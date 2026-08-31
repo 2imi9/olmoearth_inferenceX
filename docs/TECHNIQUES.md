@@ -12,12 +12,12 @@ condition untested) / UNTESTED / OUT-OF-SCOPE-V1.
 
 | Technique | LLM ancestor | Status | Gap that remains |
 |---|---|---|---|
-| Cross-model disagreement (E_case) | SelfCheckGPT / self-consistency | PARTIAL | only 2 models; loses to baseline on easy scenes; hard-scene test missing |
+| Cross-model disagreement (E_case) | SelfCheckGPT / self-consistency | PARTIAL | pairwise ties baseline on easy scene; naive tri-model std is WORSE (weak rater pollutes); aggregation design + hard-scene test remain |
 | Geographic grounding (E_geo) | retrieval-grounded fact checking | PARTIAL | specificity shown (no false alarms), sensitivity never tested (no scene with a real break yet) |
-| Perturbation stability (E_system) | semantic entropy / paraphrase robustness | UNTESTED | tile-phase shift experiment not built |
-| Backbone-version comparison (E_system) | n/a (EO-specific) | UNTESTED | v1 vs v1_2 same-window; local loader needs newer olmoearth_pretrain |
-| Embedding dissimilarity (E_dist) | internal-state probing (INSIDE, SEPs) | UNTESTED | no AOA/DI computation exists yet; SHRUG-FM overlap must be delineated first |
-| Max-softmax baseline | logit confidence | VERIFIED | none; it is the bar, and it currently holds it |
+| Perturbation stability (E_system) | semantic entropy / paraphrase robustness | VERIFIED | beats max-softmax AURC on the easy scene (0.00058 vs 0.00089); single-scene, 18 errors, needs replication |
+| Backbone-version comparison (E_system) | n/a (EO-specific) | BLOCKED | v1_2 load fails on current checkout (LatentMIM state_dict mismatch, confirmed); pull newer olmoearth_pretrain |
+| Embedding dissimilarity (E_dist) | internal-state probing (INSIDE, SEPs) | PARTIAL | k-NN-to-train tested: does NOT rank in-domain errors (4x worse than baseline). Role is OOD alarm, not error proxy; needs an actually-OOD eval to verify that role |
+| Max-softmax baseline | logit confidence | VERIFIED | the bar; tile-phase is the first channel to beat it |
 | Risk-coverage / AURC harness | selective prediction | VERIFIED | needs CIs / significance once scenes multiply |
 | Weak-truth validation loop | MRP pseudo-label validation (PPE) | PARTIAL | WorldCover only; partner-project labels not yet used |
 | Semantic-entropy port (cluster-then-entropy) | Farquhar et al. | UNTESTED | refinement of E_system, not started |
@@ -64,6 +64,26 @@ condition untested) / UNTESTED / OUT-OF-SCOPE-V1.
 - On an easy scene (400 m river, dry season, 2% error rate), |p_a - p_b|
   does NOT beat max-softmax on AURC (0.0011 vs 0.0009). The model's own
   confidence suffices when the task is easy. (exp/exp02)
+
+### Perturbation stability (E_system tile-phase)
+- Shifting the input window by 1-3 px (sub-patch phase) and measuring the std
+  of water probability across shifts ranks Base's errors BETTER than the
+  model's own confidence: AURC 0.00058 vs 0.00089 on the Kazungula scene. The
+  signal map traces the shoreline continuously. First channel to beat the
+  baseline. Single scene, 18 error patches: directional until replicated.
+  (exp/exp03)
+
+### Cross-model disagreement, aggregation
+- Naive tri-model std underperforms pairwise |Nano-Base| (AURC 0.00105 vs
+  0.00086) because Tiny is the weakest head (0.951 vs 0.973/0.982) and equal
+  weighting lets it inject noise. Multi-rater aggregation needs reliability
+  weighting (Dawid-Skene direction), not plain std. (exp/exp03)
+
+### Embedding dissimilarity (E_dist)
+- k-NN cosine distance to train patches does not rank in-domain errors (AURC
+  0.00365, 4x worse than baseline). Expected and now demonstrated: novelty is
+  not error when the eval region is in-domain. E_dist's claim must be tested
+  on an actually out-of-domain region. (exp/exp03)
 
 ### Geographic grounding (E_geo)
 - OSM centerline check produces zero false break alarms on a scene where the

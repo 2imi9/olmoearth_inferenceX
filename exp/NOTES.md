@@ -50,3 +50,15 @@ Next:
   where the river is subpixel at patch scale. Expect E_geo to activate there.
 - Tri-model (add Tiny) for Dawid-Skene-shaped E_case.
 - v1 vs v1_2 E_system on the same windows.
+
+## exp03 — four techniques, one run (2026-08-31)
+
+Same Katima/Kazungula pair. Results in docs/TECHNIQUES.md (ledger is the
+authority). Headlines: tile-phase E_system beats max-softmax (first channel to
+do it); naive tri-model std worse than pairwise (Tiny pollutes); E_dist doesn't
+rank in-domain errors (OOD alarm, not error proxy); v1_2 loader blocked on
+current olmoearth_pretrain checkout.
+
+Separately, allenai HF datasets answer OQ4: olmoearth_lcc production COGs ship
+binary-change prob + argmax + top-1 prob (encoder v1.2-Base), and AWF/mangrove
+expert labels are public. Production output is HTTP range-readable.
