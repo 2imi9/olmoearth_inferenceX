@@ -26,6 +26,22 @@ condition untested) / UNTESTED / OUT-OF-SCOPE-V1.
 
 ## Verified facts
 
+### Production inference exports (allenai/olmoearth_lcc)
+- The at-scale LCC run (encoder OlmoEarth-v1.2-Base, continent-scale Africa,
+  32768x32768-px UTM tiles) publishes 9-band uint8 summary COGs: band 1
+  binary-change probability (0-255), bands 2-5 argmax classes, bands 6-7
+  probability of the argmax class, bands 8-9 month-encoded change dates.
+  Answer to the probabilities-vs-argmax question: PARTIAL probabilities
+  (top-1 score + binary head), not full per-class distributions. Max-softmax
+  ships in the product, so the baseline comparison runs directly on
+  production output. (README of allenai/olmoearth_lcc)
+- Those COGs are public; windows are HTTP range-readable, so production
+  output can be audited without Ai2 infrastructure.
+- Label-bias caveat for any validation against olmoearth_lcc annotations:
+  most collection phases are output-based labeling (model proposes, human
+  verifies), so label locations correlate with model beliefs. Relevant to the
+  correlated-error open question.
+
 ### Infrastructure
 - Inference-only install of olmoearth_pretrain is the base dependency set
   (torch, einops, hf_hub, numpy); no training extra needed. CPU sufficient for
@@ -78,11 +94,14 @@ condition untested) / UNTESTED / OUT-OF-SCOPE-V1.
 6. E_dist. Compute AOA/DI over embeddings for a window vs a training-domain
    reference sample. Read SHRUG-FM first and record here exactly what it
    already covers so the contribution boundary is explicit.
-7. Per-class probabilities in tiled inference exports: probabilities or argmax
-   only? Answer changes the statistical power of every disagreement signal.
-   (Asked of Ai2; also answerable by reading the tiled inference writer.)
-8. Partner-project validation. Swap WorldCover weak truth for a partner
-   project's labels on at least one AOI; this is the PPE-style validation the
-   frame promises.
+7. RESOLVED for the at-scale LCC pipeline (see Verified facts): exports carry
+   binary-change probability + argmax classes + top-1 probability, not full
+   distributions. Remaining sliver: confirm Studio per-project exports match.
+8. Partner-project validation. Labels FOUND, not yet used:
+   allenai/olmoearth_projects_awf (expert AWF LULC annotations, 418 KB
+   geojson, pairs with public OlmoEarth-v1-FT-AWF-Base checkpoint),
+   olmoearth_projects_mangrove, and allenai/olmoearth_lcc training_data
+   (verified change/no-change points). Next: run the audit signals over an AWF
+   AOI and score against the expert labels instead of WorldCover.
 9. GRIT/GRWL centerlines. OSM is the placeholder reference; GRIT is the real
    one and adds width attributes E_geo can condition on.
