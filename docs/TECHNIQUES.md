@@ -1,0 +1,88 @@
+# Technique ledger
+
+Standing record of what is verified, organized by technique. No timeline: a claim
+lives here only once an experiment supports it, and gets amended or deleted when
+a later experiment says otherwise. Chronology lives in exp/NOTES.md. Every entry
+names its evidence (exp script) so claims stay reproducible.
+
+Status codes: VERIFIED (experiment supports it) / PARTIAL (some evidence, key
+condition untested) / UNTESTED / OUT-OF-SCOPE-V1.
+
+## Summary
+
+| Technique | LLM ancestor | Status | Gap that remains |
+|---|---|---|---|
+| Cross-model disagreement (E_case) | SelfCheckGPT / self-consistency | PARTIAL | only 2 models; loses to baseline on easy scenes; hard-scene test missing |
+| Geographic grounding (E_geo) | retrieval-grounded fact checking | PARTIAL | specificity shown (no false alarms), sensitivity never tested (no scene with a real break yet) |
+| Perturbation stability (E_system) | semantic entropy / paraphrase robustness | UNTESTED | tile-phase shift experiment not built |
+| Backbone-version comparison (E_system) | n/a (EO-specific) | UNTESTED | v1 vs v1_2 same-window; local loader needs newer olmoearth_pretrain |
+| Embedding dissimilarity (E_dist) | internal-state probing (INSIDE, SEPs) | UNTESTED | no AOA/DI computation exists yet; SHRUG-FM overlap must be delineated first |
+| Max-softmax baseline | logit confidence | VERIFIED | none; it is the bar, and it currently holds it |
+| Risk-coverage / AURC harness | selective prediction | VERIFIED | needs CIs / significance once scenes multiply |
+| Weak-truth validation loop | MRP pseudo-label validation (PPE) | PARTIAL | WorldCover only; partner-project labels not yet used |
+| Semantic-entropy port (cluster-then-entropy) | Farquhar et al. | UNTESTED | refinement of E_system, not started |
+| Verifier head trained on labeled regions | process reward models | OUT-OF-SCOPE-V1 | needs labels as training input; revisit after channels ship |
+| Channel fusion | n/a | OUT-OF-SCOPE-V1 | per-channel ranking only; Borda if forced |
+
+## Verified facts
+
+### Infrastructure
+- Inference-only install of olmoearth_pretrain is the base dependency set
+  (torch, einops, hf_hub, numpy); no training extra needed. CPU sufficient for
+  128x128 windows at patch 4. (exp/smoke_test.py)
+- All checkpoints public and ungated on HF: v1 Nano/Tiny/Base/Large, v1_1
+  Nano/Tiny/Base, v1_2 Nano/Tiny/Small/Base, plus FT variants (AWF, LFMC,
+  Mangrove, ForestLossDriver, EcosystemTypeMapping). Multi-model and
+  cross-version signals need zero Ai2 infrastructure.
+- Planetary Computer S2 L2A + ESA WorldCover on a shared 10 m grid works as a
+  self-serve data path. OSM Overpass needs mirror fallback (mail.ru mirror most
+  reliable in practice). HF_HUB_OFFLINE=1 for cached-checkpoint reruns.
+
+### Cross-model disagreement (E_case)
+- Noise floor: mean local-structure agreement between Nano and Base on random
+  input is ~0.59, not 0 (shared patchification/normalization). Any agreement
+  claim must be read against this floor. (exp/smoke_test.py)
+- Disagreement is structured, not random: it concentrates at class boundaries
+  and thin structures (shoreline, bridge) at both embedding level and
+  prediction level. (exp/exp01, exp/exp02)
+- On an easy scene (400 m river, dry season, 2% error rate), |p_a - p_b|
+  does NOT beat max-softmax on AURC (0.0011 vs 0.0009). The model's own
+  confidence suffices when the task is easy. (exp/exp02)
+
+### Geographic grounding (E_geo)
+- OSM centerline check produces zero false break alarms on a scene where the
+  river is clearly resolved (52 centerline patches, 0 consensus-dry).
+  Specificity evidence only; sensitivity untested. (exp/exp02)
+
+### Heads and transfer
+- Frozen-embedding logistic heads transfer spatially: trained on one reach,
+  97-98% accuracy vs WorldCover on a reach ~110 km away. Spatial split is
+  cheap to honor and should never be dropped. (exp/exp02)
+- WorldCover-as-truth carries temporal drift error (2021 labels vs 2024
+  scenes; moving sandbars). Treat a few points of "model error" as label noise.
+
+## Gaps to fill, in priority order
+
+1. Hard-scene E_case vs baseline. The design claim is that disagreement beats
+   confidence where the task is hard (narrow/sub-patch channels, flood-season
+   wetland margins). No experiment yet. This is the make-or-break test.
+2. E_geo sensitivity. Find or construct a scene with a real consensus break
+   (narrow reach the models actually miss) and show the centerline check fires.
+   Until then E_geo has only proven it stays quiet.
+3. Tri-model E_case. Add Tiny; three raters is the Dawid-Skene identifiability
+   minimum. Also decide the aggregation (pairwise mean vs majority-vs-outlier).
+4. E_system tile-phase. Shift the window grid by fractions of a patch, measure
+   prediction flips. Uses the same cached-window machinery as exp02.
+5. E_system v1 vs v1_2. Same windows, both backbones. Requires pulling newer
+   olmoearth_pretrain for the v1_2 loader path.
+6. E_dist. Compute AOA/DI over embeddings for a window vs a training-domain
+   reference sample. Read SHRUG-FM first and record here exactly what it
+   already covers so the contribution boundary is explicit.
+7. Per-class probabilities in tiled inference exports: probabilities or argmax
+   only? Answer changes the statistical power of every disagreement signal.
+   (Asked of Ai2; also answerable by reading the tiled inference writer.)
+8. Partner-project validation. Swap WorldCover weak truth for a partner
+   project's labels on at least one AOI; this is the PPE-style validation the
+   frame promises.
+9. GRIT/GRWL centerlines. OSM is the placeholder reference; GRIT is the real
+   one and adds width attributes E_geo can condition on.
