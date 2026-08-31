@@ -14,12 +14,12 @@ condition untested) / UNTESTED / OUT-OF-SCOPE-V1.
 |---|---|---|---|
 | Cross-model disagreement (E_case) | SelfCheckGPT / self-consistency | PARTIAL | pairwise ties baseline on easy scene; naive tri-model std is WORSE (weak rater pollutes); aggregation design + hard-scene test remain |
 | Geographic grounding (E_geo) | retrieval-grounded fact checking | PARTIAL | specificity shown (no false alarms), sensitivity never tested (no scene with a real break yet) |
-| Perturbation stability (E_system) | semantic entropy / paraphrase robustness | VERIFIED | beats max-softmax AURC on the easy scene (0.00058 vs 0.00089); single-scene, 18 errors, needs replication |
+| Perturbation stability (E_system) | semantic entropy / paraphrase robustness | MIXED | beat max-softmax on the easy binary scene (0.00058 vs 0.00089) but LOST on AWF multiclass expert labels (0.0427 vs 0.0367); condition-dependent, not a general win |
 | Backbone-version comparison (E_system) | n/a (EO-specific) | BLOCKED | v1_2 load fails on current checkout (LatentMIM state_dict mismatch, confirmed); pull newer olmoearth_pretrain |
 | Embedding dissimilarity (E_dist) | internal-state probing (INSIDE, SEPs) | PARTIAL | k-NN-to-train tested: does NOT rank in-domain errors (4x worse than baseline). Role is OOD alarm, not error proxy; needs an actually-OOD eval to verify that role |
 | Max-softmax baseline | logit confidence | VERIFIED | the bar; tile-phase is the first channel to beat it |
 | Risk-coverage / AURC harness | selective prediction | VERIFIED | needs CIs / significance once scenes multiply |
-| Weak-truth validation loop | MRP pseudo-label validation (PPE) | PARTIAL | WorldCover only; partner-project labels not yet used |
+| Weak-truth validation loop | MRP pseudo-label validation (PPE) | VERIFIED | harness now runs on real partner expert labels (AWF, official rslearn spatial split, 344 val points) |
 | Semantic-entropy port (cluster-then-entropy) | Farquhar et al. | UNTESTED | refinement of E_system, not started |
 | Verifier head trained on labeled regions | process reward models | OUT-OF-SCOPE-V1 | needs labels as training input; revisit after channels ship |
 | Channel fusion | n/a | OUT-OF-SCOPE-V1 | per-channel ranking only; Borda if forced |
@@ -84,6 +84,21 @@ condition untested) / UNTESTED / OUT-OF-SCOPE-V1.
   0.00365, 4x worse than baseline). Expected and now demonstrated: novelty is
   not error when the eval region is in-domain. E_dist's claim must be tested
   on an actually out-of-domain region. (exp/exp03)
+
+### Partner-truth validation (AWF)
+- The full audit harness runs against real expert labels: AWF dataset, official
+  1115/344 rslearn spatial split, frozen Base + multiclass head reaches 85.2%
+  (their finetuned model: 89.5%). Error sample: 51 errors. (exp/exp04)
+- On this in-domain multiclass task the max-softmax baseline WINS: AURC 0.0367
+  vs tile-phase 0.0427 vs Nano-Base TV 0.0533. Tile-phase's easy-scene win did
+  not transfer. Working hypothesis: confidence excels at ranked in-domain
+  class-confusion errors; the channels' claimed territory is correlated /
+  systematic / OOD failures, which this task does not exercise. (exp/exp04)
+- Weak-rater effect replicated: Nano is 75.6% on this task and TV disagreement
+  against it is the worst signal tested. Two tasks, two confirmations:
+  disagreement needs raters of comparable strength or reliability weighting.
+- Weakest class: herbaceous wetland (50% recall). Wetland margins are also the
+  posited hard case for the water task; consistent story. (exp/exp04)
 
 ### Geographic grounding (E_geo)
 - OSM centerline check produces zero false break alarms on a scene where the

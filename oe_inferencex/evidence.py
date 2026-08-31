@@ -58,3 +58,26 @@ def pool_to_patches(grid, patch):
     """Max-pool a boolean/fraction pixel grid to the patch grid."""
     h, w = grid.shape
     return grid.reshape(h // patch, patch, w // patch, patch).mean(axis=(1, 3))
+
+
+def train_softmax_head(feats, labels, n_classes, epochs=400, lr=0.05):
+    """Multinomial logistic regression on (N, D) features, (N,) int labels."""
+    x = torch.as_tensor(feats, dtype=torch.float32)
+    y = torch.as_tensor(labels, dtype=torch.long)
+    counts = torch.bincount(y, minlength=n_classes).float().clamp(min=1)
+    weight = counts.sum() / (n_classes * counts)
+    w = torch.zeros(x.shape[1], n_classes, requires_grad=True)
+    b = torch.zeros(n_classes, requires_grad=True)
+    opt = torch.optim.Adam([w, b], lr=lr)
+    for _ in range(epochs):
+        opt.zero_grad()
+        loss = torch.nn.functional.cross_entropy(x @ w + b, y, weight=weight)
+        loss.backward()
+        opt.step()
+    return w.detach(), b.detach()
+
+
+def predict_softmax_head(feats, w, b):
+    """(N, C) probability matrix."""
+    x = torch.as_tensor(feats, dtype=torch.float32)
+    return torch.softmax(x @ w + b, dim=-1).numpy()

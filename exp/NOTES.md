@@ -62,3 +62,10 @@ current olmoearth_pretrain checkout.
 Separately, allenai HF datasets answer OQ4: olmoearth_lcc production COGs ship
 binary-change prob + argmax + top-1 prob (encoder v1.2-Base), and AWF/mangrove
 expert labels are public. Production output is HTTP range-readable.
+
+## exp04 — AWF expert-label validation (2026-08-31)
+
+Harness on real partner truth (details in ledger). Baseline wins on multiclass
+in-domain errors; tile-phase easy-scene win did not transfer; weak-rater
+effect replicated with Nano. Herbaceous wetland weakest class (50% recall).
+Features cached in exp/out/exp04_feats.npz (5 passes x 1459 windows).
