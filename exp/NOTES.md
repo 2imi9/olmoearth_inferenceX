@@ -24,3 +24,29 @@ Next:
 - Few-shot water head on both embeddings -> prediction disagreement (true
   E_case, not just representation structure).
 - v1 vs v1_2 same-window comparison (needs olmoearth_pretrain pull for loader).
+
+## exp02 — full minimal audit slice (2026-08-31)
+
+Every pipeline stage present, minimal depth. Heads trained at Katima Mulilo,
+evaluated at Kazungula (~110 km, spatial split). WorldCover 2021 water as weak
+truth. OSM waterway=river centerline as E_geo reference (overpass mirrors:
+mail.ru worked when main + kumi were down; HF_HUB_OFFLINE=1 for cached reruns).
+
+Numbers:
+- Nano head 0.973 / Base head 0.979 eval acc vs WorldCover. Base error rate 2.1%.
+- E_case AURC 0.0011 vs max-softmax baseline 0.0009. BASELINE WINS on this scene.
+- E_geo: 52 centerline patches, 0 consensus-dry. No river breaks, no false alarms.
+
+Honest read: on an easy dry-season scene with a 400 m river, the model's own
+confidence is enough and E_case adds nothing. This is the §5 baseline argument
+made concrete on day one. The channels' claimed value is on hard cases
+(correlated errors, narrow channels, flood season, wetland margins), so the
+next experiment must be a deliberately hard scene, not another easy one.
+Also: errors are isolated specks partly from 2021-labels-vs-2024-scene drift
+(moving sandbars) - weak-truth noise, not all model error.
+
+Next:
+- Hard scene: Barotse floodplain in flood season, or a narrow (<100 m) reach
+  where the river is subpixel at patch scale. Expect E_geo to activate there.
+- Tri-model (add Tiny) for Dawid-Skene-shaped E_case.
+- v1 vs v1_2 E_system on the same windows.
