@@ -47,3 +47,10 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+# Result 2026-08-31 (CPU, synthetic noise input):
+#   Nano (1,16,16,1,3,128), Base (1,16,16,1,3,768)
+#   cross-model similarity-structure correlation: 0.5855
+# NOTE: ~0.59 on pure noise = the noise floor for cross-model structural
+# agreement (shared patchification/normalization). Real-imagery agreement
+# must be measured against this floor, not against zero.
