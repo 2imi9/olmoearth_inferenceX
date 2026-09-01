@@ -38,10 +38,10 @@ One section per signal, every claim citing its experiment. Index at
   decorrelation, not accuracy.
 - Label-free reliability (Dawid-Skene, exp07): DS EM over Nano/Tiny/Base
   votes on AWF (labels untouched) overestimates every model and inverts the
-  ordering: estimated 0.868/0.921/0.887 vs measured 0.756/0.805/0.852. DS
+  ordering: estimated 0.859/0.916/0.876 vs measured 0.753/0.802/0.817. DS
   assumes conditionally independent raters; the family errs together, and
   agreement-on-errors is read as competence. The estimate-minus-measured gap
-  (+0.112, +0.116, +0.035) directly measures correlated-error mass per
+  (+0.106, +0.114, +0.059) directly measures correlated-error mass per
   model. Label-free accuracy estimation within a single family is
   unsupported; an out-of-family rater (Clay or AnySat, both wrapped in
   [olmoearth_pretrain/evals](https://github.com/allenai/olmoearth_pretrain/tree/main/olmoearth_pretrain/evals))
@@ -70,7 +70,7 @@ One section per signal, every claim citing its experiment. Index at
   grids, so shifted patches covered different ground; that version scored
   19/29 with no significant effect. Their tile-phase numbers are
   superseded. exp04's per-window variant tracked the label patch under
-  shift and is unaffected (lost to the baseline there, 0.0427 vs 0.0367).
+  shift and is unaffected (lost to the baseline there, 0.0489 vs 0.0363).
 - Earlier single-scene results consistent with the corrected signal: beat
   the baseline on the easy binary scene (0.00058 vs 0.00089; exp03); the
   signal map traces the shoreline continuously.

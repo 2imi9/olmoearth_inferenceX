@@ -53,17 +53,17 @@ terms in [protocol.md](../method/protocol.md).
   [task config](https://github.com/allenai/olmoearth_projects/blob/main/olmoearth_run_data/awf/model.yaml).
 - The full pipeline runs against the AWF partner dataset: 1459 expert-labeled
   points, 12-month Sentinel-2 stacks, the project's own 1115/344 spatial
-  split. A linear head on frozen Base embeddings reaches 85.2% validation
-  accuracy (the project's fully fine-tuned model: 89.5%), giving 51 errors
+  split. A linear head on frozen Base embeddings reaches 81.7% validation
+  accuracy (the project's fully fine-tuned model: 89.5%), giving 63 errors
   for signal evaluation.
 - On this in-domain multiclass task, max-softmax achieved the lowest AURC
-  (0.0367) of the signals tested (tile-phase 0.0427, Nano-Base total
-  variation 0.0533).
+  (0.0363) of the signals tested (tile-phase 0.0489, Nano-Base total
+  variation 0.0670).
 - Lowest per-class recall: herbaceous wetland (0.50, n=6 validation points,
   so indicative only). Class-index-to-name mapping verified against the
   per-class metric definitions in olmoearth_projects awf model.yaml.
-- Completing the comparison on the same 51 errors (exp12): E_dist
-  knn-to-train 0.1104 and a no-model spectral-variability control 0.1287,
+- Completing the comparison on the same 63 errors (exp12): E_dist
+  knn-to-train 0.1338 and a no-model spectral-variability control 0.1658,
   both far behind the baseline. In-domain AWF errors are neither
   out-of-distribution nor pixel-trivial, consistent with the water-task
   pattern.

@@ -47,13 +47,13 @@ and a plain pixel statistic computed without any model (the control).
 <details open>
 <summary><b>Headline comparison: three scenes</b> (click to shrink)</summary>
 
-| AURC (lower = finds errors better) | In-domain ([AWF expert labels](https://huggingface.co/datasets/allenai/olmoearth_projects_awf), 51 errors) | Ambiguous wetland margins (Barotse, vs WorldCover 2021, 97 errors) | Reference omits the river (Zambezi delta, vs WorldCover 2021, 29 disagreements) |
+| AURC (lower = finds errors better) | In-domain ([AWF expert labels](https://huggingface.co/datasets/allenai/olmoearth_projects_awf), 63 errors) | Ambiguous wetland margins (Barotse, vs WorldCover 2021, 97 errors) | Reference omits the river (Zambezi delta, vs WorldCover 2021, 29 disagreements) |
 |---|---|---|---|
-| model's own confidence (baseline) | **0.0367** | 0.0684 | 0.0234 |
-| cross-model disagreement (E_case) | 0.0533 | 0.0235 | 0.0103 |
-| tiling instability (E_system) | 0.0427 | **0.0127** | 0.0009 |
-| embedding distance (E_dist) | 0.1104 | 0.0289 | 0.0014 |
-| pixel statistic (control) | 0.1287 | 0.0384 | **0.0005** |
+| model's own confidence (baseline) | **0.0363** | 0.0684 | 0.0234 |
+| cross-model disagreement (E_case) | 0.0670 | 0.0235 | 0.0103 |
+| tiling instability (E_system) | 0.0489 | **0.0127** | 0.0009 |
+| embedding distance (E_dist) | 0.1338 | 0.0289 | 0.0014 |
+| pixel statistic (control) | 0.1658 | 0.0384 | **0.0005** |
 
 Third column: the WorldCover reference contains no water on this scene, so
 its disagreements are reference omissions; a no-model pixel statistic ranks
@@ -99,7 +99,7 @@ nothing more. AWF column: point labels, exp04 and exp12.
 
 ## Findings
 
-- **On the one expert-labelled in-domain task (AWF, 51 errors, point
+- **On the one expert-labelled in-domain task (AWF, 63 errors, point
   labels), the model's own confidence is the best signal** (exp04, exp12).
   On dense in-region river scenes it is not: best on 0 of 27 (exp13).
 - **Errors concentrate at the boundaries of the model's own prediction

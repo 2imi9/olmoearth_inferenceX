@@ -201,3 +201,12 @@ explanation demoted to hypothesis. Audit record: exp/out/audit_wf_119095bf.json.
 Post-correction headline: aligned tile-phase beats confidence on 26/27
 (sign p=4e-07); boundary indicator 19/27 vs confidence (p=0.05, marginal),
 22/27 vs control; the two are indistinguishable head-to-head (15/12, p=0.70).
+
+## AWF re-embedding after loader fix (2026-09-01)
+
+Band groups now warped onto the 10 m grid with georeferencing (WarpedVRT)
+instead of stretched. Re-run on GPU: Nano 0.753, Tiny 0.802, Base
+0.817 val accuracy; 63 Base errors; AURC baseline 0.0363, E_case
+0.0670, tile-phase 0.0489, E_dist 0.1338, control 0.1658. DS
+reliabilities: nano 0.859 (measured 0.753, gap +0.106), tiny 0.916 (measured 0.802, gap +0.114), base 0.876 (measured 0.817, gap +0.059).
+All AWF numbers in README/docs updated from this run.
