@@ -54,11 +54,28 @@ CPU only. Stated conservatively:
    twice, exp03 and exp04); multi-model aggregation appears to require
    reliability weighting.
 
+| AURC (lower = better ranking) | In-domain, expert labels (AWF, 51 errors) | Ambiguous wetland margins (Barotse, 97 errors) | Geographic shift (delta, 29 errors) |
+|---|---|---|---|
+| max-softmax confidence (baseline) | **0.0367** | 0.0666 | 0.0258 |
+| E_case model disagreement | 0.0533 | **0.0235** | 0.0103 |
+| E_system tile-phase | 0.0427 | 0.0555 | 0.0076 |
+| E_dist k-NN to training | n/a | 0.0289 | 0.0014 |
+| best no-model image statistic (control, exp06) | n/a | 0.0384 | **0.0005** |
+
+Bold marks the best signal per condition. The control row is what disqualifies
+the shift column: when a pixel statistic outranks every model signal, the
+scene's errors are trivial and support no model-signal claim.
+
+![No-model controls](exp/out/exp06_controls.png)
+
+*Risk-coverage per scene with the no-model controls on the same errors
+(exp06), and the control signal maps for the Barotse scene. E_case retains
+its margin over the controls only on the Barotse scene (panel b).*
+
 ![Hard scenes](exp/out/exp05_hard_scenes.png)
 
-*Risk-coverage on the two difficult scenes (exp05). Top: Barotse floodplain
-interior. Bottom: Zambezi delta mangrove coast. Lower curves indicate better
-error ranking; the max-softmax baseline is the highest curve on both.*
+*The two difficult scenes (exp05): imagery, reference, model-reference
+disagreement, and risk-coverage. Lower curves indicate better error ranking.*
 
 **Limitations.** Each condition has been observed on a single scene or task,
 with small error counts and no significance testing. ESA WorldCover, the
