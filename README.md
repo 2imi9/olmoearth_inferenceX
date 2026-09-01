@@ -29,7 +29,7 @@ splits are spatial.
 
 ## Findings to date
 
-Five experiments (exp01-exp05), all on public data and public checkpoints,
+Six experiments (exp01-exp06), all on public data and public checkpoints,
 CPU only. Stated conservatively:
 
 1. On the in-domain tasks evaluated — an easy dry-season river scene
@@ -75,7 +75,7 @@ The per-technique record with all numbers, conditions, and caveats is in
 
 - `docs/TECHNIQUES.md` — technique ledger: standing results per technique,
   each claim citing the experiment that produced it; open items ranked.
-- `exp/` — experiment scripts (exp01-exp05); figures and cached
+- `exp/` — experiment scripts (exp01-exp06); figures and cached
   intermediates in `exp/out/`.
 - `exp/NOTES.md` — chronological lab log.
 - `oe_inferencex/` — library in progress. `evidence.py` contains the signal
