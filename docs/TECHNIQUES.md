@@ -198,6 +198,21 @@ instantiations, not the signal families.
 - WorldCover-as-reference carries temporal drift (2021 labels vs 2024 scenes),
   so a fraction of measured "model error" is label noise.
 
+## Second use case: change attribution between two inference results
+
+Error ranking is one consumer of the signals. The same decomposition applies
+to comparing two inference outputs (two dates, two model versions): a raw
+diff mixes real surface change, model instability, low-consensus predictions,
+and geographically implausible transitions. E_system instability and E_case
+consensus at each date gate which diffs are trustworthy; geographic and
+temporal plausibility rules constrain which transitions are physically
+possible; plain image differencing is the no-model control. Intended
+application: automated interpretation of what changed over time (EO
+autoresearch), where a change narrative should only be generated from diffs
+that survive this decomposition. Natural testbed: the olmoearth_lcc
+production change product (change probability and month-encoded dates) and
+its verified change/no-change points. Untested; design only.
+
 ## Open items, in priority order
 
 1. A domain-shift testbed with non-trivial errors and expert labels
