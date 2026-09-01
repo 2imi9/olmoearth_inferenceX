@@ -111,22 +111,26 @@ def main():
         results[name] = (cov, risk, aurc)
         print(f"AURC {name}: {aurc:.4f}")
 
-    import matplotlib
-    matplotlib.use("Agg")
+    from oe_inferencex.figstyle import setup, rc_panel, letter, AWF_CLASSES
     import matplotlib.pyplot as plt
-    fig, axes = plt.subplots(1, 2, figsize=(12, 4.5))
-    for name, (cov, risk, aurc) in results.items():
-        axes[0].plot(cov, risk, label=f"{name} (AURC {aurc:.3f})", lw=1.4)
-    axes[0].set_xlabel("coverage"); axes[0].set_ylabel("selective risk")
-    axes[0].set_title("risk-coverage on AWF expert labels (val, spatial split)")
-    axes[0].legend(fontsize=8)
-    per_class = [( (p_base.argmax(1) == y[va]) & (y[va] == k)).sum() / max((y[va] == k).sum(), 1)
+    setup()
+    fig, axes = plt.subplots(1, 2, figsize=(13, 5.2))
+    rc_panel(axes[0], results,
+             "AWF expert labels, official spatial split\n(n=344 val windows, 51 errors)", idx=0)
+    per_class = [((p_base.argmax(1) == y[va]) & (y[va] == k)).sum() / max((y[va] == k).sum(), 1)
                  for k in range(N_CLASSES)]
-    axes[1].bar(range(N_CLASSES), per_class)
-    axes[1].set_xlabel("category"); axes[1].set_ylabel("Base head recall")
-    axes[1].set_title("per-class recall vs expert labels")
+    counts = [int((y[va] == k).sum()) for k in range(N_CLASSES)]
+    axes[1].bar(range(N_CLASSES), per_class, color="#4878a8")
+    axes[1].set_xticks(range(N_CLASSES))
+    axes[1].set_xticklabels([f"{c}\n(n={n})" for c, n in zip(AWF_CLASSES, counts)],
+                            rotation=45, ha="right", fontsize=6.5)
+    axes[1].set_ylabel("recall of Base-head prediction vs expert label")
+    axes[1].set_ylim(0, 1.05)
+    axes[1].grid(axis="y", alpha=0.25, lw=0.5)
+    axes[1].set_title("Per-class recall\n(class indices mapped via olmoearth_projects awf model.yaml)")
+    letter(axes[1], 1)
     fig.tight_layout()
-    fig.savefig("exp/out/exp04_awf_expert.png", dpi=150)
+    fig.savefig("exp/out/exp04_awf_expert.png", bbox_inches="tight")
     print("wrote exp/out/exp04_awf_expert.png")
 
 

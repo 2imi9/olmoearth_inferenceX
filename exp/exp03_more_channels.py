@@ -120,27 +120,33 @@ def main():
         results[name] = (cov, risk, aurc)
         print(f"AURC {name}: {aurc:.5f}")
 
-    import matplotlib
-    matplotlib.use("Agg")
+    from oe_inferencex.figstyle import setup, map_panel, rc_panel
     import matplotlib.pyplot as plt
+    setup()
+    cbar_labels = {
+        "E_case tri-model std": "std of water prob across Nano/Tiny/Base",
+        "E_case |Nano-Base|": "|p_Nano - p_Base|",
+        "E_system tile-phase": "mean per-pixel std of water prob\nacross 0-3 px grid shifts",
+        "E_dist knn-to-train": "mean cosine distance to 5 nearest\ntraining patches (Base embeddings)",
+        "E_system |v1_2-v1|": "|p_v1.2 - p_v1|",
+    }
     names = [n for n in signals if n != "baseline max-softmax"]
     n = len(names)
-    fig, axes = plt.subplots(2, (n + 2) // 2 + 1, figsize=(4.2 * ((n + 2) // 2 + 1), 8))
+    ncol = (n + 2) // 2 + 1
+    fig, axes = plt.subplots(2, ncol, figsize=(4.6 * ncol, 9))
     axes = axes.flat
-    im = axes[0].imshow(errors, cmap="Reds"); axes[0].set_title("Base errors", fontsize=9)
-    fig.colorbar(im, ax=axes[0], shrink=0.7)
+    map_panel(fig, axes[0], errors, "Base head vs WorldCover\n(disagreement, counted as error)",
+              "disagreement (binary)", cmap="Reds", idx=0, vmin=0, vmax=1)
     for k, name in enumerate(names):
-        im = axes[k + 1].imshow(signals[name], cmap="magma")
-        axes[k + 1].set_title(name, fontsize=9)
-        fig.colorbar(im, ax=axes[k + 1], shrink=0.7)
-    ax = axes[n + 1]
-    for name, (cov, risk, aurc) in results.items():
-        ax.plot(cov, risk, label=f"{name} ({aurc:.4f})", lw=1.2)
-    ax.set_title("risk-coverage", fontsize=9); ax.legend(fontsize=6)
-    for a_ in axes[:n + 1]: a_.axis("off")
-    for a_ in axes[n + 2:]: a_.set_visible(False)
-    fig.tight_layout()
-    fig.savefig("exp/out/exp03_more_channels.png", dpi=150)
+        map_panel(fig, axes[k + 1], signals[name], name, cbar_labels.get(name, "signal value"),
+                  cmap="magma", idx=k + 1)
+    rc_panel(axes[n + 1], results, "Kazungula scene (n=1024 patches, 18 errors)", idx=n + 1)
+    for a_ in axes[n + 2:]:
+        a_.set_visible(False)
+    fig.suptitle("Signals on the Kazungula water task; heads trained at Katima Mulilo (110 km away)",
+                 fontsize=9)
+    fig.tight_layout(rect=[0, 0, 1, 0.97])
+    fig.savefig("exp/out/exp03_more_channels.png", bbox_inches="tight")
     print("wrote exp/out/exp03_more_channels.png")
 
 

@@ -134,30 +134,26 @@ def main():
         print(f"{name}: AURC={aurc:.4f}")
     print(f"overall Base error rate: {errors.mean():.3f}")
 
-    import matplotlib
-    matplotlib.use("Agg")
+    from oe_inferencex.figstyle import setup, map_panel, rc_panel
     import matplotlib.pyplot as plt
-    fig, axes = plt.subplots(2, 3, figsize=(15, 9))
-    panels = [
-        ("WorldCover water (weak truth)", ev_labels, "Blues", {}),
-        ("Base water prob", p_base, "Blues", {}),
-        ("Base errors vs WorldCover", errors, "Reds", {}),
-        ("E_case |Nano-Base|", e_case, "magma", {}),
-        ("E_geo: centerline + consensus-dry", centerline.astype(float) + e_geo_flags, "viridis", {}),
-    ]
-    for ax, (title, img, cmap, kw) in zip(axes.flat, panels):
-        im = ax.imshow(img, cmap=cmap, **kw)
-        ax.set_title(title, fontsize=10)
-        ax.axis("off")
-        fig.colorbar(im, ax=ax, shrink=0.7)
-    ax = axes.flat[5]
-    for name, (cov, risk, aurc) in results.items():
-        ax.plot(cov, risk, label=f"{name} (AURC {aurc:.3f})")
-    ax.set_xlabel("coverage"); ax.set_ylabel("selective risk")
-    ax.set_title("risk-coverage (lower = better ranking)", fontsize=10)
-    ax.legend(fontsize=8)
-    fig.tight_layout()
-    fig.savefig("exp/out/exp02_full_slice.png", dpi=150)
+    setup()
+    fig, axes = plt.subplots(2, 3, figsize=(15.5, 9.5))
+    map_panel(fig, axes[0, 0], ev_labels, "ESA WorldCover 2021 water\n(reference)",
+              "water patch (fraction > 0.5)", cmap="Blues", idx=0, vmin=0, vmax=1)
+    map_panel(fig, axes[0, 1], p_base, "Base head water probability",
+              "P(water)", cmap="Blues", idx=1, vmin=0, vmax=1)
+    map_panel(fig, axes[0, 2], errors, "Base head vs reference\n(disagreement, counted as error)",
+              "disagreement (binary)", cmap="Reds", idx=2, vmin=0, vmax=1)
+    map_panel(fig, axes[1, 0], np.abs(p_nano - p_base), "E_case |Nano - Base|",
+              "|p_Nano - p_Base|", cmap="magma", idx=3)
+    map_panel(fig, axes[1, 1], centerline.astype(float) + e_geo_flags,
+              "E_geo: OSM centerline (1)\n+ consensus-dry flags (2)",
+              "0 = off-line, 1 = centerline,\n2 = flagged break", cmap="viridis", idx=4)
+    rc_panel(axes[1, 2], results, "Kazungula scene (n=1024 patches)", idx=5)
+    fig.suptitle("Full audit slice at Kazungula; heads trained at Katima Mulilo (110 km away)",
+                 fontsize=9)
+    fig.tight_layout(rect=[0, 0, 1, 0.97])
+    fig.savefig("exp/out/exp02_full_slice.png", bbox_inches="tight")
     print("wrote exp/out/exp02_full_slice.png")
 
 

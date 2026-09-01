@@ -108,7 +108,9 @@ motivate replication; they do not establish effect sizes.
 - On this in-domain multiclass task, max-softmax achieved the lowest AURC
   (0.0367) of the signals tested (tile-phase 0.0427, Nano-Base total
   variation 0.0533). (exp/exp04)
-- Lowest per-class recall: herbaceous wetland (0.50). (exp/exp04)
+- Lowest per-class recall: herbaceous wetland (0.50, n=6 validation points, so
+  indicative only). Class-index-to-name mapping verified against the per-class
+  metric definitions in olmoearth_projects awf model.yaml. (exp/exp04)
 
   ![AWF risk-coverage and per-class recall](../exp/out/exp04_awf_expert.png)
 

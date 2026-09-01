@@ -111,28 +111,32 @@ def main():
             print(f"  AURC {sn}: {aurc:.4f}")
         all_results[name] = (res, errors, p["base"], labels, signals)
 
-    import matplotlib
-    matplotlib.use("Agg")
+    from oe_inferencex.figstyle import setup, map_panel, rc_panel
     import matplotlib.pyplot as plt
-    fig, axes = plt.subplots(2, 4, figsize=(18, 8.5))
+    setup()
+    from olmoearth_pretrain.data.constants import Modality
+    bo = Modality.SENTINEL2_L2A.band_order
+    aoi_titles = {
+        "hard_barotse": "Barotse floodplain interior\n(in-region, ambiguous wetland margins)",
+        "ood_delta": "Zambezi delta mangrove coast\n(~1300 km from training region)",
+    }
+    fig, axes = plt.subplots(2, 4, figsize=(19, 9.5))
     for row, name in enumerate(AOIS):
         res, errors, pb, labels, signals = all_results[name]
         img = data[f"{name}_img"]
-        from olmoearth_pretrain.data.constants import Modality
-        bo = Modality.SENTINEL2_L2A.band_order
         rgb = img[[bo.index(b) for b in ("B04", "B03", "B02")], :SIZE, :SIZE].transpose(1, 2, 0).astype(np.float32)
-        axes[row, 0].imshow(np.clip((rgb - 1000) / 2000, 0, 1))
-        axes[row, 0].set_title(f"{name} RGB", fontsize=9)
-        axes[row, 1].imshow(labels, cmap="Blues"); axes[row, 1].set_title("WorldCover water", fontsize=9)
-        axes[row, 2].imshow(errors, cmap="Reds"); axes[row, 2].set_title("Base errors", fontsize=9)
-        for sn, (cov, risk, aurc) in res.items():
-            axes[row, 3].plot(cov, risk, label=f"{sn} ({aurc:.3f})", lw=1.2)
-        axes[row, 3].set_title(f"risk-coverage: {name}", fontsize=9)
-        axes[row, 3].legend(fontsize=6)
-        for c in range(3):
-            axes[row, c].axis("off")
-    fig.tight_layout()
-    fig.savefig("exp/out/exp05_hard_scenes.png", dpi=150)
+        k = row * 4
+        map_panel(fig, axes[row, 0], np.clip((rgb - 1000) / 2000, 0, 1),
+                  f"Sentinel-2 RGB, {name}", None, rgb=True, idx=k)
+        map_panel(fig, axes[row, 1], labels, "ESA WorldCover 2021 water\n(reference)",
+                  "water patch (fraction > 0.5)", cmap="Blues", idx=k + 1, vmin=0, vmax=1)
+        map_panel(fig, axes[row, 2], errors, "Base head vs reference\n(disagreement, counted as error)",
+                  "disagreement (binary)", cmap="Reds", idx=k + 2, vmin=0, vmax=1)
+        rc_panel(axes[row, 3], res, aoi_titles[name], idx=k + 3)
+    fig.suptitle("Water heads trained at Katima Mulilo, evaluated on two difficult scenes. "
+                 "Reference labels are weak on these terrains (see docs/TECHNIQUES.md).", fontsize=9)
+    fig.tight_layout(rect=[0, 0, 1, 0.97])
+    fig.savefig("exp/out/exp05_hard_scenes.png", bbox_inches="tight")
     print("\nwrote exp/out/exp05_hard_scenes.png")
 
 
