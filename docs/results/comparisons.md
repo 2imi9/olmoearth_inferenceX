@@ -86,7 +86,39 @@ terms in [protocol.md](../method/protocol.md).
 
   ![Hard scenes](../../exp/out/exp05_hard_scenes.png)
 
-### Pre-registered 29-scene comparison (exp11, authoritative)
+### Corrected statistics on the 29-scene set (exp13, authoritative)
+- Same scenes, errors, and heads as exp11, recomputed with three
+  corrections: (1) tile-phase aligned on a pixel canvas before taking the
+  std across shifts (exp05/09/11 compared unaligned patch grids, so shifted
+  patches covered different ground); (2) excess AURC (E-AURC = AURC minus
+  the oracle's) so scenes with different error rates are comparable; (3) a
+  4x4-patch block bootstrap (B=1000) for per-scene intervals, since patches
+  are spatially autocorrelated. Per-scene values in
+  exp/out/exp13_corrected_stats.csv.
+- Aligned tile-phase beats the baseline on 27/29 scenes (exact sign test
+  p<0.001; sign-flip permutation on E-AURC differences p=0.002); its block
+  bootstrap interval excludes zero in its favor on 18 scenes and against
+  on none. It beats the pixel control on 19/29, E_case on 24/29, E_dist on
+  25/29, and is the best signal on 12/29 (best or second on 24/29). This is
+  the first result in the repository that is both statistically robust and
+  control-surviving.
+- The unaligned tile-phase of exp11 scores 19/29 (sign p=0.14, permutation
+  p=0.95): the misalignment hid the effect. Recorded as an erratum.
+- E_case: 12/29, sign p=0.46, interval excludes zero in its favor on 2
+  scenes and against on 10. Not a general signal; unchanged conclusion.
+- E_dist: 13/29, sign p=0.71. The exp11 permutation p=0.019 was a scale
+  artifact of raw AURC dominated by the high-error Shire scenes; on
+  scale-comparable E-AURC there is no advantage (intervals: 11 better, 4
+  worse). Superseded.
+- Control: 13/29 vs baseline; best signal on 9/29, the reference-omission
+  scenes. Baseline best on 1/29.
+- Head-seed variance remains structurally zero (deterministic head
+  training), as noted under exp11.
+
+### Pre-registered 29-scene comparison (exp11; statistics superseded by exp13)
+- The scene rule and scene set below stand. The statistics in this section
+  use raw AURC and the unaligned tile-phase; exp13 corrects both and is
+  authoritative where they differ.
 - Scene rule committed to git before any new scene was fetched: candidates
   sampled at fixed fractions along OSM geometries of eight named rivers,
   0.2-degree separation, inclusion iff the deterministic Base head commits

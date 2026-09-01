@@ -42,3 +42,10 @@ generated from diffs that survive this decomposition. Natural testbed: the
 olmoearth_lcc production change product (change probability and
 month-encoded dates) and its verified change/no-change points. Untested;
 design only.
+
+Update after exp13: confidence intervals and significance tests now exist
+(block bootstrap, sign and permutation tests). Remaining statistical gap is
+the reference-label confound, not the test machinery. New item: verify the
+aligned tile-phase result against expert labels (AWF windows under
+sub-patch shifts, per-window) since its 29-scene support is
+WorldCover-referenced.

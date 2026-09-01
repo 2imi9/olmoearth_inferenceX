@@ -151,3 +151,14 @@ Seed test vacuous (deterministic heads). Stats in exp/out/exp11_stats.csv.
 
 E_dist 0.1104 and spectral-variability control 0.1287 on the same 51 AWF
 errors; both far behind baseline 0.0367. README table n/a cells filled.
+
+## exp13 — corrected statistics on the 29-scene set (2026-09-01)
+
+Refinement pass caught three methodological problems: unaligned tile-phase
+in exp05/09/11, raw AURC not comparable across scenes, i.i.d. patch
+bootstrap ignoring spatial autocorrelation. Recomputed from cached exp11
+features. Aligned tile-phase beats baseline 27/29 (sign p<0.001), control
+19/29; E_dist's exp11 significance was a scale artifact; E_case unchanged.
+First robust, control-surviving positive result. Also corrected the E_dist
+definition in docs (distance to the head's training scene, not pretraining
+data). Results: exp/out/exp13_corrected_stats.csv.

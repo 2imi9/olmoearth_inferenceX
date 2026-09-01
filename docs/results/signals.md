@@ -47,12 +47,23 @@ One section per signal, every claim citing its experiment. Index at
   is the designed fix, untested.
 
 ### Perturbation stability (E_system)
-- Tile-phase: shifting the input window origin by 1-3 pixels (sub-patch
-  phase) and taking the standard deviation of predicted probability across
-  shifts was the best signal on 2 of 7 replication scenes (exp09), beat the
-  baseline on the easy binary scene (0.00058 vs 0.00089; exp03), and lost to
-  it on the AWF multiclass task (0.0427 vs 0.0367; exp04). The signal map
-  traces the shoreline continuously.
+- Tile-phase, defined correctly: shift the input window origin by 1-3
+  pixels (sub-patch phase), upsample each shifted prediction map to pixels,
+  place it at its true offset on a common canvas, take the per-pixel
+  standard deviation across shifts, and pool back to the shift-0 patch grid
+  (exp03 method). On the 29-scene rule-selected set this beats the baseline
+  on 27/29 scenes (sign p<0.001), the pixel control on 19/29, and is the
+  most frequent best signal (exp13). By construction it is largest where
+  neighboring patches disagree, so beating the pixel-edge control is the
+  relevant test, and it does on two thirds of scenes.
+- Erratum: exp05, exp09, and exp11 computed the std across unaligned patch
+  grids, so shifted patches covered different ground; that version scored
+  19/29 with no significant effect. Their tile-phase numbers are
+  superseded. exp04's per-window variant tracked the label patch under
+  shift and is unaffected (lost to the baseline there, 0.0427 vs 0.0367).
+- Earlier single-scene results consistent with the corrected signal: beat
+  the baseline on the easy binary scene (0.00058 vs 0.00089; exp03); the
+  signal map traces the shoreline continuously.
 
   ![Signal maps at Kazungula](../../exp/out/exp03_more_channels.png)
 - Masking perturbation, rejected (exp08): occluding a random 15% of patch
@@ -68,8 +79,14 @@ One section per signal, every claim citing its experiment. Index at
   mismatch, exp03).
 
 ### Embedding dissimilarity (E_dist)
-- Mean cosine distance to the k=5 nearest training patches did not rank
-  in-domain errors (AURC 0.00365 vs baseline 0.00089; exp03).
+- Definition as implemented: mean cosine distance from a window's Base
+  embedding to its k=5 nearest patches of the head's training window (one
+  128x128 scene at Katima Mulilo, or the AWF training split in exp12). This
+  is distance to the head's training region, not to the encoder's
+  pretraining distribution; an AOA-style reference sample over the
+  pretraining domain has not been built.
+- It did not rank in-domain errors (AURC 0.00365 vs baseline 0.00089;
+  exp03).
 - Its apparent advantage under geographic shift (0.0014 vs 0.0258, exp05)
   did not survive the no-model control (NDWI gradient 0.0005 on the same
   disagreements; exp06), and it won zero of seven replication scenes once

@@ -21,23 +21,25 @@ The documentation set:
 - [../exp/NOTES.md](../exp/NOTES.md) - chronological lab log.
 
 Evidence tiers: single-scene results (exp01-exp08) establish direction
-only; exp09 is a seven-scene comparison with hand-chosen scenes; exp11 is
-the authoritative comparison - 29 scenes under a pre-registered selection
-rule, with per-scene bootstrap CIs and permutation tests
-(exp/out/exp11_stats.csv). Where exp09 and exp11 disagree, exp11 stands.
+only; exp09 is a seven-scene comparison with hand-chosen scenes; exp11
+fixed the scene set - 29 scenes under a pre-registered selection rule; exp13
+is the authoritative statistics on that set (aligned tile-phase, excess
+AURC, block bootstrap, sign and permutation tests;
+exp/out/exp13_corrected_stats.csv). Where earlier experiments disagree with
+exp13, exp13 stands.
 
 ## Summary
 
 | Technique | Related LLM-domain method | Status | State of evidence |
 |---|---|---|---|
-| Max-softmax confidence (baseline) | logit-based confidence | supported | best signal on the in-domain AWF expert-label task; best on 6 of 29 scenes under the pre-registered rule (exp11). Stronger than the hand-chosen exp09 set suggested. All channel claims are relative to this baseline |
-| Cross-model disagreement (E_case) | self-consistency / SelfCheckGPT | mixed | strong on specific ambiguous scenes (Barotse 0.0235 vs baseline 0.0666, control-proof) but the advantage does not generalize: better than baseline on only 12/29 rule-selected scenes, mean difference negative (p=0.07, exp11). Regime-specific, not general. Partner quality is decorrelation, not accuracy (exp10); naive >2-model aggregation hurts (exp03/04/07) |
-| Perturbation stability (E_system, tile-phase) | sampling-consistency methods | mixed | most frequent winner under the pre-registered rule (19/29 scenes better than baseline) but mean difference ~0 (p=0.95, exp11): modest frequent gains, occasional large losses. Masking-perturbation variant rejected (exp08): perturb the tokenization, not the content |
+| Max-softmax confidence (baseline) | logit-based confidence | supported | best signal on the in-domain AWF expert-label task; on the 29-scene rule-selected set it is the best signal on 1/29 once tile-phase is computed correctly (exp13). All channel claims are relative to this baseline |
+| Cross-model disagreement (E_case) | self-consistency / SelfCheckGPT | mixed | strong on specific ambiguous scenes (Barotse, control-proof) but not general: beats the baseline on 12/29 rule-selected scenes, sign test p=0.46, block-bootstrap interval against it on 10 scenes (exp13). Partner quality is decorrelation, not accuracy (exp10); naive >2-model aggregation hurts (exp03/04/07) |
+| Perturbation stability (E_system, tile-phase) | sampling-consistency methods | supported | with shifted grids aligned, beats the baseline on 27/29 rule-selected scenes (sign p<0.001, permutation p=0.002), the pixel control on 19/29, and is the most frequent best signal (12/29) (exp13). Earlier unaligned computation (exp05/09/11) understated it: erratum. Masking-perturbation variant rejected (exp08) |
 | Backbone-version comparison (E_system, v1 vs v1_2) | n/a (EO-specific) | blocked | v1_2 checkpoints fail to load with the current olmoearth_pretrain checkout (state_dict mismatch); requires the newer loader |
-| Embedding dissimilarity (E_dist) | internal-state probing (INSIDE, semantic entropy probes) | mixed | the only signal with a significant mean improvement over the baseline under the pre-registered rule (p=0.019, exp11), driven by high-error floodplain scenes where the reference is weakest; zero wins on the earlier hand-chosen set once controls were included (exp09). Interpretation unstable across scene sets; reference-quality confound unresolved |
+| Embedding dissimilarity (E_dist) | internal-state probing (INSIDE, semantic entropy probes) | partial | no scale-free advantage: 13/29 vs baseline, sign p=0.71 (exp13); the exp11 p=0.019 was a raw-AURC scale artifact from high-error scenes. As implemented it measures distance to the head's training scene, not the pretraining distribution. Out-of-distribution-indicator role untested on a valid testbed |
 | Geographic grounding (E_geo) | retrieval-grounded fact checking | partial | specificity observed (zero false break alarms on one scene); sensitivity untested, no scene with a confirmed consensus break evaluated |
 | Label-free reliability (Dawid-Skene) | annotator modeling | rejected (within family) | inflates every model and inverts the ordering because family members err together; the inflation gap measures correlated-error mass. Viable only with an out-of-family rater (exp07) |
-| Risk-coverage / AURC harness | selective prediction | supported | seven-scene replication exists; lacks confidence intervals and significance tests |
+| Risk-coverage / AURC harness | selective prediction | supported | 29-scene pre-registered set with excess AURC, block-bootstrap intervals, exact sign tests and sign-flip permutation tests (exp13) |
 | Validation on labeled data (labels grade signals, never train them) | pseudo-label validation (PPE §2.3.1) | supported | executed with AWF expert labels under the project's own spatial split; WorldCover remains the reference elsewhere |
 | No-model pixel-statistic controls | ablation practice | supported | ran on all comparison scenes; killed one claim (E_dist under shift) and confirmed two (E_case wins are not edge detection) |
 | Semantic-entropy port (cluster-then-entropy) | Farquhar et al. 2024 | untested | possible refinement of the perturbation signal |
