@@ -36,15 +36,20 @@ CPU only. Stated conservatively:
    (exp02) and 9-class land cover against expert annotations from the AWF
    partner project under its own spatial split (exp04) — max-softmax
    confidence produced the best error ranking of the signals tested.
-2. On two scenes chosen to be difficult — a floodplain interior with
-   ambiguous wetland margins, and a mangrove-coast scene ~1300 km from the
-   training region (exp05) — every evidence channel tested produced a better
-   error ranking than confidence (e.g. floodplain: E_case AURC 0.0235 vs
-   baseline 0.0666; shifted scene: E_dist 0.0014 vs 0.0258).
-3. Embedding distance to training data behaved as an out-of-distribution
-   indicator, not a general error proxy: it was the worst signal in-domain
-   and the best under geographic shift.
-4. Equal-weight disagreement across three models was worse than the best
+2. On a floodplain scene with ambiguous wetland margins (exp05), cross-model
+   disagreement ranked errors better than confidence (AURC 0.0235 vs 0.0666)
+   and retained that margin over no-model image-statistic controls (best
+   control: 0.0384; exp06).
+3. On a mangrove-coast scene ~1300 km from the training region (exp05),
+   model confidence ranked errors worst, but no model signal outperformed
+   trivial NDWI statistics (exp06): that scene's errors are spectrally
+   trivial reference omissions, so it supports only the negative claim about
+   confidence. A shift testbed with non-trivial errors is the first open
+   item.
+4. Embedding distance to training data did not rank in-domain errors (worst
+   signal on the in-domain scene); its proposed role as an
+   out-of-distribution indicator remains untested on a valid shift testbed.
+5. Equal-weight disagreement across three models was worse than the best
    pairwise signal whenever one model was substantially weaker (observed
    twice, exp03 and exp04); multi-model aggregation appears to require
    reliability weighting.
@@ -58,9 +63,10 @@ error ranking; the max-softmax baseline is the highest curve on both.*
 **Limitations.** Each condition has been observed on a single scene or task,
 with small error counts and no significance testing. ESA WorldCover, the
 reference on the unlabeled-region scenes, is least reliable on exactly the
-terrains where the channels performed best; on the shifted scene, part of the
-measured "error" plausibly reflects reference omissions rather than model
-error. Replication against expert labels under shift is the first open item.
+terrains where the channels performed best; on the shifted scene the exp06
+controls show the measured "errors" are spectrally trivial, and that scene is
+therefore excluded as evidence for model-signal superiority. Replication
+against expert labels under shift is the first open item.
 
 The per-technique record with all numbers, conditions, and caveats is in
 [docs/TECHNIQUES.md](docs/TECHNIQUES.md).

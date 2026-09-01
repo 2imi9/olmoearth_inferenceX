@@ -1,0 +1,13 @@
+scene,signal,aurc,n_errors
+kazungula,baseline max-softmax,0.00089,18
+kazungula,spectral variance (no model),0.00121,18
+kazungula,NDWI ambiguity (no model),0.01437,18
+kazungula,NDWI gradient (no model),0.00161,18
+hard_barotse,baseline max-softmax,0.06658,97
+hard_barotse,spectral variance (no model),0.06074,97
+hard_barotse,NDWI ambiguity (no model),0.09308,97
+hard_barotse,NDWI gradient (no model),0.03842,97
+ood_delta,baseline max-softmax,0.02575,29
+ood_delta,spectral variance (no model),0.00088,29
+ood_delta,NDWI ambiguity (no model),0.00071,29
+ood_delta,NDWI gradient (no model),0.00047,29

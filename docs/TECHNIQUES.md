@@ -22,7 +22,7 @@ motivate replication; they do not establish effect sizes.
 | Geographic grounding (E_geo) | retrieval-grounded fact checking | partial | specificity observed (no false break alarms on one scene); sensitivity untested, no scene with a confirmed consensus break evaluated yet |
 | Perturbation stability (E_system, tile-phase) | sampling-consistency methods | mixed | lower AURC than baseline on one easy binary scene (0.00058 vs 0.00089) and one shifted scene (0.0076 vs 0.0258); higher than baseline on AWF multiclass (0.0427 vs 0.0367) |
 | Backbone-version comparison (E_system, v1 vs v1_2) | n/a (EO-specific) | blocked | v1_2 checkpoints fail to load with the current olmoearth_pretrain checkout (state_dict mismatch); requires the newer loader |
-| Embedding dissimilarity (E_dist) | internal-state probing (INSIDE, semantic entropy probes) | mixed | does not rank in-domain errors (AURC 0.00365 vs baseline 0.00089); ranks errors well under geographic domain shift (0.0014 vs 0.0258). Consistent with an out-of-distribution indicator rather than a general error proxy |
+| Embedding dissimilarity (E_dist) | internal-state probing (INSIDE, semantic entropy probes) | partial | does not rank in-domain errors (AURC 0.00365 vs baseline 0.00089). The apparent advantage under domain shift (0.0014 vs 0.0258) did not survive the image-statistic control: trivial NDWI statistics rank the same disagreements better (0.0005), so no shift-condition claim is currently supported (exp06). Requires a shift testbed with non-trivial errors |
 | Max-softmax confidence (baseline) | logit-based confidence | supported | lowest AURC of all signals tested on in-domain tasks; highest AURC on the two hard scenes. All channel claims are relative to this baseline |
 | Risk-coverage / AURC harness | selective prediction | supported | lacks confidence intervals and significance tests; required once scene counts grow |
 | Validation on labeled data (labels grade signals, never train them) | pseudo-label validation (PPE §2.3.1) | supported | executed with AWF expert labels and the project's own spatial split; WorldCover remains the reference on unlabeled-region scenes |
@@ -93,11 +93,12 @@ motivate replication; they do not establish effect sizes.
 ### Embedding dissimilarity (E_dist)
 - Mean cosine distance to the k=5 nearest training patches did not rank
   in-domain errors (AURC 0.00365, vs baseline 0.00089). (exp/exp03)
-- The same statistic ranked errors well under geographic domain shift
-  (~1300 km, mangrove estuary vs miombo training region): AURC 0.0014 vs
-  baseline 0.0258. Together these are consistent with embedding distance
-  acting as an out-of-distribution indicator rather than a general error
-  proxy. (exp/exp05)
+- Under geographic domain shift (~1300 km) the same statistic achieved AURC
+  0.0014 vs baseline 0.0258, but this did not survive the no-model control:
+  trivial NDWI statistics achieved 0.0005 on the same disagreements (exp06).
+  The out-of-distribution-indicator interpretation remains plausible but is
+  currently unsupported by a scene where it outperforms image statistics.
+  (exp/exp05, exp/exp06)
 
 ### Validation against expert labels (AWF)
 - The full pipeline runs against the AWF partner dataset: 1459 expert-labeled
@@ -113,6 +114,25 @@ motivate replication; they do not establish effect sizes.
   metric definitions in olmoearth_projects awf model.yaml. (exp/exp04)
 
   ![AWF risk-coverage and per-class recall](../exp/out/exp04_awf_expert.png)
+
+### No-model image-statistic controls (exp06)
+- Control signals computed directly from pixel values (within-patch spectral
+  variance, patch-mean |NDWI| proximity to the water/land boundary, NDWI
+  gradient magnitude), scored on identical errors with the same harness.
+- Kazungula: every model signal retains a margin over the best control
+  (tile-phase 0.00058, |Nano-Base| 0.00086 vs spectral variance 0.0012).
+- Barotse floodplain: E_case retains a margin over the best control (0.0235
+  vs NDWI gradient 0.0384). The wetland-margin result therefore does not
+  reduce to edge detection.
+- Zambezi delta: all three no-model statistics rank the disagreements as well
+  as or better than every model signal (NDWI gradient 0.0005 vs E_dist
+  0.0014). The delta scene's disagreements are spectrally trivial (the river
+  the reference misses), so this scene supports no claim of model-signal
+  superiority; the E_dist shift claim is withdrawn pending a shift testbed
+  with non-trivial errors.
+- Secondary observation: on both difficult scenes, even no-model statistics
+  rank errors better than max-softmax confidence, underlining how weakly
+  informative the model's own confidence is there.
 
 ### Hard scenes and domain shift (exp05)
 - Water heads trained at Katima Mulilo were evaluated on (a) the Barotse
@@ -131,12 +151,13 @@ motivate replication; they do not establish effect sizes.
   fraction of the counted "errors" may be reference errors rather than model
   errors. The signals rank model-reference disagreement correctly; whether
   that equals model error requires expert-labeled replication.
-- Combined statement of exp02-exp05, stated conservatively: on the in-domain
-  tasks evaluated, max-softmax confidence produced the best error ranking;
-  on the two scenes involving ambiguous terrain or geographic shift, each
-  evidence channel produced a better ranking than confidence. The conditions
-  under which each holds have been observed once each and require
-  replication.
+- Combined statement of exp02-exp06, stated conservatively: on the in-domain
+  tasks evaluated, max-softmax confidence produced the best error ranking. On
+  the ambiguous-wetland scene, cross-model disagreement produced the best
+  ranking and retained its margin over no-model image statistics. On the
+  domain-shift scene, model confidence performed worst but no model signal
+  outperformed trivial image statistics, so only the negative claim about
+  confidence is supported there. Each condition has been observed once.
 
 ### Geographic grounding (E_geo)
 - On a scene where the river is clearly resolved, the OSM centerline
@@ -155,9 +176,9 @@ motivate replication; they do not establish effect sizes.
 
 ## Open items, in priority order
 
-1. Replicate the domain-shift comparison against expert labels rather than
-   WorldCover (candidate design: geographic-corner holdout within the AWF
-   dataset).
+1. A domain-shift testbed with non-trivial errors and expert labels
+   (candidate design: geographic-corner holdout within the AWF dataset). The
+   delta scene is disqualified as evidence by the exp06 controls.
 2. E_geo sensitivity: evaluate on a scene containing a confirmed consensus
    break and measure whether the centerline check detects it.
 3. Reliability-weighted multi-model aggregation (Dawid-Skene direction),

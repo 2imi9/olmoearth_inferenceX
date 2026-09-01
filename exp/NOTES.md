@@ -77,3 +77,12 @@ wetland margins, Zambezi delta mangrove shift). E_case 3x better on margins,
 E_dist 18x better under shift. Weak-truth caveat: delta "errors" trace a river
 WorldCover likely misses. Ledger has the full statement. Eval windows cached
 in exp/out/exp05_cache.npz.
+
+## exp06 — no-model image-statistic controls (2026-08-31)
+
+Spectral variance, NDWI ambiguity, NDWI gradient vs the same errors.
+Kazungula and Barotse claims survive (E_case keeps a margin over the best
+control). The delta E_dist shift claim does NOT survive: trivial NDWI stats
+rank those disagreements better. Claim withdrawn in ledger and README.
+Secondary: no-model stats outrank max-softmax on both hard scenes.
+Results: exp/out/exp06_controls.csv.
