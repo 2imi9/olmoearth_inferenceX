@@ -1,14 +1,21 @@
 # olmoearth_inferenceX
 
-Experiments on locating errors in OlmoEarth predictions over regions with no
-labels.
+Experiments on locating errors in
+[OlmoEarth](https://allenai.org/olmoearth) predictions over regions with no
+labels. Everything runs on Ai2's public artifacts: the
+[olmoearth_pretrain](https://github.com/allenai/olmoearth_pretrain) encoders
+and loader, checkpoints from
+[HuggingFace](https://huggingface.co/allenai/OlmoEarth-v1-Base), and the
+project datasets linked below.
 
 ## Result
 
 Each signal gives every map window a suspicion score. The four signals:
 
-- **E_case** - cross-model disagreement: two models predict the same window
-  differently.
+- **E_case** - cross-model disagreement: two models
+  ([OlmoEarth v1 Nano](https://huggingface.co/allenai/OlmoEarth-v1-Nano) and
+  [Base](https://huggingface.co/allenai/OlmoEarth-v1-Base)) predict the same
+  window differently.
 - **E_system** - tiling instability: the prediction flips when the input
   grid shifts by a few pixels.
 - **E_dist** - embedding distance: the window looks unlike anything in the

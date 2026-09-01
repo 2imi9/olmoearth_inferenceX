@@ -105,6 +105,10 @@ harness, per condition.
   ![No-model controls vs model signals](../exp/out/exp06_controls.png)
 
 ### Validation against expert labels (AWF, exp04)
+- Source: the
+  [olmoearth_projects_awf dataset](https://huggingface.co/datasets/allenai/olmoearth_projects_awf)
+  with classes and split defined by its
+  [task config](https://github.com/allenai/olmoearth_projects/blob/main/olmoearth_run_data/awf/model.yaml).
 - The full pipeline runs against the AWF partner dataset: 1459 expert-labeled
   points, 12-month Sentinel-2 stacks, the project's own 1115/344 spatial
   split. A linear head on frozen Base embeddings reaches 85.2% validation
@@ -210,7 +214,8 @@ harness, per condition.
   (+0.112, +0.116, +0.035) directly measures correlated-error mass per
   model. Label-free accuracy estimation within a single family is
   unsupported; an out-of-family rater (Clay or AnySat, both wrapped in
-  olmoearth_pretrain evals) is the designed fix, untested.
+  [olmoearth_pretrain/evals](https://github.com/allenai/olmoearth_pretrain/tree/main/olmoearth_pretrain/evals))
+  is the designed fix, untested.
 
 ### Perturbation stability (E_system)
 - Tile-phase: shifting the input window origin by 1-3 pixels (sub-patch
@@ -261,6 +266,9 @@ harness, per condition.
   scenes), so a fraction of measured "model error" is label noise.
 
 ### Production inference exports (allenai/olmoearth_lcc)
+- Source: the
+  [olmoearth_lcc dataset](https://huggingface.co/datasets/allenai/olmoearth_lcc)
+  backing the [OlmoEarth LCC product](https://olmoearth-lcc.allen.ai).
 - The published continent-scale LCC run (encoder OlmoEarth-v1.2-Base,
   32768x32768-pixel UTM tiles) provides 9-band uint8 summary rasters: band 1
   binary-change probability (scaled 0-255), bands 2-5 argmax classes, bands
@@ -275,6 +283,12 @@ harness, per condition.
   annotators verify), so label locations are correlated with model beliefs.
 
 ### Infrastructure
+- Encoders, loader, and eval wrappers come from
+  [allenai/olmoearth_pretrain](https://github.com/allenai/olmoearth_pretrain);
+  dataset tooling and the window format come from
+  [allenai/rslearn](https://github.com/allenai/rslearn); per-project task
+  configs live in
+  [allenai/olmoearth_projects](https://github.com/allenai/olmoearth_projects).
 - The olmoearth_pretrain base dependency set suffices for inference (torch,
   einops, huggingface_hub, numpy); CPU handles 128x128-pixel windows at
   patch size 4, and a single consumer GPU (tested: RTX 5090 laptop, torch
