@@ -28,5 +28,4 @@ selective-prediction evaluation (risk-coverage / AURC) of land cover
 inference; cross-model disagreement used as an audit signal; and the combination of such
 signals into an audit that is scored against the audited model's own
 confidence with no-model controls, over regions without labels. The
-contribution claim is the audit protocol and the ViT-specific
-instantiations, not the signal families.
+contribution claim is the audit protocol and its finding that a perturbation-based instability signal, statistically indistinguishable from proximity to a boundary in the model's own prediction map, ranks errors better than confidence on the rule-selected scenes (exp13/exp14). Boundary-concentrated error itself is well known in segmentation and land-cover validation (trimap and Boundary-IoU evaluation; mixed-pixel effects, Foody 2002; Radoux and Bogaert 2017) and is not claimed as new.
