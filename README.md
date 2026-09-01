@@ -13,15 +13,18 @@ Each signal gives every map window a suspicion score. The four signals:
   grid shifts by a few pixels.
 - **E_dist** - embedding distance: the window looks unlike anything in the
   training data.
-- **E_geo** - map check: the prediction contradicts a reference river map.
-  Tested only for false alarms so far, so it is not in the table.
+- **E_geo** - map check: the prediction contradicts a reference river map
+  ([OSM waterways](https://wiki.openstreetmap.org/wiki/Key:waterway) for
+  now). Tested only for false alarms so far, so it is not in the table.
 
 AURC measures how well a suspicion score finds real errors; lower is
 better. Every signal must beat two references: the model's own confidence
-(max-softmax, the probability the model assigns its chosen class), and a
-plain pixel statistic computed without any model (the control).
+(max-softmax, the probability the model assigns its chosen class; this is
+what ships as the top-1 probability bands of the
+[olmoearth_lcc production rasters](https://huggingface.co/datasets/allenai/olmoearth_lcc)),
+and a plain pixel statistic computed without any model (the control).
 
-| AURC (lower = finds errors better) | In-domain (expert labels, 51 errors) | Ambiguous wetland margins (97 errors) | Far from training region (29 errors) |
+| AURC (lower = finds errors better) | In-domain ([AWF expert labels](https://huggingface.co/datasets/allenai/olmoearth_projects_awf), 51 errors) | Ambiguous wetland margins (97 errors) | Far from training region (29 errors) |
 |---|---|---|---|
 | model's own confidence (baseline) | **0.0367** | 0.0666 | 0.0258 |
 | cross-model disagreement (E_case) | 0.0533 | **0.0235** | 0.0103 |
@@ -55,6 +58,15 @@ We port LLM hallucination-detection ideas to earth observation. Labels only
 evaluate signals, never build them. Train and evaluation areas are always
 geographically separate. A no-model control runs in every comparison.
 
+Upstream evaluation we compare against: OlmoEarth's supervised metrics run
+through
+[rslearn segmentation tasks](https://github.com/allenai/rslearn/blob/master/rslearn/train/tasks/segmentation.py)
+(the [AWF task config](https://github.com/allenai/olmoearth_projects/blob/main/olmoearth_run_data/awf/model.yaml)
+defines the classes and split we reuse) and
+[olmoearth_pretrain/evals](https://github.com/allenai/olmoearth_pretrain/tree/main/olmoearth_pretrain/evals).
+Those measure accuracy where labels exist; this repository tests the
+confidence signal itself where they do not.
+
 ## Reproduce
 
 ```
@@ -62,7 +74,9 @@ uv sync --extra geo
 uv run python exp/exp02_full_slice.py
 ```
 
-Experiments are exp01-exp11 in `exp/`. exp04 needs the AWF dataset
-(`huggingface.co/datasets/allenai/olmoearth_projects_awf`) under
-`data/awf/dataset/`. `uv sync` installs CPU torch; the GPU runs used the
+Experiments are exp01-exp11 in `exp/`. Model checkpoints come from
+[HuggingFace allenai](https://huggingface.co/allenai) (OlmoEarth v1 Nano to
+Large). exp04 needs the
+[AWF dataset](https://huggingface.co/datasets/allenai/olmoearth_projects_awf)
+extracted under `data/awf/dataset/`. `uv sync` installs CPU torch; the GPU runs used the
 cu128 wheel. Experimental repository; a clean library release comes later.
