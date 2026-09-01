@@ -1,5 +1,21 @@
 # Experiment notes
 
+Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
+
+| Exp | Topic |
+|---|---|
+| smoke_test | checkpoint load; noise floor for cross-model agreement |
+| exp01 | embedding-level agreement map, Kazungula |
+| exp02 | full audit slice: heads, E_case, E_geo, baseline, risk-coverage |
+| exp03 | tri-model, tile-phase, E_dist, v1_2 attempt |
+| exp04 | AWF expert-label validation, official spatial split |
+| exp05 | difficult scenes: wetland margins, domain shift |
+| exp06 | no-model pixel-statistic controls |
+| exp07 | Dawid-Skene label-free reliability (rejected within family) |
+| exp08 | masking perturbation (rejected) |
+| exp09 | seven-scene replication with control |
+| exp10 | rater strength vs diversity (diversity wins) |
+
 ## exp01 — first E_case map (2026-08-31)
 
 Setup: one S2 L2A scene (Planetary Computer, 0-5% cloud, 2024 dry season),
