@@ -1,158 +1,175 @@
 # Technique ledger
 
-Standing record of what is verified, organized by technique. No timeline: a claim
-lives here only once an experiment supports it, and gets amended or deleted when
-a later experiment says otherwise. Chronology lives in exp/NOTES.md. Every entry
-names its evidence (exp script) so claims stay reproducible.
+Standing record of experimental results, organized by technique rather than by
+date. A claim appears here only when an experiment supports it, and is amended
+or removed when a later experiment contradicts it. Chronology is kept in
+exp/NOTES.md. Every entry cites the experiment script that produced it.
 
-Status codes: VERIFIED (experiment supports it) / PARTIAL (some evidence, key
-condition untested) / UNTESTED / OUT-OF-SCOPE-V1.
+Status terms: **supported** (at least one experiment consistent with the
+technique's claim, under the stated conditions) / **mixed** (results differ
+across conditions) / **partial** (some evidence; a key condition untested) /
+**untested** / **blocked** / **out of scope (v1)**.
+
+All AURC comparisons below come from single scenes or single tasks with small
+error counts and no significance testing. They establish direction and
+motivate replication; they do not establish effect sizes.
 
 ## Summary
 
-| Technique | LLM ancestor | Status | Gap that remains |
+| Technique | Related LLM-domain method | Status | Open items |
 |---|---|---|---|
-| Cross-model disagreement (E_case) | SelfCheckGPT / self-consistency | VERIFIED* | 3x better than baseline on wetland-margin floodplain (0.0235 vs 0.0666); loses in-domain multiclass; weak-rater effect twice-replicated. *weak-truth caveat on hard scenes |
-| Geographic grounding (E_geo) | retrieval-grounded fact checking | PARTIAL | specificity shown (no false alarms), sensitivity never tested (no scene with a real break yet) |
-| Perturbation stability (E_system) | semantic entropy / paraphrase robustness | MIXED | beat max-softmax on the easy binary scene (0.00058 vs 0.00089) but LOST on AWF multiclass expert labels (0.0427 vs 0.0367); condition-dependent, not a general win |
-| Backbone-version comparison (E_system) | n/a (EO-specific) | BLOCKED | v1_2 load fails on current checkout (LatentMIM state_dict mismatch, confirmed); pull newer olmoearth_pretrain |
-| Embedding dissimilarity (E_dist) | internal-state probing (INSIDE, SEPs) | VERIFIED* | role confirmed both ways: useless in-domain (4x worse), dominant under domain shift (0.0014 vs 0.0258, 18x better, mangrove delta). *weak-truth caveat |
-| Max-softmax baseline | logit confidence | VERIFIED | wins on in-domain class confusion (exp04); collapses on wetland margins and domain shift where every channel beats it (exp05) |
-| Risk-coverage / AURC harness | selective prediction | VERIFIED | needs CIs / significance once scenes multiply |
-| Weak-truth validation loop | MRP pseudo-label validation (PPE) | VERIFIED | harness now runs on real partner expert labels (AWF, official rslearn spatial split, 344 val points) |
-| Semantic-entropy port (cluster-then-entropy) | Farquhar et al. | UNTESTED | refinement of E_system, not started |
-| Verifier head trained on labeled regions | process reward models | OUT-OF-SCOPE-V1 | needs labels as training input; revisit after channels ship |
-| Channel fusion | n/a | OUT-OF-SCOPE-V1 | per-channel ranking only; Borda if forced |
+| Cross-model disagreement (E_case) | self-consistency / SelfCheckGPT | mixed | lower AURC than the confidence baseline on a wetland-margin scene (0.0235 vs 0.0666); higher AURC in-domain on AWF (0.0533 vs 0.0367). Reference-label quality limits the wetland result. Aggregation across >2 models unresolved |
+| Geographic grounding (E_geo) | retrieval-grounded fact checking | partial | specificity observed (no false break alarms on one scene); sensitivity untested, no scene with a confirmed consensus break evaluated yet |
+| Perturbation stability (E_system, tile-phase) | sampling-consistency methods | mixed | lower AURC than baseline on one easy binary scene (0.00058 vs 0.00089) and one shifted scene (0.0076 vs 0.0258); higher than baseline on AWF multiclass (0.0427 vs 0.0367) |
+| Backbone-version comparison (E_system, v1 vs v1_2) | n/a (EO-specific) | blocked | v1_2 checkpoints fail to load with the current olmoearth_pretrain checkout (state_dict mismatch); requires the newer loader |
+| Embedding dissimilarity (E_dist) | internal-state probing (INSIDE, semantic entropy probes) | mixed | does not rank in-domain errors (AURC 0.00365 vs baseline 0.00089); ranks errors well under geographic domain shift (0.0014 vs 0.0258). Consistent with an out-of-distribution indicator rather than a general error proxy |
+| Max-softmax confidence (baseline) | logit-based confidence | supported | lowest AURC of all signals tested on in-domain tasks; highest AURC on the two hard scenes. All channel claims are relative to this baseline |
+| Risk-coverage / AURC harness | selective prediction | supported | lacks confidence intervals and significance tests; required once scene counts grow |
+| Validation on labeled data (labels grade signals, never train them) | pseudo-label validation (PPE §2.3.1) | supported | executed with AWF expert labels and the project's own spatial split; WorldCover remains the reference on unlabeled-region scenes |
+| Semantic-entropy port (cluster-then-entropy) | Farquhar et al. 2024 | untested | possible refinement of the perturbation signal |
+| Verifier head trained on labeled regions | learned verifiers / reward models | out of scope (v1) | requires labels as training input |
+| Channel fusion | n/a | out of scope (v1) | per-channel reporting only; rank aggregation if a single ordering is required |
 
-## Verified facts
+## Results
 
 ### Production inference exports (allenai/olmoearth_lcc)
-- The at-scale LCC run (encoder OlmoEarth-v1.2-Base, continent-scale Africa,
-  32768x32768-px UTM tiles) publishes 9-band uint8 summary COGs: band 1
-  binary-change probability (0-255), bands 2-5 argmax classes, bands 6-7
-  probability of the argmax class, bands 8-9 month-encoded change dates.
-  Answer to the probabilities-vs-argmax question: PARTIAL probabilities
-  (top-1 score + binary head), not full per-class distributions. Max-softmax
-  ships in the product, so the baseline comparison runs directly on
-  production output. (README of allenai/olmoearth_lcc)
-- Those COGs are public; windows are HTTP range-readable, so production
-  output can be audited without Ai2 infrastructure.
-- Label-bias caveat for any validation against olmoearth_lcc annotations:
-  most collection phases are output-based labeling (model proposes, human
-  verifies), so label locations correlate with model beliefs. Relevant to the
-  correlated-error open question.
+- The published continent-scale LCC run (encoder OlmoEarth-v1.2-Base,
+  32768x32768-pixel UTM tiles) provides 9-band uint8 summary rasters: band 1
+  binary-change probability (scaled 0-255), bands 2-5 argmax classes, bands
+  6-7 the probability of the argmax class, bands 8-9 month-encoded change
+  dates. The export format therefore carries partial probability information
+  (top-1 score and one binary-head probability), not full per-class
+  distributions. (Documented in the dataset README.)
+- The rasters are cloud-optimized GeoTIFFs on public storage; windows can be
+  read over HTTP without bulk download.
+- Caveat for any validation against the olmoearth_lcc annotations: most
+  collection phases used output-based labeling (model proposes candidates,
+  annotators verify), so label locations are correlated with model beliefs.
 
 ### Infrastructure
-- Inference-only install of olmoearth_pretrain is the base dependency set
-  (torch, einops, hf_hub, numpy); no training extra needed. CPU sufficient for
-  128x128 windows at patch 4. (exp/smoke_test.py)
-- All checkpoints public and ungated on HF: v1 Nano/Tiny/Base/Large, v1_1
-  Nano/Tiny/Base, v1_2 Nano/Tiny/Small/Base, plus FT variants (AWF, LFMC,
-  Mangrove, ForestLossDriver, EcosystemTypeMapping). Multi-model and
-  cross-version signals need zero Ai2 infrastructure.
-- Planetary Computer S2 L2A + ESA WorldCover on a shared 10 m grid works as a
-  self-serve data path. OSM Overpass needs mirror fallback (mail.ru mirror most
-  reliable in practice). HF_HUB_OFFLINE=1 for cached-checkpoint reruns.
+- The olmoearth_pretrain base dependency set suffices for inference (torch,
+  einops, huggingface_hub, numpy); CPU inference handles 128x128-pixel windows
+  at patch size 4. (exp/smoke_test.py)
+- All encoder checkpoints are public: v1 Nano/Tiny/Base/Large, v1_1
+  Nano/Tiny/Base, v1_2 Nano/Tiny/Small/Base, plus fine-tuned variants (AWF,
+  LFMC, Mangrove, ForestLossDriver, EcosystemTypeMapping). Multi-model and
+  cross-version signals require no private infrastructure.
+- Planetary Computer Sentinel-2 L2A and ESA WorldCover can be read onto a
+  shared 10 m grid; OSM Overpass requires mirror fallback.
 
 ### Cross-model disagreement (E_case)
-- Noise floor: mean local-structure agreement between Nano and Base on random
-  input is ~0.59, not 0 (shared patchification/normalization). Any agreement
-  claim must be read against this floor. (exp/smoke_test.py)
-- Disagreement is structured, not random: it concentrates at class boundaries
-  and thin structures (shoreline, bridge) at both embedding level and
-  prediction level. (exp/exp01, exp/exp02)
-- On an easy scene (400 m river, dry season, 2% error rate), |p_a - p_b|
-  does NOT beat max-softmax on AURC (0.0011 vs 0.0009). The model's own
-  confidence suffices when the task is easy. (exp/exp02)
+- Reference point: mean local-similarity-structure agreement between Nano and
+  Base on random input is approximately 0.59, not 0, because the models share
+  patchification and input normalization. Agreement values must be interpreted
+  relative to this floor. (exp/smoke_test.py)
+- Disagreement is spatially structured: it concentrates at class boundaries
+  and thin structures (shoreline, a bridge) at both the embedding level and
+  the prediction level. (exp/exp01, exp/exp02)
 
-### Perturbation stability (E_system tile-phase)
-- Shifting the input window by 1-3 px (sub-patch phase) and measuring the std
-  of water probability across shifts ranks Base's errors BETTER than the
-  model's own confidence: AURC 0.00058 vs 0.00089 on the Kazungula scene. The
-  signal map traces the shoreline continuously. First channel to beat the
-  baseline. Single scene, 18 error patches: directional until replicated.
-  (exp/exp03)
+  ![Embedding-level agreement, Kazungula](../exp/out/exp01_zambezi_agreement.png)
+- On a dry-season scene with a ~400 m river (Base error rate 2%), pairwise
+  |p_Nano - p_Base| did not achieve lower AURC than max-softmax (0.0011 vs
+  0.0009). (exp/exp02)
+- On a floodplain-interior scene with ambiguous wetland margins (97 error
+  patches), the same signal achieved substantially lower AURC than
+  max-softmax (0.0235 vs 0.0666), subject to the reference-label caveat
+  below. (exp/exp05)
+- Equal-weight aggregation over three models performed worse than the best
+  pairwise signal (AURC 0.00105 vs 0.00086) when one model (Tiny, accuracy
+  0.951 vs 0.973/0.982) was substantially weaker; the same pattern recurred
+  on AWF with Nano (accuracy 0.756) as the weak member. Multi-model
+  aggregation appears to require reliability weighting. (exp/exp03, exp/exp04)
 
-### Cross-model disagreement, aggregation
-- Naive tri-model std underperforms pairwise |Nano-Base| (AURC 0.00105 vs
-  0.00086) because Tiny is the weakest head (0.951 vs 0.973/0.982) and equal
-  weighting lets it inject noise. Multi-rater aggregation needs reliability
-  weighting (Dawid-Skene direction), not plain std. (exp/exp03)
+### Perturbation stability (E_system, tile-phase)
+- Shifting the input window origin by 1-3 pixels (sub-patch phase) and taking
+  the standard deviation of predicted probability across shifts produced
+  lower AURC than max-softmax on the easy binary scene (0.00058 vs 0.00089;
+  18 error patches) and on the domain-shifted scene (0.0076 vs 0.0258), and
+  higher AURC on the AWF multiclass task (0.0427 vs 0.0367). The signal map
+  traces the shoreline continuously. (exp/exp03, exp/exp04, exp/exp05)
+
+  ![Signal maps at Kazungula](../exp/out/exp03_more_channels.png)
 
 ### Embedding dissimilarity (E_dist)
-- k-NN cosine distance to train patches does not rank in-domain errors (AURC
-  0.00365, 4x worse than baseline). Expected and now demonstrated: novelty is
-  not error when the eval region is in-domain. E_dist's claim must be tested
-  on an actually out-of-domain region. (exp/exp03)
+- Mean cosine distance to the k=5 nearest training patches did not rank
+  in-domain errors (AURC 0.00365, vs baseline 0.00089). (exp/exp03)
+- The same statistic ranked errors well under geographic domain shift
+  (~1300 km, mangrove estuary vs miombo training region): AURC 0.0014 vs
+  baseline 0.0258. Together these are consistent with embedding distance
+  acting as an out-of-distribution indicator rather than a general error
+  proxy. (exp/exp05)
 
-### Partner-truth validation (AWF)
-- The full audit harness runs against real expert labels: AWF dataset, official
-  1115/344 rslearn spatial split, frozen Base + multiclass head reaches 85.2%
-  (their finetuned model: 89.5%). Error sample: 51 errors. (exp/exp04)
-- On this in-domain multiclass task the max-softmax baseline WINS: AURC 0.0367
-  vs tile-phase 0.0427 vs Nano-Base TV 0.0533. Tile-phase's easy-scene win did
-  not transfer. Working hypothesis: confidence excels at ranked in-domain
-  class-confusion errors; the channels' claimed territory is correlated /
-  systematic / OOD failures, which this task does not exercise. (exp/exp04)
-- Weak-rater effect replicated: Nano is 75.6% on this task and TV disagreement
-  against it is the worst signal tested. Two tasks, two confirmations:
-  disagreement needs raters of comparable strength or reliability weighting.
-- Weakest class: herbaceous wetland (50% recall). Wetland margins are also the
-  posited hard case for the water task; consistent story. (exp/exp04)
+### Validation against expert labels (AWF)
+- The full pipeline runs against the AWF partner dataset: 1459 expert-labeled
+  points, 12-month Sentinel-2 stacks, the project's own 1115/344 spatial
+  split. A linear head on frozen Base embeddings reaches 85.2% validation
+  accuracy (the project's fully fine-tuned model: 89.5%), giving 51 errors
+  for signal evaluation. (exp/exp04)
+- On this in-domain multiclass task, max-softmax achieved the lowest AURC
+  (0.0367) of the signals tested (tile-phase 0.0427, Nano-Base total
+  variation 0.0533). (exp/exp04)
+- Lowest per-class recall: herbaceous wetland (0.50). (exp/exp04)
+
+  ![AWF risk-coverage and per-class recall](../exp/out/exp04_awf_expert.png)
 
 ### Hard scenes and domain shift (exp05)
-- The condition-dependence is now mapped on both sides. Heads trained at
-  Katima, evaluated on (a) Barotse floodplain interior (wetland margins) and
-  (b) Zambezi delta mangrove coast (~1300 km shift). Every channel beats the
-  baseline on both: E_case 0.0235 vs baseline 0.0666 on the floodplain;
-  E_dist 0.0014 vs 0.0258 under shift. Confidence is overconfident-wrong
-  under shift, matching the LLM-land expectation. (exp/exp05)
-- Caveat that keeps this honest: WorldCover is weak truth on exactly these
-  terrains. On the delta the "errors" trace a narrow river WorldCover likely
-  misses, so part of the win is the audit correctly flagging reference
-  disagreement, not proven model error. Replicating the shift condition with
-  expert truth is the remaining step (e.g. geographic-corner holdout on AWF).
-- Combined exp04+05 statement: max-softmax suffices for in-domain confusion;
-  the evidence channels earn their keep on wetland margins and out-of-domain
-  regions, each channel strongest in its own regime (E_case on ambiguity,
-  E_dist on shift). This is the frame's core claim, now with numbers.
+- Water heads trained at Katima Mulilo were evaluated on (a) the Barotse
+  floodplain interior (ambiguous wetland margins, in-region) and (b) the
+  Zambezi delta mangrove coast (~1300 km from the training region). On both
+  scenes, every channel tested achieved lower AURC than max-softmax
+  (floodplain: E_case 0.0235, E_dist 0.0289, tile-phase 0.0555, baseline
+  0.0666; delta: E_dist 0.0014, tile-phase 0.0076, E_case 0.0103, baseline
+  0.0258). (exp/exp05)
+
+  ![Hard scenes](../exp/out/exp05_hard_scenes.png)
+
+- Reference-label caveat: ESA WorldCover is least reliable on exactly these
+  terrains. On the delta scene, the disagreements between model and reference
+  trace a narrow river that WorldCover plausibly misses, so an unknown
+  fraction of the counted "errors" may be reference errors rather than model
+  errors. The signals rank model-reference disagreement correctly; whether
+  that equals model error requires expert-labeled replication.
+- Combined statement of exp02-exp05, stated conservatively: on the in-domain
+  tasks evaluated, max-softmax confidence produced the best error ranking;
+  on the two scenes involving ambiguous terrain or geographic shift, each
+  evidence channel produced a better ranking than confidence. The conditions
+  under which each holds have been observed once each and require
+  replication.
 
 ### Geographic grounding (E_geo)
-- OSM centerline check produces zero false break alarms on a scene where the
-  river is clearly resolved (52 centerline patches, 0 consensus-dry).
-  Specificity evidence only; sensitivity untested. (exp/exp02)
+- On a scene where the river is clearly resolved, the OSM centerline
+  consistency check produced zero false break alarms (52 centerline patches,
+  0 flagged). This is evidence of specificity only; no scene with a confirmed
+  consensus break has been evaluated, so sensitivity is unknown. (exp/exp02)
 
-### Heads and transfer
-- Frozen-embedding logistic heads transfer spatially: trained on one reach,
-  97-98% accuracy vs WorldCover on a reach ~110 km away. Spatial split is
-  cheap to honor and should never be dropped. (exp/exp02)
-- WorldCover-as-truth carries temporal drift error (2021 labels vs 2024
-  scenes; moving sandbars). Treat a few points of "model error" as label noise.
+  ![Full audit slice, Kazungula](../exp/out/exp02_full_slice.png)
 
-## Gaps to fill, in priority order
+### Heads and spatial transfer
+- Linear heads on frozen embeddings transfer spatially: trained on one river
+  reach, 97-98% accuracy against WorldCover on a reach ~110 km away.
+  (exp/exp02)
+- WorldCover-as-reference carries temporal drift (2021 labels vs 2024 scenes),
+  so a fraction of measured "model error" is label noise.
 
-1. DONE with weak-truth caveat (see Hard scenes section). Remaining: replicate
-   the shift condition against expert truth (AWF geographic-corner holdout).
-2. E_geo sensitivity. Find or construct a scene with a real consensus break
-   (narrow reach the models actually miss) and show the centerline check fires.
-   Until then E_geo has only proven it stays quiet.
-3. Tri-model E_case. Add Tiny; three raters is the Dawid-Skene identifiability
-   minimum. Also decide the aggregation (pairwise mean vs majority-vs-outlier).
-4. E_system tile-phase. Shift the window grid by fractions of a patch, measure
-   prediction flips. Uses the same cached-window machinery as exp02.
-5. E_system v1 vs v1_2. Same windows, both backbones. Requires pulling newer
-   olmoearth_pretrain for the v1_2 loader path.
-6. E_dist. Compute AOA/DI over embeddings for a window vs a training-domain
-   reference sample. Read SHRUG-FM first and record here exactly what it
-   already covers so the contribution boundary is explicit.
-7. RESOLVED for the at-scale LCC pipeline (see Verified facts): exports carry
-   binary-change probability + argmax classes + top-1 probability, not full
-   distributions. Remaining sliver: confirm Studio per-project exports match.
-8. Partner-project validation. Labels FOUND, not yet used:
-   allenai/olmoearth_projects_awf (expert AWF LULC annotations, 418 KB
-   geojson, pairs with public OlmoEarth-v1-FT-AWF-Base checkpoint),
-   olmoearth_projects_mangrove, and allenai/olmoearth_lcc training_data
-   (verified change/no-change points). Next: run the audit signals over an AWF
-   AOI and score against the expert labels instead of WorldCover.
-9. GRIT/GRWL centerlines. OSM is the placeholder reference; GRIT is the real
-   one and adds width attributes E_geo can condition on.
+## Open items, in priority order
+
+1. Replicate the domain-shift comparison against expert labels rather than
+   WorldCover (candidate design: geographic-corner holdout within the AWF
+   dataset).
+2. E_geo sensitivity: evaluate on a scene containing a confirmed consensus
+   break and measure whether the centerline check detects it.
+3. Reliability-weighted multi-model aggregation (Dawid-Skene direction),
+   motivated by the twice-observed weak-member effect.
+4. v1 vs v1_2 comparison on identical windows; requires updating the
+   olmoearth_pretrain checkout for the v1_2 loader.
+5. E_dist formalization: AOA/Dissimilarity Index (Meyer & Pebesma 2021) in
+   place of raw k-NN distance; delineate overlap with SHRUG-FM (CVPR 2026
+   EarthVision) before claiming novelty.
+6. Confidence intervals and significance testing for AURC comparisons once
+   multiple scenes per condition exist.
+7. Confirm whether Studio per-project exports match the olmoearth_lcc export
+   format (partial probabilities).
+8. Replace OSM centerlines with GRIT, which adds width attributes that E_geo
+   can condition on.
+9. Audit a window of the published LCC production output directly (HTTP
+   range reads) against river centerlines.

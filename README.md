@@ -1,53 +1,96 @@
 # olmoearth_inferenceX
 
-Auditing OlmoEarth inference quality over regions with no ground-truth labels.
+Experiments toward assessing the reliability of OlmoEarth model inference over
+regions without ground-truth labels.
 
-The idea: LLMs already have a working toolkit for judging outputs without a
-reference answer (hallucination detection). Those techniques mostly do not
-depend on language, so they port to earth observation, the same way the RoPE
-fix in OlmoEarth v1.2 ported an LLM mechanism to fix the v1 striping artifact.
+## Motivation
 
-| Signal | LLM ancestor | OlmoEarth mechanism |
+Fine-tuned earth observation models are routinely applied to regions where no
+labels exist, which is precisely where supervised evaluation metrics say
+nothing. The language-model literature has developed several families of
+techniques for judging model outputs without a reference answer
+(hallucination detection, selective prediction). Most of these techniques do
+not depend on language, and this repository tests whether they transfer to
+geospatial inference.
+
+| Signal | Related LLM-domain method | Geospatial instantiation |
 |---|---|---|
-| E_case model disagreement | SelfCheckGPT / self-consistency | Nano/Tiny/Base prediction divergence |
-| E_system perturbation stability | semantic entropy | tile-grid phase shifts |
-| E_geo geographic grounding | retrieval-grounded fact checking | predictions vs reference river centerlines |
-| E_dist embedding dissimilarity | internal-state probing | k-NN distance to training distribution |
+| E_case: cross-model disagreement | self-consistency; SelfCheckGPT (Manakul et al., EMNLP 2023) | divergence between Nano/Tiny/Base predictions on the same input |
+| E_system: perturbation stability | semantic entropy (Farquhar et al., Nature 2024) | prediction variance under sub-patch shifts of the tiling grid |
+| E_geo: geographic grounding | retrieval-grounded fact checking | prediction consistency against reference river centerlines (GRIT, GRWL, OSM) |
+| E_dist: embedding dissimilarity | internal-state probing (INSIDE; semantic entropy probes) | distance from the training distribution in embedding space |
 
-Output posture: a ranked audit of suspect windows with risk-coverage curves,
-not a single accuracy number. Every signal is scored against the max-softmax
-confidence of the audited model, which is the baseline to beat.
+The output posture is a ranked audit: per-window suspicion scores evaluated
+as risk-coverage curves (AURC), not a single accuracy estimate per region.
+Every signal is compared against the max-softmax confidence of the audited
+model, which is the baseline any proposed signal must improve on. Labeled
+data is used only to evaluate the signals, never to construct them. All
+splits are spatial.
 
-## Headline so far
+## Findings to date
 
-Confidence wins on in-domain class confusion (verified on AWF partner expert
-labels). It collapses on ambiguous wetland margins and under domain shift,
-where every evidence channel beats it: model disagreement 3x better on the
-Barotse floodplain, embedding distance 18x better on the Zambezi delta
-(weak-truth caveats documented in the ledger).
+Five experiments (exp01-exp05), all on public data and public checkpoints,
+CPU only. Stated conservatively:
 
-## Layout
+1. On the in-domain tasks evaluated — an easy dry-season river scene
+   (exp02) and 9-class land cover against expert annotations from the AWF
+   partner project under its own spatial split (exp04) — max-softmax
+   confidence produced the best error ranking of the signals tested.
+2. On two scenes chosen to be difficult — a floodplain interior with
+   ambiguous wetland margins, and a mangrove-coast scene ~1300 km from the
+   training region (exp05) — every evidence channel tested produced a better
+   error ranking than confidence (e.g. floodplain: E_case AURC 0.0235 vs
+   baseline 0.0666; shifted scene: E_dist 0.0014 vs 0.0258).
+3. Embedding distance to training data behaved as an out-of-distribution
+   indicator, not a general error proxy: it was the worst signal in-domain
+   and the best under geographic shift.
+4. Equal-weight disagreement across three models was worse than the best
+   pairwise signal whenever one model was substantially weaker (observed
+   twice, exp03 and exp04); multi-model aggregation appears to require
+   reliability weighting.
 
-- `docs/TECHNIQUES.md` - the technique ledger: standing results per technique,
-  each claim tied to the experiment that supports it, gaps enumerated. Start here.
-- `exp/` - experiments (exp01-exp05) and their figures in `exp/out/`.
-- `exp/NOTES.md` - chronological lab log.
-- `oe_inferencex/` - the library-in-progress: `evidence.py` is pure math
-  (no network), `data.py` and `awf.py` are data access.
-- `reports/` - point-in-time writeups.
+![Hard scenes](exp/out/exp05_hard_scenes.png)
 
-## Run it
+*Risk-coverage on the two difficult scenes (exp05). Top: Barotse floodplain
+interior. Bottom: Zambezi delta mangrove coast. Lower curves indicate better
+error ranking; the max-softmax baseline is the highest curve on both.*
 
-Everything runs on CPU with public data and public checkpoints; no special
-infrastructure.
+**Limitations.** Each condition has been observed on a single scene or task,
+with small error counts and no significance testing. ESA WorldCover, the
+reference on the unlabeled-region scenes, is least reliable on exactly the
+terrains where the channels performed best; on the shifted scene, part of the
+measured "error" plausibly reflects reference omissions rather than model
+error. Replication against expert labels under shift is the first open item.
+
+The per-technique record with all numbers, conditions, and caveats is in
+[docs/TECHNIQUES.md](docs/TECHNIQUES.md).
+
+## Repository layout
+
+- `docs/TECHNIQUES.md` — technique ledger: standing results per technique,
+  each claim citing the experiment that produced it; open items ranked.
+- `exp/` — experiment scripts (exp01-exp05); figures and cached
+  intermediates in `exp/out/`.
+- `exp/NOTES.md` — chronological lab log.
+- `oe_inferencex/` — library in progress. `evidence.py` contains the signal
+  and evaluation mathematics (pure, no network access); `data.py` and
+  `awf.py` contain data access.
+- `reports/` — point-in-time writeups.
+
+## Reproduction
+
+CPU-only; public data and checkpoints throughout.
 
 ```
 uv sync --extra geo
 uv run python exp/exp02_full_slice.py
 ```
 
-exp04 additionally needs the AWF dataset:
-`huggingface.co/datasets/allenai/olmoearth_projects_awf` extracted to
+exp04 additionally requires the AWF dataset
+(`huggingface.co/datasets/allenai/olmoearth_projects_awf`) extracted to
 `data/awf/dataset/`.
 
-Status: experimental. A cleaned-up library repo comes later.
+## Status
+
+Experimental repository; interfaces and structure will change. A separated
+library release is planned once the signal set stabilizes.
