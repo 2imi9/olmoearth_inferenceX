@@ -12,12 +12,12 @@ condition untested) / UNTESTED / OUT-OF-SCOPE-V1.
 
 | Technique | LLM ancestor | Status | Gap that remains |
 |---|---|---|---|
-| Cross-model disagreement (E_case) | SelfCheckGPT / self-consistency | PARTIAL | pairwise ties baseline on easy scene; naive tri-model std is WORSE (weak rater pollutes); aggregation design + hard-scene test remain |
+| Cross-model disagreement (E_case) | SelfCheckGPT / self-consistency | VERIFIED* | 3x better than baseline on wetland-margin floodplain (0.0235 vs 0.0666); loses in-domain multiclass; weak-rater effect twice-replicated. *weak-truth caveat on hard scenes |
 | Geographic grounding (E_geo) | retrieval-grounded fact checking | PARTIAL | specificity shown (no false alarms), sensitivity never tested (no scene with a real break yet) |
 | Perturbation stability (E_system) | semantic entropy / paraphrase robustness | MIXED | beat max-softmax on the easy binary scene (0.00058 vs 0.00089) but LOST on AWF multiclass expert labels (0.0427 vs 0.0367); condition-dependent, not a general win |
 | Backbone-version comparison (E_system) | n/a (EO-specific) | BLOCKED | v1_2 load fails on current checkout (LatentMIM state_dict mismatch, confirmed); pull newer olmoearth_pretrain |
-| Embedding dissimilarity (E_dist) | internal-state probing (INSIDE, SEPs) | PARTIAL | k-NN-to-train tested: does NOT rank in-domain errors (4x worse than baseline). Role is OOD alarm, not error proxy; needs an actually-OOD eval to verify that role |
-| Max-softmax baseline | logit confidence | VERIFIED | the bar; tile-phase is the first channel to beat it |
+| Embedding dissimilarity (E_dist) | internal-state probing (INSIDE, SEPs) | VERIFIED* | role confirmed both ways: useless in-domain (4x worse), dominant under domain shift (0.0014 vs 0.0258, 18x better, mangrove delta). *weak-truth caveat |
+| Max-softmax baseline | logit confidence | VERIFIED | wins on in-domain class confusion (exp04); collapses on wetland margins and domain shift where every channel beats it (exp05) |
 | Risk-coverage / AURC harness | selective prediction | VERIFIED | needs CIs / significance once scenes multiply |
 | Weak-truth validation loop | MRP pseudo-label validation (PPE) | VERIFIED | harness now runs on real partner expert labels (AWF, official rslearn spatial split, 344 val points) |
 | Semantic-entropy port (cluster-then-entropy) | Farquhar et al. | UNTESTED | refinement of E_system, not started |
@@ -100,6 +100,23 @@ condition untested) / UNTESTED / OUT-OF-SCOPE-V1.
 - Weakest class: herbaceous wetland (50% recall). Wetland margins are also the
   posited hard case for the water task; consistent story. (exp/exp04)
 
+### Hard scenes and domain shift (exp05)
+- The condition-dependence is now mapped on both sides. Heads trained at
+  Katima, evaluated on (a) Barotse floodplain interior (wetland margins) and
+  (b) Zambezi delta mangrove coast (~1300 km shift). Every channel beats the
+  baseline on both: E_case 0.0235 vs baseline 0.0666 on the floodplain;
+  E_dist 0.0014 vs 0.0258 under shift. Confidence is overconfident-wrong
+  under shift, matching the LLM-land expectation. (exp/exp05)
+- Caveat that keeps this honest: WorldCover is weak truth on exactly these
+  terrains. On the delta the "errors" trace a narrow river WorldCover likely
+  misses, so part of the win is the audit correctly flagging reference
+  disagreement, not proven model error. Replicating the shift condition with
+  expert truth is the remaining step (e.g. geographic-corner holdout on AWF).
+- Combined exp04+05 statement: max-softmax suffices for in-domain confusion;
+  the evidence channels earn their keep on wetland margins and out-of-domain
+  regions, each channel strongest in its own regime (E_case on ambiguity,
+  E_dist on shift). This is the frame's core claim, now with numbers.
+
 ### Geographic grounding (E_geo)
 - OSM centerline check produces zero false break alarms on a scene where the
   river is clearly resolved (52 centerline patches, 0 consensus-dry).
@@ -114,9 +131,8 @@ condition untested) / UNTESTED / OUT-OF-SCOPE-V1.
 
 ## Gaps to fill, in priority order
 
-1. Hard-scene E_case vs baseline. The design claim is that disagreement beats
-   confidence where the task is hard (narrow/sub-patch channels, flood-season
-   wetland margins). No experiment yet. This is the make-or-break test.
+1. DONE with weak-truth caveat (see Hard scenes section). Remaining: replicate
+   the shift condition against expert truth (AWF geographic-corner holdout).
 2. E_geo sensitivity. Find or construct a scene with a real consensus break
    (narrow reach the models actually miss) and show the centerline check fires.
    Until then E_geo has only proven it stays quiet.

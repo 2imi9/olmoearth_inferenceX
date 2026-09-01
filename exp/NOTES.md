@@ -69,3 +69,11 @@ Harness on real partner truth (details in ledger). Baseline wins on multiclass
 in-domain errors; tile-phase easy-scene win did not transfer; weak-rater
 effect replicated with Nano. Herbaceous wetland weakest class (50% recall).
 Features cached in exp/out/exp04_feats.npz (5 passes x 1459 windows).
+
+## exp05 — hard scenes and domain shift (2026-08-31)
+
+Every channel beats max-softmax on both hard AOIs (Barotse floodplain
+wetland margins, Zambezi delta mangrove shift). E_case 3x better on margins,
+E_dist 18x better under shift. Weak-truth caveat: delta "errors" trace a river
+WorldCover likely misses. Ledger has the full statement. Eval windows cached
+in exp/out/exp05_cache.npz.
