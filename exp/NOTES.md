@@ -101,3 +101,13 @@ reruns x 3 scenes in under two minutes). Clean negative: occlusion
 instability is the worst signal everywhere; it measures context reliance,
 not error. Design rule recorded in ledger: perturb tokenization, not
 content.
+
+## exp09 — multi-scene replication with controls, GPU (overnight)
+
+Seven river scenes, full comparison + NDWI-gradient control (details in
+ledger). Confidence best on 0/7; E_case 3 wins (all surviving the control);
+tile-phase 2; control wins the two reference-omission scenes as exp06
+predicted; E_dist 0 legitimate wins. First AURC numbers with spread.
+Iteration notes: initial water-fraction filter wrongly excluded
+high-error scenes (fixed to errors>=8); four initial AOIs missed their
+rivers at 1.28 km precision and were re-aimed.

@@ -10,9 +10,10 @@ technique's claim, under the stated conditions) / **mixed** (results differ
 across conditions) / **partial** (some evidence; a key condition untested) /
 **untested** / **blocked** / **out of scope (v1)**.
 
-All AURC comparisons below come from single scenes or single tasks with small
-error counts and no significance testing. They establish direction and
-motivate replication; they do not establish effect sizes.
+Most AURC comparisons below come from single scenes or tasks with small
+error counts and no significance testing; exp09 adds a seven-scene
+replication for the water task (WorldCover-referenced, still without formal
+significance tests). Numbers establish direction, not effect sizes.
 
 ## Summary
 
@@ -23,7 +24,7 @@ motivate replication; they do not establish effect sizes.
 | Perturbation stability (E_system, tile-phase) | sampling-consistency methods | mixed | lower AURC than baseline on one easy binary scene (0.00058 vs 0.00089) and one shifted scene (0.0076 vs 0.0258); higher than baseline on AWF multiclass (0.0427 vs 0.0367). Masking-perturbation variant tested and rejected: worst signal on all three scenes (exp08) |
 | Backbone-version comparison (E_system, v1 vs v1_2) | n/a (EO-specific) | blocked | v1_2 checkpoints fail to load with the current olmoearth_pretrain checkout (state_dict mismatch); requires the newer loader |
 | Embedding dissimilarity (E_dist) | internal-state probing (INSIDE, semantic entropy probes) | partial | does not rank in-domain errors (AURC 0.00365 vs baseline 0.00089). The apparent advantage under domain shift (0.0014 vs 0.0258) did not survive the image-statistic control: trivial NDWI statistics rank the same disagreements better (0.0005), so no shift-condition claim is currently supported (exp06). Requires a shift testbed with non-trivial errors |
-| Max-softmax confidence (baseline) | logit-based confidence | supported | lowest AURC of all signals tested on in-domain tasks; highest AURC on the two hard scenes. All channel claims are relative to this baseline |
+| Max-softmax confidence (baseline) | logit-based confidence | supported | best signal on the in-domain AWF task; best ranking on zero of seven river scenes in the exp09 replication. All channel claims are relative to this baseline |
 | Risk-coverage / AURC harness | selective prediction | supported | lacks confidence intervals and significance tests; required once scene counts grow |
 | Validation on labeled data (labels grade signals, never train them) | pseudo-label validation (PPE §2.3.1) | supported | executed with AWF expert labels and the project's own spatial split; WorldCover remains the reference on unlabeled-region scenes |
 | Semantic-entropy port (cluster-then-entropy) | Farquhar et al. 2024 | untested | possible refinement of the perturbation signal |
@@ -192,6 +193,30 @@ instantiations, not the signal families.
   domain-shift scene, model confidence performed worst but no model signal
   outperformed trivial image statistics, so only the negative claim about
   confidence is supported there. Each condition has been observed once.
+
+### Multi-scene replication (exp09)
+- The full signal comparison plus the NDWI-gradient control over seven river
+  scenes across southern Africa (Kazungula, Barotse, Zambezi delta, Luangwa
+  confluence, Okavango panhandle, Shire at Liwonde, upstream Victoria
+  Falls), heads trained at Katima Mulilo, WorldCover reference, 8+ errors
+  per scene. Per-scene results in exp/out/exp09_multiscene.csv.
+- Max-softmax confidence produced the best ranking on zero of seven scenes
+  (mean AURC 0.0201 +/- 0.0230).
+- E_case won three scenes (mean 0.0129 +/- 0.0127) and beat the pixel
+  control on every scene it won, including a zero-reference-water scene
+  (Okavango: 0.0003 vs control 0.0163) whose errors are therefore not
+  spectrally trivial. Tile-phase won two (mean 0.0138), both with the
+  control far behind.
+- The control won exactly the two scenes identified as reference-omission
+  regimes (delta, Shire), consistent with exp06.
+- E_dist won zero scenes once the control was included; its earlier apparent
+  shift-scene advantages were both control-dominated scenes. Across all
+  evidence, E_dist has no support as an error ranker; the
+  out-of-distribution-indicator role remains the open hypothesis.
+- Standing caveats: WorldCover reference, small per-scene error counts, no
+  formal significance testing yet.
+
+  ![Per-scene AURC](../exp/out/exp09_multiscene.png)
 
 ### Geographic grounding (E_geo)
 - On a scene where the river is clearly resolved, the OSM centerline

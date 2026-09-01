@@ -37,6 +37,11 @@ not rank errors in familiar territory.
 *Risk-coverage per scene, model signals and no-model controls on identical
 errors (exp06); bottom row: control signal maps for the Barotse scene.*
 
+Across seven river scenes with the control included (exp09), confidence
+produced the best ranking on zero scenes; disagreement and tile-phase won
+five between them, each win surviving the pixel control; the control won the
+two scenes whose errors are trivial reference omissions.
+
 **Read the numbers as directions, not effect sizes**: one scene or task per
 condition, small error counts, no significance tests, and ESA WorldCover as a
 weak reference on exactly the interesting terrains. The standing
