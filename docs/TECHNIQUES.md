@@ -20,7 +20,7 @@ motivate replication; they do not establish effect sizes.
 |---|---|---|---|
 | Cross-model disagreement (E_case) | self-consistency / SelfCheckGPT | mixed | lower AURC than the confidence baseline on a wetland-margin scene (0.0235 vs 0.0666); higher AURC in-domain on AWF (0.0533 vs 0.0367). Reference-label quality limits the wetland result. Aggregation across >2 models unresolved |
 | Geographic grounding (E_geo) | retrieval-grounded fact checking | partial | specificity observed (no false break alarms on one scene); sensitivity untested, no scene with a confirmed consensus break evaluated yet |
-| Perturbation stability (E_system, tile-phase) | sampling-consistency methods | mixed | lower AURC than baseline on one easy binary scene (0.00058 vs 0.00089) and one shifted scene (0.0076 vs 0.0258); higher than baseline on AWF multiclass (0.0427 vs 0.0367) |
+| Perturbation stability (E_system, tile-phase) | sampling-consistency methods | mixed | lower AURC than baseline on one easy binary scene (0.00058 vs 0.00089) and one shifted scene (0.0076 vs 0.0258); higher than baseline on AWF multiclass (0.0427 vs 0.0367). Masking-perturbation variant tested and rejected: worst signal on all three scenes (exp08) |
 | Backbone-version comparison (E_system, v1 vs v1_2) | n/a (EO-specific) | blocked | v1_2 checkpoints fail to load with the current olmoearth_pretrain checkout (state_dict mismatch); requires the newer loader |
 | Embedding dissimilarity (E_dist) | internal-state probing (INSIDE, semantic entropy probes) | partial | does not rank in-domain errors (AURC 0.00365 vs baseline 0.00089). The apparent advantage under domain shift (0.0014 vs 0.0258) did not survive the image-statistic control: trivial NDWI statistics rank the same disagreements better (0.0005), so no shift-condition claim is currently supported (exp06). Requires a shift testbed with non-trivial errors |
 | Max-softmax confidence (baseline) | logit-based confidence | supported | lowest AURC of all signals tested on in-domain tasks; highest AURC on the two hard scenes. All channel claims are relative to this baseline |
@@ -111,6 +111,16 @@ instantiations, not the signal families.
   traces the shoreline continuously. (exp/exp03, exp/exp04, exp/exp05)
 
   ![Signal maps at Kazungula](../exp/out/exp03_more_channels.png)
+
+### Masking perturbation (E_system variant, exp08)
+- Occluding a random 15% of patch cells with mean-fill and measuring
+  per-patch prediction standard deviation over N=32 reruns (GPU) ranks
+  errors worse than every other signal on all three scenes (AURC 0.0027 /
+  0.0788 / 0.0449 vs tile-phase 0.0008 / 0.0555 / 0.0076). Occlusion
+  instability appears to measure context reliance rather than error
+  likelihood. Contrast with tile-phase supports a design rule: perturbations
+  that preserve scene content while changing the tokenization expose model
+  pathology; perturbations that remove content do not. (exp/exp08)
 
 ### Embedding dissimilarity (E_dist)
 - Mean cosine distance to the k=5 nearest training patches did not rank

@@ -93,3 +93,11 @@ Negative with a useful twist: DS overestimates all three models and inverts
 the order (details in ledger). The DS-vs-measured gap measures correlated
 error per model. Fix is an out-of-family rater. Tiny AWF features cached in
 exp/out/exp07_tiny_feats.npy; Tiny val acc 0.805.
+
+## exp08 — masking-perturbation ensemble, GPU (overnight)
+
+First GPU experiment (RTX 5090 laptop, torch 2.7.1+cu128; 32 occlusion
+reruns x 3 scenes in under two minutes). Clean negative: occlusion
+instability is the worst signal everywhere; it measures context reliance,
+not error. Design rule recorded in ledger: perturb tokenization, not
+content.
