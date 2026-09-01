@@ -1,8 +1,7 @@
 # olmoearth_inferenceX
 
 Experiments on locating errors in OlmoEarth predictions over regions with no
-labels. Ten experiments so far, all on public data and public checkpoints;
-CPU sufficient throughout, a consumer GPU used from exp08 onward.
+labels. 
 
 ## Result
 
