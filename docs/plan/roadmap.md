@@ -47,7 +47,7 @@ Update after exp13: confidence intervals and significance tests now exist
 (block bootstrap, sign and permutation tests). Remaining statistical gap is
 the reference-label confound, not the test machinery. New item: verify the
 aligned tile-phase result against expert labels (AWF windows under
-sub-patch shifts, per-window) since its 29-scene support is
+sub-patch shifts, per-window) since its 27-scene support is
 WorldCover-referenced.
 
 Update after exp14: the tile-phase result is reinterpreted as

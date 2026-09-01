@@ -68,7 +68,7 @@ One section per signal, every claim citing its experiment. Index at
   carrying no boundary context.
 - Erratum: exp05, exp09, and exp11 computed the std across unaligned patch
   grids, so shifted patches covered different ground; that version scored
-  19/29 with no significant effect. Their tile-phase numbers are
+  19/29 in exp11 (29 scenes, raw AURC) with no significant effect. Their tile-phase numbers are
   superseded. exp04's per-window variant tracked the label patch under
   shift and is unaffected (lost to the baseline there, 0.0489 vs 0.0363).
 - Earlier single-scene results consistent with the corrected signal: beat

@@ -10,7 +10,7 @@ The documentation set:
 - [method/protocol.md](method/protocol.md) - status terms, evidence tiers, related work,
   and the positioning of the contribution.
 - [results/comparisons.md](results/comparisons.md) - cross-signal comparisons: the pre-registered
-  29-scene study (authoritative), the controls, the expert-label validation,
+  27-scene study (pre-registered rule; 29 fetched, 2 cache leftovers excluded; authoritative), the controls, the expert-label validation,
   and the earlier scene studies.
 - [results/signals.md](results/signals.md) - per-signal evidence for the baseline, E_case,
   E_system, E_dist, and E_geo.
