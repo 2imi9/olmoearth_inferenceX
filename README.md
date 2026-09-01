@@ -65,9 +65,14 @@ Docs: [index](docs/TECHNIQUES.md) ·
 
 ## Method
 
-We port LLM hallucination-detection ideas to earth observation. Labels only
-evaluate signals, never build them. Train and evaluation areas are always
-geographically separate. A no-model control runs in every comparison.
+In machine-learning terms this is selective prediction: score how likely
+each window is wrong, and judge the score by risk-coverage curves. All
+signals are label-free; labels are used only for evaluation. Every split is
+a spatial hold-out, with training and evaluation areas geographically
+separate. Every comparison includes a non-learned control computed from raw
+pixels. The signal designs are adapted from LLM hallucination-detection
+methods, which face the same problem of judging outputs with no reference
+answer.
 
 Upstream evaluation we compare against: OlmoEarth's supervised metrics run
 through
