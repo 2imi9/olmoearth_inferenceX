@@ -29,20 +29,24 @@ Interpretation:
 2. **On ambiguous terrain, cross-model disagreement is the best signal
    tested** - roughly three times better than confidence, and better than
    any pixel statistic, so it reflects model behavior rather than image
-   edges.
+   edges. This advantage is regime-specific: it does not hold on average
+   across arbitrary river scenes (exp11).
 3. **Far from the training region, confidence is unreliable** - even a plain
    pixel statistic outranks it. But no model signal beat the pixel
    statistics there either: that scene's "errors" are places where the
    reference map misses an obvious river, so the scene proves confidence
    fails and nothing more.
 
-Replicated across seven river scenes (exp09): confidence was never the best
-signal (0 of 7); disagreement and tiling instability won five between them,
-each win beating the control; the control won the two scenes whose errors
-are trivial reference omissions. Side findings: combining three models from
-the same family is worse than the best pair - a disagreement partner needs
-to be *different*, not accurate (exp07, exp10) - and embedding distance
-never legitimately won a scene.
+Scaled to 29 scenes under a pre-registered selection rule (exp11), the
+picture is sharper and humbler: no signal dominates. Confidence is best on
+6 of 29 scenes; tiling instability beats it most often (19/29) but only
+slightly on average; disagreement's wins are real but limited to ambiguous
+scenes; embedding distance shows the only statistically significant average
+improvement (p=0.019), concentrated on high-error floodplain scenes where
+the reference map is least reliable. Which signal finds errors best depends
+on the scene - identifying the regime per scene is now the central open
+problem. Side findings: a disagreement partner needs to be *different*, not
+accurate (exp07, exp10), and combining same-family models hurts.
 
 ![No-model controls](exp/out/exp06_controls.png)
 

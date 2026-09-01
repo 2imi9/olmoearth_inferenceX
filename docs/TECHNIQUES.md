@@ -11,20 +11,21 @@ across conditions) / **partial** (some evidence; a key condition untested) /
 **rejected** (tested, contradicted) / **untested** / **blocked** /
 **out of scope (v1)**.
 
-Most comparisons come from single scenes or tasks with small error counts
-and no significance testing; exp09 adds a seven-scene replication for the
-water task (WorldCover-referenced, still without formal significance tests).
-Numbers establish direction, not effect sizes.
+Evidence tiers: single-scene results (exp01-exp08) establish direction
+only; exp09 is a seven-scene comparison with hand-chosen scenes; exp11 is
+the authoritative comparison - 29 scenes under a pre-registered selection
+rule, with per-scene bootstrap CIs and permutation tests
+(exp/out/exp11_stats.csv). Where exp09 and exp11 disagree, exp11 stands.
 
 ## Summary
 
 | Technique | Related LLM-domain method | Status | State of evidence |
 |---|---|---|---|
-| Max-softmax confidence (baseline) | logit-based confidence | supported | best signal on the in-domain AWF expert-label task; best on zero of seven river scenes in the exp09 replication. All channel claims are relative to this baseline |
-| Cross-model disagreement (E_case) | self-consistency / SelfCheckGPT | mixed | best signal on 3 of 7 replication scenes, each win surviving the pixel control; loses to the baseline in-domain on AWF (0.0533 vs 0.0367). Partner quality is about decorrelation, not accuracy (exp10); all naive >2-model aggregations hurt (exp03/04/07). Out-of-family rater is the open fix |
-| Perturbation stability (E_system, tile-phase) | sampling-consistency methods | mixed | best signal on 2 of 7 replication scenes; loses to baseline on AWF multiclass (0.0427 vs 0.0367). Masking-perturbation variant rejected (exp08): perturb the tokenization, not the content |
+| Max-softmax confidence (baseline) | logit-based confidence | supported | best signal on the in-domain AWF expert-label task; best on 6 of 29 scenes under the pre-registered rule (exp11). Stronger than the hand-chosen exp09 set suggested. All channel claims are relative to this baseline |
+| Cross-model disagreement (E_case) | self-consistency / SelfCheckGPT | mixed | strong on specific ambiguous scenes (Barotse 0.0235 vs baseline 0.0666, control-proof) but the advantage does not generalize: better than baseline on only 12/29 rule-selected scenes, mean difference negative (p=0.07, exp11). Regime-specific, not general. Partner quality is decorrelation, not accuracy (exp10); naive >2-model aggregation hurts (exp03/04/07) |
+| Perturbation stability (E_system, tile-phase) | sampling-consistency methods | mixed | most frequent winner under the pre-registered rule (19/29 scenes better than baseline) but mean difference ~0 (p=0.95, exp11): modest frequent gains, occasional large losses. Masking-perturbation variant rejected (exp08): perturb the tokenization, not the content |
 | Backbone-version comparison (E_system, v1 vs v1_2) | n/a (EO-specific) | blocked | v1_2 checkpoints fail to load with the current olmoearth_pretrain checkout (state_dict mismatch); requires the newer loader |
-| Embedding dissimilarity (E_dist) | internal-state probing (INSIDE, semantic entropy probes) | partial | zero legitimate wins across all scenes once controls are included; no support as an error ranker. Out-of-distribution-indicator role remains the open hypothesis, untested on a shift testbed with non-trivial errors |
+| Embedding dissimilarity (E_dist) | internal-state probing (INSIDE, semantic entropy probes) | mixed | the only signal with a significant mean improvement over the baseline under the pre-registered rule (p=0.019, exp11), driven by high-error floodplain scenes where the reference is weakest; zero wins on the earlier hand-chosen set once controls were included (exp09). Interpretation unstable across scene sets; reference-quality confound unresolved |
 | Geographic grounding (E_geo) | retrieval-grounded fact checking | partial | specificity observed (zero false break alarms on one scene); sensitivity untested, no scene with a confirmed consensus break evaluated |
 | Label-free reliability (Dawid-Skene) | annotator modeling | rejected (within family) | inflates every model and inverts the ordering because family members err together; the inflation gap measures correlated-error mass. Viable only with an out-of-family rater (exp07) |
 | Risk-coverage / AURC harness | selective prediction | supported | seven-scene replication exists; lacks confidence intervals and significance tests |
@@ -133,6 +134,34 @@ harness, per condition.
   that equals model error requires expert-labeled replication.
 
   ![Hard scenes](../exp/out/exp05_hard_scenes.png)
+
+### Pre-registered 29-scene comparison (exp11, authoritative)
+- Scene rule committed to git before any new scene was fetched: candidates
+  sampled at fixed fractions along OSM geometries of eight named rivers,
+  0.2-degree separation, inclusion iff the deterministic Base head commits
+  >=8 errors against WorldCover. 22 rule-selected scenes joined the 7
+  existing ones; 29 total. Per-scene AURC, bootstrap 95% CIs (B=1000), and
+  seed columns in exp/out/exp11_stats.csv.
+- Baseline best on 6/29 scenes: the exp09 claim "confidence never best
+  (0/7)" did not survive scene expansion and is superseded.
+- Sign-flip permutation tests on per-scene AURC differences vs baseline:
+  E_case better on 12/29, mean difference -0.0058 (trend toward worse,
+  p=0.070); tile-phase better on 19/29 but mean difference -0.0002
+  (p=0.950); E_dist better on 13/29 with mean difference +0.0098
+  (p=0.019), the only significant mean improvement, driven by high-error
+  floodplain scenes (Shire, Okavango mid-stem: 8-30% error rates) where
+  WorldCover reliability is lowest; control not significant (p=0.848).
+- Coherent summary: no signal dominates across scenes. Which signal ranks
+  errors best is regime-dependent, which elevates regime identification
+  (deciding per scene which signal to trust) from a side idea to the central
+  open problem.
+- Head-seed variance is structurally zero: heads initialize at zeros with
+  deterministic full-batch training, so the planned seed-robustness test is
+  vacuous rather than passed; robustness to head initialization remains
+  untested by design choice.
+- Standing caveats unchanged: WorldCover reference (worst on exactly the
+  high-error scenes that drive the E_dist result), no expert labels outside
+  AWF, one task family.
 
 ## Per-signal results
 

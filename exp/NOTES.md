@@ -15,6 +15,7 @@ Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 | exp08 | masking perturbation (rejected) |
 | exp09 | seven-scene replication with control |
 | exp10 | rater strength vs diversity (diversity wins) |
+| exp11 | pre-registered 29-scene comparison with bootstrap + permutation stats |
 
 ## exp01 — first E_case map (2026-08-31)
 
@@ -135,3 +136,12 @@ scenes) despite Large being more accurate everywhere. Disagreement partners
 need decorrelation, not strength. Note: exp10's per-scene win counts use a
 3-signal set (baseline, two pairs) and are not comparable to exp09's
 5-signal win counts.
+
+## exp11 — pre-registered statistical hardening (2026-09-01)
+
+Rule committed before fetching; 29 scenes. Headline revisions: baseline best
+on 6/29 (exp09's 0/7 superseded); E_case advantage does not generalize
+(p=0.07 toward worse); tile-phase most frequent winner but mean-zero; E_dist
+only significant mean improvement (p=0.019), reference-quality confounded.
+No signal dominates -> regime identification becomes the central problem.
+Seed test vacuous (deterministic heads). Stats in exp/out/exp11_stats.csv.

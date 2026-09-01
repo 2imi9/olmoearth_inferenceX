@@ -4,3 +4,4 @@ __pycache__/
 *.egg-info/
 .env
 data/
+exp/out/exp11_feats.npz
