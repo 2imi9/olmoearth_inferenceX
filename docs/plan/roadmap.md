@@ -56,3 +56,10 @@ mechanism (interior point labels carry no boundary signal) rather than by a
 new run. New item: test boundary proximity against expert-labeled dense
 maps rather than points, and combine it with E_geo (boundary patches that
 also contradict the reference map).
+
+Update after exp15: the boundary + E_geo combination is rejected under the
+WorldCover reference; E_geo flags mostly mark OSM-vs-WorldCover
+disagreement. Next for E_geo: replace OSM lines with GRWL centerlines
+filtered by width (keep rivers wide enough for the reference to resolve),
+then re-measure flag precision; or evaluate against expert-labeled dense
+water maps.

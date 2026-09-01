@@ -104,7 +104,15 @@ One section per signal, every claim citing its experiment. Index at
 ### Geographic grounding (E_geo)
 - On a scene where the river is clearly resolved, the OSM centerline
   consistency check produced zero false break alarms (52 centerline patches,
-  0 flagged; exp02). Specificity evidence only; no scene with a confirmed
-  consensus break has been evaluated, so sensitivity is unknown.
+  0 flagged; exp02).
+- Across 23 georeferenced scenes (exp15), flags (centerline patch predicted
+  dry) occur on 15 scenes and are enriched for errors relative to a random
+  patch (precision 0.25 vs base error rate 0.078), but eight scenes carry
+  20-51 flags at precision zero where OSM marks a river that both the model
+  and WorldCover call dry. The flag therefore mostly detects reference-map
+  disagreement under the current truth. As a ranking signal it beats the
+  baseline on 3/23, and prepending it to boundary proximity makes boundary
+  worse (5/23, p=0.011). Sensitivity remains unmeasurable without
+  width-filtered centerlines (GRWL) or expert truth.
 
   ![Full audit slice, Kazungula](../../exp/out/exp02_full_slice.png)

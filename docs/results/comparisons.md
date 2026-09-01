@@ -131,6 +131,26 @@ terms in [protocol.md](../method/protocol.md).
   points, where a boundary signal has nothing to detect. Values in
   exp/out/exp14_boundary_ablation.csv.
 
+### Boundary proximity combined with the reference-map check (exp15)
+- E_geo flag = patch on an OSM waterway=river centerline that the model
+  predicts dry. Georeferencing recovered for 23 of the 29 scenes (four
+  Overpass failures, two scenes without stored coordinates). Ranking
+  signals: boundary (exp14), geo flag alone, and geo-first-then-boundary.
+- The conjunction is worse than boundary alone (better on 5/23, exact sign
+  test p=0.011 against it); geo alone beats the baseline on 3/23. Combining
+  E_geo with boundary proximity is rejected under this reference.
+- First sensitivity data for E_geo: 15/23 scenes carry flags; flags are
+  enriched for errors relative to a random patch (mean precision 0.25 vs a
+  base error rate of 0.078) but eight scenes have 20-51 flags at precision
+  exactly zero. Those are patches where OSM says river and both the model
+  and WorldCover say dry: disagreement between two reference maps (narrow
+  or seasonal channels below WorldCover's effective resolution), not model
+  error. Under WorldCover truth, E_geo's precision cannot be separated from
+  the reference confound. Values in exp/out/exp15_boundary_geo.csv.
+- Implication: E_geo needs either width-filtered centerlines (GRWL width
+  attribute, keeping rivers the reference can resolve) or expert truth
+  before its sensitivity can be stated.
+
 ### Pre-registered 29-scene comparison (exp11; statistics superseded by exp13)
 - The scene rule and scene set below stand. The statistics in this section
   use raw AURC and the unaligned tile-phase; exp13 corrects both and is

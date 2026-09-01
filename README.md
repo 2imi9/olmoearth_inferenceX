@@ -24,7 +24,8 @@ Each signal gives every map window a suspicion score. The four signals:
   pretraining data).
 - **E_geo** - map check: the prediction contradicts a reference river map
   ([OSM waterways](https://wiki.openstreetmap.org/wiki/Key:waterway) for
-  now). Tested only for false alarms so far, so it is not in the table.
+  now). Under the current reference it mostly finds disagreements between
+  the two maps, so it is not in the table (exp15).
 
 AURC measures how well a suspicion score finds real errors; lower is
 better. Every signal must beat two references: the model's own confidence
@@ -101,6 +102,9 @@ and a plain pixel statistic computed without any model (the control).
   survive scale-comparable statistics.
 - **Where the reference map misses obvious water, a plain pixel statistic
   wins.** Those scenes prove confidence fails and nothing more.
+- **Checking predictions against river lines mostly finds disagreements
+  between reference maps, not model errors**, and adding that check to
+  boundary proximity made it worse (exp15).
 - **A disagreement partner must be a different model, not a more accurate
   one.** Same-family ensembles hurt.
 - **The reference map is least reliable on exactly the most interesting
@@ -143,7 +147,7 @@ uv sync --extra geo
 uv run python exp/exp02_full_slice.py
 ```
 
-Experiments are exp01-exp14 in `exp/`. Model checkpoints come from
+Experiments are exp01-exp15 in `exp/`. Model checkpoints come from
 [HuggingFace allenai](https://huggingface.co/allenai) (OlmoEarth v1 Nano to
 Large). exp04 needs the
 [AWF dataset](https://huggingface.co/datasets/allenai/olmoearth_projects_awf)

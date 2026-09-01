@@ -170,3 +170,11 @@ indicator (neighbor label disagreement on the shift-0 map): 13/29
 head-to-head, p=0.71; the indicator alone beats confidence 23/29. The
 headline is restated as boundary proximity, not perturbation. Explains the
 AWF loss (interior point labels). Results: exp/out/exp14_boundary_ablation.csv.
+
+## exp15 — boundary proximity + E_geo (2026-09-01)
+
+Georeferencing recovered and verified for 23/29 scenes. Geo-first-then-
+boundary is worse than boundary alone (5/23, p=0.011); geo alone 3/23.
+Geo flags 3x error-enriched but precision zero on 8 scenes: OSM-vs-
+WorldCover disagreement on narrow channels. E_geo sensitivity still
+unmeasurable under WorldCover truth. Results: exp/out/exp15_boundary_geo.csv.
