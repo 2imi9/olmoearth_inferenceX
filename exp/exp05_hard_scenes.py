@@ -1,4 +1,4 @@
-"""Exp 05: where does the baseline break?
+"""Exp 05: conditions under which the confidence baseline degrades.
 
 Heads trained at Katima Mulilo (reusing exp03's cached train window), then
 evaluated on two deliberately hard windows:
@@ -9,8 +9,9 @@ evaluated on two deliberately hard windows:
          mangrove canopy). Real domain shift ~1300 km from training.
 
 Per AOI: baseline max-softmax, E_case |Nano-Base|, E_system tile-phase,
-E_dist knn-to-train. AURC vs WorldCover water errors. The LLM-land prediction:
-confidence degrades under shift (overconfident-wrong), evidence channels hold.
+E_dist knn-to-train. AURC vs WorldCover water errors. Expectation from the
+LLM literature: confidence degrades under distribution shift while the
+evidence signals remain informative.
 """
 import os
 

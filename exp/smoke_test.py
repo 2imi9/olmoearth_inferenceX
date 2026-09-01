@@ -1,7 +1,8 @@
 """Smoke test: load OlmoEarth checkpoints, run synthetic inference, compare embeddings.
 
-First sanity check for E_case: do Nano and Base produce embeddings on the same
-input, and does their per-patch representation differ in a measurable way?
+First sanity check for E_case: verifies that Nano and Base produce
+embeddings on the same input and that their per-patch representations differ
+measurably.
 No real imagery yet. CPU is fine.
 """
 import torch

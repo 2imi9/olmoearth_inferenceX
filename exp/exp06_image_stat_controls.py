@@ -1,8 +1,8 @@
 """Exp 06: no-model image-statistic controls.
 
-Question: do the model-based signals rank errors any better than trivial
-image statistics computed directly from pixel values? If not, the channels
-are expensive edge detectors on these scenes.
+Tests whether the model-based signals rank errors better than trivial
+image statistics computed directly from pixel values. If they do not, the
+channels are expensive edge detectors on these scenes.
 
 Controls (no model involved):
   spectral variance   - within-patch std of reflectance, averaged over bands

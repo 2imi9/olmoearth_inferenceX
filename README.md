@@ -14,17 +14,19 @@ CPU only.
 | embedding distance to training data (E_dist) | n/a | 0.0289 | 0.0014 |
 | plain pixel statistics (control, no model) | n/a | 0.0384 | **0.0005** |
 
-In simple terms:
+Interpretation:
 
-1. **In familiar territory, use the model's own confidence.** Nothing we
-   built beats it there.
-2. **On ambiguous terrain, ask a second model.** Nano-Base disagreement finds
-   errors almost 3x better than confidence, and better than any pixel
-   statistic, so it is reading model behavior, not just edges.
-3. **Far from the training region, confidence is untrustworthy** - a plain
-   NDWI gradient filter outranks it. But no model signal beat pixel
-   statistics there either: that scene's errors are spectrally obvious
-   reference omissions, so it proves confidence fails and nothing more.
+1. **In familiar territory, the model's own confidence is the best signal
+   tested.** None of the constructed signals improved on it.
+2. **On ambiguous terrain, cross-model disagreement is the best signal
+   tested.** Nano-Base disagreement ranks errors roughly three times better
+   than confidence and better than any pixel statistic, so it reflects model
+   behavior rather than image edges.
+3. **Far from the training region, confidence is unreliable** - a plain NDWI
+   gradient filter outranks it. No model signal beat pixel statistics there
+   either: that scene's errors are spectrally obvious reference omissions,
+   so the scene supports the negative claim about confidence and nothing
+   more.
 
 Two side findings: averaging disagreement over three models is worse than the
 best pair when one model is weak (seen twice), and embedding distance does
