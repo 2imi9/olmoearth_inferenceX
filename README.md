@@ -189,8 +189,11 @@ Experiments are exp01-exp15 in `exp/`. Model checkpoints come from
 [HuggingFace allenai](https://huggingface.co/allenai) (OlmoEarth v1 Nano to
 Large). exp04 needs the
 [AWF dataset](https://huggingface.co/datasets/allenai/olmoearth_projects_awf)
-extracted under `data/awf/dataset/`. `uv sync` installs CPU torch; the GPU runs used the
-cu128 wheel.
+extracted under `data/awf/dataset/`. `uv sync` installs CPU torch on Windows because the upstream package pins
+the CPU index and uv refuses a second torch index for the same platform
+while olmoearth-pretrain is a path dependency. For the GPU experiments,
+install the cu128 wheel into the venv afterwards and run scripts with
+`.venv/Scripts/python.exe` directly; `uv run` and `uv sync` will revert it.
 
 Status: research code under active development. Interfaces may change
 between experiments; results are updated in place as later experiments

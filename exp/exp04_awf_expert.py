@@ -58,7 +58,7 @@ def embed_all(windows):
             f = out["tokens_and_masks"].sentinel2_l2a.mean(dim=[3, 4]).cpu()
             for bi, (pi, pj) in enumerate(locs):
                 feats[key].append(f[bi, pi, pj].numpy())
-        if (i // BATCH) % 20 == 19:
+        if (i // BATCH) % 5 == 4:
             np.savez(CKPT, done=i + len(chunk), **{k: np.stack(v) for k, v in feats.items()})
             print(f"  {i + len(chunk)}/{len(windows)} (checkpointed)", flush=True)
     return {k: np.stack(v) for k, v in feats.items()}
