@@ -1,18 +1,14 @@
 # olmoearth_inferenceX
 
 Experiments on locating errors in OlmoEarth predictions over regions with no
-labels. 
+labels.
 
 ## Result
 
-**How to read the table.** Each signal assigns every map window a suspicion
-score; windows are ranked by it and judged by AURC (area under the
-risk-coverage curve): remove the most suspicious windows first and measure
-how quickly errors disappear from what remains. Lower AURC = the signal
-finds errors better. The baseline is max-softmax, the probability the model
-itself assigns to its chosen class - a useful signal must beat it. The
-control is a statistic computed from raw pixels with no model involved; a
-model signal only means something where it also beats the control.
+Each signal gives every map window a suspicion score. AURC measures how well
+that score finds real errors; lower is better. Every signal must beat two
+references: the model's own confidence (max-softmax), and a plain pixel
+statistic computed without any model (the control).
 
 | AURC (lower = finds errors better) | In-domain (expert labels, 51 errors) | Ambiguous wetland margins (97 errors) | Far from training region (29 errors) |
 |---|---|---|---|
@@ -22,76 +18,40 @@ model signal only means something where it also beats the control.
 | embedding distance: window looks unlike the training data (E_dist) | n/a | 0.0289 | 0.0014 |
 | pixel statistic, no model (control) | n/a | 0.0384 | **0.0005** |
 
-Interpretation:
+What we learned so far:
 
-1. **In familiar territory, the model's own confidence is the best signal
-   tested.** None of the constructed signals improved on it.
-2. **On ambiguous terrain, cross-model disagreement is the best signal
-   tested** - roughly three times better than confidence, and better than
-   any pixel statistic, so it reflects model behavior rather than image
-   edges. This advantage is regime-specific: it does not hold on average
-   across arbitrary river scenes (exp11).
-3. **Far from the training region, confidence is unreliable** - even a plain
-   pixel statistic outranks it. But no model signal beat the pixel
-   statistics there either: that scene's "errors" are places where the
-   reference map misses an obvious river, so the scene proves confidence
-   fails and nothing more.
-
-Scaled to 29 scenes under a pre-registered selection rule (exp11), the
-picture is sharper and humbler: no signal dominates. Confidence is best on
-6 of 29 scenes; tiling instability beats it most often (19/29) but only
-slightly on average; disagreement's wins are real but limited to ambiguous
-scenes; embedding distance shows the only statistically significant average
-improvement (p=0.019), concentrated on high-error floodplain scenes where
-the reference map is least reliable. Which signal finds errors best depends
-on the scene - identifying the regime per scene is now the central open
-problem. Side findings: a disagreement partner needs to be *different*, not
-accurate (exp07, exp10), and combining same-family models hurts.
+- In familiar territory, the model's own confidence is the best signal.
+- On ambiguous terrain, cross-model disagreement is the best signal, and it
+  beats the pixel control there, so it is not just edge detection.
+- Far from the training region, confidence fails. No model signal provably
+  beats pixel statistics there yet.
+- Across 29 scenes chosen by a pre-registered rule, no signal dominates.
+  Which signal works depends on the scene. Identifying that regime per
+  scene is the open problem.
+- A disagreement partner must be a different model, not a more accurate
+  one. Same-family ensembles hurt.
+- The reference map is least reliable on exactly the most interesting
+  terrains, so all numbers are directions rather than settled effect sizes.
 
 ![No-model controls](exp/out/exp06_controls.png)
 
-*Risk-coverage per scene: model signals and no-model controls scored on
-identical errors (exp06); bottom row shows the control signal maps for the
-Barotse floodplain scene.*
+Every number, condition, statistic, and caveat:
+[docs/TECHNIQUES.md](docs/TECHNIQUES.md). Chronology: exp/NOTES.md.
 
-**Read the numbers as directions, not effect sizes**: few scenes per
-condition, small error counts, no significance tests, and the reference map
-(ESA WorldCover) is least reliable on exactly the interesting terrains. The
-full per-technique record - every number, condition, and caveat - is
-[docs/TECHNIQUES.md](docs/TECHNIQUES.md).
+## Method
 
-## Method in one paragraph
+We port LLM hallucination-detection ideas to earth observation. Labels only
+evaluate signals, never build them. Train and evaluation areas are always
+geographically separate. A no-model control runs in every comparison.
 
-The signals port techniques the LLM community uses to detect hallucinations
-- judging outputs when no reference answer exists - and they mostly do not
-depend on language: cross-model disagreement (self-consistency /
-SelfCheckGPT), perturbation instability (semantic entropy), checking
-predictions against reference river maps (retrieval-grounded fact checking;
-tested for false alarms only so far), and embedding distance
-(internal-state probing). Labels are used only to evaluate signals, never to
-build them; train and evaluation areas are always geographically separate;
-pixel-statistic controls run on every comparison.
-
-## Next
-
-An error-rater model from outside the OlmoEarth family (correlated errors
-within the family cap the disagreement signal), a domain-shift test with
-non-trivial errors and expert labels, a sensitivity test for the
-reference-map check, and significance testing over the seven-scene set.
-
-## Layout and reproduction
-
-`docs/TECHNIQUES.md` results ledger · `exp/` experiments (exp01-exp10) and
-figures · `exp/NOTES.md` lab log · `oe_inferencex/` library in progress ·
-`reports/` writeups.
+## Reproduce
 
 ```
 uv sync --extra geo
 uv run python exp/exp02_full_slice.py
 ```
 
-exp04 needs `huggingface.co/datasets/allenai/olmoearth_projects_awf`
-extracted to `data/awf/dataset/`. Note: `uv sync` installs CPU torch; the
-GPU experiments used the cu128 wheel installed manually. Experimental
-repository; a separated library release is planned once the signal set
-stabilizes.
+Experiments are exp01-exp11 in `exp/`. exp04 needs the AWF dataset
+(`huggingface.co/datasets/allenai/olmoearth_projects_awf`) under
+`data/awf/dataset/`. `uv sync` installs CPU torch; the GPU runs used the
+cu128 wheel. Experimental repository; a clean library release comes later.
