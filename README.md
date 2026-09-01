@@ -12,8 +12,8 @@ project datasets linked below.
 
 Each signal gives every map window a suspicion score. The four signals:
 
-- **E_case** - cross-model disagreement: two models
-  ([OlmoEarth v1 Nano](https://huggingface.co/allenai/OlmoEarth-v1-Nano) and
+- **E_case** - cross-model disagreement: two models (OlmoEarth v1
+  [Nano](https://huggingface.co/allenai/OlmoEarth-v1-Nano) and
   [Base](https://huggingface.co/allenai/OlmoEarth-v1-Base)) predict the same
   window differently.
 - **E_system** - tiling instability: the prediction flips when the input
