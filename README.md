@@ -68,14 +68,10 @@ scene's errors are trivial and support no model-signal claim.
 
 ![No-model controls](exp/out/exp06_controls.png)
 
-*Risk-coverage per scene with the no-model controls on the same errors
-(exp06), and the control signal maps for the Barotse scene. E_case retains
-its margin over the controls only on the Barotse scene (panel b).*
-
-![Hard scenes](exp/out/exp05_hard_scenes.png)
-
-*The two difficult scenes (exp05): imagery, reference, model-reference
-disagreement, and risk-coverage. Lower curves indicate better error ranking.*
+*Risk-coverage per scene, model signals and no-model controls on identical
+errors (exp06); bottom row: control signal maps for the Barotse scene.
+E_case retains a margin over the controls only on the Barotse scene (panel
+b). Scene imagery and per-experiment figures are in docs/TECHNIQUES.md.*
 
 **Limitations.** Each condition has been observed on a single scene or task,
 with small error counts and no significance testing. ESA WorldCover, the
