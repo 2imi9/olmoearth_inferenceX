@@ -16,6 +16,7 @@ Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 | exp09 | seven-scene replication with control |
 | exp10 | rater strength vs diversity (diversity wins) |
 | exp11 | pre-registered 29-scene comparison with bootstrap + permutation stats |
+| exp12 | fills the AWF table cells: E_dist and pixel control in-domain |
 
 ## exp01 — first E_case map (2026-08-31)
 
@@ -145,3 +146,8 @@ on 6/29 (exp09's 0/7 superseded); E_case advantage does not generalize
 only significant mean improvement (p=0.019), reference-quality confounded.
 No signal dominates -> regime identification becomes the central problem.
 Seed test vacuous (deterministic heads). Stats in exp/out/exp11_stats.csv.
+
+## exp12 — AWF missing cells (2026-09-01)
+
+E_dist 0.1104 and spectral-variability control 0.1287 on the same 51 AWF
+errors; both far behind baseline 0.0367. README table n/a cells filled.

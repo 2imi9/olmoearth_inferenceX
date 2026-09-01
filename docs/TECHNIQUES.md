@@ -116,6 +116,11 @@ harness, per condition.
 - Lowest per-class recall: herbaceous wetland (0.50, n=6 validation points,
   so indicative only). Class-index-to-name mapping verified against the
   per-class metric definitions in olmoearth_projects awf model.yaml.
+- Completing the comparison on the same 51 errors (exp12): E_dist
+  knn-to-train 0.1104 and a no-model spectral-variability control 0.1287,
+  both far behind the baseline. In-domain AWF errors are neither
+  out-of-distribution nor pixel-trivial, consistent with the water-task
+  pattern.
 
   ![AWF risk-coverage and per-class recall](../exp/out/exp04_awf_expert.png)
 
