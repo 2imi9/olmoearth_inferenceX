@@ -5,18 +5,29 @@ labels.
 
 ## Result
 
-Each signal gives every map window a suspicion score. AURC measures how well
-that score finds real errors; lower is better. Every signal must beat two
-references: the model's own confidence (max-softmax), and a plain pixel
-statistic computed without any model (the control).
+Each signal gives every map window a suspicion score. The four signals:
+
+- **E_case** - cross-model disagreement: two models predict the same window
+  differently.
+- **E_system** - tiling instability: the prediction flips when the input
+  grid shifts by a few pixels.
+- **E_dist** - embedding distance: the window looks unlike anything in the
+  training data.
+- **E_geo** - map check: the prediction contradicts a reference river map.
+  Tested only for false alarms so far, so it is not in the table.
+
+AURC measures how well a suspicion score finds real errors; lower is
+better. Every signal must beat two references: the model's own confidence
+(max-softmax, the probability the model assigns its chosen class), and a
+plain pixel statistic computed without any model (the control).
 
 | AURC (lower = finds errors better) | In-domain (expert labels, 51 errors) | Ambiguous wetland margins (97 errors) | Far from training region (29 errors) |
 |---|---|---|---|
-| model's own confidence (max-softmax, baseline) | **0.0367** | 0.0666 | 0.0258 |
-| cross-model disagreement: two models differ on a window (E_case) | 0.0533 | **0.0235** | 0.0103 |
-| tiling instability: prediction flips when the input grid shifts a few pixels (E_system) | 0.0427 | 0.0555 | 0.0076 |
-| embedding distance: window looks unlike the training data (E_dist) | n/a | 0.0289 | 0.0014 |
-| pixel statistic, no model (control) | n/a | 0.0384 | **0.0005** |
+| model's own confidence (baseline) | **0.0367** | 0.0666 | 0.0258 |
+| cross-model disagreement (E_case) | 0.0533 | **0.0235** | 0.0103 |
+| tiling instability (E_system) | 0.0427 | 0.0555 | 0.0076 |
+| embedding distance (E_dist) | n/a | 0.0289 | 0.0014 |
+| pixel statistic (control) | n/a | 0.0384 | **0.0005** |
 
 What we learned so far:
 
