@@ -5,71 +5,80 @@ labels.
 
 ## Result
 
-| AURC, lower = finds errors better | In-domain (AWF expert labels, 51 errors) | Ambiguous wetland margins (97 errors) | Far from training region (29 errors) |
+**How to read the table.** Each signal assigns every map window a suspicion
+score; windows are ranked by it and judged by AURC (area under the
+risk-coverage curve): remove the most suspicious windows first and measure
+how quickly errors disappear from what remains. Lower AURC = the signal
+finds errors better. The baseline is max-softmax, the probability the model
+itself assigns to its chosen class - a useful signal must beat it. The
+control is a statistic computed from raw pixels with no model involved; a
+model signal only means something where it also beats the control.
+
+| AURC (lower = finds errors better) | In-domain (expert labels, 51 errors) | Ambiguous wetland margins (97 errors) | Far from training region (29 errors) |
 |---|---|---|---|
-| model's own confidence (max-softmax) | **0.0367** | 0.0666 | 0.0258 |
-| cross-model disagreement (E_case) | 0.0533 | **0.0235** | 0.0103 |
-| tiling-perturbation instability (E_system) | 0.0427 | 0.0555 | 0.0076 |
-| embedding distance to training data (E_dist) | n/a | 0.0289 | 0.0014 |
-| plain pixel statistics (control, no model) | n/a | 0.0384 | **0.0005** |
+| model's own confidence (max-softmax, baseline) | **0.0367** | 0.0666 | 0.0258 |
+| cross-model disagreement: two models differ on a window (E_case) | 0.0533 | **0.0235** | 0.0103 |
+| tiling instability: prediction flips when the input grid shifts a few pixels (E_system) | 0.0427 | 0.0555 | 0.0076 |
+| embedding distance: window looks unlike the training data (E_dist) | n/a | 0.0289 | 0.0014 |
+| pixel statistic, no model (control) | n/a | 0.0384 | **0.0005** |
 
 Interpretation:
 
 1. **In familiar territory, the model's own confidence is the best signal
    tested.** None of the constructed signals improved on it.
 2. **On ambiguous terrain, cross-model disagreement is the best signal
-   tested.** Nano-Base disagreement ranks errors roughly three times better
-   than confidence and better than any pixel statistic, so it reflects model
-   behavior rather than image edges.
-3. **Far from the training region, confidence is unreliable** - a plain NDWI
-   gradient filter outranks it. No model signal beat pixel statistics there
-   either: that scene's errors are spectrally obvious reference omissions,
-   so the scene supports the negative claim about confidence and nothing
-   more.
+   tested** - roughly three times better than confidence, and better than
+   any pixel statistic, so it reflects model behavior rather than image
+   edges.
+3. **Far from the training region, confidence is unreliable** - even a plain
+   pixel statistic outranks it. But no model signal beat the pixel
+   statistics there either: that scene's "errors" are places where the
+   reference map misses an obvious river, so the scene proves confidence
+   fails and nothing more.
 
-Two side findings: averaging disagreement over three models is worse than the
-best pair when one model is weak (seen twice), and embedding distance does
-not rank errors in familiar territory.
+Replicated across seven river scenes (exp09): confidence was never the best
+signal (0 of 7); disagreement and tiling instability won five between them,
+each win beating the control; the control won the two scenes whose errors
+are trivial reference omissions. Side findings: combining three models from
+the same family is worse than the best pair - a disagreement partner needs
+to be *different*, not accurate (exp07, exp10) - and embedding distance
+never legitimately won a scene.
 
 ![No-model controls](exp/out/exp06_controls.png)
 
-*Risk-coverage per scene, model signals and no-model controls on identical
-errors (exp06); bottom row: control signal maps for the Barotse scene.*
+*Risk-coverage per scene: model signals and no-model controls scored on
+identical errors (exp06); bottom row shows the control signal maps for the
+Barotse floodplain scene.*
 
-Across seven river scenes with the control included (exp09), confidence
-produced the best ranking on zero scenes; disagreement and tile-phase won
-five between them, each win surviving the pixel control; the control won the
-two scenes whose errors are trivial reference omissions.
-
-**Read the numbers as directions, not effect sizes**: one scene or task per
-condition, small error counts, no significance tests, and ESA WorldCover as a
-weak reference on exactly the interesting terrains. The standing
-per-technique record with every number, condition, and caveat is
+**Read the numbers as directions, not effect sizes**: few scenes per
+condition, small error counts, no significance tests, and the reference map
+(ESA WorldCover) is least reliable on exactly the interesting terrains. The
+full per-technique record - every number, condition, and caveat - is
 [docs/TECHNIQUES.md](docs/TECHNIQUES.md).
 
 ## Method in one paragraph
 
-The signals are ports of LLM hallucination-detection techniques, which mostly
-do not depend on language: cross-model disagreement (self-consistency /
-SelfCheckGPT), perturbation instability (semantic entropy), reference-map
-consistency (retrieval-grounded fact checking; specificity shown, sensitivity
-untested), and embedding distance (internal-state probing). Every signal is
-scored by AURC against observed errors and must beat the audited model's own
-max-softmax confidence; labels only evaluate signals, never construct them;
-all splits are spatial; no-model pixel statistics run as controls on the same
-errors.
+The signals port techniques the LLM community uses to detect hallucinations
+- judging outputs when no reference answer exists - and they mostly do not
+depend on language: cross-model disagreement (self-consistency /
+SelfCheckGPT), perturbation instability (semantic entropy), checking
+predictions against reference river maps (retrieval-grounded fact checking;
+tested for false alarms only so far), and embedding distance
+(internal-state probing). Labels are used only to evaluate signals, never to
+build them; train and evaluation areas are always geographically separate;
+pixel-statistic controls run on every comparison.
 
 ## Next
 
-A domain-shift testbed with non-trivial errors and expert labels (AWF
-geographic-corner holdout), multiple scenes per condition with confidence
-intervals, a sensitivity test for the reference-map check, and
-reliability-weighted multi-model aggregation.
+An error-rater model from outside the OlmoEarth family (correlated errors
+within the family cap the disagreement signal), a domain-shift test with
+non-trivial errors and expert labels, a sensitivity test for the
+reference-map check, and significance testing over the seven-scene set.
 
 ## Layout and reproduction
 
-`docs/TECHNIQUES.md` results ledger · `exp/` experiments and figures ·
-`exp/NOTES.md` lab log · `oe_inferencex/` library in progress ·
+`docs/TECHNIQUES.md` results ledger · `exp/` experiments (exp01-exp10) and
+figures · `exp/NOTES.md` lab log · `oe_inferencex/` library in progress ·
 `reports/` writeups.
 
 ```
@@ -78,5 +87,7 @@ uv run python exp/exp02_full_slice.py
 ```
 
 exp04 needs `huggingface.co/datasets/allenai/olmoearth_projects_awf`
-extracted to `data/awf/dataset/`. Experimental repository; a separated
-library release is planned once the signal set stabilizes.
+extracted to `data/awf/dataset/`. Note: `uv sync` installs CPU torch; the
+GPU experiments used the cu128 wheel installed manually. Experimental
+repository; a separated library release is planned once the signal set
+stabilizes.
