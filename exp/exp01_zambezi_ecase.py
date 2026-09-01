@@ -111,21 +111,21 @@ def main():
           f"p5={np.percentile(agree, 5):.3f} max={agree.max():.3f}")
 
     # Quicklook: RGB (B04,B03,B02 are indices per band_order) + agreement map.
-    import matplotlib
-    matplotlib.use("Agg")
+    from oe_inferencex.figstyle import setup, map_panel
     import matplotlib.pyplot as plt
+    setup()
     band_order = Modality.SENTINEL2_L2A.band_order
     rgb_idx = [band_order.index(b) for b in ("B04", "B03", "B02")]
     rgb = image[rgb_idx].transpose(1, 2, 0).astype(np.float32)
-    rgb = np.clip((rgb - 1000) / 2000, 0, 1)  # rough L2A stretch
-    fig, axes = plt.subplots(1, 2, figsize=(11, 5))
-    axes[0].imshow(rgb); axes[0].set_title("Sentinel-2 RGB (Zambezi, Kazungula)")
-    im = axes[1].imshow(agree, cmap="RdYlGn", vmin=0, vmax=1)
-    axes[1].set_title("Nano-Base local structure agreement")
-    fig.colorbar(im, ax=axes[1], shrink=0.8)
-    for ax in axes: ax.axis("off")
+    rgb = np.clip((rgb - 1000) / 2000, 0, 1)
+    fig, axes = plt.subplots(1, 2, figsize=(11.5, 5))
+    map_panel(fig, axes[0], rgb, "Sentinel-2 RGB, Zambezi at Kazungula", None, rgb=True, idx=0)
+    map_panel(fig, axes[1], agree,
+              "Nano-Base local similarity-structure\ncorrelation (radius-4 neighborhood)",
+              "Pearson r of local cosine-similarity\nvectors (noise floor: 0.59)",
+              cmap="RdYlGn", idx=1, vmin=0, vmax=1)
     fig.tight_layout()
-    fig.savefig("exp/out/exp01_zambezi_agreement.png", dpi=150)
+    fig.savefig("exp/out/exp01_zambezi_agreement.png", bbox_inches="tight")
     np.save("exp/out/exp01_agreement.npy", agree)
     print("wrote exp/out/exp01_zambezi_agreement.png")
 
