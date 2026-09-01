@@ -134,6 +134,8 @@ motivate replication; they do not establish effect sizes.
   rank errors better than max-softmax confidence, underlining how weakly
   informative the model's own confidence is there.
 
+  ![No-model controls vs model signals](../exp/out/exp06_controls.png)
+
 ### Hard scenes and domain shift (exp05)
 - Water heads trained at Katima Mulilo were evaluated on (a) the Barotse
   floodplain interior (ambiguous wetland margins, in-region) and (b) the
