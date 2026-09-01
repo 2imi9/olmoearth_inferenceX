@@ -82,7 +82,7 @@ and a plain pixel statistic computed without any model (the control).
 
 </details>
 
-What we learned so far:
+## Findings
 
 - **In familiar territory, the model's own confidence is the best signal.**
 - **Tiling instability beats the model's own confidence on 27 of 29 scenes**
