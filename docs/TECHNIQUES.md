@@ -103,6 +103,17 @@ instantiations, not the signal families.
   on AWF with Nano (accuracy 0.756) as the weak member. Multi-model
   aggregation appears to require reliability weighting. (exp/exp03, exp/exp04)
 
+### Rater strength vs rater diversity (exp10)
+- Replacing Nano with v1-Large as Base's disagreement partner makes the
+  signal worse, not better: |Large-Base| mean AURC 0.0197 vs |Nano-Base|
+  0.0129 over the seven exp09 scenes, better on only 3/7, although Large is
+  the more accurate model on every scene. Within one family, two strong
+  models agree on errors; the informative property of a disagreement partner
+  is decorrelation, not accuracy. Converges with the exp07 correlated-error
+  finding from an independent direction, and upgrades the out-of-family
+  rater (open item 3) to the clearest next addition for E_case.
+  (exp/exp10, exp/out/exp10_large_pair.csv)
+
 ### Perturbation stability (E_system, tile-phase)
 - Shifting the input window origin by 1-3 pixels (sub-patch phase) and taking
   the standard deviation of predicted probability across shifts produced

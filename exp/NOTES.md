@@ -111,3 +111,11 @@ predicted; E_dist 0 legitimate wins. First AURC numbers with spread.
 Iteration notes: initial water-fraction filter wrongly excluded
 high-error scenes (fixed to errors>=8); four initial AOIs missed their
 rivers at 1.28 km precision and were re-aimed.
+
+## exp10 — rater strength vs diversity, GPU (overnight)
+
+|Large-Base| worse than |Nano-Base| (0.0197 vs 0.0129 mean AURC, 3/7
+scenes) despite Large being more accurate everywhere. Disagreement partners
+need decorrelation, not strength. Note: exp10's per-scene win counts use a
+3-signal set (baseline, two pairs) and are not comparable to exp09's
+5-signal win counts.
