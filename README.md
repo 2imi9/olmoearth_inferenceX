@@ -1,7 +1,8 @@
 # olmoearth_inferenceX
 
-Can you tell where an OlmoEarth prediction is wrong, in a region with no
-labels? Six experiments, public data and checkpoints, CPU only.
+Experiments on locating errors in OlmoEarth predictions over regions with no
+labels. Six experiments so far, all on public data and public checkpoints,
+CPU only.
 
 ## Result
 
