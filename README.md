@@ -41,18 +41,19 @@ and a plain pixel statistic computed without any model (the control).
 
 What we learned so far:
 
-- In familiar territory, the model's own confidence is the best signal.
-- On ambiguous terrain, cross-model disagreement is the best signal, and it
-  beats the pixel control there, so it is not just edge detection.
-- Far from the training region, confidence fails. No model signal provably
-  beats pixel statistics there yet.
-- Across 29 scenes chosen by a pre-registered rule, no signal dominates.
+- **In familiar territory, the model's own confidence is the best signal.**
+- **On ambiguous terrain, cross-model disagreement is the best signal**, and
+  it beats the pixel control there, so it is not just edge detection.
+- **Far from the training region, confidence fails.** No model signal
+  provably beats pixel statistics there yet.
+- **Across 29 scenes chosen by a pre-registered rule, no signal dominates.**
   Which signal works depends on the scene. Identifying that regime per
   scene is the open problem.
-- A disagreement partner must be a different model, not a more accurate
-  one. Same-family ensembles hurt.
-- The reference map is least reliable on exactly the most interesting
-  terrains, so all numbers are directions rather than settled effect sizes.
+- **A disagreement partner must be a different model, not a more accurate
+  one.** Same-family ensembles hurt.
+- **The reference map is least reliable on exactly the most interesting
+  terrains**, so all numbers are directions rather than settled effect
+  sizes.
 
 ![No-model controls](exp/out/exp06_controls.png)
 
