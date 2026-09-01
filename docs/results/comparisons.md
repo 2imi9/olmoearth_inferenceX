@@ -4,7 +4,7 @@ All signals scored on identical errors with the same harness, per
 condition. Index at [TECHNIQUES.md](../TECHNIQUES.md); protocol and status
 terms in [protocol.md](../method/protocol.md).
 
-### Multi-scene replication (exp09)
+### Multi-scene replication (exp09; tile-phase unaligned and statistics superseded by exp13)
 - The full signal comparison plus the NDWI-gradient control over seven river
   scenes across southern Africa (Kazungula, Barotse, Zambezi delta, Luangwa
   confluence, Okavango panhandle, Shire at Liwonde, upstream Victoria
@@ -70,7 +70,7 @@ terms in [protocol.md](../method/protocol.md).
 
   ![AWF risk-coverage and per-class recall](../../exp/out/exp04_awf_expert.png)
 
-### Single difficult scenes (exp05)
+### Single difficult scenes (exp05; tile-phase values unaligned, superseded by exp13)
 - Water heads trained at Katima Mulilo, evaluated on (a) the Barotse
   floodplain interior (ambiguous wetland margins, in-region) and (b) the
   Zambezi delta mangrove coast (~1300 km from the training region). On both
@@ -86,80 +86,100 @@ terms in [protocol.md](../method/protocol.md).
 
   ![Hard scenes](../../exp/out/exp05_hard_scenes.png)
 
-### Corrected statistics on the 29-scene set (exp13, authoritative)
-- Same scenes, errors, and heads as exp11, recomputed with three
-  corrections: (1) tile-phase aligned on a pixel canvas before taking the
-  std across shifts (exp05/09/11 compared unaligned patch grids, so shifted
-  patches covered different ground); (2) excess AURC (E-AURC = AURC minus
-  the oracle's) so scenes with different error rates are comparable; (3) a
-  4x4-patch block bootstrap (B=1000) for per-scene intervals, since patches
-  are spatially autocorrelated. Per-scene values in
-  exp/out/exp13_corrected_stats.csv.
-- Aligned tile-phase beats the baseline on 27/29 scenes (exact sign test
-  p<0.001; sign-flip permutation on E-AURC differences p=0.002); its block
-  bootstrap interval excludes zero in its favor on 18 scenes and against
-  on none. It beats the pixel control on 19/29, E_case on 24/29, E_dist on
-  25/29, and is the best signal on 12/29 (best or second on 24/29). This is
-  the first result in the repository that is both statistically robust and
-  control-surviving.
-- The unaligned tile-phase of exp11 scores 19/29 (sign p=0.14, permutation
-  p=0.95): the misalignment hid the effect. Recorded as an erratum.
-- E_case: 12/29, sign p=0.46, interval excludes zero in its favor on 2
-  scenes and against on 10. Not a general signal; unchanged conclusion.
-- E_dist: 13/29, sign p=0.71. The exp11 permutation p=0.019 was a scale
-  artifact of raw AURC dominated by the high-error Shire scenes; on
-  scale-comparable E-AURC there is no advantage (intervals: 11 better, 4
-  worse). Superseded.
-- Control: 13/29 vs baseline; best signal on 9/29, the reference-omission
-  scenes. Baseline best on 1/29.
-- Head-seed variance remains structurally zero (deterministic head
-  training), as noted under exp11.
+### Corrected statistics on the rule-selected scene set (exp13, authoritative)
+- Same errors and heads as exp11, recomputed with: (1) tile-phase aligned
+  on a pixel canvas before taking the std across shifts (exp05/09/11
+  compared unaligned patch grids); (2) excess AURC (E-AURC = AURC minus the
+  oracle's), which makes absolute levels comparable across scenes; it does
+  not change any signal-minus-baseline difference or any test on them; (3)
+  a 4x4-patch block bootstrap (B=1000) for per-scene intervals; (4) AURC
+  computed as its expectation under random tie-breaking, since the boundary
+  score has nine levels and float32 sigmoid saturation ties the
+  max-softmax uncertainty at zero on a large share of patches, so a
+  stable-sort AURC depends on raster order; (5) the baseline scored as the
+  negative absolute logit, monotone in max-softmax and tie-free where the
+  sigmoid saturates. Two scenes (kafue, luangwa) that entered exp11 through
+  a cache import rather than the pre-registered rule are excluded; 27
+  scenes remain. Per-scene values in exp/out/exp13_corrected_stats.csv.
+- Aligned tile-phase beats the baseline on 26/27 scenes (1 worse, 0 tied;
+  exact sign test on untied pairs p=4e-07; sign-flip permutation on
+  mean E-AURC differences p=0.000); its percentile block-bootstrap
+  interval excludes zero in its favor on 18 scenes and against on
+  0. It beats the pixel control on 18/27, E_case on
+  23/27, E_dist on 22/27, and is the best of the five
+  signals on 12/27 (best or second on 24/27). Per-scene
+  percentile intervals are biased for this rank statistic on high-error
+  scenes and are indicative only; the cross-scene sign and permutation
+  tests do not use them.
+- The unaligned tile-phase of exp11 scores 17/27
+  (sign p=0.25): the misalignment hid the effect. Erratum.
+- E_case: 10/27 (sign p=0.25); intervals in its favor on
+  3 scenes and against on 9. Not a general signal.
+- E_dist: 13/27 (sign p=1.00); mean-difference sign-flip
+  permutation p=0.01, unchanged from exp11 because the oracle
+  subtraction cancels in within-scene differences. The mean-based test is
+  carried by the high-error scenes; the scale-free sign test is reported as
+  primary and shows no advantage. Intervals: 11 in favor, 5 against.
+- Control: 14/27 vs baseline; best signal on 9/27, the
+  reference-omission scenes. Baseline best on 0/27.
+- Head-seed variance is structurally zero (deterministic head training), as
+  noted under exp11.
 
 ### Boundary ablation of tile-phase (exp14)
 - Question: is aligned tile-phase a perturbation signal or a detector of
   boundaries in the model's own prediction map? Two zero-cost proxies from
   the shift-0 map alone: gradient magnitude of the probability map, and the
-  fraction of a patch's 8 neighbors whose hard label differs.
-- The discrete boundary fraction matches tile-phase exactly: 13/29
-  head-to-head, sign p=0.71, median E-AURC difference 0.0000; it beats the
-  baseline on 23/29 (p=0.002) by itself. The continuous gradient is weaker
-  (tile-phase better on 27/29) despite within-scene Spearman 0.84-0.95.
-- Conclusion: the perturbation adds nothing beyond boundary proximity. The
-  supported claim is that errors concentrate at prediction boundaries and
-  boundary proximity ranks them better than confidence, at zero extra
-  inference. This also explains exp04: AWF windows are labeled at interior
-  points, where a boundary signal has nothing to detect. Values in
-  exp/out/exp14_boundary_ablation.csv.
+  fraction of a patch's 8 neighbors whose hard label differs. Scored with
+  tie-aware E-AURC on the 27 rule-selected scenes, alongside the pixel
+  control.
+- The discrete boundary fraction is statistically indistinguishable from
+  tile-phase across scenes: boundary better on 12, tile-phase on 15,
+  tied on 0 (sign p=0.70, median E-AURC difference -0.00012); per-scene
+  values differ in both directions, so this is a null result, not an
+  equivalence. The boundary fraction alone beats the baseline on 19/27
+  (p=0.052) and the pixel control on 22/27 (p=0.002); the
+  continuous gradient is weaker (tile-phase better on 25/27).
+  Best-signal tally among the five: {'pred-boundary': 10, 'tile-phase (aligned)': 10, 'control': 5, 'baseline': 2}.
+- Conclusion: no advantage of the perturbation beyond boundary proximity is
+  detectable. The supported claim is that errors concentrate at prediction
+  boundaries and the aligned tile-phase signal ranks them better than
+  confidence; the zero-cost boundary indicator is indistinguishable from
+  tile-phase across scenes, but its own margin over confidence is marginal
+  (p=0.05), so the zero-inference shortcut is suggestive, not established. A plausible but untested explanation for exp04 is
+  that AWF windows are labelled at single points where a boundary signal
+  has no neighbours to compare; no boundary indicator has been computed on
+  AWF. Values in exp/out/exp14_boundary_ablation.csv.
 
 ### Boundary proximity combined with the reference-map check (exp15)
 - E_geo flag = patch on an OSM waterway=river centerline that the model
-  predicts dry. Georeferencing recovered for 23 of the 29 scenes (four
-  Overpass failures, two scenes without stored coordinates). Ranking
-  signals: boundary (exp14), geo flag alone, and geo-first-then-boundary.
-- The conjunction is worse than boundary alone (better on 5/23, exact sign
-  test p=0.011 against it); geo alone beats the baseline on 3/23. Combining
-  E_geo with boundary proximity is rejected under this reference.
-- First sensitivity data for E_geo: 15/23 scenes carry flags; flags are
-  enriched for errors relative to a random patch (mean precision 0.25 vs a
-  base error rate of 0.078) but eight scenes have 20-51 flags at precision
-  exactly zero. Those are patches where OSM says river and both the model
-  and WorldCover say dry: disagreement between two reference maps (narrow
-  or seasonal channels below WorldCover's effective resolution), not model
-  error. Under WorldCover truth, E_geo's precision cannot be separated from
-  the reference confound. Values in exp/out/exp15_boundary_geo.csv.
-- Implication: E_geo needs either width-filtered centerlines (GRWL width
-  attribute, keeping rivers the reference can resolve) or expert truth
-  before its sensitivity can be stated.
+  predicts dry. Georeferencing recovered for 27 of the 27 rule-selected
+  scenes (Overpass failures excluded). Signals: boundary (exp14), geo flag
+  alone, geo-first-then-boundary.
+- Prepending the flag changes the ranking only on scenes carrying flags:
+  better on 5, worse on 9, unchanged on 13 of 27 (exact sign test on
+  untied pairs p=0.42). No benefit shown; not significantly worse. Geo
+  alone beats the baseline on 3/27; boundary alone on 19/27.
+- E_geo sensitivity: 17/27 scenes carry flags; pooled precision
+  0.12 over 413 flags against a base error rate of 0.081
+  (1.5x), while the unweighted per-scene mean of 0.22 is inflated by
+  scenes with one or two flags. 9 scenes carry 1-51 flags at precision
+  exactly zero: OSM marks a river that both the model and WorldCover call
+  dry, i.e. disagreement between two reference maps on narrow or seasonal
+  channels. Under WorldCover truth, E_geo precision cannot be separated
+  from the reference confound. Values in exp/out/exp15_boundary_geo.csv.
+- Implication: E_geo needs width-filtered centerlines (GRWL width
+  attribute) or expert truth before its sensitivity can be stated.
 
-### Pre-registered 29-scene comparison (exp11; statistics superseded by exp13)
+### Pre-registered scene set (exp11; statistics superseded by exp13)
 - The scene rule and scene set below stand. The statistics in this section
   use raw AURC and the unaligned tile-phase; exp13 corrects both and is
   authoritative where they differ.
 - Scene rule committed to git before any new scene was fetched: candidates
   sampled at fixed fractions along OSM geometries of eight named rivers,
   0.2-degree separation, inclusion iff the deterministic Base head commits
-  >=8 errors against WorldCover. 22 rule-selected scenes joined the 7
-  existing ones; 29 total. Per-scene AURC, bootstrap 95% CIs (B=1000), and
+  >=8 errors against WorldCover. 20 rule-selected scenes joined the 7 exp09 scenes plus 2 unsuffixed exp09
+  first-attempt AOIs (kafue, luangwa) that entered through the cache import
+  and are excluded from exp13 onward; 29 total here, 27 in exp13-exp15. Per-scene AURC, bootstrap 95% CIs (B=1000), and
   seed columns in exp/out/exp11_stats.csv.
 - Baseline best on 6/29 scenes: the exp09 claim "confidence never best
   (0/7)" did not survive scene expansion and is superseded.

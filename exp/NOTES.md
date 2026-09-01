@@ -17,6 +17,9 @@ Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 | exp10 | rater strength vs diversity (diversity wins) |
 | exp11 | pre-registered 29-scene comparison with bootstrap + permutation stats |
 | exp12 | fills the AWF table cells: E_dist and pixel control in-domain |
+| exp13 | corrected statistics on the rule-selected set: aligned tile-phase, tie-aware excess AURC, block bootstrap, sign/permutation tests |
+| exp14 | boundary ablation: tile-phase indistinguishable from prediction-boundary proximity |
+| exp15 | boundary proximity + E_geo: no benefit from the conjunction; E_geo sensitivity unmeasurable under WorldCover truth |
 
 ## exp01 — first E_case map (2026-08-31)
 
@@ -178,3 +181,23 @@ boundary is worse than boundary alone (5/23, p=0.011); geo alone 3/23.
 Geo flags 3x error-enriched but precision zero on 8 scenes: OSM-vs-
 WorldCover disagreement on narrow channels. E_geo sensitivity still
 unmeasurable under WorldCover truth. Results: exp/out/exp15_boundary_geo.csv.
+
+## audit + corrections (2026-09-01)
+
+A 204-agent adversarial audit confirmed 53 findings. Code fixes: tie-aware
+AURC (expected value under random tie-breaking) and a negative-|logit|
+baseline in exp13/14/15 and evidence.py; tie-excluding sign tests; exp14
+now scores against the pixel control; kafue and luangwa (cache leftovers,
+not rule-selected) excluded from exp13-15 (27 scenes); AWF loader now warps
+the 20 m/60 m band groups onto the 10 m grid instead of stretching them
+(exp04/07/12 re-embedded); rasterize_polyline floor fix. Text fixes: the
+E-AURC 'scale artifact' explanation for E_dist withdrawn (the oracle
+subtraction cancels in differences); 'equivalent'/'adds nothing' softened
+to 'statistically indistinguishable'; exp15 'rejected' softened to 'no
+benefit shown' (5/9/13 W/L/T); E_geo enrichment restated as pooled
+precision; README scope narrowed to linear probes on frozen encoders;
+boundary-concentrated error positioned against prior work; AWF point-label
+explanation demoted to hypothesis. Audit record: exp/out/audit_wf_119095bf.json.
+Post-correction headline: aligned tile-phase beats confidence on 26/27
+(sign p=4e-07); boundary indicator 19/27 vs confidence (p=0.05, marginal),
+22/27 vs control; the two are indistinguishable head-to-head (15/12, p=0.70).

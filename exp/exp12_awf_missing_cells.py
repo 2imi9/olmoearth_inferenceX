@@ -9,6 +9,8 @@ Scored with AURC against the same 51 seed-0 Base-head errors as exp04.
 """
 import numpy as np
 import rasterio
+from rasterio.enums import Resampling
+from rasterio.vrt import WarpedVRT
 import torch
 
 from oe_inferencex.awf import ROOT, GROUPS, list_windows
@@ -22,10 +24,14 @@ N_CLASSES = 9
 def spectral_variability(wdir, r, c):
     vals = []
     r0, c0 = max(r - 4, 0), max(c - 4, 0)
+    with rasterio.open(f"{wdir}/layers/sentinel2/B02_B03_B04_B08/geotiff.tif") as ref:
+        crs, transform = ref.crs, ref.transform
     for group, bands in GROUPS.items():
         path = f"{wdir}/layers/sentinel2/{group}/geotiff.tif"
         with rasterio.open(path) as src:
-            data = src.read(out_shape=(src.count, 63, 63))
+            with WarpedVRT(src, crs=crs, transform=transform, width=63, height=63,
+                           resampling=Resampling.nearest) as vrt:
+                data = vrt.read()
         for bi in range(data.shape[0]):
             vals.append(np.std(data[bi, r0:r0 + 8, c0:c0 + 8].astype(np.float64)))
     return float(np.mean(vals))

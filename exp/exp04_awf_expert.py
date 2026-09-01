@@ -18,7 +18,8 @@ from oe_inferencex.evidence import train_softmax_head, predict_softmax_head, ris
 PATCH = 4
 N_CLASSES = 9
 SHIFTS = (0, 1, 2, 3)
-BATCH = 8
+BATCH = 16
+DEV = "cuda" if torch.cuda.is_available() else "cpu"
 CACHE = "exp/out/exp04_feats.npz"
 
 
@@ -29,8 +30,8 @@ CKPT = "exp/out/exp04_ckpt.npz"
 def embed_all(windows):
     """One disk pass per batch; all five model/shift passes from memory.
     Checkpoints every 20 batches so a killed run resumes."""
-    models = {"nano": load_model_from_id(ModelID.OLMOEARTH_V1_NANO),
-              "base": load_model_from_id(ModelID.OLMOEARTH_V1_BASE)}
+    models = {"nano": load_model_from_id(ModelID.OLMOEARTH_V1_NANO).to(DEV),
+              "base": load_model_from_id(ModelID.OLMOEARTH_V1_BASE).to(DEV)}
     for m in models.values():
         m.eval()
     feats = {k: [] for k in PASSES}
@@ -51,10 +52,10 @@ def embed_all(windows):
                 cr, (pr, pc) = crop_stack(full, r, c, int(s))
                 stacks.append(cr)
                 locs.append((min(pr // PATCH, CROP // PATCH - 1), min(pc // PATCH, CROP // PATCH - 1)))
-            sample = stacks_to_sample(stacks)
+            sample = stacks_to_sample(stacks, DEV)
             with torch.no_grad():
                 out = models[mname].encoder(sample, fast_pass=True, patch_size=PATCH)
-            f = out["tokens_and_masks"].sentinel2_l2a.mean(dim=[3, 4])
+            f = out["tokens_and_masks"].sentinel2_l2a.mean(dim=[3, 4]).cpu()
             for bi, (pi, pj) in enumerate(locs):
                 feats[key].append(f[bi, pi, pj].numpy())
         if (i // BATCH) % 20 == 19:

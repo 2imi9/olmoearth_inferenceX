@@ -1,4 +1,4 @@
-"""Exp 01: first real E_case map over the Zambezi (Barotse floodplain, near Mongu).
+"""Exp 01: first embedding-level E_case map, Zambezi at Kazungula (Zambia-Botswana border).
 
 One Sentinel-2 L2A scene from Planetary Computer, Nano + Base embeddings,
 per-patch local similarity-structure agreement between the two models.

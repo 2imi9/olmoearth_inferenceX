@@ -21,8 +21,8 @@ Index at [TECHNIQUES.md](../TECHNIQUES.md).
    claiming novelty.
 7. Confirm whether Studio per-project exports match the olmoearth_lcc export
    format (partial probabilities).
-8. Replace OSM centerlines with GRIT, which adds width attributes that E_geo
-   can condition on.
+8. Replace OSM centerlines with GRWL centerlines filtered by width, so the
+   reference can resolve the channel (GRIT was the earlier candidate).
 9. Audit a window of the published LCC production output directly (HTTP
    range reads) against river centerlines; first step toward the
    change-attribution use case.
@@ -51,9 +51,8 @@ sub-patch shifts, per-window) since its 29-scene support is
 WorldCover-referenced.
 
 Update after exp14: the tile-phase result is reinterpreted as
-prediction-boundary proximity; the planned AWF verification is answered by
-mechanism (interior point labels carry no boundary signal) rather than by a
-new run. New item: test boundary proximity against expert-labeled dense
+prediction-boundary proximity; the point-label explanation for the AWF loss
+is a hypothesis and is kept open as item 6. New item: test boundary proximity against expert-labeled dense
 maps rather than points, and combine it with E_geo (boundary patches that
 also contradict the reference map).
 

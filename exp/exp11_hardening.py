@@ -26,6 +26,11 @@ Signals: baseline max-softmax, E_case |Nano-Base|, E_system tile-phase,
 E_dist knn-to-train, NDWI-gradient control. Errors are defined by the
 seed-0 Base head throughout, as in exp09.
 """
+# NOTE (post-hoc, 2026-09-01): the five-seed head test above is vacuous. Heads are
+# zero-initialised and trained full-batch (evidence.py train_logistic_head), so
+# seed_std in exp11_stats.csv is float noise. Also, the exp09 cache import below
+# swept in two unsuffixed exp09 first-attempt AOIs (kafue, luangwa) that were not
+# selected by the rule; exp13-exp15 exclude them (NON_RULE). Retained for the record.
 import json
 import os
 import urllib.parse

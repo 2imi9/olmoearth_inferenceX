@@ -12,6 +12,7 @@ import numpy as np
 import rasterio
 import torch
 from rasterio.enums import Resampling
+from rasterio.vrt import WarpedVRT
 
 from olmoearth_pretrain.data.constants import Modality
 from olmoearth_pretrain.data.normalize import Normalizer, Strategy
@@ -54,13 +55,16 @@ def load_window_full(wdir):
     stack = np.zeros((63, 63, N_MONTHS, len(band_order)), dtype=np.float32)
     for t in range(N_MONTHS):
         layer = "sentinel2" if t == 0 else f"sentinel2.{t}"
+        # georeference every group onto the 10 m grid of the first group so
+        # the 20 m and 60 m bands are warped, not stretched, into alignment
+        with rasterio.open(f"{wdir}/layers/{layer}/B02_B03_B04_B08/geotiff.tif") as ref:
+            crs, transform = ref.crs, ref.transform
         for group, bands in GROUPS.items():
             path = f"{wdir}/layers/{layer}/{group}/geotiff.tif"
             with rasterio.open(path) as src:
-                data = src.read(
-                    out_shape=(src.count, 63, 63),
-                    resampling=Resampling.bilinear,
-                )
+                with WarpedVRT(src, crs=crs, transform=transform, width=63, height=63,
+                               resampling=Resampling.bilinear) as vrt:
+                    data = vrt.read()
             for bi, band in enumerate(bands):
                 stack[:, :, t, band_order.index(band)] = data[bi]
     return stack
@@ -77,13 +81,13 @@ def crop_stack(full, r, c, shift=0):
 _normalizer = Normalizer(Strategy.COMPUTED)
 
 
-def stacks_to_sample(stacks):
+def stacks_to_sample(stacks, device="cpu"):
     """Batch of raw stacks (B, CROP, CROP, T, 12) -> MaskedOlmoEarthSample."""
     x = _normalizer.normalize(Modality.SENTINEL2_L2A, np.stack(stacks).astype(np.float64))
     b = x.shape[0]
-    timestamps = torch.tensor([[15, m, 2023] for m in range(N_MONTHS)])[None].repeat(b, 1, 1)
+    timestamps = torch.tensor([[15, m, 2023] for m in range(N_MONTHS)], device=device)[None].repeat(b, 1, 1)
     return MaskedOlmoEarthSample(
-        sentinel2_l2a=torch.tensor(x, dtype=torch.float32),
-        sentinel2_l2a_mask=torch.ones((b, CROP, CROP, N_MONTHS, 3)) * MaskValue.ONLINE_ENCODER.value,
+        sentinel2_l2a=torch.tensor(x, dtype=torch.float32, device=device),
+        sentinel2_l2a_mask=torch.ones((b, CROP, CROP, N_MONTHS, 3), device=device) * MaskValue.ONLINE_ENCODER.value,
         timestamps=timestamps,
     )

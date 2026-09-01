@@ -30,7 +30,7 @@ import numpy as np
 import torch
 
 from olmoearth_pretrain.data.constants import Modality
-from oe_inferencex.evidence import train_logistic_head, predict_head
+from oe_inferencex.evidence import train_logistic_head, predict_head, predict_logit, aurc_expected
 
 SIZE, PATCH, PAD = 128, 4, 4
 GRID = SIZE // PATCH
@@ -42,9 +42,11 @@ SIGS = ["baseline", "E_case", "tile-phase (aligned)", "E_dist", "control"]
 
 
 def aurc(sig, err):
-    order = np.argsort(sig, kind="stable")
-    e = err[order]
-    return float((np.cumsum(e) / np.arange(1, len(e) + 1)).mean())
+    """Tie-aware AURC (expected value under random tie-breaking)."""
+    return aurc_expected(sig, err)
+
+
+NON_RULE = ("kafue", "luangwa")  # exp09 first-attempt AOIs that entered exp11 via the cache import; excluded
 
 
 def oracle_aurc(n, k):
@@ -115,11 +117,12 @@ def main():
     rng = np.random.default_rng(0)
     rows, per_scene = [], {}
     for name in names:
-        if f"{name}_base0" not in feats:
+        if f"{name}_base0" not in feats or name in NON_RULE:
             continue
         lab = scenes[f"{name}_lab"]
         p_shift = [predict_head(torch.tensor(feats[f"{name}_base{s}"]), *hb) for s in SHIFTS]
         p_base = p_shift[0]
+        logit = predict_logit(torch.tensor(feats[f"{name}_base0"]), *hb)
         p_nano = predict_head(torch.tensor(feats[f"{name}_nano"]), *hn)
         err = ((p_base > 0.5) != lab.astype(bool)).astype(np.float64)
         if err.sum() < 8:
@@ -128,7 +131,7 @@ def main():
         a_ev = torch.nn.functional.normalize(torch.tensor(f0).reshape(-1, f0.shape[-1]), dim=-1)
         knn = torch.topk(1 - (a_ev @ a_tr.T), k=5, largest=False).values.mean(1).reshape(GRID, GRID).numpy()
         sigs = {
-            "baseline": 1 - np.maximum(p_base, 1 - p_base),
+            "baseline": -np.abs(logit),  # monotone in max-softmax, tie-free where the sigmoid saturates
             "E_case": np.abs(p_nano - p_base),
             "tile-phase (aligned)": aligned_tile_phase(p_shift),
             "tile-phase (unaligned, exp11)": np.stack(p_shift).std(0),
@@ -172,17 +175,21 @@ def main():
     sn = sorted(per_scene)
     n = len(sn)
     print(f"\nscenes: {n}. Cross-scene tests on E-AURC (scale-comparable):")
-    print(f"{'signal':<30}{'median diff':>12}{'better':>9}{'sign p':>9}{'perm p':>9}{'CI excl 0':>11}")
+    print(f"{'signal':<30}{'median diff':>12}{'W/L/T':>10}{'sign p':>9}{'perm p':>9}{'CI excl 0':>11}")
+    print("(sign test on untied pairs; permutation is the mean-difference sign-flip test, which the")
+    print(" oracle subtraction cannot change and which is driven by the high-error scenes)")
     rng2 = np.random.default_rng(1)
     for k in ["E_case", "tile-phase (aligned)", "tile-phase (unaligned, exp11)", "E_dist", "control"]:
         d = np.array([per_scene[s]["baseline"] - per_scene[s][k] for s in sn])  # >0 = signal better
-        wins = int((d > 0).sum())
+        wins, losses = int((d > 1e-12).sum()), int((d < -1e-12).sum())
+        ties = n - wins - losses
         perm = np.array([(d * rng2.choice([-1, 1], n)).mean() for _ in range(N_PERM)])
         p_perm = float((np.abs(perm) >= abs(d.mean())).mean())
         sig_rows = [r for r in rows if r["signal"] == k]
         excl = sum(1 for r in sig_rows if r["diff_ci_hi"] < 0) if sig_rows and "diff_ci_hi" in sig_rows[0] else 0
         excl_worse = sum(1 for r in sig_rows if r["diff_ci_lo"] > 0) if sig_rows and "diff_ci_lo" in sig_rows[0] else 0
-        print(f"{k:<30}{np.median(d):>+12.4f}{wins:>6}/{n:<3}{sign_test_p(wins, n):>9.3f}{p_perm:>9.3f}"
+        p_sign = sign_test_p(wins, wins + losses) if wins + losses else 1.0
+        print(f"{k:<30}{np.median(d):>+12.4f}{wins:>3}/{losses}/{ties:<3}{p_sign:>9.3f}{p_perm:>9.3f}"
               f"{excl:>6}b/{excl_worse}w")
     best = {s: min(per_scene[s], key=per_scene[s].get) for s in sn}
     from collections import Counter

@@ -21,9 +21,9 @@ import math
 import numpy as np
 import torch
 
-from oe_inferencex.evidence import train_logistic_head, predict_head
+from oe_inferencex.evidence import train_logistic_head, predict_head, predict_logit
 from exp13_stat_corrections import (
-    aligned_tile_phase, eaurc, sign_test_p, SHIFTS, GRID,
+    aligned_tile_phase, eaurc, sign_test_p, ndwi_gradient, SHIFTS, GRID, NON_RULE,
 )
 
 
@@ -42,11 +42,12 @@ def main():
     names = sorted({k.rsplit("_", 1)[0] for k in scenes if k.endswith("_img")})
     rows, per = [], {}
     for name in names:
-        if f"{name}_base0" not in feats:
+        if f"{name}_base0" not in feats or name in NON_RULE:
             continue
         lab = scenes[f"{name}_lab"]
         p_shift = [predict_head(torch.tensor(feats[f"{name}_base{s}"]), *hb) for s in SHIFTS]
         p = p_shift[0]
+        logit = predict_logit(torch.tensor(feats[f"{name}_base0"]), *hb)
         err = ((p > 0.5) != lab.astype(bool)).astype(np.float64)
         if err.sum() < 8:
             continue
@@ -61,10 +62,11 @@ def main():
                     nb += (pad[1 + di:1 + di + GRID, 1 + dj:1 + dj + GRID] != hard)
         boundary = nb / 8.0
         sigs = {
-            "baseline": 1 - np.maximum(p, 1 - p),
+            "baseline": -np.abs(logit),
             "tile-phase (aligned)": aligned_tile_phase(p_shift),
             "pred-gradient": grad,
             "pred-boundary": boundary,
+            "control": ndwi_gradient(scenes[f"{name}_img"]),
         }
         e = err.flatten()
         val = {k: eaurc(v.flatten(), e) for k, v in sigs.items()}
@@ -81,10 +83,16 @@ def main():
     sn = sorted(per); n = len(sn)
     print(f"\nscenes: {n}")
     for a, b in (("tile-phase (aligned)", "pred-gradient"), ("tile-phase (aligned)", "pred-boundary"),
-                 ("pred-gradient", "baseline"), ("pred-boundary", "baseline"), ("tile-phase (aligned)", "baseline")):
-        wins = sum(per[s][0][a] < per[s][0][b] for s in sn)
-        med = float(np.median([per[s][0][b] - per[s][0][a] for s in sn]))
-        print(f"{a:<22} < {b:<14}: {wins:>2}/{n}  sign p={sign_test_p(wins, n):.3f}  median E-AURC gain {med:+.4f}")
+                 ("pred-gradient", "baseline"), ("pred-boundary", "baseline"), ("tile-phase (aligned)", "baseline"),
+                 ("pred-boundary", "control"), ("tile-phase (aligned)", "control")):
+        d = np.array([per[s][0][b] - per[s][0][a] for s in sn])  # >0 = a better
+        wins, losses = int((d > 1e-12).sum()), int((d < -1e-12).sum())
+        ties = n - wins - losses
+        p_sign = sign_test_p(wins, wins + losses) if wins + losses else 1.0
+        print(f"{a:<22} < {b:<14}: W/L/T {wins:>2}/{losses:>2}/{ties:<2} sign p={p_sign:.3f}  median E-AURC gain {float(np.median(d)):+.4f}")
+    best = {s: min(per[s][0], key=per[s][0].get) for s in sn}
+    from collections import Counter
+    print("best signal per scene (E-AURC):", dict(Counter(best.values())))
     rhos = [per[s][1] for s in sn]
     print(f"\nwithin-scene Spearman(tile-phase, pred-gradient): median {np.median(rhos):.2f}, "
           f"min {min(rhos):.2f}, max {max(rhos):.2f}")

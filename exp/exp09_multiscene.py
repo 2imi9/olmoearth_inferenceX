@@ -1,7 +1,7 @@
 """Exp 09: multi-scene replication with spread (GPU).
 
-The same signal comparison (baseline, E_case, tile-phase, E_dist) over eight
-river scenes across southern Africa, all evaluated with heads trained at
+The same signal comparison (baseline, E_case, tile-phase, E_dist) over nine
+candidate river scenes across southern Africa (seven evaluated in the recorded run), all evaluated with heads trained at
 Katima Mulilo and scored against ESA WorldCover. Produces per-scene AURC,
 the per-signal mean and standard deviation, and win counts: the first
 numbers with spread rather than one scene per condition. Scenes with fewer

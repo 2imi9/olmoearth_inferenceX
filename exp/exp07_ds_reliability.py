@@ -23,13 +23,14 @@ from oe_inferencex.evidence import (
 
 PATCH = 4
 N_CLASSES = 9
-BATCH = 8
+BATCH = 16
+DEV = "cuda" if torch.cuda.is_available() else "cpu"
 CACHE = "exp/out/exp04_feats.npz"
 TINY_CACHE = "exp/out/exp07_tiny_feats.npy"
 
 
 def embed_tiny(windows):
-    model = load_model_from_id(ModelID.OLMOEARTH_V1_TINY)
+    model = load_model_from_id(ModelID.OLMOEARTH_V1_TINY).to(DEV)
     model.eval()
     feats = []
     for i in range(0, len(windows), BATCH):
@@ -40,10 +41,10 @@ def embed_tiny(windows):
             cr, (pr, pc) = crop_stack(full, r, c, 0)
             stacks.append(cr)
             locs.append((min(pr // PATCH, 7), min(pc // PATCH, 7)))
-        sample = stacks_to_sample(stacks)
+        sample = stacks_to_sample(stacks, DEV)
         with torch.no_grad():
             out = model.encoder(sample, fast_pass=True, patch_size=PATCH)
-        f = out["tokens_and_masks"].sentinel2_l2a.mean(dim=[3, 4])
+        f = out["tokens_and_masks"].sentinel2_l2a.mean(dim=[3, 4]).cpu()
         for bi, (pi, pj) in enumerate(locs):
             feats.append(f[bi, pi, pj].numpy())
         if (i // BATCH) % 40 == 39:

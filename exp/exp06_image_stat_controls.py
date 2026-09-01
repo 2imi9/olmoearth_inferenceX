@@ -13,7 +13,7 @@ Controls (no model involved):
 Scored with the same AURC harness, against the same Base-head errors, on the
 three scenes with cached imagery: Kazungula (in-domain), Barotse floodplain
 (ambiguous margins), Zambezi delta (domain shift). Model-signal AURCs for
-these scenes are in docs/TECHNIQUES.md; the baseline max-softmax is
+these scenes are in docs/results/comparisons.md (exp05 and exp06 sections); the baseline max-softmax is
 recomputed here to anchor the comparison on identical errors.
 """
 import numpy as np

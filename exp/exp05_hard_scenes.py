@@ -135,7 +135,7 @@ def main():
                   "disagreement (binary)", cmap="Reds", idx=k + 2, vmin=0, vmax=1)
         rc_panel(axes[row, 3], res, aoi_titles[name], idx=k + 3)
     fig.suptitle("Water heads trained at Katima Mulilo, evaluated on two difficult scenes. "
-                 "Reference labels are weak on these terrains (see docs/TECHNIQUES.md).", fontsize=9)
+                 "Reference labels are weak on these terrains (see docs/results/comparisons.md).", fontsize=9)
     fig.tight_layout(rect=[0, 0, 1, 0.97])
     fig.savefig("exp/out/exp05_hard_scenes.png", bbox_inches="tight")
     print("\nwrote exp/out/exp05_hard_scenes.png")

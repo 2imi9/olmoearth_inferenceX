@@ -6,9 +6,10 @@ One section per signal, every claim citing its experiment. Index at
 ### Max-softmax confidence (the baseline)
 - Best signal on the in-domain AWF expert-label task (exp04) and competitive
   on the easy river scene (exp02).
-- Best on zero of seven scenes in the replication (exp09); on the two
-  difficult single scenes it was also outranked by no-model pixel statistics
-  (exp06).
+- Replication: best on 0/7 scenes in exp09 (superseded), 6/29 by raw AURC
+  in exp11 (superseded), and 0/27 on the rule-selected set with
+  aligned tile-phase and tie-aware E-AURC (exp13, authoritative), where
+  aligned tile-phase beats it on 26/27.
 
 ### Cross-model disagreement (E_case)
 - Reference point: mean local-similarity-structure agreement between Nano
@@ -51,18 +52,20 @@ One section per signal, every claim citing its experiment. Index at
   pixels (sub-patch phase), upsample each shifted prediction map to pixels,
   place it at its true offset on a common canvas, take the per-pixel
   standard deviation across shifts, and pool back to the shift-0 patch grid
-  (exp03 method). On the 29-scene rule-selected set this beats the baseline
-  on 27/29 scenes (sign p<0.001), the pixel control on 19/29, and is the
-  most frequent best signal (exp13). By construction it is largest where
+  (exp03 method). On the 27 rule-selected scenes this beats the baseline
+  on 26/27 (sign p=4e-07), the pixel control on 18/27, and is
+  the most frequent best signal (exp13). By construction it is largest where
   neighboring patches disagree, so beating the pixel-edge control is the
-  relevant test, and it does on two thirds of scenes.
+  relevant test.
 - Mechanism (exp14): a discrete boundary indicator computed from the
   shift-0 hard prediction map alone (fraction of 8 neighbors with a
-  different label) matches aligned tile-phase head-to-head (13/29, sign
-  p=0.71) and beats the baseline on 23/29 by itself. The perturbation is
-  therefore a noisy way of measuring prediction-boundary proximity, not a
-  distinct mechanism. The signal is meaningful for dense maps and not for
-  interior point labels, which explains its loss on AWF (exp04).
+  different label) is statistically indistinguishable from aligned
+  tile-phase across the 27 scenes (boundary better on 12, tile-phase on 15,
+  sign p=0.70) and by itself beats the baseline on 19/27 and the pixel
+  control on 22/27. No advantage of the perturbation beyond boundary
+  proximity is detectable. The signal is meaningful for dense maps; its
+  loss on AWF (exp04) is plausibly but not demonstrably due to point labels
+  carrying no boundary context.
 - Erratum: exp05, exp09, and exp11 computed the std across unaligned patch
   grids, so shifted patches covered different ground; that version scored
   19/29 with no significant effect. Their tile-phase numbers are
@@ -97,22 +100,24 @@ One section per signal, every claim citing its experiment. Index at
 - Its apparent advantage under geographic shift (0.0014 vs 0.0258, exp05)
   did not survive the no-model control (NDWI gradient 0.0005 on the same
   disagreements; exp06), and it won zero of seven replication scenes once
-  the control was included (exp09). No support as an error ranker. The
-  out-of-distribution-indicator interpretation remains plausible but
-  requires a shift testbed whose errors are not spectrally trivial.
+  the control was included (exp09, superseded). On the 27 rule-selected
+  scenes it beats the baseline on 13/27 (sign p=1.00; intervals
+  11 in favor, 5 against; exp13). No general support as an error
+  ranker. The out-of-distribution-indicator interpretation remains plausible
+  but requires a shift testbed whose errors are not spectrally trivial.
 
 ### Geographic grounding (E_geo)
 - On a scene where the river is clearly resolved, the OSM centerline
   consistency check produced zero false break alarms (52 centerline patches,
   0 flagged; exp02).
-- Across 23 georeferenced scenes (exp15), flags (centerline patch predicted
-  dry) occur on 15 scenes and are enriched for errors relative to a random
-  patch (precision 0.25 vs base error rate 0.078), but eight scenes carry
-  20-51 flags at precision zero where OSM marks a river that both the model
-  and WorldCover call dry. The flag therefore mostly detects reference-map
+- Across 27 georeferenced rule-selected scenes (exp15), flags (centerline
+  patch predicted dry) occur on 17 scenes with pooled precision 0.12
+  over 413 flags (1.5x the base error rate 0.081); 9 scenes
+  carry 1-51 flags at precision zero where OSM marks a river that both
+  the model and WorldCover call dry. The flag mostly detects reference-map
   disagreement under the current truth. As a ranking signal it beats the
-  baseline on 3/23, and prepending it to boundary proximity makes boundary
-  worse (5/23, p=0.011). Sensitivity remains unmeasurable without
-  width-filtered centerlines (GRWL) or expert truth.
+  baseline on 3/27; prepending it to boundary proximity gives 5 better,
+  9 worse, 13 unchanged (sign p=0.42). Sensitivity remains unmeasurable
+  without width-filtered centerlines (GRWL) or expert truth.
 
   ![Full audit slice, Kazungula](../../exp/out/exp02_full_slice.png)

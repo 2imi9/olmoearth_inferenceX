@@ -37,9 +37,9 @@ from rasterio.vrt import WarpedVRT
 from olmoearth_pretrain.data.constants import Modality
 from oe_inferencex.data import _catalog
 from oe_inferencex.evidence import (
-    train_logistic_head, predict_head, rasterize_polyline, pool_to_patches,
+    train_logistic_head, predict_head, predict_logit, rasterize_polyline, pool_to_patches,
 )
-from exp13_stat_corrections import eaurc, sign_test_p, GRID
+from exp13_stat_corrections import eaurc, sign_test_p, GRID, NON_RULE
 from exp11_hardening import candidate_centers, EXISTING, MIRRORS
 
 SIZE, PATCH, PAD = 128, 4, 4
@@ -130,10 +130,11 @@ def main():
     names = sorted({k.rsplit("_", 1)[0] for k in scenes if k.endswith("_img")})
     rows, per = [], {}
     for name in names:
-        if f"{name}_base0" not in feats or name not in coords:
+        if f"{name}_base0" not in feats or name not in coords or name in NON_RULE:
             continue
         lab = scenes[f"{name}_lab"]
         p = predict_head(torch.tensor(feats[f"{name}_base0"]), *hb)
+        logit = predict_logit(torch.tensor(feats[f"{name}_base0"]), *hb)
         err = ((p > 0.5) != lab.astype(bool)).astype(np.float64)
         if err.sum() < 8:
             continue
@@ -162,7 +163,7 @@ def main():
         bnd = boundary_indicator(p)
         geo_flag = (center & (p < 0.5)).astype(np.float64)
         sigs = {
-            "baseline": 1 - np.maximum(p, 1 - p),
+            "baseline": -np.abs(logit),
             "boundary": bnd,
             "geo": geo_flag,
             "boundary+geo": bnd + geo_flag,  # geo-flagged first, then by boundary
@@ -185,16 +186,21 @@ def main():
     sn = sorted(per); n = len(sn)
     print(f"\nscenes with verified georeferencing: {n}")
     for a, b in (("boundary+geo", "boundary"), ("boundary+geo", "baseline"), ("boundary", "baseline"), ("geo", "baseline")):
-        wins = sum(per[s][a] < per[s][b] for s in sn)
-        med = float(np.median([per[s][b] - per[s][a] for s in sn]))
-        print(f"{a:<13} < {b:<9}: {wins:>2}/{n}  sign p={sign_test_p(wins, n):.3f}  median E-AURC gain {med:+.4f}")
+        d = np.array([per[s][b] - per[s][a] for s in sn])  # >0 = a better
+        wins, losses = int((d > 1e-12).sum()), int((d < -1e-12).sum())
+        ties = n - wins - losses
+        p_sign = sign_test_p(wins, wins + losses) if wins + losses else 1.0
+        print(f"{a:<13} < {b:<9}: W/L/T {wins:>2}/{losses:>2}/{ties:<2} sign p (untied pairs)={p_sign:.3f}  median E-AURC gain {float(np.median(d)):+.4f}")
     flagged = [r for r in rows if r["geo_flags"] > 0]
     if flagged:
-        precs = [float(r["geo_flag_precision_vs_worldcover"]) for r in flagged]
-        print(f"\nscenes with any geo flag: {len(flagged)}/{n}; "
-              f"mean precision of geo flags vs WorldCover {np.mean(precs):.2f} "
-              f"(base error rate across those scenes "
-              f"{np.mean([r['n_errors'] / (GRID * GRID) for r in flagged]):.3f})")
+        total_flags = sum(r["geo_flags"] for r in flagged)
+        hits = sum(r["geo_flags"] * float(r["geo_flag_precision_vs_worldcover"]) for r in flagged)
+        base = np.mean([r["n_errors"] / (GRID * GRID) for r in flagged])
+        zero = [r["scene"] for r in flagged if float(r["geo_flag_precision_vs_worldcover"]) == 0.0]
+        print(f"\nscenes with any geo flag: {len(flagged)}/{n}; pooled precision {hits / total_flags:.3f} "
+              f"over {total_flags} flags ({hits / total_flags / base:.1f}x the base error rate {base:.3f}); "
+              f"unweighted per-scene mean {np.mean([float(r['geo_flag_precision_vs_worldcover']) for r in flagged]):.2f}")
+        print(f"precision-zero scenes: {len(zero)} ({', '.join(zero)})")
     print("wrote exp/out/exp15_boundary_geo.csv")
 
 

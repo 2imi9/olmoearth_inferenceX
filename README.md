@@ -1,8 +1,11 @@
 # olmoearth_inferenceX
 
-Experiments on locating errors in
-[OlmoEarth](https://allenai.org/olmoearth) predictions over regions with no
-labels. Everything runs on Ai2's public artifacts: the
+Experiments on locating errors in predictions from linear probes on frozen
+[OlmoEarth](https://allenai.org/olmoearth) v1 encoders, over regions with no
+labels: a binary water head trained on one WorldCover-labelled 128x128
+Sentinel-2 scene at Katima Mulilo, and a multiclass head on the AWF expert
+labels. The production land-cover model has not been run. Everything runs
+on Ai2's public artifacts: the
 [olmoearth_pretrain](https://github.com/allenai/olmoearth_pretrain) encoders
 and loader, checkpoints from
 [HuggingFace](https://huggingface.co/allenai/OlmoEarth-v1-Base), and the
@@ -16,9 +19,10 @@ Each signal gives every map window a suspicion score. The four signals:
   [Nano](https://huggingface.co/allenai/OlmoEarth-v1-Nano) and
   [Base](https://huggingface.co/allenai/OlmoEarth-v1-Base)) predict the same
   window differently.
-- **E_system** - tiling instability: the prediction flips when the input
-  grid shifts by a few pixels. Ablation shows this is equivalent to
-  proximity to a boundary in the model's own prediction map (exp14).
+- **E_system** - tiling instability (called tile-phase in the scripts and
+  CSVs): the prediction flips when the input grid shifts by a few pixels.
+  Ablation shows it is statistically indistinguishable from proximity to a
+  boundary in the model's own prediction map (exp14).
 - **E_dist** - embedding distance: the window looks unlike the area the
   prediction head was trained on (one reference scene; not the encoder's
   pretraining data).
@@ -27,58 +31,67 @@ Each signal gives every map window a suspicion score. The four signals:
   now). Under the current reference it mostly finds disagreements between
   the two maps, so it is not in the table (exp15).
 
-AURC measures how well a suspicion score finds real errors; lower is
-better. Every signal must beat two references: the model's own confidence
-(max-softmax, the probability the model assigns its chosen class; this is
-what ships as the top-1 probability bands of the
-[olmoearth_lcc production rasters](https://huggingface.co/datasets/allenai/olmoearth_lcc)),
+AURC (area under the risk-coverage curve) measures how well a suspicion
+score ranks the 40 m patches where the model's prediction disagrees with
+the reference: patches are accepted in order of increasing suspicion, and
+AURC is the error rate among accepted patches averaged over all acceptance
+levels. Lower is better. On the river scenes the reference is ESA
+WorldCover 2021 water, treated as truth; on the AWF task it is expert point
+labels. Every signal must beat two references: the model's own confidence
+(max-softmax, the probability the model assigns its chosen class; the same
+kind of quantity that ships as the top-1 probability bands of the
+[olmoearth_lcc production rasters](https://huggingface.co/datasets/allenai/olmoearth_lcc),
+although those come from a different fine-tuned model we have not tested),
 and a plain pixel statistic computed without any model (the control).
 
 <details open>
-<summary><b>Headline comparison: three conditions</b> (click to shrink)</summary>
+<summary><b>Headline comparison: three scenes</b> (click to shrink)</summary>
 
-| AURC (lower = finds errors better) | In-domain ([AWF expert labels](https://huggingface.co/datasets/allenai/olmoearth_projects_awf), 51 errors) | Ambiguous wetland margins (97 errors) | Far from training region (29 errors) |
+| AURC (lower = finds errors better) | In-domain ([AWF expert labels](https://huggingface.co/datasets/allenai/olmoearth_projects_awf), 51 errors) | Ambiguous wetland margins (Barotse, vs WorldCover 2021, 97 errors) | Reference omits the river (Zambezi delta, vs WorldCover 2021, 29 disagreements) |
 |---|---|---|---|
-| model's own confidence (baseline) | **0.0367** | 0.0666 | 0.0258 |
+| model's own confidence (baseline) | **0.0367** | 0.0684 | 0.0234 |
 | cross-model disagreement (E_case) | 0.0533 | 0.0235 | 0.0103 |
 | tiling instability (E_system) | 0.0427 | **0.0127** | 0.0009 |
 | embedding distance (E_dist) | 0.1104 | 0.0289 | 0.0014 |
 | pixel statistic (control) | 0.1287 | 0.0384 | **0.0005** |
 
+Third column: the WorldCover reference contains no water on this scene, so
+its disagreements are reference omissions; a no-model pixel statistic ranks
+them best (exp06), so the column shows that confidence fails there and
+nothing more. AWF column: point labels, exp04 and exp12.
+
 </details>
 
 <details>
-<summary><b>All 29 scenes</b> (pre-registered set; exp13 corrected computation; bold = best per scene; click to expand)</summary>
+<summary><b>All 27 scenes</b> (pre-registered set; exp13 tie-aware AURC; bold = lowest unrounded AURC, ties at the displayed precision are within noise; click to expand)</summary>
 
 | scene | errors | baseline | E_case | tile-phase | E_dist | control |
 |---|---|---|---|---|---|---|
-| barotse | 97 | 0.0666 | 0.0235 | **0.0127** | 0.0289 | 0.0384 |
+| barotse | 97 | 0.0684 | 0.0235 | **0.0127** | 0.0289 | 0.0384 |
 | cuando_20 | 49 | 0.0035 | 0.0075 | **0.0025** | 0.0039 | 0.0092 |
 | cuando_50 | 168 | 0.0536 | 0.0794 | 0.0277 | **0.0189** | 0.0316 |
 | cuando_80 | 61 | 0.0072 | 0.0155 | **0.0050** | 0.0092 | 0.0093 |
-| delta | 29 | 0.0258 | 0.0103 | 0.0009 | 0.0014 | **0.0005** |
-| kafue | 11 | 0.0002 | **0.0001** | 0.0001 | 0.0001 | 0.0128 |
+| delta | 29 | 0.0234 | 0.0103 | 0.0009 | 0.0014 | **0.0005** |
 | kafue_20 | 77 | 0.0164 | 0.0244 | **0.0078** | 0.0407 | 0.0287 |
-| kafue_50 | 48 | 0.0272 | 0.0275 | **0.0027** | 0.0089 | 0.0099 |
-| kafue_80 | 38 | 0.0095 | 0.0068 | 0.0020 | 0.0138 | **0.0014** |
+| kafue_50 | 48 | 0.0241 | 0.0275 | **0.0027** | 0.0089 | 0.0099 |
+| kafue_80 | 38 | 0.0128 | 0.0068 | 0.0020 | 0.0138 | **0.0014** |
 | kazungula | 18 | 0.0009 | 0.0009 | **0.0006** | 0.0037 | 0.0016 |
-| luangwa | 8 | 0.0002 | 0.0017 | **0.0000** | 0.0002 | 0.0065 |
-| luangwa_conf | 52 | 0.0096 | 0.0189 | **0.0072** | 0.0108 | 0.0597 |
-| okavango_50 | 96 | **0.1181** | 0.1620 | 0.1271 | 0.1339 | 0.1229 |
-| okavango_80 | 76 | 0.0555 | 0.0578 | 0.0061 | 0.0105 | **0.0037** |
+| luangwa_conf | 52 | 0.0103 | 0.0189 | **0.0072** | 0.0108 | 0.0597 |
+| okavango_50 | 96 | 0.1452 | 0.1612 | **0.1175** | 0.1339 | 0.1229 |
+| okavango_80 | 76 | 0.0572 | 0.0578 | 0.0061 | 0.0105 | **0.0037** |
 | okavango_sep | 13 | 0.0005 | **0.0003** | 0.0003 | 0.0007 | 0.0163 |
-| rovuma_20 | 39 | 0.0054 | 0.0095 | **0.0021** | 0.0104 | 0.0073 |
-| rovuma_50 | 74 | 0.0099 | 0.0091 | **0.0080** | 0.0152 | 0.0160 |
-| rovuma_80 | 18 | 0.0015 | 0.0030 | 0.0010 | 0.0014 | **0.0006** |
-| save_20 | 25 | 0.0162 | 0.0619 | 0.0005 | **0.0005** | 0.0040 |
-| save_50 | 76 | 0.0150 | 0.0409 | **0.0116** | 0.0163 | 0.0676 |
-| save_80 | 23 | 0.0070 | 0.0292 | 0.0006 | 0.0006 | **0.0005** |
-| shire_20 | 303 | 0.1509 | 0.1607 | 0.1767 | **0.1134** | 0.2558 |
-| shire_50 | 123 | 0.0861 | 0.1000 | 0.0591 | 0.0629 | **0.0584** |
-| shire_80 | 188 | 0.2957 | 0.2943 | 0.1902 | 0.2172 | **0.1487** |
-| shire_liwonde | 17 | 0.0368 | 0.0357 | 0.0252 | 0.0013 | **0.0006** |
+| rovuma_20 | 39 | 0.0053 | 0.0095 | **0.0021** | 0.0104 | 0.0073 |
+| rovuma_50 | 74 | 0.0091 | 0.0091 | **0.0080** | 0.0152 | 0.0160 |
+| rovuma_80 | 18 | 0.0016 | 0.0030 | 0.0010 | 0.0014 | **0.0006** |
+| save_20 | 25 | 0.0208 | 0.0619 | 0.0005 | **0.0005** | 0.0040 |
+| save_50 | 76 | 0.0140 | 0.0409 | **0.0116** | 0.0163 | 0.0676 |
+| save_80 | 23 | 0.0069 | 0.0292 | 0.0006 | 0.0006 | **0.0005** |
+| shire_20 | 303 | 0.1572 | 0.1605 | 0.1778 | **0.1134** | 0.2558 |
+| shire_50 | 123 | 0.1008 | 0.1000 | 0.0636 | 0.0629 | **0.0584** |
+| shire_80 | 188 | 0.3017 | 0.2947 | 0.1881 | 0.2172 | **0.1487** |
+| shire_liwonde | 17 | 0.0335 | 0.0357 | 0.0252 | 0.0013 | **0.0006** |
 | vicfalls_up | 23 | 0.0008 | **0.0006** | 0.0008 | 0.0012 | 0.0412 |
-| zambezi_20 | 51 | 0.0153 | 0.0118 | 0.0062 | 0.0168 | **0.0059** |
+| zambezi_20 | 51 | 0.0130 | 0.0118 | 0.0062 | 0.0168 | **0.0059** |
 | zambezi_50 | 16 | 0.0003 | **0.0003** | 0.0003 | 0.0037 | 0.0005 |
 | zambezi_80 | 47 | 0.0035 | 0.0148 | **0.0014** | 0.0085 | 0.0326 |
 
@@ -86,30 +99,55 @@ and a plain pixel statistic computed without any model (the control).
 
 ## Findings
 
-- **In familiar territory, the model's own confidence is the best signal.**
+- **On the one expert-labelled in-domain task (AWF, 51 errors, point
+  labels), the model's own confidence is the best signal** (exp04, exp12).
+  On dense in-region river scenes it is not: best on 0 of 27 (exp13).
 - **Errors concentrate at the boundaries of the model's own prediction
-  map, and boundary proximity predicts them better than confidence.**
-  Tiling instability beats confidence on 27 of 29 scenes (sign test
-  p < 0.001) and the pixel control on 19 of 29 (exp13), but a zero-cost
-  boundary indicator computed from the prediction map alone matches it
-  (13 of 29 head-to-head, p = 0.71) and itself beats confidence on 23 of 29
-  (exp14). The perturbation adds nothing beyond boundary proximity. This
-  holds for dense maps; on interior point labels (AWF) it does not apply.
+  map, and tiling instability ranks them better than confidence.** Tiling
+  instability beats confidence on 26 of 27 rule-selected scenes
+  (sign test p = 4e-07) and the pixel control on
+  18 of 27 (exp13). A zero-cost boundary indicator computed
+  from the prediction map alone is statistically indistinguishable from it
+  (boundary better on 12, tile-phase on 15, sign test p = 0.70) and itself
+  beats confidence on 19 of 27 (p = 0.052) and the pixel control on
+  22 of 27 (exp14). No advantage of the perturbation beyond boundary proximity is
+  detectable, but the indicator's own margin over confidence is marginal
+  (p = 0.05), so the zero-inference shortcut is suggestive rather than
+  established. Boundary-concentrated error is well known in
+  segmentation and land-cover validation (trimap and Boundary-IoU
+  evaluation; mixed-pixel effects, Foody 2002); what this repository adds is
+  the quantified comparison against confidence, with controls, on OlmoEarth
+  probes. On the AWF point-label task confidence won and per-window tiling
+  instability lost; we hypothesise point labels carry no boundary context,
+  but no boundary indicator has been computed on AWF, so the boundary
+  result is unconfirmed on expert labels.
 - **Cross-model disagreement helps only on specific ambiguous scenes.** It
-  beats confidence on 12 of 29 scenes; not a general signal.
-- **Embedding distance has no scale-free advantage.** Its earlier
-  "significant" result came from a few high-error scenes and did not
-  survive scale-comparable statistics.
+  beats confidence on 10 of 27 scenes (sign test p = 0.25);
+  not a general signal.
+- **Embedding distance shows no scale-free advantage.** It beats confidence
+  on 13 of 27 scenes (sign test p = 1.00); a mean-difference
+  test gives p = 0.01 but is carried by a few high-error scenes.
 - **Where the reference map misses obvious water, a plain pixel statistic
-  wins.** Those scenes prove confidence fails and nothing more.
+  wins** (exp06). Those scenes prove confidence fails and nothing more.
 - **Checking predictions against river lines mostly finds disagreements
-  between reference maps, not model errors**, and adding that check to
-  boundary proximity made it worse (exp15).
-- **A disagreement partner must be a different model, not a more accurate
-  one.** Same-family ensembles hurt.
+  between reference maps, not model errors**, and prepending that check to
+  boundary proximity did not help (5 better, 9 worse, 13 unchanged of 27;
+  sign test on untied pairs p = 0.42; exp15).
+- **A disagreement partner needs uncorrelated errors, not higher accuracy.**
+  Pairing Base with the stronger v1-Large (same OlmoEarth family) ranks
+  errors worse than pairing it with Nano (mean AURC 0.0197 vs 0.0129, better
+  on 3 of 7 scenes; exp10), and averaging three OlmoEarth models is worse
+  than the best pair when one member is much weaker (exp03, exp04, exp07).
+  No partner from outside the family has been tested.
 - **The reference map is least reliable on exactly the most interesting
   terrains**, so all numbers are directions rather than settled effect
-  sizes.
+  sizes. Across the 27 scenes no single signal is best everywhere (best-signal
+  tally: tiling instability 12, control 9, E_case 3,
+  E_dist 3, confidence 0); which signal works still
+  depends on the scene.
+
+Risk-coverage curves for Kazungula, Barotse and the delta, no-model pixel
+statistics against confidence and E_case (exp06):
 
 ![No-model controls](exp/out/exp06_controls.png)
 
