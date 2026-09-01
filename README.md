@@ -56,18 +56,10 @@ What we learned so far:
 
 ![No-model controls](exp/out/exp06_controls.png)
 
-Full documentation, organized separately in `docs/`:
-
-- [docs/TECHNIQUES.md](docs/TECHNIQUES.md) - summary table and index.
-- [docs/RESULTS.md](docs/RESULTS.md) - cross-signal comparisons with
-  statistics.
-- [docs/SIGNALS.md](docs/SIGNALS.md) - per-signal evidence.
-- [docs/PROTOCOL.md](docs/PROTOCOL.md) - evaluation protocol and related
-  work.
-- [docs/INFRASTRUCTURE.md](docs/INFRASTRUCTURE.md) - established facts and
-  upstream sources.
-- [docs/ROADMAP.md](docs/ROADMAP.md) - open items.
-- [exp/NOTES.md](exp/NOTES.md) - chronological lab log.
+Docs: [index](docs/TECHNIQUES.md) ·
+[results](docs/RESULTS.md) · [signals](docs/SIGNALS.md) ·
+[protocol](docs/PROTOCOL.md) · [facts](docs/INFRASTRUCTURE.md) ·
+[roadmap](docs/ROADMAP.md) · [lab log](exp/NOTES.md)
 
 ## Method
 
