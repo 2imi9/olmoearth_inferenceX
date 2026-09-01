@@ -56,6 +56,13 @@ One section per signal, every claim citing its experiment. Index at
   most frequent best signal (exp13). By construction it is largest where
   neighboring patches disagree, so beating the pixel-edge control is the
   relevant test, and it does on two thirds of scenes.
+- Mechanism (exp14): a discrete boundary indicator computed from the
+  shift-0 hard prediction map alone (fraction of 8 neighbors with a
+  different label) matches aligned tile-phase head-to-head (13/29, sign
+  p=0.71) and beats the baseline on 23/29 by itself. The perturbation is
+  therefore a noisy way of measuring prediction-boundary proximity, not a
+  distinct mechanism. The signal is meaningful for dense maps and not for
+  interior point labels, which explains its loss on AWF (exp04).
 - Erratum: exp05, exp09, and exp11 computed the std across unaligned patch
   grids, so shifted patches covered different ground; that version scored
   19/29 with no significant effect. Their tile-phase numbers are

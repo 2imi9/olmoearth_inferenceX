@@ -162,3 +162,11 @@ features. Aligned tile-phase beats baseline 27/29 (sign p<0.001), control
 First robust, control-surviving positive result. Also corrected the E_dist
 definition in docs (distance to the head's training scene, not pretraining
 data). Results: exp/out/exp13_corrected_stats.csv.
+
+## exp14 — boundary ablation of tile-phase (2026-09-01)
+
+Aligned tile-phase is equivalent to a zero-cost prediction-boundary
+indicator (neighbor label disagreement on the shift-0 map): 13/29
+head-to-head, p=0.71; the indicator alone beats confidence 23/29. The
+headline is restated as boundary proximity, not perturbation. Explains the
+AWF loss (interior point labels). Results: exp/out/exp14_boundary_ablation.csv.

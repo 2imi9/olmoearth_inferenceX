@@ -49,3 +49,10 @@ the reference-label confound, not the test machinery. New item: verify the
 aligned tile-phase result against expert labels (AWF windows under
 sub-patch shifts, per-window) since its 29-scene support is
 WorldCover-referenced.
+
+Update after exp14: the tile-phase result is reinterpreted as
+prediction-boundary proximity; the planned AWF verification is answered by
+mechanism (interior point labels carry no boundary signal) rather than by a
+new run. New item: test boundary proximity against expert-labeled dense
+maps rather than points, and combine it with E_geo (boundary patches that
+also contradict the reference map).

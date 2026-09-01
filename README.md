@@ -17,7 +17,8 @@ Each signal gives every map window a suspicion score. The four signals:
   [Base](https://huggingface.co/allenai/OlmoEarth-v1-Base)) predict the same
   window differently.
 - **E_system** - tiling instability: the prediction flips when the input
-  grid shifts by a few pixels.
+  grid shifts by a few pixels. Ablation shows this is equivalent to
+  proximity to a boundary in the model's own prediction map (exp14).
 - **E_dist** - embedding distance: the window looks unlike the area the
   prediction head was trained on (one reference scene; not the encoder's
   pretraining data).
@@ -85,10 +86,14 @@ and a plain pixel statistic computed without any model (the control).
 ## Findings
 
 - **In familiar territory, the model's own confidence is the best signal.**
-- **Tiling instability beats the model's own confidence on 27 of 29 scenes**
-  (sign test p < 0.001) once the shifted grids are aligned, and beats the
-  pixel control on 19 of 29. It is the most frequent best signal. Earlier
-  runs computed it without alignment and understated it (exp13).
+- **Errors concentrate at the boundaries of the model's own prediction
+  map, and boundary proximity predicts them better than confidence.**
+  Tiling instability beats confidence on 27 of 29 scenes (sign test
+  p < 0.001) and the pixel control on 19 of 29 (exp13), but a zero-cost
+  boundary indicator computed from the prediction map alone matches it
+  (13 of 29 head-to-head, p = 0.71) and itself beats confidence on 23 of 29
+  (exp14). The perturbation adds nothing beyond boundary proximity. This
+  holds for dense maps; on interior point labels (AWF) it does not apply.
 - **Cross-model disagreement helps only on specific ambiguous scenes.** It
   beats confidence on 12 of 29 scenes; not a general signal.
 - **Embedding distance has no scale-free advantage.** Its earlier
@@ -138,7 +143,7 @@ uv sync --extra geo
 uv run python exp/exp02_full_slice.py
 ```
 
-Experiments are exp01-exp13 in `exp/`. Model checkpoints come from
+Experiments are exp01-exp14 in `exp/`. Model checkpoints come from
 [HuggingFace allenai](https://huggingface.co/allenai) (OlmoEarth v1 Nano to
 Large). exp04 needs the
 [AWF dataset](https://huggingface.co/datasets/allenai/olmoearth_projects_awf)

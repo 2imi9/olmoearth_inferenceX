@@ -115,6 +115,22 @@ terms in [protocol.md](../method/protocol.md).
 - Head-seed variance remains structurally zero (deterministic head
   training), as noted under exp11.
 
+### Boundary ablation of tile-phase (exp14)
+- Question: is aligned tile-phase a perturbation signal or a detector of
+  boundaries in the model's own prediction map? Two zero-cost proxies from
+  the shift-0 map alone: gradient magnitude of the probability map, and the
+  fraction of a patch's 8 neighbors whose hard label differs.
+- The discrete boundary fraction matches tile-phase exactly: 13/29
+  head-to-head, sign p=0.71, median E-AURC difference 0.0000; it beats the
+  baseline on 23/29 (p=0.002) by itself. The continuous gradient is weaker
+  (tile-phase better on 27/29) despite within-scene Spearman 0.84-0.95.
+- Conclusion: the perturbation adds nothing beyond boundary proximity. The
+  supported claim is that errors concentrate at prediction boundaries and
+  boundary proximity ranks them better than confidence, at zero extra
+  inference. This also explains exp04: AWF windows are labeled at interior
+  points, where a boundary signal has nothing to detect. Values in
+  exp/out/exp14_boundary_ablation.csv.
+
 ### Pre-registered 29-scene comparison (exp11; statistics superseded by exp13)
 - The scene rule and scene set below stand. The statistics in this section
   use raw AURC and the unaligned tile-phase; exp13 corrects both and is
