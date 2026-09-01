@@ -143,4 +143,9 @@ Experiments are exp01-exp13 in `exp/`. Model checkpoints come from
 Large). exp04 needs the
 [AWF dataset](https://huggingface.co/datasets/allenai/olmoearth_projects_awf)
 extracted under `data/awf/dataset/`. `uv sync` installs CPU torch; the GPU runs used the
-cu128 wheel. Experimental repository; a clean library release comes later.
+cu128 wheel.
+
+Status: research code under active development. Interfaces may change
+between experiments; results are updated in place as later experiments
+supersede earlier ones. A packaged library follows once the signal set
+stabilizes.
