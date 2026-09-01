@@ -81,3 +81,40 @@ def predict_softmax_head(feats, w, b):
     """(N, C) probability matrix."""
     x = torch.as_tensor(feats, dtype=torch.float32)
     return torch.softmax(x @ w + b, dim=-1).numpy()
+
+
+def dawid_skene(votes, n_classes, iters=50):
+    """Dawid-Skene EM over hard votes (N items, R raters). No labels used.
+
+    Returns (posteriors [N, C], confusions [R, C, C], reliabilities [R])
+    where confusions[r][true, voted] and reliability is the prior-weighted
+    diagonal of the confusion matrix (expected accuracy of rater r).
+    """
+    votes = np.asarray(votes)
+    n, r = votes.shape
+    post = np.zeros((n, n_classes))
+    for i in range(n):
+        for j in range(r):
+            post[i, votes[i, j]] += 1
+    post /= post.sum(1, keepdims=True)
+    for _ in range(iters):
+        prior = post.mean(0)
+        conf = np.zeros((r, n_classes, n_classes))
+        for j in range(r):
+            for c in range(n_classes):
+                conf[j, :, c] = post[votes[:, j] == c].sum(0)
+        conf += 0.01
+        conf /= conf.sum(2, keepdims=True)
+        logp = np.log(prior)[None, :].repeat(n, 0)
+        for j in range(r):
+            logp += np.log(conf[j, :, votes[:, j]])
+        logp -= logp.max(1, keepdims=True)
+        new_post = np.exp(logp)
+        new_post /= new_post.sum(1, keepdims=True)
+        if np.abs(new_post - post).max() < 1e-6:
+            post = new_post
+            break
+        post = new_post
+    prior = post.mean(0)
+    reliab = np.array([(prior * np.diag(conf[j])).sum() for j in range(r)])
+    return post, conf, reliab

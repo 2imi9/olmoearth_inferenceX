@@ -86,3 +86,10 @@ control). The delta E_dist shift claim does NOT survive: trivial NDWI stats
 rank those disagreements better. Claim withdrawn in ledger and README.
 Secondary: no-model stats outrank max-softmax on both hard scenes.
 Results: exp/out/exp06_controls.csv.
+
+## exp07 — Dawid-Skene label-free reliability (2026-08-31, overnight)
+
+Negative with a useful twist: DS overestimates all three models and inverts
+the order (details in ledger). The DS-vs-measured gap measures correlated
+error per model. Fix is an out-of-family rater. Tiny AWF features cached in
+exp/out/exp07_tiny_feats.npy; Tiny val acc 0.805.

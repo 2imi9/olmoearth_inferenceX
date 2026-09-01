@@ -198,6 +198,25 @@ instantiations, not the signal families.
 - WorldCover-as-reference carries temporal drift (2021 labels vs 2024 scenes),
   so a fraction of measured "model error" is label noise.
 
+### Label-free reliability estimation (Dawid-Skene, exp07)
+- Dawid-Skene EM over the argmax votes of Nano/Tiny/Base heads on the AWF
+  validation set (labels untouched) overestimates every model's accuracy and
+  inverts the ordering: estimated 0.868/0.921/0.887 vs measured
+  0.756/0.805/0.852 (Nano/Tiny/Base). DS assumes conditionally independent
+  raters; the OlmoEarth family shares pretraining data and recipe, so
+  agreement-on-errors is read as competence. Label-free accuracy estimation
+  within a single model family is therefore unsupported. (exp/exp07)
+- The estimate-minus-measured gap (+0.112, +0.116, +0.035) is a direct
+  measurement of correlated-error mass per model, the quantity behind the
+  correlated-errors open question. A rater from outside the family (e.g.
+  Clay or AnySat, both wrapped in olmoearth_pretrain evals) is the designed
+  fix; untested.
+- All multi-model aggregations again ranked errors worse than Base alone
+  with max-softmax (AURC: baseline 0.0367, equal-weight mean 0.0450,
+  DS posterior 0.0898); aggregated accuracy also below Base alone
+  (DS 0.834, majority 0.837, Base 0.852). Third independent confirmation
+  that naive aggregation over this family hurts. (exp/exp07)
+
 ## Second use case: change attribution between two inference results
 
 Error ranking is one consumer of the signals. The same decomposition applies
@@ -220,8 +239,10 @@ its verified change/no-change points. Untested; design only.
    delta scene is disqualified as evidence by the exp06 controls.
 2. E_geo sensitivity: evaluate on a scene containing a confirmed consensus
    break and measure whether the centerline check detects it.
-3. Reliability-weighted multi-model aggregation (Dawid-Skene direction),
-   motivated by the twice-observed weak-member effect.
+3. Out-of-family rater (Clay or AnySat) for disagreement and Dawid-Skene:
+   within-family DS is invalidated by correlated errors (exp07); an
+   architecture-independent rater is required for both aggregation and any
+   label-free reliability claim.
 4. v1 vs v1_2 comparison on identical windows; requires updating the
    olmoearth_pretrain checkout for the v1_2 loader.
 5. E_dist formalization: AOA/Dissimilarity Index (Meyer & Pebesma 2021) in
