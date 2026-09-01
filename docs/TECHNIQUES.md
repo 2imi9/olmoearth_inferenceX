@@ -7,16 +7,16 @@ the experiment that produced it.
 
 The documentation set:
 
-- [PROTOCOL.md](PROTOCOL.md) - status terms, evidence tiers, related work,
+- [method/protocol.md](method/protocol.md) - status terms, evidence tiers, related work,
   and the positioning of the contribution.
-- [RESULTS.md](RESULTS.md) - cross-signal comparisons: the pre-registered
+- [results/comparisons.md](results/comparisons.md) - cross-signal comparisons: the pre-registered
   29-scene study (authoritative), the controls, the expert-label validation,
   and the earlier scene studies.
-- [SIGNALS.md](SIGNALS.md) - per-signal evidence for the baseline, E_case,
+- [results/signals.md](results/signals.md) - per-signal evidence for the baseline, E_case,
   E_system, E_dist, and E_geo.
-- [INFRASTRUCTURE.md](INFRASTRUCTURE.md) - established facts: upstream
+- [method/infrastructure.md](method/infrastructure.md) - established facts: upstream
   sources, export formats, transfer properties.
-- [ROADMAP.md](ROADMAP.md) - open items in priority order and the
+- [plan/roadmap.md](plan/roadmap.md) - open items in priority order and the
   change-attribution use case.
 - [../exp/NOTES.md](../exp/NOTES.md) - chronological lab log.
 

@@ -1,6 +1,6 @@
 # Open items and next use case
 
-Index at [TECHNIQUES.md](TECHNIQUES.md).
+Index at [TECHNIQUES.md](../TECHNIQUES.md).
 
 ## Open items, in priority order
 

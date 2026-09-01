@@ -57,9 +57,11 @@ What we learned so far:
 ![No-model controls](exp/out/exp06_controls.png)
 
 Docs: [index](docs/TECHNIQUES.md) ·
-[results](docs/RESULTS.md) · [signals](docs/SIGNALS.md) ·
-[protocol](docs/PROTOCOL.md) · [facts](docs/INFRASTRUCTURE.md) ·
-[roadmap](docs/ROADMAP.md) · [lab log](exp/NOTES.md)
+[results](docs/results/comparisons.md) ·
+[signals](docs/results/signals.md) ·
+[protocol](docs/method/protocol.md) ·
+[facts](docs/method/infrastructure.md) ·
+[roadmap](docs/plan/roadmap.md) · [lab log](exp/NOTES.md)
 
 ## Method
 

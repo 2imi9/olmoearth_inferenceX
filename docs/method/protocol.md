@@ -1,6 +1,6 @@
 # Evaluation protocol and positioning
 
-Part of the results documentation; index at [TECHNIQUES.md](TECHNIQUES.md).
+Part of the results documentation; index at [TECHNIQUES.md](../TECHNIQUES.md).
 
 Status terms: **supported** (at least one experiment consistent with the
 technique's claim, under the stated conditions) / **mixed** (results differ

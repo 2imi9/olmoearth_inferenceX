@@ -1,7 +1,7 @@
 # Established facts
 
 Non-signal findings: upstream sources, export formats, transfer
-properties. Index at [TECHNIQUES.md](TECHNIQUES.md).
+properties. Index at [TECHNIQUES.md](../TECHNIQUES.md).
 
 ### Heads and spatial transfer
 - Linear heads on frozen embeddings transfer spatially: trained on one river

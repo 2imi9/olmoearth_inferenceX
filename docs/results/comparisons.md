@@ -1,8 +1,8 @@
 # Cross-signal comparisons
 
 All signals scored on identical errors with the same harness, per
-condition. Index at [TECHNIQUES.md](TECHNIQUES.md); protocol and status
-terms in [PROTOCOL.md](PROTOCOL.md).
+condition. Index at [TECHNIQUES.md](../TECHNIQUES.md); protocol and status
+terms in [protocol.md](../method/protocol.md).
 
 ### Multi-scene replication (exp09)
 - The full signal comparison plus the NDWI-gradient control over seven river
@@ -24,7 +24,7 @@ terms in [PROTOCOL.md](PROTOCOL.md).
 - Standing caveats: WorldCover reference, small per-scene error counts, no
   formal significance testing yet.
 
-  ![Per-scene AURC](../exp/out/exp09_multiscene.png)
+  ![Per-scene AURC](../../exp/out/exp09_multiscene.png)
 
 ### No-model image-statistic controls (exp06)
 - Control signals computed directly from pixel values (within-patch spectral
@@ -44,7 +44,7 @@ terms in [PROTOCOL.md](PROTOCOL.md).
 - Secondary observation: on both difficult scenes, even no-model statistics
   rank errors better than max-softmax confidence.
 
-  ![No-model controls vs model signals](../exp/out/exp06_controls.png)
+  ![No-model controls vs model signals](../../exp/out/exp06_controls.png)
 
 ### Validation against expert labels (AWF, exp04)
 - Source: the
@@ -68,7 +68,7 @@ terms in [PROTOCOL.md](PROTOCOL.md).
   out-of-distribution nor pixel-trivial, consistent with the water-task
   pattern.
 
-  ![AWF risk-coverage and per-class recall](../exp/out/exp04_awf_expert.png)
+  ![AWF risk-coverage and per-class recall](../../exp/out/exp04_awf_expert.png)
 
 ### Single difficult scenes (exp05)
 - Water heads trained at Katima Mulilo, evaluated on (a) the Barotse
@@ -84,7 +84,7 @@ terms in [PROTOCOL.md](PROTOCOL.md).
   terrains. The signals rank model-reference disagreement correctly; whether
   that equals model error requires expert-labeled replication.
 
-  ![Hard scenes](../exp/out/exp05_hard_scenes.png)
+  ![Hard scenes](../../exp/out/exp05_hard_scenes.png)
 
 ### Pre-registered 29-scene comparison (exp11, authoritative)
 - Scene rule committed to git before any new scene was fetched: candidates

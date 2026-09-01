@@ -1,7 +1,7 @@
 # Per-signal evidence
 
 One section per signal, every claim citing its experiment. Index at
-[TECHNIQUES.md](TECHNIQUES.md).
+[TECHNIQUES.md](../TECHNIQUES.md).
 
 ### Max-softmax confidence (the baseline)
 - Best signal on the in-domain AWF expert-label task (exp04) and competitive
@@ -19,7 +19,7 @@ One section per signal, every claim citing its experiment. Index at
   and thin structures (shoreline, a bridge) at both the embedding level and
   the prediction level. (exp/exp01, exp/exp02)
 
-  ![Embedding-level agreement, Kazungula](../exp/out/exp01_zambezi_agreement.png)
+  ![Embedding-level agreement, Kazungula](../../exp/out/exp01_zambezi_agreement.png)
 - Pairwise |p_Nano - p_Base| did not beat max-softmax on the easy scene
   (0.0011 vs 0.0009, exp02); it was the best signal on the Barotse
   wetland-margin scene (0.0235 vs baseline 0.0666, control 0.0384; exp05,
@@ -54,7 +54,7 @@ One section per signal, every claim citing its experiment. Index at
   it on the AWF multiclass task (0.0427 vs 0.0367; exp04). The signal map
   traces the shoreline continuously.
 
-  ![Signal maps at Kazungula](../exp/out/exp03_more_channels.png)
+  ![Signal maps at Kazungula](../../exp/out/exp03_more_channels.png)
 - Masking perturbation, rejected (exp08): occluding a random 15% of patch
   cells with mean-fill and measuring prediction standard deviation over N=32
   reruns ranks errors worse than every other signal on all three scenes
@@ -83,4 +83,4 @@ One section per signal, every claim citing its experiment. Index at
   0 flagged; exp02). Specificity evidence only; no scene with a confirmed
   consensus break has been evaluated, so sensitivity is unknown.
 
-  ![Full audit slice, Kazungula](../exp/out/exp02_full_slice.png)
+  ![Full audit slice, Kazungula](../../exp/out/exp02_full_slice.png)
