@@ -31,6 +31,9 @@ what ships as the top-1 probability bands of the
 [olmoearth_lcc production rasters](https://huggingface.co/datasets/allenai/olmoearth_lcc)),
 and a plain pixel statistic computed without any model (the control).
 
+<details open>
+<summary><b>Headline comparison: three conditions</b> (click to shrink)</summary>
+
 | AURC (lower = finds errors better) | In-domain ([AWF expert labels](https://huggingface.co/datasets/allenai/olmoearth_projects_awf), 51 errors) | Ambiguous wetland margins (97 errors) | Far from training region (29 errors) |
 |---|---|---|---|
 | model's own confidence (baseline) | **0.0367** | 0.0666 | 0.0258 |
@@ -38,6 +41,45 @@ and a plain pixel statistic computed without any model (the control).
 | tiling instability (E_system) | 0.0427 | 0.0555 | 0.0076 |
 | embedding distance (E_dist) | 0.1104 | 0.0289 | 0.0014 |
 | pixel statistic (control) | 0.1287 | 0.0384 | **0.0005** |
+
+</details>
+
+<details>
+<summary><b>All 29 scenes</b> (pre-registered set, exp11; bold = best per scene; click to expand)</summary>
+
+| scene | errors | baseline | E_case | tile-phase | E_dist | control |
+|---|---|---|---|---|---|---|
+| barotse | 97 | 0.0666 | **0.0235** | 0.0555 | 0.0289 | 0.0384 |
+| cuando_20 | 49 | **0.0035** | 0.0075 | 0.0043 | 0.0039 | 0.0092 |
+| cuando_50 | 168 | 0.0536 | 0.0794 | 0.0412 | **0.0189** | 0.0316 |
+| cuando_80 | 61 | **0.0072** | 0.0155 | 0.0075 | 0.0092 | 0.0093 |
+| delta | 29 | 0.0258 | 0.0103 | 0.0076 | 0.0014 | **0.0005** |
+| kafue | 11 | 0.0002 | **0.0001** | 0.0001 | 0.0001 | 0.0128 |
+| kafue_20 | 77 | **0.0164** | 0.0244 | 0.0180 | 0.0407 | 0.0287 |
+| kafue_50 | 48 | 0.0272 | 0.0275 | 0.0204 | **0.0089** | 0.0099 |
+| kafue_80 | 38 | 0.0095 | 0.0068 | 0.0024 | 0.0138 | **0.0014** |
+| kazungula | 18 | 0.0009 | 0.0009 | **0.0008** | 0.0037 | 0.0016 |
+| luangwa | 8 | 0.0002 | 0.0017 | **0.0001** | 0.0002 | 0.0065 |
+| luangwa_conf | 52 | 0.0096 | 0.0189 | **0.0087** | 0.0108 | 0.0597 |
+| okavango_50 | 96 | **0.1181** | 0.1620 | 0.1640 | 0.1339 | 0.1229 |
+| okavango_80 | 76 | 0.0555 | 0.0578 | 0.0456 | 0.0105 | **0.0037** |
+| okavango_sep | 13 | 0.0005 | **0.0003** | 0.0006 | 0.0007 | 0.0163 |
+| rovuma_20 | 39 | **0.0054** | 0.0095 | 0.0076 | 0.0104 | 0.0073 |
+| rovuma_50 | 74 | 0.0099 | **0.0091** | 0.0097 | 0.0152 | 0.0160 |
+| rovuma_80 | 18 | 0.0015 | 0.0030 | 0.0010 | 0.0014 | **0.0006** |
+| save_20 | 25 | 0.0162 | 0.0619 | 0.0007 | **0.0005** | 0.0040 |
+| save_50 | 76 | **0.0150** | 0.0409 | 0.0153 | 0.0163 | 0.0676 |
+| save_80 | 23 | 0.0070 | 0.0292 | 0.0013 | 0.0006 | **0.0005** |
+| shire_20 | 303 | 0.1509 | 0.1607 | 0.2083 | **0.1134** | 0.2558 |
+| shire_50 | 123 | 0.0861 | 0.1000 | 0.0833 | 0.0629 | **0.0584** |
+| shire_80 | 188 | 0.2957 | 0.2943 | 0.2894 | 0.2172 | **0.1487** |
+| shire_liwonde | 17 | 0.0368 | 0.0357 | 0.0226 | 0.0013 | **0.0006** |
+| vicfalls_up | 23 | 0.0008 | **0.0006** | 0.0011 | 0.0012 | 0.0412 |
+| zambezi_20 | 51 | 0.0153 | 0.0118 | 0.0240 | 0.0168 | **0.0059** |
+| zambezi_50 | 16 | 0.0003 | **0.0003** | 0.0003 | 0.0037 | 0.0005 |
+| zambezi_80 | 47 | 0.0035 | 0.0148 | **0.0028** | 0.0085 | 0.0326 |
+
+</details>
 
 What we learned so far:
 
