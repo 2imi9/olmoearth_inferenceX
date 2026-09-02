@@ -7,6 +7,8 @@ the experiment that produced it.
 
 The documentation set:
 
+- [method/recipe.md](method/recipe.md) - what to do and not do, each item
+  tied to its experiment.
 - [method/protocol.md](method/protocol.md) - status terms, evidence tiers, related work,
   and the positioning of the contribution.
 - [results/comparisons.md](results/comparisons.md) - cross-signal comparisons: the pre-registered

@@ -86,7 +86,7 @@ are in [docs/results/comparisons.md](docs/results/comparisons.md) and
 
 ![No-model controls](exp/out/exp06_controls.png)
 
-Docs: [index](docs/TECHNIQUES.md) ·
+Docs: [recipe](docs/method/recipe.md) · [index](docs/TECHNIQUES.md) ·
 [results](docs/results/comparisons.md) ·
 [signals](docs/results/signals.md) ·
 [protocol](docs/method/protocol.md) ·
