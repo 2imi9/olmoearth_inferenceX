@@ -4,8 +4,9 @@ Experiments on locating errors in predictions from linear probes on frozen
 [OlmoEarth](https://allenai.org/olmoearth) v1 encoders, over regions with no
 labels. Two probes are audited: a binary water head trained on one
 WorldCover-labelled scene, and a nine-class head on the AWF expert labels.
-The production land-cover model has not been run. Everything uses Ai2's
-public artifacts: [olmoearth_pretrain](https://github.com/allenai/olmoearth_pretrain),
+The production model has not been run here, but one of its served outputs,
+the land cover change rasters, has been assessed as published (exp20).
+Everything uses Ai2's public artifacts: [olmoearth_pretrain](https://github.com/allenai/olmoearth_pretrain),
 [HuggingFace checkpoints](https://huggingface.co/allenai/OlmoEarth-v1-Base),
 and the datasets linked below.
 
@@ -32,9 +33,10 @@ AURC (area under the risk-coverage curve) measures how well a score ranks
 the patches where the model disagrees with the reference; lower is better.
 The reference is ESA WorldCover 2021 water on river scenes and expert point
 labels on AWF. Every signal must beat the model's own confidence
-(max-softmax, the kind of value that ships in the
-[olmoearth_lcc rasters](https://huggingface.co/datasets/allenai/olmoearth_lcc))
-and a pixel statistic computed without any model (the control).
+(max-softmax) and a pixel statistic computed without any model (the
+control). The served
+[olmoearth_lcc rasters](https://huggingface.co/datasets/allenai/olmoearth_lcc)
+export a change probability but no confidence for their class map (exp20).
 
 <details open>
 <summary><b>Headline comparison: three scenes</b> (click to shrink)</summary>
@@ -76,8 +78,15 @@ Per-scene values for all 27 rule-selected scenes: [docs/results/comparisons.md](
 - **A disagreement partner needs a different view of the input, not a more
   accurate model** (exp10, exp17), though no disagreement signal beats
   confidence on expert labels.
-- **Caveat:** results cover one task family (water) with linear probes on
-  frozen encoders, not the production model.
+- **On the served production rasters, boundary triage works and confidence
+  cannot be tested.** The land cover change product exports no confidence
+  for its class map; ranking its water map by prediction-boundary fraction
+  captures a median 0.88 of WorldCover disagreements at a 5% review budget,
+  and the change probability's ambiguity sits on the edges of flagged
+  regions (exp20).
+- **Caveat:** the ranking results cover one task family (water) with linear
+  probes on frozen encoders; the production model has only been assessed
+  through its served output.
 
 Negative and null results (cross-model disagreement, embedding distance,
 the map check, masking perturbation) and every number behind the findings
@@ -113,7 +122,7 @@ uv sync --extra geo
 uv run python exp/exp02_full_slice.py
 ```
 
-Experiments are exp01-exp17 in `exp/`. Checkpoints come from
+Experiments are exp01-exp20 in `exp/`; exp20 needs no checkpoint (it reads the served rasters over HTTP). Checkpoints come from
 [HuggingFace allenai](https://huggingface.co/allenai). exp04 needs the
 [AWF dataset](https://huggingface.co/datasets/allenai/olmoearth_projects_awf)
 under `data/awf/dataset/`. `uv sync` installs CPU torch; for the GPU

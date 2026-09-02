@@ -24,6 +24,7 @@ Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 | exp17 | evidence from inside the encoder: band-set disagreement 21/27 vs WorldCover; depth probes marginal; logit-lens, drift, attention entropy rejected |
 | exp18 | Sen1Floods11 hand labels (spatial hold-out): confidence is best; tile-phase, band-set, boundary, E_case all equal or worse; WorldCover wins read as reference error |
 | exp19 | v1 vs v1.2 (RoPE): instability larger under v1.2; single band-set token in v1.2; cross-version disagreement not useful |
+| exp20 | first served production output (olmoearth_lcc): no class confidence exported; boundary captures 0.88 of water disagreements at a 5% budget; change ambiguity sits on flagged-region edges |
 
 ## exp01 — first E_case map (2026-08-31)
 
@@ -256,3 +257,23 @@ phase magnitude larger under v1.2 (0.046 vs 0.032; smaller on 6/31). Against
 WorldCover both versions' tile-phase beats their confidence (26/1, 25/2), but
 exp18 makes that reference-error detection. Cross-version disagreement:
 6/21 (v1 errors), 18/9 n.s. (v1.2). Cache exp/out/exp19_feats.npz (ignored).
+
+## exp20 - served production output (2026-09-02)
+
+First assessment of one of Ai2's own outputs. Ten 512-px windows of
+allenai/olmoearth_lcc (EPSG:3857, about 9.55 m) read by HTTP range requests
+(oe_inferencex/lcc.py; GDAL vsicurl stalls on the signed CDN redirect).
+Product facts from the dataset card: band 1 change probability; bands 4-5
+land cover classes with no confidence; bands 6-7 are change-category head
+probabilities (80 to 99% at 255 over all pixels because "none" dominates).
+Water map against WorldCover water: boundary AURC below random at 6/6 sites
+with water; capture 0.88 at 5% budget (median); boundary share 0.92 among
+disagreements against 0.01 among agreements. Full-legend disagreement median
+49%: legend semantics, not error. Change probability: median 2.7% flagged,
+1.2% ambiguous; low confidence on flagged-region edges 2.7% against 0.07%
+interior. Two mistakes fixed on the way: the first run used band 6 as a
+class confidence (it is not), and the assessor's oracle had the wrong sign
+(fixed in assess.py; verified oracle 0.05, anti-oracle 0.66 on synthetic
+data). Cache exp/out/exp20_windows.npz (ignored). Product gap to report:
+export a class-head confidence alongside bands 4-5. Next testbed: the
+dataset's annotated change points against band 1.

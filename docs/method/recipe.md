@@ -33,7 +33,9 @@ the experiment behind it. Index at [../TECHNIQUES.md](../TECHNIQUES.md).
    by high-error scenes.
 6. **Report operating points alongside AURC** for anyone who will act on
    the ranking: the error fraction captured at a fixed review budget is
-   what a reviewer needs (open item; not yet done).
+   what a reviewer needs. assess_prediction and assess_classmap in
+   oe_inferencex/assess.py report review sets and capture at 1, 5 and 10%
+   budgets; exp20 reports them on a served product.
 
 ## Do not
 
@@ -61,8 +63,17 @@ the experiment behind it. Index at [../TECHNIQUES.md](../TECHNIQUES.md).
 
 ## For OlmoEarth deployments specifically
 
-- The top-1 probability bands already exported in the production LCC
-  rasters are the recommended signal; no additional inference is needed.
+- The served land cover change rasters export no confidence for the land
+  cover classes (bands 4-5); their probability bands 6-7 belong to the
+  change-category heads and are not a class confidence (exp20). Until a
+  class confidence is exported, boundary fraction of the class map is the
+  only label-free cue available on the product; it captured a median 0.88
+  of water disagreements with WorldCover at a 5% review budget (exp20).
+  Exporting the class head's top-1 minus top-2 logit alongside bands 4-5
+  would let the recipe's primary signal run on the product.
+- Read the product through its dataset card (task card): threshold band 1
+  at 128 before reading bands 2-9, and take the CRS from the file (the
+  served rasters are EPSG:3857, not the UTM grid in the file name).
 - v1.2 uses a single Sentinel-2 band-set token per patch and rotary
   position encoding; rotary encoding does not reduce sub-patch tiling
   instability (larger in v1.2, exp19), and the band-set signal of v1 has no

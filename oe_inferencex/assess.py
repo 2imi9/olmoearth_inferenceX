@@ -53,6 +53,23 @@ def _boundary(pooled_hard):
     return nb / 8.0
 
 
+def assess_classmap(hard, confidence, n_classes, patch=4, nodata_mask=None, reference=None, budgets=(0.01, 0.05, 0.10),
+                    signal="exported top-1 probability"):
+    """Production case: a hard class map plus an exported per-pixel confidence
+    band (for instance the top-1 probability bands of the LCC rasters), with
+    no logits. Ties in `confidence` are reported, because a quantized or
+    saturated band can only rank the pixels it separates."""
+    hard = np.asarray(hard).astype(int)
+    conf = np.asarray(confidence, dtype=np.float64)
+    valid = ~nodata_mask if nodata_mask is not None else np.ones(conf.shape, dtype=bool)
+    vals, counts = np.unique(conf[valid], return_counts=True)
+    warnings = [f"confidence band has {len(vals)} distinct values; {counts.max() / counts.sum():.3f} of pixels share the modal value {vals[counts.argmax()]:.4g}"]
+    out = _assess(conf, hard, n_classes, patch, nodata_mask, reference, budgets, signal, warnings)
+    out["confidence_distinct_values"] = int(len(vals))
+    out["confidence_modal_share"] = float(counts.max() / counts.sum())
+    return out
+
+
 def assess_prediction(scores, is_logit, patch=4, nodata_mask=None, reference=None, budgets=(0.01, 0.05, 0.10)):
     scores = np.asarray(scores, dtype=np.float64)
     warnings = []
@@ -76,6 +93,12 @@ def assess_prediction(scores, is_logit, patch=4, nodata_mask=None, reference=Non
             warnings.append("probability input: confidence ties where probabilities saturate; prefer logits")
         hard = scores.argmax(0)
         n_classes = C
+    return _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets,
+                   "negative logit margin" if is_logit else "1 - max probability", warnings)
+
+
+def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, signal, warnings):
+    margin = np.asarray(margin, dtype=np.float64)
     if nodata_mask is not None:
         margin = np.where(nodata_mask, np.nan, margin)
 
@@ -90,10 +113,11 @@ def assess_prediction(scores, is_logit, patch=4, nodata_mask=None, reference=Non
         "confidence_quantiles": {q: float(np.nanquantile(conf_w[valid_w], q)) for q in (0.05, 0.25, 0.5, 0.75, 0.95)},
         "boundary_window_fraction": float((bnd_w[valid_w] > 0).mean()),
         "class_share": {int(c): float((pooled_hard[valid_w] == c).mean()) for c in range(n_classes)},
-        "signal": "negative logit margin" if is_logit else "1 - max probability",
+        "signal": signal,
         "warnings": warnings,
         "arrays": {"confidence": conf_w, "boundary": bnd_w, "pooled_argmax": pooled_hard, "valid": valid_w},
         "review_sets": {},
+        "confidence_distinct_pooled": int(len(np.unique(conf_w[valid_w]))),
     }
     order = np.argsort(np.where(valid_w, suspicion, -np.inf).flatten(), kind="stable")[::-1]  # most suspicious first
     n_valid = int(valid_w.sum())
@@ -110,7 +134,7 @@ def assess_prediction(scores, is_logit, patch=4, nodata_mask=None, reference=Non
         err = (ref_w != pooled_hard).astype(float)
         e, s = err[valid_w], suspicion[valid_w]
         rc = {"error_rate": float(e.mean()), "aurc_confidence": aurc_expected(s, e)}
-        oracle = aurc_expected(-e, e)  # errors ranked last
+        oracle = aurc_expected(e, e)  # errors most suspicious, so rejected first
         rc["excess_aurc_confidence"] = rc["aurc_confidence"] - oracle
         rc["aurc_boundary"] = aurc_expected(bnd_w[valid_w], e)
         rc["aurc_random_expected"] = float(e.mean())

@@ -314,6 +314,46 @@ terms in [protocol.md](../method/protocol.md).
 - Best-signal tally: aligned tile-phase 13, control 9, depth-probe 2,
   band-set 1, attention entropy 1, E_case 1, baseline 0.
 
+### Served production output: land cover change rasters (exp20; weak reference)
+- First assessment of one of Ai2's own outputs: ten 512-px windows (about
+  4.9 km) of the published allenai/olmoearth_lcc rasters at Zambezi, Chobe
+  and Barotse sites, read with the pure-HTTP tile reader in
+  oe_inferencex/lcc.py. The product ships in EPSG:3857 at about 9.55 m as
+  9-band uint8 BigTIFFs; per the dataset card, band 1 is the change
+  probability, bands 4-5 the source and destination land cover classes, and
+  bands 6-7 the probabilities of the change-category heads (bands 2-3).
+- The product exports no confidence for the land cover classes, so the
+  recipe's primary signal (the model's own confidence) cannot be run on the
+  class map. Bands 6-7 are not class confidences: they sit at 255 on 80 to
+  99% of all pixels because the category head answers "none" at unchanged
+  pixels; among flagged pixels they take 48 to 196 distinct values.
+- Boundary triage on the product's water map (band 4 water against ESA
+  WorldCover 2021 water, the one class whose legends coincide): six of ten
+  sites contain water; disagreement is 0.2 to 2.4% of 4-px windows; the
+  boundary fraction ranks disagreements below random on 6 of 6 (Kazungula
+  AURC 0.0013 against 0.0156 random, oracle 0.0001); a 5% review budget by
+  boundary captures a median 0.88 of disagreements (0.61 to 0.98); the
+  boundary share is 0.92 among disagreements (0.69 to 0.99) against 0.01
+  among agreements (0.005 to 0.08). Legends and dates differ, so these are
+  reference disagreements, not counted model errors.
+- Full-legend disagreement with WorldCover is a median 49% (5 to 68%),
+  dominated by tree, shrub and grass and by built-up; the legends' semantics
+  differ (WorldCover's built-up covers whole towns, its tree threshold is
+  lower), so this number is context, not an error rate.
+- Change probability (band 1): a median 2.7% of pixels flagged at 0.5 (0.01
+  to 13.7%); all 256 values used; 60 to 95% of pixels at exactly 0; the
+  ambiguous band 0.25 to 0.75 holds a median 1.2% (0.08 to 4.7%). Low
+  confidence (|2p - 1| < 0.5) sits on flagged-region edges: a median 2.7% of
+  edge windows against 0.07% of interior windows. The boundary finding
+  replicates label-free on the product.
+- Where change is flagged, the predicted transitions are plausible for the
+  region (tree to grassland or built-up at Kazungula and Katima, grassland to
+  crops at Barotse, water to wetland at Linyanti); the pre-category head says
+  deforestation on 4 to 72% of flagged pixels and the post head new_building
+  or new_crop_field. No change reference exists here, so these are sanity
+  checks, not accuracies. Values in exp/out/exp20_lcc_production.csv; figure
+  exp/out/exp20_lcc_kazungula.png.
+
 ### OlmoEarth v1 vs v1.2 (exp19; WorldCover reference)
 - Run in an isolated environment on the current olmoearth_pretrain main,
   which loads both versions; v1 features recomputed with the new code match

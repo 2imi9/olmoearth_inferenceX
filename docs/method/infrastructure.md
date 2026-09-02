@@ -118,3 +118,23 @@ properties. Index at [TECHNIQUES.md](../TECHNIQUES.md).
   (ecosystem_type_mapping); nodata conventions differ per project (9, 10,
   54, 255, -1); v1.2 tokenizes ten Sentinel-2 bands as one group and drops
   B01/B09; kenya_lulc_croptype has no configs on main.
+
+## Served production rasters (exp20)
+
+- allenai/olmoearth_lcc model_outputs: one file per 32768-px UTM tile, named
+  EPSG:<code>_<col>_<row>.tif, but served in EPSG:3857 at about 9.55 m (the
+  Kazungula tile is 36588 x 36794 px, 1.2 GB); BigTIFF, 256-px tiles,
+  deflate, pixel-interleaved, 9 bands uint8. Legends and band semantics are
+  in the dataset card and mirrored in oe_inferencex/lcc.py.
+- HuggingFace serves the file through a signed CDN redirect (xet bridge)
+  whose URL has no .tif suffix; GDAL's vsicurl stalls on it. The reader in
+  oe_inferencex/lcc.py parses the first IFD, fetches the tile tables, and
+  range-requests only the tiles that cover a window: a 128-px window in
+  under a second, a 512-px window in about three seconds.
+- ESA WorldCover 2021 is warped onto the same 3857 window grid with a
+  WarpedVRT (oe_inferencex/data.py); water agreement peaks at zero shift
+  (IoU 0.905 at Kazungula), so the two grids are aligned.
+- The olmoearth_lcc dataset also carries annotated change points
+  (pre_category, post_category and fine-grained change categories); they
+  are an expert reference for the change product itself and are not yet
+  used here.

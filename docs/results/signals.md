@@ -148,3 +148,16 @@ One section per signal, every claim citing its experiment. Index at
   without width-filtered centerlines (GRWL) or expert truth.
 
   ![Full audit slice, Kazungula](../../exp/out/exp02_full_slice.png)
+
+## On the served production product (exp20)
+
+- The published land cover change rasters export no confidence for the land
+  cover classes; the recipe's primary signal cannot be run on them, and the
+  exported probabilities (bands 6-7) belong to the change-category heads.
+- Boundary fraction of the product's own class map is the one label-free cue
+  the product allows. On the water class it ranks WorldCover disagreements
+  below random at 6 of 6 sites with water and captures a median 0.88 of them
+  at a 5% review budget.
+- The change probability (band 1) is sharply separated (median 1.2% of pixels
+  between 0.25 and 0.75); its ambiguity concentrates on the edges of flagged
+  regions (2.7% of edge windows against 0.07% interior).
