@@ -245,6 +245,39 @@ terms in [protocol.md](../method/protocol.md).
   task, so every validation task also contributes training windows. Values
   in exp/out/exp16_awf_boundary.csv and exp16_summary.json.
 
+### Evidence from inside the encoder (exp17)
+- Setup: the v1-Base encoder was hooked (per-block outputs, last-block q/k)
+  for one forward pass per scene on the 27 rule-selected scenes plus the
+  training scene. Signals, all label-free and single-model: depth-probe
+  disagreement (the water head retrained on each block's tokens; std over
+  the last six blocks), decision settling (the final head applied to every
+  block's tokens, logit-lens style; std over the last six), representation
+  drift (cosine change between consecutive late blocks), band-set
+  disagreement (heads trained separately on the 10 m, 20 m and 60 m
+  Sentinel-2 band-set tokens; std of the three probabilities), and
+  last-block attention entropy. Scored with tie-aware E-AURC against the
+  exp13 errors, alongside the baseline, aligned tile-phase and the pixel
+  control. Values in exp/out/exp17_internal_evidence.csv.
+- Band-set disagreement beats the confidence baseline on 21/27 scenes
+  (6 worse; exact sign test p=0.006) and the pixel control on 16/27, from a
+  single forward pass with no second model. It outperforms the two-model
+  E_case (10/27). This is the second statistically supported,
+  control-surviving positive signal in the repository, after aligned
+  tile-phase (26/27 on the same scenes).
+- Depth-probe disagreement is marginal: 19/27 vs baseline (p=0.052), 13/27
+  vs control.
+- Decision settling (0/27), representation drift (3/27) and attention
+  entropy (3/27) are decisively worse than confidence; the INSIDE-style
+  internal-state signals do not transfer to this setting.
+- Error correlation with the final head (mean phi over scenes): Nano 0.61,
+  depth probe 0.64, logit-lens 0.61, 20 m band-set probe 0.75. The band-set
+  probe is the most correlated rater yet yields the best disagreement
+  signal, so error decorrelation alone does not predict the value of a
+  disagreement partner; a partner that sees a different view of the input
+  does. This refines the exp10 conclusion.
+- Best-signal tally: aligned tile-phase 13, control 9, depth-probe 2,
+  band-set 1, attention entropy 1, E_case 1, baseline 0.
+
 ### Pre-registered scene set (exp11; statistics superseded by exp13)
 - The scene rule and scene set below stand. The statistics in this section
   use raw AURC and the unaligned tile-phase; exp13 corrects both and is

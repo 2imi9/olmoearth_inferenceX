@@ -21,6 +21,7 @@ Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 | exp14 | boundary ablation: tile-phase indistinguishable from prediction-boundary proximity |
 | exp15 | boundary proximity + E_geo: no benefit from the conjunction; E_geo sensitivity unmeasurable under WorldCover truth |
 | exp16 | boundary indicator on AWF: labelled patches not interior; score error-associated but a proxy for low margin; confidence wins |
+| exp17 | evidence from inside the encoder: band-set disagreement supported (21/27); depth probes marginal; logit-lens, drift, attention entropy rejected |
 
 ## exp01 — first E_case map (2026-08-31)
 
@@ -223,3 +224,13 @@ patches, sign p=0.008), conditional test of the score given the margin
 30 tasks. AURC confidence 0.0363 vs boundary 0.0636. The "no
 boundary context" explanation is withdrawn; the score is a low-margin proxy
 on nine classes. Results: exp/out/exp16_awf_boundary.csv, exp16_summary.json.
+
+## exp17 — evidence from inside the encoder (2026-09-01)
+
+Hooked v1-Base (12 blocks, 768-d, 12 heads, no registers; sequence H,W,T,S
+verified). Band-set disagreement (heads on the three S2 band-set tokens):
+21/6 vs confidence (p=0.006), 16/27 vs control, one pass, better than the
+two-model E_case. Depth probes 19/8 (p=0.052). Logit-lens settling 0/27,
+drift 3/24, attention entropy 3/24: rejected. phi with final head: Nano
+0.61, band-set probe 0.75, so disagreement value is not error decorrelation
+alone. Cache exp/out/exp17_internals.npz (float16 per-block tokens).

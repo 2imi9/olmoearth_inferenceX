@@ -109,6 +109,20 @@ One section per signal, every claim citing its experiment. Index at
   ranker. The out-of-distribution-indicator interpretation remains plausible
   but requires a shift testbed whose errors are not spectrally trivial.
 
+### Internal evidence (exp17)
+- Band-set disagreement (std of water probabilities from heads on the three
+  Sentinel-2 band-set tokens of the same patch): beats the baseline 21/27
+  (sign p=0.006) and the pixel control 16/27 on the rule-selected scenes,
+  one forward pass, no second model. Supported.
+- Depth-probe disagreement (std over the last six blocks of per-block
+  heads): 19/27 vs baseline (p=0.052). Partial.
+- Logit-lens decision settling, late-block representation drift, and
+  last-block attention entropy: 0/27, 3/27, 3/27 vs baseline. Rejected as
+  error rankers here.
+- The band-set probe's errors correlate more with the final head (phi 0.75)
+  than Nano's do (0.61), yet its disagreement ranks errors better than
+  E_case: a different input view matters more than error decorrelation.
+
 ### Geographic grounding (E_geo)
 - On a scene where the river is clearly resolved, the OSM centerline
   consistency check produced zero false break alarms (52 centerline patches,

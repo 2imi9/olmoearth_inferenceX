@@ -13,10 +13,11 @@ and the datasets linked below.
 
 Each signal gives every map window a suspicion score. The four signals:
 
-- **E_case** - cross-model disagreement: OlmoEarth v1
+- **E_case** - disagreement: two models (OlmoEarth v1
   [Nano](https://huggingface.co/allenai/OlmoEarth-v1-Nano) and
-  [Base](https://huggingface.co/allenai/OlmoEarth-v1-Base) predict the same
-  window differently.
+  [Base](https://huggingface.co/allenai/OlmoEarth-v1-Base)) predict the same
+  window differently; or, within one model, its three Sentinel-2 band-set
+  tokens do (exp17).
 - **E_system** - tiling instability (tile-phase in the scripts): the
   prediction flips when the input grid shifts by a few pixels. It behaves
   like proximity to a boundary in the model's own prediction map (exp14).
@@ -64,9 +65,13 @@ Per-scene values for all 27 rule-selected scenes: [docs/results/comparisons.md](
   boundaries of the model's own prediction map; a zero-cost boundary
   indicator is indistinguishable from the perturbation signal, though its
   own margin over confidence is only marginal (exp14).
-- **A disagreement partner needs uncorrelated errors, not higher accuracy.**
-  Stronger same-family partners and same-family ensembles do not help
-  (exp07, exp10).
+- **The encoder's own three band-set tokens disagree where it errs.** The
+  spread among water predictions from the 10 m, 20 m and 60 m Sentinel-2
+  views beats confidence on 21 of 27 scenes (p = 0.006) and the pixel
+  control on 16 of 27, from one forward pass with no second model (exp17).
+- **A disagreement partner needs a different view of the input, not a more
+  accurate model.** Stronger same-family partners and same-family ensembles
+  do not help (exp07, exp10); the intra-model band-set ensemble does.
 - **Caveat:** the reference map is least reliable on the most interesting
   terrains, and no single signal is best on every scene. Numbers are
   directions, not settled effect sizes.
@@ -105,7 +110,7 @@ uv sync --extra geo
 uv run python exp/exp02_full_slice.py
 ```
 
-Experiments are exp01-exp16 in `exp/`. Checkpoints come from
+Experiments are exp01-exp17 in `exp/`. Checkpoints come from
 [HuggingFace allenai](https://huggingface.co/allenai). exp04 needs the
 [AWF dataset](https://huggingface.co/datasets/allenai/olmoearth_projects_awf)
 under `data/awf/dataset/`. `uv sync` installs CPU torch; for the GPU

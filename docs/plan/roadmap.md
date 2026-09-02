@@ -56,3 +56,12 @@ generated from diffs that survive this decomposition. Natural testbed: the
 olmoearth_lcc production change product (change probability and
 month-encoded dates) and its verified change/no-change points. Untested;
 design only.
+
+Update after exp17: band-set disagreement (heads on the encoder's three
+Sentinel-2 band-set tokens) is a second supported signal (21/27 vs
+confidence, 16/27 vs control, single pass). Depth-probe disagreement is
+marginal; logit-lens settling, representation drift and attention entropy
+are rejected. Next for internal evidence: band-set disagreement on the AWF
+expert task and on the production LCC encoder (v1.2, once loadable); test
+whether band-set and tiling instability flag different errors before any
+rank aggregation is considered.

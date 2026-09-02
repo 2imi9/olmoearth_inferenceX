@@ -45,3 +45,21 @@ properties. Index at [TECHNIQUES.md](../TECHNIQUES.md).
   cross-version signals require no private infrastructure.
 - Planetary Computer Sentinel-2 L2A and ESA WorldCover can be read onto a
   shared 10 m grid; OSM Overpass requires mirror fallback.
+
+### Encoder internals (verified empirically, exp17 preparation)
+- OlmoEarth v1-Base encoder: 12 pre-norm ViT blocks (norm1, attention,
+  layer-scale, norm2, MLP, layer-scale), 768-d, 12 heads, no register
+  tokens, no qk-norm; attention runs through PyTorch scaled-dot-product
+  attention, so weights are not returned but the q and k projections are
+  plain linear layers whose outputs can be hooked and the weights recomputed.
+- The token sequence entering the blocks is laid out H, W, T, S
+  (outer to inner), where S indexes the three Sentinel-2 band-set tokens per
+  patch (10 m bands B02/B03/B04/B08; 20 m bands B05/B06/B07/B8A/B11/B12;
+  60 m bands B01/B09). Verified to zero error against the official output
+  by reshaping a hooked last-block output through the final LayerNorm.
+  Every earlier experiment mean-pooled these three tokens; they are
+  separately addressable.
+- Per-block outputs are hookable with standard forward hooks under
+  fast_pass=True (no masked-token removal, no packing), which is what makes
+  layer-wise probes, logit-lens trajectories and attention statistics
+  available from a single forward pass.
