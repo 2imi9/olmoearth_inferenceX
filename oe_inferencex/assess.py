@@ -27,7 +27,7 @@ nothing here serializes them into text.
 """
 import numpy as np
 
-from oe_inferencex.evidence import aurc_expected
+from oe_inferencex.metrics import aurc_expected
 
 
 def _pool(a, patch):
@@ -99,8 +99,10 @@ def assess_prediction(scores, is_logit, patch=4, nodata_mask=None, reference=Non
 
 def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, signal, warnings):
     margin = np.asarray(margin, dtype=np.float64)
+    hard = np.asarray(hard).astype(int)
     if nodata_mask is not None:
         margin = np.where(nodata_mask, np.nan, margin)
+        hard = np.where(nodata_mask, -1, hard)  # no-prediction pixels do not vote in pooling or boundaries
 
     conf_w = _pool(np.nan_to_num(margin, nan=np.nanmax(margin)), patch)   # higher = more confident
     valid_w = _pool((~nodata_mask).astype(float), patch) >= 0.5 if nodata_mask is not None else np.ones_like(conf_w, dtype=bool)
@@ -129,14 +131,17 @@ def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, sig
                                  "boundary_share_in_set": float((bnd_w.flatten()[idx] > 0).mean())}
 
     if reference is not None:
-        ref = np.asarray(reference)
+        ref = np.asarray(reference).astype(int)  # values < 0 mean no reference
+        ref_valid_w = _pool((ref >= 0).astype(float), patch) >= 0.5
+        scored = valid_w & ref_valid_w
         ref_w = _pooled_argmax(ref, n_classes, patch)
         err = (ref_w != pooled_hard).astype(float)
-        e, s = err[valid_w], suspicion[valid_w]
-        rc = {"error_rate": float(e.mean()), "aurc_confidence": aurc_expected(s, e)}
+        e, s = err[scored], suspicion[scored]
+        bnd_s = bnd_w[scored]
+        rc = {"n_windows_scored": int(scored.sum()), "error_rate": float(e.mean()), "aurc_confidence": aurc_expected(s, e)}
         oracle = aurc_expected(e, e)  # errors most suspicious, so rejected first
         rc["excess_aurc_confidence"] = rc["aurc_confidence"] - oracle
-        rc["aurc_boundary"] = aurc_expected(bnd_w[valid_w], e)
+        rc["aurc_boundary"] = aurc_expected(bnd_s, e)
         rc["aurc_random_expected"] = float(e.mean())
         cap = {}
         e_sorted = e[np.argsort(s, kind="stable")[::-1]]
@@ -145,7 +150,27 @@ def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, sig
             cap[b] = {"errors_captured_fraction": float(e_sorted[:k].sum() / max(e.sum(), 1)),
                       "precision_in_set": float(e_sorted[:k].mean())}
         rc["error_capture_at_budget"] = cap
-        rc["boundary_share_among_errors"] = float((bnd_w[valid_w][e > 0] > 0).mean()) if e.sum() else float("nan")
+        rc["boundary_share_among_errors"] = float((bnd_s[e > 0] > 0).mean()) if e.sum() else float("nan")
         rc["caveat"] = "reference-product labels can flatter boundary-type signals (exp18); treat as expert truth only if it is"
         out["against_reference"] = rc
     return out
+
+
+def summary(out):
+    """JSON-safe view of an assessment: no arrays, string keys, NaN as null,
+    review-set windows as [row, col] lists. The arrays stay in `out["arrays"]`
+    for callers that write them to files."""
+    def conv(o):
+        if isinstance(o, dict):
+            return {str(k): conv(v) for k, v in o.items()}
+        if isinstance(o, (list, tuple)):
+            return [conv(v) for v in o]
+        if isinstance(o, np.ndarray):
+            return conv(o.tolist())
+        if isinstance(o, (np.floating, float)):
+            return None if np.isnan(o) else float(o)
+        if isinstance(o, (np.integer, int, bool)):
+            return int(o) if not isinstance(o, bool) else o
+        return o
+    return conv({k: v for k, v in out.items() if k != "arrays"})
+

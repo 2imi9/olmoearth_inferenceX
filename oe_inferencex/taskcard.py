@@ -230,8 +230,8 @@ def lcc_card():
         card.encoder["repo"] = enc.group(1)
     card.goal = "Detect recent land cover change from Sentinel-2 time series (16 quarterly + 4 biweekly images), continent scale."
     card.audit = {"output_is_dense": True, "boundary_cue_applies": True,
-                  "probabilities_in_export": "binary-change probability (band 1) and top-1 probability of argmax classes (bands 6-7); no full per-class distribution",
-                  "confidence_scoring": "top-1 probability bands as shipped",
+                  "probabilities_in_export": "change probability (band 1) and the probabilities of the change-category heads (bands 6-7); no confidence for the land cover classes (bands 4-5) and no per-class distribution (exp20)",
+                  "confidence_scoring": "none available for the class map; |2p - 1| of band 1 for the change decision; boundary fraction of the class map as triage (exp20)",
                   "band_set_disagreement_available": False, "note": "encoder v1.2-Base: single Sentinel-2 band-set token per patch (exp19)"}
     return card
 
