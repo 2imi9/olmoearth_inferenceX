@@ -56,31 +56,25 @@ Per-scene values for all 27 rule-selected scenes: [docs/results/comparisons.md](
 
 ## Findings
 
-- **On the expert-labelled AWF task, the model's own confidence is the best
-  signal.** On the 27 river scenes it is best on none.
-- **Tiling instability beats confidence on 26 of 27 river scenes** (sign
-  test p < 0.001) and the pixel control on 18 of 27 (exp13). Errors sit at
-  the boundaries of the model's own prediction map.
-- **A zero-cost boundary indicator from the prediction map is
-  indistinguishable from tiling instability** (exp14). Its own margin over
-  confidence is marginal (19 of 27, p = 0.05), so it is suggestive, not
-  established. Boundary-concentrated error is well known in segmentation;
-  the contribution here is the controlled comparison against confidence.
-- **On AWF the boundary score loses to confidence** because with nine
-  classes it mostly marks low-margin predictions (exp16). The earlier
-  "point labels carry no boundary context" explanation was tested and
-  withdrawn.
-- **Cross-model disagreement helps only on specific ambiguous scenes**
-  (10 of 27 vs confidence). **Embedding distance shows no advantage**
-  (13 of 27).
+- **On dense river scenes the model's own confidence is never the best
+  error-finder** (best on 0 of 27). On the expert-labelled nine-class AWF
+  task it is (exp04, exp16).
+- **Tiling instability beats confidence on 26 of 27 scenes** (sign test
+  p < 0.001) and the pixel control on 18 of 27 (exp13). Errors sit at the
+  boundaries of the model's own prediction map; a zero-cost boundary
+  indicator is indistinguishable from the perturbation signal, though its
+  own margin over confidence is only marginal (exp14).
 - **A disagreement partner needs uncorrelated errors, not higher accuracy.**
-  A stronger same-family partner ranks errors worse (exp10); same-family
-  ensembles do not help (exp03, exp07).
-- **The map check mostly finds disagreements between reference maps**, and
-  adding it to boundary proximity did not help (exp15).
-- **The reference map is least reliable on the most interesting terrains**,
-  so numbers are directions, not settled effect sizes. No single signal is
-  best on every scene.
+  Stronger same-family partners and same-family ensembles do not help
+  (exp07, exp10).
+- **Caveat:** the reference map is least reliable on the most interesting
+  terrains, and no single signal is best on every scene. Numbers are
+  directions, not settled effect sizes.
+
+Negative and null results (cross-model disagreement, embedding distance,
+the map check, masking perturbation) and every number behind the findings
+are in [docs/results/comparisons.md](docs/results/comparisons.md) and
+[docs/results/signals.md](docs/results/signals.md).
 
 ![No-model controls](exp/out/exp06_controls.png)
 
