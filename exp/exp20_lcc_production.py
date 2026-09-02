@@ -204,8 +204,16 @@ def main():
         "settings": {"size_px": SIZE, "patch": PATCH, "budgets": BUDGETS, "lcc_to_worldcover": LCC_TO_WC,
                      "reference": "ESA WorldCover 2021 v200 (weak; three years older than the product)"},
     }
+    def clean(o):  # NaN is not valid JSON; write null
+        if isinstance(o, float) and np.isnan(o):
+            return None
+        if isinstance(o, dict):
+            return {k: clean(v) for k, v in o.items()}
+        if isinstance(o, (list, tuple)):
+            return [clean(v) for v in o]
+        return o
     with open(os.path.join(OUT, "exp20_lcc_production.json"), "w") as f:
-        json.dump({"summary": summary, "sites": rows}, f, indent=1, default=float)
+        json.dump(clean({"summary": summary, "sites": rows}), f, indent=1, default=float)
     print(json.dumps({k: v for k, v in summary.items() if k != "settings"}, indent=1))
     make_figure(windows)
 
