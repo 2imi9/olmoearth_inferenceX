@@ -1,6 +1,7 @@
 """Exp 15: prediction-boundary proximity combined with the reference-map check.
 
-Signals on the 29 exp11 scenes (seed-0 Base head, cached features):
+Signals on the 27 rule-selected exp11 scenes (seed-0 Base head, cached
+features; two cache leftovers excluded):
   baseline      - max-softmax confidence
   boundary      - fraction of a patch's 8 neighbors with a different hard
                   label on the model's own prediction map (exp14)

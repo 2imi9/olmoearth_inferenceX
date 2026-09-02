@@ -111,6 +111,8 @@ terms in [protocol.md](../method/protocol.md).
   percentile intervals are biased for this rank statistic on high-error
   scenes and are indicative only; the cross-scene sign and permutation
   tests do not use them.
+  ![Per-scene tie-aware AURC, 27 rule-selected scenes](../../exp/out/exp13_per_scene.png)
+
 - The unaligned tile-phase of exp11 scores 17/27
   (sign p=0.25): the misalignment hid the effect. Erratum.
 - E_case: 10/27 (sign p=0.25); intervals in its favor on

@@ -9,8 +9,9 @@ the model's own shift-0 prediction map alone matches it:
   pred-boundary   - fraction of a patch's 8 neighbors whose hard label
                     differs from its own (a discrete boundary indicator).
 
-All three are scored with E-AURC on the 29 exp11 scenes against the same
-seed-0 errors, with per-scene head-to-head counts, exact sign tests, and the
+All are scored with tie-aware E-AURC on the 27 rule-selected exp11 scenes
+(two cache leftovers excluded) against the same seed-0 errors, alongside
+the pixel control, with per-scene head-to-head counts, exact sign tests, and the
 rank correlation between tile-phase and pred-gradient within each scene.
 If pred-gradient matches tile-phase, the perturbation adds nothing beyond
 boundary proximity and the claim should be restated accordingly.

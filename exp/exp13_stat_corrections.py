@@ -21,7 +21,10 @@ Three corrections, all recomputed from the cached exp11 features and scenes
    scene) are resampled with replacement, B=1000, and the 95% interval of
    each signal's E-AURC difference from the baseline is reported per scene.
 
-Errors, heads, and scene set are exactly those of exp11 (seed 0).
+Errors and heads are those of exp11 (seed 0). Scene set: the rule-selected
+exp11 scenes minus two cache leftovers (kafue, luangwa), 27 scenes. Later
+corrections (post-audit): tie-aware AURC, negative-|logit| baseline, and
+tie-excluding sign tests.
 """
 import csv
 import math
