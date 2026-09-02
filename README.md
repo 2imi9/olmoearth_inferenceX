@@ -39,17 +39,19 @@ and a pixel statistic computed without any model (the control).
 <details open>
 <summary><b>Headline comparison: three scenes</b> (click to shrink)</summary>
 
-| AURC (lower = finds errors better) | In-domain ([AWF expert labels](https://huggingface.co/datasets/allenai/olmoearth_projects_awf), 63 errors) | Ambiguous wetland margins (Barotse, vs WorldCover 2021, 97 errors) | Reference omits the river (Zambezi delta, vs WorldCover 2021, 29 disagreements) |
-|---|---|---|---|
-| model's own confidence (baseline) | **0.0363** | 0.0684 | 0.0234 |
-| cross-model disagreement (E_case) | 0.0670 | 0.0235 | 0.0103 |
-| tiling instability (E_system) | 0.0489 | **0.0127** | 0.0009 |
-| embedding distance (E_dist) | 0.1338 | 0.0289 | 0.0014 |
-| pixel statistic (control) | 0.1658 | 0.0384 | **0.0005** |
+| AURC (lower = finds errors better) | In-domain ([AWF expert labels](https://huggingface.co/datasets/allenai/olmoearth_projects_awf), 63 errors) | Ambiguous wetland margins (Barotse, vs WorldCover 2021, 97 errors) | Reference omits the river (Zambezi delta, vs WorldCover 2021, 29 disagreements) | Hand-labelled flood masks (Sen1Floods11 Bolivia, pooled excess AURC over 81,984 patches) |
+|---|---|---|---|---|
+| model's own confidence (baseline) | **0.0363** | 0.0684 | 0.0234 | **0.0105** |
+| cross-model disagreement (E_case) | 0.0670 | 0.0235 | 0.0103 | 0.0186 |
+| tiling instability (E_system) | 0.0489 | **0.0127** | 0.0009 | 0.0115 |
+| embedding distance (E_dist) | 0.1338 | 0.0289 | 0.0014 | 0.0592 |
+| pixel statistic (control) | 0.1658 | 0.0384 | **0.0005** | 0.0356 |
 
-Third column: the reference has no water on this scene, so a pixel
-statistic ranks its disagreements best; the column only shows that
-confidence fails there.
+Columns 2-3 score against ESA WorldCover, a weak reference; the third
+scene's reference has no water, so its disagreements are reference
+omissions. Column 4 scores against hand-labelled masks on a geographically
+held-out region (exp18): there confidence is best and every other signal
+is equal or worse.
 
 </details>
 

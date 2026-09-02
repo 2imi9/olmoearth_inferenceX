@@ -91,9 +91,12 @@ One section per signal, every claim citing its experiment. Index at
   likelihood. Design rule: perturbations that preserve scene content while
   changing the tokenization expose model pathology; perturbations that
   remove content do not.
-- Backbone-version comparison (v1 vs v1_2): blocked; v1_2 checkpoints fail
-  to load with the current olmoearth_pretrain checkout (LatentMIM state_dict
-  mismatch, exp03).
+- Backbone-version comparison (v1 vs v1.2, exp19): loaded on current
+  olmoearth_pretrain main in an isolated environment. RoPE (v1.2) does not
+  reduce sub-patch tiling instability (larger on 25 of 31 scenes); tile-phase
+  ranks WorldCover-referenced errors for both versions, subject to the exp18
+  caveat; cross-version disagreement is not a useful signal (6/21 for v1's
+  errors, 18/9 n.s. for v1.2's).
 
 ### Embedding dissimilarity (E_dist)
 - Definition as implemented: mean cosine distance from a window's Base

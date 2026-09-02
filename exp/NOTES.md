@@ -23,6 +23,7 @@ Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 | exp16 | boundary indicator on AWF: labelled patches not interior; score error-associated but a proxy for low margin; confidence wins |
 | exp17 | evidence from inside the encoder: band-set disagreement 21/27 vs WorldCover; depth probes marginal; logit-lens, drift, attention entropy rejected |
 | exp18 | Sen1Floods11 hand labels (spatial hold-out): confidence is best; tile-phase, band-set, boundary, E_case all equal or worse; WorldCover wins read as reference error |
+| exp19 | v1 vs v1.2 (RoPE): instability larger under v1.2; single band-set token in v1.2; cross-version disagreement not useful |
 
 ## exp01 — first E_case map (2026-08-31)
 
@@ -246,3 +247,12 @@ boundaries 75% vs 21% (phenomenon holds). Reading: the WorldCover
 advantages were reference-error detection. Repository claims revised in
 README, ledger, comparisons, signals, roadmap. Cache exp/out/exp18_feats.npz
 (3.9 GB, ignored). Caveat: L1C chips through the L2A path.
+
+## exp19 — v1 vs v1.2 (2026-09-01)
+
+Isolated worktree + venv on olmoearth_pretrain main. v1 features match the
+cache exactly. v1.2: rope_3d_mixed, one S2 band-set token per patch. Tile-
+phase magnitude larger under v1.2 (0.046 vs 0.032; smaller on 6/31). Against
+WorldCover both versions' tile-phase beats their confidence (26/1, 25/2), but
+exp18 makes that reference-error detection. Cross-version disagreement:
+6/21 (v1 errors), 18/9 n.s. (v1.2). Cache exp/out/exp19_feats.npz (ignored).

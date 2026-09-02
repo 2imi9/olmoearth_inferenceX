@@ -314,6 +314,26 @@ terms in [protocol.md](../method/protocol.md).
 - Best-signal tally: aligned tile-phase 13, control 9, depth-probe 2,
   band-set 1, attention entropy 1, E_case 1, baseline 0.
 
+### OlmoEarth v1 vs v1.2 (exp19; WorldCover reference)
+- Run in an isolated environment on the current olmoearth_pretrain main,
+  which loads both versions; v1 features recomputed with the new code match
+  the cached exp11 features exactly (max difference 0). v1.2-Base uses
+  rotary position encodings (rope_3d_mixed) and, unlike v1, tokenizes
+  Sentinel-2 as a single band-set token per patch, so band-set
+  disagreement does not exist for it.
+- Tiling instability does not shrink under RoPE: mean per-patch std across
+  0-3 px shifts is 0.046 for v1.2 vs 0.032 for v1, smaller for v1.2 on
+  only 6 of 31 scenes (sign p=9e-4). RoPE addressed the long-range
+  striping artifact; sub-patch grid-shift instability is a different
+  effect and is larger in v1.2 on this probe.
+- Head accuracy vs WorldCover on the Katima probe: v1 0.942, v1.2 0.922.
+- Against WorldCover, tile-phase ranks each version's own errors better
+  than its confidence for both (v1 26/1, v1.2 25/2), but exp18 shows this
+  WorldCover-referenced comparison reflects reference error; no expert-label
+  test of v1.2 has been run. Cross-version disagreement |p_v1.2 - p_v1| is
+  worse than confidence for v1's errors (6/21) and not significant for
+  v1.2's (18/9, p=0.12). Values in exp/out/exp19_v1_vs_v12.csv.
+
 ### Pre-registered scene set (exp11; statistics superseded by exp13)
 - The scene rule and scene set below stand. The statistics in this section
   use raw AURC and the unaligned tile-phase; exp13 corrects both and is

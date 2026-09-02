@@ -82,6 +82,11 @@ properties. Index at [TECHNIQUES.md](../TECHNIQUES.md).
   newer code. To avoid disturbing the environment those results depend on,
   origin/main is checked out as a git worktree (../olmoearth_pretrain_main)
   with its own virtual environment (.venv-main).
+- OlmoEarth v1.2-Base (loaded on current main, exp19): 12 blocks, 768-d,
+  position encoding rope_3d_mixed, and a single Sentinel-2 band-set token
+  per patch (v1 has three), so the exp17 band-set signal has no v1.2
+  counterpart. v1 features recomputed with the new code match the cached
+  ones exactly.
 - Other evaluation sets wrapped in olmoearth_pretrain/evals with dense
   labels: MADOS (marine debris, 15 classes), PASTIS-R (crop segmentation,
   19 classes), GeoBench m-cashew-plant and m-sa-crop-type. Baseline model
