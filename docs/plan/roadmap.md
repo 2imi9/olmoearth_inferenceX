@@ -38,6 +38,10 @@ as experiments close items; the chronology of what closed what is in
 8. Measure striping at production-tile scale on the served rasters (v1.2
    encoder): the long-range artifact RoPE was meant to remove has not been
    quantified on a product; exp19 measured only sub-patch instability.
+10. Run the other published fine-tuned checkpoints (Mangrove,
+   ForestLossDriver, LFMC, EcosystemTypeMapping) through the exp21 replica
+   for generality of the confidence result and of the tiling-instability
+   tie; LFMC is a regression task and needs a different error definition.
 9. Ask for a class-head confidence in the LCC export (top-1 minus top-2
    logit alongside bands 4-5); without it the recipe's primary signal
    cannot run on the product (exp20).
@@ -47,7 +51,8 @@ Closed by later experiments: confidence intervals and significance tests
 + E_geo conjunction (exp15: no benefit); the AWF point-label hypothesis
 (exp16: withdrawn); the v1 vs v1.2 comparison (exp19); the first direct
 audit of a served production window (exp20, HTTP range reads; the river
-centerline part is subsumed by item 5).
+centerline part is subsumed by item 5); evaluating on the production model
+rather than probes (exp21, the fine-tuned AWF checkpoint end to end).
 
 ## Second use case: change attribution between two inference results
 

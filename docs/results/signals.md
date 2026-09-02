@@ -161,3 +161,17 @@ One section per signal, every claim citing its experiment. Index at
 - The change probability (band 1) is sharply separated (median 1.2% of pixels
   between 0.25 and 0.75); its ambiguity concentrates on the edges of flagged
   regions (2.7% of edge windows against 0.07% interior).
+
+## On the fine-tuned AWF model (exp21)
+
+- The production-style fine-tuned model (allenai/OlmoEarth-v1-FT-AWF-Base)
+  run end to end reproduces Ai2's accuracy within two points (0.881 against
+  0.895 on the validation split).
+- Its own confidence remains the best supported error ranker (AURC 0.0262);
+  aligned tiling instability is statistically indistinguishable from it
+  (0.0235, bootstrap CI spans zero) and captures slightly more errors at a
+  20% budget (0.71 against 0.63); boundary indicator, probe disagreement and
+  the control are significantly worse.
+- The model is overconfident (ECE 0.080; 0.93 accuracy at 0.99 mean
+  confidence in the top bin), so a stated accuracy needs a coverage:
+  0.945 at 80% coverage, 0.919 at 90%.

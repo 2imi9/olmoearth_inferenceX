@@ -138,3 +138,23 @@ properties. Index at [TECHNIQUES.md](../TECHNIQUES.md).
   (pre_category, post_category and fine-grained change categories); they
   are an expert reference for the change product itself and are not yet
   used here.
+
+## Fine-tuned checkpoints (exp21)
+
+- Ai2 publishes fine-tuned models on HuggingFace: allenai/OlmoEarth-v1-FT-
+  {AWF, Mangrove, ForestLossDriver, LFMC, EcosystemTypeMapping}-Base, each a
+  Lightning checkpoint (model.ckpt) trained by rslearn from the project's
+  model.yaml in olmoearth_projects. The AWF one holds state-dict keys
+  model.encoder.0.model.* (the pretrain encoder, 231 tensors, 203 changed by
+  fine-tuning; the backbone was unfrozen at epoch 20 of 55) and
+  model.decoders.segment.1.layer.* (a 1x1 convolution, 768 to 10 classes).
+- Replica without rslearn: load the encoder keys strictly into
+  olmoearth_pretrain's v1-Base encoder; mean-pool tokens over timesteps and
+  band sets (rslearn's OlmoEarth wrapper, token_pooling=True); legacy
+  timestamps (day 1, month index 0-11, year 2024; only the month is used);
+  bilinear x4 upsampling (torch.nn.Upsample default, align_corners=False)
+  then the 1x1 convolution; softmax. The training pipeline pads to 31 px and
+  crops 16 px around the point, so 16-px crops are the training regime.
+- The replica reaches 0.881 on the validation split against Ai2's reported
+  0.895; the remaining gap is within crop-alignment and interpolation
+  choices (0.898 when the containing patch's logits are read directly).

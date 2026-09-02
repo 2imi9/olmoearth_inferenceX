@@ -25,6 +25,7 @@ Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 | exp18 | Sen1Floods11 hand labels (spatial hold-out): confidence is best; tile-phase, band-set, boundary, E_case all equal or worse; WorldCover wins read as reference error |
 | exp19 | v1 vs v1.2 (RoPE): instability larger under v1.2; single band-set token in v1.2; cross-version disagreement not useful |
 | exp20 | first served production output (olmoearth_lcc): no class confidence exported; boundary captures 0.88 of water disagreements at a 5% budget; change ambiguity sits on flagged-region edges |
+| exp21 | fine-tuned AWF model end to end from Ai2's checkpoint: accuracy 0.881 (Ai2 0.895); confidence best, tiling instability ties it; overconfident (ECE 0.080); 0.945 at 80% coverage |
 
 ## exp01 — first E_case map (2026-08-31)
 
@@ -277,3 +278,22 @@ class confidence (it is not), and the assessor's oracle had the wrong sign
 data). Cache exp/out/exp20_windows.npz (ignored). Product gap to report:
 export a class-head confidence alongside bands 4-5. Next testbed: the
 dataset's annotated change points against band 1.
+
+## exp21 - fine-tuned AWF model end to end (2026-09-02)
+
+The user pointed out the fine-tuned checkpoints are public. Loaded
+allenai/OlmoEarth-v1-FT-AWF-Base (Lightning ckpt from rslearn) into our
+pretrain encoder strictly (231/231 keys), replicated rslearn's wrapper
+(mean-pool T and S, legacy month timestamps) and head (bilinear x4 then 1x1
+conv). Validation split, 344 expert points, 16-px and 32-px crops, 4 shifts.
+Accuracy 0.881 / 0.878 (Ai2 reports 0.895; patch-logit reading 0.898). Probe
+of exp16: 0.817; 28 of 41 fine-tuned errors are also probe errors. Signals
+(16 px): confidence AURC 0.0262, tiling instability 0.0235 (cluster
+bootstrap over 30 tasks: CI [-0.0068, +0.0010], P(better) 0.93), boundary
+0.0765, probe disagreement 0.0852, NDVI-tstd control 0.0937; oracle 0.0076,
+random 0.119. Capture at 20% budget: confidence 0.63, tile 0.71. Calibration
+ECE 0.080, top bin 0.93 accurate at 0.99 confidence; selective accuracy
+0.945 at 80% coverage. First run had two bugs (probe CSV key prefix; patch
+logits instead of bilinear pixel logits), fixed before recording. Cache
+exp/out/exp21_stacks.npz (ignored). Next: the other four fine-tuned
+checkpoints for generality.

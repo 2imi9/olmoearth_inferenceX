@@ -314,6 +314,45 @@ terms in [protocol.md](../method/protocol.md).
 - Best-signal tally: aligned tile-phase 13, control 9, depth-probe 2,
   band-set 1, attention entropy 1, E_case 1, baseline 0.
 
+### The fine-tuned AWF model, end to end (exp21; expert labels)
+- Ai2 publishes the fine-tuned checkpoints. allenai/OlmoEarth-v1-FT-AWF-Base
+  is a fully fine-tuned v1-Base encoder (203 of 231 tensors changed) with a
+  1x1 convolution head, trained by rslearn from the AWF model.yaml. It was
+  replicated without rslearn: encoder weights loaded strictly into
+  olmoearth_pretrain's v1-Base encoder, tokens mean-pooled over timesteps
+  and band sets as rslearn's wrapper does, legacy month-index timestamps,
+  bilinear x4 upsampling before the 1x1 convolution. Run on the 344
+  expert-labelled validation points of the official spatial split (the
+  train split is the model's own training data).
+- Accuracy 0.881 on 16-px crops (the training regime) and 0.878 on 32-px
+  crops, against 0.895 reported by Ai2; reading the containing patch's
+  logits instead of the bilinearly interpolated pixel gives 0.898. The
+  frozen-encoder probe of exp16 reaches 0.817 on the same points; 28 of the
+  fine-tuned model's 41 errors are also probe errors.
+- Signal comparison on the fine-tuned model (16-px crops, 41 errors,
+  tie-aware AURC, cluster bootstrap over the 30 annotation tasks):
+  confidence 0.0262; aligned tiling instability 0.0235 (difference CI
+  [-0.0068, +0.0010], P(better) 0.93, not significant); boundary indicator
+  0.0765 (significantly worse); disagreement with the frozen probe 0.0852
+  (worse); NDVI temporal-variability control 0.0937 (worse); oracle 0.0076,
+  random 0.119. On 32-px crops confidence 0.0276 against tiling instability
+  0.0286 (CI [-0.0022, +0.0035]). Error capture at a 20% review budget:
+  confidence 0.63, tiling instability 0.71 (16 px); 0.69 against 0.64
+  (32 px).
+- How good, stated for a user: keeping the 80% most confident points
+  raises accuracy from 0.881 to 0.945, the 90% most confident to 0.919.
+  Expected calibration error 0.080 (10 bins): the 299 points with top-1
+  probability above 0.9 are 0.93 accurate at a mean confidence of 0.99,
+  and the 21 points in the 0.8-0.9 bin are 0.52 accurate, so the model is
+  overconfident. Per-class recall: shrubland/savanna 0.96 (n 116),
+  agriculture/settlement 0.91 (56), grassland/barren 0.82 (72), woodland
+  forest 0.73 (45), open water 0.91 (11), montane forest 0.80 (10),
+  herbaceous wetland 0.50 (6), urban 1.00 (27).
+- Boundary share among errors 0.63 against 0.34 among correct points; a
+  sub-patch shift flips the argmax at 5% of error points against 1% of
+  correct ones. Values in exp/out/exp21_finetuned_awf.csv and
+  exp21_summary.json; figure exp/out/exp21_finetuned_awf.png.
+
 ### Served production output: land cover change rasters (exp20; weak reference)
 - First assessment of one of Ai2's own outputs: ten 512-px windows (about
   4.9 km) of the published allenai/olmoearth_lcc rasters at Zambezi, Chobe

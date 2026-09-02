@@ -1,11 +1,12 @@
 # olmoearth_inferenceX
 
-Experiments on locating errors in predictions from linear probes on frozen
-[OlmoEarth](https://allenai.org/olmoearth) v1 encoders, over regions with no
-labels. Two probes are audited: a binary water head trained on one
-WorldCover-labelled scene, and a nine-class head on the AWF expert labels.
-The production model has not been run here, but one of its served outputs,
-the land cover change rasters, has been assessed as published (exp20).
+Experiments on locating errors in [OlmoEarth](https://allenai.org/olmoearth)
+predictions over regions with no labels. Audited: linear probes on frozen
+v1 encoders (a binary water head trained on one WorldCover-labelled scene,
+a nine-class head on the AWF expert labels), Ai2's published fine-tuned AWF
+model run end to end
+([OlmoEarth-v1-FT-AWF-Base](https://huggingface.co/allenai/OlmoEarth-v1-FT-AWF-Base),
+exp21), and its served land cover change rasters as published (exp20).
 Everything uses Ai2's public artifacts: [olmoearth_pretrain](https://github.com/allenai/olmoearth_pretrain),
 [HuggingFace checkpoints](https://huggingface.co/allenai/OlmoEarth-v1-Base),
 and the datasets linked below.
@@ -66,6 +67,12 @@ Per-scene values for all 27 rule-selected scenes: [docs/results/comparisons.md](
   geographically held-out region, 351 scored tiles) every audit signal is
   equal or significantly worse than confidence (exp18); on the AWF expert
   point task confidence also wins (exp04, exp16).
+- **This holds for Ai2's fine-tuned AWF model run end to end.** The
+  published checkpoint reproduces Ai2's accuracy (0.881 vs 0.895 on the
+  validation split); confidence ranks its errors best, tiling instability
+  ties it, and everything else is significantly worse (exp21). The model
+  is overconfident: 0.93 accurate where it says 0.99, so a stated accuracy
+  needs a coverage (0.945 at 80%).
 - **The earlier wins were against a weak reference.** Tiling instability
   beat confidence on 26 of 27 scenes and band-set disagreement on 21 of 27
   when errors were defined against ESA WorldCover (exp13, exp17); neither
@@ -84,9 +91,9 @@ Per-scene values for all 27 rule-selected scenes: [docs/results/comparisons.md](
   captures a median 0.88 of WorldCover disagreements at a 5% review budget,
   and the change probability's ambiguity sits on the edges of flagged
   regions (exp20).
-- **Caveat:** the ranking results cover one task family (water) with linear
-  probes on frozen encoders; the production model has only been assessed
-  through its served output.
+- **Caveat:** the water results are for linear probes on frozen encoders;
+  one fine-tuned model has been run end to end, and the change product only
+  assessed through its served output.
 
 Negative and null results (cross-model disagreement, embedding distance,
 the map check, masking perturbation) and every number behind the findings
@@ -122,7 +129,7 @@ uv sync --extra geo
 uv run python exp/exp02_full_slice.py
 ```
 
-Experiments are exp01-exp20 in `exp/`; exp20 needs no checkpoint (it reads the served rasters over HTTP). Checkpoints come from
+Experiments are exp01-exp21 in `exp/`; exp20 needs no checkpoint (it reads the served rasters over HTTP); exp21 downloads the fine-tuned checkpoint from HuggingFace. Checkpoints come from
 [HuggingFace allenai](https://huggingface.co/allenai). exp04 needs the
 [AWF dataset](https://huggingface.co/datasets/allenai/olmoearth_projects_awf)
 under `data/awf/dataset/`. `uv sync` installs CPU torch; for the GPU
