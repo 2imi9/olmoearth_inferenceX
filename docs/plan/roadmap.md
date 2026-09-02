@@ -16,9 +16,11 @@ Index at [TECHNIQUES.md](../TECHNIQUES.md).
    olmoearth_pretrain checkout for the v1_2 loader.
 5. Confidence intervals and significance testing for AURC comparisons, now
    that seven scenes exist for the water task.
-6. E_dist formalization: AOA/Dissimilarity Index (Meyer & Pebesma 2021) in
-   place of raw k-NN distance; delineate overlap with SHRUG-FM before
-   claiming novelty.
+6. Verify the boundary-proximity result on expert-labelled dense maps
+   with few classes. The AWF per-patch test (exp16) withdrew the
+   point-label hypothesis: on nine classes the boundary score is a proxy
+   for low margin. A dense expert-labelled binary or few-class map is still
+   needed.
 7. Confirm whether Studio per-project exports match the olmoearth_lcc export
    format (partial probabilities).
 8. Replace OSM centerlines with GRWL centerlines filtered by width, so the

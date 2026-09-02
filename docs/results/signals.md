@@ -63,9 +63,12 @@ One section per signal, every claim citing its experiment. Index at
   tile-phase across the 27 scenes (boundary better on 12, tile-phase on 15,
   sign p=0.70) and by itself beats the baseline on 19/27 and the pixel
   control on 22/27. No advantage of the perturbation beyond boundary
-  proximity is detectable. The signal is meaningful for dense maps; its
-  loss on AWF (exp04) is plausibly but not demonstrably due to point labels
-  carrying no boundary context.
+  proximity is detectable. Its loss on AWF (exp04) is examined in exp16: the
+  prediction-boundary score at labelled patches is error-associated but
+  largely a proxy for low margin on the nine-class task (Spearman
+  0.60 with the margin; logistic LRT p=0.002 with a small coefficient),
+  so confidence ranks better (0.0363 vs 0.0636). The "no boundary
+  context" explanation is withdrawn.
 - Erratum: exp05, exp09, and exp11 computed the std across unaligned patch
   grids, so shifted patches covered different ground; that version scored
   19/29 in exp11 (29 scenes, raw AURC) with no significant effect. Their tile-phase numbers are

@@ -147,10 +147,9 @@ terms in [protocol.md](../method/protocol.md).
   boundaries and the aligned tile-phase signal ranks them better than
   confidence; the zero-cost boundary indicator is indistinguishable from
   tile-phase across scenes, but its own margin over confidence is marginal
-  (p=0.05), so the zero-inference shortcut is suggestive, not established. A plausible but untested explanation for exp04 is
-  that AWF windows are labelled at single points where a boundary signal
-  has no neighbours to compare; no boundary indicator has been computed on
-  AWF. Values in exp/out/exp14_boundary_ablation.csv.
+  (p=0.05), so the zero-inference shortcut is suggestive, not established. The exp04 loss was examined in exp16: labelled patches are not
+  interior, the score is error-associated, but it is largely a proxy for
+  low margin on the nine-class task, so confidence wins there. Values in exp/out/exp14_boundary_ablation.csv.
 
 ### Boundary proximity combined with the reference-map check (exp15)
 - E_geo flag = patch on an OSM waterway=river centerline that the model
@@ -171,6 +170,47 @@ terms in [protocol.md](../method/protocol.md).
   from the reference confound. Values in exp/out/exp15_boundary_geo.csv.
 - Implication: E_geo needs width-filtered centerlines (GRWL width
   attribute) or expert truth before its sensitivity can be stated.
+
+### Boundary signal on the AWF point-label task (exp16)
+- The explanation offered for exp04, "point labels carry no boundary
+  context", was tested directly. The Base head was applied densely to all
+  64 patches of each validation crop and the exp14 boundary indicator was
+  computed at the labelled patch; errors reproduce exp04 exactly
+  (63/344). The script was adversarially reviewed before recording
+  (exp/out/review_exp16_wf_5d95d304.json); the review's corrections are
+  built in: the score is derived from the head's own prediction map, not
+  ground-truth boundaries, so both questions below are tested against the
+  right reference, and uncertainty uses a cluster bootstrap over the
+  30 annotation tasks.
+- Ranking: the negative logit margin (confidence) ranks errors better than
+  the boundary score (tie-aware AURC 0.0363 vs 0.0636; cluster-bootstrap
+  95% interval on the difference [+0.0023, +0.0562], P(boundary better)
+  = 0.016) and than per-window tile-phase (0.0489; interval
+  [+0.0023, +0.0221]).
+- Are labelled patches interior? No. The labelled patch's score is zero on
+  47% of windows against 43% for the other patches of the same
+  maps; its within-window quantile averages 0.46, and paired against a
+  random non-label patch it is higher on 89 windows and lower on
+  129 (sign p=0.008). Labelled patches are, if anything, slightly
+  less boundary-like than an arbitrary patch.
+- Does the score carry error information? Marginally, strongly: 90% of
+  errors have a nonzero score against 44% of correct windows (Fisher
+  p=2e-12; Mann-Whitney z=8.9); error rate rises from
+  4% at score 0 to about 64% at score 1.
+  Conditionally, little: the score correlates with the margin (Spearman
+  0.60), and in a logistic model of error on both, the margin dominates
+  (standardized coefficients 3.53 vs 0.52; likelihood-ratio test for
+  adding the score chi2=9.5, p=0.002). The margin re-quantized to the
+  score's own tie-group sizes still scores 0.0367, so the loss is
+  not a granularity effect.
+- Reading: on a nine-class task the argmax flips between neighbouring
+  patches wherever margins are small, so the prediction-boundary score is
+  largely a coarse proxy for low confidence; the margin already carries
+  that information at finer resolution. The "no boundary context"
+  explanation is withdrawn; the in-domain result (confidence best on AWF)
+  stands with this explanation. Caveat: the AWF split is by point, not by
+  task, so every validation task also contributes training windows. Values
+  in exp/out/exp16_awf_boundary.csv and exp16_summary.json.
 
 ### Pre-registered scene set (exp11; statistics superseded by exp13)
 - The scene rule and scene set below stand. The statistics in this section

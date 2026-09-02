@@ -117,10 +117,12 @@ nothing more. AWF column: point labels, exp04 and exp12.
   segmentation and land-cover validation (trimap and Boundary-IoU
   evaluation; mixed-pixel effects, Foody 2002); what this repository adds is
   the quantified comparison against confidence, with controls, on OlmoEarth
-  probes. On the AWF point-label task confidence won and per-window tiling
-  instability lost; we hypothesise point labels carry no boundary context,
-  but no boundary indicator has been computed on AWF, so the boundary
-  result is unconfirmed on expert labels.
+  probes. On the AWF nine-class expert task confidence wins and the boundary
+  indicator loses (AURC 0.0636 vs 0.0363; exp16). There the
+  boundary score is largely a proxy for low confidence, because with nine
+  classes the argmax flips between neighbours wherever margins are small.
+  The earlier explanation that point labels carry no boundary context was
+  tested and is withdrawn.
 - **Cross-model disagreement helps only on specific ambiguous scenes.** It
   beats confidence on 10 of 27 scenes (sign test p = 0.25);
   not a general signal.

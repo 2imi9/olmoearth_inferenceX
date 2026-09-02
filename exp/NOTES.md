@@ -20,6 +20,7 @@ Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 | exp13 | corrected statistics on the rule-selected set: aligned tile-phase, tie-aware excess AURC, block bootstrap, sign/permutation tests |
 | exp14 | boundary ablation: tile-phase indistinguishable from prediction-boundary proximity |
 | exp15 | boundary proximity + E_geo: no benefit from the conjunction; E_geo sensitivity unmeasurable under WorldCover truth |
+| exp16 | boundary indicator on AWF: labelled patches not interior; score error-associated but a proxy for low margin; confidence wins |
 
 ## exp01 — first E_case map (2026-08-31)
 
@@ -210,3 +211,15 @@ instead of stretched. Re-run on GPU: Nano 0.753, Tiny 0.802, Base
 0.0670, tile-phase 0.0489, E_dist 0.1338, control 0.1658. DS
 reliabilities: nano 0.859 (measured 0.753, gap +0.106), tiny 0.916 (measured 0.802, gap +0.114), base 0.876 (measured 0.817, gap +0.059).
 All AWF numbers in README/docs updated from this run.
+
+## exp16 — boundary indicator on the AWF point-label task (2026-09-01)
+
+Dense Base head over each validation crop (GPU). Errors reproduce exp04
+(63). Script adversarially reviewed (40 agents) before recording; the
+review corrected the analysis: interior test against the within-window
+reference (labelled patches slightly less boundary-like than random
+patches, sign p=0.008), conditional test of the score given the margin
+(LRT p=0.002, coefficient 0.52 vs 3.53), cluster bootstrap over
+30 tasks. AURC confidence 0.0363 vs boundary 0.0636. The "no
+boundary context" explanation is withdrawn; the score is a low-margin proxy
+on nine classes. Results: exp/out/exp16_awf_boundary.csv, exp16_summary.json.
