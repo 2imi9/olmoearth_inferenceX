@@ -9,6 +9,9 @@ The documentation set:
 
 - [method/recipe.md](method/recipe.md) - what to do and not do, each item
   tied to its experiment.
+- [method/taskcards.md](method/taskcards.md) - what each fine-tuned model is
+  (task, legend, inputs, windows, outputs, encoder version) resolved from its
+  configs by oe_inferencex/taskcard.py, with the audit settings that follow.
 - [method/protocol.md](method/protocol.md) - status terms, evidence tiers, related work,
   and the positioning of the contribution.
 - [results/comparisons.md](results/comparisons.md) - cross-signal comparisons: the pre-registered

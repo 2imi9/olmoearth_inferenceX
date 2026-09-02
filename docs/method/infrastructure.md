@@ -98,3 +98,23 @@ properties. Index at [TECHNIQUES.md](../TECHNIQUES.md).
 - Environment note: a `uv run` or `uv sync` in this repository reinstalls
   CPU torch (the upstream index pins); after any such command the cu128
   wheel must be reinstalled for GPU work.
+
+### Task cards (oe_inferencex/taskcard.py)
+- A Layer-2 resolver that reads the authoritative configuration sources and
+  returns one structured card per model: the encoder's HuggingFace
+  config.json (depth, width, heads, register tokens, position encoding,
+  Sentinel-2 band groups per patch), the project's model.yaml and
+  olmoearth_run.yaml in allenai/olmoearth_projects (task type, class
+  legend from per-class metric definitions or explicit class lists, nodata
+  value, inputs and timesteps, window size and resolution, split protocol),
+  the project docs (stated goal), and the olmoearth_lcc README (export band
+  table and class legends). Audit settings are derived from the card:
+  whether outputs are dense, class count, whether band-set disagreement
+  exists for the encoder version, and how to score confidence.
+- Resolved for both encoders, eleven projects and the LCC product
+  (docs/method/taskcards.md, exp/out/taskcards.json). Fleet-level facts
+  that fell out: nearly every project uses 63-px windows at 10 m with a
+  128-px spatial splitter grid; class counts range from 2 to 110
+  (ecosystem_type_mapping); nodata conventions differ per project (9, 10,
+  54, 255, -1); v1.2 tokenizes ten Sentinel-2 bands as one group and drops
+  B01/B09; kenya_lulc_croptype has no configs on main.
