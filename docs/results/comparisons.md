@@ -86,7 +86,43 @@ terms in [protocol.md](../method/protocol.md).
 
   ![Hard scenes](../../exp/out/exp05_hard_scenes.png)
 
-### Corrected statistics on the rule-selected scene set (exp13, authoritative)
+### Dense expert labels: Sen1Floods11 (exp18, authoritative for the water task)
+- Testbed: Sen1Floods11 hand-labelled flood-water masks (Ai2's own
+  evaluation set, public mirror), 64x64 tiles; head trained on 600 tiles of
+  the valid split; scored on Bolivia (441 tiles, a geographically held-out
+  region; 351 tiles with enough errors to score) and on 800 test tiles.
+  Sentinel-2 Level-1C chips fed through the L2A path (documented mismatch;
+  head accuracy 0.912 Bolivia, 0.953 test). All signals computed on one
+  60x60 crop per tile; tie-aware excess AURC per tile; exact sign tests.
+  Values in exp/out/exp18_sen1floods.csv.
+- Against expert labels, confidence is the best signal. Bolivia: aligned
+  tile-phase 163 better / 187 worse (p=0.22), band-set disagreement
+  111/239 (p=7e-12), boundary indicator 134/217 (p=1e-5), E_case 84/265
+  (p=6e-23), E_dist 22/329, pixel control 79/271. Test split: tile-phase
+  173/305 (p=2e-9), band-set 148/334, boundary 154/327, E_case 141/340.
+  Pooled E-AURC over all patches: confidence 0.0105 (Bolivia) and 0.0096
+  (test), lowest of all signals on both.
+- Errors still concentrate on prediction boundaries (75% of error patches
+  vs 21% of correct patches on Bolivia; 73% vs 18% on test), so the
+  boundary phenomenon is real; confidence simply ranks those errors better
+  than boundary proximity or instability do.
+- Reading: the WorldCover-referenced advantages of tile-phase (26/27) and
+  band-set disagreement (21/27) do not transfer to expert truth. The
+  parsimonious explanation is that under WorldCover a large share of the
+  counted "errors" were reference errors (a 2021 product's boundaries and
+  omissions against 2024 imagery), which are themselves boundary-structured
+  and therefore detectable by boundary-type signals; the model's own
+  errors on hand-labelled data are ranked best by its own confidence.
+  Until a signal beats confidence on expert-labelled dense maps, the
+  repository's positive claims are claims about detecting disagreement
+  with a weak reference, not about detecting model error.
+- Caveats: Level-1C inputs through an L2A path; flood water rather than
+  permanent water; one crop per tile; the head is trained on tiles from
+  the same eleven regions as the test split (Bolivia is the clean spatial
+  hold-out). None of these plausibly favour confidence over the other
+  signals.
+
+### Corrected statistics on the rule-selected scene set (exp13; WorldCover reference, superseded by exp18 for the water task)
 - Same errors and heads as exp11, recomputed with: (1) tile-phase aligned
   on a pixel canvas before taking the std across shifts (exp05/09/11
   compared unaligned patch grids); (2) excess AURC (E-AURC = AURC minus the

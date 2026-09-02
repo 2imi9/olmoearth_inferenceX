@@ -65,3 +65,14 @@ are rejected. Next for internal evidence: band-set disagreement on the AWF
 expert task and on the production LCC encoder (v1.2, once loadable); test
 whether band-set and tiling instability flag different errors before any
 rank aggregation is considered.
+
+Update after exp18: the water-task audit signals do not beat confidence on
+Sen1Floods11 hand labels; the WorldCover-referenced advantages are read as
+detection of reference error. Priorities reordered: (1) quantify how much
+of the WorldCover "error" is reference error, by scoring the WorldCover
+scenes' flagged patches against an independent water reference or hand
+checks; (2) test whether any signal helps confidence at fixed review budget
+on expert labels (operating-point analysis) rather than AURC; (3) evaluate
+on the production model rather than probes; (4) other dense expert sets in
+Ai2's evaluation suite (MADOS, PASTIS, GeoBench cashew/SA-crop) for
+generality of the negative result.

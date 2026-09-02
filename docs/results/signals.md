@@ -48,6 +48,10 @@ One section per signal, every claim citing its experiment. Index at
   is the designed fix, untested.
 
 ### Perturbation stability (E_system)
+- Against dense expert labels (Sen1Floods11, exp18) aligned tile-phase is
+  not better than confidence: Bolivia 163/187 (p=0.22), test 173/305
+  (p=2e-9, worse). The WorldCover-referenced advantage below did not
+  transfer; see comparisons.md exp18 for the reading.
 - Tile-phase, defined correctly: shift the input window origin by 1-3
   pixels (sub-patch phase), upsample each shifted prediction map to pixels,
   place it at its true offset on a common canvas, take the per-pixel
@@ -109,7 +113,10 @@ One section per signal, every claim citing its experiment. Index at
   ranker. The out-of-distribution-indicator interpretation remains plausible
   but requires a shift testbed whose errors are not spectrally trivial.
 
-### Internal evidence (exp17)
+### Internal evidence (exp17; band-set result not confirmed on expert labels, exp18)
+- On Sen1Floods11 hand labels band-set disagreement is worse than
+  confidence (Bolivia 111/239, p=7e-12; test 148/334). The WorldCover
+  result below stands only as a statement about reference disagreement.
 - Band-set disagreement (std of water probabilities from heads on the three
   Sentinel-2 band-set tokens of the same patch): beats the baseline 21/27
   (sign p=0.006) and the pixel control 16/27 on the rule-selected scenes,

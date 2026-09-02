@@ -57,24 +57,25 @@ Per-scene values for all 27 rule-selected scenes: [docs/results/comparisons.md](
 
 ## Findings
 
-- **On dense river scenes the model's own confidence is never the best
-  error-finder** (best on 0 of 27). On the expert-labelled nine-class AWF
-  task it is (exp04, exp16).
-- **Tiling instability beats confidence on 26 of 27 scenes** (sign test
-  p < 0.001) and the pixel control on 18 of 27 (exp13). Errors sit at the
-  boundaries of the model's own prediction map; a zero-cost boundary
-  indicator is indistinguishable from the perturbation signal, though its
-  own margin over confidence is only marginal (exp14).
-- **The encoder's own three band-set tokens disagree where it errs.** The
-  spread among water predictions from the 10 m, 20 m and 60 m Sentinel-2
-  views beats confidence on 21 of 27 scenes (p = 0.006) and the pixel
-  control on 16 of 27, from one forward pass with no second model (exp17).
+- **Against expert labels, the model's own confidence is the best
+  error-finder.** On Sen1Floods11 hand-labelled flood masks (a
+  geographically held-out region, 351 scored tiles) every audit signal is
+  equal or significantly worse than confidence (exp18); on the AWF expert
+  point task confidence also wins (exp04, exp16).
+- **The earlier wins were against a weak reference.** Tiling instability
+  beat confidence on 26 of 27 scenes and band-set disagreement on 21 of 27
+  when errors were defined against ESA WorldCover (exp13, exp17); neither
+  transfers to hand labels. The likely reason is that much of what
+  WorldCover called error was reference error, which boundary-type signals
+  detect well.
+- **Errors do concentrate at prediction boundaries** (about 75% of error
+  patches vs 20% of correct ones, on both references), but confidence
+  ranks them better than boundary proximity or instability do.
 - **A disagreement partner needs a different view of the input, not a more
-  accurate model.** Stronger same-family partners and same-family ensembles
-  do not help (exp07, exp10); the intra-model band-set ensemble does.
-- **Caveat:** the reference map is least reliable on the most interesting
-  terrains, and no single signal is best on every scene. Numbers are
-  directions, not settled effect sizes.
+  accurate model** (exp10, exp17), though no disagreement signal beats
+  confidence on expert labels.
+- **Caveat:** results cover one task family (water) with linear probes on
+  frozen encoders, not the production model.
 
 Negative and null results (cross-model disagreement, embedding distance,
 the map check, masking perturbation) and every number behind the findings

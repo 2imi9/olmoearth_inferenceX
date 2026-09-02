@@ -123,7 +123,9 @@ def main():
     for ver in versions:
         torch.manual_seed(0); heads[ver] = train_logistic_head(f32(z[f"{ver}_tr"]), tr_labels)
         heads_bs[ver] = []
-        for s in range(3):
+        n_bs = z[f"{ver}_tr_bs"].shape[0]
+        print(f"{ver}: band-set tokens per patch = {n_bs}")
+        for s in range(n_bs):
             torch.manual_seed(0); heads_bs[ver].append(train_logistic_head(f32(z[f"{ver}_tr_bs"][s]), tr_labels))
 
     rows, per = [], {ver: {} for ver in versions}
@@ -141,8 +143,10 @@ def main():
             acc[ver].append(1 - err.mean())
             tp = aligned_tile_phase(p_shift)
             mag[ver].append(float(tp.mean()))
-            p_bs = np.stack([prob_logit(z[f"{ver}_{n}_bs"][s], *heads_bs[ver][s])[0] for s in range(3)])
-            sigs = {"confidence": -np.abs(logit), "tile-phase": tp, "band-set": p_bs.std(0)}
+            sigs = {"confidence": -np.abs(logit), "tile-phase": tp}
+            if len(heads_bs[ver]) > 1:
+                p_bs = np.stack([prob_logit(z[f"{ver}_{n}_bs"][s], *heads_bs[ver][s])[0] for s in range(len(heads_bs[ver]))])
+                sigs["band-set"] = p_bs.std(0)
             e = err.flatten()
             if e.sum() >= 8:
                 per[ver][n] = {k: eaurc(v.flatten(), e) for k, v in sigs.items()}
@@ -163,6 +167,8 @@ def main():
         sn = sorted(per[ver]); N = len(sn)
         print(f"\n{ver}: {N} scenes. Signals vs own confidence (E-AURC):")
         for k in ("tile-phase", "band-set", "cross-version"):
+            if k not in per[ver][sn[0]]:
+                print(f"  {k:<14} n/a (single band-set token per patch in this version)"); continue
             d = np.array([per[ver][s]["confidence"] - per[ver][s][k] for s in sn])
             w_, l_ = int((d > 1e-12).sum()), int((d < -1e-12).sum())
             print(f"  {k:<14} W/L/T {w_:>2}/{l_:>2}/{N - w_ - l_:<2} sign p={sign_p(w_, l_):.1e}  median gain {np.median(d):+.4f}")

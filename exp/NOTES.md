@@ -21,7 +21,8 @@ Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 | exp14 | boundary ablation: tile-phase indistinguishable from prediction-boundary proximity |
 | exp15 | boundary proximity + E_geo: no benefit from the conjunction; E_geo sensitivity unmeasurable under WorldCover truth |
 | exp16 | boundary indicator on AWF: labelled patches not interior; score error-associated but a proxy for low margin; confidence wins |
-| exp17 | evidence from inside the encoder: band-set disagreement supported (21/27); depth probes marginal; logit-lens, drift, attention entropy rejected |
+| exp17 | evidence from inside the encoder: band-set disagreement 21/27 vs WorldCover; depth probes marginal; logit-lens, drift, attention entropy rejected |
+| exp18 | Sen1Floods11 hand labels (spatial hold-out): confidence is best; tile-phase, band-set, boundary, E_case all equal or worse; WorldCover wins read as reference error |
 
 ## exp01 — first E_case map (2026-08-31)
 
@@ -234,3 +235,14 @@ two-model E_case. Depth probes 19/8 (p=0.052). Logit-lens settling 0/27,
 drift 3/24, attention entropy 3/24: rejected. phi with final head: Nano
 0.61, band-set probe 0.75, so disagreement value is not error decorrelation
 alone. Cache exp/out/exp17_internals.npz (float16 per-block tokens).
+
+## exp18 — Sen1Floods11 dense expert labels (2026-09-01)
+
+Head trained on 600 valid-split tiles; scored on Bolivia (held-out region,
+351 tiles) and 800 test tiles. Confidence best everywhere. Tile-phase
+163/187 (p=0.22) on Bolivia, 173/305 (worse) on test; band-set 111/239;
+boundary 134/217; E_case 84/265; E_dist 22/329; control 79/271. Errors on
+boundaries 75% vs 21% (phenomenon holds). Reading: the WorldCover
+advantages were reference-error detection. Repository claims revised in
+README, ledger, comparisons, signals, roadmap. Cache exp/out/exp18_feats.npz
+(3.9 GB, ignored). Caveat: L1C chips through the L2A path.
