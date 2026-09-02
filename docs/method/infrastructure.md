@@ -63,3 +63,33 @@ properties. Index at [TECHNIQUES.md](../TECHNIQUES.md).
   fast_pass=True (no masked-token removal, no packing), which is what makes
   layer-wise probes, logit-lens trajectories and attention statistics
   available from a single forward pass.
+
+### Findings from the olmoearth_pretrain repository (2026-09-01 dig)
+- Dense expert-labelled water truth exists in Ai2's own evaluation set:
+  Sen1Floods11 (hand-labelled flood masks, LabelHand: -1 no data, 0
+  non-water, 1 water) processed into 64x64 tiles and mirrored in the public
+  bucket gs://ai2-olmoearth-projects-public-data/research_benchmarks/floods
+  (flood_{train,valid,test,bolivia}_data.pt; 13-band Sentinel-2 Level-1C
+  chips, int16, plus Sentinel-1). Bolivia (441 tiles) is a geographically
+  held-out region. Ai2's own benchmark uses the Sentinel-1 channel only.
+  The v1 sample type carries only sentinel2_l2a, so Level-1C chips must go
+  through the L2A path with the L2A normalizer (a documented mismatch).
+- OlmoEarth v1.2 uses rotary position encodings: origin/main
+  nn/encodings.py defines 2D and 3D RoPE variants (axial and mixed). This
+  confirms in source the "RoPE fix in 1.2" statement from the project
+  kickoff. The local checkout used for exp01-exp17 is 411 commits behind
+  origin/main (April vs August 2026); v1.2 checkpoints load only with the
+  newer code. To avoid disturbing the environment those results depend on,
+  origin/main is checked out as a git worktree (../olmoearth_pretrain_main)
+  with its own virtual environment (.venv-main).
+- Other evaluation sets wrapped in olmoearth_pretrain/evals with dense
+  labels: MADOS (marine debris, 15 classes), PASTIS-R (crop segmentation,
+  19 classes), GeoBench m-cashew-plant and m-sa-crop-type. Baseline model
+  wrappers in evals/models include Galileo, Satlas, TerraMind, Prithvi v2,
+  Panopticon, CROMA and AnySat: candidate out-of-family raters.
+- olmoearth_pretrain ships an MCP server (olmoearth_pretrain/mcp) exposing
+  model loading, config analysis, modality description and inference-code
+  generation as tools; relevant to agent integration, not used here.
+- Environment note: a `uv run` or `uv sync` in this repository reinstalls
+  CPU torch (the upstream index pins); after any such command the cu128
+  wheel must be reinstalled for GPU work.

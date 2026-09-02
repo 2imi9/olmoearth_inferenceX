@@ -6,3 +6,6 @@ __pycache__/
 data/
 exp/out/exp11_feats.npz
 exp/out/exp17_internals.npz
+.venv-main/
+exp/out/exp18_feats.npz
+exp/out/exp19_feats.npz
