@@ -85,6 +85,12 @@ Per-scene values for all 27 rule-selected scenes: [docs/results/comparisons.md](
 - **A disagreement partner needs a different view of the input, not a more
   accurate model** (exp10, exp17), though no disagreement signal beats
   confidence on expert labels.
+- **The served product shows no inference-window striping, but its outputs
+  are quantized to the 40 m patch grid.** On 5 windows of 37 km, the class
+  boundaries and change-probability gradients peak on the encoder's 4-px
+  patch lattice (19 of 20 profiles) and nowhere at the inference-window
+  periods; seams affecting 5 to 10% of rows would have been detected
+  (exp22).
 - **On the served production rasters, boundary triage works and confidence
   cannot be tested.** The land cover change product exports no confidence
   for its class map; ranking its water map by prediction-boundary fraction

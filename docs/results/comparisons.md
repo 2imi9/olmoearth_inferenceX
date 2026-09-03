@@ -353,6 +353,46 @@ terms in [protocol.md](../method/protocol.md).
   correct ones. Values in exp/out/exp21_finetuned_awf.csv and
   exp21_summary.json; figure exp/out/exp21_finetuned_awf.png.
 
+### Periodic artifacts in the served product (exp22; label-free)
+- Question: does the served v1.2 product carry striping or seams at the
+  scales its pipeline imposes? 5 windows of 4096 served px (about 37 km)
+  from 3 served tiles were read; column and row profiles of the
+  class-map boundary indicator (band 4), of the change-probability gradient
+  (band 1), and of ESA WorldCover 2021 warped to the same grid (a control
+  that shares no model grid) were tested for periodicity with a whitened
+  periodogram. The rasters are the Web Mercator zoom-14 grid warped from
+  the 10 m UTM inference grid, so every pipeline period is predicted from
+  each window's own geometry (an encoder patch of 4 UTM px maps to
+  4.34 to 4.42 served px across the windows).
+- Encoder patch lattice: the largest peak of every product profile but one
+  (19 of 20) lies on the patch lattice (1, 2 or 4 patches, or
+  the third harmonic of the 4-patch period), with Bonferroni p at most
+  6e-08; the observed periods track each window's UTM-to-Mercator ratio,
+  which places the lattice in the UTM inference grid. The WorldCover
+  control's largest peak never reaches p = 0.006. Class boundaries and
+  change-probability gradients are therefore quantized to the 40 m patch
+  grid. The one off-lattice top peak: kwando change_gradient row at 7.55 px (1.72 patches).
+- Inference-window seams (64, 128, 256, 512 UTM px), judged on the
+  fundamental ordinate because harmonic comb scores are confounded by the
+  lattice: profiles with p < 0.01, class map 64 px: 0 of 10, 128 px: 0 of 10, 256 px: 0 of 10, 512 px: 0 of 10;
+  change gradient 64 px: 0 of 10, 128 px: 1 of 10, 256 px: 0 of 10, 512 px: 0 of 10; control
+  64 px: 0 of 10, 128 px: 0 of 10, 256 px: 1 of 10, 512 px: 0 of 10. This is the rate expected under the null.
+  Seams injected into each real class map along the sheared UTM grid set
+  the detection limit: at the 128-px period, seams affecting 5% in 3, 10% in 2 windows'
+  rows would have been detected; at 256 px, 10% in 2, 20% in 3.
+- Warp duplication beat (nearest-neighbour warping repeats one source
+  column every ratio/(ratio - 1) served px): fundamental p < 0.001 in
+  2 of 10 class-map and 2 of 10 gradient profiles, 0 of 10 in the control.
+- Method validation before use, on lattice-free synthetic maps: scan false
+  positives 0 of 10, confirmatory 1 of 10 (three hypotheses each); seams on
+  5% of rows detected at sparse boundaries (p 9e-7) and on 10% at dense
+  ones (p 5e-9); shear correction about triples power; the beat period was
+  first mis-predicted as 1/(ratio - 1) and corrected after the scan located
+  its second harmonic. A first synthetic generator built by 8x upsampling
+  carried a lattice of its own and was discarded. Values in
+  exp/out/exp22_lcc_striping.csv, exp22_confirmatory.csv, exp22_power.csv;
+  figure exp/out/exp22_lcc_striping.png.
+
 ### Served production output: land cover change rasters (exp20; weak reference)
 - First assessment of one of Ai2's own outputs: ten 512-px windows (about
   4.9 km) of the published allenai/olmoearth_lcc rasters at Zambezi, Chobe

@@ -48,12 +48,13 @@ def fetch_s2_window(lon, lat, size=128, datetime="2024-06-01/2024-09-30", max_cl
     return image, (dt.day, dt.month - 1, dt.year), (crs, win_transform)
 
 
-def fetch_worldcover_window(lon, lat, crs, transform, size=128):
-    """ESA WorldCover 2021 classes on the same 10 m grid. Water = class 80."""
+def fetch_worldcover_window(lon, lat, crs, transform, size=128, version="2.0.0"):
+    """ESA WorldCover classes on the given grid. Water = class 80.
+    version "2.0.0" is the 2021 map (default), "1.0.0" the 2020 map."""
     search = _catalog().search(
         collections=["esa-worldcover"],
         intersects={"type": "Point", "coordinates": [lon, lat]},
-        query={"esa_worldcover:product_version": {"eq": "2.0.0"}},
+        query={"esa_worldcover:product_version": {"eq": version}},
     )
     item = next(search.items())
     with rasterio.open(item.assets["map"].href) as src:

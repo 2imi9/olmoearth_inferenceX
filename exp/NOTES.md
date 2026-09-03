@@ -26,6 +26,7 @@ Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 | exp19 | v1 vs v1.2 (RoPE): instability larger under v1.2; single band-set token in v1.2; cross-version disagreement not useful |
 | exp20 | first served production output (olmoearth_lcc): no class confidence exported; boundary captures 0.88 of water disagreements at a 5% budget; change ambiguity sits on flagged-region edges |
 | exp21 | fine-tuned AWF model end to end from Ai2's checkpoint: accuracy 0.881 (Ai2 0.895); confidence best, tiling instability ties it; overconfident (ECE 0.080); 0.945 at 80% coverage |
+| exp22 | served v1.2 product: outputs quantized to the 4-px patch lattice (19/20 profiles, p <= 6e-08); no inference-window seams at 64-512 px (limit 5-10% of rows at 128 px); WorldCover control clean |
 
 ## exp01 — first E_case map (2026-08-31)
 
@@ -298,3 +299,24 @@ ECE 0.080, top bin 0.93 accurate at 0.99 confidence; selective accuracy
 logits instead of bilinear pixel logits), fixed before recording. Cache
 exp/out/exp21_stacks.npz (ignored). Next: the other four fine-tuned
 checkpoints for generality.
+
+## exp22 - periodic artifacts in the served product (2026-09-02)
+
+Label-free periodicity test on 5 windows of 4096 served px (3 tiles).
+Geometry: served grid is Web Mercator zoom 14 (9.5546 units/px) warped from
+UTM 10 m, so pipeline periods are predicted per window (4 UTM px ->
+4.34-4.42 served px; UTM lines sheared by about 0.6 deg, corrected).
+Method validated first on lattice-free synthetic maps (0/10 scan false
+positives; seams on 5-10% of rows detectable); the first synthetic
+generator (8x zoom) had a lattice of its own and every peak it produced was
+an artifact - discarded before any product number was read; the warp-beat
+prediction was corrected from 1/(ratio-1) to ratio/(ratio-1). Result:
+19/20 product profiles peak on the patch lattice (max Bonferroni p 6e-08);
+control never below p 0.006. Window seams (64-512 px, fundamental only, since
+comb scores are confounded by the lattice): class map 64 px: 0 of 10, 128 px: 0 of 10, 256 px: 0 of 10, 512 px: 0 of 10,
+gradient 64 px: 0 of 10, 128 px: 1 of 10, 256 px: 0 of 10, 512 px: 0 of 10, control 64 px: 0 of 10, 128 px: 0 of 10, 256 px: 1 of 10, 512 px: 0 of 10: the null rate.
+In-situ detection limits: 128 px 5% in 3, 10% in 2 windows; 256 px 10% in 2, 20% in 3.
+Warp beat at p<0.001 in 2/10 and 2/10 product profiles, 0/10 control.
+Reading: no window-seam striping in the served v1.2 product at the stated
+limits; outputs are patch-quantized (40 m), which bounds boundary accuracy.
+Cache exp/out/exp22_windows.npz (ignored).

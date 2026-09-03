@@ -39,13 +39,12 @@ as experiments close items; the chronology of what closed what is in
    overlap with SHRUG-FM (CVPR 2026 EarthVision) before claiming novelty.
 7. Confirm whether Studio per-project exports match the olmoearth_lcc export
    format (partial probabilities).
-8. Measure striping at production-tile scale on the served rasters (v1.2
-   encoder): the long-range artifact RoPE was meant to remove has not been
-   quantified on a product; exp19 measured only sub-patch instability.
-10. Run the other published fine-tuned checkpoints (Mangrove,
-   ForestLossDriver, LFMC, EcosystemTypeMapping) through the exp21 replica
-   for generality of the confidence result and of the tiling-instability
-   tie; LFMC is a regression task and needs a different error definition.
+8. Striping at tile scale in the served v1.2 product: measured (exp22).
+   No inference-window seams at 64 to 512 px at the null rate, with
+   detection limits of 5 to 10% of rows at 128 px; outputs are quantized
+   to the 4-px patch lattice. Open: the same test on a v1-encoder product,
+   which would show whether RoPE removed a seam signal that v1 had; no v1
+   product is served.
 9. Ask for a class-head confidence in the LCC export (top-1 minus top-2
    logit alongside bands 4-5); without it the recipe's primary signal
    cannot run on the product (exp20).

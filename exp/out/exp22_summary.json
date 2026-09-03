@@ -1,0 +1,636 @@
+{
+ "windows": {
+  "chobe_east": {
+   "tile": "EPSG:32735_0_-819200.tif",
+   "epsg": 3857,
+   "served_px_ground_m": 9.094690318596566,
+   "served_px_per_utm_px": 1.0995426616728534,
+   "predicted_periods_px": {
+    "encoder patch 4 px": 4.398170646691414,
+    "2 patches 8 px": 8.796341293382827,
+    "window 32 px": 35.18536517353131,
+    "window 64 px": 70.37073034706262,
+    "window 128 px": 140.74146069412524,
+    "window 256 px": 281.4829213882505,
+    "window 512 px": 562.965842776501,
+    "warp duplication beat": 11.045943952016234
+   },
+   "utm_column_slope_px_per_row": -0.01090839043993828,
+   "utm_row_slope_px_per_col": 0.011013643438768202,
+   "nodata_fraction": 0.0,
+   "worldcover_nodata_fraction": 0.05126953125,
+   "detection_limit_row_fraction[window 128 px]": 0.1,
+   "detection_limit_row_fraction[window 256 px]": 0.2
+  },
+  "sesheke": {
+   "tile": "EPSG:32735_0_-819200.tif",
+   "epsg": 3857,
+   "served_px_ground_m": 9.10990044227085,
+   "served_px_per_utm_px": 1.0977068370142662,
+   "predicted_periods_px": {
+    "encoder patch 4 px": 4.390827348057065,
+    "2 patches 8 px": 8.78165469611413,
+    "window 32 px": 35.12661878445652,
+    "window 64 px": 70.25323756891304,
+    "window 128 px": 140.50647513782607,
+    "window 256 px": 281.01295027565214,
+    "window 512 px": 562.0259005513043,
+    "warp duplication beat": 11.234698313424984
+   },
+   "utm_column_slope_px_per_row": -0.01413762923387842,
+   "utm_row_slope_px_per_col": 0.01428254523976086,
+   "nodata_fraction": 0.0,
+   "worldcover_nodata_fraction": 0.0,
+   "detection_limit_row_fraction[window 128 px]": 0.05,
+   "detection_limit_row_fraction[window 256 px]": 0.1
+  },
+  "savuti_north": {
+   "tile": "EPSG:32735_0_-819200.tif",
+   "epsg": 3857,
+   "served_px_ground_m": 9.05823112538085,
+   "served_px_per_utm_px": 1.1039682981791386,
+   "predicted_periods_px": {
+    "encoder patch 4 px": 4.415873192716554,
+    "2 patches 8 px": 8.831746385433108,
+    "window 32 px": 35.326985541732434,
+    "window 64 px": 70.65397108346487,
+    "window 128 px": 141.30794216692973,
+    "window 256 px": 282.61588433385947,
+    "window 512 px": 565.2317686677189,
+    "warp duplication beat": 10.618316520647369
+   },
+   "utm_column_slope_px_per_row": -0.015469819785386973,
+   "utm_row_slope_px_per_col": 0.01562726652430778,
+   "nodata_fraction": 0.0,
+   "worldcover_nodata_fraction": 0.0,
+   "detection_limit_row_fraction[window 128 px]": 0.05,
+   "detection_limit_row_fraction[window 256 px]": 0.1
+  },
+  "kwando": {
+   "tile": "EPSG:32734_65536_-819200.tif",
+   "epsg": 3857,
+   "served_px_ground_m": 9.127329898220303,
+   "served_px_per_utm_px": 1.0956106672499977,
+   "predicted_periods_px": {
+    "encoder patch 4 px": 4.382442668999991,
+    "2 patches 8 px": 8.764885337999981,
+    "window 32 px": 35.059541351999925,
+    "window 64 px": 70.11908270399985,
+    "window 128 px": 140.2381654079997,
+    "window 256 px": 280.4763308159994,
+    "window 512 px": 560.9526616319988,
+    "warp duplication beat": 11.459083999332975
+   },
+   "utm_column_slope_px_per_row": 0.011807667248972626,
+   "utm_row_slope_px_per_col": -0.011974418061390647,
+   "nodata_fraction": 0.0,
+   "worldcover_nodata_fraction": 0.0,
+   "detection_limit_row_fraction[window 128 px]": 0.05,
+   "detection_limit_row_fraction[window 256 px]": 0.2
+  },
+  "barotse": {
+   "tile": "EPSG:32734_65536_-851968.tif",
+   "epsg": 3857,
+   "served_px_ground_m": 9.21818449508531,
+   "served_px_per_utm_px": 1.0848123082513172,
+   "predicted_periods_px": {
+    "encoder patch 4 px": 4.339249233005269,
+    "2 patches 8 px": 8.678498466010538,
+    "window 32 px": 34.71399386404215,
+    "window 64 px": 69.4279877280843,
+    "window 128 px": 138.8559754561686,
+    "window 256 px": 277.7119509123372,
+    "window 512 px": 555.4239018246744,
+    "warp duplication beat": 12.790741469230896
+   },
+   "utm_column_slope_px_per_row": 0.009724941216990846,
+   "utm_row_slope_px_per_col": -0.00986577454279889,
+   "nodata_fraction": 0.0,
+   "worldcover_nodata_fraction": 0.0,
+   "detection_limit_row_fraction[window 128 px]": 0.1,
+   "detection_limit_row_fraction[window 256 px]": 0.2
+  }
+ },
+ "confirmatory_tally": {
+  "class_boundary": {
+   "encoder patch 4 px": {
+    "n": 10,
+    "p_comb<0.01": 6,
+    "p_comb<0.001": 5,
+    "median_comb_power": 36.767978899423724
+   },
+   "2 patches 8 px": {
+    "n": 10,
+    "p_comb<0.01": 7,
+    "p_comb<0.001": 6,
+    "median_comb_power": 55.94620826516783
+   },
+   "window 32 px": {
+    "n": 10,
+    "p_comb<0.01": 9,
+    "p_comb<0.001": 9,
+    "median_comb_power": 39.346376568016225
+   },
+   "window 64 px": {
+    "n": 10,
+    "p_comb<0.01": 0,
+    "p_comb<0.001": 0,
+    "median_comb_power": 0.9773779449487394
+   },
+   "window 128 px": {
+    "n": 10,
+    "p_comb<0.01": 0,
+    "p_comb<0.001": 0,
+    "median_comb_power": 1.112054076498314
+   },
+   "window 256 px": {
+    "n": 10,
+    "p_comb<0.01": 0,
+    "p_comb<0.001": 0,
+    "median_comb_power": 0.9907698867238413
+   },
+   "window 512 px": {
+    "n": 10,
+    "p_comb<0.01": 0,
+    "p_comb<0.001": 0,
+    "median_comb_power": 0.8418974813968643
+   },
+   "warp duplication beat": {
+    "n": 10,
+    "p_comb<0.01": 2,
+    "p_comb<0.001": 2,
+    "median_comb_power": 1.7750362342546548
+   }
+  },
+  "change_gradient": {
+   "encoder patch 4 px": {
+    "n": 10,
+    "p_comb<0.01": 5,
+    "p_comb<0.001": 5,
+    "median_comb_power": 23.403283937547403
+   },
+   "2 patches 8 px": {
+    "n": 10,
+    "p_comb<0.01": 7,
+    "p_comb<0.001": 5,
+    "median_comb_power": 51.31824379486404
+   },
+   "window 32 px": {
+    "n": 10,
+    "p_comb<0.01": 7,
+    "p_comb<0.001": 7,
+    "median_comb_power": 7.993408619951019
+   },
+   "window 64 px": {
+    "n": 10,
+    "p_comb<0.01": 0,
+    "p_comb<0.001": 0,
+    "median_comb_power": 1.1479273736315032
+   },
+   "window 128 px": {
+    "n": 10,
+    "p_comb<0.01": 2,
+    "p_comb<0.001": 0,
+    "median_comb_power": 1.5459997830125665
+   },
+   "window 256 px": {
+    "n": 10,
+    "p_comb<0.01": 1,
+    "p_comb<0.001": 0,
+    "median_comb_power": 1.554874104019389
+   },
+   "window 512 px": {
+    "n": 10,
+    "p_comb<0.01": 0,
+    "p_comb<0.001": 0,
+    "median_comb_power": 1.2835130392208691
+   },
+   "warp duplication beat": {
+    "n": 10,
+    "p_comb<0.01": 2,
+    "p_comb<0.001": 2,
+    "median_comb_power": 1.452069178827993
+   }
+  },
+  "worldcover_boundary": {
+   "encoder patch 4 px": {
+    "n": 10,
+    "p_comb<0.01": 1,
+    "p_comb<0.001": 0,
+    "median_comb_power": 1.4468127724199702
+   },
+   "2 patches 8 px": {
+    "n": 10,
+    "p_comb<0.01": 0,
+    "p_comb<0.001": 0,
+    "median_comb_power": 1.3794401977429769
+   },
+   "window 32 px": {
+    "n": 10,
+    "p_comb<0.01": 1,
+    "p_comb<0.001": 0,
+    "median_comb_power": 1.2920284374022852
+   },
+   "window 64 px": {
+    "n": 10,
+    "p_comb<0.01": 0,
+    "p_comb<0.001": 0,
+    "median_comb_power": 1.6562260272265459
+   },
+   "window 128 px": {
+    "n": 10,
+    "p_comb<0.01": 0,
+    "p_comb<0.001": 0,
+    "median_comb_power": 1.0623096992592211
+   },
+   "window 256 px": {
+    "n": 10,
+    "p_comb<0.01": 1,
+    "p_comb<0.001": 1,
+    "median_comb_power": 1.3205571972553638
+   },
+   "window 512 px": {
+    "n": 10,
+    "p_comb<0.01": 1,
+    "p_comb<0.001": 0,
+    "median_comb_power": 1.0590253064496618
+   },
+   "warp duplication beat": {
+    "n": 10,
+    "p_comb<0.01": 0,
+    "p_comb<0.001": 0,
+    "median_comb_power": 1.2411873279159251
+   }
+  }
+ },
+ "fundamental_tally": {
+  "class_boundary": {
+   "encoder patch 4 px": {
+    "n": 10,
+    "p_fund<0.01": 6,
+    "p_fund<0.001": 5,
+    "median_fund_power": 36.767978899423724
+   },
+   "2 patches 8 px": {
+    "n": 10,
+    "p_fund<0.01": 7,
+    "p_fund<0.001": 6,
+    "median_fund_power": 62.90489241367499
+   },
+   "window 32 px": {
+    "n": 10,
+    "p_fund<0.01": 0,
+    "p_fund<0.001": 0,
+    "median_fund_power": 0.8761744560177793
+   },
+   "window 64 px": {
+    "n": 10,
+    "p_fund<0.01": 0,
+    "p_fund<0.001": 0,
+    "median_fund_power": 1.1454509241508393
+   },
+   "window 128 px": {
+    "n": 10,
+    "p_fund<0.01": 0,
+    "p_fund<0.001": 0,
+    "median_fund_power": 0.6450169429453808
+   },
+   "window 256 px": {
+    "n": 10,
+    "p_fund<0.01": 0,
+    "p_fund<0.001": 0,
+    "median_fund_power": 0.7658872069953111
+   },
+   "window 512 px": {
+    "n": 10,
+    "p_fund<0.01": 0,
+    "p_fund<0.001": 0,
+    "median_fund_power": 0.8097702582797667
+   },
+   "warp duplication beat": {
+    "n": 10,
+    "p_fund<0.01": 2,
+    "p_fund<0.001": 2,
+    "median_fund_power": 0.6931471805599453
+   }
+  },
+  "change_gradient": {
+   "encoder patch 4 px": {
+    "n": 10,
+    "p_fund<0.01": 5,
+    "p_fund<0.001": 5,
+    "median_fund_power": 23.403283937547403
+   },
+   "2 patches 8 px": {
+    "n": 10,
+    "p_fund<0.01": 6,
+    "p_fund<0.001": 5,
+    "median_fund_power": 21.96018688854689
+   },
+   "window 32 px": {
+    "n": 10,
+    "p_fund<0.01": 0,
+    "p_fund<0.001": 0,
+    "median_fund_power": 1.285186024811738
+   },
+   "window 64 px": {
+    "n": 10,
+    "p_fund<0.01": 0,
+    "p_fund<0.001": 0,
+    "median_fund_power": 1.2641750047638118
+   },
+   "window 128 px": {
+    "n": 10,
+    "p_fund<0.01": 1,
+    "p_fund<0.001": 0,
+    "median_fund_power": 1.7968739569274472
+   },
+   "window 256 px": {
+    "n": 10,
+    "p_fund<0.01": 0,
+    "p_fund<0.001": 0,
+    "median_fund_power": 1.2680495003751242
+   },
+   "window 512 px": {
+    "n": 10,
+    "p_fund<0.01": 0,
+    "p_fund<0.001": 0,
+    "median_fund_power": 0.6859429756336598
+   },
+   "warp duplication beat": {
+    "n": 10,
+    "p_fund<0.01": 2,
+    "p_fund<0.001": 2,
+    "median_fund_power": 1.580160749392657
+   }
+  },
+  "worldcover_boundary": {
+   "encoder patch 4 px": {
+    "n": 10,
+    "p_fund<0.01": 1,
+    "p_fund<0.001": 0,
+    "median_fund_power": 1.4468127724199702
+   },
+   "2 patches 8 px": {
+    "n": 10,
+    "p_fund<0.01": 0,
+    "p_fund<0.001": 0,
+    "median_fund_power": 0.9871365986411507
+   },
+   "window 32 px": {
+    "n": 10,
+    "p_fund<0.01": 0,
+    "p_fund<0.001": 0,
+    "median_fund_power": 1.3923533695101908
+   },
+   "window 64 px": {
+    "n": 10,
+    "p_fund<0.01": 0,
+    "p_fund<0.001": 0,
+    "median_fund_power": 0.8820100922459607
+   },
+   "window 128 px": {
+    "n": 10,
+    "p_fund<0.01": 0,
+    "p_fund<0.001": 0,
+    "median_fund_power": 0.8975619433453537
+   },
+   "window 256 px": {
+    "n": 10,
+    "p_fund<0.01": 1,
+    "p_fund<0.001": 1,
+    "median_fund_power": 1.4029613488735542
+   },
+   "window 512 px": {
+    "n": 10,
+    "p_fund<0.01": 0,
+    "p_fund<0.001": 0,
+    "median_fund_power": 0.8960256956724786
+   },
+   "warp duplication beat": {
+    "n": 10,
+    "p_fund<0.01": 0,
+    "p_fund<0.001": 0,
+    "median_fund_power": 0.9604616964510488
+   }
+  }
+ },
+ "comb_caveat": "comb scores are confounded for hypotheses commensurate with the patch lattice; window-scale seams are judged on the fundamental",
+ "top_peaks_product": [
+  {
+   "window": "chobe_east",
+   "map": "class_boundary",
+   "axis": "col",
+   "period_px": 8.787418655097614,
+   "period_in_utm_patches": 1.9979712841992783,
+   "p_bonferroni": 9.284518563879047e-60,
+   "on_patch_lattice": true
+  },
+  {
+   "window": "chobe_east",
+   "map": "class_boundary",
+   "axis": "row",
+   "period_px": 17.68122270742358,
+   "period_in_utm_patches": 4.020131124453875,
+   "p_bonferroni": 7.179074143776108e-61,
+   "on_patch_lattice": true
+  },
+  {
+   "window": "chobe_east",
+   "map": "change_gradient",
+   "axis": "col",
+   "period_px": 8.787418655097614,
+   "period_in_utm_patches": 1.9979712841992783,
+   "p_bonferroni": 7.204867883154052e-103,
+   "on_patch_lattice": true
+  },
+  {
+   "window": "chobe_east",
+   "map": "change_gradient",
+   "axis": "row",
+   "period_px": 8.84061135371179,
+   "period_in_utm_patches": 2.0100655622269374,
+   "p_bonferroni": 3.890734501970168e-12,
+   "on_patch_lattice": true
+  },
+  {
+   "window": "sesheke",
+   "map": "class_boundary",
+   "axis": "col",
+   "period_px": 17.55217391304348,
+   "period_in_utm_patches": 3.997463922331242,
+   "p_bonferroni": 1.3244300006996594e-192,
+   "on_patch_lattice": true
+  },
+  {
+   "window": "sesheke",
+   "map": "class_boundary",
+   "axis": "row",
+   "period_px": 5.884839650145773,
+   "period_in_utm_patches": 1.3402575832889003,
+   "p_bonferroni": 4.391715253476188e-246,
+   "on_patch_lattice": true
+  },
+  {
+   "window": "sesheke",
+   "map": "change_gradient",
+   "axis": "col",
+   "period_px": 4.38804347826087,
+   "period_in_utm_patches": 0.9993659805828105,
+   "p_bonferroni": 4.973080573386733e-111,
+   "on_patch_lattice": true
+  },
+  {
+   "window": "sesheke",
+   "map": "change_gradient",
+   "axis": "row",
+   "period_px": 4.412021857923498,
+   "period_in_utm_patches": 1.0048269968701482,
+   "p_bonferroni": 1.3167171933531587e-88,
+   "on_patch_lattice": true
+  },
+  {
+   "window": "savuti_north",
+   "map": "class_boundary",
+   "axis": "col",
+   "period_px": 5.884671532846715,
+   "period_in_utm_patches": 1.3326178710368688,
+   "p_bonferroni": 3.539566059782017e-147,
+   "on_patch_lattice": true
+  },
+  {
+   "window": "savuti_north",
+   "map": "class_boundary",
+   "axis": "row",
+   "period_px": 5.919236417033774,
+   "period_in_utm_patches": 1.340445288781579,
+   "p_bonferroni": 2.7496802251552574e-205,
+   "on_patch_lattice": true
+  },
+  {
+   "window": "savuti_north",
+   "map": "change_gradient",
+   "axis": "col",
+   "period_px": 8.820568927789935,
+   "period_in_utm_patches": 1.9974688001318497,
+   "p_bonferroni": 2.868555238690056e-64,
+   "on_patch_lattice": true
+  },
+  {
+   "window": "savuti_north",
+   "map": "change_gradient",
+   "axis": "row",
+   "period_px": 4.43942731277533,
+   "period_in_utm_patches": 1.005333966586184,
+   "p_bonferroni": 2.2208807037761227e-41,
+   "on_patch_lattice": true
+  },
+  {
+   "window": "kwando",
+   "map": "class_boundary",
+   "axis": "col",
+   "period_px": 17.51948051948052,
+   "period_in_utm_patches": 3.9976519586685684,
+   "p_bonferroni": 0.0,
+   "on_patch_lattice": true
+  },
+  {
+   "window": "kwando",
+   "map": "class_boundary",
+   "axis": "row",
+   "period_px": 8.812636165577342,
+   "period_in_utm_patches": 2.01089593890529,
+   "p_bonferroni": 0.0,
+   "on_patch_lattice": true
+  },
+  {
+   "window": "kwando",
+   "map": "change_gradient",
+   "axis": "col",
+   "period_px": 4.37987012987013,
+   "period_in_utm_patches": 0.9994129896671421,
+   "p_bonferroni": 1.5339508245802582e-55,
+   "on_patch_lattice": true
+  },
+  {
+   "window": "kwando",
+   "map": "change_gradient",
+   "axis": "row",
+   "period_px": 7.546641791044776,
+   "period_in_utm_patches": 1.722017231264045,
+   "p_bonferroni": 5.562564017618567e-08,
+   "on_patch_lattice": false
+  },
+  {
+   "window": "barotse",
+   "map": "class_boundary",
+   "axis": "col",
+   "period_px": 4.336898395721925,
+   "period_in_utm_patches": 0.9994582387051053,
+   "p_bonferroni": 5.934509760000943e-140,
+   "on_patch_lattice": true
+  },
+  {
+   "window": "barotse",
+   "map": "class_boundary",
+   "axis": "row",
+   "period_px": 4.364908503767492,
+   "period_in_utm_patches": 1.005913297297388,
+   "p_bonferroni": 7.702241243563746e-225,
+   "on_patch_lattice": true
+  },
+  {
+   "window": "barotse",
+   "map": "change_gradient",
+   "axis": "col",
+   "period_px": 4.336898395721925,
+   "period_in_utm_patches": 0.9994582387051053,
+   "p_bonferroni": 1.9083595723970725e-148,
+   "on_patch_lattice": true
+  },
+  {
+   "window": "barotse",
+   "map": "change_gradient",
+   "axis": "row",
+   "period_px": 4.364908503767492,
+   "period_in_utm_patches": 1.005913297297388,
+   "p_bonferroni": 3.658476184255313e-181,
+   "on_patch_lattice": true
+  }
+ ],
+ "top_peaks_on_lattice": "19/20",
+ "top_peaks_max_p_bonferroni": 5.562564017618567e-08,
+ "worldcover_top_peaks_min_p_bonferroni": 0.005731952298645924,
+ "significant_matched_peaks_count_by_map_and_period": {
+  "class_boundary": {
+   "2 patches 8 px": 11,
+   "encoder patch 4 px": 10,
+   "warp duplication beat": 1
+  },
+  "change_gradient": {
+   "2 patches 8 px": 7,
+   "encoder patch 4 px": 16,
+   "warp duplication beat": 2
+  }
+ },
+ "n_profiles_per_map": 10,
+ "settings": {
+  "size_px": 4096,
+  "strip_px": 1024,
+  "period_range_px": [
+   3.0,
+   1024.0
+  ],
+  "median_bins": 41,
+  "tolerance": 0.02,
+  "utm_lengths_px": {
+   "encoder patch 4 px": 4,
+   "2 patches 8 px": 8,
+   "window 32 px": 32,
+   "window 64 px": 64,
+   "window 128 px": 128,
+   "window 256 px": 256,
+   "window 512 px": 512
+  }
+ }
+}

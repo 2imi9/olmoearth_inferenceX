@@ -1,0 +1,241 @@
+window,map,axis,rank,period_px,whitened_power,p_bonferroni,matches,harmonic_of,n_bins,n_strips
+chobe_east,class_boundary,col,1,8.787418655097614,143.13239241354816,9.284518563879047e-60,2 patches 8 px,window 32 px (h=4);window 64 px (h=8);window 128 px (h=16);window 256 px (h=32),1347,1
+chobe_east,class_boundary,col,2,5.862518089725037,112.57519487919787,1.7321346938679146e-46,,window 32 px (h=6);window 64 px (h=12);window 128 px (h=24);window 256 px (h=48),1347,1
+chobe_east,class_boundary,col,3,6.59771986970684,84.45323676629016,2.8300420548556642e-34,,window 128 px (h=21);window 256 px (h=42);window 256 px (h=43),1347,1
+chobe_east,class_boundary,col,4,7.529739776951673,72.39815748326077,4.8668425995094926e-29,,window 128 px (h=19);window 256 px (h=37);window 256 px (h=38),1347,1
+chobe_east,class_boundary,col,5,17.61304347826087,70.24098127379501,4.208206327561787e-28,,window 32 px (h=2);window 64 px (h=4);window 128 px (h=8);window 256 px (h=16);window 512 px (h=32),1347,1
+chobe_east,class_boundary,col,6,4.393709327548807,68.67796634145881,2.0086570125372902e-27,encoder patch 4 px,2 patches 8 px (h=2);window 32 px (h=8);window 64 px (h=16);window 128 px (h=32),1347,1
+chobe_east,class_boundary,col,7,26.477124183006534,58.87960584166841,3.616426825556317e-23,,window 512 px (h=21),1347,1
+chobe_east,class_boundary,col,8,4.055055055055055,46.980281287912625,5.322193670226004e-18,,window 128 px (h=35),1347,1
+chobe_east,class_boundary,row,1,17.68122270742358,145.6914127574308,7.179074143776108e-61,,window 32 px (h=2);window 64 px (h=4);window 128 px (h=8);window 256 px (h=16);window 512 px (h=32),1346,1
+chobe_east,class_boundary,row,2,8.84061135371179,134.50798882846257,5.163780103096954e-56,2 patches 8 px,window 32 px (h=4);window 64 px (h=8);window 128 px (h=16);window 256 px (h=32),1346,1
+chobe_east,class_boundary,row,3,5.893740902474527,97.64945406088022,5.2532249756497495e-40,,window 32 px (h=6);window 64 px (h=12);window 128 px (h=24);window 256 px (h=47);window 256 px (h=48),1346,1
+chobe_east,class_boundary,row,4,10.62729658792651,87.12480250759249,1.955348146049625e-35,,window 128 px (h=13);window 256 px (h=26);window 256 px (h=27),1346,1
+chobe_east,class_boundary,row,5,6.637704918032788,85.77083150333364,7.572621143880697e-35,,window 128 px (h=21);window 256 px (h=42);window 256 px (h=43),1346,1
+chobe_east,class_boundary,row,6,3.5393356643356646,85.4661403534991,1.0270034790266345e-34,,window 32 px (h=10);window 64 px (h=20);window 128 px (h=39);window 128 px (h=40),1346,1
+chobe_east,class_boundary,row,7,26.638157894736842,64.05307481119425,2.0471427160472252e-25,,window 512 px (h=21),1346,1
+chobe_east,class_boundary,row,8,4.425136612021857,54.755930727677985,2.2327828793162194e-21,encoder patch 4 px,2 patches 8 px (h=2);window 32 px (h=8);window 64 px (h=16);window 128 px (h=32),1346,1
+chobe_east,change_gradient,col,1,8.787418655097614,242.39714286234172,7.204867883154052e-103,2 patches 8 px,window 32 px (h=4);window 64 px (h=8);window 128 px (h=16);window 256 px (h=32),1347,1
+chobe_east,change_gradient,col,2,5.862518089725037,206.94936530437263,1.7881346160211377e-87,,window 32 px (h=6);window 64 px (h=12);window 128 px (h=24);window 256 px (h=48),1347,1
+chobe_east,change_gradient,col,3,4.393709327548807,106.85728166519657,5.270354368814138e-44,encoder patch 4 px,2 patches 8 px (h=2);window 32 px (h=8);window 64 px (h=16);window 128 px (h=32),1347,1
+chobe_east,change_gradient,col,4,17.61304347826087,68.58869858588382,2.196212094911465e-27,,window 32 px (h=2);window 64 px (h=4);window 128 px (h=8);window 256 px (h=16);window 512 px (h=32),1347,1
+chobe_east,change_gradient,col,5,3.516493055555556,62.171014658593556,1.3453614993259142e-24,,window 32 px (h=10);window 64 px (h=20);window 128 px (h=40),1347,1
+chobe_east,change_gradient,col,6,5.854046242774567,57.943564054164,9.22141282928379e-23,,window 32 px (h=6);window 64 px (h=12);window 128 px (h=24);window 256 px (h=48),1347,1
+chobe_east,change_gradient,col,7,13.152597402597403,50.902898672216416,1.0532211931678746e-19,,window 256 px (h=21);window 512 px (h=42);window 512 px (h=43),1347,1
+chobe_east,change_gradient,col,8,10.577023498694517,48.49929739940611,1.165172856742043e-18,,window 256 px (h=27),1347,1
+chobe_east,change_gradient,row,1,8.84061135371179,33.47731566833955,3.890734501970168e-12,2 patches 8 px,window 32 px (h=4);window 64 px (h=8);window 128 px (h=16);window 256 px (h=32),1346,1
+chobe_east,change_gradient,row,2,10.62729658792651,29.236240961115673,2.703379018890925e-10,,window 128 px (h=13);window 256 px (h=26);window 256 px (h=27),1346,1
+chobe_east,change_gradient,row,3,5.893740902474527,24.278777654735247,3.8450845773349874e-08,,window 32 px (h=6);window 64 px (h=12);window 128 px (h=24);window 256 px (h=47);window 256 px (h=48),1346,1
+chobe_east,change_gradient,row,4,4.420305676855895,16.5958835019202,8.347269448731732e-05,encoder patch 4 px,2 patches 8 px (h=2);window 32 px (h=8);window 64 px (h=16);window 128 px (h=32),1346,1
+chobe_east,change_gradient,row,5,13.232026143790849,13.840705485671158,0.001312511271840415,,window 256 px (h=21);window 512 px (h=42);window 512 px (h=43),1346,1
+chobe_east,change_gradient,row,6,3.1242283950617287,12.73397022218475,0.003969648560599046,,window 128 px (h=45),1346,1
+chobe_east,change_gradient,row,7,6.637704918032788,11.963273979296668,0.0085794843265256,,window 128 px (h=21);window 256 px (h=42);window 256 px (h=43),1346,1
+chobe_east,change_gradient,row,8,7.568224299065421,11.008885049092761,0.02228163374167538,,window 256 px (h=37),1346,1
+chobe_east,worldcover_boundary,col,1,8.301229508196721,8.48613192537713,0.27789922000996964,,window 128 px (h=17);window 256 px (h=34),1347,1
+chobe_east,worldcover_boundary,col,2,16.670781893004115,8.374209530589035,0.3108097301534467,,window 256 px (h=17);window 512 px (h=34),1347,1
+chobe_east,worldcover_boundary,col,3,29.786764705882355,7.531472951567752,0.721922291662994,,window 512 px (h=19),1347,1
+chobe_east,worldcover_boundary,col,4,17.386266094420602,6.916820917186764,1.0,,window 32 px (h=2);window 64 px (h=4);window 128 px (h=8);window 256 px (h=16);window 512 px (h=32);window 512 px (h=33),1347,1
+chobe_east,worldcover_boundary,col,5,5.358465608465608,5.803974709886015,1.0,,window 64 px (h=13);window 128 px (h=26),1347,1
+chobe_east,worldcover_boundary,col,6,3.983284169124877,5.723246864286757,1.0,,window 32 px (h=9);window 64 px (h=18);window 128 px (h=35);window 128 px (h=36),1347,1
+chobe_east,worldcover_boundary,col,7,6.119335347432024,5.213826599829842,1.0,,window 128 px (h=23);window 256 px (h=46),1347,1
+chobe_east,worldcover_boundary,col,8,3.0367316341829085,5.084375044996809,1.0,,window 64 px (h=23);window 128 px (h=46);window 128 px (h=47),1347,1
+chobe_east,worldcover_boundary,row,1,289.2142857142857,8.772067287729739,0.20863378736054516,,,1346,1
+chobe_east,worldcover_boundary,row,2,3.5362445414847166,7.365347011486374,0.8517565765228735,,window 32 px (h=10);window 64 px (h=20);window 128 px (h=40),1346,1
+chobe_east,worldcover_boundary,row,3,5.197689345314506,7.219059004539489,0.9859333782748989,,window 128 px (h=27),1346,1
+chobe_east,worldcover_boundary,row,4,6.605220228384992,6.855513994995034,1.0,,window 128 px (h=21);window 256 px (h=42);window 256 px (h=43),1346,1
+chobe_east,worldcover_boundary,row,5,3.291869918699187,6.43636748798781,1.0,,window 64 px (h=21);window 128 px (h=42);window 128 px (h=43),1346,1
+chobe_east,worldcover_boundary,row,6,6.210122699386503,6.326785935086768,1.0,,window 128 px (h=23);window 256 px (h=45);window 256 px (h=46),1346,1
+chobe_east,worldcover_boundary,row,7,5.639275766016713,5.817220893946767,1.0,,window 128 px (h=25),1346,1
+chobe_east,worldcover_boundary,row,8,4.3725701943844495,5.801216986593292,1.0,encoder patch 4 px,2 patches 8 px (h=2);window 32 px (h=8);window 64 px (h=16);window 128 px (h=32),1346,1
+sesheke,class_boundary,col,1,17.55217391304348,449.0172719936589,1.3244300006996594e-192,,window 32 px (h=2);window 64 px (h=4);window 128 px (h=8);window 256 px (h=16);window 512 px (h=32),1342,1
+sesheke,class_boundary,col,2,8.77608695652174,437.4876166540838,1.3467739329780695e-187,2 patches 8 px,window 32 px (h=4);window 64 px (h=8);window 128 px (h=16);window 256 px (h=32),1342,1
+sesheke,class_boundary,col,3,5.85072463768116,402.06510858027667,3.2590760410985317e-172,,window 32 px (h=6);window 64 px (h=12);window 128 px (h=24);window 256 px (h=48),1342,1
+sesheke,class_boundary,col,4,4.38804347826087,277.0900386333564,6.152870109782959e-118,encoder patch 4 px,2 patches 8 px (h=2);window 32 px (h=8);window 64 px (h=16);window 128 px (h=32),1342,1
+sesheke,class_boundary,col,5,3.510434782608696,172.09539208606975,2.4415935662097836e-72,,window 32 px (h=10);window 64 px (h=20);window 128 px (h=40),1342,1
+sesheke,class_boundary,col,6,6.585644371941274,124.58642274061232,1.0484714269355385e-51,,window 128 px (h=21);window 256 px (h=42);window 256 px (h=43),1342,1
+sesheke,class_boundary,col,7,4.788849347568209,105.9767724053585,1.2665579062831525e-43,,window 128 px (h=29),1342,1
+sesheke,class_boundary,col,8,5.263363754889179,96.96346188477337,1.0400544416525713e-39,,window 128 px (h=27),1342,1
+sesheke,class_boundary,row,1,5.884839650145773,572.1581293249586,4.391715253476188e-246,,window 32 px (h=6);window 64 px (h=12);window 128 px (h=24);window 256 px (h=47);window 256 px (h=48),1342,1
+sesheke,class_boundary,row,2,3.531933508311462,222.9118760699679,2.0813963466933315e-94,,window 32 px (h=10);window 64 px (h=20);window 128 px (h=39);window 128 px (h=40),1342,1
+sesheke,class_boundary,row,3,8.833698030634574,217.5583688150981,4.398994789471787e-92,2 patches 8 px,window 32 px (h=4);window 64 px (h=8);window 128 px (h=16);window 256 px (h=32),1342,1
+sesheke,class_boundary,row,4,6.628899835796389,164.39633743647636,5.386793433767718e-69,,window 128 px (h=21);window 256 px (h=42);window 256 px (h=43),1342,1
+sesheke,class_boundary,row,5,17.628820960698693,146.4205222117574,3.4524522595388475e-61,,window 32 px (h=2);window 64 px (h=4);window 128 px (h=8);window 256 px (h=16);window 512 px (h=32),1342,1
+sesheke,class_boundary,row,6,3.1173745173745178,113.98541852882136,4.2122508959206727e-47,,window 128 px (h=45),1342,1
+sesheke,class_boundary,row,7,4.412021857923498,112.09954485313952,2.7767626704866448e-46,encoder patch 4 px,2 patches 8 px (h=2);window 32 px (h=8);window 64 px (h=16);window 128 px (h=32),1342,1
+sesheke,class_boundary,row,8,7.55992509363296,106.97238807806835,4.679879357106717e-44,,window 256 px (h=37),1342,1
+sesheke,change_gradient,col,1,4.38804347826087,261.1848221581003,4.973080573386733e-111,encoder patch 4 px,2 patches 8 px (h=2);window 32 px (h=8);window 64 px (h=16);window 128 px (h=32),1342,1
+sesheke,change_gradient,col,2,4.38327904451683,167.47549471156023,2.477817458281241e-70,encoder patch 4 px,2 patches 8 px (h=2);window 32 px (h=8);window 64 px (h=16);window 128 px (h=32),1342,1
+sesheke,change_gradient,col,3,3.507384882710687,120.01520496056862,1.0134708387421385e-49,,window 32 px (h=10);window 64 px (h=20);window 128 px (h=40),1342,1
+sesheke,change_gradient,col,4,3.510434782608696,97.56777453566146,5.683376450506362e-40,,window 32 px (h=10);window 64 px (h=20);window 128 px (h=40),1342,1
+sesheke,change_gradient,col,5,5.85072463768116,80.70536354895962,1.1963505856420813e-32,,window 32 px (h=6);window 64 px (h=12);window 128 px (h=24);window 256 px (h=48),1342,1
+sesheke,change_gradient,col,6,4.788849347568209,67.2364235960017,8.459501371728707e-27,,window 128 px (h=29),1342,1
+sesheke,change_gradient,col,7,8.77608695652174,57.44894969303492,1.506574710358753e-22,2 patches 8 px,window 32 px (h=4);window 64 px (h=8);window 128 px (h=16);window 256 px (h=32),1342,1
+sesheke,change_gradient,col,8,3.095858895705522,54.83789455945479,2.0509615069092667e-21,,window 64 px (h=23);window 128 px (h=45);window 128 px (h=46),1342,1
+sesheke,change_gradient,row,1,4.412021857923498,209.5542628368004,1.3167171933531587e-88,encoder patch 4 px,2 patches 8 px (h=2);window 32 px (h=8);window 64 px (h=16);window 128 px (h=32),1342,1
+sesheke,change_gradient,row,2,3.531933508311462,107.19754230054312,3.7363832897728805e-44,,window 32 px (h=10);window 64 px (h=20);window 128 px (h=39);window 128 px (h=40),1342,1
+sesheke,change_gradient,row,3,4.416849015317287,93.47427561168125,3.407143440940057e-38,encoder patch 4 px,2 patches 8 px (h=2);window 32 px (h=8);window 64 px (h=16);window 128 px (h=32),1342,1
+sesheke,change_gradient,row,4,5.884839650145773,81.62238046565403,4.781928517500527e-33,,window 32 px (h=6);window 64 px (h=12);window 128 px (h=24);window 256 px (h=47);window 256 px (h=48),1342,1
+sesheke,change_gradient,row,5,3.528846153846154,58.46100268488967,5.475977351742369e-23,,window 32 px (h=10);window 64 px (h=20);window 128 px (h=40),1342,1
+sesheke,change_gradient,row,6,7.55992509363296,41.20660088683699,1.7058982854024562e-15,,window 256 px (h=37),1342,1
+sesheke,change_gradient,row,7,6.628899835796389,40.77067929262829,2.6379798603157518e-15,,window 128 px (h=21);window 256 px (h=42);window 256 px (h=43),1342,1
+sesheke,change_gradient,row,8,8.833698030634574,34.78466211977223,1.0494595461328462e-12,2 patches 8 px,window 32 px (h=4);window 64 px (h=8);window 128 px (h=16);window 256 px (h=32),1342,1
+sesheke,worldcover_boundary,col,1,3.333608587943848,9.253397850882532,0.12854431974773098,,window 64 px (h=21);window 128 px (h=42),1342,1
+sesheke,worldcover_boundary,col,2,4.407205240174673,7.991459225444189,0.45405229156604615,encoder patch 4 px,2 patches 8 px (h=2);window 32 px (h=8);window 64 px (h=16);window 128 px (h=32),1342,1
+sesheke,worldcover_boundary,col,3,5.477611940298508,6.372351176249307,1.0,,window 64 px (h=13);window 128 px (h=26),1342,1
+sesheke,worldcover_boundary,col,4,5.6461538461538465,6.148780532308069,1.0,,window 128 px (h=25);warp duplication beat (h=2),1342,1
+sesheke,worldcover_boundary,col,5,3.510434782608696,5.934882364749138,1.0,,window 32 px (h=10);window 64 px (h=20);window 128 px (h=40),1342,1
+sesheke,worldcover_boundary,col,6,8.44560669456067,5.5925160918890935,1.0,,window 256 px (h=33),1342,1
+sesheke,worldcover_boundary,col,7,10.595800524934385,5.562363788949718,1.0,,window 128 px (h=13);window 256 px (h=26);window 256 px (h=27),1342,1
+sesheke,worldcover_boundary,col,8,3.398148148148149,5.481867879430618,1.0,,window 64 px (h=21);window 128 px (h=41);window 128 px (h=42),1342,1
+sesheke,worldcover_boundary,row,1,12.27051671732523,12.363615408521419,0.005731952298645924,,window 256 px (h=23);window 512 px (h=45);window 512 px (h=46),1342,1
+sesheke,worldcover_boundary,row,2,16.019841269841272,9.906834463923845,0.06687579764787634,,window 512 px (h=35),1342,1
+sesheke,worldcover_boundary,row,3,12.196374622356496,6.7739168456919705,1.0,,window 256 px (h=23);window 512 px (h=46);window 512 px (h=47),1342,1
+sesheke,worldcover_boundary,row,4,6.288161993769471,6.763434978835536,1.0,,window 64 px (h=11);window 128 px (h=22);window 256 px (h=44);window 256 px (h=45),1342,1
+sesheke,worldcover_boundary,row,5,3.095858895705522,6.480409734501353,1.0,,window 64 px (h=23);window 128 px (h=45);window 128 px (h=46),1342,1
+sesheke,worldcover_boundary,row,6,38.44761904761905,6.355978373467182,1.0,,,1342,1
+sesheke,worldcover_boundary,row,7,3.4563356164383565,6.292066135847479,1.0,,window 32 px (h=10);window 64 px (h=20);window 128 px (h=40);window 128 px (h=41),1342,1
+sesheke,worldcover_boundary,row,8,3.1837539432176656,6.220769880143682,1.0,,window 32 px (h=11);window 64 px (h=22);window 128 px (h=44);window 128 px (h=45),1342,1
+savuti_north,class_boundary,col,1,5.884671532846715,344.41642942542023,3.539566059782017e-147,,window 32 px (h=6);window 64 px (h=12);window 128 px (h=24);window 256 px (h=48),1340,1
+savuti_north,class_boundary,col,2,8.820568927789935,286.4041403620666,5.53817971878668e-122,2 patches 8 px,window 32 px (h=4);window 64 px (h=8);window 128 px (h=16);window 256 px (h=32),1340,1
+savuti_north,class_boundary,col,3,13.21639344262295,247.2719096706094,5.473673628456786e-105,,window 256 px (h=21);window 512 px (h=42);window 512 px (h=43),1340,1
+savuti_north,class_boundary,col,4,4.410284463894968,161.53480247581285,9.406573380939918e-68,encoder patch 4 px,2 patches 8 px (h=2);window 32 px (h=8);window 64 px (h=16);window 128 px (h=32),1340,1
+savuti_north,class_boundary,col,5,3.5297723292469354,159.11330017068755,1.059440416601396e-66,,window 32 px (h=10);window 64 px (h=20);window 128 px (h=40);warp duplication beat (h=3),1340,1
+savuti_north,class_boundary,col,6,26.519736842105264,133.41540540128668,1.532958619432726e-55,,window 512 px (h=21),1340,1
+savuti_north,class_boundary,col,7,10.607894736842105,132.8770622580186,2.6262126455933866e-55,warp duplication beat,window 256 px (h=27),1340,1
+savuti_north,class_boundary,col,8,17.67982456140351,107.99938020644787,1.6732850302511416e-44,,window 32 px (h=2);window 64 px (h=4);window 128 px (h=8);window 256 px (h=16);window 512 px (h=32),1340,1
+savuti_north,class_boundary,row,1,5.919236417033774,478.21888433356884,2.7496802251552574e-205,,window 32 px (h=6);window 64 px (h=12);window 128 px (h=24);window 256 px (h=47);window 256 px (h=48),1340,1
+savuti_north,class_boundary,row,2,8.87885462555066,400.6854397236445,1.2930917693963652e-171,2 patches 8 px,window 32 px (h=4);window 64 px (h=8);window 128 px (h=16);window 256 px (h=32),1340,1
+savuti_north,class_boundary,row,3,17.75770925110132,375.37142898064394,1.2745724529417918e-160,,window 32 px (h=2);window 64 px (h=4);window 128 px (h=8);window 256 px (h=16);window 512 px (h=32),1340,1
+savuti_north,class_boundary,row,4,4.43942731277533,299.81783228617957,8.277032496393297e-128,encoder patch 4 px,2 patches 8 px (h=2);window 32 px (h=8);window 64 px (h=16);window 128 px (h=32),1340,1
+savuti_north,class_boundary,row,5,3.5515418502202647,184.48195424596585,1.0176772325805559e-77,,window 32 px (h=10);window 64 px (h=20);window 128 px (h=39);window 128 px (h=40);warp duplication beat (h=3),1340,1
+savuti_north,class_boundary,row,6,6.662809917355372,159.4296236593795,7.721452269584101e-67,,window 128 px (h=21);window 256 px (h=42);window 256 px (h=43),1340,1
+savuti_north,class_boundary,row,7,4.844951923076923,122.85187546005182,5.932164623077658e-51,,window 128 px (h=29),1340,1
+savuti_north,class_boundary,row,8,3.806421152030217,121.9389029333445,1.478128276422292e-50,,window 128 px (h=37),1340,1
+savuti_north,change_gradient,col,1,8.820568927789935,153.51206234269455,2.868555238690056e-64,2 patches 8 px,window 32 px (h=4);window 64 px (h=8);window 128 px (h=16);window 256 px (h=32),1340,1
+savuti_north,change_gradient,col,2,17.67982456140351,129.79509109430575,5.72549392207824e-54,,window 32 px (h=2);window 64 px (h=4);window 128 px (h=8);window 256 px (h=16);window 512 px (h=32),1340,1
+savuti_north,change_gradient,col,3,13.21639344262295,127.55739065570013,5.365792951120576e-53,,window 256 px (h=21);window 512 px (h=42);window 512 px (h=43),1340,1
+savuti_north,change_gradient,col,4,10.607894736842105,105.41414690175947,2.2198441482514213e-43,warp duplication beat,window 256 px (h=27),1340,1
+savuti_north,change_gradient,col,5,4.410284463894968,93.78340296898789,2.497413153920109e-38,encoder patch 4 px,2 patches 8 px (h=2);window 32 px (h=8);window 64 px (h=16);window 128 px (h=32),1340,1
+savuti_north,change_gradient,col,6,5.884671532846715,73.20471412605106,2.1612320740311282e-29,,window 32 px (h=6);window 64 px (h=12);window 128 px (h=24);window 256 px (h=48),1340,1
+savuti_north,change_gradient,col,7,17.602620087336245,70.5973917686239,2.931211234304739e-28,,window 32 px (h=2);window 64 px (h=4);window 128 px (h=8);window 256 px (h=16);window 512 px (h=32),1340,1
+savuti_north,change_gradient,col,8,4.816009557945042,52.552171961100946,2.0136616712419505e-20,,window 128 px (h=29),1340,1
+savuti_north,change_gradient,row,1,4.43942731277533,100.80850987507394,2.2208807037761227e-41,encoder patch 4 px,2 patches 8 px (h=2);window 32 px (h=8);window 64 px (h=16);window 128 px (h=32),1340,1
+savuti_north,change_gradient,row,2,5.919236417033774,86.99624094915454,2.2136930818257875e-35,,window 32 px (h=6);window 64 px (h=12);window 128 px (h=24);window 256 px (h=47);window 256 px (h=48),1340,1
+savuti_north,change_gradient,row,3,10.664021164021165,85.59995340943979,8.943703259853334e-35,warp duplication beat,window 128 px (h=13);window 256 px (h=26);window 256 px (h=27),1340,1
+savuti_north,change_gradient,row,4,17.75770925110132,79.63288949157675,3.4912448989398194e-32,,window 32 px (h=2);window 64 px (h=4);window 128 px (h=8);window 256 px (h=16);window 512 px (h=32),1340,1
+savuti_north,change_gradient,row,5,8.87885462555066,79.3811974373254,4.4904388276829886e-32,2 patches 8 px,window 32 px (h=4);window 64 px (h=8);window 128 px (h=16);window 256 px (h=32),1340,1
+savuti_north,change_gradient,row,6,3.5515418502202647,55.32020329155416,1.264287287438966e-21,,window 32 px (h=10);window 64 px (h=20);window 128 px (h=39);window 128 px (h=40);warp duplication beat (h=3),1340,1
+savuti_north,change_gradient,row,7,5.324966974900925,50.91291311016899,1.0373076409948617e-19,,window 128 px (h=27);warp duplication beat (h=2),1340,1
+savuti_north,change_gradient,row,8,4.844951923076923,50.61088308884676,1.4030642165898137e-19,,window 128 px (h=29),1340,1
+savuti_north,worldcover_boundary,col,1,11.855882352941176,6.690438391628601,1.0,,window 32 px (h=3);window 64 px (h=6);window 128 px (h=12);window 256 px (h=24);window 512 px (h=47);window 512 px (h=48),1340,1
+savuti_north,worldcover_boundary,col,2,6.239938080495357,6.45239690074929,1.0,,window 128 px (h=23);window 256 px (h=45);window 256 px (h=46),1340,1
+savuti_north,worldcover_boundary,col,3,4.897934386391252,6.429925988512806,1.0,,window 128 px (h=29),1340,1
+savuti_north,worldcover_boundary,col,4,4.164256198347108,6.359063882910758,1.0,,window 64 px (h=17);window 128 px (h=34),1340,1
+savuti_north,worldcover_boundary,col,5,12.596874999999999,6.116217021834598,1.0,,window 128 px (h=11);window 256 px (h=22);window 512 px (h=44);window 512 px (h=45),1340,1
+savuti_north,worldcover_boundary,col,6,12.105105105105105,5.937881879998022,1.0,,window 256 px (h=23);window 512 px (h=46);window 512 px (h=47),1340,1
+savuti_north,worldcover_boundary,col,7,13.526845637583891,5.4135242673367,1.0,,window 256 px (h=21);window 512 px (h=41);window 512 px (h=42),1340,1
+savuti_north,worldcover_boundary,col,8,5.410738255033557,4.914003066818987,1.0,,window 64 px (h=13);window 128 px (h=26);warp duplication beat (h=2),1340,1
+savuti_north,worldcover_boundary,row,1,13.948096885813149,8.780790150857579,0.20589987790870146,,window 64 px (h=5);window 128 px (h=10);window 256 px (h=20);window 512 px (h=40);window 512 px (h=41),1340,1
+savuti_north,worldcover_boundary,row,2,45.80681818181819,7.537504012120567,0.7138523582582661,,,1340,1
+savuti_north,worldcover_boundary,row,3,3.883429672447013,5.897386688305137,1.0,,window 32 px (h=9);window 64 px (h=18);window 128 px (h=36);window 128 px (h=37),1340,1
+savuti_north,worldcover_boundary,row,4,8.19308943089431,5.710532990889687,1.0,,window 128 px (h=17);window 256 px (h=34);window 256 px (h=35),1340,1
+savuti_north,worldcover_boundary,row,5,4.055331991951711,5.665539052187541,1.0,,window 128 px (h=35),1340,1
+savuti_north,worldcover_boundary,row,6,3.191607284243864,5.571777389904876,1.0,,window 32 px (h=11);window 64 px (h=22);window 128 px (h=44);window 128 px (h=45),1340,1
+savuti_north,worldcover_boundary,row,7,8.045908183632735,5.338395218518111,1.0,,window 256 px (h=35),1340,1
+savuti_north,worldcover_boundary,row,8,3.0217391304347827,5.312311115766463,1.0,,window 64 px (h=23);window 128 px (h=46);window 128 px (h=47),1340,1
+kwando,class_boundary,col,1,17.51948051948052,737.5368354286841,0.0,,window 32 px (h=2);window 64 px (h=4);window 128 px (h=8);window 256 px (h=16);window 512 px (h=32),1345,1
+kwando,class_boundary,col,2,8.75974025974026,674.1594876026052,2.2129769774732823e-290,2 patches 8 px,window 32 px (h=4);window 64 px (h=8);window 128 px (h=16);window 256 px (h=32),1345,1
+kwando,class_boundary,col,3,5.8398268398268405,524.6285747492086,1.9294219812647583e-225,,window 32 px (h=6);window 64 px (h=12);window 128 px (h=24);window 256 px (h=48);warp duplication beat (h=2),1345,1
+kwando,class_boundary,col,4,4.37987012987013,453.82652141307375,1.082351425069841e-194,encoder patch 4 px,2 patches 8 px (h=2);window 32 px (h=8);window 64 px (h=16);window 128 px (h=32),1345,1
+kwando,class_boundary,col,5,3.503896103896104,322.5323252214265,1.1342615367783087e-137,,window 32 px (h=10);window 64 px (h=20);window 128 px (h=40),1345,1
+kwando,class_boundary,col,6,5.249027237354086,150.53895215952278,5.629710338245346e-63,,window 128 px (h=27),1345,1
+kwando,class_boundary,col,7,6.580487804878048,148.3132083699002,5.2133189514218e-62,,window 128 px (h=21);window 256 px (h=42);window 256 px (h=43),1345,1
+kwando,class_boundary,col,8,3.506932409012131,114.54470384376312,2.413178646673481e-47,,window 32 px (h=10);window 64 px (h=20);window 128 px (h=40),1345,1
+kwando,class_boundary,row,1,8.812636165577342,755.6936298698887,0.0,2 patches 8 px,window 32 px (h=4);window 64 px (h=8);window 128 px (h=16);window 256 px (h=32),1345,1
+kwando,class_boundary,row,2,4.406318082788671,466.5945682530257,3.0851480232763036e-200,encoder patch 4 px,2 patches 8 px (h=2);window 32 px (h=8);window 64 px (h=16);window 128 px (h=32),1345,1
+kwando,class_boundary,row,3,5.879360465116278,218.6358368749842,1.501014139265395e-92,,window 32 px (h=6);window 64 px (h=12);window 128 px (h=24);window 256 px (h=47);window 256 px (h=48),1345,1
+kwando,class_boundary,row,4,3.5265911072362686,193.10588106068332,1.8361312266792538e-81,,window 32 px (h=10);window 64 px (h=20);window 128 px (h=39);window 128 px (h=40),1345,1
+kwando,class_boundary,row,5,17.663755458515283,185.52231014546342,3.6091648428452855e-78,,window 32 px (h=2);window 64 px (h=4);window 128 px (h=8);window 256 px (h=16);window 512 px (h=32),1345,1
+kwando,class_boundary,row,6,4.065326633165829,153.39597344072638,3.233683218611663e-64,,window 64 px (h=17);window 128 px (h=34);window 128 px (h=35),1345,1
+kwando,class_boundary,row,7,17.58695652173913,143.7815484354463,4.843833420327519e-60,,window 32 px (h=2);window 64 px (h=4);window 128 px (h=8);window 256 px (h=16);window 512 px (h=32),1345,1
+kwando,class_boundary,row,8,6.6202945990180035,107.70602028223678,2.2521224924481436e-44,,window 128 px (h=21);window 256 px (h=42);window 256 px (h=43),1345,1
+kwando,change_gradient,col,1,4.37987012987013,133.41848276126532,1.5339508245802582e-55,encoder patch 4 px,2 patches 8 px (h=2);window 32 px (h=8);window 64 px (h=16);window 128 px (h=32),1345,1
+kwando,change_gradient,col,2,8.75974025974026,89.21765320136818,2.4098377906506623e-36,2 patches 8 px,window 32 px (h=4);window 64 px (h=8);window 128 px (h=16);window 256 px (h=32),1345,1
+kwando,change_gradient,col,3,4.384615384615384,80.7941846701626,1.0971189392268773e-32,encoder patch 4 px,2 patches 8 px (h=2);window 32 px (h=8);window 64 px (h=16);window 128 px (h=32),1345,1
+kwando,change_gradient,col,4,10.5390625,38.16460582717447,3.5813318872817696e-14,,window 256 px (h=27),1345,1
+kwando,change_gradient,col,5,5.255844155844156,36.29151418504869,2.330869364761563e-13,,window 128 px (h=27),1345,1
+kwando,change_gradient,col,6,5.8398268398268405,31.29589485439784,3.444195879650688e-11,,window 32 px (h=6);window 64 px (h=12);window 128 px (h=24);window 256 px (h=48);warp duplication beat (h=2),1345,1
+kwando,change_gradient,col,7,3.0940366972477062,30.47196823833798,7.85081286906293e-11,,window 64 px (h=23);window 128 px (h=45);window 128 px (h=46),1345,1
+kwando,change_gradient,col,8,17.51948051948052,28.934996621226116,3.6510091204897237e-10,,window 32 px (h=2);window 64 px (h=4);window 128 px (h=8);window 256 px (h=16);window 512 px (h=32),1345,1
+kwando,change_gradient,row,1,7.546641791044776,23.90877087977681,5.562564017618567e-08,,window 256 px (h=37),1345,1
+kwando,change_gradient,row,2,4.406318082788671,23.300854292774634,1.0216210701895554e-07,encoder patch 4 px,2 patches 8 px (h=2);window 32 px (h=8);window 64 px (h=16);window 128 px (h=32),1345,1
+kwando,change_gradient,row,3,5.879360465116278,22.91091132422739,1.5088286461523118e-07,,window 32 px (h=6);window 64 px (h=12);window 128 px (h=24);window 256 px (h=47);window 256 px (h=48),1345,1
+kwando,change_gradient,row,4,6.6202945990180035,22.01670338546953,3.6896867303513297e-07,,window 128 px (h=21);window 256 px (h=42);window 256 px (h=43),1345,1
+kwando,change_gradient,row,5,3.1139337952270973,14.14514864181466,0.000967302440498127,,window 128 px (h=45),1345,1
+kwando,change_gradient,row,6,5.870827285921624,11.035692675402924,0.021676135213386728,,window 32 px (h=6);window 64 px (h=12);window 128 px (h=24);window 256 px (h=47);window 256 px (h=48),1345,1
+kwando,change_gradient,row,7,6.598694942903751,10.592376959418667,0.03376847286064028,,window 128 px (h=21);window 256 px (h=42);window 256 px (h=43),1345,1
+kwando,change_gradient,row,8,3.304738562091503,9.693217023326156,0.08298729698349903,,window 64 px (h=21);window 128 px (h=42);window 128 px (h=43),1345,1
+kwando,worldcover_boundary,col,1,33.446280991735534,12.093873284968454,0.0075234987272708815,,window 512 px (h=17),1345,1
+kwando,worldcover_boundary,col,2,3.4738197424892707,7.90414585423608,0.4965870109552318,,window 32 px (h=10);window 64 px (h=20);window 128 px (h=40);window 128 px (h=41),1345,1
+kwando,worldcover_boundary,col,3,4.432639649507119,6.310199750235948,1.0,encoder patch 4 px,2 patches 8 px (h=2);window 32 px (h=8);window 64 px (h=16);window 128 px (h=32),1345,1
+kwando,worldcover_boundary,col,4,12.189759036144578,5.249129761288551,1.0,,window 256 px (h=23);window 512 px (h=46),1345,1
+kwando,worldcover_boundary,col,5,3.979351032448377,5.1968376610909655,1.0,,window 128 px (h=35),1345,1
+kwando,worldcover_boundary,col,6,3.317213114754098,5.195628983457902,1.0,,window 64 px (h=21);window 128 px (h=42);window 128 px (h=43),1345,1
+kwando,worldcover_boundary,col,7,3.159250585480094,5.177717158551416,1.0,,window 32 px (h=11);window 64 px (h=22);window 128 px (h=44);window 128 px (h=45),1345,1
+kwando,worldcover_boundary,col,8,5.764957264957264,4.811176726270669,1.0,,window 32 px (h=6);window 64 px (h=12);window 128 px (h=24);window 256 px (h=48);warp duplication beat (h=2),1345,1
+kwando,worldcover_boundary,row,1,3.776844070961718,6.290045292199392,1.0,,window 128 px (h=37);warp duplication beat (h=3),1345,1
+kwando,worldcover_boundary,row,2,5.037359900373598,6.209536234925928,1.0,,window 32 px (h=7);window 64 px (h=14);window 128 px (h=28),1345,1
+kwando,worldcover_boundary,row,3,3.6739327883742052,6.141258697490375,1.0,,window 64 px (h=19);window 128 px (h=38),1345,1
+kwando,worldcover_boundary,row,4,12.800632911392404,6.091864091077094,1.0,,window 128 px (h=11);window 256 px (h=22);window 512 px (h=43);window 512 px (h=44),1345,1
+kwando,worldcover_boundary,row,5,5.107323232323232,5.918622238507838,1.0,,window 32 px (h=7);window 64 px (h=14);window 128 px (h=27);window 128 px (h=28),1345,1
+kwando,worldcover_boundary,row,6,3.6310592459605027,5.832627031460644,1.0,,window 64 px (h=19);window 128 px (h=38);window 128 px (h=39),1345,1
+kwando,worldcover_boundary,row,7,7.617702448210922,5.81444212237241,1.0,,window 256 px (h=37),1345,1
+kwando,worldcover_boundary,row,8,42.135416666666664,5.772743668526087,1.0,,,1345,1
+barotse,class_boundary,col,1,4.336898395721925,327.787505887505,5.934509760000943e-140,encoder patch 4 px,2 patches 8 px (h=2);window 32 px (h=8);window 64 px (h=16);window 128 px (h=32);warp duplication beat (h=3),1348,1
+barotse,class_boundary,col,2,5.784593437945793,307.0189262540456,6.209610792381957e-131,,window 32 px (h=6);window 64 px (h=12);window 128 px (h=24);window 256 px (h=48),1348,1
+barotse,class_boundary,col,3,7.426739926739927,187.0755019482819,7.652999708360902e-79,,window 128 px (h=19);window 256 px (h=37);window 256 px (h=38),1348,1
+barotse,class_boundary,col,4,26.161290322580648,129.49873691933797,7.74645557672726e-54,,window 512 px (h=21),1348,1
+barotse,class_boundary,col,5,17.32905982905983,125.11297873936125,6.220332661028203e-52,,window 32 px (h=2);window 64 px (h=4);window 128 px (h=8);window 256 px (h=16);window 512 px (h=32),1348,1
+barotse,class_boundary,col,6,8.683083511777301,118.32764633187492,5.503589503181133e-49,2 patches 8 px,window 32 px (h=4);window 64 px (h=8);window 128 px (h=16);window 256 px (h=32),1348,1
+barotse,class_boundary,col,7,5.198717948717949,91.4553894161907,2.5770267607146112e-37,,window 128 px (h=27),1348,1
+barotse,class_boundary,col,8,3.720183486238532,91.38147380403223,2.774725790882905e-37,,window 64 px (h=19);window 128 px (h=37);window 128 px (h=38),1348,1
+barotse,class_boundary,row,1,4.364908503767492,523.246511858033,7.702241243563746e-225,encoder patch 4 px,2 patches 8 px (h=2);window 32 px (h=8);window 64 px (h=16);window 128 px (h=32),1348,1
+barotse,class_boundary,row,2,5.8177905308464855,402.74895265667107,1.6521221776462612e-172,,window 32 px (h=6);window 64 px (h=12);window 128 px (h=24);window 256 px (h=47);window 256 px (h=48),1348,1
+barotse,class_boundary,row,3,17.47844827586207,246.80270214949184,8.803152591436754e-105,,window 32 px (h=2);window 64 px (h=4);window 128 px (h=8);window 256 px (h=16);window 512 px (h=32),1348,1
+barotse,class_boundary,row,4,8.720430107526882,221.21980667310828,1.135399154190609e-93,2 patches 8 px,window 32 px (h=4);window 64 px (h=8);window 128 px (h=16);window 256 px (h=32),1348,1
+barotse,class_boundary,row,5,3.492678725236865,191.25505584918616,1.171317146453601e-80,,window 32 px (h=10);window 64 px (h=20);window 128 px (h=39);window 128 px (h=40),1348,1
+barotse,class_boundary,row,6,8.739224137931036,158.36052784709113,2.262489106985128e-66,2 patches 8 px,window 32 px (h=4);window 64 px (h=8);window 128 px (h=16);window 256 px (h=32),1348,1
+barotse,class_boundary,row,7,4.764982373678026,122.97121769493475,5.296251675072777e-51,,window 128 px (h=29),1348,1
+barotse,class_boundary,row,8,6.550888529886915,116.48609561094428,3.470734157136243e-48,,window 128 px (h=21);window 256 px (h=42);window 256 px (h=43),1348,1
+barotse,change_gradient,col,1,4.336898395721925,347.3427270441856,1.9083595723970725e-148,encoder patch 4 px,2 patches 8 px (h=2);window 32 px (h=8);window 64 px (h=16);window 128 px (h=32);warp duplication beat (h=3),1348,1
+barotse,change_gradient,col,2,4.341541755888651,137.96629546239043,1.62813002079165e-57,encoder patch 4 px,2 patches 8 px (h=2);window 32 px (h=8);window 64 px (h=16);window 128 px (h=32);warp duplication beat (h=3),1348,1
+barotse,change_gradient,col,3,3.4687767322497867,130.66573959494596,2.411460831958278e-54,,window 32 px (h=10);window 64 px (h=20);window 128 px (h=40),1348,1
+barotse,change_gradient,col,4,4.332264957264957,117.16366159429069,1.7626179243448084e-48,encoder patch 4 px,2 patches 8 px (h=2);window 32 px (h=8);window 64 px (h=16);window 128 px (h=32);warp duplication beat (h=3),1348,1
+barotse,change_gradient,col,5,3.471746575342466,81.48746287337664,5.497109930218358e-33,,window 32 px (h=10);window 64 px (h=20);window 128 px (h=40),1348,1
+barotse,change_gradient,col,6,5.784593437945793,75.70958918200027,1.7759596048481126e-30,,window 32 px (h=6);window 64 px (h=12);window 128 px (h=24);window 256 px (h=48),1348,1
+barotse,change_gradient,col,7,17.32905982905983,40.54021645398881,3.336549644261594e-15,,window 32 px (h=2);window 64 px (h=4);window 128 px (h=8);window 256 px (h=16);window 512 px (h=32),1348,1
+barotse,change_gradient,col,8,7.426739926739927,39.02981790200702,1.510968281558829e-14,,window 128 px (h=19);window 256 px (h=37);window 256 px (h=38),1348,1
+barotse,change_gradient,row,1,4.364908503767492,422.6772324057757,3.658476184255313e-181,encoder patch 4 px,2 patches 8 px (h=2);window 32 px (h=8);window 64 px (h=16);window 128 px (h=32),1348,1
+barotse,change_gradient,row,2,4.026812313803377,87.44355655086046,1.4237567765309813e-35,,window 64 px (h=17);window 128 px (h=34);window 128 px (h=35),1348,1
+barotse,change_gradient,row,3,3.0813069908814588,70.38051668154296,3.662856156689446e-28,,window 128 px (h=45),1348,1
+barotse,change_gradient,row,4,3.489672977624785,68.90445662044162,1.6027456372958061e-27,,window 32 px (h=10);window 64 px (h=20);window 128 px (h=39);window 128 px (h=40),1348,1
+barotse,change_gradient,row,5,5.8177905308464855,67.14606206897474,9.300914543515274e-27,,window 32 px (h=6);window 64 px (h=12);window 128 px (h=24);window 256 px (h=47);window 256 px (h=48),1348,1
+barotse,change_gradient,row,6,3.492678725236865,56.93368609521768,2.533402452474713e-22,,window 32 px (h=10);window 64 px (h=20);window 128 px (h=39);window 128 px (h=40),1348,1
+barotse,change_gradient,row,7,4.360215053763441,48.53764651158079,1.1221679161429355e-18,encoder patch 4 px,2 patches 8 px (h=2);window 32 px (h=8);window 64 px (h=16);window 128 px (h=32),1348,1
+barotse,change_gradient,row,8,6.550888529886915,39.45355786736217,9.890708875192397e-15,,window 128 px (h=21);window 256 px (h=42);window 256 px (h=43),1348,1
+barotse,worldcover_boundary,col,1,13.080645161290324,9.22757097609458,0.13249721076305143,,window 256 px (h=21);window 512 px (h=42);window 512 px (h=43),1348,1
+barotse,worldcover_boundary,col,2,27.96551724137931,7.687360075851935,0.6181755598870479,,window 128 px (h=5);window 256 px (h=10);window 512 px (h=20),1348,1
+barotse,worldcover_boundary,col,3,3.4075630252100844,6.762003674945738,1.0,,window 32 px (h=10);window 64 px (h=20);window 128 px (h=40);window 128 px (h=41),1348,1
+barotse,worldcover_boundary,col,4,10.929919137466307,5.920564447106487,1.0,,window 256 px (h=25),1348,1
+barotse,worldcover_boundary,col,5,3.471746575342466,5.379766919500294,1.0,,window 32 px (h=10);window 64 px (h=20);window 128 px (h=40),1348,1
+barotse,worldcover_boundary,col,6,3.3102040816326532,5.317753985554469,1.0,,window 64 px (h=21);window 128 px (h=42),1348,1
+barotse,worldcover_boundary,col,7,4.810201660735468,4.976278756116685,1.0,,window 128 px (h=29),1348,1
+barotse,worldcover_boundary,col,8,9.771084337349398,4.901732815997639,1.0,,window 64 px (h=7);window 128 px (h=14);window 256 px (h=28),1348,1
+barotse,worldcover_boundary,row,1,5.239018087855297,7.4558422162010105,0.7792176116190294,,window 64 px (h=13);window 128 px (h=26);window 128 px (h=27),1348,1
+barotse,worldcover_boundary,row,2,3.4393553859202712,6.380836821499538,1.0,,window 32 px (h=10);window 64 px (h=20);window 128 px (h=40);window 128 px (h=41),1348,1
+barotse,worldcover_boundary,row,3,30.26119402985075,6.073420171799687,1.0,,window 256 px (h=9);window 512 px (h=18),1348,1
+barotse,worldcover_boundary,row,4,12.914012738853504,6.0552006792389035,1.0,warp duplication beat,window 512 px (h=43),1348,1
+barotse,worldcover_boundary,row,5,3.9407191448007772,5.990674923917013,1.0,,window 128 px (h=35),1348,1
+barotse,worldcover_boundary,row,6,11.787790697674419,5.981058657943397,1.0,,window 32 px (h=3);window 64 px (h=6);window 128 px (h=12);window 256 px (h=24);window 512 px (h=47);window 512 px (h=48),1348,1
+barotse,worldcover_boundary,row,7,3.6531531531531534,5.898459485493742,1.0,,window 64 px (h=19);window 128 px (h=38),1348,1
+barotse,worldcover_boundary,row,8,3.1192307692307693,5.711060470457341,1.0,,window 32 px (h=11);window 64 px (h=22);window 128 px (h=44);window 128 px (h=45),1348,1

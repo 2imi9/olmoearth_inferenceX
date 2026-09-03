@@ -175,3 +175,10 @@ One section per signal, every claim citing its experiment. Index at
 - The model is overconfident (ECE 0.080; 0.93 accuracy at 0.99 mean
   confidence in the top bin), so a stated accuracy needs a coverage:
   0.945 at 80% coverage, 0.919 at 90%.
+
+- Periodic artifacts (exp22): the served v1.2 product's class boundaries and
+  change-probability gradients are quantized to the encoder's 4-px patch
+  lattice (19 of 20 profiles' top peaks, p <= 6e-08; absent in the
+  WorldCover control). No inference-window seams at 64 to 512 px were
+  detected; seams affecting 5 to 10% of rows at 128 px (10 to 20% at 256 px)
+  would have been.
