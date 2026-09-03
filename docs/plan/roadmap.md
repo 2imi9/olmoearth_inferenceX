@@ -94,10 +94,13 @@ Update after exp18: the water-task audit signals do not beat confidence on
 Sen1Floods11 hand labels; the WorldCover-referenced advantages were read as
 detection of reference error. Update after exp23: that reading is not
 supported by WorldCover's own version instability (about 10% of
-disagreements; the advantage is unchanged on stable patches). Priorities:
-(1) test the temporal mismatch by re-running the scenes with imagery from
-WorldCover's own year (2021), and score flagged patches against an
-independent water reference or hand checks; (2) test whether any signal helps confidence at fixed review budget
+disagreements; the advantage is unchanged on stable patches). Update after
+exp24: the year gap does not explain it either (2021 imagery, 2021 map,
+within-year head: tiling instability still wins). Priorities: (1) test the
+single-date-versus-annual-map mismatch by splitting patches on JRC Global
+Surface Water seasonality (seasonal against permanent water), and score
+flagged patches against an independent date-matched reference or hand
+checks; (2) test whether any signal helps confidence at fixed review budget
 on expert labels (operating-point analysis) rather than AURC; (3) evaluate
 on the production model rather than probes; (4) other dense expert sets in
 Ai2's evaluation suite (MADOS, PASTIS, GeoBench cashew/SA-crop) for

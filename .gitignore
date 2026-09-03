@@ -13,3 +13,5 @@ exp/out/exp20_windows.npz
 exp/out/exp21_stacks.npz
 exp/out/exp22_windows.npz
 exp/out/exp23_geo.npz
+exp/out/exp24_scenes.npz
+exp/out/exp24_feats.npz

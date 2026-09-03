@@ -80,7 +80,9 @@ Per-scene values for all 27 rule-selected scenes: [docs/results/comparisons.md](
   measurable part of reference error, patches where WorldCover's own 2020
   and 2021 versions disagree, covers about 10% of the disagreements and
   does not explain the advantage: on reference-stable patches tiling
-  instability still beats confidence on 21 of 23 scenes (exp23).
+  instability still beats confidence on 21 of 23 scenes (exp23). Nor does
+  the year gap: with 2021 imagery, 2021 labels and a head trained within
+  2021 it still wins on 20 of 23 (exp24).
 - **Errors do concentrate at prediction boundaries** (about 75% of error
   patches vs 20% of correct ones, on both references), but confidence
   ranks them better than boundary proximity or instability do.
@@ -137,7 +139,7 @@ uv sync --extra geo
 uv run python exp/exp02_full_slice.py
 ```
 
-Experiments are exp01-exp23 in `exp/`; exp20 needs no checkpoint (it reads the served rasters over HTTP); exp21 downloads the fine-tuned checkpoint from HuggingFace. Checkpoints come from
+Experiments are exp01-exp24 in `exp/`; exp20 needs no checkpoint (it reads the served rasters over HTTP); exp21 downloads the fine-tuned checkpoint from HuggingFace. Checkpoints come from
 [HuggingFace allenai](https://huggingface.co/allenai). exp04 needs the
 [AWF dataset](https://huggingface.co/datasets/allenai/olmoearth_projects_awf)
 under `data/awf/dataset/`. `uv sync` installs CPU torch; for the GPU

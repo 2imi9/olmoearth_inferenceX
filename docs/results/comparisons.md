@@ -357,6 +357,34 @@ terms in [protocol.md](../method/protocol.md).
   correct ones. Values in exp/out/exp21_finetuned_awf.csv and
   exp21_summary.json; figure exp/out/exp21_finetuned_awf.png.
 
+### The year gap: does it explain the WorldCover wins? (exp24)
+- The remaining candidate after exp23 was temporal mismatch: WorldCover
+  2021 scored against June-September 2024 imagery. The same rule scenes
+  were re-fetched with imagery from May-September 2021 (least cloudy item
+  under 5% cloud per scene), WorldCover 2021 warped to each 2021 window's
+  own grid, features computed exactly as in exp11 (v1-Base at shifts 0-3,
+  v1-Nano), and the head retrained within the year on Katima 2021 (seed 0;
+  both the 2021 and the 2024 head fit their training scene perfectly).
+  23 scenes have at least 8 disagreements in both years; 2021 has more
+  disagreements than 2024 on 17 of 24 scenes (total 2152 against 1714),
+  consistent with single dates in the 2021 wet-to-dry transition against an
+  annual map.
+- Within the year, the advantage persists: tiling instability beats
+  confidence on 20/3/0 scenes (sign p 5e-04; median E-AURC gain +0.0186)
+  against 22/1/0 with 2024 imagery on the same scenes (gain +0.0069); the
+  boundary indicator 19/4/0 against 17/6/0; cross-model disagreement 9/14/0 against 10/13/0;
+  embedding distance 12/11/0 against 11/12/0; the control 12/11/0 against 12/11/0. The
+  per-scene tiling-instability gain is not larger in 2024 (9/14/0, p 0.405).
+- Conclusion: the year gap does not explain the WorldCover-referenced wins
+  either. Two explanations remain untested: the mismatch between a
+  single-date image and an annual composite map (seasonal water margins,
+  which are boundary-structured and which an annual map cannot represent),
+  and a genuine difference between the WorldCover-defined task and
+  date-matched expert labels. Values in exp/out/exp24_year2021.csv; figure
+  exp/out/exp24_year2021.png. Caveat: 2021 Level-2A products predate the
+  2022 radiometric offset change; the 2021 head is trained and scored
+  within that radiometry.
+
 ### Reference instability: does it explain the WorldCover wins? (exp23)
 - Test of the exp18 reading with a measurable component of reference
   error: patches where ESA WorldCover 2020 (v100) and 2021 (v200) disagree
@@ -379,8 +407,8 @@ terms in [protocol.md](../method/protocol.md).
 - Conclusion: the reading that the WorldCover-referenced wins were
   detection of reference error is not supported by this component. It
   cannot rule out reference errors shared by both versions or genuine
-  change between 2021 and the 2024 imagery; a test with imagery from
-  WorldCover's own year is the next step. Values in
+  change between 2021 and the 2024 imagery; the year gap was tested next
+  (exp24) and does not explain the wins either. Values in
   exp/out/exp23_reference_instability.csv; figure
   exp/out/exp23_reference_instability.png.
 

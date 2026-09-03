@@ -23,7 +23,8 @@ the experiment behind it. Index at [../TECHNIQUES.md](../TECHNIQUES.md).
    were equal or worse on hand-labelled masks (exp13 vs exp18). Why the
    reference-defined wins do not transfer is open: the measurable part of
    reference error (WorldCover's own version instability) covers about
-   10% of the disagreements and does not explain them (exp23).
+   10% of the disagreements and does not explain them (exp23), and the
+   imagery-to-map year gap does not either (exp24).
 4. **If a reference product is all you have, run a no-model control.** A
    pixel statistic (for water, the NDWI gradient) scored on the same errors
    exposes reference-omission scenes, where it outranks every model signal
