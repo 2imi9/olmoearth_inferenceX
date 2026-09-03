@@ -26,10 +26,10 @@ Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 | exp19 | v1 vs v1.2 (RoPE): instability larger under v1.2; single band-set token in v1.2; cross-version disagreement not useful |
 | exp20 | first served production output (olmoearth_lcc): no class confidence exported; boundary captures 0.88 of water disagreements at a 5% budget; change ambiguity sits on flagged-region edges |
 | exp21 | fine-tuned AWF model end to end from Ai2's checkpoint: accuracy 0.881 (Ai2 0.895); confidence best, tiling instability ties it; overconfident (ECE 0.080); 0.945 at 80% coverage |
+| exp22 | served v1.2 product: outputs quantized to the 4-px patch lattice (19/20 profiles, p <= 6e-08); no inference-window seams at 64-512 px (limit 5-10% of rows at 128 px); WorldCover control clean |
 | exp23 | WorldCover 2020 vs 2021 instability: errors 14x enriched at unstable patches but those are ~10% of errors; tile-phase advantage unchanged on stable patches (21/23); exp18 reading withdrawn |
 | exp24 | 2021 imagery + 2021 map + within-year head: tile-phase still beats confidence 23/3/0 (2024 same scenes 25/1/0); year gap does not explain the WorldCover wins |
 | exp25 | JRC seasonal-water split: disagreements enriched on seasonal margins, but tile-phase still beats confidence without them (22/2/0 in 2024, 22/1/0 in 2021); third mismatch component ruled out |
-| exp22 | served v1.2 product: outputs quantized to the 4-px patch lattice (19/20 profiles, p <= 6e-08); no inference-window seams at 64-512 px (limit 5-10% of rows at 128 px); WorldCover control clean |
 
 ## exp01 — first E_case map (2026-08-31)
 
