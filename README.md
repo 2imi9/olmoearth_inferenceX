@@ -139,7 +139,7 @@ uv sync --extra geo
 uv run python exp/exp02_full_slice.py
 ```
 
-Experiments are exp01-exp25 in `exp/`; exp20 needs no checkpoint (it reads the served rasters over HTTP); exp21 downloads the fine-tuned checkpoint from HuggingFace. Checkpoints come from
+Experiments are exp01-exp26 in `exp/`; exp20 needs no checkpoint (it reads the served rasters over HTTP); exp21 downloads the fine-tuned checkpoint from HuggingFace. Checkpoints come from
 [HuggingFace allenai](https://huggingface.co/allenai). exp04 needs the
 [AWF dataset](https://huggingface.co/datasets/allenai/olmoearth_projects_awf)
 under `data/awf/dataset/`. `uv sync` installs CPU torch; for the GPU

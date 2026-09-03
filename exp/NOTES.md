@@ -29,6 +29,7 @@ Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 | exp22 | served v1.2 product: outputs quantized to the 4-px patch lattice (19/20 profiles, p <= 6e-08); no inference-window seams at 64-512 px (limit 5-10% of rows at 128 px); WorldCover control clean |
 | exp23 | WorldCover 2020 vs 2021 instability: errors 14x enriched at unstable patches but those are ~10% of errors; tile-phase advantage unchanged on stable patches (21/23); exp18 reading withdrawn |
 | exp24 | 2021 imagery + 2021 map + within-year head: tile-phase still beats confidence 23/3/0 (2024 same scenes 25/1/0); year gap does not explain the WorldCover wins |
+| exp26 | hand-check kit: top-12 disagreements by tiling instability and by confidence on the three scenes with the largest exp13 gain (shire_80, barotse, okavango_80); crops, cues and blank verdict columns; no claim |
 | exp25 | JRC seasonal-water split: disagreements enriched on seasonal margins, but tile-phase still beats confidence without them (22/2/0 in 2024, 22/1/0 in 2021); third mismatch component ruled out |
 
 ## exp01 — first E_case map (2026-08-31)
@@ -373,3 +374,16 @@ coordinates are now cached in exp/out/rule_candidates.json (a mirror
 failure had silently dropped the Zambezi scenes from one run); the JRC
 asset hangs the interpreter at exit, so the script ends with os._exit.
 Cache exp25_jrc.npz (ignored).
+
+## exp26 - hand-check kit (2026-09-02)
+
+Preparation, not evidence. Scenes by rule (largest exp13 tiling-instability
+gain): shire_80 (188 disagreements), barotse (97), okavango_80 (76). For
+each, the top-12 disagreements by tiling instability and by confidence
+(overlap 2, 0 and 4) as 48-px true-colour, NDWI, WorldCover-2021 and
+head-probability crops (exp/out/exp26_handcheck_<scene>_<ranker>.png) and
+a CSV with model probability, reference label, NDWI cues, JRC seasonality
+and occurrence, both ranks, and empty verdict/note columns (vocabulary:
+model error / reference error / seasonal or date difference / ambiguous).
+The reviewer's verdicts, once entered, are the input to the next analysis;
+the NDWI cue is a crude aid and must not be treated as truth.

@@ -1,0 +1,24 @@
+{
+ "scene_rule": "top 3 by tiling-instability excess-AURC gain over confidence in exp13",
+ "scenes": {
+  "shire_80": {
+   "tile_gain_exp13": 0.11359625412946359,
+   "n_disagreements": 188,
+   "overlap_of_top_sets": 2,
+   "csv": "exp26_handcheck_shire_80.csv"
+  },
+  "barotse": {
+   "tile_gain_exp13": 0.05567842688370907,
+   "n_disagreements": 97,
+   "overlap_of_top_sets": 0,
+   "csv": "exp26_handcheck_barotse.csv"
+  },
+  "okavango_80": {
+   "tile_gain_exp13": 0.05101043567890072,
+   "n_disagreements": 76,
+   "overlap_of_top_sets": 4,
+   "csv": "exp26_handcheck_okavango_80.csv"
+  }
+ },
+ "k_per_ranker": 12
+}
