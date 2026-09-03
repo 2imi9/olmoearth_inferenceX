@@ -135,9 +135,10 @@ properties. Index at [TECHNIQUES.md](../TECHNIQUES.md).
   WarpedVRT (oe_inferencex/data.py); water agreement peaks at zero shift
   (IoU 0.905 at Kazungula), so the two grids are aligned.
 - The olmoearth_lcc dataset also carries annotated change points
-  (pre_category, post_category and fine-grained change categories); they
-  are an expert reference for the change product itself and are not yet
-  used here.
+  (pre_category, post_category and fine-grained change categories). They
+  are the LCC model's training labels (dataset card), collected largely by
+  output-based labelling of the model's own predictions, so they are not a
+  held-out reference for the served product and are not used here.
 
 ## Fine-tuned checkpoints (exp21)
 

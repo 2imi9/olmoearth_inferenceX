@@ -25,11 +25,15 @@ as experiments close items; the chronology of what closed what is in
    and WorldCover truth the flags mostly mark reference-map disagreement
    (exp15). E_geo sensitivity on a scene with a confirmed consensus break
    remains unmeasured.
-5. Assess the served change product against its own annotated change
-   points (the olmoearth_lcc dataset carries pre/post categories and
-   fine-grained change labels): band 1 as the confidence, expert labels on
-   the production model's own output. exp20 assessed the product only
-   against WorldCover and label-free.
+5. An expert reference for the served change product. The olmoearth_lcc
+   dataset's annotated points are the model's training labels (dataset
+   card: "used to train the OlmoEarth LCC model"), so they cannot serve as
+   a held-out reference; scoring the product on them would be in-sample.
+   Options: independent change references over the served tiles (for
+   example published deforestation or flood maps with dates inside the
+   product's window), or a small hand-labelled set drawn without reference
+   to the model's output. exp20 assessed the product only against
+   WorldCover and label-free.
 6. E_dist formalization: AOA/Dissimilarity Index (Meyer & Pebesma 2021) in
    place of raw k-NN distance to the head's training scene; delineate the
    overlap with SHRUG-FM (CVPR 2026 EarthVision) before claiming novelty.

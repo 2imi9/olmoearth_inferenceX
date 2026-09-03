@@ -276,8 +276,9 @@ interior. Two mistakes fixed on the way: the first run used band 6 as a
 class confidence (it is not), and the assessor's oracle had the wrong sign
 (fixed in assess.py; verified oracle 0.05, anti-oracle 0.66 on synthetic
 data). Cache exp/out/exp20_windows.npz (ignored). Product gap to report:
-export a class-head confidence alongside bands 4-5. Next testbed: the
-dataset's annotated change points against band 1.
+export a class-head confidence alongside bands 4-5. The dataset's
+annotated change points were first proposed as the next testbed and then
+withdrawn: the card states they trained the model, so they are in-sample.
 
 ## exp21 - fine-tuned AWF model end to end (2026-09-02)
 
