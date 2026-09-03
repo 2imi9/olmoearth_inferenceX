@@ -49,6 +49,14 @@ as experiments close items; the chronology of what closed what is in
 9. Ask for a class-head confidence in the LCC export (top-1 minus top-2
    logit alongside bands 4-5); without it the recipe's primary signal
    cannot run on the product (exp20).
+10. Generality of exp21 across fine-tuned checkpoints. Of the five public
+    fine-tuned models, only AWF and Mangrove have public labelled datasets.
+    Mangrove was examined and declined for the ranking questions: its model
+    classifies 2 x 2-pixel windows with no spatial context (boundary and
+    tiling signals are undefined there) and its split is a hash split of
+    grid cells, not a spatial hold-out. LFMC, ForestLossDriver and
+    EcosystemTypeMapping have no public labels. A second fine-tuned dense
+    task with expert labels and a spatial split is still needed.
 
 Closed by later experiments: confidence intervals and significance tests
 (exp13: block bootstrap, exact sign tests, permutation tests); the boundary
