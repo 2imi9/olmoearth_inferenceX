@@ -27,7 +27,8 @@ Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 | exp20 | first served production output (olmoearth_lcc): no class confidence exported; boundary captures 0.88 of water disagreements at a 5% budget; change ambiguity sits on flagged-region edges |
 | exp21 | fine-tuned AWF model end to end from Ai2's checkpoint: accuracy 0.881 (Ai2 0.895); confidence best, tiling instability ties it; overconfident (ECE 0.080); 0.945 at 80% coverage |
 | exp23 | WorldCover 2020 vs 2021 instability: errors 14x enriched at unstable patches but those are ~10% of errors; tile-phase advantage unchanged on stable patches (21/23); exp18 reading withdrawn |
-| exp24 | 2021 imagery + 2021 map + within-year head: tile-phase still beats confidence 20/3/0 (2024 same scenes 22/1/0); year gap does not explain the WorldCover wins |
+| exp24 | 2021 imagery + 2021 map + within-year head: tile-phase still beats confidence 23/3/0 (2024 same scenes 25/1/0); year gap does not explain the WorldCover wins |
+| exp25 | JRC seasonal-water split: disagreements enriched on seasonal margins, but tile-phase still beats confidence without them (22/2/0 in 2024, 22/1/0 in 2021); third mismatch component ruled out |
 | exp22 | served v1.2 product: outputs quantized to the 4-px patch lattice (19/20 profiles, p <= 6e-08); no inference-window seams at 64-512 px (limit 5-10% of rows at 128 px); WorldCover control clean |
 
 ## exp01 — first E_case map (2026-08-31)
@@ -340,19 +341,35 @@ reference errors, 2021-to-2024 change, task properties. Next: rerun the
 scenes with imagery from WorldCover's own year to test the temporal
 mismatch. Cache exp/out/exp23_geo.npz (ignored).
 
+
 ## exp24 - the year gap (2026-09-02)
 
 Same rule scenes with May-Sep 2021 S2 L2A (least cloudy, <5%), WorldCover
 2021 on each 2021 grid, exp11 features (GPU, HF offline), head retrained on
-Katima 2021 (seed 0; training fit 1.0 for both years' heads). 23 scenes
-scored in both years; 2021 has more disagreements (2152 vs 1714; more on
-17/24 scenes; imagery May-Aug 2021 against an annual map). Tile-phase vs
-confidence 20/3/0 (p 5e-04, median gain +0.0186) against 22/1/0
-(gain +0.0069) in 2024; boundary 19/4/0 vs 17/6/0; E_case 9/14/0 vs
-10/13/0; E_dist 12/11/0 vs 11/12/0; control 12/11/0 vs 12/11/0; paired tile
-gain not larger in 2024 (9/14/0, p 0.405). The year gap does not
+Katima 2021 (seed 0; training fit 1.0 for both years' heads). 26 scenes
+scored in both years; 2021 has more disagreements (2337 vs 1845; more on
+20/27 scenes; imagery May-Aug 2021 against an annual map). Tile-phase vs
+confidence 23/3/0 (p 9e-05, median gain +0.0172) against 25/1/0
+(gain +0.0047) in 2024; boundary 20/6/0 vs 18/8/0; E_case 11/15/0 vs
+10/16/0; E_dist 12/14/0 vs 12/14/0; control 12/14/0 vs 13/13/0; paired tile
+gain not larger in 2024 (10/16/0, p 0.327). The year gap does not
 explain the WorldCover wins. Remaining candidates: single-date image vs
 annual composite (seasonal water margins), or a real task difference.
 Next (exp25): split patches by JRC Global Surface Water seasonality and
 test whether the advantage lives on seasonal-water patches. Caches
 exp24_scenes.npz, exp24_feats.npz (ignored).
+
+## exp25 - seasonal water (2026-09-02)
+
+JRC GSW v1.3 seasonality (2020, 30 m) and occurrence on each scene grid
+(2024 grids from exp23_geo; 2021 grids re-derived with the exp15 lookup and
+B02 check); patch seasonal = any pixel 1-11 months. Median seasonal share
+9%. T1: seasonal share among disagreements 39% vs 8% among
+agreements (2024, 21/3/3, p 3e-04); 2021 41% vs 9%. T2 without
+seasonal patches: tile-phase vs confidence 22/2/0 (2024, p 4e-05; all patches
+23/1/0), 22/1/0 (2021, p 6e-06; all 20/3/0); boundary 19/5/0/20/3/0. T3 seasonal
+only: 12/6/0 / 13/8/0. Not supported. Tooling: the scene rule's Overpass
+coordinates are now cached in exp/out/rule_candidates.json (a mirror
+failure had silently dropped the Zambezi scenes from one run); the JRC
+asset hangs the interpreter at exit, so the script ends with os._exit.
+Cache exp25_jrc.npz (ignored).

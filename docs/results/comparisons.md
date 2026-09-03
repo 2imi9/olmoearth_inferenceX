@@ -357,6 +357,35 @@ terms in [protocol.md](../method/protocol.md).
   correct ones. Values in exp/out/exp21_finetuned_awf.csv and
   exp21_summary.json; figure exp/out/exp21_finetuned_awf.png.
 
+### Seasonal water: do the wins live on margins an annual map cannot represent? (exp25)
+- Candidate after exp23 and exp24: a single-date image against an annual
+  composite map disagrees on seasonal water margins, which are
+  boundary-structured. JRC Global Surface Water (v1.3, 30 m; seasonality =
+  months with water in 2020) was warped onto every scene grid; a 4-px patch
+  is seasonal if any pixel holds water 1 to 11 months. Median seasonal
+  share per scene 9% (2024 grids). Tests on the 2024 scenes (27) and
+  the 2021 scenes of exp24 (26).
+- T1 enrichment: seasonal patches are a median 39% of disagreements
+  against 8% of agreements in 2024 (21/3/3 scenes, sign p 3e-04);
+  41% against 9% in 2021 (22/3/1, p 2e-04). Seasonal margins
+  carry a disproportionate share of the disagreements, as the hypothesis
+  requires.
+- T2 exclusion: with seasonal patches removed from scoring, tiling
+  instability still beats confidence on 22/2/0 scenes in 2024 (sign p 4e-05;
+  all patches on the same scenes 23/1/0) and 22/1/0 in 2021 (p 6e-06; all
+  patches 20/3/0); the boundary indicator 19/5/0 against 18/6/0 (2024) and 20/3/0
+  against 18/5/0 (2021). T3 on seasonal patches only (fewer scenes qualify):
+  tiling instability 12/6/0 (2024) and 13/8/0 (2021).
+- Conclusion: the advantage does not live on seasonal water margins. Three
+  measurable components of reference-versus-image mismatch have now been
+  removed one at a time (version instability, exp23; the year gap, exp24;
+  seasonal water, exp25) and the WorldCover-referenced advantage of
+  tiling instability over confidence survives each. What remains is
+  either reference error shared by both versions and unrelated to
+  seasonality, or a genuine property of the WorldCover-defined task that
+  date-matched hand labels do not share. Values in
+  exp/out/exp25_seasonal_water.csv; figure exp/out/exp25_seasonal_water.png.
+
 ### The year gap: does it explain the WorldCover wins? (exp24)
 - The remaining candidate after exp23 was temporal mismatch: WorldCover
   2021 scored against June-September 2024 imagery. The same rule scenes
@@ -365,16 +394,16 @@ terms in [protocol.md](../method/protocol.md).
   own grid, features computed exactly as in exp11 (v1-Base at shifts 0-3,
   v1-Nano), and the head retrained within the year on Katima 2021 (seed 0;
   both the 2021 and the 2024 head fit their training scene perfectly).
-  23 scenes have at least 8 disagreements in both years; 2021 has more
-  disagreements than 2024 on 17 of 24 scenes (total 2152 against 1714),
+  26 scenes have at least 8 disagreements in both years; 2021 has more
+  disagreements than 2024 on 20 of 27 scenes (total 2337 against 1845),
   consistent with single dates in the 2021 wet-to-dry transition against an
   annual map.
 - Within the year, the advantage persists: tiling instability beats
-  confidence on 20/3/0 scenes (sign p 5e-04; median E-AURC gain +0.0186)
-  against 22/1/0 with 2024 imagery on the same scenes (gain +0.0069); the
-  boundary indicator 19/4/0 against 17/6/0; cross-model disagreement 9/14/0 against 10/13/0;
-  embedding distance 12/11/0 against 11/12/0; the control 12/11/0 against 12/11/0. The
-  per-scene tiling-instability gain is not larger in 2024 (9/14/0, p 0.405).
+  confidence on 23/3/0 scenes (sign p 9e-05; median E-AURC gain +0.0172)
+  against 25/1/0 with 2024 imagery on the same scenes (gain +0.0047); the
+  boundary indicator 20/6/0 against 18/8/0; cross-model disagreement 11/15/0 against 10/16/0;
+  embedding distance 12/14/0 against 12/14/0; the control 12/14/0 against 13/13/0. The
+  per-scene tiling-instability gain is not larger in 2024 (10/16/0, p 0.327).
 - Conclusion: the year gap does not explain the WorldCover-referenced wins
   either. Two explanations remain untested: the mismatch between a
   single-date image and an annual composite map (seasonal water margins,

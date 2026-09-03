@@ -96,11 +96,12 @@ detection of reference error. Update after exp23: that reading is not
 supported by WorldCover's own version instability (about 10% of
 disagreements; the advantage is unchanged on stable patches). Update after
 exp24: the year gap does not explain it either (2021 imagery, 2021 map,
-within-year head: tiling instability still wins). Priorities: (1) test the
-single-date-versus-annual-map mismatch by splitting patches on JRC Global
-Surface Water seasonality (seasonal against permanent water), and score
-flagged patches against an independent date-matched reference or hand
-checks; (2) test whether any signal helps confidence at fixed review budget
+within-year head: tiling instability still wins). Update after exp25:
+seasonal water does not explain it either (without seasonal patches
+tiling instability still wins 22/2/0 and 22/1/0). Priorities: (1) hand-check a
+sample of the disagreements that tiling instability ranks first on two or
+three scenes against the imagery itself, to learn whether they are model
+errors, shared reference errors or something else; (2) test whether any signal helps confidence at fixed review budget
 on expert labels (operating-point analysis) rather than AURC; (3) evaluate
 on the production model rather than probes; (4) other dense expert sets in
 Ai2's evaluation suite (MADOS, PASTIS, GeoBench cashew/SA-crop) for

@@ -195,8 +195,14 @@ instability's advantage is unchanged on reference-stable patches
 as an open question; the fact it tried to explain (no transfer to hand
 labels) stands.
 
+
 - exp24 extends the erratum: with 2021 imagery, 2021 labels and a head
   trained within 2021, tiling instability still beats confidence on
-  20/3/0 scenes and the boundary indicator on 19/4/0. Neither reference-version
+  23/3/0 scenes and the boundary indicator on 20/6/0. Neither reference-version
   instability nor the year gap explains the WorldCover-referenced wins;
   the single-date-versus-annual-map mismatch is the next candidate.
+
+- exp25 completes the series: removing seasonal-water patches (JRC Global
+  Surface Water) leaves tiling instability's advantage intact (22/2/0 in
+  2024, 22/1/0 in 2021). Version instability, the year gap and seasonal
+  water have each been ruled out as the explanation.

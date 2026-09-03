@@ -8,7 +8,7 @@ across conditions) / **partial** (some evidence; a key condition untested) /
 **rejected** (tested, contradicted) / **untested** / **blocked** /
 **out of scope (v1)**.
 
-Evidence tiers: single-scene results (exp01-exp08) establish direction only; exp09 is a seven-scene comparison with hand-chosen scenes; exp11 fixed the scene set under a pre-registered selection rule (27 scenes after excluding two cache leftovers, see results/comparisons.md); exp13 is the authoritative statistics on that set (aligned tile-phase, tie-aware excess AURC, block bootstrap, sign and permutation tests; exp/out/exp13_corrected_stats.csv), and exp14 supplies the mechanism behind the tile-phase result. Where earlier experiments disagree with exp13/exp14, the later stands.
+Evidence tiers: single-scene results (exp01-exp08) establish direction only; exp09 is a seven-scene comparison with hand-chosen scenes; exp11 fixed the scene set under a pre-registered selection rule (27 scenes after excluding two cache leftovers, see results/comparisons.md); exp13 is the authoritative statistics on that set (aligned tile-phase, tie-aware excess AURC, block bootstrap, sign and permutation tests; exp/out/exp13_corrected_stats.csv), and exp14 supplies the mechanism behind the tile-phase result. Where earlier experiments disagree with exp13/exp14, the later stands. The rule's scene coordinates are fixed in exp/out/rule_candidates.json since exp25: the rule is evaluated against OSM through Overpass, and a mirror failure had silently dropped rivers from one run's scene set, so later experiments read the cached coordinates rather than re-querying.
 
 ## Related work and positioning
 

@@ -83,19 +83,39 @@ def overpass(query):
     raise RuntimeError("all overpass mirrors failed")
 
 
+CANDIDATE_CACHE = "exp/out/rule_candidates.json"
+
+
 def candidate_centers():
+    """Rule-selected scene centres. Cached in exp/out/rule_candidates.json the
+    first time every river's OSM geometry is retrieved, so later experiments
+    use the same scene set regardless of Overpass mirror availability."""
+    if os.path.exists(CANDIDATE_CACHE):
+        return [tuple(c) for c in json.load(open(CANDIDATE_CACHE))]
+    for attempt in range(3):
+        kept, complete = _candidate_centers_once()
+        if complete:
+            json.dump(kept, open(CANDIDATE_CACHE, "w"))
+            return kept
+        print(f"candidate rule incomplete (attempt {attempt + 1}); retrying")
+    return kept
+
+
+def _candidate_centers_once():
     s, w, n, e = BBOX
-    cands = []
+    cands, complete = [], True
     for river in RIVERS:
         try:
             ways = overpass(
                 f'[out:json][timeout:90];way["waterway"="river"]["name"~"{river}"]({s},{w},{n},{e});out geom;')
         except RuntimeError:
             print(f"{river}: overpass failed entirely, skipped")
+            complete = False
             continue
         coords = [(nd["lon"], nd["lat"]) for way in ways for nd in way.get("geometry", [])]
         print(f"{river}: {len(ways)} ways, {len(coords)} nodes")
         if len(coords) < 10:
+            complete = False
             continue
         for frac in FRACS:
             lon, lat = coords[round(frac * (len(coords) - 1))]
@@ -108,7 +128,7 @@ def candidate_centers():
             used.append((lon, lat))
         else:
             print(f"{name}: within {MIN_SEP} deg of an existing AOI, dropped")
-    return kept
+    return kept, complete
 
 
 def embed_gpu(model, img, date):
