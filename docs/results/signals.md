@@ -182,3 +182,15 @@ One section per signal, every claim citing its experiment. Index at
   WorldCover control). No inference-window seams at 64 to 512 px were
   detected; seams affecting 5 to 10% of rows at 128 px (10 to 20% at 256 px)
   would have been.
+
+## Erratum on the exp18 reading (exp23)
+
+The claim that the WorldCover-referenced advantages of tiling instability
+and band-set disagreement were "detection of reference error" was tested
+with the disagreement between WorldCover's own 2020 and 2021 versions. That
+component covers about 10% of the disagreements, the signals'
+flagged errors are not more often unstable than confidence's, and tiling
+instability's advantage is unchanged on reference-stable patches
+(21/23). The reading is withdrawn as an explanation and recorded
+as an open question; the fact it tried to explain (no transfer to hand
+labels) stands.

@@ -108,14 +108,18 @@ terms in [protocol.md](../method/protocol.md).
   than boundary proximity or instability do.
 - Reading: the WorldCover-referenced advantages of tile-phase (26/27) and
   band-set disagreement (21/27) do not transfer to expert truth. The
-  parsimonious explanation is that under WorldCover a large share of the
-  counted "errors" were reference errors (a 2021 product's boundaries and
-  omissions against 2024 imagery), which are themselves boundary-structured
-  and therefore detectable by boundary-type signals; the model's own
-  errors on hand-labelled data are ranked best by its own confidence.
-  Until a signal beats confidence on expert-labelled dense maps, the
-  repository's positive claims are claims about detecting disagreement
-  with a weak reference, not about detecting model error.
+  explanation first proposed here, that a large share of the counted
+  "errors" were reference errors detectable by boundary-type signals, was
+  tested in exp23 with the measurable component of reference error
+  (disagreement between WorldCover's own 2020 and 2021 versions) and is not
+  supported: that component covers about 10% of the disagreements and the
+  advantage persists on reference-stable patches. Remaining candidates are
+  reference errors shared by both versions (narrow and seasonal water),
+  genuine change between 2021 and the 2024 imagery, and properties of the
+  WorldCover-defined task. Until a signal beats confidence on
+  expert-labelled dense maps, the repository's positive claims are claims
+  about detecting disagreement with a weak reference, not about detecting
+  model error.
 - Caveats: Level-1C inputs through an L2A path; flood water rather than
   permanent water; one crop per tile; the head is trained on tiles from
   the same eleven regions as the test split (Bolivia is the clean spatial
@@ -353,6 +357,33 @@ terms in [protocol.md](../method/protocol.md).
   correct ones. Values in exp/out/exp21_finetuned_awf.csv and
   exp21_summary.json; figure exp/out/exp21_finetuned_awf.png.
 
+### Reference instability: does it explain the WorldCover wins? (exp23)
+- Test of the exp18 reading with a measurable component of reference
+  error: patches where ESA WorldCover 2020 (v100) and 2021 (v200) disagree
+  about water, on 24 of the 27 rule scenes (three Kafue scenes dropped
+  because the re-read image no longer matches the cache). Signals recomputed
+  as in exp13 from cached features; three pre-specified tests.
+- T1 enrichment: version-unstable patches are a median 10.8% of the
+  head's disagreements against 0.8% of its agreements (17/3/4 scenes,
+  sign p 0.003); pooled, 10% of disagreements sit on unstable patches.
+  Reference instability is real but small.
+- T2 mechanism: among disagreements, the top-k set ranked by tiling
+  instability is no more often reference-unstable than the top-k set
+  ranked by confidence (median difference +0.00; 8/8/8; p 1.000).
+- T3 decisive: with unstable patches removed from scoring (23 scenes with
+  at least 8 remaining disagreements), tiling instability still beats
+  confidence on 21 of 23 scenes (sign p 7e-05; median E-AURC gain
+  +0.0026) against 22 of 23 on all patches of the same scenes
+  (gain +0.0031); the boundary indicator 18/23 against 15/23. The
+  advantage is unchanged.
+- Conclusion: the reading that the WorldCover-referenced wins were
+  detection of reference error is not supported by this component. It
+  cannot rule out reference errors shared by both versions or genuine
+  change between 2021 and the 2024 imagery; a test with imagery from
+  WorldCover's own year is the next step. Values in
+  exp/out/exp23_reference_instability.csv; figure
+  exp/out/exp23_reference_instability.png.
+
 ### Periodic artifacts in the served product (exp22; label-free)
 - Question: does the served v1.2 product carry striping or seams at the
   scales its pipeline imposes? 5 windows of 4096 served px (about 37 km)
@@ -448,7 +479,8 @@ terms in [protocol.md](../method/protocol.md).
 - Head accuracy vs WorldCover on the Katima probe: v1 0.942, v1.2 0.922.
 - Against WorldCover, tile-phase ranks each version's own errors better
   than its confidence for both (v1 26/1, v1.2 25/2), but exp18 shows this
-  WorldCover-referenced comparison reflects reference error; no expert-label
+  WorldCover-referenced advantage does not transfer to hand labels (its
+  cause is open, exp23); no expert-label
   test of v1.2 has been run. Cross-version disagreement |p_v1.2 - p_v1| is
   worse than confidence for v1's errors (6/21) and not significant for
   v1.2's (18/9, p=0.12). Values in exp/out/exp19_v1_vs_v12.csv.

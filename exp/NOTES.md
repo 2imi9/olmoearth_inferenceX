@@ -26,6 +26,7 @@ Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 | exp19 | v1 vs v1.2 (RoPE): instability larger under v1.2; single band-set token in v1.2; cross-version disagreement not useful |
 | exp20 | first served production output (olmoearth_lcc): no class confidence exported; boundary captures 0.88 of water disagreements at a 5% budget; change ambiguity sits on flagged-region edges |
 | exp21 | fine-tuned AWF model end to end from Ai2's checkpoint: accuracy 0.881 (Ai2 0.895); confidence best, tiling instability ties it; overconfident (ECE 0.080); 0.945 at 80% coverage |
+| exp23 | WorldCover 2020 vs 2021 instability: errors 14x enriched at unstable patches but those are ~10% of errors; tile-phase advantage unchanged on stable patches (21/23); exp18 reading withdrawn |
 | exp22 | served v1.2 product: outputs quantized to the 4-px patch lattice (19/20 profiles, p <= 6e-08); no inference-window seams at 64-512 px (limit 5-10% of rows at 128 px); WorldCover control clean |
 
 ## exp01 — first E_case map (2026-08-31)
@@ -246,8 +247,9 @@ Head trained on 600 valid-split tiles; scored on Bolivia (held-out region,
 351 tiles) and 800 test tiles. Confidence best everywhere. Tile-phase
 163/187 (p=0.22) on Bolivia, 173/305 (worse) on test; band-set 111/239;
 boundary 134/217; E_case 84/265; E_dist 22/329; control 79/271. Errors on
-boundaries 75% vs 21% (phenomenon holds). Reading: the WorldCover
-advantages were reference-error detection. Repository claims revised in
+boundaries 75% vs 21% (phenomenon holds). Reading at the time: the
+WorldCover advantages were reference-error detection (tested and not
+supported by exp23). Repository claims revised in
 README, ledger, comparisons, signals, roadmap. Cache exp/out/exp18_feats.npz
 (3.9 GB, ignored). Caveat: L1C chips through the L2A path.
 
@@ -257,7 +259,7 @@ Isolated worktree + venv on olmoearth_pretrain main. v1 features match the
 cache exactly. v1.2: rope_3d_mixed, one S2 band-set token per patch. Tile-
 phase magnitude larger under v1.2 (0.046 vs 0.032; smaller on 6/31). Against
 WorldCover both versions' tile-phase beats their confidence (26/1, 25/2), but
-exp18 makes that reference-error detection. Cross-version disagreement:
+exp18 shows that advantage does not transfer to hand labels (cause open, exp23). Cross-version disagreement:
 6/21 (v1 errors), 18/9 n.s. (v1.2). Cache exp/out/exp19_feats.npz (ignored).
 
 ## exp20 - served production output (2026-09-02)
@@ -320,3 +322,19 @@ Warp beat at p<0.001 in 2/10 and 2/10 product profiles, 0/10 control.
 Reading: no window-seam striping in the served v1.2 product at the stated
 limits; outputs are patch-quantized (40 m), which bounds boundary accuracy.
 Cache exp/out/exp22_windows.npz (ignored).
+
+## exp23 - reference instability (2026-09-02)
+
+Tests the exp18 reading directly. 24 rule scenes (kafue_20/50/80 dropped:
+re-read B02 no longer matches the cache), WorldCover 2020 v100 and 2021
+v200 fetched on each scene's recovered grid, signals as in exp13. T1:
+unstable share among disagreements median 10.8% vs 0.8% among
+agreements (17/3/4, p 0.003); pooled 10% of disagreements unstable. T2:
+tile-phase's flagged errors not more often unstable than confidence's
+(8/8/8, p 1.000). T3: on reference-stable patches tile-phase still
+beats confidence 21/23 (p 7e-05) vs 22/23 on all patches; boundary
+18/23 vs 15/23. The "reference error" explanation is withdrawn
+(not supported by the measurable component); open candidates: shared
+reference errors, 2021-to-2024 change, task properties. Next: rerun the
+scenes with imagery from WorldCover's own year to test the temporal
+mismatch. Cache exp/out/exp23_geo.npz (ignored).

@@ -73,12 +73,14 @@ Per-scene values for all 27 rule-selected scenes: [docs/results/comparisons.md](
   ties it, and everything else is significantly worse (exp21). The model
   is overconfident: 0.93 accurate where it says 0.99, so a stated accuracy
   needs a coverage (0.945 at 80%).
-- **The earlier wins were against a weak reference.** Tiling instability
-  beat confidence on 26 of 27 scenes and band-set disagreement on 21 of 27
-  when errors were defined against ESA WorldCover (exp13, exp17); neither
-  transfers to hand labels. The likely reason is that much of what
-  WorldCover called error was reference error, which boundary-type signals
-  detect well.
+- **The earlier wins were against a weak reference, and the reason is
+  not settled.** Tiling instability beat confidence on 26 of 27 scenes and
+  band-set disagreement on 21 of 27 when errors were defined against ESA
+  WorldCover (exp13, exp17); neither transfers to hand labels. The
+  measurable part of reference error, patches where WorldCover's own 2020
+  and 2021 versions disagree, covers about 10% of the disagreements and
+  does not explain the advantage: on reference-stable patches tiling
+  instability still beats confidence on 21 of 23 scenes (exp23).
 - **Errors do concentrate at prediction boundaries** (about 75% of error
   patches vs 20% of correct ones, on both references), but confidence
   ranks them better than boundary proximity or instability do.
@@ -135,7 +137,7 @@ uv sync --extra geo
 uv run python exp/exp02_full_slice.py
 ```
 
-Experiments are exp01-exp21 in `exp/`; exp20 needs no checkpoint (it reads the served rasters over HTTP); exp21 downloads the fine-tuned checkpoint from HuggingFace. Checkpoints come from
+Experiments are exp01-exp23 in `exp/`; exp20 needs no checkpoint (it reads the served rasters over HTTP); exp21 downloads the fine-tuned checkpoint from HuggingFace. Checkpoints come from
 [HuggingFace allenai](https://huggingface.co/allenai). exp04 needs the
 [AWF dataset](https://huggingface.co/datasets/allenai/olmoearth_projects_awf)
 under `data/awf/dataset/`. `uv sync` installs CPU torch; for the GPU
