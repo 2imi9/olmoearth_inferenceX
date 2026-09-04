@@ -42,6 +42,29 @@ The statistics settled in exp13 and used by every experiment after it:
 | Cross-scene tests | Exact sign test on untied pairs, plus a sign-flip permutation test on mean E-AURC differences | The sign test is scale-free and is reported as primary; mean-based tests are dominated by high-error scenes. |
 | Reporting | Wins / losses / ties per scene, not means | Same reason. |
 
+### Known limits of these tests
+
+- **The 27 scenes are not 27 independent draws.** They sample fixed fractions
+  along eight named rivers, so scenes on one river share its reference
+  errors, season and channel morphology. Re-running the headline sign test
+  with one vote per river (majority of that river's scenes) gives tiling
+  instability **8/8 rivers, p=0.008**, against 26/27 scenes, p=4e-07. The
+  result survives clustering; its significance is three orders of magnitude
+  weaker than the scene-level figure suggests, and the scene-level p-value
+  should not be quoted on its own. Reproduce with
+  `uv run --extra geo python exp/summary_transfer.py`.
+- **A null is not a demonstration of equality.** Where a signal is reported
+  as not beating confidence at p > 0.05 (aligned tile-phase on Sen1Floods11
+  Bolivia, 163/187, p=0.22) the claim is that no advantage was shown, not
+  that the two are equivalent. No equivalence test has been run.
+- **Cross-testbed comparisons change several things at once.** Moving from
+  the WorldCover scenes to Sen1Floods11 changes the reference, the task
+  (permanent against flood water), the geography, the unit of analysis
+  (scene against tile), the input processing (L2A against L1C through the
+  L2A path) and the head's training set. That the advantage does not
+  transfer is established; *which* of those differences causes it is not,
+  and that is the open question exp23-exp25 attack.
+
 Splits are geographic hold-outs. Scene selection is pre-registered before
 any scene is fetched (the rule is in
 [results/comparisons.md](../results/comparisons.md)); its coordinates have
