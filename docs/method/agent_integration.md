@@ -70,11 +70,15 @@ lives in the vendored skills submodule and must be committed upstream.
   (exp20);
 - `pyyaml` and `huggingface_hub` are declared.
 
+**Resolved since.** `olmoearth-pretrain` was a hard dependency of the
+package even though the assessment layer never imports it, which forced the
+agent to install with `--no-deps` and broke `uv sync` on any clone without a
+sibling `../olmoearth_pretrain` checkout. It now sits behind the `encoder`
+extra, so `uv sync` installs `assess` / `metrics` / `taskcard` / `lcc` with
+numpy, pyyaml and huggingface_hub alone — no torch, no `--no-deps`.
+
 **Still open:**
 
-- `olmoearth-pretrain` remains a declared dependency of the package though
-  the assessment layer does not use it — only the data loaders (`awf.py`,
-  `data.py`) do. The agent works around this by installing with `--no-deps`.
 - A production mode of the agent tool that takes a class map and a
   confidence band (`assess_classmap`) is written here but not yet wired in
   the agent.

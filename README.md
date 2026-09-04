@@ -139,10 +139,31 @@ the [AWF task config](https://github.com/allenai/olmoearth_projects/blob/main/ol
 whose classes and split we reuse, and
 [olmoearth_pretrain/evals](https://github.com/allenai/olmoearth_pretrain/tree/main/olmoearth_pretrain/evals).
 
+## Install
+
+The package is layered, so the assessment API installs without the encoder
+stack:
+
+```bash
+uv sync                                    # assessment layer only, no torch
+uv sync --extra encoder --extra geo        # full experiment environment
+```
+
+| Install | Gives you | Needs torch |
+|---|---|---|
+| `uv sync` | `oe_inferencex.assess`, `.metrics`, `.taskcard`, `.lcc` — what the OlmoEarth Agent consumes | no |
+| `+ --extra geo` | Geospatial IO and plotting; the 5 experiments that read rasters without an encoder (exp12, exp14, exp20, exp22, exp23) | no |
+| `+ --extra encoder` | `oe_inferencex.awf`, `.data`, and the 22 experiments that run the encoder | yes |
+
+Torch is pinned per platform: Linux resolves the **cu128** build, everything
+else the CPU build. To reproduce against a specific upstream revision rather
+than the published `olmoearth-pretrain` release, install a checkout over the
+top: `uv pip install -e ../olmoearth_pretrain`.
+
 ## Reproduce
 
 ```bash
-uv sync --extra geo
+uv sync --extra encoder --extra geo
 uv run python exp/exp02_full_slice.py
 ```
 
@@ -154,9 +175,6 @@ JSON under `exp/out/` that the claim can be checked against.
 - `exp21` downloads the fine-tuned checkpoint from HuggingFace.
 - `exp04` needs the [AWF dataset](https://huggingface.co/datasets/allenai/olmoearth_projects_awf) under `data/awf/dataset/`.
 - Checkpoints come from [HuggingFace allenai](https://huggingface.co/allenai).
-- `uv sync` installs CPU torch. For the GPU experiments, install the cu128
-  wheel into the venv afterwards and invoke the venv's Python directly —
-  `uv run` reverts it.
 
 ## Documentation
 

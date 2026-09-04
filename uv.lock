@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.11, <3.14"
 resolution-markers = [
     "python_full_version >= '3.12' and sys_platform == 'win32'",
@@ -873,12 +873,19 @@ name = "olmoearth-inferencex"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "huggingface-hub" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.5.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "olmoearth-pretrain" },
+    { name = "pyyaml" },
 ]
 
 [package.optional-dependencies]
+encoder = [
+    { name = "olmoearth-pretrain" },
+    { name = "torch", version = "2.7.1", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'darwin'" },
+    { name = "torch", version = "2.7.1+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin' and sys_platform != 'linux'" },
+    { name = "torch", version = "2.7.1+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux'" },
+]
 geo = [
     { name = "geopandas" },
     { name = "matplotlib" },
@@ -892,20 +899,24 @@ geo = [
 [package.metadata]
 requires-dist = [
     { name = "geopandas", marker = "extra == 'geo'", specifier = ">=1.0" },
+    { name = "huggingface-hub", specifier = ">=0.20" },
     { name = "matplotlib", marker = "extra == 'geo'", specifier = ">=3.8" },
     { name = "numpy", specifier = ">=1.26.4" },
-    { name = "olmoearth-pretrain", editable = "../olmoearth_pretrain" },
+    { name = "olmoearth-pretrain", marker = "extra == 'encoder'", specifier = ">=0.1,<0.2" },
     { name = "planetary-computer", marker = "extra == 'geo'", specifier = ">=1.0" },
     { name = "pystac-client", marker = "extra == 'geo'", specifier = ">=0.8" },
+    { name = "pyyaml", specifier = ">=6.0" },
     { name = "rasterio", marker = "extra == 'geo'", specifier = ">=1.4" },
     { name = "shapely", marker = "extra == 'geo'", specifier = ">=2.0" },
+    { name = "torch", marker = "sys_platform == 'linux' and extra == 'encoder'", specifier = ">=2.7,<2.8", index = "https://download.pytorch.org/whl/cu128" },
+    { name = "torch", marker = "sys_platform != 'linux' and extra == 'encoder'", specifier = ">=2.7,<2.8", index = "https://download.pytorch.org/whl/cpu" },
 ]
-provides-extras = ["geo"]
+provides-extras = ["encoder", "geo"]
 
 [[package]]
 name = "olmoearth-pretrain"
 version = "0.1.0"
-source = { editable = "../olmoearth_pretrain" }
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "einops" },
     { name = "huggingface-hub" },
@@ -916,81 +927,10 @@ dependencies = [
     { name = "torch", version = "2.7.1+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux'" },
     { name = "universal-pathlib" },
 ]
-
-[package.metadata]
-requires-dist = [
-    { name = "ai2-olmo-core", marker = "extra == 'training'", specifier = "==2.3.0" },
-    { name = "albumentations", marker = "extra == 'eval'", specifier = ">=1.4.10" },
-    { name = "albumentations", marker = "extra == 'training'", specifier = ">=1.4.10" },
-    { name = "beaker-py", marker = "extra == 'beaker'", specifier = "==1.34.1" },
-    { name = "cartopy", marker = "extra == 'training'", specifier = ">=0.25.0" },
-    { name = "class-registry", marker = "extra == 'dataset-creation'", specifier = ">=2.1.2" },
-    { name = "class-registry", marker = "extra == 'training'", specifier = ">=2.1.2" },
-    { name = "claymodel", marker = "extra == 'eval'", git = "https://github.com/Clay-foundation/model.git" },
-    { name = "docker", marker = "extra == 'beaker'", specifier = ">=5.0,<8.0" },
-    { name = "einops", specifier = ">=0.7.0" },
-    { name = "einops", marker = "extra == 'dataset-creation'", specifier = "==0.7.0" },
-    { name = "fastmcp", marker = "extra == 'mcp'", specifier = ">=2.12.0" },
-    { name = "flash-attn", marker = "extra == 'flash-attn'", specifier = ">=2.4.0" },
-    { name = "gcsfs", marker = "extra == 'dataset-creation'", specifier = ">=2025.9.0" },
-    { name = "gcsfs", marker = "extra == 'training'", specifier = ">=2025.9.0" },
-    { name = "geobench", marker = "extra == 'dataset-creation'", git = "https://github.com/ServiceNow/geo-bench.git" },
-    { name = "geobench", marker = "extra == 'eval'", git = "https://github.com/ServiceNow/geo-bench.git" },
-    { name = "geopandas", marker = "extra == 'eval'", specifier = ">=1.1.1" },
-    { name = "gitpython", marker = "extra == 'dev'", specifier = ">=3.0,<4.0" },
-    { name = "google-cloud-compute", marker = "extra == 'beaker'" },
-    { name = "hdf5plugin", marker = "extra == 'training'", specifier = ">=6.0.0" },
-    { name = "huggingface-hub" },
-    { name = "interrogate", marker = "extra == 'dataset-creation'", specifier = ">=1.7.0" },
-    { name = "interrogate", marker = "extra == 'dev'", specifier = ">=1.7.0" },
-    { name = "matplotlib", marker = "extra == 'training'", specifier = ">=3.10.7" },
-    { name = "numpy", specifier = ">=1.26.4" },
-    { name = "numpy", marker = "extra == 'dataset-creation'", specifier = ">=1.26.4" },
-    { name = "olmoearth-pretrain", extras = ["training", "beaker", "dataset-creation", "dev", "eval"], marker = "extra == 'all-no-flash'" },
-    { name = "packaging", marker = "extra == 'beaker'", specifier = ">=24.2" },
-    { name = "pandas", marker = "extra == 'dataset-creation'", specifier = ">=2.3.3" },
-    { name = "pandas", marker = "extra == 'training'", specifier = ">=2.2" },
-    { name = "pandera", marker = "extra == 'dataset-creation'", specifier = ">=0.26.1" },
-    { name = "pip", marker = "extra == 'dev'", specifier = ">=25.2" },
-    { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=4.3.0" },
-    { name = "psutil", marker = "extra == 'training'", specifier = ">=7.1.1" },
-    { name = "pydantic", marker = "extra == 'beaker'", specifier = ">=1.8.2,<3.0" },
-    { name = "pydantic", marker = "extra == 'eval'", specifier = ">=2,<3" },
-    { name = "pytest", marker = "extra == 'dataset-creation'", specifier = ">=8.4.2" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.4.2" },
-    { name = "pytest-xdist", marker = "extra == 'dev'", specifier = ">=3.8.0" },
-    { name = "pytorch-lightning", marker = "extra == 'eval'", specifier = "==2.5.5" },
-    { name = "pyyaml", marker = "extra == 'beaker'", specifier = ">=6.0.3" },
-    { name = "pyyaml", marker = "extra == 'eval'", specifier = ">=6.0" },
-    { name = "rasterio", marker = "extra == 'dataset-creation'", specifier = ">=1.4.3" },
-    { name = "rasterio", marker = "extra == 'training'", specifier = ">=1.4.3" },
-    { name = "requests", marker = "extra == 'beaker'", specifier = ">=2.32.5" },
-    { name = "rich", marker = "extra == 'beaker'", specifier = ">=12.3,<14.0" },
-    { name = "rioxarray", marker = "extra == 'dataset-creation'", specifier = ">=0.19.0" },
-    { name = "rioxarray", marker = "extra == 'eval'", specifier = ">=0.19.0" },
-    { name = "rslearn", marker = "extra == 'dataset-creation'", specifier = ">=0.0.19" },
-    { name = "rslearn", marker = "extra == 'eval'", specifier = ">=0.0.26" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.14.1" },
-    { name = "satlaspretrain-models", marker = "extra == 'eval'", specifier = ">=0.3.1" },
-    { name = "scikit-learn", marker = "extra == 'eval'", specifier = ">=1.7.2" },
-    { name = "shapely", marker = "extra == 'training'", specifier = ">=2" },
-    { name = "terratorch", marker = "extra == 'eval'", specifier = "==1.1" },
-    { name = "timm", marker = "extra == 'eval'", specifier = "==1.0.20" },
-    { name = "torch", marker = "sys_platform != 'linux'", specifier = ">=2.7,<2.8", index = "https://download.pytorch.org/whl/cpu" },
-    { name = "torch", marker = "sys_platform == 'linux'", specifier = ">=2.7,<2.8", index = "https://download.pytorch.org/whl/cu128" },
-    { name = "torch", marker = "sys_platform == 'linux' and extra == 'dataset-creation'", specifier = ">=2.7,<2.8", index = "https://download.pytorch.org/whl/cu128" },
-    { name = "torch", marker = "sys_platform != 'linux' and extra == 'dataset-creation'", specifier = ">=2.7,<2.8", index = "https://download.pytorch.org/whl/cpu" },
-    { name = "torchmetrics", marker = "extra == 'eval'", specifier = "==1.7.1" },
-    { name = "torchvision", marker = "extra == 'training'", specifier = ">=0.22.1" },
-    { name = "tqdm", marker = "extra == 'eval'", specifier = ">=4.66.0" },
-    { name = "universal-pathlib", specifier = ">=0.2.5" },
-    { name = "universal-pathlib", marker = "extra == 'dataset-creation'", specifier = ">=0.2.5" },
-    { name = "universal-pathlib", marker = "extra == 'training'", specifier = ">=0.2.5" },
-    { name = "wandb", marker = "extra == 'dataset-creation'", specifier = ">=0.19.0" },
-    { name = "wandb", marker = "extra == 'training'", specifier = ">=0.19.0" },
-    { name = "xarray", marker = "extra == 'eval'", specifier = ">=2025.10.1" },
+sdist = { url = "https://files.pythonhosted.org/packages/12/44/c6a8a0948d2ff992eb02a670b54d534d80ab178b883715301f9c01fb3268/olmoearth_pretrain-0.1.0.tar.gz", hash = "sha256:95132034c0c6783ccb3404fad17c94f39f0356a0feb2b519b456e6a17017c9e8", size = 307990, upload-time = "2026-02-06T18:06:40.491Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/18/9d/3841c37302013bd1839e6617284020a9e89d9b82c159095fdd75ea31506f/olmoearth_pretrain-0.1.0-py3-none-any.whl", hash = "sha256:84316688b85c151ee0bb0e477783cedcc9f4309d70ab5358b48b58a4a97701cf", size = 404695, upload-time = "2026-02-06T18:06:39.137Z" },
 ]
-provides-extras = ["training", "beaker", "dataset-creation", "dev", "eval", "flash-attn", "mcp", "all-no-flash"]
 
 [[package]]
 name = "packaging"
