@@ -3,17 +3,16 @@
 **Can you find where a model's map is wrong, in a region with no labels?**
 
 This repository ports hallucination-detection techniques from LLMs to earth
-observation and tests them against [OlmoEarth](https://allenai.org/olmoearth)
-predictions. Everything uses Ai2's public artifacts.
+observation and tests them against OlmoEarth predictions.
 
 Four things were audited:
 
-| Target | What it is |
+| Target | What was audited |
 |---|---|
-| Linear probes on frozen v1 encoders | A binary water head trained on one WorldCover-labelled scene; a nine-class head on the AWF expert labels |
-| [OlmoEarth-v1-FT-AWF-Base](https://huggingface.co/allenai/OlmoEarth-v1-FT-AWF-Base) | Ai2's published fine-tuned model, run end to end (exp21) |
-| [olmoearth_lcc rasters](https://huggingface.co/datasets/allenai/olmoearth_lcc) | The served land cover change product, as published (exp20, exp22) |
-| v1 vs v1.2 encoders | Whether the RoPE change affects any of this (exp19) |
+| Linear probes on frozen v1 encoders | Binary water head trained on one WorldCover-labelled scene; nine-class head on the AWF labels |
+| [`OlmoEarth-v1-FT-AWF-Base`](https://huggingface.co/allenai/OlmoEarth-v1-FT-AWF-Base) | Run end to end on the 344 validation points of the official split (exp21) |
+| [`olmoearth_lcc`](https://huggingface.co/datasets/allenai/olmoearth_lcc) rasters | As served: ten 512-px windows, plus a periodicity test on five 4096-px windows (exp20, exp22) |
+| v1 vs v1.2 encoders | Whether RoPE changes the tiling-instability result (exp19) |
 
 ## The short answer
 
@@ -73,8 +72,8 @@ Sen1Floods11 hand-labelled flood masks (a geographically held-out region,
 351 scored tiles) every signal is equal or significantly worse (exp18); the
 same holds on the AWF expert point task (exp04, exp16).
 
-**2. This holds for Ai2's fine-tuned model run end to end.** The published
-AWF checkpoint reproduces Ai2's accuracy (0.881 against 0.895); confidence
+**2. This holds for the fine-tuned model run end to end.** The published AWF
+checkpoint reproduces the reported accuracy (0.881 against 0.895); confidence
 ranks its errors best, tiling instability ties it, everything else is
 significantly worse (exp21).
 

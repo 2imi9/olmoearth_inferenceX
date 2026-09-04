@@ -35,7 +35,7 @@ genuine property of the WorldCover-defined task.
    WorldCover-referenced (exp13); exp16 showed that on nine classes the
    boundary score collapses into a proxy for low margin. A dense
    expert-labelled binary or few-class map is the missing testbed.
-   Candidates in Ai2's own evaluation suite: MADOS (marine debris, 15
+   Candidates in `olmoearth_pretrain/evals`: MADOS (marine debris, 15
    classes), PASTIS-R, GeoBench m-cashew-plant and m-sa-crop-type.
 
 3. **Operating-point analysis instead of AURC.** Test whether any signal

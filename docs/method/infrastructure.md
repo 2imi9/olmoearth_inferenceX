@@ -65,13 +65,13 @@ properties. Index at [TECHNIQUES.md](../TECHNIQUES.md).
   available from a single forward pass.
 
 ### Findings from the olmoearth_pretrain repository (2026-09-01 dig)
-- Dense expert-labelled water truth exists in Ai2's own evaluation set:
+- Dense expert-labelled water truth exists in the evaluation set:
   Sen1Floods11 (hand-labelled flood masks, LabelHand: -1 no data, 0
   non-water, 1 water) processed into 64x64 tiles and mirrored in the public
   bucket gs://ai2-olmoearth-projects-public-data/research_benchmarks/floods
   (flood_{train,valid,test,bolivia}_data.pt; 13-band Sentinel-2 Level-1C
   chips, int16, plus Sentinel-1). Bolivia (441 tiles) is a geographically
-  held-out region. Ai2's own benchmark uses the Sentinel-1 channel only.
+  held-out region. The upstream benchmark uses the Sentinel-1 channel only.
   The v1 sample type carries only sentinel2_l2a, so Level-1C chips must go
   through the L2A path with the L2A normalizer (a documented mismatch).
 - OlmoEarth v1.2 uses rotary position encodings: origin/main
@@ -145,7 +145,7 @@ properties. Index at [TECHNIQUES.md](../TECHNIQUES.md).
 
 ## Fine-tuned checkpoints (exp21)
 
-- Ai2 publishes fine-tuned models on HuggingFace: allenai/OlmoEarth-v1-FT-
+- Fine-tuned models on HuggingFace: allenai/OlmoEarth-v1-FT-
   {AWF, Mangrove, ForestLossDriver, LFMC, EcosystemTypeMapping}-Base, each a
   Lightning checkpoint (model.ckpt) trained by rslearn from the project's
   model.yaml in olmoearth_projects. The AWF one holds state-dict keys
@@ -159,6 +159,6 @@ properties. Index at [TECHNIQUES.md](../TECHNIQUES.md).
   bilinear x4 upsampling (torch.nn.Upsample default, align_corners=False)
   then the 1x1 convolution; softmax. The training pipeline pads to 31 px and
   crops 16 px around the point, so 16-px crops are the training regime.
-- The replica reaches 0.881 on the validation split against Ai2's reported
+- The replica reaches 0.881 on the validation split against the reported
   0.895; the remaining gap is within crop-alignment and interpolation
   choices (0.898 when the containing patch's logits are read directly).

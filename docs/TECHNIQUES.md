@@ -49,7 +49,7 @@ Scored against the model's own confidence and a no-model pixel control.
 
 | Target | Status | Verdict | Evidence |
 |---|---|---|---|
-| Fine-tuned model end to end (`OlmoEarth-v1-FT-AWF-Base`) | **supported** | Replica reproduces Ai2's accuracy (0.881 vs 0.895); confidence ranks its errors best (AURC 0.0262), tiling instability is indistinguishable (0.0235, CI spans zero), everything else significantly worse. Overconfident: ECE 0.080 | exp21 |
+| Fine-tuned model end to end (`OlmoEarth-v1-FT-AWF-Base`) | **supported** | Replica reproduces the reported accuracy (0.881 vs 0.895); confidence ranks its errors best (AURC 0.0262), tiling instability is indistinguishable (0.0235, CI spans zero), everything else significantly worse. Overconfident: ECE 0.080 | exp21 |
 | Served LCC rasters, boundary triage | **supported on a weak reference** | The product exports no class confidence, so the baseline cannot run; boundary fraction captures a median 0.88 of WorldCover water disagreements at a 5% review budget | exp20 |
 | Served LCC rasters, periodic artifacts | **lattice found, seams not** | Outputs are quantized to the encoder's 4-px patch lattice (19 of 20 profiles, p <= 6e-08); no inference-window seams at 64-512 px, at the null rate. Detection limit 5-10% of rows at 128 px | exp22 |
 

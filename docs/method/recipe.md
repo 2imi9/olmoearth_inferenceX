@@ -97,7 +97,7 @@ reference maps on narrow channels (exp15).
   position encoding, which does *not* reduce sub-patch tiling instability
   (larger in v1.2, exp19); and it tokenizes Sentinel-2 as one band-set token
   per patch, so v1's band-set signal has no v1.2 counterpart.
-- **One fine-tuned model has been run end to end** from Ai2's published
+- **One fine-tuned model has been run end to end** from the published
   checkpoint (exp21): confidence still ranks its errors best and tiling
   instability ties it. The other published checkpoints (Mangrove,
   ForestLossDriver, LFMC, EcosystemTypeMapping) have not been run; the water

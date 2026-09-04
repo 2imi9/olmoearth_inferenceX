@@ -19,8 +19,8 @@ stand.
 
 ## Dense flood masks: Sen1Floods11 (exp18)
 
-**Setup.** Sen1Floods11 hand-labelled flood-water masks (Ai2's own
-evaluation set, public mirror), 64x64 tiles. Head trained on 600 tiles of
+**Setup.** Sen1Floods11 hand-labelled flood-water masks (public mirror),
+64x64 tiles. Head trained on 600 tiles of
 the valid split; scored on Bolivia (441 tiles, a geographically held-out
 region; 351 with enough errors to score) and on the test split (800 tiles,
 482 scored). All signals
@@ -69,7 +69,7 @@ upsampling before the 1x1 convolution. Run on the 344 expert-labelled
 validation points of the official spatial split.
 
 **Accuracy.** 0.881 on 16-px crops (the training regime), 0.878 on 32-px,
-against 0.895 reported by Ai2; 0.898 when the containing patch's logits are
+against the reported 0.895; 0.898 when the containing patch's logits are
 read directly instead of the interpolated pixel. The frozen-encoder probe of
 exp16 reaches 0.817 on the same points; 28 of the fine-tuned model's 41
 errors are also probe errors.
@@ -144,7 +144,7 @@ classes and split from its
 
 1459 expert-labeled points, 12-month Sentinel-2 stacks, the project's own
 1115/344 spatial split. A linear head on frozen Base embeddings reaches
-81.7% validation accuracy (Ai2's fully fine-tuned model: 89.5%), giving 63
+81.7% validation accuracy (the fully fine-tuned model: 89.5%), giving 63
 errors for signal evaluation.
 
 On this in-domain multiclass task **confidence achieves the lowest AURC**
@@ -352,7 +352,7 @@ adjudication of individual disagreements; exp26 prepared the kit.
 
 ## Served land cover change rasters (exp20)
 
-First assessment of one of Ai2's own outputs: ten 512-px windows (about
+First assessment of a served output: ten 512-px windows (about
 4.9 km) of the published `allenai/olmoearth_lcc` rasters at Zambezi, Chobe
 and Barotse sites, read with the pure-HTTP tile reader in
 `oe_inferencex/lcc.py`. The product ships in EPSG:3857 at about 9.55 m as
