@@ -103,22 +103,26 @@ genuine property of the WorldCover-defined task.
 | Does the year gap explain them? | exp24 — no |
 | Does seasonal water explain them? | exp25 — no |
 
-## Second use case: change attribution
+## Cross-inference evaluation: what is done, what is not
 
-Error ranking is one consumer of these signals. The same decomposition
-applies to comparing two inference outputs (two dates, two model versions),
-where a raw diff mixes real surface change, model instability, low-consensus
-predictions, and geographically implausible transitions.
+The comparison machinery is signal-agnostic, and six experiments already
+exercise it on pairs of inference runs — Nano/Tiny/Base (exp07), Large vs
+Nano as partner (exp10), band-set probes vs the final head (exp17), v1 vs
+v1.2 (exp19), fine-tuned model vs frozen probe (exp21), 2021 vs 2024 imagery
+(exp24). The index is in
+[../TECHNIQUES.md](../TECHNIQUES.md#cross-inference-comparisons); the
+adjudication case (exp23/24/25) is the section below it.
 
-The design: E_system instability and E_case consensus at each date gate
-which diffs are trustworthy; geographic and temporal plausibility rules
-constrain which transitions are physically possible; plain image
-differencing is the no-model control.
+**What is not done: change attribution between two dated products.** A raw
+diff of two inference outputs mixes real surface change, model instability,
+low-consensus predictions, and geographically implausible transitions. The
+design: E_system instability and E_case consensus at each date gate which
+diffs are trustworthy; geographic and temporal plausibility rules constrain
+which transitions are physically possible; plain image differencing is the
+no-model control. A change narrative should only be generated from diffs
+that survive the decomposition.
 
-Intended application is automated interpretation of what changed over time,
-where a change narrative should only be generated from diffs that survive
-the decomposition. Natural testbed: the `olmoearth_lcc` production change
-product (change probability and month-encoded dates).
-
-**Status: design only, untested.** It inherits item 7 above — without a
-held-out change reference there is nothing to score it against.
+Natural testbed: the `olmoearth_lcc` production change product (change
+probability and month-encoded dates). **Status: design only, untested.** It
+inherits item 7 above — without a held-out change reference there is nothing
+to score it against.

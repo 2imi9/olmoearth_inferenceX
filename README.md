@@ -1,9 +1,21 @@
 # olmoearth_inferenceX
 
-**Can you find where a model's map is wrong, in a region with no labels?**
+**A protocol for comparing inference outputs without labels.**
 
-This repository ports hallucination-detection techniques from LLMs to earth
-observation and tests them against OlmoEarth predictions.
+Two things disagree — a model and a reference, two model versions, two
+scorers, two explanations for the same discrepancy. Which do you believe,
+and is the difference real? Every signal here is label-free; labels only
+grade the signals, never train them.
+
+Two applications are demonstrated:
+
+1. **Error ranking.** Score how likely each map window is wrong, then judge
+   the score by risk-coverage curves. The signal designs are adapted from
+   LLM hallucination detection, which faces the same no-reference problem.
+2. **Cross-inference evaluation.** Compare two inference runs — model
+   versions, encoder internals, input years, reference vintages — on
+   identical errors, against a no-model control, with a significance test
+   that says whether the gap is real.
 
 Four things were audited:
 
@@ -14,12 +26,24 @@ Four things were audited:
 | [`olmoearth_lcc`](https://huggingface.co/datasets/allenai/olmoearth_lcc) rasters | As served: ten 512-px windows, plus a periodicity test on five 4096-px windows (exp20, exp22) |
 | v1 vs v1.2 encoders | Whether RoPE changes the tiling-instability result (exp19) |
 
-## The short answer
+## The short answers
 
-**The model's own confidence is the best error-finder we found.** Every
-constructed audit signal was equal or worse against expert labels. That is a
-negative result for the audit idea and a positive one for the model: its
-confidence is usable, provided you also report the coverage it holds at.
+**On error ranking: the model's own confidence wins.** Every constructed
+audit signal was equal or worse against expert labels. That is a negative
+result for the audit idea and a positive one for the model — its confidence
+is usable, provided you report the coverage it holds at.
+
+**On cross-inference comparison: two runs tell you less than you would
+hope.** Within one model family, members err together, so agreement
+overstates reliability (exp07) and a *stronger* partner makes disagreement
+worse (exp10). What makes a second run informative is a different view of
+the input, not higher accuracy (exp17). RoPE in v1.2 did not reduce
+sub-patch instability (exp19).
+
+**The adjudication protocol itself held up.** Three competing explanations
+for one discrepancy were each pre-registered and each rejected on its own
+artifact (exp23, exp24, exp25) — which is why the open question below is
+stated as open rather than as a hunch.
 
 ## How the signals work
 

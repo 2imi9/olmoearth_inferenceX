@@ -4,6 +4,11 @@ Standing record of what was tried and what survived, organized by technique
 rather than by date. A claim appears here only when an experiment supports
 it, and is amended or removed when a later experiment contradicts it.
 
+The repository has two applications: **error ranking** (which windows is the
+model getting wrong?) and **cross-inference evaluation** (of two runs,
+scorers or explanations, which should you believe?). Most tables below serve
+the first; the cross-inference index is [further down](#cross-inference-comparisons).
+
 Each row carries a one-line verdict and a pointer. The evidence behind a
 verdict lives in exactly one place: per-signal detail in
 [results/signals.md](results/signals.md), per-experiment detail in
@@ -53,12 +58,38 @@ Scored against the model's own confidence and a no-model pixel control.
 | Served LCC rasters, boundary triage | **supported on a weak reference** | The product exports no class confidence, so the baseline cannot run; boundary fraction captures a median 0.88 of WorldCover water disagreements at a 5% review budget | exp20 |
 | Served LCC rasters, periodic artifacts | **lattice found, seams not** | Outputs are quantized to the encoder's 4-px patch lattice (19 of 20 profiles, p <= 6e-08); no inference-window seams at 64-512 px, at the null rate. Detection limit 5-10% of rows at 128 px | exp22 |
 
+## Cross-inference comparisons
+
+The second application: two inference runs scored on identical errors under
+the same tests. Evidence lives in the experiment sections of
+[results/comparisons.md](results/comparisons.md); this is the index.
+
+| Compared | Finding | Evidence |
+|---|---|---|
+| Nano / Tiny / Base votes | Family members err together, so label-free accuracy estimation inflates every model and inverts the ordering. The inflation gap measures correlated-error mass | exp07 |
+| v1-Large vs Nano as Base's partner | A *stronger* partner makes disagreement worse, though Large is more accurate on every scene | exp10 |
+| Three band-set probes vs the final head | The most error-correlated rater (phi 0.75) yields the *best* disagreement signal — a different view of the input beats decorrelation | exp17 |
+| v1 vs v1.2 on identical scenes | RoPE does not reduce sub-patch tiling instability (larger on 25 of 31 scenes); cross-version disagreement is not a useful signal | exp19 |
+| Fine-tuned model vs frozen probe | 28 of the fine-tuned model's 41 errors are also probe errors; probe disagreement ranks errors significantly worse than confidence | exp21 |
+| Same scenes, 2021 vs 2024 imagery | The instability advantage persists within the year and is not larger in 2024 | exp24 |
+
+**What generalizes.** A second run is informative when it sees the input
+differently, not when it is more accurate — and never when it shares a
+family's failure modes. Agreement within a family is not evidence of
+correctness.
+
 ## Reference audits: why do the WorldCover wins not transfer?
 
-Tiling instability beats confidence 26/27 against ESA WorldCover but not
-against hand labels (exp18). Three measurable components of
-reference-versus-image mismatch were removed one at a time. **None explains
-the gap.**
+The adjudication case: three competing explanations for one discrepancy,
+each pre-registered, each tested on its own artifact. Tiling instability
+beats confidence 26/27 against ESA WorldCover but not against hand labels
+(exp18); three measurable components of reference-versus-image mismatch were
+removed one at a time. **None explains the gap.**
+
+Each uses the same design — T1 enrichment (are the suspect patches
+over-represented among disagreements?), T2 mechanism (does the signal flag
+them preferentially?), T3 exclusion (does the advantage survive removing
+them?).
 
 | Candidate explanation | Test | Result | Evidence |
 |---|---|---|---|

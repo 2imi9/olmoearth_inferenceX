@@ -6,9 +6,18 @@ other document assumes this page and does not restate it. Index at
 
 ## What is being measured
 
-Selective prediction. Each signal assigns every map window a suspicion
-score; the score is judged by how well it ranks the windows the model gets
-wrong. Signals are label-free. Labels only grade the signals, never train
+The apparatus answers one question in two forms: **given two things that
+disagree, which should you believe, and is the difference real?**
+
+- **Error ranking.** Each signal assigns every map window a suspicion score;
+  the score is judged by how well it ranks the windows the model gets wrong.
+- **Cross-inference evaluation.** Two inference runs — model versions,
+  encoder internals, input years, reference vintages — are scored on
+  identical errors and compared under the same tests.
+
+The machinery is the same for both, and is deliberately signal-agnostic:
+`aurc_expected(uncertainty, errors)` takes any score vector and any error
+vector. Signals are label-free; labels only grade the signals, never train
 them.
 
 A signal is credible only if it beats two references at once:
@@ -95,8 +104,11 @@ combination of such signals into an audit scored against the audited
 model's own confidence, with no-model controls, over regions without
 labels.
 
-**The contribution claim** is the audit protocol itself, plus its finding
-that a perturbation-based instability signal — statistically
+**The contribution claim** is the comparison protocol itself — pre-registered
+selection, spatial hold-out, tie-aware metrics, a no-model control and an
+exact significance test, applied to label-free comparison of inference
+outputs — plus its finding that a perturbation-based instability signal —
+statistically
 indistinguishable from proximity to a boundary in the model's own
 prediction map — ranks errors better than confidence on the rule-selected
 scenes (exp13/exp14), while failing to do so against expert labels
