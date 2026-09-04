@@ -3,14 +3,30 @@ name = "olmoearth-inferencex"
 version = "0.1.0"
 description = "Audit system for OlmoEarth inference quality over unlabeled regions"
 requires-python = ">=3.11,<3.14"
+
+# Core: the assessment layer (oe_inferencex.assess / metrics / taskcard / lcc).
+# Deliberately free of torch and of olmoearth-pretrain, so the OlmoEarth Agent
+# can install this package without the encoder stack. See
+# docs/method/agent_integration.md.
 dependencies = [
-    "olmoearth-pretrain",
     "numpy>=1.26.4",
-    "pyyaml>=6.0",
-    "huggingface_hub>=0.20",
+    "pyyaml>=6.0",            # oe_inferencex.taskcard reads project model.yaml
+    "huggingface_hub>=0.20",  # oe_inferencex.taskcard resolves encoder configs
 ]
 
 [project.optional-dependencies]
+# The encoder stack. Needed by oe_inferencex.{awf,data} and by 22 of the 27
+# experiment scripts; pulls torch, einops and universal-pathlib transitively.
+# To reproduce against a specific upstream revision instead of the release,
+# install a checkout over the top:  uv pip install -e ../olmoearth_pretrain
+encoder = [
+    "olmoearth-pretrain>=0.1,<0.2",
+    # declared directly so the [tool.uv.sources] index pin below applies to it
+    # (uv only honours source overrides for direct dependencies)
+    "torch>=2.7,<2.8",
+]
+
+# Geospatial IO and plotting, for the experiment scripts.
 geo = [
     "rasterio>=1.4",
     "geopandas>=1.0",
@@ -27,5 +43,22 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 include = ["oe_inferencex*"]
 
+# Torch index pinning. These were previously inherited from the sibling
+# olmoearth_pretrain checkout; declaring them here keeps resolution identical
+# without requiring that checkout to exist. Linux gets the cu128 build (the
+# GPU experiments); every other platform gets the CPU build.
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
 [tool.uv.sources]
-olmoearth-pretrain = { path = "../olmoearth_pretrain", editable = true }
+torch = [
+    { index = "pytorch-cu128", marker = "sys_platform == 'linux'" },
+    { index = "pytorch-cpu", marker = "sys_platform != 'linux'" },
+]

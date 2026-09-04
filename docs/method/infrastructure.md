@@ -95,9 +95,12 @@ properties. Index at [TECHNIQUES.md](../TECHNIQUES.md).
 - olmoearth_pretrain ships an MCP server (olmoearth_pretrain/mcp) exposing
   model loading, config analysis, modality description and inference-code
   generation as tools; relevant to agent integration, not used here.
-- Environment note: a `uv run` or `uv sync` in this repository reinstalls
-  CPU torch (the upstream index pins); after any such command the cu128
-  wheel must be reinstalled for GPU work.
+- Environment note: torch is index-pinned in this repository's
+  `pyproject.toml` (previously inherited from the sibling
+  olmoearth_pretrain checkout) — Linux resolves the cu128 build, every other
+  platform the CPU build. On Windows and macOS a GPU run therefore still
+  needs the cu128 wheel installed over the top, and `uv run` will revert it,
+  so invoke the venv's Python directly after doing so.
 
 ### Task cards (oe_inferencex/taskcard.py)
 - A Layer-2 resolver that reads the authoritative configuration sources and
