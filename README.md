@@ -4,66 +4,36 @@
 
 Two things disagree — a model and a reference, two model versions, two
 scorers, two explanations for the same discrepancy. Which do you believe,
-and is the difference real? Every signal here is label-free; labels only
-grade the signals, never train them.
+and is the difference real? Signals are label-free; labels only grade them.
 
-Two applications are demonstrated:
+Two applications are demonstrated: **error ranking** (which windows is the
+model getting wrong?) and **cross-inference evaluation** (of two runs, which
+should you believe?). The signal designs are adapted from LLM
+hallucination-detection methods, which face the same no-reference problem.
 
-1. **Error ranking.** Score how likely each map window is wrong, then judge
-   the score by risk-coverage curves. The signal designs are adapted from
-   LLM hallucination detection, which faces the same no-reference problem.
-2. **Cross-inference evaluation.** Compare two inference runs — model
-   versions, encoder internals, input years, reference vintages — on
-   identical errors, against a no-model control, with a significance test
-   that says whether the gap is real.
-
-Four things were audited:
-
-| Target | What was audited |
+| Audited | How |
 |---|---|
 | Linear probes on frozen v1 encoders | Binary water head trained on one WorldCover-labelled scene; nine-class head on the AWF labels |
-| [`OlmoEarth-v1-FT-AWF-Base`](https://huggingface.co/allenai/OlmoEarth-v1-FT-AWF-Base) | Run end to end on the 344 validation points of the official split (exp21) |
-| [`olmoearth_lcc`](https://huggingface.co/datasets/allenai/olmoearth_lcc) rasters | As served: ten 512-px windows, plus a periodicity test on five 4096-px windows (exp20, exp22) |
+| [`OlmoEarth-v1-FT-AWF-Base`](https://huggingface.co/allenai/OlmoEarth-v1-FT-AWF-Base) | End to end, on the 344 validation points of the official split (exp21) |
+| [`olmoearth_lcc`](https://huggingface.co/datasets/allenai/olmoearth_lcc) rasters | As served: ten 512-px windows, plus periodicity on five 4096-px windows (exp20, exp22) |
 | v1 vs v1.2 encoders | Whether RoPE changes the tiling-instability result (exp19) |
-
-## The short answers
-
-**On error ranking: the model's own confidence wins.** Every constructed
-audit signal was equal or worse against expert labels. That is a negative
-result for the audit idea and a positive one for the model — its confidence
-is usable, provided you report the coverage it holds at.
-
-**On cross-inference comparison: two runs tell you less than you would
-hope.** Within one model family, members err together, so agreement
-overstates reliability (exp07) and a *stronger* partner makes disagreement
-worse (exp10). What makes a second run informative is a different view of
-the input, not higher accuracy (exp17). RoPE in v1.2 did not reduce
-sub-patch instability (exp19).
-
-**The adjudication protocol itself held up.** Three competing explanations
-for one discrepancy were each pre-registered and each rejected on its own
-artifact (exp23, exp24, exp25) — which is why the open question below is
-stated as open rather than as a hunch.
-
-## How the signals work
-
-Each signal scores every map window for how likely it is to be wrong.
-
-| Signal | What it measures |
-|---|---|
-| **E_system** — tiling instability | The prediction flips when the input grid shifts a few pixels. Behaves like proximity to a boundary in the model's own prediction map (exp14) |
-| **E_case** — disagreement | Two models ([Nano](https://huggingface.co/allenai/OlmoEarth-v1-Nano) vs [Base](https://huggingface.co/allenai/OlmoEarth-v1-Base)), or one model's three Sentinel-2 band-set tokens, predict the window differently (exp17) |
-| **E_dist** — embedding distance | The window looks unlike the scene the head was trained on |
-| **E_geo** — map check | The prediction contradicts an [OSM river line](https://wiki.openstreetmap.org/wiki/Key:waterway). Mostly finds disagreements *between reference maps*, so it is not in the table (exp15) |
-
-A signal is credible only if it beats **both** the model's own confidence
-and a pixel statistic computed with no model at all (the control).
 
 ## The numbers
 
-AURC (area under the risk-coverage curve) measures how well a score ranks
-the windows the model gets wrong. **Lower is better; bold is best in
-column.**
+Each signal scores every window for how likely it is wrong:
+
+- **E_system**, tiling instability — the prediction flips when the input grid
+  shifts a few pixels; behaves like boundary proximity (exp14)
+- **E_case**, disagreement — two models, or one model's three Sentinel-2
+  band-set tokens, predict the window differently (exp17)
+- **E_dist**, embedding distance — the window looks unlike the head's
+  training scene
+- **E_geo**, map check — the prediction contradicts an OSM river line. Mostly
+  finds disagreement *between reference maps*, so it is not in the table (exp15)
+
+A signal counts only if it beats **both** the model's own confidence and a
+pixel statistic computed with no model at all. AURC ranks the windows the
+model gets wrong; **lower is better, bold is best in column.**
 
 | Signal | AWF<br>in-domain | Barotse<br>wetland margins | Zambezi delta<br>ref. omits river | Sen1Floods11<br>hand labels |
 |---|---|---|---|---|
@@ -75,129 +45,79 @@ column.**
 
 <sup>
 Col 1: <a href="https://huggingface.co/datasets/allenai/olmoearth_projects_awf">AWF expert labels</a>, 63 errors.
-Cols 2-3: ESA WorldCover 2021, a weak reference; 97 and 29 disagreements.
-Col 4: hand-labelled flood masks, pooled excess AURC over 81,984 patches
-on a geographically held-out region (exp18).
+Cols 2–3: ESA WorldCover 2021, 97 and 29 disagreements.
+Col 4: hand-labelled flood masks, pooled excess AURC over 81,984 patches on a geographically held-out region (exp18).
 </sup>
 
-**Read the columns carefully — they say different things.** Columns 2-3
-score against ESA WorldCover, so their "errors" are disagreements with a
-weak map; the delta scene's reference has no water at all, which is why the
-no-model control wins there. Only columns 1 and 4 score against human
-labels, and in both of those **confidence wins**.
+**The columns say different things.** Columns 2–3 score against WorldCover,
+a weak map — the delta scene's reference has no water at all, which is why
+the no-model control wins there. Only columns 1 and 4 score against human
+labels, and confidence wins both.
 
-Per-scene values for all 27 rule-selected scenes:
-[docs/results/comparisons.md](docs/results/comparisons.md).
+## What we found
 
-## Findings
+1. **Confidence beats every audit signal on expert labels** — Sen1Floods11
+   dense masks (exp18), AWF points (exp04, exp16), and the fine-tuned model
+   run end to end (exp21, reproducing 0.881 against the reported 0.895).
+2. **That model is overconfident** — 0.93 accurate where it claims 0.99
+   (ECE 0.080) — so a stated accuracy needs a coverage: 0.945 at 80% (exp21).
+3. **The WorldCover wins do not transfer, and we do not know why.** Tiling
+   instability won 26/27 scenes and band-set disagreement 21/27 against
+   WorldCover (exp13, exp17); neither survives hand labels. Reference-version
+   instability (exp23), the imagery-to-map year gap (exp24) and seasonal
+   water (exp25) were each tested and each rejected. **Main open question.**
+4. **Errors concentrate at prediction boundaries** — about 75% of error
+   patches against 20% of correct ones, on both references — but confidence
+   still ranks them better than boundary proximity does (exp14, exp16, exp18).
+5. **Two runs tell you less than you would hope.** Within one family members
+   err together (exp07) and a *stronger* partner makes disagreement worse
+   (exp10); what helps is a different view of the input (exp17). RoPE in
+   v1.2 did not reduce sub-patch instability (exp19).
+6. **On the served product no class confidence is exported**, so boundary
+   fraction is the only label-free cue — it captures a median 0.88 of
+   WorldCover water disagreements at a 5% review budget (exp20). Outputs are
+   quantized to the 4-px patch lattice, with no inference-window seams (exp22).
 
-**1. Against expert labels, confidence beats every audit signal.** On
-Sen1Floods11 hand-labelled flood masks (a geographically held-out region,
-351 scored tiles) every signal is equal or significantly worse (exp18); the
-same holds on the AWF expert point task (exp04, exp16).
+> **Scope.** The water results are linear probes on frozen encoders. One
+> fine-tuned model has been run end to end; the change product is assessed
+> only through its served output.
 
-**2. This holds for the fine-tuned model run end to end.** The published AWF
-checkpoint reproduces the reported accuracy (0.881 against 0.895); confidence
-ranks its errors best, tiling instability ties it, everything else is
-significantly worse (exp21).
-
-**3. But that model is overconfident, so accuracy needs a coverage.** It is
-0.93 accurate where it claims 0.99 (ECE 0.080). Abstain on the least
-confident 20% and accuracy rises to 0.945.
-
-**4. The earlier wins were against a weak reference, and we do not know
-why.** Tiling instability beat confidence on 26 of 27 scenes, and band-set
-disagreement on 21 of 27, when errors were defined against ESA WorldCover
-(exp13, exp17). Neither transfers to hand labels. Three explanations were
-tested and **all three failed**: reference-version instability covers only
-~10% of disagreements and the advantage survives without it (exp23); the
-imagery-to-map year gap does not explain it (exp24); neither does seasonal
-water (exp25). This is the repository's main open question.
-
-**5. Errors do concentrate at prediction boundaries** — about 75% of error
-patches against 20% of correct ones, on both references — but confidence
-still ranks them better than boundary proximity does.
-
-**6. A disagreement partner needs a different view of the input, not a more
-accurate model** (exp10, exp17). A stronger same-family partner makes the
-signal worse.
-
-**7. On the served product, boundary triage works and confidence cannot be
-tested.** The land cover change rasters export no confidence for their class
-map. Ranking by prediction-boundary fraction captures a median 0.88 of
-WorldCover water disagreements at a 5% review budget (exp20).
-
-**8. The served product shows no inference-window striping, but is quantized
-to the 40 m patch grid.** Class boundaries and change-probability gradients
-peak on the encoder's 4-px lattice in 19 of 20 profiles and nowhere at the
-inference-window periods; seams affecting 5-10% of rows would have been
-detected (exp22).
-
-> **Scope caveat.** The water results are linear probes on frozen encoders.
-> One fine-tuned model has been run end to end; the change product is
-> assessed only through its served output.
-
-Negative and null results, and every number behind the above, are in
+Every number above, and the negative results behind it, are in
 [comparisons.md](docs/results/comparisons.md) and
-[signals.md](docs/results/signals.md).
+[signals.md](docs/results/signals.md). Scoring rules, evidence tiers and the
+contribution claim are in [protocol.md](docs/method/protocol.md).
 
 ![No-model controls](exp/out/exp06_controls.png)
 
-## Method
-
-This is **selective prediction**: score how likely each window is to be
-wrong, then judge the score by risk-coverage curves.
-
-- Signals are label-free. Labels only grade the signals, never train them.
-- Every split is a spatial hold-out.
-- Every comparison includes a non-learned pixel control.
-- Scene selection is pre-registered before any scene is fetched.
-
-Full scoring rules, evidence tiers and status terms:
-[docs/method/protocol.md](docs/method/protocol.md).
-
-Upstream evaluation for comparison:
-[rslearn segmentation tasks](https://github.com/allenai/rslearn/blob/master/rslearn/train/tasks/segmentation.py),
-the [AWF task config](https://github.com/allenai/olmoearth_projects/blob/main/olmoearth_run_data/awf/model.yaml)
-whose classes and split we reuse, and
-[olmoearth_pretrain/evals](https://github.com/allenai/olmoearth_pretrain/tree/main/olmoearth_pretrain/evals).
-
 ## Install
 
-The package is layered, so the assessment API installs without the encoder
-stack:
-
 ```bash
-uv sync                                    # assessment layer only, no torch
-uv sync --extra encoder --extra geo        # full experiment environment
+uv sync                                 # assessment layer only, no torch
+uv sync --extra encoder --extra geo     # full experiment environment
 ```
 
-| Install | Gives you | Needs torch |
-|---|---|---|
-| `uv sync` | `oe_inferencex.assess`, `.metrics`, `.taskcard`, `.lcc` — what the OlmoEarth Agent consumes | no |
-| `+ --extra geo` | Geospatial IO and plotting; the 5 experiments that read rasters without an encoder (exp12, exp14, exp20, exp22, exp23) | no |
-| `+ --extra encoder` | `oe_inferencex.awf`, `.data`, and the 22 experiments that run the encoder | yes |
+`uv sync` gives `oe_inferencex.assess/.metrics/.taskcard/.lcc`, which is what
+the OlmoEarth Agent consumes. `--extra geo` adds raster IO and plotting (and
+the 5 experiments that need no encoder: exp12, exp14, exp20, exp22, exp23);
+`--extra encoder` adds `.awf`, `.data` and the other 22.
 
 Torch is pinned per platform: Linux resolves the **cu128** build, everything
 else the CPU build. To reproduce against a specific upstream revision rather
-than the published `olmoearth-pretrain` release, install a checkout over the
-top: `uv pip install -e ../olmoearth_pretrain`.
+than the published release: `uv pip install -e ../olmoearth_pretrain`.
 
 ## Reproduce
 
 ```bash
-uv sync --extra encoder --extra geo
 uv run python exp/exp02_full_slice.py
 ```
 
-Experiments are `exp01`-`exp26` in [`exp/`](exp/). Every claim in the docs
+Experiments are `exp01`–`exp26` in [`exp/`](exp/). Every claim in the docs
 cites the experiment that produced it, and every experiment writes a CSV or
-JSON under `exp/out/` that the claim can be checked against.
-
-- `exp20` needs no checkpoint — it reads the served rasters over HTTP.
-- `exp21` downloads the fine-tuned checkpoint from HuggingFace.
-- `exp04` needs the [AWF dataset](https://huggingface.co/datasets/allenai/olmoearth_projects_awf) under `data/awf/dataset/`.
-- Checkpoints come from [HuggingFace allenai](https://huggingface.co/allenai).
+JSON under `exp/out/` the claim can be checked against. `exp20` needs no
+checkpoint (it reads the served rasters over HTTP); `exp21` downloads the
+fine-tuned checkpoint; `exp04` needs the
+[AWF dataset](https://huggingface.co/datasets/allenai/olmoearth_projects_awf)
+under `data/awf/dataset/`.
 
 ## Documentation
 
@@ -206,13 +126,10 @@ JSON under `exp/out/` that the claim can be checked against.
 | [Technique ledger](docs/TECHNIQUES.md) | What was tried, one line each — **start here** |
 | [Recipe](docs/method/recipe.md) | What to do and not do when auditing a map |
 | [Protocol](docs/method/protocol.md) | How results are scored; evidence tiers |
-| [Comparisons](docs/results/comparisons.md) | Per-experiment results |
-| [Signals](docs/results/signals.md) | Per-signal evidence |
-| [Task cards](docs/method/taskcards.md) | What each fine-tuned model is |
-| [Infrastructure](docs/method/infrastructure.md) | Upstream sources, formats, encoder internals |
+| [Comparisons](docs/results/comparisons.md) · [Signals](docs/results/signals.md) | Per-experiment and per-signal evidence |
+| [Task cards](docs/method/taskcards.md) · [Infrastructure](docs/method/infrastructure.md) | What each model is; upstream sources and formats |
 | [Agent integration](docs/method/agent_integration.md) | Contract with the OlmoEarth Agent |
-| [Roadmap](docs/plan/roadmap.md) | Open items in priority order |
-| [Lab log](exp/NOTES.md) | Chronological, including superseded runs |
+| [Roadmap](docs/plan/roadmap.md) · [Lab log](exp/NOTES.md) | Open items; chronology |
 
 ---
 

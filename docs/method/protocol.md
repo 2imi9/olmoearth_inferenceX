@@ -97,6 +97,12 @@ read as claiming they are:
   validation (trimap and Boundary-IoU evaluation; mixed-pixel effects,
   Foody 2002; Radoux and Bogaert 2017), and is not claimed as new.
 
+**Upstream evaluation this is measured against:**
+[rslearn segmentation tasks](https://github.com/allenai/rslearn/blob/master/rslearn/train/tasks/segmentation.py),
+the [AWF task config](https://github.com/allenai/olmoearth_projects/blob/main/olmoearth_run_data/awf/model.yaml)
+whose classes and split are reused here, and
+[olmoearth_pretrain/evals](https://github.com/allenai/olmoearth_pretrain/tree/main/olmoearth_pretrain/evals).
+
 **What we did not find in the EO literature**, and what this repository
 targets: selective-prediction evaluation (risk-coverage / AURC) of land
 cover inference; cross-model disagreement as an audit signal; and the
