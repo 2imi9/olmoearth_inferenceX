@@ -33,13 +33,7 @@ Columns 2–3 score against WorldCover, a weak map — the delta scene's
 reference has no water at all, which is why the no-model control wins there.
 **Only columns 1 and 4 score against human labels, and confidence wins both.**
 
-![Per-scene AURC on the 27 rule-selected scenes](exp/out/exp13_per_scene.png)
-
-<sup>
-All 27 WorldCover scenes (exp13), log scale. E_system tiling instability
-(green) sits lowest on 26 of them — the result that does not survive hand
-labels.
-</sup>
+![Signal win rate against confidence, weak reference vs hand labels](exp/out/summary_transfer.png)
 
 ## What we found
 
