@@ -3,8 +3,17 @@
 For each signal, the share of units where it ranks errors better than the
 model's own confidence, under a weak reference (ESA WorldCover, the 27
 rule-selected scenes) and under hand labels (Sen1Floods11 Bolivia). Every
-signal that beats confidence on the left loses to it on the right; that gap
-is the repository's open question (docs/results/comparisons.md section 3).
+signal that beats confidence on the left fails to beat it on the right; that
+gap is the repository's open question (docs/results/comparisons.md section 3).
+
+DIAGNOSTIC ONLY - do not publish this chart as evidence. Its two columns do
+not share a unit: a WorldCover point is one scene aggregating 3000+ patches
+into a single vote, a Sen1Floods11 point is one 60x60 tile crop. Joining them
+with a line implies a comparability that does not hold, and the monotone drop
+reads as though the reference caused it, which is exactly the causal claim
+exp23-exp25 failed to establish. The numbers are correct; the graphic form
+overstates them. The clustered sign test printed below is the part worth
+citing (docs/method/protocol.md, "Known limits of these tests").
 
 Reads committed artifacts only - no network, no encoder, no torch:
 exp13_summary.json, exp14_boundary_ablation.csv, exp17_internal_evidence.csv,
