@@ -58,9 +58,8 @@ uv sync --extra encoder --extra geo     # full experiment environment
 uv run python exp/exp02_full_slice.py
 ```
 
-Experiments are `exp01`–`exp26` in [`exp/`](exp/); each writes a CSV or JSON
-under `exp/out/` that its claims can be checked against. Torch is pinned per
-platform — Linux resolves the cu128 build.
+Experiments are `exp01`–`exp26` in [`exp/`](exp/), with outputs under
+`exp/out/`. Torch is pinned per platform — Linux resolves the cu128 build.
 
 ## Documentation
 
