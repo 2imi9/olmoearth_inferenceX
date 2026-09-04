@@ -10,17 +10,18 @@ which faces the same no-reference problem.
 
 ## The numbers
 
-AURC ranks the windows the model gets wrong. **Lower is better, bold is best
-in column.** A signal counts only if it beats both the model's own confidence
-and a pixel statistic computed with no model at all.
+AURC ranks the windows the model gets wrong. **Lower is better**, and
+<u>underlined</u> marks the best value in each column. A signal counts only
+if it beats both the model's own confidence and a pixel statistic computed
+with no model at all.
 
 | Signal | AWF<br>in-domain | Barotse<br>wetland margins | Zambezi delta<br>ref. omits river | Sen1Floods11<br>hand labels |
 |---|---|---|---|---|
-| confidence (baseline) | **0.0363** | 0.0684 | 0.0234 | **0.0105** |
-| E_system tiling instability | 0.0489 | **0.0127** | 0.0009 | 0.0115 |
+| confidence (baseline) | <u>0.0363</u> | 0.0684 | 0.0234 | <u>0.0105</u> |
+| E_system tiling instability | 0.0489 | <u>0.0127</u> | 0.0009 | 0.0115 |
 | E_case cross-model | 0.0670 | 0.0235 | 0.0103 | 0.0186 |
 | E_dist embedding distance | 0.1338 | 0.0289 | 0.0014 | 0.0592 |
-| pixel control (no model) | 0.1658 | 0.0384 | **0.0005** | 0.0356 |
+| pixel control (no model) | 0.1658 | 0.0384 | <u>0.0005</u> | 0.0356 |
 
 <sup>
 Col 1: AWF expert labels, 63 errors. Cols 2–3: ESA WorldCover 2021, 97 and 29
