@@ -32,6 +32,7 @@ Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 | exp26 | hand-check kit: top-12 disagreements by tiling instability and by confidence on the three scenes with the largest exp13 gain (shire_80, barotse, okavango_80); crops, cues and blank verdict columns; no claim |
 | exp25 | JRC seasonal-water split: disagreements enriched on seasonal margins, but tile-phase still beats confidence without them (22/2/0 in 2024, 22/1/0 in 2021); third mismatch component ruled out |
 | repro-aicr | exp02 and exp21 reproduced end to end on the AICR B200 cluster (2026-09-05): every metric identical, max abs diff 1e-5; a run with the cache present skips the encoder |
+| bench-b200 | encoder throughput and precision on AICR: fp32 leaves the B200 tensor cores idle (18.8 ms per 128x128 window); TF32 halves it with 59 of 60 exp21 fields unchanged and one budget count moving by one window; bf16 7-10x, untested on the audit |
 
 ## exp01 — first E_case map (2026-08-31)
 
@@ -416,3 +417,30 @@ accuracy 0.881 (41 errors), confidence AURC 0.0262, tiling instability
 0.0235, ECE 0.080, selective accuracy 0.945 at 80% coverage. A first
 attempt (job 697356) fetched and extracted the dataset but aborted before
 inference on a pipefail in the job script, not in the experiment.
+
+## Encoder throughput and precision on AICR (2026-09-05)
+
+Not new evidence about the signals; a measurement of how the encoder uses
+the GPU and whether a faster numeric path changes the audit. Every
+experiment in this repository runs fp32 with no TF32, autocast or compile.
+exp/bench_encoder_b200.py (job 697668, one B200, torch 2.7.1+cu128, random
+input) shows why that is slow: in fp32 attention runs on an sm80
+memory-efficient SDPA kernel and the GEMMs on SIMT sgemm, so the tensor
+cores are idle, and the flash kernel refuses fp32 outright. Per 128x128
+window: fp32 18.8 ms; TF32 10.1 ms (pooled-feature drift rel 2.2e-4,
+random-head score Spearman 1.000000); bf16 autocast 2.7 ms (rel 5.6e-3,
+0.99993); bf16 + torch.compile 2.4 ms (rel 2.6e-3, 0.99998). Batched x16
+reaches 1.8 ms and the AWF 32x32x12-month regime 1.1 ms. Values in
+exp/out/bench_encoder_b200.json.
+
+TF32 on the audit itself (job 697843): exp21 rerun with no script change,
+torch.set_float32_matmul_precision("high") set before import, stacks cache
+present. Inference 8 s against 19 s. 59 of the 60 numeric fields of
+exp21_summary.json match fp32 to under 1e-4 - every accuracy, AURC, ECE and
+selective-accuracy value - and one does not: error capture at the 20%
+budget by tiling instability on 32-px crops moves from 27/42 (0.643) to
+28/42 (0.667), one window crossing the budget cut. Continuous metrics are
+insensitive to TF32; a discrete review-budget count can move by one
+window, because tiling instability is a small standard deviation across
+shifts. bf16 has not been tested on the audit. All numbers reported in the
+docs remain the fp32 runs.
