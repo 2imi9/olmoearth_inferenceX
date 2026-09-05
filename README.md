@@ -33,6 +33,8 @@ Columns 2–3 score against WorldCover, a weak map — the delta scene's
 reference has no water at all, which is why the no-model control wins there.
 **Only columns 1 and 4 score against human labels, and confidence wins both.**
 
+![Reliability of the fine-tuned AWF model on 344 held-out expert points (exp21)](exp/out/exp21_reliability.png)
+
 ## What we found
 
 - **Confidence beats every audit signal on expert labels** (exp18, exp04,
