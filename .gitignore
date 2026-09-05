@@ -16,3 +16,10 @@ exp/out/exp23_geo.npz
 exp/out/exp24_scenes.npz
 exp/out/exp24_feats.npz
 exp/out/exp25_jrc.npz
+exp/out/exp27_*.npz
+exp/out/exp28_*.npz
+exp/out/exp29_*.npz
+exp/out/*_smoke.*
+exp/out/*_smoke_*
+data/floods
+slurm/
