@@ -31,7 +31,7 @@ Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 | exp24 | 2021 imagery + 2021 map + within-year head: tile-phase still beats confidence 23/3/0 (2024 same scenes 25/1/0); year gap does not explain the WorldCover wins |
 | exp26 | hand-check kit: top-12 disagreements by tiling instability and by confidence on the three scenes with the largest exp13 gain (shire_80, barotse, okavango_80); crops, cues and blank verdict columns; no claim |
 | exp25 | JRC seasonal-water split: disagreements enriched on seasonal margins, but tile-phase still beats confidence without them (22/2/0 in 2024, 22/1/0 in 2021); third mismatch component ruled out |
-| repro-aicr | exp02 reproduced end to end on the AICR B200 cluster (2026-09-05): identical metrics, max abs prob diff 1e-5; a run with the cache present skips the encoder |
+| repro-aicr | exp02 and exp21 reproduced end to end on the AICR B200 cluster (2026-09-05): every metric identical, max abs diff 1e-5; a run with the cache present skips the encoder |
 
 ## exp01 — first E_case map (2026-08-31)
 
@@ -389,7 +389,7 @@ model error / reference error / seasonal or date difference / ambiguous).
 The reviewer's verdicts, once entered, are the input to the next analysis;
 the NDWI cue is a crude aid and must not be treated as truth.
 
-## exp02 reproduction on AICR (2026-09-05)
+## Reproduction on AICR (2026-09-05)
 
 Environment and pipeline check on a different machine, not new evidence.
 Fresh clone at ~/olmoearth_inferenceX on the MGHPCC AICR cluster, built
@@ -406,3 +406,13 @@ regenerated exp02_cache.npz against the committed one: labels, transform
 and CRS identical; max |dp| 9.7e-06 (Base), 4.5e-06 (Nano). A run with the
 cache present prints "loaded cached probs/labels" and replays the metric
 layer only; it does not exercise the encoder.
+
+exp21 on the same clone (job 697617, one B200, 2m55s wall; the AWF dataset
+fetched from allenai/olmoearth_projects_awf to /scratch and symlinked in as
+data/awf, 1459 windows): 344 validation windows loaded in 48 s, four shifts
+in 3 s at 16 px and 16 s at 32 px. All 60 numeric fields of
+exp21_summary.json match the committed run to a max abs diff of 1.05e-05:
+accuracy 0.881 (41 errors), confidence AURC 0.0262, tiling instability
+0.0235, ECE 0.080, selective accuracy 0.945 at 80% coverage. A first
+attempt (job 697356) fetched and extracted the dataset but aborted before
+inference on a pipefail in the job script, not in the experiment.
