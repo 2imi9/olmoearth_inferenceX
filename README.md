@@ -8,6 +8,12 @@ Two applications are demonstrated: **error ranking** and **cross-inference
 evaluation**. Signal designs are adapted from LLM hallucination detection,
 which faces the same no-reference problem.
 
+![Full audit slice at Kazungula: reference, prediction, disagreements, E_case signal, OSM check, risk-coverage](exp/out/exp02_full_slice.png)
+
+<sup>One scene end to end — what `exp/exp02_full_slice.py` (the reproduce
+command below) writes. The signal lights up on the shoreline, where the
+disagreements are.</sup>
+
 ## The numbers
 
 AURC ranks the windows the model gets wrong. **Lower is better**, and
@@ -32,8 +38,6 @@ disagreements. Col 4: hand-labelled flood masks, pooled excess AURC over
 Columns 2–3 score against WorldCover, a weak map — the delta scene's
 reference has no water at all, which is why the no-model control wins there.
 **Only columns 1 and 4 score against human labels, and confidence wins both.**
-
-![Reliability of the fine-tuned AWF model on 344 held-out expert points (exp21)](exp/out/exp21_reliability.png)
 
 ## What we found
 
