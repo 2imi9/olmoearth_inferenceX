@@ -72,12 +72,15 @@ def test_exp13_headline_tests_from_the_committed_table():
     assert wins_losses_ties(list(e_dist.values()))[:2] == (13, 14)                          # ledger: E_dist 13/27
 
 
-def test_block_bootstrap_covers_whole_blocks():
+def test_block_bootstrap_resamples_whole_blocks():
     idx = block_bootstrap_indices(32, 4, np.random.default_rng(0))
-    assert len(idx) == 1024
-    rows, cols = idx // 32, idx % 32
-    assert set(np.unique(rows // 4 * 8 + cols // 4)) <= set(range(64))
-    assert len(idx) % 16 == 0
+    assert idx.shape == (1024,)
+    groups = idx.reshape(64, 16)                                   # one sampled 4x4 block per consecutive 16 indices
+    rows, cols = groups // 32, groups % 32
+    assert np.all(rows // 4 == rows[:, :1] // 4) and np.all(cols // 4 == cols[:, :1] // 4)
+    assert all(len(set(zip(r, c))) == 16 for r, c in zip(rows, cols))
+    assert len(np.unique(rows[:, 0] // 4 * 8 + cols[:, 0] // 4)) < 64      # with replacement: some blocks repeat
+    assert np.array_equal(idx, block_bootstrap_indices(32, 4, np.random.default_rng(0)))   # seeded
 
 
 def test_cluster_bootstrap_difference_prefers_the_better_signal():

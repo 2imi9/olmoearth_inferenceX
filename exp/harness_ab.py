@@ -169,7 +169,7 @@ def ndwi_a(img, size):
 
 def boundary_indicator(p):
     """exp14's pred-boundary: fraction of a patch's 8 neighbours whose hard label differs (edge padding)."""
-    return sig_lib.boundary_indicator(p)
+    return sig_lib.boundary_indicator(p, probabilities=True)
 
 
 def paired_stats(diffs, rng):

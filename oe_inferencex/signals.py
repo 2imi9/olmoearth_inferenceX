@@ -22,27 +22,35 @@ S2_BANDS = ("B02", "B03", "B04", "B08", "B05", "B06", "B07", "B8A", "B11", "B12"
 def confidence(logits, multiclass=None):
     """The baseline error ranker (recipe item 1): higher = more suspect.
 
-    Binary logit maps give the negative absolute logit; multiclass logits
-    with the class axis first, (C, H, W), give the negative top-1 minus
-    top-2 margin. Neither ties where a sigmoid or softmax saturates in
-    float32. `multiclass` defaults to True for 3-d input; pass False for a
-    batch of binary maps (N, H, W)."""
-    x = np.asarray(logits, dtype=np.float64)
+    Binary logit maps, (H, W) or a batch (N, H, W) with multiclass=False,
+    give the negative absolute logit; one multiclass map with the class axis
+    first, (C, H, W), gives the negative top-1 minus top-2 margin. Neither
+    ties where a sigmoid or softmax saturates in float32. `multiclass`
+    defaults to True for 3-d input. The input dtype is kept (float32 margins
+    stay float32, as the experiments computed them); integers become float64."""
+    x = np.asarray(logits)
+    if x.dtype.kind != "f":
+        x = x.astype(np.float64)
     if multiclass is None:
         multiclass = x.ndim == 3
     if multiclass:
+        if x.ndim != 3 or x.shape[0] < 2:
+            raise ValueError(f"multiclass logits must be one (C, H, W) map with C >= 2, got shape {x.shape}")
         srt = np.sort(x, axis=0)
         return -(srt[-1] - srt[-2])
+    if x.ndim not in (2, 3):
+        raise ValueError(f"binary logits must be (H, W) or (N, H, W), got shape {x.shape}")
     return -np.abs(x)
 
 
-def boundary_indicator(hard):
+def boundary_indicator(hard, probabilities=False):
     """Fraction of a unit's 8 neighbours whose hard label differs (edge padding); (H, W) or (N, H, W).
 
-    exp14's pred-boundary, exp18.boundary and the assessor's boundary fraction. Probability maps
-    of the positive class may be passed instead of hard labels; they are thresholded at 0.5."""
+    exp14's pred-boundary, exp18.boundary and the assessor's boundary fraction. `hard` holds class
+    labels (any dtype, cast to int); with probabilities=True it holds the probability of the
+    positive class and is thresholded at 0.5 first."""
     a = np.asarray(hard)
-    if a.dtype.kind == "f":
+    if probabilities:
         a = (a > 0.5)
     a = a.astype(int)
     squeeze = a.ndim == 2
@@ -60,7 +68,7 @@ def boundary_indicator(hard):
 
 
 # ----------------------------------------------------------------------------- tile-phase instability
-def aligned_tile_phase(shift_maps, patch=4):
+def aligned_tile_phase(shift_maps, patch=4, dtype=np.float64):
     """Perturbation stability (E_system): std across sub-patch shifts, aligned on a pixel canvas.
 
     shift_maps: sequence over shifts s = 0, 1, ..., S-1 of patch-grid maps
@@ -68,15 +76,17 @@ def aligned_tile_phase(shift_maps, patch=4):
     map is upsampled to pixels, placed at its true offset on a common canvas,
     the per-pixel std across shifts is taken, and the result is pooled back
     to the shift-0 patch grid (exp13; alignment is the correction of exp05,
-    exp09 and exp11). Returns (G, G) or (N, G, G)."""
-    maps = np.asarray(shift_maps, dtype=np.float64)
+    exp09 and exp11). Returns (G, G) or (N, G, G). `dtype` is the canvas
+    arithmetic: float64 reproduces exp13 (scenes), float32 reproduces exp18
+    (flood tiles) bit for bit; the two differ in the last float32 digits."""
+    maps = np.asarray(shift_maps, dtype=dtype)
     squeeze = maps.ndim == 3
     if squeeze:
         maps = maps[:, None]
     S, N, G0, G1 = maps.shape
     H, W = G0 * patch, G1 * patch
-    canvas = np.full((S, N, H + S, W + S), np.nan)
-    ones = np.ones((patch, patch))
+    canvas = np.full((S, N, H + S, W + S), np.nan, dtype=dtype)
+    ones = np.ones((patch, patch), dtype=dtype)
     for s in range(S):
         canvas[s, :, s:s + H, s:s + W] = np.stack([np.kron(m, ones) for m in maps[s]])
     pix_std = np.nanstd(canvas, axis=0)[:, :H, :W]

@@ -6,8 +6,10 @@ import os
 import numpy as np
 import pytest
 
-from oe_inferencex.metrics import aurc_expected, excess_aurc, oracle_aurc, risk_coverage
+from oe_inferencex.metrics import (aurc_expected, capture_at_budget, excess_aurc, expected_calibration_error, oracle_aurc,
+                                   risk_coverage, selective_accuracy)
 from oe_inferencex.signals import boundary_indicator, confidence
+from oe_inferencex.stats import cluster_bootstrap_difference
 
 OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "exp", "out")
 
@@ -81,3 +83,30 @@ def test_recorded_prereg_river_tests_are_reproducible_from_the_summaries():
         recomputed = clustered_sign_test(pr["per_river"], {})
         assert (recomputed["w"], recomputed["l"], recomputed["t"]) == (pr["w"], pr["l"], pr["t"])
         assert recomputed["p"] == pytest.approx(pr["one_sided_p"], abs=1e-12)
+
+
+
+def test_exp21_fine_tuned_model_metrics_from_the_per_window_table():
+    """exp21_summary.json (16-px crops) reproduced from exp21_finetuned_awf.csv: AURCs, ECE, selective accuracy,
+    error capture at the review budgets and the cluster bootstrap of tiling instability against confidence."""
+    rows = [r for r in csv.DictReader(open(_need("exp21_finetuned_awf.csv"))) if r["crop"] == "16"]
+    ref = json.load(open(_need("exp21_summary.json")))["crops"]["16"]
+    err = np.array([float(r["error"]) for r in rows])
+    conf = -np.array([float(r["logit_margin"]) for r in rows])
+    tile = np.array([float(r["tile_phase"]) for r in rows])
+    bnd = np.array([float(r["boundary"]) for r in rows])
+    assert len(rows) == 344 and int(err.sum()) == ref["n_errors"]
+    assert aurc_expected(conf, err) == pytest.approx(ref["aurc"]["confidence (neg logit margin)"], abs=1e-12)
+    assert aurc_expected(tile, err) == pytest.approx(ref["aurc"]["tiling instability (aligned)"], abs=1e-12)
+    assert aurc_expected(bnd, err) == pytest.approx(ref["aurc"]["boundary indicator"], abs=1e-12)
+    assert oracle_aurc(len(err), int(err.sum())) == pytest.approx(ref["aurc_oracle"], abs=1e-12)
+    top1 = np.array([float(r["top1_prob"]) for r in rows])
+    assert expected_calibration_error(top1, 1 - err)[0] == pytest.approx(ref["ece_10bins"], abs=1e-12)
+    sel = selective_accuracy(conf, 1 - err)
+    assert all(sel[c] == pytest.approx(ref["selective_accuracy_at_coverage"][str(c)], abs=1e-12) for c in (0.5, 0.8, 0.9, 1.0))
+    cap = capture_at_budget(tile, err, budgets=(0.05, 0.1, 0.2))
+    assert all(cap[b] == pytest.approx(ref["error_capture_at_budget"][str(b)]["tiling instability (aligned)"], abs=1e-12)
+               for b in (0.05, 0.1, 0.2))
+    clusters = np.array([r["task"] for r in rows])
+    lo, hi, p_better = cluster_bootstrap_difference(tile, conf, err, clusters)
+    assert (lo, hi, p_better) == pytest.approx(ref["bootstrap_vs_confidence (lo, hi, P(signal better))"]["tiling instability (aligned)"], abs=1e-12)

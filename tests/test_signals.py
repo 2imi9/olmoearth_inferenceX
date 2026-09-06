@@ -19,6 +19,11 @@ def test_confidence_is_negative_margin():
     c = confidence(logits)
     assert c.shape == (2, 2) and c[0, 0] == -4.0 and c[1, 1] == 0.0
     assert np.array_equal(confidence(np.full((3, 2, 2), -2.0), multiclass=False), np.full((3, 2, 2), -2.0))
+    assert confidence(np.ones((4, 4), np.float32)).dtype == np.float32          # dtype kept, as the experiments computed it
+    with pytest.raises(ValueError):
+        confidence(np.zeros((2, 3, 4, 4)))                                     # a batch of multiclass maps is ambiguous
+    with pytest.raises(ValueError):
+        confidence(np.zeros((1, 4, 4)), multiclass=True)
 
 
 def test_boundary_indicator_counts_differing_neighbours():
@@ -28,7 +33,9 @@ def test_boundary_indicator_counts_differing_neighbours():
     assert b[1, 1] == 1.0                                  # all 8 neighbours differ
     assert b[0, 0] == pytest.approx(1 / 8)                 # only the centre differs (edge padding)
     assert np.array_equal(boundary_indicator(np.stack([hard, hard]))[1], b)
-    assert np.array_equal(boundary_indicator(hard.astype(float) * 0.9), b)   # probabilities threshold at 0.5
+    assert np.array_equal(boundary_indicator(hard * 0.9, probabilities=True), b)     # probabilities threshold at 0.5
+    multi = np.array([[1.0, 2.0], [1.0, 2.0]])                                        # float class labels stay labels
+    assert np.array_equal(boundary_indicator(multi), boundary_indicator(multi.astype(int)))
 
 
 def test_tile_phase_is_zero_for_shift_invariant_maps_and_positive_otherwise():
@@ -87,6 +94,7 @@ def test_equals_exp13_and_exp18_implementations(exp_modules):
     tiles = rng.integers(0, 6000, (3, 12, 64, 64)).astype(np.float32)
     assert np.allclose(ndwi_gradient(tiles, size=exp18.CROP), exp18.ndwi_gradient(tiles))
     p = rng.random((2, exp18.G, exp18.G))
-    assert np.allclose(boundary_indicator(p), exp18.boundary(p))
-    ps60 = np.stack([rng.random((2, exp18.G, exp18.G)) for _ in exp13.SHIFTS])
-    assert np.allclose(aligned_tile_phase(ps60), exp18.aligned_tile_phase(ps60), atol=1e-6)   # exp18 works in float32
+    assert np.array_equal(boundary_indicator(p, probabilities=True), exp18.boundary(p))
+    ps60 = np.stack([rng.random((2, exp18.G, exp18.G)) for _ in exp13.SHIFTS]).astype(np.float32)
+    assert np.array_equal(aligned_tile_phase(ps60, dtype=np.float32), exp18.aligned_tile_phase(ps60))   # bit for bit
+    assert np.allclose(aligned_tile_phase(ps60), exp18.aligned_tile_phase(ps60), atol=1e-6)               # float64 form
