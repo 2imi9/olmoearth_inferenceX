@@ -287,7 +287,7 @@ training patches also the class-conditional Mahalanobis distance and ViM.
 Three references: the head's training patches (R1, where the kNN score is
 E_dist), the evaluated scene itself cross-fitted over five folds (R2), and
 a cross-testbed pool of about 414k (part A) or 29k (part B) patches (R3)
-standing in for a pretraining sample (exp31, one B200 job, 53 s).
+standing in for a pretraining sample (exp31, one B200 job, 47 s).
 
 **Verdict: rejected** on both testbeds.
 On the 27 scenes no score beats confidence: kNN to the training scene is

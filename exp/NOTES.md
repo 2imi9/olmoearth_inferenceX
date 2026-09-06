@@ -657,9 +657,12 @@ diagnostic. Preregistered primary: the same-scene kNN score (label-free,
 no external data); U+ = mean of the within-unit midrank percentiles of
 confidence and of that score; inference = per-river mean gain over
 confidence, one-sided exact sign test over the 8 rivers. References,
-controls and scaffolding as exp28 (exp/harness_ab.py). Job 706911, one
-B200, fp32, 53 s, 0 failures (a first submission, job 706904, failed on a
-device-placement bug before any score was computed); outputs
+controls and scaffolding as exp28 (exp/harness_ab.py). Job 706963, one
+B200, fp32, 47 s, 0 failures (job 706904 failed on a device-placement bug
+before any score was computed; job 706911 ranked ViM by its softmax
+probability, which saturates at 1.0 and tied the most atypical patches, so
+the Codex cross-review had it replaced by the equivalent log-odds; every
+other number is identical between 706911 and 706963); outputs
 exp/out/exp31_summary.json and exp/out/exp31_feature_typicality.csv.
 
 Part A (27 rule scenes, exp13 error set). The preregistered combination U+
@@ -675,9 +678,15 @@ R1 kNN score wins (16/11); the R2 and R3 Gaussian scores lose 2/25 to 5/22.
 Spearman with the NDWI-gradient control: R2 kNN 0.55, R2 Mahalanobis 0.47,
 R3 kNN 0.27; the R1 kNN score correlates with confidence (0.56) and
 tile-phase (0.55). The R1 kNN E-AURCs differ from the committed exp13
-values by at most 6.3e-4 over the 27 scenes (rank flips among near-tied
-distances on the regenerated cluster features); the 13/27 pattern is
-reproduced. Tile-phase against confidence: 26/1 by scene, 8/0 by river.
+values by at most 6.3e-4 over the 27 scenes. Provenance: exp28, exp30 and
+exp31 all score one error set, the seed-0 head on the exp11 features
+regenerated on the cluster, and that set differs from the committed exp13
+run (original laptop features) by one or two patches on four scenes
+(barotse 98 against 97, kafue_20 78 against 77, shire_20 302 against 303,
+vicfalls_up 21 against 23; identical on the other 23), so the exp13 numbers
+quoted from this pipeline are its own, not a byte reproduction of exp13.
+The 13/27 pattern of E_dist is reproduced. Tile-phase against confidence:
+26/1 by scene, 8/0 by river.
 
 Part B (Sen1Floods11 Bolivia, 351 scored tiles, head accuracy 0.912).
 Every typicality score loses to confidence on at least 317 of 351 tiles:
