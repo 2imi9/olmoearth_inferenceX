@@ -8,11 +8,12 @@ Two applications are demonstrated: **error ranking** and **cross-inference
 evaluation**. Signal designs are adapted from LLM hallucination detection,
 which faces the same no-reference problem.
 
-![Full audit slice at Kazungula: reference, prediction, disagreements, E_case signal, OSM check, risk-coverage](exp/out/exp02_full_slice.png)
+![Full audit slice at Kazungula: Sentinel-2 true colour with the disagreements outlined, reference, prediction, disagreements, E_case signal, OSM check, risk-coverage](exp/out/exp02_full_slice.png)
 
 <sup>One scene end to end — what `exp/exp02_full_slice.py` (the reproduce
-command below) writes. The signal lights up on the shoreline, where the
-disagreements are.</sup>
+command below) writes. Panel (a) is the scene itself with the patches where
+the model and the reference disagree outlined; the signal lights up on the
+shoreline, where those disagreements are.</sup>
 
 ## The numbers
 

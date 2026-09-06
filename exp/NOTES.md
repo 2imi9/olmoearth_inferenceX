@@ -87,6 +87,20 @@ Next:
 - Tri-model (add Tiny) for Dawid-Skene-shaped E_case.
 - v1 vs v1_2 E_system on the same windows.
 
+**2026-09-06, true-colour panel.** The figure gained panel (a), the
+Sentinel-2 L2A window itself (S2A 2024-08-29, 0% cloud, the least-cloudy
+June-September 2024 item the loader selects deterministically) with the 22
+disagreement patches outlined. The window was re-fetched into the cache as
+the B04/B03/B02 digital numbers plus the date; its grid transform and the
+WorldCover labels are identical to the committed cache, and the committed
+probabilities were left untouched. A full CPU re-run on the Mac the same day
+gave the same 22 disagreement patches, the same AURCs (0.0011 / 0.0009) and
+the same error rate, with probabilities differing from the committed ones by
+at most 1.5e-3 (fp32 accumulation order; the B200 run of 2026-09-05 matched
+to 1e-5). Most outlined patches lie on the Kazungula bridge and along the
+shorelines: at 40 m a bridge patch is mostly water, which the reference calls
+land and the head calls water.
+
 ## exp03 — four techniques, one run (2026-08-31)
 
 Same Katima/Kazungula pair. Results in docs/TECHNIQUES.md (ledger is the

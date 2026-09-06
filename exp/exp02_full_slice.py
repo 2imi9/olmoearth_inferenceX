@@ -16,7 +16,7 @@ import rasterio.warp
 import torch
 
 from olmoearth_pretrain.model_loader import ModelID, load_model_from_id
-from oe_inferencex.data import fetch_s2_window, fetch_worldcover_window, s2_to_sample, embed
+from oe_inferencex.data import Modality, fetch_s2_window, fetch_worldcover_window, s2_to_sample, embed
 from oe_inferencex.evidence import (
     train_logistic_head, predict_head, risk_coverage, rasterize_polyline, pool_to_patches,
 )
@@ -98,7 +98,10 @@ def compute_probs():
         probs[mid.value] = predict_head(f_ev, w, b)
         acc = ((probs[mid.value] > 0.5) == ev_labels.astype(bool)).mean()
         print(f"{mid.value}: eval acc vs WorldCover = {acc:.3f}")
-    np.savez(CACHE, p_nano=list(probs.values())[0], p_base=list(probs.values())[1],
+    bo = Modality.SENTINEL2_L2A.band_order
+    rgb_dn = np.stack([ev_img[bo.index(b)] for b in ("B04", "B03", "B02")]).astype(np.uint16)
+    date_str = f"{ev_date[2]}-{ev_date[1] + 1:02d}-{ev_date[0]:02d}"
+    np.savez(CACHE, p_nano=list(probs.values())[0], p_base=list(probs.values())[1], ev_rgb=rgb_dn, ev_date=np.array(date_str),
              ev_labels=ev_labels, crs_wkt=str(crs.to_wkt()),
              transform=np.array(transform)[:6])
     return probs, ev_labels, (crs, transform)
@@ -107,15 +110,14 @@ def compute_probs():
 def main():
     import os
     import rasterio
-    if os.path.exists(CACHE):
-        z = np.load(CACHE)
-        p_nano, p_base, ev_labels = z["p_nano"], z["p_base"], z["ev_labels"]
-        ev_geo = (rasterio.crs.CRS.from_wkt(str(z["crs_wkt"])),
-                  rasterio.Affine(*z["transform"]))
-        print("loaded cached probs/labels")
-    else:
-        probs, ev_labels, ev_geo = compute_probs()
-        p_nano, p_base = probs.values()
+    if not (os.path.exists(CACHE) and "ev_rgb" in np.load(CACHE).files):
+        compute_probs()
+    z = np.load(CACHE)
+    p_nano, p_base, ev_labels = z["p_nano"], z["p_base"], z["ev_labels"]
+    ev_rgb, ev_date = z["ev_rgb"].astype(np.float64), str(z["ev_date"])
+    ev_geo = (rasterio.crs.CRS.from_wkt(str(z["crs_wkt"])),
+              rasterio.Affine(*z["transform"]))
+    print(f"loaded cached probs/labels/true colour ({ev_date})")
     errors = ((p_base > 0.5) != ev_labels.astype(bool)).astype(np.float64)
 
     e_case = np.abs(p_nano - p_base)
@@ -136,20 +138,31 @@ def main():
 
     from oe_inferencex.figstyle import setup, map_panel, rc_panel
     import matplotlib.pyplot as plt
+    from matplotlib.patches import Rectangle
     setup()
-    fig, axes = plt.subplots(2, 3, figsize=(15.5, 9.5))
-    map_panel(fig, axes[0, 0], ev_labels, "ESA WorldCover 2021 water\n(reference)",
-              "water patch (fraction > 0.5)", cmap="Blues", idx=0, vmin=0, vmax=1)
-    map_panel(fig, axes[0, 1], p_base, "Base head water probability",
-              "P(water)", cmap="Blues", idx=1, vmin=0, vmax=1)
-    map_panel(fig, axes[0, 2], errors, "Base head vs reference\n(disagreement, counted as error)",
-              "disagreement (binary)", cmap="Reds", idx=2, vmin=0, vmax=1)
-    map_panel(fig, axes[1, 0], np.abs(p_nano - p_base), "E_case |Nano - Base|",
-              "|p_Nano - p_Base|", cmap="magma", idx=3)
-    map_panel(fig, axes[1, 1], centerline.astype(float) + e_geo_flags,
+    fig = plt.figure(figsize=(20, 9.5))
+    gs = fig.add_gridspec(2, 4)
+    ax = {k: fig.add_subplot(gs[i, j]) for k, (i, j) in
+          {"rgb": (0, 0), "ref": (0, 1), "pred": (0, 2), "err": (0, 3), "case": (1, 0), "geo": (1, 1)}.items()}
+    ax["rc"] = fig.add_subplot(gs[1, 2:])
+    lo, hi = np.percentile(ev_rgb, 2), np.percentile(ev_rgb, 98)
+    rgb = np.clip((np.moveaxis(ev_rgb, 0, -1) - lo) / max(hi - lo, 1e-6), 0, 1)
+    map_panel(fig, ax["rgb"], rgb, f"Sentinel-2 L2A true colour, {ev_date}\n(red: patches where head and reference disagree)",
+              "", idx=0, rgb=True, interpolation="nearest")
+    for r, c in zip(*np.nonzero(errors)):
+        ax["rgb"].add_patch(Rectangle((c * PATCH - 0.5, r * PATCH - 0.5), PATCH, PATCH, fill=False, ec="red", lw=0.9))
+    map_panel(fig, ax["ref"], ev_labels, "ESA WorldCover 2021 water\n(reference)",
+              "water patch (fraction > 0.5)", cmap="Blues", idx=1, vmin=0, vmax=1)
+    map_panel(fig, ax["pred"], p_base, "Base head water probability",
+              "P(water)", cmap="Blues", idx=2, vmin=0, vmax=1)
+    map_panel(fig, ax["err"], errors, "Base head vs reference\n(disagreement, counted as error)",
+              "disagreement (binary)", cmap="Reds", idx=3, vmin=0, vmax=1)
+    map_panel(fig, ax["case"], np.abs(p_nano - p_base), "E_case |Nano - Base|",
+              "|p_Nano - p_Base|", cmap="magma", idx=4)
+    map_panel(fig, ax["geo"], centerline.astype(float) + e_geo_flags,
               "E_geo: OSM centerline (1)\n+ consensus-dry flags (2)",
-              "0 = off-line, 1 = centerline,\n2 = flagged break", cmap="viridis", idx=4)
-    rc_panel(axes[1, 2], results, "Kazungula scene (n=1024 patches)", idx=5)
+              "0 = off-line, 1 = centerline,\n2 = flagged break", cmap="viridis", idx=5)
+    rc_panel(ax["rc"], results, "Kazungula scene (n=1024 patches)", idx=6)
     fig.suptitle("Full audit slice at Kazungula; heads trained at Katima Mulilo (110 km away)",
                  fontsize=9)
     fig.tight_layout(rect=[0, 0, 1, 0.97])
