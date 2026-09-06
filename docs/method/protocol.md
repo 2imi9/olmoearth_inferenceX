@@ -18,7 +18,11 @@ disagree, which should you believe, and is the difference real?**
 The machinery is the same for both, and is deliberately signal-agnostic:
 `aurc_expected(uncertainty, errors)` takes any score vector and any error
 vector. Signals are label-free; labels only grade the signals, never train
-them.
+them. The machinery lives in the package: `oe_inferencex.metrics` (this
+section's metrics), `oe_inferencex.signals` (confidence, the boundary
+indicator, aligned tile-phase, the pixel controls) and `oe_inferencex.stats`
+(the tests below); `tests/` reproduces the recorded numbers from the
+committed artifacts.
 
 A signal is credible only if it beats two references at once:
 

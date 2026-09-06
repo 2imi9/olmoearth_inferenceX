@@ -28,6 +28,7 @@ nothing here serializes them into text.
 import numpy as np
 
 from oe_inferencex.metrics import aurc_expected
+from oe_inferencex.signals import boundary_indicator
 
 
 def _pool(a, patch):
@@ -43,14 +44,8 @@ def _pooled_argmax(hard, n_classes, patch):
 
 
 def _boundary(pooled_hard):
-    pad = np.pad(pooled_hard, 1, mode="edge")
-    G0, G1 = pooled_hard.shape
-    nb = np.zeros(pooled_hard.shape, dtype=float)
-    for di in (-1, 0, 1):
-        for dj in (-1, 0, 1):
-            if di or dj:
-                nb += (pad[1 + di:1 + di + G0, 1 + dj:1 + dj + G1] != pooled_hard)
-    return nb / 8.0
+    """Prediction-boundary fraction of the pooled class map (oe_inferencex.signals.boundary_indicator)."""
+    return boundary_indicator(pooled_hard)
 
 
 def assess_classmap(hard, confidence, n_classes, patch=4, nodata_mask=None, reference=None, budgets=(0.01, 0.05, 0.10),

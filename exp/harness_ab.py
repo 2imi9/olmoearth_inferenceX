@@ -13,7 +13,9 @@ and of the experiment's primary score; inference = per-river mean gain,
 one-sided exact sign test over the eight river clusters. All of this is
 copied from exp/exp28_decoder_consistency.py, which stays as it ran; the
 experiment scripts add their own signals and call `finish_part_a` /
-`finish_part_b`.
+`finish_part_b`. The signal, control and test arithmetic lives in
+oe_inferencex.signals / oe_inferencex.stats; the wrappers here keep the
+exp28 names and the exact exp13 / exp18 code paths on the real grids.
 
 fp32 only: no autocast, no TF32, no compile.
 """
@@ -41,6 +43,8 @@ from olmoearth_pretrain.model_loader import ModelID, load_model_from_id  # noqa:
 
 from oe_inferencex.evidence import predict_head, predict_logit, train_logistic_head  # noqa: E402
 from oe_inferencex.metrics import aurc_expected  # noqa: E402
+from oe_inferencex import signals as sig_lib  # noqa: E402
+from oe_inferencex import stats as stats_lib  # noqa: E402
 import exp13_stat_corrections as exp13  # noqa: E402
 import exp14_boundary_ablation as exp14  # noqa: E402
 import exp18_sen1floods_expert as exp18  # noqa: E402
@@ -120,66 +124,34 @@ def load_model():
 # ----------------------------------------------------------------------------- controls and references
 def s2_patch_variance(img, size):
     """Observed-input control: mean over bands of the within-patch pixel std (raw DN)."""
-    G = size // PATCH
-    x = np.asarray(img)[:, :size, :size].astype(np.float64)
-    return x.reshape(x.shape[0], G, PATCH, G, PATCH).std(axis=(2, 4)).mean(axis=0)
+    return sig_lib.s2_patch_variance(img, patch=PATCH, size=size)
 
 
 def ndwi_level(img, size):
     """Observed-input control: -|patch-mean NDWI| (near zero = spectrally ambiguous water/land)."""
-    bo = Modality.SENTINEL2_L2A.band_order
-    G = size // PATCH
-    x = np.asarray(img)[:, :size, :size].astype(np.float64)
-    nd = (x[bo.index("B03")] - x[bo.index("B08")]) / np.clip(x[bo.index("B03")] + x[bo.index("B08")], 1, None)
-    return -np.abs(nd.reshape(G, PATCH, G, PATCH).mean(axis=(1, 3)))
+    return sig_lib.ndwi_level(img, patch=PATCH, size=size)
 
 
 def midrank_pct(v):
     """Within-unit midrank percentile in [0, 1], ties averaged."""
-    v = np.asarray(v, dtype=np.float64).ravel()
-    order = np.argsort(v, kind="mergesort")
-    r = np.empty(len(v))
-    s = v[order]
-    i = 0
-    while i < len(s):
-        j = i
-        while j + 1 < len(s) and s[j + 1] == s[i]:
-            j += 1
-        r[order[i:j + 1]] = (i + j) / 2.0
-        i = j + 1
-    return r / max(len(v) - 1, 1)
+    return sig_lib.midrank_pct(v)
 
 
 def one_sided_sign_p(w, n):
     """P(X >= w), X ~ Binomial(n, 1/2); the preregistered one-sided exact sign test."""
-    return float(sum(math.comb(n, i) for i in range(w, n + 1)) / 2 ** n) if n else 1.0
+    return stats_lib.sign_test(w, n - w, "greater")
 
 
 def river_test(per_scene):
     """per_scene: {scene: gain}; average within river cluster, then a one-sided exact sign test (> 0 predicted)."""
-    groups = {}
-    for s, d in per_scene.items():
-        groups.setdefault(RIVER.get(s, s), []).append(float(d))
-    means = {g: float(np.mean(v)) for g, v in groups.items()}
-    w = sum(m > 1e-12 for m in means.values())
-    l = sum(m < -1e-12 for m in means.values())
-    return {"per_river": means, "w": w, "l": l, "t": len(means) - w - l, "one_sided_p": one_sided_sign_p(w, w + l),
-            "n_rivers": len(means)}
+    r = stats_lib.clustered_sign_test(per_scene, RIVER, aggregate="mean", alternative="greater")
+    return {"per_river": r["per_cluster"], "w": r["w"], "l": r["l"], "t": r["t"], "one_sided_p": r["p"],
+            "n_rivers": r["n_clusters"]}
 
 
 def aligned_tile_phase_general(shift_probs, size, pad=exp13.PAD):
     """exp13.aligned_tile_phase for an arbitrary crop size (equal to exp13's at 128; checked in --smoke)."""
-    G = size // PATCH
-    canvas = np.full((len(shift_probs), size + pad, size + pad), np.nan)
-    for s, p in enumerate(shift_probs):
-        canvas[s, s:s + size, s:s + size] = np.kron(p, np.ones((PATCH, PATCH)))
-    pix_std = np.nanstd(canvas, axis=0)
-    out = np.zeros((G, G))
-    for i in range(G):
-        for j in range(G):
-            blk = pix_std[i * PATCH:(i + 1) * PATCH, j * PATCH:(j + 1) * PATCH]
-            out[i, j] = np.nanmean(blk) if np.isfinite(blk).any() else 0.0
-    return out
+    return sig_lib.aligned_tile_phase(shift_probs, patch=PATCH)
 
 
 def tile_phase_a(shift_probs, size):
@@ -188,12 +160,7 @@ def tile_phase_a(shift_probs, size):
 
 def ndwi_gradient_general(img, size):
     """exp13.ndwi_gradient for an arbitrary crop size (equal to exp13's at 128; checked in --smoke)."""
-    bo = Modality.SENTINEL2_L2A.band_order
-    G = size // PATCH
-    x = img[:, :size, :size].astype(np.float64)
-    nd = (x[bo.index("B03")] - x[bo.index("B08")]) / np.clip(x[bo.index("B03")] + x[bo.index("B08")], 1, None)
-    gy, gx = np.gradient(nd)
-    return np.hypot(gx, gy).reshape(G, PATCH, G, PATCH).mean(axis=(1, 3))
+    return sig_lib.ndwi_gradient(img, patch=PATCH, size=size)
 
 
 def ndwi_a(img, size):
@@ -202,30 +169,12 @@ def ndwi_a(img, size):
 
 def boundary_indicator(p):
     """exp14's pred-boundary: fraction of a patch's 8 neighbours whose hard label differs (edge padding)."""
-    G0, G1 = p.shape
-    hard = (p > 0.5).astype(int)
-    pad = np.pad(hard, 1, mode="edge")
-    nb = np.zeros_like(p, dtype=float)
-    for di in (-1, 0, 1):
-        for dj in (-1, 0, 1):
-            if di or dj:
-                nb += (pad[1 + di:1 + di + G0, 1 + dj:1 + dj + G1] != hard)
-    return nb / 8.0
+    return sig_lib.boundary_indicator(p)
 
 
 def paired_stats(diffs, rng):
     """diffs: per-unit (reference E-AURC - signal E-AURC); > 0 = signal better."""
-    d = np.asarray(diffs, dtype=np.float64)
-    n = len(d)
-    w, l = int((d > 1e-12).sum()), int((d < -1e-12).sum())
-    res = {"n": n, "w": w, "l": l, "t": n - w - l,
-           "sign_p": exp13.sign_test_p(w, w + l) if w + l else 1.0,
-           "median_gain": float(np.median(d)) if n else float("nan"),
-           "mean_gain": float(d.mean()) if n else float("nan")}
-    if n and rng is not None:
-        perm = np.array([(d * rng.choice([-1, 1], n)).mean() for _ in range(N_PERM)])
-        res["perm_p"] = float((np.abs(perm) >= abs(d.mean())).mean())
-    return res
+    return stats_lib.paired_comparison(diffs, rng, N_PERM)
 
 
 def json_ready(o):

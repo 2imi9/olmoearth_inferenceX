@@ -63,10 +63,13 @@ reference has no water at all, which is why the no-model control wins there.
 uv sync                                 # assessment layer only, no torch
 uv sync --extra encoder --extra geo     # full experiment environment
 uv run python exp/exp02_full_slice.py
+uv run pytest                           # the assessment layer against the recorded numbers
 ```
 
-Experiments are `exp01`–`exp26` in [`exp/`](exp/), with outputs under
-`exp/out/`. Torch is pinned per platform — Linux resolves the cu128 build.
+Experiments are `exp01`–`exp31` in [`exp/`](exp/), with outputs under
+`exp/out/`. The supported machinery (confidence, boundary triage, the
+AURC harness, the controls and tests) is the package
+[`oe_inferencex/`](oe_inferencex/), torch-free and covered by `tests/`. Torch is pinned per platform — Linux resolves the cu128 build.
 
 ## Documentation
 

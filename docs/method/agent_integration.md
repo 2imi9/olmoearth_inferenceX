@@ -16,10 +16,14 @@ Index at [../TECHNIQUES.md](../TECHNIQUES.md); recipe at
 | `oe_inferencex.assess` | `assess_prediction` (logits or probabilities), `assess_classmap` (hard class map plus an exported confidence band), `summary` (JSON-safe view) |
 | `oe_inferencex.taskcard` | What task, legend, goal and audit settings a fine-tuned model has |
 | `oe_inferencex.lcc` | HTTP range reader for the served change rasters |
-| `oe_inferencex.metrics` | Tie-aware AURC, torch-free |
+| `oe_inferencex.metrics` | Tie-aware AURC, excess AURC, error capture at a budget, selective accuracy, ECE; torch-free |
+| `oe_inferencex.signals` | The supported signals and controls as pure functions: confidence, prediction-boundary indicator, aligned tile-phase, NDWI-gradient and the other pixel controls, the U+ combination |
+| `oe_inferencex.stats` | Exact sign tests, the one-vote-per-cluster test, sign-flip permutation, block and cluster bootstraps |
 
 **Rule:** pure functions; no network except the task-card resolvers and the
-raster reader. Arrays are returned, never serialized into text.
+raster reader. Arrays are returned, never serialized into text. `tests/`
+checks these modules against the numbers recorded in `exp/out` (`uv run
+pytest`), and against the experiment modules when the encoder is installed.
 
 ## What the agent provides
 

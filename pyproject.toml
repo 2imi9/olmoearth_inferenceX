@@ -37,6 +37,11 @@ geo = [
     "scipy>=1.11",
 ]
 
+[dependency-groups]
+# `uv run pytest`: the assessment layer against the recorded numbers in exp/out (encoder-free);
+# the equality checks against the experiment modules run only when the encoder extra is installed.
+dev = ["pytest>=8"]
+
 [build-system]
 requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
