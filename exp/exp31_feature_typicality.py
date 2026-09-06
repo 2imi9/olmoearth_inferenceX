@@ -183,7 +183,7 @@ def lw_fit(X, center=None, labels=None, chunk=16384):
         centre = lambda i: means[idx[i:i + chunk]]  # noqa: E731
     else:
         if center is not None:
-            mean = torch.as_tensor(np.asarray(center, dtype=np.float64)).to(DEV)
+            mean = torch.as_tensor(center, dtype=torch.float64).to(DEV)   # numpy array or tensor on DEV
         else:
             s = torch.zeros(D, dtype=torch.float64, device=DEV)
             for i in range(0, n, chunk):
