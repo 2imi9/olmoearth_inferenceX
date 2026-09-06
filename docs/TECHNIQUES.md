@@ -116,6 +116,6 @@ labels do not share. Open.
 
 | Item | Status | Note |
 |---|---|---|
-| Semantic-entropy port (cluster-then-entropy, Farquhar et al. 2024) | untested | Possible refinement of the perturbation signal |
+| Semantic-entropy port (cluster-then-entropy, Farquhar et al. 2024) | untested | Possible refinement of the perturbation signal; issue #5 |
 | Verifier head trained on labeled regions | out of scope (v1) | Requires labels as training input |
 | Channel fusion | out of scope (v1) | Per-channel reporting only; nothing yet beats confidence, so there is nothing to fuse |

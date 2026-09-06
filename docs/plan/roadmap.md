@@ -43,10 +43,20 @@ disjoint readout is the only route, with H(p) as the score and the
 constant-class baseline and class/boundary strata reported alongside.
 
 **Everything below is ordered by how much it bears on that question.**
+The paper-backed items are tracked as GitHub issues, one per method, each
+carrying the paper links and the concrete test:
+[#2](https://github.com/2imi9/olmoearth_inferenceX/issues/2) (this test),
+[#3](https://github.com/2imi9/olmoearth_inferenceX/issues/3) (RCG density, parked),
+[#4](https://github.com/2imi9/olmoearth_inferenceX/issues/4) (AOA / SHRUG-FM),
+[#5](https://github.com/2imi9/olmoearth_inferenceX/issues/5) (semantic entropy),
+[#6](https://github.com/2imi9/olmoearth_inferenceX/issues/6) (out-of-family rater),
+[#7](https://github.com/2imi9/olmoearth_inferenceX/issues/7) (few-class testbed),
+[#8](https://github.com/2imi9/olmoearth_inferenceX/issues/8) (GRWL centerlines),
+[#9](https://github.com/2imi9/olmoearth_inferenceX/issues/9) (operating points).
 
 ## Priority items
 
-1. **Hand-adjudicate the disagreements.** exp26 prepared the kit: the top-12
+1. **Hand-adjudicate the disagreements** (issue #2). exp26 prepared the kit: the top-12
    disagreements ranked by tiling instability and by confidence on shire_80,
    barotse and okavango_80. For each patch the kit carries a 48-px
    true-colour crop with the 4-px patch outlined, the NDWI crop, the
@@ -62,20 +72,20 @@ constant-class baseline and class/boundary strata reported alongside.
    water definition, mixed with a sample of undisputed cells. Expert hours,
    not GPU hours, are the binding cost.
 
-2. **A dense expert-labelled map with few classes.** The 27-scene support is
+2. **A dense expert-labelled map with few classes** (issue #7). The 27-scene support is
    WorldCover-referenced (exp13); exp16 showed that on nine classes the
    boundary score collapses into a proxy for low margin. A dense
    expert-labelled binary or few-class map is the missing testbed.
    Candidates in `olmoearth_pretrain/evals`: MADOS (marine debris, 15
    classes), PASTIS-R, GeoBench m-cashew-plant and m-sa-crop-type.
 
-3. **Operating-point analysis instead of AURC.** Test whether any signal
+3. **Operating-point analysis instead of AURC** (issue #9). Test whether any signal
    helps confidence at a *fixed review budget* on expert labels. exp21 hints
    at this: tiling instability captures 0.71 of errors at a 20% budget
    against confidence's 0.63, while losing on AURC. A ranking metric and a
    reviewer's actual workflow are not the same question.
 
-4. **An out-of-family rater** (Clay or AnySat, both wrapped in
+4. **An out-of-family rater** (issue #6) (Clay or AnySat, both wrapped in
    olmoearth_pretrain evals). Correlated errors invalidate within-family
    Dawid-Skene (exp07) and cap pairwise disagreement quality (exp10). An
    architecture-independent rater is required for both.
@@ -102,7 +112,7 @@ constant-class baseline and class/boundary strata reported alongside.
    dated inside the product's window), or a small hand-labelled set drawn
    without reference to the model's output.
 
-8. **E_geo with width-filtered GRWL centerlines**, then re-measure flag
+8. **E_geo with width-filtered GRWL centerlines** (issue #8), then re-measure flag
    precision. Under OSM lines and WorldCover truth the flags mostly mark
    reference-map disagreement (exp15).
 
@@ -131,7 +141,7 @@ constant-class baseline and class/boundary strata reported alongside.
 | Does seasonal water explain them? | exp25 — no |
 | Does the pretraining objective itself (masked-token decoder error) rank the errors? | exp28 — no, on both testbeds; the frozen targets are near-collinear, so the residual tracks input texture |
 | Does a last-layer posterior over the probe head (Laplace, bootstrap ensemble) rank the errors? | exp30 — no, on both testbeds; the variance is feature norm on the one-scene head and rises with the logit on the 128k-patch head |
-| E_dist formalization: does feature-space typicality against training, same-scene or cross-testbed references rank the errors? | exp31 — no; the confidence + same-scene kNN combination reaches 6/2 rivers (p = 0.145) against WorldCover and hurts on hand labels; only a true pretraining sample remains untested |
+| E_dist formalization: does feature-space typicality against training, same-scene or cross-testbed references rank the errors? | exp31 — no; the confidence + same-scene kNN combination reaches 6/2 rivers (p = 0.145) against WorldCover and hurts on hand labels; only a true pretraining sample remains untested (issue #4; the RCG density upgrade is issue #3, parked) |
 
 ## Cross-inference evaluation: what is done, what is not
 
