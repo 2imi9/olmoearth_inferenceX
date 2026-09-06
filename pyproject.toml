@@ -34,6 +34,7 @@ geo = [
     "pystac-client>=0.8",
     "planetary-computer>=1.0",
     "matplotlib>=3.8",
+    "scipy>=1.11",
 ]
 
 [build-system]

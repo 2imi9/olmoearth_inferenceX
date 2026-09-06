@@ -1,0 +1,92 @@
+{
+ "projection": {
+  "key": "per_modality_embeddings.worldcover.worldcover__0.proj.weight",
+  "weight_shape": [
+   768,
+   1,
+   8,
+   8
+  ],
+  "weight_sum_norm": 16.404767990112305,
+  "bias_norm": 2.0713887214660645
+ },
+ "normaliser": {
+  "code_10": 0.2519216403758342,
+  "code_80": 0.974094604597542
+ },
+ "prototypes": {
+  "codes": [
+   10,
+   20,
+   30,
+   40,
+   50,
+   60,
+   70,
+   80,
+   90,
+   95,
+   100
+  ],
+  "token_norms": [
+   4.580300807952881,
+   6.13776969909668,
+   7.752028942108154,
+   9.39384937286377,
+   11.05095386505127,
+   12.717367172241211,
+   14.389860153198242,
+   16.0665283203125,
+   17.746192932128906,
+   18.58689308166504,
+   19.428071975708008
+  ],
+  "pairwise_cosine": {
+   "min": 0.935066819190979,
+   "median": 0.9956762790679932,
+   "max": 0.9999885559082031
+  },
+  "cos_water_grass": 0.9900517463684082,
+  "cos_water_builtup": 0.9982454776763916,
+  "cos_water_wetland": 0.9999247789382935
+ },
+ "mixtures_water_vs_grass": {
+  "0.00": {
+   "cos_block_water": 0.990052342414856,
+   "cos_scatter_water": 0.990052342414856,
+   "cos_block_scatter": 1.0,
+   "cos_scatter0_scatter1": 1.0
+  },
+  "0.25": {
+   "cos_block_water": 0.9329711198806763,
+   "cos_scatter_water": 0.9352574944496155,
+   "cos_block_scatter": 0.8769176006317139,
+   "cos_scatter0_scatter1": 0.88420170545578
+  },
+  "0.50": {
+   "cos_block_water": 0.9429917335510254,
+   "cos_scatter_water": 0.9420385956764221,
+   "cos_block_scatter": 0.9030859470367432,
+   "cos_scatter0_scatter1": 0.8941141366958618
+  },
+  "0.75": {
+   "cos_block_water": 0.9667840600013733,
+   "cos_scatter_water": 0.9684953093528748,
+   "cos_block_scatter": 0.9399980902671814,
+   "cos_scatter0_scatter1": 0.9445568323135376
+  },
+  "1.00": {
+   "cos_block_water": 1.0,
+   "cos_scatter_water": 1.0,
+   "cos_block_scatter": 1.0,
+   "cos_scatter0_scatter1": 1.0
+  }
+ },
+ "ridge_readout_of_water_fraction": {
+  "r2_raw_tokens": 0.6703256119209513,
+  "r2_l2_normalised_tokens": 0.5467566563106754,
+  "n_train": 400,
+  "n_test": 200
+ },
+ "reading": "class identity is carried by token norm, not direction; under cosine the pure-class prototypes are nearly identical and layout moves the token more than water fraction does; a linear readout of water fraction from perfect tokens is bounded well below 1, and lower once tokens are normalised as the loss normalises them."
+}

@@ -33,6 +33,7 @@ Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 | exp25 | JRC seasonal-water split: disagreements enriched on seasonal margins, but tile-phase still beats confidence without them (22/2/0 in 2024, 22/1/0 in 2021); third mismatch component ruled out |
 | repro-aicr | exp02 and exp21 reproduced end to end on the AICR B200 cluster (2026-09-05): every metric identical, max abs diff 1e-5; a run with the cache present skips the encoder |
 | bench-b200 | encoder throughput and precision on AICR: fp32 leaves the B200 tensor cores idle (18.8 ms per 128x128 window); TF32 halves it with 59 of 60 exp21 fields unchanged and one budget count moving by one window; bf16 7-10x, untested on the audit |
+| exp27-gate | oracle gate on the latent-MIM target space (2026-09-06, CPU): pure-class WorldCover prototypes have pairwise cosine median 0.996, class sits in token norm, layout outweighs water fraction, ridge readout of water fraction from perfect tokens R2 0.67 raw / 0.55 normalised; prototype and retrieval readouts of the shipped decoder are unsound |
 
 ## exp01 — first E_case map (2026-08-31)
 
@@ -444,3 +445,28 @@ insensitive to TF32; a discrete review-budget count can move by one
 window, because tiling instability is a small standard deviation across
 shifts. bf16 has not been tested on the audit. All numbers reported in the
 docs remain the fp32 runs.
+
+## exp27 oracle gate (2026-09-06)
+
+Design check, not evidence about the signals. Before any decoder output is
+read as a WorldCover class, exp/exp27_oracle_gate.py pushes synthetic 8x8
+class-code patches through the exact saved target projection (Conv2d(1->768,
+8), bias norm 2.07 against a weight-sum norm of 16.4, after the WorldCover
+normaliser which maps codes to a monotone scalar, 10 -> 0.25, 80 -> 0.97).
+Results in exp/out/exp27_oracle_gate.json: the eleven pure-class prototypes
+have pairwise cosine min 0.935, median 0.996 (water vs wetland 0.9999);
+token norm grows linearly with the code (4.6 -> 19.4), so class identity is
+carried by magnitude, which the L2-normalised discrimination loss discards;
+in water/grass mixtures the cosine to the water prototype is non-monotone in
+water fraction (0.990 at 0%, 0.933 at 25%, 1.0 at 100%) while a change of
+layout at fixed fraction moves it by 0.06-0.12; a ridge readout of water
+fraction from perfect tokens reaches R2 0.67 raw and 0.55 after L2
+normalisation. Consequence, recorded in docs/plan/roadmap.md: nearest-
+prototype and retrieval readouts of the decoder are unsound, a learned
+locked readout is bounded by that ceiling, and a decoder-versus-map
+disagreement count cannot serve as the coupling statistic because it
+reduces to the class indicator when the decoder collapses to one class. The
+primary endpoint becomes reference specificity on identical cells, which
+needs adjudicated labels on the river scenes. A CPU pilot of the exp27 draft
+(uncommitted) on one scene motivated this gate; its numbers are not recorded
+here because the script is not yet committed.

@@ -9,9 +9,38 @@ what is in [../../exp/NOTES.md](../../exp/NOTES.md). Index at
 Tiling instability beats confidence 26/27 against ESA WorldCover and loses
 against hand labels. Three explanations for the gap have been tested and
 rejected (reference-version instability, the year gap, seasonal water; see
-[../results/comparisons.md](../results/comparisons.md) section 3). What
-remains is either reference error shared by both WorldCover versions, or a
-genuine property of the WorldCover-defined task.
+[../results/comparisons.md](../results/comparisons.md) section 3).
+
+**Leading hypothesis: the reference is not independent of the model.**
+WorldCover 2021 v200 was a decode-only pretraining target of OlmoEarth v1 and
+v1.2 (checkpoint `config.json` `only_decode_modalities`; the pretraining
+dataset card; the v1 paper, arXiv:2511.13655), as was the OpenStreetMap
+raster behind E_geo. A probe fitted to WorldCover over features of an encoder
+trained to predict WorldCover partly reads out the model's own internal
+prediction of that map, so its disagreements would concentrate where that
+internal prediction is uncertain: boundaries, which tiling instability and
+the boundary indicator detect and hand labels do not share. Only 3 of the 27
+rule scenes lie inside a pretraining tile (median nearest tile 23 km), so the
+coupling would run through the map's conventions, not memorised scenes.
+
+**What would test it.** Not a decoder-versus-map disagreement count: the
+probe and the shipped decoder share the encoder, so their errors co-locate
+under any reference, and a decoder that predicts one class everywhere turns
+such a count into the class indicator. The primary statistic is reference
+specificity on identical cells: for scene *s* and reference *r*, G(s, r) =
+AURC(confidence) minus AURC(signal); D(s) = G(s, WorldCover) minus
+G(s, human labels); average within river, one-sided exact sign test over the
+eight river clusters (7/8 positive gives p = 0.035). Run it for tiling
+instability first, since it is the signal whose transfer failure is the
+question. Anything read off the shipped decoder must first pass the oracle
+gate in `exp/exp27_oracle_gate.py` (`exp/out/exp27_oracle_gate.json`): in the
+target space, pure-class prototypes have pairwise cosine of median 0.996,
+class identity sits in token norm which the loss discards, layout moves a
+token more than water fraction does, and a ridge readout of water fraction
+from perfect tokens reaches R² 0.67 raw and 0.55 normalised. Prototype and
+retrieval readouts are therefore unsound; a learned, locked, geographically
+disjoint readout is the only route, with H(p) as the score and the
+constant-class baseline and class/boundary strata reported alongside.
 
 **Everything below is ordered by how much it bears on that question.**
 
@@ -27,9 +56,11 @@ genuine property of the WorldCover-defined task.
    the reference label, NDWI statistics, JRC seasonality, both ranks, and
    empty `verdict` / `note` columns. Verdict vocabulary: model error /
    reference error / seasonal or date difference / ambiguous. **A reviewer's
-   verdicts are the input to the next analysis.** This is the only route
-   that separates "reference error shared by both WorldCover versions" from
-   "a property of the task".
+   verdicts are the input to the next analysis.** The paired-reference test
+   above needs far more than this seed: on the order of a few hundred
+   disputed cells across the eight rivers, blinded, with matched dates and
+   water definition, mixed with a sample of undisputed cells. Expert hours,
+   not GPU hours, are the binding cost.
 
 2. **A dense expert-labelled map with few classes.** The 27-scene support is
    WorldCover-referenced (exp13); exp16 showed that on nine classes the
