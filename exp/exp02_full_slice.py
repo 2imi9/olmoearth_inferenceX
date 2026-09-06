@@ -128,6 +128,17 @@ def bridge_strip_check(p_base, lab, err):
     print(f"disagreements: {err.sum()} total, {(err & strip).sum()} on the strip, {(err & ~strip).sum()} elsewhere; "
           f"confident (P > 0.9 or < 0.1): {(err & conf).sum()}; uncertain (0.3-0.7): "
           f"{(err & (p_base > 0.3) & (p_base < 0.7)).sum()}")
+    pad = np.pad(lab, 1, mode="edge")
+    bnd = np.zeros_like(lab)
+    for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+        bnd |= pad[1 + dr:lab.shape[0] + 1 + dr, 1 + dc:lab.shape[1] + 1 + dc] != lab
+    near = bnd.copy()
+    for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+        near |= np.roll(bnd, dr, axis=0) if dr else np.roll(bnd, dc, axis=1)
+    off = err & ~strip
+    print(f"off-strip disagreements: {(off & bnd).sum()}/{off.sum()} adjacent to a reference class change, "
+          f"{(off & near).sum()}/{off.sum()} within one patch of one; head says non-water where the reference says water "
+          f"on {(off & ~(p_base > 0.5)).sum()}/{off.sum()}")
 
 
 def main():

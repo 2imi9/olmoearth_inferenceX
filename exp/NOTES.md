@@ -34,7 +34,8 @@ Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 | repro-aicr | exp02 and exp21 reproduced end to end on the AICR B200 cluster (2026-09-05): every metric identical, max abs diff 1e-5; exp17, exp18, exp20, exp23-exp26 and the transfer summary rerun there on 2026-09-06 with byte-identical tracked outputs and the river-level 8/0 (p = 0.0078) unchanged |
 | bench-b200 | encoder throughput and precision on AICR: fp32 leaves the B200 tensor cores idle (18.8 ms per 128x128 window); TF32 halves it with 59 of 60 exp21 fields unchanged and one budget count moving by one window; bf16 7-10x, untested on the audit |
 | exp27-gate | oracle gate on the latent-MIM target space (2026-09-06, CPU): pure-class WorldCover prototypes have pairwise cosine median 0.996, class sits in token norm, layout outweighs water fraction, ridge readout of water fraction from perfect tokens R2 0.67 raw / 0.55 normalised; prototype and retrieval readouts of the shipped decoder are unsound |
-| exp28 | decoder self-consistency (native masked-token reconstruction error, whole-spectrum and token-level masks, crowding/constant/input controls): rejected on both testbeds; the preregistered confidence+decoder combination gains nothing (4/4 rivers, p = 0.64); the frozen targets are near-collinear (pairwise cosine 0.99) |
+| exp28 | decoder self-consistency (native masked-token reconstruction error, whole-spectrum and token-level masks, crowding/constant/input controls): rejected on both testbeds; the preregistered confidence+decoder combination gains nothing (4/4 rivers, p = 0.64); the frozen targets are near-collinear (within-scene pairwise cosine median 0.994) |
+| exp30 | last-layer Laplace on the probe head (logit variance, probit-moderated confidence, Gauss-Hermite MI and entropy, bootstrap-head std): rejected on both testbeds; the preregistered confidence+variance combination loses 0/8 rivers (p = 1.0); on the one-scene head the variance is feature norm (Spearman 0.89), on the 128k-patch head the weights are well determined and the variance is still the worst signal |
 
 ## exp01 — first E_case map (2026-08-31)
 
@@ -96,17 +97,19 @@ WorldCover labels are identical to the committed cache, and the committed
 probabilities were left untouched. A full CPU re-run on the Mac the same day
 gave the same 22 disagreement patches, the same AURCs (0.0011 / 0.0009) and
 the same error rate, with probabilities differing from the committed ones by
-at most 1.5e-3 (fp32 accumulation order; the B200 run of 2026-09-05 matched
-to 1e-5). Where the outlined patches sit, measured by `bridge_strip_check`
-in the script from the cache: the reference draws the Kazungula bridge as a
-line of 15 non-water patches across the river, one patch (40 m) wide, and
-the head reproduces it, calling only 2 of those 15 water (mean P(water)
-0.12); so the bridge neither breaks nor disappears in the prediction. Of the
-22 disagreements, 2 are on that line and 20 are shoreline cells, and 15 of
-the 22 carry a confident prediction (P above 0.9 or below 0.1) while only 1
-is uncertain (0.3-0.7). Nothing is fabricated: these are mixed 40 m cells on
-which a majority-pooled 10 m map from 2021 and a head reading a 2024
-dry-season image disagree about the water fraction.
+at most 1.5e-3 (consistent with fp32 accumulation-order differences; the
+B200 run of 2026-09-05 matched to 1e-5). Where the outlined patches sit,
+measured by `bridge_strip_check` in the script from the cache: the reference
+draws the Kazungula bridge as a line of 15 non-water patches across the
+river, mostly one patch (40 m) wide, and the head reproduces it, calling
+only 2 of those 15 water (mean P(water) 0.12); the bridge neither breaks nor
+disappears in the prediction. Of the 22 disagreements, 2 are on that line
+and 20 lie within one patch of a reference class change (18 adjacent to
+one); on 17 of those 20 the head says non-water where the 2021 map says
+water. 15 of the 22 carry a confident prediction (P above 0.9 or below 0.1)
+and only 1 is uncertain (0.3-0.7). Nothing is fabricated: these are boundary
+cells on which a majority-pooled 10 m map from 2021 and a head reading a
+2024 dry-season image disagree about the water fraction.
 
 ## exp03 — four techniques, one run (2026-08-31)
 
@@ -546,13 +549,75 @@ Pooled E-AURC: confidence 0.0105, tile-phase 0.0115, NDWI level 0.0119,
 boundary 0.0313; decoder cosine distance 0.065 (23/328 tiles against
 confidence), U+ 0.031 (81/270): the combination hurts.
 
-Mechanism. The mean cosine between a decoded token and its true target is
-0.468 against 0.431 for a shuffled target, and the mean pairwise cosine of the
-frozen targets within a scene is 0.991 (both in the diagnostics of the
-summary). The target space is nearly collinear under cosine, the same
-aliasing the exp27 oracle gate measured for the WorldCover projection, so the
-residual carries almost no per-patch information beyond input texture.
+Mechanism (the per-scene diagnostics in the summary, medians over the 27
+scenes). The mean cosine between a decoded token and its true target is
+0.469 (range 0.441-0.569) against 0.440 (0.396-0.499) for a shuffled target,
+a gap of 0.030 (smallest scene 0.012); the mean pairwise cosine of the frozen
+targets within a scene is 0.994 (0.975-0.999). The target space is nearly
+collinear under cosine, the same kind of aliasing the exp27 oracle gate
+measured for the WorldCover projection, so the residual carries little
+per-patch information beyond what input texture already gives: it beats only
+the constant score.
 
 Verdict: rejected as an error signal on both testbeds; a valid negative that
 closes the decoder-side family (exp08 occlusion, exp28 native masking) for
 this checkpoint.
+
+## exp30 last-layer Laplace on the probe head (2026-09-06)
+
+Question: does a posterior over the probe head's weights, with the head's
+confidence as its point estimate, carry an epistemic term that ranks the
+probe's errors? Last-layer Laplace: N(theta, (H + lambda I)^-1) with H the
+Hessian of the balanced binary cross-entropy at the trained head (bias
+included, positive weight n_neg/n_pos as in train_logistic_head) and lambda
+chosen post hoc by the Laplace marginal likelihood on a log grid (51 points,
+1e-4 to 1e6, trained weights fixed). Scores: the logit variance
+v = phi^T Sigma phi (preregistered primary), the probit-moderated confidence
+-|mu| / sqrt(1 + pi v / 8), predictive entropy and mutual information under
+l ~ N(mu, v) by 64-node Gauss-Hermite quadrature, the standard deviation of
+the logits of 16 heads retrained on bootstrap resamples of the training
+patches, and the feature norm as a diagnostic. References, controls, the U+
+combination and the river-clustered one-sided sign test as exp28, through
+exp/harness_ab.py (the exp28 scaffolding extracted verbatim; exp28 itself
+unchanged). Job 706827, one B200, fp32, 238 s, 0 failures; outputs
+exp/out/exp30_summary.json and exp/out/exp30_laplace_head.csv.
+
+Part A (27 rule scenes, exp13 error set; head on the 1024 katima patches).
+The head fits its scene perfectly (training accuracy 1.0), so the Hessian
+has rank 174 of 769 at 1e-8 of its largest eigenvalue, the marginal
+likelihood picks lambda = 0.1 with 13.9 effective parameters, and the
+variance is prior-dominated: mean 630 on the training patches, Spearman 0.89
+(median over scenes) with the feature norm. As a ranker it is the worst
+signal: median E-AURC 0.071 against 0.0118 for confidence, 3/24/0 by scene
+and 0/8 by river, and it loses to all three controls (constant 5/22, S2
+variance 2/25, NDWI level 3/24). The preregistered combination U+ loses to
+confidence 7/20/0 by scene and 0/8 by river (one-sided p = 1.0). Against
+confidence: moderated confidence 9/18 (1/7 rivers; Spearman 0.97 with
+confidence), mutual information 3/24 (0/8), predictive entropy 10/17 (1/7),
+bootstrap std 4/23 (2/6). The variance ranking is insensitive to lambda
+(Spearman 0.97 at lambda/100, 0.95 at 100 lambda). Tile-phase against
+confidence in this pipeline: 26/1 by scene, 8/0 by river (p = 0.0039), as
+exp28.
+
+Part B (Sen1Floods11 Bolivia; head on 127,840 valid-split patches, accuracy
+0.912, 351 scored tiles). Here the Hessian has full rank, lambda = 6.3 with
+667 effective parameters, mean training variance 0.22, and the variance is
+not norm (Spearman -0.12). It is still the worst signal: pooled E-AURC 0.168
+against 0.0105 for confidence, 6/345 tiles, below the constant score
+(58/293). Bootstrap std 0.121 (6/345). Moderated confidence and predictive
+entropy are confidence itself (Spearman 1.00, pooled 0.0105; 77/152 with 122
+tied tiles and 73/141 with 137). Mutual information 0.0114 (93/253). U+
+0.0594 (21/330).
+
+Mechanism. On the one-scene head the variance measures how far a feature
+leaves the span of the training patches, the Bayesian form of exp13's E_dist
+(13/27), and behaves like it. On the large head the weights are well
+determined and the variance rises with the size of the logit (Spearman -0.53
+with confidence on Bolivia, -0.48 on the scenes): it flags the patches the
+head is surest about, since a large projection on a weight direction also
+carries a large posterior variance along it. Neither a Bayesian nor a
+bootstrap posterior over the last layer contains information about error
+that the point estimate lacks.
+
+Verdict: rejected as an error signal on both testbeds; the last-layer
+posterior family (Laplace, bootstrap ensemble) is closed for these heads.

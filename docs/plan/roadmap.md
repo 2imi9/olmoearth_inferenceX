@@ -133,6 +133,7 @@ constant-class baseline and class/boundary strata reported alongside.
 | Does reference instability explain the WorldCover wins? | exp23 — no |
 | Does the year gap explain them? | exp24 — no |
 | Does seasonal water explain them? | exp25 — no |
+| Does the pretraining objective itself (masked-token decoder error) rank the errors? | exp28 — no, on both testbeds; the frozen targets are near-collinear, so the residual tracks input texture |
 
 ## Cross-inference evaluation: what is done, what is not
 

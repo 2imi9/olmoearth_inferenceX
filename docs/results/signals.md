@@ -229,11 +229,11 @@ instead.*
 
 ## Decoder self-consistency
 
-**Definition.** The pretraining objective itself, run at inference: hide 25% of the 4-px
-patches (all three band-set tokens together, or a token-level variant matching
-the pretraining masking), decode them, and score each patch by the cosine
-distance between the decoded token and the frozen target projection of the
-true patch (exp28, one B200 job, 106 s).
+**Definition.** The pretraining objective itself, run at inference: hide 25%
+of the 4-px patches with all three band-set tokens together (or, in a variant
+matching the pretraining masking, 50% of the tokens), decode them, and score
+each patch by the cosine distance between the decoded token and the frozen
+target projection of the true patch (exp28, one B200 job, 106 s).
 
 **Verdict: rejected** on both testbeds.
 On the 27 scenes it loses to confidence 7/20 by scene and 2/6 by river and to
@@ -242,13 +242,39 @@ preregistered combination with confidence gains nothing (4/4 rivers,
 p = 0.64). On Sen1Floods11 Bolivia its pooled E-AURC is 0.065 against 0.0105
 for confidence. The patch-discrimination NLL tracks a target-only crowding
 control, so it measures how crowded a target's neighbourhood is rather than
-decoding. The cause is the target space: decoded-to-true cosine 0.468 against
-0.431 for a shuffled target, with the frozen targets of a scene at pairwise
-cosine 0.99, the same aliasing the exp27 oracle gate measured
-(exp/out/exp28_summary.json).
+decoding. The cause is the target space: decoded-to-true cosine 0.469
+against 0.440 for a shuffled target (medians over the 27 scenes), with the
+frozen targets of a scene at pairwise cosine 0.994, the same kind of aliasing
+the exp27 oracle gate measured (exp/out/exp28_summary.json).
 
 ---
 
+
+## Last-layer Laplace on the probe head
+
+**Definition.** A Gaussian posterior over the logistic head's weights,
+N(theta, (H + lambda I)^-1), from the Hessian of its balanced cross-entropy
+at the trained weights, lambda by the marginal likelihood; the score is a
+patch's logit variance phi^T Sigma phi (exp30, one B200 job, 238 s). Also
+scored: the probit-moderated confidence, Gauss-Hermite predictive entropy
+and mutual information, and the standard deviation of 16 bootstrap-retrained
+heads.
+
+**Verdict: rejected** on both testbeds.
+On the 27 scenes the variance is the worst signal (median E-AURC 0.071
+against 0.0118 for confidence; 3/24 by scene, 0/8 by river) and loses to
+the constant score and both observed-input controls; the preregistered
+combination with confidence loses 7/20 by scene and 0/8 by river (p = 1.0).
+On Sen1Floods11 Bolivia its pooled E-AURC is 0.168 against 0.0105 for
+confidence (6/345 tiles), the bootstrap std 0.121, and the moderated
+confidence and predictive entropy coincide with confidence (Spearman 1.00).
+On the one-scene head the posterior is prior-dominated and the variance is
+feature norm (Spearman 0.89), the Bayesian form of E_dist; on the
+128k-patch head the weights are well determined and the variance rises with
+the size of the logit (Spearman -0.53 with confidence), flagging the patches
+the head is surest about (exp/out/exp30_summary.json).
+
+---
 
 ## Label-free reliability estimation (Dawid-Skene)
 
