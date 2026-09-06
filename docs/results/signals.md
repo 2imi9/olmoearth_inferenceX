@@ -229,11 +229,13 @@ instead.*
 
 ## Decoder self-consistency
 
-The pretraining objective itself, run at inference: hide 25% of the 4-px
+**Definition.** The pretraining objective itself, run at inference: hide 25% of the 4-px
 patches (all three band-set tokens together, or a token-level variant matching
 the pretraining masking), decode them, and score each patch by the cosine
 distance between the decoded token and the frozen target projection of the
-true patch (exp28, one B200 job, 106 s). It is rejected on both testbeds.
+true patch (exp28, one B200 job, 106 s).
+
+**Verdict: rejected** on both testbeds.
 On the 27 scenes it loses to confidence 7/20 by scene and 2/6 by river and to
 both observed-input controls (S2 patch variance, NDWI level); the
 preregistered combination with confidence gains nothing (4/4 rivers,
@@ -244,6 +246,9 @@ decoding. The cause is the target space: decoded-to-true cosine 0.468 against
 0.431 for a shuffled target, with the frozen targets of a scene at pairwise
 cosine 0.99, the same aliasing the exp27 oracle gate measured
 (exp/out/exp28_summary.json).
+
+---
+
 
 ## Label-free reliability estimation (Dawid-Skene)
 
