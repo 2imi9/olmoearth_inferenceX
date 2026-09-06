@@ -529,7 +529,8 @@ sign test over the 8 river clusters. Errors are always those of the original
 unmasked probe. Job 706755, one B200, fp32, 106 s, 0 failures; outputs
 exp/out/exp28_summary.json and exp/out/exp28_decoder_consistency.csv.
 
-Part A (27 rule-selected scenes, exp13 error set). Decoder cosine distance
+Part A (27 rule-selected scenes; the exp13 error set as regenerated on the
+cluster, provenance under exp31). Decoder cosine distance
 (K = 8) has median E-AURC 0.0302 against 0.0118 for confidence and 0.0032 for
 tile-phase; it loses to confidence 7/20/0 by scene and 2/6 by river
 (one-sided p = 0.96), beats the constant score 22/5/0 and loses to both
@@ -591,7 +592,8 @@ is fitted without a prior), so the marginal likelihood is a surrogate; the
 residual gradient norm is recorded (part A 0.98 against 0.24 for the
 likelihood alone, part B 211 against 241).
 
-Part A (27 rule scenes, exp13 error set; head on the 1024 katima patches).
+Part A (27 rule scenes, the regenerated exp13 error set as exp28; head on
+the 1024 katima patches).
 The head fits its scene perfectly (training accuracy 1.0), so the Hessian
 has rank 174 of 769 at 1e-8 of its largest eigenvalue, the marginal
 likelihood picks lambda = 0.1 with 13.9 effective parameters, and the
@@ -609,7 +611,7 @@ confidence in this pipeline: 26/1 by scene, 8/0 by river (p = 0.0039), as
 exp28.
 
 Part B (Sen1Floods11 Bolivia; head on 127,840 valid-split patches, accuracy
-0.912, 351 scored tiles). Here the Hessian has full rank, lambda = 6.3 with
+0.912, 351 scored tiles). Here the Hessian has rank 768 of 769, lambda = 6.3 with
 667 effective parameters, mean training variance 0.22, and the variance is
 not norm (Spearman -0.12). It is still the worst signal: pooled E-AURC 0.168
 against 0.0105 for confidence, 6/345 tiles, below the constant score
@@ -671,9 +673,10 @@ short of the 7/8 needed, and it loses to tile-phase 2/25 (0/8 rivers). The
 primary score alone loses to confidence 11/16 (2/6 rivers) and to the S2
 variance control 5/22. No typicality score beats confidence: the R1 kNN
 score (exp13's E_dist) is 13/14 (5/3 rivers, median E-AURC 0.0076 against
-0.0118 for confidence, best on 2 scenes); every Gaussian score is 5/22 or
-worse (R1 Mahalanobis and PCA residual 5/22, R3 Mahalanobis 1/26, R3 PCA
-residual 1/26); ViM is 0/27. Against the S2 patch-variance control only the
+0.0118 for confidence, best on 2 scenes); the Gaussian scores run from 9/18 (R2
+Mahalanobis; R2 PCA residual 8/19) through 5/22 (R1 Mahalanobis,
+class-conditional Mahalanobis and PCA residual) to 1/26 (R3 Mahalanobis
+and PCA residual), none with a river gain beyond 1/7; ViM is 0/27. Against the S2 patch-variance control only the
 R1 kNN score wins (16/11); the R2 and R3 Gaussian scores lose 2/25 to 5/22.
 Spearman with the NDWI-gradient control: R2 kNN 0.55, R2 Mahalanobis 0.47,
 R3 kNN 0.27; the R1 kNN score correlates with confidence (0.56) and

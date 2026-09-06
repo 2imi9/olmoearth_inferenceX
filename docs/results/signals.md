@@ -291,7 +291,8 @@ standing in for a pretraining sample (exp31, one B200 job, 47 s).
 
 **Verdict: rejected** on both testbeds.
 On the 27 scenes no score beats confidence: kNN to the training scene is
-13/14 (5/3 rivers), the Gaussian scores are 5/22 or worse, ViM 0/27; the
+13/14 (5/3 rivers), the Gaussian scores run from 9/18 (same-scene
+Mahalanobis) down to 1/26 (cross-testbed pool), ViM 0/27; the
 preregistered combination of confidence with the same-scene kNN score
 reaches 14/13 by scene and 6/2 by river (one-sided p = 0.145, below the
 7/8 threshold) and loses to tile-phase 2/25. On Sen1Floods11 Bolivia every
