@@ -34,6 +34,7 @@ Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 | repro-aicr | exp02 and exp21 reproduced end to end on the AICR B200 cluster (2026-09-05): every metric identical, max abs diff 1e-5; exp17, exp18, exp20, exp23-exp26 and the transfer summary rerun there on 2026-09-06 with byte-identical tracked outputs and the river-level 8/0 (p = 0.0078) unchanged |
 | bench-b200 | encoder throughput and precision on AICR: fp32 leaves the B200 tensor cores idle (18.8 ms per 128x128 window); TF32 halves it with 59 of 60 exp21 fields unchanged and one budget count moving by one window; bf16 7-10x, untested on the audit |
 | exp27-gate | oracle gate on the latent-MIM target space (2026-09-06, CPU): pure-class WorldCover prototypes have pairwise cosine median 0.996, class sits in token norm, layout outweighs water fraction, ridge readout of water fraction from perfect tokens R2 0.67 raw / 0.55 normalised; prototype and retrieval readouts of the shipped decoder are unsound |
+| exp28 | decoder self-consistency (native masked-token reconstruction error, whole-spectrum and token-level masks, crowding/constant/input controls): rejected on both testbeds; the preregistered confidence+decoder combination gains nothing (4/4 rivers, p = 0.64); the frozen targets are near-collinear (pairwise cosine 0.99) |
 
 ## exp01 — first E_case map (2026-08-31)
 
@@ -480,3 +481,57 @@ primary endpoint becomes reference specificity on identical cells, which
 needs adjudicated labels on the river scenes. A CPU pilot of the exp27 draft
 (uncommitted) on one scene motivated this gate; its numbers are not recorded
 here because the script is not yet committed.
+
+## exp28 decoder self-consistency (2026-09-06)
+
+Question: does the model's own pretraining objective, evaluated at inference,
+rank the probe's errors? For each scene, K masks hide 25% of the 4-px patches
+with all three S2 band-set tokens of a hidden patch masked together; the
+encoder and decoder run once per mask, and each hidden token's decoded output
+is compared with the frozen target projection of the true patch (cosine
+distance; centred cosine; the patch-discrimination NLL at tau 0.1, minus
+log n). Whole-spectrum masking is a deliberate intervention, not the
+pretraining geometry (pretraining used modality_cross_random token masking,
+not grouped across band sets), so a token-level complementary-pair variant
+matching the pretraining marginal (50% of tokens hidden, cross-band tokens
+visible, every token hidden 4 times) is scored from the same code path.
+Controls: the target-only crowding NLL (the true target queried against the
+same candidates with no decoder), a constant score, and two observed-input
+controls (S2 within-patch variance, NDWI level). Preregistered inference: the
+gain of U+ (mean of the within-scene midrank percentiles of confidence and of
+decoder cosine distance) over confidence, per-river means, one-sided exact
+sign test over the 8 river clusters. Errors are always those of the original
+unmasked probe. Job 706755, one B200, fp32, 106 s, 0 failures; outputs
+exp/out/exp28_summary.json and exp/out/exp28_decoder_consistency.csv.
+
+Part A (27 rule-selected scenes, exp13 error set). Decoder cosine distance
+(K = 8) has median E-AURC 0.0302 against 0.0118 for confidence and 0.0032 for
+tile-phase; it loses to confidence 7/20/0 by scene and 2/6 by river
+(one-sided p = 0.96), beats the constant score 22/5/0 and loses to both
+observed-input controls (S2 variance 6/21/0, NDWI level 5/22/0). The
+preregistered combination U+ gains nothing over confidence: 4/4/0 rivers,
+p = 0.64 (11/16/0 by scene). The NLL scores (median 0.080) sit beside the
+target-only crowding control (0.094): the discrimination loss is governed by
+how crowded a target's neighbourhood is, not by the decoder. The token-mask
+variant is indistinguishable from whole-spectrum masking (0.0303 against
+0.0302); centring makes the score worse (0.054); K = 32 changes nothing
+(0.0292). Within every reference-class x prediction-boundary stratum the
+mean primary score on error and on correct patches differs by at most 0.045
+and the sign is not consistent across strata. Tile-phase against confidence
+in this pipeline: 26/1/0 by scene, 8/0/0 by river (one-sided p = 0.0039).
+
+Part B (Sen1Floods11 Bolivia, hand labels, 351 tiles, head accuracy 0.912).
+Pooled E-AURC: confidence 0.0105, tile-phase 0.0115, NDWI level 0.0119,
+boundary 0.0313; decoder cosine distance 0.065 (23/328 tiles against
+confidence), U+ 0.031 (81/270): the combination hurts.
+
+Mechanism. The mean cosine between a decoded token and its true target is
+0.468 against 0.431 for a shuffled target, and the mean pairwise cosine of the
+frozen targets within a scene is 0.991 (both in the diagnostics of the
+summary). The target space is nearly collinear under cosine, the same
+aliasing the exp27 oracle gate measured for the WorldCover projection, so the
+residual carries almost no per-patch information beyond input texture.
+
+Verdict: rejected as an error signal on both testbeds; a valid negative that
+closes the decoder-side family (exp08 occlusion, exp28 native masking) for
+this checkpoint.

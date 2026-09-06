@@ -48,6 +48,7 @@ Scored against the model's own confidence and a no-model pixel control.
 | Backbone-version disagreement (v1 vs v1.2) | n/a (EO-specific) | **not supported** | Worse than confidence for v1's errors (6/21), n.s. for v1.2's; RoPE does not reduce sub-patch tiling instability | exp19 |
 | Internal-state signals (logit-lens settling, representation drift, attention entropy) | INSIDE / hidden-state probing | **rejected** | 0/27, 3/27, 3/27 vs baseline; these do not transfer from language models | exp17 |
 | Masking perturbation | occlusion sensitivity | **rejected** | Worst signal on every scene tested; occlusion measures context reliance, not error likelihood | exp08 |
+| Decoder self-consistency (native masked-token reconstruction error) | the latent-MIM pretraining objective at inference | **rejected** | Loses to confidence (7/20 scenes, 2/6 rivers) and to both observed-input controls; the preregistered confidence+decoder combination gains nothing (4/4 rivers, p = 0.64); the frozen targets are near-collinear (pairwise cosine 0.99) | exp28 |
 | Label-free reliability (Dawid-Skene) | annotator modeling | **rejected within family** | Inflates every model and inverts the ordering, because family members err together; the inflation gap measures correlated-error mass | exp07 |
 
 ## Deployed artifacts: what can be audited from outside
