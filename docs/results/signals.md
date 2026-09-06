@@ -135,10 +135,11 @@ has not been built.
 - On hand labels it is the worst signal tested (22/329; exp18).
 - On AWF: 0.1338 against a 0.0363 baseline (exp12).
 
-**Verdict: partial, no support as an error ranker.** Its
-out-of-distribution-indicator interpretation remains plausible but untested:
-that needs a shift testbed whose errors are not spectrally trivial, which
-does not yet exist.
+**Verdict: not supported as an error ranker.** exp31 separated the
+reference set from the density estimator (see "Feature-space typicality"
+below) with the same result. Its out-of-distribution-indicator
+interpretation remains untested: that needs a shift testbed whose errors
+are not spectrally trivial, which does not yet exist.
 
 ---
 
@@ -255,10 +256,10 @@ the exp27 oracle gate measured (exp/out/exp28_summary.json).
 **Definition.** A Gaussian posterior over the logistic head's weights,
 N(theta, (H + lambda I)^-1), from the Hessian of its balanced cross-entropy
 at the trained weights, lambda by the marginal likelihood; the score is a
-patch's logit variance phi^T Sigma phi (exp30, one B200 job, 238 s). Also
-scored: the probit-moderated confidence, Gauss-Hermite predictive entropy
-and mutual information, and the standard deviation of 16 bootstrap-retrained
-heads.
+patch's logit variance phi^T Sigma phi (exp30, one B200 job, 192 s). Also
+scored: the probit-moderated confidence, predictive entropy and mutual
+information under the posterior, and the standard deviation of 16
+bootstrap-retrained heads.
 
 **Verdict: rejected** on both testbeds.
 On the 27 scenes the variance is the worst signal (median E-AURC 0.071
@@ -273,6 +274,32 @@ feature norm (Spearman 0.89), the Bayesian form of E_dist; on the
 128k-patch head the weights are well determined and the variance rises with
 the size of the logit (Spearman -0.53 with confidence), flagging the patches
 the head is surest about (exp/out/exp30_summary.json).
+
+---
+
+## Feature-space typicality
+
+**Definition.** The pooled 768-d feature of a patch scored for atypicality
+against a reference set: mean cosine distance to its 5 nearest reference
+patches, Mahalanobis distance under a Ledoit-Wolf-shrunk covariance, or
+the PCA residual outside the top 192 principal directions; on the head's
+training patches also the class-conditional Mahalanobis distance and ViM.
+Three references: the head's training patches (R1, where the kNN score is
+E_dist), the evaluated scene itself cross-fitted over five folds (R2), and
+a cross-testbed pool of about 414k (part A) or 29k (part B) patches (R3)
+standing in for a pretraining sample (exp31, one B200 job, 53 s).
+
+**Verdict: rejected** on both testbeds.
+On the 27 scenes no score beats confidence: kNN to the training scene is
+13/14 (5/3 rivers), the Gaussian scores are 5/22 or worse, ViM 0/27; the
+preregistered combination of confidence with the same-scene kNN score
+reaches 14/13 by scene and 6/2 by river (one-sided p = 0.145, below the
+7/8 threshold) and loses to tile-phase 2/25. On Sen1Floods11 Bolivia every
+score loses to confidence on at least 317 of 351 tiles (best pooled E-AURC
+0.0527 against 0.0105) and the combination hurts (0.0326, 60/291). The
+kNN scores track the NDWI-gradient control (Spearman up to 0.58) and sit
+level with the S2 patch-variance control on Bolivia
+(exp/out/exp31_summary.json).
 
 ---
 

@@ -36,6 +36,7 @@ Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 | exp27-gate | oracle gate on the latent-MIM target space (2026-09-06, CPU): pure-class WorldCover prototypes have pairwise cosine median 0.996, class sits in token norm, layout outweighs water fraction, ridge readout of water fraction from perfect tokens R2 0.67 raw / 0.55 normalised; prototype and retrieval readouts of the shipped decoder are unsound |
 | exp28 | decoder self-consistency (native masked-token reconstruction error, whole-spectrum and token-level masks, crowding/constant/input controls): rejected on both testbeds; the preregistered confidence+decoder combination gains nothing (4/4 rivers, p = 0.64); the frozen targets are near-collinear (within-scene pairwise cosine median 0.994) |
 | exp30 | last-layer Laplace on the probe head (logit variance, probit-moderated confidence, Gauss-Hermite MI and entropy, bootstrap-head std): rejected on both testbeds; the preregistered confidence+variance combination loses 0/8 rivers (p = 1.0); on the one-scene head the variance is feature norm (Spearman 0.89), on the 128k-patch head the weights are well determined and the variance is still the worst signal |
+| exp31 | feature-space typicality (kNN, Ledoit-Wolf Mahalanobis, PCA residual, class-conditional Mahalanobis, ViM) against the head's training patches, the scene itself (cross-fitted) and a cross-testbed pool: rejected; the preregistered confidence+typicality combination reaches 6/2 rivers (p = 0.145) against WorldCover and hurts on hand labels (60/291 tiles); no typicality score beats confidence on either testbed |
 
 ## exp01 — first E_case map (2026-08-31)
 
@@ -579,8 +580,16 @@ the logits of 16 heads retrained on bootstrap resamples of the training
 patches, and the feature norm as a diagnostic. References, controls, the U+
 combination and the river-clustered one-sided sign test as exp28, through
 exp/harness_ab.py (the exp28 scaffolding extracted verbatim; exp28 itself
-unchanged). Job 706827, one B200, fp32, 238 s, 0 failures; outputs
-exp/out/exp30_summary.json and exp/out/exp30_laplace_head.csv.
+unchanged). Job 706903, one B200, fp32, 192 s, 0 failures; outputs
+exp/out/exp30_summary.json and exp/out/exp30_laplace_head.csv. A first run
+(job 706827) integrated the two predictive scores with a 64-node
+Gauss-Hermite rule, which the Codex cross-review showed mis-orders patches
+once the variance exceeds a few hundred, as in part A; the rerun integrates
+on a 4001-point logit grid and every other number is identical. The trained
+weights are not the stationary point of the regularised objective (the head
+is fitted without a prior), so the marginal likelihood is a surrogate; the
+residual gradient norm is recorded (part A 0.98 against 0.24 for the
+likelihood alone, part B 211 against 241).
 
 Part A (27 rule scenes, exp13 error set; head on the 1024 katima patches).
 The head fits its scene perfectly (training accuracy 1.0), so the Hessian
@@ -593,8 +602,8 @@ and 0/8 by river, and it loses to all three controls (constant 5/22, S2
 variance 2/25, NDWI level 3/24). The preregistered combination U+ loses to
 confidence 7/20/0 by scene and 0/8 by river (one-sided p = 1.0). Against
 confidence: moderated confidence 9/18 (1/7 rivers; Spearman 0.97 with
-confidence), mutual information 3/24 (0/8), predictive entropy 10/17 (1/7),
-bootstrap std 4/23 (2/6). The variance ranking is insensitive to lambda
+confidence), mutual information 6/21 (1/7; Spearman 0.92 with confidence),
+predictive entropy 9/18 (1/7), bootstrap std 4/23 (2/6). The variance ranking is insensitive to lambda
 (Spearman 0.97 at lambda/100, 0.95 at 100 lambda). Tile-phase against
 confidence in this pipeline: 26/1 by scene, 8/0 by river (p = 0.0039), as
 exp28.
@@ -621,3 +630,71 @@ that the point estimate lacks.
 
 Verdict: rejected as an error signal on both testbeds; the last-layer
 posterior family (Laplace, bootstrap ensemble) is closed for these heads.
+
+## exp31 feature-space typicality (2026-09-06)
+
+Question: exp13's E_dist (mean cosine distance to the five nearest patches
+of the head's training scene) found 13/27 against confidence and was the
+worst signal on hand labels (22/329, exp18), but it conflates the reference
+set with the density estimator. Here the pooled 768-d Base feature of each
+patch is scored against three reference sets with three estimators each:
+R1 the head's training patches (katima's 1024 in part A; the 127,840 valid
+patches of the 600 valid-split tiles in part B), R2 the evaluated unit
+itself, cross-fitted over 5 random folds so no patch is scored against a
+reference containing it (819 reference patches per fold in A, 180 in B),
+and R3 a cross-testbed pool as a proxy for a pretraining-distribution
+reference (part A: the 414,225 Sen1Floods11 patches cached by exp18 from
+11 countries; part B: the 27 rule scenes plus katima, 28,672 patches).
+Estimators: mean cosine distance to the k = 5 nearest reference patches
+(R1 in part A is exp13's E_dist), Mahalanobis distance under the
+Ledoit-Wolf-shrunk covariance, and the PCA residual norm outside the top
+d = min(192, n/2) principal directions (the residual term of ViM). On R1,
+where the head's own training labels are legitimately available, also the
+class-conditional Mahalanobis distance (Lee et al. 2018, tied covariance)
+and ViM (Wang et al. 2022) adapted to the one-logit head, which fuses
+confidence and typicality by construction. The feature norm is scored as a
+diagnostic. Preregistered primary: the same-scene kNN score (label-free,
+no external data); U+ = mean of the within-unit midrank percentiles of
+confidence and of that score; inference = per-river mean gain over
+confidence, one-sided exact sign test over the 8 rivers. References,
+controls and scaffolding as exp28 (exp/harness_ab.py). Job 706911, one
+B200, fp32, 53 s, 0 failures (a first submission, job 706904, failed on a
+device-placement bug before any score was computed); outputs
+exp/out/exp31_summary.json and exp/out/exp31_feature_typicality.csv.
+
+Part A (27 rule scenes, exp13 error set). The preregistered combination U+
+beats confidence 14/13 by scene and 6/2 by river, one-sided p = 0.145:
+short of the 7/8 needed, and it loses to tile-phase 2/25 (0/8 rivers). The
+primary score alone loses to confidence 11/16 (2/6 rivers) and to the S2
+variance control 5/22. No typicality score beats confidence: the R1 kNN
+score (exp13's E_dist) is 13/14 (5/3 rivers, median E-AURC 0.0076 against
+0.0118 for confidence, best on 2 scenes); every Gaussian score is 5/22 or
+worse (R1 Mahalanobis and PCA residual 5/22, R3 Mahalanobis 1/26, R3 PCA
+residual 1/26); ViM is 0/27. Against the S2 patch-variance control only the
+R1 kNN score wins (16/11); the R2 and R3 Gaussian scores lose 2/25 to 5/22.
+Spearman with the NDWI-gradient control: R2 kNN 0.55, R2 Mahalanobis 0.47,
+R3 kNN 0.27; the R1 kNN score correlates with confidence (0.56) and
+tile-phase (0.55). The R1 kNN E-AURCs differ from the committed exp13
+values by at most 6.3e-4 over the 27 scenes (rank flips among near-tied
+distances on the regenerated cluster features); the 13/27 pattern is
+reproduced. Tile-phase against confidence: 26/1 by scene, 8/0 by river.
+
+Part B (Sen1Floods11 Bolivia, 351 scored tiles, head accuracy 0.912).
+Every typicality score loses to confidence on at least 317 of 351 tiles:
+pooled E-AURC 0.0527 for the best (R3 kNN) against 0.0105 for confidence;
+R1 kNN 0.0593, R2 kNN 0.0628, R1 Mahalanobis 0.0663, class-conditional
+0.0648, ViM 0.0929, R3 Mahalanobis 0.0831; the R1, R2 and R3 kNN scores
+sit level with the S2 variance control (173/178, 161/190, 171/180). U+
+0.0326, 60/291 tiles: the combination hurts.
+
+Reading: atypicality of the frozen feature, whichever reference it is
+measured against and whichever density estimates it, is not error
+likelihood for these heads. The one partial exception, a 6/2-river gain of
+the confidence+same-scene-kNN combination against WorldCover, does not
+reach the preregistered threshold and reverses on hand labels, the pattern
+of every WorldCover-only advantage in this repository. Roadmap item 9
+(E_dist formalisation) closes: the AOA-style reference-sample question is
+answered for the two references that can be built from this repository's
+data, and only a true pretraining sample remains untested.
+
+Verdict: rejected on both testbeds.
