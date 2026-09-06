@@ -31,7 +31,7 @@ Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 | exp24 | 2021 imagery + 2021 map + within-year head: tile-phase still beats confidence 23/3/0 (2024 same scenes 25/1/0); year gap does not explain the WorldCover wins |
 | exp26 | hand-check kit: top-12 disagreements by tiling instability and by confidence on the three scenes with the largest exp13 gain (shire_80, barotse, okavango_80); crops, cues and blank verdict columns; no claim |
 | exp25 | JRC seasonal-water split: disagreements enriched on seasonal margins, but tile-phase still beats confidence without them (22/2/0 in 2024, 22/1/0 in 2021); third mismatch component ruled out |
-| repro-aicr | exp02 and exp21 reproduced end to end on the AICR B200 cluster (2026-09-05): every metric identical, max abs diff 1e-5; a run with the cache present skips the encoder |
+| repro-aicr | exp02 and exp21 reproduced end to end on the AICR B200 cluster (2026-09-05): every metric identical, max abs diff 1e-5; exp17, exp18, exp20, exp23-exp26 and the transfer summary rerun there on 2026-09-06 with byte-identical tracked outputs and the river-level 8/0 (p = 0.0078) unchanged |
 | bench-b200 | encoder throughput and precision on AICR: fp32 leaves the B200 tensor cores idle (18.8 ms per 128x128 window); TF32 halves it with 59 of 60 exp21 fields unchanged and one budget count moving by one window; bf16 7-10x, untested on the audit |
 | exp27-gate | oracle gate on the latent-MIM target space (2026-09-06, CPU): pure-class WorldCover prototypes have pairwise cosine median 0.996, class sits in token norm, layout outweighs water fraction, ridge readout of water fraction from perfect tokens R2 0.67 raw / 0.55 normalised; prototype and retrieval readouts of the shipped decoder are unsound |
 
@@ -418,6 +418,16 @@ accuracy 0.881 (41 errors), confidence AURC 0.0262, tiling instability
 0.0235, ECE 0.080, selective accuracy 0.945 at 80% coverage. A first
 attempt (job 697356) fetched and extracted the dataset but aborted before
 inference on a pipefail in the job script, not in the experiment.
+
+**2026-09-06, chain rerun.** Job 706739 (b200-devel, one B200, fp32) reran
+exp18, exp17, exp20, exp23, exp24, exp25, exp26 and `exp/summary_transfer.py`
+in sequence from a fresh `git pull`, with the tracked `exp/out/` files reset
+first. `git diff -- exp/out/` is empty afterwards: every tracked CSV, JSON and
+PNG those scripts write is byte-identical to the committed version, and the
+transfer summary printed the same river-level result (8/0, sign p = 0.0078,
+n = 8). The run also regenerated the gitignored caches the follow-on
+experiments read (exp17_internals, exp18_feats, exp23_geo, exp24_feats,
+exp25_jrc). Log: `slurm/oeix-chain-706739.out` on the cluster.
 
 ## Encoder throughput and precision on AICR (2026-09-05)
 
