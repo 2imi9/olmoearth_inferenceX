@@ -50,8 +50,10 @@ min over the two classes. (5) ViM (Wang et al. 2022) adapted to the
 one-logit binary head: origin o = -pinv(W) b = -b w / ||w||^2, principal
 subspace fitted on X_train - o, residual r(x) = ||P_perp (x - o)||, alpha =
 sum_train max(0, logit) / sum_train r, virtual logit alpha r, class logits
-[0, logit] (a sigmoid is a two-way softmax), score = exp(alpha r) / (1 +
-exp(logit) + exp(alpha r)) computed with logsumexp. ViM fuses confidence and
+[0, logit] (a sigmoid is a two-way softmax), score = the log-odds
+alpha r - log(1 + exp(logit)) of the virtual class, monotone in the ViM
+softmax probability exp(alpha r) / (1 + exp(logit) + exp(alpha r)) without
+its saturation at 1.0. ViM fuses confidence and
 typicality by construction and is not a pure typicality score. One
 diagnostic signal, ||x||_2 of the pooled feature, shows whether any density
 is just feature norm. The encoder runs in fp32 (harness); the density fits
@@ -289,11 +291,14 @@ def vim_fit(X, w, b):
 
 
 def vim_score(Q, logit, vim):
-    """Softmax probability of the virtual logit alpha r among the logits [0, logit, alpha r] (stable via logaddexp)."""
+    """Log-odds of the virtual logit alpha r against the class logits [0, logit]: vl - logaddexp(0, l).
+
+    Monotone in the ViM softmax probability exp(vl) / (1 + exp(l) + exp(vl)) but free of its saturation at 1.0,
+    which tied every patch with a large virtual logit (Codex review of the first run)."""
     r = gauss_scores(Q, vim["fit"], vim["d"])[1]
     vl = vim["alpha"] * r
     l = np.asarray(logit, dtype=np.float64).ravel()
-    return np.exp(vl - np.logaddexp(np.logaddexp(0.0, l), vl))
+    return vl - np.logaddexp(0.0, l)
 
 
 def fixed_ref_scores(Q, logit, r1, cc, vim, r3):
