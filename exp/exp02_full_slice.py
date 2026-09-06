@@ -107,6 +107,29 @@ def compute_probs():
     return probs, ev_labels, (crs, transform)
 
 
+def bridge_strip_check(p_base, lab, err):
+    """Reference non-water patches enclosed by water within 3 patches on both sides of their row: the line the
+    Kazungula bridge draws across the river in WorldCover 2021. Reports how the head and the disagreements sit on it."""
+    strip = np.zeros_like(lab)
+    for r in range(lab.shape[0]):
+        row = lab[r]
+        for c in range(1, lab.shape[1] - 1):
+            if row[c] or not row[:c].any() or not row[c + 1:].any():
+                continue
+            left = c - 1 - np.max(np.nonzero(row[:c])[0])
+            right = np.min(np.nonzero(row[c + 1:])[0])
+            if left <= 3 and right <= 3:
+                strip[r, c] = True
+    widths = [int(strip[r].sum()) for r in range(lab.shape[0]) if strip[r].any()]
+    conf = (p_base > 0.9) | (p_base < 0.1)
+    print(f"bridge strip in the reference: {strip.sum()} patches, width per row median {int(np.median(widths))} "
+          f"(max {max(widths)}) patches; head calls {(p_base[strip] > 0.5).sum()}/{strip.sum()} of them water "
+          f"(mean P(water) {p_base[strip].mean():.2f})")
+    print(f"disagreements: {err.sum()} total, {(err & strip).sum()} on the strip, {(err & ~strip).sum()} elsewhere; "
+          f"confident (P > 0.9 or < 0.1): {(err & conf).sum()}; uncertain (0.3-0.7): "
+          f"{(err & (p_base > 0.3) & (p_base < 0.7)).sum()}")
+
+
 def main():
     import os
     import rasterio
@@ -119,6 +142,7 @@ def main():
               rasterio.Affine(*z["transform"]))
     print(f"loaded cached probs/labels/true colour ({ev_date})")
     errors = ((p_base > 0.5) != ev_labels.astype(bool)).astype(np.float64)
+    bridge_strip_check(p_base, ev_labels.astype(bool), errors.astype(bool))
 
     e_case = np.abs(p_nano - p_base)
     baseline = 1 - np.maximum(p_base, 1 - p_base)  # max-softmax uncertainty

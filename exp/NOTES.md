@@ -97,9 +97,16 @@ probabilities were left untouched. A full CPU re-run on the Mac the same day
 gave the same 22 disagreement patches, the same AURCs (0.0011 / 0.0009) and
 the same error rate, with probabilities differing from the committed ones by
 at most 1.5e-3 (fp32 accumulation order; the B200 run of 2026-09-05 matched
-to 1e-5). Most outlined patches lie on the Kazungula bridge and along the
-shorelines: at 40 m a bridge patch is mostly water, which the reference calls
-land and the head calls water.
+to 1e-5). Where the outlined patches sit, measured by `bridge_strip_check`
+in the script from the cache: the reference draws the Kazungula bridge as a
+line of 15 non-water patches across the river, one patch (40 m) wide, and
+the head reproduces it, calling only 2 of those 15 water (mean P(water)
+0.12); so the bridge neither breaks nor disappears in the prediction. Of the
+22 disagreements, 2 are on that line and 20 are shoreline cells, and 15 of
+the 22 carry a confident prediction (P above 0.9 or below 0.1) while only 1
+is uncertain (0.3-0.7). Nothing is fabricated: these are mixed 40 m cells on
+which a majority-pooled 10 m map from 2021 and a head reading a 2024
+dry-season image disagree about the water fraction.
 
 ## exp03 — four techniques, one run (2026-08-31)
 
