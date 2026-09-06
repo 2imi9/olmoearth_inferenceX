@@ -16,8 +16,12 @@ oe_inferencex.evidence.train_logistic_head (positive weight n_neg / n_pos),
 so H = sum_i w_i p_i (1 - p_i) phi_i phi_i^T with w_i the positive weight for
 water patches and 1 otherwise. lambda is chosen post hoc by maximising the
 Laplace marginal likelihood on a log grid with the trained weights held
-fixed (the laplace-torch default); the sensitivity of the ranking to lambda
-is reported. Because the training set of part A is a single 32x32 scene
+fixed (the laplace-torch default). Because the head was trained without a
+prior, the trained weights are not the stationary point of the regularised
+objective, so this is an evidence surrogate rather than a Laplace evidence at
+a MAP; the residual gradient ||grad NLL(theta) + lambda theta|| is recorded
+next to ||grad NLL(theta)||, and the sensitivity of the ranking to lambda is
+reported. Because the training set of part A is a single 32x32 scene
 (1024 patches in 768 dimensions) the head fits it perfectly and H is nearly
 singular, so there v is dominated by the prior term and measures how far x
 leaves the subspace spanned by the training scene: the Bayesian form of
@@ -30,10 +34,15 @@ Signals (higher = more uncertain), all from one fit per part:
                                   (MacKay); a principled fusion of
                                   confidence and variance.
   Laplace mutual information      H[E p] - E[H p] under l ~ N(mu, v), by
-                                  64-node Gauss-Hermite quadrature (exact up
-                                  to quadrature, no Monte Carlo noise): the
+                                  numerical integration over the logit on a
+                                  4001-point grid covering the Gaussian mass
+                                  within the window where the entropy is
+                                  non-zero (|l| < 45), with the tail mass
+                                  added in closed form; a fixed Gauss-Hermite
+                                  rule mis-orders patches once v exceeds a
+                                  few hundred, which part A produces. The
                                   BALD epistemic score.
-  Laplace predictive entropy      H[E p], the same quadrature.
+  Laplace predictive entropy      H[E p], the same integration.
   bootstrap-head logit std        the frequentist counterpart: 16 heads
                                   retrained on bootstrap resamples of the
                                   training patches, std of their logits.
@@ -79,17 +88,17 @@ from harness_ab import CONF, TILE, BOUND, CTRL, CONST, CTRL_VAR, CTRL_LVL, REFER
 from oe_inferencex.evidence import train_logistic_head
 
 LAMBDA_GRID = np.logspace(-4, 6, 51)
-GH_NODES = 64
+INT_NODES = 4001          # logit-grid points per patch for the predictive integrals
+INT_HALF_WINDOW = 45.0    # |l| beyond which the Bernoulli entropy is below 1e-18
 N_BOOT = 16
 LAM_SENS = (0.01, 100.0)   # lambda multipliers for the ranking-sensitivity diagnostic
 
 VAR, MOD, MI, ENT, BOOT, NORM = ("Laplace logit variance", "Laplace moderated confidence (probit)",
-                                 "Laplace mutual information (GH)", "Laplace predictive entropy (GH)",
+                                 "Laplace mutual information", "Laplace predictive entropy",
                                  f"bootstrap-head logit std (B={N_BOOT})", "diagnostic feature norm")
 NEW_NAMES = [VAR, MOD, MI, ENT, BOOT, NORM]
 PRIMARY = VAR
 COMBO = "combination conf+Laplace (prereg)"
-_GH_T, _GH_W = np.polynomial.hermite.hermgauss(GH_NODES)
 
 
 def _phi(x):
@@ -126,12 +135,16 @@ def fit_laplace(x_tr, y_tr, w, b):
                     for lam in LAMBDA_GRID])
     lam = float(LAMBDA_GRID[int(np.argmax(lml))])
     gamma = float(P - lam * (1.0 / (h + lam)).sum())              # effective number of parameters
+    g_nll = phi.T @ (np.where(y == 1, pos_w, 1.0) * (p - y))       # gradient of the summed weighted BCE at theta
     return {"theta": theta, "Q": Q, "h": h, "lam": lam, "pos_w": pos_w, "P": P,
             "diag": {"lambda": lam, "lambda_grid_edge": bool(lam in (LAMBDA_GRID[0], LAMBDA_GRID[-1])),
                      "effective_params": gamma, "train_nll_sum": nll, "n_train": int(len(y)),
                      "train_acc": float(((logit > 0) == (y > 0.5)).mean()),
                      "hessian_eig_max": float(h.max()), "hessian_eig_min": float(h.min()),
                      "hessian_rank_1e-8": int((h > 1e-8 * h.max()).sum()),
+                     "nll_grad_norm": float(np.linalg.norm(g_nll)),
+                     "posterior_grad_norm": float(np.linalg.norm(g_nll + lam * theta)),
+                     "theta_norm": float(np.linalg.norm(theta)),
                      "lml_curve": {"lambda": LAMBDA_GRID.tolist(), "lml": lml.tolist()},
                      "pos_weight": pos_w}}
 
@@ -146,17 +159,52 @@ def laplace_predict(lap, x, lam=None):
     return mu, v
 
 
-def gh_scores(mu, v):
-    """Predictive entropy and mutual information of a Bernoulli with logit ~ N(mu, v), by Gauss-Hermite quadrature."""
-    l = mu[:, None] + np.sqrt(2 * np.clip(v, 0, None))[:, None] * _GH_T[None, :]
-    p = 0.5 * (1 + np.tanh(l / 2))   # sigmoid, overflow-free
-    w = _GH_W / np.sqrt(np.pi)
-    eps = 1e-12
-    ent = lambda q: -(q * np.log(q + eps) + (1 - q) * np.log(1 - q + eps))  # noqa: E731
-    p_bar = (p * w[None, :]).sum(1)
-    exp_ent = (ent(p) * w[None, :]).sum(1)
-    pred_ent = ent(p_bar)
-    return pred_ent, pred_ent - exp_ent
+def _entropy(q):
+    eps = 1e-300
+    return -(q * np.log(q + eps) + (1 - q) * np.log(1 - q + eps))
+
+
+def _ndtr(z):
+    """Standard normal CDF."""
+    from math import erf
+    return 0.5 * (1 + np.vectorize(erf)(z / np.sqrt(2)))
+
+
+def gh_scores(mu, v, chunk=2048):
+    """Predictive entropy and mutual information of a Bernoulli with logit l ~ N(mu, v).
+
+    E[sigmoid(l)] and E[H(sigmoid(l))] are integrated on a uniform grid of
+    INT_NODES points over [max(mu - 8 s, -W), min(mu + 8 s, W)], s = sqrt(v),
+    W = INT_HALF_WINDOW, by the trapezoid rule; outside |l| < W the entropy
+    is numerically zero and sigmoid is 0 or 1, so the mass above the window
+    is added to E[sigmoid] in closed form. This resolves the sigmoid
+    transition for any v, which a fixed Gauss-Hermite rule does not once v
+    exceeds a few hundred."""
+    mu = np.asarray(mu, dtype=np.float64).ravel()
+    s = np.sqrt(np.clip(np.asarray(v, dtype=np.float64).ravel(), 1e-300, None))
+    W = INT_HALF_WINDOW
+    pred_ent, mi = np.empty(len(mu)), np.empty(len(mu))
+    u = np.linspace(0.0, 1.0, INT_NODES)
+    for i0 in range(0, len(mu), chunk):
+        m, sd = mu[i0:i0 + chunk], s[i0:i0 + chunk]
+        lo, hi = np.maximum(m - 8 * sd, -W), np.minimum(m + 8 * sd, W)
+        ok = hi > lo
+        lo_c, hi_c = np.where(ok, lo, m), np.where(ok, hi, m + 1e-6)
+        l = lo_c[:, None] + (hi_c - lo_c)[:, None] * u[None, :]
+        z = (l - m[:, None]) / sd[:, None]
+        pdf = np.exp(-0.5 * z * z) / (sd[:, None] * np.sqrt(2 * np.pi))
+        p = 0.5 * (1 + np.tanh(l / 2))
+        w = np.full(INT_NODES, 1.0); w[0] = w[-1] = 0.5
+        dl = (hi_c - lo_c) / (INT_NODES - 1)
+        p_bar = (pdf * p * w[None, :]).sum(1) * dl + (1 - _ndtr((hi_c - m) / sd))
+        exp_ent = (pdf * _entropy(p) * w[None, :]).sum(1) * dl
+        p_bar = np.where(ok, p_bar, 1 - _ndtr((W - m) / sd))   # all mass outside the window
+        exp_ent = np.where(ok, exp_ent, 0.0)
+        p_bar = np.clip(p_bar, 0.0, 1.0)
+        pe = _entropy(p_bar)
+        pred_ent[i0:i0 + chunk] = pe
+        mi[i0:i0 + chunk] = pe - exp_ent
+    return pred_ent, mi
 
 
 def bootstrap_heads(x_tr, y_tr, n_boot, seed=0):
@@ -276,7 +324,8 @@ def main():
     config = {"lambda_grid": [float(LAMBDA_GRID[0]), float(LAMBDA_GRID[-1]), len(LAMBDA_GRID)],
               "lambda_selection": "post-hoc Laplace marginal likelihood on the grid, trained weights fixed",
               "hessian": "weighted BCE Hessian at the trained head, positive weight n_neg/n_pos as in train_logistic_head, bias included",
-              "quadrature_nodes": GH_NODES, "n_bootstrap_heads": N_BOOT,
+              "predictive_integration": f"trapezoid, {INT_NODES} logit-grid points within [mu - 8 s, mu + 8 s] clipped to |l| < {INT_HALF_WINDOW}, tail mass closed form",
+              "n_bootstrap_heads": N_BOOT,
               "primary_score": PRIMARY, "combination": COMBO,
               "prereg": "U+ = mean of within-unit midrank percentiles of confidence and of the Laplace logit variance; "
                         "per-river mean gain over confidence, one-sided exact sign test over the 8 rivers"}
