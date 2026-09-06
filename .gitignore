@@ -23,3 +23,5 @@ exp/out/*_smoke.*
 exp/out/*_smoke_*
 data/floods
 slurm/
+exp/out/exp30_*.npz
+exp/out/exp31_*.npz
