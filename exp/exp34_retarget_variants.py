@@ -18,16 +18,21 @@ ask a different question from "how large is the residual":
       stride 6), so the predictor cannot copy texture from immediate
       neighbours; the residual measures longer-range predictability.
   (c) residual along the decision direction. The whitened residual of the
-      exp33 predictor projected onto the water head's weight direction in
-      whitened space, so only the unpredictability that matters for the
-      class counts; the head is the same one that defines confidence.
+      exp33 predictor projected onto the water head's weight direction as
+      it appears inside the retained whitened subspace (the component of
+      the weight outside the top-d directions is discarded; the fraction of
+      the training logit variance the subspace keeps is recorded), so only
+      the unpredictability that matters for the class counts; the head is
+      the same one that defines confidence.
 
 The exp33 residual (whitened MSE, random 25% masks, K = 8 quarter masks) is
 recomputed in the same run as the reference variant. Whitening (top 64
 directions), the predictor (two pre-norm transformer layers, width 128,
 learned mask token, sinusoidal 2-d positions, Adam 1e-3, 400 steps),
-river-disjoint folds in part A (katima in every pool), the 600 valid tiles
-in part B, controls, U+ and the river test are exp33's. No evaluation label
+river-disjoint folds in part A (katima, on the Zambezi, only in the pools
+that do not hold the Zambezi out), the 600 valid tiles in part B, controls,
+U+ and the river test are exp33's. The Spearman diagnostics against the S2
+variance and boundary controls use tie-averaged ranks. No evaluation label
 enters any fit; the k-means and the whitener see the training pool only.
 
 Preregistered: primary score = the discrete predictive entropy; U+ = mean
@@ -50,6 +55,7 @@ import torch.nn as nn
 
 import harness_ab as hb
 import exp33_context_predictor as e33
+from oe_inferencex import stats as stats_lib
 from harness_ab import CONF, TILE, BOUND, DEV, RIVER  # noqa: F401
 
 K_CLUSTERS, K_SMOKE = 128, 16
@@ -192,10 +198,20 @@ def score_variants(Z, G, labels, w_dir, res_model, gap_model, clu_model, rng):
     return {k: v.reshape(n_units, G, G) for k, v in out.items()}
 
 
-def decision_direction(w, whitener):
-    """The head's weight expressed in whitened coordinates: x.w = z.((P^T w) / scale) + const; returned as a unit vector."""
-    v = (whitener["P"].T @ np.asarray(w, dtype=np.float64)) / whitener["scale"]
-    return v / max(np.linalg.norm(v), 1e-12)
+def decision_direction(w, whitener, X_train=None):
+    """The head's weight projected into the whitened subspace: within the retained top-d directions x.w = z.((P^T w) /
+    scale) + const; the component of w outside that subspace is discarded. Returns the unit direction and a
+    diagnostic with the fraction of ||w||^2 retained and, given training tokens, the fraction of the training logit
+    variance the retained subspace carries."""
+    w = np.asarray(w, dtype=np.float64)
+    P = whitener["P"]
+    v = (P.T @ w) / whitener["scale"]
+    diag = {"weight_norm_fraction_retained": float(np.linalg.norm(P.T @ w) ** 2 / max(w @ w, 1e-300))}
+    if X_train is not None:
+        Xc = np.asarray(X_train, dtype=np.float64) - whitener["mu"]
+        full, kept = Xc @ w, (Xc @ P) @ (P.T @ w)
+        diag["logit_variance_fraction_retained"] = float(kept.var() / max(full.var(), 1e-300))
+    return v / max(np.linalg.norm(v), 1e-12), diag
 
 
 def fit_all(Ztr, G, k, steps, seed, log):
@@ -213,10 +229,12 @@ def fit_all(Ztr, G, k, steps, seed, log):
 
 
 def unit_diag(sigs, unit_ok=None):
+    """Tie-aware Spearman (oe_inferencex.stats.spearman) with the two controls the null names; the boundary indicator
+    has nine levels, so exp14's positional ranks would let it correlate with raster order."""
     ctrl, bnd = np.asarray(sigs[hb.CTRL_VAR]), np.asarray(sigs[BOUND])
     m = np.ones(ctrl.shape, bool) if unit_ok is None else unit_ok
-    return {k: {"spearman_vs_s2_variance": hb.exp14.spearman(np.asarray(sigs[k])[m], ctrl[m]),
-                "spearman_vs_boundary": hb.exp14.spearman(np.asarray(sigs[k])[m], bnd[m])} for k in NEW_NAMES}
+    return {k: {"spearman_vs_s2_variance": stats_lib.spearman(np.asarray(sigs[k])[m], ctrl[m]),
+                "spearman_vs_boundary": stats_lib.spearman(np.asarray(sigs[k])[m], bnd[m])} for k in NEW_NAMES}
 
 
 # ----------------------------------------------------------------------------- part A
@@ -239,7 +257,9 @@ def part_a(model, args, summary, rows, cache):
     scores, diag = {}, {}
     for f, rivers in enumerate(folds):
         held = [n for n in names if RIVER[n] in rivers]
-        train = [n for n in all_names if RIVER[n] not in rivers] + ["__katima__"]
+        train = [n for n in all_names if RIVER[n] not in rivers]
+        if "Zambezi" not in rivers:                                                    # katima lies on the Zambezi
+            train.append("__katima__")
         if not held:
             continue
         try:
@@ -248,11 +268,13 @@ def part_a(model, args, summary, rows, cache):
             res_m, gap_m, clu_m, C, fd = fit_all(Ztr, G, args.k, args.steps, f, f"fold {f} ({len(train)} units)")
             Zev = np.stack([e33.whiten(w, feats[n]) for n in held])
             lab_ev = assign(C, Zev.reshape(-1, Zev.shape[-1])).reshape(Zev.shape[:2])
-            out = score_variants(Zev, G, lab_ev, decision_direction(w_head, w), res_m, gap_m, clu_m, rng)
+            wdir, wdiag = decision_direction(w_head, w, np.concatenate([feats[n] for n in train]))
+            out = score_variants(Zev, G, lab_ev, wdir, res_m, gap_m, clu_m, rng)
             for i, n in enumerate(held):
                 scores[n] = {k: out[k][i] for k in NEW_NAMES}
             summary["part_a"].setdefault("folds", {})[str(f)] = {"held": held, "n_train_units": len(train), "seed": f,
-                                                                  "var_kept_by_whitening": w["var_kept"], **fd}
+                                                                  "katima_in_pool": "__katima__" in train,
+                                                                  "var_kept_by_whitening": w["var_kept"], "decision_direction": wdiag, **fd}
             print(f"fold {f}: whitening {w['var_kept']:.3f}; cluster CE {fd['loss_first_last']['clusters_ce'][0]:.2f} -> "
                   f"{fd['loss_first_last']['clusters_ce'][1]:.2f} (log K {fd['log_k']:.2f}); gap loss -> {fd['loss_first_last']['gap'][1]:.3f}", flush=True)
         except Exception as ex:  # noqa: BLE001
@@ -280,7 +302,7 @@ def part_a(model, args, summary, rows, cache):
     summary["part_a"]["diagnostics"] = diag
     if diag:
         summary["part_a"]["spearman_vs_controls_median"] = {
-            k: {c: float(np.median([diag[n][k][c] for n in diag])) for c in ("spearman_vs_s2_variance", "spearman_vs_boundary")} for k in NEW_NAMES}
+            k: {c: float(np.nanmedian([diag[n][k][c] for n in diag])) for c in ("spearman_vs_s2_variance", "spearman_vs_boundary")} for k in NEW_NAMES}
     hb.finish_part_a(summary, per, rho_per, NEW_NAMES, PRIMARY, COMBO)
 
 
@@ -297,8 +319,10 @@ def part_b(model, args, summary, rows, cache):
     res_m, gap_m, clu_m, C, fd = fit_all(Ztr, G, args.k, args.steps, 0, f"part B ({len(Ztr)} tiles)")
     Zev = np.stack([e33.whiten(w, u) for u in ctx["ev_feats"].reshape(N, G * G, D)])
     lab_ev = assign(C, Zev.reshape(-1, Zev.shape[-1])).reshape(Zev.shape[:2])
-    out = score_variants(Zev, G, lab_ev, decision_direction(w_head, w), res_m, gap_m, clu_m, np.random.default_rng(0))
-    summary["part_b"]["fit"] = {"n_train_tiles": int(len(Ztr)), "seed": 0, "d": args.d, "var_kept_by_whitening": w["var_kept"], **fd}
+    wdir, wdiag = decision_direction(w_head, w, tr_units.reshape(-1, D))
+    out = score_variants(Zev, G, lab_ev, wdir, res_m, gap_m, clu_m, np.random.default_rng(0))
+    summary["part_b"]["fit"] = {"n_train_tiles": int(len(Ztr)), "seed": 0, "d": args.d, "var_kept_by_whitening": w["var_kept"],
+                                "decision_direction": wdiag, **fd}
     print(f"part B: whitening {w['var_kept']:.3f}; cluster CE {fd['loss_first_last']['clusters_ce'][0]:.2f} -> "
           f"{fd['loss_first_last']['clusters_ce'][1]:.2f} (log K {fd['log_k']:.2f}); gap loss -> {fd['loss_first_last']['gap'][1]:.3f}", flush=True)
     sigs = hb.base_signals_b(ctx)

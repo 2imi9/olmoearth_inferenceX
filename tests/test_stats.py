@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 
 from oe_inferencex.stats import (block_bootstrap_indices, cluster_bootstrap_difference, clustered_sign_test,
-                                 paired_comparison, sign_test, wins_losses_ties)
+                                 paired_comparison, sign_test, spearman, wins_losses_ties)
 
 OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "exp", "out")
 RIVER = {"barotse": "Zambezi", "delta": "Zambezi", "kazungula": "Zambezi", "vicfalls_up": "Zambezi",
@@ -91,3 +91,15 @@ def test_cluster_bootstrap_difference_prefers_the_better_signal():
     clusters = np.repeat(np.arange(30), 20)
     lo, hi, p_better = cluster_bootstrap_difference(good, bad, err, clusters, n_boot=200)
     assert hi < 0 and p_better == 1.0
+
+
+def test_spearman_averages_ties_and_flags_constants():
+    x = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
+    assert spearman(x, x) == pytest.approx(1.0) and spearman(x, -x) == pytest.approx(-1.0)
+    tied = np.array([0, 0, 0, 1, 1, 1], float)                     # a two-level score
+    assert spearman(tied, x) == pytest.approx(spearman(tied, x[::-1] * -1))   # position inside a tie group does not matter
+    assert np.isnan(spearman(np.zeros(6), x))                       # constant input: undefined, not 1
+    rng = np.random.default_rng(0)
+    a, b = rng.random(50), rng.random(50)
+    ra, rb = np.argsort(np.argsort(a)), np.argsort(np.argsort(b))
+    assert spearman(a, b) == pytest.approx(np.corrcoef(ra, rb)[0, 1])   # equals the plain form without ties

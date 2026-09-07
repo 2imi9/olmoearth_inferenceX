@@ -31,7 +31,8 @@ indicator and the S2 patch-variance control is recorded.
 Training sets. Part A: the 27 rule scenes plus the katima training scene,
 cross-fitted over three river-disjoint folds (Zambezi + Luangwa; Cuando +
 Kafue + Okavango; Rovuma + Save + Shire): each scene is scored by a
-predictor that never saw its river; katima is in every training set. The
+predictor that never saw its river; katima, which lies on the Zambezi, is in
+the two pools that do not hold the Zambezi out. The
 training pools take every rule scene's features whether or not the scene
 passes the eight-error scoring rule, so no evaluation label shapes a fit. Part
 B: the 600 valid-split tiles (the head's training tiles, label-free here),
@@ -205,7 +206,9 @@ def part_a(model, args, summary, rows, cache):
     scores, diag = {}, {}
     for f, rivers in enumerate(folds):
         held = [n for n in names if RIVER[n] in rivers]                              # scored scenes of this fold
-        train = [n for n in all_names if RIVER[n] not in rivers] + ["__katima__"]     # every other river, labels unseen
+        train = [n for n in all_names if RIVER[n] not in rivers]                       # every other river, labels unseen
+        if "Zambezi" not in rivers:                                                    # katima lies on the Zambezi
+            train.append("__katima__")
         if not held:
             continue
         try:

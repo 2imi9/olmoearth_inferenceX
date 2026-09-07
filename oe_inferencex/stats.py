@@ -14,6 +14,7 @@ from math import comb
 import numpy as np
 
 from oe_inferencex.metrics import aurc_expected
+from oe_inferencex.signals import midrank_pct
 
 TIE_TOL = 1e-12
 
@@ -109,3 +110,14 @@ def cluster_bootstrap_difference(score_a, score_b, errors, clusters, n_boot=2000
         diffs.append(aurc_expected(a[sel], err[sel]) - aurc_expected(b[sel], err[sel]))
     diffs = np.array(diffs)
     return float(np.percentile(diffs, 2.5)), float(np.percentile(diffs, 97.5)), float((diffs < 0).mean())
+
+
+def spearman(x, y):
+    """Spearman rank correlation with tie-averaged (mid)ranks; NaN when either input is constant.
+
+    exp14.spearman ranks ties by position (double argsort), which lets a nine-level score such as the boundary
+    indicator correlate with raster order; this form does not."""
+    rx, ry = midrank_pct(x), midrank_pct(y)
+    if rx.std() == 0 or ry.std() == 0:
+        return float("nan")
+    return float(np.corrcoef(rx, ry)[0, 1])

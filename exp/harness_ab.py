@@ -54,7 +54,7 @@ torch.backends.cudnn.allow_tf32 = False
 torch.set_float32_matmul_precision("highest")
 
 OUT = os.path.join(EXP_DIR, "out")
-DEV = "cuda" if torch.cuda.is_available() else "cpu"
+DEV = "cuda" if torch.cuda.is_available() and "--smoke" not in sys.argv else "cpu"   # --smoke runs on the CPU, as advertised
 PATCH = 4
 SHIFTS = exp13.SHIFTS
 N_BANDSETS = Modality.SENTINEL2_L2A.num_band_sets  # 3
