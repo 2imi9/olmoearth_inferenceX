@@ -194,8 +194,9 @@ def part_a(model, args, summary, rows, cache):
         except Exception as ex:  # noqa: BLE001
             summary["failures"].append({"part": "A", "unit": name, "error": repr(ex), "traceback": traceback.format_exc()})
     # training pools use every rule scene's shift-0 features (scene_unit computes them before its error filter), so
-    # membership never depends on the evaluation labels; the error filter applies only to which scenes are scored
-    all_names = [n for n in ctx["names"] if f"{n}_base0" in ctx["feats"]]
+    # membership never depends on the evaluation labels; the error filter applies only to which scenes are scored.
+    # Cache-only scenes outside the rule set (no river cluster) are excluded from both pools and scoring.
+    all_names = [n for n in ctx["names"] if n in hb.RULE_SCENES and f"{n}_base0" in ctx["feats"]]   # rule scenes only
     names = [n for n in all_names if units.get(n) is not None]
     feats = {n: np.asarray(ctx["feats"][f"{n}_base0"], dtype=np.float32).reshape(G * G, D) for n in all_names}
     feats["__katima__"] = ctx["tr_feats"].reshape(G * G, D)
