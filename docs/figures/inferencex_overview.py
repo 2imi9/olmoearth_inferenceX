@@ -80,7 +80,7 @@ beliefs = [
     ("tiling instability and band-set disagreement win against WorldCover only",
      "26/27 scenes, 8/0 rivers; 21/27; both lose on hand labels; three explanations for the gap ruled out", "exp13 17 18 23-25"),
     ("the pretraining target space is degenerate",
-     "target encoder = untouched random init, targets of effective rank 2; a whitened target is 60-70% predictable from context", "exp32 33"),
+     "target encoder = untouched random init, targets of effective rank 2; whitened, the target is 60-70% predictable", "exp32 33"),
 ]
 y0 = 74
 for i, (claim, how, exps) in enumerate(beliefs):
