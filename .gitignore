@@ -25,3 +25,4 @@ data/floods
 slurm/
 exp/out/exp30_*.npz
 exp/out/exp31_*.npz
+exp/out/exp33_*.npz
