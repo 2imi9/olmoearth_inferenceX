@@ -37,6 +37,7 @@ Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 | exp28 | decoder self-consistency (native masked-token reconstruction error, whole-spectrum and token-level masks, crowding/constant/input controls): rejected on both testbeds; the preregistered confidence+decoder combination gains nothing (4/4 rivers, p = 0.64); the frozen targets are near-collinear (within-scene pairwise cosine median 0.994) |
 | exp30 | last-layer Laplace on the probe head (logit variance, probit-moderated confidence, Gauss-Hermite MI and entropy, bootstrap-head std): rejected on both testbeds; the preregistered confidence+variance combination loses 0/8 rivers (p = 1.0); on the one-scene head the variance is feature norm (Spearman 0.89), on the 128k-patch head the weights are well determined and the variance is still the worst signal |
 | exp31 | feature-space typicality (kNN, Ledoit-Wolf Mahalanobis, PCA residual, class-conditional Mahalanobis, ViM) against the head's training patches, the scene itself (cross-fitted) and a cross-testbed pool: rejected; the preregistered confidence+typicality combination reaches 6/2 rivers (p = 0.145) against WorldCover and hurts on hand labels (60/291 tiles); no typicality score beats confidence on either testbed |
+| exp32 | the latent-MIM target space read from code and measured on CPU: the target encoder is the untouched random initialisation (EMA decay 1.0); on four scenes its targets have random-pair cosine 0.99 and centred effective rank 2.0 against 54 for the online encoder: the mechanism behind exp27 and exp28 |
 
 ## exp01 — first E_case map (2026-08-31)
 
@@ -710,3 +711,44 @@ answered for the two references that can be built from this repository's
 data, and only a true pretraining sample remains untested.
 
 Verdict: rejected on both testbeds.
+
+## exp32 the latent-MIM target space (2026-09-06)
+
+A code reading and a CPU measurement, not a signal. From the installed
+olmoearth_pretrain code and the checkpoint config: the train module is
+ContrastiveLatentMIM with ema_decay (1.0, 1.0) and reinit_targets False, so
+the target encoder is a copy of the online encoder that is never updated;
+token_exit_cfg is 0 for every modality, so a target is the target encoder's
+patch embedding of the raw patch with no attention; the loss is patch
+discrimination (prediction and target L2-normalised, softmax at tau 0.1 over
+the masked tokens of the same sample, mask_other_samples True) plus a
+0.1-weighted contrastive term on pooled tokens; masking encodes and decodes
+50% of the tokens, with the maps decode-only. exp/exp32_target_space.py,
+outputs exp/out/exp32_target_space.csv and exp32_summary.json.
+
+The shipped target encoder is the random initialisation: every LayerNorm
+weight is exactly 1 and every bias exactly 0 (the online encoder's LayerNorm
+weights have std 0.14), its matrices sit at init scale (std
+0.029 against 0.040), and its three S2 patch projections have drifted to
+cosine 0.48, 0.44, 0.56 from the online encoder's. The targets are therefore frozen
+random linear projections of the raw 8x8x12 patch.
+
+On four committed 128-px scenes (barotse, okavango_80, shire_80, kazungula),
+three band sets each: random pairs of target tokens have cosine 0.991
+(online-encoder tokens 0.60); one direction holds 99.2% of the raw
+target energy (61% for the encoder); after centring the top direction
+still holds 85% of the variance and the effective rank is 2.0, against 54
+for the encoder outputs; the token norm varies by 9% (CV). A random
+projection preserves the raw patch covariance, which is dominated by
+brightness, and the targets are not normalised per patch (MAE does that;
+the Latent MIM recipe of Wei et al., arXiv:2407.15837, uses an EMA target
+with within-image patch InfoNCE and a gap-4 stochastic grid against local
+copying), so the discrimination loss can mostly tell bright from dark.
+
+Consequences already recorded elsewhere now have their mechanism: the
+class aliasing of the exp27 gate (class in token norm, prototypes at cosine
+0.996), the uninformative decoder residual of exp28 (decoded-to-true cosine
+0.47 against 0.43 shuffled; NLL near log n), and the failure of every
+decoder-side signal. Two follow-ups are issues #10 (a predictor with a
+whitened target on frozen features, the last latent-MIM reading with a
+clean target) and #11 (the pretraining-target recommendation).

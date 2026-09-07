@@ -22,6 +22,10 @@ internal prediction is uncertain: boundaries, which tiling instability and
 the boundary indicator detect and hand labels do not share. Only 3 of the 27
 rule scenes lie inside a pretraining tile (median nearest tile 23 km), so the
 coupling would run through the map's conventions, not memorised scenes.
+The target space itself is degenerate: the target encoder is the untouched
+random initialisation and its targets have effective rank 2 on real scenes
+(exp32, `exp/out/exp32_summary.json`), which is why nothing read off the
+decoder side carries per-patch information (issues #10, #11).
 
 **What would test it.** Not a decoder-versus-map disagreement count: the
 probe and the shipped decoder share the encoder, so their errors co-locate
