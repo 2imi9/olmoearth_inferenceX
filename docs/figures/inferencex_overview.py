@@ -1,24 +1,23 @@
-"""Renders docs/figures/inferencex_overview.png: the repository in one figure. What is audited, the label-free signal
-families with the ledger's verdicts (docs/TECHNIQUES.md), the test every signal takes (docs/method/protocol.md),
-and the findings with the open question (docs/plan/roadmap.md). Numbers cite the experiments named on the figure."""
+"""Renders docs/figures/inferencex_overview.png: the repository in one figure, restricted to what the ledger supports.
+What is audited, what we believe is true (with the experiments behind each line), the test every claim passed, and the
+open question with its next step. Sources: docs/TECHNIQUES.md, docs/method/protocol.md, docs/plan/roadmap.md."""
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 from matplotlib.patches import Circle, FancyArrowPatch, FancyBboxPatch, Polygon, Rectangle  # noqa: E402
 
-fig, ax = plt.subplots(figsize=(20, 10.4), dpi=200)
-ax.set_xlim(0, 200); ax.set_ylim(0, 104); ax.axis("off")
+fig, ax = plt.subplots(figsize=(20, 9.2), dpi=200)
+ax.set_xlim(0, 200); ax.set_ylim(0, 92); ax.axis("off")
 INK, MUTED, PANEL = "#1f2937", "#6b7280", "#f5f5f4"
 TEAL, TEAL_L = "#0f766e", "#ccfbf1"
 EMERALD, EMERALD_L = "#047857", "#d1fae5"
 AMBER, AMBER_L = "#b45309", "#fef3c7"
-STONE, STONE_L, CROSS = "#78716c", "#e7e5e4", "#b91c1c"
 VIOLET, VIOLET_L = "#6d28d9", "#ede9fe"
-NAVY = "#1e3a8a"
+NAVY, CROSS = "#1e3a8a", "#b91c1c"
 
 
 def text(x, y, t, fs=9, color=INK, weight="normal", ha="center", va="center"):
-    ax.text(x, y, t, ha=ha, va=va, fontsize=fs, color=color, weight=weight, linespacing=1.32)
+    ax.text(x, y, t, ha=ha, va=va, fontsize=fs, color=color, weight=weight, linespacing=1.35)
 
 
 def arrow(x0, y0, x1, y1, color=MUTED, lw=1.4):
@@ -29,10 +28,10 @@ def rbox(x, y, w, h, fc, ec, lw=1.3):
     ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.4,rounding_size=1.2", fc=fc, ec=ec, lw=lw))
 
 
-def block(x, y, w, h, t, fc=TEAL_L, ec=TEAL, fs=9.5, color=INK):
+def block(x, y, w, h, t, fc=TEAL_L, ec=TEAL, fs=9.5):
     tip = 3.5
     ax.add_patch(Polygon([(x, y), (x + w - tip, y), (x + w, y + h / 2), (x + w - tip, y + h), (x, y + h)], closed=True, fc=fc, ec=ec, lw=1.2))
-    text(x + (w - tip) / 2, y + h / 2, t, fs=fs, color=color)
+    text(x + (w - tip) / 2, y + h / 2, t, fs=fs)
 
 
 def panel(x, y, w, h, title, tc=NAVY):
@@ -40,91 +39,81 @@ def panel(x, y, w, h, title, tc=NAVY):
     text(x + 2, y + h - 3, title, fs=11, weight="bold", color=tc, ha="left")
 
 
-def badge(x, y, kind):
-    fc, mark = {"ok": (EMERALD, "✓"), "mixed": (AMBER, "~"), "no": (CROSS, "✗"), "next": (VIOLET, "?")}[kind]
-    ax.add_patch(Circle((x, y), 1.7, fc=fc, ec="none"))
-    text(x, y, mark, fs=9, color="white", weight="bold")
+def check(x, y, color=EMERALD):
+    ax.add_patch(Circle((x, y), 1.6, fc=color, ec="none"))
+    text(x, y, "✓", fs=8.5, color="white", weight="bold")
 
 
-text(3, 101.5, "olmoearth_inferenceX: examining OlmoEarth inference results without labels", fs=13.5, weight="bold", ha="left")
-text(3, 97.8, "which windows of a prediction map to trust, and which to send for review; every signal label-free at inference, every verdict scored on expert labels", fs=9, color=MUTED, ha="left")
+text(3, 89.5, "olmoearth_inferenceX: examining OlmoEarth inference results without labels", fs=13.5, weight="bold", ha="left")
+text(3, 85.8, "which windows of a prediction map to trust, and which to send for review", fs=9.5, color=MUTED, ha="left")
 
-# ------------------------------------------------------------------ panel A: what is audited
-panel(2, 38, 46, 56, "A  What is audited")
-block(6, 78, 20, 9, "Sentinel-2\nwindow", fc="#dbeafe", ec="#3b82f6")
-arrow(26.5, 82.5, 30, 82.5)
-block(30, 78, 14, 9, "OlmoEarth\nencoder", fs=9)
-text(37, 75.5, "v1 Base, frozen, fp32", fs=7.3, color=TEAL)
-arrow(37, 77.5, 37, 72.5)
-rbox(5, 59, 41, 12, "white", TEAL)
-text(25.5, 68.5, "three deployment cases", fs=8.5, weight="bold")
-text(25.5, 63.5, "a linear water probe on frozen tokens\n(27 WorldCover scenes; Sen1Floods11 tiles)\n"
-     "the fine-tuned AWF model end to end  (exp21)\nthe served LCC change rasters  (exp20, exp22)", fs=7.0)
-arrow(25.5, 58.5, 25.5, 54.5)
-rbox(5, 44, 41, 10, "white", INK)
-text(25.5, 51.5, "prediction map + per-window confidence", fs=9, weight="bold")
-text(25.5, 47.2, "errors = disagreements with a reference, patch by patch;\nthe signal's job is to rank them before anyone looks", fs=7.2, color=MUTED)
-text(25.5, 40.5, "references: WorldCover (weak map), Sen1Floods11 hand labels,\nAWF expert points", fs=7.0, color=MUTED)
+# ------------------------------------------------------------------ A: what is audited
+panel(2, 26, 46, 56, "A  What is audited")
+block(6, 66, 20, 9, "Sentinel-2\nwindow", fc="#dbeafe", ec="#3b82f6")
+arrow(26.5, 70.5, 30, 70.5)
+block(30, 66, 14, 9, "OlmoEarth\nencoder", fs=9)
+text(37, 63.5, "v1 Base, frozen, fp32", fs=7.3, color=TEAL)
+arrow(25.5, 65, 25.5, 60.5)
+rbox(5, 47, 41, 12, "white", TEAL)
+text(25.5, 56.5, "three deployment cases", fs=8.5, weight="bold")
+text(25.5, 51.5, "a linear water probe on frozen tokens\n(27 WorldCover scenes; Sen1Floods11 tiles)\n"
+     "the fine-tuned AWF model end to end\nthe served LCC change rasters", fs=7.2)
+arrow(25.5, 46.5, 25.5, 42.5)
+rbox(5, 32, 41, 10, "white", INK)
+text(25.5, 39.5, "prediction map + per-window confidence", fs=9, weight="bold")
+text(25.5, 35.2, "errors = disagreements with a reference, patch by patch;\nthe signal's job is to rank them before anyone looks", fs=7.2, color=MUTED)
+text(25.5, 28.5, "references: WorldCover (weak map), Sen1Floods11 hand labels,\nAWF expert points", fs=6.6, color=MUTED)
 
-# ------------------------------------------------------------------ panel B: signals and verdicts
-panel(52, 8, 64, 86, "B  Label-free signals, with the ledger's verdict")
-rows = [
-    ("ok", "confidence, negative logit margin", "best ranker on every expert-labelled testbed", "exp04 16 18 21"),
-    ("ok", "prediction-boundary proximity", "triage: 75% of errors on boundaries vs 20% of correct; not a ranker", "exp14 16 18 20"),
-    ("mixed", "tiling instability (aligned tile-phase)", "26/27 scenes, 8/0 rivers vs WorldCover; loses on hand labels", "exp13 18 21"),
-    ("mixed", "band-set disagreement (one model, 3 views)", "21/27 vs WorldCover; loses on hand labels", "exp17 18"),
-    ("no", "cross-model / cross-version disagreement", "same-family models err together; stronger partner is worse", "exp10 13 18 19"),
-    ("no", "internal states: logit lens, drift, attention", "0/27, 3/24, 3/24: language-model tricks do not transfer", "exp17"),
-    ("no", "embedding distance and feature typicality", "kNN, Mahalanobis, PCA, ViM vs 3 references: never beats confidence", "exp13 31"),
-    ("no", "decoder self-consistency (native masking)", "residual at chance: frozen random target has rank 2", "exp28 32"),
-    ("no", "last-layer Laplace / bootstrap variance", "worst signal on both testbeds; moderated confidence = confidence", "exp30"),
-    ("no", "occlusion masking; Dawid-Skene in-family", "measures context reliance; inflates and inverts the ordering", "exp08 07"),
-    ("next", "re-targeted latent-MIM residual", "whitened / discrete targets on the frozen encoder; designed, preregistered", "exp33, #10"),
+# ------------------------------------------------------------------ B: what we believe is true
+panel(52, 8, 74, 74, "B  What we believe is true", tc=EMERALD)
+beliefs = [
+    ("the model's own confidence is the best label-free error ranker",
+     "negative logit margin; best on every expert-labelled testbed (AWF, Sen1Floods11, fine-tuned model)", "exp04 16 18 21"),
+    ("errors concentrate on prediction boundaries: 75% of errors vs 20% of correct",
+     "on both references and on the served product; a triage cue for where to look, not a better ranker", "exp14 16 18 20"),
+    ("the fine-tuned model is overconfident, so an accuracy needs a coverage",
+     "0.93 accurate where it claims 0.99 (ECE 0.08); abstaining on the least confident 20% gives 0.945", "exp21"),
+    ("the served product exports no class confidence; outputs sit on the patch lattice",
+     "boundary fraction captures a median 0.88 of disagreements at a 5% review budget; no window seams", "exp20 22"),
+    ("a second run helps only if it sees the input differently",
+     "same-family models err together; a stronger partner makes disagreement worse; agreement is not truth", "exp07 10 17"),
+    ("tiling instability and band-set disagreement win against WorldCover only",
+     "26/27 scenes, 8/0 rivers; 21/27; both lose on hand labels; three explanations for the gap ruled out", "exp13 17 18 23-25"),
+    ("the pretraining target space is degenerate",
+     "the target encoder is the untouched random init; its targets have effective rank 2 on real scenes", "exp32"),
 ]
-y0 = 84.5
-for i, (k, name, verdict, exps) in enumerate(rows):
-    y = y0 - i * 6.9
-    badge(55.5, y, k)
-    text(58.5, y + 1.4, name, fs=8.3, weight="bold", ha="left", color=(VIOLET if k == "next" else INK))
-    text(58.5, y - 1.5, verdict, fs=7.2, ha="left", color=MUTED)
-    text(114, y, exps, fs=7, ha="right", color=MUTED)
-text(54.5, 9.5, "✓ supported    ~ supported against WorldCover only    ✗ rejected    ? pending", fs=7.6, ha="left", color=MUTED)
+y0 = 74
+for i, (claim, how, exps) in enumerate(beliefs):
+    y = y0 - i * 8.7
+    check(55.5, y, color=(AMBER if i == 5 else EMERALD))
+    text(58.5, y + 2.0, claim, fs=7.6, weight="bold", ha="left")
+    text(58.5, y - 0.9, how, fs=6.6, ha="left", color=MUTED, va="center")
+    text(58.5, y - 3.6, exps, fs=6.4, ha="left", color=MUTED)
+text(54, 10.5, "green: supported on expert labels    amber: true against WorldCover only, the open question", fs=7.3, ha="left", color=MUTED)
 
-# ------------------------------------------------------------------ panel C: the test
-panel(120, 38, 78, 56, "C  The test every signal takes", tc=EMERALD)
-rbox(123, 78, 72, 10, EMERALD_L, EMERALD, lw=1.6)
-text(159, 85.2, "score every signal on identical patches against two references at once", fs=8.8, weight="bold", color=EMERALD)
-text(159, 80.8, "the model's own confidence (negative absolute logit)   and   a no-model pixel control (NDWI gradient)", fs=7.6)
-text(159, 74.2, "beating one but not the other is not support", fs=7.6, color=MUTED)
-rbox(123, 55, 72, 16, "white", EMERALD)
-text(159, 68, "how it is scored", fs=8.8, weight="bold")
-text(159, 61.5, "tie-aware excess AURC per scene or tile;  wins / losses / ties, exact sign tests, sign-flip permutation\n"
-     "one vote per river cluster (8 rivers; 7/8 gives p = 0.035);  block and cluster bootstraps\n"
-     "preregistered primary score and U+ combination before any result is read;  a null is a valid result", fs=7.3)
-rbox(123, 42, 72, 10, "white", EMERALD)
-text(159, 49, "rules", fs=8.8, weight="bold")
-text(159, 45, "labels grade signals, never train them;  every recorded claim points to a file under exp/out;\n"
-     "the machinery is the torch-free package oe_inferencex, with tests that reproduce the recorded numbers", fs=7.3)
+# ------------------------------------------------------------------ C: the test
+panel(130, 26, 68, 56, "C  The test every claim passed", tc=EMERALD)
+rbox(133, 66, 62, 11, EMERALD_L, EMERALD, lw=1.6)
+text(164, 73.5, "two references at once, on identical patches", fs=8.8, weight="bold", color=EMERALD)
+text(164, 69, "the model's own confidence   and   a no-model pixel control\nbeating one but not the other is not support", fs=7.4)
+rbox(133, 45, 62, 17, "white", EMERALD)
+text(164, 59, "scoring", fs=8.8, weight="bold")
+text(164, 52.5, "tie-aware excess AURC per scene or tile\nwins / losses / ties, exact sign tests, sign-flip permutation\n"
+     "one vote per river cluster; block and cluster bootstraps\npreregistered primary score and combination", fs=7.3)
+rbox(133, 28.5, 62, 12.5, "white", EMERALD)
+text(164, 38.5, "rules", fs=8.8, weight="bold")
+text(164, 33.4, "expert labels grade signals, never train them\nevery recorded claim points to a file under exp/out\nthe machinery is a tested torch-free package", fs=7.1)
 
-# ------------------------------------------------------------------ panel D: findings and the open question
-panel(2, 8, 46, 27, "D  Findings")
-text(4, 27.5, "confidence beats every constructed signal on expert labels\n"
-     "errors concentrate on prediction boundaries (75% vs 20%)\n"
-     "the fine-tuned model is overconfident:\n    0.93 accurate where it says 0.99 (ECE 0.08)\n"
-     "the served product exports no class confidence\n"
-     "a second run helps only if it sees the input differently", fs=7.3, ha="left", va="top")
-text(4, 11.5, "the WorldCover-only wins are real and do not transfer:\nwhy is the open question", fs=7.4, ha="left", color=AMBER, weight="bold")
+# ------------------------------------------------------------------ D: open question and next step
+panel(2, 8, 46, 15, "D  Open question", tc=AMBER)
+text(4, 17.5, "why the WorldCover wins do not transfer to hand labels.\nleading hypothesis: WorldCover was a pretraining target, so the\n"
+     "probe partly reads out the model's own map; decisive test needs\nadjudicated cells on the 8 rivers (issue #2)", fs=7.3, ha="left", va="top")
+panel(130, 8, 68, 15, "E  Next step", tc=VIOLET)
+text(132, 17.5, "keep OlmoEarth's latent-MIM objective at inference, replace its degenerate target\n"
+     "with a normalised or discrete one, post hoc on the frozen encoder, and read the residual\n"
+     "as an error signal; same test as above, preregistered (exp33; issues #10, #11)", fs=7.3, ha="left", va="top")
 
-panel(120, 8, 78, 27, "E  The open question and the next step", tc=CROSS)
-text(122, 28.5, "reference instability, the year gap and seasonal water are each ruled out (exp23-25)", fs=7.6, ha="left", va="top")
-text(122, 24.6, "leading hypothesis: WorldCover was a pretraining target, so the probe partly reads out\n"
-     "the model's own map; the frozen target space has effective rank 2 (exp32)", fs=7.6, ha="left", va="top", color=CROSS)
-text(122, 18.6, "decisive test: reference specificity on identical cells, one vote per river;\n"
-     "needs a few hundred adjudicated cells across the 8 rivers (issue #2)", fs=7.6, ha="left", va="top")
-rbox(122, 9.2, 74, 4.2, VIOLET_L, VIOLET, lw=1.4)
-text(159, 11.3, "next signal under test: the re-targeted latent-MIM residual, exp33 (issues #10, #11)", fs=7.8, color=VIOLET, weight="bold")
-
-arrow(48.5, 66, 51.5, 66, color=INK, lw=1.6)
-arrow(116.5, 66, 119.5, 66, color=EMERALD, lw=1.6)
-text(3, 3, "github.com/2imi9/olmoearth_inferenceX; ledger docs/TECHNIQUES.md; protocol docs/method/protocol.md; open items docs/plan/roadmap.md and issues #2-#11", fs=7.3, color=MUTED, ha="left")
+arrow(48.5, 54, 51.5, 54, color=INK, lw=1.6)
+arrow(126.5, 54, 129.5, 54, color=EMERALD, lw=1.6)
+text(3, 3, "github.com/2imi9/olmoearth_inferenceX; ledger docs/TECHNIQUES.md; protocol docs/method/protocol.md; open items docs/plan/roadmap.md", fs=7.3, color=MUTED, ha="left")
 fig.savefig("docs/figures/inferencex_overview.png", bbox_inches="tight", facecolor="white")
