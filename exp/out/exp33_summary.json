@@ -1,0 +1,2868 @@
+{
+ "experiment": "exp33 context-prediction residual with a whitened target",
+ "device": "cuda",
+ "smoke": false,
+ "config": {
+  "patch": 4,
+  "tf32": false,
+  "autocast": false,
+  "compile": false,
+  "whitening": "PCA whitening in the top 64 directions, fitted on the predictor's training units",
+  "d": 64,
+  "fold_seeds_a": "fold index (0, 1, 2)",
+  "seed_b": 0,
+  "predictor": "width 128, 2 pre-norm transformer layers, 4 heads, ff 256, sinusoidal 2-d positions, learned mask token",
+  "training": "MSE on hidden positions, 0.25 random mask per unit per step, Adam 0.001, 400 steps, batch 64 units",
+  "scoring": "2 rounds of 4 disjoint quarter masks (K = 8), every patch hidden 2 times",
+  "folds_a": [
+   [
+    "Luangwa",
+    "Zambezi"
+   ],
+   [
+    "Cuando",
+    "Kafue",
+    "Okavango"
+   ],
+   [
+    "Rovuma",
+    "Save",
+    "Shire"
+   ]
+  ],
+  "primary_score": "predictor residual, whitened MSE (K=8)",
+  "combination": "combination conf+predictor (prereg)",
+  "null": "the residual is a boundary detector: wins against WorldCover, loses on hand labels"
+ },
+ "part_a": {
+  "skipped": [
+   {
+    "scene": "itezhitezhi",
+    "reason": "0 errors"
+   },
+   {
+    "scene": "okavango",
+    "reason": "1 errors"
+   },
+   {
+    "scene": "shire",
+    "reason": "0 errors"
+   },
+   {
+    "scene": "tete",
+    "reason": "6 errors"
+   }
+  ],
+  "scene_set_warning": {
+   "missing": [],
+   "extra": [
+    "itezhitezhi",
+    "okavango",
+    "shire",
+    "tete"
+   ]
+  },
+  "crop_size": 128,
+  "grid": 32,
+  "feats_source": "exp/out/exp11_feats.npz",
+  "scenes_requested": [
+   "barotse",
+   "cuando_20",
+   "cuando_50",
+   "cuando_80",
+   "delta",
+   "itezhitezhi",
+   "kafue_20",
+   "kafue_50",
+   "kafue_80",
+   "kazungula",
+   "luangwa_conf",
+   "okavango",
+   "okavango_50",
+   "okavango_80",
+   "okavango_sep",
+   "rovuma_20",
+   "rovuma_50",
+   "rovuma_80",
+   "save_20",
+   "save_50",
+   "save_80",
+   "shire",
+   "shire_20",
+   "shire_50",
+   "shire_80",
+   "shire_liwonde",
+   "tete",
+   "vicfalls_up",
+   "zambezi_20",
+   "zambezi_50",
+   "zambezi_80"
+  ],
+  "folds": {
+   "0": {
+    "held": [
+     "barotse",
+     "delta",
+     "kazungula",
+     "luangwa_conf",
+     "vicfalls_up",
+     "zambezi_20",
+     "zambezi_50",
+     "zambezi_80"
+    ],
+    "n_train_units": 20,
+    "var_kept_by_whitening": 0.7808782689270869,
+    "train_loss_first_last": [
+     1.403863787651062,
+     0.2951878011226654
+    ],
+    "seed": 0,
+    "mean_context_gain_vs_position_only_held": 0.6016296685472049,
+    "mean_gain_vs_zero_predictor_held": 0.5990570617723083
+   },
+   "1": {
+    "held": [
+     "cuando_20",
+     "cuando_50",
+     "cuando_80",
+     "kafue_20",
+     "kafue_50",
+     "kafue_80",
+     "okavango_50",
+     "okavango_80",
+     "okavango_sep"
+    ],
+    "n_train_units": 19,
+    "var_kept_by_whitening": 0.783162487887437,
+    "train_loss_first_last": [
+     1.2721391916275024,
+     0.2968958020210266
+    ],
+    "seed": 1,
+    "mean_context_gain_vs_position_only_held": 0.5770357391501214,
+    "mean_gain_vs_zero_predictor_held": 0.5907709792792571
+   },
+   "2": {
+    "held": [
+     "rovuma_20",
+     "rovuma_50",
+     "rovuma_80",
+     "save_20",
+     "save_50",
+     "save_80",
+     "shire_20",
+     "shire_50",
+     "shire_80",
+     "shire_liwonde"
+    ],
+    "n_train_units": 18,
+    "var_kept_by_whitening": 0.7820553024947481,
+    "train_loss_first_last": [
+     1.3114625215530396,
+     0.28649958968162537
+    ],
+    "seed": 2,
+    "mean_context_gain_vs_position_only_held": 0.6148260999310271,
+    "mean_gain_vs_zero_predictor_held": 0.6023941456737939
+   }
+  },
+  "diagnostics": {
+   "barotse": {
+    "fold": 0,
+    "context_gain_vs_position_only": 0.5537212326892555,
+    "gain_vs_zero_predictor": 0.5464507574579394,
+    "spearman_residual_vs_s2_variance": 0.5282808029647378
+   },
+   "delta": {
+    "fold": 0,
+    "context_gain_vs_position_only": 0.587457649626746,
+    "gain_vs_zero_predictor": 0.6106335020591684,
+    "spearman_residual_vs_s2_variance": 0.5267503889206779
+   },
+   "kazungula": {
+    "fold": 0,
+    "context_gain_vs_position_only": 0.6205907161830536,
+    "gain_vs_zero_predictor": 0.6103399400558632,
+    "spearman_residual_vs_s2_variance": 0.582612094091982
+   },
+   "luangwa_conf": {
+    "fold": 0,
+    "context_gain_vs_position_only": 0.6471636330968016,
+    "gain_vs_zero_predictor": 0.6384828217310553,
+    "spearman_residual_vs_s2_variance": 0.6734196185895143
+   },
+   "vicfalls_up": {
+    "fold": 0,
+    "context_gain_vs_position_only": 0.6090407929295236,
+    "gain_vs_zero_predictor": 0.609166389667934,
+    "spearman_residual_vs_s2_variance": 0.3304435819147414
+   },
+   "zambezi_20": {
+    "fold": 0,
+    "context_gain_vs_position_only": 0.6122515988905473,
+    "gain_vs_zero_predictor": 0.6088986303536804,
+    "spearman_residual_vs_s2_variance": 0.6649017304734997
+   },
+   "zambezi_50": {
+    "fold": 0,
+    "context_gain_vs_position_only": 0.5897156411015491,
+    "gain_vs_zero_predictor": 0.5681737950939203,
+    "spearman_residual_vs_s2_variance": 0.6140123091159431
+   },
+   "zambezi_80": {
+    "fold": 0,
+    "context_gain_vs_position_only": 0.593096083860162,
+    "gain_vs_zero_predictor": 0.6003106577589055,
+    "spearman_residual_vs_s2_variance": 0.6322935479400614
+   },
+   "cuando_20": {
+    "fold": 1,
+    "context_gain_vs_position_only": 0.5694416751070499,
+    "gain_vs_zero_predictor": 0.5970189421456371,
+    "spearman_residual_vs_s2_variance": 0.5571226575352264
+   },
+   "cuando_50": {
+    "fold": 1,
+    "context_gain_vs_position_only": 0.5890479373837052,
+    "gain_vs_zero_predictor": 0.6073820273173487,
+    "spearman_residual_vs_s2_variance": 0.7091692184929546
+   },
+   "cuando_80": {
+    "fold": 1,
+    "context_gain_vs_position_only": 0.6193140131509693,
+    "gain_vs_zero_predictor": 0.6417580768625247,
+    "spearman_residual_vs_s2_variance": 0.6182947951684428
+   },
+   "kafue_20": {
+    "fold": 1,
+    "context_gain_vs_position_only": 0.6174541350730819,
+    "gain_vs_zero_predictor": 0.6042825545819519,
+    "spearman_residual_vs_s2_variance": 0.6250565611365425
+   },
+   "kafue_50": {
+    "fold": 1,
+    "context_gain_vs_position_only": 0.5740743658820848,
+    "gain_vs_zero_predictor": 0.5843879210857248,
+    "spearman_residual_vs_s2_variance": 0.6436193427687577
+   },
+   "kafue_80": {
+    "fold": 1,
+    "context_gain_vs_position_only": 0.5641041334750726,
+    "gain_vs_zero_predictor": 0.5749492236659286,
+    "spearman_residual_vs_s2_variance": 0.5756136229525786
+   },
+   "okavango_50": {
+    "fold": 1,
+    "context_gain_vs_position_only": 0.5637796462551551,
+    "gain_vs_zero_predictor": 0.5592378391160491,
+    "spearman_residual_vs_s2_variance": 0.6529114512552748
+   },
+   "okavango_80": {
+    "fold": 1,
+    "context_gain_vs_position_only": 0.5638604648820531,
+    "gain_vs_zero_predictor": 0.6014085340441151,
+    "spearman_residual_vs_s2_variance": 0.6872710955940204
+   },
+   "okavango_sep": {
+    "fold": 1,
+    "context_gain_vs_position_only": 0.53224528114192,
+    "gain_vs_zero_predictor": 0.5465136946940352,
+    "spearman_residual_vs_s2_variance": 0.41579653860596516
+   },
+   "rovuma_20": {
+    "fold": 2,
+    "context_gain_vs_position_only": 0.5874028108193902,
+    "gain_vs_zero_predictor": 0.5753475534778232,
+    "spearman_residual_vs_s2_variance": 0.5456654455153422
+   },
+   "rovuma_50": {
+    "fold": 2,
+    "context_gain_vs_position_only": 0.6076791248353737,
+    "gain_vs_zero_predictor": 0.5818597167669763,
+    "spearman_residual_vs_s2_variance": 0.6396211711429797
+   },
+   "rovuma_80": {
+    "fold": 2,
+    "context_gain_vs_position_only": 0.6250783631602129,
+    "gain_vs_zero_predictor": 0.6096440664606824,
+    "spearman_residual_vs_s2_variance": 0.6129878384056934
+   },
+   "save_20": {
+    "fold": 2,
+    "context_gain_vs_position_only": 0.6389802536503291,
+    "gain_vs_zero_predictor": 0.6462192200601586,
+    "spearman_residual_vs_s2_variance": 0.5834644226986624
+   },
+   "save_50": {
+    "fold": 2,
+    "context_gain_vs_position_only": 0.628550540762242,
+    "gain_vs_zero_predictor": 0.5941018605082682,
+    "spearman_residual_vs_s2_variance": 0.4495753947321364
+   },
+   "save_80": {
+    "fold": 2,
+    "context_gain_vs_position_only": 0.5651234369259499,
+    "gain_vs_zero_predictor": 0.5857486250148025,
+    "spearman_residual_vs_s2_variance": 0.5108820340998498
+   },
+   "shire_20": {
+    "fold": 2,
+    "context_gain_vs_position_only": 0.6175853551235899,
+    "gain_vs_zero_predictor": 0.6096165755051921,
+    "spearman_residual_vs_s2_variance": 0.5035922077283456
+   },
+   "shire_50": {
+    "fold": 2,
+    "context_gain_vs_position_only": 0.6097344262332918,
+    "gain_vs_zero_predictor": 0.5869152447395161,
+    "spearman_residual_vs_s2_variance": 0.5422677651813175
+   },
+   "shire_80": {
+    "fold": 2,
+    "context_gain_vs_position_only": 0.6579755805635401,
+    "gain_vs_zero_predictor": 0.6286101872166493,
+    "spearman_residual_vs_s2_variance": 0.630046033456119
+   },
+   "shire_liwonde": {
+    "fold": 2,
+    "context_gain_vs_position_only": 0.6101511072363505,
+    "gain_vs_zero_predictor": 0.6058784069878693,
+    "spearman_residual_vs_s2_variance": 0.29322951684428866
+   }
+  },
+  "n_scenes": 27,
+  "scenes": [
+   "barotse",
+   "cuando_20",
+   "cuando_50",
+   "cuando_80",
+   "delta",
+   "kafue_20",
+   "kafue_50",
+   "kafue_80",
+   "kazungula",
+   "luangwa_conf",
+   "okavango_50",
+   "okavango_80",
+   "okavango_sep",
+   "rovuma_20",
+   "rovuma_50",
+   "rovuma_80",
+   "save_20",
+   "save_50",
+   "save_80",
+   "shire_20",
+   "shire_50",
+   "shire_80",
+   "shire_liwonde",
+   "vicfalls_up",
+   "zambezi_20",
+   "zambezi_50",
+   "zambezi_80"
+  ],
+  "tests": {
+   "confidence (baseline)": {
+    "vs tile-phase (aligned)": {
+     "n": 27,
+     "w": 1,
+     "l": 26,
+     "t": 0,
+     "sign_p": 4.172325134277344e-07,
+     "median_gain": -0.006359431169100524,
+     "mean_gain": -0.015257721956077523,
+     "perm_p": 0.0001,
+     "river": {
+      "per_river": {
+       "Zambezi": -0.012502064424455816,
+       "Cuando": -0.009711914175528767,
+       "Kafue": -0.013542043835698158,
+       "Luangwa": -0.0031257302703569653,
+       "Okavango": -0.026314778227120136,
+       "Rovuma": -0.0016036184785114926,
+       "Save": -0.009716563706462527,
+       "Shire": -0.03466288907564557
+      },
+      "w": 0,
+      "l": 8,
+      "t": 0,
+      "one_sided_p": 1.0,
+      "n_rivers": 8
+     }
+    },
+    "vs boundary indicator": {
+     "n": 27,
+     "w": 8,
+     "l": 19,
+     "t": 0,
+     "sign_p": 0.052238985896110535,
+     "median_gain": -0.003622877283200404,
+     "mean_gain": -0.01987208958847569,
+     "perm_p": 0.0299,
+     "river": {
+      "per_river": {
+       "Zambezi": -0.012828202747667888,
+       "Cuando": -0.00795295488672,
+       "Kafue": -0.011842848525217853,
+       "Luangwa": 0.00075770872453838,
+       "Okavango": -0.04897116426741196,
+       "Rovuma": 0.00041461002174543563,
+       "Save": 0.0020172241316819056,
+       "Shire": -0.06212532695048487
+      },
+      "w": 3,
+      "l": 5,
+      "t": 0,
+      "one_sided_p": 0.85546875,
+      "n_rivers": 8
+     }
+    },
+    "vs control NDWI gradient": {
+     "n": 27,
+     "w": 13,
+     "l": 14,
+     "t": 0,
+     "sign_p": 1.0,
+     "median_gain": -0.0009912783905492955,
+     "mean_gain": -0.004550349544946399,
+     "perm_p": 0.6208,
+     "river": {
+      "per_river": {
+       "Zambezi": 0.001028664333339305,
+       "Cuando": -0.004741440782274649,
+       "Kafue": -0.004309224552648737,
+       "Luangwa": 0.049408886260253776,
+       "Okavango": -0.019991543046846815,
+       "Rovuma": 0.002633513022036646,
+       "Save": 0.010101790144964427,
+       "Shire": -0.032637064665718585
+      },
+      "w": 4,
+      "l": 4,
+      "t": 0,
+      "one_sided_p": 0.63671875,
+      "n_rivers": 8
+     }
+    }
+   },
+   "tile-phase (aligned)": {
+    "vs confidence (baseline)": {
+     "n": 27,
+     "w": 26,
+     "l": 1,
+     "t": 0,
+     "sign_p": 4.172325134277344e-07,
+     "median_gain": 0.006359431169100524,
+     "mean_gain": 0.015257721956077523,
+     "perm_p": 0.0003,
+     "river": {
+      "per_river": {
+       "Zambezi": 0.012502064424455816,
+       "Cuando": 0.009711914175528767,
+       "Kafue": 0.013542043835698158,
+       "Luangwa": 0.0031257302703569653,
+       "Okavango": 0.026314778227120136,
+       "Rovuma": 0.0016036184785114926,
+       "Save": 0.009716563706462527,
+       "Shire": 0.03466288907564557
+      },
+      "w": 8,
+      "l": 0,
+      "t": 0,
+      "one_sided_p": 0.00390625,
+      "n_rivers": 8
+     }
+    },
+    "vs boundary indicator": {
+     "n": 27,
+     "w": 15,
+     "l": 12,
+     "t": 0,
+     "sign_p": 0.7011080384254456,
+     "median_gain": 0.00012037696972413406,
+     "mean_gain": -0.004614367632398167,
+     "perm_p": 0.4353,
+     "river": {
+      "per_river": {
+       "Zambezi": -0.0003261383232120707,
+       "Cuando": 0.0017589592888087684,
+       "Kafue": 0.0016991953104803028,
+       "Luangwa": 0.0038834389948953453,
+       "Okavango": -0.022656386040291823,
+       "Rovuma": 0.002018228500256928,
+       "Save": 0.011733787838144433,
+       "Shire": -0.027462437874839304
+      },
+      "w": 5,
+      "l": 3,
+      "t": 0,
+      "one_sided_p": 0.36328125,
+      "n_rivers": 8
+     }
+    },
+    "vs control NDWI gradient": {
+     "n": 27,
+     "w": 18,
+     "l": 9,
+     "t": 0,
+     "sign_p": 0.12207812070846558,
+     "median_gain": 0.004251250096414257,
+     "mean_gain": 0.010707372411131125,
+     "perm_p": 0.025,
+     "river": {
+      "per_river": {
+       "Zambezi": 0.013530728757795128,
+       "Cuando": 0.004970473393254117,
+       "Kafue": 0.00923281928304942,
+       "Luangwa": 0.05253461653061074,
+       "Okavango": 0.0063232351802733205,
+       "Rovuma": 0.004237131500548138,
+       "Save": 0.019818353851426957,
+       "Shire": 0.0020258244099269785
+      },
+      "w": 8,
+      "l": 0,
+      "t": 0,
+      "one_sided_p": 0.00390625,
+      "n_rivers": 8
+     }
+    }
+   },
+   "boundary indicator": {
+    "vs confidence (baseline)": {
+     "n": 27,
+     "w": 19,
+     "l": 8,
+     "t": 0,
+     "sign_p": 0.052238985896110535,
+     "median_gain": 0.003622877283200404,
+     "mean_gain": 0.01987208958847569,
+     "perm_p": 0.0287,
+     "river": {
+      "per_river": {
+       "Zambezi": 0.012828202747667888,
+       "Cuando": 0.00795295488672,
+       "Kafue": 0.011842848525217853,
+       "Luangwa": -0.00075770872453838,
+       "Okavango": 0.04897116426741196,
+       "Rovuma": -0.00041461002174543563,
+       "Save": -0.0020172241316819056,
+       "Shire": 0.06212532695048487
+      },
+      "w": 5,
+      "l": 3,
+      "t": 0,
+      "one_sided_p": 0.36328125,
+      "n_rivers": 8
+     }
+    },
+    "vs tile-phase (aligned)": {
+     "n": 27,
+     "w": 12,
+     "l": 15,
+     "t": 0,
+     "sign_p": 0.7011080384254456,
+     "median_gain": -0.00012037696972413406,
+     "mean_gain": 0.004614367632398167,
+     "perm_p": 0.433,
+     "river": {
+      "per_river": {
+       "Zambezi": 0.0003261383232120707,
+       "Cuando": -0.0017589592888087684,
+       "Kafue": -0.0016991953104803028,
+       "Luangwa": -0.0038834389948953453,
+       "Okavango": 0.022656386040291823,
+       "Rovuma": -0.002018228500256928,
+       "Save": -0.011733787838144433,
+       "Shire": 0.027462437874839304
+      },
+      "w": 3,
+      "l": 5,
+      "t": 0,
+      "one_sided_p": 0.85546875,
+      "n_rivers": 8
+     }
+    },
+    "vs control NDWI gradient": {
+     "n": 27,
+     "w": 22,
+     "l": 5,
+     "t": 0,
+     "sign_p": 0.0015137195587158203,
+     "median_gain": 0.004832765848821029,
+     "mean_gain": 0.015321740043529293,
+     "perm_p": 0.0002,
+     "river": {
+      "per_river": {
+       "Zambezi": 0.013856867081007194,
+       "Cuando": 0.003211514104445349,
+       "Kafue": 0.007533623972569116,
+       "Luangwa": 0.04865117753571539,
+       "Okavango": 0.028979621220565143,
+       "Rovuma": 0.0022189030002912114,
+       "Save": 0.008084566013282524,
+       "Shire": 0.02948826228476628
+      },
+      "w": 8,
+      "l": 0,
+      "t": 0,
+      "one_sided_p": 0.00390625,
+      "n_rivers": 8
+     }
+    }
+   },
+   "control NDWI gradient": {
+    "vs confidence (baseline)": {
+     "n": 27,
+     "w": 14,
+     "l": 13,
+     "t": 0,
+     "sign_p": 1.0,
+     "median_gain": 0.0009912783905492955,
+     "mean_gain": 0.004550349544946399,
+     "perm_p": 0.6191,
+     "river": {
+      "per_river": {
+       "Zambezi": -0.001028664333339305,
+       "Cuando": 0.004741440782274649,
+       "Kafue": 0.004309224552648737,
+       "Luangwa": -0.049408886260253776,
+       "Okavango": 0.019991543046846815,
+       "Rovuma": -0.002633513022036646,
+       "Save": -0.010101790144964427,
+       "Shire": 0.032637064665718585
+      },
+      "w": 4,
+      "l": 4,
+      "t": 0,
+      "one_sided_p": 0.63671875,
+      "n_rivers": 8
+     }
+    },
+    "vs tile-phase (aligned)": {
+     "n": 27,
+     "w": 9,
+     "l": 18,
+     "t": 0,
+     "sign_p": 0.12207812070846558,
+     "median_gain": -0.004251250096414257,
+     "mean_gain": -0.010707372411131125,
+     "perm_p": 0.0278,
+     "river": {
+      "per_river": {
+       "Zambezi": -0.013530728757795128,
+       "Cuando": -0.004970473393254117,
+       "Kafue": -0.00923281928304942,
+       "Luangwa": -0.05253461653061074,
+       "Okavango": -0.0063232351802733205,
+       "Rovuma": -0.004237131500548138,
+       "Save": -0.019818353851426957,
+       "Shire": -0.0020258244099269785
+      },
+      "w": 0,
+      "l": 8,
+      "t": 0,
+      "one_sided_p": 1.0,
+      "n_rivers": 8
+     }
+    },
+    "vs boundary indicator": {
+     "n": 27,
+     "w": 5,
+     "l": 22,
+     "t": 0,
+     "sign_p": 0.0015137195587158203,
+     "median_gain": -0.004832765848821029,
+     "mean_gain": -0.015321740043529293,
+     "perm_p": 0.0003,
+     "river": {
+      "per_river": {
+       "Zambezi": -0.013856867081007194,
+       "Cuando": -0.003211514104445349,
+       "Kafue": -0.007533623972569116,
+       "Luangwa": -0.04865117753571539,
+       "Okavango": -0.028979621220565143,
+       "Rovuma": -0.0022189030002912114,
+       "Save": -0.008084566013282524,
+       "Shire": -0.02948826228476628
+      },
+      "w": 0,
+      "l": 8,
+      "t": 0,
+      "one_sided_p": 1.0,
+      "n_rivers": 8
+     }
+    }
+   },
+   "constant score": {
+    "vs confidence (baseline)": {
+     "n": 27,
+     "w": 3,
+     "l": 24,
+     "t": 0,
+     "sign_p": 4.9233436584472656e-05,
+     "median_gain": -0.022764346783876767,
+     "mean_gain": -0.026236548310115414,
+     "perm_p": 0.0055,
+     "river": {
+      "per_river": {
+       "Zambezi": -0.023293140669212908,
+       "Cuando": -0.06905547424511863,
+       "Kafue": -0.03558386632173885,
+       "Luangwa": -0.0405020796277609,
+       "Okavango": 0.007402435006888361,
+       "Rovuma": -0.03730658581458086,
+       "Save": -0.026427864289701206,
+       "Shire": -0.005479668267027853
+      },
+      "w": 1,
+      "l": 7,
+      "t": 0,
+      "one_sided_p": 0.99609375,
+      "n_rivers": 8
+     }
+    },
+    "vs tile-phase (aligned)": {
+     "n": 27,
+     "w": 3,
+     "l": 24,
+     "t": 0,
+     "sign_p": 4.9233436584472656e-05,
+     "median_gain": -0.04362780989811787,
+     "mean_gain": -0.04149427026619294,
+     "perm_p": 0.0,
+     "river": {
+      "per_river": {
+       "Zambezi": -0.03579520509366873,
+       "Cuando": -0.07876738842064739,
+       "Kafue": -0.049125910157437,
+       "Luangwa": -0.04362780989811787,
+       "Okavango": -0.018912343220231775,
+       "Rovuma": -0.03891020429309236,
+       "Save": -0.036144427996163735,
+       "Shire": -0.04014255734267343
+      },
+      "w": 0,
+      "l": 8,
+      "t": 0,
+      "one_sided_p": 1.0,
+      "n_rivers": 8
+     }
+    },
+    "vs boundary indicator": {
+     "n": 27,
+     "w": 0,
+     "l": 27,
+     "t": 0,
+     "sign_p": 1.4901161193847656e-08,
+     "median_gain": -0.04211469878732295,
+     "mean_gain": -0.0461086378985911,
+     "perm_p": 0.0,
+     "river": {
+      "per_river": {
+       "Zambezi": -0.036121343416880794,
+       "Cuando": -0.07700842913183861,
+       "Kafue": -0.0474267148469567,
+       "Luangwa": -0.039744370903222526,
+       "Okavango": -0.041568729260523594,
+       "Rovuma": -0.03689197579283543,
+       "Save": -0.024410640158019303,
+       "Shire": -0.06760499521751272
+      },
+      "w": 0,
+      "l": 8,
+      "t": 0,
+      "one_sided_p": 1.0,
+      "n_rivers": 8
+     }
+    },
+    "vs control NDWI gradient": {
+     "n": 27,
+     "w": 4,
+     "l": 23,
+     "t": 0,
+     "sign_p": 0.000310748815536499,
+     "median_gain": -0.030756611226664753,
+     "mean_gain": -0.030786897855061817,
+     "perm_p": 0.0,
+     "river": {
+      "per_river": {
+       "Zambezi": -0.0222644763358736,
+       "Cuando": -0.07379691502739326,
+       "Kafue": -0.03989309087438758,
+       "Luangwa": 0.008906806632492874,
+       "Okavango": -0.012589108039958453,
+       "Rovuma": -0.03467307279254422,
+       "Save": -0.01632607414473678,
+       "Shire": -0.03811673293274644
+      },
+      "w": 1,
+      "l": 7,
+      "t": 0,
+      "one_sided_p": 0.99609375,
+      "n_rivers": 8
+     }
+    }
+   },
+   "control S2 patch variance": {
+    "vs confidence (baseline)": {
+     "n": 27,
+     "w": 13,
+     "l": 14,
+     "t": 0,
+     "sign_p": 1.0,
+     "median_gain": -0.0003203718576542605,
+     "mean_gain": 0.002688634571223567,
+     "perm_p": 0.7319,
+     "river": {
+      "per_river": {
+       "Zambezi": -0.004260259163178536,
+       "Cuando": -0.0006150793454231697,
+       "Kafue": 0.0031307096256013756,
+       "Luangwa": -0.014887538282832687,
+       "Okavango": 0.004063242680090299,
+       "Rovuma": -0.00177490052490028,
+       "Save": 3.1444076915998716e-05,
+       "Shire": 0.025699059077816517
+      },
+      "w": 4,
+      "l": 4,
+      "t": 0,
+      "one_sided_p": 0.63671875,
+      "n_rivers": 8
+     }
+    },
+    "vs tile-phase (aligned)": {
+     "n": 27,
+     "w": 6,
+     "l": 21,
+     "t": 0,
+     "sign_p": 0.005924612283706665,
+     "median_gain": -0.006336583671302937,
+     "mean_gain": -0.012569087384853959,
+     "perm_p": 0.0056,
+     "river": {
+      "per_river": {
+       "Zambezi": -0.016762323587634353,
+       "Cuando": -0.010326993520951936,
+       "Kafue": -0.010411334210096782,
+       "Luangwa": -0.018013268553189653,
+       "Okavango": -0.022251535547029837,
+       "Rovuma": -0.003378519003411772,
+       "Save": -0.009685119629546528,
+       "Shire": -0.008963829997829053
+      },
+      "w": 0,
+      "l": 8,
+      "t": 0,
+      "one_sided_p": 1.0,
+      "n_rivers": 8
+     }
+    },
+    "vs boundary indicator": {
+     "n": 27,
+     "w": 6,
+     "l": 21,
+     "t": 0,
+     "sign_p": 0.005924612283706665,
+     "median_gain": -0.0043806248017451595,
+     "mean_gain": -0.01718345501725213,
+     "perm_p": 0.0002,
+     "river": {
+      "per_river": {
+       "Zambezi": -0.01708846191084643,
+       "Cuando": -0.008568034232143168,
+       "Kafue": -0.008712138899616478,
+       "Luangwa": -0.014129829558294307,
+       "Okavango": -0.04490792158732165,
+       "Rovuma": -0.0013602905031548443,
+       "Save": 0.0020486682085979055,
+       "Shire": -0.03642626787266835
+      },
+      "w": 1,
+      "l": 7,
+      "t": 0,
+      "one_sided_p": 0.99609375,
+      "n_rivers": 8
+     }
+    },
+    "vs control NDWI gradient": {
+     "n": 27,
+     "w": 10,
+     "l": 17,
+     "t": 0,
+     "sign_p": 0.24778856337070465,
+     "median_gain": -0.0010197086639211813,
+     "mean_gain": -0.0018617149737228335,
+     "perm_p": 0.4769,
+     "river": {
+      "per_river": {
+       "Zambezi": -0.0032315948298392303,
+       "Cuando": -0.0053565201276978185,
+       "Kafue": -0.001178514927047362,
+       "Luangwa": 0.03452134797742109,
+       "Okavango": -0.015928300366756513,
+       "Rovuma": 0.0008586124971363667,
+       "Save": 0.010133234221880429,
+       "Shire": -0.006938005587902073
+      },
+      "w": 3,
+      "l": 5,
+      "t": 0,
+      "one_sided_p": 0.85546875,
+      "n_rivers": 8
+     }
+    }
+   },
+   "control NDWI level": {
+    "vs confidence (baseline)": {
+     "n": 27,
+     "w": 12,
+     "l": 15,
+     "t": 0,
+     "sign_p": 0.7011080384254456,
+     "median_gain": -0.0014122822185976673,
+     "mean_gain": 0.008969954638376252,
+     "perm_p": 0.4962,
+     "river": {
+      "per_river": {
+       "Zambezi": -0.01659682881443469,
+       "Cuando": -0.001117504692598514,
+       "Kafue": -0.005944261388046848,
+       "Luangwa": -0.02592557047986501,
+       "Okavango": 0.04917403973290563,
+       "Rovuma": -0.005182902366257371,
+       "Save": 0.009248224849599114,
+       "Shire": 0.06143983975256514
+      },
+      "w": 3,
+      "l": 5,
+      "t": 0,
+      "one_sided_p": 0.85546875,
+      "n_rivers": 8
+     }
+    },
+    "vs tile-phase (aligned)": {
+     "n": 27,
+     "w": 6,
+     "l": 21,
+     "t": 0,
+     "sign_p": 0.005924612283706665,
+     "median_gain": -0.006034717201901883,
+     "mean_gain": -0.0062877673177012755,
+     "perm_p": 0.4333,
+     "river": {
+      "per_river": {
+       "Zambezi": -0.029098893238890512,
+       "Cuando": -0.01082941886812728,
+       "Kafue": -0.019486305223745008,
+       "Luangwa": -0.029051300750221977,
+       "Okavango": 0.0228592615057855,
+       "Rovuma": -0.006786520844768863,
+       "Save": -0.0004683388568634123,
+       "Shire": 0.02677695067691957
+      },
+      "w": 2,
+      "l": 6,
+      "t": 0,
+      "one_sided_p": 0.96484375,
+      "n_rivers": 8
+     }
+    },
+    "vs boundary indicator": {
+     "n": 27,
+     "w": 5,
+     "l": 22,
+     "t": 0,
+     "sign_p": 0.0015137195587158203,
+     "median_gain": -0.010195577609170572,
+     "mean_gain": -0.010902134950099441,
+     "perm_p": 0.0156,
+     "river": {
+      "per_river": {
+       "Zambezi": -0.02942503156210258,
+       "Cuando": -0.009070459579318513,
+       "Kafue": -0.017787109913264702,
+       "Luangwa": -0.02516786175532663,
+       "Okavango": 0.00020287546549367883,
+       "Rovuma": -0.004768292344511936,
+       "Save": 0.01126544898128102,
+       "Shire": -0.000685487197919736
+      },
+      "w": 2,
+      "l": 6,
+      "t": 0,
+      "one_sided_p": 0.96484375,
+      "n_rivers": 8
+     }
+    },
+    "vs control NDWI gradient": {
+     "n": 27,
+     "w": 10,
+     "l": 17,
+     "t": 0,
+     "sign_p": 0.24778856337070465,
+     "median_gain": -0.002403560609146963,
+     "mean_gain": 0.004419605093429848,
+     "perm_p": 0.4972,
+     "river": {
+      "per_river": {
+       "Zambezi": -0.015568164481095385,
+       "Cuando": -0.005858945474873163,
+       "Kafue": -0.010253485940695585,
+       "Luangwa": 0.023483315780388765,
+       "Okavango": 0.02918249668605882,
+       "Rovuma": -0.0025493893442207244,
+       "Save": 0.019350014994563545,
+       "Shire": 0.028802775086846547
+      },
+      "w": 4,
+      "l": 4,
+      "t": 0,
+      "one_sided_p": 0.63671875,
+      "n_rivers": 8
+     }
+    }
+   },
+   "predictor residual, whitened MSE (K=8)": {
+    "vs confidence (baseline)": {
+     "n": 27,
+     "w": 13,
+     "l": 14,
+     "t": 0,
+     "sign_p": 1.0,
+     "median_gain": -0.000870926280701604,
+     "mean_gain": 0.004257285348801104,
+     "perm_p": 0.7025,
+     "river": {
+      "per_river": {
+       "Zambezi": -0.002441627497941597,
+       "Cuando": -0.001914602364166135,
+       "Kafue": -0.007200232335887356,
+       "Luangwa": -0.015328478186496935,
+       "Okavango": 0.027037812605693396,
+       "Rovuma": -0.009877015422864038,
+       "Save": -0.007695694354311051,
+       "Shire": 0.03657894267608086
+      },
+      "w": 2,
+      "l": 6,
+      "t": 0,
+      "one_sided_p": 0.96484375,
+      "n_rivers": 8
+     }
+    },
+    "vs tile-phase (aligned)": {
+     "n": 27,
+     "w": 4,
+     "l": 23,
+     "t": 0,
+     "sign_p": 0.000310748815536499,
+     "median_gain": -0.00639801905179839,
+     "mean_gain": -0.01100043660727642,
+     "perm_p": 0.1586,
+     "river": {
+      "per_river": {
+       "Zambezi": -0.014943691922397414,
+       "Cuando": -0.011626516539694902,
+       "Kafue": -0.020742276171585514,
+       "Luangwa": -0.0184542084568539,
+       "Okavango": 0.0007230343785732639,
+       "Rovuma": -0.011480633901375529,
+       "Save": -0.017412258060773577,
+       "Shire": 0.001916053600435291
+      },
+      "w": 2,
+      "l": 6,
+      "t": 0,
+      "one_sided_p": 0.96484375,
+      "n_rivers": 8
+     }
+    },
+    "vs boundary indicator": {
+     "n": 27,
+     "w": 4,
+     "l": 23,
+     "t": 0,
+     "sign_p": 0.000310748815536499,
+     "median_gain": -0.006267308284078276,
+     "mean_gain": -0.015614804239674589,
+     "perm_p": 0.0001,
+     "river": {
+      "per_river": {
+       "Zambezi": -0.015269830245609487,
+       "Cuando": -0.009867557250886134,
+       "Kafue": -0.01904308086110521,
+       "Luangwa": -0.014570769461958556,
+       "Okavango": -0.021933351661718555,
+       "Rovuma": -0.009462405401118602,
+       "Save": -0.005678470222629142,
+       "Shire": -0.02554638427440401
+      },
+      "w": 0,
+      "l": 8,
+      "t": 0,
+      "one_sided_p": 1.0,
+      "n_rivers": 8
+     }
+    },
+    "vs control NDWI gradient": {
+     "n": 27,
+     "w": 8,
+     "l": 19,
+     "t": 0,
+     "sign_p": 0.052238985896110535,
+     "median_gain": -0.0016968085338730033,
+     "mean_gain": -0.0002930641961452967,
+     "perm_p": 0.95,
+     "river": {
+      "per_river": {
+       "Zambezi": -0.00141296316460229,
+       "Cuando": -0.0066560431464407835,
+       "Kafue": -0.011509456888536093,
+       "Luangwa": 0.03408040807375684,
+       "Okavango": 0.007046269558846585,
+       "Rovuma": -0.007243502400827391,
+       "Save": 0.0024060957906533805,
+       "Shire": 0.003941878010362272
+      },
+      "w": 4,
+      "l": 4,
+      "t": 0,
+      "one_sided_p": 0.63671875,
+      "n_rivers": 8
+     }
+    },
+    "vs constant score": {
+     "n": 27,
+     "w": 25,
+     "l": 2,
+     "t": 0,
+     "sign_p": 5.647540092468262e-06,
+     "median_gain": 0.025173601441263967,
+     "mean_gain": 0.030493833658916517,
+     "perm_p": 0.0,
+     "river": {
+      "per_river": {
+       "Zambezi": 0.02085151317127131,
+       "Cuando": 0.06714087188095248,
+       "Kafue": 0.028383633985851486,
+       "Luangwa": 0.025173601441263967,
+       "Okavango": 0.01963537759880504,
+       "Rovuma": 0.027429570391716823,
+       "Save": 0.01873216993539016,
+       "Shire": 0.04205861094310871
+      },
+      "w": 8,
+      "l": 0,
+      "t": 0,
+      "one_sided_p": 0.00390625,
+      "n_rivers": 8
+     }
+    },
+    "vs control S2 patch variance": {
+     "n": 27,
+     "w": 9,
+     "l": 18,
+     "t": 0,
+     "sign_p": 0.12207812070846558,
+     "median_gain": -0.0016851311341673483,
+     "mean_gain": 0.0015686507775775366,
+     "perm_p": 0.7583,
+     "river": {
+      "per_river": {
+       "Zambezi": 0.00181863166523694,
+       "Cuando": -0.0012995230187429652,
+       "Kafue": -0.010330941961488732,
+       "Luangwa": -0.0004409399036642489,
+       "Okavango": 0.022974569925603098,
+       "Rovuma": -0.008102114897963758,
+       "Save": -0.007727138431227049,
+       "Shire": 0.010879883598264344
+      },
+      "w": 3,
+      "l": 5,
+      "t": 0,
+      "one_sided_p": 0.85546875,
+      "n_rivers": 8
+     }
+    },
+    "vs control NDWI level": {
+     "n": 27,
+     "w": 13,
+     "l": 14,
+     "t": 0,
+     "sign_p": 1.0,
+     "median_gain": -0.0008047573323893345,
+     "mean_gain": -0.004712669289575145,
+     "perm_p": 0.4065,
+     "river": {
+      "per_river": {
+       "Zambezi": 0.014155201316493091,
+       "Cuando": -0.000797097671567621,
+       "Kafue": -0.0012559709478405078,
+       "Luangwa": 0.010597092293368075,
+       "Okavango": -0.022136227127212235,
+       "Rovuma": -0.004694113056606667,
+       "Save": -0.016943919203910165,
+       "Shire": -0.024860897076484274
+      },
+      "w": 2,
+      "l": 6,
+      "t": 0,
+      "one_sided_p": 0.96484375,
+      "n_rivers": 8
+     }
+    }
+   },
+   "predictor residual, cosine (K=8)": {
+    "vs confidence (baseline)": {
+     "n": 27,
+     "w": 9,
+     "l": 18,
+     "t": 0,
+     "sign_p": 0.12207812070846558,
+     "median_gain": -0.007208025468903038,
+     "mean_gain": -0.004493673584103259,
+     "perm_p": 0.6814,
+     "river": {
+      "per_river": {
+       "Zambezi": -0.009787327929572875,
+       "Cuando": -0.00890948723820887,
+       "Kafue": -0.015504141936836219,
+       "Luangwa": -0.03447245268887352,
+       "Okavango": 0.02535763054861508,
+       "Rovuma": -0.01760278146008575,
+       "Save": -0.010513750625513284,
+       "Shire": 0.015793038390295694
+      },
+      "w": 2,
+      "l": 6,
+      "t": 0,
+      "one_sided_p": 0.96484375,
+      "n_rivers": 8
+     }
+    },
+    "vs tile-phase (aligned)": {
+     "n": 27,
+     "w": 3,
+     "l": 24,
+     "t": 0,
+     "sign_p": 4.9233436584472656e-05,
+     "median_gain": -0.012283711652494604,
+     "mean_gain": -0.019751395540180787,
+     "perm_p": 0.0094,
+     "river": {
+      "per_river": {
+       "Zambezi": -0.022289392354028693,
+       "Cuando": -0.018621401413737637,
+       "Kafue": -0.029046185772534372,
+       "Luangwa": -0.03759818295923049,
+       "Okavango": -0.0009571476785050527,
+       "Rovuma": -0.01920639993859724,
+       "Save": -0.020230314331975814,
+       "Shire": -0.018869850685349878
+      },
+      "w": 0,
+      "l": 8,
+      "t": 0,
+      "one_sided_p": 1.0,
+      "n_rivers": 8
+     }
+    },
+    "vs boundary indicator": {
+     "n": 27,
+     "w": 0,
+     "l": 27,
+     "t": 0,
+     "sign_p": 1.4901161193847656e-08,
+     "median_gain": -0.015992548039200083,
+     "mean_gain": -0.024365763172578953,
+     "perm_p": 0.0,
+     "river": {
+      "per_river": {
+       "Zambezi": -0.022615530677240765,
+       "Cuando": -0.016862442124928868,
+       "Kafue": -0.027346990462054077,
+       "Luangwa": -0.033714743964335145,
+       "Okavango": -0.023613533718796875,
+       "Rovuma": -0.01718817143834031,
+       "Save": -0.008496526493831381,
+       "Shire": -0.04633228856018918
+      },
+      "w": 0,
+      "l": 8,
+      "t": 0,
+      "one_sided_p": 1.0,
+      "n_rivers": 8
+     }
+    },
+    "vs control NDWI gradient": {
+     "n": 27,
+     "w": 5,
+     "l": 22,
+     "t": 0,
+     "sign_p": 0.0015137195587158203,
+     "median_gain": -0.007104448933550321,
+     "mean_gain": -0.00904402312904966,
+     "perm_p": 0.0426,
+     "river": {
+      "per_river": {
+       "Zambezi": -0.008758663596233568,
+       "Cuando": -0.013650928020483519,
+       "Kafue": -0.019813366489484955,
+       "Luangwa": 0.014936433571380255,
+       "Okavango": 0.005366087501768268,
+       "Rovuma": -0.014969268438049103,
+       "Save": -0.00041196048054885646,
+       "Shire": -0.016844026275422894
+      },
+      "w": 2,
+      "l": 6,
+      "t": 0,
+      "one_sided_p": 0.96484375,
+      "n_rivers": 8
+     }
+    },
+    "vs constant score": {
+     "n": 27,
+     "w": 23,
+     "l": 4,
+     "t": 0,
+     "sign_p": 0.000310748815536499,
+     "median_gain": 0.014653221662333044,
+     "mean_gain": 0.021742874726012155,
+     "perm_p": 0.0,
+     "river": {
+      "per_river": {
+       "Zambezi": 0.013505812739640036,
+       "Cuando": 0.060145987006909755,
+       "Kafue": 0.020079724384902627,
+       "Luangwa": 0.006029626938887381,
+       "Okavango": 0.017955195541726723,
+       "Rovuma": 0.019703804354495116,
+       "Save": 0.015914113664187924,
+       "Shire": 0.021272706657323545
+      },
+      "w": 8,
+      "l": 0,
+      "t": 0,
+      "one_sided_p": 0.00390625,
+      "n_rivers": 8
+     }
+    },
+    "vs control S2 patch variance": {
+     "n": 27,
+     "w": 4,
+     "l": 23,
+     "t": 0,
+     "sign_p": 0.000310748815536499,
+     "median_gain": -0.007463233166563377,
+     "mean_gain": -0.007182308155326825,
+     "perm_p": 0.1315,
+     "river": {
+      "per_river": {
+       "Zambezi": -0.005527068766394339,
+       "Cuando": -0.008294407892785701,
+       "Kafue": -0.018634851562437594,
+       "Luangwa": -0.019584914406040835,
+       "Okavango": 0.02129438786852478,
+       "Rovuma": -0.01582788093518547,
+       "Save": -0.010545194702429284,
+       "Shire": -0.009906020687520823
+      },
+      "w": 1,
+      "l": 7,
+      "t": 0,
+      "one_sided_p": 0.99609375,
+      "n_rivers": 8
+     }
+    },
+    "vs control NDWI level": {
+     "n": 27,
+     "w": 7,
+     "l": 20,
+     "t": 0,
+     "sign_p": 0.0191572904586792,
+     "median_gain": -0.0048503581477926435,
+     "mean_gain": -0.013463628222479509,
+     "perm_p": 0.0212,
+     "river": {
+      "per_river": {
+       "Zambezi": 0.006809500884861814,
+       "Cuando": -0.007791982545610356,
+       "Kafue": -0.00955988054878937,
+       "Luangwa": -0.00854688220900851,
+       "Okavango": -0.023816409184290552,
+       "Rovuma": -0.012419879093828377,
+       "Save": -0.019761975475112402,
+       "Shire": -0.045646801362269444
+      },
+      "w": 1,
+      "l": 7,
+      "t": 0,
+      "one_sided_p": 0.99609375,
+      "n_rivers": 8
+     }
+    }
+   },
+   "mean-predictor residual (Mahalanobis top-d)": {
+    "vs confidence (baseline)": {
+     "n": 27,
+     "w": 13,
+     "l": 14,
+     "t": 0,
+     "sign_p": 1.0,
+     "median_gain": -0.0016730460620068013,
+     "mean_gain": 0.006762562714008237,
+     "perm_p": 0.584,
+     "river": {
+      "per_river": {
+       "Zambezi": 0.0015422285890198807,
+       "Cuando": -0.007227137191577775,
+       "Kafue": -0.0032838249023098283,
+       "Luangwa": -0.002600976658207889,
+       "Okavango": 0.02948711518105013,
+       "Rovuma": -0.010920298260936177,
+       "Save": -0.008207866869034084,
+       "Shire": 0.04371265148542857
+      },
+      "w": 3,
+      "l": 5,
+      "t": 0,
+      "one_sided_p": 0.85546875,
+      "n_rivers": 8
+     }
+    },
+    "vs tile-phase (aligned)": {
+     "n": 27,
+     "w": 4,
+     "l": 23,
+     "t": 0,
+     "sign_p": 0.000310748815536499,
+     "median_gain": -0.005726706928564854,
+     "mean_gain": -0.00849515924206929,
+     "perm_p": 0.3153,
+     "river": {
+      "per_river": {
+       "Zambezi": -0.010959835835435939,
+       "Cuando": -0.01693905136710654,
+       "Kafue": -0.016825868738007985,
+       "Luangwa": -0.005726706928564854,
+       "Okavango": 0.0031723369539299975,
+       "Rovuma": -0.012523916739447668,
+       "Save": -0.01792443057549661,
+       "Shire": 0.009049762409783002
+      },
+      "w": 2,
+      "l": 6,
+      "t": 0,
+      "one_sided_p": 0.96484375,
+      "n_rivers": 8
+     }
+    },
+    "vs boundary indicator": {
+     "n": 27,
+     "w": 4,
+     "l": 23,
+     "t": 0,
+     "sign_p": 0.000310748815536499,
+     "median_gain": -0.006745347086217914,
+     "mean_gain": -0.013109526874467458,
+     "perm_p": 0.0002,
+     "river": {
+      "per_river": {
+       "Zambezi": -0.01128597415864801,
+       "Cuando": -0.015180092078297772,
+       "Kafue": -0.015126673427527682,
+       "Luangwa": -0.0018432679336695089,
+       "Okavango": -0.019484049086361824,
+       "Rovuma": -0.010505688239190743,
+       "Save": -0.006190642737352176,
+       "Shire": -0.0184126754650563
+      },
+      "w": 0,
+      "l": 8,
+      "t": 0,
+      "one_sided_p": 1.0,
+      "n_rivers": 8
+     }
+    },
+    "vs control NDWI gradient": {
+     "n": 27,
+     "w": 9,
+     "l": 18,
+     "t": 0,
+     "sign_p": 0.12207812070846558,
+     "median_gain": -0.002969517549919275,
+     "mean_gain": 0.0022122131690618363,
+     "perm_p": 0.664,
+     "river": {
+      "per_river": {
+       "Zambezi": 0.002570892922359188,
+       "Cuando": -0.011968577973852423,
+       "Kafue": -0.007593049454958566,
+       "Luangwa": 0.04680790960204589,
+       "Okavango": 0.009495572134203318,
+       "Rovuma": -0.008286785238899532,
+       "Save": 0.0018939232759303465,
+       "Shire": 0.011075586819709982
+      },
+      "w": 5,
+      "l": 3,
+      "t": 0,
+      "one_sided_p": 0.36328125,
+      "n_rivers": 8
+     }
+    },
+    "vs constant score": {
+     "n": 27,
+     "w": 25,
+     "l": 2,
+     "t": 0,
+     "sign_p": 5.647540092468262e-06,
+     "median_gain": 0.025819878065655485,
+     "mean_gain": 0.03299911102412365,
+     "perm_p": 0.0,
+     "river": {
+      "per_river": {
+       "Zambezi": 0.02483536925823279,
+       "Cuando": 0.06182833705354084,
+       "Kafue": 0.032300041419429014,
+       "Luangwa": 0.03790110296955301,
+       "Okavango": 0.022084680174161774,
+       "Rovuma": 0.026386287553644684,
+       "Save": 0.018219997420667124,
+       "Shire": 0.04919231975245643
+      },
+      "w": 8,
+      "l": 0,
+      "t": 0,
+      "one_sided_p": 0.00390625,
+      "n_rivers": 8
+     }
+    },
+    "vs control S2 patch variance": {
+     "n": 27,
+     "w": 10,
+     "l": 17,
+     "t": 0,
+     "sign_p": 0.24778856337070465,
+     "median_gain": -0.0014337478080636652,
+     "mean_gain": 0.0040739281427846705,
+     "perm_p": 0.467,
+     "river": {
+      "per_river": {
+       "Zambezi": 0.0058024877521984175,
+       "Cuando": -0.006612057846154606,
+       "Kafue": -0.006414534527911204,
+       "Luangwa": 0.012286561624624798,
+       "Okavango": 0.02542387250095983,
+       "Rovuma": -0.009145397736035897,
+       "Save": -0.008239310945950082,
+       "Shire": 0.018013592407612054
+      },
+      "w": 4,
+      "l": 4,
+      "t": 0,
+      "one_sided_p": 0.63671875,
+      "n_rivers": 8
+     }
+    },
+    "vs control NDWI level": {
+     "n": 27,
+     "w": 11,
+     "l": 16,
+     "t": 0,
+     "sign_p": 0.44206833839416504,
+     "median_gain": -0.0011060646689197325,
+     "mean_gain": -0.0022073919243680135,
+     "perm_p": 0.7044,
+     "river": {
+      "per_river": {
+       "Zambezi": 0.018139057403454572,
+       "Cuando": -0.006109632498979261,
+       "Kafue": 0.0026604364857370204,
+       "Luangwa": 0.023324593821657122,
+       "Okavango": -0.0196869245518555,
+       "Rovuma": -0.005737395894678807,
+       "Save": -0.017456091718633198,
+       "Shire": -0.017727188267136564
+      },
+      "w": 3,
+      "l": 5,
+      "t": 0,
+      "one_sided_p": 0.85546875,
+      "n_rivers": 8
+     }
+    }
+   },
+   "position-only residual (all patches hidden)": {
+    "vs confidence (baseline)": {
+     "n": 27,
+     "w": 12,
+     "l": 15,
+     "t": 0,
+     "sign_p": 0.7011080384254456,
+     "median_gain": -0.0026267286282399965,
+     "mean_gain": 0.005534591483145227,
+     "perm_p": 0.6889,
+     "river": {
+      "per_river": {
+       "Zambezi": -0.0034094079111607087,
+       "Cuando": -0.007454304447406797,
+       "Kafue": -0.012201293561976004,
+       "Luangwa": -0.006999754370617561,
+       "Okavango": 0.03929850023863855,
+       "Rovuma": -0.013632808855320186,
+       "Save": -0.011819516808871201,
+       "Shire": 0.04943196252461765
+      },
+      "w": 2,
+      "l": 6,
+      "t": 0,
+      "one_sided_p": 0.96484375,
+      "n_rivers": 8
+     }
+    },
+    "vs tile-phase (aligned)": {
+     "n": 27,
+     "w": 4,
+     "l": 23,
+     "t": 0,
+     "sign_p": 0.000310748815536499,
+     "median_gain": -0.00853844569793662,
+     "mean_gain": -0.009723130472932297,
+     "perm_p": 0.26,
+     "river": {
+      "per_river": {
+       "Zambezi": -0.015911472335616524,
+       "Cuando": -0.01716621862293556,
+       "Kafue": -0.025743337397674163,
+       "Luangwa": -0.010125484640974527,
+       "Okavango": 0.012983722011518421,
+       "Rovuma": -0.015236427333831676,
+       "Save": -0.02153608051533373,
+       "Shire": 0.014769073448972084
+      },
+      "w": 2,
+      "l": 6,
+      "t": 0,
+      "one_sided_p": 0.96484375,
+      "n_rivers": 8
+     }
+    },
+    "vs boundary indicator": {
+     "n": 27,
+     "w": 2,
+     "l": 25,
+     "t": 0,
+     "sign_p": 5.647540092468262e-06,
+     "median_gain": -0.008021362046119977,
+     "mean_gain": -0.014337498105330467,
+     "perm_p": 0.0005,
+     "river": {
+      "per_river": {
+       "Zambezi": -0.0162376106588286,
+       "Cuando": -0.015407259334126795,
+       "Kafue": -0.024044142087193857,
+       "Luangwa": -0.006242045646079181,
+       "Okavango": -0.009672664028773398,
+       "Rovuma": -0.013218198833574751,
+       "Save": -0.009802292677189297,
+       "Shire": -0.012693364425867219
+      },
+      "w": 0,
+      "l": 8,
+      "t": 0,
+      "one_sided_p": 1.0,
+      "n_rivers": 8
+     }
+    },
+    "vs control NDWI gradient": {
+     "n": 27,
+     "w": 7,
+     "l": 20,
+     "t": 0,
+     "sign_p": 0.0191572904586792,
+     "median_gain": -0.0037855507328469094,
+     "mean_gain": 0.000984241938198829,
+     "perm_p": 0.861,
+     "river": {
+      "per_river": {
+       "Zambezi": -0.0023807435778214017,
+       "Cuando": -0.012195745229681443,
+       "Kafue": -0.016510518114624742,
+       "Luangwa": 0.042409131889636215,
+       "Okavango": 0.019306957191791742,
+       "Rovuma": -0.010999295833283539,
+       "Save": -0.0017177266639067726,
+       "Shire": 0.016794897858899063
+      },
+      "w": 3,
+      "l": 5,
+      "t": 0,
+      "one_sided_p": 0.85546875,
+      "n_rivers": 8
+     }
+    },
+    "vs constant score": {
+     "n": 27,
+     "w": 26,
+     "l": 1,
+     "t": 0,
+     "sign_p": 4.172325134277344e-07,
+     "median_gain": 0.024372089923728267,
+     "mean_gain": 0.03177113979326064,
+     "perm_p": 0.0,
+     "river": {
+      "per_river": {
+       "Zambezi": 0.019883732758052202,
+       "Cuando": 0.061601169797711824,
+       "Kafue": 0.023382572759762837,
+       "Luangwa": 0.03350232525714334,
+       "Okavango": 0.0318960652317502,
+       "Rovuma": 0.02367377695926068,
+       "Save": 0.014608347480830008,
+       "Shire": 0.0549116307916455
+      },
+      "w": 8,
+      "l": 0,
+      "t": 0,
+      "one_sided_p": 0.00390625,
+      "n_rivers": 8
+     }
+    },
+    "vs control S2 patch variance": {
+     "n": 27,
+     "w": 11,
+     "l": 16,
+     "t": 0,
+     "sign_p": 0.44206833839416504,
+     "median_gain": -0.0027631254737524634,
+     "mean_gain": 0.002845956911921664,
+     "perm_p": 0.654,
+     "river": {
+      "per_river": {
+       "Zambezi": 0.0008508512520178285,
+       "Cuando": -0.006839225101983626,
+       "Kafue": -0.01533200318757738,
+       "Luangwa": 0.007887783912215125,
+       "Okavango": 0.035235257558548255,
+       "Rovuma": -0.011857908330419905,
+       "Save": -0.011850960885787201,
+       "Shire": 0.023732903446801134
+      },
+      "w": 4,
+      "l": 4,
+      "t": 0,
+      "one_sided_p": 0.63671875,
+      "n_rivers": 8
+     }
+    },
+    "vs control NDWI level": {
+     "n": 27,
+     "w": 12,
+     "l": 15,
+     "t": 0,
+     "sign_p": 0.7011080384254456,
+     "median_gain": -0.0012990249837681977,
+     "mean_gain": -0.0034353631552310198,
+     "perm_p": 0.4979,
+     "river": {
+      "per_river": {
+       "Zambezi": 0.01318742090327398,
+       "Cuando": -0.0063367997548082824,
+       "Kafue": -0.006257032173929156,
+       "Luangwa": 0.01892581610924745,
+       "Okavango": -0.009875539494267076,
+       "Rovuma": -0.008449906489062813,
+       "Save": -0.021067741658470317,
+       "Shire": -0.01200787722794748
+      },
+      "w": 2,
+      "l": 6,
+      "t": 0,
+      "one_sided_p": 0.96484375,
+      "n_rivers": 8
+     }
+    }
+   },
+   "combination conf+predictor (prereg)": {
+    "vs confidence (baseline)": {
+     "n": 27,
+     "w": 15,
+     "l": 12,
+     "t": 0,
+     "sign_p": 0.7011080384254456,
+     "median_gain": 0.0006258027034597299,
+     "mean_gain": 0.010095449952957377,
+     "perm_p": 0.0834,
+     "river": {
+      "per_river": {
+       "Zambezi": 0.005832945500734573,
+       "Cuando": 0.0075920835301370735,
+       "Kafue": 0.007717662257583511,
+       "Luangwa": -5.790241485681413e-05,
+       "Okavango": 0.01138697068902691,
+       "Rovuma": -0.00035457684955651113,
+       "Save": 0.005422402525874435,
+       "Shire": 0.034127701545091926
+      },
+      "w": 6,
+      "l": 2,
+      "t": 0,
+      "one_sided_p": 0.14453125,
+      "n_rivers": 8
+     }
+    },
+    "vs tile-phase (aligned)": {
+     "n": 27,
+     "w": 4,
+     "l": 23,
+     "t": 0,
+     "sign_p": 0.000310748815536499,
+     "median_gain": -0.002438619681923081,
+     "mean_gain": -0.005162272003120149,
+     "perm_p": 0.0388,
+     "river": {
+      "per_river": {
+       "Zambezi": -0.006669118923721246,
+       "Cuando": -0.0021198306453916933,
+       "Kafue": -0.0058243815781146464,
+       "Luangwa": -0.0031836326852137794,
+       "Okavango": -0.014927807538093222,
+       "Rovuma": -0.001958195328068003,
+       "Save": -0.004294161180588092,
+       "Shire": -0.0005351875305536422
+      },
+      "w": 0,
+      "l": 8,
+      "t": 0,
+      "one_sided_p": 1.0,
+      "n_rivers": 8
+     }
+    },
+    "vs boundary indicator": {
+     "n": 27,
+     "w": 7,
+     "l": 20,
+     "t": 0,
+     "sign_p": 0.0191572904586792,
+     "median_gain": -0.001163141899358551,
+     "mean_gain": -0.009776639635518317,
+     "perm_p": 0.06,
+     "river": {
+      "per_river": {
+       "Zambezi": -0.006995257246933317,
+       "Cuando": -0.0003608713565829251,
+       "Kafue": -0.004125186267634343,
+       "Luangwa": 0.0006998063096815658,
+       "Okavango": -0.03758419357838504,
+       "Rovuma": 6.003317218892457e-05,
+       "Save": 0.007439626657556341,
+       "Shire": -0.027997625405392947
+      },
+      "w": 3,
+      "l": 5,
+      "t": 0,
+      "one_sided_p": 0.85546875,
+      "n_rivers": 8
+     }
+    },
+    "vs control NDWI gradient": {
+     "n": 27,
+     "w": 15,
+     "l": 12,
+     "t": 0,
+     "sign_p": 0.7011080384254456,
+     "median_gain": 0.0008079790821126408,
+     "mean_gain": 0.005545100408010976,
+     "perm_p": 0.1307,
+     "river": {
+      "per_river": {
+       "Zambezi": 0.00686160983407388,
+       "Cuando": 0.002850642747862424,
+       "Kafue": 0.003408437704934774,
+       "Luangwa": 0.04935098384539696,
+       "Okavango": -0.008604572357819902,
+       "Rovuma": 0.0022789361724801357,
+       "Save": 0.015524192670838863,
+       "Shire": 0.0014906368793733366
+      },
+      "w": 7,
+      "l": 1,
+      "t": 0,
+      "one_sided_p": 0.03515625,
+      "n_rivers": 8
+     }
+    },
+    "vs constant score": {
+     "n": 27,
+     "w": 26,
+     "l": 1,
+     "t": 0,
+     "sign_p": 4.172325134277344e-07,
+     "median_gain": 0.037682262264607365,
+     "mean_gain": 0.03633199826307279,
+     "perm_p": 0.0,
+     "river": {
+      "per_river": {
+       "Zambezi": 0.029126086169947486,
+       "Cuando": 0.07664755777525568,
+       "Kafue": 0.04330152857932235,
+       "Luangwa": 0.04044417721290409,
+       "Okavango": 0.0039845356821385505,
+       "Rovuma": 0.036952008965024354,
+       "Save": 0.031850266815575644,
+       "Shire": 0.03960736981211978
+      },
+      "w": 8,
+      "l": 0,
+      "t": 0,
+      "one_sided_p": 0.00390625,
+      "n_rivers": 8
+     }
+    },
+    "vs control S2 patch variance": {
+     "n": 27,
+     "w": 19,
+     "l": 8,
+     "t": 0,
+     "sign_p": 0.052238985896110535,
+     "median_gain": 0.002620003437725974,
+     "mean_gain": 0.00740681538173381,
+     "perm_p": 0.0055,
+     "river": {
+      "per_river": {
+       "Zambezi": 0.01009320466391311,
+       "Cuando": 0.008207162875560241,
+       "Kafue": 0.004586952631982136,
+       "Luangwa": 0.014829635867975872,
+       "Okavango": 0.007323728008936613,
+       "Rovuma": 0.001420323675343769,
+       "Save": 0.005390958448958437,
+       "Shire": 0.00842864246727541
+      },
+      "w": 8,
+      "l": 0,
+      "t": 0,
+      "one_sided_p": 0.00390625,
+      "n_rivers": 8
+     }
+    },
+    "vs control NDWI level": {
+     "n": 27,
+     "w": 18,
+     "l": 9,
+     "t": 0,
+     "sign_p": 0.12207812070846558,
+     "median_gain": 0.009431500879292058,
+     "mean_gain": 0.0011254953145811266,
+     "perm_p": 0.8814,
+     "river": {
+      "per_river": {
+       "Zambezi": 0.022429774315169265,
+       "Cuando": 0.008709588222735586,
+       "Kafue": 0.01366192364563036,
+       "Luangwa": 0.025867668065008197,
+       "Okavango": -0.03778706904387872,
+       "Rovuma": 0.0048283255167008605,
+       "Save": -0.00382582232372468,
+       "Shire": -0.027312138207473212
+      },
+      "w": 5,
+      "l": 3,
+      "t": 0,
+      "one_sided_p": 0.36328125,
+      "n_rivers": 8
+     }
+    }
+   }
+  },
+  "prereg": {
+   "primary_score": "predictor residual, whitened MSE (K=8)",
+   "combination": "U+ = mean of within-scene midrank percentiles of confidence and of the primary score",
+   "combination_gain_over_confidence": {
+    "per_river": {
+     "Zambezi": 0.005832945500734573,
+     "Cuando": 0.0075920835301370735,
+     "Kafue": 0.007717662257583511,
+     "Luangwa": -5.790241485681413e-05,
+     "Okavango": 0.01138697068902691,
+     "Rovuma": -0.00035457684955651113,
+     "Save": 0.005422402525874435,
+     "Shire": 0.034127701545091926
+    },
+    "w": 6,
+    "l": 2,
+    "t": 0,
+    "one_sided_p": 0.14453125,
+    "n_rivers": 8
+   },
+   "primary_vs_confidence": {
+    "per_river": {
+     "Zambezi": -0.002441627497941597,
+     "Cuando": -0.001914602364166135,
+     "Kafue": -0.007200232335887356,
+     "Luangwa": -0.015328478186496935,
+     "Okavango": 0.027037812605693396,
+     "Rovuma": -0.009877015422864038,
+     "Save": -0.007695694354311051,
+     "Shire": 0.03657894267608086
+    },
+    "w": 2,
+    "l": 6,
+    "t": 0,
+    "one_sided_p": 0.96484375,
+    "n_rivers": 8
+   },
+   "tile_phase_vs_confidence": {
+    "per_river": {
+     "Zambezi": 0.012502064424455816,
+     "Cuando": 0.009711914175528767,
+     "Kafue": 0.013542043835698158,
+     "Luangwa": 0.0031257302703569653,
+     "Okavango": 0.026314778227120136,
+     "Rovuma": 0.0016036184785114926,
+     "Save": 0.009716563706462527,
+     "Shire": 0.03466288907564557
+    },
+    "w": 8,
+    "l": 0,
+    "t": 0,
+    "one_sided_p": 0.00390625,
+    "n_rivers": 8
+   },
+   "note": "river-level one-sided exact sign tests are the inference; scene-level W/L/T are descriptive"
+  },
+  "best_tally": {
+   "boundary indicator": 7,
+   "tile-phase (aligned)": 11,
+   "control S2 patch variance": 2,
+   "control NDWI level": 2,
+   "control NDWI gradient": 3,
+   "confidence (baseline)": 1,
+   "position-only residual (all patches hidden)": 1
+  },
+  "median_eaurc": {
+   "confidence (baseline)": 0.011751534697448444,
+   "tile-phase (aligned)": 0.003182107993378797,
+   "boundary indicator": 0.0032155763118874242,
+   "control NDWI gradient": 0.008807346556610331,
+   "constant score": 0.0466646078509389,
+   "control S2 patch variance": 0.011541592722909205,
+   "control NDWI level": 0.0161406771411188,
+   "predictor residual, whitened MSE (K=8)": 0.012531539630548282,
+   "predictor residual, cosine (K=8)": 0.023474419484490965,
+   "mean-predictor residual (Mahalanobis top-d)": 0.011543595241757847,
+   "position-only residual (all patches hidden)": 0.01437826332568844,
+   "combination conf+predictor (prereg)": 0.00712394228251431
+  },
+  "spearman": {
+   "predictor residual, whitened MSE (K=8)": {
+    "confidence (baseline)": {
+     "median": 0.005875686199127386,
+     "min": -0.2747651612009155,
+     "max": 0.39819804556183386
+    },
+    "tile-phase (aligned)": {
+     "median": 0.22156447813103497,
+     "min": -0.10892549486803517,
+     "max": 0.6131344212681495
+    },
+    "boundary indicator": {
+     "median": 0.2892666163006938,
+     "min": 0.01198208729704599,
+     "max": 0.5712943011944781
+    },
+    "control NDWI gradient": {
+     "median": 0.526905387221944,
+     "min": 0.12386457513768684,
+     "max": 0.6917634758779772
+    }
+   },
+   "predictor residual, cosine (K=8)": {
+    "confidence (baseline)": {
+     "median": -0.039621037032401114,
+     "min": -0.31254630167727626,
+     "max": 0.4464576478792646
+    },
+    "tile-phase (aligned)": {
+     "median": 0.049017628835562536,
+     "min": -0.1944460450790358,
+     "max": 0.5891949341964093
+    },
+    "boundary indicator": {
+     "median": 0.22733185886202703,
+     "min": 0.00975426471640083,
+     "max": 0.5607384016701237
+    },
+    "control NDWI gradient": {
+     "median": 0.4553941062871039,
+     "min": 0.051310752092125024,
+     "max": 0.6671076595021814
+    }
+   },
+   "mean-predictor residual (Mahalanobis top-d)": {
+    "confidence (baseline)": {
+     "median": 0.14472964424933837,
+     "min": -0.3215576384915242,
+     "max": 0.4487670879228954
+    },
+    "tile-phase (aligned)": {
+     "median": 0.27543680933052,
+     "min": -0.12054153851655819,
+     "max": 0.5497182895536799
+    },
+    "boundary indicator": {
+     "median": 0.20591350538230452,
+     "min": -0.03669073206494528,
+     "max": 0.4463290358343466
+    },
+    "control NDWI gradient": {
+     "median": 0.16260262812030613,
+     "min": -0.11959649479650954,
+     "max": 0.43921780005006794
+    }
+   },
+   "position-only residual (all patches hidden)": {
+    "confidence (baseline)": {
+     "median": -0.07560566572491238,
+     "min": -0.4134065651598598,
+     "max": 0.43895526741649377
+    },
+    "tile-phase (aligned)": {
+     "median": 0.09246518712896072,
+     "min": -0.21126951308919245,
+     "max": 0.5144221957478006
+    },
+    "boundary indicator": {
+     "median": 0.2866240455797153,
+     "min": -0.10366087234461054,
+     "max": 0.44421661540662327
+    },
+    "control NDWI gradient": {
+     "median": 0.2148027121629354,
+     "min": -0.20989281212002,
+     "max": 0.46135658438237603
+    }
+   }
+  }
+ },
+ "part_b": {
+  "floods_dir": "/home/qi_zim_neu/olmoearth_inferenceX/data/floods",
+  "train_tiles": 600,
+  "bolivia_tiles": 441,
+  "crop": 60,
+  "feats_source": "/home/qi_zim_neu/olmoearth_inferenceX/exp/out/exp18_feats.npz",
+  "head_acc": 0.9115925058548009,
+  "predictor": {
+   "n_train_tiles": 600,
+   "var_kept_by_whitening": 0.6896450380905528,
+   "train_loss_first_last": [
+    1.4191327095031738,
+    0.3613260090351105
+   ],
+   "seed": 0,
+   "d": 64,
+   "mean_context_gain_vs_position_only_bolivia": 0.7037616074354852,
+   "median_context_gain_vs_position_only_bolivia": 0.6940687560406473,
+   "mean_gain_vs_zero_predictor_bolivia": 0.6941884537774566
+  },
+  "diagnostics": {
+   "spearman_residual_vs_s2_variance_pooled": 0.5656263946820014,
+   "spearman_residual_vs_boundary_pooled": 0.21950994311912705
+  },
+  "valid_patches": 81984,
+  "n_tiles_scored": 351,
+  "pooled_eaurc": {
+   "confidence (baseline)": 0.010451317389907929,
+   "tile-phase (aligned)": 0.011490037576812592,
+   "boundary indicator": 0.031266065029214245,
+   "control NDWI gradient": 0.03558331133346556,
+   "constant score": 0.08437847096465531,
+   "control S2 patch variance": 0.06356890419949844,
+   "control NDWI level": 0.011912048516046348,
+   "predictor residual, whitened MSE (K=8)": 0.06638076842423948,
+   "predictor residual, cosine (K=8)": 0.07053366663021508,
+   "mean-predictor residual (Mahalanobis top-d)": 0.06772964716570976,
+   "position-only residual (all patches hidden)": 0.06879247014013497,
+   "combination conf+predictor (prereg)": 0.03311573510580432
+  },
+  "tests": {
+   "confidence (baseline)": {
+    "vs tile-phase (aligned)": {
+     "n": 351,
+     "w": 187,
+     "l": 163,
+     "t": 1,
+     "sign_p": 0.2188654347807409,
+     "median_gain": 9.472175393966708e-05,
+     "mean_gain": 0.0011376660500610986
+    },
+    "vs boundary indicator": {
+     "n": 351,
+     "w": 220,
+     "l": 131,
+     "t": 0,
+     "sign_p": 2.34535597324804e-06,
+     "median_gain": 0.004864400637894853,
+     "mean_gain": 0.01886854617431158
+    },
+    "vs control NDWI gradient": {
+     "n": 351,
+     "w": 272,
+     "l": 78,
+     "t": 1,
+     "sign_p": 2.706178431829267e-26,
+     "median_gain": 0.006639162984401254,
+     "mean_gain": 0.027687128530182202
+    }
+   },
+   "tile-phase (aligned)": {
+    "vs confidence (baseline)": {
+     "n": 351,
+     "w": 163,
+     "l": 187,
+     "t": 1,
+     "sign_p": 0.2188654347807409,
+     "median_gain": -9.472175393966708e-05,
+     "mean_gain": -0.0011376660500610986
+    },
+    "vs boundary indicator": {
+     "n": 351,
+     "w": 226,
+     "l": 125,
+     "t": 0,
+     "sign_p": 7.721972860688945e-08,
+     "median_gain": 0.003961377011354542,
+     "mean_gain": 0.017730880124250482
+    },
+    "vs control NDWI gradient": {
+     "n": 351,
+     "w": 278,
+     "l": 72,
+     "t": 1,
+     "sign_p": 1.1025965160150386e-29,
+     "median_gain": 0.006385617585131046,
+     "mean_gain": 0.0265494624801211
+    }
+   },
+   "boundary indicator": {
+    "vs confidence (baseline)": {
+     "n": 351,
+     "w": 131,
+     "l": 220,
+     "t": 0,
+     "sign_p": 2.34535597324804e-06,
+     "median_gain": -0.004864400637894853,
+     "mean_gain": -0.01886854617431158
+    },
+    "vs tile-phase (aligned)": {
+     "n": 351,
+     "w": 125,
+     "l": 226,
+     "t": 0,
+     "sign_p": 7.721972860688945e-08,
+     "median_gain": -0.003961377011354542,
+     "mean_gain": -0.017730880124250482
+    },
+    "vs control NDWI gradient": {
+     "n": 351,
+     "w": 214,
+     "l": 137,
+     "t": 0,
+     "sign_p": 4.666657554036062e-05,
+     "median_gain": 0.0014284099723045672,
+     "mean_gain": 0.008818582355870621
+    }
+   },
+   "control NDWI gradient": {
+    "vs confidence (baseline)": {
+     "n": 351,
+     "w": 78,
+     "l": 272,
+     "t": 1,
+     "sign_p": 2.706178431829267e-26,
+     "median_gain": -0.006639162984401254,
+     "mean_gain": -0.027687128530182202
+    },
+    "vs tile-phase (aligned)": {
+     "n": 351,
+     "w": 72,
+     "l": 278,
+     "t": 1,
+     "sign_p": 1.1025965160150386e-29,
+     "median_gain": -0.006385617585131046,
+     "mean_gain": -0.0265494624801211
+    },
+    "vs boundary indicator": {
+     "n": 351,
+     "w": 137,
+     "l": 214,
+     "t": 0,
+     "sign_p": 4.666657554036062e-05,
+     "median_gain": -0.0014284099723045672,
+     "mean_gain": -0.008818582355870621
+    }
+   },
+   "constant score": {
+    "vs confidence (baseline)": {
+     "n": 351,
+     "w": 6,
+     "l": 345,
+     "t": 0,
+     "sign_p": 1.1038978366786859e-93,
+     "median_gain": -0.06295257406820373,
+     "mean_gain": -0.07339606014188521
+    },
+    "vs tile-phase (aligned)": {
+     "n": 351,
+     "w": 5,
+     "l": 346,
+     "t": 0,
+     "sign_p": 1.9085971958654757e-95,
+     "median_gain": -0.06415263555836859,
+     "mean_gain": -0.07225839409182411
+    },
+    "vs boundary indicator": {
+     "n": 351,
+     "w": 9,
+     "l": 331,
+     "t": 11,
+     "sign_p": 1.3800790820762916e-85,
+     "median_gain": -0.05318240982804032,
+     "mean_gain": -0.05452751396757363
+    },
+    "vs control NDWI gradient": {
+     "n": 351,
+     "w": 28,
+     "l": 323,
+     "t": 0,
+     "sign_p": 9.608287766088056e-65,
+     "median_gain": -0.04132642925449681,
+     "mean_gain": -0.045708931611703
+    }
+   },
+   "control S2 patch variance": {
+    "vs confidence (baseline)": {
+     "n": 351,
+     "w": 37,
+     "l": 313,
+     "t": 1,
+     "sign_p": 1.3483578677715472e-55,
+     "median_gain": -0.022025767137210328,
+     "mean_gain": -0.05663901254822659
+    },
+    "vs tile-phase (aligned)": {
+     "n": 351,
+     "w": 30,
+     "l": 320,
+     "t": 1,
+     "sign_p": 2.1171645259861096e-62,
+     "median_gain": -0.022877368639677768,
+     "mean_gain": -0.055501346498165474
+    },
+    "vs boundary indicator": {
+     "n": 351,
+     "w": 95,
+     "l": 256,
+     "t": 0,
+     "sign_p": 3.3699990823071795e-18,
+     "median_gain": -0.011244685442876191,
+     "mean_gain": -0.037770466373915
+    },
+    "vs control NDWI gradient": {
+     "n": 351,
+     "w": 80,
+     "l": 270,
+     "t": 1,
+     "sign_p": 3.1981640997001003e-25,
+     "median_gain": -0.011289646645248314,
+     "mean_gain": -0.02895188401804438
+    }
+   },
+   "control NDWI level": {
+    "vs confidence (baseline)": {
+     "n": 351,
+     "w": 201,
+     "l": 150,
+     "t": 0,
+     "sign_p": 0.007524139788171172,
+     "median_gain": 0.0002873618600450402,
+     "mean_gain": 0.0026814132288797902
+    },
+    "vs tile-phase (aligned)": {
+     "n": 351,
+     "w": 197,
+     "l": 154,
+     "t": 0,
+     "sign_p": 0.02483583722175348,
+     "median_gain": 0.0003660586539268179,
+     "mean_gain": 0.003819079278940889
+    },
+    "vs boundary indicator": {
+     "n": 351,
+     "w": 229,
+     "l": 121,
+     "t": 1,
+     "sign_p": 8.209247136467912e-09,
+     "median_gain": 0.005266433157065362,
+     "mean_gain": 0.02154995940319137
+    },
+    "vs control NDWI gradient": {
+     "n": 351,
+     "w": 271,
+     "l": 80,
+     "t": 0,
+     "sign_p": 2.0680144764577157e-25,
+     "median_gain": 0.0078425293575932,
+     "mean_gain": 0.030368541759061993
+    }
+   },
+   "predictor residual, whitened MSE (K=8)": {
+    "vs confidence (baseline)": {
+     "n": 351,
+     "w": 12,
+     "l": 339,
+     "t": 0,
+     "sign_p": 2.727950107881315e-84,
+     "median_gain": -0.03483791491054249,
+     "mean_gain": -0.055966938889625735
+    },
+    "vs tile-phase (aligned)": {
+     "n": 351,
+     "w": 10,
+     "l": 341,
+     "t": 0,
+     "sign_p": 3.0865229054499596e-87,
+     "median_gain": -0.03374384272926619,
+     "mean_gain": -0.05482927283956464
+    },
+    "vs boundary indicator": {
+     "n": 351,
+     "w": 57,
+     "l": 294,
+     "t": 0,
+     "sign_p": 1.3087233044256986e-39,
+     "median_gain": -0.022882689372415027,
+     "mean_gain": -0.03709839271531416
+    },
+    "vs control NDWI gradient": {
+     "n": 351,
+     "w": 50,
+     "l": 301,
+     "t": 0,
+     "sign_p": 8.08262761127201e-45,
+     "median_gain": -0.01851492542039035,
+     "mean_gain": -0.028279810359443536
+    },
+    "vs constant score": {
+     "n": 351,
+     "w": 277,
+     "l": 74,
+     "t": 0,
+     "sign_p": 1.006716081808534e-28,
+     "median_gain": 0.021841928175486774,
+     "mean_gain": 0.017429121252259473
+    },
+    "vs control S2 patch variance": {
+     "n": 351,
+     "w": 147,
+     "l": 204,
+     "t": 0,
+     "sign_p": 0.002746779973885122,
+     "median_gain": -0.0035292833910875888,
+     "mean_gain": 0.0006720736586008423
+    },
+    "vs control NDWI level": {
+     "n": 351,
+     "w": 21,
+     "l": 330,
+     "t": 0,
+     "sign_p": 1.399354305027405e-72,
+     "median_gain": -0.03218549412206471,
+     "mean_gain": -0.058648352118505526
+    }
+   },
+   "predictor residual, cosine (K=8)": {
+    "vs confidence (baseline)": {
+     "n": 351,
+     "w": 9,
+     "l": 342,
+     "t": 0,
+     "sign_p": 8.997204220670621e-89,
+     "median_gain": -0.0450403429292934,
+     "mean_gain": -0.06405202678978168
+    },
+    "vs tile-phase (aligned)": {
+     "n": 351,
+     "w": 7,
+     "l": 344,
+     "t": 0,
+     "sign_p": 5.4569625455023075e-92,
+     "median_gain": -0.04594974121397956,
+     "mean_gain": -0.06291436073972059
+    },
+    "vs boundary indicator": {
+     "n": 351,
+     "w": 49,
+     "l": 302,
+     "t": 0,
+     "sign_p": 1.3320888008990134e-45,
+     "median_gain": -0.03222487651931395,
+     "mean_gain": -0.045183480615470104
+    },
+    "vs control NDWI gradient": {
+     "n": 351,
+     "w": 42,
+     "l": 309,
+     "t": 0,
+     "sign_p": 2.22682295862668e-51,
+     "median_gain": -0.027168596245284914,
+     "mean_gain": -0.03636489825959948
+    },
+    "vs constant score": {
+     "n": 351,
+     "w": 246,
+     "l": 105,
+     "t": 0,
+     "sign_p": 3.563117185414127e-14,
+     "median_gain": 0.014789960827770773,
+     "mean_gain": 0.009344033352103528
+    },
+    "vs control S2 patch variance": {
+     "n": 351,
+     "w": 120,
+     "l": 231,
+     "t": 0,
+     "sign_p": 3.2239620673447945e-09,
+     "median_gain": -0.009430556804193684,
+     "mean_gain": -0.007413014241555102
+    },
+    "vs control NDWI level": {
+     "n": 351,
+     "w": 11,
+     "l": 340,
+     "t": 0,
+     "sign_p": 9.597959966599082e-86,
+     "median_gain": -0.0443883599814507,
+     "mean_gain": -0.06673344001866148
+    }
+   },
+   "mean-predictor residual (Mahalanobis top-d)": {
+    "vs confidence (baseline)": {
+     "n": 351,
+     "w": 14,
+     "l": 337,
+     "t": 0,
+     "sign_p": 1.728375075406333e-81,
+     "median_gain": -0.025023940071506656,
+     "mean_gain": -0.049231647593089706
+    },
+    "vs tile-phase (aligned)": {
+     "n": 351,
+     "w": 12,
+     "l": 339,
+     "t": 0,
+     "sign_p": 2.727950107881315e-84,
+     "median_gain": -0.025819348336557513,
+     "mean_gain": -0.0480939815430286
+    },
+    "vs boundary indicator": {
+     "n": 351,
+     "w": 72,
+     "l": 279,
+     "t": 0,
+     "sign_p": 6.92722826977512e-30,
+     "median_gain": -0.015027876413134047,
+     "mean_gain": -0.030363101418778127
+    },
+    "vs control NDWI gradient": {
+     "n": 351,
+     "w": 71,
+     "l": 280,
+     "t": 0,
+     "sign_p": 1.770752827044946e-30,
+     "median_gain": -0.012057124739801618,
+     "mean_gain": -0.021544519062907507
+    },
+    "vs constant score": {
+     "n": 351,
+     "w": 294,
+     "l": 57,
+     "t": 0,
+     "sign_p": 1.3087233044256986e-39,
+     "median_gain": 0.02652296589356578,
+     "mean_gain": 0.024164412548795505
+    },
+    "vs control S2 patch variance": {
+     "n": 351,
+     "w": 157,
+     "l": 194,
+     "t": 0,
+     "sign_p": 0.054509006815369763,
+     "median_gain": -0.001938843333911684,
+     "mean_gain": 0.0074073649551368755
+    },
+    "vs control NDWI level": {
+     "n": 351,
+     "w": 26,
+     "l": 325,
+     "t": 0,
+     "sign_p": 6.848533262600448e-67,
+     "median_gain": -0.024653329122101192,
+     "mean_gain": -0.051913060821969496
+    }
+   },
+   "position-only residual (all patches hidden)": {
+    "vs confidence (baseline)": {
+     "n": 351,
+     "w": 18,
+     "l": 333,
+     "t": 0,
+     "sign_p": 3.020866575021841e-76,
+     "median_gain": -0.03042409201296709,
+     "mean_gain": -0.049921325608557665
+    },
+    "vs tile-phase (aligned)": {
+     "n": 351,
+     "w": 11,
+     "l": 340,
+     "t": 0,
+     "sign_p": 9.597959966599082e-86,
+     "median_gain": -0.029102827776615936,
+     "mean_gain": -0.04878365955849657
+    },
+    "vs boundary indicator": {
+     "n": 351,
+     "w": 60,
+     "l": 291,
+     "t": 0,
+     "sign_p": 1.6278097212692316e-37,
+     "median_gain": -0.018369866698638725,
+     "mean_gain": -0.031052779434246083
+    },
+    "vs control NDWI gradient": {
+     "n": 351,
+     "w": 79,
+     "l": 272,
+     "t": 0,
+     "sign_p": 6.042413481991288e-26,
+     "median_gain": -0.014391151814849467,
+     "mean_gain": -0.022234197078375467
+    },
+    "vs constant score": {
+     "n": 351,
+     "w": 286,
+     "l": 65,
+     "t": 0,
+     "sign_p": 3.399616162243347e-34,
+     "median_gain": 0.023363165158195143,
+     "mean_gain": 0.02347473453332755
+    },
+    "vs control S2 patch variance": {
+     "n": 351,
+     "w": 159,
+     "l": 192,
+     "t": 0,
+     "sign_p": 0.08748573138023132,
+     "median_gain": -0.002026538978312972,
+     "mean_gain": 0.006717686939668917
+    },
+    "vs control NDWI level": {
+     "n": 351,
+     "w": 17,
+     "l": 334,
+     "t": 0,
+     "sign_p": 1.6226378651529333e-77,
+     "median_gain": -0.030637161852773386,
+     "mean_gain": -0.052602738837437456
+    }
+   },
+   "combination conf+predictor (prereg)": {
+    "vs confidence (baseline)": {
+     "n": 351,
+     "w": 46,
+     "l": 305,
+     "t": 0,
+     "sign_p": 5.171705761753572e-48,
+     "median_gain": -0.006859790135537613,
+     "mean_gain": -0.013958822239304936
+    },
+    "vs tile-phase (aligned)": {
+     "n": 351,
+     "w": 40,
+     "l": 311,
+     "t": 0,
+     "sign_p": 3.9443784016962474e-53,
+     "median_gain": -0.006821503960474999,
+     "mean_gain": -0.012821156189243836
+    },
+    "vs boundary indicator": {
+     "n": 351,
+     "w": 142,
+     "l": 209,
+     "t": 0,
+     "sign_p": 0.00041167192542713733,
+     "median_gain": -0.0017695034286377403,
+     "mean_gain": 0.004909723935006643
+    },
+    "vs control NDWI gradient": {
+     "n": 351,
+     "w": 177,
+     "l": 174,
+     "t": 0,
+     "sign_p": 0.9150056067303767,
+     "median_gain": 0.00016037541147100737,
+     "mean_gain": 0.013728306290877264
+    },
+    "vs constant score": {
+     "n": 351,
+     "w": 345,
+     "l": 6,
+     "t": 0,
+     "sign_p": 1.1038978366786859e-93,
+     "median_gain": 0.053633917233083,
+     "mean_gain": 0.05943723790258028
+    },
+    "vs control S2 patch variance": {
+     "n": 351,
+     "w": 280,
+     "l": 71,
+     "t": 0,
+     "sign_p": 1.770752827044946e-30,
+     "median_gain": 0.014993265810689362,
+     "mean_gain": 0.042680190308921645
+    },
+    "vs control NDWI level": {
+     "n": 351,
+     "w": 84,
+     "l": 267,
+     "t": 0,
+     "sign_p": 2.420913431777561e-23,
+     "median_gain": -0.005530865696383096,
+     "mean_gain": -0.016640235468184727
+    }
+   }
+  },
+  "prereg": {
+   "primary_score": "predictor residual, whitened MSE (K=8)",
+   "combination_gain_over_confidence_pooled": -0.02266441771589639,
+   "combination_tiles_better": 46,
+   "combination_tiles_worse": 305,
+   "primary_tiles_better": 12,
+   "primary_tiles_worse": 339,
+   "note": "Bolivia is one flood event; per-tile signs are descriptive, not an exact test"
+  },
+  "best_tally": {
+   "confidence (baseline)": 62,
+   "boundary indicator": 72,
+   "tile-phase (aligned)": 44,
+   "control NDWI gradient": 21,
+   "combination conf+predictor (prereg)": 5,
+   "control NDWI level": 137,
+   "control S2 patch variance": 5,
+   "position-only residual (all patches hidden)": 3,
+   "predictor residual, whitened MSE (K=8)": 1,
+   "mean-predictor residual (Mahalanobis top-d)": 1
+  },
+  "spearman": {
+   "predictor residual, whitened MSE (K=8)": {
+    "confidence (baseline)": {
+     "median": 0.22897176569742944,
+     "min": -0.37019279393173204,
+     "max": 0.7695459334176149
+    },
+    "tile-phase (aligned)": {
+     "median": 0.33740202275600506,
+     "min": -0.28374420564686054,
+     "max": 0.8027444163506112
+    },
+    "boundary indicator": {
+     "median": 0.17467656974294146,
+     "min": -0.42776162790697686,
+     "max": 0.6940676359039192
+    },
+    "control NDWI gradient": {
+     "median": 0.4958743553680263,
+     "min": -0.08235294117647059,
+     "max": 0.8770364517488414
+    }
+   },
+   "predictor residual, cosine (K=8)": {
+    "confidence (baseline)": {
+     "median": 0.15794523441582264,
+     "min": -0.34930151706700385,
+     "max": 0.7323345975558365
+    },
+    "tile-phase (aligned)": {
+     "median": 0.23644332069110832,
+     "min": -0.2902886641382217,
+     "max": 0.7983902233459756
+    },
+    "boundary indicator": {
+     "median": 0.10682962910781588,
+     "min": -0.5722069597069597,
+     "max": 0.6211001282636047
+    },
+    "control NDWI gradient": {
+     "median": 0.4045564686051412,
+     "min": -0.27429864253393665,
+     "max": 0.8376369574378425
+    }
+   },
+   "mean-predictor residual (Mahalanobis top-d)": {
+    "confidence (baseline)": {
+     "median": 0.20935702936370168,
+     "min": -0.5566562267269258,
+     "max": 0.7505488832701224
+    },
+    "tile-phase (aligned)": {
+     "median": 0.30680634554923564,
+     "min": -0.6120372165148285,
+     "max": 0.7136043433032371
+    },
+    "boundary indicator": {
+     "median": 0.22315584898110832,
+     "min": -0.3414370390018466,
+     "max": 0.7314068029664361
+    },
+    "control NDWI gradient": {
+     "median": 0.38573324905183315,
+     "min": -0.21699208374051462,
+     "max": 0.8035134850400338
+    }
+   },
+   "position-only residual (all patches hidden)": {
+    "confidence (baseline)": {
+     "median": 0.15387258082986602,
+     "min": -0.4806368023178707,
+     "max": 0.6533902233459756
+    },
+    "tile-phase (aligned)": {
+     "median": 0.210192793931732,
+     "min": -0.4919200987543485,
+     "max": 0.6643642200974879
+    },
+    "boundary indicator": {
+     "median": 0.20206384323640963,
+     "min": -0.3498798988621998,
+     "max": 0.7327141989459041
+    },
+    "control NDWI gradient": {
+     "median": 0.2347518009683896,
+     "min": -0.27764749262536875,
+     "max": 0.7028360724820902
+    }
+   }
+  },
+  "boundary_share": {
+   "errors": 0.7504139072847682,
+   "correct": 0.21356508242346392
+  }
+ },
+ "failures": [],
+ "runtime_s": 29.93575096130371,
+ "n_failures": 0
+}

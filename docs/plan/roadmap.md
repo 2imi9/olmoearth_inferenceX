@@ -25,7 +25,11 @@ coupling would run through the map's conventions, not memorised scenes.
 The target space itself is degenerate: the target encoder is the untouched
 random initialisation and its targets have effective rank 2 on real scenes
 (exp32, `exp/out/exp32_summary.json`), which is why nothing read off the
-decoder side carries per-patch information (issues #10, #11).
+decoder side carries per-patch information. Re-targeting the frozen encoder
+with a whitened target makes that objective predictable (60-70% of the
+variance from context) and still yields no error signal: the residual is
+input texture (exp33; issue #10 closed, issue #11 carries the
+pretraining-target recommendation).
 
 **What would test it.** Not a decoder-versus-map disagreement count: the
 probe and the shipped decoder share the encoder, so their errors co-locate

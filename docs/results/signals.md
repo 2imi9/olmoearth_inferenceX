@@ -304,6 +304,30 @@ level with the S2 patch-variance control on Bolivia
 
 ---
 
+## Re-targeted latent-MIM residual
+
+**Definition.** The latent-MIM reading of exp28 with a non-degenerate
+target: the frozen encoder's pooled tokens PCA-whitened in their top 64
+directions, a small transformer predictor trained label-free to fill 25%
+hidden patches from the rest of the unit, and a patch scored by its
+whitened residual over eight quarter masks (exp33, one B200 job, 30 s).
+Part A cross-fits over river-disjoint folds; part B trains on the 600 valid
+tiles.
+
+**Verdict: rejected** on both testbeds, with one constructive fact. The
+target swap makes the objective predictable: the predictor explains 61% of
+the whitened variance from context on held-out rivers and 70% on Bolivia,
+where the shipped decoder's residual was at chance (exp28). But that
+residual is input texture, not error: on the 27 scenes it is 13/14 against
+confidence by scene and 2/6 by river, loses to tile-phase and the boundary
+indicator 4/23 and to the S2 patch-variance control 9/18, and correlates
+with that control at Spearman 0.58; the preregistered combination reaches
+6/2 rivers (p = 0.145). On Sen1Floods11 Bolivia it loses to confidence on
+339 of 351 tiles (pooled E-AURC 0.066 against 0.0105) and the combination
+hurts (46/305) (exp/out/exp33_summary.json).
+
+---
+
 ## Label-free reliability estimation (Dawid-Skene)
 
 **Definition.** Dawid-Skene EM over Nano/Tiny/Base votes on AWF, labels

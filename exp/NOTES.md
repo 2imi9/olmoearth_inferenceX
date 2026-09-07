@@ -38,6 +38,7 @@ Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 | exp30 | last-layer Laplace on the probe head (logit variance, probit-moderated confidence, Gauss-Hermite MI and entropy, bootstrap-head std): rejected on both testbeds; the preregistered confidence+variance combination loses 0/8 rivers (p = 1.0); on the one-scene head the variance is feature norm (Spearman 0.89), on the 128k-patch head the weights are well determined and the variance is still the worst signal |
 | exp31 | feature-space typicality (kNN, Ledoit-Wolf Mahalanobis, PCA residual, class-conditional Mahalanobis, ViM) against the head's training patches, the scene itself (cross-fitted) and a cross-testbed pool: rejected; the preregistered confidence+typicality combination reaches 6/2 rivers (p = 0.145) against WorldCover and hurts on hand labels (60/291 tiles); no typicality score beats confidence on either testbed |
 | exp32 | the latent-MIM target space read from code and measured on CPU: the target encoder is the untouched random initialisation (EMA decay 1.0); on four scenes its targets have random-pair cosine 0.99 and centred effective rank 2.0 against 54 for the online encoder: the mechanism behind exp27 and exp28 |
+| exp33 | context-prediction residual with a whitened target on the frozen encoder: the target swap makes the latent-MIM objective predictable (61% of whitened variance from context on held-out rivers, 70% on Bolivia) but the residual tracks input texture, not error: rejected on both testbeds; U+ 6/2 rivers (p = 0.145), 46/305 Bolivia tiles |
 
 ## exp01 — first E_case map (2026-08-31)
 
@@ -752,3 +753,64 @@ class aliasing of the exp27 gate (class in token norm, prototypes at cosine
 decoder-side signal. Two follow-ups are issues #10 (a predictor with a
 whitened target on frozen features, the last latent-MIM reading with a
 clean target) and #11 (the pretraining-target recommendation).
+
+## exp33 context-prediction residual with a whitened target (2026-09-07)
+
+Question: exp28 read the shipped decoder's masked-token residual and found
+nothing, and exp32 traced that to a target of effective rank 2. Does the
+latent-MIM reading carry error information once the target is not
+degenerate? The frozen encoder's pooled tokens are PCA-whitened in their
+top 64 directions (fitted on the predictor's training units only), a small
+transformer predictor (two pre-norm layers, width 128, learned mask token,
+sinusoidal 2-d positions) is trained label-free to reconstruct hidden
+patches from the rest of the unit (MSE, 25% random masks, Adam 1e-3, 400
+steps), and each patch is scored by its whitened MSE residual over K = 8
+quarter masks (every patch hidden twice, as exp28). Companions: the cosine
+form, the mean predictor (the top-d Mahalanobis distance of exp31) and the
+same predictor with every patch hidden (its position-only prior), which
+gives the context gain 1 - MSE(25% hidden) / MSE(all hidden). Part A
+cross-fits over three river-disjoint folds (Zambezi + Luangwa; Cuando +
+Kafue + Okavango; Rovuma + Save + Shire) with katima in every training
+pool; part B trains on the 600 valid tiles and scores Bolivia. References,
+controls, U+ and the river test as exp28 (exp/harness_ab.py). Preregistered
+null: the residual is a boundary detector. Job 714672, one B200, fp32,
+30 s, 0 failures (a first submission, job 714647, failed in part A on a
+cache-only scene with no river cluster; its part B is the same design).
+Outputs exp/out/exp33_summary.json and exp/out/exp33_context_predictor.csv.
+
+The target swap works. Whitening keeps 78% of the variance in part A and
+69% in part B; the training loss falls from 1.3-1.4 to 0.29 (A) and 0.36
+(B) in whitened units; on held-out rivers the predictor explains a median
+61% of the whitened variance beyond its position-only prior (53% to 66%
+across scenes), and 70% on Bolivia. Against exp28, where the shipped
+decoder's decoded-to-true cosine was 0.469 against 0.431 for a shuffled
+target, the objective is now predictable from context.
+
+The residual is not an error signal. Part A: the whitened residual against
+confidence is 13/14 by scene and 2/6 by river (one-sided p = 0.96), median
+E-AURC 0.0125 against 0.0118; it loses to tile-phase 4/23, to the boundary
+indicator 4/23 and to the S2 patch-variance control 9/18; the
+preregistered combination U+ is 15/12 by scene and 6/2 by river (p =
+0.145), the same 6/2 as exp31's combination and short of the 7/8
+threshold. The cosine form is 9/18, the Mahalanobis top-d 13/14, the
+position-only residual 12/15. Within scenes the residual correlates with
+the S2 patch-variance control (Spearman median 0.58) and the NDWI-gradient
+control (0.53) more than with the boundary indicator (0.29), and not with
+confidence (0.01). Tile-phase against confidence: 8/0 by river, as before.
+Part B (351 scored tiles, head accuracy 0.912): the residual loses to
+confidence 12/339, pooled E-AURC 0.0664 against 0.0105; U+ 46/305 (pooled
+0.0331); Spearman with S2 variance 0.57 pooled, with boundary 0.22.
+
+Reading: what the predictor cannot predict from context is input texture
+(patches whose neighbourhood does not determine them), not model error; the
+preregistered null named the boundary indicator, and the observed correlate
+is texture more than boundary. Two runs of the same design differ by one
+tile in the U+ count (45/306 in job 714647, 46/305 in 714672), GPU
+nondeterminism in the predictor training; the run of record is 714672.
+
+Verdict: rejected as an error signal on both testbeds. The constructive
+half stands for issue #11: normalising the target turns a rank-2 objective
+into one that context predicts at 60-70%, so the pretraining-target
+recommendation is strengthened while the residual-as-error-signal idea is
+closed. A discrete-target variant would ask the same question with the
+same expected answer and is not scheduled.

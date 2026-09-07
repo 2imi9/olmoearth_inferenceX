@@ -80,7 +80,7 @@ beliefs = [
     ("tiling instability and band-set disagreement win against WorldCover only",
      "26/27 scenes, 8/0 rivers; 21/27; both lose on hand labels; three explanations for the gap ruled out", "exp13 17 18 23-25"),
     ("the pretraining target space is degenerate",
-     "the target encoder is the untouched random init; its targets have effective rank 2 on real scenes", "exp32"),
+     "target encoder = untouched random init, targets of effective rank 2; a whitened target is 60-70% predictable from context", "exp32 33"),
 ]
 y0 = 74
 for i, (claim, how, exps) in enumerate(beliefs):
@@ -108,10 +108,10 @@ text(164, 33.4, "expert labels grade signals, never train them\nevery recorded c
 panel(2, 8, 46, 15, "D  Open question", tc=AMBER)
 text(4, 17.5, "why the WorldCover wins do not transfer to hand labels.\nleading hypothesis: WorldCover was a pretraining target, so the\n"
      "probe partly reads out the model's own map; decisive test needs\nadjudicated cells on the 8 rivers (issue #2)", fs=7.3, ha="left", va="top")
-panel(130, 8, 68, 15, "E  Next step", tc=VIOLET)
-text(132, 17.5, "keep OlmoEarth's latent-MIM objective at inference, replace its degenerate target\n"
-     "with a normalised or discrete one, post hoc on the frozen encoder, and read the residual\n"
-     "as an error signal; same test as above, preregistered (exp33; issues #10, #11)", fs=7.3, ha="left", va="top")
+panel(130, 8, 68, 15, "E  Where it stands", tc=VIOLET)
+text(132, 17.5, "the re-targeted latent-MIM residual was tested (exp33): the objective becomes predictable,\n"
+     "the residual is texture, not error. Remaining: the adjudicated-cell test (issue #2) and the\n"
+     "pretraining-target recommendation to Ai2 (issue #11)", fs=7.3, ha="left", va="top")
 
 arrow(48.5, 54, 51.5, 54, color=INK, lw=1.6)
 arrow(126.5, 54, 129.5, 54, color=EMERALD, lw=1.6)
