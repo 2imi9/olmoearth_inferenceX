@@ -14,8 +14,11 @@ exp28) and a patch's score is its mean squared residual in the whitened
 space over the masks that hid it. Two companions from the same forward:
 the residual measured as cosine distance, and the residual of the trivial
 predictor that outputs the mean, which is the top-d Mahalanobis distance of
-exp31; the per-unit context gain 1 - MSE(predictor) / MSE(mean) says
-whether context predicts anything at all.
+exp31, and the residual of the same trained predictor with every patch
+hidden, its position-only prior; the per-unit context gain
+1 - MSE(25% hidden) / MSE(all hidden) says whether context predicts anything
+beyond position, which the zero baseline cannot tell (a position code alone
+learns spatially varying means).
 
 Preregistered: primary score = the whitened MSE residual (K = 8); U+ = mean
 of the within-unit midrank percentiles of confidence and of that score;
@@ -28,13 +31,16 @@ indicator and the S2 patch-variance control is recorded.
 Training sets. Part A: the 27 rule scenes plus the katima training scene,
 cross-fitted over three river-disjoint folds (Zambezi + Luangwa; Cuando +
 Kafue + Okavango; Rovuma + Save + Shire): each scene is scored by a
-predictor that never saw its river; katima is in every training set. Part
+predictor that never saw its river; katima is in every training set. The
+training pools take every rule scene's features whether or not the scene
+passes the eight-error scoring rule, so no evaluation label shapes a fit. Part
 B: the 600 valid-split tiles (the head's training tiles, label-free here),
 scored on Bolivia. No evaluation label enters any fit. Predictor: tokens
 projected to width 128 with a sinusoidal 2-d position code, a learned mask
 token, two pre-norm transformer layers with four heads, an output head to
 the d whitened dimensions, MSE on hidden positions, Adam 1e-3, 400 steps
-with a fresh 25% random mask per unit per step, seed 0. fp32.
+with a fresh 25% random mask per unit per step; seed = fold index in part
+A, 0 in part B. fp32.
 
 Evaluation, controls and scaffolding: exp/harness_ab.py (exp28 pattern).
 Inputs: exp/out/exp11_feats.npz and exp/out/exp18_feats.npz (cluster
@@ -59,9 +65,9 @@ WIDTH, HEADS, LAYERS, FF = 128, 4, 2, 256
 STEPS, LR, MASK_FRAC, BATCH_UNITS = 400, 1e-3, 0.25, 64
 K_ROUNDS = 2                       # 2 rounds x 4 quarters = 8 masks, every patch hidden twice
 FOLDS_A = ({"Zambezi", "Luangwa"}, {"Cuando", "Kafue", "Okavango"}, {"Rovuma", "Save", "Shire"})
-RES, RES_COS, MAHA = ("predictor residual, whitened MSE (K=8)", "predictor residual, cosine (K=8)",
-                      "mean-predictor residual (Mahalanobis top-d)")
-NEW_NAMES = [RES, RES_COS, MAHA]
+RES, RES_COS, MAHA, NOCTX = ("predictor residual, whitened MSE (K=8)", "predictor residual, cosine (K=8)",
+                             "mean-predictor residual (Mahalanobis top-d)", "position-only residual (all patches hidden)")
+NEW_NAMES = [RES, RES_COS, MAHA, NOCTX]
 PRIMARY = RES
 COMBO = "combination conf+predictor (prereg)"
 
@@ -155,6 +161,8 @@ def score_units(model, Z, G, rng):
     cosd = np.zeros((n_units, n_tok))
     cnt = np.zeros((n_units, n_tok))
     Zt = torch.tensor(Z, device=DEV)
+    all_hidden = torch.ones((n_units, n_tok), dtype=torch.bool, device=DEV)
+    nocontext = ((model(Zt, all_hidden) - Zt) ** 2).mean(-1).cpu().numpy()       # position-only prior: no context at all
     for u in range(n_units):
         masks = quarter_masks(n_tok, K_ROUNDS, rng)
         hidden = torch.tensor(masks, device=DEV)
@@ -168,9 +176,10 @@ def score_units(model, Z, G, rng):
     mse /= cnt
     cosd /= cnt
     maha = (Z ** 2).mean(-1)                                   # the mean predictor (zero in whitened space)
-    gain = 1 - mse.mean(1) / np.maximum(maha.mean(1), 1e-12)
+    gain = 1 - mse.mean(1) / np.maximum(nocontext.mean(1), 1e-12)   # against the position-only prior, not the zero predictor
     return {"mse": mse.reshape(n_units, G, G), "cos": cosd.reshape(n_units, G, G), "maha": maha.reshape(n_units, G, G),
-            "context_gain_per_unit": gain}
+            "nocontext": nocontext.reshape(n_units, G, G), "context_gain_per_unit": gain,
+            "gain_vs_zero_per_unit": 1 - mse.mean(1) / np.maximum(maha.mean(1), 1e-12)}
 
 
 # ----------------------------------------------------------------------------- part A
@@ -184,15 +193,18 @@ def part_a(model, args, summary, rows, cache):
             units[name] = hb.scene_unit(ctx, model, name, args, summary)
         except Exception as ex:  # noqa: BLE001
             summary["failures"].append({"part": "A", "unit": name, "error": repr(ex), "traceback": traceback.format_exc()})
-    names = [n for n, u in units.items() if u is not None]
-    feats = {n: units[n]["feats0"].reshape(G * G, D) for n in names}
+    # training pools use every rule scene's shift-0 features (scene_unit computes them before its error filter), so
+    # membership never depends on the evaluation labels; the error filter applies only to which scenes are scored
+    all_names = [n for n in ctx["names"] if f"{n}_base0" in ctx["feats"]]
+    names = [n for n in all_names if units.get(n) is not None]
+    feats = {n: np.asarray(ctx["feats"][f"{n}_base0"], dtype=np.float32).reshape(G * G, D) for n in all_names}
     feats["__katima__"] = ctx["tr_feats"].reshape(G * G, D)
-    folds = FOLDS_A if not args.smoke else tuple({RIVER[n]} for n in names)
+    folds = FOLDS_A if not args.smoke else tuple({RIVER[n]} for n in all_names)
     rng = np.random.default_rng(0)
     scores, diag = {}, {}
     for f, rivers in enumerate(folds):
-        held = [n for n in names if RIVER[n] in rivers]
-        train = [n for n in names if RIVER[n] not in rivers] + ["__katima__"]
+        held = [n for n in names if RIVER[n] in rivers]                              # scored scenes of this fold
+        train = [n for n in all_names if RIVER[n] not in rivers] + ["__katima__"]     # every other river, labels unseen
         if not held:
             continue
         try:
@@ -203,11 +215,14 @@ def part_a(model, args, summary, rows, cache):
             Zev = np.stack([whiten(w, feats[n]) for n in held])
             out = score_units(pred, Zev, G, rng)
             for i, n in enumerate(held):
-                scores[n] = {k: out[k][i] for k in ("mse", "cos", "maha")}
-                diag[n] = {"fold": f, "context_gain": float(out["context_gain_per_unit"][i])}
+                scores[n] = {k: out[k][i] for k in ("mse", "cos", "maha", "nocontext")}
+                diag[n] = {"fold": f, "context_gain_vs_position_only": float(out["context_gain_per_unit"][i]),
+                           "gain_vs_zero_predictor": float(out["gain_vs_zero_per_unit"][i])}
             summary["part_a"].setdefault("folds", {})[str(f)] = {
                 "held": held, "n_train_units": len(train), "var_kept_by_whitening": w["var_kept"],
-                "train_loss_first_last": [trace[0], trace[-1]], "mean_context_gain_held": float(out["context_gain_per_unit"].mean())}
+                "train_loss_first_last": [trace[0], trace[-1]], "seed": f,
+                "mean_context_gain_vs_position_only_held": float(out["context_gain_per_unit"].mean()),
+                "mean_gain_vs_zero_predictor_held": float(out["gain_vs_zero_per_unit"].mean())}
             print(f"fold {f}: whitening keeps {w['var_kept']:.3f} of variance; train loss {trace[0]:.3f} -> {trace[-1]:.3f}; "
                   f"held-out context gain {out['context_gain_per_unit'].mean():.3f}", flush=True)
         except Exception as ex:  # noqa: BLE001
@@ -220,15 +235,16 @@ def part_a(model, args, summary, rows, cache):
         try:
             unit = units[name]
             sigs = hb.base_signals_a(unit, ctx)
-            sigs[RES], sigs[RES_COS], sigs[MAHA] = scores[name]["mse"], scores[name]["cos"], scores[name]["maha"]
+            sigs[RES], sigs[RES_COS], sigs[MAHA], sigs[NOCTX] = (scores[name]["mse"], scores[name]["cos"],
+                                                                  scores[name]["maha"], scores[name]["nocontext"])
             sigs[COMBO] = hb.combination(sigs, PRIMARY)
-            for k, key in ((RES, "mse"), (RES_COS, "cos"), (MAHA, "maha")):
+            for k, key in ((RES, "mse"), (RES_COS, "cos"), (MAHA, "maha"), (NOCTX, "nocontext")):
                 cache[f"{name}_{key}"] = np.asarray(sigs[k], dtype=np.float32)
             cache[f"{name}_err"] = unit["err"].astype(np.float32)
             val = hb.score_scene(unit, sigs, rows, per, rho_per, NEW_NAMES)
             diag[name]["spearman_residual_vs_s2_variance"] = hb.exp14.spearman(sigs[RES].flatten(), sigs[hb.CTRL_VAR].flatten())
             print(f"{name}: {unit['n_err']} errors, conf {val[CONF]:.4f} tile {val[TILE]:.4f} residual {val[RES]:.4f} "
-                  f"maha {val[MAHA]:.4f} U+ {val[COMBO]:.4f} | gain {diag[name]['context_gain']:.3f}", flush=True)
+                  f"maha {val[MAHA]:.4f} U+ {val[COMBO]:.4f} | context gain {diag[name]['context_gain_vs_position_only']:.3f}", flush=True)
         except Exception as ex:  # noqa: BLE001
             summary["failures"].append({"part": "A", "unit": name, "error": repr(ex), "traceback": traceback.format_exc()})
             print(f"{name}: FAILED {ex!r}", flush=True)
@@ -252,13 +268,15 @@ def part_b(model, args, summary, rows, cache):
     out = score_units(pred, Zev, G, np.random.default_rng(0))
     summary["part_b"]["predictor"] = {"n_train_tiles": int(len(Ztr)), "var_kept_by_whitening": w["var_kept"],
                                       "train_loss_first_last": [trace[0], trace[-1]],
-                                      "mean_context_gain_bolivia": float(out["context_gain_per_unit"].mean()),
-                                      "median_context_gain_bolivia": float(np.median(out["context_gain_per_unit"]))}
+                                      "seed": 0, "d": args.d,
+                                      "mean_context_gain_vs_position_only_bolivia": float(out["context_gain_per_unit"].mean()),
+                                      "median_context_gain_vs_position_only_bolivia": float(np.median(out["context_gain_per_unit"])),
+                                      "mean_gain_vs_zero_predictor_bolivia": float(out["gain_vs_zero_per_unit"].mean())}
     print(f"part B: whitening keeps {w['var_kept']:.3f}; train loss {trace[0]:.3f} -> {trace[-1]:.3f}; "
-          f"Bolivia context gain mean {out['context_gain_per_unit'].mean():.3f}", flush=True)
+          f"Bolivia context gain vs position-only {out['context_gain_per_unit'].mean():.3f}", flush=True)
     sigs = hb.base_signals_b(ctx)
-    sigs[RES], sigs[RES_COS], sigs[MAHA] = out["mse"], out["cos"], out["maha"]
-    for k, key in ((RES, "mse"), (RES_COS, "cos"), (MAHA, "maha")):
+    sigs[RES], sigs[RES_COS], sigs[MAHA], sigs[NOCTX] = out["mse"], out["cos"], out["maha"], out["nocontext"]
+    for k, key in ((RES, "mse"), (RES_COS, "cos"), (MAHA, "maha"), (NOCTX, "nocontext")):
         cache[f"bolivia_{key}"] = np.asarray(sigs[k], dtype=np.float32)
     cache["bolivia_err"] = ctx["err"].astype(np.float32)
     cache["bolivia_ok"] = ctx["ok"]
@@ -274,7 +292,8 @@ def main():
         ap.add_argument("--d", type=int, default=D_WHITE, help=f"whitened dimensions (default {D_WHITE})")
     args = hb.make_parser(__doc__, extra).parse_args()
     args.steps = args.steps or (60 if args.smoke else STEPS)
-    config = {"whitening": f"PCA whitening in the top {D_WHITE} directions, fitted on the predictor's training units",
+    config = {"whitening": f"PCA whitening in the top {args.d} directions, fitted on the predictor's training units",
+              "d": args.d, "fold_seeds_a": "fold index (0, 1, 2)", "seed_b": 0,
               "predictor": f"width {WIDTH}, {LAYERS} pre-norm transformer layers, {HEADS} heads, ff {FF}, sinusoidal 2-d positions, learned mask token",
               "training": f"MSE on hidden positions, {MASK_FRAC} random mask per unit per step, Adam {LR}, {args.steps} steps, batch {BATCH_UNITS} units",
               "scoring": f"{K_ROUNDS} rounds of 4 disjoint quarter masks (K = {4 * K_ROUNDS}), every patch hidden {K_ROUNDS} times",
