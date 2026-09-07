@@ -38,7 +38,8 @@ Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 | exp30 | last-layer Laplace on the probe head (logit variance, probit-moderated confidence, Gauss-Hermite MI and entropy, bootstrap-head std): rejected on both testbeds; the preregistered confidence+variance combination loses 0/8 rivers (p = 1.0); on the one-scene head the variance is feature norm (Spearman 0.89), on the 128k-patch head the weights are well determined and the variance is still the worst signal |
 | exp31 | feature-space typicality (kNN, Ledoit-Wolf Mahalanobis, PCA residual, class-conditional Mahalanobis, ViM) against the head's training patches, the scene itself (cross-fitted) and a cross-testbed pool: rejected; the preregistered confidence+typicality combination reaches 6/2 rivers (p = 0.145) against WorldCover and hurts on hand labels (60/291 tiles); no typicality score beats confidence on either testbed |
 | exp32 | the latent-MIM target space read from code and measured on CPU: the target encoder is the untouched random initialisation (EMA decay 1.0); on four scenes its targets have random-pair cosine 0.99 and centred effective rank 2.0 against 54 for the online encoder: the mechanism behind exp27 and exp28 |
-| exp33 | context-prediction residual with a whitened target on the frozen encoder: the target swap makes the latent-MIM objective predictable (61% of whitened variance from context on held-out rivers, 70% on Bolivia) but the residual tracks input texture, not error: rejected on both testbeds; U+ 6/2 rivers (p = 0.145), 46/305 Bolivia tiles |
+| exp33 | context-prediction residual with a whitened target on the frozen encoder: the target swap makes the latent-MIM objective predictable (57% of whitened variance from context on held-out rivers, 70% on Bolivia) but the residual tracks input texture, not error: rejected on both testbeds; U+ 6/2 rivers (p = 0.145), 45/306 Bolivia tiles |
+| exp34 | three further readings of the re-targeted objective: discrete-target NLL and predictive entropy (k-means, HuBERT-style), gap-masked residual (3x3 hole, Latent MIM-style), residual along the decision direction: all rejected on both testbeds; the preregistered entropy combination 0/8 rivers; the gap residual is the only variant at parity with confidence on WorldCover (13/14, 4/4 rivers) and it still tracks texture |
 
 ## exp01 — first E_case map (2026-08-31)
 
@@ -770,43 +771,47 @@ form, the mean predictor (the top-d Mahalanobis distance of exp31) and the
 same predictor with every patch hidden (its position-only prior), which
 gives the context gain 1 - MSE(25% hidden) / MSE(all hidden). Part A
 cross-fits over three river-disjoint folds (Zambezi + Luangwa; Cuando +
-Kafue + Okavango; Rovuma + Save + Shire) with katima in every training
-pool; part B trains on the 600 valid tiles and scores Bolivia. References,
-controls, U+ and the river test as exp28 (exp/harness_ab.py). Preregistered
-null: the residual is a boundary detector. Job 714672, one B200, fp32,
-30 s, 0 failures (a first submission, job 714647, failed in part A on a
-cache-only scene with no river cluster; its part B is the same design).
+Kafue + Okavango; Rovuma + Save + Shire) with katima, which lies on the
+Zambezi, in the two pools that do not hold the Zambezi out; part B trains
+on the 600 valid tiles and scores Bolivia. References, controls, U+ and the
+river test as exp28 (exp/harness_ab.py). Preregistered null: the residual
+is a boundary detector. Run of record: job 714859, one B200, fp32, 32 s, 0
+failures. Earlier runs: 714647 failed in part A on a cache-only scene with
+no river cluster; 714672 had katima in every pool, which the Codex review
+of exp34 flagged as not strictly river-disjoint for the Zambezi fold
+(every count below moved by at most one scene between 714672 and 714859).
 Outputs exp/out/exp33_summary.json and exp/out/exp33_context_predictor.csv.
 
 The target swap works. Whitening keeps 78% of the variance in part A and
-69% in part B; the training loss falls from 1.3-1.4 to 0.29 (A) and 0.36
-(B) in whitened units; on held-out rivers the predictor explains a median
-61% of the whitened variance beyond its position-only prior (53% to 66%
-across scenes), and 70% on Bolivia. Against exp28, where the shipped
+69% in part B; the training loss falls from 1.3-1.4 to 0.29-0.33 (A) and
+0.36 (B) in whitened units; on held-out rivers the predictor explains a
+median 57% of the whitened variance beyond its position-only prior (48% to
+66% across scenes; 52% on the Zambezi fold, whose pool lacks katima), and
+70% on Bolivia. Against exp28, where the shipped
 decoder's decoded-to-true cosine was 0.469 against 0.431 for a shuffled
 target, the objective is now predictable from context.
 
 The residual is not an error signal. Part A: the whitened residual against
 confidence is 13/14 by scene and 2/6 by river (one-sided p = 0.96), median
-E-AURC 0.0125 against 0.0118; it loses to tile-phase 4/23, to the boundary
-indicator 4/23 and to the S2 patch-variance control 9/18; the
-preregistered combination U+ is 15/12 by scene and 6/2 by river (p =
+E-AURC 0.0126 against 0.0118; it loses to tile-phase 4/23, to the boundary
+indicator 3/24 and to the S2 patch-variance control 11/16; the
+preregistered combination U+ is 14/13 by scene and 6/2 by river (p =
 0.145), the same 6/2 as exp31's combination and short of the 7/8
 threshold. The cosine form is 9/18, the Mahalanobis top-d 13/14, the
-position-only residual 12/15. Within scenes the residual correlates with
-the S2 patch-variance control (Spearman median 0.58) and the NDWI-gradient
-control (0.53) more than with the boundary indicator (0.29), and not with
-confidence (0.01). Tile-phase against confidence: 8/0 by river, as before.
+position-only residual 13/14. Within scenes the residual correlates with
+the S2 patch-variance control (Spearman median 0.56) and the NDWI-gradient
+control (0.45) more than with the boundary indicator (0.31), and not with
+confidence (0.03). Tile-phase against confidence: 8/0 by river, as before.
 Part B (351 scored tiles, head accuracy 0.912): the residual loses to
-confidence 12/339, pooled E-AURC 0.0664 against 0.0105; U+ 46/305 (pooled
+confidence 12/339, pooled E-AURC 0.0664 against 0.0105; U+ 45/306 (pooled
 0.0331); Spearman with S2 variance 0.57 pooled, with boundary 0.22.
 
 Reading: what the predictor cannot predict from context is input texture
 (patches whose neighbourhood does not determine them), not model error; the
 preregistered null named the boundary indicator, and the observed correlate
-is texture more than boundary. Two runs of the same design differ by one
-tile in the U+ count (45/306 in job 714647, 46/305 in 714672), GPU
-nondeterminism in the predictor training; the run of record is 714672.
+is texture more than boundary. Runs of the same design differ by one tile
+in the Bolivia U+ count (45/306 in jobs 714647 and 714859, 46/305 in
+714672), GPU nondeterminism in the predictor training.
 
 Verdict: rejected as an error signal on both testbeds. The constructive
 half stands for issue #11: normalising the target turns a rank-2 objective
@@ -814,3 +819,72 @@ into one that context predicts at 60-70%, so the pretraining-target
 recommendation is strengthened while the residual-as-error-signal idea is
 closed. A discrete-target variant would ask the same question with the
 same expected answer and is not scheduled.
+
+## exp34 three further readings of the re-targeted objective (2026-09-07)
+
+Question: exp33 established that a whitened target makes the latent-MIM
+objective predictable and that its residual ranks input texture. Do the
+readings of the proposal that ask a different question fare better? (a)
+Discrete target, HuBERT-style: k-means with K = 128 over the whitened
+training tokens, a cluster predictor trained with cross-entropy on 25%
+hidden patches, scored by the true-cluster NLL and by the predictive
+entropy of the cluster distribution, which needs no true token. (b) Gap
+masking, Latent MIM-style: 3x3 holes centred on a stride-6 lattice, 36
+phases so every patch is a hole centre once, the residual scored at the
+centre only, the predictor trained on hole masks with the loss on centres.
+(c) The exp33 residual projected onto the water head's weight direction in
+whitened coordinates. The exp33 residual is recomputed as the reference
+variant. Whitening, predictor, folds, controls, U+ and the river test as
+exp33; preregistered primary = the predictive entropy; null = every variant
+tracks S2 patch variance and the boundary indicator. Job 714849, one B200,
+fp32, 50 s, 0 failures (a first run, job 714823, had katima in every pool;
+the Codex review pointed out that katima lies on the Zambezi, so the rerun
+keeps it out of the Zambezi-held-out pool and the numbers below are the
+rerun's; the two runs agree to within one scene on every count). Outputs
+exp/out/exp34_summary.json and exp/out/exp34_retarget_variants.csv;
+exp/exp34_retarget_variants.py. The correlations with the two controls use
+tie-averaged ranks (oe_inferencex.stats.spearman), since the boundary
+indicator has nine levels; the harness's per-reference Spearman columns
+keep exp14's positional form.
+
+Part A (27 rule scenes). The preregistered combination U+ (confidence +
+entropy) loses to confidence 7/20 by scene and 0/8 by river (p = 1.0); the
+entropy alone is 5/22 and 1/7 (median E-AURC 0.0431 against 0.0118 for
+confidence and 0.0467 for the constant score), the cluster NLL 8/19 and
+2/6, the decision-direction residual 11/16 and 2/6 (the retained whitened
+subspace carries 98-99% of the head's training logit variance, so the
+projection loses little), the exp33 residual 13/14 and 2/6 (median 0.0126,
+exp33 gave 0.0125: GPU nondeterminism in the predictor training). The
+gap-masked residual is the only variant at parity with confidence, 13/14
+by scene and 4/4 by river (p = 0.64), median 0.0085, best on 2 scenes; it
+loses to tile-phase 6/21 and to the boundary indicator 5/22 (tile-phase
+against confidence 8/0 by river, as before). Correlates within scenes
+(medians, tie-averaged ranks): the gap residual keeps most of the texture
+correlation (Spearman 0.43 with S2 variance, 0.35 with boundary, against
+0.56 and 0.37 for the exp33 residual); the entropy and the NLL are nearly
+free of it (0.05 and 0.14 with S2 variance; 0.03 and 0.18 with boundary)
+and of confidence (-0.19, -0.12), so their failure is not texture:
+context-uncertainty about a patch's cluster is simply unrelated to the
+probe's errors. Caveat for the
+entropy in part A: the cluster predictor overfits its 20 training scenes
+(training cross-entropy 0.2 nats against a held-out NLL of 3.9, one nat
+below chance at log K = 4.85, with a predictive entropy of 1.5), so its
+uncertainty is overconfident there.
+
+Part B (Sen1Floods11 Bolivia, 351 scored tiles). The cluster predictor is
+roughly calibrated here (held-out NLL 1.69 against entropy 1.88; training
+cross-entropy 1.39 on 600 tiles) and the null holds: entropy 17/334
+against confidence (pooled E-AURC 0.072 against 0.0105), U+ 60/290
+(0.033); NLL 14/337; gap residual 22/329 (0.064; Spearman 0.60 with S2
+variance); decision-direction residual 8/343 (0.080; Spearman 0.03 with S2
+variance and 0.09 with boundary, so noise with respect to everything
+measured; the subspace carries 95% of the training logit variance); exp33
+residual 12/339.
+
+Verdict: rejected on both testbeds, all three readings. With exp28 (frozen
+target), exp33 (whitened target) and exp34 (discrete target, gap masking,
+decision direction), no reading of OlmoEarth's latent-MIM objective at
+inference ranks the probe's errors better than its confidence; the family
+is closed for this checkpoint. What survives is the exp33 measurement that
+a normalised target makes the objective predictable, which is the
+pretraining recommendation of issue #11.

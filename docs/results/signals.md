@@ -315,16 +315,29 @@ Part A cross-fits over river-disjoint folds; part B trains on the 600 valid
 tiles.
 
 **Verdict: rejected** on both testbeds, with one constructive fact. The
-target swap makes the objective predictable: the predictor explains 61% of
+target swap makes the objective predictable: the predictor explains 57% of
 the whitened variance from context on held-out rivers and 70% on Bolivia,
 where the shipped decoder's residual was at chance (exp28). But that
 residual is input texture, not error: on the 27 scenes it is 13/14 against
-confidence by scene and 2/6 by river, loses to tile-phase and the boundary
-indicator 4/23 and to the S2 patch-variance control 9/18, and correlates
-with that control at Spearman 0.58; the preregistered combination reaches
-6/2 rivers (p = 0.145). On Sen1Floods11 Bolivia it loses to confidence on
-339 of 351 tiles (pooled E-AURC 0.066 against 0.0105) and the combination
-hurts (46/305) (exp/out/exp33_summary.json).
+confidence by scene and 2/6 by river, loses to tile-phase 4/23, to the
+boundary indicator 3/24 and to the S2 patch-variance control 11/16, and
+correlates with that control at Spearman 0.56; the preregistered
+combination reaches 6/2 rivers (p = 0.145). On Sen1Floods11 Bolivia it
+loses to confidence on 339 of 351 tiles (pooled E-AURC 0.066 against
+0.0105) and the combination hurts (45/306) (exp/out/exp33_summary.json).
+
+**The other readings (exp34).** A discrete target (k-means, K = 128;
+scores: the true-cluster NLL and the predictive entropy), gap masking (3x3
+holes, centre scored) and the residual projected onto the head's decision
+direction, same folds and tests. All rejected: the preregistered entropy
+combination loses 0/8 rivers (p = 1.0) and 60/290 Bolivia tiles; the
+entropy is nearly uncorrelated with texture (Spearman 0.05 with S2
+variance) and still unrelated to error (5/22, 1/7 rivers; 17/334 tiles);
+the gap-masked residual is the one variant at parity with confidence on
+WorldCover (13/14, 4/4 rivers) and loses 22/329 on hand labels while
+keeping the texture correlation (0.43 and 0.60). With exp28, no reading of
+the latent-MIM objective at inference ranks the probe's errors better than
+confidence (exp/out/exp34_summary.json).
 
 ---
 
