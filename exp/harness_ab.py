@@ -15,7 +15,10 @@ copied from exp/exp28_decoder_consistency.py, which stays as it ran; the
 experiment scripts add their own signals and call `finish_part_a` /
 `finish_part_b`. The signal, control and test arithmetic lives in
 oe_inferencex.signals / oe_inferencex.stats; the wrappers here keep the
-exp28 names and the exact exp13 / exp18 code paths on the real grids.
+exp28 names and the exact exp13 / exp18 code paths on the real grids. The
+per-reference Spearman columns use tie-averaged ranks
+(oe_inferencex.stats.spearman) from exp36 on; exp28 to exp34 used exp14's
+positional ranks, which order ties by raster position.
 
 fp32 only: no autocast, no TF32, no compile.
 """
@@ -298,7 +301,7 @@ def score_scene(unit, sigs, rows, per, rho_per, new_names, extra_cols=None):
     ef = err.flatten()
     val = {k: exp13.eaurc(np.asarray(v, dtype=np.float64).flatten(), ef) for k, v in sigs.items()}
     per[name] = val
-    rho_per[name] = {k: {r: exp14.spearman(np.asarray(sigs[k]).flatten(), np.asarray(sigs[r]).flatten()) for r in REFERENCES}
+    rho_per[name] = {k: {r: stats_lib.spearman(np.asarray(sigs[k]).flatten(), np.asarray(sigs[r]).flatten()) for r in REFERENCES}
                      for k in new_names}
     for k in sigs:
         row = {"part": "A", "unit": name, "n_patches": int(ef.size), "n_errors": unit["n_err"], "signal": k,
@@ -349,8 +352,8 @@ def finish_part_a(summary, per, rho_per, new_names, primary, combo):
     summary["part_a"]["best_tally"] = dict(Counter(min(per[s], key=per[s].get) for s in sn))
     summary["part_a"]["median_eaurc"] = {k: float(np.median([per[s][k] for s in sn])) for k in sig_names}
     summary["part_a"]["spearman"] = {
-        k: {r: {"median": float(np.median([rho_per[s][k][r] for s in sn])),
-                "min": float(min(rho_per[s][k][r] for s in sn)), "max": float(max(rho_per[s][k][r] for s in sn))}
+        k: {r: {"median": float(np.nanmedian([rho_per[s][k][r] for s in sn])),
+                "min": float(np.nanmin([rho_per[s][k][r] for s in sn])), "max": float(np.nanmax([rho_per[s][k][r] for s in sn]))}
             for r in REFERENCES}
         for k in new_names if k in sig_names}
     print(f"\npart A: {len(sn)} scenes. E-AURC head-to-head (W/L/T, exact sign p, perm p, median gain):")
@@ -495,7 +498,7 @@ def finish_part_b(summary, rows, ctx, sigs, new_names, primary, combo, ok=None):
             per[k].append(exp18.eaurc(np.asarray(v[t], dtype=np.float64)[m], e))
         for k in new_names:
             for r in REFERENCES:
-                rho[k][r].append(exp14.spearman(np.asarray(sigs[k][t])[m], np.asarray(sigs[r][t])[m]))
+                rho[k][r].append(stats_lib.spearman(np.asarray(sigs[k][t])[m], np.asarray(sigs[r][t])[m]))
     for k in per:
         per[k] = np.array(per[k])
     n_tiles = len(tiles_scored)
@@ -517,8 +520,8 @@ def finish_part_b(summary, rows, ctx, sigs, new_names, primary, combo, ok=None):
                                    "primary_tiles_worse": int(((per[CONF] - per[primary]) < -1e-12).sum()),
                                    "note": "Bolivia is one flood event; per-tile signs are descriptive, not an exact test"}
     summary["part_b"]["best_tally"] = dict(Counter(min(sigs, key=lambda k: per[k][i]) for i in range(n_tiles))) if n_tiles else {}
-    summary["part_b"]["spearman"] = {k: {r: {"median": float(np.median(v)) if v else None, "min": float(min(v)) if v else None,
-                                            "max": float(max(v)) if v else None} for r, v in rr.items()} for k, rr in rho.items()}
+    summary["part_b"]["spearman"] = {k: {r: {"median": float(np.nanmedian(v)) if v else None, "min": float(np.nanmin(v)) if v else None,
+                                            "max": float(np.nanmax(v)) if v else None} for r, v in rr.items()} for k, rr in rho.items()}
     on_b = sigs[BOUND] > 0
     summary["part_b"]["boundary_share"] = {"errors": float(on_b[ok & (err > 0)].mean()) if (ok & (err > 0)).any() else None,
                                            "correct": float(on_b[ok & (err == 0)].mean()) if (ok & (err == 0)).any() else None}

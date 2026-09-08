@@ -109,7 +109,10 @@ def dihedral_probs_tiles(model, tiles, hb_head, crop_px):
 
 
 def lexicographic(conf, boundary):
-    """Boundary patches first ordered by confidence (higher = more suspect), then the interior by confidence."""
+    """Boundary patches first ordered by confidence (higher = more suspect), then the interior by confidence.
+
+    The midrank is taken over whatever set is passed in: one unit for the per-unit scores, the pooled set for pooled
+    estimates (per-unit midranks would not order confidence across units)."""
     c, b = np.asarray(conf, dtype=np.float64), np.asarray(boundary) > 0
     return np.where(b, 2.0, 0.0) + hb.midrank_pct(c).reshape(c.shape)
 
@@ -182,6 +185,16 @@ def part_b(model, args, summary, rows, cache):
                 cap[k].append(c[k])
     rng = np.random.default_rng(1)
     tests = {}
+
+    def pooled_score(k, idx):
+        """Pooled score of signal k over the tiles in idx; the lexicographic rule is rebuilt from the pooled confidence
+        with one global midrank, since per-tile midranks do not order confidence across tiles."""
+        if k == LEX:
+            c_ = np.concatenate([all_sig[CONF][i] for i in idx])
+            b_ = np.concatenate([all_sig[BOUND][i] for i in idx])
+            return lexicographic(c_, b_)
+        return np.concatenate([all_sig[k][i] for i in idx])
+
     for k in (LEX, DIH, BOUND, TILE):
         tests[k] = {}
         for b in BUDGETS:
@@ -194,10 +207,11 @@ def part_b(model, args, summary, rows, cache):
                 e = np.concatenate([all_err[i] for i in pick])
                 if e.sum() == 0:
                     continue
-                s_, c_ = np.concatenate([all_sig[k][i] for i in pick]), np.concatenate([all_sig[CONF][i] for i in pick])
+                s_, c_ = pooled_score(k, pick), np.concatenate([all_sig[CONF][i] for i in pick])
                 boot.append(capture_at_budget_expected(s_, e, (b,))[b] - capture_at_budget_expected(c_, e, (b,))[b])
             g = np.array(boot)
-            pooled_sig, pooled_err = np.concatenate(all_sig[k]), np.concatenate(all_err)
+            everything = np.arange(len(all_err))
+            pooled_sig, pooled_err = pooled_score(k, everything), np.concatenate(all_err)
             pooled_conf = np.concatenate(all_sig[CONF])
             tests[k][str(b)] = {"w": w, "l": l, "t": t_, "sign_p": sign_test(w, l, "greater" if one_sided else "two-sided"), "one_sided": one_sided,
                                 "pooled": capture_at_budget_expected(pooled_sig, pooled_err, (b,))[b],
