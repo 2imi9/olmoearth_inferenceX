@@ -70,7 +70,7 @@ beliefs = [
     ("the model's own confidence is the best label-free error ranker",
      "negative logit margin; best on every expert-labelled testbed (AWF, Sen1Floods11, fine-tuned model)", "exp04 16 18 21"),
     ("errors concentrate on prediction boundaries: 75% of errors vs 20% of correct",
-     "a triage cue, not a ranker; at a 5% review budget it captures slightly more errors than confidence on hand labels", "exp14 16 18 20 35"),
+     "a triage cue, not a ranker; reviewing boundary windows first, then by confidence, captures more errors at 5-10% budgets on hand labels", "exp14 16 18 20 35 36"),
     ("the fine-tuned model is overconfident, so an accuracy needs a coverage",
      "0.93 accurate where it claims 0.99 (ECE 0.08); abstaining on the least confident 20% gives 0.945", "exp21"),
     ("the served product exports no class confidence; outputs sit on the patch lattice",

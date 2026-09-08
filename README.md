@@ -51,7 +51,9 @@ reference has no water at all, which is why the no-model control wins there.
   reference instability, the year gap and seasonal water were each tested and
   rejected (exp23, exp24, exp25). **Main open question.**
 - **Errors concentrate at prediction boundaries** — 75% against 20% — but
-  confidence still ranks them better (exp14, exp16, exp18).
+  confidence still ranks them better (exp14, exp16, exp18). Reviewing the
+  boundary windows first, then by confidence, captures more of the errors
+  at 5% and 10% review budgets on hand labels (exp36).
 - **Two runs help only if they see the input differently**, not if one is more
   accurate; same-family models err together (exp07, exp10, exp17, exp19).
 - **The served product exports no class confidence**, so boundary fraction is
@@ -66,7 +68,7 @@ uv run python exp/exp02_full_slice.py
 uv run pytest                           # the assessment layer against the recorded numbers
 ```
 
-Experiments are `exp01`–`exp31` in [`exp/`](exp/), with outputs under
+Experiments are `exp01`–`exp36` in [`exp/`](exp/), with outputs under
 `exp/out/`. The supported machinery (confidence, boundary triage, the
 AURC harness, the controls and tests) is the package
 [`oe_inferencex/`](oe_inferencex/), torch-free and covered by `tests/`. Torch is pinned per platform — Linux resolves the cu128 build.

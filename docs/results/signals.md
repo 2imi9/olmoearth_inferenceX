@@ -85,9 +85,27 @@ against 0.259 for confidence (bootstrap CI [+0.009, +0.046]; by tile
 181/147/23, p = 0.068), beating both pixel controls there; by the 20%
 budget it is behind (0.667 against 0.749). Secondary, not preregistered.
 
+**Boundary first, then confidence (exp36).** The reviewer's rule that
+follows from exp35: order the boundary windows by confidence, then the
+interior by confidence, no parameter. Preregistered against confidence at
+the 5% and 10% budgets. On Sen1Floods11 Bolivia it captures 0.274 of the
+errors at 5% against 0.259 (per tile 85 better, 31 worse, 235 tied,
+one-sided p = 2.7e-7; tile-bootstrap CI of the pooled gain [+0.009,
++0.021]) and 0.494 at 10% against 0.465 (112/48/191, p = 2.3e-7; CI
+[+0.015, +0.039]); at 20% it is no longer ahead pooled (0.732 against
+0.749, CI spanning zero). The ties are the tiles where the least-confident
+windows already are boundary windows. On the fine-tuned AWF model (exp21's
+344 windows) it captures exactly what confidence captures at 5% on both
+crops, because there the 17 least-confident windows are all boundary
+windows, and no more at 10 or 20%. On AURC it loses to confidence on
+both testbeds (pooled E-AURC 0.0165 against 0.0105 on Bolivia; 0.037
+against 0.026 on AWF) and beats it against WorldCover (25/2 scenes, 8/0
+rivers), as the boundary indicator does.
+
 **Verdict: supported as a triage cue, not as a ranker.** It says *where*
-errors live, and at the tightest budget it points a reviewer at slightly
-more errors than confidence does. It is also the only label-free cue
+errors live, and at the tightest budgets the boundary-first order points a
+reviewer at 1.5 to 3 points more of the errors than confidence does on hand
+labels, and at the same errors on the fine-tuned model. It is also the only label-free cue
 available on the served LCC product, which exports no class confidence
 (exp20).
 
@@ -235,6 +253,30 @@ pathology; perturbations that remove content measure context reliance
 instead.*
 
 ---
+
+## Dihedral consistency
+
+**Definition.** OlmoEarth v1 was pretrained with flip-and-rotate
+augmentation, so predictions on the eight flips and rotations of a window
+should agree. Each transformed window is encoded and scored by the same
+head, the probability map is mapped back to the window's frame, and the
+signal is the standard deviation over the eight maps (exp36, one B200 job,
+429 s; the identity transform reproduces the cached probabilities to a
+maximum absolute difference of 0.013 on the scenes and 0.007 on Bolivia,
+and all eight maps of a window share one forward path).
+
+**Verdict: rejected.** Against confidence it is 17/10 by scene but 4/4 by
+river (one-sided p = 0.64), 154/196 by Bolivia tile with a pooled E-AURC of
+0.0110 against 0.0105, and below confidence at every review budget (pooled
+intervals below zero). It loses to tile-phase 5/22 (0/8 rivers) against
+WorldCover. Its Spearman with confidence is 0.67 on the scenes and 0.94 on
+Bolivia: a smoothed confidence, not a second view. The preregistered
+confidence+dihedral combination is 4/4 rivers; on Bolivia it is 201/148 by
+tile with a worse pooled E-AURC (0.0223), a per-tile edge that does not
+survive pooling (exp/out/exp36_summary.json).
+
+---
+
 
 ## Decoder self-consistency
 

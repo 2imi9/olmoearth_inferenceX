@@ -179,6 +179,8 @@ Bolivia) and exposes `explain_review_set(assessment, cues)` in the package.
 | Does the year gap explain them? | exp24 — no |
 | Does seasonal water explain them? | exp25 — no |
 | Does any signal help at a fixed review budget where it does not on AURC? | exp35 — not with preregistered support; boundary at a 5% budget on hand labels is the one small, secondary exception |
+| Does reviewing boundary windows first, then by confidence, beat confidence at fixed budgets? | exp36 — yes at the 5% and 10% budgets on hand labels (preregistered, per tile p = 3e-7 and 2e-7; pooled 0.274 vs 0.259 and 0.494 vs 0.465), not at 20%, and not on the fine-tuned model, where both orders pick the same 5% set; a triage rule, not a ranker |
+| Does dihedral (flip-and-rotate) consistency rank the errors? | exp36 — no; 4/4 rivers, 154/196 Bolivia tiles, Spearman 0.67 to 0.94 with confidence |
 | Does the pretraining objective itself (masked-token decoder error) rank the errors? | exp28 — no, on both testbeds; the frozen targets are near-collinear, so the residual tracks input texture |
 | Does a last-layer posterior over the probe head (Laplace, bootstrap ensemble) rank the errors? | exp30 — no, on both testbeds; the variance is feature norm on the one-scene head and rises with the logit on the 128k-patch head |
 | E_dist formalization: does feature-space typicality against training, same-scene or cross-testbed references rank the errors? | exp31 — no; the confidence + same-scene kNN combination reaches 6/2 rivers (p = 0.145) against WorldCover and hurts on hand labels; only a true pretraining sample remains untested (issue #4; the RCG density upgrade is issue #3, parked) |

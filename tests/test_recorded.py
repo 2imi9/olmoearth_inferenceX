@@ -9,7 +9,7 @@ import pytest
 from oe_inferencex.metrics import (aurc_expected, capture_at_budget, excess_aurc, expected_calibration_error, oracle_aurc,
                                    risk_coverage, selective_accuracy)
 from oe_inferencex.signals import boundary_indicator, confidence
-from oe_inferencex.stats import cluster_bootstrap_difference
+from oe_inferencex.stats import cluster_bootstrap_difference, sign_test
 
 OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "exp", "out")
 
@@ -47,7 +47,8 @@ def test_exp13_table_is_internally_consistent_with_the_oracle():
         assert float(r["aurc"]) - float(r["eaurc"]) == pytest.approx(oracle_aurc(1024, int(r["n_errors"])), abs=1e-9)
 
 
-@pytest.mark.parametrize("name", ["exp28_decoder_consistency.csv", "exp30_laplace_head.csv", "exp31_feature_typicality.csv"])
+@pytest.mark.parametrize("name", ["exp28_decoder_consistency.csv", "exp30_laplace_head.csv", "exp31_feature_typicality.csv",
+                                  "exp36_dihedral_lexicographic.csv"])
 def test_constant_score_rows_equal_error_rate_minus_oracle(name):
     """A constant score ties every unit, so its tie-aware E-AURC is the error rate minus the oracle (parts A and B)."""
     rows = [r for r in csv.DictReader(open(_need(name))) if r["signal"] == "constant score"]
@@ -77,7 +78,7 @@ def test_exp28_and_exp30_share_the_error_set_and_the_reference_signals():
 def test_recorded_prereg_river_tests_are_reproducible_from_the_summaries():
     """The one-sided exact sign test in each summary equals the package's on the stored per-river means."""
     from oe_inferencex.stats import clustered_sign_test
-    for name in ("exp28_summary.json", "exp30_summary.json", "exp31_summary.json"):
+    for name in ("exp28_summary.json", "exp30_summary.json", "exp31_summary.json", "exp36_summary.json"):
         s = json.load(open(_need(name)))
         pr = s["part_a"]["prereg"]["combination_gain_over_confidence"]
         recomputed = clustered_sign_test(pr["per_river"], {})
@@ -110,3 +111,20 @@ def test_exp21_fine_tuned_model_metrics_from_the_per_window_table():
     clusters = np.array([r["task"] for r in rows])
     lo, hi, p_better = cluster_bootstrap_difference(tile, conf, err, clusters)
     assert (lo, hi, p_better) == pytest.approx(ref["bootstrap_vs_confidence (lo, hi, P(signal better))"]["tiling instability (aligned)"], abs=1e-12)
+
+
+def test_exp36_preregistered_budget_tests_are_reproducible_from_the_summary():
+    """The lexicographic rule's one-sided per-tile sign tests at the 5% and 10% budgets (exp36, run of record 716511)."""
+    s = json.load(open(os.path.join(OUT, "exp36_summary.json")))
+    pr = s["part_b"]["prereg_lexicographic"]
+    assert set(pr) == {"0.05", "0.1"}
+    for b, r in pr.items():
+        assert r["one_sided"] and r["w"] + r["l"] + r["t"] == s["part_b"]["n_tiles_scored"] == 351
+        assert r["sign_p"] == pytest.approx(sign_test(r["w"], r["l"], "greater"), rel=1e-9)
+        assert r["pooled"] > r["pooled_confidence"] and r["boot_lo"] > 0
+    assert (pr["0.05"]["w"], pr["0.05"]["l"], pr["0.05"]["t"]) == (85, 31, 235)
+    assert (pr["0.1"]["w"], pr["0.1"]["l"], pr["0.1"]["t"]) == (112, 48, 191)
+    awf = s["part_awf"]["crops"]
+    for crop in ("16", "32"):                                   # the two orders pick the same 5% review set on the AWF model
+        r = awf[crop]["lexicographic_vs_confidence"]["0.05"]
+        assert r["capture_lex"] == pytest.approx(r["capture_confidence"]) and r["boot_lo"] == pytest.approx(0.0)

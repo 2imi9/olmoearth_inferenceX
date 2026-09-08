@@ -369,6 +369,26 @@ detail, not in verdict: on expert labels no signal beats confidence at a
 fixed budget with preregistered support. Details in
 `exp/out/exp35_summary.json`.
 
+## Boundary first, then confidence, at fixed budgets (exp36)
+
+The review order that exp35 suggested, tested where exp35 stopped. Capture
+of the errors inside the most suspect fraction of the windows, the
+boundary-first order against confidence:
+
+| Testbed | 5% | 10% | 20% |
+|---|---|---|---|
+| Sen1Floods11 Bolivia, pooled over 351 tiles | 0.274 vs 0.259, CI [+0.009, +0.021] | 0.494 vs 0.465, CI [+0.015, +0.039] | 0.732 vs 0.749, CI [-0.054, +0.013] |
+| Bolivia per tile, better/worse/tied | 85/31/235, one-sided p = 2.7e-7 | 112/48/191, p = 2.3e-7 | 121/77/153, two-sided p = 0.002 |
+| AWF fine-tuned, 16-px crop, 30-task bootstrap | 0.220 vs 0.220 | 0.390 vs 0.390 | 0.634 vs 0.634 |
+| AWF fine-tuned, 32-px crop | 0.214 vs 0.214 | 0.381 vs 0.429 | 0.571 vs 0.690 |
+| WorldCover scenes, rivers better/worse | 8/0 | 8/0 | 8/0 |
+
+The 5% and 10% Bolivia rows were preregistered (one-sided per-tile sign
+tests, tile bootstrap of the pooled gain); the rest is descriptive. On the
+AWF model the two orders pick the same 5% review set on both crops, so the
+bootstrap interval's lower bound is exactly zero. Source
+`exp/out/exp36_summary.json`.
+
 ## Served land cover change rasters (exp20)
 
 First assessment of a served output: ten 512-px windows (about

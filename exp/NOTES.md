@@ -41,6 +41,7 @@ Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 | exp33 | context-prediction residual with a whitened target on the frozen encoder: the target swap makes the latent-MIM objective predictable (57% of whitened variance from context on held-out rivers, 70% on Bolivia) but the residual tracks input texture, not error: rejected on both testbeds; U+ 6/2 rivers (p = 0.145), 45/306 Bolivia tiles |
 | exp34 | three further readings of the re-targeted objective: discrete-target NLL and predictive entropy (k-means, HuBERT-style), gap-masked residual (3x3 hole, Latent MIM-style), residual along the decision direction: all rejected on both testbeds; the preregistered entropy combination 0/8 rivers; the gap residual is the only variant at parity with confidence on WorldCover (13/14, 4/4 rivers) and it still tracks texture |
 | exp35 | operating points at fixed review budgets (5, 10, 20%): the preregistered test (tiling instability vs confidence at 20% on Bolivia hand labels) is null (116/112/123 tiles, p = 0.42; pooled 0.707 vs 0.749); the boundary indicator captures more errors than confidence at the 5% budget on hand labels (0.286 vs 0.259, bootstrap CI excludes zero, per-tile p = 0.068), the one operating point where a constructed cue beats confidence; it reverses by 20% |
+| exp36 | dihedral consistency (8 flips and rotations) and the boundary-first-then-confidence review order: dihedral consistency is not a better ranker (4/4 rivers vs confidence, 154/196 Bolivia tiles); the lexicographic order captures more errors than confidence at the 5% and 10% budgets on Bolivia hand labels (per tile 85/31/235 and 112/48/191, one-sided p = 3e-7 and 2e-7; pooled gain CI above zero), not at 20%, and gains nothing on the AWF fine-tuned model |
 
 ## exp01 — first E_case map (2026-08-31)
 
@@ -951,3 +952,68 @@ cue does better, boundary at 5% on Bolivia, is small (2.7 points of
 capture), secondary, and reverses at larger budgets, and a no-model control
 shows a comparable pooled win at 20%. Roadmap item 3 closes; the boundary
 indicator's role as a triage cue gains one qualified operating point.
+
+## exp36 dihedral consistency, and boundary first then confidence (2026-09-07)
+
+Two label-free candidates with separate preregistered tests. (1) Dihedral
+consistency: OlmoEarth v1 was pretrained with flip-and-rotate augmentation
+(the checkpoint's transform_config), so predictions on the eight flips and
+rotations of a window should agree; each transformed window is encoded and
+scored by the same head, the probability map is mapped back, and the signal
+is the standard deviation over the eight maps. Preregistered: against
+confidence, one vote per river on the 27 scenes and per tile on Bolivia; U+
+= midrank mean of confidence and dihedral consistency. (2) Boundary first,
+then confidence: exp35 found the boundary indicator beats confidence at a
+5% budget and loses at 20%; the reviewer's rule is lexicographic, boundary
+patches ordered by confidence first, then the interior by confidence, no
+parameter. Preregistered: capture at the 5% and 10% budgets against
+confidence, per-tile one-sided exact sign tests on Bolivia and a bootstrap
+over the 30 tasks of the fine-tuned AWF model (exp21's table); 20% and the
+WorldCover scenes alongside. exp/exp36_dihedral_lexicographic.py; one B200 job, 716511 on commit a28d29b,
+429 s (a first run, 716293, on e7dd569 had the pooled bootstrap of the
+lexicographic rule built from per-tile midranks, caught in the Codex
+review; its per-tile, river and AWF numbers are identical).
+Outputs exp/out/exp36_summary.json and exp/out/exp36_dihedral_lexicographic.csv.
+
+Dihedral consistency. Part A: against confidence 17/10 by scene and 4/4 by
+river (one-sided p = 0.64), median E-AURC 0.0077 against 0.0118; it loses
+to tile-phase 5/22 (0/8 rivers) and to the boundary indicator 10/17;
+Spearman with confidence 0.67 and with tile-phase 0.57 (medians). U+ 19/8
+by scene, 4/4 by river. Part B (351 tiles): 154/196 against confidence,
+pooled E-AURC 0.0110 against 0.0105; Spearman with confidence 0.94; U+ is
+201/148 by tile with a worse pooled E-AURC (0.0223), so its per-tile edge
+does not survive pooling. Capture at 5, 10 and 20%: below confidence at
+every budget, pooled intervals below zero. The identity transform
+reproduces the cached probabilities to a maximum absolute difference of
+0.013 in part A (cached exp11 features against a fresh forward pass on the
+B200) and 0.007 in part B (the float16 feature cache); the eight maps of
+a window share one forward path, so the signal is unaffected. Verdict:
+rejected as a ranker; it behaves like a smoothed confidence, not like
+tile-phase.
+
+Boundary first, then confidence. Bolivia hand labels: at the 5% budget it
+beats confidence on 85 tiles, loses on 31 and ties on 235 (one-sided
+p = 2.7e-7; pooled 0.274 against 0.259, tile
+bootstrap CI of the gain [+0.009, +0.021]); at 10% 112/48/191 (p = 2.3e-7; pooled 0.494 against 0.465, CI [+0.015, +0.039]); at 20%
+121/77/153 by tile (two-sided p = 0.002) with the pooled gain no longer
+positive (0.732 against 0.749, CI [-0.054, +0.013]). The ties are the tiles where the least-confident
+windows are already boundary windows, so the two orders pick the same
+review set. On E-AURC it loses to confidence on Bolivia (pooled 0.0165
+against 0.0105), as the boundary indicator does: the gain is an
+operating-point gain, not a ranking gain. AWF fine-tuned model (exp21's
+344 windows, 30 tasks): capture identical to confidence at 5% on both crops
+(0.220 and 0.214; the 17 least-confident windows are all boundary windows),
+equal at 10% on the 16-px crop and behind on the 32-px crop (0.381 against
+0.429), behind at 20% (0.634 against 0.634 and 0.571 against 0.690);
+E-AURC worse (0.037 against 0.026). WorldCover scenes: 25/2 by scene and
+8/0 by river on E-AURC, 8/0 by river on capture at every budget, as the
+boundary indicator's WorldCover wins predict.
+
+Reading: the first preregistered result on expert labels where a
+constructed rule beats confidence, and a bounded one. Ordering the review
+by boundary first and confidence within captures 1.5 to 3 points more of
+the errors at 5% and 10% budgets on Sen1Floods11 Bolivia, gains nothing on
+the AWF point task where the low-margin windows are boundary windows
+anyway, and is behind by 20%. It is a triage rule, consistent with the
+boundary indicator's standing as a triage cue, and it costs nothing at
+inference.
