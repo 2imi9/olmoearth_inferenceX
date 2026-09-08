@@ -389,6 +389,28 @@ AWF model the two orders pick the same 5% review set on both crops, so the
 bootstrap interval's lower bound is exactly zero. Source
 `exp/out/exp36_summary.json`.
 
+## Spectral ambiguity first, then boundary, then confidence (exp38)
+
+The order exp37's enrichment suggested, tested at fixed budgets on exp37's
+per-window tables (CPU; the tables reproduce exp36's counts exactly).
+Capture of the errors, NDWI-first order against the boundary-first order of
+exp36 and against confidence:
+
+| Comparison | 5% | 10% | 20% |
+|---|---|---|---|
+| vs boundary-first, Bolivia per tile (better/worse/tied) | 151/100/100, one-sided p = 7.7e-4 | 146/86/119, p = 4.9e-5 | 119/54/178 |
+| vs boundary-first, Bolivia pooled | 0.292 vs 0.274, CI [-0.002, +0.037] | 0.481 vs 0.494, CI [-0.053, +0.033] | 0.831 vs 0.732, CI [+0.071, +0.130] |
+| vs confidence, Bolivia pooled | 0.292 vs 0.259, CI [+0.014, +0.052] | 0.481 vs 0.465, CI [-0.021, +0.057] | 0.831 vs 0.749, CI [+0.055, +0.107] |
+| vs boundary-first, WorldCover rivers (better/worse) | 2/6 | 3/5 | 3/4 |
+| vs confidence, WorldCover rivers | 4/4 | 4/4 | 6/1 |
+
+The 5% and 10% rows against the boundary-first order were preregistered
+(per-tile one-sided tests and the tile bootstrap of the pooled gain); the
+per-tile tests pass, the pooled bootstrap does not, so the result is mixed.
+The two statistics are two operating modes: a budget per tile against one
+budget over the area, where the ambiguous windows of NDWI-heavy tiles fill
+the set. Source `exp/out/exp38_summary.json`.
+
 ## Served land cover change rasters (exp20)
 
 First assessment of a served output: ten 512-px windows (about

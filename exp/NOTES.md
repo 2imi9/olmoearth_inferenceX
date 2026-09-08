@@ -43,6 +43,7 @@ Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 | exp35 | operating points at fixed review budgets (5, 10, 20%): the preregistered test (tiling instability vs confidence at 20% on Bolivia hand labels) is null (116/112/123 tiles, p = 0.42; pooled 0.707 vs 0.749); the boundary indicator captures more errors than confidence at the 5% budget on hand labels (0.286 vs 0.259, bootstrap CI excludes zero, per-tile p = 0.068), the one operating point where a constructed cue beats confidence; it reverses by 20% |
 | exp36 | dihedral consistency (8 flips and rotations) and the boundary-first-then-confidence review order: dihedral consistency is not a better ranker (4/4 rivers vs confidence, 154/196 Bolivia tiles); the lexicographic order captures more errors than confidence at the 5% and 10% budgets on Bolivia hand labels (per tile 85/31/235 and 112/48/191, one-sided p = 3e-7 and 2e-7; pooled gain CI above zero), not at 20%, and gains nothing on the AWF fine-tuned model |
 | exp37 | cue enrichment on identical windows for the explanation layer: on Bolivia hand labels 95% of error windows carry at least one of five label-free cues (boundary 3.5x, least confident 20% 3.6x, unstable 3.6x, NDWI-ambiguous 7.2x, flip/rotation disagreement 3.5x); inside confidence's 5% review set the boundary and NDWI cues separate error rates (0.46 vs 0.16, 0.51 vs 0.33), the tiling and dihedral cues do not; `oe_inferencex.explain` built |
+| exp38 | spectral ambiguity first, then boundary, then confidence, at fixed budgets (CPU, on exp37's tables): preregistered against the exp36 order on Bolivia, per-tile budgets win at 5% and 10% (151/100/100, p = 8e-4; 146/86/119, p = 5e-5) but one pooled budget does not (0.292 vs 0.274, CI touching zero; 0.481 vs 0.494); clear only at 20% pooled (0.831 vs 0.732); loses to the boundary-first order on the WorldCover rivers (2/6, 3/5, 3/4); mixed, boundary-first stays the supported rule |
 
 ## exp01 — first E_case map (2026-08-31)
 
@@ -1068,3 +1069,49 @@ information inside the review set, and it is task-specific. The library in
 the package now carries these shares (tests check them against the
 summary). Whether an NDWI-first review order captures more errors at a
 budget is a preregistered question for a later experiment.
+
+## exp38 spectral ambiguity first, then boundary, then confidence (2026-09-08)
+
+The order that exp37 suggested: NDWI-ambiguous windows (|patch-mean NDWI|
+< 0.1) first, ordered by confidence, then boundary windows, then the rest.
+Preregistered against exp36's boundary-first order on Bolivia at the 5% and
+10% budgets: per-tile one-sided exact sign tests over the 351 tiles with
+3 <= errors <= n - 3, and one tile bootstrap (2000 resamples over the 440
+tiles with valid windows, shared by every comparison) of the pooled gain
+with the scores rebuilt from a global confidence midrank per resample.
+Secondary: against confidence, the 20% budget, the NDWI-then-confidence
+order, and the 27 WorldCover scenes with one vote per river. Stated
+caveat: the cue was chosen after seeing exp37's Bolivia enrichment on the
+same tiles (its threshold was fixed before exp37; the river vote is the
+check that shares no windows with the choice). Computed locally on CPU from
+exp37's per-window tables, exp/exp38_ndwi_first_order.py, 340 s; the
+tables reproduce exp36's per-tile counts exactly (85/31/235 and
+112/48/191), recorded in the summary. Outputs exp/out/exp38_summary.json
+and exp/out/exp38_ndwi_first.csv (per-unit captures).
+
+Primary. Per tile the NDWI-first order beats the boundary-first order at
+5% (151 better, 100 worse, 100 tied; one-sided p = 7.7e-4) and at 10%
+(146/86/119, p = 4.9e-5). Pooled over the whole testbed it does not: 0.292
+against 0.274 at 5% (CI of the gain [-0.002, +0.037]) and 0.481 against
+0.494 at 10% (CI [-0.053, +0.033]). The two statistics answer different
+operating modes. With a budget per tile the order falls back to boundary
+then confidence wherever a tile has few ambiguous windows and gains from
+them where it has many; with one budget over the whole area the ambiguous
+windows of the NDWI-heavy tiles (8,500 of 82,000 windows carry the cue,
+error rate 0.41) fill the 10% set and crowd out the low-confidence boundary
+windows of the other tiles. Secondary: at 20% the NDWI-first order is
+clearly ahead both ways (119/54/178; pooled 0.831 against 0.732, CI [+0.071,
++0.130]); against confidence it is ahead pooled at 5% (0.292 against 0.259,
+CI [+0.014, +0.052]) and 20% (0.831 against 0.749), not at 10%; the
+NDWI-then-confidence order without the boundary level is within 0.003 of
+it everywhere. WorldCover scenes: against the boundary-first order the
+rivers vote 2/6, 3/5 and 3/4 at the three budgets; against confidence 4/4,
+4/4 and 6/1 (p = 0.062), while the boundary-first order stays 8/0 at every
+budget.
+
+Verdict: mixed, not supported at the preregistered level (the per-tile
+tests pass, the pooled bootstrap does not). The boundary-first order
+remains the supported triage rule. Spectral ambiguity is a task-specific
+cue that explains errors (exp37) and, with a per-tile or a loose budget,
+finds more of them on hand labels; as a global ordering at tight budgets
+it does not, and on the WorldCover reference it hurts.

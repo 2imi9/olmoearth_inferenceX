@@ -58,7 +58,9 @@ three facets of one fact. The fifth cue, spectral ambiguity, is the one
 that tells a reviewer something the ranker did not: it covers a quarter of
 the review set, carries the highest error rate of any cue, and is
 task-specific (water against land), so it is the cue to derive from the
-input for this task and to look for the analogue of in others. Whether
-putting it ahead in the review order captures more errors at a budget is
-a preregistered question for a later experiment, not something this
-measurement shows.
+input for this task and to look for the analogue of in others. Putting it
+ahead in the review order was then tested (exp38, [comparisons.md](comparisons.md#spectral-ambiguity-first-then-boundary-then-confidence-exp38)):
+with a budget per tile it captures more errors than the boundary-first
+order at every budget; with one budget over the whole area it does so only
+at 20%, and on the WorldCover reference it loses. A cue that explains
+errors is not automatically a better order to review them in.

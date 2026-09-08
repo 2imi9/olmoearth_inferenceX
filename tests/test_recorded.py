@@ -152,3 +152,19 @@ def test_exp37_cue_shares_recompute_from_the_per_window_tables():
             assert r["share_errors"] == pytest.approx(rec[cue]["share_errors"], abs=1e-12)
             assert r["share_correct"] == pytest.approx(rec[cue]["share_correct"], abs=1e-12)
             assert rec[cue]["boot_lo"] <= rec[cue]["enrichment"] <= rec[cue]["boot_hi"]
+
+
+def test_exp38_prereg_tests_and_exp36_consistency_from_the_summary():
+    """exp38 (CPU, on exp37's tables): the exp36 consistency check holds and the preregistered per-tile p-values
+    recompute from the counts; the pooled bootstrap at the preregistered budgets does not exclude zero (mixed)."""
+    s = json.load(open(os.path.join(OUT, "exp38_summary.json")))
+    chk = s["part_b"]["exp36_consistency"]
+    assert all(chk[b]["match"] for b in ("0.05", "0.1"))
+    assert tuple(chk["0.05"]["recomputed"]) == (85, 31, 235) and tuple(chk["0.1"]["recomputed"]) == (112, 48, 191)
+    for b in ("0.05", "0.1"):
+        pt, po = s["part_b"]["prereg"][b]["per_tile"], s["part_b"]["prereg"][b]["pooled"]
+        assert pt["one_sided"] and pt["n_units"] == 351
+        assert pt["sign_p"] == pytest.approx(sign_test(pt["w"], pt["l"], "greater"), rel=1e-9)
+        assert pt["w"] > pt["l"] and pt["sign_p"] < 0.001
+        assert po["boot_lo"] <= 0 <= po["boot_hi"]                           # the pooled gain is not established
+    assert s["part_b"]["tests"]["NDWI-ambiguous, then boundary, then confidence vs boundary, then confidence"]["pooled"]["0.2"]["boot_lo"] > 0
