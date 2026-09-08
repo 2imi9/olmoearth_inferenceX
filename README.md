@@ -59,7 +59,7 @@ For the full experiment environment:
 
 ```
 uv sync --extra encoder --extra geo
-uv run python exp/exp02_full_slice.py
+uv run python scripts/audit_one_scene.py   # one scene end to end
 ```
 
 

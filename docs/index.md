@@ -44,7 +44,7 @@ For the full experiment environment:
 
 ```bash
 uv sync --extra encoder --extra geo
-uv run python exp/exp02_full_slice.py
+uv run python scripts/audit_one_scene.py   # one scene end to end
 ```
 
 ## Contact

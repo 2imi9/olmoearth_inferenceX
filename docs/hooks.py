@@ -9,5 +9,5 @@ def on_page_markdown(markdown, page, config, files):
     up = "../" * page.file.src_uri.count("/")
     markdown = markdown.replace("](../../exp/NOTES.md)", f"]({up}LabLog.md)").replace("](../exp/NOTES.md)", f"]({up}LabLog.md)")
     markdown = re.sub(r"\]\((?:\.\./)+exp/out/([^)]+\.png)\)", lambda m: f"]({up}exp_out/{m.group(1)})", markdown)
-    markdown = re.sub(r"\]\((?:\.\./)+(exp|oe_inferencex|tests)/\)", lambda m: f"]({TREE}{m.group(1)})", markdown)
+    markdown = re.sub(r"\]\((?:\.\./)+(exp|oe_inferencex|tests|scripts)/\)", lambda m: f"]({TREE}{m.group(1)})", markdown)
     return markdown

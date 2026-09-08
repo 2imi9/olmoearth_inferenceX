@@ -86,9 +86,12 @@ full pattern, two references at once with controls; the
 uv sync                                 # the package only, no torch
 uv run pytest                           # the package against the recorded numbers
 uv sync --extra encoder --extra geo     # full experiment environment (Linux resolves the cu128 torch build)
-uv run python exp/exp02_full_slice.py   # one scene end to end
+uv run python scripts/audit_one_scene.py   # one scene end to end
 ```
 
+Named entry points live in [`scripts/`](../scripts/); each wraps the numbered
+experiment it runs, so the experiment file stays the record and the script is
+the formal name (`scripts/audit_one_scene.py` runs `exp/exp02_full_slice.py`).
 Experiments are `exp01`–`exp38` in [`exp/`](../exp/), outputs under
 `exp/out/`, chronology in the [lab log](../exp/NOTES.md). Cluster jobs
 follow the pattern in [infrastructure](method/infrastructure.md).
