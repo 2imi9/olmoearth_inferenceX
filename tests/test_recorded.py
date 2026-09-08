@@ -205,3 +205,18 @@ def test_exp40_replication_is_a_recorded_negative():
     assert b["prereg"]["capture_10_pooled"]["boot_hi"] < 0
     PIX, OE = "contradiction (pixel-statistics neighbours)", "contradiction (OlmoEarth neighbours)"
     assert b["pooled_capture"][PIX]["0.1"] > b["pooled_capture"][OE]["0.1"]      # the ordering of the spaces replicates
+
+
+def test_exp41_two_view_disagreement_is_a_recorded_negative():
+    """exp41 (job 726248): outside partners' errors are as correlated with OlmoEarth's as the family's; the primary
+    fails on both tasks."""
+    s = json.load(open(os.path.join(OUT, "exp41_summary.json")))
+    f = s["tasks"]["sen1floods11"]
+    assert f["prereg"]["supported_vs_confidence"] is False and f["falsification_correlation"]["outside_below_family"] is False
+    for m, c in f["error_correlation"].items():
+        assert 0.75 < c["phi_test"] < 0.85 and c["p_err_given_oe_err_test"] > 0.79        # every model errs on the same windows
+    pt = f["prereg"]["capture_10_per_unit"]
+    assert (pt["w"], pt["l"], pt["t"]) == (281, 1263, 35) and pt["sign_p"] == pytest.approx(sign_test(281, 1263, "greater"), rel=1e-9)
+    assert f["pooled_capture"]["weighted disagreement (selected partner)"]["0.1"] < f["pooled_capture"]["confidence (OlmoEarth)"]["0.1"]
+    a = s["tasks"]["awf_sentinel2"]
+    assert a["prereg"]["supported_vs_confidence"] is False and a["prereg"]["boot_p05"] < 0

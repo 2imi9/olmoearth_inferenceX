@@ -91,12 +91,8 @@ carrying the paper links and the concrete test:
 3. **Operating-point analysis instead of AURC** (issue #9): closed by exp35,
    see the Closed table.
 
-4. **An out-of-family rater** (issue #6). exp39 tested AnySat as the
-   neighbourhood space for a contradiction score: it beat confidence but
-   not the same score in OlmoEarth's own space, and its 40 m contextual
-   features are position-dominated on a single date. The remaining case
-   for an outside rater is a second *head* on an outside representation
-   (disagreement between two views), which exp39 did not test.
+4. **An out-of-family rater** (issue #6): closed by exp39 and exp41, see
+   the Closed table. Every encoder errs on the same windows.
 
 5. **A domain-shift testbed with non-trivial errors and expert labels**
    (candidate design: geographic-corner holdout within AWF). The delta scene
@@ -227,6 +223,7 @@ tool returns the structured evidence.
 | Does reviewing boundary windows first, then by confidence, beat confidence at fixed budgets? | exp36 — yes at the 5% and 10% budgets on hand labels (preregistered, per tile p = 3e-7 and 2e-7; pooled 0.274 vs 0.259 and 0.494 vs 0.465), not at 20%, and not on the fine-tuned model, where both orders pick the same 5% set; a triage rule, not a ranker |
 | Does dihedral (flip-and-rotate) consistency rank the errors? | exp36 — no; 4/4 rivers, 154/196 Bolivia tiles, Spearman 0.67 to 0.94 with confidence |
 | Explanation layer, first build | exp37 — five label-free cues measured on identical windows, library and `explain_review_set` in the package; 95% of hand-label errors carry a cue, NDWI ambiguity 7.2x |
+| Does a head on an outside representation of the same windows err where OlmoEarth does not (issue 6, the two-view design)? | exp41 — no; on Sen1Floods11 every model is wrong on 80-82% of OlmoEarth's error windows, outside families and OlmoEarth's own alike (phi 0.77-0.81), and disagreement captures 0.242 vs 0.454 at 10%; the errors belong to the windows |
 | Does putting the most enriched cue (spectral ambiguity) first beat the boundary-first order at fixed budgets? | exp38 — mixed: per-tile budgets yes at 5% and 10% (p = 8e-4, 5e-5), one pooled budget no (0.292 vs 0.274, 0.481 vs 0.494), clear only at 20%; loses on the WorldCover rivers; boundary-first stays the supported rule |
 | Does the model's prediction contradict its predictions on the windows that look most like it (neighbourhood contradiction), and does an outside representation help? | exp39, exp40 — on Bolivia the OlmoEarth-space score passes P1 at 5-10% budgets and the pixel-statistics ablation beats confidence at every budget and on E-AURC; AnySat adds nothing over OlmoEarth's own space (issue 6 answered in the negative for this design); the preregistered replication on the multi-region test split with Bolivia as the bank fails every primary test, so neither score is supported; the open variable is the bank's coverage of the queries |
 | Does the pretraining objective itself (masked-token decoder error) rank the errors? | exp28 — no, on both testbeds; the frozen targets are near-collinear, so the residual tracks input texture |

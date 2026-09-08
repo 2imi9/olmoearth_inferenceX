@@ -223,6 +223,20 @@ beats it.
 
 ![Embedding-level agreement, Kazungula](../../exp/out/exp01_zambezi_agreement.png)
 
+**Two views, two heads (exp41).** The last version of the idea: a probe on
+an outside representation of the *same* windows, from Ai2's row-aligned
+paper embeddings, so that disagreement is between two encoders rather than
+two heads on one. It fails for a reason that closes the family. On
+Sen1Floods11 every model, Clay, Galileo, Panopticon and OlmoEarth's own
+nano, tiny and large, is wrong on 80 to 82% of the windows where the
+OlmoEarth probe is wrong and on about 2% of the others (phi 0.77 to 0.81);
+the partner chosen for the lowest held-out correlation captures 0.242 of
+the errors at a 10% budget against 0.454 for confidence, and loses on 1,263
+of 1,579 chips. On the AWF points the same (0.180 against 0.246). The
+errors belong to the windows, not to the model, which is why a second
+encoder of the same input cannot find them and why the boundary and
+spectral-ambiguity cues explain them.
+
 ---
 
 ## Internal-state signals

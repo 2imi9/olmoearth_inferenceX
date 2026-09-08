@@ -46,6 +46,7 @@ Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 | exp38 | spectral ambiguity first, then boundary, then confidence, at fixed budgets (CPU, on exp37's tables): preregistered against the exp36 order on Bolivia, per-tile budgets win at 5% and 10% (151/100/100, p = 8e-4; 146/86/119, p = 5e-5) but one pooled budget does not (0.292 vs 0.274, CI touching zero; 0.481 vs 0.494); clear only at 20% pooled (0.831 vs 0.732); loses to the boundary-first order on the WorldCover rivers (2/6, 3/5, 3/4); mixed, boundary-first stays the supported rule |
 | exp39 | neighbourhood contradiction (share of a window's 32 nearest neighbours in a disjoint bank that the same head predicts differently) in three embedding spaces: P1 passed, the OlmoEarth-space score beats confidence at the 10% budget on Bolivia hand labels (169/126/56 tiles, p = 0.007; pooled 0.530 vs 0.465, CI above zero); P2, AnySat's local embedding beats confidence but not the OlmoEarth space (159/143, p = 0.19) and its 40 m patch output is position-dominated; the pixel-statistics ablation exceeds both by a wide margin (10%: 214/89/48, pooled 0.682 vs 0.465; E-AURC 219/131 and pooled 0.0093 vs 0.0105, the first hand-label E-AURC win), so the semantic-neighbourhood reading is falsified and the finding is the model's inconsistency across spectrally similar windows; null against WorldCover (rivers 4/4); replication preregistered as exp40 |
 | exp40 | preregistered replication of the pixel-statistics neighbourhood contradiction on the Sen1Floods11 test split (800 tiles, other regions; Bolivia as the bank): fails, worse than confidence at the 10% budget (183/195/105, p = 0.75; pooled 0.530 vs 0.643, CI below zero), at 20% and on E-AURC (215/267, pooled 0.0149 vs 0.0096); the OlmoEarth-space score is far worse (97/301); the Bolivia win did not carry over, so neither contradiction score is supported |
+| exp41 | two-view disagreement from Ai2's paper embeddings (probes per model on identical windows, partner chosen by lowest held-out error correlation): rejected. On Sen1Floods11 every model errs on the same windows, outside families as much as OlmoEarth's own (P(partner wrong | OlmoEarth wrong) 0.80 to 0.82 for Clay, Galileo, Panopticon and for nano/tiny/large; phi 0.77 to 0.81), and disagreement captures 0.242 of the errors at 10% against 0.454 for confidence (281/1263 chips); on AWF (200 points) the same, 0.180 vs 0.246; the errors belong to the windows, not to the model |
 
 ## exp01 — first E_case map (2026-08-31)
 
@@ -1252,3 +1253,61 @@ from the test split, the bank excluding the query's region), not a
 re-reading of this one. Under the protocol both contradiction scores stand
 as Bolivia-only findings: a preregistered pass on one event and a
 preregistered failure on the multi-region split. Neither is supported.
+
+## exp41 two-view disagreement from the paper embeddings (2026-09-08)
+
+The cross-model question that exp07, exp10 and exp39 left: does an outside
+representation err where OlmoEarth does not, so that disagreement between
+two heads on two views flags OlmoEarth's errors? Ai2's
+allenai/olmoearth-paper-embeddings (row-aligned embeddings of 26 models on
+the paper's tasks, with labels) allows the test without an encoder pass.
+One multinomial logistic probe per model (L-BFGS, standardised features)
+fitted on 80% of the valid units; the held-out 20% selects the outside
+partner with the lowest error correlation (phi) with OlmoEarth Base;
+same-family references nano, tiny, large. Preregistered: the selected
+partner's confidence-weighted disagreement against OlmoEarth's confidence
+(top-1 minus top-2 logit), Sen1Floods11 (Sentinel-1 input in this dump,
+64-px chips, 4-px windows labelled by majority, chips as clusters) at the
+10% budget per chip and pooled and on E-AURC per chip, one-sided; AWF
+Sentinel-2 points pooled with a sample bootstrap; falsification if the
+outside partners' error correlation is not below the family references'.
+Limitation stated before the run: no imagery in the dump, so no pixel
+control. exp/exp41_two_view_disagreement.py, one B200 job, 726248 on
+c25273f, 416 s; Codex review before the run fixed a phi overflow, an
+alignment check and the memory plan. Four Sen1Floods11 partners (CROMA,
+TerraMind, CopernicusFM, Satlas) embed the chips on other grids and were
+dropped by the 4-px labelling; three outside partners remained (Clay,
+Galileo, Panopticon). Outputs exp/out/exp41_summary.json, exp41_two_view.csv,
+exp41_cache.npz.
+
+Sen1Floods11 (592,385 test windows, 49,386 errors of the OlmoEarth probe,
+accuracy 0.917; 1,579 chips scored). The falsification fired first: the
+outside partners' errors are as correlated with OlmoEarth's as its own
+family's. On the test split the probability that a partner is wrong where
+OlmoEarth is wrong is 0.80 to 0.82 for every model, Clay, Galileo and
+Panopticon alike, nano, tiny and large alike, against 0.016 to 0.021 where
+OlmoEarth is right; phi 0.77 to 0.81 for all six (held-out selection: Clay
+0.72, family minimum 0.69). The selected partner's weighted disagreement
+captures 0.242 of the errors at 10% against 0.454 for confidence (per chip
+281 better, 1,263 worse; pooled CI [-0.233, -0.193]) and has pooled E-AURC
+0.0668 against 0.0215 (per chip 78/1,499); the accuracy-weighted vote over
+all outside partners 0.362; U+ 0.311. Every partner, inside or outside the
+family, gives the same numbers within 0.01.
+
+AWF Sentinel-2 (200 test points, 9 classes, 61 errors; OlmoEarth probe
+0.695, Panopticon 0.630). Panopticon was selected on a held-out phi of
+-0.003, which the test split shows to be the noise of 195 samples: its
+test phi is 0.62 (family 0.50 to 0.70). Weighted disagreement captures
+0.180 at 10% against 0.246 (5th percentile of the bootstrap gain -0.13);
+E-AURC 0.21 against 0.09; the vote 0.213. Worse on every count.
+
+Reading. Cross-model disagreement cannot flag OlmoEarth's errors because
+the other models make the same errors, whatever family they come from.
+On these testbeds the errors belong to the windows, not to the model: the
+same ambiguous surfaces, boundaries and label disagreements defeat every
+encoder. That is why confidence is hard to beat, why the boundary and
+spectral-ambiguity cues explain errors, and why a second opinion helps only
+when it sees the input differently (exp10) rather than through another
+encoder of the same input. Issue 6 is answered in the negative for both
+designs, neighbourhood (exp39) and head (exp41). Two-view disagreement is
+rejected.
