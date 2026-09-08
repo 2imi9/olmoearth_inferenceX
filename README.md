@@ -1,6 +1,6 @@
 olmoearth_inferenceX audits OlmoEarth inference results without labels.
 
-![One scene through the audit: Sentinel-2 bands, the frozen OlmoEarth encoder and the task head, the prediction, confidence and boundary layers, the review set at a 5% budget drawn on the scene, and the reasons per flagged window](docs/figures/audit_pipeline.png)
+<img src="docs/figures/audit_pipeline.png" alt="One scene through the audit: Sentinel-2 bands, the frozen OlmoEarth encoder and the task head, the prediction, confidence and boundary layers, the review set at a 5% budget drawn on the scene, and the reasons per flagged window" width="760">
 
 Given a prediction map, it helps with:
 
