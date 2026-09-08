@@ -42,8 +42,8 @@ Other links:
 Setup
 -----
 
-The package needs Python 3.12 and no torch; the experiments need the
-encoder.
+The package needs Python 3.11+ (3.12 is what the experiments ran on) and
+no torch; the experiments need the encoder.
 
 ```
 git clone https://github.com/2imi9/olmoearth_inferenceX.git
