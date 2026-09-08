@@ -4,7 +4,7 @@ What the audit found, what holds up, and how well. Every number traces to a
 file under `exp/out/`; the per-experiment detail is in the
 [technique ledger](TECHNIQUES.md) and the results pages.
 
-![The audit pipeline on a real scene: Sentinel-2 bands, the frozen encoder and head, prediction, confidence and boundary layers, the review set at a 5% budget, the reasons per window](figures/audit_pipeline.png)
+![The audit pipeline on a real scene: Sentinel-2 bands, the frozen encoder and head, prediction, confidence and boundary layers, the review set at a 5% budget, the reasons per window](figures/pipeline.png)
 
 *One scene (okavango_80) through the pipeline: the layers are the actual rasters, the orange squares are the 5% review set in the boundary-first order.*
 
