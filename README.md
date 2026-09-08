@@ -11,7 +11,8 @@ Given a prediction map, it helps with:
 4. Auditing deployed OlmoEarth products: the fine-tuned models through their
    task cards, and the served land cover change rasters.
 
-Full documentation is in [docs/](docs/index.md).
+Full documentation is available at **https://olmoearth-inferencex.readthedocs.io/**
+(source in [docs/](docs/index.md)).
 
 
 Quickstart
