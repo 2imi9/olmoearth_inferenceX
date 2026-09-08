@@ -223,19 +223,20 @@ def run_task(task, cfg, args, summary):
     del ref
     partners, family = [], []
     for m in cfg["partners"] + FAMILY:
+        d = None
         try:
             d = load(m)
             if not aligned(meta(d), ref_md):
                 summary["failures"].append({"part": task, "unit": m, "error": "rows not aligned with OlmoEarth (labels, units or masks differ on valid or test)"})
                 print(f"  {task}/{m}: not aligned, dropped", flush=True)
-                del d
                 continue
             heads[m] = fit_and_predict(m, d)
-            del d
             (family if m in FAMILY else partners).append(m)
         except Exception as ex:  # noqa: BLE001
             summary["failures"].append({"part": task, "unit": m, "error": repr(ex), "traceback": traceback.format_exc()})
             print(f"  {task}/{m}: FAILED {ex!r}", flush=True)
+        finally:
+            d = None                                   # release this model's embeddings before the next load
     # error correlation with OlmoEarth
     corr = {}
     for m in partners + family:
