@@ -2,8 +2,8 @@
 import numpy as np
 import pytest
 
-from oe_inferencex.metrics import (aurc_expected, capture_at_budget, excess_aurc, expected_calibration_error,
-                                   oracle_aurc, risk_coverage, selective_accuracy)
+from oe_inferencex.metrics import (aurc_expected, capture_at_budget, capture_at_budget_expected, excess_aurc,
+                                   expected_calibration_error, oracle_aurc, risk_coverage, selective_accuracy)
 
 
 def test_aurc_matches_plain_aurc_without_ties():
@@ -61,3 +61,18 @@ def test_ece_of_a_calibrated_and_a_miscalibrated_model():
     assert ece == pytest.approx(4 / 6 * 0.05 + 2 / 6 * 0.05, abs=1e-12)
     assert [r[2] for r in rows] == [2, 4]
     assert expected_calibration_error(np.full(6, 0.99), np.ones(6))[0] == pytest.approx(0.01)
+
+
+def test_expected_capture_equals_plain_capture_without_ties_and_averages_ties():
+    rng = np.random.default_rng(3)
+    u, e = rng.random(200), (rng.random(200) < 0.15).astype(float)
+    plain, exp_ = capture_at_budget(u, e, (0.05, 0.1, 0.2)), capture_at_budget_expected(u, e, (0.05, 0.1, 0.2))
+    assert all(plain[b] == pytest.approx(exp_[b]) for b in (0.05, 0.1, 0.2))
+    tied = np.zeros(10)                                    # everything tied: expected capture is the budget itself
+    err = np.array([1, 1, 0, 0, 0, 0, 0, 0, 0, 0], float)
+    assert capture_at_budget_expected(tied, err, (0.2, 0.5))[0.2] == pytest.approx(0.2)
+    assert capture_at_budget_expected(tied, err, (0.2, 0.5))[0.5] == pytest.approx(0.5)
+    perm = rng.permutation(10)                              # raster order must not matter
+    assert capture_at_budget_expected(tied[perm], err[perm], (0.2,))[0.2] == pytest.approx(0.2)
+    two = np.array([1, 1, 1, 1, 0, 0, 0, 0, 0, 0], float)  # a two-level score: top group holds all 4 errors
+    assert capture_at_budget_expected(two, err, (0.2,))[0.2] == pytest.approx(0.5)   # k = 2 of the 4-strong top group

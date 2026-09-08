@@ -104,3 +104,29 @@ def expected_calibration_error(confidence, correct, bins=10):
             total += m.mean() * gap
             rows.append((float(lo), float(hi), int(m.sum()), float(conf[m].mean()), float(corr[m].mean())))
     return float(total), rows
+
+
+def capture_at_budget_expected(uncertainty, errors, budgets=(0.05, 0.10, 0.20)):
+    """Tie-aware error capture at a budget: the expected fraction of all errors inside the round(b * n) most suspect
+    units when tied scores are broken at random, so a coarse score (the boundary indicator has nine levels) is not
+    credited or penalised for raster order. Equal to capture_at_budget when no scores tie at the cut."""
+    u = np.asarray(uncertainty).flatten()
+    e = np.asarray(errors).flatten().astype(np.float64)
+    order = np.argsort(-u, kind="stable")                 # most suspect first
+    s, e = u[order], e[order]
+    n, total = len(e), max(e.sum(), 1)
+    newgrp = np.r_[True, s[1:] != s[:-1]]
+    starts = np.flatnonzero(newgrp)
+    sizes = np.diff(np.r_[starts, n])
+    e_group = np.add.reduceat(e, starts)
+    out = {}
+    for b in budgets:
+        k = max(1, int(round(b * n)))
+        full = starts + sizes <= k                        # groups entirely inside the budget
+        captured = e_group[full].sum()
+        part = np.flatnonzero((starts < k) & ~full)       # the group straddling the cut, if any
+        if len(part):
+            g = part[0]
+            captured += e_group[g] * (k - starts[g]) / sizes[g]
+        out[b] = float(captured / total)
+    return out
