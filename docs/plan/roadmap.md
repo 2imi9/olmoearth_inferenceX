@@ -91,10 +91,12 @@ carrying the paper links and the concrete test:
 3. **Operating-point analysis instead of AURC** (issue #9): closed by exp35,
    see the Closed table.
 
-4. **An out-of-family rater** (issue #6) (Clay or AnySat, both wrapped in
-   olmoearth_pretrain evals). Correlated errors invalidate within-family
-   Dawid-Skene (exp07) and cap pairwise disagreement quality (exp10). An
-   architecture-independent rater is required for both.
+4. **An out-of-family rater** (issue #6). exp39 tested AnySat as the
+   neighbourhood space for a contradiction score: it beat confidence but
+   not the same score in OlmoEarth's own space, and its 40 m contextual
+   features are position-dominated on a single date. The remaining case
+   for an outside rater is a second *head* on an outside representation
+   (disagreement between two views), which exp39 did not test.
 
 5. **A domain-shift testbed with non-trivial errors and expert labels**
    (candidate design: geographic-corner holdout within AWF). The delta scene
@@ -192,6 +194,7 @@ tool returns the structured evidence.
 | Does dihedral (flip-and-rotate) consistency rank the errors? | exp36 — no; 4/4 rivers, 154/196 Bolivia tiles, Spearman 0.67 to 0.94 with confidence |
 | Explanation layer, first build | exp37 — five label-free cues measured on identical windows, library and `explain_review_set` in the package; 95% of hand-label errors carry a cue, NDWI ambiguity 7.2x |
 | Does putting the most enriched cue (spectral ambiguity) first beat the boundary-first order at fixed budgets? | exp38 — mixed: per-tile budgets yes at 5% and 10% (p = 8e-4, 5e-5), one pooled budget no (0.292 vs 0.274, 0.481 vs 0.494), clear only at 20%; loses on the WorldCover rivers; boundary-first stays the supported rule |
+| Does the model's prediction contradict its predictions on the windows that look most like it (neighbourhood contradiction), and does an outside representation help? | exp39 — in OlmoEarth's own space it beats confidence at the 5% and 10% budgets on hand labels (preregistered P1), not on E-AURC; AnySat adds nothing over it and its 40 m context features are position-dominated (issue 6 answered in the negative for this design); the pixel-statistics ablation beats everything on hand labels including confidence on E-AURC, replication preregistered as exp40 |
 | Does the pretraining objective itself (masked-token decoder error) rank the errors? | exp28 — no, on both testbeds; the frozen targets are near-collinear, so the residual tracks input texture |
 | Does a last-layer posterior over the probe head (Laplace, bootstrap ensemble) rank the errors? | exp30 — no, on both testbeds; the variance is feature norm on the one-scene head and rises with the logit on the 128k-patch head |
 | E_dist formalization: does feature-space typicality against training, same-scene or cross-testbed references rank the errors? | exp31 — no; the confidence + same-scene kNN combination reaches 6/2 rivers (p = 0.145) against WorldCover and hurts on hand labels; only a true pretraining sample remains untested (issue #4; the RCG density upgrade is issue #3, parked) |

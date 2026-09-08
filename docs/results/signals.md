@@ -254,6 +254,58 @@ instead.*
 
 ---
 
+## Neighbourhood contradiction
+
+**Definition.** For a window with prediction y, take its 32 nearest
+neighbours by cosine in an embedding space, from a bank of windows that
+share no tile or river with the window, and score the share of neighbours
+the same head predicts differently. No label enters; the bank carries the
+model's own predictions. Three spaces: the frozen OlmoEarth features, per-
+window pixel statistics (means of the twelve log bands, NDWI mean and std),
+and AnySat's local embedding (exp39, one B200 job, 139 s). Banks: the
+Sen1Floods11 test split, 800 tiles never used to train the head, for
+Bolivia; the rule scenes on other rivers for the scenes.
+
+**In OlmoEarth's own space: supported at tight budgets, preregistered.**
+It beats confidence at the 10% budget on Bolivia hand labels, 169 tiles
+better, 126 worse, 56 tied (one-sided p = 0.007), pooled 0.530 against
+0.465 (CI [+0.027, +0.095]), and at 5% (0.324 against 0.259); at 20% it is
+null, and on E-AURC it does not beat confidence (177/173), so the gain is
+an operating-point gain like the boundary rule's. Against WorldCover it is
+7/1 rivers on capture at every budget and 21/6 scenes on E-AURC.
+
+**In pixel-statistics space: the ablation that won.** Fourteen spectral
+statistics per window make a better neighbourhood than either
+representation: at 10% it captures 0.682 of the errors against 0.465 for
+confidence (214/89/48 tiles, p = 5e-13; CI [+0.18, +0.26]), 0.412 against
+0.259 at 5%, 0.891 against 0.749 at 20%, and on E-AURC it beats confidence
+per tile 219/131 and pooled 0.0093 against 0.0105, the first ranking win
+on hand labels in the repository. It beats tile-phase, the boundary
+indicator and the NDWI-gradient control, and it adds information inside
+every confidence quintile (error rate among its top fifth against the rest:
+0.79 against 0.21 in the least confident quintile, 0.32 against 0.024 in
+the next). It is null against WorldCover (4/4 rivers), the mirror image of
+tile-phase. It was the preregistered ablation, not the candidate, so its
+status is a strong secondary finding until exp40, a preregistered
+replication with the Sen1Floods11 test split as queries and Bolivia as the
+bank, passes or fails.
+
+**AnySat as an outside witness: rejected.** Its local embedding beats
+confidence (172/127/52 at 10%) but not the OlmoEarth space (159/143,
+p = 0.19). Its contextual patch output at 40 m on a single date is
+dominated by position within the tile, moving little when the content
+shifts, and scores far below confidence (0.137 against 0.259 at 5%). An
+out-of-family representation added nothing over the model's own.
+
+**Reading.** The mechanism is inconsistency: the model predicting
+look-alike windows differently. For the water task, look-alike is spectral,
+and fourteen numbers say it better than a 768-dimensional embedding. The
+representation was not what made it work. Source
+`exp/out/exp39_summary.json`.
+
+---
+
+
 ## Dihedral consistency
 
 **Definition.** OlmoEarth v1 was pretrained with flip-and-rotate

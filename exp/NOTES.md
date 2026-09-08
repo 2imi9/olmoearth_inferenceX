@@ -44,6 +44,7 @@ Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 | exp36 | dihedral consistency (8 flips and rotations) and the boundary-first-then-confidence review order: dihedral consistency is not a better ranker (4/4 rivers vs confidence, 154/196 Bolivia tiles); the lexicographic order captures more errors than confidence at the 5% and 10% budgets on Bolivia hand labels (per tile 85/31/235 and 112/48/191, one-sided p = 3e-7 and 2e-7; pooled gain CI above zero), not at 20%, and gains nothing on the AWF fine-tuned model |
 | exp37 | cue enrichment on identical windows for the explanation layer: on Bolivia hand labels 95% of error windows carry at least one of five label-free cues (boundary 3.5x, least confident 20% 3.6x, unstable 3.6x, NDWI-ambiguous 7.2x, flip/rotation disagreement 3.5x); inside confidence's 5% review set the boundary and NDWI cues separate error rates (0.46 vs 0.16, 0.51 vs 0.33), the tiling and dihedral cues do not; `oe_inferencex.explain` built |
 | exp38 | spectral ambiguity first, then boundary, then confidence, at fixed budgets (CPU, on exp37's tables): preregistered against the exp36 order on Bolivia, per-tile budgets win at 5% and 10% (151/100/100, p = 8e-4; 146/86/119, p = 5e-5) but one pooled budget does not (0.292 vs 0.274, CI touching zero; 0.481 vs 0.494); clear only at 20% pooled (0.831 vs 0.732); loses to the boundary-first order on the WorldCover rivers (2/6, 3/5, 3/4); mixed, boundary-first stays the supported rule |
+| exp39 | neighbourhood contradiction (share of a window's 32 nearest neighbours in a disjoint bank that the same head predicts differently) in three embedding spaces: P1 passed, the OlmoEarth-space score beats confidence at the 10% budget on Bolivia hand labels (169/126/56 tiles, p = 0.007; pooled 0.530 vs 0.465, CI above zero); P2, AnySat's local embedding beats confidence but not the OlmoEarth space (159/143, p = 0.19) and its 40 m patch output is position-dominated; the pixel-statistics ablation exceeds both by a wide margin (10%: 214/89/48, pooled 0.682 vs 0.465; E-AURC 219/131 and pooled 0.0093 vs 0.0105, the first hand-label E-AURC win), so the semantic-neighbourhood reading is falsified and the finding is the model's inconsistency across spectrally similar windows; null against WorldCover (rivers 4/4); replication preregistered as exp40 |
 
 ## exp01 — first E_case map (2026-08-31)
 
@@ -1115,3 +1116,95 @@ remains the supported triage rule. Spectral ambiguity is a task-specific
 cue that explains errors (exp37) and, with a per-tile or a loose budget,
 finds more of them on hand labels; as a global ordering at tight budgets
 it does not, and on the WorldCover reference it hurts.
+
+## exp39 neighbourhood contradiction in three embedding spaces (2026-09-08)
+
+Origin: a brainstorm on whether a representation-learning result could give
+an inference-time error signal beyond the head's margin; its first proposal
+was neighbourhood contradiction in an out-of-family embedding space. For a
+query window with prediction y, take its k = 32 nearest neighbours by cosine
+in an embedding space from a bank of windows that share no tile or river
+with the query, and score the share of neighbours the same head predicts
+differently (contradiction = 1 - q(y)); the neighbour vote's binary entropy
+is a secondary reading. No label enters: the bank carries the model's own
+predictions. Three spaces, since the ablations are the test: the frozen
+OlmoEarth features (exp11 and exp18 caches); per-window pixel statistics
+(means of the twelve log bands, NDWI mean and std, standardised); AnySat
+(torch.hub gastruc/anysat, base, fp32, one date, bands standardised per
+testbed). Banks: the Sen1Floods11 test split as exp18 sampled it (800 tiles,
+seed 1, 180,000 windows, never used to train the head) for Bolivia; the
+rule scenes on other rivers for the scenes. Preregistered at the 10%
+budget on Bolivia, per-tile one-sided sign tests over the 351 tiles with
+3 <= errors <= n - 3 and a tile bootstrap of the pooled gain, river votes on
+the scenes alongside: P1, the OlmoEarth-space contradiction beats
+confidence; P2, the AnySat-space contradiction beats confidence and beats
+the OlmoEarth space; falsification, no hand-label gain or a gain the
+pixel-statistics ablation reproduces. One-sided only for those pairs;
+everything else two-sided. exp/exp39_neighbour_contradiction.py, one
+B200 job, 725563 on c379c5d, 139 s, 0 failures; Codex review before the
+run fixed four blocking defects (AnySat output layout, bank/feature
+alignment, NaN signals reaching the scorer, a same-river fallback).
+Outputs exp/out/exp39_summary.json, exp39_neighbour_contradiction.csv,
+exp39_cache.npz (per-window scores).
+
+AnySat, a finding before the result. Its patch output at 40 m on a
+single-date input is dominated by position within the tile: the features
+barely move when the content shifts by one window (correlation with the
+unshifted map 0.97 to 0.99 after centring, against 0.58 to 0.69 with the
+correctly shifted map). Only the local half of its dense per-pixel output
+moves with the content (1.00 along the right axis, 0.31 to 0.52 along the
+wrong one), so that half, pooled to the window, is the P2 space and the
+contextual half a secondary space; the checks are recorded in the summary.
+
+Bolivia hand labels (351 scored tiles; capture of the errors inside the
+budget, then E-AURC). P1 passed: the OlmoEarth-space contradiction beats
+confidence at 10% on 169 tiles, loses on 126, ties on 56 (one-sided
+p = 0.0072), pooled 0.530 against 0.465 (CI of the gain [+0.027, +0.095]);
+at 5% 189/113/49, pooled 0.324 against 0.259 (CI [+0.040, +0.088]); at
+20% null (140/125/86, CI spanning zero). On E-AURC it does not beat
+confidence (177/173, pooled 0.0134 against 0.0105): an operating-point
+gain, like the boundary rule, not a ranking gain. P2, half: AnySat's local
+embedding beats confidence at 10% (172/127/52, p = 0.0054; pooled 0.513
+against 0.465, CI [+0.009, +0.088]) but not the OlmoEarth space (159/143/49,
+p = 0.19; pooled 0.513 against 0.530, CI [-0.054, +0.025]); the contextual
+AnySat space is far below confidence (0.137 against 0.259 at 5%). The
+falsification clause fired, and then some: the pixel-statistics ablation
+beats confidence at every budget by a wide margin (5%: 236/70/45,
+p = 3e-22, pooled 0.412 against 0.259, CI [+0.120, +0.187]; 10%:
+214/89/48, p = 5e-13, pooled 0.682 against 0.465, CI [+0.177, +0.257];
+20%: 176/91/84, pooled 0.891 against 0.749) and on E-AURC, per tile
+219/131 (p = 3e-6) and pooled 0.0093 against 0.0105, the first hand-label
+E-AURC win in the repository; it also beats tile-phase 227/123, the
+boundary indicator 256/90 and the NDWI-gradient control 277/73. Its
+Spearman with confidence is 0.60 (OlmoEarth space 0.70, AnySat local 0.56,
+AnySat context 0.14). Strata (error rate among the top fifth by score
+against the rest, ties included): within the least confident quintile
+0.79 against 0.21, the next 0.32 against 0.024, the middle 0.050 against
+0.004; boundary windows 0.72 against 0.13; NDWI-clear windows 0.20 against
+0.006. The preregistered combination (confidence + AnySat local, U+) wins
+per tile (226/123 on E-AURC) but loses pooled at every budget; the 0.75 /
+0.25 weighting likewise.
+
+WorldCover scenes (27, one vote per river). OlmoEarth-space contradiction
+against confidence: E-AURC 21/6 by scene (p = 0.006), 5/3 by river
+(p = 0.36); capture 7/1 rivers at every budget (p = 0.035 one-sided at 10%,
+0.070 two-sided at 5 and 20%); median E-AURC 0.0063 against 0.0118. The
+pixel-statistics contradiction is null here: 14/13 scenes, 4/4 rivers on
+E-AURC, 5/3, 4/4, 4/4 on capture. AnySat local 17/10 scenes, 5/3 rivers,
+capture 7/1, 6/2, 5/3. Best per scene most often AnySat context (11),
+tile-phase (5), OlmoEarth contradiction (3).
+
+Verdicts. P1 supported on hand labels at tight budgets, directionally
+positive on WorldCover, no ranking gain. P2 rejected: an out-of-family
+representation adds nothing over OlmoEarth's own, and AnySat's contextual
+features are not usable at this scale. The semantic-neighbourhood reading
+is falsified by its own ablation: what the mechanism measures is the
+model's inconsistency across windows that look alike, and windows look
+alike, for this task, in fourteen spectral statistics better than in any
+768-dimensional embedding. That inconsistency is the finding: label-free,
+one bank of the model's own predictions, and stronger than confidence on
+hand labels at every budget and on E-AURC. It was the ablation, not a
+preregistered candidate, and it is null on the WorldCover reference, so
+its status is a strong secondary finding until a preregistered replication
+on an independent expert testbed (exp40, the Sen1Floods11 test split as
+queries with Bolivia as the bank) passes.

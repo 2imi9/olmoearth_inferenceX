@@ -168,3 +168,25 @@ def test_exp38_prereg_tests_and_exp36_consistency_from_the_summary():
         assert pt["w"] > pt["l"] and pt["sign_p"] < 0.001
         assert po["boot_lo"] <= 0 <= po["boot_hi"]                           # the pooled gain is not established
     assert s["part_b"]["tests"]["NDWI-ambiguous, then boundary, then confidence vs boundary, then confidence"]["pooled"]["0.2"]["boot_lo"] > 0
+
+
+def test_exp39_preregistered_tests_and_ablation_from_the_summary():
+    """exp39 (job 725563): P1 (OlmoEarth-space contradiction vs confidence at 10%) passes per tile and pooled; P2 does
+    not beat the OlmoEarth space; the pixel-statistics ablation exceeds both, per tile, pooled and on E-AURC."""
+    s = json.load(open(os.path.join(OUT, "exp39_summary.json")))
+    b = s["part_b"]
+    p1, p2, p2oe = b["prereg"]["P1"], b["prereg"]["P2"], b["prereg"]["P2_vs_oe"]
+    for r in (p1, p2, p2oe):
+        assert r["one_sided"] and r["w"] + r["l"] + r["t"] == b["n_tiles_scored"] == 351
+        assert r["sign_p"] == pytest.approx(sign_test(r["w"], r["l"], "greater"), rel=1e-9)
+    assert (p1["w"], p1["l"], p1["t"]) == (169, 126, 56) and p1["sign_p"] < 0.01
+    assert p2oe["sign_p"] > 0.05                                             # AnySat does not beat the OlmoEarth space
+    C, OE, PIX = "confidence (baseline)", "contradiction (OlmoEarth neighbours)", "contradiction (pixel-statistics neighbours)"
+    g = b["pooled_capture_gain"]
+    assert g[f"{OE} vs {C}"]["0.1"]["boot_lo"] > 0 and g[f"{PIX} vs {C}"]["0.1"]["boot_lo"] > 0.1
+    assert b["pooled_capture"][PIX]["0.1"] == pytest.approx(0.682, abs=5e-4) and b["pooled_capture"][C]["0.1"] == pytest.approx(0.465, abs=5e-4)
+    assert b["pooled_eaurc"][PIX] < b["pooled_eaurc"][C] < b["pooled_eaurc"][OE]
+    t = b["tests"][PIX][f"vs {C}"]
+    assert (t["w"], t["l"]) == (219, 131)
+    a = s["part_a"]
+    assert a["capture_river_tests_vs_confidence"][OE]["0.1"]["w"] == 7 and a["capture_river_tests_vs_confidence"][PIX]["0.1"]["w"] == 4
