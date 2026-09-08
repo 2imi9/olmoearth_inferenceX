@@ -8,17 +8,23 @@ edit_uri: edit/main/docs/
 docs_dir: docs
 exclude_docs: |
   figures/*.py
+  figures/tikz/
   __pycache__/
   requirements.txt
   gen_pages.py
+  gen_api.py
   hooks.py
 
 theme:
   name: material
   features:
-    - navigation.sections
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.prune
     - navigation.top
     - navigation.tracking
+    - navigation.indexes
+    - navigation.footer
     - toc.follow
     - content.code.copy
     - content.action.edit
@@ -40,33 +46,40 @@ theme:
         icon: material/weather-sunny
         name: Switch to light mode
 
+# Top-level entries with children become the tabs; the first page of a section is its landing page (section-index).
 nav:
-  - Home: index.md
-  - Findings: Findings.md
-  - Usage: Usage.md
-  - Recipe: method/recipe.md
-  - Technique ledger: TECHNIQUES.md
-  - Protocol: method/protocol.md
-  - Results:
-      - Explanation: results/explanation.md
-      - Signals: results/signals.md
-      - Comparisons: results/comparisons.md
-  - Method:
+  - Home:
+      - index.md
+      - Findings: Findings.md
+      - Recipe: method/recipe.md
+  - Usage:
+      - Usage.md
       - Agent integration: method/agent_integration.md
       - Task cards: method/taskcards.md
       - Infrastructure: method/infrastructure.md
-  - Roadmap: plan/roadmap.md
-  - Lab log: LabLog.md
-  - API reference: API.md
+  - Evidence:
+      - Technique ledger: TECHNIQUES.md
+      - Explanation: results/explanation.md
+      - Signals: results/signals.md
+      - Comparisons: results/comparisons.md
+      - Lab log: LabLog.md
+  - Protocol:
+      - method/protocol.md
+      - Roadmap: plan/roadmap.md
+  - API Reference: reference/
 
 hooks:
   - docs/hooks.py
 
 plugins:
   - search
+  - section-index
   - gen-files:
       scripts:
         - docs/gen_pages.py
+        - docs/gen_api.py
+  - literate-nav:
+      nav_file: SUMMARY.md
   - mkdocstrings:
       handlers:
         python:
@@ -93,4 +106,5 @@ markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
   - pymdownx.inlinehilite
+  - pymdownx.snippets
   - pymdownx.superfences

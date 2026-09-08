@@ -20,7 +20,7 @@ tiers and status terms are defined once in
 
 | Document | What it holds |
 |---|---|
-| [index.md](index.md) | Documentation index and reading order |
+| [index.md](index.md) | Documentation landing page |
 | [Findings.md](Findings.md) | What holds, the numbers, how a claim gets in, the limits |
 | [Usage.md](Usage.md) | The package: quick start, the production case, scoring a new rule |
 | [method/protocol.md](method/protocol.md) | How results are scored, evidence tiers, status terms, related work |

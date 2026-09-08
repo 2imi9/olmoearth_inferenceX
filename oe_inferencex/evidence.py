@@ -81,7 +81,7 @@ def dawid_skene(votes, n_classes, iters=50):
     """Dawid-Skene EM over hard votes (N items, R raters). No labels used.
 
     Returns (posteriors [N, C], confusions [R, C, C], reliabilities [R])
-    where confusions[r][true, voted] and reliability is the prior-weighted
+    where `confusions[r][true, voted]` is rater r's confusion matrix and reliability is the prior-weighted
     diagonal of the confusion matrix (expected accuracy of rater r).
     """
     votes = np.asarray(votes)

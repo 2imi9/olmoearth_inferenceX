@@ -1,19 +1,53 @@
-# olmoearth_inferenceX documentation
+# olmoearth_inferenceX
 
-Label-free auditing of OlmoEarth inference results: which windows of a
-prediction map to trust, which to send for review first, and why.
+olmoearth_inferenceX audits OlmoEarth inference results without labels.
+Given a prediction map, it helps with:
 
-Start here:
+1. **Deciding which windows to trust and which to send for review first**, as
+   review sets at a chosen budget, in confidence order or boundary first.
+2. **Explaining why each flagged window is suspect**, with label-free cues that
+   carry measured evidence from expert-labelled testbeds.
+3. **Scoring any candidate audit rule the same way**, against the model's own
+   confidence and a no-model control, on two references at once.
+4. **Auditing deployed OlmoEarth products**: the fine-tuned models through their
+   task cards, and the served land cover change rasters.
 
-1. [Findings](Findings.md): what holds, the numbers, how a claim gets in, the limits.
-2. [Usage](Usage.md): the package, a quick start, the production case, scoring a new rule.
-3. [Recipe](method/recipe.md): what to do and not do when auditing a prediction map.
+## New to the repository?
 
-Reference:
+For the short version, read [Findings](Findings.md): what holds, the numbers,
+how a claim gets in, and the limits. Then:
 
-- [Technique ledger](TECHNIQUES.md): everything tried, one line each, with the verdict and the evidence.
-- [Protocol](method/protocol.md): how results are scored, evidence tiers, status terms, related work.
-- [Explanation](results/explanation.md), [Signals](results/signals.md), [Comparisons](results/comparisons.md): per-cue, per-signal and per-experiment evidence.
-- [Agent integration](method/agent_integration.md): the contract with the OlmoEarth Agent.
-- [Task cards](method/taskcards.md), [Infrastructure](method/infrastructure.md): what each fine-tuned model is; upstream sources, export formats, the cluster pattern.
-- [Roadmap](plan/roadmap.md): open items in priority order. [Lab log](../exp/NOTES.md): chronology, including superseded runs.
+- [Usage](Usage.md) walks through the package: assess a prediction, explain its
+  review set, the production case with an exported confidence band, and how to
+  score a new rule with the same machinery.
+- The [Recipe](method/recipe.md) is the list of what to do and not do when
+  auditing a prediction map.
+- The [Technique ledger](TECHNIQUES.md) is everything tried, one line each,
+  with the verdict and the evidence; the [Evidence](results/explanation.md)
+  pages hold the per-cue, per-signal and per-experiment detail.
+- The [API Reference](reference/index.md) documents the torch-free package
+  `oe_inferencex` module by module.
+
+## Installation
+
+The package needs Python 3.11+ (3.12 is what the experiments ran on) and no
+torch; the experiments need the encoder.
+
+```bash
+git clone https://github.com/2imi9/olmoearth_inferenceX.git
+cd olmoearth_inferenceX
+uv sync
+uv run pytest
+```
+
+For the full experiment environment:
+
+```bash
+uv sync --extra encoder --extra geo
+uv run python exp/exp02_full_slice.py
+```
+
+## Contact
+
+For questions and suggestions, please
+[open an issue on GitHub](https://github.com/2imi9/olmoearth_inferenceX/issues).
