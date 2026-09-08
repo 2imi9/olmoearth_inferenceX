@@ -13,7 +13,7 @@ Index at [../TECHNIQUES.md](../TECHNIQUES.md); recipe at
 
 | Module | Provides |
 |---|---|
-| `oe_inferencex.assess` | `assess_prediction` (logits or probabilities), `assess_classmap` (hard class map plus an exported confidence band), `summary` (JSON-safe view) |
+| `oe_inferencex.assess` | `assess_prediction` (logits or probabilities), `assess_classmap` (hard class map plus an exported confidence band), both with `order="confidence"` or `"boundary_first"` for the review sets (exp36), `summary` (JSON-safe view) |
 | `oe_inferencex.taskcard` | What task, legend, goal and audit settings a fine-tuned model has |
 | `oe_inferencex.lcc` | HTTP range reader for the served change rasters |
 | `oe_inferencex.metrics` | Tie-aware AURC, excess AURC, error capture at a budget, selective accuracy, ECE; torch-free |

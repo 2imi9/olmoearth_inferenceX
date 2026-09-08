@@ -28,7 +28,7 @@ nothing here serializes them into text.
 import numpy as np
 
 from oe_inferencex.metrics import aurc_expected
-from oe_inferencex.signals import boundary_indicator
+from oe_inferencex.signals import boundary_indicator, midrank_pct
 
 
 def _pool(a, patch):
@@ -48,8 +48,20 @@ def _boundary(pooled_hard):
     return boundary_indicator(pooled_hard)
 
 
+ORDERS = ("confidence", "boundary_first")
+
+
+def boundary_first_score(suspicion, boundary):
+    """The review order supported by exp36: boundary windows first, ordered by suspicion, then the interior by suspicion.
+
+    2 * [boundary > 0] + the within-map midrank percentile of suspicion, the construction exp36 and exp38 tested; higher
+    is reviewed first. Ties are broken by review_order as for any score."""
+    s_ = np.asarray(suspicion, dtype=np.float64)
+    return np.where(np.asarray(boundary) > 0, 2.0, 0.0) + midrank_pct(s_).reshape(s_.shape)
+
+
 def assess_classmap(hard, confidence, n_classes, patch=4, nodata_mask=None, reference=None, budgets=(0.01, 0.05, 0.10),
-                    signal="exported top-1 probability"):
+                    signal="exported top-1 probability", order="confidence"):
     """Production case: a hard class map plus an exported per-pixel confidence
     band (for instance the top-1 probability bands of the LCC rasters), with
     no logits. Ties in `confidence` are reported, because a quantized or
@@ -59,13 +71,18 @@ def assess_classmap(hard, confidence, n_classes, patch=4, nodata_mask=None, refe
     valid = ~nodata_mask if nodata_mask is not None else np.ones(conf.shape, dtype=bool)
     vals, counts = np.unique(conf[valid], return_counts=True)
     warnings = [f"confidence band has {len(vals)} distinct values; {counts.max() / counts.sum():.3f} of pixels share the modal value {vals[counts.argmax()]:.4g}"]
-    out = _assess(conf, hard, n_classes, patch, nodata_mask, reference, budgets, signal, warnings)
+    out = _assess(conf, hard, n_classes, patch, nodata_mask, reference, budgets, signal, warnings, order)
     out["confidence_distinct_values"] = int(len(vals))
     out["confidence_modal_share"] = float(counts.max() / counts.sum())
     return out
 
 
-def assess_prediction(scores, is_logit, patch=4, nodata_mask=None, reference=None, budgets=(0.01, 0.05, 0.10)):
+def assess_prediction(scores, is_logit, patch=4, nodata_mask=None, reference=None, budgets=(0.01, 0.05, 0.10), order="confidence"):
+    """Assess a prediction map: `scores` is (H, W) of binary logits or probabilities, or (C, H, W) per class.
+
+    `order` is the review order of the review sets: "confidence" (least confident first, the ranker every
+    experiment scored) or "boundary_first" (boundary windows first, then the interior, each by confidence; the
+    order that captures more errors at 5-10% budgets on hand labels, exp36). AURC entries always score confidence."""
     scores = np.asarray(scores, dtype=np.float64)
     warnings = []
     if scores.ndim == 2:  # binary probability map
@@ -89,10 +106,12 @@ def assess_prediction(scores, is_logit, patch=4, nodata_mask=None, reference=Non
         hard = scores.argmax(0)
         n_classes = C
     return _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets,
-                   "negative logit margin" if is_logit else "1 - max probability", warnings)
+                   "negative logit margin" if is_logit else "1 - max probability", warnings, order)
 
 
-def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, signal, warnings):
+def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, signal, warnings, order="confidence"):
+    if order not in ORDERS:
+        raise ValueError(f"order must be one of {ORDERS}, got {order!r}")
     margin = np.asarray(margin, dtype=np.float64)
     hard = np.asarray(hard).astype(int)
     if nodata_mask is not None:
@@ -104,6 +123,7 @@ def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, sig
     pooled_hard = _pooled_argmax(hard, n_classes, patch)
     bnd_w = _boundary(pooled_hard)
     suspicion = -conf_w  # ranking signal: low margin first
+    review_score = boundary_first_score(suspicion, bnd_w) if order == "boundary_first" else suspicion
 
     out = {
         "n_windows": int(valid_w.sum()), "patch_px": patch, "n_classes": n_classes,
@@ -111,16 +131,17 @@ def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, sig
         "boundary_window_fraction": float((bnd_w[valid_w] > 0).mean()),
         "class_share": {int(c): float((pooled_hard[valid_w] == c).mean()) for c in range(n_classes)},
         "signal": signal,
+        "review_order": order,
         "warnings": warnings,
         "arrays": {"confidence": conf_w, "boundary": bnd_w, "pooled_argmax": pooled_hard, "valid": valid_w},
         "review_sets": {},
         "confidence_distinct_pooled": int(len(np.unique(conf_w[valid_w]))),
     }
-    order = review_order(suspicion, valid_w)  # most suspicious first
+    rank = review_order(review_score, valid_w)  # first to review first
     n_valid = int(valid_w.sum())
     for b in budgets:
         k = max(1, int(round(b * n_valid)))
-        idx = order[:k]
+        idx = rank[:k]
         rows, cols = np.unravel_index(idx, conf_w.shape)
         out["review_sets"][b] = {"n_windows": int(k), "windows_rowcol": np.stack([rows, cols], 1),
                                  "boundary_share_in_set": float((bnd_w.flatten()[idx] > 0).mean())}
@@ -132,6 +153,7 @@ def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, sig
         ref_w = _pooled_argmax(ref, n_classes, patch)
         err = (ref_w != pooled_hard).astype(float)
         e, s = err[scored], suspicion[scored]
+        r_s = review_score[scored]
         bnd_s = bnd_w[scored]
         rc = {"n_windows_scored": int(scored.sum()), "error_rate": float(e.mean()), "aurc_confidence": aurc_expected(s, e)}
         oracle = aurc_expected(e, e)  # errors most suspicious, so rejected first
@@ -139,7 +161,7 @@ def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, sig
         rc["aurc_boundary"] = aurc_expected(bnd_s, e)
         rc["aurc_random_expected"] = float(e.mean())
         cap = {}
-        e_sorted = e[np.argsort(s, kind="stable")[::-1]]
+        e_sorted = e[np.argsort(r_s, kind="stable")[::-1]]   # capture follows the review order
         for b in budgets:
             k = max(1, int(round(b * len(e))))
             cap[b] = {"errors_captured_fraction": float(e_sorted[:k].sum() / max(e.sum(), 1)),
