@@ -20,7 +20,8 @@ Testbeds and inference, preregistered.
     three correct patches (the exp18 rule). Primary test: tiling instability
     against confidence at the 20% budget, per-tile one-sided exact sign test
     (the exp21 hint is directional). Pooled capture over all valid patches
-    with a bootstrap over tiles for every signal and budget.
+    with a bootstrap over every tile that has valid patches (the same
+    population as the pooled estimate) for every signal and budget.
   AWF fine-tuned model (expert points; exp21's per-window table, 16-px
     crops primary, 32-px secondary). Signals: confidence, boundary, tiling
     instability, probe disagreement, NDVI temporal-std control. Capture on
@@ -68,7 +69,8 @@ def capture_all(sigs, err, mask=None):
 def bootstrap_pooled_gain(per_unit_sig, per_unit_err, per_unit_conf, budget, rng, n_boot=N_BOOT):
     """Bootstrap over units of pooled capture(signal) - pooled capture(confidence) at one budget.
 
-    per_unit_*: lists of flat arrays per unit. Returns (mean gain, lo, hi, P(gain > 0))."""
+    per_unit_*: lists of flat arrays per unit, one entry per tile with valid patches (the population of the pooled
+    estimate), not only the tiles that pass the per-tile scoring rule. Returns (mean gain, lo, hi, P(gain > 0))."""
     n = len(per_unit_err)
     gains = []
     for _ in range(n_boot):
@@ -148,20 +150,23 @@ def part_b(model, args, summary, rows, cache):
     aurc_pooled = {k: aurc_expected(np.asarray(v)[ok], err[ok]) for k, v in sigs.items()}
     per = {k: [] for k in names}
     per_aurc = {k: [] for k in names}
-    per_sig, per_err = {k: [] for k in names}, []
+    all_sig, all_err = {k: [] for k in names}, []           # every tile with valid patches: the pooled estimate's population
     tiles = []
     for t in range(N):
         m = ok[t]
+        if not m.any():
+            continue
         e = err[t][m]
-        if e.sum() < 3 or e.sum() > len(e) - 3:
+        all_err.append(e)
+        for k in names:
+            all_sig[k].append(np.asarray(sigs[k][t])[m])
+        if e.sum() < 3 or e.sum() > len(e) - 3:              # the exp18 rule applies to the per-tile tests only
             continue
         tiles.append(t)
-        per_err.append(e)
         cap, _ = capture_all({k: np.asarray(v[t]) for k, v in sigs.items()}, err[t], m)
         for k in names:
             per[k].append(cap[k])
             per_aurc[k].append(aurc_expected(np.asarray(sigs[k][t])[m], e))
-            per_sig[k].append(np.asarray(sigs[k][t])[m])
     rng = np.random.default_rng(1)
     tests, boots = {}, {}
     for k in names:
@@ -172,8 +177,8 @@ def part_b(model, args, summary, rows, cache):
             gains = np.array([per[k][i][b] - per[CONF][i][b] for i in range(len(tiles))])
             tests[k][str(b)] = sign_summary(gains, one_sided=(k == TILE and b == PRIMARY_BUDGET))
             tests[k][str(b)]["aurc_w_l"] = list(wins_losses_ties(np.array(per_aurc[CONF]) - np.array(per_aurc[k]))[:2])
-            boots[k][str(b)] = bootstrap_pooled_gain(per_sig[k], per_err, per_sig[CONF], b, rng)
-    summary["part_b"].update({"n_tiles_scored": len(tiles), "budgets": list(BUDGETS),
+            boots[k][str(b)] = bootstrap_pooled_gain(all_sig[k], all_err, all_sig[CONF], b, rng)
+    summary["part_b"].update({"n_tiles_scored": len(tiles), "n_tiles_pooled": len(all_err), "budgets": list(BUDGETS),
                               "pooled_capture_expected": {k: {str(b): v[b] for b in BUDGETS} for k, v in pooled_exp.items()},
                               "pooled_capture_stable_sort": {k: {str(b): v[b] for b in BUDGETS} for k, v in pooled_plain.items()},
                               "pooled_aurc": aurc_pooled, "per_tile_tests_vs_confidence": tests, "bootstrap_pooled_gain_vs_confidence": boots})

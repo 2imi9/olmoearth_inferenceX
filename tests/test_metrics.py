@@ -76,3 +76,5 @@ def test_expected_capture_equals_plain_capture_without_ties_and_averages_ties():
     assert capture_at_budget_expected(tied[perm], err[perm], (0.2,))[0.2] == pytest.approx(0.2)
     two = np.array([1, 1, 1, 1, 0, 0, 0, 0, 0, 0], float)  # a two-level score: top group holds all 4 errors
     assert capture_at_budget_expected(two, err, (0.2,))[0.2] == pytest.approx(0.5)   # k = 2 of the 4-strong top group
+    assert capture_at_budget_expected(np.array([0, 1], np.uint8), np.array([0, 1], float), (0.5,))[0.5] == pytest.approx(1.0)
+    assert capture_at_budget_expected(np.array([False, True]), np.array([0, 1], float), (0.5,))[0.5] == pytest.approx(1.0)

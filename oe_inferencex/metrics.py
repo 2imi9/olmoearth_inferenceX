@@ -69,7 +69,7 @@ def excess_aurc(uncertainty, errors):
 def capture_at_budget(uncertainty, errors, budgets=(0.01, 0.05, 0.10)):
     """Operating points (recipe item 6): the fraction of all errors inside the most suspect fraction b of the units.
 
-    The review set is the top round(b * n) units by uncertainty, most suspect
+    The review set is the top max(1, round(b * n)) units by uncertainty, most suspect
     first, ties broken by position (stable sort), as exp21 and assess report it."""
     u = np.asarray(uncertainty).flatten()
     e = np.asarray(errors).flatten().astype(np.float64)
@@ -109,10 +109,11 @@ def expected_calibration_error(confidence, correct, bins=10):
 def capture_at_budget_expected(uncertainty, errors, budgets=(0.05, 0.10, 0.20)):
     """Tie-aware error capture at a budget: the expected fraction of all errors inside the round(b * n) most suspect
     units when tied scores are broken at random, so a coarse score (the boundary indicator has nine levels) is not
-    credited or penalised for raster order. Equal to capture_at_budget when no scores tie at the cut."""
-    u = np.asarray(uncertainty).flatten()
+    credited or penalised for raster order. Equal to capture_at_budget when no scores tie at the cut. As in
+    capture_at_budget, at least one unit is always reviewed, so the realised budget is max(1, round(b * n)) / n."""
+    u = np.asarray(uncertainty, dtype=np.float64).flatten()
     e = np.asarray(errors).flatten().astype(np.float64)
-    order = np.argsort(-u, kind="stable")                 # most suspect first
+    order = np.argsort(-u, kind="stable")                 # most suspect first (float cast: unsigned or boolean scores negate safely)
     s, e = u[order], e[order]
     n, total = len(e), max(e.sum(), 1)
     newgrp = np.r_[True, s[1:] != s[:-1]]
