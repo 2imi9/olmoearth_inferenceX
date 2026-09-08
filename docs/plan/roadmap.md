@@ -167,11 +167,45 @@ Next: the reference-side cues (seasonal water, version instability, OSM)
 measured on the same windows where a WorldCover reference exists; the agent
 tool returns the structured evidence.
 
+## Published by Ai2 and usable now (checked on the Hugging Face hub, 2026-09-08)
+
+- **`allenai/olmoearth-paper-embeddings`** (June 2026, CC BY 4.0): pre-extracted
+  embeddings from 26 foundation models on the 24 tasks of the paper's Table 2,
+  row-aligned across models in canonical sample order, with labels. The
+  segmentation tasks (`sen1floods11` on Sentinel-1, `m_cashew_plant`,
+  `m_sa_crop_type`, `mados`, `pastis`) come as `(N, 16, 16, D)` patch grids with
+  full-resolution labels. This is issue #6 without a forward pass: a second head
+  on Clay, DINOv3-sat, TerraMind or AnySat embeddings of the *same* windows,
+  so disagreement is between two views. It is also part of issue #7: dense
+  labelled few-class testbeds on identical windows for every model (cashew,
+  7 classes; MADOS, 15; Sen1Floods11, 2). Sizes: ~1 GB per split for
+  Sen1Floods11 per model, 9 GB for the cashew training split.
+- **`allenai/olmoearth_lcc`** (updated 2026-08-28): the served change product's
+  summary rasters now carry probabilities: band 1 `binary_change` (0-255), bands
+  6-7 the pre/post change-category scores. The land-cover classes (bands 4-5)
+  still have no score, so the ask below stands for them, but the production
+  case of `assess_classmap` (hard map plus an exported confidence band) can now
+  run on the change decision itself, which exp20 could not. The repository also
+  publishes `training_data/eval_points.json`: 284 windows in 25 tiles across 17
+  countries and 16 change types (renewable energy, reservoir filling, urban
+  expansion, wildfire, mining, ...), 120 positive and 314 negative points, each
+  with an expected change and literature evidence URLs, sourced from a curated
+  evaluation set rather than output-based labelling. That is the independent
+  change reference roadmap item 7 asked for, at point scale.
+- **`allenai/olmoearth_pretrain_dataset`** (CC BY 4.0): the pretraining data
+  itself, documented in `olmoearth_pretrain/docs/Pretraining-Dataset.md`. The
+  true pretraining sample that issue #4 needed for typicality is public.
+- Third-party: `Major-TOM/Core-S2L2A-249k-OlmoEarth-Base`, mean-pooled
+  OlmoEarth-Base embeddings of 249k global Sentinel-2 chips (384 px) with
+  footprints, a global chip-level bank for the coverage question exp40 left.
+
 ## Asks of upstream
 
-- **A class-head confidence in the LCC export** — top-1 minus top-2 logit
-  alongside bands 4-5. Without it the recipe's primary signal cannot run on
-  the served product at all (exp20).
+- **A class-head confidence for the land-cover bands of the LCC export** —
+  top-1 minus top-2 logit alongside bands 4-5. The 2026-08-28 export added a
+  change probability (band 1) and category scores (bands 6-7), so the change
+  decision can now be audited with the primary signal; the land-cover classes
+  still cannot.
 - Confirmation of whether Studio per-project exports match the
   `olmoearth_lcc` export format (partial probabilities).
 
