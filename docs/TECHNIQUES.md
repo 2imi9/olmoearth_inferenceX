@@ -20,6 +20,9 @@ tiers and status terms are defined once in
 
 | Document | What it holds |
 |---|---|
+| [index.md](index.md) | Documentation index and reading order |
+| [Findings.md](Findings.md) | What holds, the numbers, how a claim gets in, the limits |
+| [Usage.md](Usage.md) | The package: quick start, the production case, scoring a new rule |
 | [method/protocol.md](method/protocol.md) | How results are scored, evidence tiers, status terms, related work |
 | [method/recipe.md](method/recipe.md) | What to do and not do when auditing a prediction map |
 | [method/taskcards.md](method/taskcards.md) | What each fine-tuned model is, resolved from its configs |
