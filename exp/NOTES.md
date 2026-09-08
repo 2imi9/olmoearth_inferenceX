@@ -45,6 +45,7 @@ Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 | exp37 | cue enrichment on identical windows for the explanation layer: on Bolivia hand labels 95% of error windows carry at least one of five label-free cues (boundary 3.5x, least confident 20% 3.6x, unstable 3.6x, NDWI-ambiguous 7.2x, flip/rotation disagreement 3.5x); inside confidence's 5% review set the boundary and NDWI cues separate error rates (0.46 vs 0.16, 0.51 vs 0.33), the tiling and dihedral cues do not; `oe_inferencex.explain` built |
 | exp38 | spectral ambiguity first, then boundary, then confidence, at fixed budgets (CPU, on exp37's tables): preregistered against the exp36 order on Bolivia, per-tile budgets win at 5% and 10% (151/100/100, p = 8e-4; 146/86/119, p = 5e-5) but one pooled budget does not (0.292 vs 0.274, CI touching zero; 0.481 vs 0.494); clear only at 20% pooled (0.831 vs 0.732); loses to the boundary-first order on the WorldCover rivers (2/6, 3/5, 3/4); mixed, boundary-first stays the supported rule |
 | exp39 | neighbourhood contradiction (share of a window's 32 nearest neighbours in a disjoint bank that the same head predicts differently) in three embedding spaces: P1 passed, the OlmoEarth-space score beats confidence at the 10% budget on Bolivia hand labels (169/126/56 tiles, p = 0.007; pooled 0.530 vs 0.465, CI above zero); P2, AnySat's local embedding beats confidence but not the OlmoEarth space (159/143, p = 0.19) and its 40 m patch output is position-dominated; the pixel-statistics ablation exceeds both by a wide margin (10%: 214/89/48, pooled 0.682 vs 0.465; E-AURC 219/131 and pooled 0.0093 vs 0.0105, the first hand-label E-AURC win), so the semantic-neighbourhood reading is falsified and the finding is the model's inconsistency across spectrally similar windows; null against WorldCover (rivers 4/4); replication preregistered as exp40 |
+| exp40 | preregistered replication of the pixel-statistics neighbourhood contradiction on the Sen1Floods11 test split (800 tiles, other regions; Bolivia as the bank): fails, worse than confidence at the 10% budget (183/195/105, p = 0.75; pooled 0.530 vs 0.643, CI below zero), at 20% and on E-AURC (215/267, pooled 0.0149 vs 0.0096); the OlmoEarth-space score is far worse (97/301); the Bolivia win did not carry over, so neither contradiction score is supported |
 
 ## exp01 — first E_case map (2026-08-31)
 
@@ -1208,3 +1209,46 @@ preregistered candidate, and it is null on the WorldCover reference, so
 its status is a strong secondary finding until a preregistered replication
 on an independent expert testbed (exp40, the Sen1Floods11 test split as
 queries with Bolivia as the bank) passes.
+
+## exp40 replication of the pixel-statistics contradiction on the test split (2026-09-08)
+
+The preregistered replication of exp39's ablation result on labels it had
+not seen: queries are the Sen1Floods11 test split as exp18 sampled it (800
+tiles from several regions and events, 171,861 valid windows, head
+accuracy 0.953, 483 tiles scored), the bank is the 441 Bolivia tiles with
+the same head's predictions, the head retrained from the valid split
+exactly as the harness does. Primary, one-sided, the pixel-statistics
+contradiction against confidence: capture at the 10% budget per tile and
+the tile bootstrap of the pooled gain (95% interval excluding zero), and
+E-AURC per tile; support needs all three. exp/exp40_pixel_contradiction_replication.py,
+one B200 job, 725652 on 558ab52, 131 s, 0 failures; Codex review found no
+blocking defect. Outputs exp/out/exp40_summary.json, exp40_pixel_contradiction_replication.csv,
+exp40_cache.npz.
+
+Result: not supported, on every primary test. At 10% the pixel contradiction
+is 183 tiles better, 195 worse, 105 tied (p = 0.75), pooled 0.530 against
+0.643 for confidence (CI of the gain [-0.160, -0.066]); at 20% 108/200/175,
+pooled 0.722 against 0.824; at 5% it is ahead per tile (237/182/64,
+two-sided p = 0.008) but not pooled (0.367 against 0.417, CI [-0.095,
++0.004]). On E-AURC it loses per tile 215/267 (one-sided p = 0.99) and
+pooled 0.0149 against 0.0096. The OlmoEarth-space contradiction is far
+worse (97/301 at 10%, pooled 0.334 against 0.643; E-AURC 116/365). The
+pixel space still beats the OlmoEarth space here (280/121 at 10%), so the
+ordering of the spaces replicates while the win over confidence does not.
+Strata: the score separates error rates inside the least confident
+quintile (0.43 against 0.13) and among boundary windows (0.43 against
+0.10), weaker than on Bolivia (0.79 against 0.21, 0.72 against 0.13).
+
+Reading. The two runs differ in what the bank covers. In exp39 the queries
+were one event and the bank 800 tiles from many regions, so every query
+had look-alikes; in exp40 the queries span many regions and the bank is
+one event, so the nearest neighbours of a window from another region are
+often not look-alikes at all, and their contradiction measures bank
+mismatch rather than the model's inconsistency. Confidence is also
+stronger on this split (error rate 4.7% against 8.8%). Whether a bank that
+covers the query's regions restores the gain is the open question the
+result leaves; it would be a third preregistration (queries and bank both
+from the test split, the bank excluding the query's region), not a
+re-reading of this one. Under the protocol both contradiction scores stand
+as Bolivia-only findings: a preregistered pass on one event and a
+preregistered failure on the multi-region split. Neither is supported.

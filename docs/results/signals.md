@@ -274,21 +274,24 @@ null, and on E-AURC it does not beat confidence (177/173), so the gain is
 an operating-point gain like the boundary rule's. Against WorldCover it is
 7/1 rivers on capture at every budget and 21/6 scenes on E-AURC.
 
-**In pixel-statistics space: the ablation that won.** Fourteen spectral
-statistics per window make a better neighbourhood than either
-representation: at 10% it captures 0.682 of the errors against 0.465 for
-confidence (214/89/48 tiles, p = 5e-13; CI [+0.18, +0.26]), 0.412 against
-0.259 at 5%, 0.891 against 0.749 at 20%, and on E-AURC it beats confidence
-per tile 219/131 and pooled 0.0093 against 0.0105, the first ranking win
-on hand labels in the repository. It beats tile-phase, the boundary
-indicator and the NDWI-gradient control, and it adds information inside
-every confidence quintile (error rate among its top fifth against the rest:
-0.79 against 0.21 in the least confident quintile, 0.32 against 0.024 in
-the next). It is null against WorldCover (4/4 rivers), the mirror image of
-tile-phase. It was the preregistered ablation, not the candidate, so its
-status is a strong secondary finding until exp40, a preregistered
-replication with the Sen1Floods11 test split as queries and Bolivia as the
-bank, passes or fails.
+**In pixel-statistics space: the ablation that won on Bolivia and failed
+to replicate.** Fourteen spectral statistics per window make a better
+neighbourhood than either representation on Bolivia: at 10% it captures
+0.682 of the errors against 0.465 for confidence (214/89/48 tiles,
+p = 5e-13), and on E-AURC it beats confidence per tile 219/131 and pooled
+0.0093 against 0.0105, adding information inside every confidence quintile.
+It is null against WorldCover (4/4 rivers). The preregistered replication
+(exp40) put the same score on the Sen1Floods11 test split, 800 tiles from
+other regions the head never saw, with Bolivia as the bank, and it failed
+every primary test: at 10% 183 tiles better, 195 worse, 105 tied (p = 0.75),
+pooled 0.530 against 0.643 with the interval below zero; at 20% 108/200;
+on E-AURC 215/267 per tile and 0.0149 against 0.0096 pooled. The pixel
+space still beats the OlmoEarth space there (280/121), so the ordering of
+spaces holds while the win over confidence does not. The two runs differ
+in what the bank covers: one event as queries against a many-region bank
+wins, many-region queries against a one-event bank loses, which points at
+bank coverage rather than at the model. That is a third preregistration,
+not a re-reading of these two.
 
 **AnySat as an outside witness: rejected.** Its local embedding beats
 confidence (172/127/52 at 10%) but not the OlmoEarth space (159/143,
@@ -297,11 +300,14 @@ dominated by position within the tile, moving little when the content
 shifts, and scores far below confidence (0.137 against 0.259 at 5%). An
 out-of-family representation added nothing over the model's own.
 
-**Reading.** The mechanism is inconsistency: the model predicting
-look-alike windows differently. For the water task, look-alike is spectral,
-and fourteen numbers say it better than a 768-dimensional embedding. The
-representation was not what made it work. Source
-`exp/out/exp39_summary.json`.
+**Verdict: not supported.** Both contradiction scores are Bolivia-only:
+a preregistered pass on one event and a preregistered failure on the
+multi-region split. What the runs did establish: the mechanism is
+inconsistency, the model predicting look-alike windows differently; for
+the water task look-alike is spectral, and fourteen numbers say it better
+than a 768-dimensional embedding; the representation was not what made it
+work on Bolivia, and no outside representation helped. Sources
+`exp/out/exp39_summary.json`, `exp/out/exp40_summary.json`.
 
 ---
 

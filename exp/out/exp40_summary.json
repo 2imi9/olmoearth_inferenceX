@@ -1,0 +1,1008 @@
+{
+ "experiment": "exp40 pixel-statistics neighbourhood contradiction: replication on the Sen1Floods11 test split",
+ "device": "cuda",
+ "smoke": false,
+ "config": {
+  "patch": 4,
+  "tf32": false,
+  "autocast": false,
+  "compile": false,
+  "k": 32,
+  "budgets": [
+   0.05,
+   0.1,
+   0.2
+  ],
+  "prereg_budget": 0.1,
+  "n_boot": 2000,
+  "primary_score": "contradiction (pixel-statistics neighbours)",
+  "combination": "combination conf+pixel contradiction (secondary)",
+  "queries": "Sen1Floods11 test split, exp18's 800-tile sample (seed 1), hand labels",
+  "bank": "Bolivia tiles (441), predictions of the exp18 head",
+  "prereg": {
+   "primary": "contradiction (pixel-statistics neighbours) vs confidence: (a) capture at 10% per tile one-sided + tile bootstrap of the pooled gain, (b) E-AURC per tile one-sided; support needs (a) per tile and pooled and (b)",
+   "secondary": "contradiction (OlmoEarth neighbours), U+, budgets 5% and 20%, strata; two-sided",
+   "falsification": "no gain on this testbed, or a gain confined to the 5% budget"
+  }
+ },
+ "part_a": {
+  "skipped": [
+   {
+    "scene": "*",
+    "reason": "exp40 is a hand-label replication only; the WorldCover result is in exp39"
+   }
+  ]
+ },
+ "part_b": {
+  "queries": "Sen1Floods11 test split, exp18's 800-tile sample (seed 1)",
+  "query_tiles": 800,
+  "valid_patches": 171861,
+  "head_acc": 0.9527583337697325,
+  "feats_source": "/home/qi_zim_neu/olmoearth_inferenceX/exp/out/exp18_feats.npz",
+  "bank": {
+   "name": "Bolivia tiles (one event)",
+   "tiles": 441,
+   "windows": 99225,
+   "water_share_of_predictions": 0.32802217183169563
+  },
+  "n_tiles_scored": 483,
+  "pooled_eaurc": {
+   "confidence (baseline)": 0.009613833394991795,
+   "tile-phase (aligned)": 0.01268521279767763,
+   "boundary indicator": 0.016722152819132988,
+   "control NDWI gradient": 0.02707183349726492,
+   "constant score": 0.046107641929515455,
+   "control S2 patch variance": 0.031787731594543275,
+   "control NDWI level": 0.011412864736978227,
+   "contradiction (pixel-statistics neighbours)": 0.014936623116137193,
+   "contradiction (OlmoEarth neighbours)": 0.017086682506525706,
+   "combination conf+pixel contradiction (secondary)": 0.013831165794773927
+  },
+  "tests": {
+   "confidence (baseline)": {
+    "vs tile-phase (aligned)": {
+     "n": 483,
+     "w": 305,
+     "l": 173,
+     "t": 5,
+     "sign_p": 1.646850723862875e-09,
+     "median_gain": 0.00041502929386058075,
+     "mean_gain": 0.001955635068855741
+    },
+    "vs boundary indicator": {
+     "n": 483,
+     "w": 329,
+     "l": 153,
+     "t": 1,
+     "sign_p": 7.529801604610161e-16,
+     "median_gain": 0.0017433271127438189,
+     "mean_gain": 0.01182809248319176
+    },
+    "vs control NDWI gradient": {
+     "n": 483,
+     "w": 416,
+     "l": 66,
+     "t": 1,
+     "sign_p": 3.959464129471184e-63,
+     "median_gain": 0.005053043079181639,
+     "mean_gain": 0.02224031367178682
+    }
+   },
+   "tile-phase (aligned)": {
+    "vs confidence (baseline)": {
+     "n": 483,
+     "w": 173,
+     "l": 305,
+     "t": 5,
+     "sign_p": 1.646850723862875e-09,
+     "median_gain": -0.00041502929386058075,
+     "mean_gain": -0.001955635068855741
+    },
+    "vs boundary indicator": {
+     "n": 483,
+     "w": 310,
+     "l": 165,
+     "t": 8,
+     "sign_p": 2.7694380595559102e-11,
+     "median_gain": 0.0011199321636277465,
+     "mean_gain": 0.009872457414336018
+    },
+    "vs control NDWI gradient": {
+     "n": 483,
+     "w": 396,
+     "l": 86,
+     "t": 1,
+     "sign_p": 1.447273664102809e-48,
+     "median_gain": 0.0045381053599372985,
+     "mean_gain": 0.02028467860293108
+    }
+   },
+   "boundary indicator": {
+    "vs confidence (baseline)": {
+     "n": 483,
+     "w": 153,
+     "l": 329,
+     "t": 1,
+     "sign_p": 7.529801604610161e-16,
+     "median_gain": -0.0017433271127438189,
+     "mean_gain": -0.01182809248319176
+    },
+    "vs tile-phase (aligned)": {
+     "n": 483,
+     "w": 165,
+     "l": 310,
+     "t": 8,
+     "sign_p": 2.7694380595559102e-11,
+     "median_gain": -0.0011199321636277465,
+     "mean_gain": -0.009872457414336018
+    },
+    "vs control NDWI gradient": {
+     "n": 483,
+     "w": 310,
+     "l": 171,
+     "t": 2,
+     "sign_p": 2.363673336200429e-10,
+     "median_gain": 0.0017277512846557196,
+     "mean_gain": 0.010412221188595059
+    }
+   },
+   "control NDWI gradient": {
+    "vs confidence (baseline)": {
+     "n": 483,
+     "w": 66,
+     "l": 416,
+     "t": 1,
+     "sign_p": 3.959464129471184e-63,
+     "median_gain": -0.005053043079181639,
+     "mean_gain": -0.02224031367178682
+    },
+    "vs tile-phase (aligned)": {
+     "n": 483,
+     "w": 86,
+     "l": 396,
+     "t": 1,
+     "sign_p": 1.447273664102809e-48,
+     "median_gain": -0.0045381053599372985,
+     "mean_gain": -0.02028467860293108
+    },
+    "vs boundary indicator": {
+     "n": 483,
+     "w": 171,
+     "l": 310,
+     "t": 2,
+     "sign_p": 2.363673336200429e-10,
+     "median_gain": -0.0017277512846557196,
+     "mean_gain": -0.010412221188595059
+    }
+   },
+   "constant score": {
+    "vs confidence (baseline)": {
+     "n": 483,
+     "w": 5,
+     "l": 478,
+     "t": 0,
+     "sign_p": 1.736298173679409e-134,
+     "median_gain": -0.041759665333390414,
+     "mean_gain": -0.051101160020344205
+    },
+    "vs tile-phase (aligned)": {
+     "n": 483,
+     "w": 5,
+     "l": 478,
+     "t": 0,
+     "sign_p": 1.736298173679409e-134,
+     "median_gain": -0.04041353344010922,
+     "mean_gain": -0.04914552495148846
+    },
+    "vs boundary indicator": {
+     "n": 483,
+     "w": 6,
+     "l": 460,
+     "t": 17,
+     "sign_p": 1.4644586897254601e-127,
+     "median_gain": -0.034013472700830376,
+     "mean_gain": -0.03927306753715244
+    },
+    "vs control NDWI gradient": {
+     "n": 483,
+     "w": 45,
+     "l": 438,
+     "t": 0,
+     "sign_p": 5.38693661360338e-82,
+     "median_gain": -0.026360352453894224,
+     "mean_gain": -0.028860846348557383
+    }
+   },
+   "control S2 patch variance": {
+    "vs confidence (baseline)": {
+     "n": 483,
+     "w": 36,
+     "l": 447,
+     "t": 0,
+     "sign_p": 2.5733733157896283e-91,
+     "median_gain": -0.012330030896949383,
+     "mean_gain": -0.02848869175298857
+    },
+    "vs tile-phase (aligned)": {
+     "n": 483,
+     "w": 35,
+     "l": 448,
+     "t": 0,
+     "sign_p": 2.0625113736277568e-92,
+     "median_gain": -0.011117812897213052,
+     "mean_gain": -0.02653305668413283
+    },
+    "vs boundary indicator": {
+     "n": 483,
+     "w": 137,
+     "l": 346,
+     "t": 0,
+     "sign_p": 6.605918287336315e-22,
+     "median_gain": -0.0058711993646894944,
+     "mean_gain": -0.01666059926979681
+    },
+    "vs control NDWI gradient": {
+     "n": 483,
+     "w": 142,
+     "l": 341,
+     "t": 0,
+     "sign_p": 6.120378357283563e-20,
+     "median_gain": -0.0026509898365915606,
+     "mean_gain": -0.0062483780812017525
+    }
+   },
+   "control NDWI level": {
+    "vs confidence (baseline)": {
+     "n": 483,
+     "w": 121,
+     "l": 360,
+     "t": 2,
+     "sign_p": 1.3479495491553032e-28,
+     "median_gain": -0.002149429268471982,
+     "mean_gain": -0.005979883901606483
+    },
+    "vs tile-phase (aligned)": {
+     "n": 483,
+     "w": 155,
+     "l": 324,
+     "t": 4,
+     "sign_p": 8.687342806972512e-15,
+     "median_gain": -0.0011122809616843513,
+     "mean_gain": -0.004024248832750742
+    },
+    "vs boundary indicator": {
+     "n": 483,
+     "w": 232,
+     "l": 247,
+     "t": 4,
+     "sign_p": 0.5224260246690074,
+     "median_gain": -4.469783241989973e-05,
+     "mean_gain": 0.005848208581585277
+    },
+    "vs control NDWI gradient": {
+     "n": 483,
+     "w": 314,
+     "l": 167,
+     "t": 2,
+     "sign_p": 1.9632932814076172e-11,
+     "median_gain": 0.002124600461494661,
+     "mean_gain": 0.016260429770180336
+    }
+   },
+   "contradiction (pixel-statistics neighbours)": {
+    "vs confidence (baseline)": {
+     "n": 483,
+     "w": 215,
+     "l": 267,
+     "t": 1,
+     "sign_p": 0.020084878581287834,
+     "median_gain": -0.00027958840403172354,
+     "mean_gain": -0.01328644559632318
+    },
+    "vs tile-phase (aligned)": {
+     "n": 483,
+     "w": 247,
+     "l": 228,
+     "t": 8,
+     "sign_p": 0.4088891026870762,
+     "median_gain": 2.3097431783080454e-05,
+     "mean_gain": -0.011330810527467438
+    },
+    "vs boundary indicator": {
+     "n": 483,
+     "w": 286,
+     "l": 176,
+     "t": 21,
+     "sign_p": 3.5018886116356644e-07,
+     "median_gain": 0.0003407526093731747,
+     "mean_gain": -0.0014583531131314197
+    },
+    "vs control NDWI gradient": {
+     "n": 483,
+     "w": 354,
+     "l": 127,
+     "t": 2,
+     "sign_p": 7.821907586788636e-26,
+     "median_gain": 0.0029196539260515093,
+     "mean_gain": 0.008953868075463639
+    },
+    "vs constant score": {
+     "n": 483,
+     "w": 449,
+     "l": 30,
+     "t": 4,
+     "sign_p": 5.262546687655825e-97,
+     "median_gain": 0.03447572743115431,
+     "mean_gain": 0.03781471442402102
+    },
+    "vs control S2 patch variance": {
+     "n": 483,
+     "w": 383,
+     "l": 99,
+     "t": 1,
+     "sign_p": 1.9129035306577895e-40,
+     "median_gain": 0.007831554739126926,
+     "mean_gain": 0.015202246156665392
+    },
+    "vs control NDWI level": {
+     "n": 483,
+     "w": 285,
+     "l": 194,
+     "t": 4,
+     "sign_p": 3.727776665619954e-05,
+     "median_gain": 0.00039960196543116326,
+     "mean_gain": -0.007306561694716697
+    }
+   },
+   "contradiction (OlmoEarth neighbours)": {
+    "vs confidence (baseline)": {
+     "n": 483,
+     "w": 116,
+     "l": 365,
+     "t": 2,
+     "sign_p": 4.967465021622143e-31,
+     "median_gain": -0.004332632854893395,
+     "mean_gain": -0.01276197387595263
+    },
+    "vs tile-phase (aligned)": {
+     "n": 483,
+     "w": 152,
+     "l": 329,
+     "t": 2,
+     "sign_p": 4.754101800650999e-16,
+     "median_gain": -0.0032016491677287215,
+     "mean_gain": -0.010806338807096888
+    },
+    "vs boundary indicator": {
+     "n": 483,
+     "w": 204,
+     "l": 273,
+     "t": 6,
+     "sign_p": 0.0018191630262488852,
+     "median_gain": -0.0008343017177159238,
+     "mean_gain": -0.0009338813927608708
+    },
+    "vs control NDWI gradient": {
+     "n": 483,
+     "w": 296,
+     "l": 186,
+     "t": 1,
+     "sign_p": 6.18021123525321e-07,
+     "median_gain": 0.0012959865885658374,
+     "mean_gain": 0.009478339795834189
+    },
+    "vs constant score": {
+     "n": 483,
+     "w": 451,
+     "l": 32,
+     "t": 0,
+     "sign_p": 8.820153168415633e-96,
+     "median_gain": 0.02986023695949877,
+     "mean_gain": 0.03833918614439158
+    },
+    "vs control S2 patch variance": {
+     "n": 483,
+     "w": 349,
+     "l": 134,
+     "t": 0,
+     "sign_p": 3.867641788263511e-23,
+     "median_gain": 0.00593500586038215,
+     "mean_gain": 0.01572671787703594
+    },
+    "vs control NDWI level": {
+     "n": 483,
+     "w": 216,
+     "l": 264,
+     "t": 3,
+     "sign_p": 0.03182576120154023,
+     "median_gain": -0.0005328581752157332,
+     "mean_gain": -0.006782089974346147
+    }
+   },
+   "combination conf+pixel contradiction (secondary)": {
+    "vs confidence (baseline)": {
+     "n": 483,
+     "w": 319,
+     "l": 155,
+     "t": 9,
+     "sign_p": 3.9512215210637504e-14,
+     "median_gain": 0.00035677207941751336,
+     "mean_gain": -0.0006245083108300419
+    },
+    "vs tile-phase (aligned)": {
+     "n": 483,
+     "w": 346,
+     "l": 132,
+     "t": 5,
+     "sign_p": 3.596334583429913e-23,
+     "median_gain": 0.0007795971062852462,
+     "mean_gain": 0.001331126758025699
+    },
+    "vs boundary indicator": {
+     "n": 483,
+     "w": 363,
+     "l": 111,
+     "t": 9,
+     "sign_p": 2.8031327028641597e-32,
+     "median_gain": 0.002416822687965766,
+     "mean_gain": 0.01120358417236172
+    },
+    "vs control NDWI gradient": {
+     "n": 483,
+     "w": 425,
+     "l": 56,
+     "t": 2,
+     "sign_p": 2.934985054724592e-71,
+     "median_gain": 0.005666260296220069,
+     "mean_gain": 0.021615805360956773
+    },
+    "vs constant score": {
+     "n": 483,
+     "w": 477,
+     "l": 6,
+     "t": 0,
+     "sign_p": 1.3862054991424501e-132,
+     "median_gain": 0.041666240779275054,
+     "mean_gain": 0.05047665170951415
+    },
+    "vs control S2 patch variance": {
+     "n": 483,
+     "w": 446,
+     "l": 37,
+     "t": 0,
+     "sign_p": 3.1170768282189715e-90,
+     "median_gain": 0.01263756697966769,
+     "mean_gain": 0.02786418344215853
+    },
+    "vs control NDWI level": {
+     "n": 483,
+     "w": 397,
+     "l": 83,
+     "t": 3,
+     "sign_p": 3.8229380175934893e-50,
+     "median_gain": 0.002713201269849901,
+     "mean_gain": 0.0053553755907764415
+    }
+   }
+  },
+  "prereg": {
+   "capture_10_per_tile": {
+    "w": 183,
+    "l": 195,
+    "t": 105,
+    "sign_p": 0.7481137453278746,
+    "one_sided": true,
+    "median_gain": 0.0,
+    "n_units": 483
+   },
+   "capture_10_pooled": {
+    "gain": -0.11353380582329775,
+    "boot_lo": -0.16022409648479333,
+    "boot_hi": -0.06628922990620122,
+    "p_better": 0.0,
+    "n_boot": 2000
+   },
+   "eaurc_per_tile": {
+    "w": 215,
+    "l": 267,
+    "t": 1,
+    "sign_p": 0.9921562749338355,
+    "one_sided": true,
+    "median_gain": -0.00027958840403172354,
+    "pooled_eaurc": 0.014936623116137193,
+    "pooled_eaurc_confidence": 0.009613833394991795
+   },
+   "supported": false
+  },
+  "best_tally": {
+   "confidence (baseline)": 86,
+   "tile-phase (aligned)": 43,
+   "combination conf+pixel contradiction (secondary)": 128,
+   "boundary indicator": 61,
+   "contradiction (pixel-statistics neighbours)": 74,
+   "contradiction (OlmoEarth neighbours)": 49,
+   "control NDWI level": 27,
+   "control NDWI gradient": 13,
+   "control S2 patch variance": 2
+  },
+  "spearman": {
+   "contradiction (pixel-statistics neighbours)": {
+    "confidence (baseline)": {
+     "median": 0.5097426313023514,
+     "min": -0.34777615790762384,
+     "max": 0.8364596186942204
+    },
+    "tile-phase (aligned)": {
+     "median": 0.5159707844428236,
+     "min": -0.34468417555570574,
+     "max": 0.7996991040365197
+    },
+    "boundary indicator": {
+     "median": 0.5322602266361335,
+     "min": -0.24598595812529117,
+     "max": 0.8601756589509858
+    },
+    "control NDWI gradient": {
+     "median": 0.3266950546708222,
+     "min": -0.572184654223928,
+     "max": 0.8062827627602556
+    }
+   },
+   "contradiction (OlmoEarth neighbours)": {
+    "confidence (baseline)": {
+     "median": 0.6335658460328185,
+     "min": -0.31500536128298173,
+     "max": 0.8879040860460967
+    },
+    "tile-phase (aligned)": {
+     "median": 0.5720023334503599,
+     "min": -0.37726655892954913,
+     "max": 0.8085226120127557
+    },
+    "boundary indicator": {
+     "median": 0.4324338948848325,
+     "min": -0.34537818966286393,
+     "max": 0.8093270130580877
+    },
+    "control NDWI gradient": {
+     "median": 0.3657759583844233,
+     "min": -0.674650673866917,
+     "max": 0.8232999132575587
+    }
+   },
+   "combination conf+pixel contradiction (secondary)": {
+    "confidence (baseline)": {
+     "median": 0.9700947525155128,
+     "min": 0.5572499521567361,
+     "max": 1.0
+    },
+    "tile-phase (aligned)": {
+     "median": 0.814609144542773,
+     "min": -0.10338190860026673,
+     "max": 0.9581444790730616
+    },
+    "boundary indicator": {
+     "median": 0.5459661215681567,
+     "min": -0.13759969638233902,
+     "max": 0.8416208760614384
+    },
+    "control NDWI gradient": {
+     "median": 0.47132954066582383,
+     "min": -0.5382564264643916,
+     "max": 0.9075123544860073
+    }
+   }
+  },
+  "boundary_share": {
+   "errors": 0.7334647124030053,
+   "correct": 0.18068669003676516
+  },
+  "prereg_eaurc": {
+   "w": 215,
+   "l": 267,
+   "t": 1,
+   "sign_p": 0.9921562749338355,
+   "one_sided": true,
+   "median_gain": -0.00027958840403172354,
+   "pooled_eaurc": 0.014936623116137193,
+   "pooled_eaurc_confidence": 0.009613833394991795
+  },
+  "capture_tests": {
+   "contradiction (pixel-statistics neighbours) vs confidence (baseline)": {
+    "0.05": {
+     "w": 237,
+     "l": 182,
+     "t": 64,
+     "sign_p": 0.00826086784262564,
+     "one_sided": false,
+     "median_gain": 0.0,
+     "n_units": 483
+    },
+    "0.1": {
+     "w": 183,
+     "l": 195,
+     "t": 105,
+     "sign_p": 0.7481137453278746,
+     "one_sided": true,
+     "median_gain": 0.0,
+     "n_units": 483
+    },
+    "0.2": {
+     "w": 108,
+     "l": 200,
+     "t": 175,
+     "sign_p": 1.7631223965442736e-07,
+     "one_sided": false,
+     "median_gain": 0.0,
+     "n_units": 483
+    }
+   },
+   "contradiction (OlmoEarth neighbours) vs confidence (baseline)": {
+    "0.05": {
+     "w": 142,
+     "l": 278,
+     "t": 63,
+     "sign_p": 3.033939119066239e-11,
+     "one_sided": false,
+     "median_gain": -0.09375,
+     "n_units": 483
+    },
+    "0.1": {
+     "w": 97,
+     "l": 301,
+     "t": 85,
+     "sign_p": 2.0602691863790465e-25,
+     "one_sided": false,
+     "median_gain": -0.125,
+     "n_units": 483
+    },
+    "0.2": {
+     "w": 65,
+     "l": 285,
+     "t": 133,
+     "sign_p": 5.545708327318316e-34,
+     "one_sided": false,
+     "median_gain": -0.10396039603960394,
+     "n_units": 483
+    }
+   },
+   "combination conf+pixel contradiction (secondary) vs confidence (baseline)": {
+    "0.05": {
+     "w": 255,
+     "l": 107,
+     "t": 121,
+     "sign_p": 4.602540084111373e-15,
+     "one_sided": false,
+     "median_gain": 0.055555555555555525,
+     "n_units": 483
+    },
+    "0.1": {
+     "w": 207,
+     "l": 104,
+     "t": 172,
+     "sign_p": 5.338755830198181e-09,
+     "one_sided": false,
+     "median_gain": 0.0,
+     "n_units": 483
+    },
+    "0.2": {
+     "w": 119,
+     "l": 91,
+     "t": 273,
+     "sign_p": 0.06217977335749598,
+     "one_sided": false,
+     "median_gain": 0.0,
+     "n_units": 483
+    }
+   },
+   "contradiction (pixel-statistics neighbours) vs contradiction (OlmoEarth neighbours)": {
+    "0.05": {
+     "w": 273,
+     "l": 132,
+     "t": 78,
+     "sign_p": 2.1009704056972116e-12,
+     "one_sided": false,
+     "median_gain": 0.06122448979591838,
+     "n_units": 483
+    },
+    "0.1": {
+     "w": 280,
+     "l": 121,
+     "t": 82,
+     "sign_p": 1.2780808413475329e-15,
+     "one_sided": false,
+     "median_gain": 0.07692307692307687,
+     "n_units": 483
+    },
+    "0.2": {
+     "w": 248,
+     "l": 128,
+     "t": 107,
+     "sign_p": 6.065366699769802e-10,
+     "one_sided": false,
+     "median_gain": 0.018442622950819665,
+     "n_units": 483
+    }
+   }
+  },
+  "pooled_capture": {
+   "confidence (baseline)": {
+    "0.05": 0.41655376277866735,
+    "0.1": 0.6430594900849859,
+    "0.2": 0.8238699347210248
+   },
+   "contradiction (pixel-statistics neighbours)": {
+    "0.05": 0.36733453890120854,
+    "0.1": 0.5295256842616881,
+    "0.2": 0.7221239549505977
+   },
+   "contradiction (OlmoEarth neighbours)": {
+    "0.05": 0.17174132342382667,
+    "0.1": 0.3340716279307564,
+    "0.2": 0.6124358387690124
+   },
+   "combination conf+pixel contradiction (secondary)": {
+    "0.05": 0.38071655817823086,
+    "0.1": 0.5573428583158846,
+    "0.2": 0.6944127568388804
+   },
+   "tile-phase (aligned)": {
+    "0.05": 0.33821899248675946,
+    "0.1": 0.5604138440694667,
+    "0.2": 0.7972656731124522
+   },
+   "boundary indicator": {
+    "0.05": 0.3899384720727376,
+    "0.1": 0.5535500485210624,
+    "0.2": 0.7241866189835358
+   }
+  },
+  "pooled_capture_gain": {
+   "contradiction (pixel-statistics neighbours) vs confidence (baseline)": {
+    "0.05": {
+     "gain": -0.049219223877458806,
+     "boot_lo": -0.09537223190895024,
+     "boot_hi": 0.0038058722871459854,
+     "p_better": 0.0315,
+     "n_boot": 2000
+    },
+    "0.1": {
+     "gain": -0.11353380582329775,
+     "boot_lo": -0.16022409648479333,
+     "boot_hi": -0.06628922990620122,
+     "p_better": 0.0,
+     "n_boot": 2000
+    },
+    "0.2": {
+     "gain": -0.1017459797704271,
+     "boot_lo": -0.15531062892086694,
+     "boot_hi": -0.05560450577267172,
+     "p_better": 0.0,
+     "n_boot": 2000
+    }
+   },
+   "contradiction (OlmoEarth neighbours) vs confidence (baseline)": {
+    "0.05": {
+     "gain": -0.24481243935484068,
+     "boot_lo": -0.28647789852571515,
+     "boot_hi": -0.20320470455935805,
+     "p_better": 0.0,
+     "n_boot": 2000
+    },
+    "0.1": {
+     "gain": -0.30898786215422946,
+     "boot_lo": -0.3619888196789095,
+     "boot_hi": -0.2587355000351731,
+     "p_better": 0.0,
+     "n_boot": 2000
+    },
+    "0.2": {
+     "gain": -0.21143409595201235,
+     "boot_lo": -0.26109949751518935,
+     "boot_hi": -0.16817054664563688,
+     "p_better": 0.0,
+     "n_boot": 2000
+    }
+   },
+   "combination conf+pixel contradiction (secondary) vs confidence (baseline)": {
+    "0.05": {
+     "gain": -0.03583720460043649,
+     "boot_lo": -0.05738033336346433,
+     "boot_hi": -0.014080817287226025,
+     "p_better": 0.0015,
+     "n_boot": 2000
+    },
+    "0.1": {
+     "gain": -0.08571663176910127,
+     "boot_lo": -0.12036580974997992,
+     "boot_hi": -0.05095836700399317,
+     "p_better": 0.0,
+     "n_boot": 2000
+    },
+    "0.2": {
+     "gain": -0.1294571778821444,
+     "boot_lo": -0.17769257506605993,
+     "boot_hi": -0.0795505038440353,
+     "p_better": 0.0,
+     "n_boot": 2000
+    }
+   },
+   "contradiction (pixel-statistics neighbours) vs contradiction (OlmoEarth neighbours)": {
+    "0.05": {
+     "gain": 0.19559321547738187,
+     "boot_lo": 0.14110930704044033,
+     "boot_hi": 0.25851336194514557,
+     "p_better": 1.0,
+     "n_boot": 2000
+    },
+    "0.1": {
+     "gain": 0.1954540563309317,
+     "boot_lo": 0.13658066286002807,
+     "boot_hi": 0.25824122525034815,
+     "p_better": 1.0,
+     "n_boot": 2000
+    },
+    "0.2": {
+     "gain": 0.10968811618158525,
+     "boot_lo": 0.05220326321993443,
+     "boot_hi": 0.16340774778956546,
+     "p_better": 1.0,
+     "n_boot": 2000
+    }
+   }
+  },
+  "strata": {
+   "contradiction (pixel-statistics neighbours)": {
+    "confidence quintile 1 (1 = most confident)": {
+     "n": 34372,
+     "threshold": 0.0,
+     "n_top": 34372,
+     "n_rest": 0,
+     "error_rate_top": 0.00977539858023973,
+     "error_rate_rest": null
+    },
+    "confidence quintile 2 (1 = most confident)": {
+     "n": 34372,
+     "threshold": 0.0,
+     "n_top": 34372,
+     "n_rest": 0,
+     "error_rate_top": 0.003083905504480391,
+     "error_rate_rest": null
+    },
+    "confidence quintile 3 (1 = most confident)": {
+     "n": 34372,
+     "threshold": 0.0,
+     "n_top": 34372,
+     "n_rest": 0,
+     "error_rate_top": 0.007709763761200978,
+     "error_rate_rest": null
+    },
+    "confidence quintile 4 (1 = most confident)": {
+     "n": 34372,
+     "threshold": 0.15625,
+     "n_top": 7042,
+     "n_rest": 27330,
+     "error_rate_top": 0.0411814825333712,
+     "error_rate_rest": 0.015843395536040982
+    },
+    "confidence quintile 5 (1 = most confident)": {
+     "n": 34373,
+     "threshold": 0.59375,
+     "n_top": 7093,
+     "n_rest": 27280,
+     "error_rate_top": 0.42689976032708304,
+     "error_rate_rest": 0.13420087976539588
+    },
+    "boundary windows": {
+     "n": 35541,
+     "threshold": 0.53125,
+     "n_top": 7346,
+     "n_rest": 28195,
+     "error_rate_top": 0.43329703239858425,
+     "error_rate_rest": 0.09831530413193829
+    },
+    "interior windows": {
+     "n": 136320,
+     "threshold": 0.0,
+     "n_top": 136320,
+     "n_rest": 0,
+     "error_rate_top": 0.015874413145539907,
+     "error_rate_rest": null
+    },
+    "NDWI-ambiguous windows": {
+     "n": 18571,
+     "threshold": 0.71875,
+     "n_top": 3897,
+     "n_rest": 14674,
+     "error_rate_top": 0.24480369515011546,
+     "error_rate_rest": 0.18290854572713644
+    },
+    "NDWI-clear windows": {
+     "n": 153290,
+     "threshold": 0.0,
+     "n_top": 153290,
+     "n_rest": 0,
+     "error_rate_top": 0.029232174310131125,
+     "error_rate_rest": null
+    }
+   },
+   "contradiction (OlmoEarth neighbours)": {
+    "confidence quintile 1 (1 = most confident)": {
+     "n": 34372,
+     "threshold": 0.0,
+     "n_top": 34372,
+     "n_rest": 0,
+     "error_rate_top": 0.00977539858023973,
+     "error_rate_rest": null
+    },
+    "confidence quintile 2 (1 = most confident)": {
+     "n": 34372,
+     "threshold": 0.0,
+     "n_top": 34372,
+     "n_rest": 0,
+     "error_rate_top": 0.003083905504480391,
+     "error_rate_rest": null
+    },
+    "confidence quintile 3 (1 = most confident)": {
+     "n": 34372,
+     "threshold": 0.03125,
+     "n_top": 8992,
+     "n_rest": 25380,
+     "error_rate_top": 0.006227758007117438,
+     "error_rate_rest": 0.008234830575256107
+    },
+    "confidence quintile 4 (1 = most confident)": {
+     "n": 34372,
+     "threshold": 0.1875,
+     "n_top": 7039,
+     "n_rest": 27333,
+     "error_rate_top": 0.02372496093195056,
+     "error_rate_rest": 0.020341711484286394
+    },
+    "confidence quintile 5 (1 = most confident)": {
+     "n": 34373,
+     "threshold": 0.59375,
+     "n_top": 7170,
+     "n_rest": 27203,
+     "error_rate_top": 0.25411436541143656,
+     "error_rate_rest": 0.17891409035768113
+    },
+    "boundary windows": {
+     "n": 35541,
+     "threshold": 0.4375,
+     "n_top": 7558,
+     "n_rest": 27983,
+     "error_rate_top": 0.32243979888859486,
+     "error_rate_rest": 0.12571918664903692
+    },
+    "interior windows": {
+     "n": 136320,
+     "threshold": 0.0625,
+     "n_top": 28707,
+     "n_rest": 107613,
+     "error_rate_top": 0.03504371756017696,
+     "error_rate_rest": 0.010760781689944524
+    },
+    "NDWI-ambiguous windows": {
+     "n": 18571,
+     "threshold": 0.46875,
+     "n_top": 3808,
+     "n_rest": 14763,
+     "error_rate_top": 0.27442226890756305,
+     "error_rate_rest": 0.1756418072207546
+    },
+    "NDWI-clear windows": {
+     "n": 153290,
+     "threshold": 0.09375,
+     "n_top": 32367,
+     "n_rest": 120923,
+     "error_rate_top": 0.09383013563197083,
+     "error_rate_rest": 0.011941483423335512
+    }
+   }
+  }
+ },
+ "failures": [],
+ "runtime_s": 131.02569484710693,
+ "n_failures": 0
+}

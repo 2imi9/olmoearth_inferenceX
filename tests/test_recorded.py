@@ -190,3 +190,18 @@ def test_exp39_preregistered_tests_and_ablation_from_the_summary():
     assert (t["w"], t["l"]) == (219, 131)
     a = s["part_a"]
     assert a["capture_river_tests_vs_confidence"][OE]["0.1"]["w"] == 7 and a["capture_river_tests_vs_confidence"][PIX]["0.1"]["w"] == 4
+
+
+def test_exp40_replication_is_a_recorded_negative():
+    """exp40 (job 725652): the pixel-statistics contradiction fails every primary test on the test split."""
+    s = json.load(open(os.path.join(OUT, "exp40_summary.json")))
+    b = s["part_b"]
+    assert b["prereg"]["supported"] is False and b["n_tiles_scored"] == 483
+    ea = b["prereg"]["eaurc_per_tile"]
+    assert (ea["w"], ea["l"]) == (215, 267) and ea["sign_p"] == pytest.approx(sign_test(215, 267, "greater"), rel=1e-9)
+    assert ea["pooled_eaurc"] > ea["pooled_eaurc_confidence"]
+    c10 = b["prereg"]["capture_10_per_tile"]
+    assert c10["one_sided"] and (c10["w"], c10["l"], c10["t"]) == (183, 195, 105)
+    assert b["prereg"]["capture_10_pooled"]["boot_hi"] < 0
+    PIX, OE = "contradiction (pixel-statistics neighbours)", "contradiction (OlmoEarth neighbours)"
+    assert b["pooled_capture"][PIX]["0.1"] > b["pooled_capture"][OE]["0.1"]      # the ordering of the spaces replicates
