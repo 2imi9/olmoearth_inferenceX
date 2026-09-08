@@ -111,9 +111,9 @@ panel(2, 8, 46, 15, "D  Open question", tc=AMBER)
 text(4, 17.5, "why the WorldCover wins do not transfer to hand labels.\nleading hypothesis: WorldCover was a pretraining target, so the\n"
      "probe partly reads out the model's own map; decisive test needs\nadjudicated cells on the 8 rivers (issue #2)", fs=7.3, ha="left", va="top")
 panel(130, 8, 68, 15, "E  Where it stands", tc=VIOLET)
-text(132, 17.5, "the re-targeted latent-MIM residual was tested (exp33): the objective becomes predictable,\n"
-     "the residual is texture, not error. Remaining: the adjudicated-cell test (issue #2) and the\n"
-     "pretraining-target recommendation to Ai2 (issue #11)", fs=7.3, ha="left", va="top")
+text(132, 17.5, "supported for deployment: confidence as the ranker, boundary first then confidence as the\n"
+     "review order, and a reason with measured evidence for every flagged window (oe_inferencex).\n"
+     "Remaining: the adjudicated-cell test (issue #2) and the pretraining-target note to Ai2 (issue #11)", fs=7.3, ha="left", va="top")
 
 arrow(48.5, 54, 51.5, 54, color=INK, lw=1.6)
 arrow(126.5, 54, 129.5, 54, color=EMERALD, lw=1.6)

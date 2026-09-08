@@ -1,88 +1,82 @@
 # olmoearth_inferenceX
 
-**A protocol for comparing inference outputs without labels.** Two things
-disagree — a model and a reference, two model versions, two explanations for
-the same discrepancy. Which do you believe, and is the difference real?
+**Examining OlmoEarth inference results without labels.** Given a prediction
+map, which windows should a reviewer trust, which should they look at first,
+and why. The protocol scores every candidate against the model's own
+confidence and a no-model pixel control, on two references at once, and
+grades on expert labels only.
 
-Two applications are demonstrated: **error ranking** and **cross-inference
-evaluation**. Signal designs are adapted from LLM hallucination detection,
-which faces the same no-reference problem.
+![Overview: what is audited, what we believe is true, the test every claim passed, the open question, where it stands](docs/figures/inferencex_overview.png)
 
-![Full audit slice at Kazungula: Sentinel-2 true colour with the disagreements outlined, reference, prediction, disagreements, E_case signal, OSM check, risk-coverage](exp/out/exp02_full_slice.png)
+## What holds
 
-<sup>One scene end to end — what `exp/exp02_full_slice.py` (the reproduce
-command below) writes. Panel (a) is the scene itself with the patches where
-the model and the reference disagree outlined; the signal lights up on the
-shoreline, where those disagreements are.</sup>
+- **The model's own confidence is the best label-free error ranker** on
+  every expert-labelled testbed: AWF points, Sen1Floods11 hand labels, and
+  the fine-tuned model run end to end (exp04, exp16, exp18, exp21).
+- **Review boundary windows first, then by confidence.** Errors concentrate
+  on prediction boundaries, 75% of errors against 21% of correct windows,
+  and this order captures more of them than confidence alone at 5% and 10%
+  review budgets on hand labels (preregistered, exp36). It costs nothing at
+  inference.
+- **Every flagged window comes with a reason.** 95% of the error windows on
+  hand labels carry at least one label-free cue with a measured enrichment;
+  spectral ambiguity is 7x enriched and the one cue that adds precision
+  inside the review set (exp37, `oe_inferencex.explain`).
+- **An accuracy needs a coverage.** The fine-tuned model is 0.93 accurate
+  where it claims 0.99; keeping the 80% most confident windows gives 0.945
+  (exp21).
+- **The served product can be triaged without confidence.** It exports no
+  class confidence, and boundary fraction alone captures a median 0.88 of
+  the disagreements at a 5% review budget (exp20).
 
 ## The numbers
 
-AURC ranks the windows the model gets wrong. **Lower is better**, and
-<u>underlined</u> marks the best value in each column. A signal counts only
-if it beats both the model's own confidence and a pixel statistic computed
-with no model at all.
+Sen1Floods11 Bolivia hand labels, 81,984 windows, 8.8% errors (exp36, exp37):
 
-| Signal | AWF<br>in-domain | Barotse<br>wetland margins | Zambezi delta<br>ref. omits river | Sen1Floods11<br>hand labels |
-|---|---|---|---|---|
-| confidence (baseline) | <u>0.0363</u> | 0.0684 | 0.0234 | <u>0.0105</u> |
-| E_system tiling instability | 0.0489 | <u>0.0127</u> | 0.0009 | 0.0115 |
-| E_case cross-model | 0.0670 | 0.0235 | 0.0103 | 0.0186 |
-| E_dist embedding distance | 0.1338 | 0.0289 | 0.0014 | 0.0592 |
-| pixel control (no model) | 0.1658 | 0.0384 | <u>0.0005</u> | 0.0356 |
+| Review budget | Errors caught, confidence | Errors caught, boundary first | Error rate inside the set |
+|---|---|---|---|
+| 5% | 0.259 | 0.274 | 0.38 |
+| 10% | 0.465 | 0.494 | 0.33 |
+| 20% | 0.749 | 0.732 | 0.26 |
 
-<sup>
-Col 1: AWF expert labels, 63 errors. Cols 2–3: ESA WorldCover 2021, 97 and 29
-disagreements. Col 4: hand-labelled flood masks, pooled excess AURC over
-81,984 patches on a held-out region (exp18).
-</sup>
+Why a window is flagged, share among error windows against correct windows
+on the same testbed (exp37):
 
-Columns 2–3 score against WorldCover, a weak map — the delta scene's
-reference has no water at all, which is why the no-model control wins there.
-**Only columns 1 and 4 score against human labels, and confidence wins both.**
+| Cue | Errors / correct | Enrichment |
+|---|---|---|
+| on a prediction boundary | 0.750 / 0.214 | 3.5x |
+| among the least confident 20% | 0.589 / 0.163 | 3.6x |
+| unstable under a tiling shift | 0.583 / 0.164 | 3.6x |
+| spectrally ambiguous, NDWI near zero | 0.483 / 0.067 | 7.2x |
 
-## What we found
+**Open question.** Tiling instability wins 26 of 27 scenes against the
+WorldCover reference and 8 of 8 rivers, but not on hand labels. The
+decisive test needs adjudicated cells on the eight rivers (issue #2).
 
-- **Confidence beats every audit signal on expert labels** (exp18, exp04,
-  exp16), including the fine-tuned model run end to end (exp21).
-- **That model is overconfident** — 0.93 accurate where it claims 0.99 — so a
-  stated accuracy needs a coverage: 0.945 at 80% (exp21).
-- **The WorldCover wins do not transfer, and we do not know why.** Tiling
-  instability won 26/27 scenes there (exp13) but not on hand labels;
-  reference instability, the year gap and seasonal water were each tested and
-  rejected (exp23, exp24, exp25). **Main open question.**
-- **Errors concentrate at prediction boundaries** — 75% against 20% — but
-  confidence still ranks them better (exp14, exp16, exp18). Reviewing the
-  boundary windows first, then by confidence, captures more of the errors
-  at 5% and 10% review budgets on hand labels (exp36).
-- **Two runs help only if they see the input differently**, not if one is more
-  accurate; same-family models err together (exp07, exp10, exp17, exp19).
-- **The served product exports no class confidence**, so boundary fraction is
-  the only cue: median 0.88 of disagreements at a 5% review budget (exp20).
-- **An error window nearly always carries a label-free cue.** On hand labels
-  95% of the error windows sit on a boundary, are among the least confident,
-  are unstable under a shift or a rotation, or are spectrally ambiguous;
-  spectral ambiguity is 7x enriched and the one cue confidence's review set
-  covers least (exp37; `oe_inferencex.explain`).
+**Side product.** OlmoEarth v1's pretraining target has effective rank 2
+(a frozen random projection); a normalised target is 57 to 70% predictable
+from context (exp32 to exp34, issue #11).
 
 ## Install and reproduce
 
 ```bash
-uv sync                                 # assessment layer only, no torch
+uv sync                                 # assessment and explanation layers, no torch
 uv sync --extra encoder --extra geo     # full experiment environment
-uv run python exp/exp02_full_slice.py
-uv run pytest                           # the assessment layer against the recorded numbers
+uv run pytest                           # the package against the recorded numbers
+uv run python exp/exp02_full_slice.py   # one scene end to end
 ```
 
-Experiments are `exp01`–`exp37` in [`exp/`](exp/), with outputs under
-`exp/out/`. The supported machinery (confidence, boundary triage, the
-AURC harness, the controls and tests, the explanation layer) is the package
-[`oe_inferencex/`](oe_inferencex/), torch-free and covered by `tests/`. Torch is pinned per platform — Linux resolves the cu128 build.
+Experiments are `exp01`–`exp38` in [`exp/`](exp/), with outputs under
+`exp/out/`. The supported machinery (confidence, boundary triage, tie-aware
+metrics, the tests, the explanation layer) is the package
+[`oe_inferencex/`](oe_inferencex/), torch-free and covered by `tests/`.
+Torch is pinned per platform; Linux resolves the cu128 build.
 
 ## Documentation
 
 | | |
 |---|---|
-| [Technique ledger](docs/TECHNIQUES.md) | What was tried, one line each — **start here** |
+| [Technique ledger](docs/TECHNIQUES.md) | Everything tried, one line each, including what was rejected and why |
 | [Recipe](docs/method/recipe.md) · [Protocol](docs/method/protocol.md) | What to do and not do; how results are scored |
 | [Comparisons](docs/results/comparisons.md) · [Signals](docs/results/signals.md) · [Explanation](docs/results/explanation.md) | Per-experiment, per-signal and per-cue evidence |
 | [Task cards](docs/method/taskcards.md) · [Infrastructure](docs/method/infrastructure.md) | What each model is; upstream sources and formats |
