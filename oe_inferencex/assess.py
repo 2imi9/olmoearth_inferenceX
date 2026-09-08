@@ -116,7 +116,7 @@ def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, sig
         "review_sets": {},
         "confidence_distinct_pooled": int(len(np.unique(conf_w[valid_w]))),
     }
-    order = np.argsort(np.where(valid_w, suspicion, -np.inf).flatten(), kind="stable")[::-1]  # most suspicious first
+    order = review_order(suspicion, valid_w)  # most suspicious first
     n_valid = int(valid_w.sum())
     for b in budgets:
         k = max(1, int(round(b * n_valid)))
@@ -149,6 +149,25 @@ def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, sig
         rc["caveat"] = "reference-product labels can flatter boundary-type signals (exp18); treat as expert truth only if it is"
         out["against_reference"] = rc
     return out
+
+
+def review_order(suspicion, valid=None):
+    """Flat window indices in review order: most suspicious first, invalid windows last, ties broken by descending
+    raster position (an ascending stable sort, reversed). The one definition of the review order; exp37 and the
+    explanation layer use it so that a review set means the same thing everywhere."""
+    s = np.asarray(suspicion, dtype=np.float64)
+    flat = np.where(np.asarray(valid, dtype=bool), s, -np.inf).ravel() if valid is not None else s.ravel()
+    return np.argsort(flat, kind="stable")[::-1]
+
+
+def review_mask(suspicion, valid, budget):
+    """Boolean map of the review set at `budget`: the k = max(1, round(budget * n_valid)) first windows of review_order."""
+    valid = np.asarray(valid, dtype=bool)
+    order = review_order(suspicion, valid)
+    k = max(1, int(round(budget * int(valid.sum()))))
+    m = np.zeros(order.shape, dtype=bool)
+    m[order[:k]] = True
+    return m.reshape(valid.shape) & valid
 
 
 def summary(out):
