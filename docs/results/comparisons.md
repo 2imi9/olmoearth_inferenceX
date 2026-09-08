@@ -350,6 +350,25 @@ adjudication of individual disagreements; exp26 prepared the kit.
 
 # 4. Deployed products
 
+## Operating points at fixed review budgets (exp35)
+
+The question of roadmap item 3: does a signal help confidence at a fixed
+review budget where it does not on AURC? Metric: expected error capture
+inside the 5, 10 or 20% most suspect windows under random tie-breaking.
+Preregistered test: tiling instability against confidence at 20% on
+Sen1Floods11 Bolivia hand labels, per-tile one-sided sign test.
+
+| Testbed | Result |
+|---|---|
+| Bolivia hand labels, 351 tiles | Preregistered test null: tiling instability 116/112/123 (p = 0.42), pooled 0.707 vs 0.749. Boundary indicator beats confidence at 5% (0.286 vs 0.259, CI [+0.009, +0.046]; 181/147/23, p = 0.068), loses at 20%. The NDWI-level control beats confidence pooled at 20% (0.795 vs 0.749), a caution on single operating points |
+| Fine-tuned AWF model, 30 tasks | 16-px crops: tiling instability +0.073 at 20% (CI [+0.000, +0.190], P 0.93), the exp21 hint; 32-px crops: reversed (0.643 vs 0.690). Every other signal behind at every budget |
+| WorldCover, 27 scenes | Tiling instability 8/0 rivers at 10% and 20%; boundary 7/1 at every budget where its AURC vote is 5/3: coarse scores fare better at fixed budgets than under AURC |
+
+**Reading.** The ranking metric and the reviewer's workflow differ in
+detail, not in verdict: on expert labels no signal beats confidence at a
+fixed budget with preregistered support. Details in
+`exp/out/exp35_summary.json`.
+
 ## Served land cover change rasters (exp20)
 
 First assessment of a served output: ten 512-px windows (about

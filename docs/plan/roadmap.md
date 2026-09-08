@@ -88,11 +88,8 @@ carrying the paper links and the concrete test:
    Candidates in `olmoearth_pretrain/evals`: MADOS (marine debris, 15
    classes), PASTIS-R, GeoBench m-cashew-plant and m-sa-crop-type.
 
-3. **Operating-point analysis instead of AURC** (issue #9). Test whether any signal
-   helps confidence at a *fixed review budget* on expert labels. exp21 hints
-   at this: tiling instability captures 0.71 of errors at a 20% budget
-   against confidence's 0.63, while losing on AURC. A ranking metric and a
-   reviewer's actual workflow are not the same question.
+3. **Operating-point analysis instead of AURC** (issue #9): closed by exp35,
+   see the Closed table.
 
 4. **An out-of-family rater** (issue #6) (Clay or AnySat, both wrapped in
    olmoearth_pretrain evals). Correlated errors invalidate within-family
@@ -148,6 +145,7 @@ carrying the paper links and the concrete test:
 | Does reference instability explain the WorldCover wins? | exp23 — no |
 | Does the year gap explain them? | exp24 — no |
 | Does seasonal water explain them? | exp25 — no |
+| Does any signal help at a fixed review budget where it does not on AURC? | exp35 — not with preregistered support; boundary at a 5% budget on hand labels is the one small, secondary exception |
 | Does the pretraining objective itself (masked-token decoder error) rank the errors? | exp28 — no, on both testbeds; the frozen targets are near-collinear, so the residual tracks input texture |
 | Does a last-layer posterior over the probe head (Laplace, bootstrap ensemble) rank the errors? | exp30 — no, on both testbeds; the variance is feature norm on the one-scene head and rises with the logit on the 128k-patch head |
 | E_dist formalization: does feature-space typicality against training, same-scene or cross-testbed references rank the errors? | exp31 — no; the confidence + same-scene kNN combination reaches 6/2 rivers (p = 0.145) against WorldCover and hurts on hand labels; only a true pretraining sample remains untested (issue #4; the RCG density upgrade is issue #3, parked) |

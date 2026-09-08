@@ -40,6 +40,7 @@ Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 | exp32 | the latent-MIM target space read from code and measured on CPU: the target encoder is the untouched random initialisation (EMA decay 1.0); on four scenes its targets have random-pair cosine 0.99 and centred effective rank 2.0 against 54 for the online encoder: the mechanism behind exp27 and exp28 |
 | exp33 | context-prediction residual with a whitened target on the frozen encoder: the target swap makes the latent-MIM objective predictable (57% of whitened variance from context on held-out rivers, 70% on Bolivia) but the residual tracks input texture, not error: rejected on both testbeds; U+ 6/2 rivers (p = 0.145), 45/306 Bolivia tiles |
 | exp34 | three further readings of the re-targeted objective: discrete-target NLL and predictive entropy (k-means, HuBERT-style), gap-masked residual (3x3 hole, Latent MIM-style), residual along the decision direction: all rejected on both testbeds; the preregistered entropy combination 0/8 rivers; the gap residual is the only variant at parity with confidence on WorldCover (13/14, 4/4 rivers) and it still tracks texture |
+| exp35 | operating points at fixed review budgets (5, 10, 20%): the preregistered test (tiling instability vs confidence at 20% on Bolivia hand labels) is null (116/112/123 tiles, p = 0.42; pooled 0.707 vs 0.749); the boundary indicator captures more errors than confidence at the 5% budget on hand labels (0.286 vs 0.259, bootstrap CI excludes zero, per-tile p = 0.068), the one operating point where a constructed cue beats confidence; it reverses by 20% |
 
 ## exp01 — first E_case map (2026-08-31)
 
@@ -888,3 +889,65 @@ inference ranks the probe's errors better than its confidence; the family
 is closed for this checkpoint. What survives is the exp33 measurement that
 a normalised target makes the objective predictable, which is the
 pretraining recommendation of issue #11.
+
+## exp35 operating points at fixed review budgets (2026-09-07)
+
+Question (roadmap item 3, issue #9): every comparison so far ranks by
+AURC; does any supported signal help confidence at a fixed review budget,
+which is what a reviewer with a budget actually uses? Metric: the expected
+fraction of a unit's errors inside its round(b n) most suspect windows
+under random tie-breaking (oe_inferencex.metrics.capture_at_budget_expected,
+so the nine-level boundary indicator is neither credited nor penalised for
+raster order; exp21's stable-sort form is reported alongside), at budgets of
+5, 10 and 20%. Preregistered: tiling instability against confidence at the
+20% budget on Sen1Floods11 Bolivia, per-tile one-sided exact sign test,
+because exp21's hint (0.71 against 0.63 on the fine-tuned model) was
+directional. Secondary: the fine-tuned AWF model (exp21's per-window table,
+bootstrap over its 30 task clusters), the WorldCover scenes (one vote per
+river), and every other signal and budget with two-sided tests. Pooled
+Bolivia estimates carry a bootstrap over all 440 tiles with valid patches
+(the Codex review caught a first version that resampled only the 351
+scored tiles). exp/exp35_operating_points.py; job 715760, one B200, fp32,
+333 s, 0 failures (job 715729 ran the pre-review code with the same
+per-tile and AWF numbers); outputs exp/out/exp35_summary.json and
+exp/out/exp35_operating_points.csv.
+
+Bolivia (hand labels; 351 scored tiles, 440 pooled). The preregistered
+test is null: tiling instability against confidence at 20% is 116/112 with
+123 ties (one-sided p = 0.42), and pooled it captures 0.707 of the errors
+against 0.749 for confidence (bootstrap CI of the gain [-0.066, -0.019]);
+at 5% and 10% it is 137/132 and 134/124 by tile with pooled gains again
+below zero. The boundary indicator is the one signal that beats confidence
+at an operating point: at the 5% budget it captures 0.286 of the errors
+against 0.259 (bootstrap CI [+0.009, +0.046], P(better) 1.00; by tile
+181/147/23, two-sided p = 0.068), while it loses to confidence on AURC
+(131/220) and at 20% (0.667 against 0.749, CI [-0.114, -0.050]); at 5% it
+also beats both pixel controls (NDWI gradient 0.188, NDWI level 0.242).
+Two cautions: the finding is secondary, not preregistered, and the
+NDWI-level control itself beats confidence at the 20% budget pooled (0.795
+against 0.749, CI [+0.010, +0.079]; by tile 137/115/99, p = 0.19), which
+says a single pooled operating point is a noisy criterion on this testbed.
+The NDWI-gradient control, the S2-variance control and the constant score
+lose at every budget.
+
+AWF fine-tuned model (expert points, 344 windows, 30 tasks). On the 16-px
+crops tiling instability captures 0.707 against 0.634 at 20% (gain +0.073,
+task-bootstrap CI [+0.000, +0.190], P(better) 0.93), reproducing exp21's
+hint; on the 32-px crops the same comparison reverses (0.643 against 0.690,
+P 0.36), and at 5% and 10% it is behind on both crops. Boundary, probe
+disagreement and the NDVI control lose at every budget with intervals below
+zero at 20%.
+
+WorldCover scenes (weak reference). Tiling instability beats confidence
+8/0 by river at 10% and 20% and 7/1 at 5%, as on AURC; the boundary
+indicator is 7/1 by river at every budget where its AURC vote is 5/3, so a
+coarse score fares better at fixed budgets than under AURC, which is the
+metric difference the issue named; the pixel controls sit at 4/4 to 6/2.
+
+Reading: the operating-point view does not change the standing
+conclusion. On expert labels no signal beats confidence at a fixed budget
+with preregistered support; the one operating point where a constructed
+cue does better, boundary at 5% on Bolivia, is small (2.7 points of
+capture), secondary, and reverses at larger budgets, and a no-model control
+shows a comparable pooled win at 20%. Roadmap item 3 closes; the boundary
+indicator's role as a triage cue gains one qualified operating point.

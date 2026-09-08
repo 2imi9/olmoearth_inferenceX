@@ -39,7 +39,7 @@ Scored against the model's own confidence and a no-model pixel control.
 |---|---|---|---|---|
 | Max-softmax confidence (baseline) | logit-based confidence | **supported** | Best error-ranker on every expert-labelled testbed; loses only against the WorldCover reference | exp04, exp16, exp18, exp21 |
 | Perturbation stability (E_system, tile-phase) | sampling-consistency | **mixed** | Beats confidence 26/27 against WorldCover and ties it on the fine-tuned model, but not on hand labels (163/187, p=0.22) | exp13, exp18, exp21 |
-| Prediction-boundary proximity | n/a (EO-specific) | **supported as triage** | 75% of error patches sit on boundaries vs 20% of correct ones, on both references; says where errors live, does not order them better than confidence | exp14, exp16, exp18 |
+| Prediction-boundary proximity | n/a (EO-specific) | **supported as triage** | 75% of error patches sit on boundaries vs 20% of correct ones, on both references; says where errors live, does not order them better than confidence on AURC; at a 5% review budget on hand labels it captures 0.286 of the errors against confidence's 0.259 (secondary, reverses by 20%) | exp14, exp16, exp18, exp35 |
 | Band-set disagreement (one model, three S2 band-set tokens) | self-consistency across input views | **mixed** | 21/27 against WorldCover from a single forward pass; worse than confidence on hand labels (111/239, p=7e-12) | exp17, exp18 |
 | Depth-probe disagreement | layer-wise probing | **partial** | 19/27 vs baseline (p=0.052), 13/27 vs control | exp17 |
 | Embedding dissimilarity (E_dist) | internal-state probing (INSIDE) | **not supported** | No scale-free advantage (13/27, sign p=1.00); exp31 generalised it to three reference sets and three density estimators with the same result | exp13, exp31 |
@@ -113,6 +113,7 @@ labels do not share. Open.
 | Risk-coverage / AURC harness | **supported** | Pre-registered 27-scene set, tie-aware AURC, block bootstrap, exact sign and permutation tests | exp13 |
 | No-model pixel-statistic controls | **supported** | Ran on every comparison scene; killed one claim (E_dist under shift) and confirmed two | exp06 |
 | Labels grade signals, never train them | **supported** | Executed with AWF expert labels under the project's own spatial split | exp04, exp16 |
+| Operating points at fixed review budgets | **checked** | Capture at 5, 10 and 20% budgets does not change the AURC verdicts on expert labels: the preregistered test (tiling instability at 20% on Bolivia) is null; boundary at 5% is the one qualified exception | exp35 |
 
 ## Not yet tried
 

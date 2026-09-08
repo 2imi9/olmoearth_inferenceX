@@ -79,9 +79,17 @@ for low confidence that the margin already carries at finer resolution
 (Spearman 0.60; the margin dominates a logistic model of error, standardized
 coefficients 3.53 vs 0.52).
 
+**At a fixed review budget (exp35).** On Sen1Floods11 Bolivia the boundary
+indicator captures 0.286 of the errors inside the 5% most suspect windows
+against 0.259 for confidence (bootstrap CI [+0.009, +0.046]; by tile
+181/147/23, p = 0.068), beating both pixel controls there; by the 20%
+budget it is behind (0.667 against 0.749). Secondary, not preregistered.
+
 **Verdict: supported as a triage cue, not as a ranker.** It says *where*
-errors live. It is also the only label-free cue available on the served LCC
-product, which exports no class confidence (exp20).
+errors live, and at the tightest budget it points a reviewer at slightly
+more errors than confidence does. It is also the only label-free cue
+available on the served LCC product, which exports no class confidence
+(exp20).
 
 ---
 
