@@ -33,7 +33,8 @@
   \flatraster{rev}{1.6}{0.4}{scene_rgb.png}{3.4cm}
   \flatcells{rev}{32}{cell}{\sceneReview}{3.4cm}
   \node[lab] at (1.6,-1.75) {review set at a 5\% budget\\ boundary first, then confidence};
-  \draw[flow] (outback.south) -- ++(0,-1.15) -| (rev.north);   % below the captions, then down into the review set
+  % from the outputs, below the captions, around the left, and into the review set left to right like every other arrow
+  \draw[flow, rounded corners=7pt] (outback.south) -- ++(0,-1.15) -| (-0.9,0.4) -- (rev.west);
   \node[card] (why) at (6.3,0.4) {%
     \begin{tikzpicture}[font=\footnotesize]
       \node[flat] (c1) at (0,0)      {\includegraphics[width=1.0cm]{rasters/scene_boundary.png}};
