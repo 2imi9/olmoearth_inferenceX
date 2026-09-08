@@ -1,0 +1,55 @@
+% The audit pipeline with real rasters: Sentinel-2 bands in, frozen encoder and head, prediction / confidence /
+% boundary layers, the review set at a 5% budget (boundary first) drawn on the scene, and the reasons per window.
+% Scene: okavango_80 (exp11, exp37). Build: pdflatex audit_pipeline.tex
+\documentclass[tikz,border=3mm]{standalone}
+\input{style.tex}
+\input{rasters/scene_review.tex}   % defines \sceneReview as a r/c list
+\begin{document}
+\begin{tikzpicture}
+  % ---- input: three band layers
+  \stack{in}{0}{0}{scene_b11.png}{scene_b08.png}{scene_rgb.png}
+  \node[sub, anchor=west] at ($(in.east)+(0.12,0)$) {RGB};
+  \node[sub, anchor=west] at ($(inmid.east)+(0.12,0)$) {NIR};
+  \node[sub, anchor=west] at ($(inback.east)+(0.12,0)$) {SWIR};
+  \node[lab] at (0.3,-1.15) {Sentinel-2 window};
+  % ---- encoder (funnel) and head
+  \draw[part, fill=oeteal!20] (3.3,-0.8) -- (3.3,2.3) -- (4.6,1.6) -- (4.6,-0.1) -- cycle;
+  \node[lab, rotate=90, align=center] at (3.9,0.75) {OlmoEarth\\encoder};
+  \node[sub] at (3.95,-1.0) {frozen};
+  \draw[part, fill=oeamber!30] (5.1,0.2) rectangle (5.6,1.3);
+  \node[sub] at (5.35,-0.25) {head};
+  \draw[flow] (2.4,0.75) -- (3.2,0.75);
+  \draw[flow] (4.65,0.75) -- (5.05,0.75);
+  % ---- output: prediction / confidence / boundary layers
+  \stack{out}{7.4}{0}{scene_boundary.png}{scene_conf.png}{scene_pred.png}
+  \draw[flow] (5.65,0.75) -- (6.35,0.75);
+  \node[sub, anchor=west] at ($(out.east)+(0.12,0)$) {prediction};
+  \node[sub, anchor=west] at ($(outmid.east)+(0.12,0)$) {confidence};
+  \node[sub, anchor=west] at ($(outback.east)+(0.12,0)$) {boundary};
+  \node[lab] at (7.7,-1.15) {one forward pass, no labels};
+  % ---- review set on the scene (flat, larger)
+  \flatraster{rev}{12.6}{0.75}{scene_rgb.png}{2.9cm}
+  \flatcells{rev}{32}{cell}{\sceneReview}{2.9cm}
+  \draw[flow] (10.3,0.75) -- (11.05,0.75);
+  \node[lab] at (12.6,-1.15) {review set at a 5\% budget\\ boundary first, then confidence};
+  % ---- reasons per flagged window
+  \node[card] (why) at (16.6,0.75) {%
+    \begin{tikzpicture}[font=\scriptsize]
+      \node[flat] (c1) at (0,0)      {\includegraphics[width=0.85cm]{rasters/scene_boundary.png}};
+      \node[flat] (c2) at (1.45,0)   {\includegraphics[width=0.85cm]{rasters/scene_conf.png}};
+      \node[flat] (c3) at (0,-1.35)  {\includegraphics[width=0.85cm]{rasters/scene_tilephase.png}};
+      \node[flat] (c4) at (1.45,-1.35){\includegraphics[width=0.85cm]{rasters/scene_ndwi.png}};
+      \node[sub, below=0.5mm of c1] {boundary};
+      \node[sub, below=0.5mm of c2] {low conf.};
+      \node[sub, below=0.5mm of c3] {unstable};
+      \node[sub, below=0.5mm of c4] {NDWI $\approx 0$};
+    \end{tikzpicture}};
+  \node[lab] at (16.6,2.55) {why each window};
+  \draw[flow] (14.15,0.75) -- (why.west);
+  % ---- reviewer
+  \draw[part, fill=oeviolet!15] (19.5,1.35) circle (0.28);
+  \draw[part, fill=oeviolet!15] (19.05,0.3) arc (180:0:0.45) -- cycle;
+  \node[sub] at (19.5,-0.15) {reviewer / agent};
+  \draw[flow] (why.east) -- (18.95,0.75);
+\end{tikzpicture}
+\end{document}

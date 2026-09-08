@@ -1,5 +1,7 @@
 # Evaluation protocol
 
+![The test every claim passed: a candidate scored next to the model's confidence and a no-model control, on both references on identical windows; labels grade, never train](../figures/protocol.png)
+
 How results in this repository are produced, weighted, and named. Every
 other document assumes this page and does not restate it. Index at
 [TECHNIQUES.md](../TECHNIQUES.md).

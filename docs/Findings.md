@@ -4,7 +4,9 @@ What the audit found, what holds up, and how well. Every number traces to a
 file under `exp/out/`; the per-experiment detail is in the
 [technique ledger](TECHNIQUES.md) and the results pages.
 
-![Overview: what is audited, what we believe is true, the test every claim passed, the open question, where it stands](figures/inferencex_overview.png)
+![The audit pipeline on a real scene: Sentinel-2 bands, the frozen encoder and head, prediction, confidence and boundary layers, the review set at a 5% budget, the reasons per window](figures/audit_pipeline.png)
+
+*One scene (okavango_80) through the pipeline: the layers are the actual rasters, the orange squares are the 5% review set in the boundary-first order.*
 
 ## What holds
 
@@ -53,6 +55,8 @@ the errors at a 5% budget, 39% at 10%, 63% at 20%; the boundary-first order
 picks the same 5% set. Selective accuracy is 0.945 at 80% coverage.
 
 ## How a claim gets in
+
+![A candidate signal next to the model's confidence and a no-model control, scored on both references on identical windows; supported only if it beats both baselines on expert labels; labels grade, never train](figures/protocol.png)
 
 A candidate rule or cue is tested on two references at once, the ESA
 WorldCover map and hand-labelled flood masks, against the model's own

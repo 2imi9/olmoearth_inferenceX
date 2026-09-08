@@ -12,6 +12,10 @@ preregistered test. Source `exp/out/exp37_summary.json`; the per-window
 tables `exp/out/exp37_patches_{bolivia,scenes}.npz` reproduce the shares
 (`tests/test_recorded.py`).
 
+![One flood tile with its review set and true errors, one flagged window traced through the four cue layers, and the measured enrichment per cue](../figures/explanation_layer.png)
+
+*Sen1Floods11 Bolivia tile 218: orange squares are the 5% review set, red the hand-label errors; the marked window carries the boundary, low-confidence and tiling cues; the bars are the enrichments below.*
+
 Cues, per window: **boundary** = indicator > 0; **low confidence** = the
 20% least confident windows of the unit, ties included; **unstable** =
 tile-phase in the unit's top 20%; **NDWI-ambiguous** = |patch-mean
