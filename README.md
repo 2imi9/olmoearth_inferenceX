@@ -1,5 +1,7 @@
 olmoearth_inferenceX audits OlmoEarth inference results without labels.
 
+![One scene through the audit: Sentinel-2 bands, the frozen OlmoEarth encoder and the task head, the prediction, confidence and boundary layers, the review set at a 5% budget drawn on the scene, and the reasons per flagged window](docs/figures/audit_pipeline.png)
+
 Given a prediction map, it helps with:
 
 1. Deciding which windows to trust and which to send for review first, as
