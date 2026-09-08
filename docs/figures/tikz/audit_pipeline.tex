@@ -1,6 +1,7 @@
 % The audit pipeline with real rasters, in two rows so that it reads at README width: Sentinel-2 bands in, frozen
 % encoder (narrowing) and head (widening), prediction / confidence / boundary layers; then the review set at a 5%
-% budget (boundary first) drawn on the scene, the reasons per window, the reviewer. Scene: okavango_80 (exp11, exp37).
+% budget (boundary first) drawn on the scene, the reasons per window, the reviewer; the second row runs right to
+% left under the outputs, so the whole figure is one snake. Scene: okavango_80 (exp11, exp37).
 % Build: pdflatex audit_pipeline.tex; export: osascript -l JavaScript pdf2png.js audit_pipeline.pdf ../audit_pipeline.png 3000
 \documentclass[tikz,border=3mm]{standalone}
 \input{style.tex}
@@ -29,13 +30,12 @@
   \node[sub, anchor=west] at ($(outmid.east)+(0.12,0)$) {confidence};
   \node[sub, anchor=west] at ($(outback.east)+(0.12,0)$) {boundary};
   \node[lab] at (9.0,7.75) {one forward pass, no labels};
-  % ================= row 2: review set -> reasons -> reviewer
-  \flatraster{rev}{1.6}{0.4}{scene_rgb.png}{3.4cm}
+  % ================= row 2, right to left under the outputs: review set -> reasons -> reviewer (a snake, no wrap-around)
+  \flatraster{rev}{8.9}{0.4}{scene_rgb.png}{3.4cm}
   \flatcells{rev}{32}{cell}{\sceneReview}{3.4cm}
-  \node[lab] at (1.6,-1.75) {review set at a 5\% budget\\ boundary first, then confidence};
-  % from the outputs, below the captions, around the left, and into the review set left to right like every other arrow
-  \draw[flow, rounded corners=7pt] (outback.south) -- ++(0,-1.15) -| (-0.9,0.4) -- (rev.west);
-  \node[card] (why) at (6.3,0.4) {%
+  \node[lab] at (8.9,-1.75) {review set at a 5\% budget\\ boundary first, then confidence};
+  \draw[flow] (rev.north |- outback.south) -- (rev.north);   % vertical drop, x of the review set, y of the stack's bottom
+  \node[card] (why) at (4.6,0.4) {%
     \begin{tikzpicture}[font=\footnotesize]
       \node[flat] (c1) at (0,0)      {\includegraphics[width=1.0cm]{rasters/scene_boundary.png}};
       \node[flat] (c2) at (1.7,0)    {\includegraphics[width=1.0cm]{rasters/scene_conf.png}};
@@ -46,11 +46,11 @@
       \node[sub, below=0.6mm of c3] {unstable};
       \node[sub, below=0.6mm of c4] {NDWI $\approx 0$};
     \end{tikzpicture}};
-  \node[lab] at (6.3,2.35) {why each window};
-  \draw[flow] (3.4,0.4) -- (why.west);
-  \draw[part, fill=oeviolet!15] (10.3,1.1) circle (0.33);
-  \draw[part, fill=oeviolet!15] (9.75,-0.15) arc (180:0:0.55) -- cycle;
-  \node[sub] at (10.3,-0.65) {reviewer / agent};
-  \draw[flow] (why.east) -- (9.7,0.4);
+  \node[lab] at (4.6,2.35) {why each window};
+  \draw[flow] (rev.west) -- (why.east);
+  \draw[part, fill=oeviolet!15] (0.9,1.1) circle (0.33);
+  \draw[part, fill=oeviolet!15] (0.35,-0.15) arc (180:0:0.55) -- cycle;
+  \node[sub] at (0.9,-0.65) {reviewer / agent};
+  \draw[flow] (why.west) -- (1.55,0.4);
 \end{tikzpicture}
 \end{document}
