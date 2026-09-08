@@ -26,8 +26,8 @@
   \draw[flow] (8.9,-1.0) -- (v.south west);
   \node[sub] at (12.6,0.55) {a win against the weak map alone\\ is not support};
   % ---- the rule: labels grade, never train
-  \draw[part, fill=oeamber!30] (13.3,-3.0) rectangle (13.8,-1.9);
-  \node[sub] at (13.55,-1.55) {head};
+  \decoderShape{head}{13.3}{-2.45}{0.7}{1.5}{oeamber!30}   % the head is a decoder: narrow in, wide out
+  \node[sub] at (13.65,-1.5) {head};
   \draw[oered, line width=0.9pt, ->] (8.9,-2.45) -- (13.25,-2.45);
   \draw[oered, line width=1.3pt] (10.9,-2.2) -- (11.4,-2.7) (10.9,-2.7) -- (11.4,-2.2);
   \node[sub, text=oered] at (11.15,-3.25) {labels grade,\\ never train};

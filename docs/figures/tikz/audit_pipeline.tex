@@ -13,16 +13,16 @@
   \node[sub, anchor=west] at ($(inback.east)+(0.12,0)$) {SWIR};
   \node[lab] at (0.3,-1.15) {Sentinel-2 window};
   % ---- encoder (funnel) and head
-  \draw[part, fill=oeteal!20] (3.3,-0.8) -- (3.3,2.3) -- (4.6,1.6) -- (4.6,-0.1) -- cycle;
+  \encoderShape{enc}{3.3}{0.75}{1.3}{3.1}{oeteal!20}     % wide in, narrow out
   \node[lab, rotate=90, align=center] at (3.9,0.75) {OlmoEarth\\encoder};
-  \node[sub] at (3.95,-1.0) {frozen};
-  \draw[part, fill=oeamber!30] (5.1,0.2) rectangle (5.6,1.3);
-  \node[sub] at (5.35,-0.25) {head};
+  \node[sub] at (3.95,-1.1) {frozen};
+  \decoderShape{head}{5.05}{0.75}{0.7}{1.5}{oeamber!30}  % narrow in, wide out: the head decodes to the map
+  \node[sub] at (5.4,-0.35) {head};
   \draw[flow] (2.4,0.75) -- (3.2,0.75);
-  \draw[flow] (4.65,0.75) -- (5.05,0.75);
+  \draw[flow] (4.65,0.75) -- (5.0,0.75);
   % ---- output: prediction / confidence / boundary layers
   \stack{out}{7.4}{0}{scene_boundary.png}{scene_conf.png}{scene_pred.png}
-  \draw[flow] (5.65,0.75) -- (6.35,0.75);
+  \draw[flow] (5.8,0.75) -- (6.35,0.75);
   \node[sub, anchor=west] at ($(out.east)+(0.12,0)$) {prediction};
   \node[sub, anchor=west] at ($(outmid.east)+(0.12,0)$) {confidence};
   \node[sub, anchor=west] at ($(outback.east)+(0.12,0)$) {boundary};
