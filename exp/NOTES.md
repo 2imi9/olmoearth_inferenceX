@@ -42,6 +42,7 @@ Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 | exp34 | three further readings of the re-targeted objective: discrete-target NLL and predictive entropy (k-means, HuBERT-style), gap-masked residual (3x3 hole, Latent MIM-style), residual along the decision direction: all rejected on both testbeds; the preregistered entropy combination 0/8 rivers; the gap residual is the only variant at parity with confidence on WorldCover (13/14, 4/4 rivers) and it still tracks texture |
 | exp35 | operating points at fixed review budgets (5, 10, 20%): the preregistered test (tiling instability vs confidence at 20% on Bolivia hand labels) is null (116/112/123 tiles, p = 0.42; pooled 0.707 vs 0.749); the boundary indicator captures more errors than confidence at the 5% budget on hand labels (0.286 vs 0.259, bootstrap CI excludes zero, per-tile p = 0.068), the one operating point where a constructed cue beats confidence; it reverses by 20% |
 | exp36 | dihedral consistency (8 flips and rotations) and the boundary-first-then-confidence review order: dihedral consistency is not a better ranker (4/4 rivers vs confidence, 154/196 Bolivia tiles); the lexicographic order captures more errors than confidence at the 5% and 10% budgets on Bolivia hand labels (per tile 85/31/235 and 112/48/191, one-sided p = 3e-7 and 2e-7; pooled gain CI above zero), not at 20%, and gains nothing on the AWF fine-tuned model |
+| exp37 | cue enrichment on identical windows for the explanation layer: on Bolivia hand labels 95% of error windows carry at least one of five label-free cues (boundary 3.5x, least confident 20% 3.6x, unstable 3.6x, NDWI-ambiguous 7.2x, flip/rotation disagreement 3.5x); inside confidence's 5% review set the boundary and NDWI cues separate error rates (0.46 vs 0.16, 0.51 vs 0.33), the tiling and dihedral cues do not; `oe_inferencex.explain` built |
 
 ## exp01 — first E_case map (2026-08-31)
 
@@ -1017,3 +1018,53 @@ the AWF point task where the low-margin windows are boundary windows
 anyway, and is behind by 20%. It is a triage rule, consistent with the
 boundary indicator's standing as a triage cue, and it costs nothing at
 inference.
+
+## exp37 cue enrichment on identical windows (2026-09-07)
+
+The first build of the explanation layer (docs/plan/roadmap.md, "Explanation
+layer"; docs/results/explanation.md): `oe_inferencex.explain` holds a cue
+library with measured shares, derives the boundary and low-confidence cues
+from an assessment, accepts caller-derived cues, and reports per review
+window which cues fire, their co-occurrence and the windows no cue explains
+(`explain_review_set`); `cue_enrichment` is the validation (share among
+errors against share among correct, cluster bootstrap of the ratio). exp37
+measured the five label-free cues the package derives on identical windows,
+one error definition per testbed: boundary (indicator > 0), low confidence
+(20% least confident of the unit, ties included), unstable (tile-phase top
+20%), NDWI-ambiguous (|patch-mean NDWI| < 0.1), flip/rotation disagreement
+(exp36's cached std over the 8 transforms, top 20%). Part A: 27 rule scenes,
+27,648 windows, 1,844 errors, scene-clustered bootstrap, per-river shares.
+Part B: Bolivia, 81,984 valid windows in 440 tiles, 7,248 errors of the
+exp18 head, tile-clustered bootstrap. Descriptive; no preregistered test.
+exp/exp37_cue_enrichment.py; one B200 job, 716704 on a0130a2, 24 s, 0
+failures. Outputs exp/out/exp37_summary.json, exp37_cue_enrichment.csv, and
+the per-window tables exp37_patches_scenes.npz and exp37_patches_bolivia.npz
+(compressed) from which tests/test_recorded.py recomputes the shares. The
+review sets use the assessor's own order (assess.review_order, ties by
+descending raster position; the Codex review caught an ascending variant).
+
+Bolivia shares among errors / correct and enrichment [CI]: boundary
+0.750 / 0.214, 3.5x [3.2, 3.8]; low confidence 0.589 / 0.163, 3.6x [3.4,
+3.9]; unstable 0.583 / 0.164, 3.6x [3.3, 3.8]; NDWI-ambiguous 0.483 /
+0.067, 7.2x [6.2, 8.5], error rate among its windows 0.41 against a base
+rate of 0.088; dihedral 0.579 / 0.164, 3.5x [3.3, 3.8]. Scenes: boundary
+4.3x, low confidence 3.3x, unstable 4.6x, NDWI 3.8x, dihedral 3.9x; every
+cue enriched on 8/8 rivers, NDWI on 7/8. 95% of Bolivia errors carry at
+least one cue (93.5% on the scenes), 80% two or more, 3.0 cues per error
+window against 0.8 per correct one; 65% of correct windows carry none.
+Inside confidence's 5% review set (4,043 windows, error rate 0.379): 73%
+boundary, 88% unstable, 95% dihedral, 27% NDWI; error rate with / without
+the cue: boundary 0.46 / 0.16, NDWI 0.51 / 0.33, unstable 0.38 / 0.37,
+dihedral 0.38 / 0.41; at 20%: boundary 0.38 / 0.09, NDWI 0.47 / 0.20,
+unstable 0.29 / 0.19. Co-occurrence among errors: boundary with low
+confidence 50%, with unstable 52%, with dihedral 49%; NDWI with each of
+the others 24 to 35%.
+
+Reading: boundary, low confidence, instability and dihedral disagreement
+are one phenomenon seen four ways (a low-margin window on a class boundary
+flips under any perturbation), so a typical review window's explanation is
+three facets of one fact; spectral ambiguity is the one cue that adds
+information inside the review set, and it is task-specific. The library in
+the package now carries these shares (tests check them against the
+summary). Whether an NDWI-first review order captures more errors at a
+budget is a preregistered question for a later experiment.

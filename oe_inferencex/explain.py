@@ -46,15 +46,16 @@ class Cue:
 BOLIVIA = "Sen1Floods11 Bolivia hand labels"
 WC_DISAGREE = "WorldCover disagreements vs agreements, 27 rule scenes"
 
-# The library. Shares on expert labels come from exp36's run of record (boundary_share in exp/out/exp36_summary.json,
-# identical to exp18's 75% vs 21%); the reference-disagreement cues keep the numbers their experiments recorded.
-# Cues with None shares are derived here but their shares are measured on identical windows by exp37.
+# The library. The expert-label shares are exp37's measurement on identical windows (Sen1Floods11 Bolivia, 81,984
+# valid windows, 7,248 errors of the exp18 head; exp/out/exp37_summary.json, part_b.analysis.cues); the boundary
+# shares equal exp36's boundary_share and exp18's 75% vs 21%. The reference-disagreement cues keep the numbers
+# their experiments recorded. tests/test_explain.py checks the expert-label shares against exp37's summary.
 CUES = {
-    "boundary": Cue("boundary", "sits on a prediction boundary", 0.750, 0.214, BOLIVIA, "exp18, exp36"),
-    "low_confidence": Cue("low_confidence", "is among the least confident {quantile:.0%} of the scene's windows (ties included)", None, None, BOLIVIA, "exp37"),
-    "unstable": Cue("unstable", "changes prediction under a sub-patch shift of the tiling (top 20% of the scene)", None, None, BOLIVIA, "exp13, exp18, exp37"),
-    "ndwi_ambiguous": Cue("ndwi_ambiguous", "is spectrally ambiguous between water and land (|NDWI| < 0.1)", None, None, BOLIVIA, "exp06, exp09, exp37"),
-    "dihedral_disagree": Cue("dihedral_disagree", "is predicted differently under flips and rotations (top 20% of the scene)", None, None, BOLIVIA, "exp36, exp37"),
+    "boundary": Cue("boundary", "sits on a prediction boundary", 0.750, 0.214, BOLIVIA, "exp18, exp36, exp37"),
+    "low_confidence": Cue("low_confidence", "is among the least confident {quantile:.0%} of the scene's windows (ties included)", 0.589, 0.163, BOLIVIA, "exp37"),
+    "unstable": Cue("unstable", "changes prediction under a sub-patch shift of the tiling (top 20% of the scene)", 0.583, 0.164, BOLIVIA, "exp13, exp18, exp37"),
+    "ndwi_ambiguous": Cue("ndwi_ambiguous", "is spectrally ambiguous between water and land (|NDWI| < 0.1)", 0.483, 0.067, BOLIVIA, "exp06, exp09, exp37"),
+    "dihedral_disagree": Cue("dihedral_disagree", "is predicted differently under flips and rotations (top 20% of the scene)", 0.579, 0.164, BOLIVIA, "exp36, exp37"),
     "seasonal_water": Cue("seasonal_water", "lies on seasonal water (JRC seasonality 1-11 months)", 0.39, 0.08, WC_DISAGREE, "exp25"),
     "reference_unstable": Cue("reference_unstable", "changed class between WorldCover 2020 and 2021", 0.10, 0.007, WC_DISAGREE, "exp23"),
     "osm_disagrees": Cue("osm_disagrees", "has an OSM river centerline where the map has no water", None, None, WC_DISAGREE + " (1.5x enriched, mostly reference-vs-reference)", "exp15"),

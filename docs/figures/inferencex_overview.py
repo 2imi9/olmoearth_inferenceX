@@ -70,7 +70,7 @@ beliefs = [
     ("the model's own confidence is the best label-free error ranker",
      "negative logit margin; best on every expert-labelled testbed (AWF, Sen1Floods11, fine-tuned model)", "exp04 16 18 21"),
     ("errors concentrate on prediction boundaries: 75% of errors vs 20% of correct",
-     "a triage cue, not a ranker; reviewing boundary windows first, then by confidence, captures more errors at 5-10% budgets on hand labels", "exp14 16 18 20 35 36"),
+     "a triage cue, not a ranker; boundary first, then by confidence, captures more errors at 5-10% budgets", "exp14 16 18 20 35 36"),
     ("the fine-tuned model is overconfident, so an accuracy needs a coverage",
      "0.93 accurate where it claims 0.99 (ECE 0.08); abstaining on the least confident 20% gives 0.945", "exp21"),
     ("the served product exports no class confidence; outputs sit on the patch lattice",
@@ -81,10 +81,12 @@ beliefs = [
      "26/27 scenes, 8/0 rivers; 21/27; both lose on hand labels; three explanations for the gap ruled out", "exp13 17 18 23-25"),
     ("the pretraining target space is degenerate",
      "target encoder = untouched random init, targets of effective rank 2; whitened, the target is 57-70% predictable", "exp32 33 34"),
+    ("an error window nearly always carries a label-free cue",
+     "95% of hand-label errors are on a boundary, low-confidence, unstable or NDWI-ambiguous; NDWI ambiguity 7x", "exp37"),
 ]
 y0 = 74
 for i, (claim, how, exps) in enumerate(beliefs):
-    y = y0 - i * 8.7
+    y = y0 - i * 7.9
     check(55.5, y, color=(AMBER if i == 5 else EMERALD))
     text(58.5, y + 2.0, claim, fs=7.6, weight="bold", ha="left")
     text(58.5, y - 0.9, how, fs=6.6, ha="left", color=MUTED, va="center")

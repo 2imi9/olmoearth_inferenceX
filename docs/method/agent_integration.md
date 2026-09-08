@@ -19,6 +19,7 @@ Index at [../TECHNIQUES.md](../TECHNIQUES.md); recipe at
 | `oe_inferencex.metrics` | Tie-aware AURC, excess AURC, error capture at a budget, selective accuracy, ECE; torch-free |
 | `oe_inferencex.signals` | The supported signals and controls as pure functions: confidence, prediction-boundary indicator, aligned tile-phase, NDWI-gradient and the other pixel controls, the U+ combination |
 | `oe_inferencex.stats` | Exact sign tests, the one-vote-per-cluster test, sign-flip permutation, block and cluster bootstraps |
+| `oe_inferencex.explain` | Why a review window is suspect: a library of label-free cues with their measured share among error and correct windows (`CUES`), `explain_review_set` (which cues fire on each window of an assessment's review sets, co-occurrence, the windows no cue explains), `cue_enrichment` (the validation: share among errors against share among correct, cluster bootstrap) |
 
 **Rule:** pure functions; no network except the task-card resolvers and the
 raster reader. Arrays are returned, never serialized into text. `tests/`
@@ -53,8 +54,19 @@ with install instructions when it is missing, so the agent runs without it.
    of boundary, oracle and random, error capture at each budget, and the
    reference caveat (exp18).
 
+5. **Why each review window is suspect** — `explain_review_set` lists, per
+   window, the label-free cues that fire (on a prediction boundary; among
+   the least confident 20%; and any cue the caller derives from other
+   inputs, such as tiling instability, NDWI ambiguity, JRC seasonality),
+   each quoted with its measured enrichment and the experiment that
+   measured it (exp37 on identical windows), plus the co-occurrence of cues
+   in the set and the windows no cue explains.
+
 Nothing is fused; nothing is learned. The narration says which signal ranked
-the windows and which caveats apply.
+the windows, which cues explain each one and with what evidence, and which
+caveats apply. The explanation layer returns structured evidence; the
+sentences are templates, and the low-confidence cue is the ranker itself,
+so inside a confidence review set it always fires.
 
 ## Status (2026-09-02)
 

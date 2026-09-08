@@ -130,15 +130,16 @@ Error ranking says *which* windows to review; the deployment also needs
 explanation, because each is a measured, error-enriched fact about a window
 rather than a score to order by:
 
-| Cue (label-free) | Enrichment on expert labels | Evidence |
+| Cue (label-free) | Share among error / correct windows on Bolivia hand labels, identical windows (exp37) | Evidence |
 |---|---|---|
-| on a prediction boundary | 75% of error patches vs 20% of correct ones | exp14, exp16, exp18 |
-| unstable under a sub-patch shift (tiling instability) | wins against WorldCover 26/27; on hand labels ties confidence | exp13, exp18, exp21 |
-| spectrally ambiguous (NDWI near zero) | ranks the reference-omission scenes above every model signal | exp06, exp09 |
-| seasonal water (JRC seasonality) | 39% of disagreements vs 8% of agreements | exp25 |
+| on a prediction boundary | 0.750 / 0.214, 3.5x | exp14, exp16, exp18, exp37 |
+| among the least confident 20% (the ranker itself) | 0.589 / 0.163, 3.6x | exp37 |
+| unstable under a sub-patch shift (tiling instability) | 0.583 / 0.164, 3.6x; wins against WorldCover 26/27 as a ranker, ties confidence on hand labels | exp13, exp18, exp37 |
+| spectrally ambiguous (\|NDWI\| < 0.1) | 0.483 / 0.067, 7.2x; error rate 0.41 among its windows | exp06, exp09, exp37 |
+| disagrees under flips and rotations | 0.579 / 0.164, 3.5x | exp36, exp37 |
+| seasonal water (JRC seasonality) | 39% of WorldCover disagreements vs 8% of agreements | exp25 |
 | reference unstable between WorldCover versions | 14x enriched among disagreements, about 10% of them | exp23 |
 | OSM river centerline disagrees with the map | 1.5x enriched; often reference-vs-reference on narrow channels | exp15 |
-| low confidence (the ranker itself) | best ranker everywhere | exp04, exp16, exp18, exp21 |
 
 **Design.** A per-window attribution on top of `oe_inferencex.assess`: for
 each window in a review set, the list of cues that fire, each carrying its
@@ -151,10 +152,18 @@ cues co-occur, and which review-set windows carry none (those are the ones
 the explanation cannot help with). The narration stays with the caller,
 as the agent contract requires; this layer returns structured evidence.
 
-**Status.** Design; the cue enrichments above are already measured. The
-first build recomputes them on identical windows from the cached signals
-(exp35/exp36 caches on the cluster hold every base signal per patch for
-Bolivia) and exposes `explain_review_set(assessment, cues)` in the package.
+**Status.** Built (exp37, `oe_inferencex.explain`): the cue library with
+the shares above, `derive_cues` (boundary, low confidence) from an
+assessment, caller-derived cues, `explain_review_set` (per review window
+the cues that fire, co-occurrence, the windows no cue explains),
+`cue_enrichment` as the validation. exp37 measured the five label-free
+cues on identical windows: 95% of the hand-label errors carry at least one,
+80% two or more; inside confidence's review set only the boundary and NDWI
+cues separate error rates, the tiling and dihedral cues fire on nearly
+every flagged window ([../results/explanation.md](../results/explanation.md)).
+Next: the reference-side cues (seasonal water, version instability, OSM)
+measured on the same windows where a WorldCover reference exists; the agent
+tool returns the structured evidence.
 
 ## Asks of upstream
 
@@ -181,6 +190,7 @@ Bolivia) and exposes `explain_review_set(assessment, cues)` in the package.
 | Does any signal help at a fixed review budget where it does not on AURC? | exp35 — not with preregistered support; boundary at a 5% budget on hand labels is the one small, secondary exception |
 | Does reviewing boundary windows first, then by confidence, beat confidence at fixed budgets? | exp36 — yes at the 5% and 10% budgets on hand labels (preregistered, per tile p = 3e-7 and 2e-7; pooled 0.274 vs 0.259 and 0.494 vs 0.465), not at 20%, and not on the fine-tuned model, where both orders pick the same 5% set; a triage rule, not a ranker |
 | Does dihedral (flip-and-rotate) consistency rank the errors? | exp36 — no; 4/4 rivers, 154/196 Bolivia tiles, Spearman 0.67 to 0.94 with confidence |
+| Explanation layer, first build | exp37 — five label-free cues measured on identical windows, library and `explain_review_set` in the package; 95% of hand-label errors carry a cue, NDWI ambiguity 7.2x |
 | Does the pretraining objective itself (masked-token decoder error) rank the errors? | exp28 — no, on both testbeds; the frozen targets are near-collinear, so the residual tracks input texture |
 | Does a last-layer posterior over the probe head (Laplace, bootstrap ensemble) rank the errors? | exp30 — no, on both testbeds; the variance is feature norm on the one-scene head and rises with the logit on the 128k-patch head |
 | E_dist formalization: does feature-space typicality against training, same-scene or cross-testbed references rank the errors? | exp31 — no; the confidence + same-scene kNN combination reaches 6/2 rivers (p = 0.145) against WorldCover and hurts on hand labels; only a true pretraining sample remains untested (issue #4; the RCG density upgrade is issue #3, parked) |

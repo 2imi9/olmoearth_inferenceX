@@ -81,7 +81,8 @@ def test_explain_review_set_rows_counts_and_unexplained_windows():
     assert "75% of error windows vs 21% of correct ones, 3.5x" in out["quotes"]["boundary"]
     assert "least confident 20%" in out["quotes"]["low_confidence"]
     assert "least confident 50%" in explain_review_set(a, low_confidence_quantile=0.5)["quotes"]["low_confidence"]
-    assert "not yet measured" in out["quotes"]["unstable"]
+    assert "58% of error windows vs 16% of correct ones, 3.6x" in out["quotes"]["unstable"]   # exp37's shares
+    assert "not measured" in explain_review_set(a, cues={"novel": extra})["quotes"]["novel"]     # a cue outside the library
     with pytest.raises(ValueError):
         explain_review_set(a, cues={"bad": np.zeros((2, 2), bool)})
     text = json.dumps(summary({"explanation": out}), allow_nan=False)             # JSON-safe through the assess summary
@@ -93,13 +94,19 @@ def test_explain_review_set_rows_counts_and_unexplained_windows():
 
 
 def test_library_numbers_trace_to_the_recorded_shares():
-    """The boundary cue's shares are exp36's run-of-record boundary_share on Bolivia (exp/out/exp36_summary.json)."""
-    rec = json.load(open(os.path.join(OUT, "exp36_summary.json")))["part_b"]["boundary_share"]
-    assert CUES["boundary"].share_errors == pytest.approx(rec["errors"], abs=5e-4)
-    assert CUES["boundary"].share_correct == pytest.approx(rec["correct"], abs=5e-4)
-    assert CUES["boundary"].enrichment == pytest.approx(0.750 / 0.214)
+    """The expert-label cues carry exp37's shares on identical Bolivia windows (exp/out/exp37_summary.json); the
+    boundary shares also equal exp36's run-of-record boundary_share."""
+    rec = json.load(open(os.path.join(OUT, "exp37_summary.json")))["part_b"]["analysis"]["cues"]
+    for name in ("boundary", "low_confidence", "unstable", "ndwi_ambiguous", "dihedral_disagree"):
+        assert CUES[name].share_errors == pytest.approx(rec[name]["share_errors"], abs=5e-4), name
+        assert CUES[name].share_correct == pytest.approx(rec[name]["share_correct"], abs=5e-4), name
+    b36 = json.load(open(os.path.join(OUT, "exp36_summary.json")))["part_b"]["boundary_share"]
+    assert CUES["boundary"].share_errors == pytest.approx(b36["errors"], abs=5e-4)
+    assert CUES["boundary"].share_correct == pytest.approx(b36["correct"], abs=5e-4)
+    assert CUES["ndwi_ambiguous"].enrichment == pytest.approx(0.483 / 0.067)
     rows = library_table(quantile=0.2)
     assert {r["name"] for r in rows} == set(CUES) and all(r["source"] and r["quote"] for r in rows)
+    assert "not yet measured" in CUES["osm_disagrees"].quote()
 
 
 def test_review_mask_reproduces_the_assessor_under_ties():

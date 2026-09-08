@@ -128,3 +128,27 @@ def test_exp36_preregistered_budget_tests_are_reproducible_from_the_summary():
     for crop in ("16", "32"):                                   # the two orders pick the same 5% review set on the AWF model
         r = awf[crop]["lexicographic_vs_confidence"]["0.05"]
         assert r["capture_lex"] == pytest.approx(r["capture_confidence"]) and r["boot_lo"] == pytest.approx(0.0)
+
+
+def test_exp37_cue_shares_recompute_from_the_per_window_tables():
+    """exp37's pooled shares among error and correct windows recompute from its per-window tables, with the cues
+    derived as the experiment defines them (boundary > 0; |NDWI| < 0.1; top 20% per unit, ties included)."""
+    from oe_inferencex.explain import cue_enrichment, top_fraction
+    s = json.load(open(os.path.join(OUT, "exp37_summary.json")))
+    for part, name, unit_col in (("part_a", "exp37_patches_scenes.npz", "scene"), ("part_b", "exp37_patches_bolivia.npz", "tile")):
+        z = np.load(os.path.join(OUT, name))
+        err = z["err"] > 0.5
+        units = z[unit_col]
+        cues = {"boundary": z["boundary"] > 0, "ndwi_ambiguous": z["ndwi_level"] > -0.1,
+                "low_confidence": np.zeros(len(err), bool), "unstable": np.zeros(len(err), bool), "dihedral_disagree": np.zeros(len(err), bool)}
+        for u in np.unique(units):
+            sel = units == u
+            for cue, col in (("low_confidence", "conf"), ("unstable", "tile_phase"), ("dihedral_disagree", "dihedral")):
+                cues[cue][sel] = top_fraction(z[col][sel], 0.2)
+        rec = s[part]["analysis"]["cues"]
+        assert rec["boundary"]["n"] == len(err) and rec["boundary"]["n_errors"] == int(err.sum())
+        for cue in rec:
+            r = cue_enrichment(cues[cue], err, n_boot=0)
+            assert r["share_errors"] == pytest.approx(rec[cue]["share_errors"], abs=1e-12)
+            assert r["share_correct"] == pytest.approx(rec[cue]["share_correct"], abs=1e-12)
+            assert rec[cue]["boot_lo"] <= rec[cue]["enrichment"] <= rec[cue]["boot_hi"]

@@ -27,6 +27,7 @@ tiers and status terms are defined once in
 | [method/agent_integration.md](method/agent_integration.md) | The contract with the OlmoEarth Agent |
 | [results/comparisons.md](results/comparisons.md) | Cross-signal comparisons, one section per experiment |
 | [results/signals.md](results/signals.md) | Per-signal evidence, one section per signal |
+| [results/explanation.md](results/explanation.md) | Why a window is suspect: cue enrichment on identical windows (exp37) |
 | [plan/roadmap.md](plan/roadmap.md) | Open items in priority order |
 | [../exp/NOTES.md](../exp/NOTES.md) | Chronological lab log, including superseded runs |
 
@@ -116,6 +117,7 @@ labels do not share. Open.
 | No-model pixel-statistic controls | **supported** | Ran on every comparison scene; killed one claim (E_dist under shift) and confirmed two | exp06 |
 | Labels grade signals, never train them | **supported** | Executed with AWF expert labels under the project's own spatial split | exp04, exp16 |
 | Operating points at fixed review budgets | **checked** | Capture at 5, 10 and 20% budgets does not change the AURC verdicts on expert labels: the preregistered test (tiling instability at 20% on Bolivia) is null; boundary at 5% is the one qualified exception | exp35 |
+| Explanation layer: label-free cues with measured enrichment (`oe_inferencex.explain`) | **built** | Five cues measured on identical windows: on hand labels 95% of error windows carry at least one (boundary 3.5x, least confident 20% 3.6x, unstable 3.6x, NDWI-ambiguous 7.2x, flip/rotation disagreement 3.5x); inside confidence's review set only the boundary and NDWI cues separate error rates (0.46 vs 0.16, 0.51 vs 0.33 at 5%); 5% of the errors carry no cue | exp37 |
 
 ## Not yet tried
 

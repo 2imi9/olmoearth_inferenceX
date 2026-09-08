@@ -58,6 +58,11 @@ reference has no water at all, which is why the no-model control wins there.
   accurate; same-family models err together (exp07, exp10, exp17, exp19).
 - **The served product exports no class confidence**, so boundary fraction is
   the only cue: median 0.88 of disagreements at a 5% review budget (exp20).
+- **An error window nearly always carries a label-free cue.** On hand labels
+  95% of the error windows sit on a boundary, are among the least confident,
+  are unstable under a shift or a rotation, or are spectrally ambiguous;
+  spectral ambiguity is 7x enriched and the one cue confidence's review set
+  covers least (exp37; `oe_inferencex.explain`).
 
 ## Install and reproduce
 
@@ -68,9 +73,9 @@ uv run python exp/exp02_full_slice.py
 uv run pytest                           # the assessment layer against the recorded numbers
 ```
 
-Experiments are `exp01`–`exp36` in [`exp/`](exp/), with outputs under
+Experiments are `exp01`–`exp37` in [`exp/`](exp/), with outputs under
 `exp/out/`. The supported machinery (confidence, boundary triage, the
-AURC harness, the controls and tests) is the package
+AURC harness, the controls and tests, the explanation layer) is the package
 [`oe_inferencex/`](oe_inferencex/), torch-free and covered by `tests/`. Torch is pinned per platform — Linux resolves the cu128 build.
 
 ## Documentation
@@ -79,7 +84,7 @@ AURC harness, the controls and tests) is the package
 |---|---|
 | [Technique ledger](docs/TECHNIQUES.md) | What was tried, one line each — **start here** |
 | [Recipe](docs/method/recipe.md) · [Protocol](docs/method/protocol.md) | What to do and not do; how results are scored |
-| [Comparisons](docs/results/comparisons.md) · [Signals](docs/results/signals.md) | Per-experiment and per-signal evidence |
+| [Comparisons](docs/results/comparisons.md) · [Signals](docs/results/signals.md) · [Explanation](docs/results/explanation.md) | Per-experiment, per-signal and per-cue evidence |
 | [Task cards](docs/method/taskcards.md) · [Infrastructure](docs/method/infrastructure.md) | What each model is; upstream sources and formats |
 | [Agent integration](docs/method/agent_integration.md) | Contract with the OlmoEarth Agent |
 | [Roadmap](docs/plan/roadmap.md) · [Lab log](exp/NOTES.md) | Open items; chronology |
