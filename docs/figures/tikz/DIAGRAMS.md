@@ -15,7 +15,7 @@ Build:
 ```bash
 uv run python docs/figures/tikz/make_rasters.py      # writes rasters/*.png and the review-set / error window lists
 cd docs/figures/tikz && for f in audit_pipeline explanation_layer protocol; do pdflatex -interaction=nonstopmode $f.tex; done
-sips -s format png --resampleWidth 2400 audit_pipeline.pdf --out ../audit_pipeline.png   # and the other two
+osascript -l JavaScript pdf2png.js audit_pipeline.pdf ../audit_pipeline.png 3600   # and the other two; sips would blur (72 dpi base)
 ```
 
 `style.tex` holds the shared macros: `\raster` (one slanted plane), `\stack` (three offset planes), `\cells` and
