@@ -473,8 +473,10 @@ def base_signals_b(ctx):
     }
 
 
-def finish_part_b(summary, rows, ctx, sigs, new_names, primary, combo, ok=None):
-    """Pooled and per-tile E-AURC, W/L against references and controls, prereg combination, Spearman, CSV rows."""
+def finish_part_b(summary, rows, ctx, sigs, new_names, primary, combo, ok=None, unit="bolivia"):
+    """Pooled and per-tile E-AURC, W/L against references and controls, prereg combination, Spearman, CSV rows.
+
+    `unit` names the evaluation split in the CSV rows (exp40 scores the test split with the same code)."""
     N, err = ctx["N"], ctx["err"]
     ok = ctx["ok"] if ok is None else ok
     ok = ok & np.all(np.isfinite(np.stack([np.asarray(sigs[k], dtype=np.float64) for k in new_names])), axis=0)
@@ -534,11 +536,11 @@ def finish_part_b(summary, rows, ctx, sigs, new_names, primary, combo, ok=None):
     print("    best per tile:", summary["part_b"]["best_tally"])
     for k, rr in summary["part_b"]["spearman"].items():
         print(f"    Spearman {k}: " + ", ".join(f"{r.split(' (')[0]} {v['median']:+.2f}" for r, v in rr.items() if v["median"] is not None))
-    rows.append({"part": "B", "unit": "bolivia (pooled)", "n_patches": int(ok.sum()), "n_errors": int(err[ok].sum()), "signal": "",
+    rows.append({"part": "B", "unit": f"{unit} (pooled)", "n_patches": int(ok.sum()), "n_errors": int(err[ok].sum()), "signal": "",
                  "aurc": "", "eaurc": "", "mean_value": "", "head_acc": ctx["acc"], "n_tiles_scored": n_tiles})
     for k in sigs:
         v = np.asarray(sigs[k], dtype=np.float64)
-        row = {"part": "B", "unit": "bolivia (pooled)", "n_patches": int(ok.sum()), "n_errors": int(err[ok].sum()), "signal": k,
+        row = {"part": "B", "unit": f"{unit} (pooled)", "n_patches": int(ok.sum()), "n_errors": int(err[ok].sum()), "signal": k,
                "aurc": aurc_expected(v[ok], err[ok]), "eaurc": pooled[k], "mean_value": float(np.mean(v[ok])),
                "n_tiles_scored": n_tiles}
         for r in REFERENCES:
@@ -553,7 +555,7 @@ def finish_part_b(summary, rows, ctx, sigs, new_names, primary, combo, ok=None):
         m = ok[t]
         for k in sigs:
             v = np.asarray(sigs[k][t], dtype=np.float64)
-            row = {"part": "B", "unit": f"bolivia/tile{t}", "n_patches": int(m.sum()), "n_errors": int(err[t][m].sum()), "signal": k,
+            row = {"part": "B", "unit": f"{unit}/tile{t}", "n_patches": int(m.sum()), "n_errors": int(err[t][m].sum()), "signal": k,
                    "aurc": aurc_expected(v[m], err[t][m]), "eaurc": float(per[k][i]), "mean_value": float(np.mean(v[m]))}
             for r in REFERENCES:
                 tag = r.split(' (')[0].split(' ')[0]
