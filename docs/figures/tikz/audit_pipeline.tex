@@ -12,17 +12,17 @@
 \begin{document}
 \begin{tikzpicture}
   % ================= row 1: input -> encoder -> head -> outputs
-  \stack{in}{0}{5.0}{scene_b11.png}{scene_b08.png}{scene_rgb.png}
+  \stack{in}{0.7}{5.0}{scene_b11.png}{scene_b08.png}{scene_rgb.png}
   \node[sub, anchor=west] at ($(in.east)+(0.12,0)$) {RGB};
   \node[sub, anchor=west] at ($(inmid.east)+(0.12,0)$) {NIR};
   \node[sub, anchor=west] at ($(inback.east)+(0.12,0)$) {SWIR};
-  \node[lab] at (0.4,3.55) {Sentinel-2 window};
+  \node[lab] at (1.1,3.55) {Sentinel-2 window};
   \encoderShape{enc}{3.9}{5.75}{1.5}{3.6}{oeteal!20}
   \node[lab, rotate=90, align=center] at (4.6,5.75) {OlmoEarth\\encoder};
   \node[sub] at (4.65,3.55) {frozen};
   \decoderShape{head}{5.85}{5.75}{0.8}{1.7}{oeamber!30}
   \node[sub] at (6.25,4.45) {head};
-  \draw[flow] (2.75,5.75) -- (3.8,5.75);
+  \draw[flow] (3.35,5.75) -- (3.8,5.75);
   \draw[flow] (5.45,5.75) -- (5.8,5.75);
   \stack{out}{8.5}{5.0}{scene_boundary.png}{scene_conf.png}{scene_pred.png}
   \draw[flow] (6.7,5.75) -- (7.3,5.75);
@@ -34,8 +34,8 @@
   \flatraster{rev}{8.9}{0.4}{scene_rgb.png}{3.4cm}
   \flatcells{rev}{32}{cell}{\sceneReview}{3.4cm}
   \node[lab] at (8.9,-1.75) {review set at a 5\% budget\\ boundary first, then confidence};
-  % rounded loop: out of the lower right of the stack, past the layer labels, down, and into the review set from the right
-  \draw[flow, rounded corners=10pt] ($(outback.south east)+(0,-0.05)$) -| (12.55,0.4) -- (rev.east);
+  % rounded loop: down from the centre of the stack, right past the layer labels, down, and into the review set from the right
+  \draw[flow, rounded corners=10pt] (rev.north |- outback.south) -- ++(0,-0.75) -| (12.55,0.4) -- (rev.east);   % from the stack's centre, then the loop
   \node[card] (why) at (4.6,0.4) {%
     \begin{tikzpicture}[font=\footnotesize]
       \node[flat] (c1) at (0,0)      {\includegraphics[width=1.0cm]{rasters/scene_boundary.png}};
