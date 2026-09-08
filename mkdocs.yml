@@ -8,6 +8,7 @@ edit_uri: edit/main/docs/
 docs_dir: docs
 exclude_docs: |
   figures/*.py
+  __pycache__/
   requirements.txt
   gen_pages.py
   hooks.py
