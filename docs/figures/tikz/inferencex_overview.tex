@@ -1,0 +1,141 @@
+\documentclass[tikz,border=4pt]{standalone}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amssymb}
+\usetikzlibrary{positioning,fit,calc,arrows.meta,shapes.misc,backgrounds}
+
+% Exact palette from ../inferencex_overview.py (including its inline blue).
+\definecolor{INK}{HTML}{1f2937}
+\definecolor{MUTED}{HTML}{6b7280}
+\definecolor{PANEL}{HTML}{f5f5f4}
+\definecolor{TEAL}{HTML}{0f766e}
+\definecolor{TEAL_L}{HTML}{ccfbf1}
+\definecolor{EMERALD}{HTML}{047857}
+\definecolor{EMERALD_L}{HTML}{d1fae5}
+\definecolor{AMBER}{HTML}{b45309}
+\definecolor{AMBER_L}{HTML}{fef3c7}
+\definecolor{VIOLET}{HTML}{6d28d9}
+\definecolor{VIOLET_L}{HTML}{ede9fe}
+\definecolor{NAVY}{HTML}{1e3a8a}
+\definecolor{CROSS}{HTML}{b91c1c}
+\definecolor{BLUE_L}{HTML}{dbeafe}
+\definecolor{BLUE}{HTML}{3b82f6}
+
+\begin{document}
+\begin{tikzpicture}[
+  font=\sffamily, text=INK, node distance=2mm,
+  every node/.style={inner sep=0pt, outer sep=0pt, align=left, execute at begin node=\raggedright},
+  panel/.style={rectangle, rounded corners=2mm, draw=INK, thin, fill=PANEL, inner sep=0pt},
+  box/.style={rectangle, rounded corners=1.5mm, draw=EMERALD, thick, fill=white, inner sep=2mm, align=left},
+  flowbox/.style={box, inner sep=1.2mm, draw=TEAL, text width=5.05cm, font=\sffamily\scriptsize},
+  claim/.style={text width=10.08cm, align=left, font=\sffamily\small\bfseries},
+  evidence/.style={text width=10.08cm, align=left, font=\sffamily\scriptsize, text=MUTED},
+  ids/.style={evidence},
+  check/.style={circle, fill=EMERALD, text=white, minimum size=3.5mm, font=\sffamily\scriptsize\bfseries},
+  arrow/.style={-{Stealth[length=2mm]}, thick, draw=MUTED},
+  paneltitle/.style={font=\sffamily\normalsize\bfseries, align=left},
+  body/.style={font=\sffamily\scriptsize, align=left},
+  boxtitle/.style={font=\sffamily\small\bfseries, align=left}
+]
+
+% Panel anchors are the only absolute coordinates. Dimensions are in cm.
+\coordinate (a-nw) at (0,0);
+\coordinate (b-nw) at (6.2,0);
+\coordinate (c-nw) at (17.8,0);
+\coordinate (d-nw) at (0,-7.55);
+\coordinate (e-nw) at (17.8,-7.55);
+\coordinate (a-se) at ($(a-nw)+(5.6,-7.25)$);
+\coordinate (b-se) at ($(b-nw)+(11,-10.15)$);
+\coordinate (c-se) at ($(c-nw)+(7.919,-7.25)$);
+\coordinate (d-se) at ($(d-nw)+(5.6,-2.6)$);
+\coordinate (e-se) at ($(e-nw)+(7.919,-2.6)$);
+
+% Fit panel frames behind all content.
+\begin{scope}[on background layer]
+\node[panel, fit=(a-nw)(a-se)] (panel-a) {};
+\node[panel, fit=(b-nw)(b-se)] (panel-b) {};
+\node[panel, fit=(c-nw)(c-se)] (panel-c) {};
+\node[panel, fit=(d-nw)(d-se)] (panel-d) {};
+\node[panel, fit=(e-nw)(e-se)] (panel-e) {};
+\end{scope}
+
+% Title and subtitle.
+\node[text width=25.719cm, align=left, font=\sffamily\Large\bfseries, above=5.5mm of a-nw, anchor=south west] (title) {olmoearth\_inferenceX: examining OlmoEarth inference results without labels};
+\node[text width=25.719cm, align=left, font=\sffamily\small, text=MUTED, below=1.2mm of title.south west, anchor=north west] (subtitle) {which windows of a prediction map to trust, and which to send for review};
+
+% A: what is audited; all four stages form a vertical flow.
+\node[paneltitle, text=NAVY, text width=5.16cm, anchor=north west] (a-title) at ($(a-nw)+(0.22,-0.22)$) {A\quad What is audited};
+\node[flowbox, fill=BLUE_L, draw=BLUE, below=2.5mm of a-title.south, text width=5.05cm] (sentinel) {Sentinel-2 window};
+\node[flowbox, fill=TEAL_L, below=3mm of sentinel] (encoder) {OlmoEarth encoder};
+\node[body, text=TEAL, text width=5.05cm, below=1mm of encoder] (version) {v1 Base, frozen, fp32};
+\node[boxtitle, text width=5.05cm, below=4mm of version] (cases-title) {three deployment cases};
+\node[body, text width=5.05cm, below=1.2mm of cases-title] (cases-body) {a linear water probe on frozen tokens\\(27 WorldCover scenes; Sen1Floods11 tiles)\\the fine-tuned AWF model end to end\\the served LCC change rasters};
+\scoped[on background layer] \node[flowbox, fit=(cases-title)(cases-body)] (cases) {};
+\node[boxtitle, text width=5.05cm, below=4.5mm of cases] (prediction-title) {prediction map +\\per-window confidence};
+\node[body, text=MUTED, text width=5.05cm, below=1.2mm of prediction-title] (prediction-body) {errors = disagreements with a reference,\\patch by patch; the signal's job is to rank\\them before anyone looks};
+\scoped[on background layer] \node[flowbox, draw=INK, fit=(prediction-title)(prediction-body)] (prediction) {};
+\node[evidence, text width=5.05cm, below=2.5mm of prediction] (references) {references: WorldCover (weak map), Sen1Floods11 hand labels, AWF expert points};
+\draw[arrow] (sentinel.south) -- (encoder.north);
+\draw[arrow] (version.south) -- (cases.north);
+\draw[arrow] (cases.south) -- (prediction.north);
+
+% B: six beliefs, each with its exact evidence and experiment identifiers.
+\node[paneltitle, text=EMERALD, text width=10.56cm, anchor=north west] (b-title) at ($(b-nw)+(0.22,-0.22)$) {B\quad What we believe is true};
+\node[claim, below=2.5mm of b-title.south west, xshift=4.8mm, anchor=north west] (claim1) {the model's own confidence is the best label-free error ranker};
+\node[evidence, below=0.7mm of claim1.south west, anchor=north west] (evidence1) {negative logit margin; best on every expert-labelled testbed\\(AWF, Sen1Floods11, fine-tuned model)};
+\node[ids, below=1mm of evidence1.south west, anchor=north west] (ids1) {exp04 16 18 21};
+\node[check, left=1.3mm of claim1.west] (check1) {$\checkmark$};
+\node[claim, below=1.2mm of ids1.south west, anchor=north west] (claim2) {errors concentrate on prediction boundaries:\\75\% of errors vs 20\% of correct};
+\node[evidence, below=0.7mm of claim2.south west, anchor=north west] (evidence2) {a triage cue, not a ranker; boundary first, then by confidence, captures more errors\\at 5-10\% budgets};
+\node[ids, below=1mm of evidence2.south west, anchor=north west] (ids2) {exp14 16 18 20 35 36};
+\node[check, left=1.3mm of claim2.west] (check2) {$\checkmark$};
+\node[claim, below=1.2mm of ids2.south west, anchor=north west] (claim3) {an error window nearly always carries a label-free cue};
+\node[evidence, below=0.7mm of claim3.south west, anchor=north west] (evidence3) {95\% of hand-label errors are on a boundary, low-confidence, unstable or\\NDWI-ambiguous; NDWI ambiguity 7x};
+\node[ids, below=1mm of evidence3.south west, anchor=north west] (ids3) {exp37};
+\node[check, left=1.3mm of claim3.west] (check3) {$\checkmark$};
+\node[claim, below=1.2mm of ids3.south west, anchor=north west] (claim4) {the fine-tuned model is overconfident,\\so an accuracy needs a coverage};
+\node[evidence, below=0.7mm of claim4.south west, anchor=north west] (evidence4) {0.93 accurate where it claims 0.99 (ECE 0.08); abstaining on the least confident\\20\% gives 0.945};
+\node[ids, below=1mm of evidence4.south west, anchor=north west] (ids4) {exp21};
+\node[check, left=1.3mm of claim4.west] (check4) {$\checkmark$};
+\node[claim, below=1.2mm of ids4.south west, anchor=north west] (claim5) {the served product exports no class confidence;\\outputs sit on the patch lattice};
+\node[evidence, below=0.7mm of claim5.south west, anchor=north west] (evidence5) {boundary fraction captures a median 0.88 of disagreements at a 5\% review budget;\\no window seams};
+\node[ids, below=1mm of evidence5.south west, anchor=north west] (ids5) {exp20 22};
+\node[check, left=1.3mm of claim5.west] (check5) {$\checkmark$};
+\node[claim, below=1.2mm of ids5.south west, anchor=north west] (claim6) {side product: the pretraining target space is degenerate};
+\node[evidence, below=0.7mm of claim6.south west, anchor=north west] (evidence6) {target encoder = untouched random init, targets of effective rank 2;\\whitened, the target is 57-70\% predictable};
+\node[ids, below=1mm of evidence6.south west, anchor=north west] (ids6) {exp32 33 34};
+\node[check, left=1.3mm of claim6.west] (check6) {$\checkmark$};
+\node[evidence, text width=10.56cm, anchor=south east] (legend) at ($(b-se)+(-0.22,0.22)$) {every item: supported on expert labels; what was tried and rejected is in the ledger\\(docs/TECHNIQUES.md)};
+
+% C: the three tests.
+\node[paneltitle, text=EMERALD, text width=7.479cm, anchor=north west] (c-title) at ($(c-nw)+(0.22,-0.22)$) {C\quad The test every claim passed};
+\node[boxtitle, text=EMERALD, text width=6.879cm, below=4.5mm of c-title] (two-title) {two references at once, on identical patches};
+\node[body, text width=6.879cm, below=2mm of two-title] (two-body) {the model's own confidence\quad and\quad a no-model pixel control\\beating one but not the other is not support};
+\scoped[on background layer] \node[box, fill=EMERALD_L, fit=(two-title)(two-body)] (two) {};
+\node[boxtitle, text width=6.879cm, below=8mm of two] (scoring-title) {scoring};
+\node[body, text width=6.879cm, below=2mm of scoring-title] (scoring-body) {tie-aware excess AURC per scene or tile\\wins / losses / ties, exact sign tests, sign-flip permutation\\one vote per river cluster; block and cluster bootstraps\\preregistered primary score and combination};
+\scoped[on background layer] \node[box, fit=(scoring-title)(scoring-body)] (scoring) {};
+\node[boxtitle, text width=6.879cm, below=8mm of scoring] (rules-title) {rules};
+\node[body, text width=6.879cm, below=2mm of rules-title] (rules-body) {expert labels grade signals, never train them\\every recorded claim points to a file under exp/out\\the machinery is a tested torch-free package};
+\scoped[on background layer] \node[box, fit=(rules-title)(rules-body)] (rules) {};
+
+% D: open question and next step.
+\node[paneltitle, text=AMBER, text width=5.16cm, anchor=north west] (d-title) at ($(d-nw)+(0.22,-0.22)$) {D\quad Open question};
+\node[body, text width=5.16cm, below=2mm of d-title] (d-body) {why the WorldCover wins do not transfer to hand labels.\\leading hypothesis: WorldCover was a pretraining target, so the probe partly reads out the model's own map; decisive test needs adjudicated cells on the 8 rivers (issue \#2)};
+
+% E: deployment status and remaining work.
+\node[paneltitle, text=VIOLET, text width=7.479cm, anchor=north west] (e-title) at ($(e-nw)+(0.22,-0.22)$) {E\quad Where it stands};
+\node[body, text width=7.479cm, below=2mm of e-title] (e-body) {supported for deployment: confidence as the ranker, boundary first then confidence as the review order, and a reason with measured evidence for every flagged window (oe\_inferencex).\\Remaining: the adjudicated-cell test (issue \#2) and the pretraining-target note to Ai2 (issue \#11)};
+
+% Inter-panel arrows share the midpoint of the upper panels.
+\coordinate (ab-start) at ($(panel-a.east)+(0.08,0)$);
+\coordinate (ab-end) at ($(panel-b.west |- ab-start)+(-0.08,0)$);
+\coordinate (bc-end) at ($(panel-c.west)+(-0.08,0)$);
+\coordinate (bc-start) at ($(panel-b.east |- bc-end)+(0.08,0)$);
+\draw[arrow, draw=INK] (ab-start) -- (ab-end);
+\draw[arrow, draw=EMERALD] (bc-start) -- (bc-end);
+
+% Source footer.
+\node[evidence, text width=25.719cm, below=3.2mm of panel-d.south west, anchor=north west] (footer) {github.com/2imi9/olmoearth\_inferenceX; ledger docs/TECHNIQUES.md; protocol docs/method/protocol.md; open items docs/plan/roadmap.md};
+\end{tikzpicture}
+\end{document}
