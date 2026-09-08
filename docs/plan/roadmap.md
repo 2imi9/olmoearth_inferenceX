@@ -123,6 +123,39 @@ carrying the paper links and the concrete test:
    reference-map disagreement (exp15).
 
 
+## Explanation layer: why a window is suspect
+
+Error ranking says *which* windows to review; the deployment also needs
+*why*. The cues that failed as rankers are the material for that
+explanation, because each is a measured, error-enriched fact about a window
+rather than a score to order by:
+
+| Cue (label-free) | Enrichment on expert labels | Evidence |
+|---|---|---|
+| on a prediction boundary | 75% of error patches vs 20% of correct ones | exp14, exp16, exp18 |
+| unstable under a sub-patch shift (tiling instability) | wins against WorldCover 26/27; on hand labels ties confidence | exp13, exp18, exp21 |
+| spectrally ambiguous (NDWI near zero) | ranks the reference-omission scenes above every model signal | exp06, exp09 |
+| seasonal water (JRC seasonality) | 39% of disagreements vs 8% of agreements | exp25 |
+| reference unstable between WorldCover versions | 14x enriched among disagreements, about 10% of them | exp23 |
+| OSM river centerline disagrees with the map | 1.5x enriched; often reference-vs-reference on narrow channels | exp15 |
+| low confidence (the ranker itself) | best ranker everywhere | exp04, exp16, exp18, exp21 |
+
+**Design.** A per-window attribution on top of `oe_inferencex.assess`: for
+each window in a review set, the list of cues that fire, each carrying its
+measured enrichment (share among errors against share among correct
+windows, cited to the experiment above) and a templated sentence. The
+explanation is validated the way the cues were: by enrichment on expert
+labels, not by AURC, so a cue that does not order errors can still explain
+them. Scene-level output: how many flagged windows carry each cue, which
+cues co-occur, and which review-set windows carry none (those are the ones
+the explanation cannot help with). The narration stays with the caller,
+as the agent contract requires; this layer returns structured evidence.
+
+**Status.** Design; the cue enrichments above are already measured. The
+first build recomputes them on identical windows from the cached signals
+(exp35/exp36 caches on the cluster hold every base signal per patch for
+Bolivia) and exposes `explain_review_set(assessment, cues)` in the package.
+
 ## Asks of upstream
 
 - **A class-head confidence in the LCC export** — top-1 minus top-2 logit
