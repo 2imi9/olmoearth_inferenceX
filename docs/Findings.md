@@ -31,8 +31,9 @@ file under `exp/out/`; the per-experiment detail is in the
    window cropped at four offsets and average the four decisions per pixel:
    pixel accuracy on hand labels rises by 1.0 points on Bolivia and 0.9 on
    the multi-region test split, preregistered, no labels, no retraining
-   (exp42). Half of the remaining errors sit on windows whose hand labels
-   are themselves mixed.
+   (exp42). Half of the grid window's errors sit on windows whose hand
+   labels are mixed; the averaged decision is per pixel, so those are the
+   grid's limit, not the map's.
 
 ## The numbers
 
@@ -63,7 +64,7 @@ tiling covers:
 |---|---|---|
 | grid window (one tiling) | 0.897 | 0.941 |
 | shift-averaged (four tilings) | 0.907, better on 321 tiles, worse on 66 | 0.950, better on 583, worse on 78 |
-| share of errors on mixed-label windows | 45% (10% of windows) | 58% (10% of windows) |
+| share of the grid window's errors on mixed-label windows | 45% (10% of windows) | 58% (10% of windows) |
 
 Fine-tuned AWF model, end to end (exp21, exp36): confidence catches 22% of
 the errors at a 5% budget, 39% at 10%, 63% at 20%; the boundary-first order

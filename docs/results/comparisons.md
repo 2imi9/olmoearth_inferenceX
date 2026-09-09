@@ -425,7 +425,9 @@ labels over the region every tiling covers:
 | W2 scale-adaptive (window accuracy) | 0.9045 vs 0.9020 | 0.9515 vs 0.9518 | 175/121; 253/241 |
 
 Mixed-label windows are 10% of the windows and carry 45% and 58% of the
-errors (error rate 0.39 and 0.28 against 0.054 and 0.022 on pure windows).
+grid window's errors (error rate 0.39 and 0.28 against 0.054 and 0.022 on
+pure windows); the shift-averaged map decides per pixel, so this bounds
+the grid, not the map.
 Tile-phase abstention equals confidence abstention at matched coverage.
 Source `exp/out/exp42_summary.json`.
 

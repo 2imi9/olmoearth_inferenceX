@@ -78,7 +78,7 @@ beliefs = [
     ("the served product exports no class confidence; outputs sit on the patch lattice",
      "boundary fraction captures a median 0.88 of disagreements at a 5% review budget; no window seams", "exp20 22"),
     ("averaging four tilings of a window improves the map itself",
-     "+1.0 / +0.9 pts pixel accuracy on hand labels, no retraining; half the remaining errors are mixed-label windows", "exp42"),
+     "+1.0 and +0.9 pixel-accuracy points on hand labels, no labels, no retraining; half of the grid window's errors sit on mixed-label windows", "exp42"),
     ("side product: the pretraining target space is degenerate",
      "target encoder = untouched random init, targets of effective rank 2; whitened, the target is 57-70% predictable", "exp32 33 34"),
 ]
