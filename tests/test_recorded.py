@@ -278,3 +278,23 @@ def test_exp44_sixteen_offsets_are_better_but_not_worthwhile():
         assert r["pixel_accuracy_mean"]["W16 (all offsets)"] > r["pixel_accuracy_mean"]["W1 (4 diagonals)"]
         assert r["tests"]["W7 (diagonals + horizontal phases)"]["mean_gain"] < 0        # an unbalanced set hurts
         assert s["testbeds"][name]["diagonal_consistency_max_abs_diff"] == 0.0
+
+
+def test_exp45_v12_replication_and_cross_version_overlap():
+    """exp45 (job 728864): on v1.2 Base the cues and the shift-averaged window replicate, confidence is no longer
+    the best ranker on Bolivia, and a different architecture still errs on ~3/4 of v1's error windows."""
+    s = json.load(open(os.path.join(OUT, "exp45_summary.json")))
+    assert s["prereg"]["complete"] is True
+    assert s["prereg"]["R3_cue_enrichment"] is True and s["prereg"]["R4_shift_averaged_window"] is True
+    assert s["prereg"]["R1_best_ranker"] is False and s["prereg"]["R2_boundary_first"] is False
+    bo = s["results"]["bolivia"]
+    e = bo["R1_best_ranker"]["pooled_eaurc"]
+    assert e["tile-phase"] < e["confidence"] and e["control NDWI level"] < e["confidence"]   # confidence is third
+    assert s["results"]["test"]["R1_best_ranker"]["replicates"] is True                      # but still leads on the test split
+    assert bo["R2_boundary_first"]["replicates"] is True
+    for name in ("bolivia", "test"):
+        r4 = s["results"][name]["R4_shift_averaged_window"]
+        assert r4["replicates"] and r4["mean_gain"] > 0.009
+        d = s["D1_cross_version_error_overlap"][name]
+        assert 0.70 < d["p_v12_wrong_given_v1_wrong"] < 0.78
+        assert d["p_v12_wrong_given_v1_right"] < 0.04 and 0.65 < d["phi"] < 0.75

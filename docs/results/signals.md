@@ -223,6 +223,15 @@ beats it.
 
 ![Embedding-level agreement, Kazungula](../../exp/out/exp01_zambezi_agreement.png)
 
+**A different backbone, same errors (exp45).** OlmoEarth v1.2 Base changes
+the position encoding to rotary and the Sentinel-2 token structure, and it is
+a separate pretraining run. On identical Sen1Floods11 windows, through our own
+Sentinel-2 pipeline, its probe is wrong on 74.6% (Bolivia) and 71.3% (test
+split) of the windows where the v1 probe is wrong, and on 3.1% and 1.3% of the
+rest; phi 0.70. That is lower than the 80 to 82% of exp41 and rules out the
+possibility that exp41's overlap came from its Sentinel-1 input, while leaving
+the shared linear probe and the shared hand labels unaccounted for.
+
 **Two views, two heads (exp41).** The last version of the idea: a probe on
 an outside representation of the *same* windows, from Ai2's row-aligned
 paper embeddings, so that disagreement is between two encoders rather than

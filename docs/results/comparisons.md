@@ -438,6 +438,28 @@ error rates, and the shift-averaged map decides per pixel and still puts
 Tile-phase abstention equals confidence abstention at matched coverage.
 Source `exp/out/exp42_summary.json`.
 
+## OlmoEarth v1.2 Base, the encoder the served product uses (exp45)
+
+The four supported findings repeated on v1.2 with the same tiles, head
+protocol and offsets. Accuracy is unchanged (0.9062 against v1's 0.9116 on
+Bolivia; 0.9534 against 0.9528 on the test split); the ranking quality of the
+model's own confidence is not.
+
+| Pooled E-AURC on Bolivia | v1 | v1.2 |
+|---|---|---|
+| confidence | 0.0105 | 0.0146 |
+| tiling instability | 0.0115 | 0.0138 |
+| NDWI level (no model) | 0.0119 | 0.0119 |
+
+Under v1.2 confidence is third on this testbed, behind a model signal and a
+pixel control; on the test split it still leads everything (0.0059). The cue
+enrichments replicate on both testbeds, and the shift-averaged window
+replicates with a slightly larger gain than under v1 (+0.0110 and +0.0096
+against +0.0102 and +0.0091), consistent with v1.2's larger tiling
+instability. The boundary-first review order replicates on Bolivia (pooled
+0.4611 against 0.4234 at the 10% budget) and does not extend to the test
+split. Source `exp/out/exp45_summary.json`.
+
 ## Served land cover change rasters (exp20)
 
 First assessment of a served output: ten 512-px windows (about

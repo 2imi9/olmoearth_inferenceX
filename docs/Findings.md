@@ -12,7 +12,11 @@ file under `exp/out/`; the per-experiment detail is in the
 
 1. **The model's own confidence is the best label-free error ranker** on
    every expert-labelled testbed: AWF points, Sen1Floods11 hand labels, and
-   the fine-tuned model run end to end (exp04, exp16, exp18, exp21).
+   the fine-tuned model run end to end (exp04, exp16, exp18, exp21). This
+   holds for OlmoEarth v1. It does not hold on Bolivia under v1.2 Base, the
+   encoder the served product uses, where tiling instability and even a
+   no-model spectral control rank its errors better at unchanged accuracy
+   (exp45).
 2. **Review boundary windows first, then by confidence.** Errors sit on
    prediction boundaries, 75% of errors against 21% of correct windows, and
    this order captures more of them than confidence alone at 5% and 10%

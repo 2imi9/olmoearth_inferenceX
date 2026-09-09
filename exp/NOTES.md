@@ -50,6 +50,7 @@ Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 | exp42 | window design: four alternatives to the 4-px grid window judged at pixel level on hand labels; the shift-averaged decision (mean of the four tilings covering each pixel) raises pixel accuracy by 1.0 points on Bolivia (321/66/53 tiles, p = 1e-41) and 0.9 on the test split (583/78/139, p = 9e-97), preregistered and supported; spectral split and scale-adaptive windows are mixed; 10% of windows have mixed hand labels and carry 45% (Bolivia) and 58% (test) of the grid window's errors (error rate 0.28-0.39 against 0.02-0.05 on pure windows), the grid's limit, not the pixel map's |
 | exp43 | a content-derived partition (deterministic k-means on Sentinel-2, 4-connected components) with the hard majority of W1's pixel decisions, preregistered against W1 with the corrected/broken accounting: not supported; it breaks more pixels than it corrects on both testbeds (Bolivia C 15,093 vs B 16,273, 168/209 tiles; test split C 24,525 vs B 30,951, 244/387), because 11-15% of segments are mixed and 5-12% of the pure ones carry a wrong majority, which then flips whole segments; W1's own errors are 43% (Bolivia) and 56% (test) on the mixed-label 10% of pixels |
 | exp44 | sixteen crop offsets against the four diagonals, twelve extra encoder passes: the full offset set is better than the diagonals on both testbeds (201/149/90, p = 0.003; 369/202/229, p = 1.3e-12) but by +0.04 accuracy points, five times below the preregistered minimum worthwhile effect, so unsupported; an unbalanced seven-offset subset (diagonals plus horizontal phases) is worse than the diagonals, a balanced eight-offset subset is between |
+| exp45 | the four supported findings repeated on OlmoEarth v1.2 Base, the encoder the served product uses: the cue enrichments and the shift-averaged window replicate on both hand-label testbeds (the window gain is larger than under v1, as v1.2's greater tiling instability predicts); the boundary-first order replicates on Bolivia and does not extend to the test split; **confidence is no longer the best ranker on Bolivia under v1.2**, where tile-phase (0.0138) and even the no-model NDWI-level control (0.0119) beat it (0.0146); v1.2 matches v1's accuracy and ranks its own errors worse; cross-version overlap: v1.2 is wrong on 71-75% of v1's error windows and on 1-3% of the rest |
 
 ## exp01 — first E_case map (2026-08-31)
 
@@ -1491,3 +1492,62 @@ balanced in both directions; an unbalanced set moves the effective window
 off centre and costs more than the extra sampling gains. That also explains
 why the four diagonals, a balanced set, were already close to the ceiling
 of this family.
+
+## exp45 the supported findings on OlmoEarth v1.2 Base (2026-09-08)
+
+Every supported result in this repository was established on v1 Base, but the
+served land cover change product runs v1.2 Base, and v1.2 differs
+structurally: rotary position encodings and one Sentinel-2 band-set token per
+patch instead of three (exp19). This run repeats the four supported findings
+on v1.2, on the same tiles, with the same head protocol (the exp18 head
+retrained from v1.2 features of the valid split, seed 0), four crop offsets,
+on Sen1Floods11 Bolivia (441 tiles) and the test split (800 tiles). Each
+replication keeps the original's direction and unit and must pass on both
+testbeds. Environment: a separate venv built from upstream main (commit
+95bdd47), which exposes the v1.2 identifiers the pinned release does not; the
+v1 environment is untouched, so the published v1 numbers stay reproducible.
+exp/exp45_v12_replication.py, one B200 job, 728864 on 5f9c985, minutes.
+Outputs exp/out/exp45_summary.json and exp45_v12_replication.csv.
+
+Head accuracy is the same as v1's: 0.9062 against 0.9116 on Bolivia, 0.9534
+against 0.9528 on the test split. What changes is how well the model ranks
+its own errors.
+
+| Finding | Bolivia | Test split | Replicates |
+|---|---|---|---|
+| R1 confidence is the best ranker | pooled E-AURC 0.0146; tile-phase 0.0138 and NDWI level 0.0119 both beat it; per tile 152/201 against tile-phase | 0.0059, beats every reference and control | no |
+| R2 boundary first at the 10% budget | 134/46/173, p = 1.8e-11; pooled 0.4611 against 0.4234, CI [+0.028, +0.053] | 143/81/271, p = 2.1e-05 per tile, pooled 0.6624 against 0.6587 with the interval spanning zero | Bolivia only |
+| R3 the four cues are enriched | boundary 3.3x, least-confident 3.2x, unstable 3.3x, NDWI-ambiguous 7.1x | 4.1x, 3.7x, 3.6x, 4.9x | yes |
+| R4 shift-averaged beats the grid window | 0.9067 against 0.8957, 330/69/41, mean +0.0110 | 0.9516 against 0.9420, 587/81/132, mean +0.0096 | yes |
+
+The R1 failure is the result of the run. On Bolivia under v1.2 the model's own
+confidence is third: tiling instability ranks its errors better (0.0138), and
+so does the NDWI-level control, which uses no model at all (0.0119, unchanged
+from v1 because it does not depend on the encoder). Under v1 on the same
+tiles confidence led at 0.0105 with tile-phase at 0.0115 and NDWI level at
+0.0119. So v1.2 kept v1's accuracy and lost ranking quality: its logit margin
+carries less information about where it is wrong. On the test split confidence
+still leads everything, so the loss is testbed-dependent, not universal. This
+is the first time a no-model control has beaten confidence on expert labels,
+and it is a property of the newer backbone, not of the audit.
+
+R2's Bolivia gain is larger under v1.2 than under v1 (+0.038 against +0.029 at
+the 10% budget). The test split was never run for R2 under v1, so its failure
+there is a limit on the finding's reach rather than a contradiction; at the
+20% budget on the test split the boundary-first order is clearly worse
+(0.743 against 0.842).
+
+R4 replicates with a slightly larger gain than v1 (+0.0110 and +0.0096 against
++0.0102 and +0.0091), which is what exp19's instability measurement predicts:
+v1.2's tilings disagree more (mean tile-phase 0.0493 on Bolivia against about
+0.030 for v1), so averaging them recovers more.
+
+D1, cross-version error overlap on identical windows. The v1.2 probe is wrong
+on 74.6% (Bolivia) and 71.3% (test split) of the windows where the v1 probe is
+wrong, and on 3.1% and 1.3% of the rest; phi 0.70 in both. v1.2 changes the
+position encoding, the token structure and the pretraining run, and this is
+Sentinel-2 through our own pipeline rather than the Sentinel-1 embeddings of
+exp41's dump. It therefore removes exp41's shared-modality explanation while
+leaving the shared linear probe and the shared labels in place. The overlap is
+lower than exp41's 80 to 82%, so a real architectural change does move the
+error set, but not much.
