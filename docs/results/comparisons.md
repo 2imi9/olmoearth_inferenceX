@@ -423,11 +423,13 @@ labels over the region every tiling covers:
 | W1 shift-averaged (preregistered) | 0.9071 | 0.9503 | 321/66/53, p = 1e-41; 583/78/139, p = 9e-97 |
 | W3 spectral split inside the window | 0.9084 | 0.9483 | vs W1: 217/158 better on Bolivia, 226/404 worse on test |
 | W2 scale-adaptive (window accuracy) | 0.9045 vs 0.9020 | 0.9515 vs 0.9518 | 175/121; 253/241 |
+| segment majority of W1 over a spectral partition (exp43, preregistered) | 0.9042 | 0.9478 | vs W1: 168/209 (C 15,093, B 16,273); 244/387 (C 24,525, B 30,951) |
 
 Mixed-label windows are 10% of the windows and carry 45% and 58% of the
 grid window's errors (error rate 0.39 and 0.28 against 0.054 and 0.022 on
 pure windows); the shift-averaged map decides per pixel, so this bounds
-the grid, not the map.
+the grid, not the map, whose own errors sit 43% and 56% on those windows
+(exp43).
 Tile-phase abstention equals confidence abstention at matched coverage.
 Source `exp/out/exp42_summary.json`.
 

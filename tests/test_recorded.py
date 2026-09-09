@@ -233,3 +233,15 @@ def test_exp42_shift_averaged_window_is_supported_on_both_testbeds():
         assert acc["W1 shift-averaged"] - acc["W0 grid"] > 0.008
         pur = s["results"][name]["purity"]
         assert pur["share_of_windows_impure"] < 0.11 and pur["share_of_errors_on_impure_windows"] > 0.44
+
+
+def test_exp43_segment_majority_breaks_more_than_it_corrects():
+    """exp43 (job 727104): the corrected/broken accounting (E_g + C = E_f + B) on both testbeds; not supported."""
+    s = json.load(open(os.path.join(OUT, "exp43_summary.json")))
+    assert s["prereg"]["supported"] is False and s["prereg"]["complete"] is True
+    for name, (C, B) in (("bolivia", (15093, 16273)), ("test", (24525, 30951))):
+        r = s["results"][name]["primary_k8_hard"]
+        assert (r["C_total"], r["B_total"]) == (C, B) and B > C and r["one_sided"] and r["sign_p"] > 0.5
+        assert r["acc_candidate_mean"] - r["acc_w1_mean"] == pytest.approx(r["mean_gain"], abs=2e-3)
+        pur = s["results"][name]["w1_errors_by_grid_window_purity"]
+        assert 0.4 < pur["share_of_w1_errors_on_impure_windows"] < 0.6 and pur["share_of_pixels_in_impure_windows"] < 0.11

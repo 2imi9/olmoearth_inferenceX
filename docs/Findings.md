@@ -65,6 +65,8 @@ tiling covers:
 | grid window (one tiling) | 0.897 | 0.941 |
 | shift-averaged (four tilings) | 0.907, better on 321 tiles, worse on 66 | 0.950, better on 583, worse on 78 |
 | share of the grid window's errors on mixed-label windows | 45% (10% of windows) | 58% (10% of windows) |
+| share of the averaged map's own errors on those windows | 43% | 56% |
+| segment majority over a spectral partition (exp43) | 0.904, breaks more than it corrects | 0.948, breaks more than it corrects |
 
 Fine-tuned AWF model, end to end (exp21, exp36): confidence catches 22% of
 the errors at a 5% budget, 39% at 10%, 63% at 20%; the boundary-first order

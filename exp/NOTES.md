@@ -48,6 +48,7 @@ Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 | exp40 | preregistered replication of the pixel-statistics neighbourhood contradiction on the Sen1Floods11 test split (800 tiles, other regions; Bolivia as the bank): fails, worse than confidence at the 10% budget (183/195/105, p = 0.75; pooled 0.530 vs 0.643, CI below zero), at 20% and on E-AURC (215/267, pooled 0.0149 vs 0.0096); the OlmoEarth-space score is far worse (97/301); the Bolivia win did not carry over, so neither contradiction score is supported |
 | exp41 | two-view disagreement from Ai2's paper embeddings (probes per model on identical windows, partner chosen by lowest held-out error correlation): rejected. On Sen1Floods11 every model errs on the same windows, outside families as much as OlmoEarth's own (P(partner wrong | OlmoEarth wrong) 0.80 to 0.82 for Clay, Galileo, Panopticon and for nano/tiny/large; phi 0.77 to 0.81), and disagreement captures 0.242 of the errors at 10% against 0.454 for confidence (281/1263 chips); on AWF (200 points) the same, 0.180 vs 0.246; the errors belong to the windows, not to the model |
 | exp42 | window design: four alternatives to the 4-px grid window judged at pixel level on hand labels; the shift-averaged decision (mean of the four tilings covering each pixel) raises pixel accuracy by 1.0 points on Bolivia (321/66/53 tiles, p = 1e-41) and 0.9 on the test split (583/78/139, p = 9e-97), preregistered and supported; spectral split and scale-adaptive windows are mixed; 10% of windows have mixed hand labels and carry 45% (Bolivia) and 58% (test) of the grid window's errors (error rate 0.28-0.39 against 0.02-0.05 on pure windows), the grid's limit, not the pixel map's |
+| exp43 | a content-derived partition (deterministic k-means on Sentinel-2, 4-connected components) with the hard majority of W1's pixel decisions, preregistered against W1 with the corrected/broken accounting: not supported; it breaks more pixels than it corrects on both testbeds (Bolivia C 15,093 vs B 16,273, 168/209 tiles; test split C 24,525 vs B 30,951, 244/387), because 11-15% of segments are mixed and 5-12% of the pure ones carry a wrong majority, which then flips whole segments; W1's own errors are 43% (Bolivia) and 56% (test) on the mixed-label 10% of pixels |
 
 ## exp01 — first E_case map (2026-08-31)
 
@@ -1368,3 +1369,55 @@ fails, and W1 already decides inside them; whether a content-derived
 partition with a hard majority of W1's pixels does better is exp43's
 preregistered question. W4 shows tile-phase does not reject more errors
 than confidence does at matched coverage.
+
+## exp43 segment majority over a content-derived partition (2026-09-08)
+
+The candidate that came out of the Lean development on the window
+question (WindowDesignProofs.lean): the exact accounting of any redesign
+against W1 on the same labelled pixels, C corrected, B broken, gain
+(C - B) / N, and the conditional theorem that a segment with one true
+class on which W1 is right on more than half of its pixels becomes fully
+correct under the strict majority of W1's hard pixel decisions. Whether an
+image-derived partition meets the conditions was the conjecture graded
+here. Partition, fixed before the run and built without labels: per tile,
+log1p of the twelve bands standardised within the tile plus raw NDWI times
+2, k-means with K = 8 initialised at the quantiles of the first principal
+component (sign fixed), exactly 20 iterations, 4-connected components.
+Each segment takes the strict majority of W1's hard predictions inside the
+common region, ties to land. Primary: against W1 on pixel accuracy per
+tile, one-sided, on both testbeds, minimum worthwhile effect +0.002 mean
+gain. exp/exp43_segment_majority.py, one B200 job, 727104 on 37de255
+(a first submission failed on a missing scipy; components are now
+computed without it, verified equal on random maps); Codex review before
+the run fixed the NDWI weight, the sign of the first component, the
+iteration count, finiteness checks and atomic tile results. Outputs
+exp/out/exp43_summary.json and exp43_segment_majority.csv (per tile: N, C,
+B, D, gain, purity, majority correctness).
+
+Not supported, on both testbeds, and the accounting says why. Bolivia
+(441 tiles, 1,180,805 labelled pixels): 15,093 corrected against 16,273
+broken; 168 tiles better, 209 worse, 63 tied (one-sided p = 0.98); mean
+gain -0.0029, median 0; accuracy 0.9042 against W1's 0.9071. Test split
+(800 tiles, 2,479,909 pixels): 24,525 corrected against 30,951 broken;
+244/387/169 (p = 1); mean gain -0.0025; 0.9478 against 0.9503. The soft
+variant is the same (-0.0031, -0.0023); K = 16 makes segments so small
+that the map is nearly W1 again (-0.0005, 0.0000). Mechanism diagnostics,
+grading only: 85.5% (Bolivia) and 89.1% (test) of the segments with at
+least two labelled pixels are single-class, and among those 88.5% and
+95.0% carry a correct W1 majority. The theorem's conditions therefore
+fail on 11 to 15% of segments by mixing and on a further 5 to 12% of the
+pure ones by a wrong majority, and a wrong majority breaks a whole segment
+at once, so the broken count outruns the corrected count even though most
+segments behave as the theorem says.
+
+The statistic exp42 did not report: W1's own pixel errors sit 43%
+(Bolivia) and 56% (test split) on the mixed-label windows, which hold 10%
+of the pixels. That is concentration, not undecidability; the pixel map
+does decide inside them, and it is wrong there four to six times more
+often than elsewhere.
+
+Reading. A spectral partition is not a class partition often enough. The
+Lean identities did their job: the run reports exactly what would have had
+to be true, and it was not. Under the protocol the candidate is
+unsupported; the result does not show that no partition can help, only
+that this one, chosen without labels, does not.
