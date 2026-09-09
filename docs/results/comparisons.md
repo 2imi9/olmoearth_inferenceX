@@ -461,6 +461,70 @@ instability. The boundary-first review order replicates on Bolivia (pooled
 0.4611 against 0.4234 at the 10% budget) and does not extend to the test
 split. Source `exp/out/exp45_summary.json`.
 
+## SHRUG-FM's reliability signals under the window protocol (exp49)
+
+SHRUG-FM (Gonzalez-Calabuig et al. 2026, best paper at the CVPR 2026
+EarthVision workshop) ranks images for abstention by three signal families,
+ensemble mutual information and entropy, k-means distance and NCDD in
+embedding space, and input percentile extremity, fused by a label-fitted
+decision tree; it never compares a single model's own confidence. exp49 ports
+the three families and the fusion step into exp47's protocol: every ranker
+graded on the shift-averaged decision's own errors, both backbones, both
+testbeds, with the substitutions stated in the script (the head's training
+split stands in for pretraining data, an ensemble of eight tile-bootstrap
+linear heads for their CNN ensemble, a logistic combiner for the tree).
+
+| Pooled E-AURC, lower is better | v1 Bolivia | v1 test | v1.2 Bolivia | v1.2 test |
+|---|---|---|---|---|
+| averaged confidence (reference) | 0.0094 | 0.0109 | 0.0116 | 0.0064 |
+| ensemble predictive entropy | 0.0076 | 0.0107 | 0.0115 | 0.0066 |
+| ensemble average entropy | 0.0079 | 0.0108 | 0.0117 | 0.0066 |
+| ensemble mutual information | 0.0120 | 0.0107 | 0.0176 | 0.0086 |
+| NDWI level (no model) | 0.0113 | 0.0106 | 0.0097 | 0.0106 |
+| embedding normalized distance | 0.0657 | 0.0347 | 0.0768 | 0.0343 |
+| embedding NCDD (eq. 5, cluster-normalized) | 0.0859 | 0.0407 | 0.0888 | 0.0413 |
+| embedding NCDD raw | 0.0700 | 0.0295 | 0.0655 | 0.0339 |
+| input extremity max / mean | 0.0484 / 0.0364 | 0.0349 / 0.0328 | 0.0538 / 0.0418 | 0.0339 / 0.0319 |
+| fusion linear, label-fitted | 0.0067 | 0.0068 | 0.0089 | 0.0060 |
+| fusion poly2, label-fitted | 0.0082 | 0.0102 | 0.0101 | 0.0084 |
+
+Preregistered and supported: under v1.2 confidence beats mutual information
+(leads +0.0060 and +0.0022, per tile 263/61 and 352/76, p = 2.5e-31 and
+7.9e-44) and beats -NCDD (+0.077 and +0.035) on both testbeds. Three things
+beside the preregistration. Bagging the head helps under v1: the predictive
+entropy of the eight members' averaged maps beats confidence on Bolivia
+(210/103 tiles, p = 1.5e-9) and marginally on the test split (240/174,
+pooled -0.0002); under v1.2 it ties on Bolivia and loses on the test split.
+The label-fitted linear fusion beats confidence on three arms by
+0.0027-0.0041 (223/94, 265/155, 223/97; p <= 9e-8) and by 0.0004 on the v1.2
+test split, the first fusion to beat confidence in this repository, where
+exp47's label-free midrank fusions all lost; it is fitted on the head's own
+training split against in-sample errors, so it needs no labels beyond the
+head's. And the paper's NCDD, computed over cluster-normalized distances as
+its eq. 5 states, is worse than the raw deficit on all four arms, as the
+normalization predicts when cluster spreads differ.
+
+Their granularity. Averaging each window signal over the tile's
+predicted-water windows and calling a tile a failure when its water F1 is
+below 0.6 (their definition) gives failure rates of 0.331 on Bolivia and
+0.220 / 0.242 on the test split, close to the paper's 0.33 and 0.21:
+
+| Tile-level AURC (Risk@0.5) | v1 Bolivia | v1 test | v1.2 Bolivia | v1.2 test |
+|---|---|---|---|---|
+| averaged confidence | 0.167 (0.110) | 0.120 (0.105) | 0.140 (0.087) | 0.134 (0.130) |
+| ensemble predictive entropy | 0.163 (0.105) | 0.118 (0.105) | 0.137 (0.073) | 0.135 (0.130) |
+| ensemble mutual information | 0.226 (0.201) | 0.117 (0.105) | 0.172 (0.155) | 0.142 (0.130) |
+| embedding NCDD | 0.281 (0.338) | 0.209 (0.205) | 0.463 (0.489) | 0.284 (0.252) |
+| fusion linear, label-fitted | 0.175 (0.105) | 0.138 (0.100) | 0.146 (0.078) | 0.163 (0.127) |
+
+At the tile level the single model's confidence, the baseline the paper never
+runs, is at or near the best signal on every arm, mutual information is the
+weakest task signal, and the window-level gain of the linear fusion does not
+carry over (it was fitted on window errors, not tile failures). The numbers
+are not comparable to the paper's (different data, model and failure rates);
+the point is which baseline was missing. Source `exp/out/exp49_summary.json`,
+job 731703.
+
 ## Served land cover change rasters (exp20)
 
 First assessment of a served output: ten 512-px windows (about

@@ -19,6 +19,8 @@ file under `exp/out/`; the per-experiment detail is in the
    model's errors as well as its own confidence under v1 and better under
    v1.2, for the grid window and for the shift-averaged decision alike
    (exp45, exp47). On the multi-region test split confidence still wins.
+   Bagging the head, eight tile-bootstrap heads averaged, improves on it
+   under v1 on Bolivia and not under v1.2 (exp49).
 2. **Review boundary windows first, then by confidence.** Errors sit on
    prediction boundaries, 75% of errors against 21% of correct windows, and
    this order captures more of them than confidence alone at 5% and 10%
@@ -41,6 +43,14 @@ file under `exp/out/`; the per-experiment detail is in the
    that is concentration, not a ceiling: any one-class-per-block decision
    must miss only 3% of pixels, far below the grid's measured error rate
    (exp43).
+7. **Fusing signals needs labels, and then it works.** A logistic combination
+   of ten label-free signals (confidence, tiling instability, NDWI level, the
+   ensemble entropies, embedding distances, input extremity) fitted on the
+   head's own training split beats confidence on Bolivia under both backbones
+   and on the v1 test split by 25-38% of excess AURC; every label-free
+   midrank fusion had lost (exp47, exp49). On the v1.2 test split the lead is
+   below the worthwhile threshold, so this is three arms of four. SHRUG-FM's
+   own signals, ported to the window, do not beat confidence (exp49).
 
 ## The numbers
 

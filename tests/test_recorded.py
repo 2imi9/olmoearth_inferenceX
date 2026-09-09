@@ -348,3 +348,30 @@ def test_exp47_a_no_model_control_matches_confidence_on_bolivia():
         e = s["results"][v]["bolivia"]["pooled_eaurc"]
         assert e["averaged confidence"] < e["grid confidence"]        # averaging helps ranking as well as accuracy
     assert s["results"]["v1_2"]["test"]["prereg_passes"] is True
+
+
+def test_exp49_shrug_fm_signals_do_not_beat_confidence_but_a_label_fitted_fusion_does():
+    """exp49 (job 731703): SHRUG-FM's signals under the window protocol. Preregistered and supported: under v1.2 the
+    averaged confidence beats ensemble mutual information and -NCDD on both testbeds. Secondary: the bagged predictive
+    entropy beats confidence on Bolivia under v1; the label-fitted linear fusion beats confidence on three of four arms;
+    NCDD as the paper states it (cluster-normalized) is worse than the raw deficit everywhere."""
+    s = json.load(open(os.path.join(OUT, "exp49_summary.json")))
+    assert s["prereg"] == {"supported": True, "complete": True} and s["n_failures"] == 0
+    for n in ("bolivia", "test"):
+        t = s["results"]["v1_2"][n]["tests"]
+        for k in ("ensemble mutual information", "embedding NCDD"):
+            assert t[k]["pooled_lead"] >= 0.001 and t[k]["sign_p"] < 0.05 and t[k]["one_sided"]
+    for v in ("v1", "v1_2"):
+        for n in ("bolivia", "test"):
+            e = s["results"][v][n]["pooled_eaurc"]
+            assert e["embedding NCDD raw"] < e["embedding NCDD"]
+            for k in ("embedding normalized distance", "input extremity max", "input extremity mean"):
+                assert e[k] > 2.5 * e["averaged confidence"]
+    b = s["results"]["v1"]["bolivia"]["tests"]["ensemble predictive entropy"]
+    assert b["pooled_lead"] <= -0.001 and b["l"] > 2 * b["w"] and b["sign_p"] < 1e-6      # the bag ranks better under v1
+    fus = {(v, n): s["results"][v][n]["tests"]["fusion linear (labelled)"]["beats_confidence"] for v in ("v1", "v1_2") for n in ("bolivia", "test")}
+    assert fus == {("v1", "bolivia"): True, ("v1", "test"): True, ("v1_2", "bolivia"): True, ("v1_2", "test"): False}
+    for v in ("v1", "v1_2"):
+        tl = s["results"][v]["bolivia"]["tile_level"]
+        assert abs(tl["failure_rate"] - 0.331) < 0.005                    # the paper's flood and burn-scar failure rates are 0.21 and 0.33
+        assert tl["per_ranker"]["averaged confidence"]["aurc"] < tl["per_ranker"]["ensemble mutual information"]["aurc"]
