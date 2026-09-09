@@ -49,6 +49,7 @@ Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 | exp41 | two-view disagreement from Ai2's paper embeddings (probes per model on identical windows, partner chosen by lowest held-out error correlation): rejected. On Sen1Floods11 every model errs on the same windows, outside families as much as OlmoEarth's own (P(partner wrong | OlmoEarth wrong) 0.80 to 0.82 for Clay, Galileo, Panopticon and for nano/tiny/large; phi 0.77 to 0.81), and disagreement captures 0.242 of the errors at 10% against 0.454 for confidence (281/1263 chips); on AWF (200 points) the same, 0.180 vs 0.246; the errors belong to the windows, not to the model |
 | exp42 | window design: four alternatives to the 4-px grid window judged at pixel level on hand labels; the shift-averaged decision (mean of the four tilings covering each pixel) raises pixel accuracy by 1.0 points on Bolivia (321/66/53 tiles, p = 1e-41) and 0.9 on the test split (583/78/139, p = 9e-97), preregistered and supported; spectral split and scale-adaptive windows are mixed; 10% of windows have mixed hand labels and carry 45% (Bolivia) and 58% (test) of the grid window's errors (error rate 0.28-0.39 against 0.02-0.05 on pure windows), the grid's limit, not the pixel map's |
 | exp43 | a content-derived partition (deterministic k-means on Sentinel-2, 4-connected components) with the hard majority of W1's pixel decisions, preregistered against W1 with the corrected/broken accounting: not supported; it breaks more pixels than it corrects on both testbeds (Bolivia C 15,093 vs B 16,273, 168/209 tiles; test split C 24,525 vs B 30,951, 244/387), because 11-15% of segments are mixed and 5-12% of the pure ones carry a wrong majority, which then flips whole segments; W1's own errors are 43% (Bolivia) and 56% (test) on the mixed-label 10% of pixels |
+| exp44 | sixteen crop offsets against the four diagonals, twelve extra encoder passes: the full offset set is better than the diagonals on both testbeds (201/149/90, p = 0.003; 369/202/229, p = 1.3e-12) but by +0.04 accuracy points, five times below the preregistered minimum worthwhile effect, so unsupported; an unbalanced seven-offset subset (diagonals plus horizontal phases) is worse than the diagonals, a balanced eight-offset subset is between |
 
 ## exp01 — first E_case map (2026-08-31)
 
@@ -1394,30 +1395,99 @@ iteration count, finiteness checks and atomic tile results. Outputs
 exp/out/exp43_summary.json and exp43_segment_majority.csv (per tile: N, C,
 B, D, gain, purity, majority correctness).
 
-Not supported, on both testbeds, and the accounting says why. Bolivia
-(441 tiles, 1,180,805 labelled pixels): 15,093 corrected against 16,273
-broken; 168 tiles better, 209 worse, 63 tied (one-sided p = 0.98); mean
-gain -0.0029, median 0; accuracy 0.9042 against W1's 0.9071. Test split
-(800 tiles, 2,479,909 pixels): 24,525 corrected against 30,951 broken;
-244/387/169 (p = 1); mean gain -0.0025; 0.9478 against 0.9503. The soft
-variant is the same (-0.0031, -0.0023); K = 16 makes segments so small
-that the map is nearly W1 again (-0.0005, 0.0000). Mechanism diagnostics,
-grading only: 85.5% (Bolivia) and 89.1% (test) of the segments with at
-least two labelled pixels are single-class, and among those 88.5% and
-95.0% carry a correct W1 majority. The theorem's conditions therefore
-fail on 11 to 15% of segments by mixing and on a further 5 to 12% of the
-pure ones by a wrong majority, and a wrong majority breaks a whole segment
-at once, so the broken count outruns the corrected count even though most
-segments behave as the theorem says.
+Not supported, on both testbeds. Two endpoints, kept apart: the
+preregistered one is the mean over tiles of (C - B) / N, and the pooled
+one is (sum C - sum B) / sum N; they differ because tiles carry different
+numbers of labelled pixels. Bolivia (440 of 441 tiles; tile 47 has no
+labelled pixel inside the common 57 x 57 region and is excluded):
+15,093 corrected against 16,273 broken over 1,180,805 pixels; mean tile
+gain -0.00288, pooled gain -0.000999; 168 tiles better, 209 worse, 63
+tied (one-sided p = 0.98); accuracy 0.9042 against W1's 0.9071. Test
+split (800 tiles, none excluded): 24,525 corrected against 30,951 broken
+over 2,479,909 pixels; mean tile gain -0.00250, pooled -0.002591;
+244/387/169 (p = 1); 0.9478 against 0.9503. The soft variant is the same
+(-0.0031, -0.0023); K = 16 makes segments so small that the map is nearly
+W1 again (-0.0005, +0.0000). The plain twelve-band partition, without the
+NDWI feature, is no better: mean gain -0.00354 on Bolivia and -0.00229 on
+the test split, so the water weighting is not what sank the candidate.
+
+Where the damage comes from (grading only, segments with at least two
+labelled pixels; singletons account for at most 7 of the corrections and
+breaks). The theorem holds exactly where its conditions hold: pure
+segments carrying a correct W1 majority break nothing at all, and pure
+segments carrying a wrong majority correct nothing at all.
+
+| Segment class | Bolivia: segments, pixels, C, B | Test split: segments, pixels, C, B |
+|---|---|---|
+| pure, correct majority | 30,699; 897,358; C 8,957; B 0 | 65,665; 2,001,090; C 8,162; B 0 |
+| pure, wrong majority | 2,570; 31,337; C 0; B 4,418 | 2,434; 28,695; C 0; B 3,359 |
+| mixed | 4,743; 237,768; C 6,133; B 11,848 | 8,047; 424,883; C 16,363; B 27,590 |
+
+Mixed segments are the dominant damage: they hold 73% of the broken
+pixels on Bolivia and 89% on the test split, against 27% and 11% from
+wrong majorities. Purity depends on how it is counted, so all three are
+reported: the fraction of segments that are single-class is 0.875 and
+0.894, the pixel-weighted share is 0.796 and 0.827, and the mean dominant
+label fraction is 0.969 and 0.974. A spectral partition is nearly pure by
+the last measure and still mixed on a tenth to a fifth of its pixels,
+which is where a single decision per segment costs more than it gains.
 
 The statistic exp42 did not report: W1's own pixel errors sit 43%
 (Bolivia) and 56% (test split) on the mixed-label windows, which hold 10%
-of the pixels. That is concentration, not undecidability; the pixel map
-does decide inside them, and it is wrong there four to six times more
-often than elsewhere.
+of the pixels. That is error concentration, not undecidability; the pixel
+map does decide inside them, and it is wrong there four to six times more
+often than elsewhere. The actual limit of one class per 4-px block is the
+oracle sum over windows of min(water pixels, land pixels) among the
+evaluated pixels: 35,838 of 1,180,805 pixels on Bolivia (3.0%) and 71,878
+of 2,479,909 on the test split (2.9%). The grid window's measured error
+rates, 10.3% and 5.9%, are far above that oracle, so most of W0's loss is
+the head, not the block.
 
 Reading. A spectral partition is not a class partition often enough. The
 Lean identities did their job: the run reports exactly what would have had
 to be true, and it was not. Under the protocol the candidate is
 unsupported; the result does not show that no partition can help, only
 that this one, chosen without labels, does not.
+
+## exp44 sixteen crop offsets against the four diagonals (2026-09-08)
+
+W1 averages the four diagonal crop offsets (dy = dx) that exp18 cached.
+The Lean counterexample in WindowDesignProofs.lean shows that adding the
+twelve horizontal and vertical phases carries no guaranteed advantage; it
+does not show there is none, so this run asks the empirical question. For
+every offset (dy, dx) in {0..3}^2 the tile is cropped to 60 px at that
+offset and encoded by the same frozen encoder (the four diagonals from the
+cache, twelve new passes here), the same exp18 head scores it, each window
+map is painted to the pixels it covers, and W16 is the equal-weight mean of
+the sixteen maps. Preregistered: W16 against W1 on pixel accuracy per tile,
+one-sided, both testbeds, minimum worthwhile effect +0.002 mean tile gain.
+exp/exp44_sixteen_offsets.py, chained with exp43 in one B200 job, 727364 on
+72d5375, 3 min 14 s in total (19 s and 32 s of encoding). Checks: a fresh
+pass on the (0, 0) crop reproduces the cached diagonal logits exactly, and
+fresh features of the (1, 1) crop match the float16 cache to a mean
+absolute difference of 8e-4, the cast. Outputs exp/out/exp44_summary.json,
+exp44_sixteen_offsets.csv.
+
+| Design | Bolivia: accuracy, tiles better/worse/tied, mean tile gain | Test split |
+|---|---|---|
+| W1, four diagonals | 0.90707 | 0.95028 |
+| W16, all sixteen offsets | 0.90745; 201/149/90, p = 0.003; +0.00037 (pooled +0.00028) | 0.95068; 369/202/229, p = 1.3e-12; +0.00040 (pooled +0.00042) |
+| W8, diagonals and anti-diagonals | 0.90734; 191/155/94; +0.00026 | 0.95053; 334/210/256; +0.00025 |
+| W7, diagonals and horizontal phases | 0.90603; 132/239/69; -0.00104 | 0.94874; 181/427/192; -0.00154 |
+
+Not supported, but not null either. W16 is better than W1 on both
+testbeds with one-sided p = 0.003 and 1.3e-12, and the gain is +0.04
+accuracy points, five times below the preregistered minimum worthwhile
+effect of +0.2 points, for twelve extra forward passes: statistically
+clear, practically negligible, and unsupported under the protocol that
+fixed the threshold before the run.
+
+The informative part is the subsets. Adding the four anti-diagonal phases,
+a balanced set of eight, gives half of W16's gain. Adding only the
+horizontal phases, seven distinct offsets skewed to dy = 0, is worse than
+the diagonals alone on both testbeds (p = 3e-8 and 7e-24 against). So what
+matters is not that more phases are sampled but that the sampled set is
+balanced in both directions; an unbalanced set moves the effective window
+off centre and costs more than the extra sampling gains. That also explains
+why the four diagonals, a balanced set, were already close to the ceiling
+of this family.

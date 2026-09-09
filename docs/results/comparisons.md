@@ -424,12 +424,17 @@ labels over the region every tiling covers:
 | W3 spectral split inside the window | 0.9084 | 0.9483 | vs W1: 217/158 better on Bolivia, 226/404 worse on test |
 | W2 scale-adaptive (window accuracy) | 0.9045 vs 0.9020 | 0.9515 vs 0.9518 | 175/121; 253/241 |
 | segment majority of W1 over a spectral partition (exp43, preregistered) | 0.9042 | 0.9478 | vs W1: 168/209 (C 15,093, B 16,273); 244/387 (C 24,525, B 30,951) |
+| sixteen crop offsets (exp44, preregistered) | 0.9074 | 0.9507 | vs W1: 201/149/90, p = 0.003 (C 4,566, B 4,237); 369/202/229, p = 1.3e-12 (C 7,100, B 6,060); +0.04 points, below the +0.2 minimum effect |
+| eight offsets, diagonals and anti-diagonals (exp44) | 0.9073 | 0.9505 | half of W16's gain |
+| seven offsets, diagonals and horizontal phases (exp44) | 0.9060 | 0.9487 | worse than the four diagonals on both |
 
 Mixed-label windows are 10% of the windows and carry 45% and 58% of the
 grid window's errors (error rate 0.39 and 0.28 against 0.054 and 0.022 on
-pure windows); the shift-averaged map decides per pixel, so this bounds
-the grid, not the map, whose own errors sit 43% and 56% on those windows
-(exp43).
+pure windows); that is error concentration, not a bound. The
+block-constant oracle limit, the pixels any one-class-per-block decision
+must get wrong, is 3.0% and 2.9%, far below the grid's 10.3% and 5.9%
+error rates, and the shift-averaged map decides per pixel and still puts
+43% and 56% of its own errors on those windows (exp43).
 Tile-phase abstention equals confidence abstention at matched coverage.
 Source `exp/out/exp42_summary.json`.
 

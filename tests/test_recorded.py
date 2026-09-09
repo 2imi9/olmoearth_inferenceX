@@ -245,3 +245,36 @@ def test_exp43_segment_majority_breaks_more_than_it_corrects():
         assert r["acc_candidate_mean"] - r["acc_w1_mean"] == pytest.approx(r["mean_gain"], abs=2e-3)
         pur = s["results"][name]["w1_errors_by_grid_window_purity"]
         assert 0.4 < pur["share_of_w1_errors_on_impure_windows"] < 0.6 and pur["share_of_pixels_in_impure_windows"] < 0.11
+
+
+def test_exp43_mechanism_accounting_matches_the_theorem():
+    """exp43 (job 727364): pure segments with a correct majority break nothing and pure segments with a wrong majority
+    correct nothing, exactly as the Lean segment theorem says; mixed segments do most of the damage; the pooled and
+    mean-tile endpoints are both recorded and differ."""
+    s = json.load(open(os.path.join(OUT, "exp43_summary.json")))
+    for name, broken_share_mixed in (("bolivia", 0.70), ("test", 0.85)):
+        r = s["results"][name]
+        m = r["mechanism_primary"]
+        assert m["pure_correct"]["B"] == 0 and m["pure_wrong"]["C"] == 0
+        p = r["primary_k8_hard"]
+        assert m["mixed"]["B"] / p["B_total"] > broken_share_mixed
+        assert p["pooled_gain"] == pytest.approx((p["C_total"] - p["B_total"]) / p["N_total"], rel=1e-9)
+        assert p["pooled_gain"] != p["mean_gain"] and p["pooled_gain"] < 0
+        assert r["secondary_k8_hard_twelve_bands_only"]["mean_gain"] < 0          # dropping NDWI does not rescue it
+        assert 0.02 < r["block_constant_oracle_limit"]["rate"] < 0.04             # far below the grid's error rate
+    assert s["results"]["bolivia"]["tiles_excluded_no_labelled_pixel_in_common_region"] == [47]
+
+
+def test_exp44_sixteen_offsets_are_better_but_not_worthwhile():
+    """exp44 (job 727364): W16 beats the four diagonals on both testbeds, below the preregistered minimum effect;
+    an unbalanced offset subset is worse than the diagonals."""
+    s = json.load(open(os.path.join(OUT, "exp44_summary.json")))
+    assert s["prereg"]["supported"] is False and s["prereg"]["complete"] is True
+    for name in ("bolivia", "test"):
+        r = s["results"][name]
+        w16 = r["tests"]["W16 (all offsets)"]
+        assert w16["one_sided"] and w16["sign_p"] < 0.05 and w16["C_total"] > w16["B_total"]
+        assert 0 < w16["mean_gain"] < 0.002 and r["prereg"]["passes"] is False
+        assert r["pixel_accuracy_mean"]["W16 (all offsets)"] > r["pixel_accuracy_mean"]["W1 (4 diagonals)"]
+        assert r["tests"]["W7 (diagonals + horizontal phases)"]["mean_gain"] < 0        # an unbalanced set hurts
+        assert s["testbeds"][name]["diagonal_consistency_max_abs_diff"] == 0.0

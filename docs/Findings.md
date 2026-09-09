@@ -31,9 +31,10 @@ file under `exp/out/`; the per-experiment detail is in the
    window cropped at four offsets and average the four decisions per pixel:
    pixel accuracy on hand labels rises by 1.0 points on Bolivia and 0.9 on
    the multi-region test split, preregistered, no labels, no retraining
-   (exp42). Half of the grid window's errors sit on windows whose hand
-   labels are mixed; the averaged decision is per pixel, so those are the
-   grid's limit, not the map's.
+   (exp42). Errors concentrate on windows whose hand labels are mixed, but
+   that is concentration, not a ceiling: any one-class-per-block decision
+   must miss only 3% of pixels, far below the grid's measured error rate
+   (exp43).
 
 ## The numbers
 
@@ -67,6 +68,7 @@ tiling covers:
 | share of the grid window's errors on mixed-label windows | 45% (10% of windows) | 58% (10% of windows) |
 | share of the averaged map's own errors on those windows | 43% | 56% |
 | segment majority over a spectral partition (exp43) | 0.904, breaks more than it corrects | 0.948, breaks more than it corrects |
+| sixteen crop offsets instead of four (exp44) | 0.9074, +0.04 points, below the worthwhile threshold | 0.9507, +0.04 points |
 
 Fine-tuned AWF model, end to end (exp21, exp36): confidence catches 22% of
 the errors at a 5% budget, 39% at 10%, 63% at 20%; the boundary-first order

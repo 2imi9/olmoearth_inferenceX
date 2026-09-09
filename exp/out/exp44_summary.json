@@ -1,0 +1,239 @@
+{
+ "experiment": "exp44 sixteen crop offsets against the four diagonals",
+ "smoke": false,
+ "testbeds": {
+  "bolivia": {
+   "tiles": 441,
+   "crop": 60,
+   "grid": 15,
+   "head": "exp18 head retrained from the valid split (seed 0)",
+   "extra_passes": 12,
+   "encode_seconds": 18.908187866210938,
+   "diagonal_consistency_max_abs_diff": 0.0,
+   "fresh_vs_cache_shift1": {
+    "tiles": 32,
+    "max_abs_feature_diff": 0.0234375,
+    "mean_abs_feature_diff": 0.000730142171960324,
+    "tolerance_note": "the cache is float16 of the same encoder; differences at the 1e-3 level are the cast, larger ones a changed input path"
+   }
+  },
+  "test": {
+   "tiles": 800,
+   "crop": 60,
+   "grid": 15,
+   "head": "exp18 head retrained from the valid split (seed 0)",
+   "extra_passes": 12,
+   "encode_seconds": 32.4995973110199,
+   "diagonal_consistency_max_abs_diff": 0.0,
+   "fresh_vs_cache_shift1": {
+    "tiles": 32,
+    "max_abs_feature_diff": 0.0234375,
+    "mean_abs_feature_diff": 0.0008687275694683194,
+    "tolerance_note": "the cache is float16 of the same encoder; differences at the 1e-3 level are the cast, larger ones a changed input path"
+   }
+  }
+ },
+ "results": {
+  "bolivia": {
+   "tiles": 441,
+   "tiles_analysed": 440,
+   "tiles_excluded_no_labelled_pixel_in_common_region": [
+    47
+   ],
+   "pixel_accuracy_mean": {
+    "W1 (4 diagonals)": 0.9070736899739421,
+    "W16 (all offsets)": 0.9074477989346726,
+    "W8 (diagonals + anti-diagonals)": 0.9073352728877203,
+    "W7 (diagonals + horizontal phases)": 0.9060314499997676
+   },
+   "tests": {
+    "W16 (all offsets)": {
+     "w": 201,
+     "l": 149,
+     "t": 90,
+     "sign_p": 0.0031641215228931977,
+     "one_sided": true,
+     "mean_gain": 0.0003741089607304631,
+     "median_gain": 0.0,
+     "n_tiles": 440,
+     "C_total": 4566,
+     "B_total": 4237,
+     "N_total": 1180805,
+     "pooled_gain": 0.0002786234814385102
+    },
+    "W8 (diagonals + anti-diagonals)": {
+     "w": 191,
+     "l": 155,
+     "t": 94,
+     "sign_p": 0.059732101513760336,
+     "one_sided": false,
+     "mean_gain": 0.00026158291377834146,
+     "median_gain": 0.0,
+     "n_tiles": 440,
+     "C_total": 3243,
+     "B_total": 3045,
+     "N_total": 1180805,
+     "pooled_gain": 0.0001676822167927812
+    },
+    "W7 (diagonals + horizontal phases)": {
+     "w": 132,
+     "l": 239,
+     "t": 69,
+     "sign_p": 3.0150496427473164e-08,
+     "one_sided": false,
+     "mean_gain": -0.0010422399741743947,
+     "median_gain": -0.0006155740227762388,
+     "n_tiles": 440,
+     "C_total": 6851,
+     "B_total": 8344,
+     "N_total": 1180805,
+     "pooled_gain": -0.0012643916650081936
+    }
+   },
+   "prereg": {
+    "sign_p": 0.0031641215228931977,
+    "mean_gain": 0.0003741089607304631,
+    "min_effect": 0.002,
+    "passes": false
+   }
+  },
+  "test": {
+   "tiles": 800,
+   "tiles_analysed": 800,
+   "tiles_excluded_no_labelled_pixel_in_common_region": [],
+   "pixel_accuracy_mean": {
+    "W1 (4 diagonals)": 0.9502769988454557,
+    "W16 (all offsets)": 0.9506797274658615,
+    "W8 (diagonals + anti-diagonals)": 0.9505292070937785,
+    "W7 (diagonals + horizontal phases)": 0.9487416979037312
+   },
+   "tests": {
+    "W16 (all offsets)": {
+     "w": 369,
+     "l": 202,
+     "t": 229,
+     "sign_p": 1.313831501502904e-12,
+     "one_sided": true,
+     "mean_gain": 0.0004027286204057958,
+     "median_gain": 0.0,
+     "n_tiles": 800,
+     "C_total": 7100,
+     "B_total": 6060,
+     "N_total": 2479909,
+     "pooled_gain": 0.00041937022689138997
+    },
+    "W8 (diagonals + anti-diagonals)": {
+     "w": 334,
+     "l": 210,
+     "t": 256,
+     "sign_p": 1.1859324251888316e-07,
+     "one_sided": false,
+     "mean_gain": 0.0002522082483229325,
+     "median_gain": 0.0,
+     "n_tiles": 800,
+     "C_total": 5148,
+     "B_total": 4557,
+     "N_total": 2479909,
+     "pooled_gain": 0.00023831519624308795
+    },
+    "W7 (diagonals + horizontal phases)": {
+     "w": 181,
+     "l": 427,
+     "t": 192,
+     "sign_p": 6.937289145742226e-24,
+     "one_sided": false,
+     "mean_gain": -0.0015353009417244982,
+     "median_gain": -0.0003077870113881194,
+     "n_tiles": 800,
+     "C_total": 11472,
+     "B_total": 15391,
+     "N_total": 2479909,
+     "pooled_gain": -0.0015802999222955358
+    }
+   },
+   "prereg": {
+    "sign_p": 1.313831501502904e-12,
+    "mean_gain": 0.0004027286204057958,
+    "min_effect": 0.002,
+    "passes": false
+   }
+  }
+ },
+ "failures": [],
+ "config": {
+  "offsets": [
+   [
+    0,
+    0
+   ],
+   [
+    0,
+    1
+   ],
+   [
+    0,
+    2
+   ],
+   [
+    0,
+    3
+   ],
+   [
+    1,
+    0
+   ],
+   [
+    1,
+    1
+   ],
+   [
+    1,
+    2
+   ],
+   [
+    1,
+    3
+   ],
+   [
+    2,
+    0
+   ],
+   [
+    2,
+    1
+   ],
+   [
+    2,
+    2
+   ],
+   [
+    2,
+    3
+   ],
+   [
+    3,
+    0
+   ],
+   [
+    3,
+    1
+   ],
+   [
+    3,
+    2
+   ],
+   [
+    3,
+    3
+   ]
+  ],
+  "min_effect": 0.002,
+  "prereg": "W16 (equal-weight mean of 16 painted maps) vs W1 (4 diagonals), pixel accuracy per tile, one-sided sign test on both testbeds, mean tile gain >= 0.002 on both",
+  "secondary": "diagonals + anti-diagonals (8 offsets); diagonals + horizontal phases (7 distinct offsets)",
+  "cost": "12 additional forward passes per tile"
+ },
+ "prereg": {
+  "supported": false,
+  "complete": true
+ }
+}
