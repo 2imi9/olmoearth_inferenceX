@@ -11,7 +11,7 @@ extra encoder pass: the partition comes from the Sentinel-2 image, the votes fro
 Partition rule, fixed before the run and built without labels. Per tile: pixel features = the twelve bands as
 log1p(DN), each standardised within the tile, plus raw NDWI times 2 (thirteen features); k-means with K = 8,
 initialised deterministically at the 8 evenly spaced quantiles of the first principal component's scores (sign fixed
-so that the largest-magnitude loading is positive), exactly 20 Lloyd iterations; segments = 4-connected components of the cluster map (scipy.ndimage.label). Each segment takes the
+so that the largest-magnitude loading is positive), exactly 20 Lloyd iterations; segments = 4-connected components of the cluster map (label propagation; components are unique). Each segment takes the
 strict majority of W1's hard predictions (probability > 0.5 = water) over its pixels inside the common 57 x 57
 region; ties predict land. Pixels are evaluated on the same valid-label mask as exp42.
 
@@ -34,7 +34,6 @@ import sys
 import traceback
 
 import numpy as np
-from scipy import ndimage
 
 EXP_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, EXP_DIR)
@@ -73,13 +72,29 @@ def kmeans_partition(f, size, K):
     d = ((f[:, None, :] - centres[None, :, :]) ** 2).sum(-1)
     lab = d.argmin(1)
     cl = lab.reshape(size, size)
-    seg = np.zeros((size, size), np.int64)
-    n = 0
-    for k in range(K):
-        comp, m = ndimage.label(cl == k, structure=np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]]))
-        seg[comp > 0] = comp[comp > 0] + n
-        n += m
-    return seg, n
+    return connected_components(cl)
+
+
+def connected_components(cl):
+    """4-connected components of a label map, without scipy: each pixel starts with its own id and takes the minimum id
+    among 4-neighbours of the same cluster until nothing changes (deterministic; components are unique whatever
+    computes them). Returns (segments 1..n, n)."""
+    h, w = cl.shape
+    ids = np.arange(h * w).reshape(h, w)
+    while True:
+        new = ids.copy()
+        same = cl[1:, :] == cl[:-1, :]
+        new[1:, :] = np.where(same, np.minimum(new[1:, :], ids[:-1, :]), new[1:, :])
+        new[:-1, :] = np.where(same, np.minimum(new[:-1, :], ids[1:, :]), new[:-1, :])
+        same = cl[:, 1:] == cl[:, :-1]
+        new[:, 1:] = np.where(same, np.minimum(new[:, 1:], ids[:, :-1]), new[:, 1:])
+        new[:, :-1] = np.where(same, np.minimum(new[:, :-1], ids[:, 1:]), new[:, :-1])
+        if np.array_equal(new, ids):
+            break
+        ids = new
+    _, seg = np.unique(ids, return_inverse=True)
+    seg = seg.reshape(h, w) + 1
+    return seg, int(seg.max())
 
 
 def segment_majority(seg, n_seg, w1_pix, common, soft=False):
