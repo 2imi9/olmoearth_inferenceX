@@ -525,6 +525,66 @@ are not comparable to the paper's (different data, model and failure rates);
 the point is which baseline was missing. Source `exp/out/exp49_summary.json`,
 job 731703.
 
+### What carries the fusion, and does the bag replicate (exp50)
+
+exp50 refits exp49's linear fusion with the same seeds (its numbers reproduce
+to the digit), saves the weights, refits it ten times leaving one signal out,
+replicates the bag with sixteen fresh members, grades shift-label entropy
+(issue 5), and fits a second fusion on tile failures.
+
+| Standardized weight of the linear fusion (positive = more suspect) | v1 | v1.2 |
+|---|---|---|
+| control NDWI level | +0.87 | +0.87 |
+| ensemble average entropy | +0.64 | +0.68 |
+| ensemble predictive entropy | +0.62 | +0.66 |
+| averaged confidence | +0.38 | +0.31 |
+| embedding normalized distance | +0.36 | +0.35 |
+| input extremity mean | -0.33 | -0.32 |
+| input extremity max | +0.33 | +0.35 |
+| tile-phase | -0.25 | -0.24 |
+| embedding NCDD | -0.24 | -0.27 |
+| ensemble mutual information | +0.22 | +0.24 |
+
+| Pooled E-AURC | v1 Bolivia | v1 test | v1.2 Bolivia | v1.2 test |
+|---|---|---|---|---|
+| averaged confidence | 0.0094 | 0.0109 | 0.0116 | 0.0064 |
+| linear fusion, all ten | 0.0067 | 0.0068 | 0.0089 | 0.0060 |
+| without control NDWI level | 0.0076 | 0.0071 | 0.0116 | 0.0050 |
+| without averaged confidence | 0.0065 | 0.0068 | 0.0089 | 0.0060 |
+| without ensemble average entropy | 0.0067 | 0.0068 | 0.0088 | 0.0060 |
+| without ensemble predictive entropy | 0.0067 | 0.0068 | 0.0088 | 0.0060 |
+| without embedding normalized distance | 0.0067 | 0.0067 | 0.0088 | 0.0064 |
+| without input extremity max | 0.0066 | 0.0069 | 0.0086 | 0.0059 |
+| without tile-phase | 0.0067 | 0.0068 | 0.0087 | 0.0060 |
+
+The weight sits on the no-model NDWI-level control, with the two ensemble
+entropies and confidence behind it; dropping NDWI level costs the most on
+three of four arms, and on Bolivia under v1.2 it returns the fusion to
+confidence's level. Label-free midrank fusion of the same two signals lost
+everywhere in exp47; what the labels buy is the weighting.
+
+The bag does not replicate. Sixteen members with a fresh seed lose to
+confidence on Bolivia under v1 (0.0100 vs 0.0094,
+140/166 tiles), where exp49's eight members had won, and win on the
+v1.2 test split (0.0059 vs 0.0064, 248/160), where they had lost.
+The preregistered P1 fails; the bag is confidence plus seed noise at the
+0.002 level, and its ledger row reads not supported. Shift-label entropy
+loses to tile-phase on Bolivia under both backbones (0.0161 vs
+0.0113; 0.0150 vs 0.0133) and never beats it.
+
+| Tile level | v1 Bolivia | v1 test | v1.2 Bolivia | v1.2 test |
+|---|---|---|---|---|
+| confidence, ROI-averaged: AURC (Risk@0.5) | 0.167 (0.110) | 0.120 (0.105) | 0.140 (0.087) | 0.134 (0.130) |
+| fusion fitted on tile failures: AURC (Risk@0.5) | 0.134 (0.082) | 0.078 (0.057) | 0.138 (0.096) | 0.086 (0.068) |
+| AURC difference, 95% tile bootstrap | -0.033 [-0.078, +0.008] | | -0.042 [-0.066, -0.019] | | -0.002 [-0.037, +0.030] | | -0.048 [-0.073, -0.025] |
+
+Fitted on tile failures, the fusion beats confidence at the tile level on the
+multi-region split under both backbones, with intervals that exclude zero,
+and not on Bolivia, the preregistered arm; P2 fails as stated and the
+tile-level gain stands as a secondary result on the split that has many
+events. Source `exp/out/exp50_summary.json` and `exp50_fusion_ablation.csv`,
+job 736320.
+
 ## Served land cover change rasters (exp20)
 
 First assessment of a served output: ten 512-px windows (about

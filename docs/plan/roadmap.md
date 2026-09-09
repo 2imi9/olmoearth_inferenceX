@@ -124,14 +124,13 @@ carrying the paper links and the concrete test:
    precision. Under OSM lines and WorldCover truth the flags mostly mark
    reference-map disagreement (exp15).
 
-9. **Record the linear fusion's weights and test the bag and the fusion as
-   deployable rankers.** exp49's label-fitted linear fusion beats confidence
-   on three of four arms and the eight-head bag's predictive entropy helps
-   under v1; neither is preregistered and the combiner's weights were not
-   saved, so which signals carry it is unknown. A run should save the
-   weights, preregister the fusion against confidence on the v1.2 test split
-   (the one arm where it fell below the threshold), and fit a variant on tile
-   failures to see whether the gain can reach the tile level.
+9. **A deployable two-signal fusion.** exp50 shows the label-fitted fusion's
+   weight sits on NDWI level, with the ensemble entropies and confidence
+   behind it. The minimal deployable form is confidence + NDWI level with
+   weights fitted once on the head's training split; preregister it against
+   confidence on the v1.2 test split at window and tile level (exp50 tile
+   AURC 0.134 to 0.086 with all ten signals), and against the one-event
+   Bolivia arm where the whole gain is the NDWI weight.
 
 
 ## Explanation layer: why a window is suspect
@@ -244,6 +243,7 @@ tool returns the structured evidence.
 | Is the shared cross-model error set caused by the readout, the input modality, the label grid or chip clustering? | exp46 — chiefly the modality: radar against optics moves the error set to phi 0.38-0.39 where a backbone swap moves it to 0.70; head capacity barely beats a backbone swap and falls short of fine-tuning; impurity and chip clustering are ruled out; and on Bolivia a no-encoder head on fifteen pixel statistics beats the frozen encoder |
 | Does the model's own confidence rank the errors of the decision we actually recommend? | exp47 — it beats tiling instability everywhere and the grid window's confidence on Bolivia, but a no-model spectral index matches it on Bolivia under v1 and beats it under v1.2, so exp45's exception is not an artefact of the window design; U+ combinations all hurt |
 | Do SHRUG-FM's reliability signals (ensemble MI, embedding OOD, input extremity) beat the model's own confidence under our protocol? | exp49 — no, preregistered and supported: confidence beats mutual information and -NCDD on both testbeds under v1.2 (per tile 263/61 and 352/76; leads +0.006/+0.002 and +0.08/+0.03); the embedding and input signals are 3-9x worse. Secondary: an eight-head bag's predictive entropy beats confidence under v1 on Bolivia (210/103); their fusion step as a label-fitted linear combiner beats confidence on three of four arms by 0.0027-0.0041, the first fusion to do so here; at their tile granularity confidence is at or near the best signal and mutual information the weakest |
+| Which signal carries the fusion that beat confidence, does the bag replicate, does the fusion reach the tile level, does shift-label entropy rank? | exp50 — NDWI level carries it (+0.87 standardized; dropping it costs the most on three arms and on Bolivia under v1.2 all of the gain); the bag does not replicate (sixteen members, fresh seed: loses on v1 Bolivia 140/166, wins on the v1.2 test split 248/160, seed noise; P1 fails); a fusion fitted on tile failures beats confidence at the tile level on the multi-region split under both backbones (0.120 to 0.078, 0.134 to 0.086, intervals excluding zero) but not on Bolivia (P2 fails); shift-label entropy loses to tile-phase (issue 5 closed) |
 | Does putting the most enriched cue (spectral ambiguity) first beat the boundary-first order at fixed budgets? | exp38 — mixed: per-tile budgets yes at 5% and 10% (p = 8e-4, 5e-5), one pooled budget no (0.292 vs 0.274, 0.481 vs 0.494), clear only at 20%; loses on the WorldCover rivers; boundary-first stays the supported rule |
 | Does the model's prediction contradict its predictions on the windows that look most like it (neighbourhood contradiction), and does an outside representation help? | exp39, exp40 — on Bolivia the OlmoEarth-space score passes P1 at 5-10% budgets and the pixel-statistics ablation beats confidence at every budget and on E-AURC; AnySat adds nothing over OlmoEarth's own space (issue 6 answered in the negative for this design); the preregistered replication on the multi-region test split with Bolivia as the bank fails every primary test, so neither score is supported; the open variable is the bank's coverage of the queries |
 | Does the pretraining objective itself (masked-token decoder error) rank the errors? | exp28 — no, on both testbeds; the frozen targets are near-collinear, so the residual tracks input texture |

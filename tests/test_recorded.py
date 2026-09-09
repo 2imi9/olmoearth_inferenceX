@@ -375,3 +375,31 @@ def test_exp49_shrug_fm_signals_do_not_beat_confidence_but_a_label_fitted_fusion
         tl = s["results"][v]["bolivia"]["tile_level"]
         assert abs(tl["failure_rate"] - 0.331) < 0.005                    # the paper's flood and burn-scar failure rates are 0.21 and 0.33
         assert tl["per_ranker"]["averaged confidence"]["aurc"] < tl["per_ranker"]["ensemble mutual information"]["aurc"]
+
+
+def test_exp50_ndwi_carries_the_fusion_and_the_bag_does_not_replicate():
+    """exp50 (job 736320): the label-fitted fusion's weight sits on NDWI level and dropping it costs the most on three
+    of four arms; the exp49 bag result does not replicate with sixteen fresh members (P1 fails, sign flips across
+    draws); a fusion fitted on tile failures beats confidence at the tile level on the multi-region split under both
+    backbones but not on Bolivia (P2 fails); shift-label entropy loses to tile-phase on Bolivia (issue 5)."""
+    s = json.load(open(os.path.join(OUT, "exp50_summary.json")))
+    assert s["prereg"] == {"P1": False, "P2": False, "supported": False, "complete": True} and s["n_failures"] == 0
+    for v in ("v1", "v1_2"):
+        w = s["results"][v]["fusion_weights"]
+        assert max(w, key=lambda k: abs(w[k])) == "control NDWI level" and w["control NDWI level"] > 0.8
+        assert w["ensemble average entropy"] > 0.5 and w["ensemble predictive entropy"] > 0.5 and w["averaged confidence"] > 0.25
+        for n in ("bolivia", "test"):
+            r = s["results"][v][n]
+            assert r["pooled_eaurc"]["fusion linear (labelled)"] < r["pooled_eaurc"]["averaged confidence"]
+            assert r["pooled_eaurc"]["shift-label entropy"] >= r["pooled_eaurc"]["tile-phase"] - 0.0002
+    for v, n in (("v1", "bolivia"), ("v1", "test"), ("v1_2", "bolivia")):
+        dr = s["results"][v][n]["drop_one_pooled_eaurc"]
+        assert max(dr, key=dr.get) == "control NDWI level"
+    assert abs(s["results"]["v1_2"]["bolivia"]["drop_one_pooled_eaurc"]["control NDWI level"] - s["results"]["v1_2"]["bolivia"]["pooled_eaurc"]["averaged confidence"]) < 0.0005
+    b1 = s["results"]["v1"]["bolivia"]["tests"]["bag16 predictive entropy"]
+    b2 = s["results"]["v1_2"]["test"]["tests"]["bag16 predictive entropy"]
+    assert b1["pooled_lead"] > 0 and b1["sign_p"] > 0.5                    # the exp49 bag gain is gone with a fresh draw
+    assert b2["pooled_lead"] < 0 and b2["sign_p"] < 1e-4                   # and appears where exp49's bag had lost
+    for v in ("v1", "v1_2"):
+        assert s["results"][v]["test"]["tile_level"]["tile-fitted fusion (labelled)"]["diff_ci95"][1] < 0
+    assert s["results"]["v1_2"]["bolivia"]["tile_level"]["tile-fitted fusion (labelled)"]["diff_ci95"][1] > 0
