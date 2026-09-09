@@ -11,6 +11,9 @@ Given a prediction map, it helps with:
    confidence and a no-model control, on two references at once.
 4. **Auditing deployed OlmoEarth products**: the fine-tuned models through their
    task cards, and the served land cover change rasters.
+5. **Comparing inferences of the same scene**, through shifted crops, across
+   backbones and across sensors, to say why a map is wrong and what to
+   change, not only where.
 
 ## New to the repository?
 

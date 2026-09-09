@@ -10,15 +10,17 @@ file under `exp/out/`; the per-experiment detail is in the
 
 ## What holds
 
-1. **The model's own confidence is the best label-free error ranker** on
-   every expert-labelled testbed: AWF points, Sen1Floods11 hand labels, and
-   the fine-tuned model run end to end (exp04, exp16, exp18, exp21). This
-   holds for OlmoEarth v1. It does not hold on Bolivia under v1.2 Base, the
-   encoder the served product uses, and one testbed. On Sen1Floods11
-   Bolivia, a single flood event, a no-model spectral index ranks the
+1. **The model's own confidence is the best single label-free signal for
+   where the map is wrong**, with one exception. It leads on the AWF points,
+   the fine-tuned model run end to end and the multi-region Sen1Floods11
+   split, under both backbones and both window designs (exp04, exp16,
+   exp18, exp21, exp45, exp47, exp49). The exception is Sen1Floods11
+   Bolivia, a single flood event, where a no-model spectral index ranks the
    model's errors as well as its own confidence under v1 and better under
-   v1.2, for the grid window and for the shift-averaged decision alike
-   (exp45, exp47). On the multi-region test split confidence still wins.
+   v1.2 Base, the encoder the served product uses, for the grid window and
+   for the shift-averaged decision alike (exp45, exp47): on one event,
+   water against land is nearly a spectral threshold, and there a head on
+   raw pixel statistics beats the frozen encoder (exp46).
    A bag of bootstrap heads does not improve on it: an apparent gain under
    v1 on Bolivia (exp49) did not replicate with a fresh draw (exp50).
 2. **Review boundary windows first, then by confidence.** Errors sit on
@@ -56,6 +58,15 @@ file under `exp/out/`; the per-experiment detail is in the
    split under both backbones (AURC 0.120 to 0.078 and 0.134 to 0.086), not on
    Bolivia. SHRUG-FM's own signals, ported to the window, do not beat
    confidence (exp49).
+
+Where against why. The ranking of where a map is wrong comes from the
+model's own confidence. Comparing inferences of the same scene, through
+shifted crops (exp42, exp44), across backbones (exp45) and across sensors
+(exp46), says why it is wrong and what to change: the tiling is not the
+cause, since fine-tuning corrects more than half of the grid's errors on the
+same windows (exp21) and reading Sentinel-1 instead of Sentinel-2 moves the
+error set twice as far as swapping the encoder (exp46); the sensor is the
+largest lever and the backbone the smallest.
 
 ## The numbers
 
@@ -111,9 +122,10 @@ The full rules are in the [protocol](method/protocol.md).
 
 ## Limits and the open question
 
-The hand-label testbed is one flood event scored with a linear probe, and
-the fine-tuned model contributes 41 errors in 344 windows, so the gains
-above are real but small and replicated on one region. Tiling instability
+The hand-label testbeds are one flood event (Bolivia) and a multi-region
+split of the same dataset, both scored with a linear probe, and the
+fine-tuned model contributes 41 errors in 344 windows, so the gains above
+are real but small, and every Bolivia exception is one event. Tiling instability
 wins 26 of 27 scenes and 8 of 8 rivers against the WorldCover map yet not
 on hand labels; the decisive test needs adjudicated cells on the eight
 rivers ([issue 2](https://github.com/2imi9/olmoearth_inferenceX/issues/2)).

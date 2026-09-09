@@ -132,6 +132,16 @@ carrying the paper links and the concrete test:
    AURC 0.134 to 0.086 with all ten signals), and against the one-event
    Bolivia arm where the whole gain is the NDWI weight.
 
+10. **Ai2's own Sen1Floods11 probe under this protocol (exp51).** Their eval
+    is a Sentinel-1 linear probe (`olmoearth_pretrain/evals/datasets/configs.py`,
+    `sen1floods11 -> [SENTINEL1]`, the same in the pinned package and upstream
+    main), ours an S2 head, so nothing said here about v1.2's ranking has
+    been checked with their readout or their sensor. Run their `LinearProbe`
+    (per-pixel logits from each token) on v1 and v1.2 with the harness the
+    package ships, grade its own confidence against NDWI level and
+    tile-phase on the same tiles, and only then say whether the Bolivia
+    exception is the model's.
+
 
 ## Explanation layer: why a window is suspect
 
@@ -209,11 +219,14 @@ tool returns the structured evidence.
 
 ## Asks of upstream
 
-- **A class-head confidence for the land-cover bands of the LCC export** —
-  top-1 minus top-2 logit alongside bands 4-5. The 2026-08-28 export added a
-  change probability (band 1) and category scores (bands 6-7), so the change
-  decision can now be audited with the primary signal; the land-cover classes
-  still cannot.
+- **The fine-tuned LCC model on the Hub, or failing that a confidence band
+  for bands 4-5 of the LCC export.** Ai2 publishes five fine-tuned models
+  (FT-AWF, Mangrove, LFMC, ForestLossDriver, EcosystemTypeMapping) but not
+  the LCC one; with it we would take the land-cover head's top-1 minus
+  top-2 logit ourselves. The 2026-08-28 export added a change probability
+  (band 1) and category scores (bands 6-7), so the change decision can be
+  audited with the primary signal; bands 4-5 are argmax classes only
+  (checked 2026-09-09). Asked on 2026-09-09.
 - Confirmation of whether Studio per-project exports match the
   `olmoearth_lcc` export format (partial probabilities).
 

@@ -491,10 +491,11 @@ linear heads for their CNN ensemble, a logistic combiner for the tree).
 Preregistered and supported: under v1.2 confidence beats mutual information
 (leads +0.0060 and +0.0022, per tile 263/61 and 352/76, p = 2.5e-31 and
 7.9e-44) and beats -NCDD (+0.077 and +0.035) on both testbeds. Three things
-beside the preregistration. Bagging the head helps under v1: the predictive
-entropy of the eight members' averaged maps beats confidence on Bolivia
-(210/103 tiles, p = 1.5e-9) and marginally on the test split (240/174,
-pooled -0.0002); under v1.2 it ties on Bolivia and loses on the test split.
+beside the preregistration. Bagging the head appeared to help under v1: the
+predictive entropy of the eight members' averaged maps beat confidence on
+Bolivia (210/103 tiles, p = 1.5e-9) and marginally on the test split
+(240/174, pooled -0.0002), and tied or lost under v1.2; exp50 below shows
+this does not replicate with a fresh draw.
 The label-fitted linear fusion beats confidence on three arms by
 0.0027-0.0041 (223/94, 265/155, 223/97; p <= 9e-8) and by 0.0004 on the v1.2
 test split, the first fusion to beat confidence in this repository, where
