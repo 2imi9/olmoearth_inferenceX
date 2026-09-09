@@ -1,5 +1,5 @@
 site_name: olmoearth_inferenceX
-site_description: Label-free auditing of OlmoEarth inference results
+site_description: Label-free audit of OlmoEarth inference maps, which windows to review first, why each is suspect, and what comparing inferences across crops, backbones and sensors says about where the errors come from
 site_url: https://olmoearth-inferencex.readthedocs.io/
 repo_url: https://github.com/2imi9/olmoearth_inferenceX
 repo_name: 2imi9/olmoearth_inferenceX
