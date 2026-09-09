@@ -98,6 +98,10 @@ carrying the paper links and the concrete test:
    (candidate design: geographic-corner holdout within AWF). The delta scene
    is disqualified as evidence by the exp06 controls, so E_dist's
    out-of-distribution role is untested until this exists.
+   Candidate multi-event testbed: GEOID-Flood (arXiv 2608.02315; 219 events,
+   CEMS-derived manually corrected pixel labels, a permanent-water class,
+   event-level splits); its Sentinel-2 is pre-event only, so for an S2 head
+   it is a permanent-water testbed and the flood class needs the S1 path.
 
 6. **Generality across fine-tuned checkpoints.** Of the five public
    fine-tuned models only AWF and Mangrove have public labelled datasets.
@@ -119,6 +123,16 @@ carrying the paper links and the concrete test:
 8. **E_geo with width-filtered GRWL centerlines** (issue #8), then re-measure flag
    precision. Under OSM lines and WorldCover truth the flags mostly mark
    reference-map disagreement (exp15).
+
+9. **exp49, queued and preregistered: SHRUG-FM's signals under our protocol**
+   (issue #4). SHRUG-FM's three reliability signals (ensemble MI/entropy,
+   k-means normalized distance and NCDD, input percentile extremity) and its
+   labelled fusion step, ported into the window-level protocol of exp47 as
+   rankers of the W1 decision's own errors against the model's confidence
+   and the no-model controls. Primary tests: confidence vs MI and vs -NCDD,
+   one-sided, both testbeds, v1.2. Secondary: the labelled fusion as a
+   ceiling, and a tile-level bridge with the paper's F1 < 0.6 failure
+   definition. No results yet.
 
 
 ## Explanation layer: why a window is suspect
