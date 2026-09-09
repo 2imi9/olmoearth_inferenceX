@@ -1544,10 +1544,17 @@ its own errors.
 | R3 the four cues are enriched | boundary 3.3x, least-confident 3.2x, unstable 3.3x, NDWI-ambiguous 7.1x | 4.1x, 3.7x, 3.6x, 4.9x | yes |
 | R4 shift-averaged beats the grid window | 0.9067 against 0.8957, 330/69/41, mean +0.0110 | 0.9516 against 0.9420, 587/81/132, mean +0.0096 | yes |
 
-The R1 failure is the result of the run. On Bolivia under v1.2 the model's own
-confidence is third: tiling instability ranks its errors better (0.0138), and
-so does the NDWI-level control, which uses no model at all (0.0119, unchanged
-from v1 because it does not depend on the encoder). Under v1 on the same
+The R1 failure is the result of the run, with one scope condition that
+matters. R1, R2 and R3 all grade the GRID window: the error set is
+p_shift[0] > 0.5 and the confidence is the shift-0 logit margin, exactly as
+exp18, exp36 and exp37 defined them. They are therefore statements about the
+decision the repository no longer recommends. The shift-averaged decision R4
+endorses has never had its own errors ranked by anything, here or in exp42,
+whose selective-accuracy and capture columns also scored against the grid
+window's error set. exp47 measures it. On Bolivia under v1.2 the grid
+window's confidence is third: tiling instability ranks its errors better
+(0.0138), and so does the NDWI-level control, which uses no model at all
+(0.0119, unchanged from v1 because it does not depend on the encoder). Under v1 on the same
 tiles confidence led at 0.0105 with tile-phase at 0.0115 and NDWI level at
 0.0119. So v1.2 kept v1's accuracy and lost ranking quality: its logit margin
 carries less information about where it is wrong. On the test split confidence

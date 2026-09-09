@@ -37,8 +37,8 @@ Preregistered, before the run, on both testbeds; each must hold on both.
   repository withdrew is strengthened rather than refuted.
 
 Descriptive alongside: the accuracy of every arm (an MLP that does not improve accuracy makes P1 uninformative,
-so it is reported first); the full pairwise overlap matrix; phi stratified by window label purity (pure windows,
-where the 4-px block is one class, against mixed ones); and the per-chip median phi beside the pooled value,
+so it is reported first); the full pairwise overlap matrix; phi stratified by window label purity (windows whose
+labelled pixels are strictly one class, against mixed ones); and the per-chip median phi beside the pooled value,
 since a pooled correlation over half a million windows mixes chips being hard with windows being hard.
 
 Inputs: data/floods/*.pt (both sensors and the labels), exp/out/exp18_feats.npz (the cached Sentinel-2
@@ -142,10 +142,23 @@ class MLP:
         return np.concatenate(out)
 
 
-def linear_logit(fit_X, fit_y, X):
-    torch.manual_seed(0)
-    w, b = train_logistic_head(torch.tensor(fit_X), fit_y)
-    return (torch.tensor(np.asarray(X, dtype=np.float32)) @ w + b).numpy()
+class Linear:
+    """The established protocol (evidence.train_logistic_head, seed 0), fitted once and applied to both testbeds.
+
+    `standardise` is used only for A0, whose raw per-window statistics span four orders of magnitude; the encoder
+    arms keep exp18's protocol untouched so A1 reproduces the published head exactly."""
+
+    def __init__(self, X, y, standardise=False):
+        self.mu, self.sd = (X.mean(0), X.std(0) + 1e-6) if standardise else (0.0, 1.0)
+        torch.manual_seed(0)
+        self.w, self.b = train_logistic_head(torch.tensor(np.asarray((X - self.mu) / self.sd, dtype=np.float32)), y)
+
+    def logit(self, X, chunk=200000):
+        out = []
+        for i in range(0, len(X), chunk):
+            x = torch.tensor(np.asarray((X[i:i + chunk] - self.mu) / self.sd, dtype=np.float32))
+            out.append((x @ self.w + self.b).numpy())
+        return np.concatenate(out)
 
 
 def phi(a, b):
@@ -199,8 +212,10 @@ def main():
     key = {"train": "tr_base", "bolivia": "bolivia_base0", "test": "test_base0"}
     feats = {}
     for name, (s2, s1, lab) in splits.items():
-        cached_ok = key[name] in cache.files and len(cache[key[name]]) >= len(s2)
-        f2 = np.asarray(cache[key[name]], dtype=np.float32)[:len(s2)] if cached_ok else np.asarray(exp18.embed(model, s2, 0)[0], dtype=np.float32)
+        cached_ok = key[name] in cache.files and len(cache[key[name]]) == len(s2)   # exact length, never a prefix
+        f2 = np.asarray(cache[key[name]], dtype=np.float32) if cached_ok else np.asarray(exp18.embed(model, s2, 0)[0], dtype=np.float32)
+        if not cached_ok:
+            print(f"  {name}: cache miss or length mismatch, re-encoded", flush=True)
         t0 = time.time()
         f1 = np.asarray(embed_s1(model, s1), dtype=np.float32)
         feats[name] = {"s2": f2, "s1": f1, "px": pixel_stats(s2, s1), "y": exp18.patch_labels(lab[:, :CROP, :CROP])}
@@ -216,18 +231,22 @@ def main():
            "px": feats["train"]["px"].reshape(-1, feats["train"]["px"].shape[-1])[sel],
            "nb": neighbourhood(feats["train"]["s2"]).reshape(-1, feats["train"]["s2"].shape[-1] * 9)[sel]}
     fy = ty.flatten()[sel]
-    mlp = MLP(fit["s2"], fy)
-    print(f"  heads fitted on {len(fy)} windows", flush=True)
+    heads = {A0: Linear(fit["px"], fy, standardise=True), A1: Linear(fit["s2"], fy), A2: Linear(fit["s1"], fy),
+             A3: MLP(fit["s2"], fy), A4: Linear(fit["nb"], fy)}
+    del fit
+    print(f"  five heads fitted once on {len(fy)} windows", flush=True)
 
     for name in ("bolivia", "test"):
         try:
             f = feats[name]
             y, ok = f["y"]
-            lg = {A0: linear_logit(fit["px"], fy, f["px"].reshape(-1, f["px"].shape[-1])),
-                  A1: linear_logit(fit["s2"], fy, f["s2"].reshape(-1, f["s2"].shape[-1])),
-                  A2: linear_logit(fit["s1"], fy, f["s1"].reshape(-1, f["s1"].shape[-1])),
-                  A3: mlp.logit(f["s2"].reshape(-1, f["s2"].shape[-1])),
-                  A4: linear_logit(fit["nb"], fy, neighbourhood(f["s2"]).reshape(-1, f["s2"].shape[-1] * 9))}
+            nb = neighbourhood(f["s2"]).reshape(-1, f["s2"].shape[-1] * 9)
+            lg = {A0: heads[A0].logit(f["px"].reshape(-1, f["px"].shape[-1])),
+                  A1: heads[A1].logit(f["s2"].reshape(-1, f["s2"].shape[-1])),
+                  A2: heads[A2].logit(f["s1"].reshape(-1, f["s1"].shape[-1])),
+                  A3: heads[A3].logit(f["s2"].reshape(-1, f["s2"].shape[-1])),
+                  A4: heads[A4].logit(nb)}
+            del nb
             m = ok.flatten()
             truth = (y.flatten() > 0.5)[m]
             err = {k: ((v.reshape(-1) > 0)[m] != truth) for k, v in lg.items()}
@@ -237,7 +256,7 @@ def main():
             lab = splits[name][2]
             l = lab[:, :G * PATCH, :G * PATCH].reshape(len(lab), G, PATCH, G, PATCH)
             nv = (l >= 0).sum(axis=(2, 4)); frac = np.where(nv > 0, (l == 1).sum(axis=(2, 4)) / np.maximum(nv, 1), np.nan)
-            impure = ((frac > 0.1) & (frac < 0.9)).flatten()[m]
+            impure = ((frac > 0) & (frac < 1)).flatten()[m]        # mixed = not strictly one class among labelled pixels
             chips = np.repeat(np.arange(len(lab)), G * G)[m]
             strata, per_chip = {}, {}
             for k in (A2, A3, A4):
@@ -246,18 +265,24 @@ def main():
                 v = [x for x in v if x is not None and np.isfinite(x)]
                 per_chip[f"{A1} vs {k}"] = {"median_within_chip_phi": float(np.median(v)) if v else None, "n_chips": len(v)}
             ref = BACKBONE_SWAP_PHI[name]
+            def below(k):
+                v = pair[f"{A1} vs {k}"]["phi"]
+                return None if v is None else bool(v < ref)
+            p13, p14, p12 = (pair[f"{A1} vs {k}"]["phi"] for k in (A3, A4, A2))
             prereg = {"backbone_swap_phi": ref,
-                      "P1_readout": {"phi_A1_A3": pair[f"{A1} vs {A3}"]["phi"], "phi_A1_A4": pair[f"{A1} vs {A4}"]["phi"],
-                                     "passes": bool(pair[f"{A1} vs {A3}"]["phi"] < ref and pair[f"{A1} vs {A4}"]["phi"] < ref)},
-                      "P2_modality": {"phi_A1_A2": pair[f"{A1} vs {A2}"]["phi"], "passes": bool(pair[f"{A1} vs {A2}"]["phi"] < ref)}}
+                      "P1_readout": {"phi_A1_A3": p13, "phi_A1_A4": p14,
+                                     "passes": None if None in (p13, p14) else bool(p13 < ref and p14 < ref)},
+                      "P2_modality": {"phi_A1_A2": p12, "passes": below(A2)}}
             summary["results"][name] = {"n_windows": int(m.sum()), "accuracy": acc, "pairwise": pair, "purity_strata": strata,
                                         "per_chip": per_chip, "prereg": prereg, "impure_share": float(impure.mean())}
             print(f"{name}: acc " + ", ".join(f"{k.split()[0]} {v:.4f}" for k, v in acc.items()), flush=True)
-            print(f"  phi vs {A1}: A2(modality) {pair[f'{A1} vs {A2}']['phi']:.3f}, A3(MLP) {pair[f'{A1} vs {A3}']['phi']:.3f}, "
-                  f"A4(3x3) {pair[f'{A1} vs {A4}']['phi']:.3f}, A0(no encoder) {pair[f'{A0} vs {A1}']['phi']:.3f} | backbone swap {ref:.3f} | "
+            def fmt(v):
+                return "n/a" if v is None else f"{v:.3f}"
+            print(f"  phi vs {A1}: A2(modality) {fmt(p12)}, A3(MLP) {fmt(p13)}, A4(3x3) {fmt(p14)}, "
+                  f"A0(no encoder) {fmt(pair[f'{A0} vs {A1}']['phi'])} | backbone swap {ref:.3f} | "
                   f"P1 {prereg['P1_readout']['passes']}, P2 {prereg['P2_modality']['passes']}", flush=True)
-            print(f"  purity strata (pure/mixed): " + ", ".join(f"{k.split('vs ')[1]} {v['pure']:.3f}/{v['mixed']:.3f}" for k, v in strata.items())
-                  + " | within-chip median phi: " + ", ".join(f"{k.split('vs ')[1]} {v['median_within_chip_phi']:.3f}" for k, v in per_chip.items()), flush=True)
+            print(f"  homogeneous/mixed phi: " + ", ".join(f"{k.split('vs ')[1]} {fmt(v['pure'])}/{fmt(v['mixed'])}" for k, v in strata.items())
+                  + " | within-chip median phi: " + ", ".join(f"{k.split('vs ')[1]} {fmt(v['median_within_chip_phi'])}" for k, v in per_chip.items()), flush=True)
             rows.append({"testbed": name, "n_windows": int(m.sum()), **{f"acc {k}": v for k, v in acc.items()},
                          **{f"phi {k}": v["phi"] for k, v in pair.items()}, "backbone_swap_phi": ref})
         except Exception as ex:  # noqa: BLE001
@@ -265,8 +290,8 @@ def main():
             print(f"{name} FAILED: {ex!r}\n{traceback.format_exc()}", flush=True)
 
     if len(summary["results"]) == 2:
-        summary["prereg"] = {"P1_readout": bool(all(summary["results"][n]["prereg"]["P1_readout"]["passes"] for n in ("bolivia", "test"))),
-                             "P2_modality": bool(all(summary["results"][n]["prereg"]["P2_modality"]["passes"] for n in ("bolivia", "test"))),
+        summary["prereg"] = {"P1_readout": all(summary["results"][n]["prereg"]["P1_readout"]["passes"] is True for n in ("bolivia", "test")),
+                             "P2_modality": all(summary["results"][n]["prereg"]["P2_modality"]["passes"] is True for n in ("bolivia", "test")),
                              "complete": not summary["failures"]}
     summary["n_failures"] = len(summary["failures"])
     os.makedirs(hb.OUT, exist_ok=True)

@@ -15,8 +15,9 @@ file under `exp/out/`; the per-experiment detail is in the
    the fine-tuned model run end to end (exp04, exp16, exp18, exp21). This
    holds for OlmoEarth v1. It does not hold on Bolivia under v1.2 Base, the
    encoder the served product uses, where tiling instability and even a
-   no-model spectral control rank its errors better at unchanged accuracy
-   (exp45).
+   no-model spectral control rank the grid window's errors better at
+   unchanged accuracy (exp45). The shift-averaged decision recommended in
+   finding 6 is ranked separately (exp47).
 2. **Review boundary windows first, then by confidence.** Errors sit on
    prediction boundaries, 75% of errors against 21% of correct windows, and
    this order captures more of them than confidence alone at 5% and 10%
