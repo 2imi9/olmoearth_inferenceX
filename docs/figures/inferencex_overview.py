@@ -110,7 +110,7 @@ text(4, 17.5, "why the WorldCover wins do not transfer to hand labels.\nleading 
      "probe partly reads out the model's own map; decisive test needs\nadjudicated cells on the 8 rivers (issue #2)", fs=7.3, ha="left", va="top")
 panel(130, 8, 68, 15, "E  Where it stands", tc=VIOLET)
 text(132, 17.5, "supported for deployment: confidence as the ranker, boundary first as the review order,\n"
-     "four-tiling averaging for the map, a reason with evidence for every flagged window; all in oe_inferencex.\n"
+     "four-tiling averaging for the map, a reason with evidence per flagged window; all in the package.\n"
      "Remaining: the adjudicated-cell test (issue #2) and the pretraining-target note to Ai2 (issue #11)", fs=7.3, ha="left", va="top")
 
 arrow(48.5, 54, 51.5, 54, color=INK, lw=1.6)
