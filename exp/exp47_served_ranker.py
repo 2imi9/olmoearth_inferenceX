@@ -72,7 +72,7 @@ def head_from(tr_feats, tr_lab):
     return train_logistic_head(torch.tensor(tr_feats.reshape(-1, tr_feats.shape[-1])[ok.flatten()]), y.flatten()[ok.flatten()])
 
 
-def arm(p_shift, s2, lab):
+def arm(p_shift, logit0, s2, lab):
     """One backbone on one testbed: the averaged decision's error set and every ranker graded on it."""
     N = len(s2)
     y, ok = exp18.patch_labels(lab[:, :CROP, :CROP])
@@ -86,9 +86,8 @@ def arm(p_shift, s2, lab):
     w1 = w1_full[:, sl, sl]
     yy, okk = y[:, sl, sl], ok[:, sl, sl]
     err = ((w1 > 0.5) != (yy > 0.5)).astype(np.float64)
-    # p_shift holds probabilities; -|p - 0.5| ranks identically to exp45's -|logit| because |p - 0.5| is monotone in |logit|
     sig = {W1C: -np.abs(w1 - 0.5),
-           W0C: -np.abs(p_shift[0] - 0.5)[:, sl, sl],
+           W0C: -np.abs(logit0)[:, sl, sl],                              # exp45's incumbent exactly: the shift-0 logit margin
            TILE: exp18.aligned_tile_phase(p_shift)[:, sl, sl],
            BOUND: bound_full[:, sl, sl],
            CTRL_G: exp18.ndwi_gradient(s2)[:, sl, sl],
@@ -150,6 +149,9 @@ def main():
     except Exception:
         has_v12 = False
     if not has_v12:
+        if not args.smoke:
+            raise SystemExit("OLMOEARTH_V1_2_BASE is unavailable: run the full experiment with ~/oe12/.venv, whose "
+                             "olmoearth_pretrain is built from upstream main. The v1.2 arm is the preregistered one.")
         versions.pop("v1_2", None)
         summary["note"] = "v1.2 identifiers unavailable in this environment; only the v1 arm ran"
 
@@ -158,28 +160,35 @@ def main():
         try:
             t0 = time.time()
             if version == "v1":
-                head = head_from(np.asarray(cache["tr_base"], dtype=np.float32)[:len(tr_s2)], tr_lab)
-                pshift = {}
+                trf = np.asarray(cache["tr_base"], dtype=np.float32)
+                if len(trf) != len(tr_s2):                                # never slice a cache to fit: the seed-0 sample is not prefix-stable
+                    model = hb.load_model(); trf = np.asarray(exp18.embed(model, tr_s2, 0)[0], dtype=np.float32); del model
+                    print("  train cache length mismatch, re-encoded", flush=True)
+                head = head_from(trf, tr_lab)
+                pshift, logit0 = {}, {}
                 for name, (s2, lab) in splits.items():
                     key = f"{'bolivia' if name == 'bolivia' else 'test'}_base"
                     if all(f"{key}{s}" in cache.files and len(cache[f"{key}{s}"]) == len(s2) for s in SHIFTS):
-                        pshift[name] = np.stack([exp18.head_prob_logit(np.asarray(cache[f"{key}{s}"], dtype=np.float32), *head)[0] for s in SHIFTS])
+                        out = [exp18.head_prob_logit(np.asarray(cache[f"{key}{s}"], dtype=np.float32), *head) for s in SHIFTS]
                     else:
                         model = hb.load_model()
-                        pshift[name] = np.stack([exp18.head_prob_logit(np.asarray(exp18.embed(model, s2, s)[0], dtype=np.float32), *head)[0] for s in SHIFTS])
+                        out = [exp18.head_prob_logit(np.asarray(exp18.embed(model, s2, s)[0], dtype=np.float32), *head) for s in SHIFTS]
                         del model
+                    pshift[name], logit0[name] = np.stack([o[0] for o in out]), out[0][1]
             else:
                 from olmoearth_pretrain.model_loader import load_model_from_id
                 model = load_model_from_id(ModelID.OLMOEARTH_V1_2_BASE).to(exp18.DEV).eval().float()
                 head = head_from(np.asarray(exp18.embed(model, tr_s2, 0)[0], dtype=np.float32), tr_lab)
-                pshift = {name: np.stack([exp18.head_prob_logit(np.asarray(exp18.embed(model, s2, s)[0], dtype=np.float32), *head)[0] for s in SHIFTS])
-                          for name, (s2, lab) in splits.items()}
+                pshift, logit0 = {}, {}
+                for name, (s2, lab) in splits.items():
+                    out = [exp18.head_prob_logit(np.asarray(exp18.embed(model, s2, s)[0], dtype=np.float32), *head) for s in SHIFTS]
+                    pshift[name], logit0[name] = np.stack([o[0] for o in out]), out[0][1]
                 del model
                 if exp18.DEV == "cuda":
                     torch.cuda.empty_cache()
             summary["results"][version] = {"encode_seconds": time.time() - t0}
             for name, (s2, lab) in splits.items():
-                sig, err, ok = arm(pshift[name], s2, lab)
+                sig, err, ok = arm(pshift[name], logit0[name], s2, lab)
                 r = score(sig, err, ok)
                 summary["results"][version][name] = r
                 lead = {k: r["tests"][k]["pooled_lead"] for k in PRIMARY_AGAINST}
