@@ -157,3 +157,33 @@ def combine_midrank(a, b):
     Returns the array in the shape of `a`; scores ranks only, so it cannot be tuned to a testbed."""
     a = np.asarray(a)
     return ((midrank_pct(a) + midrank_pct(b)) / 2).reshape(a.shape)
+
+
+# ----------------------------------------------------------------------------- window design (exp42)
+def shift_averaged_probability(shift_maps, patch=4):
+    """The decision design that beat the grid window on both hand-label testbeds (exp42): run the encoder on the
+    same tile cropped at offsets 0, 1, ..., S-1 px (as exp18's cache), paint each window map back to the pixels it
+    covers, and average. Returns (pixel_map, common), where pixel_map (H + S - 1, W + S - 1) holds the mean
+    probability over every tiling that covers a pixel (NaN where none does) and `common` marks the pixels covered
+    by all S tilings, the region exp42 scored. shift_maps: (S, G, G) window probabilities, shift s first.
+
+    Pixel accuracy rose by 1.0 points on Bolivia and 0.9 on the multi-region test split (p < 1e-40 per tile) at the
+    cost of S forward passes; the window-pooled version of the map is the input for assess_prediction."""
+    maps = np.asarray(shift_maps, dtype=np.float64)
+    S, G0, G1 = maps.shape
+    H, W = G0 * patch + S - 1, G1 * patch + S - 1
+    canvas = np.full((S, H, W), np.nan)
+    for s in range(S):
+        canvas[s, s:s + G0 * patch, s:s + G1 * patch] = np.repeat(np.repeat(maps[s], patch, 0), patch, 1)
+    pixel = np.nanmean(canvas, axis=0)
+    common = np.zeros((H, W), dtype=bool)
+    common[S - 1:G0 * patch, S - 1:G1 * patch] = True
+    return pixel, common
+
+
+def pool_to_windows(pixel_map, patch=4, offset=0):
+    """Mean of a pixel map over the patch x patch windows of the tiling at crop `offset` (NaN-aware)."""
+    a = np.asarray(pixel_map, dtype=np.float64)
+    G0, G1 = (a.shape[0] - offset) // patch, (a.shape[1] - offset) // patch
+    blk = a[offset:offset + G0 * patch, offset:offset + G1 * patch].reshape(G0, patch, G1, patch)
+    return np.nanmean(blk, axis=(1, 3))

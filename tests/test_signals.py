@@ -98,3 +98,22 @@ def test_equals_exp13_and_exp18_implementations(exp_modules):
     ps60 = np.stack([rng.random((2, exp18.G, exp18.G)) for _ in exp13.SHIFTS]).astype(np.float32)
     assert np.array_equal(aligned_tile_phase(ps60, dtype=np.float32), exp18.aligned_tile_phase(ps60))   # bit for bit
     assert np.allclose(aligned_tile_phase(ps60), exp18.aligned_tile_phase(ps60), atol=1e-6)               # float64 form
+
+
+def test_shift_averaged_probability_geometry_and_average():
+    import numpy as np
+    import pytest
+
+    from oe_inferencex.signals import pool_to_windows, shift_averaged_probability
+
+    G, S = 4, 4
+    const = np.full((S, G, G), 0.3)
+    pix, common = shift_averaged_probability(const, patch=4)
+    assert pix.shape == (G * 4 + S - 1,) * 2 and common.sum() == (G * 4 - (S - 1)) ** 2
+    assert np.allclose(pix[common], 0.3) and np.isnan(pix[0, -1])              # corners are covered by no tiling
+    maps = np.zeros((S, G, G)); maps[:, :, 2:] = 1.0                             # a vertical edge at pixel column 8 in each tiling's frame
+    pix, common = shift_averaged_probability(maps, patch=4)
+    # tiling s puts its edge at pixel column 8 + s: pixels 8..11 are water in a growing number of tilings
+    assert pix[8, 7] == pytest.approx(0.0) and pix[8, 8] == pytest.approx(1 / 4) and pix[8, 11] == pytest.approx(1.0)
+    win = pool_to_windows(pix, patch=4, offset=0)
+    assert win.shape == (G, G) and win[1, 1] == pytest.approx(0.0) and win[1, 3] == pytest.approx(1.0)

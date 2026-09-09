@@ -77,12 +77,14 @@ beliefs = [
      "0.93 accurate where it claims 0.99 (ECE 0.08); abstaining on the least confident 20% gives 0.945", "exp21"),
     ("the served product exports no class confidence; outputs sit on the patch lattice",
      "boundary fraction captures a median 0.88 of disagreements at a 5% review budget; no window seams", "exp20 22"),
+    ("averaging four tilings of a window improves the map itself",
+     "+1.0 / +0.9 pts pixel accuracy on hand labels, no retraining; half the remaining errors are mixed-label windows", "exp42"),
     ("side product: the pretraining target space is degenerate",
      "target encoder = untouched random init, targets of effective rank 2; whitened, the target is 57-70% predictable", "exp32 33 34"),
 ]
 y0 = 74
 for i, (claim, how, exps) in enumerate(beliefs):
-    y = y0 - i * 9.6
+    y = y0 - i * 8.6
     check(55.5, y, color=EMERALD)
     text(58.5, y + 2.0, claim, fs=7.6, weight="bold", ha="left")
     text(58.5, y - 0.9, how, fs=6.6, ha="left", color=MUTED, va="center")
@@ -107,8 +109,8 @@ panel(2, 8, 46, 15, "D  Open question", tc=AMBER)
 text(4, 17.5, "why the WorldCover wins do not transfer to hand labels.\nleading hypothesis: WorldCover was a pretraining target, so the\n"
      "probe partly reads out the model's own map; decisive test needs\nadjudicated cells on the 8 rivers (issue #2)", fs=7.3, ha="left", va="top")
 panel(130, 8, 68, 15, "E  Where it stands", tc=VIOLET)
-text(132, 17.5, "supported for deployment: confidence as the ranker, boundary first then confidence as the\n"
-     "review order, and a reason with measured evidence for every flagged window (oe_inferencex).\n"
+text(132, 17.5, "supported for deployment: confidence as the ranker, boundary first as the review order,\n"
+     "four-tiling averaging for the map, and a reason with evidence for every flagged window (oe_inferencex).\n"
      "Remaining: the adjudicated-cell test (issue #2) and the pretraining-target note to Ai2 (issue #11)", fs=7.3, ha="left", va="top")
 
 arrow(48.5, 54, 51.5, 54, color=INK, lw=1.6)

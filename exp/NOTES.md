@@ -47,6 +47,7 @@ Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 | exp39 | neighbourhood contradiction (share of a window's 32 nearest neighbours in a disjoint bank that the same head predicts differently) in three embedding spaces: P1 passed, the OlmoEarth-space score beats confidence at the 10% budget on Bolivia hand labels (169/126/56 tiles, p = 0.007; pooled 0.530 vs 0.465, CI above zero); P2, AnySat's local embedding beats confidence but not the OlmoEarth space (159/143, p = 0.19) and its 40 m patch output is position-dominated; the pixel-statistics ablation exceeds both by a wide margin (10%: 214/89/48, pooled 0.682 vs 0.465; E-AURC 219/131 and pooled 0.0093 vs 0.0105, the first hand-label E-AURC win), so the semantic-neighbourhood reading is falsified and the finding is the model's inconsistency across spectrally similar windows; null against WorldCover (rivers 4/4); replication preregistered as exp40 |
 | exp40 | preregistered replication of the pixel-statistics neighbourhood contradiction on the Sen1Floods11 test split (800 tiles, other regions; Bolivia as the bank): fails, worse than confidence at the 10% budget (183/195/105, p = 0.75; pooled 0.530 vs 0.643, CI below zero), at 20% and on E-AURC (215/267, pooled 0.0149 vs 0.0096); the OlmoEarth-space score is far worse (97/301); the Bolivia win did not carry over, so neither contradiction score is supported |
 | exp41 | two-view disagreement from Ai2's paper embeddings (probes per model on identical windows, partner chosen by lowest held-out error correlation): rejected. On Sen1Floods11 every model errs on the same windows, outside families as much as OlmoEarth's own (P(partner wrong | OlmoEarth wrong) 0.80 to 0.82 for Clay, Galileo, Panopticon and for nano/tiny/large; phi 0.77 to 0.81), and disagreement captures 0.242 of the errors at 10% against 0.454 for confidence (281/1263 chips); on AWF (200 points) the same, 0.180 vs 0.246; the errors belong to the windows, not to the model |
+| exp42 | window design: four alternatives to the 4-px grid window judged at pixel level on hand labels; the shift-averaged decision (mean of the four tilings covering each pixel) raises pixel accuracy by 1.0 points on Bolivia (321/66/53 tiles, p = 1e-41) and 0.9 on the test split (583/78/139, p = 9e-97), preregistered and supported; spectral split and scale-adaptive windows are mixed; 10% of windows have mixed hand labels and carry 45% (Bolivia) and 58% (test) of the errors, error rate 0.28-0.39 against 0.02-0.05 on pure windows |
 
 ## exp01 — first E_case map (2026-08-31)
 
@@ -1311,3 +1312,56 @@ when it sees the input differently (exp10) rather than through another
 encoder of the same input. Issue 6 is answered in the negative for both
 designs, neighbourhood (exp39) and head (exp41). Two-view disagreement is
 rejected.
+
+## exp42 window design (2026-09-08)
+
+exp41 said the errors belong to the windows, so the window was tested as a
+design. Four alternatives to the fixed 4-px grid window, all from exp18's
+cached features at crop offsets 0 to 3 px and the same head, judged at
+pixel level on hand labels over the 57 x 57 region every tiling covers:
+W1 shift-averaged (each pixel takes the mean of the four windows that
+cover it), W2 scale-adaptive (a window defers to its 8-px block when the
+block's margin is larger), W3 spectral split (inside a window the pixels
+on each side of NDWI = 0 take the mean W1 probability of their own side),
+W4 abstention by tile-phase against abstention by confidence at matched
+coverage within each tile; purity from the pixel labels. Preregistered
+primary: W1 against W0 on pixel accuracy per tile, one-sided, on Bolivia
+and on the test split, both required. exp/exp42_window_design.py, one B200
+job, 726464 on 2d6dce6, minutes; Codex review before the run, no blocking
+finding. Outputs exp/out/exp42_summary.json, exp42_window_design.csv.
+
+Supported. W1 raises pixel accuracy from 0.8969 to 0.9071 on Bolivia (441
+tiles: 321 better, 66 worse, 53 tied, p = 1.3e-41, mean gain +1.02 points)
+and from 0.9411 to 0.9503 on the test split (800 tiles: 583/78/139,
+p = 8.9e-97, +0.91 points). The cost is four forward passes instead of
+one; no labels, no retraining. W1's own confidence is also a slightly
+better abstention score (selective accuracy at 80% coverage 0.9576 against
+0.9535 on Bolivia, 0.9798 against 0.9791 on test) and, on Bolivia, a better
+ranker (E-AURC 0.0091 against 0.0105; capture 0.517 against 0.463 at 10%),
+though on the test split its E-AURC is worse (0.0109 against 0.0098) while
+capture at 5 and 10% is better; secondary, not preregistered.
+
+Mixed or null. W3 helps on Bolivia (0.9084 against 0.9071; 217/158 tiles,
+p = 0.003; inside boundary windows 0.790 against 0.785) and hurts on the
+test split (0.9483 against 0.9503; 226/404; boundary windows 0.851 against
+0.860): a spectral edge is the right edge for one flood and not for many
+regions. W2 gains 0.25 points on Bolivia (175/121, p = 0.002) and nothing
+on the test split (253/241), with 39 to 40% of windows deferring. Tile-
+phase abstention equals confidence abstention (0.9542 against 0.9535; 0.9776
+against 0.9791).
+
+Purity. Windows whose hand labels are mixed (labelled water fraction
+between 0.1 and 0.9) are 10% of the windows on both testbeds and carry 45%
+of the errors on Bolivia and 58% on the test split; their error rate is
+0.39 and 0.28 against 0.054 and 0.022 on pure windows. Half of what the
+audit calls an error is a window the label itself cannot decide.
+
+Reading. The grid is not the right unit, and the remedy is not a cleverer
+window but no fixed window: average the tilings, and the decision follows
+the content by construction. It is the first change in the repository that
+improves the prediction map rather than the review of it, and it is
+label-free. The package now ships it (signals.shift_averaged_probability
+and pool_to_windows). What remains: the purity result says the benchmark's
+own ceiling is set by mixed windows, which is an argument for labels at
+finer resolution or for abstaining on predicted-mixed windows, and W4
+shows tile-phase does not predict mixing better than confidence does.

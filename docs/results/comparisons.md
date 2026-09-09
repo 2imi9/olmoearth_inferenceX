@@ -411,6 +411,24 @@ The two statistics are two operating modes: a budget per tile against one
 budget over the area, where the ambiguous windows of NDWI-heavy tiles fill
 the set. Source `exp/out/exp38_summary.json`.
 
+## Window design at pixel level (exp42)
+
+Four alternatives to the fixed 4-px grid window, all from the cached
+features at four crop offsets and the same head, judged on pixel-level hand
+labels over the region every tiling covers:
+
+| Design | Bolivia pixel accuracy | Test split pixel accuracy | Per tile vs the grid |
+|---|---|---|---|
+| W0 grid window | 0.8969 | 0.9411 | |
+| W1 shift-averaged (preregistered) | 0.9071 | 0.9503 | 321/66/53, p = 1e-41; 583/78/139, p = 9e-97 |
+| W3 spectral split inside the window | 0.9084 | 0.9483 | vs W1: 217/158 better on Bolivia, 226/404 worse on test |
+| W2 scale-adaptive (window accuracy) | 0.9045 vs 0.9020 | 0.9515 vs 0.9518 | 175/121; 253/241 |
+
+Mixed-label windows are 10% of the windows and carry 45% and 58% of the
+errors (error rate 0.39 and 0.28 against 0.054 and 0.022 on pure windows).
+Tile-phase abstention equals confidence abstention at matched coverage.
+Source `exp/out/exp42_summary.json`.
+
 ## Served land cover change rasters (exp20)
 
 First assessment of a served output: ten 512-px windows (about

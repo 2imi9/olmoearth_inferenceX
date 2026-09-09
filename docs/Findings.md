@@ -27,6 +27,12 @@ file under `exp/out/`; the per-experiment detail is in the
 5. **The served product can be triaged without confidence.** It exports no
    class confidence; boundary fraction alone captures a median 0.88 of the
    disagreements at a 5% review budget (exp20).
+6. **Averaging the tilings improves the map itself.** Run the encoder on the
+   window cropped at four offsets and average the four decisions per pixel:
+   pixel accuracy on hand labels rises by 1.0 points on Bolivia and 0.9 on
+   the multi-region test split, preregistered, no labels, no retraining
+   (exp42). Half of the remaining errors sit on windows whose hand labels
+   are themselves mixed.
 
 ## The numbers
 
@@ -49,6 +55,15 @@ on the same testbed, with the error rate among windows carrying the cue
 | among the least confident 20% | 0.589 / 0.163 | 3.6x | 0.26 |
 | unstable under a tiling shift | 0.583 / 0.164 | 3.6x | 0.26 |
 | spectrally ambiguous, NDWI near zero | 0.483 / 0.067 | 7.2x | 0.41 |
+
+Window design (exp42), pixel accuracy on hand labels over the region every
+tiling covers:
+
+| Decision | Bolivia, 441 tiles | Test split, 800 tiles |
+|---|---|---|
+| grid window (one tiling) | 0.897 | 0.941 |
+| shift-averaged (four tilings) | 0.907, better on 321 tiles, worse on 66 | 0.950, better on 583, worse on 78 |
+| share of errors on mixed-label windows | 45% (10% of windows) | 58% (10% of windows) |
 
 Fine-tuned AWF model, end to end (exp21, exp36): confidence catches 22% of
 the errors at a 5% budget, 39% at 10%, 63% at 20%; the boundary-first order

@@ -220,3 +220,16 @@ def test_exp41_two_view_disagreement_is_a_recorded_negative():
     assert f["pooled_capture"]["weighted disagreement (selected partner)"]["0.1"] < f["pooled_capture"]["confidence (OlmoEarth)"]["0.1"]
     a = s["tasks"]["awf_sentinel2"]
     assert a["prereg"]["supported_vs_confidence"] is False and a["prereg"]["boot_p05"] < 0
+
+
+def test_exp42_shift_averaged_window_is_supported_on_both_testbeds():
+    """exp42 (job 726464): W1 beats the grid window on pixel accuracy per tile on Bolivia and on the test split."""
+    s = json.load(open(os.path.join(OUT, "exp42_summary.json")))
+    assert s["prereg"]["supported"] is True
+    for name, counts in (("bolivia", (321, 66, 53)), ("test", (583, 78, 139))):
+        r = s["results"][name]["prereg_W1_vs_W0_pixel"]
+        assert r["one_sided"] and (r["w"], r["l"], r["t"]) == counts and r["sign_p"] == pytest.approx(sign_test(r["w"], r["l"], "greater"), rel=1e-9)
+        acc = s["results"][name]["pixel_accuracy_mean"]
+        assert acc["W1 shift-averaged"] - acc["W0 grid"] > 0.008
+        pur = s["results"][name]["purity"]
+        assert pur["share_of_windows_impure"] < 0.11 and pur["share_of_errors_on_impure_windows"] > 0.44
