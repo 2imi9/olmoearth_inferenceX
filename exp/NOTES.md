@@ -46,7 +46,7 @@ Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 | exp38 | spectral ambiguity first, then boundary, then confidence, at fixed budgets (CPU, on exp37's tables): preregistered against the exp36 order on Bolivia, per-tile budgets win at 5% and 10% (151/100/100, p = 8e-4; 146/86/119, p = 5e-5) but one pooled budget does not (0.292 vs 0.274, CI touching zero; 0.481 vs 0.494); clear only at 20% pooled (0.831 vs 0.732); loses to the boundary-first order on the WorldCover rivers (2/6, 3/5, 3/4); mixed, boundary-first stays the supported rule |
 | exp39 | neighbourhood contradiction (share of a window's 32 nearest neighbours in a disjoint bank that the same head predicts differently) in three embedding spaces: P1 passed, the OlmoEarth-space score beats confidence at the 10% budget on Bolivia hand labels (169/126/56 tiles, p = 0.007; pooled 0.530 vs 0.465, CI above zero); P2, AnySat's local embedding beats confidence but not the OlmoEarth space (159/143, p = 0.19) and its 40 m patch output is position-dominated; the pixel-statistics ablation exceeds both by a wide margin (10%: 214/89/48, pooled 0.682 vs 0.465; E-AURC 219/131 and pooled 0.0093 vs 0.0105, the first hand-label E-AURC win), so the semantic-neighbourhood reading is falsified and the finding is the model's inconsistency across spectrally similar windows; null against WorldCover (rivers 4/4); replication preregistered as exp40 |
 | exp40 | preregistered replication of the pixel-statistics neighbourhood contradiction on the Sen1Floods11 test split (800 tiles, other regions; Bolivia as the bank): fails, worse than confidence at the 10% budget (183/195/105, p = 0.75; pooled 0.530 vs 0.643, CI below zero), at 20% and on E-AURC (215/267, pooled 0.0149 vs 0.0096); the OlmoEarth-space score is far worse (97/301); the Bolivia win did not carry over, so neither contradiction score is supported |
-| exp41 | two-view disagreement from Ai2's paper embeddings (probes per model on identical windows, partner chosen by lowest held-out error correlation): rejected. On Sen1Floods11 every model errs on the same windows, outside families as much as OlmoEarth's own (P(partner wrong | OlmoEarth wrong) 0.80 to 0.82 for Clay, Galileo, Panopticon and for nano/tiny/large; phi 0.77 to 0.81), and disagreement captures 0.242 of the errors at 10% against 0.454 for confidence (281/1263 chips); on AWF (200 points) the same, 0.180 vs 0.246; the errors belong to the windows, not to the model |
+| exp41 | two-view disagreement from Ai2's paper embeddings (probes per model on identical windows, partner chosen by lowest held-out error correlation): rejected. On Sen1Floods11 the three outside partners that share the 4-px grid err on 80-82% of OlmoEarth's error windows, as its own family does (phi 0.77-0.81), and disagreement captures 0.242 at the 10% budget against 0.454; on AWF the outside models are far less correlated (phi 0.32-0.48 against the family's 0.50-0.70). The gloss "the errors belong to the windows" was withdrawn: fine-tuning the encoder corrects 55.6% of a frozen probe's errors on the same AWF points (exp21) |
 | exp42 | window design: four alternatives to the 4-px grid window judged at pixel level on hand labels; the shift-averaged decision (mean of the four tilings covering each pixel) raises pixel accuracy by 1.0 points on Bolivia (321/66/53 tiles, p = 1e-41) and 0.9 on the test split (583/78/139, p = 9e-97), preregistered and supported; spectral split and scale-adaptive windows are mixed; 10% of windows have mixed hand labels and carry 45% (Bolivia) and 58% (test) of the grid window's errors (error rate 0.28-0.39 against 0.02-0.05 on pure windows), the grid's limit, not the pixel map's |
 | exp43 | a content-derived partition (deterministic k-means on Sentinel-2, 4-connected components) with the hard majority of W1's pixel decisions, preregistered against W1 with the corrected/broken accounting: not supported; it breaks more pixels than it corrects on both testbeds (Bolivia C 15,093 vs B 16,273, 168/209 tiles; test split C 24,525 vs B 30,951, 244/387), because 11-15% of segments are mixed and 5-12% of the pure ones carry a wrong majority, which then flips whole segments; W1's own errors are 43% (Bolivia) and 56% (test) on the mixed-label 10% of pixels |
 | exp44 | sixteen crop offsets against the four diagonals, twelve extra encoder passes: the full offset set is better than the diagonals on both testbeds (201/149/90, p = 0.003; 369/202/229, p = 1.3e-12) but by +0.04 accuracy points, five times below the preregistered minimum worthwhile effect, so unsupported; an unbalanced seven-offset subset (diagonals plus horizontal phases) is worse than the diagonals, a balanced eight-offset subset is between |
@@ -1296,7 +1296,7 @@ captures 0.242 of the errors at 10% against 0.454 for confidence (per chip
 281 better, 1,263 worse; pooled CI [-0.233, -0.193]) and has pooled E-AURC
 0.0668 against 0.0215 (per chip 78/1,499); the accuracy-weighted vote over
 all outside partners 0.362; U+ 0.311. Every partner, inside or outside the
-family, gives the same numbers within 0.01.
+family, is within 0.01 of the selected partner (the full spread across partners is 0.017).
 
 AWF Sentinel-2 (200 test points, 9 classes, 61 errors; OlmoEarth probe
 0.695, Panopticon 0.630). Panopticon was selected on a held-out phi of
@@ -1305,21 +1305,45 @@ test phi is 0.62 (family 0.50 to 0.70). Weighted disagreement captures
 0.180 at 10% against 0.246 (5th percentile of the bootstrap gain -0.13);
 E-AURC 0.21 against 0.09; the vote 0.213. Worse on every count.
 
-Reading. Cross-model disagreement cannot flag OlmoEarth's errors because
-the other models make the same errors, whatever family they come from.
-On these testbeds the errors belong to the windows, not to the model: the
-same ambiguous surfaces, boundaries and label disagreements defeat every
-encoder. That is why confidence is hard to beat, why the boundary and
-spectral-ambiguity cues explain errors, and why a second opinion helps only
-when it sees the input differently (exp10) rather than through another
-encoder of the same input. Issue 6 is answered in the negative for both
-designs, neighbourhood (exp39) and head (exp41). Two-view disagreement is
-rejected.
+Reading, as first written and then corrected. Cross-model disagreement
+cannot flag OlmoEarth's errors, because the surviving partners make the same
+errors whatever family they come from. Issue 6 is answered in the negative
+for both designs, neighbourhood (exp39) and head (exp41), and two-view
+disagreement is rejected. That much stands.
+
+The gloss originally attached to it, "the errors belong to the windows, not
+to the model", does not, and is withdrawn. An adversarial re-reading of the
+repository's own outputs (2026-09-08) established four things against it.
+(1) The one end-to-end fine-tuned model we hold contradicts it directly: on
+the 344 AWF points, against the frozen exp16 probe on the same points and
+labels, fine-tuning corrects 35 of the probe's 63 errors, 55.6%, and the
+error correlation is phi 0.475 at crop 16 and 0.466 at crop 32, against
+exp41's 0.77 to 0.81 across six frozen encoders (exp/out/exp21_finetuned_awf.csv,
+columns error and probe_error). Changing the readout moves the error set
+about twice as much as changing the frozen encoder does. (2) The claim rests
+on the Sen1Floods11 half only: on AWF the outside models sit at phi 0.32 to
+0.48 against the family's 0.50 to 0.70, and exp41's own
+falsification_correlation.outside_below_family is true there. The line "on
+AWF the same" was right about the capture numbers and wrong about the
+correlation. (3) "Every encoder" is three outside encoders; four of the seven
+requested partners (CROMA, TerraMind, CopernicusFM, Satlas) never produced
+Sen1Floods11 embeddings on the 4-px grid and were dropped, which is a
+selection on shared tokenisation, not a logistics footnote. (4) The window
+geometry cannot be carrying the weight the phrase implies: exp43's
+block-constant oracle forces at most 29% (Bolivia) and 49% (test split) of
+the grid window's errors, and 55% and 42% of those errors sit on windows
+whose labels are entirely one class, where the window constrains nothing.
+
+What the evidence does support, narrowly: no frozen encoder read out by a
+linear probe on this input escapes these errors, whatever its family. The
+shared factor may be the frozen-probe readout as much as the window; exp41
+cannot separate them, and the fine-tuned comparison above says the readout
+carries at least as much of it.
 
 ## exp42 window design (2026-09-08)
 
-exp41 said the errors belong to the windows, so the window was tested as a
-design. Four alternatives to the fixed 4-px grid window, all from exp18's
+exp41 found that no frozen encoder read by a linear probe escapes these
+errors, which made the window worth testing as a design in its own right. Four alternatives to the fixed 4-px grid window, all from exp18's
 cached features at crop offsets 0 to 3 px and the same head, judged at
 pixel level on hand labels over the 57 x 57 region every tiling covers:
 W1 shift-averaged (each pixel takes the mean of the four windows that
@@ -1430,14 +1454,14 @@ wrong majorities. Purity depends on how it is counted, so all three are
 reported: the fraction of segments that are single-class is 0.875 and
 0.894, the pixel-weighted share is 0.796 and 0.827, and the mean dominant
 label fraction is 0.969 and 0.974. A spectral partition is nearly pure by
-the last measure and still mixed on a tenth to a fifth of its pixels,
+the last measure and still mixed on 20.4% (Bolivia) and 17.3% (test split) of its pixels,
 which is where a single decision per segment costs more than it gains.
 
 The statistic exp42 did not report: W1's own pixel errors sit 43%
 (Bolivia) and 56% (test split) on the mixed-label windows, which hold 10%
 of the pixels. That is error concentration, not undecidability; the pixel
-map does decide inside them, and it is wrong there four to six times more
-often than elsewhere. The actual limit of one class per 4-px block is the
+map does decide inside them, and its error rate there is 6.5 times the
+pure-window rate on Bolivia and 11.9 times on the test split. The actual limit of one class per 4-px block is the
 oracle sum over windows of min(water pixels, land pixels) among the
 evaluated pixels: 35,838 of 1,180,805 pixels on Bolivia (3.0%) and 71,878
 of 2,479,909 on the test split (2.9%). The grid window's measured error

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """exp42: is the 4-px grid window the right unit? Four alternative window designs against it, judged at pixel level.
 
-Why. exp41 showed that every encoder errs on the same windows: the errors belong to the windows. The window itself,
+Why. exp41 showed that no frozen encoder read by a linear probe escapes these errors, which makes the window worth testing as a design. The window itself,
 a fixed 4-px block on a fixed grid, was never tested as a design choice, and the cue results say where it fails:
 errors sit on boundaries and mixed surfaces, where a grid block straddles two classes. Four designs that keep the
 model frozen and change only how a decision is placed on the ground, all computable from cached features:

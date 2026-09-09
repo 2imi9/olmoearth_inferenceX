@@ -238,13 +238,28 @@ paper embeddings, so that disagreement is between two encoders rather than
 two heads on one. It fails for a reason that closes the family. On
 Sen1Floods11 every model, Clay, Galileo, Panopticon and OlmoEarth's own
 nano, tiny and large, is wrong on 80 to 82% of the windows where the
-OlmoEarth probe is wrong and on about 2% of the others (phi 0.77 to 0.81);
+OlmoEarth probe is wrong and on 1.6 to 2.1% of the others (phi 0.77 to 0.81);
 the partner chosen for the lowest held-out correlation captures 0.242 of
 the errors at a 10% budget against 0.454 for confidence, and loses on 1,263
-of 1,579 chips. On the AWF points the same (0.180 against 0.246). The
-errors belong to the windows, not to the model, which is why a second
-encoder of the same input cannot find them and why the boundary and
-spectral-ambiguity cues explain them.
+of 1,579 chips. On the AWF points the capture is the same story (0.180
+against 0.246), but the error correlation is not: there the outside models
+sit at phi 0.32 to 0.48 against OlmoEarth's own family at 0.50 to 0.70, and
+exp41's preregistered falsification clause reports the outside partners as
+less correlated than the family. The Sen1Floods11 half also lost four of the
+seven requested partners, which embed on other token grids, so "every
+encoder" means the three that share OlmoEarth's 4-px grid.
+
+**What this does and does not show.** It shows that no frozen encoder read
+out by a linear probe on this input escapes these errors, whatever family it
+comes from, which is why cross-model disagreement fails as a signal. It does
+not show that the errors are a property of the windows. The repository's one
+end-to-end fine-tuned model says otherwise: on the 344 AWF points, against
+the frozen probe on the same points and labels, fine-tuning corrects 35 of
+the probe's 63 errors and the error correlation falls to phi 0.475
+(exp/out/exp21_finetuned_awf.csv). Changing the readout moves the error set
+about twice as much as changing the frozen encoder. An earlier version of
+this section said the errors belong to the windows and not to the model;
+that sentence is withdrawn.
 
 ---
 

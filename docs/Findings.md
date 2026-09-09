@@ -70,6 +70,7 @@ tiling covers:
 | grid window (one tiling) | 0.897 | 0.941 |
 | shift-averaged (four tilings) | 0.907, better on 321 tiles, worse on 66 | 0.950, better on 583, worse on 78 |
 | share of the grid window's errors on mixed-label windows | 45% (10% of windows) | 58% (10% of windows) |
+| errors the block geometry actually forces (oracle) | at most 29% | at most 49% |
 | share of the averaged map's own errors on those windows | 43% | 56% |
 | segment majority over a spectral partition (exp43) | 0.904, breaks more than it corrects | 0.948, breaks more than it corrects |
 | sixteen crop offsets instead of four (exp44) | 0.9074, +0.04 points, below the worthwhile threshold | 0.9507, +0.04 points |

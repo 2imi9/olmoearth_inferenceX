@@ -298,3 +298,20 @@ def test_exp45_v12_replication_and_cross_version_overlap():
         d = s["D1_cross_version_error_overlap"][name]
         assert 0.70 < d["p_v12_wrong_given_v1_wrong"] < 0.78
         assert d["p_v12_wrong_given_v1_right"] < 0.04 and 0.65 < d["phi"] < 0.75
+
+
+def test_fine_tuning_moves_the_error_set_more_than_swapping_a_frozen_encoder():
+    """The measurement that withdrew the "errors belong to the windows" gloss: on the same AWF points and labels,
+    fine-tuning the encoder corrects most of the frozen probe's errors, while swapping a frozen encoder (exp41)
+    barely moves the error set."""
+    rows = [r for r in csv.DictReader(open(os.path.join(OUT, "exp21_finetuned_awf.csv"))) if r["crop"] == "16"]
+    ft = np.array([float(r["error"]) for r in rows]) > 0.5
+    pr = np.array([float(r["probe_error"]) for r in rows]) > 0.5
+    n11, n10, n01, n00 = int((ft & pr).sum()), int((ft & ~pr).sum()), int((~ft & pr).sum()), int((~ft & ~pr).sum())
+    assert (n11, n10, n01, n00) == (28, 13, 35, 268) and len(rows) == 344
+    corrected = n01 / (n01 + n11)
+    phi = (n11 * n00 - n10 * n01) / np.sqrt(float((n11 + n10) * (n01 + n00) * (n11 + n01) * (n10 + n00)))
+    assert corrected == pytest.approx(35 / 63, rel=1e-9) and corrected > 0.5
+    assert phi == pytest.approx(0.4753, abs=5e-4)
+    frozen = json.load(open(os.path.join(OUT, "exp41_summary.json")))["tasks"]["sen1floods11"]["error_correlation"]
+    assert phi < min(c["phi_test"] for c in frozen.values()) - 0.25          # unfreezing moves it far more than swapping

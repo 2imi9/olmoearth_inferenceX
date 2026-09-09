@@ -432,8 +432,9 @@ Mixed-label windows are 10% of the windows and carry 45% and 58% of the
 grid window's errors (error rate 0.39 and 0.28 against 0.054 and 0.022 on
 pure windows); that is error concentration, not a bound. The
 block-constant oracle limit, the pixels any one-class-per-block decision
-must get wrong, is 3.0% and 2.9%, far below the grid's 10.3% and 5.9%
-error rates, and the shift-averaged map decides per pixel and still puts
+must get wrong, is 3.0% and 2.9% pooled, against grid error rates of 10.3%
+and 5.9% averaged over tiles, so the block forces at most 29% and 49% of
+those errors, and the shift-averaged map decides per pixel and still puts
 43% and 56% of its own errors on those windows (exp43).
 Tile-phase abstention equals confidence abstention at matched coverage.
 Source `exp/out/exp42_summary.json`.
