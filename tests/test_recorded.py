@@ -315,3 +315,36 @@ def test_fine_tuning_moves_the_error_set_more_than_swapping_a_frozen_encoder():
     assert phi == pytest.approx(0.4753, abs=5e-4)
     frozen = json.load(open(os.path.join(OUT, "exp41_summary.json")))["tasks"]["sen1floods11"]["error_correlation"]
     assert phi < min(c["phi_test"] for c in frozen.values()) - 0.25          # unfreezing moves it far more than swapping
+
+
+def test_exp46_modality_moves_the_error_set_most():
+    """exp46 (job 729376): the input modality dominates the readout and the backbone; impurity and chips do not explain it."""
+    s = json.load(open(os.path.join(OUT, "exp46_summary.json")))
+    assert s["prereg"]["P1_readout"] is True and s["prereg"]["P2_modality"] is True and s["prereg"]["complete"] is True
+    for name in ("bolivia", "test"):
+        r = s["results"][name]
+        ref = r["prereg"]["backbone_swap_phi"]
+        phi = {k.split("vs ")[1].split()[0]: v["phi"] for k, v in r["pairwise"].items() if k.startswith("A1")}
+        assert phi["A2"] < 0.45 < ref                       # modality moves it far more than the backbone
+        assert phi["A3"] < ref and phi["A4"] < ref          # readout, only just
+        assert phi["A3"] > 0.6                              # and nowhere near fine-tuning's 0.475
+        for st in r["purity_strata"].values():              # impurity does not explain the overlap
+            assert abs(st["pure"] - st["mixed"]) < 0.2
+    assert s["results"]["bolivia"]["accuracy"]["A0 no encoder"] > s["results"]["bolivia"]["accuracy"]["A1 S2 linear"]
+
+
+def test_exp47_a_no_model_control_matches_confidence_on_bolivia():
+    """exp47 (job 729376): on the shift-averaged decision the repository recommends, the NDWI-level control matches or
+    beats the model's own confidence on Bolivia under both backbones; confidence always beats tiling instability."""
+    s = json.load(open(os.path.join(OUT, "exp47_summary.json")))
+    assert s["prereg"]["supported"] is False and s["prereg"]["complete"] is True
+    for v in ("v1", "v1_2"):
+        for n in ("bolivia", "test"):
+            t = s["results"][v][n]["tests"]
+            assert t["tile-phase"]["pooled_lead"] > 0.001 and t["tile-phase"]["sign_p"] < 0.05
+            for k in ("U+ averaged confidence + tile-phase", "U+ averaged confidence + NDWI level"):
+                assert t[k]["pooled_lead"] > 0                        # plain averaged confidence beats every combination
+        assert s["results"][v]["bolivia"]["tests"]["control NDWI level"]["sign_p"] > 0.5   # loses the per-tile count
+        e = s["results"][v]["bolivia"]["pooled_eaurc"]
+        assert e["averaged confidence"] < e["grid confidence"]        # averaging helps ranking as well as accuracy
+    assert s["results"]["v1_2"]["test"]["prereg_passes"] is True

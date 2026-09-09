@@ -51,6 +51,8 @@ Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 | exp43 | a content-derived partition (deterministic k-means on Sentinel-2, 4-connected components) with the hard majority of W1's pixel decisions, preregistered against W1 with the corrected/broken accounting: not supported; it breaks more pixels than it corrects on both testbeds (Bolivia C 15,093 vs B 16,273, 168/209 tiles; test split C 24,525 vs B 30,951, 244/387), because 11-15% of segments are mixed and 5-12% of the pure ones carry a wrong majority, which then flips whole segments; W1's own errors are 43% (Bolivia) and 56% (test) on the mixed-label 10% of pixels |
 | exp44 | sixteen crop offsets against the four diagonals, twelve extra encoder passes: the full offset set is better than the diagonals on both testbeds (201/149/90, p = 0.003; 369/202/229, p = 1.3e-12) but by +0.04 accuracy points, five times below the preregistered minimum worthwhile effect, so unsupported; an unbalanced seven-offset subset (diagonals plus horizontal phases) is worse than the diagonals, a balanced eight-offset subset is between |
 | exp45 | the four supported findings repeated on OlmoEarth v1.2 Base, the encoder the served product uses: the cue enrichments and the shift-averaged window replicate on both hand-label testbeds (the window gain is larger than under v1, as v1.2's greater tiling instability predicts); the boundary-first order replicates on Bolivia and does not extend to the test split; **confidence is no longer the best ranker on Bolivia under v1.2**, where tile-phase (0.0138) and even the no-model NDWI-level control (0.0119) beat it (0.0146); v1.2 matches v1's accuracy and ranks its own errors worse; cross-version overlap: v1.2 is wrong on 71-75% of v1's error windows and on 1-3% of the rest |
+| exp46 | what makes the errors shared, five arms on identical Sen1Floods11 windows: the INPUT MODALITY is by far the biggest lever (Sentinel-1 against Sentinel-2 gives phi 0.39/0.38, against 0.70 for a backbone swap), a two-layer head moves the error set only marginally more than a backbone swap (0.68/0.70) and a 3x3 neighbourhood head a little more (0.63/0.68); label impurity is not the driver (phi is the same on homogeneous and mixed windows) and neither is chip clustering; a head on fifteen per-window pixel statistics with NO encoder beats the frozen encoder on Bolivia (0.9199 against 0.9116) |
+| exp47 | ranking the shift-averaged decision's own errors, the design the repository recommends and had never audited: the averaged confidence beats tiling instability everywhere (+0.0017 to +0.0022, p from 4e-10 to 2e-37) and beats the grid window's confidence on Bolivia, but on Bolivia it is matched or beaten by the no-model NDWI-level control under BOTH backbones, so exp45's finding was not an artefact of grading the grid window; preregistration fails (only v1.2 on the test split passes); every U+ combination is worse than plain averaged confidence |
 
 ## exp01 — first E_case map (2026-08-31)
 
@@ -1582,3 +1584,100 @@ exp41's dump. It therefore removes exp41's shared-modality explanation while
 leaving the shared linear probe and the shared labels in place. The overlap is
 lower than exp41's 80 to 82%, so a real architectural change does move the
 error set, but not much.
+
+## exp46 what makes the errors shared (2026-09-09)
+
+exp41 found six frozen encoders erring on 80-82% of the same Sen1Floods11
+windows, and held three things constant while doing it: one token-local
+linear probe, one input modality (its embeddings are Sentinel-1), and one
+hard-thresholded majority label per window. This varies them one at a time
+on identical windows, with the same labels, chips and fit split. Five arms:
+a head on fifteen per-window pixel statistics with no encoder at all (A0),
+the token-local linear head on cached Sentinel-2 features (A1, the
+reference), the same head class on Sentinel-1 features encoded here (A2), a
+two-layer head on the same features as A1 (A3), and a linear head on the
+3x3 token neighbourhood (A4). Reference points already measured on these
+windows: a backbone swap from v1 to v1.2 gives phi 0.697 and 0.705 (exp45),
+swapping the frozen encoder across families gives 0.77 to 0.81 (exp41), and
+fine-tuning gives 0.475 (exp21). exp/exp46_shared_error_sources.py, one
+B200 job, 729376 on d897294. Codex review before the run fixed four things,
+one of which mattered: the no-encoder arm's features span four orders of
+magnitude and its accuracy rose from 0.64 to 0.92 once standardised.
+
+| Arm, against A1 | Bolivia: accuracy, phi | Test split: accuracy, phi |
+|---|---|---|
+| A0 no encoder, fifteen pixel statistics | 0.9199, 0.714 | 0.9425, 0.553 |
+| A1 Sentinel-2 linear (reference) | 0.9116 | 0.9528 |
+| A2 Sentinel-1 linear | 0.8728, 0.389 | 0.8931, 0.381 |
+| A3 Sentinel-2 two-layer head | 0.9201, 0.679 | 0.9567, 0.698 |
+| A4 Sentinel-2 3x3 neighbourhood | 0.9290, 0.627 | 0.9541, 0.679 |
+| backbone swap, for comparison | 0.697 | 0.705 |
+
+Both preregistered comparisons pass, but they pass very differently. The
+input modality is the dominant lever: reading the same scene through radar
+instead of optics moves the error set to phi 0.38-0.39, roughly twice as far
+as swapping the backbone. Changing the readout barely beats a backbone swap
+(0.679 and 0.698 for the two-layer head, 0.627 and 0.679 for the
+neighbourhood head), which is much weaker than the fine-tuning result at
+0.475; fine-tuning changes the features as well as the head, and this run
+shows the head alone does not account for it.
+
+Two mechanisms are ruled out rather than confirmed. Label impurity is not
+the driver: phi is essentially the same on windows whose labels are strictly
+one class and on mixed ones (0.626 against 0.665 for A3 on Bolivia, 0.760
+against 0.582 on the test split). Chip-level clustering is not inflating the
+pooled figure either: the within-chip median phi sits within 0.02 to 0.05 of
+the pooled value on every arm.
+
+The uncomfortable result is A0. Fifteen per-window statistics with no
+encoder reach 0.9199 on Bolivia against the frozen encoder's 0.9116 under
+the same head, and their errors are as correlated with the encoder's
+(phi 0.714) as another backbone's are. On the multi-region test split the
+encoder does earn its place (0.9528 against 0.9425). So on the single-event
+testbed the foundation model buys nothing that a spectral summary does not
+already provide, which is the same direction as exp47's control result
+below.
+
+## exp47 ranking the decision the repository recommends (2026-09-09)
+
+exp45's R1 graded the grid window: its error set is the shift-0 decision and
+its confidence the shift-0 margin, faithfully replicating exp18, exp36 and
+exp37. But exp42 and exp45's own R4 recommend the shift-averaged decision,
+which now ships as signals.shift_averaged_probability, and its errors had
+never been ranked by anything; exp42's averaged-confidence columns also
+scored against the grid window's error set. This run fixes that. Both
+backbones, both testbeds, the averaged decision's own error set, and every
+ranker graded on it. Preregistered one-sided against tiling instability and
+the no-model NDWI-level control, minimum pooled lead 0.001, both testbeds
+under v1.2 required. exp/exp47_served_ranker.py, same job 729376.
+
+| Arm | averaged confidence | grid confidence | tile-phase | NDWI level (no model) |
+|---|---|---|---|---|
+| v1 Bolivia | 0.0094 | 0.0108 | 0.0113 | 0.0113 |
+| v1 test split | 0.0109 | 0.0099 | 0.0131 | 0.0106 |
+| v1.2 Bolivia | 0.0116 | 0.0149 | 0.0133 | 0.0097 |
+| v1.2 test split | 0.0064 | 0.0061 | 0.0081 | 0.0106 |
+
+Pooled excess AURC, lower is better. Not supported: only v1.2 on the test
+split passes both preregistered comparisons. The averaged confidence does
+beat tiling instability everywhere, by 0.0017 to 0.0022 with per-tile
+p between 4e-10 and 2e-37, and it beats the grid window's confidence on
+Bolivia under both backbones (0.0094 against 0.0108, 0.0116 against 0.0149),
+which is the shift-averaging gain showing up in ranking as well as accuracy.
+
+The result that matters is the control. On Bolivia the NDWI-level control,
+which uses no model at all, matches the averaged confidence under v1 (a
+pooled lead of +0.0019 for confidence but 142 tiles against 174 per tile)
+and beats it under v1.2 (-0.0019 pooled, 142 against 182 per tile). exp45's
+finding therefore survives the correction: it was not an artefact of grading
+a window design we had replaced. On the multi-region test split the model's
+confidence wins comfortably under v1.2 (+0.0042) and ties under v1
+(-0.0003 pooled while winning 316 tiles to 108). The pattern is testbed
+dependent, and the testbed where the model loses to a spectral index is the
+single flood event.
+
+Every U+ combination is worse than plain averaged confidence, by 0.0025 to
+0.0153, so the fusion that exp45's result seemed to invite does not help.
+The boundary-first order is also worse on excess AURC (0.0175 against
+0.0094 on v1 Bolivia), which is consistent rather than contradictory: it was
+only ever claimed at fixed review budgets, never as a ranker.

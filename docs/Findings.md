@@ -14,10 +14,11 @@ file under `exp/out/`; the per-experiment detail is in the
    every expert-labelled testbed: AWF points, Sen1Floods11 hand labels, and
    the fine-tuned model run end to end (exp04, exp16, exp18, exp21). This
    holds for OlmoEarth v1. It does not hold on Bolivia under v1.2 Base, the
-   encoder the served product uses, where tiling instability and even a
-   no-model spectral control rank the grid window's errors better at
-   unchanged accuracy (exp45). The shift-averaged decision recommended in
-   finding 6 is ranked separately (exp47).
+   encoder the served product uses, and one testbed. On Sen1Floods11
+   Bolivia, a single flood event, a no-model spectral index ranks the
+   model's errors as well as its own confidence under v1 and better under
+   v1.2, for the grid window and for the shift-averaged decision alike
+   (exp45, exp47). On the multi-region test split confidence still wins.
 2. **Review boundary windows first, then by confidence.** Errors sit on
    prediction boundaries, 75% of errors against 21% of correct windows, and
    this order captures more of them than confidence alone at 5% and 10%
