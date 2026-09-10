@@ -60,6 +60,7 @@ sys.path.insert(0, os.path.dirname(EXP_DIR))
 import exp18_sen1floods_expert as exp18  # noqa: E402
 import exp46_shared_error_sources as e46  # noqa: E402
 import harness_ab as hb  # noqa: E402
+from oe_inferencex.compare import phi  # noqa: E402,F401  (the float-safe copy lived here until exp57 promoted it)
 from oe_inferencex.metrics import aurc_expected, oracle_aurc  # noqa: E402
 from oe_inferencex.signals import ndwi_level  # noqa: E402
 from oe_inferencex.stats import sign_test, wins_losses_ties  # noqa: E402
@@ -190,13 +191,6 @@ def score(sig, err, ok, ref, primary):
                     "median_gain": float(np.median(g)) if len(g) else None, "pooled_lead": pooled[k] - pooled[ref]}
     return {"n_tiles_scored": len(tiles), "n_windows": int(ok.sum()), "n_errors": int(err[ok].sum()), "accuracy": float(1 - err[ok].mean()),
             "pooled_eaurc": pooled, "tests": tests, "per_tile_eaurc_ref": per[ref], "tiles": tiles}
-
-
-def phi(a, b):
-    a, b = a.astype(bool), b.astype(bool)
-    n11, n10, n01, n00 = (float((a & b).sum()), float((a & ~b).sum()), float((~a & b).sum()), float((~a & ~b).sum()))   # floats: the product overflows int64
-    den = np.sqrt((n11 + n10) * (n01 + n00) * (n11 + n01) * (n10 + n00))
-    return float((n11 * n00 - n10 * n01) / den) if den > 0 else float("nan")
 
 
 # ----------------------------------------------------------------------------- data

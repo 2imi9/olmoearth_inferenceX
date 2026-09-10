@@ -38,3 +38,9 @@ with each citation's file and line. Rewrite those sentences, update the entries
 (status, check, `superseded_by`), add entries and markers for the new claims, and
 run `pytest tests/test_claims.py`. `claims.py list --exp exp50` shows what rests
 on a run; `claims.py show <id>` prints an entry.
+
+**Promotion.** A measurement that recurs across experiments (the error-set
+correlation phi, the corrected-and-broken cross-tab, the per-event rate and
+sign test) is promoted to the package (`oe_inferencex.compare`) and documented
+in the same recording pass as the run that made it recur; the experiment
+scripts then import it, so one implementation carries every recorded number.

@@ -57,6 +57,7 @@ import exp47_served_ranker as e47  # noqa: E402
 import exp49_shrug_signals as e49  # noqa: E402
 import exp51_their_probe as e51  # noqa: E402
 import harness_ab as hb  # noqa: E402
+from oe_inferencex.compare import crosstab as compare_crosstab  # noqa: E402
 from oe_inferencex.signals import ndwi_level  # noqa: E402
 
 PATCH, CROP, G, SHIFTS, DEV = exp18.PATCH, exp18.CROP, exp18.G, exp18.SHIFTS, exp18.DEV
@@ -158,10 +159,11 @@ def finetune(model, mods, tr, va, epochs, seed=0, log=print):
 
 
 def crosstab(err_a, err_b, ok):
-    """Windows where the frozen head (a) errs and the fine-tuned model (b) does not, and the reverse."""
-    a, b = err_a[ok] > 0, err_b[ok] > 0
-    return {"frozen_errors": int(a.sum()), "corrected": int((a & ~b).sum()), "broken": int((~a & b).sum()), "both": int((a & b).sum()),
-            "share_corrected": float((a & ~b).sum() / max(a.sum(), 1)), "phi": e51.phi(a, b)}
+    """Windows where the frozen head (a) errs and the fine-tuned model (b) does not, and the reverse
+    (oe_inferencex.compare.crosstab since exp57, under the key names this experiment recorded)."""
+    ct = compare_crosstab(err_a, err_b, ok)
+    return {"frozen_errors": ct["errors_a"], "corrected": ct["corrected"], "broken": ct["broken"], "both": ct["both"],
+            "share_corrected": ct["share_corrected"], "phi": ct["phi"]}
 
 
 def main():

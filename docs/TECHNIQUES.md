@@ -5,9 +5,10 @@ rather than by date. A claim appears here only when an experiment supports
 it, and is amended or removed when a later experiment contradicts it.
 
 The repository has two applications: **error ranking** (which windows is the
-model getting wrong?) and **cross-inference evaluation** (of two runs,
-scorers or explanations, which should you believe?). Most tables below serve
-the first; the cross-inference index is [further down](#cross-inference-comparisons).
+model getting wrong?) and **cross-inference comparison** (how much do two
+inferences of the same scene differ, where, and, on a labelled testbed, which
+of those differences predict error?). Most tables below serve the first; the
+cross-inference index is [further down](#cross-inference-comparisons).
 
 Each row carries a one-line verdict and a pointer. The evidence behind a
 verdict lives in exactly one place: per-signal detail in

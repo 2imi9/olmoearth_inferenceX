@@ -1,8 +1,14 @@
-olmoearth_inferenceX audits OlmoEarth inference results without labels.
+olmoearth_inferenceX measures differences between OlmoEarth inferences
+without labels, and shows on expert-labelled testbeds which of those
+differences predict error.
 
 <img src="docs/figures/pipeline.png" alt="One scene through the audit: Sentinel-2 bands, the frozen OlmoEarth encoder and the task head, the prediction, confidence and boundary layers, the review set at a 5% budget drawn on the scene, and the reasons per flagged window" width="760">
 
-Given a prediction map, it helps with:
+On those testbeds the model's own logit margin is the difference that
+predicts error; disagreement across crops, backbones or encoders does not
+rank errors; the sensor difference says where the shared errors come from;
+the frozen-versus-fine-tuned difference measures how much training moved
+the model. Given a prediction map, it helps with:
 
 1. Deciding which windows to trust and which to send for review first, as
    review sets at a chosen budget, in confidence order or boundary first.
@@ -12,9 +18,10 @@ Given a prediction map, it helps with:
    confidence and a no-model control, on two references at once.
 4. Auditing deployed OlmoEarth products: the fine-tuned models through their
    task cards, and the served land cover change rasters.
-5. Comparing inferences of the same scene, through shifted crops, across
-   backbones and across sensors, to say why a map is wrong and what to
-   change, not only where.
+5. Measuring the difference between two inferences of the same scene,
+   through shifted crops, across backbones, across sensors and before
+   against after fine-tuning: how much they disagree, what the disagreement
+   windows have in common and, with labels, which side is right.
 
 Full documentation is available at **https://olmoearth-inferencex.readthedocs.io/**
 (source in [docs/](docs/index.md)).

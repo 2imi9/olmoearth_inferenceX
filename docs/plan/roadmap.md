@@ -27,8 +27,8 @@ random initialisation and its targets have effective rank 2 on real scenes
 (exp32, `exp/out/exp32_summary.json`), which is why nothing read off the
 decoder side carries per-patch information. Re-targeting the frozen encoder
 with a whitened target makes that objective predictable (57-70% of the
-variance from context) and still yields no error signal: the residual is
-input texture (exp33), and neither a discrete target, gap masking nor the
+variance from context) and still yields no quantity that ranks the errors:
+the residual is input texture (exp33), and neither a discrete target, gap masking nor the
 decision-direction projection changes that (exp34; issue #10 closed, issue
 #11 carries the pretraining-target recommendation).
 
@@ -81,12 +81,10 @@ carrying the paper links and the concrete test:
    water definition, mixed with a sample of undisputed cells. Expert hours,
    not GPU hours, are the binding cost.
 
-2. **A dense expert-labelled map with few classes** (issue #7). The 27-scene support is
-   WorldCover-referenced (exp13); exp16 showed that on nine classes the
-   boundary score collapses into a proxy for low margin. A dense
-   expert-labelled binary or few-class map is the missing testbed.
-   Candidates in `olmoearth_pretrain/evals`: MADOS (marine debris, 15
-   classes), PASTIS-R, GeoBench m-cashew-plant and m-sa-crop-type.
+2. **A dense expert-labelled map with few classes** (issue #7): closed by
+   exp54 on Ai2's published embeddings (MADOS, PASTIS, cashew, SA crop
+   type), see the Closed table; exp16's nine-class collapse of the boundary
+   score reappears there as boundary-first losing pooled at 15-19 classes.
 
 3. **Operating-point analysis instead of AURC** (issue #9): closed by exp35,
    see the Closed table.

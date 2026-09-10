@@ -63,6 +63,7 @@ import harness_ab as hb  # noqa: E402
 from olmoearth_pretrain.data.constants import Modality  # noqa: E402
 from olmoearth_pretrain.datatypes import MaskedOlmoEarthSample, MaskValue  # noqa: E402
 from oe_inferencex.evidence import train_logistic_head  # noqa: E402
+from oe_inferencex.compare import phi  # noqa: E402,F401  (the recorded copy lived here; NaN now where it returned None)
 from oe_inferencex.signals import ndwi  # noqa: E402
 
 PATCH, CROP, G = exp18.PATCH, exp18.CROP, exp18.G
@@ -159,13 +160,6 @@ class Linear:
             x = torch.tensor(np.asarray((X[i:i + chunk] - self.mu) / self.sd, dtype=np.float32))
             out.append((x @ self.w + self.b).numpy())
         return np.concatenate(out)
-
-
-def phi(a, b):
-    a, b = np.asarray(a, bool), np.asarray(b, bool)
-    n11, n10, n01, n00 = (float((a & b).sum()), float((a & ~b).sum()), float((~a & b).sum()), float((~a & ~b).sum()))
-    den = np.sqrt((n11 + n10) * (n01 + n00) * (n11 + n01) * (n10 + n00))
-    return float((n11 * n00 - n10 * n01) / den) if den > 0 else None
 
 
 def overlap(ea, eb):

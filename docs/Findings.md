@@ -10,8 +10,9 @@ file under `exp/out/`; the per-experiment detail is in the
 
 ## What holds
 
-1. **The model's own confidence is the best single label-free signal for
-   where the map is wrong**, with one exception. It leads on the AWF points,
+1. **Of the label-free quantities the audit measures, the model's own
+   confidence is the one that best predicts where the map is wrong**, with
+   one exception. It leads on the AWF points,
    the fine-tuned model run end to end and the multi-region Sen1Floods11
    split, leading or tying under both backbones and both window designs (exp04, exp16,
    exp18, exp21, exp45, exp47, exp49). The exception is Sen1Floods11 <!-- claim:confidence-best-single-signal -->
@@ -81,12 +82,16 @@ file under `exp/out/`; the per-experiment detail is in the
    Sentinel-2 model adds at most a tenth of a point: the sensor lever exp46
    found on frozen probes is a frozen-feature property (exp52). <!-- claim:s1-adds-little-after-finetune -->
 
-Where against why. The ranking of where a map is wrong comes from the
-model's own confidence. Comparing inferences of the same scene, through
-shifted crops (exp42, exp44), across backbones (exp45) and across sensors
-(exp46), says why it is wrong and what to change: the tiling is not the
-cause, since fine-tuning corrects more than half of the grid's errors on the
-same windows (exp21) and reading Sentinel-1 instead of Sentinel-2 moves the <!-- claim:fine-tuning-corrects-half -->
+Which differences predict error. Every comparison here is a label-free
+measurement of how two inferences of the same scene differ: across shifted
+crops (exp42, exp44), backbones (exp45), sensors (exp46), encoders (exp41,
+exp51, exp54) and before against after fine-tuning (exp21, exp52). On the
+labelled testbeds the model's own confidence is the difference that ranks
+its errors; disagreement across crops, backbones or encoders does not rank
+them (exp13, exp19, exp41, exp54), but where the error sets move says what
+moves them: the tiling is not the cause, since fine-tuning corrects more
+than half of the grid's errors on the same windows (exp21) and reading
+Sentinel-1 instead of Sentinel-2 moves the <!-- claim:fine-tuning-corrects-half -->
 error set twice as far as swapping the encoder (exp46); the sensor is the
 largest lever and the backbone the smallest. <!-- claim:modality-dominates-shared-errors -->
 On Ai2's own embeddings, with their probe, seven published encoders err on
@@ -156,18 +161,19 @@ The hand-label testbeds are one flood event (Bolivia) and a multi-region
 split of the same dataset, both scored with a linear probe, and the
 fine-tuned model contributes 41 errors in 344 windows, so the gains above <!-- claim:fine-tuned-model-audit -->
 are real but small, and every Bolivia exception is one event. Tiling instability
+wins 26 of 27 scenes and 8 of 8 rivers against the WorldCover map yet not
+on hand labels; the decisive test needs adjudicated cells on the eight
+rivers ([issue 2](https://github.com/2imi9/olmoearth_inferenceX/issues/2)). <!-- claim:tile-phase-26-of-27-worldcover -->
 With Ai2's own Sentinel-1 probe, v1.2 ranks its Bolivia errors worse than v1
 pooled but not per tile (173/152, p = 0.13), so the v1.2 exception as a
 per-tile finding rests on our S2 head (exp51). <!-- claim:v12-bolivia-their-readout -->
 The review set does not buy label efficiency: choosing fine-tuning tiles by
 the audit's suspicion is worse than random on the multi-region split at every
 budget (exp56). <!-- claim:audit-does-not-save-labels -->
-wins 26 of 27 scenes and 8 of 8 rivers against the WorldCover map yet not
-on hand labels; the decisive test needs adjudicated cells on the eight
-rivers ([issue 2](https://github.com/2imi9/olmoearth_inferenceX/issues/2)). <!-- claim:tile-phase-26-of-27-worldcover -->
-A second expert-labelled few-class testbed with a spatial split is the
-next thing that would raise the evidence
-([issue 7](https://github.com/2imi9/olmoearth_inferenceX/issues/7)).
+Ai2's multi-class embeddings supplied dense few-class testbeds (exp54;
+[issue 7](https://github.com/2imi9/olmoearth_inferenceX/issues/7) closed); a
+second fine-tuned dense task with expert labels and a spatial split is still
+missing (roadmap item 6).
 
 Side product: OlmoEarth v1's pretraining target has effective rank 2, and a
 normalised target is 57 to 70% predictable from context (exp32 to exp34,
