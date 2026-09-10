@@ -25,6 +25,8 @@ file under `exp/out/`; the per-experiment detail is in the
    the index on Bolivia and loses to it on the multi-region split under both
    backbones (exp51); the index from the other sensor wins wherever the
    model's own sensor is the less informative one for water. <!-- claim:s1-probe-ndwi-flip -->
+   Fine-tune the encoder and the exception goes: the trained S2 model's
+   confidence beats the index on Bolivia under both backbones (exp52). <!-- claim:finetune-dissolves-bolivia-exception -->
    A bag of bootstrap heads does not improve on it: an apparent gain under
    v1 on Bolivia (exp49) did not replicate with a fresh draw (exp50). <!-- claim:bag-not-replicated -->
 2. **Review boundary windows first, then by confidence.** Errors sit on
@@ -62,6 +64,14 @@ file under `exp/out/`; the per-experiment detail is in the
    split under both backbones (AURC 0.120 to 0.078 and 0.134 to 0.086), not on
    Bolivia. SHRUG-FM's own signals, ported to the window, do not beat <!-- claim:tile-fitted-fusion-split-only -->
    confidence (exp49). <!-- claim:shrug-signals-rejected -->
+8. **Fine-tuning corrects two thirds of the frozen head's Bolivia errors.**
+   Training OlmoEarth Base on the Sen1Floods11 train split with Ai2's recipe
+   corrects 66% of the frozen head's Bolivia errors and 44% of its multi-region
+   errors on identical windows, and takes window accuracy from 0.917 to 0.954
+   and from 0.955 to 0.967, preregistered (exp52); exp21's 55.6% on Ai2's AWF
+   model sits between the two testbeds. Adding Sentinel-1 to the fine-tuned <!-- claim:finetune-corrects-frozen-errors -->
+   Sentinel-2 model adds at most a tenth of a point: the sensor lever exp46
+   found on frozen probes is a frozen-feature property (exp52). <!-- claim:s1-adds-little-after-finetune -->
 
 Where against why. The ranking of where a map is wrong comes from the
 model's own confidence. Comparing inferences of the same scene, through

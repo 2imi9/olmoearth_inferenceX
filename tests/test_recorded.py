@@ -424,3 +424,31 @@ def test_exp51_their_probe_reproduces_and_the_exception_moves_with_the_sensor():
     ph = s["phi_vs_olmoearth_base"]
     assert all(0.77 <= ph[k]["phi"] <= 0.83 for k in ("galileo_base", "croma_base", "terramind_base", "clay_large", "anysat", "panopticon"))
     assert 0.55 <= ph["satlas_base"]["phi"] <= 0.70
+
+
+def test_exp52_fine_tuning_corrects_the_frozen_errors_and_dissolves_the_bolivia_exception():
+    """exp52 (job 762708): both preregistered tests pass; Sentinel-1 adds at most 0.1 points to the fine-tuned S2 model."""
+    s = json.load(open(os.path.join(OUT, "exp52_summary.json")))
+    assert s["prereg"] == {"P1": True, "P2": True, "supported": True, "complete": True} and s["n_failures"] == 0
+    R = s["results"]
+    for a in ("FT-S2 v1", "FT-S2 v1_2"):
+        t = R[a]["bolivia"]["tests"]["control NDWI level"]
+        assert t["pooled_lead"] >= 0.001 and t["sign_p"] < 0.05
+    for n in ("bolivia", "test"):
+        ct = R["FT-S2 v1"][n]["vs_frozen_head"]
+        assert ct["share_corrected"] >= 0.40 and ct["corrected"] > ct["broken"]
+        assert 0 <= R["FT-S1+S2 v1"][n]["window_accuracy"] - R["FT-S2 v1"][n]["window_accuracy"] <= 0.001
+        assert R["FT-S1 v1"][n]["window_accuracy"] < R["FT-S1 v1"][n]["frozen_window_accuracy"]
+    assert R["FT-S1 v1"]["test"]["pooled_eaurc"]["control NDWI level"] < R["FT-S1 v1"]["test"]["pooled_eaurc"]["averaged confidence"]
+
+
+def test_exp53_shift_consistency_adaptation_is_rejected():
+    """exp53 (job 762709): held-out agreement improves on nearly every tile while hand-label accuracy falls."""
+    s = json.load(open(os.path.join(OUT, "exp53_summary.json")))
+    assert s["prereg"]["P1"] is False and s["prereg"]["complete"] is True and s["n_failures"] == 0
+    for n in ("bolivia", "test"):
+        for v in ("memo", "consistency"):
+            r = s["results"][n][v]
+            assert r["mean_gain"] < 0 and r["sign_p"] > 0.05 and r["share_tiles_held_out_improved"] >= 0.95
+    assert round(s["results"]["bolivia"]["baseline_pixel_accuracy_mean"], 4) == 0.9071      # reproduces exp42's W1
+    assert round(s["results"]["test"]["baseline_pixel_accuracy_mean"], 4) == 0.9503

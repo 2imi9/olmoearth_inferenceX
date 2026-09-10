@@ -648,6 +648,78 @@ result on our S2 heads (0.77-0.81) replicates on their sensor and their
 readout with no encoder pass. Galileo Base edges OlmoEarth on mIoU (0.792
 against 0.789). Source `exp/out/exp51_summary.json`, job 761713.
 
+## Fine-tuning OlmoEarth ourselves (exp52)
+
+Ai2's fine-tuning recipe restated in fp32 (a linear per-pixel head on the pooled
+window tokens, the backbone frozen for the first fifth of the epochs then
+unfrozen at a tenth of the learning rate, a plateau scheduler on validation
+mIoU, the best checkpoint kept; lr 3e-4, 12 epochs, batch 32, our choices),
+trained on the bucket's train split and graded on Bolivia and the exp18 test
+sample, which it never sees. Each fine-tuned model's own shift-averaged
+decision goes through exp47's protocol, and its error set is cross-tabbed
+against the frozen exp18 head's on identical windows, as exp21 did with Ai2's
+AWF model.
+
+| Fine-tuned model | window acc (frozen W1) | pixel acc, one tiling | E-AURC confidence | NDWI level (tiles conf/NDWI better) | tile-phase | frozen errors corrected | correct windows broken | phi vs frozen |
+|---|---|---|---|---|---|---|---|---|
+| FT-S2 v1, Bolivia | 0.9540 (0.9174) | 0.9493 | 0.0040 | 0.0063 (168/86) | 0.0058 | 0.658 (3881/5895) | 1272 | 0.423 |
+| FT-S2 v1, test split | 0.9674 (0.9554) | 0.9656 | 0.0092 | 0.0086 (302/61) | 0.0113 | 0.441 (2946/6680) | 1144 | 0.641 |
+| FT-S1 v1, Bolivia | 0.8802 (0.9174) | 0.8754 | 0.0192 | 0.0271 (169/134) | 0.0301 | 0.611 (3599/5895) | 6251 | 0.249 |
+| FT-S1 v1, test split | 0.9105 (0.9554) | 0.9061 | 0.0347 | 0.0158 (204/252) | 0.0414 | 0.337 (2253/6680) | 8976 | 0.434 |
+| FT-S1+S2 v1, Bolivia | 0.9549 (0.9174) | 0.9500 | 0.0041 | 0.0061 (167/85) | 0.0056 | 0.672 (3962/5895) | 1285 | 0.409 |
+| FT-S1+S2 v1, test split | 0.9678 (0.9554) | 0.9668 | 0.0080 | 0.0084 (293/60) | 0.0100 | 0.457 (3054/6680) | 1195 | 0.625 |
+| FT-S2 v1.2, Bolivia | 0.9529 (0.9174) | 0.9491 | 0.0040 | 0.0061 (168/91) | 0.0054 | 0.635 (3744/5895) | 1210 | 0.450 |
+| FT-S2 v1.2, test split | 0.9659 (0.9554) | 0.9656 | 0.0061 | 0.0085 (300/58) | 0.0087 | 0.439 (2930/6680) | 1348 | 0.628 |
+
+Both preregistered tests pass. P1: the fine-tuned S2 model's confidence beats
+the no-model NDWI index on Bolivia under both backbones (+0.0023, 168/86 tiles;
++0.0021, 168/91): the Bolivia exception belonged to the frozen encoder, not to the <!-- claim:finetune-dissolves-bolivia-exception -->
+event. On the multi-region split the same confidence ties the index pooled
+under v1 (-0.0005, but 302/61 per tile) and beats it under v1.2 (+0.0024) and with
+both sensors (+0.0004, 293/60). P2: fine-tuning corrects 66% of the frozen head's Bolivia
+errors and 44% of its multi-region errors (v1.2: 64% and 44%), breaking far fewer <!-- claim:finetune-corrects-frozen-errors -->
+than it corrects; exp21's 55.6% on Ai2's AWF model sits between the two
+testbeds. Window accuracy rises from the frozen 0.9174 / 0.9554 to
+0.9540 / 0.9674, and a single tiling of the fine-tuned model (0.949 / 0.966 pixel
+accuracy) already beats the frozen shift-averaged decision (0.907 / 0.950,
+exp42).
+
+The sensor lever after training. Adding Sentinel-1 to the fine-tuned
+Sentinel-2 model adds 0.10 / 0.04 window-accuracy points (0.9549 against 0.9540;
+0.9678 against 0.9674); Sentinel-1 alone, fine-tuned, stays below the frozen S2 <!-- claim:s1-adds-little-after-finetune -->
+head (0.8802 / 0.9105) and breaks more of its windows than it corrects, and on the
+multi-region split the NDWI index still ranks the S1 model's errors better
+than its own confidence (0.0158 against 0.0347), exp51's flip with a trained model. The
+modality lever exp46 measured on frozen probes is a frozen-feature property:
+once the S2 model is trained, the radar has little left to add on this task.
+Source `exp/out/exp52_summary.json`, job 762708.
+
+## Test-time adaptation of the head by shift consistency (exp53)
+
+Per tile, a copy of the exp18 head is adapted on that tile's four cached
+feature maps to make the tilings agree, memo (entropy of the shift-averaged
+probability) or consistency (variance across tilings), each with an anchor to
+the original weights, fitted on tilings 0 and 2 and stopped when tilings 1 and
+3 stop agreeing more; the adapted decision is the shift-averaged one. Labels
+grade, never adapt.
+
+| Adapted head, hand-label pixel accuracy | Bolivia (baseline 0.9071) | test split (baseline 0.9503) |
+|---|---|---|
+| memo: mean gain, tiles better/worse/tied, one-sided p | -0.0032, 191/186/63, p = 0.42 | -0.0079, 230/381/189, p = 1 |
+| memo: held-out disagreement before -> at the kept step; tiles improved | 0.0675 -> 0.0366; 0.99 | 0.0541 -> 0.0303; 0.98 |
+| memo: E-AURC of the adapted confidence (baseline) | 0.0108 (0.0094) | 0.0145 (0.0109) |
+| consistency: mean gain, tiles better/worse/tied, one-sided p | -0.0079, 171/202/67, p = 0.95 | -0.0140, 196/417/187, p = 1 |
+| consistency: held-out disagreement before -> at the kept step; tiles improved | 0.0675 -> 0.0338; 0.99 | 0.0541 -> 0.0281; 0.96 |
+| consistency: E-AURC of the adapted confidence (baseline) | 0.0103 (0.0094) | 0.0099 (0.0109) |
+
+Rejected, and instructively. The held-out disagreement falls on 99% of the tiles <!-- claim:shift-tta-rejected -->
+and the adaptation runs to the cap on the median tile, while hand-label
+accuracy falls on both testbeds under both objectives. Agreement across views
+is not correctness: the head can be moved so that every tiling is wrong
+together, and a label-free validation on held-out views does not guard
+against it. The consistency variant ranks its own errors slightly better on
+the test split and decides worse. Source `exp/out/exp53_summary.json`, job 762709.
+
 ## Served land cover change rasters (exp20)
 
 First assessment of a served output: ten 512-px windows (about

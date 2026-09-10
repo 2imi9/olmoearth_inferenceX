@@ -1217,3 +1217,67 @@
   cited_in:
     - {file: docs/TECHNIQUES.md, marker: encode-path-reproduces-their-probe}
     - {file: docs/results/comparisons.md, marker: encode-path-reproduces-their-probe}
+
+- id: finetune-corrects-frozen-errors
+  statement: Fine-tuning OlmoEarth Base on Sen1Floods11 with Ai2's recipe corrects at least 40% of the frozen head's shift-averaged errors on both testbeds (66% Bolivia, 44% multi-region under v1) and lifts window accuracy from 0.917 / 0.955 to 0.954 / 0.967 (preregistered P2).
+  status: supported
+  experiments: [exp52]
+  artifacts: [exp/out/exp52_summary.json]
+  check: |-
+    (lambda s, r:
+      s['prereg']['P2'] is True and s['prereg']['complete'] is True
+      and all(r[n]['vs_frozen_head']['share_corrected'] >= 0.40 and r[n]['vs_frozen_head']['corrected'] > r[n]['vs_frozen_head']['broken'] for n in ('bolivia', 'test'))
+      and round(r['bolivia']['vs_frozen_head']['share_corrected'], 2) == 0.66 and round(r['test']['vs_frozen_head']['share_corrected'], 2) == 0.44
+      and all(r[n]['window_accuracy'] > r[n]['frozen_window_accuracy'] + 0.01 for n in ('bolivia', 'test'))
+    )(A['exp/out/exp52_summary.json'], A['exp/out/exp52_summary.json']['results']['FT-S2 v1'])
+  cited_in:
+    - {file: docs/Findings.md, marker: finetune-corrects-frozen-errors}
+    - {file: docs/TECHNIQUES.md, marker: finetune-corrects-frozen-errors}
+    - {file: docs/results/comparisons.md, marker: finetune-corrects-frozen-errors}
+
+- id: finetune-dissolves-bolivia-exception
+  statement: The fine-tuned S2 model's own confidence beats the no-model NDWI-level control on Bolivia under both backbones (preregistered P1), so the Bolivia exception belonged to the frozen encoder; on the multi-region split it ties pooled under v1 while winning per tile, and beats it under v1.2.
+  status: supported
+  experiments: [exp52]
+  artifacts: [exp/out/exp52_summary.json]
+  check: |-
+    (lambda s, R:
+      s['prereg']['P1'] is True
+      and all(R[a]['bolivia']['tests']['control NDWI level']['pooled_lead'] >= 0.001 and R[a]['bolivia']['tests']['control NDWI level']['sign_p'] < 0.05 for a in ('FT-S2 v1', 'FT-S2 v1_2'))
+      and abs(R['FT-S2 v1']['test']['tests']['control NDWI level']['pooled_lead']) < 0.001 and R['FT-S2 v1']['test']['tests']['control NDWI level']['w'] > 3 * R['FT-S2 v1']['test']['tests']['control NDWI level']['l']
+      and R['FT-S2 v1_2']['test']['tests']['control NDWI level']['pooled_lead'] >= 0.001
+    )(A['exp/out/exp52_summary.json'], A['exp/out/exp52_summary.json']['results'])
+  cited_in:
+    - {file: docs/Findings.md, marker: finetune-dissolves-bolivia-exception}
+    - {file: docs/TECHNIQUES.md, marker: finetune-dissolves-bolivia-exception}
+    - {file: docs/results/comparisons.md, marker: finetune-dissolves-bolivia-exception}
+
+- id: s1-adds-little-after-finetune
+  statement: Adding Sentinel-1 to the fine-tuned Sentinel-2 model adds at most 0.1 window-accuracy points; fine-tuned Sentinel-1 alone stays below the frozen S2 head and the NDWI index still out-ranks its confidence on the multi-region split, so exp46's sensor lever is a frozen-feature property.
+  status: measured
+  experiments: [exp52, exp46]
+  artifacts: [exp/out/exp52_summary.json]
+  check: |-
+    (lambda R:
+      all(0 <= R['FT-S1+S2 v1'][n]['window_accuracy'] - R['FT-S2 v1'][n]['window_accuracy'] <= 0.001 for n in ('bolivia', 'test'))
+      and all(R['FT-S1 v1'][n]['window_accuracy'] < R['FT-S1 v1'][n]['frozen_window_accuracy'] for n in ('bolivia', 'test'))
+      and R['FT-S1 v1']['test']['pooled_eaurc']['control NDWI level'] < R['FT-S1 v1']['test']['pooled_eaurc']['averaged confidence']
+    )(A['exp/out/exp52_summary.json']['results'])
+  cited_in:
+    - {file: docs/Findings.md, marker: s1-adds-little-after-finetune}
+    - {file: docs/TECHNIQUES.md, marker: s1-adds-little-after-finetune}
+    - {file: docs/results/comparisons.md, marker: s1-adds-little-after-finetune}
+
+- id: shift-tta-rejected
+  statement: Adapting the head per tile so the four tilings agree (memo or consistency objective, anchored, stopped on held-out tilings) lowers hand-label pixel accuracy on both testbeds while held-out agreement improves on 96-99% of tiles; preregistered P1 fails.
+  status: rejected
+  experiments: [exp53]
+  artifacts: [exp/out/exp53_summary.json]
+  check: |-
+    (lambda s, R:
+      s['prereg']['P1'] is False and s['prereg']['complete'] is True
+      and all(R[n][v]['mean_gain'] < 0 and R[n][v]['sign_p'] > 0.05 and R[n][v]['share_tiles_held_out_improved'] >= 0.95 for n in ('bolivia', 'test') for v in ('memo', 'consistency'))
+    )(A['exp/out/exp53_summary.json'], A['exp/out/exp53_summary.json']['results'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: shift-tta-rejected}
+    - {file: docs/results/comparisons.md, marker: shift-tta-rejected}
