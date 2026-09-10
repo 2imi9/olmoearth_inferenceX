@@ -130,6 +130,8 @@ def train_probe(emb, lab, pp, seed=0):
             x = emb[idx].to(DEV, dtype=torch.float32)
             y = lab[idx].to(DEV)
             logits = probe(x)["logits"].reshape(len(idx), h, w, 2, pp, pp).permute(0, 3, 1, 4, 2, 5).reshape(len(idx), 2, h * pp, w * pp)
+            if logits.shape[-2:] != y.shape[-2:]:                                   # their harness: bilinear to the label size
+                logits = torch.nn.functional.interpolate(logits, size=tuple(y.shape[-2:]), mode="bilinear", align_corners=True)
             loss = loss_fn(logits, y)
             loss.backward()
             adjust_learning_rate(optimizer=opt, epoch=epoch + i / steps, total_epochs=EPOCHS, warmup_epochs=int(EPOCHS * 0.1), max_lr=LR, min_lr=1.0e-5)
@@ -138,14 +140,16 @@ def train_probe(emb, lab, pp, seed=0):
     return probe.eval()
 
 
-def predict_pixels(probe, emb, pp):
-    """(N, H, W) water probability at pixel level, fp32."""
+def predict_pixels(probe, emb, pp, out_hw):
+    """(N, H, W) water probability at pixel level, fp32; logits interpolated to out_hw when the token grid does not tile it."""
     out = []
     with torch.no_grad():
         for i in range(0, len(emb), 256):
             x = emb[i:i + 256].to(DEV, dtype=torch.float32)
             n, h, w = x.shape[:3]
             lg = probe(x)["logits"].reshape(n, h, w, 2, pp, pp).permute(0, 3, 1, 4, 2, 5).reshape(n, 2, h * pp, w * pp)
+            if lg.shape[-2:] != tuple(out_hw):
+                lg = torch.nn.functional.interpolate(lg, size=tuple(out_hw), mode="bilinear", align_corners=True)
             out.append(torch.softmax(lg, dim=1)[:, 1].cpu().numpy())
     return np.concatenate(out)
 
@@ -190,8 +194,8 @@ def score(sig, err, ok, ref, primary):
 
 def phi(a, b):
     a, b = a.astype(bool), b.astype(bool)
-    n11, n10, n01, n00 = (a & b).sum(), (a & ~b).sum(), (~a & b).sum(), (~a & ~b).sum()
-    den = np.sqrt(float((n11 + n10) * (n01 + n00) * (n11 + n01) * (n10 + n00)))
+    n11, n10, n01, n00 = (float((a & b).sum()), float((a & ~b).sum()), float((~a & b).sum()), float((~a & ~b).sum()))   # floats: the product overflows int64
+    den = np.sqrt((n11 + n10) * (n01 + n00) * (n11 + n01) * (n10 + n00))
     return float((n11 * n00 - n10 * n01) / den) if den > 0 else float("nan")
 
 
@@ -223,6 +227,17 @@ def load_ours(floods_dir, split, n=None, seed=0):
         idx = np.random.default_rng(seed).choice(len(s1), n, replace=False)
         s1, s2, lab = s1[idx], s2[idx], lab[idx]
     return s1, s2, lab
+
+
+def checkpoint(summary, suffix):
+    """Write the summary so far (without the in-memory arrays), so a late failure keeps the finished arms."""
+    slim = json.loads(json.dumps(hb.json_ready({k: v for k, v in summary.items()}), default=str)) if False else None
+    keep = {}
+    for k, v in summary["results"].items():
+        keep[k] = {kk: ({x: y for x, y in vv.items() if x not in ("err", "ok", "per_tile_eaurc_ref", "tiles")} if isinstance(vv, dict) else vv) for kk, vv in v.items()} if isinstance(v, dict) else v
+    os.makedirs(hb.OUT, exist_ok=True)
+    with open(os.path.join(hb.OUT, f"exp51_summary{suffix}.partial.json"), "w") as f:
+        json.dump(hb.json_ready({**{k: v for k, v in summary.items() if k != "results"}, "results": keep}), f, indent=1)
 
 
 def main():
@@ -278,7 +293,7 @@ def main():
             res = {"encode_and_train_seconds": time.time() - t0, "train_tiles": int(len(emb[tr_key]))}
             for split in grade_splits:
                 s1, s2, lab = ours[split]
-                p = predict_pixels(probe, emb[split], PATCH)
+                p = predict_pixels(probe, emb[split], PATCH, (CROP, CROP))
                 wp, y, ok, err, conf = window_view(p, lab[:, :CROP, :CROP], PATCH)
                 pix_ok = lab[:, :CROP, :CROP] >= 0
                 sig = {CONF: conf, CTRL_S1: s1_level(s1, med_vv, PATCH, CROP),
@@ -295,6 +310,7 @@ def main():
                 rows.append({"arm": f"{version} our S1 encode", "split": split, "window_acc": r["accuracy"], "pixel_acc": r["pixel_accuracy"], "miou": r["pixel_miou"],
                              **{f"eaurc {k}": v for k, v in r["pooled_eaurc"].items()}})
             summary["results"][f"B_{version}" if version == "v1" else "C_v1_2"] = {k: v for k, v in res.items()}
+            checkpoint(summary, suffix)
         except Exception as ex:  # noqa: BLE001
             summary["failures"].append({"part": f"arm {version}", "error": repr(ex), "traceback": traceback.format_exc()})
             print(f"arm {version} FAILED: {ex!r}\n{traceback.format_exc()}", flush=True)
@@ -330,9 +346,9 @@ def main():
                 emb_te, lab_te = load_theirs(model, "test", cache_dir)
                 pp = lab_tr.shape[-1] // emb_tr.shape[1]
                 probe = train_probe(emb_tr, lab_tr, pp)
-                p = predict_pixels(probe, emb_te, pp)
+                p = predict_pixels(probe, emb_te, pp, tuple(lab_te.shape[-2:]))
                 lab_np = lab_te.numpy()
-                wp, y, ok, err, conf = window_view(p, lab_np, pp)
+                wp, y, ok, err, conf = window_view(p, lab_np, PATCH)                  # 4-px windows for every model, whatever its token grid
                 miou, _ = segmentation_miou((p > 0.5).astype(np.int64), lab_np)
                 r = {"seconds": time.time() - t0, "train_tiles": int(len(emb_tr)), "test_tiles": int(len(emb_te)), "token_grid": list(emb_tr.shape[1:3]), "pixels_per_token_side": int(pp),
                      "pixel_miou": miou, "pixel_accuracy": float(((p > 0.5) == (lab_np == 1))[lab_np >= 0].mean())}
@@ -346,8 +362,8 @@ def main():
                     if (match >= 0).sum() >= 50:
                         mi = np.where(match >= 0)[0]
                         s1m, s2m = ours["test"][0][match[mi]], ours["test"][1][match[mi]]
-                        sig_m = {CONF: conf[mi], CTRL_S1: s1_level(s1m, med_vv, pp, lab_np.shape[-1]),
-                                 CTRL_NDWI: np.stack([ndwi_level(t, patch=pp, size=lab_np.shape[-1]) for t in s2m])}
+                        sig_m = {CONF: conf[mi], CTRL_S1: s1_level(s1m, med_vv, PATCH, lab_np.shape[-1]),
+                                 CTRL_NDWI: np.stack([ndwi_level(t, patch=PATCH, size=lab_np.shape[-1]) for t in s2m])}
                         r["matched"] = score(sig_m, err[mi], ok[mi], CONF, [CTRL_S1, CTRL_NDWI])
                         for k in ("per_tile_eaurc_ref", "tiles"):
                             r["matched"].pop(k)
@@ -364,6 +380,7 @@ def main():
                 r["window_accuracy"] = r_score["accuracy"]; r["pooled_eaurc"] = r_score["pooled_eaurc"]; r["n_windows"] = r_score["n_windows"]; r["n_errors"] = r_score["n_errors"]
                 their_err[model] = (err, ok, theirs_k if model == THEIRS else label_keys(lab_np))
                 summary["results"][f"A_{model}" if model == THEIRS else f"D_{model}"] = r
+                checkpoint(summary, suffix)
                 print(f"{model} (their embeddings, their probe): train {r['train_tiles']} test {r['test_tiles']} tiles, grid {r['token_grid']} | pixel mIoU {r['pixel_miou']:.3f} "
                       f"acc {r['pixel_accuracy']:.4f} | window acc {r['window_accuracy']:.4f}, E-AURC confidence {r['pooled_eaurc'][CONF]:.4f}" +
                       (f" | matched {r.get('matched_tiles')} tiles: " + ", ".join(f"{k} {v:.4f}" for k, v in r["matched"]["pooled_eaurc"].items()) + f", phi vs our encode {r['matched']['phi_vs_arm_B_v1']}" if "matched" in r else ""), flush=True)
