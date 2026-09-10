@@ -1,0 +1,1137 @@
+# Claim ledger: one entry per claim the docs make, each pinned to the artifact under exp/out/ it rests on.
+#
+# id           stable slug, the name of the marker `<!-- claim:<id> -->` in the docs
+# statement    the claim as the docs make it, one sentence
+# status       supported | mixed | rejected | measured | superseded
+# experiments  the runs behind it
+# artifacts    paths under exp/out/ (summary JSON or CSV) the check reads
+# check        a Python expression over A (artifact path -> parsed JSON, or a list of CSV row dicts of strings)
+#              that is True while the artifacts still say what the statement says
+# cited_in     the documents that carry the claim; each needs a marker with this id in that file
+# superseded_by  the experiment that overturned it (status must then be superseded)
+# note         scope or caveat
+#
+# tests/test_claims.py evaluates every check and matches every citation to a marker; scripts/claims.py stale
+# prints the sentences to rewrite after a new artifact lands. See docs/method/claims.md.
+
+- id: confidence-best-single-signal
+  statement: The model's own max-softmax confidence is the best single label-free error ranker on the AWF points, the fine-tuned model and the multi-region Sen1Floods11 test split, under both backbones and both window designs, leading or tying, and it beats tiling instability on the flood testbeds and ties it on the fine-tuned model.
+  status: supported
+  experiments: [exp04, exp16, exp18, exp21, exp45, exp47, exp49]
+  artifacts: [exp/out/exp16_summary.json, exp/out/exp18_sen1floods.csv, exp/out/exp21_summary.json, exp/out/exp45_summary.json, exp/out/exp47_summary.json]
+  check: |-
+    (lambda s16, c18, s21, s45, s47:
+      s16['aurc']['baseline'] < min(s16['aurc']['boundary'], s16['aurc']['tile-phase'])
+      and all(float(r['confidence (baseline)|pooled']) == min(float(r[k]) for k in r if k.endswith('|pooled')) for r in c18)
+      and s21['crops']['16']['aurc']['confidence (neg logit margin)'] < min(v for k, v in s21['crops']['16']['aurc'].items() if k not in ('confidence (neg logit margin)', 'tiling instability (aligned)'))
+      and s21['crops']['16']['bootstrap_vs_confidence (lo, hi, P(signal better))']['tiling instability (aligned)'][0] < 0 < s21['crops']['16']['bootstrap_vs_confidence (lo, hi, P(signal better))']['tiling instability (aligned)'][1]
+      and s45['results']['test']['R1_best_ranker']['replicates'] is True
+      and all(s47['results'][v][n]['tests']['tile-phase']['pooled_lead'] > 0 and s47['results'][v][n]['tests']['tile-phase']['sign_p'] < 0.05 for v in ('v1', 'v1_2') for n in ('bolivia', 'test'))
+      and all(s47['results'][v]['test']['tests']['control NDWI level']['w'] > s47['results'][v]['test']['tests']['control NDWI level']['l'] for v in ('v1', 'v1_2'))
+    )(A['exp/out/exp16_summary.json'], A['exp/out/exp18_sen1floods.csv'], A['exp/out/exp21_summary.json'], A['exp/out/exp45_summary.json'], A['exp/out/exp47_summary.json'])
+  cited_in:
+    - {file: docs/Findings.md, marker: confidence-best-single-signal}
+    - {file: docs/TECHNIQUES.md, marker: confidence-best-single-signal}
+  note: On the fine-tuned model tiling instability is indistinguishable from confidence (AURC 0.0235 vs 0.0262, CI spans zero); on the v1 test split with the shift-averaged decision the NDWI-level control's pooled E-AURC is 0.0003 below averaged confidence while confidence wins per tile 316/108 (exp47, exp49).
+
+- id: exp18-confidence-best-both-splits
+  statement: On Sen1Floods11 hand labels under v1 with the grid window, confidence has the lowest pooled E-AURC on Bolivia and on the test split and every other signal loses the per-tile sign test against it.
+  status: supported
+  experiments: [exp18]
+  artifacts: [exp/out/exp18_sen1floods.csv]
+  check: |-
+    (lambda c18:
+      [r['split'] for r in c18] == ['bolivia', 'test']
+      and all(float(r['confidence (baseline)|pooled']) == min(float(r[k]) for k in r if k.endswith('|pooled')) for r in c18)
+      and all(int(r[k].split('/')[0]) < int(r[k].split('/')[1]) for r in c18 for k in r if k.endswith('|W/L') and not k.startswith('confidence'))
+      and c18[0]['tile-phase (aligned)|W/L'] == '163/187' and c18[0]['boundary indicator|W/L'] == '134/217'
+      and c18[1]['tile-phase (aligned)|W/L'] == '173/305' and c18[0]['n_tiles_scored'] == '351' and c18[1]['n_tiles_scored'] == '482'
+    )(A['exp/out/exp18_sen1floods.csv'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp18-confidence-best-both-splits}
+  note: v1, grid window; the Bolivia exception (exp45, exp47) is under v1.2 and on the shift-averaged decision.
+
+- id: bolivia-ndwi-exception
+  statement: On Sen1Floods11 Bolivia, one flood event, the no-model NDWI-level control ranks the model's errors as well as its confidence under v1 and better under v1.2 Base, for the grid window and the shift-averaged decision alike.
+  status: mixed
+  experiments: [exp45, exp47]
+  artifacts: [exp/out/exp36_summary.json, exp/out/exp45_summary.json, exp/out/exp47_summary.json]
+  check: |-
+    (lambda s36, s45, s47:
+      s45['results']['bolivia']['R1_best_ranker']['pooled_eaurc']['control NDWI level'] < s45['results']['bolivia']['R1_best_ranker']['pooled_eaurc']['confidence']
+      and s45['results']['bolivia']['R1_best_ranker']['replicates'] is False
+      and s47['results']['v1_2']['bolivia']['pooled_eaurc']['control NDWI level'] < s47['results']['v1_2']['bolivia']['pooled_eaurc']['averaged confidence']
+      and abs(s36['part_b']['pooled_eaurc']['control NDWI level'] - s36['part_b']['pooled_eaurc']['confidence (baseline)']) < 0.002
+      and abs(s47['results']['v1']['bolivia']['tests']['control NDWI level']['pooled_lead']) < 0.002
+    )(A['exp/out/exp36_summary.json'], A['exp/out/exp45_summary.json'], A['exp/out/exp47_summary.json'])
+  cited_in:
+    - {file: docs/Findings.md, marker: bolivia-ndwi-exception}
+    - {file: docs/TECHNIQUES.md, marker: bolivia-ndwi-exception}
+  note: "'As well as' under v1 means within 0.002 pooled E-AURC (grid 0.0119 vs 0.0105, shift-averaged 0.0113 vs 0.0094); per tile the control loses 142/174 on the shift-averaged decision under v1 (exp47)."
+
+- id: pixel-head-beats-encoder-bolivia
+  statement: On Sen1Floods11 Bolivia a head on fifteen per-window pixel statistics with no encoder is more accurate than the linear probe on the frozen encoder (0.9199 vs 0.9116).
+  status: measured
+  experiments: [exp46]
+  artifacts: [exp/out/exp46_summary.json]
+  check: |-
+    (lambda a: a['A0 no encoder'] > a['A1 S2 linear'] and round(a['A0 no encoder'], 4) == 0.9199 and round(a['A1 S2 linear'], 4) == 0.9116
+    )(A['exp/out/exp46_summary.json']['results']['bolivia']['accuracy'])
+  cited_in:
+    - {file: docs/Findings.md, marker: pixel-head-beats-encoder-bolivia}
+    - {file: docs/TECHNIQUES.md, marker: pixel-head-beats-encoder-bolivia}
+
+- id: bag-beats-confidence-v1-bolivia
+  statement: The predictive entropy of eight tile-bootstrap heads' averaged maps beats the single head's confidence on Bolivia under v1 (pooled E-AURC 0.0076 vs 0.0094, 210/103 tiles).
+  status: superseded
+  superseded_by: exp50
+  experiments: [exp49]
+  artifacts: [exp/out/exp49_summary.json]
+  check: |-
+    (lambda r: r['pooled_eaurc']['ensemble predictive entropy'] < r['pooled_eaurc']['averaged confidence']
+      and (r['tests']['ensemble predictive entropy']['l'], r['tests']['ensemble predictive entropy']['w']) == (210, 103)
+    )(A['exp/out/exp49_summary.json']['results']['v1']['bolivia'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: bag-beats-confidence-v1-bolivia}
+  note: exp50's sixteen fresh members lose on the same arm; the docs keep the exp49 number only as the run exp50 refuted.
+
+- id: bag-not-replicated
+  statement: A bag of bootstrap heads does not improve on the single head's confidence; the apparent gain under v1 on Bolivia did not replicate with a fresh draw and the sign flips across draws.
+  status: rejected
+  experiments: [exp49, exp50]
+  artifacts: [exp/out/exp49_summary.json, exp/out/exp50_summary.json]
+  check: |-
+    (lambda s49, s50:
+      s50['prereg']['P1'] is False
+      and s49['results']['v1']['bolivia']['tests']['ensemble predictive entropy']['pooled_lead'] < -0.001
+      and s50['results']['v1']['bolivia']['tests']['bag16 predictive entropy']['pooled_lead'] > 0
+      and s50['results']['v1']['bolivia']['tests']['bag16 predictive entropy']['sign_p'] > 0.5
+      and (s50['results']['v1']['bolivia']['tests']['bag16 predictive entropy']['w'], s50['results']['v1']['bolivia']['tests']['bag16 predictive entropy']['l']) == (140, 166)
+      and s50['results']['v1_2']['test']['tests']['bag16 predictive entropy']['pooled_lead'] < 0
+      and (s50['results']['v1_2']['test']['tests']['bag16 predictive entropy']['w'], s50['results']['v1_2']['test']['tests']['bag16 predictive entropy']['l']) == (248, 160)
+      and all(abs(s50['results'][v][n]['pooled_eaurc']['bag16 predictive entropy'] - s50['results'][v][n]['pooled_eaurc']['averaged confidence']) < 0.0025 for v in ('v1', 'v1_2') for n in ('bolivia', 'test'))
+    )(A['exp/out/exp49_summary.json'], A['exp/out/exp50_summary.json'])
+  cited_in:
+    - {file: docs/Findings.md, marker: bag-not-replicated}
+    - {file: docs/TECHNIQUES.md, marker: bag-not-replicated}
+    - {file: docs/results/comparisons.md, marker: bag-not-replicated}
+
+- id: boundary-first-review-order
+  statement: Reviewing boundary windows in confidence order and then the interior captures more of the errors than confidence alone at the 5% and 10% review budgets on Bolivia hand labels (preregistered), is no longer ahead at 20%, and picks the same 5% set as confidence on the fine-tuned model.
+  status: supported
+  experiments: [exp36]
+  artifacts: [exp/out/exp36_summary.json]
+  check: |-
+    (lambda s:
+      all(s['part_b']['prereg_lexicographic'][b]['one_sided'] and s['part_b']['prereg_lexicographic'][b]['pooled'] > s['part_b']['prereg_lexicographic'][b]['pooled_confidence'] and s['part_b']['prereg_lexicographic'][b]['boot_lo'] > 0 and s['part_b']['prereg_lexicographic'][b]['sign_p'] < 1e-6 for b in ('0.05', '0.1'))
+      and (s['part_b']['prereg_lexicographic']['0.05']['w'], s['part_b']['prereg_lexicographic']['0.05']['l'], s['part_b']['prereg_lexicographic']['0.05']['t']) == (85, 31, 235)
+      and (s['part_b']['prereg_lexicographic']['0.1']['w'], s['part_b']['prereg_lexicographic']['0.1']['l'], s['part_b']['prereg_lexicographic']['0.1']['t']) == (112, 48, 191)
+      and round(s['part_b']['prereg_lexicographic']['0.05']['pooled'], 3) == 0.274 and round(s['part_b']['prereg_lexicographic']['0.05']['pooled_confidence'], 3) == 0.259
+      and round(s['part_b']['prereg_lexicographic']['0.1']['pooled'], 3) == 0.494 and round(s['part_b']['prereg_lexicographic']['0.1']['pooled_confidence'], 3) == 0.465
+      and s['part_b']['capture_tests_vs_confidence']['boundary first, then confidence']['0.2']['pooled'] < s['part_b']['capture_tests_vs_confidence']['boundary first, then confidence']['0.2']['pooled_confidence']
+      and round(s['part_b']['capture_tests_vs_confidence']['boundary first, then confidence']['0.2']['pooled'], 3) == 0.732
+      and s['part_b']['pooled_eaurc']['boundary first, then confidence'] > s['part_b']['pooled_eaurc']['confidence (baseline)']
+      and all(s['part_awf']['crops'][c]['lexicographic_vs_confidence']['0.05']['capture_lex'] == s['part_awf']['crops'][c]['lexicographic_vs_confidence']['0.05']['capture_confidence'] for c in ('16', '32'))
+    )(A['exp/out/exp36_summary.json'])
+  cited_in:
+    - {file: docs/Findings.md, marker: boundary-first-review-order}
+    - {file: docs/TECHNIQUES.md, marker: boundary-first-review-order}
+    - {file: docs/results/comparisons.md, marker: boundary-first-review-order}
+
+- id: errors-sit-on-boundaries
+  statement: On Bolivia hand labels 75% of the error windows sit on a prediction boundary against 21% of the correct windows.
+  status: measured
+  experiments: [exp18, exp36, exp37]
+  artifacts: [exp/out/exp36_summary.json, exp/out/exp37_summary.json]
+  check: |-
+    (lambda s36, c:
+      round(c['share_errors'], 3) == 0.750 and round(c['share_correct'], 3) == 0.214
+      and round(s36['part_b']['boundary_share']['errors'], 2) == 0.75 and round(s36['part_b']['boundary_share']['correct'], 2) == 0.21
+    )(A['exp/out/exp36_summary.json'], A['exp/out/exp37_summary.json']['part_b']['analysis']['cues']['boundary'])
+  cited_in:
+    - {file: docs/Findings.md, marker: errors-sit-on-boundaries}
+    - {file: docs/results/comparisons.md, marker: errors-sit-on-boundaries}
+  note: The test-split shares (73% vs 18%) quoted with exp18 are not in a committed artifact; the check pins Bolivia.
+
+- id: explanation-cues-cover-errors
+  statement: 95% of the Bolivia error windows carry at least one label-free cue with a measured enrichment; spectral ambiguity is 7x enriched and, with the boundary cue, is the one that separates error rates inside confidence's review set.
+  status: measured
+  experiments: [exp37]
+  artifacts: [exp/out/exp37_summary.json]
+  check: |-
+    (lambda a:
+      round(1 - a['unexplained']['share_of_errors_without_cue'], 2) == 0.95
+      and round(a['cues']['ndwi_ambiguous']['enrichment'], 1) == 7.2
+      and all(3.4 < a['cues'][k]['enrichment'] < 3.7 for k in ('boundary', 'low_confidence', 'unstable', 'dihedral_disagree'))
+      and round(a['review_set']['0.05']['cues']['boundary']['error_rate_with_cue'], 2) == 0.46 and abs(a['review_set']['0.05']['cues']['boundary']['error_rate_without_cue'] - 0.155) < 0.006
+      and round(a['review_set']['0.05']['cues']['ndwi_ambiguous']['error_rate_with_cue'], 2) == 0.51 and round(a['review_set']['0.05']['cues']['ndwi_ambiguous']['error_rate_without_cue'], 2) == 0.33
+      and all(abs(a['review_set']['0.05']['cues'][k]['error_rate_with_cue'] - a['review_set']['0.05']['cues'][k]['error_rate_without_cue']) < 0.05 for k in ('unstable', 'dihedral_disagree'))
+    )(A['exp/out/exp37_summary.json']['part_b']['analysis'])
+  cited_in:
+    - {file: docs/Findings.md, marker: explanation-cues-cover-errors}
+    - {file: docs/TECHNIQUES.md, marker: explanation-cues-cover-errors}
+  note: The error rate without the boundary cue inside the 5% set is 0.1547 (the docs print 0.16).
+
+- id: cue-enrichment-table
+  statement: Among Bolivia error windows against correct windows the cue shares are boundary 0.750/0.214 (3.5x, error rate 0.25), least-confident 20% 0.589/0.163 (3.6x, 0.26), unstable 0.583/0.164 (3.6x, 0.26) and NDWI-ambiguous 0.483/0.067 (7.2x, 0.41).
+  status: measured
+  experiments: [exp37]
+  artifacts: [exp/out/exp37_summary.json]
+  check: |-
+    (lambda c: all((round(c[k]['share_errors'], 3), round(c[k]['share_correct'], 3), round(c[k]['enrichment'], 1), round(c[k]['precision'], 2)) == v for k, v in
+      {'boundary': (0.750, 0.214, 3.5, 0.25), 'low_confidence': (0.589, 0.163, 3.6, 0.26), 'unstable': (0.583, 0.164, 3.6, 0.26), 'ndwi_ambiguous': (0.483, 0.067, 7.2, 0.41)}.items())
+    )(A['exp/out/exp37_summary.json']['part_b']['analysis']['cues'])
+  cited_in:
+    - {file: docs/Findings.md, marker: cue-enrichment-table}
+
+- id: review-set-error-rate
+  statement: The error rate inside confidence's review set on Bolivia hand labels is 0.38 at the 5% budget, 0.33 at 10% and 0.26 at 20%, against a base rate of 8.8%.
+  status: measured
+  experiments: [exp37]
+  artifacts: [exp/out/exp37_summary.json]
+  check: |-
+    (lambda a: [round(a['review_set'][b]['error_rate_in_set'], 2) for b in ('0.05', '0.1', '0.2')] == [0.38, 0.33, 0.26] and round(a['error_rate'], 3) == 0.088 and a['n_windows'] == 81984
+    )(A['exp/out/exp37_summary.json']['part_b']['analysis'])
+  cited_in:
+    - {file: docs/Findings.md, marker: review-set-error-rate}
+
+- id: accuracy-needs-coverage
+  statement: The fine-tuned AWF model is overconfident (ECE 0.080; 0.93 accurate where it claims 0.99), so a stated accuracy needs a coverage; keeping the 80% most confident windows raises accuracy from 0.881 to 0.945.
+  status: supported
+  experiments: [exp21]
+  artifacts: [exp/out/exp21_summary.json]
+  check: |-
+    (lambda c:
+      round(c['ece_10bins'], 3) == 0.080 and round(c['accuracy'], 3) == 0.881
+      and round(c['selective_accuracy_at_coverage']['0.8'], 3) == 0.945 and round(c['selective_accuracy_at_coverage']['0.9'], 3) == 0.919
+      and c['reliability'][-1][2] == 299 and round(c['reliability'][-1][3], 2) == 0.99 and round(c['reliability'][-1][4], 2) == 0.93
+    )(A['exp/out/exp21_summary.json']['crops']['16'])
+  cited_in:
+    - {file: docs/Findings.md, marker: accuracy-needs-coverage}
+    - {file: docs/results/comparisons.md, marker: accuracy-needs-coverage}
+
+- id: served-product-boundary-triage
+  statement: The served land cover change rasters export no class confidence, and boundary fraction alone captures a median 0.88 of the WorldCover water disagreements at a 5% review budget on the sites that have any.
+  status: supported
+  experiments: [exp20]
+  artifacts: [exp/out/exp20_lcc_production.json]
+  check: |-
+    (lambda s:
+      round(s['water_capture@0.05_median_over_sites_with_disagreements'], 2) == 0.88 and s['sites_with_water_disagreements'] == 6
+      and s['water_aurc_boundary_below_random_sites'] == 6 and s['n_sites'] == 10
+      and round(s['water_boundary_share_errors_median'], 2) == 0.92 and round(s['water_boundary_share_correct_median'], 2) == 0.01
+    )(A['exp/out/exp20_lcc_production.json']['summary'])
+  cited_in:
+    - {file: docs/Findings.md, marker: served-product-boundary-triage}
+    - {file: docs/TECHNIQUES.md, marker: served-product-boundary-triage}
+    - {file: docs/results/comparisons.md, marker: served-product-boundary-triage}
+  note: Legends and dates differ, so these are reference disagreements, not counted model errors.
+
+- id: w1-accuracy-gain
+  statement: Averaging the four tilings' decisions per pixel raises pixel accuracy on hand labels by 1.0 points on Bolivia (0.897 to 0.907, better on 321 tiles, worse on 66) and 0.9 on the test split (0.941 to 0.950, 583/78), preregistered, with no labels and no retraining.
+  status: supported
+  experiments: [exp42]
+  artifacts: [exp/out/exp42_summary.json]
+  check: |-
+    (lambda s:
+      s['prereg']['supported'] is True
+      and (s['results']['bolivia']['prereg_W1_vs_W0_pixel']['w'], s['results']['bolivia']['prereg_W1_vs_W0_pixel']['l']) == (321, 66)
+      and (s['results']['test']['prereg_W1_vs_W0_pixel']['w'], s['results']['test']['prereg_W1_vs_W0_pixel']['l']) == (583, 78)
+      and round(s['results']['bolivia']['pixel_accuracy_mean']['W0 grid'], 3) == 0.897 and round(s['results']['bolivia']['pixel_accuracy_mean']['W1 shift-averaged'], 3) == 0.907
+      and round(s['results']['test']['pixel_accuracy_mean']['W0 grid'], 3) == 0.941 and round(s['results']['test']['pixel_accuracy_mean']['W1 shift-averaged'], 3) == 0.950
+      and round(100 * s['results']['bolivia']['prereg_W1_vs_W0_pixel']['mean_gain'], 1) == 1.0 and round(100 * s['results']['test']['prereg_W1_vs_W0_pixel']['mean_gain'], 1) == 0.9
+    )(A['exp/out/exp42_summary.json'])
+  cited_in:
+    - {file: docs/Findings.md, marker: w1-accuracy-gain}
+    - {file: docs/TECHNIQUES.md, marker: w1-accuracy-gain}
+    - {file: docs/results/comparisons.md, marker: w1-accuracy-gain}
+
+- id: mixed-label-windows-not-a-ceiling
+  statement: Mixed-label windows are 10% of the windows and carry 45% (Bolivia) and 58% (test split) of the grid window's errors, but the block-constant oracle limit is 3% of pixels, so the block forces at most 29% and 49% of those errors and the averaged map still puts 43% and 56% of its own errors there.
+  status: measured
+  experiments: [exp42, exp43]
+  artifacts: [exp/out/exp42_summary.json, exp/out/exp43_summary.json]
+  check: |-
+    (lambda s42, s43:
+      round(s42['results']['bolivia']['purity']['share_of_errors_on_impure_windows'], 2) == 0.45 and round(s42['results']['test']['purity']['share_of_errors_on_impure_windows'], 2) == 0.58
+      and all(round(s42['results'][n]['purity']['share_of_windows_impure'], 1) == 0.1 for n in ('bolivia', 'test'))
+      and round(s43['results']['bolivia']['block_constant_oracle_limit']['rate'], 3) == 0.030 and round(s43['results']['test']['block_constant_oracle_limit']['rate'], 3) == 0.029
+      and round(s43['results']['bolivia']['block_constant_oracle_limit']['rate'] / (1 - s42['results']['bolivia']['pixel_accuracy_mean']['W0 grid']), 2) == 0.29
+      and round(s43['results']['test']['block_constant_oracle_limit']['rate'] / (1 - s42['results']['test']['pixel_accuracy_mean']['W0 grid']), 2) == 0.49
+      and round(s43['results']['bolivia']['w1_errors_by_grid_window_purity']['share_of_w1_errors_on_impure_windows'], 2) == 0.43
+      and round(s43['results']['test']['w1_errors_by_grid_window_purity']['share_of_w1_errors_on_impure_windows'], 2) == 0.56
+    )(A['exp/out/exp42_summary.json'], A['exp/out/exp43_summary.json'])
+  cited_in:
+    - {file: docs/Findings.md, marker: mixed-label-windows-not-a-ceiling}
+    - {file: docs/TECHNIQUES.md, marker: mixed-label-windows-not-a-ceiling}
+    - {file: docs/results/comparisons.md, marker: mixed-label-windows-not-a-ceiling}
+
+- id: label-fitted-fusion-three-of-four
+  statement: A logistic combination of ten label-free signals fitted on the head's own training split beats confidence by 25-38% of excess AURC on Bolivia under both backbones and on the v1 test split; on the v1.2 test split its lead is below the worthwhile threshold, and the degree-2 combiner is worse than the linear one everywhere.
+  status: mixed
+  experiments: [exp47, exp49]
+  artifacts: [exp/out/exp49_summary.json]
+  check: |-
+    (lambda s:
+      {(v, n): s['results'][v][n]['tests']['fusion linear (labelled)']['beats_confidence'] for v in ('v1', 'v1_2') for n in ('bolivia', 'test')} == {('v1', 'bolivia'): True, ('v1', 'test'): True, ('v1_2', 'bolivia'): True, ('v1_2', 'test'): False}
+      and all(0.0027 <= round(-s['results'][v][n]['tests']['fusion linear (labelled)']['pooled_lead'], 4) <= 0.0041 for v, n in (('v1', 'bolivia'), ('v1', 'test'), ('v1_2', 'bolivia')))
+      and all(0.23 <= 1 - s['results'][v][n]['pooled_eaurc']['fusion linear (labelled)'] / s['results'][v][n]['pooled_eaurc']['averaged confidence'] <= 0.38 for v, n in (('v1', 'bolivia'), ('v1', 'test'), ('v1_2', 'bolivia')))
+      and round(-s['results']['v1_2']['test']['tests']['fusion linear (labelled)']['pooled_lead'], 4) == 0.0004
+      and all(s['results'][v][n]['pooled_eaurc']['fusion poly2 (labelled)'] > s['results'][v][n]['pooled_eaurc']['fusion linear (labelled)'] for v in ('v1', 'v1_2') for n in ('bolivia', 'test'))
+    )(A['exp/out/exp49_summary.json'])
+  cited_in:
+    - {file: docs/Findings.md, marker: label-fitted-fusion-three-of-four}
+    - {file: docs/TECHNIQUES.md, marker: label-fitted-fusion-three-of-four}
+    - {file: docs/results/comparisons.md, marker: label-fitted-fusion-three-of-four}
+  note: The relative gains on the three winning arms are 29%, 38% and 24% of confidence's excess AURC (the docs print 25-38%); the absolute leads are 0.0027, 0.0041 and 0.0027.
+
+- id: fusion-weight-on-ndwi
+  statement: The label-fitted fusion's weight sits on the no-model NDWI-level control with the ensemble entropies and confidence behind it, and dropping NDWI level costs the most on three of four arms, returning the fusion to confidence's level on Bolivia under v1.2.
+  status: measured
+  experiments: [exp50]
+  artifacts: [exp/out/exp50_summary.json]
+  check: |-
+    (lambda s:
+      all(max(s['results'][v]['fusion_weights'], key=lambda k: abs(s['results'][v]['fusion_weights'][k])) == 'control NDWI level' and round(s['results'][v]['fusion_weights']['control NDWI level'], 2) == 0.87 for v in ('v1', 'v1_2'))
+      and all(s['results'][v]['fusion_weights'][k] > 0.5 for v in ('v1', 'v1_2') for k in ('ensemble average entropy', 'ensemble predictive entropy'))
+      and all(0.3 <= s['results'][v]['fusion_weights']['averaged confidence'] <= 0.4 for v in ('v1', 'v1_2'))
+      and all(max(s['results'][v][n]['drop_one_pooled_eaurc'], key=s['results'][v][n]['drop_one_pooled_eaurc'].get) == 'control NDWI level' for v, n in (('v1', 'bolivia'), ('v1', 'test'), ('v1_2', 'bolivia')))
+      and abs(s['results']['v1_2']['bolivia']['drop_one_pooled_eaurc']['control NDWI level'] - s['results']['v1_2']['bolivia']['pooled_eaurc']['averaged confidence']) < 0.0005
+    )(A['exp/out/exp50_summary.json'])
+  cited_in:
+    - {file: docs/Findings.md, marker: fusion-weight-on-ndwi}
+    - {file: docs/TECHNIQUES.md, marker: fusion-weight-on-ndwi}
+    - {file: docs/results/comparisons.md, marker: fusion-weight-on-ndwi}
+
+- id: tile-fitted-fusion-split-only
+  statement: Fitted on tile failures, the fusion beats confidence at the tile level on the multi-region split under both backbones (AURC 0.120 to 0.078 and 0.134 to 0.086, bootstrap intervals excluding zero) but not on Bolivia, the preregistered arm.
+  status: mixed
+  experiments: [exp50]
+  artifacts: [exp/out/exp50_summary.json]
+  check: |-
+    (lambda s:
+      s['prereg']['P2'] is False
+      and all(s['results'][v]['test']['tile_level']['tile-fitted fusion (labelled)']['diff_ci95'][1] < 0 for v in ('v1', 'v1_2'))
+      and round(s['results']['v1']['test']['tile_level']['averaged confidence']['aurc'], 3) == 0.120 and round(s['results']['v1']['test']['tile_level']['tile-fitted fusion (labelled)']['aurc'], 3) == 0.078
+      and round(s['results']['v1_2']['test']['tile_level']['averaged confidence']['aurc'], 3) == 0.134 and round(s['results']['v1_2']['test']['tile_level']['tile-fitted fusion (labelled)']['aurc'], 3) == 0.086
+      and s['results']['v1_2']['bolivia']['tile_level']['tile-fitted fusion (labelled)']['diff_ci95'][0] < 0 < s['results']['v1_2']['bolivia']['tile_level']['tile-fitted fusion (labelled)']['diff_ci95'][1]
+      and s['results']['v1']['bolivia']['tile_level']['tile-fitted fusion (labelled)']['diff_ci95'][1] > 0
+    )(A['exp/out/exp50_summary.json'])
+  cited_in:
+    - {file: docs/Findings.md, marker: tile-fitted-fusion-split-only}
+    - {file: docs/TECHNIQUES.md, marker: tile-fitted-fusion-split-only}
+    - {file: docs/results/comparisons.md, marker: tile-fitted-fusion-split-only}
+
+- id: shrug-signals-rejected
+  statement: SHRUG-FM's reliability signals ported to the window do not beat the model's own confidence; under v1.2 confidence beats ensemble mutual information and -NCDD on both testbeds (preregistered, supported), the embedding and input signals are several times worse, and cluster-normalized NCDD is worse than the raw deficit on all four arms.
+  status: rejected
+  experiments: [exp49]
+  artifacts: [exp/out/exp49_summary.json]
+  check: |-
+    (lambda s:
+      s['prereg'] == {'supported': True, 'complete': True}
+      and (s['results']['v1_2']['bolivia']['tests']['ensemble mutual information']['w'], s['results']['v1_2']['bolivia']['tests']['ensemble mutual information']['l']) == (263, 61)
+      and (s['results']['v1_2']['test']['tests']['ensemble mutual information']['w'], s['results']['v1_2']['test']['tests']['ensemble mutual information']['l']) == (352, 76)
+      and round(s['results']['v1_2']['bolivia']['tests']['ensemble mutual information']['pooled_lead'], 4) == 0.0060 and round(s['results']['v1_2']['test']['tests']['ensemble mutual information']['pooled_lead'], 4) == 0.0022
+      and all(0.03 <= round(s['results'][v][n]['tests']['embedding NCDD']['pooled_lead'], 2) <= 0.08 for v in ('v1', 'v1_2') for n in ('bolivia', 'test'))
+      and all(s['results'][v][n]['pooled_eaurc']['embedding NCDD raw'] < s['results'][v][n]['pooled_eaurc']['embedding NCDD'] for v in ('v1', 'v1_2') for n in ('bolivia', 'test'))
+      and all(s['results'][v][n]['pooled_eaurc'][k] > 2.9 * s['results'][v][n]['pooled_eaurc']['averaged confidence'] for v in ('v1', 'v1_2') for n in ('bolivia', 'test') for k in ('embedding normalized distance', 'embedding NCDD', 'input extremity max', 'input extremity mean'))
+      and all(s['results'][v]['bolivia']['tile_level']['per_ranker']['ensemble mutual information']['aurc'] > s['results'][v]['bolivia']['tile_level']['per_ranker']['averaged confidence']['aurc'] for v in ('v1', 'v1_2'))
+    )(A['exp/out/exp49_summary.json'])
+  cited_in:
+    - {file: docs/Findings.md, marker: shrug-signals-rejected}
+    - {file: docs/TECHNIQUES.md, marker: shrug-signals-rejected}
+    - {file: docs/results/comparisons.md, marker: shrug-signals-rejected}
+  note: At the tile level mutual information is the weakest task signal on Bolivia under both backbones; on the v1 test split it is 0.003 better than confidence (0.117 vs 0.120), so 'weakest on every arm' would overstate it.
+
+- id: label-free-midrank-fusion-lost
+  statement: Every label-free midrank combination of averaged confidence with tiling instability or NDWI level is worse than plain averaged confidence on all four arms.
+  status: rejected
+  experiments: [exp47]
+  artifacts: [exp/out/exp47_summary.json]
+  check: |-
+    (lambda s: all(s['results'][v][n]['tests'][k]['pooled_lead'] > 0 and s['results'][v][n]['pooled_eaurc'][k] > s['results'][v][n]['pooled_eaurc']['averaged confidence']
+      for v in ('v1', 'v1_2') for n in ('bolivia', 'test') for k in ('U+ averaged confidence + tile-phase', 'U+ averaged confidence + NDWI level'))
+    )(A['exp/out/exp47_summary.json'])
+  cited_in:
+    - {file: docs/Findings.md, marker: label-free-midrank-fusion-lost}
+    - {file: docs/TECHNIQUES.md, marker: label-free-midrank-fusion-lost}
+
+- id: fine-tuning-corrects-half
+  statement: On the same AWF windows, fine-tuning the encoder corrects more than half of the frozen probe's errors (35 of 63), so the tiling is not the cause of the grid's errors.
+  status: measured
+  experiments: [exp21]
+  artifacts: [exp/out/exp21_summary.json]
+  check: |-
+    (lambda f: f['probe_only_wrong'] == 35 and f['both_wrong'] == 28 and f['ft_only_wrong'] == 13 and f['probe_only_wrong'] / (f['probe_only_wrong'] + f['both_wrong']) > 0.5
+    )(A['exp/out/exp21_summary.json']['crops']['16']['ft_vs_probe'])
+  cited_in:
+    - {file: docs/Findings.md, marker: fine-tuning-corrects-half}
+
+- id: modality-dominates-shared-errors
+  statement: Reading Sentinel-1 instead of Sentinel-2 moves the error set far more (phi 0.38-0.39) than swapping the backbone (0.70), a two-layer or 3x3 head barely beats a backbone swap and stays far from fine-tuning's 0.475, and label impurity and chip clustering do not explain the overlap; the sensor is the largest lever and the backbone the smallest.
+  status: measured
+  experiments: [exp46]
+  artifacts: [exp/out/exp46_summary.json]
+  check: |-
+    (lambda s:
+      s['prereg']['P1_readout'] is True and s['prereg']['P2_modality'] is True and s['prereg']['complete'] is True
+      and all(0.38 <= round(s['results'][n]['pairwise']['A1 S2 linear vs A2 S1 linear']['phi'], 2) <= 0.39 and round(s['results'][n]['prereg']['backbone_swap_phi'], 2) == 0.70 for n in ('bolivia', 'test'))
+      and all(0.6 < s['results'][n]['pairwise'][k]['phi'] < s['results'][n]['prereg']['backbone_swap_phi'] for n in ('bolivia', 'test') for k in ('A1 S2 linear vs A3 S2 MLP', 'A1 S2 linear vs A4 S2 3x3 linear'))
+      and all(abs(st['pure'] - st['mixed']) < 0.2 for n in ('bolivia', 'test') for st in s['results'][n]['purity_strata'].values())
+    )(A['exp/out/exp46_summary.json'])
+  cited_in:
+    - {file: docs/Findings.md, marker: modality-dominates-shared-errors}
+    - {file: docs/TECHNIQUES.md, marker: modality-dominates-shared-errors}
+
+- id: tile-phase-26-of-27-worldcover
+  statement: Aligned tiling instability beats confidence on 26 of the 27 rule scenes and 8 of 8 rivers against the WorldCover reference, but not on Bolivia hand labels (163/187 tiles, p=0.22).
+  status: measured
+  experiments: [exp13, exp18, exp36]
+  artifacts: [exp/out/exp13_summary.json, exp/out/exp13_corrected_stats.csv, exp/out/exp18_sen1floods.csv, exp/out/exp36_summary.json]
+  check: |-
+    (lambda s13, c13, c18, s36:
+      (s13['signals']['tile-phase (aligned)']['w'], s13['signals']['tile-phase (aligned)']['l']) == (26, 1) and s13['signals']['tile-phase (aligned)']['sign_p'] < 1e-6
+      and sum(float(r['eaurc']) < float(b['eaurc']) for r in c13 if r['signal'] == 'tile-phase (aligned)' for b in c13 if b['signal'] == 'baseline' and b['scene'] == r['scene']) == 26
+      and (s36['part_a']['prereg']['tile_phase_vs_confidence']['w'], s36['part_a']['prereg']['tile_phase_vs_confidence']['l']) == (8, 0)
+      and c18[0]['tile-phase (aligned)|W/L'] == '163/187' and 0.2 < float(c18[0]['tile-phase (aligned)|sign_p']) < 0.3
+    )(A['exp/out/exp13_summary.json'], A['exp/out/exp13_corrected_stats.csv'], A['exp/out/exp18_sen1floods.csv'], A['exp/out/exp36_summary.json'])
+  cited_in:
+    - {file: docs/Findings.md, marker: tile-phase-26-of-27-worldcover}
+    - {file: docs/results/comparisons.md, marker: tile-phase-26-of-27-worldcover}
+
+- id: target-effective-rank-2
+  statement: OlmoEarth v1's latent-MIM pretraining target has effective rank 2 on real scenes, and a whitened target is 57 to 70% predictable from context.
+  status: measured
+  experiments: [exp32, exp33, exp34]
+  artifacts: [exp/out/exp32_summary.json, exp/out/exp33_summary.json]
+  check: |-
+    (lambda s32, s33:
+      1.9 < s32['medians']['target_centred_effective_rank'] < 2.1
+      and round(sum(d['context_gain_vs_position_only'] for d in s33['part_a']['diagnostics'].values()) / len(s33['part_a']['diagnostics']), 2) == 0.57
+      and round(s33['part_b']['predictor']['mean_context_gain_vs_position_only_bolivia'], 2) == 0.70
+    )(A['exp/out/exp32_summary.json'], A['exp/out/exp33_summary.json'])
+  cited_in:
+    - {file: docs/Findings.md, marker: target-effective-rank-2}
+  note: 57% is the mean over the 27 rule scenes (held-out folds), 70% is Bolivia.
+
+- id: no-encoder-internal-signal-beats-confidence
+  statement: No signal derived from the encoder's internals, its pretraining objective, a posterior over the probe head, feature-space typicality, a second model of the same family, or flip-and-rotate consistency ranks errors better than confidence on expert labels.
+  status: rejected
+  experiments: [exp18, exp28, exp30, exp31, exp34, exp36, exp41]
+  artifacts: [exp/out/exp18_sen1floods.csv, exp/out/exp28_summary.json, exp/out/exp30_summary.json, exp/out/exp31_summary.json, exp/out/exp34_summary.json, exp/out/exp36_summary.json, exp/out/exp41_summary.json]
+  check: |-
+    (lambda c18, s28, s30, s31, s34, s36, s41:
+      c18[0]['E_case |Nano-Base||W/L'] == '84/265'
+      and s28['part_b']['prereg']['combination_tiles_better'] < s28['part_b']['prereg']['combination_tiles_worse']
+      and s30['part_b']['prereg']['primary_tiles_better'] < 10 and s30['part_b']['prereg']['combination_tiles_better'] < s30['part_b']['prereg']['combination_tiles_worse']
+      and s31['part_b']['prereg']['combination_tiles_better'] < s31['part_b']['prereg']['combination_tiles_worse'] and s31['part_b']['prereg']['primary_tiles_better'] < 30
+      and s34['part_b']['prereg']['combination_tiles_better'] < s34['part_b']['prereg']['combination_tiles_worse']
+      and s36['part_b']['prereg']['primary_tiles_better'] < s36['part_b']['prereg']['primary_tiles_worse'] and s36['part_b']['prereg']['combination_gain_over_confidence_pooled'] < 0
+      and s41['tasks']['sen1floods11']['prereg']['supported_vs_confidence'] is False
+    )(A['exp/out/exp18_sen1floods.csv'], A['exp/out/exp28_summary.json'], A['exp/out/exp30_summary.json'], A['exp/out/exp31_summary.json'], A['exp/out/exp34_summary.json'], A['exp/out/exp36_summary.json'], A['exp/out/exp41_summary.json'])
+  cited_in:
+    - {file: docs/Findings.md, marker: no-encoder-internal-signal-beats-confidence}
+
+- id: tile-phase-mixed
+  statement: Tiling instability beats confidence on 26 of 27 scenes against WorldCover and is indistinguishable from it on the fine-tuned model, but not on hand labels (163/187, p=0.22).
+  status: mixed
+  experiments: [exp13, exp18, exp21]
+  artifacts: [exp/out/exp13_summary.json, exp/out/exp18_sen1floods.csv, exp/out/exp21_summary.json]
+  check: |-
+    (lambda s13, c18, s21:
+      s13['signals']['tile-phase (aligned)']['w'] == 26
+      and c18[0]['tile-phase (aligned)|W/L'] == '163/187' and 0.2 < float(c18[0]['tile-phase (aligned)|sign_p']) < 0.3
+      and s21['crops']['16']['bootstrap_vs_confidence (lo, hi, P(signal better))']['tiling instability (aligned)'][0] < 0 < s21['crops']['16']['bootstrap_vs_confidence (lo, hi, P(signal better))']['tiling instability (aligned)'][1]
+    )(A['exp/out/exp13_summary.json'], A['exp/out/exp18_sen1floods.csv'], A['exp/out/exp21_summary.json'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: tile-phase-mixed}
+
+- id: boundary-proximity-triage
+  statement: Prediction-boundary proximity says where errors live (75% of error windows against about 20% of correct ones) and captures 0.286 of the errors against confidence's 0.259 at a 5% budget on hand labels, but does not order them better than confidence on AURC and reverses by 20%.
+  status: supported
+  experiments: [exp14, exp16, exp18, exp35]
+  artifacts: [exp/out/exp16_summary.json, exp/out/exp18_sen1floods.csv, exp/out/exp35_summary.json, exp/out/exp37_summary.json]
+  check: |-
+    (lambda s16, c18, s35, s37:
+      round(s37['part_b']['analysis']['cues']['boundary']['share_errors'], 2) == 0.75 and s37['part_b']['analysis']['cues']['boundary']['share_correct'] < 0.22
+      and round(s35['part_b']['pooled_capture_expected']['boundary indicator']['0.05'], 3) == 0.286 and round(s35['part_b']['pooled_capture_expected']['confidence (baseline)']['0.05'], 3) == 0.259
+      and s35['part_b']['bootstrap_pooled_gain_vs_confidence']['boundary indicator']['0.05']['lo'] > 0
+      and s35['part_b']['pooled_capture_expected']['boundary indicator']['0.2'] < s35['part_b']['pooled_capture_expected']['confidence (baseline)']['0.2']
+      and c18[0]['boundary indicator|W/L'] == '134/217' and s16['aurc']['boundary'] > s16['aurc']['baseline']
+    )(A['exp/out/exp16_summary.json'], A['exp/out/exp18_sen1floods.csv'], A['exp/out/exp35_summary.json'], A['exp/out/exp37_summary.json'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: boundary-proximity-triage}
+
+- id: ndwi-first-order-mixed
+  statement: Putting spectrally ambiguous windows first, then boundary, then confidence wins the preregistered per-tile tests against the boundary-first order at 5% and 10% but not the pooled bootstrap, is clearly ahead only at 20% pooled, and loses to boundary-first on the WorldCover rivers.
+  status: mixed
+  experiments: [exp38]
+  artifacts: [exp/out/exp38_summary.json]
+  check: |-
+    (lambda s:
+      all(s['part_b']['prereg'][b]['per_tile']['w'] > s['part_b']['prereg'][b]['per_tile']['l'] and s['part_b']['prereg'][b]['per_tile']['sign_p'] < 0.001 and s['part_b']['prereg'][b]['pooled']['boot_lo'] <= 0 for b in ('0.05', '0.1'))
+      and (s['part_b']['prereg']['0.05']['per_tile']['w'], s['part_b']['prereg']['0.05']['per_tile']['l'], s['part_b']['prereg']['0.05']['per_tile']['t']) == (151, 100, 100)
+      and (s['part_b']['prereg']['0.1']['per_tile']['w'], s['part_b']['prereg']['0.1']['per_tile']['l'], s['part_b']['prereg']['0.1']['per_tile']['t']) == (146, 86, 119)
+      and round(s['part_b']['prereg']['0.05']['pooled']['pooled'], 3) == 0.292 and round(s['part_b']['prereg']['0.1']['pooled']['pooled'], 3) == 0.481
+      and s['part_b']['tests']['NDWI-ambiguous, then boundary, then confidence vs boundary, then confidence']['pooled']['0.2']['boot_lo'] > 0
+      and round(s['part_b']['tests']['NDWI-ambiguous, then boundary, then confidence vs boundary, then confidence']['pooled']['0.2']['pooled'], 3) == 0.831
+      and [(s['part_a']['river_votes']['NDWI-ambiguous, then boundary, then confidence vs boundary, then confidence'][b]['w'], s['part_a']['river_votes']['NDWI-ambiguous, then boundary, then confidence vs boundary, then confidence'][b]['l']) for b in ('0.05', '0.1', '0.2')] == [(2, 6), (3, 5), (3, 4)]
+    )(A['exp/out/exp38_summary.json'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: ndwi-first-order-mixed}
+    - {file: docs/results/comparisons.md, marker: ndwi-first-order-mixed}
+
+- id: neighbourhood-contradiction-olmoearth-mixed
+  statement: Neighbourhood contradiction in OlmoEarth feature space passed its preregistered test on Bolivia (beats confidence at the 10% budget, 169/126/56 tiles, pooled 0.530 vs 0.465) and 7/1 rivers against WorldCover, but on the multi-region test split with Bolivia as the bank it is far worse than confidence (pooled 0.334 vs 0.643) and never gains on E-AURC.
+  status: mixed
+  experiments: [exp39, exp40]
+  artifacts: [exp/out/exp39_summary.json, exp/out/exp40_summary.json]
+  check: |-
+    (lambda s39, s40:
+      (s39['part_b']['prereg']['P1']['w'], s39['part_b']['prereg']['P1']['l'], s39['part_b']['prereg']['P1']['t']) == (169, 126, 56) and s39['part_b']['prereg']['P1']['sign_p'] < 0.01
+      and round(s39['part_b']['pooled_capture']['contradiction (OlmoEarth neighbours)']['0.1'], 3) == 0.530 and round(s39['part_b']['pooled_capture']['confidence (baseline)']['0.1'], 3) == 0.465
+      and (s39['part_a']['capture_river_tests_vs_confidence']['contradiction (OlmoEarth neighbours)']['0.1']['w'], s39['part_a']['capture_river_tests_vs_confidence']['contradiction (OlmoEarth neighbours)']['0.1']['l']) == (7, 1)
+      and round(s40['part_b']['pooled_capture']['contradiction (OlmoEarth neighbours)']['0.1'], 3) == 0.334 and round(s40['part_b']['pooled_capture']['confidence (baseline)']['0.1'], 3) == 0.643
+      and (s40['part_b']['capture_tests']['contradiction (OlmoEarth neighbours) vs confidence (baseline)']['0.1']['w'], s40['part_b']['capture_tests']['contradiction (OlmoEarth neighbours) vs confidence (baseline)']['0.1']['l']) == (97, 301)
+      and s39['part_b']['pooled_eaurc']['contradiction (OlmoEarth neighbours)'] > s39['part_b']['pooled_eaurc']['confidence (baseline)']
+      and s40['part_b']['pooled_eaurc']['contradiction (OlmoEarth neighbours)'] > s40['part_b']['pooled_eaurc']['confidence (baseline)']
+    )(A['exp/out/exp39_summary.json'], A['exp/out/exp40_summary.json'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: neighbourhood-contradiction-olmoearth-mixed}
+
+- id: pixel-stat-contradiction-rejected
+  statement: Neighbourhood contradiction in pixel-statistics space beat confidence at every budget and on E-AURC on Bolivia, but the preregistered replication on the test split with Bolivia as the bank failed every primary test.
+  status: rejected
+  experiments: [exp39, exp40]
+  artifacts: [exp/out/exp39_summary.json, exp/out/exp40_summary.json]
+  check: |-
+    (lambda s39, s40:
+      round(s39['part_b']['pooled_capture']['contradiction (pixel-statistics neighbours)']['0.1'], 3) == 0.682
+      and (s39['part_b']['tests']['contradiction (pixel-statistics neighbours)']['vs confidence (baseline)']['w'], s39['part_b']['tests']['contradiction (pixel-statistics neighbours)']['vs confidence (baseline)']['l']) == (219, 131)
+      and s39['part_b']['pooled_eaurc']['contradiction (pixel-statistics neighbours)'] < s39['part_b']['pooled_eaurc']['confidence (baseline)']
+      and s40['part_b']['prereg']['supported'] is False and s40['part_b']['n_tiles_scored'] == 483
+      and (s40['part_b']['prereg']['capture_10_per_tile']['w'], s40['part_b']['prereg']['capture_10_per_tile']['l'], s40['part_b']['prereg']['capture_10_per_tile']['t']) == (183, 195, 105)
+      and (s40['part_b']['prereg']['eaurc_per_tile']['w'], s40['part_b']['prereg']['eaurc_per_tile']['l']) == (215, 267)
+      and s40['part_b']['prereg']['capture_10_pooled']['boot_hi'] < 0
+      and round(s40['part_b']['pooled_capture']['contradiction (pixel-statistics neighbours)']['0.1'], 3) == 0.530
+    )(A['exp/out/exp39_summary.json'], A['exp/out/exp40_summary.json'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: pixel-stat-contradiction-rejected}
+
+- id: anysat-witness-rejected
+  statement: AnySat embeddings as the neighbourhood space beat confidence at the 10% budget on Bolivia (172/127/52) but not the OlmoEarth space (159/143, p=0.19); an outside representation adds nothing over the model's own.
+  status: rejected
+  experiments: [exp39]
+  artifacts: [exp/out/exp39_summary.json]
+  check: |-
+    (lambda p:
+      (p['P2']['w'], p['P2']['l'], p['P2']['t']) == (172, 127, 52) and p['P2']['sign_p'] < 0.05
+      and (p['P2_vs_oe']['w'], p['P2_vs_oe']['l']) == (159, 143) and p['P2_vs_oe']['sign_p'] > 0.05 and round(p['P2_vs_oe']['sign_p'], 2) == 0.19
+    )(A['exp/out/exp39_summary.json']['part_b']['prereg'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: anysat-witness-rejected}
+
+- id: two-view-disagreement-rejected
+  statement: A head on an outside representation of the same windows errs where OlmoEarth errs (phi 0.77-0.81 on Sen1Floods11, as its own family does), so two-view disagreement captures 0.242 of the errors at 10% against 0.454 for confidence on Sen1Floods11 and 0.180 against 0.246 on AWF.
+  status: rejected
+  experiments: [exp41]
+  artifacts: [exp/out/exp41_summary.json]
+  check: |-
+    (lambda f, a:
+      f['prereg']['supported_vs_confidence'] is False and a['prereg']['supported_vs_confidence'] is False
+      and all(0.765 <= c['phi_test'] <= 0.815 for c in f['error_correlation'].values())
+      and f['falsification_correlation']['outside_below_family'] is False
+      and round(f['pooled_capture']['weighted disagreement (selected partner)']['0.1'], 3) == 0.242 and round(f['pooled_capture']['confidence (OlmoEarth)']['0.1'], 3) == 0.454
+      and round(f['pooled_eaurc']['weighted disagreement (selected partner)'], 3) == 0.067 and f['pooled_eaurc']['confidence (OlmoEarth)'] < 0.022
+      and round(a['pooled_capture']['weighted disagreement (selected partner)']['0.1'], 3) == 0.180 and round(a['pooled_capture']['confidence (OlmoEarth)']['0.1'], 3) == 0.246
+      and all(0.49 <= c['phi_test'] <= 0.71 for c in a['error_correlation'].values() if c['family'])
+    )(A['exp/out/exp41_summary.json']['tasks']['sen1floods11'], A['exp/out/exp41_summary.json']['tasks']['awf_sentinel2'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: two-view-disagreement-rejected}
+  note: The Sen1Floods11 confidence E-AURC is 0.0215 (the ledger prints 0.022); on AWF the outside models' test-split phi runs 0.32-0.64 over eleven models, not only 0.32-0.48.
+
+- id: band-set-disagreement-mixed
+  statement: Band-set disagreement from one forward pass beats confidence on 21 of 27 scenes against WorldCover but is worse than confidence on hand labels (111/239, p=7e-12).
+  status: mixed
+  experiments: [exp17, exp18]
+  artifacts: [exp/out/exp17_internal_evidence.csv, exp/out/exp18_sen1floods.csv]
+  check: |-
+    (lambda c17, c18:
+      len(c17) == 27 and sum(float(r['band-set disagreement']) < float(r['baseline']) for r in c17) == 21
+      and c18[0]['band-set disagreement|W/L'] == '111/239' and float(c18[0]['band-set disagreement|sign_p']) < 1e-11
+    )(A['exp/out/exp17_internal_evidence.csv'], A['exp/out/exp18_sen1floods.csv'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: band-set-disagreement-mixed}
+    - {file: docs/results/comparisons.md, marker: band-set-disagreement-mixed}
+
+- id: depth-probe-partial
+  statement: Depth-probe disagreement beats confidence on 19 of 27 scenes against WorldCover (p=0.052) and the pixel control on 13 of 27.
+  status: mixed
+  experiments: [exp17]
+  artifacts: [exp/out/exp17_internal_evidence.csv]
+  check: |-
+    (lambda c: sum(float(r['depth-probe disagreement']) < float(r['baseline']) for r in c) == 19 and sum(float(r['depth-probe disagreement']) < float(r['control']) for r in c) == 13
+    )(A['exp/out/exp17_internal_evidence.csv'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: depth-probe-partial}
+    - {file: docs/results/comparisons.md, marker: depth-probe-partial}
+
+- id: embedding-dissimilarity-rejected
+  statement: Embedding dissimilarity to the training features has no scale-free advantage over confidence (13/27 scenes, sign p=1.00), and every feature-typicality generalisation of it loses on both testbeds.
+  status: rejected
+  experiments: [exp13, exp31]
+  artifacts: [exp/out/exp13_summary.json, exp/out/exp31_summary.json]
+  check: |-
+    (lambda s13, s31:
+      (s13['signals']['E_dist']['w'], s13['signals']['E_dist']['l']) == (13, 14) and s13['signals']['E_dist']['sign_p'] == 1.0
+      and (s31['part_a']['prereg']['primary_vs_confidence']['w'], s31['part_a']['prereg']['primary_vs_confidence']['l']) == (2, 6)
+      and all(t['vs confidence (baseline)']['w'] <= 13 for k, t in s31['part_a']['tests'].items() if '[R' in k)
+      and all(t['vs confidence (baseline)']['l'] >= 317 for k, t in s31['part_b']['tests'].items() if '[R' in k)
+    )(A['exp/out/exp13_summary.json'], A['exp/out/exp31_summary.json'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: embedding-dissimilarity-rejected}
+
+- id: geo-grounding-partial
+  statement: E_geo flags (an OSM river centerline the model predicts dry) are 1.5x error-enriched but mostly mark OSM-versus-WorldCover disagreement on narrow channels, and E_geo is poor as a ranker (3 of 27 scenes); prepending the flag to boundary proximity does not help.
+  status: mixed
+  experiments: [exp02, exp15]
+  artifacts: [exp/out/exp13_summary.json, exp/out/exp15_boundary_geo.csv]
+  check: |-
+    (lambda e, c:
+      round(e['enrichment'], 1) == 1.5 and (e['geo_vs_baseline']['w'], e['geo_vs_baseline']['l']) == (3, 24) and e['zero_scenes'] == 9 and e['flags'] == 413
+      and (e['conj_vs_boundary']['w'], e['conj_vs_boundary']['l'], e['conj_vs_boundary']['t']) == (5, 9, 13)
+      and sum(float(r['geo']) < float(r['baseline']) for r in c) == 3 and sum(float(r['boundary+geo']) < float(r['boundary']) for r in c) == 5
+    )(A['exp/out/exp13_summary.json']['exp15'], A['exp/out/exp15_boundary_geo.csv'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: geo-grounding-partial}
+    - {file: docs/results/comparisons.md, marker: geo-grounding-partial}
+
+- id: cross-model-disagreement-rejected
+  statement: Disagreement with a second model of the same family (E_case) beats confidence on 10 of 27 scenes against WorldCover and on 84/265 Bolivia tiles on hand labels.
+  status: rejected
+  experiments: [exp10, exp13, exp17, exp18]
+  artifacts: [exp/out/exp13_summary.json, exp/out/exp17_internal_evidence.csv, exp/out/exp18_sen1floods.csv]
+  check: |-
+    (lambda s13, c17, c18:
+      (s13['signals']['E_case']['w'], s13['signals']['E_case']['l']) == (10, 17)
+      and sum(float(r['E_case |Nano-Base|']) < float(r['baseline']) for r in c17) == 10
+      and c18[0]['E_case |Nano-Base||W/L'] == '84/265'
+    )(A['exp/out/exp13_summary.json'], A['exp/out/exp17_internal_evidence.csv'], A['exp/out/exp18_sen1floods.csv'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: cross-model-disagreement-rejected}
+
+- id: backbone-version-disagreement-rejected
+  statement: Disagreement between OlmoEarth v1 and v1.2 is not a useful error signal, and RoPE does not reduce sub-patch tiling instability (v1.2's is smaller on only 6 of 31 scenes).
+  status: rejected
+  experiments: [exp19]
+  artifacts: [exp/out/exp19_v1_vs_v12.csv]
+  check: |-
+    (lambda c: len(c) == 31 and sum(float(r['v1_2_tilephase_mean']) < float(r['v1_tilephase_mean']) for r in c) == 6
+      and round(sum(float(r['v1_2_tilephase_mean']) for r in c) / len(c), 3) == 0.046 and round(sum(float(r['v1_tilephase_mean']) for r in c) / len(c), 3) == 0.032
+    )(A['exp/out/exp19_v1_vs_v12.csv'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: backbone-version-disagreement-rejected}
+    - {file: docs/results/comparisons.md, marker: backbone-version-disagreement-rejected}
+  note: The cross-version disagreement counts (6/21 for v1's errors, 18/9 for v1.2's) are not in the committed CSV, which holds accuracies and tile-phase means only.
+
+- id: internal-state-signals-rejected
+  statement: Logit-lens settling, representation drift and attention entropy beat confidence on 0, 3 and 3 of 27 scenes; internal-state signals do not transfer from language models.
+  status: rejected
+  experiments: [exp17]
+  artifacts: [exp/out/exp17_internal_evidence.csv]
+  check: |-
+    (lambda c: [sum(float(r[k]) < float(r['baseline']) for r in c) for k in ('decision settling (logit-lens)', 'representation drift', 'attention entropy')] == [0, 3, 3]
+    )(A['exp/out/exp17_internal_evidence.csv'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: internal-state-signals-rejected}
+    - {file: docs/results/comparisons.md, marker: internal-state-signals-rejected}
+
+- id: masking-perturbation-rejected
+  statement: Masking perturbation is the worst signal on every scene tested; occlusion measures context reliance, not error likelihood.
+  status: rejected
+  experiments: [exp08]
+  artifacts: []
+  check: "True"
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: masking-perturbation-rejected}
+  note: no artifact; figure only (exp/out/exp08_mask_perturb.png)
+
+- id: dihedral-consistency-rejected
+  statement: The standard deviation of the probability map over the eight flips and rotations is not better than confidence (17/10 scenes but 4/4 rivers against WorldCover, 154/196 Bolivia tiles) and is a smoothed confidence (Spearman 0.67 to 0.94); the preregistered combination gains nothing.
+  status: rejected
+  experiments: [exp36]
+  artifacts: [exp/out/exp36_summary.json]
+  check: |-
+    (lambda s:
+      (s['part_a']['tests']['dihedral consistency (8 transforms)']['vs confidence (baseline)']['w'], s['part_a']['tests']['dihedral consistency (8 transforms)']['vs confidence (baseline)']['l']) == (17, 10)
+      and (s['part_a']['prereg']['primary_vs_confidence']['w'], s['part_a']['prereg']['primary_vs_confidence']['l']) == (4, 4) and round(s['part_a']['prereg']['primary_vs_confidence']['one_sided_p'], 2) == 0.64
+      and (s['part_a']['prereg']['combination_gain_over_confidence']['w'], s['part_a']['prereg']['combination_gain_over_confidence']['l']) == (4, 4)
+      and (s['part_b']['prereg']['primary_tiles_better'], s['part_b']['prereg']['primary_tiles_worse']) == (154, 196)
+      and (s['part_b']['prereg']['combination_tiles_better'], s['part_b']['prereg']['combination_tiles_worse']) == (201, 148) and s['part_b']['prereg']['combination_gain_over_confidence_pooled'] < 0
+      and round(s['part_b']['spearman']['dihedral consistency (8 transforms)']['confidence (baseline)']['min'], 2) == 0.67 and round(s['part_b']['spearman']['dihedral consistency (8 transforms)']['confidence (baseline)']['median'], 2) == 0.94
+      and all(s['part_b']['capture_tests_vs_confidence']['dihedral consistency (8 transforms)'][b]['pooled'] < s['part_b']['capture_tests_vs_confidence']['dihedral consistency (8 transforms)'][b]['pooled_confidence'] for b in ('0.05', '0.1', '0.2'))
+    )(A['exp/out/exp36_summary.json'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: dihedral-consistency-rejected}
+
+- id: decoder-self-consistency-rejected
+  statement: The native masked-token reconstruction error loses to confidence (7/20 scenes, 2/6 rivers), the preregistered confidence+decoder combination gains nothing (4/4 rivers, p=0.64), and the frozen targets are near-collinear (within-scene pairwise cosine median 0.994).
+  status: rejected
+  experiments: [exp28]
+  artifacts: [exp/out/exp28_summary.json]
+  check: |-
+    (lambda s:
+      (s['part_a']['tests']['decoder cos-dist (K=8)']['vs confidence (baseline)']['w'], s['part_a']['tests']['decoder cos-dist (K=8)']['vs confidence (baseline)']['l']) == (7, 20)
+      and (s['part_a']['prereg']['primary_decoder_vs_confidence']['w'], s['part_a']['prereg']['primary_decoder_vs_confidence']['l']) == (2, 6)
+      and (s['part_a']['prereg']['combination_gain_over_confidence']['w'], s['part_a']['prereg']['combination_gain_over_confidence']['l']) == (4, 4) and round(s['part_a']['prereg']['combination_gain_over_confidence']['one_sided_p'], 2) == 0.64
+      and round(sorted(d['target_pair_cos'] for d in s['part_a']['diagnostics'].values())[len(s['part_a']['diagnostics']) // 2], 3) == 0.994 and len(s['part_a']['diagnostics']) == 27
+    )(A['exp/out/exp28_summary.json'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: decoder-self-consistency-rejected}
+
+- id: laplace-variance-rejected
+  statement: Last-layer Laplace logit variance is the worst signal on both testbeds (3/24 scenes, 0/8 rivers; 6/345 Bolivia tiles), the probit-moderated confidence is confidence itself, and the preregistered confidence+variance combination loses 0/8 rivers.
+  status: rejected
+  experiments: [exp30]
+  artifacts: [exp/out/exp30_summary.json]
+  check: |-
+    (lambda s:
+      (s['part_a']['tests']['Laplace logit variance']['vs confidence (baseline)']['w'], s['part_a']['tests']['Laplace logit variance']['vs confidence (baseline)']['l']) == (3, 24)
+      and (s['part_a']['prereg']['primary_vs_confidence']['w'], s['part_a']['prereg']['primary_vs_confidence']['l']) == (0, 8)
+      and (s['part_a']['prereg']['combination_gain_over_confidence']['w'], s['part_a']['prereg']['combination_gain_over_confidence']['l']) == (0, 8) and s['part_a']['prereg']['combination_gain_over_confidence']['one_sided_p'] == 1.0
+      and (s['part_b']['prereg']['primary_tiles_better'], s['part_b']['prereg']['primary_tiles_worse']) == (6, 345)
+      and round(s['part_b']['spearman']['Laplace moderated confidence (probit)']['confidence (baseline)']['median'], 2) == 1.0
+    )(A['exp/out/exp30_summary.json'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: laplace-variance-rejected}
+
+- id: feature-typicality-rejected
+  statement: No feature-space typicality score (kNN, Mahalanobis, PCA residual, ViM against three reference sets) beats confidence on either testbed; the preregistered confidence+typicality combination reaches 6/2 rivers (p=0.145) and hurts on hand labels (60/291).
+  status: rejected
+  experiments: [exp31]
+  artifacts: [exp/out/exp31_summary.json]
+  check: |-
+    (lambda s:
+      (s['part_a']['prereg']['combination_gain_over_confidence']['w'], s['part_a']['prereg']['combination_gain_over_confidence']['l']) == (6, 2) and round(s['part_a']['prereg']['combination_gain_over_confidence']['one_sided_p'], 3) == 0.145
+      and (s['part_b']['prereg']['combination_tiles_better'], s['part_b']['prereg']['combination_tiles_worse']) == (60, 291)
+      and max(t['vs confidence (baseline)']['w'] for k, t in s['part_a']['tests'].items() if '[R' in k) == 13
+      and all(t['vs confidence (baseline)']['l'] >= 317 for k, t in s['part_b']['tests'].items() if '[R' in k)
+    )(A['exp/out/exp31_summary.json'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: feature-typicality-rejected}
+
+- id: retargeted-residual-rejected
+  statement: Re-targeting the frozen encoder's latent-MIM objective with a whitened target makes it predictable from context but the residual tracks input texture (Spearman 0.56 with S2 variance), loses to confidence on 2/6 rivers and 12/339 Bolivia tiles, and the combination reaches only 6/2 rivers (p=0.145).
+  status: rejected
+  experiments: [exp33]
+  artifacts: [exp/out/exp33_summary.json]
+  check: |-
+    (lambda s:
+      (s['part_a']['prereg']['primary_vs_confidence']['w'], s['part_a']['prereg']['primary_vs_confidence']['l']) == (2, 6)
+      and (s['part_a']['prereg']['combination_gain_over_confidence']['w'], s['part_a']['prereg']['combination_gain_over_confidence']['l']) == (6, 2) and round(s['part_a']['prereg']['combination_gain_over_confidence']['one_sided_p'], 3) == 0.145
+      and (s['part_b']['prereg']['primary_tiles_better'], s['part_b']['prereg']['primary_tiles_worse']) == (12, 339)
+      and 0.55 <= s['part_b']['diagnostics']['spearman_residual_vs_s2_variance_pooled'] <= 0.57
+    )(A['exp/out/exp33_summary.json'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: retargeted-residual-rejected}
+
+- id: retargeted-other-readings-rejected
+  statement: The other readings of the re-targeted objective (discrete target NLL and entropy, gap masking, decision-direction residual) close the family; the entropy combination loses 0/8 rivers and 60/290 Bolivia tiles, and the gap-masked residual reaches parity with confidence on WorldCover (13/14, 4/4 rivers) while losing 22/329 on hand labels.
+  status: rejected
+  experiments: [exp34]
+  artifacts: [exp/out/exp34_summary.json]
+  check: |-
+    (lambda s:
+      (s['part_a']['prereg']['combination_gain_over_confidence']['w'], s['part_a']['prereg']['combination_gain_over_confidence']['l']) == (0, 8) and s['part_a']['prereg']['combination_gain_over_confidence']['one_sided_p'] == 1.0
+      and (s['part_b']['prereg']['combination_tiles_better'], s['part_b']['prereg']['combination_tiles_worse']) == (60, 290)
+      and (s['part_a']['tests']['gap-masked residual (3x3 hole, centre)']['vs confidence (baseline)']['w'], s['part_a']['tests']['gap-masked residual (3x3 hole, centre)']['vs confidence (baseline)']['l']) == (13, 14)
+      and (s['part_a']['tests']['gap-masked residual (3x3 hole, centre)']['vs confidence (baseline)']['river']['w'], s['part_a']['tests']['gap-masked residual (3x3 hole, centre)']['vs confidence (baseline)']['river']['l']) == (4, 4)
+      and (s['part_b']['tests']['gap-masked residual (3x3 hole, centre)']['vs confidence (baseline)']['w'], s['part_b']['tests']['gap-masked residual (3x3 hole, centre)']['vs confidence (baseline)']['l']) == (22, 329)
+    )(A['exp/out/exp34_summary.json'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: retargeted-other-readings-rejected}
+
+- id: family-errs-together-dawid-skene
+  statement: Family members err together, so label-free reliability estimation (Dawid-Skene over Nano, Tiny and Base votes) inflates every model and inverts the ordering; the inflation gap measures correlated-error mass.
+  status: rejected
+  experiments: [exp07]
+  artifacts: []
+  check: "True"
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: family-errs-together-dawid-skene}
+  note: no artifact; exp07 left only a feature cache (exp/out/exp07_tiny_feats.npy), no summary or figure
+
+- id: fine-tuned-model-audit
+  statement: The replica of the fine-tuned AWF model reproduces the reported accuracy (0.881 vs 0.895) on the 344 validation points with 41 errors; confidence ranks its errors best (AURC 0.0262), tiling instability is indistinguishable (0.0235, CI spans zero), everything else is significantly worse, and it is overconfident (ECE 0.080).
+  status: supported
+  experiments: [exp21]
+  artifacts: [exp/out/exp21_summary.json]
+  check: |-
+    (lambda c, b:
+      round(c['accuracy'], 3) == 0.881 and c['n_errors'] == 41
+      and round(c['aurc']['confidence (neg logit margin)'], 4) == 0.0262 and round(c['aurc']['tiling instability (aligned)'], 4) == 0.0235
+      and b['tiling instability (aligned)'][0] < 0 < b['tiling instability (aligned)'][1]
+      and all(b[k][0] > 0 for k in ('boundary indicator', 'probe disagreement', 'control (NDVI temporal std)'))
+      and round(c['ece_10bins'], 3) == 0.080
+    )(A['exp/out/exp21_summary.json']['crops']['16'], A['exp/out/exp21_summary.json']['crops']['16']['bootstrap_vs_confidence (lo, hi, P(signal better))'])
+  cited_in:
+    - {file: docs/Findings.md, marker: fine-tuned-model-audit}
+    - {file: docs/TECHNIQUES.md, marker: fine-tuned-model-audit}
+    - {file: docs/results/comparisons.md, marker: fine-tuned-model-audit}
+
+- id: fine-tuned-vs-probe-errors
+  statement: 28 of the fine-tuned model's 41 errors are also errors of the frozen probe, and disagreement with the probe ranks the fine-tuned model's errors significantly worse than its confidence.
+  status: measured
+  experiments: [exp21]
+  artifacts: [exp/out/exp21_summary.json]
+  check: |-
+    (lambda c: c['ft_vs_probe']['both_wrong'] == 28 and c['n_errors'] == 41
+      and c['aurc']['probe disagreement'] > c['aurc']['confidence (neg logit margin)'] and c['bootstrap_vs_confidence (lo, hi, P(signal better))']['probe disagreement'][0] > 0
+    )(A['exp/out/exp21_summary.json']['crops']['16'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: fine-tuned-vs-probe-errors}
+    - {file: docs/results/comparisons.md, marker: fine-tuned-vs-probe-errors}
+
+- id: fine-tuned-capture-at-budgets
+  statement: On the fine-tuned AWF model confidence catches 22% of the errors at a 5% review budget, 39% at 10% and 63% at 20%, the boundary-first order picks the same 5% set, and selective accuracy is 0.945 at 80% coverage.
+  status: measured
+  experiments: [exp21, exp36]
+  artifacts: [exp/out/exp21_summary.json, exp/out/exp36_summary.json]
+  check: |-
+    (lambda c, awf:
+      [round(c['error_capture_at_budget'][b]['confidence (neg logit margin)'], 2) for b in ('0.05', '0.1', '0.2')] == [0.22, 0.39, 0.63]
+      and round(c['selective_accuracy_at_coverage']['0.8'], 3) == 0.945
+      and awf['16']['lexicographic_vs_confidence']['0.05']['capture_lex'] == awf['16']['lexicographic_vs_confidence']['0.05']['capture_confidence'] and awf['16']['lexicographic_vs_confidence']['0.05']['boot_lo'] == 0.0
+    )(A['exp/out/exp21_summary.json']['crops']['16'], A['exp/out/exp36_summary.json']['part_awf']['crops'])
+  cited_in:
+    - {file: docs/Findings.md, marker: fine-tuned-capture-at-budgets}
+    - {file: docs/results/comparisons.md, marker: fine-tuned-capture-at-budgets}
+
+- id: lcc-lattice-found-seams-absent
+  statement: The served product's class boundaries and change-probability gradients are quantized to the encoder's 4-px patch lattice (19 of 20 profiles, Bonferroni p at most 6e-08), while inference-window seams at 64-512 px are absent at the null rate.
+  status: measured
+  experiments: [exp22]
+  artifacts: [exp/out/exp22_summary.json]
+  check: |-
+    (lambda s:
+      s['top_peaks_on_lattice'] == '19/20' and s['top_peaks_max_p_bonferroni'] <= 6e-08 and s['worldcover_top_peaks_min_p_bonferroni'] > 0.005
+      and all(s['fundamental_tally']['class_boundary'][f'window {n} px']['p_fund<0.01'] == 0 for n in (64, 128, 256, 512))
+      and sum(s['fundamental_tally']['change_gradient'][f'window {n} px']['p_fund<0.01'] for n in (64, 128, 256, 512)) == 1
+      and all(w['detection_limit_row_fraction[window 128 px]'] <= 0.1 for w in s['windows'].values())
+    )(A['exp/out/exp22_summary.json'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: lcc-lattice-found-seams-absent}
+    - {file: docs/results/comparisons.md, marker: lcc-lattice-found-seams-absent}
+
+- id: stronger-partner-worse-disagreement
+  statement: Replacing Nano with v1-Large as Base's partner makes the disagreement signal worse (mean AURC 0.0197 vs 0.0129 over seven scenes, better on only 3 of 7) although Large is the more accurate model.
+  status: measured
+  experiments: [exp10]
+  artifacts: [exp/out/exp10_large_pair.csv]
+  check: |-
+    (lambda c: len(c) == 7 and round(sum(float(r['large_base']) for r in c) / 7, 4) == 0.0197 and round(sum(float(r['nano_base']) for r in c) / 7, 4) == 0.0129
+      and sum(float(r['large_base']) < float(r['nano_base']) for r in c) == 3 and all(float(r['large_acc']) > 0.8 for r in c)
+    )(A['exp/out/exp10_large_pair.csv'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: stronger-partner-worse-disagreement}
+    - {file: docs/results/comparisons.md, marker: stronger-partner-worse-disagreement}
+  note: The CSV holds Large's accuracy per scene but not Base's, so 'more accurate on every scene' is not recomputed.
+
+- id: band-set-most-correlated-best-partner
+  statement: The band-set probe is the rater most error-correlated with the final head yet yields the best disagreement signal (21 of 27 scenes against 10 of 27 for the two-model E_case), so a different view of the input beats decorrelation.
+  status: measured
+  experiments: [exp17]
+  artifacts: [exp/out/exp17_internal_evidence.csv]
+  check: |-
+    (lambda c: sum(float(r['band-set disagreement']) < float(r['baseline']) for r in c) == 21 and sum(float(r['E_case |Nano-Base|']) < float(r['baseline']) for r in c) == 10
+      and sum(float(r['band-set disagreement']) < float(r['E_case |Nano-Base|']) for r in c) > 13
+    )(A['exp/out/exp17_internal_evidence.csv'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: band-set-most-correlated-best-partner}
+    - {file: docs/results/comparisons.md, marker: band-set-most-correlated-best-partner}
+  note: The error-correlation phis (Nano 0.61, depth probe 0.64, logit-lens 0.61, band-set 0.75) are not in the committed CSV.
+
+- id: rope-does-not-reduce-tiling-instability
+  statement: RoPE does not reduce sub-patch tiling instability; v1.2's mean per-patch shift instability is 0.046 against v1's 0.032 and smaller on only 6 of 31 scenes.
+  status: measured
+  experiments: [exp19]
+  artifacts: [exp/out/exp19_v1_vs_v12.csv]
+  check: |-
+    (lambda c: len(c) == 31 and sum(float(r['v1_2_tilephase_mean']) < float(r['v1_tilephase_mean']) for r in c) == 6
+      and round(sum(float(r['v1_2_tilephase_mean']) for r in c) / 31, 3) == 0.046 and round(sum(float(r['v1_tilephase_mean']) for r in c) / 31, 3) == 0.032
+    )(A['exp/out/exp19_v1_vs_v12.csv'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: rope-does-not-reduce-tiling-instability}
+    - {file: docs/results/comparisons.md, marker: rope-does-not-reduce-tiling-instability}
+
+- id: reference-instability-does-not-explain
+  statement: WorldCover 2020-vs-2021 instability covers about 10% of the disagreements, and on reference-stable patches tiling instability still beats confidence on 21 of 23 scenes.
+  status: measured
+  experiments: [exp23]
+  artifacts: [exp/out/exp23_summary.json]
+  check: |-
+    (lambda t:
+      round(t['T1_enrichment']['pooled_share_errors'], 1) == 0.1 and t['T1_enrichment']['wins_losses_ties'] == [17, 3, 4]
+      and round(t['T1_enrichment']['median_share_errors'], 3) == 0.108 and round(t['T1_enrichment']['median_share_correct'], 3) == 0.008
+      and t['T2_mechanism_tile_vs_confidence']['wins_losses_ties'] == [8, 8, 8]
+      and t['T3_signal_vs_confidence']['tile-phase (aligned)']['stable_patches']['wlt'] == [21, 2, 0] and t['T3_signal_vs_confidence']['tile-phase (aligned)']['all_patches_same_scenes']['wlt'] == [22, 1, 0]
+      and t['T3_signal_vs_confidence']['boundary']['stable_patches']['wlt'] == [18, 5, 0]
+    )(A['exp/out/exp23_summary.json']['tests'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: reference-instability-does-not-explain}
+    - {file: docs/results/comparisons.md, marker: reference-instability-does-not-explain}
+
+- id: year-gap-does-not-explain
+  statement: With 2021 imagery, a 2021 map and a head retrained within the year, tiling instability's advantage over confidence persists (23/3/0) and the per-scene gain is not larger in 2024 (10/16/0, p=0.33).
+  status: measured
+  experiments: [exp24]
+  artifacts: [exp/out/exp24_summary.json]
+  check: |-
+    (lambda s:
+      s['signal_vs_confidence']['tile-phase (aligned)']['2021']['wlt'] == [23, 3, 0] and s['signal_vs_confidence']['tile-phase (aligned)']['2024_same_scenes']['wlt'] == [25, 1, 0]
+      and s['tile_gain_2024_minus_2021']['wlt_gain_larger_in_2024'] == [10, 16, 0] and round(s['tile_gain_2024_minus_2021']['sign_p'], 2) == 0.33
+      and s['n_scenes_both'] == 26
+    )(A['exp/out/exp24_summary.json'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: year-gap-does-not-explain}
+    - {file: docs/results/comparisons.md, marker: year-gap-does-not-explain}
+
+- id: seasonal-water-does-not-explain
+  statement: Seasonal-water margins hold 39% of the disagreements against 8% of the agreements, yet with them removed tiling instability still beats confidence 22/2/0 in 2024 and 22/1/0 in 2021.
+  status: measured
+  experiments: [exp25]
+  artifacts: [exp/out/exp25_summary.json]
+  check: |-
+    (lambda y:
+      round(y['2024']['T1_enrichment']['median_share_errors'], 2) == 0.39 and round(y['2024']['T1_enrichment']['median_share_correct'], 2) == 0.08 and y['2024']['T1_enrichment']['wins_losses_ties'] == [21, 3, 3]
+      and round(y['2021']['T1_enrichment']['median_share_errors'], 2) == 0.41 and y['2021']['T1_enrichment']['wins_losses_ties'] == [22, 3, 1]
+      and y['2024']['T2_exclusion']['tile-phase (aligned)']['nonseasonal_patches']['wlt'] == [22, 2, 0] and y['2021']['T2_exclusion']['tile-phase (aligned)']['nonseasonal_patches']['wlt'] == [22, 1, 0]
+      and y['2024']['T3_seasonal_only']['tile-phase (aligned)']['wlt'] == [12, 6, 0] and y['2021']['T3_seasonal_only']['tile-phase (aligned)']['wlt'] == [13, 8, 0]
+    )(A['exp/out/exp25_summary.json']['years'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: seasonal-water-does-not-explain}
+    - {file: docs/results/comparisons.md, marker: seasonal-water-does-not-explain}
+
+- id: aurc-harness
+  statement: The risk-coverage harness scores every signal on the preregistered 27-scene set with tie-aware AURC, block bootstrap and exact sign and permutation tests, six signals per scene.
+  status: supported
+  experiments: [exp13]
+  artifacts: [exp/out/exp13_summary.json, exp/out/exp13_corrected_stats.csv]
+  check: |-
+    (lambda s, c: s['n_scenes'] == 27 and len(c) == 27 * 6 and len({r['scene'] for r in c}) == 27 and len({r['signal'] for r in c}) == 6
+      and all('perm_p' in v and 'sign_p' in v and 'ci_for' in v for v in s['signals'].values())
+    )(A['exp/out/exp13_summary.json'], A['exp/out/exp13_corrected_stats.csv'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: aurc-harness}
+
+- id: no-model-controls
+  statement: No-model pixel-statistic controls run on every comparison scene; on the Zambezi delta every no-model statistic ranks the disagreements at least as well as every model signal (which withdrew the E_dist shift claim), while on Kazungula and the Barotse floodplain the model signals keep a margin.
+  status: supported
+  experiments: [exp06]
+  artifacts: [exp/out/exp06_controls.csv]
+  check: |-
+    (lambda c, m, n:
+      max(float(r['aurc']) for r in c if r['scene'] == 'ood_delta' and r['signal'] in n) < min(float(r['aurc']) for r in c if r['scene'] == 'ood_delta' and r['signal'] in m)
+      and all(min(float(r['aurc']) for r in c if r['scene'] == s and r['signal'] in m) < min(float(r['aurc']) for r in c if r['scene'] == s and r['signal'] in n) for s in ('kazungula', 'hard_barotse'))
+      and {r['scene'] for r in c} == {'kazungula', 'hard_barotse', 'ood_delta'}
+    )(A['exp/out/exp06_controls.csv'], ('baseline max-softmax', 'E_case |Nano-Base|'), ('spectral variance (no model)', 'NDWI ambiguity (no model)', 'NDWI gradient (no model)'))
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: no-model-controls}
+    - {file: docs/results/comparisons.md, marker: no-model-controls}
+
+- id: labels-grade-never-train
+  statement: Expert labels grade signals and never train them; the AWF signal comparison runs on the 344 validation points (63 probe errors, 30 annotation tasks) of the project's own spatial split.
+  status: supported
+  experiments: [exp04, exp16]
+  artifacts: [exp/out/exp16_summary.json]
+  check: |-
+    (lambda s: s['n'] == 344 and s['n_err'] == 63 and s['n_tasks'] == 30)(A['exp/out/exp16_summary.json'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: labels-grade-never-train}
+
+- id: awf-confidence-lowest-aurc
+  statement: On the AWF expert labels confidence achieves the lowest AURC (0.0363) against tile-phase 0.0489 and the boundary score 0.0636, with cluster-bootstrap intervals on both differences above zero.
+  status: supported
+  experiments: [exp04, exp12, exp16]
+  artifacts: [exp/out/exp16_summary.json]
+  check: |-
+    (lambda s:
+      round(s['aurc']['baseline'], 4) == 0.0363 and round(s['aurc']['tile-phase'], 4) == 0.0489 and round(s['aurc']['boundary'], 4) == 0.0636
+      and s['ci']['cluster']['boundary']['lo'] > 0 and s['ci']['cluster']['tile-phase']['lo'] > 0
+      and round(s['ci']['cluster']['boundary']['lo'], 4) == 0.0023 and round(s['ci']['cluster']['boundary']['hi'], 4) == 0.0562
+    )(A['exp/out/exp16_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: awf-confidence-lowest-aurc}
+  note: The exp12 numbers (Nano-Base total variation 0.0670, E_dist 0.1338, spectral-variability control 0.1658) have no committed artifact; the check pins exp16, which reproduces exp04's errors and baseline AURC.
+
+- id: rule-selected-27-scenes
+  statement: The scene rule, committed before any new scene was fetched, leaves 27 rule-selected scenes from exp13 onward, after excluding the two unsuffixed AOIs that entered through a cache import.
+  status: measured
+  experiments: [exp11, exp13]
+  artifacts: [exp/out/exp11_stats.csv, exp/out/exp13_summary.json, exp/out/exp13_corrected_stats.csv]
+  check: |-
+    (lambda c11, s13, c13:
+      s13['n_scenes'] == 27 and len({r['scene'] for r in c13}) == 27
+      and {'kafue', 'luangwa'} <= {r['scene'] for r in c11} and not ({'kafue', 'luangwa'} & {r['scene'] for r in c13})
+      and {r['scene'] for r in c13} <= {r['scene'] for r in c11}
+    )(A['exp/out/exp11_stats.csv'], A['exp/out/exp13_summary.json'], A['exp/out/exp13_corrected_stats.csv'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: rule-selected-27-scenes}
+
+- id: exp11-unaligned-tile-phase-stats
+  statement: exp11's statistics, raw AURC with the unaligned tile-phase, had tile-phase better than confidence on 17 of 27 scenes.
+  status: superseded
+  superseded_by: exp13
+  experiments: [exp11]
+  artifacts: [exp/out/exp13_summary.json]
+  check: |-
+    (lambda s: (s['signals']['tile-phase (unaligned, exp11)']['w'], s['signals']['tile-phase (unaligned, exp11)']['l']) == (17, 10))(A['exp/out/exp13_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp11-unaligned-tile-phase-stats}
+  note: exp13 recomputed the same errors with the corrected scoring (26/27); the unaligned count survives only as a row of exp13's summary.
+
+- id: boundary-fraction-equals-tile-phase
+  statement: The zero-cost boundary fraction of the shift-0 map is statistically indistinguishable from aligned tile-phase (boundary better on 12 scenes, tile-phase on 15, sign p=0.70), beats confidence on 19 of 27 (p=0.052) and the pixel control on 22 of 27.
+  status: measured
+  experiments: [exp14]
+  artifacts: [exp/out/exp13_summary.json, exp/out/exp14_boundary_ablation.csv]
+  check: |-
+    (lambda e, c:
+      (e['boundary_vs_tile']['w'], e['boundary_vs_tile']['l']) == (12, 15) and round(e['boundary_vs_tile']['sign_p'], 2) == 0.70
+      and (e['boundary_vs_baseline']['w'], e['boundary_vs_baseline']['l']) == (19, 8) and round(e['boundary_vs_baseline']['sign_p'], 3) == 0.052
+      and (e['boundary_vs_control']['w'], e['boundary_vs_control']['l']) == (22, 5) and (e['gradient_vs_tile']['w'], e['gradient_vs_tile']['l']) == (2, 25)
+      and e['best_tally'] == {'pred-boundary': 10, 'tile-phase (aligned)': 10, 'control': 5, 'baseline': 2}
+      and sum(float(r['pred-boundary']) < float(r['tile-phase (aligned)']) for r in c) == 12 and sum(float(r['pred-boundary']) < float(r['baseline']) for r in c) == 19
+    )(A['exp/out/exp13_summary.json']['exp14'], A['exp/out/exp14_boundary_ablation.csv'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: boundary-fraction-equals-tile-phase}
+
+- id: operating-points-null
+  statement: Capture at fixed 5, 10 and 20% budgets does not change the AURC verdicts on expert labels; the preregistered test (tiling instability at 20% on Bolivia) is null (116/112/123, p=0.42) and boundary at 5% is the one qualified exception.
+  status: measured
+  experiments: [exp35]
+  artifacts: [exp/out/exp35_summary.json]
+  check: |-
+    (lambda s:
+      (s['part_b']['prereg']['w'], s['part_b']['prereg']['l'], s['part_b']['prereg']['t']) == (116, 112, 123) and round(s['part_b']['prereg']['one_sided_p'], 2) == 0.42
+      and round(s['part_b']['pooled_capture_expected']['tile-phase (aligned)']['0.2'], 3) == 0.707 and round(s['part_b']['pooled_capture_expected']['confidence (baseline)']['0.2'], 3) == 0.749
+      and s['part_b']['bootstrap_pooled_gain_vs_confidence']['boundary indicator']['0.05']['lo'] > 0 and s['part_b']['bootstrap_pooled_gain_vs_confidence']['boundary indicator']['0.2']['hi'] < 0
+      and (s['part_b']['per_tile_tests_vs_confidence']['boundary indicator']['0.05']['w'], s['part_b']['per_tile_tests_vs_confidence']['boundary indicator']['0.05']['l'], s['part_b']['per_tile_tests_vs_confidence']['boundary indicator']['0.05']['t']) == (181, 147, 23)
+      and round(s['part_b']['pooled_capture_expected']['control NDWI level']['0.2'], 3) == 0.795
+      and round(s['part_awf']['crops']['16']['bootstrap_vs_confidence']['tile-phase (aligned)']['0.2']['gain'], 3) == 0.073 and s['part_awf']['crops']['16']['bootstrap_vs_confidence']['tile-phase (aligned)']['0.2']['lo'] <= 0
+      and all(s['part_a']['tests_vs_confidence']['tile-phase (aligned)'][b]['river']['w'] == 8 for b in ('0.1', '0.2'))
+      and all(s['part_a']['tests_vs_confidence']['boundary indicator'][b]['river']['w'] == 7 for b in ('0.05', '0.1', '0.2'))
+    )(A['exp/out/exp35_summary.json'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: operating-points-null}
+    - {file: docs/results/comparisons.md, marker: operating-points-null}
+
+- id: v12-replication-mixed
+  statement: On OlmoEarth v1.2 Base the cue enrichments and the shift-averaged window replicate on both hand-label testbeds, the boundary-first order replicates on Bolivia (pooled 0.461 vs 0.423 at 10%) but not on the test split, and confidence is no longer the best ranker on Bolivia while v1.2 matches v1's accuracy (0.906 and 0.953).
+  status: mixed
+  experiments: [exp45]
+  artifacts: [exp/out/exp45_summary.json]
+  check: |-
+    (lambda s:
+      s['prereg'] == {'R1_best_ranker': False, 'R2_boundary_first': False, 'R3_cue_enrichment': True, 'R4_shift_averaged_window': True, 'complete': True}
+      and s['results']['bolivia']['R2_boundary_first']['replicates'] is True and s['results']['test']['R2_boundary_first']['replicates'] is False
+      and round(s['results']['bolivia']['R2_boundary_first']['pooled']['0.1']['lex'], 3) == 0.461 and round(s['results']['bolivia']['R2_boundary_first']['pooled']['0.1']['confidence'], 3) == 0.423
+      and s['results']['bolivia']['R1_best_ranker']['replicates'] is False and s['results']['test']['R1_best_ranker']['replicates'] is True
+      and round(s['results']['bolivia']['head_accuracy'], 3) == 0.906 and round(s['results']['test']['head_accuracy'], 3) == 0.953
+      and all(s['results'][n]['R4_shift_averaged_window']['replicates'] and s['results'][n]['R3_cue_enrichment']['replicates'] for n in ('bolivia', 'test'))
+      and round(s['results']['bolivia']['R4_shift_averaged_window']['mean_gain'], 4) == 0.0110 and round(s['results']['test']['R4_shift_averaged_window']['mean_gain'], 4) == 0.0096
+    )(A['exp/out/exp45_summary.json'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: v12-replication-mixed}
+    - {file: docs/results/comparisons.md, marker: v12-replication-mixed}
+
+- id: averaged-confidence-ranking-mixed
+  statement: The shift-averaged decision's own confidence beats tiling instability on both testbeds and both backbones and beats the grid window's confidence on Bolivia, but the NDWI-level control matches it on Bolivia under v1 and beats it under v1.2.
+  status: mixed
+  experiments: [exp47]
+  artifacts: [exp/out/exp47_summary.json]
+  check: |-
+    (lambda s:
+      s['prereg']['supported'] is False and s['prereg']['complete'] is True
+      and all(s['results'][v][n]['tests']['tile-phase']['pooled_lead'] > 0.001 and s['results'][v][n]['tests']['tile-phase']['sign_p'] < 0.05 for v in ('v1', 'v1_2') for n in ('bolivia', 'test'))
+      and all(s['results'][v]['bolivia']['pooled_eaurc']['averaged confidence'] < s['results'][v]['bolivia']['pooled_eaurc']['grid confidence'] for v in ('v1', 'v1_2'))
+      and s['results']['v1_2']['bolivia']['pooled_eaurc']['control NDWI level'] < s['results']['v1_2']['bolivia']['pooled_eaurc']['averaged confidence']
+      and abs(s['results']['v1']['bolivia']['tests']['control NDWI level']['pooled_lead']) < 0.002
+      and s['results']['v1_2']['test']['prereg_passes'] is True
+    )(A['exp/out/exp47_summary.json'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: averaged-confidence-ranking-mixed}
+
+- id: shift-label-entropy-rejected
+  statement: Shift-label entropy (the four shifted hard decisions painted to pixels) is worse than tile-phase on Bolivia under both backbones, ties it on the v1 test split and loses on the v1.2 test split.
+  status: rejected
+  experiments: [exp50]
+  artifacts: [exp/out/exp50_summary.json]
+  check: |-
+    (lambda r:
+      round(r['v1']['bolivia']['pooled_eaurc']['shift-label entropy'], 4) == 0.0161 and round(r['v1']['bolivia']['pooled_eaurc']['tile-phase'], 4) == 0.0113
+      and round(r['v1_2']['bolivia']['pooled_eaurc']['shift-label entropy'], 4) == 0.0150 and round(r['v1_2']['bolivia']['pooled_eaurc']['tile-phase'], 4) == 0.0133
+      and abs(r['v1']['test']['pooled_eaurc']['shift-label entropy'] - r['v1']['test']['pooled_eaurc']['tile-phase']) < 0.0002
+      and r['v1_2']['test']['pooled_eaurc']['shift-label entropy'] > r['v1_2']['test']['pooled_eaurc']['tile-phase'] + 0.003
+    )(A['exp/out/exp50_summary.json']['results'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: shift-label-entropy-rejected}
+    - {file: docs/results/comparisons.md, marker: shift-label-entropy-rejected}
+
+- id: window-design-alternatives-mixed
+  statement: The spectral-split decision gains 0.13 points on Bolivia and loses 0.20 on the test split, the scale-adaptive decision gains 0.25 on Bolivia and is flat on the test split, and tile-phase abstention equals confidence abstention at matched coverage.
+  status: mixed
+  experiments: [exp42]
+  artifacts: [exp/out/exp42_summary.json]
+  check: |-
+    (lambda r:
+      round(100 * (r['bolivia']['pixel_accuracy_mean']['W3 spectral split'] - r['bolivia']['pixel_accuracy_mean']['W1 shift-averaged']), 2) == 0.13
+      and round(100 * (r['test']['pixel_accuracy_mean']['W3 spectral split'] - r['test']['pixel_accuracy_mean']['W1 shift-averaged']), 2) == -0.20
+      and round(100 * (r['bolivia']['W2_vs_W0_window']['acc_W2'] - r['bolivia']['W2_vs_W0_window']['acc_W0']), 2) == 0.25
+      and abs(r['test']['W2_vs_W0_window']['acc_W2'] - r['test']['W2_vs_W0_window']['acc_W0']) < 0.001
+      and all(abs(r[n]['selective_accuracy']['tile-phase (W4 purity proxy)'][c] - r[n]['selective_accuracy']['confidence'][c]) < 0.002 for n in ('bolivia', 'test') for c in ('0.8', '0.9'))
+    )(A['exp/out/exp42_summary.json']['results'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: window-design-alternatives-mixed}
+    - {file: docs/results/comparisons.md, marker: window-design-alternatives-mixed}
+
+- id: segment-majority-rejected
+  statement: A segment majority of the shift-averaged decision over a spectral partition breaks more pixels than it corrects on both testbeds (Bolivia C 15,093 vs B 16,273; test split C 24,525 vs B 30,951), mixed segments cause most of the broken pixels, and dropping the NDWI feature does not help.
+  status: rejected
+  experiments: [exp43]
+  artifacts: [exp/out/exp43_summary.json]
+  check: |-
+    (lambda s:
+      s['prereg']['supported'] is False and s['prereg']['complete'] is True
+      and (s['results']['bolivia']['primary_k8_hard']['C_total'], s['results']['bolivia']['primary_k8_hard']['B_total']) == (15093, 16273)
+      and (s['results']['test']['primary_k8_hard']['C_total'], s['results']['test']['primary_k8_hard']['B_total']) == (24525, 30951)
+      and (s['results']['bolivia']['primary_k8_hard']['w'], s['results']['bolivia']['primary_k8_hard']['l']) == (168, 209) and (s['results']['test']['primary_k8_hard']['w'], s['results']['test']['primary_k8_hard']['l']) == (244, 387)
+      and round(s['results']['bolivia']['mechanism_primary']['mixed']['B'] / s['results']['bolivia']['primary_k8_hard']['B_total'], 2) == 0.73
+      and round(s['results']['test']['mechanism_primary']['mixed']['B'] / s['results']['test']['primary_k8_hard']['B_total'], 2) == 0.89
+      and all(s['results'][n]['mechanism_primary']['pure_correct']['B'] == 0 and s['results'][n]['secondary_k8_hard_twelve_bands_only']['mean_gain'] < 0 for n in ('bolivia', 'test'))
+      and round(s['results']['bolivia']['primary_k8_hard']['acc_candidate_mean'], 3) == 0.904 and round(s['results']['test']['primary_k8_hard']['acc_candidate_mean'], 3) == 0.948
+    )(A['exp/out/exp43_summary.json'])
+  cited_in:
+    - {file: docs/Findings.md, marker: segment-majority-rejected}
+    - {file: docs/TECHNIQUES.md, marker: segment-majority-rejected}
+    - {file: docs/results/comparisons.md, marker: segment-majority-rejected}
+
+- id: sixteen-offsets-not-worthwhile
+  statement: Sixteen crop offsets beat the four diagonals on both testbeds (201/149/90, 369/202/229) but by +0.04 accuracy points, five times below the preregistered minimum worthwhile effect, for twelve extra forward passes; an unbalanced seven-offset subset is worse than the diagonals.
+  status: rejected
+  experiments: [exp44]
+  artifacts: [exp/out/exp44_summary.json]
+  check: |-
+    (lambda s:
+      s['prereg']['supported'] is False and s['prereg']['complete'] is True
+      and (s['results']['bolivia']['tests']['W16 (all offsets)']['w'], s['results']['bolivia']['tests']['W16 (all offsets)']['l'], s['results']['bolivia']['tests']['W16 (all offsets)']['t']) == (201, 149, 90)
+      and (s['results']['test']['tests']['W16 (all offsets)']['w'], s['results']['test']['tests']['W16 (all offsets)']['l'], s['results']['test']['tests']['W16 (all offsets)']['t']) == (369, 202, 229)
+      and all(round(100 * s['results'][n]['tests']['W16 (all offsets)']['mean_gain'], 2) == 0.04 and s['results'][n]['tests']['W16 (all offsets)']['mean_gain'] < s['results'][n]['prereg']['min_effect'] / 4 for n in ('bolivia', 'test'))
+      and all(s['results'][n]['tests']['W7 (diagonals + horizontal phases)']['mean_gain'] < 0 for n in ('bolivia', 'test'))
+      and round(s['results']['bolivia']['pixel_accuracy_mean']['W16 (all offsets)'], 4) == 0.9074 and round(s['results']['test']['pixel_accuracy_mean']['W16 (all offsets)'], 4) == 0.9507
+    )(A['exp/out/exp44_summary.json'])
+  cited_in:
+    - {file: docs/Findings.md, marker: sixteen-offsets-not-worthwhile}
+    - {file: docs/TECHNIQUES.md, marker: sixteen-offsets-not-worthwhile}
+    - {file: docs/results/comparisons.md, marker: sixteen-offsets-not-worthwhile}

@@ -27,7 +27,7 @@ region; 351 with enough errors to score) and on the test split (800 tiles,
 computed on one 60x60 crop per tile, tie-aware excess AURC per tile, exact
 sign tests. Values in `exp/out/exp18_sen1floods.csv`.
 
-**Result: confidence is the best signal**, on both splits.
+**Result: confidence is the best signal**, on both splits. <!-- claim:exp18-confidence-best-both-splits -->
 
 | Signal vs confidence | Bolivia (better/worse) | p | Test split |
 |---|---|---|---|
@@ -42,7 +42,7 @@ Pooled E-AURC over all patches: confidence 0.0105 (Bolivia), 0.0096 (test)
 — lowest of all signals on both.
 
 **Errors still concentrate on boundaries** (75% of error patches vs 21% of
-correct on Bolivia; 73% vs 18% on test). The phenomenon is real; confidence
+correct on Bolivia; 73% vs 18% on test). The phenomenon is real; confidence <!-- claim:errors-sit-on-boundaries -->
 simply ranks those errors better than boundary proximity or instability do.
 
 **Reading.** The WorldCover-referenced advantages of tile-phase (26/27) and
@@ -72,7 +72,7 @@ validation points of the official spatial split.
 against the reported 0.895; 0.898 when the containing patch's logits are
 read directly instead of the interpolated pixel. The frozen-encoder probe of
 exp16 reaches 0.817 on the same points; 28 of the fine-tuned model's 41
-errors are also probe errors.
+errors are also probe errors. <!-- claim:fine-tuned-vs-probe-errors -->
 
 **Signal comparison** (16-px crops, 41 errors, tie-aware AURC, cluster
 bootstrap over the 30 annotation tasks):
@@ -80,7 +80,7 @@ bootstrap over the 30 annotation tasks):
 | Signal | AURC | Verdict |
 |---|---|---|
 | Aligned tiling instability | 0.0235 | indistinguishable from confidence (CI [-0.0068, +0.0010], P(better) 0.93) |
-| **Confidence** | **0.0262** | best supported |
+| **Confidence** | **0.0262** | best supported | <!-- claim:fine-tuned-model-audit -->
 | Boundary indicator | 0.0765 | significantly worse |
 | Disagreement with the frozen probe | 0.0852 | worse |
 | NDVI temporal-variability control | 0.0937 | worse |
@@ -95,7 +95,7 @@ raises accuracy from 0.881 to 0.945; the 90% most confident to 0.919.
 Expected calibration error 0.080 (10 bins): the 299 points above 0.9
 top-1 probability are 0.93 accurate at a mean confidence of 0.99, and the 21
 points in the 0.8-0.9 bin are 0.52 accurate. **The model is overconfident,
-so a stated accuracy needs a coverage.**
+so a stated accuracy needs a coverage.** <!-- claim:accuracy-needs-coverage -->
 
 Per-class recall: shrubland/savanna 0.96 (n 116), agriculture/settlement
 0.91 (56), grassland/barren 0.82 (72), woodland forest 0.73 (45), open water
@@ -117,7 +117,7 @@ ground-truth boundaries, and uncertainty uses a cluster bootstrap over the
 - **Ranking.** Confidence (negative logit margin) ranks errors better than
   the boundary score (AURC 0.0363 vs 0.0636; cluster-bootstrap 95% interval
   on the difference [+0.0023, +0.0562], P(boundary better) = 0.016) and than
-  per-window tile-phase (0.0489, interval [+0.0023, +0.0221]).
+  per-window tile-phase (0.0489, interval [+0.0023, +0.0221]). <!-- claim:awf-confidence-lowest-aurc -->
 - **Are labelled patches interior?** No. The labelled patch's score is zero
   on 47% of windows against 43% for other patches of the same maps; its
   within-window quantile averages 0.46. Labelled patches are, if anything,
@@ -150,7 +150,7 @@ errors for signal evaluation.
 On this in-domain multiclass task **confidence achieves the lowest AURC**
 (0.0363), against tile-phase 0.0489, Nano-Base total variation 0.0670, and —
 completing the comparison on the same 63 errors (exp12) — E_dist 0.1338 and a
-no-model spectral-variability control 0.1658. In-domain AWF errors are
+no-model spectral-variability control 0.1658. In-domain AWF errors are <!-- claim:awf-confidence-lowest-aurc -->
 neither out-of-distribution nor pixel-trivial.
 
 Lowest per-class recall: herbaceous wetland (0.50, n=6, indicative only).
@@ -172,7 +172,7 @@ fixed fractions along OSM geometries of eight named rivers, 0.2-degree
 separation, included iff the deterministic Base head commits >= 8 errors
 against WorldCover. 20 rule-selected scenes joined the 7 exp09 scenes; two
 unsuffixed AOIs (kafue, luangwa) that entered through a cache import rather
-than the rule are excluded from exp13 onward, leaving **27 scenes**.
+than the rule are excluded from exp13 onward, leaving **27 scenes**. <!-- claim:rule-selected-27-scenes -->
 
 Head-seed variance is structurally zero: heads initialize at zeros with
 deterministic full-batch training, so the planned seed-robustness test is
@@ -180,7 +180,7 @@ vacuous rather than passed. Robustness to head initialization is untested by
 design choice.
 
 *The exp11 statistics used raw AURC and the unaligned tile-phase; exp13
-corrects both and supersedes them.*
+corrects both and supersedes them.* <!-- claim:exp11-unaligned-tile-phase-stats -->
 
 ## Corrected statistics (exp13)
 
@@ -194,7 +194,7 @@ permutation p-values and best-signal tally below are in
 exact sign test p=4e-07; sign-flip permutation p=1e-04). Its block-bootstrap
 interval excludes zero in its favour on 18 scenes and against on 0. It beats
 the pixel control on 18/27, E_case on 23/27, E_dist on 22/27, and is the best
-of the five signals on 12/27 (best or second on 24/27).
+of the five signals on 12/27 (best or second on 24/27). <!-- claim:tile-phase-26-of-27-worldcover -->
 
 Everything else against the baseline:
 
@@ -251,7 +251,7 @@ whose hard label differs.
 
 **The discrete boundary fraction is statistically indistinguishable from
 tile-phase**: boundary better on 12 scenes, tile-phase on 15, tied on 0
-(sign p=0.70; median E-AURC gap 0.00012 in tile-phase's favour). Per-scene
+(sign p=0.70; median E-AURC gap 0.00012 in tile-phase's favour). Per-scene <!-- claim:boundary-fraction-equals-tile-phase -->
 values differ in
 both directions, so this is a null result, not an equivalence. Boundary
 fraction alone beats the baseline on 19/27 (p=0.052) and the pixel control
@@ -295,7 +295,7 @@ longer matches the cache).
 - **T3.** With unstable patches removed (23 scenes with >= 8 remaining
   disagreements), **tiling instability still beats confidence on 21/23**
   (p=7e-05, median E-AURC gain +0.0026) against 22/23 on all patches of the
-  same scenes. Boundary indicator 18/23 against 15/23.
+  same scenes. Boundary indicator 18/23 against 15/23. <!-- claim:reference-instability-does-not-explain -->
 
 Values in `exp/out/exp23_reference_instability.csv`.
 
@@ -313,7 +313,7 @@ annual map.
 p=9e-05, median gain +0.0172) against 25/1/0 with 2024 imagery on the same
 scenes (gain +0.0047); boundary 20/6/0 against 18/8/0; E_case 11/15/0 against
 10/16/0; E_dist 12/14/0 either way; control 12/14/0 against 13/13/0. The
-per-scene gain is **not** larger in 2024 (10/16/0, p=0.327).
+per-scene gain is **not** larger in 2024 (10/16/0, p=0.327). <!-- claim:year-gap-does-not-explain -->
 
 *Caveat: 2021 Level-2A products predate the 2022 radiometric offset change;
 the 2021 head is trained and scored within that radiometry.* Values in
@@ -333,7 +333,7 @@ Tested on the 27 scenes of 2024 and the 26 of exp24.
   confidence 22/2/0 in 2024** (p=4e-05; all patches 23/1/0) and 22/1/0 in
   2021 (p=6e-06; all patches 20/3/0). Boundary 19/5/0 against 18/6/0 (2024),
   20/3/0 against 18/5/0 (2021). T3 restricted *to* seasonal patches: tiling
-  instability 12/6/0 (2024), 13/8/0 (2021).
+  instability 12/6/0 (2024), 13/8/0 (2021). <!-- claim:seasonal-water-does-not-explain -->
 
 Values in `exp/out/exp25_seasonal_water.csv`.
 
@@ -360,7 +360,7 @@ Sen1Floods11 Bolivia hand labels, per-tile one-sided sign test.
 
 | Testbed | Result |
 |---|---|
-| Bolivia hand labels, 351 tiles | Preregistered test null: tiling instability 116/112/123 (p = 0.42), pooled 0.707 vs 0.749. Boundary indicator beats confidence at 5% (0.286 vs 0.259, CI [+0.009, +0.046]; 181/147/23, p = 0.068), loses at 20%. The NDWI-level control beats confidence pooled at 20% (0.795 vs 0.749), a caution on single operating points |
+| Bolivia hand labels, 351 tiles | Preregistered test null: tiling instability 116/112/123 (p = 0.42), pooled 0.707 vs 0.749. Boundary indicator beats confidence at 5% (0.286 vs 0.259, CI [+0.009, +0.046]; 181/147/23, p = 0.068), loses at 20%. The NDWI-level control beats confidence pooled at 20% (0.795 vs 0.749), a caution on single operating points | <!-- claim:operating-points-null -->
 | Fine-tuned AWF model, 30 tasks | 16-px crops: tiling instability +0.073 at 20% (CI [+0.000, +0.190], P 0.93), the exp21 hint; 32-px crops: reversed (0.643 vs 0.690). Every other signal behind at every budget |
 | WorldCover, 27 scenes | Tiling instability 8/0 rivers at 10% and 20%; boundary 7/1 at every budget where its AURC vote is 5/3: coarse scores fare better at fixed budgets than under AURC |
 
@@ -377,9 +377,9 @@ boundary-first order against confidence:
 
 | Testbed | 5% | 10% | 20% |
 |---|---|---|---|
-| Sen1Floods11 Bolivia, pooled over 351 tiles | 0.274 vs 0.259, CI [+0.009, +0.021] | 0.494 vs 0.465, CI [+0.015, +0.039] | 0.732 vs 0.749, CI [-0.054, +0.013] |
+| Sen1Floods11 Bolivia, pooled over 351 tiles | 0.274 vs 0.259, CI [+0.009, +0.021] | 0.494 vs 0.465, CI [+0.015, +0.039] | 0.732 vs 0.749, CI [-0.054, +0.013] | <!-- claim:boundary-first-review-order -->
 | Bolivia per tile, better/worse/tied | 85/31/235, one-sided p = 2.7e-7 | 112/48/191, p = 2.3e-7 | 121/77/153, two-sided p = 0.002 |
-| AWF fine-tuned, 16-px crop, 30-task bootstrap | 0.220 vs 0.220 | 0.390 vs 0.390 | 0.634 vs 0.634 |
+| AWF fine-tuned, 16-px crop, 30-task bootstrap | 0.220 vs 0.220 | 0.390 vs 0.390 | 0.634 vs 0.634 | <!-- claim:fine-tuned-capture-at-budgets -->
 | AWF fine-tuned, 32-px crop | 0.214 vs 0.214 | 0.381 vs 0.429 | 0.571 vs 0.690 |
 | WorldCover scenes, rivers better/worse | 8/0 | 8/0 | 8/0 |
 
@@ -406,7 +406,7 @@ exp36 and against confidence:
 
 The 5% and 10% rows against the boundary-first order were preregistered
 (per-tile one-sided tests and the tile bootstrap of the pooled gain); the
-per-tile tests pass, the pooled bootstrap does not, so the result is mixed.
+per-tile tests pass, the pooled bootstrap does not, so the result is mixed. <!-- claim:ndwi-first-order-mixed -->
 The two statistics are two operating modes: a budget per tile against one
 budget over the area, where the ambiguous windows of NDWI-heavy tiles fill
 the set. Source `exp/out/exp38_summary.json`.
@@ -420,11 +420,11 @@ labels over the region every tiling covers:
 | Design | Bolivia pixel accuracy | Test split pixel accuracy | Per tile vs the grid |
 |---|---|---|---|
 | W0 grid window | 0.8969 | 0.9411 | |
-| W1 shift-averaged (preregistered) | 0.9071 | 0.9503 | 321/66/53, p = 1e-41; 583/78/139, p = 9e-97 |
-| W3 spectral split inside the window | 0.9084 | 0.9483 | vs W1: 217/158 better on Bolivia, 226/404 worse on test |
+| W1 shift-averaged (preregistered) | 0.9071 | 0.9503 | 321/66/53, p = 1e-41; 583/78/139, p = 9e-97 | <!-- claim:w1-accuracy-gain -->
+| W3 spectral split inside the window | 0.9084 | 0.9483 | vs W1: 217/158 better on Bolivia, 226/404 worse on test | <!-- claim:window-design-alternatives-mixed -->
 | W2 scale-adaptive (window accuracy) | 0.9045 vs 0.9020 | 0.9515 vs 0.9518 | 175/121; 253/241 |
-| segment majority of W1 over a spectral partition (exp43, preregistered) | 0.9042 | 0.9478 | vs W1: 168/209 (C 15,093, B 16,273); 244/387 (C 24,525, B 30,951) |
-| sixteen crop offsets (exp44, preregistered) | 0.9074 | 0.9507 | vs W1: 201/149/90, p = 0.003 (C 4,566, B 4,237); 369/202/229, p = 1.3e-12 (C 7,100, B 6,060); +0.04 points, below the +0.2 minimum effect |
+| segment majority of W1 over a spectral partition (exp43, preregistered) | 0.9042 | 0.9478 | vs W1: 168/209 (C 15,093, B 16,273); 244/387 (C 24,525, B 30,951) | <!-- claim:segment-majority-rejected -->
+| sixteen crop offsets (exp44, preregistered) | 0.9074 | 0.9507 | vs W1: 201/149/90, p = 0.003 (C 4,566, B 4,237); 369/202/229, p = 1.3e-12 (C 7,100, B 6,060); +0.04 points, below the +0.2 minimum effect | <!-- claim:sixteen-offsets-not-worthwhile -->
 | eight offsets, diagonals and anti-diagonals (exp44) | 0.9073 | 0.9505 | half of W16's gain |
 | seven offsets, diagonals and horizontal phases (exp44) | 0.9060 | 0.9487 | worse than the four diagonals on both |
 
@@ -435,7 +435,7 @@ block-constant oracle limit, the pixels any one-class-per-block decision
 must get wrong, is 3.0% and 2.9% pooled, against grid error rates of 10.3%
 and 5.9% averaged over tiles, so the block forces at most 29% and 49% of
 those errors, and the shift-averaged map decides per pixel and still puts
-43% and 56% of its own errors on those windows (exp43).
+43% and 56% of its own errors on those windows (exp43). <!-- claim:mixed-label-windows-not-a-ceiling -->
 Tile-phase abstention equals confidence abstention at matched coverage.
 Source `exp/out/exp42_summary.json`.
 
@@ -459,7 +459,7 @@ replicates with a slightly larger gain than under v1 (+0.0110 and +0.0096
 against +0.0102 and +0.0091), consistent with v1.2's larger tiling
 instability. The boundary-first review order replicates on Bolivia (pooled
 0.4611 against 0.4234 at the 10% budget) and does not extend to the test
-split. Source `exp/out/exp45_summary.json`.
+split. Source `exp/out/exp45_summary.json`. <!-- claim:v12-replication-mixed -->
 
 ## SHRUG-FM's reliability signals under the window protocol (exp49)
 
@@ -490,17 +490,17 @@ linear heads for their CNN ensemble, a logistic combiner for the tree).
 
 Preregistered and supported: under v1.2 confidence beats mutual information
 (leads +0.0060 and +0.0022, per tile 263/61 and 352/76, p = 2.5e-31 and
-7.9e-44) and beats -NCDD (+0.077 and +0.035) on both testbeds. Three things
+7.9e-44) and beats -NCDD (+0.077 and +0.035) on both testbeds. Three things <!-- claim:shrug-signals-rejected -->
 beside the preregistration. Bagging the head appeared to help under v1: the
 predictive entropy of the eight members' averaged maps beat confidence on
 Bolivia (210/103 tiles, p = 1.5e-9) and marginally on the test split
 (240/174, pooled -0.0002), and tied or lost under v1.2; exp50 below shows
-this does not replicate with a fresh draw.
+this does not replicate with a fresh draw. <!-- claim:bag-beats-confidence-v1-bolivia -->
 The label-fitted linear fusion beats confidence on three arms by
 0.0027-0.0041 (223/94, 265/155, 223/97; p <= 9e-8) and by 0.0004 on the v1.2
 test split, the first fusion to beat confidence in this repository, where
 exp47's label-free midrank fusions all lost; it is fitted on the head's own
-training split against in-sample errors, so it needs no labels beyond the
+training split against in-sample errors, so it needs no labels beyond the <!-- claim:label-fitted-fusion-three-of-four -->
 head's. And the paper's NCDD, computed over cluster-normalized distances as
 its eq. 5 states, is worse than the raw deficit on all four arms, as the
 normalization predicts when cluster spreads differ.
@@ -520,7 +520,8 @@ below 0.6 (their definition) gives failure rates of 0.331 on Bolivia and
 
 At the tile level the single model's confidence, the baseline the paper never
 runs, is at or near the best signal on every arm, mutual information is the
-weakest task signal, and the window-level gain of the linear fusion does not
+weakest task signal on three of four arms (it edges confidence on the v1 test
+split, 0.117 against 0.120), and the window-level gain of the linear fusion does not
 carry over (it was fitted on window errors, not tile failures). The numbers
 are not comparable to the paper's (different data, model and failure rates);
 the point is which baseline was missing. Source `exp/out/exp49_summary.json`,
@@ -562,16 +563,16 @@ The weight sits on the no-model NDWI-level control, with the two ensemble
 entropies and confidence behind it; dropping NDWI level costs the most on
 three of four arms, and on Bolivia under v1.2 it returns the fusion to
 confidence's level. Label-free midrank fusion of the same two signals lost
-everywhere in exp47; what the labels buy is the weighting.
+everywhere in exp47; what the labels buy is the weighting. <!-- claim:fusion-weight-on-ndwi -->
 
 The bag does not replicate. Sixteen members with a fresh seed lose to
 confidence on Bolivia under v1 (0.0100 vs 0.0094,
 140/166 tiles), where exp49's eight members had won, and win on the
 v1.2 test split (0.0059 vs 0.0064, 248/160), where they had lost.
 The preregistered P1 fails; the bag is confidence plus seed noise at the
-0.002 level, and its ledger row reads not supported. Shift-label entropy
+0.002 level, and its ledger row reads not supported. Shift-label entropy <!-- claim:bag-not-replicated -->
 loses to tile-phase on Bolivia under both backbones (0.0161 vs
-0.0113; 0.0150 vs 0.0133) and never beats it.
+0.0113; 0.0150 vs 0.0133) and never beats it. <!-- claim:shift-label-entropy-rejected -->
 
 | Tile level | v1 Bolivia | v1 test | v1.2 Bolivia | v1.2 test |
 |---|---|---|---|---|
@@ -584,7 +585,7 @@ multi-region split under both backbones, with intervals that exclude zero,
 and not on Bolivia, the preregistered arm; P2 fails as stated and the
 tile-level gain stands as a secondary result on the split that has many
 events. Source `exp/out/exp50_summary.json` and `exp50_fusion_ablation.csv`,
-job 736320.
+job 736320. <!-- claim:tile-fitted-fusion-split-only -->
 
 ## Served land cover change rasters (exp20)
 
@@ -603,7 +604,7 @@ and Barotse sites, read with the pure-HTTP tile reader in
   disagreement is 0.2-2.4% of 4-px windows; boundary fraction ranks
   disagreements below random at 6 of 6 (Kazungula AURC 0.0013 against 0.0156
   random, oracle 0.0001); **a 5% review budget captures a median 0.88 of
-  disagreements** (0.61-0.98). Boundary share is 0.92 among disagreements
+  disagreements** (0.61-0.98). Boundary share is 0.92 among disagreements <!-- claim:served-product-boundary-triage -->
   against 0.01 among agreements. *Legends and dates differ, so these are
   reference disagreements, not counted model errors.*
 - **Change probability** (band 1): a median 2.7% of pixels flagged at 0.5;
@@ -636,7 +637,7 @@ Every pipeline period is predicted from each window's own geometry.
   each window's UTM-to-Mercator ratio. The weakest of the 19 still reaches
   Bonferroni p=3.9e-12; the WorldCover control's *best* top peak reaches only
   p=0.006. **Class boundaries and
-  change-probability gradients are quantized to the 40 m patch grid.**
+  change-probability gradients are quantized to the 40 m patch grid.** <!-- claim:lcc-lattice-found-seams-absent -->
 - **Inference-window seams: absent.** At 64, 128, 256 and 512 UTM px,
   profiles with p<0.01 are 0/10 in every class-map band and 1/10 in one
   gradient band — the rate expected under the null. Injected seams set the
@@ -673,7 +674,7 @@ gradient magnitude), scored on identical errors with the same harness.
   well as or better than every model signal (NDWI gradient 0.0005 vs E_dist
   0.0014). This scene's disagreements are the river the reference misses —
   spectrally trivial — so **it supports no claim of model-signal
-  superiority**, and the E_dist shift claim was withdrawn on this basis.
+  superiority**, and the E_dist shift claim was withdrawn on this basis. <!-- claim:no-model-controls -->
 
 On both difficult scenes, even no-model statistics rank errors better than
 confidence.
@@ -688,11 +689,11 @@ scene. Five label-free single-model signals scored against the exp13 errors.
 
 | Signal | vs baseline | vs control |
 |---|---|---|
-| Band-set disagreement | **21/27** (p=0.006) | 16/27 |
-| Depth-probe disagreement | 19/27 (p=0.052) | 13/27 |
-| Decision settling (logit-lens) | 0/27 | - |
-| Representation drift | 3/27 | - |
-| Attention entropy | 3/27 | - |
+| Band-set disagreement | **21/27** (p=0.006) | 16/27 | <!-- claim:band-set-disagreement-mixed -->
+| Depth-probe disagreement | 19/27 (p=0.052) | 13/27 | <!-- claim:depth-probe-partial -->
+| Decision settling (logit-lens) | 0/27 | - | <!-- claim:internal-state-signals-rejected -->
+| Representation drift | 3/27 | - | <!-- claim:internal-state-signals-rejected -->
+| Attention entropy | 3/27 | - | <!-- claim:internal-state-signals-rejected -->
 
 Band-set disagreement (heads trained separately on the 10 m, 20 m and 60 m
 Sentinel-2 band-set tokens; std of the three probabilities) needs **no second
@@ -703,7 +704,7 @@ The INSIDE-style internal-state signals do not transfer to this setting.
 Nano 0.61, depth probe 0.64, logit-lens 0.61, 20 m band-set probe 0.75. The
 band-set probe is the *most* correlated rater yet yields the *best*
 disagreement signal — so error decorrelation alone does not predict a
-partner's value; a partner that sees a different view of the input does.
+partner's value; a partner that sees a different view of the input does. <!-- claim:band-set-most-correlated-best-partner -->
 This refines exp10.
 
 Best-signal tally: tile-phase 13, control 9, depth-probe 2, band-set 1,
@@ -715,7 +716,7 @@ attention entropy 1, E_case 1, baseline 0. Values in
 Replacing Nano with v1-Large as Base's partner makes the disagreement signal
 **worse** (|Large-Base| mean AURC 0.0197 vs |Nano-Base| 0.0129 over seven
 scenes, better on only 3/7) although Large is the more accurate model on
-every scene. Within one family, strong models agree on errors. Refined by
+every scene. Within one family, strong models agree on errors. Refined by <!-- claim:stronger-partner-worse-disagreement -->
 exp17 above.
 
 ## E_geo combined with boundary proximity (exp15)
@@ -725,7 +726,7 @@ predicts dry. Georeferencing recovered for all 27 rule-selected scenes.
 
 - **Prepending the flag to boundary proximity does not help:** better on 5
   scenes, worse on 9, unchanged on 13 (sign p=0.42). Geo alone beats the
-  baseline on 3/27; boundary alone on 19/27.
+  baseline on 3/27; boundary alone on 19/27. <!-- claim:geo-grounding-partial -->
 - **Sensitivity.** 17/27 scenes carry flags; pooled precision 0.12 over 413
   flags against a base error rate of 0.081 (1.5x). The unweighted per-scene
   mean of 0.22 is inflated by scenes with one or two flags. **9 scenes carry
@@ -747,13 +748,13 @@ cached exp11 features exactly (max difference 0).
 - **RoPE does not reduce tiling instability.** Mean per-patch std across 0-3
   px shifts is 0.046 for v1.2 vs 0.032 for v1, smaller for v1.2 on only 6 of
   31 scenes (sign p=9e-4). RoPE addressed the long-range striping artifact;
-  sub-patch grid-shift instability is a different effect.
+  sub-patch grid-shift instability is a different effect. <!-- claim:rope-does-not-reduce-tiling-instability -->
 - **v1.2 tokenizes Sentinel-2 as a single band-set token per patch**, so the
   exp17 band-set signal has no v1.2 counterpart.
 - Head accuracy vs WorldCover on the Katima probe: v1 0.942, v1.2 0.922.
 - Tile-phase ranks each version's own WorldCover-referenced errors better
   than its confidence (v1 26/1, v1.2 25/2), subject to the exp18 caveat.
   **Cross-version disagreement is not useful**: worse than confidence for
-  v1's errors (6/21), not significant for v1.2's (18/9, p=0.12).
+  v1's errors (6/21), not significant for v1.2's (18/9, p=0.12). <!-- claim:backbone-version-disagreement-rejected -->
 
 Values in `exp/out/exp19_v1_vs_v12.csv`.

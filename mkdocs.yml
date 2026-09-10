@@ -65,6 +65,7 @@ nav:
       - Lab log: LabLog.md
   - Protocol:
       - method/protocol.md
+      - Claim ledger: method/claims.md
       - Roadmap: plan/roadmap.md
   - API Reference: reference/
 

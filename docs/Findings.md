@@ -13,60 +13,60 @@ file under `exp/out/`; the per-experiment detail is in the
 1. **The model's own confidence is the best single label-free signal for
    where the map is wrong**, with one exception. It leads on the AWF points,
    the fine-tuned model run end to end and the multi-region Sen1Floods11
-   split, under both backbones and both window designs (exp04, exp16,
-   exp18, exp21, exp45, exp47, exp49). The exception is Sen1Floods11
+   split, leading or tying under both backbones and both window designs (exp04, exp16,
+   exp18, exp21, exp45, exp47, exp49). The exception is Sen1Floods11 <!-- claim:confidence-best-single-signal -->
    Bolivia, a single flood event, where a no-model spectral index ranks the
-   model's errors as well as its own confidence under v1 and better under
+   model's errors within 0.002 of its own confidence under v1 and better under
    v1.2 Base, the encoder the served product uses, for the grid window and
    for the shift-averaged decision alike (exp45, exp47): on one event,
    water against land is nearly a spectral threshold, and there a head on
-   raw pixel statistics beats the frozen encoder (exp46).
+   raw pixel statistics beats the frozen encoder (exp46). <!-- claim:bolivia-ndwi-exception --> <!-- claim:pixel-head-beats-encoder-bolivia -->
    A bag of bootstrap heads does not improve on it: an apparent gain under
-   v1 on Bolivia (exp49) did not replicate with a fresh draw (exp50).
+   v1 on Bolivia (exp49) did not replicate with a fresh draw (exp50). <!-- claim:bag-not-replicated -->
 2. **Review boundary windows first, then by confidence.** Errors sit on
-   prediction boundaries, 75% of errors against 21% of correct windows, and
+   prediction boundaries, 75% of errors against 21% of correct windows, and <!-- claim:errors-sit-on-boundaries -->
    this order captures more of them than confidence alone at 5% and 10%
-   review budgets on hand labels, preregistered (exp36). No extra inference.
+   review budgets on hand labels, preregistered (exp36). No extra inference. <!-- claim:boundary-first-review-order -->
 3. **Every flagged window comes with a reason.** 95% of the error windows on
    hand labels carry at least one label-free cue with a measured enrichment;
    spectral ambiguity is 7x enriched and the one cue that adds precision
-   inside the review set (exp37).
+   inside the review set (exp37). <!-- claim:explanation-cues-cover-errors -->
 4. **An accuracy needs a coverage.** The fine-tuned model is 0.93 accurate
-   where it claims 0.99; keeping the 80% most confident windows gives 0.945
+   where it claims 0.99; keeping the 80% most confident windows gives 0.945 <!-- claim:accuracy-needs-coverage -->
    (exp21).
 5. **The served product can be triaged without confidence.** It exports no
    class confidence; boundary fraction alone captures a median 0.88 of the
-   disagreements at a 5% review budget (exp20).
+   disagreements at a 5% review budget (exp20). <!-- claim:served-product-boundary-triage -->
 6. **Averaging the tilings improves the map itself.** Run the encoder on the
    window cropped at four offsets and average the four decisions per pixel:
    pixel accuracy on hand labels rises by 1.0 points on Bolivia and 0.9 on
    the multi-region test split, preregistered, no labels, no retraining
-   (exp42). Errors concentrate on windows whose hand labels are mixed, but
+   (exp42). Errors concentrate on windows whose hand labels are mixed, but <!-- claim:w1-accuracy-gain -->
    that is concentration, not a ceiling: any one-class-per-block decision
-   must miss only 3% of pixels, far below the grid's measured error rate
+   must miss only 3% of pixels, far below the grid's measured error rate <!-- claim:mixed-label-windows-not-a-ceiling -->
    (exp43).
 7. **Fusing signals needs labels, and then it works.** A logistic combination
    of ten label-free signals (confidence, tiling instability, NDWI level, the
    ensemble entropies, embedding distances, input extremity) fitted on the
    head's own training split beats confidence on Bolivia under both backbones
-   and on the v1 test split by 25-38% of excess AURC; every label-free
-   midrank fusion had lost (exp47, exp49). On the v1.2 test split the lead is
+   and on the v1 test split by 24-38% of excess AURC; every label-free
+   midrank fusion had lost (exp47, exp49). On the v1.2 test split the lead is <!-- claim:label-fitted-fusion-three-of-four --> <!-- claim:label-free-midrank-fusion-lost -->
    below the worthwhile threshold, so this is three arms of four. The weight
    sits on the no-model NDWI level with the ensemble entropies and confidence
-   behind it, and dropping NDWI level costs the most (exp50). Fitted on tile
+   behind it, and dropping NDWI level costs the most (exp50). Fitted on tile <!-- claim:fusion-weight-on-ndwi -->
    failures instead, it beats confidence at the tile level on the multi-region
    split under both backbones (AURC 0.120 to 0.078 and 0.134 to 0.086), not on
-   Bolivia. SHRUG-FM's own signals, ported to the window, do not beat
-   confidence (exp49).
+   Bolivia. SHRUG-FM's own signals, ported to the window, do not beat <!-- claim:tile-fitted-fusion-split-only -->
+   confidence (exp49). <!-- claim:shrug-signals-rejected -->
 
 Where against why. The ranking of where a map is wrong comes from the
 model's own confidence. Comparing inferences of the same scene, through
 shifted crops (exp42, exp44), across backbones (exp45) and across sensors
 (exp46), says why it is wrong and what to change: the tiling is not the
 cause, since fine-tuning corrects more than half of the grid's errors on the
-same windows (exp21) and reading Sentinel-1 instead of Sentinel-2 moves the
+same windows (exp21) and reading Sentinel-1 instead of Sentinel-2 moves the <!-- claim:fine-tuning-corrects-half -->
 error set twice as far as swapping the encoder (exp46); the sensor is the
-largest lever and the backbone the smallest.
+largest lever and the backbone the smallest. <!-- claim:modality-dominates-shared-errors -->
 
 ## The numbers
 
@@ -75,9 +75,9 @@ Sen1Floods11 Bolivia hand labels, 81,984 windows, 8.8% of them errors
 
 | Review budget | Errors caught, confidence order | Errors caught, boundary first | Error rate inside the set |
 |---|---|---|---|
-| 5% | 0.259 | 0.274 | 0.38 |
-| 10% | 0.465 | 0.494 | 0.33 |
-| 20% | 0.749 | 0.732 | 0.26 |
+| 5% | 0.259 | 0.274 | 0.38 | <!-- claim:boundary-first-review-order --> <!-- claim:review-set-error-rate -->
+| 10% | 0.465 | 0.494 | 0.33 | <!-- claim:boundary-first-review-order --> <!-- claim:review-set-error-rate -->
+| 20% | 0.749 | 0.732 | 0.26 | <!-- claim:boundary-first-review-order --> <!-- claim:review-set-error-rate -->
 
 Why a window is flagged: share among error windows against correct windows
 on the same testbed, with the error rate among windows carrying the cue
@@ -85,27 +85,27 @@ on the same testbed, with the error rate among windows carrying the cue
 
 | Cue | Errors / correct | Enrichment | Error rate with the cue |
 |---|---|---|---|
-| on a prediction boundary | 0.750 / 0.214 | 3.5x | 0.25 |
-| among the least confident 20% | 0.589 / 0.163 | 3.6x | 0.26 |
-| unstable under a tiling shift | 0.583 / 0.164 | 3.6x | 0.26 |
-| spectrally ambiguous, NDWI near zero | 0.483 / 0.067 | 7.2x | 0.41 |
+| on a prediction boundary | 0.750 / 0.214 | 3.5x | 0.25 | <!-- claim:cue-enrichment-table -->
+| among the least confident 20% | 0.589 / 0.163 | 3.6x | 0.26 | <!-- claim:cue-enrichment-table -->
+| unstable under a tiling shift | 0.583 / 0.164 | 3.6x | 0.26 | <!-- claim:cue-enrichment-table -->
+| spectrally ambiguous, NDWI near zero | 0.483 / 0.067 | 7.2x | 0.41 | <!-- claim:cue-enrichment-table -->
 
 Window design (exp42), pixel accuracy on hand labels over the region every
 tiling covers:
 
 | Decision | Bolivia, 441 tiles | Test split, 800 tiles |
 |---|---|---|
-| grid window (one tiling) | 0.897 | 0.941 |
-| shift-averaged (four tilings) | 0.907, better on 321 tiles, worse on 66 | 0.950, better on 583, worse on 78 |
-| share of the grid window's errors on mixed-label windows | 45% (10% of windows) | 58% (10% of windows) |
-| errors the block geometry actually forces (oracle) | at most 29% | at most 49% |
-| share of the averaged map's own errors on those windows | 43% | 56% |
-| segment majority over a spectral partition (exp43) | 0.904, breaks more than it corrects | 0.948, breaks more than it corrects |
-| sixteen crop offsets instead of four (exp44) | 0.9074, +0.04 points, below the worthwhile threshold | 0.9507, +0.04 points |
+| grid window (one tiling) | 0.897 | 0.941 | <!-- claim:w1-accuracy-gain -->
+| shift-averaged (four tilings) | 0.907, better on 321 tiles, worse on 66 | 0.950, better on 583, worse on 78 | <!-- claim:w1-accuracy-gain -->
+| share of the grid window's errors on mixed-label windows | 45% (10% of windows) | 58% (10% of windows) | <!-- claim:mixed-label-windows-not-a-ceiling -->
+| errors the block geometry actually forces (oracle) | at most 29% | at most 49% | <!-- claim:mixed-label-windows-not-a-ceiling -->
+| share of the averaged map's own errors on those windows | 43% | 56% | <!-- claim:mixed-label-windows-not-a-ceiling -->
+| segment majority over a spectral partition (exp43) | 0.904, breaks more than it corrects | 0.948, breaks more than it corrects | <!-- claim:segment-majority-rejected -->
+| sixteen crop offsets instead of four (exp44) | 0.9074, +0.04 points, below the worthwhile threshold | 0.9507, +0.04 points | <!-- claim:sixteen-offsets-not-worthwhile -->
 
 Fine-tuned AWF model, end to end (exp21, exp36): confidence catches 22% of
 the errors at a 5% budget, 39% at 10%, 63% at 20%; the boundary-first order
-picks the same 5% set. Selective accuracy is 0.945 at 80% coverage.
+picks the same 5% set. Selective accuracy is 0.945 at 80% coverage. <!-- claim:fine-tuned-capture-at-budgets -->
 
 ## How a claim gets in
 
@@ -124,18 +124,18 @@ The full rules are in the [protocol](method/protocol.md).
 
 The hand-label testbeds are one flood event (Bolivia) and a multi-region
 split of the same dataset, both scored with a linear probe, and the
-fine-tuned model contributes 41 errors in 344 windows, so the gains above
+fine-tuned model contributes 41 errors in 344 windows, so the gains above <!-- claim:fine-tuned-model-audit -->
 are real but small, and every Bolivia exception is one event. Tiling instability
 wins 26 of 27 scenes and 8 of 8 rivers against the WorldCover map yet not
 on hand labels; the decisive test needs adjudicated cells on the eight
-rivers ([issue 2](https://github.com/2imi9/olmoearth_inferenceX/issues/2)).
+rivers ([issue 2](https://github.com/2imi9/olmoearth_inferenceX/issues/2)). <!-- claim:tile-phase-26-of-27-worldcover -->
 A second expert-labelled few-class testbed with a spatial split is the
 next thing that would raise the evidence
 ([issue 7](https://github.com/2imi9/olmoearth_inferenceX/issues/7)).
 
 Side product: OlmoEarth v1's pretraining target has effective rank 2, and a
 normalised target is 57 to 70% predictable from context (exp32 to exp34,
-[issue 11](https://github.com/2imi9/olmoearth_inferenceX/issues/11)).
+[issue 11](https://github.com/2imi9/olmoearth_inferenceX/issues/11)). <!-- claim:target-effective-rank-2 -->
 
 ## What was tried and rejected
 
@@ -144,4 +144,4 @@ Kept as evidence, one line each with the reason, in the
 from the encoder's internals, its pretraining objective, a posterior over
 the probe head, feature-space typicality, a second model of the same
 family, or flip-and-rotate consistency ranks errors better than confidence
-on expert labels.
+on expert labels. <!-- claim:no-encoder-internal-signal-beats-confidence -->
