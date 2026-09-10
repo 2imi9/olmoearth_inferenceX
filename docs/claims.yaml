@@ -1281,3 +1281,22 @@
   cited_in:
     - {file: docs/TECHNIQUES.md, marker: shift-tta-rejected}
     - {file: docs/results/comparisons.md, marker: shift-tta-rejected}
+
+- id: audit-does-not-save-labels
+  statement: Choosing fine-tuning tiles by the audit's suspicion (low-confidence or boundary windows under the frozen head) is worse than random selection on the multi-region test split at every budget from 100 to 1,000 labels and never reaches random's 1,000-label accuracy; entropy selection is worse still; preregistered P1 and P2 fail.
+  status: rejected
+  experiments: [exp56]
+  artifacts: [exp/out/exp56_summary.json]
+  check: |-
+    (lambda s, A:
+      s['prereg']['P1'] is False and s['prereg']['P2'] is False and s['prereg']['complete'] is True
+      and all(v < 0 for v in s['prereg']['P1_detail']['per_seed_lead'].values())
+      and all(A['audit'][b]['test']['mean'] < A['random'][b]['test']['mean'] for b in ('100', '300', '500', '1000'))
+      and all(A['entropy'][b]['test']['mean'] < A['random'][b]['test']['mean'] for b in ('100', '300', '500', '1000'))
+      and s['labels_to_parity']['audit'] is None and s['labels_to_parity']['entropy'] is None
+      and all(A[st][b]['selected_frozen_error_rate_mean'] > 2.5 * A['random'][b]['selected_frozen_error_rate_mean'] for st in ('audit', 'entropy') for b in ('100', '300', '500', '1000'))
+    )(A['exp/out/exp56_summary.json'], A['exp/out/exp56_summary.json']['aggregate'])
+  cited_in:
+    - {file: docs/Findings.md, marker: audit-does-not-save-labels}
+    - {file: docs/TECHNIQUES.md, marker: audit-does-not-save-labels}
+    - {file: docs/results/comparisons.md, marker: audit-does-not-save-labels}

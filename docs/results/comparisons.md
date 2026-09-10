@@ -720,6 +720,39 @@ together, and a label-free validation on held-out views does not guard
 against it. The consistency variant ranks its own errors slightly better on
 the test split and decides worse. Source `exp/out/exp53_summary.json`, job 762709.
 
+## Does the audit save labels? (exp56)
+
+The effect-size question put directly: if the audit's ranking says where the
+frozen model is wrong, does labelling those tiles teach a fine-tuned model
+more than labelling random ones? Pool = the bucket's train split; three ways
+to choose B tiles to label (random; the audit's review-set rule on the frozen
+head, tiles with the most bottom-quintile-confidence or boundary windows;
+predictive entropy, the classic active-learning baseline); budgets 100, 300,
+500, 1,000; three seeds; each choice fine-tuned with exp52's recipe at a
+matched step count and graded on Bolivia and the test split, which no
+strategy sees.
+
+| Window accuracy, mean over three seeds (min) | B = 100 | 300 | 500 | 1000 |
+|---|---|---|---|---|
+| random, test split | 0.9525 (0.9430) | 0.9600 (0.9591) | 0.9609 (0.9606) | 0.9622 (0.9604) |
+| audit, test split | 0.9432 (0.9427) | 0.9547 (0.9519) | 0.9589 (0.9568) | 0.9588 (0.9559) |
+| entropy, test split | 0.9360 (0.9351) | 0.9554 (0.9547) | 0.9586 (0.9583) | 0.9577 (0.9558) |
+| random, Bolivia | 0.9308 (0.9160) | 0.9455 (0.9433) | 0.9429 (0.9309) | 0.9501 (0.9492) |
+| audit, Bolivia | 0.9323 (0.9296) | 0.9503 (0.9464) | 0.9490 (0.9463) | 0.9500 (0.9445) |
+| entropy, Bolivia | 0.9324 (0.9268) | 0.9505 (0.9500) | 0.9499 (0.9486) | 0.9486 (0.9444) |
+| frozen-head error rate of the selected tiles, audit / entropy (pool 0.045) | 0.173 / 0.215 | 0.159 / 0.181 | 0.148 / 0.163 | 0.128 / 0.133 |
+
+Both preregistered tests fail, and not narrowly. At 300 labels the audit's
+selection is -0.0053 behind random on the test split on the seed mean and behind on
+every seed (-0.0044, -0.0090, -0.0027); it never reaches random's 1,000-label accuracy at any budget, <!-- claim:audit-does-not-save-labels -->
+nor does entropy. On Bolivia the audit's tiles tie or edge random's. The
+selected tiles are three to four times harder than the pool (frozen error rate
+0.13-0.17 against 0.045) and richer in water, and a model fitted to them
+generalises worse to the multi-region split. The audit's ranking says where
+the frozen model is wrong, not which labels teach the model; label efficiency
+is not a product of the audit, and the review set stays a review set. Source
+`exp/out/exp56_summary.json`, job 775302.
+
 ## Served land cover change rasters (exp20)
 
 First assessment of a served output: ten 512-px windows (about

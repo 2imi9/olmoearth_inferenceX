@@ -452,3 +452,15 @@ def test_exp53_shift_consistency_adaptation_is_rejected():
             assert r["mean_gain"] < 0 and r["sign_p"] > 0.05 and r["share_tiles_held_out_improved"] >= 0.95
     assert round(s["results"]["bolivia"]["baseline_pixel_accuracy_mean"], 4) == 0.9071      # reproduces exp42's W1
     assert round(s["results"]["test"]["baseline_pixel_accuracy_mean"], 4) == 0.9503
+
+
+def test_exp56_audit_guided_label_selection_is_rejected():
+    """exp56 (job 775302): the audit's tile selection is worse than random on the multi-region split at every budget."""
+    s = json.load(open(os.path.join(OUT, "exp56_summary.json")))
+    assert s["prereg"]["P1"] is False and s["prereg"]["P2"] is False and s["prereg"]["complete"] is True and s["n_failures"] == 0
+    assert all(v < 0 for v in s["prereg"]["P1_detail"]["per_seed_lead"].values())
+    A = s["aggregate"]
+    for b in ("100", "300", "500", "1000"):
+        assert A["audit"][b]["test"]["mean"] < A["random"][b]["test"]["mean"]
+        assert A["audit"][b]["selected_frozen_error_rate_mean"] > 2.5 * A["random"][b]["selected_frozen_error_rate_mean"]
+    assert s["labels_to_parity"]["audit"] is None

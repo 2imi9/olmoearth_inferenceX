@@ -145,6 +145,9 @@ are real but small, and every Bolivia exception is one event. Tiling instability
 With Ai2's own Sentinel-1 probe, v1.2 ranks its Bolivia errors worse than v1
 pooled but not per tile (173/152, p = 0.13), so the v1.2 exception as a
 per-tile finding rests on our S2 head (exp51). <!-- claim:v12-bolivia-their-readout -->
+The review set does not buy label efficiency: choosing fine-tuning tiles by
+the audit's suspicion is worse than random on the multi-region split at every
+budget (exp56). <!-- claim:audit-does-not-save-labels -->
 wins 26 of 27 scenes and 8 of 8 rivers against the WorldCover map yet not
 on hand labels; the decisive test needs adjudicated cells on the eight
 rivers ([issue 2](https://github.com/2imi9/olmoearth_inferenceX/issues/2)). <!-- claim:tile-phase-26-of-27-worldcover -->
