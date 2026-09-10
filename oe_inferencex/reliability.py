@@ -64,6 +64,7 @@ def centroid_signals(X, centroids, intra_mean):
     (higher = more in-distribution; not monotone in distance when cluster spreads differ); and NCDD raw, the same
     deficit over raw distances (Pokhrel et al. 2024), which tends to 0 far from every centroid."""
     C, im = np.asarray(centroids, dtype=np.float64), np.asarray(intra_mean, dtype=np.float64)
+    im = np.where(im > 0, im, 1e-12)                                    # a singleton cluster has no spread; keep the division finite
     nd, ncdd, raw = np.empty(len(X)), np.empty(len(X)), np.empty(len(X))
     for i, x in _chunks(X):
         d = _dist(x, C)
