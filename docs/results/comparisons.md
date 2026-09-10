@@ -587,6 +587,67 @@ tile-level gain stands as a secondary result on the split that has many
 events. Source `exp/out/exp50_summary.json` and `exp50_fusion_ablation.csv`,
 job 736320. <!-- claim:tile-fitted-fusion-split-only -->
 
+## Ai2's own Sen1Floods11 probe under the window protocol (exp51)
+
+Everything above about v1.2's ranking rests on our head and our sensor. Ai2's
+Sen1Floods11 evaluation is a Sentinel-1 linear probe with sixteen pixel logits
+per token (`olmoearth_pretrain/evals`, `sen1floods11 -> [SENTINEL1]`), and Ai2
+publishes the embeddings behind their Table 2. exp51 runs that probe recipe in
+fp32 on their embeddings (arm A, plus seven other encoders they publish) and on
+our own S1 encodes of v1 and v1.2 (arms B and C), all graded on 4-px windows.
+
+| Their probe on our S1 encode | window acc | pixel mIoU | E-AURC probe confidence | NDWI level (tiles conf/NDWI better, two-sided p) | S1 level |
+|---|---|---|---|---|---|
+| v1 Base, Bolivia | 0.8801 | 0.739 | 0.0214 | 0.0272 (181/148, p = 0.078) | 0.1221 |
+| v1 Base, test split | 0.9097 | 0.779 | 0.0221 | 0.0144 (700/813, p = 0.004) | 0.0905 |
+| v1.2 Base, Bolivia | 0.8619 | 0.700 | 0.0241 | 0.0363 (181/157, p = 0.21) | 0.1565 |
+| v1.2 Base, test split | 0.9163 | 0.795 | 0.0195 | 0.0141 (685/826, p = 0.00031) | 0.0767 |
+
+| Encoder, their embeddings, their probe | pixel mIoU | window acc | E-AURC confidence | phi of window errors vs OlmoEarth Base | P(OlmoEarth wrong given model wrong) |
+|---|---|---|---|---|---|
+| olmoearth_base | 0.789 | 0.9155 | 0.0202 | 1 | 1 |
+| galileo_base | 0.792 | 0.9168 | 0.0202 | 0.805 | 0.82 |
+| croma_base | 0.787 | 0.9152 | 0.0230 | 0.803 | 0.81 |
+| terramind_base | 0.782 | 0.9135 | 0.0227 | 0.818 | 0.82 |
+| clay_large | 0.784 | 0.9135 | 0.0249 | 0.801 | 0.80 |
+| anysat | 0.777 | 0.9121 | 0.0199 | 0.779 | 0.77 |
+| panopticon | 0.777 | 0.9113 | 0.0229 | 0.784 | 0.78 |
+| satlas_base | 0.727 | 0.8871 | 0.0394 | 0.620 | 0.56 |
+
+On their own embeddings OlmoEarth Base reaches mIoU 0.789 against the
+paper's 79.2, and our S1 encode of the same model with the same probe agrees
+with it window for window (phi 0.937 on the 2,419 matched test tiles,
+accuracy 0.9151 against 0.9164 on the shared block): the encode path <!-- claim:encode-path-reproduces-their-probe -->
+reproduces their probe. Three results follow.
+
+P1, preregistered and supported: the probe's own confidence beats the
+sensor-level control everywhere (lead +0.0684 on the test split, per tile
+1391/179 on their embeddings). <!-- claim:s1-probe-p1-confidence-beats-sensor-control -->
+
+P2, preregistered and not supported: with their readout and their sensor,
+v1.2 ranks its own Bolivia errors worse than v1 pooled (0.0241 against
+0.0214, lead +0.0027) but not per tile (173/152, p = 0.13; phi between the
+two backbones' error sets 0.654). v1.2 is also less accurate there with S1
+(0.8619 against 0.8801) and more accurate on the test split. The v1.2 <!-- claim:v12-bolivia-their-readout -->
+exception, as a per-tile finding, rests on our S2 head.
+
+The flip. Under the S1 probe the no-model NDWI index, computed from the
+Sentinel-2 of the same tiles, loses on Bolivia (n.s.) and beats the probe's own
+confidence on the multi-region test split under both backbones
+(0.0144 against 0.0221, 813 tiles to 700; 0.0141 against
+0.0195, 826 to 685), and on their own embeddings (0.0143 against 0.0202,
+833 to 732). With the S2 head the exception was Bolivia; with the S1 probe it is the <!-- claim:s1-probe-ndwi-flip -->
+multi-region split. The index from the other sensor wins wherever the model's
+own sensor is the less informative one for water.
+
+Every encoder errs on the same windows, again. On Ai2's embeddings, with their
+probe, six of the seven other encoders share OlmoEarth's error windows at phi
+0.78-0.82 and are wrong on 77-82% of the windows OlmoEarth is wrong on; Satlas, <!-- claim:cross-encoder-phi-on-their-embeddings -->
+with a 2 x 2 token grid on these tiles, is the one outlier at 0.62. exp41's
+result on our S2 heads (0.77-0.81) replicates on their sensor and their
+readout with no encoder pass. Galileo Base edges OlmoEarth on mIoU (0.792
+against 0.789). Source `exp/out/exp51_summary.json`, job 761713.
+
 ## Served land cover change rasters (exp20)
 
 First assessment of a served output: ten 512-px windows (about
