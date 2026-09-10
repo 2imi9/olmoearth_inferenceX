@@ -63,8 +63,30 @@ import harness_ab as hb  # noqa: E402
 from oe_inferencex.metrics import aurc_expected, oracle_aurc  # noqa: E402
 from oe_inferencex.signals import ndwi_level  # noqa: E402
 from oe_inferencex.stats import sign_test, wins_losses_ties  # noqa: E402
-from olmoearth_pretrain.evals.metrics import segmentation_metrics  # noqa: E402
-from olmoearth_pretrain.evals.utils import adjust_learning_rate  # noqa: E402
+
+
+def adjust_learning_rate(optimizer, epoch, warmup_epochs, total_epochs, max_lr, min_lr):
+    """Their schedule (evals/utils.py), restated: linear warm-up then half-cycle cosine to min_lr."""
+    if epoch < warmup_epochs:
+        lr = max_lr * epoch / warmup_epochs
+    else:
+        lr = min_lr + (max_lr - min_lr) * 0.5 * (1.0 + np.cos(np.pi * (epoch - warmup_epochs) / (total_epochs - warmup_epochs)))
+    for group in optimizer.param_groups:
+        group["lr"] = lr
+    return lr
+
+
+def segmentation_miou(pred, lab):
+    """Their segmentation metric (evals/metrics.py imports sklearn, absent in the inference environments), restated:
+    mean over the two classes of tp / (tp + fp + fn) over labelled pixels, and overall pixel accuracy."""
+    m = lab >= 0
+    p, y = pred[m], lab[m]
+    ious = []
+    for c in (0, 1):
+        tp = float(((p == c) & (y == c)).sum()); fp = float(((p == c) & (y != c)).sum()); fn = float(((p != c) & (y == c)).sum())
+        if tp + fp + fn > 0:
+            ious.append(tp / (tp + fp + fn))
+    return float(np.mean(ious)) if ious else float("nan"), float((p == y).mean()) if len(p) else float("nan")
 
 
 class LinearProbe(torch.nn.Module):
@@ -263,8 +285,7 @@ def main():
                        CTRL_NDWI: np.stack([ndwi_level(t, patch=PATCH, size=CROP) for t in s2])}
                 r = score(sig, err, ok, CONF, [CTRL_S1])
                 r["pixel_accuracy"] = float(((p > 0.5) == (lab[:, :CROP, :CROP] == 1))[pix_ok].mean())
-                m = segmentation_metrics(torch.tensor((p > 0.5).astype(np.int64)), torch.tensor(lab[:, :CROP, :CROP]), 2)
-                r["pixel_miou"] = float(m.metrics.get("miou", float("nan")))
+                r["pixel_miou"], _ = segmentation_miou((p > 0.5).astype(np.int64), lab[:, :CROP, :CROP])
                 r["err"] = err; r["ok"] = ok                                    # kept in memory for the cross-arm tests
                 res[split] = r
                 conf_by_version.setdefault(version, {})[split] = r
@@ -312,9 +333,9 @@ def main():
                 p = predict_pixels(probe, emb_te, pp)
                 lab_np = lab_te.numpy()
                 wp, y, ok, err, conf = window_view(p, lab_np, pp)
-                m = segmentation_metrics(torch.tensor((p > 0.5).astype(np.int64)), lab_te, 2)
+                miou, _ = segmentation_miou((p > 0.5).astype(np.int64), lab_np)
                 r = {"seconds": time.time() - t0, "train_tiles": int(len(emb_tr)), "test_tiles": int(len(emb_te)), "token_grid": list(emb_tr.shape[1:3]), "pixels_per_token_side": int(pp),
-                     "pixel_miou": float(m.metrics.get("miou", float("nan"))), "pixel_accuracy": float(((p > 0.5) == (lab_np == 1))[lab_np >= 0].mean())}
+                     "pixel_miou": miou, "pixel_accuracy": float(((p > 0.5) == (lab_np == 1))[lab_np >= 0].mean())}
                 sig = {CONF: conf}
                 if model == THEIRS and "test" in ours:
                     # match their test tiles to ours by the label tile, then add the controls and our S2 head's errors
