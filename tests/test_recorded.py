@@ -464,3 +464,31 @@ def test_exp56_audit_guided_label_selection_is_rejected():
         assert A["audit"][b]["test"]["mean"] < A["random"][b]["test"]["mean"]
         assert A["audit"][b]["selected_frozen_error_rate_mean"] > 2.5 * A["random"][b]["selected_frozen_error_rate_mean"]
     assert s["labels_to_parity"]["audit"] is None
+
+
+def test_exp54_multiclass_confidence_holds_and_shared_errors_are_task_dependent():
+    """exp54 (job 775213): confidence beats the embedding-distance control on all five multi-class tasks; the cross-encoder
+    phi is 0.26-0.44 on MADOS and 0.05-0.08 on PASTIS; boundary-first loses pooled and wins per tile at many classes."""
+    s = json.load(open(os.path.join(OUT, "exp54_summary.json")))
+    assert s["prereg"]["P1"] is True and s["prereg"]["complete"] is True and s["n_failures"] == 0 and len(s["prereg"]["P1_per_task"]) == 5
+    r = s["results"]
+    assert all(0.25 <= v["phi"] <= 0.45 for v in r["mados"]["phi_vs_olmoearth_base"].values())
+    assert all(0.04 <= v["phi"] <= 0.09 for v in r["pastis_sentinel2"]["phi_vs_olmoearth_base"].values())
+    bf = r["m_sa_crop_type"]["olmoearth_base"]["boundary_first_vs_confidence"]["0.05"]
+    assert (bf["w"], bf["l"]) == (647, 196) and bf["pooled_boundary_first"] <= bf["pooled_confidence"]
+
+
+def test_exp55_exceptions_are_rare_over_events_and_the_review_set_is_worth_ten_times_random():
+    """exp55 (job 775649): over 45 GEOID-Flood events the no-model controls beat confidence on 2 (S2) and 1 (S1)
+    events; the median event's 5% review set holds 88% / 64% of the errors; the sensor flip and the
+    boundary-first majority do not generalise."""
+    s = json.load(open(os.path.join(OUT, "exp55_summary.json")))
+    assert s["prereg"]["P1"] is True and s["prereg"]["P2"] is True and s["prereg"]["P3"] is True and s["prereg"]["complete"] is True and s["n_failures"] == 0
+    R = s["results"]
+    assert R["A"]["across_events"]["n_events_scored"] == 45
+    assert R["A"]["across_events"]["control NDWI level"]["control_wins"] == 2
+    assert R["B"]["across_events"]["control S1 level"]["control_wins"] == 1
+    assert all(R[t]["across_events"]["median_capture5_ratio_to_random"] >= 5 for t in ("A", "B"))
+    d = s["prereg"]["descriptive"]
+    assert d["B_ndwi_prior_beats_s1_confidence_on_majority"]["holds"] is False
+    assert all(d[k]["holds"] is False for k in ("A_boundary_first_beats_confidence_at_5pct_on_majority", "B_boundary_first_beats_confidence_at_5pct_on_majority"))

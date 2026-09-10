@@ -1300,3 +1300,108 @@
     - {file: docs/Findings.md, marker: audit-does-not-save-labels}
     - {file: docs/TECHNIQUES.md, marker: audit-does-not-save-labels}
     - {file: docs/results/comparisons.md, marker: audit-does-not-save-labels}
+
+- id: multiclass-confidence-beats-embedding-control
+  statement: On MADOS (15 classes), PASTIS (19, S2 and S1+S2), m_cashew_plant (7) and m_sa_crop_type (10) from Ai2's published embeddings, OlmoEarth Base's probe confidence beats the embedding-distance control by 0.03-0.21 excess AURC with per-tile p < 0.05 on every task (preregistered P1).
+  status: supported
+  experiments: [exp54]
+  artifacts: [exp/out/exp54_summary.json]
+  check: |-
+    (lambda s:
+      s['prereg']['P1'] is True and s['prereg']['complete'] is True and len(s['prereg']['P1_per_task']) == 5
+      and all(s['results'][t]['olmoearth_base']['tests']['control embedding distance']['pooled_lead'] >= 0.03 and s['results'][t]['olmoearth_base']['tests']['control embedding distance']['sign_p'] < 0.05 for t in s['results'])
+    )(A['exp/out/exp54_summary.json'])
+  cited_in:
+    - {file: docs/Findings.md, marker: multiclass-confidence-beats-embedding-control}
+    - {file: docs/TECHNIQUES.md, marker: multiclass-confidence-beats-embedding-control}
+    - {file: docs/results/comparisons.md, marker: multiclass-confidence-beats-embedding-control}
+
+- id: shared-errors-task-dependent
+  statement: The shared error windows of exp41/exp51 are a property of the binary water task; on MADOS the other encoders share OlmoEarth's error windows at phi 0.26-0.44 and on PASTIS at 0.05-0.08.
+  status: measured
+  experiments: [exp54, exp51, exp41]
+  artifacts: [exp/out/exp54_summary.json]
+  check: |-
+    (lambda r:
+      all(0.25 <= v['phi'] <= 0.45 for v in r['mados']['phi_vs_olmoearth_base'].values())
+      and all(0.04 <= v['phi'] <= 0.09 for v in r['pastis_sentinel2']['phi_vs_olmoearth_base'].values())
+    )(A['exp/out/exp54_summary.json']['results'])
+  cited_in:
+    - {file: docs/Findings.md, marker: shared-errors-task-dependent}
+    - {file: docs/TECHNIQUES.md, marker: shared-errors-task-dependent}
+    - {file: docs/results/comparisons.md, marker: shared-errors-task-dependent}
+
+- id: boundary-first-many-classes-split
+  statement: At 15-19 classes the boundary-first order captures slightly fewer errors than confidence, or as many, at the 5% budget pooled over windows, while winning the per-tile sign test on four of six PASTIS encoders, on cashew (34/6) and on SA crop type (647/196).
+  status: measured
+  experiments: [exp54]
+  artifacts: [exp/out/exp54_summary.json]
+  check: |-
+    (lambda r:
+      all(x['boundary_first_vs_confidence']['0.05']['pooled_boundary_first'] <= x['boundary_first_vs_confidence']['0.05']['pooled_confidence'] + 0.001 for t in r for m, x in r[t].items() if m != 'phi_vs_olmoearth_base')
+      and sum(1 for m, x in r['pastis_sentinel2'].items() if m != 'phi_vs_olmoearth_base' and x['boundary_first_vs_confidence']['0.05']['sign_p'] < 0.05 and x['boundary_first_vs_confidence']['0.05']['w'] > x['boundary_first_vs_confidence']['0.05']['l']) >= 4
+      and (r['m_cashew_plant']['olmoearth_base']['boundary_first_vs_confidence']['0.05']['w'], r['m_cashew_plant']['olmoearth_base']['boundary_first_vs_confidence']['0.05']['l']) == (34, 6)
+      and (r['m_sa_crop_type']['olmoearth_base']['boundary_first_vs_confidence']['0.05']['w'], r['m_sa_crop_type']['olmoearth_base']['boundary_first_vs_confidence']['0.05']['l']) == (647, 196)
+    )(A['exp/out/exp54_summary.json']['results'])
+  cited_in:
+    - {file: docs/Findings.md, marker: boundary-first-many-classes-split}
+    - {file: docs/TECHNIQUES.md, marker: boundary-first-many-classes-split}
+    - {file: docs/results/comparisons.md, marker: boundary-first-many-classes-split}
+
+- id: geoid-exception-rate
+  statement: Over 45 scored GEOID-Flood events the NDWI index beats the S2 head's confidence on 2 events for permanent water and the sensor-level control beats the S1 head's confidence on 1 for post-event water (preregistered P1 and P2); Bolivia-type exceptions exist and are rare.
+  status: supported
+  experiments: [exp55]
+  artifacts: [exp/out/exp55_summary.json]
+  check: |-
+    (lambda s, R:
+      s['prereg']['P1'] is True and s['prereg']['P2'] is True and s['prereg']['complete'] is True
+      and R['A']['across_events']['control NDWI level']['control_wins'] == 2 and R['A']['across_events']['n_events_scored'] == 45
+      and R['B']['across_events']['control S1 level']['control_wins'] == 1
+      and R['A']['across_events']['control NDWI level']['exception_rate'] < 1 / 3
+    )(A['exp/out/exp55_summary.json'], A['exp/out/exp55_summary.json']['results'])
+  cited_in:
+    - {file: docs/Findings.md, marker: geoid-exception-rate}
+    - {file: docs/TECHNIQUES.md, marker: geoid-exception-rate}
+    - {file: docs/results/comparisons.md, marker: geoid-exception-rate}
+
+- id: geoid-capture-effect-size
+  statement: On the median GEOID-Flood event the 5% of windows confidence flags hold 88% of the permanent-water errors and 64% of the post-event water errors, 17.5 and 12.8 times a random 5% (preregistered P3, threshold 0.25).
+  status: supported
+  experiments: [exp55]
+  artifacts: [exp/out/exp55_summary.json]
+  check: |-
+    (lambda s, R:
+      s['prereg']['P3'] is True
+      and all(R[t]['across_events']['median_capture5_confidence'] >= 0.25 and R[t]['across_events']['median_capture5_ratio_to_random'] >= 5 for t in ('A', 'B'))
+      and round(R['A']['across_events']['median_capture5_confidence'], 2) == 0.88 and round(R['B']['across_events']['median_capture5_confidence'], 2) == 0.64
+    )(A['exp/out/exp55_summary.json'], A['exp/out/exp55_summary.json']['results'])
+  cited_in:
+    - {file: docs/Findings.md, marker: geoid-capture-effect-size}
+    - {file: docs/TECHNIQUES.md, marker: geoid-capture-effect-size}
+    - {file: docs/results/comparisons.md, marker: geoid-capture-effect-size}
+
+- id: geoid-sensor-flip-not-general
+  statement: "exp51's sensor flip does not generalise: over GEOID-Flood's events the pre-event NDWI prior out-ranks the S1 head's confidence on 9% of events, not a majority."
+  status: measured
+  experiments: [exp55, exp51]
+  artifacts: [exp/out/exp55_summary.json]
+  check: |-
+    (lambda d:
+      d['B_ndwi_prior_beats_s1_confidence_on_majority']['holds'] is False and d['B_ndwi_prior_beats_s1_confidence_on_majority']['rate'] < 0.2
+    )(A['exp/out/exp55_summary.json']['prereg']['descriptive'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: geoid-sensor-flip-not-general}
+    - {file: docs/results/comparisons.md, marker: geoid-sensor-flip-not-general}
+
+- id: geoid-boundary-first-minority
+  statement: Across GEOID-Flood's events the boundary-first order beats confidence at the 5% budget on 40% (permanent water), 27% (post-event water) and 32% (flooded only) of events, a minority, while tying pooled.
+  status: measured
+  experiments: [exp55, exp36]
+  artifacts: [exp/out/exp55_summary.json]
+  check: |-
+    (lambda d:
+      all(d[k]['holds'] is False and d[k]['share'] < 0.5 for k in ('A_boundary_first_beats_confidence_at_5pct_on_majority', 'B_boundary_first_beats_confidence_at_5pct_on_majority', 'C_boundary_first_beats_confidence_at_5pct_on_majority'))
+    )(A['exp/out/exp55_summary.json']['prereg']['descriptive'])
+  cited_in:
+    - {file: docs/Findings.md, marker: geoid-boundary-first-minority}

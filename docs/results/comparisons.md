@@ -753,6 +753,89 @@ the frozen model is wrong, not which labels teach the model; label efficiency
 is not a product of the audit, and the review set stays a review set. Source
 `exp/out/exp56_summary.json`, job 775302.
 
+## The window protocol on Ai2's multi-class embeddings (exp54)
+
+Four more tasks, all dense and multi-class, from Ai2's published Table-2
+embeddings, with their probe recipe per task and no encoder pass: MADOS
+(marine debris, 15 classes), PASTIS (19 crop types, Sentinel-2 alone and with
+Sentinel-1), GEO-Bench's m_cashew_plant (7) and m_sa_crop_type (10); six
+encoders on the first two. Windows are 4 px with the majority class as label;
+the control is the embedding-space one (distance to the training centroids),
+since the embeddings carry no pixels.
+
+| task | encoder | classes | pixel mIoU | window acc | E-AURC confidence | embedding distance | capture at 5% | boundary-first at 5%, tiles better/worse |
+|---|---|---|---|---|---|---|---|---|
+| mados | olmoearth_base | 15 | 0.668 | 0.9264 | 0.0078 | 0.0423 | 0.291 | 0.278, 6/0 |
+| mados | galileo_base | 15 | 0.659 | 0.9291 | 0.0051 | 0.0495 | 0.371 | 0.301, 4/1 |
+| mados | croma_base | 15 | 0.615 | 0.9172 | 0.0062 | 0.0634 | 0.322 | 0.238, 4/0 |
+| mados | terramind_base | 15 | 0.652 | 0.9386 | 0.0048 | 0.0375 | 0.391 | 0.317, 7/0 |
+| mados | clay_large | 15 | 0.393 | 0.8555 | 0.0353 | 0.1504 | 0.215 | 0.192, 7/0 |
+| mados | anysat | 15 | 0.499 | 0.8228 | 0.0526 | 0.1242 | 0.145 | 0.124, 2/3 |
+| pastis_sentinel2 | olmoearth_base | 19 | 0.498 | 0.8099 | 0.0386 | 0.1612 | 0.157 | 0.148, 225/173 |
+| pastis_sentinel2 | galileo_base | 19 | 0.384 | 0.7657 | 0.0539 | 0.2024 | 0.134 | 0.127, 270/167 |
+| pastis_sentinel2 | croma_base | 19 | 0.442 | 0.7820 | 0.0493 | 0.1871 | 0.139 | 0.132, 173/170 |
+| pastis_sentinel2 | terramind_base | 19 | 0.403 | 0.7724 | 0.0540 | 0.1890 | 0.137 | 0.130, 204/158 |
+| pastis_sentinel2 | clay_large | 19 | 0.215 | 0.6727 | 0.0938 | 0.2813 | 0.104 | 0.100, 263/174 |
+| pastis_sentinel2 | anysat | 19 | 0.438 | 0.7793 | 0.0517 | 0.1719 | 0.135 | 0.129, 224/176 |
+| m_cashew_plant | olmoearth_base | 7 | 0.261 | 0.6528 | 0.1308 | 0.2664 | 0.089 | 0.089, 34/6 |
+| m_sa_crop_type | olmoearth_base | 10 | 0.288 | 0.6600 | 0.0672 | 0.2761 | 0.107 | 0.105, 647/196 |
+| pastis_sentinel1_sentinel2 | olmoearth_base | 19 | 0.476 | 0.8052 | 0.0394 | 0.1645 | 0.155 | 0.146, 216/150 |
+
+Preregistered P1 holds on all five tasks: the probe's confidence beats the
+embedding-distance control by 0.03 to 0.21 excess AURC, with the per-tile <!-- claim:multiclass-confidence-beats-embedding-control -->
+sign test below 0.05 everywhere. Predictive entropy sits within 0.005 of
+confidence; cross-encoder disagreement is a poor ranker (0.0263 on MADOS,
+0.1531 on PASTIS against confidence's 0.0078 and 0.0386).
+
+Shared errors are a property of the task, not of the encoders. On the binary
+water task the encoders err on the same windows (phi 0.77-0.82, exp41,
+exp51); on MADOS they share far less and on PASTIS almost nothing (mados: galileo_base 0.33, croma_base 0.26, terramind_base 0.32, clay_large 0.27, anysat 0.44; pastis_sentinel2: galileo_base 0.08, croma_base 0.08, terramind_base 0.08, clay_large 0.05, anysat 0.08). <!-- claim:shared-errors-task-dependent -->
+
+Boundary-first at many classes splits by the measure. Pooled over windows
+it captures slightly fewer errors than confidence at the 5% budget on every
+task and encoder; per tile it wins the sign test on four of six PASTIS
+encoders, on cashew (34/6) and on SA crop type (647/196), and is mixed on
+MADOS, whose tiles rarely hold enough errors to score. My stated prediction <!-- claim:boundary-first-many-classes-split -->
+(a clean loss at 15 and 19 classes) held on the pooled measure and failed on
+the per-tile one. Source `exp/out/exp54_summary.json`, job 775213.
+
+## GEOID-Flood: the exception as a rate over events (exp55)
+
+Every Bolivia exception in this repository is one event. GEOID-Flood (219 CEMS
+activations, event-level splits, manually validated three-class labels) turns
+the question into a rate: a shard subset of its test split gave 55 events, 64-px
+chips at stride 256 with validity and cloud filters, heads trained on a val
+subset the events never touch, and exp47's protocol run per event with the
+same four crop offsets. Two sensors on identical windows: permanent water from
+the pre-event Sentinel-2 composite (S2 head) and water after the event from the
+post-event Sentinel-1 (S1 head; flooded-only as a secondary task).
+
+| GEOID-Flood, 55 events (45 scored) | A: permanent water, pre-event S2 | B: water after the event, post-event S1 | C: flooded only, post-event S1 |
+|---|---|---|---|
+| chips, windows, window accuracy | 4,497, 870,728, 0.9677 | 4,527, 875,976, 0.9619 | 4,527, 875,976, 0.9833 |
+| pooled E-AURC, averaged confidence | 0.0028 | 0.0030 | 0.0017 |
+| pooled E-AURC, tile-phase | 0.0040 | 0.0031 | 0.0019 |
+| pooled E-AURC, control NDWI level | 0.0129 | 0.0181 | 0.0217 |
+| pooled E-AURC, control S1 level | 0.1035 | 0.0930 | 0.0358 |
+| pooled E-AURC, boundary first, then confidence | 0.0029 | 0.0031 | 0.0017 |
+| events where control NDWI level beats confidence | 2/45 (4%) | 4/45 (9%) | 3/44 (7%) |
+| events where control S1 level beats confidence | 0/45 (0%) | 1/45 (2%) | 2/44 (5%) |
+| events where tile-phase beats confidence | 11/45 (24%) | 23/45 (51%) | 12/44 (27%) |
+| events where boundary-first beats confidence at 5% | 18/45 | 12/45 | 14/44 |
+| median event: confidence's capture at 5% (x random) | 0.877 (17.5x) | 0.642 (12.8x) | 0.565 (11.3x) |
+
+All three preregistered tests pass. The no-model index beats the S2 head's
+confidence on 2 of 45 events (4%) and the sensor-level control beats the S1 head's on <!-- claim:geoid-exception-rate -->
+1 of 45; Bolivia-type exceptions exist and are rare. The effect size in the units a
+reviewer uses: on the median event the 5% of windows confidence flags hold
+88% of the permanent-water errors and 64% of the post-event water errors, 17.5 and 12.8 times <!-- claim:geoid-capture-effect-size -->
+what a random 5% would. Two stated predictions fail: exp51's sensor flip does
+not generalise (the pre-event NDWI prior out-ranks the S1 head's confidence on
+9% of events, not a majority), and boundary-first beats confidence at the 5% budget on <!-- claim:geoid-sensor-flip-not-general -->
+40% / 27% / 32% of events, a minority, while tying pooled. The two sensors' heads share errors at phi 0.58 pooled
+and 0.30 within the median event; the S1 head is wrong on 65% of the windows the S2
+head is wrong on. Runtime 7 minutes. Source `exp/out/exp55_summary.json`, job 775649.
+
 ## Served land cover change rasters (exp20)
 
 First assessment of a served output: ten 512-px windows (about

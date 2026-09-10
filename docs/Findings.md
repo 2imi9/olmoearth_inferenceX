@@ -27,12 +27,20 @@ file under `exp/out/`; the per-experiment detail is in the
    model's own sensor is the less informative one for water. <!-- claim:s1-probe-ndwi-flip -->
    Fine-tune the encoder and the exception goes: the trained S2 model's
    confidence beats the index on Bolivia under both backbones (exp52). <!-- claim:finetune-dissolves-bolivia-exception -->
+   Over 45 GEOID-Flood events the index beats confidence on 2 for
+   permanent water and the sensor control on 1 for post-event water:
+   exceptions exist and are rare (exp55). On four multi-class tasks from Ai2's
+   embeddings confidence beats the embedding-distance control everywhere
+   (exp54). <!-- claim:geoid-exception-rate --> <!-- claim:multiclass-confidence-beats-embedding-control -->
    A bag of bootstrap heads does not improve on it: an apparent gain under
    v1 on Bolivia (exp49) did not replicate with a fresh draw (exp50). <!-- claim:bag-not-replicated -->
 2. **Review boundary windows first, then by confidence.** Errors sit on
    prediction boundaries, 75% of errors against 21% of correct windows, and <!-- claim:errors-sit-on-boundaries -->
    this order captures more of them than confidence alone at 5% and 10%
    review budgets on hand labels, preregistered (exp36). No extra inference. <!-- claim:boundary-first-review-order -->
+   Its scope is narrower than that sentence: across 45 flood events it beats
+   confidence at the 5% budget on 40% of them (exp55), and at 15-19 classes
+   it loses pooled while winning per tile (exp54). <!-- claim:geoid-boundary-first-minority --> <!-- claim:boundary-first-many-classes-split -->
 3. **Every flagged window comes with a reason.** 95% of the error windows on
    hand labels carry at least one label-free cue with a measured enrichment;
    spectral ambiguity is 7x enriched and the one cue that adds precision
@@ -82,7 +90,13 @@ same windows (exp21) and reading Sentinel-1 instead of Sentinel-2 moves the <!--
 error set twice as far as swapping the encoder (exp46); the sensor is the
 largest lever and the backbone the smallest. <!-- claim:modality-dominates-shared-errors -->
 On Ai2's own embeddings, with their probe, seven published encoders err on
-the same windows as OlmoEarth (phi 0.78-0.82, Satlas 0.62; exp51). <!-- claim:cross-encoder-phi-on-their-embeddings -->
+the same windows as OlmoEarth (phi 0.78-0.82, Satlas 0.62; exp51). That sharing belongs to the binary water
+task: on marine debris and crop types the same encoders share far less
+(phi 0.26-0.44 and 0.05-0.08; exp54). <!-- claim:cross-encoder-phi-on-their-embeddings --> <!-- claim:shared-errors-task-dependent -->
+
+The effect size in a reviewer's units (exp55, 45 GEOID-Flood events): on the
+median event the 5% of windows confidence flags hold 88% of the permanent-water
+errors and 64% of the post-event water errors, 17.5 and 12.8 times a random 5%. <!-- claim:geoid-capture-effect-size -->
 
 ## The numbers
 
