@@ -67,6 +67,8 @@ nav:
       - method/protocol.md
       - Claim ledger: method/claims.md
       - Roadmap: plan/roadmap.md
+      - Paper outline: plan/paper_outline.md
+      - Readout design theory (exp48 preregistration): plan/readout_design_theory.md
   - API Reference: reference/
 
 hooks:

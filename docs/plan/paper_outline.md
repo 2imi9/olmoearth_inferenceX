@@ -1,0 +1,159 @@
+# Paper outline
+
+Working outline for a workshop paper (EarthVision / ML-for-remote-sensing style, 4-8 pages plus appendix) drawn from this repository. An outline with content, not prose: each section states its one-sentence argument, the claims it makes, and the figure or table it needs. Every claim carries its registered id from [`claims.yaml`](../claims.yaml) as `[c: <id>]`, so the outline can be checked against the [claim ledger](../method/claims.md); every number is the ledger's or the docs'; every figure names the artifact under `exp/out/` it is drawn from.
+
+**Note on the skeleton.** The proposed skeleton is kept with three changes. (1) The WorldCover-versus-hand-labels transfer failure (exp13, exp18, exp23-exp25) is told inside the Protocol section as the worked example of why two references are scored at once, not as a result: it is the evidence for the method. (2) A short results subsection on the deployed products (exp20-exp22) is added, because contribution 3 and the abstract's "frozen or fine-tuned" rest on the fine-tuned AWF audit and the served rasters, which the proposed order left out. (3) The negative-results table is widened past the eight named families to the signals that win only against WorldCover, because the umbrella claim that nothing read off the encoder beats confidence on expert labels [c: no-encoder-internal-signal-beats-confidence] is what makes the confidence baseline the paper's thesis rather than a default.
+
+## 1. Title, abstract, contributions
+
+Title candidates:
+
+1. Confidence Is the Baseline: A Label-Free Audit Protocol for Earth-Observation Foundation-Model Maps
+2. Where a Map Is Wrong, and Why: Auditing OlmoEarth Inference Without Labels
+3. Two References, No Labels: Preregistered Error Ranking for Frozen and Fine-Tuned EO Encoders
+
+Abstract (draft, 148 words): Foundation-model maps ship over unlabelled regions. We ask which windows to review first, why each is suspect, and what comparing inferences across crops, backbones and sensors says about where errors come from. The protocol scores each candidate signal on identical windows against the model's confidence and a no-model pixel control, on two references at once (WorldCover and expert flood masks), with preregistered tests, tie-aware excess AURC and per-tile sign tests; labels grade signals, never train them. Confidence is then the best single ranker, with one exception, on one flood event, that moves with the sensor and disappears under fine-tuning. Seven encoders err on OlmoEarth's error windows (phi 0.78-0.82, Satlas 0.62); the sensor, not the backbone, moves the error set. Averaging four tilings adds 1.0 and 0.9 pixel-accuracy points without labels, boundary-first review beats confidence at 5-10% budgets, and SHRUG-FM's signals do not beat the baseline it never ran.
+
+Contributions:
+
+1. **The protocol.** Two references at once, the model's own confidence and no-model pixel controls as the baselines every rule must beat, preregistration, tie-aware excess AURC with per-tile sign tests, labels that grade and never train, and a claim ledger that fails a test when an artifact stops saying what a sentence says [c: aurc-harness] [c: no-model-controls] [c: labels-grade-never-train].
+2. **The ranking result and its anatomy.** Confidence is the best single label-free ranker [c: confidence-best-single-signal]; its one exception is one event [c: bolivia-ndwi-exception], moves with the sensor [c: s1-probe-ndwi-flip] and dissolves under fine-tuning [c: finetune-dissolves-bolivia-exception]; a boundary-first review order [c: boundary-first-review-order] and an explanation layer [c: explanation-cues-cover-errors] sit on top of it; a catalogue of what does not work (Section 5).
+3. **Cross-inference comparison says why.** The sensor is the largest lever and the backbone the smallest [c: modality-dominates-shared-errors]; every encoder errs on the same windows [c: cross-encoder-phi-on-their-embeddings]; averaging the tilings improves the map itself [c: w1-accuracy-gain]; fine-tuning corrects two thirds of the frozen errors and Sentinel-1 adds nothing after it [c: finetune-corrects-frozen-errors] [c: s1-adds-little-after-finetune].
+
+## 2. Introduction
+
+Argument: a map from a frozen or fine-tuned EO foundation model must be trusted somewhere without labels, and the field's best treatment of that question fuses three signal families under a label-fitted gate without ever running the one baseline a deployed model always has, its own confidence; run under a protocol with no-model controls and two references, that baseline beats the proposed signals, and the informative findings are about where the shared errors come from.
+
+- The problem: which windows to review first, why each is suspect, and whether a second inference of the same scene (shifted crop, other backbone, other sensor, fine-tuned weights) says why the map is wrong (README items 1-5).
+- SHRUG-FM (Gonzalez-Calabuig et al. 2026, EarthVision best paper): image-level abstention from ensemble mutual information and entropy, k-means distance and NCDD in embedding space, input percentile extremity, fused by a label-fitted depth-3 tree; a single model's own confidence is not among its baselines, and its own ablation says the fusion adds nothing over the two ensemble scores on fire and flood (positioning from the paper; no claim id).
+- What this paper shows: ported to the window under our protocol, none of its signals beats confidence [c: shrug-signals-rejected]; nothing read off the encoder's internals, its pretraining objective, a posterior over the head, feature typicality, a same-family model or flip-and-rotate consistency does either [c: no-encoder-internal-signal-beats-confidence]; the exception is one event and belongs to the frozen encoder [c: bolivia-ndwi-exception] [c: finetune-dissolves-bolivia-exception].
+- Figure 1: one scene through the audit (bands, frozen encoder and head, prediction, confidence and boundary layers, the 5% review set, the reasons per window). Source `docs/figures/pipeline.png` (okavango_80, actual rasters).
+
+## 3. Protocol (the method contribution)
+
+Argument: a label-free audit rule is credible only if it beats the model's own confidence and a no-model control on two references at once under tests fixed before the run, because the reference a signal wins on can itself be the reason it wins.
+
+- Two references: ESA WorldCover on 27 rule-selected scenes along eight rivers, the rule committed before any scene was fetched [c: rule-selected-27-scenes]; Sen1Floods11 hand labels (Bolivia, one event; a multi-region test split) and the AWF expert points, 344 validation windows of the project's own spatial split [c: labels-grade-never-train]. Expert labels override WorldCover wherever they conflict (protocol tiers).
+- Two baselines: confidence as the negative logit margin, so saturated probabilities do not tie; no-model pixel controls (NDWI gradient, NDWI level, spectral variance) run on every comparison scene, which killed one claim and confirmed two [c: no-model-controls]. Beating one baseline and not the other is not support.
+- Scoring: tie-aware AURC and excess AURC, 4x4-patch block bootstrap, exact sign tests on untied pairs with scenes voting once per river, per-tile sign tests on hand labels [c: aurc-harness]; capture at 5, 10 and 20% budgets does not change the AURC verdicts, boundary at 5% the one qualified exception [c: operating-points-null].
+- Preregistration: primary test and direction written before the run; a null is not equivalence (protocol).
+- Worked example, why two references: tiling instability beats confidence on 26 of 27 scenes and 8 of 8 rivers against WorldCover yet 163/187 (p = 0.22) on Bolivia hand labels [c: tile-phase-26-of-27-worldcover] [c: tile-phase-mixed]; it is indistinguishable from the boundary fraction of the model's own map [c: boundary-fraction-equals-tile-phase]; reference instability (about 10% of disagreements; 21/23 on stable patches), the year gap (23/3/0) and seasonal water (39% vs 8%; 22/2/0 with it removed) each fail to explain the gap [c: reference-instability-does-not-explain] [c: year-gap-does-not-explain] [c: seasonal-water-does-not-explain]. Leading hypothesis, stated as such: WorldCover was a decode-only pretraining target of OlmoEarth (roadmap; no claim id; the decisive paired-reference test on identical cells is issue #2, not run).
+- The claim ledger as reproducibility infrastructure: one entry per claim with statement, status, experiments, artifact fields and a check; a marker in every citing document; `tests/test_claims.py` fails when an artifact stops saying what a sentence says; `scripts/claims.py stale` prints the sentences to rewrite after a run (`docs/method/claims.md`).
+- Figure 2: the test every claim passed. Source `docs/figures/protocol.png`. Table 1: the transfer failure and the three rejected explanations. Sources `exp/out/exp13_summary.json`, `exp13_corrected_stats.csv`, `exp18_sen1floods.csv`, `exp23_summary.json`, `exp24_summary.json`, `exp25_summary.json`.
+
+## 4. Results
+
+### 4.1 Confidence ranks the errors, with one exception
+
+Argument: the model's own confidence is the best or tied-best single ranker on every expert-labelled testbed under both backbones and both window designs, except on one flood event, where a no-model spectral index matches or beats it.
+
+- Best on the AWF points (AURC 0.0363 against tile-phase 0.0489 and boundary 0.0636, cluster intervals above zero) [c: awf-confidence-lowest-aurc]; on the fine-tuned model (0.0262, tiling instability 0.0235 with an interval spanning zero, everything else worse) [c: fine-tuned-model-audit]; lowest pooled E-AURC on both Sen1Floods11 splits under v1 with every other signal losing the per-tile test [c: exp18-confidence-best-both-splits]; leading or tying under v1.2 and on the shift-averaged decision [c: confidence-best-single-signal].
+- The exception: Bolivia, one event, where NDWI level ranks the errors within 0.002 of confidence under v1 (grid 0.0119 vs 0.0105) and better under v1.2 (0.0119 vs 0.0146), grid and shift-averaged alike [c: bolivia-ndwi-exception] [c: averaged-confidence-ranking-mixed]; under v1.2 confidence is third there, behind tiling instability (0.0138) too, at unchanged accuracy (0.906 / 0.953) [c: v12-replication-mixed].
+- What does not fix it label-free: every midrank fusion loses on all four arms [c: label-free-midrank-fusion-lost]; a bag of bootstrap heads is confidence plus seed noise at the 0.002 level [c: bag-not-replicated].
+- Why the event is special: a head on fifteen per-window pixel statistics with no encoder is more accurate than the frozen probe there (0.9199 vs 0.9116) [c: pixel-head-beats-encoder-bolivia].
+- Table 2: pooled E-AURC per ranker, both backbones, both testbeds, grid and shift-averaged. Sources `exp/out/exp45_summary.json`, `exp47_summary.json`, `exp18_sen1floods.csv`, `exp16_summary.json`, `exp21_summary.json`.
+
+### 4.2 The exception moves with the sensor (exp51) and disappears under fine-tuning (exp52)
+
+Argument: the index from the other sensor wins wherever the model's own sensor is the less informative one for water, and a trained encoder needs no index at all.
+
+- Under Ai2's own Sentinel-1 probe the no-model NDWI index beats the probe's confidence on the multi-region split under both backbones (0.0144 vs 0.0221; 0.0141 vs 0.0195) and on their embeddings, and loses on Bolivia: the mirror image of the S2 head's exception [c: s1-probe-ndwi-flip]; the probe's confidence still beats the sensor-level control everywhere (preregistered P1, test-split lead +0.0684) [c: s1-probe-p1-confidence-beats-sensor-control].
+- With their readout v1.2 ranks its Bolivia errors worse than v1 pooled (0.0241 vs 0.0214) but not per tile (173/152, p = 0.13), so the v1.2 exception as a per-tile finding rests on our S2 head [c: v12-bolivia-their-readout].
+- The fine-tuned S2 model's confidence beats the index on Bolivia under both backbones (+0.0023, 168/86; +0.0021, 168/91; preregistered P1): the exception belonged to the frozen encoder, not the event [c: finetune-dissolves-bolivia-exception].
+- Table 3: E-AURC of confidence against the NDWI and sensor-level controls, S2 head / S1 probe / fine-tuned, per testbed. Sources `exp/out/exp51_summary.json`, `exp51_their_probe.csv`, `exp52_summary.json`.
+
+### 4.3 Errors come from the input sensor, not the backbone (exp46); every encoder errs on the same windows (exp41, exp51)
+
+Argument: a second model is informative when it sees the input differently, never when it shares the family's failure modes, and on a frozen encoder read by a linear probe every published encoder is family.
+
+- Reading radar instead of optics moves the error set to phi 0.38-0.39 against 0.70 for a backbone swap; a two-layer head (0.68-0.70) and a 3x3 head (0.63-0.68) barely beat a backbone swap and stay far from fine-tuning's 0.475; label impurity and chip clustering are ruled out [c: modality-dominates-shared-errors].
+- Heads on Clay, Galileo and Panopticon err on 80-82% of OlmoEarth's error windows (phi 0.77-0.81); two-view disagreement captures 0.242 of the errors at 10% against 0.454 for confidence [c: two-view-disagreement-rejected]; on Ai2's published embeddings with their probe six of seven encoders share the error windows at phi 0.78-0.82, Satlas (2 x 2 token grid) 0.62, 2,419 tiles, no encoder pass [c: cross-encoder-phi-on-their-embeddings].
+- Within the family: Dawid-Skene inflates every model and inverts the ordering [c: family-errs-together-dawid-skene]; a stronger partner makes disagreement worse (0.0197 vs 0.0129) [c: stronger-partner-worse-disagreement]; the most error-correlated rater gives the best disagreement signal, so a different view beats decorrelation [c: band-set-most-correlated-best-partner]; an outside embedding space adds nothing over the model's own [c: anysat-witness-rejected].
+- Figure 3: phi of window errors against OlmoEarth Base, by what was swapped (sensor, backbone, head, fine-tuning) and by encoder. Sources `exp/out/exp46_summary.json`, `exp46_shared_error_sources.csv`, `exp41_summary.json`, `exp51_summary.json`.
+
+### 4.4 Averaging the tilings improves the map (exp42, exp44)
+
+Argument: the fixed 4-px grid window is not the right decision unit; the mean of the four tilings that cover each pixel is a better map at no label cost, and the remaining errors are not forced by the block geometry.
+
+- Pixel accuracy on hand labels 0.897 to 0.907 on Bolivia (better on 321 tiles, worse on 66) and 0.941 to 0.950 on the test split (583/78), preregistered, four forward passes, no labels, no retraining [c: w1-accuracy-gain]; replicates on v1.2 with a slightly larger gain [c: v12-replication-mixed], whose RoPE did not reduce tiling instability (0.046 vs 0.032) [c: rope-does-not-reduce-tiling-instability].
+- Mixed-label windows are 10% of windows and carry 45% / 58% of the grid's errors, but the block-constant oracle limit is 3% of pixels, so the block forces at most 29% / 49% of them [c: mixed-label-windows-not-a-ceiling].
+- Sixteen offsets add +0.04 points for twelve extra passes, five times below the preregistered threshold [c: sixteen-offsets-not-worthwhile]; spectral-split and scale-adaptive decisions are mixed [c: window-design-alternatives-mixed]; the averaged confidence beats tiling instability at ranking its own errors [c: averaged-confidence-ranking-mixed].
+- Table 4: pixel accuracy by window design, both testbeds, with per-tile wins/losses. Sources `exp/out/exp42_summary.json`, `exp42_window_design.csv`, `exp43_summary.json`, `exp44_summary.json`.
+
+### 4.5 The review-set order (exp36) and the explanation layer (exp37)
+
+Argument: errors live on prediction boundaries, so reviewing boundary windows first captures more at tight budgets than confidence alone, and every flagged window can carry a measured reason.
+
+- 75% of error windows sit on a boundary against 21% of correct ones [c: errors-sit-on-boundaries]; boundary proximity says where errors live, does not order them better on AURC, and reverses by 20% [c: boundary-proximity-triage].
+- Boundary first, then confidence: 0.274 vs 0.259 at 5% and 0.494 vs 0.465 at 10% (per tile 85/31/235 and 112/48/191, p = 3e-7 and 2e-7), not ahead at 20% (0.732), the same 5% set as confidence on the fine-tuned model; a triage rule, not a ranker [c: boundary-first-review-order]; replicates on v1.2 Bolivia (0.461 vs 0.423), not on the test split [c: v12-replication-mixed]; spectral ambiguity first is mixed [c: ndwi-first-order-mixed].
+- Error rate inside confidence's review set 0.38 / 0.33 / 0.26 at 5 / 10 / 20% against a base rate of 8.8% on 81,984 windows [c: review-set-error-rate].
+- Cues on identical windows: 95% of error windows carry at least one; NDWI-ambiguous 7.2x (0.483 / 0.067, error rate 0.41), boundary 3.5x, least-confident 20% 3.6x, unstable 3.6x [c: cue-enrichment-table]; inside the 5% set only the boundary and NDWI cues separate error rates (0.46 vs 0.15; 0.51 vs 0.33) [c: explanation-cues-cover-errors].
+- Figure 4: the explanation layer on a review set. Source `docs/figures/explanation_layer.png`. Table 5: capture at budgets by order, and the cue table. Sources `exp/out/exp36_summary.json`, `exp37_summary.json`, `exp37_cue_enrichment.csv`, `exp38_summary.json`.
+
+### 4.6 SHRUG-FM's signals under the protocol (exp49) and the label-fitted fusion (exp50)
+
+Argument: the baseline SHRUG-FM never ran beats each of its signals; the one thing its fusion step buys is a labelled weighting, and the weight lands on a no-model spectral index.
+
+- Under v1.2 confidence beats ensemble mutual information (+0.0060 and +0.0022; per tile 263/61 and 352/76) and -NCDD (0.03-0.08) on both testbeds, preregistered; the embedding and input signals are 3-9x worse; NCDD as the paper states it is worse than the raw deficit on all four arms; at their tile granularity (failure = water F1 < 0.6) confidence is at or near the best signal and mutual information the weakest task signal [c: shrug-signals-rejected].
+- A logistic combination of ten signals fitted on the head's own training split beats confidence by 0.0027-0.0041 pooled E-AURC (24-38%) on three of four arms, 0.0004 on the v1.2 test split; the degree-2 combiner is worse everywhere [c: label-fitted-fusion-three-of-four]. Its weight sits on NDWI level (+0.87) with the ensemble entropies (+0.6) and confidence (+0.3 to +0.4) behind; dropping NDWI costs the most on three of four arms [c: fusion-weight-on-ndwi]. Fitted on tile failures it beats confidence at the tile level on the multi-region split (AURC 0.120 to 0.078 and 0.134 to 0.086), not on Bolivia, the preregistered arm [c: tile-fitted-fusion-split-only].
+- The exp49 bag result (210/103 on v1 Bolivia; superseded by exp50) [c: bag-beats-confidence-v1-bolivia] did not replicate with sixteen fresh members (140/166; wins 248/160 where it had lost) [c: bag-not-replicated].
+- Table 6: pooled E-AURC of every ported signal and the fusions, four arms; the fusion weights and drop-one ablation. Sources `exp/out/exp49_summary.json`, `exp49_shrug_signals.csv`, `exp50_summary.json`, `exp50_fusion_ablation.csv`.
+
+### 4.7 Fine-tuning corrects two thirds of the frozen errors; Sentinel-1 adds nothing after it (exp52)
+
+Argument: the frozen encoder, not the tiling or the task, owns most of the errors, and the sensor lever of Section 4.3 is a frozen-feature property.
+
+- Ai2's recipe in fp32 corrects 66% of the frozen head's Bolivia errors and 44% of its multi-region errors on identical windows, window accuracy 0.917 to 0.954 and 0.955 to 0.967, preregistered P2 [c: finetune-corrects-frozen-errors]; on AWF fine-tuning corrects 35 of 63 probe errors [c: fine-tuning-corrects-half] and 28 of the fine-tuned model's 41 errors are also probe errors [c: fine-tuned-vs-probe-errors].
+- Adding Sentinel-1 to the fine-tuned S2 model adds at most 0.1 window-accuracy points; fine-tuned S1 alone stays below the frozen S2 head and the NDWI index still out-ranks its confidence on the split (0.0158 vs 0.0347) [c: s1-adds-little-after-finetune].
+- The label-free alternative fails: adapting the head so the tilings agree lowers accuracy on both testbeds under both objectives while held-out agreement improves on 96-99% of tiles; agreement is not correctness [c: shift-tta-rejected].
+- Table 7: per fine-tuned model, window accuracy against the frozen head, errors corrected and broken, E-AURC of confidence against the controls. Sources `exp/out/exp52_summary.json`, `exp52_finetune.csv`, `exp21_summary.json`, `exp53_summary.json`.
+
+### 4.8 The deployed products (exp20, exp21, exp22)
+
+Argument: the audit runs end to end on Ai2's shipped models and rasters, and where the product exports no confidence the boundary cue still triages it.
+
+- The fine-tuned AWF replica reproduces the reported accuracy (0.881 vs 0.895; 41 errors in 344 windows) and is overconfident (ECE 0.080; 0.93 accurate where it claims 0.99), so a stated accuracy needs a coverage: 0.945 at 80% [c: fine-tuned-model-audit] [c: accuracy-needs-coverage]; confidence catches 22 / 39 / 63% of its errors at 5 / 10 / 20% [c: fine-tuned-capture-at-budgets].
+- The served land cover change rasters export no class confidence; boundary fraction alone captures a median 0.88 of the WorldCover water disagreements at a 5% budget [c: served-product-boundary-triage]; outputs are quantized to the 4-px patch lattice (19 of 20 profiles) with no inference-window seams at 64-512 px [c: lcc-lattice-found-seams-absent].
+- Figure 5: reliability diagram and selective accuracy of the fine-tuned model; a served tile with its boundary triage. Sources `exp/out/exp21_summary.json`, `exp21_finetuned_awf.png`, `exp20_lcc_production.json`, `exp20_lcc_kazungula.png`, `exp22_summary.json`, `exp22_lcc_striping.png`.
+
+## 5. Negative results worth a table
+
+Argument: the confidence baseline is a finding, not a default, because each family below was preregistered against it on expert labels and lost.
+
+| Family | One line | Claim | Source under `exp/out/` |
+|---|---|---|---|
+| Feature-space typicality (kNN, Mahalanobis, PCA residual, ViM; training, same-scene, cross-testbed references) | No score beats confidence on either testbed; the combination reaches 6/2 rivers (p = 0.145) and hurts on hand labels (60/291) | [c: feature-typicality-rejected] [c: embedding-dissimilarity-rejected] | `exp31_summary.json`, `exp13_summary.json` |
+| Ensembles and posteriors over the head | Laplace logit variance is the worst signal on both testbeds (3/24 scenes, 0/8 rivers, 6/345 tiles); a bootstrap bag is confidence plus seed noise | [c: laplace-variance-rejected] [c: bag-not-replicated] | `exp30_summary.json`, `exp49_summary.json`, `exp50_summary.json` |
+| Masking perturbation | Worst signal on every scene; occlusion measures context reliance, not error likelihood | [c: masking-perturbation-rejected] | figure only, `exp08_mask_perturb.png` |
+| Latent-MIM residuals (native decoder, whitened re-target, discrete target, gap masking) | Native error loses 7/20 scenes and 2/6 rivers with targets at cosine 0.994; the re-targeted residual tracks texture (Spearman 0.56) and loses 12/339 tiles; the other readings close the family; the target has effective rank 2 | [c: decoder-self-consistency-rejected] [c: retargeted-residual-rejected] [c: retargeted-other-readings-rejected] [c: target-effective-rank-2] | `exp28_summary.json`, `exp32_summary.json`, `exp33_summary.json`, `exp34_summary.json` |
+| Shift-label entropy | Worse than tile-phase on Bolivia under both backbones (0.0161 vs 0.0113; 0.0150 vs 0.0133); hardening discards the spread | [c: shift-label-entropy-rejected] | `exp50_summary.json` |
+| Test-time adaptation by shift consistency | Accuracy falls (memo -0.0032 / -0.0079; consistency -0.0079 / -0.0140) while held-out agreement rises on 96-99% of tiles | [c: shift-tta-rejected] | `exp53_summary.json` |
+| Segment majority over a spectral partition | Breaks more pixels than it corrects (C 15,093 vs B 16,273; C 24,525 vs B 30,951); mixed segments cause most of the breakage | [c: segment-majority-rejected] | `exp43_summary.json` |
+| Sixteen crop offsets | +0.04 points for twelve extra passes; an unbalanced seven-offset subset is worse than the diagonals | [c: sixteen-offsets-not-worthwhile] | `exp44_summary.json` |
+| Dihedral consistency | 17/10 scenes but 4/4 rivers and 154/196 tiles; a smoothed confidence (Spearman 0.67 to 0.94) | [c: dihedral-consistency-rejected] | `exp36_summary.json` |
+| Internal-state signals (logit lens, drift, attention entropy) | 0, 3 and 3 of 27 scenes; they do not transfer from language models | [c: internal-state-signals-rejected] | `exp17_internal_evidence.csv` |
+| Same-family and cross-version disagreement | Nano-Base 10/27 scenes and 84/265 tiles; v1 vs v1.2 not a signal | [c: cross-model-disagreement-rejected] [c: backbone-version-disagreement-rejected] | `exp13_summary.json`, `exp18_sen1floods.csv`, `exp19_v1_vs_v12.csv` |
+| Neighbourhood contradiction (OlmoEarth and pixel-statistics spaces) | Passes on Bolivia (169/126/56; pixel space at every budget), fails every primary test on the multi-region split with Bolivia as the bank | [c: neighbourhood-contradiction-olmoearth-mixed] [c: pixel-stat-contradiction-rejected] | `exp39_summary.json`, `exp40_summary.json` |
+| WorldCover-only winners | Band-set disagreement 21/27 scenes but 111/239 tiles; depth probe 19/27 (p = 0.052); E_geo flags 1.5x enriched, 3/27 as a ranker | [c: band-set-disagreement-mixed] [c: depth-probe-partial] [c: geo-grounding-partial] | `exp17_internal_evidence.csv`, `exp18_sen1floods.csv`, `exp15_boundary_geo.csv` |
+
+## 6. Limitations
+
+- One dense expert-labelled dataset. The hand-label testbeds are one flood event (Bolivia) and a multi-region split of the same dataset, both scored with a linear probe; AWF is points; multi-class and multi-event breadth wait on exp54 and exp55 (Section 7). The fine-tuned model contributes 41 errors in 344 windows [c: fine-tuned-model-audit].
+- Small positive effect sizes. Boundary-first captures 0.274 against 0.259 and 0.494 against 0.465 [c: boundary-first-review-order]; the window average gains 1.0 and 0.9 points [c: w1-accuracy-gain]; every Bolivia exception is one event [c: bolivia-ndwi-exception]; a null against confidence is not equivalence (protocol).
+- No human-in-the-loop evaluation of the review sets. The hand-check kit exists (exp26 sheets and CSVs) and holds no verdicts; the paired-reference test on the eight rivers needs a few hundred adjudicated cells (roadmap item 1, issue #2); the reference-side cues are unmeasured on identical windows.
+- The served LCC classes carry no confidence (bands 4-5 are argmax only), so the primary signal cannot run on them and the product is triaged on a weak reference [c: served-product-boundary-triage]; the model is asked of upstream.
+- The WorldCover transfer gap is unexplained after three rejected explanations (Section 3); the leading hypothesis is untested. Cross-testbed comparisons change reference, task, geography, unit and preprocessing at once (protocol).
+
+## 7. Placeholders for the runs in flight
+
+- `[pending exp54]` **Multi-class breadth** (Ai2's published embeddings: MADOS 15 classes, PASTIS 19 with S2 and S1+S2, m_cashew_plant, m_sa_crop_type; six encoders on MADOS and PASTIS-S2; script committed at 3160f6f). If P1 passes: "On every task OlmoEarth Base's probe confidence beats the embedding-distance control (pooled lead at least 0.001, per-tile p < 0.05), so the ranking result of Section 4.1 is not a binary-water property; as predicted, the boundary-first order loses to confidence at the 5% budget at 15 and 19 classes, where the boundary cue collapses into low margin." If it fails: "On [task] the embedding-distance control ranks the probe's errors as well as its confidence, so Section 4.1 is scoped to few-class tasks and the control family rejected on floods (exp49) is not rejected in general."
+- `[pending exp55]` **Multi-event rate** (GEOID-Flood, 219 CEMS events; script `exp/exp55_geoid_flood.py`, smoke only). If P1-P3 pass: "Across the scored events the averaged confidence beats the NDWI-level control on the permanent-water task and the S1-level control on the post-event task on more events than it loses to (p < 0.05), with a median 5% capture of at least 0.25 on both; the NDWI exception rate is below one third of events, so the Bolivia exception is an exception." If they fail: "A no-model control out-ranks confidence on at least a third of events, or the median capture falls below 0.25, so the Bolivia result is a rate and Section 4.1 must read 'confidence or a spectral index, depending on the event'."
+- `[pending exp56]` **Label efficiency** (audit-guided vs random vs entropy tile selection, budgets 100 / 300 / 500 / 1000, three seeds, exp52's fine-tuning loop; script committed at d7e9220). If P1 and P2 pass: "At 300 labels the audit's selection beats random on test-split window accuracy by at least 0.005 on every seed, and reaches the 1000-label random accuracy with at most 500 labels: the review set also buys label efficiency." If they fail: "The audit's ranking says where the frozen model is wrong, not which labels teach the model; label efficiency is not a product of the audit and the review set stays a review set."
+
+## 8. Appendix list
+
+- A. **The claim ledger.** `docs/claims.yaml`, the marker convention, `tests/test_claims.py` and `scripts/claims.py`; every number in the paper resolves to an entry and an artifact field (`docs/method/claims.md`).
+- B. **Protocol details.** The scene rule and its cached coordinates [c: rule-selected-27-scenes]; perturbation alignment; the block bootstrap and the river-clustered sign test [c: aurc-harness]; the budgets [c: operating-points-null]; evidence tiers and status terms (`docs/method/protocol.md`).
+- C. **Theory note on cascades (T2/T5).** Not in the repository: the self-derived note for the exp48 readout ladder (R1 context / R2 pixel bands / R5 confidence-gated cascade; issue #13, not run; published form Jitkrittum et al. 2023) lives outside `docs/` and carries no claim id. `[pending exp48]` until the ladder runs and the note is committed.
+- D. **The Ai2-embedding replication.** Their probe on their embeddings reaches mIoU 0.789 against the paper's 79.2 and our S1 encode agrees window for window (phi 0.937 on 2,419 tiles) [c: encode-path-reproduces-their-probe]; the shared-error result [c: cross-encoder-phi-on-their-embeddings] and its S2-head original [c: two-view-disagreement-rejected]. Sources `exp/out/exp51_summary.json`, `exp51_their_probe.csv`, `exp41_summary.json`.
+- E. **Window purity and the reference audits.** The oracle accounting [c: mixed-label-windows-not-a-ceiling] and the three reference tests of Section 3 in full. Sources `exp/out/exp43_summary.json`, `exp23_summary.json`, `exp24_summary.json`, `exp25_summary.json`.

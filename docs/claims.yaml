@@ -267,7 +267,7 @@
     - {file: docs/results/comparisons.md, marker: mixed-label-windows-not-a-ceiling}
 
 - id: label-fitted-fusion-three-of-four
-  statement: A logistic combination of ten label-free signals fitted on the head's own training split beats confidence by 25-38% of excess AURC on Bolivia under both backbones and on the v1 test split; on the v1.2 test split its lead is below the worthwhile threshold, and the degree-2 combiner is worse than the linear one everywhere.
+  statement: A logistic combination of ten label-free signals fitted on the head's own training split beats confidence by 24-38% of excess AURC on Bolivia under both backbones and on the v1 test split; on the v1.2 test split its lead is below the worthwhile threshold, and the degree-2 combiner is worse than the linear one everywhere.
   status: mixed
   experiments: [exp47, exp49]
   artifacts: [exp/out/exp49_summary.json]
@@ -283,7 +283,7 @@
     - {file: docs/Findings.md, marker: label-fitted-fusion-three-of-four}
     - {file: docs/TECHNIQUES.md, marker: label-fitted-fusion-three-of-four}
     - {file: docs/results/comparisons.md, marker: label-fitted-fusion-three-of-four}
-  note: The relative gains on the three winning arms are 29%, 38% and 24% of confidence's excess AURC (the docs print 25-38%); the absolute leads are 0.0027, 0.0041 and 0.0027.
+  note: The relative gains on the three winning arms are 29%, 38% and 24% of confidence's excess AURC (the docs print 24-38%); the absolute leads are 0.0027, 0.0041 and 0.0027.
 
 - id: fusion-weight-on-ndwi
   statement: The label-fitted fusion's weight sits on the no-model NDWI-level control with the ensemble entropies and confidence behind it, and dropping NDWI level costs the most on three of four arms, returning the fusion to confidence's level on Bolivia under v1.2.
