@@ -1135,3 +1135,85 @@
     - {file: docs/Findings.md, marker: sixteen-offsets-not-worthwhile}
     - {file: docs/TECHNIQUES.md, marker: sixteen-offsets-not-worthwhile}
     - {file: docs/results/comparisons.md, marker: sixteen-offsets-not-worthwhile}
+
+- id: s1-probe-p1-confidence-beats-sensor-control
+  statement: Under Ai2's own Sentinel-1 probe recipe on our v1 encode, the probe's confidence beats the no-model sensor-level control on the multi-region test split (preregistered P1).
+  status: supported
+  experiments: [exp51]
+  artifacts: [exp/out/exp51_summary.json]
+  check: |-
+    (lambda s:
+      s['prereg']['P1'] is True and s['prereg']['complete'] is True
+      and s['results']['B_v1']['test']['tests']['control S1 level']['pooled_lead'] >= 0.001
+      and s['results']['B_v1']['test']['tests']['control S1 level']['sign_p'] < 0.05
+      and s['results']['A_olmoearth_base']['matched']['tests']['control S1 level']['w'] > 5 * s['results']['A_olmoearth_base']['matched']['tests']['control S1 level']['l']
+    )(A['exp/out/exp51_summary.json'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: s1-probe-p1-confidence-beats-sensor-control}
+    - {file: docs/results/comparisons.md, marker: s1-probe-p1-confidence-beats-sensor-control}
+
+- id: v12-bolivia-their-readout
+  statement: With Ai2's own Sentinel-1 probe, v1.2 ranks its Bolivia errors worse than v1 pooled (0.0241 vs 0.0214) but not per tile (173/152, p = 0.13), so preregistered P2 fails and the v1.2 exception as a per-tile finding rests on our S2 head.
+  status: mixed
+  experiments: [exp51]
+  artifacts: [exp/out/exp51_summary.json]
+  check: |-
+    (lambda s, p:
+      s['prereg']['P2'] is False and p['lead_v1_2_minus_v1'] >= 0.001 and p['sign_p'] >= 0.05
+      and (p['w_v1_better'], p['l']) == (173, 152)
+      and round(p['pooled_eaurc_v1'], 4) == 0.0214 and round(p['pooled_eaurc_v1_2'], 4) == 0.0241
+      and s['results']['C_v1_2']['bolivia']['accuracy'] < s['results']['B_v1']['bolivia']['accuracy']
+      and s['results']['C_v1_2']['test']['accuracy'] > s['results']['B_v1']['test']['accuracy']
+    )(A['exp/out/exp51_summary.json'], A['exp/out/exp51_summary.json']['P2_test'])
+  cited_in:
+    - {file: docs/Findings.md, marker: v12-bolivia-their-readout}
+    - {file: docs/TECHNIQUES.md, marker: v12-bolivia-their-readout}
+    - {file: docs/results/comparisons.md, marker: v12-bolivia-their-readout}
+
+- id: s1-probe-ndwi-flip
+  statement: Under the Sentinel-1 probe the no-model NDWI index beats the probe's own confidence on the multi-region test split under both backbones and on Ai2's own embeddings, and loses on Bolivia, the mirror image of the S2 head's Bolivia exception.
+  status: measured
+  experiments: [exp51]
+  artifacts: [exp/out/exp51_summary.json]
+  check: |-
+    (lambda s:
+      all(s['results'][a]['test']['tests']['control NDWI level']['pooled_lead'] < -0.001
+          and s['results'][a]['test']['tests']['control NDWI level']['l'] > s['results'][a]['test']['tests']['control NDWI level']['w'] for a in ('B_v1', 'C_v1_2'))
+      and all(s['results'][a]['bolivia']['tests']['control NDWI level']['pooled_lead'] > 0 for a in ('B_v1', 'C_v1_2'))
+      and s['results']['A_olmoearth_base']['matched']['tests']['control NDWI level']['pooled_lead'] < -0.001
+      and s['results']['A_olmoearth_base']['matched']['tests']['control NDWI level']['l'] > s['results']['A_olmoearth_base']['matched']['tests']['control NDWI level']['w']
+    )(A['exp/out/exp51_summary.json'])
+  cited_in:
+    - {file: docs/Findings.md, marker: s1-probe-ndwi-flip}
+    - {file: docs/TECHNIQUES.md, marker: s1-probe-ndwi-flip}
+    - {file: docs/results/comparisons.md, marker: s1-probe-ndwi-flip}
+
+- id: cross-encoder-phi-on-their-embeddings
+  statement: On Ai2's published Sen1Floods11 embeddings with their probe, six of seven other encoders share OlmoEarth Base's error windows at phi 0.78-0.82 and Satlas (2 x 2 token grid) at 0.62; exp41's shared-error result replicates on their sensor and readout.
+  status: measured
+  experiments: [exp51, exp41]
+  artifacts: [exp/out/exp51_summary.json]
+  check: |-
+    (lambda ph:
+      all(0.77 <= ph[k]['phi'] <= 0.83 for k in ('galileo_base', 'croma_base', 'terramind_base', 'clay_large', 'anysat', 'panopticon'))
+      and 0.55 <= ph['satlas_base']['phi'] <= 0.70
+      and all(ph[k]['aligned_tiles'] == 2419 for k in ph)
+    )(A['exp/out/exp51_summary.json']['phi_vs_olmoearth_base'])
+  cited_in:
+    - {file: docs/Findings.md, marker: cross-encoder-phi-on-their-embeddings}
+    - {file: docs/TECHNIQUES.md, marker: cross-encoder-phi-on-their-embeddings}
+    - {file: docs/results/comparisons.md, marker: cross-encoder-phi-on-their-embeddings}
+
+- id: encode-path-reproduces-their-probe
+  statement: Ai2's probe on their own OlmoEarth Base embeddings reaches mIoU 0.789 against the paper's 79.2, and our Sentinel-1 encode of the same model with the same probe agrees with it window for window (phi 0.937 on 2,419 matched test tiles, accuracies within 0.002 on the shared block).
+  status: measured
+  experiments: [exp51]
+  artifacts: [exp/out/exp51_summary.json]
+  check: |-
+    (lambda a:
+      round(a['pixel_miou'], 3) == 0.789 and a['matched_tiles'] == 2419 and a['matched']['phi_vs_arm_B_v1'] > 0.9
+      and abs(a['matched']['acc_arm_A_on_shared'] - a['matched']['acc_arm_B_on_shared']) < 0.002
+    )(A['exp/out/exp51_summary.json']['results']['A_olmoearth_base'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: encode-path-reproduces-their-probe}
+    - {file: docs/results/comparisons.md, marker: encode-path-reproduces-their-probe}

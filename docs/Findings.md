@@ -21,6 +21,10 @@ file under `exp/out/`; the per-experiment detail is in the
    for the shift-averaged decision alike (exp45, exp47): on one event,
    water against land is nearly a spectral threshold, and there a head on
    raw pixel statistics beats the frozen encoder (exp46). <!-- claim:bolivia-ndwi-exception --> <!-- claim:pixel-head-beats-encoder-bolivia -->
+   Under Ai2's own Sentinel-1 probe the picture flips: its confidence beats
+   the index on Bolivia and loses to it on the multi-region split under both
+   backbones (exp51); the index from the other sensor wins wherever the
+   model's own sensor is the less informative one for water. <!-- claim:s1-probe-ndwi-flip -->
    A bag of bootstrap heads does not improve on it: an apparent gain under
    v1 on Bolivia (exp49) did not replicate with a fresh draw (exp50). <!-- claim:bag-not-replicated -->
 2. **Review boundary windows first, then by confidence.** Errors sit on
@@ -67,6 +71,8 @@ cause, since fine-tuning corrects more than half of the grid's errors on the
 same windows (exp21) and reading Sentinel-1 instead of Sentinel-2 moves the <!-- claim:fine-tuning-corrects-half -->
 error set twice as far as swapping the encoder (exp46); the sensor is the
 largest lever and the backbone the smallest. <!-- claim:modality-dominates-shared-errors -->
+On Ai2's own embeddings, with their probe, seven published encoders err on
+the same windows as OlmoEarth (phi 0.78-0.82, Satlas 0.62; exp51). <!-- claim:cross-encoder-phi-on-their-embeddings -->
 
 ## The numbers
 
@@ -126,6 +132,9 @@ The hand-label testbeds are one flood event (Bolivia) and a multi-region
 split of the same dataset, both scored with a linear probe, and the
 fine-tuned model contributes 41 errors in 344 windows, so the gains above <!-- claim:fine-tuned-model-audit -->
 are real but small, and every Bolivia exception is one event. Tiling instability
+With Ai2's own Sentinel-1 probe, v1.2 ranks its Bolivia errors worse than v1
+pooled but not per tile (173/152, p = 0.13), so the v1.2 exception as a
+per-tile finding rests on our S2 head (exp51). <!-- claim:v12-bolivia-their-readout -->
 wins 26 of 27 scenes and 8 of 8 rivers against the WorldCover map yet not
 on hand labels; the decisive test needs adjudicated cells on the eight
 rivers ([issue 2](https://github.com/2imi9/olmoearth_inferenceX/issues/2)). <!-- claim:tile-phase-26-of-27-worldcover -->

@@ -403,3 +403,24 @@ def test_exp50_ndwi_carries_the_fusion_and_the_bag_does_not_replicate():
     for v in ("v1", "v1_2"):
         assert s["results"][v]["test"]["tile_level"]["tile-fitted fusion (labelled)"]["diff_ci95"][1] < 0
     assert s["results"]["v1_2"]["bolivia"]["tile_level"]["tile-fitted fusion (labelled)"]["diff_ci95"][1] > 0
+
+
+def test_exp51_their_probe_reproduces_and_the_exception_moves_with_the_sensor():
+    """exp51 (job 761713): Ai2's own S1 probe recipe on their embeddings and on our S1 encodes. P1 holds (confidence beats
+    the sensor-level control); P2 fails (v1.2 worse than v1 on Bolivia pooled, not per tile); the NDWI index beats the
+    S1 probe's confidence on the multi-region split and loses on Bolivia; seven encoders share OlmoEarth's error
+    windows at phi 0.78-0.82 (Satlas 0.62); their mIoU reproduces and our encode matches their embeddings."""
+    s = json.load(open(os.path.join(OUT, "exp51_summary.json")))
+    assert s["prereg"] == {"P1": True, "P2": False, "supported": False, "complete": True} and s["n_failures"] == 0
+    p = s["P2_test"]
+    assert p["lead_v1_2_minus_v1"] >= 0.001 and p["sign_p"] >= 0.05 and (p["w_v1_better"], p["l"]) == (173, 152)
+    for a in ("B_v1", "C_v1_2"):
+        t = s["results"][a]["test"]["tests"]["control NDWI level"]
+        assert t["pooled_lead"] < -0.001 and t["l"] > t["w"]                      # the no-model index beats the S1 probe on the multi-region split
+        assert s["results"][a]["bolivia"]["tests"]["control NDWI level"]["pooled_lead"] > 0
+        assert s["results"][a]["test"]["tests"]["control S1 level"]["pooled_lead"] > 0.05
+    a = s["results"]["A_olmoearth_base"]
+    assert round(a["pixel_miou"], 3) == 0.789 and a["matched_tiles"] == 2419 and a["matched"]["phi_vs_arm_B_v1"] > 0.9
+    ph = s["phi_vs_olmoearth_base"]
+    assert all(0.77 <= ph[k]["phi"] <= 0.83 for k in ("galileo_base", "croma_base", "terramind_base", "clay_large", "anysat", "panopticon"))
+    assert 0.55 <= ph["satlas_base"]["phi"] <= 0.70
