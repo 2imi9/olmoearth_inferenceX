@@ -255,6 +255,7 @@ tool returns the structured evidence.
 | Does adapting the head per tile so the tilings agree (test-time adaptation, held-out tilings as the stop rule) improve the map? | exp53 — no: pixel accuracy falls on both testbeds under both objectives while held-out agreement improves on 96-99% of tiles; agreement is not correctness and held-out views are not a guard (preregistered P1 fails) |
 | Does labelling the tiles the audit flags teach a fine-tuned model more than labelling random tiles (label efficiency)? | exp56 — no: the audit's selection is worse than random on the multi-region split at every budget (at 300 labels -0.0053 on the seed mean, every seed behind; 1,000 labels 0.9588 vs 0.9622) and never reaches random's 1,000-label accuracy; entropy selection is worse still; the chosen tiles are three to four times harder than the pool (preregistered P1 and P2 fail) |
 | Does the protocol hold on dense multi-class tasks, and do encoders share errors there too? | exp54 — confidence beats the embedding-distance control on MADOS, PASTIS (S2, S1+S2), cashew and SA crop type (P1 on all five); shared errors are task-dependent (phi 0.26-0.44 on MADOS, 0.05-0.08 on PASTIS vs 0.77-0.82 on floods); boundary-first at many classes loses pooled and wins per tile |
+| How much do two inferences of the same scene differ, where, and which side is right? | exp57 — the difference atlas on every pair: disagreement 2-4% of windows across crop offsets, backbones and encoders, 8-11% across sensors; boundary-enriched everywhere (3.3-7.1x on Sen1Floods11, 21x on the median GEOID event; preregistered P1); the sensor and backbone disagreement sets overlap at phi 0.27 / 0.18 (P2); the label decides which side is right only for the fine-tuned model (71-75%) and the S2 head against the S1 head (67-84%), coin flips elsewhere; the module reproduces exp51, exp52 and exp55's cross-tabs |
 | Over many flood events, how often does a no-model index beat confidence, and what is the review set worth? | exp55 — GEOID-Flood, 55 events: the index beats the S2 head's confidence on 2/45 events, the S1-level control beats the S1 head's on 1/45 (P1, P2); the median event's 5% review set holds 88% / 64% of the errors, 17.5x / 12.8x random (P3); the sensor flip and the boundary-first majority did not generalise |
 | Does putting the most enriched cue (spectral ambiguity) first beat the boundary-first order at fixed budgets? | exp38 — mixed: per-tile budgets yes at 5% and 10% (p = 8e-4, 5e-5), one pooled budget no (0.292 vs 0.274, 0.481 vs 0.494), clear only at 20%; loses on the WorldCover rivers; boundary-first stays the supported rule |
 | Does the model's prediction contradict its predictions on the windows that look most like it (neighbourhood contradiction), and does an outside representation help? | exp39, exp40 — on Bolivia the OlmoEarth-space score passes P1 at 5-10% budgets and the pixel-statistics ablation beats confidence at every budget and on E-AURC; AnySat adds nothing over OlmoEarth's own space (issue 6 answered in the negative for this design); the preregistered replication on the multi-region test split with Bolivia as the bank fails every primary test, so neither score is supported; the open variable is the bank's coverage of the queries |
@@ -262,15 +263,26 @@ tool returns the structured evidence.
 | Does a last-layer posterior over the probe head (Laplace, bootstrap ensemble) rank the errors? | exp30 — no, on both testbeds; the variance is feature norm on the one-scene head and rises with the logit on the 128k-patch head |
 | E_dist formalization: does feature-space typicality against training, same-scene or cross-testbed references rank the errors? | exp31 — no; the confidence + same-scene kNN combination reaches 6/2 rivers (p = 0.145) against WorldCover and hurts on hand labels; only a true pretraining sample remains untested (issue #4; the RCG density upgrade is issue #3, parked) |
 
-## Cross-inference evaluation: what is done, what is not
+## Cross-inference comparison: what is done, what is not
 
-The comparison machinery is signal-agnostic, and six experiments already
-exercise it on pairs of inference runs — Nano/Tiny/Base (exp07), Large vs
-Nano as partner (exp10), band-set probes vs the final head (exp17), v1 vs
-v1.2 (exp19), fine-tuned model vs frozen probe (exp21), 2021 vs 2024 imagery
-(exp24). The index is in
+The comparison half of the package is `oe_inferencex.compare` (exp57): the
+disagreement rate pooled and per group, the cue enrichment on the
+disagreement windows, the stability of a disagreement set across head draws
+and across pairs, and, with labels, exp52's cross-tab and which side is
+right. exp57 ran it on every pair the repository holds (crop offsets, v1 vs
+v1.2, the S2 head vs the S1 head, frozen vs fine-tuned, seven encoders on
+Ai2's embeddings, the two sensors per GEOID-Flood event): the disagreement
+sits on prediction boundaries everywhere, the sensor and backbone
+differences are different sets of windows, and the label says which side is
+right only for the differences that changed the model. Earlier pairs
+(Nano/Tiny/Base, exp07; Large vs Nano as partner, exp10; band-set probes,
+exp17; v1 vs v1.2, exp19; fine-tuned vs frozen, exp21; 2021 vs 2024 imagery,
+exp24) predate the module. The index is in
 [../TECHNIQUES.md](../TECHNIQUES.md#cross-inference-comparisons); the
-adjudication case (exp23/24/25) is the section below it.
+adjudication case (exp23/24/25) is the section below it. Not done: the
+stability of the encoder and fine-tuned disagreement sets across seeds (only
+the linear heads were redrawn), and the same measurement on a multi-class
+task.
 
 **What is not done: change attribution between two dated products.** A raw
 diff of two inference outputs mixes real surface change, model instability,

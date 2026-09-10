@@ -99,6 +99,21 @@ the same windows as OlmoEarth (phi 0.78-0.82, Satlas 0.62; exp51). That sharing 
 task: on marine debris and crop types the same encoders share far less
 (phi 0.26-0.44 and 0.05-0.08; exp54). <!-- claim:cross-encoder-phi-on-their-embeddings --> <!-- claim:shared-errors-task-dependent -->
 
+Measured as differences, without labels (exp57, every pair on identical
+windows): two inferences of the same scene disagree on 2 to 4% of the windows
+across crop offsets, backbones and encoders and on 8 to 11% across sensors,
+and the disagreement sits on prediction boundaries everywhere, 3.3 to 7.1
+times as often as the agreement windows on Sen1Floods11 and 21 times on the
+median GEOID-Flood event, preregistered. The sensor difference and the <!-- claim:atlas-disagreement-is-boundary-located -->
+backbone difference are different sets of windows (phi 0.27 and 0.18 between
+their disagreement masks; every pair of differences overlaps at 0.18 to
+0.41), preregistered. Which side is right where they disagree is a labelled <!-- claim:atlas-different-differences -->
+question, and the label answers it only for the differences that changed the
+model: the fine-tuned model is right on 71 to 75% of its disagreements with
+the frozen head and the Sentinel-2 head on 67 to 84% of its disagreements
+with the Sentinel-1 head, while crop offsets, backbones and six of seven
+encoders split their disagreements 39 to 61%. <!-- claim:atlas-which-side -->
+
 The effect size in a reviewer's units (exp55, 45 GEOID-Flood events): on the
 median event the 5% of windows confidence flags hold 88% of the permanent-water
 errors and 64% of the post-event water errors, 17.5 and 12.8 times a random 5%. <!-- claim:geoid-capture-effect-size -->

@@ -1405,3 +1405,131 @@
     )(A['exp/out/exp55_summary.json']['prereg']['descriptive'])
   cited_in:
     - {file: docs/Findings.md, marker: geoid-boundary-first-minority}
+
+- id: atlas-disagreement-is-boundary-located
+  statement: On the disagreement windows of every pair of inferences (crop offsets 0 vs 2, v1 vs v1.2, the S2 head vs the S1 head and frozen vs fine-tuned on both Sen1Floods11 testbeds; seven encoders against OlmoEarth Base on Ai2's embeddings; the two sensors on the median GEOID-Flood event) the boundary cue is enriched more than twofold, 3.3x to 7.1x on Sen1Floods11 and 21x on the median GEOID event (preregistered P1, 16 of 16 pairs).
+  status: supported
+  experiments: [exp57]
+  artifacts: [exp/out/exp57_summary.json]
+  check: |-
+    (lambda s, g, d:
+      s['prereg']['P1'] is True and s['prereg']['complete'] is True
+      and s['prereg']['P1_n_tested'] == 16 and len(d) == 16
+      and all(v > 2 for v in d.values()) and min(d.values()) > 3.3
+      and round(min(v for k, v in d.items() if not k.startswith('geoid')), 1) == 3.3
+      and round(max(v for k, v in d.items() if not k.startswith('geoid')), 1) == 7.1
+      and d['geoid/median event'] > 20 and round(g['across_events']['boundary_enrichment']['q50']) == 21
+    )(A['exp/out/exp57_summary.json'], A['exp/out/exp57_summary.json']['results']['geoid'], A['exp/out/exp57_summary.json']['prereg']['P1_detail'])
+  cited_in:
+    - {file: docs/Findings.md, marker: atlas-disagreement-is-boundary-located}
+    - {file: docs/TECHNIQUES.md, marker: atlas-disagreement-is-boundary-located}
+    - {file: docs/results/comparisons.md, marker: atlas-disagreement-is-boundary-located}
+
+- id: atlas-different-differences
+  statement: "The sensor difference and the backbone difference are different sets of windows: phi between the S2-vs-S1 and the v1-vs-v1.2 disagreement masks is 0.27 on Bolivia and 0.18 on the test split, below 0.5 on 257 of 327 and 386 of 489 tiles (one-sided sign tests p < 1e-25; preregistered P2), and every pair of the four Sen1Floods11 disagreement sets overlaps at phi 0.18 to 0.41."
+  status: supported
+  experiments: [exp57]
+  artifacts: [exp/out/exp57_summary.json]
+  check: |-
+    (lambda s, sb, cp:
+      s['prereg']['P2'] is True
+      and all(sb[t]['pooled_phi'] < 0.5 and sb[t]['sign_p'] < 1e-25 for t in ('bolivia', 'test'))
+      and round(sb['bolivia']['pooled_phi'], 2) == 0.27 and round(sb['test']['pooled_phi'], 2) == 0.18
+      and (sb['bolivia']['tiles_below'], sb['bolivia']['n_tiles_defined']) == (257, 327)
+      and (sb['test']['tiles_below'], sb['test']['n_tiles_defined']) == (386, 489)
+      and all(cp[t]['names'] == ['offsets 0 vs 2', 'backbones', 'sensors', 'finetune'] for t in ('bolivia', 'test'))
+      and all(0.18 <= cp[t]['phi'][i][j] <= 0.42 for t in ('bolivia', 'test') for i in range(4) for j in range(4) if i != j)
+      and round(min(cp[t]['phi'][i][j] for t in ('bolivia', 'test') for i in range(4) for j in range(4) if i != j), 2) == 0.18
+      and round(max(cp[t]['phi'][i][j] for t in ('bolivia', 'test') for i in range(4) for j in range(4) if i != j), 2) == 0.41
+    )(A['exp/out/exp57_summary.json'], A['exp/out/exp57_summary.json']['results']['cross_pairs']['sensors_vs_backbones'], A['exp/out/exp57_summary.json']['results']['cross_pairs'])
+  cited_in:
+    - {file: docs/Findings.md, marker: atlas-different-differences}
+    - {file: docs/TECHNIQUES.md, marker: atlas-different-differences}
+    - {file: docs/results/comparisons.md, marker: atlas-different-differences}
+
+- id: atlas-which-side
+  statement: "Where two inferences disagree, the label says which is right only for the differences that changed the model: the fine-tuned model is right on 75% / 71% (Bolivia / test) of its disagreements with the frozen head and the S2 head on 67% / 84% of its disagreements with the S1 head, while under crop offsets and the two backbones either side is right on 39-61% of theirs and OlmoEarth Base is right on 47-56% of its disagreements with six of the seven encoders (71% against Satlas)."
+  status: measured
+  experiments: [exp57]
+  artifacts: [exp/out/exp57_summary.json]
+  check: |-
+    (lambda r, E, six=('galileo_base', 'croma_base', 'terramind_base', 'clay_large', 'anysat', 'panopticon'):
+      round(r['finetune']['bolivia']['graded']['which_side']['share_b_right'], 2) == 0.75
+      and round(r['finetune']['test']['graded']['which_side']['share_b_right'], 2) == 0.71
+      and round(r['sensors']['bolivia']['graded']['which_side']['share_a_right'], 2) == 0.67
+      and round(r['sensors']['test']['graded']['which_side']['share_a_right'], 2) == 0.84
+      and sorted(round(x['graded']['which_side'][k], 2) for x in (r['offsets']['bolivia']['offsets 0 vs 2'], r['offsets']['test']['offsets 0 vs 2'], r['backbones']['bolivia'], r['backbones']['test']) for k in ('share_a_right', 'share_b_right'))[::7] == [0.39, 0.61]
+      and sorted(round(E[m]['graded']['which_side']['share_a_right'], 2) for m in six)[::5] == [0.47, 0.56]
+      and round(E['satlas_base']['graded']['which_side']['share_a_right'], 2) == 0.71
+    )(A['exp/out/exp57_summary.json']['results'], A['exp/out/exp57_summary.json']['results']['encoders'])
+  cited_in:
+    - {file: docs/Findings.md, marker: atlas-which-side}
+    - {file: docs/TECHNIQUES.md, marker: atlas-which-side}
+    - {file: docs/results/comparisons.md, marker: atlas-which-side}
+
+- id: atlas-disagreement-rates
+  statement: Two inferences of the same Sen1Floods11 scene disagree on 2.0% to 4.0% of the windows across crop offsets and backbones, 7.2% / 2.7% (Bolivia / test) frozen against fine-tuned, 10.9% / 8.4% across sensors and 2.8% to 3.5% across encoders (Satlas 7.0%); on GEOID-Flood the two sensors disagree on 3.4%.
+  status: measured
+  experiments: [exp57]
+  artifacts: [exp/out/exp57_summary.json]
+  check: |-
+    (lambda r, E, g, six=('galileo_base', 'croma_base', 'terramind_base', 'clay_large', 'anysat', 'panopticon'):
+      abs(r['offsets']['bolivia']['offsets 0 vs 2']['disagreement_rate'] - 0.034) <= 0.0005
+      and abs(r['offsets']['test']['offsets 0 vs 2']['disagreement_rate'] - 0.026) <= 0.0005
+      and abs(r['backbones']['bolivia']['disagreement_rate'] - 0.040) <= 0.0005
+      and abs(r['backbones']['test']['disagreement_rate'] - 0.020) <= 0.0005
+      and abs(r['finetune']['bolivia']['disagreement_rate'] - 0.072) <= 0.0005
+      and abs(r['finetune']['test']['disagreement_rate'] - 0.027) <= 0.0005
+      and abs(r['sensors']['bolivia']['disagreement_rate'] - 0.109) <= 0.0005
+      and abs(r['sensors']['test']['disagreement_rate'] - 0.084) <= 0.0005
+      and abs(min(E[m]['disagreement_rate'] for m in six) - 0.028) <= 0.0005
+      and abs(max(E[m]['disagreement_rate'] for m in six) - 0.035) <= 0.0005
+      and abs(E['satlas_base']['disagreement_rate'] - 0.070) <= 0.0005
+      and abs(g['disagreement_rate'] - 0.034) <= 0.0005
+    )(A['exp/out/exp57_summary.json']['results'], A['exp/out/exp57_summary.json']['results']['encoders'], A['exp/out/exp57_summary.json']['results']['geoid'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: atlas-disagreement-rates}
+    - {file: docs/results/comparisons.md, marker: atlas-disagreement-rates}
+
+- id: atlas-geoid-disagreement-is-change-and-error
+  statement: On GEOID-Flood 27% of the windows where the pre-event S2 head and the post-event S1 head disagree are flooded by the label, 33% are S2-head errors on permanent water and 40% S1-head errors on post-event water; the two error maps share phi 0.585 pooled and 0.30 on the median event, exp55's numbers.
+  status: measured
+  experiments: [exp57, exp55]
+  artifacts: [exp/out/exp57_summary.json, exp/out/exp55_summary.json]
+  check: |-
+    (lambda g, e55:
+      round(g['graded']['disagreement_is']['share_flooded_by_label'], 2) == 0.27
+      and round(g['graded']['disagreement_is']['share_a_wrong_on_its_task'], 2) == 0.33
+      and round(g['graded']['disagreement_is']['share_b_wrong_on_its_task'], 2) == 0.40
+      and abs(g['graded']['crosstab_own_labels']['phi'] - e55['cross_tab_A_vs_B']['phi']) < 1e-6
+      and round(g['graded']['crosstab_own_labels']['phi'], 3) == 0.585
+      and round(g['across_events']['errors_phi']['q50'], 2) == 0.30
+    )(A['exp/out/exp57_summary.json']['results']['geoid'], A['exp/out/exp55_summary.json'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: atlas-geoid-disagreement-is-change-and-error}
+    - {file: docs/results/comparisons.md, marker: atlas-geoid-disagreement-is-change-and-error}
+
+- id: atlas-reproduces-recorded-cross-tabs
+  statement: "The module's cross-tabs reproduce the recorded ones: the re-run fine-tune corrects 65.5% / 42.7% (Bolivia / test) of the frozen head's errors (exp52: 65.8% / 44.1%), the seven encoders' error maps share phi 0.79 to 0.83 with OlmoEarth Base's (Satlas 0.62; exp51: 0.78 to 0.82, Satlas 0.62) and the GEOID sensors' phi 0.585 equals exp55's."
+  status: measured
+  experiments: [exp57, exp52, exp51, exp55]
+  artifacts: [exp/out/exp57_summary.json, exp/out/exp52_summary.json, exp/out/exp51_summary.json, exp/out/exp55_summary.json]
+  check: |-
+    (lambda r, E, g, e52, e51, e55, six=('galileo_base', 'croma_base', 'terramind_base', 'clay_large', 'anysat', 'panopticon'):
+      all(abs(r['finetune'][t]['graded']['crosstab']['share_corrected'] - e52['results']['FT-S2 v1'][t]['vs_frozen_head']['share_corrected']) <= 0.02 for t in ('bolivia', 'test'))
+      and round(r['finetune']['bolivia']['graded']['crosstab']['share_corrected'], 3) == 0.655
+      and round(r['finetune']['test']['graded']['crosstab']['share_corrected'], 3) == 0.427
+      and round(e52['results']['FT-S2 v1']['bolivia']['vs_frozen_head']['share_corrected'], 3) == 0.658
+      and round(e52['results']['FT-S2 v1']['test']['vs_frozen_head']['share_corrected'], 3) == 0.441
+      and set(e51['phi_vs_olmoearth_base']) == set(six) | {'satlas_base'}
+      and all(abs(E[m]['graded']['crosstab']['phi'] - e51['phi_vs_olmoearth_base'][m]['phi']) <= 0.03 for m in e51['phi_vs_olmoearth_base'])
+      and round(min(E[m]['graded']['crosstab']['phi'] for m in six), 2) == 0.79
+      and round(max(E[m]['graded']['crosstab']['phi'] for m in six), 2) == 0.83
+      and round(E['satlas_base']['graded']['crosstab']['phi'], 2) == 0.62
+      and round(min(e51['phi_vs_olmoearth_base'][m]['phi'] for m in six), 2) == 0.78
+      and round(max(e51['phi_vs_olmoearth_base'][m]['phi'] for m in six), 2) == 0.82
+      and round(e51['phi_vs_olmoearth_base']['satlas_base']['phi'], 2) == 0.62
+      and abs(g['graded']['crosstab_own_labels']['phi'] - e55['cross_tab_A_vs_B']['phi']) < 1e-6
+    )(A['exp/out/exp57_summary.json']['results'], A['exp/out/exp57_summary.json']['results']['encoders'], A['exp/out/exp57_summary.json']['results']['geoid'], A['exp/out/exp52_summary.json'], A['exp/out/exp51_summary.json'], A['exp/out/exp55_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: atlas-reproduces-recorded-cross-tabs}

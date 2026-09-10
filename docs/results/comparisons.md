@@ -836,6 +836,107 @@ not generalise (the pre-event NDWI prior out-ranks the S1 head's confidence on
 and 0.30 within the median event; the S1 head is wrong on 65% of the windows the S2
 head is wrong on. Runtime 7 minutes. Source `exp/out/exp55_summary.json`, job 775649.
 
+## The difference atlas: every pair of inferences under one measurement (exp57)
+
+Every earlier comparison of two inferences of the same scene turned the
+difference into a ranker and graded it, or reported one phi; the difference
+itself, how large it is, where it sits, whether two differences are the same
+set, was never the object, and the arithmetic was copied from script to
+script. exp57 promotes it to `oe_inferencex.compare` and applies it to every
+pair the repository holds. A pair is two hard decisions on identical 4-px
+windows with a validity mask, a tile or event id per window, the labels, and
+four label-free cues of the first inference: on a prediction boundary of its
+own window map, among the least confident 20% of the testbed's windows under
+it, among the 20% most unstable under a sub-patch shift of its tiling (where it
+has four crop offsets), spectrally ambiguous (|NDWI| < 0.1). Label-free first:
+the disagreement rate pooled and per tile or event, each cue's share among the
+disagreement windows over its share among the agreement windows, the stability
+of the disagreement set across three head draws (the full training set and two
+80% subsets of its tiles, seeds 1 and 2) and across pairs on the same grid.
+The label bridge second: which side is right on the disagreement windows and
+exp52's cross-tab of the two error maps. The Sen1Floods11 pairs sit on exp47's
+W1 grid (the shift-averaged decision pooled to windows 1..14 of the offset-0
+grid) on Bolivia (441 tiles, 71,373 windows) and the multi-region test split
+(800 tiles, 149,684 windows): the tiling at crop offset 0 against offset 2,
+OlmoEarth v1 against v1.2 Base, the S2 head against the S1 head on v1, and the
+frozen S2 head against FT-S2 v1, fine-tuned once more with exp52's recipe. The
+seven encoders of exp51 are paired with OlmoEarth Base on Ai2's published
+embeddings and probe (their test split, 2,419 tiles, 563,969 windows), and per
+GEOID-Flood event (exp55's 55 events, 870,728 windows) the pre-event S2 head
+(permanent water) with the post-event S1 head (water after the event), each
+error map graded against its own task label. Two inferences disagree on
+2.0-4.0% of the windows across crop offsets and backbones, 7.2% / 2.7% between
+the frozen and the fine-tuned head, 10.9% / 8.4% across sensors, 2.8-3.5%
+across encoders with Satlas at 7.0%, and 3.4% on GEOID-Flood. <!-- claim:atlas-disagreement-rates -->
+
+| Pair, testbed | windows | disagreement, pooled / median tile | boundary enrichment | right on the disagreement windows | phi of the two error maps | stability across head draws |
+|---|---|---|---|---|---|---|
+| offset 0 vs offset 2, Bolivia | 71,373 | 3.4% / 2.6% | 4.2x | offset 0 39%, offset 2 61% | 0.779 | 0.59 |
+| offset 0 vs offset 2, test split | 149,684 | 2.6% / 1.5% | 5.4x | 50% / 50% | 0.714 | 0.69 |
+| v1 vs v1.2 Base, Bolivia | 71,373 | 4.0% / 2.9% | 3.7x | v1 55%, v1.2 45% | 0.743 | 0.64 |
+| v1 vs v1.2 Base, test split | 149,684 | 2.0% / 1.0% | 5.3x | v1 47%, v1.2 53% | 0.765 | 0.65 |
+| S2 head vs S1 head, Bolivia | 71,373 | 10.9% / 6.6% | 3.3x | S2 67%, S1 33% | 0.415 | 0.75 | <!-- claim:atlas-disagreement-is-boundary-located -->
+| S2 head vs S1 head, test split | 149,684 | 8.4% / 3.2% | 4.0x | S2 84%, S1 16% | 0.430 | 0.86 |
+| frozen vs FT-S2 v1, Bolivia | 71,373 | 7.2% / 3.9% | 3.8x | frozen 25%, FT-S2 75% | 0.428 | one fine-tune |
+| frozen vs FT-S2 v1, test split | 149,684 | 2.7% / 1.0% | 5.3x | frozen 29%, FT-S2 71% | 0.650 | one fine-tune |
+| OlmoEarth Base vs galileo_base, their test split | 563,969 | 2.9% / 0.8% | 6.2x | OlmoEarth 47%, galileo 53% | 0.814 | one probe each; the seven disagreement sets at phi 0.29-0.55 |
+| OlmoEarth Base vs croma_base, their test split | 563,969 | 3.0% / 1.2% | 6.1x | 50% / 50% | 0.810 | as above |
+| OlmoEarth Base vs terramind_base, their test split | 563,969 | 2.8% / 0.8% | 6.6x | OlmoEarth 54%, terramind 46% | 0.825 | as above |
+| OlmoEarth Base vs clay_large, their test split | 563,969 | 3.1% / 1.2% | 6.3x | OlmoEarth 53%, clay 47% | 0.809 | as above |
+| OlmoEarth Base vs satlas_base, their test split | 563,969 | 7.0% / 2.7% | 7.1x | OlmoEarth 71%, satlas 29% | 0.624 | as above |
+| OlmoEarth Base vs anysat, their test split | 563,969 | 3.5% / 1.2% | 6.2x | OlmoEarth 55%, anysat 45% | 0.787 | as above |
+| OlmoEarth Base vs panopticon, their test split | 563,969 | 3.4% / 1.2% | 6.1x | OlmoEarth 56%, panopticon 44% | 0.792 | as above |
+| S2 head vs S1 head per GEOID-Flood event, pooled | 870,728 | 3.4% | 10.1x | 27% flooded by the label; S2 wrong 33%, S1 wrong 40%, neither 27% | 0.585 | n/a |
+| S2 head vs S1 head, median GEOID-Flood event | 55 events | 1.4% | 21.2x | flooded by the label 0.7% (66% at the 90th percentile) | 0.30 | n/a |
+
+The four Sen1Floods11 differences are different sets of windows. In the 4 x 4
+matrix of phi between the disagreement masks every off-diagonal entry lies
+between 0.18 and 0.41 (median 0.28 on both testbeds), and the preregistered
+pair, the sensor difference against the backbone difference, gives phi 0.27 on
+Bolivia and 0.18 on the test split; per tile the tiles with phi below 0.5
+outnumber the rest 257 to 70 and 386 to 103 (one-sided exact sign test,
+p = 1.5e-26 and 8.0e-40; tiles with an undefined phi dropped). The seven
+encoder disagreement sets on Ai2's embeddings overlap at phi 0.29 to 0.55
+(median 0.45), Satlas at 0.29-0.39 with every other encoder. A re-drawn head
+keeps most of a difference: the same pair's disagreement mask recurs across
+the three head draws at median pairwise phi 0.59-0.86, above any overlap
+between two different pairs. <!-- claim:atlas-different-differences -->
+
+The label says which side is right only for the differences that changed the
+model. The fine-tuned model is right on 75% / 71% of its disagreements with the
+frozen head (259/84 and 333/127 tiles) and the S2 head on 67% / 84% of its
+disagreements with the S1 head (223/125 and 449/103 tiles); between crop
+offsets and between backbones the winning side takes 39-61% and changes with
+the testbed, and OlmoEarth Base is right on 47-56% of its disagreements with
+six of the seven encoders and on 71% with Satlas. <!-- claim:atlas-which-side -->
+
+On GEOID-Flood the two heads predict different things, permanent water before
+the event and water after it, so their disagreement is change as well as
+error. It covers 3.4% of the windows pooled and 1.4% on the median event, and
+it is boundary-located more sharply than on Sen1Floods11: enrichment 10.1x
+pooled, 21.2x on the median event, above 2 on every one of the 49 events with a
+defined value. Of the disagreement windows (the categories overlap) 27% are
+flooded by the label, 33% are errors of the S2 head on its own task, 40% errors
+of the S1 head on its, and 27% are neither; the flooded share is concentrated
+in a few events, 0.7% on the median event and 66% at the 90th percentile. The
+two error maps share phi 0.585 pooled and 0.30 on the median event, exp55's
+numbers. <!-- claim:atlas-geoid-disagreement-is-change-and-error -->
+
+Both preregistered results hold. P1: the disagreement windows of every pair are
+boundary-enriched, above 2 on all sixteen tested pairs, 3.3x to 7.1x on
+Sen1Floods11 and 21.2x on the median GEOID-Flood event. <!-- claim:atlas-disagreement-is-boundary-located -->
+P2: the sensor difference and the backbone difference are different
+differences, phi 0.27 / 0.18 pooled and the tiles below 0.5 a majority on both
+testbeds. The module's cross-tabs reproduce the recorded ones: the fine-tuned
+model corrects 65.5% / 42.7% of the frozen head's errors against exp52's
+65.8% / 44.1% (a fresh fine-tune with the same recipe, window accuracy 0.9539 /
+0.9666 against 0.9540 / 0.9674), the encoders share OlmoEarth Base's errors at
+phi 0.79-0.83 with Satlas at 0.62 against exp51's 0.78-0.82 and 0.62, and the
+two GEOID-Flood heads at 0.585 as in exp55. <!-- claim:atlas-reproduces-recorded-cross-tabs -->
+Runtime 19:44 for the Sen1Floods11 and encoder pairs, 11 minutes of it the
+fine-tune, and 3:34 for the GEOID-Flood job. Source
+`exp/out/exp57_summary.json`, jobs 779972 and 779973.
+
 ## Served land cover change rasters (exp20)
 
 First assessment of a served output: ten 512-px windows (about

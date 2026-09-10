@@ -492,3 +492,21 @@ def test_exp55_exceptions_are_rare_over_events_and_the_review_set_is_worth_ten_t
     d = s["prereg"]["descriptive"]
     assert d["B_ndwi_prior_beats_s1_confidence_on_majority"]["holds"] is False
     assert all(d[k]["holds"] is False for k in ("A_boundary_first_beats_confidence_at_5pct_on_majority", "B_boundary_first_beats_confidence_at_5pct_on_majority"))
+
+
+def test_exp57_disagreement_is_boundary_located_and_the_differences_are_different():
+    """exp57 (jobs 779972, 779973): on the disagreement windows of every pair of inferences the boundary cue is enriched
+    more than twofold (P1, 16 of 16 pairs, at least 3.3x); the sensor and the backbone disagreement masks overlap at
+    phi 0.27 / 0.18 pooled and below 0.5 on 257 of 327 and 386 of 489 tiles (P2); the module's cross-tabs reproduce
+    exp52's corrected share and exp55's GEOID phi."""
+    s = json.load(open(os.path.join(OUT, "exp57_summary.json")))
+    assert s["prereg"]["P1"] is True and s["prereg"]["P2"] is True and s["prereg"]["complete"] is True and s["n_failures"] == 0
+    assert s["prereg"]["P1_n_tested"] == 16 and min(s["prereg"]["P1_detail"].values()) > 3.3
+    sb = s["results"]["cross_pairs"]["sensors_vs_backbones"]
+    assert all(sb[t]["pooled_phi"] < 0.3 for t in ("bolivia", "test"))
+    assert (sb["bolivia"]["tiles_below"], sb["test"]["tiles_below"]) == (257, 386)
+    ft = s["results"]["finetune"]
+    assert round(ft["bolivia"]["graded"]["crosstab"]["share_corrected"], 3) == 0.655
+    assert round(ft["test"]["graded"]["crosstab"]["share_corrected"], 3) == 0.427
+    g = s["results"]["geoid"]["graded"]
+    assert round(g["crosstab_own_labels"]["phi"], 3) == 0.585 and round(g["disagreement_is"]["share_flooded_by_label"], 2) == 0.27
