@@ -286,6 +286,15 @@ def geoid_probabilities(args, summary):
 
 
 # ----------------------------------------------------------------------------- prereg and main
+def _ge(v, t):
+    """v >= t with an undefined v (None after a JSON round trip, NaN) counting as a failure."""
+    return v is not None and np.isfinite(v) and v >= t
+
+
+def _lt(v, t):
+    return v is not None and np.isfinite(v) and v < t
+
+
 def prereg(summary):
     R = summary["results"]
     p1, p2, detail = [], [], {}
@@ -295,19 +304,19 @@ def prereg(summary):
             if r and "resolution" in r:
                 res, tg = r["resolution"], r["targeting"]
                 detail[f"{pair}/{name}"] = {"share_right": res["share_right"], "resolution_p": res["over_groups"]["sign_p"], "capture_50": tg["capture"]["0.5"], "targeting_p": tg["over_groups"]["sign_p"]}
-                p1.append(res["share_right"] >= MIN_RESOLUTION and res["over_groups"]["sign_p"] < 0.05)
-                p2.append(tg["capture"]["0.5"] >= MIN_CAPTURE and tg["over_groups"]["sign_p"] < 0.05)
+                p1.append(_ge(res["share_right"], MIN_RESOLUTION) and _lt(res["over_groups"]["sign_p"], 0.05))
+                p2.append(_ge(tg["capture"]["0.5"], MIN_CAPTURE) and _lt(tg["over_groups"]["sign_p"], 0.05))
     for model, r in R.get("encoders", {}).items():
         if isinstance(r, dict) and "resolution" in r:
             res, tg = r["resolution"], r["targeting"]
             detail[f"encoders/{model}"] = {"share_right": res["share_right"], "resolution_p": res["over_groups"]["sign_p"], "capture_50": tg["capture"]["0.5"], "targeting_p": tg["over_groups"]["sign_p"]}
-            p1.append(res["share_right"] >= MIN_RESOLUTION and res["over_groups"]["sign_p"] < 0.05)
-            p2.append(tg["capture"]["0.5"] >= MIN_CAPTURE and tg["over_groups"]["sign_p"] < 0.05)
+            p1.append(_ge(res["share_right"], MIN_RESOLUTION) and _lt(res["over_groups"]["sign_p"], 0.05))
+            p2.append(_ge(tg["capture"]["0.5"], MIN_CAPTURE) and _lt(tg["over_groups"]["sign_p"], 0.05))
     expected = 8 + len(summary["config"]["others"])
     g = R.get("geoid", {}).get("change")
     p3 = None
     if g:
-        p3 = bool(np.isfinite(g["ratio"]) and g["ratio"] >= MIN_CHANGE_RATIO and g["over_events"]["sign_p"] < 0.05)
+        p3 = bool(_ge(g["ratio"], MIN_CHANGE_RATIO) and _lt(g["over_events"]["sign_p"], 0.05))
     complete = len(p1) == expected and p3 is not None and not summary["failures"]
     summary["prereg"] = {"P1": all(p1) if p1 else None, "P2": all(p2) if p2 else None, "P3": p3, "detail": detail, "n_tested": len(p1), "n_expected": expected,
                          "P3_detail": None if not g else {"ratio": g["ratio"], "flooded_all": g["flooded_all"], "flooded_both_confident": g["flooded_both_confident"], "events_w": g["over_events"]["w"], "events_l": g["over_events"]["l"], "sign_p": g["over_events"]["sign_p"]},
