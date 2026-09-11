@@ -13,9 +13,12 @@ disagree, which should you believe, and is the difference real?**
 
 - **Error ranking.** Each signal assigns every map window a suspicion score;
   the score is judged by how well it ranks the windows the model gets wrong.
-- **Cross-inference evaluation.** Two inference runs — model versions,
-  encoder internals, input years, reference vintages — are scored on
-  identical errors and compared under the same tests.
+- **Cross-inference comparison.** Two inferences of the same scene, shifted
+  crops, backbones, sensors, a frozen and a fine-tuned model, input years,
+  are compared on the windows both predicted: how much they differ, where
+  the difference sits, whether two differences are the same set, all
+  measured without labels; then, where labels exist, which side is right
+  and what one side corrects and breaks (`oe_inferencex.compare`, exp57).
 
 The machinery is the same for both, and is deliberately signal-agnostic:
 `aurc_expected(uncertainty, errors)` takes any score vector and any error
@@ -47,6 +50,20 @@ The statistics settled in exp13 and used by every experiment after it:
 | Per-scene uncertainty | 4x4-patch block bootstrap, B=1000 | Percentile intervals are biased for a rank statistic on high-error scenes, so they are indicative only. |
 | Cross-scene tests | Exact sign test on untied pairs, plus a sign-flip permutation test on mean E-AURC differences | The sign test is scale-free and is reported as primary; mean-based tests are dominated by high-error scenes. |
 | Reporting | Wins / losses / ties per scene, not means | Same reason. |
+
+### How a difference is measured
+
+The comparison half, settled in exp57 and probed in exp58; the arithmetic is
+`oe_inferencex.compare`, one implementation for every experiment:
+
+| Element | Choice | Why |
+|---|---|---|
+| Unit | Two hard decisions on identical windows, with the validity mask of the windows both predicted; probabilities are thresholded and class scores argmaxed before the call | A difference is a property of a window, not of a threshold; floating-point noise between two probability maps is not a difference. |
+| Label-free readings, in this order | The disagreement rate pooled and per tile or event; the enrichment of each label-free cue among the disagreement windows against the agreement windows (boundary, low confidence, tiling instability, spectral ambiguity, the explanation layer's cues); the pairwise phi of disagreement sets across head draws and across pairs | These are the statements a user can make about two maps with no reference. They come first so that the graded reading never leaks into them. |
+| Graded readings, second | Which side matches the label where the two disagree; the cross-tab of the two error maps (corrected, broken, both, their phi) | The label bridge from exp52, kept separate: it says what a difference *means*, the readings above say what it *is*. |
+| Groups | One vote per tile or event with at least three disagreement windows (twenty for an event), a one-sided exact sign test that the preregistered direction holds on more groups than not, and the share of groups where it flips | The per-event machinery of exp55 generalised; windows of one tile are not independent draws (the limit below). |
+| Preregistration | Each comparison states, before the run, the enrichment or overlap it predicts and the falsification | As for signals: a difference that is merely reported is not a finding. |
+| What a difference does not say | Which side is right. The more confident side wins only slightly more often than a coin flip on the disagreement windows, and confidence does not order them (exp58); the package therefore reports both sides and resolves nothing without labels | The disagreement windows are the boundary windows where confidence has run out; deciding between two inferences there is a labelled question. |
 
 ### Known limits of these tests
 
