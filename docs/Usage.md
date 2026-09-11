@@ -90,6 +90,12 @@ confident (a margin of at least 0.25 each) are flooded every time on this chip a
 over the 55 events, against 27% of all differing windows: a reading of the difference, not a proof of
 change (exp58; a label-fitted rule reaches 80% on 6% of the windows, exp59).*
 
+The pair mixes time and sensor. exp60 separates the axes: a same-period cross-sensor
+difference carries none of the later flood (0.4% of its windows against 19.5% here),
+while the same-sensor difference across the event carries 26%, and more than half of
+it is the pre-event radar seeing water the label's permanent class does not hold
+([Comparisons](results/comparisons.md#two-periods-both-sensors-the-time-axis-and-the-sensor-axis-apart-exp60)).
+
 The same measurement for the whole event, from the committed decisions alone:
 
 ```python

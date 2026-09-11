@@ -113,6 +113,12 @@ model: the fine-tuned model is right on 71 to 75% of its disagreements with
 the frozen head and the Sentinel-2 head on 67 to 84% of its disagreements
 with the Sentinel-1 head, while crop offsets, backbones and six of seven
 encoders split their disagreements 39 to 61%. <!-- claim:atlas-which-side -->
+Across two dates the axes separate (exp60, GEOID-Flood): a same-period
+cross-sensor difference carries none of the later flood (0.4% of its windows
+against 19.5% for the mixed pair, on 23 events against 3), while the same-sensor
+difference across the event carries 26%, not the doubling preregistered, because
+the pre-event radar sees the water regime of that date and not the label's
+permanent class. <!-- claim:two-periods-sensor-axis-isolated --> <!-- claim:two-periods-time-only-difference -->
 
 The effect size in a reviewer's units (exp55, 45 GEOID-Flood events): on the
 median event the 5% of windows confidence flags hold 88% of the permanent-water

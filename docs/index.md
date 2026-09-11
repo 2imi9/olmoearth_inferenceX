@@ -33,6 +33,12 @@ much more often each fires on the differing windows than on the rest: boundary 1
 of them both sides are confident about. With labels, boxed apart, it says what the difference is:
 here 84% of it is the flood itself and 16% an error of one head.*
 
+The pair mixes time and sensor. exp60 separates the axes: a same-period cross-sensor
+difference carries none of the later flood (0.4% of its windows against 19.5% here),
+while the same-sensor difference across the event carries 26%, and more than half of
+it is the pre-event radar seeing water the label's permanent class does not hold
+([Comparisons](results/comparisons.md#two-periods-both-sensors-the-time-axis-and-the-sensor-axis-apart-exp60)).
+
 A worked flood example, runnable from the committed artifacts, is in
 [Usage: compare two inferences of the same scene](Usage.md#compare-two-inferences-of-the-same-scene);
 the event-level results are in [Comparisons](results/comparisons.md#the-difference-atlas-every-pair-of-inferences-under-one-measurement-exp57).

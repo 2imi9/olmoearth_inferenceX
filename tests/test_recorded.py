@@ -546,3 +546,18 @@ def test_exp59_fitted_resolution_helps_except_on_the_fine_tuned_pair():
     assert round(D["sensors/test"]["fitted"], 2) == 0.86 and round(D["sensors/test"]["margin"], 2) == 0.70
     c = s["results"]["geoid"]["change"]
     assert round(c["flooded_rule"], 2) == 0.80 and round(c["share_change"], 2) == 0.06 and (c["over_events_vs_raw_diff"]["w"], c["over_events_vs_raw_diff"]["l"]) == (11, 8)
+
+
+def test_exp60_sensor_axis_isolates_and_time_axis_does_not_concentrate_the_flood():
+    """exp60 (job 794821): the same-period cross-sensor difference carries none of the later flood (P2); the same-sensor
+    difference across the event carries 26%, 1.33x the mixed pair, not the preregistered doubling (P1 fails)."""
+    s = json.load(open(_need("exp60_summary.json")))
+    assert s["prereg"]["P1"] is False and s["prereg"]["P2"] is True and s["prereg"]["complete"] is True and s["n_failures"] == 0
+    R, T = s["results"]["pairs"], s["results"]["tests"]
+    assert round(R["sensor_only"]["flooded_share"], 3) == 0.004 and (T["P2_sensor_vs_mixed"]["w"], T["P2_sensor_vs_mixed"]["l"]) == (23, 3)
+    assert round(T["P1_time_vs_mixed"]["ratio_pooled"], 2) == 1.33 and (T["P1_time_vs_mixed"]["w"], T["P1_time_vs_mixed"]["l"]) == (13, 13)
+    assert round(R["time_only"]["err_a_share"], 3) == 0.545
+    z = np.load(_need("exp60_masks.npz"))
+    d = (z["A_s2pre"] != z["A_s1pre"]) & z["ok"]
+    flooded = z["y_after"] & ~z["y_permanent"]
+    assert d.sum() == R["sensor_only"]["n_disagree"] and abs(flooded[d].mean() - R["sensor_only"]["flooded_share"]) < 1e-9

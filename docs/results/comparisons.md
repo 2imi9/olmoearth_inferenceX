@@ -1094,6 +1094,48 @@ events against 8 (p = 0.32): precision bought with coverage, and no event-level
 majority, so P2 fails. <!-- claim:fitted-change-rule-precision-not-recall -->
 Runtime 18:49 and 4:20 (jobs 791849, 791850). Source `exp/out/exp59_summary.json`.
 
+## Two periods, both sensors: the time axis and the sensor axis apart (exp60)
+
+The README's GEOID pair mixes two axes, time and sensor. GEOID-Flood holds three
+of the four cells of the two-period, two-sensor design (no post-event optical
+pass: the scene is under cloud), so the pre-event Sentinel-1 pass was extracted
+from the same shards exp55 fetched, one Sentinel-1 water head was fitted on the
+val chips' pre pass with the permanent-water label and post pass with the
+water-after label, and three pairs were read through `compare` on the same 869,160
+windows of 4,489 clear chips in 55 events: time-only (S1 before against S1 after,
+one head), sensor-only (S2 before against S1 before, both permanent water), and the
+mixed pair (S2 before against S1 after). Each head is accurate on its own task
+(96.8%, 97.7%, 98.5% of the windows).
+
+| Pair | differing windows, pooled / median event | flooded by the label | first side off its label | second side off its label | boundary enrichment | both confident: share, flooded |
+|---|---|---|---|---|---|---|
+| time-only: S1 before vs S1 after | 3.4% / 2.2% | 25.9% | 54.5% (pre pass vs permanent water) | 19.6% | 12.9x | 48%, 41% |
+| sensor-only: S2 before vs S1 before | 4.9% / 1.6% | 0.4% | 58.9% | 41.1% | 7.3x | 67%, 0.2% |
+| mixed: S2 before vs S1 after | 4.6% / 1.5% | 19.5% | 63.0% | 17.8% | 7.4x | 57%, 26% | <!-- claim:two-periods-composition -->
+
+The sensor axis isolates cleanly: a same-period cross-sensor difference carries
+almost none of the later flood, 0.4% of its differing windows against 19.5% for
+the mixed pair (ratio 0.02), lower on 23 events against 3 (one-sided sign test
+p = 4e-5); preregistered P2 holds. Its content is sensor error alone: where the
+optical and the radar head disagree on permanent water, one of them is off the
+label, the optical one on 59% of the windows. <!-- claim:two-periods-sensor-axis-isolated -->
+The time axis does not concentrate the flood: the same-sensor difference across
+the event is flooded on 25.9% of its windows, 1.33 times the mixed pair's 19.5%,
+short of the preregistered 2, and higher on 13 events against 13 (p = 0.58);
+P1 fails. More than half of that difference, 54.5%, is where the pre-event radar
+pass departs from the permanent-water label: the radar head sees the water that
+was there on the pre-event date, seasonal or otherwise, which the label's permanent
+class does not carry, so "time only" contains the water regime of the two dates
+as well as the flood. Where both sides are confident the time-only difference is
+flooded 41% of the time against 26% on the mixed pair, on 12 events against 9
+(p = 0.33, a stated prediction, not supported). The sensor-only pair has fewer
+differing windows than the mixed pair on 21 events against 17 (p = 0.31, the
+other stated prediction, not supported). <!-- claim:two-periods-time-only-difference -->
+Caveat: the two radar passes may differ in orbit and incidence angle, so the time
+axis includes acquisition geometry. Runtime 5:24 (job 794821), the pre-event pass
+extracted in about a minute. Source `exp/out/exp60_summary.json`,
+`exp/out/exp60_masks.npz` (the three decision maps, margins and labels).
+
 ## Served land cover change rasters (exp20)
 
 First assessment of a served output: ten 512-px windows (about

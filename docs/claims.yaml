@@ -1641,3 +1641,54 @@
   cited_in:
     - {file: docs/TECHNIQUES.md, marker: fitted-change-rule-precision-not-recall}
     - {file: docs/results/comparisons.md, marker: fitted-change-rule-precision-not-recall}
+
+- id: two-periods-sensor-axis-isolated
+  statement: "On GEOID-Flood a same-period cross-sensor difference (the S2 permanent-water head against the S1 water head on the pre-event pass) is flooded by the label on 0.4% of its differing windows, against 19.5% for the mixed pair (S2 before against S1 after), a ratio of 0.02, and lower on 23 events against 3 (one-sided sign test p < 1e-4); preregistered P2 holds: the sensor axis carries none of the later flood."
+  status: supported
+  experiments: [exp60]
+  artifacts: [exp/out/exp60_summary.json]
+  check: |-
+    (lambda s, R, T:
+      s['prereg']['P2'] is True and s['prereg']['complete'] is True
+      and round(R['sensor_only']['flooded_share'], 3) == 0.004 and round(R['mixed']['flooded_share'], 3) == 0.195
+      and round(T['ratio_pooled'], 2) == 0.02 and T['w'] == 23 and T['l'] == 3 and T['sign_p'] < 1e-4
+    )(A['exp/out/exp60_summary.json'], A['exp/out/exp60_summary.json']['results']['pairs'], A['exp/out/exp60_summary.json']['results']['tests']['P2_sensor_vs_mixed'])
+  cited_in:
+    - {file: docs/Findings.md, marker: two-periods-sensor-axis-isolated}
+    - {file: docs/TECHNIQUES.md, marker: two-periods-sensor-axis-isolated}
+    - {file: docs/results/comparisons.md, marker: two-periods-sensor-axis-isolated}
+
+- id: two-periods-time-only-difference
+  statement: "On GEOID-Flood the same-sensor difference across the event (one S1 water head on the pre-event and the post-event pass) is flooded by the label on 25.9% of its differing windows, 1.33 times the mixed pair's 19.5%, short of the preregistered doubling, and higher on 13 events against 13 (p = 0.58); 54.5% of its differing windows are where the pre-event pass departs from the permanent-water label and 19.6% where the post-event pass departs from the water-after label; preregistered P1 fails."
+  status: mixed
+  experiments: [exp60]
+  artifacts: [exp/out/exp60_summary.json]
+  check: |-
+    (lambda s, R, T:
+      s['prereg']['P1'] is False
+      and round(R['time_only']['flooded_share'], 3) == 0.259 and round(T['ratio_pooled'], 2) == 1.33 and T['ratio_pooled'] < 2
+      and T['w'] == 13 and T['l'] == 13 and T['sign_p'] > 0.05
+      and round(R['time_only']['err_a_share'], 3) == 0.545 and round(R['time_only']['err_b_share'], 3) == 0.196
+    )(A['exp/out/exp60_summary.json'], A['exp/out/exp60_summary.json']['results']['pairs'], A['exp/out/exp60_summary.json']['results']['tests']['P1_time_vs_mixed'])
+  cited_in:
+    - {file: docs/Findings.md, marker: two-periods-time-only-difference}
+    - {file: docs/TECHNIQUES.md, marker: two-periods-time-only-difference}
+    - {file: docs/results/comparisons.md, marker: two-periods-time-only-difference}
+
+- id: two-periods-composition
+  statement: "On the same 869,160 windows of 4,489 clear GEOID-Flood chips in 55 events, the time-only, sensor-only and mixed pairs differ on 3.4%, 4.9% and 4.6% of the windows, are boundary-enriched 12.9x, 7.3x and 7.4x, and where both sides are confident (48%, 67%, 57% of their differing windows) are flooded by the label 41%, 0.2% and 26% of the time; each head is accurate on its own task (96.8%, 97.7%, 98.5%)."
+  status: measured
+  experiments: [exp60]
+  artifacts: [exp/out/exp60_summary.json]
+  check: |-
+    (lambda R, acc:
+      [round(R[k]['disagreement_rate'], 3) for k in ('time_only', 'sensor_only', 'mixed')] == [0.034, 0.049, 0.046]
+      and [round(R[k]['boundary_enrichment'], 1) for k in ('time_only', 'sensor_only', 'mixed')] == [12.9, 7.3, 7.4]
+      and [round(R[k]['both_confident_share'], 2) for k in ('time_only', 'sensor_only', 'mixed')] == [0.48, 0.67, 0.57]
+      and [round(R[k]['both_confident_flooded'], 2) for k in ('time_only', 'sensor_only', 'mixed')] == [0.41, 0.0, 0.26]
+      and R['time_only']['n_windows'] == 869160
+      and [round(acc[k], 3) for k in ('A_s2pre', 'A_s1pre', 'B_s1post')] == [0.968, 0.977, 0.985]
+    )(A['exp/out/exp60_summary.json']['results']['pairs'], A['exp/out/exp60_summary.json']['results']['accuracy_own_task'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: two-periods-composition}
+    - {file: docs/results/comparisons.md, marker: two-periods-composition}
