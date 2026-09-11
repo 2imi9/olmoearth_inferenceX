@@ -7,6 +7,7 @@ Torch-free assessment layer (docs/method/agent_integration.md):
   assess    a prediction or served class map -> review sets, operating points, reference scoring
   explain   why a review window is suspect: label-free cues with measured enrichment
   compare   how two inferences of the same scene differ: disagreement, where it sits, stability, the label bridge
+  calibrate fuse the readings with labels: a ranker or side rule, held-out, bound to its model family
   taskcard  what each fine-tuned model is; lcc: HTTP range reader for the served rasters
 Encoder-dependent (extra "encoder"): evidence (linear heads), awf, data.
 """

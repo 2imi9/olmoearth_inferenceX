@@ -4,6 +4,45 @@ The package [`oe_inferencex/`](../oe_inferencex/) is torch-free. It takes a
 prediction map and returns a review plan with a reason per flagged window;
 with a reference map it also scores the plan.
 
+## Fuse the readings with labels
+
+The label-free layers say where to look, why, and how two inferences differ.
+Where labels exist, `oe_inferencex.calibrate` fits a combination of those
+readings and reports it held-out: a ranker, P(error | readings), or a side
+rule, P(side b is right | readings of both sides) on the windows where two
+decisions differ. The labels train the weights; the imagery never does. The
+fit is cross-fitted by group (tile, event), so no window grades the weights it
+trained, and every fusion carries the model family it was fitted on and
+refuses to score another unless forced: exp59's side rule, fitted on frozen
+heads, lost 26 points on the fine-tuned pair.
+
+```python
+import numpy as np
+from oe_inferencex.calibrate import fit_side, side_features
+
+z = np.load("exp/out/exp60_masks.npz")                          # exp60: the radar head before and after 55 flood events
+fa, fb = {"margin": z["margin_A_s1pre"]}, {"margin": z["margin_B_s1post"]}
+fusion, report = fit_side(fa, fb, z["A_s1pre"], z["B_s1post"], z["ok"], z["y_after"],
+                          groups=z["event"], family="OlmoEarth v1 frozen S1 head")
+report["held_out"]["share_right"]                                # 0.830: the fitted rule, cross-fitted by event
+report["baseline"]["share_right"]                                # 0.690: believe the side with the larger margin
+report["always_a"], report["always_b"]                           # 0.196, 0.804
+fusion.prob(side_features(fa, fb), family="OlmoEarth v1 frozen S1 head")   # P(b right) per window
+fusion.score(side_features(fa, fb), family="FT-S2 v1")            # ValueError: another family, refit or force=True
+```
+
+`fit_ranker(signals, errors, ok, groups=..., family=...)` does the same for
+the review ranking: it takes named readings in any orientation (confidence,
+tile-phase, a no-model index, ...), learns each sign, and reports the fusion's
+held-out excess AURC, capture at the budgets and calibration against every
+single reading, with a sign test over groups against the best single. On the
+pair above the margin alone mostly teaches the rule which side is usually
+right (always b, the post-event pass, gives 0.804) and adds three points over
+that, 23 events against 16; exp59's eleven readings added 5 to 17 points over
+the raw margin on the crop-offset, backbone and sensor pairs.
+Both fusions serialise with `to_dict` and `from_dict`, so an agent can store a
+fitted rule next to the labels it came from.
+
 ## Command line
 
 Two commands cover the two halves without writing Python. Inputs are GeoTIFFs

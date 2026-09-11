@@ -22,6 +22,9 @@ the model. Given a prediction map, it helps with:
    through shifted crops, across backbones, across sensors and before
    against after fine-tuning: how much they disagree, what the disagreement
    windows have in common and, with labels, which side is right.
+6. **Fusing the label-free readings with labels where they exist**: a fitted
+   ranker or side rule, reported held-out and bound to the model family it
+   was fitted on, because such rules do not transfer across families.
 
 ![The two-period, two-sensor square on one GEOID-Flood chip: four dated inputs, four inferences on identical windows, the same-date and same-sensor differences on the scene, and the label bridge boxed apart](figures/compare.png)
 

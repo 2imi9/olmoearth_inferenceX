@@ -9,6 +9,20 @@ evidence itself.
 Index at [../TECHNIQUES.md](../TECHNIQUES.md); recipe at
 [recipe.md](recipe.md).
 
+## With labels: `calibrate`
+
+When the caller holds labels for a model, `calibrate.fit_ranker` and
+`calibrate.fit_side` fit the label-free readings to them and return a `Fusion`
+plus a held-out report (cross-fitted by tile or event; excess AURC, capture,
+calibration, or share right against the raw rule, always-a, always-b and the
+coin, with a sign test over groups). Inputs: named per-window readings, the
+decisions, validity, labels, group ids, and the model family as a string.
+Outputs: the fusion (JSON-serialisable) and the report. Contract: the fusion is
+bound to the family it was fitted on and raises when asked to score another,
+because a rule fitted on frozen heads does not transfer to a fine-tuned model
+(exp59); an agent must refit per model and report the held-out numbers, not the
+in-sample ones.
+
 ## As a tool call
 
 An agent that cannot import the package can call the two commands and read the
