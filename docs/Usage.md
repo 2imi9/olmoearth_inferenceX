@@ -74,9 +74,37 @@ Grade on expert labels; never train a rule on them.
 
 ## Compare two inferences of the same scene
 
-![Comparing two inferences of one scene: Bolivia tile 209, the S2 head against the S1 head, the disagreement windows, the cue enrichment, the stability matrix, the two-date reading and the label bridge](figures/compare.png)
+![Comparing two inferences of one scene across two dates: a GEOID-Flood chip before and after the event, the two heads' decisions on identical windows, the differing windows on the scene, the cue enrichment over 55 events, the label bridge boxed apart, the change reading and the stability matrix](figures/compare.png)
 
-*Tile 209 of Sen1Floods11 Bolivia through `compare`: every number is exp57's or exp58's; the label bridge is boxed apart because it needs labels.*
+*One GEOID-Flood chip (event EMSR275-1, chip 2293) through `compare`: the pre-event Sentinel-2
+composite of 2017-07-07 read by the permanent-water head (A) and the post-event Sentinel-1 scene of
+2018-03-22 read by the water-after-the-event head (B), on identical 4-px windows. Top row, without
+labels: the two decisions differ on 152 of this chip's 196 windows and on 3.4% of the 870,728 windows
+over 55 events (1.4% on the median event); the four cue layers of A, with the tag saying how much
+more often each fires on the differing windows than on the rest over the 55 events: boundary 10.1x,
+spectral ambiguity 6.6x, low confidence 3.0x, unstable tiling 2.9x (exp57). Bottom row: with labels,
+boxed apart because they are needed, 84% of this chip's differing windows are flooded by the label and
+16% are errors of the S1 head, none of the S2 head; over the 55 events 27% are flooded, 33% S2-head
+errors and 40% S1-head errors (exp57). Without labels, the differing windows where both sides are
+confident (a margin of at least 0.25 each) are flooded every time on this chip and 52% of the time
+over the 55 events, against 27% of all differing windows: a reading of the difference, not a proof of
+change (exp58; a label-fitted rule reaches 80% on 6% of the windows, exp59).*
+
+The same measurement for the whole event, from the committed decisions alone:
+
+```python
+import numpy as np
+from oe_inferencex.compare import compare_inferences
+
+z = np.load("exp/out/exp57_masks.npz")                               # exp57: the two heads' decisions on 55 GEOID-Flood events
+ev = z["geoid_event"] == "EMSR275-1"                                  # the event in the figure
+a, b, ok = z["geoid_s2"][ev], z["geoid_s1"][ev], z["geoid_ok"][ev]    # pre-event S2 head, post-event S1 head, windows both predicted
+out = compare_inferences(a, b, ok, labels=z["geoid_y_after"][ev])   # graded on water after the event
+out["disagreement_rate"]                                            # 0.094: 3,310 of 35,084 windows
+out["graded"]["which_side"]["share_b_right"]                        # 0.79: the S1 head matches the post-event label on 79% of them
+flooded = z["geoid_y_after"][ev] & ~z["geoid_y_permanent"][ev]
+flooded[out["arrays"]["disagree"]].mean()                          # 0.77: three quarters of the difference is the flood itself
+```
 
 Two backbones, two sensors, a frozen and a fine-tuned model, or the same
 model on shifted crops: `compare` measures how their decisions differ on the
@@ -122,8 +150,10 @@ summary(out)                                # the JSON-safe view, no arrays
 - Which side to believe is not a label-free reading. On the disagreement
   windows the more confident side is right more often than a coin flip and
   far less often than the side the labels prefer, and the first inference's
-  confidence does not order the set (exp58); the module resolves nothing and
-  reports both sides.
+  confidence does not order the set (exp58); a rule fitted on the heads'
+  training labels adds 5 to 17 points on the crop-offset, backbone and sensor
+  pairs and fails on the fine-tuned pair (exp59). The module resolves nothing
+  and reports both sides.
 - The disagreement mask stays in `out["arrays"]`. `assess.summary(out)`
   gives the JSON-safe view that crosses a tool boundary, as the
   [agent contract](method/agent_integration.md) requires; undefined values

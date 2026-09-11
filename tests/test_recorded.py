@@ -534,3 +534,15 @@ def test_exp58_tool_beats_the_raw_diff_only_modestly():
     c = R["geoid"]["change"]
     assert round(c["ratio"], 2) == 1.92 and (c["over_events"]["w"], c["over_events"]["l"]) == (16, 9) and c["over_events"]["sign_p"] > 0.05
     assert R["geoid"]["resolution"]["share_right"] < 0.5 < R["geoid"]["resolution"]["always_b"]   # the S2 head predicts permanent water: wrong on every flooded window
+
+
+def test_exp59_fitted_resolution_helps_except_on_the_fine_tuned_pair():
+    """exp59 (jobs 791849, 791850): a label-fitted rule beats the raw margin rule on six of eight pair-testbeds and loses on the
+    fine-tuned pair; on GEOID-Flood it is precise (80%) on 6% of the differing windows and not better event by event."""
+    s = json.load(open(_need("exp59_summary.json")))
+    assert s["prereg"]["P1"] is False and s["prereg"]["P2"] is False and s["prereg"]["complete"] is True and s["n_failures"] == 0
+    D = s["prereg"]["P1_detail"]
+    assert sum(v["gain"] > 0 for v in D.values()) == 6 and D["finetune/bolivia"]["gain"] < -0.2
+    assert round(D["sensors/test"]["fitted"], 2) == 0.86 and round(D["sensors/test"]["margin"], 2) == 0.70
+    c = s["results"]["geoid"]["change"]
+    assert round(c["flooded_rule"], 2) == 0.80 and round(c["share_change"], 2) == 0.06 and (c["over_events_vs_raw_diff"]["w"], c["over_events_vs_raw_diff"]["l"]) == (11, 8)

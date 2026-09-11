@@ -1,8 +1,10 @@
-% Comparing two inferences of one scene (oe_inferencex.compare, exp57 / exp58) with real rasters: Sen1Floods11 Bolivia
-% tile 209, the S2 head against the S1 head on identical windows. Row 1: the two decisions, the disagreement windows on
-% the scene, what they have in common (cue enrichment). Row 2: are two differences the same set (the phi matrix of the
-% four Sen1Floods11 pairs), the two-date reading on GEOID-Flood, and the label bridge, boxed apart because it needs labels.
-% Numbers come from rasters/cmp_numbers.tex, written by make_compare_rasters.py from the committed artifacts.
+% Two inferences of one scene across two dates (oe_inferencex.compare; exp57, exp58), real rasters only: GEOID-Flood
+% event EMSR275-1, chip 2293. Row 1: the pre-event Sentinel-2 composite and the post-event Sentinel-1 scene with their
+% dates, the two heads' decisions on identical windows, the differing windows on the scene, and the four cue layers of
+% the first inference with their measured enrichment over the 55 events as tags. Row 2: the label bridge boxed apart,
+% and the differing windows where both sides are confident. The elaboration lives under the figure in the docs.
+% Numbers: rasters/cmp_numbers.tex, written by make_compare_rasters.py from the committed artifacts; the cue layers
+% from rasters/cmp_chip_layers.npz (the two heads' shift maps of this chip, exp55's recipe).
 % Build: pdflatex compare_inferences.tex; export: osascript -l JavaScript pdf2png.js compare_inferences.pdf ../compare.png 3600
 \documentclass[tikz,border=3mm]{standalone}
 \input{style.tex}
@@ -10,84 +12,75 @@
 \input{rasters/cmp_numbers.tex}
 \input{rasters/cmp_disagree.tex}
 \input{rasters/cmp_disagree_boundary.tex}
-\input{rasters/cmp_a_right.tex}
-\input{rasters/cmp_b_right.tex}
+\input{rasters/cmp_flooded.tex}
+\input{rasters/cmp_error.tex}
+\input{rasters/cmp_both_confident.tex}
 \tikzset{lab/.style={font=\small, text=ink, inner sep=1pt, align=center},
          sub/.style={font=\footnotesize, text=muted, inner sep=1pt, align=center},
          tag/.style={font=\footnotesize, text=ink, fill=white, fill opacity=0.85, text opacity=1, inner sep=1.5pt, rounded corners=1pt},
-         dcell/.style={draw=oeamber, line width=0.9pt, fill=none},
-         bcell/.style={draw=oered, line width=0.9pt, fill=none},
-         acell/.style={draw=oeteal, line width=0.6pt, fill=oeteal, fill opacity=0.55},
-         rcell/.style={draw=oeviolet, line width=0.6pt, fill=oeviolet, fill opacity=0.55},
-         labelled/.style={card, draw=oeviolet!80, dashed}}
+         dcell/.style={draw=oeamber, line width=0.7pt, fill=none},
+         bcell/.style={draw=oered, line width=0.7pt, fill=none},
+         ccell/.style={draw=oeblue, line width=0.7pt, fill=none},
+         fcell/.style={draw=oeviolet, line width=0.5pt, fill=oeviolet, fill opacity=0.55},
+         ecell/.style={draw=oeteal, line width=0.5pt, fill=oeteal, fill opacity=0.6},
+         labelled/.style={card, draw=oeviolet!80, dashed},
+         tflow/.style={->, line width=0.9pt, draw=muted}}
 \begin{document}
 \begin{tikzpicture}
-  % ================= row 1: the scene, two inferences, the disagreement windows, what they have in common
-  \flatraster{scene}{1.3}{5.8}{cmp_rgb.png}{2.4cm}
-  \node[lab] at (1.3,7.75) {one scene};
-  \node[sub] at (1.3,4.3) {Sentinel-2, Bolivia tile \cmpTile};
-  \flatraster{ma}{4.35}{5.8}{cmp_a.png}{2.0cm}
-  \flatraster{mb}{6.65}{5.8}{cmp_b.png}{2.0cm}
-  \node[lab] at (5.5,7.75) {two inferences, same windows};
-  \node[sub] at (4.35,4.55) {A: S2 head};
-  \node[sub] at (6.65,4.55) {B: S1 head};
-  \draw[flow] (2.55,5.8) -- (3.3,5.8);
-  \flatraster{dis}{10.3}{5.8}{cmp_rgb.png}{3.2cm}
-  \flatcells{dis}{16}{dcell}{\cmpDisagree}{3.2cm}
-  \flatcells{dis}{16}{bcell}{\cmpDisagreeBoundary}{3.2cm}
-  \draw[flow] (7.7,5.8) -- (8.65,5.8);
-  \node[lab] at (10.3,7.75) {where A and B differ, no labels};
-  \node[sub] at (10.3,4.0) {\cmpTileDisagree{} of \cmpTileWindows{} windows on this tile (\cmpTileRate\%),\\ \cmpPooledRate\% of \cmpPooledWindows{} over the testbed};
+  % ================= row 1
+  \node[lab] at (1.4,8.35) {one scene, two dates};
+  \flatraster{s2}{1.4}{7.0}{cmp_s2.png}{2.2cm}
+  \node[tag, anchor=north west] at ($(s2.north west)+(0.06,-0.06)$) {$t_1$ \cmpDatePre};
+  \node[sub] at (1.4,5.7) {Sentinel-2, before};
+  \flatraster{s1}{1.4}{3.55}{cmp_s1.png}{2.2cm}
+  \node[tag, anchor=north west] at ($(s1.north west)+(0.06,-0.06)$) {$t_2$ \cmpDatePost};
+  \node[sub] at (1.4,2.25) {Sentinel-1, after};
+  \draw[tflow] (-0.45,5.95) -- (-0.45,4.7);
+  \node[sub, rotate=90] at (-0.7,5.3) {8.5 months};
+  \node[lab] at (5.1,8.35) {two inferences};
+  \flatraster{ma}{5.1}{7.0}{cmp_a.png}{2.0cm}
+  \flatraster{mb}{5.1}{3.55}{cmp_b.png}{2.0cm}
+  \node[sub] at (5.1,5.7) {A: permanent water};
+  \node[sub] at (5.1,2.25) {B: water after the event};
+  \draw[flow] (2.55,7.0) -- (4.05,7.0);
+  \draw[flow] (2.55,3.55) -- (4.05,3.55);
+  \node[lab] at (9.0,8.35) {where A and B differ};
+  \flatraster{dis}{9.0}{5.3}{cmp_s2.png}{3.4cm}
+  \flatcells{dis}{16}{dcell}{\cmpDisagree}{3.4cm}
+  \flatcells{dis}{16}{bcell}{\cmpDisagreeBoundary}{3.4cm}
   \node[tag, anchor=south east] at ($(dis.south east)+(-0.08,0.08)$) {\textcolor{oered}{$\square$} on a boundary of A};
-  % evidence card: the cues' share among disagreement windows over their share among agreement windows
-  \node[card] (ev) at (17.2,5.8) {%
-    \begin{tikzpicture}[font=\scriptsize, x=0.42cm]
-      \foreach \name/\y/\e in {boundary/0/\cmpEnrBoundary, low conf./-0.7/\cmpEnrLowConf, unstable/-1.4/\cmpEnrUnstable, NDWI $\approx 0$/-2.1/\cmpEnrNdwi} {
-        \node[sub, anchor=west] at (0,\y) {\name};
-        \fill[oeteal!70] (2.6,\y-0.16) rectangle ({2.6+\e},\y+0.16);
-        \node[lab, anchor=west] at ({2.6+\e+0.12},\y) {\e$\times$};
-      }
-      \draw[muted, line width=0.4pt] (2.6,0.4) -- (2.6,-2.45);
-      \node[sub, anchor=west] at (0,0.7) {share among disagreement windows /};
-      \node[sub, anchor=west] at (0,0.4) {share among agreement windows};
-      \node[sub, anchor=west] at (0,-2.75) {boundary: \cmpShareBoundaryDis\% of the disagreement windows, \cmpShareBoundaryAgr\% of the rest};
-    \end{tikzpicture}};
-  \node[lab] at (17.2,7.75) {what they have in common};
-  \draw[flow] (11.95,5.8) -- (ev.west);
-  % ================= row 2: stability, the two-date reading, the label bridge
-  \node[card] (stab) at (10.3,1.15) {%
-    \begin{tikzpicture}[font=\scriptsize]
-      \foreach \i/\j/\v in \cmpPhiCells {
-        \pgfmathsetmacro{\lvl}{min(100, \v*85)}
-        \fill[oeteal!\lvl] ({\j*0.62},{-\i*0.62}) rectangle ++(0.58,0.58);
-        \node[font=\tiny, text=ink] at ({\j*0.62+0.29},{-\i*0.62+0.29}) {\v};
-      }
-      \foreach \i/\n in \cmpPhiNames {
-        \node[sub, anchor=east] at (-0.08,{-\i*0.62+0.29}) {\n};
-        \node[sub, anchor=west, rotate=90] at ({\i*0.62+0.29},0.7) {\n};
-      }
-    \end{tikzpicture}};
-  \node[lab] at (10.3,3.15) {are two differences the same set?};
-  \node[sub] at (10.3,-1.6) {phi between four pairs' disagreement sets:\\ different differences (median 0.28);\\ the same pair across head draws: \cmpDrawsPhi};
-  \draw[flow] (10.3,3.95) -- (10.3,3.45);
-  % the two-date reading: GEOID-Flood, the pre-event S2 head against the post-event S1 head, per event
-  \node[card, text width=5.3cm, align=left, font=\footnotesize] (geo) at (4.4,1.15) {%
-    \textbf{two dates of one scene} (GEOID-Flood, \cmpGeoEvents{} events): pre-event S2 head against post-event S1 head.\\[2pt]
-    \cmpGeoRate\% of the windows differ, \cmpGeoBoundaryEnr$\times$ boundary-enriched. Both sides confident on \cmpGeoBothShare\% of them: those are flooded by the label \cmpGeoFloodedBoth\% of the time, against \cmpGeoFloodedAll\% of all differing windows.\\[2pt]
-    \textcolor{muted}{a reading of the difference, not a proof of change (exp58)}};
-  \node[lab] at (4.4,3.15) {the same measurement across time};
-  % the label bridge: boxed apart, dashed, because it needs labels
-  \node[labelled] (lb) at (17.2,1.15) {%
+  \draw[flow] (6.15,7.0) -- (7.0,5.6);
+  \draw[flow] (6.15,3.55) -- (7.0,5.0);
+  \node[sub] at (9.0,3.25) {\cmpChipDisagree{} of \cmpChipWindows{} windows};
+  \node[lab] at (14.35,8.35) {what those windows have in common};
+  \draw[flow] (10.75,5.3) -- (11.85,5.3);
+  \flatraster{c1}{13.1}{6.35}{cmp_boundary.png}{1.6cm}
+  \flatraster{c2}{15.6}{6.35}{cmp_conf.png}{1.6cm}
+  \flatraster{c3}{13.1}{4.25}{cmp_tilephase.png}{1.6cm}
+  \flatraster{c4}{15.6}{4.25}{cmp_ndwi.png}{1.6cm}
+  \node[tag, anchor=south east] at ($(c1.south east)+(-0.05,0.05)$) {\cmpEnrBoundary$\times$};
+  \node[tag, anchor=south east] at ($(c2.south east)+(-0.05,0.05)$) {\cmpEnrLowConf$\times$};
+  \node[tag, anchor=south east] at ($(c3.south east)+(-0.05,0.05)$) {\cmpEnrUnstable$\times$};
+  \node[tag, anchor=south east] at ($(c4.south east)+(-0.05,0.05)$) {\cmpEnrNdwi$\times$};
+  \node[sub] at (13.1,7.35) {boundary of A};
+  \node[sub] at (15.6,7.35) {low confidence};
+  \node[sub] at (13.1,3.25) {unstable tiling};
+  \node[sub] at (15.6,3.25) {NDWI $\approx 0$};
+  % ================= row 2
+  \node[lab, text=oeviolet] at (5.1,0.85) {with labels: what the difference is};
+  \node[labelled] (lb) at (5.1,-1.2) {%
     \begin{tikzpicture}
-      \flatraster{lt}{0}{0}{cmp_rgb.png}{2.5cm}
-      \flatcells{lt}{16}{acell}{\cmpARight}{2.5cm}
-      \flatcells{lt}{16}{rcell}{\cmpBRight}{2.5cm}
-      \node[sub, anchor=west, align=left] at (1.45,0.6) {\textcolor{oeteal}{$\blacksquare$} A right: \cmpARightShare\%};
-      \node[sub, anchor=west, align=left] at (1.45,0.15) {\textcolor{oeviolet}{$\blacksquare$} B right: \cmpBRightShare\%};
-      \node[sub, anchor=west, align=left] at (1.45,-0.35) {error maps phi \cmpErrorsPhi};
-      \node[sub, anchor=west, align=left] at (1.45,-0.8) {(testbed, hand labels)};
+      \flatraster{lt}{0}{0}{cmp_label.png}{2.6cm}
+      \flatcells{lt}{16}{fcell}{\cmpFlooded}{2.6cm}
+      \flatcells{lt}{16}{ecell}{\cmpError}{2.6cm}
+      \node[sub, anchor=west] at (1.5,0.35) {\textcolor{oeviolet}{$\blacksquare$} flooded: \cmpChipFlooded\%};
+      \node[sub, anchor=west] at (1.5,-0.35) {\textcolor{oeteal}{$\blacksquare$} one head wrong: \cmpChipErrB\%};
     \end{tikzpicture}};
-  \node[lab, text=oeviolet] at (17.2,3.15) {which side is right: with labels only};
-  \draw[flow, draw=oeviolet, dashed] (17.2,3.9) -- (17.2,3.45);
+  \node[lab] at (11.3,0.85) {both sides confident, no labels};
+  \flatraster{bc}{11.3}{-1.2}{cmp_s2.png}{2.6cm}
+  \flatcells{bc}{16}{ccell}{\cmpBothConfident}{2.6cm}
+  \node[sub, anchor=west] at (12.85,-0.85) {\textcolor{oeblue}{$\square$} flooded: \cmpChipBothFlooded\% here,};
+  \node[sub, anchor=west] at (12.85,-1.55) {\cmpBothFlooded\% vs \cmpFloodedAll\% over \cmpEvents{} events};
+  \draw[flow] (9.0,3.0) -- (9.8,1.15);
 \end{tikzpicture}
 \end{document}

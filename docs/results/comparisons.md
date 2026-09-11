@@ -1055,6 +1055,45 @@ from error in the pooled count and not event by event. <!-- claim:tool-vs-diff-c
 Runtime 18:17 for the Sen1Floods11 and encoder pairs and 6:10 for GEOID-Flood,
 refetching exp55's shard subset after the extracted tree had been emptied. Source `exp/out/exp58_summary.json`, jobs 787530 and 789352.
 
+## A label-fitted rule for which side to believe (exp59)
+
+exp58's follow-up: the one fusion that ever beat confidence here was fitted on
+the head's own training split (exp49), so the same route for the comparison
+half. On every disagreement window eleven label-free features of the two
+sides (each side's margin, midrank percentile, signed probability, boundary
+indicator and tile-phase, and the NDWI level); a logistic rule fitted once on
+the 600 valid-split tiles the frozen heads were trained on, both sides encoded
+at the four crop offsets; graded on Bolivia and the test split against the raw
+margin rule, always the first side, always the second, per tile with
+`compare.over_groups`. On GEOID-Flood the same features fitted on the val
+events' disagreement windows to predict "flooded by the label", graded per test
+event against the raw diff and exp58's both-confident reading.
+
+| Pair, testbed | fitted rule right | raw margin rule | gain, tiles w/l, p | always the better side |
+|---|---|---|---|---|
+| offset 0 vs 2, Bolivia | 63.6% | 51.3% | +0.12, 162/41, 1.6e-18 | 61.0% |
+| offset 0 vs 2, test | 68.1% | 58.2% | +0.10, 223/86, 1.8e-15 | 50.2% |
+| v1 vs v1.2, Bolivia | 69.8% | 56.0% | +0.14, 170/75, 6.0e-10 | 55.3% |
+| v1 vs v1.2, test | 65.2% | 57.7% | +0.08, 177/96, 5.4e-7 | 52.6% |
+| S2 vs S1 head, Bolivia | 73.2% | 68.2% | +0.05, 148/120, 0.049 | 67.3% |
+| S2 vs S1 head, test | 86.4% | 69.8% | +0.17, 305/88, 2.0e-29 | 84.2% |
+| frozen vs FT-S2, Bolivia | 35.3% | 60.9% | -0.26, 71/162, 1.0 | 75.8% |
+| frozen vs FT-S2, test | 54.2% | 55.7% | -0.02, 155/112, 0.005 | 71.8% | <!-- claim:fitted-resolution-mixed -->
+
+The fitted rule adds 5 to 17 points over the raw margin rule on the crop-offset,
+backbone and sensor pairs, on more tiles than not everywhere, and on the sensor
+pairs it reaches or passes always choosing the S2 head (73% against 67%, 86%
+against 84%); on the fine-tuned pair it loses, 35% on Bolivia where always
+choosing the fine-tuned model gives 76%, because a rule fitted to frozen heads
+reads the fine-tuned model's margins wrongly (it believes it on 23% of the
+windows). P1 fails on that pair and, by 0.001 of gain, on the Bolivia sensor pair. <!-- claim:fitted-resolution-mixed -->
+On GEOID-Flood the fitted change rule is 80% flooded where it calls change,
+3.0 times the raw diff's 27% and 1.5 times the both-confident reading's 52%,
+but it calls only 6% of the differing windows (recall 18%) and wins on 11 test
+events against 8 (p = 0.32): precision bought with coverage, and no event-level
+majority, so P2 fails. <!-- claim:fitted-change-rule-precision-not-recall -->
+Runtime 18:49 and 4:20 (jobs 791849, 791850). Source `exp/out/exp59_summary.json`.
+
 ## Served land cover change rasters (exp20)
 
 First assessment of a served output: ten 512-px windows (about

@@ -23,7 +23,19 @@ the model. Given a prediction map, it helps with:
    against after fine-tuning: how much they disagree, what the disagreement
    windows have in common and, with labels, which side is right.
 
-<img src="docs/figures/compare.png" alt="Two inferences of one scene compared without labels: the two decisions on identical windows, the disagreement windows on the scene, the cues they share, whether two differences are the same set, the same measurement across two dates, and the label bridge boxed apart" width="760">
+<img src="docs/figures/compare.png" alt="Two inferences of one scene across two dates compared without labels: a GEOID-Flood chip before and after the event, the two decisions on identical windows, the differing windows on the scene, the cues they share, the label bridge boxed apart, the change reading, and whether two differences are the same set" width="760">
+
+*One GEOID-Flood chip across two dates: the pre-event Sentinel-2 composite and the post-event
+Sentinel-1 scene, 8.5 months apart, each read by its own head on identical windows. Without labels
+the package reports how much the two decisions differ (152 of this chip's 196 windows, 3.4% over 55
+events), where on the scene, what those windows have in common (the four cue layers of A, with how
+much more often each fires on the differing windows than on the rest: boundary 10 times), and which
+of them both sides are confident about. With labels, boxed apart, it says what the difference is:
+here 84% of it is the flood itself and 16% an error of one head.*
+
+A worked flood example, runnable from the committed artifacts, is in
+[Usage: compare two inferences of the same scene](docs/Usage.md#compare-two-inferences-of-the-same-scene);
+the event-level results are in [Comparisons](docs/results/comparisons.md#the-difference-atlas-every-pair-of-inferences-under-one-measurement-exp57).
 
 Full documentation is available at **https://olmoearth-inferencex.readthedocs.io/**
 (source in [docs/](docs/index.md)).
