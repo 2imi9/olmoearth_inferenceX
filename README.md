@@ -25,15 +25,16 @@ the model. Given a prediction map, it helps with:
 
 <img src="docs/figures/compare.png" alt="The two-period, two-sensor square on one GEOID-Flood chip: four dated inputs, four inferences on identical windows, the same-date and same-sensor differences on the scene, and the label bridge boxed apart" width="760">
 
-*The two-period, two-sensor square on one GEOID-Flood chip (event EMSR275-2, Kutina): the Sentinel-2
-composite and the Sentinel-1 pass of 2017-07-07, then the Sentinel-1 pass of 2018-03-22 and, from
-WorldFloods v2, the Sentinel-2 scene of 2018-03-24, each read by its head on identical windows. The
-same-date pairs agree on every window before and after the event; the same-sensor pairs differ on all
-196, and the label says all 196 are the flood. Over exp60's 55 events the same-date pair before the
-event differs on 4.9% of windows and 0.4% of those are the later flood; the radar pair across the event
-differs on 3.4% with 26% flood. On the 544 chips where a clear post-event optical pass exists (exp62)
-the radar pair across the event is 41% flood and the same-date pair after the event 18%. What a
-difference is needs labels, so that panel is boxed apart.*
+*The two-period, two-sensor square on one GEOID-Flood chip (event EMSR273-1, a lagoon shore at Grile,
+Albania): the Sentinel-2 composite and the Sentinel-1 pass before the event, the Sentinel-1 pass after it
+and, from WorldFloods v2, the Sentinel-2 scene after it, each read by its head on identical windows. The
+same-period pairs differ on 22 windows before the event and 44 after, along the shore and where the radar
+sees flooded vegetation as bright; the same-sensor pairs differ on 97 windows (optical) and 67 (radar), and
+the label says 81% of the radar's date differences are the flood, the rest a head off its label at the
+shore. Over exp60's 55 events the same-period pair before the event differs on 4.9% of windows and 0.4%
+of those are the later flood; the radar pair across the event differs on 3.4% with 26% flood; on the 544
+chips with all four cells (exp62) the radar pair across the event is 41% flood and the same-period pair
+after it 18%. What a difference is needs labels, so that panel is boxed apart.*
 
 A worked flood example, runnable from the committed artifacts, is in
 [Usage: compare two inferences of the same scene](docs/Usage.md#compare-two-inferences-of-the-same-scene);

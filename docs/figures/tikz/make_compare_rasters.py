@@ -1,10 +1,10 @@
 """Rasters and numbers for the comparison diagram (compare_inferences.tex): the two-period, two-sensor square on one
-GEOID-Flood chip where all four cells exist, event EMSR275-2 (Kutina, Croatia), tile EMSR275-2-10, rows 256-319,
-columns 256-319: exp62 chip 21 (its exp60 index is stored in exp/out/exp62_masks.npz). Evidence: the Sentinel-2
+GEOID-Flood chip where all four cells exist, event EMSR273-1 (Grile, Albania), tile EMSR273-1-0, rows 512-575,
+columns 512-575: exp62 chip 7 (its exp60 index is stored in exp/out/exp62_masks.npz). Evidence: the Sentinel-2
 composite and the Sentinel-1 pass of the pre-event date, the Sentinel-1 pass after the event (GEOID), and WorldFloods
-v2's Sentinel-2 scene of 2018-03-24 (the fourth cell, exp62). Decisions: exp60's three (exp/out/exp60_masks.npz) and
+v2's Sentinel-2 scene of 2018-03-28 (the fourth cell, exp62). Decisions: exp60's three (exp/out/exp60_masks.npz) and
 exp62's fourth (exp/out/exp62_masks.npz). The four differences that each isolate one axis, drawn on the scene, and the
-label bridge. Imagery: rasters/cmp_square21.npz, cut once on the cluster from the shard tree and the WorldFloods repo
+label bridge. Imagery: rasters/cmp_square7.npz, cut once on the cluster from the shard tree and the WorldFloods repo
 (S1 in dB with exp55's rules, S2 digital numbers). Fixed stretches, reflectance 0-1200 DN (L1C with a 600 DN haze offset removed) and VH -32 to -10 dB, so
 water is dark in radar (VH) and blue-grey in optics on every panel alike. Numbers from exp/out/exp60_summary.json and
 exp/out/exp62_summary.json, written as TeX macros so the figure cannot drift from the ledger.
@@ -13,6 +13,7 @@ exp/out/exp62_summary.json, written as TeX macros so the figure cannot drift fro
 """
 import json
 import os
+import re
 import sys
 
 import numpy as np
@@ -22,7 +23,7 @@ sys.path.insert(0, ROOT)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from make_rasters import OUT, classmap, save, tex_list  # noqa: E402
 
-CHIP62, EVENT = 21, "EMSR275-2"
+CHIP62, EVENT, TILE = 7, "EMSR273-1", "EMSR273-1-0"
 OFFSET = 1                                  # the 14 x 14 W1 windows are windows 1..14 of the 16-cell grid over the 64-px chip
 FLOOD = (109, 40, 217)
 
@@ -46,11 +47,13 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     m62 = np.load(os.path.join(ROOT, "exp", "out", "exp62_masks.npz"))
     z60 = np.load(os.path.join(ROOT, "exp", "out", "exp60_masks.npz"))
-    assert m62["event"][CHIP62] == EVENT and m62["tile"][CHIP62] == "EMSR275-2-10"
+    assert m62["event"][CHIP62] == EVENT and m62["tile"][CHIP62] == TILE
     k = int(m62["chip_index"][CHIP62])
     ok, ya, yb = m62["ok"][CHIP62], z60["y_permanent"][k], z60["y_after"][k]
     dec = {"A_s2pre": z60["A_s2pre"][k], "A_s1pre": z60["A_s1pre"][k], "B_s1post": z60["B_s1post"][k], "B_s2post": m62["B_s2post"][CHIP62]}
-    z = np.load(os.path.join(OUT, "cmp_square21.npz"))
+    z = np.load(os.path.join(OUT, "cmp_square7.npz"))
+    names = [str(n) for n in z["names"]]
+    date = lambda n: re.search(r"_(?:pre|post)_(\d{4})(\d{2})(\d{2})T", n).groups()
     save("cmp_s2_t1.png", optical(z["s2pre"], [2, 1, 0]), 8)                       # encoder order: B02, B03, B04 first
     save("cmp_s2_t2.png", optical(z["wf_S2"].astype(np.float32), [3, 2, 1], offset=600.0), 8)     # WorldFloods order: B01..B12, B8A ninth; L1C
     save("cmp_s1_t1.png", radar(z["s1pre"]), 8)
@@ -66,7 +69,7 @@ def main():
     save("cmp_label.png", lab_img, 8)
     flooded = yb & ~ya
     pairs = {"SensA": ("A_s2pre", "A_s1pre"), "SensB": ("B_s2post", "B_s1post"), "TimeSS": ("A_s2pre", "B_s2post"), "TimeSO": ("A_s1pre", "B_s1post")}
-    macros = {"cmpEvent": EVENT, "cmpDatePre": "2017-07-07", "cmpDateSOnePost": "2018-03-22", "cmpDateSTwoPost": "2018-03-24",
+    macros = {"cmpEvent": EVENT, "cmpDateSTwoPre": "-".join(date(names[0])), "cmpDateSOnePre": "-".join(date(names[1])), "cmpDateSOnePost": "-".join(date(names[2])), "cmpDateSTwoPost": "2018-03-28",
               "cmpWindows": str(int(ok.sum())), "cmpFloodedWindows": str(int((flooded & ok).sum()))}
     for name, (a, b) in pairs.items():
         d = (dec[a] != dec[b]) & ok
