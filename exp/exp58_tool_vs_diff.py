@@ -243,9 +243,23 @@ def geoid_probabilities(args, summary):
     """exp57's GEOID inputs: the two heads' W1 probabilities on the clear test chips, both task labels, events."""
     import exp55_geoid_flood as e55
     hf_home = os.environ.get("HF_HOME", os.path.expanduser("~/.cache/huggingface"))
-    tiles = e57.geoid_tiles(args, os.path.join(hf_home, "geoid_flood"))
+    data_dir = os.path.join(hf_home, "geoid_flood")
+    tiles = e57.geoid_tiles(args, data_dir)
     if tiles is None:
         return None
+    if not args.smoke and any(not tiles[split] for split in ("test", "val")):
+        # the extracted tree was emptied after exp57 (the shard markers survived): drop the markers and refetch exp55's subset
+        import shutil
+        root = os.path.join(data_dir, "tree")
+        files = e55.hub_files()
+        refetched = {}
+        for split, n in (("test", 4), ("val", 2)):
+            if not tiles[split]:
+                shutil.rmtree(os.path.join(root, split, ".done"), ignore_errors=True)
+                refetched[split] = e55.fetch_split(files, split, n, data_dir, root)
+                tiles[split] = e55.scan_split(root, split)
+        summary["config"]["geoid_refetched"] = {k: len(v) for k, v in refetched.items()}
+        print("geoid: tree was empty, refetched " + ", ".join(f"{k} ({len(v)} shards, {len(tiles[k])} tiles)" for k, v in refetched.items()), flush=True)
     data = {}
     for split in ("test", "val"):
         cand = e55.chip_candidates(tiles[split], split)
