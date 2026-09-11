@@ -74,27 +74,19 @@ Grade on expert labels; never train a rule on them.
 
 ## Compare two inferences of the same scene
 
-![Comparing two inferences of one scene across two dates: a GEOID-Flood chip before and after the event, the two heads' decisions on identical windows, the differing windows on the scene, the cue enrichment over 55 events, the label bridge boxed apart, the change reading and the stability matrix](figures/compare.png)
+![Two dates, two sensors on one GEOID-Flood chip: three pieces of evidence with their dates, three inferences on identical windows, the same-date cross-sensor difference and the same-sensor cross-date difference on the scene, and the label bridge boxed apart](figures/compare.png)
 
-*One GEOID-Flood chip (event EMSR275-1, chip 2293) through `compare`: the pre-event Sentinel-2
-composite of 2017-07-07 read by the permanent-water head (A) and the post-event Sentinel-1 scene of
-2018-03-22 read by the water-after-the-event head (B), on identical 4-px windows. Top row, without
-labels: the two decisions differ on 152 of this chip's 196 windows and on 3.4% of the 870,728 windows
-over 55 events (1.4% on the median event); the four cue layers of A, with the tag saying how much
-more often each fires on the differing windows than on the rest over the 55 events: boundary 10.1x,
-spectral ambiguity 6.6x, low confidence 3.0x, unstable tiling 2.9x (exp57). Bottom row: with labels,
-boxed apart because they are needed, 84% of this chip's differing windows are flooded by the label and
-16% are errors of the S1 head, none of the S2 head; over the 55 events 27% are flooded, 33% S2-head
-errors and 40% S1-head errors (exp57). Without labels, the differing windows where both sides are
-confident (a margin of at least 0.25 each) are flooded every time on this chip and 52% of the time
-over the 55 events, against 27% of all differing windows: a reading of the difference, not a proof of
-change (exp58; a label-fitted rule reaches 80% on 6% of the windows, exp59).*
-
-The pair mixes time and sensor. exp60 separates the axes: a same-period cross-sensor
-difference carries none of the later flood (0.4% of its windows against 19.5% here),
-while the same-sensor difference across the event carries 26%, and more than half of
-it is the pre-event radar seeing water the label's permanent class does not hold
-([Comparisons](results/comparisons.md#two-periods-both-sensors-the-time-axis-and-the-sensor-axis-apart-exp60)).
+*One GEOID-Flood chip (event EMSR275-1, chip 2293) through `compare`, exp60's three-cell design. Evidence:
+the Sentinel-2 composite and the Sentinel-1 pass of 2017-07-07, and the Sentinel-1 pass of 2018-03-22.
+Inferences: the permanent-water head on each pre-event image, the water-after-the-event head on the
+post-event radar, one Sentinel-1 head for both dates. Same date across sensors: 4 of this chip's 196
+windows differ, none of them flooded; over 55 events 4.9% of 869,160 windows differ and 0.4% of those are
+flooded by the label, so the sensor axis is sensor error alone (preregistered P2 holds). Same sensor
+across dates: 151 windows differ here, 87% flooded by the label and 13% one head off its label; over the
+55 events 3.4% differ and 25.9% of those are flooded, 1.33 times the mixed pair, short of the preregistered
+doubling (P1 fails), because 54.5% of that difference is the pre-event radar seeing water the label's
+permanent class does not hold. The boxed panel needs labels: violet windows are the flood, teal ones an
+error of one head, amber outlines the four sensor differences.*
 
 The same measurement for the whole event, from the committed decisions alone:
 

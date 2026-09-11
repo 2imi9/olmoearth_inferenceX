@@ -25,19 +25,13 @@ the model. Given a prediction map, it helps with:
 
 ![Two inferences of one scene across two dates compared without labels: a GEOID-Flood chip before and after the event, the two decisions on identical windows, the differing windows on the scene, the cues they share, the label bridge boxed apart, the change reading, and whether two differences are the same set](figures/compare.png)
 
-*One GEOID-Flood chip across two dates: the pre-event Sentinel-2 composite and the post-event
-Sentinel-1 scene, 8.5 months apart, each read by its own head on identical windows. Without labels
-the package reports how much the two decisions differ (152 of this chip's 196 windows, 3.4% over 55
-events), where on the scene, what those windows have in common (the four cue layers of A, with how
-much more often each fires on the differing windows than on the rest: boundary 10 times), and which
-of them both sides are confident about. With labels, boxed apart, it says what the difference is:
-here 84% of it is the flood itself and 16% an error of one head.*
-
-The pair mixes time and sensor. exp60 separates the axes: a same-period cross-sensor
-difference carries none of the later flood (0.4% of its windows against 19.5% here),
-while the same-sensor difference across the event carries 26%, and more than half of
-it is the pre-event radar seeing water the label's permanent class does not hold
-([Comparisons](results/comparisons.md#two-periods-both-sensors-the-time-axis-and-the-sensor-axis-apart-exp60)).
+*One GEOID-Flood chip, two dates, two sensors (exp60): the Sentinel-2 composite and the Sentinel-1
+pass of the pre-event date, and the Sentinel-1 pass 8.5 months later, each read by its head on identical
+windows. The two differences isolate one axis each. Same date across sensors: 4 of 196 windows here,
+4.9% over 55 events, and only 0.4% of those windows are the later flood, so the sensor difference is
+sensor error alone. Same sensor across dates: 151 windows here, 87% of them the flood by the label; over
+the 55 events 26%, because the pre-event radar also sees the seasonal water of that date, which the
+label's permanent class does not hold. What a difference is needs labels, so that panel is boxed apart.*
 
 A worked flood example, runnable from the committed artifacts, is in
 [Usage: compare two inferences of the same scene](Usage.md#compare-two-inferences-of-the-same-scene);
