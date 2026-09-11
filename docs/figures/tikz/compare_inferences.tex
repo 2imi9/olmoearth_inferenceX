@@ -73,13 +73,13 @@
       \flatraster{lt}{0}{0}{cmp_label.png}{2.6cm}
       \flatcells{lt}{16}{fcell}{\cmpFlooded}{2.6cm}
       \flatcells{lt}{16}{ecell}{\cmpError}{2.6cm}
-      \node[sub, anchor=west] at (1.5,0.35) {\textcolor{oeviolet}{$\blacksquare$} flooded: \cmpChipFlooded\%};
+      \node[sub, anchor=west] at (1.5,0.35) {\textcolor{oeviolet}{$\blacksquare$} flooded by the label: \cmpChipFlooded\%};
       \node[sub, anchor=west] at (1.5,-0.35) {\textcolor{oeteal}{$\blacksquare$} one head wrong: \cmpChipErrB\%};
     \end{tikzpicture}};
   \node[lab] at (11.3,0.85) {both sides confident, no labels};
   \flatraster{bc}{11.3}{-1.2}{cmp_s2.png}{2.6cm}
   \flatcells{bc}{16}{ccell}{\cmpBothConfident}{2.6cm}
-  \node[sub, anchor=west] at (12.85,-0.85) {\textcolor{oeblue}{$\square$} flooded: \cmpChipBothFlooded\% here,};
+  \node[sub, anchor=west] at (12.85,-0.85) {\textcolor{oeblue}{$\square$} flooded by the label: \cmpChipBothFlooded\% here,};
   \node[sub, anchor=west] at (12.85,-1.55) {\cmpBothFlooded\% vs \cmpFloodedAll\% over \cmpEvents{} events};
   \draw[flow] (9.0,3.0) -- (9.8,1.15);
 \end{tikzpicture}
