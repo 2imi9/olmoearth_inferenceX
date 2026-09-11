@@ -1,5 +1,5 @@
 """Rasters and numbers for the comparison diagram (compare_inferences.tex): the two-period, two-sensor square on one
-GEOID-Flood chip where all four cells exist, event EMSR273-1 (Grile, Albania), tile EMSR273-1-0, rows 512-575,
+GEOID-Flood chip where all four cells exist, event EMSR273-1 (Gruemirë on Lake Shkodër, Albania), tile EMSR273-1-0, rows 512-575,
 columns 512-575: exp62 chip 7 (its exp60 index is stored in exp/out/exp62_masks.npz). Evidence: the Sentinel-2
 composite and the Sentinel-1 pass of the pre-event date, the Sentinel-1 pass after the event (GEOID), and WorldFloods
 v2's Sentinel-2 scene of 2018-03-28 (the fourth cell, exp62). Decisions: exp60's three (exp/out/exp60_masks.npz) and

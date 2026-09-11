@@ -1,5 +1,5 @@
 % The two-period, two-sensor square on one scene (oe_inferencex.compare; exp60, exp62), real rasters only: GEOID-Flood
-% event EMSR273-1 (Grile), a chip with all four cells, a river, permanent water and a flood boundary. Left: the four pieces of evidence, rows by date and
+% event EMSR273-1 (Gruemirë on Lake Shkodër), a chip with all four cells: the lake, permanent water, and its flooded shore. Left: the four pieces of evidence, rows by date and
 % columns by sensor, with their dates. Middle: the four decisions on identical windows. Right: the four differences
 % that each isolate one axis, same date across sensors (two rows) and same sensor across dates (two columns), drawn on
 % the scene; then the label bridge, boxed apart because it needs labels. The elaboration lives under the figure.
@@ -37,6 +37,8 @@
   \node[tag, anchor=north west] at ($(e12.north west)+(0.06,-0.06)$) {before, \cmpDateSOnePre};
   \node[tag, anchor=north west] at ($(e21.north west)+(0.06,-0.06)$) {after, \cmpDateSTwoPost};
   \node[tag, anchor=north west] at ($(e22.north west)+(0.06,-0.06)$) {after, \cmpDateSOnePost};
+  \node[sub, align=center, text width=5.4cm] at (2.75,1.75) {Lake Shkod\"er, Albania (event EMSR273): the lake at left is permanent water, its shore plain at right the flood of March 2018};
+  \node[tag, anchor=south east] at ($(e21.south east)+(-0.06,0.06)$) {open water};
   \draw[tflow] (-0.45,5.2) -- (-0.45,4.6);
   \node[sub, rotate=90] at (-0.7,4.95) {a year};
   % ================= inferences, same arrangement

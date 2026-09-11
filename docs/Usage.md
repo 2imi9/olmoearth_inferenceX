@@ -76,12 +76,12 @@ Grade on expert labels; never train a rule on them.
 
 ![The two-period, two-sensor square on one GEOID-Flood chip: four dated inputs, four inferences on identical windows, the same-date and same-sensor differences on the scene, and the label bridge boxed apart](figures/compare.png)
 
-*One GEOID-Flood chip (event EMSR273-1, Grile; exp62 chip 7) with all four cells: the Sentinel-2 composite
+*One GEOID-Flood chip (event EMSR273-1, Gruemirë on Lake Shkodër; exp62 chip 7) with all four cells: the Sentinel-2 composite
 dated 2017-04-02 and the Sentinel-1 pass of 2017-03-11 read by the permanent-water heads, the Sentinel-1
 pass of 2018-03-11 read by the water-after head (exp60), and WorldFloods v2's Sentinel-2 L1C scene of
 2018-03-28 read by the post-event optical head exp62 fitted on other activations (radar shown as VH
-backscatter, open water dark, flooded vegetation bright). The lagoon on the left is permanent water, the
-right half is flooded by the label. The same-period pairs differ on 22 windows before the event and 44
+backscatter, open water dark, flooded vegetation bright). The lake on the left is permanent water, its
+shore plain on the right is flooded by the label. The same-period pairs differ on 22 windows before the event and 44
 after: the shore, and the flooded vegetation the radar head does not call water. The same-sensor pairs
 differ on 97 (optical) and 67 (radar) windows; 81% of the radar's are the flood by the label and the rest
 a head off its label at the shore. Over the 544 chips with all four cells the pre-event optical head is

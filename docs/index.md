@@ -25,10 +25,10 @@ the model. Given a prediction map, it helps with:
 
 ![The two-period, two-sensor square on one GEOID-Flood chip: four dated inputs, four inferences on identical windows, the same-date and same-sensor differences on the scene, and the label bridge boxed apart](figures/compare.png)
 
-*The two-period, two-sensor square on one GEOID-Flood chip (event EMSR273-1, a lagoon shore at Grile,
-Albania): the Sentinel-2 composite and the Sentinel-1 pass before the event, the Sentinel-1 pass after it
+*The two-period, two-sensor square on one GEOID-Flood chip (event EMSR273-1, the shore of Lake Shkodër
+at Gruemirë, Albania): the Sentinel-2 composite and the Sentinel-1 pass before the event, the Sentinel-1 pass after it
 and, from WorldFloods v2, the Sentinel-2 scene after it, each read by its head on identical windows. The
-same-period pairs differ on 22 windows before the event and 44 after, along the shore and where the radar
+same-period pairs differ on 22 windows before the event and 44 after, along the lake shore and where the radar
 sees flooded vegetation as bright; the same-sensor pairs differ on 97 windows (optical) and 67 (radar), and
 the label says 81% of the radar's date differences are the flood, the rest a head off its label at the
 shore. Over exp60's 55 events the same-period pair before the event differs on 4.9% of windows and 0.4%
