@@ -86,7 +86,10 @@ across dates: 151 windows differ here, 87% flooded by the label and 13% one head
 55 events 3.4% differ and 25.9% of those are flooded, 1.33 times the mixed pair, short of the preregistered
 doubling (P1 fails), because 54.5% of that difference is the pre-event radar calling water that neither
 the label nor the JRC monthly water of that month holds (exp61: 0.1% of those windows are water there). The boxed panel needs labels: violet windows are the flood, teal ones an
-error of one head, amber outlines the four sensor differences.*
+error of one head, amber outlines the four sensor differences. The fourth cell, Sentinel-2 after the
+event, is not in GEOID-Flood; WorldFloods v2 (isp-uv-es/WorldFloodsv2, CC BY-NC 4.0) holds a scene of this
+AoI from 2018-03-24, cut onto the chip's grid on the cluster, and it is 100% cloud there: its cloud band
+flags every pixel and its water band is void. No head was run on it.*
 
 The same measurement for the whole event, from the committed decisions alone:
 

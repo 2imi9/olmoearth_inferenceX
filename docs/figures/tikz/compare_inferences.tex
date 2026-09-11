@@ -36,6 +36,11 @@
   \node[sub] at (1.4,5.7) {Sentinel-2};
   \node[sub] at (1.4,3.1) {Sentinel-1};
   \node[sub] at (1.4,0.5) {Sentinel-1};
+  \flatraster{e4}{1.4}{-1.15}{cmp_s2post.png}{2.2cm}
+  \node[tag, anchor=north west] at ($(e4.north west)+(0.06,-0.06)$) {$t_2$ \cmpDatePostS2};
+  \node[sub] at (1.4,-2.45) {Sentinel-2, \cmpPostS2Cloud\% cloud};
+  \node[sub, align=center] at (4.7,-1.15) {no inference:\\ the scene is cloud};
+  \draw[flow, draw=muted, dashed] (2.55,-1.15) -- (3.65,-1.15);
   \draw[tflow] (-0.45,3.35) -- (-0.45,2.65);
   \node[sub, rotate=90] at (-0.7,3.0) {8.5 months};
   % ================= column 2: inferences

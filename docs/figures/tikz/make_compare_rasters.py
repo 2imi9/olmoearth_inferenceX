@@ -51,6 +51,13 @@ def main():
     lab_img[lab == 2] = FLOOD
     lab_img[lab == 255] = (200, 200, 200)
     save("cmp_label.png", lab_img, 8)
+    # the fourth cell: WorldFloods v2's Sentinel-2 L1C scene of the same AoI two days after the radar pass (rasters/cmp_s2post.npz,
+    # cut on the cluster onto this chip's grid; bands B1..B12 with B8A ninth, then two ancillary bands; gt band 1: 2 = cloud).
+    post = np.load(os.path.join(OUT, "cmp_s2post.npz"))
+    x = np.clip(post["s2"][[3, 2, 1]] / 6000.0, 0, 1)                    # fixed stretch: cloud stays white
+    save("cmp_s2post.png", (x.transpose(1, 2, 0) * 255).astype(np.uint8), 8)
+    cloud_share = float((post["gt"][0] == 2).mean())
+    date_post_s2 = str(post["s2_date"])[:10]
     flooded = yb & ~ya
     d_sens = (dec["A_s2pre"] != dec["A_s1pre"]) & ok
     d_time = (dec["A_s1pre"] != dec["B_s1post"]) & ok
@@ -70,7 +77,7 @@ def main():
         "cmpSensPooledRate": f"{100 * R['sensor_only']['disagreement_rate']:.1f}", "cmpSensPooledFlooded": f"{100 * R['sensor_only']['flooded_share']:.1f}",
         "cmpTimePooledRate": f"{100 * R['time_only']['disagreement_rate']:.1f}", "cmpTimePooledFlooded": f"{100 * R['time_only']['flooded_share']:.0f}",
         "cmpTimePooledPreDeparts": f"{100 * R['time_only']['err_a_share']:.0f}",
-        "cmpEvents": "55",
+        "cmpEvents": "55", "cmpDatePostS2": date_post_s2, "cmpPostS2Cloud": f"{100 * cloud_share:.0f}",
     }
     with open(os.path.join(OUT, "cmp_numbers.tex"), "w") as f:
         for k, v in macros.items():
