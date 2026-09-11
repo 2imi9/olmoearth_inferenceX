@@ -30,8 +30,9 @@ pass of the pre-event date, and the Sentinel-1 pass 8.5 months later, each read 
 windows. The two differences isolate one axis each. Same date across sensors: 4 of 196 windows here,
 4.9% over 55 events, and only 0.4% of those windows are the later flood, so the sensor difference is
 sensor error alone. Same sensor across dates: 151 windows here, 87% of them the flood by the label; over
-the 55 events 26%, because the pre-event radar also sees the seasonal water of that date, which the
-label's permanent class does not hold. What a difference is needs labels, so that panel is boxed apart.*
+the 55 events 26%, and more than half of it is the pre-event radar calling water that neither the label
+nor the month's Landsat water product holds (exp61). What a difference is needs labels, so that panel is
+boxed apart.*
 
 A worked flood example, runnable from the committed artifacts, is in
 [Usage: compare two inferences of the same scene](Usage.md#compare-two-inferences-of-the-same-scene);

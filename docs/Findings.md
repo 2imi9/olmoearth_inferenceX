@@ -116,9 +116,10 @@ encoders split their disagreements 39 to 61%. <!-- claim:atlas-which-side -->
 Across two dates the axes separate (exp60, GEOID-Flood): a same-period
 cross-sensor difference carries none of the later flood (0.4% of its windows
 against 19.5% for the mixed pair, on 23 events against 3), while the same-sensor
-difference across the event carries 26%, not the doubling preregistered, because
-the pre-event radar sees the water regime of that date and not the label's
-permanent class. <!-- claim:two-periods-sensor-axis-isolated --> <!-- claim:two-periods-time-only-difference -->
+difference across the event carries 26%, not the doubling preregistered, and more
+than half of it is the pre-event radar calling water that neither the label nor the
+month's Landsat water product holds (exp61: 0.1% of those windows are water
+there). <!-- claim:two-periods-sensor-axis-isolated --> <!-- claim:two-periods-time-only-difference --> <!-- claim:residue-not-seasonal-water -->
 
 The effect size in a reviewer's units (exp55, 45 GEOID-Flood events): on the
 median event the 5% of windows confidence flags hold 88% of the permanent-water

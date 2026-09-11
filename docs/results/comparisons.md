@@ -1123,10 +1123,9 @@ The time axis does not concentrate the flood: the same-sensor difference across
 the event is flooded on 25.9% of its windows, 1.33 times the mixed pair's 19.5%,
 short of the preregistered 2, and higher on 13 events against 13 (p = 0.58);
 P1 fails. More than half of that difference, 54.5%, is where the pre-event radar
-pass departs from the permanent-water label: the radar head sees the water that
-was there on the pre-event date, seasonal or otherwise, which the label's permanent
-class does not carry, so "time only" contains the water regime of the two dates
-as well as the flood. Where both sides are confident the time-only difference is
+pass departs from the permanent-water label. The reading that this is the water
+regime of the pre-event date, seasonal water the permanent class does not carry,
+was tested by exp61 with a date-matched arbiter and rejected (next section). Where both sides are confident the time-only difference is
 flooded 41% of the time against 26% on the mixed pair, on 12 events against 9
 (p = 0.33, a stated prediction, not supported). The sensor-only pair has fewer
 differing windows than the mixed pair on 21 events against 17 (p = 0.31, the
@@ -1135,6 +1134,42 @@ Caveat: the two radar passes may differ in orbit and incidence angle, so the tim
 axis includes acquisition geometry. Runtime 5:24 (job 794821), the pre-event pass
 extracted in about a minute. Source `exp/out/exp60_summary.json`,
 `exp/out/exp60_masks.npz` (the three decision maps, margins and labels).
+
+## Is the pre-event radar's departure the seasonal water of its date? (exp61)
+
+exp60 left a reading untested: that the 54.5% of the same-sensor difference where
+the pre-event radar departs from the permanent-water label is water that was
+there on that date and the permanent class does not carry. Two things test it
+without new imagery. GEOID ships three layers exp55 never extracted, permwater,
+floodmask and validity (about 10 MB per shard); and the JRC Global Surface Water
+monthly history (v1.4, 30 m, 1984 to 2021) gives water, not water or no
+observation for the month of each tile's pre-event Sentinel-1 pass, read by HTTP
+range requests and reprojected onto the chip grid. exp60's chips and decisions were
+reproduced and asserted equal to the committed masks, so every window is exp60's.
+
+The residue is 16,199 of the 29,700 time-only differing windows: 14,447 where the
+radar said water and the label not permanent, 1,752 where the radar said dry and
+the label permanent. The JRC product observed 85% of them in that month and calls
+3.2% of the observed ones water: 0.1% of the radar-water part, 32% of the radar-dry
+part. The raw CEMS floodmask marks 1.9% of the residue. Per event, the JRC water
+share on the residue is at or near zero on 14 of the 17 events with at least 20
+observed residue windows and above one half on 3 small ones (one-sided sign test
+against one half, p = 0.999). Preregistered P1 fails: by a date-matched optical
+arbiter, the pre-event radar's departures from the permanent label are not the
+seasonal water of the date; they are windows the radar head calls water that
+neither the label nor the month's Landsat product holds. What they are physically,
+radar-dark dry surfaces or water too narrow for 30 m optics, the two optical
+references cannot decide. <!-- claim:residue-not-seasonal-water -->
+Three sanity facts came with it. GEOID's permanent class is its permwater layer
+(equal on 99.3% of windows) and its flooded class is its floodmask (99.9%), so
+grading against those layers adds nothing. The JRC monthly water agrees with the
+label on 99.2% of the 649,877 observed windows, more than with the radar head
+(97.5%) or the optical head (96.4%). On the 42,696 sensor-only differing windows it
+sides with the radar head 61% to 39%. <!-- claim:geoid-label-is-permwater -->
+Runtime 1:05 on the cpu partition (job 799222; a first run, job 799100, was discarded:
+its reader had rewritten the product's no-observation value as not-water). Source
+`exp/out/exp61_summary.json`, `exp/out/exp61_layers.npz` (the pooled layers on
+exp60's windows).
 
 ## Served land cover change rasters (exp20)
 

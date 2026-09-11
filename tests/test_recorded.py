@@ -561,3 +561,19 @@ def test_exp60_sensor_axis_isolates_and_time_axis_does_not_concentrate_the_flood
     d = (z["A_s2pre"] != z["A_s1pre"]) & z["ok"]
     flooded = z["y_after"] & ~z["y_permanent"]
     assert d.sum() == R["sensor_only"]["n_disagree"] and abs(flooded[d].mean() - R["sensor_only"]["flooded_share"]) < 1e-9
+
+
+def test_exp61_residue_is_not_the_seasonal_water_of_the_date():
+    """exp61 (job 799222): the JRC monthly water of the pre-event month calls 0.1% of the radar-water residue water; the
+    layers recompute the label agreement on the committed masks."""
+    s = json.load(open(_need("exp61_summary.json")))
+    assert s["prereg"]["P1"] is False and s["prereg"]["complete"] is True and s["n_failures"] == 0
+    r, t = s["results"]["residue"], s["results"]["P1_test"]
+    assert r["gsw_water_share_radar_water"] < 0.002 and round(r["gsw_water_share_among_observed"], 3) == 0.032 and (t["w"], t["l"]) == (3, 14)
+    L = np.load(_need("exp61_layers.npz"))
+    z = np.load(_need("exp60_masks.npz"))
+    obs = np.nan_to_num(L["gsw_observed"], nan=0.0) >= 0.5
+    m = z["ok"] & obs
+    assert m.sum() == s["results"]["agreement_with_gsw_all_observed"]["n"]
+    assert abs(((L["gsw_water"] > 0.5) == z["y_permanent"])[m].mean() - s["results"]["agreement_with_gsw_all_observed"]["label_permanent"]) < 1e-9
+    assert abs(((L["permwater"] > 0.5) == z["y_permanent"])[z["ok"] & ~np.isnan(L["permwater"])].mean() - s["results"]["sanity"]["permwater_equals_label_all_windows"]) < 1e-9

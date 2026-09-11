@@ -84,8 +84,8 @@ windows differ, none of them flooded; over 55 events 4.9% of 869,160 windows dif
 flooded by the label, so the sensor axis is sensor error alone (preregistered P2 holds). Same sensor
 across dates: 151 windows differ here, 87% flooded by the label and 13% one head off its label; over the
 55 events 3.4% differ and 25.9% of those are flooded, 1.33 times the mixed pair, short of the preregistered
-doubling (P1 fails), because 54.5% of that difference is the pre-event radar seeing water the label's
-permanent class does not hold. The boxed panel needs labels: violet windows are the flood, teal ones an
+doubling (P1 fails), because 54.5% of that difference is the pre-event radar calling water that neither
+the label nor the JRC monthly water of that month holds (exp61: 0.1% of those windows are water there). The boxed panel needs labels: violet windows are the flood, teal ones an
 error of one head, amber outlines the four sensor differences.*
 
 The same measurement for the whole event, from the committed decisions alone:

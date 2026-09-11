@@ -1,0 +1,614 @@
+{
+ "experiment": "exp61 the pre-event radar's departures from the permanent-water label: GEOID's own layers and the JRC monthly water of the pre-event month",
+ "smoke": false,
+ "config": {
+  "extra_layers": [
+   "permwater",
+   "floodmask",
+   "validity"
+  ],
+  "gsw": "https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GSWE/MonthlyHistory/VER5-0/tiles/{y}/{y}_{m:02d}/{y}_{m:02d}-{r:010d}-{c:010d}.tif",
+  "gsw_last_month": [
+   2021,
+   12
+  ],
+  "min_observed": 0.5,
+  "min_event_windows": 20,
+  "prereg": "P1 on the residue windows GSW observed, GSW says water on >= 1/2 pooled and on more events than not (p < 0.05)",
+  "pre_s1_shards": {
+   "test": [
+    {
+     "shard": "geoid-flood/shards/test/s1grd/test-s1grd-00000-of-00019.tar",
+     "cached": true
+    },
+    {
+     "shard": "geoid-flood/shards/test/s1grd/test-s1grd-00001-of-00019.tar",
+     "cached": true
+    },
+    {
+     "shard": "geoid-flood/shards/test/s1grd/test-s1grd-00002-of-00019.tar",
+     "cached": true
+    },
+    {
+     "shard": "geoid-flood/shards/test/s1grd/test-s1grd-00003-of-00019.tar",
+     "cached": true
+    }
+   ],
+   "val": [
+    {
+     "shard": "geoid-flood/shards/val/s1grd/val-s1grd-00000-of-00009.tar",
+     "cached": true
+    },
+    {
+     "shard": "geoid-flood/shards/val/s1grd/val-s1grd-00001-of-00009.tar",
+     "cached": true
+    }
+   ]
+  },
+  "extra_shards": {
+   "test": [
+    {
+     "shard": "geoid-flood/shards/test/permwater/test-permwater-00000-of-00001.tar",
+     "cached": true
+    },
+    {
+     "shard": "geoid-flood/shards/test/floodmask/test-floodmask-00000-of-00001.tar",
+     "cached": true
+    },
+    {
+     "shard": "geoid-flood/shards/test/validity/test-validity-00000-of-00001.tar",
+     "cached": true
+    }
+   ]
+  },
+  "chips": {
+   "clear": 4489,
+   "events": 55,
+   "aligned_with_exp60": true
+  },
+  "layer_values_seen": {
+   "permwater": [
+    0,
+    1
+   ],
+   "floodmask": [
+    0,
+    1
+   ],
+   "validity": [
+    0,
+    1
+   ]
+  },
+  "chips_without_layer": {
+   "permwater": 0,
+   "floodmask": 0,
+   "validity": 0
+  },
+  "gsw_read_failures": 0,
+  "pre_event_months": [
+   "2015-10",
+   "2015-11",
+   "2015-12",
+   "2016-03",
+   "2016-09",
+   "2017-03",
+   "2017-04",
+   "2017-06",
+   "2017-07",
+   "2017-08",
+   "2017-09",
+   "2017-10"
+  ],
+  "read_seconds": 46.32327079772949
+ },
+ "results": {
+  "n_windows": 869160,
+  "n_time_only_differing": 29700,
+  "n_residue": 16199,
+  "residue_share_of_time_only": 0.5454208754208755,
+  "residue": {
+   "radar_water_label_not_permanent": 14447,
+   "radar_dry_label_permanent": 1752,
+   "gsw_observed_share": 0.8530773504537317,
+   "gsw_water_share_among_observed": 0.031840219986974456,
+   "gsw_water_share_radar_water": 0.0012788745903604829,
+   "gsw_water_share_radar_dry": 0.3241590214067278,
+   "floodmask_share": 0.018581393913204517,
+   "permwater_equals_label_share": 0.9593802086548553
+  },
+  "sanity": {
+   "permwater_equals_label_all_windows": 0.9930427079018823,
+   "floodmask_equals_flooded_label_all_windows": 0.9994051728105297,
+   "validity_share": 0.9993050761654931
+  },
+  "agreement_with_gsw_all_observed": {
+   "A_s2pre": 0.9635330993403367,
+   "A_s1pre": 0.975096826014769,
+   "label_permanent": 0.9915614800954642,
+   "n": 649877
+  },
+  "sensor_only_differing": {
+   "n": 42696,
+   "gsw_observed_share": 0.8215523702454562,
+   "gsw_sides_with_s1": 0.6071214756107991,
+   "gsw_sides_with_s2": 0.3928785243892009
+  },
+  "per_event": {
+   "EMSR162-1": {
+    "n_residue": 2,
+    "n_residue_observed": 2,
+    "gsw_water_share": 1.0,
+    "floodmask_share": 0.0,
+    "gsw_sides_with_s1_sensor_only": 0.6,
+    "month": "2016-03"
+   },
+   "EMSR162-2": {
+    "n_residue": 0,
+    "n_residue_observed": 0,
+    "gsw_water_share": null,
+    "floodmask_share": null,
+    "gsw_sides_with_s1_sensor_only": null,
+    "month": "2016-03"
+   },
+   "EMSR162-3": {
+    "n_residue": 0,
+    "n_residue_observed": 0,
+    "gsw_water_share": null,
+    "floodmask_share": null,
+    "gsw_sides_with_s1_sensor_only": null,
+    "month": "2016-03"
+   },
+   "EMSR162-4": {
+    "n_residue": 0,
+    "n_residue_observed": 0,
+    "gsw_water_share": null,
+    "floodmask_share": null,
+    "gsw_sides_with_s1_sensor_only": null,
+    "month": "2016-03"
+   },
+   "EMSR187-1": {
+    "n_residue": 890,
+    "n_residue_observed": 885,
+    "gsw_water_share": 0.0022598870056497176,
+    "floodmask_share": 0.0,
+    "gsw_sides_with_s1_sensor_only": 0.07158119658119658,
+    "month": "2015-10"
+   },
+   "EMSR192-1": {
+    "n_residue": 180,
+    "n_residue_observed": 0,
+    "gsw_water_share": null,
+    "floodmask_share": 0.005555555555555556,
+    "gsw_sides_with_s1_sensor_only": null,
+    "month": "2015-11,2015-12"
+   },
+   "EMSR192-10": {
+    "n_residue": 67,
+    "n_residue_observed": 0,
+    "gsw_water_share": null,
+    "floodmask_share": 0.04477611940298507,
+    "gsw_sides_with_s1_sensor_only": null,
+    "month": "2015-11"
+   },
+   "EMSR192-11": {
+    "n_residue": 263,
+    "n_residue_observed": 0,
+    "gsw_water_share": null,
+    "floodmask_share": 0.0038022813688212928,
+    "gsw_sides_with_s1_sensor_only": null,
+    "month": "2015-11"
+   },
+   "EMSR192-12": {
+    "n_residue": 27,
+    "n_residue_observed": 0,
+    "gsw_water_share": null,
+    "floodmask_share": 0.0,
+    "gsw_sides_with_s1_sensor_only": null,
+    "month": "2015-11"
+   },
+   "EMSR192-13": {
+    "n_residue": 746,
+    "n_residue_observed": 0,
+    "gsw_water_share": null,
+    "floodmask_share": 0.0013404825737265416,
+    "gsw_sides_with_s1_sensor_only": null,
+    "month": "2015-11"
+   },
+   "EMSR192-14": {
+    "n_residue": 47,
+    "n_residue_observed": 0,
+    "gsw_water_share": null,
+    "floodmask_share": 0.0,
+    "gsw_sides_with_s1_sensor_only": null,
+    "month": "2015-11"
+   },
+   "EMSR192-15": {
+    "n_residue": 395,
+    "n_residue_observed": 0,
+    "gsw_water_share": null,
+    "floodmask_share": 0.0,
+    "gsw_sides_with_s1_sensor_only": null,
+    "month": "2015-11"
+   },
+   "EMSR192-16": {
+    "n_residue": 7,
+    "n_residue_observed": 0,
+    "gsw_water_share": null,
+    "floodmask_share": 0.2857142857142857,
+    "gsw_sides_with_s1_sensor_only": null,
+    "month": "2015-11"
+   },
+   "EMSR192-19": {
+    "n_residue": 0,
+    "n_residue_observed": 0,
+    "gsw_water_share": null,
+    "floodmask_share": null,
+    "gsw_sides_with_s1_sensor_only": null,
+    "month": "2015-12"
+   },
+   "EMSR192-2": {
+    "n_residue": 54,
+    "n_residue_observed": 0,
+    "gsw_water_share": null,
+    "floodmask_share": 0.0,
+    "gsw_sides_with_s1_sensor_only": null,
+    "month": "2015-12"
+   },
+   "EMSR192-20": {
+    "n_residue": 0,
+    "n_residue_observed": 0,
+    "gsw_water_share": null,
+    "floodmask_share": null,
+    "gsw_sides_with_s1_sensor_only": null,
+    "month": "2015-12"
+   },
+   "EMSR192-21": {
+    "n_residue": 0,
+    "n_residue_observed": 0,
+    "gsw_water_share": null,
+    "floodmask_share": null,
+    "gsw_sides_with_s1_sensor_only": null,
+    "month": "2015-12"
+   },
+   "EMSR192-22": {
+    "n_residue": 0,
+    "n_residue_observed": 0,
+    "gsw_water_share": null,
+    "floodmask_share": null,
+    "gsw_sides_with_s1_sensor_only": null,
+    "month": "2015-12"
+   },
+   "EMSR192-24": {
+    "n_residue": 0,
+    "n_residue_observed": 0,
+    "gsw_water_share": null,
+    "floodmask_share": null,
+    "gsw_sides_with_s1_sensor_only": null,
+    "month": "2015-11"
+   },
+   "EMSR192-29": {
+    "n_residue": 1,
+    "n_residue_observed": 0,
+    "gsw_water_share": null,
+    "floodmask_share": 0.0,
+    "gsw_sides_with_s1_sensor_only": null,
+    "month": "2015-12"
+   },
+   "EMSR192-3": {
+    "n_residue": 17,
+    "n_residue_observed": 0,
+    "gsw_water_share": null,
+    "floodmask_share": 0.0,
+    "gsw_sides_with_s1_sensor_only": null,
+    "month": "2015-11,2015-12"
+   },
+   "EMSR192-30": {
+    "n_residue": 0,
+    "n_residue_observed": 0,
+    "gsw_water_share": null,
+    "floodmask_share": null,
+    "gsw_sides_with_s1_sensor_only": null,
+    "month": "2015-12"
+   },
+   "EMSR192-31": {
+    "n_residue": 4,
+    "n_residue_observed": 0,
+    "gsw_water_share": null,
+    "floodmask_share": 0.0,
+    "gsw_sides_with_s1_sensor_only": null,
+    "month": "2015-12"
+   },
+   "EMSR192-32": {
+    "n_residue": 0,
+    "n_residue_observed": 0,
+    "gsw_water_share": null,
+    "floodmask_share": null,
+    "gsw_sides_with_s1_sensor_only": null,
+    "month": "2015-12"
+   },
+   "EMSR192-33": {
+    "n_residue": 0,
+    "n_residue_observed": 0,
+    "gsw_water_share": null,
+    "floodmask_share": null,
+    "gsw_sides_with_s1_sensor_only": null,
+    "month": "2015-12"
+   },
+   "EMSR192-4": {
+    "n_residue": 51,
+    "n_residue_observed": 0,
+    "gsw_water_share": null,
+    "floodmask_share": 0.0,
+    "gsw_sides_with_s1_sensor_only": null,
+    "month": "2015-11"
+   },
+   "EMSR192-5": {
+    "n_residue": 29,
+    "n_residue_observed": 0,
+    "gsw_water_share": null,
+    "floodmask_share": 0.0,
+    "gsw_sides_with_s1_sensor_only": null,
+    "month": "2015-11"
+   },
+   "EMSR192-6": {
+    "n_residue": 34,
+    "n_residue_observed": 0,
+    "gsw_water_share": null,
+    "floodmask_share": 0.14705882352941177,
+    "gsw_sides_with_s1_sensor_only": null,
+    "month": "2015-11"
+   },
+   "EMSR192-7": {
+    "n_residue": 49,
+    "n_residue_observed": 0,
+    "gsw_water_share": null,
+    "floodmask_share": 0.0,
+    "gsw_sides_with_s1_sensor_only": null,
+    "month": "2015-11,2015-12"
+   },
+   "EMSR192-8": {
+    "n_residue": 4,
+    "n_residue_observed": 0,
+    "gsw_water_share": null,
+    "floodmask_share": 0.0,
+    "gsw_sides_with_s1_sensor_only": null,
+    "month": "2015-11"
+   },
+   "EMSR192-9": {
+    "n_residue": 25,
+    "n_residue_observed": 0,
+    "gsw_water_share": null,
+    "floodmask_share": 0.0,
+    "gsw_sides_with_s1_sensor_only": null,
+    "month": "2015-11"
+   },
+   "EMSR199-9": {
+    "n_residue": 184,
+    "n_residue_observed": 178,
+    "gsw_water_share": 0.09550561797752809,
+    "floodmask_share": 0.8967391304347826,
+    "gsw_sides_with_s1_sensor_only": 0.5463917525773195,
+    "month": "2016-09"
+   },
+   "EMSR215-1": {
+    "n_residue": 19,
+    "n_residue_observed": 19,
+    "gsw_water_share": 0.05263157894736842,
+    "floodmask_share": 0.0,
+    "gsw_sides_with_s1_sensor_only": 0.7358490566037735,
+    "month": "2017-07"
+   },
+   "EMSR238-1": {
+    "n_residue": 8,
+    "n_residue_observed": 8,
+    "gsw_water_share": 0.625,
+    "floodmask_share": 0.0,
+    "gsw_sides_with_s1_sensor_only": 0.6666666666666666,
+    "month": "2016-09"
+   },
+   "EMSR238-2": {
+    "n_residue": 37,
+    "n_residue_observed": 37,
+    "gsw_water_share": 1.0,
+    "floodmask_share": 0.0,
+    "gsw_sides_with_s1_sensor_only": 0.046511627906976744,
+    "month": "2016-09"
+   },
+   "EMSR238-3": {
+    "n_residue": 4,
+    "n_residue_observed": 4,
+    "gsw_water_share": 0.0,
+    "floodmask_share": 0.0,
+    "gsw_sides_with_s1_sensor_only": 0.0,
+    "month": "2016-09"
+   },
+   "EMSR238-4": {
+    "n_residue": 1,
+    "n_residue_observed": 1,
+    "gsw_water_share": 0.0,
+    "floodmask_share": 0.0,
+    "gsw_sides_with_s1_sensor_only": null,
+    "month": "2016-09"
+   },
+   "EMSR258-14": {
+    "n_residue": 0,
+    "n_residue_observed": 0,
+    "gsw_water_share": null,
+    "floodmask_share": null,
+    "gsw_sides_with_s1_sensor_only": 1.0,
+    "month": "2017-08"
+   },
+   "EMSR261-1": {
+    "n_residue": 2179,
+    "n_residue_observed": 1987,
+    "gsw_water_share": 0.0025163563160543532,
+    "floodmask_share": 0.0,
+    "gsw_sides_with_s1_sensor_only": 0.13189236876929863,
+    "month": "2017-04"
+   },
+   "EMSR261-2": {
+    "n_residue": 191,
+    "n_residue_observed": 30,
+    "gsw_water_share": 0.0,
+    "floodmask_share": 0.0,
+    "gsw_sides_with_s1_sensor_only": 0.15,
+    "month": "2017-06"
+   },
+   "EMSR261-3": {
+    "n_residue": 2227,
+    "n_residue_observed": 2220,
+    "gsw_water_share": 0.002702702702702703,
+    "floodmask_share": 0.000898069151324652,
+    "gsw_sides_with_s1_sensor_only": 0.07676261994159365,
+    "month": "2017-03"
+   },
+   "EMSR273-1": {
+    "n_residue": 14,
+    "n_residue_observed": 14,
+    "gsw_water_share": 1.0,
+    "floodmask_share": 0.5,
+    "gsw_sides_with_s1_sensor_only": 0.3793103448275862,
+    "month": "2017-03"
+   },
+   "EMSR273-2": {
+    "n_residue": 17,
+    "n_residue_observed": 17,
+    "gsw_water_share": 0.29411764705882354,
+    "floodmask_share": 0.29411764705882354,
+    "gsw_sides_with_s1_sensor_only": 0.76,
+    "month": "2017-03"
+   },
+   "EMSR273-3": {
+    "n_residue": 49,
+    "n_residue_observed": 47,
+    "gsw_water_share": 0.723404255319149,
+    "floodmask_share": 0.5102040816326531,
+    "gsw_sides_with_s1_sensor_only": 0.6854460093896714,
+    "month": "2017-03"
+   },
+   "EMSR273-4": {
+    "n_residue": 50,
+    "n_residue_observed": 50,
+    "gsw_water_share": 0.32,
+    "floodmask_share": 0.0,
+    "gsw_sides_with_s1_sensor_only": 0.8434782608695652,
+    "month": "2017-03"
+   },
+   "EMSR273-5": {
+    "n_residue": 13,
+    "n_residue_observed": 13,
+    "gsw_water_share": 0.38461538461538464,
+    "floodmask_share": 0.6923076923076923,
+    "gsw_sides_with_s1_sensor_only": 0.7142857142857143,
+    "month": "2017-03"
+   },
+   "EMSR275-1": {
+    "n_residue": 982,
+    "n_residue_observed": 982,
+    "gsw_water_share": 0.07128309572301425,
+    "floodmask_share": 0.03665987780040733,
+    "gsw_sides_with_s1_sensor_only": 0.3339253996447602,
+    "month": "2017-07"
+   },
+   "EMSR275-2": {
+    "n_residue": 935,
+    "n_residue_observed": 935,
+    "gsw_water_share": 0.053475935828877004,
+    "floodmask_share": 0.034224598930481284,
+    "gsw_sides_with_s1_sensor_only": 0.25979557069846676,
+    "month": "2017-07"
+   },
+   "EMSR275-3": {
+    "n_residue": 87,
+    "n_residue_observed": 87,
+    "gsw_water_share": 0.034482758620689655,
+    "floodmask_share": 0.0,
+    "gsw_sides_with_s1_sensor_only": 0.6127167630057804,
+    "month": "2017-07"
+   },
+   "EMSR279-1": {
+    "n_residue": 167,
+    "n_residue_observed": 166,
+    "gsw_water_share": 0.006024096385542169,
+    "floodmask_share": 0.0,
+    "gsw_sides_with_s1_sensor_only": 0.3180428134556575,
+    "month": "2017-10"
+   },
+   "EMSR279-10": {
+    "n_residue": 227,
+    "n_residue_observed": 227,
+    "gsw_water_share": 0.03524229074889868,
+    "floodmask_share": 0.0,
+    "gsw_sides_with_s1_sensor_only": 0.256797583081571,
+    "month": "2017-04"
+   },
+   "EMSR279-11": {
+    "n_residue": 222,
+    "n_residue_observed": 219,
+    "gsw_water_share": 0.684931506849315,
+    "floodmask_share": 0.0,
+    "gsw_sides_with_s1_sensor_only": 0.970034202868957,
+    "month": "2017-09"
+   },
+   "EMSR279-2": {
+    "n_residue": 231,
+    "n_residue_observed": 229,
+    "gsw_water_share": 0.021834061135371178,
+    "floodmask_share": 0.004329004329004329,
+    "gsw_sides_with_s1_sensor_only": 0.22137404580152673,
+    "month": "2017-10"
+   },
+   "EMSR279-3": {
+    "n_residue": 5442,
+    "n_residue_observed": 5441,
+    "gsw_water_share": 0.0003675794890645102,
+    "floodmask_share": 0.0011025358324145535,
+    "gsw_sides_with_s1_sensor_only": 0.026100852272727272,
+    "month": "2017-04"
+   },
+   "EMSR279-4": {
+    "n_residue": 21,
+    "n_residue_observed": 21,
+    "gsw_water_share": 0.09523809523809523,
+    "floodmask_share": 0.0,
+    "gsw_sides_with_s1_sensor_only": 0.7872340425531915,
+    "month": "2017-08"
+   }
+  },
+  "P1_test": {
+   "n_groups": 17,
+   "n_undefined": 0,
+   "median": -0.4647577092511013,
+   "w": 3,
+   "l": 14,
+   "t": 0,
+   "share_flipped": 0.8235294117647058,
+   "sign_p": 0.9988250732421875,
+   "flipped": [
+    "EMSR187-1",
+    "EMSR199-9",
+    "EMSR261-1",
+    "EMSR261-2",
+    "EMSR261-3",
+    "EMSR273-4",
+    "EMSR275-1",
+    "EMSR275-2",
+    "EMSR275-3",
+    "EMSR279-1",
+    "EMSR279-10",
+    "EMSR279-2",
+    "EMSR279-3",
+    "EMSR279-4"
+   ]
+  }
+ },
+ "failures": [],
+ "prereg": {
+  "P1": false,
+  "gsw_observed_gate_ok": true,
+  "complete": true
+ },
+ "n_failures": 0,
+ "seconds": 56.43874406814575
+}

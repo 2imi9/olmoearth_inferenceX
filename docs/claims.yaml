@@ -1692,3 +1692,37 @@
   cited_in:
     - {file: docs/TECHNIQUES.md, marker: two-periods-composition}
     - {file: docs/results/comparisons.md, marker: two-periods-composition}
+
+- id: residue-not-seasonal-water
+  statement: "On the 16,199 windows where exp60's same-sensor difference is the pre-event radar departing from GEOID's permanent-water label, the JRC Global Surface Water monthly history of the pre-event month observed 85% and calls 3.2% of the observed ones water, 0.1% of the 14,447 where the radar said water and 32% of the 1,752 where it said dry; the raw CEMS floodmask marks 1.9%; per event the water share is at or above one half on 3 of 17 events (p = 0.999); preregistered P1 fails: the residue is not the seasonal water of the date but windows the radar head calls water that neither the label nor a date-matched optical product holds."
+  status: rejected
+  experiments: [exp61]
+  artifacts: [exp/out/exp61_summary.json]
+  check: |-
+    (lambda s, r, t:
+      s['prereg']['P1'] is False and s['prereg']['complete'] is True and s['prereg']['gsw_observed_gate_ok'] is True
+      and r['radar_water_label_not_permanent'] == 14447 and r['radar_dry_label_permanent'] == 1752
+      and round(r['gsw_observed_share'], 2) == 0.85 and round(r['gsw_water_share_among_observed'], 3) == 0.032
+      and r['gsw_water_share_radar_water'] < 0.002 and round(r['gsw_water_share_radar_dry'], 2) == 0.32 and round(r['floodmask_share'], 3) == 0.019
+      and t['n_groups'] == 17 and t['w'] == 3 and t['l'] == 14 and t['sign_p'] > 0.05
+    )(A['exp/out/exp61_summary.json'], A['exp/out/exp61_summary.json']['results']['residue'], A['exp/out/exp61_summary.json']['results']['P1_test'])
+  cited_in:
+    - {file: docs/Findings.md, marker: residue-not-seasonal-water}
+    - {file: docs/TECHNIQUES.md, marker: residue-not-seasonal-water}
+    - {file: docs/results/comparisons.md, marker: residue-not-seasonal-water}
+
+- id: geoid-label-is-permwater
+  statement: "GEOID-Flood's permanent-water class equals its permwater layer on 99.3% of exp60's windows and its flooded class equals its floodmask layer on 99.9%; the JRC monthly water of the pre-event month agrees with the permanent-water label on 99.2% of the 649,877 observed windows, more than with the radar head (97.5%) or the optical head (96.4%), and on the 42,696 sensor-only differing windows it sides with the radar head 61% of the time."
+  status: measured
+  experiments: [exp61]
+  artifacts: [exp/out/exp61_summary.json]
+  check: |-
+    (lambda R:
+      round(R['sanity']['permwater_equals_label_all_windows'], 3) == 0.993 and round(R['sanity']['floodmask_equals_flooded_label_all_windows'], 3) == 0.999
+      and round(R['agreement_with_gsw_all_observed']['label_permanent'], 3) == 0.992 and round(R['agreement_with_gsw_all_observed']['A_s1pre'], 3) == 0.975
+      and round(R['agreement_with_gsw_all_observed']['A_s2pre'], 3) == 0.964 and R['agreement_with_gsw_all_observed']['n'] == 649877
+      and R['sensor_only_differing']['n'] == 42696 and round(R['sensor_only_differing']['gsw_sides_with_s1'], 2) == 0.61
+    )(A['exp/out/exp61_summary.json']['results'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: geoid-label-is-permwater}
+    - {file: docs/results/comparisons.md, marker: geoid-label-is-permwater}
