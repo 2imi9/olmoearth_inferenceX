@@ -167,28 +167,31 @@ def fit_ranker(signals, errors, ok, groups=None, family=None, folds=5, budgets=(
 
 
 # ----------------------------------------------------------------------------- the side rule
-def side_features(features_a, features_b):
-    """The design for a side rule: for every named reading, the value on side a, on side b, and their difference."""
+def side_features(features_a, features_b, shared=None):
+    """The design for a side rule: for every named reading, the value on side a, on side b, and their difference;
+    `shared` readings (a pixel index, a cue of the scene) enter once."""
     out = {}
     for k in features_a:
         if k not in features_b:
             raise KeyError(f"reading {k!r} missing on side b")
         fa, fb = np.asarray(features_a[k], dtype=np.float64), np.asarray(features_b[k], dtype=np.float64)
         out[f"{k}:a"], out[f"{k}:b"], out[f"{k}:a-b"] = fa, fb, fa - fb
+    for k, v in (shared or {}).items():
+        out[k] = np.asarray(v, dtype=np.float64)
     return out
 
 
-def fit_side(features_a, features_b, a, b, ok, labels, groups=None, family=None, folds=5, baseline=None, min_group_windows=3):
+def fit_side(features_a, features_b, a, b, ok, labels, groups=None, family=None, folds=5, baseline=None, min_group_windows=3, shared=None):
     """P(side b is right | readings of both sides) on the windows where two decisions differ, fitted on labels and
     reported held-out.
 
     features_a, features_b: {name: array} of the same readings on each side (margins, ranks, boundary, ...); a, b:
     the two decisions; labels: the class map; baseline: the reading whose larger side the raw rule believes (default
-    the first). Returns (Fusion, report): held-out share right of the fitted rule, of the baseline rule, of always a,
+    the first); shared: {name: array} readings of the scene that belong to neither side. Returns (Fusion, report): held-out share right of the fitted rule, of the baseline rule, of always a,
     always b, the coin; and a one-sided sign test over groups that the fitted rule beats the baseline."""
     a_, b_, lab, okm = np.asarray(a), np.asarray(b), np.asarray(labels), np.asarray(ok) > 0.5
     d = (a_ != b_) & okm
-    feats = side_features(features_a, features_b)
+    feats = side_features(features_a, features_b, shared)
     names = list(feats)
     baseline = baseline or list(features_a)[0]
     Xraw = np.nan_to_num(np.stack([feats[k][d] for k in names], 1))
