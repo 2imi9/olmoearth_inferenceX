@@ -268,6 +268,16 @@ tool returns the structured evidence.
 | Does a last-layer posterior over the probe head (Laplace, bootstrap ensemble) rank the errors? | exp30 — no, on both testbeds; the variance is feature norm on the one-scene head and rises with the logit on the 128k-patch head |
 | E_dist formalization: does feature-space typicality against training, same-scene or cross-testbed references rank the errors? | exp31 — no; the confidence + same-scene kNN combination reaches 6/2 rivers (p = 0.145) against WorldCover and hurts on hand labels; only a true pretraining sample remains untested (issue #4; the RCG density upgrade is issue #3, parked) |
 
+## The agent benchmark
+
+Preregistered in [agent_benchmark.md](agent_benchmark.md) (exp64), not yet run:
+forty cards from the labelled testbeds, three tasks (review set, explanation,
+comparison), four arms (the package as tools, a sandbox, a template, no rasters),
+a claims audit against the tool outputs; P1 the tool agent grounds its claims
+better than the sandbox agent by 0.2, P2 it captures more errors and reaches 80%
+of the package's own capture, P3 it declines to pick a side where the package
+resolves nothing.
+
 ## Cross-inference comparison: what is done, what is not
 
 The comparison half of the package is `oe_inferencex.compare` (exp57): the

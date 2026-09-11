@@ -96,6 +96,14 @@ caveats apply. The explanation layer returns structured evidence; the
 sentences are templates, and the low-confidence cue is the ranker itself,
 so inside a confidence review set it always fires.
 
+## Is it measured?
+
+Not yet. Whether an agent given these tools produces better-grounded statements
+than one given a sandbox is the preregistered benchmark in
+[../plan/agent_benchmark.md](../plan/agent_benchmark.md) (exp64): forty cards
+from the labelled testbeds, three tasks, a claims audit against the tool outputs,
+the package's own numbers as the ceiling.
+
 ## Status (2026-09-02)
 
 **Agent side.** Implemented and tested in the agent repo's working tree (15
