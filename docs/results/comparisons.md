@@ -1171,6 +1171,45 @@ its reader had rewritten the product's no-observation value as not-water). Sourc
 `exp/out/exp61_summary.json`, `exp/out/exp61_layers.npz` (the pooled layers on
 exp60's windows).
 
+## The fourth cell: post-event optical from WorldFloods completes the square (exp62)
+
+GEOID-Flood has no optical pass after the event. WorldFloods v2 (isp-uv-es on the
+Hub, Sentinel-2 L1C at 10 m with cloud and water masks, CC BY-NC 4.0) holds 26
+post-event scenes on four of the eleven activations behind exp60's 55 events, most
+of them clear. A water head for post-event optical imagery was fitted on OlmoEarth
+features of 1,766 clear WorldFloods train chips from 40 scenes of other activations,
+and every shared scene was reprojected onto exp60's chips: 544 of the 4,489 chips,
+in 6 events, are at least 90% clear on a post-event scene and carry all four cells.
+The fourth cell's head is right on 97.1% of GEOID's water-after windows there and
+agrees with WorldFloods' own water mask on 97.1%; the two labels agree on 98.4%. <!-- claim:fourth-cell-completed -->
+
+| Pair on the 544 chips (106,606 windows) | differing windows | flooded by the label | first side off its label | second side off its label |
+|---|---|---|---|---|
+| time-only optical: S2 before vs S2 after | 24.4% | 3.8% | 88.5% | 7.7% |
+| time-only radar: S1 before vs S1 after | 2.6% | 41.1% | 9.8% | 49.2% |
+| sensor-only before: S2 vs S1 | 21.9% | 0.1% | 97.9% | 2.1% |
+| sensor-only after: S2 vs S1 | 3.8% | 18.0% | 55.0% | 45.0% |
+| mixed: S2 before vs S1 after | 23.4% | 4.6% | 90.2% | 5.3% |
+| mirror: S1 before vs S2 after | 3.4% | 27.3% | 17.8% | 55.0% | <!-- claim:fourth-cell-prereg-fails -->
+
+Both preregistered claims fail, and the table says why: on this subset the
+pre-event optical head is off the permanent-water label on 22% of the windows
+(78.1% accuracy against 96.8% over all of exp60; 99.0% for the pre-event radar
+head, 97.5% for the post-event radar head), so every pair that contains it measures
+that failure. It is one event: on EMSR279-11 (the Ebro delta at Tortosa, 393 of
+the 544 chips) the pre-event optical head calls water on 9% of the windows where
+the label holds 38% permanent water. P1 compared
+the optical time-only pair (3.8% flood) with the radar one (41.1%), one event
+against five; P2 compared the post-event sensor pair (18.0%) with the optical
+time-only pair, four events against two (p = 0.34). The pairs without the
+pre-event optical head carry the design's logic: the radar difference across the
+event is 41% flood on these chips (26% over all 55 events), the cross-sensor
+difference after the event 18%, and where both radar dates are confident the
+temporal difference is flooded 87% of the time. <!-- claim:fourth-cell-prereg-fails -->
+Runtime 14:12 (job 799540; the head 12 min, the cut 92 s). Source
+`exp/out/exp62_summary.json`, `exp/out/exp62_masks.npz` (the fourth cell's decisions
+and margins, WorldFloods' water and clear masks per window, chip ids).
+
 ## Served land cover change rasters (exp20)
 
 First assessment of a served output: ten 512-px windows (about

@@ -577,3 +577,20 @@ def test_exp61_residue_is_not_the_seasonal_water_of_the_date():
     assert m.sum() == s["results"]["agreement_with_gsw_all_observed"]["n"]
     assert abs(((L["gsw_water"] > 0.5) == z["y_permanent"])[m].mean() - s["results"]["agreement_with_gsw_all_observed"]["label_permanent"]) < 1e-9
     assert abs(((L["permwater"] > 0.5) == z["y_permanent"])[z["ok"] & ~np.isnan(L["permwater"])].mean() - s["results"]["sanity"]["permwater_equals_label_all_windows"]) < 1e-9
+
+
+def test_exp62_fourth_cell_completed_and_the_pre_event_optical_head_fails_on_one_event():
+    """exp62 (job 799540): the square is complete on 544 chips; both preregistered claims fail because the pre-event optical
+    head misses the label's permanent water on the Ebro delta (393 of 544 chips), recomputed from the committed masks."""
+    s = json.load(open(_need("exp62_summary.json")))
+    assert s["prereg"]["P1"] is False and s["prereg"]["P2"] is False and s["prereg"]["complete"] is True and s["n_failures"] == 0
+    m = np.load(_need("exp62_masks.npz"))
+    z = np.load(_need("exp60_masks.npz"))
+    idx, ok = m["chip_index"], m["ok"]
+    ya, yb = z["y_permanent"][idx], z["y_after"][idx]
+    assert len(idx) == 544 and abs(((m["B_s2post"] == yb)[ok]).mean() - s["results"]["fourth_cell"]["accuracy_water_after_label"]) < 1e-9
+    a2 = z["A_s2pre"][idx]
+    assert abs(((a2 == ya)[ok]).mean() - s["results"]["fourth_cell"]["accuracy_own_task_others"]["A_s2pre"]) < 1e-9
+    tortosa = m["event"] == "EMSR279-11"
+    assert tortosa.sum() == 393 and round(float(((a2 == ya)[tortosa[:, None, None] & ok]).mean()), 3) == 0.699
+    assert round(float(a2[tortosa[:, None, None] & ok].mean()), 2) == 0.09 and round(float(ya[tortosa[:, None, None] & ok].mean()), 2) == 0.38

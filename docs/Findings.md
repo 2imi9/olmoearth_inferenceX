@@ -120,6 +120,11 @@ difference across the event carries 26%, not the doubling preregistered, and mor
 than half of it is the pre-event radar calling water that neither the label nor the
 month's Landsat water product holds (exp61: 0.1% of those windows are water
 there). <!-- claim:two-periods-sensor-axis-isolated --> <!-- claim:two-periods-time-only-difference --> <!-- claim:residue-not-seasonal-water -->
+Where a clear post-event optical pass exists (WorldFloods v2, 544 chips in 6
+events) the fourth cell completes the square: the post-event optical head is
+right on 97% of the windows, and the square is dominated by one event where the
+pre-event optical optical head finds a quarter of the label's permanent water
+(exp62). <!-- claim:fourth-cell-completed -->
 
 The effect size in a reviewer's units (exp55, 45 GEOID-Flood events): on the
 median event the 5% of windows confidence flags hold 88% of the permanent-water

@@ -1,18 +1,18 @@
-"""Rasters and numbers for the comparison diagram (compare_inferences.tex): the two-period, two-sensor design on one
-GEOID-Flood chip (event EMSR275-1, tile EMSR275-1-4, rows 0-63, columns 256-319; exp60 chip 2293, the same chip as exp57's
-2293, matched by its label grids). Three pieces of evidence, the Sentinel-2 composite and the Sentinel-1 pass of the
-pre-event date and the Sentinel-1 pass after the event, read by exp60's heads into three decisions
-(exp/out/exp60_masks.npz); the two differences that isolate one axis each, same date across sensors and same sensor across
-dates, drawn on the scene; the label bridge. Imagery: rasters/cmp_chip.npz (S2 composite, post-event S1, label; exp55's
-loader) and rasters/cmp_s1pre.npz (the pre-event S1 pass, same loader rules), both read once from the shard tree on the
-cluster. Numbers come from exp/out/exp60_summary.json and are written as TeX macros so the figure cannot drift from
-the ledger.
+"""Rasters and numbers for the comparison diagram (compare_inferences.tex): the two-period, two-sensor square on one
+GEOID-Flood chip where all four cells exist, event EMSR275-2 (Kutina, Croatia), tile EMSR275-2-10, rows 256-319,
+columns 256-319: exp62 chip 21 (its exp60 index is stored in exp/out/exp62_masks.npz). Evidence: the Sentinel-2
+composite and the Sentinel-1 pass of the pre-event date, the Sentinel-1 pass after the event (GEOID), and WorldFloods
+v2's Sentinel-2 scene of 2018-03-24 (the fourth cell, exp62). Decisions: exp60's three (exp/out/exp60_masks.npz) and
+exp62's fourth (exp/out/exp62_masks.npz). The four differences that each isolate one axis, drawn on the scene, and the
+label bridge. Imagery: rasters/cmp_square21.npz, cut once on the cluster from the shard tree and the WorldFloods repo
+(S1 in dB with exp55's rules, S2 digital numbers). Fixed stretches, reflectance 0-1200 DN (L1C with a 600 DN haze offset removed) and VH -32 to -10 dB, so
+water is dark in radar (VH) and blue-grey in optics on every panel alike. Numbers from exp/out/exp60_summary.json and
+exp/out/exp62_summary.json, written as TeX macros so the figure cannot drift from the ledger.
 
     uv run python docs/figures/tikz/make_compare_rasters.py
 """
 import json
 import os
-import re
 import sys
 
 import numpy as np
@@ -20,9 +20,9 @@ import numpy as np
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 sys.path.insert(0, ROOT)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from make_rasters import OUT, classmap, gray, rgb, save, tex_list  # noqa: E402
+from make_rasters import OUT, classmap, save, tex_list  # noqa: E402
 
-CHIP, EVENT = 2293, "EMSR275-1"
+CHIP62, EVENT = 21, "EMSR275-2"
 OFFSET = 1                                  # the 14 x 14 W1 windows are windows 1..14 of the 16-cell grid over the 64-px chip
 FLOOD = (109, 40, 217)
 
@@ -31,59 +31,62 @@ def cells(mask):
     return [(r + OFFSET, c + OFFSET) for r, c in zip(*np.nonzero(mask))]
 
 
+def optical(dn, idx, offset=0.0, scale=1200.0):
+    """Fixed stretch per processing level: surface reflectance 0-1200 DN; top-of-atmosphere L1C with its haze offset removed."""
+    return (np.clip((dn[idx] - offset) / scale, 0, 1).transpose(1, 2, 0) * 255).astype(np.uint8)
+
+
+def radar(db):
+    """VH backscatter, -32 to -10 dB: open water is dark, land bright, the same stretch on both dates."""
+    g = (np.clip((db[1] + 32.0) / 22.0, 0, 1) * 255).astype(np.uint8)
+    return np.repeat(g[..., None], 3, -1)
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
-    z = np.load(os.path.join(ROOT, "exp", "out", "exp60_masks.npz"))
-    assert z["event"][CHIP] == EVENT
-    ok, ya, yb = z["ok"][CHIP], z["y_permanent"][CHIP], z["y_after"][CHIP]
-    dec = {k: z[k][CHIP] for k in ("A_s2pre", "A_s1pre", "B_s1post")}
-    chip, pre = np.load(os.path.join(OUT, "cmp_chip.npz")), np.load(os.path.join(OUT, "cmp_s1pre.npz"))
-    s2, s1post, lab, s1pre = chip["s2"], chip["s1"], chip["lab"], pre["s1pre"]
-    date_pre = re.search(r"_pre_(\d{4})(\d{2})(\d{2})T", str(pre["name"])).groups()
-    save("cmp_s2.png", rgb(s2, 64), 8)
-    save("cmp_s1pre.png", np.repeat(gray(s1pre[0], 64)[..., None], 3, -1), 8)
-    save("cmp_s1post.png", np.repeat(gray(s1post[0], 64)[..., None], 3, -1), 8)
-    for k, m in dec.items():
-        im = classmap(m.astype(float))
+    m62 = np.load(os.path.join(ROOT, "exp", "out", "exp62_masks.npz"))
+    z60 = np.load(os.path.join(ROOT, "exp", "out", "exp60_masks.npz"))
+    assert m62["event"][CHIP62] == EVENT and m62["tile"][CHIP62] == "EMSR275-2-10"
+    k = int(m62["chip_index"][CHIP62])
+    ok, ya, yb = m62["ok"][CHIP62], z60["y_permanent"][k], z60["y_after"][k]
+    dec = {"A_s2pre": z60["A_s2pre"][k], "A_s1pre": z60["A_s1pre"][k], "B_s1post": z60["B_s1post"][k], "B_s2post": m62["B_s2post"][CHIP62]}
+    z = np.load(os.path.join(OUT, "cmp_square21.npz"))
+    save("cmp_s2_t1.png", optical(z["s2pre"], [2, 1, 0]), 8)                       # encoder order: B02, B03, B04 first
+    save("cmp_s2_t2.png", optical(z["wf_S2"].astype(np.float32), [3, 2, 1], offset=600.0), 8)     # WorldFloods order: B01..B12, B8A ninth; L1C
+    save("cmp_s1_t1.png", radar(z["s1pre"]), 8)
+    save("cmp_s1_t2.png", radar(z["s1post"]), 8)
+    for key, d in dec.items():
+        im = classmap(d.astype(float))
         im[~ok] = (200, 200, 200)
-        save(f"cmp_{k}.png", im, 32)
+        save(f"cmp_{key}.png", im, 32)
+    lab = z["label"]
     lab_img = classmap((lab == 1).astype(float))
     lab_img[lab == 2] = FLOOD
     lab_img[lab == 255] = (200, 200, 200)
     save("cmp_label.png", lab_img, 8)
-    # the fourth cell: WorldFloods v2's Sentinel-2 L1C scene of the same AoI two days after the radar pass (rasters/cmp_s2post.npz,
-    # cut on the cluster onto this chip's grid; bands B1..B12 with B8A ninth, then two ancillary bands; gt band 1: 2 = cloud).
-    post = np.load(os.path.join(OUT, "cmp_s2post.npz"))
-    x = np.clip(post["s2"][[3, 2, 1]] / 6000.0, 0, 1)                    # fixed stretch: cloud stays white
-    save("cmp_s2post.png", (x.transpose(1, 2, 0) * 255).astype(np.uint8), 8)
-    cloud_share = float((post["gt"][0] == 2).mean())
-    date_post_s2 = str(post["s2_date"])[:10]
     flooded = yb & ~ya
-    d_sens = (dec["A_s2pre"] != dec["A_s1pre"]) & ok
-    d_time = (dec["A_s1pre"] != dec["B_s1post"]) & ok
-    tex_list("cmp_sens_diff.tex", "cmpCellsSensDiff", cells(d_sens))
-    tex_list("cmp_time_diff.tex", "cmpCellsTimeDiff", cells(d_time))
-    tex_list("cmp_time_flooded.tex", "cmpCellsTimeFlooded", cells(d_time & flooded))
-    tex_list("cmp_time_error.tex", "cmpCellsTimeError", cells(d_time & ~flooded))
-    tex_list("cmp_sens_error.tex", "cmpCellsSensError", cells(d_sens))
-
-    R = json.load(open(os.path.join(ROOT, "exp", "out", "exp60_summary.json")))["results"]["pairs"]
-    macros = {
-        "cmpEvent": EVENT, "cmpDatePre": "-".join(date_pre), "cmpDatePost": "2018-03-22", "cmpChip": str(CHIP),
-        "cmpWindows": str(int(ok.sum())),
-        "cmpSensN": str(int(d_sens.sum())), "cmpSensFlooded": f"{100 * flooded[d_sens].mean():.0f}" if d_sens.any() else "0",
-        "cmpTimeN": str(int(d_time.sum())), "cmpTimeFlooded": f"{100 * flooded[d_time].mean():.0f}" if d_time.any() else "0",
-        "cmpTimeError": f"{100 * (~flooded)[d_time].mean():.0f}" if d_time.any() else "0",
-        "cmpSensPooledRate": f"{100 * R['sensor_only']['disagreement_rate']:.1f}", "cmpSensPooledFlooded": f"{100 * R['sensor_only']['flooded_share']:.1f}",
-        "cmpTimePooledRate": f"{100 * R['time_only']['disagreement_rate']:.1f}", "cmpTimePooledFlooded": f"{100 * R['time_only']['flooded_share']:.0f}",
-        "cmpTimePooledPreDeparts": f"{100 * R['time_only']['err_a_share']:.0f}",
-        "cmpEvents": "55", "cmpDatePostS2": date_post_s2, "cmpPostS2Cloud": f"{100 * cloud_share:.0f}",
-    }
+    pairs = {"SensA": ("A_s2pre", "A_s1pre"), "SensB": ("B_s2post", "B_s1post"), "TimeSS": ("A_s2pre", "B_s2post"), "TimeSO": ("A_s1pre", "B_s1post")}
+    macros = {"cmpEvent": EVENT, "cmpDatePre": "2017-07-07", "cmpDateSOnePost": "2018-03-22", "cmpDateSTwoPost": "2018-03-24",
+              "cmpWindows": str(int(ok.sum())), "cmpFloodedWindows": str(int((flooded & ok).sum()))}
+    for name, (a, b) in pairs.items():
+        d = (dec[a] != dec[b]) & ok
+        tex_list(f"cmp_{name.lower()}.tex", f"cmpCells{name}", cells(d))
+        macros[f"cmpN{name}"] = str(int(d.sum()))
+        macros[f"cmpFl{name}"] = f"{100 * flooded[d].mean():.0f}" if d.any() else "0"
+    tex_list("cmp_time_flooded.tex", "cmpCellsTimeFlooded", cells((dec["A_s1pre"] != dec["B_s1post"]) & ok & flooded))
+    tex_list("cmp_time_error.tex", "cmpCellsTimeError", cells((dec["A_s1pre"] != dec["B_s1post"]) & ok & ~flooded))
+    R60 = json.load(open(os.path.join(ROOT, "exp", "out", "exp60_summary.json")))["results"]["pairs"]
+    S62 = json.load(open(os.path.join(ROOT, "exp", "out", "exp62_summary.json")))
+    R62 = S62["results"]["pairs"]
+    macros.update({"cmpPooledSensPreRate": f"{100 * R60['sensor_only']['disagreement_rate']:.1f}", "cmpPooledSensPreFlooded": f"{100 * R60['sensor_only']['flooded_share']:.1f}",
+                   "cmpPooledTimeSORate": f"{100 * R60['time_only']['disagreement_rate']:.1f}", "cmpPooledTimeSOFlooded": f"{100 * R60['time_only']['flooded_share']:.0f}",
+                   "cmpSquareChips": str(S62["config"]["fourth_cell"]["chips_with_clear_post_optical"]), "cmpSquareEvents": str(len(S62["config"]["fourth_cell"]["events"])),
+                   "cmpSquareSensBFlooded": f"{100 * R62['sensor_only_post']['flooded_share']:.0f}", "cmpSquareTimeSOFlooded": f"{100 * R62['time_only_s1']['flooded_share']:.0f}"})
     with open(os.path.join(OUT, "cmp_numbers.tex"), "w") as f:
-        for k, v in macros.items():
-            f.write(f"\\def\\{k}{{{v}}}\n")
-    print(f"chip {CHIP} ({EVENT}, pre {'-'.join(date_pre)}): {int(ok.sum())} valid windows; same date across sensors {int(d_sens.sum())} differ ({macros['cmpSensFlooded']}% flooded); "
-          f"same sensor across dates {int(d_time.sum())} differ ({macros['cmpTimeFlooded']}% flooded, {macros['cmpTimeError']}% one head off its label)")
+        for key, v in macros.items():
+            f.write(f"\\def\\{key}{{{v}}}\n")
+    print(f"chip {CHIP62} ({EVENT}, exp60 index {k}): {int(ok.sum())} valid windows, {int((flooded & ok).sum())} flooded; differences " +
+          ", ".join(f"{n} {macros['cmpN' + n]} ({macros['cmpFl' + n]}% flooded)" for n in pairs))
 
 
 if __name__ == "__main__":

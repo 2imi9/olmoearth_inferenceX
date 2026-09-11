@@ -74,22 +74,19 @@ Grade on expert labels; never train a rule on them.
 
 ## Compare two inferences of the same scene
 
-![Two dates, two sensors on one GEOID-Flood chip: three pieces of evidence with their dates, three inferences on identical windows, the same-date cross-sensor difference and the same-sensor cross-date difference on the scene, and the label bridge boxed apart](figures/compare.png)
+![The two-period, two-sensor square on one GEOID-Flood chip: four dated inputs, four inferences on identical windows, the same-date and same-sensor differences on the scene, and the label bridge boxed apart](figures/compare.png)
 
-*One GEOID-Flood chip (event EMSR275-1, chip 2293) through `compare`, exp60's three-cell design. Evidence:
-the Sentinel-2 composite and the Sentinel-1 pass of 2017-07-07, and the Sentinel-1 pass of 2018-03-22.
-Inferences: the permanent-water head on each pre-event image, the water-after-the-event head on the
-post-event radar, one Sentinel-1 head for both dates. Same date across sensors: 4 of this chip's 196
-windows differ, none of them flooded; over 55 events 4.9% of 869,160 windows differ and 0.4% of those are
-flooded by the label, so the sensor axis is sensor error alone (preregistered P2 holds). Same sensor
-across dates: 151 windows differ here, 87% flooded by the label and 13% one head off its label; over the
-55 events 3.4% differ and 25.9% of those are flooded, 1.33 times the mixed pair, short of the preregistered
-doubling (P1 fails), because 54.5% of that difference is the pre-event radar calling water that neither
-the label nor the JRC monthly water of that month holds (exp61: 0.1% of those windows are water there). The boxed panel needs labels: violet windows are the flood, teal ones an
-error of one head, amber outlines the four sensor differences. The fourth cell, Sentinel-2 after the
-event, is not in GEOID-Flood; WorldFloods v2 (isp-uv-es/WorldFloodsv2, CC BY-NC 4.0) holds a scene of this
-AoI from 2018-03-24, cut onto the chip's grid on the cluster, and it is 100% cloud there: its cloud band
-flags every pixel and its water band is void. No head was run on it.*
+*One GEOID-Flood chip (event EMSR275-2, Kutina; exp62 chip 21) with all four cells: the Sentinel-2 composite
+and the Sentinel-1 pass of 2017-07-07 read by the permanent-water heads, the Sentinel-1 pass of 2018-03-22
+read by the water-after head (exp60), and WorldFloods v2's Sentinel-2 L1C scene of 2018-03-24 read by the
+post-event optical head exp62 fitted on other activations (radar shown as VH backscatter, water dark). On
+this chip the same-date pairs agree on all 196 windows before and after the event, the same-sensor pairs
+differ on all 196, and every window is flooded by the label. Over the 544 chips with all four cells the
+picture is less clean: the pre-event optical head is off its label on 22% of the windows, on one event
+(the Ebro delta) where the optical head finds a quarter of the label's permanent water, so the two clean
+pairs are the radar one across the event (41% flood) and the cross-sensor one after it (18%); exp62's
+preregistered comparisons fail on that event. The optical pass is two days after the radar one because
+Sentinel-2 crossed the area only on 03-19 and 03-24; on the neighbouring AoI the same pass is cloud.*
 
 The same measurement for the whole event, from the committed decisions alone:
 

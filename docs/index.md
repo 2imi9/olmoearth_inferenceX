@@ -23,18 +23,17 @@ the model. Given a prediction map, it helps with:
    against after fine-tuning: how much they disagree, what the disagreement
    windows have in common and, with labels, which side is right.
 
-![Two inferences of one scene across two dates compared without labels: a GEOID-Flood chip before and after the event, the two decisions on identical windows, the differing windows on the scene, the cues they share, the label bridge boxed apart, the change reading, and whether two differences are the same set](figures/compare.png)
+![The two-period, two-sensor square on one GEOID-Flood chip: four dated inputs, four inferences on identical windows, the same-date and same-sensor differences on the scene, and the label bridge boxed apart](figures/compare.png)
 
-*One GEOID-Flood chip, two dates, two sensors (exp60): the Sentinel-2 composite and the Sentinel-1
-pass of the pre-event date, and the Sentinel-1 pass 8.5 months later, each read by its head on identical
-windows. The two differences isolate one axis each. Same date across sensors: 4 of 196 windows here,
-4.9% over 55 events, and only 0.4% of those windows are the later flood, so the sensor difference is
-sensor error alone. Same sensor across dates: 151 windows here, 87% of them the flood by the label; over
-the 55 events 26%, and more than half of it is the pre-event radar calling water that neither the label
-nor the month's Landsat water product holds (exp61). What a difference is needs labels, so that panel is
-boxed apart. The fourth cell, optical after the event, is not in GEOID-Flood; WorldFloods v2 holds a Sentinel-2 scene of
-this area from 2018-03-24, two days after the radar pass, and over this chip it is entirely cloud, which is
-why flood mapping leans on radar.*
+*The two-period, two-sensor square on one GEOID-Flood chip (event EMSR275-2, Kutina): the Sentinel-2
+composite and the Sentinel-1 pass of 2017-07-07, then the Sentinel-1 pass of 2018-03-22 and, from
+WorldFloods v2, the Sentinel-2 scene of 2018-03-24, each read by its head on identical windows. The
+same-date pairs agree on every window before and after the event; the same-sensor pairs differ on all
+196, and the label says all 196 are the flood. Over exp60's 55 events the same-date pair before the
+event differs on 4.9% of windows and 0.4% of those are the later flood; the radar pair across the event
+differs on 3.4% with 26% flood. On the 544 chips where a clear post-event optical pass exists (exp62)
+the radar pair across the event is 41% flood and the same-date pair after the event 18%. What a
+difference is needs labels, so that panel is boxed apart.*
 
 A worked flood example, runnable from the committed artifacts, is in
 [Usage: compare two inferences of the same scene](Usage.md#compare-two-inferences-of-the-same-scene);

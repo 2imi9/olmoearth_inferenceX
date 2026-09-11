@@ -1726,3 +1726,39 @@
   cited_in:
     - {file: docs/TECHNIQUES.md, marker: geoid-label-is-permwater}
     - {file: docs/results/comparisons.md, marker: geoid-label-is-permwater}
+
+- id: fourth-cell-completed
+  statement: "WorldFloods v2's post-event Sentinel-2 scenes complete the two-period, two-sensor square on 544 of exp60's 4,489 GEOID-Flood chips in 6 events; a post-event optical water head fitted on 1,766 clear WorldFloods chips from 40 scenes of other activations is right on 97.1% of GEOID's water-after windows there and agrees with WorldFloods' own water mask on 97.1%; the two labels agree on 98.4%."
+  status: measured
+  experiments: [exp62]
+  artifacts: [exp/out/exp62_summary.json]
+  check: |-
+    (lambda c, F:
+      c['fourth_cell']['chips_with_clear_post_optical'] == 544 and c['fourth_cell']['of'] == 4489 and len(c['fourth_cell']['events']) == 6
+      and c['fit']['chips'] == 1766 and len(c['fit']['scenes']) == 40
+      and round(F['accuracy_water_after_label'], 3) == 0.971 and round(F['agreement_with_worldfloods_water'], 3) == 0.971 and round(F['worldfloods_vs_geoid_water_after'], 3) == 0.984
+    )(A['exp/out/exp62_summary.json']['config'], A['exp/out/exp62_summary.json']['results']['fourth_cell'])
+  cited_in:
+    - {file: docs/Findings.md, marker: fourth-cell-completed}
+    - {file: docs/TECHNIQUES.md, marker: fourth-cell-completed}
+    - {file: docs/results/comparisons.md, marker: fourth-cell-completed}
+
+- id: fourth-cell-prereg-fails
+  statement: "On the 544 chips with all four cells the preregistered comparisons fail: the optical time-only difference is flooded by the label on 3.8% of its windows against 41.1% for the radar one (P1, one event against five), and the post-event cross-sensor difference on 18.0% (P2, four events against two, p = 0.34), because the pre-event optical head is off the permanent-water label on 22% of these windows (78.1% accuracy; the pre-event radar head 99.0%, the post-event radar head 97.5%): the optical time-only pair differs on 24.4% of windows with the pre-event optical side off on 88.5%, the sensor-only-before pair on 21.9% with that side off on 97.9%; where both radar dates are confident the radar temporal difference is flooded 86.7% of the time."
+  status: rejected
+  experiments: [exp62]
+  artifacts: [exp/out/exp62_summary.json]
+  check: |-
+    (lambda s, R, F:
+      s['prereg']['P1'] is False and s['prereg']['P2'] is False and s['prereg']['complete'] is True
+      and round(R['time_only_s2']['flooded_share'], 3) == 0.038 and round(R['time_only_s1']['flooded_share'], 3) == 0.411 and round(R['sensor_only_post']['flooded_share'], 2) == 0.18
+      and round(R['time_only_s2']['disagreement_rate'], 3) == 0.244 and round(R['time_only_s2']['err_a_share'], 3) == 0.885
+      and round(R['sensor_only_pre']['disagreement_rate'], 3) == 0.219 and round(R['sensor_only_pre']['err_a_share'], 3) == 0.979
+      and round(F['accuracy_own_task_others']['A_s2pre'], 3) == 0.781 and round(F['accuracy_own_task_others']['A_s1pre'], 2) == 0.99 and round(F['accuracy_own_task_others']['B_s1post'], 3) == 0.975
+      and round(R['time_only_s1']['both_confident_flooded'], 3) == 0.867
+      and s['results']['tests']['P1_optical_vs_radar_time_only']['w'] == 1 and s['results']['tests']['P1_optical_vs_radar_time_only']['l'] == 5
+      and s['results']['tests']['P2_sensor_post_vs_time_only_s2']['w'] == 4 and s['results']['tests']['P2_sensor_post_vs_time_only_s2']['l'] == 2
+    )(A['exp/out/exp62_summary.json'], A['exp/out/exp62_summary.json']['results']['pairs'], A['exp/out/exp62_summary.json']['results']['fourth_cell'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: fourth-cell-prereg-fails}
+    - {file: docs/results/comparisons.md, marker: fourth-cell-prereg-fails}
