@@ -14,6 +14,9 @@ dependencies = [
     "huggingface_hub>=0.20",  # oe_inferencex.taskcard resolves encoder configs
 ]
 
+[project.scripts]
+oe-inferencex = "oe_inferencex.cli:main"
+
 [project.optional-dependencies]
 # The encoder stack. Needed by oe_inferencex.{awf,data} and by 22 of the 27
 # experiment scripts; pulls torch, einops and universal-pathlib transitively.

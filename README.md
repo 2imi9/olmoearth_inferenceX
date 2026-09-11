@@ -79,6 +79,8 @@ no torch; the experiments need the encoder.
 git clone https://github.com/2imi9/olmoearth_inferenceX.git
 cd olmoearth_inferenceX
 uv sync
+
+Or from the shell: `oe-inferencex assess scores.tif --out audit` and `oe-inferencex compare a.tif b.tif --out diff` write the same JSON and rasters ([Usage](docs/Usage.md#command-line)).
 uv run pytest
 ```
 

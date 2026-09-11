@@ -4,6 +4,38 @@ The package [`oe_inferencex/`](../oe_inferencex/) is torch-free. It takes a
 prediction map and returns a review plan with a reason per flagged window;
 with a reference map it also scores the plan.
 
+## Command line
+
+Two commands cover the two halves without writing Python. Inputs are GeoTIFFs
+(with the `geo` extra, which brings rasterio) or `.npy` arrays; outputs are plain
+files the caller reads back, and nothing narrates.
+
+```bash
+oe-inferencex assess water_prob.tif --out audit --budgets 0.01 0.05 0.10
+```
+
+writes `audit/assessment.json` (the `assess.summary` view: window count,
+confidence quantiles, boundary share, the review sets, and the risk-coverage
+block when `--reference labels.tif` is given, with its caveat), one
+`review_set_05pct.csv` per budget (rank, window and pixel coordinates, map
+coordinates of the window centre, confidence, boundary), `suspicion.tif` and
+`boundary.tif` on the window grid, and `explanation.json` (the cues each review
+window carries, their measured enrichment, the windows no cue explains). Pass
+`--logits` for a logit map, `--order boundary_first` for the order exp36
+supports, `--patch` for the window size.
+
+```bash
+oe-inferencex compare before.tif after.tif --out diff --labels reference.tif --groups tiles.tif
+```
+
+writes `diff/comparison.json` (the `compare_inferences` summary: how much the
+two decisions differ, per group when `--groups` gives tile or event ids, the
+boundary enrichment of the differing windows, and with `--labels` which side is
+right and the cross-tab), `differing_windows.csv` and `disagreement.tif`. Class
+maps are read as integers; a single-band probability map is thresholded at
+`--threshold` and a multi-band score map argmaxed, so the module never compares
+floating point. The two maps must share one grid.
+
 ## Modules
 
 | Module | What it gives you |

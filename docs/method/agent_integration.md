@@ -9,6 +9,17 @@ evidence itself.
 Index at [../TECHNIQUES.md](../TECHNIQUES.md); recipe at
 [recipe.md](recipe.md).
 
+## As a tool call
+
+An agent that cannot import the package can call the two commands and read the
+JSON back: `oe-inferencex assess <scores> --out <dir>` returns the review sets
+and the explanation, `oe-inferencex compare <a> <b> --out <dir>` the difference
+of two decisions on identical windows, both label-free unless a reference or
+label raster is given. The files are the contract: `assessment.json` and
+`explanation.json` for the first, `comparison.json` for the second, each with
+an `inputs` block naming what was read and a `files` block naming what was
+written. The Usage page lists every field.
+
 ## What this repo provides
 
 | Module | Provides |
