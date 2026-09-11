@@ -5,7 +5,7 @@ composite and the Sentinel-1 pass of the pre-event date, the Sentinel-1 pass aft
 v2's Sentinel-2 scene of 2018-03-28 (the fourth cell, exp62). Decisions: exp60's three (exp/out/exp60_masks.npz) and
 exp62's fourth (exp/out/exp62_masks.npz). The four differences that each isolate one axis, drawn on the scene, and the
 label bridge. Imagery: rasters/cmp_square7.npz, cut once on the cluster from the shard tree and the WorldFloods repo
-(S1 in dB with exp55's rules, S2 digital numbers). Fixed stretches, reflectance 0-1200 DN (L1C with a 600 DN haze offset removed) and VH -32 to -10 dB, so
+(S1 in dB with exp55's rules, S2 digital numbers). Fixed stretches, surface reflectance 0-1200 DN, top-of-atmosphere 0-1400 DN, VH -32 to -10 dB, so
 water is dark in radar (VH) and blue-grey in optics on every panel alike. Numbers from exp/out/exp60_summary.json and
 exp/out/exp62_summary.json, written as TeX macros so the figure cannot drift from the ledger.
 
@@ -55,7 +55,7 @@ def main():
     names = [str(n) for n in z["names"]]
     date = lambda n: re.search(r"_(?:pre|post)_(\d{4})(\d{2})(\d{2})T", n).groups()
     save("cmp_s2_t1.png", optical(z["s2pre"], [2, 1, 0]), 8)                       # encoder order: B02, B03, B04 first
-    save("cmp_s2_t2.png", optical(z["wf_S2"].astype(np.float32), [3, 2, 1], offset=600.0), 8)     # WorldFloods order: B01..B12, B8A ninth; L1C
+    save("cmp_s2_t2.png", optical(z["wf_S2"].astype(np.float32), [3, 2, 1], scale=1400.0), 8)     # WorldFloods order: B01..B12, B8A ninth; L1C top-of-atmosphere
     save("cmp_s1_t1.png", radar(z["s1pre"]), 8)
     save("cmp_s1_t2.png", radar(z["s1post"]), 8)
     for key, d in dec.items():
