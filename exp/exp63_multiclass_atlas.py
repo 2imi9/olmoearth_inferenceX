@@ -166,8 +166,10 @@ def main():
             ref = held[(BASE, 0)]
             groups = np.arange(len(ref["dec"]))[:, None, None]
             for key, h in held.items():
-                masks[f"{task}/{key[0]}/{key[1]}/dec"] = (h["dec"] if key == (BASE, 0) else (align(ref, h) or h)["dec"]).astype(np.int16)
-                masks[f"{task}/{key[0]}/{key[1]}/margin"] = (h["margin"] if key == (BASE, 0) else (align(ref, h) or h)["margin"]).astype(np.float32)
+                # Base's draws share the reference order; aligning them by label hash would permute tiles with identical labels
+                hh = h if key[0] == BASE else (align(ref, h) or h)
+                masks[f"{task}/{key[0]}/{key[1]}/dec"] = hh["dec"].astype(np.int16)
+                masks[f"{task}/{key[0]}/{key[1]}/margin"] = hh["margin"].astype(np.float32)
             masks[f"{task}/y"], masks[f"{task}/ok"] = ref["y"].astype(np.int16), ref["ok"]
             dis = {}
             for model in models:

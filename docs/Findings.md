@@ -125,6 +125,13 @@ events) the fourth cell completes the square: the post-event optical head is
 right on 97% of the windows, and the square is dominated by one event where the
 pre-event optical optical head finds a quarter of the label's permanent water
 (exp62). <!-- claim:fourth-cell-completed -->
+At 15 and 19 classes (exp63, Ai2's MADOS and PASTIS embeddings) the sensor and
+encoder differences stay different sets, and refitting the head moves under
+0.4% of windows against 6 to 25% for a change of encoder; but the boundary cue
+locates differences only where boundaries are rare, 3.5 to 6.2 times on MADOS
+and 1.7 to 1.8 times on PASTIS, where 50% of windows border another class,
+so on dense classes it is the low-margin cue that says where two inferences
+differ. <!-- claim:multiclass-boundary-cue-fails-on-parcels --> <!-- claim:multiclass-sensor-vs-encoder-different -->
 
 The effect size in a reviewer's units (exp55, 45 GEOID-Flood events): on the
 median event the 5% of windows confidence flags hold 88% of the permanent-water

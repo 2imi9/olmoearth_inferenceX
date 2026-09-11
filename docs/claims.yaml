@@ -1762,3 +1762,54 @@
   cited_in:
     - {file: docs/TECHNIQUES.md, marker: fourth-cell-prereg-fails}
     - {file: docs/results/comparisons.md, marker: fourth-cell-prereg-fails}
+
+- id: multiclass-boundary-cue-fails-on-parcels
+  statement: "On Ai2's MADOS embeddings (15 classes) the windows where two encoders' decisions differ sit on a prediction boundary 3.5 to 6.2 times as often as the agreeing windows, but on PASTIS (19 crop classes) only 1.7 to 1.8 times on every one of seven pairs, because 50% of PASTIS's agreeing windows already border another class; the bottom margin quintile locates the differences on both tasks, 3.3 to 6.0 times; preregistered P1 (enrichment above 2 on every pair) fails on the seven PASTIS pairs and holds on the six MADOS ones."
+  status: mixed
+  experiments: [exp63]
+  artifacts: [exp/out/exp63_summary.json]
+  check: |-
+    (lambda s, d, M, P:
+      s['prereg']['P1'] is False and s['prereg']['P1_n_tested'] == 13
+      and all(d[k] > 2 for k in d if k.startswith('mados/')) and all(1.7 <= d[k] < 2 for k in d if k.startswith('pastis_sentinel2/'))
+      and round(min(d[k] for k in d if k.startswith('mados/')), 1) == 3.5 and round(max(d[k] for k in d if k.startswith('mados/')), 1) == 6.2
+      and all(3.3 <= r['where']['low_margin']['enrichment'] <= 6.0 for r in list(M.values()) + list(P.values()))
+      and round(100 * P['olmoearth_base vs galileo_base']['where']['boundary']['share_agree']) == 50
+    )(A['exp/out/exp63_summary.json'], A['exp/out/exp63_summary.json']['prereg']['P1_detail'], A['exp/out/exp63_summary.json']['results']['mados']['pairs'], A['exp/out/exp63_summary.json']['results']['pastis_sentinel2']['pairs'])
+  cited_in:
+    - {file: docs/Findings.md, marker: multiclass-boundary-cue-fails-on-parcels}
+    - {file: docs/TECHNIQUES.md, marker: multiclass-boundary-cue-fails-on-parcels}
+    - {file: docs/results/comparisons.md, marker: multiclass-boundary-cue-fails-on-parcels}
+
+- id: multiclass-sensor-vs-encoder-different
+  statement: "On PASTIS (19 classes) the set of windows where OlmoEarth Base's Sentinel-2 decision differs from its Sentinel-1 plus Sentinel-2 decision and the set where it differs from Galileo's overlap at phi 0.34 pooled (0.25 to 0.34 against each of the five encoders), below 0.5 on 392 tiles against 65 (one-sided sign test p < 1e-50); preregistered P2 holds: the sensor difference and the encoder difference are different sets at many classes too."
+  status: supported
+  experiments: [exp63]
+  artifacts: [exp/out/exp63_summary.json]
+  check: |-
+    (lambda s, v:
+      s['prereg']['P2'] is True and round(v['pooled_phi'], 2) == 0.34 and v['tiles_below'] == 392 and v['tiles_at_or_above'] == 65 and v['sign_p'] < 1e-50
+      and all(0.25 <= x <= 0.35 for x in v['sensor_vs_each_encoder'].values())
+    )(A['exp/out/exp63_summary.json'], A['exp/out/exp63_summary.json']['results']['pastis_sentinel2']['sensor_vs_encoder'])
+  cited_in:
+    - {file: docs/Findings.md, marker: multiclass-sensor-vs-encoder-different}
+    - {file: docs/TECHNIQUES.md, marker: multiclass-sensor-vs-encoder-different}
+    - {file: docs/results/comparisons.md, marker: multiclass-sensor-vs-encoder-different}
+
+- id: multiclass-atlas-composition
+  statement: "On MADOS and PASTIS, OlmoEarth Base against its own second probe draw differs on 0.31% and 0.17% of windows while each other encoder differs from it on 6.2 to 25.4%, and the PASTIS sensor pair on 6.0%; on MADOS Base and the three encoders near its accuracy split their disagreements 38 to 57% each way, on PASTIS Base is right on 50 to 68% of the differing windows and the other encoder on 14 to 29% with 18 to 21% wrong on both sides, and on the sensor pair 43% against 35%; the five encoder disagreement sets overlap at a median phi of 0.45 (MADOS) and 0.50 (PASTIS)."
+  status: measured
+  experiments: [exp63]
+  artifacts: [exp/out/exp63_summary.json]
+  check: |-
+    (lambda M, P, R:
+      round(100 * M['draw 0 vs draw 1']['disagreement_rate'], 2) == 0.31 and round(100 * P['draw 0 vs draw 1']['disagreement_rate'], 2) == 0.17
+      and all(6.2 <= round(100 * r['disagreement_rate'], 1) <= 25.4 for k, r in list(M.items()) + list(P.items()) if k.startswith('olmoearth_base vs'))
+      and round(P['S2 vs S1+S2']['disagreement_rate'], 3) == 0.06
+      and all(0.50 <= round(P[k]['graded']['which_side']['share_a_right'], 2) <= 0.68 and 0.14 <= round(P[k]['graded']['which_side']['share_b_right'], 2) <= 0.29 for k in P if k.startswith('olmoearth_base vs'))
+      and round(P['S2 vs S1+S2']['graded']['which_side']['share_a_right'], 2) == 0.43 and round(P['S2 vs S1+S2']['graded']['which_side']['share_b_right'], 2) == 0.35
+      and round(R['mados']['stability_across_encoders']['median_pairwise_phi'], 2) == 0.45 and round(R['pastis_sentinel2']['stability_across_encoders']['median_pairwise_phi'], 2) == 0.50
+    )(A['exp/out/exp63_summary.json']['results']['mados']['pairs'], A['exp/out/exp63_summary.json']['results']['pastis_sentinel2']['pairs'], A['exp/out/exp63_summary.json']['results'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: multiclass-atlas-composition}
+    - {file: docs/results/comparisons.md, marker: multiclass-atlas-composition}

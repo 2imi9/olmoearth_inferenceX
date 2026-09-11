@@ -1210,6 +1210,58 @@ Runtime 14:12 (job 799540; the head 12 min, the cut 92 s). Source
 `exp/out/exp62_summary.json`, `exp/out/exp62_masks.npz` (the fourth cell's decisions
 and margins, WorldFloods' water and clear masks per window, chip ids).
 
+## The difference atlas at 15 and 19 classes (exp63)
+
+Every comparison finding so far was a binary-water finding. exp63 runs the atlas
+on Ai2's paper embeddings for MADOS (marine debris, 15 classes) and PASTIS (crop
+types, 19 classes): exp54's probes per encoder, decisions on 4-px windows aligned
+by the label tile, OlmoEarth Base with three probe draws, each other encoder
+against Base, Base against its own second draw, and on PASTIS the sensor pair,
+Base on Sentinel-2 against Base on Sentinel-1 plus Sentinel-2 over the same
+scenes. Cues of the first side: boundary, the bottom margin quintile, the top
+entropy quintile. Windows: 78,720 on MADOS, 458,638 on PASTIS.
+
+| Pair | differing windows | boundary | low margin | high entropy | a right / b right / neither | errors phi |
+|---|---|---|---|---|---|---|
+| MADOS: Base vs galileo | 7.6% | 4.8x | 5.2x | 5.3x | 43% / 47% / 11% | 0.49 |
+| MADOS: Base vs croma | 6.7% | 5.5x | 5.4x | 5.4x | 53% / 38% / 9% | 0.58 |
+| MADOS: Base vs terramind | 6.2% | 5.1x | 4.9x | 4.9x | 38% / 57% / 5% | 0.53 |
+| MADOS: Base vs clay | 15.2% | 3.5x | 4.1x | 4.1x | 65% / 19% / 16% | 0.38 |
+| MADOS: Base vs anysat | 13.4% | 6.2x | 6.0x | 5.9x | 86% / 9% / 5% | 0.49 |
+| MADOS: Base draw 0 vs draw 1 | 0.3% | 5.0x | 5.1x | 5.1x | 48% / 48% / 4% | 0.98 |
+| PASTIS: Base vs galileo | 13.6% | 1.8x | 4.7x | 3.8x | 56% / 23% / 21% | 0.68 |
+| PASTIS: Base vs croma | 13.5% | 1.8x | 4.9x | 3.9x | 50% / 29% / 21% | 0.67 |
+| PASTIS: Base vs terramind | 13.7% | 1.8x | 4.8x | 3.8x | 53% / 26% / 21% | 0.68 |
+| PASTIS: Base vs clay | 25.4% | 1.8x | 3.3x | 3.4x | 68% / 14% / 18% | 0.50 |
+| PASTIS: Base vs anysat | 13.9% | 1.8x | 4.7x | 3.7x | 51% / 29% / 20% | 0.66 |
+| PASTIS: Base draw 0 vs draw 1 | 0.2% | 1.7x | 5.0x | 3.5x | 35% / 40% / 24% | 1.00 |
+| PASTIS: Base S2 vs S1+S2 | 6.0% | 1.8x | 5.8x | 3.8x | 43% / 35% / 22% | 0.85 | <!-- claim:multiclass-atlas-composition -->
+
+**The boundary cue does not travel to parcels.** On MADOS the differing windows
+sit on boundaries 3.5 to 6.2 times as often as the agreeing ones, as on floods;
+on PASTIS 1.7 to 1.8 times on every pair, because 50% of PASTIS's agreeing
+windows already border another class (parcels are small) against 14% on
+MADOS, so the cue has nowhere to concentrate. Preregistered P1 fails on the seven
+PASTIS pairs and holds on the six MADOS ones. Low margin and high entropy locate
+the differences on both tasks, 3.3 to 6.0 times, and they are the cue to use
+where classes are dense. <!-- claim:multiclass-boundary-cue-fails-on-parcels -->
+**The sensor difference and the encoder difference are different sets at 19
+classes too:** the PASTIS S2-vs-S1+S2 set and the Base-vs-Galileo set overlap at
+phi 0.34 pooled (galileo 0.34, croma 0.32, terramind 0.34, clay 0.25, anysat 0.31 against each encoder), below 0.5 on
+392 tiles against 65 (p < 1e-50); P2 holds. The five encoder disagreement sets
+overlap at a median phi of 0.50 on PASTIS and 0.45 on MADOS. <!-- claim:multiclass-sensor-vs-encoder-different -->
+**The head-draw floor.** Base against its own second probe draw differs on
+0.31% of MADOS windows and 0.17% of PASTIS windows: every encoder
+difference (6 to 25%) and the sensor difference (6.0%) is 20 to 150 times above
+the noise of refitting the head, the first such floor for any difference rate
+here. Which side is right follows accuracy: on MADOS Base and the three encoders
+near its accuracy split their disagreements 38 to 57% each way; on PASTIS,
+where Base leads every encoder by 3 to 14 points, it is right on 50 to 68% of the
+differing windows and the other side on 14 to 29%, with a fifth of the windows
+wrong on both sides, the multi-class case the binary tasks could not show. On the
+sensor pair neither side is preferred (43% against 35%). Runtime 11:37 (job
+800249, no downloads). Source `exp/out/exp63_summary.json`, `exp/out/exp63_masks.npz`. <!-- claim:multiclass-atlas-composition -->
+
 ## Served land cover change rasters (exp20)
 
 First assessment of a served output: ten 512-px windows (about

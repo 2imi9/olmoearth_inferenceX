@@ -594,3 +594,20 @@ def test_exp62_fourth_cell_completed_and_the_pre_event_optical_head_fails_on_one
     tortosa = m["event"] == "EMSR279-11"
     assert tortosa.sum() == 393 and round(float(((a2 == ya)[tortosa[:, None, None] & ok]).mean()), 3) == 0.699
     assert round(float(a2[tortosa[:, None, None] & ok].mean()), 2) == 0.09 and round(float(ya[tortosa[:, None, None] & ok].mean()), 2) == 0.38
+
+
+def test_exp63_boundary_cue_fails_on_parcels_and_the_draw_floor_is_tiny():
+    """exp63 (job 800249): P1 fails on the seven PASTIS pairs and holds on MADOS, P2 holds; the head-draw floor recomputed from
+    the committed decisions."""
+    s = json.load(open(_need("exp63_summary.json")))
+    assert s["prereg"]["P1"] is False and s["prereg"]["P2"] is True and s["prereg"]["complete"] is True and s["n_failures"] == 0
+    d = s["prereg"]["P1_detail"]
+    assert sum(v > 2 for v in d.values()) == 6 and all(v < 2 for k, v in d.items() if k.startswith("pastis"))
+    z = np.load(_need("exp63_masks.npz"))
+    for task in ("mados", "pastis_sentinel2"):
+        ok = z[f"{task}/ok"]
+        d01 = (z[f"{task}/olmoearth_base/0/dec"] != z[f"{task}/olmoearth_base/1/dec"]) & ok
+        # the saved draw-1 decisions were aligned by label hash, which permutes tiles with identical labels: 21 windows on PASTIS
+        assert abs(d01.sum() / ok.sum() - s["results"][task]["pairs"]["draw 0 vs draw 1"]["disagreement_rate"]) < 1e-4
+        dg = (z[f"{task}/olmoearth_base/0/dec"] != z[f"{task}/galileo_base/0/dec"]) & ok
+        assert dg.sum() > 20 * d01.sum()
