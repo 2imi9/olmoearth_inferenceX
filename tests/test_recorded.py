@@ -510,3 +510,27 @@ def test_exp57_disagreement_is_boundary_located_and_the_differences_are_differen
     assert round(ft["test"]["graded"]["crosstab"]["share_corrected"], 3) == 0.427
     g = s["results"]["geoid"]["graded"]
     assert round(g["crosstab_own_labels"]["phi"], 3) == 0.585 and round(g["disagreement_is"]["share_flooded_by_label"], 2) == 0.27
+
+
+def test_exp58_tool_beats_the_raw_diff_only_modestly():
+    """exp58 (job 787530; the GEOID half is job 789352): believing the larger margin beats the coin flip on the disagreement
+    windows of all 15 pairs (per-tile p < 0.05) but misses the preregistered 55% on four of them (P1 fails); ordering the
+    set by the first inference's confidence holds more than 60% of its errors in the least confident half only where the
+    other side is much worse (P2 fails); the rule is less accurate on the persistent disagreement windows than on the
+    transient ones on all six pair-testbeds. P3 (GEOID change) is added when that half lands."""
+    s = json.load(open(_need("exp58_summary.json")))
+    assert s["prereg"]["P1"] is False and s["prereg"]["P2"] is False and s["prereg"]["n_tested"] == 15
+    d = s["prereg"]["detail"]
+    assert len(d) == 15 and all(v["resolution_p"] < 0.05 for v in d.values())
+    assert round(d["offsets/bolivia"]["share_right"], 2) == 0.51
+    R = s["results"]
+    assert round(R["sensors"]["test"]["resolution"]["share_right"], 2) == 0.70 and round(R["sensors"]["test"]["resolution"]["always_a"], 2) == 0.84
+    assert round(R["sensors"]["bolivia"]["targeting"]["capture"]["0.5"], 2) == 0.74 and round(R["sensors"]["test"]["targeting"]["capture"]["0.5"], 2) == 0.92
+    for p in ("offsets", "backbones", "sensors"):
+        for t in ("bolivia", "test"):
+            st = R[p][t]["stability"]
+            assert st["resolution_persistent"] < st["resolution_transient"]
+    assert s["prereg"]["P3"] is False and s["prereg"]["complete"] is True and s["n_failures"] == 0
+    c = R["geoid"]["change"]
+    assert round(c["ratio"], 2) == 1.92 and (c["over_events"]["w"], c["over_events"]["l"]) == (16, 9) and c["over_events"]["sign_p"] > 0.05
+    assert R["geoid"]["resolution"]["share_right"] < 0.5 < R["geoid"]["resolution"]["always_b"]   # the S2 head predicts permanent water: wrong on every flooded window

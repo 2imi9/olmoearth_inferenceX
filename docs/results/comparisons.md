@@ -937,6 +937,124 @@ Runtime 19:44 for the Sen1Floods11 and encoder pairs, 11 minutes of it the
 fine-tune, and 3:34 for the GEOID-Flood job. Source
 `exp/out/exp57_summary.json`, jobs 779972 and 779973.
 
+## Is the comparison tool better than the raw diff? (exp58)
+
+exp57 measured the difference between two inferences of the same scene and
+showed where it sits; the question a user asks next is whether the package
+tells them anything a raw disagreement map does not. The raw diff is the
+baseline. It says which windows changed and nothing else: every disagreement
+window is equally suspect, no side is preferred, and on two dates every change
+is a change. `oe_inferencex.compare` reads the same disagreement set
+label-free in three ways, and each reading is a prediction about the labels
+that exp58 grades. Resolution believes the side with the larger margin
+|p - 0.5| on the window (on a binary task the mean-probability decision),
+graded as the share of disagreement windows where the chosen side matches the
+label, against the raw diff's coin flip (0.5 in expectation, since exactly one
+side is right on a binary window), always the first inference and always the
+second; recorded alongside, not preregistered, the same rule on
+rank-normalised margins, each side's margin as its midrank percentile over the
+testbed's valid windows. Targeting orders the disagreement windows by the
+first inference's own confidence, least confident first, where the raw diff
+has no order, graded as the share of the first inference's errors inside the
+least confident half of the set (a random order captures 0.50 in expectation)
+and inside the least confident 20%. Change, on GEOID-Flood, where the two
+heads predict different things, reads a disagreement window where both sides
+are confident (each margin at least 0.25) as change where the raw diff reads
+every disagreement as change, graded by the flooded-by-label share among the
+both-confident disagreements against the share among all of them. The pairs
+and grids are exp57's: crop offset 0 against 2, v1 against v1.2 Base, the S2
+head against the S1 head, the frozen head against FT-S2 v1 (fine-tuned once
+more with exp52's recipe), each on Bolivia and the multi-region test split of
+Sen1Floods11 on the W1 grid; the seven encoders against OlmoEarth Base on
+Ai2's embeddings and probe on their test split; the pre-event S2 head against
+the post-event S1 head per GEOID-Flood event. The per-tile tests are one-sided
+exact sign tests that the reading beats its baseline on more tiles than not,
+over the tiles with at least 3 disagreement windows, and for the three pairs
+with exp57's three head draws the resolution rule is also graded on the
+disagreement windows that persist across all draws against those that appear
+in draw 0 only.
+
+| Pair, testbed | disagreement windows | right on them: the rule / always the first / always the second | resolution, tiles w/l, p | least confident half holds (random 0.50) | targeting, tiles w/l, p | the rule on persistent / transient windows |
+|---|---|---|---|---|---|---|
+| offset 0 vs offset 2, Bolivia | 2,458 | 51.3% / 39.0% / 61.0% | 148/116, p = 0.028 | 52.1% | 117/101, p = 0.15 | 0.45 / 0.56 |
+| offset 0 vs offset 2, test split | 3,852 | 58.2% / 49.8% / 50.2% | 250/109, p = 3.5e-14 | 56.8% | 208/107, p = 6.7e-9 | 0.57 / 0.60 |
+| v1 vs v1.2 Base, Bolivia | 2,850 | 56.0% / 55.3% / 44.7% | 151/92, p = 9.3e-5 | 56.6% | 109/112, p = 0.61 | 0.54 / 0.58 |
+| v1 vs v1.2 Base, test split | 2,971 | 57.7% / 47.4% / 52.6% | 191/106, p = 4.6e-7 | 54.4% | 166/103, p = 7.4e-5 | 0.56 / 0.60 |
+| S2 head vs S1 head, Bolivia | 7,761 | 68.2% / 67.3% / 32.7% | 254/47, p = 8.1e-36 | 73.8% | 192/83, p = 2.1e-11 | 0.67 / 0.72 |
+| S2 head vs S1 head, test split | 12,535 | 69.8% / 84.2% / 15.8% | 374/92, p = 1.1e-41 | 92.3% | 297/163, p = 2.1e-10 | 0.68 / 0.76 |
+| frozen vs FT-S2 v1, Bolivia | 5,141 | 61.3% / 24.7% / 75.3% | 191/80, p = 6.1e-12 | 52.1% | 153/80, p = 1.0e-6 | one fine-tune |
+| frozen vs FT-S2 v1, test split | 4,068 | 55.1% / 28.1% / 71.9% | 202/105, p = 1.7e-8 | 50.1% | 151/105, p = 0.0024 | one fine-tune |
+| OlmoEarth Base vs galileo_base, their test split | 16,588 | 54.1% / 47.5% / 52.5% | 633/351, p = 9.4e-20 | 52.2% | 501/370, p = 5.1e-6 | one probe each |
+| OlmoEarth Base vs croma_base, their test split | 17,034 | 55.1% / 50.5% / 49.5% | 693/354, p = 2.8e-26 | 53.4% | 556/371, p = 6.7e-10 | one probe each |
+| OlmoEarth Base vs terramind_base, their test split | 15,853 | 54.4% / 53.7% / 46.3% | 644/346, p = 9.4e-22 | 54.7% | 500/358, p = 7.0e-7 | one probe each |
+| OlmoEarth Base vs clay_large, their test split | 17,363 | 55.9% / 53.3% / 46.7% | 708/344, p = 6.1e-30 | 55.6% | 580/375, p = 1.7e-11 | one probe each |
+| OlmoEarth Base vs satlas_base, their test split | 39,731 | 61.6% / 71.0% / 29.0% | 978/348, p = 7.8e-70 | 71.5% | 939/334, p = 3.7e-67 | one probe each |
+| OlmoEarth Base vs anysat, their test split | 19,505 | 54.7% / 54.9% / 45.1% | 728/375, p = 5.6e-27 | 55.3% | 601/379, p = 6.7e-13 | one probe each |
+| OlmoEarth Base vs panopticon, their test split | 19,060 | 56.1% / 56.2% / 43.8% | 716/363, p = 1.5e-27 | 57.1% | 599/374, p = 2.7e-13 | one probe each |
+
+Believing the more confident side beats the coin flip everywhere: the chosen
+side is right on 51-70% of the disagreement windows on all fifteen
+pair-testbeds and on more tiles than not on every one (sign test p from 0.028
+on the Bolivia offsets to 7.8e-70 on Satlas), but it misses the preregistered
+55% pooled on four of them, the Bolivia offsets at 51.3% and three encoders at
+54.1-54.7% (Galileo, TerraMind, AnySat), and wherever one side is known to be
+better the rule is far below always choosing it: the S2 head is right on 84%
+of its disagreements with the S1 head on the test split against the rule's
+70%, and the fine-tuned model on 75% / 72% of its disagreements with the
+frozen head against the rule's 61% / 55%. <!-- claim:tool-vs-diff-resolution -->
+The rank-normalised variant changes little: 0.55 instead of 0.51 on the
+Bolivia offsets, within 0.02 everywhere else, and worse on the two sensor
+pairs (0.64 / 0.63 against 0.68 / 0.70).
+
+Ordering the disagreement set by the first inference's confidence adds little
+to the set. On twelve of the fifteen pair-testbeds the least confident half
+holds 50-57% of the first inference's errors against the random order's 50%,
+and the least confident 20% holds 20-25%; the per-tile test still passes on
+ten of the twelve and fails on the Bolivia offsets and backbones. The order
+helps only where the other side is much worse, so that the first inference's
+few errors on the set are its least confident windows: 74% / 92% of the S2
+head's errors on its disagreements with the S1 head, which is wrong on 67% /
+84% of them, and 72% of OlmoEarth Base's errors on its disagreements with
+Satlas, wrong on 71%. <!-- claim:tool-vs-diff-targeting -->
+
+A disagreement that survives redrawing the head is a hard window, not a
+settled one. On all six pair-testbeds with head draws the resolution rule is
+less accurate on the persistent disagreement windows (those in all three
+draws) than on the transient ones (draw 0 only), 0.45-0.68 against 0.56-0.76,
+the opposite of the stated prediction; the persistent set is 46-80% of the
+disagreement windows, largest on the two sensor pairs. <!-- claim:tool-vs-diff-persistence -->
+
+On GEOID-Flood the two heads predict different things, permanent water before the
+event and water after it, so the reading is change against error. Of the 29,392
+disagreement windows 12,142 (41%) have both sides confident, a margin of at least
+0.25 on each; 52% of those are flooded by the label, against 27% of all
+disagreement windows and 10% of the rest, 1.9 times the raw diff's precision for
+change pooled over the 55 events. Per event the reading wins on 16, loses on 9 and
+ties on 16 of the 41 events with at least 20 disagreement windows (one-sided sign
+test p = 0.11): the pooled ratio clears the preregistered 1.5, the event test does
+not. Where one side is unconfident, that side is wrong on its own task half of the
+time (50%). Graded on water after the event, believing the more confident side is <!-- claim:tool-vs-diff-change -->
+right on 45% of the disagreement windows (always the S1 head 60%; tiles 27/14,
+p = 0.03), since the S2 head predicts permanent water and is wrong on every flooded
+window by construction; the least confident half of the set holds 57% of its errors
+(tiles 28/12, p = 0.008).
+
+Both preregistered results fail. P1: the chosen side is right on at or below
+55% of the disagreement windows pooled on four of the fifteen pair-testbeds
+(the Bolivia offsets 51.3%, Galileo 54.1%, TerraMind 54.4%, AnySat 54.7%), so
+at the preregistered level a margin rule is no better than the raw diff's
+silence on which side to believe, though it beats the coin flip by the
+per-tile test on every pair. P2: the least confident half holds below 55% of
+the first inference's errors pooled on seven pair-testbeds and the per-tile
+test misses 0.05 on two more (the Bolivia offsets and backbones), eight in
+all, so the order adds nothing to the set.
+P3 fails on its event test: the both-confident windows are flooded 1.9 times as
+often pooled, above the preregistered 1.5, but on 16 events against 9 (p = 0.11),
+short of the majority the test required; confidence on both sides separates change
+from error in the pooled count and not event by event. <!-- claim:tool-vs-diff-change -->
+Runtime 18:17 for the Sen1Floods11 and encoder pairs and 6:10 for GEOID-Flood,
+refetching exp55's shard subset after the extracted tree had been emptied. Source `exp/out/exp58_summary.json`, jobs 787530 and 789352.
+
 ## Served land cover change rasters (exp20)
 
 First assessment of a served output: ten 512-px windows (about

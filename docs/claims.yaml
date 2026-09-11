@@ -1533,3 +1533,78 @@
     )(A['exp/out/exp57_summary.json']['results'], A['exp/out/exp57_summary.json']['results']['encoders'], A['exp/out/exp57_summary.json']['results']['geoid'], A['exp/out/exp52_summary.json'], A['exp/out/exp51_summary.json'], A['exp/out/exp55_summary.json'])
   cited_in:
     - {file: docs/results/comparisons.md, marker: atlas-reproduces-recorded-cross-tabs}
+
+- id: tool-vs-diff-resolution
+  statement: "Believing the side with the larger margin is right on more disagreement windows than a coin flip on every pair (51-70% pooled; one-sided per-tile sign tests p <= 0.03 on all 15), but the preregistered 55% is missed on the Bolivia crop offsets (51%) and three encoders (Galileo, TerraMind and AnySat, 54-55%), and wherever one side is known to be better the rule falls short of always choosing it (the S2 head is right on 84% of the test-split disagreements against the rule's 70%; the fine-tuned model on 75% / 72% (Bolivia / test) against 61% / 55%); P1 fails."
+  status: mixed
+  experiments: [exp58]
+  artifacts: [exp/out/exp58_summary.json]
+  check: |-
+    (lambda s, d, r:
+      s['prereg']['P1'] is False and s['prereg']['n_tested'] == 15 and len(d) == 15
+      and all(v['resolution_p'] < 0.05 and 0.51 <= v['share_right'] <= 0.70 for v in d.values())
+      and max(v['resolution_p'] for v in d.values()) <= 0.03
+      and round(min(v['share_right'] for v in d.values()), 2) == 0.51 and round(max(v['share_right'] for v in d.values()), 2) == 0.70
+      and d['offsets/bolivia']['share_right'] < 0.55
+      and sorted(k for k, v in d.items() if v['share_right'] < 0.55) == ['encoders/anysat', 'encoders/galileo_base', 'encoders/terramind_base', 'offsets/bolivia']
+      and r['sensors']['test']['resolution']['always_a'] > r['sensors']['test']['resolution']['share_right'] + 0.1
+      and round(r['sensors']['test']['resolution']['always_a'], 2) == 0.84 and round(r['sensors']['test']['resolution']['share_right'], 2) == 0.70
+      and all(r['finetune'][t]['resolution']['always_b'] > r['finetune'][t]['resolution']['share_right'] + 0.1 for t in ('bolivia', 'test'))
+      and round(r['finetune']['bolivia']['resolution']['always_b'], 2) == 0.75 and round(r['finetune']['test']['resolution']['always_b'], 2) == 0.72
+      and round(r['finetune']['bolivia']['resolution']['share_right'], 2) == 0.61 and round(r['finetune']['test']['resolution']['share_right'], 2) == 0.55
+    )(A['exp/out/exp58_summary.json'], A['exp/out/exp58_summary.json']['prereg']['detail'], A['exp/out/exp58_summary.json']['results'])
+  cited_in:
+    - {file: docs/Findings.md, marker: tool-vs-diff-resolution}
+    - {file: docs/results/comparisons.md, marker: tool-vs-diff-resolution}
+    - {file: docs/TECHNIQUES.md, marker: tool-vs-diff-resolution}
+
+- id: tool-vs-diff-targeting
+  statement: "Ordering the disagreement windows by the first inference's confidence holds 50-57% of its errors in the least confident half on twelve of the fifteen pairs, no better than the unordered set's 50%; it helps only where the other side is much worse (the S1 head, 74% / 92% on Bolivia / test; Satlas, 72%); P2 fails."
+  status: rejected
+  experiments: [exp58]
+  artifacts: [exp/out/exp58_summary.json]
+  check: |-
+    (lambda s, d, r, E:
+      s['prereg']['P2'] is False and len(d) == 15
+      and all(r['sensors'][t]['targeting']['capture']['0.5'] >= 0.7 and r['sensors'][t]['targeting']['random']['0.5'] == 0.5 for t in ('bolivia', 'test'))
+      and round(r['sensors']['bolivia']['targeting']['capture']['0.5'], 2) == 0.74 and round(r['sensors']['test']['targeting']['capture']['0.5'], 2) == 0.92
+      and E['satlas_base']['targeting']['capture']['0.5'] >= 0.7 and round(E['satlas_base']['targeting']['capture']['0.5'], 2) == 0.72
+      and sorted(k for k, v in d.items() if v['capture_50'] >= 0.6) == ['encoders/satlas_base', 'sensors/bolivia', 'sensors/test']
+      and sum(v['capture_50'] < 0.6 for v in d.values()) == 12
+      and all(0.50 <= round(v['capture_50'], 2) <= 0.57 for v in d.values() if v['capture_50'] < 0.6)
+    )(A['exp/out/exp58_summary.json'], A['exp/out/exp58_summary.json']['prereg']['detail'], A['exp/out/exp58_summary.json']['results'], A['exp/out/exp58_summary.json']['results']['encoders'])
+  cited_in:
+    - {file: docs/Findings.md, marker: tool-vs-diff-targeting}
+    - {file: docs/results/comparisons.md, marker: tool-vs-diff-targeting}
+    - {file: docs/TECHNIQUES.md, marker: tool-vs-diff-targeting}
+
+- id: tool-vs-diff-persistence
+  statement: The resolution rule is less accurate on the disagreement windows that persist across three head draws than on the transient ones on all six pair-testbeds (0.45-0.68 against 0.56-0.76), the opposite of the stated prediction.
+  status: measured
+  experiments: [exp58]
+  artifacts: [exp/out/exp58_summary.json]
+  check: |-
+    (lambda S:
+      len(S) == 6 and all(x['n_draws'] == 3 and x['resolution_persistent'] < x['resolution_transient'] for x in S)
+      and round(min(x['resolution_persistent'] for x in S), 2) == 0.45 and round(max(x['resolution_persistent'] for x in S), 2) == 0.68
+      and round(min(x['resolution_transient'] for x in S), 2) == 0.56 and round(max(x['resolution_transient'] for x in S), 2) == 0.76
+    )([A['exp/out/exp58_summary.json']['results'][p][t]['stability'] for p in ('offsets', 'backbones', 'sensors') for t in ('bolivia', 'test')])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: tool-vs-diff-persistence}
+
+- id: tool-vs-diff-change
+  statement: "On GEOID-Flood the disagreement windows where both heads are confident (a margin of at least 0.25 on each side, 41% of the set) are flooded by the label 1.9 times as often as the disagreement windows as a whole (52% against 27%), above the preregistered 1.5 pooled over the 55 events, but the reading wins on 16 events against 9 (16 ties, one-sided sign test p = 0.11), short of the event-level majority P3 required; P3 fails on its event test."
+  status: mixed
+  experiments: [exp58]
+  artifacts: [exp/out/exp58_summary.json]
+  check: |-
+    (lambda s, c:
+      s['prereg']['P3'] is False and s['prereg']['complete'] is True
+      and round(c['ratio'], 2) == 1.92 and c['ratio'] >= 1.5
+      and round(c['flooded_both_confident'], 2) == 0.52 and round(c['flooded_all'], 2) == 0.27
+      and round(c['share_both_confident'], 2) == 0.41
+      and c['over_events']['w'] == 16 and c['over_events']['l'] == 9 and c['over_events']['sign_p'] > 0.05
+    )(A['exp/out/exp58_summary.json'], A['exp/out/exp58_summary.json']['results']['geoid']['change'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: tool-vs-diff-change}
+    - {file: docs/results/comparisons.md, marker: tool-vs-diff-change}

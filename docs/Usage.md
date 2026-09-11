@@ -115,6 +115,11 @@ summary(out)                                # the JSON-safe view, no arrays
   difference. `ok` and the cues are boolean or 0/1 arrays of the same
   shape; `stability` gives the pairwise phi of several disagreement masks,
   the test that two runs flag the same set.
+- Which side to believe is not a label-free reading. On the disagreement
+  windows the more confident side is right more often than a coin flip and
+  far less often than the side the labels prefer, and the first inference's
+  confidence does not order the set (exp58); the module resolves nothing and
+  reports both sides.
 - The disagreement mask stays in `out["arrays"]`. `assess.summary(out)`
   gives the JSON-safe view that crosses a tool boundary, as the
   [agent contract](method/agent_integration.md) requires; undefined values

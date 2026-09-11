@@ -185,6 +185,11 @@ per-tile finding rests on our S2 head (exp51). <!-- claim:v12-bolivia-their-read
 The review set does not buy label efficiency: choosing fine-tuning tiles by
 the audit's suspicion is worse than random on the multi-region split at every
 budget (exp56). <!-- claim:audit-does-not-save-labels -->
+The comparison tool tells a user only modestly more than a raw disagreement
+map: on the windows where two inferences disagree the more confident side is
+right on 51 to 70%, better than a coin flip everywhere and far below the side
+the labels prefer, and the first inference's confidence does not order the
+disagreement set (exp58). <!-- claim:tool-vs-diff-resolution --> <!-- claim:tool-vs-diff-targeting -->
 Ai2's multi-class embeddings supplied dense few-class testbeds (exp54;
 [issue 7](https://github.com/2imi9/olmoearth_inferenceX/issues/7) closed); a
 second fine-tuned dense task with expert labels and a spatial split is still
