@@ -23,6 +23,8 @@ the model. Given a prediction map, it helps with:
    against after fine-tuning: how much they disagree, what the disagreement
    windows have in common and, with labels, which side is right.
 
+<img src="docs/figures/compare.png" alt="Two inferences of one scene compared without labels: the two decisions on identical windows, the disagreement windows on the scene, the cues they share, whether two differences are the same set, the same measurement across two dates, and the label bridge boxed apart" width="760">
+
 Full documentation is available at **https://olmoearth-inferencex.readthedocs.io/**
 (source in [docs/](docs/index.md)).
 

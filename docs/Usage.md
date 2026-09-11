@@ -74,6 +74,10 @@ Grade on expert labels; never train a rule on them.
 
 ## Compare two inferences of the same scene
 
+![Comparing two inferences of one scene: Bolivia tile 209, the S2 head against the S1 head, the disagreement windows, the cue enrichment, the stability matrix, the two-date reading and the label bridge](figures/compare.png)
+
+*Tile 209 of Sen1Floods11 Bolivia through `compare`: every number is exp57's or exp58's; the label bridge is boxed apart because it needs labels.*
+
 Two backbones, two sensors, a frozen and a fine-tuned model, or the same
 model on shifted crops: `compare` measures how their decisions differ on the
 windows both predicted, and grades the difference where labels exist.

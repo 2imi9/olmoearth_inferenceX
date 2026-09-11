@@ -23,6 +23,8 @@ the model. Given a prediction map, it helps with:
    against after fine-tuning: how much they disagree, what the disagreement
    windows have in common and, with labels, which side is right.
 
+![Two inferences of one scene compared without labels: the two decisions, the disagreement windows on the scene, the cues they share, whether two differences are the same set, the same measurement across two dates, and the label bridge boxed apart](figures/compare.png)
+
 ## New to the repository?
 
 For the short version, read [Findings](Findings.md): what holds, the numbers,
