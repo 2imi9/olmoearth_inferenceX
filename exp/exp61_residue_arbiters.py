@@ -169,13 +169,15 @@ def gsw_chip(tile_path, r, c, year, month):
         b = ds.bounds
         if b.right < lon0 or b.left > lon1 or b.top < lat0 or b.bottom > lat1:
             continue
-        sw = ds.window(max(lon0, b.left), max(lat0, b.bottom), min(lon1, b.right), min(lat1, b.top)).round_offsets().round_lengths()
+        w0 = ds.window(max(lon0, b.left), max(lat0, b.bottom), min(lon1, b.right), min(lat1, b.top)).round_offsets().round_lengths()
+        c0, r0 = max(int(w0.col_off) - 1, 0), max(int(w0.row_off) - 1, 0)                  # one source pixel of padding: no uncovered strip
+        sw = Window(c0, r0, min(int(w0.width) + 2, ds.width - c0), min(int(w0.height) + 2, ds.height - r0))
         if sw.width < 1 or sw.height < 1:
             continue
         src_arr = ds.read(1, window=sw)
         tmp = np.zeros((CHIP, CHIP), np.uint8)
-        reproject(src_arr, tmp, src_transform=ds.window_transform(sw), src_crs=ds.crs, dst_transform=dst_transform, dst_crs=dst_crs,
-                  resampling=Resampling.nearest, src_nodata=None, dst_nodata=0)
+        # no nodata arguments: with dst_nodata=0 and no src_nodata, rasterio rewrites source zeros (no observation) as 1
+        reproject(src_arr, tmp, src_transform=ds.window_transform(sw), src_crs=ds.crs, dst_transform=dst_transform, dst_crs=dst_crs, resampling=Resampling.nearest)
         out = np.maximum(out, tmp)
     return out
 
@@ -268,13 +270,17 @@ def main():
                         "validity_share": share(L["validity"] > 0.5, ok & ~np.isnan(L["validity"]))},
              "agreement_with_gsw_all_observed": {"A_s2pre": share(A_s2 == gsw_w, ok & obs), "A_s1pre": share(A_s1 == gsw_w, ok & obs), "label_permanent": share(ya == gsw_w, ok & obs), "n": int((ok & obs).sum())},
              "sensor_only_differing": {"n": int(d_sens.sum()), "gsw_observed_share": share(obs, d_sens), "gsw_sides_with_s1": share(gsw_w == A_s1, d_sens & obs), "gsw_sides_with_s2": share(gsw_w == A_s2, d_sens & obs)}}
+        ev_months = {}
+        for tid, ym in months.items():
+            if ym:
+                ev_months.setdefault(tiles["test"][tid]["aoi"], set()).add(f"{ym[0]}-{ym[1]:02d}")
         rows, per = [], {}
         for ev in np.unique(events):
             m = (events == ev)[:, None, None]
             n_dep, n_obs = int((dep & m).sum()), int((dep & obs & m).sum())
             s = share(gsw_w, dep & obs & m)
             per[ev.item()] = {"n_residue": n_dep, "n_residue_observed": n_obs, "gsw_water_share": s, "floodmask_share": share(flood_w, dep & m),
-                              "gsw_sides_with_s1_sensor_only": share(gsw_w == A_s1, d_sens & obs & m), "month": None}
+                              "gsw_sides_with_s1_sensor_only": share(gsw_w == A_s1, d_sens & obs & m), "month": ",".join(sorted(ev_months.get(ev.item(), [])))}
             rows.append({"event": ev.item(), **per[ev.item()]})
         R["per_event"] = per
         tests = over_groups({ev: v["gsw_water_share"] - 0.5 for ev, v in per.items() if v["n_residue_observed"] >= MIN_EVENT_WINDOWS and v["gsw_water_share"] == v["gsw_water_share"]})
