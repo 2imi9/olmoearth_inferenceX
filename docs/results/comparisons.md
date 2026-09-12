@@ -1262,6 +1262,56 @@ wrong on both sides, the multi-class case the binary tasks could not show. On th
 sensor pair neither side is preferred (43% against 35%). Runtime 11:37 (job
 800249, no downloads). Source `exp/out/exp63_summary.json`, `exp/out/exp63_masks.npz`. <!-- claim:multiclass-atlas-composition -->
 
+## Calibrate on the record: the fused readings, held-out (exp65)
+
+`oe_inferencex.calibrate` fits the label-free readings to labels and reports the
+fit held-out, cross-fitted by tile, bound to a model family. exp65 records what it
+gives on exp59's four Sen1Floods11 pairs and on exp49's ranker, against the
+numbers those experiments got by fitting on the training split.
+
+**The ranker fusion** (v1 S2 head; readings: confidence, aligned tile-phase, the
+boundary indicator, NDWI level, S2 patch variance; five folds by tile):
+
+| Testbed | confidence alone, excess AURC | fusion, held-out | lead | tiles, p | held-out capture at 5% / 10% |
+|---|---|---|---|---|---|
+| Bolivia | 0.0105 | 0.0084 | +0.0021 | 263/69, 4.1e-28 | 0.31 / 0.57 |
+| test split | 0.0098 | 0.0069 | +0.0029 | 318/134, 1.3e-18 | 0.45 / 0.68 | <!-- claim:calibrate-ranker-fusion-beats-confidence -->
+
+Preregistered P1 holds on both testbeds: the fusion cuts confidence's excess AURC
+by 20% on Bolivia and 30% on the test split, held-out, and wins on
+four tiles of five. The weights say what the labels add: the NDWI level carries
+the largest standardised weight on Bolivia (1.74 against 0.38 for
+confidence), where the no-model index was the frozen head's one exception
+(exp47), and confidence and tile-phase share the lead on the test split. <!-- claim:calibrate-ranker-fusion-beats-confidence -->
+
+**The side rule** (which side to believe where two decisions differ; readings per
+side: margin, its midrank, the signed probability, the boundary indicator,
+tile-phase; NDWI shared; five folds by tile):
+
+| Pair, testbed | raw margin rule | cross-fitted rule | gain, points | tiles, p | always the better side | exp59's protocol, fitted on the training tiles |
+|---|---|---|---|---|---|---|
+| crop offset 0 vs 2, bolivia | 51.3% | 75.8% | +24.5 | 186/57, 1.9e-17 | 61.0% | 63.5% |
+| crop offset 0 vs 2, test | 58.2% | 69.0% | +10.8 | 230/107, 9.1e-12 | 50.2% | 68.1% |
+| v1 vs v1.2, bolivia | 56.0% | 77.2% | +21.2 | 188/63, 6.3e-16 | 55.3% | 69.6% |
+| v1 vs v1.2, test | 57.7% | 65.4% | +7.7 | 167/91, 1.3e-06 | 52.6% | 65.2% |
+| S2 head vs S1 head, bolivia | 68.2% | 79.7% | +11.4 | 176/87, 2.2e-08 | 67.3% | 72.5% |
+| S2 head vs S1 head, test | 69.8% | 86.0% | +16.2 | 301/87, 5.2e-29 | 84.2% | 86.4% |
+| frozen vs FT-S2 v1, bolivia | 61.1% | 74.9% | +13.8 | 176/73, 2.7e-11 | 75.2% | 35.5% |
+| frozen vs FT-S2 v1, test | 55.4% | 72.8% | +17.4 | 204/97, 3.3e-10 | 71.7% | 53.3% | <!-- claim:calibrate-side-rule-held-out -->
+
+Preregistered P2 holds on all eight: the cross-fitted rule beats the raw margin
+rule by 8 to 24 points, on more tiles than not everywhere. On the three frozen
+pairs it matches or passes exp59's train-split fit; on the fine-tuned pair,
+where exp59's rule lost 26 points, refitting per family gains 14 and 17. <!-- claim:calibrate-side-rule-held-out -->
+**The family lock** does what it is for: the rule fitted on the pooled frozen
+pairs' training windows, forced onto the fine-tuned pair, is right on 43.8% and
+49.2% of its differing windows against 61.1% and 55.4% for the raw margin and
+74.9% and 72.8% for the pair's own cross-fit (P3 holds), and the module raises
+before scoring it unless forced. Runtime 12:49 (job 801135). Source
+`exp/out/exp65_summary.json`; `exp/out/exp65_readings.npz` holds every reading on
+the disagreement and valid windows with tile ids and labels, and the fits
+reproduce from it to the last digit. <!-- claim:calibrate-family-lock -->
+
 ## Served land cover change rasters (exp20)
 
 First assessment of a served output: ten 512-px windows (about

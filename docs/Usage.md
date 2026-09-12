@@ -35,7 +35,9 @@ fusion.score(side_features(fa, fb), family="FT-S2 v1")            # ValueError: 
 the review ranking: it takes named readings in any orientation (confidence,
 tile-phase, a no-model index, ...), learns each sign, and reports the fusion's
 held-out excess AURC, capture at the budgets and calibration against every
-single reading, with a sign test over groups against the best single. On the
+single reading, with a sign test over groups against the best single. On the v1
+S2 head with five readings (exp65) the fusion cuts confidence's held-out excess
+AURC by 20% on Bolivia and 30% on the test split. On the
 pair above the margin alone mostly teaches the rule which side is usually
 right (always b, the post-event pass, gives 0.804) and adds three points over
 that, 23 events against 16; exp59's eleven readings added 5 to 17 points over

@@ -1813,3 +1813,55 @@
   cited_in:
     - {file: docs/TECHNIQUES.md, marker: multiclass-atlas-composition}
     - {file: docs/results/comparisons.md, marker: multiclass-atlas-composition}
+
+- id: calibrate-ranker-fusion-beats-confidence
+  statement: "A fusion of five label-free readings (confidence, aligned tile-phase, the boundary indicator, NDWI level, S2 patch variance) fitted to labels and cross-fitted by tile through oe_inferencex.calibrate has a lower held-out excess AURC than the model's own confidence on both Sen1Floods11 testbeds: 0.0084 against 0.0105 on Bolivia (263 tiles against 69) and 0.0069 against 0.0098 on the test split (318 against 134); preregistered P1 holds."
+  status: supported
+  experiments: [exp65]
+  artifacts: [exp/out/exp65_summary.json]
+  check: |-
+    (lambda s, R:
+      s['prereg']['P1'] is True and s['prereg']['complete'] is True
+      and round(R['bolivia']['held_out_excess_aurc'], 4) == 0.0084 and round(R['bolivia']['confidence_excess_aurc'], 4) == 0.0105
+      and round(R['test']['held_out_excess_aurc'], 4) == 0.0069 and round(R['test']['confidence_excess_aurc'], 4) == 0.0098
+      and R['bolivia']['tiles_vs_confidence']['w'] == 263 and R['bolivia']['tiles_vs_confidence']['l'] == 69
+      and R['test']['tiles_vs_confidence']['w'] == 318 and R['test']['tiles_vs_confidence']['l'] == 134
+      and all(R[n]['lead_over_confidence'] >= 0.001 and R[n]['tiles_vs_confidence']['sign_p'] < 0.05 for n in ('bolivia', 'test'))
+    )(A['exp/out/exp65_summary.json'], A['exp/out/exp65_summary.json']['results']['ranker'])
+  cited_in:
+    - {file: docs/Findings.md, marker: calibrate-ranker-fusion-beats-confidence}
+    - {file: docs/TECHNIQUES.md, marker: calibrate-ranker-fusion-beats-confidence}
+    - {file: docs/results/comparisons.md, marker: calibrate-ranker-fusion-beats-confidence}
+
+- id: calibrate-side-rule-held-out
+  statement: "A side rule fitted to labels on the readings of both sides (margin, midrank, signed probability, boundary, tile-phase; NDWI shared) and cross-fitted by tile beats the raw margin rule on every one of the eight Sen1Floods11 pair-testbeds, by 8 to 24 points and on more tiles than not (p < 1e-5 everywhere); on the fine-tuned pair, where exp59's frozen-fitted rule lost 26 points, refitting per family gains 14 and 17; preregistered P2 holds."
+  status: supported
+  experiments: [exp65]
+  artifacts: [exp/out/exp65_summary.json]
+  check: |-
+    (lambda s, S:
+      s['prereg']['P2'] is True
+      and all(S[p][n]['gain'] >= 0.05 and S[p][n]['tiles']['sign_p'] < 1e-5 for p in ('offsets', 'backbones', 'sensors', 'finetune') for n in ('bolivia', 'test'))
+      and round(100 * S['finetune']['bolivia']['gain']) == 14 and round(100 * S['finetune']['test']['gain']) == 17
+      and round(min(S[p][n]['gain'] for p in ('offsets', 'backbones', 'sensors', 'finetune') for n in ('bolivia', 'test')), 2) == 0.08
+    )(A['exp/out/exp65_summary.json'], A['exp/out/exp65_summary.json']['results']['side'])
+  cited_in:
+    - {file: docs/Findings.md, marker: calibrate-side-rule-held-out}
+    - {file: docs/TECHNIQUES.md, marker: calibrate-side-rule-held-out}
+    - {file: docs/results/comparisons.md, marker: calibrate-side-rule-held-out}
+
+- id: calibrate-family-lock
+  statement: "The side rule fitted on the pooled frozen pairs' training windows, forced onto the frozen-vs-fine-tuned pair, is right on 43.8% and 49.2% of its differing windows, below the raw margin rule (61.1% and 55.4%) and far below the pair's own cross-fit (74.9% and 72.8%), and the module raises before scoring another family unless forced; preregistered P3 holds."
+  status: supported
+  experiments: [exp65]
+  artifacts: [exp/out/exp65_summary.json]
+  check: |-
+    (lambda s, T:
+      s['prereg']['P3'] is True
+      and all(T[n]['lock_raised'] is True and T[n]['frozen_rule_forced']['share_right'] < T[n]['frozen_rule_forced']['margin_rule'] < T[n]['own_cross_fit'] for n in ('bolivia', 'test'))
+      and round(100 * T['bolivia']['frozen_rule_forced']['share_right'], 1) == 43.8 and round(100 * T['test']['frozen_rule_forced']['share_right'], 1) == 49.2
+    )(A['exp/out/exp65_summary.json'], A['exp/out/exp65_summary.json']['results']['transfer'])
+  cited_in:
+    - {file: docs/Findings.md, marker: calibrate-family-lock}
+    - {file: docs/TECHNIQUES.md, marker: calibrate-family-lock}
+    - {file: docs/results/comparisons.md, marker: calibrate-family-lock}

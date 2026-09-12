@@ -132,6 +132,12 @@ locates differences only where boundaries are rare, 3.5 to 6.2 times on MADOS
 and 1.7 to 1.8 times on PASTIS, where 50% of windows border another class,
 so on dense classes it is the low-margin cue that says where two inferences
 differ. <!-- claim:multiclass-boundary-cue-fails-on-parcels --> <!-- claim:multiclass-sensor-vs-encoder-different -->
+Where labels exist, fusing the readings with them pays and does not travel
+(exp65): a fusion cross-fitted by tile cuts confidence's excess AURC by 20%
+and 30%, a cross-fitted side rule beats the raw margin by 8 to 25 points on
+every pair, and the same rule moved from frozen heads to the fine-tuned model
+falls below the raw margin, so the package binds every fusion to its model
+family. <!-- claim:calibrate-ranker-fusion-beats-confidence --> <!-- claim:calibrate-side-rule-held-out --> <!-- claim:calibrate-family-lock -->
 
 The effect size in a reviewer's units (exp55, 45 GEOID-Flood events): on the
 median event the 5% of windows confidence flags hold 88% of the permanent-water

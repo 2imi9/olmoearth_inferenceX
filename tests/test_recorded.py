@@ -611,3 +611,27 @@ def test_exp63_boundary_cue_fails_on_parcels_and_the_draw_floor_is_tiny():
         assert abs(d01.sum() / ok.sum() - s["results"][task]["pairs"]["draw 0 vs draw 1"]["disagreement_rate"]) < 1e-4
         dg = (z[f"{task}/olmoearth_base/0/dec"] != z[f"{task}/galileo_base/0/dec"]) & ok
         assert dg.sum() > 20 * d01.sum()
+
+
+def test_exp65_calibrate_refits_the_recorded_held_out_numbers_from_the_readings():
+    """exp65 (job 801135): P1-P3 hold; fit_ranker and fit_side on the saved readings reproduce the recorded held-out numbers."""
+    from oe_inferencex.calibrate import fit_ranker, fit_side
+    s = json.load(open(_need("exp65_summary.json")))
+    assert s["prereg"]["P1"] is True and s["prereg"]["P2"] is True and s["prereg"]["P3"] is True and s["prereg"]["complete"] is True and s["n_failures"] == 0
+    z = np.load(_need("exp65_readings.npz"))
+    for n in ("bolivia", "test"):
+        sig = {k: z[f"ranker/{n}/{k}"] for k in ("confidence", "tile_phase", "boundary", "ndwi_level", "s2_variance")}
+        err = z[f"ranker/{n}/err"]
+        _, rep = fit_ranker(sig, err, np.ones_like(err, bool), groups=z[f"ranker/{n}/tile"], family="v1 S2 head")
+        assert abs(rep["held_out"]["excess_aurc"] - s["results"]["ranker"][n]["held_out_excess_aurc"]) < 1e-9
+    for pair, n in (("sensors", "test"), ("finetune", "bolivia")):
+        pre = f"side/{pair}/{n}/"
+        names = ("margin", "rank", "signed", "boundary", "tile_phase")
+        fa = {k: z[pre + f"{k}:a"] for k in names}; fb = {k: z[pre + f"{k}:b"] for k in names}
+        b_right, a_right = z[pre + "b_right"], z[pre + "a_right"]
+        # a synthetic pair whose disagreement set is these windows: a = 0, b = 1, label = 1 where b is right and 0 where a is right
+        a, b = np.zeros(len(b_right), int), np.ones(len(b_right), int)
+        lab = np.where(b_right, 1, np.where(a_right, 0, 2))
+        _, rep = fit_side(fa, fb, a, b, np.ones(len(b_right), bool), lab, groups=z[pre + "tile"], family="x", baseline="margin", shared={"ndwi": z[pre + "ndwi"]})
+        assert abs(rep["held_out"]["share_right"] - s["results"]["side"][pair][n]["cross_fit"]) < 1e-9
+        assert abs(rep["baseline"]["share_right"] - s["results"]["side"][pair][n]["margin_rule"]) < 1e-9
