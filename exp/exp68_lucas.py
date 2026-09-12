@@ -51,9 +51,10 @@ so the boundary indicator can be computed from the model's own decision map.
   split into fit and report halves, so no region contributes to both.
 
   Part A, ranking. The margin (top-1 minus top-2 window probability) against predictive entropy, one minus top-1, the
-  boundary-first order, and four controls that see no model: within-window pixel variance, the rarity of the predicted
-  class, the polygon's area, and the chosen window's purity. The last two are oracle-side metadata an operator would not
-  hold at inference time; they are included to make the test harder, not fairer.
+  boundary-first order, and four controls that see no model confidence: two deployable ones, the within-window pixel
+  variance and the rarity of the predicted class, and two oracle-side ones an operator would not hold at inference
+  time, the polygon's area and the chosen window's purity. P1 is judged on the deployable pair; the oracle pair is the
+  secondary bar P1b.
   Part B, two dates. The same polygon, the same model, two acquisitions: oe_inferencex.compare on the near and far
   decisions, with the surveyed class saying which side is right. This is the difference measurement the package exists
   for, run for the first time with a ground-observed arbiter.
@@ -65,13 +66,22 @@ so the boundary indicator can be computed from the model's own decision map.
 
 Preregistered (one-sided):
   P1  the ranking survives a reference that never saw the imagery: on field-surveyed polygons in held-out regions the
-      margin's excess AURC is at least 0.01 below the best of the four no-model controls, pooled, and lower on more NUTS2
-      regions than not (sign test p < 0.05), under the design-weighted estimator.
+      margin's excess AURC is at least 0.01 below the best DEPLOYABLE no-model control, pooled, and lower on more NUTS2
+      regions than not (sign test p < 0.05), under the design-weighted estimator. Deployable means computable at
+      inference time from the imagery and the decision alone: the within-window pixel variance and the rarity of the
+      predicted class. The polygon's area and the chosen window's purity are reference-side metadata an operator does
+      not hold, so they are scored as a separate and harder secondary bar (P1b), reported either way; losing to an
+      oracle control says the units are hard, not that the ranking fails, and conflating the two would let a bar no
+      deployment can face decide the protocol's fate.
   P2  the standard homogeneity filter understates the tool: error capture at a 10% budget is higher on the unfiltered
       population than on the filtered one (homogeneous plot fills the window and area >= 5,000 sqm), and the boundary
       cue's enrichment on error polygons is higher unfiltered.
   P3  exp18's caveat holds on provenance, not only on resolution: within matched (class x country) strata the
       boundary-first order's lead over the margin is larger on photo-interpreted polygons than on field-surveyed ones.
+  P1b the harder bar, reported whichever way it falls: the margin also beats the best oracle-side control, polygon area
+      or window purity, by 0.01 weighted. This is not a falsification of the protocol, because no deployment holds
+      these; it says whether the model's own confidence adds anything over simply knowing how small and mixed the unit
+      is, which is the question a sceptic would ask next.
   P4  the finding survives the sampling design: the part-A lead of P1 keeps its sign and stays at least 0.005 when
       estimated with Horvitz-Thompson weights, with a cluster bootstrap interval over NUTS2 excluding zero.
   P5  the two-date difference is class-dependent in the direction land cover implies: the share of polygons whose
@@ -97,7 +107,10 @@ the Horvitz-Thompson correction is exact for our own stratified subsample of tha
 more. The survey ran 2022-03-11 to 2023-06-26 and imagery is matched per polygon to its own date. Level-1 classes are
 coarse: a cropland error between two crops is invisible here, which makes this a weaker test of the model than PASTIS
 and a stronger test of the reference. 167 of every 3,000 points are photo-interpreted and they sit in harder terrain, so
-the part-C contrast is within matched strata and is still confounded by anything terrain drives beyond class and country.
+the part-C contrast is within matched strata and is still confounded by anything terrain drives beyond class and country. The probe is fitted on the
+class-balanced stratified sample, so its class prior does not match the population: the design-weighted error rate is
+therefore higher than a probe fitted on the population would give, and both rates are recorded. That mismatch shifts the
+level of every ranker equally, because all of them are scored on identical units.
 
 Inputs: the LUCAS Copernicus 2022 GeoPackage (1.12 GB, CC BY 4.0, JRC) and Sentinel-2 L2A from the Planetary Computer.
 Run with ~/olmoearth_inferenceX/.venv, which carries rasterio, pyogrio, the STAC clients and the encoder.
@@ -605,8 +618,17 @@ def score_arm(sigs, err, weights, groups, name, rows):
     return out
 
 
-def best_control(scored, key="excess_aurc_weighted"):
-    ctl = {k: v for k, v in scored.items() if k.startswith("ctl_")}
+DEPLOYABLE_CONTROLS = ("ctl_pixel_variance", "ctl_class_rarity")
+ORACLE_CONTROLS = ("ctl_polygon_area", "ctl_window_impurity")
+
+
+def best_control(scored, family=DEPLOYABLE_CONTROLS, key="excess_aurc_weighted"):
+    """The strongest control of one family, by weighted E-AURC (lower is a better ranker, so the strongest is the min).
+
+    The families are kept apart on purpose: `DEPLOYABLE_CONTROLS` are computable at inference time from the imagery and
+    the decision, `ORACLE_CONTROLS` read the reference's own geometry and no operator holds them. P1 is judged on the
+    first, P1b on the second."""
+    ctl = {k: v for k, v in scored.items() if k in family}
     name = min(ctl, key=lambda k: ctl[k][key])
     return name, ctl[name][key]
 
@@ -720,15 +742,18 @@ def analyze_stage(args):
     A = rep_m & (obs == FIELD)
     sigs_a = signal_table({k: v[A] for k, v in r.items()}, sub(A), wt[A])
     scored_a = score_arm(sigs_a, err[A], wt[A], nuts2[A], "field_report", rows)
-    ctl_name, ctl_val = best_control(scored_a)
+    ctl_name, ctl_val = best_control(scored_a, DEPLOYABLE_CONTROLS)
+    orc_name, orc_val = best_control(scored_a, ORACLE_CONTROLS)
     lead_w = ctl_val - scored_a["margin"]["excess_aurc_weighted"]
+    lead_orc = orc_val - scored_a["margin"]["excess_aurc_weighted"]
     st = region_sign_test({"u": sigs_a["margin"], "err": err[A]},
                           {"u": sigs_a[ctl_name], "err": err[A]}, nuts2[A])
     boot = cluster_boot(lambda s: (w_excess_aurc(sigs_a[ctl_name][s], err[A][s], wt[A][s])
                                    - w_excess_aurc(sigs_a["margin"][s], err[A][s], wt[A][s])), nuts2[A], seed=args.seed)
     summary["results"]["part_a"] = {"n": int(A.sum()), "n_errors": int(err[A].sum()),
                                     "error_rate_weighted": w_mean(err[A], wt[A]),
-                                    "signals": scored_a, "best_control": ctl_name,
+                                    "signals": scored_a, "best_control": ctl_name, "best_oracle_control": orc_name,
+                                    "margin_lead_over_oracle_weighted": lead_orc,
                                     "margin_lead_weighted": lead_w,
                                     "margin_lead_naive": float(scored_a[ctl_name]["excess_aurc_naive"]
                                                                - scored_a["margin"]["excess_aurc_naive"]),
@@ -736,6 +761,9 @@ def analyze_stage(args):
     summary["verdicts"]["P1"] = {"holds": bool(lead_w >= 0.01 and st["p"] < 0.05 and st["wins"] > st["losses"]),
                                  "lead_weighted": lead_w, "threshold": 0.01, "against": ctl_name,
                                  "sign_test": st}
+    summary["verdicts"]["P1b"] = {"holds": bool(lead_orc >= 0.01), "lead_weighted": lead_orc, "threshold": 0.01,
+                                  "against": orc_name,
+                                  "note": "oracle-side control; failing this is informative, not a falsification"}
     summary["verdicts"]["P4"] = {"holds": bool(lead_w >= 0.005 and boot["lo"] > 0),
                                  "lead_weighted": lead_w, "bootstrap": boot,
                                  "naive_minus_weighted": float(summary["results"]["part_a"]["margin_lead_naive"] - lead_w)}
@@ -894,8 +922,10 @@ def smoke(args):
     sigs = signal_table(rd, meta, np.ones(m))
     rows = []
     sc = score_arm(sigs, err, rng.random(m) * 2 + 0.5, rng.integers(0, 12, m), "smoke", rows)
-    name, val = best_control(sc)
-    assert sc["margin"]["excess_aurc_weighted"] < val, "planted margin lost to a control"
+    for fam in (DEPLOYABLE_CONTROLS, ORACLE_CONTROLS):
+        name, val = best_control(sc, fam)
+        assert name in fam, f"best_control crossed families: {name} not in {fam}"
+        assert sc["margin"]["excess_aurc_weighted"] < val, f"planted margin lost to {name}"
     assert len(rows) == len(sigs) and all(set(r0) == set(rows[0]) for r0 in rows)
 
     # sampling design and the region split
