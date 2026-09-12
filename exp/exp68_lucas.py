@@ -727,6 +727,9 @@ def analyze_stage(args):
                           "crop_px": CROP, "grid": G, "neighbourhood": NB, "classes": CLASSES,
                           "boa_offset_removed": BOA_OFFSET, "strata": strata,
                           "caveats": ["the reference is in-situ observation, causally independent of the imagery",
+                                      "the probe is fitted on 3,037 field-surveyed polygons in the fit regions for 768 "
+                                      "features and eight classes, which is thin; the fit and report accuracies are "
+                                      "both reported so the generalisation gap is visible",
                                       "the graded unit is the polygon; the median polygon is smaller than the 40 m window",
                                       "LUCAS design weights over EU area are not shipped; the estimand is the Copernicus polygon population",
                                       "photo-interpreted points sit in harder terrain, so part C matches on class and country"]},
@@ -740,8 +743,10 @@ def analyze_stage(args):
         p = probe_probs(lin, Xn)
         arms[seed] = readings(p)
         acc = float((arms[seed]["dec"][rep_m] == y[rep_m]).mean())
-        print(f"probe seed {seed}: report accuracy {acc:.4f}", flush=True)
+        acc_fit = float((arms[seed]["dec"][fit_sel] == y[fit_sel]).mean())
+        print(f"probe seed {seed}: fit accuracy {acc_fit:.4f}, report accuracy {acc:.4f}", flush=True)
         summary["results"][f"probe_seed_{seed}_report_accuracy"] = acc
+        summary["results"][f"probe_seed_{seed}_fit_accuracy"] = acc_fit
     r = arms[0]
     err = (r["dec"] != y).astype(np.float64)
     summary["results"]["per_class_accuracy"] = {
@@ -819,13 +824,29 @@ def analyze_stage(args):
     # ---- part C, filters (P2) and provenance (P3)
     filt = A & homog & (area >= 5000)
     unfilt = A
+    deleted = A & ~(homog & (area >= 5000))        # exactly the units the published convention throws away
     cap = {}
-    for tag, m in (("filtered", filt), ("unfiltered", unfilt)):
+    for tag, m in (("filtered", filt), ("unfiltered", unfilt), ("deleted_by_filter", deleted)):
         s = signal_table({k: v[m] for k, v in r.items()}, sub(m), wt[m])
         sc = score_arm(s, err[m], wt[m], nuts2[m], f"{tag}_field_report", rows)
         enr = cue_enrichment(r["boundary"][m] > 0, err[m], clusters=nuts2[m], n_boot=400, seed=args.seed)
         cap[tag] = {"n": int(m.sum()), "capture_10_weighted": sc["margin"]["capture_weighted"]["0.1"],
                     "boundary_enrichment": float(enr["enrichment"]), "signals": sc}
+    # filtered against deleted is a contrast between disjoint sets, so the direction can carry an interval; filtered
+    # against unfiltered cannot, the one being a subset of the other.
+    def _cap10(mask, idx_):
+        sub_i = np.flatnonzero(mask)[idx_]
+        return w_capture(-r["margin"][sub_i], err[sub_i], wt[sub_i], (0.10,))[0.10]
+    boot_filt = cluster_boot(lambda ii: _cap10(filt, ii), nuts2[filt], n_boot=1000, seed=args.seed)
+    boot_del = cluster_boot(lambda ii: _cap10(deleted, ii), nuts2[deleted], n_boot=1000, seed=args.seed)
+    cap["filtered_vs_deleted"] = {
+        "n_filtered": int(filt.sum()), "n_deleted": int(deleted.sum()),
+        "capture_10_filtered": cap["filtered"]["capture_10_weighted"],
+        "capture_10_deleted": cap["deleted_by_filter"]["capture_10_weighted"],
+        "margin_excess_aurc_filtered": cap["filtered"]["signals"]["margin"]["excess_aurc_weighted"],
+        "margin_excess_aurc_deleted": cap["deleted_by_filter"]["signals"]["margin"]["excess_aurc_weighted"],
+        "bootstrap_capture_10_filtered": boot_filt, "bootstrap_capture_10_deleted": boot_del,
+        "intervals_disjoint": bool(boot_filt["lo"] > boot_del["hi"] or boot_del["lo"] > boot_filt["hi"])}
     summary["results"]["part_c_filters"] = cap
     summary["verdicts"]["P2"] = {
         "holds": bool(cap["unfiltered"]["capture_10_weighted"] > cap["filtered"]["capture_10_weighted"]
@@ -851,11 +872,29 @@ def analyze_stage(args):
                      "lead_boundary_first_over_margin": float(sc["margin"]["excess_aurc_weighted"]
                                                               - sc["boundary_first"]["excess_aurc_weighted"]),
                      "signals": sc}
+    # The photo arm is harder than the field arm even within matched class-country strata, so the gap could be a
+    # difficulty effect rather than a provenance effect. Recompute it on high-purity units, where the two arms' error
+    # rates are closest, as the nearest thing to matching on difficulty that this design allows.
+    prov_hi = {}
+    for tag in (FIELD, PHOTO):
+        m = matched & (obs == tag) & (near["purity"] >= 0.75)
+        if m.sum() < 30 or err[m].sum() == 0:
+            prov_hi[tag] = {"n": int(m.sum()), "lead_boundary_first_over_margin": float("nan")}
+            continue
+        sg = signal_table({k: v[m] for k, v in r.items()}, sub(m), wt[m])
+        sq = score_arm(sg, err[m], wt[m], nuts2[m], f"matched_highpurity_{tag}", rows)
+        prov_hi[tag] = {"n": int(m.sum()), "error_rate_weighted": w_mean(err[m], wt[m]),
+                        "lead_boundary_first_over_margin": float(sq["margin"]["excess_aurc_weighted"]
+                                                                - sq["boundary_first"]["excess_aurc_weighted"])}
+    gap_hi = prov_hi[PHOTO]["lead_boundary_first_over_margin"] - prov_hi[FIELD]["lead_boundary_first_over_margin"]
     gap = prov[PHOTO]["lead_boundary_first_over_margin"] - prov[FIELD]["lead_boundary_first_over_margin"]
-    summary["results"]["part_c_provenance"] = {"n_matched_strata": len(both), "arms": prov, "gap": float(gap)}
+    summary["results"]["part_c_provenance"] = {"n_matched_strata": len(both), "arms": prov, "gap": float(gap),
+                                              "high_purity_arms": prov_hi, "high_purity_gap": float(gap_hi)}
     summary["verdicts"]["P3"] = {"holds": bool(np.isfinite(gap) and gap > 0), "gap": float(gap),
                                  "photo_lead": prov[PHOTO]["lead_boundary_first_over_margin"],
-                                 "field_lead": prov[FIELD]["lead_boundary_first_over_margin"]}
+                                 "field_lead": prov[FIELD]["lead_boundary_first_over_margin"],
+                                 "high_purity_gap": float(gap_hi),
+                                 "high_purity_holds": bool(np.isfinite(gap_hi) and gap_hi > 0)}
 
     # ---- part B, two acquisitions of one place
     if "pid_far" in d and len(d["pid_far"]):
@@ -884,6 +923,12 @@ def analyze_stage(args):
             "disagreement_rate": cmpres["disagreement_rate"],
             "head_draw_floor": summary["results"]["head_draw_floor_decision_change"],
             "which_side": cmpres["graded"]["which_side"], "crosstab": cmpres["graded"]["crosstab"],
+            "near_beats_far_sign_test": {
+                "a_right": int(cmpres["graded"]["which_side"]["a_right"]),
+                "b_right": int(cmpres["graded"]["which_side"]["b_right"]),
+                "p_greater": float(stats.sign_test(int(cmpres["graded"]["which_side"]["a_right"]),
+                                                  int(cmpres["graded"]["which_side"]["b_right"]),
+                                                  alternative="greater"))},
             "where": cmpres["where"], "per_class": per_class}
         clear_both = (near["clear"][idx][keep] >= 0.99) & (far["clear"][keep] >= 0.99)
         per_class_clear = {}
