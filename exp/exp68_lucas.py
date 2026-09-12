@@ -697,7 +697,10 @@ def analyze_stage(args):
     d = load_shards()
     n = len(d["pid_near"])
     print(f"loaded {n} near chips, {len(d.get('pid_far', []))} far chips in {time.time()-t0:.0f}s", flush=True)
-    model = exp18.load_model() if not hasattr(exp18, "MODEL") else exp18.MODEL
+    # harness_ab.load_model's construction, restated so this experiment does not import the Sen1Floods11 harness
+    t_load = time.time()
+    model = exp18.load_model_from_id(exp18.ModelID.OLMOEARTH_V1_BASE).to(exp18.DEV).eval().float()
+    print(f"loaded OlmoEarth v1 Base on {exp18.DEV} in {time.time() - t_load:.1f}s", flush=True)
     near = prepare_arm(d, "near", model)
     print(f"encoded near in {time.time()-t0:.0f}s, D={near['E'].shape[-1]}", flush=True)
 
