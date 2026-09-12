@@ -60,6 +60,12 @@ so the boundary indicator can be computed from the model's own decision map.
   for, run for the first time with a ground-observed arbiter.
   Part C, provenance and filters. Every part-A number recomputed on the field-surveyed and photo-interpreted arms within
   matched strata, and on the filtered and unfiltered populations.
+  Two covariates are carried through because they are the obvious ways this could be fooled. The purity of the chosen
+  window, since the sample's median polygon covers only a third of one, so part A is also reported within four purity
+  bands: label noise attenuates every ranker equally and cannot manufacture a lead, but the record should show where the
+  lead lives. And the cloud state of the chosen window from the scene classification band, since a cloudier far
+  acquisition would change decisions for reasons that are not phenology, so part B's class-dependent change rate is
+  reported again on the polygons whose window is cloud-clear in both acquisitions.
   Estimators. Everything is reported twice, as a naive unweighted count and as a Horvitz-Thompson design-weighted share
   over the polygon population, with a cluster bootstrap over NUTS2 regions. The weighted estimators are checked against
   the package's unweighted ones under uniform weights to 1e-9 in the smoke test.
@@ -155,6 +161,8 @@ FIELD, PHOTO = "field", "photo"
 PHOTO_CAP, FIELD_CAP = 900, 1000
 BUDGETS = (0.05, 0.10, 0.20)
 SHARD = 500
+SCL_CLEAR = (4, 5, 6, 7, 11)      # vegetation, bare, water, unclassified, snow; not nodata, shadow, cloud or cirrus
+PURITY_BANDS = ((0.0, 0.25), (0.25, 0.5), (0.5, 0.75), (0.75, 1.01))
 
 
 # ----------------------------------------------------------------------------- design-weighted estimators
@@ -661,21 +669,24 @@ def load_shards():
 
 def prepare_arm(d, tag, model):
     """Chosen window, its purity, its pixel variance, and the 5 x 5 embedding neighbourhood for one acquisition."""
-    img, cov = d[f"img_{tag}"], d[f"cov_{tag}"]
+    img, cov, scl = d[f"img_{tag}"], d[f"cov_{tag}"], d[f"scl_{tag}"]
     n = len(img)
     rc = np.zeros((n, 2), dtype=np.int64)
     purity = np.zeros(n, dtype=np.float64)
     var = np.zeros(n, dtype=np.float64)
+    clear = np.zeros(n, dtype=np.float64)
     for i in range(n):
         cw = window_coverage(cov[i])
         r, q, best = choose_window(cw)
         rc[i] = (r, q)
         purity[i] = best
-        blk = img[i][:, r * PATCH:(r + 1) * PATCH, q * PATCH:(q + 1) * PATCH].astype(np.float64)
+        sl = slice(r * PATCH, (r + 1) * PATCH), slice(q * PATCH, (q + 1) * PATCH)
+        blk = img[i][:, sl[0], sl[1]].astype(np.float64)
         var[i] = float(blk.std(axis=(1, 2)).mean())
+        clear[i] = float(np.isin(scl[i][sl[0], sl[1]], SCL_CLEAR).mean())
     dates = np.array([[int(s[8:10]), int(s[5:7]) - 1, int(s[:4])] for s in d[f"date_{tag}"].astype(str)])
     E, clamped = embed_chips(model, img, dates, rc)
-    return {"E": E, "rc": rc, "purity": purity, "variance": var, "clamped": clamped, "dates": dates}
+    return {"E": E, "rc": rc, "purity": purity, "variance": var, "clear": clear, "clamped": clamped, "dates": dates}
 
 
 def analyze_stage(args):
@@ -761,6 +772,23 @@ def analyze_stage(args):
     summary["verdicts"]["P1"] = {"holds": bool(lead_w >= 0.01 and st["p"] < 0.05 and st["wins"] > st["losses"]),
                                  "lead_weighted": lead_w, "threshold": 0.01, "against": ctl_name,
                                  "sign_test": st}
+    bands = {}
+    for lo, hi in PURITY_BANDS:
+        m = A & (near["purity"] >= lo) & (near["purity"] < hi)
+        if m.sum() < 40 or err[m].sum() < 5:
+            bands[f"{lo:.2f}-{min(hi,1.0):.2f}"] = {"n": int(m.sum()), "note": "too few units or errors to score"}
+            continue
+        sg = signal_table({k: v[m] for k, v in r.items()}, sub(m), wt[m])
+        sq = score_arm(sg, err[m], wt[m], nuts2[m], f"purity_{lo:.2f}", rows)
+        cn, cv = best_control(sq, DEPLOYABLE_CONTROLS)
+        bands[f"{lo:.2f}-{min(hi,1.0):.2f}"] = {
+            "n": int(m.sum()), "error_rate_weighted": w_mean(err[m], wt[m]),
+            "margin_excess_aurc_weighted": sq["margin"]["excess_aurc_weighted"],
+            "best_control": cn, "margin_lead_weighted": float(cv - sq["margin"]["excess_aurc_weighted"]),
+            "capture_10_weighted": sq["margin"]["capture_weighted"]["0.1"]}
+    summary["results"]["part_a_by_purity"] = bands
+    summary["results"]["purity_quantiles"] = {q: float(np.quantile(near["purity"][A], q)) for q in (0.05, 0.25, 0.5, 0.75, 0.95)}
+    summary["results"]["scl_clear_quantiles"] = {q: float(np.quantile(near["clear"][A], q)) for q in (0.05, 0.5, 0.95)}
     summary["verdicts"]["P1b"] = {"holds": bool(lead_orc >= 0.01), "lead_weighted": lead_orc, "threshold": 0.01,
                                   "against": orc_name,
                                   "note": "oracle-side control; failing this is informative, not a falsification"}
@@ -837,12 +865,24 @@ def analyze_stage(args):
             "head_draw_floor": summary["results"]["head_draw_floor_decision_change"],
             "which_side": cmpres["graded"]["which_side"], "crosstab": cmpres["graded"]["crosstab"],
             "where": cmpres["where"], "per_class": per_class}
+        clear_both = (near["clear"][idx][keep] >= 0.99) & (far["clear"][keep] >= 0.99)
+        per_class_clear = {}
+        for k, cl in enumerate(CLASSES):
+            m = (yy == k) & clear_both
+            per_class_clear[CLASS_NAME[cl]] = {"n": int(m.sum()),
+                                               "change_rate": float(changed[m].mean()) if m.sum() >= 20 else float("nan")}
+        summary["results"]["part_b"]["per_class_cloud_clear"] = per_class_clear
+        summary["results"]["part_b"]["n_cloud_clear_both"] = int(clear_both.sum())
         cb = per_class[CLASS_NAME["B"]]["change_rate"]
         stable = max(per_class[CLASS_NAME["A"]]["change_rate"], per_class[CLASS_NAME["C"]]["change_rate"])
         summary["verdicts"]["P5"] = {"holds": bool(np.isfinite(cb) and np.isfinite(stable) and cb >= 2 * stable),
                                      "cropland_change_rate": cb, "max_stable_change_rate": stable,
                                      "artificial": per_class[CLASS_NAME["A"]]["change_rate"],
-                                     "woodland": per_class[CLASS_NAME["C"]]["change_rate"]}
+                                     "woodland": per_class[CLASS_NAME["C"]]["change_rate"],
+                                     "cloud_clear_only": {
+                                         "cropland": per_class_clear[CLASS_NAME["B"]]["change_rate"],
+                                         "artificial": per_class_clear[CLASS_NAME["A"]]["change_rate"],
+                                         "woodland": per_class_clear[CLASS_NAME["C"]]["change_rate"]}}
     else:
         summary["verdicts"]["P5"] = {"holds": None, "note": "no far acquisitions fetched"}
 
@@ -854,7 +894,7 @@ def analyze_stage(args):
         wcsv.writeheader(); wcsv.writerows(rows)
     np.savez_compressed(os.path.join(OUT, f"exp68_masks{tag}.npz"),
                         dec=r["dec"], y=y, err=err, margin=r["margin"], entropy=r["entropy"],
-                        boundary=r["boundary"], purity=near["purity"], variance=near["variance"],
+                        boundary=r["boundary"], purity=near["purity"], variance=near["variance"], clear=near["clear"],
                         area=area, weight=wt, report=rep_m, obs=obs, homog=homog, nuts2=nuts2)
     for k, v in summary["verdicts"].items():
         print(f"{k}: {v.get('holds')}", flush=True)
