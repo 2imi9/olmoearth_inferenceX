@@ -33,7 +33,10 @@ predictive entropy over the nine classes, the prediction-boundary indicator, the
 control that uses no imagery and no probabilities at all, the rarity of the window's predicted class within its own
 tile. Scored as everywhere here: pooled excess AURC, a one-sided exact sign test over tiles, error capture at 5, 10 and
 20 percent. The explanation layer is measured on the error windows as cue enrichment (boundary, bottom margin quintile,
-top entropy quintile), and the published top-1 probability is scored for calibration against correctness.
+top entropy quintile), and the published top-1 probability is scored for calibration against correctness at BOTH scales:
+on the pooled windows and, on every sixteenth annotated pixel, at Dynamic World's own native resolution, because averaging
+sixteen probability vectors lowers the maximum and a window-level calibration number alone would confound the product
+with the pooling.
 
 Preregistered (one-sided):
   P1  Dynamic World's own margin ranks its own errors: its pooled excess AURC is at least 0.01 below the no-imagery
@@ -91,6 +94,7 @@ WIN, TILE_PX = 4, 512
 MARGIN, NAIVE, ENT, BND, LEX, CTRL = "margin", "1 - top-1 probability", "entropy", "boundary indicator", "boundary first, then margin", "control class rarity"
 BUDGETS = (0.05, 0.10, 0.20)
 MIN_LEAD, MIN_ENRICH, MIN_TILE_ERRORS = 0.01, 2.0, 3
+PIXSUB = 16                                                                    # every 16th annotated pixel enters the calibration check
 fmt = e57.fmt
 
 
@@ -257,6 +261,7 @@ def main():
             summary["config"]["read_seconds"] = time.time() - t0
         # ---- windows
         acc = {k: [] for k in ("dec", "y", "margin", "top1p", "entropy", "bnd", "rar", "tile", "marked")}
+        pix = {"top1p": [], "correct": [], "margin": []}                      # every PIXSUB-th annotated pixel, for calibration at the native resolution
         agree_published = []
         for t, (name, lulc, top1, p) in enumerate(tiles_data):
             q = windows(lulc, top1, p)
@@ -270,6 +275,13 @@ def main():
                          ("entropy", q["entropy"]), ("bnd", b), ("rar", r), ("marked", q["marked_share"])):
                 acc[k].append(np.asarray(v)[ok])
             acc["tile"].append(np.full(int(ok.sum()), t, np.int32))
+            fin = np.isfinite(p).all(0) & (lulc > 0)
+            if fin.any():
+                srt = np.sort(p, axis=0)
+                sel = np.zeros(fin.shape, bool); sel.reshape(-1)[::PIXSUB] = True
+                m = fin & sel
+                pix["top1p"].append(srt[-1][m]); pix["margin"].append((srt[-1] - srt[-2])[m])
+                pix["correct"].append(((lulc - 1) == p.argmax(0))[m])
         A = {k: np.concatenate(v) for k, v in acc.items()}
         err = (A["dec"] != A["y"]).astype(np.float64)
         summary["results"]["windows"] = {"n_windows": int(len(err)), "n_tiles": len(agree_published),
@@ -295,10 +307,20 @@ def main():
         # ---- explanation layer and calibration
         cues = {"boundary": A["bnd"] > 0, "low_margin": top_fraction(-A["margin"], 0.2), "high_entropy": top_fraction(A["entropy"], 0.2)}
         summary["results"]["explanation"] = {k: {kk: vv for kk, vv in cue_enrichment(v, err, n_boot=0).items()} for k, v in cues.items()}
+        Px = {k: np.concatenate(v) for k, v in pix.items()} if pix["top1p"] else None
         ece, reliability = expected_calibration_error(A["top1p"], 1 - err)
         summary["results"]["calibration"] = {"ece_of_top1_probability": ece, "mean_top1_probability": float(A["top1p"].mean()),
                                              "accuracy": float(1 - err.mean()), "overconfidence": float(A["top1p"].mean() - (1 - err.mean())),
                                              "reliability": [{"lo": a, "hi": b, "n": n, "confidence": c, "accuracy": d} for a, b, n, c, d in reliability]}
+        if Px is not None:
+            pece, prel = expected_calibration_error(Px["top1p"], Px["correct"].astype(np.float64))
+            summary["results"]["calibration"]["per_pixel"] = {
+                "n_pixels": int(len(Px["correct"])), "subsample": PIXSUB,
+                "mean_top1_probability": float(Px["top1p"].mean()), "accuracy": float(Px["correct"].mean()),
+                "overconfidence": float(Px["top1p"].mean() - Px["correct"].mean()), "ece": pece,
+                "reliability": [{"lo": a, "hi": b, "n": n, "confidence": c, "accuracy": d} for a, b, n, c, d in prel]}
+            print(f"calibration per pixel ({len(Px['correct'])} annotated pixels, every {PIXSUB}th): mean top-1 probability {Px['top1p'].mean():.4f} against accuracy {Px['correct'].mean():.4f}, "
+                  f"overconfidence {Px['top1p'].mean() - Px['correct'].mean():+.4f}, ECE {pece:.4f}", flush=True)
         print("cues on the error windows: " + ", ".join(f"{k} {v['enrichment']:.2f}x ({100*v['share_errors']:.0f}% vs {100*v['share_correct']:.0f}%)" for k, v in summary["results"]["explanation"].items()), flush=True)
         print(f"calibration: mean published top-1 probability {A['top1p'].mean():.4f} against accuracy {1 - err.mean():.4f}, overconfidence {A['top1p'].mean() - (1 - err.mean()):+.4f}, ECE {ece:.4f}", flush=True)
         np.savez_compressed(os.path.join(hb.OUT, f"exp67_windows{suffix}.npz"),
