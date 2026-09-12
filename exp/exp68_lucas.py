@@ -775,6 +775,23 @@ def analyze_stage(args):
     summary["verdicts"]["P1"] = {"holds": bool(lead_w >= 0.01 and st["p"] < 0.05 and st["wins"] > st["losses"]),
                                  "lead_weighted": lead_w, "threshold": 0.01, "against": ctl_name,
                                  "sign_test": st}
+    # Not preregistered, and added because part A raised it: the margin is this repository's recommended ranker, and
+    # on this task three other model signals score below it. Whether that ordering is real or noise is a question the
+    # record must answer rather than leave to the eye, so every ranker is tested against the margin on the same units.
+    pair = {}
+    for name, u in sigs_a.items():
+        if name == "margin":
+            continue
+        st_p = region_sign_test({"u": u, "err": err[A]}, {"u": sigs_a["margin"], "err": err[A]}, nuts2[A])
+        bt = cluster_boot(lambda idx_, u_=u: (w_excess_aurc(sigs_a["margin"][idx_], err[A][idx_], wt[A][idx_])
+                                              - w_excess_aurc(u_[idx_], err[A][idx_], wt[A][idx_])),
+                          nuts2[A], n_boot=2000, seed=args.seed)
+        pair[name] = {"beats_margin_by_weighted": float(scored_a["margin"]["excess_aurc_weighted"]
+                                                        - scored_a[name]["excess_aurc_weighted"]),
+                      "region_sign_test_vs_margin": st_p, "cluster_bootstrap": bt,
+                      "significant": bool(bt["lo"] > 0 or bt["hi"] < 0)}
+    summary["results"]["part_a_vs_margin"] = pair
+
     bands = {}
     for lo, hi in PURITY_BANDS:
         m = A & (near["purity"] >= lo) & (near["purity"] < hi)
@@ -896,7 +913,7 @@ def analyze_stage(args):
         wcsv = csv.DictWriter(fh, fieldnames=list(rows[0].keys()))
         wcsv.writeheader(); wcsv.writerows(rows)
     np.savez_compressed(os.path.join(OUT, f"exp68_masks{tag}.npz"),
-                        dec=r["dec"], y=y, err=err, margin=r["margin"], entropy=r["entropy"],
+                        dec=r["dec"], y=y, err=err, margin=r["margin"], top1=r["top1"], entropy=r["entropy"],
                         boundary=r["boundary"], purity=near["purity"], variance=near["variance"], clear=near["clear"],
                         area=area, weight=wt, report=rep_m, obs=obs, homog=homog, nuts2=nuts2)
     for k, v in summary["verdicts"].items():
