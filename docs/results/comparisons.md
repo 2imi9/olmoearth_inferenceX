@@ -1312,6 +1312,88 @@ before scoring it unless forced. Runtime 12:49 (job 801135). Source
 the disagreement and valid windows with tile ids and labels, and the fits
 reproduce from it to the last digit. <!-- claim:calibrate-family-lock -->
 
+## DFC2020: eight-class land cover, both sensors, our own encoder, two references (exp66)
+
+Ai2 suggested DFC2020 as a labelled evaluation set. It is the first dense
+testbed here that is neither binary flood water nor read through Ai2's
+published embeddings: eight land-cover classes at 10 m, Sentinel-1 and
+Sentinel-2 over the same scenes, our own frozen OlmoEarth v1 Base with their
+linear probe fitted on 400 validation patches and reported on 1,200 test
+patches, 4,320,000 windows of 4 px per arm, two probe seeds each.
+
+One correction belongs at the top, because the contest is usually described
+otherwise, including when it was suggested to us. The 10 m reference is **not
+hand-drawn**: it is an iterated random forest over Sentinel-1, Sentinel-2,
+spectral indices, the 500 m MODIS map and FROM-GLC10, with a published overall
+accuracy of 0.824. The same patches also carry those 500 m MODIS labels. That
+makes the dataset more useful here, not less: one testbed with two references
+of known and different quality over identical pixels is the instrument this
+repository has never had for its oldest caveat, that reference-product labels
+flatter boundary-type signals (exp18). They agree on 71.3% of the windows
+both label.
+
+| Arm | pixel mIoU | window accuracy | margin, excess AURC | lead over the NDWI control (p) | entropy | boundary-first | margin capture at 5% / 20% |
+|---|---|---|---|---|---|---|---|
+| Sentinel-2 | 0.431 | 0.716 | 0.0369 | +0.1576 (5e-218) | -0.0015 | +0.0453 | 0.128 / 0.482 |
+| Sentinel-1 | 0.322 | 0.569 | 0.0782 | +0.1734 (5e-76) | +0.0073 | +0.1198 | 0.088 / 0.342 |
+| both | 0.435 | 0.725 | 0.0373 | +0.1557 (2e-178) | -0.0005 | +0.0409 | 0.128 / 0.479 |
+
+The ranking transfers. On every arm the model's own margin beats the no-model
+pixel index by 0.156 to 0.173 of excess AURC, on more patches than not with
+p below 1e-75 (preregistered P1 holds), and the mean intersection over union
+sits in the range the literature reports for a linear probe on frozen features,
+despite the imagery being top-of-atmosphere where the encoder expects surface
+reflectance. Predictive entropy ties the margin, as everywhere in this
+repository. Boundary-first **loses** to the margin on all three arms, by 0.041
+to 0.120: with eight classes the cue behaves as it did at fifteen and nineteen
+(exp54, exp63) and not as it does on binary water. <!-- claim:dfc2020-margin-beats-pixel-control -->
+
+| Pair on identical windows | differing windows | boundary | low margin | a right / b right / neither | errors phi |
+|---|---|---|---|---|---|
+| sensors | 44.27% | 3.30x | 4.65x | 50% / 17% / 32% | 0.38 |
+| s2 vs joint | 15.07% | 2.63x | 5.37x | 26% / 31% / 43% | 0.79 |
+| s2 draw 0 vs 1 | 0.82% | 2.32x | 5.17x | 27% / 29% / 45% | 0.99 |
+| s1 draw 0 vs 1 | 1.34% | 2.40x | 5.29x | 19% / 27% / 54% | 0.99 |
+| s1s2 draw 0 vs 1 | 1.19% | 2.33x | 5.25x | 26% / 34% / 41% | 0.98 |
+
+**The sensor axis dominates land cover.** Sentinel-2 and Sentinel-1 disagree on
+44.3% of the windows, against 1.34% when only the probe seed changes: a factor
+of 33 above the noise floor, and the differing windows carry the boundary
+cue 3.3 times as often as the agreeing ones (preregistered P2 holds). On water
+the same axis moved 4.9% of windows (exp60); on eight land-cover classes it
+moves nine times as many, and the optical side is right on 50% of them against
+17% for radar, with 32% wrong on both sides. Every pair's differing windows are
+boundary-enriched 2.3 to 3.3 times and low-margin-enriched 4.6 to 5.4 times, so
+the atlas findings hold on land cover under our own encoder; and the five
+difference sets are close to independent, median pairwise phi 0.08, the
+strongest form yet of exp57's result that different differences are different
+sets of windows. <!-- claim:dfc2020-sensor-difference-dominates-land-cover --> <!-- claim:dfc2020-atlas-holds-with-our-own-encoder -->
+
+**The coarse reference penalises the boundary order; it does not flatter it.**
+This was preregistered the other way and P3 fails. Boundary-first is behind the
+margin by 0.0453, 0.1198 and 0.0409 against the 10 m reference, and further
+behind, by 0.0766, 0.1351 and 0.0822, against the 500 m one; the gap is negative
+on all three arms (-0.0313, -0.0153, -0.0413). The reading refines exp18 rather
+than repeating it: a reference flatters a boundary cue only when it resolves
+boundaries at a comparable scale, as WorldCover did at 10 m against a 10 m
+prediction. A reference twenty times coarser has its own transitions in the
+wrong places, so the cue loses alignment and scores worse. The practical form,
+for anyone auditing against a reference product: check the reference's
+resolution against the prediction's before trusting any boundary-shaped
+signal's score. <!-- claim:dfc2020-coarse-reference-penalises-the-boundary-order -->
+
+Stated caveats, carried from the preregistration: the imagery is L1C
+top-of-atmosphere while the encoder's modality is L2A surface reflectance; the
+split archives carry no real georeferencing, so windows are addressed by patch
+and pixel; validation and test differ in class composition, which is a shift and
+not an i.i.d. split; and the reference's own errors are correlated with what a
+linear probe on these features learns, which is the reason part C exists.
+Publishing a DFC2020 number needs case-by-case approval from the IEEE GRSS IADF
+technical committee and TUM under the contest terms, so this section is an
+internal record until that is settled. Runtime 1:06:02 including the 10.4 GB
+fetch (job 804312). Source `exp/out/exp66_summary.json`; `exp/out/exp66_masks.npz`
+carries the decisions, margins and both references for the first 200 patches.
+
 ## Served land cover change rasters (exp20)
 
 First assessment of a served output: ten 512-px windows (about

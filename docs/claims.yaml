@@ -1865,3 +1865,72 @@
     - {file: docs/Findings.md, marker: calibrate-family-lock}
     - {file: docs/TECHNIQUES.md, marker: calibrate-family-lock}
     - {file: docs/results/comparisons.md, marker: calibrate-family-lock}
+
+- id: dfc2020-margin-beats-pixel-control
+  statement: "On DFC2020's eight land-cover classes, with OlmoEarth v1 Base frozen and their linear probe, the model's own margin beats the no-model NDWI pixel control against the 10 m reference on all three arms (Sentinel-2, Sentinel-1, both): pooled excess AURC leads of 0.1576, 0.1734 and 0.1557, each on more patches than not with p below 1e-75; predictive entropy ties the margin and the boundary-first order loses to it by 0.0409 to 0.1198, as at fifteen and nineteen classes; preregistered P1 holds."
+  status: supported
+  experiments: [exp66]
+  artifacts: [exp/out/exp66_summary.json]
+  check: |-
+    (lambda s, A:
+      s['prereg']['P1'] is True and s['prereg']['complete'] is True
+      and all(A[a]['scores']['dfc']['tests']['control NDWI level']['pooled_lead'] >= 0.15 and A[a]['scores']['dfc']['tests']['control NDWI level']['sign_p'] < 1e-75 for a in ('s2', 's1', 's1s2'))
+      and all(A[a]['scores']['dfc']['tests']['boundary first, then margin']['pooled_lead'] > 0 for a in ('s2', 's1', 's1s2'))
+      and abs(A['s2']['scores']['dfc']['tests']['entropy']['pooled_lead']) < 0.01
+    )(A['exp/out/exp66_summary.json'], A['exp/out/exp66_summary.json']['results']['arms'])
+  cited_in:
+    - {file: docs/Findings.md, marker: dfc2020-margin-beats-pixel-control}
+    - {file: docs/TECHNIQUES.md, marker: dfc2020-margin-beats-pixel-control}
+    - {file: docs/results/comparisons.md, marker: dfc2020-margin-beats-pixel-control}
+
+- id: dfc2020-sensor-difference-dominates-land-cover
+  statement: "On DFC2020 the Sentinel-2 and Sentinel-1 inferences of the same scenes differ on 44.27% of the windows, 33 times the 1.34% that a second probe seed moves, and the differing windows carry the boundary cue 3.30 times as often as the agreeing ones; the optical side is right on 50.4% of them, the radar side on 17.2%, and 32.4% are wrong on both; on binary flood water the same axis moved 4.9% of windows (exp60); preregistered P2 holds."
+  status: supported
+  experiments: [exp66]
+  artifacts: [exp/out/exp66_summary.json]
+  check: |-
+    (lambda s, P:
+      s['prereg']['P2'] is True
+      and round(100 * P['sensors']['disagreement_rate'], 2) == 44.27
+      and P['sensors']['disagreement_rate'] >= 10 * max(P[k]['disagreement_rate'] for k in P if 'draw 0 vs 1' in k)
+      and round(P['sensors']['where']['boundary']['enrichment'], 2) == 3.30
+      and round(100 * P['sensors']['graded']['which_side']['share_a_right'], 1) == 50.4
+    )(A['exp/out/exp66_summary.json'], A['exp/out/exp66_summary.json']['results']['pairs'])
+  cited_in:
+    - {file: docs/Findings.md, marker: dfc2020-sensor-difference-dominates-land-cover}
+    - {file: docs/TECHNIQUES.md, marker: dfc2020-sensor-difference-dominates-land-cover}
+    - {file: docs/results/comparisons.md, marker: dfc2020-sensor-difference-dominates-land-cover}
+
+- id: dfc2020-coarse-reference-penalises-the-boundary-order
+  statement: "Graded against DFC2020's 500 m MODIS reference instead of its 10 m one, the boundary-first order falls further behind the model's margin, not closer: it trails by 0.0453, 0.1198 and 0.0409 against the 10 m reference and by 0.0766, 0.1351 and 0.0822 against the 500 m one, so the gap is negative on all three arms (-0.0313, -0.0153, -0.0413); preregistered P3, which predicted the weaker reference would flatter the boundary order as WorldCover did in exp18, fails. The reading: a reference flatters a boundary-shaped signal only when it resolves boundaries at a scale comparable to the prediction's, and a reference twenty times coarser penalises it."
+  status: rejected
+  experiments: [exp66]
+  artifacts: [exp/out/exp66_summary.json]
+  check: |-
+    (lambda s, g:
+      s['prereg']['P3'] is False and s['prereg']['P3_detail']['arms_negative'] == 3 and s['prereg']['P3_detail']['arms_positive'] == 0
+      and all(g[a]['gap_lc_minus_dfc'] < 0 for a in ('s2', 's1', 's1s2'))
+      and all(g[a]['dfc'] < 0 and g[a]['lc'] < g[a]['dfc'] for a in ('s2', 's1', 's1s2'))
+      and round(g['s2']['gap_lc_minus_dfc'], 4) == -0.0313
+    )(A['exp/out/exp66_summary.json'], A['exp/out/exp66_summary.json']['results']['reference_gap']['boundary_first_lead_over_margin'])
+  cited_in:
+    - {file: docs/Findings.md, marker: dfc2020-coarse-reference-penalises-the-boundary-order}
+    - {file: docs/TECHNIQUES.md, marker: dfc2020-coarse-reference-penalises-the-boundary-order}
+    - {file: docs/results/comparisons.md, marker: dfc2020-coarse-reference-penalises-the-boundary-order}
+
+- id: dfc2020-atlas-holds-with-our-own-encoder
+  statement: "On DFC2020's 4,320,000 windows per arm the atlas findings hold under our own encoder on eight-class land cover: every one of the five compared pairs has differing windows that are boundary-enriched 2.32 to 3.30 times and low-margin-enriched 4.65 to 5.37 times, and the five difference sets are close to independent, median pairwise phi 0.078; the two references agree on 71.3% of the windows both label, and the three arms reach pixel mean intersection over union 0.431, 0.322 and 0.435, the joint arm above both single sensors."
+  status: measured
+  experiments: [exp66]
+  artifacts: [exp/out/exp66_summary.json]
+  check: |-
+    (lambda s, R, P:
+      all(2.3 <= P[k]['where']['boundary']['enrichment'] <= 3.35 and 4.6 <= P[k]['where']['low_margin']['enrichment'] <= 5.4 for k in P)
+      and round(R['stability_across_pairs']['median_pairwise_phi'], 3) == 0.078
+      and round(100 * R['reference_gap']['agreement_of_the_two_references'], 1) == 71.3
+      and R['arms']['s1s2']['pixel_miou'] > R['arms']['s2']['pixel_miou'] > R['arms']['s1']['pixel_miou']
+      and all(R['arms'][a]['n_windows'] == 4320000 for a in ('s2', 's1', 's1s2'))
+    )(A['exp/out/exp66_summary.json'], A['exp/out/exp66_summary.json']['results'], A['exp/out/exp66_summary.json']['results']['pairs'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: dfc2020-atlas-holds-with-our-own-encoder}
+    - {file: docs/results/comparisons.md, marker: dfc2020-atlas-holds-with-our-own-encoder}

@@ -635,3 +635,27 @@ def test_exp65_calibrate_refits_the_recorded_held_out_numbers_from_the_readings(
         _, rep = fit_side(fa, fb, a, b, np.ones(len(b_right), bool), lab, groups=z[pre + "tile"], family="x", baseline="margin", shared={"ndwi": z[pre + "ndwi"]})
         assert abs(rep["held_out"]["share_right"] - s["results"]["side"][pair][n]["cross_fit"]) < 1e-9
         assert abs(rep["baseline"]["share_right"] - s["results"]["side"][pair][n]["margin_rule"]) < 1e-9
+
+
+def test_exp66_dfc2020_sensor_axis_and_the_coarse_reference_recompute_from_the_masks():
+    """exp66 (job 804312): P1 and P2 hold, P3 fails on all three arms; the sensor difference, the seed floor and the
+    boundary enrichment recompute from the committed decisions of the first 200 test patches."""
+    from oe_inferencex.compare import compare_inferences
+    from oe_inferencex.explain import cue_enrichment
+    s = json.load(open(_need("exp66_summary.json")))
+    assert s["prereg"]["P1"] is True and s["prereg"]["P2"] is True and s["prereg"]["P3"] is False and s["prereg"]["complete"] is True and s["n_failures"] == 0
+    assert s["prereg"]["P3_detail"]["arms_negative"] == 3 and s["prereg"]["P3_detail"]["arms_positive"] == 0
+    z = np.load(_need("exp66_masks.npz"))
+    ok = z["ok_dfc"]
+    assert len(np.unique(z["patch"])) == 200 and ok.shape[0] == 3200        # 200 patches x 16 chips
+    sens = (z["s2/dec"] != z["s1/dec"]) & ok
+    floor = (z["s1/dec"] != z["s1/dec_seed1"]) & ok
+    assert sens.sum() / ok.sum() > 0.35 and sens.sum() > 10 * floor.sum()   # the axis dominates the seed noise on this subsample too
+    bnd = boundary_indicator(z["s2/dec"]) > 0        # the package's own cue; exp54.boundary_share is the same quantity
+    enr = cue_enrichment(bnd[ok], sens[ok], n_boot=0)["enrichment"]
+    assert 2.5 < enr < 4.5, enr                                            # the full run records 3.30x over all 1,200 patches
+    out = compare_inferences(z["s2/dec"], z["s1/dec"], ok, labels=z["y_dfc"])
+    ws = out["graded"]["which_side"]
+    assert ws["share_a_right"] > ws["share_b_right"] and 0.2 < 1 - ws["share_a_right"] - ws["share_b_right"] < 0.45
+    assert float((z["y_dfc"] == z["y_lc"])[ok & z["ok_lc"]].mean()) == pytest.approx(
+        s["results"]["reference_gap"]["agreement_of_the_two_references"], abs=0.05)

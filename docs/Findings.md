@@ -138,6 +138,15 @@ and 30%, a cross-fitted side rule beats the raw margin by 8 to 25 points on
 every pair, and the same rule moved from frozen heads to the fine-tuned model
 falls below the raw margin, so the package binds every fusion to its model
 family. <!-- claim:calibrate-ranker-fusion-beats-confidence --> <!-- claim:calibrate-side-rule-held-out --> <!-- claim:calibrate-family-lock -->
+On eight-class land cover with our own encoder (exp66, DFC2020, the set Ai2
+suggested) the ranking transfers, the margin beating a pixel index by 0.16
+excess AURC on every arm, and the sensor axis dominates: Sentinel-2 and
+Sentinel-1 differ on 44% of windows against a 1.3% probe-seed floor,
+nine times what the same axis moved on water. Grading the same rankers
+against a second, twenty times coarser reference reverses this repository's
+oldest caveat: a coarse reference penalises a boundary-shaped signal rather
+than flattering it, so flattery needs a reference that resolves boundaries at
+the prediction's own scale. <!-- claim:dfc2020-margin-beats-pixel-control --> <!-- claim:dfc2020-sensor-difference-dominates-land-cover --> <!-- claim:dfc2020-coarse-reference-penalises-the-boundary-order -->
 
 The effect size in a reviewer's units (exp55, 45 GEOID-Flood events): on the
 median event the 5% of windows confidence flags hold 88% of the permanent-water
