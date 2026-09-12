@@ -474,14 +474,16 @@ def _write_shard(path, keep, rows):
 
 
 # ----------------------------------------------------------------------------- stage 2, encode
-def embed_chips(model, imgs, dates, batch=32):
-    """(N, 12, 64, 64) harmonised DN and (N, 3) day/month0/year -> pooled (N, 15, 15, D) fp16 tokens.
+def embed_chips(model, imgs, dates, rc, batch=32):
+    """(N, 12, 64, 64) harmonised DN, (N, 3) day/month0/year and the chosen window -> (N, 5, 5, D) fp16 tokens.
 
-    Same encoder path as exp18.embed, except the timestamp is the scene's own date rather than exp18's fixed one:
-    part B compares two acquisitions of one place, so the date must be the thing that differs."""
+    Same encoder path as exp18.embed, with two differences. The timestamp is the scene's own date rather than exp18's
+    fixed one, because part B compares two acquisitions of one place and the date must be the thing that differs. And
+    only the 5 x 5 neighbourhood of the chosen window is kept, per batch: the full 15 x 15 stack for this many chips is
+    4.2 GB and nothing downstream reads outside the neighbourhood."""
     import torch
     import exp18_sen1floods_expert as exp18
-    out = []
+    out, clamped = [], np.zeros(len(imgs), dtype=bool)
     for i in range(0, len(imgs), batch):
         x = imgs[i:i + batch][:, :, :CROP, :CROP].transpose(0, 2, 3, 1)[:, :, :, None, :].astype(np.float64)
         x = exp18._norm.normalize(exp18.Modality.SENTINEL2_L2A, x)
@@ -492,8 +494,11 @@ def embed_chips(model, imgs, dates, batch=32):
             timestamps=torch.tensor(dates[i:i + batch], dtype=torch.long, device=exp18.DEV)[:, None, :])
         with torch.no_grad():
             o = model.encoder(sample, fast_pass=True, patch_size=PATCH)["tokens_and_masks"].sentinel2_l2a
-        out.append(o.mean(dim=[3, 4]).half().cpu().numpy())
-    return np.concatenate(out)
+        f = o.mean(dim=[3, 4]).half().cpu().numpy()                      # (b, 15, 15, D)
+        keep, cl = neighbourhood(f, rc[i:i + b])
+        clamped[i:i + b] = cl
+        out.append(keep)
+    return np.concatenate(out), clamped
 
 
 def neighbourhood(feats, rc):
@@ -535,13 +540,16 @@ def fit_probe(X, y, seed=0, epochs=80, lr=2e-3, wd=1e-4, batch=256):
     return lin.eval()
 
 
-def probe_probs(lin, E):
-    """(N, 5, 5, D) -> (N, 5, 5, 8) class probabilities."""
+def probe_probs(lin, E, batch=512):
+    """(N, 5, 5, D) -> (N, 5, 5, 8) class probabilities, in batches so the whole stack never sits on the device."""
     import torch
     import exp18_sen1floods_expert as exp18
+    out = []
     with torch.no_grad():
-        x = torch.tensor(np.asarray(E, dtype=np.float32), device=exp18.DEV)
-        return torch.softmax(lin(x), dim=-1).cpu().numpy()
+        for i in range(0, len(E), batch):
+            x = torch.tensor(np.asarray(E[i:i + batch], dtype=np.float32), device=exp18.DEV)
+            out.append(torch.softmax(lin(x), dim=-1).cpu().numpy())
+    return np.concatenate(out)
 
 
 def readings(p):
@@ -644,8 +652,7 @@ def prepare_arm(d, tag, model):
         blk = img[i][:, r * PATCH:(r + 1) * PATCH, q * PATCH:(q + 1) * PATCH].astype(np.float64)
         var[i] = float(blk.std(axis=(1, 2)).mean())
     dates = np.array([[int(s[8:10]), int(s[5:7]) - 1, int(s[:4])] for s in d[f"date_{tag}"].astype(str)])
-    feats = embed_chips(model, img, dates)
-    E, clamped = neighbourhood(feats, rc)
+    E, clamped = embed_chips(model, img, dates, rc)
     return {"E": E, "rc": rc, "purity": purity, "variance": var, "clamped": clamped, "dates": dates}
 
 
