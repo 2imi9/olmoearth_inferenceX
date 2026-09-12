@@ -659,3 +659,24 @@ def test_exp66_dfc2020_sensor_axis_and_the_coarse_reference_recompute_from_the_m
     assert ws["share_a_right"] > ws["share_b_right"] and 0.2 < 1 - ws["share_a_right"] - ws["share_b_right"] < 0.45
     assert float((z["y_dfc"] == z["y_lc"])[ok & z["ok_lc"]].mean()) == pytest.approx(
         s["results"]["reference_gap"]["agreement_of_the_two_references"], abs=0.05)
+
+
+def test_exp67_dynamic_world_recomputes_from_the_committed_windows():
+    """exp67 (jobs 815613, 815860): all three preregistrations hold; the margin's advantage over the naive confidence, its
+    tie counts and the under-confidence recompute from the committed windows of every eighth tile."""
+    s = json.load(open(_need("exp67_summary.json")))
+    assert all(s["prereg"][k] is True for k in ("P1", "P2", "P3")) and s["prereg"]["complete"] is True and s["n_failures"] == 0
+    z = np.load(_need("exp67_windows.npz"))
+    err = (z["dec"] != z["y"]).astype(np.float64)
+    assert len(np.unique(z["tile"])) == 52 and len(err) == 548515
+    margin, naive = -z["margin"].astype(np.float64), 1.0 - z["top1p"].astype(np.float64)
+    assert excess_aurc(margin, err) < excess_aurc(naive, err)                      # the margin ranks better on the subsample too
+    assert excess_aurc(margin, err) < excess_aurc(z["rarity"].astype(np.float64), err)
+    ties = lambda v: len(v) - len(np.unique(v))
+    assert ties(naive) > ties(margin)                                             # the saturation that exp13 chose a margin to avoid
+    K = s["results"]["ranking"]["tied_values"]                                    # the ratio itself is a full-run quantity: tie counts are not scale-invariant
+    assert K["1 - top-1 probability"] > 6 * K["margin"]
+    assert float(z["top1p"].mean()) < float(1 - err.mean()) - 0.15                # under-confident by more than fifteen points
+    from oe_inferencex.explain import cue_enrichment
+    e = cue_enrichment(z["boundary"] > 0, err, n_boot=0)["enrichment"]
+    assert 2.0 < e < 4.0, e

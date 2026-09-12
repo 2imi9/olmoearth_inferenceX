@@ -147,6 +147,13 @@ against a second, twenty times coarser reference reverses this repository's
 oldest caveat: a coarse reference penalises a boundary-shaped signal rather
 than flattering it, so flattery needs a reference that resolves boundaries at
 the prediction's own scale. <!-- claim:dfc2020-margin-beats-pixel-control --> <!-- claim:dfc2020-sensor-difference-dominates-land-cover --> <!-- claim:dfc2020-coarse-reference-penalises-the-boundary-order -->
+The recipe also survives contact with a model this project had no hand in
+(exp67, Dynamic World's 409 expert-annotated tiles): a served global product's
+own margin ranks its own errors better than a control that never sees the
+imagery, it beats the naive top-probability confidence which ties on 23% of
+windows, and its errors carry the same cues. Its published probabilities,
+though, understate its accuracy by about 0.20 at every confidence level: the
+numbers that order a review well are not the numbers to threshold on. <!-- claim:dw-margin-ranks-a-production-model --> <!-- claim:dw-published-probabilities-are-underconfident -->
 
 The effect size in a reviewer's units (exp55, 45 GEOID-Flood events): on the
 median event the 5% of windows confidence flags hold 88% of the permanent-water

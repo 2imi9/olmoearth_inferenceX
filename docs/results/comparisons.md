@@ -1394,6 +1394,84 @@ internal record until that is settled. Runtime 1:06:02 including the 10.4 GB
 fetch (job 804312). Source `exp/out/exp66_summary.json`; `exp/out/exp66_masks.npz`
 carries the decisions, margins and both references for the first 200 patches.
 
+## Auditing a production model with its own probabilities: Dynamic World (exp67)
+
+Every ranking result above scores a model we or Ai2 fitted. This one scores a
+land-cover product someone else trained, deployed globally and published the
+per-pixel probabilities of. Ai2 suggested Dynamic World's expert-annotated
+validation labels; our first judgement was that they were reachable only
+through Earth Engine, and that judgement was wrong. The expert test tiles are
+on Zenodo, ungated and CC BY 4.0, and they carry the expert consensus
+annotation, Dynamic World's nine-class probability raster and its Top-1
+decision on one grid. So the audit needs no imagery and no encoder.
+
+Two conventions in that archive are traps and were verified against the
+record's own description and five sampled tiles before anything was computed:
+the band named `lulc` is the expert annotation and is one-indexed with 0
+meaning "no markup", while the band named `label` is Dynamic World's Top-1 and
+is zero-indexed. Comparing them directly gives 0.3% agreement; comparing
+`lulc - 1` to `label` gives the real number. Pixels are pooled to the 4 px
+windows scored everywhere here, giving 4,348,526 windows over 409 tiles, 95% of
+a window annotated on average. Dynamic World agrees with the expert consensus
+on 73.7% of them, against the 74% its own paper reports, and our pooled
+decision reproduces its published Top-1 on 99.0%, so the pipeline reads the
+product correctly.
+
+| Ranker, all label-free | pooled excess AURC | lead over the margin | tiles, p | tied values of 4,348,526 | capture at 5% / 20% |
+|---|---|---|---|---|---|
+| margin | 0.0637 | reference |  | 156,842 | 0.121 / 0.444 |
+| 1 - top-1 probability | 0.0651 | +0.0014 | 238/167, 2e-04 | 1,017,570 | 0.128 / 0.446 |
+| entropy | 0.0692 | +0.0055 | 289/117, 7e-18 | 0 | 0.123 / 0.423 |
+| boundary first, then margin | 0.0966 | +0.0329 | 238/168, 6e-04 | 163,884 | 0.120 / 0.432 |
+| boundary indicator | 0.1320 | +0.0683 | 349/57, 3e-52 | 4,348,517 | 0.128 / 0.428 |
+| control class rarity | 0.1120 | +0.0483 | 315/91, 3e-30 | 4,345,800 | 0.115 / 0.385 |
+
+**The recipe holds on a model we had no hand in.** Dynamic World's own margin
+ranks its own errors better than a control that never sees the imagery or the
+probabilities, by 0.0483 of excess AURC and on 315 tiles against 91
+(preregistered P1). It also beats the naive confidence, one minus the top-1
+probability, and the reason is visible in the tie column: the naive form ties
+on 23% of windows where the margin ties on 4%, which is precisely why this
+repository has scored a margin since exp13 (P2). The errors carry the
+explanation layer's cues, boundary 2.93 times, bottom margin quintile
+3.93 times, top entropy quintile 3.51 times (P3), and the boundary-first order
+loses to the margin as it does at eight, fifteen and nineteen classes. <!-- claim:dw-margin-ranks-a-production-model --> <!-- claim:dw-margin-beats-naive-confidence --> <!-- claim:dw-errors-carry-the-cues -->
+
+**The published probabilities are under-confident by about twenty points.**
+This reverses the stated prediction, which followed the usual finding for
+neural networks. Over 4,135,162 annotated pixels at the product's own
+resolution the mean published top-1 probability is 0.539 while the accuracy is
+0.738; the same gap appears on the pooled windows (0.535 against 0.737), so it
+is the product and not our pooling, which is why the measurement was taken at
+both scales. Every bin is under-confident and the effect is monotone:
+
+| published top-1 probability | pixels | mean probability | accuracy | gap |
+|---|---|---|---|---|
+| 0.1 to 0.2 | 7,947 | 0.187 | 0.230 | +0.043 |
+| 0.2 to 0.3 | 305,383 | 0.266 | 0.349 | +0.083 |
+| 0.3 to 0.4 | 700,020 | 0.351 | 0.475 | +0.124 |
+| 0.4 to 0.5 | 643,516 | 0.449 | 0.624 | +0.175 |
+| 0.5 to 0.6 | 610,337 | 0.551 | 0.772 | +0.221 |
+| 0.6 to 0.7 | 1,220,716 | 0.665 | 0.911 | +0.246 |
+| 0.7 to 0.8 | 647,234 | 0.716 | 0.968 | +0.251 |
+
+The published probability never exceeds about 0.8. A reader should take the
+two findings together and not separately: the same numbers that rank the
+errors well are badly miscalibrated as probabilities, so they are good for
+deciding *what to review first* and poor for deciding *what to trust at a
+threshold*. That is the distinction this repository has drawn since exp21
+between a ranking and a calibrated probability, now measured on a served
+global product. <!-- claim:dw-published-probabilities-are-underconfident -->
+
+Limits. The expert consensus is released only as a consensus, not per
+annotator, so the question this dataset most invites, whether the model is
+unsure where the annotators disagreed, cannot be asked of it. There is no
+cloud class among the nine, and cloud is one reason a pixel goes unannotated.
+Runtime 1:23 with the archive cached, 12:23 including the 3.63 GB fetch and its
+checksum (jobs 815613 and 815860). Source `exp/out/exp67_summary.json`;
+`exp/out/exp67_windows.npz` carries the per-window quantities for every eighth
+tile, and every number above recomputes from it.
+
 ## Served land cover change rasters (exp20)
 
 First assessment of a served output: ten 512-px windows (about
