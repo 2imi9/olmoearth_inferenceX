@@ -223,6 +223,41 @@ tool returns the structured evidence.
 - Confirmation of whether Studio per-project exports match the
   `olmoearth_lcc` export format (partial probabilities).
 
+## Suggestions from Ai2, and where each stands
+
+Patrick Johnson, 2026-09-11, in the shared Slack channel. His two substantive
+points and his five dataset suggestions, each with our position and the
+evidence behind it. Updated when an item moves.
+
+**"Without labels it's hard to confirm where a map is actually wrong."**
+Agreed, and the package does not claim to. It ranks windows by the model's own
+top-1 minus top-2 logit margin without labels; labels are what grade that
+ranking, and every headline number here is graded on expert labels
+([results/comparisons.md](../results/comparisons.md)). The distinction is
+stated in [../method/protocol.md](../method/protocol.md) and in the Usage
+page, and belongs in any reply upstream.
+
+**"Train a model in the OlmoEarth platform, export it, take the margin from
+that head."** Not done: no platform account, no export, no credits requested.
+This is the most valuable offer on the table, because an exported head is the
+served product's own weights rather than a public checkpoint, and because
+`oe_inferencex.taskcard` would then read a live fine-tune instead of a config.
+Blocking question asked back: which platform task has labels Ai2 trusts, since
+without them the audit can be run but not graded. Until that lands, the closest
+thing we hold is our own fine-tune of OlmoEarth on Sen1Floods11 with their
+recipe restated (exp52).
+
+| Dataset he suggested | What it is | Our position |
+|---|---|---|
+| Copernicus EMS | expert-digitised flood extents | **Done.** Used throughout, via the GEOID-Flood release: 219 activations, 55 events scored (exp55, exp57, exp60, exp61, exp62). The one source that carries both a flood class and a permanent-water class per pixel. Not yet fetched: the per-activation *reference* (pre-event) water layers, which would date-match the pre-event grading that exp61 left open. |
+| DFC2020 | S1 + S2 at 10 m, hand-labelled test set | **Next, committed to him.** The only suggestion that gives multi-class land cover, both sensors over the same scenes, and a hand-labelled test split next to a weakly-labelled training split. That last pairing also tests this repository's oldest caveat directly, that reference-product labels flatter boundary-type signals (exp18). Not in Ai2's published embeddings, so it needs a fetch and our own encoder pass. |
+| LUCAS | in-situ field survey points, Europe | **Judged, not run.** Points, not dense maps: they can grade a review set (is a flagged window wrong?) but not a window-level difference between two inferences, which is where the comparison half lives. Worth it only if we add a point-graded protocol. |
+| EuroCrops | farmer-declared crop parcels, Europe | **Judged, not run.** Parcels, same limitation as LUCAS, with the extra caveat that declarations are the farmer's, not an analyst's. PASTIS already gives us dense crop-type labels through Ai2's embeddings (exp54, exp63). |
+| Dynamic World | expert-annotated validation labels, 10 m | **Blocked.** A 103-agent source search (2026-09-11) found no bulk export of either the product or its validation tiles outside Earth Engine, and no mirror on a hub we can script against. Asked upstream whether a bulk copy exists. |
+
+He also passed on the HOTOSM open call for EO GeoAI models: sub-metre imagery,
+outside the 10 m Sentinel setup this project is built on, so not pursued.
+
 ## Closed
 
 | Item | Closed by |
