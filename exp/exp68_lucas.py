@@ -564,7 +564,7 @@ def fit_probe(X, y, seed=0, epochs=80, lr=2e-3, wd=1e-4, batch=256):
     return lin.eval()
 
 
-WD_GRID = (1e-4, 1e-2, 1.0, 10.0, 100.0)
+WD_GRID = (1e-4, 1e-2, 1.0, 10.0, 100.0, 1000.0, 10000.0)
 EPOCH_GRID = (10, 30, 80)
 
 
@@ -575,9 +575,11 @@ def tune_probe(X, y, groups, seed=0):
     own fit set against 0.480 on the held-out regions. A probe that has memorised its fit set is not a fair model to
     audit, and part of that gap is genuine spatial shift across Europe rather than plain overfitting, so the validation
     split is by region and not by row: a within-region split would not see the shift the report split imposes.
-    The grid is deliberately wide, to 100 in weight decay and down to ten epochs, so that if the best setting is still
-    the default the conclusion is earned: the remaining gap is then spatial shift across Europe and not regularisation
-    left on the table, and a reader can check that from the recorded sweep rather than taking it on trust.
+    The grid is deliberately wide, to 10,000 in weight decay and down to ten epochs, and it was extended upward once
+    after a first sweep chose its largest value: a grid whose winner sits on its own boundary has not shown the optimum,
+    only that it lies at least that far out. The recorded sweep lets a reader check that the chosen setting is interior,
+    and that the remaining fit-to-report gap is spatial shift across Europe rather than regularisation left on the
+    table.
 
     Returns the refitted probe and the whole sweep, so the record shows what regularisation bought."""
     inner_fit, inner_val = region_split(groups, salt="inner")
