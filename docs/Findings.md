@@ -188,6 +188,20 @@ of differing windows are ones where the model was right about both years, so the
 difference between two inferences was the model correctly following a real crop
 rotation, not either side being wrong. <!-- claim:eurocrops-ranking-holds-on-declarations --> <!-- claim:eurocrops-the-labelled-floor-for-a-two-date-difference --> <!-- claim:eurocrops-a-difference-can-be-the-model-tracking-the-ground -->
 
+And it answers the objection that all of this rests on testbeds we chose (exp70).
+Ai2's published embedding suite holds 25 tasks they picked for their own paper,
+with the splits fixed in the files. On all 24 that a margin is defined for, and on
+all 14 distinct sources behind them, the model's own margin ranks its errors
+better than the best control that sees no model, over 6.4 million graded units
+spanning an accuracy range from 0.333 to 0.979, on classification and segmentation
+alike. Six of the tasks come from GEO-Bench 1, a third-party benchmark, and the
+margin wins on all six. <!-- claim:suite-margin-wins-every-task -->
+That run also scoped the probe warning above. Across those 24 tasks the ordering
+of the confidence signals does degrade with how badly the probe generalises, which
+is the direction LUCAS found, but by four ten-thousandths rather than by an
+outright reversal. Only severe memorisation flips the ordering; mild memorisation
+merely erodes it. <!-- claim:suite-probe-gap-degrades-the-ordering -->
+
 The effect size in a reviewer's units (exp55, 45 GEOID-Flood areas of interest
 drawn from nine activations): on the median area the 5% of windows confidence
 flags hold 88% of the permanent-water errors and 64% of the post-event water

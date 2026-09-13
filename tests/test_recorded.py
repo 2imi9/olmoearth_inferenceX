@@ -1,4 +1,5 @@
 """The package reproduces numbers recorded in exp/out from the committed artifacts alone (no encoder needed)."""
+import collections
 import csv
 import json
 import os
@@ -791,3 +792,53 @@ def test_exp69_eurocrops_recomputes_from_the_committed_windows():
         # a difference can be the model right about BOTH years, the case one labelled date cannot represent
         both = moved & (z["dec_y0"][B] == z["y_y0"][B]) & (z["dec_y1"][B] == z["y_y1"][B])
         assert both.sum() > 0, r
+
+
+def test_exp70_every_task_of_a_suite_we_did_not_choose():
+    """exp70 (job 837407): the margin beats the best no-model control on all 24 tasks of Ai2's published suite.
+
+    This is the answer to the objection that the testbeds in this repository were chosen with knowledge of the answer,
+    so the test checks the things that make it an answer: that every task won, that the win survives collapsing tasks
+    that share a source, that both families and both ends of the accuracy range are covered, and that nothing was
+    silently dropped."""
+    s = json.load(open(_need("exp70_summary.json")))
+    V, R = s["verdicts"], s["results"]["tasks"]
+    assert not s["results"]["failures"], f"tasks failed to score: {s['results']['failures']}"
+    assert len(R) == 24 and all(V[k]["holds"] is True for k in ("P1", "P2", "P3"))
+
+    # every task, and every distinct source, since three AWF sensors are not three datasets
+    assert all(R[t]["margin_lead"] > 0 for t in R)
+    assert V["P1"]["distinct_sources"] == V["P1"]["source_wins"] == 14
+    assert V["P1"]["p"] < 1e-6
+
+    # both families, and the excluded task named rather than dropped
+    fams = collections.Counter(R[t]["family"] for t in R)
+    assert fams["classification"] == 17 and fams["segmentation"] == 7
+    assert "m_bigearthnet" in s["config"]["excluded"] and "multi-label" in s["config"]["excluded"]["m_bigearthnet"]
+
+    # the margin's lead is not an artifact of easy tasks: it wins at both ends of a wide accuracy range
+    accs = {t: R[t]["test_accuracy"] for t in R}
+    assert min(accs.values()) < 0.40 and max(accs.values()) > 0.97
+    worst, best = min(accs, key=accs.get), max(accs, key=accs.get)
+    assert R[worst]["margin_lead"] > 0 and R[best]["margin_lead"] > 0
+
+    # the control it beats must be a control, not another confidence reading
+    assert all(R[t]["best_control"].startswith("ctl_") for t in R)
+
+    # P3 carries its own scope: exp68's direction, not exp68's magnitude
+    assert V["P3"]["margin_over_entropy_wide_gap"] < V["P3"]["margin_over_entropy_tight_gap"]
+    assert abs(V["P3"]["margin_over_entropy_tight_gap"] - V["P3"]["margin_over_entropy_wide_gap"]) < 0.001, \
+        "the suite must not be quoted as reproducing exp68's inversion; it reproduces only the direction"
+
+
+def test_exp70_csv_agrees_with_its_summary():
+    """One row per task, and the row's numbers are the summary's."""
+    s = json.load(open(_need("exp70_summary.json")))["results"]["tasks"]
+    rows = list(csv.DictReader(open(_need("exp70_tasks.csv"))))
+    assert len(rows) == len(s) == 24
+    for r in rows:
+        t = r["task"]
+        assert t in s
+        assert abs(float(r["margin_lead"]) - s[t]["margin_lead"]) < 1e-9
+        assert abs(float(r["test_accuracy"]) - s[t]["test_accuracy"]) < 1e-9
+        assert int(r["n_units"]) == s[t]["n_units"]

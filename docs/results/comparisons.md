@@ -1797,6 +1797,85 @@ decimals rather than pinned exactly. Source `exp/out/exp69_summary.json`;
 masks, the four confidence signals and the pixel-variance control for every fourth
 chip of each region, and every number above recomputes from it.
 
+## Tasks we did not choose: Ai2's whole published suite (exp70)
+
+The strongest objection to everything above is that we picked our own testbeds.
+Sen1Floods11, the AWF points, GEOID-Flood and the four references of exp66 to
+exp69 were each chosen here, one at a time, for a reason we also wrote down. A
+reader is entitled to ask whether the margin ranks errors on tasks nobody
+selected to make it look good.
+
+Ai2's `olmoearth-paper-embeddings` settles that cheaply. It is the embedding set
+behind their own paper: 25 tasks for OlmoEarth Base, chosen by them for their
+evaluation, with the splits fixed in the files. Because the embeddings are
+published there is no encoder pass at all. Six of the tasks carry an `m_` prefix
+because they come from GEO-Bench 1, a third-party benchmark with its own paper.
+
+24 of the 25 ran. `m_bigearthnet` is excluded and the reason is in the record
+rather than left out: its labels are 43 binary tags per sample, so a top-1 minus
+top-2 margin is not defined on it without inventing a convention this project
+has never tested. The other 24 split into two families the protocol must treat
+differently because the data do: 17 classification tasks where the graded unit is
+the sample, and 7 segmentation tasks where it is the 4 px window as everywhere
+else here. 6,435,473 graded units in total, from 200 samples on the AWF sensors
+to 4,096,000 windows on m_sa_crop_type.
+
+**The margin beats the best no-model control on all 24, and on all 14 distinct
+sources.** One-sided exact sign test over tasks, p = 6e-08. The lead runs from
++0.0157 on a two-class cropharvest split to +0.2278 on the seventeen-class
+so2sat, median +0.1158, against controls that see either no model at all (how far
+a sample sits from the training set's mean embedding) or only the decision (how
+rare the predicted class is). Preregistered P1 holds. <!-- claim:suite-margin-wins-every-task -->
+
+It is not a property of one family or of easy tasks. Classification 17 of 17,
+segmentation 7 of 7, so preregistered P2 holds and the claim does not have to be
+narrowed to a family by name. And the suite spans an accuracy range this
+repository has never had in one place, from 0.333 on nandi_sentinel1 to 0.979 on
+m_eurosat, with the margin winning at both ends. <!-- claim:suite-holds-in-both-families -->
+
+| Family | Tasks | Margin wins | Accuracy range | Median lead |
+|---|---|---|---|---|
+| classification, unit = sample | 17 | 17 | 0.333 to 0.979 | +0.112 |
+| segmentation, unit = 4 px window | 7 | 7 | 0.653 to 0.926 | +0.117 |
+| of which GEO-Bench 1 | 6 | 6 | 0.511 to 0.979 | |
+
+**exp68's warning about probes replicates in direction and not in magnitude, and
+the distinction matters.** exp68 found that a probe which had memorised its fit
+set reversed the ordering of the confidence signals: the margin went from last of
+four to the front once regularisation was chosen on held-out ground. That finding
+now sits on the front page as a warning to anyone evaluating with linear probes,
+so it needed testing somewhere other than the one task it was found on.
+Splitting these 24 tasks at their median train-minus-test gap of 0.087, the
+margin's advantage over predictive entropy is -0.000148 on the worse-generalising
+half against +0.000215 on the better half. The direction is exp68's and the
+preregistered test passes, so P3 holds. The magnitude is four ten-thousandths,
+nothing like the inversion exp68 saw, and the reason is visible in the gaps: the
+probes here have a median gap of 0.087 where exp68's default probe had 0.44. The
+honest statement is that the ordering of confidence signals degrades with
+memorisation, monotonically, and that only severe memorisation reverses it. The
+warning stays, with that scope attached. <!-- claim:suite-probe-gap-degrades-the-ordering -->
+
+What this is not, and it should be said before anyone quotes it. Ai2's suite and
+GEO-Bench both measure accuracy, and no public benchmark measures label-free
+error ranking, so nothing here is a leaderboard result and nothing competes with
+a published number. The suite is used as a task set. That is exactly what was
+needed: it converts "the margin ranks errors on the testbeds we chose" into "the
+margin ranks errors on a suite somebody else fixed".
+
+Limits. The embeddings are Ai2's, extracted with their settings, so this inherits
+their extraction and is not an independent implementation of their models. The
+24 tasks are not 24 independent datasets: three AWF sensors, three nandi sensors,
+six cropharvest variants and three PASTIS variants share four sources between
+them, which is why the count by distinct source, 14 of 14, is reported beside the
+count by task. Where a task's test split is small, 200 samples on the AWF
+sensors, its excess AURC is noisy, which is why the headline is a count over
+tasks and not a pooled number. The controls available from embeddings alone are
+weaker than the pixel indices used elsewhere here, because the imagery is not
+published with them; a no-model spectral index beat confidence on one Sen1Floods11
+event in exp45 and no such control can be computed here. Runtime 12 minutes on one
+B200, no downloads beyond the cached embeddings (job 837407). Source
+`exp/out/exp70_summary.json` and `exp/out/exp70_tasks.csv`, one row per task.
+
 ## Served land cover change rasters (exp20)
 
 First assessment of a served output: ten 512-px windows (about

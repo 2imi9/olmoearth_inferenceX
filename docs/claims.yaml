@@ -2267,3 +2267,70 @@
     CPU rather than a GPU flipped one window of 13,373 and moved a third decimal, which is not a change in the finding.
     Slovenia's 0.051 is low because only 3.8% of its declarations changed at all, so there is little
     rotation for the model to follow.
+
+- id: suite-margin-wins-every-task
+  statement: "On all 24 scored tasks of Ai2's published embedding suite, chosen by them for their own paper and not by us, the model's own margin ranks its errors better than the best no-model control, with a lead from 0.0157 to 0.2278 of excess AURC and a median of 0.1158 (one-sided exact sign test over tasks, 24 of 24, p = 6e-08); the win also holds on all 14 distinct sources, since three AWF sensors, three nandi sensors, six cropharvest variants and three PASTIS variants are not twelve independent datasets, and it holds across an accuracy range from 0.333 to 0.979 over 6,435,473 graded units; preregistered P1 holds, and this is the answer to the objection that the testbeds in this repository were chosen with knowledge of the answer."
+  status: supported
+  experiments: [exp70]
+  artifacts: [exp/out/exp70_summary.json]
+  check: |-
+    (lambda V, R:
+      V['P1']['holds'] is True and V['P1']['wins'] == 24 and V['P1']['of'] == 24
+      and V['P1']['p'] < 1e-6
+      and V['P1']['distinct_sources'] == 14 and V['P1']['source_wins'] == 14
+      and len(R) == 24 and all(R[t]['margin_lead'] > 0 for t in R)
+      and round(min(R[t]['margin_lead'] for t in R), 4) == 0.0157
+      and round(max(R[t]['margin_lead'] for t in R), 4) == 0.2278
+      and round(min(R[t]['test_accuracy'] for t in R), 3) == 0.333
+      and round(max(R[t]['test_accuracy'] for t in R), 3) == 0.979
+      and sum(R[t]['n_units'] for t in R) == 6435473
+    )(A['exp/out/exp70_summary.json']['verdicts'], A['exp/out/exp70_summary.json']['results']['tasks'])
+  cited_in:
+    - {file: docs/Findings.md, marker: suite-margin-wins-every-task}
+    - {file: docs/TECHNIQUES.md, marker: suite-margin-wins-every-task}
+    - {file: docs/results/comparisons.md, marker: suite-margin-wins-every-task}
+  note: >-
+    The embeddings are Ai2's, extracted with their settings, so this inherits their extraction and is not an independent
+    implementation of their models. The suite measures accuracy and no public benchmark measures label-free error
+    ranking, so this is a task set and not a leaderboard result. The controls available from embeddings alone are
+    weaker than the pixel indices used elsewhere here, because the imagery is not published with them.
+
+- id: suite-holds-in-both-families
+  statement: "The result is not a property of one task family: the margin beats the best no-model control on 17 of 17 classification tasks, where the graded unit is the sample, and on 7 of 7 segmentation tasks, where it is the 4 px window used everywhere else in this repository, so preregistered P2 holds and the claim does not have to be narrowed to a family by name; six of the tasks come from GEO-Bench 1, a third-party benchmark with its own paper, and the margin wins on all six."
+  status: supported
+  experiments: [exp70]
+  artifacts: [exp/out/exp70_summary.json]
+  check: |-
+    (lambda V, R:
+      V['P2']['holds'] is True
+      and V['P2']['classification'] == '17/17' and V['P2']['segmentation'] == '7/7'
+      and sum(1 for t in R if R[t]['family'] == 'classification') == 17
+      and sum(1 for t in R if R[t]['family'] == 'segmentation') == 7
+      and all(R[t]['margin_lead'] > 0 for t in R if R[t]['geobench'])
+      and sum(1 for t in R if R[t]['geobench']) == 6
+    )(A['exp/out/exp70_summary.json']['verdicts'], A['exp/out/exp70_summary.json']['results']['tasks'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: suite-holds-in-both-families}
+    - {file: docs/results/comparisons.md, marker: suite-holds-in-both-families}
+
+- id: suite-probe-gap-degrades-the-ordering
+  statement: "exp68's warning about linear probes replicates in direction and not in magnitude, and the scope matters because that warning is on the front page: splitting these 24 tasks at their median train-minus-test gap of 0.087, the margin's advantage over predictive entropy is -0.000148 on the worse-generalising half against +0.000215 on the better half, which is exp68's direction and passes preregistered P3, but is four ten-thousandths rather than the outright inversion exp68 saw, and the reason is visible in the gaps, a median of 0.087 here against 0.44 for exp68's default probe; so the ordering of confidence signals degrades with memorisation and only severe memorisation reverses it."
+  status: mixed
+  experiments: [exp70, exp68]
+  artifacts: [exp/out/exp70_summary.json, exp/out/exp68_summary.json]
+  check: |-
+    (lambda V, T:
+      V['P3']['holds'] is True
+      and V['P3']['margin_over_entropy_wide_gap'] < V['P3']['margin_over_entropy_tight_gap']
+      and round(V['P3']['median_gap'], 3) == 0.087
+      and V['P3']['n_wide'] == 12 and V['P3']['n_tight'] == 12
+      and abs(V['P3']['margin_over_entropy_tight_gap'] - V['P3']['margin_over_entropy_wide_gap']) < 0.001
+      and T['chosen']['weight_decay'] == 100.0
+    )(A['exp/out/exp70_summary.json']['verdicts'], A['exp/out/exp68_summary.json']['results']['probe_tuning'])
+  cited_in:
+    - {file: docs/Findings.md, marker: suite-probe-gap-degrades-the-ordering}
+    - {file: docs/results/comparisons.md, marker: suite-probe-gap-degrades-the-ordering}
+  note: >-
+    The magnitude clause is deliberately part of the statement. exp68's inversion was dramatic and this suite's probes
+    do not reproduce it, so quoting exp68 alone would overstate how often the ordering flips in practice; quoting exp70
+    alone would understate what a badly fitted probe can do. Both belong in the sentence.
