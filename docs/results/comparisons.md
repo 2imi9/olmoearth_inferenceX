@@ -806,7 +806,32 @@ activations, event-level splits, manually validated three-class labels) turns
 the question into a rate: a shard subset of its test split gave 55 events, 64-px
 chips at stride 256 with validity and cloud filters, heads trained on a val
 subset the events never touch, and exp47's protocol run per event with the
-same four crop offsets. Two sensors on identical windows: permanent water from
+same four crop offsets.
+
+One thing about those events that this section did not say and should have.
+They are areas of interest, not activations, and they cluster: the 45 scored
+for permanent water come from **9 CEMS activations**, and EMSR192 alone
+contributes 23 of the 45. This repository's own protocol votes once per river
+on Sen1Floods11 for exactly this reason, so the per-event sign test here was
+counting correlated units. Recomputing every headline from the committed
+artifact with activations as the unit, averaging areas of interest inside an
+activation first:
+
+| Quantity | as recorded, per area of interest | clustered, per activation |
+|---|---|---|
+| median capture at a 5% budget, permanent water | 0.877, 17.5x a random 5% | 0.843, 16.9x |
+| median capture at a 5% budget, water after the event | 0.642, 12.8x | 0.607, 12.1x |
+| confidence beats the NDWI control, permanent water | 43/2, p = 3e-11 | 9/0, p = 2e-03 |
+| confidence beats the sensor control, water after | 44/1, p = 1e-12 | 9/1, p = 1e-02 |
+| exceptions, where the control wins | 2 of 45 areas | 1 of 9 activations (both areas are EMSR273) |
+
+The effect size a reviewer would feel barely moves, which is the number this
+section exists to report. What moves is the evidence behind the exception rate:
+"2 of 45" reads as 4% and the honest figure is one activation in nine for
+permanent water and one in ten for water after the event. The exceptions are
+still a minority and the sign tests still hold at the activation level, but they
+hold at p = 0.002 and 0.01 rather than at 1e-11, and "rare" should be read
+against nine activations. Two sensors on identical windows: permanent water from
 the pre-event Sentinel-2 composite (S2 head) and water after the event from the
 post-event Sentinel-1 (S1 head; flooded-only as a secondary task).
 

@@ -1,10 +1,26 @@
 # Recipe: auditing a prediction map without labels
 
-What twenty-six experiments support doing, and not doing, when judging where
+What the first twenty-five experiments support doing, and not doing, when judging where
 a prediction map is wrong in a region with no labels. Each item cites the
 experiment behind it; the evidence is in
 [../results/comparisons.md](../results/comparisons.md). Index at
 [../TECHNIQUES.md](../TECHNIQUES.md).
+
+**What this page does not yet carry.** Forty-odd experiments after exp25 have
+produced conclusions a practitioner would want and this page has not been
+rewritten around them. The largest omissions: the comparison half of the
+package, which measures where two inferences of one place differ and, with
+labels, which side to believe (exp57 to exp63, exp65); the progression across
+four kinds of reference, photointerpretation, another model's output, ground
+observation and farmers' declarations, and what each one does and does not
+license (exp66 to exp69); the warning that a small readout which has memorised
+its practice data reverses which confidence signal ranks best, so a ranking
+comparison is unreadable without its readout's generalisation gap beside it
+(exp68); and the floor a two-date difference must be read against, which is how
+often the map moves where the ground did not, between 6% and 37% on crops
+(exp69), not the rate at which reseeding the head moves it. Until this page is
+rewritten, [../TECHNIQUES.md](../TECHNIQUES.md) is the complete index and
+[../results/comparisons.md](../results/comparisons.md) the evidence.
 
 ## Do
 

@@ -28,9 +28,11 @@ file under `exp/out/`; the per-experiment detail is in the
    model's own sensor is the less informative one for water. <!-- claim:s1-probe-ndwi-flip -->
    Fine-tune the encoder and the exception goes: the trained S2 model's
    confidence beats the index on Bolivia under both backbones (exp52). <!-- claim:finetune-dissolves-bolivia-exception -->
-   Over 45 GEOID-Flood events the index beats confidence on 2 for
-   permanent water and the sensor control on 1 for post-event water:
-   exceptions exist and are rare (exp55). On four multi-class tasks from Ai2's
+   Over 45 GEOID-Flood areas of interest the index beats confidence on 2 for
+   permanent water and the sensor control on 1 for post-event water, but those
+   areas come from only nine and ten CEMS activations and both permanent-water
+   exceptions sit in one of them, so the rate to quote is one activation in nine
+   and not two areas in forty-five (exp55). On four multi-class tasks from Ai2's
    embeddings confidence beats the embedding-distance control everywhere
    (exp54). <!-- claim:geoid-exception-rate --> <!-- claim:multiclass-confidence-beats-embedding-control -->
    A bag of bootstrap heads does not improve on it: an apparent gain under
@@ -186,9 +188,12 @@ of differing windows are ones where the model was right about both years, so the
 difference between two inferences was the model correctly following a real crop
 rotation, not either side being wrong. <!-- claim:eurocrops-ranking-holds-on-declarations --> <!-- claim:eurocrops-the-labelled-floor-for-a-two-date-difference --> <!-- claim:eurocrops-a-difference-can-be-the-model-tracking-the-ground -->
 
-The effect size in a reviewer's units (exp55, 45 GEOID-Flood events): on the
-median event the 5% of windows confidence flags hold 88% of the permanent-water
-errors and 64% of the post-event water errors, 17.5 and 12.8 times a random 5%. <!-- claim:geoid-capture-effect-size -->
+The effect size in a reviewer's units (exp55, 45 GEOID-Flood areas of interest
+drawn from nine activations): on the median area the 5% of windows confidence
+flags hold 88% of the permanent-water errors and 64% of the post-event water
+errors, 17.5 and 12.8 times a random 5%; clustering by activation moves that to
+16.9 and 12.1 times, so the effect a reviewer would feel survives the clustering
+even though the exception rate above does not survive it as well. <!-- claim:geoid-capture-effect-size -->
 
 ## The numbers
 

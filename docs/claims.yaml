@@ -1349,7 +1349,7 @@
     - {file: docs/results/comparisons.md, marker: boundary-first-many-classes-split}
 
 - id: geoid-exception-rate
-  statement: Over 45 scored GEOID-Flood events the NDWI index beats the S2 head's confidence on 2 events for permanent water and the sensor-level control beats the S1 head's confidence on 1 for post-event water (preregistered P1 and P2); Bolivia-type exceptions exist and are rare.
+  statement: "Over 45 scored GEOID-Flood areas of interest the NDWI index beats the S2 head's confidence on 2 for permanent water and the sensor-level control beats the S1 head's confidence on 1 for post-event water (preregistered P1 and P2); those 45 areas come from only 9 and 10 CEMS activations and both permanent-water exceptions sit inside a single activation, EMSR273, so the honest exception rate is one activation in nine rather than two areas in forty-five, and clustered by activation the preregistered tests hold at p = 2e-03 and 1e-02 rather than 3e-11 and 1e-12; Bolivia-type exceptions exist and are a minority, to be read against nine activations and not forty-five events."
   status: supported
   experiments: [exp55]
   artifacts: [exp/out/exp55_summary.json]
@@ -1360,13 +1360,18 @@
       and R['B']['across_events']['control S1 level']['control_wins'] == 1
       and R['A']['across_events']['control NDWI level']['exception_rate'] < 1 / 3
     )(A['exp/out/exp55_summary.json'], A['exp/out/exp55_summary.json']['results'])
+  note: >-
+    Recomputed from the committed artifact with activations as the unit, averaging areas of interest inside an a
+    ctivation first. This repository's protocol votes once per river on Sen1Floods11 for exactly this reason, an
+    d the per-event sign test here was counting correlated units; the clustered table is in the exp55 section of
+     results/comparisons.md.
   cited_in:
     - {file: docs/Findings.md, marker: geoid-exception-rate}
     - {file: docs/TECHNIQUES.md, marker: geoid-exception-rate}
     - {file: docs/results/comparisons.md, marker: geoid-exception-rate}
 
 - id: geoid-capture-effect-size
-  statement: On the median GEOID-Flood event the 5% of windows confidence flags hold 88% of the permanent-water errors and 64% of the post-event water errors, 17.5 and 12.8 times a random 5% (preregistered P3, threshold 0.25).
+  statement: "On the median GEOID-Flood area of interest the 5% of windows confidence flags hold 88% of the permanent-water errors and 64% of the post-event water errors, 17.5 and 12.8 times a random 5% (preregistered P3, threshold 0.25); the 45 areas cluster into 9 and 10 CEMS activations with EMSR192 contributing about half of them, and clustering by activation barely moves the effect a reviewer would feel, to 0.843 and 0.607, or 16.9 and 12.1 times a random 5%."
   status: supported
   experiments: [exp55]
   artifacts: [exp/out/exp55_summary.json]
@@ -1376,6 +1381,10 @@
       and all(R[t]['across_events']['median_capture5_confidence'] >= 0.25 and R[t]['across_events']['median_capture5_ratio_to_random'] >= 5 for t in ('A', 'B'))
       and round(R['A']['across_events']['median_capture5_confidence'], 2) == 0.88 and round(R['B']['across_events']['median_capture5_confidence'], 2) == 0.64
     )(A['exp/out/exp55_summary.json'], A['exp/out/exp55_summary.json']['results'])
+  note: >-
+    The effect size is what this claim is for and it survives clustering, 17.5x to 16.9x and 12.8x to 12.1x. The
+     evidence behind the companion exception rate does not survive as well; see geoid-exception-rate and the exp
+    55 section.
   cited_in:
     - {file: docs/Findings.md, marker: geoid-capture-effect-size}
     - {file: docs/TECHNIQUES.md, marker: geoid-capture-effect-size}
