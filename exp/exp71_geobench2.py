@@ -21,7 +21,13 @@ all, and only 2 carry all twelve bands OlmoEarth expects:
   BENV2 12/12, TreeSatAI 12/12, DynamicEarthNet 11/12 (no B09), So2Sat 10/12, PASTIS 10/12, BioMassters 10/12.
   The other 14 are aerial, WorldView, Planet, grayscale or SAR-only and OlmoEarth cannot read them at all.
 
-BioMassters is excluded as a regression task with no classes, so a top-1 minus top-2 margin is undefined on it. Missing
+Three of those six then fall away for reasons measured on the downloaded data rather than assumed. BioMassters is
+regression with no classes. TreeSatAI carries 15 tags per sample and BENV2 carries 19, both multi-label, so a top-1
+minus top-2 margin is undefined on them for the same reason m_bigearthnet was dropped from exp70. That leaves THREE
+usable tasks out of twenty: So2Sat, PASTIS and DynamicEarthNet. The arithmetic is worth stating plainly, because it
+says something real about the benchmark and the model rather than about this protocol: GEO-Bench-2 is built to reward
+models that read many modalities and many label shapes, and a Sentinel-only single-label ranking protocol reaches a
+seventh of it. Missing
 bands are filled with zeros and the fill is reported per task, because a zero in a normalised band is not a neutral
 value and a reader should be able to discount a task that needed two of them. So this is a result on a named third-party
 benchmark and on a minority of it, and the docstring says which minority before the numbers do.
@@ -99,6 +105,10 @@ SUITE = {
     "dynamic_earthnet":  {"cls": "GeoBenchDynamicEarthNet", "sub": "dynamic_earthnet", "kind": "segmentation"},
 }
 EXCLUDED = {"biomassters": "a regression task with no classes, so a top-1 minus top-2 margin is undefined",
+            "treesatai": "MEASURED on the downloaded data: 15 tags per sample, multi-label, so a top-1 minus top-2 "
+                         "margin is undefined without a convention this project has never tested (as m_bigearthnet "
+                         "in exp70)",
+            "benv2": "MEASURED on the downloaded data: 19 tags per sample, multi-label, same reason",
             "burn_scars, caffe, cloudsen12, everwatch, flair2, fotw, forestnet, kuro_siwo, nzcattle, "
             "spacenet2, spacenet6, spacenet7, spacenet8, substation":
                 "no Sentinel-2 at all: aerial, WorldView, Planet, grayscale or SAR-only, which OlmoEarth cannot read"}
