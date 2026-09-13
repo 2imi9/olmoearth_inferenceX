@@ -269,18 +269,253 @@ def smoke(args):
     assert r["package_capture_at_budget"] <= r["attainable_capture_ceiling"] + 1e-12, "capture cannot beat the ceiling"
     assert sorted(os.listdir(os.path.join(root, "t"))) == ["labels.npy", "meta.json", "scores.npy", "valid.npy"]
     print("smoke OK: error floor and ceiling, one chip per event, exclusions, capture bounded by the attainable ceiling")
+    _smoke_pipeline()
+
+
+def _smoke_pipeline():
+    """run and grade end to end against a STUB model, so the harness is checked without a GPU.
+
+    The stub is written to make arm A ground itself in its tools and arm B state a number no tool produced. That is
+    a test of the grading, NOT a preview of the result: the arms behave that way here because this function makes
+    them, and what a real served model does is the experiment's open question."""
+    import shutil
+    import tempfile
+    import types
+
+    import exp64_arms as arms
+
+    root = tempfile.mkdtemp()
+    cards_root = os.path.join(root, "smoke")
+    rng = np.random.default_rng(0)
+    g, made = 16, []
+    for i in range(6):
+        lab = (rng.random((g, g)) < 0.35).astype(int)
+        dec = lab.copy()
+        ei = rng.choice(g * g, size=30, replace=False)
+        dec.ravel()[ei] = 1 - dec.ravel()[ei]
+        margin = rng.random((g, g)).astype(np.float32) * 0.5 + 0.5
+        margin.ravel()[ei] -= 0.45
+        sec = dec.copy()
+        fl = rng.choice(g * g, size=20, replace=False)
+        sec.ravel()[fl] = 1 - sec.ravel()[fl]
+        made.append(_card(f"c{i}", dec, margin, np.ones((g, g), bool), lab,
+                          {"source": "smoke", "review_budget": BUDGET, "task": "water", "sensor": "S1"},
+                          second={"dec": sec, "margin": margin * 0.9, "name": "s"}))
+    write_cards(made, cards_root)
+
+    def stub(endpoint, model, messages, tools=None, temperature=0.0, seed=0, timeout=300):
+        txt = json.dumps(messages)
+        if tools and '"role": "tool"' not in txt:
+            name = tools[0]["function"]["name"]
+            call = {"id": "1", "function": {"name": name, "arguments": "{}" if name != "python" else
+                    json.dumps({"code": "print(float(margin.mean()))"})}}
+            extra = [{"id": "2", "function": {"name": "compare", "arguments": "{}"}}] if name == "assess" else []
+            return {"role": "assistant", "content": "", "tool_calls": [call] + extra}
+        tool_msgs = [m for m in messages if m.get("role") == "tool"]
+        if tools and tools[0]["function"]["name"] == "assess":
+            a, cmp_ = json.loads(tool_msgs[0]["content"]), json.loads(tool_msgs[-1]["content"])
+            ans = {"review_windows": a["review_windows"],
+                   "explanations": [{"window": w["window"], "cue": "boundary" if w["boundary"] else "low_margin",
+                                     "value": w["margin"]} for w in a["window_cues"]],
+                   "comparison": {"n_differing": cmp_["n_differing"], "where": "boundaries",
+                                  "believe": "decline"}}
+            return {"role": "assistant", "content": json.dumps(ans)}
+        if tools:
+            ans = {"review_windows": [[i // g, i % g] for i in range(12)],
+                   "explanations": [{"window": [0, 0], "cue": "low_margin", "value": 0.4242}],
+                   "comparison": {"n_differing": 999, "where": "everywhere", "believe": "first"}}
+            return {"role": "assistant", "content": json.dumps(ans) + " I measured 0.8137 of windows."}
+        ans = {"review_windows": [[0, 0], [1, 1]],
+               "explanations": [{"window": [0, 0], "cue": "other", "value": None}],
+               "comparison": {"n_differing": 50, "where": "unknown", "believe": "second"}}
+        return {"role": "assistant", "content": json.dumps(ans)}
+
+    real_chat, real_cards, real_out = arms.chat, CARDS, OUT
+    arms.chat = stub
+    globals()["CARDS"], globals()["OUT"] = root, tempfile.mkdtemp()
+    try:
+        a = types.SimpleNamespace(smoke=True, endpoint="stub", model="stub-model", arms="ABCD",
+                                  samples=2, temperature=0.0, seed=0, cards=0)
+        cmd_run(a)
+        s = cmd_grade(a)
+    finally:
+        arms.chat = real_chat
+        globals()["CARDS"], globals()["OUT"] = real_cards, real_out
+        shutil.rmtree(root, ignore_errors=True)
+
+    assert s["claims_audit"]["C"]["pooled"] == 1.0, "arm C states only what its tools produced"
+    assert s["claims_audit"]["A"]["pooled"] > s["claims_audit"]["B"]["pooled"], "the audit must separate them"
+    assert abs(s["share_of_package"]["A"]["pooled"] - 1.0) < 1e-9, "an arm copying the review set reproduces it"
+    assert s["review_capture"]["D"]["pooled"] < s["review_capture"]["A"]["pooled"], "the no-raster floor is a floor"
+    assert s["verdicts"]["P3_declines"]["declined_A"] == 1.0 and s["verdicts"]["P3_declines"]["declined_B"] == 0.0
+    assert s["parse_failures"] == {"A": 0, "B": 0, "C": 0, "D": 0}, s["parse_failures"]
+    assert _sign_p(6, 6) < 0.05 and _sign_p(3, 6) > 0.05, "the sign test must be one-sided and exact"
+    print("smoke OK: run and grade end to end on a stub model, the audit separates a grounded arm from an "
+          "ungrounded one, and the three verdicts compute")
+
+
+ARMS = ("A", "B", "C", "D")
+
+
+def cmd_run(args):
+    """Every arm over every card, `--samples` times, appended to exp64_answers.jsonl as they finish.
+
+    Written as it goes rather than at the end: a thousand short runs against a served model is long enough that a
+    preempted job should cost the runs it had not reached, not the ones it had."""
+    import exp64_arms as arms
+    root = os.path.join(CARDS, "smoke" if args.smoke else "v1")
+    dirs = sorted(d for d in (os.path.join(root, x) for x in os.listdir(root)) if os.path.isdir(d))
+    if args.cards:
+        dirs = dirs[:args.cards]
+    tag = "_smoke" if args.smoke else ""
+    path = os.path.join(OUT, f"exp64_answers{tag}.jsonl")
+    os.makedirs(OUT, exist_ok=True)
+    want = [a for a in ARMS if a in set(args.arms)]
+    n = 0
+    with open(path, "w") as fh:
+        for d in dirs:
+            card = arms.load_card(d)
+            for arm in want:
+                # Arm C has no model and no sampling temperature, so one run of it is all there is.
+                for sample in range(1 if arm == "C" else args.samples):
+                    if arm == "C":
+                        ans, text, tools = arms.arm_c_answer(card)
+                        run = {"arm": "C", "answer": ans, "parse_error": None, "text": text,
+                               "tool_outputs": tools, "n_tool_calls": len(tools), "n_steps": 0}
+                    else:
+                        run = arms.run_llm_arm(card, arm, args.endpoint, args.model,
+                                               seed=args.seed + sample, temperature=args.temperature)
+                    fh.write(json.dumps({"card": card["name"], "sample": sample, **run}, default=float) + "\n")
+                    fh.flush()
+                    n += 1
+            print(f"  {card['name']:<34} {len(want)} arms done", flush=True)
+    print(f"wrote {n} runs to {path}")
+    return path
+
+
+def cmd_grade(args):
+    """Grade every recorded run and decide the three preregistered predictions."""
+    import exp64_arms as arms
+    tag = "_smoke" if args.smoke else ""
+    root = os.path.join(CARDS, "smoke" if args.smoke else "v1")
+    runs = [json.loads(ln) for ln in open(os.path.join(OUT, f"exp64_answers{tag}.jsonl")) if ln.strip()]
+    cards = {}
+    graded = []
+    for r in runs:
+        if r["card"] not in cards:
+            cards[r["card"]] = arms.load_card(os.path.join(root, r["card"]))
+        g = arms.grade_run(r, cards[r["card"]])
+        g["sample"] = r.get("sample", 0)
+        graded.append(g)
+
+    def by_arm(fn):
+        """Mean over cards of the per-card mean over samples, so a card counts once however often it was sampled."""
+        out = {}
+        for arm in ARMS:
+            per_card = collections.defaultdict(list)
+            for g in graded:
+                if g["arm"] != arm:
+                    continue
+                v = fn(g)
+                if v is not None and np.isfinite(v):
+                    per_card[g["card"]].append(v)
+            means = {c: float(np.mean(v)) for c, v in per_card.items() if v}
+            out[arm] = {"pooled": float(np.mean(list(means.values()))) if means else float("nan"),
+                        "median": float(np.median(list(means.values()))) if means else float("nan"),
+                        "n_cards": len(means), "per_card": means}
+        return out
+
+    claims = by_arm(lambda g: g["claims"]["supported_share"])
+    capture = by_arm(lambda g: g["review_set"]["capture"] if g["review_set"].get("gradeable") else None)
+    share_pkg = by_arm(lambda g: g["review_set"]["share_of_package"] if g["review_set"].get("gradeable") else None)
+    cue_acc = by_arm(lambda g: g["explanation"]["accuracy"])
+    declined = by_arm(lambda g: float(g["comparison"]["declined"]) if g["comparison"].get("gradeable") else None)
+
+    def paired(metric, a="A", b="B"):
+        """Wins, losses and an exact sign test on the cards both arms were graded on."""
+        shared = sorted(set(metric[a]["per_card"]) & set(metric[b]["per_card"]))
+        wins = sum(metric[a]["per_card"][c] > metric[b]["per_card"][c] for c in shared)
+        losses = sum(metric[a]["per_card"][c] < metric[b]["per_card"][c] for c in shared)
+        return {"n_cards": len(shared), "wins": wins, "losses": losses,
+                "p_value": _sign_p(wins, wins + losses)}
+
+    cl_p, cap_p = paired(claims), paired(capture)
+    p1 = {"holds": bool(claims["A"]["pooled"] - claims["B"]["pooled"] >= 0.2
+                        and cl_p["wins"] > cl_p["losses"] and cl_p["p_value"] < 0.05),
+          "pooled_A": claims["A"]["pooled"], "pooled_B": claims["B"]["pooled"],
+          "difference": claims["A"]["pooled"] - claims["B"]["pooled"], **cl_p}
+    p2 = {"holds": bool(capture["A"]["pooled"] - capture["B"]["pooled"] >= 0.05
+                        and cap_p["wins"] > cap_p["losses"]
+                        and share_pkg["A"]["median"] >= 0.8),
+          "pooled_A": capture["A"]["pooled"], "pooled_B": capture["B"]["pooled"],
+          "difference": capture["A"]["pooled"] - capture["B"]["pooled"],
+          "median_share_of_package_A": share_pkg["A"]["median"], **cap_p}
+    p3 = {"holds": bool(declined["A"]["pooled"] >= 0.8 and declined["B"]["pooled"] < 0.5),
+          "declined_A": declined["A"]["pooled"], "declined_B": declined["B"]["pooled"],
+          "n_cards_A": declined["A"]["n_cards"], "n_cards_B": declined["B"]["n_cards"]}
+
+    parse_fail = {arm: sum(1 for g in graded if g["arm"] == arm and g["parse_error"]) for arm in ARMS}
+    fabricated = {arm: int(sum(g["claims"]["n_fabricated_windows"] for g in graded if g["arm"] == arm))
+                  for arm in ARMS}
+    summary = {"experiment": "exp64 agent benchmark", "model": args.model, "endpoint_named": bool(args.endpoint),
+               "samples_per_card": args.samples, "temperature": args.temperature, "budget": BUDGET,
+               "n_runs": len(graded), "n_cards": len(cards),
+               "claims_audit": claims, "review_capture": capture, "share_of_package": share_pkg,
+               "cue_accuracy": cue_acc, "declined_share": declined,
+               "parse_failures": parse_fail, "fabricated_windows": fabricated,
+               "verdicts": {"P1_claims_audit": p1, "P2_review_capture": p2, "P3_declines": p3}}
+    with open(os.path.join(OUT, f"exp64_summary{tag}.json"), "w") as fh:
+        json.dump(summary, fh, indent=1, default=float)
+
+    print(f"\n{'arm':<4} {'claims':>8} {'capture':>8} {'of pkg':>8} {'cue acc':>8} {'declined':>9} "
+          f"{'parse!':>7} {'fabric':>7}")
+    for arm in ARMS:
+        print(f"{arm:<4} {claims[arm]['pooled']:>8.3f} {capture[arm]['pooled']:>8.3f} "
+              f"{share_pkg[arm]['pooled']:>8.3f} {cue_acc[arm]['pooled']:>8.3f} "
+              f"{declined[arm]['pooled']:>9.3f} {parse_fail[arm]:>7d} {fabricated[arm]:>7d}")
+    print(f"\nP1 claims audit A - B >= 0.2 and A wins more cards : {p1['holds']}  "
+          f"({p1['difference']:+.3f}, {p1['wins']}/{p1['losses']}, p={p1['p_value']:.4g})")
+    print(f"P2 capture A - B >= 0.05 and >= 0.8 of the package  : {p2['holds']}  "
+          f"({p2['difference']:+.3f}, {p2['wins']}/{p2['losses']}, median share {p2['median_share_of_package_A']:.3f})")
+    print(f"P3 A declines >= 80%, B on fewer than half          : {p3['holds']}  "
+          f"(A {p3['declined_A']:.3f}, B {p3['declined_B']:.3f})")
+    return summary
+
+
+def _sign_p(wins, decisive):
+    """One-sided exact sign test; no scipy, so the binomial tail is summed directly."""
+    if decisive == 0:
+        return 1.0
+    total = 0.0
+    for k in range(wins, decisive + 1):
+        c = 1.0
+        for i in range(k):
+            c = c * (decisive - i) / (i + 1)
+        total += c
+    return min(1.0, total * 0.5 ** decisive)
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--stage", choices=("cards", "run", "grade", "all"), default="cards")
     ap.add_argument("--smoke", action="store_true")
+    ap.add_argument("--endpoint", default=os.environ.get("LLM_ENDPOINT", "http://localhost:8000/v1"))
+    ap.add_argument("--model", default=os.environ.get("LLM_MODEL", ""))
+    ap.add_argument("--arms", default="ABCD", help="which arms to run")
+    ap.add_argument("--samples", type=int, default=3)
+    ap.add_argument("--temperature", type=float, default=0.0)
+    ap.add_argument("--seed", type=int, default=SEED)
+    ap.add_argument("--cards", type=int, default=0, help="cap the number of cards (0 = all)")
     args = ap.parse_args()
     if args.smoke:
         smoke(args)
         return
     if args.stage in ("cards", "all"):
         cmd_cards(args)
+    if args.stage in ("run", "all"):
+        cmd_run(args)
+    if args.stage in ("grade", "all"):
+        cmd_grade(args)
 
 
 if __name__ == "__main__":
