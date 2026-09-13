@@ -51,15 +51,28 @@ so the boundary indicator can be computed from the model's own decision map.
   split into fit and report halves, so no region contributes to both.
 
   Part A, ranking. The margin (top-1 minus top-2 window probability) against predictive entropy, one minus top-1, the
-  boundary-first order, and four controls that see no model confidence: two deployable ones, the within-window pixel
-  variance and the rarity of the predicted class, and two oracle-side ones an operator would not hold at inference
-  time, the polygon's area and the chosen window's purity. P1 is judged on the deployable pair; the oracle pair is the
-  secondary bar P1b.
+  boundary-first order, the neighbourhood-disagreement fraction on its own, and four controls that see no model
+  confidence: two deployable ones, the within-window pixel variance and the rarity of the predicted class, and two
+  oracle-side ones an operator would not hold at inference time, the polygon's area and the chosen window's purity.
+  P1 is judged on the deployable pair; the oracle pair is the secondary bar P1b. The disagreement fraction is scored as
+  a ranker and not as a control, because it reads the model's argmax at nine windows and so is a model output, but it
+  uses no confidence at all and an audit found it competitive, which is worth the record knowing. Every ranker is also
+  tested against the margin per region and by cluster bootstrap, which is exploratory and labelled as such. The
+  per-region sign tests use the design-weighted E-AURC, the estimator the preregistrations name; the unweighted version
+  is recorded beside it because the two differ.
   Part B, two dates. The same polygon, the same model, two acquisitions: oe_inferencex.compare on the near and far
   decisions, with the surveyed class saying which side is right. This is the difference measurement the package exists
   for, run for the first time with a ground-observed arbiter.
   Part C, provenance and filters. Every part-A number recomputed on the field-surveyed and photo-interpreted arms within
-  matched strata, and on the filtered and unfiltered populations.
+  matched strata, and on the filtered population, the unfiltered one, and the units the published filter deletes, which
+  is the disjoint contrast an interval can be put on. Two corrections an audit forced. The boundary-first order works by
+  coarsening the suspicion order into two blocks, and that coarsening has a cost or a benefit of its own set by its fire
+  rate and by how much headroom the suspicion order has left, nothing to do with boundaries; so each arm's gain is
+  reported beside two rate-matched nulls, a random flag and the top slice of pixel variance, and only the excess over
+  the random null is evidence about boundaries. And error capture at a fixed budget is bounded above by the budget over
+  the error rate, so two subsets with different error rates do not have the same attainable maximum: the capture
+  comparison is reported with both ceilings, and the ceiling-free readings, a design-weighted AUROC and an odds ratio,
+  carry the direction.
   Two covariates are carried through because they are the obvious ways this could be fooled. The purity of the chosen
   window, since the sample's median polygon covers only a third of one, so part A is also reported within four purity
   bands: label noise attenuates every ranker equally and cannot manufacture a lead, but the record should show where the
@@ -67,7 +80,11 @@ so the boundary indicator can be computed from the model's own decision map.
   acquisition would change decisions for reasons that are not phenology, so part B's class-dependent change rate is
   reported again on the polygons whose window is cloud-clear in both acquisitions.
   Estimators. Everything is reported twice, as a naive unweighted count and as a Horvitz-Thompson design-weighted share
-  over the polygon population, with a cluster bootstrap over NUTS2 regions. The weighted estimators are checked against
+  over the polygon population, with a cluster bootstrap over NUTS2 regions. The weight is the stratum's population over
+  the number of polygons actually in hand, not over the number drawn: 217 of 12,073 returned no usable scene and that
+  loss is not missing at random across Europe, so the intended-sample weights are recorded per stratum beside the
+  adjusted ones. Polygons whose graded window is entirely scene-classification nodata are dropped rather than scored,
+  because a window with no observation cannot be graded, and the count is recorded. The weighted estimators are checked against
   the package's unweighted ones under uniform weights to 1e-9 in the smoke test.
 
 Preregistered (one-sided):
@@ -163,6 +180,8 @@ BUDGETS = (0.05, 0.10, 0.20)
 SHARD = 500
 SCL_CLEAR = (4, 5, 6, 7, 11)      # vegetation, bare, water, unclassified, snow; not nodata, shadow, cloud or cirrus
 PURITY_BANDS = ((0.0, 0.25), (0.25, 0.5), (0.5, 0.75), (0.75, 1.01))
+POINT_WIN = (SIZE // 2) // PATCH   # the chip is centred on the survey point at pixel 32, and the 60 px crop is taken
+                                   # from the top-left, so the point sits in window 8 of 15 and NOT in the grid centre 7
 
 
 # ----------------------------------------------------------------------------- design-weighted estimators
@@ -249,26 +268,38 @@ def cluster_boot(fn, groups, n_boot=2000, seed=0):
     return {"lo": float(np.quantile(v, 0.025)), "hi": float(np.quantile(v, 0.975)), "n": len(v)}
 
 
-def region_sign_test(a, b, groups, min_n=8):
-    """One-sided sign test over NUTS2 regions on the per-region E-AURC gap (a better than b => positive win)."""
+def region_sign_test(a, b, groups, min_n=8, weights=None):
+    """One-sided sign test over NUTS2 regions on the per-region E-AURC gap (a better than b => positive win).
+
+    `weights` makes each region's vote use the design-weighted E-AURC, which is what the preregistrations mean when they
+    say "under the design-weighted estimator". Left unweighted the votes ignore Horvitz-Thompson weights that vary from
+    1.0 to 42.0 inside a single region, which is not the estimator that was preregistered; both are recorded so the
+    difference is visible."""
     wins = losses = 0
-    per = []
+    per, dropped_small, dropped_degenerate = [], 0, 0
     for g in np.unique(groups):
         m = groups == g
         if m.sum() < min_n:
+            dropped_small += 1
             continue
         e = a["err"][m]
         if e.sum() == 0 or e.sum() == m.sum():
+            dropped_degenerate += 1
             continue
-        ga = metrics.excess_aurc(a["u"][m], e)
-        gb = metrics.excess_aurc(b["u"][m], e)
+        if weights is None:
+            ga, gb = metrics.excess_aurc(a["u"][m], e), metrics.excess_aurc(b["u"][m], e)
+        else:
+            w = weights[m]
+            ga, gb = w_excess_aurc(a["u"][m], e, w), w_excess_aurc(b["u"][m], e, w)
         per.append((str(g), gb - ga))
         if gb > ga:
             wins += 1
         elif gb < ga:
             losses += 1
     p = stats.sign_test(wins, losses, alternative="greater")
-    return {"wins": wins, "losses": losses, "p": float(p), "n_regions": len(per)}
+    return {"wins": wins, "losses": losses, "p": float(p), "n_regions": len(per),
+            "regions_dropped_too_small": dropped_small, "regions_dropped_degenerate": dropped_degenerate,
+            "estimator": "design-weighted" if weights is not None else "unweighted"}
 
 
 # ----------------------------------------------------------------------------- sample design
@@ -390,14 +421,17 @@ def window_coverage(cover):
 
 
 def choose_window(cov_win):
-    """The window with the largest overlap; ties to the one nearest the chip centre."""
+    """The window with the largest overlap; ties, and the no-overlap fallback, to the window holding the survey point.
+
+    The anchor is POINT_WIN, not the grid centre. read_chip centres the 64 px chip on the survey point, so the point is
+    at chip pixel (32, 32); the encoder reads the 60 px crop taken from the TOP-LEFT, so the point lands at crop pixel
+    (32, 32), which is window 32 // 4 = 8 of 15. Using G // 2 = 7 put the fallback one window (40 m) away from the
+    point, silently grading a twelfth of the polygons on ground the surveyor never looked at."""
     best = cov_win.max()
     if best <= 0:
-        c = G // 2
-        return c, c, 0.0
+        return POINT_WIN, POINT_WIN, 0.0
     cand = np.argwhere(cov_win >= best - 1e-9)
-    c = (G - 1) / 2.0
-    d = ((cand[:, 0] - c) ** 2 + (cand[:, 1] - c) ** 2)
+    d = ((cand[:, 0] - POINT_WIN) ** 2 + (cand[:, 1] - POINT_WIN) ** 2)
     r, q = cand[int(np.argmin(d))]
     return int(r), int(q), float(best)
 
@@ -416,6 +450,8 @@ def fetch_stage(args):
     take, strata = build_sample(df, seed=args.seed)
     print(f"population {len(df)}, sampled {len(take)} over {len(strata)} strata in {time.time()-t0:.1f}s", flush=True)
     sub = df.iloc[take].reset_index(drop=True)
+    assert sub["point_id"].is_unique, ("duplicate point_id in the sample: load_shards and part B key metadata by "
+                                       "point_id, so a duplicate would attach another polygon's class and weight")
     g = pyogrio.read_dataframe(GPKG, layer=LAYER, columns=["point_id"], read_geometry=True)
     if g["point_id"].duplicated().any():
         print(f"warning: {int(g['point_id'].duplicated().sum())} duplicate point_id, keeping the first", flush=True)
@@ -643,6 +679,10 @@ def signal_table(r, meta, weights):
             "one_minus_top1": 1.0 - r["top1"],
             "entropy": r["entropy"],
             "boundary_first": boundary_first_score(sus, r["boundary"]),
+            "boundary_only": r["boundary"].astype(np.float64),   # the neighbourhood-disagreement fraction alone, no
+                                                                # confidence at all; it reads the model's argmax at nine
+                                                                # windows, so it is a model output and not a control
+
             "ctl_pixel_variance": meta["variance"],
             "ctl_class_rarity": rare,
             "ctl_polygon_area": -meta["area"],
@@ -671,6 +711,100 @@ def score_arm(sigs, err, weights, groups, name, rows):
 
 DEPLOYABLE_CONTROLS = ("ctl_pixel_variance", "ctl_class_rarity")
 ORACLE_CONTROLS = ("ctl_polygon_area", "ctl_window_impurity")
+
+
+def cue_stats(cue, err, w):
+    """Design-weighted cue enrichment beside the odds ratio, which has no ceiling.
+
+    The enrichment ratio is bounded above by 1 / (share among the correct units), so when a cue fires on almost every
+    correct unit the ratio cannot be large however informative the cue is, and comparing enrichments across subsets with
+    different fire rates partly compares headroom. The odds ratio is free of that ceiling, so both are recorded."""
+    cue = np.asarray(cue, dtype=np.float64).ravel()
+    err = np.asarray(err, dtype=np.float64).ravel()
+    w = np.asarray(w, dtype=np.float64).ravel()
+    we, wc = w * err, w * (1.0 - err)
+    se = float((we * cue).sum() / max(we.sum(), 1e-300))
+    sc = float((wc * cue).sum() / max(wc.sum(), 1e-300))
+    odds = float((se / max(1 - se, 1e-300)) / max(sc / max(1 - sc, 1e-300), 1e-300)) if 0 < sc < 1 else float("nan")
+    return {"share_errors_weighted": se, "share_correct_weighted": sc,
+            "enrichment_weighted": float(se / sc) if sc > 0 else float("nan"),
+            "enrichment_ceiling": float(1.0 / sc) if sc > 0 else float("nan"),
+            "odds_ratio_weighted": odds, "fire_rate_weighted": w_mean(cue, w)}
+
+
+def w_auroc(u, err, w):
+    """Design-weighted AUROC of a suspicion score against the error indicator: base-rate invariant, unlike capture."""
+    u = np.asarray(u, dtype=np.float64).ravel()
+    err = np.asarray(err, dtype=np.float64).ravel().astype(bool)
+    w = np.asarray(w, dtype=np.float64).ravel()
+    if err.all() or not err.any():
+        return float("nan")
+    o = np.argsort(u, kind="stable")
+    u_, e_, w_ = u[o], err[o], w[o]
+    # weighted rank of each unit, ties averaged over the tied block's weight span
+    cw = np.cumsum(w_)
+    newgrp = np.r_[True, u_[1:] != u_[:-1]]
+    starts = np.flatnonzero(newgrp)
+    grp = np.cumsum(newgrp) - 1
+    wbefore = np.r_[0.0, cw][starts]
+    wgroup = np.add.reduceat(w_, starts)
+    rank = wbefore[grp] + 0.5 * wgroup[grp]                 # midrank in weight units
+    wp, wn = w_[e_].sum(), w_[~e_].sum()
+    # P(score of a random error > score of a random correct unit), ties counted half
+    num = float((w_[e_] * rank[e_]).sum()) - wp * wp / 2.0
+    return float(num / max(wp * wn, 1e-300))
+
+
+def flag_lead(sus, flag, err, w):
+    """How much a two-block re-ordering at this flag's fire rate gains over the plain suspicion order, weighted."""
+    return float(w_excess_aurc(sus, err, w) - w_excess_aurc(boundary_first_score(sus, flag), err, w))
+
+
+def rate_matched_leads(sus, boundary, variance, err, w, n_draw=200, seed=0):
+    """The boundary order's gain beside two null orders that fire at the same rate but carry no boundary information.
+
+    boundary_first_score coarsens the suspicion order into two blocks. That coarsening has a cost or a benefit of its
+    own, set by the fire rate and by how much headroom the suspicion order has left, and it is nothing to do with
+    boundaries. So the boundary gain is only evidence about boundaries to the extent it exceeds what a rate-matched
+    partition carrying no information at all achieves: a random flag, and, as a second reference, the top slice of the
+    within-window pixel variance, which is one of this experiment's own controls."""
+    rate = float((np.asarray(boundary) > 0).mean())
+    rng = np.random.default_rng(seed)
+    rnd = [flag_lead(sus, rng.random(len(err)) < rate, err, w) for _ in range(n_draw)]
+    v = np.asarray(variance, dtype=np.float64)
+    k = max(1, int(round(rate * len(v))))
+    var_flag = np.zeros(len(v), dtype=bool)
+    var_flag[np.argsort(-v, kind="stable")[:k]] = True
+    b = flag_lead(sus, np.asarray(boundary) > 0, err, w)
+    return {"fire_rate": rate, "boundary": b, "random_mean": float(np.mean(rnd)),
+            "random_sd": float(np.std(rnd)), "variance_matched": flag_lead(sus, var_flag, err, w),
+            "boundary_minus_random": float(b - np.mean(rnd))}
+
+
+def paired_cluster_boot(fn_a, groups_a, fn_b, groups_b, n_boot=1000, seed=0):
+    """Bootstrap two statistics on disjoint subsets under ONE resampling of the shared NUTS2 regions, so the difference
+    carries an interval. Resampling each subset independently would not give a paired interval on the difference."""
+    rng = np.random.default_rng(seed)
+    ga, gb = np.asarray(groups_a), np.asarray(groups_b)
+    regions = np.unique(np.concatenate([ga, gb]))
+    ia = {g: np.flatnonzero(ga == g) for g in regions}
+    ib = {g: np.flatnonzero(gb == g) for g in regions}
+    diffs, va, vb = [], [], []
+    for _ in range(n_boot):
+        pick = regions[rng.integers(0, len(regions), len(regions))]
+        sa = np.concatenate([ia[g] for g in pick]) if any(len(ia[g]) for g in pick) else np.array([], int)
+        sb = np.concatenate([ib[g] for g in pick]) if any(len(ib[g]) for g in pick) else np.array([], int)
+        if len(sa) < 20 or len(sb) < 20:
+            continue
+        x, yv = fn_a(sa), fn_b(sb)
+        if np.isfinite(x) and np.isfinite(yv):
+            va.append(x); vb.append(yv); diffs.append(x - yv)
+    if not diffs:
+        return {"n": 0}
+    d = np.sort(np.asarray(diffs))
+    return {"n": len(d), "difference_lo": float(np.quantile(d, 0.025)), "difference_hi": float(np.quantile(d, 0.975)),
+            "difference_mean": float(d.mean()), "p_difference_gt_0": float((d > 0).mean()),
+            "a_mean": float(np.mean(va)), "b_mean": float(np.mean(vb))}
 
 
 def best_control(scored, family=DEPLOYABLE_CONTROLS, key="excess_aurc_weighted"):
@@ -755,10 +889,26 @@ def analyze_stage(args):
     homog = np.array([str(v) == "Yes" for v in d["near_meta_survey_homplot_fills_extwin"]])
     with open(os.path.join(OUT, "exp68_strata.json")) as fh:
         strata = json.load(fh)
-    wt = np.array([strata[f"{CLASSES[c]}:{o}"]["ht_weight"] for c, o in zip(y, obs)])
+    skey = np.array([f"{CLASSES[c]}:{o}" for c, o in zip(y, obs)])
+    wt_intended = np.array([strata[k]["ht_weight"] for k in skey])
+    # Nonresponse: 217 of the 12,073 sampled polygons returned no usable scene, and that loss is not missing at random
+    # across Europe, so the weight is the stratum's population size over the number of polygons actually in hand, not
+    # over the number we meant to draw. Both are recorded.
+    realized = collections.Counter(skey.tolist())
+    wt = np.array([strata[k]["N_stratum"] / max(realized[k], 1) for k in skey])
+    summary_nonresponse = {k: {"N_stratum": strata[k]["N_stratum"], "n_sampled": strata[k]["n_sampled"],
+                               "n_realized": int(realized.get(k, 0)),
+                               "response_rate": realized.get(k, 0) / max(strata[k]["n_sampled"], 1),
+                               "ht_weight_intended": strata[k]["ht_weight"],
+                               "ht_weight_adjusted": strata[k]["N_stratum"] / max(realized.get(k, 1), 1)}
+                           for k in sorted(strata)}
 
+    # A window whose sixteen pixels are all scene-classification nodata carries no observation and cannot be graded;
+    # read_chip fills outside-granule reads with zeros, so these exist and must be dropped rather than scored.
+    no_data = (near["clear"] <= 0) & (near["variance"] <= 0)
     fit_m, rep_m = region_split(nuts2)
-    fit_sel = fit_m & (obs == FIELD)
+    rep_m = rep_m & ~no_data
+    fit_sel = fit_m & (obs == FIELD) & ~no_data
     c = NB // 2
     Xc = near["E"][:, c, c, :].astype(np.float32)
     mu, sd = Xc[fit_sel].mean(0), Xc[fit_sel].std(0) + 1e-6
@@ -779,6 +929,12 @@ def analyze_stage(args):
                                       "LUCAS design weights over EU area are not shipped; the estimand is the Copernicus polygon population",
                                       "photo-interpreted points sit in harder terrain, so part C matches on class and country"]},
                "results": {}, "verdicts": {}}
+    summary["config"]["nonresponse_by_stratum"] = summary_nonresponse
+    summary["config"]["n_sampled_intended"] = int(sum(v["n_sampled"] for v in strata.values()))
+    summary["config"]["n_realized"] = int(len(y))
+    summary["config"]["n_dropped_no_valid_pixels"] = int(no_data.sum())
+    summary["config"]["weights"] = ("Horvitz-Thompson, stratum population over the number of polygons actually in hand; "
+                                   "the intended-sample weights are recorded per stratum beside them")
     rows = []
 
     # ---- probes, two seeds
@@ -818,7 +974,9 @@ def analyze_stage(args):
     lead_w = ctl_val - scored_a["margin"]["excess_aurc_weighted"]
     lead_orc = orc_val - scored_a["margin"]["excess_aurc_weighted"]
     st = region_sign_test({"u": sigs_a["margin"], "err": err[A]},
-                          {"u": sigs_a[ctl_name], "err": err[A]}, nuts2[A])
+                          {"u": sigs_a[ctl_name], "err": err[A]}, nuts2[A], weights=wt[A])
+    st_unw = region_sign_test({"u": sigs_a["margin"], "err": err[A]},
+                              {"u": sigs_a[ctl_name], "err": err[A]}, nuts2[A])
     boot = cluster_boot(lambda s: (w_excess_aurc(sigs_a[ctl_name][s], err[A][s], wt[A][s])
                                    - w_excess_aurc(sigs_a["margin"][s], err[A][s], wt[A][s])), nuts2[A], seed=args.seed)
     summary["results"]["part_a"] = {"n": int(A.sum()), "n_errors": int(err[A].sum()),
@@ -828,10 +986,23 @@ def analyze_stage(args):
                                     "margin_lead_weighted": lead_w,
                                     "margin_lead_naive": float(scored_a[ctl_name]["excess_aurc_naive"]
                                                                - scored_a["margin"]["excess_aurc_naive"]),
-                                    "region_sign_test": st, "cluster_bootstrap": boot}
+                                    "region_sign_test": st, "region_sign_test_unweighted": st_unw,
+                                    "cluster_bootstrap": boot,
+                                    "per_class": {CLASS_NAME[CLASSES[k]]: (lambda mk: (
+                                        {"n": int(mk.sum()),
+                                         "weight_share": float(wt[A][mk].sum() / wt[A].sum()),
+                                         "error_rate_weighted": w_mean(err[A][mk], wt[A][mk]),
+                                         "margin_excess_aurc_weighted": w_excess_aurc(sigs_a["margin"][mk], err[A][mk], wt[A][mk]),
+                                         "margin_lead_weighted": float(w_excess_aurc(sigs_a[ctl_name][mk], err[A][mk], wt[A][mk])
+                                                                       - w_excess_aurc(sigs_a["margin"][mk], err[A][mk], wt[A][mk]))}
+                                        if mk.sum() >= 40 and 0 < err[A][mk].sum() < mk.sum()
+                                        else {"n": int(mk.sum()), "note": "too few units or degenerate"}))(y[A] == k)
+                                        for k in range(N_CLASS)}}
     summary["verdicts"]["P1"] = {"holds": bool(lead_w >= 0.01 and st["p"] < 0.05 and st["wins"] > st["losses"]),
                                  "lead_weighted": lead_w, "threshold": 0.01, "against": ctl_name,
-                                 "sign_test": st}
+                                 "sign_test": st, "sign_test_unweighted": st_unw,
+                                 "note": "the sign test uses the design-weighted per-region E-AURC, which is the "
+                                         "estimator the preregistration names; the unweighted test is beside it"}
     # Not preregistered, and added because part A raised it: the margin is this repository's recommended ranker, and
     # on this task three other model signals score below it. Whether that ordering is real or noise is a question the
     # record must answer rather than leave to the eye, so every ranker is tested against the margin on the same units.
@@ -866,6 +1037,8 @@ def analyze_stage(args):
     summary["results"]["part_a_by_purity"] = bands
     summary["results"]["purity_quantiles"] = {q: float(np.quantile(near["purity"][A], q)) for q in (0.05, 0.25, 0.5, 0.75, 0.95)}
     summary["results"]["scl_clear_quantiles"] = {q: float(np.quantile(near["clear"][A], q)) for q in (0.05, 0.5, 0.95)}
+    summary["results"]["n_neighbourhood_clamped"] = int(near["clamped"].sum())
+    summary["results"]["window_holds_the_survey_point"] = int(POINT_WIN)
     summary["verdicts"]["P1b"] = {"holds": bool(lead_orc >= 0.01), "lead_weighted": lead_orc, "threshold": 0.01,
                                   "against": orc_name,
                                   "note": "oracle-side control; failing this is informative, not a falsification"}
@@ -882,15 +1055,28 @@ def analyze_stage(args):
         s = signal_table({k: v[m] for k, v in r.items()}, sub(m), wt[m])
         sc = score_arm(s, err[m], wt[m], nuts2[m], f"{tag}_field_report", rows)
         enr = cue_enrichment(r["boundary"][m] > 0, err[m], clusters=nuts2[m], n_boot=400, seed=args.seed)
+        cue_w = cue_stats(r["boundary"][m] > 0, err[m], wt[m])
         cap[tag] = {"n": int(m.sum()), "capture_10_weighted": sc["margin"]["capture_weighted"]["0.1"],
-                    "boundary_enrichment": float(enr["enrichment"]), "signals": sc}
+                    "boundary_enrichment": float(enr["enrichment"]),
+                    "boundary_cue_weighted": cue_w,
+                    "error_rate_weighted": w_mean(err[m], wt[m]),
+                    "capture_10_ceiling": float(min(1.0, 0.10 / max(w_mean(err[m], wt[m]), 1e-9))),
+                    "margin_auroc_weighted": w_auroc(-r["margin"][m], err[m], wt[m]),
+                    "signals": sc}
     # filtered against deleted is a contrast between disjoint sets, so the direction can carry an interval; filtered
     # against unfiltered cannot, the one being a subset of the other.
     def _cap10(mask, idx_):
         sub_i = np.flatnonzero(mask)[idx_]
         return w_capture(-r["margin"][sub_i], err[sub_i], wt[sub_i], (0.10,))[0.10]
+    def _auroc(mask, idx_):
+        sub_i = np.flatnonzero(mask)[idx_]
+        return w_auroc(-r["margin"][sub_i], err[sub_i], wt[sub_i])
     boot_filt = cluster_boot(lambda ii: _cap10(filt, ii), nuts2[filt], n_boot=1000, seed=args.seed)
     boot_del = cluster_boot(lambda ii: _cap10(deleted, ii), nuts2[deleted], n_boot=1000, seed=args.seed)
+    paired_cap = paired_cluster_boot(lambda ii: _cap10(filt, ii), nuts2[filt],
+                                     lambda ii: _cap10(deleted, ii), nuts2[deleted], n_boot=1000, seed=args.seed)
+    paired_auc = paired_cluster_boot(lambda ii: _auroc(filt, ii), nuts2[filt],
+                                     lambda ii: _auroc(deleted, ii), nuts2[deleted], n_boot=1000, seed=args.seed)
     cap["filtered_vs_deleted"] = {
         "n_filtered": int(filt.sum()), "n_deleted": int(deleted.sum()),
         "capture_10_filtered": cap["filtered"]["capture_10_weighted"],
@@ -898,7 +1084,18 @@ def analyze_stage(args):
         "margin_excess_aurc_filtered": cap["filtered"]["signals"]["margin"]["excess_aurc_weighted"],
         "margin_excess_aurc_deleted": cap["deleted_by_filter"]["signals"]["margin"]["excess_aurc_weighted"],
         "bootstrap_capture_10_filtered": boot_filt, "bootstrap_capture_10_deleted": boot_del,
-        "intervals_disjoint": bool(boot_filt["lo"] > boot_del["hi"] or boot_del["lo"] > boot_filt["hi"])}
+        "intervals_disjoint": bool(boot_filt["lo"] > boot_del["hi"] or boot_del["lo"] > boot_filt["hi"]),
+        # Capture at a fixed budget is bounded above by budget / error rate, so the two subsets do not have the same
+        # attainable maximum and the raw comparison is partly a base-rate effect; AUROC has no such ceiling.
+        "capture_10_ceiling_filtered": cap["filtered"]["capture_10_ceiling"],
+        "capture_10_ceiling_deleted": cap["deleted_by_filter"]["capture_10_ceiling"],
+        "capture_10_share_of_ceiling_filtered": float(cap["filtered"]["capture_10_weighted"]
+                                                      / max(cap["filtered"]["capture_10_ceiling"], 1e-9)),
+        "capture_10_share_of_ceiling_deleted": float(cap["deleted_by_filter"]["capture_10_weighted"]
+                                                     / max(cap["deleted_by_filter"]["capture_10_ceiling"], 1e-9)),
+        "margin_auroc_filtered": cap["filtered"]["margin_auroc_weighted"],
+        "margin_auroc_deleted": cap["deleted_by_filter"]["margin_auroc_weighted"],
+        "paired_bootstrap_capture_10": paired_cap, "paired_bootstrap_auroc": paired_auc}
     summary["results"]["part_c_filters"] = cap
     summary["verdicts"]["P2"] = {
         "holds": bool(cap["unfiltered"]["capture_10_weighted"] > cap["filtered"]["capture_10_weighted"]
@@ -906,7 +1103,15 @@ def analyze_stage(args):
         "capture_10_unfiltered": cap["unfiltered"]["capture_10_weighted"],
         "capture_10_filtered": cap["filtered"]["capture_10_weighted"],
         "boundary_enrichment_unfiltered": cap["unfiltered"]["boundary_enrichment"],
-        "boundary_enrichment_filtered": cap["filtered"]["boundary_enrichment"]}
+        "boundary_enrichment_filtered": cap["filtered"]["boundary_enrichment"],
+        # the base-rate-free reading of the same contrast, on disjoint sets
+        "auroc_filtered": cap["filtered"]["margin_auroc_weighted"],
+        "auroc_deleted": cap["deleted_by_filter"]["margin_auroc_weighted"],
+        "auroc_difference_bootstrap": paired_auc,
+        "odds_ratio_filtered": cap["filtered"]["boundary_cue_weighted"]["odds_ratio_weighted"],
+        "odds_ratio_deleted": cap["deleted_by_filter"]["boundary_cue_weighted"]["odds_ratio_weighted"],
+        "note": ("enrichment is bounded by 1 / share-among-correct, which differs between the subsets, so the odds "
+                 "ratio and the AUROC are the ceiling-free readings of the same contrast")}
 
     key = np.array([f"{CLASSES[c_]}|{k}" for c_, k in zip(y, nuts0)])
     both = {k for k in set(key[rep_m]) if (rep_m & (key == k) & (obs == FIELD)).sum() >= 5
@@ -923,6 +1128,10 @@ def analyze_stage(args):
         prov[tag] = {"n": int(m.sum()), "error_rate_weighted": w_mean(err[m], wt[m]),
                      "lead_boundary_first_over_margin": float(sc["margin"]["excess_aurc_weighted"]
                                                               - sc["boundary_first"]["excess_aurc_weighted"]),
+                     "rate_matched": rate_matched_leads(-r["margin"][m], r["boundary"][m], near["variance"][m],
+                                                        err[m], wt[m], seed=args.seed),
+                     "median_polygon_area": float(np.median(area[m])),
+                     "median_window_purity": float(np.median(near["purity"][m])),
                      "signals": sc}
     # The photo arm is harder than the field arm even within matched class-country strata, so the gap could be a
     # difficulty effect rather than a provenance effect. Recompute it on high-purity units, where the two arms' error
@@ -940,13 +1149,25 @@ def analyze_stage(args):
                                                                 - sq["boundary_first"]["excess_aurc_weighted"])}
     gap_hi = prov_hi[PHOTO]["lead_boundary_first_over_margin"] - prov_hi[FIELD]["lead_boundary_first_over_margin"]
     gap = prov[PHOTO]["lead_boundary_first_over_margin"] - prov[FIELD]["lead_boundary_first_over_margin"]
+    rm_gap = (prov[PHOTO]["rate_matched"]["boundary_minus_random"]
+              - prov[FIELD]["rate_matched"]["boundary_minus_random"]) if "rate_matched" in prov[PHOTO] and "rate_matched" in prov[FIELD] else float("nan")
+    null_gap = (prov[PHOTO]["rate_matched"]["random_mean"] - prov[FIELD]["rate_matched"]["random_mean"]) \
+        if "rate_matched" in prov[PHOTO] and "rate_matched" in prov[FIELD] else float("nan")
     summary["results"]["part_c_provenance"] = {"n_matched_strata": len(both), "arms": prov, "gap": float(gap),
-                                              "high_purity_arms": prov_hi, "high_purity_gap": float(gap_hi)}
+                                              "high_purity_arms": prov_hi, "high_purity_gap": float(gap_hi),
+                                              "gap_from_a_rate_matched_null": float(null_gap),
+                                              "boundary_specific_gap": float(rm_gap)}
     summary["verdicts"]["P3"] = {"holds": bool(np.isfinite(gap) and gap > 0), "gap": float(gap),
                                  "photo_lead": prov[PHOTO]["lead_boundary_first_over_margin"],
                                  "field_lead": prov[FIELD]["lead_boundary_first_over_margin"],
                                  "high_purity_gap": float(gap_hi),
-                                 "high_purity_holds": bool(np.isfinite(gap_hi) and gap_hi > 0)}
+                                 "high_purity_holds": bool(np.isfinite(gap_hi) and gap_hi > 0),
+                                 "gap_from_a_rate_matched_null": float(null_gap),
+                                 "boundary_specific_gap": float(rm_gap),
+                                 "boundary_specific_holds": bool(np.isfinite(rm_gap) and rm_gap > 0),
+                                 "note": ("a two-block re-ordering has a cost of its own set by its fire rate and by "
+                                          "the suspicion order's remaining headroom, so only the part of the gap that "
+                                          "exceeds a rate-matched null carrying no information is about boundaries")}
 
     # ---- part B, two acquisitions of one place
     if "pid_far" in d and len(d["pid_far"]):
@@ -958,7 +1179,7 @@ def analyze_stage(args):
         rf = readings(probe_probs(lin0, Xf))
         pos = {int(p): i for i, p in enumerate(d["pid_near"])}
         idx = np.array([pos[int(p)] for p in d["pid_far"]])
-        keep = rep_m[idx]
+        keep = rep_m[idx] & (far["clear"] > 0)
         a, b = r["dec"][idx][keep], rf["dec"][keep]
         lab, ok = y[idx][keep], np.ones(int(keep.sum()), dtype=bool)
         cmpres = cmp_mod.compare_inferences(a, b, ok, groups=nuts2[idx][keep], labels=lab,
@@ -966,10 +1187,12 @@ def analyze_stage(args):
                                                   "low_margin_near": r["margin"][idx][keep] <= np.quantile(r["margin"][idx][keep], 0.2)})
         changed = (a != b)
         per_class = {}
-        yy = y[idx][keep]
+        yy, wwb = y[idx][keep], wt[idx][keep]
         for k, cl in enumerate(CLASSES):
             m = yy == k
-            per_class[CLASS_NAME[cl]] = {"n": int(m.sum()), "change_rate": float(changed[m].mean()) if m.any() else float("nan")}
+            per_class[CLASS_NAME[cl]] = {"n": int(m.sum()),
+                                         "change_rate": float(changed[m].mean()) if m.any() else float("nan"),
+                                         "change_rate_weighted": w_mean(changed[m], wwb[m]) if m.any() else float("nan")}
         gapdays = np.abs(d["date_far"].astype(str).astype("datetime64[D]").astype(int)[keep]
                          - d["date_near"].astype(str).astype("datetime64[D]").astype(int)[idx][keep])
         summary["results"]["part_b"] = {
@@ -992,12 +1215,22 @@ def analyze_stage(args):
                                                "change_rate": float(changed[m].mean()) if m.sum() >= 20 else float("nan")}
         summary["results"]["part_b"]["per_class_cloud_clear"] = per_class_clear
         summary["results"]["part_b"]["n_cloud_clear_both"] = int(clear_both.sum())
+        floor = min(v["change_rate"] for v in per_class.values() if np.isfinite(v["change_rate"]))
+        floor_class = min((v["change_rate"], k) for k, v in per_class.items() if np.isfinite(v["change_rate"]))[1]
+        summary["results"]["part_b"]["class_independent_floor"] = {
+            "lowest_change_rate": float(floor), "class": floor_class,
+            "note": ("the probe-reseed rate is the floor for a different question, whether the head is stable; the "
+                     "floor for a two-date change rate is the rate on cover that did not change, and the most stable "
+                     "class is the closest observable bound on it")}
         cb = per_class[CLASS_NAME["B"]]["change_rate"]
         stable = max(per_class[CLASS_NAME["A"]]["change_rate"], per_class[CLASS_NAME["C"]]["change_rate"])
         summary["verdicts"]["P5"] = {"holds": bool(np.isfinite(cb) and np.isfinite(stable) and cb >= 2 * stable),
                                      "cropland_change_rate": cb, "max_stable_change_rate": stable,
                                      "artificial": per_class[CLASS_NAME["A"]]["change_rate"],
                                      "woodland": per_class[CLASS_NAME["C"]]["change_rate"],
+                                     "cropland_over_lowest_class": float(cb / max(floor, 1e-9)),
+                                     "lowest_class": floor_class,
+                                     "cropland_change_rate_weighted": per_class[CLASS_NAME["B"]]["change_rate_weighted"],
                                      "cloud_clear_only": {
                                          "cropland": per_class_clear[CLASS_NAME["B"]]["change_rate"],
                                          "artificial": per_class_clear[CLASS_NAME["A"]]["change_rate"],
@@ -1014,7 +1247,9 @@ def analyze_stage(args):
     np.savez_compressed(os.path.join(OUT, f"exp68_masks{tag}.npz"),
                         dec=r["dec"], y=y, err=err, margin=r["margin"], top1=r["top1"], entropy=r["entropy"],
                         boundary=r["boundary"], purity=near["purity"], variance=near["variance"], clear=near["clear"],
-                        area=area, weight=wt, report=rep_m, obs=obs, homog=homog, nuts2=nuts2)
+                        area=area, weight=wt, weight_intended=wt_intended, report=rep_m, obs=obs, homog=homog,
+                        nuts2=nuts2, clamped=near["clamped"], no_data=no_data, point_id=d["pid_near"],
+                        fit=fit_sel, nuts0=nuts0)
     for k, v in summary["verdicts"].items():
         print(f"{k}: {v.get('holds')}", flush=True)
     print(f"done in {time.time()-t0:.0f}s", flush=True)
@@ -1052,12 +1287,50 @@ def smoke(args):
     dup = np.r_[np.arange(n), np.arange(500)]
     assert abs(w_aurc(u, e, w2) - w_aurc(u[dup], e[dup], np.ones(len(dup)))) < 1e-4, "weights do not act as replication"
 
+    # the weighted AUROC must equal the Mann-Whitney statistic under unit weights
+    for name, u in (("continuous", rng.random(n)), ("tied", np.round(rng.random(n), 1))):
+        pos, neg = u[e > 0], u[e == 0]
+        ref = float(((pos[:, None] > neg[None, :]).sum() + 0.5 * (pos[:, None] == neg[None, :]).sum()) / (len(pos) * len(neg)))
+        got = w_auroc(u, e, ones)
+        assert abs(got - ref) < 1e-9, f"w_auroc {name}: {got} vs Mann-Whitney {ref}"
+    assert abs(w_auroc(u, e, np.full(n, 4.2)) - w_auroc(u, e, ones)) < 1e-9, "w_auroc is not scale invariant"
+    assert np.isnan(w_auroc(rng.random(10), np.ones(10), np.ones(10))), "w_auroc must be NaN with no correct units"
+
+    # cue statistics: the enrichment ceiling is exactly 1 / share-among-correct, and a useless cue gives 1 and 1
+    cue = (rng.random(n) < 0.3)
+    cs = cue_stats(cue, e, ones)
+    assert abs(cs["enrichment_ceiling"] - 1.0 / cs["share_correct_weighted"]) < 1e-9
+    assert abs(cs["enrichment_weighted"] - 1.0) < 0.2 and abs(cs["odds_ratio_weighted"] - 1.0) < 0.6
+    perfect = cue_stats(e > 0, e, ones)                      # a cue that fires exactly on the errors
+    assert perfect["share_errors_weighted"] == 1.0 and perfect["share_correct_weighted"] == 0.0
+    assert np.isnan(perfect["enrichment_weighted"]) and np.isnan(perfect["odds_ratio_weighted"]), \
+        "a cue with no false positives has no finite ratio and must report NaN rather than a number"
+
+    # a rate-matched null must find a nonzero cost or benefit for a two-block re-ordering that carries no information
+    sus0 = rng.random(n) - 0.5 * e
+    rm = rate_matched_leads(sus0, (rng.random(n) < 0.4).astype(float), rng.random(n), e, ones, n_draw=40, seed=0)
+    assert 0.3 < rm["fire_rate"] < 0.5 and np.isfinite(rm["random_mean"]) and np.isfinite(rm["boundary_minus_random"])
+    assert abs(rm["boundary"] - (rm["random_mean"] + rm["boundary_minus_random"])) < 1e-12
+
+    # the paired bootstrap must return an interval on the difference of two disjoint subsets
+    g = np.array([f"R{i % 24}" for i in range(n)])
+    half = np.arange(n) < n // 2
+    pb = paired_cluster_boot(lambda ii: float(e[half][ii].mean()), g[half],
+                             lambda ii: float(e[~half][ii].mean()), g[~half], n_boot=120, seed=0)
+    assert pb["n"] > 50 and pb["difference_lo"] <= pb["difference_mean"] <= pb["difference_hi"]
+
     # window choice on a known polygon
     cov = np.zeros((SIZE, SIZE), dtype=np.float32)
     cov[20:28, 36:44] = 1.0                       # windows rows 5-6, cols 9-10 of the 15 x 15 grid
     r_, q_, best = choose_window(window_coverage(cov))
     assert best == 1.0 and r_ in (5, 6) and q_ in (9, 10), f"choose_window gave {(r_, q_, best)}"
-    assert choose_window(window_coverage(np.zeros((SIZE, SIZE), np.float32)))[2] == 0.0
+    # the survey point sits at chip pixel (32, 32) and the crop is taken from the top-left, so its window is 8, not 7
+    assert POINT_WIN == 8 and POINT_WIN * PATCH <= SIZE // 2 < (POINT_WIN + 1) * PATCH, "POINT_WIN does not hold the point"
+    assert choose_window(window_coverage(np.zeros((SIZE, SIZE), np.float32))) == (POINT_WIN, POINT_WIN, 0.0), \
+        "the no-overlap fallback must be the window holding the survey point"
+    one_px = np.zeros((SIZE, SIZE), dtype=np.float32)
+    one_px[SIZE // 2, SIZE // 2] = 1.0
+    assert choose_window(window_coverage(one_px))[:2] == (POINT_WIN, POINT_WIN), "a polygon on the point must pick its window"
 
     # readings and the neighbourhood
     m = 300
@@ -1111,7 +1384,8 @@ def smoke(args):
                                      labels=rng.integers(0, N_CLASS, m), cues={"boundary": rd["boundary"] > 0.2})
     assert abs(res["disagreement_rate"] - flip.mean()) < 1e-12, "disagreement rate disagrees with the planted flips"
     assert res["graded"] is not None and res["where"] is not None
-    print("smoke OK: weighted estimators reduce to the package's, window choice, readings, scoring, design, compare")
+    print("smoke OK: weighted estimators reduce to the package's, AUROC matches Mann-Whitney, cue ceiling, "
+          "rate-matched null, paired bootstrap, window anchored on the survey point, readings, scoring, design, compare")
 
 
 # ----------------------------------------------------------------------------- entry
