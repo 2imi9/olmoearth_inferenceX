@@ -680,3 +680,64 @@ def test_exp67_dynamic_world_recomputes_from_the_committed_windows():
     from oe_inferencex.explain import cue_enrichment
     e = cue_enrichment(z["boundary"] > 0, err, n_boot=0)["enrichment"]
     assert 2.0 < e < 4.0, e
+
+
+def test_exp68_lucas_recomputes_from_the_committed_polygons():
+    """exp68 (jobs 817465, 820129): four of five preregistrations hold against a reference that never saw the imagery,
+    and the load-bearing quantities recompute from the committed per-polygon arrays.
+
+    The weighted estimators are exercised here rather than only in the experiment's own smoke, because the whole record
+    rests on them: a design-weighted excess AURC must reduce to the package's unweighted one when every weight is one."""
+    import sys
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "exp"))
+    import exp68_lucas as e68
+
+    s = json.load(open(_need("exp68_summary.json")))
+    v = s["verdicts"]
+    assert all(v[k]["holds"] is True for k in ("P1", "P1b", "P4", "P3", "P5"))
+    assert v["P2"]["holds"] is False                       # the published homogeneity filter flatters the tool
+    z = np.load(_need("exp68_masks.npz"), allow_pickle=True)
+    err = (z["dec"] != z["y"]).astype(np.float64)
+    assert np.array_equal(err, z["err"])
+    w, rep, obs = z["weight"], z["report"], z["obs"].astype(str)
+    A = rep & (obs == "field")
+    assert int(A.sum()) == s["results"]["part_a"]["n"] == 4778
+
+    # the weighted estimator must agree with the package under unit weights, and with the record under the real ones
+    margin = -z["margin"].astype(np.float64)
+    assert abs(e68.w_excess_aurc(margin[A], err[A], np.ones(int(A.sum())))
+               - excess_aurc(margin[A], err[A])) < 1e-9
+    rec = s["results"]["part_a"]["signals"]
+    assert abs(e68.w_excess_aurc(margin[A], err[A], w[A]) - rec["margin"]["excess_aurc_weighted"]) < 1e-9
+    for name, arr in (("ctl_pixel_variance", z["variance"]), ("ctl_polygon_area", -z["area"]),
+                      ("ctl_window_impurity", 1.0 - z["purity"]), ("entropy", z["entropy"])):
+        got = e68.w_excess_aurc(np.asarray(arr, dtype=np.float64)[A], err[A], w[A])
+        assert abs(got - rec[name]["excess_aurc_weighted"]) < 1e-9, (name, got, rec[name]["excess_aurc_weighted"])
+
+    # P1: the margin beats both deployable controls, and the design weighting cuts the lead rather than creating it
+    assert rec["margin"]["excess_aurc_weighted"] < rec["ctl_pixel_variance"]["excess_aurc_weighted"]
+    assert rec["margin"]["excess_aurc_weighted"] < rec["ctl_class_rarity"]["excess_aurc_weighted"]
+    assert s["results"]["part_a"]["margin_lead_naive"] > s["results"]["part_a"]["margin_lead_weighted"] > 0.01
+
+    # the graded window must be the one holding the survey point, not the grid centre (the bug that moved P5)
+    assert s["results"]["window_holds_the_survey_point"] == e68.POINT_WIN == 8
+    assert e68.choose_window(np.zeros((e68.G, e68.G))) == (8, 8, 0.0)
+
+    # the tuned probe: the chosen decay is interior to the swept grid and the default memorised the fit set
+    T = s["results"]["probe_tuning"]
+    assert T["chosen"]["weight_decay"] < max(g["weight_decay"] for g in T["grid"])
+    default = [g for g in T["grid"] if g["weight_decay"] == 1e-4 and g["epochs"] == 80][0]
+    assert default["inner_fit_accuracy"] > 0.99 > default["inner_val_accuracy"] + 0.4
+    assert T["chosen"]["inner_val_accuracy"] > default["inner_val_accuracy"]
+
+    # P3's gap is over half reproduced by a flag carrying no information, so it is not boundary-specific
+    P = s["results"]["part_c_provenance"]
+    assert v["P3"]["gap_from_a_rate_matched_null"] > 0.5 * v["P3"]["gap"]
+    assert (P["arms"]["photo"]["rate_matched"]["variance_matched"]
+            - P["arms"]["field"]["rate_matched"]["variance_matched"]) > v["P3"]["gap"]
+
+    # part B: the two-date difference dwarfs the head-reseed floor and the near date is the better side
+    B = s["results"]["part_b"]
+    assert B["disagreement_rate"] > 50 * B["head_draw_floor"]
+    assert B["which_side"]["a_right"] > B["which_side"]["b_right"] and B["near_beats_far_sign_test"]["p_greater"] < 1e-12
+    assert B["per_class"]["cropland"]["change_rate"] >= 2 * B["per_class"]["woodland"]["change_rate"]

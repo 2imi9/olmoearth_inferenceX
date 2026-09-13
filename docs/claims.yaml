@@ -2005,3 +2005,149 @@
     - {file: docs/Findings.md, marker: dw-published-probabilities-are-underconfident}
     - {file: docs/TECHNIQUES.md, marker: dw-published-probabilities-are-underconfident}
     - {file: docs/results/comparisons.md, marker: dw-published-probabilities-are-underconfident}
+
+- id: lucas-ranking-survives-ground-observation
+  statement: "On 4,778 LUCAS Copernicus 2022 polygons in held-out NUTS2 regions, where a surveyor stood at the point and the reference never saw the satellite imagery, the model's own margin ranks its own errors better than the best control an operator could compute at inference time: design-weighted excess AURC 0.1468 against the within-window pixel variance's 0.2421, a lead of 0.0953 on 94 regions against 32 (one-sided p = 1.5e-08) with a NUTS2 cluster bootstrap of [0.071, 0.120]; it also beats oracle-side metadata about the unit's own size and mixedness by 0.0622, and the lead is not an artifact of the stratified sampling design, which if ignored would overstate it by 0.0216; preregistered P1, P1b and P4 all hold, so what this repository measures on photointerpreted references is not annotator agreement."
+  status: supported
+  experiments: [exp68]
+  artifacts: [exp/out/exp68_summary.json]
+  check: |-
+    (lambda V, A_:
+      V['P1']['holds'] is True and V['P1b']['holds'] is True and V['P4']['holds'] is True
+      and V['P1']['against'] == 'ctl_pixel_variance' and V['P1']['sign_test']['estimator'] == 'design-weighted'
+      and round(V['P1']['lead_weighted'], 4) == 0.0953 and round(V['P1b']['lead_weighted'], 4) == 0.0622
+      and V['P1']['sign_test']['wins'] == 94 and V['P1']['sign_test']['losses'] == 32
+      and V['P1']['sign_test']['p'] < 1e-6 and V['P4']['bootstrap']['lo'] > 0
+      and round(V['P4']['bootstrap']['lo'], 3) == 0.071 and round(V['P4']['bootstrap']['hi'], 3) == 0.120
+      and round(V['P4']['naive_minus_weighted'], 4) == 0.0216
+      and A_['n'] == 4778 and round(A_['signals']['margin']['excess_aurc_weighted'], 4) == 0.1468
+      and round(A_['signals']['ctl_pixel_variance']['excess_aurc_weighted'], 4) == 0.2421
+    )(A['exp/out/exp68_summary.json']['verdicts'], A['exp/out/exp68_summary.json']['results']['part_a'])
+  cited_in:
+    - {file: docs/Findings.md, marker: lucas-ranking-survives-ground-observation}
+    - {file: docs/TECHNIQUES.md, marker: lucas-ranking-survives-ground-observation}
+    - {file: docs/results/comparisons.md, marker: lucas-ranking-survives-ground-observation}
+  note: >-
+    The estimand is the LUCAS Copernicus polygon population, not EU area, since LUCAS's own design weights are not in
+    the distributed file; it is exact up to the 1.8% of sampled polygons that returned no usable scene. The pooled lead
+    holds in all eight classes but ranges from +0.016 on grassland, 23% of the population weight, to +0.377 on water, 1%.
+
+- id: lucas-overfitting-inverts-the-ranker-ordering
+  statement: "A probe that has memorised its fit set reverses the ordering of confidence signals: fitting 6,152 linear-probe parameters on about 3,000 LUCAS polygons reached 0.9986 accuracy on its own inner fit set against 0.554 on held-out regions and put the margin LAST of the four model signals, while tuning weight decay and epochs on NUTS2 regions held out of the fit set chose a decay of 100, traded inner fit accuracy down to 0.727 to buy 0.596, and put the margin first, tied with the boundary-first order at 0.1468 against 0.1466 (bootstrap [-0.012, +0.012], not significant) and ahead of one minus the top-1 probability by 0.0183, the neighbourhood-disagreement fraction by 0.0290 and entropy by 0.0634 with disjoint intervals; so the ordering of confidence signals is a property of how well the head generalises and not of the task, and a ranking comparison is only readable beside its own generalisation gap."
+  status: measured
+  experiments: [exp68]
+  artifacts: [exp/out/exp68_summary.json]
+  check: |-
+    (lambda R, T, M:
+      T['chosen']['weight_decay'] == 100.0 and T['chosen']['epochs'] == 80
+      and round(T['chosen']['inner_val_accuracy'], 3) == 0.596
+      and any(round(g['inner_fit_accuracy'], 4) == 0.9986 and round(g['inner_val_accuracy'], 3) == 0.554
+              for g in T['grid'] if g['weight_decay'] == 1e-4 and g['epochs'] == 80)
+      and max(g['inner_val_accuracy'] for g in T['grid']) == T['chosen']['inner_val_accuracy']
+      and T['chosen']['weight_decay'] < max(g['weight_decay'] for g in T['grid'])
+      and round(R['probe_seed_0_fit_accuracy'], 3) == 0.669 and round(R['probe_seed_0_report_accuracy'], 3) == 0.522
+      and M['boundary_first']['significant'] is False
+      and all(M[k]['significant'] is True and M[k]['beats_margin_by_weighted'] < 0
+              for k in ('one_minus_top1', 'entropy', 'boundary_only'))
+      and round(-M['one_minus_top1']['beats_margin_by_weighted'], 4) == 0.0183
+      and round(-M['entropy']['beats_margin_by_weighted'], 4) == 0.0634
+    )(A['exp/out/exp68_summary.json']['results'], A['exp/out/exp68_summary.json']['results']['probe_tuning'],
+      A['exp/out/exp68_summary.json']['results']['part_a_vs_margin'])
+  cited_in:
+    - {file: docs/Findings.md, marker: lucas-overfitting-inverts-the-ranker-ordering}
+    - {file: docs/TECHNIQUES.md, marker: lucas-overfitting-inverts-the-ranker-ordering}
+    - {file: docs/results/comparisons.md, marker: lucas-overfitting-inverts-the-ranker-ordering}
+  note: >-
+    The tuned decay of 100 is interior to the grid: 1,000 scored worse on held-out regions and 10,000 collapsed the probe
+    to chance, so the remaining fit-to-report gap is spatial shift across Europe and not regularisation left on the table.
+    The inverted ordering is recorded from the superseded run's numbers, which are quoted in the section text, not from
+    this artifact, which carries only the tuning sweep that shows the same thing on held-out regions.
+
+- id: lucas-the-homogeneity-filter-flatters-the-tool
+  statement: "The published practice of filtering land-cover reference data to large homogeneous units flatters the audit rather than understating it, reversing preregistered P2: on the disjoint contrast between the 1,145 LUCAS polygons the filter keeps and the 3,633 it deletes, the margin's design-weighted AUROC is 0.774 against 0.677, a difference of +0.097 with a paired NUTS2 bootstrap of [+0.048, +0.141], and its excess AURC is 0.0785 against 0.1925, so the mixed and small units the convention throws away are where the ranking is weakest; the boundary-cue half of the same preregistration is not reversed once its ceiling is removed, the enrichment gap of 1.599 against 1.104 being largely lost headroom and the ceiling-free odds ratios nearly equal at 3.17 against 3.04."
+  status: rejected
+  experiments: [exp68]
+  artifacts: [exp/out/exp68_summary.json]
+  check: |-
+    (lambda V, F:
+      V['P2']['holds'] is False
+      and round(V['P2']['auroc_filtered'], 3) == 0.774 and round(V['P2']['auroc_deleted'], 3) == 0.677
+      and V['P2']['auroc_difference_bootstrap']['difference_lo'] > 0
+      and round(V['P2']['auroc_difference_bootstrap']['difference_lo'], 3) == 0.048
+      and round(V['P2']['auroc_difference_bootstrap']['difference_hi'], 3) == 0.141
+      and round(V['P2']['odds_ratio_filtered'], 2) == 3.17 and round(V['P2']['odds_ratio_deleted'], 2) == 3.04
+      and abs(V['P2']['odds_ratio_filtered'] - V['P2']['odds_ratio_deleted']) < 0.25
+      and F['n_filtered'] == 1145 and F['n_deleted'] == 3633
+      and round(F['margin_excess_aurc_filtered'], 4) == 0.0785
+      and round(F['margin_excess_aurc_deleted'], 4) == 0.1925
+      and F['capture_10_share_of_ceiling_deleted'] > F['capture_10_share_of_ceiling_filtered']
+    )(A['exp/out/exp68_summary.json']['verdicts'],
+      A['exp/out/exp68_summary.json']['results']['part_c_filters']['filtered_vs_deleted'])
+  cited_in:
+    - {file: docs/Findings.md, marker: lucas-the-homogeneity-filter-flatters-the-tool}
+    - {file: docs/TECHNIQUES.md, marker: lucas-the-homogeneity-filter-flatters-the-tool}
+    - {file: docs/results/comparisons.md, marker: lucas-the-homogeneity-filter-flatters-the-tool}
+  note: >-
+    Error capture at a fixed budget is bounded above by the budget over the error rate, 0.350 on the kept units against
+    0.208 on the deleted ones, so the raw capture comparison of 0.210 against 0.146 is partly a base-rate effect and as a
+    share of its own ceiling the deleted units do better; the AUROC is the base-rate-free reading and it carries the
+    direction. The filter is in practice close to a purity selector, so this is not an axis independent of window purity.
+
+- id: lucas-provenance-gap-is-not-boundary-specific
+  statement: "LUCAS holds a ground-observed arm and an image-interpreted arm under one protocol, and within 93 matched class-by-country strata the boundary-first order's lead over the margin is +0.0386 on the photo-interpreted polygons against +0.0003 on the field-surveyed ones, a gap of 0.0383 that survives restricting both arms to high-purity units, which read naively would confirm exp18's caveat on reference provenance rather than on resolution; it does not survive a rate-matched null, because a flag drawn at random at the same fire rate already produces a photo-minus-field gap of 0.0204, over half of it, and a rate-matched flag built from the pixel variance, which carries no boundary information at all, produces a larger gap of 0.0609, leaving a boundary-specific residual of only 0.0178, so what an image-interpreted reference flatters is two-block coarsening in general and not boundary shape."
+  status: mixed
+  experiments: [exp68]
+  artifacts: [exp/out/exp68_summary.json]
+  check: |-
+    (lambda V, P:
+      V['P3']['holds'] is True and V['P3']['high_purity_holds'] is True
+      and round(V['P3']['gap'], 4) == 0.0383
+      and round(V['P3']['gap_from_a_rate_matched_null'], 4) == 0.0204
+      and round(V['P3']['boundary_specific_gap'], 4) == 0.0178
+      and V['P3']['gap_from_a_rate_matched_null'] > 0.5 * V['P3']['gap']
+      and P['n_matched_strata'] == 93
+      and round(P['arms']['photo']['lead_boundary_first_over_margin'], 4) == 0.0386
+      and abs(P['arms']['field']['lead_boundary_first_over_margin']) < 0.005
+      and (P['arms']['photo']['rate_matched']['variance_matched']
+           - P['arms']['field']['rate_matched']['variance_matched']) > V['P3']['gap']
+      and P['arms']['photo']['median_polygon_area'] < 0.1 * P['arms']['field']['median_polygon_area']
+    )(A['exp/out/exp68_summary.json']['verdicts'], A['exp/out/exp68_summary.json']['results']['part_c_provenance'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: lucas-provenance-gap-is-not-boundary-specific}
+    - {file: docs/results/comparisons.md, marker: lucas-provenance-gap-is-not-boundary-specific}
+  note: >-
+    The two arms differ in geometry far more than in provenance: within the same matched cells the photo arm's median
+    polygon is 44 sqm against the field arm's 2,096 and its median window purity 0.012 against 0.590, so class and
+    country do not match them on difficulty. The high-purity comparison has only 204 photo-interpreted polygons.
+
+- id: lucas-two-dates-are-phenology
+  statement: "One place read through two Sentinel-2 acquisitions a median 118 days apart changes the model's decision on 31.2% of 7,109 LUCAS polygons against a probe-reseed floor of 0.30%, about a hundred times more than reseeding the head, and the surveyor settles which side is right: among the 2,221 differences the near-date acquisition is correct 917 times against the far one's 591 (one-sided p = 2e-17) with both wrong on 713, the two dates' error sets overlapping at phi 0.579, and the differing polygons carry the low-margin cue at 2.96 times and the boundary cue at only 1.11; the change rate is phenology and not noise, cropland changing on 44.5% against woodland's 20.8% and artificial land's 21.3%, which is preregistered P5 holding, with bare land the least stable class of all at 46.4%, unpredicted and right for a survey year."
+  status: supported
+  experiments: [exp68]
+  artifacts: [exp/out/exp68_summary.json]
+  check: |-
+    (lambda V, B:
+      V['P5']['holds'] is True
+      and round(V['P5']['cropland_change_rate'], 4) == 0.4454
+      and round(V['P5']['woodland'], 4) == 0.2082 and round(V['P5']['artificial'], 4) == 0.2131
+      and V['P5']['cropland_change_rate'] >= 2 * max(V['P5']['woodland'], V['P5']['artificial'])
+      and V['P5']['cloud_clear_only']['cropland'] >= 2 * max(V['P5']['cloud_clear_only']['woodland'],
+                                                             V['P5']['cloud_clear_only']['artificial'])
+      and B['n'] == 7109 and round(B['disagreement_rate'], 4) == 0.3124
+      and B['disagreement_rate'] > 50 * B['head_draw_floor']
+      and B['which_side']['a_right'] == 917 and B['which_side']['b_right'] == 591
+      and B['near_beats_far_sign_test']['p_greater'] < 1e-12
+      and round(B['crosstab']['phi'], 3) == 0.579
+      and B['where']['low_margin_near']['enrichment'] > 2.5 and B['where']['boundary_near']['enrichment'] < 1.3
+      and max(v['change_rate'] for v in B['per_class'].values()) == B['per_class']['bare']['change_rate']
+    )(A['exp/out/exp68_summary.json']['verdicts'], A['exp/out/exp68_summary.json']['results']['part_b'])
+  cited_in:
+    - {file: docs/Findings.md, marker: lucas-two-dates-are-phenology}
+    - {file: docs/TECHNIQUES.md, marker: lucas-two-dates-are-phenology}
+    - {file: docs/results/comparisons.md, marker: lucas-two-dates-are-phenology}
+  note: >-
+    P5 failed on the two runs before the window anchor was corrected: the chip is centred on the survey point at pixel 32
+    and the encoder reads the 60 px crop from the top-left, so the point sits in window 8 of 15 while the grid centre is
+    7, and a twelfth of polygons were graded on a window 40 m from the point. The probe-reseed rate is the floor for a
+    different question, whether the head is stable; the floor for a two-date change rate is the rate on cover that did
+    not change, whose closest observable bound here is the most stable class, woodland at 0.208.

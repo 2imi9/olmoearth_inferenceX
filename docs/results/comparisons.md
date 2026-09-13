@@ -1472,6 +1472,190 @@ checksum (jobs 815613 and 815860). Source `exp/out/exp67_summary.json`;
 `exp/out/exp67_windows.npz` carries the per-window quantities for every eighth
 tile, and every number above recomputes from it.
 
+## The protocol against ground observation: LUCAS (exp68)
+
+Every reference above is image interpretation. Sen1Floods11 and GEOID-Flood
+are analysts drawing on the same Sentinel imagery the model reads, DFC2020's
+test labels are an iterated Earth Engine random forest, Dynamic World's
+consensus is expert annotators labelling Sentinel-2 chips, and MADOS and PASTIS
+arrive as Ai2's embeddings. That shared provenance is this repository's oldest
+unresolved worry, raised in exp18 and never settled: when the reference is drawn
+from the pixels the model reads, reference error and model error are correlated,
+because a hazy pixel or an ambiguous edge misleads the annotator and the network
+the same way. A window scored as a captured error may be a window where the
+annotator was wrong.
+
+LUCAS breaks the correlation. It is an in-situ survey: a surveyor stood at the
+point and recorded the land cover in front of them, so the reference never saw a
+pixel. Ai2 suggested it; our first judgement, that points can grade a review set
+but not a difference, was wrong on both counts, and the second is why part B
+below exists.
+
+The graded unit is the polygon, and the data force that: the median LUCAS
+Copernicus polygon is 2,746 sqm where a 4 px window is 1,600 sqm, and a tenth of
+polygons are smaller than a single 10 m pixel. Each polygon takes the window with
+the largest overlap with it, ties and no-overlap cases going to the window that
+holds the survey point. 12,073 polygons were drawn, stratified by level-1 class
+crossed with observation type with the photo-interpreted strata deliberately
+oversampled, so inclusion probabilities are ours and known; 11,856 returned a
+usable Sentinel-2 L2A scene from the Planetary Computer within 30 days of the
+survey, and a second scene at least 90 days away. NUTS2 regions split into
+disjoint fit and report halves. Every number is reported naively and
+Horvitz-Thompson weighted, the weight being the stratum's population over the
+polygons actually in hand.
+
+| Ranker on 4,778 field-surveyed polygons in held-out regions | weighted excess AURC | lead over the margin | regions, p | capture at 5 / 10 / 20% |
+|---|---|---|---|---|
+| boundary first, then margin | 0.1466 | -0.0002, not significant | 49/62, 0.91 | 0.083 / 0.166 / 0.307 |
+| margin | 0.1468 | reference |  | 0.083 / 0.165 / 0.302 |
+| 1 - top-1 probability | 0.1651 | +0.0183 | 49/72 | 0.091 / 0.168 / 0.317 |
+| neighbourhood disagreement alone | 0.1758 | +0.0290 | 39/87 | 0.095 / 0.179 / 0.329 |
+| control, polygon area (oracle) | 0.2089 | +0.0622 | 25/101 | 0.072 / 0.150 / 0.314 |
+| entropy | 0.2102 | +0.0634 | 41/84 | 0.083 / 0.161 / 0.318 |
+| control, window impurity (oracle) | 0.2205 | +0.0737 | 27/99 | 0.067 / 0.152 / 0.308 |
+| control, pixel variance | 0.2421 | +0.0953 | 15/111 | 0.074 / 0.149 / 0.284 |
+| control, predicted-class rarity | 0.4469 | +0.3001 | 10/116 | 0.101 / 0.155 / 0.229 |
+
+**The ranking survives a grader that never saw the imagery.** The margin beats
+the best control an operator could actually compute, the within-window pixel
+variance, by 0.0953 of weighted excess AURC, on 94 regions against 32 under the
+design-weighted estimator the preregistration names (p = 1e-08; unweighted the
+same test is 111 against 15), with a NUTS2 cluster bootstrap of [0.071, 0.120].
+Preregistered P1 holds, and so does P4: the finding is not an artifact of
+ignoring the sampling design, although ignoring it would have overstated the
+lead by 0.0216. P1b holds too, so the model's own confidence beats simply
+knowing how small and mixed the unit is, by 0.0622. This is the result the
+experiment existed to get, and its falsification would have put every capture
+number in this repository in question. <!-- claim:lucas-ranking-survives-ground-observation -->
+
+The lead is not uniform, and the record should say where it lives. By class it
+runs from +0.016 on grassland, which carries 23% of the population weight and is
+the hardest class at 0.507 weighted error, to +0.377 on water, which carries 1%.
+By purity of the graded window it runs from +0.071 in the lowest quarter to
++0.161 in the highest, with one band, 0.50 to 0.75 and 618 polygons, where the
+margin loses to a control by 0.010.
+
+| purity of the graded window | polygons | weighted error rate | margin excess AURC | lead | capture at 10% |
+|---|---|---|---|---|---|
+| 0.00 to 0.25 | 1,817 | 0.639 | 0.2539 | +0.0709 | 0.113 |
+| 0.25 to 0.50 | 483 | 0.511 | 0.2259 | +0.0658 | 0.120 |
+| 0.50 to 0.75 | 618 | 0.373 | 0.1804 | -0.0102 | 0.158 |
+| 0.75 to 1.00 | 1,860 | 0.305 | 0.0977 | +0.1614 | 0.203 |
+
+**An overfit head inverts the ranking comparison, and that is worth more than
+the ranking it produces.** The first run of this experiment fitted 6,152 probe
+parameters on about 3,000 polygons and reached 0.9986 accuracy on its own inner
+fit set against 0.554 on held-out regions. On that probe the margin came *last*
+of the four model signals. Tuning weight decay and epochs on NUTS2 regions held
+out of the fit set, never on the report regions, chose a decay of 100, traded
+inner fit accuracy down to 0.727 to buy 0.596, and put the margin back at the
+top, tied with the boundary-first order and ahead of every other signal by
+0.018 to 0.063 with disjoint bootstrap intervals. So the ordering of confidence
+signals is not a property of the task; it is a property of how well the head
+generalises, and a memorised head reverses it. Anyone reading a ranking
+comparison off a probe should report that probe's generalisation gap
+first. <!-- claim:lucas-overfitting-inverts-the-ranker-ordering -->
+
+**The published homogeneity filter flatters the tool; the preregistration had
+it backwards.** P2 predicted that filtering to large homogeneous units, which
+is standard LUCAS practice, would understate the tool by deleting the mixed
+units the cues live on. The opposite holds. On the disjoint contrast between the
+1,145 polygons the filter keeps and the 3,633 it deletes, the margin's
+design-weighted AUROC is 0.774 against 0.677, a difference of +0.097 with a
+paired NUTS2 bootstrap of [+0.048, +0.141], and its excess AURC is 0.0785
+against 0.1925. The mixed and small units the convention throws away are where
+the ranking is weakest, which is also where the label describes least of what
+the model saw. Two cautions on how not to read this. Error capture at a fixed
+budget is bounded above by the budget over the error rate, and those ceilings
+differ, 0.350 on the kept units against 0.208 on the deleted ones, so the raw
+capture comparison, 0.210 against 0.146, is partly a base-rate effect; as a
+share of its own ceiling the deleted units do better. And the boundary-cue half
+of P2, enrichment 1.599 against 1.104, is largely lost headroom rather than lost
+discrimination, because enrichment is bounded by one over the cue's share among
+correct units: on the ceiling-free odds ratio the two subsets are nearly equal,
+3.17 against 3.04. The reversal is about the ranking, not about the
+cue. <!-- claim:lucas-the-homogeneity-filter-flatters-the-tool -->
+
+**The provenance contrast holds as preregistered and does not support the
+interpretation it was built for.** Of the 137,966 Copernicus polygons, 131,195
+were observed in the field and 6,771 were photo-interpreted in the field, under
+one protocol and one nomenclature, so the same dataset holds a ground-observed
+arm and an image-interpreted arm. Within 93 matched class-by-country strata the
+boundary-first order's lead over the margin is +0.0386 on the photo-interpreted
+arm and +0.0003 on the field-surveyed one, a gap of 0.0383 that survives
+restricting both arms to high-purity units (+0.0275 against -0.0140, though the
+photo arm is then only 204 polygons). Read naively that is exp18's caveat
+confirmed on reference provenance rather than on the resolution proxy exp66 had
+to use. It does not survive a rate-matched null. The boundary-first order works
+by coarsening the suspicion order into two blocks, and that coarsening has a
+cost of its own set by its fire rate and by how much headroom the order has
+left. A flag drawn at random at the same rate already produces a photo-minus-
+field gap of 0.0204, just over half the 0.0383; and a rate-matched flag built
+from the pixel variance, which contains no boundary information and is one of
+this experiment's own controls, produces a *larger* gap, 0.0609. So what the
+image-interpreted arm flatters is two-block coarsening in general, and the
+boundary indicator is not even the strongest example of it. The
+boundary-specific residual is +0.0178 and is the only part of this that is
+evidence about boundaries. The two arms also differ in geometry far more than
+in provenance: within the same matched cells the photo arm's median polygon is
+44 sqm against the field arm's 2,096, and its median window purity 0.012 against
+0.590. <!-- claim:lucas-provenance-gap-is-not-boundary-specific -->
+
+**Two dates, one place, and a surveyor as arbiter.** This is the difference
+measurement `oe_inferencex.compare` exists for, run for the first time where the
+reference is independent of both inputs. The same polygon is read through the
+scene nearest its survey date and through one at least 90 days away, median
+separation 118 days, on 7,109 polygons in the held-out regions. The decision
+changes on 31.2% of them against a probe-reseed floor of 0.30%, so the date moves
+the map about a hundred times more than reseeding the head does. Among the 2,221
+differences the near acquisition is the right side 917 times and the far one 591,
+a one-sided p of 2e-17, with both wrong on 713; the two dates' error sets overlap
+at phi 0.579. The differing polygons are where the near-date margin was low,
+enrichment 2.96, and are not located by the boundary cue, enrichment 1.11.
+
+The change rate is phenology and not noise, which was preregistered as P5 and
+holds: cropland changes on 44.5% of polygons against woodland's 20.8% and
+artificial land's 21.3%, a factor of 2.09 to 2.14, and the same on the subset
+whose window is cloud-clear in both acquisitions. The ordering across all eight
+classes is what land cover implies, with one thing the preregistration did not
+predict: bare land is the least stable class of all, 46.4%, which in a survey
+year is right, since bare soil is a season rather than a cover
+type. <!-- claim:lucas-two-dates-are-phenology -->
+
+| surveyed class | polygons | decision changes between the two acquisitions |
+|---|---|---|
+| woodland | 1,028 | 0.208 |
+| artificial | 812 | 0.213 |
+| water | 639 | 0.230 |
+| shrubland | 891 | 0.259 |
+| grassland | 1,134 | 0.310 |
+| wetland | 609 | 0.327 |
+| cropland | 1,154 | 0.445 |
+| bare | 842 | 0.464 |
+
+Limits, and one bug worth recording. Level-1 report accuracy is 0.522 against a
+stated prediction of 0.55 to 0.75, so that prediction failed; the tuning sweep
+says most of the remaining gap to the 0.669 fit accuracy is spatial shift across
+Europe rather than regularisation left on the table, since decay beyond 100 made
+held-out accuracy worse and decay of 10,000 collapsed the probe to chance. The
+estimand is the LUCAS Copernicus polygon population, not EU area, because
+LUCAS's own design weights are not shipped in this file; it is exact only up to
+the 1.8% of sampled polygons that returned no usable scene, for which the
+weighting assumes the loss is ignorable within a stratum. 32 polygons whose
+graded window was entirely scene-classification nodata were dropped rather than
+scored. The bug: the chip is centred on the survey point at pixel 32 and the
+encoder reads the 60 px crop from the top-left, so the point sits in window 8 of
+15, while the first two runs used the grid centre, window 7, as the tie-break
+and no-overlap anchor. Window 7 spans pixels 28 to 31 and does not contain the
+point, so a twelfth of the polygons were graded on ground the surveyor never
+looked at. Fixing it moved P5 from failing to holding, which is the clearest
+argument in this repository for grading the unit you think you are grading.
+Runtime 1:53 on one B200 for the analysis and 1:05 for the 23,687 chip fetches
+on 24 threads (jobs 817465 and 820129). Source `exp/out/exp68_summary.json`;
+`exp/out/exp68_masks.npz` carries every per-polygon quantity, and the weighted
+estimators in it were reproduced from their definitions by an independent
+implementation to 1e-14.
+
 ## Served land cover change rasters (exp20)
 
 First assessment of a served output: ten 512-px windows (about

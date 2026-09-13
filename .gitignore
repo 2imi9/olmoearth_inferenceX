@@ -29,3 +29,4 @@ exp/out/exp33_*.npz
 exp/out/exp34_*.npz
 exp/out/exp36_*.npz
 .gstack/
+site/

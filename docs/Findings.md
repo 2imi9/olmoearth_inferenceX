@@ -154,6 +154,23 @@ imagery, it beats the naive top-probability confidence which ties on 23% of
 windows, and its errors carry the same cues. Its published probabilities,
 though, understate its accuracy by about 0.20 at every confidence level: the
 numbers that order a review well are not the numbers to threshold on. <!-- claim:dw-margin-ranks-a-production-model --> <!-- claim:dw-published-probabilities-are-underconfident -->
+And it survives the grader this project had never had (exp68, LUCAS Copernicus
+2022, 11,856 in-situ survey polygons): where a surveyor stood at the point and
+never saw a pixel, the margin still beats the best control an operator could
+compute by 0.095 of design-weighted excess AURC, on 94 European regions against
+32, so what this repository has been measuring is not annotator agreement. Two
+things that came with it are worth as much as the result. A probe that memorises
+its fit set reverses the ordering of confidence signals, putting the margin last
+where a properly regularised head puts it first, so a ranking comparison is only
+readable beside its own generalisation gap. And the published practice of
+filtering land-cover reference data to large homogeneous units flatters the tool
+rather than understating it, by 0.097 of AUROC: the mixed and small units the
+convention deletes are where the ranking is weakest. <!-- claim:lucas-ranking-survives-ground-observation --> <!-- claim:lucas-overfitting-inverts-the-ranker-ordering --> <!-- claim:lucas-the-homogeneity-filter-flatters-the-tool -->
+The same polygons carry the cleanest difference measurement here: one place read
+through two acquisitions 118 days apart changes decision on 31% of polygons
+against a 0.3% head-reseed floor, the surveyed class says the near date is the
+right side 917 times against 591, and the change rate is phenology, twice as
+high on cropland as on woodland. <!-- claim:lucas-two-dates-are-phenology -->
 
 The effect size in a reviewer's units (exp55, 45 GEOID-Flood events): on the
 median event the 5% of windows confidence flags hold 88% of the permanent-water
