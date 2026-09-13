@@ -625,7 +625,7 @@ def analyze_stage(args):
                                       "the HCAT harmonisation is the EuroCrops project's, and unmapped codes are dropped",
                                       "both years are labelled, which is what makes the two-date comparison decidable"]},
                "results": {}, "verdicts": {}}
-    rows, per_region = [], {}
+    rows, per_region, windows = [], {}, []
 
     for region in REGIONS:
         files = sorted(f for f in os.listdir(CHIPDIR) if f.startswith(region + "_") and f.endswith(".npz"))
@@ -771,11 +771,29 @@ def analyze_stage(args):
         pr["reference_probe"]["ratio"] = float(pr["reference_probe"]["model_change_rate_declared_changed"]
                                               / max(pr["reference_probe"]["model_change_rate_declared_same"], 1e-9))
         pr["probe_tuning"]["best_at_grid_edge"] = bool(best["epochs"] == max(g["epochs"] for g in sweep))
+        keep = np.zeros(n, dtype=bool)
+        keep[::4] = True                                   # every fourth chip, so the artifact stays a few megabytes
+        km = np.repeat(keep[:, None, None], G, 1).repeat(G, 2)
+        windows.append({
+            "region": np.full(int(km.sum()), region),
+            "cell": cell_w[km], "chip": np.repeat(np.arange(n)[:, None, None], G, 1).repeat(G, 2)[km],
+            "dec_y0": r0["dec"][km], "dec_y1": r1["dec"][km],
+            "y_y0": r0["y"][km], "y_y1": r1["y"][km],
+            "graded_y0": r0["graded"][km], "graded_y1": r1["graded"][km],
+            "margin_y0": r0["margin"][km].astype(np.float32), "entropy_y0": r0["entropy"][km].astype(np.float32),
+            "top1_y0": r0["top1"][km].astype(np.float32), "boundary_y0": r0["boundary"][km].astype(np.float32),
+            "variance_y0": var0[km].astype(np.float32),
+            "report": np.repeat(rep_c[:, None, None], G, 1).repeat(G, 2)[km]})
         per_region[region] = pr
         print(f"  {region}: window accuracy {pr['window_accuracy_report']:.4f}, margin lead {lead:+.4f} over {ctl}, "
               f"cells {st['wins']}-{st['losses']}; model moves {rate_changed:.3f} where the declaration changed and "
               f"{rate_same:.3f} where it did not", flush=True)
 
+    # Every quantity above must be recomputable without a rerun. exp68's audit found that its part B could only be
+    # taken on the summary's word, so the per-window arrays go out here for every fourth chip of each region.
+    if windows:
+        np.savez_compressed(os.path.join(OUT, f"exp69_windows{'_smoke' if args.smoke else ''}.npz"),
+                            **{k: np.concatenate([w[k] for w in windows]) for k in windows[0]})
     summary["results"]["regions"] = per_region
     summary["config"]["regions"] = {k: {"years": plan["regions"][k].get("years"),
                                        "join": plan["regions"][k].get("join")} for k in plan["regions"]}
