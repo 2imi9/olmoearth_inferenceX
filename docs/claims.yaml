@@ -2334,3 +2334,39 @@
     The magnitude clause is deliberately part of the statement. exp68's inversion was dramatic and this suite's probes
     do not reproduce it, so quoting exp68 alone would overstate how often the ordering flips in practice; quoting exp70
     alone would understate what a badly fitted probe can do. Both belong in the sentence.
+
+- id: agent-skill-reproduces-the-package
+  statement: "The OlmoEarth Agent's review-set skill computes what this repository computes, checked on real inference rather than on synthetic input: over the 17 single-label tasks of Ai2's published olmoearth_base embeddings, 143,776 graded units, the dependency-free pure-Python port and the numpy implementation every recorded number here was computed with agree bit-exactly on the arg-max decision (no disagreement on any unit) and, once numpy is promoted to the port's precision, on the top-1 minus top-2 margin (0.0 absolute) and on excess AURC, AUROC and capture at 5, 10 and 20 percent (worst 9.4e-16). At the probe's native float32 the margin differs by a constant 2.98e-08, which is that dtype's rounding and not a difference in what the two compute, and it moves excess AURC and AUROC by at most 2.7e-05 while leaving capture at every budget bit-identical, so the review set a reviewer acts on is the same set either way."
+  status: supported
+  experiments: [exp72]
+  artifacts: [exp/out/exp72_agent_crosscheck.json]
+  check: |-
+    (lambda V, R, D, S:
+      V['P1_decisions_and_margins_agree'] is True
+      and V['P2_statistics_agree'] is True
+      and V['P3_ties_exercised'] == 'holds'
+      and len(R) == 17
+      and sum(r['n'] for r in R) == 143776
+      and all(r['n_decision_disagreements'] == 0 for r in R)
+      and all(r['max_abs_margin_delta_f64'] == 0.0 for r in R)
+      and all(r['max_stat_delta_f64'] <= 1e-09 for r in R)
+      and all(r['probs_dtype'] == 'float32' for r in R)
+      and all(round(r['max_abs_margin_delta'], 12) == round(2.9802322387695312e-08, 12) for r in R)
+      and max(r['max_stat_delta'] for r in R) < 3e-05
+      and all(r['deltas'][k] == 0.0 and r['deltas_f64'][k] == 0.0
+              for r in R for k in ('capture@0.05', 'capture@0.10', 'capture@0.20'))
+      and any(r['n_exact_margin_ties'] > 0 for r in R)
+      and D['at_the_probe_dtype_float32']['P2'] is False
+      and len(S) == 64
+    )(A['exp/out/exp72_agent_crosscheck.json']['verdicts'],
+      A['exp/out/exp72_agent_crosscheck.json']['results'],
+      A['exp/out/exp72_agent_crosscheck.json']['dtype_note'],
+      A['exp/out/exp72_agent_crosscheck.json']['skill_sha256'])
+  cited_in:
+    - {file: docs/TECHNIQUES.md, marker: agent-skill-reproduces-the-package}
+  note: >-
+    A differential test, not a finding: it says the agent reports what the experiments report, so the evidence cited in
+    the skill transfers to it, and it says nothing about whether the ranking is good, which is exp70's question. The
+    float32 clause is in the statement because the synthetic unit test could not have found it: it generated float64
+    matrices, so the two paths never disagreed, and only real probe output exposed the constant. The run pins the skill
+    by sha256; editing that file invalidates this claim rather than silently weakening it.
