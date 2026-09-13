@@ -658,7 +658,7 @@ def analyze_stage(args):
         # tune on cells held out of the fit set, then refit on all of it (exp68's lesson, made mandatory here)
         sweep, best = [], None
         for wd in (1e-4, 1e-2, 1.0, 100.0):
-            for ep in (15, 40):
+            for ep in (15, 40, 80):          # 40 won on its own boundary in the first run, so the axis is extended
                 p = fit_dense_probe(e0[fit_c & in_f], lab0[fit_c & in_f], C, seed=0, epochs=ep, wd=wd)
                 rv = window_readings(p, e0[fit_c & in_v], lab0[fit_c & in_v], C)
                 gv = rv["graded"]
