@@ -656,26 +656,36 @@ def analyze_stage(args):
         fit_c, rep_c = cell_split(cells)
         in_f, in_v = cell_split(cells, salt="inner")
 
-        # tune on cells held out of the fit set, then refit on all of it (exp68's lesson, made mandatory here)
-        sweep, best = [], None
-        for wd in (1e-4, 1e-2, 1.0, 100.0):
-            for ep in (15, 40, 80, 160, 320):
-                # This axis has been extended twice: 40 won on its own boundary, then 80 did. A grid whose winner sits
-                # on its edge locates no optimum, only a lower bound on one, so it runs to 320 until the winner is
-                # interior. If held-out accuracy is still climbing there the honest reading is that a dense probe on
-                # this task is under-trained rather than over-fitted, which is the opposite of exp68's single-window
-                # probe and has the same explanation: 225 supervised windows per chip against one.
-                p = fit_dense_probe(e0[fit_c & in_f], lab0[fit_c & in_f], C, seed=0, epochs=ep, wd=wd)
-                rv = window_readings(p, e0[fit_c & in_v], lab0[fit_c & in_v], C)
-                gv = rv["graded"]
-                acc_v = float((rv["dec"][gv] == rv["y"][gv]).mean()) if gv.any() else float("nan")
-                rf = window_readings(p, e0[fit_c & in_f], lab0[fit_c & in_f], C)
-                gf = rf["graded"]
-                acc_f = float((rf["dec"][gf] == rf["y"][gf]).mean()) if gf.any() else float("nan")
-                sweep.append({"weight_decay": wd, "epochs": ep, "inner_fit_accuracy": acc_f, "inner_val_accuracy": acc_v})
-                print(f"  tune wd={wd:g} ep={ep}: inner fit {acc_f:.4f} val {acc_v:.4f}", flush=True)
-        best = max((s for s in sweep if np.isfinite(s["inner_val_accuracy"])), key=lambda s: s["inner_val_accuracy"])
-        print(f"  chosen wd={best['weight_decay']:g} epochs={best['epochs']}", flush=True)
+        # Tune on cells held out of the fit set, then refit on all of it: exp68's lesson, mandatory here.
+        # --reuse-tuning takes the setting a previous run chose and skips the sweep. The sweep is what PICKS the probe,
+        # not what the probe's numbers rest on, so regenerating an artifact should not cost sixty probe fits.
+        if args.reuse_tuning:
+            prev = json.load(open(os.path.join(OUT, "exp69_summary.json")))["results"]["regions"][region]["probe_tuning"]
+            sweep, best = prev["grid"], dict(prev["chosen"])
+            print(f"  reusing wd={best['weight_decay']:g} epochs={best['epochs']} from the recorded sweep", flush=True)
+        else:
+            sweep = []
+            for wd in (1e-4, 1e-2, 1.0, 100.0):
+                for ep in (15, 40, 80, 160, 320):
+                    # This axis was extended twice: 40 won on its own boundary, then 80 did. A grid whose winner sits on
+                    # its edge locates no optimum, only a lower bound on one, so it runs to 320. Two regions are still
+                    # improving there, which is why every conclusion is also reported at a fixed reference probe: if the
+                    # verdicts do not move across a twenty-fold range of training length, the optimum's exact location
+                    # is not what they rest on. Contrast exp68, where the regularisation axis DID change which signal
+                    # ranked first and so had to be resolved.
+                    p_ = fit_dense_probe(e0[fit_c & in_f], lab0[fit_c & in_f], C, seed=0, epochs=ep, wd=wd)
+                    rv = window_readings(p_, e0[fit_c & in_v], lab0[fit_c & in_v], C)
+                    gv = rv["graded"]
+                    acc_v = float((rv["dec"][gv] == rv["y"][gv]).mean()) if gv.any() else float("nan")
+                    rf = window_readings(p_, e0[fit_c & in_f], lab0[fit_c & in_f], C)
+                    gf = rf["graded"]
+                    acc_f = float((rf["dec"][gf] == rf["y"][gf]).mean()) if gf.any() else float("nan")
+                    sweep.append({"weight_decay": wd, "epochs": ep,
+                                  "inner_fit_accuracy": acc_f, "inner_val_accuracy": acc_v})
+                    print(f"  tune wd={wd:g} ep={ep}: inner fit {acc_f:.4f} val {acc_v:.4f}", flush=True)
+            best = max((z for z in sweep if np.isfinite(z["inner_val_accuracy"])),
+                       key=lambda z: z["inner_val_accuracy"])
+            print(f"  chosen wd={best['weight_decay']:g} epochs={best['epochs']}", flush=True)
         probe = fit_dense_probe(e0[fit_c], lab0[fit_c], C, seed=0, epochs=best["epochs"], wd=best["weight_decay"])
         # A second probe at a FIXED reference setting, so the record itself shows whether the verdicts depend on how long
         # the probe trained. The epoch axis was extended three times and two regions were still improving at its far end,
@@ -894,6 +904,9 @@ def main():
     ap.add_argument("--stage", choices=("fetch", "analyze", "all"), default="all")
     ap.add_argument("--threads", type=int, default=16)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--reuse-tuning", action="store_true",
+                    help="take each region's weight decay and epochs from the recorded exp69_summary.json instead of "
+                         "sweeping again; for regenerating artifacts without repeating sixty probe fits")
     ap.add_argument("--smoke", action="store_true")
     args = ap.parse_args()
     os.makedirs(OUT, exist_ok=True)
