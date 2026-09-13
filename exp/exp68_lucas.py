@@ -297,9 +297,12 @@ def build_sample(df, seed=0):
     return take, meta
 
 
-def region_split(nuts2):
-    """Fit and report halves by a stable hash of the NUTS2 code, so no region contributes to both."""
-    h = np.array([int(hashlib.md5(str(r).encode()).hexdigest()[:8], 16) % 2 for r in nuts2])
+def region_split(nuts2, salt=""):
+    """Two halves by a stable hash of the NUTS2 code, so no region contributes to both.
+
+    `salt` gives an independent split of the same regions, which is what the inner validation split needs: hashing the
+    fit regions with the outer salt would put every one of them on the same side again."""
+    h = np.array([int(hashlib.md5((salt + str(r)).encode()).hexdigest()[:8], 16) % 2 for r in nuts2])
     return h == 0, h == 1
 
 
@@ -561,6 +564,44 @@ def fit_probe(X, y, seed=0, epochs=80, lr=2e-3, wd=1e-4, batch=256):
     return lin.eval()
 
 
+WD_GRID = (1e-4, 1e-2, 1.0, 10.0, 100.0)
+EPOCH_GRID = (10, 30, 80)
+
+
+def tune_probe(X, y, groups, seed=0):
+    """Pick weight decay and epochs on NUTS2 regions held out of the fit set, then refit on all of it.
+
+    The first run of this experiment fitted 6,152 probe parameters on 3,037 polygons and reached 0.943 accuracy on its
+    own fit set against 0.480 on the held-out regions. A probe that has memorised its fit set is not a fair model to
+    audit, and part of that gap is genuine spatial shift across Europe rather than plain overfitting, so the validation
+    split is by region and not by row: a within-region split would not see the shift the report split imposes.
+    The grid is deliberately wide, to 100 in weight decay and down to ten epochs, so that if the best setting is still
+    the default the conclusion is earned: the remaining gap is then spatial shift across Europe and not regularisation
+    left on the table, and a reader can check that from the recorded sweep rather than taking it on trust.
+
+    Returns the refitted probe and the whole sweep, so the record shows what regularisation bought."""
+    inner_fit, inner_val = region_split(groups, salt="inner")
+    if inner_fit.sum() < 200 or inner_val.sum() < 200:
+        return fit_probe(X, y, seed=seed), {"note": "too few units to tune; defaults used", "chosen": None}
+    sweep = []
+    for wd in WD_GRID:
+        for ep in EPOCH_GRID:
+            lin = fit_probe(X[inner_fit], y[inner_fit], seed=seed, epochs=ep, wd=wd)
+            pv = probe_probs(lin, X[inner_val][:, None, None, :])[:, 0, 0, :]
+            pf = probe_probs(lin, X[inner_fit][:, None, None, :])[:, 0, 0, :]
+            sweep.append({"weight_decay": wd, "epochs": ep,
+                          "inner_fit_accuracy": float((pf.argmax(-1) == y[inner_fit]).mean()),
+                          "inner_val_accuracy": float((pv.argmax(-1) == y[inner_val]).mean())})
+            print(f"  tune wd={wd:g} epochs={ep}: inner fit {sweep[-1]['inner_fit_accuracy']:.4f} "
+                  f"val {sweep[-1]['inner_val_accuracy']:.4f}", flush=True)
+    best = max(sweep, key=lambda d: d["inner_val_accuracy"])
+    print(f"  chosen wd={best['weight_decay']:g} epochs={best['epochs']} "
+          f"(inner val {best['inner_val_accuracy']:.4f})", flush=True)
+    return (fit_probe(X, y, seed=seed, epochs=best["epochs"], wd=best["weight_decay"]),
+            {"grid": sweep, "chosen": {k: best[k] for k in ("weight_decay", "epochs", "inner_val_accuracy")},
+             "n_inner_fit": int(inner_fit.sum()), "n_inner_val": int(inner_val.sum())})
+
+
 def probe_probs(lin, E, batch=512):
     """(N, 5, 5, D) -> (N, 5, 5, 8) class probabilities, in batches so the whole stack never sits on the device."""
     import torch
@@ -727,9 +768,11 @@ def analyze_stage(args):
                           "crop_px": CROP, "grid": G, "neighbourhood": NB, "classes": CLASSES,
                           "boa_offset_removed": BOA_OFFSET, "strata": strata,
                           "caveats": ["the reference is in-situ observation, causally independent of the imagery",
-                                      "the probe is fitted on 3,037 field-surveyed polygons in the fit regions for 768 "
-                                      "features and eight classes, which is thin; the fit and report accuracies are "
-                                      "both reported so the generalisation gap is visible",
+                                      "the probe is fitted on about 3,000 field-surveyed polygons in the fit regions "
+                                      "for 768 features and eight classes, which is thin; weight decay and epochs are "
+                                      "tuned on NUTS2 regions held out of the fit set, never on the report regions, "
+                                      "and the fit, inner-validation and report accuracies are all recorded so the "
+                                      "remaining gap is visible and attributable",
                                       "the graded unit is the polygon; the median polygon is smaller than the 40 m window",
                                       "LUCAS design weights over EU area are not shipped; the estimand is the Copernicus polygon population",
                                       "photo-interpreted points sit in harder terrain, so part C matches on class and country"]},
@@ -738,8 +781,15 @@ def analyze_stage(args):
 
     # ---- probes, two seeds
     arms = {}
+    tuned = None
     for seed in (0, 1):
-        lin = fit_probe(Xn[:, c, c, :][fit_sel], y[fit_sel], seed=seed)
+        if seed == 0:
+            lin, tuned = tune_probe(Xn[:, c, c, :][fit_sel], y[fit_sel], nuts2[fit_sel], seed=seed)
+            summary["results"]["probe_tuning"] = tuned
+        else:
+            ch = (tuned or {}).get("chosen") or {}
+            lin = fit_probe(Xn[:, c, c, :][fit_sel], y[fit_sel], seed=seed,
+                            epochs=ch.get("epochs", 80), wd=ch.get("weight_decay", 1e-4))
         p = probe_probs(lin, Xn)
         arms[seed] = readings(p)
         acc = float((arms[seed]["dec"][rep_m] == y[rep_m]).mean())
@@ -900,7 +950,9 @@ def analyze_stage(args):
     if "pid_far" in d and len(d["pid_far"]):
         far = prepare_arm(d, "far", model)
         Xf = (far["E"] - mu) / sd
-        lin0 = fit_probe(Xn[:, c, c, :][fit_sel], y[fit_sel], seed=0)
+        ch0 = (tuned or {}).get("chosen") or {}
+        lin0 = fit_probe(Xn[:, c, c, :][fit_sel], y[fit_sel], seed=0,
+                         epochs=ch0.get("epochs", 80), wd=ch0.get("weight_decay", 1e-4))
         rf = readings(probe_probs(lin0, Xf))
         pos = {int(p): i for i, p in enumerate(d["pid_near"])}
         idx = np.array([pos[int(p)] for p in d["pid_far"]])
