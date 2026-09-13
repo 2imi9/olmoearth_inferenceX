@@ -440,6 +440,11 @@ def run_llm_arm(card, arm, endpoint, model, seed=0, temperature=0.0, max_steps=6
                 cargs = json.loads(fn.get("arguments") or "{}")
             except json.JSONDecodeError:
                 cargs = {}
+            # A model may send `arguments` as a bare string rather than an object -- Qwen does this for a
+            # single-parameter tool. Treat that string as the one parameter's value instead of crashing, since
+            # refusing it would score the arm on the server's calling convention rather than on its reasoning.
+            if not isinstance(cargs, dict):
+                cargs = {"code": str(cargs)} if name == "python" else {}
             if name == "assess":
                 out = tool_assess(card)
             elif name == "compare":

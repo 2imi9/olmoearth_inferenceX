@@ -383,8 +383,17 @@ def cmd_run(args):
                         run = {"arm": "C", "answer": ans, "parse_error": None, "text": text,
                                "tool_outputs": tools, "n_tool_calls": len(tools), "n_steps": 0}
                     else:
-                        run = arms.run_llm_arm(card, arm, args.endpoint, args.model,
-                                               seed=args.seed + sample, temperature=args.temperature)
+                        # One arm failing on one card must not end a run of a thousand: the failure is recorded
+                        # as that run's result, which is what it is, and the remaining arms still execute.
+                        try:
+                            run = arms.run_llm_arm(card, arm, args.endpoint, args.model,
+                                                   seed=args.seed + sample, temperature=args.temperature)
+                        except Exception as exc:  # noqa: BLE001
+                            run = {"arm": arm, "answer": None, "text": "",
+                                   "parse_error": f"harness error: {type(exc).__name__}: {exc}",
+                                   "tool_outputs": {}, "n_tool_calls": 0, "n_steps": 0}
+                            print(f"    {card['name']} arm {arm} sample {sample}: "
+                                  f"{type(exc).__name__}: {exc}", flush=True)
                     fh.write(json.dumps({"card": card["name"], "sample": sample, **run}, default=float) + "\n")
                     fh.flush()
                     n += 1
