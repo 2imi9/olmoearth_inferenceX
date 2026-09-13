@@ -1727,7 +1727,7 @@ label cannot see.** Among windows where the two years' decisions differ:
 
 | Region | differing windows | right about both years | right about the first only | right about the second only | right about neither |
 |---|---|---|---|---|---|
-| Austria | 13,372 | 0.287 | 0.338 | 0.169 | 0.205 |
+| Austria | 13,373 | 0.287 | 0.338 | 0.169 | 0.206 |
 | Denmark | 33,900 | 0.367 | 0.290 | 0.214 | 0.129 |
 | Slovenia | 971 | 0.051 | 0.505 | 0.154 | 0.290 |
 
@@ -1763,8 +1763,14 @@ at a fixed reference probe of 80 epochs and 1e-4 decay, and they agree, the marg
 leads differing by at most 0.003 and the change-rate ratios by at most 0.15. That
 insensitivity is the point, and it is the opposite of exp68's situation, where the
 regularisation axis changed which signal ranked first. Runtime 2:37 on one B200
-and 21 minutes for the 5,400 chip fetches (jobs 821061 and 822222). Source
-`exp/out/exp69_summary.json`.
+and 21 minutes for the 5,400 chip fetches (jobs 821061 and 822222); the committed
+artifacts come from a CPU rerun that reused the recorded hyperparameters (job
+823365) and reproduced the GPU run to four decimals on every headline number,
+which is a cross-check worth having and the reason shares here are quoted to three
+decimals rather than pinned exactly. Source `exp/out/exp69_summary.json`;
+`exp/out/exp69_windows.npz` carries both years' decisions and labels, the graded
+masks, the four confidence signals and the pixel-variance control for every fourth
+chip of each region, and every number above recomputes from it.
 
 ## Served land cover change rasters (exp20)
 
