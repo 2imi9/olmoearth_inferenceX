@@ -1,8 +1,9 @@
 # olmoearth_inferenceX
 
-olmoearth_inferenceX measures differences between OlmoEarth inferences
-without labels, and shows on expert-labelled testbeds which of those
-differences predict error.
+olmoearth_inferenceX measures differences between Earth-observation
+inferences without labels, and shows on expert-labelled testbeds which of
+those differences predict error. It was built around OlmoEarth and has since
+been run on a served global product no one here had a hand in training.
 
 On those testbeds the model's own logit margin is the difference that
 predicts error; disagreement across crops, backbones or encoders does not
@@ -16,15 +17,26 @@ the model. Given a prediction map, it helps with:
    carry measured evidence from expert-labelled testbeds.
 3. **Scoring any candidate audit rule the same way**, against the model's own
    confidence and a no-model control, on two references at once.
-4. **Auditing deployed OlmoEarth products**: the fine-tuned models through their
-   task cards, and the served land cover change rasters.
+4. **Auditing a deployed product**, whoever trained it: OlmoEarth's fine-tuned
+   models through their task cards, the served land cover change rasters, and a
+   served global land-cover product audited from nothing but the probabilities it
+   publishes about itself.
 5. **Measuring the difference between two inferences of the same scene**,
-   through shifted crops, across backbones, across sensors and before
-   against after fine-tuning: how much they disagree, what the disagreement
-   windows have in common and, with labels, which side is right.
+   through shifted crops, across backbones, across sensors, across encoders,
+   before against after fine-tuning, and between two acquisition dates: how much
+   they disagree, what the disagreement windows have in common and, with labels,
+   which side is right.
 6. **Fusing the label-free readings with labels where they exist**: a fitted
    ranker or side rule, reported held-out and bound to the model family it
    was fitted on, because such rules do not transfer across families.
+7. **Grading against a reference that is a sample rather than a map**: the
+   design-weighted estimators report the population quantity instead of the
+   sample's, which on a stratified reference is not a fine point. Ignoring the
+   design overstated one lead by a quarter of its size.
+
+Both halves run from the command line without writing Python, `oe-inferencex
+assess` and `oe-inferencex compare`; see
+[Usage: command line](Usage.md#command-line).
 
 ![The two-period, two-sensor square on one GEOID-Flood chip: four dated inputs, four inferences on identical windows, the same-date and same-sensor differences on the scene, and the label bridge boxed apart](figures/compare.png)
 
@@ -42,6 +54,33 @@ after it 18%. What a difference is needs labels, so that panel is boxed apart.*
 A worked flood example, runnable from the committed artifacts, is in
 [Usage: compare two inferences of the same scene](Usage.md#compare-two-inferences-of-the-same-scene);
 the event-level results are in [Comparisons](results/comparisons.md#the-difference-atlas-every-pair-of-inferences-under-one-measurement-exp57).
+
+## What the evidence spans
+
+The ranking result now rests on five kinds of reference whose errors fail in
+different ways, which is the part of this work hardest to argue with:
+
+| The answer key came from | Testbeds |
+|---|---|
+| people reading the same imagery | Sen1Floods11 hand labels, Copernicus EMS through GEOID-Flood, WorldFloods v2 |
+| another model's output | DFC2020, whose test labels are an iterated random forest, not hand-drawn |
+| experts annotating a served product | Dynamic World's 409 expert tiles, audited from its own published probabilities |
+| surveyors standing in the field | LUCAS Copernicus 2022, the only reference here that never saw a pixel |
+| farmers' own declarations | EuroCrops, which also labels both sides of a two-date comparison |
+
+Two results a practitioner should carry away before using any of this.
+
+**Report your readout's generalisation gap beside any ranking comparison.** A
+small readout that has memorised its practice data reverses which confidence
+signal ranks best. On LUCAS the margin went from last of the four model signals
+to the front of them, statistically tied with the boundary-first order, on the
+same data, purely from choosing the probe's regularisation on held-out ground
+instead of leaving it at a default.
+
+**A two-date difference needs the right floor.** How often the map moves where
+the ground did not is between 6% and 37% on crops, one to two orders of
+magnitude above the rate at which reseeding the readout moves it. Comparing a
+date difference against the reseed rate flatters it.
 
 ## New to the repository?
 
