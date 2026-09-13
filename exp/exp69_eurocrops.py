@@ -128,6 +128,7 @@ SEASON = ("06-15", "08-31")     # the growing season window the scene is chosen 
 BUDGETS = (0.05, 0.10, 0.20)
 CELL = 20_000                   # the 20 km grid cell that splits fit from report, in EPSG:3035 metres
 CHIPS_PER_REGION = 900
+REF_WD, REF_EPOCHS = 1e-4, 80   # the fixed reference setting the tuned probe is reported against
 SHARD = 150
 SCL_CLEAR = (4, 5, 6, 7, 11)
 
@@ -676,7 +677,15 @@ def analyze_stage(args):
         best = max((s for s in sweep if np.isfinite(s["inner_val_accuracy"])), key=lambda s: s["inner_val_accuracy"])
         print(f"  chosen wd={best['weight_decay']:g} epochs={best['epochs']}", flush=True)
         probe = fit_dense_probe(e0[fit_c], lab0[fit_c], C, seed=0, epochs=best["epochs"], wd=best["weight_decay"])
+        # A second probe at a FIXED reference setting, so the record itself shows whether the verdicts depend on how long
+        # the probe trained. The epoch axis was extended three times and two regions were still improving at its far end,
+        # which would be a worry if the conclusions moved with it; recording both settings in one artifact lets a reader
+        # check that they do not, instead of taking three job logs on trust.
+        ref_probe = fit_dense_probe(e0[fit_c], lab0[fit_c], C, seed=0, epochs=REF_EPOCHS, wd=REF_WD)
 
+        rr0 = window_readings(ref_probe, e0, lab0, C)
+        rr1 = window_readings(ref_probe, e1, lab1, C)
+        rr0["boundary"] = boundary_from(rr0["dec"])
         r0 = window_readings(probe, e0, lab0, C)
         r1 = window_readings(probe, e1, lab1, C)
         r0["boundary"] = boundary_from(r0["dec"])
@@ -740,6 +749,28 @@ def analyze_stage(args):
         rows.append({"region": region, "part": "B", "signal": "declared_same", "n": int((~changed_decl).sum()),
                      "error_rate": rate_same, "excess_aurc": float("nan"),
                      "capture_05": float("nan"), "capture_10": float("nan"), "capture_20": float("nan")})
+        # the same three quantities under the fixed reference probe
+        Ar = np.repeat(rep_c[:, None, None], G, 1).repeat(G, 2) & rr0["graded"]
+        err_r = (rr0["dec"] != rr0["y"]).astype(np.float64)
+        fr = lambda z: np.asarray(z)[Ar]
+        sgr = signals_of({k: fr(v) for k, v in rr0.items() if k in ("margin", "top1", "entropy", "boundary")},
+                         fr(window_variance(d["img_y0"])), fr(rr0["dec"]))
+        er = fr(err_r)
+        sc_r = {k: float(metrics.excess_aurc(u, er)) for k, u in sgr.items()}
+        ctl_r = min(("ctl_pixel_variance", "ctl_class_rarity"), key=lambda k: sc_r[k])
+        bothr = rr0["graded"] & rr1["graded"] & np.repeat(rep_c[:, None, None], G, 1).repeat(G, 2)
+        ar_, br_ = rr0["dec"][bothr], rr1["dec"][bothr]
+        chr_ = rr0["y"][bothr] != rr1["y"][bothr]
+        mvr = ar_ != br_
+        pr["reference_probe"] = {
+            "weight_decay": REF_WD, "epochs": REF_EPOCHS,
+            "window_accuracy_report": float((rr0["dec"][Ar] == rr0["y"][Ar]).mean()),
+            "margin_lead": float(sc_r[ctl_r] - sc_r["margin"]), "best_control": ctl_r,
+            "model_change_rate_declared_changed": float(mvr[chr_].mean()) if chr_.any() else float("nan"),
+            "model_change_rate_declared_same": float(mvr[~chr_].mean()) if (~chr_).any() else float("nan")}
+        pr["reference_probe"]["ratio"] = float(pr["reference_probe"]["model_change_rate_declared_changed"]
+                                              / max(pr["reference_probe"]["model_change_rate_declared_same"], 1e-9))
+        pr["probe_tuning"]["best_at_grid_edge"] = bool(best["epochs"] == max(g["epochs"] for g in sweep))
         per_region[region] = pr
         print(f"  {region}: window accuracy {pr['window_accuracy_report']:.4f}, margin lead {lead:+.4f} over {ctl}, "
               f"cells {st['wins']}-{st['losses']}; model moves {rate_changed:.3f} where the declaration changed and "
