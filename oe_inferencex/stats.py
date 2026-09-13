@@ -121,3 +121,38 @@ def spearman(x, y):
     if rx.std() == 0 or ry.std() == 0:
         return float("nan")
     return float(np.corrcoef(rx, ry)[0, 1])
+
+
+def paired_cluster_bootstrap(fn_a, clusters_a, fn_b, clusters_b, n_boot=1000, seed=0, min_units=20):
+    """Bootstrap two statistics computed on DISJOINT subsets under one resampling of the shared clusters.
+
+    Use this when the question is whether a statistic differs between two groups of units that share a clustering, for
+    instance the units a published filter keeps against the units it deletes, grouped by region. Resampling each subset
+    independently would give two intervals but no interval on their difference, because the two draws would not see the
+    same regions.
+
+    fn_a, fn_b   callables taking an index array into their own subset and returning a float
+    clusters_a   cluster id per unit of subset A; clusters_b the same for subset B
+    Returns {n, difference_lo, difference_hi, difference_mean, p_difference_gt_0, a_mean, b_mean}, or {n: 0} when no
+    draw produced enough units in both subsets."""
+    rng = np.random.default_rng(seed)
+    ca, cb = np.asarray(clusters_a), np.asarray(clusters_b)
+    ids = np.unique(np.concatenate([ca, cb]))
+    idx_a = {g: np.flatnonzero(ca == g) for g in ids}
+    idx_b = {g: np.flatnonzero(cb == g) for g in ids}
+    diffs, vals_a, vals_b = [], [], []
+    for _ in range(n_boot):
+        pick = ids[rng.integers(0, len(ids), len(ids))]
+        sel_a = np.concatenate([idx_a[g] for g in pick]) if len(pick) else np.array([], dtype=int)
+        sel_b = np.concatenate([idx_b[g] for g in pick]) if len(pick) else np.array([], dtype=int)
+        if len(sel_a) < min_units or len(sel_b) < min_units:
+            continue
+        a, b = fn_a(sel_a), fn_b(sel_b)
+        if np.isfinite(a) and np.isfinite(b):
+            vals_a.append(a); vals_b.append(b); diffs.append(a - b)
+    if not diffs:
+        return {"n": 0}
+    d = np.sort(np.asarray(diffs, dtype=np.float64))
+    return {"n": len(d), "difference_lo": float(np.quantile(d, 0.025)), "difference_hi": float(np.quantile(d, 0.975)),
+            "difference_mean": float(d.mean()), "p_difference_gt_0": float((d > 0).mean()),
+            "a_mean": float(np.mean(vals_a)), "b_mean": float(np.mean(vals_b))}

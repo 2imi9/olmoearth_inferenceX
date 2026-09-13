@@ -185,69 +185,15 @@ POINT_WIN = (SIZE // 2) // PATCH   # the chip is centred on the survey point at 
 
 
 # ----------------------------------------------------------------------------- design-weighted estimators
-def w_aurc(u, e, w):
-    """Weighted AURC with the package's tie handling: within a tied group the errors are spread uniformly over the
-    group's weight span. Reduces exactly to metrics.aurc_expected when every weight is one (checked in the smoke)."""
-    u = np.asarray(u, dtype=np.float64).ravel()
-    e = np.asarray(e, dtype=np.float64).ravel()
-    w = np.asarray(w, dtype=np.float64).ravel()
-    o = np.argsort(u, kind="stable")
-    s, e, w = u[o], e[o], w[o]
-    n = len(e)
-    cw, ce = np.cumsum(w), np.cumsum(e * w)
-    newgrp = np.r_[True, s[1:] != s[:-1]]
-    starts = np.flatnonzero(newgrp)
-    grp = np.cumsum(newgrp) - 1
-    e_group = np.add.reduceat(e * w, starts)
-    w_group = np.add.reduceat(w, starts)
-    e_before = np.r_[0.0, ce][starts]
-    w_before = np.r_[0.0, cw][starts]
-    frac = (cw - w_before[grp]) / np.maximum(w_group[grp], 1e-300)
-    risk = (e_before[grp] + e_group[grp] * frac) / np.maximum(cw, 1e-300)
-    return float((risk * w).sum() / max(w.sum(), 1e-300))
-
-
-def w_excess_aurc(u, e, w):
-    """Weighted E-AURC: the weighted AURC minus that of the perfect ranker on the same weighted units."""
-    e = np.asarray(e, dtype=np.float64).ravel()
-    return w_aurc(u, e, w) - w_aurc(e, e, w)
+# The design-weighted estimators now live in the package, where they are unit-tested against their unweighted
+# counterparts; these names are kept because the recorded test and three commits of history refer to them.
+w_aurc = metrics.weighted_aurc
+w_excess_aurc = metrics.weighted_excess_aurc
+w_mean = metrics.weighted_mean
 
 
 def w_capture(u, e, w, budgets=BUDGETS):
-    """Weighted, tie-aware error capture: the share of weighted errors inside the most suspect fraction b of the weight.
-
-    Ties are handled as the package's capture_at_budget_expected handles them, by expectation under random tie-breaking:
-    a tied group straddling the cut contributes its weighted errors in proportion to the share of the group's weight
-    that falls inside the budget, so a coarse score is neither credited nor penalised for input order."""
-    u = np.asarray(u, dtype=np.float64).ravel()
-    e = np.asarray(e, dtype=np.float64).ravel()
-    w = np.asarray(w, dtype=np.float64).ravel()
-    o = np.argsort(-u, kind="stable")
-    s, e, w = u[o], e[o], w[o]
-    cw = np.cumsum(w)
-    W, tot = cw[-1], max((e * w).sum(), 1e-300)
-    newgrp = np.r_[True, s[1:] != s[:-1]]
-    starts = np.flatnonzero(newgrp)
-    e_group = np.add.reduceat(e * w, starts)
-    w_group = np.add.reduceat(w, starts)
-    w_before = np.r_[0.0, cw][starts]
-    out = {}
-    for b in budgets:
-        cut = b * W
-        full = (w_before + w_group) <= cut + 1e-12
-        got = e_group[full].sum()
-        part = np.flatnonzero((w_before < cut) & ~full)
-        if len(part):
-            g = part[0]
-            got += e_group[g] * (cut - w_before[g]) / max(w_group[g], 1e-300)
-        out[b] = float(got / tot)
-    return out
-
-
-def w_mean(x, w):
-    x = np.asarray(x, dtype=np.float64).ravel()
-    w = np.asarray(w, dtype=np.float64).ravel()
-    return float((x * w).sum() / max(w.sum(), 1e-300))
+    return metrics.weighted_capture_at_budget(u, e, w, budgets)
 
 
 def cluster_boot(fn, groups, n_boot=2000, seed=0):
@@ -732,27 +678,7 @@ def cue_stats(cue, err, w):
             "odds_ratio_weighted": odds, "fire_rate_weighted": w_mean(cue, w)}
 
 
-def w_auroc(u, err, w):
-    """Design-weighted AUROC of a suspicion score against the error indicator: base-rate invariant, unlike capture."""
-    u = np.asarray(u, dtype=np.float64).ravel()
-    err = np.asarray(err, dtype=np.float64).ravel().astype(bool)
-    w = np.asarray(w, dtype=np.float64).ravel()
-    if err.all() or not err.any():
-        return float("nan")
-    o = np.argsort(u, kind="stable")
-    u_, e_, w_ = u[o], err[o], w[o]
-    # weighted rank of each unit, ties averaged over the tied block's weight span
-    cw = np.cumsum(w_)
-    newgrp = np.r_[True, u_[1:] != u_[:-1]]
-    starts = np.flatnonzero(newgrp)
-    grp = np.cumsum(newgrp) - 1
-    wbefore = np.r_[0.0, cw][starts]
-    wgroup = np.add.reduceat(w_, starts)
-    rank = wbefore[grp] + 0.5 * wgroup[grp]                 # midrank in weight units
-    wp, wn = w_[e_].sum(), w_[~e_].sum()
-    # P(score of a random error > score of a random correct unit), ties counted half
-    num = float((w_[e_] * rank[e_]).sum()) - wp * wp / 2.0
-    return float(num / max(wp * wn, 1e-300))
+w_auroc = metrics.weighted_auroc
 
 
 def flag_lead(sus, flag, err, w):
@@ -782,29 +708,7 @@ def rate_matched_leads(sus, boundary, variance, err, w, n_draw=200, seed=0):
 
 
 def paired_cluster_boot(fn_a, groups_a, fn_b, groups_b, n_boot=1000, seed=0):
-    """Bootstrap two statistics on disjoint subsets under ONE resampling of the shared NUTS2 regions, so the difference
-    carries an interval. Resampling each subset independently would not give a paired interval on the difference."""
-    rng = np.random.default_rng(seed)
-    ga, gb = np.asarray(groups_a), np.asarray(groups_b)
-    regions = np.unique(np.concatenate([ga, gb]))
-    ia = {g: np.flatnonzero(ga == g) for g in regions}
-    ib = {g: np.flatnonzero(gb == g) for g in regions}
-    diffs, va, vb = [], [], []
-    for _ in range(n_boot):
-        pick = regions[rng.integers(0, len(regions), len(regions))]
-        sa = np.concatenate([ia[g] for g in pick]) if any(len(ia[g]) for g in pick) else np.array([], int)
-        sb = np.concatenate([ib[g] for g in pick]) if any(len(ib[g]) for g in pick) else np.array([], int)
-        if len(sa) < 20 or len(sb) < 20:
-            continue
-        x, yv = fn_a(sa), fn_b(sb)
-        if np.isfinite(x) and np.isfinite(yv):
-            va.append(x); vb.append(yv); diffs.append(x - yv)
-    if not diffs:
-        return {"n": 0}
-    d = np.sort(np.asarray(diffs))
-    return {"n": len(d), "difference_lo": float(np.quantile(d, 0.025)), "difference_hi": float(np.quantile(d, 0.975)),
-            "difference_mean": float(d.mean()), "p_difference_gt_0": float((d > 0).mean()),
-            "a_mean": float(np.mean(va)), "b_mean": float(np.mean(vb))}
+    return stats.paired_cluster_bootstrap(fn_a, groups_a, fn_b, groups_b, n_boot=n_boot, seed=seed)
 
 
 def best_control(scored, family=DEPLOYABLE_CONTROLS, key="excess_aurc_weighted"):

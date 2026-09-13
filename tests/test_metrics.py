@@ -78,3 +78,83 @@ def test_expected_capture_equals_plain_capture_without_ties_and_averages_ties():
     assert capture_at_budget_expected(two, err, (0.2,))[0.2] == pytest.approx(0.5)   # k = 2 of the 4-strong top group
     assert capture_at_budget_expected(np.array([0, 1], np.uint8), np.array([0, 1], float), (0.5,))[0.5] == pytest.approx(1.0)
     assert capture_at_budget_expected(np.array([False, True]), np.array([0, 1], float), (0.5,))[0.5] == pytest.approx(1.0)
+
+
+# --------------------------------------------------------------------------- design-weighted variants
+from oe_inferencex.metrics import (weighted_aurc, weighted_auroc, weighted_capture_at_budget,  # noqa: E402
+                                   weighted_excess_aurc, weighted_mean)
+
+
+def _sample(n=2000, seed=0):
+    rng = np.random.default_rng(seed)
+    return rng, (rng.random(n) < 0.2).astype(float)
+
+
+@pytest.mark.parametrize("kind", ["continuous", "coarse ties", "informative", "binary"])
+def test_weighted_aurc_reduces_to_the_unweighted_one_under_unit_weights(kind):
+    """The whole point of the weighted forms: a design weight of one everywhere must give the package's own number, or a
+    weighted result could not be compared with any unweighted result in this repository."""
+    rng, e = _sample()
+    u = {"continuous": rng.random(len(e)), "coarse ties": np.round(rng.random(len(e)), 1),
+         "informative": rng.random(len(e)) - 0.6 * e, "binary": (rng.random(len(e)) < 0.5).astype(float)}[kind]
+    ones = np.ones(len(e))
+    assert weighted_aurc(u, e, ones) == pytest.approx(aurc_expected(u, e), abs=1e-12)
+    assert weighted_excess_aurc(u, e, ones) == pytest.approx(excess_aurc(u, e), abs=1e-12)
+    got, ref = weighted_capture_at_budget(u, e, ones), capture_at_budget_expected(u, e, (0.05, 0.10, 0.20))
+    for b in (0.05, 0.10, 0.20):                      # the weight cut is fractional where the unit cut rounds
+        assert got[b] == pytest.approx(ref[b], abs=2.0 / e.sum() + 1e-9)
+
+
+def test_weighted_estimators_are_scale_invariant_and_reject_bad_input():
+    rng, e = _sample()
+    u = rng.random(len(e))
+    for fn in (weighted_aurc, weighted_excess_aurc, weighted_auroc):
+        assert fn(u, e, np.full(len(e), 7.3)) == pytest.approx(fn(u, e, np.ones(len(e))), abs=1e-12)
+    with pytest.raises(ValueError):
+        weighted_aurc(u, e, np.ones(len(e) - 1))
+    with pytest.raises(ValueError):
+        weighted_aurc(u, e, -np.ones(len(e)))
+    with pytest.raises(ValueError):
+        weighted_auroc(u, e, np.ones(len(e) - 1))
+
+
+def test_a_weight_acts_as_replication_to_the_discretisation_of_aurc():
+    """A weight of two must agree with duplicating the row, but only to the accuracy of AURC itself, which is a
+    right-endpoint average over units: aurc_expected shifts by about 2e-5 here when every unit is duplicated."""
+    rng, e = _sample()
+    u = rng.random(len(e))
+    dup_all = np.r_[np.arange(len(e)), np.arange(len(e))]
+    assert abs(aurc_expected(u, e) - aurc_expected(u[dup_all], e[dup_all])) < 1e-4
+    w = np.where(np.arange(len(e)) < 500, 2.0, 1.0)
+    dup = np.r_[np.arange(len(e)), np.arange(500)]
+    assert abs(weighted_aurc(u, e, w) - weighted_aurc(u[dup], e[dup], np.ones(len(dup)))) < 1e-4
+
+
+def test_weighted_mean_and_a_weight_that_selects_a_subset():
+    x = np.array([0.0, 1.0, 1.0, 0.0])
+    assert weighted_mean(x, np.ones(4)) == pytest.approx(0.5)
+    assert weighted_mean(x, np.array([0.0, 1.0, 1.0, 0.0])) == pytest.approx(1.0)   # a zero weight drops a unit
+    assert weighted_mean(x, np.array([3.0, 1.0, 0.0, 0.0])) == pytest.approx(0.25)
+    with pytest.raises(ValueError):
+        weighted_mean(x, np.ones(3))
+
+
+def test_weighted_auroc_matches_mann_whitney_and_has_no_base_rate_ceiling():
+    rng, e = _sample()
+    for u in (rng.random(len(e)), np.round(rng.random(len(e)), 1)):
+        pos, neg = u[e > 0], u[e == 0]
+        ref = ((pos[:, None] > neg[None, :]).sum() + 0.5 * (pos[:, None] == neg[None, :]).sum()) / (len(pos) * len(neg))
+        assert weighted_auroc(u, e, np.ones(len(e))) == pytest.approx(float(ref), abs=1e-12)
+    ones = np.ones(len(e))
+    assert weighted_auroc(e, e, ones) == pytest.approx(1.0)           # the oracle ordering
+    assert weighted_auroc(-e, e, ones) == pytest.approx(0.0)
+    assert np.isnan(weighted_auroc(rng.random(10), np.ones(10), np.ones(10)))
+    assert np.isnan(weighted_auroc(rng.random(10), np.zeros(10), np.ones(10)))
+    # capture at a budget is ceiling-bounded by budget / error rate where AUROC is not: two populations that rank
+    # identically well but differ in base rate get different captures and the same AUROC
+    rng2 = np.random.default_rng(1)
+    for rate in (0.1, 0.5):
+        ee = (rng2.random(4000) < rate).astype(float)
+        uu = rng2.random(4000) - 0.9 * ee
+        cap = weighted_capture_at_budget(uu, ee, np.ones(4000), (0.10,))[0.10]
+        assert cap <= 0.10 / rate + 1e-9

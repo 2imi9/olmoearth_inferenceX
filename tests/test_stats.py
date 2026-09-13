@@ -103,3 +103,31 @@ def test_spearman_averages_ties_and_flags_constants():
     a, b = rng.random(50), rng.random(50)
     ra, rb = np.argsort(np.argsort(a)), np.argsort(np.argsort(b))
     assert spearman(a, b) == pytest.approx(np.corrcoef(ra, rb)[0, 1])   # equals the plain form without ties
+
+
+def test_paired_cluster_bootstrap_puts_an_interval_on_a_difference_between_disjoint_subsets():
+    """Two subsets sharing a clustering: the difference needs one resampling of the clusters, not two independent ones."""
+    from oe_inferencex.stats import paired_cluster_bootstrap
+    rng = np.random.default_rng(0)
+    n = 1200
+    clusters = np.array([f"R{i % 30}" for i in range(n)])
+    a_mask = np.arange(n) < n // 2
+    # subset A has a genuinely higher mean than subset B
+    x = np.where(a_mask, rng.random(n) * 0.2 + 0.6, rng.random(n) * 0.2 + 0.3)
+    out = paired_cluster_bootstrap(lambda ii: float(x[a_mask][ii].mean()), clusters[a_mask],
+                                   lambda ii: float(x[~a_mask][ii].mean()), clusters[~a_mask],
+                                   n_boot=400, seed=0)
+    assert out["n"] > 300
+    assert out["difference_lo"] > 0 and out["p_difference_gt_0"] == 1.0
+    assert out["difference_lo"] <= out["difference_mean"] <= out["difference_hi"]
+    assert out["difference_mean"] == pytest.approx(out["a_mean"] - out["b_mean"], abs=1e-9)
+    # no real difference: the interval must straddle zero
+    y = rng.random(n)
+    same = paired_cluster_bootstrap(lambda ii: float(y[a_mask][ii].mean()), clusters[a_mask],
+                                    lambda ii: float(y[~a_mask][ii].mean()), clusters[~a_mask],
+                                    n_boot=400, seed=0)
+    assert same["difference_lo"] < 0 < same["difference_hi"]
+    # a non-finite statistic is skipped rather than poisoning the interval
+    nanny = paired_cluster_bootstrap(lambda ii: float("nan"), clusters[a_mask],
+                                     lambda ii: 1.0, clusters[~a_mask], n_boot=20, seed=0)
+    assert nanny == {"n": 0}
