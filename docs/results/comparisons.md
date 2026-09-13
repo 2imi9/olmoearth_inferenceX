@@ -1656,6 +1656,116 @@ on 24 threads (jobs 817465 and 820129). Source `exp/out/exp68_summary.json`;
 estimators in it were reproduced from their definitions by an independent
 implementation to 1e-14.
 
+## EuroCrops: a dense crop map from declarations, and a difference labelled on both sides (exp69)
+
+Two things here that nothing above has. The reference is administrative: EuroCrops
+harmonises the parcel declarations farmers make to their national paying agency,
+so the label is not photointerpretation, not another model's output and not a
+field visit. It is a legal statement of what was sown, made by the person who
+sowed it, for money. Its failure modes are therefore unlike every other reference
+in this repository: it is authoritative about crop identity and can be wrong about
+extent, which is a cadastral boundary rather than what the sensor sees, about
+timing, and about whether the declared crop was actually planted.
+
+And both sides of the time axis are labelled. Every temporal comparison above has
+truth for at most one date. exp60's two flood periods are graded against one event
+mask; exp68's two acquisitions are graded against a survey made on one day, so its
+"neither side is right" cell absorbs both genuine model failure and the reference
+simply not describing the other date. EuroCrops ships one file per region per
+year, and a parcel present in both years carries a declared crop in each. That
+makes `oe_inferencex.compare`'s graded block decidable, and it measures a quantity
+this repository has been missing: **the floor for a two-date change rate**. The
+right null for "the map changed between two dates" is not how often reseeding the
+head changes it, which answers a different question; it is how often the map
+changes where the ground did not. Windows whose declared crop is identical in both
+years give that null directly.
+
+Austria, Denmark and Slovenia, chosen because their national codes join the
+EuroCrops project's own harmonisation at 0.996, 0.999 and 0.853 and because their
+field sizes differ by an order of magnitude. Spain was dropped after a live check:
+its codes join at 0.000 and its single file is 11 GB over 17 million parcels. The
+JRC parquet files carry no harmonised crop code in any of their four versions, so
+the mapping comes from the project's GitHub repository. 900 chips per region, 64 px
+at 10 m, every parcel intersecting a chip burned into its own UTM grid so the label
+map is dense wherever farmland is declared; a window is graded when all sixteen of
+its pixels are labelled and three quarters agree. Splits are by 20 km grid cell.
+
+| Region | graded windows | window accuracy | margin excess AURC | lead over the best no-model control | cells | capture at 10% |
+|---|---|---|---|---|---|---|
+| Austria | 37,036 | 0.785 | 0.0337 | +0.0527 over class rarity | 50/3, 3e-12 | 0.278 |
+| Denmark | 54,358 | 0.695 | 0.0931 | +0.1348 over pixel variance | 70/0, 8e-22 | 0.206 |
+| Slovenia | 14,880 | 0.845 | 0.0317 | +0.0521 over class rarity | 23/1, 1e-06 | 0.383 |
+
+**The ranking holds on a reference made of declarations.** The margin beats the
+best no-model control in all three regions and on all but four of the 146 grid
+cells that carry enough graded windows to score, which is preregistered P1. It is
+also the best or equal-best of the four model signals everywhere, within 0.001 of
+one minus the top-1 probability and ahead of entropy and the boundary-first order,
+so the ordering exp68 found once its probe was properly regularised holds here
+too. <!-- claim:eurocrops-ranking-holds-on-declarations -->
+
+**A two-date difference is mostly the ground moving, and now that has a number.**
+
+| Region | windows whose declared crop changed | model changes where it did | model changes where it did not | ratio |
+|---|---|---|---|---|
+| Austria | 13,402 of 35,815 | 0.758 | 0.143 | 5.29 |
+| Denmark | 30,082 of 53,408 | 0.843 | 0.366 | 2.31 |
+| Slovenia | 460 of 12,169 | 0.589 | 0.060 | 9.85 |
+
+Preregistered P2 required a factor of two in every region and gets 2.3 to 9.9. The
+right-hand column is the labelled floor, and it is the first measurement of it
+here: between 6% and 37% of windows change decision between two summers on ground
+whose declared crop did not change. It tracks the model rather than the place,
+being 0.060 where window accuracy is 0.845 and 0.366 where it is 0.695, which is
+what a floor made of model instability should do. It also puts exp68's 31% land
+cover change rate in a light exp68 could not: that number was scored against a
+head-reseed floor of 0.3%, which flattered it, because the honest floor is one or
+two orders of magnitude larger. <!-- claim:eurocrops-the-labelled-floor-for-a-two-date-difference -->
+
+**Labelling both sides makes the comparison decidable, and reveals a case one
+label cannot see.** Among windows where the two years' decisions differ:
+
+| Region | differing windows | right about both years | right about the first only | right about the second only | right about neither |
+|---|---|---|---|---|---|
+| Austria | 13,372 | 0.287 | 0.338 | 0.169 | 0.205 |
+| Denmark | 33,900 | 0.367 | 0.290 | 0.214 | 0.129 |
+| Slovenia | 971 | 0.051 | 0.505 | 0.154 | 0.290 |
+
+Preregistered P3 asked only that the undecidable share fall below one half, and it
+is 0.13 to 0.29. The column that matters is the first one. Between 5% and 37% of
+differing windows are windows where the model was right about *both* years, which
+means the difference between the two inferences was the model correctly following
+a real crop rotation. That case does not exist when only one date is labelled: with
+a single reference it is scored as one side being wrong, and this repository has
+been scoring it that way since exp60. An operator comparing two inferences of one
+place should be told that a difference can be the model tracking the ground, and
+until now the measurement could not say so. <!-- claim:eurocrops-a-difference-can-be-the-model-tracking-the-ground -->
+
+The differing windows carry the cues, and the strength tracks field size: the
+low-margin cue is enriched 5.06 times on Slovenia's small parcels, 3.23 on
+Austria's and 1.47 on Denmark's large ones, with the boundary cue at 5.59, 2.84 and
+1.17. Where fields are large, a difference is less likely to sit on a boundary,
+which is what the cue is for.
+
+Limits. A declaration is not an observation, and the caveats compound: extent is
+cadastral, a declared crop may fail or be replaced, and catch crops and second
+harvests inside one year are invisible. Slovenia's join leaves 14.7% of parcels
+unmapped against Austria's 0.4% and Denmark's 0.1%, and unmapped codes are not a
+random sample of crops, so its numbers carry a selection risk the other two do not;
+it also has only 460 windows whose declared crop changed, because much of the
+sample is permanent grassland, so its ratio of 9.85 rests on the thinnest evidence
+of the three. Austria's mapping file covers 2021 and is applied to 2020, which the
+run checks rather than assumes: the join rates are 0.9958 and 0.9959. The probe's
+epoch axis was extended three times and two regions were still improving at 320
+epochs, so their optimum is not located, only bounded; rather than chase gains
+under 0.01 of accuracy, every conclusion is reported twice, at the tuned probe and
+at a fixed reference probe of 80 epochs and 1e-4 decay, and they agree, the margin
+leads differing by at most 0.003 and the change-rate ratios by at most 0.15. That
+insensitivity is the point, and it is the opposite of exp68's situation, where the
+regularisation axis changed which signal ranked first. Runtime 2:37 on one B200
+and 21 minutes for the 5,400 chip fetches (jobs 821061 and 822222). Source
+`exp/out/exp69_summary.json`.
+
 ## Served land cover change rasters (exp20)
 
 First assessment of a served output: ten 512-px windows (about

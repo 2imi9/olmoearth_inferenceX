@@ -741,3 +741,53 @@ def test_exp68_lucas_recomputes_from_the_committed_polygons():
     assert B["disagreement_rate"] > 50 * B["head_draw_floor"]
     assert B["which_side"]["a_right"] > B["which_side"]["b_right"] and B["near_beats_far_sign_test"]["p_greater"] < 1e-12
     assert B["per_class"]["cropland"]["change_rate"] >= 2 * B["per_class"]["woodland"]["change_rate"]
+
+
+def test_exp69_eurocrops_recomputes_from_the_committed_windows():
+    """exp69 (jobs 821061, 822320): all three preregistrations hold on farmers' declared crops in three regions, and
+    part A and part B recompute from the committed per-window arrays.
+
+    The load-bearing quantity is the one no other testbed here can produce: the rate at which the model changes its
+    decision between two summers on ground whose DECLARED CROP DID NOT CHANGE, which is the floor a two-date difference
+    must be read against."""
+    s = json.load(open(_need("exp69_summary.json")))
+    V, R = s["verdicts"], s["results"]["regions"]
+    assert all(V[k]["holds"] is True for k in ("P1", "P2", "P3"))
+    assert set(R) == {"at", "dk", "si"}
+    assert sum(R[r]["n_graded_windows_year0"] for r in R) == 106274
+
+    # the floor is far above the head-reseed rate exp68 had to use, and it tracks the model rather than the place
+    floors = {r: R[r]["part_b"]["model_change_rate_declared_same"] for r in R}
+    assert all(0.0 < f < 0.5 for f in floors.values())
+    assert min(floors, key=floors.get) == max(R, key=lambda r: R[r]["window_accuracy_report"])
+    assert all(R[r]["part_b"]["ratio"] >= 2.0 for r in R)
+    # and none of it depends on how long the probe trained
+    for r in R:
+        assert abs(R[r]["reference_probe"]["margin_lead"] - R[r]["part_a"]["margin_lead"]) <= 0.003
+        assert R[r]["reference_probe"]["ratio"] >= 2.0
+
+    z = np.load(_need("exp69_windows.npz"), allow_pickle=True)
+    region = z["region"].astype(str)
+    assert set(np.unique(region)) == {"at", "dk", "si"}
+    for r in np.unique(region):
+        m = region == r
+        # part A, on the graded windows of the report cells, recomputed from the arrays
+        A = m & z["graded_y0"] & z["report"]
+        assert A.sum() > 500, (r, int(A.sum()))
+        err = (z["dec_y0"][A] != z["y_y0"][A]).astype(np.float64)
+        margin = -z["margin_y0"][A].astype(np.float64)
+        rec = R[r]["part_a"]["signals"]
+        assert abs(excess_aurc(margin, err) - rec["margin"]["excess_aurc"]) < 0.02, r
+        # the margin beats both no-model controls on the subsample too
+        assert excess_aurc(margin, err) < excess_aurc(z["variance_y0"][A].astype(np.float64), err)
+        # part B's two rates, and the sign of their difference, recomputed
+        B = m & z["graded_y0"] & z["graded_y1"] & z["report"]
+        moved = z["dec_y0"][B] != z["dec_y1"][B]
+        declared_changed = z["y_y0"][B] != z["y_y1"][B]
+        assert declared_changed.any() and (~declared_changed).any(), r
+        got_changed, got_same = moved[declared_changed].mean(), moved[~declared_changed].mean()
+        assert got_changed > 2 * got_same, (r, got_changed, got_same)
+        assert abs(got_same - R[r]["part_b"]["model_change_rate_declared_same"]) < 0.06, r
+        # a difference can be the model right about BOTH years, the case one labelled date cannot represent
+        both = moved & (z["dec_y0"][B] == z["y_y0"][B]) & (z["dec_y1"][B] == z["y_y1"][B])
+        assert both.sum() > 0, r

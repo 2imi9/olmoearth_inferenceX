@@ -2151,3 +2151,105 @@
     7, and a twelfth of polygons were graded on a window 40 m from the point. The probe-reseed rate is the floor for a
     different question, whether the head is stable; the floor for a two-date change rate is the rate on cover that did
     not change, whose closest observable bound here is the most stable class, woodland at 0.208.
+
+- id: eurocrops-ranking-holds-on-declarations
+  statement: "On 106,274 graded 4-px windows of farmers' declared crops across Austria, Denmark and Slovenia, a reference that is neither photointerpretation nor another model's output nor a field visit but a legal declaration of what was sown, the model's own margin beats the best no-model control in every region, by 0.0527, 0.1348 and 0.0521 of excess AURC, and on all but four of the 146 20 km grid cells carrying enough graded windows to score (50/3, 70/0 and 23/1; p = 3e-12, 8e-22 and 1e-06); preregistered P1 holds, the margin is the best or equal-best of the four model signals in all three regions, and every number is reproduced at a fixed reference probe as well as at the tuned one, the leads differing by at most 0.003."
+  status: supported
+  experiments: [exp69]
+  artifacts: [exp/out/exp69_summary.json]
+  check: |-
+    (lambda V, R:
+      V['P1']['holds'] is True and set(R) == {'at', 'dk', 'si'}
+      and sum(R[r]['n_graded_windows_year0'] for r in R) == 106274
+      and all(R[r]['part_a']['margin_lead'] >= 0.01 for r in R)
+      and all(R[r]['part_a']['cell_sign_test']['p'] < 1e-5 for r in R)
+      and sum(R[r]['part_a']['cell_sign_test']['losses'] for r in R) == 4
+      and sum(R[r]['part_a']['cell_sign_test']['wins'] for r in R) == 143
+      and round(R['at']['part_a']['margin_lead'], 4) == 0.0527
+      and round(R['dk']['part_a']['margin_lead'], 4) == 0.1348
+      and round(R['si']['part_a']['margin_lead'], 4) == 0.0521
+      # the margin is best or within a whisker of best among the four model signals, in every region
+      and all(R[r]['part_a']['signals']['margin']['excess_aurc']
+              <= min(R[r]['part_a']['signals'][k]['excess_aurc']
+                     for k in ('one_minus_top1', 'entropy', 'boundary_first')) + 0.0015 for r in R)
+      # and the conclusion does not depend on how long the probe trained
+      and all(abs(R[r]['reference_probe']['margin_lead'] - R[r]['part_a']['margin_lead']) <= 0.003 for r in R)
+    )(A['exp/out/exp69_summary.json']['verdicts'], A['exp/out/exp69_summary.json']['results']['regions'])
+  cited_in:
+    - {file: docs/Findings.md, marker: eurocrops-ranking-holds-on-declarations}
+    - {file: docs/TECHNIQUES.md, marker: eurocrops-ranking-holds-on-declarations}
+    - {file: docs/results/comparisons.md, marker: eurocrops-ranking-holds-on-declarations}
+  note: >-
+    A declaration is authoritative about crop identity and can be wrong about extent, which is a cadastral boundary
+    rather than what the sensor sees, about timing, and about whether the declared crop was planted. Slovenia's codes
+    join the harmonisation at 0.853 against Austria's 0.996 and Denmark's 0.999, and unmapped codes are not a random
+    sample of crops, so its numbers carry a selection risk the other two do not.
+
+- id: eurocrops-the-labelled-floor-for-a-two-date-difference
+  statement: "The floor for a two-date change rate is measured here for the first time, because EuroCrops labels both years: the model changes its decision on 0.143 of Austrian, 0.366 of Danish and 0.060 of Slovenian windows whose declared crop did NOT change between the two summers, against 0.758, 0.843 and 0.589 of those where it did, ratios of 5.29, 2.31 and 9.85, so preregistered P2 holds and a two-date difference is mostly the ground moving rather than the model wavering; the floor tracks the model and not the place, being 0.060 where window accuracy is 0.845 and 0.366 where it is 0.695, and it is one to two orders of magnitude above the 0.3% probe-reseed rate that exp68 had to compare its 31% land-cover change rate against, which flattered that number."
+  status: supported
+  experiments: [exp69, exp68]
+  artifacts: [exp/out/exp69_summary.json, exp/out/exp68_summary.json]
+  check: |-
+    (lambda V, R, B:
+      V['P2']['holds'] is True
+      and all(R[r]['part_b']['ratio'] >= 2.0 for r in R)
+      and round(R['at']['part_b']['model_change_rate_declared_same'], 3) == 0.143
+      and round(R['dk']['part_b']['model_change_rate_declared_same'], 3) == 0.366
+      and round(R['si']['part_b']['model_change_rate_declared_same'], 3) == 0.060
+      and round(R['at']['part_b']['model_change_rate_declared_changed'], 3) == 0.758
+      and round(R['dk']['part_b']['model_change_rate_declared_changed'], 3) == 0.843
+      and round(R['si']['part_b']['model_change_rate_declared_changed'], 3) == 0.589
+      # the floor tracks the model: the region with the best windows has the lowest floor and vice versa
+      and min(R, key=lambda r: R[r]['part_b']['model_change_rate_declared_same'])
+          == max(R, key=lambda r: R[r]['window_accuracy_report'])
+      and max(R, key=lambda r: R[r]['part_b']['model_change_rate_declared_same'])
+          == min(R, key=lambda r: R[r]['window_accuracy_report'])
+      # every labelled floor is far above the head-reseed rate exp68 had to use
+      and all(R[r]['part_b']['model_change_rate_declared_same'] > 10 * B['head_draw_floor'] for r in R)
+      # and the ratios survive the fixed reference probe
+      and all(R[r]['reference_probe']['ratio'] >= 2.0 for r in R)
+    )(A['exp/out/exp69_summary.json']['verdicts'], A['exp/out/exp69_summary.json']['results']['regions'],
+      A['exp/out/exp68_summary.json']['results']['part_b'])
+  cited_in:
+    - {file: docs/Findings.md, marker: eurocrops-the-labelled-floor-for-a-two-date-difference}
+    - {file: docs/TECHNIQUES.md, marker: eurocrops-the-labelled-floor-for-a-two-date-difference}
+    - {file: docs/results/comparisons.md, marker: eurocrops-the-labelled-floor-for-a-two-date-difference}
+  note: >-
+    Slovenia's ratio rests on 460 windows whose declared crop changed, 3.8% of its graded windows, because much of its
+    sample is permanent grassland; Austria's rests on 13,402 and Denmark's on 30,082. The floor is not a pure model
+    property either: a declaration can be identical in two years while the field was managed differently, so this is an
+    upper bound on how stable the ground was and therefore a conservative floor.
+
+- id: eurocrops-a-difference-can-be-the-model-tracking-the-ground
+  statement: "Labelling both dates exposes a case a single reference cannot represent: among windows where two years' inferences differ, the model is right about BOTH years on 0.287 of Austrian, 0.367 of Danish and 0.051 of Slovenian ones, meaning the difference between the two inferences was the model correctly following a real crop rotation rather than either side being wrong; with one reference that case is scored as a side being wrong, which is how this repository has scored it since exp60, and preregistered P3 is comfortably met besides, the undecidable share where neither year is right falling to 0.205, 0.129 and 0.290 against a bar of one half."
+  status: supported
+  experiments: [exp69]
+  artifacts: [exp/out/exp69_summary.json]
+  check: |-
+    (lambda V, R:
+      V['P3']['holds'] is True
+      and all(R[r]['part_b']['share_neither_right'] < 0.5 for r in R)
+      and round(R['at']['part_b']['share_neither_right'], 3) == 0.205
+      and round(R['dk']['part_b']['share_neither_right'], 3) == 0.129
+      and round(R['si']['part_b']['share_neither_right'], 3) == 0.290
+      # right about both years = year0 right + year1 right + neither - 1, the four cells summing to one
+      and all(0.0 <= (R[r]['part_b']['share_year0_right'] + R[r]['part_b']['share_year1_right']
+                      + R[r]['part_b']['share_neither_right'] - 1.0) <= 1.0 for r in R)
+      and round(R['at']['part_b']['share_year0_right'] + R['at']['part_b']['share_year1_right']
+                + R['at']['part_b']['share_neither_right'] - 1.0, 3) == 0.287
+      and round(R['dk']['part_b']['share_year0_right'] + R['dk']['part_b']['share_year1_right']
+                + R['dk']['part_b']['share_neither_right'] - 1.0, 3) == 0.367
+      and round(R['si']['part_b']['share_year0_right'] + R['si']['part_b']['share_year1_right']
+                + R['si']['part_b']['share_neither_right'] - 1.0, 3) == 0.051
+      and sum(R[r]['part_b']['n_differing'] for r in R) == 48243
+    )(A['exp/out/exp69_summary.json']['verdicts'], A['exp/out/exp69_summary.json']['results']['regions'])
+  cited_in:
+    - {file: docs/Findings.md, marker: eurocrops-a-difference-can-be-the-model-tracking-the-ground}
+    - {file: docs/TECHNIQUES.md, marker: eurocrops-a-difference-can-be-the-model-tracking-the-ground}
+    - {file: docs/results/comparisons.md, marker: eurocrops-a-difference-can-be-the-model-tracking-the-ground}
+  note: >-
+    The both-right share is derived from the three recorded shares by the identity that the four cells of the
+    right-about-year-0 by right-about-year-1 table sum to one over the differing windows, which the check asserts rather
+    than assumes. Slovenia's 0.051 is low because only 3.8% of its declarations changed at all, so there is little
+    rotation for the model to follow.

@@ -171,6 +171,20 @@ through two acquisitions 118 days apart changes decision on 31% of polygons
 against a 0.3% head-reseed floor, the surveyed class says the near date is the
 right side 917 times against 591, and the change rate is phenology, twice as
 high on cropland as on woodland. <!-- claim:lucas-two-dates-are-phenology -->
+That last number had no floor until exp69 (EuroCrops, 106,274 graded windows of
+farmers' declarations in Austria, Denmark and Slovenia), which is the first
+testbed here where both sides of a time axis are labelled, because a parcel
+present in two years carries a declared crop in each. The ranking holds on a
+reference made of declarations, the margin beating the best no-model control in
+all three regions and on all but four of 146 grid cells. And the floor for a
+two-date change rate is finally measurable: between 6% and 37% of windows change
+decision between two summers where the declared crop did not change, against 59%
+to 84% where it did. That floor is one to two orders of magnitude above the
+head-reseed rate this repository had been comparing against. Labelling both dates
+also exposes a case a single reference cannot represent at all: between 5% and 37%
+of differing windows are ones where the model was right about both years, so the
+difference between two inferences was the model correctly following a real crop
+rotation, not either side being wrong. <!-- claim:eurocrops-ranking-holds-on-declarations --> <!-- claim:eurocrops-the-labelled-floor-for-a-two-date-difference --> <!-- claim:eurocrops-a-difference-can-be-the-model-tracking-the-ground -->
 
 The effect size in a reviewer's units (exp55, 45 GEOID-Flood events): on the
 median event the 5% of windows confidence flags hold 88% of the permanent-water
