@@ -658,7 +658,12 @@ def analyze_stage(args):
         # tune on cells held out of the fit set, then refit on all of it (exp68's lesson, made mandatory here)
         sweep, best = [], None
         for wd in (1e-4, 1e-2, 1.0, 100.0):
-            for ep in (15, 40, 80):          # 40 won on its own boundary in the first run, so the axis is extended
+            for ep in (15, 40, 80, 160, 320):
+                # This axis has been extended twice: 40 won on its own boundary, then 80 did. A grid whose winner sits
+                # on its edge locates no optimum, only a lower bound on one, so it runs to 320 until the winner is
+                # interior. If held-out accuracy is still climbing there the honest reading is that a dense probe on
+                # this task is under-trained rather than over-fitted, which is the opposite of exp68's single-window
+                # probe and has the same explanation: 225 supervised windows per chip against one.
                 p = fit_dense_probe(e0[fit_c & in_f], lab0[fit_c & in_f], C, seed=0, epochs=ep, wd=wd)
                 rv = window_readings(p, e0[fit_c & in_v], lab0[fit_c & in_v], C)
                 gv = rv["graded"]
