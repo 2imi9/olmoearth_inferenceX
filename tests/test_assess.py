@@ -112,3 +112,44 @@ def test_assess_prediction_review_order_option():
     assert a["against_reference"]["aurc_confidence"] == b["against_reference"]["aurc_confidence"]   # AURC scores confidence
     with pytest.raises(ValueError):
         assess_prediction(logit, is_logit=True, order="random")
+
+
+# --------------------------------------------------------------------------- defects found by audit, 2026-09-13
+def test_nodata_pixels_do_not_inflate_a_window_confidence():
+    """A pixel with no prediction carries no evidence about its window and must not vote.
+
+    The pooling filled no-data pixels with the SCENE MAXIMUM margin before a plain mean, so a window that was 37.5%
+    no-data read as nine times more confident than the same window fully observed (0.3625 against 0.04) and sank down
+    the review list. No-data at scene edges and under cloud is everywhere in Earth observation."""
+    p = np.full((8, 8), 0.95)
+    p[0:4, 0:4] = 0.52                      # one genuinely uncertain window
+    nod = np.zeros((8, 8), bool)
+    nod[0:2, 0:3] = True                    # 6 of that window's 16 pixels have no prediction
+    clean = assess_prediction(p, is_logit=False, patch=4)["arrays"]["confidence"]
+    holed = assess_prediction(p, is_logit=False, patch=4, nodata_mask=nod)["arrays"]["confidence"]
+    assert holed[0, 0] == pytest.approx(clean[0, 0], abs=1e-12), "no-data changed the confidence of observed pixels"
+    assert holed[0, 0] < 0.2, "the uncertain window must stay uncertain"
+
+
+def test_a_window_with_no_valid_pixels_is_excluded_not_scored():
+    p = np.full((8, 8), 0.95)
+    nod = np.zeros((8, 8), bool)
+    nod[0:4, 0:4] = True
+    out = assess_prediction(p, is_logit=False, patch=4, nodata_mask=nod)
+    assert not bool(out["arrays"]["valid"][0, 0])
+    assert out["n_windows"] == 3
+    assert [0, 0] not in [list(w) for w in out["review_sets"][0.05]["windows_rowcol"]]
+
+
+@pytest.mark.parametrize("bad", [0.0, -0.1, 1.5, 200])
+def test_a_budget_outside_zero_to_one_is_refused(bad):
+    """--budgets 200 used to report '20000%: 51200' on a 256-window scene, which is not a budget."""
+    p = np.random.default_rng(0).random((32, 32))
+    with pytest.raises(ValueError, match="budget must be a fraction"):
+        assess_prediction(p, is_logit=False, patch=4, budgets=(bad,))
+
+
+def test_a_budget_of_one_reviews_every_window_and_no_more():
+    p = np.random.default_rng(0).random((32, 32))
+    out = assess_prediction(p, is_logit=False, patch=4, budgets=(1.0,))
+    assert out["review_sets"][1.0]["n_windows"] == out["n_windows"] == 64

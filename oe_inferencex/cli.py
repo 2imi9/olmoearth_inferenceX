@@ -80,8 +80,40 @@ def pool_valid(valid, patch):
 
 
 # ----------------------------------------------------------------------------- assess
+def _pct(x, nd=2):
+    """A percentage, or the word undefined. `summary` turns NaN into None, and `None or 0` prints 0.00%, which reads as
+    "they never disagree" when the truth is "this could not be computed". This package exists to keep those apart."""
+    return "undefined" if x is None else f"{100 * float(x):.{nd}f}%"
+
+
+def _check_scores(scores, valid, is_logit, path):
+    """Refuse a file that is not what the flags say it is, rather than scoring it anyway.
+
+    A hard class map is the likeliest file an operator has to hand, and `assess_prediction` would take the 2-D branch,
+    threshold it at 0.5 and compute a confidence of 9.0 for a class index of 5, returning a full plausible review set
+    with exit 0. Silence is worse than absence here: the operator dispatches a field team on a nonsense ordering with
+    nothing to warn them."""
+    if scores.ndim == 3 or is_logit:
+        return
+    v = scores[valid]
+    if v.size == 0:
+        raise SystemExit(f"{path}: no valid pixels")
+    lo, hi = float(np.nanmin(v)), float(np.nanmax(v))
+    if lo < 0.0 or hi > 1.0:
+        raise SystemExit(
+            f"{path}: values run {lo:g} to {hi:g}, which is not a probability map. Pass --logits if these are logits, "
+            f"or give a (C, H, W) per-class score map. For a hard class map with a separate confidence band use "
+            f"assess_classmap in the Python API; the command line does not read one.")
+    integral = np.array_equal(v, np.rint(v))
+    if integral and len(np.unique(v)) > 2:
+        raise SystemExit(
+            f"{path}: {len(np.unique(v))} distinct integer values in [0, 1] is a class map, not a probability map. "
+            f"See assess_classmap in the Python API.")
+
+
 def cmd_assess(args):
     scores, valid, geo = read_raster(args.scores, args.nodata)
+    _check_scores(scores, valid, args.logits, args.scores)
     reference = None
     if args.reference:
         ref, rvalid, _ = read_raster(args.reference, None)
@@ -97,7 +129,12 @@ def cmd_assess(args):
     for b, rs in out["review_sets"].items():
         rc = np.asarray(rs["windows_rowcol"], dtype=int).reshape(-1, 2)
         pr, pc, x, y = window_coords(rc[:, 0], rc[:, 1], geo, args.patch)
-        path = os.path.join(args.out, f"review_set_{int(round(b * 100)):02d}pct.csv")
+        # Two budgets that differ must not write one file. 0.001 and 0.004 both rounded to "00pct" and the second
+        # silently destroyed the first, while the JSON went on naming two files that were one. Whole percents keep
+        # their old zero-padded name; only the sub-percent budgets that used to collide get a decimal form.
+        pct = b * 100
+        tag = f"{int(round(pct)):02d}" if abs(pct - round(pct)) < 1e-9 else f"{pct:g}".replace(".", "p")
+        path = os.path.join(args.out, f"review_set_{tag}pct.csv")
         with open(path, "w", newline="") as f:
             w = csv.writer(f)
             w.writerow(["rank", "window_row", "window_col", "pixel_row", "pixel_col", "x", "y", "confidence", "boundary"])
@@ -141,19 +178,37 @@ def cmd_compare(args):
     a_w, b_w = _pooled_argmax(ha, n_classes, args.patch), _pooled_argmax(hb, n_classes, args.patch)
     ok = pool_valid(va & vb, args.patch)
     labels = groups = None
+    notes = []
     if args.labels:
         lab, lv, _ = read_raster(args.labels, None)
-        lab_w = _pooled_argmax(np.where(lv, np.rint(lab).astype(int), 0), n_classes, args.patch)
+        lab_i = np.rint(lab).astype(int)
+        if not lv.any():
+            raise SystemExit(f"{args.labels}: no valid label pixels")
+        # The label raster is pooled over ITS OWN class range, never the maps'. _pooled_argmax counts votes only over
+        # range(n_classes), so pooling a 0-5 label raster with the maps' n_classes=3 silently dropped every pixel of
+        # class 3 and above and let the window label fall to a surviving low index: measured at 44.9% of window labels
+        # wrong, with exit 0 and no warning, on the very output that says which inference to believe.
+        n_lab = int(lab_i[lv].max()) + 1
+        # invalid label pixels must not vote; -1 is the non-voting code _assess uses, where 0 is a real class
+        lab_w = _pooled_argmax(np.where(lv, lab_i, -1), max(n_lab, 2), args.patch)
         ok &= pool_valid(lv, args.patch)
         labels = lab_w
+        if n_lab > n_classes:
+            notes.append(f"the labels carry {n_lab} classes and the two maps predict at most {n_classes}; "
+                         f"windows whose label is a class neither map can predict are counted wrong for both sides")
     if args.groups:
         g, gv, _ = read_raster(args.groups, None)
-        groups = _pooled_argmax(np.rint(g).astype(int), int(np.rint(g[gv]).max()) + 1, args.patch)
+        if not gv.any():
+            raise SystemExit(f"{args.groups}: no valid group pixels")
+        gi = np.rint(g).astype(int)
+        groups = _pooled_argmax(np.where(gv, gi, -1), int(gi[gv].max()) + 1, args.patch)
     cues = {"boundary_a": boundary_indicator(a_w) > 0, "boundary_b": boundary_indicator(b_w) > 0}
     out = compare_inferences(a_w, b_w, ok, groups=groups, labels=labels, cues=cues)
     os.makedirs(args.out, exist_ok=True)
     s = summary(out)
     s["inputs"] = {"a": os.path.abspath(args.a), "b": os.path.abspath(args.b), "labels": os.path.abspath(args.labels) if args.labels else None, "patch_px": args.patch}
+    if notes:
+        s["notes"] = notes
     s["files"] = {"disagreement": write_raster(os.path.join(args.out, "disagreement.tif"), out["arrays"]["disagree"], geo, args.patch, nodata=None)}
     rows, cols = np.nonzero(out["arrays"]["disagree"])
     pr, pc, x, y = window_coords(rows, cols, geo, args.patch)
@@ -167,9 +222,10 @@ def cmd_compare(args):
     with open(os.path.join(args.out, "comparison.json"), "w") as f:
         json.dump(s, f, indent=1)
     where = s["where"] or {}
-    print(f"{s['n_disagree']} of {s['n_windows']} windows differ ({100 * (s['disagreement_rate'] or 0):.2f}%)" +
+    print(f"{s['n_disagree']} of {s['n_windows']} windows differ ({_pct(s['disagreement_rate'])})" +
           (f"; on a boundary of a {where['boundary_a']['enrichment']:.1f}x as often as the agreeing windows" if where.get("boundary_a", {}).get("enrichment") is not None else "") +
-          (f"; with labels: a right on {100 * (s['graded']['which_side']['share_a_right'] or 0):.0f}%, b on {100 * (s['graded']['which_side']['share_b_right'] or 0):.0f}% of them" if s.get("graded") else "") +
+          (f"; with labels: a right on {_pct(s['graded']['which_side']['share_a_right'], 0)}, "
+           f"b on {_pct(s['graded']['which_side']['share_b_right'], 0)} of them" if s.get("graded") else "") +
           f"\nwrote {args.out}/comparison.json, differing_windows.csv, disagreement")
     return 0
 

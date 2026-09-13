@@ -94,3 +94,57 @@ def test_compare_refuses_different_grids(tmp_path):
     _write(tmp_path / "b.tif", p[:64, :64])
     with pytest.raises(SystemExit):
         main(["compare", str(tmp_path / "a.tif"), str(tmp_path / "b.tif"), "--out", str(tmp_path / "x")])
+
+
+# --------------------------------------------------------------------------- defects found by audit, 2026-09-13
+def test_labels_are_pooled_over_their_own_classes_not_the_maps(tmp_path):
+    """The output that says WHICH INFERENCE TO BELIEVE was graded against a fabricated label.
+
+    cmd_compare pooled the label raster with n_classes taken from the two inference maps, and _pooled_argmax counts
+    votes only over range(n_classes): every label pixel of a class the maps never predict was silently dropped and the
+    window label fell to a surviving low index. Measured at 44.9% of window labels wrong, exit 0, no warning."""
+    rng = np.random.default_rng(0)
+    np.save(tmp_path / "a.npy", rng.integers(0, 3, (64, 64)))
+    np.save(tmp_path / "b.npy", rng.integers(0, 3, (64, 64)))
+    np.save(tmp_path / "lab.npy", rng.integers(0, 6, (64, 64)))     # six label classes, three predicted
+    out = tmp_path / "o"
+    assert main(["compare", str(tmp_path / "a.npy"), str(tmp_path / "b.npy"), "--out", str(out),
+                 "--labels", str(tmp_path / "lab.npy")]) == 0
+    s = json.load(open(out / "comparison.json"))
+    assert s.get("notes"), "a label raster with classes the maps cannot predict must say so"
+    assert "6 classes" in s["notes"][0] and "at most 3" in s["notes"][0]
+
+
+def test_two_budgets_that_differ_write_two_files(tmp_path):
+    """0.001 and 0.004 both wrote review_set_00pct.csv; the second destroyed the first while the JSON named both."""
+    np.save(tmp_path / "p.npy", np.random.default_rng(0).random((64, 64)))
+    out = tmp_path / "o"
+    assert main(["assess", str(tmp_path / "p.npy"), "--out", str(out),
+                 "--budgets", "0.001", "0.004", "0.05"]) == 0
+    files = sorted(f.name for f in out.iterdir() if f.name.startswith("review_set"))
+    assert len(files) == 3, files
+    assert "review_set_05pct.csv" in files, "whole-percent budgets must keep their established name"
+    s = json.load(open(out / "assessment.json"))
+    paths = [v for k, v in s["files"].items() if k.startswith("review_set")]
+    assert len(set(paths)) == len(paths), "two budgets must not be recorded as one file"
+
+
+@pytest.mark.parametrize("arr,why", [
+    (np.arange(6).reshape(1, 6).repeat(64, 0)[:, :64] % 6, "a hard class map"),
+    (np.full((64, 64), 3.0), "values outside [0, 1]"),
+])
+def test_assess_refuses_a_file_that_is_not_a_probability_map(tmp_path, arr, why):
+    """A class map took the probability branch, thresholded at 0.5 and produced a confidence of 9.0 for class 5,
+    returning a full plausible review set with exit 0. Silence is worse than absence when a field team acts on it."""
+    np.save(tmp_path / "x.npy", arr.astype(float))
+    with pytest.raises(SystemExit) as e:
+        main(["assess", str(tmp_path / "x.npy"), "--out", str(tmp_path / "o")])
+    assert "probability map" in str(e.value) or "class map" in str(e.value), (why, str(e.value))
+
+
+def test_an_undefined_rate_is_not_printed_as_zero(capsys, tmp_path):
+    """`None or 0` printed 0.00%, which reads as 'they never disagree' when the truth is 'this was not computable'."""
+    from oe_inferencex.cli import _pct
+    assert _pct(None) == "undefined"
+    assert _pct(0.0) == "0.00%"
+    assert _pct(0.5, 0) == "50%"

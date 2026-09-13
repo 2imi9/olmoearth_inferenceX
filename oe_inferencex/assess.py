@@ -25,6 +25,8 @@ Output: a dict of summary statistics plus per-window arrays. The arrays are
 returned so the caller can write them to files and pass handles onward;
 nothing here serializes them into text.
 """
+import warnings
+
 import numpy as np
 
 from oe_inferencex.metrics import aurc_expected
@@ -34,6 +36,21 @@ from oe_inferencex.signals import boundary_indicator, midrank_pct
 def _pool(a, patch):
     h, w = a.shape[0] // patch * patch, a.shape[1] // patch * patch
     return a[:h, :w].reshape(h // patch, patch, w // patch, patch).mean(axis=(1, 3))
+
+
+def _pool_valid(a, patch):
+    """Mean over the VALID pixels of each window, NaN where a window has none.
+
+    A window is the unit this package ranks, and a pixel with no prediction carries no evidence about it. Filling those
+    pixels with any constant before a plain mean puts that constant's opinion into the window's score: filling with the
+    scene maximum made a window that was 37.5% no-data read as nine times more confident than the same window fully
+    observed, which pushed partially-observed windows down the review list exactly where an operator most needs to
+    look. No-data at scene edges and under cloud is ubiquitous in Earth observation, so this was not a corner case."""
+    h, w = a.shape[0] // patch * patch, a.shape[1] // patch * patch
+    blocks = a[:h, :w].reshape(h // patch, patch, w // patch, patch)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)      # a wholly invalid window is NaN by design
+        return np.nanmean(blocks, axis=(1, 3))
 
 
 def _pooled_argmax(hard, n_classes, patch):
@@ -118,7 +135,7 @@ def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, sig
         margin = np.where(nodata_mask, np.nan, margin)
         hard = np.where(nodata_mask, -1, hard)  # no-prediction pixels do not vote in pooling or boundaries
 
-    conf_w = _pool(np.nan_to_num(margin, nan=np.nanmax(margin)), patch)   # higher = more confident
+    conf_w = _pool_valid(margin, patch) if nodata_mask is not None else _pool(margin, patch)   # higher = more confident
     valid_w = _pool((~nodata_mask).astype(float), patch) >= 0.5 if nodata_mask is not None else np.ones_like(conf_w, dtype=bool)
     pooled_hard = _pooled_argmax(hard, n_classes, patch)
     bnd_w = _boundary(pooled_hard)
@@ -140,7 +157,9 @@ def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, sig
     rank = review_order(review_score, valid_w)  # first to review first
     n_valid = int(valid_w.sum())
     for b in budgets:
-        k = max(1, int(round(b * n_valid)))
+        if not (0 < b <= 1):
+            raise ValueError(f"budget must be a fraction in (0, 1], got {b}; a budget of 1.0 reviews every window")
+        k = min(n_valid, max(1, int(round(b * n_valid))))
         idx = rank[:k]
         rows, cols = np.unravel_index(idx, conf_w.shape)
         out["review_sets"][b] = {"n_windows": int(k), "windows_rowcol": np.stack([rows, cols], 1),
@@ -186,7 +205,8 @@ def review_mask(suspicion, valid, budget):
     """Boolean map of the review set at `budget`: the k = max(1, round(budget * n_valid)) first windows of review_order."""
     valid = np.asarray(valid, dtype=bool)
     order = review_order(suspicion, valid)
-    k = max(1, int(round(budget * int(valid.sum()))))
+    n_valid = int(valid.sum())
+    k = min(n_valid, max(1, int(round(budget * n_valid))))   # a budget above 1.0 reviews everything, never more
     m = np.zeros(order.shape, dtype=bool)
     m[order[:k]] = True
     return m.reshape(valid.shape) & valid
