@@ -5,6 +5,28 @@ inferences without labels, and shows on expert-labelled testbeds which of
 those differences predict error. It was built around OlmoEarth and has since
 been run on a served global product no one here had a hand in training.
 
+## The strongest evidence
+
+**On tasks this project did not choose, the model's own margin ranks its errors
+better than any control that sees no model — on 24 of 24.**
+
+Ai2's published embedding suite holds 25 tasks they picked for their own paper,
+with the splits fixed in the files. On all 24 that a top-1 minus top-2 margin is
+defined for, and on all 14 distinct sources behind them, the margin beats the
+best no-model control: 6,435,473 graded units, an accuracy range from 0.333 to
+0.979, 17 of 17 classification tasks and 7 of 7 segmentation tasks, sign test
+p = 6e-08. Six of the tasks come from GEO-Bench 1, a third-party benchmark, and
+the margin wins on all six.
+
+This is the answer to the obvious objection — that a result like this rests on
+testbeds the author picked. It does not. See
+[Tasks we did not choose (exp70)](results/comparisons.md#tasks-we-did-not-choose-ai2s-whole-published-suite-exp70).
+
+*What this is not: a leaderboard result. That suite measures accuracy, and no
+public benchmark measures label-free error ranking.*
+
+## What it does
+
 On those testbeds the model's own logit margin is the difference that
 predicts error; disagreement across crops, backbones or encoders does not
 rank errors; the sensor difference says where the shared errors come from;
@@ -40,16 +62,12 @@ assess` and `oe-inferencex compare`; see
 
 ![The two-period, two-sensor square on one GEOID-Flood chip: four dated inputs, four inferences on identical windows, the same-date and same-sensor differences on the scene, and the label bridge boxed apart](figures/compare.png)
 
-*The two-period, two-sensor square on one GEOID-Flood chip (event EMSR273-1, the shore of Lake Shkodër
-at Gruemirë, Albania): the Sentinel-2 composite and the Sentinel-1 pass before the event, the Sentinel-1 pass after it
-and, from WorldFloods v2, the Sentinel-2 scene after it, each read by its head on identical windows. The
-same-period pairs differ on 22 windows before the event and 44 after, along the lake shore and where the radar
-sees flooded vegetation as bright; the same-sensor pairs differ on 97 windows (optical) and 67 (radar), and
-the label says 81% of the radar's date differences are the flood, the rest a head off its label at the
-shore. Over exp60's 55 events the same-period pair before the event differs on 4.9% of windows and 0.4%
-of those are the later flood; the radar pair across the event differs on 3.4% with 26% flood; on the 544
-chips with all four cells (exp62) the radar pair across the event is 41% flood and the same-period pair
-after it 18%. What a difference is needs labels, so that panel is boxed apart.*
+*Four dated inputs of one GEOID-Flood chip (event EMSR273-1, Lake Shkodër at
+Gruemirë, Albania), each read by its head on identical windows. The same-period
+pairs differ on 22 windows before the event and 44 after; the same-sensor pairs
+on 97 (optical) and 67 (radar). What a difference **is** needs labels, so that
+panel is boxed apart. The event-level numbers are in
+[Comparisons](results/comparisons.md#the-difference-atlas-every-pair-of-inferences-under-one-measurement-exp57).*
 
 A worked flood example, runnable from the committed artifacts, is in
 [Usage: compare two inferences of the same scene](Usage.md#compare-two-inferences-of-the-same-scene);
