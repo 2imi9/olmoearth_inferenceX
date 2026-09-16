@@ -108,6 +108,7 @@ verdict) · [Protocol](docs/method/protocol.md) (how results are scored) ·
 [Explanation](docs/results/explanation.md), [Signals](docs/results/signals.md),
 [Comparisons](docs/results/comparisons.md) (per-cue, per-signal, per-experiment
 evidence) · [Agent integration](docs/method/agent_integration.md) ·
+[Related work](docs/related_work.md) (where each idea comes from) ·
 [Roadmap](docs/plan/roadmap.md).
 
 Full documentation: **https://olmoearth-inferencex.readthedocs.io/**

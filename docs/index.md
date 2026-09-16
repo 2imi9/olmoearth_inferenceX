@@ -110,6 +110,8 @@ how a claim gets in, and the limits. Then:
   score a new rule with the same machinery.
 - The [Recipe](method/recipe.md) is the list of what to do and not do when
   auditing a prediction map.
+- [Related work](related_work.md) says where each idea here comes from, with
+  the selective-classification and Earth-observation literature it rests on.
 - The [Technique ledger](TECHNIQUES.md) is everything tried, one line each,
   with the verdict and the evidence; the [Evidence](results/explanation.md)
   pages hold the per-cue, per-signal and per-experiment detail.

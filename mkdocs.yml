@@ -52,6 +52,7 @@ nav:
       - index.md
       - Findings: Findings.md
       - Recipe: method/recipe.md
+      - Related work: related_work.md
   - Usage:
       - Usage.md
       - Agent integration: method/agent_integration.md
