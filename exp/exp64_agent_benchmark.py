@@ -337,7 +337,14 @@ def _smoke_pipeline():
         a = types.SimpleNamespace(smoke=True, endpoint="stub", model="stub-model", arms="ABCD",
                                   samples=2, temperature=0.0, seed=0, cards=0)
         cmd_run(a)
+        # a second answer file, as the agent driver writes one: grade must see the extra arm without being told
+        with open(os.path.join(OUT, "exp64_answers_smoke.jsonl")) as fh:
+            one = next(json.loads(ln) for ln in fh if '"arm": "A"' in ln)
+        one["arm"] = "E"
+        with open(os.path.join(OUT, "exp64_answers_smoke_E.jsonl"), "w") as fh:
+            fh.write(json.dumps(one, default=float) + "\n")
         s = cmd_grade(a)
+        assert "E" in s["claims_audit"] and s["exploratory"]["E"]["note"].startswith("not preregistered")
     finally:
         arms.chat = real_chat
         globals()["CARDS"], globals()["OUT"] = real_cards, real_out
@@ -348,13 +355,15 @@ def _smoke_pipeline():
     assert abs(s["share_of_package"]["A"]["pooled"] - 1.0) < 1e-9, "an arm copying the review set reproduces it"
     assert s["review_capture"]["D"]["pooled"] < s["review_capture"]["A"]["pooled"], "the no-raster floor is a floor"
     assert s["verdicts"]["P3_declines"]["declined_A"] == 1.0 and s["verdicts"]["P3_declines"]["declined_B"] == 0.0
-    assert s["parse_failures"] == {"A": 0, "B": 0, "C": 0, "D": 0}, s["parse_failures"]
+    assert {k: v for k, v in s["parse_failures"].items() if k in ARMS} == {"A": 0, "B": 0, "C": 0, "D": 0}, \
+        s["parse_failures"]
     assert _sign_p(6, 6) < 0.05 and _sign_p(3, 6) > 0.05, "the sign test must be one-sided and exact"
     print("smoke OK: run and grade end to end on a stub model, the audit separates a grounded arm from an "
           "ungrounded one, and the three verdicts compute")
 
 
-ARMS = ("A", "B", "C", "D")
+ARMS = ("A", "B", "C", "D")                      # the preregistered arms cmd_run drives
+ARMS_ALL = ("A", "B", "C", "D", "E", "E_forced")  # plus the OlmoEarth Agent, run by exp64_arm_e.py
 
 
 def cmd_run(args):
@@ -407,7 +416,13 @@ def cmd_grade(args):
     import exp64_arms as arms
     tag = "_smoke" if args.smoke else ""
     root = os.path.join(CARDS, "smoke" if args.smoke else "v1")
-    runs = [json.loads(ln) for ln in open(os.path.join(OUT, f"exp64_answers{tag}.jsonl")) if ln.strip()]
+    # The four preregistered arms land in exp64_answers.jsonl; other drivers append their own file beside it
+    # (exp64_answers_E.jsonl for the OlmoEarth Agent), so one grade pass sees every arm.
+    import glob
+    files = sorted(set([os.path.join(OUT, f"exp64_answers{tag}.jsonl")]
+                       + glob.glob(os.path.join(OUT, f"exp64_answers{tag}_*.jsonl"))))
+    runs = [json.loads(ln) for f in files if os.path.exists(f) for ln in open(f) if ln.strip()]
+    present = [a for a in ARMS_ALL if any(r["arm"] == a for r in runs)]
     cards = {}
     graded = []
     for r in runs:
@@ -420,7 +435,7 @@ def cmd_grade(args):
     def by_arm(fn):
         """Mean over cards of the per-card mean over samples, so a card counts once however often it was sampled."""
         out = {}
-        for arm in ARMS:
+        for arm in present:
             per_card = collections.defaultdict(list)
             for g in graded:
                 if g["arm"] != arm:
@@ -463,23 +478,36 @@ def cmd_grade(args):
           "declined_A": declined["A"]["pooled"], "declined_B": declined["B"]["pooled"],
           "n_cards_A": declined["A"]["n_cards"], "n_cards_B": declined["B"]["n_cards"]}
 
-    parse_fail = {arm: sum(1 for g in graded if g["arm"] == arm and g["parse_error"]) for arm in ARMS}
+    parse_fail = {arm: sum(1 for g in graded if g["arm"] == arm and g["parse_error"]) for arm in present}
     fabricated = {arm: int(sum(g["claims"]["n_fabricated_windows"] for g in graded if g["arm"] == arm))
-                  for arm in ARMS}
+                  for arm in present}
+    # The OlmoEarth Agent arms were left open on the plan page, so nothing about them was preregistered:
+    # they are reported against arm A descriptively, and the summary says so.
+    exploratory = {}
+    for x in ("E", "E_forced"):
+        if x in present and "A" in present:
+            exploratory[x] = {"note": "not preregistered; descriptive only",
+                              "claims_vs_A": paired(claims, x, "A"), "capture_vs_A": paired(capture, x, "A"),
+                              "pooled_claims": claims[x]["pooled"], "pooled_capture": capture[x]["pooled"],
+                              "median_share_of_package": share_pkg[x]["median"],
+                              "declined": declined[x]["pooled"], "parse_failures": parse_fail[x],
+                              "fabricated_windows": fabricated[x]}
     summary = {"experiment": "exp64 agent benchmark", "model": args.model, "endpoint_named": bool(args.endpoint),
                "samples_per_card": args.samples, "temperature": args.temperature, "budget": BUDGET,
                "n_runs": len(graded), "n_cards": len(cards),
                "claims_audit": claims, "review_capture": capture, "share_of_package": share_pkg,
                "cue_accuracy": cue_acc, "declined_share": declined,
                "parse_failures": parse_fail, "fabricated_windows": fabricated,
-               "verdicts": {"P1_claims_audit": p1, "P2_review_capture": p2, "P3_declines": p3}}
+               "answer_files": [os.path.basename(f) for f in files if os.path.exists(f)],
+               "verdicts": {"P1_claims_audit": p1, "P2_review_capture": p2, "P3_declines": p3},
+               "exploratory": exploratory}
     with open(os.path.join(OUT, f"exp64_summary{tag}.json"), "w") as fh:
         json.dump(summary, fh, indent=1, default=float)
 
-    print(f"\n{'arm':<4} {'claims':>8} {'capture':>8} {'of pkg':>8} {'cue acc':>8} {'declined':>9} "
+    print(f"\n{'arm':<9} {'claims':>8} {'capture':>8} {'of pkg':>8} {'cue acc':>8} {'declined':>9} "
           f"{'parse!':>7} {'fabric':>7}")
-    for arm in ARMS:
-        print(f"{arm:<4} {claims[arm]['pooled']:>8.3f} {capture[arm]['pooled']:>8.3f} "
+    for arm in present:
+        print(f"{arm:<9} {claims[arm]['pooled']:>8.3f} {capture[arm]['pooled']:>8.3f} "
               f"{share_pkg[arm]['pooled']:>8.3f} {cue_acc[arm]['pooled']:>8.3f} "
               f"{declined[arm]['pooled']:>9.3f} {parse_fail[arm]:>7d} {fabricated[arm]:>7d}")
     print(f"\nP1 claims audit A - B >= 0.2 and A wins more cards : {p1['holds']}  "

@@ -406,6 +406,13 @@ def _prompt(card, arm):
     elif arm == "D":
         head += ("You have no rasters for this card, only the description above. Answer as well as you can "
                  "from it.\n\n")
+    elif arm in ("E", "E_forced"):
+        # The OlmoEarth Agent as shipped: its own registry, its own system prompt. It is told where the scores
+        # are and nothing about which of its tools to use; the forced variant pins its review-set skill.
+        head += (f"The card's per-class scores are in the JSON file {card.get('scores_json', '<missing>')}: an "
+                 "object with 'grid' [rows, cols] and 'scores', one row per window in row-major order, two "
+                 "numbers per window (logit-like class scores). Use your tools to ground every number you "
+                 "state; do not estimate values you have not computed.\n\n")
     return head + ANSWER_RULE
 
 
