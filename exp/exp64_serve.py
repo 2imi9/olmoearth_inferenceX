@@ -47,7 +47,11 @@ def load(model_id, dtype="bfloat16"):
 def generate(messages, tools, temperature, max_tokens, seed):
     tok, model, torch = STATE["tok"], STATE["model"], STATE["torch"]
     # A tool result must reach the template as the role it expects; the loop already emits role="tool".
-    text = tok.apply_chat_template(messages, tools=tools or None, tokenize=False, add_generation_prompt=True)
+    # Qwen3-family templates default to a thinking phase; the arms want the answer, and a <think> block full of
+    # braces would defeat the one-json-object contract, so it is switched off where the template supports it.
+    extra = {"enable_thinking": False} if "enable_thinking" in (tok.chat_template or "") else {}
+    text = tok.apply_chat_template(messages, tools=tools or None, tokenize=False, add_generation_prompt=True,
+                                   **extra)
     enc = tok([text], return_tensors="pt").to(model.device)
     if seed is not None:
         torch.manual_seed(int(seed))
@@ -61,8 +65,12 @@ def generate(messages, tools, temperature, max_tokens, seed):
     return tok.decode(gen, skip_special_tokens=True)
 
 
+_THINK = re.compile(r"<think>.*?</think>\s*", re.DOTALL)
+
+
 def to_message(raw):
     """The model's text as an OpenAI assistant message, with any tool-call blocks lifted out."""
+    raw = _THINK.sub("", raw)      # a residual thinking block is not part of the answer
     calls = []
     for m in _TOOL_CALL.finditer(raw):
         try:
