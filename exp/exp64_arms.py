@@ -286,12 +286,29 @@ _NUM = re.compile(r"-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?%?")
 _WIN = re.compile(r"[\(\[]\s*(\d+)\s*,\s*(\d+)\s*[\)\]]")
 
 
+_NUM_IN_TEXT = re.compile(r"-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?")
+
+
 def _values_in(obj, out):
-    """Every numeric value anywhere in a tool output, so a stated number can be matched against it."""
+    """Every numeric value anywhere in a tool output, so a stated number can be matched against it.
+
+    Numbers inside strings count too. The sandbox arm's only tool output is what it printed, which is text,
+    and the first grading of the 27B run scored that arm at zero grounding while 97% of the values it stated
+    were in its own printed output: the audit had read JSON fields and skipped strings, which is a bias toward
+    the arm whose tools happen to answer in JSON. A number the run's tools produced is evidence whatever the
+    container."""
     if isinstance(obj, bool):
         return
     if isinstance(obj, (int, float)) and math.isfinite(obj):
         out.append(float(obj))
+    elif isinstance(obj, str):
+        for m in _NUM_IN_TEXT.finditer(obj):
+            try:
+                v = float(m.group(0))
+            except ValueError:
+                continue
+            if math.isfinite(v):
+                out.append(v)
     elif isinstance(obj, dict):
         for v in obj.values():
             _values_in(v, out)
