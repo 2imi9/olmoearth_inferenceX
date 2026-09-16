@@ -335,7 +335,14 @@ def claims_audit(text, tool_outputs, grid):
 
 
 # --------------------------------------------------------------------------------------------- the served model
-def chat(endpoint, model, messages, tools=None, temperature=0.0, seed=0, timeout=300, max_tokens=2000):
+#: Completion budget per turn. Qwen3-family models reason before answering, and the first 27B run showed a
+#: 2,000-token cap spent entirely inside the reasoning on the no-tool arm (120 of 120 empty answers), so the
+#: budget matches what the OlmoEarth Agent's own client allows rather than what a 7B needed.
+MAX_TOKENS = 8000
+MAX_STEPS = 10
+
+
+def chat(endpoint, model, messages, tools=None, temperature=0.0, seed=0, timeout=600, max_tokens=MAX_TOKENS):
     """One completion from an OpenAI-compatible endpoint. urllib, so the experiment adds no dependency."""
     import urllib.error
     import urllib.request
@@ -350,7 +357,10 @@ def chat(endpoint, model, messages, tools=None, temperature=0.0, seed=0, timeout
                                           "Authorization": "Bearer " + os.environ.get("LLM_API_KEY", "EMPTY")})
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
-            return json.loads(r.read().decode())["choices"][0]["message"]
+            choice = json.loads(r.read().decode())["choices"][0]
+            msg = choice["message"]
+            msg["_finish_reason"] = choice.get("finish_reason")   # kept for the record; never sent back
+            return msg
     except urllib.error.HTTPError as exc:
         return {"role": "assistant", "content": f"__HTTP_ERROR__ {exc.code} {exc.read()[:300]!r}"}
     except Exception as exc:  # noqa: BLE001 - a dead endpoint is recorded, not raised, so one card cannot end the run
@@ -434,7 +444,13 @@ def _parse_answer(text):
     return (obj, None) if isinstance(obj, dict) else (None, "top-level json is not an object")
 
 
-def run_llm_arm(card, arm, endpoint, model, seed=0, temperature=0.0, max_steps=6):
+def _turn_record(msg):
+    return {"finish_reason": msg.get("_finish_reason"), "content_len": len(msg.get("content") or ""),
+            "reasoning_len": len(msg.get("reasoning") or msg.get("reasoning_content") or ""),
+            "n_calls": len(msg.get("tool_calls") or [])}
+
+
+def run_llm_arm(card, arm, endpoint, model, seed=0, temperature=0.0, max_steps=MAX_STEPS):
     """One agent run: a minimal tool-calling loop, so the benchmark is reproducible without any agent framework."""
     tools = {"A": TOOLSPEC_A, "B": TOOLSPEC_B, "D": None}[arm]
     messages = [{"role": "system", "content": "You are a careful remote-sensing analyst. State only what your "
@@ -443,9 +459,11 @@ def run_llm_arm(card, arm, endpoint, model, seed=0, temperature=0.0, max_steps=6
     used = {}
     calls_made = []                      # what the model asked for, kept beside what it got back
     transcript = []
+    turns = []
     for _ in range(max_steps):
         msg = chat(endpoint, model, messages, tools=tools, temperature=temperature, seed=seed)
         transcript.append(msg)
+        turns.append(_turn_record(msg))
         calls = msg.get("tool_calls") or []
         if not calls:
             break
@@ -482,10 +500,17 @@ def run_llm_arm(card, arm, endpoint, model, seed=0, temperature=0.0, max_steps=6
             used.setdefault(name, []).append(out)
             messages.append({"role": "tool", "tool_call_id": call.get("id", name),
                              "content": json.dumps(out)[:12000]})
+    else:
+        # Every step was a tool call. One last turn without tools asks for the answer, the same for every arm,
+        # so a run that computed and never concluded is scored on what it concludes rather than on silence.
+        messages.append({"role": "user", "content": "The tool budget is spent. " + ANSWER_RULE})
+        msg = chat(endpoint, model, messages, tools=None, temperature=temperature, seed=seed)
+        transcript.append(msg)
+        turns.append(_turn_record(msg))
     text = (transcript[-1].get("content") if transcript else "") or ""
     answer, parse_error = _parse_answer(text)
     return {"arm": arm, "answer": answer, "parse_error": parse_error, "text": text,
-            "tool_outputs": used, "tool_calls": calls_made,
+            "tool_outputs": used, "tool_calls": calls_made, "turns": turns,
             "n_tool_calls": sum(len(v) for v in used.values()), "n_steps": len(transcript)}
 
 
