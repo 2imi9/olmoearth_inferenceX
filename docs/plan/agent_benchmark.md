@@ -5,6 +5,13 @@ Preregistration of the benchmark that turns "usable by an agent"
 intention into a measured claim. Written before any card is built. Runs as
 exp64; the numbers land in the ledger like every other experiment.
 
+**Outcome (2026-09-16).** Run as written below, with nvidia/Qwen3.8-27B-NVFP4, forty cards,
+three samples: P1 fails, P2 fails, P3 holds; the agent arm the last section left
+open was run and reproduces the package. The recorded section, with the
+withdrawn first grading of P1 and the limits, is
+[Comparisons](../results/comparisons.md#does-the-package-help-an-agent-the-preregistered-benchmark-exp64). The text from here on is the preregistration as it stood
+before the run and is unchanged.
+
 ## The question
 
 An agent is asked about a prediction map: which windows should a reviewer

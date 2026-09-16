@@ -2370,3 +2370,98 @@
     float32 clause is in the statement because the synthetic unit test could not have found it: it generated float64
     matrices, so the two paths never disagreed, and only real probe output exposed the constant. The run pins the skill
     by sha256; editing that file invalidates this claim rather than silently weakening it.
+
+- id: agent-benchmark-tool-arm-reproduces-the-package
+  statement: "Handed the package as tools, nvidia/Qwen3.8-27B-NVFP4 reproduces the package: on the median card and pooled over forty cards its review set captures 1.000 of the package's own, 99.4% of the numbers it states are in its tool outputs, 99.5% of its stated cues hold, it declines the side question on every comparison card and fabricates no window in 120 runs; the OlmoEarth Agent as shipped, choosing among forty-one tools with only the score files named, picked the package's review-set tool on 40 of 40 runs and its compare tool on 10 of 10 comparison cards and did the same, 0.963 of the package's capture, 99.8% grounded, declining on 10 of 10."
+  status: supported
+  experiments: [exp64]
+  artifacts: [exp/out/exp64_summary.json]
+  check: |-
+    (lambda S:
+      S['model'] == 'nvidia/Qwen3.8-27B-NVFP4' and S['n_cards'] == 40 and S['n_runs'] == 480
+      and S['share_of_package']['A']['pooled'] >= 0.999 and S['share_of_package']['A']['median'] >= 0.999
+      and S['claims_audit']['A']['pooled'] > 0.99 and S['cue_accuracy']['A']['pooled'] > 0.99
+      and S['declined_share']['A']['pooled'] == 1.0 and S['parse_failures']['A'] == 0
+      and S['fabricated_windows']['A'] == 0
+      and S['exploratory']['E']['pooled_claims'] > 0.99 and S['share_of_package']['E']['pooled'] > 0.95
+      and S['exploratory']['E']['declined'] == 1.0 and S['exploratory']['E']['fabricated_windows'] == 0
+      and S['exploratory']['E']['comparison_unanswered'] == 0.0
+    )(A['exp/out/exp64_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: agent-benchmark-tool-arm-reproduces-the-package}
+    - {file: docs/Findings.md, marker: agent-benchmark-tool-arm-reproduces-the-package}
+    - {file: docs/TECHNIQUES.md, marker: agent-benchmark-tool-arm-reproduces-the-package}
+  note: >-
+    The model is at the low edge of the plan page's 30 to 70 billion range and NVFP4 is below its fp16-or-int8
+    precision; both deviations are recorded in the section and in every output file. The agent arm was not
+    preregistered and its numbers describe, they do not test.
+
+- id: agent-benchmark-sandbox-rediscovers-the-ranking
+  statement: "The package is not a ranking advantage over a model of this strength: preregistered P2 fails, because a numpy sandbox given the same arrays and no package captures 0.904 of the package's errors by itself, pooled 0.200 against the tool arm's 0.232, a difference of +0.032 below the preregistered 0.05 on 13 cards to 10, p = 0.34, which is the falsification the plan page named in advance; the half of P2 that holds is that the tool arm reaches the package's own capture on the median card."
+  status: rejected
+  experiments: [exp64]
+  artifacts: [exp/out/exp64_summary.json]
+  check: |-
+    (lambda V, S:
+      V['holds'] is False and 0 < V['difference'] < 0.05
+      and V['wins'] == 13 and V['losses'] == 10 and V['p_value'] > 0.05
+      and V['median_share_of_package_A'] >= 0.999
+      and 0.89 < S['share_of_package']['B']['pooled'] < 0.92
+    )(A['exp/out/exp64_summary.json']['verdicts']['P2_review_capture'], A['exp/out/exp64_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: agent-benchmark-sandbox-rediscovers-the-ranking}
+    - {file: docs/Findings.md, marker: agent-benchmark-sandbox-rediscovers-the-ranking}
+    - {file: docs/TECHNIQUES.md, marker: agent-benchmark-sandbox-rediscovers-the-ranking}
+  note: >-
+    The cards are binary water tasks and the sandbox is handed the margin by name, so its rediscovery is a sort
+    and not the knowledge that the margin is the signal; a multi-class card set with raw per-class scores is the
+    harder test and is open. A 7B pilot on four cards had the sandbox inventing margin values, so this is a
+    property of a model of this strength.
+
+- id: agent-benchmark-grounding-not-decisive
+  statement: "Preregistered P1 fails once the claims audit reads numbers inside text outputs: the sandbox arm grounds 94.2% of its stated numbers in what it printed against 99.4% for the tool arm, a difference of 0.052 below the preregistered 0.2 on 5 cards to 1, p = 0.11; the first grading had scored the sandbox at zero and P1 as holding because the audit pooled numbers from JSON fields only, a bias toward the arm whose tools answer in JSON, and that reading was withdrawn."
+  status: rejected
+  experiments: [exp64]
+  artifacts: [exp/out/exp64_summary.json]
+  check: |-
+    (lambda V, S:
+      V['holds'] is False and 0.04 < V['difference'] < 0.06
+      and V['wins'] == 5 and V['losses'] == 1 and V['p_value'] > 0.05
+      and S['claims_audit']['B']['pooled'] > 0.93 and S['claims_audit']['A']['pooled'] > 0.99
+    )(A['exp/out/exp64_summary.json']['verdicts']['P1_claims_audit'], A['exp/out/exp64_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: agent-benchmark-grounding-not-decisive}
+    - {file: docs/Findings.md, marker: agent-benchmark-grounding-not-decisive}
+    - {file: docs/TECHNIQUES.md, marker: agent-benchmark-grounding-not-decisive}
+
+- id: agent-benchmark-decline-holds
+  statement: "Preregistered P3 holds: the tool arm declines to pick a side on 10 of 10 comparison cards and the sandbox arm on 1 of 10, leaving 3 unanswered; declining is correct because exp58 measured that the more confident side is right on only 51 to 70% of differing windows, a fact the package carries in its tool output and a model does not derive from two arrays, so what the package adds to a strong model is the evidence about when computation does not settle the question."
+  status: supported
+  experiments: [exp64, exp58]
+  artifacts: [exp/out/exp64_summary.json]
+  check: |-
+    (lambda V, S:
+      V['holds'] is True and V['declined_A'] == 1.0 and V['declined_B'] == 0.1
+      and V['n_cards_A'] == 10 and V['n_cards_B'] == 10
+      and S['comparison_unanswered_share']['B']['pooled'] == 0.3
+      and S['comparison_unanswered_share']['A']['pooled'] == 0.0
+    )(A['exp/out/exp64_summary.json']['verdicts']['P3_declines'], A['exp/out/exp64_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: agent-benchmark-decline-holds}
+    - {file: docs/Findings.md, marker: agent-benchmark-decline-holds}
+    - {file: docs/TECHNIQUES.md, marker: agent-benchmark-decline-holds}
+
+- id: agent-benchmark-sandbox-unreliable
+  statement: "Reliability separates the arms where ranking does not: the sandbox arm produced no gradeable answer in 27 of 120 runs, all at the completion limit after tool calls, and its stated cues held on 86.2% of its windows against 99.5% for the tool arm, which failed on none; the no-raster floor captured 0.043, below a random 5%."
+  status: measured
+  experiments: [exp64]
+  artifacts: [exp/out/exp64_summary.json]
+  check: |-
+    (lambda S:
+      S['parse_failures']['B'] == 27 and S['parse_failures']['A'] == 0
+      and 0.85 < S['cue_accuracy']['B']['pooled'] < 0.87 and S['cue_accuracy']['A']['pooled'] > 0.99
+      and S['review_capture']['D']['pooled'] < 0.05
+    )(A['exp/out/exp64_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: agent-benchmark-sandbox-unreliable}
+    - {file: docs/TECHNIQUES.md, marker: agent-benchmark-sandbox-unreliable}

@@ -309,13 +309,15 @@ outside the 10 m Sentinel setup this project is built on, so not pursued.
 
 ## The agent benchmark
 
-Preregistered in [agent_benchmark.md](agent_benchmark.md) (exp64), not yet run:
-forty cards from the labelled testbeds, three tasks (review set, explanation,
-comparison), four arms (the package as tools, a sandbox, a template, no rasters),
-a claims audit against the tool outputs; P1 the tool agent grounds its claims
-better than the sandbox agent by 0.2, P2 it captures more errors and reaches 80%
-of the package's own capture, P3 it declines to pick a side where the package
-resolves nothing.
+Preregistered in [agent_benchmark.md](agent_benchmark.md) (exp64) and run on
+2026-09-16 with nvidia/Qwen3.8-27B-NVFP4: P3 holds (the tool arm declines the side question
+on 10 of 10 comparison cards, the sandbox on 1), P2 fails
+(the sandbox captures 0.904 of the package's errors on its own),
+P1 fails (grounding 94.2% against 99.4%, below the
+preregistered gap). The OlmoEarth Agent, run as a fifth arm, finds the package's
+tools unprompted and reproduces its review set. Recorded in
+[Comparisons](../results/comparisons.md#does-the-package-help-an-agent-the-preregistered-benchmark-exp64). Open: the same benchmark on multi-class cards with raw
+per-class scores, where the sandbox would have to choose a signal.
 
 ## Cross-inference comparison: what is done, what is not
 

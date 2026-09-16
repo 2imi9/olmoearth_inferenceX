@@ -209,6 +209,17 @@ errors, 17.5 and 12.8 times a random 5%; clustering by activation moves that to
 16.9 and 12.1 times, so the effect a reviewer would feel survives the clustering
 even though the exception rate above does not survive it as well. <!-- claim:geoid-capture-effect-size -->
 
+And whether any of this helps an agent is now measured rather than assumed
+(exp64, forty cards, three preregistered predictions, Qwen3.8-27B-NVFP4).
+Handed the package as tools, the model reproduces the package's review set,
+grounds 99.4% of what it states, and declines the side
+question on every comparison card; the OlmoEarth Agent as shipped finds the
+package's tools on its own and does the same. <!-- claim:agent-benchmark-tool-arm-reproduces-the-package -->
+The one advantage over a numpy sandbox that survived its preregistered test is
+the decline: 10 of 10 cards against 1,
+because the fact that confidence does not settle which side is right is carried
+by the package and not derivable from the arrays. <!-- claim:agent-benchmark-decline-holds -->
+
 ## The numbers
 
 Sen1Floods11 Bolivia hand labels, 81,984 windows, 8.8% of them errors
@@ -298,3 +309,12 @@ from the encoder's internals, its pretraining objective, a posterior over
 the probe head, feature-space typicality, a second model of the same
 family, or flip-and-rotate consistency ranks errors better than confidence
 on expert labels. <!-- claim:no-encoder-internal-signal-beats-confidence -->
+
+The benchmark of the tool itself rejected two of its own three predictions,
+and the record says so. A strong model given numpy and the same arrays captures
+0.904 of the package's errors on its own, so the tool is not a
+ranking advantage over such a model. <!-- claim:agent-benchmark-sandbox-rediscovers-the-ranking -->
+It also grounds 94.2% of its stated numbers in what it printed,
+against 99.4% for the tool arm, below the preregistered gap;
+the first grading had said otherwise because the audit skipped numbers in text,
+and that reading was withdrawn. <!-- claim:agent-benchmark-grounding-not-decisive -->

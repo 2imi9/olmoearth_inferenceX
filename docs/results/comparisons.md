@@ -1876,6 +1876,113 @@ event in exp45 and no such control can be computed here. Runtime 12 minutes on o
 B200, no downloads beyond the cached embeddings (job 837407). Source
 `exp/out/exp70_summary.json` and `exp/out/exp70_tasks.csv`, one row per task.
 
+## Does the package help an agent? The preregistered benchmark (exp64)
+
+Every number above answers whether the measurement is right. None answers
+whether the tool helps, and the plan page
+([agent_benchmark.md](../plan/agent_benchmark.md)) preregistered the benchmark
+that does, with its three predictions and what would falsify each, before a
+card was built. It ran on 2026-09-16 and two of the three predictions failed.
+They are recorded as they fell, because a benchmark that could only confirm
+would not have been worth running.
+
+Forty cards from the labelled testbeds, twenty from GEOID-Flood with their
+per-window decisions and margins committed by exp60, twenty from Sen1Floods11
+through exp18's cached encoder pass and its refit head, each with hidden labels
+and a 5% budget, ten carrying a second inference of the same windows. Three
+tasks per card: name the windows to review, say why each is suspect, and on the
+comparison cards say how the two inferences differ and which to believe, where
+the correct answer is to decline. Four preregistered arms sharing one model: A
+has the package's two commands as tools, B a numpy sandbox with the same arrays
+and no package, C the package's outputs narrated by a template with no model,
+D the card's description and no rasters. A fifth arm the plan left open, E, is
+the OlmoEarth Agent as it ships, choosing among its forty-one tools, with the
+package's skill among them; it was not preregistered and is reported beside the
+others, not against a prediction. Three samples per card for A, B and D.
+
+The model is `nvidia/Qwen3.8-27B-NVFP4`, served by vLLM inside a container on one GPU. The
+plan page asked for a 30 to 70 billion parameter instruct model in fp16 or int8;
+27 billion is at the low edge of that range and NVFP4 is below that precision.
+Both are deviations, recorded here and in every output file, and every arm ran
+the same model with reasoning enabled, so the arm comparisons are unaffected by
+either.
+
+| Arm | Numbers grounded in tool output | Capture at 5%, share of the package's | Stated cues that hold | Declines the side question | Runs without a gradeable answer | Fabricated windows |
+|---|---|---|---|---|---|---|
+| A, the package as tools | 99.4% | 1.000 | 99.5% | 100.0% | 0 of 120 | 0 |
+| B, numpy sandbox, no package | 94.2% | 0.904 | 86.2% | 10.0% | 27 of 120 | 0 |
+| C, template, no model | 100.0% | 1.000 | 100.0% | 100.0% | 0 of 40 | 0 |
+| D, description only, no rasters | 0.0% | 0.228 | 23.6% | 100.0% | 0 of 120 | 0 |
+| E, the OlmoEarth Agent, free choice | 99.8% | 0.963 | 98.7% | 100.0% | 1 of 40 | 0 |
+| E, skill pinned | 99.1% | 1.008 | 99.1% | 100.0% | 0 of 40 | 0 |
+
+**Handed the package as tools, the model reproduces the package.** Arm A
+reaches the package's own capture on the median card and pooled, grounds
+99.4% of the numbers it states in what its tools returned,
+states cues that hold on 99.5% of the windows it names,
+declines the side question on every comparison card, and fabricates nothing.
+The OlmoEarth Agent as shipped, told only where the score files are, chose the
+package's review-set tool on 40 of 40 runs and its compare tool on 10 of 10
+comparison cards without being pointed at either, and did the same:
+0.963 of the package's capture, 99.8%
+grounded, declining on 10 of 10. Pinning the skill through
+the agent's own mechanism adds nothing but the turns spent loading it. <!-- claim:agent-benchmark-tool-arm-reproduces-the-package -->
+
+**P2 fails: the sandbox rediscovers the ranking on its own.** That was the
+falsification the plan page named in advance, in those words. Given numpy and
+the same arrays, the model captures 0.904 of the package's
+errors by itself, pooled 0.200 against the tool arm's
+0.232, a difference of +0.032 below the
+preregistered 0.05, on 13 cards to 10, p = 0.34.
+The ranking itself is not what the package adds to a model of this strength; the
+median tool-arm card still reaches the package's capture, which is the half of
+P2 that holds. <!-- claim:agent-benchmark-sandbox-rediscovers-the-ranking -->
+
+**P1 fails, and the first grading said otherwise.** The claims audit first scored
+the sandbox arm at zero grounding, and P1 as holding at p below 1e-9. A check of
+the arm's own transcripts found 97% of the values it stated in its own printed
+output: the audit had pooled numbers from JSON fields and skipped strings, and a
+sandbox's only tool output is the text it prints. That is a bias toward whichever
+arm's tools answer in JSON, and it was the whole of the result. With numbers in
+text counted, for every arm alike, the sandbox grounds 94.2%
+of its stated numbers against the tool arm's 99.4%, a
+difference of 0.052 below the preregistered 0.2, on
+5 cards to 1, p = 0.11. The withdrawn
+reading is kept in the commit history and not in the ledger. <!-- claim:agent-benchmark-grounding-not-decisive -->
+
+**P3 holds, and it is the one advantage that survives.** The tool arm declines
+to pick a side on 10 of 10 comparison cards; the sandbox
+arm declines on 1, picks a side on
+6, and leaves
+3 unanswered. Declining is correct because exp58
+measured that the more confident side is right on only 51 to 70% of differing
+windows and that confidence does not order the set. That fact is carried by the
+package and stated in its tool output; it is not something a model derives from
+two arrays, and the sandbox arm, which had both arrays, did not. What the
+package adds to a strong model is not computation but the evidence about when
+computation does not settle the question. <!-- claim:agent-benchmark-decline-holds -->
+
+**Reliability separates the arms where ranking does not.** The sandbox arm
+produced no gradeable answer in 27 of 120 runs, every one of them at the
+completion limit after a run of tool calls, and the cues it stated held on
+86.2% of its windows against 99.5% for
+the tool arm. The no-raster floor captured 0.043, below a
+random 5%, and its stated cues held on 23.6% of windows, which
+is what guessing from a description looks like. <!-- claim:agent-benchmark-sandbox-unreliable -->
+
+Three limits on the reading. The cards are binary water tasks, on which the
+margin, one minus top-1 and entropy coincide, so the sandbox arm was never asked
+to choose a signal; the sandbox is also handed `margin` by name, so its
+rediscovery is `argsort` and not the knowledge that the margin is the signal to
+sort by. A multi-class card set from exp70's tasks, with raw per-class scores,
+is the harder test and is not run. One model was run; a 7B pilot on four cards
+had the sandbox arm inventing margin values it never computed, so the P2 result
+is a property of a model of this strength, not of models. And the agent arm was
+not preregistered: its numbers describe what happened and predict nothing.
+
+Outputs: `exp/out/exp64_summary.json`, `exp64_cards.csv`,
+`exp64_answers.jsonl` (arms A to D, 400 runs), `exp64_answers_E.jsonl` (80 runs).
+
 ## Served land cover change rasters (exp20)
 
 First assessment of a served output: ten 512-px windows (about

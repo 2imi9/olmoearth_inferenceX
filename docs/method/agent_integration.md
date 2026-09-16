@@ -112,41 +112,25 @@ so inside a confidence review set it always fires.
 
 ## Is it measured?
 
-Not yet. Whether an agent given these tools produces better-grounded statements
-than one given a sandbox is the preregistered benchmark in
-[../plan/agent_benchmark.md](../plan/agent_benchmark.md) (exp64): forty cards
-from the labelled testbeds, three tasks, a claims audit against the tool outputs,
-the package's own numbers as the ceiling.
+Yes, since 2026-09-16: [../plan/agent_benchmark.md](../plan/agent_benchmark.md)
+(exp64), forty cards, three tasks, a claims audit against the tool outputs,
+recorded in [Comparisons](../results/comparisons.md#does-the-package-help-an-agent-the-preregistered-benchmark-exp64). Handed these tools, Qwen3.8-27B-NVFP4
+reproduces the package's review set and declines the side question on every
+comparison card, and the OlmoEarth Agent as shipped finds the tools on its own
+and does the same. Two of the three preregistered predictions failed: a numpy
+sandbox with the same arrays captures 0.904 of the package's
+errors by itself and grounds 94.2% of its numbers, so what the
+package adds to a model of that strength is the evidence about when not to
+choose, and reliability, not the ranking.
 
-## Status (2026-09-02)
+## Status (2026-09-16)
 
-**Agent side.** Implemented and tested in the agent repo's working tree (15
-tool tests; full suite 611 passing), not yet committed there. The SKILL.md
-lives in the vendored skills submodule and must be committed upstream.
+**Agent side.** Skill #18 `olmoearth-review-set` is on the agent repository's
+branch `2imi9/feature-inferencex-review-set`, unmerged: four tools
+(`olmoearth_review_set`, `olmoearth_compare_review`, `olmoearth_grade_review_rule`,
+`olmoearth_review_budget_ceiling`), scores taken inline or from a `.json` file
+under `OLMOEARTH_SCORES_ROOT`, row and column returned with a grid; 645 tests
+passing there. exp72 showed the port bit-exact against this package on real
+inference. The agent's LLM client also gained a defensive decode for
+double-encoded tool arguments, which the 7B pilot exposed.
 
-**Audit side — fixed after the integration review:**
-
-- the oracle sign in the assessor (errors are the most suspicious windows);
-- a torch-free home for the AURC metrics, so the agent need not install torch;
-- no-prediction pixels no longer vote in pooled classes or boundaries;
-- windows without reference are excluded from scoring rather than counted as
-  errors;
-- `summary()` gives a JSON-safe view;
-- the LCC task card no longer claims the product ships a class confidence
-  (exp20);
-- `pyyaml` and `huggingface_hub` are declared.
-
-**Resolved since.** `olmoearth-pretrain` was a hard dependency of the
-package even though the assessment layer never imports it, which forced the
-agent to install with `--no-deps` and broke `uv sync` on any clone without a
-sibling `../olmoearth_pretrain` checkout. It now sits behind the `encoder`
-extra, so `uv sync` installs `assess` / `metrics` / `taskcard` / `lcc` with
-numpy, pyyaml and huggingface_hub alone — no torch, no `--no-deps`.
-
-**Still open:**
-
-- A production mode of the agent tool that takes a class map and a
-  confidence band (`assess_classmap`) is written here but not yet wired in
-  the agent.
-- The task-card resolvers fetch with `urllib`, validated at the agent's tool
-  boundary only.
