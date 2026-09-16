@@ -125,10 +125,13 @@ def knn_distance(test, bank, k=KNN_K, chunk=4096):
         return out
 
 
-def mahalanobis_min(test, bank, bank_dec, n_classes, shrink=SHRINK, chunk=8192):
-    """Minimum over classes of the Mahalanobis distance to the class mean, shared shrunk covariance."""
+def mahalanobis_min(test, bank, bank_dec, n_classes, shrink=SHRINK, chunk=65536):
+    """Minimum over classes of the Mahalanobis distance to the class mean, shared shrunk covariance.
+
+    Double precision throughout, as the first 23 tasks were scored; the quadratic form runs on the GPU in
+    float64 when there is one, chunked, because m_sa_crop_type's 4,096,000 windows put the numpy version
+    past both the memory and the time of a job. The test set is never copied whole to float64."""
     bank = np.asarray(bank, dtype=np.float64)
-    test = np.asarray(test, dtype=np.float64)
     d = bank.shape[1]
     means, resid = [], []
     for c in range(n_classes):
@@ -144,12 +147,42 @@ def mahalanobis_min(test, bank, bank_dec, n_classes, shrink=SHRINK, chunk=8192):
     cov = (1 - shrink) * cov + shrink * np.trace(cov) / d * np.eye(d)
     prec = np.linalg.inv(cov)
     out = np.full(len(test), np.inf)
-    for i in range(0, len(test), chunk):
-        T = test[i:i + chunk]
-        for mu in means:
-            diff = T - mu
-            out[i:i + chunk] = np.minimum(out[i:i + chunk], np.einsum("ij,jk,ik->i", diff, prec, diff))
+    try:
+        import torch
+        dev = "cuda" if torch.cuda.is_available() else "cpu"
+        P = torch.from_numpy(prec).to(dev)
+        M = torch.from_numpy(means).to(dev)
+        for i in range(0, len(test), chunk):
+            T = torch.from_numpy(np.asarray(test[i:i + chunk], dtype=np.float64)).to(dev)
+            best = torch.full((len(T),), float("inf"), dtype=torch.float64, device=dev)
+            for mu in M:
+                diff = T - mu
+                best = torch.minimum(best, ((diff @ P) * diff).sum(1))
+            out[i:i + chunk] = best.cpu().numpy()
+    except ImportError:
+        for i in range(0, len(test), chunk):
+            T = np.asarray(test[i:i + chunk], dtype=np.float64)
+            for mu in means:
+                diff = T - mu
+                out[i:i + chunk] = np.minimum(out[i:i + chunk], np.einsum("ij,jk,ik->i", diff, prec, diff))
     return np.sqrt(np.clip(out, 0, None))
+
+
+def controls_chunked(emb_test, emb_train, dec, chunk=262144):
+    """exp70's two no-model controls with the same arithmetic in double precision, accumulated in chunks so a
+    task of four million windows is never copied whole to float64; the only difference from exp70.controls is
+    the order of summation."""
+    n, d = emb_train.shape
+    acc = np.zeros(d, dtype=np.float64)
+    for i in range(0, n, chunk):
+        acc += np.asarray(emb_train[i:i + chunk], dtype=np.float64).sum(0)
+    mu = acc / n
+    dist = np.empty(len(emb_test), dtype=np.float64)
+    for i in range(0, len(emb_test), chunk):
+        dist[i:i + chunk] = np.linalg.norm(np.asarray(emb_test[i:i + chunk], dtype=np.float64) - mu, axis=1)
+    freq = collections.Counter(np.asarray(dec).tolist())
+    rare = np.array([-np.log(max(freq[int(c)], 1) / max(len(dec), 1)) for c in dec])
+    return {"ctl_embedding_distance": dist, "ctl_class_rarity": rare}
 
 
 # ----------------------------------------------------------------------------- the two families
@@ -202,7 +235,7 @@ def run_classification(task, cache):
     err = (dec != y).astype(np.float64)
     etr = xtr.to(torch.float32).numpy()
     ete = xte.to(torch.float32).numpy()
-    sig.update(e70.controls(ete, etr, dec))
+    sig.update(controls_chunked(ete, etr, dec))
     sig.update(ensemble_from_probs(p_te))
     rng = np.random.default_rng(0)
     bank = draw_bank(len(etr), rng)
@@ -236,7 +269,7 @@ def run_segmentation(task, cache):
            "entropy": q0["entropy"].ravel()[ok].astype(np.float64)}
     etr = xtr.to(torch.float32).numpy().reshape(-1, xtr.shape[-1])
     ete = xte.to(torch.float32).numpy().reshape(-1, xte.shape[-1])[ok]
-    sig.update(e70.controls(ete, etr, dec))
+    sig.update(controls_chunked(ete, etr, dec))
     sig.update(ensemble_from_decisions([q["dec"].ravel()[ok] for q in qs],
                                        [q["margin"].ravel()[ok] for q in qs], C))
     ok_tr = q_tr0["ok"].ravel()
@@ -385,6 +418,9 @@ def smoke(args):
     far = mahalanobis_min(test + 50.0, bank, rng.integers(0, C, 300), C)
     assert (far > md).all(), "a point far from every class mean is farther"
     assert len(draw_bank(10, rng)) == 10 and len(draw_bank(BANK + 5, rng)) == BANK
+    dec_s = rng.integers(0, C, 50)
+    a, b = controls_chunked(test, bank, dec_s, chunk=7), e70.controls(test, bank, dec_s)
+    assert np.allclose(a["ctl_embedding_distance"], b["ctl_embedding_distance"]) and np.array_equal(a["ctl_class_rarity"], b["ctl_class_rarity"])
     # the verdicts on planted leads: the margin wins 20 of 24 against each alternative
     fake = {}
     for i in range(24):
