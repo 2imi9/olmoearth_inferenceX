@@ -504,6 +504,8 @@ def cmd_grade(args):
     share_pkg = by_arm(lambda g: g["review_set"]["share_of_package"] if g["review_set"].get("gradeable") else None)
     cue_acc = by_arm(lambda g: g["explanation"]["accuracy"])
     declined = by_arm(lambda g: float(g["comparison"]["declined"]) if g["comparison"].get("gradeable") else None)
+    unanswered = by_arm(lambda g: float(not g["comparison"].get("answered", True))
+                        if g["comparison"].get("gradeable") else None)
 
     def paired(metric, a="A", b="B"):
         """Wins, losses and an exact sign test on the cards both arms were graded on."""
@@ -540,13 +542,14 @@ def cmd_grade(args):
                               "claims_vs_A": paired(claims, x, "A"), "capture_vs_A": paired(capture, x, "A"),
                               "pooled_claims": claims[x]["pooled"], "pooled_capture": capture[x]["pooled"],
                               "median_share_of_package": share_pkg[x]["median"],
-                              "declined": declined[x]["pooled"], "parse_failures": parse_fail[x],
+                              "declined": declined[x]["pooled"], "comparison_unanswered": unanswered[x]["pooled"],
+                              "parse_failures": parse_fail[x],
                               "fabricated_windows": fabricated[x]}
     summary = {"experiment": "exp64 agent benchmark", "model": args.model, "endpoint_named": bool(args.endpoint),
                "samples_per_card": args.samples, "temperature": args.temperature, "budget": BUDGET,
                "n_runs": len(graded), "n_cards": len(cards),
                "claims_audit": claims, "review_capture": capture, "share_of_package": share_pkg,
-               "cue_accuracy": cue_acc, "declined_share": declined,
+               "cue_accuracy": cue_acc, "declined_share": declined, "comparison_unanswered_share": unanswered,
                "parse_failures": parse_fail, "fabricated_windows": fabricated,
                "answer_files": [os.path.basename(f) for f in files if os.path.exists(f)],
                "verdicts": {"P1_claims_audit": p1, "P2_review_capture": p2, "P3_declines": p3},

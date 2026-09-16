@@ -44,18 +44,20 @@ CARDS = "/scratch/qi_zim_neu/olmoearth_inferenceX/exp64_cards"
 SKILL = "olmoearth-review-set"
 
 
-def write_scores_json(card):
-    """The card's margin and decision as a two-class, logit-like score matrix the agent's tool accepts.
+def write_scores_json(card, which="first"):
+    """A margin and decision map as a two-class, logit-like score matrix the agent's tools accept.
 
     Row = [m, 0] for class 0 and [0, m] for class 1, so top-1 minus top-2 is the margin and arg-max is the
-    decision: the same information arm A reads, in the shape skill #18 asks for. Row-major over the grid."""
-    m, d = card["margin"], card["dec"]
+    decision: the same information arm A reads, in the shape skill #18 asks for. Row-major over the grid. The
+    second inference, on cards that have one, is written the same way so the agent can compare the two, as arm A
+    can; the first agent run had only the first file and answered the comparison question on no card."""
+    m, d = (card["margin"], card["dec"]) if which == "first" else (card["second"]["margin"], card["second"]["dec"])
     rows = [[float(m[r, c]), 0.0] if int(d[r, c]) == 0 else [0.0, float(m[r, c])]
             for r in range(d.shape[0]) for c in range(d.shape[1])]
-    path = os.path.join(card["dir"], "scores.json")
+    path = os.path.join(card["dir"], "scores.json" if which == "first" else "second_scores.json")
     with open(path, "w") as fh:
         json.dump({"grid": list(d.shape), "n_classes": 2, "classes": card["meta"].get("classes"),
-                   "scores": rows}, fh)
+                   "inference": which, "scores": rows}, fh)
     return path
 
 
@@ -115,7 +117,9 @@ async def main_async(args):
         with open(path, "w") as fh:
             for d in dirs:
                 card = arms.load_card(d)
-                card["scores_json"] = write_scores_json(card)
+                card["scores_json"] = write_scores_json(card, "first")
+                if card["second"] is not None:
+                    card["second_scores_json"] = write_scores_json(card, "second")
                 for arm in args.arms.split(","):
                     run = await run_one(card, arm, llm, studio, skill_index, args.max_turns)
                     run.update({"card": card["name"], "sample": 0, "model": os.environ.get("LLM_MODEL", "")})

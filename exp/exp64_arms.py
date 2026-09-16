@@ -243,7 +243,13 @@ def grade_comparison(answer, card, tol=0.25):
     truth = tool_compare(card)
     if not truth["comparable"]:
         return {"gradeable": False}
-    c = answer.get("comparison") or {}
+    if not isinstance(answer.get("comparison"), dict):
+        # The question was asked and not answered: scored as not declining, and marked apart from a pick so
+        # the summary can say how often an arm left the question alone rather than chose a side.
+        return {"gradeable": True, "answered": False, "true_n_differing": truth["n_differing"],
+                "said_n_differing": None, "count_within_tolerance": False, "believe": "",
+                "believe_raw": "", "declined": False, "side_score": 0.0}
+    c = answer["comparison"]
     said = c.get("n_differing")
     try:
         count_ok = abs(float(said) - truth["n_differing"]) <= tol * max(truth["n_differing"], 1)
@@ -269,8 +275,8 @@ def grade_comparison(answer, card, tol=0.25):
         side_score, declined = 1.0, True
     else:
         side_score, declined = 0.0, False
-    return {"gradeable": True, "true_n_differing": truth["n_differing"], "said_n_differing": said,
-            "count_within_tolerance": bool(count_ok), "believe": believe,
+    return {"gradeable": True, "answered": True, "true_n_differing": truth["n_differing"],
+            "said_n_differing": said, "count_within_tolerance": bool(count_ok), "believe": believe,
             "believe_raw": str(c.get("believe", "")), "declined": declined, "side_score": side_score}
 
 
@@ -421,8 +427,11 @@ def _prompt(card, arm):
         # are and nothing about which of its tools to use; the forced variant pins its review-set skill.
         head += (f"The card's per-class scores are in the JSON file {card.get('scores_json', '<missing>')}: an "
                  "object with 'grid' [rows, cols] and 'scores', one row per window in row-major order, two "
-                 "numbers per window (logit-like class scores). Use your tools to ground every number you "
-                 "state; do not estimate values you have not computed.\n\n")
+                 "numbers per window (logit-like class scores). ")
+        if card["second"] is not None:
+            head += (f"The second inference of the same windows is in {card.get('second_scores_json', '<missing>')}, "
+                     "same layout. ")
+        head += "Use your tools to ground every number you state; do not estimate values you have not computed.\n\n"
     return head + ANSWER_RULE
 
 
