@@ -292,24 +292,37 @@ def verdicts(results):
     return v
 
 
+PARTS = os.path.join(OUT, "exp73_parts")
+
+
 def cmd_all(args):
     cache = os.environ.get("HF_HOME")
-    os.makedirs(OUT, exist_ok=True)
+    os.makedirs(PARTS, exist_ok=True)
     results, rows, failures = {}, [], {}
     for task in e70.TASKS_CLS + e70.TASKS_SEG:
         if args.only and task not in args.only:
             continue
-        fn = run_classification if task in e70.TASKS_CLS else run_segmentation
-        t0 = time.time()
-        try:
-            r = fn(task, cache)
-        except Exception as exc:
-            failures[task] = f"{type(exc).__name__}: {str(exc)[:200]}"
-            print(f"  {task:48s} FAILED {failures[task][:90]}", flush=True)
-            continue
-        r["lead"] = leads(r)
-        r["source"] = e70.source_of(task)
-        r["seconds"] = round(time.time() - t0, 1)
+        # One task's result is written the moment it finishes and reused on a rerun: the PASTIS tasks take the
+        # better part of an hour each, and a job cut at its time limit must not lose the tasks it did finish.
+        part = os.path.join(PARTS, f"{task}.json")
+        if os.path.exists(part) and not args.redo:
+            with open(part) as fh:
+                r = json.load(fh)
+            print(f"  {task:48s} from checkpoint ({r['seconds']:.0f}s when run)", flush=True)
+        else:
+            fn = run_classification if task in e70.TASKS_CLS else run_segmentation
+            t0 = time.time()
+            try:
+                r = fn(task, cache)
+            except Exception as exc:
+                failures[task] = f"{type(exc).__name__}: {str(exc)[:200]}"
+                print(f"  {task:48s} FAILED {failures[task][:90]}", flush=True)
+                continue
+            r["lead"] = leads(r)
+            r["source"] = e70.source_of(task)
+            r["seconds"] = round(time.time() - t0, 1)
+            with open(part, "w") as fh:
+                json.dump(r, fh, default=float)
         results[task] = r
         s = r["signals"]
         rows.append({"task": task, "family": r["family"], "source": r["source"], "n_units": r["n_units"],
@@ -319,6 +332,8 @@ def cmd_all(args):
                      "knn_eaurc": s["knn_dist"]["excess_aurc"], "mahalanobis_eaurc": s["mahalanobis"]["excess_aurc"],
                      "lead_ensemble": r["lead"]["ensemble"], "lead_knn": r["lead"]["knn_dist"],
                      "lead_mahalanobis": r["lead"]["mahalanobis"], "seconds": r["seconds"]})
+        if os.path.exists(part) and not args.redo and "seconds" in r and r.get("_printed"):
+            continue
         print(f"  {task:48s} {r['family'][:3]} n={r['n_units']:7d} acc {r['test_accuracy']:.3f} | margin lead over "
               f"ens {r['lead']['ensemble']:+.4f} knn {r['lead']['knn_dist']:+.4f} maha {r['lead']['mahalanobis']:+.4f} "
               f"({r['seconds']:.0f}s)", flush=True)
@@ -387,6 +402,7 @@ def smoke(args):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--only", nargs="*", default=None)
+    ap.add_argument("--redo", action="store_true", help="recompute tasks that have a checkpoint")
     ap.add_argument("--smoke", action="store_true")
     args = ap.parse_args()
     if args.smoke:
