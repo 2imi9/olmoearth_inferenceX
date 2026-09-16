@@ -164,6 +164,46 @@ def geoid_cards(rng):
     return cards
 
 
+def sen1floods_cards(rng):
+    """Twenty cards from exp18's cached features: ten Bolivia hand-label tiles, ten multi-region test tiles.
+
+    exp18 committed the encoder pass (exp/out/exp18_feats.npz, 3.9 GB, on the cluster) and its head is a logistic
+    regression refit from the cached training features in seconds, so no encoder runs here. The tiles are the ones
+    exp18 evaluated, loaded with the same calls and seeds so labels align with the cached features. A binary head's
+    top-1 minus top-2 logit is the absolute logit, which is exp18's own confidence reading negated."""
+    import torch
+    import exp18_sen1floods_expert as e18
+    from oe_inferencex.evidence import train_logistic_head
+
+    z = np.load(e18.CACHE)
+    _, tr_lab = e18.load_split("valid", e18.N_TRAIN_TILES)
+    tr_y, tr_ok = e18.patch_labels(tr_lab[:, :e18.CROP, :e18.CROP])
+    D = z["tr_base"].shape[-1]
+    sel = tr_ok.flatten()
+    torch.manual_seed(0)
+    w, b = train_logistic_head(torch.tensor(np.asarray(z["tr_base"], dtype=np.float32)).reshape(-1, D)[sel],
+                               tr_y.flatten()[sel])
+    cards = []
+    for name, (_, lab), src in (
+            ("bolivia", e18.load_split("bolivia"), "Sen1Floods11 Bolivia hand labels via exp18"),
+            ("test", e18.load_split("test", e18.N_TEST_TILES, seed=1), "Sen1Floods11 multi-region test split via exp18")):
+        y, ok = e18.patch_labels(lab[:, :e18.CROP, :e18.CROP])
+        p, logit = e18.head_prob_logit(z[f"{name}_base0"], w, b)
+        dec = (p > 0.5).astype(np.int64)
+        ylab = (y > 0.5).astype(np.int64)
+        err, qual = _qualifying({"dec": dec, "y": ylab}, "dec", "y", ok)
+        idx = np.flatnonzero(qual)
+        rng.shuffle(idx)
+        print(f"  sen1floods {name}: {len(lab)} tiles, {int(qual.sum())} qualifying, drawing {N_PER_SOURCE}", flush=True)
+        for i in idx[:N_PER_SOURCE]:
+            cards.append(_card(f"sen1_{name}_{int(i):04d}", dec[i], np.abs(logit[i]), ok[i], ylab[i],
+                               {"task": "water", "sensor": "Sentinel-2, exp18 tiles, OlmoEarth v1 Base features, "
+                                                           "shift 0, exp18's logistic head",
+                                "classes": ["not water", "water"], "review_budget": BUDGET,
+                                "second_inference": None, "source": src, "tile_index": int(i)}))
+    return cards
+
+
 def write_cards(cards, root):
     os.makedirs(root, exist_ok=True)
     rows = []
@@ -213,7 +253,11 @@ def package_capture(c):
 
 def cmd_cards(args):
     rng = np.random.default_rng(SEED)
-    cards = geoid_cards(rng)
+    cards = []
+    if "geoid" in args.sources:
+        cards += geoid_cards(rng)
+    if "sen1" in args.sources:
+        cards += sen1floods_cards(rng)
     root = os.path.join(CARDS, "smoke" if args.smoke else "v1")
     rows = write_cards(cards, root)
     tag = "_smoke" if args.smoke else ""
@@ -335,7 +379,8 @@ def _smoke_pipeline():
     globals()["CARDS"], globals()["OUT"] = root, tempfile.mkdtemp()
     try:
         a = types.SimpleNamespace(smoke=True, endpoint="stub", model="stub-model", arms="ABCD",
-                                  samples=2, temperature=0.0, seed=0, cards=0, card_prefix="", answers_suffix="")
+                                  samples=2, temperature=0.0, seed=0, cards=0, card_prefix="", answers_suffix="",
+                                  sources="")
         cmd_run(a)
         # a second answer file, as the agent driver writes one: grade must see the extra arm without being told
         with open(os.path.join(OUT, "exp64_answers_smoke.jsonl")) as fh:
@@ -548,6 +593,7 @@ def main():
     ap.add_argument("--temperature", type=float, default=0.0)
     ap.add_argument("--seed", type=int, default=SEED)
     ap.add_argument("--cards", type=int, default=0, help="cap the number of cards (0 = all)")
+    ap.add_argument("--sources", default="geoid,sen1", help="card sources to build: geoid, sen1")
     ap.add_argument("--card-prefix", default="", help="run only cards whose name starts with this")
     ap.add_argument("--answers-suffix", default="", help="write exp64_answers_<suffix>.jsonl instead")
     args = ap.parse_args()
