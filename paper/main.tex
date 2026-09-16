@@ -19,8 +19,8 @@
 
 \title{\pkg: what was done, what held, and what did not\\
 \large A working report, not a submission}
-\author{Ziming Qi\\ \small \url{https://github.com/2imi9/olmoearth_inferenceX} \quad
-\url{https://olmoearth-inferencex.readthedocs.io}}
+\author{Ziming Qi\\[2pt] \small \url{https://github.com/2imi9/olmoearth_inferenceX}\\[-1pt]
+\small \url{https://olmoearth-inferencex.readthedocs.io}}
 \date{16 September 2026}
 
 \begin{document}
@@ -294,19 +294,20 @@ plan left open, the OlmoEarth Agent as it ships with the package's skill among
 its forty-one tools, was run and is reported descriptively.
 
 \begin{table}[h]
-\centering\small
-\begin{tabular}{lccccc}
+\centering\footnotesize
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{@{}l r r r c c@{}}
 \toprule
-Arm & Numbers grounded & Capture, share of package's & Cues that hold & Declines side question & Runs with no answer \\
+Arm & \shortstack[r]{numbers\\grounded} & \shortstack[r]{capture, share\\of package's} & \shortstack[r]{cues\\that hold} & \shortstack{declines the\\side question} & \shortstack{runs with\\no answer} \\
 \midrule
-A, package as tools & 99.4\% & 1.000 & 99.5\% & 10/10 & 0/120 \\
+A, the package as tools & 99.4\% & 1.000 & 99.5\% & 10/10 & 0/120 \\
 B, numpy sandbox, no package & 94.2\% & 0.904 & 86.2\% & 1/10 & 27/120 \\
 C, template, no model & 100\% & 1.000 & 100\% & 10/10 & 0/40 \\
-D, description only & -- & 0.228 & 23.6\% & 10/10 & 0/120 \\
-E, the OlmoEarth Agent & 99.8\% & 0.963 & 98.7\% & 10/10 & 1/40 \\
+D, description only, no rasters & -- & 0.228 & 23.6\% & 10/10 & 0/120 \\
+E, the OlmoEarth Agent, as shipped & 99.8\% & 0.963 & 98.7\% & 10/10 & 1/40 \\
 \bottomrule
 \end{tabular}
-\caption{exp64 on Qwen3.8-27B. No arm fabricated a window.}
+\caption{exp64 on Qwen3.8-27B, forty cards. No arm fabricated a window.}
 \end{table}
 
 Handed the package as tools, the model reproduces the package; the agent as
@@ -401,6 +402,7 @@ one result by someone who is not the author.
 \bibliography{references}
 
 \appendix
+\sloppy
 \section{The package, briefly}
 
 \texttt{oe-inferencex assess} takes a probability or logit raster and writes the
