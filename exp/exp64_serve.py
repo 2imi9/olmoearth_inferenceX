@@ -69,9 +69,18 @@ def to_message(raw):
             obj = json.loads(m.group(1))
         except json.JSONDecodeError:
             continue            # malformed: leave it in the content, do not invent a call
+        args = obj.get("arguments", {})
+        if isinstance(args, str):
+            # Qwen sometimes writes the arguments object as a JSON string. An OpenAI-format server hands the
+            # client ONE encoding of an object; passing the string through would hand it two, which the
+            # exp64 agent pilot showed crashes a client that expects a dict. Undo the model's extra layer.
+            try:
+                inner = json.loads(args)
+                args = inner if isinstance(inner, dict) else {}
+            except json.JSONDecodeError:
+                args = {}
         calls.append({"id": "call_" + uuid.uuid4().hex[:8], "type": "function",
-                      "function": {"name": obj.get("name", ""),
-                                   "arguments": json.dumps(obj.get("arguments", {}))}})
+                      "function": {"name": obj.get("name", ""), "arguments": json.dumps(args)}})
     content = _TOOL_CALL.sub("", raw).strip() if calls else raw.strip()
     msg = {"role": "assistant", "content": content}
     if calls:
