@@ -335,7 +335,7 @@ def _smoke_pipeline():
     globals()["CARDS"], globals()["OUT"] = root, tempfile.mkdtemp()
     try:
         a = types.SimpleNamespace(smoke=True, endpoint="stub", model="stub-model", arms="ABCD",
-                                  samples=2, temperature=0.0, seed=0, cards=0)
+                                  samples=2, temperature=0.0, seed=0, cards=0, card_prefix="", answers_suffix="")
         cmd_run(a)
         # a second answer file, as the agent driver writes one: grade must see the extra arm without being told
         with open(os.path.join(OUT, "exp64_answers_smoke.jsonl")) as fh:
@@ -374,10 +374,15 @@ def cmd_run(args):
     import exp64_arms as arms
     root = os.path.join(CARDS, "smoke" if args.smoke else "v1")
     dirs = sorted(d for d in (os.path.join(root, x) for x in os.listdir(root)) if os.path.isdir(d))
+    if args.card_prefix:
+        dirs = [d for d in dirs if os.path.basename(d).startswith(args.card_prefix)]
     if args.cards:
         dirs = dirs[:args.cards]
     tag = "_smoke" if args.smoke else ""
-    path = os.path.join(OUT, f"exp64_answers{tag}.jsonl")
+    # A second batch of cards (the Sen1Floods11 half, built after the first run started) writes its own file,
+    # which the grade stage already gathers, rather than overwriting the first batch's answers.
+    suffix = f"_{args.answers_suffix}" if args.answers_suffix else ""
+    path = os.path.join(OUT, f"exp64_answers{tag}{suffix}.jsonl")
     os.makedirs(OUT, exist_ok=True)
     want = [a for a in ARMS if a in set(args.arms)]
     n = 0
@@ -543,6 +548,8 @@ def main():
     ap.add_argument("--temperature", type=float, default=0.0)
     ap.add_argument("--seed", type=int, default=SEED)
     ap.add_argument("--cards", type=int, default=0, help="cap the number of cards (0 = all)")
+    ap.add_argument("--card-prefix", default="", help="run only cards whose name starts with this")
+    ap.add_argument("--answers-suffix", default="", help="write exp64_answers_<suffix>.jsonl instead")
     args = ap.parse_args()
     if args.smoke:
         smoke(args)
