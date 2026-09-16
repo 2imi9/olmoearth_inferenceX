@@ -250,22 +250,29 @@ def grade_comparison(answer, card, tol=0.25):
     except (TypeError, ValueError):
         count_ok = False
     believe = str(c.get("believe", "")).strip().lower()
-    if believe in ("decline", "neither", "none", "cannot", "unresolvable"):
-        side_score, declined = 1.0, True
-    elif believe in ("first", "second", "a", "b"):
-        # Picking a side scores the share it actually gets right, so a confident wrong pick is penalised.
+    picks = {"first": "first", "a": "first", "second": "second", "b": "second"}
+    # The pilot's tool arm answered "not resolvable without labels", the tool's own phrase, and was scored as
+    # a wrong pick. A pick must be one of the exact words; anything else that says it will not choose is the
+    # correct answer the contract asks for, and the raw string is kept so a reader can check the reading.
+    declines = ("decline", "neither", "none", "cannot", "can't", "unresolv", "not resolv", "without label",
+                "no way to", "insufficient", "unknown", "not possible")
+    if believe in picks:
+        believe = picks[believe]
         diff = (card["dec"] != card["second"]["dec"]) & card["ok"]
         if diff.sum() == 0:
             side_score, declined = float("nan"), False
         else:
             first_right = (card["dec"][diff] == card["labels"][diff]).mean()
-            side_score = float(first_right if believe in ("first", "a") else 1.0 - first_right)
+            side_score = float(first_right if believe == "first" else 1.0 - first_right)
             declined = False
+    elif believe and any(w in believe for w in declines):
+        side_score, declined = 1.0, True
     else:
         side_score, declined = 0.0, False
     return {"gradeable": True, "true_n_differing": truth["n_differing"], "said_n_differing": said,
-            "count_within_tolerance": bool(count_ok), "believe": believe, "declined": declined,
-            "side_score": side_score}
+            "count_within_tolerance": bool(count_ok), "believe": believe,
+            "believe_raw": str(c.get("believe", "")), "declined": declined, "side_score": side_score}
+
 
 
 # --------------------------------------------------------------------------------------------- claims audit
@@ -328,11 +335,12 @@ def claims_audit(text, tool_outputs, grid):
 
 
 # --------------------------------------------------------------------------------------------- the served model
-def chat(endpoint, model, messages, tools=None, temperature=0.0, seed=0, timeout=300):
+def chat(endpoint, model, messages, tools=None, temperature=0.0, seed=0, timeout=300, max_tokens=2000):
     """One completion from an OpenAI-compatible endpoint. urllib, so the experiment adds no dependency."""
     import urllib.error
     import urllib.request
-    body = {"model": model, "messages": messages, "temperature": temperature, "seed": seed, "max_tokens": 1200}
+    body = {"model": model, "messages": messages, "temperature": temperature, "seed": seed,
+            "max_tokens": max_tokens}
     if tools:
         body["tools"] = tools
         body["tool_choice"] = "auto"
@@ -375,9 +383,10 @@ TOOLSPEC_A = [
 TOOLSPEC_B = [
     {"type": "function", "function": {
         "name": "python",
-        "description": "Run numpy over this card's arrays. Names already bound: margin, decision, valid (2-D "
-                       "arrays), budget (float), grid (tuple), and on two-inference cards second_margin and "
-                       "second_decision. print() what you want back.",
+        "description": "Run numpy over THIS CARD'S arrays, which are already loaded as variables: margin, "
+                       "decision, valid (2-D arrays of shape grid), budget (float), grid (tuple), and on "
+                       "two-inference cards second_margin and second_decision. Do not create or simulate data; "
+                       "compute on these variables and print() what you want back. Only printed output returns.",
         "parameters": {"type": "object", "properties": {"code": {"type": "string"}}, "required": ["code"]}}},
 ]
 
@@ -425,6 +434,7 @@ def run_llm_arm(card, arm, endpoint, model, seed=0, temperature=0.0, max_steps=6
                                               "tools support."},
                 {"role": "user", "content": _prompt(card, arm)}]
     used = {}
+    calls_made = []                      # what the model asked for, kept beside what it got back
     transcript = []
     for _ in range(max_steps):
         msg = chat(endpoint, model, messages, tools=tools, temperature=temperature, seed=seed)
@@ -440,11 +450,20 @@ def run_llm_arm(card, arm, endpoint, model, seed=0, temperature=0.0, max_steps=6
                 cargs = json.loads(fn.get("arguments") or "{}")
             except json.JSONDecodeError:
                 cargs = {}
-            # A model may send `arguments` as a bare string rather than an object -- Qwen does this for a
-            # single-parameter tool. Treat that string as the one parameter's value instead of crashing, since
-            # refusing it would score the arm on the server's calling convention rather than on its reasoning.
+            # Qwen double-encodes: `arguments` arrives as a JSON string that itself holds the JSON object, so
+            # one decode yields a str. The pilot showed what happens if that str is taken as code: the sandbox
+            # evaluates the literal text {"code": "..."} as a dict expression, does nothing, and returns empty
+            # output four times in a row. Decode again; only a string that is not JSON is the bare value.
+            if isinstance(cargs, str):
+                try:
+                    again = json.loads(cargs)
+                    cargs = again if isinstance(again, dict) else {"code": cargs}
+                except json.JSONDecodeError:
+                    cargs = {"code": cargs} if name == "python" else {}
             if not isinstance(cargs, dict):
                 cargs = {"code": str(cargs)} if name == "python" else {}
+            calls_made.append({"name": name, "arguments": {k: (v[:4000] if isinstance(v, str) else v)
+                                                           for k, v in cargs.items()}})
             if name == "assess":
                 out = tool_assess(card)
             elif name == "compare":
@@ -459,8 +478,8 @@ def run_llm_arm(card, arm, endpoint, model, seed=0, temperature=0.0, max_steps=6
     text = (transcript[-1].get("content") if transcript else "") or ""
     answer, parse_error = _parse_answer(text)
     return {"arm": arm, "answer": answer, "parse_error": parse_error, "text": text,
-            "tool_outputs": used, "n_tool_calls": sum(len(v) for v in used.values()),
-            "n_steps": len(transcript)}
+            "tool_outputs": used, "tool_calls": calls_made,
+            "n_tool_calls": sum(len(v) for v in used.values()), "n_steps": len(transcript)}
 
 
 def grade_run(run, card):

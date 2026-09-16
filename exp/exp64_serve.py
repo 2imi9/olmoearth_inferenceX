@@ -23,6 +23,7 @@ import json
 import re
 import sys
 import threading
+import time
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -116,9 +117,11 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as exc:          # noqa: BLE001 - returned to the caller, which records it
             self._send(500, {"error": f"{type(exc).__name__}: {exc}"})
             return
+        # The openai SDK (which the OlmoEarth Agent uses) expects the full envelope, not only choices.
         self._send(200, {"id": "chatcmpl-" + uuid.uuid4().hex[:12], "object": "chat.completion",
-                         "model": STATE.get("model_id", ""),
-                         "choices": [{"index": 0, "message": to_message(raw), "finish_reason": "stop"}]})
+                         "created": int(time.time()), "model": STATE.get("model_id", ""),
+                         "choices": [{"index": 0, "message": to_message(raw), "finish_reason": "stop"}],
+                         "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}})
 
 
 def main():
