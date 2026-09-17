@@ -103,7 +103,16 @@ async def main_async(args):
     dirs = sorted(d for d in (os.path.join(root, x) for x in os.listdir(root)) if os.path.isdir(d))
     if args.cards:
         dirs = dirs[:args.cards]
-    llm = OlmoEarthLLM()
+    # The agent's client asks for 32,768 output tokens by default. A 32k-context model cannot hold that beside
+    # the agent's forty-one tool schemas (the 7B run's every request came back 400), so the driver may hand the
+    # client a smaller budget; the agent's code is untouched and the budget used is recorded in every run.
+    if args.max_output_tokens:
+        import dataclasses
+        from olmoearth_agent.llm.config import ServingConfig
+        llm = OlmoEarthLLM(config=dataclasses.replace(ServingConfig.from_env(),
+                                                      max_output_tokens=int(args.max_output_tokens)))
+    else:
+        llm = OlmoEarthLLM()
     studio = StudioClient(StudioConfig(api_key="exp64-no-studio-access"))
     try:
         skill_index = SkillLoader().index()
@@ -123,7 +132,8 @@ async def main_async(args):
                     card["second_scores_json"] = write_scores_json(card, "second")
                 for arm in args.arms.split(","):
                     run = await run_one(card, arm, llm, studio, skill_index, args.max_turns)
-                    run.update({"card": card["name"], "sample": 0, "model": os.environ.get("LLM_MODEL", "")})
+                    run.update({"card": card["name"], "sample": 0, "model": os.environ.get("LLM_MODEL", ""),
+                                "max_output_tokens": int(args.max_output_tokens) if args.max_output_tokens else None})
                     fh.write(json.dumps(run, default=float) + "\n")
                     fh.flush()
                     n += 1
@@ -142,6 +152,8 @@ def main():
     ap.add_argument("--cards", type=int, default=0)
     ap.add_argument("--max-turns", type=int, default=8)
     ap.add_argument("--out-dir", default="", help="output directory (default exp/out)")
+    ap.add_argument("--max-output-tokens", type=int, default=0,
+                    help="cap the agent client's completion budget (0 = the agent's default)")
     asyncio.run(main_async(ap.parse_args()))
 
 
