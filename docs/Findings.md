@@ -224,6 +224,10 @@ The one advantage over a numpy sandbox that survived its preregistered test is
 the decline: 10 of 10 cards against 1,
 because the fact that confidence does not settle which side is right is carried
 by the package and not derivable from the arrays. <!-- claim:agent-benchmark-decline-holds -->
+The same forty cards at 7B measure the other end: there the package is decisive
+on every axis, grounding 100.0% against the sandbox's 0.1% and
+capturing 0.997 of its errors against 0.144, so what it adds
+over a sandbox is everything at 7B and the decline at 27B. <!-- claim:agent-benchmark-package-is-a-floor-at-7b -->
 
 ## The numbers
 
@@ -327,3 +331,6 @@ It also grounds 94.2% of its stated numbers in what it printed,
 against 99.4% for the tool arm, below the preregistered gap;
 the first grading had said otherwise because the audit skipped numbers in text,
 and that reading was withdrawn. <!-- claim:agent-benchmark-grounding-not-decisive -->
+At 7B the agent as shipped does not find the tool on its own, 17 of 40 runs
+against 40 of 40 at 27B, which rejects the prediction that it would reproduce the package at that
+size; pinning the skill recovers most of it. <!-- claim:agent-benchmark-7b-agent-does-not-find-the-tool -->

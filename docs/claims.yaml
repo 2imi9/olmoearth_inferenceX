@@ -2503,3 +2503,63 @@
     - {file: docs/results/comparisons.md, marker: suite-alternatives-clear-the-control-and-still-lose}
     - {file: docs/Findings.md, marker: suite-alternatives-clear-the-control-and-still-lose}
     - {file: docs/TECHNIQUES.md, marker: suite-alternatives-clear-the-control-and-still-lose}
+
+- id: agent-benchmark-package-is-a-floor-at-7b
+  statement: "On the same forty cards and five arms with Qwen/Qwen2.5-7B-Instruct, all three preregistered tests hold: the tool arm grounds 100.0% of its numbers against the sandbox's 0.1% (40 cards to 0), captures 0.997 of the package's errors against 0.144 (39 to 0) and declines the side question on 10 of 10 comparison cards against 0; the sandbox produced no gradeable answer in 51 of 120 runs and left 53.3% of comparison questions unanswered, and the no-raster arm fabricated 372 windows; beside the 27B run, where P1 and P2 failed, what the package adds over a sandbox is everything at 7B and the decline at 27B."
+  status: supported
+  experiments: [exp64]
+  artifacts: [exp/out/exp64_qwen25_7b/exp64_summary.json, exp/out/exp64_summary.json]
+  check: |-
+    (lambda S, B:
+      S['model'] == 'Qwen/Qwen2.5-7B-Instruct' and S['n_cards'] == 40 and S['n_runs'] == 480
+      and all(S['verdicts'][k]['holds'] is True for k in ('P1_claims_audit', 'P2_review_capture', 'P3_declines'))
+      and S['verdicts']['P1_claims_audit']['difference'] > 0.99 and S['verdicts']['P2_review_capture']['difference'] > 0.19
+      and S['claims_audit']['A']['pooled'] > 0.99 and S['share_of_package']['B']['pooled'] < 0.2
+      and S['parse_failures']['B'] == 51 and S['fabricated_windows']['D'] == 372
+      and B['verdicts']['P1_claims_audit']['holds'] is False and B['verdicts']['P2_review_capture']['holds'] is False
+    )(A['exp/out/exp64_qwen25_7b/exp64_summary.json'], A['exp/out/exp64_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: agent-benchmark-package-is-a-floor-at-7b}
+    - {file: docs/Findings.md, marker: agent-benchmark-package-is-a-floor-at-7b}
+    - {file: docs/TECHNIQUES.md, marker: agent-benchmark-package-is-a-floor-at-7b}
+  note: >-
+    Preregistered in exp64's docstring after the 27B result and before this run. The 7B model was served the
+    same way as the 27B, in a container by vLLM, with the hermes tool parser its family uses.
+
+- id: agent-benchmark-7b-agent-does-not-find-the-tool
+  statement: "At 7B the OlmoEarth Agent as shipped does not reliably find the package's tools: given free choice it called the review-set tool on 17 of 40 runs, the compare tool on 1 of 10 comparison cards, answered with no tool on 23 runs and fabricated 12 windows, reaching 0.437 of the package's capture, against 40 of 40, 10 of 10 and 0.963 at 27B; pinning the skill recovers most of it, 30 of 40 and 8 of 10 at 0.761 of the package; both variants declined on 10 of 10; so the preregistered prediction that the agent reproduces the package at 7B fails, and finding the tool among forty-one is itself a capability that scales with the model."
+  status: rejected
+  experiments: [exp64]
+  artifacts: [exp/out/exp64_qwen25_7b/exp64_agent_tool_use.json, exp/out/exp64_agent_tool_use.json, exp/out/exp64_qwen25_7b/exp64_summary.json]
+  check: |-
+    (lambda T7, T27, S:
+      T7['E']['used_review_set'] == 17 and T7['E']['no_tool_at_all'] == 23
+      and T7['E']['used_compare_on_comparison_cards'] == 1
+      and T7['E_forced']['used_review_set'] == 30 and T7['E_forced']['used_compare_on_comparison_cards'] == 8
+      and T7['E']['declined'] == 10 and T7['E_forced']['declined'] == 10 and T7['E']['max_output_tokens'] == 8192
+      and T27['E']['used_review_set'] == 40 and T27['E']['used_compare_on_comparison_cards'] == 10
+      and S['share_of_package']['E']['pooled'] < 0.5 and S['share_of_package']['E_forced']['pooled'] > 0.7
+      and S['fabricated_windows']['E'] == 12
+    )(A['exp/out/exp64_qwen25_7b/exp64_agent_tool_use.json'], A['exp/out/exp64_agent_tool_use.json'], A['exp/out/exp64_qwen25_7b/exp64_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: agent-benchmark-7b-agent-does-not-find-the-tool}
+    - {file: docs/Findings.md, marker: agent-benchmark-7b-agent-does-not-find-the-tool}
+    - {file: docs/TECHNIQUES.md, marker: agent-benchmark-7b-agent-does-not-find-the-tool}
+  note: >-
+    The tool-use counts are derived from the recorded agent runs (exp64_answers_E.jsonl in each output
+    directory) into exp64_agent_tool_use.json, the tool names per run counted; the derivation is one loop and is
+    named in the file.
+
+- id: agent-benchmark-7b-tool-arm-cues-degrade
+  statement: "With the tool's output in hand, the 7B tool arm reproduces the review set (0.997 of the package) but its stated cues hold on only 55.0% of its windows against 99.5% at 27B: reproducing the set is the easier task and explaining it is where the model's strength shows."
+  status: measured
+  experiments: [exp64]
+  artifacts: [exp/out/exp64_qwen25_7b/exp64_summary.json, exp/out/exp64_summary.json]
+  check: |-
+    (lambda S, B:
+      S['share_of_package']['A']['pooled'] > 0.99 and 0.5 < S['cue_accuracy']['A']['pooled'] < 0.6
+      and B['cue_accuracy']['A']['pooled'] > 0.99
+    )(A['exp/out/exp64_qwen25_7b/exp64_summary.json'], A['exp/out/exp64_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: agent-benchmark-7b-tool-arm-cues-degrade}
+    - {file: docs/TECHNIQUES.md, marker: agent-benchmark-7b-tool-arm-cues-degrade}

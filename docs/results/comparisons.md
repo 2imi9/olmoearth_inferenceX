@@ -2040,6 +2040,50 @@ not preregistered: its numbers describe what happened and predict nothing.
 Outputs: `exp/out/exp64_summary.json`, `exp64_cards.csv`,
 `exp64_answers.jsonl` (arms A to D, 400 runs), `exp64_answers_E.jsonl` (80 runs).
 
+### The model-size ablation: the same forty cards at 7B
+
+The 27B result read as: for a model of that strength the ranking is not what
+the package adds. That reading was preregistered as a test before it ran (the
+docstring of `exp/exp64_agent_benchmark.py`): the same forty cards and five arms
+with `Qwen/Qwen2.5-7B-Instruct`, served the same way, graded by the same code, outputs under
+`exp/out/exp64_qwen25_7b/`. Predicted: at 7B all three tests hold, and the agent
+reproduces the package as it did at 27B.
+
+**At 7B the package is decisive, and all three predictions hold.** The tool arm
+grounds 100.0% of its numbers against the sandbox's
+0.1%, a difference of 0.999 on
+40 cards to 0; it captures
+0.997 of the package's errors against the sandbox's
+0.144, a difference of +0.198 on
+39 to 0; it declines the side question on
+10 of 10 comparison cards and the sandbox on 0.
+The sandbox arm produced no gradeable answer in 51 of 120 runs and left
+53.3% of comparison questions unanswered; the no-raster arm fabricated
+372 windows. Beside the 27B run, where P1 and P2 failed, this is the size
+contrast measured: what the package adds over a sandbox is everything at 7B and the decline at 27B.
+<!-- claim:agent-benchmark-package-is-a-floor-at-7b -->
+
+**The agent at 7B does not find the tool, and that prediction fails.** Given
+free choice among its forty-one tools, the OlmoEarth Agent called the review-set
+tool on 17 of 40 runs, the compare tool on
+1 of 10 comparison cards, and answered
+with no tool at all on 23, reaching 0.437
+of the package's capture with 12 fabricated windows; at 27B the
+same agent found both tools on every run. Pinning the skill through the agent's
+own mechanism recovers most of it, 30 of 40 and
+8 of 10, 0.761 of the
+package's capture, 2 fabricated. Both variants declined the side
+question on 10 of 10. The agent's completion budget was capped at 8,192 tokens
+by the driver, because its 32,768 default cannot fit beside its prompt in the
+7B's 32k context; the cap is recorded in every run.
+<!-- claim:agent-benchmark-7b-agent-does-not-find-the-tool -->
+
+**What degrades at 7B even with the tool in hand.** The tool arm's stated cues
+hold on 55.0% of its windows against 99.5% at 27B: it copies the
+review set correctly and mislabels the reasons. Reproducing the set is the
+easier task; explaining it is where the model's strength shows.
+<!-- claim:agent-benchmark-7b-tool-arm-cues-degrade -->
+
 ## Served land cover change rasters (exp20)
 
 First assessment of a served output: ten 512-px windows (about

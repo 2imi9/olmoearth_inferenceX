@@ -47,11 +47,12 @@ scene says how much they differ and where, and the answer to \emph{which side is
 right} is, without labels, to decline: the more confident side is right on only
 half to two thirds of the differing windows.
 
-Two of the project's own predictions failed and are kept. A strong reasoning
+Three of the project's own predictions failed and are kept. A strong reasoning
 model given a numpy sandbox rediscovers the ranking by itself and grounds its
 numbers nearly as well as a model given the package as tools; what the package
 adds to such a model is the evidence about when not to choose a side, and
-reliability. The project's method is its other contribution: predictions written
+reliability; at 7B the same package is decisive on every axis, and the agent no
+longer finds it unaided. The project's method is its other contribution: predictions written
 before each run with what would falsify them, every documented number pinned to
 a committed artifact by an executable check, and 31 rejected claims recorded as
 prominently as the 40 supported ones.
@@ -331,8 +332,17 @@ derivable from two arrays \claim{agent-benchmark-decline-holds}. Reliability
 separates the arms where ranking does not: 27 of the sandbox's 120 runs ended
 without an answer \claim{agent-benchmark-sandbox-unreliable}.
 
+The same forty cards at 7B (Qwen2.5-7B-Instruct, preregistered after the 27B
+result) measure the other end: all three predictions hold there, grounding
+100.0% against 0.1%, capture 0.997 against
+0.144 of the package's, declines 10 of 10 against 0, with the sandbox failing to
+answer in 51 of 120 runs \claim{agent-benchmark-package-is-a-floor-at-7b}. And the
+agent at 7B does not find the tool on its own, 17 of 40 runs against 40 of 40 at
+27B, which rejects the prediction that it would reproduce the package at that size;
+pinning the skill recovers most of it \claim{agent-benchmark-7b-agent-does-not-find-the-tool}.
+
 The reading, stated plainly: for a model of this strength the ranking is not what
-the package adds. What it adds is calibrated knowledge, when computation does not
+the package adds; for a weaker one it is, on every axis. What it adds is calibrated knowledge, when computation does not
 settle the question, and a reliable path to the same answer. The cards are binary
 water tasks and the sandbox was handed the margin by name, so the harder test,
 multi-class cards with raw per-class scores where the model must choose a
