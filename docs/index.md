@@ -10,9 +10,8 @@ been run on a served global product no one here had a hand in training.
 **On tasks this project did not choose, the model's own margin ranks its errors
 better than any control that sees no model — on 24 of 24.**
 
-The tasks are the 25 of the [OlmoEarth paper embedding suite](https://huggingface.co/datasets/allenai/olmoearth-paper-embeddings),
-chosen by the model authors for their paper, with the splits fixed in the
-files. On all 24 that a top-1 minus top-2 margin is
+The tasks are the 25 of the [OlmoEarth paper embedding suite](https://huggingface.co/datasets/allenai/olmoearth-paper-embeddings)
+by Ai2, with the splits fixed in the files. On all 24 that a top-1 minus top-2 margin is
 defined for, and on all 14 distinct sources behind them, the margin beats the
 best no-model control: 6,435,473 graded units, an accuracy range from 0.333 to
 0.979, 17 of 17 classification tasks and 7 of 7 segmentation tasks, sign test
