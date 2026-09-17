@@ -2465,3 +2465,41 @@
   cited_in:
     - {file: docs/results/comparisons.md, marker: agent-benchmark-sandbox-unreliable}
     - {file: docs/TECHNIQUES.md, marker: agent-benchmark-sandbox-unreliable}
+
+- id: suite-margin-beats-the-strong-alternatives
+  statement: "On the 24 tasks, published embeddings, probe recipe and 6,435,473 graded units of exp70, the model's own margin beats a five-seed probe ensemble (mutual information on classification, vote disagreement on the window path) on 22 of 24 tasks (one-sided sign test p = 1.8e-05, median lead +0.0153 of excess AURC, 13 of 14 distinct sources), the distance to the tenth nearest of a seeded bank of at most 20,000 training units on 24 of 24 (p = 6.0e-08, median lead +0.0954) and the minimum class-conditional Mahalanobis distance with class means fitted on predicted classes on 24 of 24 (p = 6.0e-08, median lead +0.1123); the ensemble's two losses are awf_landsat at -0.0030, m_eurosat at -0.0003; preregistered P1, P2 and P3 all hold at exp70's bar of 18 of 24."
+  status: supported
+  experiments: [exp73, exp70]
+  artifacts: [exp/out/exp73_summary.json]
+  check: |-
+    (lambda V, R:
+      V['P1']['holds'] is True and V['P1']['wins'] == 22 and V['P1']['losses'] == 2 and V['P1']['p'] < 0.05
+      and V['P2']['holds'] is True and V['P2']['wins'] == 24 and V['P3']['holds'] is True and V['P3']['wins'] == 24
+      and V['P1']['distinct_sources'] == 14 and V['P1']['source_wins'] == 13
+      and set(V['P1']['lost_on']) == {'awf_landsat', 'm_eurosat'}
+      and len(R) == 24 and sum(r['n_units'] for r in R.values()) == 6435473
+      and all(R[t]['lead']['knn_dist'] > 0 and R[t]['lead']['mahalanobis'] > 0 for t in R)
+    )(A['exp/out/exp73_summary.json']['verdicts'], A['exp/out/exp73_summary.json']['results']['tasks'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: suite-margin-beats-the-strong-alternatives}
+    - {file: docs/Findings.md, marker: suite-margin-beats-the-strong-alternatives}
+    - {file: docs/TECHNIQUES.md, marker: suite-margin-beats-the-strong-alternatives}
+
+- id: suite-alternatives-clear-the-control-and-still-lose
+  statement: "The alternatives are real signals and still lose: on the 24-task suite the five-seed ensemble beats the best no-model control on 15 tasks, the nearest-neighbour distance on 14 and the Mahalanobis distance on 12, and on none of those tasks is it better than the margin; the ensemble is nearly the margin's equal on classification (median lead of the margin +0.0114) and clearly behind on segmentation (+0.1336), the feature-space signals are far behind on both (medians +0.0913 and +0.1118 on classification, +0.1121 and +0.1166 on segmentation), mutual information beats vote disagreement on 17 of 17 classification tasks, and the bag margin beats the single margin on 6 of 17."
+  status: measured
+  experiments: [exp73]
+  artifacts: [exp/out/exp73_summary.json]
+  check: |-
+    (lambda V, R:
+      V['P4']['ensemble'] == 15 and V['P4']['knn_dist'] == 14 and V['P4']['mahalanobis'] == 12
+      and sum(1 for t in R if 'bag_margin' in R[t]['lead'] and R[t]['lead']['bag_margin'] < 0) == 6
+      and sum(1 for t in R if 'bag_margin' in R[t]['lead']) == 17
+      and sum(1 for t in R if R[t]['family'] == 'classification' and R[t]['signals']['ens_mi']['excess_aurc'] < R[t]['signals']['ens_vote_dis']['excess_aurc']) == 17
+      and sorted(R[t]['lead']['ensemble'] for t in R if R[t]['family'] == 'classification')[8] > 0.005
+      and sorted(R[t]['lead']['ensemble'] for t in R if R[t]['family'] == 'segmentation')[3] > 0.1
+    )(A['exp/out/exp73_summary.json']['verdicts'], A['exp/out/exp73_summary.json']['results']['tasks'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: suite-alternatives-clear-the-control-and-still-lose}
+    - {file: docs/Findings.md, marker: suite-alternatives-clear-the-control-and-still-lose}
+    - {file: docs/TECHNIQUES.md, marker: suite-alternatives-clear-the-control-and-still-lose}

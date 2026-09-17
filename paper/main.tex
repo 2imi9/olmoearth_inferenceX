@@ -40,8 +40,8 @@ own confidence, the top-1 minus top-2 logit margin on each window, is the signal
 It ranks the model's own errors on every expert-labelled testbed tried, on five
 kinds of reference that fail in different ways, and on all 24 tasks of the model
 authors' own published evaluation suite, which this project did not choose.
-Nothing else tried beats it: not ensembles, not distance from the training
-distribution, not consistency under perturbation, not the pretraining objective's
+Nothing else tried beats it, on the water testbeds or on that suite: not
+ensembles, not distance from the training distribution, not consistency under perturbation, not the pretraining objective's
 own error, not a second model of the same family. Comparing two inferences of one
 scene says how much they differ and where, and the answer to \emph{which side is
 right} is, without labels, to decline: the more confident side is right on only
@@ -172,12 +172,15 @@ The bar a practitioner cares about is the alternatives the literature actually
 proposes, run on the same tasks (exp73): a five-seed probe ensemble
 \citep{lakshminarayanan2017}, distance to the tenth nearest training embedding
 \citep{sun2022}, and a class-conditional Mahalanobis distance \citep{lee2018}
-fitted on predicted classes so that labels never train it. At the time of
-writing 23 of the 24 tasks are scored: the margin is ahead of the nearest-neighbour
-and Mahalanobis signals on 23 of 23 and of the ensemble on 22 of 23 with one tie;
-the ensemble is nearly its equal on classification and clearly behind on
-segmentation. The final file, with the largest task, is the one item of this
-report still to land.
+fitted on predicted classes so that labels never train it. Preregistered at
+exp70's own bar, all three hold: the margin beats the ensemble on 22 of
+24 tasks ($p = 1.8e-05$), the nearest-neighbour distance on 24 of 24
+and the Mahalanobis distance on 24 of 24 ($p = 6.0e-08$)
+\claim{suite-margin-beats-the-strong-alternatives}. The alternatives are real
+signals, each beating the no-model control on roughly half the suite (15,
+14 and 12 tasks), and better than the margin on none;
+the ensemble is nearly the margin's equal on classification and clearly behind on
+segmentation \claim{suite-alternatives-clear-the-control-and-still-lose}.
 
 \subsection{Products this project had no hand in}
 
@@ -358,9 +361,8 @@ labels both dates.
 Most testbeds are binary water tasks, on which the margin, one minus top-1 and
 entropy coincide; the multi-class evidence is DFC2020, Dynamic World, LUCAS,
 EuroCrops and the 24-task suite. The encoders are the OlmoEarth family plus one
-served product; the competitors in Section~\ref{sec:rejected} were beaten mostly
-on the water testbeds, and the suite-wide competitor test is the item still
-landing. One author; nothing here has been reproduced by anyone else, which is a
+served product; the competitors in Section~\ref{sec:rejected} were beaten on the water
+testbeds and, for three of the families, on the 24-task suite as well. One author; nothing here has been reproduced by anyone else, which is a
 research criterion this project cannot meet alone. Several experiments assume
 the cluster's paths. The agent benchmark used one model below the plan's
 precision. The package is two commands and a small API, deliberately.
@@ -393,8 +395,9 @@ is built, cross-checked bit-exact against the package on real inference, and
 sitting on a branch of the OlmoEarth Agent repository; and the protocol scores
 any new candidate rule against the same two baselines on the same references.
 
-Open items, in the order they would help: the competitor test's final task; the
-multi-class agent benchmark; a fine-tuned land-cover head exported from the
+Open items, in the order they would help: the same suite under the other
+encoder families Ai2 published embeddings for (exp74, running); the multi-class
+agent benchmark; a fine-tuned land-cover head exported from the
 platform, to audit as Dynamic World was; and an independent reproduction of any
 one result by someone who is not the author.
 

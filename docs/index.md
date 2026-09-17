@@ -16,7 +16,10 @@ defined for, and on all 14 distinct sources behind them, the margin beats the
 best no-model control: 6,435,473 graded units, an accuracy range from 0.333 to
 0.979, 17 of 17 classification tasks and 7 of 7 segmentation tasks, sign test
 p = 6e-08. Six of the tasks come from GEO-Bench 1, a third-party benchmark, and
-the margin wins on all six.
+the margin wins on all six. On the same tasks it also beats the competitors the
+literature proposes: a five-seed ensemble on 22 of 24, nearest-neighbour
+typicality on 24 of 24 and a Mahalanobis distance on 24 of 24
+([exp73](results/comparisons.md#the-strong-alternatives-on-the-same-suite-exp73)).
 
 This is the answer to the obvious objection — that a result like this rests on
 testbeds the author picked. It does not. See
