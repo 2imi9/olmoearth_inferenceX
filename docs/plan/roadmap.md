@@ -1,5 +1,10 @@
 # Open items
 
+**Status, 17 September 2026.** The evidence program closed with exp74 and the
+v1.0.0 release. The items below stay as the record of what would come next; their
+tracker issues (#2, #8, #11, #12, #13, #16) were closed the same day, as completed
+or as not planned, each with the reason.
+
 Rewritten in place as experiments close items. The chronology of what closed
 what is in [../../exp/NOTES.md](../../exp/NOTES.md). Index at
 [../TECHNIQUES.md](../TECHNIQUES.md).

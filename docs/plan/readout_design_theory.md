@@ -1,5 +1,7 @@
 # Readout design: theorems, predictions, preregistration for exp48
 
+**Status, 17 September 2026.** Preregistered, not run; issue 13 closed as not planned when the evidence program closed at v1.0.0.
+
 A theory note written before exp48 (issue 13) is run: derivations over recorded numbers (exp42-exp47), not results. Its published anchor for the cascade result is Jitkrittum et al., NeurIPS 2023 (arXiv 2307.02764). The numbers quoted are from the artifacts named; the predictions are the ones exp48 will be graded against.
 
 Every number is from exp/out/ (exp42, exp43, exp46, exp47). Notation: finite index set I (windows or pixels), labels y : I -> {0,1},
