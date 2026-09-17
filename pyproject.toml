@@ -90,3 +90,6 @@ torch = [
     { index = "pytorch-cu128", marker = "sys_platform == 'linux'" },
     { index = "pytorch-cpu", marker = "sys_platform != 'linux'" },
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
