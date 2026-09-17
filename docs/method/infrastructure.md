@@ -28,6 +28,10 @@ properties. Index at [TECHNIQUES.md](../TECHNIQUES.md).
   annotators verify), so label locations are correlated with model beliefs.
 
 ### Infrastructure
+
+The Slurm scripts behind the served-model and multi-encoder runs (exp64, exp72, exp73, exp74) are kept
+verbatim under [exp/jobs/](https://github.com/2imi9/olmoearth_inferenceX/tree/main/exp/jobs), with a
+README that maps each script to its job ids and artifacts.
 - Encoders, loader, and eval wrappers come from
   [allenai/olmoearth_pretrain](https://github.com/allenai/olmoearth_pretrain);
   dataset tooling and the window format come from

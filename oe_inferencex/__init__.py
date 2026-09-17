@@ -20,7 +20,11 @@ Modules, in the order a user meets them:
   reliability the ensemble and typicality signals that were tested and lost, kept so they can be re-tested
   cli         `oe-inferencex assess` and `oe-inferencex compare`, rasters or .npy in, files out
   taskcard    what each OlmoEarth fine-tuned model is; lcc: a range reader for the served rasters
-Encoder-bound, installed with the "encoder" and "geo" extras and not imported here: evidence, awf, data, figstyle.
+By dependency the modules form three groups, and the layout stays flat (docs/plan/adr-001-repository-layout.md):
+  numpy only        assess, explain, compare, calibrate, metrics, stats, signals, reliability, cli
+  standard library  taskcard, lcc
+  guarded extras    evidence (torch); awf and data (the "encoder" and "geo" extras); figstyle (matplotlib).
+                    Not imported here; each names its extra if imported without it.
 
 The evidence behind each function is in the documentation, one claim id per number:
 https://olmoearth-inferencex.readthedocs.io

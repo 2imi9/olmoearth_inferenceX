@@ -1,6 +1,6 @@
 # ADR-001: Repository and package layout for 1.0
 
-**Status:** Proposed
+**Status:** Accepted (2026-09-17). Items 2 to 4 were applied the same day; item 1 waits on the licence choice and item 5 on job 881793.
 **Date:** 2026-09-17
 **Deciders:** Ziming (2imi9). If Ai2 takes the refinement up jointly, the two-repository question below is theirs as well.
 
@@ -105,7 +105,7 @@ The decisive force is that any recorded number can be reproduced from one tag of
 ## Action items
 
 1. [ ] Choose the licence (Apache-2.0 suggested), add `LICENSE`, tag `v1.0.0`.
-2. [ ] Create `exp/jobs/`: fetch the 17 scripts through one `srun` on the cpu partition, commit them verbatim, and add a README that maps each script to its job ids and the artifacts it produced.
-3. [ ] Root hygiene: ignore `.DS_Store`, delete `wbpage.html`, delete or move `reports/` (one 2 MB Word document from 2 September, superseded by the Findings page), and either commit `exp/exp27_decoder_worldcover.py` as the retired pilot the lab log mentions or delete it.
-4. [ ] Name the three dependency groups in the package docstring; the Usage page already does.
+2. [x] `exp/jobs/` created: the 17 scripts fetched through one `srun` on the cpu partition (tar over base64, no scp), committed verbatim with a README that maps each script to its job ids and artifacts, and the listing of every job log at the time of the copy.
+3. [x] Root hygiene: `.DS_Store` ignored; `wbpage.html` removed (a saved Copernicus product page, never tracked); `reports/` moved into `paper/`, next to the report it preceded; `exp/exp27_decoder_worldcover.py` committed as the retired pilot, with a status line and the lab log's sentence updated.
+4. [x] The package docstring names the three dependency groups.
 5. [ ] Record exp74 when job 881793 finishes; nothing in this decision changes that plan.

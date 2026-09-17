@@ -45,3 +45,6 @@ paper/*.toc
 # build artifacts
 dist/
 build/
+
+# Finder metadata
+.DS_Store

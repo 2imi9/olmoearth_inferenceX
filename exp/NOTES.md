@@ -520,8 +520,10 @@ disagreement count cannot serve as the coupling statistic because it
 reduces to the class indicator when the decoder collapses to one class. The
 primary endpoint becomes reference specificity on identical cells, which
 needs adjudicated labels on the river scenes. A CPU pilot of the exp27 draft
-(uncommitted) on one scene motivated this gate; its numbers are not recorded
-here because the script is not yet committed.
+on one scene motivated this gate. The draft is committed as
+exp/exp27_decoder_worldcover.py (retired 2026-09-17, never run past that
+pilot) and its pilot numbers are not recorded, because this gate showed the
+prototype readout it relies on to be unsound.
 
 ## exp28 decoder self-consistency (2026-09-06)
 
