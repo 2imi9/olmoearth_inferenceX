@@ -119,6 +119,8 @@ how a claim gets in, and the limits. Then:
   score a new rule with the same machinery.
 - The [Recipe](method/recipe.md) is the list of what to do and not do when
   auditing a prediction map.
+- The [technical report](https://github.com/2imi9/olmoearth_inferenceX/blob/main/report/main.pdf)
+  is the whole record in ten pages: what was done, what held, and what did not.
 - [Related work](related_work.md) says where each idea here comes from, with
   the selective-classification and Earth-observation literature it rests on.
 - The [Technique ledger](TECHNIQUES.md) is everything tried, one line each,

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- The document in `report/` (previously `paper/`) is titled a technical report and dated 17 September 2026; the README and the docs front page link to it.
+
 ## 1.0.0 (2026-09-17)
 
 The first release with the evidence frozen behind it. Every function's behaviour is the one the recorded
