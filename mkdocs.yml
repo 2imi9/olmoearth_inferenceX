@@ -71,6 +71,7 @@ nav:
       - Paper outline: plan/paper_outline.md
       - Readout design theory (exp48 preregistration): plan/readout_design_theory.md
       - Agent benchmark (exp64 preregistration): plan/agent_benchmark.md
+      - Layout decision (ADR-001): plan/adr-001-repository-layout.md
   - API Reference: reference/
 
 hooks:
