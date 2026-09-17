@@ -10,8 +10,9 @@ been run on a served global product no one here had a hand in training.
 **On tasks this project did not choose, the model's own margin ranks its errors
 better than any control that sees no model — on 24 of 24.**
 
-Ai2's published embedding suite holds 25 tasks they picked for their own paper,
-with the splits fixed in the files. On all 24 that a top-1 minus top-2 margin is
+The tasks are the 25 of the [OlmoEarth paper embedding suite](https://huggingface.co/datasets/allenai/olmoearth-paper-embeddings),
+chosen by the model authors for their paper, with the splits fixed in the
+files. On all 24 that a top-1 minus top-2 margin is
 defined for, and on all 14 distinct sources behind them, the margin beats the
 best no-model control: 6,435,473 graded units, an accuracy range from 0.333 to
 0.979, 17 of 17 classification tasks and 7 of 7 segmentation tasks, sign test
@@ -20,8 +21,8 @@ the margin wins on all six. On the same tasks it also beats the competitors the
 literature proposes: a five-seed ensemble on 22 of 24, nearest-neighbour
 typicality on 24 of 24 and a Mahalanobis distance on 24 of 24
 ([exp73](results/comparisons.md#the-strong-alternatives-on-the-same-suite-exp73)).
-Nor is it a property of OlmoEarth: under the fifteen other encoders Ai2
-published the suite for, eight families outside OlmoEarth (AnySat, Clay,
+Nor is it a property of OlmoEarth: under the fifteen other encoders the suite
+is published for, eight families outside OlmoEarth (AnySat, Clay,
 Panopticon, Galileo, CROMA, TerraMind, Satlas, Copernicus-FM) and the OlmoEarth
 size series, the margin beats the control on 322 of 332 scored tasks, every
 encoder at 90% or better
