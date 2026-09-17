@@ -83,11 +83,11 @@ ways, which is the part of this work hardest to argue with:
 
 | The answer key came from | Testbeds |
 |---|---|
-| people reading the same imagery | Sen1Floods11 hand labels, Copernicus EMS through GEOID-Flood, WorldFloods v2 |
-| another model's output | DFC2020, whose test labels are an iterated random forest, not hand-drawn |
-| experts annotating a served product | Dynamic World's 409 expert tiles, audited from its own published probabilities |
-| surveyors standing in the field | LUCAS Copernicus 2022, the only reference here that never saw a pixel |
-| farmers' own declarations | EuroCrops, which also labels both sides of a two-date comparison |
+| people reading the same imagery | [Sen1Floods11 hand labels](docs/results/comparisons.md#dense-flood-masks-sen1floods11-exp18), [Copernicus EMS through GEOID-Flood](docs/results/comparisons.md#geoid-flood-the-exception-as-a-rate-over-events-exp55), [WorldFloods v2](docs/results/comparisons.md#the-fourth-cell-post-event-optical-from-worldfloods-completes-the-square-exp62) |
+| another model's output | [DFC2020](docs/results/comparisons.md#dfc2020-eight-class-land-cover-both-sensors-our-own-encoder-two-references-exp66), whose test labels are an iterated random forest, not hand-drawn |
+| experts annotating a served product | [Dynamic World's 409 expert tiles](docs/results/comparisons.md#auditing-a-production-model-with-its-own-probabilities-dynamic-world-exp67), audited from its own published probabilities |
+| surveyors standing in the field | [LUCAS Copernicus 2022](docs/results/comparisons.md#the-protocol-against-ground-observation-lucas-exp68), the only reference here that never saw a pixel |
+| farmers' own declarations | [EuroCrops](docs/results/comparisons.md#eurocrops-a-dense-crop-map-from-declarations-and-a-difference-labelled-on-both-sides-exp69), which also labels both sides of a two-date comparison |
 
 Two warnings for practitioners
 ------------------------------
