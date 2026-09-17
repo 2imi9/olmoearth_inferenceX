@@ -119,8 +119,21 @@ Full documentation: **https://olmoearth-inferencex.readthedocs.io/**
 Setup
 -----
 
-Python 3.11+ (3.12 is what the experiments ran on) and no torch; the experiments
-need the encoder.
+Python 3.11+ and numpy; nothing else for the package. To use it:
+
+```bash
+pip install "olmoearth-inferencex @ git+https://github.com/2imi9/olmoearth_inferenceX"
+python -c "import oe_inferencex as ox; print(ox.__version__)"
+oe-inferencex assess --help
+```
+
+[examples/quickstart.py](examples/quickstart.py) runs the whole surface on a
+synthetic map with no data to download; the public API is what
+`oe_inferencex.__all__` exports, and [CHANGELOG.md](CHANGELOG.md) says what a
+release contains. Rasters need the `geo` extra (`rasterio`); `.npy` input does
+not.
+
+To work on the repository, with the tests against the recorded numbers:
 
 ```bash
 git clone https://github.com/2imi9/olmoearth_inferenceX.git

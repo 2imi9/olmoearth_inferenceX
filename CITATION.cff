@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use this software or its recorded results, please cite it as below."
+title: "olmoearth_inferenceX: label-free audit of Earth-observation prediction maps"
+type: software
+authors:
+  - family-names: Qi
+    given-names: Ziming
+version: 1.0.0
+date-released: 2026-09-17
+repository-code: "https://github.com/2imi9/olmoearth_inferenceX"
+url: "https://olmoearth-inferencex.readthedocs.io"
+abstract: >-
+  Given a prediction map from an Earth-observation model and no labels: which windows a reviewer should
+  check first, why each is suspect, and how two inferences of the same scene differ. The model's own top-1
+  minus top-2 margin ranks its errors on five kinds of expert reference and on all 24 tasks of the model
+  authors' published evaluation suite; every documented number is pinned to a committed artifact.

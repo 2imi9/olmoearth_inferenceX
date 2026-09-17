@@ -9,8 +9,12 @@ import json
 import os
 
 import numpy as np
-import rasterio
-import torch
+try:
+    import rasterio
+    import torch
+except ImportError as exc:  # pragma: no cover - a plain install, without the extra
+    raise ImportError("oe_inferencex.awf needs rasterio and torch: "
+                      "pip install 'olmoearth-inferencex[encoder,geo]'") from exc
 from rasterio.enums import Resampling
 from rasterio.vrt import WarpedVRT
 

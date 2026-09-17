@@ -5,9 +5,13 @@ Network code lives here (Layer 2 territory); evidence math stays pure.
 import numpy as np
 import planetary_computer
 import pystac_client
-import rasterio
-import rasterio.warp
-import torch
+try:
+    import rasterio
+    import rasterio.warp
+    import torch
+except ImportError as exc:  # pragma: no cover - a plain install, without the extra
+    raise ImportError("oe_inferencex.data needs rasterio and torch: "
+                      "pip install 'olmoearth-inferencex[encoder,geo]'") from exc
 from rasterio.enums import Resampling
 from rasterio.vrt import WarpedVRT
 

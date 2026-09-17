@@ -1,8 +1,22 @@
 [project]
 name = "olmoearth-inferencex"
-version = "0.1.0"
-description = "Audit system for OlmoEarth inference quality over unlabeled regions"
+version = "1.0.0"
+description = "Label-free audit of Earth-observation prediction maps: which windows to review first, why, and how two inferences differ"
+readme = "README.md"
 requires-python = ">=3.11,<3.14"
+authors = [{ name = "Ziming Qi" }]
+keywords = ["earth-observation", "remote-sensing", "selective-classification", "error-ranking", "OlmoEarth", "audit"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: GIS",
+    "Operating System :: OS Independent",
+]
+
 
 # Core: the assessment layer (oe_inferencex.assess / metrics / taskcard / lcc).
 # Deliberately free of torch and of olmoearth-pretrain, so the OlmoEarth Agent
@@ -16,6 +30,11 @@ dependencies = [
 
 [project.scripts]
 oe-inferencex = "oe_inferencex.cli:main"
+
+[project.urls]
+Documentation = "https://olmoearth-inferencex.readthedocs.io"
+Repository = "https://github.com/2imi9/olmoearth_inferenceX"
+Changelog = "https://github.com/2imi9/olmoearth_inferenceX/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 # The encoder stack. Needed by oe_inferencex.{awf,data} and by 22 of the 27

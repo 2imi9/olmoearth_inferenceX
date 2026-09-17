@@ -6,7 +6,11 @@ gets labeled axes, a legend, and a light grid; panels are lettered.
 """
 import string
 
-import matplotlib
+try:
+    import matplotlib
+except ImportError as exc:  # pragma: no cover - a plain install, without the extra
+    raise ImportError("oe_inferencex.figstyle needs matplotlib: "
+                      "pip install 'olmoearth-inferencex[geo]'") from exc
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt

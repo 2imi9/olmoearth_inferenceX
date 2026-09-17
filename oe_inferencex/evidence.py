@@ -1,6 +1,10 @@
 """Layer 1: pure evidence math. No network, no LLM, no agent imports."""
 import numpy as np
-import torch
+try:
+    import torch
+except ImportError as exc:  # pragma: no cover - a plain install, without the extra
+    raise ImportError("oe_inferencex.evidence needs torch: "
+                      "pip install 'olmoearth-inferencex[encoder]'") from exc
 
 from oe_inferencex.metrics import aurc_expected, risk_coverage  # noqa: F401  (re-exported; torch-free home)
 
