@@ -111,6 +111,8 @@ Quickstart
 2. [Usage](docs/Usage.md) — assess a prediction, explain its review set, the
    production case, how to score a new rule.
 3. [Recipe](docs/method/recipe.md) — what to do and not do when auditing a map.
+4. [Technical report](report/main.pdf): the whole record in ten pages, what was done,
+   what held, and what did not.
 
 Also: [TECHNIQUES](docs/TECHNIQUES.md) (everything tried, one line each, with the
 verdict) · [Protocol](docs/method/protocol.md) (how results are scored) ·

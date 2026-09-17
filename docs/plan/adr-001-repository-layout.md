@@ -30,7 +30,7 @@ olmoearth_inferenceX/
   exp/                  numbered scripts, helpers, NOTES.md; out/ is what the ledger pins
     jobs/               NEW: the sbatch, serve and container scripts, verbatim, with a README
   docs/                 the mkdocs site; claims.yaml lives here
-  paper/                main.tex, references.bib, main.pdf
+  report/               the technical report: main.tex, references.bib, main.pdf
   README.md  CHANGELOG.md  CITATION.cff  pyproject.toml  LICENSE (once chosen)
 ```
 
@@ -106,6 +106,6 @@ The decisive force is that any recorded number can be reproduced from one tag of
 
 1. [x] Licence chosen, Apache-2.0 (2026-09-17); `LICENSE` added; tagged `v1.0.0`.
 2. [x] `exp/jobs/` created: the 17 scripts fetched through one `srun` on the cpu partition (tar over base64, no scp), committed verbatim with a README that maps each script to its job ids and artifacts, and the listing of every job log at the time of the copy.
-3. [x] Root hygiene: `.DS_Store` ignored; `wbpage.html` removed (a saved Copernicus product page, never tracked); `reports/` moved into `paper/`, next to the report it preceded; `exp/exp27_decoder_worldcover.py` committed as the retired pilot, with a status line and the lab log's sentence updated.
+3. [x] Root hygiene: `.DS_Store` ignored; `wbpage.html` removed (a saved Copernicus product page, never tracked); `reports/` moved into `report/` (then `paper/`), next to the report it preceded; `exp/exp27_decoder_worldcover.py` committed as the retired pilot, with a status line and the lab log's sentence updated.
 4. [x] The package docstring names the three dependency groups.
 5. [x] exp74 recorded from job 881793 (2026-09-17).

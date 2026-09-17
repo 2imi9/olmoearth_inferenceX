@@ -31,16 +31,16 @@ exp/out/exp36_*.npz
 .gstack/
 site/
 
-# LaTeX build files (paper/)
-paper/*.aux
-paper/*.log
-paper/*.out
-paper/*.bbl
-paper/*.blg
-paper/*.fls
-paper/*.fdb_latexmk
-paper/*.synctex.gz
-paper/*.toc
+# LaTeX build files (report/)
+report/*.aux
+report/*.log
+report/*.out
+report/*.bbl
+report/*.blg
+report/*.fls
+report/*.fdb_latexmk
+report/*.synctex.gz
+report/*.toc
 
 # build artifacts
 dist/
