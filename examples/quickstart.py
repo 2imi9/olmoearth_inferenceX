@@ -40,7 +40,7 @@ print("compare: keys ->", sorted(diff)[:8])
 # 4. With labels, only ever to grade: the margin's excess AURC against the truth.
 truth_w = ox.pool_to_windows(truth.astype(float), patch=4).round().astype(int)
 err = (a_w != truth_w).astype(float).ravel()
-sus = -ox.confidence(scores, multiclass=True)
+sus = ox.confidence(scores, multiclass=True)          # already a suspicion: higher = more suspect
 sus_w = ox.pool_to_windows(sus, patch=4).ravel()
 cap = ox.capture_at_budget_expected(sus_w, err, budgets=(0.05, 0.10))
 print(f"graded against the planted truth: {int(err.sum())} of {len(err)} windows wrong; the margin's excess AURC "
