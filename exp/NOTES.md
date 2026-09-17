@@ -2,6 +2,11 @@
 
 Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 
+Entries run to exp47 (9 September 2026). From exp49 on, each experiment is
+recorded where it is graded: the results pages under docs/results/, the
+technique ledger and the claim ledger (docs/claims.yaml), and this log was not
+continued. exp48 was preregistered and not run (issue 13).
+
 | Exp | Topic |
 |---|---|
 | smoke_test | checkpoint load; noise floor for cross-model agreement |
