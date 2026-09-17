@@ -77,6 +77,53 @@ def parse_lrs(block):
     return {t: (v.get("settings") or {}).get("probe_lr") for t, v in block.items() if isinstance(v, dict)}
 
 
+def window_embeddings(x, hw, ww, H, W, win):
+    """The patch embedding under each window, for encoders whose patch grid is not the window grid.
+
+    exp70 took one patch per window, which holds for OlmoEarth's grid and failed with an index error on AnySat,
+    Clay, Panopticon, CROMA, TerraMind and Satlas, whose patches are coarser or finer than 4 px: 54 of the first
+    run's 82 absences were this. Window (i, j) covers pixels [i*win, (i+1)*win); the patch containing its first
+    pixel is (i*win*h // H, j*win*w // W). When the grid coincides the map is the identity, so exp70's numbers
+    are reproduced exactly on OlmoEarth."""
+    N, h, w, D = x.shape
+    pr = np.minimum(np.arange(hw) * win * h // H, h - 1)
+    pc = np.minimum(np.arange(ww) * win * w // W, w - 1)
+    return x[:, pr[:, None], pc[None, :], :]                  # (N, hw, ww, D)
+
+
+def run_segmentation_any_grid(task, cache, seed=0):
+    """exp70.run_segmentation with the embedding control read per window rather than per patch."""
+    import torch
+    import exp54_multiclass_embeddings as e54
+    import exp73_alternatives_suite as e73
+    xtr, ytr = e54.load_theirs(e70.MODEL, task, "train", cache)
+    xte, yte = e54.load_theirs(e70.MODEL, task, "test", cache)
+    C = int(max(int(ytr[ytr >= 0].max()), int(yte[yte >= 0].max())) + 1)
+    pp = int(round(ytr.shape[-1] / xtr.shape[1]))
+    lr = e54.TASK_LR.get(task, 0.1)
+    probe = e54.train_probe(xtr, ytr, pp, C, lr, seed=seed)
+    q_te = e54.window_quantities(probe, xte, yte, pp, C)
+    q_tr = e54.window_quantities(probe, xtr, ytr, pp, C)
+    ok = q_te["ok"].ravel()
+    err = q_te["err"].ravel()[ok]
+    dec = q_te["dec"].ravel()[ok]
+    sig = {"margin": -q_te["margin"].ravel()[ok].astype(np.float64),
+           "entropy": q_te["entropy"].ravel()[ok].astype(np.float64)}
+    hw, ww = q_te["hw"]
+    H, W = yte.shape[1], yte.shape[2]
+    xte32 = xte.to(torch.float32).numpy()
+    ete = window_embeddings(xte32, hw, ww, H, W, e54.WIN).reshape(-1, xte.shape[-1])[ok]
+    etr = xtr.to(torch.float32).numpy().reshape(-1, xtr.shape[-1])
+    sig.update(e73.controls_chunked(ete, etr, dec))            # exp70's controls, accumulated in chunks
+    ok_tr = q_tr["ok"]
+    return {"family": "segmentation", "n_units": int(ok.sum()), "n_classes": C, "patch_px": pp,
+            "patch_grid": [int(xte.shape[1]), int(xte.shape[2])], "window_grid": [int(hw), int(ww)],
+            "test_accuracy": float(1.0 - err.mean()),
+            "train_accuracy": float(1.0 - q_tr["err"][ok_tr].mean()),
+            "pixel_accuracy": q_te["pixel_accuracy"], "pixel_miou": q_te["pixel_miou"],
+            "error_rate": float(err.mean()), "signals": e70.score_task(sig, err, C)}
+
+
 def run_encoder(enc, cache, redo=False):
     """exp70's two runners on one encoder, with that encoder's probe settings, checkpointed per task."""
     import exp54_multiclass_embeddings as e54
@@ -94,7 +141,7 @@ def run_encoder(enc, cache, redo=False):
             else:
                 results[task] = r
             continue
-        fn = e70.run_classification if task in e70.TASKS_CLS else e70.run_segmentation
+        fn = e70.run_classification if task in e70.TASKS_CLS else run_segmentation_any_grid
         t0 = time.time()
         try:
             r = fn(task, cache, seed=0)
@@ -199,6 +246,16 @@ def smoke(args):
     """The settings parser and the verdicts on planted per-encoder results, torch-free."""
     lrs = parse_lrs({"a": {"settings": {"probe_lr": 0.5}}, "b": {"settings": {"probe_lr": None}}, "c": "junk"})
     assert lrs == {"a": 0.5, "b": None}
+    rng0 = np.random.default_rng(1)
+    x = rng0.standard_normal((2, 16, 16, 3))                     # 16x16 patches of 4 px on a 64 px tile
+    same = window_embeddings(x, 16, 16, 64, 64, 4)
+    assert np.array_equal(same, x), "on OlmoEarth's grid the map is the identity"
+    coarse = rng0.standard_normal((2, 8, 8, 3))                   # 8x8 patches of 8 px on the same tile
+    m = window_embeddings(coarse, 16, 16, 64, 64, 4)
+    assert m.shape == (2, 16, 16, 3) and np.array_equal(m[:, 0], m[:, 1]) and np.array_equal(m[:, 0, 0], coarse[:, 0, 0])
+    fine = rng0.standard_normal((2, 32, 32, 3))                   # 32x32 patches of 2 px
+    f = window_embeddings(fine, 16, 16, 64, 64, 4)
+    assert f.shape == (2, 16, 16, 3) and np.array_equal(f[:, 1, 1], fine[:, 2, 2])
     rng = np.random.default_rng(0)
     per = {}
     for i, enc in enumerate(ENCODERS):
