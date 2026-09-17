@@ -35,11 +35,12 @@ one suspect, and when two inferences of the same scene disagree, how much do the
 differ, where, and can the map itself say which is right?} Labels are used only
 to grade the answers, never to produce them.
 
-The answer, across 63 experiments and 138 recorded claims, is short. The model's
+The answer, across 65 experiments and 146 recorded claims, is short. The model's
 own confidence, the top-1 minus top-2 logit margin on each window, is the signal.
 It ranks the model's own errors on every expert-labelled testbed tried, on five
 kinds of reference that fail in different ways, and on all 24 tasks of the model
-authors' own published evaluation suite, which this project did not choose.
+authors' own published evaluation suite, which this project did not choose,
+under OlmoEarth and fifteen other encoders.
 Nothing else tried beats it, on the water testbeds or on that suite: not
 ensembles, not distance from the training distribution, not consistency under perturbation, not the pretraining objective's
 own error, not a second model of the same family. Comparing two inferences of one
@@ -182,6 +183,23 @@ signals, each beating the no-model control on roughly half the suite (15,
 14 and 12 tasks), and better than the margin on none;
 the ensemble is nearly the margin's equal on classification and clearly behind on
 segmentation \claim{suite-alternatives-clear-the-control-and-still-lose}.
+
+Nor is the result a property of one encoder. Ai2 published the same task
+embeddings for other models with their own probe settings, so exp70's protocol
+was run unchanged on every encoder carrying at least 20 of the 24 tasks
+(exp74): fifteen encoders, from eight families outside OlmoEarth (AnySat, Clay,
+Panopticon, Galileo, CROMA, TerraMind, Satlas, Copernicus-FM) and the OlmoEarth
+size series. Across 332 scored (encoder, task) pairs and 92 million graded
+units the margin beats the best no-model control on 322, every encoder at
+90\% or better (preregistered P1, bar 75\%), eight of them undefeated; the ten
+losses sit on CropHarvest Togo and Nandi Sentinel-1 alone
+\claim{suite-holds-under-every-encoder}. The three outside families that carry
+the whole suite win on 23, 24 and 24 of 24 (P2, bar 22)
+\claim{suite-outside-families-hold-at-twenty-two}, and across the OlmoEarth
+sizes the median lead is flat to slightly narrowing, $+0.131$ at tiny to
+$+0.113$ at large, while the tasks won rise from 22 to 24 (P3, descriptive)
+\claim{suite-lead-across-olmoearth-sizes}. A task an encoder was not published
+for is recorded as absent, never as a loss.
 
 \subsection{Products this project had no hand in}
 
@@ -405,11 +423,10 @@ is built, cross-checked bit-exact against the package on real inference, and
 sitting on a branch of the OlmoEarth Agent repository; and the protocol scores
 any new candidate rule against the same two baselines on the same references.
 
-Open items, in the order they would help: the same suite under the other
-encoder families Ai2 published embeddings for (exp74, running); the multi-class
-agent benchmark; a fine-tuned land-cover head exported from the
-platform, to audit as Dynamic World was; and an independent reproduction of any
-one result by someone who is not the author.
+Open items, in the order they would help: the multi-class agent benchmark; a
+fine-tuned land-cover head exported from the platform, to audit as Dynamic World
+was; and an independent reproduction of any one result by someone who is not
+the author.
 
 \bibliographystyle{plainnat}
 \bibliography{references}

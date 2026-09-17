@@ -206,6 +206,11 @@ beats a five-seed ensemble on 22 of 24, a nearest-neighbour typicality
 score on 24 of 24 and a class-conditional Mahalanobis distance on
 24 of 24 (exp73), each of which is a real signal on roughly half the
 suite and better than the margin on none of it. <!-- claim:suite-margin-beats-the-strong-alternatives -->
+Nor is it a property of one encoder. Under the fifteen other encoders Ai2
+published the suite for, eight families outside OlmoEarth and the OlmoEarth
+size series, the margin beats the best no-model control on 322 of 332 scored
+tasks, every encoder at 90% or better, and the three outside families that
+carry the whole suite win on 23, 24 and 24 of 24 (exp74). <!-- claim:suite-holds-under-every-encoder --> <!-- claim:suite-outside-families-hold-at-twenty-two -->
 
 The effect size in a reviewer's units (exp55, 45 GEOID-Flood areas of interest
 drawn from nine activations): on the median area the 5% of windows confidence

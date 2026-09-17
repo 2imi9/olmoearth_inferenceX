@@ -1933,6 +1933,63 @@ to checkpoint each task as it finishes.
 
 Outputs: `exp/out/exp73_summary.json`, `exp73_tasks.csv`, `exp73_parts/`.
 
+## The suite under the other encoders (exp74)
+
+exp70 and exp73 are about one encoder, OlmoEarth Base, so the sharpest
+remaining objection is that the finding is a property of that model. Ai2
+published the same task embeddings for twenty-six other models with their own
+per-model probe settings, so the objection is answerable at no encoder cost:
+exp70's protocol, unchanged, on every encoder with enough of the suite. The
+rule, set before the listing was read against it, admits every model directory
+that carries at least 20 of exp70's 24 tasks: fifteen encoders, from eight
+families outside OlmoEarth (AnySat, Clay large, Panopticon, three sizes of
+Galileo, two of CROMA, two of TerraMind, Satlas, Copernicus-FM) and the
+OlmoEarth size series (tiny, nano, large; Base is exp70). DINOv3, Presto,
+Prithvi and TESSERA carry 3 to 15 tasks and are excluded by the rule rather
+than by choosing among their tasks. Probes use Ai2's own per-model learning
+rates where a task names one and exp70's defaults where it does not; the graded
+units, the two no-model controls, the scoring and the tie-aware statistics are
+exp70's. A task an encoder does not carry is recorded as absent, never as a
+loss or a win: the 28 absences (three or four per encoder in the Galileo,
+CROMA, TerraMind, Satlas and Copernicus-FM directories) were checked against
+the public Hub listing on 2026-09-17 and are files that do not exist there.
+Preregistered: P1, every encoder beats the best no-model control on at least
+75% of its scored tasks at p below 0.05; P2, each of the three outside
+families with all 24 tasks on at least 22; P3, descriptive, the lead across
+the OlmoEarth sizes.
+
+**P1 holds for every encoder.** Across the 15 encoders, 332 scored (encoder,
+task) pairs and 92,019,785 graded units, the margin beats the best no-model
+control on 322, with the weakest encoders at 19 of 21 (90.5%, p = 1.1e-04) and
+eight encoders undefeated. The ten losses sit on two sources alone: CropHarvest
+Togo in its three modality variants (seven) and Nandi Sentinel-1
+(three). <!-- claim:suite-holds-under-every-encoder -->
+
+**P2 holds.** The three outside families that carry the whole suite win on 23
+of 24 (AnySat, losing only Togo), 24 of 24 (Clay large) and 24 of 24
+(Panopticon), so the result is not a property of the OlmoEarth family: it is a
+property of a linear probe's margin on any of these encoders'
+embeddings. <!-- claim:suite-outside-families-hold-at-twenty-two -->
+
+**P3, on the record.** Across the OlmoEarth sizes the margin's median lead
+over the control is +0.1310 at tiny (median accuracy 0.759, 22 of 24 tasks
+won), +0.1314 at nano (0.749, 23 of 24), +0.1158 at Base (0.754, 24 of 24)
+and +0.1134 at large (0.729, 24 of 24): flat to slightly narrowing with
+capacity, a spread of 0.018, while the count of tasks won rises. Nothing here
+says the signal needs a large encoder, and nothing says a larger one widens
+it. <!-- claim:suite-lead-across-olmoearth-sizes -->
+
+The first run of this experiment read the embedding control per window from
+OlmoEarth's patch grid, so encoders with another patch size scored none of
+their segmentation tasks (54 of its 82 absences). The loader now maps each
+4-px window to the patch that contains it (commit 8ff2787; the identity on
+OlmoEarth's grid, which the smoke test checks), and the 54 pairs were rerun
+(job 881793) from the 306 kept checkpoints. The first run's verdicts were P1
+held on all fifteen and P2 failed only on its "24 scored" clause; the rerun
+changed nothing except that the missing tasks were scored.
+
+Outputs: `exp/out/exp74_summary.json`, `exp74_encoders.csv`, `exp74_parts/`.
+
 ## Does the package help an agent? The preregistered benchmark (exp64)
 
 Every number above answers whether the measurement is right. None answers

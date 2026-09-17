@@ -1,6 +1,6 @@
 # ADR-001: Repository and package layout for 1.0
 
-**Status:** Accepted (2026-09-17). Items 2 to 4 were applied the same day; item 1 waits on the licence choice and item 5 on job 881793.
+**Status:** Accepted (2026-09-17). Items 2 to 5 were applied the same day; item 1 waits on the licence choice.
 **Date:** 2026-09-17
 **Deciders:** Ziming (2imi9). If Ai2 takes the refinement up jointly, the two-repository question below is theirs as well.
 
@@ -108,4 +108,4 @@ The decisive force is that any recorded number can be reproduced from one tag of
 2. [x] `exp/jobs/` created: the 17 scripts fetched through one `srun` on the cpu partition (tar over base64, no scp), committed verbatim with a README that maps each script to its job ids and artifacts, and the listing of every job log at the time of the copy.
 3. [x] Root hygiene: `.DS_Store` ignored; `wbpage.html` removed (a saved Copernicus product page, never tracked); `reports/` moved into `paper/`, next to the report it preceded; `exp/exp27_decoder_worldcover.py` committed as the retired pilot, with a status line and the lab log's sentence updated.
 4. [x] The package docstring names the three dependency groups.
-5. [ ] Record exp74 when job 881793 finishes; nothing in this decision changes that plan.
+5. [x] exp74 recorded from job 881793 (2026-09-17).

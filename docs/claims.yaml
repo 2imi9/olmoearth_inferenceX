@@ -2504,6 +2504,60 @@
     - {file: docs/Findings.md, marker: suite-alternatives-clear-the-control-and-still-lose}
     - {file: docs/TECHNIQUES.md, marker: suite-alternatives-clear-the-control-and-still-lose}
 
+- id: suite-holds-under-every-encoder
+  statement: "exp70's protocol on the fifteen other encoders Ai2 published the suite for (AnySat, Clay large, Panopticon, OlmoEarth tiny, nano and large, Galileo tiny, nano and base, CROMA base and large, TerraMind base and large, Satlas base, Copernicus-FM), each with Ai2's own per-model probe settings: across 332 scored (encoder, task) pairs and 92,019,785 graded units the margin beats the best no-model control on 322, every encoder on at least 90.5% of its scored tasks with a one-sided sign test p of at most 1.1e-04 (preregistered P1, bar 75% and p < 0.05, holds for all fifteen), eight encoders undefeated; the ten losses are CropHarvest Togo in its three modality variants (seven) and Nandi Sentinel-1 (three); the 28 (encoder, task) pairs an encoder does not carry are recorded as absent, never as losses, and are files that do not exist on the Hub."
+  status: supported
+  experiments: [exp74, exp70]
+  artifacts: [exp/out/exp74_summary.json]
+  check: |-
+    (lambda V, R, T, X:
+      V['P1']['holds'] is True and V['P1']['encoders_below_bar'] == []
+      and len(R) == 15 and sum(e['scored'] for e in R.values()) == 332
+      and sum(e['wins'] for e in R.values()) == 322 and sum(e['losses'] for e in R.values()) == 10
+      and min(e['share'] for e in R.values()) > 0.90 and max(e['p'] for e in R.values()) < 1.2e-04
+      and sum(1 for e in R.values() if e['losses'] == 0) == 8
+      and sum(len(v) for v in X.values()) == 28
+      and sum(T[e][t]['n_units'] for e in T for t in T[e]) == 92019785
+      and sorted(t for e in R.values() for t in e['lost_on']) == sorted(['cropharvest_Togo_12_sentinel2_sentinel1'] * 2 + ['cropharvest_Togo_12_sentinel1'] * 4 + ['cropharvest_Togo_12_sentinel2'] + ['nandi_sentinel1'] * 3)
+    )(A['exp/out/exp74_summary.json']['verdicts'], A['exp/out/exp74_summary.json']['results']['per_encoder'], A['exp/out/exp74_summary.json']['results']['tasks'], A['exp/out/exp74_summary.json']['results']['absent'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: suite-holds-under-every-encoder}
+    - {file: docs/Findings.md, marker: suite-holds-under-every-encoder}
+    - {file: docs/TECHNIQUES.md, marker: suite-holds-under-every-encoder}
+
+- id: suite-outside-families-hold-at-twenty-two
+  statement: "The three families outside OlmoEarth that carry all 24 tasks win on 23 of 24 (AnySat, losing cropharvest_Togo_12_sentinel2_sentinel1 only), 24 of 24 (Clay large) and 24 of 24 (Panopticon), each at a one-sided sign test p of at most 1.5e-06, meeting preregistered P2's bar of 22 of 24, so the suite result is not a property of the OlmoEarth family."
+  status: supported
+  experiments: [exp74]
+  artifacts: [exp/out/exp74_summary.json]
+  check: |-
+    (lambda V, R:
+      V['P2']['holds'] is True
+      and V['P2']['per_family'] == {'anysat': '23/24', 'clay_large': '24/24', 'panopticon': '24/24'}
+      and R['anysat']['lost_on'] == ['cropharvest_Togo_12_sentinel2_sentinel1']
+      and all(R[e]['scored'] == 24 and R[e]['p'] < 1.5e-06 for e in ('anysat', 'clay_large', 'panopticon'))
+    )(A['exp/out/exp74_summary.json']['verdicts'], A['exp/out/exp74_summary.json']['results']['per_encoder'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: suite-outside-families-hold-at-twenty-two}
+    - {file: docs/Findings.md, marker: suite-outside-families-hold-at-twenty-two}
+    - {file: docs/TECHNIQUES.md, marker: suite-outside-families-hold-at-twenty-two}
+
+- id: suite-lead-across-olmoearth-sizes
+  statement: "Across the OlmoEarth size series the margin's median lead of excess AURC over the best no-model control is +0.1310 at tiny (median accuracy 0.759, 22 of 24 tasks won), +0.1314 at nano (0.749, 23 of 24), +0.1158 at Base (0.754, 24 of 24, from exp70) and +0.1134 at large (0.729, 24 of 24): a spread of 0.018, flat to slightly narrowing with capacity while the count of tasks won rises; descriptive P3, no trend claimed."
+  status: measured
+  experiments: [exp74, exp70]
+  artifacts: [exp/out/exp74_summary.json]
+  check: |-
+    (lambda S, O:
+      [round(S[e]['median_lead'], 4) for e in O] == [0.131, 0.1314, 0.1158, 0.1134]
+      and [round(S[e]['median_accuracy'], 3) for e in O] == [0.759, 0.749, 0.754, 0.729]
+      and [S[e]['wins'] for e in O] == [22, 23, 24, 24] and all(S[e]['scored'] == 24 for e in O)
+      and max(S[e]['median_lead'] for e in O) - min(S[e]['median_lead'] for e in O) < 0.02
+    )(A['exp/out/exp74_summary.json']['verdicts']['P3']['series'], ('olmoearth_tiny', 'olmoearth_nano', 'olmoearth_base', 'olmoearth_large'))
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: suite-lead-across-olmoearth-sizes}
+    - {file: docs/TECHNIQUES.md, marker: suite-lead-across-olmoearth-sizes}
+
 - id: agent-benchmark-package-is-a-floor-at-7b
   statement: "On the same forty cards and five arms with Qwen/Qwen2.5-7B-Instruct, all three preregistered tests hold: the tool arm grounds 100.0% of its numbers against the sandbox's 0.1% (40 cards to 0), captures 0.997 of the package's errors against 0.144 (39 to 0) and declines the side question on 10 of 10 comparison cards against 0; the sandbox produced no gradeable answer in 51 of 120 runs and left 53.3% of comparison questions unanswered, and the no-raster arm fabricated 372 windows; beside the 27B run, where P1 and P2 failed, what the package adds over a sandbox is everything at 7B and the decline at 27B."
   status: supported

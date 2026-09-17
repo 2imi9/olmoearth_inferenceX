@@ -21,6 +21,12 @@ wins on all six. On the same tasks it also beats the competitors the literature
 proposes: a five-seed ensemble on 22 of 24, nearest-neighbour typicality on
 24 of 24 and a Mahalanobis distance on 24 of 24
 ([exp73](docs/results/comparisons.md#the-strong-alternatives-on-the-same-suite-exp73)).
+Nor is it a property of OlmoEarth: under the fifteen other encoders Ai2
+published the suite for, eight families outside OlmoEarth (AnySat, Clay,
+Panopticon, Galileo, CROMA, TerraMind, Satlas, Copernicus-FM) and the OlmoEarth
+size series, the margin beats the control on 322 of 332 scored tasks, every
+encoder at 90% or better
+([exp74](docs/results/comparisons.md#the-suite-under-the-other-encoders-exp74)).
 
 This is the answer to the obvious objection — that a result like this rests on
 testbeds the author picked. It does not.
