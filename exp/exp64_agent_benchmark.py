@@ -55,6 +55,19 @@ scale, since the runs are short. The model is named in the summary, never inferr
 Outputs: exp/out/exp64_summary.json, exp/out/exp64_cards.csv, exp/out/exp64_answers.jsonl.
 Stages: --stage cards (build them), --stage run (the four arms), --stage grade.
 --smoke: synthetic cards, a stub model, no GPU, _smoke outputs.
+
+Model-size ablation, preregistered 2026-09-16 before its run, after the Qwen3.8-27B result was recorded. The 27B
+run failed P1 and P2: a numpy sandbox rediscovered the ranking and grounded its numbers nearly as well as the
+tool arm, and the reading offered was that the package is a floor whose value over a sandbox shrinks as the model
+strengthens. That reading is testable: the same forty cards and five arms with Qwen2.5-7B-Instruct, outputs under
+exp/out/exp64_qwen25_7b/, graded by the same code.
+  Predicted. At 7B the three preregistered tests hold: P1 the tool arm grounds its claims better than the sandbox
+  by at least 0.2 pooled and on more cards than not; P2 it captures at least 0.05 more and reaches 80% of the
+  package's capture on the median card; P3 it declines to pick a side on at least 80% of comparison cards and the
+  sandbox on fewer than half. The agent arm reproduces the package at 7B as it did at 27B.
+  Falsification. If the 7B sandbox also matches the tool arm, the package adds nothing at either size tested and
+  the floor reading is wrong. If the tool arm itself fails at 7B (parse failures, fabricated windows), the
+  package's value is bound to a model that can follow its contract, which is a limit to state on the front page.
 """
 import argparse
 import collections
@@ -380,7 +393,7 @@ def _smoke_pipeline():
     try:
         a = types.SimpleNamespace(smoke=True, endpoint="stub", model="stub-model", arms="ABCD",
                                   samples=2, temperature=0.0, seed=0, cards=0, card_prefix="", answers_suffix="",
-                                  sources="")
+                                  sources="", out_dir="")
         cmd_run(a)
         # a second answer file, as the agent driver writes one: grade must see the extra arm without being told
         with open(os.path.join(OUT, "exp64_answers_smoke.jsonl")) as fh:
@@ -408,6 +421,13 @@ def _smoke_pipeline():
 
 
 ARMS = ("A", "B", "C", "D")                      # the preregistered arms cmd_run drives
+
+
+def _out(args):
+    """The output directory of this run; a second model writes beside the first, never over it."""
+    d = getattr(args, "out_dir", "") or OUT
+    os.makedirs(d, exist_ok=True)
+    return d
 ARMS_ALL = ("A", "B", "C", "D", "E", "E_forced")  # plus the OlmoEarth Agent, run by exp64_arm_e.py
 
 
@@ -427,8 +447,7 @@ def cmd_run(args):
     # A second batch of cards (the Sen1Floods11 half, built after the first run started) writes its own file,
     # which the grade stage already gathers, rather than overwriting the first batch's answers.
     suffix = f"_{args.answers_suffix}" if args.answers_suffix else ""
-    path = os.path.join(OUT, f"exp64_answers{tag}{suffix}.jsonl")
-    os.makedirs(OUT, exist_ok=True)
+    path = os.path.join(_out(args), f"exp64_answers{tag}{suffix}.jsonl")
     want = [a for a in ARMS if a in set(args.arms)]
     n = 0
     with open(path, "w") as fh:
@@ -469,8 +488,9 @@ def cmd_grade(args):
     # The four preregistered arms land in exp64_answers.jsonl; other drivers append their own file beside it
     # (exp64_answers_E.jsonl for the OlmoEarth Agent), so one grade pass sees every arm.
     import glob
-    files = sorted(set([os.path.join(OUT, f"exp64_answers{tag}.jsonl")]
-                       + glob.glob(os.path.join(OUT, f"exp64_answers{tag}_*.jsonl"))))
+    out = _out(args)
+    files = sorted(set([os.path.join(out, f"exp64_answers{tag}.jsonl")]
+                       + glob.glob(os.path.join(out, f"exp64_answers{tag}_*.jsonl"))))
     runs = [json.loads(ln) for f in files if os.path.exists(f) for ln in open(f) if ln.strip()]
     present = [a for a in ARMS_ALL if any(r["arm"] == a for r in runs)]
     cards = {}
@@ -554,7 +574,7 @@ def cmd_grade(args):
                "answer_files": [os.path.basename(f) for f in files if os.path.exists(f)],
                "verdicts": {"P1_claims_audit": p1, "P2_review_capture": p2, "P3_declines": p3},
                "exploratory": exploratory}
-    with open(os.path.join(OUT, f"exp64_summary{tag}.json"), "w") as fh:
+    with open(os.path.join(out, f"exp64_summary{tag}.json"), "w") as fh:
         json.dump(summary, fh, indent=1, default=float)
 
     print(f"\n{'arm':<9} {'claims':>8} {'capture':>8} {'of pkg':>8} {'cue acc':>8} {'declined':>9} "
@@ -599,6 +619,7 @@ def main():
     ap.add_argument("--sources", default="geoid,sen1", help="card sources to build: geoid, sen1")
     ap.add_argument("--card-prefix", default="", help="run only cards whose name starts with this")
     ap.add_argument("--answers-suffix", default="", help="write exp64_answers_<suffix>.jsonl instead")
+    ap.add_argument("--out-dir", default="", help="output directory for run and grade (default exp/out)")
     args = ap.parse_args()
     if args.smoke:
         smoke(args)

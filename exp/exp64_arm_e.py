@@ -110,8 +110,9 @@ async def main_async(args):
     except Exception as exc:  # noqa: BLE001 - vendored skills absent: the agent runs without the index
         print(f"  skill index unavailable ({type(exc).__name__}); running without it", flush=True)
         skill_index = ""
-    os.makedirs(OUT, exist_ok=True)
-    path = os.path.join(OUT, "exp64_answers_E.jsonl")
+    out = args.out_dir or OUT
+    os.makedirs(out, exist_ok=True)
+    path = os.path.join(out, "exp64_answers_E.jsonl")
     n = 0
     try:
         with open(path, "w") as fh:
@@ -140,6 +141,7 @@ def main():
     ap.add_argument("--arms", default="E,E_forced")
     ap.add_argument("--cards", type=int, default=0)
     ap.add_argument("--max-turns", type=int, default=8)
+    ap.add_argument("--out-dir", default="", help="output directory (default exp/out)")
     asyncio.run(main_async(ap.parse_args()))
 
 
