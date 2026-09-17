@@ -201,6 +201,11 @@ of the confidence signals does degrade with how badly the probe generalises, whi
 is the direction LUCAS found, but by four ten-thousandths rather than by an
 outright reversal. Only severe memorisation flips the ordering; mild memorisation
 merely erodes it. <!-- claim:suite-probe-gap-degrades-the-ordering -->
+And the bar is not only the no-model control. On the same 24 tasks the margin
+beats a five-seed ensemble on 22 of 24, a nearest-neighbour typicality
+score on 24 of 24 and a class-conditional Mahalanobis distance on
+24 of 24 (exp73), each of which is a real signal on roughly half the
+suite and better than the margin on none of it. <!-- claim:suite-margin-beats-the-strong-alternatives -->
 
 The effect size in a reviewer's units (exp55, 45 GEOID-Flood areas of interest
 drawn from nine activations): on the median area the 5% of windows confidence
@@ -309,6 +314,10 @@ from the encoder's internals, its pretraining objective, a posterior over
 the probe head, feature-space typicality, a second model of the same
 family, or flip-and-rotate consistency ranks errors better than confidence
 on expert labels. <!-- claim:no-encoder-internal-signal-beats-confidence -->
+On the 24-task suite the same families clear the no-model control on
+15, 14 and 12 tasks and still lose to the
+margin on all but two ties; the ensemble is nearly the margin's equal on
+classification and clearly behind on segmentation. <!-- claim:suite-alternatives-clear-the-control-and-still-lose -->
 
 The benchmark of the tool itself rejected two of its own three predictions,
 and the record says so. A strong model given numpy and the same arrays captures

@@ -1876,6 +1876,63 @@ event in exp45 and no such control can be computed here. Runtime 12 minutes on o
 B200, no downloads beyond the cached embeddings (job 837407). Source
 `exp/out/exp70_summary.json` and `exp/out/exp70_tasks.csv`, one row per task.
 
+## The strong alternatives on the same suite (exp73)
+
+exp70's bar was the best no-model control, which a signal must clear to exist
+and which is not the bar a practitioner cares about. The alternatives the
+literature proposes for exactly this job were tested here before and lost, but
+on the water testbeds this project chose. exp73 runs them on the 24 tasks of
+exp70, the same published embeddings, the same probe recipe, the same
+6,435,473 graded units and the same scoring, so the only thing that changes is
+the signal: a five-seed probe ensemble (mutual information, vote disagreement
+and the bag margin where probabilities exist, vote disagreement and the margin's
+spread across seeds on the window path, which yields none), the distance to the
+tenth nearest of a seeded bank of at most 20,000 training units, and the minimum
+class-conditional Mahalanobis distance with a shared shrunk covariance whose
+class means are fitted on predicted classes, so labels grade and never train.
+Preregistered at exp70's own bar, 18 of 24 at p below 0.05, per alternative.
+
+**All three predictions hold.** The margin beats the ensemble on 22 of
+24 tasks (p = 1.8e-05, median lead +0.0153 of excess AURC,
+13 of 14 distinct sources), the nearest-neighbour
+distance on 24 of 24 (p = 6.0e-08, median lead +0.0954)
+and the Mahalanobis distance on 24 of 24 (p = 6.0e-08, median lead
++0.1123). The ensemble's two losses are ties in all but name,
+awf_landsat at -0.0030, m_eurosat at -0.0003. <!-- claim:suite-margin-beats-the-strong-alternatives -->
+
+**They are real signals, and they still lose.** The descriptive P4 is the part
+worth carrying: the ensemble beats the best no-model control on 15
+of 24 tasks, the nearest-neighbour distance on 14 and the Mahalanobis
+distance on 12, so on roughly half the suite each of them
+measures something, and on none of those tasks does it measure it better than
+the margin. The shape of the loss is informative. On classification the ensemble
+is nearly the margin's equal, median lead +0.0114; on
+segmentation the margin pulls clearly ahead, +0.1336. The
+feature-space signals are far behind everywhere, medians +0.0913
+and +0.1118 on classification, +0.1121 and
++0.1166 on segmentation, which is the finding of exp31 and
+exp49 on water written across seventeen sources. Within the ensemble, mutual
+information beats vote disagreement on 17 of 17 classification
+tasks, and the bag margin, exp49's bag, beats the single margin on 6 of
+17: five seeds averaged are a slightly different margin, not a better
+one. <!-- claim:suite-alternatives-clear-the-control-and-still-lose -->
+
+| Alternative | Beats the margin | Beats the no-model control | Median lead of the margin |
+|---|---|---|---|
+| five-seed ensemble | 2 of 24 | 15 of 24 | +0.0153 |
+| 10th-nearest training embedding | 0 of 24 | 14 of 24 | +0.0954 |
+| Mahalanobis to the nearest class mean | 0 of 24 | 12 of 24 | +0.1123 |
+
+Two things this does not say. It does not say ensembles are useless: on
+classification they cost five probes for a ranking nearly as good, which is a
+price, not a gain. And the bank is at most 20,000 training units, drawn once per
+task with a fixed seed and recorded; a larger bank is a different experiment,
+not a tuning of this one. The largest task, m_sa_crop_type at 4,096,000 windows,
+is the one that made the first run of this experiment die of memory and taught it
+to checkpoint each task as it finishes.
+
+Outputs: `exp/out/exp73_summary.json`, `exp73_tasks.csv`, `exp73_parts/`.
+
 ## Does the package help an agent? The preregistered benchmark (exp64)
 
 Every number above answers whether the measurement is right. None answers
