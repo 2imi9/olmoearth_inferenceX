@@ -155,6 +155,12 @@ uv sync --extra encoder --extra geo
 uv run python scripts/audit_one_scene.py   # one scene end to end
 ```
 
+Licence
+-------
+
+Apache License 2.0; see [LICENSE](LICENSE). To cite the software or its
+recorded results, see [CITATION.cff](CITATION.cff).
+
 Contact
 -------
 

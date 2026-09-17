@@ -25,5 +25,7 @@ experiments used; the numbers in the documentation were computed with this code.
 **Public surface.** Declared in `oe_inferencex.__all__`; the encoder-bound modules (`evidence`, `awf`, `data`,
 `figstyle`) are installed with the `encoder` and `geo` extras and raise a plain instruction otherwise.
 
-**Evidence.** 64 preregistered experiments and 142 ledger claims, each pinned to a committed artifact by an
+**Licence.** Apache-2.0, in `LICENSE`; the release is tagged `v1.0.0`.
+
+**Evidence.** 65 preregistered experiments and 146 ledger claims, each pinned to a committed artifact by an
 executable check; the summary is `docs/Findings.md` and the origin of each idea is `docs/related_work.md`.

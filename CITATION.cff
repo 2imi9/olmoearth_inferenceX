@@ -7,6 +7,7 @@ authors:
     given-names: Ziming
 version: 1.0.0
 date-released: 2026-09-17
+license: Apache-2.0
 repository-code: "https://github.com/2imi9/olmoearth_inferenceX"
 url: "https://olmoearth-inferencex.readthedocs.io"
 abstract: >-

@@ -5,6 +5,8 @@ description = "Label-free audit of Earth-observation prediction maps: which wind
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
 authors = [{ name = "Ziming Qi" }]
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 keywords = ["earth-observation", "remote-sensing", "selective-classification", "error-ranking", "OlmoEarth", "audit"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -65,7 +67,7 @@ geo = [
 dev = ["pytest>=8"]
 
 [build-system]
-requires = ["setuptools>=61"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
