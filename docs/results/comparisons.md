@@ -1931,7 +1931,7 @@ not a tuning of this one. The largest task, m_sa_crop_type at 4,096,000 windows,
 is the one that made the first run of this experiment die of memory and taught it
 to checkpoint each task as it finishes.
 
-Outputs: `exp/out/exp73_summary.json`, `exp73_tasks.csv`, `exp73_parts/`.
+Outputs: `exp/out/exp73_summary.json`, `exp73_tasks.csv`.
 
 ## The suite under the other encoders (exp74)
 
@@ -1984,11 +1984,12 @@ OlmoEarth's patch grid, so encoders with another patch size scored none of
 their segmentation tasks (54 of its 82 absences). The loader now maps each
 4-px window to the patch that contains it (commit 8ff2787; the identity on
 OlmoEarth's grid, which the smoke test checks), and the 54 pairs were rerun
-(job 881793) from the 306 kept checkpoints. The first run's verdicts were P1
+(job 881793) from the 306 checkpoints kept at the time (the checkpoint files
+remain in tag v1.0.0). The first run's verdicts were P1
 held on all fifteen and P2 failed only on its "24 scored" clause; the rerun
 changed nothing except that the missing tasks were scored.
 
-Outputs: `exp/out/exp74_summary.json`, `exp74_encoders.csv`, `exp74_parts/`.
+Outputs: `exp/out/exp74_summary.json`, `exp74_encoders.csv`.
 
 ## Does the package help an agent? The preregistered benchmark (exp64)
 

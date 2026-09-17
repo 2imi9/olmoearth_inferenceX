@@ -48,3 +48,9 @@ build/
 
 # Finder metadata
 .DS_Store
+
+# resume checkpoints and diagnostic figures removed after the 2026-09-17 audit; a rerun recreates them
+exp/out/exp73_parts/
+exp/out/exp74_parts/
+exp/out/summary_transfer.png
+exp/out/exp05_hard_scenes.png

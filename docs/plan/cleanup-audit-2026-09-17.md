@@ -1,6 +1,6 @@
 # Repository cleanup audit
 
-olmoearth_inferenceX at commit c5f25ec, 17 September 2026. Every one of the 808 tracked files was reviewed. Tier 1 was applied the same day (see the changelog); Tier 2 waits for a decision; Tier 3 stays.
+olmoearth_inferenceX at commit c5f25ec, 17 September 2026. Every one of the 808 tracked files was reviewed. Tier 1 and Tier 2 were applied the same day at the author's choice (see the changelog); Tier 3 stays, except exp21's figure, which went with the Word report.
 
 ## How the list was made
 
@@ -84,7 +84,7 @@ exp09 was overturned by exp11 and exp13. Every plotted value is in the kept exp0
 
 - `exp/out/exp09_multiscene.png`
 
-## Tier 2: removable, your call
+## Tier 2: removable, applied the same day at the author's choice
 
 ### Flat CSV copies of claim-pinned summaries (16 files, 77 KB)
 
@@ -162,7 +162,7 @@ Each is dead: a draft never run past a pilot, a download no run used, a sweep wi
 | `exp/jobs/e64pilot.sh` | The only committed source for a limitation cited in the exp64 results section. |
 | `exp/out/exp05_cache.npz` | Three recorded scripts read it as input, even though its arrays duplicate exp11_scenes.npz. |
 | `exp/out/exp09_cache.npz` | exp10 reads it under a claim pin, even though its arrays duplicate exp11_scenes.npz. Pointing exp10 at that file would free 10 MB, but that edits a recorded script. |
-| `exp/out/exp21_finetuned_awf.png` | Embedded in the Word report. Removable together with it. |
+| `exp/out/exp21_finetuned_awf.png` | Was embedded only in the Word report; removed together with it. |
 | `exp/out/exp22_lcc_striping.png` | Embedded in the Word report, and the only store of the full periodogram curves. |
 | `exp/out/exp39_cache.npz, exp40_cache.npz, exp41_cache.npz` | Nothing reads them, but the lab log names each as the store of per-window scores that no other committed file holds. |
 
