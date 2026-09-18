@@ -2646,6 +2646,79 @@
     - {file: docs/results/comparisons.md, marker: margin-takes-two-thirds-of-the-ranking-headroom}
     - {file: docs/Findings.md, marker: margin-takes-two-thirds-of-the-ranking-headroom}
 
+- id: augrc-leaves-the-suite-result-standing
+  statement: "For a fixed set of errors AUGRC orders readings as the failure AUROC does, and by AUROC the margin beats the best no-model control on 23 of exp70's 24 tasks, in exp70's own artifact and again in exp76; the exception is cropharvest_Togo_12_sentinel1, where the class-rarity control leads by under 0.001 of AUROC. Across every reading exp76 computed, the best one is the same under excess AURC and under AUROC on 22 of 24 tasks. exp76's probability margin reproduces exp70's excess AURC to within 1e-4 on 18 of 24 tasks and to within 0.004 on all."
+  status: measured
+  experiments: [exp76, exp70]
+  artifacts: [exp/out/exp76_summary.json, exp/out/exp70_summary.json]
+  check: |-
+    (lambda V, R, E:
+      V['descriptive']['margin_beats_best_control_by_auroc'] == 23
+      and sum(1 for t in E if E[t]['signals']['margin']['auroc'] > max(E[t]['signals'][c]['auroc'] for c in ('ctl_embedding_distance', 'ctl_class_rarity'))) == 23
+      and [t for t in E if E[t]['signals']['margin']['auroc'] <= max(E[t]['signals'][c]['auroc'] for c in ('ctl_embedding_distance', 'ctl_class_rarity'))] == ['cropharvest_Togo_12_sentinel1']
+      and E['cropharvest_Togo_12_sentinel1']['signals']['ctl_class_rarity']['auroc'] - E['cropharvest_Togo_12_sentinel1']['signals']['margin']['auroc'] < 0.001
+      and V['P4']['same_best_reading_under_both_statistics'] == 22 and V['P4']['of'] == 24
+      and V['consistency']['max_abs_deviation_of_margin_eaurc_from_exp70'] < 0.004
+      and sum(1 for t in R if abs(R[t]['signals']['margin']['excess_aurc'] - E[t]['signals']['margin']['excess_aurc']) < 1e-4) == 18
+    )(A['exp/out/exp76_summary.json']['verdicts'], A['exp/out/exp76_summary.json']['results']['tasks'], A['exp/out/exp70_summary.json']['results']['tasks'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: augrc-leaves-the-suite-result-standing}
+    - {file: docs/TECHNIQUES.md, marker: augrc-leaves-the-suite-result-standing}
+
+- id: top1-beats-the-margin-on-multiclass
+  statement: "Among the model's own confidence readings on exp70's 24 tasks, one minus the top probability ranks errors better than top-1 minus top-2 on 14 of the 16 multi-class tasks, all 6 multi-class segmentation tasks (preregistered P1) and 8 of 10 classification tasks, under excess AURC and under AUROC alike, and captures more errors at a 5% and at a 10% budget on 13 of them against 2; it loses on awf_sentinel2 and on nandi_sentinel1. The difference is small, a median 0.0006 of excess AURC beside a median lead of the margin over the best no-model control of 0.116, and on the 8 binary tasks the forms are one ranking."
+  status: supported
+  experiments: [exp76, exp70]
+  artifacts: [exp/out/exp76_summary.json]
+  check: |-
+    (lambda V, R, M:
+      V['P1']['holds'] is True and V['P1']['one_minus_top1_better'] == 6 and V['P1']['margin_better'] == 0 and V['P1']['of'] == 6
+      and V['descriptive']['one_minus_top1_vs_margin_multiclass'] == {'excess_aurc': [14, 2], 'auroc': [14, 2]} and V['descriptive']['n_multiclass'] == 16
+      and sorted(t for t in M if R[t]['signals']['one_minus_top1']['excess_aurc'] > R[t]['signals']['margin']['excess_aurc']) == ['awf_sentinel2', 'nandi_sentinel1']
+      and [sum(1 for t in M if R[t]['signals']['one_minus_top1']['capture'][b] > R[t]['signals']['margin']['capture'][b]) for b in ('0.05', '0.1')] == [13, 13]
+      and [sum(1 for t in M if R[t]['signals']['one_minus_top1']['capture'][b] < R[t]['signals']['margin']['capture'][b]) for b in ('0.05', '0.1')] == [2, 2]
+      and sum(1 for t in R if R[t]['n_classes'] == 2) == 8
+      and (lambda d: round((d[7] + d[8]) / 2, 4) == 0.0006)(sorted(R[t]['signals']['margin']['excess_aurc'] - R[t]['signals']['one_minus_top1']['excess_aurc'] for t in M))
+      and (lambda d: round((d[11] + d[12]) / 2, 3) == 0.116)(sorted(R[t]['margin_lead'] for t in R))
+    )(A['exp/out/exp76_summary.json']['verdicts'], A['exp/out/exp76_summary.json']['results']['tasks'], [t for t in A['exp/out/exp76_summary.json']['results']['tasks'] if A['exp/out/exp76_summary.json']['results']['tasks'][t]['n_classes'] > 2])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: top1-beats-the-margin-on-multiclass}
+    - {file: docs/TECHNIQUES.md, marker: top1-beats-the-margin-on-multiclass}
+    - {file: docs/Findings.md, marker: top1-beats-the-margin-on-multiclass}
+
+- id: no-whole-vector-score-beats-the-probability-forms
+  statement: "No score built from the whole logit vector beats the better of the two probability forms (top-1 minus top-2, one minus top-1) on more than 3 of the 24 tasks: the logit margin on 1, the top logit against the mean of the others on 1, a dispersion of the class margins with its sign fixed before the run on 0, the energy on 3 and the top logit on 2; preregistered P2, whose bar for a win was 18, holds. The logit margin loses to the probability margin on 16 of the 16 multi-class tasks, with median excess AURC 0.0766 against 0.0741 and 0.0720 for one minus top-1."
+  status: supported
+  experiments: [exp76]
+  artifacts: [exp/out/exp76_summary.json]
+  check: |-
+    (lambda V, R:
+      V['P2']['holds'] is True
+      and V['P2']['wins_over_the_better_of_margin_and_omt'] == {'logit_margin': 1, 'margin_to_mean': 1, 'margin_cv': 0, 'energy': 3, 'max_logit': 2}
+      and sum(1 for t in R if R[t]['n_classes'] > 2 and R[t]['signals']['logit_margin']['excess_aurc'] > R[t]['signals']['margin']['excess_aurc']) == 16
+      and [round(V['descriptive']['median_eaurc'][k], 4) for k in ('logit_margin', 'margin', 'one_minus_top1')] == [0.0766, 0.0741, 0.072]
+    )(A['exp/out/exp76_summary.json']['verdicts'], A['exp/out/exp76_summary.json']['results']['tasks'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: no-whole-vector-score-beats-the-probability-forms}
+    - {file: docs/TECHNIQUES.md, marker: no-whole-vector-score-beats-the-probability-forms}
+
+- id: window-aggregator-is-not-the-lever
+  statement: "On the 7 segmentation tasks the mean over a window's pixels of one minus the top probability beats the record's window score, the margin of window-mean probabilities, on 6, so preregistered P3, that no aggregator would reach 6, fails as written; but the same form computed on window-mean probabilities beats that pixel-level aggregate on 6 of 7, so the gain is the form's and not the aggregation's. The pixel-level margin beats the window margin on 3 of 7, the smallest pixel margin and the share of low-margin pixels on none, and the mean over the 3x3 windows around a window on 1, m_sa_crop_type, 0.0638 against 0.0672. The aggregator option the preregistration named was not added to the package; the form option was."
+  status: mixed
+  experiments: [exp76]
+  artifacts: [exp/out/exp76_summary.json]
+  check: |-
+    (lambda V, R, S:
+      V['P3']['holds'] is False
+      and V['P3']['wins_over_margin'] == {'pix_margin_mean': 3, 'pix_margin_min': 0, 'pix_low_share': 0, 'pix_omt_mean': 6, 'nbr_margin_mean': 1} and len(S) == 7
+      and sum(1 for t in S if R[t]['signals']['one_minus_top1']['excess_aurc'] < R[t]['signals']['pix_omt_mean']['excess_aurc']) == 6
+      and [t for t in S if R[t]['signals']['nbr_margin_mean']['excess_aurc'] < R[t]['signals']['margin']['excess_aurc']] == ['m_sa_crop_type']
+      and [round(R['m_sa_crop_type']['signals'][k]['excess_aurc'], 4) for k in ('nbr_margin_mean', 'margin')] == [0.0638, 0.0672]
+    )(A['exp/out/exp76_summary.json']['verdicts'], A['exp/out/exp76_summary.json']['results']['tasks'], [t for t in A['exp/out/exp76_summary.json']['results']['tasks'] if A['exp/out/exp76_summary.json']['results']['tasks'][t]['family'] == 'segmentation'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: window-aggregator-is-not-the-lever}
+    - {file: docs/TECHNIQUES.md, marker: window-aggregator-is-not-the-lever}
+
 - id: agent-benchmark-package-is-a-floor-at-7b
   statement: "On the same forty cards and five arms with Qwen/Qwen2.5-7B-Instruct, all three preregistered tests hold: the tool arm grounds 100.0% of its numbers against the sandbox's 0.1% (40 cards to 0), captures 0.997 of the package's errors against 0.144 (39 to 0) and declines the side question on 10 of 10 comparison cards against 0; the sandbox produced no gradeable answer in 51 of 120 runs and left 53.3% of comparison questions unanswered, and the no-raster arm fabricated 372 windows; beside the 27B run, where P1 and P2 failed, what the package adds over a sandbox is everything at 7B and the decline at 27B."
   status: supported

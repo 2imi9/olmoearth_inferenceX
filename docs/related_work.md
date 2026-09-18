@@ -429,11 +429,11 @@ the record would need next, with their cost.
 
 | Challenge | What it claims | What the record says | Status |
 |---|---|---|---|
-| Traub et al. 2024, AUGRC | AURC ranks methods wrongly on five of six datasets; AUGRC is the interpretable statistic | Every ranking claim here is excess AURC plus capture at a budget; AUGRC was never computed | Untested: recompute AUGRC on exp70's 24 tasks, one CPU job, per-unit scores needed |
+| Traub et al. 2024, AUGRC | AURC ranks methods wrongly on five of six datasets; AUGRC is the interpretable statistic | Every ranking claim here is excess AURC plus capture at a budget; AUGRC was never computed | Answered (exp76 and exp70's artifact): for fixed errors AUGRC orders readings as the failure AUROC does; the margin beats the best control on 23 of 24 by AUROC, and the best reading is the same under both statistics on 22 of 24 |
 | Rabanser and Papernot 2025 | Only feature-aware, reordering scores can close the ranking gap | Every rejected signal was a monotone rescaling or a feature-space score that lost; the theory predicts the record | Answered, and now cited |
 | Heng and Soh 2026, likelihood ratios | The optimal selector is a likelihood ratio, with gains under covariate shift | Never scored here; the Mahalanobis and typicality scores tested are not likelihood ratios of correct against wrong | Untested: a likelihood-ratio selector on the 24 tasks, one CPU job |
-| Class margin dispersion, ECCV 2026 workshop | The whole margin distribution beats top-1 minus top-2 on AURC | The record's score is top-1 minus top-2 only | Untested and cheap: needs the full logit vector, which exp70's path has |
-| Guarino et al. 2026; Soft Dice Confidence 2026 | The aggregator from pixels to regions is a first-class choice; spatially aware aggregation wins | The 4-px window score is the margin of window-mean probabilities, chosen without a test | Untested: three aggregators on the seven segmentation tasks, one CPU job |
+| Class margin dispersion, ECCV 2026 workshop | The whole margin distribution beats top-1 minus top-2 on AURC | The record's score is top-1 minus top-2 only | Tested in part (exp76): the published definition could not be retrieved; a margin-dispersion score defined here beat the better probability form on 0 of 24 tasks, and no whole-vector score on more than 3 |
+| Guarino et al. 2026; Soft Dice Confidence 2026 | The aggregator from pixels to regions is a first-class choice; spatially aware aggregation wins | The 4-px window score is the margin of window-mean probabilities, chosen without a test | Tested (exp76): five aggregators on the seven segmentation tasks; the form matters, the aggregator does not, since the same form on window-mean probabilities beats its pixel-level aggregate on 6 of 7 |
 | Kondylatos et al. 2025 | Pretrained representation uncertainty works zero-shot in Earth observation | exp17 tested band-set disagreement, depth probes, logit lens and attention entropy; not this reading | Untested: needs their pretrained uncertainty head, an encoder pass |
 | Lehmann et al. 2026 | Confidence of frozen geospatial encoders miscalibrates under corruption and shift; ensembles do not help | exp74 scored ranking under 16 encoders on clean splits; ensembles lost in exp73 | Half answered: agrees on ensembles; shift was never applied here |
 | Johnson et al. 2026, RSE | A spatially aware, calibrated uncertainty for this model class | Not scored | Untested, encoder-side |
@@ -444,7 +444,7 @@ the record would need next, with their cost.
 | Goel et al. 2025, CAPA | Raw disagreement between models is confounded by their accuracies | exp75 reports raw vote disagreement and KL | Untested and cheap: recompute exp75's readings as chance-adjusted agreement |
 | Kao et al. 2026, UnivEARTH; DataMind 2026 | Most agent failure is execution failure in a sandbox, not reasoning | exp64's sandbox arm produced no gradeable answer in 51 of 120 runs at 7B | Answered: the record already separates unanswered from wrong |
 
-Tests this suggests, in order of cost, none run: AUGRC and class margin
-dispersion on exp70's outputs; CAPA for exp75; three window aggregators on the
-segmentation tasks; a likelihood-ratio selector on the 24 tasks; representation
-uncertainty and the Matérn estimator, which need encoder passes.
+Tests this suggests, in order of cost: AUGRC, a margin-dispersion score and five
+window aggregators were run as exp76. Still not run: CAPA for exp75, a
+likelihood-ratio selector on the 24 tasks, and representation uncertainty and
+the Matérn estimator, which need encoder passes.

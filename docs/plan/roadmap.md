@@ -9,7 +9,10 @@ exp75, experts that see different inputs (heads fitted on the other sensors Ai2 
 for the same units, their disagreement as a reading for the errors the margin misses),
 scored by the same protocol. Run on 2026-09-17: the disagreement is a real signal but does
 not pay in a review set, so the record now says what remains needs labels (see the results
-page, exp75).
+page, exp75). exp76 followed on 2026-09-18, answering three published challenges to the
+choice of score: the statistic does not change the suite result, one minus the top
+probability is the best form on multi-class tasks, and the window aggregator is not the
+lever.
 
 Rewritten in place as experiments close items. The chronology of what closed
 what is in [../../exp/NOTES.md](../../exp/NOTES.md). Index at

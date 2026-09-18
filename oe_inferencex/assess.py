@@ -94,12 +94,22 @@ def assess_classmap(hard, confidence, n_classes, patch=4, nodata_mask=None, refe
     return out
 
 
-def assess_prediction(scores, is_logit, patch=4, nodata_mask=None, reference=None, budgets=(0.01, 0.05, 0.10), order="confidence"):
+def assess_prediction(scores, is_logit, patch=4, nodata_mask=None, reference=None, budgets=(0.01, 0.05, 0.10), order="confidence",
+                      form="margin"):
     """Assess a prediction map: `scores` is (H, W) of binary logits or probabilities, or (C, H, W) per class.
 
     `order` is the review order of the review sets: "confidence" (least confident first, the ranker every
     experiment scored) or "boundary_first" (boundary windows first, then the interior, each by confidence; the
-    order that captures more errors at 5-10% budgets on hand labels, exp36). AURC entries always score confidence."""
+    order that captures more errors at 5-10% budgets on hand labels, exp36). AURC entries always score confidence.
+
+    `form` is the member of the confidence family used on a (C, H, W) logit map: "margin", the top-1 minus top-2
+    logit margin (the default, unchanged since 1.0.0), or "top1", the top softmax probability computed tie-free
+    from the logits. On the 16 multi-class tasks of Ai2's suite "top1" ranked errors better than the margin on 14
+    and the logit margin was the weakest form on all 16 (exp76), so a multi-class logit map scored with the default
+    carries a warning. Binary maps and probability input are unaffected: there the forms are one ranking, and
+    probability input already uses the top probability."""
+    if form not in ("margin", "top1"):
+        raise ValueError(f"form must be 'margin' or 'top1', got {form!r}")
     scores = np.asarray(scores, dtype=np.float64)
     warnings = []
     if scores.ndim == 2:  # binary probability map
@@ -115,15 +125,21 @@ def assess_prediction(scores, is_logit, patch=4, nodata_mask=None, reference=Non
     else:
         C = scores.shape[0]
         srt = np.sort(scores, axis=0)
-        if is_logit:
+        if is_logit and form == "top1":
+            margin = -np.log1p(np.exp(srt[:-1] - srt[-1]).sum(0))   # log of the top softmax probability, tie-free
+        elif is_logit:
             margin = srt[-1] - srt[-2]
+            if C > 2:
+                warnings.append("multi-class logit margin: on Ai2's suite one minus the top probability ranked errors "
+                                "better on 14 of 16 multi-class tasks (exp76); pass form='top1'")
         else:
             margin = srt[-1]  # top-1 probability
             warnings.append("probability input: confidence ties where probabilities saturate; prefer logits")
         hard = scores.argmax(0)
         n_classes = C
     return _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets,
-                   "negative logit margin" if is_logit else "1 - max probability", warnings, order)
+                   ("1 - max probability (from logits)" if form == "top1" and scores.ndim == 3 else "negative logit margin")
+                   if is_logit else "1 - max probability", warnings, order)
 
 
 def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, signal, warnings, order="confidence"):

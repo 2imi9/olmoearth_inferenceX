@@ -153,3 +153,19 @@ def test_a_budget_of_one_reviews_every_window_and_no_more():
     p = np.random.default_rng(0).random((32, 32))
     out = assess_prediction(p, is_logit=False, patch=4, budgets=(1.0,))
     assert out["review_sets"][1.0]["n_windows"] == out["n_windows"] == 64
+
+
+def test_assess_prediction_top1_form_on_multiclass_logits_and_the_warning_on_the_default():
+    rng = np.random.default_rng(5)
+    z = rng.standard_normal((4, 32, 32)) * 2
+    default = assess_prediction(z, is_logit=True)
+    top1 = assess_prediction(z, is_logit=True, form="top1")
+    assert any("form='top1'" in w for w in summary(default)["warnings"])
+    assert not any("form='top1'" in w for w in summary(top1)["warnings"])
+    assert summary(top1)["signal"] == "1 - max probability (from logits)"
+    assert summary(default)["signal"] == "negative logit margin"
+    assert set(summary(top1)["review_sets"]) == set(summary(default)["review_sets"])
+    binary = assess_prediction(rng.standard_normal((32, 32)), is_logit=True, form="top1")
+    assert not any("form='top1'" in w for w in summary(binary)["warnings"])
+    with pytest.raises(ValueError):
+        assess_prediction(z, is_logit=True, form="entropy")

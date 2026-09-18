@@ -134,3 +134,18 @@ def test_crop_dependence_is_zero_for_a_constant_map_and_exact_at_an_edge():
     assert abs(out["rate"] - 1 / 6) < 1e-12 and abs(out["mean_share"] - (3 / 16 + 5 * 0.25) / 36) < 1e-12
     stacked = crop_dependence(np.stack([[g, c], [g, c]]), patch=4)
     assert stacked["per_window"].shape == (2, 6, 6) and stacked["per_window"][1].max() == 0
+
+
+def test_confidence_top1_form_is_the_ranking_of_one_minus_the_top_probability():
+    rng = np.random.default_rng(3)
+    z = rng.standard_normal((5, 8, 8)) * 3
+    p = np.exp(z - z.max(0)); p /= p.sum(0)
+    s = confidence(z, form="top1")
+    assert s.shape == (8, 8) and np.all(s >= 0)
+    assert np.allclose(s, -np.log(p.max(0)))
+    assert np.array_equal(np.argsort(s, axis=None), np.argsort(1 - p.max(0), axis=None))
+    big = np.zeros((3, 2, 2)); big[0] = 60.0                       # saturated: 1 - p rounds to 0, the log form does not tie with itself
+    assert np.all(confidence(big, form="top1") > 0)
+    assert np.array_equal(confidence(z), confidence(z, form="margin"))
+    with pytest.raises(ValueError):
+        confidence(z, form="entropy")

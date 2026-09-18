@@ -114,6 +114,10 @@ why["quotes"]["ndwi_ambiguous"]             # "is spectrally ambiguous ... (48% 
   boundary windows first, then the interior, each by confidence; it
   captures more errors at 5 to 10% budgets on hand labels (exp36). AURC
   entries always score confidence.
+- `form="top1"` ranks a multi-class logit map by one minus the top probability,
+  computed tie-free from the logits, the best member of the confidence family on
+  multi-class tasks (exp76); the default stays the logit margin of 1.0.0 and
+  carries a warning on such maps. Binary maps are unaffected.
 - `explain_review_set` derives the boundary and low-confidence cues from
   the assessment itself. Any other cue is a boolean array of window shape
   the caller derives: spectral ambiguity from the input bands as above,

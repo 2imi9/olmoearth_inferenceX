@@ -119,6 +119,14 @@ reference maps on narrow channels (exp15).
   ForestLossDriver, LFMC, EcosystemTypeMapping) have not been run; the water
   results are for linear probes on frozen encoders.
 
+## Which confidence on a multi-class map
+
+On a binary map every form of the model's confidence is one ranking. On a
+multi-class map rank by one minus the top probability, `form="top1"` in
+`assess_prediction` and `signals.confidence`, which is computed tie-free from the
+logits; the top-1 minus top-2 logit margin, the default kept from 1.0.0, was the
+weakest form on Ai2's suite (exp76).
+
 ## Compute budget per reading
 
 Every audit here scales with inference, not with labels. The margin, the

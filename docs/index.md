@@ -26,6 +26,9 @@ Panopticon, Galileo, CROMA, TerraMind, Satlas, Copernicus-FM) and the OlmoEarth
 size series, the margin beats the control on 322 of 332 scored tasks, every
 encoder at 90% or better
 ([exp74](results/comparisons.md#the-suite-under-the-other-encoders-exp74)).
+Within the model's own confidence family the forms are close; on multi-class
+tasks one minus the top probability is marginally better than top-1 minus top-2
+([exp76](results/comparisons.md#which-confidence-which-statistic-which-aggregator-exp76)).
 
 This is the answer to the obvious objection — that a result like this rests on
 testbeds the author picked. It does not. See

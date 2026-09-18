@@ -194,6 +194,15 @@ groups and not on the largest, and interleaving the two rankings captures no mor
 or 10\% on any group \claim{sensor-disagreement-does-not-pay-in-a-review-set}. What the
 margin misses is mostly invisible to a second sensor as well; closing it needs labels.
 
+Which member of the confidence family is the last question asked of the suite (exp76).
+Under AUGRC, which for fixed errors orders readings as the failure AUROC does, the
+margin beats the best control on 23 of 24 tasks
+\claim{augrc-leaves-the-suite-result-standing}. One minus the top probability ranks
+errors better than top-1 minus top-2 on 14 of the 16 multi-class tasks, by a median
+$0.0006$ of excess AURC beside a lead over the control of $0.116$, and on binary tasks
+the forms are one ranking \claim{top1-beats-the-margin-on-multiclass}; no score built
+from the whole logit vector, and no aggregation of pixels into a window, does better.
+
 Nor is the result a property of one encoder. Ai2 published the same task
 embeddings for other models with their own probe settings, so exp70's protocol
 was run unchanged on every encoder carrying at least 20 of the 24 tasks

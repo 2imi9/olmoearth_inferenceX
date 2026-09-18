@@ -215,6 +215,10 @@ How much is left: on those 24 tasks the margin already takes a median 0.68 of
 the gap between a random and a perfect ranking, and labels buy a fifth to a
 third of the rest (exp65); what remains is errors the model makes confidently,
 which no label-free reading tried has seen. <!-- claim:margin-takes-two-thirds-of-the-ranking-headroom -->
+Which member of the confidence family: on the 16 multi-class tasks one minus the
+top probability ranks errors better than top-1 minus top-2 on 14, by a small
+margin, and no score built from the whole logit vector does better; on binary
+tasks the forms are one ranking (exp76). <!-- claim:top1-beats-the-margin-on-multiclass -->
 
 The effect size in a reviewer's units (exp55, 45 GEOID-Flood areas of interest
 drawn from nine activations): on the median area the 5% of windows confidence

@@ -19,7 +19,7 @@ S2_BANDS = ("B02", "B03", "B04", "B08", "B05", "B06", "B07", "B8A", "B11", "B12"
 
 
 # ----------------------------------------------------------------------------- confidence and boundary
-def confidence(logits, multiclass=None):
+def confidence(logits, multiclass=None, form="margin"):
     """The baseline error ranker (recipe item 1): higher = more suspect.
 
     Binary logit maps, (H, W) or a batch (N, H, W) with multiclass=False,
@@ -27,7 +27,15 @@ def confidence(logits, multiclass=None):
     first, (C, H, W), gives the negative top-1 minus top-2 margin. Neither
     ties where a sigmoid or softmax saturates in float32. `multiclass`
     defaults to True for 3-d input. The input dtype is kept (float32 margins
-    stay float32, as the experiments computed them); integers become float64."""
+    stay float32, as the experiments computed them); integers become float64.
+
+    `form` chooses the member of the confidence family on a multiclass map. "margin" is the logit margin above,
+    the default and the form the water testbeds used, where the forms are one ranking. "top1" is minus the log of
+    the top softmax probability, log(1 + sum over the other classes of exp(z_j - z_top)), a tie-free monotone
+    form of one minus the top probability: on the 16 multi-class tasks of Ai2's suite it ranked errors better than
+    top-1 minus top-2 on 14, and the logit margin was the weakest of the three forms on all 16 (exp76)."""
+    if form not in ("margin", "top1"):
+        raise ValueError(f"form must be 'margin' or 'top1', got {form!r}")
     x = np.asarray(logits)
     if x.dtype.kind != "f":
         x = x.astype(np.float64)
@@ -37,6 +45,9 @@ def confidence(logits, multiclass=None):
         if x.ndim != 3 or x.shape[0] < 2:
             raise ValueError(f"multiclass logits must be one (C, H, W) map with C >= 2, got shape {x.shape}")
         srt = np.sort(x, axis=0)
+        if form == "top1":
+            z = srt.astype(np.float64)
+            return np.log1p(np.exp(z[:-1] - z[-1]).sum(0))
         return -(srt[-1] - srt[-2])
     if x.ndim not in (2, 3):
         raise ValueError(f"binary logits must be (H, W) or (N, H, W), got shape {x.shape}")

@@ -2048,6 +2048,61 @@ locked to a model family.
 
 Outputs: `exp/out/exp75_summary.json`, `exp75_groups.csv`.
 
+## Which confidence, which statistic, which aggregator (exp76)
+
+A search of the 2024 to 2026 literature (the related-work page, section 7)
+left three published challenges to the record's choice of score that were
+cheap to answer. exp76 answers them on exp70's 24 tasks, from Ai2's linear
+probe at seed 0, so the errors are exp70's errors: eight forms of the model's
+own confidence from one probe, and five ways of aggregating pixel confidence
+into a 4-px window on the seven segmentation tasks. It ran on a CPU node in 29
+minutes; the probability margin reproduces exp70's excess AURC to four decimals
+on 18 of 24 tasks, and by at most 0.0036 on the rest, where a CPU fit of a small
+task (200 units on AWF Sentinel-1) lands three test units from the GPU fit.
+
+**The statistic does not change the suite result.** For a fixed set of errors
+AUGRC orders readings exactly as the failure AUROC does, and exp70 had recorded
+the AUROC. By that statistic the margin beats the best no-model control on 23
+of 24 tasks, not 24: on Togo Sentinel-1 the class-rarity control leads by
+0.0005 of AUROC. Across all readings the best one is the same under excess AURC
+and under AUROC on 22 of 24 tasks. <!-- claim:augrc-leaves-the-suite-result-standing -->
+
+**Among the model's own readings, one minus the top probability is the best on
+multi-class tasks.** It ranks errors better than top-1 minus top-2 on 14 of the
+16 multi-class tasks, all 6 multi-class segmentation tasks (preregistered P1,
+holds) and 8 of 10 classification tasks, under either statistic, and captures
+more errors at a 5% and at a 10% budget on 13 of them against 2. It loses on AWF
+Sentinel-2 and on Nandi Sentinel-1, the near-chance task. The difference is
+small, a median 0.0006 of excess AURC beside a median lead of the margin over
+the best control of 0.116, and on the 8 binary tasks the forms are one ranking,
+which is why the water testbeds never showed it. The headline stands, since it
+is about controls and alternatives; its representative was not the best member
+of its own family, and the record now says so. <!-- claim:top1-beats-the-margin-on-multiclass -->
+
+**No score built from the whole logit vector does better.** The logit margin,
+the top logit against the mean of the others, a dispersion of the class margins
+with its sign fixed in advance, the energy and the top logit each beat the
+better of the two probability forms on at most 3 of 24 tasks (P2, holds). The
+logit margin is the weakest of the three margins: it loses to the probability
+margin on 16 of 16 multi-class tasks. That is the form `assess_prediction` used
+for multi-class logits; it now offers `form="top1"`, tie-free from the logits,
+and warns on the old default. A published workshop claim for class margin
+dispersion could not be tested under its name, because its definition could not
+be retrieved. <!-- claim:no-whole-vector-score-beats-the-probability-forms -->
+
+**The aggregator is not the lever; the form is.** The mean over a window's
+pixels of one minus the top probability beats the record's window score on 6 of
+7 segmentation tasks, so P3, which said no aggregator would reach 6, fails as
+written. The decomposition says why: the same form on window-mean probabilities
+beats its pixel-level aggregate on 6 of 7. The pixel-level margin against the
+window margin is 3 to 4; the smallest pixel margin and the share of low-margin
+pixels win nowhere; the mean over the 3x3 windows around a window wins once, on
+the South Africa crop task, 0.0638 against 0.0672. The preregistered consequence
+was an aggregator option in `assess`; it was not added, because the evidence is
+for the form, which was. <!-- claim:window-aggregator-is-not-the-lever -->
+
+Outputs: `exp/out/exp76_summary.json`, `exp76_readings.csv`.
+
 ## What remains: the headroom (from exp70 and exp65)
 
 Every "can it be improved" question needs a number for how much is left, so
