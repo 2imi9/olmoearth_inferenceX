@@ -4,6 +4,10 @@
 v1.0.0 release. The items below stay as the record of what would come next; their
 tracker issues (#2, #8, #11, #12, #13, #16) were closed the same day, as completed
 or as not planned, each with the reason.
+Reopened the same evening for one preregistered experiment at the author's request:
+exp75, experts that see different inputs (heads fitted on the other sensors Ai2 published
+for the same units, their disagreement as a reading for the errors the margin misses),
+scored by the same protocol.
 
 Rewritten in place as experiments close items. The chronology of what closed
 what is in [../../exp/NOTES.md](../../exp/NOTES.md). Index at
