@@ -211,6 +211,10 @@ published the suite for, eight families outside OlmoEarth and the OlmoEarth
 size series, the margin beats the best no-model control on 322 of 332 scored
 tasks, every encoder at 90% or better, and the three outside families that
 carry the whole suite win on 23, 24 and 24 of 24 (exp74). <!-- claim:suite-holds-under-every-encoder --> <!-- claim:suite-outside-families-hold-at-twenty-two -->
+How much is left: on those 24 tasks the margin already takes a median 0.68 of
+the gap between a random and a perfect ranking, and labels buy a fifth to a
+third of the rest (exp65); what remains is errors the model makes confidently,
+which no label-free reading tried has seen. <!-- claim:margin-takes-two-thirds-of-the-ranking-headroom -->
 
 The effect size in a reviewer's units (exp55, 45 GEOID-Flood areas of interest
 drawn from nine activations): on the median area the 5% of windows confidence

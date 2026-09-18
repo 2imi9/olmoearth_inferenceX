@@ -29,6 +29,7 @@ REQUIRED = ("id", "statement", "status", "experiments", "artifacts", "check", "c
 SAFE = {n: __builtins__[n] if isinstance(__builtins__, dict) else getattr(__builtins__, n)
         for n in ("abs", "all", "any", "float", "int", "len", "max", "min", "round", "sorted", "sum", "set",
                   "str", "list", "dict", "tuple", "isinstance", "enumerate", "zip", "range")}
+SAFE["log"] = __import__("math").log        # a check that needs the perfect ranking's AURC, e + (1 - e) log(1 - e)
 
 
 def load_registry(path=REGISTRY):

@@ -2048,6 +2048,23 @@ locked to a model family.
 
 Outputs: `exp/out/exp75_summary.json`, `exp75_groups.csv`.
 
+## What remains: the headroom (from exp70 and exp65)
+
+Every "can it be improved" question needs a number for how much is left, so
+here it is, from artifacts already on the record. On each of exp70's 24 tasks
+the gap between a random ranking and a perfect one is the random ranking's
+excess AURC, its error rate minus the perfect ranking's AURC. The margin
+already takes a median 0.68 of that gap, from 0.21 on Nandi Sentinel-1 (an
+error rate of 0.667) to 0.89 on EuroSAT, brick kilns and MADOS; and its review
+set holds a median 0.59 of the attainable ceiling at a 5% budget, 0.56 at 10%
+and 0.54 at 20%. What labels can buy from the rest was measured in exp65: a
+fusion of five readings fitted to labels and cross-fitted by tile removes 20%
+of the margin's held-out excess AURC on Bolivia and 30% on the test split, and
+locks to the family it was fitted on. Read with exp46, exp73 and exp75: about a
+third of the ranking headroom remains; a fifth to a third of that is reachable
+with labels; the rest is errors the model makes confidently that no label-free
+reading tried, including a second sensor, has seen. <!-- claim:margin-takes-two-thirds-of-the-ranking-headroom -->
+
 ## Does the package help an agent? The preregistered benchmark (exp64)
 
 Every number above answers whether the measurement is right. None answers

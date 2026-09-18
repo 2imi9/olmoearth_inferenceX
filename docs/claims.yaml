@@ -2628,6 +2628,24 @@
     - {file: docs/results/comparisons.md, marker: late-fusion-of-sensor-heads-does-not-buy-accuracy}
     - {file: docs/TECHNIQUES.md, marker: late-fusion-of-sensor-heads-does-not-buy-accuracy}
 
+- id: margin-takes-two-thirds-of-the-ranking-headroom
+  statement: "On exp70's 24 tasks the margin already takes a median 0.68 of the gap between a random ranking's excess AURC (the error rate minus the perfect ranking's AURC) and zero, from 0.21 on Nandi Sentinel-1 to 0.89 at the top, and its review set holds a median 0.59 of the attainable ceiling at a 5% budget, 0.56 at 10% and 0.54 at 20%; exp65's label-fitted, tile-cross-fitted fusion removes 20% of the margin's held-out excess AURC on Bolivia and 30% on the test split. About a third of the ranking headroom remains, a fifth to a third of it reachable with labels."
+  status: measured
+  experiments: [exp70, exp65]
+  artifacts: [exp/out/exp70_summary.json, exp/out/exp65_summary.json]
+  check: |-
+    (lambda T, R, log, med:
+      (lambda sh: round(med([sh[t] for t in T]), 2) == 0.68 and round(min(sh.values()), 2) == 0.21 and round(max(sh.values()), 2) == 0.89
+                 and sh['nandi_sentinel1'] == min(sh.values()))(
+        {t: 1 - T[t]['signals']['margin']['excess_aurc'] / (T[t]['error_rate'] - (T[t]['error_rate'] + (1 - T[t]['error_rate']) * log(1 - T[t]['error_rate']))) for t in T})
+      and [round(med([T[t]['signals']['margin']['capture'][b] / min(1.0, float(b) / T[t]['error_rate']) for t in T]), 2) for b in ('0.05', '0.1', '0.2')] == [0.59, 0.56, 0.54]
+      and round(1 - R['bolivia']['held_out_excess_aurc'] / R['bolivia']['confidence_excess_aurc'], 1) == 0.2
+      and round(1 - R['test']['held_out_excess_aurc'] / R['test']['confidence_excess_aurc'], 1) == 0.3
+    )(A['exp/out/exp70_summary.json']['results']['tasks'], A['exp/out/exp65_summary.json']['results']['ranker'], log, lambda v: sorted(v)[len(v) // 2] if len(v) % 2 else (sorted(v)[len(v) // 2 - 1] + sorted(v)[len(v) // 2]) / 2)
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: margin-takes-two-thirds-of-the-ranking-headroom}
+    - {file: docs/Findings.md, marker: margin-takes-two-thirds-of-the-ranking-headroom}
+
 - id: agent-benchmark-package-is-a-floor-at-7b
   statement: "On the same forty cards and five arms with Qwen/Qwen2.5-7B-Instruct, all three preregistered tests hold: the tool arm grounds 100.0% of its numbers against the sandbox's 0.1% (40 cards to 0), captures 0.997 of the package's errors against 0.144 (39 to 0) and declines the side question on 10 of 10 comparison cards against 0; the sandbox produced no gradeable answer in 51 of 120 runs and left 53.3% of comparison questions unanswered, and the no-raster arm fabricated 372 windows; beside the 27B run, where P1 and P2 failed, what the package adds over a sandbox is everything at 7B and the decline at 27B."
   status: supported
