@@ -7,7 +7,9 @@ or as not planned, each with the reason.
 Reopened the same evening for one preregistered experiment at the author's request:
 exp75, experts that see different inputs (heads fitted on the other sensors Ai2 published
 for the same units, their disagreement as a reading for the errors the margin misses),
-scored by the same protocol.
+scored by the same protocol. Run on 2026-09-17: the disagreement is a real signal but does
+not pay in a review set, so the record now says what remains needs labels (see the results
+page, exp75).
 
 Rewritten in place as experiments close items. The chronology of what closed
 what is in [../../exp/NOTES.md](../../exp/NOTES.md). Index at

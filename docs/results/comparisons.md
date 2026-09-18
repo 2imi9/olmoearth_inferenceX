@@ -1991,6 +1991,63 @@ changed nothing except that the missing tasks were scored.
 
 Outputs: `exp/out/exp74_summary.json`, `exp74_encoders.csv`.
 
+## Experts that see different inputs: sensor disagreement (exp75)
+
+Everything label-free tested here was a function of one head's features, and
+every such function lost to that head's own margin. The margin still misses
+roughly four in ten of the errors a perfect ranking would put in a 10% review
+set, and exp46 says the misses are errors the model makes confidently, from the
+input itself. No reading of the same features can see them; a different input
+might. Ai2 published the same tasks embedded from different sensors, with the
+same units in the same order (verified before the run), so a head fitted on
+another sensor is an expert on a different input and its disagreement with the
+reference head costs no encoder pass and no label. Five groups: AWF and Nandi
+from Landsat, Sentinel-1 and Sentinel-2; CropHarvest Togo and China and PASTIS
+from one sensor, the other, and both. The reference head is the most accurate of
+each group; the views are the others; all are Ai2's linear probe at seed 0, so
+the reference head's errors are exp70's errors. 464,366 graded units.
+
+**The disagreement is a real signal.** On all five groups the mean KL from the
+reference head's probabilities to the views' beats the best no-model control,
+by +0.0279 to +0.1232 of excess AURC (preregistered P1, holds). It is not a
+better ranker than the margin: the margin has the lower excess AURC on four of
+the five, and on the fifth the difference is +0.0007 on 200
+units. <!-- claim:sensor-disagreement-beats-the-control -->
+
+**It does not find the errors the margin misses, where it matters.** Of the
+62,226 errors outside the margin's 10% review set, the disagreement's own 10%
+set contains a larger share than the best control's on three groups with a
+bootstrap interval clear of zero (Nandi +0.145, Togo +0.162, China +0.045), and
+on two it does not: AWF, where 25 missed errors give no power, and PASTIS, the
+largest group with 61,229 missed errors, where the share is 0.163 against the
+control's 0.158 and the interval spans zero. Preregistered P2 needed four of
+five and fails. Interleaving the two rankings, which was the way to spend the
+finding, captures no more errors than the margin alone at 5% or 10% on any
+group: it is strictly worse at both budgets on China and PASTIS, worse at one of
+the two on AWF and Nandi, and exactly flat on Togo. P3 fails 0 of 5. <!-- claim:sensor-disagreement-does-not-pay-in-a-review-set -->
+
+**A third sensor helps only if its head can do the task.** On AWF the Landsat
+view finds 24% of the margin's missed errors against Sentinel-1's 12%; on Nandi
+Landsat finds 25.5% against Sentinel-1's 2.7%, and that Sentinel-1 head is at
+0.332 accuracy, near chance on a three-class task. Disagreement with a head that
+cannot do the task is noise, and pooling the views hides
+it. <!-- claim:a-view-helps-only-if-its-head-can-do-the-task -->
+
+**Fusing the heads does not buy accuracy either.** Averaging the reference's and
+the views' probabilities improves accuracy on one group of five, Nandi by 0.7
+points, and loses on AWF and China by 2.0 and 2.9 points. This sits beside Ai2's
+own early fusion in the encoder, which gains on China and loses on Togo: more
+sensors is not a law, it depends on whether the added sensor carries information
+about the units this one finds
+ambiguous. <!-- claim:late-fusion-of-sensor-heads-does-not-buy-accuracy -->
+
+Read together: a different sensor sees a little of what the margin cannot, not
+enough to change a review set, and most of what remains is invisible to every
+label-free reading tried. What is left needs labels, which exp65 measured and
+locked to a model family.
+
+Outputs: `exp/out/exp75_summary.json`, `exp75_groups.csv`.
+
 ## Does the package help an agent? The preregistered benchmark (exp64)
 
 Every number above answers whether the measurement is right. None answers

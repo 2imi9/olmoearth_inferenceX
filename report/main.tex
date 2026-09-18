@@ -184,6 +184,16 @@ signals, each beating the no-model control on roughly half the suite (15,
 the ensemble is nearly the margin's equal on classification and clearly behind on
 segmentation \claim{suite-alternatives-clear-the-control-and-still-lose}.
 
+One more input was tried after the release. The same tasks are published embedded from
+different sensors, so a head fitted on another sensor is an expert on a different input,
+and its disagreement with the reference head costs no labels (exp75, five groups,
+464{,}366 units). That disagreement beats every no-model control
+\claim{sensor-disagreement-beats-the-control}, and still does not pay: of the errors
+outside the margin's 10\% review set it finds more than the control on three of five
+groups and not on the largest, and interleaving the two rankings captures no more at 5\%
+or 10\% on any group \claim{sensor-disagreement-does-not-pay-in-a-review-set}. What the
+margin misses is mostly invisible to a second sensor as well; closing it needs labels.
+
 Nor is the result a property of one encoder. Ai2 published the same task
 embeddings for other models with their own probe settings, so exp70's protocol
 was run unchanged on every encoder carrying at least 20 of the 24 tasks

@@ -2558,6 +2558,76 @@
     - {file: docs/results/comparisons.md, marker: suite-lead-across-olmoearth-sizes}
     - {file: docs/TECHNIQUES.md, marker: suite-lead-across-olmoearth-sizes}
 
+- id: sensor-disagreement-beats-the-control
+  statement: "Heads fitted on the other sensors Ai2 published for the same units are experts on a different input, and their disagreement with the reference head is a real label-free signal: on all five groups (AWF, Nandi, CropHarvest Togo, CropHarvest China, PASTIS; 464,366 graded units) the mean KL from the reference head's probabilities to the views' beats the best no-model control by +0.0279 to +0.1232 of excess AURC, preregistered P1 holding 5 of 5. It is not a better ranker than the margin: the margin has the lower excess AURC on four of the five groups, and on AWF, the fifth, the disagreement leads by 0.0007 on 200 units."
+  status: supported
+  experiments: [exp75, exp70]
+  artifacts: [exp/out/exp75_summary.json]
+  check: |-
+    (lambda V, R:
+      V['P1']['holds'] is True and len(V['P1']['groups']) == 5 and len(R) == 5
+      and all(r['lead_over_control']['view_kl'] > 0.027 for r in R.values())
+      and max(r['lead_over_control']['view_kl'] for r in R.values()) > 0.123
+      and sum(r['n_units'] for r in R.values()) == 464366
+      and sum(1 for g, x in V['descriptive']['view_kl_vs_margin_eaurc'].items() if x < 0) == 4
+    )(A['exp/out/exp75_summary.json']['verdicts'], A['exp/out/exp75_summary.json']['results']['groups'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: sensor-disagreement-beats-the-control}
+    - {file: docs/TECHNIQUES.md, marker: sensor-disagreement-beats-the-control}
+
+- id: sensor-disagreement-does-not-pay-in-a-review-set
+  statement: "The disagreement does not buy a better review set. Of the 62,226 reference-head errors outside the margin's 10% review set, the disagreement's own 10% set holds a larger share than the best control's with a cluster-bootstrap interval clear of zero on three groups (Nandi, Togo, China) and not on two: AWF, where 25 missed errors give no power, and PASTIS, the largest group with 61,229 missed errors, where the share is 0.163 against the control's 0.158 and the 95% interval spans zero; preregistered P2 needed four of five and fails. Interleaving the margin's and the disagreement's rankings captures no more errors than the margin alone at either 5% or 10% on any group: it is strictly worse at both budgets on two (China and PASTIS), worse at one of the two on another two (AWF and Nandi), and exactly flat on Togo; preregistered P3 holds on 0 of 5."
+  status: rejected
+  experiments: [exp75]
+  artifacts: [exp/out/exp75_summary.json]
+  check: |-
+    (lambda V, R:
+      V['P2']['holds'] is False and len(V['P2']['groups']) == 3 and set(V['P2']['groups']) == {'china', 'nandi', 'togo'}
+      and V['P3']['holds'] is False and len(V['P3']['groups']) == 0
+      and sum(r['misses']['missed_by_margin'] for r in R.values()) == 62226
+      and R['pastis']['misses']['missed_by_margin'] == 61229
+      and R['pastis']['misses']['view_kl_minus_control']['ci95'][0] < 0 < R['pastis']['misses']['view_kl_minus_control']['ci95'][1]
+      and all(min(r['capture_gain_interleave']['0.05'], r['capture_gain_interleave']['0.1']) <= 0 for r in R.values())
+      and sum(1 for r in R.values() if min(r['capture_gain_interleave']['0.05'], r['capture_gain_interleave']['0.1']) < 0) == 4
+      and sum(1 for r in R.values() if max(r['capture_gain_interleave']['0.05'], r['capture_gain_interleave']['0.1']) < 0) == 2
+    )(A['exp/out/exp75_summary.json']['verdicts'], A['exp/out/exp75_summary.json']['results']['groups'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: sensor-disagreement-does-not-pay-in-a-review-set}
+    - {file: docs/TECHNIQUES.md, marker: sensor-disagreement-does-not-pay-in-a-review-set}
+
+- id: a-view-helps-only-if-its-head-can-do-the-task
+  statement: "A second sensor is informative only where its own head can do the task. On AWF the Landsat view's KL finds 24.0% of the margin's missed errors against the Sentinel-1 view's 12.0%; on Nandi the Landsat view finds 25.5% against the Sentinel-1 view's 2.7%, and that Sentinel-1 head sits at 0.332 accuracy, near chance on its task, while the Landsat head reaches 0.726. Pooling the views hides the difference, so a disagreement reading should name the view it came from."
+  status: measured
+  experiments: [exp75]
+  artifacts: [exp/out/exp75_summary.json]
+  check: |-
+    (lambda V, R:
+      abs(V['P4']['per_view']['awf']['kl_landsat'] - 0.24) < 1e-9 and abs(V['P4']['per_view']['awf']['kl_s1'] - 0.12) < 1e-9
+      and V['P4']['per_view']['nandi']['kl_landsat'] > 0.25 and V['P4']['per_view']['nandi']['kl_s1'] < 0.03
+      and R['nandi']['view_accuracy']['s1'] < 0.34 and R['nandi']['view_accuracy']['landsat'] > 0.72
+    )(A['exp/out/exp75_summary.json']['verdicts'], A['exp/out/exp75_summary.json']['results']['groups'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: a-view-helps-only-if-its-head-can-do-the-task}
+    - {file: docs/TECHNIQUES.md, marker: a-view-helps-only-if-its-head-can-do-the-task}
+
+- id: late-fusion-of-sensor-heads-does-not-buy-accuracy
+  statement: "Averaging the reference head's and the views' probabilities, a late fusion at the head, improves accuracy on one of the five groups (Nandi, 0.818 against 0.811) and loses on AWF (0.810 against 0.830) and China (0.745 against 0.774); Togo and PASTIS are within half a point. It sits beside Ai2's own early fusion inside the encoder, which on the same suite gains on CropHarvest China (0.774 against 0.735 for the single-sensor head) and loses on Togo (0.781 against 0.830): more sensors is not a law, and a fused head is worth its cost only where the added sensor carries information about the units the first one finds ambiguous."
+  status: measured
+  experiments: [exp75, exp70]
+  artifacts: [exp/out/exp75_summary.json, exp/out/exp70_summary.json]
+  check: |-
+    (lambda R, E:
+      sum(1 for r in R.values() if r['late_fusion_accuracy'] > r['test_accuracy']) == 1
+      and R['nandi']['late_fusion_accuracy'] > R['nandi']['test_accuracy']
+      and R['awf']['test_accuracy'] - R['awf']['late_fusion_accuracy'] > 0.019
+      and R['china']['test_accuracy'] - R['china']['late_fusion_accuracy'] > 0.028
+      and E['cropharvest_Peoples_Republic_of_China_6_sentinel1_sentinel2']['test_accuracy'] > E['cropharvest_Peoples_Republic_of_China_6']['test_accuracy']
+      and E['cropharvest_Togo_12_sentinel2_sentinel1']['test_accuracy'] < E['cropharvest_Togo_12_sentinel2']['test_accuracy']
+    )(A['exp/out/exp75_summary.json']['results']['groups'], A['exp/out/exp70_summary.json']['results']['tasks'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: late-fusion-of-sensor-heads-does-not-buy-accuracy}
+    - {file: docs/TECHNIQUES.md, marker: late-fusion-of-sensor-heads-does-not-buy-accuracy}
+
 - id: agent-benchmark-package-is-a-floor-at-7b
   statement: "On the same forty cards and five arms with Qwen/Qwen2.5-7B-Instruct, all three preregistered tests hold: the tool arm grounds 100.0% of its numbers against the sandbox's 0.1% (40 cards to 0), captures 0.997 of the package's errors against 0.144 (39 to 0) and declines the side question on 10 of 10 comparison cards against 0; the sandbox produced no gradeable answer in 51 of 120 runs and left 53.3% of comparison questions unanswered, and the no-raster arm fabricated 372 windows; beside the 27B run, where P1 and P2 failed, what the package adds over a sandbox is everything at 7B and the decline at 27B."
   status: supported
