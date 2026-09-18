@@ -3,10 +3,12 @@
     oe-inferencex assess  scores.tif --out DIR [--logits] [--patch 4] [--nodata V] [--reference labels.tif]
                           [--budgets 0.01 0.05 0.10] [--order confidence|boundary_first]
     oe-inferencex compare a.tif b.tif --out DIR [--patch 4] [--nodata V] [--labels labels.tif] [--groups ids.tif]
-                          [--threshold 0.5]
+                          [--threshold T]
 
 Inputs are GeoTIFFs (any rasterio-readable raster) or .npy arrays: (H, W) for a binary map, (C, H, W) for per-class
-scores or, for `compare`, an integer class map. No-data comes from the raster's own value, NaN, or --nodata. Outputs are
+scores or, for `compare`, an integer class map. `compare` also takes two continuous maps (a regression output) when the
+cut-off is named with --threshold; without it a map outside [0, 1] is refused rather than cut at 0.5. No-data comes
+from the raster's own value, NaN, or --nodata. Outputs are
 plain files the caller reads back: JSON summaries (assess.summary / compare's dict), CSVs of the review windows with
 pixel and map coordinates, and rasters on the window grid (patch x patch pixels per window) when the input was one.
 Nothing here narrates; the JSON is the evidence (docs/method/agent_integration.md).
@@ -93,9 +95,9 @@ def _check_scores(scores, valid, is_logit, path):
     threshold it at 0.5 and compute a confidence of 9.0 for a class index of 5, returning a full plausible review set
     with exit 0. Silence is worse than absence here: the operator dispatches a field team on a nonsense ordering with
     nothing to warn them."""
-    if scores.ndim == 3 or is_logit:
+    if is_logit:
         return
-    v = scores[valid]
+    v = scores[:, valid] if scores.ndim == 3 else scores[valid]
     if v.size == 0:
         raise SystemExit(f"{path}: no valid pixels")
     lo, hi = float(np.nanmin(v)), float(np.nanmax(v))
@@ -104,6 +106,8 @@ def _check_scores(scores, valid, is_logit, path):
             f"{path}: values run {lo:g} to {hi:g}, which is not a probability map. Pass --logits if these are logits, "
             f"or give a (C, H, W) per-class score map. For a hard class map with a separate confidence band use "
             f"assess_classmap in the Python API; the command line does not read one.")
+    if scores.ndim == 3:
+        return
     integral = np.array_equal(v, np.rint(v))
     if integral and len(np.unique(v)) > 2:
         raise SystemExit(
@@ -157,12 +161,24 @@ def cmd_assess(args):
 
 
 # ----------------------------------------------------------------------------- compare
-def decisions(path, nodata, threshold):
+def decisions(path, nodata, threshold, notes=None):
     a, valid, geo = read_raster(path, nodata)
     if a.ndim == 3:
         hard, n_classes = a.argmax(0), a.shape[0]
     elif a.dtype.kind == "f" and not np.array_equal(a[valid], np.rint(a[valid])):
-        hard, n_classes = (a > threshold).astype(int), 2
+        # A continuous map outside [0, 1] under the default cut-off of 0.5 is one class everywhere on both sides, so
+        # two regression outputs "never differ", with exit 0. The cut-off of a continuous map is the caller's to name.
+        lo, hi = (float(np.nanmin(a[valid])), float(np.nanmax(a[valid]))) if valid.any() else (0.0, 1.0)
+        continuous = lo < 0.0 or hi > 1.0
+        if continuous and threshold is None:
+            raise SystemExit(
+                f"{path}: values run {lo:g} to {hi:g}, which is not a probability map. To compare two continuous maps "
+                f"at a cut-off, name it with --threshold (for example --threshold 80); otherwise pass hard class maps "
+                f"or (C, H, W) scores.")
+        if continuous and notes is not None:
+            notes.append(f"{os.path.basename(path)} is a continuous map cut at {threshold:g}: the comparison is of that one "
+                         f"decision, and no recorded experiment grades it on a regression output")
+        hard, n_classes = (a > (0.5 if threshold is None else threshold)).astype(int), 2
     else:
         hard = np.rint(a).astype(int)
         n_classes = int(hard[valid].max()) + 1 if valid.any() else 2
@@ -170,15 +186,15 @@ def decisions(path, nodata, threshold):
 
 
 def cmd_compare(args):
-    ha, va, geo, na = decisions(args.a, args.nodata, args.threshold)
-    hb, vb, _, nb = decisions(args.b, args.nodata, args.threshold)
+    notes = []
+    ha, va, geo, na = decisions(args.a, args.nodata, args.threshold, notes)
+    hb, vb, _, nb = decisions(args.b, args.nodata, args.threshold, notes)
     if ha.shape != hb.shape:
         raise SystemExit(f"the two maps differ in shape: {ha.shape} vs {hb.shape}; compare needs identical grids")
     n_classes = max(na, nb, 2)
     a_w, b_w = _pooled_argmax(ha, n_classes, args.patch), _pooled_argmax(hb, n_classes, args.patch)
     ok = pool_valid(va & vb, args.patch)
     labels = groups = None
-    notes = []
     if args.labels:
         lab, lv, _ = read_raster(args.labels, None)
         lab_i = np.rint(lab).astype(int)
@@ -250,7 +266,8 @@ def build_parser():
     c.add_argument("--out", required=True, help="output directory")
     c.add_argument("--patch", type=int, default=4, help="window size in pixels (default 4)")
     c.add_argument("--nodata", type=float, default=None)
-    c.add_argument("--threshold", type=float, default=0.5, help="threshold for a probability map")
+    c.add_argument("--threshold", type=float, default=None,
+                   help="cut-off for a 2-D continuous map: 0.5 for a probability map when omitted; required for any other range")
     c.add_argument("--labels", default=None, help="optional integer class raster: adds which side is right and the cross-tab")
     c.add_argument("--groups", default=None, help="optional integer raster of group ids (tiles, events) for per-group rates")
     c.set_defaults(func=cmd_compare)

@@ -148,3 +148,35 @@ def test_an_undefined_rate_is_not_printed_as_zero(capsys, tmp_path):
     assert _pct(None) == "undefined"
     assert _pct(0.0) == "0.00%"
     assert _pct(0.5, 0) == "50%"
+
+
+def test_multiband_scores_outside_zero_one_are_refused_cleanly(tmp_path):
+    """The 3-D branch skipped the range check, so a multi-band raster that is not per-class probabilities was scored."""
+    np.save(tmp_path / "x.npy", np.stack([np.full((64, 64), 120.0), np.full((64, 64), 30.0)]))
+    with pytest.raises(SystemExit) as e:
+        main(["assess", str(tmp_path / "x.npy"), "--out", str(tmp_path / "o")])
+    assert "probability map" in str(e.value)
+
+
+def test_compare_refuses_continuous_maps_at_the_default_cutoff_and_takes_a_named_one(tmp_path):
+    """Two regression outputs cut at 0.5 are one class everywhere, so they 'never differ', with exit 0. With the cut-off
+    named the comparison runs, is about that one decision, and says that no recorded experiment grades it."""
+    rng = np.random.default_rng(0)
+    a = 80 + 25 * rng.standard_normal((64, 64)); b = a + 10 * rng.standard_normal((64, 64))
+    np.save(tmp_path / "a.npy", a); np.save(tmp_path / "b.npy", b)
+    with pytest.raises(SystemExit) as e:
+        main(["compare", str(tmp_path / "a.npy"), str(tmp_path / "b.npy"), "--out", str(tmp_path / "o")])
+    assert "--threshold" in str(e.value)
+    assert main(["compare", str(tmp_path / "a.npy"), str(tmp_path / "b.npy"), "--out", str(tmp_path / "o"), "--threshold", "80"]) == 0
+    s = json.load(open(tmp_path / "o" / "comparison.json"))
+    assert 0 < s["disagreement_rate"] < 1 and any("continuous map cut at 80" in n for n in s["notes"])
+
+
+def test_compare_on_probability_maps_is_unchanged_by_the_optional_cutoff(tmp_path):
+    p, _ = _scene(0); q, _ = _scene(1)
+    p, q = np.nan_to_num(p, nan=0.1), np.nan_to_num(q, nan=0.1)
+    np.save(tmp_path / "a.npy", p); np.save(tmp_path / "b.npy", q)
+    main(["compare", str(tmp_path / "a.npy"), str(tmp_path / "b.npy"), "--out", str(tmp_path / "d")])
+    main(["compare", str(tmp_path / "a.npy"), str(tmp_path / "b.npy"), "--out", str(tmp_path / "e"), "--threshold", "0.5"])
+    d, e = (json.load(open(tmp_path / k / "comparison.json")) for k in ("d", "e"))
+    assert d["disagreement_rate"] == e["disagreement_rate"] and "notes" not in d

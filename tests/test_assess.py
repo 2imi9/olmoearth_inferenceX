@@ -169,3 +169,41 @@ def test_assess_prediction_top1_form_on_multiclass_logits_and_the_warning_on_the
     assert not any("form='top1'" in w for w in summary(binary)["warnings"])
     with pytest.raises(ValueError):
         assess_prediction(z, is_logit=True, form="entropy")
+
+
+@pytest.mark.parametrize("scores,why", [
+    (np.full((32, 32), 80.0) + np.arange(32)[None, :], "a regression output, such as fuel moisture in percent"),
+    (np.stack([np.full((32, 32), 120.0), np.full((32, 32), 30.0)]), "per-class scores that are not probabilities"),
+    (np.full((32, 32), -0.2), "a negative value"),
+])
+def test_a_map_that_is_not_a_probability_map_is_refused_by_the_api_too(scores, why):
+    """The command line refused these and the function did not, so an agent importing the package got a full,
+    plausible review set for a regression raster: every pixel above 0.5 is 'class 1', every confidence a number."""
+    with pytest.raises(ValueError, match="not a probability map"):
+        assess_prediction(scores, is_logit=False)
+    assert assess_prediction(scores, is_logit=True)["n_windows"] == 64, "logits are unbounded and stay accepted"
+
+
+def test_the_range_check_ignores_nodata_and_nan():
+    p = np.random.default_rng(0).random((32, 32))
+    nodata = np.zeros((32, 32), bool)
+    p[:4, :4], nodata[:4, :4] = -9999.0, True
+    p[10, 10] = np.nan
+    assert assess_prediction(p, is_logit=False, nodata_mask=nodata)["n_windows"] == 63
+    with pytest.raises(ValueError, match="-9999"):
+        assess_prediction(p, is_logit=False)       # the same array without its mask is refused, and says why
+
+
+def test_a_review_set_decided_by_ties_says_so_and_a_separable_one_stays_silent():
+    """A hard 0/1 mask passes every range check and carries no confidence: every window ties and the 'review set' is
+    the bottom-right corner of the raster. The set is returned, with the count of ties that decided it."""
+    hard = np.zeros((64, 64)); hard[:, 32:] = 1.0
+    out = assess_prediction(hard, is_logit=False, budgets=(0.05,))
+    tie = out["review_sets"][0.05]["tied_at_cutoff"]
+    assert tie["inside"] == out["review_sets"][0.05]["n_windows"] and tie["outside"] > 0
+    assert any("raster position" in w for w in out["warnings"])
+    assert summary(out)["review_sets"]["0.05"]["tied_at_cutoff"] == tie
+
+    smooth = np.random.default_rng(1).normal(0, 3, (64, 64))
+    out = assess_prediction(smooth, is_logit=True, budgets=(0.05,))
+    assert "tied_at_cutoff" not in out["review_sets"][0.05] and not any("raster position" in w for w in out["warnings"])

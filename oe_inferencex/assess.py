@@ -111,6 +111,8 @@ def assess_prediction(scores, is_logit, patch=4, nodata_mask=None, reference=Non
     if form not in ("margin", "top1"):
         raise ValueError(f"form must be 'margin' or 'top1', got {form!r}")
     scores = np.asarray(scores, dtype=np.float64)
+    if not is_logit:
+        _check_probabilities(scores, nodata_mask)
     warnings = []
     if scores.ndim == 2:  # binary probability map
         p1 = scores
@@ -140,6 +142,21 @@ def assess_prediction(scores, is_logit, patch=4, nodata_mask=None, reference=Non
     return _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets,
                    ("1 - max probability (from logits)" if form == "top1" and scores.ndim == 3 else "negative logit margin")
                    if is_logit else "1 - max probability", warnings, order)
+
+
+def _check_probabilities(scores, nodata_mask):
+    """Refuse an array that cannot be a probability map, for every caller and not only the command line. A regression
+    output, a reflectance band or a class map passed as probabilities would otherwise be thresholded at 0.5 and come
+    back as a full, plausible review set."""
+    valid = np.isfinite(scores)
+    if nodata_mask is not None:
+        valid = valid & ~np.asarray(nodata_mask, dtype=bool)   # (H, W) broadcasts over (C, H, W)
+    v = scores[valid]
+    if v.size and (v.min() < -1e-6 or v.max() > 1 + 1e-6):
+        raise ValueError(
+            f"scores run {v.min():g} to {v.max():g}, which is not a probability map. Pass is_logit=True for logits. "
+            f"A hard class map with a separate confidence band goes to assess_classmap. A regression output has no "
+            f"class confidence and is not supported here; two inferences of it can be compared at a cut-off instead.")
 
 
 def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, signal, warnings, order="confidence"):
@@ -180,6 +197,16 @@ def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, sig
         rows, cols = np.unravel_index(idx, conf_w.shape)
         out["review_sets"][b] = {"n_windows": int(k), "windows_rowcol": np.stack([rows, cols], 1),
                                  "boundary_share_in_set": float((bnd_w.flatten()[idx] > 0).mean())}
+        # A set whose cut-off falls inside a run of equal scores is decided there by raster position, not by evidence:
+        # a hard mask, a quantized band or a constant map all end here. Said only when it happens.
+        flat = review_score.ravel()
+        tied = valid_w.ravel() & (flat == flat[idx[-1]])
+        inside = int(tied[idx].sum())
+        if int(tied.sum()) > inside:
+            out["review_sets"][b]["tied_at_cutoff"] = {"inside": inside, "outside": int(tied.sum()) - inside}
+            warnings.append(f"review set at {b:g}: {inside} of its {k} windows share the cut-off score with "
+                            f"{int(tied.sum()) - inside} windows left outside; among those the order is raster position, "
+                            f"not evidence")
 
     if reference is not None:
         ref = np.asarray(reference).astype(int)  # values < 0 mean no reference

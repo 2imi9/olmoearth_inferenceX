@@ -4,6 +4,31 @@ The package [`oe_inferencex/`](../oe_inferencex/) is torch-free. It takes a
 prediction map and returns a review plan with a reason per flagged window;
 with a reference map it also scores the plan.
 
+## What it takes, and what it refuses
+
+The package reads arrays, not models, so any map from any model can go in. What the record supports differs by
+the kind of map, and outside that support the package refuses or says so, rather than returning a plausible
+review set for an input it cannot rank.
+
+| Map | Entry point | What the record supports |
+|---|---|---|
+| Binary probability or logit map, `(H, W)` | `assess_prediction`, `oe-inferencex assess` | Confidence ranks errors on hand labels and on the segmentation tasks of Ai2's suite ([exp70](results/comparisons.md#tasks-we-did-not-choose-ai2s-whole-published-suite-exp70)). Logits are preferred: probabilities tie where they saturate. |
+| Per-class scores, `(C, H, W)` | the same | The whole suite, under every encoder of it ([exp74](results/comparisons.md#the-suite-under-the-other-encoders-exp74)); which form of the confidence to use is [exp76](results/comparisons.md#which-confidence-which-statistic-which-aggregator-exp76). |
+| Hard class map with an exported confidence band | `assess_classmap` | [The production case](#the-production-case-a-class-map-with-an-exported-confidence-band): the band can only rank the pixels it separates, and the ties are reported. |
+| Two inferences of one scene: classes, probabilities or scores | `compare_inferences`, `oe-inferencex compare`, with `--groups` for zones | [Compare](#compare-two-inferences-of-the-same-scene): where they differ, per zone, and which cues mark the difference. Label-free unless labels are given. |
+| Continuous map, such as a regression output | `compare` only, with the cut-off named by `--threshold` | Nothing yet. There is no class confidence to rank by, so `assess` refuses it; two inferences can be compared at a named cut-off, and the output says that no recorded experiment grades this case. |
+| Hard class map alone | `compare` only | No confidence, so no ranking: the prediction boundary is the only cue. |
+
+Three refusals follow from this, in the Python API as well as on the command line. Probability input outside
+[0, 1] raises, because a regression raster or a class map would otherwise be cut at 0.5 and scored. A review set
+whose cut-off falls inside a run of equal scores (a hard mask, a quantized band, a constant map) is returned with
+`tied_at_cutoff` and a warning: among the tied windows the order is raster position, not evidence. And
+`oe-inferencex compare` does not cut a continuous map at 0.5 by default, since two regression outputs would then
+"never differ"; name the cut-off and it runs.
+
+What the package never says, for any map: how wrong the map is. It orders the windows and explains the order; an
+error rate needs a reference, and then the reference caveat applies.
+
 ## Fuse the readings with labels
 
 The label-free layers say where to look, why, and how two inferences differ.
