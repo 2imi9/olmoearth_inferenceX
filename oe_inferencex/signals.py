@@ -94,6 +94,35 @@ def aligned_tile_phase(shift_maps, patch=4, dtype=np.float64):
     return out[0] if squeeze else out
 
 
+def crop_dependence(shift_decisions, patch=4):
+    """How much of a decision map depends on the crop offset it was inferred at: a map property, not a ranker.
+
+    shift_decisions: sequence over shifts s = 0, 1, ..., S-1 of hard decision maps (G, G) or (N, G, G) on the patch
+    grid of the window offset by s pixels, as `aligned_tile_phase` takes them. Each map is painted onto a pixel
+    canvas at its true offset; a pixel flips when the decisions of the tilings covering it are not all equal; the
+    share of flipping pixels per window is pooled back to the shift-0 grid. Returns {"per_window": share in [0, 1]
+    of shape (G, G) or (N, G, G), "rate": share of windows with any flip, "mean_share", "n_offsets"}.
+
+    On a frozen encoder run at four offsets this is the tiling instability of exp13 seen as a map property. A
+    test-time-training encoder refits its inner model on every crop from all of the crop's tokens, so the number is
+    expected to be structurally larger there; docs/plan/vit3_readiness.md preregisters it as a gate."""
+    maps = np.asarray(shift_decisions, dtype=np.float64)
+    squeeze = maps.ndim == 3
+    if squeeze:
+        maps = maps[:, None]
+    S, N, G0, G1 = maps.shape
+    H, W = G0 * patch, G1 * patch
+    canvas = np.full((S, N, H + S, W + S), np.nan)
+    ones = np.ones((patch, patch))
+    for s in range(S):
+        canvas[s, :, s:s + H, s:s + W] = np.stack([np.kron(m, ones) for m in maps[s]])
+    sub = canvas[:, :, :H, :W]                       # every pixel here is covered by shift 0, so no all-NaN slice
+    flip = (np.nanmax(sub, axis=0) - np.nanmin(sub, axis=0)) > 0
+    share = flip.reshape(N, G0, patch, G1, patch).mean(axis=(2, 4))
+    return {"per_window": share[0] if squeeze else share, "rate": float((share > 0).mean()),
+            "mean_share": float(share.mean()), "n_offsets": int(S)}
+
+
 # ----------------------------------------------------------------------------- pixel controls
 def _crop(img, size):
     x = np.asarray(img)

@@ -119,6 +119,18 @@ reference maps on narrow channels (exp15).
   ForestLossDriver, LFMC, EcosystemTypeMapping) have not been run; the water
   results are for linear probes on frozen encoders.
 
+## Compute budget per reading
+
+Every audit here scales with inference, not with labels. The margin, the
+entropy, the boundary indicator and the spectral cues cost nothing beyond the
+one forward pass that made the map. Crop dependence and tiling instability cost
+one pass per offset (four here), the shift-averaged decision the same, and a
+five-seed ensemble five; the record rejected the ensemble readings and keeps
+the crop readings as map properties, not rankers. On an encoder whose forward
+pass is dearer, a test-time-training design costs about four attention passes
+per layer, the single-pass readings are the only affordable default at scale;
+see [the ViT3 readiness page](../plan/vit3_readiness.md).
+
 ## What would change this recipe
 
 A signal that beats confidence on expert-labelled dense maps, on more than

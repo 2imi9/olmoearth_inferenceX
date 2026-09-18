@@ -117,3 +117,20 @@ def test_shift_averaged_probability_geometry_and_average():
     assert pix[8, 7] == pytest.approx(0.0) and pix[8, 8] == pytest.approx(1 / 4) and pix[8, 11] == pytest.approx(1.0)
     win = pool_to_windows(pix, patch=4, offset=0)
     assert win.shape == (G, G) and win[1, 1] == pytest.approx(0.0) and win[1, 3] == pytest.approx(1.0)
+
+
+
+def test_crop_dependence_is_zero_for_a_constant_map_and_exact_at_an_edge():
+    from oe_inferencex.signals import crop_dependence
+    c = np.ones((6, 6), dtype=int)
+    same = crop_dependence([c, c, c, c], patch=4)
+    assert same["rate"] == 0.0 and same["mean_share"] == 0.0 and same["n_offsets"] == 4
+    assert same["per_window"].shape == (6, 6)
+    g = np.zeros((6, 6), dtype=int); g[:, 3:] = 1     # an edge at pixel 12; the same grid map painted at offset 1 puts it at 13
+    out = crop_dependence([g, g], patch=4)
+    # the edge window flips 4 of 16 pixels, except in the first window row, where pixel row 0 is covered by shift 0 only
+    assert np.allclose(out["per_window"][1:, 3], 0.25) and abs(out["per_window"][0, 3] - 3 / 16) < 1e-12
+    assert np.all(out["per_window"][:, [0, 1, 2, 4, 5]] == 0)
+    assert abs(out["rate"] - 1 / 6) < 1e-12 and abs(out["mean_share"] - (3 / 16 + 5 * 0.25) / 36) < 1e-12
+    stacked = crop_dependence(np.stack([[g, c], [g, c]]), patch=4)
+    assert stacked["per_window"].shape == (2, 6, 6) and stacked["per_window"][1].max() == 0

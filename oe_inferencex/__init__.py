@@ -34,15 +34,15 @@ from importlib.metadata import PackageNotFoundError, version as _version
 from .assess import (assess_classmap, assess_prediction, boundary_first_score, review_mask, review_order,
                      summary)
 from .calibrate import fit_ranker, fit_side, side_features
-from .compare import (compare_inferences, crosstab, disagreement, over_groups, phi, stability, where,
-                      which_side)
+from .compare import (compare_inferences, crosstab, determinism_check, disagreement, over_groups, phi, stability,
+                      where, which_side)
 from .explain import CUES, cue_enrichment, derive_cues, explain_review_set, library_table
 from .metrics import (aurc_expected, capture_at_budget, capture_at_budget_expected, excess_aurc,
                       expected_calibration_error, oracle_aurc, risk_coverage, selective_accuracy,
                       weighted_aurc, weighted_auroc, weighted_capture_at_budget, weighted_excess_aurc,
                       weighted_mean)
-from .signals import (aligned_tile_phase, boundary_indicator, combine_midrank, confidence, midrank_pct, ndwi,
-                      ndwi_gradient, ndwi_level, pool_to_windows, s2_patch_variance,
+from .signals import (aligned_tile_phase, boundary_indicator, combine_midrank, confidence, crop_dependence,
+                      midrank_pct, ndwi, ndwi_gradient, ndwi_level, pool_to_windows, s2_patch_variance,
                       shift_averaged_probability)
 from .stats import (block_bootstrap_indices, cluster_bootstrap_difference, clustered_sign_test,
                     paired_cluster_bootstrap, paired_comparison, sign_test, spearman, wins_losses_ties)
@@ -53,6 +53,7 @@ except PackageNotFoundError:          # a source checkout that was never install
     __version__ = "1.0.0"
 
 __all__ = [
+    "crop_dependence", "determinism_check",
     "__version__",
     # assess
     "assess_prediction", "assess_classmap", "review_order", "review_mask", "boundary_first_score", "summary",

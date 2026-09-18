@@ -83,8 +83,8 @@ floating point. The two maps must share one grid.
 |---|---|
 | `assess` | Review sets at any budget from a logit, probability or exported-confidence map, in confidence order or in the boundary-first order; error rate, capture at each budget and tie-aware AURC when a reference map exists |
 | `explain` | Why each flagged window is suspect: label-free cues, each with its measured share among error and correct windows and the experiment that measured it |
-| `compare` | How two inferences of the same scene differ: the disagreement rate pooled and per tile or event, what the disagreement windows have in common (the enrichment of each label-free cue among them), whether two disagreement sets are the same set; with labels, the errors one side corrects and the errors it adds, and which side is right where they disagree |
-| `signals` | Confidence, the boundary indicator, tiling instability, the NDWI cues and the pixel controls, as pure functions |
+| `compare` | How two inferences of the same scene differ: the disagreement rate pooled and per tile or event, what the disagreement windows have in common (the enrichment of each label-free cue among them), whether two disagreement sets are the same set; with labels, the errors one side corrects and the errors it adds, and which side is right where they disagree; `determinism_check`, the same input inferred twice under two engines or precisions, gated against the reseed floor |
+| `signals` | Confidence, the boundary indicator, tiling instability, the NDWI cues and the pixel controls, as pure functions; `crop_dependence`, how much of a decision map depends on the crop it was inferred in, a map property for encoders that adapt per input |
 | `calibrate` | Where labels exist, a fitted ranker or a fitted which-side rule, cross-fitted by group and reported held-out; each fusion is locked to the model family it was fitted on, because such rules do not transfer |
 | `metrics`, `stats` | Tie-aware AURC and capture at a budget, exact sign tests, one vote per cluster, block and cluster bootstraps; and the design-weighted forms for a reference that is a probability sample rather than a map, including a base-rate-free AUROC and a paired bootstrap on the difference between two disjoint subsets |
 | `reliability`, `evidence` | SHRUG-FM's published reliability signals reimplemented torch-free, so a competitor's method is scored under this protocol rather than described; the small logistic and softmax heads a candidate rule is scored with. The expected calibration error lives in `metrics` |
@@ -234,6 +234,25 @@ summary(out)                                # the JSON-safe view, no arrays
   [agent contract](method/agent_integration.md) requires; undefined values
   are NaN in the arrays and null in the summary.
 
+## Same input, two engines
+
+```python
+from oe_inferencex.compare import determinism_check
+from oe_inferencex.signals import crop_dependence
+
+# the same tiles inferred under fp32 and bf16: decisions a and b, margins ma and mb, valid windows ok
+gate = determinism_check(a, b, ok, floor=0.03, margin_a=ma, margin_b=mb)
+gate["disagreement_rate"], gate["margin_drift"], gate["passes"]
+
+# the same tile inferred at crop offsets 0, 1, 2, 3 px: decisions on the patch grid, shift first
+crop_dependence([d0, d1, d2, d3], patch=4)["rate"]     # share of windows whose decision depends on the crop
+```
+
+Both are map properties, not rankers. The floor is the reseed disagreement
+rate of the model family (exp57 measured 2 to 4%); a rate above it is drift the
+engine introduced. Why these exist, and the predictions they gate, is in
+[the ViT3 readiness page](plan/vit3_readiness.md).
+
 ## Scoring a new rule the same way
 
 `metrics.capture_at_budget_expected` and `metrics.excess_aurc` score a
@@ -242,6 +261,18 @@ candidate per unit; `stats.sign_test`, `stats.clustered_sign_test` and
 validates an explanation cue. The experiment scripts in `exp/` show the
 full pattern, two references at once with controls; the
 [protocol](method/protocol.md) is the rulebook.
+
+On Ai2's published suite, any per-unit reading can be screened beside the
+margin and the two no-model controls on every task a model carries, with
+exp74's bar for the margin and no change to the record:
+
+```bash
+HF_HOME=<cache> python scripts/suite_regression.py --model olmoearth_base --signal mypkg.readings:my_reading
+```
+
+The reading is `f(probs, emb_test, emb_train, decisions) -> per-unit array`,
+higher meaning more suspect. A candidate that screens well enters the record
+only through a preregistered experiment.
 
 ## Reproduce
 

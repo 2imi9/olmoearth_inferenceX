@@ -266,3 +266,30 @@ def compare_inferences(a, b, ok, groups=None, labels=None, cues=None):
             graded["over_groups"] = over_groups({k: v["corrected"] - v["broken"] for k, v in per.items()})
         out["graded"] = graded
     return out
+
+
+
+def determinism_check(a, b, ok, floor=None, margin_a=None, margin_b=None, groups=None):
+    """The same input inferred twice, by two engines, precisions or batch compositions: does the map move, and by
+    more than reseeding the head moves it?
+
+    a, b: hard decisions of the same shape; ok: the valid windows; floor: the reseed disagreement rate the record
+    gives for the model family (exp57 measured 2 to 4% between two inferences of one scene), so a rate above it is
+    drift the engine introduced; margin_a, margin_b: optional per-window margins, for the drift of the score itself.
+    Returns n_windows, n_disagree, disagreement_rate, per_group (or None), margin_drift ({mean_abs, max_abs} on the
+    valid windows, or None), floor, passes (rate <= floor, or None without a floor). A frozen fp32 encoder run twice
+    must give 0. A test-time-training encoder fits its inner model in one full-batch step at learning rate 1.0, the
+    kind of computation whose numerics differ between engines; docs/plan/vit3_readiness.md makes this a gate."""
+    okm = _indicator(ok)
+    dis = disagreement(a, b, okm, groups)
+    out = {"n_windows": dis["n"], "n_disagree": dis["n_disagree"], "disagreement_rate": dis["rate"],
+           "per_group": dis["per_group"], "margin_drift": None, "floor": floor, "passes": None}
+    if margin_a is not None and margin_b is not None:
+        ma, mb = np.asarray(margin_a, dtype=np.float64), np.asarray(margin_b, dtype=np.float64)
+        _same_shape(margin_a=ma, margin_b=mb, ok=okm)
+        d = np.abs(ma - mb)[okm]
+        out["margin_drift"] = {"mean_abs": float(d.mean()) if d.size else float("nan"),
+                               "max_abs": float(d.max()) if d.size else float("nan")}
+    if floor is not None:
+        out["passes"] = bool(dis["rate"] <= floor)
+    return out

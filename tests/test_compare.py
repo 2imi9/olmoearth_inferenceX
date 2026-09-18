@@ -431,3 +431,20 @@ def check_exp57_atlas_recomputes_from_the_masks(suffix=""):
 
 def test_exp57_atlas_recomputes_from_the_masks():
     check_exp57_atlas_recomputes_from_the_masks("")
+
+
+
+def test_determinism_check_zero_for_identical_maps_and_gates_against_a_floor():
+    from oe_inferencex.compare import determinism_check
+    rng = np.random.default_rng(0)
+    a = rng.integers(0, 3, (20, 20)); ok = np.ones((20, 20), dtype=bool); ok[:2] = False
+    same = determinism_check(a, a, ok, floor=0.03, margin_a=np.ones((20, 20)), margin_b=np.ones((20, 20)))
+    assert same["disagreement_rate"] == 0.0 and same["passes"] is True and same["n_windows"] == 360
+    assert same["margin_drift"] == {"mean_abs": 0.0, "max_abs": 0.0}
+    b = a.copy(); b[5, :] = (b[5, :] + 1) % 3                            # one row of 20 windows moves
+    moved = determinism_check(a, b, ok, floor=0.03, margin_a=np.ones((20, 20)), margin_b=np.full((20, 20), 0.9))
+    assert moved["n_disagree"] == 20 and abs(moved["disagreement_rate"] - 20 / 360) < 1e-12
+    assert moved["passes"] is False and abs(moved["margin_drift"]["mean_abs"] - 0.1) < 1e-12
+    assert determinism_check(a, b, ok)["passes"] is None
+    with pytest.raises(ValueError):
+        determinism_check(a, b, ok, margin_a=np.ones((20, 20)), margin_b=np.ones((19, 20)))
