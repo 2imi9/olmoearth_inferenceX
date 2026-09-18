@@ -29,6 +29,9 @@ Preregistered, before the run.
       head's errors than the margin alone at both 5% and 10% on at least 4 of 5 groups.
   P4  descriptive: on AWF and Nandi, the share of missed errors found by the Landsat view, by the Sentinel-1
       view, and by both together, so whether a third sensor adds to a second is on the record.
+  Also descriptive, added on 2026-09-17 before the run started: the accuracy of a late fusion at the head, the
+  mean of the reference's and the views' probabilities, beside the reference's and each view's accuracy, so
+  whether fusing sensors at the head buys accuracy is on the record next to Ai2's early fusion in the encoder.
 Falsification. If P2 fails on 3 or more groups, then even a different sensor does not see the confident errors,
 and the record states that what remains needs labels. If P3 holds, the interleaving enters oe_inferencex as a
 label-free set rule for scenes with a second sensor, with the family lock exp65 measured.
@@ -224,7 +227,8 @@ def run_group(name, cache):
            "test_accuracy": float(1 - err.mean()), "error_rate": float(err.mean()), "signals": sc,
            "best_control": cname, "lead_over_control": {s: float(cval - sc[s]["excess_aurc"]) for s in sc if s not in e70.CONTROLS},
            "capture_gain_interleave": {b: float(sc["interleave"]["capture"][b] - sc["margin"]["capture"][b]) for b in sc["margin"]["capture"]},
-           "misses": miss, "view_accuracy": {k: float((np.asarray(p).argmax(1) == y).mean()) for k, p in p_views.items()}}
+           "misses": miss, "view_accuracy": {k: float((np.asarray(p).argmax(1) == y).mean()) for k, p in p_views.items()},
+           "late_fusion_accuracy": float((np.mean([np.asarray(p_ref)] + [np.asarray(p) for p in p_views.values()], axis=0).argmax(1) == y).mean())}
     rec.update(extra)
     return rec
 
@@ -245,7 +249,9 @@ def verdicts(results):
                 "per_view": {g: {k: s for k, s in results[g]["misses"]["share_found"].items() if k.startswith("kl_") or k == "view_kl"}
                              for g in groups}},
          "descriptive": {"view_kl_vs_margin_eaurc": {g: float(results[g]["signals"]["margin"]["excess_aurc"] - results[g]["signals"]["view_kl"]["excess_aurc"]) for g in groups},
-                         "missed_by_margin": {g: results[g]["misses"]["missed_by_margin"] for g in groups}}}
+                         "missed_by_margin": {g: results[g]["misses"]["missed_by_margin"] for g in groups},
+                         "accuracy": {g: {"reference": results[g].get("test_accuracy"), "late_fusion": results[g].get("late_fusion_accuracy"),
+                                          **results[g].get("view_accuracy", {})} for g in groups}}}
     return v
 
 
