@@ -1,7 +1,12 @@
-# Readiness for a test-time-training OlmoEarth (ViT3)
+# Readiness for an encoder that adapts at inference
 
-Written 18 September 2026, before any such checkpoint exists. ViT3 (Han et
-al., arXiv 2512.01643) replaces attention with a test-time-training layer: a
+Written 18 September 2026, before any such checkpoint exists, and before its
+design is known. Nothing here assumes one architecture: the gates below are
+properties any encoder that adapts per input will have, whether by test-time
+training, fast weights, retrieval or tuning at inference, and the code takes
+only decisions, margins and per-unit readings. ViT3 is the worked example
+because it is the most concrete published design. ViT3 (Han et al., arXiv
+2512.01643) replaces attention with a test-time-training layer: a
 small inner model is refit on every input sequence from all of its key-value
 pairs, in a single full-batch step at learning rate 1.0 under a mean-squared
 reconstruction loss, and the adapted weights produce the output. The paper's
@@ -23,6 +28,9 @@ The fit is per sequence, not per batch, so batch composition is not expected
 to move a map; the determinism gate compares engines and precisions.
 
 ## Preregistered, before the run
+
+Stated for a test-time-training OlmoEarth; the thresholds are the record's
+existing bars, so they carry over to any adaptive design unchanged.
 
 - **P1** The margin of a test-time-training OlmoEarth beats the best no-model
   control on at least 75% of the tasks it carries, sign test p < 0.05,
