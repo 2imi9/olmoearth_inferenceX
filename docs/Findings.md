@@ -4,6 +4,27 @@ What the audit found, what holds up, and how well. Every number traces to a
 file under `exp/out/`; the per-experiment detail is in the
 [technique ledger](TECHNIQUES.md) and the results pages.
 
+## In short
+
+For a reader with two minutes. No numbers here; each line is argued, with its numbers and its exceptions, further
+down the page.
+
+- **The model's own confidence is the best label-free guide to where a map is wrong.** It beats every index that
+  never sees the model on every task of Ai2's published embedding suite, nearly always under the other encoders of
+  that suite too, and on every labelled dataset Ai2 suggested. One known exception: on a single flood event a plain
+  water index did as well as a frozen head, and that went away once the encoder was fine-tuned.
+- **This is not agreement with annotators.** It still holds when the reference is a surveyor who stood on the
+  ground and never saw a pixel.
+- **Most errors sit on the boundaries of the model's own prediction.** Reviewing boundary windows first, then the
+  rest by confidence, finds more errors at small review budgets.
+- **Comparing two inferences says why, not where.** Differences across crops, backbones and sensors do not rank
+  errors. They show where shared errors come from (the sensor, not the backbone), and that two dates differ far
+  more often than noise even where nothing changed on the ground.
+- **What did not work.** Nothing taken from inside the encoder ranks errors better than confidence: not its
+  pretraining objective, not embedding distances, not ensembles of heads.
+- **What the tool does not say.** How wrong a map is. It orders the windows and explains the order; an error rate
+  needs a reference. Errors the model is confident about stay hidden from it.
+
 ![The audit pipeline on a real scene: Sentinel-2 bands, the frozen encoder and head, prediction, confidence and boundary layers, the review set at a 5% budget, the reasons per window](figures/pipeline.png)
 
 *One scene (okavango_80) through the pipeline: the layers are the actual rasters, the orange squares are the 5% review set in the boundary-first order.*
