@@ -126,7 +126,7 @@ choose, and reliability, not the ranking.
 ## Status (2026-09-16)
 
 **Agent side.** Skill #18 `olmoearth-review-set` is on the agent repository's
-branch `2imi9/feature-inferencex-review-set`, unmerged: four tools
+branch `2imi9/feature-inferencex-review-set`, merged into main on 2026-09-18 (pull request 155): four tools
 (`olmoearth_review_set`, `olmoearth_compare_review`, `olmoearth_grade_review_rule`,
 `olmoearth_review_budget_ceiling`), scores taken inline or from a `.json` file
 under `OLMOEARTH_SCORES_ROOT`, row and column returned with a grid; 645 tests
