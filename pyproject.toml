@@ -73,6 +73,10 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 include = ["oe_inferencex*"]
 
+# The real map `oe-inferencex demo` audits (about 250 KB) and its notice.
+[tool.setuptools.package-data]
+oe_inferencex = ["sample/*"]
+
 # Torch index pinning. These were previously inherited from the sibling
 # olmoearth_pretrain checkout; declaring them here keeps resolution identical
 # without requiring that checkout to exist. Linux gets the cu128 build (the

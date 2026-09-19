@@ -2778,3 +2778,45 @@
   cited_in:
     - {file: docs/results/comparisons.md, marker: agent-benchmark-7b-tool-arm-cues-degrade}
     - {file: docs/TECHNIQUES.md, marker: agent-benchmark-7b-tool-arm-cues-degrade}
+
+- id: demo-sample-is-the-median-tile
+  statement: "The real map `oe-inferencex demo` audits is the lower-median tile by error capture at the 5% budget among the 18 of Dynamic World's 409 expert-annotated test tiles that pass a rule fixed before any tile was looked at (annotated on at least 90% of windows, at least three classes with 5% of the windows, error rate between 5% and 35%): a typical tile, not the best one."
+  status: measured
+  experiments: [exp67]
+  artifacts: [exp/out/demo_sample_selection.json]
+  check: |-
+    (lambda d: (lambda caps:
+      d['n_tiles_scored'] == 409 and d['n_candidates'] == 18 == len(caps) and not d['smoke']
+      and d['chosen']['capture_05'] == caps[(len(caps) - 1) // 2]
+      and all(c['marked_share'] >= 0.90 and c['n_classes_5pct'] >= 3 and 0.05 <= c['error_rate'] <= 0.35 for c in d['candidates'])
+      and caps[0] < 0.10 and caps[-1] > 0.50
+    )(sorted(c['capture_05'] for c in d['candidates'])))(A['exp/out/demo_sample_selection.json'])
+  cited_in:
+    - {file: README.md, marker: demo-sample-is-the-median-tile}
+    - {file: docs/index.md, marker: demo-sample-is-the-median-tile}
+  note: >-
+    Not an experiment of its own: scripts/make_demo_sample.py over the archive exp67 audited (cluster job 995922, cpu,
+    47 seconds). The candidates' capture at 5% runs from 0.095 to 0.501, so the choice of tile could have moved the
+    demo's headline by a factor of five; the rule takes that choice away.
+
+- id: demo-sample-hit-rate
+  statement: "On the demo's tile 19% of the scored windows are wrong; of the 5% of windows flagged without labels 67% are wrong, and they hold 17% of the map's errors (the 10% flagged hold 32%); 97% of the flagged windows sit on a boundary of the model's own map."
+  status: measured
+  experiments: [exp67]
+  artifacts: [exp/out/demo_sample_audit.json, exp/out/demo_sample_selection.json]
+  check: |-
+    (lambda a, d: a['tile'] == d['chosen']['tile']
+      and round(a['error_rate'], 2) == 0.19 and round(a['review_sets']['0.05']['precision_in_set'], 2) == 0.67
+      and round(a['review_sets']['0.05']['errors_captured_fraction'], 2) == 0.17
+      and round(a['review_sets']['0.1']['errors_captured_fraction'], 2) == 0.32
+      and round(a['review_sets']['0.05']['boundary_share_in_set'], 2) == 0.97
+      and a['review_sets']['0.05']['precision_in_set'] > 3 * a['error_rate']
+    )(A['exp/out/demo_sample_audit.json'], A['exp/out/demo_sample_selection.json'])
+  cited_in:
+    - {file: README.md, marker: demo-sample-hit-rate}
+    - {file: docs/index.md, marker: demo-sample-hit-rate}
+  note: >-
+    demo_sample_audit.json is `python scripts/make_demo_sample.py --audit`: the package's own assess_prediction on the
+    bundled sample (window-level mean probabilities, patch 1), numpy only. One tile illustrates the tool; the evidence
+    about Dynamic World is exp67's, over the whole test set.
+

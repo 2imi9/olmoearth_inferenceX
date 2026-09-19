@@ -72,7 +72,7 @@ fitted rule next to the labels it came from.
 
 ## Command line
 
-`oe-inferencex demo` is the first run: it audits a small made-up map and draws the result, with no data to find. Two commands cover the two halves without writing Python. Inputs are GeoTIFFs
+`oe-inferencex demo` is the first run: it audits a real sample map shipped with the package (one Dynamic World tile with its expert annotation; `--made-up` for a synthetic one) and draws the result, with no data to find. Two commands cover the two halves without writing Python. Inputs are GeoTIFFs
 (with the `geo` extra, which brings rasterio) or `.npy` arrays; outputs are plain
 files the caller reads back, and nothing narrates.
 

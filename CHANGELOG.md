@@ -4,7 +4,10 @@
 
 ## 1.1.1 (2026-09-19)
 
-- The demo's picture explains itself. It has three titled panels instead of two untitled ones: what an audit gives (the map and the windows to check first, no labels used), the same windows over the map's real errors, and a random pick of the same size over the same errors, which is what shows why the flagged windows are a good choice. The titles carry the measured shares and are drawn with a built-in 5 x 7 font, so the picture still needs nothing but numpy. The run now ends with the real `assess` command on the sample file before the user's own map.
+- `oe-inferencex demo` audits a real map. The package ships one tile of Dynamic World (a served global land-cover product this project had no hand in) with its published probabilities and the expert annotation of the same ground, reduced to 40 m windows, about 250 KB, CC BY 4.0 with its notice. The tile was chosen by a rule fixed before any tile was looked at, the lower-median tile by error capture among the 18 of 409 test tiles that are fully annotated, because the candidates' capture runs from 0.10 to 0.50 and a hand-picked tile could have said anything (`scripts/make_demo_sample.py`, cluster job 995922). `--made-up` keeps the synthetic water map.
+- The demo's picture explains itself: three titled panels (what an audit gives with no labels used; the same windows over the map's real errors; a random pick of the same size over the same errors), a legend, and titles that carry the hit rates, drawn with a built-in 5 x 7 font so that nothing but numpy is needed. The random pick is reported by its expectation, not by the luck of one draw.
+- The demo's words lead with what the tool is worth to a reviewer (how often a flagged window is really wrong, against a random one; how much of the map can be used as it is), then the reasons windows are flagged, then what the tool does not do, then the real `assess` command on the sample file before the user's own map.
+- Two claims pin the demo's numbers in the ledger (157 claims).
 
 ## 1.1.0 (2026-09-18)
 

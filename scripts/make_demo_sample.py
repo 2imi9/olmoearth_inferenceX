@@ -71,7 +71,22 @@ def choose(stats):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--smoke", action="store_true")
+    ap.add_argument("--audit", action="store_true", help="audit the bundled sample and write exp/out/demo_sample_audit.json (numpy only)")
     args = ap.parse_args()
+    if args.audit:
+        z = np.load(os.path.join(ROOT, "oe_inferencex", "sample", "dynamic_world_tile.npz"))
+        pw, y = z["probs"].astype(np.float32), z["expert"].astype(int)
+        nodata = ~np.isfinite(pw).all(0)
+        a = assess_prediction(pw, is_logit=False, patch=1, nodata_mask=nodata, reference=np.where(nodata, -1, y), budgets=(0.01, BUDGET, 0.10))
+        r = a["against_reference"]
+        out = {"tile": json.loads(str(z["meta"]))["tile"], "n_windows": a["n_windows"], "n_windows_scored": r["n_windows_scored"],
+               "error_rate": r["error_rate"], "review_sets": {str(b): {"n_windows": a["review_sets"][b]["n_windows"],
+                                                                       "boundary_share_in_set": a["review_sets"][b]["boundary_share_in_set"],
+                                                                       **r["error_capture_at_budget"][b]} for b in (0.01, BUDGET, 0.10)}}
+        with open(os.path.join(ROOT, "exp", "out", "demo_sample_audit.json"), "w") as f:
+            json.dump(out, f, indent=1)
+        print(json.dumps(out)[:400])
+        return
     tiles = []
     if args.smoke:
         rng = np.random.default_rng(0)

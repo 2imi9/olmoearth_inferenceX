@@ -249,7 +249,7 @@ def cmd_compare(args):
 
 def cmd_demo(args):
     from oe_inferencex.demo import run
-    return run(out=args.out, seed=args.seed)
+    return run(out=args.out, seed=args.seed, made_up=args.made_up)
 
 
 # ----------------------------------------------------------------------------- entry
@@ -266,9 +266,10 @@ def build_parser():
     a.add_argument("--budgets", type=float, nargs="+", default=[0.01, 0.05, 0.10], help="review budgets as fractions of windows")
     a.add_argument("--order", choices=("confidence", "boundary_first"), default="confidence", help="review order")
     a.set_defaults(func=cmd_assess)
-    d = sub.add_parser("demo", help="first run: audit a small made-up water map and draw the result; needs no data")
+    d = sub.add_parser("demo", help="first run: audit a real sample map (or a made-up one) and draw the result; needs no data")
     d.add_argument("--out", default="oe_inferencex_demo", help="output directory (default oe_inferencex_demo)")
-    d.add_argument("--seed", type=int, default=0, help="seed of the made-up scene")
+    d.add_argument("--seed", type=int, default=0, help="seed of the made-up scene and of the random pick")
+    d.add_argument("--made-up", action="store_true", help="audit a small synthetic water map instead of the real sample tile")
     d.set_defaults(func=cmd_demo)
     c = sub.add_parser("compare", help="measure how two inferences of the same scene differ")
     c.add_argument("a", help="first map: integer classes, a probability map (thresholded), or (C, H, W) scores (argmax)")
