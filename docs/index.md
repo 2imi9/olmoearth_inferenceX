@@ -5,7 +5,7 @@ inferences without labels, and shows on expert-labelled testbeds which of
 those differences predict error. It was built around OlmoEarth and has since
 been run on a served global product no one here had a hand in training.
 
-## Try it in two minutes
+## Demo
 
 ```bash
 pip install olmoearth-inferencex
@@ -23,35 +23,20 @@ Your own map: `oe-inferencex assess your_map.tif --out audit`. What the project 
 
 ## The strongest evidence
 
-**On tasks this project did not choose, the model's own margin ranks its errors
-better than any control that sees no model — on 24 of 24.**
+**On tasks this project did not choose, the model's own margin ranks its errors better than any control that sees no
+model: on 24 of 24.**
 
-The tasks are the 25 of the [OlmoEarth paper embedding suite](https://huggingface.co/datasets/allenai/olmoearth-paper-embeddings)
-by Ai2, with the splits fixed in the files. On all 24 that a top-1 minus top-2 margin is
-defined for, and on all 14 distinct sources behind them, the margin beats the
-best no-model control: 6,435,473 graded units, an accuracy range from 0.333 to
-0.979, 17 of 17 classification tasks and 7 of 7 segmentation tasks, sign test
-p = 6e-08. Six of the tasks come from GEO-Bench 1, a third-party benchmark, and
-the margin wins on all six. On the same tasks it also beats the competitors the
-literature proposes: a five-seed ensemble on 22 of 24, nearest-neighbour
-typicality on 24 of 24 and a Mahalanobis distance on 24 of 24
-([exp73](results/comparisons.md#the-strong-alternatives-on-the-same-suite-exp73)).
-Nor is it a property of OlmoEarth: under the fifteen other encoders the suite
-is published for, eight families outside OlmoEarth (AnySat, Clay,
-Panopticon, Galileo, CROMA, TerraMind, Satlas, Copernicus-FM) and the OlmoEarth
-size series, the margin beats the control on 322 of 332 scored tasks, every
-encoder at 90% or better
-([exp74](results/comparisons.md#the-suite-under-the-other-encoders-exp74)).
-Within the model's own confidence family the forms are close; on multi-class
-tasks one minus the top probability is marginally better than top-1 minus top-2
-([exp76](results/comparisons.md#which-confidence-which-statistic-which-aggregator-exp76)).
+The tasks are Ai2's [OlmoEarth paper embedding suite](https://huggingface.co/datasets/allenai/olmoearth-paper-embeddings), with the
+splits fixed in the files, so the result does not rest on testbeds the author picked. On the same tasks the margin also
+beats the alternatives the literature proposes, and it holds under the fifteen other encoders of the suite, on 322 of
+332 tasks. *This is not a leaderboard result: the suite measures accuracy, and no public benchmark measures label-free
+error ranking.*
 
-This is the answer to the obvious objection — that a result like this rests on
-testbeds the author picked. It does not. See
-[Tasks we did not choose (exp70)](results/comparisons.md#tasks-we-did-not-choose-ai2s-whole-published-suite-exp70).
-
-*What this is not: a leaderboard result. That suite measures accuracy, and no
-public benchmark measures label-free error ranking.*
+??? note "The numbers"
+    - **The suite** ([exp70](results/comparisons.md#tasks-we-did-not-choose-ai2s-whole-published-suite-exp70)): all 24 tasks that a top-1 minus top-2 margin is defined for, and all 14 sources behind them; 6,435,473 graded units; accuracy from 0.333 to 0.979; 17 of 17 classification and 7 of 7 segmentation tasks; sign test p = 6e-08. Six tasks come from GEO-Bench 1, a third-party benchmark, and the margin wins on all six.
+    - **Against the alternatives the literature proposes** ([exp73](results/comparisons.md#the-strong-alternatives-on-the-same-suite-exp73)): it beats a five-seed ensemble on 22 of 24, nearest-neighbour typicality on 24 of 24 and a Mahalanobis distance on 24 of 24.
+    - **Under the other encoders** ([exp74](results/comparisons.md#the-suite-under-the-other-encoders-exp74)): eight families outside OlmoEarth (AnySat, Clay, Panopticon, Galileo, CROMA, TerraMind, Satlas, Copernicus-FM) and the OlmoEarth size series; 322 of 332 scored tasks, every encoder at 90% or better.
+    - **Which confidence** ([exp76](results/comparisons.md#which-confidence-which-statistic-which-aggregator-exp76)): the forms are close; on multi-class tasks one minus the top probability is marginally better than top-1 minus top-2.
 
 ## What it does
 
