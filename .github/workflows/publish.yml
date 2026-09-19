@@ -1,0 +1,26 @@
+# Publishes a release to PyPI. It runs only when a GitHub release is published, or by hand; it is not a test pipeline.
+# There is no token: PyPI trusts this workflow's identity (trusted publishing), so no secret exists to leak.
+name: Publish to PyPI
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv build
+      - name: The wheel installs and runs with nothing but its declared dependencies
+        run: |
+          uv venv /tmp/clean
+          uv pip install --python /tmp/clean/bin/python dist/*.whl
+          /tmp/clean/bin/oe-inferencex demo --out /tmp/demo
+      - run: uv publish

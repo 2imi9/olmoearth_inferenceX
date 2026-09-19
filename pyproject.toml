@@ -1,6 +1,6 @@
 [project]
 name = "olmoearth-inferencex"
-version = "1.0.0"
+version = "1.1.0"
 description = "Label-free audit of Earth-observation prediction maps: which windows to review first, why, and how two inferences differ"
 readme = "README.md"
 requires-python = ">=3.11,<3.14"

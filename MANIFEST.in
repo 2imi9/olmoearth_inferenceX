@@ -1,0 +1,2 @@
+# The source archive carries the package alone. The tests grade the package against exp/out, which is not shipped.
+prune tests

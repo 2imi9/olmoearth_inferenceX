@@ -72,7 +72,7 @@ fitted rule next to the labels it came from.
 
 ## Command line
 
-Two commands cover the two halves without writing Python. Inputs are GeoTIFFs
+`oe-inferencex demo` is the first run: it audits a small made-up map and draws the result, with no data to find. Two commands cover the two halves without writing Python. Inputs are GeoTIFFs
 (with the `geo` extra, which brings rasterio) or `.npy` arrays; outputs are plain
 files the caller reads back, and nothing narrates.
 

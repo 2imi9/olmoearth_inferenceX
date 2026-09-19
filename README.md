@@ -3,7 +3,35 @@ without labels, and shows on expert-labelled testbeds which of those differences
 predict error. It was built around OlmoEarth and has since been run on a served
 global product no one here had a hand in training.
 
-<img src="docs/figures/pipeline.png" alt="One scene through the audit: Sentinel-2 bands, the frozen OlmoEarth encoder and the task head, the prediction, confidence and boundary layers, the review set at a 5% budget drawn on the scene, and the reasons per flagged window" width="760">
+<img src="https://raw.githubusercontent.com/2imi9/olmoearth_inferenceX/main/docs/figures/pipeline.png" alt="One scene through the audit: Sentinel-2 bands, the frozen OlmoEarth encoder and the task head, the prediction, confidence and boundary layers, the review set at a 5% budget drawn on the scene, and the reasons per flagged window" width="760">
+
+Try it in two minutes
+---------------------
+
+```bash
+pip install olmoearth-inferencex
+oe-inferencex demo
+```
+
+No data, no labels and nothing but numpy. The command makes a small made-up water map the way a model would (sure in
+the middle of the water and the land, unsure along the shore, fooled by one cloud shadow), audits it without labels,
+and writes the picture below with the same files a real audit writes.
+
+<img src="https://raw.githubusercontent.com/2imi9/olmoearth_inferenceX/main/docs/figures/demo_review_set.png" alt="Left: a water map with the 5% of windows to check first outlined in orange, all of them along the shore and around a false patch. Right: the same map with the windows that are really wrong filled in red; the orange outlines sit on the edges of the red areas" width="760">
+
+*Left: the map, with the 5% of windows to check first in orange. Right: where the map is really wrong, in red, known
+only because the scene is made up. The flagged 5% hold about a quarter of the errors, five times what a random 5%
+would, which is close to what the record measures on a real flood map. The middle of the red patch at the top right is
+an error the model is sure about, and nothing computed without labels finds those.*
+
+Then your own map, a GeoTIFF (with `pip install "olmoearth-inferencex[geo]"`) or a `.npy` array of probabilities or
+logits:
+
+```bash
+oe-inferencex assess your_map.tif --out audit
+```
+
+What the project found, in six plain sentences: [Findings, in short](https://github.com/2imi9/olmoearth_inferenceX/blob/main/docs/Findings.md#in-short).
 
 The strongest evidence
 ----------------------
@@ -20,20 +48,20 @@ Six of the tasks come from GEO-Bench 1, a third-party benchmark, and the margin
 wins on all six. On the same tasks it also beats the competitors the literature
 proposes: a five-seed ensemble on 22 of 24, nearest-neighbour typicality on
 24 of 24 and a Mahalanobis distance on 24 of 24
-([exp73](docs/results/comparisons.md#the-strong-alternatives-on-the-same-suite-exp73)).
+([exp73](https://github.com/2imi9/olmoearth_inferenceX/blob/main/docs/results/comparisons.md#the-strong-alternatives-on-the-same-suite-exp73)).
 Nor is it a property of OlmoEarth: under the fifteen other encoders the suite
 is published for, eight families outside OlmoEarth (AnySat, Clay,
 Panopticon, Galileo, CROMA, TerraMind, Satlas, Copernicus-FM) and the OlmoEarth
 size series, the margin beats the control on 322 of 332 scored tasks, every
 encoder at 90% or better
-([exp74](docs/results/comparisons.md#the-suite-under-the-other-encoders-exp74)).
+([exp74](https://github.com/2imi9/olmoearth_inferenceX/blob/main/docs/results/comparisons.md#the-suite-under-the-other-encoders-exp74)).
 Within the model's own confidence family the forms are close; on multi-class
 tasks one minus the top probability is marginally better than top-1 minus top-2
-([exp76](docs/results/comparisons.md#which-confidence-which-statistic-which-aggregator-exp76)).
+([exp76](https://github.com/2imi9/olmoearth_inferenceX/blob/main/docs/results/comparisons.md#which-confidence-which-statistic-which-aggregator-exp76)).
 
 This is the answer to the obvious objection — that a result like this rests on
 testbeds the author picked. It does not.
-[Tasks we did not choose (exp70)](docs/results/comparisons.md#tasks-we-did-not-choose-ai2s-whole-published-suite-exp70).
+[Tasks we did not choose (exp70)](https://github.com/2imi9/olmoearth_inferenceX/blob/main/docs/results/comparisons.md#tasks-we-did-not-choose-ai2s-whole-published-suite-exp70).
 
 *What this is not: a leaderboard result. That suite measures accuracy, and no
 public benchmark measures label-free error ranking.*
@@ -68,15 +96,15 @@ difference measures how much training moved the model. Given a prediction map:
 
 Both halves run from the command line without writing Python:
 `oe-inferencex assess` and `oe-inferencex compare`
-([Usage](docs/Usage.md#command-line)).
+([Usage](https://github.com/2imi9/olmoearth_inferenceX/blob/main/docs/Usage.md#command-line)).
 
-<img src="docs/figures/compare.png" alt="The two-period, two-sensor square on one GEOID-Flood chip: four dated inputs, four inferences on identical windows, the same-date and same-sensor differences on the scene, and the label bridge boxed apart" width="760">
+<img src="https://raw.githubusercontent.com/2imi9/olmoearth_inferenceX/main/docs/figures/compare.png" alt="The two-period, two-sensor square on one GEOID-Flood chip: four dated inputs, four inferences on identical windows, the same-date and same-sensor differences on the scene, and the label bridge boxed apart" width="760">
 
 *Four dated inputs of one GEOID-Flood chip (Lake Shkodër at Gruemirë, Albania),
 each read on identical windows. Same-period pairs differ on 22 windows before the
 event and 44 after; same-sensor pairs on 97 (optical) and 67 (radar). What a
 difference **is** needs labels, so that panel is boxed apart. Full numbers in
-[Comparisons](docs/results/comparisons.md#the-difference-atlas-every-pair-of-inferences-under-one-measurement-exp57).*
+[Comparisons](https://github.com/2imi9/olmoearth_inferenceX/blob/main/docs/results/comparisons.md#the-difference-atlas-every-pair-of-inferences-under-one-measurement-exp57).*
 
 What the evidence spans
 -----------------------
@@ -86,11 +114,11 @@ ways, which is the part of this work hardest to argue with:
 
 | The answer key came from | Testbeds |
 |---|---|
-| people reading the same imagery | [Sen1Floods11 hand labels](docs/results/comparisons.md#dense-flood-masks-sen1floods11-exp18), [Copernicus EMS through GEOID-Flood](docs/results/comparisons.md#geoid-flood-the-exception-as-a-rate-over-events-exp55), [WorldFloods v2](docs/results/comparisons.md#the-fourth-cell-post-event-optical-from-worldfloods-completes-the-square-exp62) |
-| another model's output | [DFC2020](docs/results/comparisons.md#dfc2020-eight-class-land-cover-both-sensors-our-own-encoder-two-references-exp66), whose test labels are an iterated random forest, not hand-drawn |
-| experts annotating a served product | [Dynamic World's 409 expert tiles](docs/results/comparisons.md#auditing-a-production-model-with-its-own-probabilities-dynamic-world-exp67), audited from its own published probabilities |
-| surveyors standing in the field | [LUCAS Copernicus 2022](docs/results/comparisons.md#the-protocol-against-ground-observation-lucas-exp68), the only reference here that never saw a pixel |
-| farmers' own declarations | [EuroCrops](docs/results/comparisons.md#eurocrops-a-dense-crop-map-from-declarations-and-a-difference-labelled-on-both-sides-exp69), which also labels both sides of a two-date comparison |
+| people reading the same imagery | [Sen1Floods11 hand labels](https://github.com/2imi9/olmoearth_inferenceX/blob/main/docs/results/comparisons.md#dense-flood-masks-sen1floods11-exp18), [Copernicus EMS through GEOID-Flood](https://github.com/2imi9/olmoearth_inferenceX/blob/main/docs/results/comparisons.md#geoid-flood-the-exception-as-a-rate-over-events-exp55), [WorldFloods v2](https://github.com/2imi9/olmoearth_inferenceX/blob/main/docs/results/comparisons.md#the-fourth-cell-post-event-optical-from-worldfloods-completes-the-square-exp62) |
+| another model's output | [DFC2020](https://github.com/2imi9/olmoearth_inferenceX/blob/main/docs/results/comparisons.md#dfc2020-eight-class-land-cover-both-sensors-our-own-encoder-two-references-exp66), whose test labels are an iterated random forest, not hand-drawn |
+| experts annotating a served product | [Dynamic World's 409 expert tiles](https://github.com/2imi9/olmoearth_inferenceX/blob/main/docs/results/comparisons.md#auditing-a-production-model-with-its-own-probabilities-dynamic-world-exp67), audited from its own published probabilities |
+| surveyors standing in the field | [LUCAS Copernicus 2022](https://github.com/2imi9/olmoearth_inferenceX/blob/main/docs/results/comparisons.md#the-protocol-against-ground-observation-lucas-exp68), the only reference here that never saw a pixel |
+| farmers' own declarations | [EuroCrops](https://github.com/2imi9/olmoearth_inferenceX/blob/main/docs/results/comparisons.md#eurocrops-a-dense-crop-map-from-declarations-and-a-difference-labelled-on-both-sides-exp69), which also labels both sides of a two-date comparison |
 
 Two warnings for practitioners
 ------------------------------
@@ -109,21 +137,21 @@ against the reseed rate flatters it.
 Quickstart
 ----------
 
-1. [Findings](docs/Findings.md) — what holds, the numbers, how a claim gets in,
+1. [Findings](https://github.com/2imi9/olmoearth_inferenceX/blob/main/docs/Findings.md) — what holds, the numbers, how a claim gets in,
    and the limits.
-2. [Usage](docs/Usage.md) — assess a prediction, explain its review set, the
+2. [Usage](https://github.com/2imi9/olmoearth_inferenceX/blob/main/docs/Usage.md) — assess a prediction, explain its review set, the
    production case, how to score a new rule.
-3. [Recipe](docs/method/recipe.md) — what to do and not do when auditing a map.
-4. [Technical report](report/main.pdf): the whole record in ten pages, what was done,
+3. [Recipe](https://github.com/2imi9/olmoearth_inferenceX/blob/main/docs/method/recipe.md) — what to do and not do when auditing a map.
+4. [Technical report](https://github.com/2imi9/olmoearth_inferenceX/blob/main/report/main.pdf): the whole record in ten pages, what was done,
    what held, and what did not.
 
-Also: [TECHNIQUES](docs/TECHNIQUES.md) (everything tried, one line each, with the
-verdict) · [Protocol](docs/method/protocol.md) (how results are scored) ·
-[Explanation](docs/results/explanation.md), [Signals](docs/results/signals.md),
-[Comparisons](docs/results/comparisons.md) (per-cue, per-signal, per-experiment
-evidence) · [Agent integration](docs/method/agent_integration.md) ·
-[Related work](docs/related_work.md) (where each idea comes from) ·
-[Roadmap](docs/plan/roadmap.md).
+Also: [TECHNIQUES](https://github.com/2imi9/olmoearth_inferenceX/blob/main/docs/TECHNIQUES.md) (everything tried, one line each, with the
+verdict) · [Protocol](https://github.com/2imi9/olmoearth_inferenceX/blob/main/docs/method/protocol.md) (how results are scored) ·
+[Explanation](https://github.com/2imi9/olmoearth_inferenceX/blob/main/docs/results/explanation.md), [Signals](https://github.com/2imi9/olmoearth_inferenceX/blob/main/docs/results/signals.md),
+[Comparisons](https://github.com/2imi9/olmoearth_inferenceX/blob/main/docs/results/comparisons.md) (per-cue, per-signal, per-experiment
+evidence) · [Agent integration](https://github.com/2imi9/olmoearth_inferenceX/blob/main/docs/method/agent_integration.md) ·
+[Related work](https://github.com/2imi9/olmoearth_inferenceX/blob/main/docs/related_work.md) (where each idea comes from) ·
+[Roadmap](https://github.com/2imi9/olmoearth_inferenceX/blob/main/docs/plan/roadmap.md).
 
 Full documentation: **https://olmoearth-inferencex.readthedocs.io/**
 
@@ -133,14 +161,17 @@ Setup
 Python 3.11+ and numpy; nothing else for the package. To use it:
 
 ```bash
-pip install "olmoearth-inferencex @ git+https://github.com/2imi9/olmoearth_inferenceX"
-python -c "import oe_inferencex as ox; print(ox.__version__)"
+pip install olmoearth-inferencex            # add [geo] to read and write GeoTIFFs
+oe-inferencex demo                          # a first run on a made-up map
 oe-inferencex assess --help
 ```
 
-[examples/quickstart.py](examples/quickstart.py) runs the whole surface on a
+The development version installs from the repository:
+`pip install "olmoearth-inferencex @ git+https://github.com/2imi9/olmoearth_inferenceX"`.
+
+[examples/quickstart.py](https://github.com/2imi9/olmoearth_inferenceX/blob/main/examples/quickstart.py) runs the whole surface on a
 synthetic map with no data to download; the public API is what
-`oe_inferencex.__all__` exports, and [CHANGELOG.md](CHANGELOG.md) says what a
+`oe_inferencex.__all__` exports, and [CHANGELOG.md](https://github.com/2imi9/olmoearth_inferenceX/blob/main/CHANGELOG.md) says what a
 release contains. Rasters need the `geo` extra (`rasterio`); `.npy` input does
 not.
 
@@ -163,8 +194,8 @@ uv run python scripts/audit_one_scene.py   # one scene end to end
 Licence
 -------
 
-Apache License 2.0; see [LICENSE](LICENSE). To cite the software or its
-recorded results, see [CITATION.cff](CITATION.cff).
+Apache License 2.0; see [LICENSE](https://github.com/2imi9/olmoearth_inferenceX/blob/main/LICENSE). To cite the software or its
+recorded results, see [CITATION.cff](https://github.com/2imi9/olmoearth_inferenceX/blob/main/CITATION.cff).
 
 Contact
 -------

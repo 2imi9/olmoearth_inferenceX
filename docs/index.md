@@ -5,6 +5,28 @@ inferences without labels, and shows on expert-labelled testbeds which of
 those differences predict error. It was built around OlmoEarth and has since
 been run on a served global product no one here had a hand in training.
 
+## Try it in two minutes
+
+```bash
+pip install olmoearth-inferencex
+oe-inferencex demo
+```
+
+No data, no labels and nothing but numpy. The command makes a small made-up water map the way a model would (sure in
+the middle of the water and the land, unsure along the shore, fooled by one cloud shadow), audits it without labels,
+and writes the picture below with the same files a real audit writes.
+
+![Left: a water map with the 5% of windows to check first outlined in orange. Right: the same map with the windows that are really wrong filled in red](figures/demo_review_set.png)
+
+*Left: the map, with the 5% of windows to check first in orange. Right: where the map is really wrong, in red, known
+only because the scene is made up. The flagged 5% hold about a quarter of the errors, five times what a random 5%
+would, which is close to what the record measures on a real flood map. The middle of the red patch at the top right is
+an error the model is sure about, and nothing computed without labels finds those.*
+
+Then your own map, a GeoTIFF (with `pip install "olmoearth-inferencex[geo]"`) or a `.npy` array of probabilities or
+logits: `oe-inferencex assess your_map.tif --out audit`. What the project found, in six plain sentences:
+[Findings, in short](Findings.md#in-short).
+
 ## The strongest evidence
 
 **On tasks this project did not choose, the model's own margin ranks its errors
@@ -135,7 +157,8 @@ how a claim gets in, and the limits. Then:
 ## Installation
 
 The package needs Python 3.11+ (3.12 is what the experiments ran on) and no
-torch; the experiments need the encoder.
+torch; the experiments need the encoder. To use it, `pip install olmoearth-inferencex`
+(add `[geo]` to read and write GeoTIFFs). To work on the repository:
 
 ```bash
 git clone https://github.com/2imi9/olmoearth_inferenceX.git

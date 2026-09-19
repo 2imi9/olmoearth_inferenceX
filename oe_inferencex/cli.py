@@ -4,6 +4,7 @@
                           [--budgets 0.01 0.05 0.10] [--order confidence|boundary_first]
     oe-inferencex compare a.tif b.tif --out DIR [--patch 4] [--nodata V] [--labels labels.tif] [--groups ids.tif]
                           [--threshold T]
+    oe-inferencex demo    [--out DIR]          a first run on a small made-up map: needs no data
 
 Inputs are GeoTIFFs (any rasterio-readable raster) or .npy arrays: (H, W) for a binary map, (C, H, W) for per-class
 scores or, for `compare`, an integer class map. `compare` also takes two continuous maps (a regression output) when the
@@ -246,6 +247,11 @@ def cmd_compare(args):
     return 0
 
 
+def cmd_demo(args):
+    from oe_inferencex.demo import run
+    return run(out=args.out, seed=args.seed)
+
+
 # ----------------------------------------------------------------------------- entry
 def build_parser():
     p = argparse.ArgumentParser(prog="oe-inferencex", description=__doc__.split("\n\n")[0])
@@ -260,6 +266,10 @@ def build_parser():
     a.add_argument("--budgets", type=float, nargs="+", default=[0.01, 0.05, 0.10], help="review budgets as fractions of windows")
     a.add_argument("--order", choices=("confidence", "boundary_first"), default="confidence", help="review order")
     a.set_defaults(func=cmd_assess)
+    d = sub.add_parser("demo", help="first run: audit a small made-up water map and draw the result; needs no data")
+    d.add_argument("--out", default="oe_inferencex_demo", help="output directory (default oe_inferencex_demo)")
+    d.add_argument("--seed", type=int, default=0, help="seed of the made-up scene")
+    d.set_defaults(func=cmd_demo)
     c = sub.add_parser("compare", help="measure how two inferences of the same scene differ")
     c.add_argument("a", help="first map: integer classes, a probability map (thresholded), or (C, H, W) scores (argmax)")
     c.add_argument("b", help="second map on the same grid")
