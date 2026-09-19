@@ -31,6 +31,8 @@ down the page.
 
 ## What holds
 
+### Where the map is wrong, and what to do about it
+
 1. **Of the label-free quantities the audit measures, the model's own
    confidence is the one that best predicts where the map is wrong**, with
    one exception. It leads on the AWF points,
@@ -105,7 +107,9 @@ down the page.
    Sentinel-2 model adds at most a tenth of a point: the sensor lever exp46
    found on frozen probes is a frozen-feature property (exp52). <!-- claim:s1-adds-little-after-finetune -->
 
-Which differences predict error. Every comparison here is a label-free
+### Comparing two inferences
+
+**Which differences predict error.** Every comparison here is a label-free
 measurement of how two inferences of the same scene differ: across shifted
 crops (exp42, exp44), backbones (exp45), sensors (exp46), encoders (exp41,
 exp51, exp54) and before against after fine-tuning (exp21, exp52). On the
@@ -122,7 +126,7 @@ the same windows as OlmoEarth (phi 0.78-0.82, Satlas 0.62; exp51). That sharing 
 task: on marine debris and crop types the same encoders share far less
 (phi 0.26-0.44 and 0.05-0.08; exp54). <!-- claim:cross-encoder-phi-on-their-embeddings --> <!-- claim:shared-errors-task-dependent -->
 
-Measured as differences, without labels (exp57, every pair on identical
+**Measured as differences, without labels** (exp57, every pair on identical
 windows): two inferences of the same scene disagree on 2 to 4% of the windows
 across crop offsets, backbones and encoders and on 8 to 11% across sensors,
 and the disagreement sits on prediction boundaries everywhere, 3.3 to 7.1
@@ -136,32 +140,39 @@ model: the fine-tuned model is right on 71 to 75% of its disagreements with
 the frozen head and the Sentinel-2 head on 67 to 84% of its disagreements
 with the Sentinel-1 head, while crop offsets, backbones and six of seven
 encoders split their disagreements 39 to 61%. <!-- claim:atlas-which-side -->
-Across two dates the axes separate (exp60, GEOID-Flood): a same-period
+
+**Across two dates the axes separate** (exp60, GEOID-Flood): a same-period
 cross-sensor difference carries none of the later flood (0.4% of its windows
 against 19.5% for the mixed pair, on 23 events against 3), while the same-sensor
 difference across the event carries 26%, not the doubling preregistered, and more
 than half of it is the pre-event radar calling water that neither the label nor the
 month's Landsat water product holds (exp61: 0.1% of those windows are water
 there). <!-- claim:two-periods-sensor-axis-isolated --> <!-- claim:two-periods-time-only-difference --> <!-- claim:residue-not-seasonal-water -->
+
 Where a clear post-event optical pass exists (WorldFloods v2, 544 chips in 6
 events) the fourth cell completes the square: the post-event optical head is
 right on 97% of the windows, and the square is dominated by one event where the
-pre-event optical optical head finds a quarter of the label's permanent water
+pre-event optical head finds a quarter of the label's permanent water
 (exp62). <!-- claim:fourth-cell-completed -->
-At 15 and 19 classes (exp63, Ai2's MADOS and PASTIS embeddings) the sensor and
+
+**At 15 and 19 classes** (exp63, Ai2's MADOS and PASTIS embeddings) the sensor and
 encoder differences stay different sets, and refitting the head moves under
 0.4% of windows against 6 to 25% for a change of encoder; but the boundary cue
 locates differences only where boundaries are rare, 3.5 to 6.2 times on MADOS
 and 1.7 to 1.8 times on PASTIS, where 50% of windows border another class,
 so on dense classes it is the low-margin cue that says where two inferences
 differ. <!-- claim:multiclass-boundary-cue-fails-on-parcels --> <!-- claim:multiclass-sensor-vs-encoder-different -->
-Where labels exist, fusing the readings with them pays and does not travel
+
+**Where labels exist, fusing the readings with them pays and does not travel**
 (exp65): a fusion cross-fitted by tile cuts confidence's excess AURC by 20%
 and 30%, a cross-fitted side rule beats the raw margin by 8 to 25 points on
 every pair, and the same rule moved from frozen heads to the fine-tuned model
 falls below the raw margin, so the package binds every fusion to its model
 family. <!-- claim:calibrate-ranker-fusion-beats-confidence --> <!-- claim:calibrate-side-rule-held-out --> <!-- claim:calibrate-family-lock -->
-On eight-class land cover with our own encoder (exp66, DFC2020, the set Ai2
+
+### On the datasets Ai2 suggested
+
+**DFC2020.** On eight-class land cover with our own encoder (exp66, DFC2020, the set Ai2
 suggested) the ranking transfers, the margin beating a pixel index by 0.16
 excess AURC on every arm, and the sensor axis dominates: Sentinel-2 and
 Sentinel-1 differ on 44% of windows against a 1.3% probe-seed floor,
@@ -170,14 +181,16 @@ against a second, twenty times coarser reference reverses this repository's
 oldest caveat: a coarse reference penalises a boundary-shaped signal rather
 than flattering it, so flattery needs a reference that resolves boundaries at
 the prediction's own scale. <!-- claim:dfc2020-margin-beats-pixel-control --> <!-- claim:dfc2020-sensor-difference-dominates-land-cover --> <!-- claim:dfc2020-coarse-reference-penalises-the-boundary-order -->
-The recipe also survives contact with a model this project had no hand in
+
+**Dynamic World.** The recipe also survives contact with a model this project had no hand in
 (exp67, Dynamic World's 409 expert-annotated tiles): a served global product's
 own margin ranks its own errors better than a control that never sees the
 imagery, it beats the naive top-probability confidence which ties on 23% of
 windows, and its errors carry the same cues. Its published probabilities,
 though, understate its accuracy by about 0.20 at every confidence level: the
 numbers that order a review well are not the numbers to threshold on. <!-- claim:dw-margin-ranks-a-production-model --> <!-- claim:dw-published-probabilities-are-underconfident -->
-And it survives the grader this project had never had (exp68, LUCAS Copernicus
+
+**LUCAS.** And it survives the grader this project had never had (exp68, LUCAS Copernicus
 2022, 11,856 in-situ survey polygons): where a surveyor stood at the point and
 never saw a pixel, the margin still beats the best control an operator could
 compute by 0.095 of design-weighted excess AURC, on 94 European regions against
@@ -189,12 +202,14 @@ readable beside its own generalisation gap. And the published practice of
 filtering land-cover reference data to large homogeneous units flatters the tool
 rather than understating it, by 0.097 of AUROC: the mixed and small units the
 convention deletes are where the ranking is weakest. <!-- claim:lucas-ranking-survives-ground-observation --> <!-- claim:lucas-overfitting-inverts-the-ranker-ordering --> <!-- claim:lucas-the-homogeneity-filter-flatters-the-tool -->
-The same polygons carry the cleanest difference measurement here: one place read
+
+**Two dates, one place.** The same polygons carry the cleanest difference measurement here: one place read
 through two acquisitions 118 days apart changes decision on 31% of polygons
 against a 0.3% head-reseed floor, the surveyed class says the near date is the
 right side 917 times against 591, and the change rate is phenology, twice as
 high on cropland as on woodland. <!-- claim:lucas-two-dates-are-phenology -->
-That last number had no floor until exp69 (EuroCrops, 106,274 graded windows of
+
+**EuroCrops.** That last number had no floor until exp69 (EuroCrops, 106,274 graded windows of
 farmers' declarations in Austria, Denmark and Slovenia), which is the first
 testbed here where both sides of a time axis are labelled, because a parcel
 present in two years carries a declared crop in each. The ranking holds on a
@@ -209,7 +224,9 @@ of differing windows are ones where the model was right about both years, so the
 difference between two inferences was the model correctly following a real crop
 rotation, not either side being wrong. <!-- claim:eurocrops-ranking-holds-on-declarations --> <!-- claim:eurocrops-the-labelled-floor-for-a-two-date-difference --> <!-- claim:eurocrops-a-difference-can-be-the-model-tracking-the-ground -->
 
-And it answers the objection that all of this rests on testbeds we chose (exp70).
+### On tasks we did not choose: Ai2's published suite
+
+**The whole suite.** And it answers the objection that all of this rests on testbeds we chose (exp70).
 Ai2's published embedding suite holds 25 tasks they picked for their own paper,
 with the splits fixed in the files. On all 24 that a margin is defined for, and on
 all 14 distinct sources behind them, the model's own margin ranks its errors
@@ -217,29 +234,36 @@ better than the best control that sees no model, over 6.4 million graded units
 spanning an accuracy range from 0.333 to 0.979, on classification and segmentation
 alike. Six of the tasks come from GEO-Bench 1, a third-party benchmark, and the
 margin wins on all six. <!-- claim:suite-margin-wins-every-task -->
-That run also scoped the probe warning above. Across those 24 tasks the ordering
+
+**The probe warning, scoped.** That run also scoped the probe warning above. Across those 24 tasks the ordering
 of the confidence signals does degrade with how badly the probe generalises, which
 is the direction LUCAS found, but by four ten-thousandths rather than by an
 outright reversal. Only severe memorisation flips the ordering; mild memorisation
 merely erodes it. <!-- claim:suite-probe-gap-degrades-the-ordering -->
-And the bar is not only the no-model control. On the same 24 tasks the margin
+
+**Against the strong alternatives.** And the bar is not only the no-model control. On the same 24 tasks the margin
 beats a five-seed ensemble on 22 of 24, a nearest-neighbour typicality
 score on 24 of 24 and a class-conditional Mahalanobis distance on
 24 of 24 (exp73), each of which is a real signal on roughly half the
 suite and better than the margin on none of it. <!-- claim:suite-margin-beats-the-strong-alternatives -->
-Nor is it a property of one encoder. Under the fifteen other encoders Ai2
+
+**Under the other encoders.** Nor is it a property of one encoder. Under the fifteen other encoders Ai2
 published the suite for, eight families outside OlmoEarth and the OlmoEarth
 size series, the margin beats the best no-model control on 322 of 332 scored
 tasks, every encoder at 90% or better, and the three outside families that
 carry the whole suite win on 23, 24 and 24 of 24 (exp74). <!-- claim:suite-holds-under-every-encoder --> <!-- claim:suite-outside-families-hold-at-twenty-two -->
-How much is left: on those 24 tasks the margin already takes a median 0.68 of
+
+**How much is left:** on those 24 tasks the margin already takes a median 0.68 of
 the gap between a random and a perfect ranking, and labels buy a fifth to a
 third of the rest (exp65); what remains is errors the model makes confidently,
 which no label-free reading tried has seen. <!-- claim:margin-takes-two-thirds-of-the-ranking-headroom -->
-Which member of the confidence family: on the 16 multi-class tasks one minus the
+
+**Which member of the confidence family:** on the 16 multi-class tasks one minus the
 top probability ranks errors better than top-1 minus top-2 on 14, by a small
 margin, and no score built from the whole logit vector does better; on binary
 tasks the forms are one ranking (exp76). <!-- claim:top1-beats-the-margin-on-multiclass -->
+
+### The effect a reviewer would feel
 
 The effect size in a reviewer's units (exp55, 45 GEOID-Flood areas of interest
 drawn from nine activations): on the median area the 5% of windows confidence
@@ -248,16 +272,20 @@ errors, 17.5 and 12.8 times a random 5%; clustering by activation moves that to
 16.9 and 12.1 times, so the effect a reviewer would feel survives the clustering
 even though the exception rate above does not survive it as well. <!-- claim:geoid-capture-effect-size -->
 
+### Does it help an agent
+
 And whether any of this helps an agent is now measured rather than assumed
 (exp64, forty cards, three preregistered predictions, Qwen3.8-27B-NVFP4).
 Handed the package as tools, the model reproduces the package's review set,
 grounds 99.4% of what it states, and declines the side
 question on every comparison card; the OlmoEarth Agent as shipped finds the
 package's tools on its own and does the same. <!-- claim:agent-benchmark-tool-arm-reproduces-the-package -->
+
 The one advantage over a numpy sandbox that survived its preregistered test is
 the decline: 10 of 10 cards against 1,
 because the fact that confidence does not settle which side is right is carried
 by the package and not derivable from the arrays. <!-- claim:agent-benchmark-decline-holds -->
+
 The same forty cards at 7B measure the other end: there the package is decisive
 on every axis, grounding 100.0% against the sandbox's 0.1% and
 capturing 0.997 of its errors against 0.144, so what it adds
