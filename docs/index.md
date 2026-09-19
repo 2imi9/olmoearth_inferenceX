@@ -99,19 +99,8 @@ different ways, which is the part of this work hardest to argue with:
 | surveyors standing in the field | [LUCAS Copernicus 2022](results/comparisons.md#the-protocol-against-ground-observation-lucas-exp68), the only reference here that never saw a pixel |
 | farmers' own declarations | [EuroCrops](results/comparisons.md#eurocrops-a-dense-crop-map-from-declarations-and-a-difference-labelled-on-both-sides-exp69), which also labels both sides of a two-date comparison |
 
-Two results a practitioner should carry away before using any of this.
-
-**Report your readout's generalisation gap beside any ranking comparison.** A
-small readout that has memorised its practice data reverses which confidence
-signal ranks best. On LUCAS the margin went from last of the four model signals
-to the front of them, statistically tied with the boundary-first order, on the
-same data, purely from choosing the probe's regularisation on held-out ground
-instead of leaving it at a default.
-
-**A two-date difference needs the right floor.** How often the map moves where
-the ground did not is between 6% and 37% on crops, one to two orders of
-magnitude above the rate at which reseeding the readout moves it. Comparing a
-date difference against the reseed rate flatters it.
+What to do and not do when auditing a map, including the two cautions this evidence produced, is in the
+[Recipe](method/recipe.md).
 
 ## New to the repository?
 

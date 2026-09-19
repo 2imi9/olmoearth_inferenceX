@@ -2289,6 +2289,7 @@
     - {file: docs/Findings.md, marker: suite-margin-wins-every-task}
     - {file: docs/TECHNIQUES.md, marker: suite-margin-wins-every-task}
     - {file: docs/results/comparisons.md, marker: suite-margin-wins-every-task}
+    - {file: README.md, marker: suite-margin-wins-every-task}
   note: >-
     The embeddings are Ai2's, extracted with their settings, so this inherits their extraction and is not an independent
     implementation of their models. The suite measures accuracy and no public benchmark measures label-free error
