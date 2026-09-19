@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 1.1.1 (2026-09-19)
+
+- The demo's picture explains itself. It has three titled panels instead of two untitled ones: what an audit gives (the map and the windows to check first, no labels used), the same windows over the map's real errors, and a random pick of the same size over the same errors, which is what shows why the flagged windows are a good choice. The titles carry the measured shares and are drawn with a built-in 5 x 7 font, so the picture still needs nothing but numpy. The run now ends with the real `assess` command on the sample file before the user's own map.
+
 ## 1.1.0 (2026-09-18)
 
 The first release on PyPI. What a user of 1.0.0 gains: a first run that needs no data (`oe-inferencex demo`), one

@@ -16,9 +16,20 @@ def test_demo_writes_the_picture_the_sample_and_the_files_assess_writes(tmp_path
               "audit/review_set_05pct.csv"):
         assert (d / f).exists(), f
     png = (d / "review_set.png").read_bytes()
-    assert png[:8] == b"\x89PNG\r\n\x1a\n" and struct.unpack(">II", png[16:24]) == (2 * 768 + 12, 768)
+    assert png[:8] == b"\x89PNG\r\n\x1a\n" and struct.unpack(">II", png[16:24]) == (3 * 768 + 2 * 12, 768 + 45)   # three panels under their titles
     said = capsys.readouterr().out
     assert "illustration, not evidence" in said and "oe-inferencex assess your_map.tif" in said
+    assert "sample_logits.npy --logits --out my_audit" in said, "the gentler next step: the real command on the sample"
+
+
+def test_the_picture_carries_its_own_words():
+    """A picture passed on alone must still say what it shows, so the titles are drawn with a built-in font."""
+    from oe_inferencex.demo import FONT, _text
+    assert all(len(rows) == 7 and max(rows) < 32 for rows in FONT.values())
+    assert set("NO LABELS USED: THE 5% TO CHECK FIRST (RED), A RANDOM-0123456789.") <= set(FONT)
+    img = np.full((30, 200, 3), 255, np.uint8)
+    _text(img, 4, 4, "5% a")
+    assert (img != 255).any() and (img[:, 150:] == 255).all()
 
 
 def test_the_demo_scene_stays_honest(tmp_path):

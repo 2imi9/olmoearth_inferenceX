@@ -50,7 +50,7 @@ from .stats import (block_bootstrap_indices, cluster_bootstrap_difference, clust
 try:
     __version__ = _version("olmoearth-inferencex")
 except PackageNotFoundError:          # a source checkout that was never installed
-    __version__ = "1.1.0"
+    __version__ = "1.1.1"
 
 __all__ = [
     "crop_dependence", "determinism_check",

@@ -3,7 +3,8 @@
 It makes a small synthetic water map the way a model would (sure in the middle of the water and the land, unsure along
 the shore, fooled by one cloud shadow), audits it through the same code path as `oe-inferencex assess`, and draws the
 result. Because the scene is made up its truth is known, so the run can say how many of the map's errors the review
-set holds. That number illustrates the tool; it is not evidence. The evidence is in the documentation.
+set holds and draw a random pick of the same size beside it. That illustrates the tool; it is not evidence. The
+evidence is in the documentation.
 """
 import argparse
 import contextlib
@@ -17,7 +18,25 @@ import numpy as np
 
 from oe_inferencex.assess import assess_prediction
 
-LAND, WATER, FLAG, WRONG = (236, 231, 219), (74, 144, 196), (255, 140, 0), (214, 39, 40)
+LAND, WATER, FLAG, WRONG, RANDOM, INK = (236, 231, 219), (74, 144, 196), (255, 140, 0), (214, 39, 40), (60, 60, 60), (40, 40, 40)
+
+FONT = {   # 5 x 7 glyphs, one integer per row, most significant bit on the left
+    "A": (14, 17, 17, 31, 17, 17, 17), "B": (30, 17, 17, 30, 17, 17, 30), "C": (14, 17, 16, 16, 16, 17, 14),
+    "D": (30, 17, 17, 17, 17, 17, 30), "E": (31, 16, 16, 30, 16, 16, 31), "F": (31, 16, 16, 30, 16, 16, 16),
+    "G": (14, 17, 16, 23, 17, 17, 14), "H": (17, 17, 17, 31, 17, 17, 17), "I": (14, 4, 4, 4, 4, 4, 14),
+    "J": (7, 2, 2, 2, 2, 18, 12), "K": (17, 18, 20, 24, 20, 18, 17), "L": (16, 16, 16, 16, 16, 16, 31),
+    "M": (17, 27, 21, 21, 17, 17, 17), "N": (17, 25, 21, 19, 17, 17, 17), "O": (14, 17, 17, 17, 17, 17, 14),
+    "P": (30, 17, 17, 30, 16, 16, 16), "Q": (14, 17, 17, 17, 21, 18, 13), "R": (30, 17, 17, 30, 20, 18, 17),
+    "S": (15, 16, 16, 14, 1, 1, 30), "T": (31, 4, 4, 4, 4, 4, 4), "U": (17, 17, 17, 17, 17, 17, 14),
+    "V": (17, 17, 17, 17, 17, 10, 4), "W": (17, 17, 17, 21, 21, 27, 17), "X": (17, 17, 10, 4, 10, 17, 17),
+    "Y": (17, 17, 10, 4, 4, 4, 4), "Z": (31, 1, 2, 4, 8, 16, 31), "0": (14, 17, 19, 21, 25, 17, 14),
+    "1": (4, 12, 4, 4, 4, 4, 14), "2": (14, 17, 1, 2, 4, 8, 31), "3": (30, 1, 1, 14, 1, 1, 30),
+    "4": (2, 6, 10, 18, 31, 2, 2), "5": (31, 16, 30, 1, 1, 17, 14), "6": (14, 16, 16, 30, 17, 17, 14),
+    "7": (31, 1, 2, 4, 8, 8, 8), "8": (14, 17, 17, 14, 17, 17, 14), "9": (14, 17, 17, 15, 1, 1, 14),
+    "%": (25, 25, 2, 4, 8, 19, 19), ":": (0, 4, 4, 0, 4, 4, 0), ",": (0, 0, 0, 0, 4, 4, 8),
+    ".": (0, 0, 0, 0, 0, 12, 12), "(": (2, 4, 8, 8, 8, 4, 2), ")": (8, 4, 2, 2, 2, 4, 8),
+    "-": (0, 0, 0, 31, 0, 0, 0), " ": (0, 0, 0, 0, 0, 0, 0),
+}
 
 
 def sample_scene(size=256, seed=0):
@@ -57,18 +76,35 @@ def _outline(img, r0, c0, side, colour, width=2):
     img[r0:r0 + width, c0:c0 + side] = img[r0 + side - width:r0 + side, c0:c0 + side] = colour
 
 
-def picture(hard, flagged, wrong, patch, zoom=3):
-    """Two panels on one canvas. Left: the map with the windows to check first outlined. Right: the same, with the
-    windows where the map is really wrong filled in."""
+def _text(img, r0, c0, text, scale=3):
+    """Words on the picture with a built-in 5 x 7 font, so that it explains itself when it is passed on alone."""
+    for i, ch in enumerate(text.upper()):
+        for r, bits in enumerate(FONT.get(ch, FONT[" "])):
+            for c in range(5):
+                if bits >> (4 - c) & 1:
+                    y, x = r0 + r * scale, c0 + (i * 6 + c) * scale
+                    img[y:y + scale, x:x + scale] = INK
+
+
+def picture(hard, flagged, wrong, random_pick, patch, titles, zoom=3):
+    """Three titled panels on one canvas: what an audit gives (the map and the windows to check first, no truth shown),
+    the same windows over the map's real errors, and a random pick of the same size over the same errors. The third
+    panel is the point of the picture: without it nothing shows why the flagged windows are a good choice."""
     base = np.where(hard[..., None] > 0, WATER, LAND).astype(np.uint8).repeat(zoom, 0).repeat(zoom, 1)
-    left, right, side = base.copy(), base.copy(), patch * zoom
+    side, bar = patch * zoom, 45
+    errors = base.copy()
     for r, c in zip(*np.nonzero(wrong)):
-        right[r * side:(r + 1) * side, c * side:(c + 1) * side] = WRONG
-    for r, c in zip(*np.nonzero(flagged)):
-        _outline(left, r * side, c * side, side, FLAG)
-        _outline(right, r * side, c * side, side, FLAG)
-    gap = np.full((base.shape[0], 4 * zoom, 3), 255, np.uint8)
-    return np.concatenate([left, gap, right], 1)
+        errors[r * side:(r + 1) * side, c * side:(c + 1) * side] = WRONG
+    panels = [base.copy(), errors.copy(), errors.copy()]
+    for panel, picks, colour in zip(panels, (flagged, flagged, random_pick), (FLAG, FLAG, RANDOM)):
+        for r, c in zip(*np.nonzero(picks)):
+            _outline(panel, r * side, c * side, side, colour)
+    out = []
+    for panel, title in zip(panels, titles):
+        head = np.full((bar, panel.shape[1], 3), 255, np.uint8)
+        _text(head, 12, 8, title)
+        out += [np.concatenate([head, panel], 0), np.full((bar + panel.shape[0], 4 * zoom, 3), 255, np.uint8)]
+    return np.concatenate(out[:-1], 1)
 
 
 def run(out="oe_inferencex_demo", seed=0, budget=0.05, patch=4):
@@ -91,16 +127,24 @@ def run(out="oe_inferencex_demo", seed=0, budget=0.05, patch=4):
     flagged = np.zeros((h, w), bool)
     rc = np.asarray(a["review_sets"][budget]["windows_rowcol"])
     flagged[rc[:, 0], rc[:, 1]] = True
+    wrong = hard_w != truth_w
+    random_pick = np.zeros(h * w, bool)
+    random_pick[np.random.default_rng(seed).choice(h * w, size=int(flagged.sum()), replace=False)] = True
+    random_pick = random_pick.reshape(h, w)
+    held = lambda picks: f"{100 * (wrong & picks).sum() / max(wrong.sum(), 1):.0f}%"
     png = os.path.join(out, "review_set.png")
-    write_png(png, picture(hard_w.repeat(patch, 0).repeat(patch, 1), flagged, hard_w != truth_w, patch))
+    write_png(png, picture(hard_w.repeat(patch, 0).repeat(patch, 1), flagged, wrong, random_pick, patch, titles=(
+        f"No labels used: the {budget:.0%} to check first", f"The same {budget:.0%}: {held(flagged)} of the real errors (red)",
+        f"A random {budget:.0%}: {held(random_pick)} of the real errors")))
 
     cap = s["against_reference"]["error_capture_at_budget"]
     pct = lambda b: f"{100 * cap[str(b)]['errors_captured_fraction']:.0f}%"
     print(f"""A sample water map (made up, {logits.shape[0]} x {logits.shape[1]} pixels) was audited without using any labels.
 
   {png}
-      left:  the map (blue is water), with the {budget:.0%} of windows to check first outlined in orange
-      right: the same, with the windows where the map is really wrong filled in red
+      left:   the map (blue is water), with the {budget:.0%} of windows to check first outlined in orange
+      middle: the same windows over the places where the map is really wrong, in red
+      right:  a random {budget:.0%} over the same errors, for comparison
   {audit}/
       the files `assess` writes for a real map: the review sets as CSV, the reasons, the summary
 
@@ -111,6 +155,8 @@ without labels finds those. All of this is an illustration, not evidence. The ev
 labels, is in the documentation:
   https://olmoearth-inferencex.readthedocs.io/en/latest/Findings/#in-short
 
-Next, your own map (GeoTIFF or .npy; probabilities, or logits with --logits):
+Next, run the real command on the sample, then on your own map (GeoTIFF or .npy; probabilities, or logits with
+--logits). How to get a score map out of a model is in https://olmoearth-inferencex.readthedocs.io/en/latest/Usage/
+  oe-inferencex assess {scores} --logits --out my_audit
   oe-inferencex assess your_map.tif --out audit""")
     return 0
