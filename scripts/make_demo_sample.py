@@ -77,12 +77,12 @@ def main():
         z = np.load(os.path.join(ROOT, "oe_inferencex", "sample", "dynamic_world_tile.npz"))
         pw, y = z["probs"].astype(np.float32), z["expert"].astype(int)
         nodata = ~np.isfinite(pw).all(0)
-        a = assess_prediction(pw, is_logit=False, patch=1, nodata_mask=nodata, reference=np.where(nodata, -1, y), budgets=(0.01, BUDGET, 0.10))
+        a = assess_prediction(pw, is_logit=False, patch=1, nodata_mask=nodata, reference=np.where(nodata, -1, y), budgets=(0.01, BUDGET, 0.10, 0.20, 0.50))
         r = a["against_reference"]
         out = {"tile": json.loads(str(z["meta"]))["tile"], "n_windows": a["n_windows"], "n_windows_scored": r["n_windows_scored"],
                "error_rate": r["error_rate"], "review_sets": {str(b): {"n_windows": a["review_sets"][b]["n_windows"],
                                                                        "boundary_share_in_set": a["review_sets"][b]["boundary_share_in_set"],
-                                                                       **r["error_capture_at_budget"][b]} for b in (0.01, BUDGET, 0.10)}}
+                                                                       **r["error_capture_at_budget"][b]} for b in (0.01, BUDGET, 0.10, 0.20, 0.50)}}
         with open(os.path.join(ROOT, "exp", "out", "demo_sample_audit.json"), "w") as f:
             json.dump(out, f, indent=1)
         print(json.dumps(out)[:400])

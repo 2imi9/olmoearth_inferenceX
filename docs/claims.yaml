@@ -2800,7 +2800,7 @@
     demo's headline by a factor of five; the rule takes that choice away.
 
 - id: demo-sample-hit-rate
-  statement: "On the demo's tile 19% of the scored windows are wrong; of the 5% of windows flagged without labels 67% are wrong, and they hold 17% of the map's errors (the 10% flagged hold 32%); 97% of the flagged windows sit on a boundary of the model's own map."
+  statement: "On the demo's tile 19% of the scored windows are wrong; of the 5% of windows flagged without labels 67% are wrong, and they hold 17% of the map's errors where no 5% could hold more than 26% (the 10% flagged hold 32%, the 20% flagged 55%); 97% of the flagged windows sit on a boundary of the model's own map."
   status: measured
   experiments: [exp67]
   artifacts: [exp/out/demo_sample_audit.json, exp/out/demo_sample_selection.json]
@@ -2811,6 +2811,7 @@
       and round(a['review_sets']['0.1']['errors_captured_fraction'], 2) == 0.32
       and round(a['review_sets']['0.05']['boundary_share_in_set'], 2) == 0.97
       and a['review_sets']['0.05']['precision_in_set'] > 3 * a['error_rate']
+      and round(0.05 / a['error_rate'], 2) == 0.26 and round(a['review_sets']['0.2']['errors_captured_fraction'], 2) == 0.55
     )(A['exp/out/demo_sample_audit.json'], A['exp/out/demo_sample_selection.json'])
   cited_in:
     - {file: README.md, marker: demo-sample-hit-rate}

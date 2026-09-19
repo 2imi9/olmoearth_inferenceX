@@ -17,7 +17,7 @@ It audits a real map, one tile of Dynamic World land cover, chosen by a rule fix
 
 <img src="https://raw.githubusercontent.com/2imi9/olmoearth_inferenceX/main/docs/figures/demo_real_map.png" alt="Three panels of a real land-cover map in southern Peru. Left: the 5% of windows to check first, outlined in black along the class boundaries. Middle: the same windows over the map's real errors in red. Right: a random 5% of windows over the same errors" width="760">
 
-*Left: the 5% of windows to check first, found without labels. Middle: the same windows over the real errors, in red: 67% of them are wrong, against 19% of windows picked at random. Right: a random 5%.* <!-- claim:demo-sample-hit-rate -->
+*Left: the 5% of windows to check first, found without labels. Middle: the same windows over the real errors, in red: 67% of them are wrong, against 19% of windows picked at random. Right: a random 5%. Most of the red lies outside the flagged windows because the map is 19% wrong and the review is 5%: no 5% could hold more than 26% of the errors, and these hold 17%; a 20% review finds 55%.* <!-- claim:demo-sample-hit-rate -->
 
 Your own map: `oe-inferencex assess your_map.tif --out audit`. What the project found, in six sentences:
 [Findings, in short](https://github.com/2imi9/olmoearth_inferenceX/blob/main/docs/Findings.md#in-short).

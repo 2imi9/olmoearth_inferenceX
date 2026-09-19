@@ -46,6 +46,8 @@ def test_the_real_sample_is_the_one_the_selection_record_chose_and_the_run_repor
     assert got["error_rate"] == pytest.approx(pinned["error_rate"])
     assert got["error_capture_at_budget"]["0.05"]["precision_in_set"] == pytest.approx(pinned["review_sets"]["0.05"]["precision_in_set"])
     assert "Of the 5% the tool flags, 67% are really wrong" in said and "picks at random (19%)" in said
+    assert "the most any review could" in said and "no review of 5% can cover a map that is 19%" in said, \
+        "a reader who sees red outside the flagged windows must be told what any 5% could hold"
 
 
 def test_the_made_up_scene_stays_honest(tmp_path):

@@ -176,7 +176,7 @@ def run(out="oe_inferencex_demo", seed=0, budget=0.05, made_up=False):
 
     nodata = ~np.isfinite(sc["scores"]).reshape(-1, *sc["scores"].shape[-2:]).all(0)
     ref = np.where(nodata, -1, sc["truth"]).astype(int)
-    a = assess_prediction(sc["scores"], is_logit=sc["is_logit"], patch=patch, nodata_mask=nodata, reference=ref, budgets=(budget,))
+    a = assess_prediction(sc["scores"], is_logit=sc["is_logit"], patch=patch, nodata_mask=nodata, reference=ref, budgets=(budget, 0.10, 0.20, 0.50))
     hard_w, valid_w, conf_w = a["arrays"]["pooled_argmax"], a["arrays"]["valid"], a["arrays"]["confidence"]
     h, w = hard_w.shape
     n_classes = a["n_classes"]
@@ -209,6 +209,9 @@ def run(out="oe_inferencex_demo", seed=0, budget=0.05, made_up=False):
     at = cap[str(budget)]
     sure_first = np.argsort(-conf_w[known], kind="stable")[: int(round(0.8 * known.sum()))]
     expl = why["budgets"][str(budget)]
+    err = a["against_reference"]["error_rate"]
+    table = "\n".join(f"      {b:>4.0%} {100 * v['errors_captured_fraction']:>16.0f}% {b:>23.0%} {min(1.0, b / err):>25.0%}"
+                      for b, v in a["against_reference"]["error_capture_at_budget"].items())
     first = expl["windows"][0]
     edge = "the shore the model drew" if not sc["classes"] else "a boundary between two classes of the model's own map"
     mark = "orange" if sc["flag"] == FLAG else "black"
@@ -222,9 +225,14 @@ def run(out="oe_inferencex_demo", seed=0, budget=0.05, made_up=False):
       the files `assess` writes for any map: the review sets as CSV with coordinates, the reasons, the summary
 
 What it is worth. The map is wrong on {100 * s['against_reference']['error_rate']:.0f}% of its windows. Of the {budget:.0%} the tool flags, {100 * at['precision_in_set']:.0f}% are really wrong, so a
-reviewer who goes where it points finds an error far more often than one who picks at random ({base}). Those {budget:.0%}
-hold {100 * at['errors_captured_fraction']:.0f}% of all the map's errors, and the 10% flagged hold {100 * cap['0.1']['errors_captured_fraction']:.0f}%. The other way round: the map is right on {100 * (1 - wrong[known].mean()):.0f}% of its
-windows, and on {100 * (1 - wrong[known][sure_first].mean()):.0f}% of the 80% it is surest about, so confidence also says which part can be used as it is.
+reviewer who goes where it points finds an error far more often than one who picks at random ({base}).
+
+    review   errors it would find   a random review finds   the most any review could
+{table}
+
+Most of the red in the picture lies outside the flagged windows because no review of {budget:.0%} can cover a map that is {base}
+wrong. The other way round: the map is right on {100 * (1 - wrong[known].mean()):.0f}% of its windows, and on {100 * (1 - wrong[known][sure_first].mean()):.0f}% of the 80% it is surest about, so
+confidence also says which part can be used as it is.
 
 Why a window is flagged. Of the {expl['n_windows']} flagged windows, {100 * expl['share_in_set']['boundary']:.0f}% sit on {edge},
 and all are among its least confident, which is how they were ranked. explanation.json gives the reasons window by
