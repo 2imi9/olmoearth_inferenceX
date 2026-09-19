@@ -1,4 +1,4 @@
-"""`oe-inferencex demo`: a first run that needs no data to find, no labels and nothing but numpy.
+"""`oe-inferencex demo`: the first run. It depends on numpy alone, so it works wherever the package installs.
 
 By default it audits a real map: one tile of Dynamic World, a served global land-cover product this project had no hand
 in, with the probabilities it publishes about itself and the expert annotation of the same ground (Zenodo record

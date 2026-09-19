@@ -13,28 +13,14 @@ pip install olmoearth-inferencex
 oe-inferencex demo
 ```
 
-No data to find, no labels, nothing but numpy. The command audits a real map: one tile of Dynamic World, a global
-10 m land-cover product this project had no hand in, with the probabilities it publishes about itself and an expert's
-annotation of the same ground to grade the result. The tile was chosen by a rule fixed in advance, the median tile by
-error capture among the 18 fully annotated ones of its 409 public test tiles, so it is a typical tile and not the best one. <!-- claim:demo-sample-is-the-median-tile -->
+It audits a real map, one tile of Dynamic World land cover, chosen by a rule fixed in advance (the median tile of 18, not the best one), and draws this: <!-- claim:demo-sample-is-the-median-tile -->
 
-<img src="https://raw.githubusercontent.com/2imi9/olmoearth_inferenceX/main/docs/figures/demo_real_map.png" alt="Three panels of a real land-cover map in southern Peru. Left: the map with the 5% of windows to check first outlined in black, along the boundaries between classes. Middle: the same windows over the map's real errors in red; 67% of the flagged windows are wrong. Right: a random 5% of windows over the same errors; about 19% of them are wrong" width="760">
+<img src="https://raw.githubusercontent.com/2imi9/olmoearth_inferenceX/main/docs/figures/demo_real_map.png" alt="Three panels of a real land-cover map in southern Peru. Left: the 5% of windows to check first, outlined in black along the class boundaries. Middle: the same windows over the map's real errors in red. Right: a random 5% of windows over the same errors" width="760">
 
-*Left: what an audit gives, the map with the 5% of windows to check first outlined in black; no labels were used.
-Middle: the same windows over the places where the map is really wrong according to the expert, in red. Right: a random
-5% over the same errors. The map is wrong on 19% of its windows; of the windows the tool flags, 67% are wrong, so a
-reviewer who goes where it points finds an error more than three times as often as one who picks at random, and those 5%
-hold 17% of all the map's errors. The run also says what the tool does not do: errors the model is sure about stay* <!-- claim:demo-sample-hit-rate -->
-*hidden, and it never says how wrong a map is. `oe-inferencex demo --made-up` does the same on a small synthetic water map.*
+*Left: the 5% of windows to check first, found without labels. Middle: the same windows over the real errors, in red: 67% of them are wrong, against 19% of windows picked at random. Right: a random 5%.* <!-- claim:demo-sample-hit-rate -->
 
-Then your own map, a GeoTIFF (with `pip install "olmoearth-inferencex[geo]"`) or a `.npy` array of probabilities or
-logits:
-
-```bash
-oe-inferencex assess your_map.tif --out audit
-```
-
-What the project found, in six plain sentences: [Findings, in short](https://github.com/2imi9/olmoearth_inferenceX/blob/main/docs/Findings.md#in-short).
+Your own map: `oe-inferencex assess your_map.tif --out audit`. What the project found, in six sentences:
+[Findings, in short](https://github.com/2imi9/olmoearth_inferenceX/blob/main/docs/Findings.md#in-short).
 
 The strongest evidence
 ----------------------

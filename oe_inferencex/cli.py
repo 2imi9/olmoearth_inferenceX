@@ -4,7 +4,7 @@
                           [--budgets 0.01 0.05 0.10] [--order confidence|boundary_first]
     oe-inferencex compare a.tif b.tif --out DIR [--patch 4] [--nodata V] [--labels labels.tif] [--groups ids.tif]
                           [--threshold T]
-    oe-inferencex demo    [--out DIR]          a first run on a small made-up map: needs no data
+    oe-inferencex demo    [--out DIR] [--made-up]   a first run on the real sample map shipped with the package
 
 Inputs are GeoTIFFs (any rasterio-readable raster) or .npy arrays: (H, W) for a binary map, (C, H, W) for per-class
 scores or, for `compare`, an integer class map. `compare` also takes two continuous maps (a regression output) when the
@@ -266,7 +266,7 @@ def build_parser():
     a.add_argument("--budgets", type=float, nargs="+", default=[0.01, 0.05, 0.10], help="review budgets as fractions of windows")
     a.add_argument("--order", choices=("confidence", "boundary_first"), default="confidence", help="review order")
     a.set_defaults(func=cmd_assess)
-    d = sub.add_parser("demo", help="first run: audit a real sample map (or a made-up one) and draw the result; needs no data")
+    d = sub.add_parser("demo", help="first run: audit the real sample map shipped with the package (or a made-up one) and draw the result")
     d.add_argument("--out", default="oe_inferencex_demo", help="output directory (default oe_inferencex_demo)")
     d.add_argument("--seed", type=int, default=0, help="seed of the made-up scene and of the random pick")
     d.add_argument("--made-up", action="store_true", help="audit a small synthetic water map instead of the real sample tile")
