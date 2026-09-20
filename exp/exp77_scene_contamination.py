@@ -39,6 +39,7 @@ if EXP_DIR not in sys.path:
 sys.path.insert(0, os.path.dirname(EXP_DIR))
 
 from oe_inferencex import metrics  # noqa: E402
+from oe_inferencex.signals import midrank_pct  # noqa: E402
 
 OUT = os.path.join(EXP_DIR, "out")
 LAMBDAS = (0.5, 1.0)          # how much of the scene direction to remove; 0 is arm A
@@ -176,8 +177,10 @@ def verdicts(rows):
     pairs = [(r["contamination"]["gap"], r["gain"]) for r in rows if r["contamination"]]
     rho = None
     if len(pairs) >= 3:
-        a = np.argsort(np.argsort([p[0] for p in pairs])).astype(float)
-        b = np.argsort(np.argsort([p[1] for p in pairs])).astype(float)
+        # Midranks, not argsort-of-argsort: the latter breaks ties by position, so seven tasks with the same gap
+        # and the same gain would rank 0..6 on both axes and report a perfect correlation on no evidence.
+        a = midrank_pct([p[0] for p in pairs])
+        b = midrank_pct([p[1] for p in pairs])
         sa, sb = a.std(), b.std()
         rho = float(((a - a.mean()) * (b - b.mean())).mean() / (sa * sb)) if sa > 0 and sb > 0 else None
     beats = [r for r in rows if any(v < r["excess_aurc"]["margin"] for k, v in r["excess_aurc"].items() if k != "margin")]
