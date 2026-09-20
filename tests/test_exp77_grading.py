@@ -82,3 +82,29 @@ def test_p4_catches_a_new_reading_that_beats_the_margin():
 def test_every_prediction_states_the_threshold_it_was_graded_against():
     v = e77.verdicts(_rows([(0.01, 0.01)] * 7))
     assert len(v) == 4 and all("holds" in d and "threshold" in d for d in v.values())
+
+
+def test_aligning_rows_by_a_label_hash_needs_a_permutation_check():
+    """exp54's cross-encoder block aligned rows by a hash of the label tile. Identical tiles collide to one key, so
+    where they are not adjacent the reorder permutes rows even when a model is aligned against itself, while every
+    other condition in the guard still passes. That is what corrupted its phi on PASTIS (reported 2026-09-20)."""
+    def reorder(k0, dec, guard_is_permutation):
+        pos0 = {k: i for i, k in enumerate(k0)}
+        idx = np.array([pos0.get(x, -1) for x in k0])
+        passes = (idx >= 0).all() and (len(np.unique(idx)) == len(idx) == len(k0) if guard_is_permutation
+                                       else len(idx) == len(k0))
+        return passes, (dec[np.argsort(idx)] if passes else None)
+
+    dec = np.array([10, 20, 30, 40])
+    scattered = ["a", "b", "a", "c"]          # identical tiles, not adjacent
+    passes, out = reorder(scattered, dec, guard_is_permutation=False)
+    assert passes and not np.array_equal(out, dec), "the old guard passes and scrambles a model against itself"
+    assert not reorder(scattered, dec, guard_is_permutation=True)[0], "the permutation check refuses it"
+
+    adjacent = ["a", "a", "b", "c"]           # identical tiles side by side: the reorder happens to be the identity
+    passes, out = reorder(adjacent, dec, guard_is_permutation=False)
+    assert passes and np.array_equal(out, dec), "which is why only some tasks were corrupted"
+
+    unique = ["a", "b", "c", "d"]
+    passes, out = reorder(unique, dec, guard_is_permutation=True)
+    assert passes and np.array_equal(out, dec), "unique keys pass the permutation check and are unchanged"

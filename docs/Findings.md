@@ -122,9 +122,12 @@ Sentinel-1 instead of Sentinel-2 moves the <!-- claim:fine-tuning-corrects-half 
 error set twice as far as swapping the encoder (exp46); the sensor is the
 largest lever and the backbone the smallest. <!-- claim:modality-dominates-shared-errors -->
 On Ai2's own embeddings, with their probe, seven published encoders err on
-the same windows as OlmoEarth (phi 0.78-0.82, Satlas 0.62; exp51). That sharing belongs to the binary water
-task: on marine debris and crop types the same encoders share far less
-(phi 0.26-0.44 and 0.05-0.08; exp54). <!-- claim:cross-encoder-phi-on-their-embeddings --> <!-- claim:shared-errors-task-dependent -->
+the same windows as OlmoEarth (phi 0.78-0.82, Satlas 0.62; exp51). They also share them on the multi-class tasks: phi 0.38 to 0.58 on
+MADOS and 0.50 to 0.68 on PASTIS Sentinel-2, co-erring on about four in five of
+OlmoEarth's PASTIS error windows (exp63). This page said the opposite until 20
+September 2026, on exp54's phi block, which aligned rows by a hash of the label
+tile and scrambled them where identical tiles were not adjacent; that block is
+withdrawn and the rest of exp54 is unaffected. <!-- claim:cross-encoder-phi-on-their-embeddings --> <!-- claim:shared-errors-task-dependent -->
 
 **Measured as differences, without labels** (exp57, every pair on identical
 windows): two inferences of the same scene disagree on 2 to 4% of the windows

@@ -1317,20 +1317,35 @@
     - {file: docs/results/comparisons.md, marker: multiclass-confidence-beats-embedding-control}
 
 - id: shared-errors-task-dependent
-  statement: The shared error windows of exp41/exp51 are a property of the binary water task; on MADOS the other encoders share OlmoEarth's error windows at phi 0.26-0.44 and on PASTIS at 0.05-0.08.
+  statement: "Encoders share OlmoEarth's error windows on the multi-class tasks too, not only on binary water: against OlmoEarth Base the five other encoders sit at phi 0.38-0.58 on MADOS and 0.50-0.68 on PASTIS Sentinel-2, co-erring on 78.7-83.2% of OlmoEarth's PASTIS error windows. exp54's phi block reported 0.26-0.44 and 0.05-0.08 for the same pairs and is withdrawn: it aligned rows by a hash of the label tile, which collides on identical tiles, and 0.08 is what phi becomes under scrambling."
   status: measured
-  experiments: [exp54, exp51, exp41]
-  artifacts: [exp/out/exp54_summary.json]
+  experiments: [exp63, exp54]
+  artifacts: [exp/out/exp63_summary.json, exp/out/exp54_summary.json]
   check: |-
-    (lambda r:
-      all(0.25 <= v['phi'] <= 0.45 for v in r['mados']['phi_vs_olmoearth_base'].values())
-      and all(0.04 <= v['phi'] <= 0.09 for v in r['pastis_sentinel2']['phi_vs_olmoearth_base'].values())
-    )(A['exp/out/exp54_summary.json']['results'])
+    (lambda a, b: (lambda P, M:
+      round(min(P), 2) == 0.50 and round(max(P), 2) == 0.68
+      and round(min(M), 2) == 0.38 and round(max(M), 2) == 0.58
+      and all(0.786 <= c['both'] / c['errors_a'] <= 0.833
+              for c in [p['graded']['crosstab'] for n, p in a['results']['pastis_sentinel2']['pairs'].items()
+                        if n.startswith('olmoearth_base vs') and 'graded' in p])
+      and all(v['phi'] < 0.09 for v in b['results']['pastis_sentinel2']['phi_vs_olmoearth_base'].values())
+      and max(abs(p['graded']['crosstab']['errors_a'] - 87167) for n, p in a['results']['pastis_sentinel2']['pairs'].items()
+              if n.startswith('olmoearth_base vs') and 'graded' in p) == 0
+    )([p['graded']['crosstab']['phi'] for n, p in a['results']['pastis_sentinel2']['pairs'].items() if n.startswith('olmoearth_base vs') and 'graded' in p],
+      [p['graded']['crosstab']['phi'] for n, p in a['results']['mados']['pairs'].items() if n.startswith('olmoearth_base vs') and 'graded' in p]))(
+      A['exp/out/exp63_summary.json'], A['exp/out/exp54_summary.json'])
   cited_in:
     - {file: docs/Findings.md, marker: shared-errors-task-dependent}
     - {file: docs/TECHNIQUES.md, marker: shared-errors-task-dependent}
     - {file: docs/results/comparisons.md, marker: shared-errors-task-dependent}
-
+  note: >-
+    Corrected on 2026-09-20. The superseded number came from exp54's cross-encoder block, whose guard checked only that
+    every label-tile key was found, never that the resulting index was a permutation; identical label tiles collide to
+    one key, so where they are not adjacent the reorder permutes rows even when a model is aligned against itself. The
+    two runs contradict each other on their face: exp54's own conditional (0.246 that OlmoEarth is wrong where Galileo
+    is) implies at least 30.9% decision disagreement on PASTIS, while exp63 measures 13.6% on the same 458,638 windows.
+    The check reads BOTH artifacts, so it fails if either the corrected numbers or the withdrawn ones change. exp54's
+    preregistered result is computed per encoder before any alignment and is unaffected.
 - id: boundary-first-many-classes-split
   statement: At 15-19 classes the boundary-first order captures slightly fewer errors than confidence, or as many, at the 5% budget pooled over windows, while winning the per-tile sign test on four of six PASTIS encoders, on cashew (34/6) and on SA crop type (647/196).
   status: measured
@@ -2907,3 +2922,24 @@
   note: >-
     The twelfth reading taken from inside the encoder, and it fails like the eleven before it. The decontamination
     flip also costs a second probe fit and a strength chosen on a labelled holdout, which the margin does not.
+
+- id: the-ranking-ceiling-is-the-tasks-not-the-encoder
+  statement: "The share of the random-to-perfect ranking gap the margin takes is a property of the task, not of the encoder: over the 16 encoders of Ai2's suite it runs from 0.553 (Satlas Base) to 0.693 (OlmoEarth Large), OlmoEarth Large is the best of the sixteen and Base ties for second, the OlmoEarth size series moves it only from 0.648 to 0.693 across four model sizes, and the spread between tasks (sd 0.160) is 2.8 times the spread within a task across all sixteen encoders (sd 0.058)."
+  status: measured
+  experiments: [exp74, exp70]
+  artifacts: [exp/out/headroom_by_encoder.json]
+  check: |-
+    (lambda d: (lambda p, s:
+      d['n_encoders'] == 16 and d['best'] == 'olmoearth_large'
+      and round(d['best_value'], 3) == 0.693 and round(d['worst_value'], 3) == 0.553
+      and sorted(p.values())[-2] >= p['olmoearth_base'] - 1e-9
+      and round(min(s.values()), 3) == 0.648 and round(max(s.values()), 3) == 0.693
+      and d['spread_between_tasks_sd'] / d['spread_within_task_across_encoders_median_sd'] > 2.5
+    )(d['per_encoder_median_headroom'], d['olmoearth_size_series']))(A['exp/out/headroom_by_encoder.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: the-ranking-ceiling-is-the-tasks-not-the-encoder}
+  note: >-
+    Derived from exp74's and exp70's committed per-task records, not a run of its own, and descriptive rather than
+    preregistered. It measures how much the statistic moves when the model changes; a different encoder has a
+    different error set, so it is not an upper bound on what a better label-free reading of OlmoEarth's own errors
+    could reach.

@@ -787,9 +787,29 @@ sign test below 0.05 everywhere. Predictive entropy sits within 0.005 of
 confidence; cross-encoder disagreement is a poor ranker (0.0263 on MADOS,
 0.1531 on PASTIS against confidence's 0.0078 and 0.0386).
 
-Shared errors are a property of the task, not of the encoders. On the binary
-water task the encoders err on the same windows (phi 0.77-0.82, exp41,
-exp51); on MADOS they share far less and on PASTIS almost nothing (mados: galileo_base 0.33, croma_base 0.26, terramind_base 0.32, clay_large 0.27, anysat 0.44; pastis_sentinel2: galileo_base 0.08, croma_base 0.08, terramind_base 0.08, clay_large 0.05, anysat 0.08). <!-- claim:shared-errors-task-dependent -->
+Shared errors are not as task-dependent as this page said until 20 September
+2026. On the binary water task the encoders err on the same windows (phi
+0.77-0.82, exp41, exp51), and on the multi-class tasks they still do: against
+OlmoEarth Base the five other encoders sit at phi 0.38 to 0.58 on MADOS and
+0.50 to 0.68 on PASTIS Sentinel-2, where they co-err on 78.7% to 83.2% of
+OlmoEarth's PASTIS error windows (exp63, on identical windows).
+
+exp54 reported phi 0.26-0.44 and 0.05-0.08 for the same pairs, and that was
+wrong. Its cross-encoder block aligned each model's rows to OlmoEarth's by a
+hash of the label tile, and two tiles with identical labels collide to one key;
+when such tiles are not adjacent the reorder permutes rows even when a model is
+aligned against itself, and the guard, which checked only that every key was
+found, passed. The result is the signature of scrambling: 0.08 is what phi
+becomes when one side is shuffled. The two runs disagree on their face, because
+exp54's own conditional (a 0.246 chance that OlmoEarth is wrong where Galileo
+is) implies at least a 30.9% decision disagreement on PASTIS while exp63
+measures 13.6% on the same windows. exp63 aligns by construction and carries a
+comment warning of exactly this hazard, so its numbers stand and exp54's phi
+block is withdrawn. Nothing else in exp54 rests on that alignment: its
+preregistered result, that the probe's confidence beats the embedding-distance
+control on all five tasks, is computed per encoder before any alignment and is
+unaffected. `exp/exp54_multiclass_embeddings.py` now refuses to align unless the
+index is a permutation. <!-- claim:shared-errors-task-dependent -->
 
 Boundary-first at many classes splits by the measure. Pooled over windows
 it captures slightly fewer errors than confidence at the 5% budget on every
@@ -2171,6 +2191,42 @@ mean is a surrogate for a probe the paper defines on a CLS token this encoder do
 a null on the surrogate; and all seven tasks are segmentation, because the suite's other seventeen ship one
 pooled embedding per sample, which leaves a token-versus-tile-mean comparison undefined. Values in
 `exp/out/exp77_summary.json` and `exp77_tasks.csv`.
+
+## The ceiling belongs to the task, not to the model (from exp74 and exp70)
+
+The margin takes a median 0.68 of the gap between a random ranking and a perfect one on the 24 tasks. A fair
+question is whether that number is OlmoEarth's limit. It is not, and the answer needs no new run: exp74 scored
+the same protocol under fifteen other encoders, so the same statistic is computable for sixteen models over 356
+encoder-task pairs.
+
+| Encoder | Headroom taken | | Encoder | Headroom taken |
+|---|---|---|---|---|
+| OlmoEarth Large | 0.693 | | CopernicusFM | 0.621 |
+| Galileo Base | 0.680 | | TerraMind Base | 0.617 |
+| OlmoEarth Base | 0.680 | | Galileo Nano | 0.607 |
+| TerraMind Large | 0.675 | | Clay Large | 0.590 |
+| CROMA Large | 0.669 | | Panopticon | 0.586 |
+| CROMA Base | 0.658 | | AnySat | 0.568 |
+| OlmoEarth Nano | 0.654 | | Satlas Base | 0.553 |
+| Galileo Tiny | 0.652 | | OlmoEarth Tiny | 0.648 |
+
+**OlmoEarth is the best of the sixteen, not the bottleneck.** Large takes more of the headroom than any other
+encoder in the suite and Base ties for second, so the ceiling is not a weakness this model has and the others
+do not. **Scale is not the lever either**: across the OlmoEarth size series the statistic runs 0.654, 0.648,
+0.680, 0.693 from nano to large, about four points from the smallest model to the largest.
+**And it does not track accuracy**: the sixteen span 0.553 to 0.693 on this statistic while their median task
+accuracy spans 0.66 to 0.76, so how accurate a model is and how rankable its errors are come apart. What the
+number does track is the task: the spread between tasks is 0.160 of standard deviation against 0.058 within a
+task across all sixteen encoders, a ratio of 2.8, so replacing the entire model moves this statistic
+considerably less than changing which task it is run on. <!-- claim:the-ranking-ceiling-is-the-tasks-not-the-encoder -->
+
+That is the reference scale for any proposal to raise 0.68 by a post-hoc reading of one frozen model's features.
+Changing everything about the model, architecture, pretraining and size together, moves the median by a few
+points. It is the strongest evidence in this record that the residual is a property of the audit problem, and
+it is a measurement rather than a theorem: a different encoder has a different error set, so this bounds how
+much the statistic moves when the model changes, not how much a better reading of OlmoEarth's own errors could
+ever achieve. Derived from the committed artifacts by `exp/out/headroom_by_encoder.json`; no run of its own, and
+nothing here is preregistered, so it is descriptive.
 
 ## What remains: the headroom (from exp70 and exp65)
 

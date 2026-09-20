@@ -258,8 +258,18 @@ def main():
                 aligned = {}
                 for m, (dec, err, ok, k, _, _) in held.items():
                     idx = np.array([pos0.get(x, -1) for x in k])
-                    if (idx >= 0).all() and len(idx) == len(k0) and dec.shape == dec0.shape:
+                    # The guard must include "idx is a permutation". Two tiles with identical labels hash to one key,
+                    # so pos0 keeps only the last of them; where such tiles are not adjacent, np.argsort(idx) permutes
+                    # rows even when a model is aligned against itself, and every other condition here still passes.
+                    # That is what corrupted this block's phi on PASTIS, reported 2026-09-20; exp63 measures the pair
+                    # at 0.50-0.68 where this reported 0.05-0.08, and 0.08 is what phi becomes under scrambling.
+                    is_perm = len(np.unique(idx)) == len(idx) == len(k0)
+                    if (idx >= 0).all() and is_perm and dec.shape == dec0.shape:
                         aligned[m] = (dec[np.argsort(idx)], err[np.argsort(idx)], ok[np.argsort(idx)])
+                    elif (idx >= 0).all() and not is_perm:
+                        summary["failures"].append({"part": f"{task}/{m}", "error": "label-tile keys are not unique: "
+                                                    f"{len(k0) - len(np.unique(idx))} of {len(k0)} tiles collide, so rows "
+                                                    "cannot be aligned by label hash; skipped rather than scrambled"})
                 others = [m for m in aligned if m != BASE]
                 if others:
                     dis = np.mean([(aligned[m][0] != dec0) for m in others], axis=0)
