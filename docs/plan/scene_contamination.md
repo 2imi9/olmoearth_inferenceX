@@ -85,3 +85,58 @@ not removable by a linear projection, which is also worth recording.
 
 CPU only, the cached embeddings the suite already uses, five probe fits per task (two baseline seeds, two
 lambda choices on the holdout, one final). No new dependency, fp32 throughout.
+
+## Amendment, 20 September 2026, written before the run's numbers were read
+
+Two defects in the text above, found by an adversarial read of this page against the code while job 1003587 was
+still running. The text above is left as it stood; this section corrects it, and the corrections bind the grading.
+
+**1. P3's quantity is not label-free, and the sentence claiming it was is wrong.** P1's gap is the mean scene
+typicality of the *error* windows minus that of the *correct* ones, inside the confident half. Separating error
+from correct needs the labels: `contamination_gap` splits on `err`, which comes from the majority label per
+window. So P3 as written correlates a **labelled** diagnostic with the gain, and the sentence above calling it
+"the claim that a quantity measured *without labels* says where a fix will pay" is false of its own quantity.
+P3 is still worth grading, but it is the weaker claim, and it will be reported as the weaker claim.
+
+The label-free claim is worth a test, because it is the one a reviewer of a map could act on. It needs a
+quantity this run does not store: the distribution of window scene typicality per map, which needs no labels and
+no probe. **P3-label-free**, defined here before any result is read: across the seven tasks, the mean window
+scene typicality of a task ranks positively with that task's P2 gain (Spearman rho > 0). It is graded only if P2
+holds, since a gain of zero everywhere has nothing to rank against. The quantity comes from a follow-up job that
+loads the same cached embeddings, computes the cosines and summarises them; it fits no probe and trains nothing.
+
+**2. P1 has no control for class frequency, so a positive gap will not identify the mechanism.** Within a tile,
+a window the model gets confidently wrong is disproportionately a minority-class window predicted as the tile's
+dominant class, and such a window's token sits near the tile mean for reasons that have nothing to do with
+diffusion of semantics. Class rarity is not a hypothetical alternative here: it is the best no-model control on
+six of these seven tasks (exp/out/exp70_summary.json; the seventh, Sen1Floods11, prefers embedding distance).
+A positive P1 is therefore consistent with the LaSt-ViT mechanism **and** with plain class imbalance, and no
+sentence in the record may pick between them on this run's evidence. P1's statement is amended to what it can
+support: *confident errors are more typical of their own tile than confident correct windows are*, with the
+mechanism left open.
+
+**Checks before any prediction is graded.** Arm A is exp70's recipe by construction, so it must reproduce
+exp70's recorded numbers on all seven tasks or the baseline has moved and no gain is comparable to the record:
+
+| task | accuracy | windows | margin excess AURC |
+|---|---|---|---|
+| mados | 0.9264 | 22,598 | 0.007793 |
+| sen1floods11 | 0.9155 | 592,385 | 0.020199 |
+| pastis_sentinel1 | 0.7157 | 458,638 | 0.071459 |
+| pastis_sentinel2 | 0.8099 | 458,638 | 0.038639 |
+| pastis_sentinel1_sentinel2 | 0.8052 | 458,638 | 0.039449 |
+| m_cashew_plant | 0.6528 | 204,800 | 0.130784 |
+| m_sa_crop_type | 0.6600 | 4,096,000 | 0.067186 |
+
+Also: every count is reported against seven whether or not seven tasks ran, and by the five distinct sources as
+well, since the three PASTIS variants are one source; a task whose gap is undefined (too few confident errors)
+is counted as not supporting P1 and named; `same_valid_windows` is checked per task before any accuracy
+comparison; the seed floor is one reseed, not a distribution, and is called that; and P4's margins are reported
+signed and beside the margin's own lead over the best no-model control on that task, which runs from 0.0165 to
+0.1272 here, so that a lead of 1e-9 is not read as a result.
+
+**The lambda grid cannot choose zero.** It is {0.5, 1.0}, so arm B always removes at least half the scene
+direction and the holdout cannot decide to leave the tokens alone. A task whose best answer was "do nothing" can
+only appear as a loss. This is a limit on P2, and the chosen lambda and both holdout accuracies are reported per
+task so a reader can see it.
+
