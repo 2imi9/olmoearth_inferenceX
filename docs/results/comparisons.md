@@ -2103,6 +2103,75 @@ for the form, which was. <!-- claim:window-aggregator-is-not-the-lever -->
 
 Outputs: `exp/out/exp76_summary.json`, `exp76_readings.csv`.
 
+## A confident error is more typical of its scene, and removing that does not help (exp77)
+
+The record's open gap is the errors the model makes confidently: on the suite the margin takes a median 0.68 of
+the ranking headroom, labels buy a fifth to a third of the rest, and the remainder has never been seen by any
+label-free reading. Every reading tried assumed such an error is *unusual*. "Vision Transformers Need More Than
+Registers" (arXiv 2602.22394) names a mechanism that would instead make it **usual**: under coarse supervision
+and global attention, scene-level semantics diffuse into tokens that do not carry them, so a window can be
+labelled by what its neighbourhood is rather than by what it shows. Their probe is a patch's similarity to the
+CLS token and their fix changes pre-training; OlmoEarth has no CLS token, ships zero register tokens and trains
+per token, and its pre-training is not this project's to change. What transfers is the comparison of a token
+with its own tile's mean. exp77 preregistered four predictions on it
+([the plan](../plan/scene_contamination.md)), ran on a CPU node in 1 h 40 m, and answers them on the seven
+segmentation tasks of Ai2's published embeddings, with the suite's own probe, so the errors are exp70's errors.
+Arm A reproduces exp70's accuracy to ten decimals on three tasks and to within that task's own reseed spread on
+three more; on PASTIS Sentinel-1 it lands 5.7e-05 away against a 4.1e-05 reseed spread, which is fp32
+nondeterminism and not a moved baseline.
+
+| Task | error rate | share of errors in the confident half | typicality gap, error minus correct | accuracy change, points | reseed floor, points | excess AURC, margin | excess AURC, scene typicality | excess AURC, best no-model control |
+|---|---|---|---|---|---|---|---|---|
+| MADOS | 0.074 | under the floor | not defined | -0.03 | 0.000 | 0.0078 | 0.0938 | 0.0243 |
+| Sen1Floods11 | 0.085 | 0.09 | -0.0125 | -0.09 | 0.007 | 0.0202 | 0.1121 | 0.0620 |
+| PASTIS S1 | 0.284 | 0.18 | +0.0090 | -0.98 | 0.004 | 0.0715 | 0.1964 | 0.1987 |
+| PASTIS S2 | 0.190 | 0.10 | +0.0035 | -0.31 | 0.009 | 0.0386 | 0.1665 | 0.1561 |
+| PASTIS S1+S2 | 0.195 | 0.10 | +0.0155 | -0.41 | 0.000 | 0.0394 | 0.1565 | 0.1585 |
+| m-cashew-plant | 0.347 | 0.30 | +0.0118 | -0.48 | 0.049 | 0.1308 | 0.2358 | 0.2570 |
+| m-SA-crop-type | 0.340 | 0.16 | +0.0037 | -0.89 | 0.024 | 0.0672 | 0.2426 | 0.1813 |
+
+**The confident errors are more typical of their scene, at the bare threshold and on three sources of five.**
+Inside the more confident half of the windows, the error windows sit closer to their own tile's mean token than
+the correct ones do, on 5 of 7 tasks, which is exactly what the preregistration asked for (P1, holds). By
+distinct source it is 3 of 5, because the three PASTIS variants are one source: it fails on Sen1Floods11, where
+the gap is negative, and it is not defined on MADOS, where the confident half holds fewer than five errors at
+all. Two things this does **not** establish, both recorded before the numbers were read. The gap is computed
+from the labels, since separating error windows from correct ones needs them, so it is not a label-free
+reading. And there is no control for class frequency, which predicts the same sign on its own: a confidently
+wrong window is disproportionately a minority-class window called the tile's dominant class, and such a token
+sits near the tile mean for reasons that have nothing to do with diffusion of semantics. Class rarity is the
+best no-model control on six of these seven tasks (exp70), so this run cannot tell the paper's mechanism from
+plain class imbalance, and does not claim to. <!-- claim:confident-errors-are-scene-typical -->
+
+**Removing the scene direction from the frozen tokens makes the map worse, on all seven.** Arm B, the same
+probe recipe on tokens with the tile-mean component projected out, loses accuracy on every task, from 0.03
+points on MADOS to 0.98 on PASTIS Sentinel-1, where the preregistration asked for a gain of at least 0.5 points
+above the reseed floor on 4 of 7 (P2, fails, 0 of 7). The reseed floors came in between 2e-06 and 4.9e-04 of
+accuracy, far below the half-point bar, so the bar that bound was the size and not the noise. The strength was
+chosen on a holdout of the train tiles from {0.5, 1.0} and came back 0.5 on all seven, the weaker of the two
+every time: the grid could not express "remove nothing", so the holdout was choosing between two harms, and the
+honest reading of a unanimous 0.5 is that the best available setting was the one furthest from the
+intervention. <!-- claim:removing-the-scene-direction-does-not-help -->
+
+**So the diagnosis has nothing to locate.** P3 asked whether the size of the gap ranks with the size of the
+gain across tasks; with every gain negative the correlation is among failures, and it comes out at rho = -0.49
+(P3, fails). The label-free variant of P3, defined in the amendment before the numbers were read, was gated on
+P2 holding and is therefore not graded. <!-- claim:scene-contamination-diagnosis-has-nothing-to-locate -->
+
+**The margin keeps its lead.** Neither scene typicality, nor its negation, nor the decontamination flip ranks
+errors better than the model's own margin on any of the seven tasks (P4, holds, 0 beaten). Scene typicality is
+not close: its excess AURC runs 0.094 to 0.243 against the margin's 0.008 to 0.131, and it is worse than the
+best control that never sees the model on 4 of the 7. The twelfth reading taken from inside the encoder fails
+like the eleven before it. <!-- claim:scene-typicality-loses-to-the-margin -->
+
+**What this closes.** It is the one mechanism the paper licensed on frozen tokens, and it is now tested: the
+signature is there, weakly and confounded, and the fix it suggests is a loss. The audit gains no reading, the
+package gains no code, and the confident-error gap stays open. Two limits on how far the null travels: the tile
+mean is a surrogate for a probe the paper defines on a CLS token this encoder does not have, so a null here is
+a null on the surrogate; and all seven tasks are segmentation, because the suite's other seventeen ship one
+pooled embedding per sample, which leaves a token-versus-tile-mean comparison undefined. Values in
+`exp/out/exp77_summary.json` and `exp77_tasks.csv`.
+
 ## What remains: the headroom (from exp70 and exp65)
 
 Every "can it be improved" question needs a number for how much is left, so

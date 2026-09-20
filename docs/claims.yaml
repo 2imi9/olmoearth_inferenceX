@@ -2822,3 +2822,88 @@
     bundled sample (window-level mean probabilities, patch 1), numpy only. One tile illustrates the tool; the evidence
     about Dynamic World is exp67's, over the whole test set.
 
+- id: confident-errors-are-scene-typical
+  statement: "Inside the more confident half of the windows, the error windows are closer to their own tile's mean token than the correct ones on 5 of the 7 segmentation tasks of Ai2's suite (3 of 5 distinct sources); the gap is negative on Sen1Floods11 and undefined on MADOS, whose confident half holds fewer than five errors."
+  status: measured
+  experiments: [exp77]
+  artifacts: [exp/out/exp77_summary.json]
+  check: |-
+    (lambda s: (lambda g:
+      s['prereg']['P1_confident_errors_are_more_scene_typical']['holds'] is True
+      and s['prereg']['P1_confident_errors_are_more_scene_typical']['n'] == 5
+      and s['prereg']['P1_confident_errors_are_more_scene_typical']['of'] == 7
+      and sum(1 for v in g.values() if v is not None and v > 0) == 5
+      and g['sen1floods11'] < 0 and g['mados'] is None
+    )({r['task']: (r['contamination']['gap'] if r['contamination'] else None) for r in s['tasks']}))(A['exp/out/exp77_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: confident-errors-are-scene-typical}
+    - {file: docs/Findings.md, marker: confident-errors-are-scene-typical}
+  note: >-
+    The gap is computed from the labels, since separating error windows from correct ones needs them, so it is not a
+    label-free reading; the preregistration said otherwise and was corrected in a dated amendment before the numbers
+    were read. There is no control for class frequency, which predicts the same sign on its own, and class rarity is
+    the best no-model control on six of these seven tasks (exp70), so this does not identify the mechanism.
+
+- id: removing-the-scene-direction-does-not-help
+  statement: "Projecting out each token's component along its own tile's mean, then refitting the suite's probe, loses accuracy on all 7 segmentation tasks, from 0.03 to 0.98 points, where the preregistration asked for a gain of at least 0.5 points above the reseed floor on 4 of 7; the strength was chosen on a train holdout and came back the weaker of the two settings on all seven."
+  status: rejected
+  experiments: [exp77]
+  artifacts: [exp/out/exp77_summary.json]
+  check: |-
+    (lambda s:
+      s['prereg']['P2_decontamination_improves_accuracy']['holds'] is False
+      and s['prereg']['P2_decontamination_improves_accuracy']['n'] == 0
+      and all(r['gain'] < 0 for r in s['tasks'])
+      and all(r['lambda'] == 0.5 for r in s['tasks'])
+      and round(min(r['gain'] for r in s['tasks']) * 100, 2) == -0.98
+      and max(r['seed_floor'] for r in s['tasks']) < 0.005
+    )(A['exp/out/exp77_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: removing-the-scene-direction-does-not-help}
+  note: >-
+    The strength grid was {0.5, 1.0} and could not express "remove nothing", so a unanimous 0.5 means the holdout
+    was choosing between two harms. Arm A reproduces exp70's accuracy exactly on three tasks and within that task's
+    reseed spread on three more; on PASTIS Sentinel-1 it is 5.7e-05 away against a 4.1e-05 spread.
+
+- id: scene-contamination-diagnosis-has-nothing-to-locate
+  statement: "The size of the typicality gap does not rank positively with the size of the accuracy change across the seven tasks (Spearman rho = -0.49); with every change negative the correlation is among failures, and the label-free variant of the prediction was gated on the intervention paying and is not graded."
+  status: rejected
+  experiments: [exp77]
+  artifacts: [exp/out/exp77_summary.json]
+  check: |-
+    (lambda s:
+      s['prereg']['P3_the_diagnosis_predicts_where_it_helps']['holds'] is False
+      and round(s['prereg']['P3_the_diagnosis_predicts_where_it_helps']['spearman'], 2) == -0.49
+      and all(r['gain'] < 0 for r in s['tasks'])
+    )(A['exp/out/exp77_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: scene-contamination-diagnosis-has-nothing-to-locate}
+  note: >-
+    Graded with the current tie-aware grader over the run's own per-task numbers; the run carried an earlier grader
+    whose rank correlation broke ties by position, and the regrade did not move any verdict (prereg_as_run in the
+    artifact keeps what the run shipped).
+
+- id: scene-typicality-loses-to-the-margin
+  statement: "Neither a window's typicality of its own scene, nor its negation, nor the decontamination flip ranks errors better than the model's own margin on any of the 7 tasks; scene typicality's excess AURC runs 0.094 to 0.243 against the margin's 0.008 to 0.131 and it is worse than the best no-model control on 4 of the 7."
+  status: rejected
+  experiments: [exp77]
+  artifacts: [exp/out/exp77_summary.json, exp/out/exp70_summary.json]
+  check: |-
+    (lambda s, r: (lambda T:
+      s['prereg']['P4_no_new_reading_beats_the_margin']['holds'] is True
+      and s['prereg']['P4_no_new_reading_beats_the_margin']['n_tasks_beaten'] == 0
+      and all(v > x['excess_aurc']['margin'] for x in s['tasks'] for k, v in x['excess_aurc'].items() if k != 'margin')
+      and round(min(x['excess_aurc']['scene_typicality'] for x in s['tasks']), 3) == 0.094
+      and round(max(x['excess_aurc']['scene_typicality'] for x in s['tasks']), 3) == 0.243
+      and sum(1 for x in s['tasks']
+              if x['excess_aurc']['scene_typicality'] > min(v['excess_aurc'] for k, v in T[x['task']]['signals'].items()
+                                                            if k.startswith('ctl_'))) == 4
+    )(r['results']['tasks']))(A['exp/out/exp77_summary.json'], A['exp/out/exp70_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: scene-typicality-loses-to-the-margin}
+    - {file: docs/Findings.md, marker: scene-typicality-loses-to-the-margin}
+    - {file: docs/TECHNIQUES.md, marker: scene-typicality-loses-to-the-margin}
+    - {file: docs/related_work.md, marker: scene-typicality-loses-to-the-margin}
+  note: >-
+    The twelfth reading taken from inside the encoder, and it fails like the eleven before it. The decontamination
+    flip also costs a second probe fit and a strength chosen on a labelled holdout, which the margin does not.

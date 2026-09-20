@@ -380,6 +380,12 @@ from the encoder's internals, its pretraining objective, a posterior over
 the probe head, feature-space typicality, a second model of the same
 family, or flip-and-rotate consistency ranks errors better than confidence
 on expert labels. <!-- claim:no-encoder-internal-signal-beats-confidence -->
+A twelfth was tried after the others: a window's agreement with its own
+tile's mean token, from the lazy-aggregation mechanism of arXiv 2602.22394. Confident errors are measurably more
+typical of their scene on 5 of 7 segmentation tasks, but the gap needs labels and has no control for class
+frequency, which predicts the same sign; as a ranker it loses to the margin on all seven and to the best no-model
+control on four, and removing that direction from the frozen tokens costs accuracy on every task
+(exp77). <!-- claim:confident-errors-are-scene-typical --> <!-- claim:scene-typicality-loses-to-the-margin -->
 On the 24-task suite the same families clear the no-model control on
 15, 14 and 12 tasks and still lose to the
 margin on all but two ties; the ensemble is nearly the margin's equal on
