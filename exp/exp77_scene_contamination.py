@@ -203,7 +203,26 @@ def main():
     ap.add_argument("--smoke", action="store_true")
     ap.add_argument("--tasks", nargs="*", default=None)
     ap.add_argument("--cache", default=os.environ.get("HF_HOME"))
+    ap.add_argument("--regrade", action="store_true",
+                    help="re-evaluate the predictions over an existing summary with this file's grader and write it back; "
+                         "the run of 2026-09-20 carried the pre-ba9f009 grader, whose rank correlation broke ties by position")
     args = ap.parse_args()
+    if args.regrade:
+        path = os.path.join(OUT, "exp77_summary_smoke.json" if args.smoke else "exp77_summary.json")
+        with open(path) as f:
+            summary = json.load(f)
+        done = [r for r in summary["tasks"] if "failed" not in r]
+        summary.setdefault("prereg_as_run", summary.get("prereg", {}))
+        summary["prereg"] = verdicts(done)
+        summary["regraded_by"] = "exp/exp77_scene_contamination.py verdicts(), tie-aware midranks"
+        with open(path, "w") as f:
+            json.dump(summary, f, indent=1)
+        changed = {k: (summary["prereg_as_run"].get(k, {}).get("holds"), v["holds"])
+                   for k, v in summary["prereg"].items() if summary["prereg_as_run"].get(k, {}).get("holds") != v["holds"]}
+        print(f"regraded {len(done)} tasks in {path}")
+        print("changed:", json.dumps(changed) if changed else "nothing; the grader's fix did not move a verdict")
+        print(json.dumps(summary["prereg"], indent=1))
+        return
     import exp70_task_suite as e70
     tasks = args.tasks or (["smoke_a", "smoke_b", "smoke_c"] if args.smoke else e70.TASKS_SEG)
     rows = []
