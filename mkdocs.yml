@@ -73,6 +73,7 @@ nav:
       - Layout decision (ADR-001): plan/adr-001-repository-layout.md
       - Cleanup audit (2026-09-17): plan/cleanup-audit-2026-09-17.md
       - Adaptive-encoder readiness: plan/vit3_readiness.md
+      - Scene contamination (exp77 preregistration): plan/scene_contamination.md
   - API Reference: reference/
 
 hooks:
