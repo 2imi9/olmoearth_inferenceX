@@ -29,7 +29,13 @@ REQUIRED = ("id", "statement", "status", "experiments", "artifacts", "check", "c
 SAFE = {n: __builtins__[n] if isinstance(__builtins__, dict) else getattr(__builtins__, n)
         for n in ("abs", "all", "any", "float", "int", "len", "max", "min", "round", "sorted", "sum", "set",
                   "str", "list", "dict", "tuple", "isinstance", "enumerate", "zip", "range")}
-SAFE["log"] = __import__("math").log        # a check that needs the perfect ranking's AURC, e + (1 - e) log(1 - e)
+SAFE["log"] = __import__("math").log        # kept for checks written before oracle_aurc was available here
+# The perfect ranker's AURC, the package's own exact finite-n function rather than its n -> infinity limit. A check
+# that needs the ranking headroom can now RECOMPUTE it from an experiment's per-task records instead of reading a
+# pre-baked field out of the artifact it is meant to be testing. The asymptotic form e + (1 - e) log(1 - e) differs
+# by O(1/n) and moved a published figure once (2026-09-21), so the two must not be mixed inside one fraction.
+SAFE["oracle_aurc"] = __import__("oe_inferencex.metrics", fromlist=["metrics"]).oracle_aurc
+SAFE["median"] = lambda v: __import__("statistics").median(list(v))
 
 
 def load_registry(path=REGISTRY):

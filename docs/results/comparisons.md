@@ -2207,14 +2207,14 @@ encoder-task pairs.
 | TerraMind Large | 0.675 | | Clay Large | 0.590 |
 | CROMA Large | 0.669 | | Panopticon | 0.586 |
 | CROMA Base | 0.658 | | AnySat | 0.568 |
-| OlmoEarth Nano | 0.654 | | Satlas Base | 0.553 |
+| OlmoEarth Nano | 0.654 | | Satlas Base | 0.551 |
 | Galileo Tiny | 0.652 | | OlmoEarth Tiny | 0.648 |
 
 **OlmoEarth is the best of the sixteen, not the bottleneck.** Large takes more of the headroom than any other
 encoder in the suite and Base ties for second, so the ceiling is not a weakness this model has and the others
 do not. **Scale is not the lever either**: across the OlmoEarth size series the statistic runs 0.654, 0.648,
 0.680, 0.693 from nano to large, about four points from the smallest model to the largest.
-**And it does not track accuracy**: the sixteen span 0.553 to 0.693 on this statistic while their median task
+**And it does not track accuracy**: the sixteen span 0.551 to 0.693 on this statistic while their median task
 accuracy spans 0.66 to 0.76, so how accurate a model is and how rankable its errors are come apart. What the
 number does track is the task: the spread between tasks is 0.160 of standard deviation against 0.058 within a
 task across all sixteen encoders, a ratio of 2.8, so replacing the entire model moves this statistic
@@ -2225,8 +2225,13 @@ Changing everything about the model, architecture, pretraining and size together
 points. It is the strongest evidence in this record that the residual is a property of the audit problem, and
 it is a measurement rather than a theorem: a different encoder has a different error set, so this bounds how
 much the statistic moves when the model changes, not how much a better reading of OlmoEarth's own errors could
-ever achieve. Derived from the committed artifacts by `exp/out/headroom_by_encoder.json`; no run of its own, and
-nothing here is preregistered, so it is descriptive.
+ever achieve. Recomputed from the committed artifacts by `scripts/headroom_by_encoder.py`; no run of its own, and nothing
+here is preregistered, so it is descriptive. The generator divides by the package's exact finite-n oracle
+(`metrics.oracle_aurc`), the same one the numerator's excess AURC subtracts. An earlier version of this section
+divided by the n-to-infinity limit instead, which mixed two definitions of one quantity inside a single fraction
+and put Satlas Base at 0.553 rather than 0.551; every other figure here was unchanged by the correction. The
+claim's check now recomputes all sixteen medians from exp70's and exp74's per-task records and requires the
+artifact to agree, so an artifact built with the other oracle fails it.
 
 ## What remains: the headroom (from exp70 and exp65)
 

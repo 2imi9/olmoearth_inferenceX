@@ -2924,22 +2924,34 @@
     flip also costs a second probe fit and a strength chosen on a labelled holdout, which the margin does not.
 
 - id: the-ranking-ceiling-is-the-tasks-not-the-encoder
-  statement: "The share of the random-to-perfect ranking gap the margin takes is a property of the task, not of the encoder: over the 16 encoders of Ai2's suite it runs from 0.553 (Satlas Base) to 0.693 (OlmoEarth Large), OlmoEarth Large is the best of the sixteen and Base ties for second, the OlmoEarth size series moves it only from 0.648 to 0.693 across four model sizes, and the spread between tasks (sd 0.160) is 2.8 times the spread within a task across all sixteen encoders (sd 0.058)."
+  statement: "The share of the random-to-perfect ranking gap the margin takes is a property of the task, not of the encoder: over the 16 encoders of Ai2's suite it runs from 0.551 (Satlas Base) to 0.693 (OlmoEarth Large), OlmoEarth Large is the best of the sixteen and Base ties for second, the OlmoEarth size series moves it only from 0.648 to 0.693 across four model sizes, and the spread between tasks (sd 0.160) is 2.8 times the spread within a task across all sixteen encoders (sd 0.058)."
   status: measured
   experiments: [exp74, exp70]
-  artifacts: [exp/out/headroom_by_encoder.json]
+  artifacts: [exp/out/headroom_by_encoder.json, exp/out/exp70_summary.json, exp/out/exp74_summary.json]
   check: |-
-    (lambda d: (lambda p, s:
-      d['n_encoders'] == 16 and d['best'] == 'olmoearth_large'
-      and round(d['best_value'], 3) == 0.693 and round(d['worst_value'], 3) == 0.553
-      and sorted(p.values())[-2] >= p['olmoearth_base'] - 1e-9
-      and round(min(s.values()), 3) == 0.648 and round(max(s.values()), 3) == 0.693
+    (lambda d, t70, t74: (lambda share: (lambda med: (lambda m:
+      d['oracle'] == 'exact' and d['n_encoders'] == 16 and len(m) == 16
+      and all(abs(m[e] - d['per_encoder_median_headroom'][e]) < 1e-12 for e in m)
+      and d['best'] == 'olmoearth_large' and max(m, key=lambda e: m[e]) == 'olmoearth_large'
+      and round(max(m.values()), 3) == 0.693 and round(min(m.values()), 3) == 0.551
+      and min(m, key=lambda e: m[e]) == 'satlas_base'
+      and sorted(m.values())[-2] >= m['olmoearth_base'] - 1e-9
+      and round(min(m[k] for k in ('olmoearth_nano', 'olmoearth_tiny', 'olmoearth_base', 'olmoearth_large')), 3) == 0.648
+      and round(max(m[k] for k in ('olmoearth_nano', 'olmoearth_tiny', 'olmoearth_base', 'olmoearth_large')), 3) == 0.693
       and d['spread_between_tasks_sd'] / d['spread_within_task_across_encoders_median_sd'] > 2.5
-    )(d['per_encoder_median_headroom'], d['olmoearth_size_series']))(A['exp/out/headroom_by_encoder.json'])
+    )({e: med([share(r) for r in tasks.values()]) for e, tasks in list(t74.items()) + [('olmoearth_base', t70)]}))(
+      lambda v: median(sorted(v))))(
+      lambda r: 1 - r['signals']['margin']['excess_aurc'] / (r['error_rate'] - oracle_aurc(r['n_units'], int(round(r['error_rate'] * r['n_units']))))))(
+      A['exp/out/headroom_by_encoder.json'],
+      A['exp/out/exp70_summary.json']['results']['tasks'],
+      A['exp/out/exp74_summary.json']['results']['tasks'])
   cited_in:
     - {file: docs/results/comparisons.md, marker: the-ranking-ceiling-is-the-tasks-not-the-encoder}
   note: >-
-    Derived from exp74's and exp70's committed per-task records, not a run of its own, and descriptive rather than
-    preregistered. It measures how much the statistic moves when the model changes; a different encoder has a
-    different error set, so it is not an upper bound on what a better label-free reading of OlmoEarth's own errors
+    Derived from exp74's and exp70's committed per-task records by scripts/headroom_by_encoder.py, not a run of its
+    own, and descriptive rather than preregistered. The check RECOMPUTES the statistic from those per-task records
+    and requires the artifact to agree to 1e-12, rather than reading its pre-baked fields; it therefore fails if the
+    artifact was generated with a different oracle, which is how a mixed definition moved the worst value from 0.553
+    to 0.551 on 2026-09-21. It measures how much the statistic moves when the model changes; a different encoder has
+    a different error set, so it is not an upper bound on what a better label-free reading of OlmoEarth's own errors
     could reach.
