@@ -111,8 +111,15 @@ def _folds(groups, n, folds, seed=0):
 
 
 def _crossfit(X, y, fold, balanced, n_folds):
-    """Held-out logit for every row, from a fit on the other folds."""
-    out = np.zeros(len(y))
+    """Held-out logit for every row, from a fit on the other folds. NaN where no fit was possible.
+
+    A fold whose training side carries no errors, or nothing but errors, cannot be fitted. Until 2026-09-21 those
+    rows were left at logit exactly 0.0 and then reported inside `held_out` as though they had been scored: with a
+    low absolute error count, which is the regime a good map is in, every error could end up tied at zero and the
+    report would say the ranker found 0% of the errors at a 10% budget while quoting a better-than-random excess
+    AURC computed from that same fabricated vector. They are NaN now, and the caller must exclude them and say how
+    many there were; a silent zero is the one thing this must not return."""
+    out = np.full(len(y), np.nan)
     for k in range(n_folds):
         tr, te = fold != k, fold == k
         if te.sum() == 0 or y[tr].sum() == 0 or y[tr].sum() == tr.sum():
@@ -147,21 +154,41 @@ def fit_ranker(signals, errors, ok, groups=None, family=None, folds=5, budgets=(
     fold = _folds(g, len(err), folds)
     held = _crossfit(X, err, fold, balanced, folds)
     singles = {k: {"as_given": excess_aurc(Xraw[:, i], err), "flipped": excess_aurc(-Xraw[:, i], err)} for i, k in enumerate(names)}
-    best_name = min(names, key=lambda k: singles[k]["as_given"])
-    best = Xraw[:, names.index(best_name)]
+    # The fusion learns each reading's sign, so scoring the baseline only "as given" grades a sign-free model
+    # against a sign-locked one. A user who passes readings oriented "higher is safer", which the docstring invites,
+    # was shown a lead that was entirely the sign: 0.389 of excess AURC where the honest gap was 0.00025, with a
+    # manufactured sign test beside it. The baseline now gets the better of its two orientations, which is what the
+    # fusion would have found, and the report records which was used. Fixed 2026-09-21.
+    best_name = min(names, key=lambda k: min(singles[k]["as_given"], singles[k]["flipped"]))
+    best_flipped = singles[best_name]["flipped"] < singles[best_name]["as_given"]
+    best = -Xraw[:, names.index(best_name)] if best_flipped else Xraw[:, names.index(best_name)]
+    # Rows whose fold could not be fitted are NaN and are excluded from every held-out number, with the count kept.
+    scored = np.isfinite(held)
+    n_unscored = int((~scored).sum())
+    hs, es, bs = held[scored], err[scored], best[scored]
+    best_e = min(singles[best_name]["as_given"], singles[best_name]["flipped"])
+    ho = ({"excess_aurc": float("nan"), "capture": {}, "ece_of_p_error": float("nan")} if not _scoreable(es) else
+          {"excess_aurc": excess_aurc(hs, es), "capture": {str(k): v for k, v in capture_at_budget_expected(hs, es, budgets).items()},
+           "ece_of_p_error": expected_calibration_error(1 / (1 + np.exp(-hs)), es)[0]})
     report = {"n_windows": int(okm.sum()), "n_errors": int(err.sum()), "n_groups": int(len(np.unique(g))) if g is not None else None, "folds": folds,
               "weights": fusion.weights(), "bias": b,
-              "held_out": {"excess_aurc": excess_aurc(held, err), "capture": {str(k): v for k, v in capture_at_budget_expected(held, err, budgets).items()},
-                           "ece_of_p_error": expected_calibration_error(1 / (1 + np.exp(-held)), err)[0]},
+              "held_out": ho, "n_unscored_rows": n_unscored,
+              "n_scored_rows": int(scored.sum()),
+              "unscored_note": ("no fold could be fitted; every held-out number is undefined" if n_unscored == len(held)
+                                else f"{n_unscored} rows sat in folds that could not be fitted and are excluded from the held-out numbers"
+                                if n_unscored else None),
               "in_sample_excess_aurc": excess_aurc(X @ w + b, err),
-              "singles_excess_aurc": singles, "best_single": best_name, "best_single_excess_aurc": singles[best_name]["as_given"],
-              "held_out_lead_over_best_single": singles[best_name]["as_given"] - excess_aurc(held, err)}
+              "singles_excess_aurc": singles, "best_single": best_name,
+              "best_single_excess_aurc": best_e,
+              "best_single_orientation": "flipped" if best_flipped else "as given",
+              "held_out_lead_over_best_single": (best_e - excess_aurc(hs, es)) if _scoreable(es) else float("nan")}
     if g is not None:
         gains = {}
         for gid in np.unique(g):
             m = g == gid
-            if _scoreable(err[m]):
-                gains[gid.item() if hasattr(gid, "item") else gid] = excess_aurc(best[m], err[m]) - excess_aurc(held[m], err[m])
+            ms = m & scored
+            if _scoreable(err[ms]):
+                gains[gid.item() if hasattr(gid, "item") else gid] = excess_aurc(best[ms], err[ms]) - excess_aurc(held[ms], err[ms])
         report["over_groups_vs_best_single"] = over_groups(gains)
     return fusion, report
 

@@ -53,16 +53,46 @@ def _pool_valid(a, patch):
         return np.nanmean(blocks, axis=(1, 3))
 
 
-def _pooled_argmax(hard, n_classes, patch):
+def _pooled_argmax(hard, n_classes, patch, empty=0):
+    """Majority class per window, counting votes only over range(n_classes).
+
+    `empty` is returned for a window with no vote at all. It defaults to 0 for the callers that only ever look at
+    valid windows, but _assess passes -1: a window under cloud or off the edge of the scene has no class, and until
+    2026-09-21 it was given class 0, which made every such window disagree with its neighbours and manufactured a
+    prediction boundary around every no-data hole. On a map predicting one class everywhere it had a prediction,
+    that reported a boundary window fraction of 16.7% and filled the boundary-first review set with the rim of the
+    data."""
     h, w = hard.shape[0] // patch * patch, hard.shape[1] // patch * patch
     blocks = hard[:h, :w].reshape(h // patch, patch, w // patch, patch).transpose(0, 2, 1, 3).reshape(h // patch, w // patch, -1)
     counts = np.stack([(blocks == c).sum(-1) for c in range(n_classes)], axis=-1)
-    return counts.argmax(-1)
+    return np.where(counts.sum(-1) > 0, counts.argmax(-1), empty)
 
 
-def _boundary(pooled_hard):
-    """Prediction-boundary fraction of the pooled class map (oe_inferencex.signals.boundary_indicator)."""
-    return boundary_indicator(pooled_hard)
+def _boundary_valid(pooled_hard, valid):
+    """boundary_indicator, except that a neighbour with no prediction cannot disagree with anything.
+
+    The denominator stays eight, exactly as signals.boundary_indicator defines it, so on a fully observed map this
+    is bit-identical to it and every recorded boundary number (exp37's cue enrichments, exp36's order) is unchanged.
+    The only difference is that a no-data neighbour no longer counts as a differing class: until 2026-09-21 a window
+    beside a cloud hole or the edge of the data was scored as though the hole disagreed with it, which on a map
+    predicting a single class everywhere it had a prediction reported a boundary window fraction of 16.7% and filled
+    the boundary-first review set with the rim of the data."""
+    if valid.all():
+        return boundary_indicator(pooled_hard)
+    diff = np.zeros(pooled_hard.shape, np.float64)
+    for dy in (-1, 0, 1):
+        for dx in (-1, 0, 1):
+            if dy == 0 and dx == 0:
+                continue
+            nb = np.roll(np.roll(pooled_hard, dy, 0), dx, 1)
+            nv = np.roll(np.roll(valid, dy, 0), dx, 1)
+            inb = np.ones(pooled_hard.shape, bool)          # edge padding, as boundary_indicator does it
+            if dy:
+                inb[0 if dy > 0 else -1, :] = False
+            if dx:
+                inb[:, 0 if dx > 0 else -1] = False
+            diff += inb & nv & (nb != pooled_hard)
+    return np.where(valid, diff / 8.0, 0.0)
 
 
 ORDERS = ("confidence", "boundary_first")
@@ -114,6 +144,21 @@ def assess_prediction(scores, is_logit, patch=4, nodata_mask=None, reference=Non
     if not is_logit:
         _check_probabilities(scores, nodata_mask)
     warnings = []
+    # Non-finite pixels carry no prediction. Until 2026-09-21, with no explicit nodata_mask they were ranked like
+    # any other window and NaN sorts to the front of the review order, so a scene with a NaN strip returned a review
+    # set that was entirely empty pixels, with healthy-looking confidence quantiles and no warning.
+    nonfinite = ~np.isfinite(scores)
+    if nonfinite.any():
+        implied = nonfinite.any(0) if scores.ndim == 3 else nonfinite
+        n_nf = int(implied.sum())
+        if nodata_mask is None:
+            nodata_mask = implied
+            warnings.append(f"{n_nf} pixels are not finite and were treated as no-data; pass nodata_mask to say so explicitly")
+        elif (implied & ~np.asarray(nodata_mask, bool)).any():
+            nodata_mask = np.asarray(nodata_mask, bool) | implied
+            warnings.append(f"{int((implied & ~np.asarray(nodata_mask, bool)).sum())} non-finite pixels outside the given "
+                            f"nodata_mask were added to it")
+        scores = np.where(nonfinite, 0.0, scores)
     if scores.ndim == 2:  # binary probability map
         p1 = scores
         if is_logit:
@@ -126,6 +171,11 @@ def assess_prediction(scores, is_logit, patch=4, nodata_mask=None, reference=Non
         n_classes = 2
     else:
         C = scores.shape[0]
+        if C == 1:
+            raise ValueError(
+                "a (1, H, W) score map has one class, so there is no confidence to rank by. A binary map is (H, W): "
+                "pass scores[0]. Until 2026-09-21 this was scored as a one-class map and returned a review set "
+                "ordered the wrong way round.")
         srt = np.sort(scores, axis=0)
         if is_logit and form == "top1":
             margin = -np.log1p(np.exp(srt[:-1] - srt[-1]).sum(0))   # log of the top softmax probability, tie-free
@@ -170,8 +220,8 @@ def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, sig
 
     conf_w = _pool_valid(margin, patch) if nodata_mask is not None else _pool(margin, patch)   # higher = more confident
     valid_w = _pool((~nodata_mask).astype(float), patch) >= 0.5 if nodata_mask is not None else np.ones_like(conf_w, dtype=bool)
-    pooled_hard = _pooled_argmax(hard, n_classes, patch)
-    bnd_w = _boundary(pooled_hard)
+    pooled_hard = _pooled_argmax(hard, n_classes, patch, empty=-1)
+    bnd_w = _boundary_valid(pooled_hard, valid_w)
     suspicion = -conf_w  # ranking signal: low margin first
     review_score = boundary_first_score(suspicion, bnd_w) if order == "boundary_first" else suspicion
 
@@ -212,7 +262,17 @@ def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, sig
         ref = np.asarray(reference).astype(int)  # values < 0 mean no reference
         ref_valid_w = _pool((ref >= 0).astype(float), patch) >= 0.5
         scored = valid_w & ref_valid_w
-        ref_w = _pooled_argmax(ref, n_classes, patch)
+        # The reference is pooled over ITS OWN class range, never the prediction's. _pooled_argmax counts votes only
+        # over range(n), so pooling a 3-class reference with the prediction's n_classes=2 silently dropped every
+        # reference pixel of class 2 and let the window label fall to a surviving low index: measured at an error
+        # rate of 0.0625 against an honest 0.1875 on a binary flood model graded against dry/flood/permanent-water,
+        # with no warning. The identical defect was found, measured at 44.9% and fixed for `compare --labels`
+        # (cli.py) on 2026-09-14 and never carried across to here. Fixed 2026-09-21.
+        n_ref = int(ref[ref >= 0].max()) + 1 if (ref >= 0).any() else n_classes
+        if n_ref > n_classes:
+            warnings.append(f"the reference carries {n_ref} classes and the map predicts {n_classes}; windows whose "
+                            f"reference class the map cannot predict are counted wrong")
+        ref_w = _pooled_argmax(ref, max(n_ref, n_classes), patch)
         err = (ref_w != pooled_hard).astype(float)
         e, s = err[scored], suspicion[scored]
         r_s = review_score[scored]

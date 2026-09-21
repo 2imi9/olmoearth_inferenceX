@@ -146,7 +146,11 @@ def cmd_assess(args):
             for i, (r, c) in enumerate(rc):
                 w.writerow([i + 1, int(r), int(c), int(pr[i]), int(pc[i]), None if x is None else float(x[i]), None if y is None else float(y[i]), float(conf[r, c]), float(bnd[r, c])])
         written[f"review_set_{b}"] = path
-    written["suspicion"] = write_raster(os.path.join(args.out, "suspicion.tif"), np.where(arr["valid"], conf, np.nan).astype(np.float32), geo, args.patch, nodata=None)
+    # SUSPICION, not confidence. Until 2026-09-21 this wrote `conf`, so ranking the file descending, which is what
+    # its name invites, returned the exact inverse of the review set: on a 256-window scene the top 13 of the
+    # raster overlapped the 13-window 5% review set in 0 of 13. A reviewer opening it with a hot-is-bad ramp
+    # inspected the windows the model was most confident about.
+    written["suspicion"] = write_raster(os.path.join(args.out, "suspicion.tif"), np.where(arr["valid"], -conf, np.nan).astype(np.float32), geo, args.patch, nodata=None)
     written["boundary"] = write_raster(os.path.join(args.out, "boundary.tif"), np.where(arr["valid"], bnd, np.nan).astype(np.float32), geo, args.patch, nodata=None)
     exp = explain_review_set(out)
     with open(os.path.join(args.out, "explanation.json"), "w") as f:
