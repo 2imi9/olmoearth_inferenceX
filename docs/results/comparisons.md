@@ -463,7 +463,7 @@ split. Source `exp/out/exp45_summary.json`. <!-- claim:v12-replication-mixed -->
 
 ## SHRUG-FM's reliability signals under the window protocol (exp49)
 
-SHRUG-FM (Gonzalez-Calabuig et al. 2026, best paper at the CVPR 2026
+SHRUG-FM (Gonzalez-Calabuig et al. 2026, accepted for proceedings at the CVPR 2026
 EarthVision workshop) ranks images for abstention by three signal families,
 ensemble mutual information and entropy, k-means distance and NCDD in
 embedding space, and input percentile extremity, fused by a label-fitted
