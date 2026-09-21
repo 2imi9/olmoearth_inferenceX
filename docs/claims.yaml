@@ -2676,6 +2676,14 @@
       and V['P4']['same_best_reading_under_both_statistics'] == 22 and V['P4']['of'] == 24
       and V['consistency']['max_abs_deviation_of_margin_eaurc_from_exp70'] < 0.004
       and sum(1 for t in R if abs(R[t]['signals']['margin']['excess_aurc'] - E[t]['signals']['margin']['excess_aurc']) < 1e-4) == 18
+    
+      and all(abs(augrc_from_auroc(sig['auroc'], r['error_rate'], r['n_units'])
+                   - ((1 - sig['auroc']) * r['error_rate'] * (1 - r['error_rate'])
+                      + r['error_rate'] ** 2 / 2 + r['error_rate'] / (2 * r['n_units']))) < 1e-12
+              for r in E.values() for sig in r['signals'].values() if 'auroc' in sig)
+      and all((max(r['signals'], key=lambda k: r['signals'][k]['auroc'])
+               == min(r['signals'], key=lambda k: augrc_from_auroc(r['signals'][k]['auroc'], r['error_rate'], r['n_units'])))
+              for r in E.values())
     )(A['exp/out/exp76_summary.json']['verdicts'], A['exp/out/exp76_summary.json']['results']['tasks'], A['exp/out/exp70_summary.json']['results']['tasks'])
   cited_in:
     - {file: docs/results/comparisons.md, marker: augrc-leaves-the-suite-result-standing}

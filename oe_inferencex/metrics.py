@@ -81,6 +81,33 @@ def capture_at_budget(uncertainty, errors, budgets=(0.01, 0.05, 0.10)):
     return out
 
 
+def augrc(uncertainty, errors):
+    """AUGRC (Traub et al. 2024, arXiv 2407.01032): the area under the GENERALISED risk-coverage curve.
+
+    Generalised risk counts an error only while it is still KEPT and divides by the whole population rather than by
+    the kept set, which removes the selective risk's blow-up at low coverage. AUGRC is its mean over coverage.
+
+    For a FIXED set of errors it is an exactly affine, strictly decreasing function of the failure AUROC:
+
+        AUGRC = (1 - AUROC_f) * e * (1 - e) + e^2 / 2 + e / (2n)
+
+    derived in docs/method/protocol.md and checked to machine precision in tests/test_formulas.py. The coefficient
+    e(1 - e) is positive for any map that is neither perfect nor wholly wrong, so AUGRC cannot reorder two readings
+    that the failure AUROC already orders, and the last two terms do not depend on the reading at all. That is why
+    exp76 could answer the AUGRC challenge from exp70's recorded AUROC without recomputing anything."""
+    u = np.asarray(uncertainty).flatten()
+    e = np.asarray(errors).flatten().astype(np.float64)
+    n = len(e)
+    kept = np.argsort(u, kind="stable")          # least suspect first: coverage grows by keeping these
+    return float((np.cumsum(e[kept]) / n).mean())
+
+
+def augrc_from_auroc(auroc_failure, error_rate, n):
+    """The same quantity from the failure AUROC, by the identity above. Exact, not an approximation."""
+    e = float(error_rate)
+    return float((1.0 - float(auroc_failure)) * e * (1.0 - e) + e ** 2 / 2.0 + e / (2.0 * int(n)))
+
+
 def attainable_ceiling(budget, error_rate, n=None):
     """The most of a map's errors ANY ranking can hold at a review budget, as a share of all its errors.
 

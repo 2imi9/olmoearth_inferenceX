@@ -37,7 +37,7 @@ from .calibrate import fit_ranker, fit_side, side_features
 from .compare import (compare_inferences, crosstab, determinism_check, disagreement, over_groups, phi, stability,
                       where, which_side)
 from .explain import CUES, cue_enrichment, derive_cues, explain_review_set, library_table
-from .metrics import (attainable_ceiling, aurc_expected, capture_at_budget, capture_at_budget_expected, excess_aurc,
+from .metrics import (attainable_ceiling, augrc, augrc_from_auroc, aurc_expected, capture_at_budget, capture_at_budget_expected, excess_aurc,
                       expected_calibration_error, oracle_aurc, risk_coverage, selective_accuracy,
                       weighted_aurc, weighted_auroc, weighted_capture_at_budget, weighted_excess_aurc,
                       weighted_mean)
@@ -64,7 +64,7 @@ __all__ = [
     # calibrate
     "fit_ranker", "fit_side", "side_features",
     # metrics
-    "excess_aurc", "aurc_expected", "risk_coverage", "oracle_aurc", "capture_at_budget", "attainable_ceiling",
+    "excess_aurc", "aurc_expected", "risk_coverage", "oracle_aurc", "capture_at_budget", "attainable_ceiling", "augrc", "augrc_from_auroc",
     "capture_at_budget_expected", "selective_accuracy", "expected_calibration_error",
     "weighted_mean", "weighted_aurc", "weighted_excess_aurc", "weighted_capture_at_budget", "weighted_auroc",
     # stats

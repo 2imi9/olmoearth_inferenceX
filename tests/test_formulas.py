@@ -165,3 +165,71 @@ def test_the_assessors_inline_top1_equals_the_signals_implementation():
     from_signals = confidence(logits, form="top1")
     assert inline.shape == from_signals.shape
     assert np.allclose(inline, from_signals, atol=1e-12), "the package holds two copies of one formula and they differ"
+
+
+def brute_force_augrc(scores, errors):
+    """AUGRC from its definition, sharing no code with metrics.augrc: at each coverage, count the errors still
+    kept and divide by the whole population, then average over coverages."""
+    order = sorted(range(len(scores)), key=lambda i: (-scores[i], i))
+    kept = list(reversed(order))
+    n = len(errors)
+    return float(np.mean([sum(errors[i] for i in kept[:c]) / n for c in range(1, n + 1)]))
+
+
+def brute_force_auroc_failure(scores, errors):
+    """P(a random error is more suspect than a random correct unit), ties half. O(n^2), no shared code."""
+    s, e = np.asarray(scores, float), np.asarray(errors, bool)
+    pos, neg = s[e], s[~e]
+    return float(((pos[:, None] > neg).sum() + 0.5 * (pos[:, None] == neg).sum()) / (pos.size * neg.size))
+
+
+def test_augrc_matches_its_definition():
+    from oe_inferencex.metrics import augrc
+    rng = np.random.default_rng(7)
+    for n, rate in ((60, 0.1), (200, 0.3), (91, 0.5)):
+        e = (rng.random(n) < rate).astype(float)
+        if e.sum() == 0 or e.sum() == n:
+            continue
+        for strength in (-2.0, 0.0, 2.0):
+            u = rng.random(n) + strength * e
+            assert augrc(u, e) == pytest.approx(brute_force_augrc(u, e), abs=1e-12)
+
+
+def test_the_augrc_identity_is_exact_and_makes_augrc_unable_to_reorder():
+    """The record answers a published challenge (AUGRC, Traub et al. 2024) by transferring exp70's AUROC counts.
+    That transfer is only valid if AUGRC is a strictly decreasing function of the failure AUROC at fixed errors.
+    Here it is checked to machine precision, and the consequence is checked directly: no pair of readings is
+    ordered one way by AUROC and the other way by AUGRC."""
+    from oe_inferencex.metrics import augrc, augrc_from_auroc
+    rng = np.random.default_rng(8)
+    for n, rate in ((150, 0.07), (400, 0.2), (300, 0.45)):
+        e = (rng.random(n) < rate).astype(float)
+        rate_true = e.mean()
+        readings = [rng.random(n) + s * e for s in (-3.0, -1.0, 0.0, 0.5, 1.0, 2.0, 5.0)]
+        pairs = []
+        for u in readings:
+            au = brute_force_auroc_failure(u, e)
+            direct, ident = augrc(u, e), augrc_from_auroc(au, rate_true, n)
+            assert direct == pytest.approx(ident, abs=1e-12), "the identity is exact, including its e/(2n) term"
+            pairs.append((au, direct))
+        for i in range(len(pairs)):
+            for j in range(i + 1, len(pairs)):
+                (a1, g1), (a2, g2) = pairs[i], pairs[j]
+                if a1 == a2:
+                    continue
+                assert (a1 > a2) == (g1 < g2), "AUGRC reordered a pair that AUROC ordered; the transfer is invalid"
+
+
+def test_the_identity_would_notice_if_the_discrete_term_were_dropped():
+    """The continuous derivation misses e/(2n). At the suite's smaller tasks that term is not negligible, so the
+    record must not quote the continuous form as exact."""
+    from oe_inferencex.metrics import augrc
+    rng = np.random.default_rng(9)
+    n, rate = 200, 0.45
+    e = (rng.random(n) < rate).astype(float)
+    u = rng.random(n) + e
+    au = brute_force_auroc_failure(u, e)
+    er = e.mean()
+    continuous = (1 - au) * er * (1 - er) + er ** 2 / 2
+    assert abs(augrc(u, e) - continuous) == pytest.approx(er / (2 * n), abs=1e-12), \
+        "the whole discrepancy is the dropped discrete term, exactly"

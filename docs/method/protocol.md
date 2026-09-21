@@ -51,6 +51,99 @@ The statistics settled in exp13 and used by every experiment after it:
 | Cross-scene tests | Exact sign test on untied pairs, plus a sign-flip permutation test on mean E-AURC differences | The sign test is scale-free and is reported as primary; mean-based tests are dominated by high-error scenes. |
 | Reporting | Wins / losses / ties per scene, not means | Same reason. |
 
+### The closed forms these statistics divide by
+
+Five quantities appear as bare formulas throughout this record. Each is derived here once, so that a reader does
+not have to take any of them on trust, and each is checked in `tests/test_formulas.py` against a brute-force
+computation written separately from the package's own. The derivations are short; the reason they are written
+down at all is that on 20 September 2026 a recorded claim was false and its own check passed, because the check
+read its number back from the artifact that produced it. A formula inside a check is an assumption of the test,
+never its subject.
+
+**Notation.** `n` units, `k` of them errors, error rate `e = k/n`. A ranking rejects the most suspect unit first.
+At coverage `c` (the fraction kept, least suspect first), the selective risk is the error rate among those kept.
+AURC is the mean of that risk over all `n` coverage levels.
+
+**1. The perfect ranking's AURC.** The oracle rejects every error before any correct unit. Keeping `i` units
+therefore keeps `max(0, i - (n - k))` errors, so
+
+```
+AURC(oracle) = mean over i = 1..n of  max(0, i - (n - k)) / i
+```
+
+which is `metrics.oracle_aurc(n, k)` exactly. Its continuous limit follows by writing `i = cn` and integrating:
+the risk is zero while `c <= 1 - e` and `(c - 1 + e)/c` above it, so
+
+```
+∫ from 1-e to 1 of (c - 1 + e)/c dc = [c - (1-e) ln c] from 1-e to 1 = e + (1-e) ln(1-e)
+```
+
+**These two are not interchangeable.** They agree only as `n` grows, with a gap of order `1/n`. Mixing them —
+an exact oracle in a numerator and the limit in the denominator of one fraction — moved a published figure in
+this record from 0.553 to 0.551 before it was caught. Use `metrics.oracle_aurc`; the limit is for reading, not
+for computing.
+
+**2. A random ranking's AURC is the error rate.** A ranking uncorrelated with the errors keeps, in expectation, a
+fraction `e` of errors at every coverage, so the selective risk is `e` at every `c` and its mean is `e`. The
+exactly-tied case is the same statement without sampling noise: when every unit has the same score, the tie-aware
+AURC is `e` identically.
+
+**3. The ranking headroom.** Combining the two: a random ranking scores `e`, a perfect one scores
+`AURC(oracle)`, so the gap any ranking can close is `e - AURC(oracle)`, and the share a given reading closes is
+
+```
+headroom = 1 - E-AURC(reading) / (e - AURC(oracle))
+```
+
+One at the oracle, zero at chance. This is the statistic behind "the margin takes a median 0.68". It is a
+rescaling of AURC, not a new measurement, and it is the normalisation that makes tasks with different error rates
+comparable — which is also why both its terms must use the same oracle.
+
+**4. The attainable ceiling at a review budget.** A review of `k_rev` units contains at most `k_rev` errors, and
+at most all `E` of them, so the captured share is at most `min(k_rev, E)/E = min(1, k_rev/E)`; with `k_rev = bn`
+and `E = en` that is `min(1, b/e)`. The oracle attains it. Two conventions differ on small maps: the nominal
+budget `b`, and the realised review set `k_rev = max(1, round(bn))` that the code actually scores.
+`metrics.attainable_ceiling` takes either, and passing `n` selects the realised one.
+
+The consequence is exp68's audit correction: **a capture compared between two populations with different error
+rates is partly a comparison of ceilings.** Report the share of the ceiling, or a ceiling-free statistic such as
+AUROC or an odds ratio.
+
+**5. The enrichment ceiling.** A cue's enrichment is its share among error units over its share among correct
+units. Since the latter is at most 1, enrichment is bounded by `1 / (share among correct)`. A cue that fires on
+few correct units can therefore post a large enrichment while separating nothing, which is why the odds ratio is
+preferred wherever the two subsets being compared differ in how often the cue fires.
+
+**6. AUGRC is an affine function of the failure AUROC, so it cannot reorder readings.** The generalised risk
+counts an error only while it is still kept and divides by the whole population rather than by the kept set. Order
+the units least-suspect-first; an error at position `r` from that end is kept at `n - r + 1` of the `n` coverage
+levels, so
+
+```
+AUGRC = (1/n^2) * sum over errors of (n - r_j + 1)
+```
+
+Write `c_j` for the number of correct units less suspect than error `j`. Then `r_j - 1 = c_j + (errors below j)`,
+and summing over the `k` errors gives `sum r_j = AUROC_f * k(n-k) + k(k-1)/2 + k`, because `sum c_j` counts exactly
+the (error, correct) pairs the failure AUROC is the rate of. Substituting and writing `e = k/n`:
+
+```
+AUGRC = (1 - AUROC_f) * e * (1 - e)  +  e^2 / 2  +  e / (2n)
+```
+
+Checked to machine precision (1e-16) over 96 cases in `tests/test_formulas.py`; `metrics.augrc` computes it from
+the definition and `metrics.augrc_from_auroc` from this identity.
+
+Two consequences the record uses. First, for a fixed error set and fixed `n` this is **exactly affine and strictly
+decreasing** in the failure AUROC, with slope `-e(1-e)`, which is negative for any map that is neither perfect nor
+wholly wrong. AUGRC therefore cannot order two readings differently from the failure AUROC, which is why exp76
+could answer the AUGRC challenge from exp70's recorded AUROC without recomputing anything. Second, the last two
+terms do not depend on the reading at all, so they cancel in any comparison of readings on one task — but they do
+**not** cancel across tasks, so an AUGRC compared between tasks is partly a comparison of error rates.
+
+The `e/(2n)` term is the discrete correction the continuous derivation misses. On the suite's smaller tasks it is
+not negligible, so the continuous form is for reading and the identity above is for computing.
+
 ### How a difference is measured
 
 The comparison half, settled in exp57 and probed in exp58; the arithmetic is

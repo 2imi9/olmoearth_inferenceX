@@ -37,6 +37,7 @@ SAFE["log"] = __import__("math").log        # kept for checks written before ora
 SAFE["oracle_aurc"] = __import__("oe_inferencex.metrics", fromlist=["metrics"]).oracle_aurc
 SAFE["median"] = lambda v: __import__("statistics").median(list(v))
 SAFE["attainable_ceiling"] = __import__("oe_inferencex.metrics", fromlist=["metrics"]).attainable_ceiling
+SAFE["augrc_from_auroc"] = __import__("oe_inferencex.metrics", fromlist=["metrics"]).augrc_from_auroc
 
 
 def load_registry(path=REGISTRY):

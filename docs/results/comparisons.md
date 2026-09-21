@@ -2080,9 +2080,10 @@ minutes; the probability margin reproduces exp70's excess AURC to four decimals
 on 18 of 24 tasks, and by at most 0.0036 on the rest, where a CPU fit of a small
 task (200 units on AWF Sentinel-1) lands three test units from the GPU fit.
 
-**The statistic does not change the suite result.** For a fixed set of errors
-AUGRC orders readings exactly as the failure AUROC does, and exp70 had recorded
-the AUROC. By that statistic the margin beats the best no-model control on 23
+**The statistic does not change the suite result.** For a fixed set of errors AUGRC is an exactly
+affine, strictly decreasing function of the failure AUROC, `AUGRC = (1 - AUROC_f)e(1-e) + e^2/2 + e/(2n)`,
+derived in [the protocol](../method/protocol.md#the-closed-forms-these-statistics-divide-by) and checked to machine
+precision; it therefore cannot order two readings differently, and exp70 had recorded the AUROC. By that statistic the margin beats the best no-model control on 23
 of 24 tasks, not 24: on Togo Sentinel-1 the class-rarity control leads by
 0.0005 of AUROC. Across all readings the best one is the same under excess AURC
 and under AUROC on 22 of 24 tasks. <!-- claim:augrc-leaves-the-suite-result-standing -->
