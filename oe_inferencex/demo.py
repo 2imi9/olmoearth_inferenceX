@@ -20,6 +20,7 @@ import zlib
 import numpy as np
 
 from oe_inferencex.assess import assess_prediction
+from oe_inferencex.metrics import attainable_ceiling
 
 LAND, WATER, FLAG, WRONG, RANDOM, INK = (236, 231, 219), (74, 144, 196), (255, 140, 0), (214, 39, 40), (60, 60, 60), (40, 40, 40)
 UNKNOWN = (255, 255, 255)
@@ -210,7 +211,8 @@ def run(out="oe_inferencex_demo", seed=0, budget=0.05, made_up=False):
     sure_first = np.argsort(-conf_w[known], kind="stable")[: int(round(0.8 * known.sum()))]
     expl = why["budgets"][str(budget)]
     err = a["against_reference"]["error_rate"]
-    table = "\n".join(f"      {b:>4.0%} {100 * v['errors_captured_fraction']:>16.0f}% {b:>23.0%} {min(1.0, b / err):>25.0%}"
+    n_scored = a["against_reference"]["n_windows_scored"]
+    table = "\n".join(f"      {b:>4.0%} {100 * v['errors_captured_fraction']:>16.0f}% {b:>23.0%} {attainable_ceiling(b, err, n=n_scored):>25.0%}"
                       for b, v in a["against_reference"]["error_capture_at_budget"].items())
     first = expl["windows"][0]
     edge = "the shore the model drew" if not sc["classes"] else "a boundary between two classes of the model's own map"

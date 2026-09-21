@@ -36,6 +36,7 @@ SAFE["log"] = __import__("math").log        # kept for checks written before ora
 # by O(1/n) and moved a published figure once (2026-09-21), so the two must not be mixed inside one fraction.
 SAFE["oracle_aurc"] = __import__("oe_inferencex.metrics", fromlist=["metrics"]).oracle_aurc
 SAFE["median"] = lambda v: __import__("statistics").median(list(v))
+SAFE["attainable_ceiling"] = __import__("oe_inferencex.metrics", fromlist=["metrics"]).attainable_ceiling
 
 
 def load_registry(path=REGISTRY):

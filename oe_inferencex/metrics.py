@@ -81,6 +81,33 @@ def capture_at_budget(uncertainty, errors, budgets=(0.01, 0.05, 0.10)):
     return out
 
 
+def attainable_ceiling(budget, error_rate, n=None):
+    """The most of a map's errors ANY ranking can hold at a review budget, as a share of all its errors.
+
+    Derivation. A review of k units can contain at most k errors, and at most all E of them, so the captured count
+    is at most min(k, E) and the captured SHARE at most min(k, E) / E = min(1, k / E). With k = b*n and E = e*n
+    that is min(1, b / e). It is attained exactly when the ranking puts errors first, which is the oracle.
+
+    Two conventions differ, and the difference is real on small maps. `n=None` uses the nominal budget, min(1, b/e),
+    the continuous form. Passing `n` uses the REALISED review set, k = max(1, round(b * n)), which is the set
+    `capture_at_budget` and `assess_prediction` actually score; the two disagree whenever round(b*n) != b*n, and on
+    a small scene a nominal 1% can be a realised 1.2%. Prefer passing `n` when comparing against a measured capture.
+
+    Why it matters (recipe item 6, exp68's audit correction): capture at a fixed budget is bounded by this ceiling,
+    so a capture compared across two populations with different error rates is partly a comparison of ceilings. Use
+    the share of the ceiling, or a ceiling-free statistic such as AUROC or an odds ratio.
+    """
+    e = float(error_rate)
+    if not 0.0 < e <= 1.0:
+        raise ValueError(f"error_rate must be in (0, 1], got {error_rate!r}; a map with no errors has no ceiling")
+    if n is None:
+        return float(min(1.0, float(budget) / e))
+    n = int(n)
+    k = max(1, int(round(float(budget) * n)))
+    n_err = e * n
+    return float(min(1.0, k / n_err)) if n_err > 0 else float("nan")
+
+
 def selective_accuracy(uncertainty, correct, coverages=(0.5, 0.8, 0.9, 1.0)):
     """Accuracy among the fraction c of units kept in ascending uncertainty (recipe item 7, exp21)."""
     u = np.asarray(uncertainty).flatten()
