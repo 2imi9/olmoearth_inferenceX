@@ -82,33 +82,71 @@ def score_units(p, emb_te, emb_tr, y, C, signal=None, name="candidate"):
     return rec
 
 
-def run_task(model, task, cache, signal, name):
+def load_task(model, task, cache):
+    """One task's embeddings and labels, loaded once so that any number of probe seeds can share them (exp79).
+
+    Returns the tensors plus the seed-independent facts: class count, family, patch size, and the train embeddings
+    flattened to (M, D) for the embedding-distance control. The test-side window embeddings are cut per seed
+    because the valid-window set comes back with the probe's window probabilities, though it is a property of the
+    labels alone; `fit_task` asserts that it does not move between seeds.
+    """
+    import torch
+    import exp54_multiclass_embeddings as e54
+    xtr, ytr = e54.load_theirs(model, task, "train", cache)
+    xte, yte = e54.load_theirs(model, task, "test", cache)
+    if task in e70.TASKS_CLS:
+        return {"task": task, "family": "classification", "xtr": xtr, "ytr": ytr, "xte": xte, "yte": yte,
+                "C": int(max(int(ytr.max()), int(yte.max())) + 1), "patch_px": 1,
+                "emb_tr": xtr.to(torch.float32).numpy(), "emb_te": xte.to(torch.float32).numpy()}
+    return {"task": task, "family": "segmentation", "xtr": xtr, "ytr": ytr, "xte": xte, "yte": yte,
+            "C": int(max(int(ytr[ytr >= 0].max()), int(yte[yte >= 0].max())) + 1),
+            "patch_px": int(round(ytr.shape[-1] / xtr.shape[1])),
+            "emb_tr": xtr.to(torch.float32).numpy().reshape(-1, xtr.shape[-1]), "emb_te": None}
+
+
+def fit_task(L, seed, signal=None, name="candidate", units=False, expect_ok=None):
+    """Fit the suite's probe at one seed on a loaded task and score it exactly as exp70 does.
+
+    With `units=True` the per-unit quantities come back too, in exp78's export format, so the seed-0 fit of a
+    reseed study doubles as the estimation study's input. `expect_ok` is the valid-window mask of an earlier
+    seed; a seed that changes it has changed the population and is refused rather than scored.
+    """
     import torch
     import exp54_multiclass_embeddings as e54
     import exp73_alternatives_suite as e73
     import exp74_suite_encoders as e74
     import exp75_sensor_views as e75
-    xtr, ytr = e54.load_theirs(model, task, "train", cache)
-    xte, yte = e54.load_theirs(model, task, "test", cache)
-    if task in e70.TASKS_CLS:
-        C = int(max(int(ytr.max()), int(yte.max())) + 1)
-        p = e73._train_cls_probe(xtr, ytr, C, 0)(xte)
-        rec = score_units(p, xte.to(torch.float32).numpy(), xtr.to(torch.float32).numpy(), yte.numpy(), C, signal, name)
-        rec["family"] = "classification"
+    task, C = L["task"], L["C"]
+    if L["family"] == "classification":
+        p = e73._train_cls_probe(L["xtr"], L["ytr"], C, seed)(L["xte"])
+        y = L["yte"].numpy()
+        rec = score_units(p, L["emb_te"], L["emb_tr"], y, C, signal, name)
+        ok, grid = np.ones(len(y), bool), np.array([len(y)])
     else:
-        C = int(max(int(ytr[ytr >= 0].max()), int(yte[yte >= 0].max())) + 1)
-        pp = int(round(ytr.shape[-1] / xtr.shape[1]))
-        probe = e54.train_probe(xtr, ytr, pp, C, e54.TASK_LR.get(task, 0.1), seed=0)
-        q = e75.seg_window_probs(probe, xte, yte, pp, C)
-        ok = q["ok"]
-        hw, ww = q["hw"]
-        H, W = yte.shape[1], yte.shape[2]
-        ete = e74.window_embeddings(xte.to(torch.float32).numpy(), hw, ww, H, W, e54.WIN).reshape(-1, xte.shape[-1])[ok]
-        etr = xtr.to(torch.float32).numpy().reshape(-1, xtr.shape[-1])
-        rec = score_units(q["P"][ok], ete, etr, q["y"][ok], C, signal, name)
-        rec["family"], rec["patch_px"] = "segmentation", pp
-    rec["source"] = e70.source_of(task)
+        probe = e54.train_probe(L["xtr"], L["ytr"], L["patch_px"], C, e54.TASK_LR.get(task, 0.1), seed=seed)
+        q = e75.seg_window_probs(probe, L["xte"], L["yte"], L["patch_px"], C)
+        ok, (hw, ww) = q["ok"], q["hw"]
+        if expect_ok is not None and not np.array_equal(ok, expect_ok):
+            raise RuntimeError(f"{task}: seed {seed} changed the valid-window set; validity is a label property")
+        H, W = L["yte"].shape[1], L["yte"].shape[2]
+        ete = e74.window_embeddings(L["xte"].to(torch.float32).numpy(), hw, ww, H, W, e54.WIN).reshape(-1, L["xte"].shape[-1])[ok]
+        p, y = q["P"][ok], q["y"][ok]
+        rec = score_units(p, ete, L["emb_tr"], y, C, signal, name)
+        grid = np.array([L["yte"].shape[0], hw, ww])
+    rec["family"], rec["patch_px"], rec["seed"], rec["source"] = L["family"], L["patch_px"], int(seed), e70.source_of(task)
+    if units:
+        srt = np.sort(np.asarray(p, dtype=np.float64), axis=1)
+        dec = np.asarray(p).argmax(1)
+        margin = srt[:, -1] - srt[:, -2] if srt.shape[1] > 1 else srt[:, -1]      # exp70.readings_from_probs' rule
+        rec["units"] = {"margin": margin.astype(np.float32), "p1": srt[:, -1].astype(np.float32),
+                        "dec": dec.astype(np.uint8), "y": np.asarray(y).astype(np.uint8),
+                        "err": (dec != np.asarray(y)).astype(np.uint8), "ok": ok, "grid": grid,
+                        "n_classes": C, "patch_px": L["patch_px"], "family": L["family"]}
     return rec
+
+
+def run_task(model, task, cache, signal, name):
+    return fit_task(load_task(model, task, cache), 0, signal, name)
 
 
 def cmd_run(args):

@@ -169,6 +169,11 @@ def wilson(k, n, N=None):
     if n == 0:
         return 0.0, 1.0
     p = k / n
+    if N and n >= N:
+        # A census has no sampling error. Without this the FPC zeroes the half-width around Wilson's shrunk
+        # centre and the interval misses the truth with certainty; found by exp79's enumeration test on
+        # 2026-09-22, unreachable here (every task has N > B) and in exp79 (N > 3B), so nothing recorded moves.
+        return p, p
     fpc = np.sqrt(max((N - n) / (N - 1), 0.0)) if N and N > 1 else 1.0
     d = 1 + Z95 ** 2 / n
     centre = (p + Z95 ** 2 / (2 * n)) / d
@@ -310,8 +315,9 @@ def design_effect(err, tile, m=M_PER_TILE):
     return float(1 + (m - 1) * rho)
 
 
-def load_units(task):
-    d = np.load(os.path.join(UNITS, f"{task}.npz"), allow_pickle=False)
+def load_units(task, units_dir=UNITS):
+    """One task's per-unit export; `units_dir` lets exp79 read another encoder's export in the same format."""
+    d = np.load(os.path.join(units_dir, f"{task}.npz"), allow_pickle=False)
     ok = np.unpackbits(d["ok_packed"])[:int(d["ok_len"][0])].astype(bool)
     grid = d["grid"]
     tile = None
