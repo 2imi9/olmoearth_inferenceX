@@ -22,8 +22,11 @@ down the page.
   more often than noise even where nothing changed on the ground.
 - **What did not work.** Nothing taken from inside the encoder ranks errors better than confidence: not its
   pretraining objective, not embedding distances, not ensembles of heads.
-- **What the tool does not say.** How wrong a map is. It orders the windows and explains the order; an error rate
-  needs a reference. Errors the model is confident about stay hidden from it.
+- **What the tool does not say.** How wrong a map is, from the map alone. It orders the windows and explains the
+  order; an error rate needs a reference. Errors the model is confident about stay hidden from it.
+- **If you can label a few hundred windows, it will tell you how wrong the map is**, with a range. The catch is in
+  how you pick them: label whole scenes and then work out the range the ordinary way, and it comes out far too
+  narrow.
 
 ![The audit pipeline on a real scene: Sentinel-2 bands, the frozen encoder and head, prediction, confidence and boundary layers, the review set at a 5% budget, the reasons per window](figures/pipeline.png)
 
@@ -274,6 +277,27 @@ flags hold 88% of the permanent-water errors and 64% of the post-event water
 errors, 17.5 and 12.8 times a random 5%; clustering by activation moves that to
 16.9 and 12.1 times, so the effect a reviewer would feel survives the clustering
 even though the exception rate above does not survive it as well. <!-- claim:geoid-capture-effect-size -->
+
+### How wrong the map is, if you can label a few hundred windows
+
+Everything above says where to look. The other question needs labels, and exp78
+measures what they buy. Label 300 windows drawn at random and the error rate
+comes back with an honest range: it covers the truth on 93 to 96% of draws on
+all seven segmentation tasks of Ai2's suite, about ±3 points on a clean map and
+±5 on a messy one. <!-- claim:design-based-interval-is-honest -->
+
+The warning matters more than the capability. Nobody labels 300 windows at
+random; they open about 19 scenes and label 16 windows in each. Do that, then
+work out the range the ordinary way, and a range that claims 95% really covers
+51 to 78% on six of the seven tasks. Errors sit next to each other, so 300
+windows from 19 scenes carry nowhere near 300 windows of information. Correcting
+for it works and costs width: on MADOS the honest interval is ±12.4 points where
+the wrong one said ±2.9. <!-- claim:tile-sampling-breaks-the-naive-interval -->
+
+Choosing which windows to label by confidence does save labels, but not
+dramatically: up to 2.5 times at equal precision, and most on maps that are
+already good, because there is little left to gain once a map is a third
+wrong. <!-- claim:confidence-saves-a-quarter-to-a-half-of-the-labels -->
 
 ### Does it help an agent
 

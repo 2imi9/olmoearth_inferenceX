@@ -2963,3 +2963,123 @@
     to 0.551 on 2026-09-21. It measures how much the statistic moves when the model changes; a different encoder has
     a different error set, so it is not an upper bound on what a better label-free reading of OlmoEarth's own errors
     could reach.
+
+- id: exp78-export-reproduces-the-suite
+  statement: "exp78's per-unit export refits exp70's probe on all seven segmentation tasks and reproduces every accuracy exp70 recorded to the four decimals the record states; the largest raw difference is 9e-05, on m-cashew-plant."
+  status: supported
+  experiments: [exp78]
+  artifacts: [exp/out/exp78_summary.json, exp/out/exp70_summary.json]
+  check: |-
+    (lambda t, e70:
+      len(t) == 7
+      and all(abs(v['accuracy_minus_exp70']) < 1e-4 for v in t.values())
+      and max(abs(v['accuracy_minus_exp70']) for v in t.values()) > 1e-5
+      and all(round(v['exp70_accuracy'], 4) == round(e70[k]['test_accuracy'], 4) for k, v in t.items())
+      and all(v['n_units'] == e70[k]['n_units'] for k, v in t.items())
+    )(A['exp/out/exp78_summary.json']['tasks'], A['exp/out/exp70_summary.json']['results']['tasks'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp78-export-reproduces-the-suite}
+  note: >-
+    The gate the preregistration put before any prediction was graded: if arm A had not reproduced exp70, the export
+    would not be the suite's per-unit data and every reanalysis built on it would be about a different map. The check
+    recomputes the comparison against exp70's own summary rather than trusting exp78's copy of it, and asserts the
+    residuals are non-zero as well as small, so an export that fabricated exact agreement would fail it.
+
+- id: design-based-interval-is-honest
+  statement: "Under a simple random sample of 300 windows, the design-based nominal-95% interval for a map's window error rate covers the true rate on 0.933 to 0.961 of 2,000 reviewer draws, on all 7 segmentation tasks of Ai2's suite."
+  status: supported
+  experiments: [exp78]
+  artifacts: [exp/out/exp78_summary.json]
+  check: |-
+    (lambda s: (lambda c:
+      s['prereg']['P1_the_interval_is_honest']['holds'] is True
+      and len(c) == 7 and min(c) >= 0.93 and round(min(c), 3) == 0.933 and round(max(c), 3) == 0.961
+      and s['prereg']['P1_the_interval_is_honest']['n'] == 7
+      and s['config']['R'] == 2000 and s['config']['headline_budget'] == 300
+    )([v['budgets']['300']['D1/E1']['coverage'] for v in s['tasks'].values()]))(A['exp/out/exp78_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: design-based-interval-is-honest}
+    - {file: docs/Findings.md, marker: design-based-interval-is-honest}
+  note: >-
+    MADOS sits on the 0.93 bar, which the preregistration predicted in advance as Wilson's discreteness at about 22
+    errors in a 300-window sample rather than a defect. The check recomputes the coverages from the per-task records
+    instead of reading the verdict, so editing the verdict block alone cannot make it pass.
+
+- id: tile-sampling-breaks-the-naive-interval
+  statement: "Spending a 300-window budget as 19 tiles of 16 windows and then applying the ordinary independent-sample formula gives a nominal-95% interval that covers on 0.506 to 0.777 of draws on 6 of the 7 segmentation tasks, with a median design effect of 2.94; the cluster-corrected estimator restores coverage but widens MADOS from +/-2.9 to +/-12.4 points."
+  status: supported
+  experiments: [exp78]
+  artifacts: [exp/out/exp78_summary.json]
+  check: |-
+    (lambda s: (lambda t, naive, deff:
+      s['prereg']['P2_the_naive_interval_is_badly_wrong']['holds'] is True
+      and sum(1 for v in naive.values() if v < 0.85) == 6
+      and median(deff.values()) >= 2.5 and round(median(deff.values()), 2) == 2.94
+      and round(min(naive.values()), 3) == 0.506 and naive['m_cashew_plant'] > 0.93
+      and round(deff['m_cashew_plant'], 2) == 1.17
+      and s['prereg']['P2_the_naive_interval_is_badly_wrong']['out_of_sample_tasks'] == ['m_sa_crop_type']
+      and all(t[k]['budgets']['300']['D4/E1_cluster']['coverage'] > v for k, v in naive.items() if v < 0.85)
+      and round(min(t[k]['budgets']['300']['D4/E1_cluster']['coverage'] for k, v in naive.items() if v < 0.85), 3) == 0.840
+      and t['m_cashew_plant']['budgets']['300']['D4/E1_cluster']['coverage'] < naive['m_cashew_plant']
+      and t['mados']['budgets']['300']['D4/E1_cluster']['half_width'] > 4 * t['mados']['budgets']['300']['D1/E1']['half_width']
+    )(s['tasks'],
+      {k: v['budgets']['300']['D4/E2_naive']['coverage'] for k, v in s['tasks'].items()},
+      {k: v['design_effect'] for k, v in s['tasks'].items()}))(A['exp/out/exp78_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: tile-sampling-breaks-the-naive-interval}
+    - {file: docs/Findings.md, marker: tile-sampling-breaks-the-naive-interval}
+  note: >-
+    Five of the seven tasks were seen in the pilot disclosed in the preregistration, which is also what moved P2's
+    threshold from 0.75 to 0.85. Of the two genuinely out-of-sample tasks only m-SA-crop-type confirms; m-cashew-plant
+    has a design effect of 1.17 and its naive interval is fine, so the out-of-sample support is 1 of 2 and the check
+    pins that asymmetry rather than letting 6 of 7 stand alone. The chip is not the unit a reviewer opens, so the
+    tile-level design effect is a lower bound on the deployment one.
+
+- id: confidence-helps-most-where-the-map-is-good
+  statement: "Choosing which windows to label by the model's own confidence narrows the error-rate interval to a median 0.80 of the simple-random width with coverage intact on all 7 tasks, and to 0.63 and 0.79 on the two tasks under 10% error; but the preregistered clause asking for a ratio above 0.94 on a task over 30% error fails at 0.9361."
+  status: mixed
+  experiments: [exp78]
+  artifacts: [exp/out/exp78_summary.json]
+  check: |-
+    (lambda p: (lambda r:
+      p['holds'] is False
+      and median(r.values()) <= 0.92 and round(median(r.values()), 3) == 0.802
+      and all(r[k] <= 0.88 for k in p['low_error_tasks']) and len(p['low_error_tasks']) == 2
+      and max(r[k] for k in p['high_error_tasks']) < 0.94
+      and round(max(r[k] for k in p['high_error_tasks']), 4) == 0.9361
+      and 0.94 - max(r[k] for k in p['high_error_tasks']) < 0.005
+      and min(r[k] for k in p['high_error_tasks']) < 0.82
+      and all(p['coverage_kept'].values())
+    )(p['per_task_ratio']))(A['exp/out/exp78_summary.json']['prereg']['P3_confidence_helps_most_where_the_map_is_good'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: confidence-helps-most-where-the-map-is-good}
+  note: >-
+    Two of three clauses passed and the third missed by 0.0039, recorded as a failure rather than rounded. The
+    mechanism is the flatness of sqrt(p(1-p)) between 0.25 and 0.7, which m-cashew-plant obeys at 34.7% error and
+    m-SA-crop-type does not, reaching 0.809 at 34.0% because its confidence separates stratum error rates more
+    sharply than its overall rate suggests. The check pins both the near-miss and the disobedient task, so a rerun
+    that merely cleared 0.94 would not silently satisfy it.
+
+- id: confidence-saves-a-quarter-to-a-half-of-the-labels
+  statement: "Confidence-guided labelling saves up to 2.51x the labels at equal half-width, on MADOS with coverage intact at 0.941, above the 1.8x the preregistered honesty check allowed; no arm reaches a half-width below +/-4 points on any task whose error rate exceeds 20%."
+  status: mixed
+  experiments: [exp78]
+  artifacts: [exp/out/exp78_summary.json]
+  check: |-
+    (lambda s: (lambda p, t:
+      p['holds'] is False
+      and p['max_budget_saving'] > 1.8 and round(p['max_budget_saving'], 2) == 2.51
+      and abs(p['max_budget_saving'] - 1.0 / s['prereg']['P3_confidence_helps_most_where_the_map_is_good']['per_task_ratio']['mados'] ** 2) < 1e-9
+      and t['mados']['budgets']['300']['D2c/E1']['coverage'] >= 0.93
+      and all(p['half_widths'][k] >= 0.04 for k, v in t.items() if v['error_rate'] > 0.20)
+      and sum(1 for v in t.values() if v['error_rate'] > 0.20) == 3
+    )(s['prereg']['P4_no_order_of_magnitude'], s['tasks']))(A['exp/out/exp78_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: confidence-saves-a-quarter-to-a-half-of-the-labels}
+    - {file: docs/Findings.md, marker: confidence-saves-a-quarter-to-a-half-of-the-labels}
+  note: >-
+    P4 was the guard against a too-good answer and it fired, but the bound was wrong rather than the assumption: the
+    model-free ceiling behind 1.8x was derived off a two-stratum split and the run uses five strata. The check
+    recomputes the saving from P3's width ratio, so the two verdict blocks cannot disagree without failing. The second
+    clause held everywhere, which is why the headline stands: on estimating how wrong a map is, the ranking is worth
+    between a quarter and a half of the labels, not the order of magnitude it is worth for finding errors.

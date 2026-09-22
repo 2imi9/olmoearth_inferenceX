@@ -2193,6 +2193,94 @@ a null on the surrogate; and all seven tasks are segmentation, because the suite
 pooled embedding per sample, which leaves a token-versus-tile-mean comparison undefined. Values in
 `exp/out/exp77_summary.json` and `exp77_tasks.csv`.
 
+## How wrong is this map? What a reviewer's labels buy (exp78)
+
+Everything above answers *where* to look. The first question a map user actually asks is a different one, and
+[Usage](../Usage.md) refuses it in as many words: the package never says how wrong a map is, because an error
+rate needs a reference. That is **estimation**, not ranking, and no experiment here had attempted it. exp78
+preregistered four predictions on it ([the plan](../plan/map_error_estimation.md)) with a pilot disclosed in
+full, and ran in two stages: the cluster only exported per-unit margin, top probability, decision and error for
+all 24 tasks, and the whole estimation study ran afterwards on a laptop with nothing but numpy, so it is
+re-runnable and auditable without the 792 GB embedding cache. Grading is a Monte Carlo of 2,000 reviewer draws
+per task and design at a labelled budget of 300 windows, with labels withheld and revealed only for sampled
+units. Because every unit on these testbeds carries a label, the quantity being estimated is known exactly and
+equals exp70's error rate — **that is the only way an interval can be graded at all**, and it is why this runs
+on the suite rather than on a real unlabelled map.
+
+The export is the baseline gate: the probe refit here reproduces every accuracy exp70 recorded, to the four
+decimals the record states, on all seven segmentation tasks. The largest raw difference is 9e-05, on
+m-cashew-plant. Future reanalysis of the suite therefore no longer needs a fresh embedding
+load. <!-- claim:exp78-export-reproduces-the-suite -->
+
+| Task | units | error rate | design effect | coverage, simple random sample | coverage, naive after tile sampling | coverage, cluster-corrected | best width ratio from confidence | half-width at B = 300 |
+|---|---|---|---|---|---|---|---|---|
+| MADOS | 22,598 | 0.074 | 9.77 | 0.933 | 0.506 | 0.904 | 0.631 | ±2.9 pts |
+| Sen1Floods11 | 592,385 | 0.085 | 5.56 | 0.949 | 0.579 | 0.840 | 0.794 | ±3.1 pts |
+| PASTIS S1 | 458,638 | 0.284 | 2.94 | 0.956 | 0.741 | 0.927 | 0.855 | ±5.1 pts |
+| PASTIS S2 | 458,638 | 0.190 | 2.70 | 0.950 | 0.759 | 0.922 | 0.802 | ±4.4 pts |
+| PASTIS S1+S2 | 458,638 | 0.195 | 2.70 | 0.945 | 0.777 | 0.924 | 0.800 | ±4.5 pts |
+| m-cashew-plant | 204,800 | 0.347 | 1.17 | 0.948 | 0.939 | 0.936 | 0.936 | ±5.3 pts |
+| m-SA-crop-type | 4,096,000 | 0.340 | 3.44 | 0.961 | 0.706 | 0.932 | 0.809 | ±5.3 pts |
+
+**The design-based interval is honest, on all seven.** Under a simple random sample of 300 windows the
+nominal-95% interval covers the true error rate on 0.933 to 0.961 of 2,000 draws, clearing the 0.93 bar
+everywhere (P1, holds 7 of 7). MADOS sits exactly on the bar, which the preregistration predicted in advance and
+named as Wilson's discreteness at an error rate that puts about 22 errors in a 300-window sample, not a defect.
+P1's job was to catch a bug in the estimator — a finite-population correction against the wrong population, a
+variance formula that treats a stratified sample as simple — and under this design the units are exchangeable by
+construction, so it found none. <!-- claim:design-based-interval-is-honest -->
+
+**The interval a reviewer would actually compute is badly wrong, and this is the practical finding.** Spend the
+same 300 labels the way a person would — open 19 scenes and label 16 windows in each — then apply the ordinary
+formula to the 300 labels as though they were independent, and the nominal-95% interval covers on 0.506 to 0.777
+of draws on six of the seven tasks, with a median design effect of 2.94 (P2, holds on 6 of 7). An interval that
+claims 95% and delivers 51% is not conservative or approximate; it is wrong in the direction that makes a map
+look better established than it is. Errors sit next to each other, so 300 windows from 19 scenes carry nowhere
+near 300 windows of information. Two honest qualifications. The effect is fixable but not free: the
+cluster-corrected estimator restores coverage on every one of those six, to 0.840–0.932, and on MADOS it does so
+by widening the interval from ±2.9 to ±12.4 points, which is the real price of tile-sampled labels rather than a
+defect of the estimator. It is not free in the other direction either: on m-cashew-plant, where the naive
+interval was already fine, correcting for a clustering that is barely there costs a little coverage, 0.936
+against 0.939.
+And of the two tasks that were genuinely out of sample — the pilot had already seen MADOS, Sen1Floods11 and the
+three PASTIS variants — only m-SA-crop-type confirms; **m-cashew-plant has a design effect of 1.17 and its naive
+interval is fine at 0.939**, so P2 passes its stated bar on a count that is 1 of 2 outside the pilot, and that is
+weaker support than 6 of 7 sounds. <!-- claim:tile-sampling-breaks-the-naive-interval -->
+
+**Confidence-guided labelling helps most where the map is already good — the direction holds and the prediction
+fails.** Choosing which windows to label by the model's own confidence, at the same budget and with coverage
+intact on every task, narrows the interval to a median 0.80 of the simple-random width, and the two tasks with
+error rates under 10% do best at 0.63 and 0.79. Both of those clauses were preregistered and both passed. The
+third did not: P3 also asked the ratio to exceed 0.94 on at least one task whose error rate is above 30%, and
+the best such task lands at **0.9361 against a 0.94 bar** (P3, fails by 0.0039). Recorded as a failure rather
+than rounded, because the mechanism it was testing is sound and the threshold was mine. The gain from
+stratification is governed by the spread of √(p(1−p)) across strata and that function is nearly flat between
+0.25 and 0.7, so a map that is a third wrong has little to gain however well its errors are ranked — and
+m-cashew-plant, at 34.7% error, behaves exactly so. What the mechanism did not predict is m-SA-crop-type: also
+34% wrong, and still down to 0.809, because its confidence separates stratum error rates far more sharply than
+its overall rate suggests. One high-error task obeying and one not is the actual result, and it is a narrower
+claim than the one that was written down. <!-- claim:confidence-helps-most-where-the-map-is-good -->
+
+**It saves more labels than the honesty check allowed, and the threshold was wrong rather than the assumption.**
+P4 was the guard against a too-good answer: no arm should beat 1.8× the labels at equal half-width. MADOS
+reaches **2.51×**, with coverage intact at 0.941 (P4, fails). The bound came from a model-free ceiling I derived
+off a two-stratum split; the run uses five strata, which beat it, so nothing was broken except the arithmetic
+behind the number. P4's second clause held everywhere: no arm produces a half-width below ±4 points on any task
+whose error rate exceeds 20%, the three such tasks landing at ±5.1, ±5.3 and ±5.3. **So the honest headline
+survives the failure it was designed to produce.** The ranking captures 17× a random review at a 5% budget; on
+*estimating* how wrong a map is, the same ranking is worth between a quarter and a half of the labels, not an
+order of magnitude. <!-- claim:confidence-saves-a-quarter-to-a-half-of-the-labels -->
+
+**What this adds, and what it does not.** A map user who can label 300 windows can now be told the error rate
+with an interval — about ±3 points on a clean map, ±5 on a messy one — and told which sampling design earns it.
+That is a reference-based answer, so [Usage](../Usage.md)'s refusal stands unchanged: nothing here says how wrong
+a map is *without* labels. Three limits carried from the preregistration. A 64×64-pixel chip is not the unit a
+reviewer opens, so the tile-level design effect is a **lower bound** on the deployment one and the naive interval
+is worse in practice than the table says. The three PASTIS variants are one source, so seven tasks are five.
+And every unit here is labelled, which is what makes grading possible and also what makes this a study of
+estimators rather than a measurement of any particular map. Values in `exp/out/exp78_summary.json`; the per-unit
+export for all 24 tasks is in `exp/out/exp78_units/`.
+
 ## The ceiling belongs to the task, not to the model (from exp74 and exp70)
 
 The margin takes a median 0.68 of the gap between a random ranking and a perfect one on the 24 tasks. A fair

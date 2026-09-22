@@ -27,7 +27,10 @@ whose cut-off falls inside a run of equal scores (a hard mask, a quantized band,
 "never differ"; name the cut-off and it runs.
 
 What the package never says, for any map: how wrong the map is. It orders the windows and explains the order; an
-error rate needs a reference, and then the reference caveat applies.
+error rate needs a reference, and then the reference caveat applies. What that reference costs is measured:
+300 labelled windows drawn at random give the error rate to about ±3 points on a clean map and ±5 on a messy one,
+and labelling whole scenes instead makes the usual range far too narrow
+([exp78](results/comparisons.md#how-wrong-is-this-map-what-a-reviewers-labels-buy-exp78)).
 
 ## Fuse the readings with labels
 
