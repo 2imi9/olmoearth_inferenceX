@@ -107,3 +107,52 @@ sixteen never touch git concurrently. Per encoder: 24 embedding loads, 240 probe
 exp77 fitted five probes per segmentation task on a CPU node in 1 h 40 m for seven tasks; on a GPU the fit is
 the small part and the load is the large one, so about one hour per encoder is the estimate. The estimation
 stage (P4, P5) runs locally on numpy from the fetched export. No new dependencies; fp32 throughout.
+
+## Amendment, 22 September 2026, written while array 1022737 was queued and before any number was read
+
+An adversarial read of this page against `exp/exp79_seed_floors.py`, done by two independent readers in
+parallel while the sixteen jobs waited for GPUs, found that the export stage is sound for every encoder (the
+any-grid path of exp74, traced on six non-Base grids) and that the **grading** stage had four defects of one
+class: it counted over *what ran* where this page says *what the record holds*. Each is corrected in the code
+before the first export has finished, and each correction has a test that isolates it.
+
+1. **The export's task set was never compared with the record's.** `cmd_export` files any load failure —
+   an out-of-memory on a large encoder's largest task included — under `absent`, and nothing then noticed that
+   an encoder recorded at 21 tasks came back with 20. A lost task raises P1's share (19 of 20 is 0.95 where 19
+   of 21 is 0.905), shrinks P2's "of 24", moves P3's median and lowers P4's exception count. **Gate G now
+   requires the export to carry exactly the tasks the record holds for that encoder** (exp70's 24 for Base,
+   exp74's per-encoder set for the rest), names every missing task with the reason the export logged, and
+   fails the encoder. P4 counts a task the record carries but the export lost as an exception, since it cannot
+   be shown to under-cover.
+2. **P2 accepted "all seeds present" as "all 10 seeds" and "20 of whatever ran" as "20 of 24".** It now
+   requires every task to carry exactly ten seeds and the task count to equal the record's, and reports both.
+3. **P1, P3 and P5 could hold on a partial run.** Three encoders' files under `exp79_seeds/` would have graded
+   "all 16 encoders" as true. Every "all" is now against the sixteen by name, and the grade names which are
+   missing.
+4. **P3's named sets came from this run's recomputed seed 0, not from the record this page cites.** The record's
+   third-to-fourth gap is 0.005 — olmoearth_base 0.6800 against terramind_large 0.6749 — which is below the
+   seed noise this page itself invokes, so a rerun could have quietly tested a different top three. The sets
+   are now read from `headroom_by_encoder.json`; the Spearman correlation is against the record's seed-0 values;
+   and **Gate G additionally requires this run's recomputed seed-0 median headroom to agree with the record's to
+   1e-3** per encoder, so that a seed 0 that is a different quantity is a gate failure rather than a silent
+   change of reference.
+
+One threshold on this page was set without its Monte Carlo noise and is corrected here, with the arithmetic.
+**P5's "within 0.01 of the exact coverage"** is 1.75 standard errors at a coverage of 0.93 over R = 2,000 draws
+(one SE is √(0.93·0.07/2000) = 0.0057), so over 112 cells it would have failed about four honest cells by
+chance and P5 could not have held on an estimator that was correct. The tolerance is now **the larger of 0.01
+and three standard errors at that cell's exact coverage** — 0.017 at 0.93 — which puts the expected number of
+false failures over 112 cells below 0.2. It remains one-sided, as this page's own failure clause ("sits more
+than 0.01 below") always was. This is a loosening of a number and a tightening of the test: it now tests the
+estimator rather than the random number generator.
+
+Two wordings are corrected without changing what is computed: Gate G's "to the four decimals the record states"
+means |difference| < 1e-4, since the record stores full-precision floats; and an encoder that fails Gate G is
+marked inside every P1–P3 block as not comparable to the record, rather than only at the top level.
+
+Also on the record before the numbers: the classification probes use Ai2's single learning rate (0.1) for every
+encoder, as exp70 and exp74 did; the per-task rates set_probe_lrs records in each export apply to the
+segmentation tasks alone. And the export stage keeps a float32 copy of the train embeddings for all ten seeds
+and makes one of the test embeddings per seed, so the largest-D encoders may exceed the 200 GB requested on
+m-SA-crop-type; if one does, item 1 above is what makes that a named gate failure instead of a smaller
+denominator, and that (encoder, task) is rerun alone with more memory.

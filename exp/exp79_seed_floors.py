@@ -48,17 +48,30 @@ P1_SHARE, P1_P = 0.75, 0.05   # exp74's bar, applied per seed
 P2_MIN_ROBUST = 20            # P2: OlmoEarth Base tasks won under all seeds
 P3_RHO = 0.9                  # P3: rank correlation with the seed-0 encoder ordering
 P4_MIN_ENCODERS, P4_MAX_EXCEPTIONS, P4_MIN_DEFF, P4_COVER = 13, 2, 2.0, 0.85
-P5_COVER, P5_EXACT_TOL = 0.93, 0.01
+P5_COVER, P5_EXACT_TOL, P5_EXACT_SE = 0.93, 0.01, 3.0   # tolerance is max(0.01, 3 Monte Carlo SEs); amendment of 2026-09-22
+P3_HEADROOM_TOL = 1e-3        # recomputed seed-0 headroom must agree with headroom_by_encoder.json to this
+ENCODERS = ["olmoearth_base"] + list(e74.ENCODERS)          # the sixteen; every "all" below means all of these
 
 
-# ----------------------------------------------------------------------------- stage: export (cluster)
-def recorded_accuracy(model, task):
-    """The test accuracy the record holds for (model, task): exp70 for OlmoEarth Base, exp74 for the rest."""
+# ----------------------------------------------------------------------------- the record, as the reference
+def recorded_tasks(model):
+    """{task: record} for every task the record holds for this encoder: exp70 for OlmoEarth Base, exp74 for the
+    rest. This, not the export, is the set every count is taken over; an encoder that carries 21 tasks in exp74
+    carries 21 here, and a task that fails to load in exp79 is a gate failure, not a smaller denominator."""
     if model == "olmoearth_base":
-        t = json.load(open(os.path.join(OUT, "exp70_summary.json")))["results"]["tasks"]
-    else:
-        t = json.load(open(os.path.join(OUT, "exp74_summary.json")))["results"]["tasks"].get(model, {})
-    return t.get(task, {}).get("test_accuracy")
+        return json.load(open(os.path.join(OUT, "exp70_summary.json")))["results"]["tasks"]
+    return json.load(open(os.path.join(OUT, "exp74_summary.json")))["results"]["tasks"].get(model, {})
+
+
+def recorded_accuracy(model, task):
+    """The test accuracy the record holds for (model, task)."""
+    return recorded_tasks(model).get(task, {}).get("test_accuracy")
+
+
+def recorded_headroom():
+    """The record's per-encoder median headroom and its ordering, from exp/out/headroom_by_encoder.json."""
+    h = json.load(open(os.path.join(OUT, "headroom_by_encoder.json")))["per_encoder_median_headroom"]
+    return h, sorted(h, key=lambda e: -h[e])
 
 
 def sha256(path):
@@ -126,16 +139,32 @@ def load_seeds():
     return {os.path.basename(p)[:-5]: json.load(open(p)) for p in sorted(glob.glob(os.path.join(SEEDS_DIR, "*.json")))}
 
 
-def gate(per_encoder):
-    """G: seed 0 reproduces the recorded accuracy on every task, per encoder; the failing ones are named."""
+def gate(per_encoder, recorded=None, headroom_ref=None):
+    """G, per encoder: the export carries exactly the tasks the record holds, and at seed 0 every one of them
+    reproduces the recorded accuracy. Failing encoders are named, and so is every missing task, because the
+    export files any load failure under `absent` and a silently smaller task set would move every count below.
+    The recomputed seed-0 median headroom is also compared with headroom_by_encoder.json, since P3's named sets
+    come from that record and mean nothing if this run's seed 0 is a different quantity."""
+    recorded = recorded if recorded is not None else {enc: recorded_tasks(enc) for enc in per_encoder}
+    h_ref = headroom_ref if headroom_ref is not None else recorded_headroom()[0]
+    h0 = headroom_per_seed(per_encoder, 0)
     g = {}
     for enc, d in per_encoder.items():
+        want, have = set(recorded.get(enc, {})), set(d["tasks"])
         diffs = {t: v["accuracy_minus_recorded"] for t, v in d["tasks"].items() if v["accuracy_minus_recorded"] is not None}
         bad = sorted(t for t, x in diffs.items() if abs(x) >= GATE_TOL)
-        g[enc] = {"holds": not bad and len(diffs) == len(d["tasks"]), "n_compared": len(diffs), "n_tasks": len(d["tasks"]),
-                  "max_abs_diff": max((abs(x) for x in diffs.values()), default=float("nan")), "failing": bad}
-    return {"holds": bool(g) and all(v["holds"] for v in g.values()), "per_encoder": g,
-            "encoders_failing": sorted(e for e, v in g.items() if not v["holds"])}
+        hd = abs(h0[enc] - h_ref[enc]) if enc in h0 and enc in h_ref else float("nan")
+        g[enc] = {"holds": bool(want) and want == have and not bad and len(diffs) == len(have)
+                           and np.isfinite(hd) and hd < P3_HEADROOM_TOL,
+                  "n_tasks_recorded": len(want), "n_tasks_exported": len(have),
+                  "missing_from_export": sorted(want - have), "not_in_record": sorted(have - want),
+                  "absent_reasons": d.get("absent", []),
+                  "max_abs_diff": max((abs(x) for x in diffs.values()), default=float("nan")), "failing": bad,
+                  "headroom_seed0": h0.get(enc), "headroom_recorded": h_ref.get(enc), "headroom_abs_diff": hd}
+    missing_encoders = sorted(set(ENCODERS) - set(per_encoder))
+    return {"holds": not missing_encoders and all(v["holds"] for v in g.values()), "per_encoder": g,
+            "encoders_failing": sorted(e for e, v in g.items() if not v["holds"]),
+            "encoders_missing": missing_encoders, "n_encoders": len(g), "of": len(ENCODERS)}
 
 
 def per_seed_results(d, seed):
@@ -153,7 +182,10 @@ def grade_p1(per_encoder, n_seeds=N_SEEDS):
             table[enc].append({"seed": s, "wins": v["wins"], "scored": v["scored"], "share": v["share"], "p": v["p"],
                                "holds": v["share"] >= P1_SHARE and v["p"] < P1_P})
     failing = sorted((enc, r["seed"]) for enc, rows in table.items() for r in rows if not r["holds"])
-    return {"holds": bool(table) and not failing, "n_encoders": len(table), "n_seeds": n_seeds,
+    missing = sorted(set(ENCODERS) - set(table))
+    short = sorted(enc for enc, d in per_encoder.items() if any(len(v["seeds"]) < n_seeds for v in d["tasks"].values()))
+    return {"holds": not missing and not short and not failing, "n_encoders": len(table), "of": len(ENCODERS),
+            "n_seeds": n_seeds, "encoders_missing": missing, "encoders_short_of_seeds": short,
             "failing_encoder_seed": failing,
             "min_share": {enc: min(r["share"] for r in rows) for enc, rows in table.items()},
             "min_wins": {enc: min(r["wins"] for r in rows) for enc, rows in table.items()}}
@@ -172,7 +204,10 @@ def grade_p2(per_encoder, model="olmoearth_base", n_seeds=N_SEEDS):
                    "n_units": v["n_units"], "robust": bool((leads > 0).all())}
     robust = sorted(t for t, r in rows.items() if r["robust"])
     flips = sorted(t for t, r in rows.items() if not r["robust"])
-    return {"holds": len(robust) >= P2_MIN_ROBUST and len(rows) > 0, "n_robust": len(robust), "of": len(rows),
+    n_recorded = len(recorded_tasks(model))
+    complete = len(rows) == n_recorded and all(r["of"] == n_seeds for r in rows.values())
+    return {"holds": complete and len(robust) >= P2_MIN_ROBUST, "n_robust": len(robust), "of": len(rows),
+            "of_recorded": n_recorded, "n_seeds": n_seeds, "complete": complete,
             "flips": {t: rows[t] for t in flips}, "per_task": rows}
 
 
@@ -186,26 +221,29 @@ def headroom_per_seed(per_encoder, seed):
     return out
 
 
-def grade_p3(per_encoder, n_seeds=N_SEEDS, top_k=3, bottom_k=2):
+def grade_p3(per_encoder, n_seeds=N_SEEDS, top_k=3, bottom_k=2, record=None):
     """P3: rank correlation with the seed-0 ordering >= P3_RHO under every seed, and the seed-0 top-k and bottom-k
     sets contain the best and worst under every seed."""
     h0 = headroom_per_seed(per_encoder, 0)
+    missing = sorted(set(ENCODERS) - set(h0))
     if len(h0) < 3:
-        return {"holds": None, "reason": f"only {len(h0)} encoders have run"}
-    order0 = sorted(h0, key=lambda e: -h0[e])
-    top, bottom = set(order0[:top_k]), set(order0[-bottom_k:])
+        return {"holds": None, "reason": f"only {len(h0)} encoders have run", "encoders_missing": missing}
+    h_rec, order_rec = (recorded_headroom() if record is None else record)
+    order0 = [e for e in order_rec if e in h0]          # the record's ordering, restricted to what has run
+    top, bottom = set(order_rec[:top_k]), set(order_rec[-bottom_k:])   # the sets the plan names, from the record
     rows = []
     for s in range(n_seeds):
         hs = headroom_per_seed(per_encoder, s)
         common = [e for e in order0 if e in hs]
-        rho = float(stats.spearman(np.array([h0[e] for e in common]), np.array([hs[e] for e in common])))
+        rho = float(stats.spearman(np.array([h_rec[e] for e in common]), np.array([hs[e] for e in common])))
         best, worst = max(common, key=lambda e: hs[e]), min(common, key=lambda e: hs[e])
         rows.append({"seed": s, "rho": rho, "best": best, "worst": worst,
                      "best_in_top": best in top, "worst_in_bottom": worst in bottom})
-    ok = all(r["rho"] >= P3_RHO and r["best_in_top"] and r["worst_in_bottom"] for r in rows)
-    return {"holds": ok, "seed0_order": order0, "top_set": sorted(top), "bottom_set": sorted(bottom),
+    ok = not missing and all(r["rho"] >= P3_RHO and r["best_in_top"] and r["worst_in_bottom"] for r in rows)
+    return {"holds": ok, "encoders_missing": missing, "record_order": order_rec, "seed0_order": order0,
+            "top_set": sorted(top), "bottom_set": sorted(bottom),
             "min_rho": min(r["rho"] for r in rows), "per_seed": rows,
-            "headroom_seed0": h0}
+            "headroom_seed0": h0, "headroom_recorded": h_rec}
 
 
 def cmd_grade(args):
@@ -213,12 +251,14 @@ def cmd_grade(args):
     if not per:
         print(f"nothing under {SEEDS_DIR}"); return 1
     G = gate(per)
+    A = {"P1_headline_survives_reseeding": grade_p1(per), "P2_which_wins_are_noise": grade_p2(per),
+         "P3_encoder_ordering_stable_in_sets": grade_p3(per)}
+    for v in A.values():                     # an encoder that failed the gate is graded against itself only
+        v["not_comparable_to_record"] = G["encoders_failing"]
     summary = load_summary()
     summary.update({"experiment": "exp79", "config": {"n_seeds": N_SEEDS, "gate_tol": GATE_TOL,
-                                                       "encoders": sorted(per), "n_encoders": len(per)},
-                    "gate": G, "prereg_A": {"P1_headline_survives_reseeding": grade_p1(per),
-                                            "P2_which_wins_are_noise": grade_p2(per),
-                                            "P3_encoder_ordering_stable_in_sets": grade_p3(per)}})
+                                                       "encoders_expected": ENCODERS, "encoders_run": sorted(per)},
+                    "gate": G, "prereg_A": A})
     write_summary(summary)
     print(json.dumps({"gate": {k: G[k] for k in ("holds", "encoders_failing")},
                       **{k: {kk: v[kk] for kk in v if kk in ("holds", "n_robust", "of", "failing_encoder_seed", "min_rho", "flips")}
@@ -266,35 +306,63 @@ def estimate_encoder(enc, units_dir, budget=e78.HEADLINE):
     return rows
 
 
-def grade_p4(per_encoder_rows):
+def grade_p4(per_encoder_rows, carried=None):
     """P4: on >= P4_MIN_ENCODERS encoders, the naive interval under-covers on all but <= P4_MAX_EXCEPTIONS of the
     segmentation tasks it carries, with median design effect >= P4_MIN_DEFF."""
+    expected = {enc: {t for e, t in expected_cells() if e == enc} for enc in ENCODERS} if carried is None else carried
     table = {}
     for enc, rows in per_encoder_rows.items():
         if not rows:
             continue
+        want = expected.get(enc, set(rows))
         under = sorted(t for t, r in rows.items() if r["naive_coverage"] < P4_COVER)
         deffs = [r["design_effect"] for r in rows.values() if np.isfinite(r["design_effect"])]
         med = float(np.median(deffs)) if deffs else float("nan")
-        table[enc] = {"carried": len(rows), "under_covering": len(under), "exceptions": sorted(set(rows) - set(under)),
+        missing = sorted(want - set(rows))
+        table[enc] = {"carried": len(want), "present": len(rows), "missing": missing,
+                      "under_covering": len(under), "exceptions": sorted(set(rows) - set(under)),
                       "median_design_effect": med,
-                      "holds": len(rows) - len(under) <= P4_MAX_EXCEPTIONS and med >= P4_MIN_DEFF}
+                      # a missing task counts as an exception: it cannot be shown to under-cover
+                      "holds": not missing and len(want) - len(under) <= P4_MAX_EXCEPTIONS and med >= P4_MIN_DEFF}
     n_ok = sum(1 for v in table.values() if v["holds"])
     return {"holds": n_ok >= P4_MIN_ENCODERS, "n_encoders_holding": n_ok, "of": len(table), "per_encoder": table,
             "failing": sorted(e for e, v in table.items() if not v["holds"])}
 
 
-def grade_p5(per_encoder_rows):
-    """P5: SRS coverage >= P5_COVER on every cell, or within P5_EXACT_TOL of the exact Wilson coverage there."""
+def p5_tolerance(exact, R=e78.R_DRAWS):
+    """How far below its exact coverage a Monte Carlo cell may sit: the larger of P5_EXACT_TOL and P5_EXACT_SE
+    standard errors of a binomial proportion at that coverage over R draws. At 0.93 and R = 2,000 one SE is
+    0.0057, so a flat 0.01 is 1.75 SE and would fail about four of 112 honest cells by chance."""
+    return max(P5_EXACT_TOL, P5_EXACT_SE * math.sqrt(exact * (1 - exact) / R))
+
+
+def expected_cells(budget=e78.HEADLINE):
+    """{(encoder, task)} the estimation stage must produce: every segmentation task the record holds for the
+    encoder whose population can carry the budget three times over, as estimate_encoder requires."""
+    cells = set()
+    for enc in ENCODERS:
+        for t, r in recorded_tasks(enc).items():
+            if t in e70.TASKS_SEG and r["n_units"] > 3 * budget:
+                cells.add((enc, t))
+    return cells
+
+
+def grade_p5(per_encoder_rows, expected=None):
+    """P5: on every recorded cell, SRS coverage >= P5_COVER or within p5_tolerance of the exact coverage."""
+    expected = expected_cells() if expected is None else expected
     cells, bad = [], []
     for enc, rows in per_encoder_rows.items():
         for t, r in rows.items():
             c, ex = r["srs_coverage"], r.get("exact_srs_coverage")
-            ok = c >= P5_COVER or (ex is not None and c >= ex - P5_EXACT_TOL)
-            cells.append({"encoder": enc, "task": t, "coverage": c, "exact": ex, "holds": ok})
+            ok = c >= P5_COVER or (ex is not None and c >= ex - p5_tolerance(ex))
+            cells.append({"encoder": enc, "task": t, "coverage": c, "exact": ex, "holds": ok,
+                          "tolerance": None if ex is None else p5_tolerance(ex)})
             if not ok:
                 bad.append((enc, t))
-    return {"holds": bool(cells) and not bad, "n_cells": len(cells), "failing": bad,
+    have = {(c["encoder"], c["task"]) for c in cells}
+    missing = sorted(expected - have)
+    return {"holds": not missing and bool(cells) and not bad, "n_cells": len(cells), "of": len(expected),
+            "cells_missing": missing, "failing": bad,
             "below_bar_but_within_exact": [(c["encoder"], c["task"], c["coverage"], c["exact"])
                                            for c in cells if c["holds"] and c["coverage"] < P5_COVER],
             "min_coverage": min((c["coverage"] for c in cells), default=float("nan"))}
@@ -355,13 +423,23 @@ def synthetic_export(encoders, n_seeds=3, n_tasks=6, flip=(), off_gate=(), seed=
     return per
 
 
+def synthetic_record(per):
+    """The 'record' a synthetic export is graded against: its own task sets and its own seed-0 headroom."""
+    tasks = {enc: {t: {"test_accuracy": v["recorded_accuracy"], "n_units": v["n_units"]} for t, v in d["tasks"].items()}
+             for enc, d in per.items()}
+    h = headroom_per_seed(per, 0)
+    return {"tasks": tasks, "headroom": h, "order": sorted(h, key=lambda e: -h[e])}
+
+
 def cmd_smoke(args):
     encs = [f"enc{i}" for i in range(5)]
     per = synthetic_export(encs)
-    assert gate(per)["holds"] and grade_p1(per, 3)["holds"]
-    assert not gate(synthetic_export(encs, off_gate=("enc2",)))["holds"]
-    p3 = grade_p3(per, 3)
-    assert p3["holds"] and p3["min_rho"] > 0.99, p3
+    rec = synthetic_record(per)
+    g = gate(per, recorded=rec["tasks"], headroom_ref=rec["headroom"])
+    assert not g["holds"] and g["encoders_missing"] and not g["encoders_failing"], "five of sixteen: missing, none failing"
+    assert not gate(synthetic_export(encs, off_gate=("enc2",)), recorded=rec["tasks"], headroom_ref=rec["headroom"])["per_encoder"]["enc2"]["holds"]
+    p3 = grade_p3(per, 3, record=(rec["headroom"], rec["order"]))
+    assert p3["min_rho"] > 0.99 and not p3["holds"] and p3["encoders_missing"], p3
     N, K, B = 40, 9, 12
     ex = exact_srs_coverage(N, K, B)
     assert 0.8 < ex <= 1.0
