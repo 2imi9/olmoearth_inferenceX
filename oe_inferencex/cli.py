@@ -22,7 +22,7 @@ import sys
 
 import numpy as np
 
-from oe_inferencex.assess import _pool, _pool_valid, _pooled_argmax, assess_prediction, summary
+from oe_inferencex.assess import _boundary_valid, _pool, _pool_valid, _pooled_argmax, assess_prediction, summary
 from oe_inferencex import estimate as est
 from oe_inferencex.compare import compare_inferences
 from oe_inferencex.explain import explain_review_set
@@ -168,10 +168,23 @@ def cmd_assess(args):
 
 # ----------------------------------------------------------------------------- compare
 def decisions(path, nodata, threshold, notes=None):
+    """(hard decisions, valid pixels, geo, n_classes, per-pixel confidence or None). The confidence breaks a tied
+    window majority the way assess does; a hard class map carries none."""
     a, valid, geo = read_raster(path, nodata)
     if a.ndim == 3:
         hard, n_classes = a.argmax(0), a.shape[0]
-    elif a.dtype.kind == "f" and not np.array_equal(a[valid], np.rint(a[valid])):
+        return hard, valid, geo, n_classes, np.nan_to_num(a.max(0).astype(np.float64), nan=0.0)
+    if threshold is not None:
+        # A named cut-off applies whatever the storage: percent cover held as int16 used to go to the class-map
+        # branch, and 0-100 was compared as a 101-class majority with the cut-off ignored (503 windows "differ"
+        # where cutting at 50 gives 74), exit 0 (audit 2026-09-22).
+        lo, hi = (float(np.nanmin(a[valid])), float(np.nanmax(a[valid]))) if valid.any() else (0.0, 1.0)
+        if (lo < 0.0 or hi > 1.0) and notes is not None:
+            notes.append(f"{os.path.basename(path)} is a continuous map cut at {threshold:g}: the comparison is of that one "
+                         f"decision, and no recorded experiment grades it on a regression output")
+        af = a.astype(np.float64)
+        return (af > threshold).astype(int), valid, geo, 2, np.nan_to_num(np.abs(af - threshold), nan=0.0)
+    if a.dtype.kind == "f" and not np.array_equal(a[valid], np.rint(a[valid])):
         # A continuous map outside [0, 1] under the default cut-off of 0.5 is one class everywhere on both sides, so
         # two regression outputs "never differ", with exit 0. The cut-off of a continuous map is the caller's to name.
         lo, hi = (float(np.nanmin(a[valid])), float(np.nanmax(a[valid]))) if valid.any() else (0.0, 1.0)
@@ -184,26 +197,50 @@ def decisions(path, nodata, threshold, notes=None):
         if continuous and notes is not None:
             notes.append(f"{os.path.basename(path)} is a continuous map cut at {threshold:g}: the comparison is of that one "
                          f"decision, and no recorded experiment grades it on a regression output")
-        hard, n_classes = (a > (0.5 if threshold is None else threshold)).astype(int), 2
-    else:
-        hard = np.rint(a).astype(int)
-        n_classes = int(hard[valid].max()) + 1 if valid.any() else 2
-    return hard, valid, geo, n_classes
+        af = a.astype(np.float64)
+        return (af > 0.5).astype(int), valid, geo, 2, np.nan_to_num(np.abs(af - 0.5), nan=0.0)
+    hard = np.rint(a).astype(int)
+    n_classes = int(hard[valid].max()) + 1 if valid.any() else 2
+    return hard, valid, geo, n_classes, None
+
+
+def _same_grid(geo_a, geo_b, what):
+    """Refuse two rasters on different grids. Only shapes used to be compared, so a map shifted by 12.8 km, or in
+    another CRS, was compared window by window as though co-registered."""
+    if geo_a is None or geo_b is None:
+        return
+    if str(geo_a["crs"]) != str(geo_b["crs"]) or not np.allclose(tuple(geo_a["transform"])[:6], tuple(geo_b["transform"])[:6]):
+        raise SystemExit(f"{what} is not on the first map's grid (CRS {geo_b['crs']} vs {geo_a['crs']}, transform "
+                         f"{tuple(geo_b['transform'])[:6]} vs {tuple(geo_a['transform'])[:6]}); resample it onto the same grid first")
 
 
 def cmd_compare(args):
     notes = []
-    ha, va, geo, na = decisions(args.a, args.nodata, args.threshold, notes)
-    hb, vb, _, nb = decisions(args.b, args.nodata, args.threshold, notes)
+    ha, va, geo, na, ca = decisions(args.a, args.nodata, args.threshold, notes)
+    hb, vb, geo_b, nb, cb = decisions(args.b, args.nodata, args.threshold, notes)
     if ha.shape != hb.shape:
         raise SystemExit(f"the two maps differ in shape: {ha.shape} vs {hb.shape}; compare needs identical grids")
+    _same_grid(geo, geo_b, args.b)
+    if not 1 <= args.patch <= min(ha.shape):
+        raise SystemExit(f"--patch {args.patch} must be at least 1 and no larger than the map, {ha.shape[0]} x {ha.shape[1]} px")
     n_classes = max(na, nb, 2)
-    a_w, b_w = _pooled_argmax(ha, n_classes, args.patch), _pooled_argmax(hb, n_classes, args.patch)
-    ok = pool_valid(va & vb, args.patch)
+    # No-data pixels do not vote (they used to argmax to class 0 and could decide a window), and a tied window goes
+    # to the more confident voters, as in assess since 2026-09-22.
+    # Both maps pool over the pixels BOTH predicted: a window half under B's no-data used to be decided from 16 of
+    # A's pixels and 8 of B's, and two identical maps then "differed" there.
+    both = va & vb
+    a_w = _pooled_argmax(np.where(both, ha, -1), n_classes, args.patch, empty=-1, weights=ca)
+    b_w = _pooled_argmax(np.where(both, hb, -1), n_classes, args.patch, empty=-1, weights=cb)
+    ok = pool_valid(va & vb, args.patch) & (a_w >= 0) & (b_w >= 0)
     labels = groups = None
+    ok_graded = None
     if args.labels:
-        lab, lv, _ = read_raster(args.labels, None)
+        lab, lv, geo_l = read_raster(args.labels, None)
+        if lab.shape != ha.shape:
+            raise SystemExit(f"{args.labels} has shape {lab.shape}; the maps are {ha.shape}")
+        _same_grid(geo, geo_l, args.labels)
         lab_i = np.rint(lab).astype(int)
+        lv = lv & (lab_i >= 0)                              # a negative code is unlabelled whatever the nodata tag says
         if not lv.any():
             raise SystemExit(f"{args.labels}: no valid label pixels")
         # The label raster is pooled over ITS OWN class range, never the maps'. _pooled_argmax counts votes only over
@@ -213,9 +250,12 @@ def cmd_compare(args):
         n_lab = int(lab_i[lv].max()) + 1
         # invalid label pixels must not vote; -1 is the non-voting code _assess uses, where 0 is a real class
         lab_w = _pooled_argmax(np.where(lv, lab_i, -1), max(n_lab, 2), args.patch, empty=-1, tie=-1)   # no majority, no label
-        ok &= pool_valid(lv, args.patch)
-        n_tied = int((ok & (lab_w < 0)).sum())
-        ok &= lab_w >= 0                                    # an evenly split label window has no label to grade
+        # The grading runs on the labelled windows; the label-free numbers stay on every window both maps predicted.
+        # Until 2026-09-22 the label mask was ANDed into the whole comparison, so adding --labels changed the numbers
+        # the docs call label-free and dropped unlabelled differing windows from the CSV and the raster.
+        labelled = pool_valid(lv, args.patch)
+        n_tied = int((ok & labelled & (lab_w < 0)).sum())
+        ok_graded = ok & labelled & (lab_w >= 0)            # an evenly split label window has no label to grade
         labels = lab_w
         if n_lab > n_classes:
             notes.append(f"the labels carry {n_lab} classes and the two maps predict at most {n_classes}; "
@@ -223,19 +263,49 @@ def cmd_compare(args):
         if n_tied:
             notes.append(f"{n_tied} windows have an evenly split label and no majority; they are left out of the grading")
     if args.groups:
-        g, gv, _ = read_raster(args.groups, None)
-        if not gv.any():
-            raise SystemExit(f"{args.groups}: no valid group pixels")
+        g, gv, geo_g = read_raster(args.groups, None)
+        if g.shape != ha.shape:
+            raise SystemExit(f"{args.groups} has shape {g.shape}; the maps are {ha.shape}")
+        _same_grid(geo, geo_g, args.groups)
         gi = np.rint(g).astype(int)
-        groups = _pooled_argmax(np.where(gv, gi, -1), int(gi[gv].max()) + 1, args.patch)
-    cues = {"boundary_a": boundary_indicator(a_w) > 0, "boundary_b": boundary_indicator(b_w) > 0}
-    out = compare_inferences(a_w, b_w, ok, groups=groups, labels=labels, cues=cues)
+        gv = gv & (gi >= 0)                                 # a negative id is outside every zone
+        if not gv.any():
+            raise SystemExit(f"{args.groups}: no valid group pixels (ids must be non-negative)")
+        # ids remapped to 0..K-1 first: pooling allocates one count per id up to the largest, which for ids near
+        # 1e5 was one window-sized array per id. A window with no group pixel belongs to no group (-1), where it used
+        # to be put in group 0, inventing or diluting that group.
+        uid, inv = np.unique(gi[gv], return_inverse=True)
+        gc = np.full(gi.shape, -1); gc[gv] = inv
+        gw = _pooled_argmax(gc, len(uid), args.patch, empty=-1)
+        groups = np.where(gw >= 0, uid[np.clip(gw, 0, None)], -1)
+    # boundaries as assess draws them: a window with no prediction cannot disagree with its neighbour, so no-data
+    # holes and the data's rim no longer manufacture boundary cues
+    valid_w = pool_valid(va & vb, args.patch) & (a_w >= 0) & (b_w >= 0)
+    cues = {"boundary_a": _boundary_valid(a_w, valid_w) > 0, "boundary_b": _boundary_valid(b_w, valid_w) > 0}
+    out = compare_inferences(a_w, b_w, ok, groups=groups, cues=cues)
+    if labels is not None:
+        out["graded"] = compare_inferences(a_w, b_w, ok_graded, groups=groups, labels=labels, cues=cues)["graded"]
+        notes.append(f"the graded block covers the {int(ok_graded.sum())} windows with a majority label; every other "
+                     f"number covers all {int(ok.sum())} windows both maps predicted")
+    if groups is not None:
+        n_nogroup = int((ok & (groups < 0)).sum())
+        for blk in (out, out.get("graded") or {}):
+            if blk.get("per_group"):
+                blk["per_group"].pop(-1, None)
+        if out.get("graded") and out["graded"].get("per_group") is not None:
+            from oe_inferencex.compare import over_groups
+            out["graded"]["over_groups"] = over_groups({k: (v["corrected"] - v["broken"]) if v["n"] > 0 else float("nan")
+                                                        for k, v in out["graded"]["per_group"].items()})
+        if n_nogroup:
+            notes.append(f"{n_nogroup} windows fall in no group and are counted overall but in no per-group rate")
     os.makedirs(args.out, exist_ok=True)
     s = summary(out)
     s["inputs"] = {"a": os.path.abspath(args.a), "b": os.path.abspath(args.b), "labels": os.path.abspath(args.labels) if args.labels else None, "patch_px": args.patch}
     if notes:
         s["notes"] = notes
-    s["files"] = {"disagreement": write_raster(os.path.join(args.out, "disagreement.tif"), out["arrays"]["disagree"], geo, args.patch, nodata=None)}
+    # NaN where nothing was compared: a 0 there used to read as "agree" in any GIS
+    dis = np.where(ok, out["arrays"]["disagree"].astype(np.float32), np.nan).astype(np.float32)
+    s["files"] = {"disagreement": write_raster(os.path.join(args.out, "disagreement.tif"), dis, geo, args.patch, nodata=None)}
     rows, cols = np.nonzero(out["arrays"]["disagree"])
     pr, pc, x, y = window_coords(rows, cols, geo, args.patch)
     path = os.path.join(args.out, "differing_windows.csv")

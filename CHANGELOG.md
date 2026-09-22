@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+**`stats`, `compare` on real GeoTIFFs, and one recorded p-value, from the first audit of four modules.**
+
+- **exp70's P3 recorded p = 6.9e-15 from a sign test over 144 task pairs treated as independent**; they come from 24 tasks. The rank-sum test over relabellings of the tasks gives 0.0054 (scipy's exact 0.0060, a million-draw permutation 0.0055). P3 still holds; no document quoted the p; the artifact's P3 block is regenerated from the committed per-task results. New `stats.rank_sum_test`, exact with ties.
+- `stats`: `sign_test` overflowed on numpy integer counts and returned negative p-values that pass "< 0.05", and accepted negative counts; NaN gains counted as ties and produced `perm_p = 0.0`; the permutation test dropped exactly tied patterns and could report 0; `spearman` answered NaN input with a finite, sometimes sign-flipped number; the cluster bootstrap took misaligned inputs and crashed without errors; two smaller refusals.
+- `oe-inferencex compare` had never been given what `assess` got on 21 September: no-data pixels voted as class 0 (identical maps "differed" by 64 windows along a no-data stripe), holes manufactured boundary cues, ties went to class 0. Fixed, with both maps pooled over the pixels both predicted. Also: `--labels` no longer changes the label-free numbers; `--threshold` applies to integer-valued continuous maps (percent cover compared 101 classes: 503 windows "differed" against 74); windows outside every zone belong to no group rather than group 0; negative label codes count as unlabelled without a nodata tag; maps, labels and groups on different grids are refused; `disagreement.tif` is NaN where nothing was compared; degenerate inputs are named refusals.
+
 **All fourteen findings the 21 September audit left open, fixed, each pinned by a test that reproduces
 its consequence.** No recorded number changes.
 

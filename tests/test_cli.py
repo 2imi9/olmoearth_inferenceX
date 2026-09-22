@@ -6,7 +6,7 @@ import os
 import numpy as np
 import pytest
 
-from oe_inferencex.assess import assess_prediction, summary
+from oe_inferencex.assess import _pooled_argmax, assess_prediction, summary
 from oe_inferencex.cli import main
 
 rasterio = pytest.importorskip("rasterio", reason="the raster path needs rasterio; the .npy path is tested below regardless")
@@ -85,7 +85,9 @@ def test_compare_two_maps_with_labels_and_groups(tmp_path):
     assert s["where"]["boundary_b"]["enrichment"] > 1
     with rasterio.open(out / "disagreement.tif") as src:
         d = src.read(1)
-    assert int(d.sum()) == s["n_disagree"] and len(list(csv.DictReader(open(out / "differing_windows.csv")))) == s["n_disagree"]
+    # NaN where nothing was compared (the scene's no-data corner), so a GIS cannot read "not compared" as "agree"
+    assert int(np.nansum(d)) == s["n_disagree"] and len(list(csv.DictReader(open(out / "differing_windows.csv")))) == s["n_disagree"]
+    assert np.isnan(d).sum() == d.size - s["n_windows"]
 
 
 def test_compare_refuses_different_grids(tmp_path):
@@ -292,3 +294,99 @@ def test_sample_sidecar_carries_the_crs_and_ground_units_for_a_georeferenced_map
     assert side["xy_are"].startswith("window centres")
     rows = list(csv.DictReader(open(tmp_path / "g.csv")))
     assert rows[0]["x"] != "" and rows[0]["y"] != ""
+
+
+# ----------------------------------------------------------------------------- compare, audited on real GeoTIFFs 2026-09-22
+def _cmp(tmp_path, *args):
+    out = tmp_path / "c"
+    assert main(["compare", *map(str, args), "--out", str(out)]) == 0
+    return json.load(open(out / "comparison.json"))
+
+
+def test_compare_no_data_pixels_do_not_vote():
+    """A stripe of no-data in B used to argmax to class 0 and make 64 windows 'differ'; A and B are otherwise equal."""
+    import tempfile, pathlib
+    tmp = pathlib.Path(tempfile.mkdtemp())
+    rng = np.random.default_rng(0)
+    p = rng.random((3, 64, 64)).astype(np.float32); p /= p.sum(0)
+    q = p.copy(); q[:, :, 30:33] = -9999
+    _write(tmp / "a.tif", p, nodata=-9999); _write(tmp / "b.tif", q, nodata=-9999)
+    s = _cmp(tmp, tmp / "a.tif", tmp / "b.tif")
+    assert s["n_disagree"] == 0
+
+
+def test_compare_label_free_numbers_do_not_change_when_labels_are_added(tmp_path):
+    rng = np.random.default_rng(1)
+    a = rng.integers(0, 2, (64, 64)); b = a.copy(); b[:, :20] = 1 - b[:, :20]
+    lab = rng.integers(0, 2, (64, 64)); lab[:, 40:] = -1                       # labels over part of the map only
+    for n, x in (("a", a), ("b", b), ("l", lab)):
+        np.save(tmp_path / f"{n}.npy", x)
+    free = _cmp(tmp_path, tmp_path / "a.npy", tmp_path / "b.npy")
+    graded = _cmp(tmp_path, tmp_path / "a.npy", tmp_path / "b.npy", "--labels", tmp_path / "l.npy")
+    assert (graded["n_windows"], graded["n_disagree"]) == (free["n_windows"], free["n_disagree"])
+    assert graded["graded"]["crosstab"]["n"] < graded["n_windows"]           # the grading covers the labelled windows
+    assert any("graded block covers" in n for n in graded["notes"])
+
+
+def test_compare_threshold_applies_to_integer_valued_continuous_maps(tmp_path):
+    """Percent cover stored as int16 used to ignore --threshold and compare 101 classes: 503 'differ' against 74."""
+    rng = np.random.default_rng(2)
+    pa = rng.random((64, 64)); pb = np.clip(pa + rng.normal(0, 0.05, pa.shape), 0, 1)
+    np.save(tmp_path / "a.npy", np.rint(pa * 100).astype(np.int16)); np.save(tmp_path / "b.npy", np.rint(pb * 100).astype(np.int16))
+    s = _cmp(tmp_path, tmp_path / "a.npy", tmp_path / "b.npy", "--threshold", "50")
+    A, B = np.rint(pa * 100), np.rint(pb * 100)                                  # the command's own tie rule: confidence
+    brute = (_pooled_argmax((A > 50).astype(int), 2, 4, weights=np.abs(A - 50))
+             != _pooled_argmax((B > 50).astype(int), 2, 4, weights=np.abs(B - 50)))
+    assert s["n_disagree"] == int(brute.sum()) and s["n_disagree"] < 0.3 * s["n_windows"]
+
+
+def test_compare_windows_outside_every_zone_belong_to_no_group(tmp_path):
+    rng = np.random.default_rng(3)
+    a = rng.integers(0, 2, (64, 64)); b = a.copy(); b[:32, :32] = 1 - b[:32, :32]
+    g = np.full((64, 64), -1); g[:32, :32] = 0; g[32:, :32] = 2                 # the right half is in no zone
+    for n, x in (("a", a), ("b", b), ("g", g)):
+        np.save(tmp_path / f"{n}.npy", x)
+    s = _cmp(tmp_path, tmp_path / "a.npy", tmp_path / "b.npy", "--groups", tmp_path / "g.npy")
+    # a hard class map carries no confidence, so an 8-8 window ties the same way in a and in its flipped copy
+    assert set(s["per_group"]) == {"0", "2"} and s["per_group"]["0"]["n"] == 64 and s["per_group"]["0"]["rate"] > 0.8
+    assert any("in no group" in n for n in s["notes"])
+
+
+def test_compare_boundary_cue_ignores_no_data_holes(tmp_path):
+    """Grid-aligned no-data holes used to manufacture a boundary around every hole."""
+    a = np.zeros((64, 64), np.float32); a[:, 32:] = 1                          # one real boundary, down the middle
+    a2 = a.copy(); a2[8:16, 8:16] = np.nan; a2[40:48, 8:16] = np.nan
+    np.save(tmp_path / "a.npy", a2); np.save(tmp_path / "b.npy", a2)
+    s = _cmp(tmp_path, tmp_path / "a.npy", tmp_path / "b.npy")
+    assert s["where"]["boundary_a"]["n_with_cue"] == 32                          # the two columns either side of x = 32 only
+
+
+def test_compare_refuses_maps_on_different_grids_of_the_same_size(tmp_path):
+    from rasterio.transform import from_origin
+    p, _ = _scene()
+    _write(tmp_path / "a.tif", p)
+    with rasterio.open(tmp_path / "b.tif", "w", driver="GTiff", height=p.shape[0], width=p.shape[1], count=1, dtype=p.dtype,
+                       crs="EPSG:32633", transform=from_origin(512800.0, 5000000.0, 10.0, 10.0)) as dst:
+        dst.write(p[None])
+    with pytest.raises(SystemExit, match="not on the first map's grid"):
+        main(["compare", str(tmp_path / "a.tif"), str(tmp_path / "b.tif"), "--out", str(tmp_path / "x")])
+
+
+def test_compare_negative_label_codes_are_unlabelled_without_a_nodata_tag(tmp_path):
+    rng = np.random.default_rng(4)
+    a = rng.integers(0, 2, (32, 32)); b = rng.integers(0, 2, (32, 32))
+    lab = rng.integers(0, 2, (32, 32)); lab[:4, :4] = -1; lab[0, 0] = 1       # window (0,0): 1 labelled pixel of 16
+    for n, x in (("a", a), ("b", b), ("l", lab)):
+        np.save(tmp_path / f"{n}.npy", x)
+    s = _cmp(tmp_path, tmp_path / "a.npy", tmp_path / "b.npy", "--labels", tmp_path / "l.npy")
+    assert s["graded"]["crosstab"]["n"] <= 63                                  # window (0,0) is not graded
+
+
+def test_compare_degenerate_inputs_are_named_refusals(tmp_path):
+    rng = np.random.default_rng(5)
+    np.save(tmp_path / "a.npy", rng.integers(0, 2, (32, 32))); np.save(tmp_path / "b.npy", rng.integers(0, 2, (32, 32)))
+    np.save(tmp_path / "small.npy", rng.integers(0, 2, (16, 16))); np.save(tmp_path / "neg.npy", -np.ones((32, 32), int))
+    for extra, msg in ((["--labels", tmp_path / "small.npy"], "has shape"), (["--groups", tmp_path / "small.npy"], "has shape"),
+                       (["--groups", tmp_path / "neg.npy"], "no valid group"), (["--patch", "0"], "--patch"), (["--patch", "64"], "--patch")):
+        with pytest.raises(SystemExit, match=msg):
+            main(["compare", str(tmp_path / "a.npy"), str(tmp_path / "b.npy"), "--out", str(tmp_path / "x"), *map(str, extra)])

@@ -104,7 +104,12 @@ boundary enrichment of the differing windows, and with `--labels` which side is
 right and the cross-tab), `differing_windows.csv` and `disagreement.tif`. Class
 maps are read as integers; a single-band probability map is thresholded at
 `--threshold` and a multi-band score map argmaxed, so the module never compares
-floating point. The two maps must share one grid.
+floating point. The two maps must share one grid, and so must `--labels` and
+`--groups`: a raster in another CRS or at another origin is refused. Both maps
+are pooled over the pixels both predicted, a tied window goes to the more
+confident voters, and `disagreement.tif` is NaN where nothing was compared. With
+`--labels`, every number above stays label-free over all compared windows and
+the graded block alone is restricted to the windows with a majority label.
 
 ```bash
 oe-inferencex sample water_prob.tif --budget 300 --out to_label.csv
