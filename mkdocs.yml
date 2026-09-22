@@ -5,6 +5,13 @@ repo_url: https://github.com/2imi9/olmoearth_inferenceX
 repo_name: 2imi9/olmoearth_inferenceX
 edit_uri: edit/main/docs/
 
+# --strict on its own does not catch a link to an anchor that does not exist: mkdocs logs that at INFO and the
+# build stays green. Raising it to a warning is what makes the docs job of .github/workflows/check.yml able to
+# fail, which is how TECHNIQUES.md's link to exp77 came to point at its own page.
+validation:
+  anchors: warn
+  unrecognized_links: warn
+
 docs_dir: docs
 exclude_docs: |
   figures/*.py

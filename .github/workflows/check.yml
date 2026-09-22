@@ -1,0 +1,65 @@
+# Every push to main and every pull request: the recorded numbers still hold, the package still installs from
+# nothing but its declared dependencies, and the docs still build. It is not a release pipeline; publish.yml is.
+#
+# Why this exists at all, in a repository that is a research record rather than a product. The record's own check
+# is the claim ledger, and tests/test_claims.py evaluates every claim's check against the committed artifacts, so
+# `pytest` is the ledger run. Until now it ran only when someone remembered. The September 2026 audit then found
+# six defects in a released version, four of which returned a plausible wrong answer and exited 0, which is the
+# failure a person reading their own terminal does not catch.
+#
+# The geo extra is not optional here. tests/test_cli.py opens with importorskip("rasterio"), so on the core
+# dependencies alone the whole file is skipped: twelve tests over the command line, including the one that pins
+# which raster carries which quantity, are not collected and the run is green for the wrong reason. That is the
+# exact path 1.1.3's worst defect lived on.
+name: Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    # Both ends of the declared requires-python, so the lower bound is a measured claim and not a hope.
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      # --frozen: a pyproject edited without relocking fails here rather than resolving to something else.
+      - name: The suite, the formulas and the claim ledger against the committed artifacts
+        run: uv run --frozen --extra geo --python ${{ matrix.python }} pytest -q
+      - name: The suite-regression runner still scores a candidate reading and grades an encoder
+        run: uv run --frozen --extra geo --python ${{ matrix.python }} python scripts/suite_regression.py --smoke
+
+  wheel:
+    # What someone gets from `pip install olmoearth-inferencex`. publish.yml runs this too, at release, which is
+    # after the tag exists; here it runs while the change is still a diff.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv build
+      - name: The wheel installs and runs with nothing but its declared dependencies
+        run: |
+          uv venv /tmp/clean
+          uv pip install --python /tmp/clean/bin/python dist/*.whl
+          /tmp/clean/bin/oe-inferencex demo --out /tmp/demo
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: mkdocs --strict, so a page that stopped resolving fails here and not on Read the Docs
+        env:
+          DISABLE_MKDOCS_2_WARNING: "true"
+        run: uv run --frozen --with-requirements docs/requirements.txt mkdocs build --strict
