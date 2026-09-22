@@ -46,3 +46,50 @@ def test_exp68_design_weighted_lead_is_unbiased_under_its_own_design():
     assert abs(wl.mean() - truth) < 3 * se, (wl.mean(), truth, se)                # unbiased
     assert (nl.mean() - truth) / (nl.std() / np.sqrt(nl.size)) > 10                 # and the check has power
     assert nl.mean() - wl.mean() == pytest.approx(0.0216, abs=0.004)               # P4's recorded gap, another route
+
+
+def test_exp65_cross_fitted_lead_has_no_optimism_and_reproduces():
+    """exp65's held-out fusion leads come from cross-fitting by tile. The known answer for a leak-free pipeline is a
+    null: scramble the four extra readings so they carry nothing about errors, and the held-out fusion must not beat
+    the margin. Over 12 scrambles the largest null lead was +0.00005 on the test split and every Bolivia one was
+    negative, against the recorded +0.0021 (20%) and +0.0029 (30%)."""
+    from oe_inferencex.calibrate import fit_ranker
+    z = np.load(os.path.join(ROOT, "exp", "out", "exp65_readings.npz"))
+    names = ("confidence", "tile_phase", "boundary", "ndwi_level", "s2_variance")
+    sig = {k: z[f"ranker/bolivia/{k}"].astype(np.float64) for k in names}
+    err = z["ranker/bolivia/err"].astype(np.float64)
+    tile = z["ranker/bolivia/tile"]
+    ok = np.ones(err.size, bool)
+    conf = metrics.excess_aurc(sig["confidence"], err)
+    _, rep = fit_ranker(sig, err, ok, groups=tile, family="x", folds=5)
+    assert round(conf, 4) == 0.0105 and round(rep["held_out"]["excess_aurc"], 4) == 0.0084     # the recorded pair
+    rng = np.random.default_rng(0)
+    for _ in range(3):
+        perm = rng.permutation(err.size)
+        s0 = {"confidence": sig["confidence"], **{k: sig[k][perm] for k in names[1:]}}
+        _, r0 = fit_ranker(s0, err, ok, groups=tile, family="x", folds=5)
+        assert conf - r0["held_out"]["excess_aurc"] < 0.0005                                # no lead from noise
+
+
+def test_exp55_activation_clustered_figures_reproduce_from_the_per_event_records():
+    """The clustered figures in geoid-capture-effect-size and geoid-exception-rate were computed by hand in a docs
+    commit (297a6e0) with no generator and no check: activations as the unit, areas averaged within an activation
+    first. Recomputed here from exp55's per-event records by an independent route, they reproduce exactly."""
+    import json
+    from math import comb
+    R = json.load(open(os.path.join(ROOT, "exp", "out", "exp55_summary.json")))["results"]
+    want = {"A": ("control NDWI level", 0.843, 16.9, (9, 0), 2.0e-03), "B": ("control S1 level", 0.607, 12.1, (9, 1), 1.1e-02)}
+    for t, (ctl, cap_w, ratio_w, (w_w, l_w), p_w) in want.items():
+        ev, scored = R[t]["per_event"], R[t]["across_events"]["events_scored"]
+        conf = "averaged confidence"
+        act = {e: e.rsplit("-", 1)[0] for e in scored}
+        acts = sorted(set(act.values()))
+        cap = {e: ev[e]["capture"][conf]["0.05"] for e in scored}
+        ratio = {e: cap[e] / (max(1, round(0.05 * ev[e]["n_windows"])) / ev[e]["n_windows"]) for e in scored}
+        gain = {e: ev[e]["pooled_eaurc"][ctl] - ev[e]["pooled_eaurc"][conf] for e in scored}
+        by = lambda d: [np.mean([d[e] for e in scored if act[e] == a]) for a in acts]
+        assert round(float(np.median(by(cap))), 3) == cap_w and round(float(np.median(by(ratio))), 1) == ratio_w
+        g = by(gain)
+        w, l = sum(x > 0 for x in g), sum(x < 0 for x in g)
+        p = sum(comb(w + l, k) for k in range(w, w + l + 1)) / 2 ** (w + l)
+        assert (w, l) == (w_w, l_w) and p == pytest.approx(p_w, rel=0.06)

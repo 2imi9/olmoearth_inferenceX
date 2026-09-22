@@ -1365,6 +1365,7 @@
 
 - id: geoid-exception-rate
   statement: "Over 45 scored GEOID-Flood areas of interest the NDWI index beats the S2 head's confidence on 2 for permanent water and the sensor-level control beats the S1 head's confidence on 1 for post-event water (preregistered P1 and P2); those 45 areas come from only 9 and 10 CEMS activations and both permanent-water exceptions sit inside a single activation, EMSR273, so the honest exception rate is one activation in nine rather than two areas in forty-five, and clustered by activation the preregistered tests hold at p = 2e-03 and 1e-02 rather than 3e-11 and 1e-12; Bolivia-type exceptions exist and are a minority, to be read against nine activations and not forty-five events."
+  crosscheck: tests/test_known_answer.py::test_exp55_activation_clustered_figures_reproduce_from_the_per_event_records
   status: supported
   experiments: [exp55]
   artifacts: [exp/out/exp55_summary.json]
@@ -1387,6 +1388,7 @@
 
 - id: geoid-capture-effect-size
   statement: "On the median GEOID-Flood area of interest the 5% of windows confidence flags hold 88% of the permanent-water errors and 64% of the post-event water errors, 17.5 and 12.8 times a random 5% (preregistered P3, threshold 0.25); the 45 areas cluster into 9 and 10 CEMS activations with EMSR192 contributing about half of them, and clustering by activation barely moves the effect a reviewer would feel, to 0.843 and 0.607, or 16.9 and 12.1 times a random 5%."
+  crosscheck: tests/test_known_answer.py::test_exp55_activation_clustered_figures_reproduce_from_the_per_event_records
   status: supported
   experiments: [exp55]
   artifacts: [exp/out/exp55_summary.json]
@@ -1840,6 +1842,7 @@
 
 - id: calibrate-ranker-fusion-beats-confidence
   statement: "A fusion of five label-free readings (confidence, aligned tile-phase, the boundary indicator, NDWI level, S2 patch variance) fitted to labels and cross-fitted by tile through oe_inferencex.calibrate has a lower held-out excess AURC than the model's own confidence on both Sen1Floods11 testbeds: 0.0084 against 0.0105 on Bolivia (263 tiles against 69) and 0.0069 against 0.0098 on the test split (318 against 134); preregistered P1 holds."
+  crosscheck: tests/test_known_answer.py::test_exp65_cross_fitted_lead_has_no_optimism_and_reproduces
   status: supported
   experiments: [exp65]
   artifacts: [exp/out/exp65_summary.json]

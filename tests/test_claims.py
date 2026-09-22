@@ -124,10 +124,11 @@ def test_claims_from_exp79_on_name_an_independent_crosscheck():
     that reason. From exp79 on, a claim must also name a test that reaches the same number by another route - a
     known answer, an enumeration, or a second artifact - as `crosscheck: tests/<file>.py::<test>`."""
     for c in CLAIMS:
-        if not any(int(e[3:]) >= 79 for e in c["experiments"]):
-            continue
         x = c.get("crosscheck")
-        assert x, f"claim {c['id']!r} (from {c['experiments']}) names no independent crosscheck"
+        if any(int(e[3:]) >= 79 for e in c["experiments"]):
+            assert x, f"claim {c['id']!r} (from {c['experiments']}) names no independent crosscheck"
+        if not x:
+            continue                                   # older claims may carry one; any that is named must exist
         path, _, name = x.partition("::")
         with open(os.path.join(ROOT, path), encoding="utf-8") as f:
             assert f"def {name}(" in f.read(), f"claim {c['id']!r}: crosscheck {x} does not exist"
