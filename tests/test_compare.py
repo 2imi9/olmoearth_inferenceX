@@ -329,8 +329,10 @@ def test_compare_inferences_per_group_crosstab_with_groups_lacking_disagreement(
     assert per["g1"]["corrected"] == per["g1"]["broken"] == 0 and per["g1"]["phi"] == 1.0
     assert per["g2"]["n"] == 0 and np.isnan(per["g2"]["phi"]) and np.isnan(out["per_group"]["g2"]["rate"])
     og = out["graded"]["over_groups"]
-    assert og["n_groups"] == 4 and og["t"] >= 3 and og["n_undefined"] == 0
-    assert og["w"] + og["l"] + og["t"] == 4 and all(type(i) is str for i in og["flipped"])
+    # g2 has no valid window, so it has no net correction: undefined, not a tie. Until 2026-09-22 this test pinned
+    # n_undefined == 0, which is audit finding 9: padding a comparison with masked tiles diluted its verdict.
+    assert og["n_groups"] == 3 and og["t"] >= 2 and og["n_undefined"] == 1
+    assert og["w"] + og["l"] + og["t"] == 3 and all(type(i) is str for i in og["flipped"])
     back = json.loads(json.dumps(summary(out), allow_nan=False))
     assert back["graded"]["per_group"]["g0"]["phi"] is None and back["per_group"]["g2"]["rate"] is None
     same = compare_inferences(a, b, ok, groups=groups, labels=lab)   # the (N,) form gives the same groups

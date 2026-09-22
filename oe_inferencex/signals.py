@@ -33,7 +33,8 @@ def confidence(logits, multiclass=None, form="margin"):
     the default and the form the water testbeds used, where the forms are one ranking. "top1" is minus the log of
     the top softmax probability, log(1 + sum over the other classes of exp(z_j - z_top)), a tie-free monotone
     form of one minus the top probability: on the 16 multi-class tasks of Ai2's suite it ranked errors better than
-    top-1 minus top-2 on 14, and the logit margin was the weakest of the three forms on all 16 (exp76)."""
+    top-1 minus top-2 on 14, and the logit margin was the weakest of the three forms on 14 of 16 by AUROC and 15 of
+    16 by excess AURC (exp76), tying for best on awf_sentinel2."""
     if form not in ("margin", "top1"):
         raise ValueError(f"form must be 'margin' or 'top1', got {form!r}")
     x = np.asarray(logits)
@@ -143,10 +144,16 @@ def _crop(img, size):
 
 
 def ndwi(img, bands=S2_BANDS):
-    """Normalised difference water index (green - NIR) / (green + NIR) per pixel, denominator clipped at 1."""
+    """Normalised difference water index (green - NIR) / (green + NIR) per pixel; 0 where both bands are 0.
+
+    Scale-free, so digital numbers and reflectance give the same index. Until 2026-09-22 the denominator was clipped
+    at 1, harmless on integer DN but on reflectance it shrank every value: open water with green 0.10 and NIR 0.02,
+    NDWI 0.667, came out 0.08, inside the ndwi_ambiguous cue's band (audit 2026-09-21, finding 16)."""
     x = np.asarray(img).astype(np.float64)
     g, nir = x[..., bands.index("B03"), :, :], x[..., bands.index("B08"), :, :]
-    return (g - nir) / np.clip(g + nir, 1, None)
+    den = g + nir
+    with np.errstate(divide="ignore", invalid="ignore"):
+        return np.where(den > 0, (g - nir) / np.where(den > 0, den, 1.0), 0.0)
 
 
 def ndwi_gradient(img, patch=4, size=None, bands=S2_BANDS):

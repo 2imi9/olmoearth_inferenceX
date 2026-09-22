@@ -104,6 +104,14 @@ def _folds(groups, n, folds, seed=0):
     """Fold id per row: groups (a group id per row, or None for one row per group) split into `folds` folds."""
     g = np.arange(n) if groups is None else np.asarray(groups).ravel()
     ids = np.unique(g)
+    if groups is not None and ids.size < 2:
+        # One group leaves nothing to fit on when that group is held out, so every row came back unscored and
+        # fit_side reported the "always side a" rate as its fitted rule's held-out accuracy: 0.196 against an honest
+        # 0.830 on exp60, turning a rule that beats the baseline into one that loses to it (audit, 2026-09-21).
+        raise ValueError(
+            f"cross-fitting by group needs at least two groups, got {ids.size}. Pass tile or event ids with at least "
+            "two distinct values, or groups=None to cross-fit by window, which is optimistic because neighbouring "
+            "windows are not independent")
     rng = np.random.default_rng(seed)
     order = rng.permutation(len(ids))
     fold_of = {ids[i]: k % folds for k, i in enumerate(order)}
@@ -229,11 +237,19 @@ def fit_side(features_a, features_b, a, b, ok, labels, groups=None, family=None,
     g = None if groups is None else np.broadcast_to(np.asarray(groups).reshape(np.asarray(groups).shape + (1,) * (a_.ndim - np.asarray(groups).ndim)), a_.shape)[d]
     fold = _folds(g, len(y), folds)
     held = _crossfit(X, y, fold, False, folds)
+    # Rows in a fold that could not be fitted are NaN. `NaN > 0` is False, so they used to count as "believe side a"
+    # inside the held-out share; they are excluded and counted, as fit_ranker has done since 2026-09-21.
+    scored = np.isfinite(held)
+    n_unscored = int((~scored).sum())
     fitted_right = (held > 0) == (y > 0.5)
     base_right = ((feats[f"{baseline}:a-b"][d] < 0) == (y > 0.5))
     a_right, b_right = (a_ == lab)[d], (b_ == lab)[d]
     report = {"n_disagree": int(d.sum()), "n_groups": int(len(np.unique(g))) if g is not None else None, "folds": folds, "weights": fusion.weights(), "bias": bias,
-              "held_out": {"share_right": float(fitted_right.mean()) if d.any() else float("nan")},
+              "held_out": {"share_right": float(fitted_right[scored].mean()) if scored.any() else float("nan")},
+              "n_unscored_rows": n_unscored, "n_scored_rows": int(scored.sum()),
+              "unscored_note": ("no fold could be fitted; the held-out share is undefined" if scored.size and not scored.any()
+                                else f"{n_unscored} rows sat in folds that could not be fitted and are excluded from the held-out share"
+                                if n_unscored else None),
               "baseline": {"reading": baseline, "share_right": float(base_right.mean()) if d.any() else float("nan")},
               "always_a": float(a_right.mean()) if d.any() else float("nan"), "always_b": float(b_right.mean()) if d.any() else float("nan"), "coin": 0.5,
               "neither_right": float((~a_right & ~b_right).mean()) if d.any() else float("nan")}
@@ -241,6 +257,7 @@ def fit_side(features_a, features_b, a, b, ok, labels, groups=None, family=None,
         gains = {}
         for gid in np.unique(g):
             m = g == gid
+            m = m & scored
             if m.sum() >= min_group_windows:
                 gains[gid.item() if hasattr(gid, "item") else gid] = float(fitted_right[m].mean() - base_right[m].mean())
         report["over_groups_vs_baseline"] = over_groups(gains)

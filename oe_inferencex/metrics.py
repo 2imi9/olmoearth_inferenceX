@@ -149,10 +149,17 @@ def expected_calibration_error(confidence, correct, bins=10):
     Returns (ece, rows) with one row (lo, hi, n, mean confidence, accuracy) per non-empty bin."""
     conf = np.asarray(confidence, dtype=np.float64).flatten()
     corr = np.asarray(correct, dtype=np.float64).flatten()
+    # Units with no finite confidence or outcome (no-data) are not in the population at all. Until 2026-09-22 they
+    # were dropped from the bins but kept in the denominator, so a scene 30% no-data reported 70% of its ECE; and a
+    # confidence of exactly 0.0 fell outside the half-open first bin, returning 0.0 for data whose ECE is 0.5.
+    keep = np.isfinite(conf) & np.isfinite(corr)
+    conf, corr = conf[keep], corr[keep]
+    if ((conf < 0) | (conf > 1)).any():
+        raise ValueError("confidence must be a probability in [0, 1]")
     edges = np.linspace(0, 1, bins + 1)
     total, rows = 0.0, []
-    for lo, hi in zip(edges[:-1], edges[1:]):
-        m = (conf > lo) & (conf <= hi)
+    for j, (lo, hi) in enumerate(zip(edges[:-1], edges[1:])):
+        m = ((conf >= lo) if j == 0 else (conf > lo)) & (conf <= hi)
         if m.any():
             gap = abs(corr[m].mean() - conf[m].mean())
             total += m.mean() * gap

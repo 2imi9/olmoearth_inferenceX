@@ -26,6 +26,7 @@ class Cue:
     share_correct: float | None        # share of correct windows carrying the cue
     reference: str                     # what "error" meant when the shares were measured
     source: str                        # experiment(s); every number traces to exp/out/
+    measured_quantile: float | None = None   # for a cue with a {quantile} knob: the cut the shares were measured at
 
     @property
     def enrichment(self):
@@ -36,7 +37,14 @@ class Cue:
 
     def quote(self, **fmt):
         """The templated sentence with its evidence; `fmt` fills placeholders such as {quantile} in the sentence."""
+        if "{quantile" in self.sentence and "quantile" not in fmt:
+            fmt = {**fmt, "quantile": self.measured_quantile}
         sentence = self.sentence.format(**fmt) if fmt else self.sentence
+        q = fmt.get("quantile")
+        if self.measured_quantile is not None and q is not None and abs(q - self.measured_quantile) > 1e-9:
+            # the shares were measured at one cut; quoting them beside another would be a number nobody measured
+            return (f"{sentence} (enrichment measured only at the {self.measured_quantile:.0%} cut, "
+                    f"not at {q:.0%}; {self.source})")
         if self.enrichment is None:
             return f"{sentence} (enrichment not yet measured; {self.source})"
         return (f"{sentence} ({self.share_errors:.0%} of error windows vs {self.share_correct:.0%} of correct ones, "
@@ -45,6 +53,7 @@ class Cue:
 
 BOLIVIA = "Sen1Floods11 Bolivia hand labels"
 WC_DISAGREE = "WorldCover disagreements vs agreements, 27 rule scenes"
+WC_DISAGREE_23 = "WorldCover disagreements vs agreements, the 24 rule scenes with at least 8 errors"
 
 # The library. The expert-label shares are exp37's measurement on identical windows (Sen1Floods11 Bolivia, 81,984
 # valid windows, 7,248 errors of the exp18 head; exp/out/exp37_summary.json, part_b.analysis.cues); the boundary
@@ -52,12 +61,14 @@ WC_DISAGREE = "WorldCover disagreements vs agreements, 27 rule scenes"
 # their experiments recorded. tests/test_explain.py checks the expert-label shares against exp37's summary.
 CUES = {
     "boundary": Cue("boundary", "sits on a prediction boundary", 0.750, 0.214, BOLIVIA, "exp18, exp36, exp37"),
-    "low_confidence": Cue("low_confidence", "is among the least confident {quantile:.0%} of the scene's windows (ties included)", 0.589, 0.163, BOLIVIA, "exp37"),
+    "low_confidence": Cue("low_confidence", "is among the least confident {quantile:.0%} of the scene's windows (ties included)", 0.589, 0.163, BOLIVIA, "exp37", 0.2),
     "unstable": Cue("unstable", "changes prediction under a sub-patch shift of the tiling (top 20% of the scene)", 0.583, 0.164, BOLIVIA, "exp13, exp18, exp37"),
     "ndwi_ambiguous": Cue("ndwi_ambiguous", "is spectrally ambiguous between water and land (|NDWI| < 0.1)", 0.483, 0.067, BOLIVIA, "exp06, exp09, exp37"),
     "dihedral_disagree": Cue("dihedral_disagree", "is predicted differently under flips and rotations (top 20% of the scene)", 0.579, 0.164, BOLIVIA, "exp36, exp37"),
     "seasonal_water": Cue("seasonal_water", "lies on seasonal water (JRC seasonality 1-11 months)", 0.39, 0.08, WC_DISAGREE, "exp25"),
-    "reference_unstable": Cue("reference_unstable", "changed class between WorldCover 2020 and 2021", 0.10, 0.007, WC_DISAGREE, "exp23"),
+    # exp23's recorded medians (T1_enrichment), 13.7x over 24 scenes. Until 2026-09-22 this read 0.10 and 0.007, a
+    # truncation that quoted 14.3x, on the 27 scenes of exp25 rather than the 24 exp23 kept (audit finding 14).
+    "reference_unstable": Cue("reference_unstable", "changed class between WorldCover 2020 and 2021", 0.108, 0.0079, WC_DISAGREE_23, "exp23"),
     "osm_disagrees": Cue("osm_disagrees", "has an OSM river centerline where the map has no water", None, None, WC_DISAGREE + " (1.5x enriched, mostly reference-vs-reference)", "exp15"),
 }
 

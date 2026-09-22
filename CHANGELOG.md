@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+**Twelve of the fourteen findings the 21 September audit left open, fixed, each pinned by a test that reproduces
+its consequence.** No recorded number changes.
+
+- **High: `fit_side` with one group id reported "always believe side a" as its fitted rule's held-out accuracy**: 0.196 on exp60 against an honest 0.830, turning a rule that beats the 0.690 baseline into one that loses to it. Cross-fitting by group now needs two groups and says so, and rows in folds that could not be fitted are excluded and counted, as `fit_ranker` has done since 1.1.3.
+- `compare` counted groups with no valid window as ties, so padding with masked tiles turned "b is clearly worse" into "a wash"; they are undefined now.
+- `expected_calibration_error` divided by units it had dropped (a scene 30% no-data reported 70% of its ECE) and lost confidences of exactly 0.
+- With `form="top1"` the confidence quantiles were log-probabilities under a probability's label; they are probabilities now, with the scale stated.
+- A partial reference now says its capture is over its own windows, not the review set of the same budget.
+- The `reference_unstable` cue quoted 14.3x on 27 scenes; exp23 recorded 13.7x on 24.
+- The `low_confidence` cue no longer quotes its 20%-cut enrichment at another cut, and `library_table()` no longer prints a raw format placeholder.
+- NDWI clipped its denominator at 1, so on reflectance input clear water (0.667) read 0.08 and was called ambiguous; it is scale-free now.
+- `determinism_check` on an empty scene gives no verdict rather than a failure; an empty scene and an oversized patch are named refusals; a ragged edge that is never ranked is reported; a docstring overstating exp76 is corrected.
+
 ## 1.2.0 (2026-09-22)
 
 **The package now says how wrong a map is, given a labelled sample.** exp78 measured what that costs on the

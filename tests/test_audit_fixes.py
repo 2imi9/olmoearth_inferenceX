@@ -100,3 +100,151 @@ def test_an_unfittable_fold_is_never_reported_as_a_held_out_score():
                         family="demo")
     assert rep["n_unscored_rows"] > 0 and rep["unscored_note"]
     assert np.isnan(rep["held_out"]["excess_aurc"]), "an undefined held-out score must be NaN, never a number"
+
+
+def test_fit_side_with_one_group_is_refused_rather_than_reported_as_always_side_a():
+    """The high finding the 21 September audit left open. One group id collapses every fold; each held-out logit is
+    NaN, NaN > 0 is False, and fit_side reported the "always a" rate as its fitted rule's held-out accuracy: 0.196
+    on exp60 against an honest 0.830 cross-fitted by event, reversing the verdict against a 0.690 baseline."""
+    import os
+    from oe_inferencex.calibrate import fit_ranker, fit_side
+    z = np.load(os.path.join(os.path.dirname(__file__), "..", "exp", "out", "exp60_masks.npz"))
+    fa, fb = {"margin": z["margin_A_s1pre"]}, {"margin": z["margin_B_s1post"]}
+    one = np.zeros_like(z["event"])
+    with pytest.raises(ValueError, match="at least two groups"):
+        fit_side(fa, fb, z["A_s1pre"], z["B_s1post"], z["ok"], z["y_after"], groups=one, family="x")
+    _, r = fit_side(fa, fb, z["A_s1pre"], z["B_s1post"], z["ok"], z["y_after"], groups=z["event"], family="x")
+    assert round(r["held_out"]["share_right"], 3) == 0.830 and r["n_unscored_rows"] == 0
+    with pytest.raises(ValueError, match="at least two groups"):
+        fit_ranker({"m": z["margin_A_s1pre"]}, z["A_s1pre"] != z["y_after"], z["ok"], groups=one, family="x")
+
+
+def test_fit_side_excludes_unfittable_folds_instead_of_reading_them_as_side_a():
+    """Two groups where one has no disagreement of one kind: that fold cannot be fitted, and its rows must be
+    counted as unscored, not scored as "believe a"."""
+    from oe_inferencex.calibrate import _crossfit
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(40, 2)); y = np.r_[np.zeros(20), (rng.random(20) < 0.5).astype(float)]
+    fold = np.r_[np.zeros(20, int), np.ones(20, int)]
+    held = _crossfit(X, y, fold, False, 2)
+    assert np.isnan(held[20:]).all()                                  # training side of fold 1 has no positives
+
+
+# ----------------------------------------------------------------------------- the rest of the 21 September audit
+def test_compare_counts_a_group_with_no_valid_window_as_undefined_not_a_tie():
+    """Finding 9: five tiles where b breaks four and corrects one, padded with nine fully masked tiles, read
+    'median 0.0, a wash' with n_undefined 0. The masked tiles are undefined now and the verdict is b's."""
+    from oe_inferencex.compare import compare_inferences
+    rng = np.random.default_rng(0)
+    lab = rng.integers(0, 2, (14, 4, 4)); a = lab.copy(); b = lab.copy(); ok = np.ones_like(lab, bool)
+    for t in range(4):
+        b[t, 0, :2] = 1 - lab[t, 0, :2]                           # b breaks tiles 0-3
+    a[4, 0, :2] = 1 - lab[4, 0, :2]                               # b corrects tile 4
+    ok[5:] = False                                                # nine fully masked tiles
+    og = compare_inferences(a, b, ok, groups=np.arange(14)[:, None, None], labels=lab)["graded"]["over_groups"]
+    assert og["n_undefined"] == 9 and og["n_groups"] == 5 and og["median"] < 0 and og["share_flipped"] == 0.8
+
+
+def test_ece_ignores_no_data_and_counts_a_confidence_of_zero():
+    """Finding 11: a scene 30% no-data reported 70% of its ECE; confidence exactly 0.0 fell out of every bin."""
+    from oe_inferencex.metrics import expected_calibration_error as ece
+    rng = np.random.default_rng(1)
+    conf = rng.random(1000); corr = (rng.random(1000) < conf ** 2).astype(float)
+    full = ece(conf, corr)[0]
+    nod = conf.copy(); nod[:300] = np.nan
+    assert ece(nod, corr)[0] == pytest.approx(ece(conf[300:], corr[300:])[0])
+    assert ece(np.zeros(10), np.ones(10))[0] == pytest.approx(1.0)       # confident nowhere, right everywhere
+    assert full > 0
+    with pytest.raises(ValueError):
+        ece(np.array([1.5]), np.array([1.0]))
+
+
+def test_top1_confidence_quantiles_are_probabilities():
+    """Finding 12: with form='top1' the quantiles were mean log-probabilities, a median of -0.62, labelled a probability."""
+    from oe_inferencex.assess import assess_prediction
+    rng = np.random.default_rng(2)
+    logits = rng.normal(size=(4, 32, 32)) * 2
+    out = assess_prediction(logits, is_logit=True, form="top1")
+    q = out["confidence_quantiles"]
+    assert all(0 < v <= 1 for v in q.values()) and "geometric mean" in out["confidence_scale"]
+    margin_out = assess_prediction(logits, is_logit=True)                                   # the default is unchanged
+    assert "confidence_scale" not in margin_out
+
+
+def test_a_partial_reference_says_its_capture_is_over_its_own_windows():
+    """Finding 13: with a reference over part of the map, capture at 0.05 described other windows than the review
+    set at 0.05, silently."""
+    from oe_inferencex.assess import assess_prediction
+    rng = np.random.default_rng(3)
+    p = rng.random((64, 64)); ref = (rng.random((64, 64)) < 0.3).astype(int); ref[:, 32:] = -1
+    out = assess_prediction(p, is_logit=False, reference=ref, budgets=(0.05,))
+    rc = out["against_reference"]
+    assert rc["n_windows_scored"] < out["n_windows"] and "not of the review sets" in rc["population"]
+    assert rc["error_capture_at_budget"][0.05]["n_reviewed"] == max(1, round(0.05 * rc["n_windows_scored"]))
+    assert any("reference covers" in w for w in out["warnings"])
+
+
+def test_reference_unstable_cue_quotes_exp23_as_recorded():
+    """Finding 14: the cue quoted 14.3x on 27 scenes; exp23 recorded 13.7x on 24."""
+    import json, os
+    from oe_inferencex.explain import CUES
+    t1 = json.load(open(os.path.join(os.path.dirname(__file__), "..", "exp", "out", "exp23_summary.json")))["tests"]["T1_enrichment"]
+    c = CUES["reference_unstable"]
+    assert c.share_errors == pytest.approx(t1["median_share_errors"], abs=5e-4)
+    assert c.share_correct == pytest.approx(t1["median_share_correct"], abs=5e-5)
+    assert round(c.enrichment, 1) == 13.7 and "24" in c.reference
+
+
+def test_low_confidence_cue_does_not_quote_its_20_percent_enrichment_at_another_cut():
+    """Finding 15: at a 90% cut the cue still quoted exp37's 3.6x, measured at 20%. Finding 20: with no argument the
+    library printed a raw '{quantile:.0%}' placeholder."""
+    from oe_inferencex.explain import CUES, library_table
+    c = CUES["low_confidence"]
+    assert "3.6x" in c.quote(quantile=0.2)
+    q90 = c.quote(quantile=0.9)
+    assert "3.6x" not in q90 and "measured only at the 20% cut" in q90 and "90%" in q90
+    row = [r for r in library_table() if r["name"] == "low_confidence"][0]
+    assert "{" not in row["quote"] and "20%" in row["quote"]
+
+
+def test_ndwi_is_the_same_on_reflectance_and_digital_numbers():
+    """Finding 16: open water in L2A reflectance (green 0.10, NIR 0.02, NDWI 0.667) computed to 0.08, inside the
+    cue's ambiguity band, because the denominator was clipped at 1."""
+    from oe_inferencex.signals import S2_BANDS, ndwi
+    img = np.zeros((12, 2, 2)); img[S2_BANDS.index("B03")] = 0.10; img[S2_BANDS.index("B08")] = 0.02
+    assert ndwi(img)[0, 0] == pytest.approx(2 / 3)
+    assert ndwi(img * 10000)[0, 0] == pytest.approx(2 / 3)
+    assert ndwi(np.zeros((12, 2, 2)))[0, 0] == 0.0
+
+
+def test_determinism_check_gives_no_verdict_on_nothing():
+    """Finding 17: a fully masked scene returned passes=False, booked as an engine failure."""
+    from oe_inferencex.compare import determinism_check
+    a = np.zeros((4, 4), int)
+    assert determinism_check(a, a, np.zeros((4, 4), bool), floor=0.03)["passes"] is None
+    assert determinism_check(a, a, np.ones((4, 4), bool), floor=0.03)["passes"] is True
+
+
+def test_an_empty_scene_and_an_oversized_patch_are_named_refusals():
+    """Finding 18: both died with raw numpy errors pointing at unrelated lines."""
+    from oe_inferencex.assess import assess_prediction
+    p = np.full((16, 16), 0.7)
+    with pytest.raises(ValueError, match="no valid window"):
+        assess_prediction(p, is_logit=False, nodata_mask=np.ones((16, 16), bool))
+    with pytest.raises(ValueError, match="larger than the map"):
+        assess_prediction(p, is_logit=False, patch=32)
+
+
+def test_a_ragged_edge_is_reported_not_silently_dropped():
+    """Finding 21: a 100 x 100 map at patch 8 never ranked 7.8% of its pixels and said nothing."""
+    from oe_inferencex.assess import assess_prediction
+    out = assess_prediction(np.random.default_rng(4).random((100, 100)), is_logit=False, patch=8)
+    assert out["pixels_outside_window_grid"] == 100 * 100 - 96 * 96
+    assert any("never ranked" in w for w in out["warnings"])
+    assert assess_prediction(np.random.default_rng(4).random((96, 96)), is_logit=False, patch=8)["pixels_outside_window_grid"] == 0
+
+
+def test_the_confidence_docstring_matches_exp76():
+    """Finding 19: the docstring said the logit margin was weakest on all 16 tasks; exp76 says 14 by AUROC, 15 by E-AURC."""
+    from oe_inferencex.signals import confidence
+    assert "all 16" not in confidence.__doc__ and "14 of 16" in confidence.__doc__

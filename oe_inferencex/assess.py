@@ -189,9 +189,16 @@ def assess_prediction(scores, is_logit, patch=4, nodata_mask=None, reference=Non
             warnings.append("probability input: confidence ties where probabilities saturate; prefer logits")
         hard = scores.argmax(0)
         n_classes = C
-    return _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets,
-                   ("1 - max probability (from logits)" if form == "top1" and scores.ndim == 3 else "negative logit margin")
-                   if is_logit else "1 - max probability", warnings, order)
+    out = _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets,
+                  ("1 - max probability (from logits)" if form == "top1" and scores.ndim == 3 else "negative logit margin")
+                  if is_logit else "1 - max probability", warnings, order)
+    if is_logit and form == "top1" and scores.ndim == 3:
+        # The ranking reads the window mean of log p1, which is tie-free; the quantiles a user sets thresholds from
+        # must be on the probability scale. Until 2026-09-22 they were reported as log-probabilities, a median
+        # "confidence" of -0.620, under a label naming a probability (audit 2026-09-21, finding 12).
+        out["confidence_quantiles"] = {q: float(np.exp(v)) for q, v in out["confidence_quantiles"].items()}
+        out["confidence_scale"] = "geometric mean of the top-1 probability over the window's pixels"
+    return out
 
 
 def _check_probabilities(scores, nodata_mask):
@@ -214,6 +221,9 @@ def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, sig
         raise ValueError(f"order must be one of {ORDERS}, got {order!r}")
     margin = np.asarray(margin, dtype=np.float64)
     hard = np.asarray(hard).astype(int)
+    H, W = hard.shape[-2:]
+    if patch > H or patch > W:
+        raise ValueError(f"the window of {patch} px is larger than the map, {H} x {W} px; pass a smaller --patch")
     if nodata_mask is not None:
         margin = np.where(nodata_mask, np.nan, margin)
         hard = np.where(nodata_mask, -1, hard)  # no-prediction pixels do not vote in pooling or boundaries
@@ -237,8 +247,17 @@ def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, sig
         "review_sets": {},
         "confidence_distinct_pooled": int(len(np.unique(conf_w[valid_w]))),
     }
-    rank = review_order(review_score, valid_w)  # first to review first
     n_valid = int(valid_w.sum())
+    if n_valid == 0:
+        raise ValueError("the map has no valid window: every window is at least half no-data (a fully clouded or "
+                         "fully masked scene); there is nothing to rank")
+    # The window grid covers whole windows only; a ragged right or bottom edge is never a candidate. Said, not silent.
+    dropped = int(H * W - (H // patch * patch) * (W // patch * patch))
+    out["pixels_outside_window_grid"] = dropped
+    if dropped:
+        warnings.append(f"{dropped} pixels ({100 * dropped / (H * W):.1f}%) on the right and bottom edge do not fill a "
+                        f"{patch} px window and are never ranked; choose a patch that divides the map to include them")
+    rank = review_order(review_score, valid_w)  # first to review first
     for b in budgets:
         if not (0 < b <= 1):
             raise ValueError(f"budget must be a fraction in (0, 1], got {b}; a budget of 1.0 reviews every window")
@@ -277,7 +296,13 @@ def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, sig
         e, s = err[scored], suspicion[scored]
         r_s = review_score[scored]
         bnd_s = bnd_w[scored]
-        rc = {"n_windows_scored": int(scored.sum()), "error_rate": float(e.mean()), "aurc_confidence": aurc_expected(s, e)}
+        rc = {"n_windows_scored": int(scored.sum()), "error_rate": float(e.mean()), "aurc_confidence": aurc_expected(s, e),
+              "population": "windows with both a prediction and a reference; the capture budgets below are fractions "
+                            "of these, not of the review sets above"}
+        if int(scored.sum()) < n_valid:
+            warnings.append(f"the reference covers {int(scored.sum())} of the {n_valid} valid windows; error capture at "
+                            "each budget is measured over those, so it is not a property of the review set of the same "
+                            "budget above")
         oracle = aurc_expected(e, e)  # errors most suspicious, so rejected first
         rc["excess_aurc_confidence"] = rc["aurc_confidence"] - oracle
         rc["aurc_boundary"] = aurc_expected(bnd_s, e)
@@ -286,7 +311,7 @@ def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, sig
         e_sorted = e[np.argsort(r_s, kind="stable")[::-1]]   # capture follows the review order
         for b in budgets:
             k = max(1, int(round(b * len(e))))
-            cap[b] = {"errors_captured_fraction": float(e_sorted[:k].sum() / max(e.sum(), 1)),
+            cap[b] = {"n_reviewed": int(k), "errors_captured_fraction": float(e_sorted[:k].sum() / max(e.sum(), 1)),
                       "precision_in_set": float(e_sorted[:k].mean())}
         rc["error_capture_at_budget"] = cap
         rc["boundary_share_among_errors"] = float((bnd_s[e > 0] > 0).mean()) if e.sum() else float("nan")

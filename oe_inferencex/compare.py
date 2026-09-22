@@ -263,7 +263,9 @@ def compare_inferences(a, b, ok, groups=None, labels=None, cues=None):
             cells = [_count_by_group(inv, len(ids), m) for m in (okm, ea & ~eb, ~ea & eb, ea & eb)]
             per = {_key(i): _crosstab_counts(n, c, br, bo) for i, n, c, br, bo in zip(ids, *cells)}
             graded["per_group"] = per
-            graded["over_groups"] = over_groups({k: v["corrected"] - v["broken"] for k, v in per.items()})
+            # A group with no valid window has no net correction; it is undefined, not a tie (audit finding 9).
+            graded["over_groups"] = over_groups({k: (v["corrected"] - v["broken"]) if v["n"] > 0 else float("nan")
+                                                 for k, v in per.items()})
         out["graded"] = graded
     return out
 
@@ -290,6 +292,6 @@ def determinism_check(a, b, ok, floor=None, margin_a=None, margin_b=None, groups
         d = np.abs(ma - mb)[okm]
         out["margin_drift"] = {"mean_abs": float(d.mean()) if d.size else float("nan"),
                                "max_abs": float(d.max()) if d.size else float("nan")}
-    if floor is not None:
+    if floor is not None and dis["n"] > 0:                    # nothing compared is no verdict, not a failure
         out["passes"] = bool(dis["rate"] <= floor)
     return out
