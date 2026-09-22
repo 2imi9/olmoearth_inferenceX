@@ -200,6 +200,17 @@ ANOVA intra-cluster correlation up to a term of order `1/T`. Checked by enumerat
 tile-sampled labels claims 95% and delivers 51 to 78%: it uses `S²/n` where the truth is `m S_b²/S²` times
 that, and on exp78's tasks that factor ran 2.7 to 9.8.
 
+All of that assumes tiles of equal size. When tile `i` holds `n_i` windows the quantity of interest is still the
+window rate `θ = Σ n_i Ȳ_i / Σ n_i`, and the unweighted mean of tile means estimates `mean_i Ȳ_i`, the rate of the
+average *tile*, which is a different number whenever size and error rate are related. The estimator is the ratio
+`θ̂ = Σ n_i ȳ_i / Σ n_i` over sampled tiles, with ultimate-cluster variance
+`Σ n_i²(ȳ_i − θ̂)² / (t(t−1) n̄²)`; on equal tiles it is exactly the mean of tile means, which the tests assert.
+MADOS is the case where the difference matters: tiles of 1 to 400 valid windows, an average tile wrong 13.3% of
+the time against 7.4% of windows, and an unweighted estimator 1.78 times the truth. The ratio estimator is
+unbiased there (1.03 over 1,000 draws, Monte Carlo SE 0.03) but its interval from 18 tiles covers 0.60, because a
+variance estimated from so few and so unequal clusters is itself unreliable: with tiles like these, the design is
+wrong and no estimator applied afterwards rescues it.
+
 **11. What labelling the review set gives.** The review set at budget `b` is the `k = bN` most suspect
 windows; `capture(b)` is the share of all `E = θN` errors it holds. The rate a reviewer computes on it is
 therefore

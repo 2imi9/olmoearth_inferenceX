@@ -172,10 +172,12 @@ def test_the_tile_design_reports_the_cluster_interval_and_the_naive_one_beside_i
         assert s["indices"].size == 300, seed
         r = ox.estimate_error_rate(s, err[s["indices"]])
         naive = r["naive_interval_if_treated_as_random"]
-        assert r["method"].startswith("ultimate cluster") and "warning" in r
+        assert r["method"].startswith("ratio estimator") and "warning" in r
         wider += (r["high"] - r["low"]) > (naive["high"] - naive["low"])
         deffs.append(r["design_effect"])
-    assert wider >= 90 and np.median(deffs) > 3
+    # The corrected interval is wider than the naive one on 75% of MADOS draws. The old estimator's was wider on
+    # over 90%, but only because one-window tiles, whose means are 0 or 1, inflated its spread.
+    assert wider >= 60 and np.median(deffs) > 3
 
 
 def test_estimate_refuses_mismatched_or_non_binary_labels():
@@ -290,3 +292,116 @@ def test_the_tile_design_refuses_a_grid_that_cannot_meet_the_budget():
         ox.sample_for_estimation(margin, 300, design="tiles", tiles=np.arange(1024) % 6, per_tile=16)
     ok = ox.sample_for_estimation(margin, 300, design="tiles", tiles=np.repeat(np.arange(64), 16), per_tile=16)
     assert ok["indices"].size == 300 and ok["n_tiles"] == 19
+
+
+# ----------------------------------------------------------------------------- the estimator audit, 2026-09-22
+def test_the_tile_estimate_is_the_window_rate_not_the_average_tiles_rate_on_mados():
+    """MADOS tiles hold 1 to 400 valid windows. The unweighted mean of tile means, which exp78 first recorded,
+    targets the average tile's rate, 0.133, and returned 1.78 times the true 0.074; the ratio estimator weights
+    each tile by its windows and is unbiased to within Monte Carlo noise over 150 draws."""
+    margin, p1, err, tile = _units("mados")
+    ests = []
+    for seed in range(300):
+        s = ox.sample_for_estimation(margin, 300, design="tiles", tiles=tile, seed=seed)
+        ests.append(ox.estimate_error_rate(s, err[s["indices"]])["estimate"])
+    # Over 1,000 draws the ratio is 1.029 with a Monte Carlo SE of 0.030; at 300 draws the SE is 0.055, so 0.2 is
+    # 3.6 SE and still separates cleanly from the old estimator's 1.78. An 8% tolerance at 150 draws, the first
+    # version of this test, was one SE and failed on noise.
+    assert abs(np.mean(ests) / err.mean() - 1) < 0.2, np.mean(ests) / err.mean()
+    ids = np.unique(tile)
+    assert np.mean([err[tile == u].mean() for u in ids]) > 1.7 * err.mean()       # what the old estimator targeted
+
+
+def test_on_equal_tiles_the_ratio_estimator_is_the_mean_of_tile_means_exactly():
+    """Which is why six of exp78's seven tasks did not move when the estimator was corrected."""
+    rng = np.random.default_rng(0)
+    tile = np.repeat(np.arange(40), 16)
+    err = (rng.random(640) < 0.2).astype(float)
+    picked = np.concatenate([np.flatnonzero(tile == u)[:8] for u in rng.choice(40, 12, replace=False)])
+    e, lo, hi, deff, var = est.cluster_interval(err, tile, picked, quantile="normal")
+    means = np.array([err[picked][tile[picked] == u].mean() for u in np.unique(tile[picked])])
+    assert e == pytest.approx(means.mean(), abs=1e-12)
+    assert var == pytest.approx(means.var(ddof=1) / means.size, rel=1e-12)
+    assert deff == pytest.approx(var / (e * (1 - e) / picked.size), rel=1e-12)   # the realised design effect
+
+
+def test_a_clean_map_labelled_by_tile_does_not_get_a_zero_width_interval():
+    rng = np.random.default_rng(0)
+    tiles = np.repeat(np.arange(250), 16)
+    margin = rng.random(4000)
+    s = ox.sample_for_estimation(margin, 300, design="tiles", tiles=tiles, seed=1)
+    r = ox.estimate_error_rate(s, np.zeros(300))
+    assert r["low"] == 0.0 and r["high"] > 0.01 and "between-tile variance is zero" in r["warning"]
+
+
+def test_the_t_quantile_matches_scipy():
+    st = pytest.importorskip("scipy.stats")
+    for df in list(range(1, 31)) + [40, 60, 120, 1000]:
+        assert est.t_quantile_975(df) == pytest.approx(st.t.ppf(0.975, df), abs=1e-5), df
+
+
+def test_nan_margins_are_not_the_suspect_end_so_the_review_set_cannot_hide_behind_no_data():
+    """assess's confidence array is NaN at no-data; argsort put NaN at the suspect end, and at 40% no-data the
+    tool's own review set passed the guard and was estimated at 5.5 times the true rate."""
+    margin, p1, err, tile = _units("mados")
+    nd = np.zeros(margin.size, bool); nd[: int(0.4 * margin.size)] = True
+    m_nan = np.where(nd, np.nan, margin)
+    vi = np.flatnonzero(~nd)
+    review = vi[np.argsort(margin[vi], kind="stable")[: int(0.05 * vi.size)]]
+    assert ox.review_set_check(review, m_nan)["looks_like_a_review_set"]        # without passing `valid`
+    with pytest.raises(ValueError, match="not a sample"):
+        ox.estimate_from_indices(review, err[review], m_nan)
+
+
+def test_a_tied_block_gets_one_percentile_so_raster_position_cannot_decide_the_guard():
+    rng = np.random.default_rng(0)
+    n = 20000
+    tied = rng.random(n) < 0.4
+    m = np.where(tied, 0.0, 0.05 + 0.95 * rng.random(n))
+    first = np.argsort(m, kind="stable")[:200]
+    last = np.flatnonzero(tied)[-200:]
+    a, b = ox.review_set_check(first, m), ox.review_set_check(last, m)
+    assert a["median_suspicion_percentile"] == pytest.approx(b["median_suspicion_percentile"])
+    assert a["looks_like_a_review_set"] and b["looks_like_a_review_set"]
+
+
+def test_estimate_from_indices_refuses_no_data_windows_and_repeats():
+    margin, p1, err, tile = _units("mados")
+    valid = np.ones(margin.size, bool); valid[: int(0.3 * margin.size)] = False
+    rng = np.random.default_rng(0)
+    good = rng.choice(np.flatnonzero(valid), 150, replace=False)
+    bad = rng.choice(np.flatnonzero(~valid), 150, replace=False)
+    with pytest.raises(ValueError, match="outside the valid map"):
+        ox.estimate_from_indices(np.concatenate([good, bad]), np.concatenate([err[good], np.zeros(150)]), margin, valid)
+    with pytest.raises(ValueError, match="more than once"):
+        ox.estimate_from_indices(np.tile(good[:100], 3), np.tile(err[good[:100]], 3), margin, valid)
+
+
+def test_a_budget_too_small_to_floor_every_stratum_is_refused_rather_than_zeroing_the_suspect_end():
+    """With a budget under 2 x 5 the allocation used to zero the least confident strata, and the estimate treated
+    the most error-prone part of the map as error-free: 0.009 against a true 0.074 on MADOS."""
+    with pytest.raises(ValueError, match="cannot give each"):
+        est.neyman_allocation(np.array([1000] * 5), np.ones(5), 3)
+    margin, p1, err, tile = _units("mados")
+    with pytest.raises(ValueError, match="cannot give each"):
+        ox.sample_for_estimation(margin, 4, p1=p1)
+
+
+def test_a_stratified_sample_with_a_repeated_or_foreign_window_is_refused_with_a_message():
+    margin, p1, err, tile = _units("mados")
+    s = ox.sample_for_estimation(margin, 300, p1=p1, seed=0)
+    w = err[s["indices"]]
+    dup = {**s, "indices": np.concatenate([s["indices"], s["indices"][:10]])}
+    with pytest.raises(ValueError, match="more than once"):
+        ox.estimate_error_rate(dup, np.concatenate([w, np.zeros(10)]))
+    valid = np.ones(margin.size, bool); valid[:100] = False
+    s2 = ox.sample_for_estimation(margin, 300, p1=p1, valid=valid, seed=0)
+    foreign = {**s2, "indices": np.concatenate([s2["indices"][:-1], [5]])}         # window 5 is not in the population
+    with pytest.raises(ValueError, match="not in the population"):
+        ox.estimate_error_rate(foreign, err[foreign["indices"]])
+
+
+def test_wilson_refuses_impossible_counts():
+    for k, n, N in ((5, 3, None), (-1, 3, None), (2, 10, 5)):
+        with pytest.raises(ValueError):
+            est.wilson_interval(k, n, N)

@@ -122,9 +122,13 @@ of a random sample's with coverage intact; `--design random` is the plain draw,
 people actually label. `estimate` reads the filled file back and writes
 `to_label_estimate.json`: the error rate, its 95% interval and half-width, and the
 method the design earns. For the tile design it also writes the naive interval
-the ordinary formula would give, beside the honest one, with the warning that on
+the ordinary formula would give, beside the corrected one, with the warning that on
 exp78's tasks that naive interval covered 51 to 78% of the time while claiming
-95%. A CSV with a blank `wrong`, or whose rows are not the design's, is refused.
+95%. The corrected interval, a ratio estimator over tiles, is better and still not
+honest everywhere: on exp78's tasks it covered 0.91 to 0.94 where the tiles are of
+equal size and 0.60 on MADOS, whose tiles hold 1 to 400 windows. If you have not
+labelled yet, use the default design. A CSV with a blank `wrong`, or whose rows are
+not the design's, is refused.
 
 **Do not label the review set and divide.** The review set is built to hold
 errors; on exp78's export the 5% review set gave 1.8 to 5.8 times the true rate

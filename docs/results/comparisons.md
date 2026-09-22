@@ -2214,11 +2214,11 @@ load. <!-- claim:exp78-export-reproduces-the-suite -->
 
 | Task | units | error rate | design effect | coverage, simple random sample | coverage, naive after tile sampling | coverage, cluster-corrected | best width ratio from confidence | half-width at B = 300 |
 |---|---|---|---|---|---|---|---|---|
-| MADOS | 22,598 | 0.074 | 9.77 | 0.933 | 0.506 | 0.904 | 0.631 | ±2.9 pts |
-| Sen1Floods11 | 592,385 | 0.085 | 5.56 | 0.949 | 0.579 | 0.840 | 0.794 | ±3.1 pts |
-| PASTIS S1 | 458,638 | 0.284 | 2.94 | 0.956 | 0.741 | 0.927 | 0.855 | ±5.1 pts |
-| PASTIS S2 | 458,638 | 0.190 | 2.70 | 0.950 | 0.759 | 0.922 | 0.802 | ±4.4 pts |
-| PASTIS S1+S2 | 458,638 | 0.195 | 2.70 | 0.945 | 0.777 | 0.924 | 0.800 | ±4.5 pts |
+| MADOS | 22,598 | 0.074 | 9.77 | 0.933 | 0.506 | 0.598 | 0.631 | ±2.9 pts |
+| Sen1Floods11 | 592,385 | 0.085 | 5.56 | 0.949 | 0.579 | 0.824 | 0.794 | ±3.1 pts |
+| PASTIS S1 | 458,638 | 0.284 | 2.94 | 0.956 | 0.741 | 0.919 | 0.855 | ±5.1 pts |
+| PASTIS S2 | 458,638 | 0.190 | 2.70 | 0.950 | 0.759 | 0.917 | 0.802 | ±4.4 pts |
+| PASTIS S1+S2 | 458,638 | 0.195 | 2.70 | 0.945 | 0.777 | 0.913 | 0.800 | ±4.5 pts |
 | m-cashew-plant | 204,800 | 0.347 | 1.17 | 0.948 | 0.939 | 0.936 | 0.936 | ±5.3 pts |
 | m-SA-crop-type | 4,096,000 | 0.340 | 3.44 | 0.961 | 0.706 | 0.932 | 0.809 | ±5.3 pts |
 
@@ -2236,12 +2236,15 @@ formula to the 300 labels as though they were independent, and the nominal-95% i
 of draws on six of the seven tasks, with a median design effect of 2.94 (P2, holds on 6 of 7). An interval that
 claims 95% and delivers 51% is not conservative or approximate; it is wrong in the direction that makes a map
 look better established than it is. Errors sit next to each other, so 300 windows from 19 scenes carry nowhere
-near 300 windows of information. Two honest qualifications. The effect is fixable but not free: the
-cluster-corrected estimator restores coverage on every one of those six, to 0.840–0.932, and on MADOS it does so
-by widening the interval from ±2.9 to ±12.4 points, which is the real price of tile-sampled labels rather than a
-defect of the estimator. It is not free in the other direction either: on m-cashew-plant, where the naive
-interval was already fine, correcting for a clustering that is barely there costs a little coverage, 0.936
-against 0.939.
+near 300 windows of information. Three honest qualifications. **Correcting for the clustering helps only where
+the tiles are of equal size.** The cluster-corrected interval restores coverage to 0.913–0.932 on the four tasks
+whose tiles are full (the three PASTIS variants and m-SA-crop-type), only to 0.824 on Sen1Floods11, and on MADOS
+not at all: 0.598. MADOS's tiles hold 1 to 400 valid windows, so 18 of them are too few and too unequal for any
+between-tile variance to be estimated well, and on MADOS the naive estimate is itself biased upward, because a
+tile of three windows is labelled whole while a tile of 400 gives sixteen; there, tile-sampled labels are the
+wrong design and no formula applied afterwards rescues them. It is not free in the other direction either: on
+m-cashew-plant, where the naive interval was already fine, correcting for a clustering that is barely there costs
+a little coverage, 0.936 against 0.939.
 And of the two tasks that were genuinely out of sample — the pilot had already seen MADOS, Sen1Floods11 and the
 three PASTIS variants — only m-SA-crop-type confirms; **m-cashew-plant has a design effect of 1.17 and its naive
 interval is fine at 0.939**, so P2 passes its stated bar on a count that is 1 of 2 outside the pilot, and that is
@@ -2285,6 +2288,20 @@ now multiplies the binomial variance term rather than the whole half-width, so a
 rules out a perfect map; and the design effect's grand mean is taken over the units it analyses. The summary was
 regenerated from the package: every cited digit above is unchanged, the largest movement being the budget saving
 on MADOS from 2.508× to 2.510×, and no verdict moved.
+
+**A correction to this section, the same day.** An audit of the estimator after it shipped found that the
+cluster-corrected arm was the unweighted mean of tile means, which targets the average tile's error rate rather
+than the average window's. On tiles of equal size the two are the same number, and so they were on m-cashew-plant
+and m-SA-crop-type exactly and on the PASTIS variants and Sen1Floods11 nearly. On MADOS, whose tiles hold 1 to 400
+valid windows, the average tile is wrong 13.3% of the time and the average window 7.4%, and the estimator
+returned 1.78 times the truth. Its interval nonetheless covered on 0.904 of draws, because tiles of one window,
+whose means are 0 or 1, inflated its spread to ±12.4 points; this section said the correction "restores coverage
+on every one of those six" on the strength of it. The arm now uses the ratio estimator, weighted by each tile's
+windows, which is the ultimate-cluster estimator the preregistration names and the form the package ships.
+Re-run: only this column moved, MADOS to 0.598 and ±8.0 points, Sen1Floods11 to 0.824, the PASTIS variants by
+about 0.01, the two equal-tile tasks not at all, and none of P1 to P4 reads this arm, so no verdict changed. What
+changed is the sentence: correcting tile-sampled labels afterwards works on a map of equal tiles and does not on
+one whose tiles differ.
 
 ## The ceiling belongs to the task, not to the model (from exp74 and exp70)
 

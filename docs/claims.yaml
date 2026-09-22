@@ -3006,7 +3006,7 @@
     instead of reading the verdict, so editing the verdict block alone cannot make it pass.
 
 - id: tile-sampling-breaks-the-naive-interval
-  statement: "Spending a 300-window budget as 19 tiles of 16 windows and then applying the ordinary independent-sample formula gives a nominal-95% interval that covers on 0.506 to 0.777 of draws on 6 of the 7 segmentation tasks, with a median design effect of 2.94; the cluster-corrected estimator restores coverage but widens MADOS from +/-2.9 to +/-12.4 points."
+  statement: "Spending a 300-window budget as 19 tiles of 16 windows and then applying the ordinary independent-sample formula gives a nominal-95% interval that covers on 0.506 to 0.777 of draws on 6 of the 7 segmentation tasks, with a median design effect of 2.94; a cluster-corrected ratio estimator restores coverage to 0.913-0.932 on the four tasks with full tiles, to 0.824 on Sen1Floods11, and not on MADOS, whose tiles hold 1 to 400 valid windows, where it covers 0.598."
   status: supported
   experiments: [exp78]
   artifacts: [exp/out/exp78_summary.json]
@@ -3019,9 +3019,10 @@
       and round(deff['m_cashew_plant'], 2) == 1.17
       and s['prereg']['P2_the_naive_interval_is_badly_wrong']['out_of_sample_tasks'] == ['m_sa_crop_type']
       and all(t[k]['budgets']['300']['D4/E1_cluster']['coverage'] > v for k, v in naive.items() if v < 0.85)
-      and round(min(t[k]['budgets']['300']['D4/E1_cluster']['coverage'] for k, v in naive.items() if v < 0.85), 3) == 0.840
+      and round(min(t[k]['budgets']['300']['D4/E1_cluster']['coverage'] for k in ('pastis_sentinel1', 'pastis_sentinel2', 'pastis_sentinel1_sentinel2', 'm_sa_crop_type')), 3) == 0.913
+      and round(t['sen1floods11']['budgets']['300']['D4/E1_cluster']['coverage'], 3) == 0.824
+      and round(t['mados']['budgets']['300']['D4/E1_cluster']['coverage'], 3) == 0.598
       and t['m_cashew_plant']['budgets']['300']['D4/E1_cluster']['coverage'] < naive['m_cashew_plant']
-      and t['mados']['budgets']['300']['D4/E1_cluster']['half_width'] > 4 * t['mados']['budgets']['300']['D1/E1']['half_width']
     )(s['tasks'],
       {k: v['budgets']['300']['D4/E2_naive']['coverage'] for k, v in s['tasks'].items()},
       {k: v['design_effect'] for k, v in s['tasks'].items()}))(A['exp/out/exp78_summary.json'])
@@ -3033,7 +3034,10 @@
     threshold from 0.75 to 0.85. Of the two genuinely out-of-sample tasks only m-SA-crop-type confirms; m-cashew-plant
     has a design effect of 1.17 and its naive interval is fine, so the out-of-sample support is 1 of 2 and the check
     pins that asymmetry rather than letting 6 of 7 stand alone. The chip is not the unit a reviewer opens, so the
-    tile-level design effect is a lower bound on the deployment one.
+    tile-level design effect is a lower bound on the deployment one. Corrected 2026-09-22: the cluster arm was the
+    unweighted mean of tile means, 1.78 times the truth on MADOS, whose recorded coverage of 0.904 came from an
+    interval inflated by one-window tiles; the statement said the correction restored coverage everywhere. It is
+    now the ratio estimator, and the check pins MADOS at 0.598 so the old sentence cannot quietly return.
 
 - id: confidence-helps-most-where-the-map-is-good
   statement: "Choosing which windows to label by the model's own confidence narrows the error-rate interval to a median 0.80 of the simple-random width with coverage intact on all 7 tasks, and to 0.63 and 0.79 on the two tasks under 10% error; but the preregistered clause asking for a ratio above 0.94 on a task over 30% error fails at 0.9361."

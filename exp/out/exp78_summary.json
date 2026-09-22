@@ -50,8 +50,8 @@
       "starved_strata_rate": 0.0
      },
      "D4/E1_cluster": {
-      "coverage": 0.9045,
-      "half_width": 0.12427475756923735,
+      "coverage": 0.598,
+      "half_width": 0.08030497128091135,
       "starved_strata_rate": 0.0
      }
     }
@@ -96,8 +96,8 @@
       "starved_strata_rate": 0.0
      },
      "D4/E1_cluster": {
-      "coverage": 0.8395,
-      "half_width": 0.06937252329400503,
+      "coverage": 0.824,
+      "half_width": 0.067409626392444,
       "starved_strata_rate": 0.0
      }
     }
@@ -142,8 +142,8 @@
       "starved_strata_rate": 0.0
      },
      "D4/E1_cluster": {
-      "coverage": 0.9275,
-      "half_width": 0.0881486089361391,
+      "coverage": 0.9185,
+      "half_width": 0.08705054554851425,
       "starved_strata_rate": 0.0
      }
     }
@@ -188,8 +188,8 @@
       "starved_strata_rate": 0.0
      },
      "D4/E1_cluster": {
-      "coverage": 0.922,
-      "half_width": 0.07334433651594492,
+      "coverage": 0.917,
+      "half_width": 0.07211661238598191,
       "starved_strata_rate": 0.0
      }
     }
@@ -234,8 +234,8 @@
       "starved_strata_rate": 0.0
      },
      "D4/E1_cluster": {
-      "coverage": 0.924,
-      "half_width": 0.07459501545042892,
+      "coverage": 0.913,
+      "half_width": 0.07343035203832692,
       "starved_strata_rate": 0.0
      }
     }
@@ -281,7 +281,7 @@
      },
      "D4/E1_cluster": {
       "coverage": 0.936,
-      "half_width": 0.05830183775442982,
+      "half_width": 0.05830183775442981,
       "starved_strata_rate": 0.0
      }
     }

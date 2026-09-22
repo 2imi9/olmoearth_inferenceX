@@ -291,8 +291,10 @@ random; they open about 19 scenes and label 16 windows in each. Do that, then
 work out the range the ordinary way, and a range that claims 95% really covers
 51 to 78% on six of the seven tasks. Errors sit next to each other, so 300
 windows from 19 scenes carry nowhere near 300 windows of information. Correcting
-for it works and costs width: on MADOS the honest interval is ±12.4 points where
-the wrong one said ±2.9. <!-- claim:tile-sampling-breaks-the-naive-interval -->
+for it afterwards works on a map whose tiles are all the same size, and not on
+one whose tiles differ: on MADOS, whose tiles hold 1 to 400 windows, even the
+corrected range covers the truth 60% of the time. Label a random or
+confidence-guided sample instead. <!-- claim:tile-sampling-breaks-the-naive-interval -->
 
 Choosing which windows to label by confidence does save labels, but not
 dramatically: up to 2.5 times at equal precision, and most on maps that are

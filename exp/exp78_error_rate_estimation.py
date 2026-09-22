@@ -231,6 +231,7 @@ def run_designs(err, margin, p1, tile, B, rng, theta):
         tiles = np.unique(tile)
         by = {t: np.flatnonzero(tile == t) for t in tiles}
         T = max(1, B // M_PER_TILE)
+        tile_sizes = np.bincount(tile)                            # valid windows per tile, the ratio estimator's weights
 
         def cluster(naive):
             pick = rng.choice(tiles, min(T, tiles.size), replace=False)
@@ -238,10 +239,11 @@ def run_designs(err, margin, p1, tile, B, rng, theta):
             if naive:
                 lo, hi = wilson(err[i].sum(), i.size, N)
                 return float(err[i].mean()), lo, hi, 0
-            means = np.array([err[np.intersect1d(i, by[t], assume_unique=False)].mean() for t in pick])
-            est = float(means.mean())
-            se = float(means.std(ddof=1) / np.sqrt(means.size)) if means.size > 1 else 0.0
-            return est, max(0.0, est - Z95 * se), min(1.0, est + Z95 * se), 0
+            # The ratio estimator, weighted by each tile's valid windows, with the normal quantile this arm was
+            # graded under. Until 2026-09-22 it was the unweighted mean of tile means: identical on six tasks, whose
+            # tiles are of equal size, and 1.78 times the true rate on MADOS, whose tiles hold 1 to 400 windows.
+            est_, lo, hi, _, _ = est.cluster_interval(err, tile, i, tile_sizes=tile_sizes, quantile="normal")
+            return est_, lo, hi, 0
 
         tally("D4/E2_naive", lambda: cluster(True))
         tally("D4/E1_cluster", lambda: cluster(False))
