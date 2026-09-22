@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-**Twelve of the fourteen findings the 21 September audit left open, fixed, each pinned by a test that reproduces
+**All fourteen findings the 21 September audit left open, fixed, each pinned by a test that reproduces
 its consequence.** No recorded number changes.
 
 - **High: `fit_side` with one group id reported "always believe side a" as its fitted rule's held-out accuracy**: 0.196 on exp60 against an honest 0.830, turning a rule that beats the 0.690 baseline into one that loses to it. Cross-fitting by group now needs two groups and says so, and rows in folds that could not be fitted are excluded and counted, as `fit_ranker` has done since 1.1.3.
@@ -13,6 +13,7 @@ its consequence.** No recorded number changes.
 - The `reference_unstable` cue quoted 14.3x on 27 scenes; exp23 recorded 13.7x on 24.
 - The `low_confidence` cue no longer quotes its 20%-cut enrichment at another cut, and `library_table()` no longer prints a raw format placeholder.
 - NDWI clipped its denominator at 1, so on reflectance input clear water (0.667) read 0.08 and was called ambiguous; it is scale-free now.
+- **Tied windows no longer go to class 0.** A 4x4 window split 8 to 8 was always given the lower class, so a balanced two-class map reported class 0 at 0.596 of its windows against a true 0.502. A prediction's tie now goes to the class whose voting pixels are more confident; a reference or label window with no majority is left unscored, in `assess --reference` and `compare --labels`, and counted. On the demo tile 2.6% of windows tie and they are wrong twice as often as the rest (0.37 against 0.18); the demo runs at one pixel per window, and its published figures are unchanged.
 - `determinism_check` on an empty scene gives no verdict rather than a failure; an empty scene and an oversized patch are named refusals; a ragged edge that is never ranked is reported; a docstring overstating exp76 is corrected.
 
 ## 1.2.0 (2026-09-22)

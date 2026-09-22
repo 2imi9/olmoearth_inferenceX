@@ -53,7 +53,7 @@ def _pool_valid(a, patch):
         return np.nanmean(blocks, axis=(1, 3))
 
 
-def _pooled_argmax(hard, n_classes, patch, empty=0):
+def _pooled_argmax(hard, n_classes, patch, empty=0, weights=None, tie=None):
     """Majority class per window, counting votes only over range(n_classes).
 
     `empty` is returned for a window with no vote at all. It defaults to 0 for the callers that only ever look at
@@ -63,9 +63,25 @@ def _pooled_argmax(hard, n_classes, patch, empty=0):
     that reported a boundary window fraction of 16.7% and filled the boundary-first review set with the rim of the
     data."""
     h, w = hard.shape[0] // patch * patch, hard.shape[1] // patch * patch
-    blocks = hard[:h, :w].reshape(h // patch, patch, w // patch, patch).transpose(0, 2, 1, 3).reshape(h // patch, w // patch, -1)
+    def _blocks(a):
+        return a[:h, :w].reshape(h // patch, patch, w // patch, patch).transpose(0, 2, 1, 3).reshape(h // patch, w // patch, -1)
+    blocks = _blocks(hard)
     counts = np.stack([(blocks == c).sum(-1) for c in range(n_classes)], axis=-1)
-    return np.where(counts.sum(-1) > 0, counts.argmax(-1), empty)
+    res = counts.argmax(-1)
+    # A tied majority (8 of 16 against 8) used to go to the lowest class index, every time: on a balanced
+    # two-class map class 0 was reported at 0.596 of the windows against a true 0.502 (audit 2026-09-21, finding
+    # 10). A prediction's tie now goes to the class whose voting pixels are more confident (`weights`, higher =
+    # more confident); a reference's tie has no majority and is returned as `tie`, so the caller can leave it
+    # unscored rather than grade the map against class 0.
+    top = counts.max(-1, keepdims=True)
+    tied = ((counts == top).sum(-1) > 1) & (top[..., 0] > 0)
+    if tied.any() and weights is not None:
+        wb = _blocks(np.nan_to_num(np.asarray(weights, dtype=np.float64), nan=0.0))
+        wsum = np.stack([np.where(blocks == c, wb, 0.0).sum(-1) for c in range(n_classes)], axis=-1)
+        res = np.where(tied, np.where(counts == top, wsum, -np.inf).argmax(-1), res)
+    if tie is not None:
+        res = np.where(tied, tie, res)
+    return np.where(counts.sum(-1) > 0, res, empty)
 
 
 def _boundary_valid(pooled_hard, valid):
@@ -230,7 +246,7 @@ def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, sig
 
     conf_w = _pool_valid(margin, patch) if nodata_mask is not None else _pool(margin, patch)   # higher = more confident
     valid_w = _pool((~nodata_mask).astype(float), patch) >= 0.5 if nodata_mask is not None else np.ones_like(conf_w, dtype=bool)
-    pooled_hard = _pooled_argmax(hard, n_classes, patch, empty=-1)
+    pooled_hard = _pooled_argmax(hard, n_classes, patch, empty=-1, weights=margin)
     bnd_w = _boundary_valid(pooled_hard, valid_w)
     suspicion = -conf_w  # ranking signal: low margin first
     review_score = boundary_first_score(suspicion, bnd_w) if order == "boundary_first" else suspicion
@@ -291,12 +307,22 @@ def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, sig
         if n_ref > n_classes:
             warnings.append(f"the reference carries {n_ref} classes and the map predicts {n_classes}; windows whose "
                             f"reference class the map cannot predict are counted wrong")
-        ref_w = _pooled_argmax(ref, max(n_ref, n_classes), patch)
+        ref_w = _pooled_argmax(ref, max(n_ref, n_classes), patch, empty=-1, tie=-1)
+        n_ref_tied = int((scored & (ref_w < 0)).sum())
+        scored = scored & (ref_w >= 0)                      # a reference with no majority grades nothing
+        if n_ref_tied:
+            warnings.append(f"{n_ref_tied} windows have an evenly split reference and no majority label; they are "
+                            "left unscored")
+        if not scored.any():
+            out["against_reference"] = {"n_windows_scored": 0, "n_windows_reference_tied": n_ref_tied,
+                                        "error_rate": float("nan"),
+                                        "note": "no window has both a prediction and a reference with a majority label"}
+            return out
         err = (ref_w != pooled_hard).astype(float)
         e, s = err[scored], suspicion[scored]
         r_s = review_score[scored]
         bnd_s = bnd_w[scored]
-        rc = {"n_windows_scored": int(scored.sum()), "error_rate": float(e.mean()), "aurc_confidence": aurc_expected(s, e),
+        rc = {"n_windows_scored": int(scored.sum()), "n_windows_reference_tied": n_ref_tied, "error_rate": float(e.mean()), "aurc_confidence": aurc_expected(s, e),
               "population": "windows with both a prediction and a reference; the capture budgets below are fractions "
                             "of these, not of the review sets above"}
         if int(scored.sum()) < n_valid:

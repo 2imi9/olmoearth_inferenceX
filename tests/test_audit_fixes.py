@@ -248,3 +248,22 @@ def test_the_confidence_docstring_matches_exp76():
     """Finding 19: the docstring said the logit margin was weakest on all 16 tasks; exp76 says 14 by AUROC, 15 by E-AURC."""
     from oe_inferencex.signals import confidence
     assert "all 16" not in confidence.__doc__ and "14 of 16" in confidence.__doc__
+
+
+def test_a_tied_window_no_longer_goes_to_class_zero():
+    """Finding 10: on a balanced two-class map every 8/8 window went to class 0, so class_share read 0.596 against
+    a true 0.502. A prediction tie now goes to the more confident voters; a reference tie is left unscored."""
+    rng = np.random.default_rng(5)
+    p = rng.random((128, 128))                                    # balanced: class 1 where p > 0.5
+    out = assess_prediction(p, is_logit=False)
+    assert abs(out["class_share"][1] - (p > 0.5).mean()) < 0.03   # was ten points under
+    # a tie decided by confidence: 8 pixels at 0.51 (barely class 1) and 8 at 0.02 (confidently class 0)
+    q = np.where(np.arange(16).reshape(4, 4) < 8, 0.51, 0.02)
+    assert _pooled_argmax((q > 0.5).astype(int), 2, 4, weights=np.abs(q - 0.5) * 2)[0, 0] == 0
+    q2 = np.where(np.arange(16).reshape(4, 4) < 8, 0.99, 0.45)
+    assert _pooled_argmax((q2 > 0.5).astype(int), 2, 4, weights=np.abs(q2 - 0.5) * 2)[0, 0] == 1
+    # a reference split 8/8 has no majority and grades nothing
+    ref = np.where(np.arange(16).reshape(4, 4) < 8, 1, 0)
+    assert _pooled_argmax(ref, 2, 4, tie=-1)[0, 0] == -1
+    r = assess_prediction(np.full((4, 4), 0.9), is_logit=False, reference=ref)["against_reference"]
+    assert r["n_windows_scored"] == 0 and r["n_windows_reference_tied"] == 1

@@ -212,12 +212,16 @@ def cmd_compare(args):
         # wrong, with exit 0 and no warning, on the very output that says which inference to believe.
         n_lab = int(lab_i[lv].max()) + 1
         # invalid label pixels must not vote; -1 is the non-voting code _assess uses, where 0 is a real class
-        lab_w = _pooled_argmax(np.where(lv, lab_i, -1), max(n_lab, 2), args.patch)
+        lab_w = _pooled_argmax(np.where(lv, lab_i, -1), max(n_lab, 2), args.patch, empty=-1, tie=-1)   # no majority, no label
         ok &= pool_valid(lv, args.patch)
+        n_tied = int((ok & (lab_w < 0)).sum())
+        ok &= lab_w >= 0                                    # an evenly split label window has no label to grade
         labels = lab_w
         if n_lab > n_classes:
             notes.append(f"the labels carry {n_lab} classes and the two maps predict at most {n_classes}; "
                          f"windows whose label is a class neither map can predict are counted wrong for both sides")
+        if n_tied:
+            notes.append(f"{n_tied} windows have an evenly split label and no majority; they are left out of the grading")
     if args.groups:
         g, gv, _ = read_raster(args.groups, None)
         if not gv.any():
