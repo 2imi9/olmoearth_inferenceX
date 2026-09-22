@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.2.0 (2026-09-22)
+
 **The package now says how wrong a map is, given a labelled sample.** exp78 measured what that costs on the
 seven segmentation tasks of Ai2's suite with every unit labelled, so the intervals could be graded; the
 estimators it ran now live in the package and it imports them back, so the recorded run and the shipped code
