@@ -82,6 +82,22 @@ def score_units(p, emb_te, emb_tr, y, C, signal=None, name="candidate"):
     return rec
 
 
+def set_probe_lrs(model, cache):
+    """Point exp54's per-task learning-rate table at this encoder, the way the record fitted it.
+
+    OlmoEarth Base is the one encoder with no entry in Ai2's merged settings file: exp70 fitted it from exp54's own
+    table (Base's published settings, hard-coded there), so for Base the table is left exactly as the module
+    defines it. Every other encoder takes Ai2's per-task rates as exp74 did. Before 2026-09-22 both this runner and
+    exp79 asked exp74 for Base's rates and died on a KeyError before loading anything; exp79's smoke job found it.
+    """
+    import exp54_multiclass_embeddings as e54
+    import exp74_suite_encoders as e74
+    if model == e54.BASE:                                        # "olmoearth_base", whatever e70.MODEL is set to
+        return dict(e54.TASK_LR)
+    e54.TASK_LR = {t: float(lr) for t, lr in e74.probe_lrs(model, cache).items() if lr is not None}
+    return dict(e54.TASK_LR)
+
+
 def load_task(model, task, cache):
     """One task's embeddings and labels, loaded once so that any number of probe seeds can share them (exp79).
 
@@ -158,8 +174,8 @@ def cmd_run(args):
     name = args.name or (args.signal.rsplit(":", 1)[-1] if args.signal else "candidate")
     out_dir = os.path.join(OUT, args.model)
     os.makedirs(os.path.join(out_dir, "parts"), exist_ok=True)
+    lrs = set_probe_lrs(args.model, cache)
     e70.MODEL = args.model
-    e54.TASK_LR = {t: float(lr) for t, lr in e74.probe_lrs(args.model, cache).items() if lr is not None}
     results, absent = {}, []
     for task in e70.TASKS_CLS + e70.TASKS_SEG:
         if args.only and task not in args.only:
@@ -186,7 +202,7 @@ def cmd_run(args):
         cand = f" {name} vs margin {r['candidate']['vs_margin']:+.4f}" if "candidate" in r else ""
         print(f"  {task:44s} {r['family'][:3]} n={r['n_units']:7d} acc {r['test_accuracy']:.3f} "
               f"margin lead {r['margin_lead']:+.4f} over {r['best_control'][4:]}{cand}", flush=True)
-    summary = {"model": args.model, "upstream": provenance,
+    summary = {"model": args.model, "upstream": provenance, "probe_lrs": lrs,
                "verdict": e74.encoder_verdict(results) if results else {},
                "bar": "the margin beats the best no-model control on >= 75% of scored tasks, sign test p < 0.05 (exp74)",
                "absent": absent, "tasks": results}

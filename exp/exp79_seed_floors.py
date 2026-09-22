@@ -74,12 +74,12 @@ def cmd_export(args):
     import exp54_multiclass_embeddings as e54
     cache = os.environ.get("HF_HOME")
     model = args.model
+    lrs = sr.set_probe_lrs(model, cache)
     e70.MODEL = model
-    e54.TASK_LR = {t: float(lr) for t, lr in e74.probe_lrs(model, cache).items() if lr is not None}
     os.makedirs(SEEDS_DIR, exist_ok=True)
     udir = os.path.join(UNITS_DIR, model)
     os.makedirs(udir, exist_ok=True)
-    out = {"experiment": "exp79", "model": model, "n_seeds": args.seeds, "tasks": {}, "absent": []}
+    out = {"experiment": "exp79", "model": model, "n_seeds": args.seeds, "probe_lrs": lrs, "tasks": {}, "absent": []}
     for task in e70.TASKS_CLS + e70.TASKS_SEG:
         if args.only and task not in args.only:
             continue
