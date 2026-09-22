@@ -39,8 +39,9 @@ from importlib.metadata import PackageNotFoundError, version as _version
 from .assess import (assess_classmap, assess_prediction, boundary_first_score, review_mask, review_order,
                      summary)
 from .calibrate import fit_ranker, fit_side, side_features
-from .estimate import (cluster_interval, confidence_strata, design_effect, estimate_error_rate, estimate_from_indices,
-                       neyman_allocation, review_set_check, sample_for_estimation, stratified_interval, wilson_interval)
+from .estimate import (cluster_interval, confidence_strata, design_effect, estimate_error_rate, estimate_from_indices, exact_coverage_srs,
+                       neyman_allocation, review_set_check, sample_for_estimation, stratified_interval, stratified_interval_wilson, stratified_mean_and_variance,
+                       wilson_interval)
 from .compare import (compare_inferences, crosstab, determinism_check, disagreement, over_groups, phi, stability,
                       where, which_side)
 from .explain import CUES, cue_enrichment, derive_cues, explain_review_set, library_table
@@ -72,7 +73,7 @@ __all__ = [
     "fit_ranker", "fit_side", "side_features",
     # estimate: how wrong the map is, from a labelled sample
     "sample_for_estimation", "estimate_error_rate", "estimate_from_indices", "review_set_check",
-    "wilson_interval", "stratified_interval", "cluster_interval", "design_effect", "confidence_strata", "neyman_allocation",
+    "wilson_interval", "exact_coverage_srs", "stratified_interval", "stratified_interval_wilson", "stratified_mean_and_variance", "cluster_interval", "design_effect", "confidence_strata", "neyman_allocation",
     # metrics
     "excess_aurc", "aurc_expected", "risk_coverage", "oracle_aurc", "capture_at_budget", "attainable_ceiling", "augrc", "augrc_from_auroc",
     "capture_at_budget_expected", "selective_accuracy", "expected_calibration_error",

@@ -53,9 +53,11 @@ The statistics settled in exp13 and used by every experiment after it:
 
 ### The closed forms these statistics divide by
 
-Five quantities appear as bare formulas throughout this record. Each is derived here once, so that a reader does
-not have to take any of them on trust, and each is checked in `tests/test_formulas.py` against a brute-force
-computation written separately from the package's own. The derivations are short; the reason they are written
+Eleven quantities appear as bare formulas throughout this record: six behind the ranking statistics and, since
+the estimator shipped, five behind the error-rate estimate. Each is derived here once, so that a reader does not
+have to take any of them on trust, and each is checked — in `tests/test_formulas.py` and
+`tests/test_estimate_exact.py` — against a brute-force computation or a full enumeration written separately from
+the package's own. The derivations are short; the reason they are written
 down at all is that on 20 September 2026 a recorded claim was false and its own check passed, because the check
 read its number back from the artifact that produced it. A formula inside a check is an assumption of the test,
 never its subject.
@@ -143,6 +145,74 @@ terms do not depend on the reading at all, so they cancel in any comparison of r
 
 The `e/(2n)` term is the discrete correction the continuous derivation misses. On the suite's smaller tasks it is
 not negligible, so the continuous form is for reading and the identity above is for computing.
+
+### The estimator's closed forms
+
+`oe_inferencex.estimate` answers how wrong a map is from a labelled sample. Everything it computes is
+finite-population sampling theory, and unlike the ranking statistics above each claim can be checked **exactly**
+on a small population by enumerating every possible sample; `tests/test_estimate_exact.py` does so, with
+rational arithmetic where the claim is an equality. Notation: `N` windows, `θ` the true window error rate;
+strata `h = 1..H` of sizes `N_h`, weights `W_h = N_h/N`, rates `θ_h`, and `S_h² = N_h θ_h(1−θ_h)/(N_h−1)` the
+stratum variance on the `N_h − 1` convention; a sample takes `n_h` from stratum `h` without replacement,
+`f_h = n_h/N_h`, and observes `p_h`.
+
+**7. The stratified estimate is unbiased and its variance is exact.** `θ̂ = Σ_h W_h p_h`. Within a stratum the
+draw is simple random without replacement, so `E[p_h] = θ_h` and `θ̂` is unbiased; the strata are drawn
+independently, so
+
+```
+Var(θ̂) = Σ_h W_h² (1 − f_h) S_h² / n_h
+```
+
+which is Cochran's result. The estimator uses `p_h(1−p_h)/(n_h−1)` in place of `S_h²/n_h`; that is `s_h²/n_h`
+with `s_h²` the sample variance on `n_h − 1`, and `E[s_h²] = S_h²` under SRS without replacement, so the variance
+the interval is built from is unbiased for the true one. Checked by enumerating all 180 stratified samples of a
+12-unit population: the mean estimate equals `θ` and the mean estimated variance equals the enumerated variance
+of the estimate, both to 1e-12.
+
+**8. Neyman's allocation minimises that variance.** Minimise `Σ W_h² S_h²/n_h` subject to `Σ n_h = B`
+(dropping the `1 − f_h` terms, which do not depend on the allocation's shape once `B` is fixed). The Lagrange
+condition `−W_h² S_h²/n_h² = λ` gives `n_h ∝ W_h S_h ∝ N_h S_h`, so
+
+```
+n_h = B · N_h S_h / Σ_j N_j S_j
+```
+
+The design does not know `S_h`, so it uses the model's own confidence: `S_h ≈ √(q_h(1−q_h))` with `q_h` the
+stratum's mean `1 − p₁`. That is why no label is spent estimating stratum rates, and why the gain is largest
+where confidence separates the stratum rates most — the clean maps of exp78. The continuous optimum is exact;
+the package's integer allocation floors it and hands the remainder to the strata with the most units left,
+which costs 1.3 to 2.3% of variance on tiny cases and 0.1 to 0.5% on exp78's real strata at a budget of 300
+(measured, not assumed; the rule is kept as exp78 ran it so its recorded numbers remain the package's output).
+
+**9. Wilson's coverage is a hypergeometric sum.** For a simple random sample of `B` from `N` with `K` errors,
+the error count `k` is hypergeometric, so the exact coverage of the interval is
+`Σ_k P(k; N, K, B) · 1[θ ∈ CI(k)]`. This is what `exact_coverage_srs` computes and what a Monte Carlo coverage
+is judged against (exp79, P5), so that Wilson's discreteness — MADOS at 0.933 in exp78 — is read as the
+interval's property and not as a defect. Checked against a full enumeration of subsets on three populations.
+
+**10. Labels taken tile by tile.** `T` tiles of `m` windows, `t` tiles drawn. The cluster-sample mean has
+variance `(1 − t/T) S_b²/t` with `S_b²` the variance of tile means, and a simple random sample of the same
+`n = tm` windows has `(1 − n/N) S²/n`. Their ratio is **exactly** `m S_b²/S²`, and writing the total sum of
+squares as between plus within, `(N−1)S² = (T−1) m S_b² + (N−T) S_w²`, it equals `1 + (m−1)ρ` with `ρ` the
+ANOVA intra-cluster correlation up to a term of order `1/T`. Checked by enumerating all 56 draws of 3 tiles from
+8 (the ratio to 1e-10) and at `T = 40` (the design effect within 3%). This is why the ordinary formula on
+tile-sampled labels claims 95% and delivers 51 to 78%: it uses `S²/n` where the truth is `m S_b²/S²` times
+that, and on exp78's tasks that factor ran 2.7 to 9.8.
+
+**11. What labelling the review set gives.** The review set at budget `b` is the `k = bN` most suspect
+windows; `capture(b)` is the share of all `E = θN` errors it holds. The rate a reviewer computes on it is
+therefore
+
+```
+rate on the review set = capture(b) · E / k = capture(b) · θ / b
+```
+
+so the inflation over the truth is `capture(b)/b`, the enrichment the record already measures. With exp70's
+recorded `capture(0.05) = 0.291` and `θ = 0.0736` on MADOS this gives 0.428, which is what labelling the 5%
+review set of exp78's export and dividing returns. The guard in `estimate_from_indices` refuses that sample by
+its median suspicion percentile, but the size of the mistake it prevents is not a measurement: it is
+`capture/b`, and it is 5.8× on MADOS because the ranking is good.
 
 ### How a difference is measured
 

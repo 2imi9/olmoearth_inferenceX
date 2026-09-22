@@ -32,7 +32,7 @@ ROOT = os.path.dirname(EXP_DIR)
 sys.path.insert(0, ROOT)
 sys.path.insert(0, EXP_DIR)
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
-from oe_inferencex import stats                    # noqa: E402
+from oe_inferencex import estimate as est, stats   # noqa: E402
 import exp70_task_suite as e70                     # noqa: E402
 import exp74_suite_encoders as e74                 # noqa: E402
 import exp78_error_rate_estimation as e78          # noqa: E402
@@ -267,19 +267,7 @@ def cmd_grade(args):
 
 
 # ----------------------------------------------------------------------------- stage: estimate (local, B)
-def exact_srs_coverage(N, K, B):
-    """The exact coverage of exp78's Wilson-with-FPC interval for a simple random sample of B from a population of
-    N units holding K errors: the hypergeometric probability of each error count k, summed over the k whose
-    interval contains K/N. This is what the estimator can achieve at (N, K, B); Monte Carlo coverage is judged
-    against it, not against a round number, so Wilson's discreteness is not mistaken for a bug."""
-    theta = K / N
-    lc = lambda n, r: math.lgamma(n + 1) - math.lgamma(r + 1) - math.lgamma(n - r + 1)
-    tot = 0.0
-    for k in range(max(0, B - (N - K)), min(B, K) + 1):
-        lo, hi = e78.wilson(k, B, N)
-        if lo <= theta <= hi:
-            tot += math.exp(lc(K, k) + lc(N - K, B - k) - lc(N, B))
-    return tot
+exact_srs_coverage = est.exact_coverage_srs      # one implementation, in the package since 2026-09-22
 
 
 def estimate_encoder(enc, units_dir, budget=e78.HEADLINE):

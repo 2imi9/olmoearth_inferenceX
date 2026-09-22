@@ -286,11 +286,16 @@ def cmd_sample(args):
     if args.design == "tiles":
         t = max(1, args.tile)
         tiles = (np.arange(hw)[:, None] // t) * ((ww + t - 1) // t) + (np.arange(ww)[None, :] // t)
-    sample = est.sample_for_estimation(margin, args.budget, design=args.design, p1=p1_w, tiles=tiles,
-                                       per_tile=args.per_tile, valid=valid_w, seed=args.seed)
+    try:
+        sample = est.sample_for_estimation(margin, args.budget, design=args.design, p1=p1_w, tiles=tiles,
+                                           per_tile=args.per_tile, valid=valid_w, seed=args.seed)
+    except ValueError as exc:
+        raise SystemExit(f"sample: {exc}")
     idx = sample["indices"]
     rows, cols = np.divmod(idx, ww)
     pr, pc, x, y = window_coords(rows, cols, geo, args.patch)
+    if os.path.isdir(args.out):
+        raise SystemExit(f"--out {args.out} is a directory; name the CSV to write, for example {os.path.join(args.out, 'to_label.csv')}")
     os.makedirs(os.path.dirname(os.path.abspath(args.out)) or ".", exist_ok=True)
     with open(args.out, "w", newline="") as f:
         w = csv.writer(f)
@@ -304,12 +309,22 @@ def cmd_sample(args):
     side = {k: (v.tolist() if isinstance(v, np.ndarray) else v) for k, v in sample.items()}
     side.update({"scores": os.path.abspath(args.scores), "logits": args.logits, "patch": args.patch,
                  "grid": [int(hw), int(ww)], "csv": os.path.abspath(args.out),
+                 # what a reviewer with a GIS needs to find a window: the CRS, the pixel size, and the window's
+                 # footprint in ground units; x and y in the CSV are window centres in that CRS
+                 "crs": None if geo is None else str(geo["crs"]),
+                 "transform": None if geo is None else list(geo["transform"])[:6],
+                 "pixel_size": None if geo is None else [abs(geo["transform"].a), abs(geo["transform"].e)],
+                 "window_size_ground_units": None if geo is None else [abs(geo["transform"].a) * args.patch, abs(geo["transform"].e) * args.patch],
+                 "xy_are": "window centres in the raster's CRS" if geo is not None else "absent: the input had no georeference",
+                 "warnings": list(out.get("warnings", [])),
                  "how_to_label": "open each window, set wrong=1 if the map's class there is not what is on the ground, "
                                  "else 0; then: oe-inferencex estimate " + os.path.basename(args.out)})
     with open(args.out[:-4] + ".json" if args.out.endswith(".csv") else args.out + ".json", "w") as f:
         json.dump(side, f, indent=1)
     print(f"{len(idx)} windows to label of {sample['n_population']} valid ({args.design} design); wrote {args.out} and its .json. "
-          f"Fill the `wrong` column with 1 or 0 per window, then run: oe-inferencex estimate {args.out}")
+          f"Fill the `wrong` column with 1 or 0 per window, then run: oe-inferencex estimate {args.out}"
+          + "".join(f"\nwarning: {w}" for w in out.get("warnings", []))
+          + (f"\nnote: {sample['note']}" if "note" in sample else ""))
     return 0
 
 
@@ -320,27 +335,44 @@ def cmd_estimate(args):
         raise SystemExit(f"{side_path} not found; `estimate` needs the sidecar `sample` wrote beside the CSV")
     with open(side_path) as f:
         side = json.load(f)
-    with open(args.sample, newline="") as f:
+    with open(args.sample, newline="", encoding="utf-8-sig") as f:          # a spreadsheet's BOM is not a column name
         rows = list(csv.DictReader(f))
-    idx = np.array([int(r["index"]) for r in rows])
+    need = {"index", "window_row", "window_col", "wrong"}
+    if not rows or not need <= set(rows[0]):
+        raise SystemExit(f"{args.sample}: expected the columns `sample` wrote ({', '.join(sorted(need))}); found "
+                         f"{', '.join(rows[0].keys()) if rows else 'no rows'}. A spreadsheet saved with another delimiter "
+                         "(semicolon) or with columns removed cannot be matched to its design")
+    try:
+        idx = np.array([int(float(r["index"])) for r in rows])                # "73.0" after a spreadsheet round trip is 73
+    except ValueError as exc:
+        raise SystemExit(f"{args.sample}: the `index` column is not the one `sample` wrote: {exc}")
     if not np.array_equal(idx, np.asarray(side["indices"], int)):
         raise SystemExit("the CSV's rows do not match the design in its sidecar; label the file `sample` wrote, in order")
     blank = [i for i, r in enumerate(rows) if str(r.get("wrong", "")).strip() == ""]
     if blank:
         raise SystemExit(f"{len(blank)} of {len(rows)} windows have no `wrong` value (first at row {blank[0] + 2}); "
                          "every sampled window needs a 1 or a 0, or the design's interval is not the one you get")
-    try:
-        wrong = np.array([int(float(r["wrong"])) for r in rows])
-    except ValueError as exc:
-        raise SystemExit(f"`wrong` must be 1 or 0 per window: {exc}")
+    # Exactly 0 or 1. int(float(x)) would read a reviewer's "0.5" (not sure) as right and "1.9" as wrong, with
+    # exit 0; a spreadsheet's "TRUE" is refused rather than guessed at.
+    ok = {"0": 0, "1": 1, "0.0": 0, "1.0": 1}
+    bad = [(i + 2, r["wrong"]) for i, r in enumerate(rows) if str(r["wrong"]).strip() not in ok]
+    if bad:
+        raise SystemExit(f"`wrong` must be exactly 1 or 0 per window; {len(bad)} row(s) are not, first at row {bad[0][0]}: "
+                         f"{bad[0][1]!r}. A window you could not judge should be left out of the budget, not scored")
+    wrong = np.array([ok[str(r["wrong"]).strip()] for r in rows])
     sample = {k: (np.asarray(v) if k in ("indices", "strata", "strata_of_population", "tiles") else v) for k, v in side.items()}
-    res = est.estimate_error_rate(sample, wrong)
+    try:
+        res = est.estimate_error_rate(sample, wrong)
+    except ValueError as exc:
+        raise SystemExit(f"estimate: {exc}")
     res["sample"] = os.path.abspath(args.sample)
     out = args.out or (args.sample[:-4] + "_estimate.json" if args.sample.endswith(".csv") else args.sample + "_estimate.json")
     with open(out, "w") as f:
         json.dump(res, f, indent=1)
-    print(f"error rate {100 * res['estimate']:.1f}% (95% interval {100 * res['low']:.1f}% to {100 * res['high']:.1f}%, "
-          f"+/-{100 * res['half_width']:.1f} points) from {res['n_labelled']} labelled windows of {res['n_population']}; "
+    # the interval is printed as its two ends: it is not symmetric about the estimate (Wilson never is, and a
+    # clipped one is not), so "estimate +/- x" would name an interval that is not the one written
+    print(f"error rate {100 * res['estimate']:.1f}%, 95% interval {100 * res['low']:.1f}% to {100 * res['high']:.1f}% "
+          f"(half-width {100 * res['half_width']:.1f} points), from {res['n_labelled']} labelled windows of {res['n_population']}; "
           f"{res['method']}" + (f"\nwarning: {res['warning']}" if "warning" in res else "") + f"\nwrote {out}")
     return 0
 

@@ -21,7 +21,8 @@ Three things a user needs, and one they must be stopped from doing.
 - `estimate_from_indices` is for windows labelled without a design. It treats them as a random sample and first
   checks that they could be one: the median suspicion percentile of a random sample is 0.5, of the tool's own
   review set about 0.97, and labelling the review set then dividing gives two to six times the true rate on every
-  task of exp78's export. Such a sample is refused with the number rather than estimated.
+  task of exp78's export. A sample more than four standard deviations above a random one is refused with the
+  number rather than estimated.
 
 Every function is numpy only. The estimators are the ones exp78 ran; that script imports them from here.
 """
@@ -31,26 +32,48 @@ Z95 = 1.959963984540054
 N_STRATA = 5
 MIN_PER_STRATUM = 2
 M_PER_TILE = 16
-REVIEW_SET_PERCENTILE = 0.75      # a random sample's median suspicion percentile is 0.5; past this it is not one
+REVIEW_SET_SIGMAS = 4.0           # a sample whose median suspicion percentile sits this many SDs above 0.5 is refused
+Q_FLOOR = 0.02                    # the confidence design assumes no stratum is better than 98% right until labelled
+MIN_TILES = 5                     # fewer tiles than this and a between-tile standard error is not an estimate
 
 
 # ----------------------------------------------------------------------------- intervals
 def wilson_interval(k, n, N=None):
-    """Wilson score interval for k of n, with a finite-population correction on the half-width when N is given.
+    """Wilson score interval for k of n, with a finite-population correction when N is given.
 
-    A census has no sampling error: at n >= N the interval is the point (p, p). Without that rule the correction
-    zeroes the half-width around Wilson's shrunk centre and the interval misses the truth with certainty.
+    The correction (N - n)/(N - 1) multiplies the binomial variance term p(1-p)/n inside the root and nothing
+    else. Until 2026-09-22 it scaled the whole half-width, including Wilson's z^2/(4n^2) term, so at k = 0 the
+    interval no longer reached the shrunk centre's foot and its lower bound sat above zero: a sample with no
+    errors ruled out a perfect map, 0.10% to 1.16% for 300 of 999. Away from k = 0 the two forms differ in the
+    fifth decimal at the record's budgets. A census has no sampling error: at n >= N the interval is (p, p).
     """
     if n == 0:
         return 0.0, 1.0
     p = k / n
     if N and n >= N:
         return p, p
-    fpc = np.sqrt(max((N - n) / (N - 1), 0.0)) if N and N > 1 else 1.0
+    fpc2 = max((N - n) / (N - 1), 0.0) if N and N > 1 else 1.0
     d = 1 + Z95 ** 2 / n
     centre = (p + Z95 ** 2 / (2 * n)) / d
-    half = Z95 * np.sqrt(p * (1 - p) / n + Z95 ** 2 / (4 * n ** 2)) / d * fpc
-    return max(0.0, centre - half), min(1.0, centre + half)
+    half = Z95 * np.sqrt(fpc2 * p * (1 - p) / n + Z95 ** 2 / (4 * n ** 2)) / d
+    lo, hi = centre - half, centre + half
+    return (0.0 if lo < 1e-12 else lo), (1.0 if hi > 1 - 1e-12 else hi)
+
+
+def exact_coverage_srs(N, K, B):
+    """The exact coverage of `wilson_interval` for a simple random sample of B from N units holding K errors: the
+    hypergeometric probability of each error count k, summed over the k whose interval contains K/N. What the
+    interval can achieve at (N, K, B), against which a Monte Carlo coverage is judged so that Wilson's
+    discreteness is not mistaken for a defect (exp79, P5)."""
+    import math
+    theta = K / N
+    lc = lambda n, r: math.lgamma(n + 1) - math.lgamma(r + 1) - math.lgamma(n - r + 1)
+    tot = 0.0
+    for k in range(max(0, B - (N - K)), min(B, K) + 1):
+        lo, hi = wilson_interval(k, B, N)
+        if lo <= theta <= hi:
+            tot += math.exp(lc(K, k) + lc(N - K, B - k) - lc(N, B))
+    return tot
 
 
 def confidence_strata(margin, n_strata=N_STRATA):
@@ -60,9 +83,11 @@ def confidence_strata(margin, n_strata=N_STRATA):
     return np.searchsorted(q, margin, side="right")
 
 
-def stratified_interval(err, strata, picked, sizes, N):
-    """Stratified mean with a Wald interval. A stratum with fewer than two sampled units contributes its single
-    unit to the estimate and nothing to the variance; the count of such strata is returned."""
+def stratified_mean_and_variance(err, strata, picked, sizes, N):
+    """The stratified estimate of the population rate and the unbiased estimate of its variance,
+    sum over strata of W_h^2 (1 - n_h/N_h) p_h (1 - p_h) / (n_h - 1), which is Cochran's (1 - f_h) s_h^2 / n_h.
+    A stratum with fewer than two sampled units contributes its single unit to the estimate and nothing to the
+    variance; the count of such strata is returned. Checked by enumeration in tests/test_estimate_exact.py."""
     err, strata, picked = np.asarray(err, dtype=np.float64), np.asarray(strata), np.asarray(picked)
     est = var = 0.0
     starved = 0
@@ -70,6 +95,8 @@ def stratified_interval(err, strata, picked, sizes, N):
         m = strata[picked] == h
         nh = int(m.sum())
         Wh = Nh / N
+        if Nh == 0:
+            continue                                            # an empty stratum contributes nothing, legitimately
         if nh < MIN_PER_STRATUM:
             starved += 1
             if nh == 1:
@@ -78,19 +105,52 @@ def stratified_interval(err, strata, picked, sizes, N):
         ph = float(err[picked][m].mean())
         est += Wh * ph
         var += Wh ** 2 * (1 - nh / Nh) * ph * (1 - ph) / (nh - 1)
-    half = Z95 * np.sqrt(max(var, 0.0))
+    return est, max(var, 0.0), starved
+
+
+def stratified_interval(err, strata, picked, sizes, N):
+    """Stratified mean with a Wald interval, clipped to [0, 1]; the count of starved strata beside it.
+
+    This is the form exp78 graded and is kept for that record. It collapses to zero width when every sampled
+    stratum is pure (no error observed, or every unit wrong), which a clean map makes likely; the package's
+    user-facing path uses `stratified_interval_wilson` instead."""
+    est, var, starved = stratified_mean_and_variance(err, strata, picked, sizes, N)
+    half = Z95 * np.sqrt(var)
     return est, max(0.0, est - half), min(1.0, est + half), starved
 
 
-def cluster_interval(err, tile, picked):
+def stratified_interval_wilson(err, strata, picked, sizes, N):
+    """The stratified estimate with a Wilson interval on its effective sample size (Korn and Graubard, 1998).
+
+    The design-based variance v of the stratified mean is turned into the sample size a simple random sample
+    would need for that variance, n_eff = p(1 - p)/v, and Wilson's interval is taken at (p, n_eff). Away from 0
+    and 1 this agrees with the Wald form to the third decimal on exp78's tasks; at p = 0 or 1, where v is zero
+    and Wald collapses to a point, n_eff is taken as the labelled count itself, which is the simple-random bound
+    the design cannot improve on without an observed error. No finite-population correction is applied a second
+    time: the strata's (1 - f_h) are already inside v. Returns (estimate, low, high, starved strata, n_eff)."""
+    est, var, starved = stratified_mean_and_variance(err, strata, picked, sizes, N)
+    n = int(np.asarray(picked).size)
+    if var > 0 and 0 < est < 1:
+        n_eff = est * (1 - est) / var
+    else:
+        n_eff = float(n)
+    lo, hi = wilson_interval(est * n_eff, n_eff)
+    return est, lo, hi, starved, n_eff
+
+
+def cluster_interval(err, tile, picked, m=M_PER_TILE):
     """Ultimate-cluster interval for labels taken tile by tile: the mean of tile means, with the between-tile
-    standard error. The design effect of the sample, 1 + (m - 1) rho, is returned beside it."""
+    standard error and a normal quantile, as exp78 graded it. The design effect of the sample, 1 + (m - 1) rho
+    at the sample's own windows per tile, is returned beside it. With fewer than two tiles there is no
+    between-tile spread and no interval; the caller refuses before that."""
     err, tile, picked = np.asarray(err, dtype=np.float64), np.asarray(tile), np.asarray(picked)
     t, e = tile[picked], err[picked]
     means = np.array([e[t == u].mean() for u in np.unique(t)])
+    if means.size < 2:
+        raise ValueError(f"{means.size} tile(s) in the sample: a between-tile standard error needs at least two")
     est = float(means.mean())
-    se = float(means.std(ddof=1) / np.sqrt(means.size)) if means.size > 1 else 0.0
-    return est, max(0.0, est - Z95 * se), min(1.0, est + Z95 * se), design_effect(e, t)
+    se = float(means.std(ddof=1) / np.sqrt(means.size))
+    return est, max(0.0, est - Z95 * se), min(1.0, est + Z95 * se), design_effect(e, t, m)
 
 
 def design_effect(err, tile, m=M_PER_TILE):
@@ -113,7 +173,15 @@ def design_effect(err, tile, m=M_PER_TILE):
 # ----------------------------------------------------------------------------- designs
 def neyman_allocation(sizes, spread, budget, floor=MIN_PER_STRATUM):
     """Allocate a budget to strata in proportion to N_h * spread_h, with a floor per stratum and no stratum
-    asked for more units than it has."""
+    asked for more units than it has.
+
+    The continuous allocation n_h = B N_h S_h / sum N_h S_h minimises the stratified variance exactly (a Lagrange
+    condition, docs/method/protocol.md). This integer version floors it and hands the remainder to the strata
+    with the most units left, which is what exp78 ran. Its cost, measured rather than guessed: on tiny cases the
+    variance lands 1.3 to 2.3% above the best integer allocation (tests/test_estimate_exact.py); on exp78's
+    real strata at the record's budget of 300 it is 0.1 to 0.5% above the continuous optimum (MADOS 0.47%,
+    PASTIS S2 0.22%, m-cashew-plant 0.11%) and half that at 1,000. Kept as run so exp78's recorded numbers stay
+    the package's output."""
     sizes = np.asarray(sizes, int)
     w = sizes.astype(float) * np.asarray(spread, float)
     w = w / w.sum() if w.sum() > 0 else np.ones(len(sizes)) / len(sizes)
@@ -164,12 +232,20 @@ def sample_for_estimation(margin, budget, design="confidence", p1=None, tiles=No
     elif design in ("confidence", "proportional"):
         s = confidence_strata(margin[pop], n_strata)
         sizes = np.bincount(s, minlength=n_strata)
+        if int((sizes > 0).sum()) < 2:
+            out["note"] = ("the confidence margin has too few distinct values to stratify (a hard mask, a constant "
+                           "map); every window is in one stratum and this is a random sample in effect")
         if design == "confidence":
             if p1 is None:
                 raise ValueError('design "confidence" needs p1, the top-1 probability per window; pass it, or use '
                                  'design="proportional"')
             p1 = np.asarray(p1, dtype=np.float64).ravel()[pop]
-            q = np.array([(1 - p1[s == h]).mean() if (s == h).any() else 0.0 for h in range(n_strata)])
+            # The model's own confidence stands in for the stratum's error rate, and it is overconfident exactly
+            # where its errors are confident: a stratum whose top-1 probability is exactly 1.0 (float32 saturation,
+            # ordinary in real maps) would be allocated the floor of two labels however large it is, and any error
+            # in it then went unseen — a nominal 95% interval covered 26% of draws on such a map (audit,
+            # 2026-09-22). No stratum is assumed better than 1 - Q_FLOOR right until the labels say so.
+            q = np.array([max(Q_FLOOR, (1 - p1[s == h]).mean()) if (s == h).any() else 0.0 for h in range(n_strata)])
             spread = np.sqrt(np.clip(q * (1 - q), 1e-9, None))
         else:
             spread = np.ones(n_strata)
@@ -197,6 +273,16 @@ def sample_for_estimation(margin, budget, design="confidence", p1=None, tiles=No
             chosen.append(t)
             total += take
         out["indices"] = np.concatenate(picked)
+        if len(chosen) < MIN_TILES:
+            raise ValueError(
+                f"the tile design would use {len(chosen)} tile(s) for this budget; a between-tile standard error needs "
+                f"at least {MIN_TILES}. Use smaller tiles or fewer windows per tile")
+        if total < budget:
+            most = sum(min(per_tile, v.size) for v in by.values())
+            raise ValueError(
+                f"the tile design can label at most {most} windows here ({len(by)} tiles, up to {per_tile} each), short of "
+                f"the budget of {budget}. Use smaller tiles, more windows per tile, or a smaller budget; a sample that "
+                "silently falls short would report an interval for a budget nobody labelled")
         out.update({"tiles": tiles, "per_tile": int(per_tile), "n_tiles": int(len(chosen))})
     else:
         raise ValueError(f'design must be "confidence", "proportional", "random" or "tiles", got {design!r}')
@@ -229,28 +315,47 @@ def estimate_error_rate(sample, wrong):
         local = np.array([pos[int(g)] for g in idx])
         err = np.zeros(pop.size)
         err[local] = wrong
-        est, lo, hi, starved = stratified_interval(err, np.asarray(sample["strata"]), local, sample["sizes"], N)
-        out.update({"estimate": est, "low": lo, "high": hi, "starved_strata": int(starved),
-                    "method": "stratified by confidence margin, Wald interval with finite-population correction"})
+        est, lo, hi, starved, n_eff = stratified_interval_wilson(err, np.asarray(sample["strata"]), local, sample["sizes"], N)
+        out.update({"estimate": est, "low": lo, "high": hi, "starved_strata": int(starved), "effective_n": n_eff,
+                    "method": "stratified by confidence margin; Wilson interval on the design's effective sample size"})
+        notes = []
+        if est in (0.0, 1.0):
+            notes.append(f"{'no' if est == 0 else 'every'} labelled window was wrong, so the design's variance is zero and "
+                         f"the interval is the simple-random Wilson bound at {idx.size} labels; the stratification "
+                         "cannot narrow it without an observed error")
         if starved:
-            out["warning"] = (f"{starved} of {sample['n_strata']} strata had fewer than {MIN_PER_STRATUM} labelled "
-                              "windows and contribute no variance; the interval is narrower than it should be")
+            notes.append(f"{starved} of {sample['n_strata']} strata had fewer than {MIN_PER_STRATUM} labelled windows "
+                         "and contribute no variance; the interval is narrower than it should be")
+        if notes:
+            out["warning"] = "; ".join(notes)
     elif design == "tiles":
         tiles = np.asarray(sample["tiles"]).ravel()
         err = np.zeros(tiles.size)
         err[idx] = wrong
-        est, lo, hi, deff = cluster_interval(err, tiles, idx)
+        est, lo, hi, deff = cluster_interval(err, tiles, idx, m=int(sample.get("per_tile", M_PER_TILE)))
         nlo, nhi = wilson_interval(int(wrong.sum()), idx.size, N)
-        out.update({"estimate": est, "low": lo, "high": hi, "design_effect": deff, "n_tiles": int(sample["n_tiles"]),
-                    "method": "ultimate cluster over tiles",
+        n_tiles = int(sample["n_tiles"])
+        out.update({"estimate": est, "low": lo, "high": hi, "design_effect": None if not np.isfinite(deff) else deff,
+                    "n_tiles": n_tiles, "method": "ultimate cluster over tiles, normal quantile",
                     "naive_interval_if_treated_as_random": {"low": nlo, "high": nhi},
                     "warning": "labels taken tile by tile are not independent; the naive interval beside this one is "
                                "what the ordinary formula would say, and on exp78's tasks it covered 51 to 78% of "
-                               "the time while claiming 95%"})
+                               "the time while claiming 95%"
+                               + (f"; with {n_tiles} tiles the normal quantile is optimistic, a t on {n_tiles - 1} "
+                                  "degrees of freedom would be wider" if n_tiles < 20 else "")})
     else:
         raise ValueError(f"unknown design {design!r}")
     out["half_width"] = (out["high"] - out["low"]) / 2
     return out
+
+
+def review_set_threshold(n):
+    """The median suspicion percentile above which n windows are not a random sample: 0.5 plus REVIEW_SET_SIGMAS
+    standard deviations of the median of n uniform percentiles, 0.6/sqrt(n). At 300 labels that is 0.64. On
+    exp78's units a random 300 sits at 0.50 +/- 0.03 (max 0.59 over 200 draws), the tool's review set near 0.97,
+    and the confidence design's own sample at 0.54 to 0.72, where treating it as random would report 1.05 to
+    1.87 times the true rate; 0.75, the first threshold, let that through."""
+    return min(0.95, 0.5 + REVIEW_SET_SIGMAS * 0.6 / np.sqrt(max(int(n), 1)))
 
 
 def review_set_check(indices, margin, valid=None):
@@ -266,7 +371,8 @@ def review_set_check(indices, margin, valid=None):
     rank[order] = (np.arange(pop.size) + 0.5) / pop.size
     pct = rank[idx]
     med = float(np.nanmedian(pct))
-    return {"median_suspicion_percentile": med, "looks_like_a_review_set": med > REVIEW_SET_PERCENTILE,
+    thr = review_set_threshold(idx.size)
+    return {"median_suspicion_percentile": med, "threshold": thr, "looks_like_a_review_set": med > thr,
             "share_in_top_5pct": float(np.nanmean(pct > 0.95))}
 
 
@@ -279,10 +385,11 @@ def estimate_from_indices(indices, wrong, margin, valid=None):
     chk = review_set_check(indices, margin, valid)
     if chk["looks_like_a_review_set"]:
         raise ValueError(
-            f"these {len(indices)} windows sit at a median suspicion percentile of {chk['median_suspicion_percentile']:.2f} "
-            f"(a random sample sits at 0.50, the review set near 0.97); {100 * chk['share_in_top_5pct']:.0f}% are in the "
-            "top 5% most suspect. They are a review set, not a sample, and the rate they give is inflated. Draw a sample "
-            "with sample_for_estimation, or pass a design.")
+            f"these {len(indices)} windows sit at a median suspicion percentile of {chk['median_suspicion_percentile']:.2f}, "
+            f"above {chk['threshold']:.2f}, the most a random sample of that size reaches (a random sample sits at 0.50, "
+            f"the review set near 0.97); {100 * chk['share_in_top_5pct']:.0f}% are in the top 5% most suspect. They are "
+            "an enriched set, not a sample, and the rate they give is inflated. Draw a sample with "
+            "sample_for_estimation, or pass a design.")
     sample = {"design": "random", "indices": np.asarray(indices, int), "n_population": int(valid.sum()), "budget": len(indices)}
     out = estimate_error_rate(sample, wrong)
     out["review_set_check"] = chk

@@ -2279,7 +2279,12 @@ reviewer opens, so the tile-level design effect is a **lower bound** on the depl
 is worse in practice than the table says. The three PASTIS variants are one source, so seven tasks are five.
 And every unit here is labelled, which is what makes grading possible and also what makes this a study of
 estimators rather than a measurement of any particular map. Values in `exp/out/exp78_summary.json`; the per-unit
-export for all 24 tasks is in `exp/out/exp78_units/`.
+export for all 24 tasks is in `exp/out/exp78_units/`. Two corrections to the estimators after the run, both on
+22 September 2026 when they moved into the package: the simple-random interval's finite-population correction
+now multiplies the binomial variance term rather than the whole half-width, so a sample with no errors no longer
+rules out a perfect map; and the design effect's grand mean is taken over the units it analyses. The summary was
+regenerated from the package: every cited digit above is unchanged, the largest movement being the budget saving
+on MADOS from 2.508× to 2.510×, and no verdict moved.
 
 ## The ceiling belongs to the task, not to the model (from exp74 and exp70)
 

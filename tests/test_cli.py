@@ -248,3 +248,47 @@ def test_tiles_design_on_the_cli_reports_the_naive_interval_beside_the_honest_on
     assert main(["estimate", str(out)]) == 0
     r = json.load(open(tmp_path / "t_estimate.json"))
     assert "naive_interval_if_treated_as_random" in r and "warning" in r and r["n_tiles"] == 10
+
+
+def test_estimate_refuses_half_labels_other_delimiters_and_says_so_without_a_traceback(tmp_path):
+    """int(float("0.5")) was 0, so a reviewer's "not sure" counted as right with exit 0; a semicolon CSV was a KeyError."""
+    path, probs, expert = _sample_map(tmp_path)
+    out = tmp_path / "s.csv"
+    main(["sample", path, "--budget", "40", "--design", "random", "--out", str(out)])
+    _fill(out, probs, expert)
+    rows = list(csv.DictReader(open(out)))
+    rows[3]["wrong"] = "0.5"
+    with open(out, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=rows[0].keys()); w.writeheader(); w.writerows(rows)
+    with pytest.raises(SystemExit, match="exactly 1 or 0.*row 5"):
+        main(["estimate", str(out)])
+    rows[3]["wrong"] = "2"
+    with open(out, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=rows[0].keys()); w.writeheader(); w.writerows(rows)
+    with pytest.raises(SystemExit, match="exactly 1 or 0"):
+        main(["estimate", str(out)])
+    rows[3]["wrong"] = "1"
+    with open(out, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=rows[0].keys(), delimiter=";"); w.writeheader(); w.writerows(rows)
+    with pytest.raises(SystemExit, match="another delimiter"):
+        main(["estimate", str(out)])
+
+
+def test_sample_refuses_a_budget_beyond_the_map_and_a_tile_grid_too_small_for_it_as_messages(tmp_path):
+    path, probs, expert = _sample_map(tmp_path)
+    with pytest.raises(SystemExit, match="budget must be between"):
+        main(["sample", path, "--budget", "5000", "--out", str(tmp_path / "x.csv")])
+    with pytest.raises(SystemExit, match="at least 5|can label at most"):
+        main(["sample", path, "--budget", "300", "--design", "tiles", "--tile", "16", "--out", str(tmp_path / "y.csv")])
+
+
+def test_sample_sidecar_carries_the_crs_and_ground_units_for_a_georeferenced_map(tmp_path):
+    p, _ = _scene()
+    path = tmp_path / "p.tif"
+    _write(path, p)
+    assert main(["sample", str(path), "--budget", "50", "--design", "random", "--out", str(tmp_path / "g.csv")]) == 0
+    side = json.load(open(tmp_path / "g.json"))
+    assert side["crs"] and side["pixel_size"] == [10.0, 10.0] and side["window_size_ground_units"] == [40.0, 40.0]
+    assert side["xy_are"].startswith("window centres")
+    rows = list(csv.DictReader(open(tmp_path / "g.csv")))
+    assert rows[0]["x"] != "" and rows[0]["y"] != ""

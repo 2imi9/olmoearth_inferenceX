@@ -3,22 +3,16 @@ labels. It ranks the windows of a map by the model's own confidence, so a review
 where to look first, says why each window is flagged, and measures how two inferences of
 the same scene differ.
 
-1. **Ranking.** The map is pooled to windows (4 px by default). Each window's suspicion is
-   the model's own confidence margin, top-1 minus top-2 class probability, read from the
-   scores the model already emits. Windows on the prediction's class boundaries are reviewed
-   first, then the rest by margin. A ranking is scored against the model's errors by its
-   excess AURC, beside two controls that never see the model: class rarity and embedding
-   distance.
-2. **Comparing.** Two inferences of the same scene, across crops, backbones, sensors or
-   dates, pooled to the same windows: the disagreement rate, its association with the
-   errors, and which side the confidence prefers where the two differ, all against the
-   family's reseed floor so a difference is only reported when it exceeds noise.
-3. **Estimating.** The one question that needs labels: how wrong the map is. `sample`
-   chooses the windows to label, stratified by confidence and allocated from the model's
-   own confidence; `estimate` returns the error rate with the interval that design earns,
-   Wilson with a finite-population correction, stratified, or cluster-corrected for labels
-   taken tile by tile. It refuses to estimate from the review set, which is built to hold
-   errors.
+1. **Ranking.** Pool the map to windows (4 px). Suspicion `s = −(p₍₁₎ − p₍₂₎)`, the negative
+   top-1-minus-top-2 margin of the model's own scores; boundary windows first, then by `s`. A
+   ranking is scored by excess AURC, `AURC(s) − AURC(oracle)`, beside two controls that never
+   see the model (class rarity, embedding distance).
+2. **Comparing.** Two inferences `A`, `B` on one window grid: `P(A ≠ B)`, its enrichment among
+   the errors, and `P(confidence picks the right side | A ≠ B)`, each against the reseed floor.
+3. **Estimating.** Label `n` windows, stratified by margin with `n_h ∝ N_h √(q_h(1−q_h))` from
+   the model's own confidence; `θ̂ = Σ W_h p_h`, 95% interval from `Σ W_h²(1−f_h) p_h(1−p_h)/(n_h−1)`;
+   cluster-corrected when labels come tile by tile. A review set is refused as a sample: its rate
+   is `capture(b)·θ/b`, not `θ`.
 
 <img src="https://raw.githubusercontent.com/2imi9/olmoearth_inferenceX/main/docs/figures/pipeline.png" alt="One scene through the audit: Sentinel-2 bands, the frozen OlmoEarth encoder and the task head, the prediction, confidence and boundary layers, the review set at a 5% budget drawn on the scene, and the reasons per flagged window" width="760">
 

@@ -197,7 +197,7 @@ def test_labelling_the_review_set_and_dividing_is_refused_with_the_inflation_nam
     review = np.argsort(margin, kind="stable")[:k]                # least confident first: the review set
     chk = ox.review_set_check(review, margin)
     assert chk["looks_like_a_review_set"] and chk["median_suspicion_percentile"] > 0.95
-    with pytest.raises(ValueError, match="review set, not a sample"):
+    with pytest.raises(ValueError, match="not a sample"):
         ox.estimate_from_indices(review, err[review], margin)
     assert err[review].mean() > 1.7 * err.mean()                  # and it would indeed have been inflated
 
@@ -207,20 +207,26 @@ def test_a_random_sample_passes_the_guard_and_is_estimated_as_one():
     idx = np.random.default_rng(0).choice(margin.size, 300, replace=False)
     r = ox.estimate_from_indices(idx, err[idx], margin)
     assert 0.45 < r["review_set_check"]["median_suspicion_percentile"] < 0.55
+    # two hundred random draws: none refused
+    for k in range(200):
+        j = np.random.default_rng(k).choice(margin.size, 300, replace=False)
+        assert not ox.review_set_check(j, margin)["looks_like_a_review_set"], k
     assert r["low"] <= err.mean() <= r["high"] and r["method"].startswith("Wilson")
 
 
 def test_the_same_windows_are_estimated_with_their_design_and_refused_without_it():
     """The confidence design oversamples the suspect end on purpose: on MADOS its median suspicion percentile is
-    about 0.83, past the guard. With its design it carries the weights that undo that and is estimated; handed
-    over as bare indices it is indistinguishable from a review set and is refused. That is the guard's job."""
+    about 0.72 and treating it as random would report 1.9 times the true rate. With its design it carries the
+    weights that undo that and is estimated; handed over as bare indices it is refused. That is the guard's job,
+    and at 0.75 the first threshold let it through: the threshold is now four SDs above a random sample's."""
     margin, p1, err, tile = _units("mados")
     s = ox.sample_for_estimation(margin, 300, p1=p1)
     chk = ox.review_set_check(s["indices"], margin)
-    assert chk["median_suspicion_percentile"] > est.REVIEW_SET_PERCENTILE
+    assert chk["median_suspicion_percentile"] > chk["threshold"] and abs(chk["threshold"] - 0.639) < 0.01
+    assert err[s["indices"]].mean() > 1.5 * err.mean()
     r = ox.estimate_error_rate(s, err[s["indices"]])
     assert r["low"] <= err.mean() <= r["high"]
-    with pytest.raises(ValueError, match="review set, not a sample"):
+    with pytest.raises(ValueError, match="not a sample"):
         ox.estimate_from_indices(s["indices"], err[s["indices"]], margin)
 
 
@@ -232,3 +238,55 @@ def test_exp78_reads_its_estimators_from_the_package():
     assert e78.wilson is est.wilson_interval and e78.stratified_interval is est.stratified_interval
     assert e78.neyman is est.neyman_allocation and e78.design_effect is est.design_effect
     assert e78.Z95 == est.Z95 and e78.MIN_PER_STRATUM == est.MIN_PER_STRATUM
+
+
+# ----------------------------------------------------------------------------- what the GeoTIFF audit found, 2026-09-22
+def test_a_sample_with_no_errors_gives_a_positive_upper_bound_and_a_lower_bound_of_zero():
+    """Two defects at once. The stratified Wald interval collapsed to [0, 0] at nominal 95% when no sampled window
+    was wrong, which a clean map makes likely; the shipped interval is Wilson on the design's effective sample
+    size and falls back to the simple-random bound there. And Wilson's own lower bound sat at 0.1% at k = 0
+    because the finite-population correction scaled the whole half-width; a perfect map was ruled out."""
+    margin = np.random.default_rng(0).random(999)
+    p1 = 0.5 + 0.5 * np.random.default_rng(1).random(999)
+    s = ox.sample_for_estimation(margin, 300, p1=p1)
+    r = ox.estimate_error_rate(s, np.zeros(300))
+    assert r["low"] == 0.0 and 0.01 < r["high"] < 0.02 and "no labelled window was wrong" in r["warning"]
+    r1 = ox.estimate_error_rate(s, np.ones(300))
+    assert r1["high"] == 1.0 and 0.98 < r1["low"] < 0.99
+    assert est.wilson_interval(0, 300, 999)[0] == 0.0 and est.wilson_interval(300, 300, 999)[1] == 1.0
+    assert est.stratified_interval(np.zeros(999), s["strata"], np.arange(300), s["sizes"], 999)[1:3] == (0.0, 0.0)   # the graded form, kept
+
+
+def test_the_shipped_stratified_interval_agrees_with_the_graded_one_away_from_the_edges_and_covers_no_worse():
+    """exp78 graded the Wald form. The Wilson-effective-n form the package ships must agree with it to the third
+    decimal where both are defined, and cover at least as often, on the real units of the cleanest task."""
+    margin, p1, err, tile = _units("mados")
+    theta = err.mean()
+    cov_w = cov_s = 0
+    gaps = []
+    pos = None
+    for seed in range(200):
+        s = ox.sample_for_estimation(margin, 300, p1=p1, seed=seed)
+        if pos is None:                                           # the population is the same for every seed
+            pos = np.full(margin.size, -1); pos[s["strata_of_population"]] = np.arange(s["strata_of_population"].size)
+        local = pos[s["indices"]]
+        e = err[s["strata_of_population"]]
+        _, wlo, whi, _ = est.stratified_interval(e, s["strata"], local, s["sizes"], s["n_population"])
+        _, slo, shi, _, n_eff = est.stratified_interval_wilson(e, s["strata"], local, s["sizes"], s["n_population"])
+        cov_w += wlo <= theta <= whi
+        cov_s += slo <= theta <= shi
+        gaps.append(abs((shi - slo) - (whi - wlo)))
+        assert 100 < n_eff < 5000
+    assert cov_s >= cov_w and cov_s / 200 >= 0.93
+    assert np.median(gaps) < 3e-3
+
+
+def test_the_tile_design_refuses_a_grid_that_cannot_meet_the_budget():
+    """Four tiles of sixteen cannot give 300 labels; before, it returned 64 with exit 0 and a sidecar saying 300."""
+    margin = np.random.default_rng(0).random(1024)
+    with pytest.raises(ValueError, match="at least 5|can label at most"):
+        ox.sample_for_estimation(margin, 300, design="tiles", tiles=np.repeat(np.arange(4), 256), per_tile=16)
+    with pytest.raises(ValueError, match="can label at most 96 windows"):        # six tiles: enough tiles, too few labels
+        ox.sample_for_estimation(margin, 300, design="tiles", tiles=np.arange(1024) % 6, per_tile=16)
+    ok = ox.sample_for_estimation(margin, 300, design="tiles", tiles=np.repeat(np.arange(64), 16), per_tile=16)
+    assert ok["indices"].size == 300 and ok["n_tiles"] == 19
