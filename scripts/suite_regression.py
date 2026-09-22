@@ -26,9 +26,32 @@ import numpy as np
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 sys.path.insert(0, os.path.join(ROOT, "exp"))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
 import exp70_task_suite as e70                    # noqa: E402
+import upstream_revision                          # noqa: E402
 
 OUT = os.path.join(ROOT, "exp", "out", "suite_regression")
+
+
+def upstream(cache):
+    """Which revision of the embedding suite this run is reading, beside the one the record was measured against.
+
+    Read out of the cache, so it costs nothing and works offline. A run against a different revision is not
+    comparable to the recorded numbers until the difference is attributed, which is why it is said out loud here
+    and carried into the summary rather than left for a reader to wonder about.
+    """
+    pinned = upstream_revision.load()["repos"][e70.HUB]["revision"]
+    here = upstream_revision.cached_revision(os.path.join(cache, "paper_embeddings"), e70.HUB) if cache else None
+    if here is None:
+        print(f"upstream: {e70.HUB} revision unknown (no cache under HF_HOME); the record was measured "
+              f"against {pinned[:12]}", flush=True)
+    elif here != pinned:
+        print(f"upstream: reading {here[:12]}, the record was measured against {pinned[:12]}. THESE ARE "
+              f"DIFFERENT BYTES; a difference from the recorded numbers may be the data, not the model.", flush=True)
+    else:
+        print(f"upstream: {e70.HUB} at {here[:12]}, the revision the record was measured against", flush=True)
+    return {"repo": e70.HUB, "revision": here, "recorded_revision": pinned,
+            "same_as_the_record": None if here is None else here == pinned}
 
 
 def load_signal(spec):
@@ -92,6 +115,7 @@ def cmd_run(args):
     import exp54_multiclass_embeddings as e54
     import exp74_suite_encoders as e74
     cache = os.environ.get("HF_HOME")
+    provenance = upstream(cache)
     signal = load_signal(args.signal) if args.signal else None
     name = args.name or (args.signal.rsplit(":", 1)[-1] if args.signal else "candidate")
     out_dir = os.path.join(OUT, args.model)
@@ -124,7 +148,8 @@ def cmd_run(args):
         cand = f" {name} vs margin {r['candidate']['vs_margin']:+.4f}" if "candidate" in r else ""
         print(f"  {task:44s} {r['family'][:3]} n={r['n_units']:7d} acc {r['test_accuracy']:.3f} "
               f"margin lead {r['margin_lead']:+.4f} over {r['best_control'][4:]}{cand}", flush=True)
-    summary = {"model": args.model, "verdict": e74.encoder_verdict(results) if results else {},
+    summary = {"model": args.model, "upstream": provenance,
+               "verdict": e74.encoder_verdict(results) if results else {},
                "bar": "the margin beats the best no-model control on >= 75% of scored tasks, sign test p < 0.05 (exp74)",
                "absent": absent, "tasks": results}
     if signal is not None and results:
@@ -164,7 +189,11 @@ def smoke():
     fake = {f"t{i}": {"margin_lead": 0.05 if i < 20 else -0.01, "source": f"s{i}", "test_accuracy": 0.8} for i in range(24)}
     v = e74.encoder_verdict(fake)
     assert v["wins"] == 20 and v["scored"] == 24 and v["share"] >= 0.75 and v["p"] < 0.05
-    print("smoke OK: candidate scoring beside the margin and controls, length check, and the per-model verdict")
+    p = upstream(None)
+    assert p["repo"] == e70.HUB and p["revision"] is None and p["same_as_the_record"] is None
+    assert len(p["recorded_revision"]) == 40, "the record pins the embedding suite this runner reads"
+    print("smoke OK: candidate scoring beside the margin and controls, length check, the per-model verdict, "
+          "and the upstream revision the summary carries")
 
 
 def main():

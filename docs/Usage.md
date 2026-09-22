@@ -303,6 +303,24 @@ The reading is `f(probs, emb_test, emb_train, decisions) -> per-unit array`,
 higher meaning more suspect. A candidate that screens well enters the record
 only through a preregistered experiment.
 
+The same command re-grades a **new encoder**: `--model <its directory>` runs
+exp70's protocol on it and applies exp74's bar. Before comparing what comes
+back against anything recorded here, check that upstream is where the record
+left it, because none of these experiments pins a revision when it downloads:
+
+```bash
+python scripts/upstream_revision.py check
+```
+
+It prints every upstream repository the record rests on, the commit the
+recorded numbers were measured against
+([exp/out/upstream_revisions.json](https://github.com/2imi9/olmoearth_inferenceX/blob/main/exp/out/upstream_revisions.json)),
+and what `main` points at today; it exits non-zero if any of them has moved or
+if the code fetches something the record does not pin. A run against moved
+bytes is not comparable until the difference is attributed, and
+`suite_regression.py` now says which revision it read and carries it into its
+summary.
+
 ## Reproduce
 
 ```bash
