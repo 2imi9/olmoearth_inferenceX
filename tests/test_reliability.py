@@ -206,3 +206,44 @@ def test_poly2_layout():
     expected = np.column_stack([Z] + [Z[:, i] * Z[:, j] for i in range(4) for j in range(i, 4)])   # i-major, i <= j
     assert np.array_equal(P, expected)
     assert np.array_equal(poly2(Z[:, :1]), np.column_stack([Z[:, 0], Z[:, 0] * Z[:, 0]]))
+
+
+# ----------------------------------------------------------------------------- the 22 September audit
+def test_a_singleton_cluster_no_longer_inverts_the_ncdd_ranking():
+    """One outlier became a one-point cluster, its spread was floored to 1e-12, and every normalised distance near it
+    went to about 1e11. Degenerate clusters now take the median spread."""
+    from oe_inferencex.reliability import centroid_signals, kmeans
+    rng = np.random.default_rng(0)
+    X = np.vstack([rng.normal(c, 1, (200, 2)) for c in ((0, 0), (10, 0), (0, 10))] + [np.array([[200.0, 200.0]])])
+    C, a, im = kmeans(X, k=4, iters=25, seed=0)
+    assert (im > 0.5).all() and im.max() < 10
+    ind = rng.normal((0, 0), 1, (200, 2)); ood = rng.uniform(-40, -20, (200, 2))
+    nd = centroid_signals(np.vstack([ind, ood]), C, im)["normalized distance"]
+    assert nd.max() < 1e3 and np.median(nd[200:]) > np.median(nd[:200])     # far points are farther, and finite
+    import pytest
+    with pytest.raises(ValueError, match="clusters from 5 points"):
+        kmeans(rng.random((5, 2)), k=8)
+
+
+def test_input_extremity_refuses_mismatched_features_and_ignores_nan():
+    import pytest
+    from oe_inferencex.reliability import input_extremity
+    rng = np.random.default_rng(0)
+    with pytest.raises(ValueError, match="must match"):
+        input_extremity(rng.random((100, 2)), rng.random((5, 3)))
+    r = input_extremity(np.array([[1.0], [2.0], [3.0], [np.nan]]), np.array([[10.0], [0.0], [np.nan]]))
+    assert r["max"][0] == 1.0 and r["max"][1] == 1.0 and np.isnan(r["max"][2])
+
+
+def test_evidence_pooling_crops_a_ragged_edge_and_dawid_skene_refuses_out_of_range_votes(monkeypatch):
+    """Both functions are pure numpy; the module imports torch at the top, so a stub stands in for it here rather
+    than skipping, which would leave CI never running this test."""
+    import importlib, sys, types
+    import pytest
+    monkeypatch.setitem(sys.modules, "torch", types.ModuleType("torch"))
+    sys.modules.pop("oe_inferencex.evidence", None)
+    evidence = importlib.import_module("oe_inferencex.evidence")
+    monkeypatch.delitem(sys.modules, "oe_inferencex.evidence")
+    assert evidence.pool_to_patches(np.ones((33, 32), bool), 16).shape == (2, 2)
+    with pytest.raises(ValueError, match="votes must be classes"):
+        evidence.dawid_skene(np.array([[0, -1], [1, 1]]), 2)

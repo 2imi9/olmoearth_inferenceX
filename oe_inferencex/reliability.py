@@ -30,6 +30,8 @@ def kmeans(X, k=64, iters=25, seed=0):
     """Lloyd's k-means with k-means++ seeding -> (centroids (k, D), assignment (N,), mean member distance per cluster (k,))."""
     rng = np.random.default_rng(seed)
     N, D = X.shape
+    if k > N:
+        raise ValueError(f"k = {k} clusters from {N} points: some clusters would be empty or single points")
     C = np.empty((k, D))
     C[0] = X[rng.integers(N)]
     dmin = np.full(N, np.inf)
@@ -54,7 +56,15 @@ def kmeans(X, k=64, iters=25, seed=0):
         a = d.argmin(1)
         assign[i:i + len(x)], dc[i:i + len(x)] = a, d[np.arange(len(x)), a]
     counts = np.bincount(assign, minlength=k)
-    intra_mean = np.where(counts > 0, np.bincount(assign, weights=dc, minlength=k) / np.maximum(counts, 1), 1.0)
+    intra_mean = np.bincount(assign, weights=dc, minlength=k) / np.maximum(counts, 1)
+    # A cluster of one point, or of identical points, has no spread, and an empty one has none to measure. Their
+    # spread used to be 0 (floored to 1e-12 downstream) or a placeholder of 1.0 in data units: one outlier seeded by
+    # k-means++ became a singleton, every normalised distance near it went to about 1e11, and the NCDD ranking
+    # inverted with exit 0 (audit 2026-09-22). Such clusters take the median spread of the clusters that have one.
+    degenerate = (counts <= 1) | (intra_mean <= 0)
+    if degenerate.all():
+        raise ValueError("no cluster has a measurable spread; the points are too few or identical")
+    intra_mean = np.where(degenerate, float(np.median(intra_mean[~degenerate])), intra_mean)
     return C, assign, intra_mean
 
 
@@ -64,7 +74,10 @@ def centroid_signals(X, centroids, intra_mean):
     (higher = more in-distribution; not monotone in distance when cluster spreads differ); and NCDD raw, the same
     deficit over raw distances (Pokhrel et al. 2024), which tends to 0 far from every centroid."""
     C, im = np.asarray(centroids, dtype=np.float64), np.asarray(intra_mean, dtype=np.float64)
-    im = np.where(im > 0, im, 1e-12)                                    # a singleton cluster has no spread; keep the division finite
+    if (im <= 0).any():                                                 # kmeans no longer returns these; a caller's own might
+        if not (im > 0).any():
+            raise ValueError("no centroid has a positive spread")
+        im = np.where(im > 0, im, float(np.median(im[im > 0])))
     nd, ncdd, raw = np.empty(len(X)), np.empty(len(X)), np.empty(len(X))
     for i, x in _chunks(X):
         d = _dist(x, C)
@@ -81,12 +94,22 @@ def centroid_signals(X, centroids, intra_mean):
 def input_extremity(train_stats, stats):
     """Per feature, e_j = 2 |F_j(x_j) - 1/2| with F_j the reference column's empirical CDF (midranks); returns its max and mean over features."""
     tr, st = np.asarray(train_stats, dtype=np.float64), np.asarray(stats, dtype=np.float64)
-    e = np.empty(st.shape)
+    if tr.shape[1] != st.shape[1]:
+        # np.empty left the extra columns holding whatever memory held, often the previous call's extremities
+        raise ValueError(f"train_stats has {tr.shape[1]} features and stats {st.shape[1]}; they must match")
+    e = np.full(st.shape, np.nan)
     for j in range(tr.shape[1]):
-        col = np.sort(tr[:, j])
-        u = (np.searchsorted(col, st[:, j], side="left") + np.searchsorted(col, st[:, j], side="right")) / 2.0 / len(col)
-        e[:, j] = 2.0 * np.abs(u - 0.5)
-    return {"max": e.max(1), "mean": e.mean(1)}
+        col = np.sort(tr[:, j][np.isfinite(tr[:, j])])                 # NaN in the reference is not a value above the rest
+        if col.size == 0:
+            continue
+        x = st[:, j]
+        u = (np.searchsorted(col, x, side="left") + np.searchsorted(col, x, side="right")) / 2.0 / len(col)
+        e[:, j] = np.where(np.isfinite(x), 2.0 * np.abs(u - 0.5), np.nan)   # a NaN statistic has no rank
+    with np.errstate(all="ignore"):
+        import warnings as _w
+        with _w.catch_warnings():
+            _w.simplefilter("ignore", RuntimeWarning)
+            return {"max": np.nanmax(e, 1), "mean": np.nanmean(e, 1)}
 
 
 def _entropy(p, eps):

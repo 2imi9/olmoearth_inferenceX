@@ -53,9 +53,12 @@ def rasterize_polyline(coords_px, size):
 
 
 def pool_to_patches(grid, patch):
-    """Max-pool a boolean/fraction pixel grid to the patch grid."""
-    h, w = grid.shape
-    return grid.reshape(h // patch, patch, w // patch, patch).mean(axis=(1, 3))
+    """Mean-pool a boolean/fraction pixel grid to the patch grid (the fraction of each patch that is set; callers
+    threshold it at 0.5 for a majority or at 0 for any). A ragged right or bottom edge is cropped, as the signals'
+    pooling does; it used to raise a reshape error."""
+    grid = np.asarray(grid)
+    h, w = grid.shape[0] // patch * patch, grid.shape[1] // patch * patch
+    return grid[:h, :w].reshape(h // patch, patch, w // patch, patch).mean(axis=(1, 3))
 
 
 def train_softmax_head(feats, labels, n_classes, epochs=400, lr=0.05):
@@ -89,6 +92,9 @@ def dawid_skene(votes, n_classes, iters=50):
     diagonal of the confusion matrix (expected accuracy of rater r).
     """
     votes = np.asarray(votes)
+    if votes.size and (votes.min() < 0 or votes.max() >= n_classes):
+        # an abstain code of -1 used to index the last class and count as a vote for it
+        raise ValueError(f"votes must be classes 0 to {n_classes - 1}; got values from {votes.min()} to {votes.max()}")
     n, r = votes.shape
     post = np.zeros((n, n_classes))
     for i in range(n):
