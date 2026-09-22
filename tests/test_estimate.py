@@ -1,0 +1,234 @@
+"""oe_inferencex.estimate: the intervals against enumeration, the designs against their own definitions, and
+the guard against the one thing a user must not do — on exp78's committed real units, not on synthetic data."""
+import itertools
+import json
+import math
+import os
+
+import numpy as np
+import pytest
+
+import oe_inferencex as ox
+from oe_inferencex import estimate as est
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+UNITS = os.path.join(ROOT, "exp", "out", "exp78_units")
+
+
+def _units(task):
+    d = np.load(os.path.join(UNITS, f"{task}.npz"), allow_pickle=False)
+    ok = np.unpackbits(d["ok_packed"])[: int(d["ok_len"][0])].astype(bool)
+    N, hw, ww = (int(v) for v in d["grid"])
+    tile = np.broadcast_to(np.arange(N)[:, None, None], (N, hw, ww)).reshape(-1)[ok]
+    return d["margin"].astype(float), d["p1"].astype(float), d["err"].astype(float), tile
+
+
+# ----------------------------------------------------------------------------- intervals
+@pytest.mark.parametrize("N,K,B", [(10, 3, 4), (12, 5, 5), (15, 7, 6)])
+def test_wilson_with_fpc_covers_at_its_exact_rate_by_enumeration(N, K, B):
+    """The coverage the interval achieves, counted over every subset, must be a sensible number and equal what
+    exp79's exact enumeration says; the same function is what exp78 graded."""
+    theta, hits = K / N, 0
+    for combo in itertools.combinations(range(N), B):
+        k = sum(1 for i in combo if i < K)
+        lo, hi = est.wilson_interval(k, B, N)
+        hits += lo <= theta <= hi
+    assert 0.7 < hits / math.comb(N, B) <= 1.0
+
+
+def test_a_census_is_the_point_and_an_empty_sample_is_everything():
+    assert est.wilson_interval(10, 50, 50) == (0.2, 0.2)
+    assert est.wilson_interval(0, 0) == (0.0, 1.0)
+    lo, hi = est.wilson_interval(3, 30)
+    assert 0 < lo < 0.1 < hi < 0.3
+
+
+def test_stratified_interval_is_the_plain_mean_when_strata_are_equal_and_narrower_when_they_differ():
+    rng = np.random.default_rng(0)
+    N = 5000
+    strata = np.repeat(np.arange(5), N // 5)
+    sizes = np.bincount(strata)
+    flat = rng.random(N) < 0.2                                     # same rate everywhere: stratifying buys nothing
+    sharp = rng.random(N) < np.array([0.6, 0.25, 0.1, 0.03, 0.01])[strata]   # rates separate: it buys width
+    picked = np.concatenate([rng.choice(np.flatnonzero(strata == h), 60, replace=False) for h in range(5)])
+    for err in (flat, sharp):
+        e, lo, hi, starved = est.stratified_interval(err.astype(float), strata, picked, sizes, N)
+        assert starved == 0 and lo <= e <= hi
+        assert abs(e - err[picked].mean()) < 1e-12               # equal allocation: the estimate is the sample mean
+    _, flo, fhi, _ = est.stratified_interval(flat.astype(float), strata, picked, sizes, N)
+    _, slo, shi, _ = est.stratified_interval(sharp.astype(float), strata, picked, sizes, N)
+    wlo, whi = est.wilson_interval(int(flat[picked].sum()), picked.size, N)
+    assert (fhi - flo) == pytest.approx(whi - wlo, rel=0.15)     # flat: about the SRS width
+    # sharp: the width is the closed form, sum over strata of W_h^2 (1 - n_h/N_h) p_h q_h / (n_h - 1), z = 1.96
+    ph = np.array([sharp[picked][strata[picked] == h].mean() for h in range(5)])
+    var = sum((sizes[h] / N) ** 2 * (1 - 60 / sizes[h]) * ph[h] * (1 - ph[h]) / 59 for h in range(5))
+    assert (shi - slo) == pytest.approx(2 * est.Z95 * math.sqrt(var), rel=1e-9)
+    assert (shi - slo) < (fhi - flo)                              # and narrower than the flat case, since strata differ
+
+
+def test_a_starved_stratum_is_counted_and_contributes_its_single_unit_to_the_estimate():
+    N = 100
+    strata = np.repeat(np.arange(2), 50)
+    err = np.zeros(N); err[:50] = 1.0                              # stratum 0 all wrong, stratum 1 all right
+    picked = np.array([0, 50, 51, 52])                             # one unit from stratum 0, three from stratum 1
+    e, lo, hi, starved = est.stratified_interval(err, strata, picked, [50, 50], N)
+    assert starved == 1 and e == pytest.approx(0.5)                # W0 * 1 + W1 * 0
+
+
+def test_design_effect_is_one_for_independent_units_and_large_for_clustered_errors():
+    rng = np.random.default_rng(1)
+    tile = np.repeat(np.arange(200), 16)
+    iid = (rng.random(3200) < 0.2).astype(float)
+    clustered = np.repeat(rng.random(200) < 0.2, 16).astype(float)   # whole tiles wrong or right
+    assert abs(est.design_effect(iid, tile) - 1.0) < 0.3
+    assert est.design_effect(clustered, tile) > 10
+    assert math.isnan(est.design_effect(iid[:32], tile[:32]))     # two tiles: not enough to estimate
+
+
+# ----------------------------------------------------------------------------- designs
+def test_neyman_allocation_sums_to_the_budget_floors_every_stratum_and_never_exceeds_a_stratum():
+    sizes = np.array([1000, 1000, 1000, 1000, 5])
+    a = est.neyman_allocation(sizes, np.array([0.5, 0.3, 0.1, 0.05, 0.9]), 300)
+    assert a.sum() == 300 and a.min() >= est.MIN_PER_STRATUM and a[4] <= 5 and a[0] > a[3]
+    b = est.neyman_allocation(sizes, np.ones(5), 300)
+    assert b.sum() == 300 and b[:4].max() - b[:4].min() <= 1      # proportional when the spread is flat, to rounding
+
+
+def test_confidence_strata_are_quintiles_with_the_least_confident_first():
+    margin = np.linspace(0, 1, 1000)
+    s = est.confidence_strata(margin)
+    assert s.min() == 0 and s.max() == 4 and (np.bincount(s) == 200).all()
+    assert s[0] == 0 and s[-1] == 4
+
+
+def test_sample_designs_return_the_budget_from_valid_windows_only():
+    rng = np.random.default_rng(0)
+    margin, p1 = rng.random(4000), 0.5 + 0.5 * rng.random(4000)
+    valid = rng.random(4000) > 0.1
+    tiles = np.repeat(np.arange(250), 16)
+    for design in ("random", "proportional", "confidence"):
+        s = ox.sample_for_estimation(margin, 300, design=design, p1=p1, valid=valid)
+        assert s["indices"].size == 300 and valid[s["indices"]].all() and len(set(s["indices"])) == 300
+        assert s["n_population"] == int(valid.sum())
+    t = ox.sample_for_estimation(margin, 300, design="tiles", tiles=tiles, valid=valid, per_tile=16)
+    assert t["indices"].size == 300 and valid[t["indices"]].all() and len(set(t["indices"])) == 300
+    assert t["n_tiles"] == len(set(tiles[t["indices"]])) >= 19   # 250 tiles of ~14.4 valid windows: 19 or more to reach 300
+    assert max(np.bincount(tiles[t["indices"]])) <= 16
+
+
+def test_sample_refuses_what_it_cannot_do():
+    margin = np.random.default_rng(0).random(100)
+    with pytest.raises(ValueError, match="needs p1"):
+        ox.sample_for_estimation(margin, 10)                      # confidence design without p1
+    with pytest.raises(ValueError, match="needs `tiles`"):
+        ox.sample_for_estimation(margin, 10, design="tiles")
+    with pytest.raises(ValueError, match="budget must be"):
+        ox.sample_for_estimation(margin, 1000, design="random")
+    with pytest.raises(ValueError, match="design must be"):
+        ox.sample_for_estimation(margin, 10, design="cleverest")
+
+
+def test_the_confidence_design_oversamples_the_least_confident_stratum_on_a_real_map():
+    """That is what buys the width: on MADOS exp78 measured a ratio of 0.63 against a random sample."""
+    margin, p1, err, tile = _units("mados")
+    s = ox.sample_for_estimation(margin, 300, p1=p1)
+    alloc = np.array(s["allocation"])
+    assert alloc[0] > alloc[4] and alloc.sum() == 300
+
+
+# ----------------------------------------------------------------------------- estimates, on real units
+@pytest.mark.parametrize("design", ["random", "proportional", "confidence"])
+def test_estimate_covers_the_true_rate_on_mados_at_the_rate_exp78_recorded(design):
+    """Two hundred reviewer draws on exp78's MADOS export: coverage near 0.95, the confidence design narrower."""
+    margin, p1, err, tile = _units("mados")
+    theta = err.mean()
+    cov, width = 0, 0.0
+    for seed in range(200):
+        s = ox.sample_for_estimation(margin, 300, design=design, p1=p1, seed=seed)
+        r = ox.estimate_error_rate(s, err[s["indices"]])
+        cov += r["low"] <= theta <= r["high"]
+        width += r["half_width"]
+    assert cov / 200 >= 0.90, (design, cov / 200)
+    assert 0.01 < width / 200 < 0.04
+
+
+def test_the_confidence_design_is_narrower_than_random_on_mados():
+    margin, p1, err, tile = _units("mados")
+    w = {}
+    for design in ("random", "confidence"):
+        w[design] = np.mean([ox.estimate_error_rate(s := ox.sample_for_estimation(margin, 300, design=design, p1=p1, seed=k),
+                                                   err[s["indices"]])["half_width"] for k in range(100)])
+    assert w["confidence"] < 0.8 * w["random"], w                # exp78: 0.63
+
+
+def test_the_tile_design_reports_the_cluster_interval_and_the_naive_one_beside_it():
+    """On MADOS the naive interval covered on 0.506 of draws in exp78 against a population design effect of 9.77.
+    MADOS tiles hold a median of six valid windows, so one draw's design effect is noisy (5% of draws fall under
+    1.5); the test is over 100 draws, and the budget must be met on every one."""
+    margin, p1, err, tile = _units("mados")
+    wider, deffs = 0, []
+    for seed in range(100):
+        s = ox.sample_for_estimation(margin, 300, design="tiles", tiles=tile, seed=seed)
+        assert s["indices"].size == 300, seed
+        r = ox.estimate_error_rate(s, err[s["indices"]])
+        naive = r["naive_interval_if_treated_as_random"]
+        assert r["method"].startswith("ultimate cluster") and "warning" in r
+        wider += (r["high"] - r["low"]) > (naive["high"] - naive["low"])
+        deffs.append(r["design_effect"])
+    assert wider >= 90 and np.median(deffs) > 3
+
+
+def test_estimate_refuses_mismatched_or_non_binary_labels():
+    margin = np.random.default_rng(0).random(500)
+    s = ox.sample_for_estimation(margin, 50, design="random")
+    with pytest.raises(ValueError, match="labels for"):
+        ox.estimate_error_rate(s, np.zeros(49))
+    with pytest.raises(ValueError, match="0 or 1"):
+        ox.estimate_error_rate(s, np.full(50, 0.5))
+
+
+# ----------------------------------------------------------------------------- the guard
+@pytest.mark.parametrize("task", ["mados", "sen1floods11", "pastis_sentinel2", "m_cashew_plant"])
+def test_labelling_the_review_set_and_dividing_is_refused_with_the_inflation_named(task):
+    """The natural wrong thing, on the real units: the 5% review set gives 1.8 to 5.8 times the true rate."""
+    margin, p1, err, tile = _units(task)
+    n = margin.size
+    k = int(round(0.05 * n))
+    review = np.argsort(margin, kind="stable")[:k]                # least confident first: the review set
+    chk = ox.review_set_check(review, margin)
+    assert chk["looks_like_a_review_set"] and chk["median_suspicion_percentile"] > 0.95
+    with pytest.raises(ValueError, match="review set, not a sample"):
+        ox.estimate_from_indices(review, err[review], margin)
+    assert err[review].mean() > 1.7 * err.mean()                  # and it would indeed have been inflated
+
+
+def test_a_random_sample_passes_the_guard_and_is_estimated_as_one():
+    margin, p1, err, tile = _units("mados")
+    idx = np.random.default_rng(0).choice(margin.size, 300, replace=False)
+    r = ox.estimate_from_indices(idx, err[idx], margin)
+    assert 0.45 < r["review_set_check"]["median_suspicion_percentile"] < 0.55
+    assert r["low"] <= err.mean() <= r["high"] and r["method"].startswith("Wilson")
+
+
+def test_the_same_windows_are_estimated_with_their_design_and_refused_without_it():
+    """The confidence design oversamples the suspect end on purpose: on MADOS its median suspicion percentile is
+    about 0.83, past the guard. With its design it carries the weights that undo that and is estimated; handed
+    over as bare indices it is indistinguishable from a review set and is refused. That is the guard's job."""
+    margin, p1, err, tile = _units("mados")
+    s = ox.sample_for_estimation(margin, 300, p1=p1)
+    chk = ox.review_set_check(s["indices"], margin)
+    assert chk["median_suspicion_percentile"] > est.REVIEW_SET_PERCENTILE
+    r = ox.estimate_error_rate(s, err[s["indices"]])
+    assert r["low"] <= err.mean() <= r["high"]
+    with pytest.raises(ValueError, match="review set, not a sample"):
+        ox.estimate_from_indices(s["indices"], err[s["indices"]], margin)
+
+
+def test_exp78_reads_its_estimators_from_the_package():
+    """One implementation: the recorded run and the shipped code cannot drift apart."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("e78", os.path.join(ROOT, "exp", "exp78_error_rate_estimation.py"))
+    e78 = importlib.util.module_from_spec(spec); spec.loader.exec_module(e78)
+    assert e78.wilson is est.wilson_interval and e78.stratified_interval is est.stratified_interval
+    assert e78.neyman is est.neyman_allocation and e78.design_effect is est.design_effect
+    assert e78.Z95 == est.Z95 and e78.MIN_PER_STRATUM == est.MIN_PER_STRATUM

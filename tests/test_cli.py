@@ -180,3 +180,71 @@ def test_compare_on_probability_maps_is_unchanged_by_the_optional_cutoff(tmp_pat
     main(["compare", str(tmp_path / "a.npy"), str(tmp_path / "b.npy"), "--out", str(tmp_path / "e"), "--threshold", "0.5"])
     d, e = (json.load(open(tmp_path / k / "comparison.json")) for k in ("d", "e"))
     assert d["disagreement_rate"] == e["disagreement_rate"] and "notes" not in d
+
+
+# ----------------------------------------------------------------------------- sample / estimate
+def _sample_map(tmp_path):
+    """The real Dynamic World tile the package ships, as a (9, H, W) probability .npy and its expert labels."""
+    z = np.load(os.path.join(os.path.dirname(__file__), "..", "oe_inferencex", "sample", "dynamic_world_tile.npz"))
+    probs, expert = z["probs"].astype(np.float32), z["expert"].astype(int)
+    path = tmp_path / "dw.npy"
+    np.save(path, probs)
+    return str(path), probs, expert
+
+
+def _fill(csv_path, probs, expert, patch=4):
+    """Label the sampled windows the way a reviewer would: wrong = 1 where the map's pooled class is not the expert's."""
+    from oe_inferencex.assess import _pooled_argmax
+    hard = _pooled_argmax(probs.argmax(0), probs.shape[0], patch)
+    ref = _pooled_argmax(np.where(expert >= 0, expert, -1), probs.shape[0], patch, empty=-1)
+    rows = list(csv.DictReader(open(csv_path)))
+    for r in rows:
+        i, j = int(r["window_row"]), int(r["window_col"])
+        r["wrong"] = str(int(hard[i, j] != ref[i, j]))
+    with open(csv_path, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=rows[0].keys())
+        w.writeheader(); w.writerows(rows)
+    return hard, ref
+
+
+def test_sample_then_estimate_round_trip_covers_the_true_rate_of_the_shipped_map(tmp_path):
+    path, probs, expert = _sample_map(tmp_path)
+    out = tmp_path / "s.csv"
+    assert main(["sample", path, "--budget", "200", "--out", str(out)]) == 0
+    side = json.load(open(tmp_path / "s.json"))
+    assert side["design"] == "confidence" and len(side["indices"]) == 200 and side["n_population"] == 32 * 32
+    rows = list(csv.DictReader(open(out)))
+    assert len(rows) == 200 and all(r["wrong"] == "" for r in rows) and all(r["stratum"] != "" for r in rows)
+    hard, ref = _fill(out, probs, expert)
+    assert main(["estimate", str(out)]) == 0
+    r = json.load(open(tmp_path / "s_estimate.json"))
+    truth = float((hard != ref).mean())
+    assert r["n_labelled"] == 200 and r["low"] <= truth <= r["high"], (r, truth)
+    assert r["method"].startswith("stratified") and 0.02 < r["half_width"] < 0.12
+
+
+def test_estimate_refuses_unlabelled_rows_and_a_csv_that_does_not_match_its_design(tmp_path):
+    path, probs, expert = _sample_map(tmp_path)
+    out = tmp_path / "s.csv"
+    main(["sample", path, "--budget", "50", "--design", "random", "--out", str(out)])
+    with pytest.raises(SystemExit, match="have no `wrong` value"):
+        main(["estimate", str(out)])
+    _fill(out, probs, expert)
+    rows = list(csv.DictReader(open(out)))
+    rows[0], rows[1] = rows[1], rows[0]                                       # reorder: no longer the design's rows
+    with open(out, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=rows[0].keys()); w.writeheader(); w.writerows(rows)
+    with pytest.raises(SystemExit, match="do not match the design"):
+        main(["estimate", str(out)])
+
+
+def test_tiles_design_on_the_cli_reports_the_naive_interval_beside_the_honest_one(tmp_path):
+    path, probs, expert = _sample_map(tmp_path)
+    out = tmp_path / "t.csv"
+    assert main(["sample", path, "--budget", "160", "--design", "tiles", "--tile", "8", "--per-tile", "16", "--out", str(out)]) == 0
+    side = json.load(open(tmp_path / "t.json"))
+    assert side["n_tiles"] == 10 and len(side["indices"]) == 160
+    _fill(out, probs, expert)
+    assert main(["estimate", str(out)]) == 0
+    r = json.load(open(tmp_path / "t_estimate.json"))
+    assert "naive_interval_if_treated_as_random" in r and "warning" in r and r["n_tiles"] == 10

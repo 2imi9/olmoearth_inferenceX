@@ -32,13 +32,12 @@ if EXP_DIR not in sys.path:
     sys.path.insert(0, EXP_DIR)
 sys.path.insert(0, os.path.dirname(EXP_DIR))
 
-from oe_inferencex import metrics, stats  # noqa: E402
+from oe_inferencex import estimate as est, metrics, stats  # noqa: E402
 
 OUT = os.path.join(EXP_DIR, "out")
 UNITS = os.path.join(OUT, "exp78_units")
 R_DRAWS, BUDGETS, HEADLINE, N_STRATA, M_PER_TILE = 2000, (100, 300, 1000), 300, 5, 16
-Z95 = 1.959963984540054
-MIN_PER_STRATUM = 2
+Z95, MIN_PER_STRATUM = est.Z95, est.MIN_PER_STRATUM
 # Preregistered thresholds. See docs/plan/map_error_estimation.md; P2's 0.85 was set with a disclosed pilot.
 P1_COVER, P2_COVER, P2_DEFF, P3_RATIO, P3_GOOD, P3_BAD, P4_SAVING, P4_HALFWIDTH = 0.93, 0.85, 2.5, 0.92, 0.88, 0.94, 1.8, 0.04
 PILOTED = ("mados", "sen1floods11", "pastis_sentinel1", "pastis_sentinel2", "pastis_sentinel1_sentinel2")
@@ -164,68 +163,18 @@ def e70_recorded(task):
 
 
 # ----------------------------------------------------------------------------- stage: estimate
-def wilson(k, n, N=None):
-    """Wilson score interval, with a finite-population correction on the half-width when N is given."""
-    if n == 0:
-        return 0.0, 1.0
-    p = k / n
-    if N and n >= N:
-        # A census has no sampling error. Without this the FPC zeroes the half-width around Wilson's shrunk
-        # centre and the interval misses the truth with certainty; found by exp79's enumeration test on
-        # 2026-09-22, unreachable here (every task has N > B) and in exp79 (N > 3B), so nothing recorded moves.
-        return p, p
-    fpc = np.sqrt(max((N - n) / (N - 1), 0.0)) if N and N > 1 else 1.0
-    d = 1 + Z95 ** 2 / n
-    centre = (p + Z95 ** 2 / (2 * n)) / d
-    half = Z95 * np.sqrt(p * (1 - p) / n + Z95 ** 2 / (4 * n ** 2)) / d * fpc
-    return max(0.0, centre - half), min(1.0, centre + half)
-
-
-def strata_of(margin, h=N_STRATA):
-    """Quintiles of the confidence margin: stratum 0 is the least confident."""
-    q = np.quantile(margin, np.linspace(0, 1, h + 1)[1:-1])
-    return np.searchsorted(q, margin, side="right")
-
-
-def stratified_interval(err, s, picked, sizes, N):
-    """Stratified mean with a Wald-t interval; strata with fewer than two sampled units pool into the total."""
-    est = var = 0.0
-    starved = 0
-    for h, Nh in enumerate(sizes):
-        m = s[picked] == h
-        nh = int(m.sum())
-        Wh = Nh / N
-        if nh < MIN_PER_STRATUM:
-            starved += 1
-            if nh == 1:
-                est += Wh * float(err[picked][m].mean())
-            continue
-        ph = float(err[picked][m].mean())
-        est += Wh * ph
-        var += Wh ** 2 * (1 - nh / Nh) * ph * (1 - ph) / (nh - 1)
-    half = Z95 * np.sqrt(max(var, 0.0))
-    return est, max(0.0, est - half), min(1.0, est + half), starved
-
-
-def neyman(sizes, spread, B):
-    """Allocate B units to strata proportional to N_h * spread_h, with a floor of MIN_PER_STRATUM."""
-    w = np.asarray(sizes, float) * np.asarray(spread, float)
-    w = w / w.sum() if w.sum() > 0 else np.ones(len(sizes)) / len(sizes)
-    n = np.maximum(MIN_PER_STRATUM, np.floor(w * B).astype(int))
-    n = np.minimum(n, np.asarray(sizes, int))
-    while n.sum() > B:
-        n[np.argmax(n)] -= 1
-    while n.sum() < B:
-        n[np.argmax(np.asarray(sizes) - n)] += 1
-    return n
-
-
-def draw_stratified(rng, s, sizes, alloc):
-    idx = []
-    for h, nh in enumerate(alloc):
-        pool = np.flatnonzero(s == h)
-        idx.append(rng.choice(pool, min(nh, pool.size), replace=False))
-    return np.concatenate(idx)
+# The estimators live in the package since 2026-09-22 (oe_inferencex.estimate), so the code a user runs is the
+# code this experiment graded; the names below are the ones this file and exp79 use. Re-running --stage estimate
+# after the move reproduced every coverage, half-width and verdict in exp/out/exp78_summary.json byte for byte.
+# One design effect moved: MADOS, 9.774639 -> 9.774605, because the package's intra-cluster correlation takes its
+# grand mean over the units in tiles of two or more windows, the same units its between- and within-tile sums use,
+# where the copy that lived here took it over all units; MADOS has single-window tiles. No recorded digit changes
+# (the record cites 9.77), and the committed summary is the package's output.
+wilson = est.wilson_interval
+strata_of = est.confidence_strata
+stratified_interval = est.stratified_interval
+neyman = est.neyman_allocation
+draw_stratified = est.draw_stratified
 
 
 def run_designs(err, margin, p1, tile, B, rng, theta):
@@ -299,20 +248,7 @@ def run_designs(err, margin, p1, tile, B, rng, theta):
     return out
 
 
-def design_effect(err, tile, m=M_PER_TILE):
-    """1 + (m-1) * rho, with rho the one-way intra-cluster correlation of the error indicator."""
-    per = [err[tile == t] for t in np.unique(tile)]
-    per = [p for p in per if p.size >= 2]
-    if len(per) < 3:
-        return float("nan")
-    sz = np.array([p.size for p in per], float)
-    mu = np.array([p.mean() for p in per])
-    n, gm = sz.sum(), err.mean()
-    msb = (sz * (mu - gm) ** 2).sum() / (len(per) - 1)
-    msw = sum(((p - p.mean()) ** 2).sum() for p in per) / (n - len(per))
-    m0 = (n - (sz ** 2).sum() / n) / (len(per) - 1)
-    rho = (msb - msw) / (msb + (m0 - 1) * msw) if (msb + (m0 - 1) * msw) > 0 else 0.0
-    return float(1 + (m - 1) * rho)
+design_effect = est.design_effect
 
 
 def load_units(task, units_dir=UNITS):

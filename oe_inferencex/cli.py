@@ -22,7 +22,8 @@ import sys
 
 import numpy as np
 
-from oe_inferencex.assess import _pooled_argmax, assess_prediction, summary
+from oe_inferencex.assess import _pool, _pool_valid, _pooled_argmax, assess_prediction, summary
+from oe_inferencex import estimate as est
 from oe_inferencex.compare import compare_inferences
 from oe_inferencex.explain import explain_review_set
 from oe_inferencex.signals import boundary_indicator
@@ -257,6 +258,93 @@ def cmd_demo(args):
 
 
 # ----------------------------------------------------------------------------- entry
+# ----------------------------------------------------------------------------- sample / estimate
+def _top1(scores, is_logit):
+    """Per-pixel top-1 probability, the quantity the confidence design allocates by."""
+    scores = np.asarray(scores, dtype=np.float64)
+    if scores.ndim == 2:
+        p = 1 / (1 + np.exp(-scores)) if is_logit else scores
+        return np.maximum(p, 1 - p)
+    if is_logit:
+        z = scores - scores.max(0, keepdims=True)
+        return np.exp(z).max(0) / np.exp(z).sum(0)
+    return scores.max(0)
+
+
+def cmd_sample(args):
+    """Which windows to label, written as a CSV with an empty `wrong` column for the reviewer, and a sidecar
+    JSON carrying the design so `estimate` can give the rate the design earns."""
+    scores, valid, geo = read_raster(args.scores, args.nodata)
+    _check_scores(scores, valid, args.logits, args.scores)
+    out = assess_prediction(scores, is_logit=args.logits, patch=args.patch, nodata_mask=~valid)
+    arr = out["arrays"]
+    margin, valid_w = arr["confidence"], arr["valid"]
+    p1 = np.where(valid, _top1(scores, args.logits), np.nan)
+    p1_w = _pool_valid(p1, args.patch) if not valid.all() else _pool(p1, args.patch)
+    hw, ww = margin.shape
+    tiles = None
+    if args.design == "tiles":
+        t = max(1, args.tile)
+        tiles = (np.arange(hw)[:, None] // t) * ((ww + t - 1) // t) + (np.arange(ww)[None, :] // t)
+    sample = est.sample_for_estimation(margin, args.budget, design=args.design, p1=p1_w, tiles=tiles,
+                                       per_tile=args.per_tile, valid=valid_w, seed=args.seed)
+    idx = sample["indices"]
+    rows, cols = np.divmod(idx, ww)
+    pr, pc, x, y = window_coords(rows, cols, geo, args.patch)
+    os.makedirs(os.path.dirname(os.path.abspath(args.out)) or ".", exist_ok=True)
+    with open(args.out, "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["index", "window_row", "window_col", "pixel_row", "pixel_col", "x", "y", "stratum", "confidence", "wrong"])
+        strata = sample.get("strata")
+        pos = {int(g): i for i, g in enumerate(sample.get("strata_of_population", []))}
+        for k, (i, r, c) in enumerate(zip(idx, rows, cols)):
+            w.writerow([int(i), int(r), int(c), int(pr[k]), int(pc[k]), None if x is None else float(x[k]),
+                        None if y is None else float(y[k]), None if strata is None else int(strata[pos[int(i)]]),
+                        float(margin[r, c]), ""])
+    side = {k: (v.tolist() if isinstance(v, np.ndarray) else v) for k, v in sample.items()}
+    side.update({"scores": os.path.abspath(args.scores), "logits": args.logits, "patch": args.patch,
+                 "grid": [int(hw), int(ww)], "csv": os.path.abspath(args.out),
+                 "how_to_label": "open each window, set wrong=1 if the map's class there is not what is on the ground, "
+                                 "else 0; then: oe-inferencex estimate " + os.path.basename(args.out)})
+    with open(args.out[:-4] + ".json" if args.out.endswith(".csv") else args.out + ".json", "w") as f:
+        json.dump(side, f, indent=1)
+    print(f"{len(idx)} windows to label of {sample['n_population']} valid ({args.design} design); wrote {args.out} and its .json. "
+          f"Fill the `wrong` column with 1 or 0 per window, then run: oe-inferencex estimate {args.out}")
+    return 0
+
+
+def cmd_estimate(args):
+    """The map's error rate with its interval, from a filled-in sample CSV and its sidecar design."""
+    side_path = args.sample[:-4] + ".json" if args.sample.endswith(".csv") else args.sample + ".json"
+    if not os.path.exists(side_path):
+        raise SystemExit(f"{side_path} not found; `estimate` needs the sidecar `sample` wrote beside the CSV")
+    with open(side_path) as f:
+        side = json.load(f)
+    with open(args.sample, newline="") as f:
+        rows = list(csv.DictReader(f))
+    idx = np.array([int(r["index"]) for r in rows])
+    if not np.array_equal(idx, np.asarray(side["indices"], int)):
+        raise SystemExit("the CSV's rows do not match the design in its sidecar; label the file `sample` wrote, in order")
+    blank = [i for i, r in enumerate(rows) if str(r.get("wrong", "")).strip() == ""]
+    if blank:
+        raise SystemExit(f"{len(blank)} of {len(rows)} windows have no `wrong` value (first at row {blank[0] + 2}); "
+                         "every sampled window needs a 1 or a 0, or the design's interval is not the one you get")
+    try:
+        wrong = np.array([int(float(r["wrong"])) for r in rows])
+    except ValueError as exc:
+        raise SystemExit(f"`wrong` must be 1 or 0 per window: {exc}")
+    sample = {k: (np.asarray(v) if k in ("indices", "strata", "strata_of_population", "tiles") else v) for k, v in side.items()}
+    res = est.estimate_error_rate(sample, wrong)
+    res["sample"] = os.path.abspath(args.sample)
+    out = args.out or (args.sample[:-4] + "_estimate.json" if args.sample.endswith(".csv") else args.sample + "_estimate.json")
+    with open(out, "w") as f:
+        json.dump(res, f, indent=1)
+    print(f"error rate {100 * res['estimate']:.1f}% (95% interval {100 * res['low']:.1f}% to {100 * res['high']:.1f}%, "
+          f"+/-{100 * res['half_width']:.1f} points) from {res['n_labelled']} labelled windows of {res['n_population']}; "
+          f"{res['method']}" + (f"\nwarning: {res['warning']}" if "warning" in res else "") + f"\nwrote {out}")
+    return 0
+
+
 def build_parser():
     p = argparse.ArgumentParser(prog="oe-inferencex", description=__doc__.split("\n\n")[0])
     sub = p.add_subparsers(dest="command", required=True)
@@ -286,6 +374,24 @@ def build_parser():
     c.add_argument("--labels", default=None, help="optional integer class raster: adds which side is right and the cross-tab")
     c.add_argument("--groups", default=None, help="optional integer raster of group ids (tiles, events) for per-group rates")
     c.set_defaults(func=cmd_compare)
+    sm = sub.add_parser("sample", help="which windows to label so that `estimate` can say how wrong the map is")
+    sm.add_argument("scores", help="the same map `assess` takes: (H, W) probability or logit map, or (C, H, W) scores")
+    sm.add_argument("--budget", type=int, required=True, help="number of windows to label (exp78 measured 300)")
+    sm.add_argument("--out", required=True, help="CSV to write; a .json sidecar with the design goes beside it")
+    sm.add_argument("--design", choices=("confidence", "proportional", "random", "tiles"), default="confidence",
+                    help="confidence (default): stratified by margin, allocated from the model's own confidence; "
+                         "tiles: how people actually label, with the cluster interval that requires")
+    sm.add_argument("--tile", type=int, default=16, help="tiles design: tile side in windows (default 16)")
+    sm.add_argument("--per-tile", type=int, default=16, help="tiles design: windows labelled per tile (default 16)")
+    sm.add_argument("--logits", action="store_true")
+    sm.add_argument("--patch", type=int, default=4)
+    sm.add_argument("--nodata", type=float, default=None)
+    sm.add_argument("--seed", type=int, default=0)
+    sm.set_defaults(func=cmd_sample)
+    e = sub.add_parser("estimate", help="the map's error rate with an interval, from the labelled sample CSV")
+    e.add_argument("sample", help="the CSV `sample` wrote, with its `wrong` column filled in")
+    e.add_argument("--out", default=None, help="JSON to write (default: <sample>_estimate.json)")
+    e.set_defaults(func=cmd_estimate)
     return p
 
 

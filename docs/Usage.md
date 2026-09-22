@@ -30,7 +30,8 @@ What the package never says, for any map: how wrong the map is. It orders the wi
 error rate needs a reference, and then the reference caveat applies. What that reference costs is measured:
 300 labelled windows drawn at random give the error rate to about ±3 points on a clean map and ±5 on a messy one,
 and labelling whole scenes instead makes the usual range far too narrow
-([exp78](results/comparisons.md#how-wrong-is-this-map-what-a-reviewers-labels-buy-exp78)).
+([exp78](results/comparisons.md#how-wrong-is-this-map-what-a-reviewers-labels-buy-exp78)). `oe-inferencex sample`
+and `estimate` are that measurement as a tool.
 
 ## Fuse the readings with labels
 
@@ -75,7 +76,7 @@ fitted rule next to the labels it came from.
 
 ## Command line
 
-`oe-inferencex demo` is the first run: it audits a real sample map shipped with the package (one Dynamic World tile with its expert annotation; `--made-up` for a synthetic one) and draws the result, with no data to find. Two commands cover the two halves without writing Python. Inputs are GeoTIFFs
+`oe-inferencex demo` is the first run: it audits a real sample map shipped with the package (one Dynamic World tile with its expert annotation; `--made-up` for a synthetic one) and draws the result, with no data to find. Four commands cover the label-free halves and the one question that needs labels, without writing Python. Inputs are GeoTIFFs
 (with the `geo` extra, which brings rasterio) or `.npy` arrays; outputs are plain
 files the caller reads back, and nothing narrates.
 
@@ -105,6 +106,34 @@ maps are read as integers; a single-band probability map is thresholded at
 `--threshold` and a multi-band score map argmaxed, so the module never compares
 floating point. The two maps must share one grid.
 
+```bash
+oe-inferencex sample water_prob.tif --budget 300 --out to_label.csv
+# ... a reviewer fills the `wrong` column with 1 or 0 per window ...
+oe-inferencex estimate to_label.csv
+```
+
+is how wrong the map is. `sample` writes the 300 windows to label (row, column,
+pixel and map coordinates, stratum, confidence) with an empty `wrong` column, and a
+`to_label.json` beside it carrying the design. The default design stratifies the
+map by confidence margin and allocates the budget from the model's own
+confidence, which on exp78's seven tasks narrowed the interval to a median 0.80
+of a random sample's with coverage intact; `--design random` is the plain draw,
+`--design tiles` labels 16 windows in each of a run of tiles, because that is how
+people actually label. `estimate` reads the filled file back and writes
+`to_label_estimate.json`: the error rate, its 95% interval and half-width, and the
+method the design earns. For the tile design it also writes the naive interval
+the ordinary formula would give, beside the honest one, with the warning that on
+exp78's tasks that naive interval covered 51 to 78% of the time while claiming
+95%. A CSV with a blank `wrong`, or whose rows are not the design's, is refused.
+
+**Do not label the review set and divide.** The review set is built to hold
+errors; on exp78's export the 5% review set gave 1.8 to 5.8 times the true rate
+on every task. `sample` draws a sample with weights the estimator undoes; the
+review set has none. In the API, `estimate_from_indices` takes windows labelled
+without a design, treats them as a random sample, and first checks that they
+could be one — a random sample sits at a median suspicion percentile of 0.50, the
+review set near 0.97 — and refuses a review set with the number.
+
 ## Modules
 
 | Module | What it gives you |
@@ -114,6 +143,7 @@ floating point. The two maps must share one grid.
 | `compare` | How two inferences of the same scene differ: the disagreement rate pooled and per tile or event, what the disagreement windows have in common (the enrichment of each label-free cue among them), whether two disagreement sets are the same set; with labels, the errors one side corrects and the errors it adds, and which side is right where they disagree; `determinism_check`, the same input inferred twice under two engines or precisions, gated against the reseed floor |
 | `signals` | Confidence, the boundary indicator, tiling instability, the NDWI cues and the pixel controls, as pure functions; `crop_dependence`, how much of a decision map depends on the crop it was inferred in, a map property for encoders that adapt per input |
 | `calibrate` | Where labels exist, a fitted ranker or a fitted which-side rule, cross-fitted by group and reported held-out; each fusion is locked to the model family it was fitted on, because such rules do not transfer |
+| `estimate` | How wrong the map is, from a labelled sample: which windows to label (stratified by confidence, random, or by tile) and the error rate with the interval that design earns; Wilson with a finite-population correction, the stratified Wald interval, or the ultimate-cluster interval with the naive one beside it; and a check that refuses the review set as a sample, since labelling it and dividing gives two to six times the true rate |
 | `metrics`, `stats` | Tie-aware AURC and capture at a budget, exact sign tests, one vote per cluster, block and cluster bootstraps; and the design-weighted forms for a reference that is a probability sample rather than a map, including a base-rate-free AUROC and a paired bootstrap on the difference between two disjoint subsets |
 | `reliability`, `evidence` | SHRUG-FM's published reliability signals reimplemented torch-free, so a competitor's method is scored under this protocol rather than described; the small logistic and softmax heads a candidate rule is scored with. The expected calibration error lives in `metrics` |
 | `taskcard`, `lcc` | What each fine-tuned OlmoEarth model is; a range reader for the served change rasters |

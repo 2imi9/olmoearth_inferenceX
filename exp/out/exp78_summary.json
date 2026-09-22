@@ -56,7 +56,7 @@
      }
     }
    },
-   "design_effect": 9.774639343445068,
+   "design_effect": 9.774605372492182,
    "exp70_accuracy": 0.9264094167625454,
    "accuracy_minus_exp70": 0.0
   },
@@ -102,7 +102,7 @@
      }
     }
    },
-   "design_effect": 5.561982129287703,
+   "design_effect": 5.5619821292849565,
    "exp70_accuracy": 0.9154823299036944,
    "accuracy_minus_exp70": 6.7523654380119424e-06
   },
