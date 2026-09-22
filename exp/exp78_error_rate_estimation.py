@@ -185,15 +185,20 @@ def run_designs(err, margin, p1, tile, B, rng, theta):
     out = {}
 
     def tally(name, fn):
-        cov = wid = 0.0
+        # Bias beside coverage. The truth is known here, so the mean estimate costs nothing, and coverage alone
+        # cannot tell a sound estimator from a biased one inside an inflated interval: the cluster arm covered
+        # 0.904 on MADOS while estimating 1.78 times the truth, and nothing here recorded that until 2026-09-22.
+        cov = wid = tot = 0.0
         starve = 0
         for _ in range(R_DRAWS):
-            est, lo, hi, st = fn()
+            est_, lo, hi, st = fn()
             cov += lo <= theta <= hi
             wid += (hi - lo) / 2
+            tot += est_
             starve += st
         out[name] = {"coverage": cov / R_DRAWS, "half_width": wid / R_DRAWS,
-                     "starved_strata_rate": starve / R_DRAWS}
+                     "starved_strata_rate": starve / R_DRAWS,
+                     "mean_estimate": tot / R_DRAWS, "bias_ratio": (tot / R_DRAWS) / theta if theta > 0 else float("nan")}
 
     def srs():
         i = rng.choice(N, B, replace=False)

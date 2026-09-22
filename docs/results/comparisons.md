@@ -2242,7 +2242,9 @@ whose tiles are full (the three PASTIS variants and m-SA-crop-type), only to 0.8
 not at all: 0.598. MADOS's tiles hold 1 to 400 valid windows, so 18 of them are too few and too unequal for any
 between-tile variance to be estimated well, and on MADOS the naive estimate is itself biased upward, because a
 tile of three windows is labelled whole while a tile of 400 gives sixteen; there, tile-sampled labels are the
-wrong design and no formula applied afterwards rescues them. It is not free in the other direction either: on
+wrong design and no formula applied afterwards rescues them. The naive estimate there averages 1.44 times the
+true rate over 2,000 draws (the bias column the summary has recorded for every arm since 22 September; every
+design-based arm sits within 0.6% of the truth on all seven tasks). It is not free in the other direction either: on
 m-cashew-plant, where the naive interval was already fine, correcting for a clustering that is barely there costs
 a little coverage, 0.936 against 0.939.
 And of the two tasks that were genuinely out of sample — the pilot had already seen MADOS, Sen1Floods11 and the

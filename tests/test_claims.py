@@ -116,3 +116,18 @@ def test_stale_lists_only_superseded_claims_today():
     """The CLI's stale view (what to rewrite after a run) is empty except for the claims already marked superseded."""
     out = claims_cli.stale(CLAIMS, ARTIFACTS)
     assert {c["id"] for c, _ in out} == {c["id"] for c in CLAIMS if c["status"] == "superseded"}
+
+
+def test_claims_from_exp79_on_name_an_independent_crosscheck():
+    """A claim's check reads its number back from the artifact that produced it, which catches drift and cannot
+    catch a formula that was wrong from the start. Three recorded results were corrected on 21-22 September for
+    that reason. From exp79 on, a claim must also name a test that reaches the same number by another route - a
+    known answer, an enumeration, or a second artifact - as `crosscheck: tests/<file>.py::<test>`."""
+    for c in CLAIMS:
+        if not any(int(e[3:]) >= 79 for e in c["experiments"]):
+            continue
+        x = c.get("crosscheck")
+        assert x, f"claim {c['id']!r} (from {c['experiments']}) names no independent crosscheck"
+        path, _, name = x.partition("::")
+        with open(os.path.join(ROOT, path), encoding="utf-8") as f:
+            assert f"def {name}(" in f.read(), f"claim {c['id']!r}: crosscheck {x} does not exist"
