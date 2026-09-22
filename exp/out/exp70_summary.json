@@ -1480,8 +1480,12 @@
    "margin_over_entropy_tight_gap": 0.00021548715332296792,
    "n_wide": 12,
    "n_tight": 12,
-   "pairwise_p": 6.932861966046822e-15,
-   "note": "exp68 found the ordering of the model signals inverts when the probe memorises its fit set; this asks whether that is a property of probes or of that one task"
+   "pairs_wide_below_tight": 109,
+   "pairs_wide_above_tight": 23,
+   "rank_sum_p": 0.0054353373104214404,
+   "rank_sum_method": "exact",
+   "note": "exp68 found the ordering of the model signals inverts when the probe memorises its fit set; this asks whether that is a property of probes or of that one task",
+   "correction": "2026-09-22: this block was regenerated from the committed per-task results. It used to carry pairwise_p = 6.9e-15, a sign test over 144 task pairs treated as independent; the rank-sum test over the 24 tasks gives the p above. holds is unchanged."
   }
  }
 }

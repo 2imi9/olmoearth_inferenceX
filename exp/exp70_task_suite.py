@@ -314,13 +314,17 @@ def verdicts(results):
         tight = [adv[t] for t in adv if gaps[t] <= med]
         w = sum(1 for a in wide for b in tight if a < b)
         l = sum(1 for a in wide for b in tight if a > b)
-        v["P3"] = {"holds": bool(float(np.median(wide)) < float(np.median(tight)) and
-                                 stats.sign_test(w, l, alternative="greater") < 0.05),
+        # The 144 wide-by-tight pairs come from 24 tasks, so they are not 144 independent trials. Until 2026-09-22
+        # this ran a binomial sign test over them and recorded p = 6.9e-15. The test whose statistic is this pair
+        # count is the rank-sum test, exact over every relabelling of the 24 tasks: p = 0.0055. The verdict holds.
+        rs = stats.rank_sum_test(wide, tight, alternative="less")
+        v["P3"] = {"holds": bool(float(np.median(wide)) < float(np.median(tight)) and rs["p"] < 0.05),
                    "median_gap": med,
                    "margin_over_entropy_wide_gap": float(np.median(wide)),
                    "margin_over_entropy_tight_gap": float(np.median(tight)),
                    "n_wide": len(wide), "n_tight": len(tight),
-                   "pairwise_p": float(stats.sign_test(w, l, alternative="greater")),
+                   "pairs_wide_below_tight": w, "pairs_wide_above_tight": l,
+                   "rank_sum_p": rs["p"], "rank_sum_method": rs["method"],
                    "note": "exp68 found the ordering of the model signals inverts when the probe memorises its fit "
                            "set; this asks whether that is a property of probes or of that one task"}
     else:

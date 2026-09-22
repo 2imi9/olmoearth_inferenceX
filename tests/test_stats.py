@@ -6,8 +6,7 @@ import os
 import numpy as np
 import pytest
 
-from oe_inferencex.stats import (block_bootstrap_indices, cluster_bootstrap_difference, clustered_sign_test,
-                                 paired_comparison, sign_test, spearman, wins_losses_ties)
+from oe_inferencex.stats import (block_bootstrap_indices, cluster_bootstrap_difference, clustered_sign_test, paired_cluster_bootstrap, paired_comparison, sign_test, spearman, wins_losses_ties)
 
 OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "exp", "out")
 RIVER = {"barotse": "Zambezi", "delta": "Zambezi", "kazungula": "Zambezi", "vicfalls_up": "Zambezi",
@@ -131,3 +130,61 @@ def test_paired_cluster_bootstrap_puts_an_interval_on_a_difference_between_disjo
     nanny = paired_cluster_bootstrap(lambda ii: float("nan"), clusters[a_mask],
                                      lambda ii: 1.0, clusters[~a_mask], n_boot=20, seed=0)
     assert nanny == {"n": 0}
+
+
+# ----------------------------------------------------------------------------- the 22 September audit of stats
+def test_sign_test_takes_numpy_counts_without_overflow_and_refuses_negative_ones():
+    """With numpy int64 counts 2 ** n overflowed: sign_test(40, 23, 'greater') came back -0.021, so '< 0.05' passed."""
+    import pytest
+    st = pytest.importorskip("scipy.stats")
+    for w, l in ((40, 23), (33, 30), (40, 30), (20, 11)):
+        for t in (np.int64, np.int32, np.uint8):
+            assert sign_test(t(w), t(l), "greater") == pytest.approx(st.binomtest(w, w + l, 0.5, "greater").pvalue, rel=1e-9)
+    for bad in ((-1, 3), (5, -2), (2.5, 3)):
+        with pytest.raises(ValueError):
+            sign_test(*bad)
+
+
+def test_nan_gains_are_undefined_not_ties_and_do_not_fabricate_significance():
+    """paired_comparison([nan, 0.1, 0.2]) returned perm_p = 0.0 beside mean_gain = nan."""
+    r = paired_comparison([np.nan, 0.1, 0.2], rng=np.random.default_rng(0), n_perm=1000)
+    assert r["n"] == 2 and r["n_undefined"] == 1 and r["t"] == 0 and np.isfinite(r["mean_gain"]) and r["perm_p"] > 0.2
+    assert wins_losses_ties([np.nan, 0.1, 0.2]) == (2, 0, 0)
+    c = clustered_sign_test({"a": np.nan, "b": 0.2, "c": 0.3}, {"a": "X", "b": "X", "c": "Y"})
+    assert c["per_cluster"] == {"X": 0.2, "Y": 0.3} and c["w"] == 2
+
+
+def test_permutation_p_counts_exact_ties_and_is_never_zero():
+    """Gains on a grid: the permutation p came out 0.048 where the exact value is 0.0557, because patterns whose mean
+    equals the observed one were dropped by rounding."""
+    from fractions import Fraction
+    import itertools
+    d = np.array([3, 1, 2, -1, 4, 2, -2, 1, 3, 1, -1, 2]) / 50
+    exact = sum(abs(sum(Fraction(int(round(x * 50)), 50) * s for x, s in zip(d, signs))) >= abs(sum(Fraction(int(round(x * 50)), 50) for x in d))
+                for signs in itertools.product((1, -1), repeat=12)) / 4096
+    r = paired_comparison(d, rng=np.random.default_rng(0), n_perm=40000)
+    assert abs(r["perm_p"] - float(exact)) < 0.004 and float(exact) == pytest.approx(0.05566, abs=1e-4)
+    assert paired_comparison([1.0] * 12, rng=np.random.default_rng(0), n_perm=100)["perm_p"] > 0
+
+
+def test_spearman_is_nan_on_nan_input():
+    assert np.isnan(spearman(np.array([np.nan, np.nan, 1., 2.]), np.array([4., 3., 2., 1.])))
+
+
+def test_bootstrap_refuses_misaligned_inputs_and_is_undefined_without_errors():
+    import pytest
+    rng = np.random.default_rng(0)
+    cl = np.repeat(np.arange(10), 30); err = (rng.random(300) < 0.2).astype(float)
+    with pytest.raises(ValueError, match="one entry per unit"):
+        cluster_bootstrap_difference(rng.random(600), rng.random(600), err, cl)
+    lo, hi, p = cluster_bootstrap_difference(rng.random(300), rng.random(300), np.zeros(300), cl, n_boot=20)
+    assert np.isnan(lo) and np.isnan(hi) and np.isnan(p)
+    with pytest.raises(ValueError, match="must divide"):
+        block_bootstrap_indices(10, 4, rng)
+
+
+def test_paired_cluster_bootstrap_matches_int_and_str_cluster_ids():
+    rng = np.random.default_rng(0)
+    ca, cb = np.repeat(np.arange(10), 30), np.repeat(np.arange(10), 30).astype(str)
+    r = paired_cluster_bootstrap(lambda i: float(i.size), ca, lambda i: float(i.size), cb, n_boot=50)
+    assert r["n"] == 50

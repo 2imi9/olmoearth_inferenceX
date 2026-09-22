@@ -2335,6 +2335,7 @@
 
 - id: suite-probe-gap-degrades-the-ordering
   statement: "exp68's warning about linear probes replicates in direction and not in magnitude, and the scope matters because that warning is on the front page: splitting these 24 tasks at their median train-minus-test gap of 0.087, the margin's advantage over predictive entropy is -0.000148 on the worse-generalising half against +0.000215 on the better half, which is exp68's direction and passes preregistered P3, but is four ten-thousandths rather than the outright inversion exp68 saw, and the reason is visible in the gaps, a median of 0.087 here against 0.44 for exp68's default probe; so the ordering of confidence signals degrades with memorisation and only severe memorisation reverses it."
+  crosscheck: tests/test_known_answer.py::test_exp70_p3_p_value_is_a_rank_sum_over_24_tasks_not_a_sign_test_over_144_pairs
   status: mixed
   experiments: [exp70, exp68]
   artifacts: [exp/out/exp70_summary.json, exp/out/exp68_summary.json]

@@ -93,3 +93,24 @@ def test_exp55_activation_clustered_figures_reproduce_from_the_per_event_records
         w, l = sum(x > 0 for x in g), sum(x < 0 for x in g)
         p = sum(comb(w + l, k) for k in range(w, w + l + 1)) / 2 ** (w + l)
         assert (w, l) == (w_w, l_w) and p == pytest.approx(p_w, rel=0.06)
+
+
+def test_exp70_p3_p_value_is_a_rank_sum_over_24_tasks_not_a_sign_test_over_144_pairs():
+    """exp70's P3 recorded p = 6.9e-15 from a sign test over 144 task pairs treated as independent. Recomputed here
+    from the per-task results by brute force over a million relabellings of the 24 tasks, the p is about 0.0055, and
+    the recorded rank-sum p must match it."""
+    import json
+    S = json.load(open(os.path.join(ROOT, "exp", "out", "exp70_summary.json")))
+    R = S["results"]["tasks"]
+    adv = {t: r["signals"]["entropy"]["excess_aurc"] - r["signals"]["margin"]["excess_aurc"] for t, r in R.items() if "entropy" in r["signals"]}
+    gaps = {t: R[t]["generalisation_gap"] for t in adv}
+    med = float(np.median(list(gaps.values())))
+    v = np.array([adv[t] for t in adv]); wide_m = np.array([gaps[t] > med for t in adv])
+    stat = lambda m: ((v[m][:, None] < v[~m][None]).sum() + 0.5 * (v[m][:, None] == v[~m][None]).sum())
+    obs = stat(wide_m)
+    rng = np.random.default_rng(1)
+    hits = sum(stat(rng.permutation(wide_m)) >= obs - 1e-9 for _ in range(20000))
+    p_mc = hits / 20000
+    p = S["verdicts"]["P3"]["rank_sum_p"]
+    assert abs(p - p_mc) < 4 * np.sqrt(p * (1 - p) / 20000) and 0.004 < p < 0.007
+    assert S["verdicts"]["P3"]["holds"] is True and "pairwise_p" not in S["verdicts"]["P3"]

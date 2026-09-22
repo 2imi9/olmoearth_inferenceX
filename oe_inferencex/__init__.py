@@ -53,7 +53,7 @@ from .signals import (aligned_tile_phase, boundary_indicator, combine_midrank, c
                       midrank_pct, ndwi, ndwi_gradient, ndwi_level, pool_to_windows, s2_patch_variance,
                       shift_averaged_probability)
 from .stats import (block_bootstrap_indices, cluster_bootstrap_difference, clustered_sign_test,
-                    paired_cluster_bootstrap, paired_comparison, sign_test, spearman, wins_losses_ties)
+                    paired_cluster_bootstrap, paired_comparison, rank_sum_test, sign_test, spearman, wins_losses_ties)
 
 try:
     __version__ = _version("olmoearth-inferencex")
@@ -80,7 +80,7 @@ __all__ = [
     "weighted_mean", "weighted_aurc", "weighted_excess_aurc", "weighted_capture_at_budget", "weighted_auroc",
     # stats
     "sign_test", "wins_losses_ties", "paired_comparison", "clustered_sign_test", "cluster_bootstrap_difference",
-    "paired_cluster_bootstrap", "block_bootstrap_indices", "spearman",
+    "paired_cluster_bootstrap", "block_bootstrap_indices", "spearman", "rank_sum_test",
     # signals
     "confidence", "boundary_indicator", "aligned_tile_phase", "shift_averaged_probability", "pool_to_windows",
     "ndwi", "ndwi_gradient", "ndwi_level", "s2_patch_variance", "midrank_pct", "combine_midrank",
