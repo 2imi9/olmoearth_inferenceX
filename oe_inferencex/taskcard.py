@@ -342,7 +342,8 @@ def to_markdown(cards):
             d = getattr(c, section)
             if d:
                 # whole, never cut: a 900-character cut left unparseable JSON in the published page
-                out.append(f"- **{section}**: `{json.dumps(d, default=str).replace('`', "'")}`")
+                body = json.dumps(d, default=str).replace("`", "'")    # outside the f-string: Python 3.11 has no PEP 701
+                out.append(f"- **{section}**: `{body}`")
         if c.warnings:
             out.append(f"- warnings: {c.warnings}")
         out.append(f"- sources: {', '.join(c.sources)}")

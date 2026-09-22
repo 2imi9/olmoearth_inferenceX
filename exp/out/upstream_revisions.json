@@ -55,7 +55,7 @@
    ],
    "carries": "the v1 Base encoder almost every map in the record was inferred with",
    "named_at": [
-    "oe_inferencex/taskcard.py:367"
+    "oe_inferencex/taskcard.py:368"
    ]
   },
   "allenai/OlmoEarth-v1-FT-AWF-Base": {
@@ -92,7 +92,7 @@
    "named_at": [
     "exp/exp03_more_channels.py:6",
     "exp/exp03_more_channels.py:108",
-    "oe_inferencex/taskcard.py:367"
+    "oe_inferencex/taskcard.py:368"
    ]
   },
   "allenai/olmoearth-paper-embeddings": {
