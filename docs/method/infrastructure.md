@@ -118,13 +118,22 @@ README that maps each script to its job ids and artifacts.
   table and class legends). Audit settings are derived from the card:
   whether outputs are dense, class count, whether band-set disagreement
   exists for the encoder version, and how to score confidence.
-- Resolved for both encoders, eleven projects and the LCC product
-  (docs/method/taskcards.md, exp/out/taskcards.json). Fleet-level facts
-  that fell out: nearly every project uses 63-px windows at 10 m with a
-  128-px spatial splitter grid; class counts range from 2 to 110
-  (ecosystem_type_mapping); nodata conventions differ per project (9, 10,
-  54, 255, -1); v1.2 tokenizes ten Sentinel-2 bands as one group and drops
-  B01/B09; kenya_lulc_croptype has no configs on main.
+- Resolved for both encoders, eleven projects (twelve models: kenya_lulc_croptype
+  publishes a cropland and a maize model) and the LCC product
+  (docs/method/taskcards.md, exp/out/taskcards.json). Fleet-level facts that
+  fell out: eight of the twelve models use 63-px windows at 10 m, seven of them
+  with a 128-px spatial splitter grid; they stack 4 to 12 Sentinel-2 time steps
+  (12 for AWF, Nandi, mangrove and LFMC; 8 for Mozambique, Togo, Fields of the
+  World and forest loss), read from each project's dataset.json; class counts
+  range from 2 to 110 (ecosystem_type_mapping, whose legend names 60); nodata
+  conventions differ per project (9, 10, 54, 3, -1); v1.2 tokenizes all twelve
+  Sentinel-2 bands as one group where v1 uses three.
+- Corrected 2026-09-22 after the module's first audit: the cards had counted
+  layers as time steps (so a 12-month model read as one), taken the class
+  legend only from metric names, reported a partition grid in degrees as the
+  split grid, skipped inputs written as DataInput specs, called mangrove's
+  pooled output dense, missed kenya_lulc_croptype's two models, and this
+  paragraph had said v1.2 drops B01/B09.
 
 ## Served production rasters (exp20)
 

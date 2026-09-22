@@ -70,7 +70,9 @@
    "band_set_disagreement_available": true,
    "tiling_instability_note": "absolute position encoding; striping artifact documented for v1"
   },
-  "warnings": []
+  "warnings": [
+   "no sentinel2_l2a band_groups override in the config; v1's three-group layout is assumed"
+  ]
  },
  {
   "name": "allenai/OlmoEarth-v1_2-Base",
@@ -164,14 +166,15 @@
     "6": "montane_forest",
     "7": "lava_forest",
     "8": "urban_dense_development"
-   }
+   },
+   "classes_source": "olmoearth_run.yaml inference_results_config.classification_fields"
   },
   "inputs": {
    "sentinel2_l2a": {
     "layers": [
      "sentinel2"
     ],
-    "n_timesteps": 1,
+    "n_timesteps": 12,
     "bands": [
      "B02",
      "B03",
@@ -216,6 +219,7 @@
   "sources": [
    "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/awf/model.yaml",
    "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/awf/olmoearth_run.yaml",
+   "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/awf/dataset.json",
    "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/docs/awf.md"
   ],
   "audit": {
@@ -243,8 +247,69 @@
    "num_classes": 110,
    "nodata_value": 54,
    "zero_is_invalid": null,
-   "classes": {},
-   "legend_note": "class names recovered from per-class metric definitions only; unnamed indices have no metric in the config"
+   "classes": {
+    "0": "T_1_1_TROPICAL_SUBTROPICAL_LOWLAND_RAINFORESTS",
+    "1": "T_1_2_TROPICAL/SUBTROPICAL_DRY_FORESTS_AND_THICKETS",
+    "2": "T_1_3_TROPICAL/SUBTROPICAL_MONTANE_RAINFORESTS",
+    "3": "T_2_1_BOREAL_AND_TEMPERATE_HIGH_MONTANE_FORESTS_AND_WOODLANDS",
+    "4": "T_3_2_SEASONALLY_DRY_TEMPERATE_HEATH_AND_SHRUBLANDS",
+    "5": "T_3_4_YOUNG_ROCKY_PAVEMENTS_LAVA_FLOWS_AND_SCREES",
+    "6": "T_4_1_TROPHIC_SAVANNAS",
+    "7": "T_4_2_PYRIC_TUSSOCK_SAVANNAS",
+    "8": "T_4_5_TEMPERATE_SUBHUMID_GRASSLANDS",
+    "9": "T_5_1_SEMI-DESERT_STEPPE",
+    "10": "T_5_2_SUCCULENT_OR_THORNY_DESERTS_AND_SEMI-DESERTS",
+    "11": "T_5_5_HYPER-ARID_DESERTS",
+    "12": "T_6_5_TROPICAL_ALPINE_GRASSLANDS_AND_HERBFIELDS",
+    "13": "T_7_1_ANNUAL_CROPLANDS",
+    "14": "T_7_2_SOWN_PASTURES_AND_FIELDS",
+    "15": "T_7_3_PLANTATIONS",
+    "16": "T_7_4_URBAN_AND_INDUSTRIAL_ECOSYSTEMS",
+    "17": "T_7_5_DERIVED_SEMI-NATURAL_PASTURES_AND_OLD_FIELDS",
+    "18": "TF_1_3_PERMANENT_MARSHES",
+    "19": "TF_1_4_SEASONAL_FLOODPLAIN_MARSHES",
+    "20": "TF_1_5_EPISODIC_ARID_FLOODPLAINS",
+    "21": "F_1_2_PERMANENT_LOWLAND_RIVERS",
+    "22": "F_1_4_SEASONAL_UPLAND_STREAMS",
+    "23": "F_1_5_SEASONAL_LOWLAND_RIVERS",
+    "24": "F_1_6_EPISODIC_ARID_RIVERS",
+    "25": "F_2_1_LARGE_PERMANENT_FRESHWATER_LAKES",
+    "26": "F_2_2_SMALL_PERMANENT_FRESHWATER_LAKES",
+    "27": "F_2_5_EPHEMERAL_FRESHWATER_LAKES",
+    "28": "F_2_6_PERMANENT_SALT_AND_SODA_LAKES",
+    "29": "F_2_7_EPHEMERAL_SALT_LAKES",
+    "30": "F_2_8_ARTESIAN_SPRINGS_AND_OASES",
+    "31": "F_2_9_GEOTHERMAL_POOLS_AND_WETLANDS",
+    "32": "F_3_1_LARGE_RESERVOIRS",
+    "33": "F_3_2_CONSTRUCTED_LACUSTRINE_WETLANDS",
+    "34": "F_3_4_FRESHWATER_AQUAFARMS",
+    "35": "F_3_5_CANALS_DITCHES_AND_DRAINS",
+    "36": "MFT_1_2_INTERTIDAL_FORESTS_AND_SHRUBLANDS",
+    "37": "MFT_1_3_COASTAL_SALTMARSHES_AND_REEDBEDS",
+    "38": "MT_1_1_ROCKY_SHORELINES",
+    "39": "MT_1_2_MUDDY_SHORELINES",
+    "40": "MT_1_3_SANDY_SHORELINES",
+    "41": "MT_1_4_BOULDER_AND_COBBLE_SHORES",
+    "42": "MT_2_1_COASTAL_SHRUBLANDS_AND_GRASSLANDS",
+    "43": "MT_2_2_LARGE_SEABIRD_AND_PINNIPED_COLONIES",
+    "44": "MT_3_1_ARTIFICIAL_SHORELINES",
+    "45": "FM_1_2_PERMANENTLY_OPEN_RIVERINE_ESTUARIES_AND_BAYS",
+    "46": "FM_1_3_INTERMITTENTLY_CLOSED_AND_OPEN_LAKES_AND_LAGOONS",
+    "47": "OPEN_OCEAN",
+    "48": "T_2_4_WARM_TEMPERATE_LAUROPHYLL_FORESTS",
+    "49": "M_4_2_MARINE_AQUAFARMS",
+    "50": "M_1_7_SUBTIDAL_SAND_BEDS",
+    "51": "M_1_1_SEAGRASS_MEADOWS",
+    "52": "M_1_3_PHOTIC_CORAL_REEFS",
+    "53": "T_3_1_SEASONALLY_DRY_TROPICAL_SHRUBLANDS",
+    "54": "UNKNOWN",
+    "55": "T_6_4_TEMPERATE_ALPINE_GRASSLANDS_AND_SHRUBLANDS",
+    "56": "T_4_4_TEMPERATE_WOODLANDS",
+    "57": "M_1_6_SUBTIDAL_ROCKY_REEFS",
+    "58": "T_6_2_POLAR/ALPINE_CLIFFS_SCREES_OUTCROPS_AND_LAVA_FLOWS",
+    "59": "F_3_3_RICE_PADDIES"
+   },
+   "classes_source": "olmoearth_run.yaml inference_results_config.classification_fields"
   },
   "inputs": {
    "sentinel2_l2a": {
@@ -285,10 +350,10 @@
    }
   },
   "windows": {
-   "grid_size": 0.1,
    "window_buffer": 31,
    "window_resolution": 10.0,
    "nodata_value": 54,
+   "grid_size": 10.0,
    "window_size_px": 63,
    "splitter": "SpatialDataSplitter"
   },
@@ -301,6 +366,7 @@
   "sources": [
    "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/ecosystem_type_mapping/model.yaml",
    "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/ecosystem_type_mapping/olmoearth_run.yaml",
+   "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/ecosystem_type_mapping/dataset.json",
    "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/docs/ecosystem_type_mapping.md"
   ],
   "audit": {
@@ -328,15 +394,18 @@
    "num_classes": 2,
    "nodata_value": 3,
    "zero_is_invalid": null,
-   "classes": {},
-   "legend_note": "class names recovered from per-class metric definitions only; unnamed indices have no metric in the config"
+   "classes": {
+    "0": "background",
+    "1": "cropland"
+   },
+   "classes_source": "olmoearth_run.yaml inference_results_config.classification_fields"
   },
   "inputs": {
    "sentinel2_l2a": {
     "layers": [
      "sentinel2"
     ],
-    "n_timesteps": 1,
+    "n_timesteps": 8,
     "bands": [
      "B02",
      "B03",
@@ -364,10 +433,7 @@
     "is_target": true
    }
   },
-  "windows": {
-   "grid_size": 1.0,
-   "nodata_value": 2
-  },
+  "windows": {},
   "outputs": {
    "decoder_out_channels": [
     2
@@ -377,6 +443,7 @@
   "sources": [
    "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/fields_of_the_world/model.yaml",
    "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/fields_of_the_world/olmoearth_run.yaml",
+   "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/fields_of_the_world/dataset.json",
    "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/docs/fields_of_the_world.md"
   ],
   "audit": {
@@ -414,7 +481,8 @@
     "8": "river",
     "9": "none"
    },
-   "num_classes": 10
+   "num_classes": 10,
+   "classes_source": "olmoearth_run.yaml inference_results_config.classification_fields"
   },
   "inputs": {
    "sentinel2_l2a": {
@@ -464,6 +532,7 @@
   "sources": [
    "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/forest_loss_driver/model.yaml",
    "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/forest_loss_driver/olmoearth_run.yaml",
+   "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/forest_loss_driver/dataset.json",
    "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/docs/forest_loss_driver.md"
   ],
   "audit": {
@@ -479,34 +548,171 @@
   "warnings": []
  },
  {
-  "name": "kenya_lulc_croptype",
+  "name": "kenya_lulc_croptype:cropland",
   "kind": "project",
   "encoder": {},
   "task": {
-   "type": "unknown"
+   "class": "SegmentationTask",
+   "type": "segmentation (dense per-pixel classes)",
+   "num_classes": 8,
+   "nodata_value": null,
+   "zero_is_invalid": true,
+   "classes": {
+    "1": "not_crop",
+    "2": "crop"
+   },
+   "classes_source": "olmoearth_run_cropland.yaml inference_results_config.classification_fields"
   },
-  "inputs": {},
-  "windows": {},
-  "outputs": {},
+  "inputs": {
+   "sentinel2_l2a": {
+    "layers": [
+     "sentinel2"
+    ],
+    "n_timesteps": 6,
+    "bands": [
+     "B02",
+     "B03",
+     "B04",
+     "B08",
+     "B05",
+     "B06",
+     "B07",
+     "B8A",
+     "B11",
+     "B12",
+     "B01",
+     "B09"
+    ],
+    "is_target": false
+   },
+   "label": {
+    "layers": [
+     "lulc_label_raster"
+    ],
+    "n_timesteps": 1,
+    "bands": [
+     "lulc_label"
+    ],
+    "is_target": true
+   }
+  },
+  "windows": {
+   "window_buffer": 31,
+   "window_resolution": 10.0,
+   "nodata_value": 255,
+   "grid_size": 128,
+   "window_size_px": 63,
+   "splitter": "SpatialDataSplitter"
+  },
+  "outputs": {
+   "decoder_out_channels": [
+    3
+   ],
+   "classes_emitted": 3
+  },
   "goal": "",
   "sources": [
-   "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/kenya_lulc_croptype/model.yaml",
-   "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/kenya_lulc_croptype/olmoearth_run.yaml",
+   "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/kenya_lulc_croptype/model_cropland.yaml",
+   "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/kenya_lulc_croptype/olmoearth_run_cropland.yaml",
+   "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/kenya_lulc_croptype/dataset.json",
    "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/docs/kenya_lulc_croptype.md"
   ],
   "audit": {
-   "output_is_dense": false,
-   "boundary_cue_applies": false,
-   "n_classes": null,
-   "confidence_scoring": "n/a (regression)",
+   "output_is_dense": true,
+   "boundary_cue_applies": true,
+   "n_classes": 3,
+   "confidence_scoring": "negative logit margin (top-1 minus top-2 logit); avoid 1-max-prob ties",
    "expert_reference_required": true,
    "reference_caveat": "reference-product labels can make boundary-type signals look better than confidence (exp18); validate on expert labels",
    "band_set_disagreement_available": null
   },
   "warnings": [
-   "model.yaml unavailable: HTTPError",
-   "olmoearth_run.yaml unavailable: HTTPError",
-   "docs/kenya_lulc_croptype.md unavailable: HTTPError"
+   "docs/kenya_lulc_croptype.md unavailable: HTTPError",
+   "the task config says num_classes=8 and the decoder emits 3 channels; the audit uses the decoder's 3, which is what the model outputs"
+  ]
+ },
+ {
+  "name": "kenya_lulc_croptype:maize",
+  "kind": "project",
+  "encoder": {},
+  "task": {
+   "class": "SegmentationTask",
+   "type": "segmentation (dense per-pixel classes)",
+   "num_classes": 8,
+   "nodata_value": null,
+   "zero_is_invalid": true,
+   "classes": {
+    "1": "not maize",
+    "2": "maize"
+   },
+   "classes_source": "olmoearth_run_maize.yaml inference_results_config.classification_fields"
+  },
+  "inputs": {
+   "sentinel2_l2a": {
+    "layers": [
+     "sentinel2"
+    ],
+    "n_timesteps": 6,
+    "bands": [
+     "B02",
+     "B03",
+     "B04",
+     "B08",
+     "B05",
+     "B06",
+     "B07",
+     "B8A",
+     "B11",
+     "B12",
+     "B01",
+     "B09"
+    ],
+    "is_target": false
+   },
+   "label": {
+    "layers": [
+     "maize_label_raster"
+    ],
+    "n_timesteps": 1,
+    "bands": [
+     "maize_label"
+    ],
+    "is_target": true
+   }
+  },
+  "windows": {
+   "window_buffer": 31,
+   "window_resolution": 10.0,
+   "nodata_value": 255,
+   "grid_size": 128,
+   "window_size_px": 63,
+   "splitter": "SpatialDataSplitter"
+  },
+  "outputs": {
+   "decoder_out_channels": [
+    3
+   ],
+   "classes_emitted": 3
+  },
+  "goal": "",
+  "sources": [
+   "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/kenya_lulc_croptype/model_maize.yaml",
+   "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/kenya_lulc_croptype/olmoearth_run_maize.yaml",
+   "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/kenya_lulc_croptype/dataset.json",
+   "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/docs/kenya_lulc_croptype.md"
+  ],
+  "audit": {
+   "output_is_dense": true,
+   "boundary_cue_applies": true,
+   "n_classes": 3,
+   "confidence_scoring": "negative logit margin (top-1 minus top-2 logit); avoid 1-max-prob ties",
+   "expert_reference_required": true,
+   "reference_caveat": "reference-product labels can make boundary-type signals look better than confidence (exp18); validate on expert labels",
+   "band_set_disagreement_available": null
+  },
+  "warnings": [
+   "docs/kenya_lulc_croptype.md unavailable: HTTPError",
+   "the task config says num_classes=8 and the decoder emits 3 channels; the audit uses the decoder's 3, which is what the model outputs"
   ]
  },
  {
@@ -605,6 +811,7 @@
   "sources": [
    "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/lfmc/model.yaml",
    "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/lfmc/olmoearth_run.yaml",
+   "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/lfmc/dataset.json",
    "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/docs/lfmc.md"
   ],
   "audit": {
@@ -636,30 +843,63 @@
     "2": "water",
     "3": "other"
    },
-   "legend_note": "class names recovered from per-class metric definitions only; unnamed indices have no metric in the config"
+   "classes_source": "olmoearth_run.yaml inference_results_config.classification_fields"
   },
-  "inputs": {},
-  "windows": {
-   "grid_size": 0.1
+  "inputs": {
+   "label": {
+    "layers": [
+     "label_raster"
+    ],
+    "n_timesteps": 1,
+    "bands": [
+     "label"
+    ],
+    "is_target": true
+   },
+   "sentinel2_l2a": {
+    "layers": [
+     "sentinel2"
+    ],
+    "n_timesteps": 12,
+    "bands": [
+     "B02",
+     "B03",
+     "B04",
+     "B08",
+     "B05",
+     "B06",
+     "B07",
+     "B8A",
+     "B11",
+     "B12",
+     "B01",
+     "B09"
+    ],
+    "is_target": false
+   }
   },
+  "windows": {},
   "outputs": {
    "decoder_out_channels": [
     4
-   ]
+   ],
+   "decoder": "SegmentationPoolingDecoder"
   },
   "goal": "OlmoEarth-v1-FT-Mangrove-Base is a model fine-tuned from OlmoEarth-v1-Base for preddicting mangrove extent from Sentinel-2.",
   "sources": [
    "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/mangrove/model.yaml",
    "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/mangrove/olmoearth_run.yaml",
+   "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/mangrove/dataset.json",
    "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/docs/mangrove.md"
   ],
   "audit": {
-   "output_is_dense": true,
-   "boundary_cue_applies": true,
+   "output_is_dense": false,
+   "boundary_cue_applies": false,
    "n_classes": 4,
    "confidence_scoring": "negative logit margin (top-1 minus top-2 logit); avoid 1-max-prob ties",
    "expert_reference_required": true,
    "reference_caveat": "reference-product labels can make boundary-type signals look better than confidence (exp18); validate on expert labels",
+   "output_note": "one prediction per predict patch copied to its pixels (a pooling decoder): the map is block-constant, so the boundary cue applies only at the patch scale",
    "band_set_disagreement_available": true
   },
   "warnings": []
@@ -675,22 +915,22 @@
    "nodata_value": null,
    "zero_is_invalid": true,
    "classes": {
-    "1": "water",
-    "2": "bareground",
-    "3": "rangeland",
-    "4": "floodedvegetation",
-    "5": "trees",
-    "6": "cropland",
-    "7": "buildings"
+    "1": "Water",
+    "2": "Bare Ground",
+    "3": "Rangeland",
+    "4": "Flooded Vegetation",
+    "5": "Trees",
+    "6": "Cropland",
+    "7": "Buildings"
    },
-   "legend_note": "class names recovered from per-class metric definitions only; unnamed indices have no metric in the config"
+   "classes_source": "olmoearth_run.yaml inference_results_config.classification_fields"
   },
   "inputs": {
    "sentinel2_l2a": {
     "layers": [
      "sentinel2"
     ],
-    "n_timesteps": 1,
+    "n_timesteps": 8,
     "bands": [
      "B02",
      "B03",
@@ -735,6 +975,7 @@
   "sources": [
    "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/mozambique_lulc/model.yaml",
    "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/mozambique_lulc/olmoearth_run.yaml",
+   "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/mozambique_lulc/dataset.json",
    "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/docs/mozambique_lulc.md"
   ],
   "audit": {
@@ -775,14 +1016,15 @@
     "7": "legumes",
     "8": "water",
     "9": "builtup"
-   }
+   },
+   "classes_source": "olmoearth_run.yaml inference_results_config.classification_fields"
   },
   "inputs": {
    "sentinel2_l2a": {
     "layers": [
      "sentinel2"
     ],
-    "n_timesteps": 1,
+    "n_timesteps": 12,
     "bands": [
      "B02",
      "B03",
@@ -827,6 +1069,7 @@
   "sources": [
    "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/nandi/model.yaml",
    "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/nandi/olmoearth_run.yaml",
+   "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/nandi/dataset.json",
    "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/docs/nandi.md"
   ],
   "audit": {
@@ -857,10 +1100,53 @@
    "classes": {},
    "legend_note": "class names recovered from per-class metric definitions only; unnamed indices have no metric in the config"
   },
-  "inputs": {},
-  "windows": {
-   "grid_size": 0.15
+  "inputs": {
+   "mask": {
+    "layers": [
+     "mask"
+    ],
+    "n_timesteps": 1,
+    "bands": [
+     "mask"
+    ],
+    "is_target": true
+   },
+   "sentinel2_l2a": {
+    "layers": [
+     "sentinel2",
+     "sentinel2.1",
+     "sentinel2.2",
+     "sentinel2.3"
+    ],
+    "n_timesteps": 4,
+    "bands": [
+     "B02",
+     "B03",
+     "B04",
+     "B08",
+     "B05",
+     "B06",
+     "B07",
+     "B8A",
+     "B11",
+     "B12",
+     "B01",
+     "B09"
+    ],
+    "is_target": false
+   },
+   "targets": {
+    "layers": [
+     "label_raster"
+    ],
+    "n_timesteps": 1,
+    "bands": [
+     "label"
+    ],
+    "is_target": true
+   }
   },
+  "windows": {},
   "outputs": {
    "decoder_out_channels": [
     2
@@ -870,6 +1156,7 @@
   "sources": [
    "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/satlas_solar_farm/model.yaml",
    "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/satlas_solar_farm/olmoearth_run.yaml",
+   "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/satlas_solar_farm/dataset.json",
    "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/docs/satlas_solar_farm.md"
   ],
   "audit": {
@@ -895,15 +1182,18 @@
    "num_classes": 8,
    "nodata_value": null,
    "zero_is_invalid": true,
-   "classes": {},
-   "legend_note": "class names recovered from per-class metric definitions only; unnamed indices have no metric in the config"
+   "classes": {
+    "1": "not_crop",
+    "2": "crop"
+   },
+   "classes_source": "olmoearth_run.yaml inference_results_config.classification_fields"
   },
   "inputs": {
    "sentinel2_l2a": {
     "layers": [
      "sentinel2"
     ],
-    "n_timesteps": 1,
+    "n_timesteps": 8,
     "bands": [
      "B02",
      "B03",
@@ -942,26 +1232,28 @@
   "outputs": {
    "decoder_out_channels": [
     3
-   ]
+   ],
+   "classes_emitted": 3
   },
   "goal": "",
   "sources": [
    "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/togo_cropland/model.yaml",
    "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/togo_cropland/olmoearth_run.yaml",
+   "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/olmoearth_run_data/togo_cropland/dataset.json",
    "https://raw.githubusercontent.com/allenai/olmoearth_projects/main/docs/togo_cropland.md"
   ],
   "audit": {
    "output_is_dense": true,
    "boundary_cue_applies": true,
-   "n_classes": 8,
+   "n_classes": 3,
    "confidence_scoring": "negative logit margin (top-1 minus top-2 logit); avoid 1-max-prob ties",
    "expert_reference_required": true,
    "reference_caveat": "reference-product labels can make boundary-type signals look better than confidence (exp18); validate on expert labels",
-   "note": "with many classes the prediction-boundary score is largely a low-margin proxy (exp16); expect confidence to dominate",
    "band_set_disagreement_available": null
   },
   "warnings": [
-   "docs/togo_cropland.md unavailable: HTTPError"
+   "docs/togo_cropland.md unavailable: HTTPError",
+   "the task config says num_classes=8 and the decoder emits 3 channels; the audit uses the decoder's 3, which is what the model outputs"
   ]
  },
  {
