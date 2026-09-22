@@ -2032,6 +2032,7 @@
 
 - id: lucas-ranking-survives-ground-observation
   statement: "On 4,778 LUCAS Copernicus 2022 polygons in held-out NUTS2 regions, where a surveyor stood at the point and the reference never saw the satellite imagery, the model's own margin ranks its own errors better than the best control an operator could compute at inference time: design-weighted excess AURC 0.1468 against the within-window pixel variance's 0.2421, a lead of 0.0953 on 94 regions against 32 (one-sided p = 1.5e-08) with a NUTS2 cluster bootstrap of [0.071, 0.120]; it also beats oracle-side metadata about the unit's own size and mixedness by 0.0622, and the lead is not an artifact of the stratified sampling design, which if ignored would overstate it by 0.0216; preregistered P1, P1b and P4 all hold, so what this repository measures on photointerpreted references is not annotator agreement."
+  crosscheck: tests/test_known_answer.py::test_exp68_design_weighted_lead_is_unbiased_under_its_own_design
   status: supported
   experiments: [exp68]
   artifacts: [exp/out/exp68_summary.json]
