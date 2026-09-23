@@ -153,7 +153,11 @@
   cited_in:
     - {file: docs/Findings.md, marker: errors-sit-on-boundaries}
     - {file: docs/results/comparisons.md, marker: errors-sit-on-boundaries}
-  note: The test-split shares (73% vs 18%) quoted with exp18 are not in a committed artifact; the check pins Bolivia.
+  note: >-
+    The test-split shares (73% vs 18%) quoted with exp18 were not in a committed artifact until 2026-09-23: exp65's
+    readings (ranker/test/boundary and err, the v1 shift-averaged decision on 149,684 test windows) give 0.732 and
+    0.180, pinned to the percent by tests/test_known_answer.py::test_the_test_split_boundary_shares_quoted_with_exp18_are_in_the_committed_readings;
+    the check pins Bolivia.
 
 - id: explanation-cues-cover-errors
   statement: 95% of the Bolivia error windows carry at least one label-free cue with a measured enrichment; spectral ambiguity is 7x enriched and, with the boundary cue, is the one that separates error rates inside confidence's review set.

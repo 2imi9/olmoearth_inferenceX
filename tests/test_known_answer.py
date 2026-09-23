@@ -164,3 +164,17 @@ def test_exp80_zone_guarantee_and_coverage_reproduce_from_a_fresh_draw():
     # the calibration gap of one task, from the per-unit file
     gap = float(u["p1"].mean() - (1 - theta))
     assert abs(gap - d["tasks"]["mados"]["calibration_gap"]) < 1e-9 and 0 < gap < 0.02
+
+
+def test_the_test_split_boundary_shares_quoted_with_exp18_are_in_the_committed_readings():
+    """The record quotes 73% of errors against 18% of correct windows on the Sen1Floods11 test split beside exp18's
+    Bolivia shares; the ledger noted that no committed artifact held them. exp65's readings (the v1 shift-averaged
+    decision, 149,684 windows) do: 0.732 and 0.180, the same to the percent the record states."""
+    z = np.load(os.path.join(ROOT, "exp", "out", "exp65_readings.npz"))
+    b, e = z["ranker/test/boundary"], z["ranker/test/err"]
+    ok = np.isfinite(b) & np.isfinite(e)
+    b, e = b[ok], e[ok] > 0.5
+    assert e.size == 149684
+    assert round(float((b[e] > 0).mean()), 2) == 0.73 and round(float((b[~e] > 0).mean()), 2) == 0.18
+    bb, ee = z["ranker/bolivia/boundary"], z["ranker/bolivia/err"] > 0.5
+    assert round(float((bb[ee] > 0).mean()), 2) == 0.75 and round(float((bb[~ee] > 0).mean()), 2) == 0.21
