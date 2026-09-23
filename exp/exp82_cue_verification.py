@@ -201,6 +201,8 @@ def cmd_estimate(args):
     import exp78_error_rate_estimation as e78
     units_dir = args.units or e78.UNITS
     record = json.load(open(os.path.join(OUT, "exp70_summary.json")))["results"]["tasks"]
+    if args.encoder != "olmoearth_base":
+        record = json.load(open(os.path.join(OUT, "exp74_summary.json")))["results"]["tasks"].get(args.encoder, {})
     tasks = args.tasks or e70.TASKS_SEG
     rows, t0 = {}, time.time()
     for t in tasks:
@@ -215,14 +217,17 @@ def cmd_estimate(args):
             r = estimate_classification(t, units_dir)
             if r["n_classes"] >= 6:
                 cls[t] = r
-    summary = {"experiment": "exp82 is the why verified where it is quoted", "units": os.path.relpath(units_dir, ROOT),
+    summary = {"experiment": "exp82 is the why verified where it is quoted", "encoder": args.encoder, "units": os.path.relpath(units_dir, ROOT),
                "config": {"n_boot": args.n_boot, "low_confidence_quantile": LOW_Q, "budgets": BUDGETS, "library_ratio": LIBRARY_RATIO,
                           "seed": 0, "seconds": round(time.time() - t0)},
                "tasks": rows, "classification_confusion_pairs": cls, "prereg": verdicts(rows)}
-    with open(SUMMARY, "w") as f:
+    # the graded run is OlmoEarth Base's; another encoder's export (exp79) writes beside it, never over it
+    path = SUMMARY if args.encoder == "olmoearth_base" else os.path.join(OUT, "exp82_cues", f"{args.encoder}.json")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as f:
         json.dump(summary, f, indent=1, default=float)
     print(json.dumps({k: v.get("holds") for k, v in summary["prereg"].items()}, indent=1))
-    print(f"wrote {SUMMARY}")
+    print(f"wrote {path}")
     return 0
 
 
@@ -263,6 +268,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--stage", choices=("estimate", "grade", "smoke"), required=True)
     ap.add_argument("--units", default=None)
+    ap.add_argument("--encoder", default="olmoearth_base", help="another encoder's exp79 export writes to exp/out/exp82_cues/<encoder>.json")
     ap.add_argument("--tasks", nargs="*", default=None)
     ap.add_argument("--n-boot", type=int, default=N_BOOT)
     args = ap.parse_args(argv)

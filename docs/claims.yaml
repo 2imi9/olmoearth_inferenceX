@@ -3661,3 +3661,28 @@
   note: >-
     Descriptive: the same code and draws as the graded Base run on each encoder's seed-0 export; the maxima and
     counts are recomputed from the per-cell rows. Extended as further exports land.
+
+- id: cue-verification-holds-on-other-encoders
+  statement: "On the seed-0 exports of Clay Large and Copernicus-FM the boundary cue's enrichment runs from 1.26 and 1.30 (m-cashew-plant) to 8.9 and 10.0 (MADOS); the library value 3.5 lies outside the tile-clustered interval on 7 of 7 tasks for both; the conjunction of the two cues is purer than either on 7 of 7 for both; the low-confidence cue's share among errors equals exp74's recorded capture at 20% within 2e-3 on every task; and the seven tasks rank identically by enrichment under all three encoders, the three PASTIS arms taken as one."
+  crosscheck: tests/test_exp82.py::test_the_tile_count_bootstrap_matches_the_window_bootstrap_on_mados
+  status: measured
+  experiments: [exp82]
+  artifacts: [exp/out/exp82_cues/clay_large.json, exp/out/exp82_cues/copernicusfm.json, exp/out/exp82_summary.json, exp/out/exp74_summary.json]
+  check: |-
+    (lambda C, F, B, R: (lambda enr, L:
+      all(len(d['tasks']) == 7 for d in (C, F))
+      and round(min(enr['clay'].values()), 2) == 1.26 and round(min(enr['cop'].values()), 2) == 1.30
+      and round(max(enr['clay'].values()), 1) == 8.9 and round(max(enr['cop'].values()), 1) == 10.0
+      and all(not (v['cues']['boundary']['boot_lo'] <= L <= v['cues']['boundary']['boot_hi']) for d in (C, F) for v in d['tasks'].values())
+      and all(v['cues']['boundary_and_low_confidence']['precision'] > max(v['cues']['boundary']['precision'], v['cues']['low_confidence']['precision']) for d in (C, F) for v in d['tasks'].values())
+      and all(abs(v['cues']['low_confidence']['share_errors'] - R[e][t]['signals']['margin']['capture']['0.2']) <= 2e-3
+              for e, d in (('clay_large', C), ('copernicusfm', F)) for t, v in d['tasks'].items())
+      and all((lambda o: [o[0], o[4], o[5], o[6]] == ['m_cashew_plant', 'm_sa_crop_type', 'sen1floods11', 'mados']
+                       and set(o[1:4]) == {'pastis_sentinel1', 'pastis_sentinel2', 'pastis_sentinel1_sentinel2'})(sorted(enr[e], key=enr[e].get)) for e in enr)
+    )({'clay': {t: v['cues']['boundary']['enrichment'] for t, v in C['tasks'].items()}, 'cop': {t: v['cues']['boundary']['enrichment'] for t, v in F['tasks'].items()},
+       'base': {t: v['cues']['boundary']['enrichment'] for t, v in B['tasks'].items()}}, 0.750 / 0.214)
+    )(A['exp/out/exp82_cues/clay_large.json'], A['exp/out/exp82_cues/copernicusfm.json'], A['exp/out/exp82_summary.json'], A['exp/out/exp74_summary.json']['results']['tasks'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: cue-verification-holds-on-other-encoders}
+  note: >-
+    Descriptive, the same code as the graded Base run on each encoder's seed-0 export; extended as further exports land.

@@ -2442,6 +2442,14 @@ MADOS has 841 labelled tiles of 1,310; the tile draws are shared across cues wit
 two code paths of `_boundary_valid` disagreeing on the indicator's value at tile edges, fixed the same night
 without moving any cue set.
 
+**On other encoders (added as exp79's exports land).** The same run on the seed-0 exports of Clay Large and
+Copernicus-FM: the boundary enrichment runs from 1.26 and 1.30 on m-cashew-plant to 8.9 and 10.0 on MADOS, the
+library value lies outside the interval on 7 of 7 tasks for both, the conjunction is purer than either cue on
+7 of 7 for both, and the low-confidence cue reproduces exp74's recorded capture at 20% on every task. The ordering
+of tasks by enrichment is the same under all three encoders (the three PASTIS arms taken as one): fragmentation is
+a property of the map.
+<!-- claim:cue-verification-holds-on-other-encoders -->
+
 **What this changes.** `explain` no longer quotes Bolivia's shares as if they were the map's: the library carries
 the suite's range and the cue's per-task values, and reports the map's own boundary prevalence, which is what
 decides where in the range a map sits.
