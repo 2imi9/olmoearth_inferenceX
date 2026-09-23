@@ -2488,6 +2488,57 @@ producer's accuracy lacked its finite-population correction (median coverage 0.9
 share's grading now covers every draw for the classes the package reports. Each is in the preregistration's
 amendments with its date.
 
+## Can raters from different families estimate a map's accuracy without labels? (exp83)
+
+Preregistered in [docs/plan/consensus_reliability.md](../plan/consensus_reliability.md) with a dated amendment;
+runs as `exp/exp83_consensus.py`; artifact `exp/out/exp83_summary.json`; estimator
+`reliability.dawid_skene`. Run on 23 September 2026 on the suite's multi-encoder panels (exp63's six encoders
+on MADOS and PASTIS S2, exp57's eight on Sen1Floods11), labels held out to grade, no cluster.
+
+**The question.** exp07 rejected label-free reliability estimation within one family (Nano/Tiny/Base agreed on
+their errors and Dawid–Skene read agreement as competence) and named an out-of-family panel as the designed
+fix, untested. The field's condition for agreement to read accuracy is diversity across raters (Baek et al.
+2022; Jiang et al. 2022). The panels here are as diverse as the suite allows: six or eight encoders from
+different families, the same windows, the same probe recipe.
+
+| task | true accuracy of the six (eight) | Dawid–Skene estimate | hidden share of errors | majority-shared share | rank correlation, estimate vs truth |
+|---|---|---|---|---|---|
+| MADOS (15 classes) | 0.926, 0.929, 0.916, **0.939**, 0.856, 0.823 | **0.947**, 0.932, 0.943, 0.946, 0.856, 0.855 | 0.28, 0.04, 0.32, 0.12, 0.00, 0.18 | 0.48, 0.42, 0.45, 0.57, 0.16, 0.20 | 0.71 |
+| PASTIS S2 (19) | **0.810**, 0.766, 0.782, 0.772, 0.673, 0.779 | **0.866**, 0.856, 0.861, 0.860, 0.738, 0.852 | 0.29, 0.39, 0.36, 0.39, 0.20, 0.33 | 0.66, 0.62, 0.64, 0.63, 0.40, 0.62 | 0.83 |
+| Sen1Floods11 (2) | 0.913, **0.914**, 0.913, 0.911, 0.911, 0.883, 0.910, 0.909 | 0.981, 0.981, 0.980, **0.983**, 0.981, 0.936, 0.975, 0.975 | 0.73–0.81 (Satlas 0.45) | 0.82–0.87 (Satlas 0.59) | 0.62 |
+
+(OlmoEarth, Galileo, CROMA, TerraMind, Clay, AnySat; on Sen1Floods11 also Satlas and Panopticon. Bold: the best.)
+
+**All three predictions fail.** The prediction that the share of an encoder's errors the estimator hides equals
+the share the panel majority makes with it (P1) fails on 13 of 20 raters: the estimator hides *less*, because it
+infers the plurality label and also debits a rater for being right where the others agree on a wrong one; the
+true best encoder on each multi-class task pays that debit most (TerraMind on MADOS: shared 0.57, hidden 0.12).
+<!-- claim:consensus-hides-less-than-the-shared-share-and-debits-the-best -->
+The order is recovered on PASTIS
+(rank correlation 0.83, the best identified in 19 of 20 tile resamples) and not on MADOS (0.71; the top two
+estimates differ by 0.001 with a standard error of 0.010, a coin) nor on Sen1Floods11 (0.62), where eight frozen
+encoders fed the same Sentinel-2 chips share 82–87% of their errors and the estimator returns 0.98 for maps that
+are 0.91 accurate. <!-- claim:consensus-order-recovered-only-where-true-gaps-are-large -->
+Mean pairwise
+disagreement ranks error on MADOS (0.83) and not on PASTIS (−0.03), and overstates the error rate on MADOS
+because the two weak encoders' idiosyncratic errors inflate everyone's disagreement, while understating it by a
+factor of 1.2–1.6 on PASTIS and 1.7–2.6 on Sen1Floods11. <!-- claim:disagreement-reads-error-with-a-blind-spot -->
+Within one family (OlmoEarth's three probe seeds, which disagree on 0.2–0.6% of windows) the estimator returns
+0.996–0.999 for maps that are 0.81–0.93 accurate: the unanimous limit, hidden share 0.94–0.995.
+<!-- claim:within-family-consensus-is-the-unanimous-limit -->
+
+**Found on the way, and fixed.** The estimator had stopped at 50 iterations since exp07; the two multi-class
+panels need 224 and 261, and the first run's hidden shares were snapshots (0.45 where the converged value is
+0.28). It now runs to its stopping rule and reports convergence; exp07's recorded numbers were produced under the
+old cap and are marked as such in its section.
+
+**What this changes.** A panel of encoders from different families does not estimate a map's accuracy without
+labels: the level is inflated everywhere by a share of the error mass the tool can now state (0.0 to 0.4 on the
+multi-class maps, 0.7 to 0.8 on the binary flood map), and the order is recoverable only where the true gaps
+between encoders exceed a chip-level standard error of about 0.01. `compare`'s "why errors are shared" gains
+that number; nothing else in the tool changes, and the front page's sentence that an error rate needs a
+reference stands.
+
 ## The ceiling belongs to the task, not to the model (from exp74 and exp70)
 
 The margin takes a median 0.68 of the gap between a random ranking and a perfect one on the 24 tasks. A fair

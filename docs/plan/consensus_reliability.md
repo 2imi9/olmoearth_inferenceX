@@ -79,6 +79,35 @@ synthetic panel of conditionally independent raters with known confusions and sh
 recover the true accuracies within 0.02; the majority-shared share is checked against a brute-force count. Then
 an adversarial read by a separate agent on the real masks.
 
+## Amendment, 23 September 2026, from the independent audit, written after the run and before the record
+
+The audit reproduced every number with its own loader and its own EM, and found one thing that blocked the
+record: **the package's Dawid–Skene stopped at 50 iterations and the 15- and 19-class panels need 224 and
+261**, so the first run's estimates were snapshots (OlmoEarth's hidden share on MADOS 0.45 at 50 iterations,
+0.28 at convergence). `reliability.dawid_skene` now runs to its stopping rule (largest posterior change below
+1e-6, cap 1,000) and reports whether it converged; the run below is the converged one. No verdict changed.
+
+**All three predictions fail, and the audit named the mechanism this page missed.** Dawid–Skene's reliability is
+the mean posterior mass on the rater's own vote, so a rater is *credited* for errors the panel shares (read as
+right) and *debited* for being right where a majority of the others agree on a wrong label (read as wrong). This
+page had only the credit. On PASTIS the credit equals the majority-shared share to within 0.06 and the debit
+(0.14–0.34) accounts for the whole gap; on MADOS the true best encoder, TerraMind, is right while a strict
+majority of the others share a wrong label on 0.36 of its error count, and its hidden share is 0.12 against a
+shared share of 0.57. The inferred truth is the plurality (98%, 89% and 99% of windows on the three tasks), it
+never beats the best single rater, and the estimator is near-certain of it.
+
+Stated from the audit: the MADOS best-encoder inversion is a coin (chip bootstrap over the 841 labelled tiles:
+OlmoEarth's estimate exceeds TerraMind's by 0.001 with a standard error of 0.010, P = 0.57, while the true gap
+between the top two is 2 standard errors); the PASTIS identification is real (19 of 20 resamples); on
+Sen1Floods11 the true best is itself barely resolved (0.0015, SE 0.0008). P3 failed on two of three clauses:
+disagreement ranks error on MADOS (0.83) and not on PASTIS (−0.03), where the most accurate encoder disagrees
+most with the strong raters because it is right alone; and disagreement *overstates* error on MADOS (five of six
+encoders) because the two weak encoders' idiosyncratic errors inflate everyone's disagreement. The
+within-family comparator is the unanimous limit (hidden 0.94–0.995), not a replication of exp07's three
+different models (0.32–0.58), and is recorded as that. The first version of `tests/test_exp83.py`'s correlated-
+raters test built its shared errors unanimous, so it exercised only the credit and would have passed whatever
+tonight found; a test with a strong rater right alone, which the debit fails, is added.
+
 ## What would invalidate the run
 
 - Labels entering the votes, the panel, or the EM in any way; they grade `a_k`, `m_k` and the rankings only.

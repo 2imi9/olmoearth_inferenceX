@@ -140,6 +140,23 @@ equal size and 0.60 on MADOS, whose tiles hold 1 to 400 windows. If you have not
 labelled yet, use the default design. A CSV with a blank `wrong`, or whose rows are
 not the design's, is refused.
 
+**Per class, and a zone with a guarantee.** With a `reference_class` column filled in beside `wrong` (the class
+the reviewer saw in each window, in the map's class ids), `estimate --per-class` adds what the map-accuracy
+literature says a producer owes: per class, the user's accuracy (of the windows the map calls it, how many are
+it), the producer's accuracy (of the windows that are it, how many the map found) and the error-adjusted share
+of the map that is it, each with an interval, from the same labelled sample (exp81; Wilson intervals on the
+effective sample size, since the field's Wald form collapses to a point whenever a class shows no sampled error
+and covered as little as 30% of draws on the suite). A class with fewer than 30 labelled windows is reported with
+a warning, and so is a class the confidence design samples thinly or one nearly all of whose windows are
+labelled. `certify` needs a **random** sample (`--design random`; a stratified or tile draw is refused, because
+the guarantee rests on the labels inside each zone being a random draw of that zone) and an error rate
+`--alpha` you are prepared to tolerate; it returns the largest most-confident share of the map that is wrong at
+most that often, certified by exact hypergeometric tests so that the statement fails on at most `--delta` (default
+0.1) of samples like yours, plus a window mask of the zone (exp80). It says when the budget cannot certify the
+level asked for: with no error among its labels a zone still needs about `ln(delta)/ln(1 − alpha)` of them, 45 at
+5%, 255 at 0.9%. On the suite 300 labels certified about half the map at half its error rate on a typical task;
+outside the zone nothing is certified.
+
 **Do not label the review set and divide.** The review set is built to hold
 errors; on exp78's export the 5% review set gave 1.8 to 5.8 times the true rate
 on every task. `sample` draws a sample with weights the estimator undoes; the

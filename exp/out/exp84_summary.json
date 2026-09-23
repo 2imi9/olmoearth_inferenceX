@@ -1,0 +1,926 @@
+{
+ "experiment": "exp84 where the lead holds",
+ "config": {
+  "n_blocks": 50,
+  "encoders_predicted": [
+   "anysat",
+   "clay_large",
+   "panopticon",
+   "olmoearth_tiny",
+   "olmoearth_nano",
+   "olmoearth_large",
+   "galileo_tiny",
+   "galileo_nano",
+   "galileo_base",
+   "croma_base",
+   "croma_large",
+   "terramind_base",
+   "terramind_large",
+   "satlas_base",
+   "copernicusfm"
+  ],
+  "seconds": 2
+ },
+ "per_encoder": {},
+ "disclosed_olmoearth_base": {
+  "olmoearth_base": [
+   {
+    "seed": 0,
+    "n_tasks": 24,
+    "rho_accuracy_auroc": 0.7747826086956522,
+    "rho_accuracy_lead": -0.4113043478260869,
+    "wins": 24,
+    "losses": 0,
+    "sign_p": 5.960464477539063e-08,
+    "losses_on": [],
+    "sensor_range": 0.03770579517481612,
+    "groups": {
+     "sensor": {
+      "S2": {
+       "median_lead": 0.10834599511989598,
+       "n": 12,
+       "wins": 12
+      },
+      "Landsat": {
+       "median_lead": 0.1122813482369576,
+       "n": 3,
+       "wins": 3
+      },
+      "S1+S2": {
+       "median_lead": 0.1460517902947121,
+       "n": 4,
+       "wins": 4
+      },
+      "S1": {
+       "median_lead": 0.12723338616403848,
+       "n": 5,
+       "wins": 5
+      }
+     },
+     "size": {
+      "<=1000": {
+       "median_lead": 0.09382220849647341,
+       "n": 7,
+       "wins": 7
+      },
+      "<=306": {
+       "median_lead": 0.08732016219948521,
+       "n": 6,
+       "wins": 6
+      },
+      ">1000": {
+       "median_lead": 0.12619535849355426,
+       "n": 11,
+       "wins": 11
+      }
+     },
+     "classes": {
+      "6-10": {
+       "median_lead": 0.11830981060541275,
+       "n": 10,
+       "wins": 10
+      },
+      "2": {
+       "median_lead": 0.04693846220381487,
+       "n": 8,
+       "wins": 8
+      },
+      ">=12": {
+       "median_lead": 0.11821153328743088,
+       "n": 6,
+       "wins": 6
+      }
+     }
+    },
+    "min_lead": 0.015696682798850045
+   },
+   {
+    "seed": 1,
+    "n_tasks": 24,
+    "rho_accuracy_auroc": 0.7452173913043476,
+    "rho_accuracy_lead": -0.46695652173913044,
+    "wins": 24,
+    "losses": 0,
+    "sign_p": 5.960464477539063e-08,
+    "losses_on": [],
+    "sensor_range": 0.039252336055750625,
+    "groups": {
+     "sensor": {
+      "S2": {
+       "median_lead": 0.10845968212570636,
+       "n": 12,
+       "wins": 12
+      },
+      "Landsat": {
+       "median_lead": 0.11800644124467927,
+       "n": 3,
+       "wins": 3
+      },
+      "S1+S2": {
+       "median_lead": 0.147712018181457,
+       "n": 4,
+       "wins": 4
+      },
+      "S1": {
+       "median_lead": 0.12789590145845048,
+       "n": 5,
+       "wins": 5
+      }
+     },
+     "size": {
+      "<=1000": {
+       "median_lead": 0.10387481549476657,
+       "n": 7,
+       "wins": 7
+      },
+      "<=306": {
+       "median_lead": 0.08460157349972057,
+       "n": 6,
+       "wins": 6
+      },
+      ">1000": {
+       "median_lead": 0.12634203502252686,
+       "n": 11,
+       "wins": 11
+      }
+     },
+     "classes": {
+      "6-10": {
+       "median_lead": 0.11663200199730211,
+       "n": 10,
+       "wins": 10
+      },
+      "2": {
+       "median_lead": 0.04641826562850955,
+       "n": 8,
+       "wins": 8
+      },
+      ">=12": {
+       "median_lead": 0.11842934623418942,
+       "n": 6,
+       "wins": 6
+      }
+     }
+    },
+    "min_lead": 0.016773655972929985
+   },
+   {
+    "seed": 2,
+    "n_tasks": 24,
+    "rho_accuracy_auroc": 0.7573913043478261,
+    "rho_accuracy_lead": -0.4208695652173912,
+    "wins": 24,
+    "losses": 0,
+    "sign_p": 5.960464477539063e-08,
+    "losses_on": [],
+    "sensor_range": 0.03818240687665725,
+    "groups": {
+     "sensor": {
+      "S2": {
+       "median_lead": 0.10907026873988115,
+       "n": 12,
+       "wins": 12
+      },
+      "Landsat": {
+       "median_lead": 0.1372292019686165,
+       "n": 3,
+       "wins": 3
+      },
+      "S1+S2": {
+       "median_lead": 0.1472526756165384,
+       "n": 4,
+       "wins": 4
+      },
+      "S1": {
+       "median_lead": 0.1265092503940831,
+       "n": 5,
+       "wins": 5
+      }
+     },
+     "size": {
+      "<=1000": {
+       "median_lead": 0.10483990935130119,
+       "n": 7,
+       "wins": 7
+      },
+      "<=306": {
+       "median_lead": 0.08329353992095875,
+       "n": 6,
+       "wins": 6
+      },
+      ">1000": {
+       "median_lead": 0.12530361673618118,
+       "n": 11,
+       "wins": 11
+      }
+     },
+     "classes": {
+      "6-10": {
+       "median_lead": 0.12250277929261395,
+       "n": 10,
+       "wins": 10
+      },
+      "2": {
+       "median_lead": 0.04439918189012398,
+       "n": 8,
+       "wins": 8
+      },
+      ">=12": {
+       "median_lead": 0.11809339270413646,
+       "n": 6,
+       "wins": 6
+      }
+     }
+    },
+    "min_lead": 0.016281477811381256
+   },
+   {
+    "seed": 3,
+    "n_tasks": 24,
+    "rho_accuracy_auroc": 0.7417391304347825,
+    "rho_accuracy_lead": -0.41043478260869554,
+    "wins": 24,
+    "losses": 0,
+    "sign_p": 5.960464477539063e-08,
+    "losses_on": [],
+    "sensor_range": 0.040303876797261606,
+    "groups": {
+     "sensor": {
+      "S2": {
+       "median_lead": 0.1066113439255203,
+       "n": 12,
+       "wins": 12
+      },
+      "Landsat": {
+       "median_lead": 0.10845584772452621,
+       "n": 3,
+       "wins": 3
+      },
+      "S1+S2": {
+       "median_lead": 0.1469152207227819,
+       "n": 4,
+       "wins": 4
+      },
+      "S1": {
+       "median_lead": 0.1271832107701119,
+       "n": 5,
+       "wins": 5
+      }
+     },
+     "size": {
+      "<=1000": {
+       "median_lead": 0.09428299630573264,
+       "n": 7,
+       "wins": 7
+      },
+      "<=306": {
+       "median_lead": 0.08158345038974124,
+       "n": 6,
+       "wins": 6
+      },
+      ">1000": {
+       "median_lead": 0.12552635593621617,
+       "n": 11,
+       "wins": 11
+      }
+     },
+     "classes": {
+      "6-10": {
+       "median_lead": 0.11706382440096322,
+       "n": 10,
+       "wins": 10
+      },
+      "2": {
+       "median_lead": 0.041966611285523384,
+       "n": 8,
+       "wins": 8
+      },
+      ">=12": {
+       "median_lead": 0.11807988607685513,
+       "n": 6,
+       "wins": 6
+      }
+     }
+    },
+    "min_lead": 0.003652268956451016
+   },
+   {
+    "seed": 4,
+    "n_tasks": 24,
+    "rho_accuracy_auroc": 0.7947826086956522,
+    "rho_accuracy_lead": -0.4765217391304348,
+    "wins": 24,
+    "losses": 0,
+    "sign_p": 5.960464477539063e-08,
+    "losses_on": [],
+    "sensor_range": 0.07015824138877849,
+    "groups": {
+     "sensor": {
+      "S2": {
+       "median_lead": 0.10696259173809694,
+       "n": 12,
+       "wins": 12
+      },
+      "Landsat": {
+       "median_lead": 0.11190583546392993,
+       "n": 3,
+       "wins": 3
+      },
+      "S1+S2": {
+       "median_lead": 0.1478280252440874,
+       "n": 4,
+       "wins": 4
+      },
+      "S1": {
+       "median_lead": 0.17712083312687543,
+       "n": 5,
+       "wins": 5
+      }
+     },
+     "size": {
+      "<=1000": {
+       "median_lead": 0.09525465180869441,
+       "n": 7,
+       "wins": 7
+      },
+      "<=306": {
+       "median_lead": 0.14739294026718358,
+       "n": 6,
+       "wins": 6
+      },
+      ">1000": {
+       "median_lead": 0.12556574511528418,
+       "n": 11,
+       "wins": 11
+      }
+     },
+     "classes": {
+      "6-10": {
+       "median_lead": 0.11738993118905139,
+       "n": 10,
+       "wins": 10
+      },
+      "2": {
+       "median_lead": 0.10196236856516763,
+       "n": 8,
+       "wins": 8
+      },
+      ">=12": {
+       "median_lead": 0.11808770180877036,
+       "n": 6,
+       "wins": 6
+      }
+     }
+    },
+    "min_lead": 0.01616465104494306
+   },
+   {
+    "seed": 5,
+    "n_tasks": 24,
+    "rho_accuracy_auroc": 0.7365217391304348,
+    "rho_accuracy_lead": -0.4278260869565217,
+    "wins": 24,
+    "losses": 0,
+    "sign_p": 5.960464477539063e-08,
+    "losses_on": [],
+    "sensor_range": 0.03696072441669121,
+    "groups": {
+     "sensor": {
+      "S2": {
+       "median_lead": 0.1084277554209328,
+       "n": 12,
+       "wins": 12
+      },
+      "Landsat": {
+       "median_lead": 0.11243283572092408,
+       "n": 3,
+       "wins": 3
+      },
+      "S1+S2": {
+       "median_lead": 0.145388479837624,
+       "n": 4,
+       "wins": 4
+      },
+      "S1": {
+       "median_lead": 0.12728923769919323,
+       "n": 5,
+       "wins": 5
+      }
+     },
+     "size": {
+      "<=1000": {
+       "median_lead": 0.09053973238527133,
+       "n": 7,
+       "wins": 7
+      },
+      "<=306": {
+       "median_lead": 0.08452725579048087,
+       "n": 6,
+       "wins": 6
+      },
+      ">1000": {
+       "median_lead": 0.12636937306783427,
+       "n": 11,
+       "wins": 11
+      }
+     },
+     "classes": {
+      "6-10": {
+       "median_lead": 0.11889755617866177,
+       "n": 10,
+       "wins": 10
+      },
+      "2": {
+       "median_lead": 0.0427083515252465,
+       "n": 8,
+       "wins": 8
+      },
+      ">=12": {
+       "median_lead": 0.11813059780087273,
+       "n": 6,
+       "wins": 6
+      }
+     }
+    },
+    "min_lead": 0.001717871866911691
+   },
+   {
+    "seed": 6,
+    "n_tasks": 24,
+    "rho_accuracy_auroc": 0.748695652173913,
+    "rho_accuracy_lead": -0.39391304347826084,
+    "wins": 24,
+    "losses": 0,
+    "sign_p": 5.960464477539063e-08,
+    "losses_on": [],
+    "sensor_range": 0.04003688101734526,
+    "groups": {
+     "sensor": {
+      "S2": {
+       "median_lead": 0.10710560685384246,
+       "n": 12,
+       "wins": 12
+      },
+      "Landsat": {
+       "median_lead": 0.11295142593167617,
+       "n": 3,
+       "wins": 3
+      },
+      "S1+S2": {
+       "median_lead": 0.14714248787118772,
+       "n": 4,
+       "wins": 4
+      },
+      "S1": {
+       "median_lead": 0.12642889482095246,
+       "n": 5,
+       "wins": 5
+      }
+     },
+     "size": {
+      "<=1000": {
+       "median_lead": 0.10032134490586184,
+       "n": 7,
+       "wins": 7
+      },
+      "<=306": {
+       "median_lead": 0.07950904390189222,
+       "n": 6,
+       "wins": 6
+      },
+      ">1000": {
+       "median_lead": 0.12437374848977173,
+       "n": 11,
+       "wins": 11
+      }
+     },
+     "classes": {
+      "6-10": {
+       "median_lead": 0.11682186704243942,
+       "n": 10,
+       "wins": 10
+      },
+      "2": {
+       "median_lead": 0.04053113224513552,
+       "n": 8,
+       "wins": 8
+      },
+      ">=12": {
+       "median_lead": 0.1180582131803799,
+       "n": 6,
+       "wins": 6
+      }
+     }
+    },
+    "min_lead": 0.012973662613069079
+   },
+   {
+    "seed": 7,
+    "n_tasks": 24,
+    "rho_accuracy_auroc": 0.751304347826087,
+    "rho_accuracy_lead": -0.44,
+    "wins": 24,
+    "losses": 0,
+    "sign_p": 5.960464477539063e-08,
+    "losses_on": [],
+    "sensor_range": 0.04159084667968922,
+    "groups": {
+     "sensor": {
+      "S2": {
+       "median_lead": 0.10542893282072315,
+       "n": 12,
+       "wins": 12
+      },
+      "Landsat": {
+       "median_lead": 0.11634779593988226,
+       "n": 3,
+       "wins": 3
+      },
+      "S1+S2": {
+       "median_lead": 0.14701977950041237,
+       "n": 4,
+       "wins": 4
+      },
+      "S1": {
+       "median_lead": 0.12707858890190132,
+       "n": 5,
+       "wins": 5
+      }
+     },
+     "size": {
+      "<=1000": {
+       "median_lead": 0.09658994094665001,
+       "n": 7,
+       "wins": 7
+      },
+      "<=306": {
+       "median_lead": 0.0812425009541186,
+       "n": 6,
+       "wins": 6
+      },
+      ">1000": {
+       "median_lead": 0.1253687918469542,
+       "n": 11,
+       "wins": 11
+      }
+     },
+     "classes": {
+      "6-10": {
+       "median_lead": 0.11642384634140793,
+       "n": 10,
+       "wins": 10
+      },
+      "2": {
+       "median_lead": 0.04285746280189322,
+       "n": 8,
+       "wins": 8
+      },
+      ">=12": {
+       "median_lead": 0.11802731748364254,
+       "n": 6,
+       "wins": 6
+      }
+     }
+    },
+    "min_lead": 0.01551519418886953
+   },
+   {
+    "seed": 8,
+    "n_tasks": 24,
+    "rho_accuracy_auroc": 0.771304347826087,
+    "rho_accuracy_lead": -0.411304347826087,
+    "wins": 24,
+    "losses": 0,
+    "sign_p": 5.960464477539063e-08,
+    "losses_on": [],
+    "sensor_range": 0.036688009937654864,
+    "groups": {
+     "sensor": {
+      "S2": {
+       "median_lead": 0.11002635884949807,
+       "n": 12,
+       "wins": 12
+      },
+      "Landsat": {
+       "median_lead": 0.11450128104756871,
+       "n": 3,
+       "wins": 3
+      },
+      "S1+S2": {
+       "median_lead": 0.14671436878715294,
+       "n": 4,
+       "wins": 4
+      },
+      "S1": {
+       "median_lead": 0.12690541468478767,
+       "n": 5,
+       "wins": 5
+      }
+     },
+     "size": {
+      "<=1000": {
+       "median_lead": 0.10768620326641432,
+       "n": 7,
+       "wins": 7
+      },
+      "<=306": {
+       "median_lead": 0.08371687547808196,
+       "n": 6,
+       "wins": 6
+      },
+      ">1000": {
+       "median_lead": 0.12415484108975416,
+       "n": 11,
+       "wins": 11
+      }
+     },
+     "classes": {
+      "6-10": {
+       "median_lead": 0.11814319731385955,
+       "n": 10,
+       "wins": 10
+      },
+      "2": {
+       "median_lead": 0.04370785354339812,
+       "n": 8,
+       "wins": 8
+      },
+      ">=12": {
+       "median_lead": 0.11812037074790693,
+       "n": 6,
+       "wins": 6
+      }
+     }
+    },
+    "min_lead": 0.016666639158147395
+   },
+   {
+    "seed": 9,
+    "n_tasks": 24,
+    "rho_accuracy_auroc": 0.777391304347826,
+    "rho_accuracy_lead": -0.5052173913043478,
+    "wins": 24,
+    "losses": 0,
+    "sign_p": 5.960464477539063e-08,
+    "losses_on": [],
+    "sensor_range": 0.03925810338313018,
+    "groups": {
+     "sensor": {
+      "S2": {
+       "median_lead": 0.10861286619474622,
+       "n": 12,
+       "wins": 12
+      },
+      "Landsat": {
+       "median_lead": 0.13351480740029467,
+       "n": 3,
+       "wins": 3
+      },
+      "S1+S2": {
+       "median_lead": 0.1478709695778764,
+       "n": 4,
+       "wins": 4
+      },
+      "S1": {
+       "median_lead": 0.12735849837134242,
+       "n": 5,
+       "wins": 5
+      }
+     },
+     "size": {
+      "<=1000": {
+       "median_lead": 0.09990648176462595,
+       "n": 7,
+       "wins": 7
+      },
+      "<=306": {
+       "median_lead": 0.08630600981667269,
+       "n": 6,
+       "wins": 6
+      },
+      ">1000": {
+       "median_lead": 0.1256095617564933,
+       "n": 11,
+       "wins": 11
+      }
+     },
+     "classes": {
+      "6-10": {
+       "median_lead": 0.11808178560844872,
+       "n": 10,
+       "wins": 10
+      },
+      "2": {
+       "median_lead": 0.04584590798224075,
+       "n": 8,
+       "wins": 8
+      },
+      ">=12": {
+       "median_lead": 0.1232768276393286,
+       "n": 6,
+       "wins": 6
+      }
+     }
+    },
+    "min_lead": 0.016632592300010803
+   }
+  ]
+ },
+ "record_holm": {
+  "tests": {
+   "clay_large": {
+    "p": 5.960464477539063e-08,
+    "adjusted": 1.1324882507324219e-06,
+    "survives": true
+   },
+   "panopticon": {
+    "p": 5.960464477539063e-08,
+    "adjusted": 1.1324882507324219e-06,
+    "survives": true
+   },
+   "olmoearth_large": {
+    "p": 5.960464477539063e-08,
+    "adjusted": 1.1324882507324219e-06,
+    "survives": true
+   },
+   "exp70_olmoearth_base": {
+    "p": 5.960464477539063e-08,
+    "adjusted": 1.1324882507324219e-06,
+    "survives": true
+   },
+   "exp73_knn_dist": {
+    "p": 5.960464477539063e-08,
+    "adjusted": 1.1324882507324219e-06,
+    "survives": true
+   },
+   "exp73_mahalanobis": {
+    "p": 5.960464477539063e-08,
+    "adjusted": 1.1324882507324219e-06,
+    "survives": true
+   },
+   "galileo_nano": {
+    "p": 4.76837158203125e-07,
+    "adjusted": 6.198883056640625e-06,
+    "survives": true
+   },
+   "croma_base": {
+    "p": 4.76837158203125e-07,
+    "adjusted": 6.198883056640625e-06,
+    "survives": true
+   },
+   "croma_large": {
+    "p": 4.76837158203125e-07,
+    "adjusted": 6.198883056640625e-06,
+    "survives": true
+   },
+   "copernicusfm": {
+    "p": 4.76837158203125e-07,
+    "adjusted": 6.198883056640625e-06,
+    "survives": true
+   },
+   "terramind_base": {
+    "p": 9.5367431640625e-07,
+    "adjusted": 8.58306884765625e-06,
+    "survives": true
+   },
+   "anysat": {
+    "p": 1.4901161193847656e-06,
+    "adjusted": 1.1920928955078125e-05,
+    "survives": true
+   },
+   "olmoearth_nano": {
+    "p": 1.4901161193847656e-06,
+    "adjusted": 1.1920928955078125e-05,
+    "survives": true
+   },
+   "galileo_base": {
+    "p": 1.049041748046875e-05,
+    "adjusted": 6.29425048828125e-05,
+    "survives": true
+   },
+   "terramind_large": {
+    "p": 1.049041748046875e-05,
+    "adjusted": 6.29425048828125e-05,
+    "survives": true
+   },
+   "olmoearth_tiny": {
+    "p": 1.7940998077392578e-05,
+    "adjusted": 7.176399230957031e-05,
+    "survives": true
+   },
+   "exp73_ensemble": {
+    "p": 1.7940998077392578e-05,
+    "adjusted": 7.176399230957031e-05,
+    "survives": true
+   },
+   "galileo_tiny": {
+    "p": 0.000110626220703125,
+    "adjusted": 0.00022125244140625,
+    "survives": true
+   },
+   "satlas_base": {
+    "p": 0.000110626220703125,
+    "adjusted": 0.00022125244140625,
+    "survives": true
+   }
+  },
+  "all_survive": true,
+  "max_adjusted_p": 0.00022125244140625
+ },
+ "block_spread_olmoearth_base": {
+  "mados": {
+   "n_blocks": 34,
+   "share_positive": 0.7941176470588235,
+   "p10_lead": -0.09385575152598385,
+   "median_lead": 0.012698742572767275,
+   "pooled_lead_rarity_control": 0.016524997787236227
+  },
+  "sen1floods11": {
+   "n_blocks": 50,
+   "share_positive": 0.98,
+   "p10_lead": 0.009708493157694688,
+   "median_lead": 0.025812398514814355,
+   "pooled_lead_rarity_control": 0.05175728092914526
+  },
+  "pastis_sentinel1": {
+   "n_blocks": 50,
+   "share_positive": 1.0,
+   "p10_lead": 0.0840080537444311,
+   "median_lead": 0.12145850701181583,
+   "pooled_lead_rarity_control": 0.1271697012145474
+  },
+  "pastis_sentinel2": {
+   "n_blocks": 50,
+   "share_positive": 1.0,
+   "p10_lead": 0.08369358113884803,
+   "median_lead": 0.11042873980820009,
+   "pooled_lead_rarity_control": 0.11741634339525261
+  },
+  "pastis_sentinel1_sentinel2": {
+   "n_blocks": 50,
+   "share_positive": 1.0,
+   "p10_lead": 0.084558855301764,
+   "median_lead": 0.11192120466271169,
+   "pooled_lead_rarity_control": 0.11900672140134175
+  },
+  "m_cashew_plant": {
+   "n_blocks": 50,
+   "share_positive": 1.0,
+   "p10_lead": 0.09527708634282628,
+   "median_lead": 0.11983050298913854,
+   "pooled_lead_rarity_control": 0.12620138266501935
+  },
+  "m_sa_crop_type": {
+   "n_blocks": 50,
+   "share_positive": 1.0,
+   "p10_lead": 0.08691372644081244,
+   "median_lead": 0.11337639923255974,
+   "pooled_lead_rarity_control": 0.11413036799382707
+  }
+ },
+ "prereg": {
+  "P1_confound_is_the_protocols": {
+   "holds": false,
+   "encoders_graded": [],
+   "encoders_missing": [
+    "anysat",
+    "clay_large",
+    "copernicusfm",
+    "croma_base",
+    "croma_large",
+    "galileo_base",
+    "galileo_nano",
+    "galileo_tiny",
+    "olmoearth_large",
+    "olmoearth_nano",
+    "olmoearth_tiny",
+    "panopticon",
+    "satlas_base",
+    "terramind_base",
+    "terramind_large"
+   ],
+   "failing": [],
+   "min_rho_auroc": null,
+   "max_rho_lead": null
+  },
+  "P2_thin_cells_are_small_or_bad": {
+   "holds": false,
+   "encoders_graded": [],
+   "n_losses": 0,
+   "losses_elsewhere": [],
+   "loss_tasks": []
+  },
+  "P3_no_sensor_is_a_hole": {
+   "holds": false,
+   "encoders_graded": [],
+   "failing": [],
+   "max_range": null
+  },
+  "P4_bar_survives_holm": {
+   "holds": false,
+   "encoders_graded": [],
+   "failing": [],
+   "max_adjusted_p": null
+  }
+ }
+}

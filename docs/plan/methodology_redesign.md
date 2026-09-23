@@ -92,15 +92,31 @@ error information here); sequential and active designs (exp78's confidence desig
 half-width of the oracle allocation, so there is no allocation headroom to claim); label-free score aggregation
 (another ranker; exp65's fusion gained 0.0006); training-data influence (a developer's question).
 
-## 3. What tonight's runs say so far
+## 3. What the night's runs said
 
-exp80 on OlmoEarth Base, 24 tasks, 2,000 draws per cell, δ = 0.1: the guarantee held on every one of the 112
-cells (largest violation frequency 0.080 for the prefix rule, 0.0045 for Bonferroni, against a bound of 0.120),
-including the thirteen tasks where the prefix rule's monotonicity assumption is broken by up to 0.034. At 300
-labels and α = half the map's error rate, the prefix rule certified a zone on most draws on 14 of the 21 tasks
-large enough for that budget, median certified coverage 0.50 against an oracle median of 0.60; the plug-in a
-reviewer would use violated its own α on up to 56% of draws. Two secondary predictions failed as written and are
-recorded as failures: the expected-count arithmetic disagreed with the run on the two tasks where 300 labels are a
-98% census, and the plug-in's violation count fell short of the preregistered 18 because the bar was written for
-24 tasks while only 21 have a 300-label cell. The independent audit of the implementation was running when this
-page was written; nothing above enters the ledger until it returns.
+Each ran, was audited by a separate agent on the real files, and entered the record with its failures stated;
+the sections are in `docs/results/comparisons.md`.
+
+- **exp80, the trusted zone.** The guarantee held on all 112 cells (largest violation 0.080 for the prefix rule,
+  0.0045 for Bonferroni, bound 0.120), including the fourteen tasks where the prefix rule's assumption is broken by
+  up to 0.034. At 300 labels and α = half the map's error rate: a zone on most draws on 14 of 21 tasks, median
+  coverage 0.50 against an oracle 0.60; the plug-in violated its own α on up to 56% of draws. Two secondary
+  predictions failed as written (a near-census arithmetic; a bar written for 24 tasks where 21 have a cell).
+- **exp81, per class.** The field's Wald interval collapses to a point whenever a class shows no sampled error
+  (63 of 328 cells below 0.93, the worst at 0.30); the shipped Wilson-on-effective-n form leaves 13 short, none
+  below 0.88, each with a named mechanism. Stehman and Wagner's warning did not hold: the confidence design
+  narrows the per-class intervals on 11 of 14 tasks. The audit found the producer's accuracy lacking its
+  finite-population correction and the design comparison reading the wrong cells; both fixed before recording.
+- **exp82, the "why" verified.** The boundary cue is real on all seven segmentation tasks (risk ratio 2.1 to
+  10.5) but its quoted enrichment runs from 1.24 to 8.13 and is set by the map's fragmentation, not its class
+  count as the page predicted; the Bolivia value lies outside every task's interval; the conjunction is purer than
+  either cue everywhere; boundary-first loses to confidence on the suite's flood split. The library now carries
+  the range and reports the map's boundary prevalence.
+- **exp83, consensus across families.** All three predictions failed: Dawid–Skene infers the panel's plurality,
+  credits an encoder for the errors the panel shares and debits it for being right alone, so the level is
+  inflated everywhere and the order is recovered only where the true gaps are large (PASTIS, not MADOS or the
+  flood split). The audit found the estimator stopping at 50 iterations where 224 and 261 were needed; fixed
+  before recording. The front page's sentence that an error rate needs a reference stands, with a second reason.
+- **exp84** is preregistered on the fifteen other encoders' seeds and runs as their exports land; exp79's
+  OlmoEarth Base export passed the record's gate on all 24 tasks on the B200 and the margin's lead survived all
+  ten seeds on every task, with the GPU's contribution measured beside the seed's (`exp/out/exp79_engine/`).

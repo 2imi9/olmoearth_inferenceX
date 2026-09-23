@@ -3445,3 +3445,76 @@
                        if pc['user_accuracy']['eligible_share'] >= 0.5)))(A['exp/out/exp81_summary.json'])
   cited_in:
     - {file: docs/results/comparisons.md, marker: per-class-budget-scales-with-classes}
+
+- id: consensus-hides-less-than-the-shared-share-and-debits-the-best
+  statement: "Over the suite's multi-encoder panels (six encoders on MADOS and PASTIS S2, eight on Sen1Floods11), Dawid-Skene run to convergence hides a share of each encoder's errors (its estimate minus its accuracy, over its error rate) that is below the share of those errors a strict majority of the other raters make with it on 13 of 20 raters, by up to 0.45 (TerraMind on MADOS: hidden 0.12, shared 0.57); the preregistered P1 (agreement within 0.10) fails."
+  crosscheck: tests/test_exp83.py::test_a_rater_that_is_right_alone_is_debited_so_its_hidden_share_falls_below_the_shared_share
+  status: rejected
+  experiments: [exp83]
+  artifacts: [exp/out/exp83_summary.json]
+  check: |-
+    (lambda s: (lambda pairs:
+      len(pairs) == 20 and sum(1 for h, m in pairs if abs(h - m) > 0.10) == 13
+      and all(r['em']['converged'] for r in s['tasks'].values())
+      and round(max(m - h for h, m in pairs), 2) == 0.45
+      and (lambda r: round(r['hidden_share'][r['raters'].index('terramind_base')], 2) == 0.12
+                     and round(r['majority_shared_share'][r['raters'].index('terramind_base')], 2) == 0.57)(s['tasks']['mados'])
+    )([(h, m) for r in s['tasks'].values() for h, m in zip(r['hidden_share'], r['majority_shared_share'])]))(A['exp/out/exp83_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: consensus-hides-less-than-the-shared-share-and-debits-the-best}
+  note: >-
+    The hidden and shared shares are recomputed from the per-rater arrays, not read from the verdict; the crosscheck
+    is a synthetic panel where a strong rater is right alone and the estimator debits it, the mechanism the audit
+    named and the preregistration missed.
+
+- id: consensus-order-recovered-only-where-true-gaps-are-large
+  statement: "The rank correlation between Dawid-Skene's estimated and the true encoder accuracies is 0.83 on PASTIS S2 (the true best identified), 0.71 on MADOS (the top two estimates 0.001 apart, a coin) and 0.62 on Sen1Floods11, where the eight encoders share 82-87% of their errors and the estimator returns 0.975-0.983 for maps that are 0.883-0.914 accurate; the preregistered P2 (at least 0.8 on both diverse tasks) fails."
+  crosscheck: tests/test_exp83.py::test_two_dawid_skene_implementations_agree_and_recover_independent_raters
+  status: rejected
+  experiments: [exp83]
+  artifacts: [exp/out/exp83_summary.json]
+  check: |-
+    (lambda T: round(T['pastis_sentinel2']['spearman_ds_vs_true'], 2) == 0.83 and T['pastis_sentinel2']['best_true'] == T['pastis_sentinel2']['best_estimated'] == 'olmoearth_base'
+      and round(T['mados']['spearman_ds_vs_true'], 2) == 0.71 and T['mados']['best_true'] == 'terramind_base' and T['mados']['best_estimated'] == 'olmoearth_base'
+      and abs(sorted(T['mados']['ds_estimate'])[-1] - sorted(T['mados']['ds_estimate'])[-2]) < 0.002
+      and round(T['sen1floods11']['spearman_ds_vs_true'], 2) == 0.62
+      and min(T['sen1floods11']['majority_shared_share'][:5]) >= 0.82 and max(T['sen1floods11']['majority_shared_share']) <= 0.87
+      and round(min(x for x in T['sen1floods11']['ds_estimate'] if x > 0.95), 3) == 0.975 and round(max(T['sen1floods11']['ds_estimate']), 3) == 0.983
+      and round(min(T['sen1floods11']['true_accuracy']), 3) == 0.883 and round(max(T['sen1floods11']['true_accuracy']), 3) == 0.914
+    )(A['exp/out/exp83_summary.json']['tasks'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: consensus-order-recovered-only-where-true-gaps-are-large}
+
+- id: disagreement-reads-error-with-a-blind-spot
+  statement: "The rank correlation between an encoder's mean pairwise disagreement with the panel and its error rate is 0.83 on MADOS and -0.03 on PASTIS S2; disagreement overstates the error rate on five of six encoders on MADOS and understates it by a median factor of 1.4 on PASTIS S2 and 2.3 on Sen1Floods11; the preregistered P3 fails on two of its three clauses."
+  crosscheck: tests/test_exp83.py::test_majority_shared_share_equals_a_brute_force_count
+  status: rejected
+  experiments: [exp83]
+  artifacts: [exp/out/exp83_summary.json]
+  check: |-
+    (lambda T: round(T['mados']['spearman_disagreement_vs_error'], 2) == 0.83 and round(T['pastis_sentinel2']['spearman_disagreement_vs_error'], 2) == -0.03
+      and sum(1 for x in T['mados']['disagreement_understates_error'] if not x) == 5
+      and round(sorted(T['pastis_sentinel2']['understatement_factor'])[3], 1) == 1.4
+      and round(sorted(T['sen1floods11']['understatement_factor'])[4], 1) in (2.3, 2.4)
+    )(A['exp/out/exp83_summary.json']['tasks'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: disagreement-reads-error-with-a-blind-spot}
+  note: >-
+    The medians are the middle sorted values (six and eight raters: the fourth of six is the upper median, the
+    fifth of eight the upper median); the section quotes them to one decimal.
+
+- id: within-family-consensus-is-the-unanimous-limit
+  statement: "Dawid-Skene over OlmoEarth Base's three probe seeds, which disagree on 0.2-0.6% of windows, returns 0.996-0.999 for maps that are 0.81-0.93 accurate on MADOS and PASTIS S2: a hidden share of 0.94-0.995, the unanimous limit rather than a replication of exp07's three-model panel."
+  crosscheck: tests/test_exp83.py::test_correlated_raters_hide_their_shared_errors_from_dawid_skene
+  status: measured
+  experiments: [exp83]
+  artifacts: [exp/out/exp83_summary.json]
+  check: |-
+    (lambda T: all(round(min(T[t]['within_family']['ds_estimate']), 3) >= 0.996 and round(max(T[t]['within_family']['ds_estimate']), 3) <= 0.999
+                   and round(min(T[t]['within_family']['hidden_share']), 3) >= 0.94 and round(max(T[t]['within_family']['hidden_share']), 3) <= 0.995
+                   and 0.0015 <= min(T[t]['within_family']['pairwise_disagreement']) and max(T[t]['within_family']['pairwise_disagreement']) <= 0.006
+                   and T[t]['within_family']['em']['converged'] for t in ('mados', 'pastis_sentinel2'))
+      and round(min(T['pastis_sentinel2']['within_family']['true_accuracy']), 2) == 0.81 and round(max(T['mados']['within_family']['true_accuracy']), 2) == 0.93
+    )(A['exp/out/exp83_summary.json']['tasks'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: within-family-consensus-is-the-unanimous-limit}

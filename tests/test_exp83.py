@@ -70,7 +70,8 @@ def test_majority_shared_share_equals_a_brute_force_count():
 
 def test_correlated_raters_hide_their_shared_errors_from_dawid_skene():
     """Five raters that share a common error on a fixed fifth of the items: the hidden share tracks the
-    majority-shared share, which is the mechanism P1 preregisters."""
+    majority-shared share, which is the mechanism P1 preregistered. The audit noted this case is unanimous on its
+    shared errors, so it exercises only the credit (errors read as right); the next test adds the debit."""
     import exp83_consensus as e83
     from oe_inferencex.reliability import dawid_skene
     rng = np.random.default_rng(5)
@@ -80,7 +81,34 @@ def test_correlated_raters_hide_their_shared_errors_from_dawid_skene():
     wrong = (y + 1) % C
     votes = np.stack([np.where(shared, wrong, np.where(rng.random(N) < 0.9, y, (y + rng.integers(1, C, N)) % C)) for _ in range(5)], 1)
     acc = (votes == y[:, None]).mean(0)
-    _, _, rel = dawid_skene(votes, C)
+    _, _, rel, info = dawid_skene(votes, C, return_info=True)
+    assert info["converged"]
     hidden = (rel - acc) / (1 - acc)
     m = e83.majority_shared_share(votes, y)
     assert np.abs(hidden - m).max() < 0.10 and m.min() > 0.5
+
+
+def test_a_rater_that_is_right_alone_is_debited_so_its_hidden_share_falls_below_the_shared_share():
+    """exp83's finding: Dawid-Skene infers the plurality, so a strong rater that is right where a majority of the
+    others agree on a wrong label is read as wrong there (a debit), and its hidden share sits below the share of
+    its own errors the majority shares. Four weak raters share a wrong label on a fifth of the items; the fifth
+    rater is right there and errs alone elsewhere."""
+    import exp83_consensus as e83
+    from oe_inferencex.reliability import dawid_skene
+    rng = np.random.default_rng(6)
+    N, C = 20000, 4
+    y = rng.integers(0, C, N)
+    shared = rng.random(N) < 0.2
+    wrong = (y + 1) % C
+    weak = [np.where(shared, wrong, np.where(rng.random(N) < 0.9, y, (y + rng.integers(1, C, N)) % C)) for _ in range(4)]
+    strong = np.where(rng.random(N) < 0.92, y, (y + rng.integers(1, C, N)) % C)          # errs alone, never with the group
+    votes = np.stack(weak + [strong], 1)
+    acc = (votes == y[:, None]).mean(0)
+    _, _, rel, info = dawid_skene(votes, C, return_info=True)
+    assert info["converged"]
+    hidden = (rel - acc) / (1 - acc)
+    m = e83.majority_shared_share(votes, y)
+    assert acc[4] == acc.max()                                   # the strong rater is the true best
+    assert m[4] < 0.10 and hidden[4] < m[4] - 0.10               # little shared, yet debited: hidden well below shared
+    assert rel[4] < acc[4]                                       # DS under-rates the best rater
+    assert np.argmax(rel) != 4                                   # and does not pick it as best

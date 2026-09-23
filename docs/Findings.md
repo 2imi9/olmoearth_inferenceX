@@ -29,7 +29,9 @@ down the page.
 - **What did not work.** Nothing taken from inside the encoder ranks errors better than confidence: not its
   pretraining objective, not embedding distances, not ensembles of heads.
 - **What the tool does not say.** How wrong a map is, from the map alone. It orders the windows and explains the
-  order; an error rate needs a reference. Errors the model is confident about stay hidden from it.
+  order; an error rate needs a reference. Errors the model is confident about stay hidden from it, and so are the
+  errors a panel of other encoders shares with it: agreement across encoder families estimates neither a map's
+  accuracy nor, except where the gaps are large, which encoder is best.
 - **If you can label a few hundred windows, it will tell you how wrong the map is**, with a range. The catch is in
   how you pick them: label whole scenes and then work out the range the ordinary way, and it comes out far too
   narrow. The same labels also certify a zone: the most confident part of the map that is wrong at most as often

@@ -39,7 +39,7 @@ def panel_exp63(task):
     y = z[f"{task}/y"][ok].astype(np.int64)
     votes = np.stack([z[f"{task}/{e}/0/dec"][ok].astype(np.int64) for e in SIX], 1)
     draws = np.stack([z[f"{task}/olmoearth_base/{k}/dec"][ok].astype(np.int64) for k in range(3)], 1)
-    return {"y": y, "votes": votes, "raters": SIX, "within_family": draws, "n_classes": int(max(y.max(), votes.max(), draws.max()) + 1)}
+    return {"y": y, "votes": votes, "raters": SIX, "within_family": draws, "n_classes": int(max(votes.max(), draws.max()) + 1)}
 
 
 def panel_exp57():
@@ -97,7 +97,7 @@ def estimate_panel(task, P):
     t0 = time.time()
     y, votes, C = P["y"], P["votes"], P["n_classes"]
     acc = (votes == y[:, None]).mean(0)
-    post, conf, rel = dawid_skene(votes, C)
+    post, conf, rel, info = dawid_skene(votes, C, iters=2000, return_info=True)
     hidden = (rel - acc) / (1 - acc)
     m = majority_shared_share(votes, y)
     d = pairwise_disagreement(votes)
@@ -113,15 +113,15 @@ def estimate_panel(task, P):
            "understatement_factor": [float((1 - acc[j]) / dbar[j]) if dbar[j] > 0 else None for j in range(len(acc))],
            "spearman_ds_vs_true": rho_rank, "spearman_disagreement_vs_error": rho_dis,
            "best_true": P["raters"][int(np.argmax(acc))], "best_estimated": P["raters"][int(np.argmax(rel))],
-           "ds_posterior_accuracy_of_plurality_label": float((post.argmax(1) == y).mean()), "seconds": round(time.time() - t0, 1)}
+           "ds_argmax_label_accuracy": float((post.argmax(1) == y).mean()), "em": info, "seconds": round(time.time() - t0, 1)}
     if P["within_family"] is not None:
         w = P["within_family"]
         acc_w = (w == y[:, None]).mean(0)
-        _, _, rel_w = dawid_skene(w, C)
+        _, _, rel_w, info_w = dawid_skene(w, C, iters=2000, return_info=True)
         row["within_family"] = {"raters": "olmoearth_base draws 0-2", "true_accuracy": acc_w.tolist(), "ds_estimate": rel_w.tolist(),
                                 "hidden_share": ((rel_w - acc_w) / (1 - acc_w)).tolist(),
-                                "pairwise_disagreement": pairwise_disagreement(w)[np.triu_indices(3, 1)].tolist()}
-    print(f"  {task:18s} N={y.size:7d} C={C:2d} rho(DS,true) {rho_rank:+.2f} best true {row['best_true']} est {row['best_estimated']} "
+                                "pairwise_disagreement": pairwise_disagreement(w)[np.triu_indices(3, 1)].tolist(), "em": info_w}
+    print(f"  {task:18s} N={y.size:7d} C={C:2d} EM {info['iterations']} it {'ok' if info['converged'] else 'NOT CONVERGED'} rho(DS,true) {rho_rank:+.2f} best true {row['best_true']} est {row['best_estimated']} "
           f"hidden {np.round(hidden, 2).tolist()} m {np.round(m, 2).tolist()} {row['seconds']:.0f}s", flush=True)
     return row
 
@@ -170,7 +170,7 @@ def cmd_estimate(args):
             "sen1floods11": estimate_panel("sen1floods11", panel_exp57())}
     summary = {"experiment": "exp83 can raters from different families estimate a map's accuracy without labels",
                "artifacts_read": ["exp/out/exp63_masks.npz", "exp/out/exp57_masks.npz"],
-               "config": {"ds_iters": 50, "seconds": round(time.time() - t0)}, "tasks": rows, "prereg": verdicts(rows)}
+               "config": {"ds_iters_cap": 2000, "ds_tol": 1e-6, "seconds": round(time.time() - t0)}, "tasks": rows, "prereg": verdicts(rows)}
     with open(SUMMARY, "w") as f:
         json.dump(summary, f, indent=1, default=float)
     print(json.dumps({k: v.get("holds") for k, v in summary["prereg"].items()}, indent=1))

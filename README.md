@@ -12,7 +12,10 @@ the same scene differ.
 3. **Estimating.** Label `n` windows, stratified by margin with `n_h ∝ N_h √(q_h(1−q_h))` from
    the model's own confidence; `θ̂ = Σ W_h p_h`, 95% interval from `Σ W_h²(1−f_h) p_h(1−p_h)/(n_h−1)`;
    cluster-corrected when labels come tile by tile. A review set is refused as a sample: its rate
-   is `capture(b)·θ/b`, not `θ`.
+   is `capture(b)·θ/b`, not `θ`. The same labels give the per-class user's and producer's accuracy
+   and error-adjusted shares, and, from a random sample, the largest most-confident zone whose
+   error rate is at most `α` with the statement failing on at most `δ` of draws: exact
+   hypergeometric tests from the smallest zone up, refused when `n < ln δ / ln(1−α)`.
 
 <img src="https://raw.githubusercontent.com/2imi9/olmoearth_inferenceX/main/docs/figures/pipeline.png" alt="One scene through the audit: Sentinel-2 bands, the frozen OlmoEarth encoder and the task head, the prediction, confidence and boundary layers, the review set at a 5% budget drawn on the scene, and the reasons per flagged window" width="760">
 

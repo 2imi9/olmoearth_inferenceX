@@ -29,6 +29,10 @@
   (predicted, reference) class pairs the errors fall into, most frequent first, with the share of errors they
   explain (Singh et al. 2024's systematic-error report; on the suite's many-class tasks the top three pairs hold
   18% to 61% of the errors, exp82).
+- `reliability.dawid_skene` (moved from `evidence`, which needed torch for nothing it used): the EM now runs to
+  its stopping rule (largest posterior change below 1e-6) with a cap of 1,000 and can report whether it converged.
+  Until now the cap was 50 iterations; on the suite's 15- and 19-class encoder panels the stop needs 224 and 261,
+  so the values at 50 were snapshots (a hidden-error share of 0.45 where the converged value is 0.28; exp83's audit).
 - `scripts/engine_determinism.py`: exp79's OlmoEarth Base export on an RTX PRO 6000 against the same commit and
   seeds on a B200, per task, so the GPU's contribution to a probe's accuracy is a measured quantity beside the seed's.
 - The claim ledger: an audit found 138 of 167 checks reading a verdict or a pinned number back from the artifact

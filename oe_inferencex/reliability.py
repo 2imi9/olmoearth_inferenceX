@@ -150,12 +150,16 @@ def poly2(Z):
 # read as competence); exp83 measures it across families, where the hidden share of each rater's errors is the
 # share the panel majority makes with it (docs/plan/consensus_reliability.md). Lived in evidence.py until
 # 2026-09-23, behind a torch import it never needed.
-def dawid_skene(votes, n_classes, iters=50):
+def dawid_skene(votes, n_classes, iters=1000, tol=1e-6, return_info=False):
     """Dawid-Skene EM over hard votes (N items, R raters). No labels used.
 
     Returns (posteriors [N, C], confusions [R, C, C], reliabilities [R])
     where `confusions[r][true, voted]` is rater r's confusion matrix and reliability is the prior-weighted
-    diagonal of the confusion matrix (expected accuracy of rater r).
+    diagonal of the confusion matrix (expected accuracy of rater r). With return_info=True a fourth value,
+    {"iterations", "converged", "last_change"}, says whether the stop (largest posterior change below `tol`) was
+    reached before `iters`. Until 2026-09-23 the cap was 50: exp83's audit found the 15- and 19-class panels of
+    the suite needing 224 and 261 iterations, so the estimates at 50 were snapshots (a hidden-error share of 0.45
+    where the converged value is 0.28); exp07's 9-class run may have been the same.
     """
     votes = np.asarray(votes)
     if votes.size and (votes.min() < 0 or votes.max() >= n_classes):
@@ -167,7 +171,8 @@ def dawid_skene(votes, n_classes, iters=50):
         for j in range(r):
             post[i, votes[i, j]] += 1
     post /= post.sum(1, keepdims=True)
-    for _ in range(iters):
+    change = float("inf")
+    for it in range(iters):
         prior = post.mean(0)
         conf = np.zeros((r, n_classes, n_classes))
         for j in range(r):
@@ -181,10 +186,15 @@ def dawid_skene(votes, n_classes, iters=50):
         logp -= logp.max(1, keepdims=True)
         new_post = np.exp(logp)
         new_post /= new_post.sum(1, keepdims=True)
-        if np.abs(new_post - post).max() < 1e-6:
-            post = new_post
-            break
+        change = float(np.abs(new_post - post).max())
         post = new_post
+        if change < tol:
+            converged = True
+            break
+    else:
+        converged = False
     prior = post.mean(0)
     reliab = np.array([(prior * np.diag(conf[j])).sum() for j in range(r)])
+    if return_info:
+        return post, conf, reliab, {"iterations": it + 1, "converged": converged, "last_change": change}
     return post, conf, reliab
