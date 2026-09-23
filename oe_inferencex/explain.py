@@ -227,3 +227,25 @@ def explain_review_set(assessment, cues=None, budgets=None, library=CUES, low_co
 def library_table(library=CUES, **fmt):
     """The cue library as plain rows (for docs and JSON); `fmt` fills sentence placeholders."""
     return [dict(asdict(c), enrichment=c.enrichment, quote=c.quote(**fmt)) for c in library.values()]
+
+
+def confusion_pairs(reference, decision, valid=None, top=3):
+    """Which (predicted, reference) class pairs the errors fall into, most frequent first: the systematic-error
+    report Singh et al. (2024) ask for on a segmentation map, which the cue library cannot give because it never
+    sees a label. Windows where the reference is negative (no majority label) or invalid are left out. On the
+    suite's ten classification tasks with six or more classes the top three pairs held 18% (ForestNet) to 61%
+    (BreizhCrops) of the errors (exp82), so the report says the share it explains beside the pairs."""
+    ref = np.asarray(reference).astype(int).ravel()
+    dec = np.asarray(decision).astype(int).ravel()
+    if ref.size != dec.size:
+        raise ValueError(f"reference has {ref.size} windows, the decision {dec.size}")
+    ok = (ref >= 0) & (dec >= 0) & (np.ones(ref.size, bool) if valid is None else np.asarray(valid, bool).ravel())
+    e = ok & (dec != ref)
+    n_err = int(e.sum())
+    if n_err == 0:
+        return {"n_errors": 0, "n_pairs": 0, "pairs": [], "share_of_errors_in_top": float("nan")}
+    pairs, counts = np.unique(np.stack([dec[e], ref[e]], 1), axis=0, return_counts=True)
+    order = np.lexsort((pairs[:, 1], pairs[:, 0], -counts))[:max(int(top), 0)]      # ties broken by class ids, stably
+    return {"n_errors": n_err, "n_pairs": int(counts.size),
+            "pairs": [{"predicted": int(pairs[i, 0]), "reference": int(pairs[i, 1]), "n": int(counts[i]), "share": float(counts[i] / n_err)} for i in order],
+            "share_of_errors_in_top": float(counts[order].sum() / n_err)}

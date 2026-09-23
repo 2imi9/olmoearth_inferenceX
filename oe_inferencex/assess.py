@@ -343,6 +343,10 @@ def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, sig
                       "precision_in_set": float(e_sorted[:k].mean())}
         rc["error_capture_at_budget"] = cap
         rc["boundary_share_among_errors"] = float((bnd_s[e > 0] > 0).mean()) if e.sum() else float("nan")
+        # the systematic-error report a labelled map allows: which (predicted, reference) pairs the errors fall
+        # into (exp82: on the suite's many-class tasks the top three pairs hold 18% to 61% of the errors)
+        from oe_inferencex.explain import confusion_pairs
+        rc["confusion_pairs"] = confusion_pairs(ref_w[scored], pooled_hard[scored])
         rc["caveat"] = "reference-product labels can flatter boundary-type signals (exp18); treat as expert truth only if it is"
         out["against_reference"] = rc
     return out

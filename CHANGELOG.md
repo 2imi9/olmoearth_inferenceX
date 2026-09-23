@@ -25,6 +25,12 @@
   quoted lies outside every task's interval. The library now carries the suite's range and reports the map's own
   boundary prevalence. `assess._boundary_valid`'s two code paths disagreed on the indicator's value at tile edges
   (the cue set was the same); one semantics now.
+- `explain.confusion_pairs` and, in `assess` against a reference, `against_reference.confusion_pairs`: which
+  (predicted, reference) class pairs the errors fall into, most frequent first, with the share of errors they
+  explain (Singh et al. 2024's systematic-error report; on the suite's many-class tasks the top three pairs hold
+  18% to 61% of the errors, exp82).
+- `scripts/engine_determinism.py`: exp79's OlmoEarth Base export on an RTX PRO 6000 against the same commit and
+  seeds on a B200, per task, so the GPU's contribution to a probe's accuracy is a measured quantity beside the seed's.
 - The claim ledger: an audit found 138 of 167 checks reading a verdict or a pinned number back from the artifact
   that produced it; the suite, estimator and cue claims now recompute their statistic from per-task or per-unit
   records, and the recomputation tests are named as `crosscheck` on the claims they cover.

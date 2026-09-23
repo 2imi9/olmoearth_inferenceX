@@ -150,3 +150,34 @@ def test_the_library_carries_exp82s_per_task_verifications_and_reports_the_maps_
     assessment = {"arrays": {"confidence": conf, "boundary": bnd.astype(float), "valid": np.ones((16, 16), bool)}, "review_sets": {}}
     out = explain.explain_review_set(assessment)
     assert "boundary_prevalence_note" in out and f"{100 * bnd.mean():.0f}%" in out["boundary_prevalence_note"]
+
+
+def test_confusion_pairs_by_brute_force_with_ties_and_unlabelled_windows():
+    from collections import Counter
+    from oe_inferencex.explain import confusion_pairs
+    rng = np.random.default_rng(4)
+    ref = rng.integers(-1, 4, 600)                                   # -1: no majority label
+    dec = rng.integers(0, 4, 600)
+    out = confusion_pairs(ref, dec, top=3)
+    brute = Counter((int(d), int(r)) for r, d in zip(ref, dec) if r >= 0 and d != r)
+    assert out["n_errors"] == sum(brute.values()) and out["n_pairs"] == len(brute)
+    top = sorted(brute.items(), key=lambda kv: (-kv[1], kv[0][0], kv[0][1]))[:3]
+    assert [(p["predicted"], p["reference"], p["n"]) for p in out["pairs"]] == [(a, b, n) for (a, b), n in top]
+    assert abs(out["share_of_errors_in_top"] - sum(n for _, n in top) / out["n_errors"]) < 1e-12
+    none = confusion_pairs(np.array([0, 1, 2]), np.array([0, 1, 2]))
+    assert none["n_errors"] == 0 and none["pairs"] == []
+    with pytest.raises(ValueError):
+        confusion_pairs(np.zeros(3), np.zeros(4))
+
+
+def test_assess_against_a_reference_reports_the_confusion_pairs():
+    from oe_inferencex.assess import assess_classmap
+    rng = np.random.default_rng(1)
+    H = W = 32
+    hard = rng.integers(0, 3, (H, W))
+    conf = rng.random((H, W))
+    ref = hard.copy()
+    ref[hard == 2] = np.where(rng.random((hard == 2).sum()) < 0.5, 0, 2)    # class 2 often called where the reference says 0
+    out = assess_classmap(hard, conf, 3, patch=4, reference=ref)
+    cp = out["against_reference"]["confusion_pairs"]
+    assert cp["n_errors"] > 0 and cp["pairs"][0]["predicted"] == 2 and cp["pairs"][0]["reference"] == 0
