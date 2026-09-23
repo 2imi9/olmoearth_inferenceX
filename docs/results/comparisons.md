@@ -2458,6 +2458,19 @@ boundary cue is a property of the window grid as much as of the map: at a grain 
 touches a boundary it carries nothing, and `explain` now says so when a map's prevalence is that high.
 <!-- claim:cue-verification-holds-on-other-encoders -->
 
+**The grain, on Base's own map (addendum of 23 September; `--coarsen`, `--stage grain`).** To separate the grid
+from the map, Base's export was coarsened to 2 × 2 and 4 × 4 blocks (majority decision and majority reference
+over the block, the tool's own boundary indicator on the coarse grid). Coarsening lowers the boundary cue's
+enrichment and its risk ratio on all seven tasks at both steps: on cashew 1.24 → 1.08 → 1.04 and 2.14 → 1.50 →
+1.30, on MADOS 8.13 → 7.30 → 6.06 and 10.5 → 8.3 → 5.7; it raises the prevalence on six of seven (MADOS's falls at
+4 × 4, where majority pooling erases its small marine objects). At AnySat's grain Base's cashew map has 0.896 of
+its windows on a boundary, so most of AnySat's 0.966 is the grid and the rest its map. Across the 21 (task, grain)
+cells the enrichment tracks the prevalence ceiling with rank correlation 0.987. Of the addendum's three bars, G2
+holds and G1 and G3 miss by 0.004 and 5e-5: the map sat at 0.896 against a 0.90 line, and the cue's risk ratio
+there was 1.2999 against 1.3. The boundary cue is a fine-grain phenomenon; a user auditing at coarser units
+should expect less from it, and `explain` quotes the two measured points (1.3 at 90% boundary windows, below 1
+at 97%) rather than a bar. <!-- claim:boundary-cue-weakens-with-the-window-grain -->
+
 **What this changes.** `explain` no longer quotes Bolivia's shares as if they were the map's: the library carries
 the suite's range and the cue's per-task values, and reports the map's own boundary prevalence, which is what
 decides where in the range a map sits.

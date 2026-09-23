@@ -70,3 +70,33 @@ def test_the_tile_count_bootstrap_matches_the_window_bootstrap_on_mados():
     for k in ("share_errors", "share_correct", "enrichment", "precision", "n", "n_errors", "n_with_cue"):
         assert abs(a[k] - b[k]) < 1e-12, k
     assert abs(a["boot_lo"] - b["boot_lo"]) < 0.05 * a["enrichment"] and abs(a["boot_hi"] - b["boot_hi"]) < 0.05 * a["enrichment"]
+
+
+def test_coarsening_is_majority_pooling_by_brute_force():
+    """The addendum's coarse grid: each k x k block's decision and reference are the majority over its valid fine
+    windows, ties to the smallest class; validity is any valid fine window; the confidence is the mean margin."""
+    import exp82_cue_verification as e82
+    rng = np.random.default_rng(3)
+    N, H, W, C, k = 3, 8, 12, 4, 4
+    valid = rng.random((N, H, W)) > 0.3
+    hard = rng.integers(0, C, (N, H, W)); hard[~valid] = 0
+    y = rng.integers(0, C, int(valid.sum())); margin = rng.random(int(valid.sum()))
+    u = {"hard": hard, "valid": valid, "y": y, "margin": margin, "n_classes": C, "family": "t",
+         "tile": np.broadcast_to(np.arange(N)[:, None, None], (N, H, W))[valid]}
+    c = e82.coarsen_export(u, k)
+    full_y = np.zeros((N, H, W), int); full_y[valid] = y
+    full_m = np.zeros((N, H, W)); full_m[valid] = margin
+    got = iter(zip(c["dec"], c["y"], c["margin"], c["err"], c["tile"]))
+    for i in range(N):
+        for r in range(H // k):
+            for q in range(W // k):
+                v = valid[i, r * k:(r + 1) * k, q * k:(q + 1) * k]
+                if not v.any():
+                    continue
+                d, yy, m, e, t = next(got)
+                maj = lambda a: int(np.argmax(np.bincount(a[v], minlength=C)))     # argmax: the smallest class on a tie
+                assert d == maj(hard[i, r * k:(r + 1) * k, q * k:(q + 1) * k]) and yy == maj(full_y[i, r * k:(r + 1) * k, q * k:(q + 1) * k])
+                assert abs(m - full_m[i, r * k:(r + 1) * k, q * k:(q + 1) * k][v].mean()) < 1e-12 and e == float(d != yy) and t == i
+    assert next(got, None) is None
+    with pytest.raises(ValueError):
+        e82.coarsen_export(u, 5)

@@ -123,6 +123,14 @@ the sections are in `docs/results/comparisons.md`.
   it does not ship. Two of my predictions failed (the calibration-gap argument was a category error; the 1.8×
   bound was an exp78 prediction that had already failed), and the audit found the tuning floor letting the
   per-stratum coefficient explode on small strata; fixed before recording.
+- **The generality reruns (exp80, exp81, exp82 on Clay Large, Copernicus-FM, AnySat and CROMA Base's seed-0
+  exports).** The guarantee held on every cell of every encoder; the field's Wald interval failed and the shipped
+  form nearly held on each; the boundary cue's ordering of the seven tasks by enrichment was the same under all
+  five encoders. One exception, and it is the mechanism in its extreme form: AnySat's probe grid on the two m-*
+  tasks is four times coarser, 97% of its cashew windows sit on a boundary, and the cue enriches nothing there.
+  The boundary cue is a property of the window grid as much as of the map, and `explain` now says so when a map's
+  prevalence is that high; whether Base's own export saturates at that grain is the addendum to
+  `docs/plan/cue_verification.md`.
 - **exp84** is preregistered on the fifteen other encoders' seeds and runs as their exports land; exp79's
   OlmoEarth Base export passed the record's gate on all 24 tasks on the B200 and the margin's lead survived all
   ten seeds on every task, with the GPU's contribution measured beside the seed's (`exp/out/exp79_engine/`).

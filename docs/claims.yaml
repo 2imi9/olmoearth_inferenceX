@@ -3717,3 +3717,28 @@
   note: >-
     Descriptive, the same code and seeds as the graded Base run on each encoder's seed-0 export; the counts come from
     the graded blocks, which `--stage grade` recomputes from the per-cell coverages.
+
+- id: boundary-cue-weakens-with-the-window-grain
+  statement: "On OlmoEarth Base's export coarsened to 2 x 2 and 4 x 4 blocks (majority decision and reference per block, the tool's boundary indicator on the coarse grid) the boundary cue's enrichment and risk ratio fall on all seven segmentation tasks at both steps (cashew 1.24, 1.08, 1.04 and 2.14, 1.50, 1.30) and the prevalence rises on six of seven; at 4 x 4 the cashew map has 0.896 of its windows on a boundary; across the 21 (task, grain) cells the enrichment's rank correlation with the prevalence ceiling is 0.987; the addendum's G1 and G3 bars fail (0.896 against 0.90; a risk ratio of 1.2999 against 1.3) and G2 holds."
+  crosscheck: tests/test_exp82.py::test_coarsening_is_majority_pooling_by_brute_force
+  status: measured
+  experiments: [exp82]
+  artifacts: [exp/out/exp82_grain.json, exp/out/exp82_summary.json, exp/out/exp82_cues/olmoearth_base_x2.json, exp/out/exp82_cues/olmoearth_base_x4.json]
+  check: |-
+    (lambda G, B, X2, X4: (lambda enr, rr, prev:
+      len(enr) == 7 and all(enr[t][0] > enr[t][1] > enr[t][2] for t in enr) and all(rr[t][0] > rr[t][1] > rr[t][2] for t in rr)
+      and [round(v, 2) for v in enr['m_cashew_plant']] == [1.24, 1.08, 1.04] and [round(v, 2) for v in rr['m_cashew_plant']] == [2.14, 1.50, 1.30]
+      and sum(prev[t][0] < prev[t][1] < prev[t][2] for t in prev) == 6 and round(prev['m_cashew_plant'][2], 3) == 0.896
+      and round(G['verdicts']['G2_ceiling_governs_across_grains']['spearman'], 3) == 0.987 and G['verdicts']['G2_ceiling_governs_across_grains']['n_cells'] == 21
+      and G['verdicts']['G1_saturation_is_the_grains']['holds'] is False and G['verdicts']['G3_saturation_threshold']['holds'] is False and G['verdicts']['G2_ceiling_governs_across_grains']['holds'] is True
+      and round(G['verdicts']['G3_saturation_threshold']['unsaturated_at_or_below_1.3']['m_cashew_plant@x4'], 4) == 1.2999 and G['verdicts']['G3_saturation_threshold']['saturated_cells'] == {}
+    )({t: [d['tasks'][t]['cues']['boundary']['enrichment'] for d in (B, X2, X4)] for t in B['tasks']},
+      {t: [(lambda b: b['precision'] / ((b['n_errors'] - b['precision'] * b['n_with_cue']) / (b['n'] - b['n_with_cue'])))(d['tasks'][t]['cues']['boundary']) for d in (B, X2, X4)] for t in B['tasks']},
+      {t: [d['tasks'][t]['cues']['boundary']['n_with_cue'] / d['tasks'][t]['n_units'] for d in (B, X2, X4)] for t in B['tasks']})
+    )(A['exp/out/exp82_grain.json'], A['exp/out/exp82_summary.json'], A['exp/out/exp82_cues/olmoearth_base_x2.json'], A['exp/out/exp82_cues/olmoearth_base_x4.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: boundary-cue-weakens-with-the-window-grain}
+    - {file: docs/Findings.md, marker: boundary-cue-weakens-with-the-window-grain}
+  note: >-
+    The coarse grid's confidence is the mean fine margin, a proxy used only for the low-confidence cue, which this
+    claim does not read. The monotone statement is the recordable one; the bars are recorded as they fell.

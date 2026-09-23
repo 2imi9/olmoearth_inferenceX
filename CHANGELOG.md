@@ -24,7 +24,11 @@
   from 1.24 to 8.13 and is set by the map's fragmentation, not its class count; the Bolivia value the library
   quoted lies outside every task's interval. The library now carries the suite's range and reports the map's own
   boundary prevalence. `assess._boundary_valid`'s two code paths disagreed on the indicator's value at tile edges
-  (the cue set was the same); one semantics now.
+  (the cue set was the same); one semantics now. On the other encoders' exports the same holds, with one
+  exception that is the mechanism in its extreme form: AnySat's window grid on the two m-* tasks is four times
+  coarser, 97% of its cashew windows sit on a boundary, and the cue enriches nothing there (0.99, the error rate
+  inside the boundary set below the rate outside). Above `explain.BOUNDARY_SATURATED` (0.9) the prevalence note
+  now says the cue is not a reason on this map.
 - `explain.confusion_pairs` and, in `assess` against a reference, `against_reference.confusion_pairs`: which
   (predicted, reference) class pairs the errors fall into, most frequent first, with the share of errors they
   explain (Singh et al. 2024's systematic-error report; on the suite's many-class tasks the top three pairs hold

@@ -185,7 +185,7 @@ def test_assess_against_a_reference_reports_the_confusion_pairs():
 
 def test_a_saturated_boundary_prevalence_is_named_as_no_reason():
     """exp82 on other encoders: on AnySat's cashew export 97% of windows sit on a boundary and the cue enriched
-    0.99, so above BOUNDARY_SATURATED the note says the cue is not a reason; below it, it does not."""
+    0.99, so above BOUNDARY_SATURATED the note says the cue is at most a weak reason; below it, it does not."""
     from oe_inferencex import explain
     rng = np.random.default_rng(6)
     conf = rng.random((16, 16))
@@ -194,5 +194,5 @@ def test_a_saturated_boundary_prevalence_is_named_as_no_reason():
         assessment = {"arrays": {"confidence": conf, "boundary": bnd.reshape(16, 16).astype(float), "valid": np.ones((16, 16), bool)},
                       "review_sets": {}}
         note = explain.explain_review_set(assessment)["boundary_prevalence_note"]
-        assert ("not a reason" in note) is saturated
+        assert ("weak reason" in note) is saturated
         assert (explain.BOUNDARY_SATURATED <= share) is saturated

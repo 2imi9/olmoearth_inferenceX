@@ -52,6 +52,33 @@ def load_export(task, units_dir):
             "n_classes": int(d["n_classes"][0]), "family": str(d["family"][0])}
 
 
+def coarsen_export(u, k):
+    """Addendum of 2026-09-23: the export at a k x k coarser window grid. Each block's decision and reference are
+    the majority class over its valid fine windows (ties to the smallest class), its validity is any valid fine
+    window, and its confidence the mean fine margin, a proxy used only for the low-confidence cue."""
+    N, hw, ww = u["valid"].shape
+    if hw % k or ww % k:
+        raise ValueError(f"grid {hw}x{ww} does not divide by {k}")
+    valid = u["valid"]
+    full_y = np.zeros((N, hw, ww), np.int64); full_y[valid] = u["y"]
+    full_m = np.zeros((N, hw, ww), np.float64); full_m[valid] = u["margin"]
+    C = int(max(u["n_classes"], u["hard"].max() + 1, full_y.max() + 1))
+    blocks = lambda a: a.reshape(N, hw // k, k, ww // k, k)
+
+    def majority(full):
+        counts = np.stack([blocks((full == c) & valid).sum(axis=(2, 4)) for c in range(C)], -1)   # (N, H, W, C)
+        return counts.argmax(-1), counts.sum(-1)                                                  # argmax: first = smallest class
+    hard_c, n_valid = majority(u["hard"])
+    y_c, _ = majority(full_y)
+    valid_c = n_valid > 0
+    margin_c = np.where(valid_c, blocks(full_m).sum(axis=(2, 4)) / np.maximum(n_valid, 1), 0.0)
+    hard_c = np.where(valid_c, hard_c, 0)
+    tile = np.broadcast_to(np.arange(N)[:, None, None], valid_c.shape)[valid_c]
+    return {"hard": hard_c, "valid": valid_c, "tile": tile, "margin": margin_c[valid_c],
+            "err": (hard_c != y_c)[valid_c].astype(np.float64), "y": y_c[valid_c], "dec": hard_c[valid_c],
+            "n_classes": u["n_classes"], "family": u["family"], "coarsen": k}
+
+
 def boundary_cue(hard, valid):
     """The tool's boundary cue per valid window: `_boundary_valid` tile by tile, indicator > 0."""
     out = np.zeros(hard.shape, np.float64)
@@ -128,16 +155,19 @@ def confusion_pairs(y, dec, top=3):
 
 
 # ----------------------------------------------------------------------------- stages
-def estimate_task(task, units_dir, n_boot, record):
+def estimate_task(task, units_dir, n_boot, record, coarsen=1):
     t0 = time.time()
     u = load_export(task, units_dir)
+    if coarsen > 1:
+        u = coarsen_export(u, coarsen)
     margin, err, tile = u["margin"], u["err"], u["tile"]
     bnd = boundary_cue(u["hard"], u["valid"])
     low = low_confidence_cue(margin)
     low_tile = low_confidence_per_tile(margin, tile)
     cues = {"boundary": bnd, "low_confidence": low, "boundary_and_low_confidence": bnd & low, "low_confidence_per_tile": low_tile}
     row = {"n_units": int(err.size), "n_tiles": int(tile.max()) + 1, "n_classes": u["n_classes"], "error_rate": float(err.mean()),
-           "recorded_capture_20": record.get(task, {}).get("signals", {}).get("margin", {}).get("capture", {}).get("0.2"),
+           "coarsen": coarsen, "boundary_prevalence": float(bnd.mean()),
+           "recorded_capture_20": record.get(task, {}).get("signals", {}).get("margin", {}).get("capture", {}).get("0.2") if coarsen == 1 else None,
            "cues": {k: enrichment_from_counts(per_tile_counts(v, err, tile), n_boot) for k, v in cues.items()},
            "captures": captures(margin, bnd, err), "seconds": round(time.time() - t0, 1)}
     c = row["cues"]
@@ -209,7 +239,7 @@ def cmd_estimate(args):
         if not os.path.exists(os.path.join(units_dir, f"{t}.npz")):
             print(f"  {t}: no export", flush=True)
             continue
-        rows[t] = estimate_task(t, units_dir, args.n_boot, record)
+        rows[t] = estimate_task(t, units_dir, args.n_boot, record, args.coarsen)
     cls = {}
     for t in e70.TASKS_CLS:
         p = os.path.join(units_dir, f"{t}.npz")
@@ -223,10 +253,13 @@ def cmd_estimate(args):
                "tasks": rows, "classification_confusion_pairs": cls, "prereg": verdicts(rows)}
     # the graded run is OlmoEarth Base's; another encoder's export (exp79) writes beside it, never over it
     path = SUMMARY if args.encoder == "olmoearth_base" else os.path.join(OUT, "exp82_cues", f"{args.encoder}.json")
+    if args.coarsen > 1:   # the addendum's coarsened grids write beside the graded runs, never over them
+        summary["prereg"] = {"note": "gate and P1-P3 are graded at the fine grain only (docs/plan/cue_verification.md, addendum)"}
+        path = os.path.join(OUT, "exp82_cues", f"{args.encoder}_x{args.coarsen}.json")
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w") as f:
         json.dump(summary, f, indent=1, default=float)
-    print(json.dumps({k: v.get("holds") for k, v in summary["prereg"].items()}, indent=1))
+    print(json.dumps({k: v.get("holds") if isinstance(v, dict) else v for k, v in summary["prereg"].items()}, indent=1))
     print(f"wrote {path}")
     return 0
 
@@ -237,6 +270,68 @@ def cmd_grade(args):
     with open(SUMMARY, "w") as f:
         json.dump(d, f, indent=1, default=float)
     print(json.dumps({k: v.get("holds") for k, v in d["prereg"].items()}, indent=1))
+    return 0
+
+
+GRAIN_FILE = os.path.join(OUT, "exp82_grain.json")
+GRAINS = (1, 2, 4)
+
+
+def risk_ratio(b):
+    """Error rate inside the cue set over the rate outside, from the recorded counts."""
+    inside = b["precision"]
+    n_out = b["n"] - b["n_with_cue"]
+    if n_out <= 0:
+        return float("nan")
+    outside = (b["n_errors"] - inside * b["n_with_cue"]) / n_out
+    return float(inside / outside) if outside > 0 else float("inf")
+
+
+def cmd_grain(args):
+    """Addendum of 2026-09-23 (docs/plan/cue_verification.md): the boundary cue across window grains on Base's
+    export, graded from the fine run and the coarsened runs; writes exp/out/exp82_grain.json."""
+    from scipy.stats import spearmanr
+    runs = {1: json.load(open(SUMMARY))}
+    for k in GRAINS[1:]:
+        runs[k] = json.load(open(os.path.join(OUT, "exp82_cues", f"olmoearth_base_x{k}.json")))
+    cells = {}
+    for k, d in runs.items():
+        for t, v in d["tasks"].items():
+            b = v["cues"]["boundary"]
+            p, th = b["n_with_cue"] / v["n_units"], v["error_rate"]
+            cells[f"{t}@x{k}"] = {"task": t, "k": k, "n_units": v["n_units"], "prevalence": float(p), "error_rate": float(th),
+                                 "enrichment": b["enrichment"], "boot_lo": b["boot_lo"], "boot_hi": b["boot_hi"],
+                                 "risk_ratio": risk_ratio(b), "ceiling": float((1 - th) / (p - th)) if p > th else float("inf")}
+    tasks = list(runs[1]["tasks"])
+    mono = {t: {"enrichment_falls": all(cells[f"{t}@x{a}"]["enrichment"] > cells[f"{t}@x{b}"]["enrichment"] for a, b in zip(GRAINS, GRAINS[1:])),
+                "risk_ratio_falls": all(cells[f"{t}@x{a}"]["risk_ratio"] > cells[f"{t}@x{b}"]["risk_ratio"] for a, b in zip(GRAINS, GRAINS[1:])),
+                "prevalence_rises": all(cells[f"{t}@x{a}"]["prevalence"] < cells[f"{t}@x{b}"]["prevalence"] for a, b in zip(GRAINS, GRAINS[1:]))}
+            for t in tasks}
+    cash = cells["m_cashew_plant@x4"]
+    ceil = [c["ceiling"] if np.isfinite(c["ceiling"]) else 1e9 for c in cells.values()]   # an unbounded ceiling ranks highest
+    rho = float(spearmanr([c["enrichment"] for c in cells.values()], ceil).correlation)
+    sat = {n: c for n, c in cells.items() if c["prevalence"] >= 0.9}
+    unsat_low = {n: c["risk_ratio"] for n, c in cells.items() if c["prevalence"] < 0.9 and c["risk_ratio"] <= 1.3}
+    verdicts = {"G1_saturation_is_the_grains": {"holds": cash["prevalence"] >= 0.9 and cash["enrichment"] <= 1.1,
+                                                 "prevalence": cash["prevalence"], "enrichment": cash["enrichment"], "bars": [0.9, 1.1]},
+                "G2_ceiling_governs_across_grains": {"holds": rho >= 0.9, "spearman": rho, "n_cells": len(cells),
+                                                      "unbounded_ceiling_cells": [n for n, c in cells.items() if not np.isfinite(c["ceiling"])]},
+                "G3_saturation_threshold": {"holds": all(c["risk_ratio"] <= 1.3 for c in sat.values()) and not unsat_low,
+                                            "saturated_cells": {n: c["risk_ratio"] for n, c in sat.items()}, "unsaturated_at_or_below_1.3": unsat_low},
+                "descriptive_monotone": {"n_tasks": len(tasks),
+                                         "enrichment_falls_on": sum(m["enrichment_falls"] for m in mono.values()),
+                                         "risk_ratio_falls_on": sum(m["risk_ratio_falls"] for m in mono.values()),
+                                         "prevalence_rises_on": sum(m["prevalence_rises"] for m in mono.values()), "per_task": mono}}
+    out = {"experiment": "exp82 grain addendum: the boundary cue across window grains on OlmoEarth Base", "grains": GRAINS,
+           "sources": {k: os.path.relpath(SUMMARY if k == 1 else os.path.join(OUT, "exp82_cues", f"olmoearth_base_x{k}.json"), ROOT) for k in GRAINS},
+           "cells": cells, "verdicts": verdicts}
+    with open(GRAIN_FILE, "w") as f:
+        json.dump(out, f, indent=1, default=float)
+    for t in tasks:
+        print(f"  {t:28s} " + "  ".join(f"x{k}: p {cells[f'{t}@x{k}']['prevalence']:.3f} enr {cells[f'{t}@x{k}']['enrichment']:.2f} rr {cells[f'{t}@x{k}']['risk_ratio']:.2f}" for k in GRAINS))
+    print(json.dumps({k: v.get("holds") for k, v in verdicts.items() if "holds" in v}, indent=1))
+    print(json.dumps(verdicts["descriptive_monotone"] | {"per_task": None}))
+    print(f"wrote {GRAIN_FILE}")
     return 0
 
 
@@ -266,13 +361,14 @@ def cmd_smoke(args):
 
 def main(argv=None):
     ap = argparse.ArgumentParser()
-    ap.add_argument("--stage", choices=("estimate", "grade", "smoke"), required=True)
+    ap.add_argument("--stage", choices=("estimate", "grade", "smoke", "grain"), required=True)
     ap.add_argument("--units", default=None)
     ap.add_argument("--encoder", default="olmoearth_base", help="another encoder's exp79 export writes to exp/out/exp82_cues/<encoder>.json")
     ap.add_argument("--tasks", nargs="*", default=None)
     ap.add_argument("--n-boot", type=int, default=N_BOOT)
+    ap.add_argument("--coarsen", type=int, default=1, help="addendum: the export at a k x k coarser window grid, written to exp/out/exp82_cues/<encoder>_x<k>.json")
     args = ap.parse_args(argv)
-    return {"estimate": cmd_estimate, "grade": cmd_grade, "smoke": cmd_smoke}[args.stage](args)
+    return {"estimate": cmd_estimate, "grade": cmd_grade, "smoke": cmd_smoke, "grain": cmd_grain}[args.stage](args)
 
 
 if __name__ == "__main__":

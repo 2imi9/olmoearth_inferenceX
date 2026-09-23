@@ -91,9 +91,11 @@ down the page.
    stays at least twice the rate outside on every task (exp82). The grain
    matters as much as the map: on an export whose windows are four times wider,
    97% of them touch a boundary and the cue enriches nothing (0.99; exp82 on
-   other encoders). The tool now quotes the range and the map's own boundary
+   other encoders), and Base's own map coarsened to that grain goes from 2.1 to
+   1.3 times the error rate outside, the cue weakening with the window size on
+   all seven tasks. The tool now quotes the range and the map's own boundary
    prevalence beside the Bolivia value, and says when that prevalence is too
-   high for the cue to mean anything. <!-- claim:boundary-cue-enrichment-is-fragmentation-not-class-count --> <!-- claim:cue-verification-holds-on-other-encoders -->
+   high for the cue to mean much. <!-- claim:boundary-cue-enrichment-is-fragmentation-not-class-count --> <!-- claim:cue-verification-holds-on-other-encoders --> <!-- claim:boundary-cue-weakens-with-the-window-grain -->
 4. **An accuracy needs a coverage.** The fine-tuned model is 0.93 accurate
    where it claims 0.99; keeping the 80% most confident windows gives 0.945 <!-- claim:accuracy-needs-coverage -->
    (exp21).

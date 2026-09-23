@@ -116,3 +116,44 @@ where none exists. If P3 fails on a task type, the conjunction is presented as o
 ## Cost
 
 No cluster; exp78's export is committed. Minutes per task; the 4-million-window task is the slowest.
+
+## Addendum, 23 September 2026: is the saturated cue a property of the grain? Written before the run
+
+The rerun on AnySat's seed-0 export found the boundary cue saturated on m-cashew-plant: 0.966 of windows on a
+boundary, enrichment 0.99, the error rate inside the boundary set 0.81 times the rate outside. AnySat's probe grid
+on the two m-* tasks is 16 × 16 windows per tile where every other encoder's is 64 × 64, so each of its windows
+is four times wider. Two readings: the cue dies at that grain on any map, or AnySat's cashew map is unusually
+fragmented. The check is Base's own export coarsened to AnySat's grain, `exp82_cue_verification.py --coarsen k`:
+each k × k block of windows becomes one window whose decision is the majority class over its valid fine windows
+(ties to the smallest class), whose reference is the majority reference the same way, whose validity is any valid
+fine window, and whose confidence is the mean fine margin (a proxy, used for the low-confidence cue only; nothing
+below is graded on it). The boundary cue is then the tool's own `_boundary_valid` on the coarse grid. Base's seven
+segmentation tasks at k = 2 and k = 4 (MADOS 20 × 20 → 5 × 5 at k = 4; the others divide evenly).
+
+**G1, the saturation is the grain's.** Base's cashew export at k = 4 has boundary prevalence at least **0.90** and
+enrichment at most **1.10**. *What makes it fail:* prevalence below 0.9 under majority pooling, which would make
+AnySat's saturation a property of its map rather than of the window size, and the record's note would say so.
+
+**G2, the ceiling governs across grains as it did across tasks.** Over the 21 (task, k) cells the enrichment's
+rank correlation with the ceiling `(1 − θ)/(p − θ)` is at least **0.9**. *What makes it fail:* a correlation
+below 0.9, meaning the grain changes the enrichment through something other than the prevalence.
+
+**G3, the threshold the tool now uses is right.** On every cell with prevalence at least **0.9** the risk ratio
+inside/outside is at most **1.3**, and on every cell below 0.9 it is above **1.3**. This is the check of
+`explain.BOUNDARY_SATURATED = 0.9`. *What makes it fail:* a saturated cell where the cue is still real (the
+constant overstates) or an unsaturated cell where it is not (the constant is too high).
+
+Descriptive: prevalence, enrichment, risk ratio and the ceiling per (task, k); the gate and P1–P3 are not graded
+on coarsened exports (the recorded capture is at the fine grain). Cost: minutes, no cluster.
+
+**Result, written after the run.** G1 fails as written, by 0.004: Base's cashew map at k = 4 has prevalence 0.896
+against the 0.90 bar, with enrichment 1.04 inside its bar. Most of AnySat's saturation is therefore the grain
+(0.765 → 0.896 for the same map) and the rest is its map (0.966). G2 holds: Spearman 0.987 over the 21 cells
+(MADOS at k = 4 has a prevalence below its error rate, so its ceiling is unbounded and ranks highest). G3 fails
+by 5e-5: the cell at 0.896 has a risk ratio of 1.2999, so the cue is already down to 1.3 just below the threshold,
+and no cell reaches 0.9 to test the first clause. What the run shows without a bar is monotone: coarsening lowers
+the enrichment and the risk ratio on all seven tasks at both steps (cashew 1.24 → 1.08 → 1.04 and 2.14 → 1.50 →
+1.30; MADOS 8.13 → 7.30 → 6.06 and 10.5 → 8.3 → 5.7) and raises the prevalence on six of seven (MADOS's falls at
+k = 4, where majority pooling erases its small marine objects). The recordable statement is that one, and the
+tool's clause was reworded from "not a reason" to "at most a weak reason", with the two measured points (1.3 at
+90%, below 1 at 97%) in place of a bar the data did not reach.

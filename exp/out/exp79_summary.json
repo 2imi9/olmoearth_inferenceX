@@ -22,14 +22,29 @@
    "copernicusfm"
   ],
   "encoders_run": [
+   "anysat",
    "clay_large",
    "copernicusfm",
+   "croma_base",
    "olmoearth_base"
   ]
  },
  "gate": {
   "holds": false,
   "per_encoder": {
+   "anysat": {
+    "holds": true,
+    "n_tasks_recorded": 24,
+    "n_tasks_exported": 24,
+    "missing_from_export": [],
+    "not_in_record": [],
+    "absent_reasons": [],
+    "max_abs_diff": 1.1102230246251565e-16,
+    "failing": [],
+    "headroom_seed0": 0.5663758821267477,
+    "headroom_recorded": 0.5663758821267477,
+    "headroom_abs_diff": 0.0
+   },
    "clay_large": {
     "holds": true,
     "n_tasks_recorded": 24,
@@ -71,6 +86,35 @@
     "headroom_recorded": 0.6204561708705782,
     "headroom_abs_diff": 0.0
    },
+   "croma_base": {
+    "holds": false,
+    "n_tasks_recorded": 21,
+    "n_tasks_exported": 21,
+    "missing_from_export": [],
+    "not_in_record": [],
+    "absent_reasons": [
+     {
+      "task": "m_forestnet",
+      "reason": "RemoteEntryNotFoundError: 404 Client Error. (Request ID: Root=1-6ab3a43e-048707c437e23a046f243840;32690301-478c-49cc-acc1-7eaec935be4b)\n\nEntry Not Found for url: https://huggingface.co/d"
+     },
+     {
+      "task": "awf_landsat",
+      "reason": "RemoteEntryNotFoundError: 404 Client Error. (Request ID: Root=1-6ab3a471-48eba0c357aa9f28335a548d;52194ca7-138b-4022-b974-109ff8884962)\n\nEntry Not Found for url: https://huggingface.co/d"
+     },
+     {
+      "task": "nandi_landsat",
+      "reason": "RemoteEntryNotFoundError: 404 Client Error. (Request ID: Root=1-6ab3a479-56f4f368029ac81c321eebf3;1cea11cf-72a6-4127-95d9-b00c13f81979)\n\nEntry Not Found for url: https://huggingface.co/d"
+     }
+    ],
+    "max_abs_diff": 0.0005419921875000622,
+    "failing": [
+     "m_cashew_plant",
+     "pastis_sentinel1"
+    ],
+    "headroom_seed0": 0.6580717202335331,
+    "headroom_recorded": 0.6580717202335331,
+    "headroom_abs_diff": 0.0
+   },
    "olmoearth_base": {
     "holds": true,
     "n_tasks_recorded": 24,
@@ -86,11 +130,10 @@
    }
   },
   "encoders_failing": [
-   "copernicusfm"
+   "copernicusfm",
+   "croma_base"
   ],
   "encoders_missing": [
-   "anysat",
-   "croma_base",
    "croma_large",
    "galileo_base",
    "galileo_nano",
@@ -103,18 +146,16 @@
    "terramind_base",
    "terramind_large"
   ],
-  "n_encoders": 3,
+  "n_encoders": 5,
   "of": 16
  },
  "prereg_A": {
   "P1_headline_survives_reseeding": {
    "holds": false,
-   "n_encoders": 3,
+   "n_encoders": 5,
    "of": 16,
    "n_seeds": 10,
    "encoders_missing": [
-    "anysat",
-    "croma_base",
     "croma_large",
     "galileo_base",
     "galileo_nano",
@@ -130,17 +171,22 @@
    "encoders_short_of_seeds": [],
    "failing_encoder_seed": [],
    "min_share": {
+    "anysat": 0.9166666666666666,
     "clay_large": 0.875,
     "copernicusfm": 0.9523809523809523,
+    "croma_base": 0.9523809523809523,
     "olmoearth_base": 1.0
    },
    "min_wins": {
+    "anysat": 22,
     "clay_large": 21,
     "copernicusfm": 20,
+    "croma_base": 20,
     "olmoearth_base": 24
    },
    "not_comparable_to_record": [
-    "copernicusfm"
+    "copernicusfm",
+    "croma_base"
    ]
   },
   "P2_which_wins_are_noise": {
@@ -370,14 +416,13 @@
     }
    },
    "not_comparable_to_record": [
-    "copernicusfm"
+    "copernicusfm",
+    "croma_base"
    ]
   },
   "P3_encoder_ordering_stable_in_sets": {
    "holds": false,
    "encoders_missing": [
-    "anysat",
-    "croma_base",
     "croma_large",
     "galileo_base",
     "galileo_nano",
@@ -410,8 +455,10 @@
    ],
    "seed0_order": [
     "olmoearth_base",
+    "croma_base",
     "copernicusfm",
-    "clay_large"
+    "clay_large",
+    "anysat"
    ],
    "top_set": [
     "galileo_base",
@@ -422,19 +469,19 @@
     "anysat",
     "satlas_base"
    ],
-   "min_rho": 1.0,
+   "min_rho": 0.8999999999999998,
    "per_seed": [
     {
      "seed": 0,
-     "rho": 1.0,
+     "rho": 0.9999999999999999,
      "best": "olmoearth_base",
-     "worst": "clay_large",
+     "worst": "anysat",
      "best_in_top": true,
-     "worst_in_bottom": false
+     "worst_in_bottom": true
     },
     {
      "seed": 1,
-     "rho": 1.0,
+     "rho": 0.8999999999999998,
      "best": "olmoearth_base",
      "worst": "clay_large",
      "best_in_top": true,
@@ -442,23 +489,23 @@
     },
     {
      "seed": 2,
-     "rho": 1.0,
+     "rho": 0.9999999999999999,
      "best": "olmoearth_base",
-     "worst": "clay_large",
+     "worst": "anysat",
      "best_in_top": true,
-     "worst_in_bottom": false
+     "worst_in_bottom": true
     },
     {
      "seed": 3,
-     "rho": 1.0,
+     "rho": 0.9999999999999999,
      "best": "olmoearth_base",
-     "worst": "clay_large",
+     "worst": "anysat",
      "best_in_top": true,
-     "worst_in_bottom": false
+     "worst_in_bottom": true
     },
     {
      "seed": 4,
-     "rho": 1.0,
+     "rho": 0.8999999999999998,
      "best": "olmoearth_base",
      "worst": "clay_large",
      "best_in_top": true,
@@ -466,15 +513,15 @@
     },
     {
      "seed": 5,
-     "rho": 1.0,
+     "rho": 0.9999999999999999,
      "best": "olmoearth_base",
-     "worst": "clay_large",
+     "worst": "anysat",
      "best_in_top": true,
-     "worst_in_bottom": false
+     "worst_in_bottom": true
     },
     {
      "seed": 6,
-     "rho": 1.0,
+     "rho": 0.8999999999999998,
      "best": "olmoearth_base",
      "worst": "clay_large",
      "best_in_top": true,
@@ -482,7 +529,7 @@
     },
     {
      "seed": 7,
-     "rho": 1.0,
+     "rho": 0.8999999999999998,
      "best": "olmoearth_base",
      "worst": "clay_large",
      "best_in_top": true,
@@ -490,7 +537,7 @@
     },
     {
      "seed": 8,
-     "rho": 1.0,
+     "rho": 0.8999999999999998,
      "best": "olmoearth_base",
      "worst": "clay_large",
      "best_in_top": true,
@@ -498,7 +545,7 @@
     },
     {
      "seed": 9,
-     "rho": 1.0,
+     "rho": 0.8999999999999998,
      "best": "olmoearth_base",
      "worst": "clay_large",
      "best_in_top": true,
@@ -506,8 +553,10 @@
     }
    ],
    "headroom_seed0": {
+    "anysat": 0.5663758821267477,
     "clay_large": 0.5894702767305815,
     "copernicusfm": 0.6204561708705782,
+    "croma_base": 0.6580717202335331,
     "olmoearth_base": 0.6799869670764211
    },
    "headroom_recorded": {
@@ -529,7 +578,8 @@
     "olmoearth_base": 0.6799869670764211
    },
    "not_comparable_to_record": [
-    "copernicusfm"
+    "copernicusfm",
+    "croma_base"
    ]
   }
  },
@@ -537,11 +587,85 @@
   "budget": 300,
   "R": 2000,
   "encoders": [
+   "anysat",
    "clay_large",
    "copernicusfm",
+   "croma_base",
    "olmoearth_base"
   ],
   "per_encoder": {
+   "anysat": {
+    "mados": {
+     "n_units": 22598,
+     "error_rate": 0.18864501283299406,
+     "design_effect": 13.78195117204239,
+     "srs_coverage": 0.949,
+     "srs_half_width": 0.043708158369357146,
+     "naive_coverage": 0.4135,
+     "cluster_coverage": 0.6345,
+     "exact_srs_coverage": null
+    },
+    "sen1floods11": {
+     "n_units": 592385,
+     "error_rate": 0.08717134971344649,
+     "design_effect": 5.9030058652661745,
+     "srs_coverage": 0.938,
+     "srs_half_width": 0.03190109626727496,
+     "naive_coverage": 0.5725,
+     "cluster_coverage": 0.8155,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel1": {
+     "n_units": 458638,
+     "error_rate": 0.30541516402914715,
+     "design_effect": 3.083488820684899,
+     "srs_coverage": 0.958,
+     "srs_half_width": 0.0517175289978136,
+     "naive_coverage": 0.747,
+     "cluster_coverage": 0.925,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel2": {
+     "n_units": 458638,
+     "error_rate": 0.22809710490626595,
+     "design_effect": 2.878635912046464,
+     "srs_coverage": 0.946,
+     "srs_half_width": 0.04708174884254277,
+     "naive_coverage": 0.741,
+     "cluster_coverage": 0.9195,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel1_sentinel2": {
+     "n_units": 458638,
+     "error_rate": 0.22815379449587692,
+     "design_effect": 2.909026565717068,
+     "srs_coverage": 0.9485,
+     "srs_half_width": 0.047096195132279264,
+     "naive_coverage": 0.731,
+     "cluster_coverage": 0.9185,
+     "exact_srs_coverage": null
+    },
+    "m_cashew_plant": {
+     "n_units": 12800,
+     "error_rate": 0.300078125,
+     "design_effect": 1.2605270482957742,
+     "srs_coverage": 0.9495,
+     "srs_half_width": 0.05092607388460065,
+     "naive_coverage": 0.935,
+     "cluster_coverage": 0.9285,
+     "exact_srs_coverage": null
+    },
+    "m_sa_crop_type": {
+     "n_units": 256000,
+     "error_rate": 0.24044921875,
+     "design_effect": 8.467895487705295,
+     "srs_coverage": 0.9595,
+     "srs_half_width": 0.04800615288197011,
+     "naive_coverage": 0.4945,
+     "cluster_coverage": 0.924,
+     "exact_srs_coverage": null
+    }
+   },
    "clay_large": {
     "mados": {
      "n_units": 22598,
@@ -686,6 +810,78 @@
      "exact_srs_coverage": null
     }
    },
+   "croma_base": {
+    "mados": {
+     "n_units": 22598,
+     "error_rate": 0.07713071953270201,
+     "design_effect": 11.32935880289,
+     "srs_coverage": 0.9585,
+     "srs_half_width": 0.030113101874561222,
+     "naive_coverage": 0.464,
+     "cluster_coverage": 0.646,
+     "exact_srs_coverage": null
+    },
+    "sen1floods11": {
+     "n_units": 592385,
+     "error_rate": 0.08479114089654533,
+     "design_effect": 5.690496534628264,
+     "srs_coverage": 0.9445,
+     "srs_half_width": 0.03148634787081129,
+     "naive_coverage": 0.5825,
+     "cluster_coverage": 0.8125,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel1": {
+     "n_units": 458638,
+     "error_rate": 0.30411566420575703,
+     "design_effect": 2.9751678087192452,
+     "srs_coverage": 0.944,
+     "srs_half_width": 0.05164439165476262,
+     "naive_coverage": 0.728,
+     "cluster_coverage": 0.922,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel2": {
+     "n_units": 458638,
+     "error_rate": 0.21696414165420222,
+     "design_effect": 2.762995225683102,
+     "srs_coverage": 0.9545,
+     "srs_half_width": 0.046288215887716165,
+     "naive_coverage": 0.7675,
+     "cluster_coverage": 0.9175,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel1_sentinel2": {
+     "n_units": 458638,
+     "error_rate": 0.23920826447001775,
+     "design_effect": 2.7959219558969406,
+     "srs_coverage": 0.948,
+     "srs_half_width": 0.04792698978977474,
+     "naive_coverage": 0.772,
+     "cluster_coverage": 0.913,
+     "exact_srs_coverage": null
+    },
+    "m_cashew_plant": {
+     "n_units": 204800,
+     "error_rate": 0.406318359375,
+     "design_effect": 1.1516715821304653,
+     "srs_coverage": 0.945,
+     "srs_half_width": 0.05512425928688311,
+     "naive_coverage": 0.9465,
+     "cluster_coverage": 0.943,
+     "exact_srs_coverage": null
+    },
+    "m_sa_crop_type": {
+     "n_units": 4096000,
+     "error_rate": 0.339030029296875,
+     "design_effect": 3.3011356120202553,
+     "srs_coverage": 0.9515,
+     "srs_half_width": 0.053177515692203164,
+     "naive_coverage": 0.7365,
+     "cluster_coverage": 0.9325,
+     "exact_srs_coverage": null
+    }
+   },
    "olmoearth_base": {
     "mados": {
      "n_units": 22598,
@@ -763,9 +959,20 @@
  "prereg_B": {
   "P4_naive_failure_belongs_to_the_task": {
    "holds": false,
-   "n_encoders_holding": 3,
-   "of": 3,
+   "n_encoders_holding": 5,
+   "of": 5,
    "per_encoder": {
+    "anysat": {
+     "carried": 7,
+     "present": 7,
+     "missing": [],
+     "under_covering": 6,
+     "exceptions": [
+      "m_cashew_plant"
+     ],
+     "median_design_effect": 3.083488820684899,
+     "holds": true
+    },
     "clay_large": {
      "carried": 7,
      "present": 7,
@@ -788,6 +995,17 @@
      "median_design_effect": 3.355721033678439,
      "holds": true
     },
+    "croma_base": {
+     "carried": 7,
+     "present": 7,
+     "missing": [],
+     "under_covering": 6,
+     "exceptions": [
+      "m_cashew_plant"
+     ],
+     "median_design_effect": 2.9751678087192452,
+     "holds": true
+    },
     "olmoearth_base": {
      "carried": 7,
      "present": 7,
@@ -804,65 +1022,9 @@
   },
   "P5_estimator_honest_everywhere": {
    "holds": false,
-   "n_cells": 21,
+   "n_cells": 35,
    "of": 111,
    "cells_missing": [
-    [
-     "anysat",
-     "m_cashew_plant"
-    ],
-    [
-     "anysat",
-     "m_sa_crop_type"
-    ],
-    [
-     "anysat",
-     "mados"
-    ],
-    [
-     "anysat",
-     "pastis_sentinel1"
-    ],
-    [
-     "anysat",
-     "pastis_sentinel1_sentinel2"
-    ],
-    [
-     "anysat",
-     "pastis_sentinel2"
-    ],
-    [
-     "anysat",
-     "sen1floods11"
-    ],
-    [
-     "croma_base",
-     "m_cashew_plant"
-    ],
-    [
-     "croma_base",
-     "m_sa_crop_type"
-    ],
-    [
-     "croma_base",
-     "mados"
-    ],
-    [
-     "croma_base",
-     "pastis_sentinel1"
-    ],
-    [
-     "croma_base",
-     "pastis_sentinel1_sentinel2"
-    ],
-    [
-     "croma_base",
-     "pastis_sentinel2"
-    ],
-    [
-     "croma_base",
-     "sen1floods11"
-    ],
     [
      "croma_large",
      "m_cashew_plant"
