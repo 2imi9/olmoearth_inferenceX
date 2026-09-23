@@ -2584,6 +2584,53 @@ the third decimal (MADOS naive 0.506, cluster 0.598; the one difference beyond M
 cluster coverage, 0.934 against 0.918, on units that differ in a handful of windows), and the per-unit files'
 SHA-256s match the export's manifest.
 
+## Does the map's own confidence sharpen the error rate once labels exist? (exp85)
+
+Preregistered in [docs/plan/model_assisted_estimation.md](../plan/model_assisted_estimation.md) with a dated
+amendment; runs as `exp/exp85_model_assisted.py`; artifact `exp/out/exp85_summary.json`; estimators
+`estimate.model_assisted_interval` and `stratified_model_assisted_interval`. Run on 23 September 2026 on exp78's
+export, its seven segmentation tasks graded and eight classification tasks descriptive, 2,000 draws at 300 labels.
+
+**The question.** exp78 planned and never ran the arm the field's rule asks for: use the map's confidence on every
+unlabelled window as a predictor of error, `g = 1 − p1`, and spend the labels correcting it (the survey-sampling
+difference estimator; prediction-powered inference with a tuned coefficient, Angelopoulos, Duchi and Zrnic 2023;
+its stratified form, Fisch et al. 2024). The tool's estimator uses the confidence only to decide which windows to
+label. This measures what the second use adds.
+
+| task (error rate) | random sample: tuned arm's half-width over the classical Wald | coefficient | correlation of `g` with error | confidence design: model-assisted over classical stratified |
+|---|---|---|---|---|
+| MADOS (0.074) | 0.886 | 0.93 | 0.45 | 0.974 |
+| Sen1Floods11 (0.085) | 0.901 | 1.02 | 0.43 | 0.977 |
+| PASTIS S1 / S2 / S1+S2 | 0.877 / 0.871 / 0.868 | 1.03 / 0.96 / 0.97 | 0.48 / 0.49 / 0.49 | 0.977 / 0.978 / 0.978 |
+| m-cashew-plant (0.347) | 0.930 | 1.05 | 0.36 | 0.982 |
+| m-SA-crop-type (0.340) | 0.840 | 1.04 | 0.54 | 0.983 |
+
+**Honest, and never worse than the classical interval under a random sample (P1, P2 hold).** The tuned arm
+covers on 0.94–0.95 of draws with bias within 0.6% and is 7–16% narrower than the classical Wald interval on
+every task, the width fully predicted by the population correlation of `g` with error. The stratified arm covers
+0.930–0.950, at the 0.93 bar on MADOS and half a point below the classical stratified arm everywhere.
+<!-- claim:model-assisted-arm-is-honest-and-never-wider -->
+
+**The gain is small because the design already took it (P3 fails, as the page allowed).** On top of the
+confidence design the model-assisted arm narrows the interval by 1.7–2.6% (median 0.978 against a bar of 0.95),
+a 3.5–5.4% saving in labels, bought with half a point of coverage. By the preregistration's rule the arm does not
+ship; the tool's estimator stays as it is. <!-- claim:model-assisted-gain-beyond-the-design-is-two-percent -->
+
+**Two predictions failed for reasons worth keeping.** The coefficient needs no tuning here: it lands at 0.93–1.05
+on every task, because a level offset in the predictor (the map's confidence overstates its accuracy by a median
+0.061, exp80) is absorbed exactly by the label correction and adds no variance; plain λ = 1 is never wider than
+the classical interval (P4 fails). And this page's "no saving above 1.8×" bar was copied from an exp78 prediction
+that had itself already failed at 2.5× on MADOS; the arm's increment over its classical twin is 1.04–1.05×, and
+the 8.3× the grader reported is EuroSAT's collapsed stratified interval, not a saving (P5 withdrawn).
+<!-- claim:model-assisted-coefficient-is-one -->
+
+**Found by the audit, and fixed.** Tuning the coefficient on a small stratum whose predictor barely varies makes
+it explode (66 on a 26-label stratum; above 3 in magnitude on a fifth to three quarters of draws on some strata),
+and the Wald interval, which treats it as fixed, then claims half the true spread (So2Sat: coverage 0.85). The
+package's tuning floor is now 30 labels per stratum, at which the stratified gain vanishes. The classification
+cells' collapse (EuroSAT 0.27 for the classical stratified arm too) is exp78's harness allocation without the
+package's floor on the assumed stratum rate; the shipped design covers 0.93–0.95 there.
+
 ## The ceiling belongs to the task, not to the model (from exp74 and exp70)
 
 The margin takes a median 0.68 of the gap between a random ranking and a perfect one on the 24 tasks. A fair

@@ -79,3 +79,27 @@ def test_the_tuned_coefficient_converges_to_the_population_covariance_ratio_and_
     assert np.mean(w_tuned) < np.mean(w_cls)                                   # the predictor helps here
     assert max(np.array(w_tuned) / np.array(w_cls)) < 1.03                      # and never costs more than tuning noise
     assert est.tuned_coefficient(np.array([0.0, 1.0]), np.array([0.2, 0.9])) == 0.0   # too few labels to tune
+
+
+def test_the_tuning_floor_keeps_small_strata_classical_and_the_stratified_tuned_form_is_exercised():
+    """exp85's audit: with a floor of three labels the per-stratum coefficient reached 66 on a 26-label stratum
+    whose predictor barely varied, and the Wald interval, which treats the coefficient as fixed, claimed half the
+    true spread. Below MIN_FOR_TUNING labels the coefficient is 0; above it the tuned stratified estimate is
+    unbiased over a Monte Carlo and its interval covers at nominal."""
+    rng = np.random.default_rng(11)
+    assert est.tuned_coefficient(rng.random(est.MIN_FOR_TUNING - 1), rng.random(est.MIN_FOR_TUNING - 1)) == 0.0
+    Npop = 20000
+    margin = rng.random(Npop)
+    strata = est.confidence_strata(margin, 4)
+    sizes = np.bincount(strata, minlength=4)
+    g = 1 - (0.5 + 0.5 * margin)
+    e = (rng.random(Npop) < 1.5 * g).astype(float)
+    theta = e.mean()
+    ests, cover, lam_seen = [], 0, []
+    for r in range(600):
+        picked = est.draw_stratified(np.random.default_rng(r), strata, sizes, np.array([100, 100, 100, 100]))
+        est_, lo, hi, lams, starved = est.stratified_model_assisted_interval(e, g, strata, picked, sizes, Npop)
+        ests.append(est_); cover += lo <= theta <= hi; lam_seen += list(lams.values())
+    ests = np.array(ests)
+    assert abs(ests.mean() - theta) < 3 * ests.std() / np.sqrt(ests.size) + 2e-3
+    assert cover / 600 > 0.92 and 0.5 < np.median(lam_seen) < 2.0

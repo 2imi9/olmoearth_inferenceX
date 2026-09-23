@@ -33,6 +33,11 @@
   its stopping rule (largest posterior change below 1e-6) with a cap of 1,000 and can report whether it converged.
   Until now the cap was 50 iterations; on the suite's 15- and 19-class encoder panels the stop needs 224 and 261,
   so the values at 50 were snapshots (a hidden-error share of 0.45 where the converged value is 0.28; exp83's audit).
+- `estimate.model_assisted_interval` and `stratified_model_assisted_interval` (exp85): the difference /
+  prediction-powered estimator with a tuned coefficient, measured and not adopted: 7–16% narrower than the
+  classical interval under a random sample, 2% narrower once the confidence design has stratified, at the cost
+  of half a point of coverage; the tuning floor is 30 labels per stratum because at 3 the coefficient exploded on
+  small strata. The tool's estimator is unchanged.
 - `scripts/engine_determinism.py`: exp79's OlmoEarth Base export on an RTX PRO 6000 against the same commit and
   seeds on a B200, per task, so the GPU's contribution to a probe's accuracy is a measured quantity beside the seed's.
 - The claim ledger: an audit found 138 of 167 checks reading a verdict or a pinned number back from the artifact

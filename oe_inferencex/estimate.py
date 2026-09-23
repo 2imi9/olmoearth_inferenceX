@@ -496,7 +496,8 @@ def estimate_from_indices(indices, wrong, margin, valid=None):
 # survey-sampling difference estimator, which prediction-powered inference rediscovered (Angelopoulos, Duchi and
 # Zrnic 2023; Mozer et al. 2026). With the coefficient tuned on the sample the interval cannot be wider than the
 # classical one beyond tuning noise. Preregistered in docs/plan/model_assisted_estimation.md.
-MIN_FOR_TUNING = 3                # a stratum with fewer labels keeps lambda = 0, its classical estimate
+MIN_FOR_TUNING = 30               # fewer labels keep lambda = 0, the classical estimate: exp85's run tuned at 3 and the
+                                  # per-stratum coefficient reached 66 on a 26-label stratum (audit, 2026-09-23)
 
 
 def tuned_coefficient(e, g):

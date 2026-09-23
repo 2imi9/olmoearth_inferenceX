@@ -3581,3 +3581,57 @@
     )(A['exp/out/exp79_engine/summary.json'])
   cited_in:
     - {file: docs/results/comparisons.md, marker: exp79-engine-effect-on-the-lead}
+
+- id: model-assisted-arm-is-honest-and-never-wider
+  statement: "On exp78's seven segmentation tasks at 300 random labels, the difference estimator with a coefficient tuned on the sample (PPI++), using g = 1 - p1 on every window, covers the true error rate on 0.94 to 0.95 of 2,000 draws with bias within 0.6%, and its half-width is 0.840 to 0.930 of the classical Wald interval's on every task; its stratified form under the confidence design covers 0.930 to 0.950."
+  crosscheck: tests/test_model_assisted.py::test_difference_estimator_is_unbiased_and_its_variance_estimator_unbiased_over_every_sample
+  status: supported
+  experiments: [exp85]
+  artifacts: [exp/out/exp85_summary.json]
+  check: |-
+    (lambda seg: (lambda cov, bias, ratio, scov:
+      len(seg) == 7 and round(min(cov), 2) == 0.94 and round(max(cov), 2) == 0.95
+      and max(abs(b - 1) for b in bias) <= 0.006
+      and round(min(ratio), 3) == 0.840 and round(max(ratio), 3) == 0.930 and max(ratio) <= 1.0
+      and round(min(scov), 3) == 0.930 and round(max(scov), 3) == 0.950
+    )([r['arms']['D1/E3d++']['coverage'] for r in seg.values()], [r['arms']['D1/E3d++']['bias_ratio'] for r in seg.values()],
+      [r['arms']['D1/E3d++']['half_width'] / r['arms']['D1/E1w']['half_width'] for r in seg.values()],
+      [r['arms']['D2c/E3s']['coverage'] for r in seg.values()])
+    )({t: r for t, r in A['exp/out/exp85_summary.json']['tasks'].items() if r['family'].startswith('seg')})
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: model-assisted-arm-is-honest-and-never-wider}
+  note: >-
+    The run tuned the per-stratum coefficient with a floor of 3 labels; the package's floor is 30 since the audit.
+    Coverages carry a Monte Carlo standard error of 0.005; MADOS's stratified 0.9305 is at the bar and below it on
+    three of ten seeds in the audit's rerun.
+
+- id: model-assisted-gain-beyond-the-design-is-two-percent
+  statement: "Under the confidence design the model-assisted stratified arm's half-width is 0.974 to 0.983 of the classical stratified arm's on the seven segmentation tasks (median 0.978 against a preregistered bar of 0.95), a 3.5% to 5.4% saving in labels bought with 0.4 to 1.0 points of coverage; the arm does not ship."
+  crosscheck: tests/test_model_assisted.py::test_stratified_form_is_unbiased_over_every_stratified_sample_for_a_fixed_coefficient
+  status: rejected
+  experiments: [exp85]
+  artifacts: [exp/out/exp85_summary.json]
+  check: |-
+    (lambda seg: (lambda ratio, dcov, saving:
+      len(ratio) == 7 and round(min(ratio), 3) == 0.974 and round(max(ratio), 3) == 0.983 and round(sorted(ratio)[3], 3) == 0.978
+      and all(d > 0 for d in dcov) and round(min(dcov), 3) >= 0.004 and round(max(dcov), 3) <= 0.010
+      and round(min(saving), 3) >= 1.035 and round(max(saving), 3) <= 1.054
+    )([r['arms']['D2c/E3s']['half_width'] / r['arms']['D2c/E1']['half_width'] for r in seg.values()],
+      [r['arms']['D2c/E1']['coverage'] - r['arms']['D2c/E3s']['coverage'] for r in seg.values()],
+      [(r['arms']['D2c/E1']['half_width'] / r['arms']['D2c/E3s']['half_width']) ** 2 for r in seg.values()])
+    )({t: r for t, r in A['exp/out/exp85_summary.json']['tasks'].items() if r['family'].startswith('seg')})
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: model-assisted-gain-beyond-the-design-is-two-percent}
+
+- id: model-assisted-coefficient-is-one
+  statement: "The tuned coefficient's median over draws is 0.93 to 1.05 on the seven segmentation tasks, and the plain difference estimator (coefficient 1) is never wider than the classical Wald interval; the preregistered P4 (wider on at least two tasks) fails, and its calibration-gap reasoning was wrong: a level offset in the predictor adds no variance."
+  crosscheck: tests/test_model_assisted.py::test_the_tuned_coefficient_converges_to_the_population_covariance_ratio_and_never_widens_much
+  status: rejected
+  experiments: [exp85]
+  artifacts: [exp/out/exp85_summary.json]
+  check: |-
+    (lambda seg: len(seg) == 7 and round(min(r['lambda_tuned_median'] for r in seg.values()), 2) == 0.93 and round(max(r['lambda_tuned_median'] for r in seg.values()), 2) == 1.05
+      and all(r['arms']['D1/E3d']['half_width'] <= r['arms']['D1/E1w']['half_width'] for r in seg.values())
+    )({t: r for t, r in A['exp/out/exp85_summary.json']['tasks'].items() if r['family'].startswith('seg')})
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: model-assisted-coefficient-is-one}

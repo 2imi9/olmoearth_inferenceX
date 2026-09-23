@@ -79,6 +79,35 @@ exactly unbiased for λ ∈ {0, 0.5, 1} and its variance estimator unbiased for 
 form the same over every stratified sample; the tuned coefficient converges to the population covariance ratio.
 Then an adversarial read by a separate agent on the real per-unit files.
 
+## Amendment, 23 September 2026, from the independent audit, written after the run and before the record
+
+The audit recomputed every estimator by hand (agreement to 1e-16), reproduced the Monte Carlo with its own
+seeds, and found the arithmetic right and two of this page's premises wrong.
+
+- **P5 is withdrawn as written.** This page said exp78 "found no design saving more than 1.8×"; exp78's P4
+  *failed* at 2.51× on MADOS and the record says so. The grader's 8.3× is EuroSAT's stratified arm with a
+  collapsed 27%-coverage interval, not a saving, and there is no leak (bias 0.9996, the predictor label-free).
+  The recordable statement is the model-assisted increment over its classical twin: 1.035–1.054× labels on every
+  segmentation task.
+- **P4's reasoning was a category error.** A level offset in the predictor is absorbed exactly by the sample
+  correction and adds no variance; λ = 1 beats the classical estimator whenever the population coefficient exceeds
+  0.5, and it is 0.93–1.04 on the seven tasks, so tuning buys 0.2–0.7% of width. P4 fails (λ = 1 is never wider).
+- **P1 holds at the bar and is seed-dependent.** MADOS's stratified model-assisted arm recorded 0.9305, one
+  draw above 0.93; over ten seeds it is 0.932 ± 0.002 and below the bar on three of ten. The model-assisted
+  stratified arm covers half a point less than the classical stratified arm on all seven tasks. The mechanism:
+  the per-stratum coefficient tuned on a small stratum whose predictor barely varies explodes (66 on a 26-label
+  stratum; |λ_h| > 3 on 20–78% of draws on some strata), and the Wald variance treats it as fixed. The tuning
+  floor of 3 labels was far too low; the package's default is now **30**, at which the stratified arm's width
+  gain vanishes. The run's artifact stays as run (floor 3).
+- **The classification cells are a harness inheritance, not a finding about the arm.** The Monte Carlo allocates
+  as exp78 did (no floor on the assumed stratum rate), so on EuroSAT four strata get 2–6 labels and the interval is
+  degenerate on 74% of draws for the classical stratified arm too (0.27 both); the shipped package allocates with
+  `Q_FLOOR` and uses Wilson on the effective sample size, which cover 0.93–0.95 there. The classification rows
+  are descriptive and say this.
+- **P3 fails robustly** (stratified median 0.978 with a paired standard error of 0.0003; Sen1Floods11's random-
+  sample ratio 0.901 against 0.90 by 1.5 standard errors), and the Cost section's rule decides: **the arm does not
+  ship.** The tests exercised neither the tuned stratified form nor small strata; a test at the floor is added.
+
 ## What would invalidate the run
 
 - `g` computed from anything a label touched; it is `1 − p1` from the export and nothing else.
