@@ -3559,6 +3559,7 @@
        for t, v in b['tasks'].items()}))(A['exp/out/exp79_seeds/olmoearth_base.json'], A['exp/out/exp79_engine/summary.json'])
   cited_in:
     - {file: docs/results/comparisons.md, marker: exp79-base-margin-wins-under-every-seed}
+    - {file: docs/Findings.md, marker: exp79-base-margin-wins-under-every-seed}
   note: >-
     Leads are recomputed from the signals, never read from margin_lead. The Togo mean over seeds (0.033, sd 0.057) is
     dominated by seed 4, where the class-rarity control inverted and the lead jumped to +0.195; the record quotes the

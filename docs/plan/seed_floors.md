@@ -108,6 +108,16 @@ exp77 fitted five probes per segmentation task on a CPU node in 1 h 40 m for sev
 the small part and the load is the large one, so about one hour per encoder is the estimate. The estimation
 stage (P4, P5) runs locally on numpy from the fetched export. No new dependencies; fp32 throughout.
 
+## First reading, 23 September 2026
+
+OlmoEarth Base's export landed first and was recorded on its own
+([comparisons](../results/comparisons.md#is-the-record-bigger-than-its-own-seed-noise-first-reading-olmoearth-base-and-the-engine-exp79)):
+gate G holds on the B200, P2 holds at 24 of 24 with the smallest lead named, and the RTX run that preceded it, my
+choice of partition, became the engine-determinism measurement. Two things learned for the fifteen others: the
+development partition's four-hour limit cuts the slowest encoders' last task (AnySat lost m-SA-crop-type and
+finishes it in a follow-up job merged by `scripts/merge_exp79_partial.py`), and the gate for those fifteen is an
+RTX gate, since exp74 was run on an RTX (job 881793). P1, P3, P4 and P5 are graded when all sixteen are in.
+
 ## Amendment, 22 September 2026, written while array 1022737 was queued and before any number was read
 
 An adversarial read of this page against `exp/exp79_seed_floors.py`, done by two independent readers in

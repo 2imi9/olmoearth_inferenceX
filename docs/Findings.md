@@ -257,6 +257,11 @@ better than the best control that sees no model, over 6.4 million graded units
 spanning an accuracy range from 0.333 to 0.979, on classification and segmentation
 alike. Six of the tasks come from GEO-Bench 1, a third-party benchmark, and the
 margin wins on all six. <!-- claim:suite-margin-wins-every-task -->
+Reseeded ten times (exp79), the 24 of 24 holds under every seed; the closest
+call is CropHarvest Togo Sentinel-1, 306 units, where one seed's lead is +0.0017,
+inside what the GPU type alone moves on that task, so that win is by sign only.
+The other fifteen encoders are being reseeded as this is written.
+<!-- claim:exp79-base-margin-wins-under-every-seed -->
 
 **The probe warning, scoped.** That run also scoped the probe warning above. Across those 24 tasks the ordering
 of the confidence signals does degrade with how badly the probe generalises, which
