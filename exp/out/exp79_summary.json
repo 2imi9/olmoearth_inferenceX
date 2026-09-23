@@ -22,12 +22,55 @@
    "copernicusfm"
   ],
   "encoders_run": [
+   "clay_large",
+   "copernicusfm",
    "olmoearth_base"
   ]
  },
  "gate": {
   "holds": false,
   "per_encoder": {
+   "clay_large": {
+    "holds": true,
+    "n_tasks_recorded": 24,
+    "n_tasks_exported": 24,
+    "missing_from_export": [],
+    "not_in_record": [],
+    "absent_reasons": [],
+    "max_abs_diff": 1.1102230246251565e-16,
+    "failing": [],
+    "headroom_seed0": 0.5894702767305815,
+    "headroom_recorded": 0.5894702767305815,
+    "headroom_abs_diff": 0.0
+   },
+   "copernicusfm": {
+    "holds": false,
+    "n_tasks_recorded": 21,
+    "n_tasks_exported": 21,
+    "missing_from_export": [],
+    "not_in_record": [],
+    "absent_reasons": [
+     {
+      "task": "m_forestnet",
+      "reason": "RemoteEntryNotFoundError: 404 Client Error. (Request ID: Root=1-6ab39b30-149c6630399c77ce56408aff;34baa45e-25ef-4a6f-9ca1-cc9242aca006)\n\nEntry Not Found for url: https://huggingface.co/d"
+     },
+     {
+      "task": "awf_landsat",
+      "reason": "RemoteEntryNotFoundError: 404 Client Error. (Request ID: Root=1-6ab39b63-1f2bd0e56d9cac374baf96b9;5dcec362-9d69-4c0c-b3c4-7d3324613513)\n\nEntry Not Found for url: https://huggingface.co/d"
+     },
+     {
+      "task": "nandi_landsat",
+      "reason": "RemoteEntryNotFoundError: 404 Client Error. (Request ID: Root=1-6ab39b6b-5f62a4fd3461c31d02767d5a;ef1d92d2-7be6-4ba1-95eb-977634738f34)\n\nEntry Not Found for url: https://huggingface.co/d"
+     }
+    ],
+    "max_abs_diff": 0.00013300249870262792,
+    "failing": [
+     "pastis_sentinel1"
+    ],
+    "headroom_seed0": 0.6204561708705782,
+    "headroom_recorded": 0.6204561708705782,
+    "headroom_abs_diff": 0.0
+   },
    "olmoearth_base": {
     "holds": true,
     "n_tasks_recorded": 24,
@@ -42,11 +85,11 @@
     "headroom_abs_diff": 0.0
    }
   },
-  "encoders_failing": [],
+  "encoders_failing": [
+   "copernicusfm"
+  ],
   "encoders_missing": [
    "anysat",
-   "clay_large",
-   "copernicusfm",
    "croma_base",
    "croma_large",
    "galileo_base",
@@ -60,19 +103,17 @@
    "terramind_base",
    "terramind_large"
   ],
-  "n_encoders": 1,
+  "n_encoders": 3,
   "of": 16
  },
  "prereg_A": {
   "P1_headline_survives_reseeding": {
    "holds": false,
-   "n_encoders": 1,
+   "n_encoders": 3,
    "of": 16,
    "n_seeds": 10,
    "encoders_missing": [
     "anysat",
-    "clay_large",
-    "copernicusfm",
     "croma_base",
     "croma_large",
     "galileo_base",
@@ -89,12 +130,18 @@
    "encoders_short_of_seeds": [],
    "failing_encoder_seed": [],
    "min_share": {
+    "clay_large": 0.875,
+    "copernicusfm": 0.9523809523809523,
     "olmoearth_base": 1.0
    },
    "min_wins": {
+    "clay_large": 21,
+    "copernicusfm": 20,
     "olmoearth_base": 24
    },
-   "not_comparable_to_record": []
+   "not_comparable_to_record": [
+    "copernicusfm"
+   ]
   },
   "P2_which_wins_are_noise": {
    "holds": true,
@@ -322,15 +369,14 @@
      "robust": true
     }
    },
-   "not_comparable_to_record": []
+   "not_comparable_to_record": [
+    "copernicusfm"
+   ]
   },
   "P3_encoder_ordering_stable_in_sets": {
-   "holds": null,
-   "reason": "only 1 encoders have run",
+   "holds": false,
    "encoders_missing": [
     "anysat",
-    "clay_large",
-    "copernicusfm",
     "croma_base",
     "croma_large",
     "galileo_base",
@@ -344,7 +390,147 @@
     "terramind_base",
     "terramind_large"
    ],
-   "not_comparable_to_record": []
+   "record_order": [
+    "olmoearth_large",
+    "galileo_base",
+    "olmoearth_base",
+    "terramind_large",
+    "croma_large",
+    "croma_base",
+    "olmoearth_nano",
+    "galileo_tiny",
+    "olmoearth_tiny",
+    "copernicusfm",
+    "terramind_base",
+    "galileo_nano",
+    "clay_large",
+    "panopticon",
+    "anysat",
+    "satlas_base"
+   ],
+   "seed0_order": [
+    "olmoearth_base",
+    "copernicusfm",
+    "clay_large"
+   ],
+   "top_set": [
+    "galileo_base",
+    "olmoearth_base",
+    "olmoearth_large"
+   ],
+   "bottom_set": [
+    "anysat",
+    "satlas_base"
+   ],
+   "min_rho": 1.0,
+   "per_seed": [
+    {
+     "seed": 0,
+     "rho": 1.0,
+     "best": "olmoearth_base",
+     "worst": "clay_large",
+     "best_in_top": true,
+     "worst_in_bottom": false
+    },
+    {
+     "seed": 1,
+     "rho": 1.0,
+     "best": "olmoearth_base",
+     "worst": "clay_large",
+     "best_in_top": true,
+     "worst_in_bottom": false
+    },
+    {
+     "seed": 2,
+     "rho": 1.0,
+     "best": "olmoearth_base",
+     "worst": "clay_large",
+     "best_in_top": true,
+     "worst_in_bottom": false
+    },
+    {
+     "seed": 3,
+     "rho": 1.0,
+     "best": "olmoearth_base",
+     "worst": "clay_large",
+     "best_in_top": true,
+     "worst_in_bottom": false
+    },
+    {
+     "seed": 4,
+     "rho": 1.0,
+     "best": "olmoearth_base",
+     "worst": "clay_large",
+     "best_in_top": true,
+     "worst_in_bottom": false
+    },
+    {
+     "seed": 5,
+     "rho": 1.0,
+     "best": "olmoearth_base",
+     "worst": "clay_large",
+     "best_in_top": true,
+     "worst_in_bottom": false
+    },
+    {
+     "seed": 6,
+     "rho": 1.0,
+     "best": "olmoearth_base",
+     "worst": "clay_large",
+     "best_in_top": true,
+     "worst_in_bottom": false
+    },
+    {
+     "seed": 7,
+     "rho": 1.0,
+     "best": "olmoearth_base",
+     "worst": "clay_large",
+     "best_in_top": true,
+     "worst_in_bottom": false
+    },
+    {
+     "seed": 8,
+     "rho": 1.0,
+     "best": "olmoearth_base",
+     "worst": "clay_large",
+     "best_in_top": true,
+     "worst_in_bottom": false
+    },
+    {
+     "seed": 9,
+     "rho": 1.0,
+     "best": "olmoearth_base",
+     "worst": "clay_large",
+     "best_in_top": true,
+     "worst_in_bottom": false
+    }
+   ],
+   "headroom_seed0": {
+    "clay_large": 0.5894702767305815,
+    "copernicusfm": 0.6204561708705782,
+    "olmoearth_base": 0.6799869670764211
+   },
+   "headroom_recorded": {
+    "anysat": 0.5663758821267477,
+    "clay_large": 0.5894702767305815,
+    "panopticon": 0.5849266160491398,
+    "olmoearth_tiny": 0.6482816428529925,
+    "olmoearth_nano": 0.6538491968337241,
+    "olmoearth_large": 0.6930521982233451,
+    "galileo_tiny": 0.6524159913164334,
+    "galileo_nano": 0.6073109475461778,
+    "galileo_base": 0.6801633312960305,
+    "croma_base": 0.6580717202335331,
+    "croma_large": 0.6690834464594277,
+    "terramind_base": 0.6161512040502284,
+    "terramind_large": 0.6748636425725418,
+    "satlas_base": 0.5514582233799528,
+    "copernicusfm": 0.6204561708705782,
+    "olmoearth_base": 0.6799869670764211
+   },
+   "not_comparable_to_record": [
+    "copernicusfm"
+   ]
   }
  },
  "estimation": {

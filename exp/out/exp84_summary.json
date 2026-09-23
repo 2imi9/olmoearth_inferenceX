@@ -21,7 +21,1485 @@
   ],
   "seconds": 2
  },
- "per_encoder": {},
+ "per_encoder": {
+  "clay_large": [
+   {
+    "seed": 0,
+    "n_tasks": 24,
+    "rho_accuracy_auroc": 0.4078260869565217,
+    "rho_accuracy_lead": -0.2182608695652174,
+    "wins": 24,
+    "losses": 0,
+    "sign_p": 5.960464477539063e-08,
+    "losses_on": [],
+    "sensor_range": 0.07211593508550829,
+    "groups": {
+     "sensor": {
+      "S2": {
+       "median_lead": 0.0991274324280067,
+       "n": 12,
+       "wins": 12
+      },
+      "Landsat": {
+       "median_lead": 0.11215526342543225,
+       "n": 3,
+       "wins": 3
+      },
+      "S1+S2": {
+       "median_lead": 0.171243367513515,
+       "n": 4,
+       "wins": 4
+      },
+      "S1": {
+       "median_lead": 0.13557220537094106,
+       "n": 5,
+       "wins": 5
+      }
+     },
+     "size": {
+      "<=1000": {
+       "median_lead": 0.0809612584857266,
+       "n": 7,
+       "wins": 7
+      },
+      "<=306": {
+       "median_lead": 0.14814951508586732,
+       "n": 6,
+       "wins": 6
+      },
+      ">1000": {
+       "median_lead": 0.13557220537094106,
+       "n": 11,
+       "wins": 11
+      }
+     },
+     "classes": {
+      "6-10": {
+       "median_lead": 0.14300518100849627,
+       "n": 10,
+       "wins": 10
+      },
+      "2": {
+       "median_lead": 0.07999477332277047,
+       "n": 8,
+       "wins": 8
+      },
+      ">=12": {
+       "median_lead": 0.13619347905858326,
+       "n": 6,
+       "wins": 6
+      }
+     }
+    },
+    "min_lead": 0.000737602578081975
+   },
+   {
+    "seed": 1,
+    "n_tasks": 24,
+    "rho_accuracy_auroc": 0.4208695652173912,
+    "rho_accuracy_lead": -0.2426086956521738,
+    "wins": 24,
+    "losses": 0,
+    "sign_p": 5.960464477539063e-08,
+    "losses_on": [],
+    "sensor_range": 0.07016044324270881,
+    "groups": {
+     "sensor": {
+      "S2": {
+       "median_lead": 0.10047090708101022,
+       "n": 12,
+       "wins": 12
+      },
+      "Landsat": {
+       "median_lead": 0.11643052293377179,
+       "n": 3,
+       "wins": 3
+      },
+      "S1+S2": {
+       "median_lead": 0.17063135032371904,
+       "n": 4,
+       "wins": 4
+      },
+      "S1": {
+       "median_lead": 0.1360923699770485,
+       "n": 5,
+       "wins": 5
+      }
+     },
+     "size": {
+      "<=1000": {
+       "median_lead": 0.08109252499564809,
+       "n": 7,
+       "wins": 7
+      },
+      "<=306": {
+       "median_lead": 0.13890587354710476,
+       "n": 6,
+       "wins": 6
+      },
+      ">1000": {
+       "median_lead": 0.1360923699770485,
+       "n": 11,
+       "wins": 11
+      }
+     },
+     "classes": {
+      "6-10": {
+       "median_lead": 0.13349778288045205,
+       "n": 10,
+       "wins": 10
+      },
+      "2": {
+       "median_lead": 0.08307860680571116,
+       "n": 8,
+       "wins": 8
+      },
+      ">=12": {
+       "median_lead": 0.13639238095595144,
+       "n": 6,
+       "wins": 6
+      }
+     }
+    },
+    "min_lead": 0.0026039511966037265
+   },
+   {
+    "seed": 2,
+    "n_tasks": 24,
+    "rho_accuracy_auroc": 0.4199999999999999,
+    "rho_accuracy_lead": -0.33999999999999986,
+    "wins": 21,
+    "losses": 3,
+    "sign_p": 0.0001385807991027832,
+    "losses_on": [
+     {
+      "task": "nandi_sentinel1",
+      "n_units": 825,
+      "accuracy": 0.27515151515151515,
+      "lead": -0.0009151433720643309
+     },
+     {
+      "task": "cropharvest_Togo_12_sentinel1",
+      "n_units": 306,
+      "accuracy": 0.7647058823529411,
+      "lead": -0.027249514549668216
+     },
+     {
+      "task": "cropharvest_Togo_12_sentinel2",
+      "n_units": 306,
+      "accuracy": 0.738562091503268,
+      "lead": -0.0056712656432550135
+     }
+    ],
+    "sensor_range": 0.07059609488366496,
+    "groups": {
+     "sensor": {
+      "S2": {
+       "median_lead": 0.10000207984101113,
+       "n": 12,
+       "wins": 11
+      },
+      "Landsat": {
+       "median_lead": 0.11174537541001522,
+       "n": 3,
+       "wins": 3
+      },
+      "S1+S2": {
+       "median_lead": 0.1705981747246761,
+       "n": 4,
+       "wins": 4
+      },
+      "S1": {
+       "median_lead": 0.135229462663583,
+       "n": 5,
+       "wins": 3
+      }
+     },
+     "size": {
+      "<=1000": {
+       "median_lead": 0.0768682143584963,
+       "n": 7,
+       "wins": 6
+      },
+      "<=306": {
+       "median_lead": 0.13764900941765518,
+       "n": 6,
+       "wins": 4
+      },
+      ">1000": {
+       "median_lead": 0.135229462663583,
+       "n": 11,
+       "wins": 11
+      }
+     },
+     "classes": {
+      "6-10": {
+       "median_lead": 0.13303642541030308,
+       "n": 10,
+       "wins": 9
+      },
+      "2": {
+       "median_lead": 0.06195300052754647,
+       "n": 8,
+       "wins": 6
+      },
+      ">=12": {
+       "median_lead": 0.13601327793110318,
+       "n": 6,
+       "wins": 6
+      }
+     }
+    },
+    "min_lead": -0.027249514549668216
+   },
+   {
+    "seed": 3,
+    "n_tasks": 24,
+    "rho_accuracy_auroc": 0.408695652173913,
+    "rho_accuracy_lead": -0.3130434782608695,
+    "wins": 22,
+    "losses": 2,
+    "sign_p": 1.7940998077392578e-05,
+    "losses_on": [
+     {
+      "task": "nandi_sentinel1",
+      "n_units": 825,
+      "accuracy": 0.2775757575757576,
+      "lead": -0.008205773597337318
+     },
+     {
+      "task": "cropharvest_Togo_12_sentinel1",
+      "n_units": 306,
+      "accuracy": 0.7679738562091503,
+      "lead": -0.04432761540037265
+     }
+    ],
+    "sensor_range": 0.06950198363205176,
+    "groups": {
+     "sensor": {
+      "S2": {
+       "median_lead": 0.09983473420911718,
+       "n": 12,
+       "wins": 12
+      },
+      "Landsat": {
+       "median_lead": 0.10893410649997123,
+       "n": 3,
+       "wins": 3
+      },
+      "S1+S2": {
+       "median_lead": 0.16933671784116894,
+       "n": 4,
+       "wins": 4
+      },
+      "S1": {
+       "median_lead": 0.13546182399781959,
+       "n": 5,
+       "wins": 3
+      }
+     },
+     "size": {
+      "<=1000": {
+       "median_lead": 0.07506431299761179,
+       "n": 7,
+       "wins": 6
+      },
+      "<=306": {
+       "median_lead": 0.1388852442925027,
+       "n": 6,
+       "wins": 5
+      },
+      ">1000": {
+       "median_lead": 0.12041793854608507,
+       "n": 11,
+       "wins": 11
+      }
+     },
+     "classes": {
+      "6-10": {
+       "median_lead": 0.12364151853029944,
+       "n": 10,
+       "wins": 9
+      },
+      "2": {
+       "median_lead": 0.06221242274866244,
+       "n": 8,
+       "wins": 7
+      },
+      ">=12": {
+       "median_lead": 0.13603298269242314,
+       "n": 6,
+       "wins": 6
+      }
+     }
+    },
+    "min_lead": -0.04432761540037265
+   },
+   {
+    "seed": 4,
+    "n_tasks": 24,
+    "rho_accuracy_auroc": 0.40434782608695646,
+    "rho_accuracy_lead": -0.3565217391304346,
+    "wins": 22,
+    "losses": 2,
+    "sign_p": 1.7940998077392578e-05,
+    "losses_on": [
+     {
+      "task": "nandi_sentinel1",
+      "n_units": 825,
+      "accuracy": 0.2739393939393939,
+      "lead": -0.003232855898013587
+     },
+     {
+      "task": "cropharvest_Togo_12_sentinel1",
+      "n_units": 306,
+      "accuracy": 0.7581699346405228,
+      "lead": -0.04123019744277662
+     }
+    ],
+    "sensor_range": 0.0810691179520359,
+    "groups": {
+     "sensor": {
+      "S2": {
+       "median_lead": 0.09528971971766349,
+       "n": 12,
+       "wins": 12
+      },
+      "Landsat": {
+       "median_lead": 0.11228417097187451,
+       "n": 3,
+       "wins": 3
+      },
+      "S1+S2": {
+       "median_lead": 0.1763588376696994,
+       "n": 4,
+       "wins": 4
+      },
+      "S1": {
+       "median_lead": 0.1361110743966171,
+       "n": 5,
+       "wins": 3
+      }
+     },
+     "size": {
+      "<=1000": {
+       "median_lead": 0.07607706522216454,
+       "n": 7,
+       "wins": 6
+      },
+      "<=306": {
+       "median_lead": 0.12575918863049265,
+       "n": 6,
+       "wins": 5
+      },
+      ">1000": {
+       "median_lead": 0.1361110743966171,
+       "n": 11,
+       "wins": 11
+      }
+     },
+     "classes": {
+      "6-10": {
+       "median_lead": 0.12856775204608278,
+       "n": 10,
+       "wins": 9
+      },
+      "2": {
+       "median_lead": 0.062318442977778374,
+       "n": 8,
+       "wins": 7
+      },
+      ">=12": {
+       "median_lead": 0.13655718514255402,
+       "n": 6,
+       "wins": 6
+      }
+     }
+    },
+    "min_lead": -0.04123019744277662
+   },
+   {
+    "seed": 5,
+    "n_tasks": 24,
+    "rho_accuracy_auroc": 0.41826086956521735,
+    "rho_accuracy_lead": -0.33739130434782594,
+    "wins": 21,
+    "losses": 3,
+    "sign_p": 0.0001385807991027832,
+    "losses_on": [
+     {
+      "task": "nandi_sentinel1",
+      "n_units": 825,
+      "accuracy": 0.2727272727272727,
+      "lead": -0.004133288480304365
+     },
+     {
+      "task": "cropharvest_Togo_12_sentinel1",
+      "n_units": 306,
+      "accuracy": 0.7581699346405228,
+      "lead": -0.039107097697765186
+     },
+     {
+      "task": "cropharvest_Togo_12_sentinel2",
+      "n_units": 306,
+      "accuracy": 0.7091503267973855,
+      "lead": -0.006344438426795135
+     }
+    ],
+    "sensor_range": 0.07139255425140857,
+    "groups": {
+     "sensor": {
+      "S2": {
+       "median_lead": 0.09971877636099287,
+       "n": 12,
+       "wins": 11
+      },
+      "Landsat": {
+       "median_lead": 0.10389463137164703,
+       "n": 3,
+       "wins": 3
+      },
+      "S1+S2": {
+       "median_lead": 0.17111133061240144,
+       "n": 4,
+       "wins": 4
+      },
+      "S1": {
+       "median_lead": 0.1362901764230839,
+       "n": 5,
+       "wins": 3
+      }
+     },
+     "size": {
+      "<=1000": {
+       "median_lead": 0.07833213783619244,
+       "n": 7,
+       "wins": 6
+      },
+      "<=306": {
+       "median_lead": 0.1425694164122469,
+       "n": 6,
+       "wins": 4
+      },
+      ">1000": {
+       "median_lead": 0.1362901764230839,
+       "n": 11,
+       "wins": 11
+      }
+     },
+     "classes": {
+      "6-10": {
+       "median_lead": 0.13767924981556057,
+       "n": 10,
+       "wins": 9
+      },
+      "2": {
+       "median_lead": 0.062368159616328925,
+       "n": 8,
+       "wins": 6
+      },
+      ">=12": {
+       "median_lead": 0.13658571062178088,
+       "n": 6,
+       "wins": 6
+      }
+     }
+    },
+    "min_lead": -0.039107097697765186
+   },
+   {
+    "seed": 6,
+    "n_tasks": 24,
+    "rho_accuracy_auroc": 0.41043478260869565,
+    "rho_accuracy_lead": -0.31826086956521726,
+    "wins": 22,
+    "losses": 2,
+    "sign_p": 1.7940998077392578e-05,
+    "losses_on": [
+     {
+      "task": "nandi_sentinel1",
+      "n_units": 825,
+      "accuracy": 0.27636363636363637,
+      "lead": -0.0040489353879189505
+     },
+     {
+      "task": "cropharvest_Togo_12_sentinel1",
+      "n_units": 306,
+      "accuracy": 0.761437908496732,
+      "lead": -0.04220630359548111
+     }
+    ],
+    "sensor_range": 0.0749620207293751,
+    "groups": {
+     "sensor": {
+      "S2": {
+       "median_lead": 0.1002556769883294,
+       "n": 12,
+       "wins": 12
+      },
+      "Landsat": {
+       "median_lead": 0.11085544960512866,
+       "n": 3,
+       "wins": 3
+      },
+      "S1+S2": {
+       "median_lead": 0.1752176977177045,
+       "n": 4,
+       "wins": 4
+      },
+      "S1": {
+       "median_lead": 0.13627079604889078,
+       "n": 5,
+       "wins": 3
+      }
+     },
+     "size": {
+      "<=1000": {
+       "median_lead": 0.07551074441905666,
+       "n": 7,
+       "wins": 6
+      },
+      "<=306": {
+       "median_lead": 0.1429039127915284,
+       "n": 6,
+       "wins": 5
+      },
+      ">1000": {
+       "median_lead": 0.13627079604889078,
+       "n": 11,
+       "wins": 11
+      }
+     },
+     "classes": {
+      "6-10": {
+       "median_lead": 0.13927002375143427,
+       "n": 10,
+       "wins": 9
+      },
+      "2": {
+       "median_lead": 0.06225559465019982,
+       "n": 8,
+       "wins": 7
+      },
+      ">=12": {
+       "median_lead": 0.13659301265683477,
+       "n": 6,
+       "wins": 6
+      }
+     }
+    },
+    "min_lead": -0.04220630359548111
+   },
+   {
+    "seed": 7,
+    "n_tasks": 24,
+    "rho_accuracy_auroc": 0.3683409523909037,
+    "rho_accuracy_lead": -0.3113720447601972,
+    "wins": 22,
+    "losses": 2,
+    "sign_p": 1.7940998077392578e-05,
+    "losses_on": [
+     {
+      "task": "nandi_sentinel1",
+      "n_units": 825,
+      "accuracy": 0.2739393939393939,
+      "lead": -0.011684128836869978
+     },
+     {
+      "task": "cropharvest_Togo_12_sentinel1",
+      "n_units": 306,
+      "accuracy": 0.7647058823529411,
+      "lead": -0.03615522663129035
+     }
+    ],
+    "sensor_range": 0.07294852841336977,
+    "groups": {
+     "sensor": {
+      "S2": {
+       "median_lead": 0.10032862045377114,
+       "n": 12,
+       "wins": 12
+      },
+      "Landsat": {
+       "median_lead": 0.11499379518003044,
+       "n": 3,
+       "wins": 3
+      },
+      "S1+S2": {
+       "median_lead": 0.1732771488671409,
+       "n": 4,
+       "wins": 4
+      },
+      "S1": {
+       "median_lead": 0.13580040359053225,
+       "n": 5,
+       "wins": 3
+      }
+     },
+     "size": {
+      "<=1000": {
+       "median_lead": 0.07657008438423402,
+       "n": 7,
+       "wins": 6
+      },
+      "<=306": {
+       "median_lead": 0.14331144067950718,
+       "n": 6,
+       "wins": 5
+      },
+      ">1000": {
+       "median_lead": 0.13580040359053225,
+       "n": 11,
+       "wins": 11
+      }
+     },
+     "classes": {
+      "6-10": {
+       "median_lead": 0.13736803285961968,
+       "n": 10,
+       "wins": 9
+      },
+      "2": {
+       "median_lead": 0.0626568674665461,
+       "n": 8,
+       "wins": 7
+      },
+      ">=12": {
+       "median_lead": 0.1363480540353473,
+       "n": 6,
+       "wins": 6
+      }
+     }
+    },
+    "min_lead": -0.03615522663129035
+   },
+   {
+    "seed": 8,
+    "n_tasks": 24,
+    "rho_accuracy_auroc": 0.408695652173913,
+    "rho_accuracy_lead": -0.2643478260869564,
+    "wins": 23,
+    "losses": 1,
+    "sign_p": 1.4901161193847656e-06,
+    "losses_on": [
+     {
+      "task": "nandi_sentinel1",
+      "n_units": 825,
+      "accuracy": 0.2836363636363637,
+      "lead": -0.006752053075682829
+     }
+    ],
+    "sensor_range": 0.0711552686456367,
+    "groups": {
+     "sensor": {
+      "S2": {
+       "median_lead": 0.10031493314376921,
+       "n": 12,
+       "wins": 12
+      },
+      "Landsat": {
+       "median_lead": 0.10526498869802711,
+       "n": 3,
+       "wins": 3
+      },
+      "S1+S2": {
+       "median_lead": 0.17147020178940592,
+       "n": 4,
+       "wins": 4
+      },
+      "S1": {
+       "median_lead": 0.13580089618780267,
+       "n": 5,
+       "wins": 4
+      }
+     },
+     "size": {
+      "<=1000": {
+       "median_lead": 0.08085299197891055,
+       "n": 7,
+       "wins": 6
+      },
+      "<=306": {
+       "median_lead": 0.1354524408440837,
+       "n": 6,
+       "wins": 6
+      },
+      ">1000": {
+       "median_lead": 0.13580089618780267,
+       "n": 11,
+       "wins": 11
+      }
+     },
+     "classes": {
+      "6-10": {
+       "median_lead": 0.13430530635094787,
+       "n": 10,
+       "wins": 9
+      },
+      "2": {
+       "median_lead": 0.08273604557372008,
+       "n": 8,
+       "wins": 8
+      },
+      ">=12": {
+       "median_lead": 0.1363447949465293,
+       "n": 6,
+       "wins": 6
+      }
+     }
+    },
+    "min_lead": -0.006752053075682829
+   },
+   {
+    "seed": 9,
+    "n_tasks": 24,
+    "rho_accuracy_auroc": 0.3947826086956522,
+    "rho_accuracy_lead": -0.34521739130434775,
+    "wins": 21,
+    "losses": 3,
+    "sign_p": 0.0001385807991027832,
+    "losses_on": [
+     {
+      "task": "nandi_sentinel1",
+      "n_units": 825,
+      "accuracy": 0.2739393939393939,
+      "lead": -6.556479987884778e-05
+     },
+     {
+      "task": "cropharvest_Togo_12_sentinel1",
+      "n_units": 306,
+      "accuracy": 0.7581699346405228,
+      "lead": -0.031113042468328106
+     },
+     {
+      "task": "cropharvest_Togo_12_sentinel2",
+      "n_units": 306,
+      "accuracy": 0.7450980392156863,
+      "lead": -0.002858421522943605
+     }
+    ],
+    "sensor_range": 0.07112504406351311,
+    "groups": {
+     "sensor": {
+      "S2": {
+       "median_lead": 0.09962099550450204,
+       "n": 12,
+       "wins": 11
+      },
+      "Landsat": {
+       "median_lead": 0.10438832417674968,
+       "n": 3,
+       "wins": 3
+      },
+      "S1+S2": {
+       "median_lead": 0.17074603956801515,
+       "n": 4,
+       "wins": 4
+      },
+      "S1": {
+       "median_lead": 0.1358752018212938,
+       "n": 5,
+       "wins": 3
+      }
+     },
+     "size": {
+      "<=1000": {
+       "median_lead": 0.0778772506989687,
+       "n": 7,
+       "wins": 6
+      },
+      "<=306": {
+       "median_lead": 0.13925115882834657,
+       "n": 6,
+       "wins": 4
+      },
+      ">1000": {
+       "median_lead": 0.1358752018212938,
+       "n": 11,
+       "wins": 11
+      }
+     },
+     "classes": {
+      "6-10": {
+       "median_lead": 0.13469713826990307,
+       "n": 10,
+       "wins": 9
+      },
+      "2": {
+       "median_lead": 0.06326518089441487,
+       "n": 8,
+       "wins": 6
+      },
+      ">=12": {
+       "median_lead": 0.13644416276081717,
+       "n": 6,
+       "wins": 6
+      }
+     }
+    },
+    "min_lead": -0.031113042468328106
+   }
+  ],
+  "copernicusfm": [
+   {
+    "seed": 0,
+    "n_tasks": 21,
+    "rho_accuracy_auroc": 0.4454545454545454,
+    "rho_accuracy_lead": -0.47402597402597396,
+    "wins": 21,
+    "losses": 0,
+    "sign_p": 4.76837158203125e-07,
+    "losses_on": [],
+    "sensor_range": 0.07596274341546463,
+    "groups": {
+     "sensor": {
+      "S2": {
+       "median_lead": 0.11354665419124318,
+       "n": 12,
+       "wins": 12
+      },
+      "S1+S2": {
+       "median_lead": 0.08888858638309108,
+       "n": 4,
+       "wins": 4
+      },
+      "S1": {
+       "median_lead": 0.1648513297985557,
+       "n": 5,
+       "wins": 5
+      }
+     },
+     "size": {
+      "<=1000": {
+       "median_lead": 0.07970534880145676,
+       "n": 5,
+       "wins": 5
+      },
+      "<=306": {
+       "median_lead": 0.1648513297985557,
+       "n": 5,
+       "wins": 5
+      },
+      ">1000": {
+       "median_lead": 0.12733759600767852,
+       "n": 11,
+       "wins": 11
+      }
+     },
+     "classes": {
+      "6-10": {
+       "median_lead": 0.11354665419124318,
+       "n": 8,
+       "wins": 8
+      },
+      "2": {
+       "median_lead": 0.09159918975067231,
+       "n": 8,
+       "wins": 8
+      },
+      ">=12": {
+       "median_lead": 0.1323669100338911,
+       "n": 5,
+       "wins": 5
+      }
+     }
+    },
+    "min_lead": 0.0007085071494540574
+   },
+   {
+    "seed": 1,
+    "n_tasks": 21,
+    "rho_accuracy_auroc": 0.4376623376623376,
+    "rho_accuracy_lead": -0.43116883116883103,
+    "wins": 21,
+    "losses": 0,
+    "sign_p": 4.76837158203125e-07,
+    "losses_on": [],
+    "sensor_range": 0.0948088553002954,
+    "groups": {
+     "sensor": {
+      "S2": {
+       "median_lead": 0.11274355247988782,
+       "n": 12,
+       "wins": 12
+      },
+      "S1+S2": {
+       "median_lead": 0.0924293653013242,
+       "n": 4,
+       "wins": 4
+      },
+      "S1": {
+       "median_lead": 0.1872382206016196,
+       "n": 5,
+       "wins": 5
+      }
+     },
+     "size": {
+      "<=1000": {
+       "median_lead": 0.0763593428028756,
+       "n": 5,
+       "wins": 5
+      },
+      "<=306": {
+       "median_lead": 0.1872382206016196,
+       "n": 5,
+       "wins": 5
+      },
+      ">1000": {
+       "median_lead": 0.12744701375895867,
+       "n": 11,
+       "wins": 11
+      }
+     },
+     "classes": {
+      "6-10": {
+       "median_lead": 0.11274355247988782,
+       "n": 8,
+       "wins": 8
+      },
+      "2": {
+       "median_lead": 0.09704163664461488,
+       "n": 8,
+       "wins": 8
+      },
+      ">=12": {
+       "median_lead": 0.13104298583096752,
+       "n": 5,
+       "wins": 5
+      }
+     }
+    },
+    "min_lead": 0.008843296835479228
+   },
+   {
+    "seed": 2,
+    "n_tasks": 21,
+    "rho_accuracy_auroc": 0.451948051948052,
+    "rho_accuracy_lead": -0.538961038961039,
+    "wins": 20,
+    "losses": 1,
+    "sign_p": 1.049041748046875e-05,
+    "losses_on": [
+     {
+      "task": "cropharvest_Togo_12_sentinel1",
+      "n_units": 306,
+      "accuracy": 0.7810457516339869,
+      "lead": -0.021110514675512906
+     }
+    ],
+    "sensor_range": 0.04319434091258721,
+    "groups": {
+     "sensor": {
+      "S2": {
+       "median_lead": 0.11865935022160885,
+       "n": 12,
+       "wins": 12
+      },
+      "S1+S2": {
+       "median_lead": 0.09099112764572696,
+       "n": 4,
+       "wins": 4
+      },
+      "S1": {
+       "median_lead": 0.13418546855831417,
+       "n": 5,
+       "wins": 4
+      }
+     },
+     "size": {
+      "<=1000": {
+       "median_lead": 0.07897767899418696,
+       "n": 5,
+       "wins": 5
+      },
+      "<=306": {
+       "median_lead": 0.13676713277681501,
+       "n": 5,
+       "wins": 4
+      },
+      ">1000": {
+       "median_lead": 0.1273894115028437,
+       "n": 11,
+       "wins": 11
+      }
+     },
+     "classes": {
+      "6-10": {
+       "median_lead": 0.12334821085859451,
+       "n": 8,
+       "wins": 8
+      },
+      "2": {
+       "median_lead": 0.052068889607167365,
+       "n": 8,
+       "wins": 7
+      },
+      ">=12": {
+       "median_lead": 0.13324245968546258,
+       "n": 5,
+       "wins": 5
+      }
+     }
+    },
+    "min_lead": -0.021110514675512906
+   },
+   {
+    "seed": 3,
+    "n_tasks": 21,
+    "rho_accuracy_auroc": 0.46963302249557975,
+    "rho_accuracy_lead": -0.4326080124233141,
+    "wins": 21,
+    "losses": 0,
+    "sign_p": 4.76837158203125e-07,
+    "losses_on": [],
+    "sensor_range": 0.10518053404135792,
+    "groups": {
+     "sensor": {
+      "S2": {
+       "median_lead": 0.11646638226703532,
+       "n": 12,
+       "wins": 12
+      },
+      "S1+S2": {
+       "median_lead": 0.08495005603908672,
+       "n": 4,
+       "wins": 4
+      },
+      "S1": {
+       "median_lead": 0.19013059008044464,
+       "n": 5,
+       "wins": 5
+      }
+     },
+     "size": {
+      "<=1000": {
+       "median_lead": 0.06906295112703835,
+       "n": 5,
+       "wins": 5
+      },
+      "<=306": {
+       "median_lead": 0.19013059008044464,
+       "n": 5,
+       "wins": 5
+      },
+      ">1000": {
+       "median_lead": 0.1286736325749419,
+       "n": 11,
+       "wins": 11
+      }
+     },
+     "classes": {
+      "6-10": {
+       "median_lead": 0.11646638226703532,
+       "n": 8,
+       "wins": 8
+      },
+      "2": {
+       "median_lead": 0.09295698755621076,
+       "n": 8,
+       "wins": 8
+      },
+      ">=12": {
+       "median_lead": 0.1286736325749419,
+       "n": 5,
+       "wins": 5
+      }
+     }
+    },
+    "min_lead": 0.0021773123203935596
+   },
+   {
+    "seed": 4,
+    "n_tasks": 21,
+    "rho_accuracy_auroc": 0.48961038961038955,
+    "rho_accuracy_lead": -0.48311688311688306,
+    "wins": 21,
+    "losses": 0,
+    "sign_p": 4.76837158203125e-07,
+    "losses_on": [],
+    "sensor_range": 0.06627249997524129,
+    "groups": {
+     "sensor": {
+      "S2": {
+       "median_lead": 0.1080547109616653,
+       "n": 12,
+       "wins": 12
+      },
+      "S1+S2": {
+       "median_lead": 0.10804244742452598,
+       "n": 4,
+       "wins": 4
+      },
+      "S1": {
+       "median_lead": 0.17431494739976727,
+       "n": 5,
+       "wins": 5
+      }
+     },
+     "size": {
+      "<=1000": {
+       "median_lead": 0.060488950287585025,
+       "n": 5,
+       "wins": 5
+      },
+      "<=306": {
+       "median_lead": 0.17431494739976727,
+       "n": 5,
+       "wins": 5
+      },
+      ">1000": {
+       "median_lead": 0.12676932795588358,
+       "n": 11,
+       "wins": 11
+      }
+     },
+     "classes": {
+      "6-10": {
+       "median_lead": 0.1080547109616653,
+       "n": 8,
+       "wins": 8
+      },
+      "2": {
+       "median_lead": 0.11088105799490194,
+       "n": 8,
+       "wins": 8
+      },
+      ">=12": {
+       "median_lead": 0.13139958692673848,
+       "n": 5,
+       "wins": 5
+      }
+     }
+    },
+    "min_lead": 0.024145675945591683
+   },
+   {
+    "seed": 5,
+    "n_tasks": 21,
+    "rho_accuracy_auroc": 0.44235143612654193,
+    "rho_accuracy_lead": -0.4605391603725671,
+    "wins": 21,
+    "losses": 0,
+    "sign_p": 4.76837158203125e-07,
+    "losses_on": [],
+    "sensor_range": 0.06705050580621419,
+    "groups": {
+     "sensor": {
+      "S2": {
+       "median_lead": 0.11184224423962555,
+       "n": 12,
+       "wins": 12
+      },
+      "S1+S2": {
+       "median_lead": 0.10997456381612153,
+       "n": 4,
+       "wins": 4
+      },
+      "S1": {
+       "median_lead": 0.17702506962233572,
+       "n": 5,
+       "wins": 5
+      }
+     },
+     "size": {
+      "<=1000": {
+       "median_lead": 0.07130317186190849,
+       "n": 5,
+       "wins": 5
+      },
+      "<=306": {
+       "median_lead": 0.17702506962233572,
+       "n": 5,
+       "wins": 5
+      },
+      ">1000": {
+       "median_lead": 0.1259365690719942,
+       "n": 11,
+       "wins": 11
+      }
+     },
+     "classes": {
+      "6-10": {
+       "median_lead": 0.11184224423962555,
+       "n": 8,
+       "wins": 8
+      },
+      "2": {
+       "median_lead": 0.10983292216765701,
+       "n": 8,
+       "wins": 8
+      },
+      ">=12": {
+       "median_lead": 0.13210412469324723,
+       "n": 5,
+       "wins": 5
+      }
+     }
+    },
+    "min_lead": 0.02506946513484219
+   },
+   {
+    "seed": 6,
+    "n_tasks": 21,
+    "rho_accuracy_auroc": 0.4675324675324675,
+    "rho_accuracy_lead": -0.4519480519480519,
+    "wins": 21,
+    "losses": 0,
+    "sign_p": 4.76837158203125e-07,
+    "losses_on": [],
+    "sensor_range": 0.07535583520497055,
+    "groups": {
+     "sensor": {
+      "S2": {
+       "median_lead": 0.1127788596891834,
+       "n": 12,
+       "wins": 12
+      },
+      "S1+S2": {
+       "median_lead": 0.1119270175913454,
+       "n": 4,
+       "wins": 4
+      },
+      "S1": {
+       "median_lead": 0.18728285279631596,
+       "n": 5,
+       "wins": 5
+      }
+     },
+     "size": {
+      "<=1000": {
+       "median_lead": 0.07258622042654023,
+       "n": 5,
+       "wins": 5
+      },
+      "<=306": {
+       "median_lead": 0.18728285279631596,
+       "n": 5,
+       "wins": 5
+      },
+      ">1000": {
+       "median_lead": 0.12721310451101914,
+       "n": 11,
+       "wins": 11
+      }
+     },
+     "classes": {
+      "6-10": {
+       "median_lead": 0.1127788596891834,
+       "n": 8,
+       "wins": 8
+      },
+      "2": {
+       "median_lead": 0.11458495190280996,
+       "n": 8,
+       "wins": 8
+      },
+      ">=12": {
+       "median_lead": 0.13297389597896103,
+       "n": 5,
+       "wins": 5
+      }
+     }
+    },
+    "min_lead": 0.024050048964321245
+   },
+   {
+    "seed": 7,
+    "n_tasks": 21,
+    "rho_accuracy_auroc": 0.4636363636363636,
+    "rho_accuracy_lead": -0.42207792207792205,
+    "wins": 21,
+    "losses": 0,
+    "sign_p": 4.76837158203125e-07,
+    "losses_on": [],
+    "sensor_range": 0.09401726117096629,
+    "groups": {
+     "sensor": {
+      "S2": {
+       "median_lead": 0.11856649483434951,
+       "n": 12,
+       "wins": 12
+      },
+      "S1+S2": {
+       "median_lead": 0.08974103928695723,
+       "n": 4,
+       "wins": 4
+      },
+      "S1": {
+       "median_lead": 0.18375830045792352,
+       "n": 5,
+       "wins": 5
+      }
+     },
+     "size": {
+      "<=1000": {
+       "median_lead": 0.07026593962941775,
+       "n": 5,
+       "wins": 5
+      },
+      "<=306": {
+       "median_lead": 0.1515896186999899,
+       "n": 5,
+       "wins": 5
+      },
+      ">1000": {
+       "median_lead": 0.12650412906292094,
+       "n": 11,
+       "wins": 11
+      }
+     },
+     "classes": {
+      "6-10": {
+       "median_lead": 0.12520234390945412,
+       "n": 8,
+       "wins": 8
+      },
+      "2": {
+       "median_lead": 0.0932961834970987,
+       "n": 8,
+       "wins": 8
+      },
+      ">=12": {
+       "median_lead": 0.13092792179275192,
+       "n": 5,
+       "wins": 5
+      }
+     }
+    },
+    "min_lead": 0.004922338287807804
+   },
+   {
+    "seed": 8,
+    "n_tasks": 21,
+    "rho_accuracy_auroc": 0.5118545252095669,
+    "rho_accuracy_lead": -0.4371549434848204,
+    "wins": 21,
+    "losses": 0,
+    "sign_p": 4.76837158203125e-07,
+    "losses_on": [],
+    "sensor_range": 0.06758560245320681,
+    "groups": {
+     "sensor": {
+      "S2": {
+       "median_lead": 0.1186589152705003,
+       "n": 12,
+       "wins": 12
+      },
+      "S1+S2": {
+       "median_lead": 0.11304290356027687,
+       "n": 4,
+       "wins": 4
+      },
+      "S1": {
+       "median_lead": 0.18062850601348368,
+       "n": 5,
+       "wins": 5
+      }
+     },
+     "size": {
+      "<=1000": {
+       "median_lead": 0.06621488698303883,
+       "n": 5,
+       "wins": 5
+      },
+      "<=306": {
+       "median_lead": 0.18062850601348368,
+       "n": 5,
+       "wins": 5
+      },
+      ">1000": {
+       "median_lead": 0.12780440636586254,
+       "n": 11,
+       "wins": 11
+      }
+     },
+     "classes": {
+      "6-10": {
+       "median_lead": 0.11920609132913586,
+       "n": 8,
+       "wins": 8
+      },
+      "2": {
+       "median_lead": 0.11594761273262585,
+       "n": 8,
+       "wins": 8
+      },
+      ">=12": {
+       "median_lead": 0.13302685542236048,
+       "n": 5,
+       "wins": 5
+      }
+     }
+    },
+    "min_lead": 0.024814971670510704
+   },
+   {
+    "seed": 9,
+    "n_tasks": 21,
+    "rho_accuracy_auroc": 0.474179953557086,
+    "rho_accuracy_lead": -0.42806108136180765,
+    "wins": 21,
+    "losses": 0,
+    "sign_p": 4.76837158203125e-07,
+    "losses_on": [],
+    "sensor_range": 0.09099778175059893,
+    "groups": {
+     "sensor": {
+      "S2": {
+       "median_lead": 0.11758552007074516,
+       "n": 12,
+       "wins": 12
+      },
+      "S1+S2": {
+       "median_lead": 0.08828990266657226,
+       "n": 4,
+       "wins": 4
+      },
+      "S1": {
+       "median_lead": 0.1792876844171712,
+       "n": 5,
+       "wins": 5
+      }
+     },
+     "size": {
+      "<=1000": {
+       "median_lead": 0.06577073874146844,
+       "n": 5,
+       "wins": 5
+      },
+      "<=306": {
+       "median_lead": 0.1792876844171712,
+       "n": 5,
+       "wins": 5
+      },
+      ">1000": {
+       "median_lead": 0.1271272221558059,
+       "n": 11,
+       "wins": 11
+      }
+     },
+     "classes": {
+      "6-10": {
+       "median_lead": 0.11758552007074516,
+       "n": 8,
+       "wins": 8
+      },
+      "2": {
+       "median_lead": 0.09531373547652722,
+       "n": 8,
+       "wins": 8
+      },
+      ">=12": {
+       "median_lead": 0.1271272221558059,
+       "n": 5,
+       "wins": 5
+      }
+     }
+    },
+    "min_lead": 0.0031328290668534153
+   }
+  ]
+ },
  "disclosed_olmoearth_base": {
   "olmoearth_base": [
    {
@@ -881,11 +2359,12 @@
  "prereg": {
   "P1_confound_is_the_protocols": {
    "holds": false,
-   "encoders_graded": [],
+   "encoders_graded": [
+    "clay_large",
+    "copernicusfm"
+   ],
    "encoders_missing": [
     "anysat",
-    "clay_large",
-    "copernicusfm",
     "croma_base",
     "croma_large",
     "galileo_base",
@@ -899,28 +2378,150 @@
     "terramind_base",
     "terramind_large"
    ],
-   "failing": [],
-   "min_rho_auroc": null,
-   "max_rho_lead": null
+   "failing": [
+    [
+     "clay_large",
+     7,
+     0.368,
+     -0.311
+    ],
+    [
+     "clay_large",
+     9,
+     0.395,
+     -0.345
+    ]
+   ],
+   "min_rho_auroc": 0.3683409523909037,
+   "max_rho_lead": -0.2182608695652174
   },
   "P2_thin_cells_are_small_or_bad": {
    "holds": false,
-   "encoders_graded": [],
-   "n_losses": 0,
+   "encoders_graded": [
+    "clay_large",
+    "copernicusfm"
+   ],
+   "n_losses": 19,
    "losses_elsewhere": [],
-   "loss_tasks": []
+   "loss_tasks": [
+    "cropharvest_Togo_12_sentinel1",
+    "cropharvest_Togo_12_sentinel2",
+    "nandi_sentinel1"
+   ]
   },
   "P3_no_sensor_is_a_hole": {
    "holds": false,
-   "encoders_graded": [],
-   "failing": [],
-   "max_range": null
+   "encoders_graded": [
+    "clay_large",
+    "copernicusfm"
+   ],
+   "failing": [
+    [
+     "clay_large",
+     0,
+     0.0721
+    ],
+    [
+     "clay_large",
+     1,
+     0.0702
+    ],
+    [
+     "clay_large",
+     2,
+     0.0706
+    ],
+    [
+     "clay_large",
+     3,
+     0.0695
+    ],
+    [
+     "clay_large",
+     4,
+     0.0811
+    ],
+    [
+     "clay_large",
+     5,
+     0.0714
+    ],
+    [
+     "clay_large",
+     6,
+     0.075
+    ],
+    [
+     "clay_large",
+     7,
+     0.0729
+    ],
+    [
+     "clay_large",
+     8,
+     0.0712
+    ],
+    [
+     "clay_large",
+     9,
+     0.0711
+    ],
+    [
+     "copernicusfm",
+     0,
+     0.076
+    ],
+    [
+     "copernicusfm",
+     1,
+     0.0948
+    ],
+    [
+     "copernicusfm",
+     3,
+     0.1052
+    ],
+    [
+     "copernicusfm",
+     4,
+     0.0663
+    ],
+    [
+     "copernicusfm",
+     5,
+     0.0671
+    ],
+    [
+     "copernicusfm",
+     6,
+     0.0754
+    ],
+    [
+     "copernicusfm",
+     7,
+     0.094
+    ],
+    [
+     "copernicusfm",
+     8,
+     0.0676
+    ],
+    [
+     "copernicusfm",
+     9,
+     0.091
+    ]
+   ],
+   "max_range": 0.10518053404135792
   },
   "P4_bar_survives_holm": {
    "holds": false,
-   "encoders_graded": [],
+   "encoders_graded": [
+    "clay_large",
+    "copernicusfm"
+   ],
    "failing": [],
-   "max_adjusted_p": null
+   "max_adjusted_p": 0.0001385807991027832
   }
  }
 }
