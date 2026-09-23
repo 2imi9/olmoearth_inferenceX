@@ -3637,25 +3637,21 @@
     - {file: docs/results/comparisons.md, marker: model-assisted-coefficient-is-one}
 
 - id: trust-zone-guarantee-holds-on-other-encoders
-  statement: "On the seed-0 exports of Clay Large (24 tasks) and Copernicus-FM (21 tasks) the certified zone exceeded alpha on at most 0.075 and 0.082 of draws for the prefix rule and 0.005 and 0.004 for Bonferroni on every cell (bound 0.120); at 300 labels and alpha = half the error rate the prefix rule certified a zone on most draws on 10 of 21 and 12 of 19 tasks, median coverages 0.25 and 0.45 against oracle medians 0.40 and 0.50."
+  statement: "On the seed-0 exports of Clay Large (24 tasks), Copernicus-FM (21), AnySat (24) and CROMA Base (21) the certified zone exceeded alpha on at most 0.075, 0.082, 0.061 and 0.079 of draws for the prefix rule and at most 0.005 for Bonferroni on every cell (bound 0.120); at 300 labels and alpha = half the error rate the prefix rule certified a zone on most draws on 10 of 21, 12 of 19, 15 of 21 and 9 of 19 tasks, median coverages 0.25, 0.45, 0.25 and 0.50 against oracle medians 0.40, 0.50, 0.40 and 0.50."
   crosscheck: tests/test_trust_zone.py::test_the_guarantee_holds_exactly_on_a_monotone_population
   status: measured
   experiments: [exp80]
-  artifacts: [exp/out/exp80_zones/clay_large.json, exp/out/exp80_zones/copernicusfm.json]
+  artifacts: [exp/out/exp80_zones/clay_large.json, exp/out/exp80_zones/copernicusfm.json, exp/out/exp80_zones/anysat.json, exp/out/exp80_zones/croma_base.json]
   check: |-
-    (lambda C, F: (lambda cells:
+    (lambda D: (lambda cells, want:
       all(max(c['rules']['prefix']['violation_rate'] for c in cells[e]) <= 0.1201 and max(c['rules']['bonferroni']['violation_rate'] for c in cells[e]) <= 0.1201 for e in cells)
-      and round(max(c['rules']['prefix']['violation_rate'] for c in cells['clay']), 3) == 0.075 and round(max(c['rules']['prefix']['violation_rate'] for c in cells['cop']), 3) == 0.082
-      and round(max(c['rules']['bonferroni']['violation_rate'] for c in cells['clay']), 3) == 0.005 and round(max(c['rules']['bonferroni']['violation_rate'] for c in cells['cop']), 3) == 0.004
-      and C['prereg']['P3_the_guarantee_is_worth_having']['n_tasks_above_delta'] == 18 and C['prereg']['P3_the_guarantee_is_worth_having']['of'] == 21
-      and F['prereg']['P3_the_guarantee_is_worth_having']['n_tasks_above_delta'] == 15 and F['prereg']['P3_the_guarantee_is_worth_having']['of'] == 19
-      and C['prereg']['descriptive']['half_theta/B300']['prefix']['tasks_with_a_zone_on_most_draws'] == 10 and C['prereg']['descriptive']['half_theta/B300']['n_tasks'] == 21
-      and F['prereg']['descriptive']['half_theta/B300']['prefix']['tasks_with_a_zone_on_most_draws'] == 12 and F['prereg']['descriptive']['half_theta/B300']['n_tasks'] == 19
-      and C['prereg']['descriptive']['half_theta/B300']['prefix']['median_of_median_coverage'] == 0.25 and C['prereg']['descriptive']['half_theta/B300']['oracle_median'] == 0.4
-      and F['prereg']['descriptive']['half_theta/B300']['prefix']['median_of_median_coverage'] == 0.45 and F['prereg']['descriptive']['half_theta/B300']['oracle_median'] == 0.5
-    )({'clay': [c for r in C['tasks'].values() for c in r['cells'] if c['monotone'] is not None],
-       'cop': [c for r in F['tasks'].values() for c in r['cells'] if c['monotone'] is not None]})
-    )(A['exp/out/exp80_zones/clay_large.json'], A['exp/out/exp80_zones/copernicusfm.json'])
+      and all(round(max(c['rules']['prefix']['violation_rate'] for c in cells[e]), 3) == want[e][0] for e in cells)
+      and all(round(max(c['rules']['bonferroni']['violation_rate'] for c in cells[e]), 3) <= 0.005 for e in cells)
+      and all((D[e]['prereg']['descriptive']['half_theta/B300']['prefix']['tasks_with_a_zone_on_most_draws'], D[e]['prereg']['descriptive']['half_theta/B300']['n_tasks']) == want[e][1] for e in cells)
+      and all(D[e]['prereg']['descriptive']['half_theta/B300']['prefix']['median_of_median_coverage'] == want[e][2] and D[e]['prereg']['descriptive']['half_theta/B300']['oracle_median'] == want[e][3] for e in cells)
+    )({e: [c for r in D[e]['tasks'].values() for c in r['cells'] if c['monotone'] is not None] for e in D},
+      {'clay_large': (0.075, (10, 21), 0.25, 0.4), 'copernicusfm': (0.082, (12, 19), 0.45, 0.5), 'anysat': (0.061, (15, 21), 0.25, 0.4), 'croma_base': (0.079, (9, 19), 0.5, 0.5)})
+    )({e: A[f'exp/out/exp80_zones/{e}.json'] for e in ('clay_large', 'copernicusfm', 'anysat', 'croma_base')})
   cited_in:
     - {file: docs/results/comparisons.md, marker: trust-zone-guarantee-holds-on-other-encoders}
   note: >-
@@ -3663,29 +3659,40 @@
     counts are recomputed from the per-cell rows. Extended as further exports land.
 
 - id: cue-verification-holds-on-other-encoders
-  statement: "On the seed-0 exports of Clay Large and Copernicus-FM the boundary cue's enrichment runs from 1.26 and 1.30 (m-cashew-plant) to 8.9 and 10.0 (MADOS); the library value 3.5 lies outside the tile-clustered interval on 7 of 7 tasks for both; the conjunction of the two cues is purer than either on 7 of 7 for both; the low-confidence cue's share among errors equals exp74's recorded capture at 20% within 2e-3 on every task; and the seven tasks rank identically by enrichment under all three encoders, the three PASTIS arms taken as one."
+  statement: "On the seed-0 exports of Clay Large, Copernicus-FM, AnySat and CROMA Base the boundary cue's enrichment runs from 1.26, 1.30, 0.99 and 1.31 (m-cashew-plant) to 8.9, 10.0, 4.1 and 9.7 (MADOS); the library value 3.5 lies outside the tile-clustered interval on 7 of 7 tasks for three encoders and 6 of 7 for AnySat (inside on its MADOS, 2.80 to 6.31); the conjunction of the two cues is purer than either on 7 of 7 for three and 6 of 7 for AnySat; the low-confidence cue's share among errors equals exp74's recorded capture at 20% within 2e-3 on every task; and the seven tasks rank identically by enrichment under all five encoders, the three PASTIS arms taken as one. AnySat's cashew and SA-crop-type exports carry 16 x 16 windows per tile against 64 x 64 for the others; on its cashew map 0.966 of windows sit on a boundary, the enrichment's interval reaches 1.00, and the error rate inside the boundary set is 0.81 times the rate outside, while on every other cell of the four encoders it is at least 1.81 times."
   crosscheck: tests/test_exp82.py::test_the_tile_count_bootstrap_matches_the_window_bootstrap_on_mados
   status: measured
   experiments: [exp82]
-  artifacts: [exp/out/exp82_cues/clay_large.json, exp/out/exp82_cues/copernicusfm.json, exp/out/exp82_summary.json, exp/out/exp74_summary.json]
+  artifacts: [exp/out/exp82_cues/clay_large.json, exp/out/exp82_cues/copernicusfm.json, exp/out/exp82_cues/anysat.json, exp/out/exp82_cues/croma_base.json, exp/out/exp82_summary.json, exp/out/exp74_summary.json]
   check: |-
-    (lambda C, F, B, R: (lambda enr, L:
-      all(len(d['tasks']) == 7 for d in (C, F))
-      and round(min(enr['clay'].values()), 2) == 1.26 and round(min(enr['cop'].values()), 2) == 1.30
-      and round(max(enr['clay'].values()), 1) == 8.9 and round(max(enr['cop'].values()), 1) == 10.0
-      and all(not (v['cues']['boundary']['boot_lo'] <= L <= v['cues']['boundary']['boot_hi']) for d in (C, F) for v in d['tasks'].values())
-      and all(v['cues']['boundary_and_low_confidence']['precision'] > max(v['cues']['boundary']['precision'], v['cues']['low_confidence']['precision']) for d in (C, F) for v in d['tasks'].values())
-      and all(abs(v['cues']['low_confidence']['share_errors'] - R[e][t]['signals']['margin']['capture']['0.2']) <= 2e-3
-              for e, d in (('clay_large', C), ('copernicusfm', F)) for t, v in d['tasks'].items())
+    (lambda D, B, R: (lambda enr, L, rr, outside, purer:
+      all(len(d['tasks']) == 7 for d in D.values())
+      and [round(min(enr[e].values()), 2) for e in D] == [1.26, 1.30, 0.99, 1.31]
+      and [round(max(enr[e].values()), 1) for e in D] == [8.9, 10.0, 4.1, 9.7]
+      and [outside[e] for e in D] == [7, 7, 6, 7] and D['anysat']['tasks']['mados']['cues']['boundary']['boot_lo'] <= L <= D['anysat']['tasks']['mados']['cues']['boundary']['boot_hi']
+      and round(D['anysat']['tasks']['mados']['cues']['boundary']['boot_lo'], 2) == 2.80 and round(D['anysat']['tasks']['mados']['cues']['boundary']['boot_hi'], 2) == 6.31
+      and [purer[e] for e in D] == [7, 7, 6, 7] and not (D['anysat']['tasks']['m_cashew_plant']['cues']['boundary_and_low_confidence']['precision'] > D['anysat']['tasks']['m_cashew_plant']['cues']['low_confidence']['precision'])
+      and all(abs(v['cues']['low_confidence']['share_errors'] - R[e][t]['signals']['margin']['capture']['0.2']) <= 2e-3 for e, d in D.items() for t, v in d['tasks'].items())
       and all((lambda o: [o[0], o[4], o[5], o[6]] == ['m_cashew_plant', 'm_sa_crop_type', 'sen1floods11', 'mados']
                        and set(o[1:4]) == {'pastis_sentinel1', 'pastis_sentinel2', 'pastis_sentinel1_sentinel2'})(sorted(enr[e], key=enr[e].get)) for e in enr)
-    )({'clay': {t: v['cues']['boundary']['enrichment'] for t, v in C['tasks'].items()}, 'cop': {t: v['cues']['boundary']['enrichment'] for t, v in F['tasks'].items()},
-       'base': {t: v['cues']['boundary']['enrichment'] for t, v in B['tasks'].items()}}, 0.750 / 0.214)
-    )(A['exp/out/exp82_cues/clay_large.json'], A['exp/out/exp82_cues/copernicusfm.json'], A['exp/out/exp82_summary.json'], A['exp/out/exp74_summary.json']['results']['tasks'])
+      and D['anysat']['tasks']['m_cashew_plant']['n_units'] == 12800 and D['anysat']['tasks']['m_sa_crop_type']['n_units'] == 256000
+      and all(D[e]['tasks']['m_cashew_plant']['n_units'] == 204800 for e in ('clay_large', 'copernicusfm', 'croma_base'))
+      and round(D['anysat']['tasks']['m_cashew_plant']['cues']['boundary']['n_with_cue'] / D['anysat']['tasks']['m_cashew_plant']['n_units'], 3) == 0.966
+      and round(D['anysat']['tasks']['m_cashew_plant']['cues']['boundary']['boot_hi'], 2) == 1.00
+      and round(rr['anysat']['m_cashew_plant'], 2) == 0.81
+      and round(min(v for e in rr for t, v in rr[e].items() if not (e == 'anysat' and t == 'm_cashew_plant')), 2) == 1.81
+    )({e: {t: v['cues']['boundary']['enrichment'] for t, v in d['tasks'].items()} for e, d in list(D.items()) + [('base', B)]}, 0.750 / 0.214,
+      {e: {t: (lambda b: b['precision'] / ((b['n_errors'] - b['precision'] * b['n_with_cue']) / (b['n'] - b['n_with_cue'])))(v['cues']['boundary']) for t, v in d['tasks'].items()} for e, d in D.items()},
+      {e: sum(not (v['cues']['boundary']['boot_lo'] <= 0.750 / 0.214 <= v['cues']['boundary']['boot_hi']) for v in d['tasks'].values()) for e, d in D.items()},
+      {e: sum(v['cues']['boundary_and_low_confidence']['precision'] > max(v['cues']['boundary']['precision'], v['cues']['low_confidence']['precision']) for v in d['tasks'].values()) for e, d in D.items()})
+    )({e: A[f'exp/out/exp82_cues/{e}.json'] for e in ('clay_large', 'copernicusfm', 'anysat', 'croma_base')}, A['exp/out/exp82_summary.json'], A['exp/out/exp74_summary.json']['results']['tasks'])
   cited_in:
     - {file: docs/results/comparisons.md, marker: cue-verification-holds-on-other-encoders}
+    - {file: docs/Findings.md, marker: cue-verification-holds-on-other-encoders}
   note: >-
-    Descriptive, the same code as the graded Base run on each encoder's seed-0 export; extended as further exports land.
+    Descriptive, the same code as the graded Base run on each encoder's seed-0 export; extended as further exports
+    land. The window grid is the export's, so AnySat's coarser grid on the two m-* tasks is a property of its probe's
+    patch geometry, not of the map's content.
 
 - id: per-class-intervals-hold-on-other-encoders
   statement: "On the classification tasks of Clay Large (17 tasks, 323 graded cells) and Copernicus-FM (14 tasks, 274 cells), the Wald per-class interval covers below 0.93 on 39 and 62 cells (worst 0.152 and 0.316) and the shipped Wilson-on-effective-n form on 11 and 15, none below 0.858; the confidence design widens the per-class user's-accuracy interval on 2 of 14 and 2 of 12 tasks; the adjusted share's exclusion rates fail no cell."

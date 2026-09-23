@@ -2377,12 +2377,13 @@ monotone tasks was 10, not 11, and its `b_min` floor is exact only in the large-
 nearly all of whose windows are labelled the exact test is stronger, so the cut is conservative).
 
 **On other encoders (added as exp79's exports land).** The same run on the seed-0 exports of Clay Large (24
-tasks) and Copernicus-FM (21): the guarantee held on every cell there too (largest violation 0.075 and 0.082
-for the prefix rule, 0.005 and 0.004 for Bonferroni), the plug-in violated its own α on 18 of 21 and 15 of 19
-tasks, and at 300 labels and α = half the map's error rate the prefix rule certified a zone on most draws on 10
-of 21 and 12 of 19 tasks with median certified coverages of 0.25 and 0.45 against oracle medians of 0.40 and
-0.50. What the guarantee buys is set by the map's quality, not by the encoder's family; the guarantee itself does
-not move. <!-- claim:trust-zone-guarantee-holds-on-other-encoders -->
+tasks), Copernicus-FM (21), AnySat (24) and CROMA Base (21): the guarantee held on every cell there too (largest
+violation 0.075, 0.082, 0.061 and 0.079 for the prefix rule, at most 0.005 for Bonferroni), the plug-in violated
+its own α on 18 of 21, 15 of 19, 18 of 21 and 15 of 19 tasks, and at 300 labels and α = half the map's error rate
+the prefix rule certified a zone on most draws on 10 of 21, 12 of 19, 15 of 21 and 9 of 19 tasks with median
+certified coverages of 0.25, 0.45, 0.25 and 0.50 against oracle medians of 0.40, 0.50, 0.40 and 0.50. What the
+guarantee buys is set by the map's quality, not by the encoder's family; the guarantee itself does not move.
+<!-- claim:trust-zone-guarantee-holds-on-other-encoders -->
 
 **What this changes.** The tool can now say, from 300 random labels, "the 50% most confident windows of this map
 are wrong at most half as often as the map overall, and that claim fails on at most one draw in ten", and can
@@ -2442,12 +2443,19 @@ MADOS has 841 labelled tiles of 1,310; the tile draws are shared across cues wit
 two code paths of `_boundary_valid` disagreeing on the indicator's value at tile edges, fixed the same night
 without moving any cue set.
 
-**On other encoders (added as exp79's exports land).** The same run on the seed-0 exports of Clay Large and
-Copernicus-FM: the boundary enrichment runs from 1.26 and 1.30 on m-cashew-plant to 8.9 and 10.0 on MADOS, the
-library value lies outside the interval on 7 of 7 tasks for both, the conjunction is purer than either cue on
-7 of 7 for both, and the low-confidence cue reproduces exp74's recorded capture at 20% on every task. The ordering
-of tasks by enrichment is the same under all three encoders (the three PASTIS arms taken as one): fragmentation is
-a property of the map.
+**On other encoders (added as exp79's exports land).** The same run on the seed-0 exports of Clay Large,
+Copernicus-FM, AnySat and CROMA Base: the boundary enrichment runs from 1.26, 1.30, 0.99 and 1.31 on
+m-cashew-plant to 8.9, 10.0, 4.1 and 9.7 on MADOS; the library value lies outside the interval on 7 of 7 tasks
+for three encoders and 6 of 7 for AnySat (its MADOS interval, 2.80 to 6.31, contains 3.5); the conjunction is purer
+than either cue on 7 of 7 for three and 6 of 7 for AnySat; and the low-confidence cue reproduces exp74's recorded
+capture at 20% on every task. The ordering of tasks by enrichment is the same under all five encoders (the three
+PASTIS arms taken as one): fragmentation is a property of the map. AnySat's exception is the ceiling in its
+extreme form. Its probe's patch geometry gives the two m-* tasks a 16 × 16 window grid per tile where the others
+have 64 × 64, so on its cashew map 97% of windows sit on a boundary; there the cue's enrichment is 0.99 with an
+interval reaching 1.00, the error rate inside the boundary set is 0.81 times the rate outside (at least 1.81 times
+on every other cell of the four encoders), and the conjunction is the low-confidence cue and no purer than it. The
+boundary cue is a property of the window grid as much as of the map: at a grain where nearly every window
+touches a boundary it carries nothing, and `explain` now says so when a map's prevalence is that high.
 <!-- claim:cue-verification-holds-on-other-encoders -->
 
 **What this changes.** `explain` no longer quotes Bolivia's shares as if they were the map's: the library carries

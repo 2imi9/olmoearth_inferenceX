@@ -73,6 +73,9 @@ BOLIVIA = "Sen1Floods11 Bolivia hand labels"
 # moves it is the map's fragmentation, and the Bolivia shares above are one point of that range.
 EXP82_BOUNDARY = {"mados": (0.5436, 0.0669), "sen1floods11": (0.4535, 0.1147), "pastis_sentinel1": (0.7766, 0.4354), "pastis_sentinel2": (0.7869, 0.4700), "pastis_sentinel1_sentinel2": (0.7849, 0.4659), "m_cashew_plant": (0.8742, 0.7064), "m_sa_crop_type": (0.7070, 0.2617)}
 EXP82_LOW_CONFIDENCE = {"mados": (0.7829, 0.1537), "sen1floods11": (0.6954, 0.1543), "pastis_sentinel1": (0.4188, 0.1131), "pastis_sentinel2": (0.5307, 0.1224), "pastis_sentinel1_sentinel2": (0.5287, 0.1205), "m_cashew_plant": (0.3302, 0.1307), "m_sa_crop_type": (0.4052, 0.0943)}
+# exp82 on other encoders: above this boundary prevalence the cue is nearly universal and the enrichment's ceiling
+# (1 - e)/(p - e) sits at 1; the one suite export there (AnySat's cashew map, 0.966) enriched 0.99
+BOUNDARY_SATURATED = 0.9
 WC_DISAGREE = "WorldCover disagreements vs agreements, 27 rule scenes"
 WC_DISAGREE_23 = "WorldCover disagreements vs agreements, the 24 rule scenes with at least 8 errors"
 
@@ -201,6 +204,14 @@ def explain_review_set(assessment, cues=None, budgets=None, library=CUES, low_co
             f"{100 * p:.0f}% of this map's windows sit on a prediction boundary; on the suite's seven segmentation tasks the "
             f"cue's enrichment ran from {hi:.1f}x on a map with 10% boundary windows to {lo:.1f}x at 76%, while the error rate "
             f"inside the boundary set stayed at least 2.1 times the rate outside on every task (exp82)")
+        if p >= BOUNDARY_SATURATED:
+            # exp82 on AnySat's cashew export (a window grid four times coarser than the others'): 97% of windows on
+            # a boundary, enrichment 0.99, the error rate inside the boundary set below the rate outside
+            out["boundary_prevalence_note"] += (
+                f"; at {100 * p:.0f}% the cue is nearly universal and cannot enrich much (a ratio of shares is bounded by "
+                f"(1 - e)/(p - e) for a map with error rate e): on the one suite export with 97% boundary windows the "
+                f"enrichment was 0.99 and the error rate inside the boundary set was below the rate outside, so on this "
+                f"map the boundary cue is not a reason (exp82 on other encoders)")
     sets = assessment.get("review_sets", {})
     for b, rs in sets.items():
         if budgets is not None and b not in budgets:

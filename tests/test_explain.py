@@ -181,3 +181,18 @@ def test_assess_against_a_reference_reports_the_confusion_pairs():
     out = assess_classmap(hard, conf, 3, patch=4, reference=ref)
     cp = out["against_reference"]["confusion_pairs"]
     assert cp["n_errors"] > 0 and cp["pairs"][0]["predicted"] == 2 and cp["pairs"][0]["reference"] == 0
+
+
+def test_a_saturated_boundary_prevalence_is_named_as_no_reason():
+    """exp82 on other encoders: on AnySat's cashew export 97% of windows sit on a boundary and the cue enriched
+    0.99, so above BOUNDARY_SATURATED the note says the cue is not a reason; below it, it does not."""
+    from oe_inferencex import explain
+    rng = np.random.default_rng(6)
+    conf = rng.random((16, 16))
+    for share, saturated in ((0.97, True), (0.3, False)):
+        bnd = np.zeros(256, bool); bnd[: int(round(share * 256))] = True
+        assessment = {"arrays": {"confidence": conf, "boundary": bnd.reshape(16, 16).astype(float), "valid": np.ones((16, 16), bool)},
+                      "review_sets": {}}
+        note = explain.explain_review_set(assessment)["boundary_prevalence_note"]
+        assert ("not a reason" in note) is saturated
+        assert (explain.BOUNDARY_SATURATED <= share) is saturated
