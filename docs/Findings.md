@@ -84,6 +84,13 @@ down the page.
    hand labels carry at least one label-free cue with a measured enrichment;
    spectral ambiguity is 7x enriched and the one cue that adds precision
    inside the review set (exp37). <!-- claim:explanation-cues-cover-errors -->
+   The enrichment a reason carries is the map's, not the library's: verified
+   per task on the suite, the boundary cue's runs from 1.2x on a plantation map
+   where three windows in four sit on a transition to 8x on a sparse marine one,
+   set by the map's fragmentation, while the error rate inside the boundary set
+   stays at least twice the rate outside on every task (exp82). The tool now
+   quotes the range and the map's own boundary prevalence beside the Bolivia
+   value. <!-- claim:boundary-cue-enrichment-is-fragmentation-not-class-count -->
 4. **An accuracy needs a coverage.** The fine-tuned model is 0.93 accurate
    where it claims 0.99; keeping the 80% most confident windows gives 0.945 <!-- claim:accuracy-needs-coverage -->
    (exp21).

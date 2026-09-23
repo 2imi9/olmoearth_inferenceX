@@ -3320,6 +3320,7 @@
     ))(s['tasks']))(A['exp/out/exp82_summary.json'])
   cited_in:
     - {file: docs/results/comparisons.md, marker: boundary-cue-enrichment-is-fragmentation-not-class-count}
+    - {file: docs/Findings.md, marker: boundary-cue-enrichment-is-fragmentation-not-class-count}
   note: >-
     The ceiling and the risk ratio are recomputed from each task's error rate, boundary prevalence and precision;
     the rank correlation is a Spearman on mid-ranks (the three PASTIS arms tie at 19 classes) written inline. The crosscheck recomputes MADOS's
