@@ -2376,6 +2376,14 @@ threshold" is not the zone there and the tool reports the tie counts. The prereg
 monotone tasks was 10, not 11, and its `b_min` floor is exact only in the large-population limit (on a zone
 nearly all of whose windows are labelled the exact test is stronger, so the cut is conservative).
 
+**On other encoders (added as exp79's exports land).** The same run on the seed-0 exports of Clay Large (24
+tasks) and Copernicus-FM (21): the guarantee held on every cell there too (largest violation 0.075 and 0.082
+for the prefix rule, 0.005 and 0.004 for Bonferroni), the plug-in violated its own α on 18 of 21 and 15 of 19
+tasks, and at 300 labels and α = half the map's error rate the prefix rule certified a zone on most draws on 10
+of 21 and 12 of 19 tasks with median certified coverages of 0.25 and 0.45 against oracle medians of 0.40 and
+0.50. What the guarantee buys is set by the map's quality, not by the encoder's family; the guarantee itself does
+not move. <!-- claim:trust-zone-guarantee-holds-on-other-encoders -->
+
 **What this changes.** The tool can now say, from 300 random labels, "the 50% most confident windows of this map
 are wrong at most half as often as the map overall, and that claim fails on at most one draw in ten", and can
 say when a budget cannot certify the α asked for. It cannot say anything about the windows outside the zone.

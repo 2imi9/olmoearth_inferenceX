@@ -3635,3 +3635,29 @@
     )({t: r for t, r in A['exp/out/exp85_summary.json']['tasks'].items() if r['family'].startswith('seg')})
   cited_in:
     - {file: docs/results/comparisons.md, marker: model-assisted-coefficient-is-one}
+
+- id: trust-zone-guarantee-holds-on-other-encoders
+  statement: "On the seed-0 exports of Clay Large (24 tasks) and Copernicus-FM (21 tasks) the certified zone exceeded alpha on at most 0.075 and 0.082 of draws for the prefix rule and 0.005 and 0.004 for Bonferroni on every cell (bound 0.120); at 300 labels and alpha = half the error rate the prefix rule certified a zone on most draws on 10 of 21 and 12 of 19 tasks, median coverages 0.25 and 0.45 against oracle medians 0.40 and 0.50."
+  crosscheck: tests/test_trust_zone.py::test_the_guarantee_holds_exactly_on_a_monotone_population
+  status: measured
+  experiments: [exp80]
+  artifacts: [exp/out/exp80_zones/clay_large.json, exp/out/exp80_zones/copernicusfm.json]
+  check: |-
+    (lambda C, F: (lambda cells:
+      all(max(c['rules']['prefix']['violation_rate'] for c in cells[e]) <= 0.1201 and max(c['rules']['bonferroni']['violation_rate'] for c in cells[e]) <= 0.1201 for e in cells)
+      and round(max(c['rules']['prefix']['violation_rate'] for c in cells['clay']), 3) == 0.075 and round(max(c['rules']['prefix']['violation_rate'] for c in cells['cop']), 3) == 0.082
+      and round(max(c['rules']['bonferroni']['violation_rate'] for c in cells['clay']), 3) == 0.005 and round(max(c['rules']['bonferroni']['violation_rate'] for c in cells['cop']), 3) == 0.004
+      and C['prereg']['P3_the_guarantee_is_worth_having']['n_tasks_above_delta'] == 18 and C['prereg']['P3_the_guarantee_is_worth_having']['of'] == 21
+      and F['prereg']['P3_the_guarantee_is_worth_having']['n_tasks_above_delta'] == 15 and F['prereg']['P3_the_guarantee_is_worth_having']['of'] == 19
+      and C['prereg']['descriptive']['half_theta/B300']['prefix']['tasks_with_a_zone_on_most_draws'] == 10 and C['prereg']['descriptive']['half_theta/B300']['n_tasks'] == 21
+      and F['prereg']['descriptive']['half_theta/B300']['prefix']['tasks_with_a_zone_on_most_draws'] == 12 and F['prereg']['descriptive']['half_theta/B300']['n_tasks'] == 19
+      and C['prereg']['descriptive']['half_theta/B300']['prefix']['median_of_median_coverage'] == 0.25 and C['prereg']['descriptive']['half_theta/B300']['oracle_median'] == 0.4
+      and F['prereg']['descriptive']['half_theta/B300']['prefix']['median_of_median_coverage'] == 0.45 and F['prereg']['descriptive']['half_theta/B300']['oracle_median'] == 0.5
+    )({'clay': [c for r in C['tasks'].values() for c in r['cells'] if c['monotone'] is not None],
+       'cop': [c for r in F['tasks'].values() for c in r['cells'] if c['monotone'] is not None]})
+    )(A['exp/out/exp80_zones/clay_large.json'], A['exp/out/exp80_zones/copernicusfm.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: trust-zone-guarantee-holds-on-other-encoders}
+  note: >-
+    Descriptive: the same code and draws as the graded Base run on each encoder's seed-0 export; the maxima and
+    counts are recomputed from the per-cell rows. Extended as further exports land.
