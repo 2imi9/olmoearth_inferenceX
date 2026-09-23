@@ -2504,6 +2504,12 @@ producer's accuracy lacked its finite-population correction (median coverage 0.9
 share's grading now covers every draw for the classes the package reports. Each is in the preregistration's
 amendments with its date.
 
+**On other encoders (added as exp79's exports land).** The same run on the classification tasks of Clay Large
+(17 tasks) and Copernicus-FM (14): the Wald form covers below 0.93 on 39 of 323 and 62 of 274 cells (worst 0.15
+and 0.32), the shipped form on 11 and 15, none below 0.86; the confidence design widens the per-class intervals
+on 2 of 14 and 2 of 12 tasks; the error-adjusted share behaves on every cell. The pattern is the estimator's, not
+the encoder's. <!-- claim:per-class-intervals-hold-on-other-encoders -->
+
 ## Can raters from different families estimate a map's accuracy without labels? (exp83)
 
 Preregistered in [docs/plan/consensus_reliability.md](../plan/consensus_reliability.md) with a dated amendment;

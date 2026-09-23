@@ -3686,3 +3686,27 @@
     - {file: docs/results/comparisons.md, marker: cue-verification-holds-on-other-encoders}
   note: >-
     Descriptive, the same code as the graded Base run on each encoder's seed-0 export; extended as further exports land.
+
+- id: per-class-intervals-hold-on-other-encoders
+  statement: "On the classification tasks of Clay Large (17 tasks, 323 graded cells) and Copernicus-FM (14 tasks, 274 cells), the Wald per-class interval covers below 0.93 on 39 and 62 cells (worst 0.152 and 0.316) and the shipped Wilson-on-effective-n form on 11 and 15, none below 0.858; the confidence design widens the per-class user's-accuracy interval on 2 of 14 and 2 of 12 tasks; the adjusted share's exclusion rates fail no cell."
+  crosscheck: tests/test_per_class.py::test_the_variance_estimators_track_the_monte_carlo_variance
+  status: measured
+  experiments: [exp81]
+  artifacts: [exp/out/exp81_per_class/clay_large.json, exp/out/exp81_per_class/copernicusfm.json]
+  check: |-
+    (lambda C, F: (lambda pc, pf, wc, wf:
+      len(C['tasks']) == 17 and len(F['tasks']) == 14
+      and pc['n_cells'] == 323 and pf['n_cells'] == 274 and len(pc['failing']) == 11 and len(pf['failing']) == 15
+      and round(min(f['coverage'] for f in pc['failing'] + pf['failing']), 3) == 0.858
+      and wc['n_failing'] == 39 and wf['n_failing'] == 62 and round(wc['min_coverage'], 3) == 0.152 and round(wf['min_coverage'], 3) == 0.316
+      and (C['prereg']['P2_the_overall_design_widens_the_classes']['n_tasks_wider'], C['prereg']['P2_the_overall_design_widens_the_classes']['of']) == (2, 14)
+      and (F['prereg']['P2_the_overall_design_widens_the_classes']['n_tasks_wider'], F['prereg']['P2_the_overall_design_widens_the_classes']['of']) == (2, 12)
+      and C['prereg']['P3_the_adjusted_share_moves_where_it_should']['failing'] == [] and F['prereg']['P3_the_adjusted_share_moves_where_it_should']['failing'] == []
+    )(C['prereg']['P1_every_reported_interval_is_honest'], F['prereg']['P1_every_reported_interval_is_honest'],
+      C['prereg']['P1_under_the_wald_form'], F['prereg']['P1_under_the_wald_form'])
+    )(A['exp/out/exp81_per_class/clay_large.json'], A['exp/out/exp81_per_class/copernicusfm.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: per-class-intervals-hold-on-other-encoders}
+  note: >-
+    Descriptive, the same code and seeds as the graded Base run on each encoder's seed-0 export; the counts come from
+    the graded blocks, which `--stage grade` recomputes from the per-cell coverages.
