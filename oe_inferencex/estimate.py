@@ -489,3 +489,414 @@ def estimate_from_indices(indices, wrong, margin, valid=None):
     out = estimate_error_rate(sample, wrong)
     out["review_set_check"] = chk
     return out
+
+
+# ----------------------------------------------------------------------------- per-class accuracy (exp81)
+# What the map-accuracy literature says a producer owes (Olofsson et al. 2014; Stehman and Foody 2019; the CEOS
+# LPV land-cover protocol 2025): not one error rate but, per class, the user's accuracy (of the windows the map
+# calls c, how many are c), the producer's accuracy (of the windows that are c, how many the map found) and the
+# error-adjusted share of the map that is c, each with a standard error. All of it comes from the same labelled
+# sample `sample_for_estimation` draws; the map's own decisions give the class of every window. Preregistered in
+# docs/plan/per_class_assessment.md.
+MIN_PER_CLASS = 30                # a per-class interval on fewer labelled windows is reported with a warning
+
+
+def _wald(est, var):
+    half = Z95 * np.sqrt(max(float(var), 0.0))
+    return float(est), max(0.0, float(est) - half), min(1.0, float(est) + half)
+
+
+def _wilson_eff(est, var, n_fallback):
+    """Wilson's interval at the effective sample size p(1-p)/var (Korn and Graubard 1998), the form the package
+    uses for the stratified overall rate. Where the estimated variance is zero or the estimate sits at 0 or 1,
+    which happens whenever no sampled window of a class is wrong, Wald collapses to a point; the effective size
+    then falls back to the labelled count of the class, the simple-random bound the design cannot beat without an
+    observed error. exp81 graded the Wald form first: on 77 of 324 per-class cells of the classification suite it
+    covered as little as 30% of draws, every one of them a class near 0 or 1."""
+    est, var = float(est), max(float(var), 0.0)
+    if var > 0 and 0 < est < 1:
+        n_eff = est * (1 - est) / var
+    else:
+        n_eff = float(max(int(n_fallback), 1))
+    lo, hi = wilson_interval(est * n_eff, n_eff)
+    return est, lo, hi
+
+
+def _interval(est, var, n_fallback, form):
+    if form == "wald":
+        return _wald(est, var)
+    if form == "wilson":
+        return _wilson_eff(est, var, n_fallback)
+    raise ValueError(f"interval must be 'wilson' or 'wald', got {form!r}")
+
+
+def _ht_total(values, strata, picked, sizes):
+    """Under stratified simple random sampling: the Horvitz-Thompson total of `values` and the unbiased estimate of
+    its variance, sum_h N_h ybar_h and sum_h N_h^2 (1 - n_h/N_h) s_h^2 / n_h. Only picked units are observed."""
+    values, strata, picked = np.asarray(values, float), np.asarray(strata), np.asarray(picked)
+    tot = var = 0.0
+    for h, Nh in enumerate(sizes):
+        m = strata[picked] == h
+        nh = int(m.sum())
+        if Nh == 0 or nh == 0:
+            continue
+        v = values[picked][m]
+        tot += Nh * float(v.mean())
+        if nh > 1:
+            var += Nh ** 2 * (1 - nh / Nh) * float(v.var(ddof=1)) / nh
+    return tot, var
+
+
+def _ht_ratio(num, den, strata, picked, sizes):
+    """A ratio of two Horvitz-Thompson totals with its linearised variance: z_k = (num_k - R den_k) / D_hat, and
+    V(R) is the variance of the total of z (Cochran 1977, section 6.11, applied stratum by stratum)."""
+    Yn, _ = _ht_total(num, strata, picked, sizes)
+    Yd, _ = _ht_total(den, strata, picked, sizes)
+    if Yd <= 0:
+        return float("nan"), float("nan")
+    R = Yn / Yd
+    z = (np.asarray(num, float) - R * np.asarray(den, float)) / Yd
+    _, var = _ht_total(z, strata, picked, sizes)
+    return R, var
+
+
+def estimate_per_class(sample, reference, map_class, n_classes=None, interval="wilson"):
+    """User's accuracy, producer's accuracy and error-adjusted share per class, from the labelled sample.
+
+    sample    : what `sample_for_estimation` returned (designs "random", "confidence" or "proportional")
+    reference : the reference class of every labelled window, in the order of sample["indices"], integers >= 0
+    map_class : the map's class of EVERY window (the flattened grid `sample` was drawn on); negative at no-data,
+                and the count of non-negative entries must equal the population the sample was drawn from
+
+    Under a random sample, the user's accuracy of class c is an exact Wilson interval on the labelled windows the
+    map calls c, since those are a random sample of that class's windows; the class shares are post-stratified by
+    map class (Olofsson et al. 2014, eq. 4 and 5) and the producer's accuracy follows their eq. 7. Under the
+    confidence design every quantity is a ratio of Horvitz-Thompson totals over the margin strata with a
+    linearised variance, because a class cuts across strata. Intervals are Wilson on the effective sample size
+    (interval="wilson", the default; "wald" is the field's convention and is kept for the record, where exp81
+    shows it collapsing to a point on classes with no sampled error). Tile samples are refused: the per-class
+    cluster form is not graded yet. A class with fewer than MIN_PER_CLASS labelled windows carries a warning; a map class no
+    labelled window fell in leaves the share estimates short by its weight, and that is said."""
+    ref = np.asarray(reference).ravel()
+    idx = np.asarray(sample["indices"], int).ravel()
+    mc = np.asarray(map_class).ravel()
+    if ref.size != idx.size:
+        raise ValueError(f"{ref.size} reference labels for {idx.size} labelled windows")
+    if ref.dtype.kind not in "iu" and not np.all(np.equal(np.mod(ref, 1), 0)):
+        raise ValueError("reference classes must be integers")
+    ref = ref.astype(int)
+    if (ref < 0).any():
+        raise ValueError("reference classes must be >= 0; a window the reviewer could not label should not be in the sample")
+    design = sample["design"]
+    if design == "tiles":
+        raise ValueError("per-class accuracy from a tile sample is not graded yet (exp81 covers random and confidence "
+                         "designs); label a random or confidence-designed sample")
+    if design not in ("random", "confidence", "proportional"):
+        raise ValueError(f"unknown design {design!r}")
+    if design == "random":
+        pop = np.flatnonzero(mc >= 0)
+    else:
+        pop = np.asarray(sample["strata_of_population"], int)
+    N = int(pop.size)
+    if N != int(sample["n_population"]):
+        raise ValueError(f"map_class has {N} valid windows but the sample was drawn from {sample['n_population']}; pass the "
+                         "map's class per window on the same grid, negative where the map has no data")
+    if (mc[idx] < 0).any():
+        raise ValueError("a labelled window sits where the map has no class")
+    C = int(n_classes) if n_classes is not None else int(max(int(mc[pop].max()), int(ref.max())) + 1)
+    if (ref >= C).any() or (mc[pop] >= C).any():
+        raise ValueError(f"a class id reaches or exceeds n_classes={C}")
+    m_s, r_s = mc[idx], ref
+    conf = np.zeros((C, C), int)                              # rows: map class, columns: reference class
+    np.add.at(conf, (m_s, r_s), 1)
+    N_map = np.bincount(mc[pop], minlength=C).astype(float)
+    W = N_map / N
+    per, warnings = {}, []
+    if design == "random":
+        n_i = conf.sum(1).astype(float)
+        u = np.divide(conf, n_i[:, None], out=np.zeros((C, C)), where=n_i[:, None] > 0)   # n_ij / n_i.
+        fpc = np.where(N_map > 0, 1 - np.divide(n_i, N_map, out=np.zeros(C), where=N_map > 0), 0.0)
+        denom = np.where(n_i > 1, n_i - 1, np.inf)
+        v_u = u * (1 - u) * (fpc / denom)[:, None]                                          # V(u_ij) per cell
+        unsampled = [int(i) for i in range(C) if N_map[i] > 0 and n_i[i] == 0]
+        if unsampled:
+            warnings.append(f"map class(es) {unsampled} have no labelled window; the reference shares below are short "
+                            f"by their weight ({float(W[unsampled].sum()):.3f} of the map)")
+        share_est = (W[:, None] * u).sum(0)                                                 # A_j = sum_i W_i u_ij
+        share_var = (W[:, None] ** 2 * v_u).sum(0)
+        overall = float((W * np.diag(u)).sum())
+        overall_var = float((W ** 2 * np.diag(v_u)).sum())
+        for c in range(C):
+            row = {"map_share": float(W[c]), "n_labelled_map_class": int(n_i[c]), "n_labelled_reference_class": int(conf[:, c].sum())}
+            if n_i[c] > 0:
+                lo, hi = wilson_interval(int(conf[c, c]), int(n_i[c]), int(N_map[c]))
+                row["user_accuracy"] = {"estimate": float(u[c, c]), "low": lo, "high": hi}
+            else:
+                row["user_accuracy"] = None
+            # producer's accuracy: Olofsson et al. 2014, eq. 7, on the post-stratified counts
+            Nhat_j = float((N_map * u[:, c]).sum())
+            if Nhat_j > 0 and n_i[c] > 0:
+                pa = N_map[c] * u[c, c] / Nhat_j
+                t1 = N_map[c] ** 2 * (1 - pa) ** 2 * u[c, c] * (1 - u[c, c]) / (n_i[c] - 1) if n_i[c] > 1 else 0.0
+                others = [i for i in range(C) if i != c and n_i[i] > 1]
+                t2 = pa ** 2 * sum(N_map[i] ** 2 * u[i, c] * (1 - u[i, c]) / (n_i[i] - 1) for i in others)
+                e, lo, hi = _interval(pa, (t1 + t2) / Nhat_j ** 2, conf[:, c].sum(), interval)
+                row["producer_accuracy"] = {"estimate": e, "low": lo, "high": hi}
+            else:
+                row["producer_accuracy"] = None
+            e, lo, hi = _interval(share_est[c], share_var[c], idx.size, interval)
+            row["reference_share"] = {"estimate": e, "low": lo, "high": hi}
+            per[int(c)] = row
+        method = "random sample: Wilson per map class for user's accuracy; shares post-stratified by map class and producer's accuracy by Olofsson et al. 2014 eq. 7"
+    else:
+        strata, sizes = np.asarray(sample["strata"]), list(sample["sizes"])
+        pos = {int(g): i for i, g in enumerate(pop)}
+        local = np.array([pos[int(g)] for g in idx])
+        m_pop = mc[pop]
+        r_pop = np.full(N, -1, int)
+        r_pop[local] = r_s
+        overall, overall_var, _ = stratified_mean_and_variance((m_pop == r_pop).astype(float), strata, local, sizes, N)
+        for c in range(C):
+            is_map = (m_pop == c).astype(float)
+            is_ref = (r_pop == c).astype(float)
+            both = is_map * is_ref
+            row = {"map_share": float(W[c]), "n_labelled_map_class": int(conf[c].sum()), "n_labelled_reference_class": int(conf[:, c].sum())}
+            ua, v = _ht_ratio(both, is_map, strata, local, sizes)
+            row["user_accuracy"] = None if not np.isfinite(ua) else dict(zip(("estimate", "low", "high"), _interval(ua, v, conf[c].sum(), interval)))
+            pa, v = _ht_ratio(both, is_ref, strata, local, sizes)
+            row["producer_accuracy"] = None if not np.isfinite(pa) else dict(zip(("estimate", "low", "high"), _interval(pa, v, conf[:, c].sum(), interval)))
+            tot, v = _ht_total(is_ref, strata, local, sizes)
+            row["reference_share"] = dict(zip(("estimate", "low", "high"), _interval(tot / N, v / N ** 2, idx.size, interval)))
+            per[int(c)] = row
+        method = "stratified by confidence margin: ratios of Horvitz-Thompson totals with linearised variance; shares as Horvitz-Thompson totals"
+    for c, row in per.items():
+        small = [k for k in ("n_labelled_map_class", "n_labelled_reference_class") if row[k] < MIN_PER_CLASS]
+        if small:
+            row["warning"] = (f"fewer than {MIN_PER_CLASS} labelled windows ({row['n_labelled_map_class']} the map calls this "
+                              f"class, {row['n_labelled_reference_class']} the reference does); the interval is wide and, "
+                              "below about ten, not to be trusted")
+    e, lo, hi = _interval(overall, overall_var, idx.size, interval)
+    out = {"design": design, "interval": interval, "n_labelled": int(idx.size), "n_population": N, "n_classes": C, "nominal_coverage": 0.95,
+           "overall_accuracy": {"estimate": e, "low": lo, "high": hi}, "confusion_counts": conf.tolist(),
+           "per_class": per, "method": method}
+    if warnings:
+        out["warning"] = "; ".join(warnings)
+    return out
+
+
+# ----------------------------------------------------------------------------- a trusted zone with a guarantee (exp80)
+# Which part of the map is wrong at most alpha of the time, stated so that the statement itself fails with
+# probability at most delta over the reviewer's random draw. Preregistered in docs/plan/trust_zone.md. The zone at
+# coverage c is the c most confident share of the valid windows; a simple random sample of the map restricted to
+# that zone is a simple random sample of the zone, so every test below is an exact hypergeometric test and nothing
+# is approximated.
+ZONE_GRID = tuple(round(j / 20, 2) for j in range(1, 21))
+ZONE_DELTA = 0.10
+ZONE_RULES = ("prefix", "bonferroni", "plugin")
+
+
+def _log_choose(n, r):
+    import math
+    return math.lgamma(n + 1) - math.lgamma(r + 1) - math.lgamma(n - r + 1)
+
+
+def hypergeom_cdf(k, n, K, b):
+    """P(X <= k) for X ~ Hypergeom(n, K, b): b windows drawn without replacement from n of which K are wrong.
+    Exact, by log-gamma sums, no approximation."""
+    import math
+    n, K, b, k = int(n), int(K), int(b), int(k)
+    if not (0 <= K <= n and 0 <= b <= n):
+        raise ValueError(f"hypergeom_cdf needs 0 <= K <= n and 0 <= b <= n, got n={n}, K={K}, b={b}")
+    lo, hi = max(0, b - (n - K)), min(b, K)
+    if k < lo:
+        return 0.0
+    if k >= hi:
+        return 1.0
+    denom = _log_choose(n, b)
+    tot = 0.0
+    for x in range(lo, k + 1):
+        tot += math.exp(_log_choose(K, x) + _log_choose(n - K, b - x) - denom)
+    return min(1.0, tot)
+
+
+def zone_pvalue(k, b, n, alpha):
+    """The exact one-sided p-value against 'this zone of n windows is wrong more than alpha of the time', from k
+    errors among b of its windows drawn at random. The null count that makes the p-value largest is the smallest
+    count that violates alpha, floor(alpha n) + 1, because P(X <= k) falls as the count rises; the p-value is the
+    supremum over the null and is valid without approximation. No labels in the zone: p = 1."""
+    import math
+    n, b, k = int(n), int(b), int(k)
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in (0, 1), got {alpha}")
+    if b == 0:
+        return 1.0
+    if not 0 <= k <= b <= n:
+        raise ValueError(f"zone_pvalue needs 0 <= k <= b <= n, got k={k}, b={b}, n={n}")
+    K0 = math.floor(alpha * n) + 1
+    if K0 > n:                                  # no count of n can exceed alpha n: the null is empty
+        return 0.0
+    return hypergeom_cdf(k, n, K0, b)
+
+
+def zone_upper_bound(k, b, n, delta=ZONE_DELTA):
+    """The largest error rate K/n of a zone of n windows that k errors among b sampled do not reject at level
+    delta: the exact hypergeometric upper confidence bound. With no labels it is 1."""
+    n, b, k = int(n), int(b), int(k)
+    if b == 0:
+        return 1.0
+    lo, hi = k, n - (b - k)                     # K must allow k wrong and b - k right among the sample
+    if hypergeom_cdf(k, n, hi, b) > delta:
+        return hi / n
+    while hi - lo > 1:                          # P(X <= k | K) is nonincreasing in K: bisect
+        mid = (lo + hi) // 2
+        if hypergeom_cdf(k, n, mid, b) > delta:
+            lo = mid
+        else:
+            hi = mid
+    return lo / n
+
+
+def min_labels_to_certify(alpha, delta=ZONE_DELTA):
+    """The fewest labels a zone must hold before it can be certified at (alpha, delta) even with no error among
+    them, in the large-population limit: ceil(ln delta / ln(1 - alpha)), from the binomial bound (1 - alpha)^b on
+    the p-value. 45 at alpha 0.05, 114 at 0.02, 255 at 0.009, all at delta 0.1. On a zone whose windows are nearly
+    all labelled the exact hypergeometric p-value is smaller than the binomial one, so this cut is conservative
+    there (exp80's audit: a 15-window zone with all 15 labelled certifies at alpha 0.139 where the limit says 16
+    labels are needed); it is exact when the zone is much larger than the sample."""
+    import math
+    if not (0 < alpha < 1 and 0 < delta < 1):
+        raise ValueError(f"alpha and delta must be in (0, 1), got {alpha}, {delta}")
+    return int(math.ceil(math.log(delta) / math.log(1.0 - alpha)))
+
+
+def zone_order(margin, valid=None):
+    """The valid windows in zone order: descending margin, ties by index, so that the zone at any coverage is a
+    fixed set decided before any label is seen. Returns (population indices in order, position of every window
+    or -1 outside the population)."""
+    margin = np.asarray(margin, dtype=np.float64).ravel()
+    valid = (np.ones(margin.size, bool) if valid is None else np.asarray(valid, bool).ravel()) & np.isfinite(margin)
+    pop = np.flatnonzero(valid)
+    order = pop[np.lexsort((pop, -margin[pop]))]
+    pos = np.full(margin.size, -1, dtype=np.int64)
+    pos[order] = np.arange(order.size)
+    return order, pos
+
+
+def zone_levels(n_population, budget, alpha, delta=ZONE_DELTA, grid=ZONE_GRID):
+    """The grid coverages a budget can certify at (alpha, delta), and the zone size at each: levels below
+    min_labels_to_certify / budget are cut before any label is seen, since they cannot be certified whatever
+    their quality. Returns (coverages, zone sizes, c_min)."""
+    b_min = min_labels_to_certify(alpha, delta)
+    c_min = b_min / max(int(budget), 1)
+    cov = [c for c in grid if c >= c_min - 1e-12]
+    sizes = [max(1, int(round(c * n_population))) for c in cov]
+    return cov, sizes, c_min
+
+
+def zone_counts(positions, wrong, sizes):
+    """Per zone size: how many sampled windows fall inside it (b) and how many of those are wrong (k)."""
+    positions = np.asarray(positions, dtype=np.int64).ravel()
+    wrong = np.asarray(wrong, dtype=np.float64).ravel()
+    o = np.argsort(positions, kind="stable")
+    ps, ws = positions[o], wrong[o]
+    cum = np.concatenate([[0.0], np.cumsum(ws)])
+    b = np.searchsorted(ps, np.asarray(sizes, dtype=np.int64), side="left")
+    return b.astype(int), cum[b].astype(int)
+
+
+def apply_zone_rule(p, b, k, alpha, delta=ZONE_DELTA, rule="prefix"):
+    """Which grid levels a rule accepts, and the largest one; levels are in increasing coverage.
+    prefix      accept while p <= delta from the smallest zone up, stop at the first failure (Bates et al. 2021;
+                valid when the zone's error rate is nondecreasing in coverage)
+    bonferroni  accept every level with p <= delta / J, J the number of levels (Angelopoulos et al. 2021, Learn
+                then Test; valid with no assumption on the shape)
+    plugin      accept every level whose sample rate k / b is at most alpha; no guarantee, the comparator"""
+    p, b, k = np.asarray(p, float), np.asarray(b, int), np.asarray(k, int)
+    if rule == "prefix":
+        acc = np.zeros(p.size, bool)
+        for j in range(p.size):
+            if p[j] <= delta:
+                acc[j] = True
+            else:
+                break
+    elif rule == "bonferroni":
+        acc = p <= delta / max(p.size, 1)
+    elif rule == "plugin":
+        with np.errstate(invalid="ignore", divide="ignore"):
+            acc = (b > 0) & (k <= alpha * b)
+    else:
+        raise ValueError(f"rule must be one of {ZONE_RULES}, got {rule!r}")
+    best = int(np.flatnonzero(acc).max()) if acc.any() else None
+    return acc, best
+
+
+def certify_zone(margin, indices, wrong, alpha, delta=ZONE_DELTA, rule="prefix", grid=ZONE_GRID, valid=None):
+    """The largest share of the map, taken from the most confident window down, that is wrong at most `alpha` of
+    the time, certified so that the statement fails with probability at most `delta` over the reviewer's draw.
+
+    margin  : per-window confidence, higher = more trusted; NaN and invalid windows are outside the population
+    indices : the labelled windows, which must be a simple random sample of the valid windows
+    wrong   : 0/1 per labelled window, in the order of `indices`
+    rule    : "prefix" (assumes the zone's error rate does not fall as the zone grows; the powerful rule),
+              "bonferroni" (no assumption), "plugin" (no guarantee; what a reviewer would do unaided)
+
+    Returns coverage None when nothing can be certified, with the reason; a labelled set that looks like the
+    tool's own review set is refused, because the hypergeometric argument needs a random draw."""
+    margin = np.asarray(margin, dtype=np.float64).ravel()
+    idx = np.asarray(indices, int).ravel()
+    wrong = np.asarray(wrong, dtype=np.float64).ravel()
+    if wrong.size != idx.size:
+        raise ValueError(f"{wrong.size} labels for {idx.size} labelled windows")
+    if not np.isin(wrong, (0.0, 1.0)).all():
+        raise ValueError("wrong must be 0 or 1 per window")
+    if not (0 < alpha < 1 and 0 < delta < 1):
+        raise ValueError(f"alpha and delta must be in (0, 1), got {alpha}, {delta}")
+    chk = review_set_check(idx, margin, valid)
+    if chk["n_outside_population"]:
+        raise ValueError(f"{chk['n_outside_population']} labelled window(s) are outside the valid map")
+    if chk["n_duplicated"]:
+        raise ValueError(f"{chk['n_duplicated']} window(s) appear more than once")
+    if chk["looks_like_a_review_set"]:
+        raise ValueError(f"these {idx.size} windows sit at a median suspicion percentile of "
+                         f"{chk['median_suspicion_percentile']:.2f}, above {chk['threshold']:.2f}: an enriched set, not a "
+                         "random sample, and a zone certified on it would be wrong. Draw the sample at random.")
+    order, pos = zone_order(margin, valid)
+    N = int(order.size)
+    cov, sizes, c_min = zone_levels(N, idx.size, alpha, delta, grid)
+    out = {"rule": rule, "alpha": float(alpha), "delta": float(delta), "n_population": N, "n_labelled": int(idx.size),
+           "min_labels_to_certify": min_labels_to_certify(alpha, delta), "c_min": float(c_min), "levels": [],
+           "coverage": None, "n_zone": None, "threshold": None, "upper_bound": None}
+    if not cov:
+        out["note"] = (f"{idx.size} labels cannot certify any zone at alpha={alpha:g}, delta={delta:g}: even a zone with "
+                       f"no error among its labels needs {out['min_labels_to_certify']} of them, more than the budget")
+        return out
+    b, k = zone_counts(pos[idx], wrong, sizes)
+    p = np.array([zone_pvalue(kk, bb, n, alpha) for kk, bb, n in zip(k, b, sizes)])
+    acc, best = apply_zone_rule(p, b, k, alpha, delta, rule)
+    for j, c in enumerate(cov):
+        out["levels"].append({"coverage": c, "n_zone": sizes[j], "n_labelled_inside": int(b[j]), "n_wrong_inside": int(k[j]),
+                              "p_value": float(p[j]), "upper_bound": zone_upper_bound(k[j], b[j], sizes[j], delta),
+                              "accepted": bool(acc[j])})
+    if best is None:
+        out["note"] = (f"no zone certified at alpha={alpha:g}, delta={delta:g} with {idx.size} labels; the smallest testable "
+                       f"zone ({cov[0]:.0%} of the map) held {int(b[0])} labels with {int(k[0])} wrong")
+        return out
+    n_zone = sizes[best]
+    thr = float(margin[order[n_zone - 1]])
+    # The certified set is the first n_zone windows in zone order, a fixed set; windows tied at the threshold may
+    # sit on both sides of the edge (float32 saturation puts hundreds at exactly 1.0 on some maps), so "margin >=
+    # threshold" is not the zone there, and the counts say so.
+    tied = int((margin[order] == thr).sum())
+    inside = int((margin[order[:n_zone]] == thr).sum())
+    out.update({"coverage": cov[best], "n_zone": n_zone, "threshold": thr, "n_tied_at_threshold": tied,
+                "n_tied_inside_zone": inside, "upper_bound": out["levels"][best]["upper_bound"],
+                "zone_indices_in_order": order[:n_zone]})
+    if rule == "plugin":
+        out["note"] = "plug-in rule: no guarantee; the largest zone whose sample rate is at most alpha"
+    elif rule == "prefix":
+        out["note"] = ("valid if the zone's error rate does not fall as the zone grows; on the suite tasks exp80 graded, "
+                       "the guarantee held whether or not that was exactly true (docs/results/comparisons.md, exp80)")
+    if tied > inside:
+        out["note"] = out.get("note", "") + (f"; {tied} windows share the threshold margin and only {inside} of them are inside "
+                                            "the zone, so the zone is the set returned, not every window at or above the threshold")
+    return out

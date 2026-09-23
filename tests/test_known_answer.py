@@ -114,3 +114,53 @@ def test_exp70_p3_p_value_is_a_rank_sum_over_24_tasks_not_a_sign_test_over_144_p
     p = S["verdicts"]["P3"]["rank_sum_p"]
     assert abs(p - p_mc) < 4 * np.sqrt(p * (1 - p) / 20000) and 0.004 < p < 0.007
     assert S["verdicts"]["P3"]["holds"] is True and "pairwise_p" not in S["verdicts"]["P3"]
+
+
+def test_exp80_zone_guarantee_and_coverage_reproduce_from_a_fresh_draw():
+    """exp80's headline cell (MADOS, alpha = theta/2, B = 300) re-drawn with a different seed and the package's
+    zone rules: the prefix and Bonferroni rules violate on at most delta + 3 SE of draws, the plug-in far more, and
+    the median certified coverage is the recorded one. The P1 bound is also recomputed from every recorded cell."""
+    import json
+    import sys
+    sys.path.insert(0, os.path.join(ROOT, "exp"))
+    import exp78_error_rate_estimation as e78
+    from oe_inferencex import estimate as est
+    d = json.load(open(os.path.join(ROOT, "exp", "out", "exp80_summary.json")))
+    delta, draws = d["config"]["delta"], 300
+    bound = delta + 3 * np.sqrt(delta * (1 - delta) / draws)
+    u = e78.load_units("mados")
+    err, margin = u["err"], u["margin"]
+    order, _ = est.zone_order(margin)
+    err_o = err[order]
+    N, theta = order.size, float(err.mean())
+    alpha, B = theta / 2, 300
+    cov, sizes, _ = est.zone_levels(N, B, alpha, delta)
+    risk = np.cumsum(err_o)[np.array(sizes) - 1] / np.array(sizes)
+    rng = np.random.default_rng(20260923)
+    viol = {r: 0 for r in ("prefix", "bonferroni", "plugin")}
+    picks = {r: [] for r in viol}
+    for _ in range(draws):
+        pos = rng.choice(N, B, replace=False)
+        b, k = est.zone_counts(pos, err_o[pos], sizes)
+        p = [est.zone_pvalue(kk, bb, n, alpha) for kk, bb, n in zip(k, b, sizes)]
+        for rule in viol:
+            _, best = est.apply_zone_rule(p, b, k, alpha, delta, rule)
+            if best is not None:
+                viol[rule] += risk[best] > alpha
+                picks[rule].append(cov[best])
+    rec = [c for c in d["tasks"]["mados"]["cells"] if c["alpha_kind"] == "half_theta" and c["budget"] == B][0]["rules"]
+    assert viol["prefix"] / draws <= bound and viol["bonferroni"] / draws <= bound
+    assert viol["plugin"] / draws > 0.25 and rec["plugin"]["violation_rate"] > 0.25
+    # within one grid step (0.05): the median sits on a grid level and 300 draws can put it one step off
+    assert abs(np.median(picks["prefix"]) - rec["prefix"]["median_coverage"]) <= 0.05 + 1e-9
+    assert abs(np.median(picks["bonferroni"]) - rec["bonferroni"]["median_coverage"]) <= 0.05 + 1e-9
+    # the recorded P1: recomputed over every cell from the per-cell violation rates, not read from the verdict
+    bound_rec = delta + 3 * np.sqrt(delta * (1 - delta) / d["config"]["draws"])
+    cells = [c for row in d["tasks"].values() for c in row["cells"] if c["monotone"] is not None]
+    assert len(cells) == 110
+    assert max(c["rules"]["bonferroni"]["violation_rate"] for c in cells) <= bound_rec
+    assert max(c["rules"]["prefix"]["violation_rate"] for c in cells) <= bound_rec
+    assert max(c["rules"]["plugin"]["violation_rate"] for c in cells) > 0.5
+    # the calibration gap of one task, from the per-unit file
+    gap = float(u["p1"].mean() - (1 - theta))
+    assert abs(gap - d["tasks"]["mados"]["calibration_gap"]) < 1e-9 and 0 < gap < 0.02

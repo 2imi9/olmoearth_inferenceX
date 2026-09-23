@@ -115,6 +115,11 @@ the graded block alone is restricted to the windows with a majority label.
 oe-inferencex sample water_prob.tif --budget 300 --out to_label.csv
 # ... a reviewer fills the `wrong` column with 1 or 0 per window ...
 oe-inferencex estimate to_label.csv
+# per class as well, once the reviewer has also filled a `reference_class` column:
+oe-inferencex estimate to_label.csv --per-class
+# and, from a RANDOM sample, the share of the map that can be trusted at a stated error rate:
+oe-inferencex sample water_prob.tif --budget 300 --design random --out random.csv
+oe-inferencex certify random.csv --alpha 0.05
 ```
 
 is how wrong the map is. `sample` writes the 300 windows to label (row, column,
@@ -152,7 +157,7 @@ review set near 0.97 — and refuses a review set with the number.
 | `compare` | How two inferences of the same scene differ: the disagreement rate pooled and per tile or event, what the disagreement windows have in common (the enrichment of each label-free cue among them), whether two disagreement sets are the same set; with labels, the errors one side corrects and the errors it adds, and which side is right where they disagree; `determinism_check`, the same input inferred twice under two engines or precisions, gated against the reseed floor |
 | `signals` | Confidence, the boundary indicator, tiling instability, the NDWI cues and the pixel controls, as pure functions; `crop_dependence`, how much of a decision map depends on the crop it was inferred in, a map property for encoders that adapt per input |
 | `calibrate` | Where labels exist, a fitted ranker or a fitted which-side rule, cross-fitted by group and reported held-out; each fusion is locked to the model family it was fitted on, because such rules do not transfer |
-| `estimate` | How wrong the map is, from a labelled sample: which windows to label (stratified by confidence, random, or by tile) and the error rate with the interval that design earns; Wilson with a finite-population correction, the stratified Wald interval, or the ultimate-cluster interval with the naive one beside it; and a check that refuses the review set as a sample, since labelling it and dividing gives two to six times the true rate |
+| `estimate` | How wrong the map is, from a labelled sample: which windows to label (stratified by confidence, random, or by tile) and the error rate with the interval that design earns; per class, the user's and producer's accuracy and the error-adjusted class share with Wilson intervals on the effective sample size (`estimate_per_class`, exp81); and from a random sample, the largest most-confident zone that is wrong at most `alpha` of the time, certified by exact hypergeometric tests so the statement fails on at most `delta` of draws (`certify_zone`, exp80), with the refusal when the budget cannot certify that level; Wilson with a finite-population correction, the stratified Wald interval, or the ultimate-cluster interval with the naive one beside it; and a check that refuses the review set as a sample, since labelling it and dividing gives two to six times the true rate |
 | `metrics`, `stats` | Tie-aware AURC and capture at a budget, exact sign tests, one vote per cluster, block and cluster bootstraps; and the design-weighted forms for a reference that is a probability sample rather than a map, including a base-rate-free AUROC and a paired bootstrap on the difference between two disjoint subsets |
 | `reliability`, `evidence` | SHRUG-FM's published reliability signals reimplemented torch-free, so a competitor's method is scored under this protocol rather than described; the small logistic and softmax heads a candidate rule is scored with. The expected calibration error lives in `metrics` |
 | `taskcard`, `lcc` | What each fine-tuned OlmoEarth model is; a range reader for the served change rasters |

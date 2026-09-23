@@ -2305,6 +2305,81 @@ about 0.01, the two equal-tile tasks not at all, and none of P1 to P4 reads this
 changed is the sentence: correcting tile-sampled labels afterwards works on a map of equal tiles and does not on
 one whose tiles differ.
 
+## Which part of the map can be trusted, with a guarantee (exp80)
+
+Preregistered in [docs/plan/trust_zone.md](../plan/trust_zone.md); runs as `exp/exp80_trust_zone.py`; artifact
+`exp/out/exp80_summary.json`; the two rules ship as `estimate.certify_zone` and `oe-inferencex certify`. Run on
+23 September 2026 on OlmoEarth Base's 24 suite tasks from exp78's per-unit export, no cluster, 42 seconds.
+
+**The question.** exp21 said an accuracy needs a coverage and read the coverage off the whole test set. A map
+user cannot. What they can do is label B windows drawn at random, and what they want is a **zone**: the most
+confident share of the map that is wrong at most α of the time, with the statement itself failing on at most δ
+of draws. The field's rule for this is risk control (Bates et al. 2021; Angelopoulos et al. 2021, *Learn then
+Test*), never before applied to a map audit or graded on one. Two rules were run beside the plug-in a reviewer
+would use unaided: a **prefix** rule that assumes the zone's error rate does not fall as the zone grows and
+accepts zones from the smallest up while an exact hypergeometric test rejects "worse than α", and an
+assumption-free **Bonferroni** rule over the grid. The grid is cut below the coverage a budget can certify at
+all: with no error among its labels a zone still needs at least ⌈ln δ / ln(1−α)⌉ labels in the large-population
+limit, 45 at α = 0.05 and 255 at α = 0.009, which is the honest refusal the tool now states.
+
+**P1 (validity) holds on all 112 cells.** Bound δ + 3 SE = 0.120; largest violation frequency 0.080 for the
+prefix rule (PASTIS S2, α = θ/2, B = 1000), 0.0045 for Bonferroni, against 0.557 for the plug-in. The prefix
+rule stayed under δ = 0.10 on every cell, including the tasks where its monotonicity assumption is broken (by at
+most 0.034 in the zone risk between adjacent grid levels). <!-- claim:trust-zone-guarantee-holds -->
+
+**P2 (the run agrees with the arithmetic) fails as written, on the two near-census cells.** On the two
+CropHarvest Togo tasks (306 units, 300 labelled) the first tested zone is fully drawn on 52% of draws, where the
+exact p-value is 0, and short by one window on the rest; the expected-count arithmetic rounds to the wrong side of
+δ. It holds on the other 19 tasks (China S2 at exactly the two-step limit). The preregistration should have
+excluded cells with B/N above 0.9; it did not. <!-- claim:trust-zone-arithmetic-agrees-outside-census -->
+
+**P3 (the guarantee is worth having) fails as written, on a preregistration error.** The bar said 18 of 24
+tasks; only 21 have a 300-label cell. The plug-in violates its own α on more than δ of draws on **16 of 21**; the
+five below δ are the three near-census Togo cells (the plug-in sees 98% of the population), Nandi S1 (no zone
+exists at α = θ/2, oracle coverage 0.001) and EuroSAT (α = 0.009, where the risk jumps from 0.006 to 0.018 in the
+last grid step). Where the plug-in has a real sample to be wrong on, it is wrong on 21–56% of draws.
+<!-- claim:plugin-zone-violates-on-most-tasks -->
+
+| task, α = θ/2, B = 300, δ = 0.1 | oracle | prefix: certified coverage (violation) | Bonferroni | plug-in violation |
+|---|---|---|---|---|
+| EuroSAT (θ 0.018, c_min 0.85) | 0.95 | 0.95 (0.002) | none | 0.063 |
+| Brick Kiln (0.036, c_min 0.42) | 0.90 | 0.50 (0.042) | 0.75 (0.001) | 0.528 |
+| ForestNet (0.485) | 0.15 | 0.10 (0.019) | 0.10 (0.001) | 0.310 |
+| So2Sat (0.333) | 0.45 | 0.35 (0.056) | 0.20 (0.001) | 0.411 |
+| Nandi Landsat / S1 / S2 | 0.55 / 0.00 / 0.75 | 0.50 / 0.05 / 0.70 | 0.35 / none / 0.60 | 0.425 / 0.066 / 0.267 |
+| CropHarvest Togo S1 / S2 / S2+S1 (near census) | 0.40 / 0.65 / 0.70 | 0.25 / 0.55 / 0.65 (0.000–0.002) | same | 0.000 / 0.002 / 0.000 |
+| CropHarvest China S2 / S1 / S1+S2 | 0.45 / 0.55 / 0.50 | 0.20 / 0.50 / 0.45 | 0.20 / 0.45 / 0.35 | 0.464 / 0.242 / 0.488 |
+| BreizhCrops (0.298) | 0.55 | 0.45 (0.013) | 0.35 (0.002) | 0.286 |
+| MADOS (0.074) | 0.85 | 0.75 (0.034) | 0.675 (0.002) | 0.383 |
+| Sen1Floods11 (0.085) | 0.85 | 0.65 (0.009) | 0.60 (0.000) | 0.261 |
+| PASTIS S1 / S2 / S1+S2 | 0.60 / 0.70 / 0.70 | 0.50 / 0.60 / 0.60 (0.044–0.070) | 0.35 / 0.50 / 0.50 | 0.39–0.49 |
+| m-cashew-plant (0.347) | 0.35 | 0.20 (0.036) | 0.20 (0.002) | 0.492 |
+| m-SA-crop-type (0.340) | 0.60 | 0.50 (0.035) | 0.45 (0.000) | 0.372 |
+
+Read across: at 300 labels the prefix rule certifies a zone on most draws on 14 of the 21 tasks, median
+certified coverage 0.50 against an oracle median of 0.60, and the price of assuming nothing (Bonferroni) is
+about a tenth of the map (medians 0.35 against 0.50). At an absolute α = 0.05 the picture is the budget's: the
+two near-perfect maps certify all or 95% of themselves, MADOS 0.85 and Sen1Floods11 0.75, the PASTIS arms
+0.30–0.35, and eleven tasks nothing on most draws, because their error rate is above 5% almost everywhere. At
+B = 100 the prefix rule certifies on most draws on 7 tasks, at B = 1000 on 10 of the 11 large enough.
+<!-- claim:trust-zone-coverage-at-300-labels -->
+
+**What the map alone says about its error rate.** The mean top-1 probability overstates the accuracy by a median
+0.061 and up to 0.184 (So2Sat) across the 24 tasks, on 19 of them; the three PASTIS arms and the two multi-class
+segmentation tasks understate it by 0.009–0.046. Nothing a user should act on without labels, which is why the
+zone above is calibrated on them. <!-- claim:mean-confidence-overstates-accuracy -->
+
+**Stated from the audit, none of it moving a number.** The α = θ/2 and α = 0.05 cells at one budget share the
+same draws. Zone sizes round half to even. The certified set is the first n windows in a fixed order (margin
+descending, ties by index); on EuroSAT 377 of 1,000 windows share a margin of exactly 1.0, so "margin ≥
+threshold" is not the zone there and the tool reports the tie counts. The preregistration's count of exactly
+monotone tasks was 10, not 11, and its `b_min` floor is exact only in the large-population limit (on a zone
+nearly all of whose windows are labelled the exact test is stronger, so the cut is conservative).
+
+**What this changes.** The tool can now say, from 300 random labels, "the 50% most confident windows of this map
+are wrong at most half as often as the map overall, and that claim fails on at most one draw in ten", and can
+say when a budget cannot certify the α asked for. It cannot say anything about the windows outside the zone.
+
 ## The ceiling belongs to the task, not to the model (from exp74 and exp70)
 
 The margin takes a median 0.68 of the gap between a random ranking and a perfect one on the 24 tasks. A fair

@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+**A trusted zone with a guarantee, per-class accuracy, and the ledger made able to fail (23 September 2026).**
+
+- `estimate.certify_zone` and `oe-inferencex certify`: from a random labelled sample, the largest most-confident
+  share of the map that is wrong at most `alpha` of the time, certified so that the statement fails on at most
+  `delta` of draws (Bates et al. 2021; Angelopoulos et al. 2021), with exact hypergeometric tests, an
+  assumption-free Bonferroni rule beside the monotone-prefix rule, the plug-in a reviewer would use as the
+  comparator, and the honest refusal when the budget cannot certify the level asked for. Graded on the 24-task
+  suite (exp80): the guarantee held on all 112 cells; the plug-in violated its own level on up to 56% of draws.
+  A stratified or tile sample is refused, because the guarantee needs a random one.
+- `estimate.estimate_per_class` and `oe-inferencex estimate --per-class`: user's accuracy, producer's accuracy
+  and the error-adjusted class share per class from the same labelled sample (Olofsson et al. 2014 under a random
+  draw; ratios of Horvitz–Thompson totals under the confidence design), with Wilson intervals on the effective
+  sample size; the field's Wald form is kept as an option because exp81 (in progress, to be recorded after its
+  audit) shows it collapsing to a point on classes with no sampled error. Tile samples are refused for now.
+- The claim ledger: an audit found 138 of 167 checks reading a verdict or a pinned number back from the artifact
+  that produced it; the suite, estimator and cue claims now recompute their statistic from per-task or per-unit
+  records, and the recomputation tests are named as `crosscheck` on the claims they cover.
+- Docs: `docs/plan/methodology_redesign.md` (42 field rules and where the record stands), `docs/plan/trust_zone.md`,
+  `docs/plan/per_class_assessment.md`; the front page's exceptions and the boundary-first scope stated in full.
+
 **`stats`, `compare` on real GeoTIFFs, and one recorded p-value, from the first audit of four modules.**
 
 - **exp70's P3 recorded p = 6.9e-15 from a sign test over 144 task pairs treated as independent**; they come from 24 tasks. The rank-sum test over relabellings of the tasks gives 0.0054 (scipy's exact 0.0060, a million-draw permutation 0.0055). P3 still holds; no document quoted the p; the artifact's P3 block is regenerated from the committed per-task results. New `stats.rank_sum_test`, exact with ties.

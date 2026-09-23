@@ -118,6 +118,7 @@
 
 - id: boundary-first-review-order
   statement: Reviewing boundary windows in confidence order and then the interior captures more of the errors than confidence alone at the 5% and 10% review budgets on Bolivia hand labels (preregistered), is no longer ahead at 20%, and picks the same 5% set as confidence on the fine-tuned model.
+  crosscheck: tests/test_recorded.py::test_exp37_review_sets_cue_coverage_and_the_boundary_first_counts_recompute_from_the_per_window_table
   status: supported
   experiments: [exp36]
   artifacts: [exp/out/exp36_summary.json]
@@ -140,6 +141,7 @@
 
 - id: errors-sit-on-boundaries
   statement: On Bolivia hand labels 75% of the error windows sit on a prediction boundary against 21% of the correct windows.
+  crosscheck: tests/test_recorded.py::test_exp37_review_sets_cue_coverage_and_the_boundary_first_counts_recompute_from_the_per_window_table
   status: measured
   experiments: [exp18, exp36, exp37]
   artifacts: [exp/out/exp36_summary.json, exp/out/exp37_summary.json]
@@ -155,6 +157,7 @@
 
 - id: explanation-cues-cover-errors
   statement: 95% of the Bolivia error windows carry at least one label-free cue with a measured enrichment; spectral ambiguity is 7x enriched and, with the boundary cue, is the one that separates error rates inside confidence's review set.
+  crosscheck: tests/test_recorded.py::test_exp37_review_sets_cue_coverage_and_the_boundary_first_counts_recompute_from_the_per_window_table
   status: measured
   experiments: [exp37]
   artifacts: [exp/out/exp37_summary.json]
@@ -174,6 +177,7 @@
 
 - id: cue-enrichment-table
   statement: Among Bolivia error windows against correct windows the cue shares are boundary 0.750/0.214 (3.5x, error rate 0.25), least-confident 20% 0.589/0.163 (3.6x, 0.26), unstable 0.583/0.164 (3.6x, 0.26) and NDWI-ambiguous 0.483/0.067 (7.2x, 0.41).
+  crosscheck: tests/test_recorded.py::test_exp37_review_sets_cue_coverage_and_the_boundary_first_counts_recompute_from_the_per_window_table
   status: measured
   experiments: [exp37]
   artifacts: [exp/out/exp37_summary.json]
@@ -186,6 +190,7 @@
 
 - id: review-set-error-rate
   statement: The error rate inside confidence's review set on Bolivia hand labels is 0.38 at the 5% budget, 0.33 at 10% and 0.26 at 20%, against a base rate of 8.8%.
+  crosscheck: tests/test_recorded.py::test_exp37_review_sets_cue_coverage_and_the_boundary_first_counts_recompute_from_the_per_window_table
   status: measured
   experiments: [exp37]
   artifacts: [exp/out/exp37_summary.json]
@@ -197,6 +202,7 @@
 
 - id: accuracy-needs-coverage
   statement: The fine-tuned AWF model is overconfident (ECE 0.080; 0.93 accurate where it claims 0.99), so a stated accuracy needs a coverage; keeping the 80% most confident windows raises accuracy from 0.881 to 0.945.
+  crosscheck: tests/test_recorded.py::test_exp21_fine_tuned_model_metrics_from_the_per_window_table
   status: supported
   experiments: [exp21]
   artifacts: [exp/out/exp21_summary.json]
@@ -764,6 +770,7 @@
 
 - id: fine-tuned-model-audit
   statement: The replica of the fine-tuned AWF model reproduces the reported accuracy (0.881 vs 0.895) on the 344 validation points with 41 errors; confidence ranks its errors best (AURC 0.0262), tiling instability is indistinguishable (0.0235, CI spans zero), everything else is significantly worse, and it is overconfident (ECE 0.080).
+  crosscheck: tests/test_recorded.py::test_exp21_fine_tuned_model_metrics_from_the_per_window_table
   status: supported
   experiments: [exp21]
   artifacts: [exp/out/exp21_summary.json]
@@ -1862,6 +1869,7 @@
 
 - id: calibrate-side-rule-held-out
   statement: "A side rule fitted to labels on the readings of both sides (margin, midrank, signed probability, boundary, tile-phase; NDWI shared) and cross-fitted by tile beats the raw margin rule on every one of the eight Sen1Floods11 pair-testbeds, by 8 to 24 points and on more tiles than not (p < 1e-5 everywhere); on the fine-tuned pair, where exp59's frozen-fitted rule lost 26 points, refitting per family gains 14 and 17; preregistered P2 holds."
+  crosscheck: tests/test_recorded.py::test_exp65_calibrate_refits_the_recorded_held_out_numbers_from_the_readings
   status: supported
   experiments: [exp65]
   artifacts: [exp/out/exp65_summary.json]
@@ -1912,6 +1920,7 @@
 
 - id: dfc2020-sensor-difference-dominates-land-cover
   statement: "On DFC2020 the Sentinel-2 and Sentinel-1 inferences of the same scenes differ on 44.27% of the windows, 33 times the 1.34% that a second probe seed moves, and the differing windows carry the boundary cue 3.30 times as often as the agreeing ones; the optical side is right on 50.4% of them, the radar side on 17.2%, and 32.4% are wrong on both; on binary flood water the same axis moved 4.9% of windows (exp60); preregistered P2 holds."
+  crosscheck: tests/test_recorded.py::test_exp66_dfc2020_sensor_axis_and_the_coarse_reference_recompute_from_the_masks
   status: supported
   experiments: [exp66]
   artifacts: [exp/out/exp66_summary.json]
@@ -1930,6 +1939,7 @@
 
 - id: dfc2020-coarse-reference-penalises-the-boundary-order
   statement: "Graded against DFC2020's 500 m MODIS reference instead of its 10 m one, the boundary-first order falls further behind the model's margin, not closer: it trails by 0.0453, 0.1198 and 0.0409 against the 10 m reference and by 0.0766, 0.1351 and 0.0822 against the 500 m one, so the gap is negative on all three arms (-0.0313, -0.0153, -0.0413); preregistered P3, which predicted the weaker reference would flatter the boundary order as WorldCover did in exp18, fails. The reading: a reference flatters a boundary-shaped signal only when it resolves boundaries at a scale comparable to the prediction's, and a reference twenty times coarser penalises it."
+  crosscheck: tests/test_recorded.py::test_exp66_dfc2020_sensor_axis_and_the_coarse_reference_recompute_from_the_masks
   status: rejected
   experiments: [exp66]
   artifacts: [exp/out/exp66_summary.json]
@@ -1964,6 +1974,7 @@
 
 - id: dw-margin-ranks-a-production-model
   statement: "On Dynamic World's 409 expert-annotated test tiles (4,348,526 windows of 4 px), the served product's own margin ranks its own errors better than a control that sees neither the imagery nor the probabilities, only how rare the predicted class is within its tile: pooled excess AURC 0.0637 against 0.1120, a lead of 0.0483, on 315 tiles against 91 (one-sided p = 2.7e-30); the product agrees with the expert consensus on 0.7367 of windows, against the 0.74 its own paper reports, and our pooled decision reproduces its published Top-1 on 0.9899; preregistered P1 holds."
+  crosscheck: tests/test_recorded.py::test_exp67_dynamic_world_recomputes_from_the_committed_windows
   status: supported
   experiments: [exp67]
   artifacts: [exp/out/exp67_summary.json]
@@ -2016,6 +2027,7 @@
 
 - id: dw-published-probabilities-are-underconfident
   statement: "Dynamic World's published top-1 probability understates its own accuracy by about 0.20 against the expert consensus, at the product's own resolution (0.539 mean probability against 0.738 accuracy over 4,135,162 annotated pixels, expected calibration error 0.199) and on the pooled 4 px windows alike (0.535 against 0.737), so it is a property of the product and not of our pooling; the under-confidence is monotone across every populated bin, for instance a published probability near 0.665 carries an accuracy of 0.911, and the published value never exceeds about 0.8. This reverses the experiment's stated prediction of overconfidence and separates two uses of the same numbers: they order a review well and threshold badly."
+  crosscheck: tests/test_recorded.py::test_exp67_dynamic_world_recomputes_from_the_committed_windows
   status: measured
   experiments: [exp67]
   artifacts: [exp/out/exp67_summary.json]
@@ -2093,6 +2105,7 @@
 
 - id: lucas-the-homogeneity-filter-flatters-the-tool
   statement: "The published practice of filtering land-cover reference data to large homogeneous units flatters the audit rather than understating it, reversing preregistered P2: on the disjoint contrast between the 1,145 LUCAS polygons the filter keeps and the 3,633 it deletes, the margin's design-weighted AUROC is 0.774 against 0.677, a difference of +0.097 with a paired NUTS2 bootstrap of [+0.048, +0.141], and its excess AURC is 0.0785 against 0.1925, so the mixed and small units the convention throws away are where the ranking is weakest; the boundary-cue half of the same preregistration is not reversed once its ceiling is removed, the enrichment gap of 1.599 against 1.104 being largely lost headroom and the ceiling-free odds ratios nearly equal at 3.17 against 3.04."
+  crosscheck: tests/test_recorded.py::test_exp68_lucas_recomputes_from_the_committed_polygons
   status: rejected
   experiments: [exp68]
   artifacts: [exp/out/exp68_summary.json]
@@ -2182,6 +2195,7 @@
 
 - id: eurocrops-ranking-holds-on-declarations
   statement: "On 106,274 graded 4-px windows of farmers' declared crops across Austria, Denmark and Slovenia, a reference that is neither photointerpretation nor another model's output nor a field visit but a legal declaration of what was sown, the model's own margin beats the best no-model control in every region, by 0.0527, 0.1348 and 0.0521 of excess AURC, and on all but four of the 146 20 km grid cells carrying enough graded windows to score (50/3, 70/0 and 23/1; p = 3e-12, 8e-22 and 1e-06); preregistered P1 holds, the margin is the best or equal-best of the four model signals in all three regions, and every number is reproduced at a fixed reference probe as well as at the tuned one, the leads differing by at most 0.003."
+  crosscheck: tests/test_recorded.py::test_exp69_eurocrops_recomputes_from_the_committed_windows
   status: supported
   experiments: [exp69]
   artifacts: [exp/out/exp69_summary.json]
@@ -2215,6 +2229,7 @@
 
 - id: eurocrops-the-labelled-floor-for-a-two-date-difference
   statement: "The floor for a two-date change rate is measured here for the first time, because EuroCrops labels both years: the model changes its decision on 0.143 of Austrian, 0.366 of Danish and 0.060 of Slovenian windows whose declared crop did NOT change between the two summers, against 0.758, 0.843 and 0.589 of those where it did, ratios of 5.29, 2.31 and 9.85, so preregistered P2 holds and a two-date difference is mostly the ground moving rather than the model wavering; the floor tracks the model and not the place, being 0.060 where window accuracy is 0.845 and 0.366 where it is 0.695, and it is one to two orders of magnitude above the 0.3% probe-reseed rate that exp68 had to compare its 31% land-cover change rate against, which flattered that number."
+  crosscheck: tests/test_recorded.py::test_exp69_eurocrops_recomputes_from_the_committed_windows
   status: supported
   experiments: [exp69, exp68]
   artifacts: [exp/out/exp69_summary.json, exp/out/exp68_summary.json]
@@ -2293,17 +2308,26 @@
   experiments: [exp70]
   artifacts: [exp/out/exp70_summary.json]
   check: |-
-    (lambda V, R:
-      V['P1']['holds'] is True and V['P1']['wins'] == 24 and V['P1']['of'] == 24
-      and V['P1']['p'] < 1e-6
-      and V['P1']['distinct_sources'] == 14 and V['P1']['source_wins'] == 14
-      and len(R) == 24 and all(R[t]['margin_lead'] > 0 for t in R)
-      and round(min(R[t]['margin_lead'] for t in R), 4) == 0.0157
-      and round(max(R[t]['margin_lead'] for t in R), 4) == 0.2278
+    (lambda R, sign_p: (lambda lead: (lambda srcs, w, l:
+      # recounted from the per-task signals: the margin wins a task when its excess AURC is below the smaller control's
+      len(R) == 24 and w == 24 and l == 0
+      and all(abs(lead[t] - R[t]['margin_lead']) < 1e-12 for t in R)
+      # the exact one-sided sign test over tasks, 24 of 24: 0.5 ** 24 = 6e-08
+      and sign_p(w, l) < 1e-6 and round(sign_p(w, l), 9) == 6e-08
+      # a source is won when the mean lead over the tasks sharing it is positive, as exp70 counts it: 14 of 14
+      and len(srcs) == 14 and sum(1 for v in srcs.values() if sum(v) / len(v) > 0) == 14
+      and round(min(lead.values()), 4) == 0.0157 and round(max(lead.values()), 4) == 0.2278
+      and round(median(lead.values()), 4) == 0.1158
       and round(min(R[t]['test_accuracy'] for t in R), 3) == 0.333
       and round(max(R[t]['test_accuracy'] for t in R), 3) == 0.979
       and sum(R[t]['n_units'] for t in R) == 6435473
-    )(A['exp/out/exp70_summary.json']['verdicts'], A['exp/out/exp70_summary.json']['results']['tasks'])
+    )({R[t]['source']: [lead[u] for u in R if R[u]['source'] == R[t]['source']] for t in R},
+      sum(1 for v in lead.values() if v > 0), sum(1 for v in lead.values() if v < 0)))(
+      {t: min(R[t]['signals'][c]['excess_aurc'] for c in ('ctl_embedding_distance', 'ctl_class_rarity'))
+          - R[t]['signals']['margin']['excess_aurc'] for t in R}))(
+      A['exp/out/exp70_summary.json']['results']['tasks'],
+      # the exact binomial tail, with the binomial coefficient as a product taken through log (the only transcendental the ledger has)
+      lambda w, l: sum(round(2 ** (sum(log((w + l - k + i) / i) for i in range(1, k + 1)) / log(2))) for k in range(w, w + l + 1)) / 2 ** (w + l))
   cited_in:
     - {file: docs/Findings.md, marker: suite-margin-wins-every-task}
     - {file: docs/TECHNIQUES.md, marker: suite-margin-wins-every-task}
@@ -2493,33 +2517,63 @@
   experiments: [exp73, exp70]
   artifacts: [exp/out/exp73_summary.json]
   check: |-
-    (lambda V, R:
-      V['P1']['holds'] is True and V['P1']['wins'] == 22 and V['P1']['losses'] == 2 and V['P1']['p'] < 0.05
-      and V['P2']['holds'] is True and V['P2']['wins'] == 24 and V['P3']['holds'] is True and V['P3']['wins'] == 24
-      and V['P1']['distinct_sources'] == 14 and V['P1']['source_wins'] == 13
-      and set(V['P1']['lost_on']) == {'awf_landsat', 'm_eurosat'}
-      and len(R) == 24 and sum(r['n_units'] for r in R.values()) == 6435473
-      and all(R[t]['lead']['knn_dist'] > 0 and R[t]['lead']['mahalanobis'] > 0 for t in R)
-    )(A['exp/out/exp73_summary.json']['verdicts'], A['exp/out/exp73_summary.json']['results']['tasks'])
+    (lambda R, sign_p: (lambda prim: (lambda lead: (lambda W, L:
+      len(R) == 24 and sum(R[t]['n_units'] for t in R) == 6435473
+      # the ensemble's primary reading is fixed by the family, and the artifact says the same
+      and all(prim[t] == R[t]['ensemble_primary'] for t in R)
+      # every alternative's per-task lead of the margin (its excess AURC minus the margin's) recomputed from the signals
+      and all(abs(lead[a][t] - R[t]['lead'][a]) < 1e-12 for a in lead for t in R)
+      # P1-P3 at exp70's bar: at least 18 of 24 won at a one-sided exact sign p < 0.05
+      and all(W[a] >= 18 and sign_p(W[a], L[a]) < 0.05 for a in lead)
+      and (W['ensemble'], L['ensemble']) == (22, 2) and round(sign_p(22, 2), 6) == 1.8e-05
+      and (W['knn_dist'], L['knn_dist']) == (24, 0) and (W['mahalanobis'], L['mahalanobis']) == (24, 0)
+      and round(sign_p(24, 0), 9) == 6e-08
+      and sorted(t for t in R if lead['ensemble'][t] < 0) == ['awf_landsat', 'm_eurosat']
+      and round(lead['ensemble']['awf_landsat'], 4) == -0.0030 and round(lead['ensemble']['m_eurosat'], 4) == -0.0003
+      and [round(median(lead[a].values()), 4) for a in ('ensemble', 'knn_dist', 'mahalanobis')] == [0.0153, 0.0954, 0.1123]
+      # 13 of 14 distinct sources for the ensemble: a source is won when the mean lead over its tasks is positive
+      and (lambda srcs: len(srcs) == 14 and sum(1 for v in srcs.values() if sum(v) / len(v) > 0) == 13)(
+        {R[t]['source']: [lead['ensemble'][u] for u in R if R[u]['source'] == R[t]['source']] for t in R})
+    )({a: sum(1 for v in lead[a].values() if v > 0) for a in lead}, {a: sum(1 for v in lead[a].values() if v < 0) for a in lead}))(
+      {a: {t: R[t]['signals'][prim[t] if a == 'ensemble' else a]['excess_aurc'] - R[t]['signals']['margin']['excess_aurc'] for t in R}
+       for a in ('ensemble', 'knn_dist', 'mahalanobis')}))(
+      # mutual information on classification, vote disagreement on the window path
+      {t: 'ens_mi' if R[t]['family'] == 'classification' else 'ens_vote_dis' for t in R}))(
+      A['exp/out/exp73_summary.json']['results']['tasks'],
+      lambda w, l: sum(round(2 ** (sum(log((w + l - k + i) / i) for i in range(1, k + 1)) / log(2))) for k in range(w, w + l + 1)) / 2 ** (w + l))
   cited_in:
     - {file: docs/results/comparisons.md, marker: suite-margin-beats-the-strong-alternatives}
     - {file: docs/Findings.md, marker: suite-margin-beats-the-strong-alternatives}
     - {file: docs/TECHNIQUES.md, marker: suite-margin-beats-the-strong-alternatives}
 
 - id: suite-alternatives-clear-the-control-and-still-lose
-  statement: "The alternatives are real signals and still lose: on the 24-task suite the five-seed ensemble beats the best no-model control on 15 tasks, the nearest-neighbour distance on 14 and the Mahalanobis distance on 12, and on none of those tasks is it better than the margin; the ensemble is nearly the margin's equal on classification (median lead of the margin +0.0114) and clearly behind on segmentation (+0.1336), the feature-space signals are far behind on both (medians +0.0913 and +0.1118 on classification, +0.1121 and +0.1166 on segmentation), mutual information beats vote disagreement on 17 of 17 classification tasks, and the bag margin beats the single margin on 6 of 17."
+  statement: "The alternatives are real signals and still lose: on the 24-task suite the five-seed ensemble beats the best no-model control on 15 tasks, the nearest-neighbour distance on 14 and the Mahalanobis distance on 12; the two distance signals beat the margin on none of those tasks and the ensemble on two of its fifteen (EuroSAT by 0.0003 and AWF Landsat by 0.0030, a statement corrected on 2026-09-23 when the check was made to recompute); the ensemble is nearly the margin's equal on classification (median lead of the margin +0.0114) and clearly behind on segmentation (+0.1336), the feature-space signals are far behind on both (medians +0.0913 and +0.1118 on classification, +0.1121 and +0.1166 on segmentation), mutual information beats vote disagreement on 17 of 17 classification tasks, and the bag margin beats the single margin on 6 of 17."
   status: measured
   experiments: [exp73]
   artifacts: [exp/out/exp73_summary.json]
   check: |-
-    (lambda V, R:
-      V['P4']['ensemble'] == 15 and V['P4']['knn_dist'] == 14 and V['P4']['mahalanobis'] == 12
-      and sum(1 for t in R if 'bag_margin' in R[t]['lead'] and R[t]['lead']['bag_margin'] < 0) == 6
-      and sum(1 for t in R if 'bag_margin' in R[t]['lead']) == 17
+    (lambda R: (lambda prim, ctl: (lambda lead, beats:
+      # an alternative clears the control on a task when its excess AURC is below the smaller of the two controls'
+      {a: len(beats[a]) for a in beats} == {'ensemble': 15, 'knn_dist': 14, 'mahalanobis': 12}
+      and all(R[t]['lead']['beats_control'][a] == (t in beats[a]) for a in beats for t in R)
+      # the feature-space signals never beat the margin where they clear the control (the ensemble does, on m_eurosat
+      # and awf_landsat, the two tasks it wins outright)
+      and all(lead[a][t] > 0 for a in ('knn_dist', 'mahalanobis') for t in beats[a])
+      and sum(1 for t in R if R[t]['family'] == 'classification') == 17 and sum(1 for t in R if R[t]['family'] == 'segmentation') == 7
+      # the margin's median lead by family, from the per-task signals
+      and [round(median(lead[a][t] for t in R if R[t]['family'] == f), 4)
+           for a in ('ensemble', 'knn_dist', 'mahalanobis') for f in ('classification', 'segmentation')]
+          == [0.0114, 0.1336, 0.0913, 0.1121, 0.1118, 0.1166]
       and sum(1 for t in R if R[t]['family'] == 'classification' and R[t]['signals']['ens_mi']['excess_aurc'] < R[t]['signals']['ens_vote_dis']['excess_aurc']) == 17
-      and sorted(R[t]['lead']['ensemble'] for t in R if R[t]['family'] == 'classification')[8] > 0.005
-      and sorted(R[t]['lead']['ensemble'] for t in R if R[t]['family'] == 'segmentation')[3] > 0.1
-    )(A['exp/out/exp73_summary.json']['verdicts'], A['exp/out/exp73_summary.json']['results']['tasks'])
+      and sum(1 for t in R if 'bag_margin' in R[t]['signals']) == 17
+      and sum(1 for t in R if 'bag_margin' in R[t]['signals'] and R[t]['signals']['bag_margin']['excess_aurc'] < R[t]['signals']['margin']['excess_aurc']) == 6
+    )({a: {t: R[t]['signals'][prim[t] if a == 'ensemble' else a]['excess_aurc'] - R[t]['signals']['margin']['excess_aurc'] for t in R}
+       for a in ('ensemble', 'knn_dist', 'mahalanobis')},
+      {a: [t for t in R if R[t]['signals'][prim[t] if a == 'ensemble' else a]['excess_aurc'] < ctl[t]]
+       for a in ('ensemble', 'knn_dist', 'mahalanobis')}))(
+      {t: 'ens_mi' if R[t]['family'] == 'classification' else 'ens_vote_dis' for t in R},
+      {t: min(R[t]['signals'][c]['excess_aurc'] for c in ('ctl_embedding_distance', 'ctl_class_rarity')) for t in R}))(
+      A['exp/out/exp73_summary.json']['results']['tasks'])
   cited_in:
     - {file: docs/results/comparisons.md, marker: suite-alternatives-clear-the-control-and-still-lose}
     - {file: docs/Findings.md, marker: suite-alternatives-clear-the-control-and-still-lose}
@@ -2531,16 +2585,27 @@
   experiments: [exp74, exp70]
   artifacts: [exp/out/exp74_summary.json]
   check: |-
-    (lambda V, R, T, X:
-      V['P1']['holds'] is True and V['P1']['encoders_below_bar'] == []
-      and len(R) == 15 and sum(e['scored'] for e in R.values()) == 332
-      and sum(e['wins'] for e in R.values()) == 322 and sum(e['losses'] for e in R.values()) == 10
-      and min(e['share'] for e in R.values()) > 0.90 and max(e['p'] for e in R.values()) < 1.2e-04
-      and sum(1 for e in R.values() if e['losses'] == 0) == 8
-      and sum(len(v) for v in X.values()) == 28
+    (lambda T, R, X, sign_p: (lambda lead: (lambda W, L:
+      len(T) == 15 and set(T) == set(R) == set(X)
+      # every encoder carries 24 tasks, scored plus absent, so nothing was dropped silently
+      and all(len(T[e]) + len(X[e]) == 24 for e in T) and sum(len(v) for v in X.values()) == 28
+      # recounted from the per-task signals: the margin wins a pair when its excess AURC is below the smaller control's
+      and all(abs(lead[e][t] - T[e][t]['margin_lead']) < 1e-12 for e in T for t in T[e])
+      and sum(len(T[e]) for e in T) == 332 and sum(W.values()) == 322 and sum(L.values()) == 10
+      # P1's bar, encoder by encoder: at least 75% of the scored tasks won at a one-sided exact sign p < 0.05
+      and all(W[e] / len(T[e]) >= 0.75 and sign_p(W[e], L[e]) < 0.05 for e in T)
+      and min(W[e] / len(T[e]) for e in T) > 0.90 and max(sign_p(W[e], L[e]) for e in T) < 1.2e-04
+      and sum(1 for e in T if L[e] == 0) == 8
+      and sorted(t for e in T for t in T[e] if lead[e][t] < 0) == sorted(['cropharvest_Togo_12_sentinel2_sentinel1'] * 2 + ['cropharvest_Togo_12_sentinel1'] * 4 + ['cropharvest_Togo_12_sentinel2'] + ['nandi_sentinel1'] * 3)
       and sum(T[e][t]['n_units'] for e in T for t in T[e]) == 92019785
-      and sorted(t for e in R.values() for t in e['lost_on']) == sorted(['cropharvest_Togo_12_sentinel2_sentinel1'] * 2 + ['cropharvest_Togo_12_sentinel1'] * 4 + ['cropharvest_Togo_12_sentinel2'] + ['nandi_sentinel1'] * 3)
-    )(A['exp/out/exp74_summary.json']['verdicts'], A['exp/out/exp74_summary.json']['results']['per_encoder'], A['exp/out/exp74_summary.json']['results']['tasks'], A['exp/out/exp74_summary.json']['results']['absent'])
+      # and the artifact's own per-encoder tally agrees with the recount
+      and all((W[e], L[e], len(T[e])) == (R[e]['wins'], R[e]['losses'], R[e]['scored']) and abs(sign_p(W[e], L[e]) - R[e]['p']) < 1e-12 for e in T)
+    )({e: sum(1 for v in lead[e].values() if v > 0) for e in T}, {e: sum(1 for v in lead[e].values() if v < 0) for e in T}))(
+      {e: {t: min(T[e][t]['signals'][c]['excess_aurc'] for c in ('ctl_embedding_distance', 'ctl_class_rarity'))
+              - T[e][t]['signals']['margin']['excess_aurc'] for t in T[e]} for e in T}))(
+      A['exp/out/exp74_summary.json']['results']['tasks'], A['exp/out/exp74_summary.json']['results']['per_encoder'],
+      A['exp/out/exp74_summary.json']['results']['absent'],
+      lambda w, l: sum(round(2 ** (sum(log((w + l - k + i) / i) for i in range(1, k + 1)) / log(2))) for k in range(w, w + l + 1)) / 2 ** (w + l))
   cited_in:
     - {file: docs/results/comparisons.md, marker: suite-holds-under-every-encoder}
     - {file: docs/Findings.md, marker: suite-holds-under-every-encoder}
@@ -2552,12 +2617,17 @@
   experiments: [exp74]
   artifacts: [exp/out/exp74_summary.json]
   check: |-
-    (lambda V, R:
-      V['P2']['holds'] is True
-      and V['P2']['per_family'] == {'anysat': '23/24', 'clay_large': '24/24', 'panopticon': '24/24'}
-      and R['anysat']['lost_on'] == ['cropharvest_Togo_12_sentinel2_sentinel1']
-      and all(R[e]['scored'] == 24 and R[e]['p'] < 1.5e-06 for e in ('anysat', 'clay_large', 'panopticon'))
-    )(A['exp/out/exp74_summary.json']['verdicts'], A['exp/out/exp74_summary.json']['results']['per_encoder'])
+    (lambda T, sign_p: (lambda lead: (lambda W, L:
+      # each outside family carries all 24 tasks and, recounted from the per-task signals, wins at least P2's 22
+      all(len(T[e]) == 24 and W[e] >= 22 for e in W)
+      and {e: str(W[e]) + '/' + str(len(T[e])) for e in W} == {'anysat': '23/24', 'clay_large': '24/24', 'panopticon': '24/24'}
+      and [t for t in sorted(T['anysat']) if lead['anysat'][t] < 0] == ['cropharvest_Togo_12_sentinel2_sentinel1']
+      and all(sign_p(W[e], L[e]) < 1.5e-06 for e in W)
+    )({e: sum(1 for v in lead[e].values() if v > 0) for e in lead}, {e: sum(1 for v in lead[e].values() if v < 0) for e in lead}))(
+      {e: {t: min(T[e][t]['signals'][c]['excess_aurc'] for c in ('ctl_embedding_distance', 'ctl_class_rarity'))
+              - T[e][t]['signals']['margin']['excess_aurc'] for t in T[e]} for e in ('anysat', 'clay_large', 'panopticon')}))(
+      A['exp/out/exp74_summary.json']['results']['tasks'],
+      lambda w, l: sum(round(2 ** (sum(log((w + l - k + i) / i) for i in range(1, k + 1)) / log(2))) for k in range(w, w + l + 1)) / 2 ** (w + l))
   cited_in:
     - {file: docs/results/comparisons.md, marker: suite-outside-families-hold-at-twenty-two}
     - {file: docs/Findings.md, marker: suite-outside-families-hold-at-twenty-two}
@@ -2992,6 +3062,7 @@
 
 - id: design-based-interval-is-honest
   statement: "Under a simple random sample of 300 windows, the design-based nominal-95% interval for a map's window error rate covers the true rate on 0.933 to 0.961 of 2,000 reviewer draws, on all 7 segmentation tasks of Ai2's suite."
+  crosscheck: tests/test_recorded.py::test_exp78_coverages_reproduce_in_a_small_seeded_monte_carlo_from_the_per_unit_files
   status: supported
   experiments: [exp78]
   artifacts: [exp/out/exp78_summary.json]
@@ -3012,6 +3083,7 @@
 
 - id: tile-sampling-breaks-the-naive-interval
   statement: "Spending a 300-window budget as 19 tiles of 16 windows and then applying the ordinary independent-sample formula gives a nominal-95% interval that covers on 0.506 to 0.777 of draws on 6 of the 7 segmentation tasks, with a median design effect of 2.94; a cluster-corrected ratio estimator restores coverage to 0.913-0.932 on the four tasks with full tiles, to 0.824 on Sen1Floods11, and not on MADOS, whose tiles hold 1 to 400 valid windows, where it covers 0.598."
+  crosscheck: tests/test_recorded.py::test_exp78_coverages_reproduce_in_a_small_seeded_monte_carlo_from_the_per_unit_files
   status: supported
   experiments: [exp78]
   artifacts: [exp/out/exp78_summary.json]
@@ -3071,6 +3143,7 @@
 
 - id: confidence-saves-a-quarter-to-a-half-of-the-labels
   statement: "Confidence-guided labelling saves up to 2.51x the labels at equal half-width, on MADOS with coverage intact at 0.941, above the 1.8x the preregistered honesty check allowed; no arm reaches a half-width below +/-4 points on any task whose error rate exceeds 20%."
+  crosscheck: tests/test_recorded.py::test_exp78_coverages_reproduce_in_a_small_seeded_monte_carlo_from_the_per_unit_files
   status: mixed
   experiments: [exp78]
   artifacts: [exp/out/exp78_summary.json]
@@ -3092,3 +3165,113 @@
     recomputes the saving from P3's width ratio, so the two verdict blocks cannot disagree without failing. The second
     clause held everywhere, which is why the headline stands: on estimating how wrong a map is, the ranking is worth
     between a quarter and a half of the labels, not the order of magnitude it is worth for finding errors.
+
+- id: trust-zone-guarantee-holds
+  statement: "From 300 (or 100 or 1,000) random labels on OlmoEarth Base's 24 suite tasks, a zone certified as wrong at most alpha of the time by the exact-test rules (monotone prefix, or Bonferroni over the grid) exceeded alpha on at most 0.080 (prefix) and 0.0045 (Bonferroni) of 2,000 draws on every one of 112 cells, against a bound of delta + 3 SE = 0.120 at delta = 0.1; the plug-in a reviewer would use exceeded it on up to 0.557."
+  crosscheck: tests/test_known_answer.py::test_exp80_zone_guarantee_and_coverage_reproduce_from_a_fresh_draw
+  status: supported
+  experiments: [exp80]
+  artifacts: [exp/out/exp80_summary.json]
+  check: |-
+    (lambda s: (lambda cells, bound:
+      len(cells) == 110 and s['config']['delta'] == 0.1 and s['config']['draws'] == 2000
+      and sum(len(r['cells']) for r in s['tasks'].values()) == 112
+      and max(c['rules']['prefix']['violation_rate'] for c in cells) <= bound
+      and round(max(c['rules']['prefix']['violation_rate'] for c in cells), 3) == 0.080
+      and max(c['rules']['bonferroni']['violation_rate'] for c in cells) <= bound
+      and round(max(c['rules']['bonferroni']['violation_rate'] for c in cells), 4) == 0.0045
+      and round(max(c['rules']['plugin']['violation_rate'] for c in cells), 3) == 0.557
+      and all(c['rules']['prefix']['violation_rate'] <= 0.1 for c in cells if not c['monotone']['nondecreasing'])
+    )([c for r in s['tasks'].values() for c in r['cells'] if c['monotone'] is not None],
+      s['config']['delta'] + 3 * (s['config']['delta'] * (1 - s['config']['delta']) / s['config']['draws']) ** 0.5))(A['exp/out/exp80_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: trust-zone-guarantee-holds}
+    - {file: docs/Findings.md, marker: trust-zone-guarantee-holds}
+  note: >-
+    The bound and the maxima are recomputed from every cell's violation rate, not read from the verdict block. Two
+    cells (EuroSAT at B = 100 for both alphas) have no testable level and count as trivially valid; the 110 cells
+    with levels are the ones graded. The prefix rule is covered by its theorem only where the zone risk is
+    nondecreasing across the tested levels; the last clause records that it stayed under delta on the other cells too.
+
+- id: trust-zone-arithmetic-agrees-outside-census
+  statement: "At 300 labels and alpha = half the map's error rate, running each rule once on the expected counts predicts the run's modal outcome (zone or no zone) and its median certified coverage to within two grid steps on 19 of the 21 tasks large enough for that budget; the two exceptions are the CropHarvest Togo tasks, where 300 labels are 98% of the population and the expected-count arithmetic rounds to the wrong side of delta at the first tested level."
+  crosscheck: tests/test_known_answer.py::test_exp80_zone_guarantee_and_coverage_reproduce_from_a_fresh_draw
+  status: mixed
+  experiments: [exp80]
+  artifacts: [exp/out/exp80_summary.json]
+  check: |-
+    (lambda s: (lambda rows: (lambda fails:
+      len({t for t, _, _ in rows}) == 21 and len(rows) == 42
+      and sorted(fails) == [('cropharvest_Togo_12_sentinel1', 'prefix'), ('cropharvest_Togo_12_sentinel2_sentinel1', 'prefix')]
+      and all(s['tasks'][t]['n_units'] == 306 for t, _ in fails)
+    )([(t, rule) for t, rule, r in rows
+       if not (r['modal_outcome'] == r['arithmetic_outcome']
+               and (r['median_coverage'] is None or r['arithmetic'] is None or abs(r['median_coverage'] - r['arithmetic']) <= 0.1 + 1e-9))])
+    )([(t, rule, c['rules'][rule]) for t, row in s['tasks'].items() for c in row['cells']
+       if c['alpha_kind'] == 'half_theta' and c['budget'] == 300 for rule in ('prefix', 'bonferroni')]))(A['exp/out/exp80_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: trust-zone-arithmetic-agrees-outside-census}
+  note: >-
+    Preregistered as "on every task" and recorded as failed as written; the check pins the two failing cells and the
+    19 passing ones so that a rerun where the arithmetic drifts elsewhere is caught. The crosscheck re-draws the
+    MADOS cell and reproduces its median coverage, one of the 19.
+
+- id: plugin-zone-violates-on-most-tasks
+  statement: "At 300 labels and alpha = half the map's error rate, the plug-in rule (accept the largest zone whose sample error rate is at most alpha) exceeds alpha on more than delta = 0.1 of draws on 16 of the 21 tasks large enough for that budget; the five below delta are the three near-census CropHarvest Togo tasks, Nandi Sentinel-1 (no zone exists at that alpha) and EuroSAT (alpha = 0.009). The preregistration's bar of 18 of 24 was written for 24 tasks and is recorded as mis-stated."
+  crosscheck: tests/test_known_answer.py::test_exp80_zone_guarantee_and_coverage_reproduce_from_a_fresh_draw
+  status: mixed
+  experiments: [exp80]
+  artifacts: [exp/out/exp80_summary.json]
+  check: |-
+    (lambda s: (lambda v:
+      len(v) == 21 and sum(1 for x in v.values() if x > 0.1) == 16
+      and sorted(t for t, x in v.items() if x <= 0.1) == ['cropharvest_Togo_12_sentinel1', 'cropharvest_Togo_12_sentinel2',
+                                                          'cropharvest_Togo_12_sentinel2_sentinel1', 'm_eurosat', 'nandi_sentinel1']
+      and min(x for t, x in v.items() if x > 0.1) > 0.2
+    )({t: c['rules']['plugin']['violation_rate'] for t, row in s['tasks'].items() for c in row['cells']
+       if c['alpha_kind'] == 'half_theta' and c['budget'] == 300}))(A['exp/out/exp80_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: plugin-zone-violates-on-most-tasks}
+    - {file: docs/Findings.md, marker: plugin-zone-violates-on-most-tasks}
+
+- id: trust-zone-coverage-at-300-labels
+  statement: "At 300 labels and alpha = half the map's error rate, the prefix rule certifies a zone on most draws on 14 of the 21 tasks large enough for that budget, with a median certified coverage of 0.50 against an oracle median of 0.60; the assumption-free Bonferroni rule on 13, median 0.35."
+  crosscheck: tests/test_known_answer.py::test_exp80_zone_guarantee_and_coverage_reproduce_from_a_fresh_draw
+  status: measured
+  experiments: [exp80]
+  artifacts: [exp/out/exp80_summary.json]
+  check: |-
+    (lambda s: (lambda cells: (lambda med:
+      len(cells) == 21
+      and sum(1 for c in cells if c['rules']['prefix']['no_zone_rate'] < 0.5) == 14
+      and sum(1 for c in cells if c['rules']['bonferroni']['no_zone_rate'] < 0.5) == 13
+      and med([c['rules']['prefix']['median_coverage'] or 0.0 for c in cells]) == 0.5
+      and med([c['rules']['bonferroni']['median_coverage'] or 0.0 for c in cells]) == 0.35
+      and med([c['oracle_coverage'] for c in cells]) == 0.6
+    )(lambda v: sorted(v)[len(v) // 2]))([c for row in s['tasks'].values() for c in row['cells']
+                                          if c['alpha_kind'] == 'half_theta' and c['budget'] == 300]))(A['exp/out/exp80_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: trust-zone-coverage-at-300-labels}
+    - {file: docs/Findings.md, marker: trust-zone-coverage-at-300-labels}
+  note: >-
+    Medians over 21 tasks are the 11th sorted value; a task whose rule certifies nothing on most draws enters as 0.
+
+- id: mean-confidence-overstates-accuracy
+  statement: "The mean top-1 probability of OlmoEarth Base's probe exceeds its accuracy by a median 0.061 and up to 0.184 (So2Sat) over the 24 suite tasks, on 19 of them; the three PASTIS arms and the two multi-class segmentation tasks understate it by 0.009 to 0.046."
+  crosscheck: tests/test_known_answer.py::test_exp80_zone_guarantee_and_coverage_reproduce_from_a_fresh_draw
+  status: measured
+  experiments: [exp80]
+  artifacts: [exp/out/exp80_summary.json]
+  check: |-
+    (lambda g: (lambda v:
+      len(v) == 24 and round((v[11] + v[12]) / 2, 3) == 0.061
+      and round(v[-1], 3) == 0.184 and max(g, key=g.get) == 'm_so2sat'
+      and sum(1 for x in v if x > 0) == 19
+      and sorted(t for t, x in g.items() if x < 0) == ['m_cashew_plant', 'm_sa_crop_type', 'pastis_sentinel1', 'pastis_sentinel1_sentinel2', 'pastis_sentinel2']
+      and round(v[0], 3) == -0.046 and round(max(x for x in v if x < 0), 3) == -0.009
+    )(sorted(g.values())))({t: row['calibration_gap'] for t, row in A['exp/out/exp80_summary.json']['tasks'].items()})
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: mean-confidence-overstates-accuracy}
+    - {file: docs/Findings.md, marker: mean-confidence-overstates-accuracy}
+  note: >-
+    A population fact read from exp78's per-unit export, recomputed in the crosscheck for MADOS from the file itself.

@@ -390,3 +390,71 @@ def test_compare_degenerate_inputs_are_named_refusals(tmp_path):
                        (["--groups", tmp_path / "neg.npy"], "no valid group"), (["--patch", "0"], "--patch"), (["--patch", "64"], "--patch")):
         with pytest.raises(SystemExit, match=msg):
             main(["compare", str(tmp_path / "a.npy"), str(tmp_path / "b.npy"), "--out", str(tmp_path / "x"), *map(str, extra)])
+
+
+# ----------------------------------------------------------------------------- certify and --per-class (exp80, exp81)
+def _fill_with_classes(csv_path, probs, expert, patch=4):
+    """As _fill, and the reviewer's class per window in a `reference_class` column."""
+    from oe_inferencex.assess import _pooled_argmax
+    hard = _pooled_argmax(probs.argmax(0), probs.shape[0], patch)
+    ref = _pooled_argmax(np.where(expert >= 0, expert, -1), probs.shape[0], patch, empty=-1)
+    rows = list(csv.DictReader(open(csv_path)))
+    keep = []
+    for r in rows:
+        i, j = int(r["window_row"]), int(r["window_col"])
+        r["wrong"] = str(int(hard[i, j] != ref[i, j]))
+        r["reference_class"] = str(int(ref[i, j])) if ref[i, j] >= 0 else str(int(hard[i, j]))
+        keep.append(r)
+    with open(csv_path, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+        w.writeheader(); w.writerows(keep)
+    return hard, ref
+
+
+def test_certify_needs_a_random_sample_and_then_names_a_zone_or_says_why_not(tmp_path):
+    path, probs, expert = _sample_map(tmp_path)
+    conf = tmp_path / "c.csv"
+    main(["sample", path, "--budget", "100", "--out", str(conf)])
+    _fill(conf, probs, expert)
+    with pytest.raises(SystemExit, match="needs a random sample"):
+        main(["certify", str(conf), "--alpha", "0.2"])
+    rnd = tmp_path / "r.csv"
+    assert main(["sample", path, "--budget", "300", "--design", "random", "--out", str(rnd)]) == 0
+    hard, ref = _fill(rnd, probs, expert)
+    truth = float((hard != ref).mean())
+    assert main(["certify", str(rnd), "--alpha", str(round(truth, 3))]) == 0      # alpha = the map's own rate
+    z = json.load(open(tmp_path / "r_zone.json"))
+    assert z["rule"] == "prefix" and z["delta"] == 0.1 and z["n_population"] == 32 * 32 and len(z["levels"]) >= 1
+    if z["coverage"] is not None:
+        assert z["n_zone"] == int(round(z["coverage"] * z["n_population"]))
+        mask = np.load(tmp_path / "r_zone.npy")
+        assert mask.shape == (32, 32) and int(mask.sum()) == z["n_zone"]
+        assert z["upper_bound"] <= round(truth, 3) + 1e-12
+    small = tmp_path / "s.csv"
+    main(["sample", path, "--budget", "20", "--design", "random", "--out", str(small)])
+    _fill(small, probs, expert)
+    assert main(["certify", str(small), "--alpha", "0.02"]) == 0                # 20 labels cannot certify 2%
+    z = json.load(open(tmp_path / "s_zone.json"))
+    assert z["coverage"] is None and "needs 114" in z["note"]
+
+
+def test_estimate_per_class_reports_every_class_and_needs_the_reference_column(tmp_path):
+    path, probs, expert = _sample_map(tmp_path)
+    out = tmp_path / "p.csv"
+    assert main(["sample", path, "--budget", "300", "--design", "random", "--out", str(out)]) == 0
+    _fill(out, probs, expert)
+    with pytest.raises(SystemExit, match="reference_class"):
+        main(["estimate", str(out), "--per-class"])
+    hard, ref = _fill_with_classes(out, probs, expert)
+    assert main(["estimate", str(out), "--per-class"]) == 0
+    r = json.load(open(tmp_path / "p_estimate.json"))
+    assert "per_class" in r and len(r["per_class"]) == probs.shape[0] and "overall_accuracy" in r
+    shares = sum(v["map_share"] for v in r["per_class"].values())
+    assert abs(shares - 1) < 1e-9
+    assert abs(r["overall_accuracy"]["estimate"] - (1 - r["estimate"])) < 0.05     # both from the same 300 labels
+    conf = tmp_path / "q.csv"
+    main(["sample", path, "--budget", "300", "--out", str(conf)])                 # the confidence design works too
+    _fill_with_classes(conf, probs, expert)
+    assert main(["estimate", str(conf), "--per-class"]) == 0
+    r = json.load(open(tmp_path / "q_estimate.json"))
+    assert r["per_class_method"].startswith("stratified")

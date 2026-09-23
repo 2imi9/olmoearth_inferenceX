@@ -402,24 +402,25 @@ def cmd_sample(args):
     return 0
 
 
-def cmd_estimate(args):
-    """The map's error rate with its interval, from a filled-in sample CSV and its sidecar design."""
-    side_path = args.sample[:-4] + ".json" if args.sample.endswith(".csv") else args.sample + ".json"
+def _labelled_sample(path, command):
+    """A filled-in sample CSV and its sidecar design, checked: the rows are the design's, every `wrong` is 0 or 1.
+    Returns (sidecar, rows, indices, sample dict for the estimators, wrong)."""
+    side_path = path[:-4] + ".json" if path.endswith(".csv") else path + ".json"
     if not os.path.exists(side_path):
-        raise SystemExit(f"{side_path} not found; `estimate` needs the sidecar `sample` wrote beside the CSV")
+        raise SystemExit(f"{side_path} not found; `{command}` needs the sidecar `sample` wrote beside the CSV")
     with open(side_path) as f:
         side = json.load(f)
-    with open(args.sample, newline="", encoding="utf-8-sig") as f:          # a spreadsheet's BOM is not a column name
+    with open(path, newline="", encoding="utf-8-sig") as f:                 # a spreadsheet's BOM is not a column name
         rows = list(csv.DictReader(f))
     need = {"index", "window_row", "window_col", "wrong"}
     if not rows or not need <= set(rows[0]):
-        raise SystemExit(f"{args.sample}: expected the columns `sample` wrote ({', '.join(sorted(need))}); found "
+        raise SystemExit(f"{path}: expected the columns `sample` wrote ({', '.join(sorted(need))}); found "
                          f"{', '.join(rows[0].keys()) if rows else 'no rows'}. A spreadsheet saved with another delimiter "
                          "(semicolon) or with columns removed cannot be matched to its design")
     try:
         idx = np.array([int(float(r["index"])) for r in rows])                # "73.0" after a spreadsheet round trip is 73
     except ValueError as exc:
-        raise SystemExit(f"{args.sample}: the `index` column is not the one `sample` wrote: {exc}")
+        raise SystemExit(f"{path}: the `index` column is not the one `sample` wrote: {exc}")
     if not np.array_equal(idx, np.asarray(side["indices"], int)):
         raise SystemExit("the CSV's rows do not match the design in its sidecar; label the file `sample` wrote, in order")
     blank = [i for i, r in enumerate(rows) if str(r.get("wrong", "")).strip() == ""]
@@ -435,19 +436,122 @@ def cmd_estimate(args):
                          f"{bad[0][1]!r}. A window you could not judge should be left out of the budget, not scored")
     wrong = np.array([ok[str(r["wrong"]).strip()] for r in rows])
     sample = {k: (np.asarray(v) if k in ("indices", "strata", "strata_of_population", "tiles") else v) for k, v in side.items()}
+    return side, rows, idx, sample, wrong
+
+
+def _map_windows(side, scores_override, nodata, command):
+    """The map's per-window confidence, class and validity, recomputed from the scores the sample was drawn on."""
+    path = scores_override or side.get("scores")
+    if not path or not os.path.exists(path):
+        raise SystemExit(f"{command}: the map's scores are needed again ({path or 'no path in the sidecar'} not found); "
+                         "pass --scores with the raster `sample` was run on")
+    scores, valid, _ = read_raster(path, nodata)
+    _check_scores(scores, valid, bool(side.get("logits", False)), path)
+    out = assess_prediction(scores, is_logit=bool(side.get("logits", False)), patch=int(side.get("patch", 4)), nodata_mask=~valid)
+    arr = out["arrays"]
+    if list(arr["confidence"].shape) != list(side.get("grid", arr["confidence"].shape)):
+        raise SystemExit(f"{command}: {path} pools to a {arr['confidence'].shape} window grid, but the sample was drawn on "
+                         f"{side.get('grid')}; pass the raster the sample was drawn on")
+    return arr["confidence"], arr["pooled_argmax"], arr["valid"]
+
+
+def _reference_classes(rows, path):
+    """The reviewer's class per labelled window from a `reference_class` column, integers >= 0, none blank."""
+    if "reference_class" not in rows[0]:
+        raise SystemExit(f"{path}: --per-class needs a `reference_class` column holding the class the reviewer saw in each "
+                         "window (an integer in the map's class ids); add it beside `wrong`")
+    vals = []
+    for i, r in enumerate(rows):
+        s = str(r["reference_class"]).strip()
+        try:
+            v = int(float(s))
+            if v < 0 or float(s) != v:
+                raise ValueError
+        except ValueError:
+            raise SystemExit(f"{path}: `reference_class` must be a whole number >= 0 in every row; row {i + 2} holds {s!r}")
+        vals.append(v)
+    return np.array(vals)
+
+
+def cmd_estimate(args):
+    """The map's error rate with its interval, from a filled-in sample CSV and its sidecar design; with
+    --per-class, the user's and producer's accuracy and error-adjusted share per class as well."""
+    side, rows, idx, sample, wrong = _labelled_sample(args.sample, "estimate")
     try:
         res = est.estimate_error_rate(sample, wrong)
     except ValueError as exc:
         raise SystemExit(f"estimate: {exc}")
+    per_class_text = ""
+    if args.per_class:
+        ref = _reference_classes(rows, args.sample)
+        _, hard, valid_w = _map_windows(side, args.scores, args.nodata, "estimate --per-class")
+        map_class = np.where(valid_w, hard, -1).ravel()
+        disagree = int((map_class[idx] != ref).sum() != int(wrong.sum()))
+        try:
+            pc = est.estimate_per_class(sample, ref, map_class)
+        except ValueError as exc:
+            raise SystemExit(f"estimate --per-class: {exc}")
+        res["per_class"] = pc["per_class"]
+        res["confusion_counts"] = pc["confusion_counts"]
+        res["overall_accuracy"] = pc["overall_accuracy"]
+        res["per_class_method"] = pc["method"]
+        if "warning" in pc:
+            res["per_class_warning"] = pc["warning"]
+        if disagree:
+            res["per_class_note"] = ("the `wrong` column and the `reference_class` column disagree on the number of wrong "
+                                     "windows; the error rate above uses `wrong`, the per-class table uses `reference_class`")
+        lines = []
+        for c, row in pc["per_class"].items():
+            ua, pa, sh = row["user_accuracy"], row["producer_accuracy"], row["reference_share"]
+            f = lambda v: "n/a" if v is None else f"{100 * v['estimate']:.0f}% ({100 * v['low']:.0f}-{100 * v['high']:.0f})"
+            lines.append(f"  class {c}: user's accuracy {f(ua)}, producer's {f(pa)}, share of map {100 * row['map_share']:.1f}% "
+                         f"-> error-adjusted {f(sh)}" + ("  [warning: few labels]" if "warning" in row else ""))
+        per_class_text = "\n" + "\n".join(lines)
     res["sample"] = os.path.abspath(args.sample)
     out = args.out or (args.sample[:-4] + "_estimate.json" if args.sample.endswith(".csv") else args.sample + "_estimate.json")
     with open(out, "w") as f:
-        json.dump(res, f, indent=1)
+        json.dump(res, f, indent=1, default=float)
     # the interval is printed as its two ends: it is not symmetric about the estimate (Wilson never is, and a
     # clipped one is not), so "estimate +/- x" would name an interval that is not the one written
     print(f"error rate {100 * res['estimate']:.1f}%, 95% interval {100 * res['low']:.1f}% to {100 * res['high']:.1f}% "
           f"(half-width {100 * res['half_width']:.1f} points), from {res['n_labelled']} labelled windows of {res['n_population']}; "
-          f"{res['method']}" + (f"\nwarning: {res['warning']}" if "warning" in res else "") + f"\nwrote {out}")
+          f"{res['method']}" + (f"\nwarning: {res['warning']}" if "warning" in res else "") + per_class_text
+          + (f"\nwarning: {res['per_class_warning']}" if "per_class_warning" in res else "") + f"\nwrote {out}")
+    return 0
+
+
+def cmd_certify(args):
+    """The largest most-confident share of the map that is wrong at most --alpha of the time, certified from a
+    random labelled sample so that the statement fails with probability at most --delta (exp80)."""
+    side, rows, idx, sample, wrong = _labelled_sample(args.sample, "certify")
+    if side.get("design") != "random":
+        raise SystemExit(f"certify needs a random sample: this CSV was drawn with the {side.get('design')!r} design. The "
+                         "guarantee rests on the labelled windows inside each zone being a random sample of that zone, "
+                         "which a stratified or tile draw is not. Draw one with `sample --design random`")
+    margin, hard, valid_w = _map_windows(side, args.scores, args.nodata, "certify")
+    try:
+        res = est.certify_zone(margin.ravel(), idx, wrong, args.alpha, delta=args.delta, rule=args.rule, valid=valid_w.ravel())
+    except ValueError as exc:
+        raise SystemExit(f"certify: {exc}")
+    hw, ww = margin.shape
+    out = args.out or (args.sample[:-4] + "_zone.json" if args.sample.endswith(".csv") else args.sample + "_zone.json")
+    mask_path = out[:-5] + ".npy" if out.endswith(".json") else out + ".npy"
+    if res["coverage"] is not None:
+        zone = np.zeros(hw * ww, bool)
+        zone[np.asarray(res.pop("zone_indices_in_order"), int)] = True
+        np.save(mask_path, zone.reshape(hw, ww))
+        res["zone_mask"] = os.path.abspath(mask_path)
+    res["sample"] = os.path.abspath(args.sample)
+    with open(out, "w") as f:
+        json.dump(res, f, indent=1, default=float)
+    if res["coverage"] is None:
+        print(f"no zone certified at alpha={args.alpha:g}, delta={args.delta:g} from {res['n_labelled']} labels. {res['note']}\nwrote {out}")
+    else:
+        print(f"the {100 * res['coverage']:.0f}% most confident windows ({res['n_zone']} of {res['n_population']}, confidence margin >= "
+              f"{res['threshold']:.4f}) are wrong at most {100 * args.alpha:g}% of the time; this statement fails on at most "
+              f"{100 * args.delta:g}% of samples like this one ({args.rule} rule; the exact upper bound on the zone's error "
+              f"rate at that level is {100 * res['upper_bound']:.1f}%). Outside the zone nothing is certified.\n"
+              f"{res['note']}\nwrote {out} and the window mask {mask_path}")
     return 0
 
 
@@ -497,7 +601,24 @@ def build_parser():
     e = sub.add_parser("estimate", help="the map's error rate with an interval, from the labelled sample CSV")
     e.add_argument("sample", help="the CSV `sample` wrote, with its `wrong` column filled in")
     e.add_argument("--out", default=None, help="JSON to write (default: <sample>_estimate.json)")
+    e.add_argument("--per-class", action="store_true",
+                   help="also user's accuracy, producer's accuracy and error-adjusted share per class; needs a "
+                        "`reference_class` column in the CSV and the map's scores (from the sidecar, or --scores)")
+    e.add_argument("--scores", default=None, help="the raster `sample` was run on, if it has moved")
+    e.add_argument("--nodata", type=float, default=None)
     e.set_defaults(func=cmd_estimate)
+    z = sub.add_parser("certify", help="which share of the map, from the most confident window down, is wrong at most "
+                                        "alpha of the time, with a guarantee (needs a random sample)")
+    z.add_argument("sample", help="the CSV `sample --design random` wrote, with its `wrong` column filled in")
+    z.add_argument("--alpha", type=float, required=True, help="the error rate the certified zone may not exceed, e.g. 0.05")
+    z.add_argument("--delta", type=float, default=est.ZONE_DELTA,
+                   help=f"the probability the statement is allowed to be wrong (default {est.ZONE_DELTA})")
+    z.add_argument("--rule", choices=("prefix", "bonferroni"), default="prefix",
+                   help="prefix (default) assumes the zone's error rate does not fall as the zone grows; bonferroni assumes nothing")
+    z.add_argument("--scores", default=None, help="the raster `sample` was run on, if it has moved")
+    z.add_argument("--nodata", type=float, default=None)
+    z.add_argument("--out", default=None, help="JSON to write (default: <sample>_zone.json; the window mask goes beside it as .npy)")
+    z.set_defaults(func=cmd_certify)
     return p
 
 

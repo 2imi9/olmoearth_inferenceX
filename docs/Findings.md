@@ -9,14 +9,20 @@ file under `exp/out/`; the per-experiment detail is in the
 For a reader with two minutes. No numbers here; each line is argued, with its numbers and its exceptions, further
 down the page.
 
-- **The model's own confidence is the best label-free guide to where a map is wrong.** It beats every index that
-  never sees the model on every task of Ai2's published embedding suite, nearly always under the other encoders of
-  that suite too, and on every labelled dataset Ai2 suggested. One known exception: on a single flood event a plain
-  water index did as well as a frozen head, and that went away once the encoder was fine-tuned.
+- **The model's own confidence is the best label-free guide to where a map is wrong.** It beats every control that
+  sees no model on every task of Ai2's published embedding suite (there the controls are class rarity and embedding
+  distance; a pixel index cannot be computed from embeddings), nearly always under the other encoders of that suite
+  too, and on every labelled dataset Ai2 suggested. The known exceptions are each one event or one sensor: on a
+  single flood event a plain water index did as well as a frozen head, and that went away once the encoder was
+  fine-tuned; the same index wins on one flood activation in nine, and under the Sentinel-1 probe on the multi-region
+  split.
 - **This is not agreement with annotators.** It still holds when the reference is a surveyor who stood on the
   ground and never saw a pixel.
 - **Most errors sit on the boundaries of the model's own prediction.** Reviewing boundary windows first, then the
-  rest by confidence, finds more errors at small review budgets.
+  rest by confidence, found more errors at small review budgets on the Bolivia flood event's hand labels; it loses
+  to confidence alone on the multi-region flood split under the newer encoder, with eight or more classes, and
+  under a reference coarser than the prediction. The boundary cue's strength is a property of the map's
+  fragmentation, not of its class count: from 1.2x on a dense plantation map to 8x on a sparse marine one.
 - **Comparing two inferences says why, not where.** Differences across crops, backbones and sensors do not rank
   errors. They show where shared errors come from (the sensor, not the backbone), and that two dates differ far
   more often than noise even where nothing changed on the ground.
@@ -26,7 +32,9 @@ down the page.
   order; an error rate needs a reference. Errors the model is confident about stay hidden from it.
 - **If you can label a few hundred windows, it will tell you how wrong the map is**, with a range. The catch is in
   how you pick them: label whole scenes and then work out the range the ordinary way, and it comes out far too
-  narrow.
+  narrow. The same labels also certify a zone: the most confident part of the map that is wrong at most as often
+  as you specify, with a stated chance of the certificate itself being wrong; on a typical task 300 random labels
+  certify about half the map at half its error rate.
 
 ![The audit pipeline on a real scene: Sentinel-2 bands, the frozen encoder and head, prediction, confidence and boundary layers, the review set at a 5% budget, the reasons per window](figures/pipeline.png)
 
@@ -301,6 +309,20 @@ dramatically: up to 2.5 times at equal precision, and most on maps that are
 already good, because there is little left to gain once a map is a third
 wrong. <!-- claim:confidence-saves-a-quarter-to-a-half-of-the-labels -->
 
+The same 300 random labels buy a guarantee as well as a rate (exp80). Ask for a
+zone that is wrong at most α of the time and the tool certifies the largest most-
+confident share of the map that passes an exact test, so that the statement
+fails on at most one draw in ten; on every one of 112 cells of the 24-task suite
+the guarantee held, with the assumption-free rule violating on 0.5% of draws at
+worst and the rule that assumes errors grow with the zone on 8%. <!-- claim:trust-zone-guarantee-holds -->
+On a typical task that is half the map at half its error rate; a reviewer who
+picks the zone by eye from the same labels is wrong about its quality on a
+quarter to a half of draws. <!-- claim:trust-zone-coverage-at-300-labels --> <!-- claim:plugin-zone-violates-on-most-tasks -->
+The tool also says when a budget cannot certify the level asked for: a 1%
+error rate needs 255 error-free labels inside the zone before any test can
+pass. Without labels the map's own confidence overstates its accuracy by a
+median 6 points across the suite, so no zone is certified from the map alone. <!-- claim:mean-confidence-overstates-accuracy -->
+
 ### Does it help an agent
 
 And whether any of this helps an agent is now measured rather than assumed
@@ -368,8 +390,15 @@ WorldCover map and hand-labelled flood masks, against the model's own
 confidence and four no-model controls. The primary test and its direction
 are written down before the run. Scores are tie-aware; scenes vote once
 per river; tiles are bootstrapped as clusters. Expert labels grade a rule
-and never train it. A win against the weak map alone is not support. The
-package tests recompute the recorded numbers from the committed artifacts.
+and never train it. A win against the weak map alone is not support. Every
+claim has a check against its artifact; where a check only reads a number back
+from the run that produced it, it catches drift and not a formula wrong from
+the start, so the load-bearing claims carry a second route, a `crosscheck`
+test that recomputes the statistic from per-task or per-unit records. An audit
+on 23 September 2026 found 138 of 167 checks were read-backs; the suite, the
+estimator and the cue claims were rewritten to recompute that night, eighteen
+claims now name their recomputation test, and the rest are listed, with what
+each would need, in `exp/out/audit_ledger_2026-09-23.md`.
 The full rules are in the [protocol](method/protocol.md).
 
 ## Limits and the open question
@@ -416,9 +445,10 @@ frequency, which predicts the same sign; as a ranker it loses to the margin on a
 control on four, and removing that direction from the frozen tokens costs accuracy on every task
 (exp77). <!-- claim:confident-errors-are-scene-typical --> <!-- claim:scene-typicality-loses-to-the-margin -->
 On the 24-task suite the same families clear the no-model control on
-15, 14 and 12 tasks and still lose to the
-margin on all but two ties; the ensemble is nearly the margin's equal on
-classification and clearly behind on segmentation. <!-- claim:suite-alternatives-clear-the-control-and-still-lose -->
+15, 14 and 12 tasks and still lose to the margin on all but two, EuroSAT and AWF
+Landsat, where the ensemble leads by 0.0003 and 0.003; the ensemble is nearly
+the margin's equal on classification and clearly behind on segmentation.
+<!-- claim:suite-alternatives-clear-the-control-and-still-lose -->
 
 The benchmark of the tool itself rejected two of its own three predictions,
 and the record says so. A strong model given numpy and the same arrays captures

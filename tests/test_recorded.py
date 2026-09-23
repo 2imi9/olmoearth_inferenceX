@@ -7,8 +7,8 @@ import os
 import numpy as np
 import pytest
 
-from oe_inferencex.metrics import (aurc_expected, capture_at_budget, excess_aurc, expected_calibration_error, oracle_aurc,
-                                   risk_coverage, selective_accuracy)
+from oe_inferencex.metrics import (aurc_expected, capture_at_budget, capture_at_budget_expected, excess_aurc,
+                                   expected_calibration_error, oracle_aurc, risk_coverage, selective_accuracy)
 from oe_inferencex.signals import boundary_indicator, confidence
 from oe_inferencex.stats import cluster_bootstrap_difference, sign_test
 
@@ -103,15 +103,29 @@ def test_exp21_fine_tuned_model_metrics_from_the_per_window_table():
     assert aurc_expected(bnd, err) == pytest.approx(ref["aurc"]["boundary indicator"], abs=1e-12)
     assert oracle_aurc(len(err), int(err.sum())) == pytest.approx(ref["aurc_oracle"], abs=1e-12)
     top1 = np.array([float(r["top1_prob"]) for r in rows])
-    assert expected_calibration_error(top1, 1 - err)[0] == pytest.approx(ref["ece_10bins"], abs=1e-12)
+    ece, reliability = expected_calibration_error(top1, 1 - err)
+    assert ece == pytest.approx(ref["ece_10bins"], abs=1e-12) and round(ece, 3) == 0.080
+    # the top bin of the reliability table: 299 windows claiming 0.99 and 0.93 accurate (accuracy-needs-coverage)
+    assert reliability[-1][2] == 299 and round(reliability[-1][3], 2) == 0.99 and round(reliability[-1][4], 2) == 0.93
+    assert round(1 - float(err.mean()), 3) == 0.881 == round(ref["accuracy"], 3)
     sel = selective_accuracy(conf, 1 - err)
     assert all(sel[c] == pytest.approx(ref["selective_accuracy_at_coverage"][str(c)], abs=1e-12) for c in (0.5, 0.8, 0.9, 1.0))
+    assert round(sel[0.8], 3) == 0.945 and round(sel[0.9], 3) == 0.919
     cap = capture_at_budget(tile, err, budgets=(0.05, 0.1, 0.2))
     assert all(cap[b] == pytest.approx(ref["error_capture_at_budget"][str(b)]["tiling instability (aligned)"], abs=1e-12)
                for b in (0.05, 0.1, 0.2))
     clusters = np.array([r["task"] for r in rows])
+    boots = ref["bootstrap_vs_confidence (lo, hi, P(signal better))"]
     lo, hi, p_better = cluster_bootstrap_difference(tile, conf, err, clusters)
-    assert (lo, hi, p_better) == pytest.approx(ref["bootstrap_vs_confidence (lo, hi, P(signal better))"]["tiling instability (aligned)"], abs=1e-12)
+    assert (lo, hi, p_better) == pytest.approx(boots["tiling instability (aligned)"], abs=1e-12)
+    assert lo < 0 < hi                                                     # tiling instability is indistinguishable from confidence
+    # and every other signal is significantly worse than confidence: its AURC and its bootstrap, from the same rows
+    for col, name in (("boundary", "boundary indicator"), ("probe_disagree", "probe disagreement"), ("control_ndvi_tstd", "control (NDVI temporal std)")):
+        sig = np.array([float(r[col]) for r in rows])
+        assert aurc_expected(sig, err) == pytest.approx(ref["aurc"][name], abs=1e-12)
+        b = cluster_bootstrap_difference(sig, conf, err, clusters)
+        assert b == pytest.approx(boots[name], abs=1e-12) and b[0] > 0, name
+    assert round(aurc_expected(conf, err), 4) == 0.0262 and round(aurc_expected(tile, err), 4) == 0.0235
 
 
 def test_exp36_preregistered_budget_tests_are_reproducible_from_the_summary():
@@ -153,6 +167,73 @@ def test_exp37_cue_shares_recompute_from_the_per_window_tables():
             assert r["share_errors"] == pytest.approx(rec[cue]["share_errors"], abs=1e-12)
             assert r["share_correct"] == pytest.approx(rec[cue]["share_correct"], abs=1e-12)
             assert rec[cue]["boot_lo"] <= rec[cue]["enrichment"] <= rec[cue]["boot_hi"]
+
+
+def test_exp37_review_sets_cue_coverage_and_the_boundary_first_counts_recompute_from_the_per_window_table():
+    """The numbers five claims pin on Bolivia hand labels, reached from exp37_patches_bolivia.npz alone rather than
+    from the summaries that recorded them: the boundary shares 0.750 / 0.214, the four-cue table with its 7.2x NDWI
+    enrichment, the 95% of error windows carrying a cue, the error rate inside confidence's review set (0.38, 0.33
+    and 0.26 at 5, 10 and 20% against a base rate of 0.088) and the cue error rates inside the 5% set, and exp36's
+    boundary-first order: its per-tile counts (85/31/235 and 112/48/191 on the 351 tiles with 3 <= errors <= n - 3,
+    the exp18 rule) and its pooled captures at the three budgets, which exp38 had reached by the same route."""
+    from oe_inferencex.assess import review_mask
+    from oe_inferencex.explain import cue_enrichment, top_fraction
+    from oe_inferencex.signals import midrank_pct
+    from oe_inferencex.stats import wins_losses_ties
+    z = np.load(os.path.join(OUT, "exp37_patches_bolivia.npz"))
+    err = z["err"] > 0.5
+    tiles = z["tile"]
+    assert len(err) == 81984 and int(err.sum()) == 7248 and round(float(err.mean()), 3) == 0.088
+    cues = {"boundary": z["boundary"] > 0, "ndwi_ambiguous": z["ndwi_level"] > -0.1,
+            "low_confidence": np.zeros(len(err), bool), "unstable": np.zeros(len(err), bool), "dihedral_disagree": np.zeros(len(err), bool)}
+    review = {b: np.zeros(len(err), bool) for b in (0.05, 0.1, 0.2)}
+    caps = {}
+    for u in np.unique(tiles):
+        sel = tiles == u
+        # the table lists a tile's valid windows in raster order, so the assessor's tie rule (descending raster
+        # position) applies to the sub-array exactly as review_mask applied it to the tile
+        assert np.all(np.diff(z["row"][sel] * 100 + z["col"][sel]) > 0)
+        for cue, col in (("low_confidence", "conf"), ("unstable", "tile_phase"), ("dihedral_disagree", "dihedral")):
+            cues[cue][sel] = top_fraction(z[col][sel], 0.2)
+        for b in review:
+            review[b][sel] = review_mask(z["conf"][sel], np.ones(int(sel.sum()), bool), b)
+        e = err[sel].astype(float)
+        if 3 <= e.sum() <= sel.sum() - 3:
+            mr = midrank_pct(z["conf"][sel])
+            caps[u] = (capture_at_budget_expected(mr, e, (0.05, 0.1, 0.2)),
+                       capture_at_budget_expected(2.0 * (z["boundary"][sel] > 0) + mr, e, (0.05, 0.1, 0.2)))
+    # errors-sit-on-boundaries and cue-enrichment-table
+    table = {k: cue_enrichment(cues[k], err, n_boot=0) for k in cues}
+    assert (round(table["boundary"]["share_errors"], 3), round(table["boundary"]["share_correct"], 3)) == (0.750, 0.214)
+    assert {k: (round(v["share_errors"], 3), round(v["share_correct"], 3), round(v["enrichment"], 1), round(v["precision"], 2))
+            for k, v in table.items() if k != "dihedral_disagree"} == {
+        "boundary": (0.750, 0.214, 3.5, 0.25), "low_confidence": (0.589, 0.163, 3.6, 0.26),
+        "unstable": (0.583, 0.164, 3.6, 0.26), "ndwi_ambiguous": (0.483, 0.067, 7.2, 0.41)}
+    assert all(3.4 < table[k]["enrichment"] < 3.7 for k in ("boundary", "low_confidence", "unstable", "dihedral_disagree"))
+    # explanation-cues-cover-errors: 95% of the error windows carry a cue; inside the 5% set the boundary and the
+    # NDWI cue separate the error rates and the two instability cues do not
+    n_cues = np.stack(list(cues.values())).sum(0)
+    assert round(1 - float((n_cues[err] == 0).mean()), 2) == 0.95
+    m = review[0.05]
+    rate = lambda k, inside: float(err[(cues[k] if inside else ~cues[k]) & m].mean())
+    assert round(rate("boundary", True), 2) == 0.46 and abs(rate("boundary", False) - 0.155) < 0.006
+    assert round(rate("ndwi_ambiguous", True), 2) == 0.51 and round(rate("ndwi_ambiguous", False), 2) == 0.33
+    assert all(abs(rate(k, True) - rate(k, False)) < 0.05 for k in ("unstable", "dihedral_disagree"))
+    # review-set-error-rate
+    assert [int(review[b].sum()) for b in (0.05, 0.1, 0.2)] == [4043, 8075, 16402]
+    assert [round(float(err[review[b]].mean()), 2) for b in (0.05, 0.1, 0.2)] == [0.38, 0.33, 0.26]
+    # boundary-first-review-order: exp36's per-tile counts, and its pooled captures under one global midrank
+    assert len(caps) == 351
+    counts = {b: wins_losses_ties(np.array([caps[u][1][b] - caps[u][0][b] for u in caps])) for b in (0.05, 0.1, 0.2)}
+    assert counts == {0.05: (85, 31, 235), 0.1: (112, 48, 191), 0.2: (121, 77, 153)}
+    assert sign_test(85, 31, "greater") < 1e-6 and sign_test(112, 48, "greater") < 1e-6
+    mr = midrank_pct(z["conf"])
+    lex = capture_at_budget_expected(2.0 * (z["boundary"] > 0) + mr, err, (0.05, 0.1, 0.2))
+    conf = capture_at_budget_expected(mr, err, (0.05, 0.1, 0.2))
+    assert [round(lex[b], 3) for b in (0.05, 0.1, 0.2)] == [0.274, 0.494, 0.732]
+    assert [round(conf[b], 3) for b in (0.05, 0.1, 0.2)] == [0.259, 0.465, 0.749]
+    assert lex[0.05] > conf[0.05] and lex[0.1] > conf[0.1] and lex[0.2] < conf[0.2]     # ahead at 5 and 10%, behind at 20%
+    assert excess_aurc(2.0 * (z["boundary"] > 0) + mr, err) > excess_aurc(z["conf"], err)   # and a worse ranker over the whole set
 
 
 def test_exp38_prereg_tests_and_exp36_consistency_from_the_summary():
@@ -625,17 +706,27 @@ def test_exp65_calibrate_refits_the_recorded_held_out_numbers_from_the_readings(
         err = z[f"ranker/{n}/err"]
         _, rep = fit_ranker(sig, err, np.ones_like(err, bool), groups=z[f"ranker/{n}/tile"], family="v1 S2 head")
         assert abs(rep["held_out"]["excess_aurc"] - s["results"]["ranker"][n]["held_out_excess_aurc"]) < 1e-9
-    for pair, n in (("sensors", "test"), ("finetune", "bolivia")):
-        pre = f"side/{pair}/{n}/"
-        names = ("margin", "rank", "signed", "boundary", "tile_phase")
-        fa = {k: z[pre + f"{k}:a"] for k in names}; fb = {k: z[pre + f"{k}:b"] for k in names}
-        b_right, a_right = z[pre + "b_right"], z[pre + "a_right"]
-        # a synthetic pair whose disagreement set is these windows: a = 0, b = 1, label = 1 where b is right and 0 where a is right
-        a, b = np.zeros(len(b_right), int), np.ones(len(b_right), int)
-        lab = np.where(b_right, 1, np.where(a_right, 0, 2))
-        _, rep = fit_side(fa, fb, a, b, np.ones(len(b_right), bool), lab, groups=z[pre + "tile"], family="x", baseline="margin", shared={"ndwi": z[pre + "ndwi"]})
-        assert abs(rep["held_out"]["share_right"] - s["results"]["side"][pair][n]["cross_fit"]) < 1e-9
-        assert abs(rep["baseline"]["share_right"] - s["results"]["side"][pair][n]["margin_rule"]) < 1e-9
+    # every one of the eight pair-testbeds: the cross-fitted share right, the raw margin rule and their gain
+    gain = {}
+    for pair in ("offsets", "backbones", "sensors", "finetune"):
+        for n in ("bolivia", "test"):
+            pre = f"side/{pair}/{n}/"
+            names = ("margin", "rank", "signed", "boundary", "tile_phase")
+            fa = {k: z[pre + f"{k}:a"] for k in names}; fb = {k: z[pre + f"{k}:b"] for k in names}
+            b_right, a_right = z[pre + "b_right"], z[pre + "a_right"]
+            # a synthetic pair whose disagreement set is these windows: a = 0, b = 1, label = 1 where b is right and 0 where a is right
+            a, b = np.zeros(len(b_right), int), np.ones(len(b_right), int)
+            lab = np.where(b_right, 1, np.where(a_right, 0, 2))
+            _, rep = fit_side(fa, fb, a, b, np.ones(len(b_right), bool), lab, groups=z[pre + "tile"], family="x", baseline="margin", shared={"ndwi": z[pre + "ndwi"]})
+            rec = s["results"]["side"][pair][n]
+            assert abs(rep["held_out"]["share_right"] - rec["cross_fit"]) < 1e-9, (pair, n)
+            assert abs(rep["baseline"]["share_right"] - rec["margin_rule"]) < 1e-9, (pair, n)
+            gain[pair, n] = rep["held_out"]["share_right"] - rep["baseline"]["share_right"]
+            assert abs(gain[pair, n] - rec["gain"]) < 1e-9
+    # calibrate-side-rule-held-out: the fitted rule beats the raw margin rule on all eight, by 8 to 24 points, and
+    # refitting per family gains 14 and 17 on the fine-tuned pair where exp59's frozen-fitted rule had lost 26
+    assert all(g >= 0.05 for g in gain.values()) and round(min(gain.values()), 2) == 0.08 and round(max(gain.values()), 2) == 0.24
+    assert round(100 * gain["finetune", "bolivia"]) == 14 and round(100 * gain["finetune", "test"]) == 17
 
 
 def test_exp66_dfc2020_sensor_axis_and_the_coarse_reference_recompute_from_the_masks():
@@ -660,6 +751,23 @@ def test_exp66_dfc2020_sensor_axis_and_the_coarse_reference_recompute_from_the_m
     assert ws["share_a_right"] > ws["share_b_right"] and 0.2 < 1 - ws["share_a_right"] - ws["share_b_right"] < 0.45
     assert float((z["y_dfc"] == z["y_lc"])[ok & z["ok_lc"]].mean()) == pytest.approx(
         s["results"]["reference_gap"]["agreement_of_the_two_references"], abs=0.05)
+    # the reference gap (dfc2020-coarse-reference-penalises-the-boundary-order): the boundary-first order's lead over
+    # the margin against each reference on the same 200 patches, the score built per chip as exp66 built it; graded
+    # against the 500 m reference the order trails further on every arm, the direction the full run recorded
+    # (gaps -0.0313, -0.0153, -0.0413), and the subsample's gap sits within 0.02 of each
+    from oe_inferencex.assess import boundary_first_score
+    g = s["results"]["reference_gap"]["boundary_first_lead_over_margin"]
+    for arm in ("s2", "s1", "s1s2"):
+        dec, conf = z[f"{arm}/dec"], -z[f"{arm}/margin"].astype(np.float64)
+        bnd = boundary_indicator(dec)                                     # > 0 exactly where exp54.boundary_share is
+        lex = np.stack([boundary_first_score(conf[t], bnd[t]) for t in range(len(dec))])
+        lead = {}
+        for ref, y, okr in (("dfc", z["y_dfc"], ok), ("lc", z["y_lc"], ok & z["ok_lc"])):
+            e = ((dec != y) & okr).astype(np.float64)[okr]
+            lead[ref] = excess_aurc(conf[okr], e) - excess_aurc(lex[okr], e)      # positive: boundary-first better
+        assert lead["dfc"] < 0 and lead["lc"] < lead["dfc"], (arm, lead)
+        assert g[arm]["dfc"] < 0 and g[arm]["lc"] < g[arm]["dfc"], arm
+        assert abs((lead["lc"] - lead["dfc"]) - g[arm]["gap_lc_minus_dfc"]) < 0.02, (arm, lead, g[arm])
 
 
 def test_exp67_dynamic_world_recomputes_from_the_committed_windows():
@@ -742,6 +850,25 @@ def test_exp68_lucas_recomputes_from_the_committed_polygons():
     assert B["disagreement_rate"] > 50 * B["head_draw_floor"]
     assert B["which_side"]["a_right"] > B["which_side"]["b_right"] and B["near_beats_far_sign_test"]["p_greater"] < 1e-12
     assert B["per_class"]["cropland"]["change_rate"] >= 2 * B["per_class"]["woodland"]["change_rate"]
+
+    # part C, the published homogeneity filter (P2, lucas-the-homogeneity-filter-flatters-the-tool): the units it
+    # keeps (homogeneous plot fills the window, area >= 5,000 sqm) against the units it deletes, recomputed from the
+    # committed polygons: the counts, the design-weighted AUROC of the margin, its weighted excess AURC and the
+    # ceiling-free odds ratio of the boundary cue on each side
+    from oe_inferencex.metrics import weighted_auroc
+    filt = A & z["homog"] & (z["area"] >= 5000)
+    deleted = A & ~(z["homog"] & (z["area"] >= 5000))
+    F, P2 = s["results"]["part_c_filters"]["filtered_vs_deleted"], v["P2"]
+    assert (int(filt.sum()), int(deleted.sum())) == (1145, 3633) == (F["n_filtered"], F["n_deleted"])
+    auroc = {k: weighted_auroc(margin[m], err[m], w[m]) for k, m in (("filtered", filt), ("deleted", deleted))}
+    assert abs(auroc["filtered"] - P2["auroc_filtered"]) < 1e-9 and abs(auroc["deleted"] - P2["auroc_deleted"]) < 1e-9
+    assert (round(auroc["filtered"], 3), round(auroc["deleted"], 3)) == (0.774, 0.677)
+    eaurc = {k: e68.w_excess_aurc(margin[m], err[m], w[m]) for k, m in (("filtered", filt), ("deleted", deleted))}
+    assert abs(eaurc["filtered"] - F["margin_excess_aurc_filtered"]) < 1e-9 and abs(eaurc["deleted"] - F["margin_excess_aurc_deleted"]) < 1e-9
+    assert (round(eaurc["filtered"], 4), round(eaurc["deleted"], 4)) == (0.0785, 0.1925)
+    odds = {k: e68.cue_stats(z["boundary"][m] > 0, err[m], w[m])["odds_ratio_weighted"] for k, m in (("filtered", filt), ("deleted", deleted))}
+    assert abs(odds["filtered"] - P2["odds_ratio_filtered"]) < 1e-9 and abs(odds["deleted"] - P2["odds_ratio_deleted"]) < 1e-9
+    assert (round(odds["filtered"], 2), round(odds["deleted"], 2)) == (3.17, 3.04)
 
 
 def test_exp69_eurocrops_recomputes_from_the_committed_windows():
@@ -842,3 +969,74 @@ def test_exp70_csv_agrees_with_its_summary():
         assert abs(float(r["margin_lead"]) - s[t]["margin_lead"]) < 1e-9
         assert abs(float(r["test_accuracy"]) - s[t]["test_accuracy"]) < 1e-9
         assert int(r["n_units"]) == s[t]["n_units"]
+
+
+def test_exp78_coverages_reproduce_in_a_small_seeded_monte_carlo_from_the_per_unit_files():
+    """exp78's recorded coverages re-drawn from the per-unit export (exp78_units/<task>.npz, read with the
+    experiment's own load_units) with 300 fresh draws at seed 1, where the run used 2,000 at seed 0, through the
+    package estimators exactly as run_designs builds each arm: a simple random sample of 300 under Wilson with the
+    finite-population correction (D1/E1), 18 tiles of 16 windows under the ordinary formula (D4/E2_naive) and under
+    the ratio estimator with the normal quantile (D4/E1_cluster), and the stratified draw allocated by Neyman from
+    the model's own confidence (D2c/E1). On MADOS and m-cashew-plant every coverage must sit within three Monte
+    Carlo standard errors of the record (the error of both runs combined), the design effect and the error rate must
+    reproduce exactly, MADOS's naive interval must fall far below the 0.85 bar and its cluster interval below it,
+    and MADOS's label saving at equal half-width must be the record's 2.51 within its own Monte Carlo error."""
+    import sys
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "exp"))
+    import exp78_error_rate_estimation as e78
+    from oe_inferencex import estimate as est
+    S = json.load(open(_need("exp78_summary.json")))
+    assert S["config"] == {"R": 2000, "headline_budget": 300, "strata": 5, "m_per_tile": 16, "piloted": S["config"]["piloted"]}
+    R, B, M, K = 300, 300, 16, 5
+    want = {"mados": {"D1/E1": 0.933, "D4/E2_naive": 0.506, "D4/E1_cluster": 0.598, "D2c/E1": 0.941},
+            "m_cashew_plant": {"D1/E1": 0.948, "D4/E2_naive": 0.939, "D4/E1_cluster": 0.936, "D2c/E1": 0.947}}
+    for task, rec in want.items():
+        _need(os.path.join("exp78_units", f"{task}.npz"))
+        u = e78.load_units(task)
+        err, margin, p1, tile = u["err"], u["margin"], u["p1"], u["tile"]
+        N, theta = err.size, float(err.mean())
+        T = S["tasks"][task]
+        assert theta == T["error_rate"] and N == T["n_units"]
+        assert est.design_effect(err, tile) == pytest.approx(T["design_effect"], abs=1e-9)
+        rng = np.random.default_rng(1)
+        tiles = np.unique(tile)
+        by = {t: np.flatnonzero(tile == t) for t in tiles}
+        sizes = np.bincount(tile)
+        strata = est.confidence_strata(margin)
+        ssz = np.bincount(strata, minlength=K)
+        q = np.array([(1 - p1[strata == h]).mean() if (strata == h).any() else 0.0 for h in range(K)])
+        cov = {k: 0 for k in rec}
+        hw = {"D1/E1": [], "D2c/E1": []}
+        for _ in range(R):
+            i = rng.choice(N, B, replace=False)
+            lo, hi = est.wilson_interval(err[i].sum(), B, N)
+            cov["D1/E1"] += lo <= theta <= hi
+            hw["D1/E1"].append((hi - lo) / 2)
+            pick = rng.choice(tiles, min(B // M, tiles.size), replace=False)
+            i = np.concatenate([rng.choice(by[t], min(M, by[t].size), replace=False) for t in pick])
+            lo, hi = est.wilson_interval(err[i].sum(), i.size, N)
+            cov["D4/E2_naive"] += lo <= theta <= hi
+            _, lo, hi, _, _ = est.cluster_interval(err, tile, i, tile_sizes=sizes, quantile="normal")
+            cov["D4/E1_cluster"] += lo <= theta <= hi
+            alloc = est.neyman_allocation(ssz, np.sqrt(np.clip(q * (1 - q), 1e-9, None)), B)
+            _, lo, hi, _ = est.stratified_interval(err, strata, est.draw_stratified(rng, strata, ssz, alloc), ssz, N)
+            cov["D2c/E1"] += lo <= theta <= hi
+            hw["D2c/E1"].append((hi - lo) / 2)
+        for arm, p in rec.items():
+            got = cov[arm] / R
+            assert round(T["budgets"]["300"][arm]["coverage"], 3) == p, (task, arm)
+            se = np.sqrt(p * (1 - p) / R + p * (1 - p) / S["config"]["R"])
+            assert abs(got - p) <= 3 * se, (task, arm, got, p, se)
+        if task == "mados":
+            se_naive = np.sqrt(0.85 * 0.15 / R)
+            assert cov["D4/E2_naive"] / R < 0.85 - 3 * se_naive and cov["D4/E1_cluster"] / R < 0.85 - 3 * se_naive
+            # confidence-saves-a-quarter-to-a-half-of-the-labels: the saving is the inverse square of the width ratio
+            hs, hc = np.array(hw["D1/E1"]), np.array(hw["D2c/E1"])
+            ratio = hc.mean() / hs.mean()
+            saving = 1 / ratio ** 2
+            var_ratio = ratio ** 2 * (hc.var() / hc.mean() ** 2 + hs.var() / hs.mean() ** 2) * (1 / R + 1 / S["config"]["R"])
+            se_saving = 2 * saving / ratio * np.sqrt(var_ratio)
+            assert abs(saving - 2.51) <= 3 * se_saving, (saving, se_saving)
+            assert saving > 1.8
+        else:
+            assert theta > 0.20 and np.mean(hw["D1/E1"]) > 0.04          # no arm reaches +/-4 points where the map is a third wrong
