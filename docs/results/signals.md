@@ -502,7 +502,18 @@ estimate-minus-measured gap (+0.106, +0.114, +0.059) is itself informative:
 it directly measures correlated-error mass per model. An out-of-family rater
 (Clay or AnySat, both wrapped in
 [olmoearth_pretrain/evals](https://github.com/allenai/olmoearth_pretrain/tree/main/olmoearth_pretrain/evals))
-is the designed fix, untested.
+was the designed fix; exp83 tested it on 23 September 2026 with six- and
+eight-encoder panels from different families and it does not work either: the
+estimator infers the panel's plurality, credits an encoder for the errors the
+panel shares and debits it for being right alone
+([comparisons](comparisons.md#can-raters-from-different-families-estimate-a-maps-accuracy-without-labels-exp83)).
+Two notes on the numbers above: they were produced with the EM capped at 50
+iterations (the cap the package carried until 23 September 2026; exp83's audit
+found the suite's 15- and 19-class panels needing 224 and 261, so the AWF
+9-class values may be snapshots too; the votes are not committed, so they
+cannot be rerun), and the within-family gap they measure is not what three
+probe seeds of one encoder give, which is the unanimous limit (hidden share
+0.94–0.995, exp83).
 
 ---
 

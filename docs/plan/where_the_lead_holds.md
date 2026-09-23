@@ -30,6 +30,15 @@ and from OlmoEarth Base's ten probe seeds in the RTX engine copy of exp79 (`exp/
 These are therefore **not predictions** and are recorded below as disclosed facts. The predictions are on what
 has not been seen: the fifteen other encoders' ten seeds, and the block spread, which no one has computed.
 
+**Addendum, later the same night, before any of the fifteen was graded.** OlmoEarth Base's graded (B200) export
+landed after this page was written: its ten seeds give Spearman(accuracy, AUROC) 0.74–0.80, Spearman(accuracy,
+lead) −0.39 to −0.51, no losses, and a sensor-group range of the median lead up to **0.070**, above the 0.037–0.050
+the RTX engine copy showed and above P3's bar of 0.06. P3's bar stays where it was written; if the fifteen
+encoders' ranges sit where Base's does, P3 fails and the record will say the bar was set on the wrong engine's
+copy. Also disclosed: the block spread on Base's segmentation tasks (descriptive, now computed) has the margin's
+lead over the class-rarity control positive in 98–100% of the 50 tile groups on six tasks and in 79% of the 34
+groups with any error on MADOS, whose 10th-percentile lead is −0.094.
+
 ## The estimands
 
 Per (encoder, task, seed) from exp79's exports: the probe's test accuracy, the margin's AUROC for its errors, and
