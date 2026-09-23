@@ -278,6 +278,20 @@ Two backbones, two sensors, a frozen and a fine-tuned model, or the same
 model on shifted crops: `compare` measures how their decisions differ on the
 windows both predicted, and grades the difference where labels exist.
 
+**Dates.** A difference between two maps of the same ground at the same time is
+an error in at least one of them. Across dates it can instead be real change on
+the ground, a flood, a harvest or a season: in the GEOID-Flood example above,
+three quarters of the difference is the flood itself. So `compare` takes the
+dates the maps describe (`dates=(date_a, date_b)` in Python, `--date-a` and
+`--date-b` on the command line; a period `YYYY-MM-DD/YYYY-MM-DD` covers a
+composite or an annual map) and says in `dates.reading` what a difference can
+mean at those dates. Across dates it refuses to grade which side is right
+unless the labels' date is given (`labels_date`, `--labels-date`), because a
+window that changed is right in one map and wrong in the other whatever either
+model did; with it, `graded.graded_against` says which map the labels match in
+time. Without dates the comparison runs as before and says the dates were not
+given.
+
 ```python
 import numpy as np
 from oe_inferencex.assess import summary

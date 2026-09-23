@@ -32,7 +32,12 @@ of two decisions on identical windows, both label-free unless a reference or
 label raster is given. The files are the contract: `assessment.json` and
 `explanation.json` for the first, `comparison.json` for the second, each with
 an `inputs` block naming what was read and a `files` block naming what was
-written. The Usage page lists every field.
+written. The Usage page lists every field. An agent comparing two maps passes
+the dates they describe (`--date-a`, `--date-b`) and narrates
+`comparison.json`'s `dates.reading`: across dates a difference can be real
+change on the ground, and the command refuses to say which map is right
+against one reference unless `--labels-date` is given, so the caution travels
+with the tool rather than depending on the model knowing it.
 
 ## What this repo provides
 

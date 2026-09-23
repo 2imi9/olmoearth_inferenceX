@@ -227,24 +227,106 @@ def which_side(a, b, labels, ok):
             "share_a_right": ar / nd if nd else NAN, "share_b_right": br / nd if nd else NAN}
 
 
-def compare_inferences(a, b, ok, groups=None, labels=None, cues=None):
+def _period(x, name):
+    """A date or a period as (start, end), both datetime.date, inclusive. Accepts a datetime.date or datetime, a
+    numpy datetime64, an ISO date string ('2018-03-11', a time part is ignored) or an ISO interval of two dates
+    ('2020-01-01/2020-12-31', for a composite or an annual map)."""
+    import datetime as dt
+    if x is None:
+        return None
+    if isinstance(x, np.datetime64):
+        x = str(np.datetime64(x, "D"))
+    if isinstance(x, dt.datetime):
+        x = x.date()
+    if isinstance(x, dt.date):
+        return x, x
+    if not isinstance(x, str):
+        raise TypeError(f"{name}: a date, datetime, datetime64 or ISO string, got {type(x).__name__}")
+    parts = x.strip().split("/")
+    if len(parts) > 2:
+        raise ValueError(f"{name}: {x!r} is neither a date nor a start/end interval")
+    try:
+        days = [dt.date.fromisoformat(p.strip()[:10]) for p in parts]
+    except ValueError:
+        raise ValueError(f"{name}: {x!r} is not an ISO date (YYYY-MM-DD) or interval (YYYY-MM-DD/YYYY-MM-DD)") from None
+    start, end = days[0], days[-1]
+    if end < start:
+        raise ValueError(f"{name}: the interval {x!r} ends before it starts")
+    return start, end
+
+
+def _iso(pr):
+    if pr is None:
+        return None
+    return pr[0].isoformat() if pr[0] == pr[1] else f"{pr[0].isoformat()}/{pr[1].isoformat()}"
+
+
+def dates_reading(date_a=None, date_b=None, labels_date=None):
+    """What a difference between two maps can mean, given the dates they describe.
+
+    A difference between two maps of the same ground at the same time is an error in at least one of them. Across
+    dates it is either an error or a real change on the ground (a flood, a harvest, a seasonal cycle), and the
+    decisions alone cannot say which. Returns {a, b, labels (ISO strings or None), status, days_apart, reading}, where
+    status is "unstated" (a date is missing), "same_time", "different_time" (the periods do not overlap; days_apart is
+    the gap between them) or "overlapping_time" (the periods overlap but differ, so part of the difference can be
+    change)."""
+    pa, pb, pl = _period(date_a, "date_a"), _period(date_b, "date_b"), _period(labels_date, "labels_date")
+    out = {"a": _iso(pa), "b": _iso(pb), "labels": _iso(pl), "status": "unstated", "days_apart": None}
+    if pa is None or pb is None:
+        out["reading"] = ("the dates the two maps describe were not given; a window where they differ is an error in at "
+                          "least one map only if both describe the same ground at the same time, and across dates it can "
+                          "be a real change on the ground instead")
+        return out
+    if pa == pb:
+        out.update(status="same_time", days_apart=0,
+                   reading=f"both maps describe {_iso(pa)}; a window where they differ is wrong in at least one of them")
+        return out
+    early, late = sorted((pa, pb))
+    gap = (late[0] - early[1]).days
+    if gap > 0:
+        out.update(status="different_time", days_apart=gap,
+                   reading=f"the maps describe {_iso(pa)} and {_iso(pb)}, {gap} days apart: a window where they differ either "
+                           "changed on the ground between them (seasonal cycles included) or is wrong in one map, and the "
+                           "decisions alone cannot say which; a reference for each date separates the two")
+    else:
+        out.update(status="overlapping_time", days_apart=0,
+                   reading=f"the maps describe the overlapping periods {_iso(pa)} and {_iso(pb)}: part of a difference can be "
+                           "change on the ground within them, so it is not an error in one map by itself")
+    return out
+
+
+def compare_inferences(a, b, ok, groups=None, labels=None, cues=None, dates=None, labels_date=None):
     """Two inferences of identical windows in one summary; label-free unless `labels` is given.
 
-    a, b     hard decisions of the same shape; ok: the windows both predicted
-    groups   optional id per window (tile, event) for the per-group rates and, with labels, the per-group cross-tab
-    labels   optional class map; adds the graded block
-    cues     optional {name: indicator of the same shape}; adds their enrichment on the disagreement windows
+    a, b         hard decisions of the same shape; ok: the windows both predicted
+    groups       optional id per window (tile, event) for the per-group rates and, with labels, the per-group cross-tab
+    labels       optional class map; adds the graded block
+    cues         optional {name: indicator of the same shape}; adds their enrichment on the disagreement windows
+    dates        optional (date_a, date_b): the date or period each map describes (see `dates_reading`)
+    labels_date  the date or period the labels describe; required with labels when the maps describe different times
 
     Returns n_windows, n_disagree, disagreement_rate, per_group (disagreement's, or None without groups), where
-    (`where` of the cues on the valid windows, or None without cues), graded (None without labels, else crosstab and
-    which_side pooled, per_group: {id: crosstab on the group's valid windows} or None, and over_groups of the
-    per-group net correction, corrected minus broken, positive when b is the better side, or None) and arrays:
-    {disagree: the mask}. `assess.summary` strips the arrays for JSON."""
+    (`where` of the cues on the valid windows, or None without cues), dates (`dates_reading`: what a difference can
+    mean at these dates), graded (None without labels, else crosstab and which_side pooled, per_group: {id: crosstab
+    on the group's valid windows} or None, over_groups of the per-group net correction, corrected minus broken,
+    positive when b is the better side, or None, and graded_against: what "right" means at the labels' date) and
+    arrays: {disagree: the mask}. `assess.summary` strips the arrays for JSON.
+
+    Across dates, "which side is right" against a single reference measures which map matches the reference's date:
+    the map of the other date is counted wrong wherever the ground changed. So with maps of different or overlapping
+    times, labels without `labels_date` are refused rather than graded as if both maps described the labels' moment."""
+    if dates is not None and (not isinstance(dates, (tuple, list)) or len(dates) != 2):
+        raise ValueError("dates must be a pair (date_a, date_b)")
+    reading = dates_reading(*(dates or (None, None)), labels_date=labels_date)
+    if labels is not None and reading["status"] in ("different_time", "overlapping_time") and reading["labels"] is None:
+        raise ValueError(f"the two maps describe {reading['a']} and {reading['b']}; say which date the labels describe "
+                         "(labels_date), because a window that changed between the dates is right in one map and wrong in "
+                         "the other whatever either model did")
     okm = _indicator(ok)
     dis = disagreement(a, b, okm, groups)
     mask = dis["mask"]
     out = {"n_windows": dis["n"], "n_disagree": dis["n_disagree"], "disagreement_rate": dis["rate"],
-           "per_group": dis["per_group"], "where": None, "graded": None, "arrays": {"disagree": mask}}
+           "per_group": dis["per_group"], "where": None, "dates": reading, "graded": None, "arrays": {"disagree": mask}}
     if cues:
         for name, c in cues.items():
             if np.shape(c) != mask.shape:
@@ -266,9 +348,30 @@ def compare_inferences(a, b, ok, groups=None, labels=None, cues=None):
             # A group with no valid window has no net correction; it is undefined, not a tie (audit finding 9).
             graded["over_groups"] = over_groups({k: (v["corrected"] - v["broken"]) if v["n"] > 0 else float("nan")
                                                  for k, v in per.items()})
+        graded["graded_against"] = _graded_against(reading)
         out["graded"] = graded
     return out
 
+
+
+def _graded_against(reading):
+    """What 'right' means in the graded block, at the dates given."""
+    st, lab = reading["status"], reading["labels"]
+    if st == "same_time":
+        if lab is not None and lab != reading["a"]:
+            return (f"the labels describe {lab} and both maps {reading['a']}; where the ground changed between them both "
+                    "maps are counted wrong")
+        return "both maps and the labels describe the same time; a map is right where it matches the labels"
+    if st == "unstated":
+        return ("the dates were not given; this grades both maps against one reference as if all three describe the same "
+                "moment, which is right only if they do")
+    matched = [s for s in ("a", "b") if reading[s] == lab]
+    other = [s for s in ("a", "b") if s not in matched]
+    if len(matched) == 1:
+        return (f"the labels describe {lab}, the date of map {matched[0]}; map {other[0]} ({reading[other[0]]}) is counted "
+                "wrong wherever the ground changed between the dates, so its share right mixes its errors with real change")
+    return (f"the labels describe {lab}, the date of neither map ({reading['a']}, {reading['b']}); each map is counted wrong "
+            "wherever the ground changed between its date and the labels'")
 
 
 def determinism_check(a, b, ok, floor=None, margin_a=None, margin_b=None, groups=None):

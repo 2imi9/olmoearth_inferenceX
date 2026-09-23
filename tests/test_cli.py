@@ -90,6 +90,32 @@ def test_compare_two_maps_with_labels_and_groups(tmp_path):
     assert np.isnan(d).sum() == d.size - s["n_windows"]
 
 
+def test_compare_reads_dates_and_refuses_cross_date_grading_without_the_labels_date(tmp_path):
+    """Across dates a difference can be real change; the JSON says so, and grading against one reference needs the
+    reference's date. Without dates the comparison runs as before and notes that they were not given."""
+    p, water = _scene()
+    q = p.copy()
+    q[40:80, 100:120] = 0.95
+    _write(tmp_path / "a.tif", p)
+    _write(tmp_path / "b.tif", q)
+    _write(tmp_path / "lab.tif", water.astype("int16"), dtype="int16")
+    args = ["compare", str(tmp_path / "a.tif"), str(tmp_path / "b.tif")]
+    assert main(args + ["--out", str(tmp_path / "u")]) == 0
+    u = json.load(open(tmp_path / "u" / "comparison.json"))
+    assert u["dates"]["status"] == "unstated" and any("--date-a" in n for n in u["notes"])
+    with pytest.raises(SystemExit, match="--labels-date"):
+        main(args + ["--out", str(tmp_path / "x"), "--labels", str(tmp_path / "lab.tif"), "--date-a", "2017-03-11", "--date-b", "2018-03-11"])
+    with pytest.raises(SystemExit, match="not an ISO date"):
+        main(args + ["--out", str(tmp_path / "y"), "--date-a", "March 2017", "--date-b", "2018-03-11"])
+    assert main(args + ["--out", str(tmp_path / "c"), "--labels", str(tmp_path / "lab.tif"), "--date-a", "2017-03-11",
+                        "--date-b", "2018-03-11", "--labels-date", "2018-03-11"]) == 0
+    c = json.load(open(tmp_path / "c" / "comparison.json"))
+    assert c["dates"]["status"] == "different_time" and c["dates"]["days_apart"] == 365
+    assert c["inputs"]["labels_date"] == "2018-03-11" and "date of map b" in c["graded"]["graded_against"]
+    assert c["n_disagree"] == u["n_disagree"]                                   # the dates change the reading, not the counts
+    assert not any("--date-a" in n for n in c.get("notes", []))
+
+
 def test_compare_refuses_different_grids(tmp_path):
     p, _ = _scene()
     _write(tmp_path / "a.tif", p)
@@ -181,7 +207,8 @@ def test_compare_on_probability_maps_is_unchanged_by_the_optional_cutoff(tmp_pat
     main(["compare", str(tmp_path / "a.npy"), str(tmp_path / "b.npy"), "--out", str(tmp_path / "d")])
     main(["compare", str(tmp_path / "a.npy"), str(tmp_path / "b.npy"), "--out", str(tmp_path / "e"), "--threshold", "0.5"])
     d, e = (json.load(open(tmp_path / k / "comparison.json")) for k in ("d", "e"))
-    assert d["disagreement_rate"] == e["disagreement_rate"] and "notes" not in d
+    # no note about the cutoff; the only note on an undated comparison is that its dates were not given
+    assert d["disagreement_rate"] == e["disagreement_rate"] and d["notes"] == [n for n in d["notes"] if "--date-a" in n] and len(d["notes"]) == 1
 
 
 # ----------------------------------------------------------------------------- sample / estimate

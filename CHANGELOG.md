@@ -33,6 +33,13 @@
   (predicted, reference) class pairs the errors fall into, most frequent first, with the share of errors they
   explain (Singh et al. 2024's systematic-error report; on the suite's many-class tasks the top three pairs hold
   18% to 61% of the errors, exp82).
+- `compare` reads the dates the two maps describe (`dates=(date_a, date_b)`, `--date-a`, `--date-b`; a date or a
+  `YYYY-MM-DD/YYYY-MM-DD` period) and says in `dates.reading` what a difference can mean there: at one time it is
+  an error in at least one map, across times it can be real change on the ground. Across times, grading which side
+  is right against one reference is refused unless the reference's date is given (`labels_date`,
+  `--labels-date`), and `graded.graded_against` then says which map the labels match in time. Undated comparisons
+  run as before and say their dates were not given. A user asked why `compare` would call either map right when
+  the landscape itself changed between the dates; until now nothing in the tool noticed, and an agent had to.
 - `reliability.dawid_skene` (moved from `evidence`, which needed torch for nothing it used): the EM now runs to
   its stopping rule (largest posterior change below 1e-6) with a cap of 1,000 and can report whether it converged.
   Until now the cap was 50 iterations; on the suite's 15- and 19-class encoder panels the stop needs 224 and 261,

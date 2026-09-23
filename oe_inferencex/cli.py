@@ -282,11 +282,27 @@ def cmd_compare(args):
     # holes and the data's rim no longer manufacture boundary cues
     valid_w = pool_valid(va & vb, args.patch) & (a_w >= 0) & (b_w >= 0)
     cues = {"boundary_a": _boundary_valid(a_w, valid_w) > 0, "boundary_b": _boundary_valid(b_w, valid_w) > 0}
-    out = compare_inferences(a_w, b_w, ok, groups=groups, cues=cues)
+    # what a difference can mean depends on the dates the maps describe: across dates it can be real change on the
+    # ground, and "which side is right" against one reference then needs that reference's date
+    from oe_inferencex.compare import dates_reading
+    dates = (args.date_a, args.date_b)
+    try:
+        reading = dates_reading(args.date_a, args.date_b, args.labels_date)
+    except (ValueError, TypeError) as exc:
+        raise SystemExit(f"compare: {exc}") from None
+    if labels is not None and reading["status"] in ("different_time", "overlapping_time") and reading["labels"] is None:
+        raise SystemExit(f"compare: the two maps describe {reading['a']} and {reading['b']}; pass --labels-date, because a "
+                         "window that changed between the dates is right in one map and wrong in the other whatever "
+                         "either model did")
+    out = compare_inferences(a_w, b_w, ok, groups=groups, cues=cues, dates=dates, labels_date=args.labels_date)
     if labels is not None:
-        out["graded"] = compare_inferences(a_w, b_w, ok_graded, groups=groups, labels=labels, cues=cues)["graded"]
+        out["graded"] = compare_inferences(a_w, b_w, ok_graded, groups=groups, labels=labels, cues=cues,
+                                           dates=dates, labels_date=args.labels_date)["graded"]
         notes.append(f"the graded block covers the {int(ok_graded.sum())} windows with a majority label; every other "
                      f"number covers all {int(ok.sum())} windows both maps predicted")
+    if out["dates"]["status"] == "unstated":
+        notes.append("the dates the two maps describe were not given (--date-a, --date-b); across dates a difference can "
+                     "be real change on the ground rather than an error")
     if groups is not None:
         n_nogroup = int((ok & (groups < 0)).sum())
         for blk in (out, out.get("graded") or {}):
@@ -300,7 +316,8 @@ def cmd_compare(args):
             notes.append(f"{n_nogroup} windows fall in no group and are counted overall but in no per-group rate")
     os.makedirs(args.out, exist_ok=True)
     s = summary(out)
-    s["inputs"] = {"a": os.path.abspath(args.a), "b": os.path.abspath(args.b), "labels": os.path.abspath(args.labels) if args.labels else None, "patch_px": args.patch}
+    s["inputs"] = {"a": os.path.abspath(args.a), "b": os.path.abspath(args.b), "labels": os.path.abspath(args.labels) if args.labels else None, "patch_px": args.patch,
+                   "date_a": args.date_a, "date_b": args.date_b, "labels_date": args.labels_date}
     if notes:
         s["notes"] = notes
     # NaN where nothing was compared: a 0 there used to read as "agree" in any GIS
@@ -322,6 +339,7 @@ def cmd_compare(args):
           (f"; on a boundary of a {where['boundary_a']['enrichment']:.1f}x as often as the agreeing windows" if where.get("boundary_a", {}).get("enrichment") is not None else "") +
           (f"; with labels: a right on {_pct(s['graded']['which_side']['share_a_right'], 0)}, "
            f"b on {_pct(s['graded']['which_side']['share_b_right'], 0)} of them" if s.get("graded") else "") +
+          (f"\n{s['dates']['reading']}" if s["dates"]["status"] in ("different_time", "overlapping_time") else "") +
           f"\nwrote {args.out}/comparison.json, differing_windows.csv, disagreement")
     return 0
 
@@ -583,6 +601,11 @@ def build_parser():
                    help="cut-off for a 2-D continuous map: 0.5 for a probability map when omitted; required for any other range")
     c.add_argument("--labels", default=None, help="optional integer class raster: adds which side is right and the cross-tab")
     c.add_argument("--groups", default=None, help="optional integer raster of group ids (tiles, events) for per-group rates")
+    c.add_argument("--date-a", default=None, help="the date map a describes, YYYY-MM-DD, or a period YYYY-MM-DD/YYYY-MM-DD "
+                   "for a composite; with --date-b it says whether a difference can be real change on the ground")
+    c.add_argument("--date-b", default=None, help="the date or period map b describes")
+    c.add_argument("--labels-date", default=None, help="the date or period the --labels raster describes; required with "
+                   "--labels when the two maps describe different times")
     c.set_defaults(func=cmd_compare)
     sm = sub.add_parser("sample", help="which windows to label so that `estimate` can say how wrong the map is")
     sm.add_argument("scores", help="the same map `assess` takes: (H, W) probability or logit map, or (C, H, W) scores")

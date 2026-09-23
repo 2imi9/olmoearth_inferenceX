@@ -355,13 +355,14 @@ def test_returned_keys_are_the_documented_ones():
         crosstab: (crosstab(a != lab, b != lab, ok), {"n", "errors_a", "errors_b", "corrected", "broken", "both", "neither", "share_corrected", "phi"}),
         which_side: (which_side(a, b, lab, ok), {"n_disagree", "a_right", "b_right", "neither", "share_a_right", "share_b_right"}),
         compare_inferences: (compare_inferences(a, b, ok, groups=groups, labels=lab, cues={"c": m}),
-                             {"n_windows", "n_disagree", "disagreement_rate", "per_group", "where", "graded", "arrays"}),
+                             {"n_windows", "n_disagree", "disagreement_rate", "per_group", "where", "dates", "graded", "arrays"}),
     }
     for fn, (out, keys) in expected.items():
         assert set(out) == keys, fn.__name__
         assert all(k in fn.__doc__ for k in keys), fn.__name__
     full = expected[compare_inferences][0]
-    assert set(full["graded"]) == {"crosstab", "which_side", "per_group", "over_groups"} and set(full["arrays"]) == {"disagree"}
+    assert set(full["graded"]) == {"crosstab", "which_side", "per_group", "over_groups", "graded_against"} and set(full["arrays"]) == {"disagree"}
+    assert set(full["dates"]) == {"a", "b", "labels", "status", "days_apart", "reading"}
     assert set(full["per_group"][0]) == {"n", "n_disagree", "rate"}
     assert all(k in compare_inferences.__doc__ for k in ("crosstab", "which_side", "per_group", "over_groups", "disagree"))
 
@@ -450,3 +451,53 @@ def test_determinism_check_zero_for_identical_maps_and_gates_against_a_floor():
     assert determinism_check(a, b, ok)["passes"] is None
     with pytest.raises(ValueError):
         determinism_check(a, b, ok, margin_a=np.ones((20, 20)), margin_b=np.ones((19, 20)))
+
+
+# ----------------------------------------------------------------------------- dates, 2026-09-23
+def test_dates_say_what_a_difference_can_mean():
+    """Same time: a difference is an error in at least one map. Different or overlapping times: it can be real
+    change on the ground. Unstated: the reading says so. Periods (composites, annual maps) are accepted."""
+    import datetime as dt
+    from oe_inferencex.compare import dates_reading
+    r = dates_reading()
+    assert r["status"] == "unstated" and r["days_apart"] is None and "real change" in r["reading"]
+    r = dates_reading("2018-03-11", dt.date(2018, 3, 11))
+    assert r["status"] == "same_time" and r["days_apart"] == 0 and "wrong in at least one" in r["reading"]
+    r = dates_reading("2017-03-11", "2018-03-28T10:15:00")
+    assert r["status"] == "different_time" and r["days_apart"] == 382 and r["b"] == "2018-03-28" and "changed on the ground" in r["reading"]
+    r = dates_reading("2020-01-01/2020-12-31", "2021-01-01/2021-12-31")
+    assert r["status"] == "different_time" and r["days_apart"] == 1
+    r = dates_reading("2020-01-01/2020-12-31", "2020-06-01")
+    assert r["status"] == "overlapping_time" and r["days_apart"] == 0
+    assert dates_reading(np.datetime64("2019-05-02T12:00"), "2019-05-02")["status"] == "same_time"
+    assert dates_reading("2019-05-02", None)["status"] == "unstated"
+    for bad in ("2019-13-01", "yesterday", "2020-12-31/2020-01-01", "2020-01-01/2020-02-01/2020-03-01"):
+        with pytest.raises(ValueError):
+            dates_reading(bad, "2020-01-01")
+    with pytest.raises(TypeError):
+        dates_reading(20200101, "2020-01-01")
+
+
+def test_across_dates_which_side_needs_the_labels_date_and_says_what_it_graded():
+    rng = np.random.default_rng(9)
+    lab = rng.integers(0, 2, (4, 8, 8))
+    a = lab ^ (rng.random(lab.shape) < 0.1)
+    b = lab ^ (rng.random(lab.shape) < 0.1)
+    ok = np.ones(lab.shape, bool)
+    base = compare_inferences(a, b, ok, labels=lab)                            # no dates: graded as before, and said so
+    assert base["dates"]["status"] == "unstated" and "same moment" in base["graded"]["graded_against"]
+    same = compare_inferences(a, b, ok, labels=lab, dates=("2018-03-11", "2018-03-11"))
+    assert same["graded"]["which_side"] == base["graded"]["which_side"] and "same time" in same["graded"]["graded_against"]
+    with pytest.raises(ValueError, match="labels_date"):
+        compare_inferences(a, b, ok, labels=lab, dates=("2017-03-11", "2018-03-11"))
+    cross = compare_inferences(a, b, ok, labels=lab, dates=("2017-03-11", "2018-03-11"), labels_date="2018-03-11")
+    assert cross["graded"]["which_side"] == base["graded"]["which_side"]           # the numbers are the same numbers
+    assert "date of map b" in cross["graded"]["graded_against"] and "map a (2017-03-11)" in cross["graded"]["graded_against"]
+    neither = compare_inferences(a, b, ok, labels=lab, dates=("2017-03-11", "2018-03-11"), labels_date="2019-01-01")
+    assert "neither map" in neither["graded"]["graded_against"]
+    free = compare_inferences(a, b, ok, dates=("2017-03-11", "2018-03-11"))       # label-free needs no labels date
+    assert free["dates"]["days_apart"] == 365 and free["graded"] is None
+    back = json.loads(json.dumps(summary(cross), allow_nan=False))
+    assert back["dates"]["status"] == "different_time" and back["dates"]["labels"] == "2018-03-11"
+    with pytest.raises(ValueError):
+        compare_inferences(a, b, ok, dates="2018-03-11")
