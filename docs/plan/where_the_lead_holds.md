@@ -33,9 +33,11 @@ has not been seen: the fifteen other encoders' ten seeds, and the block spread, 
 **Addendum, later the same night, before any of the fifteen was graded.** OlmoEarth Base's graded (B200) export
 landed after this page was written: its ten seeds give Spearman(accuracy, AUROC) 0.74–0.80, Spearman(accuracy,
 lead) −0.39 to −0.51, no losses, and a sensor-group range of the median lead up to **0.070**, above the 0.037–0.050
-the RTX engine copy showed and above P3's bar of 0.06. P3's bar stays where it was written; if the fifteen
-encoders' ranges sit where Base's does, P3 fails and the record will say the bar was set on the wrong engine's
-copy. Also disclosed: the block spread on Base's segmentation tasks (descriptive, now computed) has the margin's
+the RTX engine copy showed and above P3's bar of 0.06. The audit traced the whole excess to one cell: at seed 4
+the S1 group's median is AWF Sentinel-1's lead, a 200-unit task whose lead differs by 0.021 between the two
+engines (0.177 on the B200, 0.157 on the RTX); the other nine seeds give 0.037–0.042 on both engines. P3's bar
+stays where it was written; a five-task group's median is one task's number, and the record will say so if the
+bar fails for that reason. Also disclosed: the block spread on Base's segmentation tasks (descriptive, now computed) has the margin's
 lead over the class-rarity control positive in 98–100% of the 50 tile groups on six tasks and in 79% of the 34
 groups with any error on MADOS, whose 10th-percentile lead is −0.094.
 

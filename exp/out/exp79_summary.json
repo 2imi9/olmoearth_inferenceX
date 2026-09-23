@@ -1,0 +1,878 @@
+{
+ "experiment": "exp79",
+ "config": {
+  "n_seeds": 10,
+  "gate_tol": 0.0001,
+  "encoders_expected": [
+   "olmoearth_base",
+   "anysat",
+   "clay_large",
+   "panopticon",
+   "olmoearth_tiny",
+   "olmoearth_nano",
+   "olmoearth_large",
+   "galileo_tiny",
+   "galileo_nano",
+   "galileo_base",
+   "croma_base",
+   "croma_large",
+   "terramind_base",
+   "terramind_large",
+   "satlas_base",
+   "copernicusfm"
+  ],
+  "encoders_run": [
+   "olmoearth_base"
+  ]
+ },
+ "gate": {
+  "holds": false,
+  "per_encoder": {
+   "olmoearth_base": {
+    "holds": true,
+    "n_tasks_recorded": 24,
+    "n_tasks_exported": 24,
+    "missing_from_export": [],
+    "not_in_record": [],
+    "absent_reasons": [],
+    "max_abs_diff": 1.1102230246251565e-16,
+    "failing": [],
+    "headroom_seed0": 0.6799869670764211,
+    "headroom_recorded": 0.6799869670764211,
+    "headroom_abs_diff": 0.0
+   }
+  },
+  "encoders_failing": [],
+  "encoders_missing": [
+   "anysat",
+   "clay_large",
+   "copernicusfm",
+   "croma_base",
+   "croma_large",
+   "galileo_base",
+   "galileo_nano",
+   "galileo_tiny",
+   "olmoearth_large",
+   "olmoearth_nano",
+   "olmoearth_tiny",
+   "panopticon",
+   "satlas_base",
+   "terramind_base",
+   "terramind_large"
+  ],
+  "n_encoders": 1,
+  "of": 16
+ },
+ "prereg_A": {
+  "P1_headline_survives_reseeding": {
+   "holds": false,
+   "n_encoders": 1,
+   "of": 16,
+   "n_seeds": 10,
+   "encoders_missing": [
+    "anysat",
+    "clay_large",
+    "copernicusfm",
+    "croma_base",
+    "croma_large",
+    "galileo_base",
+    "galileo_nano",
+    "galileo_tiny",
+    "olmoearth_large",
+    "olmoearth_nano",
+    "olmoearth_tiny",
+    "panopticon",
+    "satlas_base",
+    "terramind_base",
+    "terramind_large"
+   ],
+   "encoders_short_of_seeds": [],
+   "failing_encoder_seed": [],
+   "min_share": {
+    "olmoearth_base": 1.0
+   },
+   "min_wins": {
+    "olmoearth_base": 24
+   },
+   "not_comparable_to_record": []
+  },
+  "P2_which_wins_are_noise": {
+   "holds": true,
+   "n_robust": 24,
+   "of": 24,
+   "of_recorded": 24,
+   "n_seeds": 10,
+   "complete": true,
+   "flips": {},
+   "per_task": {
+    "m_eurosat": {
+     "mean": 0.020868039816003225,
+     "sd": 0.0029157450853074364,
+     "min": 0.01551519418886953,
+     "wins": 10,
+     "of": 10,
+     "n_units": 1000,
+     "robust": true
+    },
+    "m_brick_kiln": {
+     "mean": 0.02845425962396151,
+     "sd": 0.00156916847422732,
+     "min": 0.026607194048119617,
+     "wins": 10,
+     "of": 10,
+     "n_units": 999,
+     "robust": true
+    },
+    "m_forestnet": {
+     "mean": 0.11452125795576407,
+     "sd": 0.007640832595758285,
+     "min": 0.10483990935130119,
+     "wins": 10,
+     "of": 10,
+     "n_units": 993,
+     "robust": true
+    },
+    "m_so2sat": {
+     "mean": 0.2195059012285101,
+     "sd": 0.005360649389355862,
+     "min": 0.20978582383265698,
+     "wins": 10,
+     "of": 10,
+     "n_units": 986,
+     "robust": true
+    },
+    "awf_landsat": {
+     "mean": 0.16614068596225134,
+     "sd": 0.004294252517774054,
+     "min": 0.15934317554872665,
+     "wins": 10,
+     "of": 10,
+     "n_units": 200,
+     "robust": true
+    },
+    "awf_sentinel1": {
+     "mean": 0.16755184100370696,
+     "sd": 0.012021578984483318,
+     "min": 0.14578158812363345,
+     "wins": 10,
+     "of": 10,
+     "n_units": 200,
+     "robust": true
+    },
+    "awf_sentinel2": {
+     "mean": 0.12127287204007027,
+     "sd": 0.0018986952254872599,
+     "min": 0.11857976798801957,
+     "wins": 10,
+     "of": 10,
+     "n_units": 200,
+     "robust": true
+    },
+    "nandi_landsat": {
+     "mean": 0.10338986574466887,
+     "sd": 0.013943283031015333,
+     "min": 0.09053973238527133,
+     "wins": 10,
+     "of": 10,
+     "n_units": 825,
+     "robust": true
+    },
+    "nandi_sentinel1": {
+     "mean": 0.021051299697334415,
+     "sd": 0.01038099240699856,
+     "min": 0.012859813676142196,
+     "wins": 10,
+     "of": 10,
+     "n_units": 825,
+     "robust": true
+    },
+    "nandi_sentinel2": {
+     "mean": 0.10254015986167542,
+     "sd": 0.003252504213130566,
+     "min": 0.09658994094665001,
+     "wins": 10,
+     "of": 10,
+     "n_units": 825,
+     "robust": true
+    },
+    "cropharvest_Togo_12_sentinel1": {
+     "mean": 0.03301607928725759,
+     "sd": 0.05723869320570922,
+     "min": 0.001717871866911691,
+     "wins": 10,
+     "of": 10,
+     "n_units": 306,
+     "robust": true
+    },
+    "cropharvest_Togo_12_sentinel2": {
+     "mean": 0.045907867835002225,
+     "sd": 0.0038418298803731426,
+     "min": 0.03926422252072868,
+     "wins": 10,
+     "of": 10,
+     "n_units": 306,
+     "robust": true
+    },
+    "cropharvest_Togo_12_sentinel2_sentinel1": {
+     "mean": 0.03683253716751023,
+     "sd": 0.00423460765787893,
+     "min": 0.03171615073502966,
+     "wins": 10,
+     "of": 10,
+     "n_units": 306,
+     "robust": true
+    },
+    "cropharvest_Peoples_Republic_of_China_6": {
+     "mean": 0.15552956821053862,
+     "sd": 0.002845074119490759,
+     "min": 0.15127138827152423,
+     "wins": 10,
+     "of": 10,
+     "n_units": 4397,
+     "robust": true
+    },
+    "cropharvest_Peoples_Republic_of_China_6_sentinel1": {
+     "mean": 0.22811149433116937,
+     "sd": 0.002707272658136928,
+     "min": 0.22426618184387725,
+     "wins": 10,
+     "of": 10,
+     "n_units": 4397,
+     "robust": true
+    },
+    "cropharvest_Peoples_Republic_of_China_6_sentinel1_sentinel2": {
+     "mean": 0.175057003456807,
+     "sd": 0.001556221423112179,
+     "min": 0.17190443400363212,
+     "wins": 10,
+     "of": 10,
+     "n_units": 4397,
+     "robust": true
+    },
+    "breizhcrops": {
+     "mean": 0.1710330287190158,
+     "sd": 0.0005442201686126382,
+     "min": 0.17041582990247578,
+     "wins": 10,
+     "of": 10,
+     "n_units": 122614,
+     "robust": true
+    },
+    "mados": {
+     "mean": 0.016551835855450787,
+     "sd": 0.00026790429261059083,
+     "min": 0.01616465104494306,
+     "wins": 10,
+     "of": 10,
+     "n_units": 22598,
+     "robust": true
+    },
+    "sen1floods11": {
+     "mean": 0.041798130335812804,
+     "sd": 9.726249107910675e-05,
+     "min": 0.04159503557064337,
+     "wins": 10,
+     "of": 10,
+     "n_units": 592385,
+     "robust": true
+    },
+    "pastis_sentinel1": {
+     "mean": 0.12711945202109032,
+     "sd": 0.0004268378248169693,
+     "min": 0.12642889482095246,
+     "wins": 10,
+     "of": 10,
+     "n_units": 458638,
+     "robust": true
+    },
+    "pastis_sentinel2": {
+     "mean": 0.11733038208000668,
+     "sd": 0.00010893012322554873,
+     "min": 0.11720883256670925,
+     "wins": 10,
+     "of": 10,
+     "n_units": 458638,
+     "robust": true
+    },
+    "pastis_sentinel1_sentinel2": {
+     "mean": 0.11892215966995905,
+     "sd": 0.00011303976856630742,
+     "min": 0.11879702699513042,
+     "wins": 10,
+     "of": 10,
+     "n_units": 458638,
+     "robust": true
+    },
+    "m_cashew_plant": {
+     "mean": 0.12548094275545701,
+     "sd": 0.0007524347086464072,
+     "min": 0.12415484108975416,
+     "wins": 10,
+     "of": 10,
+     "n_units": 204800,
+     "robust": true
+    },
+    "m_sa_crop_type": {
+     "mean": 0.11327012049609327,
+     "sd": 0.0007319635516182022,
+     "min": 0.11233510877248187,
+     "wins": 10,
+     "of": 10,
+     "n_units": 4096000,
+     "robust": true
+    }
+   },
+   "not_comparable_to_record": []
+  },
+  "P3_encoder_ordering_stable_in_sets": {
+   "holds": null,
+   "reason": "only 1 encoders have run",
+   "encoders_missing": [
+    "anysat",
+    "clay_large",
+    "copernicusfm",
+    "croma_base",
+    "croma_large",
+    "galileo_base",
+    "galileo_nano",
+    "galileo_tiny",
+    "olmoearth_large",
+    "olmoearth_nano",
+    "olmoearth_tiny",
+    "panopticon",
+    "satlas_base",
+    "terramind_base",
+    "terramind_large"
+   ],
+   "not_comparable_to_record": []
+  }
+ },
+ "estimation": {
+  "budget": 300,
+  "R": 2000,
+  "encoders": [
+   "olmoearth_base"
+  ],
+  "per_encoder": {
+   "olmoearth_base": {
+    "mados": {
+     "n_units": 22598,
+     "error_rate": 0.07359058323745464,
+     "design_effect": 9.774605372492182,
+     "srs_coverage": 0.933,
+     "srs_half_width": 0.029430171889612826,
+     "naive_coverage": 0.5065,
+     "cluster_coverage": 0.598,
+     "exact_srs_coverage": null
+    },
+    "sen1floods11": {
+     "n_units": 592385,
+     "error_rate": 0.0845176700963056,
+     "design_effect": 5.561635225750122,
+     "srs_coverage": 0.9485,
+     "srs_half_width": 0.03145310364330604,
+     "naive_coverage": 0.5775,
+     "cluster_coverage": 0.8165,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel1": {
+     "n_units": 458638,
+     "error_rate": 0.28434626001334384,
+     "design_effect": 2.9419455686595803,
+     "srs_coverage": 0.9565,
+     "srs_half_width": 0.0506647535210794,
+     "naive_coverage": 0.7315,
+     "cluster_coverage": 0.934,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel2": {
+     "n_units": 458638,
+     "error_rate": 0.1900562099084681,
+     "design_effect": 2.7039119446055624,
+     "srs_coverage": 0.95,
+     "srs_half_width": 0.04410508257580218,
+     "naive_coverage": 0.7595,
+     "cluster_coverage": 0.917,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel1_sentinel2": {
+     "n_units": 458638,
+     "error_rate": 0.19483993912410225,
+     "design_effect": 2.703288932045452,
+     "srs_coverage": 0.945,
+     "srs_half_width": 0.04453368576064958,
+     "naive_coverage": 0.777,
+     "cluster_coverage": 0.913,
+     "exact_srs_coverage": null
+    },
+    "m_cashew_plant": {
+     "n_units": 204800,
+     "error_rate": 0.3472119140625,
+     "design_effect": 1.16558383304416,
+     "srs_coverage": 0.948,
+     "srs_half_width": 0.05345668650443025,
+     "naive_coverage": 0.9395,
+     "cluster_coverage": 0.9355,
+     "exact_srs_coverage": null
+    },
+    "m_sa_crop_type": {
+     "n_units": 4096000,
+     "error_rate": 0.34003271484375,
+     "design_effect": 3.4357991679093667,
+     "srs_coverage": 0.961,
+     "srs_half_width": 0.05319402242261021,
+     "naive_coverage": 0.7045,
+     "cluster_coverage": 0.9315,
+     "exact_srs_coverage": null
+    }
+   }
+  }
+ },
+ "prereg_B": {
+  "P4_naive_failure_belongs_to_the_task": {
+   "holds": false,
+   "n_encoders_holding": 1,
+   "of": 1,
+   "per_encoder": {
+    "olmoearth_base": {
+     "carried": 7,
+     "present": 7,
+     "missing": [],
+     "under_covering": 6,
+     "exceptions": [
+      "m_cashew_plant"
+     ],
+     "median_design_effect": 2.9419455686595803,
+     "holds": true
+    }
+   },
+   "failing": []
+  },
+  "P5_estimator_honest_everywhere": {
+   "holds": false,
+   "n_cells": 7,
+   "of": 111,
+   "cells_missing": [
+    [
+     "anysat",
+     "m_cashew_plant"
+    ],
+    [
+     "anysat",
+     "m_sa_crop_type"
+    ],
+    [
+     "anysat",
+     "mados"
+    ],
+    [
+     "anysat",
+     "pastis_sentinel1"
+    ],
+    [
+     "anysat",
+     "pastis_sentinel1_sentinel2"
+    ],
+    [
+     "anysat",
+     "pastis_sentinel2"
+    ],
+    [
+     "anysat",
+     "sen1floods11"
+    ],
+    [
+     "clay_large",
+     "m_cashew_plant"
+    ],
+    [
+     "clay_large",
+     "m_sa_crop_type"
+    ],
+    [
+     "clay_large",
+     "mados"
+    ],
+    [
+     "clay_large",
+     "pastis_sentinel1"
+    ],
+    [
+     "clay_large",
+     "pastis_sentinel1_sentinel2"
+    ],
+    [
+     "clay_large",
+     "pastis_sentinel2"
+    ],
+    [
+     "clay_large",
+     "sen1floods11"
+    ],
+    [
+     "copernicusfm",
+     "m_cashew_plant"
+    ],
+    [
+     "copernicusfm",
+     "m_sa_crop_type"
+    ],
+    [
+     "copernicusfm",
+     "mados"
+    ],
+    [
+     "copernicusfm",
+     "pastis_sentinel1"
+    ],
+    [
+     "copernicusfm",
+     "pastis_sentinel1_sentinel2"
+    ],
+    [
+     "copernicusfm",
+     "pastis_sentinel2"
+    ],
+    [
+     "copernicusfm",
+     "sen1floods11"
+    ],
+    [
+     "croma_base",
+     "m_cashew_plant"
+    ],
+    [
+     "croma_base",
+     "m_sa_crop_type"
+    ],
+    [
+     "croma_base",
+     "mados"
+    ],
+    [
+     "croma_base",
+     "pastis_sentinel1"
+    ],
+    [
+     "croma_base",
+     "pastis_sentinel1_sentinel2"
+    ],
+    [
+     "croma_base",
+     "pastis_sentinel2"
+    ],
+    [
+     "croma_base",
+     "sen1floods11"
+    ],
+    [
+     "croma_large",
+     "m_cashew_plant"
+    ],
+    [
+     "croma_large",
+     "m_sa_crop_type"
+    ],
+    [
+     "croma_large",
+     "mados"
+    ],
+    [
+     "croma_large",
+     "pastis_sentinel1"
+    ],
+    [
+     "croma_large",
+     "pastis_sentinel1_sentinel2"
+    ],
+    [
+     "croma_large",
+     "pastis_sentinel2"
+    ],
+    [
+     "croma_large",
+     "sen1floods11"
+    ],
+    [
+     "galileo_base",
+     "m_cashew_plant"
+    ],
+    [
+     "galileo_base",
+     "m_sa_crop_type"
+    ],
+    [
+     "galileo_base",
+     "mados"
+    ],
+    [
+     "galileo_base",
+     "pastis_sentinel1"
+    ],
+    [
+     "galileo_base",
+     "pastis_sentinel1_sentinel2"
+    ],
+    [
+     "galileo_base",
+     "pastis_sentinel2"
+    ],
+    [
+     "galileo_base",
+     "sen1floods11"
+    ],
+    [
+     "galileo_nano",
+     "m_cashew_plant"
+    ],
+    [
+     "galileo_nano",
+     "m_sa_crop_type"
+    ],
+    [
+     "galileo_nano",
+     "mados"
+    ],
+    [
+     "galileo_nano",
+     "pastis_sentinel1"
+    ],
+    [
+     "galileo_nano",
+     "pastis_sentinel1_sentinel2"
+    ],
+    [
+     "galileo_nano",
+     "pastis_sentinel2"
+    ],
+    [
+     "galileo_nano",
+     "sen1floods11"
+    ],
+    [
+     "galileo_tiny",
+     "m_cashew_plant"
+    ],
+    [
+     "galileo_tiny",
+     "m_sa_crop_type"
+    ],
+    [
+     "galileo_tiny",
+     "mados"
+    ],
+    [
+     "galileo_tiny",
+     "pastis_sentinel1"
+    ],
+    [
+     "galileo_tiny",
+     "pastis_sentinel1_sentinel2"
+    ],
+    [
+     "galileo_tiny",
+     "pastis_sentinel2"
+    ],
+    [
+     "galileo_tiny",
+     "sen1floods11"
+    ],
+    [
+     "olmoearth_large",
+     "m_cashew_plant"
+    ],
+    [
+     "olmoearth_large",
+     "m_sa_crop_type"
+    ],
+    [
+     "olmoearth_large",
+     "mados"
+    ],
+    [
+     "olmoearth_large",
+     "pastis_sentinel1"
+    ],
+    [
+     "olmoearth_large",
+     "pastis_sentinel1_sentinel2"
+    ],
+    [
+     "olmoearth_large",
+     "pastis_sentinel2"
+    ],
+    [
+     "olmoearth_large",
+     "sen1floods11"
+    ],
+    [
+     "olmoearth_nano",
+     "m_cashew_plant"
+    ],
+    [
+     "olmoearth_nano",
+     "m_sa_crop_type"
+    ],
+    [
+     "olmoearth_nano",
+     "mados"
+    ],
+    [
+     "olmoearth_nano",
+     "pastis_sentinel1"
+    ],
+    [
+     "olmoearth_nano",
+     "pastis_sentinel1_sentinel2"
+    ],
+    [
+     "olmoearth_nano",
+     "pastis_sentinel2"
+    ],
+    [
+     "olmoearth_nano",
+     "sen1floods11"
+    ],
+    [
+     "olmoearth_tiny",
+     "m_cashew_plant"
+    ],
+    [
+     "olmoearth_tiny",
+     "m_sa_crop_type"
+    ],
+    [
+     "olmoearth_tiny",
+     "mados"
+    ],
+    [
+     "olmoearth_tiny",
+     "pastis_sentinel1"
+    ],
+    [
+     "olmoearth_tiny",
+     "pastis_sentinel1_sentinel2"
+    ],
+    [
+     "olmoearth_tiny",
+     "pastis_sentinel2"
+    ],
+    [
+     "olmoearth_tiny",
+     "sen1floods11"
+    ],
+    [
+     "panopticon",
+     "m_cashew_plant"
+    ],
+    [
+     "panopticon",
+     "m_sa_crop_type"
+    ],
+    [
+     "panopticon",
+     "mados"
+    ],
+    [
+     "panopticon",
+     "pastis_sentinel1"
+    ],
+    [
+     "panopticon",
+     "pastis_sentinel1_sentinel2"
+    ],
+    [
+     "panopticon",
+     "pastis_sentinel2"
+    ],
+    [
+     "panopticon",
+     "sen1floods11"
+    ],
+    [
+     "satlas_base",
+     "m_cashew_plant"
+    ],
+    [
+     "satlas_base",
+     "m_sa_crop_type"
+    ],
+    [
+     "satlas_base",
+     "mados"
+    ],
+    [
+     "satlas_base",
+     "pastis_sentinel1"
+    ],
+    [
+     "satlas_base",
+     "pastis_sentinel2"
+    ],
+    [
+     "satlas_base",
+     "sen1floods11"
+    ],
+    [
+     "terramind_base",
+     "m_cashew_plant"
+    ],
+    [
+     "terramind_base",
+     "m_sa_crop_type"
+    ],
+    [
+     "terramind_base",
+     "mados"
+    ],
+    [
+     "terramind_base",
+     "pastis_sentinel1"
+    ],
+    [
+     "terramind_base",
+     "pastis_sentinel1_sentinel2"
+    ],
+    [
+     "terramind_base",
+     "pastis_sentinel2"
+    ],
+    [
+     "terramind_base",
+     "sen1floods11"
+    ],
+    [
+     "terramind_large",
+     "m_cashew_plant"
+    ],
+    [
+     "terramind_large",
+     "m_sa_crop_type"
+    ],
+    [
+     "terramind_large",
+     "mados"
+    ],
+    [
+     "terramind_large",
+     "pastis_sentinel1"
+    ],
+    [
+     "terramind_large",
+     "pastis_sentinel1_sentinel2"
+    ],
+    [
+     "terramind_large",
+     "pastis_sentinel2"
+    ],
+    [
+     "terramind_large",
+     "sen1floods11"
+    ]
+   ],
+   "failing": [],
+   "below_bar_but_within_exact": [],
+   "min_coverage": 0.933
+  }
+ }
+}

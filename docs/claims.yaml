@@ -3519,3 +3519,64 @@
     )(A['exp/out/exp83_summary.json']['tasks'])
   cited_in:
     - {file: docs/results/comparisons.md, marker: within-family-consensus-is-the-unanimous-limit}
+
+- id: exp79-base-gate-holds-on-the-record-engine
+  statement: "exp79's OlmoEarth Base export on a B200 carries exp70's 24 tasks and reproduces every recorded seed-0 test accuracy to the four decimals the record states (largest difference below 1e-10) and the recorded median headroom to 1e-3; the same export on an RTX PRO 6000 misses the 1e-4 gate on seven classification tasks by one to three net predictions and on no segmentation task."
+  crosscheck: tests/test_known_answer.py::test_exp79_base_gate_seed_leads_and_engine_differences_recompute_from_the_exports
+  status: supported
+  experiments: [exp79]
+  artifacts: [exp/out/exp79_seeds/olmoearth_base.json, exp/out/exp70_summary.json, exp/out/exp79_engine/summary.json]
+  check: |-
+    (lambda b, rec, eng: set(b['tasks']) == set(rec) and len(rec) == 24
+      and max(abs(v['seeds'][0]['test_accuracy'] - rec[t]['test_accuracy']) for t, v in b['tasks'].items()) < 1e-10
+      and len(eng['classification']['tasks_gate_failed_rtx']) == 7 and eng['classification']['tasks_gate_failed_b200'] == []
+      and eng['segmentation']['tasks_gate_failed_rtx'] == [] and eng['segmentation']['tasks_gate_failed_b200'] == []
+      and 1 <= min(eng['tasks'][t]['net_predictions_moved_seed0'] for t in eng['classification']['tasks_gate_failed_rtx'])
+      and max(eng['tasks'][t]['net_predictions_moved_seed0'] for t in eng['classification']['tasks_gate_failed_rtx']) <= 3
+    )(A['exp/out/exp79_seeds/olmoearth_base.json'], A['exp/out/exp70_summary.json']['results']['tasks'], A['exp/out/exp79_engine/summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp79-base-gate-holds-on-the-record-engine}
+  note: >-
+    The headroom agreement is graded by exp/exp79_seed_floors.py --stage grade against exp/out/headroom_by_encoder.json
+    and reported in exp/out/exp79_summary.json (gate.per_encoder.olmoearth_base.headroom_abs_diff = 0); exp70 was run
+    on a B200 (job 837407), so the gate is an engine-matched reproduction.
+
+- id: exp79-base-margin-wins-under-every-seed
+  statement: "On OlmoEarth Base the margin's lead over the best no-model control is positive under all ten probe seeds on all 24 tasks (P2, bar 20); the smallest lead at any seed is +0.0017 on CropHarvest Togo Sentinel-1 (seed 5; median over seeds 0.018), inside the engine's own effect on that task (0.0036), followed by Nandi Sentinel-1 (+0.013), EuroSAT (+0.016) and MADOS (+0.016)."
+  crosscheck: tests/test_known_answer.py::test_exp79_base_gate_seed_leads_and_engine_differences_recompute_from_the_exports
+  status: supported
+  experiments: [exp79]
+  artifacts: [exp/out/exp79_seeds/olmoearth_base.json, exp/out/exp79_engine/summary.json]
+  check: |-
+    (lambda b, eng: (lambda L:
+      len(L) == 24 and all(len(v) == 10 and min(v) > 0 for v in L.values())
+      and sorted(L, key=lambda t: min(L[t]))[:4] == ['cropharvest_Togo_12_sentinel1', 'nandi_sentinel1', 'm_eurosat', 'mados']
+      and round(min(L['cropharvest_Togo_12_sentinel1']), 4) == 0.0017 and L['cropharvest_Togo_12_sentinel1'].index(min(L['cropharvest_Togo_12_sentinel1'])) == 5
+      and round(sorted(L['cropharvest_Togo_12_sentinel1'])[4] / 2 + sorted(L['cropharvest_Togo_12_sentinel1'])[5] / 2, 3) == 0.018
+      and round(eng['tasks']['cropharvest_Togo_12_sentinel1']['max_abs_lead_difference'], 4) == 0.0036
+      and round(min(L['nandi_sentinel1']), 3) == 0.013 and round(min(L['m_eurosat']), 3) == 0.016 and round(min(L['mados']), 3) == 0.016
+    )({t: [min(s['signals']['ctl_embedding_distance']['excess_aurc'], s['signals']['ctl_class_rarity']['excess_aurc']) - s['signals']['margin']['excess_aurc'] for s in v['seeds']]
+       for t, v in b['tasks'].items()}))(A['exp/out/exp79_seeds/olmoearth_base.json'], A['exp/out/exp79_engine/summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp79-base-margin-wins-under-every-seed}
+  note: >-
+    Leads are recomputed from the signals, never read from margin_lead. The Togo mean over seeds (0.033, sd 0.057) is
+    dominated by seed 4, where the class-rarity control inverted and the lead jumped to +0.195; the record quotes the
+    minimum and the median for that reason.
+
+- id: exp79-engine-effect-on-the-lead
+  statement: "Across the 240 (task, seed) cells of OlmoEarth Base's export, the GPU type never turns a win of the margin into a loss; the engine's effect on the lead is about a fifth of the seed's on the classification tasks it moves at all (median ratio of the engine difference to the seed standard deviation 0.52 on those nine, 0.21 over all seventeen) and about 2% on segmentation; 68 cells change their lead with the accuracy unchanged, so the net prediction count understates the predictions moved."
+  crosscheck: tests/test_known_answer.py::test_exp79_base_gate_seed_leads_and_engine_differences_recompute_from_the_exports
+  status: measured
+  experiments: [exp79]
+  artifacts: [exp/out/exp79_engine/summary.json]
+  check: |-
+    (lambda e: e['n_tasks'] == 24 and e['lead']['wins_differ_on'] == []
+      and round(e['classification']['median_engine_over_seed_lead_ratio_where_engine_moves'], 2) == 0.52
+      and round(e['classification']['median_engine_over_seed_lead_ratio'], 2) == 0.21
+      and round(e['segmentation']['median_engine_over_seed_lead_ratio'], 3) == 0.024
+      and e['lead']['cells_with_identical_accuracy_but_different_lead'] == 68 and e['lead']['cells_with_identical_lead'] == 63
+      and round(e['classification']['max_abs_accuracy_difference'], 3) == 0.015 and e['segmentation']['max_abs_accuracy_difference'] < 1e-4
+    )(A['exp/out/exp79_engine/summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp79-engine-effect-on-the-lead}

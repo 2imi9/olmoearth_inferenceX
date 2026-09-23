@@ -2539,6 +2539,51 @@ needs labels; the order is recoverable only where the true gaps between encoders
 error of about 0.01. Nothing in the tool changes: `reliability.dawid_skene` keeps its one documented use, the
 front page's sentence that an error rate needs a reference stands, and the panel is now a second reason for it.
 
+## Is the record bigger than its own seed noise? First reading: OlmoEarth Base, and the engine (exp79)
+
+Preregistered in [docs/plan/seed_floors.md](../plan/seed_floors.md) with an amendment; runs as
+`exp/exp79_seed_floors.py` (export on the cluster, grade and estimate locally); artifacts
+`exp/out/exp79_seeds/<encoder>.json`, `exp/out/exp79_summary.json`, `exp/out/exp79_engine/summary.json`. This
+section is the first reading, written on 23 September 2026 when only OlmoEarth Base's export had landed; the
+fifteen other encoders' exports arrive one at a time on the cluster's development partition, and P1, P3, P4 and
+P5 are graded when all sixteen are in. The suite's headline sentences had never been reseeded; this is what ten
+probe seeds do to them, and what the GPU does.
+
+**Gate G holds on OlmoEarth Base, on the engine the record was made on.** The B200 export carries exp70's 24
+tasks; at seed 0 every task reproduces the recorded test accuracy to the four decimals the record states (largest
+difference below 1e-10) and the recomputed seed-0 median headroom agrees with `headroom_by_encoder.json` exactly.
+exp70 was itself run on a B200 (job 837407), so this is an engine-matched reproduction: the same export on an RTX
+PRO 6000 misses the 1e-4 gate on seven classification tasks by one to three net predictions each and on no
+segmentation task. <!-- claim:exp79-base-gate-holds-on-the-record-engine -->
+
+**P2 holds, with no flips, and one win by sign only.** The margin beats the best no-model control under every one
+of the ten seeds on all 24 tasks (the bar was 20). The smallest lead at any seed is +0.0017 on CropHarvest Togo
+Sentinel-1 (306 units, seed 5), which is inside the engine's own effect on that task (0.0036) and on the RTX
+engine was +0.0001 at seed 3; the win holds by sign on every seed and engine tried, and a third GPU could
+plausibly have put one seed below zero. Its median lead over seeds is 0.018; the mean of 0.033 with a spread of
+0.057 is one seed, seed 4, on which the class-rarity control inverted (its AUROC fell to 0.31 and the lead jumped
+to +0.195), the failure mode the preregistration named, here in the direction of a larger lead. The next smallest
+leads are Nandi Sentinel-1 (+0.013), EuroSAT (+0.016) and MADOS (+0.016, spread 0.0003). The "24 of 24" sentence
+about OlmoEarth Base is not a seed-0 fact, and the record's four smallest leads are named with their spread.
+<!-- claim:exp79-base-margin-wins-under-every-seed -->
+
+**The engine is a measured quantity, and on small classification tasks it is of the seed's order.** The same
+export from the same commit and seeds was run on the RTX first, by my choice of partition, and then on the B200.
+Linear-probe training is not bit-identical across GPU types: the RTX moves one to three net predictions on seven
+classification tasks (up to 0.015 in accuracy on the 200-unit AWF Sentinel-1) and 0 to 21 of 204,800 windows on
+the segmentation tasks (largest difference 8e-5). On no task and no seed does the engine turn a win of the margin
+into a loss. Its effect on the lead is bimodal: on the nine classification tasks it moves at all, the engine
+difference is about half the seed standard deviation (median ratio 0.52, range 0.21–0.98), 0.21 over all
+seventeen, and about 2% on the segmentation tasks. The accuracy count is a net count: 68 of the 240 cells keep
+their accuracy to the last bit and change their lead, so more predictions move than the count says. A gate at 1e-4 must name its
+engine. <!-- claim:exp79-engine-effect-on-the-lead -->
+
+**exp78's estimation study reproduces from the new export (P4 and P5 on Base).** Rerun on the seed-0 units the
+B200 export wrote, every design effect, error rate and coverage of exp78's seven segmentation tasks comes back to
+the third decimal (MADOS naive 0.506, cluster 0.598; the one difference beyond Monte Carlo noise is PASTIS S1's
+cluster coverage, 0.934 against 0.918, on units that differ in a handful of windows), and the per-unit files'
+SHA-256s match the export's manifest.
+
 ## The ceiling belongs to the task, not to the model (from exp74 and exp70)
 
 The margin takes a median 0.68 of the gap between a random ranking and a perfect one on the 24 tasks. A fair

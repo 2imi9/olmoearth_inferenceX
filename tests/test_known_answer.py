@@ -178,3 +178,38 @@ def test_the_test_split_boundary_shares_quoted_with_exp18_are_in_the_committed_r
     assert round(float((b[e] > 0).mean()), 2) == 0.73 and round(float((b[~e] > 0).mean()), 2) == 0.18
     bb, ee = z["ranker/bolivia/boundary"], z["ranker/bolivia/err"] > 0.5
     assert round(float((bb[ee] > 0).mean()), 2) == 0.75 and round(float((bb[~ee] > 0).mean()), 2) == 0.21
+
+
+def test_exp79_base_gate_seed_leads_and_engine_differences_recompute_from_the_exports():
+    """exp79's first reading (OlmoEarth Base): the gate against exp70 recomputed from the export's seed-0 accuracies;
+    every one of the 240 (task, seed) leads recomputed from the signals; the smallest leads named in the record; and
+    the RTX-vs-B200 differences recomputed from the two exports by a second route."""
+    import json
+    lead = lambda sig: min(sig["ctl_embedding_distance"]["excess_aurc"], sig["ctl_class_rarity"]["excess_aurc"]) - sig["margin"]["excess_aurc"]
+    b200 = json.load(open(os.path.join(ROOT, "exp", "out", "exp79_seeds", "olmoearth_base.json")))
+    rtx = json.load(open(os.path.join(ROOT, "exp", "out", "exp79_engine", "olmoearth_base_rtx.json")))
+    rec = json.load(open(os.path.join(ROOT, "exp", "out", "exp70_summary.json")))["results"]["tasks"]
+    assert set(b200["tasks"]) == set(rec) and len(rec) == 24
+    assert max(abs(v["seeds"][0]["test_accuracy"] - rec[t]["test_accuracy"]) for t, v in b200["tasks"].items()) < 1e-4
+    mins = {}
+    for t, v in b200["tasks"].items():
+        leads = [lead(s["signals"]) for s in v["seeds"]]
+        assert len(leads) == 10 and all(abs(l - s["margin_lead"]) < 1e-12 for l, s in zip(leads, v["seeds"]))
+        assert min(leads) > 0
+        mins[t] = (min(leads), int(np.argmin(leads)), float(np.median(leads)))
+    assert round(mins["cropharvest_Togo_12_sentinel1"][0], 4) == 0.0017 and mins["cropharvest_Togo_12_sentinel1"][1] == 5
+    assert round(mins["cropharvest_Togo_12_sentinel1"][2], 3) == 0.018
+    assert sorted(mins, key=lambda t: mins[t][0])[:4] == ["cropharvest_Togo_12_sentinel1", "nandi_sentinel1", "m_eurosat", "mados"]
+    # the engine: accuracy differences per family and the RTX gate failures, from the two exports directly
+    cls = {t: max(abs(a["test_accuracy"] - b["test_accuracy"]) for a, b in zip(rtx["tasks"][t]["seeds"], b200["tasks"][t]["seeds"]))
+           for t in rec if b200["tasks"][t]["family"].startswith("cla")}
+    seg = {t: max(abs(a["test_accuracy"] - b["test_accuracy"]) for a, b in zip(rtx["tasks"][t]["seeds"], b200["tasks"][t]["seeds"]))
+           for t in rec if b200["tasks"][t]["family"].startswith("seg")}
+    assert round(max(cls.values()), 3) == 0.015 and max(cls, key=cls.get) == "awf_sentinel1"
+    assert max(seg.values()) < 1e-4
+    rtx_fail = sorted(t for t, v in rtx["tasks"].items() if abs(v["seeds"][0]["test_accuracy"] - rec[t]["test_accuracy"]) >= 1e-4)
+    assert rtx_fail == ["awf_sentinel1", "cropharvest_Peoples_Republic_of_China_6_sentinel1", "m_eurosat", "m_forestnet", "m_so2sat", "nandi_landsat", "nandi_sentinel1"]
+    wins_same = all((lead(a["signals"]) > 0) == (lead(b["signals"]) > 0) for t in rec for a, b in zip(rtx["tasks"][t]["seeds"], b200["tasks"][t]["seeds"]))
+    assert wins_same
+    eng = json.load(open(os.path.join(ROOT, "exp", "out", "exp79_engine", "summary.json")))
+    assert eng["classification"]["tasks_gate_failed_rtx"] == rtx_fail and eng["classification"]["tasks_gate_failed_b200"] == []

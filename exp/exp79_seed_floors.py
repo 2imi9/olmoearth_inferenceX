@@ -135,8 +135,18 @@ def cmd_export(args):
 
 # ----------------------------------------------------------------------------- stage: grade (local)
 def load_seeds():
-    """{encoder: export json} for every encoder that has run."""
-    return {os.path.basename(p)[:-5]: json.load(open(p)) for p in sorted(glob.glob(os.path.join(SEEDS_DIR, "*.json")))}
+    """{encoder: export json} for every encoder that has run: only the sixteen by name, and a file whose `model`
+    field is not its name is refused (the RTX engine copy of Base lives outside this directory for that reason)."""
+    out = {}
+    for p in sorted(glob.glob(os.path.join(SEEDS_DIR, "*.json"))):
+        enc = os.path.basename(p)[:-5]
+        if enc not in ENCODERS:
+            continue
+        d = json.load(open(p))
+        if d.get("model") != enc:
+            raise SystemExit(f"{p} says model={d.get('model')!r}; an export must be named after its encoder")
+        out[enc] = d
+    return out
 
 
 def gate(per_encoder, recorded=None, headroom_ref=None):
@@ -151,8 +161,23 @@ def gate(per_encoder, recorded=None, headroom_ref=None):
     g = {}
     for enc, d in per_encoder.items():
         want, have = set(recorded.get(enc, {})), set(d["tasks"])
-        diffs = {t: v["accuracy_minus_recorded"] for t, v in d["tasks"].items() if v["accuracy_minus_recorded"] is not None}
-        bad = sorted(t for t, x in diffs.items() if abs(x) >= GATE_TOL)
+        # against the record as it is now, not the copy the cluster checkout carried when it ran (audit, 2026-09-23):
+        # the difference is recomputed from seed 0 where the record holds an accuracy, and the export's own stored
+        # difference must agree with it; a task the export could not compare (stored None) fails the gate
+        rec = recorded.get(enc, {})
+        diffs, stale = {}, []
+        for t, v in d["tasks"].items():
+            stored = v.get("accuracy_minus_recorded")
+            recomputed = (v["seeds"][0]["test_accuracy"] - rec[t]["test_accuracy"]
+                          if t in rec and isinstance(rec[t], dict) and rec[t].get("test_accuracy") is not None and v.get("seeds") else None)
+            if recomputed is None and stored is None:
+                continue
+            # the larger of the two differences is the one graded: a stored difference that misses the record's
+            # copy fails even if the current record were to agree, and vice versa
+            diffs[t] = max((x for x in (stored, recomputed) if x is not None), key=abs)
+            if stored is None or (recomputed is not None and abs(stored - recomputed) >= GATE_TOL):
+                stale.append(t)
+        bad = sorted(set(t for t, x in diffs.items() if abs(x) >= GATE_TOL) | set(stale))
         hd = abs(h0[enc] - h_ref[enc]) if enc in h0 and enc in h_ref else float("nan")
         g[enc] = {"holds": bool(want) and want == have and not bad and len(diffs) == len(have)
                            and np.isfinite(hd) and hd < P3_HEADROOM_TOL,
