@@ -152,6 +152,13 @@ not the simple-random one this page used, which is 1.4 to 1.9 times larger and p
 standard errors where a 95% interval excludes 17–29% of the time, exactly as observed. The simple-random ratio is
 kept beside it in the artifact.
 
+**Third run, one selection rule added after it.** Grading the share on every draw for every class swept in
+classes the map hardly ever predicts (BreizhCrops never predicts three of nine), whose share estimate rests on a
+handful of windows and whose bias ratio near zero is meaningless (0.72 to 1.54 with coverage 0.97–0.99). The
+share cells graded are those the package reports without a warning, an expected labelled count of at least 30 in
+the reference class; their coverage is over every draw. That leaves 328 cells: 13 below the bar, six
+discreteness cells passing by the exact rule.
+
 Two mechanisms behind the nine confidence-design cells at 0.87–0.93, both anticipated on this page and neither a
 formula error, are now warnings in the package: a class nearly all of whose windows are labelled (the estimate
 takes 22 distinct values on Togo and a normal interval covers 0.884 even with the exact variance), and a class

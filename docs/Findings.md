@@ -323,6 +323,14 @@ error rate needs 255 error-free labels inside the zone before any test can
 pass. Without labels the map's own confidence overstates its accuracy by a
 median 6 points across the suite, so no zone is certified from the map alone. <!-- claim:mean-confidence-overstates-accuracy -->
 
+The same sample now also answers the question the map-accuracy literature
+says a producer owes (exp81): per class, how often the map's call is right,
+how much of the class the map found, and the class's corrected share of the
+map, each with an interval. The interval the literature uses collapses to a
+point whenever a class shows no sampled error, and covered as little as 30% of
+draws on 63 of 328 graded cells; the package's form leaves 13 cells short, none
+below 0.88, each named with its cause. <!-- claim:per-class-intervals-wald-fails-wilson-nearly-holds -->
+
 ### Does it help an agent
 
 And whether any of this helps an agent is now measured rather than assumed

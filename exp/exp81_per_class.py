@@ -169,6 +169,12 @@ def grade_p1(rows, cover=P1_COVER, bias=P1_BIAS, interval="wilson", exact_tol=0.
                 v = pc[q]
                 if v["coverage"] is None or v["eligible_share"] < 0.5:
                     continue
+                # the share's coverage is over every draw (second amendment); the cells graded are the ones the
+                # package reports without a warning, i.e. an expected labelled count of at least MIN_PER_CLASS in
+                # the reference class, since the third run showed that grading every class sweeps in classes the
+                # map hardly ever predicts, whose share estimate is a handful of windows
+                if q == "reference_share" and c["budget"] * pc["reference_share_true"] < est.MIN_PER_CLASS:
+                    continue
                 n += 1
                 bad_bias = v["bias_ratio"] is not None and abs(v["bias_ratio"] - 1) > bias
                 low = v["coverage"] < cover

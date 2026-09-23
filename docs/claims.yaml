@@ -3369,3 +3369,75 @@
   note: >-
     The confidence captures equal exp70's recorded captures to 1.3e-4 (the export reproduces the record); the
     crosscheck pins that equality at 20%.
+
+- id: per-class-intervals-wald-fails-wilson-nearly-holds
+  statement: "On the 17 classification tasks of the suite at 300 and 1,000 random or confidence-designed labels, per-class intervals for user's accuracy, producer's accuracy and class share (classes with at least 30 expected labels; 328 cells): with Wald intervals 63 cells cover below 0.93 and the worst covers 0.296; with Wilson on the effective sample size 13 cover below 0.93, none below 0.879, and six EuroSAT user's-accuracy cells at 0.63-0.90 match the exact coverage Wilson can achieve on a class with one to four errors in a hundred windows."
+  crosscheck: tests/test_per_class.py::test_the_variance_estimators_track_the_monte_carlo_variance
+  status: mixed
+  experiments: [exp81]
+  artifacts: [exp/out/exp81_summary.json]
+  check: |-
+    (lambda s: (lambda p, w:
+      p['n_cells'] == 328 and w['n_cells'] == 328
+      and len(p['failing']) == 13 and round(min(f['coverage'] for f in p['failing']), 3) == 0.879
+      and all(f['coverage'] >= 0.87 for f in p['failing'])
+      and w['n_failing'] == 63 and round(w['min_coverage'], 3) == 0.296
+      and len(p['discreteness_cells_passing_by_exact_coverage']) == 6
+      and all(x['task'] == 'm_eurosat' and abs(x['coverage'] - x['exact_coverage']) < 0.05 for x in p['discreteness_cells_passing_by_exact_coverage'])
+      and len(s['tasks']) == 17 and s['config']['draws'] == 2000
+    )(s['prereg']['P1_every_reported_interval_is_honest'], s['prereg']['P1_under_the_wald_form']))(A['exp/out/exp81_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: per-class-intervals-wald-fails-wilson-nearly-holds}
+    - {file: docs/Findings.md, marker: per-class-intervals-wald-fails-wilson-nearly-holds}
+  note: >-
+    The counts are read from the graded blocks, which `exp/exp81_per_class.py --stage grade` recomputes from the
+    per-cell coverages (pure functions of the rows); the crosscheck is the variance and bias test on a synthetic
+    map with margin-dependent classes under both designs. Preregistered P1 (every cell at or above 0.93) is
+    recorded as failed; the thirteen cells and their mechanisms are in the section.
+
+- id: confidence-design-serves-the-classes-too
+  statement: "At 300 labels the confidence design's per-class user's-accuracy intervals (Wilson on the effective sample size) are wider than a random sample's, by the median ratio over classes, on 3 of the 14 classification tasks that have a 300-label cell, and narrower on the other 11; the preregistered P2 (wider on at least half) fails."
+  crosscheck: tests/test_per_class.py::test_the_variance_estimators_track_the_monte_carlo_variance
+  status: rejected
+  experiments: [exp81]
+  artifacts: [exp/out/exp81_summary.json]
+  check: |-
+    (lambda p: p['holds'] is False and p['of'] == 14 and p['n_tasks_wider'] == 3
+      and sum(1 for v in p['median_ratio_per_task'].values() if v > 1) == 3
+      and round(min(p['median_ratio_per_task'].values()), 2) == 0.40
+    )(A['exp/out/exp81_summary.json']['prereg']['P2_the_overall_design_widens_the_classes'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: confidence-design-serves-the-classes-too}
+
+- id: adjusted-share-moves-with-the-population-gap
+  statement: "At 300 random labels, where the map's class share differs from the true share by at least three standard errors of the post-stratified share estimate, the 95% interval excludes the map's share on at least 0.775 of draws; where it differs by less than one, on at most 0.23; the preregistered bars (0.80 and 0.20) fail on one cell each (So2Sat classes 15 and 10)."
+  crosscheck: tests/test_per_class.py::test_random_design_matches_wilson_per_class_and_olofssons_equations
+  status: mixed
+  experiments: [exp81]
+  artifacts: [exp/out/exp81_summary.json]
+  check: |-
+    (lambda s: (lambda cells: (lambda hi, lo:
+      len(hi) >= 10 and len(lo) >= 20
+      and round(min(hi), 3) == 0.775 and sum(1 for x in hi if x < 0.8) == 1
+      and abs(max(lo) - 0.2295) < 1e-9 and sum(1 for x in lo if x > 0.2) == 1
+    )([v['exclusion_rate'] for c in cells for v in c['share_excludes_map'].values() if v['disc_over_se'] >= 3.0],
+      [v['exclusion_rate'] for c in cells for v in c['share_excludes_map'].values() if v['disc_over_se'] < 1.0])
+    )([c for row in s['tasks'].values() for c in row['cells'] if c['design'] == 'random' and c['budget'] == 300
+       and c.get('interval') == 'wilson' and 'share_excludes_map' in c]))(A['exp/out/exp81_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: adjusted-share-moves-with-the-population-gap}
+
+- id: per-class-budget-scales-with-classes
+  statement: "At 300 random labels the package reports without a warning (at least 30 labelled windows of the class on at least half the draws) every class of the two- and six-class tasks, 8 of EuroSAT's 10, 4 of ForestNet's 12, 4 of BreizhCrops' 9 and none of So2Sat's 17; at 1,000 labels BreizhCrops reaches 5."
+  crosscheck: tests/test_per_class.py::test_refusals
+  status: measured
+  experiments: [exp81]
+  artifacts: [exp/out/exp81_summary.json]
+  check: |-
+    (lambda s: (lambda n:
+      n('m_eurosat', 300) == 8 and n('m_forestnet', 300) == 4 and n('breizhcrops', 300) == 4 and n('m_so2sat', 300) == 0
+      and n('breizhcrops', 1000) == 5 and n('nandi_landsat', 300) == 6 and n('m_brick_kiln', 300) == 2
+    )(lambda t, B: sum(1 for pc in [c for c in s['tasks'][t]['cells'] if c['design'] == 'random' and c['budget'] == B and c.get('interval') == 'wilson'][0]['per_class'].values()
+                       if pc['user_accuracy']['eligible_share'] >= 0.5)))(A['exp/out/exp81_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: per-class-budget-scales-with-classes}

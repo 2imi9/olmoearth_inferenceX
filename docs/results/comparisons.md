@@ -2438,6 +2438,56 @@ without moving any cue set.
 the suite's range and the cue's per-task values, and reports the map's own boundary prevalence, which is what
 decides where in the range a map sits.
 
+## What a map user is owed per class (exp81)
+
+Preregistered in [docs/plan/per_class_assessment.md](../plan/per_class_assessment.md) with three dated
+amendments; runs as `exp/exp81_per_class.py`; artifact `exp/out/exp81_summary.json`; ships as
+`estimate.estimate_per_class` and `oe-inferencex estimate --per-class`. Run on 23 September 2026 on the 17
+classification tasks of the suite from exp78's export (the segmentation tasks wait for exp79's export, which
+carries the reference class per window); 2,000 draws per cell, no cluster, six minutes.
+
+**The question.** `estimate` gave one error rate. The map-accuracy literature's standard (Olofsson et al. 2014;
+Stehman and Foody 2019; the CEOS land-cover protocol) is per class: the user's accuracy, the producer's accuracy
+and the error-adjusted class share, each with a standard error, from one probability sample. This adds them under
+the random design (Wilson per map class; post-stratified shares; Olofsson's eq. 7 for the producer's accuracy,
+with the finite-population correction its siblings carry) and under the confidence design (ratios of
+Horvitz–Thompson totals over the margin strata, linearised variance), graded against the population truth on
+every class with at least 30 expected labels.
+
+**The field's interval fails; the shipped one nearly holds.** With Wald intervals, the form the literature uses,
+63 of 328 graded cells cover below 0.93 and the worst covers 0.30: whenever a class shows no sampled error the
+interval is a point at 1. With Wilson on the effective sample size, the package's form, 13 cells sit below the
+bar, at 0.879 to 0.928, and every one is named with its mechanism: three on the near-census CropHarvest Togo
+tasks (300 of 306 windows labelled, the estimate takes 22 values), four where a class's rare errors sit in
+confidence strata the overall-rate allocation samples thinly (Brick Kiln, Nandi Landsat; covered 0.80–0.90 on the
+draws that miss them, 0.98 on the rest), and six small-count cells on EuroSAT. Six further EuroSAT cells sit at
+0.63–0.90 by Wilson's discreteness, a class holding one error in a hundred windows seen by thirty labels, and
+match the exact achievable coverage. The package now warns for the first two cases.
+<!-- claim:per-class-intervals-wald-fails-wilson-nearly-holds -->
+
+**P2 fails, in the tool's favour.** Stehman and Wagner's warning, that a sample allocated for the overall rate
+serves the classes worse, does not hold here: the confidence design's per-class user's-accuracy intervals are
+wider than a random sample's on 3 of 14 tasks (median ratio over classes above 1) and narrower on the rest,
+down to 0.40 on the near-census Togo arms and 0.69 on Brick Kiln. The default design serves both purposes.
+<!-- claim:confidence-design-serves-the-classes-too -->
+
+**P3 fails on two cells at its bars.** Where the map's class share differs from the truth by three or more
+standard errors of the post-stratified estimate, the interval excludes the map's share on 78% to 100% of draws
+(one cell, So2Sat class 15, at 0.775 against a bar of 0.80); where it differs by less than one, on 6% to 23%
+(one cell at 0.23 against 0.20). The estimator behaves; the bars were set on the simple-random standard error,
+1.4 to 1.9 times the estimator's own. <!-- claim:adjusted-share-moves-with-the-population-gap -->
+
+**The budget scales with the classes.** At 300 labels a random sample reports without a warning all classes of
+the two- and six-class tasks, eight of EuroSAT's ten, four of ForestNet's twelve, four of BreizhCrops' nine and
+none of So2Sat's seventeen; at 1,000 labels BreizhCrops reaches five. That is the CEOS point, and the tool says
+it per class rather than averaging it away. <!-- claim:per-class-budget-scales-with-classes -->
+
+**Stated from the audit.** The first run graded bias conditional on the class count, which manufactured a 3–11%
+upward bias on classes at the 30-label line; the second run's design comparison read the Wald cells; the
+producer's accuracy lacked its finite-population correction (median coverage 0.983 before, 0.953 after); the
+share's grading now covers every draw for the classes the package reports. Each is in the preregistration's
+amendments with its date.
+
 ## The ceiling belongs to the task, not to the model (from exp74 and exp70)
 
 The margin takes a median 0.68 of the gap between a random ranking and a perfect one on the 24 tasks. A fair

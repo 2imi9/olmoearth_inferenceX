@@ -14,8 +14,11 @@
 - `estimate.estimate_per_class` and `oe-inferencex estimate --per-class`: user's accuracy, producer's accuracy
   and the error-adjusted class share per class from the same labelled sample (Olofsson et al. 2014 under a random
   draw; ratios of Horvitz–Thompson totals under the confidence design), with Wilson intervals on the effective
-  sample size; the field's Wald form is kept as an option because exp81 (in progress, to be recorded after its
-  audit) shows it collapsing to a point on classes with no sampled error. Tile samples are refused for now.
+  sample size; the field's Wald form is kept as an option because exp81 shows it collapsing to a point on
+  classes with no sampled error (63 of 328 cells below 0.93 coverage, the worst at 0.30, against 13 for the
+  shipped form, none below 0.88). Warnings for a near-census class and for a class the confidence design samples
+  thinly. Tile samples are refused for now. The finite-population correction the producer's accuracy lacked was
+  found by the audit before the record.
 - `explain`'s reasons verified per task (exp82): the boundary cue is real on all seven segmentation tasks of the
   suite (error rate inside the boundary set 2.1 to 10.5 times the rate outside) but its quoted enrichment runs
   from 1.24 to 8.13 and is set by the map's fragmentation, not its class count; the Bolivia value the library
