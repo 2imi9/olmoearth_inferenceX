@@ -16,6 +16,12 @@
   draw; ratios of Horvitz–Thompson totals under the confidence design), with Wilson intervals on the effective
   sample size; the field's Wald form is kept as an option because exp81 (in progress, to be recorded after its
   audit) shows it collapsing to a point on classes with no sampled error. Tile samples are refused for now.
+- `explain`'s reasons verified per task (exp82): the boundary cue is real on all seven segmentation tasks of the
+  suite (error rate inside the boundary set 2.1 to 10.5 times the rate outside) but its quoted enrichment runs
+  from 1.24 to 8.13 and is set by the map's fragmentation, not its class count; the Bolivia value the library
+  quoted lies outside every task's interval. The library now carries the suite's range and reports the map's own
+  boundary prevalence. `assess._boundary_valid`'s two code paths disagreed on the indicator's value at tile edges
+  (the cue set was the same); one semantics now.
 - The claim ledger: an audit found 138 of 167 checks reading a verdict or a pinned number back from the artifact
   that produced it; the suite, estimator and cue claims now recompute their statistic from per-task or per-unit
   records, and the recomputation tests are named as `crosscheck` on the claims they cover.

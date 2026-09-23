@@ -2380,6 +2380,64 @@ nearly all of whose windows are labelled the exact test is stronger, so the cut 
 are wrong at most half as often as the map overall, and that claim fails on at most one draw in ten", and can
 say when a budget cannot certify the α asked for. It cannot say anything about the windows outside the zone.
 
+## Is the "why" verified where it is quoted? (exp82)
+
+Preregistered in [docs/plan/cue_verification.md](../plan/cue_verification.md) with a dated amendment; runs as
+`exp/exp82_cue_verification.py`; artifact `exp/out/exp82_summary.json`. Run on 23 September 2026 on the seven
+segmentation tasks of the suite from exp78's per-unit export (22,598 to 4,096,000 windows in tiles), no cluster.
+
+**The question.** `explain` quotes, beside every flagged window, the share of error and of correct windows that
+carry each reason: 0.750 against 0.214 for the boundary cue, measured once on Bolivia (exp37) and quoted on every
+map. The field's rule (Johnson et al. 2023; HiBug2) is that a reason is defensible only where the named group
+shows elevated error on held-out data, with an interval. Here the cues are computed as the tool computes them
+(the window-level boundary indicator on each tile's decision map; the least confident fifth by margin), errors
+are graded, and every share carries a tile-clustered 95% bootstrap interval.
+
+| task (classes; boundary windows) | boundary: error share / correct share, enrichment [95%] | risk ratio inside/outside | low-confidence enrichment | conjunction precision vs boundary / low-confidence |
+|---|---|---|---|---|
+| MADOS (15; 10%) | 0.544 / 0.067, **8.13** [5.65, 12.88] | 10.5 | 5.09 | 0.409 vs 0.392 / 0.288 |
+| Sen1Floods11 (2; 14%) | 0.454 / 0.115, **3.96** [3.73, 4.21] | 5.0 | 4.51 | 0.338 vs 0.267 / 0.294 |
+| m-SA-crop-type (10; 41%) | 0.707 / 0.262, **2.70** [2.59, 2.82] | 3.4 | 4.30 | 0.705 vs 0.582 / 0.689 |
+| PASTIS S1 / S2 / S1+S2 (19; 53%) | 0.785 / 0.466, **1.67–1.78** | 3.1–3.3 | 3.70–4.39 | 0.52–0.61 vs 0.28–0.42 / 0.50–0.60 |
+| m-cashew-plant (7; 76%) | 0.874 / 0.706, **1.24** [1.23, 1.25] | 2.1 | 2.53 | 0.583 vs 0.397 / 0.573 |
+
+**Gate.** The low-confidence cue's share among errors equals exp70's recorded capture at 20% on every task
+(largest difference 3e-4, from exp70 being a separate probe run), so the export and the cue construction are the
+record's. <!-- claim:cue-verification-gate-reproduces-exp70 -->
+
+**P1 fails as written, and the mechanism it named is wrong.** The boundary enrichment is below 2 on the 7-class
+cashew map (1.24) while the 15-class MADOS map has the highest (8.13); the ratio's rank correlation with class
+count is −0.26. What governs it is how much of the map is boundary: the ratio cannot exceed `(1 − θ)/(p − θ)` for a
+cue of prevalence `p`, a ceiling of 1.56 on cashew and 32.7 on MADOS, and the enrichment tracks that ceiling with
+rank correlation 1.00. The cue is real everywhere: the error rate inside the boundary set is 2.1 to 10.5 times the
+rate outside on all seven tasks. <!-- claim:boundary-cue-enrichment-is-fragmentation-not-class-count -->
+
+**P2 holds, 7 of 7.** The library value 3.5 lies outside the tile-clustered interval on every task; the nearest
+edge is Sen1Floods11's 3.73. Quoting Bolivia on another map is wrong by the record's own interval on every map
+tried. <!-- claim:cue-library-value-outside-every-task-interval -->
+
+**P3 holds, 7 of 7.** The conjunction "on a boundary and among the least confident fifth" is purer than either cue
+alone on every task (all fourteen gaps clear zero under the bootstrap; smallest +0.010 [+0.009, +0.011]); the two
+reasons are two reasons. <!-- claim:cue-conjunction-is-purer-than-either-cue -->
+
+**Descriptive.** The boundary-first order beats the confidence order at 5% and 10% on MADOS (0.320 against 0.291;
+0.540 against 0.495), loses on Sen1Floods11 at 10% and 20% (0.415 against 0.459; 0.650 against 0.695) and is
+within ±0.007 on the other five: the record's "boundary-first replicates on Bolivia and not on the test split"
+(exp45), now on the suite. <!-- claim:boundary-first-loses-on-the-suite-flood-split -->
+On the ten classification tasks with six or more classes, the three most frequent (predicted, reference) pairs
+hold 18% (ForestNet) to 61% (BreizhCrops) of the errors. The per-tile variant of the low-confidence cue is
+weaker than the pooled one on the sparse MADOS tiles (1.37 against 5.09) and within 0.3 elsewhere.
+
+**Stated from the audit.** The export's validity is label coverage, so the cue compares a window with its
+labelled neighbours (on MADOS 4.3% of the grid; restricted to fully surrounded windows its enrichment is 8.39);
+MADOS has 841 labelled tiles of 1,310; the tile draws are shared across cues within a task; and the audit found the
+two code paths of `_boundary_valid` disagreeing on the indicator's value at tile edges, fixed the same night
+without moving any cue set.
+
+**What this changes.** `explain` no longer quotes Bolivia's shares as if they were the map's: the library carries
+the suite's range and the cue's per-task values, and reports the map's own boundary prevalence, which is what
+decides where in the range a map sits.
+
 ## The ceiling belongs to the task, not to the model (from exp74 and exp70)
 
 The margin takes a median 0.68 of the gap between a random ranking and a perfect one on the 24 tasks. A fair

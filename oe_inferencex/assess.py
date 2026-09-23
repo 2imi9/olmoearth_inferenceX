@@ -95,19 +95,21 @@ def _boundary_valid(pooled_hard, valid):
     the boundary-first review set with the rim of the data."""
     if valid.all():
         return boundary_indicator(pooled_hard)
+    # Neighbours outside the grid are the replicated edge, exactly as boundary_indicator pads: a diagonal
+    # neighbour beyond the edge copies the in-grid lateral cell, so the two paths give the same VALUE, not only
+    # the same set of windows above zero. Until 2026-09-23 this path dropped out-of-grid neighbours instead, and
+    # the indicator written to the CSV and boundary.tif differed by up to 0.5 at tile edges between a map with
+    # no-data and one without (exp82's audit); the cue set, indicator > 0, was the same under both.
+    H, W = pooled_hard.shape
+    rows, cols = np.arange(H), np.arange(W)
     diff = np.zeros(pooled_hard.shape, np.float64)
     for dy in (-1, 0, 1):
         for dx in (-1, 0, 1):
             if dy == 0 and dx == 0:
                 continue
-            nb = np.roll(np.roll(pooled_hard, dy, 0), dx, 1)
-            nv = np.roll(np.roll(valid, dy, 0), dx, 1)
-            inb = np.ones(pooled_hard.shape, bool)          # edge padding, as boundary_indicator does it
-            if dy:
-                inb[0 if dy > 0 else -1, :] = False
-            if dx:
-                inb[:, 0 if dx > 0 else -1] = False
-            diff += inb & nv & (nb != pooled_hard)
+            r = np.clip(rows + dy, 0, H - 1)[:, None]
+            c = np.clip(cols + dx, 0, W - 1)[None, :]
+            diff += valid[r, c] & (pooled_hard[r, c] != pooled_hard)
     return np.where(valid, diff / 8.0, 0.0)
 
 

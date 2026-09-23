@@ -126,3 +126,27 @@ def test_review_mask_reproduces_the_assessor_under_ties():
         assert (m == expected).all() and m.sum() == rs["n_windows"]
     order = review_order(np.array([[1.0, 1.0], [1.0, 0.0]]), np.ones((2, 2), bool))
     assert order.tolist() == [2, 1, 0, 3]            # ties by descending raster position, as the assessor sorts
+
+
+def test_the_library_carries_exp82s_per_task_verifications_and_reports_the_maps_boundary_prevalence():
+    """The verified shares in the library equal exp82's artifact, the quoted range is the artifact's, and the
+    review-set explanation states the map's own boundary prevalence beside that range."""
+    import json
+    import os
+    from oe_inferencex import explain
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    d = json.load(open(os.path.join(root, "exp", "out", "exp82_summary.json")))["tasks"]
+    for cue in ("boundary", "low_confidence"):
+        v = explain.CUES[cue].verified
+        assert set(v) == set(d)
+        for t, (se, sc) in v.items():
+            assert abs(se - d[t]["cues"][cue]["share_errors"]) < 1e-4 and abs(sc - d[t]["cues"][cue]["share_correct"]) < 1e-4
+    lo, hi = explain.CUES["boundary"].verified_range
+    assert round(lo, 2) == 1.24 and round(hi, 2) == 8.13
+    assert "1.2x to 8.1x" in explain.CUES["boundary"].quote()
+    rng = np.random.default_rng(0)
+    conf = rng.random((16, 16))
+    bnd = rng.random((16, 16)) < 0.3
+    assessment = {"arrays": {"confidence": conf, "boundary": bnd.astype(float), "valid": np.ones((16, 16), bool)}, "review_sets": {}}
+    out = explain.explain_review_set(assessment)
+    assert "boundary_prevalence_note" in out and f"{100 * bnd.mean():.0f}%" in out["boundary_prevalence_note"]

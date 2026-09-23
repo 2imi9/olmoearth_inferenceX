@@ -27,6 +27,7 @@ class Cue:
     reference: str                     # what "error" meant when the shares were measured
     source: str                        # experiment(s); every number traces to exp/out/
     measured_quantile: float | None = None   # for a cue with a {quantile} knob: the cut the shares were measured at
+    verified: dict | None = None             # per suite task: (share_errors, share_correct) measured by exp82, labels grading only
 
     @property
     def enrichment(self):
@@ -47,11 +48,31 @@ class Cue:
                     f"not at {q:.0%}; {self.source})")
         if self.enrichment is None:
             return f"{sentence} (enrichment not yet measured; {self.source})"
-        return (f"{sentence} ({self.share_errors:.0%} of error windows vs {self.share_correct:.0%} of correct ones, "
+        text = (f"{sentence} ({self.share_errors:.0%} of error windows vs {self.share_correct:.0%} of correct ones, "
                 f"{self.enrichment:.1f}x; {self.reference}; {self.source})")
+        if self.verified:
+            # exp82: the same cue on the suite's seven segmentation tasks; the enrichment is set by how much of
+            # the map carries the cue, so the Bolivia number is one point of a range, never the map's own
+            r = self.verified_range
+            text += f"; on the suite's seven segmentation tasks {r[0]:.1f}x to {r[1]:.1f}x (exp82)"
+        return text
+
+    @property
+    def verified_range(self):
+        """(lowest, highest) enrichment among the per-task verifications, or None."""
+        if not self.verified:
+            return None
+        v = [e / c for e, c in self.verified.values() if c > 0]
+        return (min(v), max(v)) if v else None
 
 
 BOLIVIA = "Sen1Floods11 Bolivia hand labels"
+# exp82 (docs/results/comparisons.md): the same two cues on the suite's seven segmentation tasks under OlmoEarth
+# Base, (share among errors, share among correct), tile-clustered intervals in exp/out/exp82_summary.json. The
+# boundary enrichment runs from 1.24 (m-cashew-plant, 76% of windows on a boundary) to 8.13 (MADOS, 10%): what
+# moves it is the map's fragmentation, and the Bolivia shares above are one point of that range.
+EXP82_BOUNDARY = {"mados": (0.5436, 0.0669), "sen1floods11": (0.4535, 0.1147), "pastis_sentinel1": (0.7766, 0.4354), "pastis_sentinel2": (0.7869, 0.4700), "pastis_sentinel1_sentinel2": (0.7849, 0.4659), "m_cashew_plant": (0.8742, 0.7064), "m_sa_crop_type": (0.7070, 0.2617)}
+EXP82_LOW_CONFIDENCE = {"mados": (0.7829, 0.1537), "sen1floods11": (0.6954, 0.1543), "pastis_sentinel1": (0.4188, 0.1131), "pastis_sentinel2": (0.5307, 0.1224), "pastis_sentinel1_sentinel2": (0.5287, 0.1205), "m_cashew_plant": (0.3302, 0.1307), "m_sa_crop_type": (0.4052, 0.0943)}
 WC_DISAGREE = "WorldCover disagreements vs agreements, 27 rule scenes"
 WC_DISAGREE_23 = "WorldCover disagreements vs agreements, the 24 rule scenes with at least 8 errors"
 
@@ -60,8 +81,10 @@ WC_DISAGREE_23 = "WorldCover disagreements vs agreements, the 24 rule scenes wit
 # shares equal exp36's boundary_share and exp18's 75% vs 21%. The reference-disagreement cues keep the numbers
 # their experiments recorded. tests/test_explain.py checks the expert-label shares against exp37's summary.
 CUES = {
-    "boundary": Cue("boundary", "sits on a prediction boundary", 0.750, 0.214, BOLIVIA, "exp18, exp36, exp37"),
-    "low_confidence": Cue("low_confidence", "is among the least confident {quantile:.0%} of the scene's windows (ties included)", 0.589, 0.163, BOLIVIA, "exp37", 0.2),
+    "boundary": Cue("boundary", "sits on a prediction boundary", 0.750, 0.214, BOLIVIA, "exp18, exp36, exp37",
+                    verified=EXP82_BOUNDARY),
+    "low_confidence": Cue("low_confidence", "is among the least confident {quantile:.0%} of the scene's windows (ties included)", 0.589, 0.163, BOLIVIA, "exp37", 0.2,
+                          verified=EXP82_LOW_CONFIDENCE),
     "unstable": Cue("unstable", "changes prediction under a sub-patch shift of the tiling (top 20% of the scene)", 0.583, 0.164, BOLIVIA, "exp13, exp18, exp37"),
     "ndwi_ambiguous": Cue("ndwi_ambiguous", "is spectrally ambiguous between water and land (|NDWI| < 0.1)", 0.483, 0.067, BOLIVIA, "exp06, exp09, exp37"),
     "dihedral_disagree": Cue("dihedral_disagree", "is predicted differently under flips and rotations (top 20% of the scene)", 0.579, 0.164, BOLIVIA, "exp36, exp37"),
@@ -168,6 +191,16 @@ def explain_review_set(assessment, cues=None, budgets=None, library=CUES, low_co
     out = {"cues": names, "quotes": quotes, "n_windows": int(valid.sum()),
            "scene_share": {n: float(all_cues[n][valid].mean()) if valid.any() else float("nan") for n in names},
            "budgets": {}}
+    # exp82: the boundary cue's enrichment is set by how much of the map is boundary (a ratio of shares cannot
+    # exceed (1 - e)/(p - e) for a cue of prevalence p), so the map's own prevalence says where in the suite's
+    # range it sits; the library's Bolivia number is one point of that range, not this map's
+    if "boundary" in library and library["boundary"].verified and valid.any():
+        p = out["scene_share"]["boundary"]
+        lo, hi = library["boundary"].verified_range
+        out["boundary_prevalence_note"] = (
+            f"{100 * p:.0f}% of this map's windows sit on a prediction boundary; on the suite's seven segmentation tasks the "
+            f"cue's enrichment ran from {hi:.1f}x on a map with 10% boundary windows to {lo:.1f}x at 76%, while the error rate "
+            f"inside the boundary set stayed at least 2.1 times the rate outside on every task (exp82)")
     sets = assessment.get("review_sets", {})
     for b, rs in sets.items():
         if budgets is not None and b not in budgets:

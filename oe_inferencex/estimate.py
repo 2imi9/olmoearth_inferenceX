@@ -633,13 +633,16 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
                 row["user_accuracy"] = {"estimate": float(u[c, c]), "low": lo, "high": hi}
             else:
                 row["user_accuracy"] = None
-            # producer's accuracy: Olofsson et al. 2014, eq. 7, on the post-stratified counts
+            # producer's accuracy: Olofsson et al. 2014, eq. 7, on the post-stratified counts, with each map
+            # class's term carrying the same finite-population correction as the user's accuracy and the shares
+            # (exp81's audit found the uncorrected form over-wide: median coverage 0.983 where its siblings sat
+            # at 0.95, and eight times too wide on a near-census draw)
             Nhat_j = float((N_map * u[:, c]).sum())
             if Nhat_j > 0 and n_i[c] > 0:
                 pa = N_map[c] * u[c, c] / Nhat_j
-                t1 = N_map[c] ** 2 * (1 - pa) ** 2 * u[c, c] * (1 - u[c, c]) / (n_i[c] - 1) if n_i[c] > 1 else 0.0
+                t1 = N_map[c] ** 2 * (1 - pa) ** 2 * u[c, c] * (1 - u[c, c]) * fpc[c] / (n_i[c] - 1) if n_i[c] > 1 else 0.0
                 others = [i for i in range(C) if i != c and n_i[i] > 1]
-                t2 = pa ** 2 * sum(N_map[i] ** 2 * u[i, c] * (1 - u[i, c]) / (n_i[i] - 1) for i in others)
+                t2 = pa ** 2 * sum(N_map[i] ** 2 * u[i, c] * (1 - u[i, c]) * fpc[i] / (n_i[i] - 1) for i in others)
                 e, lo, hi = _interval(pa, (t1 + t2) / Nhat_j ** 2, conf[:, c].sum(), interval)
                 row["producer_accuracy"] = {"estimate": e, "low": lo, "high": hi}
             else:
@@ -670,11 +673,29 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
             per[int(c)] = row
         method = "stratified by confidence margin: ratios of Horvitz-Thompson totals with linearised variance; shares as Horvitz-Thompson totals"
     for c, row in per.items():
+        notes = []
         small = [k for k in ("n_labelled_map_class", "n_labelled_reference_class") if row[k] < MIN_PER_CLASS]
         if small:
-            row["warning"] = (f"fewer than {MIN_PER_CLASS} labelled windows ({row['n_labelled_map_class']} the map calls this "
-                              f"class, {row['n_labelled_reference_class']} the reference does); the interval is wide and, "
-                              "below about ten, not to be trusted")
+            notes.append(f"fewer than {MIN_PER_CLASS} labelled windows ({row['n_labelled_map_class']} the map calls this "
+                         f"class, {row['n_labelled_reference_class']} the reference does); the interval is wide and, "
+                         "below about ten, not to be trusted")
+        # exp81's audit named two cases where a nominal 95% interval covered 0.87-0.92: a class nearly all of
+        # whose windows are labelled (the estimate takes a handful of values and a normal interval cannot follow
+        # it), and, under the confidence design, a class whose windows sit in strata the overall-rate allocation
+        # samples thinly, so its rare errors are often not drawn at all
+        if N_map[c] > 0 and row["n_labelled_map_class"] >= 0.9 * N_map[c] and row["n_labelled_map_class"] < N_map[c]:
+            notes.append("nearly every window of this class is labelled; the interval is a rough guide, since the estimate "
+                         "can only take a few values (exp81: coverage 0.87-0.92 on such a class)")
+        if design != "random":
+            f_all = idx.size / N
+            thin = np.array([sizes[h] > 0 and (strata[local] == h).sum() / sizes[h] < 0.5 * f_all for h in range(len(sizes))])
+            in_thin = float((thin[strata[m_pop == c]]).mean()) if (m_pop == c).any() else 0.0
+            if in_thin > 0.5:
+                notes.append(f"{100 * in_thin:.0f}% of this class sits in confidence strata the design samples at under half the "
+                             "overall rate; if its errors are rare there they are often not drawn, and the interval is then "
+                             "optimistic (exp81: coverage 0.90-0.92 on two such classes)")
+        if notes:
+            row["warning"] = "; ".join(notes)
     e, lo, hi = _interval(overall, overall_var, idx.size, interval)
     out = {"design": design, "interval": interval, "n_labelled": int(idx.size), "n_population": N, "n_classes": C, "nominal_coverage": 0.95,
            "overall_accuracy": {"estimate": e, "low": lo, "high": hi}, "confusion_counts": conf.tolist(),

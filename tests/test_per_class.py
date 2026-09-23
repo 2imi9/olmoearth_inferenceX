@@ -77,12 +77,13 @@ def _olofsson(conf, N_map):
         v_share[j] = sum(W[i] ** 2 * (conf[i, j] / n_i[i]) * (1 - conf[i, j] / n_i[i]) / (n_i[i] - 1) * (1 - n_i[i] / N_map[i])
                          for i in range(C) if n_i[i] > 1)
     v_pa = np.full(C, np.nan)
+    fpc = 1 - n_i / N_map                                       # the record's form: eq. 7 with each class's FPC
     for j in range(C):
         Nhat = sum(N_map[i] * conf[i, j] / n_i[i] for i in range(C) if n_i[i] > 0)
         if Nhat > 0 and n_i[j] > 1:
             u = conf[j, j] / n_i[j]
-            t1 = N_map[j] ** 2 * (1 - pa[j]) ** 2 * u * (1 - u) / (n_i[j] - 1)
-            t2 = pa[j] ** 2 * sum(N_map[i] ** 2 * (conf[i, j] / n_i[i]) * (1 - conf[i, j] / n_i[i]) / (n_i[i] - 1)
+            t1 = N_map[j] ** 2 * (1 - pa[j]) ** 2 * u * (1 - u) * fpc[j] / (n_i[j] - 1)
+            t2 = pa[j] ** 2 * sum(N_map[i] ** 2 * (conf[i, j] / n_i[i]) * (1 - conf[i, j] / n_i[i]) * fpc[i] / (n_i[i] - 1)
                                   for i in range(C) if i != j and n_i[i] > 1)
             v_pa[j] = (t1 + t2) / Nhat ** 2
     return ua, pa, share, v_share, v_pa
