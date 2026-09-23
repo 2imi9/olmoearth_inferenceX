@@ -109,12 +109,12 @@ def run_cell(u, C, design, B, draws, seed=0, interval="wilson"):
             "per_class": per_class}
 
 
-def estimate_task(task, units_dir, draws):
+def estimate_task(task, units_dir, draws, designs=DESIGNS):
     u = load_units_with_reference(task, units_dir)
     C = int(max(u["y"].max(), u["dec"].max()) + 1)
     N = int(u["y"].size)
     row = {"n_units": N, "n_classes": C, "family": u["family"], "cells": []}
-    for design in DESIGNS:
+    for design in designs:
         for B in BUDGETS:
             if B >= N:
                 continue
@@ -139,35 +139,40 @@ def _cells(rows, design=None, budget=None, interval="wilson"):
                 yield t, c
 
 
-def exact_ua_coverage(N, N_c, K_c, B, min_labels=est.MIN_PER_CLASS):
-    """The exact coverage of Wilson's interval for a class's user's accuracy under a random draw of B from N,
-    averaged over the hypergeometric count n_c of labelled windows the map calls c, conditional on n_c >= min_labels
-    (the condition under which the interval is reported and graded). Each term is `est.exact_coverage_srs` at
-    (N_c, K_c, n_c), the enumeration exp79's P5 uses; the average is the quantity a Monte Carlo can achieve."""
+def exact_ua_coverage(N, N_c, K_c, B, min_labels=est.MIN_PER_CLASS, max_class=5000):
+    """A diagnostic, never an exemption (sixth amendment): the exact coverage of the shipped random-design user's
+    accuracy interval (`est.hypergeom_interval`) for a class of N_c windows holding K_c errors, averaged over the
+    hypergeometric count n_c of labelled windows the map calls c, conditional on n_c >= min_labels. It says whether
+    the Monte Carlo agrees with the enumeration. It cannot pass a cell: a rule that passed cells matching their own
+    exact coverage passed every deterministic defect, and hid the finite-population Wilson defect for a night.
+    Classes above `max_class` windows return nan (the enumeration's cost grows with n_c times K_c)."""
     import math
+    if N_c > max_class:
+        return float("nan")
     lc = lambda n, r: math.lgamma(n + 1) - math.lgamma(r + 1) - math.lgamma(n - r + 1)
     lo, hi = max(min_labels, B - (N - N_c)), min(B, N_c)
     if hi < lo:
         return float("nan")
     w = np.array([math.exp(lc(N_c, m) + lc(N - N_c, B - m) - lc(N, B)) for m in range(lo, hi + 1)])
-    cov = np.array([est.exact_coverage_srs(N_c, K_c, m) for m in range(lo, hi + 1)])
+    cov = np.array([est.exact_coverage_srs(N_c, K_c, m, interval=est.hypergeom_interval) for m in range(lo, hi + 1)])
     return float((w * cov).sum() / w.sum())
 
 
-def grade_p1(rows, cover=P1_COVER, bias=P1_BIAS, interval="wilson", exact_tol=0.02):
+def grade_p1(rows, cover=P1_COVER, bias=P1_BIAS, interval="wilson"):
     """P1: every per-class interval that the package reports without a warning covers at >= cover, and its
     estimate is unbiased to within `bias` over all draws, on every (task, design, budget, class, quantity) cell.
-    Amendment of 2026-09-23: a random-design user's-accuracy cell below the bar passes when its Monte Carlo
-    coverage is within `exact_tol` of the exact coverage Wilson's interval can achieve at that class's (N_c, K_c),
-    averaged over the labelled count the draw gives the class (`exact_ua_coverage`), the exp79 P5 rule, because a
-    class holding one error in a hundred windows seen by thirty labels can only show it or not."""
-    fails, n, discrete = [], 0, []
+    Sixth amendment (2026-09-23): no cell passes by matching its own exact coverage; a failing random-design
+    user's-accuracy cell carries that coverage as a diagnostic. The random-design user's accuracy is the exact
+    hypergeometric interval under both interval options, so the Wald block does not grade it."""
+    fails, n = [], 0
     for t, c in _cells(rows, interval=interval):
         N = rows[t]["n_units"]
         for k, pc in c["per_class"].items():
             for q in QUANTITIES:
                 v = pc[q]
                 if v["coverage"] is None or v["eligible_share"] < 0.5:
+                    continue
+                if interval == "wald" and c["design"] == "random" and q == "user_accuracy":
                     continue
                 # the share's coverage is over every draw (second amendment); the cells graded are the ones the
                 # package reports without a warning, i.e. an expected labelled count of at least MIN_PER_CLASS in
@@ -178,20 +183,13 @@ def grade_p1(rows, cover=P1_COVER, bias=P1_BIAS, interval="wilson", exact_tol=0.
                 n += 1
                 bad_bias = v["bias_ratio"] is not None and abs(v["bias_ratio"] - 1) > bias
                 low = v["coverage"] < cover
-                if low and c["design"] == "random" and q == "user_accuracy" and "n_map_true" in pc:
-                    exact = exact_ua_coverage(N, pc["n_map_true"], pc["n_wrong_in_map_class_true"], c["budget"])
-                    # within the larger of exact_tol and three Monte Carlo standard errors at the eligible count
-                    n_el = max(1.0, v["eligible_share"] * c["n_draws"])
-                    tol = max(exact_tol, 3 * np.sqrt(max(exact * (1 - exact), 1e-9) / n_el)) if np.isfinite(exact) else exact_tol
-                    if np.isfinite(exact) and v["coverage"] >= exact - tol:
-                        discrete.append({"task": t, "budget": c["budget"], "class": int(k), "coverage": v["coverage"],
-                                         "exact_coverage": exact, "n_map": pc["n_map_true"], "n_wrong": pc["n_wrong_in_map_class_true"]})
-                        low = False
                 if low or bad_bias:
-                    fails.append({"task": t, "design": c["design"], "budget": c["budget"], "class": int(k), "quantity": q,
-                                  "coverage": v["coverage"], "bias_ratio": v["bias_ratio"]})
-    return {"holds": n > 0 and not fails, "n_cells": n, "interval": interval, "failing": fails,
-            "discreteness_cells_passing_by_exact_coverage": discrete}
+                    row = {"task": t, "design": c["design"], "budget": c["budget"], "class": int(k), "quantity": q,
+                           "coverage": v["coverage"], "bias_ratio": v["bias_ratio"]}
+                    if low and c["design"] == "random" and q == "user_accuracy" and "n_map_true" in pc:
+                        row["exact_coverage"] = exact_ua_coverage(N, pc["n_map_true"], pc["n_wrong_in_map_class_true"], c["budget"])
+                    fails.append(row)
+    return {"holds": n > 0 and not fails, "n_cells": n, "interval": interval, "failing": fails}
 
 
 def grade_p2(rows, budget=HEADLINE, min_share=P2_MIN_SHARE):
@@ -225,6 +223,13 @@ def grade_p3(rows, budget=HEADLINE, design="random", hi=P3_HIGH, lo=P3_LOW, se_h
         if not ex:
             continue
         for k, v in ex.items():
+            # fifth amendment (2026-09-23): the classes graded are the ones the package reports without a warning,
+            # an expected reference count of at least MIN_PER_CLASS, the share's own P1 rule; the segmentation run
+            # showed a class the reference never holds (cashew class 0, 1.8 expected labels) graded at 6,000
+            # standard errors with a zero-variance expected error
+            pc = c["per_class"].get(str(k), c["per_class"].get(k, {}))
+            if budget * pc.get("reference_share_true", 1.0) < est.MIN_PER_CLASS:
+                continue
             if v["disc_over_se"] >= se_hi:
                 n += 1
                 if v["exclusion_rate"] < hi:
@@ -286,6 +291,7 @@ def cmd_estimate(args):
     import exp78_error_rate_estimation as e78
     units_dir = args.units or e78.UNITS
     tasks = args.tasks or (e70.TASKS_CLS + e70.TASKS_SEG)
+    designs = tuple(d for d in DESIGNS if d in args.designs)
     rows, t0 = {}, time.time()
     for t in tasks:
         path = os.path.join(units_dir, f"{t}.npz")
@@ -293,21 +299,34 @@ def cmd_estimate(args):
             print(f"  {t}: no export under {units_dir}", flush=True)
             continue
         try:
-            rows[t] = estimate_task(t, units_dir, args.draws)
+            rows[t] = estimate_task(t, units_dir, args.draws, designs)
         except ValueError as exc:
             print(f"  {t}: skipped, {exc}", flush=True)
             continue
+        rows[t]["units"] = os.path.relpath(units_dir, ROOT)       # per task: a summary can merge exports (audit, 2026-09-23)
         u = load_units_with_reference(t, units_dir)
-        if rows[t]["n_units"] > HEADLINE:
+        if rows[t]["n_units"] > HEADLINE and "random" in designs:
             add_share_exclusion(u, rows[t]["n_classes"], rows[t], args.draws)
-    prev = json.load(open(SUMMARY)) if os.path.exists(SUMMARY) and args.merge else {"tasks": {}}
-    prev["tasks"].update(rows)
-    summary = {"experiment": "exp81 what a map user is owed per class", "encoder": args.encoder,
-               "units": os.path.relpath(units_dir, ROOT),
-               "config": {"draws": args.draws, "budgets": BUDGETS, "designs": DESIGNS, "min_per_class": est.MIN_PER_CLASS,
-                          "seed": 0, "seconds": round(time.time() - t0)},
-               "tasks": prev["tasks"], "prereg": verdicts(prev["tasks"])}
+    # the graded run is OlmoEarth Base's; another encoder's export writes beside it, and a merge reads the file it
+    # writes (until 2026-09-23 a merge read Base's summary whatever the encoder; latent, no other encoder was merged)
     path = SUMMARY if args.encoder == "olmoearth_base" else os.path.join(OUT, "exp81_per_class", f"{args.encoder}.json")
+    prev = json.load(open(path)) if os.path.exists(path) and args.merge else {"tasks": {}}
+    order = {d: i for i, d in enumerate(DESIGNS)}
+    for t, row in rows.items():
+        row = json.loads(json.dumps(row, default=float))        # string class keys, as a merged file carries them
+        old = prev["tasks"].get(t)
+        if old is not None and set(designs) != set(DESIGNS):
+            # a partial rerun (sixth amendment): only the named designs' cells are replaced; the others, whose code
+            # path the change did not touch, are carried over as run
+            kept = [c for c in old["cells"] if c["design"] not in designs]
+            row["cells"] = sorted(kept + row["cells"], key=lambda c: (order[c["design"]], c["budget"], INTERVALS.index(c["interval"])))
+            row["carried_over_designs"] = sorted({c["design"] for c in kept})
+        prev["tasks"][t] = row
+    summary = {"experiment": "exp81 what a map user is owed per class", "encoder": args.encoder,
+               "units": sorted({r.get("units", "unrecorded") for r in prev["tasks"].values()}),
+               "config": {"draws": args.draws, "budgets": BUDGETS, "designs": DESIGNS, "min_per_class": est.MIN_PER_CLASS,
+                          "seed": 0, "seconds_last_invocation": round(time.time() - t0)},
+               "tasks": prev["tasks"], "prereg": verdicts(prev["tasks"])}
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w") as f:
         json.dump(summary, f, indent=1, default=float)
@@ -317,11 +336,13 @@ def cmd_estimate(args):
 
 
 def cmd_grade(args):
-    d = json.load(open(SUMMARY))
+    path = SUMMARY if args.encoder == "olmoearth_base" else os.path.join(OUT, "exp81_per_class", f"{args.encoder}.json")
+    d = json.load(open(path))
     d["prereg"] = verdicts(d["tasks"])
-    with open(SUMMARY, "w") as f:
+    with open(path, "w") as f:
         json.dump(d, f, indent=1, default=float)
     print(json.dumps({k: v.get("holds") for k, v in d["prereg"].items()}, indent=1))
+    print(f"wrote {path}")
     return 0
 
 
@@ -355,6 +376,8 @@ def main(argv=None):
     ap.add_argument("--tasks", nargs="*", default=None)
     ap.add_argument("--draws", type=int, default=R_DRAWS)
     ap.add_argument("--merge", action="store_true", help="estimate: keep tasks already in the summary (segmentation added later)")
+    ap.add_argument("--designs", nargs="*", default=list(DESIGNS), choices=DESIGNS,
+                    help="estimate: the designs to run; with --merge the other designs' cells are carried over (sixth amendment)")
     args = ap.parse_args(argv)
     return {"estimate": cmd_estimate, "grade": cmd_grade, "smoke": cmd_smoke}[args.stage](args)
 

@@ -405,3 +405,121 @@ def test_wilson_refuses_impossible_counts():
     for k, n, N in ((5, 3, None), (-1, 3, None), (2, 10, 5)):
         with pytest.raises(ValueError):
             est.wilson_interval(k, n, N)
+
+
+# ----------------------------------------------------------------------------- the finite-population form, 2026-09-23
+def _exact_coverage(form, N, K, n):
+    lc = lambda a, r: math.lgamma(a + 1) - math.lgamma(r + 1) - math.lgamma(a - r + 1)
+    theta, tot = K / N, 0.0
+    for k in range(max(0, n - (N - K)), min(n, K) + 1):
+        lo, hi = form(k, n, N)
+        if lo <= theta <= hi:
+            tot += math.exp(lc(K, k) + lc(N - K, n - k) - lc(N, n))
+    return tot
+
+
+def test_the_finite_population_wilson_is_the_score_inversion_at_the_effective_size():
+    """exp81's generality run: a class with one error in a hundred windows, seen once in thirty labels, was
+    excluded by the variance-only correction ([0.0121, 0.161] against 0.010), and its exact coverage at (100, 1, 30)
+    was 0.70, which the record had read as discreteness. The score inversion at n_eff = n (N - 1) / (N - n) keeps
+    the truth: written out here from the definition, it must equal the package's interval, cover that cell, reach
+    zero and one at the edges, and agree with the infinite-population form to 1e-5 where the correction is small."""
+    def by_hand(k, n, N):
+        p = k / n
+        ne = n * (N - 1) / (N - n)
+        d = 1 + est.Z95 ** 2 / ne
+        c = (p + est.Z95 ** 2 / (2 * ne)) / d
+        h = est.Z95 * math.sqrt(p * (1 - p) / ne + est.Z95 ** 2 / (4 * ne ** 2)) / d
+        return max(c - h, 0.0), min(c + h, 1.0)
+    for k, n, N in ((1, 30, 100), (0, 30, 100), (30, 30, 100), (29, 45, 100), (7, 150, 300), (3, 300, 22598)):
+        got, want = est.wilson_interval(k, n, N), by_hand(k, n, N)
+        assert abs(got[0] - want[0]) < 1e-12 and abs(got[1] - want[1]) < 1e-12
+    lo, hi = est.wilson_interval(1, 30, 100)
+    assert lo < 0.01 < hi                                                 # the cell that was excluded
+    assert est.wilson_interval(0, 30, 100)[0] == 0.0 and est.wilson_interval(30, 30, 100)[1] == 1.0
+    assert _exact_coverage(est.wilson_interval, 100, 1, 30) == pytest.approx(1.0)
+    assert _exact_coverage(est.wilson_interval, 100, 2, 60) > 0.99 and _exact_coverage(est.wilson_interval, 300, 1, 150) == pytest.approx(1.0)
+    # what the variance-only form did at the same cells, kept so the defect stays visible
+    def variance_only(k, n, N):
+        p = k / n
+        f2 = (N - n) / (N - 1)
+        d = 1 + est.Z95 ** 2 / n
+        c = (p + est.Z95 ** 2 / (2 * n)) / d
+        h = est.Z95 * math.sqrt(f2 * p * (1 - p) / n + est.Z95 ** 2 / (4 * n ** 2)) / d
+        return max(c - h, 0.0), min(c + h, 1.0)
+    assert _exact_coverage(variance_only, 100, 1, 30) == pytest.approx(0.70, abs=1e-9)
+    assert variance_only(1, 30, 100)[0] > 0.01
+    # where the correction is small the forms agree, and the recorded budgets move by at most 1.7e-4
+    for k in (0, 3, 30, 150, 300):
+        a, b = est.wilson_interval(k, 300, 22598), est.wilson_interval(k, 300)
+        assert abs(a[0] - b[0]) < 2e-3 and abs(a[1] - b[1]) < 2e-3
+        v = variance_only(k, 300, 22598)
+        assert abs(a[0] - v[0]) < 1.7e-4 and abs(a[1] - v[1]) < 1.7e-4
+    a, b = est.wilson_interval(3, 300, 10 ** 9), est.wilson_interval(3, 300)
+    assert abs(a[0] - b[0]) < 1e-5 and abs(a[1] - b[1]) < 1e-5
+
+
+# ----------------------------------------------------------------------------- the exact per-class interval, 2026-09-23
+def test_the_hypergeometric_tails_equal_the_package_cdf_and_a_brute_force_sum():
+    """The log-space ratio recurrence against `hypergeom_cdf` and against pmfs summed with math.comb."""
+    for N, K, n in ((30, 7, 10), (100, 1, 30), (146, 133, 140), (1000, 3, 60), (5000, 4200, 300)):
+        for k in range(max(0, n - (N - K)), min(n, K) + 1):
+            pmf = lambda x: math.comb(K, x) * math.comb(N - K, n - x) / math.comb(N, n)
+            below = sum(pmf(x) for x in range(max(0, n - (N - K)), k + 1))
+            above = sum(pmf(x) for x in range(k, min(n, K) + 1))
+            assert est._hyper_tail(k, n, N, K, upper=False) == pytest.approx(below, rel=1e-9, abs=1e-15)
+            assert est._hyper_tail(k, n, N, K, upper=True) == pytest.approx(above, rel=1e-9, abs=1e-15)
+            assert est._hyper_tail(k, n, N, K, upper=False) == pytest.approx(est.hypergeom_cdf(k, N, K, n), rel=1e-9, abs=1e-15)
+
+
+def test_the_exact_interval_is_the_tail_inversion_and_covers_at_least_nominal_by_enumeration():
+    """Written out by scanning every K, not by bisection: the interval is every K whose two tails at the observed
+    k exceed 2.5%. Its exact coverage is at least 0.95 on a grid where the finite-population Wilson form falls to
+    0.80, and it is the point on a census and everything on an empty sample."""
+    def by_scan(k, n, N):
+        tail_up = lambda K: sum(math.comb(K, x) * math.comb(N - K, n - x) for x in range(k, min(n, K) + 1)) / math.comb(N, n)
+        tail_dn = lambda K: sum(math.comb(K, x) * math.comb(N - K, n - x) for x in range(max(0, n - (N - K)), k + 1)) / math.comb(N, n)
+        keep = [K for K in range(k, N - (n - k) + 1) if tail_up(K) > 0.025 and tail_dn(K) > 0.025]
+        return min(keep) / N, max(keep) / N
+    for k, n, N in ((0, 10, 50), (1, 10, 50), (5, 10, 50), (10, 10, 50), (29, 30, 100), (1, 30, 100), (13, 20, 60)):
+        assert est.hypergeom_interval(k, n, N) == pytest.approx(by_scan(k, n, N), abs=1e-12)
+    worst = 1.0
+    for N in (50, 100, 300):
+        for K in (1, 2, 3, 5, 10, 25):
+            for n in (10, 20, 30, 45):
+                if n < N:
+                    worst = min(worst, est.exact_coverage_srs(N, K, n, interval=est.hypergeom_interval))
+    assert worst >= 0.95
+    assert est.exact_coverage_srs(50, 1, 10) == pytest.approx(0.8)          # the Wilson form's dip on the same grid
+    assert est.hypergeom_interval(7, 40, 40) == (7 / 40, 7 / 40) and est.hypergeom_interval(0, 0, 40) == (0.0, 1.0)
+    with pytest.raises(ValueError):
+        est.hypergeom_interval(5, 3, 40)
+
+
+def test_the_random_design_user_accuracy_is_the_exact_interval():
+    """estimate_per_class under a random sample reports hypergeom_interval for the user's accuracy, whatever
+    `interval` says; the class that exposed the Wilson defect (one error in 100 windows, one seen in 30 labels)
+    is covered."""
+    rng = np.random.default_rng(3)
+    N = 1000
+    dec = np.repeat(np.arange(10), 100)
+    ref = dec.copy(); ref[np.arange(10) * 100] = (dec[np.arange(10) * 100] + 1) % 10   # one error per class
+    s = est.sample_for_estimation(rng.random(N), 300, design="random", seed=0)
+    for form in ("wilson", "wald"):
+        out = est.estimate_per_class(s, ref[s["indices"]], dec, n_classes=10, interval=form)
+        for c in range(10):
+            conf = np.zeros((10, 10), int)
+            np.add.at(conf, (dec[s["indices"]], ref[s["indices"]]), 1)
+            want = est.hypergeom_interval(int(conf[c, c]), int(conf[c].sum()), 100)
+            ua = out["per_class"][c]["user_accuracy"]
+            assert (ua["low"], ua["high"]) == want and ua["low"] <= 0.99 <= ua["high"]
+
+
+def test_the_exact_interval_refuses_fractional_counts_and_an_impossible_level():
+    for k, n, N in ((5.5, 10, 50), (np.float64(5.9), 10, 50), (True, 10, 50), (3, 10.2, 50)):
+        with pytest.raises(ValueError):
+            est.hypergeom_interval(k, n, N)
+    for conf in (-0.5, 0.0, 1.0, 1.5):
+        with pytest.raises(ValueError):
+            est.hypergeom_interval(3, 10, 50, conf)
+    assert est.hypergeom_interval(np.int64(3), 10.0, 50) == est.hypergeom_interval(3, 10, 50)

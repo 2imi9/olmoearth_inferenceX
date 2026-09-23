@@ -13,12 +13,14 @@
   A stratified or tile sample is refused, because the guarantee needs a random one.
 - `estimate.estimate_per_class` and `oe-inferencex estimate --per-class`: user's accuracy, producer's accuracy
   and the error-adjusted class share per class from the same labelled sample (Olofsson et al. 2014 under a random
-  draw; ratios of Horvitz–Thompson totals under the confidence design), with Wilson intervals on the effective
-  sample size; the field's Wald form is kept as an option because exp81 shows it collapsing to a point on
-  classes with no sampled error (63 of 328 cells below 0.93 coverage, the worst at 0.30, against 13 for the
-  shipped form, none below 0.88). Warnings for a near-census class and for a class the confidence design samples
-  thinly. Tile samples are refused for now. The finite-population correction the producer's accuracy lacked was
-  found by the audit before the record.
+  draw; ratios of Horvitz–Thompson totals under the confidence design). Under a random sample the user's accuracy
+  has an exact hypergeometric interval (`estimate.hypergeom_interval`), whose coverage is at least 95% on every
+  class by construction; the other quantities use Wilson on the effective sample size. The field's Wald form is
+  kept as an option because exp81 shows it collapsing to a point on classes with no sampled error (107 of 522
+  cells below 0.93 coverage on the 24-task suite, the worst at 0.02, against 14 of 628 for the shipped forms,
+  the lowest 0.879). Warnings for a near-census class and for a class the confidence design samples thinly. Tile
+  samples are refused for now. The finite-population correction the producer's accuracy lacked was found by the
+  audit before the record.
 - `explain`'s reasons verified per task (exp82): the boundary cue is real on all seven segmentation tasks of the
   suite (error rate inside the boundary set 2.1 to 10.5 times the rate outside) but its quoted enrichment runs
   from 1.24 to 8.13 and is set by the map's fragmentation, not its class count; the Bolivia value the library
@@ -46,6 +48,18 @@
   its stopping rule (largest posterior change below 1e-6) with a cap of 1,000 and can report whether it converged.
   Until now the cap was 50 iterations; on the suite's 15- and 19-class encoder panels the stop needs 224 and 261,
   so the values at 50 were snapshots (a hidden-error share of 0.45 where the converged value is 0.28; exp83's audit).
+- `estimate.wilson_interval`'s finite-population correction is now the score-test inversion at the effective
+  size n (N − 1)/(N − n) (Korn and Graubard 1998), the form the stratified interval already used. The form of
+  22 September multiplied only the variance term and left Wilson's centre at n, so a class holding one error in a
+  hundred windows was excluded whenever its error was sampled (one of 30 from 100 gave [0.0121, 0.161] against
+  0.010; exact coverage 0.70 there and 0.50 at 300 windows, one error, 150 labels). It was found by brute-forcing
+  one per-class cell of exp81's generality run, and the six EuroSAT cells the exp81 record had read as Wilson's
+  discreteness were this form, passed by a grading rule that compared each cell with its own exact coverage and
+  so could not catch a defect in the interval; the rule is gone. Because no normal-theory form meets a per-cell
+  coverage bar on a small finite class (the score form still fell below 0.93 on 40 of 164 cells of a grid), the
+  per-class user's accuracy under a random sample now uses the exact interval above. At the record's overall-rate
+  budgets (300 of at least 12,800 windows) the two Wilson forms give the same exact coverage on every recorded
+  cell and half-widths within 3e-4; no recorded number outside exp81's section moves.
 - `estimate.model_assisted_interval` and `stratified_model_assisted_interval` (exp85): the difference /
   prediction-powered estimator with a tuned coefficient, measured and not adopted: 7–16% narrower than the
   classical interval under a random sample, 2% narrower once the confidence design has stratified, at the cost

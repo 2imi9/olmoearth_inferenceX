@@ -184,3 +184,91 @@ the run, an adversarial read of the implementation on the real files by a separa
 
 No cluster for the classification tasks; the segmentation tasks wait for exp79's export. Minutes per task on
 numpy. Ships as `oe-inferencex estimate --per-class` after P1 holds.
+
+## Fourth amendment, 23 September 2026: the finite-population form, written before the rerun
+
+The generality run on AnySat's export left one shipped-form cell far below the bar: EuroSAT class 9 (100 map
+windows, one wrong) under the random design at 300 labels covered 0.621, missing the exact-coverage tolerance by
+0.004. Brute-forcing that cell by hand found the cause in the package, not in the draw. `wilson_interval`'s
+finite-population correction multiplied only the `p(1 − p)/n` term inside the root and left Wilson's centre and
+its `z²/(4n²)` term at `n`; with one error seen in 30 of 100 the interval was [0.0121, 0.161] against a truth of
+0.010, so a class holding one error in a hundred windows was excluded whenever its error was sampled. Its exact
+hypergeometric coverage is 0.70 at (100, 1, 30) and 0.50 at (300, 1, 150). The first run's six EuroSAT cells at
+0.63–0.69, which the record read as "Wilson's discreteness, not a defect", were this form. The interval is now
+the score-test inversion at the effective size `n (N − 1)/(N − n)` (Korn and Graubard 1998, the form the
+package's stratified interval already used), which covers 1.00 at (100, 1, 30), reaches 0 and 1 at the edges, and
+differs from the old form by at most 1.7e-4 at 300 of 22,598 (`tests/test_estimate.py`). (A first draft of this
+paragraph claimed the score form's exact coverage never dips below 0.92 on a grid with N ≤ 1000 and K ≥ 2; the
+independent audit found 0.830 at (1000, 3, 60), and the sixth amendment below records what followed.)
+
+**Expectation for the rerun, stated before it.** The six EuroSAT discreteness cells cover at or above 0.93 and
+the "discreteness" exemption is not needed on any cell; every other shipped-form cell moves by less than 0.01,
+because the correction only matters where a class's labelled count is a large fraction of its map count; the
+Wald counts do not move (Wald has no such term). Base's classification tasks are rerun with `--merge` after the
+segmentation run finishes; the segmentation cells, whose map classes hold thousands of windows against tens of
+labels, are left as run (the two forms agree there to 1e-4). The four other encoders are rerun in full.
+
+## Fifth amendment, 23 September 2026: P3 grades the classes the package reports, written from the segmentation run
+
+The segmentation run (the seven tasks from exp79's Base export, merged into the summary) graded P3 on every class
+in the exclusion table, and one cell of m-cashew-plant read 6,016 standard errors with an exclusion rate of 0.0:
+class 0, which the map predicts on 0.6% of windows and the reference never holds, so its expected reference count
+at 300 labels is 1.8, its expected post-stratified variance is zero, and its interval (a Wilson fallback on two
+labels) cannot exclude anything. The package warns for such a class rather than reporting it. P3 is therefore
+restricted, as the share's P1 cells were by the second amendment, to classes with an expected reference count of
+at least 30 labels; the classification cells recorded on 23 September are regraded under the same rule and the
+counts restated where they move. Ten further segmentation cells fail P3's null clause (discrepancies of 0.5 to
+1.0 standard errors excluded on 0.21 to 0.33 of draws against a bar of 0.20); whether they survive the
+restriction is graded, not assumed.
+
+## Sixth amendment, 23 September 2026: an exact interval for the random-design user's accuracy, and no exemption
+
+Written after the four-encoder rerun under the score form and before any run under the form below. An
+independent audit of the fourth amendment (`exp/out/audit_wilson_fpc_2026-09-23.md`) found three things, each
+verified here by enumeration.
+
+- **The exact-coverage exemption is a tautology.** `exact_ua_coverage` computes the exact coverage of the same
+  interval the Monte Carlo grades, so a cell whose shortfall is the interval's own always passes it; it exempted
+  the variance-only form's defect (0.70 at (100, 1, 30)) and then the score form's near-census shortfall (the
+  three Togo cells at 0.925–0.929). It is removed. The exact coverage stays in the failing-cell report as a
+  diagnostic, so a reader can see whether the Monte Carlo agrees with the enumeration, but it passes nothing.
+- **The fourth amendment's expectation failed.** "Every other shipped-form cell moves by less than 0.01" did not
+  hold: on Clay Large 36 per-class cells moved by more than 0.01 (the largest 0.073), among them the six Togo
+  random-design user's-accuracy cells, from 1.000 to 0.927–0.976, because Togo labels 300 of 306 windows and the
+  correction matters most there. The three exemptions the four-encoder rerun reported were cells the score form
+  created, not pre-existing discreteness.
+- **No normal-theory form meets a per-cell bar on a small finite class.** On a grid of (N_c, K_c, n_c) with
+  N_c ≤ 1000 the score form falls below 0.93 on 40 of 164 cells, the worst at 0.80; the equal-tailed exact
+  hypergeometric interval (the tail inversion that the trusted zone's tests already use) never falls below 0.951,
+  and on the near-census Togo classes it is no wider than the score form.
+
+**The change.** Under a random sample, the labelled windows the map calls class c are a simple random sample of
+that class's N_c windows, so the user's accuracy has an exact interval: every count K of correct windows whose
+two tails at the observed count both exceed 2.5%, divided by N_c (`estimate.hypergeom_interval`). The random-design
+user's accuracy uses it; its coverage is at least 95% by construction on every class. Nothing else changes: the
+producer's accuracy, the shares and every confidence-design interval keep Wilson on the effective sample size,
+because none of them is a single hypergeometric count. The Wald option does not apply to this interval.
+
+**Predictions for the rerun, stated before it.** (a) No random-design user's-accuracy cell of any of the five
+encoders covers below 0.93, on the classification tasks or on Base's segmentation tasks. (b) The median
+half-width of those cells grows by at most 10% against the score form, and on the near-census Togo classes by
+at most 2%. (c) Every other cell is identical to the score-form run to the digit, since its code path is
+untouched; this is checked by comparing the artifacts, not assumed. (d) The P1 failures that remain are
+confidence-design and producer's-accuracy cells, each with the mechanism the record already names (near-census
+labelling under the confidence design, thinly sampled strata) or a new one stated.
+
+**What is rerun.** The random-design cells of every task under all five encoders (`--designs random --merge`,
+which replaces only those cells in each task's row); the confidence-design cells are carried over unchanged.
+
+**Result, written after the rerun and the second audit** (`exp/out/audit_exact_interval_2026-09-23.md`). (a) held:
+no graded random-design user's-accuracy cell covers below 0.943 on any of the five encoders (0.947 on Base's
+segmentation tasks, 0.950 on its classification tasks). (b) held as a median, half-widths 5% wider on every
+encoder, and on the Togo classes (at most 1% wider), but not cell by cell: ten cells widened by 10 to 15%, seven
+of them one-error EuroSAT classes the score form already covered. (c) held: the audit diffed every value and
+found only random-design user's-accuracy entries changed. (d) failed on four random-design share cells on
+EuroSAT that it did not name. The rerun covered the four other encoders' classification tasks only, as their
+first runs did. The audit also found the mechanism this page and the record gave for the Brick Kiln and Nandi
+Landsat cells wrong: none of their strata is sampled at under half the overall rate, so the thin-strata warning
+never fired on them, and their shortfall is the rare-error mechanism the EuroSAT and MADOS cells share (a class
+whose accuracy rests on a handful of errors that a draw misses or catches at a large weight). The package does
+not warn for that case yet; the warning's text no longer cites these cells.

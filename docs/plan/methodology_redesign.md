@@ -103,10 +103,12 @@ the sections are in `docs/results/comparisons.md`.
   coverage 0.50 against an oracle 0.60; the plug-in violated its own α on up to 56% of draws. Two secondary
   predictions failed as written (a near-census arithmetic; a bar written for 24 tasks where 21 have a cell).
 - **exp81, per class.** The field's Wald interval collapses to a point whenever a class shows no sampled error
-  (63 of 328 cells below 0.93, the worst at 0.30); the shipped Wilson-on-effective-n form leaves 13 short, none
-  below 0.88, each with a named mechanism. Stehman and Wagner's warning did not hold: the confidence design
-  narrows the per-class intervals on 11 of 14 tasks. The audit found the producer's accuracy lacking its
-  finite-population correction and the design comparison reading the wrong cells; both fixed before recording.
+  (107 of 522 cells below 0.93 on the 24 tasks, the worst at 0.02); the shipped forms leave 14 of 628 short, the
+  lowest 0.879, each with a named mechanism, and the random-design user's accuracy is now an exact hypergeometric
+  interval that covers at least 95% by construction. Stehman and Wagner's warning did not hold: the confidence
+  design narrows the per-class intervals on 19 of 21 tasks. The audits found the producer's accuracy lacking its
+  finite-population correction, the design comparison reading the wrong cells, and, a night later, a defect in
+  the finite-population Wilson form that a self-referential exemption had hidden; all fixed before recording.
 - **exp82, the "why" verified.** The boundary cue is real on all seven segmentation tasks (risk ratio 2.1 to
   10.5) but its quoted enrichment runs from 1.24 to 8.13 and is set by the map's fragmentation, not its class
   count as the page predicted; the Bolivia value lies outside every task's interval; the conjunction is purer than

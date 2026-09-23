@@ -346,9 +346,10 @@ The same sample now also answers the question the map-accuracy literature
 says a producer owes (exp81): per class, how often the map's call is right,
 how much of the class the map found, and the class's corrected share of the
 map, each with an interval. The interval the literature uses collapses to a
-point whenever a class shows no sampled error, and covered as little as 30% of
-draws on 63 of 328 graded cells; the package's form leaves 13 cells short, none
-below 0.88, each named with its cause. <!-- claim:per-class-intervals-wald-fails-wilson-nearly-holds -->
+point whenever a class shows no sampled error, and covered as little as 2% of
+draws; 107 of 522 graded cells fell short. The package's forms leave 14 of 628
+short, the lowest at 0.879, each named with its cause, and the user's accuracy
+from a random sample is exact, never below 95% by construction. <!-- claim:per-class-intervals-wald-fails-wilson-nearly-holds -->
 
 ### Does it help an agent
 

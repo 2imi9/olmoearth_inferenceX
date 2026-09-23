@@ -2286,10 +2286,14 @@ And every unit here is labelled, which is what makes grading possible and also w
 estimators rather than a measurement of any particular map. Values in `exp/out/exp78_summary.json`; the per-unit
 export for all 24 tasks is in `exp/out/exp78_units/`. Two corrections to the estimators after the run, both on
 22 September 2026 when they moved into the package: the simple-random interval's finite-population correction
-now multiplies the binomial variance term rather than the whole half-width, so a sample with no errors no longer
-rules out a perfect map; and the design effect's grand mean is taken over the units it analyses. The summary was
+then multiplied the binomial variance term rather than the whole half-width, so a sample with no errors no longer
+ruled out a perfect map; and the design effect's grand mean is taken over the units it analyses. The summary was
 regenerated from the package: every cited digit above is unchanged, the largest movement being the budget saving
-on MADOS from 2.508× to 2.510×, and no verdict moved.
+on MADOS from 2.508× to 2.510×, and no verdict moved. A third form followed on 23 September, when exp81's
+generality run showed the variance-only correction excluding a one-in-a-hundred truth seen once in thirty labels:
+the interval is now the score inversion at the effective size n (N − 1)/(N − n). At this study's sampling fractions
+(300 of 22,598 and above) the two forms differ by at most 1.7e-4 and the summary was not regenerated; the exp81
+section says what moved where the fraction is 0.3.
 
 **A correction to this section, the same day.** An audit of the estimator after it shipped found that the
 cluster-corrected arm was the unweighted mean of tile means, which targets the average tile's error rate rather
@@ -2477,59 +2481,109 @@ decides where in the range a map sits.
 
 ## What a map user is owed per class (exp81)
 
-Preregistered in [docs/plan/per_class_assessment.md](../plan/per_class_assessment.md) with three dated
+Preregistered in [docs/plan/per_class_assessment.md](../plan/per_class_assessment.md) with six dated
 amendments; runs as `exp/exp81_per_class.py`; artifact `exp/out/exp81_summary.json`; ships as
 `estimate.estimate_per_class` and `oe-inferencex estimate --per-class`. Run on 23 September 2026 on the 17
-classification tasks of the suite from exp78's export (the segmentation tasks wait for exp79's export, which
-carries the reference class per window); 2,000 draws per cell, no cluster, six minutes.
+classification tasks of the suite from exp78's export and the seven segmentation tasks from exp79's OlmoEarth
+Base export, which carries the reference class per window; 2,000 draws per cell, no cluster.
 
 **The question.** `estimate` gave one error rate. The map-accuracy literature's standard (Olofsson et al. 2014;
 Stehman and Foody 2019; the CEOS land-cover protocol) is per class: the user's accuracy, the producer's accuracy
 and the error-adjusted class share, each with a standard error, from one probability sample. This adds them under
-the random design (Wilson per map class; post-stratified shares; Olofsson's eq. 7 for the producer's accuracy,
-with the finite-population correction its siblings carry) and under the confidence design (ratios of
-Horvitz–Thompson totals over the margin strata, linearised variance), graded against the population truth on
-every class with at least 30 expected labels.
+the random design (an exact hypergeometric interval per map class for the user's accuracy; post-stratified
+shares; Olofsson's eq. 7 for the producer's accuracy, with the finite-population correction its siblings carry)
+and under the confidence design (ratios of Horvitz–Thompson totals over the margin strata, linearised variance),
+graded against the population truth on every class with at least 30 expected labels.
 
-**The field's interval fails; the shipped one nearly holds.** With Wald intervals, the form the literature uses,
-63 of 328 graded cells cover below 0.93 and the worst covers 0.30: whenever a class shows no sampled error the
-interval is a point at 1. With Wilson on the effective sample size, the package's form, 13 cells sit below the
-bar, at 0.879 to 0.928, and every one is named with its mechanism: three on the near-census CropHarvest Togo
-tasks (300 of 306 windows labelled, the estimate takes 22 values), four where a class's rare errors sit in
-confidence strata the overall-rate allocation samples thinly (Brick Kiln, Nandi Landsat; covered 0.80–0.90 on the
-draws that miss them, 0.98 on the rest), and six small-count cells on EuroSAT. Six further EuroSAT cells sit at
-0.63–0.90 by Wilson's discreteness, a class holding one error in a hundred windows seen by thirty labels, and
-match the exact achievable coverage. The package now warns for the first two cases.
+**The field's interval fails; the shipped ones nearly hold, and the user's accuracy holds by construction.** With
+Wald intervals, the form the literature uses, 107 of 522 graded cells cover below 0.93 and the worst covers 0.02:
+whenever a class shows no sampled error, or its accuracy sits within a hair of 1, the interval is a point. Under
+the shipped forms 14 of 628 cells sit below the bar, at 0.879 to 0.928, and each has a named mechanism. Five are
+on the near-census CropHarvest Togo tasks under the confidence design: 300 of 306 windows labelled, so the estimate
+takes a handful of values. The other nine share one mechanism, a class whose accuracy rests on a handful of rare
+errors: a draw that misses them leaves the estimate at or near 1 with too little variance, and a draw that
+catches one at a large weight moves it further than the interval reaches. Three are on Brick Kiln and Nandi
+Landsat, five are producer's-accuracy and share cells on EuroSAT (classes of 97 to 102 windows with a few errors
+each) and one is on MADOS, where a single missed window of class 7, drawn on 201 of 2,000 draws, sets the
+coverage at 0.8995. No graded random-design user's-accuracy cell covers below 0.947 on any task. The package warns
+for the near-census case; it does not yet warn for the rare-error case. The first reading of this section put
+Brick Kiln and Nandi Landsat down to strata the allocation samples thinly, and the package gained a warning for
+that; the second audit found none of their strata sampled at under half the overall rate, so the warning never
+fired on them, and the mechanism was the rare-error one.
 <!-- claim:per-class-intervals-wald-fails-wilson-nearly-holds -->
+
+**A defect in the finite-population interval, found by brute force.** The first reading of this section put six
+EuroSAT user's-accuracy cells at 0.63–0.90 down to Wilson's discreteness and passed them by comparing each with
+the exact coverage of the same interval. Both halves were wrong. Brute-forcing one cell of AnySat's export (class
+9, one error in 100 windows, covering 0.621) showed the package's finite-population Wilson form excluding the
+truth whenever that error was sampled: one error in 30 labels from 100 windows gave [0.0121, 0.161] against 0.010,
+an exact coverage of 0.70. And a rule that passes a cell because its Monte Carlo agrees with the exact coverage of
+the same interval passes any deterministic defect; that is how this one was hidden. The rule is gone, and the
+random-design user's accuracy is now the exact hypergeometric interval, whose coverage is at least 95% by
+construction; on a grid of classes with at most 1,000 windows it never covers below 0.951, where the score form
+falls below 0.93 on 40 of 164 cells. The six EuroSAT cells now cover 0.99 to 1.00. Of the sixth amendment's
+predictions, two held on all five encoders: no graded random-design user's-accuracy cell below 0.93, and every
+other cell identical to the digit. The width prediction held as a median, half-widths 5% wider, but not cell by
+cell: ten cells widened by 10 to 15%, seven of them one-error EuroSAT classes that the score form already
+covered, so the exact interval is wider there without covering more. The prediction that only confidence-design
+and producer's-accuracy cells would remain failed on four random-design share cells on EuroSAT, two under Base
+and one each under AnySat and CROMA Base. At the overall-rate budgets the record uses elsewhere, 300 of at least 12,800 windows, the
+forms give the same exact coverage on every recorded cell, and no number outside this section moves.
 
 **P2 fails, in the tool's favour.** Stehman and Wagner's warning, that a sample allocated for the overall rate
 serves the classes worse, does not hold here: the confidence design's per-class user's-accuracy intervals are
-wider than a random sample's on 3 of 14 tasks (median ratio over classes above 1) and narrower on the rest,
-down to 0.40 on the near-census Togo arms and 0.69 on Brick Kiln. The default design serves both purposes.
+wider than a random sample's on 2 of 21 tasks (EuroSAT and So2Sat, by the median ratio over classes) and narrower
+on the rest, all seven segmentation tasks among them, down to 0.68 on Brick Kiln and 0.69 on MADOS. The count depends on
+the random design's interval, 3 and then 5 of the 14 classification tasks under the two earlier forms, because
+several tasks sit within 3% of a ratio of 1; the verdict does not. The comparison now sets an exact, conservative
+interval (average coverage 0.97) against a nominal one (0.945), which leans about 5% in the confidence design's
+favour; under the like-for-like score form the median task's ratio is 0.88 to 0.96 on all five encoders, still
+well below 1.
 <!-- claim:confidence-design-serves-the-classes-too -->
 
-**P3 fails on two cells at its bars.** Where the map's class share differs from the truth by three or more
-standard errors of the post-stratified estimate, the interval excludes the map's share on 78% to 100% of draws
-(one cell, So2Sat class 15, at 0.775 against a bar of 0.80); where it differs by less than one, on 6% to 23%
-(one cell at 0.23 against 0.20). The estimator behaves; the bars were set on the simple-random standard error,
-1.4 to 1.9 times the estimator's own. <!-- claim:adjusted-share-moves-with-the-population-gap -->
+**P3 holds on the classes the package reports.** On the 42 classes with at least 30 expected reference labels,
+where the map's class share differs from the truth by three or more standard errors of the post-stratified
+estimate, the interval excludes the map's share on at least 83% of draws, and where it differs by less than one,
+on at most 13%. As first written P3 graded every class, and there 12 of 116 cells failed, every one a class with
+at most 18 expected reference labels, for which the package warns: two So2Sat classes (0.775 and 0.23 against the
+bars of 0.80 and 0.20), nine PASTIS and MADOS classes whose null-clause exclusion ran 0.21 to 0.33, and a cashew
+class the reference never holds. The restriction was adopted after seeing those cells, in the fifth amendment, and
+is the rule P1's share cells already followed. <!-- claim:adjusted-share-moves-with-the-population-gap -->
 
 **The budget scales with the classes.** At 300 labels a random sample reports without a warning all classes of
 the two- and six-class tasks, eight of EuroSAT's ten, four of ForestNet's twelve, four of BreizhCrops' nine and
 none of So2Sat's seventeen; at 1,000 labels BreizhCrops reaches five. That is the CEOS point, and the tool says
 it per class rather than averaging it away. <!-- claim:per-class-budget-scales-with-classes -->
 
-**Stated from the audit.** The first run graded bias conditional on the class count, which manufactured a 3–11%
-upward bias on classes at the 30-label line; the second run's design comparison read the Wald cells; the
-producer's accuracy lacked its finite-population correction (median coverage 0.983 before, 0.953 after); the
-share's grading now covers every draw for the classes the package reports. Each is in the preregistration's
-amendments with its date.
+**Not graded, and said.** The overall accuracy the per-class output prints beside the classes is not a P1
+quantity. In the Wilson form the tool prints it covers below 0.93 on 3 of 64 cells, MADOS at 300 random labels
+(0.913), PASTIS Sentinel-2 at 300 random labels (0.925) and the Togo two-sensor arm under the confidence design
+(0.927); the Wald option adds five more, the lowest 0.911 on Brick Kiln under the confidence design. On MADOS
+`estimate`'s own overall interval covers 0.933 under the same design (exp78, exp79). The tool's overall number
+is `estimate`'s; this one is a by-product of the per-class table and is named here until it is graded.
 
-**On other encoders (added as exp79's exports land).** The same run on the classification tasks of Clay Large
-(17 tasks) and Copernicus-FM (14): the Wald form covers below 0.93 on 39 of 323 and 62 of 274 cells (worst 0.15
-and 0.32), the shipped form on 11 and 15, none below 0.86; the confidence design widens the per-class intervals
-on 2 of 14 and 2 of 12 tasks; the error-adjusted share behaves on every cell. The pattern is the estimator's, not
-the encoder's. <!-- claim:per-class-intervals-hold-on-other-encoders -->
+**Stated from the audits.** The first run graded bias conditional on the class count, which manufactured a 3–11%
+upward bias on classes at the 30-label line; the second run's design comparison read the Wald cells; the
+producer's accuracy lacked its finite-population correction (median coverage 0.983 before, 0.952 in the
+artifact now); the share's grading now covers every draw for the classes the package reports; the
+finite-population Wilson form and the exemption that hid it are above. The second audit, of the exact interval
+and the partial rerun, found the rerun clean (only random-design user's-accuracy entries changed), the interval
+matching an exact rational scan on 420 cases, the thin-strata mechanism above wrong, and the artifact recording
+one export directory for tasks drawn from two; each task now names its export (the 17 classification tasks
+exp78's, the seven segmentation tasks exp79's). Each is in the preregistration's amendments with its date, and
+the audits are kept as `exp/out/audit_wilson_fpc_2026-09-23.md` and `exp/out/audit_exact_interval_2026-09-23.md`.
+
+**On other encoders (added as exp79's exports land; rerun under the exact interval).** The same run on the
+classification tasks of Clay Large (17 tasks), Copernicus-FM (14), AnySat (17) and CROMA Base (14): no
+graded random-design user's-accuracy cell covers below 0.943; the shipped forms fail 11, 15, 8 and 12 cells, the
+lowest coverage 0.858, every one a confidence-design cell or a producer's-accuracy or share cell, and two of them
+BreizhCrops producer's accuracies that also fail the 2% bias clause (1.055 on Clay Large; 1.023 on Copernicus-FM,
+where coverage is 0.946 and bias is the only failure); the Wald form fails 39 of 268, 62 of 229, 30 of 269 and 53
+of 228 cells (worst 0.15 to 0.33); the confidence design widens the per-class intervals on 3 of 14, 3 of 12, 3 of
+14 and 2 of 12 tasks; P3's test of the error-adjusted share fails no cell of the 128 classes the package
+reports. The pattern is the estimator's, not the encoder's. It was AnySat's run that
+exposed the interval's form: its EuroSAT class 9 covered 0.621 under the old form and covers 1.00 now.
+<!-- claim:per-class-intervals-hold-on-other-encoders -->
 
 ## Can raters from different families estimate a map's accuracy without labels? (exp83)
 

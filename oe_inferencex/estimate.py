@@ -48,11 +48,18 @@ TILES_WARNING = ("labels taken tile by tile are not independent, and a map whose
 def wilson_interval(k, n, N=None):
     """Wilson score interval for k of n, with a finite-population correction when N is given.
 
-    The correction (N - n)/(N - 1) multiplies the binomial variance term p(1-p)/n inside the root and nothing
-    else. Until 2026-09-22 it scaled the whole half-width, including Wilson's z^2/(4n^2) term, so at k = 0 the
-    interval no longer reached the shrunk centre's foot and its lower bound sat above zero: a sample with no
-    errors ruled out a perfect map, 0.10% to 1.16% for 300 of 999. Away from k = 0 the two forms differ in the
-    fifth decimal at the record's budgets. A census has no sampling error: at n >= N the interval is (p, p).
+    With a finite population the score test's variance is theta (1 - theta) (N - n) / ((N - 1) n), which is
+    theta (1 - theta) / n_eff at the effective size n_eff = n (N - 1) / (N - n); inverting that test is Wilson's
+    interval at (p n_eff, n_eff), the Korn and Graubard (1998) form the package's stratified interval already uses.
+    Two earlier forms are on the record. Until 2026-09-22 the correction scaled the whole half-width, so at k = 0
+    the lower bound sat above zero and a sample with no errors ruled out a perfect map. Until 2026-09-23 it
+    multiplied only the p (1 - p) / n term inside the root and left the centre and the z^2 / (4 n^2) term at n: at
+    k = 0 that reaches zero, but away from it the interval is narrower than the centre's pull toward one half
+    allows, and a class holding one error in a hundred windows, seen once in thirty labels, was excluded (k = 1 of
+    30 from 100 gave [0.0121, 0.161] against a truth of 0.010); its exact coverage at (100, 1, 30) was 0.70, and
+    exp81's record read those cells as Wilson's discreteness. The score inversion covers them (1.00 there), and
+    at the record's budgets the two forms differ by at most 1.7e-4 at 300 of 22,598 (`tests/test_estimate.py`).
+    A census has no sampling error: at n >= N the interval is (p, p).
     """
     if n < 0 or k < 0 or k > n:
         raise ValueError(f"wilson_interval needs 0 <= k <= n, got k={k}, n={n}")
@@ -63,10 +70,10 @@ def wilson_interval(k, n, N=None):
     p = k / n
     if N and n >= N:
         return p, p
-    fpc2 = max((N - n) / (N - 1), 0.0) if N and N > 1 else 1.0
-    d = 1 + Z95 ** 2 / n
-    centre = (p + Z95 ** 2 / (2 * n)) / d
-    half = Z95 * np.sqrt(fpc2 * p * (1 - p) / n + Z95 ** 2 / (4 * n ** 2)) / d
+    n_eff = n * (N - 1) / (N - n) if N and N > 1 else float(n)
+    d = 1 + Z95 ** 2 / n_eff
+    centre = (p + Z95 ** 2 / (2 * n_eff)) / d
+    half = Z95 * np.sqrt(p * (1 - p) / n_eff + Z95 ** 2 / (4 * n_eff ** 2)) / d
     lo, hi = centre - half, centre + half
     return (0.0 if lo < 1e-12 else lo), (1.0 if hi > 1 - 1e-12 else hi)
 
@@ -91,20 +98,100 @@ def t_quantile_975(df):
     return z + g1 / df + g2 / df ** 2 + g3 / df ** 3 + g4 / df ** 4
 
 
-def exact_coverage_srs(N, K, B):
-    """The exact coverage of `wilson_interval` for a simple random sample of B from N units holding K errors: the
-    hypergeometric probability of each error count k, summed over the k whose interval contains K/N. What the
-    interval can achieve at (N, K, B), against which a Monte Carlo coverage is judged so that Wilson's
-    discreteness is not mistaken for a defect (exp79, P5)."""
+def exact_coverage_srs(N, K, B, interval=None):
+    """The exact coverage of an interval (`wilson_interval` by default) for a simple random sample of B from N units
+    holding K errors: the hypergeometric probability of each error count k, summed over the k whose interval
+    contains K/N. It says what the interval achieves at (N, K, B) and whether a Monte Carlo agrees with it. It is a
+    diagnostic, not an exemption: a cell below a coverage bar is the interval's shortfall whether or not the
+    enumeration predicts it (exp81's sixth amendment; a rule that passed cells matching their own exact coverage
+    passed every deterministic defect, and hid one for a night)."""
     import math
+    interval = interval or wilson_interval
     theta = K / N
     lc = lambda n, r: math.lgamma(n + 1) - math.lgamma(r + 1) - math.lgamma(n - r + 1)
     tot = 0.0
     for k in range(max(0, B - (N - K)), min(B, K) + 1):
-        lo, hi = wilson_interval(k, B, N)
+        lo, hi = interval(k, B, N)
         if lo <= theta <= hi:
             tot += math.exp(lc(K, k) + lc(N - K, B - k) - lc(N, B))
     return tot
+
+
+def _hyper_tail(k, n, N, K, upper):
+    """P(X >= k) when `upper`, else P(X <= k), for X hypergeometric: n draws without replacement from N units of
+    which K are marked. Summed in log space along the pmf's ratio recurrence, so it neither loops in Python over
+    the support nor overflows when k sits far from the mode."""
+    import math
+    lo, hi = max(0, n - (N - K)), min(n, K)
+    if upper:
+        if k <= lo:
+            return 1.0
+        if k > hi:
+            return 0.0
+        x = np.arange(k, hi, dtype=np.float64)                  # pmf(x + 1) / pmf(x), x = k .. hi - 1
+        r = (K - x) * (n - x) / ((x + 1.0) * (N - K - n + x + 1.0))
+    else:
+        if k >= hi:
+            return 1.0
+        if k < lo:
+            return 0.0
+        x = np.arange(k, lo, -1, dtype=np.float64)              # pmf(x - 1) / pmf(x), x = k .. lo + 1
+        r = x * (N - K - n + x) / ((K - x + 1.0) * (n - x + 1.0))
+    lead = _log_choose(K, k) + _log_choose(N - K, n - k) - _log_choose(N, n)
+    if r.size == 0:
+        return min(1.0, math.exp(lead))
+    cs = np.cumsum(np.log(r))
+    m = max(0.0, float(cs.max()))
+    return min(1.0, math.exp(lead + m + math.log(math.exp(-m) + float(np.exp(cs - m).sum()))))
+
+
+def hypergeom_interval(k, n, N, conf=0.95):
+    """Exact equal-tailed interval for the share K/N of marked units in a finite population of N, from k marked
+    among a simple random sample of n: every K whose two tails at the observed k both exceed (1 - conf)/2, the
+    tail inversion of Buonaccorsi (1987) and Wang (2015), the finite-population form of Clopper and Pearson. Its
+    coverage is at least `conf` for every (N, K, n) by construction; the trusted zone's tests (`zone_pvalue`) are
+    the one-sided form of the same inversion. exp81's sixth amendment adopted it for the user's accuracy under a
+    random sample, where the labelled windows of a map class are a simple random sample of that class: on a grid
+    of classes with N <= 1000 it never covered below 0.951, where the finite-population Wilson form fell below
+    0.93 on 40 of 164 cells. A census is the point; an empty sample is everything."""
+    if not 0 < conf < 1:
+        raise ValueError(f"conf must be in (0, 1), got {conf}")
+    counts = []
+    for name, x in (("k", k), ("n", n), ("N", N)):
+        if isinstance(x, (bool, np.bool_)) or float(x) != int(x):
+            raise ValueError(f"hypergeom_interval takes whole counts, got {name}={x!r}")
+        counts.append(int(x))
+    k, n, N = counts
+    if n < 0 or k < 0 or k > n or n > N:
+        raise ValueError(f"hypergeom_interval needs 0 <= k <= n <= N, got k={k}, n={n}, N={N}")
+    # validated here, cached below on plain ints: a cache in front of the checks let True (equal to 1) through
+    return _hypergeom_interval(k, n, N, float(conf))
+
+
+@__import__("functools").lru_cache(maxsize=1 << 16)
+def _hypergeom_interval(k, n, N, conf):
+    if n == 0:
+        return 0.0, 1.0
+    if n >= N:
+        return k / n, k / n
+    a = (1.0 - conf) / 2.0
+    lo_K, hi_K = k, N - (n - k)                                  # the counts the sample does not rule out outright
+    left, right = lo_K, hi_K                                     # smallest K with P(X >= k | K) > a (nondecreasing in K)
+    while left < right:
+        mid = (left + right) // 2
+        if _hyper_tail(k, n, N, mid, upper=True) > a:
+            right = mid
+        else:
+            left = mid + 1
+    K_lo = left
+    left, right = lo_K, hi_K                                     # largest K with P(X <= k | K) > a (nonincreasing in K)
+    while left < right:
+        mid = (left + right + 1) // 2
+        if _hyper_tail(k, n, N, mid, upper=False) > a:
+            left = mid
+        else:
+            right = mid - 1
+    return K_lo / N, left / N
 
 
 def confidence_strata(margin, n_strata=N_STRATA):
@@ -631,8 +718,9 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
     map_class : the map's class of EVERY window (the flattened grid `sample` was drawn on); negative at no-data,
                 and the count of non-negative entries must equal the population the sample was drawn from
 
-    Under a random sample, the user's accuracy of class c is an exact Wilson interval on the labelled windows the
-    map calls c, since those are a random sample of that class's windows; the class shares are post-stratified by
+    Under a random sample, the user's accuracy of class c has an exact hypergeometric interval (`hypergeom_interval`)
+    on the labelled windows the map calls c, since those are a simple random sample of that class's windows, and
+    `interval` does not apply to it; the class shares are post-stratified by
     map class (Olofsson et al. 2014, eq. 4 and 5) and the producer's accuracy follows their eq. 7. Under the
     confidence design every quantity is a ratio of Horvitz-Thompson totals over the margin strata with a
     linearised variance, because a class cuts across strata. Intervals are Wilson on the effective sample size
@@ -692,7 +780,11 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
         for c in range(C):
             row = {"map_share": float(W[c]), "n_labelled_map_class": int(n_i[c]), "n_labelled_reference_class": int(conf[:, c].sum())}
             if n_i[c] > 0:
-                lo, hi = wilson_interval(int(conf[c, c]), int(n_i[c]), int(N_map[c]))
+                # exact (sixth amendment of exp81): the labelled windows the map calls c are a simple random sample
+                # of that class, so the count of correct ones is hypergeometric and its tail inversion covers at
+                # least 95% on every class; the finite-population Wilson form fell to 0.70 on a class with one
+                # error in a hundred windows, and the score form to 0.83 on a small grid
+                lo, hi = hypergeom_interval(int(conf[c, c]), int(n_i[c]), int(N_map[c]))
                 row["user_accuracy"] = {"estimate": float(u[c, c]), "low": lo, "high": hi}
             else:
                 row["user_accuracy"] = None
@@ -713,7 +805,7 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
             e, lo, hi = _interval(share_est[c], share_var[c], idx.size, interval)
             row["reference_share"] = {"estimate": e, "low": lo, "high": hi}
             per[int(c)] = row
-        method = "random sample: Wilson per map class for user's accuracy; shares post-stratified by map class and producer's accuracy by Olofsson et al. 2014 eq. 7"
+        method = "random sample: exact hypergeometric interval per map class for user's accuracy; shares post-stratified by map class and producer's accuracy by Olofsson et al. 2014 eq. 7"
     else:
         strata, sizes = np.asarray(sample["strata"]), list(sample["sizes"])
         pos = {int(g): i for i, g in enumerate(pop)}
@@ -742,13 +834,16 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
             notes.append(f"fewer than {MIN_PER_CLASS} labelled windows ({row['n_labelled_map_class']} the map calls this "
                          f"class, {row['n_labelled_reference_class']} the reference does); the interval is wide and, "
                          "below about ten, not to be trusted")
-        # exp81's audit named two cases where a nominal 95% interval covered 0.87-0.92: a class nearly all of
-        # whose windows are labelled (the estimate takes a handful of values and a normal interval cannot follow
-        # it), and, under the confidence design, a class whose windows sit in strata the overall-rate allocation
-        # samples thinly, so its rare errors are often not drawn at all
+        # exp81 measured one case where a nominal 95% interval covers well under 95%: a class nearly all of whose
+        # windows are labelled, so the estimate takes a handful of values and a normal interval cannot follow it
+        # (0.86-0.92 on five encoders' Togo classes). The thin-strata note below is a caution from the design: the
+        # cells exp81 first attributed to it (Brick Kiln, Nandi Landsat) did not meet its criterion, and their
+        # shortfall is the rare-error case, a class whose accuracy rests on a handful of errors that a draw misses
+        # or catches at a large weight, for which the package does not yet warn (exp81's second audit)
         if N_map[c] > 0 and row["n_labelled_map_class"] >= 0.9 * N_map[c] and row["n_labelled_map_class"] < N_map[c]:
-            notes.append("nearly every window of this class is labelled; the interval is a rough guide, since the estimate "
-                         "can only take a few values (exp81: coverage 0.87-0.92 on such a class)")
+            notes.append("nearly every window of this class is labelled; apart from the user's accuracy under a random sample, "
+                         "which is exact, the intervals are a rough guide, since the estimate can only take a few values "
+                         "(exp81: coverage 0.86-0.92 on such classes)")
         if design != "random":
             f_all = idx.size / N
             thin = np.array([sizes[h] > 0 and (strata[local] == h).sum() / sizes[h] < 0.5 * f_all for h in range(len(sizes))])
@@ -756,7 +851,7 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
             if in_thin > 0.5:
                 notes.append(f"{100 * in_thin:.0f}% of this class sits in confidence strata the design samples at under half the "
                              "overall rate; if its errors are rare there they are often not drawn, and the interval is then "
-                             "optimistic (exp81: coverage 0.90-0.92 on two such classes)")
+                             "optimistic")
         if notes:
             row["warning"] = "; ".join(notes)
     e, lo, hi = _interval(overall, overall_var, idx.size, interval)

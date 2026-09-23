@@ -3,8 +3,8 @@ where the claim is an equality and by a large seeded Monte Carlo where it is a v
 
 Under the confidence design every per-class quantity is built from Horvitz-Thompson totals over the margin strata;
 over EVERY stratified sample of a small population those totals are unbiased and their variance estimator is
-unbiased for the exact variance. Under a random sample the user's accuracy interval must be the Wilson interval on
-the labelled windows of that map class, the class shares the post-stratified form of Olofsson et al. 2014, and the
+unbiased for the exact variance. Under a random sample the user's accuracy interval must be the exact hypergeometric
+interval on the labelled windows of that map class, the class shares the post-stratified form of Olofsson et al. 2014, and the
 producer's accuracy their eq. 7, written out independently here."""
 import itertools
 
@@ -89,7 +89,9 @@ def _olofsson(conf, N_map):
     return ua, pa, share, v_share, v_pa
 
 
-def test_random_design_matches_wilson_per_class_and_olofssons_equations():
+def test_random_design_matches_the_exact_interval_per_class_and_olofssons_equations():
+    """The user's accuracy under a random sample is the exact hypergeometric interval (exp81's sixth amendment;
+    until then this test pinned the finite-population Wilson form, which fell to 0.70 on a one-error class)."""
     rng = np.random.default_rng(3)
     Npop, C, B = 3000, 4, 300
     mc = rng.integers(0, C, Npop)
@@ -102,7 +104,7 @@ def test_random_design_matches_wilson_per_class_and_olofssons_equations():
     ua, pa, share, v_share, v_pa = _olofsson(conf, N_map)
     for c in range(C):
         row = out["per_class"][c]
-        lo, hi = est.wilson_interval(int(conf[c, c]), int(conf[c].sum()), int(N_map[c]))
+        lo, hi = est.hypergeom_interval(int(conf[c, c]), int(conf[c].sum()), int(N_map[c]))
         assert abs(row["user_accuracy"]["estimate"] - ua[c]) < 1e-12
         assert (row["user_accuracy"]["low"], row["user_accuracy"]["high"]) == (lo, hi)
         assert abs(row["producer_accuracy"]["estimate"] - pa[c]) < 1e-12

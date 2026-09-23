@@ -3376,61 +3376,83 @@
     crosscheck pins that equality at 20%.
 
 - id: per-class-intervals-wald-fails-wilson-nearly-holds
-  statement: "On the 17 classification tasks of the suite at 300 and 1,000 random or confidence-designed labels, per-class intervals for user's accuracy, producer's accuracy and class share (classes with at least 30 expected labels; 328 cells): with Wald intervals 63 cells cover below 0.93 and the worst covers 0.296; with Wilson on the effective sample size 13 cover below 0.93, none below 0.879, and six EuroSAT user's-accuracy cells at 0.63-0.90 match the exact coverage Wilson can achieve on a class with one to four errors in a hundred windows."
-  crosscheck: tests/test_per_class.py::test_the_variance_estimators_track_the_monte_carlo_variance
+  statement: "On the 24 tasks of the suite (17 classification tasks from exp78's export, 7 segmentation tasks from exp79's OlmoEarth Base export) at 300 and 1,000 random or confidence-designed labels, per-class intervals for user's accuracy, producer's accuracy and class share (classes with at least 30 expected labels): the shipped forms leave 14 of 628 cells below 0.93, none below 0.879, five on the near-census Togo tasks under the confidence design and nine rare-error cells (three on Brick Kiln and Nandi Landsat, five producer's-accuracy and share cells on EuroSAT, one MADOS producer's accuracy of 0.9998); no graded random-design user's-accuracy cell, the exact hypergeometric interval, covers below 0.947; with the field's Wald form 107 of 522 cells cover below 0.93, the worst 0.019."
+  crosscheck: tests/test_estimate.py::test_the_exact_interval_is_the_tail_inversion_and_covers_at_least_nominal_by_enumeration
   status: mixed
   experiments: [exp81]
   artifacts: [exp/out/exp81_summary.json]
   check: |-
-    (lambda s: (lambda p, w:
-      p['n_cells'] == 328 and w['n_cells'] == 328
-      and len(p['failing']) == 13 and round(min(f['coverage'] for f in p['failing']), 3) == 0.879
-      and all(f['coverage'] >= 0.87 for f in p['failing'])
-      and w['n_failing'] == 63 and round(w['min_coverage'], 3) == 0.296
-      and len(p['discreteness_cells_passing_by_exact_coverage']) == 6
-      and all(x['task'] == 'm_eurosat' and abs(x['coverage'] - x['exact_coverage']) < 0.05 for x in p['discreteness_cells_passing_by_exact_coverage'])
-      and len(s['tasks']) == 17 and s['config']['draws'] == 2000
-    )(s['prereg']['P1_every_reported_interval_is_honest'], s['prereg']['P1_under_the_wald_form']))(A['exp/out/exp81_summary.json'])
+    (lambda s: (lambda p, w, ua:
+      p['n_cells'] == 628 and len(p['failing']) == 14 and round(min(f['coverage'] for f in p['failing']), 3) == 0.879
+      and sum(f['task'].startswith('cropharvest_Togo') and f['design'] == 'confidence' for f in p['failing']) == 5
+      and sum(f['task'] in ('m_brick_kiln', 'nandi_landsat') and f['design'] == 'confidence' for f in p['failing']) == 3
+      and sum(f['task'] == 'm_eurosat' and f['quantity'] in ('producer_accuracy', 'reference_share') for f in p['failing']) == 5
+      and [(f['task'], f['class'], f['quantity']) for f in p['failing'] if f['task'] == 'mados'] == [('mados', 7, 'producer_accuracy')]
+      and not any(f['design'] == 'random' and f['quantity'] == 'user_accuracy' for f in p['failing'])
+      and round(min(ua), 3) == 0.947
+      and w['n_cells'] == 522 and w['n_failing'] == 107 and round(w['min_coverage'], 3) == 0.019
+      and len(s['tasks']) == 24 and s['config']['draws'] == 2000
+    )(s['prereg']['P1_every_reported_interval_is_honest'], s['prereg']['P1_under_the_wald_form'],
+      [pc['user_accuracy']['coverage'] for row in s['tasks'].values() for c in row['cells'] if c['design'] == 'random' and c['interval'] == 'wilson'
+       for pc in c['per_class'].values() if pc['user_accuracy']['coverage'] is not None and pc['user_accuracy']['eligible_share'] >= 0.5])
+    )(A['exp/out/exp81_summary.json'])
   cited_in:
     - {file: docs/results/comparisons.md, marker: per-class-intervals-wald-fails-wilson-nearly-holds}
     - {file: docs/Findings.md, marker: per-class-intervals-wald-fails-wilson-nearly-holds}
   note: >-
     The counts are read from the graded blocks, which `exp/exp81_per_class.py --stage grade` recomputes from the
-    per-cell coverages (pure functions of the rows); the crosscheck is the variance and bias test on a synthetic
-    map with margin-dependent classes under both designs. Preregistered P1 (every cell at or above 0.93) is
-    recorded as failed; the thirteen cells and their mechanisms are in the section.
+    per-cell coverages; the minimum random-design user's-accuracy coverage is recomputed here from the cells. The
+    crosscheck writes the exact interval out by scanning every count and enumerates its coverage. Preregistered P1
+    (every cell at or above 0.93) is recorded as failed. Rerun on 23 September under the sixth amendment: until then
+    the random-design user's accuracy was a finite-population Wilson form that covered 0.70 on a one-error class, and
+    six EuroSAT cells were passed by an exemption that compared each with its own exact coverage.
 
 - id: confidence-design-serves-the-classes-too
-  statement: "At 300 labels the confidence design's per-class user's-accuracy intervals (Wilson on the effective sample size) are wider than a random sample's, by the median ratio over classes, on 3 of the 14 classification tasks that have a 300-label cell, and narrower on the other 11; the preregistered P2 (wider on at least half) fails."
+  statement: "At 300 labels the confidence design's per-class user's-accuracy intervals are wider than a random sample's, by the median ratio over classes, on 2 of the 21 tasks with a 300-label cell (EuroSAT and So2Sat) and narrower on the other 19, all seven segmentation tasks among them, down to 0.68 (Brick Kiln) and 0.69 (MADOS); the preregistered P2 (wider on at least half) fails."
   crosscheck: tests/test_per_class.py::test_the_variance_estimators_track_the_monte_carlo_variance
   status: rejected
   experiments: [exp81]
   artifacts: [exp/out/exp81_summary.json]
   check: |-
-    (lambda p: p['holds'] is False and p['of'] == 14 and p['n_tasks_wider'] == 3
-      and sum(1 for v in p['median_ratio_per_task'].values() if v > 1) == 3
-      and round(min(p['median_ratio_per_task'].values()), 2) == 0.40
+    (lambda p: p['holds'] is False and p['of'] == 21 and p['n_tasks_wider'] == 2
+      and {t for t, v in p['median_ratio_per_task'].items() if v > 1} == {'m_eurosat', 'm_so2sat'}
+      and all(p['median_ratio_per_task'][t] < 1 for t in ('mados', 'sen1floods11', 'pastis_sentinel1', 'pastis_sentinel2', 'pastis_sentinel1_sentinel2', 'm_cashew_plant', 'm_sa_crop_type'))
+      and round(p['median_ratio_per_task']['m_brick_kiln'], 2) == 0.68 and round(p['median_ratio_per_task']['mados'], 2) == 0.69
+      and min(p['median_ratio_per_task'], key=p['median_ratio_per_task'].get) == 'm_brick_kiln'
     )(A['exp/out/exp81_summary.json']['prereg']['P2_the_overall_design_widens_the_classes'])
   cited_in:
     - {file: docs/results/comparisons.md, marker: confidence-design-serves-the-classes-too}
+  note: >-
+    The random design's user's-accuracy interval is the exact one since the sixth amendment, about 5% wider than the
+    score form; under the two earlier forms the count was 3 and then 5 of the 14 classification tasks, because
+    several tasks sit within 3% of a ratio of 1. The comparison now sets an exact, conservative interval (average
+    coverage 0.97) against a nominal one (0.945), leaning about 5% in the confidence design's favour; under the
+    like-for-like score form the median task's ratio is 0.88 to 0.96 on all five encoders. The verdict is the same
+    under every form (exp81's second audit).
 
 - id: adjusted-share-moves-with-the-population-gap
-  statement: "At 300 random labels, where the map's class share differs from the true share by at least three standard errors of the post-stratified share estimate, the 95% interval excludes the map's share on at least 0.775 of draws; where it differs by less than one, on at most 0.23; the preregistered bars (0.80 and 0.20) fail on one cell each (So2Sat classes 15 and 10)."
-  crosscheck: tests/test_per_class.py::test_random_design_matches_wilson_per_class_and_olofssons_equations
+  statement: "At 300 random labels, on the 42 classes with at least 30 expected reference labels, where the map's class share differs from the true share by at least three standard errors of the post-stratified estimate the 95% interval excludes the map's share on at least 0.83 of draws, and where it differs by less than one on at most 0.13; graded over every class as first written, 12 of 116 cells fail, all on classes with at most 18 expected reference labels."
+  crosscheck: tests/test_per_class.py::test_random_design_matches_the_exact_interval_per_class_and_olofssons_equations
   status: mixed
   experiments: [exp81]
   artifacts: [exp/out/exp81_summary.json]
   check: |-
-    (lambda s: (lambda cells: (lambda hi, lo:
-      len(hi) >= 10 and len(lo) >= 20
-      and round(min(hi), 3) == 0.775 and sum(1 for x in hi if x < 0.8) == 1
-      and abs(max(lo) - 0.2295) < 1e-9 and sum(1 for x in lo if x > 0.2) == 1
-    )([v['exclusion_rate'] for c in cells for v in c['share_excludes_map'].values() if v['disc_over_se'] >= 3.0],
-      [v['exclusion_rate'] for c in cells for v in c['share_excludes_map'].values() if v['disc_over_se'] < 1.0])
-    )([c for row in s['tasks'].values() for c in row['cells'] if c['design'] == 'random' and c['budget'] == 300
-       and c.get('interval') == 'wilson' and 'share_excludes_map' in c]))(A['exp/out/exp81_summary.json'])
+    (lambda s: (lambda cells: (lambda graded, every:
+      len(graded) == 42 and round(min(v['exclusion_rate'] for v, e in graded if v['disc_over_se'] >= 3.0), 2) == 0.83
+      and round(max(v['exclusion_rate'] for v, e in graded if v['disc_over_se'] < 1.0), 2) == 0.13
+      and len(every) == 116 and len([1 for v, e in every if (v['disc_over_se'] >= 3.0 and v['exclusion_rate'] < 0.8) or (v['disc_over_se'] < 1.0 and v['exclusion_rate'] > 0.2)]) == 12
+      and max(e for v, e in every if (v['disc_over_se'] >= 3.0 and v['exclusion_rate'] < 0.8) or (v['disc_over_se'] < 1.0 and v['exclusion_rate'] > 0.2)) < 18.5
+    )([(v, e) for v, e in cells if e >= 30 and (v['disc_over_se'] >= 3.0 or v['disc_over_se'] < 1.0)],
+      [(v, e) for v, e in cells if v['disc_over_se'] >= 3.0 or v['disc_over_se'] < 1.0])
+    )([(v, 300 * c['per_class'][str(k)]['reference_share_true']) for row in s['tasks'].values() for c in row['cells']
+       if c['design'] == 'random' and c['budget'] == 300 and c.get('interval') == 'wilson' and 'share_excludes_map' in c
+       for k, v in c['share_excludes_map'].items()]))(A['exp/out/exp81_summary.json'])
   cited_in:
     - {file: docs/results/comparisons.md, marker: adjusted-share-moves-with-the-population-gap}
+  note: >-
+    The restriction to classes with at least 30 expected reference labels (the classes the package reports without
+    a warning, the rule P1's share cells already followed) was adopted in the fifth amendment after the unrestricted
+    failures were seen, so the claim states both gradings.
 
 - id: per-class-budget-scales-with-classes
   statement: "At 300 random labels the package reports without a warning (at least 30 labelled windows of the class on at least half the draws) every class of the two- and six-class tasks, 8 of EuroSAT's 10, 4 of ForestNet's 12, 4 of BreizhCrops' 9 and none of So2Sat's 17; at 1,000 labels BreizhCrops reaches 5."
@@ -3695,28 +3717,34 @@
     patch geometry, not of the map's content.
 
 - id: per-class-intervals-hold-on-other-encoders
-  statement: "On the classification tasks of Clay Large (17 tasks, 323 graded cells) and Copernicus-FM (14 tasks, 274 cells), the Wald per-class interval covers below 0.93 on 39 and 62 cells (worst 0.152 and 0.316) and the shipped Wilson-on-effective-n form on 11 and 15, none below 0.858; the confidence design widens the per-class user's-accuracy interval on 2 of 14 and 2 of 12 tasks; the adjusted share's exclusion rates fail no cell."
-  crosscheck: tests/test_per_class.py::test_the_variance_estimators_track_the_monte_carlo_variance
+  statement: "On the classification tasks of Clay Large (17 tasks, 323 graded cells), Copernicus-FM (14, 274), AnySat (17, 323) and CROMA Base (14, 276), with the random-design user's accuracy the exact hypergeometric interval, no such cell covers below 0.943 (lowest 0.952, 0.949, 0.943, 0.952); the shipped forms fail 11, 15, 8 and 12 cells, the lowest coverage 0.858, none of them a random-design user's accuracy, one of them (a Copernicus-FM BreizhCrops producer's accuracy at coverage 0.946) on the 2% bias clause alone; the Wald form fails 39 of 268, 62 of 229, 30 of 269 and 53 of 228 cells (worst 0.152, 0.316, 0.333, 0.293); the confidence design widens the per-class user's-accuracy interval on 3 of 14, 3 of 12, 3 of 14 and 2 of 12 tasks; the adjusted share's exclusion rates fail no cell of the 128 classes with at least 30 expected reference labels (34, 31, 33 and 30)."
+  crosscheck: tests/test_estimate.py::test_the_exact_interval_is_the_tail_inversion_and_covers_at_least_nominal_by_enumeration
   status: measured
   experiments: [exp81]
-  artifacts: [exp/out/exp81_per_class/clay_large.json, exp/out/exp81_per_class/copernicusfm.json]
+  artifacts: [exp/out/exp81_per_class/clay_large.json, exp/out/exp81_per_class/copernicusfm.json, exp/out/exp81_per_class/anysat.json, exp/out/exp81_per_class/croma_base.json]
   check: |-
-    (lambda C, F: (lambda pc, pf, wc, wf:
-      len(C['tasks']) == 17 and len(F['tasks']) == 14
-      and pc['n_cells'] == 323 and pf['n_cells'] == 274 and len(pc['failing']) == 11 and len(pf['failing']) == 15
-      and round(min(f['coverage'] for f in pc['failing'] + pf['failing']), 3) == 0.858
-      and wc['n_failing'] == 39 and wf['n_failing'] == 62 and round(wc['min_coverage'], 3) == 0.152 and round(wf['min_coverage'], 3) == 0.316
-      and (C['prereg']['P2_the_overall_design_widens_the_classes']['n_tasks_wider'], C['prereg']['P2_the_overall_design_widens_the_classes']['of']) == (2, 14)
-      and (F['prereg']['P2_the_overall_design_widens_the_classes']['n_tasks_wider'], F['prereg']['P2_the_overall_design_widens_the_classes']['of']) == (2, 12)
-      and C['prereg']['P3_the_adjusted_share_moves_where_it_should']['failing'] == [] and F['prereg']['P3_the_adjusted_share_moves_where_it_should']['failing'] == []
-    )(C['prereg']['P1_every_reported_interval_is_honest'], F['prereg']['P1_every_reported_interval_is_honest'],
-      C['prereg']['P1_under_the_wald_form'], F['prereg']['P1_under_the_wald_form'])
-    )(A['exp/out/exp81_per_class/clay_large.json'], A['exp/out/exp81_per_class/copernicusfm.json'])
+    (lambda D: (lambda P, W, P2, P3, UA:
+      [len(D[e]['tasks']) for e in D] == [17, 14, 17, 14] and [P[e]['n_cells'] for e in D] == [323, 274, 323, 276]
+      and [len(P[e]['failing']) for e in D] == [11, 15, 8, 12] and round(min(f['coverage'] for e in D for f in P[e]['failing']), 3) == 0.858
+      and [sum(f['coverage'] >= 0.93 for f in P[e]['failing']) for e in D] == [0, 1, 0, 0]
+      and not any(f['design'] == 'random' and f['quantity'] == 'user_accuracy' for e in D for f in P[e]['failing'])
+      and [round(UA[e], 3) for e in D] == [0.952, 0.949, 0.943, 0.952]
+      and [W[e]['n_cells'] for e in D] == [268, 229, 269, 228] and [W[e]['n_failing'] for e in D] == [39, 62, 30, 53]
+      and [round(W[e]['min_coverage'], 3) for e in D] == [0.152, 0.316, 0.333, 0.293]
+      and [(P2[e]['n_tasks_wider'], P2[e]['of']) for e in D] == [(3, 14), (3, 12), (3, 14), (2, 12)]
+      and [P3[e]['n_cells'] for e in D] == [34, 31, 33, 30] and all(P3[e]['failing'] == [] and P3[e]['holds'] for e in D)
+    )({e: D[e]['prereg']['P1_every_reported_interval_is_honest'] for e in D}, {e: D[e]['prereg']['P1_under_the_wald_form'] for e in D},
+      {e: D[e]['prereg']['P2_the_overall_design_widens_the_classes'] for e in D}, {e: D[e]['prereg']['P3_the_adjusted_share_moves_where_it_should'] for e in D},
+      {e: min(pc['user_accuracy']['coverage'] for row in D[e]['tasks'].values() for c in row['cells'] if c['design'] == 'random' and c['interval'] == 'wilson'
+              for pc in c['per_class'].values() if pc['user_accuracy']['coverage'] is not None and pc['user_accuracy']['eligible_share'] >= 0.5) for e in D})
+    )({e: A[f'exp/out/exp81_per_class/{e}.json'] for e in ('clay_large', 'copernicusfm', 'anysat', 'croma_base')})
   cited_in:
     - {file: docs/results/comparisons.md, marker: per-class-intervals-hold-on-other-encoders}
   note: >-
-    Descriptive, the same code and seeds as the graded Base run on each encoder's seed-0 export; the counts come from
-    the graded blocks, which `--stage grade` recomputes from the per-cell coverages.
+    Descriptive, the same code and seeds as the graded Base run on each encoder's seed-0 export; the random-design
+    cells were rerun on 23 September under the sixth amendment (`--designs random --merge`), the confidence-design
+    cells carried over unchanged. Under the grading that took every class, one CROMA Base cell with fewer than 30
+    expected reference labels (So2Sat class 7) sat at 0.755 against 0.80.
 
 - id: boundary-cue-weakens-with-the-window-grain
   statement: "On OlmoEarth Base's export coarsened to 2 x 2 and 4 x 4 blocks (majority decision and reference per block, the tool's boundary indicator on the coarse grid) the boundary cue's enrichment and risk ratio fall on all seven segmentation tasks at both steps (cashew 1.24, 1.08, 1.04 and 2.14, 1.50, 1.30) and the prevalence rises on six of seven; at 4 x 4 the cashew map has 0.896 of its windows on a boundary; across the 21 (task, grain) cells the enrichment's rank correlation with the prevalence ceiling is 0.987; the addendum's G1 and G3 bars fail (0.896 against 0.90; a risk ratio of 1.2999 against 1.3) and G2 holds."

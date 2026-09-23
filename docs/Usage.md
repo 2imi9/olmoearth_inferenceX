@@ -144,9 +144,11 @@ not the design's, is refused.
 the reviewer saw in each window, in the map's class ids), `estimate --per-class` adds what the map-accuracy
 literature says a producer owes: per class, the user's accuracy (of the windows the map calls it, how many are
 it), the producer's accuracy (of the windows that are it, how many the map found) and the error-adjusted share
-of the map that is it, each with an interval, from the same labelled sample (exp81; Wilson intervals on the
-effective sample size, since the field's Wald form collapses to a point whenever a class shows no sampled error
-and covered as little as 30% of draws on the suite). A class with fewer than 30 labelled windows is reported with
+of the map that is it, each with an interval, from the same labelled sample (exp81; from a random sample the
+user's accuracy has an exact hypergeometric interval, covering at least 95% by construction, and the other
+quantities Wilson intervals on the effective sample size, since the field's Wald form collapses to a point
+whenever a class shows no sampled error and covered as little as 2% of draws on the suite). A class with fewer
+than 30 labelled windows is reported with
 a warning, and so is a class the confidence design samples thinly or one nearly all of whose windows are
 labelled. `certify` needs a **random** sample (`--design random`; a stratified or tile draw is refused, because
 the guarantee rests on the labels inside each zone being a random draw of that zone) and an error rate
