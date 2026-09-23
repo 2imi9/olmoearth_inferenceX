@@ -2533,11 +2533,11 @@ panels need 224 and 261, and the first run's hidden shares were snapshots (0.45 
 old cap and are marked as such in its section.
 
 **What this changes.** A panel of encoders from different families does not estimate a map's accuracy without
-labels: the level is inflated everywhere by a share of the error mass the tool can now state (0.0 to 0.4 on the
-multi-class maps, 0.7 to 0.8 on the binary flood map), and the order is recoverable only where the true gaps
-between encoders exceed a chip-level standard error of about 0.01. `compare`'s "why errors are shared" gains
-that number; nothing else in the tool changes, and the front page's sentence that an error rate needs a
-reference stands.
+labels: the level is inflated everywhere by a share of the error mass this record can state for these panels
+(0.0 to 0.4 on the multi-class maps, 0.7 to 0.8 on the binary flood map) and a user cannot, since the share
+needs labels; the order is recoverable only where the true gaps between encoders exceed a chip-level standard
+error of about 0.01. Nothing in the tool changes: `reliability.dawid_skene` keeps its one documented use, the
+front page's sentence that an error rate needs a reference stands, and the panel is now a second reason for it.
 
 ## The ceiling belongs to the task, not to the model (from exp74 and exp70)
 
