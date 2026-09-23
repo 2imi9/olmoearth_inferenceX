@@ -117,6 +117,12 @@ the sections are in `docs/results/comparisons.md`.
   inflated everywhere and the order is recovered only where the true gaps are large (PASTIS, not MADOS or the
   flood split). The audit found the estimator stopping at 50 iterations where 224 and 261 were needed; fixed
   before recording. The front page's sentence that an error rate needs a reference stands, with a second reason.
+- **exp85, the model-assisted arm.** The map's confidence as an error predictor, corrected by the labels, is
+  exact and honest and narrows the interval 7–16% under a random sample, with a coefficient that lands at 1; once
+  the confidence design has stratified it adds 2% of width for half a point of coverage, so by the page's own rule
+  it does not ship. Two of my predictions failed (the calibration-gap argument was a category error; the 1.8×
+  bound was an exp78 prediction that had already failed), and the audit found the tuning floor letting the
+  per-stratum coefficient explode on small strata; fixed before recording.
 - **exp84** is preregistered on the fifteen other encoders' seeds and runs as their exports land; exp79's
   OlmoEarth Base export passed the record's gate on all 24 tasks on the B200 and the margin's lead survived all
   ten seeds on every task, with the GPU's contribution measured beside the seed's (`exp/out/exp79_engine/`).
