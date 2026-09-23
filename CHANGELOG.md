@@ -39,7 +39,9 @@
   is right against one reference is refused unless the reference's date is given (`labels_date`,
   `--labels-date`), and `graded.graded_against` then says which map the labels match in time. Undated comparisons
   run as before and say their dates were not given. A user asked why `compare` would call either map right when
-  the landscape itself changed between the dates; until now nothing in the tool noticed, and an agent had to.
+  the landscape itself changed between the dates; until now nothing in the tool noticed, and an agent had to. A
+  date string is read whole (trailing characters are refused), a month or year `datetime64` is its whole period,
+  and a time with an offset is read in UTC, so one instant written in two time zones is one time.
 - `reliability.dawid_skene` (moved from `evidence`, which needed torch for nothing it used): the EM now runs to
   its stopping rule (largest posterior change below 1e-6) with a cap of 1,000 and can report whether it converged.
   Until now the cap was 50 iterations; on the suite's 15- and 19-class encoder panels the stop needs 224 and 261,

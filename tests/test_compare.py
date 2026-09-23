@@ -501,3 +501,20 @@ def test_across_dates_which_side_needs_the_labels_date_and_says_what_it_graded()
     assert back["dates"]["status"] == "different_time" and back["dates"]["labels"] == "2018-03-11"
     with pytest.raises(ValueError):
         compare_inferences(a, b, ok, dates="2018-03-11")
+
+
+def test_dates_the_second_audit_found_misread():
+    """Trailing characters are refused, not cut off; a month or year datetime64 is the whole period; a time with
+    an offset is read in UTC, so one instant written in two zones is one time."""
+    import datetime as dt
+    from oe_inferencex.compare import dates_reading
+    for bad in ("2020-01-011", "2020-01-01garbage", "2020-01-01/", "/2020-01-01"):
+        with pytest.raises(ValueError):
+            dates_reading(bad, "2020-01-01")
+    assert dates_reading(np.datetime64("2020-06"), "2020-06-15")["status"] == "overlapping_time"
+    assert dates_reading(np.datetime64("2020"), "2020-01-01/2020-12-31")["status"] == "same_time"
+    assert dates_reading(np.datetime64("2020-06"), "2020-07-01")["days_apart"] == 1
+    assert dates_reading("2020-03-01T23:00:00-05:00", "2020-03-02T04:00:00Z")["status"] == "same_time"
+    east = dt.datetime(2020, 3, 1, 23, tzinfo=dt.timezone(dt.timedelta(hours=-5)))
+    assert dates_reading(east, "2020-03-02")["status"] == "same_time"
+    assert dates_reading(dt.datetime(2020, 3, 1, 23), "2020-03-01")["status"] == "same_time"       # naive: its own date

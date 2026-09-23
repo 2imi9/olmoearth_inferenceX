@@ -227,28 +227,55 @@ def which_side(a, b, labels, ok):
             "share_a_right": ar / nd if nd else NAN, "share_b_right": br / nd if nd else NAN}
 
 
+def _utc_day(t):
+    """The calendar date of a datetime, read in UTC when it carries an offset (satellite acquisition times are UTC)."""
+    import datetime as dt
+    if t.tzinfo is not None:
+        t = t.astimezone(dt.timezone.utc)
+    return t.date()
+
+
+def _iso_day(text, name, raw):
+    """One ISO date or date-time string, whole: trailing characters are an error, not something to cut off."""
+    import datetime as dt
+    try:
+        return dt.date.fromisoformat(text)
+    except ValueError:
+        pass
+    try:
+        return _utc_day(dt.datetime.fromisoformat(text))
+    except ValueError:
+        raise ValueError(f"{name}: {raw!r} is not an ISO date (YYYY-MM-DD) or interval (YYYY-MM-DD/YYYY-MM-DD)") from None
+
+
 def _period(x, name):
-    """A date or a period as (start, end), both datetime.date, inclusive. Accepts a datetime.date or datetime, a
-    numpy datetime64, an ISO date string ('2018-03-11', a time part is ignored) or an ISO interval of two dates
-    ('2020-01-01/2020-12-31', for a composite or an annual map)."""
+    """A date or a period as (start, end), both datetime.date, inclusive. Accepts a datetime.date or datetime (one
+    with an offset is read in UTC), a numpy datetime64 (a month or year value is the whole month or year), an ISO
+    date or date-time string ('2018-03-11', '2018-03-11T10:15:00Z') or an ISO interval of two ('2020-01-01/2020-12-31',
+    for a composite or an annual map). The second audit of 23 September found the first version cutting strings to
+    ten characters, reading a month as its first day and a time with an offset in local time; all three are fixed."""
     import datetime as dt
     if x is None:
         return None
     if isinstance(x, np.datetime64):
-        x = str(np.datetime64(x, "D"))
+        unit = np.datetime_data(x.dtype)[0]
+        if unit in ("Y", "M", "W"):                                   # a coarse value denotes its whole period
+            start = x.astype("datetime64[D]")
+            end = (x + np.timedelta64(1, unit)).astype("datetime64[D]") - np.timedelta64(1, "D")
+            return start.astype(object), end.astype(object)
+        day = x.astype("datetime64[D]").astype(object)
+        return day, day
     if isinstance(x, dt.datetime):
-        x = x.date()
+        day = _utc_day(x)
+        return day, day
     if isinstance(x, dt.date):
         return x, x
     if not isinstance(x, str):
         raise TypeError(f"{name}: a date, datetime, datetime64 or ISO string, got {type(x).__name__}")
     parts = x.strip().split("/")
-    if len(parts) > 2:
+    if len(parts) > 2 or not all(p.strip() for p in parts):
         raise ValueError(f"{name}: {x!r} is neither a date nor a start/end interval")
-    try:
-        days = [dt.date.fromisoformat(p.strip()[:10]) for p in parts]
-    except ValueError:
-        raise ValueError(f"{name}: {x!r} is not an ISO date (YYYY-MM-DD) or interval (YYYY-MM-DD/YYYY-MM-DD)") from None
+    days = [_iso_day(p.strip(), name, x) for p in parts]
     start, end = days[0], days[-1]
     if end < start:
         raise ValueError(f"{name}: the interval {x!r} ends before it starts")
