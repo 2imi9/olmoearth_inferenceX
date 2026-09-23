@@ -166,3 +166,14 @@ segmentation tasks alone. And the export stage keeps a float32 copy of the train
 and makes one of the test embeddings per seed, so the largest-D encoders may exceed the 200 GB requested on
 m-SA-crop-type; if one does, item 1 above is what makes that a named gate failure instead of a smaller
 denominator, and that (encoder, task) is rerun alone with more memory.
+
+**P5's second clause, restated on 23 September before the remaining encoders land.** exp81's audit showed that
+a rule passing a cell because its Monte Carlo coverage matches the exact coverage of the same interval cannot
+detect a defect in the interval itself: the Monte Carlo of a deterministic interval always converges to that
+interval's exact coverage, so the clause tests the sampler and the harness, not the interval. It hid a
+finite-population defect in `wilson_interval` for a night on exp81's per-class cells. P5 keeps the clause for
+what it does test, but a cell that holds only through it is reported beside the verdict as the interval's own
+shortfall, with its (N, K, B) and exact value, and is never counted as the estimator being honest there. At the
+time of writing no cell has used it: 35 cells on five encoders, the lowest at 0.933. At this study's sampling
+fractions (300 of at least 12,800 windows) the finite-population forms of 22 and 23 September give identical
+exact coverage on every recorded cell.

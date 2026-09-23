@@ -26,6 +26,10 @@
    "clay_large",
    "copernicusfm",
    "croma_base",
+   "croma_large",
+   "galileo_base",
+   "galileo_nano",
+   "galileo_tiny",
    "olmoearth_base"
   ]
  },
@@ -115,6 +119,114 @@
     "headroom_recorded": 0.6580717202335331,
     "headroom_abs_diff": 0.0
    },
+   "croma_large": {
+    "holds": false,
+    "n_tasks_recorded": 21,
+    "n_tasks_exported": 21,
+    "missing_from_export": [],
+    "not_in_record": [],
+    "absent_reasons": [
+     {
+      "task": "m_forestnet",
+      "reason": "RemoteEntryNotFoundError: 404 Client Error. (Request ID: Root=1-6ab3ae1a-158939356f1b16ee6ea2c135;89bd9d14-5620-4452-970d-6039abf74d81)\n\nEntry Not Found for url: https://huggingface.co/d"
+     },
+     {
+      "task": "awf_landsat",
+      "reason": "RemoteEntryNotFoundError: 404 Client Error. (Request ID: Root=1-6ab3ae4e-1edb2f6e3803b00a66617da1;3d835a42-092a-4651-93c4-84e177a29322)\n\nEntry Not Found for url: https://huggingface.co/d"
+     },
+     {
+      "task": "nandi_landsat",
+      "reason": "RemoteEntryNotFoundError: 404 Client Error. (Request ID: Root=1-6ab3ae56-271835761e9fffcf03742f63;cd4ecdf8-7b30-4226-af28-66b58b4e32ca)\n\nEntry Not Found for url: https://huggingface.co/d"
+     }
+    ],
+    "max_abs_diff": 0.0004186308155886831,
+    "failing": [
+     "m_cashew_plant",
+     "pastis_sentinel1",
+     "pastis_sentinel1_sentinel2"
+    ],
+    "headroom_seed0": 0.6690834464594277,
+    "headroom_recorded": 0.6690834464594277,
+    "headroom_abs_diff": 0.0
+   },
+   "galileo_base": {
+    "holds": true,
+    "n_tasks_recorded": 21,
+    "n_tasks_exported": 21,
+    "missing_from_export": [],
+    "not_in_record": [],
+    "absent_reasons": [
+     {
+      "task": "m_forestnet",
+      "reason": "RemoteEntryNotFoundError: 404 Client Error. (Request ID: Root=1-6ab3ba28-5d822032512d179e346f0d67;f172a74c-5f20-4db9-acd9-73b530bd5eb6)\n\nEntry Not Found for url: https://huggingface.co/d"
+     },
+     {
+      "task": "awf_landsat",
+      "reason": "RemoteEntryNotFoundError: 404 Client Error. (Request ID: Root=1-6ab3ba5b-077b77a83a64cad132b1faa2;f5702129-7c81-4662-b4bb-b67225bc0fa1)\n\nEntry Not Found for url: https://huggingface.co/d"
+     },
+     {
+      "task": "nandi_landsat",
+      "reason": "RemoteEntryNotFoundError: 404 Client Error. (Request ID: Root=1-6ab3ba63-3e450bc272fbba13790e71a7;b80f44ca-2f7c-4d08-b7c1-b66ae3254740)\n\nEntry Not Found for url: https://huggingface.co/d"
+     }
+    ],
+    "max_abs_diff": 1.1102230246251565e-16,
+    "failing": [],
+    "headroom_seed0": 0.6801633322841558,
+    "headroom_recorded": 0.6801633312960305,
+    "headroom_abs_diff": 9.881253593135852e-10
+   },
+   "galileo_nano": {
+    "holds": true,
+    "n_tasks_recorded": 21,
+    "n_tasks_exported": 21,
+    "missing_from_export": [],
+    "not_in_record": [],
+    "absent_reasons": [
+     {
+      "task": "m_forestnet",
+      "reason": "RemoteEntryNotFoundError: 404 Client Error. (Request ID: Root=1-6ab3cbd2-70a5a3fc04354fff104f63d9;f2a348fd-b146-4f9a-988d-94a78a8a8c56)\n\nEntry Not Found for url: https://huggingface.co/d"
+     },
+     {
+      "task": "awf_landsat",
+      "reason": "RemoteEntryNotFoundError: 404 Client Error. (Request ID: Root=1-6ab3cc02-5893002737f4e5f47191053f;ce060e87-88b1-46ee-93f5-cf399da194fd)\n\nEntry Not Found for url: https://huggingface.co/d"
+     },
+     {
+      "task": "nandi_landsat",
+      "reason": "RemoteEntryNotFoundError: 404 Client Error. (Request ID: Root=1-6ab3cc09-1108752159b42db97eb606ed;9e40a884-cbf2-4cdc-a7a8-af74e1f5a55e)\n\nEntry Not Found for url: https://huggingface.co/d"
+     }
+    ],
+    "max_abs_diff": 1.1102230246251565e-16,
+    "failing": [],
+    "headroom_seed0": 0.6073109470689437,
+    "headroom_recorded": 0.6073109475461778,
+    "headroom_abs_diff": 4.77234030071827e-10
+   },
+   "galileo_tiny": {
+    "holds": true,
+    "n_tasks_recorded": 21,
+    "n_tasks_exported": 21,
+    "missing_from_export": [],
+    "not_in_record": [],
+    "absent_reasons": [
+     {
+      "task": "m_forestnet",
+      "reason": "RemoteEntryNotFoundError: 404 Client Error. (Request ID: Root=1-6ab3d2ba-3b684fe3021187fb05e6d86b;3c912947-b13b-4ec1-b56d-ff7f440cc75e)\n\nEntry Not Found for url: https://huggingface.co/d"
+     },
+     {
+      "task": "awf_landsat",
+      "reason": "RemoteEntryNotFoundError: 404 Client Error. (Request ID: Root=1-6ab3d2ea-595b8ce65d8525ba4595aa88;2ed6312a-ac72-4244-9ac3-422a30a1f811)\n\nEntry Not Found for url: https://huggingface.co/d"
+     },
+     {
+      "task": "nandi_landsat",
+      "reason": "RemoteEntryNotFoundError: 404 Client Error. (Request ID: Root=1-6ab3d2f1-47d543f93b4bea160166ea66;d0722c42-fd68-4679-82a1-cb7155be394c)\n\nEntry Not Found for url: https://huggingface.co/d"
+     }
+    ],
+    "max_abs_diff": 1.1102230246251565e-16,
+    "failing": [],
+    "headroom_seed0": 0.6524159901796576,
+    "headroom_recorded": 0.6524159913164334,
+    "headroom_abs_diff": 1.1367757846159066e-09
+   },
    "olmoearth_base": {
     "holds": true,
     "n_tasks_recorded": 24,
@@ -131,13 +243,10 @@
   },
   "encoders_failing": [
    "copernicusfm",
-   "croma_base"
+   "croma_base",
+   "croma_large"
   ],
   "encoders_missing": [
-   "croma_large",
-   "galileo_base",
-   "galileo_nano",
-   "galileo_tiny",
    "olmoearth_large",
    "olmoearth_nano",
    "olmoearth_tiny",
@@ -146,20 +255,16 @@
    "terramind_base",
    "terramind_large"
   ],
-  "n_encoders": 5,
+  "n_encoders": 9,
   "of": 16
  },
  "prereg_A": {
   "P1_headline_survives_reseeding": {
    "holds": false,
-   "n_encoders": 5,
+   "n_encoders": 9,
    "of": 16,
    "n_seeds": 10,
    "encoders_missing": [
-    "croma_large",
-    "galileo_base",
-    "galileo_nano",
-    "galileo_tiny",
     "olmoearth_large",
     "olmoearth_nano",
     "olmoearth_tiny",
@@ -175,6 +280,10 @@
     "clay_large": 0.875,
     "copernicusfm": 0.9523809523809523,
     "croma_base": 0.9523809523809523,
+    "croma_large": 1.0,
+    "galileo_base": 0.9523809523809523,
+    "galileo_nano": 0.9523809523809523,
+    "galileo_tiny": 0.9047619047619048,
     "olmoearth_base": 1.0
    },
    "min_wins": {
@@ -182,11 +291,16 @@
     "clay_large": 21,
     "copernicusfm": 20,
     "croma_base": 20,
+    "croma_large": 21,
+    "galileo_base": 20,
+    "galileo_nano": 20,
+    "galileo_tiny": 19,
     "olmoearth_base": 24
    },
    "not_comparable_to_record": [
     "copernicusfm",
-    "croma_base"
+    "croma_base",
+    "croma_large"
    ]
   },
   "P2_which_wins_are_noise": {
@@ -417,16 +531,13 @@
    },
    "not_comparable_to_record": [
     "copernicusfm",
-    "croma_base"
+    "croma_base",
+    "croma_large"
    ]
   },
   "P3_encoder_ordering_stable_in_sets": {
    "holds": false,
    "encoders_missing": [
-    "croma_large",
-    "galileo_base",
-    "galileo_nano",
-    "galileo_tiny",
     "olmoearth_large",
     "olmoearth_nano",
     "olmoearth_tiny",
@@ -454,9 +565,13 @@
     "satlas_base"
    ],
    "seed0_order": [
+    "galileo_base",
     "olmoearth_base",
+    "croma_large",
     "croma_base",
+    "galileo_tiny",
     "copernicusfm",
+    "galileo_nano",
     "clay_large",
     "anysat"
    ],
@@ -469,19 +584,19 @@
     "anysat",
     "satlas_base"
    ],
-   "min_rho": 0.8999999999999998,
+   "min_rho": 0.9333333333333332,
    "per_seed": [
     {
      "seed": 0,
-     "rho": 0.9999999999999999,
-     "best": "olmoearth_base",
+     "rho": 1.0,
+     "best": "galileo_base",
      "worst": "anysat",
      "best_in_top": true,
      "worst_in_bottom": true
     },
     {
      "seed": 1,
-     "rho": 0.8999999999999998,
+     "rho": 0.9666666666666667,
      "best": "olmoearth_base",
      "worst": "clay_large",
      "best_in_top": true,
@@ -489,7 +604,7 @@
     },
     {
      "seed": 2,
-     "rho": 0.9999999999999999,
+     "rho": 0.9833333333333333,
      "best": "olmoearth_base",
      "worst": "anysat",
      "best_in_top": true,
@@ -497,7 +612,7 @@
     },
     {
      "seed": 3,
-     "rho": 0.9999999999999999,
+     "rho": 0.9666666666666667,
      "best": "olmoearth_base",
      "worst": "anysat",
      "best_in_top": true,
@@ -505,7 +620,7 @@
     },
     {
      "seed": 4,
-     "rho": 0.8999999999999998,
+     "rho": 0.9500000000000001,
      "best": "olmoearth_base",
      "worst": "clay_large",
      "best_in_top": true,
@@ -513,7 +628,7 @@
     },
     {
      "seed": 5,
-     "rho": 0.9999999999999999,
+     "rho": 0.9666666666666667,
      "best": "olmoearth_base",
      "worst": "anysat",
      "best_in_top": true,
@@ -521,7 +636,7 @@
     },
     {
      "seed": 6,
-     "rho": 0.8999999999999998,
+     "rho": 0.9666666666666667,
      "best": "olmoearth_base",
      "worst": "clay_large",
      "best_in_top": true,
@@ -529,7 +644,7 @@
     },
     {
      "seed": 7,
-     "rho": 0.8999999999999998,
+     "rho": 0.9666666666666667,
      "best": "olmoearth_base",
      "worst": "clay_large",
      "best_in_top": true,
@@ -537,7 +652,7 @@
     },
     {
      "seed": 8,
-     "rho": 0.8999999999999998,
+     "rho": 0.9333333333333332,
      "best": "olmoearth_base",
      "worst": "clay_large",
      "best_in_top": true,
@@ -545,7 +660,7 @@
     },
     {
      "seed": 9,
-     "rho": 0.8999999999999998,
+     "rho": 0.9500000000000001,
      "best": "olmoearth_base",
      "worst": "clay_large",
      "best_in_top": true,
@@ -557,6 +672,10 @@
     "clay_large": 0.5894702767305815,
     "copernicusfm": 0.6204561708705782,
     "croma_base": 0.6580717202335331,
+    "croma_large": 0.6690834464594277,
+    "galileo_base": 0.6801633322841558,
+    "galileo_nano": 0.6073109470689437,
+    "galileo_tiny": 0.6524159901796576,
     "olmoearth_base": 0.6799869670764211
    },
    "headroom_recorded": {
@@ -579,7 +698,8 @@
    },
    "not_comparable_to_record": [
     "copernicusfm",
-    "croma_base"
+    "croma_base",
+    "croma_large"
    ]
   }
  },
@@ -591,6 +711,10 @@
    "clay_large",
    "copernicusfm",
    "croma_base",
+   "croma_large",
+   "galileo_base",
+   "galileo_nano",
+   "galileo_tiny",
    "olmoearth_base"
   ],
   "per_encoder": {
@@ -600,7 +724,7 @@
      "error_rate": 0.18864501283299406,
      "design_effect": 13.78195117204239,
      "srs_coverage": 0.949,
-     "srs_half_width": 0.043708158369357146,
+     "srs_half_width": 0.043703425044131265,
      "naive_coverage": 0.4135,
      "cluster_coverage": 0.6345,
      "exact_srs_coverage": null
@@ -610,7 +734,7 @@
      "error_rate": 0.08717134971344649,
      "design_effect": 5.9030058652661745,
      "srs_coverage": 0.938,
-     "srs_half_width": 0.03190109626727496,
+     "srs_half_width": 0.031900662850334875,
      "naive_coverage": 0.5725,
      "cluster_coverage": 0.8155,
      "exact_srs_coverage": null
@@ -620,7 +744,7 @@
      "error_rate": 0.30541516402914715,
      "design_effect": 3.083488820684899,
      "srs_coverage": 0.958,
-     "srs_half_width": 0.0517175289978136,
+     "srs_half_width": 0.0517174513930608,
      "naive_coverage": 0.747,
      "cluster_coverage": 0.925,
      "exact_srs_coverage": null
@@ -630,7 +754,7 @@
      "error_rate": 0.22809710490626595,
      "design_effect": 2.878635912046464,
      "srs_coverage": 0.946,
-     "srs_half_width": 0.04708174884254277,
+     "srs_half_width": 0.04708158295828532,
      "naive_coverage": 0.741,
      "cluster_coverage": 0.9195,
      "exact_srs_coverage": null
@@ -640,7 +764,7 @@
      "error_rate": 0.22815379449587692,
      "design_effect": 2.909026565717068,
      "srs_coverage": 0.9485,
-     "srs_half_width": 0.047096195132279264,
+     "srs_half_width": 0.04709602953765664,
      "naive_coverage": 0.731,
      "cluster_coverage": 0.9185,
      "exact_srs_coverage": null
@@ -650,7 +774,7 @@
      "error_rate": 0.300078125,
      "design_effect": 1.2605270482957742,
      "srs_coverage": 0.9495,
-     "srs_half_width": 0.05092607388460065,
+     "srs_half_width": 0.05092298252284012,
      "naive_coverage": 0.935,
      "cluster_coverage": 0.9285,
      "exact_srs_coverage": null
@@ -660,7 +784,7 @@
      "error_rate": 0.24044921875,
      "design_effect": 8.467895487705295,
      "srs_coverage": 0.9595,
-     "srs_half_width": 0.04800615288197011,
+     "srs_half_width": 0.048005888908200664,
      "naive_coverage": 0.4945,
      "cluster_coverage": 0.924,
      "exact_srs_coverage": null
@@ -672,8 +796,8 @@
      "error_rate": 0.12093990618638818,
      "design_effect": 13.103291412862047,
      "srs_coverage": 0.949,
-     "srs_half_width": 0.03657337606694545,
-     "naive_coverage": 0.363,
+     "srs_half_width": 0.0365650642972517,
+     "naive_coverage": 0.3625,
      "cluster_coverage": 0.671,
      "exact_srs_coverage": null
     },
@@ -682,7 +806,7 @@
      "error_rate": 0.08654169163635136,
      "design_effect": 5.807664778169117,
      "srs_coverage": 0.9505,
-     "srs_half_width": 0.03184736679200644,
+     "srs_half_width": 0.03184693220277355,
      "naive_coverage": 0.583,
      "cluster_coverage": 0.8235,
      "exact_srs_coverage": null
@@ -692,7 +816,7 @@
      "error_rate": 0.33894487591520983,
      "design_effect": 3.190280433563,
      "srs_coverage": 0.9565,
-     "srs_half_width": 0.053146004037431645,
+     "srs_half_width": 0.05314595185826564,
      "naive_coverage": 0.7385,
      "cluster_coverage": 0.929,
      "exact_srs_coverage": null
@@ -702,7 +826,7 @@
      "error_rate": 0.31409303197728927,
      "design_effect": 3.0663043460313832,
      "srs_coverage": 0.947,
-     "srs_half_width": 0.05212264938533794,
+     "srs_half_width": 0.0521225790731645,
      "naive_coverage": 0.721,
      "cluster_coverage": 0.917,
      "exact_srs_coverage": null
@@ -712,7 +836,7 @@
      "error_rate": 0.31823137201889073,
      "design_effect": 3.0071595765644767,
      "srs_coverage": 0.9575,
-     "srs_half_width": 0.05232604627198906,
+     "srs_half_width": 0.05232597959130102,
      "naive_coverage": 0.743,
      "cluster_coverage": 0.926,
      "exact_srs_coverage": null
@@ -722,7 +846,7 @@
      "error_rate": 0.3575439453125,
      "design_effect": 1.2141061551883277,
      "srs_coverage": 0.9495,
-     "srs_half_width": 0.053796793034030274,
+     "srs_half_width": 0.053796702007845545,
      "naive_coverage": 0.927,
      "cluster_coverage": 0.9325,
      "exact_srs_coverage": null
@@ -732,7 +856,7 @@
      "error_rate": 0.38062158203125,
      "design_effect": 3.7577842103689756,
      "srs_coverage": 0.9525,
-     "srs_half_width": 0.05452528308628943,
+     "srs_half_width": 0.054525279899139745,
      "naive_coverage": 0.69,
      "cluster_coverage": 0.9295,
      "exact_srs_coverage": null
@@ -744,7 +868,7 @@
      "error_rate": 0.078325515532348,
      "design_effect": 11.042872443614591,
      "srs_coverage": 0.9495,
-     "srs_half_width": 0.030343270396852418,
+     "srs_half_width": 0.03033088814004348,
      "naive_coverage": 0.447,
      "cluster_coverage": 0.66,
      "exact_srs_coverage": null
@@ -754,7 +878,7 @@
      "error_rate": 0.08818082834643011,
      "design_effect": 5.569765703467847,
      "srs_coverage": 0.9535,
-     "srs_half_width": 0.03212221724597938,
+     "srs_half_width": 0.032121789696143266,
      "naive_coverage": 0.6025,
      "cluster_coverage": 0.8275,
      "exact_srs_coverage": null
@@ -764,7 +888,7 @@
      "error_rate": 0.3800513694896629,
      "design_effect": 3.4002827136140663,
      "srs_coverage": 0.951,
-     "srs_half_width": 0.054473566776840836,
+     "srs_half_width": 0.054473537568936976,
      "naive_coverage": 0.7145,
      "cluster_coverage": 0.9315,
      "exact_srs_coverage": null
@@ -774,7 +898,7 @@
      "error_rate": 0.2640034188183273,
      "design_effect": 2.836477705105342,
      "srs_coverage": 0.951,
-     "srs_half_width": 0.049477659521546605,
+     "srs_half_width": 0.04947754043325833,
      "naive_coverage": 0.751,
      "cluster_coverage": 0.92,
      "exact_srs_coverage": null
@@ -784,7 +908,7 @@
      "error_rate": 0.2853230652497176,
      "design_effect": 2.870553131788753,
      "srs_coverage": 0.9435,
-     "srs_half_width": 0.05069889810674109,
+     "srs_half_width": 0.050698801904490554,
      "naive_coverage": 0.7515,
      "cluster_coverage": 0.927,
      "exact_srs_coverage": null
@@ -794,7 +918,7 @@
      "error_rate": 0.373193359375,
      "design_effect": 1.1498261416294675,
      "srs_coverage": 0.951,
-     "srs_half_width": 0.05428884723836333,
+     "srs_half_width": 0.05428877517936967,
      "naive_coverage": 0.945,
      "cluster_coverage": 0.932,
      "exact_srs_coverage": null
@@ -804,7 +928,7 @@
      "error_rate": 0.3509189453125,
      "design_effect": 3.355721033678439,
      "srs_coverage": 0.9475,
-     "srs_half_width": 0.053594783068388836,
+     "srs_half_width": 0.05359477808719346,
      "naive_coverage": 0.7195,
      "cluster_coverage": 0.926,
      "exact_srs_coverage": null
@@ -816,7 +940,7 @@
      "error_rate": 0.07713071953270201,
      "design_effect": 11.32935880289,
      "srs_coverage": 0.9585,
-     "srs_half_width": 0.030113101874561222,
+     "srs_half_width": 0.030100551865169977,
      "naive_coverage": 0.464,
      "cluster_coverage": 0.646,
      "exact_srs_coverage": null
@@ -826,7 +950,7 @@
      "error_rate": 0.08479114089654533,
      "design_effect": 5.690496534628264,
      "srs_coverage": 0.9445,
-     "srs_half_width": 0.03148634787081129,
+     "srs_half_width": 0.03148590328692215,
      "naive_coverage": 0.5825,
      "cluster_coverage": 0.8125,
      "exact_srs_coverage": null
@@ -836,7 +960,7 @@
      "error_rate": 0.30411566420575703,
      "design_effect": 2.9751678087192452,
      "srs_coverage": 0.944,
-     "srs_half_width": 0.05164439165476262,
+     "srs_half_width": 0.05164431271664259,
      "naive_coverage": 0.728,
      "cluster_coverage": 0.922,
      "exact_srs_coverage": null
@@ -846,7 +970,7 @@
      "error_rate": 0.21696414165420222,
      "design_effect": 2.762995225683102,
      "srs_coverage": 0.9545,
-     "srs_half_width": 0.046288215887716165,
+     "srs_half_width": 0.046288033897814294,
      "naive_coverage": 0.7675,
      "cluster_coverage": 0.9175,
      "exact_srs_coverage": null
@@ -856,7 +980,7 @@
      "error_rate": 0.23920826447001775,
      "design_effect": 2.7959219558969406,
      "srs_coverage": 0.948,
-     "srs_half_width": 0.04792698978977474,
+     "srs_half_width": 0.04792684072653063,
      "naive_coverage": 0.772,
      "cluster_coverage": 0.913,
      "exact_srs_coverage": null
@@ -866,7 +990,7 @@
      "error_rate": 0.406318359375,
      "design_effect": 1.1516715821304653,
      "srs_coverage": 0.945,
-     "srs_half_width": 0.05512425928688311,
+     "srs_half_width": 0.05512421904330199,
      "naive_coverage": 0.9465,
      "cluster_coverage": 0.943,
      "exact_srs_coverage": null
@@ -876,9 +1000,297 @@
      "error_rate": 0.339030029296875,
      "design_effect": 3.3011356120202553,
      "srs_coverage": 0.9515,
-     "srs_half_width": 0.053177515692203164,
+     "srs_half_width": 0.05317750989570979,
      "naive_coverage": 0.7365,
      "cluster_coverage": 0.9325,
+     "exact_srs_coverage": null
+    }
+   },
+   "croma_large": {
+    "mados": {
+     "n_units": 22598,
+     "error_rate": 0.068236127090893,
+     "design_effect": 12.910872087773216,
+     "srs_coverage": 0.9525,
+     "srs_half_width": 0.02851382279189625,
+     "naive_coverage": 0.3625,
+     "cluster_coverage": 0.6975,
+     "exact_srs_coverage": null
+    },
+    "sen1floods11": {
+     "n_units": 592385,
+     "error_rate": 0.08604032850257856,
+     "design_effect": 5.930785402345862,
+     "srs_coverage": 0.9465,
+     "srs_half_width": 0.031675552463418924,
+     "naive_coverage": 0.5935,
+     "cluster_coverage": 0.807,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel1": {
+     "n_units": 458638,
+     "error_rate": 0.30571169419018923,
+     "design_effect": 2.9612305677732627,
+     "srs_coverage": 0.9385,
+     "srs_half_width": 0.051706918634402244,
+     "naive_coverage": 0.7515,
+     "cluster_coverage": 0.9275,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel2": {
+     "n_units": 458638,
+     "error_rate": 0.22226461828282873,
+     "design_effect": 2.8174707396264473,
+     "srs_coverage": 0.9505,
+     "srs_half_width": 0.04668386304371367,
+     "naive_coverage": 0.735,
+     "cluster_coverage": 0.926,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel1_sentinel2": {
+     "n_units": 458638,
+     "error_rate": 0.23964433823625605,
+     "design_effect": 2.8202865889158955,
+     "srs_coverage": 0.9455,
+     "srs_half_width": 0.04794466235824958,
+     "naive_coverage": 0.7685,
+     "cluster_coverage": 0.9225,
+     "exact_srs_coverage": null
+    },
+    "m_cashew_plant": {
+     "n_units": 204800,
+     "error_rate": 0.3923681640625,
+     "design_effect": 1.28327270877588,
+     "srs_coverage": 0.944,
+     "srs_half_width": 0.05477904262180329,
+     "naive_coverage": 0.9365,
+     "cluster_coverage": 0.9455,
+     "exact_srs_coverage": null
+    },
+    "m_sa_crop_type": {
+     "n_units": 4096000,
+     "error_rate": 0.33795068359375,
+     "design_effect": 3.388689430051295,
+     "srs_coverage": 0.96,
+     "srs_half_width": 0.05313639924557493,
+     "naive_coverage": 0.7205,
+     "cluster_coverage": 0.93,
+     "exact_srs_coverage": null
+    }
+   },
+   "galileo_base": {
+    "mados": {
+     "n_units": 22598,
+     "error_rate": 0.0620851402779007,
+     "design_effect": 9.275711520903538,
+     "srs_coverage": 0.9355,
+     "srs_half_width": 0.027299080141643787,
+     "naive_coverage": 0.3925,
+     "cluster_coverage": 0.7295,
+     "exact_srs_coverage": null
+    },
+    "sen1floods11": {
+     "n_units": 592385,
+     "error_rate": 0.08336470369776412,
+     "design_effect": 5.519897166776467,
+     "srs_coverage": 0.9445,
+     "srs_half_width": 0.03128853164117394,
+     "naive_coverage": 0.621,
+     "cluster_coverage": 0.8285,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel1": {
+     "n_units": 458638,
+     "error_rate": 0.29522630048098936,
+     "design_effect": 2.9708957315826745,
+     "srs_coverage": 0.9475,
+     "srs_half_width": 0.05123089571522951,
+     "naive_coverage": 0.768,
+     "cluster_coverage": 0.9265,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel2": {
+     "n_units": 458638,
+     "error_rate": 0.227927036137433,
+     "design_effect": 2.83234686889916,
+     "srs_coverage": 0.9525,
+     "srs_half_width": 0.047120953362436234,
+     "naive_coverage": 0.77,
+     "cluster_coverage": 0.9165,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel1_sentinel2": {
+     "n_units": 458638,
+     "error_rate": 0.24852061974803658,
+     "design_effect": 2.801747758205944,
+     "srs_coverage": 0.9565,
+     "srs_half_width": 0.04856781568586258,
+     "naive_coverage": 0.752,
+     "cluster_coverage": 0.9255,
+     "exact_srs_coverage": null
+    },
+    "m_cashew_plant": {
+     "n_units": 204800,
+     "error_rate": 0.3588671875,
+     "design_effect": 1.207860047829442,
+     "srs_coverage": 0.938,
+     "srs_half_width": 0.053827769984459505,
+     "naive_coverage": 0.937,
+     "cluster_coverage": 0.928,
+     "exact_srs_coverage": null
+    },
+    "m_sa_crop_type": {
+     "n_units": 4096000,
+     "error_rate": 0.361692138671875,
+     "design_effect": 3.5299247765444868,
+     "srs_coverage": 0.9515,
+     "srs_half_width": 0.053967171820494736,
+     "naive_coverage": 0.711,
+     "cluster_coverage": 0.928,
+     "exact_srs_coverage": null
+    }
+   },
+   "galileo_nano": {
+    "mados": {
+     "n_units": 22598,
+     "error_rate": 0.13673776440392954,
+     "design_effect": 10.843876690519503,
+     "srs_coverage": 0.936,
+     "srs_half_width": 0.03850539443255852,
+     "naive_coverage": 0.3885,
+     "cluster_coverage": 0.6565,
+     "exact_srs_coverage": null
+    },
+    "sen1floods11": {
+     "n_units": 592385,
+     "error_rate": 0.08723549718510766,
+     "design_effect": 5.542337387254863,
+     "srs_coverage": 0.947,
+     "srs_half_width": 0.03195507953551676,
+     "naive_coverage": 0.5955,
+     "cluster_coverage": 0.8275,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel1": {
+     "n_units": 458638,
+     "error_rate": 0.34782769853348394,
+     "design_effect": 3.1280929533385553,
+     "srs_coverage": 0.952,
+     "srs_half_width": 0.053478582962681216,
+     "naive_coverage": 0.7385,
+     "cluster_coverage": 0.926,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel2": {
+     "n_units": 458638,
+     "error_rate": 0.3271076535306712,
+     "design_effect": 2.9747934524517565,
+     "srs_coverage": 0.9475,
+     "srs_half_width": 0.052655507080333654,
+     "naive_coverage": 0.7335,
+     "cluster_coverage": 0.92,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel1_sentinel2": {
+     "n_units": 458638,
+     "error_rate": 0.3299835600190128,
+     "design_effect": 3.0197337464994276,
+     "srs_coverage": 0.9415,
+     "srs_half_width": 0.052821494078881745,
+     "naive_coverage": 0.736,
+     "cluster_coverage": 0.926,
+     "exact_srs_coverage": null
+    },
+    "m_cashew_plant": {
+     "n_units": 204800,
+     "error_rate": 0.3742138671875,
+     "design_effect": 1.1823303611161329,
+     "srs_coverage": 0.9455,
+     "srs_half_width": 0.054303038275975705,
+     "naive_coverage": 0.9465,
+     "cluster_coverage": 0.933,
+     "exact_srs_coverage": null
+    },
+    "m_sa_crop_type": {
+     "n_units": 4096000,
+     "error_rate": 0.404595458984375,
+     "design_effect": 3.8961285117655766,
+     "srs_coverage": 0.9525,
+     "srs_half_width": 0.0551093707488092,
+     "naive_coverage": 0.689,
+     "cluster_coverage": 0.937,
+     "exact_srs_coverage": null
+    }
+   },
+   "galileo_tiny": {
+    "mados": {
+     "n_units": 22598,
+     "error_rate": 0.0754934064961501,
+     "design_effect": 10.57494358630698,
+     "srs_coverage": 0.9525,
+     "srs_half_width": 0.029875345951113474,
+     "naive_coverage": 0.36,
+     "cluster_coverage": 0.7425,
+     "exact_srs_coverage": null
+    },
+    "sen1floods11": {
+     "n_units": 592385,
+     "error_rate": 0.08679828152299603,
+     "design_effect": 5.755179021931133,
+     "srs_coverage": 0.94,
+     "srs_half_width": 0.03185812903710431,
+     "naive_coverage": 0.5895,
+     "cluster_coverage": 0.823,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel1": {
+     "n_units": 458638,
+     "error_rate": 0.3253764406787052,
+     "design_effect": 3.034009850714176,
+     "srs_coverage": 0.9505,
+     "srs_half_width": 0.05260453372207274,
+     "naive_coverage": 0.733,
+     "cluster_coverage": 0.9205,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel2": {
+     "n_units": 458638,
+     "error_rate": 0.27505570842363697,
+     "design_effect": 2.961653225804292,
+     "srs_coverage": 0.9495,
+     "srs_half_width": 0.05014225449337028,
+     "naive_coverage": 0.7555,
+     "cluster_coverage": 0.9205,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel1_sentinel2": {
+     "n_units": 458638,
+     "error_rate": 0.286408888927651,
+     "design_effect": 2.9958392439225143,
+     "srs_coverage": 0.956,
+     "srs_half_width": 0.05077354455462876,
+     "naive_coverage": 0.7465,
+     "cluster_coverage": 0.931,
+     "exact_srs_coverage": null
+    },
+    "m_cashew_plant": {
+     "n_units": 204800,
+     "error_rate": 0.37232421875,
+     "design_effect": 1.2246333358635264,
+     "srs_coverage": 0.9505,
+     "srs_half_width": 0.054255050120789454,
+     "naive_coverage": 0.934,
+     "cluster_coverage": 0.928,
+     "exact_srs_coverage": null
+    },
+    "m_sa_crop_type": {
+     "n_units": 4096000,
+     "error_rate": 0.389411376953125,
+     "design_effect": 3.739621900648597,
+     "srs_coverage": 0.9455,
+     "srs_half_width": 0.054746224207340446,
+     "naive_coverage": 0.7185,
+     "cluster_coverage": 0.9315,
      "exact_srs_coverage": null
     }
    },
@@ -888,8 +1300,8 @@
      "error_rate": 0.07359058323745464,
      "design_effect": 9.774605372492182,
      "srs_coverage": 0.933,
-     "srs_half_width": 0.029430171889612826,
-     "naive_coverage": 0.5065,
+     "srs_half_width": 0.029417068297414847,
+     "naive_coverage": 0.505,
      "cluster_coverage": 0.598,
      "exact_srs_coverage": null
     },
@@ -898,7 +1310,7 @@
      "error_rate": 0.0845176700963056,
      "design_effect": 5.561635225750122,
      "srs_coverage": 0.9485,
-     "srs_half_width": 0.03145310364330604,
+     "srs_half_width": 0.03145265824473752,
      "naive_coverage": 0.5775,
      "cluster_coverage": 0.8165,
      "exact_srs_coverage": null
@@ -908,7 +1320,7 @@
      "error_rate": 0.28434626001334384,
      "design_effect": 2.9419455686595803,
      "srs_coverage": 0.9565,
-     "srs_half_width": 0.0506647535210794,
+     "srs_half_width": 0.05066465669073769,
      "naive_coverage": 0.7315,
      "cluster_coverage": 0.934,
      "exact_srs_coverage": null
@@ -918,7 +1330,7 @@
      "error_rate": 0.1900562099084681,
      "design_effect": 2.7039119446055624,
      "srs_coverage": 0.95,
-     "srs_half_width": 0.04410508257580218,
+     "srs_half_width": 0.044104854392103016,
      "naive_coverage": 0.7595,
      "cluster_coverage": 0.917,
      "exact_srs_coverage": null
@@ -928,7 +1340,7 @@
      "error_rate": 0.19483993912410225,
      "design_effect": 2.703288932045452,
      "srs_coverage": 0.945,
-     "srs_half_width": 0.04453368576064958,
+     "srs_half_width": 0.044533466937256405,
      "naive_coverage": 0.777,
      "cluster_coverage": 0.913,
      "exact_srs_coverage": null
@@ -938,7 +1350,7 @@
      "error_rate": 0.3472119140625,
      "design_effect": 1.16558383304416,
      "srs_coverage": 0.948,
-     "srs_half_width": 0.05345668650443025,
+     "srs_half_width": 0.05345658222954372,
      "naive_coverage": 0.9395,
      "cluster_coverage": 0.9355,
      "exact_srs_coverage": null
@@ -948,7 +1360,7 @@
      "error_rate": 0.34003271484375,
      "design_effect": 3.4357991679093667,
      "srs_coverage": 0.961,
-     "srs_half_width": 0.05319402242261021,
+     "srs_half_width": 0.053194016658223535,
      "naive_coverage": 0.7045,
      "cluster_coverage": 0.9315,
      "exact_srs_coverage": null
@@ -959,8 +1371,8 @@
  "prereg_B": {
   "P4_naive_failure_belongs_to_the_task": {
    "holds": false,
-   "n_encoders_holding": 5,
-   "of": 5,
+   "n_encoders_holding": 9,
+   "of": 9,
    "per_encoder": {
     "anysat": {
      "carried": 7,
@@ -1006,6 +1418,50 @@
      "median_design_effect": 2.9751678087192452,
      "holds": true
     },
+    "croma_large": {
+     "carried": 7,
+     "present": 7,
+     "missing": [],
+     "under_covering": 6,
+     "exceptions": [
+      "m_cashew_plant"
+     ],
+     "median_design_effect": 2.9612305677732627,
+     "holds": true
+    },
+    "galileo_base": {
+     "carried": 7,
+     "present": 7,
+     "missing": [],
+     "under_covering": 6,
+     "exceptions": [
+      "m_cashew_plant"
+     ],
+     "median_design_effect": 2.9708957315826745,
+     "holds": true
+    },
+    "galileo_nano": {
+     "carried": 7,
+     "present": 7,
+     "missing": [],
+     "under_covering": 6,
+     "exceptions": [
+      "m_cashew_plant"
+     ],
+     "median_design_effect": 3.1280929533385553,
+     "holds": true
+    },
+    "galileo_tiny": {
+     "carried": 7,
+     "present": 7,
+     "missing": [],
+     "under_covering": 6,
+     "exceptions": [
+      "m_cashew_plant"
+     ],
+     "median_design_effect": 3.034009850714176,
+     "holds": true
+    },
     "olmoearth_base": {
      "carried": 7,
      "present": 7,
@@ -1022,121 +1478,9 @@
   },
   "P5_estimator_honest_everywhere": {
    "holds": false,
-   "n_cells": 35,
+   "n_cells": 63,
    "of": 111,
    "cells_missing": [
-    [
-     "croma_large",
-     "m_cashew_plant"
-    ],
-    [
-     "croma_large",
-     "m_sa_crop_type"
-    ],
-    [
-     "croma_large",
-     "mados"
-    ],
-    [
-     "croma_large",
-     "pastis_sentinel1"
-    ],
-    [
-     "croma_large",
-     "pastis_sentinel1_sentinel2"
-    ],
-    [
-     "croma_large",
-     "pastis_sentinel2"
-    ],
-    [
-     "croma_large",
-     "sen1floods11"
-    ],
-    [
-     "galileo_base",
-     "m_cashew_plant"
-    ],
-    [
-     "galileo_base",
-     "m_sa_crop_type"
-    ],
-    [
-     "galileo_base",
-     "mados"
-    ],
-    [
-     "galileo_base",
-     "pastis_sentinel1"
-    ],
-    [
-     "galileo_base",
-     "pastis_sentinel1_sentinel2"
-    ],
-    [
-     "galileo_base",
-     "pastis_sentinel2"
-    ],
-    [
-     "galileo_base",
-     "sen1floods11"
-    ],
-    [
-     "galileo_nano",
-     "m_cashew_plant"
-    ],
-    [
-     "galileo_nano",
-     "m_sa_crop_type"
-    ],
-    [
-     "galileo_nano",
-     "mados"
-    ],
-    [
-     "galileo_nano",
-     "pastis_sentinel1"
-    ],
-    [
-     "galileo_nano",
-     "pastis_sentinel1_sentinel2"
-    ],
-    [
-     "galileo_nano",
-     "pastis_sentinel2"
-    ],
-    [
-     "galileo_nano",
-     "sen1floods11"
-    ],
-    [
-     "galileo_tiny",
-     "m_cashew_plant"
-    ],
-    [
-     "galileo_tiny",
-     "m_sa_crop_type"
-    ],
-    [
-     "galileo_tiny",
-     "mados"
-    ],
-    [
-     "galileo_tiny",
-     "pastis_sentinel1"
-    ],
-    [
-     "galileo_tiny",
-     "pastis_sentinel1_sentinel2"
-    ],
-    [
-     "galileo_tiny",
-     "pastis_sentinel2"
-    ],
-    [
-     "galileo_tiny",
-     "sen1floods11"
-    ],
     [
      "olmoearth_large",
      "m_cashew_plant"

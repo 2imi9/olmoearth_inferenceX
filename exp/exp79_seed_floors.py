@@ -368,8 +368,11 @@ def grade_p5(per_encoder_rows, expected=None):
         for t, r in rows.items():
             c, ex = r["srs_coverage"], r.get("exact_srs_coverage")
             ok = c >= P5_COVER or (ex is not None and c >= ex - p5_tolerance(ex))
+            # the second clause tests the sampler, not the interval (restated 2026-09-23): a cell held only by it is
+            # the interval's own shortfall and is reported as such
             cells.append({"encoder": enc, "task": t, "coverage": c, "exact": ex, "holds": ok,
-                          "tolerance": None if ex is None else p5_tolerance(ex)})
+                          "tolerance": None if ex is None else p5_tolerance(ex),
+                          "interval_shortfall": bool(c < P5_COVER and ok)})
             if not ok:
                 bad.append((enc, t))
     have = {(c["encoder"], c["task"]) for c in cells}
