@@ -3770,3 +3770,28 @@
   note: >-
     The coarse grid's confidence is the mean fine margin, a proxy used only for the low-confidence cue, which this
     claim does not read. The monotone statement is the recordable one; the bars are recorded as they fell.
+
+- id: rare-error-warning-marks-the-misses
+  statement: "On the nine rare-error cells of exp81's OlmoEarth Base record, the 'few errors' warning (a per-class interval resting on one to four sampled errors of the kind it counts) fires on 1,081 of the 1,351 draws whose interval misses the truth (0.800 against a preregistered 0.80), on 796 of 800 on EuroSAT and MADOS and 285 of 551 on Brick Kiln and Nandi Landsat; the draws it does not warn cover at least 0.943; across 85,281 graded (draw, class, quantity) cells of the seventeen classification tasks at 300 labels it fires on 11.1%."
+  crosscheck: tests/test_per_class.py::test_the_few_errors_warning_fires_on_one_to_four_sampled_errors_and_not_on_zero_or_five
+  status: measured
+  experiments: [exp81]
+  artifacts: [exp/out/exp81_rare_error_warning.json]
+  check: |-
+    (lambda d: (lambda V, cells: (lambda em, bn:
+      V['a_warning_marks_the_misses']['holds'] is True and V['a_warning_marks_the_misses']['misses'] == 1351 and V['a_warning_marks_the_misses']['misses_warned'] == 1081
+      and round(V['a_warning_marks_the_misses']['share'], 3) == 0.800
+      and (sum(v['misses_warned'] for v in em), sum(v['misses'] for v in em)) == (796, 800)
+      and (sum(v['misses_warned'] for v in bn), sum(v['misses'] for v in bn)) == (285, 551)
+      and round(V['b_unwarned_draws_cover']['min_coverage_unwarned'], 3) == 0.943
+      and V['c_warning_is_not_everywhere']['n_graded'] == 85281 and round(V['c_warning_is_not_everywhere']['share_warned'], 3) == 0.111
+      and len(cells) == 9
+    )([v for k, v in cells.items() if k.startswith(('m_eurosat', 'mados'))], [v for k, v in cells.items() if k.startswith(('m_brick_kiln', 'nandi_landsat'))])
+    )(d['verdicts'], d['cells']))(A['exp/out/exp81_rare_error_warning.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: rare-error-warning-marks-the-misses}
+  note: >-
+    Preregistered in docs/plan/per_class_assessment.md, seventh amendment; (a) holds at its bar, not with room. The
+    warning explains EuroSAT's and MADOS's shortfalls almost wholly and Brick Kiln's and Nandi Landsat's about
+    half; their unwarned draws still cover 0.943 to 0.966.
+

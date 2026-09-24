@@ -470,7 +470,7 @@ def test_dates_say_what_a_difference_can_mean():
     r = dates_reading("2020-01-01/2020-12-31", "2020-06-01")
     assert r["status"] == "overlapping_time" and r["days_apart"] == 0
     assert dates_reading(np.datetime64("2019-05-02T12:00"), "2019-05-02")["status"] == "same_time"
-    assert dates_reading("2019-05-02", None)["status"] == "unstated"
+    assert dates_reading("2019-05-02", None)["status"] == "partly_stated"
     for bad in ("2019-13-01", "yesterday", "2020-12-31/2020-01-01", "2020-01-01/2020-02-01/2020-03-01"):
         with pytest.raises(ValueError):
             dates_reading(bad, "2020-01-01")
@@ -518,3 +518,26 @@ def test_dates_the_second_audit_found_misread():
     east = dt.datetime(2020, 3, 1, 23, tzinfo=dt.timezone(dt.timedelta(hours=-5)))
     assert dates_reading(east, "2020-03-02")["status"] == "same_time"
     assert dates_reading(dt.datetime(2020, 3, 1, 23), "2020-03-01")["status"] == "same_time"       # naive: its own date
+
+
+def test_the_second_review_of_compare():
+    """Review of 2026-09-23: a negative label is unlabelled in Python as on the command line; one map date alone is
+    'partly stated' and grading needs both or neither; a missing date (NaT) is an unstated one; a numpy week is
+    refused; same-time grading without a labels date says it assumed one."""
+    from oe_inferencex.compare import dates_reading
+    a = np.array([[0, 1, 1, 0], [1, 1, 0, 0]])
+    b = np.array([[0, 1, 0, 0], [1, 1, 0, 1]])
+    lab = np.array([[0, 1, -1, -1], [-1, -1, -1, -1]])
+    g = compare_inferences(a, b, np.ones_like(a, bool), labels=lab)["graded"]
+    assert g["crosstab"]["n"] == 2 and g["which_side"]["n_disagree"] == 0
+    assert compare_inferences(a, b, np.ones_like(a, bool), labels=lab)["n_disagree"] == 2     # label-free part unchanged
+    r = dates_reading("2020-06-15", None)
+    assert r["status"] == "partly_stated" and "only map a's date" in r["reading"]
+    with pytest.raises(ValueError, match="both maps' dates"):
+        compare_inferences(a, b, np.ones_like(a, bool), labels=np.abs(lab), dates=("2020-06-15", None), labels_date="2020-09-15")
+    assert dates_reading(np.datetime64("NaT"), "2020-01-01")["status"] == "partly_stated"
+    assert dates_reading(np.datetime64("NaT"), np.datetime64("NaT"))["status"] == "unstated"
+    with pytest.raises(ValueError, match="Thursday"):
+        dates_reading(np.datetime64("2020-01-06", "W"), "2020-01-06")
+    same = compare_inferences(a, b, np.ones_like(a, bool), labels=np.abs(lab), dates=("2020-06-15", "2020-06-15"))
+    assert "labels' date was not given" in same["graded"]["graded_against"]

@@ -247,3 +247,25 @@ def test_evidence_pooling_crops_a_ragged_edge_and_dawid_skene_refuses_out_of_ran
     assert evidence.pool_to_patches(np.ones((33, 32), bool), 16).shape == (2, 2)
     with pytest.raises(ValueError, match="votes must be classes"):
         evidence.dawid_skene(np.array([[0, -1], [1, 1]]), 2)
+
+
+def test_dawid_skene_edge_inputs_the_second_review_found():
+    import warnings
+    from oe_inferencex.reliability import dawid_skene
+    rng = np.random.default_rng(0)
+    votes = rng.integers(0, 2, (50, 3))
+    with pytest.raises(ValueError, match="iters"):
+        dawid_skene(votes, 2, iters=0)
+    post_b, _, rel_b = dawid_skene(votes.astype(bool), 2)
+    post_i, _, rel_i = dawid_skene(votes, 2)
+    assert np.allclose(post_b, post_i) and np.allclose(rel_b, rel_i)
+    with pytest.raises(ValueError, match="whole class ids"):
+        dawid_skene(np.where(votes == 0, np.nan, 1.0), 2)
+    with pytest.raises(ValueError, match="two raters"):
+        dawid_skene(votes[:, :1], 2)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        post, _, _ = dawid_skene(votes, 4)                  # classes 2 and 3 never voted: finite, and no warning
+    assert np.isfinite(post).all()
+    _, _, _, info = dawid_skene(np.repeat(votes[:, :1], 3, 1), 2, tol=0, iters=300, return_info=True)
+    assert info["converged"] and info["last_change"] == 0.0

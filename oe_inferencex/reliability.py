@@ -162,6 +162,20 @@ def dawid_skene(votes, n_classes, iters=1000, tol=1e-6, return_info=False):
     where the converged value is 0.28); exp07's 9-class run may have been the same.
     """
     votes = np.asarray(votes)
+    # review of 2026-09-23: boolean votes indexed as masks, float or NaN votes failed deep inside, iters=0 crashed,
+    # tol=0 could never stop, and one rater ran to the cap reporting a reliability nothing identifies
+    if votes.ndim != 2:
+        raise ValueError(f"votes must be (items, raters), got shape {votes.shape}")
+    if votes.dtype.kind == "b":
+        votes = votes.astype(int)
+    elif votes.dtype.kind == "f":
+        if not np.isfinite(votes).all() or not np.all(np.mod(votes, 1) == 0):
+            raise ValueError("votes must be whole class ids; a missing vote cannot be NaN (drop the item or the rater)")
+        votes = votes.astype(int)
+    if votes.shape[1] < 2:
+        raise ValueError("Dawid-Skene needs at least two raters: one rater's confusion matrix is not identified")
+    if int(iters) < 1:
+        raise ValueError(f"iters must be at least 1, got {iters}")
     if votes.size and (votes.min() < 0 or votes.max() >= n_classes):
         # an abstain code of -1 used to index the last class and count as a vote for it
         raise ValueError(f"votes must be classes 0 to {n_classes - 1}; got values from {votes.min()} to {votes.max()}")
@@ -180,7 +194,8 @@ def dawid_skene(votes, n_classes, iters=1000, tol=1e-6, return_info=False):
                 conf[j, :, c] = post[votes[:, j] == c].sum(0)
         conf += 0.01
         conf /= conf.sum(2, keepdims=True)
-        logp = np.log(prior)[None, :].repeat(n, 0)
+        with np.errstate(divide="ignore"):                    # a class no rater voted has prior 0: log 0 is -inf, not a warning
+            logp = np.log(prior)[None, :].repeat(n, 0)
         for j in range(r):
             logp += np.log(conf[j, :, votes[:, j]])
         logp -= logp.max(1, keepdims=True)
@@ -188,7 +203,7 @@ def dawid_skene(votes, n_classes, iters=1000, tol=1e-6, return_info=False):
         new_post /= new_post.sum(1, keepdims=True)
         change = float(np.abs(new_post - post).max())
         post = new_post
-        if change < tol:
+        if change <= tol:
             converged = True
             break
     else:

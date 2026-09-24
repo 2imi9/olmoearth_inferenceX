@@ -149,3 +149,14 @@ def test_confidence_top1_form_is_the_ranking_of_one_minus_the_top_probability():
     assert np.array_equal(confidence(z), confidence(z, form="margin"))
     with pytest.raises(ValueError):
         confidence(z, form="entropy")
+
+
+def test_ndwi_clips_negative_reflectance_and_stays_in_range():
+    """Review of 2026-09-23: negative NIR over dark water gave 0 (ambiguous) or values outside [-1, 1]."""
+    from oe_inferencex.signals import S2_BANDS, ndwi
+    img = np.zeros((len(S2_BANDS), 1, 3))
+    g, n = S2_BANDS.index("B03"), S2_BANDS.index("B08")
+    img[g, 0], img[n, 0] = [0.004, 0.03, 0.10], [-0.006, -0.005, 0.02]
+    out = ndwi(img)[0]
+    assert out[0] == 1.0 and out[1] == 1.0 and abs(out[2] - 2 / 3) < 1e-12
+    assert np.all((out >= -1) & (out <= 1))

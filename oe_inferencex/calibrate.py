@@ -189,7 +189,10 @@ def fit_ranker(signals, errors, ok, groups=None, family=None, folds=5, budgets=(
               "singles_excess_aurc": singles, "best_single": best_name,
               "best_single_excess_aurc": best_e,
               "best_single_orientation": "flipped" if best_flipped else "as given",
-              "held_out_lead_over_best_single": (best_e - excess_aurc(hs, es)) if _scoreable(es) else float("nan")}
+              # both sides on the scored rows: best_e covers every row and the held-out AURC only the scored ones, so
+              # the lead mixed two populations whenever a fold was unscored (review of 2026-09-23)
+              "best_single_excess_aurc_on_scored_rows": excess_aurc(bs, es) if _scoreable(es) else float("nan"),
+              "held_out_lead_over_best_single": (excess_aurc(bs, es) - excess_aurc(hs, es)) if _scoreable(es) else float("nan")}
     if g is not None:
         gains = {}
         for gid in np.unique(g):
@@ -235,6 +238,8 @@ def fit_side(features_a, features_b, a, b, ok, labels, groups=None, family=None,
     w, bias = _logistic(X, y, balanced=False)
     fusion = Fusion("side", names, mu, sd, w, bias, family, int(d.sum()), baseline)
     g = None if groups is None else np.broadcast_to(np.asarray(groups).reshape(np.asarray(groups).shape + (1,) * (a_.ndim - np.asarray(groups).ndim)), a_.shape)[d]
+    if g is not None and g.size == 0:
+        g = None                  # no disagreement window: undefined numbers, as without groups, not a refusal about groups
     fold = _folds(g, len(y), folds)
     held = _crossfit(X, y, fold, False, folds)
     # Rows in a fold that could not be fitted are NaN. `NaN > 0` is False, so they used to count as "believe side a"
@@ -244,21 +249,26 @@ def fit_side(features_a, features_b, a, b, ok, labels, groups=None, family=None,
     fitted_right = (held > 0) == (y > 0.5)
     base_right = ((feats[f"{baseline}:a-b"][d] < 0) == (y > 0.5))
     a_right, b_right = (a_ == lab)[d], (b_ == lab)[d]
+    # every comparator on the rows the fitted rule was scored on: with an unscored fold the rule's share covered half
+    # the rows and "always b" all of them, which read as a 22-point win on rows where the two tied (review, 2026-09-23)
+    sc = scored if scored.any() else np.zeros_like(scored)
+    base_right, a_right, b_right = base_right[sc], a_right[sc], b_right[sc]
     report = {"n_disagree": int(d.sum()), "n_groups": int(len(np.unique(g))) if g is not None else None, "folds": folds, "weights": fusion.weights(), "bias": bias,
+              "comparators_cover": "the scored rows",
               "held_out": {"share_right": float(fitted_right[scored].mean()) if scored.any() else float("nan")},
               "n_unscored_rows": n_unscored, "n_scored_rows": int(scored.sum()),
               "unscored_note": ("no fold could be fitted; the held-out share is undefined" if scored.size and not scored.any()
                                 else f"{n_unscored} rows sat in folds that could not be fitted and are excluded from the held-out share"
                                 if n_unscored else None),
-              "baseline": {"reading": baseline, "share_right": float(base_right.mean()) if d.any() else float("nan")},
-              "always_a": float(a_right.mean()) if d.any() else float("nan"), "always_b": float(b_right.mean()) if d.any() else float("nan"), "coin": 0.5,
-              "neither_right": float((~a_right & ~b_right).mean()) if d.any() else float("nan")}
+              "baseline": {"reading": baseline, "share_right": float(base_right.mean()) if base_right.size else float("nan")},
+              "always_a": float(a_right.mean()) if a_right.size else float("nan"), "always_b": float(b_right.mean()) if b_right.size else float("nan"), "coin": 0.5,
+              "neither_right": float((~a_right & ~b_right).mean()) if a_right.size else float("nan")}
     if g is not None:
         gains = {}
         for gid in np.unique(g):
-            m = g == gid
-            m = m & scored
+            m = (g == gid) & scored
             if m.sum() >= min_group_windows:
-                gains[gid.item() if hasattr(gid, "item") else gid] = float(fitted_right[m].mean() - base_right[m].mean())
+                base_all = (feats[f"{baseline}:a-b"][d] < 0) == (y > 0.5)
+                gains[gid.item() if hasattr(gid, "item") else gid] = float(fitted_right[m].mean() - base_all[m].mean())
         report["over_groups_vs_baseline"] = over_groups(gains)
     return fusion, report

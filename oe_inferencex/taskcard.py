@@ -146,18 +146,24 @@ def _task_from_node(node):
     return t
 
 
+_LISTING_UNREACHABLE = {}     # project -> why the directory listing could not be read (a rate limit is the usual cause)
+
+
 def _variants(project):
     """[(variant, model file, run file)]: the plain pair, or one per model_<variant>.yaml when a project publishes
     several. kenya_lulc_croptype has published model_cropland.yaml and model_maize.yaml since 2026-01-15 and no
     model.yaml, and its card used to fall back to an unknown task asserted as regression. A project the listing does
     not know is refused; the listing being unreachable (rate limit) falls back to the plain pair."""
+    _LISTING_UNREACHABLE.pop(project, None)
     try:
         names = [x["name"] for x in json.loads(_get(f"{GH_API}/{project}"))]
     except urllib.error.HTTPError as exc:
         if exc.code == 404:
             raise LookupError(f"olmoearth_projects has no olmoearth_run_data/{project}") from None
+        _LISTING_UNREACHABLE[project] = f"HTTP {exc.code}" + (", GitHub's API rate limit" if exc.code in (403, 429) else "")
         return [("", "model.yaml", "olmoearth_run.yaml")]
-    except Exception:
+    except Exception as exc:
+        _LISTING_UNREACHABLE[project] = type(exc).__name__
         return [("", "model.yaml", "olmoearth_run.yaml")]
     if "model.yaml" in names:
         return [("", "model.yaml", "olmoearth_run.yaml")]
@@ -205,6 +211,11 @@ def project_card(project, variant="", model_file="model.yaml", run_file="olmoear
         card.warnings.append(f"{run_file} unavailable: {type(exc).__name__}"); run = {}
     if not fetched:
         # a misspelled project used to yield a card asserting regression scoring and non-dense output, exit 0
+        why = _LISTING_UNREACHABLE.get(project)
+        if why:
+            # a project that publishes only model_<variant>.yaml read as "not found" under a rate limit (review, 2026-09-23)
+            raise LookupError(f"the project listing for {project} could not be read ({why}), so only {model_file} was tried, "
+                              "and it could not be read either; the project may publish per-variant files. Retry later")
         raise LookupError(f"neither {model_file} nor {run_file} could be read for {project}; is the name right?")
     try:
         dataset = json.loads(_get(dy))

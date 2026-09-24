@@ -111,7 +111,11 @@ def test_random_design_matches_the_exact_interval_per_class_and_olofssons_equati
         assert abs(row["producer_accuracy"]["high"] - min(1.0, pa[c] + est.Z95 * np.sqrt(v_pa[c]))) < 1e-12
         assert abs(row["reference_share"]["estimate"] - share[c]) < 1e-12
         assert abs(row["reference_share"]["high"] - min(1.0, share[c] + est.Z95 * np.sqrt(v_share[c]))) < 1e-12
-    assert abs(out["overall_accuracy"]["estimate"] - sum(N_map[c] / Npop * conf[c, c] / conf[c].sum() for c in range(C))) < 1e-12
+    # the overall accuracy is `estimate`'s: the simple proportion right with the exact interval; Olofsson's
+    # post-stratified sum is kept beside it as a point so the table adds up
+    assert abs(out["overall_accuracy_post_stratified"] - sum(N_map[c] / Npop * conf[c, c] / conf[c].sum() for c in range(C))) < 1e-12
+    assert out["overall_accuracy"]["estimate"] == np.trace(conf) / B
+    assert (out["overall_accuracy"]["low"], out["overall_accuracy"]["high"]) == est.hypergeom_interval(int(np.trace(conf)), B, Npop)
 
 
 @pytest.mark.parametrize("design", ["random", "confidence"])
@@ -163,3 +167,20 @@ def test_refusals():
     bad[s["indices"][0]] = -1
     with pytest.raises(ValueError):
         est.estimate_per_class(s, np.zeros(60, int), bad)
+
+
+def test_the_few_errors_warning_fires_on_one_to_four_sampled_errors_and_not_on_zero_or_five():
+    """Seventh amendment: the producer's accuracy and the share rest on the sampled errors of the kind they count;
+    one to four of them is warned, none (the interval falls back wide) and five or more are not."""
+    N = 2000
+    mc = np.repeat([0, 1], N // 2)
+    sample = {"design": "random", "indices": np.arange(0, N, 5), "n_population": N, "budget": N // 5}
+    idx = sample["indices"]
+    for n_missed, expect in ((0, False), (1, True), (4, True), (5, False), (12, False)):
+        ref = mc[idx].copy()
+        cls1 = np.flatnonzero(ref == 1)
+        ref[cls1[:n_missed]] = 0                          # class-0 windows the map calls 1: commissions of class 1
+        ref_c0 = ref.copy()
+        out = est.estimate_per_class(sample, ref_c0, mc, n_classes=2)
+        codes = out["per_class"][1].get("warning_codes", [])
+        assert ("few errors" in codes) is expect, (n_missed, codes)

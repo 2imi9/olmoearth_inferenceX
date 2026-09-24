@@ -255,11 +255,13 @@ def _period(x, name):
     for a composite or an annual map). The second audit of 23 September found the first version cutting strings to
     ten characters, reading a month as its first day and a time with an offset in local time; all three are fixed."""
     import datetime as dt
-    if x is None:
-        return None
+    if x is None or type(x).__name__ == "NaTType" or (isinstance(x, np.datetime64) and np.isnat(x)):
+        return None                                               # a missing date (NaT) is an unstated one
     if isinstance(x, np.datetime64):
         unit = np.datetime_data(x.dtype)[0]
-        if unit in ("Y", "M", "W"):                                   # a coarse value denotes its whole period
+        if unit == "W":
+            raise ValueError(f"{name}: a numpy week starts on a Thursday, not the ISO Monday; give the dates or an interval")
+        if unit in ("Y", "M"):                                        # a coarse value denotes its whole period
             start = x.astype("datetime64[D]")
             end = (x + np.timedelta64(1, unit)).astype("datetime64[D]") - np.timedelta64(1, "D")
             return start.astype(object), end.astype(object)
@@ -299,10 +301,18 @@ def dates_reading(date_a=None, date_b=None, labels_date=None):
     change)."""
     pa, pb, pl = _period(date_a, "date_a"), _period(date_b, "date_b"), _period(labels_date, "labels_date")
     out = {"a": _iso(pa), "b": _iso(pb), "labels": _iso(pl), "status": "unstated", "days_apart": None}
-    if pa is None or pb is None:
+    if pa is None and pb is None:
         out["reading"] = ("the dates the two maps describe were not given; a window where they differ is an error in at "
                           "least one map only if both describe the same ground at the same time, and across dates it can "
                           "be a real change on the ground instead")
+        return out
+    if pa is None or pb is None:
+        # one date alone says nothing about whether the maps share a time (review of 2026-09-23: this read as "not
+        # given" and let grading through even when the labels' date differed from the one map date given)
+        given, missing = ("a", "b") if pb is None else ("b", "a")
+        out.update(status="partly_stated",
+                   reading=f"only map {given}'s date was given ({out[given]}); without map {missing}'s the tool cannot say "
+                           "whether a difference is an error or a change on the ground")
         return out
     if pa == pb:
         out.update(status="same_time", days_apart=0,
@@ -327,7 +337,7 @@ def compare_inferences(a, b, ok, groups=None, labels=None, cues=None, dates=None
 
     a, b         hard decisions of the same shape; ok: the windows both predicted
     groups       optional id per window (tile, event) for the per-group rates and, with labels, the per-group cross-tab
-    labels       optional class map; adds the graded block
+    labels       optional class map, negative where a window has no label; adds the graded block
     cues         optional {name: indicator of the same shape}; adds their enrichment on the disagreement windows
     dates        optional (date_a, date_b): the date or period each map describes (see `dates_reading`)
     labels_date  the date or period the labels describe; required with labels when the maps describe different times
@@ -349,6 +359,8 @@ def compare_inferences(a, b, ok, groups=None, labels=None, cues=None, dates=None
         raise ValueError(f"the two maps describe {reading['a']} and {reading['b']}; say which date the labels describe "
                          "(labels_date), because a window that changed between the dates is right in one map and wrong in "
                          "the other whatever either model did")
+    if labels is not None and reading["status"] == "partly_stated":
+        raise ValueError(f"{reading['reading']}; give both maps' dates, or neither, before grading which side is right")
     okm = _indicator(ok)
     dis = disagreement(a, b, okm, groups)
     mask = dis["mask"]
@@ -363,6 +375,10 @@ def compare_inferences(a, b, ok, groups=None, labels=None, cues=None, dates=None
         lab = _decision(labels, "labels")
         a_, b_ = _decision(a, "a"), _decision(b, "b")
         _same_shape(a=a_, labels=lab)
+        # a negative label is "not labelled", as the command line, assess and confusion_pairs read it; until
+        # 2026-09-23 this path compared the maps against -1 as a class and counted every unlabelled window as an
+        # error of both
+        okm = okm & (lab >= 0)
         err_a, err_b = a_ != lab, b_ != lab
         graded = {"crosstab": crosstab(err_a, err_b, okm), "which_side": which_side(a_, b_, lab, okm),
                   "per_group": None, "over_groups": None}
@@ -385,7 +401,10 @@ def _graded_against(reading):
     """What 'right' means in the graded block, at the dates given."""
     st, lab = reading["status"], reading["labels"]
     if st == "same_time":
-        if lab is not None and lab != reading["a"]:
+        if lab is None:
+            return (f"both maps describe {reading['a']} and the labels' date was not given; they are taken to describe "
+                    "the same time, and a map is right where it matches them")
+        if lab != reading["a"]:
             return (f"the labels describe {lab} and both maps {reading['a']}; where the ground changed between them both "
                     "maps are counted wrong")
         return "both maps and the labels describe the same time; a map is right where it matches the labels"
@@ -409,7 +428,7 @@ def determinism_check(a, b, ok, floor=None, margin_a=None, margin_b=None, groups
     gives for the model family (exp57 measured 2 to 4% between two inferences of one scene), so a rate above it is
     drift the engine introduced; margin_a, margin_b: optional per-window margins, for the drift of the score itself.
     Returns n_windows, n_disagree, disagreement_rate, per_group (or None), margin_drift ({mean_abs, max_abs} on the
-    valid windows, or None), floor, passes (rate <= floor, or None without a floor). A frozen fp32 encoder run twice
+    valid windows, or None), floor, passes (rate <= floor, or None without a floor or without a compared window). A frozen fp32 encoder run twice
     must give 0. A test-time-training encoder fits its inner model in one full-batch step at learning rate 1.0, the
     kind of computation whose numerics differ between engines; docs/plan/vit3_readiness.md makes this a gate."""
     okm = _indicator(ok)

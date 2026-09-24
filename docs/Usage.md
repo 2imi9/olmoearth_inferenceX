@@ -106,8 +106,11 @@ maps are read as integers; a single-band probability map is thresholded at
 `--threshold` and a multi-band score map argmaxed, so the module never compares
 floating point. The two maps must share one grid, and so must `--labels` and
 `--groups`: a raster in another CRS or at another origin is refused. Both maps
-are pooled over the pixels both predicted, a tied window goes to the more
-confident voters, and `disagreement.tif` is NaN where nothing was compared. With
+are pooled over the pixels both predicted. A tied window goes to the more
+confident voters when both maps carry a confidence; when either is a hard class
+map, which has none, it is left out of the comparison and counted in a note, so a
+map and its own probability version never differ by tie-breaking. `disagreement.tif`
+is NaN where nothing was compared. With
 `--labels`, every number above stays label-free over all compared windows and
 the graded block alone is restricted to the windows with a majority label.
 
@@ -148,9 +151,10 @@ of the map that is it, each with an interval, from the same labelled sample (exp
 user's accuracy has an exact hypergeometric interval, covering at least 95% by construction, and the other
 quantities Wilson intervals on the effective sample size, since the field's Wald form collapses to a point
 whenever a class shows no sampled error and covered as little as 2% of draws on the suite). A class with fewer
-than 30 labelled windows is reported with
-a warning, and so is a class the confidence design samples thinly or one nearly all of whose windows are
-labelled. `certify` needs a **random** sample (`--design random`; a stratified or tile draw is refused, because
+than 30 labelled windows is reported with a warning, and so is a class the confidence design samples thinly, one
+nearly all of whose windows are labelled, one whose interval rests on one to four sampled errors (exp81's seventh
+amendment: it marks 80% of the draws on which such an interval misses) and one the map never predicts, whose
+producer's accuracy is then exactly 0. The command line prints each warning's reason beside the class. `certify` needs a **random** sample (`--design random`; a stratified or tile draw is refused, because
 the guarantee rests on the labels inside each zone being a random draw of that zone) and an error rate
 `--alpha` you are prepared to tolerate; it returns the largest most-confident share of the map that is wrong at
 most that often, certified by exact hypergeometric tests so that the statement fails on at most `--delta` (default
@@ -164,7 +168,7 @@ errors; on exp78's export the 5% review set gave 1.8 to 5.8 times the true rate
 on every task. `sample` draws a sample with weights the estimator undoes; the
 review set has none. In the API, `estimate_from_indices` takes windows labelled
 without a design, treats them as a random sample, and first checks that they
-could be one — a random sample sits at a median suspicion percentile of 0.50, the
+could be one — a random sample sits at a mean suspicion percentile of 0.50, the
 review set near 0.97 — and refuses a review set with the number.
 
 ## Modules
@@ -176,7 +180,7 @@ review set near 0.97 — and refuses a review set with the number.
 | `compare` | How two inferences of the same scene differ: the disagreement rate pooled and per tile or event, what the disagreement windows have in common (the enrichment of each label-free cue among them), whether two disagreement sets are the same set; with labels, the errors one side corrects and the errors it adds, and which side is right where they disagree; `determinism_check`, the same input inferred twice under two engines or precisions, gated against the reseed floor |
 | `signals` | Confidence, the boundary indicator, tiling instability, the NDWI cues and the pixel controls, as pure functions; `crop_dependence`, how much of a decision map depends on the crop it was inferred in, a map property for encoders that adapt per input |
 | `calibrate` | Where labels exist, a fitted ranker or a fitted which-side rule, cross-fitted by group and reported held-out; each fusion is locked to the model family it was fitted on, because such rules do not transfer |
-| `estimate` | How wrong the map is, from a labelled sample: which windows to label (stratified by confidence, random, or by tile) and the error rate with the interval that design earns; per class, the user's and producer's accuracy and the error-adjusted class share with Wilson intervals on the effective sample size (`estimate_per_class`, exp81); and from a random sample, the largest most-confident zone that is wrong at most `alpha` of the time, certified by exact hypergeometric tests so the statement fails on at most `delta` of draws (`certify_zone`, exp80), with the refusal when the budget cannot certify that level; Wilson with a finite-population correction, the stratified Wald interval, or the ultimate-cluster interval with the naive one beside it; and a check that refuses the review set as a sample, since labelling it and dividing gives two to six times the true rate |
+| `estimate` | How wrong the map is, from a labelled sample: which windows to label (stratified by confidence, random, or by tile) and the error rate with the interval that design earns; per class, the user's and producer's accuracy and the error-adjusted class share, the user's accuracy under a random draw with the exact hypergeometric interval and the rest with Wilson intervals on the effective sample size (`estimate_per_class`, exp81); and from a random sample, the largest most-confident zone that is wrong at most `alpha` of the time, certified by exact hypergeometric tests so the statement fails on at most `delta` of draws (`certify_zone`, exp80), with the refusal when the budget cannot certify that level; the exact hypergeometric interval under a random draw, Wilson on the design's effective sample size under the confidence design, or the ultimate-cluster interval with the naive one beside it under tiles; and a check that refuses the review set as a sample, since labelling it and dividing gives two to six times the true rate |
 | `metrics`, `stats` | Tie-aware AURC and capture at a budget, exact sign tests, one vote per cluster, block and cluster bootstraps; and the design-weighted forms for a reference that is a probability sample rather than a map, including a base-rate-free AUROC and a paired bootstrap on the difference between two disjoint subsets |
 | `reliability`, `evidence` | SHRUG-FM's published reliability signals reimplemented torch-free, so a competitor's method is scored under this protocol rather than described; the small logistic and softmax heads a candidate rule is scored with. The expected calibration error lives in `metrics` |
 | `taskcard`, `lcc` | What each fine-tuned OlmoEarth model is; a range reader for the served change rasters |
@@ -260,21 +264,29 @@ permanent water, so the two clean pairs are the radar one across the event (41% 
 one after it (18%); exp62's preregistered comparisons fail on that event. The optical pass after the event
 is the first clear one WorldFloods holds for the area, 17 days after the radar pass.*
 
-The same measurement for the whole event, from the committed decisions alone:
+The same measurement for a whole event, from the committed decisions alone (EMSR275-1, a larger event than the
+figure's EMSR273-1):
 
 ```python
 import numpy as np
 from oe_inferencex.compare import compare_inferences
 
 z = np.load("exp/out/exp57_masks.npz")                               # exp57: the two heads' decisions on 55 GEOID-Flood events
-ev = z["geoid_event"] == "EMSR275-1"                                  # the event in the figure
+ev = z["geoid_event"] == "EMSR275-1"                                  # 55 events in the file; the figure's is EMSR273-1
 a, b, ok = z["geoid_s2"][ev], z["geoid_s1"][ev], z["geoid_ok"][ev]    # pre-event S2 head, post-event S1 head, windows both predicted
 out = compare_inferences(a, b, ok, labels=z["geoid_y_after"][ev])   # graded on water after the event
 out["disagreement_rate"]                                            # 0.094: 3,310 of 35,084 windows
 out["graded"]["which_side"]["share_b_right"]                        # 0.79: the S1 head matches the post-event label on 79% of them
 flooded = z["geoid_y_after"][ev] & ~z["geoid_y_permanent"][ev]
 flooded[out["arrays"]["disagree"]].mean()                          # 0.77: three quarters of the difference is the flood itself
+out["dates"]["status"]                                              # "unstated": these arrays carry no acquisition dates
 ```
+
+The two heads read different dates, pre-event optical and post-event radar, so this is a cross-date comparison
+run without its dates, and the 0.79 is "which map matches the post-event label", not "which map is right": the
+pre-event map is counted wrong wherever the flood changed the ground, which is the 0.77. Passed with the event's
+dates, `compare_inferences(a, b, ok, labels=..., dates=(pre, post))` refuses until `labels_date=post` is given,
+and `graded["graded_against"]` then says exactly that.
 
 Two backbones, two sensors, a frozen and a fine-tuned model, or the same
 model on shifted crops: `compare` measures how their decisions differ on the

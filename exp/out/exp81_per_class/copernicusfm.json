@@ -16,7 +16,7 @@
   ],
   "min_per_class": 30,
   "seed": 0,
-  "seconds_last_invocation": 33
+  "seconds_last_invocation": 29
  },
  "tasks": {
   "m_eurosat": {
@@ -29,7 +29,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9445,
+     "overall_coverage": 0.962,
      "per_class": {
       "0": {
        "map_share": 0.099,
@@ -342,7 +342,7 @@
        }
       }
      },
-     "seconds": 0.8,
+     "seconds": 0.7,
      "share_excludes_map": {
       "0": {
        "disc": 0.0010000000000000009,
@@ -411,7 +411,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.938,
+     "overall_coverage": 0.962,
      "per_class": {
       "0": {
        "map_share": 0.099,
@@ -1429,10 +1429,10 @@
      "seconds": 5.4
     }
    ],
+   "units": "exp/out/exp79_units/copernicusfm",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/copernicusfm"
+   ]
   },
   "m_brick_kiln": {
    "n_units": 999,
@@ -1444,7 +1444,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9605,
+     "overall_coverage": 0.973,
      "per_class": {
       "0": {
        "map_share": 0.6646646646646647,
@@ -1530,7 +1530,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.939,
+     "overall_coverage": 0.973,
      "per_class": {
       "0": {
        "map_share": 0.6646646646646647,
@@ -1756,10 +1756,10 @@
      "seconds": 2.0
     }
    ],
+   "units": "exp/out/exp79_units/copernicusfm",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/copernicusfm"
+   ]
   },
   "m_so2sat": {
    "n_units": 986,
@@ -1771,7 +1771,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.944,
+     "overall_coverage": 0.952,
      "per_class": {
       "0": {
        "map_share": 0.036511156186612576,
@@ -2301,7 +2301,7 @@
        }
       }
      },
-     "seconds": 1.5,
+     "seconds": 1.2,
      "share_excludes_map": {
       "0": {
        "disc": 0.02231237322515213,
@@ -2412,7 +2412,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.944,
+     "overall_coverage": 0.952,
      "per_class": {
       "0": {
        "map_share": 0.036511156186612576,
@@ -2942,7 +2942,7 @@
        }
       }
      },
-     "seconds": 1.0,
+     "seconds": 0.9,
      "share_excludes_map": {
       "0": {
        "disc": 0.02231237322515213,
@@ -4123,26 +4123,26 @@
      "seconds": 12.0
     }
    ],
+   "units": "exp/out/exp79_units/copernicusfm",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/copernicusfm"
+   ]
   },
   "awf_sentinel1": {
    "n_units": 200,
    "n_classes": 9,
    "family": "classification",
    "cells": [],
-   "carried_over_designs": [],
-   "units": "exp/out/exp79_units/copernicusfm"
+   "units": "exp/out/exp79_units/copernicusfm",
+   "carried_over_designs": []
   },
   "awf_sentinel2": {
    "n_units": 200,
    "n_classes": 9,
    "family": "classification",
    "cells": [],
-   "carried_over_designs": [],
-   "units": "exp/out/exp79_units/copernicusfm"
+   "units": "exp/out/exp79_units/copernicusfm",
+   "carried_over_designs": []
   },
   "nandi_sentinel1": {
    "n_units": 825,
@@ -4154,7 +4154,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9435,
+     "overall_coverage": 0.9535,
      "per_class": {
       "0": {
        "map_share": 0.16242424242424242,
@@ -4343,7 +4343,7 @@
        }
       }
      },
-     "seconds": 0.7,
+     "seconds": 0.6,
      "share_excludes_map": {
       "0": {
        "disc": 0.08363636363636365,
@@ -4388,7 +4388,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.943,
+     "overall_coverage": 0.9535,
      "per_class": {
       "0": {
        "map_share": 0.16242424242424242,
@@ -5010,10 +5010,10 @@
      "seconds": 4.6
     }
    ],
+   "units": "exp/out/exp79_units/copernicusfm",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/copernicusfm"
+   ]
   },
   "nandi_sentinel2": {
    "n_units": 825,
@@ -5025,7 +5025,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9445,
+     "overall_coverage": 0.9555,
      "per_class": {
       "0": {
        "map_share": 0.18424242424242424,
@@ -5214,7 +5214,7 @@
        }
       }
      },
-     "seconds": 0.7,
+     "seconds": 0.6,
      "share_excludes_map": {
       "0": {
        "disc": 0.06181818181818183,
@@ -5259,7 +5259,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9415,
+     "overall_coverage": 0.9555,
      "per_class": {
       "0": {
        "map_share": 0.18424242424242424,
@@ -5881,10 +5881,10 @@
      "seconds": 4.6
     }
    ],
+   "units": "exp/out/exp79_units/copernicusfm",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/copernicusfm"
+   ]
   },
   "cropharvest_Togo_12_sentinel1": {
    "n_units": 306,
@@ -5896,7 +5896,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.966,
+     "overall_coverage": 0.9975,
      "per_class": {
       "0": {
        "map_share": 0.4803921568627451,
@@ -5982,7 +5982,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.966,
+     "overall_coverage": 0.9975,
      "per_class": {
       "0": {
        "map_share": 0.4803921568627451,
@@ -6208,10 +6208,10 @@
      "seconds": 1.9
     }
    ],
+   "units": "exp/out/exp79_units/copernicusfm",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/copernicusfm"
+   ]
   },
   "cropharvest_Togo_12_sentinel2": {
    "n_units": 306,
@@ -6223,7 +6223,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9765,
+     "overall_coverage": 0.9915,
      "per_class": {
       "0": {
        "map_share": 0.4477124183006536,
@@ -6309,7 +6309,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9765,
+     "overall_coverage": 0.9915,
      "per_class": {
       "0": {
        "map_share": 0.4477124183006536,
@@ -6535,10 +6535,10 @@
      "seconds": 1.9
     }
    ],
+   "units": "exp/out/exp79_units/copernicusfm",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/copernicusfm"
+   ]
   },
   "cropharvest_Togo_12_sentinel2_sentinel1": {
    "n_units": 306,
@@ -6550,7 +6550,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.969,
+     "overall_coverage": 0.9735,
      "per_class": {
       "0": {
        "map_share": 0.5065359477124183,
@@ -6636,7 +6636,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.969,
+     "overall_coverage": 0.9735,
      "per_class": {
       "0": {
        "map_share": 0.5065359477124183,
@@ -6862,10 +6862,10 @@
      "seconds": 2.0
     }
    ],
+   "units": "exp/out/exp79_units/copernicusfm",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/copernicusfm"
+   ]
   },
   "cropharvest_Peoples_Republic_of_China_6": {
    "n_units": 4397,
@@ -6877,7 +6877,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.949,
+     "overall_coverage": 0.958,
      "per_class": {
       "0": {
        "map_share": 0.19285876734136911,
@@ -6942,7 +6942,7 @@
        }
       }
      },
-     "seconds": 0.6,
+     "seconds": 0.5,
      "share_excludes_map": {
       "0": {
        "disc": 0.2708664998862861,
@@ -6963,7 +6963,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.949,
+     "overall_coverage": 0.958,
      "per_class": {
       "0": {
        "map_share": 0.19285876734136911,
@@ -7049,7 +7049,7 @@
      "budget": 1000,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9505,
+     "overall_coverage": 0.9575,
      "per_class": {
       "0": {
        "map_share": 0.19285876734136911,
@@ -7121,7 +7121,7 @@
      "budget": 1000,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9515,
+     "overall_coverage": 0.9575,
      "per_class": {
       "0": {
        "map_share": 0.19285876734136911,
@@ -7186,7 +7186,7 @@
        }
       }
      },
-     "seconds": 0.3
+     "seconds": 0.4
     },
     {
      "design": "confidence",
@@ -7477,10 +7477,10 @@
      "seconds": 3.4
     }
    ],
+   "units": "exp/out/exp79_units/copernicusfm",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/copernicusfm"
+   ]
   },
   "cropharvest_Peoples_Republic_of_China_6_sentinel1": {
    "n_units": 4397,
@@ -7492,7 +7492,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.95,
+     "overall_coverage": 0.954,
      "per_class": {
       "0": {
        "map_share": 0.08733227200363884,
@@ -7578,7 +7578,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9475,
+     "overall_coverage": 0.954,
      "per_class": {
       "0": {
        "map_share": 0.08733227200363884,
@@ -7664,7 +7664,7 @@
      "budget": 1000,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.953,
+     "overall_coverage": 0.954,
      "per_class": {
       "0": {
        "map_share": 0.08733227200363884,
@@ -7736,7 +7736,7 @@
      "budget": 1000,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.953,
+     "overall_coverage": 0.954,
      "per_class": {
       "0": {
        "map_share": 0.08733227200363884,
@@ -7801,7 +7801,7 @@
        }
       }
      },
-     "seconds": 0.3
+     "seconds": 0.4
     },
     {
      "design": "confidence",
@@ -8092,10 +8092,10 @@
      "seconds": 3.4
     }
    ],
+   "units": "exp/out/exp79_units/copernicusfm",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/copernicusfm"
+   ]
   },
   "cropharvest_Peoples_Republic_of_China_6_sentinel1_sentinel2": {
    "n_units": 4397,
@@ -8107,7 +8107,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9495,
+     "overall_coverage": 0.959,
      "per_class": {
       "0": {
        "map_share": 0.2124175574255174,
@@ -8172,7 +8172,7 @@
        }
       }
      },
-     "seconds": 0.6,
+     "seconds": 0.5,
      "share_excludes_map": {
       "0": {
        "disc": 0.2513077098021378,
@@ -8193,7 +8193,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.946,
+     "overall_coverage": 0.959,
      "per_class": {
       "0": {
        "map_share": 0.2124175574255174,
@@ -8279,7 +8279,7 @@
      "budget": 1000,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.956,
+     "overall_coverage": 0.9645,
      "per_class": {
       "0": {
        "map_share": 0.2124175574255174,
@@ -8344,14 +8344,14 @@
        }
       }
      },
-     "seconds": 1.0
+     "seconds": 0.9
     },
     {
      "design": "random",
      "budget": 1000,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9575,
+     "overall_coverage": 0.9645,
      "per_class": {
       "0": {
        "map_share": 0.2124175574255174,
@@ -8416,7 +8416,7 @@
        }
       }
      },
-     "seconds": 0.3
+     "seconds": 0.4
     },
     {
      "design": "confidence",
@@ -8707,10 +8707,10 @@
      "seconds": 3.4
     }
    ],
+   "units": "exp/out/exp79_units/copernicusfm",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/copernicusfm"
+   ]
   },
   "breizhcrops": {
    "n_units": 122614,
@@ -8722,7 +8722,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.947,
+     "overall_coverage": 0.9575,
      "per_class": {
       "0": {
        "map_share": 0.017020894840719655,
@@ -9004,7 +9004,7 @@
        }
       }
      },
-     "seconds": 3.0,
+     "seconds": 2.5,
      "share_excludes_map": {
       "0": {
        "disc": 0.03173373350514623,
@@ -9067,7 +9067,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.946,
+     "overall_coverage": 0.9575,
      "per_class": {
       "0": {
        "map_share": 0.017020894840719655,
@@ -9349,7 +9349,7 @@
        }
       }
      },
-     "seconds": 2.3,
+     "seconds": 1.9,
      "share_excludes_map": {
       "0": {
        "disc": 0.03173373350514623,
@@ -9412,7 +9412,7 @@
      "budget": 1000,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.955,
+     "overall_coverage": 0.9535,
      "per_class": {
       "0": {
        "map_share": 0.017020894840719655,
@@ -9694,14 +9694,14 @@
        }
       }
      },
-     "seconds": 4.1
+     "seconds": 3.5
     },
     {
      "design": "random",
      "budget": 1000,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.954,
+     "overall_coverage": 0.9535,
      "per_class": {
       "0": {
        "map_share": 0.017020894840719655,
@@ -9983,7 +9983,7 @@
        }
       }
      },
-     "seconds": 3.0
+     "seconds": 2.0
     },
     {
      "design": "confidence",
@@ -11142,10 +11142,10 @@
      "seconds": 47.5
     }
    ],
+   "units": "exp/out/exp79_units/copernicusfm",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/copernicusfm"
+   ]
   }
  },
  "prereg": {

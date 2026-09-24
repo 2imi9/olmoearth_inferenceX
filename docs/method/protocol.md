@@ -190,6 +190,11 @@ the error count `k` is hypergeometric, so the exact coverage of the interval is
 `Σ_k P(k; N, K, B) · 1[θ ∈ CI(k)]`. This is what `exact_coverage_srs` computes and what a Monte Carlo coverage
 is judged against (exp79, P5), so that Wilson's discreteness — MADOS at 0.933 in exp78 — is read as the
 interval's property and not as a defect. Checked against a full enumeration of subsets on three populations.
+The same sum judges any interval, and it passes nothing by itself: a Monte Carlo of a deterministic interval
+converges to that interval's exact coverage whatever its defect, so agreement tests the sampler, not the interval
+(exp81's audit). Since 23 September the tool's random-design interval is the tail inversion of this
+hypergeometric count (`hypergeom_interval`), whose exact coverage is at least 95% for every `(N, K, B)`; the
+Wilson form stays in the experiments' harness, which is what exp78 and exp79 graded.
 
 **10. Labels taken tile by tile.** `T` tiles of `m` windows, `t` tiles drawn. The cluster-sample mean has
 variance `(1 − t/T) S_b²/t` with `S_b²` the variance of tile means, and a simple random sample of the same
@@ -222,7 +227,7 @@ rate on the review set = capture(b) · E / k = capture(b) · θ / b
 so the inflation over the truth is `capture(b)/b`, the enrichment the record already measures. With exp70's
 recorded `capture(0.05) = 0.291` and `θ = 0.0736` on MADOS this gives 0.428, which is what labelling the 5%
 review set of exp78's export and dividing returns. The guard in `estimate_from_indices` refuses that sample by
-its median suspicion percentile, but the size of the mistake it prevents is not a measurement: it is
+its mean suspicion percentile, but the size of the mistake it prevents is not a measurement: it is
 `capture/b`, and it is 5.8× on MADOS because the ranking is good.
 
 ### How a difference is measured

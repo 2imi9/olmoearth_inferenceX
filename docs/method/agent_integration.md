@@ -36,8 +36,9 @@ written. The Usage page lists every field. An agent comparing two maps passes
 the dates they describe (`--date-a`, `--date-b`) and narrates
 `comparison.json`'s `dates.reading`: across dates a difference can be real
 change on the ground, and the command refuses to say which map is right
-against one reference unless `--labels-date` is given, so the caution travels
-with the tool rather than depending on the model knowing it.
+against one reference unless `--labels-date` is given; with only one of the
+two map dates it refuses to grade at all. The caution travels with the tool
+rather than depending on the model knowing it.
 
 ## What this repo provides
 

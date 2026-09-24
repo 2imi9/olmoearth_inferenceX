@@ -136,11 +136,15 @@ def test_the_library_carries_exp82s_per_task_verifications_and_reports_the_maps_
     from oe_inferencex import explain
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     d = json.load(open(os.path.join(root, "exp", "out", "exp82_summary.json")))["tasks"]
-    for cue in ("boundary", "low_confidence"):
+    # the boundary cue is exp82's own; the low-confidence cue is exp82's per-tile cut, the scene-level cut the tool
+    # draws (review of 2026-09-23: the pooled task-wide cut enriched 2.5x to 5.1x, the per-scene one 1.4x to 3.4x)
+    for cue, key in (("boundary", "boundary"), ("low_confidence", "low_confidence_per_tile")):
         v = explain.CUES[cue].verified
         assert set(v) == set(d)
         for t, (se, sc) in v.items():
-            assert abs(se - d[t]["cues"][cue]["share_errors"]) < 1e-4 and abs(sc - d[t]["cues"][cue]["share_correct"]) < 1e-4
+            assert abs(se - d[t]["cues"][key]["share_errors"]) < 1e-4 and abs(sc - d[t]["cues"][key]["share_correct"]) < 1e-4
+    lo_c, hi_c = explain.CUES["low_confidence"].verified_range
+    assert round(lo_c, 1) == 1.4 and round(hi_c, 1) == 3.4
     lo, hi = explain.CUES["boundary"].verified_range
     assert round(lo, 2) == 1.24 and round(hi, 2) == 8.13
     assert "1.2x to 8.1x" in explain.CUES["boundary"].quote()

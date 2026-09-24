@@ -207,3 +207,15 @@ def test_a_review_set_decided_by_ties_says_so_and_a_separable_one_stays_silent()
     smooth = np.random.default_rng(1).normal(0, 3, (64, 64))
     out = assess_prediction(smooth, is_logit=True, budgets=(0.05,))
     assert "tied_at_cutoff" not in out["review_sets"][0.05] and not any("raster position" in w for w in out["warnings"])
+
+
+def test_top1_confidence_array_is_on_the_scale_of_its_quantiles():
+    """Review of 2026-09-23: with form='top1' the quantiles were probabilities and the array log-probabilities."""
+    rng = np.random.default_rng(2)
+    logits = rng.normal(0, 1, (4, 32, 32))
+    out = assess_prediction(logits, is_logit=True, form="top1")
+    conf = out["arrays"]["confidence"][out["arrays"]["valid"]]
+    q25 = out["confidence_quantiles"][0.25]
+    assert 0 < conf.min() and conf.max() <= 1 and 0.2 < float(np.mean(conf <= q25)) < 0.3
+    ref = assess_prediction(logits, is_logit=True, form="top1")
+    assert all(np.array_equal(ref["review_sets"][b]["windows_rowcol"], out["review_sets"][b]["windows_rowcol"]) for b in out["review_sets"])

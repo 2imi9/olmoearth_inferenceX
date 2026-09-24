@@ -17,7 +17,7 @@
   ],
   "min_per_class": 30,
   "seed": 0,
-  "seconds_last_invocation": 557
+  "seconds_last_invocation": 430
  },
  "tasks": {
   "m_eurosat": {
@@ -30,7 +30,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9545,
+     "overall_coverage": 0.9655,
      "per_class": {
       "0": {
        "map_share": 0.099,
@@ -412,7 +412,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.917,
+     "overall_coverage": 0.9655,
      "per_class": {
       "0": {
        "map_share": 0.099,
@@ -1430,10 +1430,10 @@
      "seconds": 7.5
     }
    ],
+   "units": "exp/out/exp78_units",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp78_units"
+   ]
   },
   "m_brick_kiln": {
    "n_units": 999,
@@ -1445,7 +1445,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9515,
+     "overall_coverage": 0.9555,
      "per_class": {
       "0": {
        "map_share": 0.6696696696696697,
@@ -1510,7 +1510,7 @@
        }
       }
      },
-     "seconds": 0.4,
+     "seconds": 0.3,
      "share_excludes_map": {
       "0": {
        "disc": 0.006006006006005982,
@@ -1531,7 +1531,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9455,
+     "overall_coverage": 0.9555,
      "per_class": {
       "0": {
        "map_share": 0.6696696696696697,
@@ -1757,10 +1757,10 @@
      "seconds": 2.0
     }
    ],
+   "units": "exp/out/exp78_units",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp78_units"
+   ]
   },
   "m_forestnet": {
    "n_units": 993,
@@ -1772,7 +1772,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9535,
+     "overall_coverage": 0.9585,
      "per_class": {
       "0": {
        "map_share": 0.23867069486404835,
@@ -2147,7 +2147,7 @@
        }
       }
      },
-     "seconds": 1.1,
+     "seconds": 0.9,
      "share_excludes_map": {
       "0": {
        "disc": 0.029204431017119836,
@@ -2228,7 +2228,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.953,
+     "overall_coverage": 0.9585,
      "per_class": {
       "0": {
        "map_share": 0.23867069486404835,
@@ -2603,7 +2603,7 @@
        }
       }
      },
-     "seconds": 0.7,
+     "seconds": 0.6,
      "share_excludes_map": {
       "0": {
        "disc": 0.029204431017119836,
@@ -3444,10 +3444,10 @@
      "seconds": 8.9
     }
    ],
+   "units": "exp/out/exp78_units",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp78_units"
+   ]
   },
   "m_so2sat": {
    "n_units": 986,
@@ -3459,7 +3459,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9395,
+     "overall_coverage": 0.948,
      "per_class": {
       "0": {
        "map_share": 0.04665314401622718,
@@ -3989,7 +3989,7 @@
        }
       }
      },
-     "seconds": 1.4,
+     "seconds": 1.2,
      "share_excludes_map": {
       "0": {
        "disc": 0.012170385395537525,
@@ -4100,7 +4100,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.938,
+     "overall_coverage": 0.948,
      "per_class": {
       "0": {
        "map_share": 0.04665314401622718,
@@ -4630,7 +4630,7 @@
        }
       }
      },
-     "seconds": 1.0,
+     "seconds": 0.9,
      "share_excludes_map": {
       "0": {
        "disc": 0.012170385395537525,
@@ -5811,34 +5811,34 @@
      "seconds": 12.3
     }
    ],
+   "units": "exp/out/exp78_units",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp78_units"
+   ]
   },
   "awf_landsat": {
    "n_units": 200,
    "n_classes": 9,
    "family": "classification",
    "cells": [],
-   "carried_over_designs": [],
-   "units": "exp/out/exp78_units"
+   "units": "exp/out/exp78_units",
+   "carried_over_designs": []
   },
   "awf_sentinel1": {
    "n_units": 200,
    "n_classes": 9,
    "family": "classification",
    "cells": [],
-   "carried_over_designs": [],
-   "units": "exp/out/exp78_units"
+   "units": "exp/out/exp78_units",
+   "carried_over_designs": []
   },
   "awf_sentinel2": {
    "n_units": 200,
    "n_classes": 9,
    "family": "classification",
    "cells": [],
-   "carried_over_designs": [],
-   "units": "exp/out/exp78_units"
+   "units": "exp/out/exp78_units",
+   "carried_over_designs": []
   },
   "nandi_landsat": {
    "n_units": 825,
@@ -5850,7 +5850,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9535,
+     "overall_coverage": 0.959,
      "per_class": {
       "0": {
        "map_share": 0.22545454545454546,
@@ -6039,7 +6039,7 @@
        }
       }
      },
-     "seconds": 0.7,
+     "seconds": 0.6,
      "share_excludes_map": {
       "0": {
        "disc": 0.0206060606060606,
@@ -6084,7 +6084,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9555,
+     "overall_coverage": 0.959,
      "per_class": {
       "0": {
        "map_share": 0.22545454545454546,
@@ -6706,10 +6706,10 @@
      "seconds": 4.7
     }
    ],
+   "units": "exp/out/exp78_units",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp78_units"
+   ]
   },
   "nandi_sentinel1": {
    "n_units": 825,
@@ -6721,7 +6721,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9455,
+     "overall_coverage": 0.946,
      "per_class": {
       "0": {
        "map_share": 0.19636363636363635,
@@ -6910,7 +6910,7 @@
        }
       }
      },
-     "seconds": 0.7,
+     "seconds": 0.6,
      "share_excludes_map": {
       "0": {
        "disc": 0.04969696969696971,
@@ -6955,7 +6955,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.945,
+     "overall_coverage": 0.946,
      "per_class": {
       "0": {
        "map_share": 0.19636363636363635,
@@ -7577,10 +7577,10 @@
      "seconds": 4.7
     }
    ],
+   "units": "exp/out/exp78_units",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp78_units"
+   ]
   },
   "nandi_sentinel2": {
    "n_units": 825,
@@ -7592,7 +7592,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9495,
+     "overall_coverage": 0.955,
      "per_class": {
       "0": {
        "map_share": 0.23030303030303031,
@@ -7781,7 +7781,7 @@
        }
       }
      },
-     "seconds": 0.7,
+     "seconds": 0.6,
      "share_excludes_map": {
       "0": {
        "disc": 0.015757575757575748,
@@ -7826,7 +7826,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.948,
+     "overall_coverage": 0.955,
      "per_class": {
       "0": {
        "map_share": 0.23030303030303031,
@@ -8448,10 +8448,10 @@
      "seconds": 4.7
     }
    ],
+   "units": "exp/out/exp78_units",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp78_units"
+   ]
   },
   "cropharvest_Togo_12_sentinel1": {
    "n_units": 306,
@@ -8463,7 +8463,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9635,
+     "overall_coverage": 0.992,
      "per_class": {
       "0": {
        "map_share": 0.5261437908496732,
@@ -8549,7 +8549,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9635,
+     "overall_coverage": 0.992,
      "per_class": {
       "0": {
        "map_share": 0.5261437908496732,
@@ -8775,10 +8775,10 @@
      "seconds": 2.0
     }
    ],
+   "units": "exp/out/exp78_units",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp78_units"
+   ]
   },
   "cropharvest_Togo_12_sentinel2": {
    "n_units": 306,
@@ -8790,7 +8790,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9575,
+     "overall_coverage": 0.994,
      "per_class": {
       "0": {
        "map_share": 0.6143790849673203,
@@ -8876,7 +8876,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9575,
+     "overall_coverage": 0.994,
      "per_class": {
       "0": {
        "map_share": 0.6143790849673203,
@@ -9102,10 +9102,10 @@
      "seconds": 2.1
     }
    ],
+   "units": "exp/out/exp78_units",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp78_units"
+   ]
   },
   "cropharvest_Togo_12_sentinel2_sentinel1": {
    "n_units": 306,
@@ -9117,7 +9117,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.956,
+     "overall_coverage": 0.9765,
      "per_class": {
       "0": {
        "map_share": 0.5588235294117647,
@@ -9203,7 +9203,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.956,
+     "overall_coverage": 0.9765,
      "per_class": {
       "0": {
        "map_share": 0.5588235294117647,
@@ -9429,10 +9429,10 @@
      "seconds": 2.1
     }
    ],
+   "units": "exp/out/exp78_units",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp78_units"
+   ]
   },
   "cropharvest_Peoples_Republic_of_China_6": {
    "n_units": 4397,
@@ -9444,7 +9444,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9455,
+     "overall_coverage": 0.9505,
      "per_class": {
       "0": {
        "map_share": 0.2246986581760291,
@@ -9509,7 +9509,7 @@
        }
       }
      },
-     "seconds": 0.6,
+     "seconds": 0.5,
      "share_excludes_map": {
       "0": {
        "disc": 0.23902660905162612,
@@ -9530,7 +9530,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9425,
+     "overall_coverage": 0.9505,
      "per_class": {
       "0": {
        "map_share": 0.2246986581760291,
@@ -9616,7 +9616,7 @@
      "budget": 1000,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.949,
+     "overall_coverage": 0.9545,
      "per_class": {
       "0": {
        "map_share": 0.2246986581760291,
@@ -9681,14 +9681,14 @@
        }
       }
      },
-     "seconds": 1.0
+     "seconds": 0.9
     },
     {
      "design": "random",
      "budget": 1000,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.949,
+     "overall_coverage": 0.9545,
      "per_class": {
       "0": {
        "map_share": 0.2246986581760291,
@@ -9753,7 +9753,7 @@
        }
       }
      },
-     "seconds": 0.3
+     "seconds": 0.4
     },
     {
      "design": "confidence",
@@ -10044,10 +10044,10 @@
      "seconds": 3.5
     }
    ],
+   "units": "exp/out/exp78_units",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp78_units"
+   ]
   },
   "cropharvest_Peoples_Republic_of_China_6_sentinel1": {
    "n_units": 4397,
@@ -10059,7 +10059,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.961,
+     "overall_coverage": 0.969,
      "per_class": {
       "0": {
        "map_share": 0.15783488742324311,
@@ -10124,7 +10124,7 @@
        }
       }
      },
-     "seconds": 0.6,
+     "seconds": 0.5,
      "share_excludes_map": {
       "0": {
        "disc": 0.30589037980441214,
@@ -10145,7 +10145,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.957,
+     "overall_coverage": 0.969,
      "per_class": {
       "0": {
        "map_share": 0.15783488742324311,
@@ -10231,7 +10231,7 @@
      "budget": 1000,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9505,
+     "overall_coverage": 0.954,
      "per_class": {
       "0": {
        "map_share": 0.15783488742324311,
@@ -10296,14 +10296,14 @@
        }
       }
      },
-     "seconds": 1.0
+     "seconds": 0.9
     },
     {
      "design": "random",
      "budget": 1000,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.948,
+     "overall_coverage": 0.954,
      "per_class": {
       "0": {
        "map_share": 0.15783488742324311,
@@ -10368,7 +10368,7 @@
        }
       }
      },
-     "seconds": 0.3
+     "seconds": 0.4
     },
     {
      "design": "confidence",
@@ -10659,10 +10659,10 @@
      "seconds": 3.5
     }
    ],
+   "units": "exp/out/exp78_units",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp78_units"
+   ]
   },
   "cropharvest_Peoples_Republic_of_China_6_sentinel1_sentinel2": {
    "n_units": 4397,
@@ -10674,7 +10674,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9495,
+     "overall_coverage": 0.9605,
      "per_class": {
       "0": {
        "map_share": 0.2438025926768251,
@@ -10739,7 +10739,7 @@
        }
       }
      },
-     "seconds": 0.6,
+     "seconds": 0.5,
      "share_excludes_map": {
       "0": {
        "disc": 0.21992267455083012,
@@ -10760,7 +10760,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9455,
+     "overall_coverage": 0.9605,
      "per_class": {
       "0": {
        "map_share": 0.2438025926768251,
@@ -10846,7 +10846,7 @@
      "budget": 1000,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9495,
+     "overall_coverage": 0.947,
      "per_class": {
       "0": {
        "map_share": 0.2438025926768251,
@@ -10918,7 +10918,7 @@
      "budget": 1000,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9485,
+     "overall_coverage": 0.947,
      "per_class": {
       "0": {
        "map_share": 0.2438025926768251,
@@ -10983,7 +10983,7 @@
        }
       }
      },
-     "seconds": 0.3
+     "seconds": 0.4
     },
     {
      "design": "confidence",
@@ -11274,10 +11274,10 @@
      "seconds": 3.5
     }
    ],
+   "units": "exp/out/exp78_units",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp78_units"
+   ]
   },
   "breizhcrops": {
    "n_units": 122614,
@@ -11289,7 +11289,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9385,
+     "overall_coverage": 0.9505,
      "per_class": {
       "0": {
        "map_share": 0.06096367462116887,
@@ -11571,7 +11571,7 @@
        }
       }
      },
-     "seconds": 3.0,
+     "seconds": 2.6,
      "share_excludes_map": {
       "0": {
        "disc": 0.012209046275302983,
@@ -11634,7 +11634,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9385,
+     "overall_coverage": 0.9505,
      "per_class": {
       "0": {
        "map_share": 0.06096367462116887,
@@ -11916,7 +11916,7 @@
        }
       }
      },
-     "seconds": 2.3,
+     "seconds": 1.9,
      "share_excludes_map": {
       "0": {
        "disc": 0.012209046275302983,
@@ -11979,7 +11979,7 @@
      "budget": 1000,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9475,
+     "overall_coverage": 0.95,
      "per_class": {
       "0": {
        "map_share": 0.06096367462116887,
@@ -12261,14 +12261,14 @@
        }
       }
      },
-     "seconds": 4.0
+     "seconds": 3.3
     },
     {
      "design": "random",
      "budget": 1000,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.947,
+     "overall_coverage": 0.95,
      "per_class": {
       "0": {
        "map_share": 0.06096367462116887,
@@ -12550,7 +12550,7 @@
        }
       }
      },
-     "seconds": 3.0
+     "seconds": 1.9
     },
     {
      "design": "confidence",
@@ -13709,10 +13709,10 @@
      "seconds": 45.1
     }
    ],
+   "units": "exp/out/exp78_units",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp78_units"
+   ]
   },
   "mados": {
    "n_units": 22598,
@@ -13724,7 +13724,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.913,
+     "overall_coverage": 0.956,
      "per_class": {
       "0": {
        "map_share": 0.00035401362952473673,
@@ -14192,7 +14192,7 @@
        }
       }
      },
-     "seconds": 1.5,
+     "seconds": 1.2,
      "share_excludes_map": {
       "0": {
        "disc": 8.850340738118416e-05,
@@ -14291,7 +14291,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9295,
+     "overall_coverage": 0.956,
      "per_class": {
       "0": {
        "map_share": 0.00035401362952473673,
@@ -14759,7 +14759,7 @@
        }
       }
      },
-     "seconds": 1.1,
+     "seconds": 0.9,
      "share_excludes_map": {
       "0": {
        "disc": 8.850340738118416e-05,
@@ -14858,7 +14858,7 @@
      "budget": 1000,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9395,
+     "overall_coverage": 0.9525,
      "per_class": {
       "0": {
        "map_share": 0.00035401362952473673,
@@ -15326,14 +15326,14 @@
        }
       }
      },
-     "seconds": 2.1
+     "seconds": 1.8
     },
     {
      "design": "random",
      "budget": 1000,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9415,
+     "overall_coverage": 0.9525,
      "per_class": {
       "0": {
        "map_share": 0.00035401362952473673,
@@ -15801,7 +15801,7 @@
        }
       }
      },
-     "seconds": 1.3
+     "seconds": 1.1
     },
     {
      "design": "confidence",
@@ -17704,10 +17704,10 @@
      "seconds": 20.0
     }
    ],
+   "units": "exp/out/exp79_units/olmoearth_base",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/olmoearth_base"
+   ]
   },
   "sen1floods11": {
    "n_units": 592385,
@@ -17719,7 +17719,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9485,
+     "overall_coverage": 0.96,
      "per_class": {
       "0": {
        "map_share": 0.7749149623977649,
@@ -17784,7 +17784,7 @@
        }
       }
      },
-     "seconds": 11.1,
+     "seconds": 8.2,
      "share_excludes_map": {
       "0": {
        "disc": 0.030792474488719246,
@@ -17805,7 +17805,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9385,
+     "overall_coverage": 0.96,
      "per_class": {
       "0": {
        "map_share": 0.7749149623977649,
@@ -17870,7 +17870,7 @@
        }
       }
      },
-     "seconds": 10.5,
+     "seconds": 7.8,
      "share_excludes_map": {
       "0": {
        "disc": 0.030792474488719246,
@@ -17891,7 +17891,7 @@
      "budget": 1000,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.936,
+     "overall_coverage": 0.9405,
      "per_class": {
       "0": {
        "map_share": 0.7749149623977649,
@@ -17956,14 +17956,14 @@
        }
       }
      },
-     "seconds": 11.3
+     "seconds": 8.9
     },
     {
      "design": "random",
      "budget": 1000,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9365,
+     "overall_coverage": 0.9405,
      "per_class": {
       "0": {
        "map_share": 0.7749149623977649,
@@ -18028,7 +18028,7 @@
        }
       }
      },
-     "seconds": 10.2
+     "seconds": 8.0
     },
     {
      "design": "confidence",
@@ -18319,10 +18319,10 @@
      "seconds": 147.5
     }
    ],
+   "units": "exp/out/exp79_units/olmoearth_base",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/olmoearth_base"
+   ]
   },
   "pastis_sentinel1": {
    "n_units": 458638,
@@ -18334,7 +18334,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9355,
+     "overall_coverage": 0.9575,
      "per_class": {
       "0": {
        "map_share": 0.49530130516878235,
@@ -18926,7 +18926,7 @@
        }
       }
      },
-     "seconds": 9.2,
+     "seconds": 7.4,
      "share_excludes_map": {
       "0": {
        "disc": 0.058385916561645546,
@@ -19049,7 +19049,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9385,
+     "overall_coverage": 0.9575,
      "per_class": {
       "0": {
        "map_share": 0.49530130516878235,
@@ -19641,7 +19641,7 @@
        }
       }
      },
-     "seconds": 8.3,
+     "seconds": 6.8,
      "share_excludes_map": {
       "0": {
        "disc": 0.058385916561645546,
@@ -19764,7 +19764,7 @@
      "budget": 1000,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9445,
+     "overall_coverage": 0.9475,
      "per_class": {
       "0": {
        "map_share": 0.49530130516878235,
@@ -20356,14 +20356,14 @@
        }
       }
      },
-     "seconds": 10.6
+     "seconds": 8.7
     },
     {
      "design": "random",
      "budget": 1000,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9455,
+     "overall_coverage": 0.9475,
      "per_class": {
       "0": {
        "map_share": 0.49530130516878235,
@@ -20955,7 +20955,7 @@
        }
       }
      },
-     "seconds": 8.5
+     "seconds": 7.0
     },
     {
      "design": "confidence",
@@ -23354,10 +23354,10 @@
      "seconds": 184.1
     }
    ],
+   "units": "exp/out/exp79_units/olmoearth_base",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/olmoearth_base"
+   ]
   },
   "pastis_sentinel2": {
    "n_units": 458638,
@@ -23369,7 +23369,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9245,
+     "overall_coverage": 0.9505,
      "per_class": {
       "0": {
        "map_share": 0.4662391690178311,
@@ -23961,7 +23961,7 @@
        }
       }
      },
-     "seconds": 9.3,
+     "seconds": 7.0,
      "share_excludes_map": {
       "0": {
        "disc": 0.029323780410694278,
@@ -24084,7 +24084,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.926,
+     "overall_coverage": 0.9505,
      "per_class": {
       "0": {
        "map_share": 0.4662391690178311,
@@ -24676,7 +24676,7 @@
        }
       }
      },
-     "seconds": 8.4,
+     "seconds": 6.4,
      "share_excludes_map": {
       "0": {
        "disc": 0.029323780410694278,
@@ -24799,7 +24799,7 @@
      "budget": 1000,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.955,
+     "overall_coverage": 0.9655,
      "per_class": {
       "0": {
        "map_share": 0.4662391690178311,
@@ -25391,14 +25391,14 @@
        }
       }
      },
-     "seconds": 10.7
+     "seconds": 8.0
     },
     {
      "design": "random",
      "budget": 1000,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9575,
+     "overall_coverage": 0.9655,
      "per_class": {
       "0": {
        "map_share": 0.4662391690178311,
@@ -25990,7 +25990,7 @@
        }
       }
      },
-     "seconds": 8.7
+     "seconds": 6.6
     },
     {
      "design": "confidence",
@@ -28389,10 +28389,10 @@
      "seconds": 188.7
     }
    ],
+   "units": "exp/out/exp79_units/olmoearth_base",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/olmoearth_base"
+   ]
   },
   "pastis_sentinel1_sentinel2": {
    "n_units": 458638,
@@ -28404,7 +28404,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9315,
+     "overall_coverage": 0.9615,
      "per_class": {
       "0": {
        "map_share": 0.46887959567240395,
@@ -28996,7 +28996,7 @@
        }
       }
      },
-     "seconds": 9.3,
+     "seconds": 7.3,
      "share_excludes_map": {
       "0": {
        "disc": 0.03196420706526715,
@@ -29119,7 +29119,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9385,
+     "overall_coverage": 0.9615,
      "per_class": {
       "0": {
        "map_share": 0.46887959567240395,
@@ -29711,7 +29711,7 @@
        }
       }
      },
-     "seconds": 8.5,
+     "seconds": 6.7,
      "share_excludes_map": {
       "0": {
        "disc": 0.03196420706526715,
@@ -29834,7 +29834,7 @@
      "budget": 1000,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9525,
+     "overall_coverage": 0.9585,
      "per_class": {
       "0": {
        "map_share": 0.46887959567240395,
@@ -30426,14 +30426,14 @@
        }
       }
      },
-     "seconds": 10.5
+     "seconds": 8.4
     },
     {
      "design": "random",
      "budget": 1000,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.953,
+     "overall_coverage": 0.9585,
      "per_class": {
       "0": {
        "map_share": 0.46887959567240395,
@@ -31025,7 +31025,7 @@
        }
       }
      },
-     "seconds": 8.5
+     "seconds": 7.0
     },
     {
      "design": "confidence",
@@ -33424,10 +33424,10 @@
      "seconds": 189.5
     }
    ],
+   "units": "exp/out/exp79_units/olmoearth_base",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/olmoearth_base"
+   ]
   },
   "m_cashew_plant": {
    "n_units": 204800,
@@ -33439,7 +33439,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9435,
+     "overall_coverage": 0.9485,
      "per_class": {
       "0": {
        "map_share": 0.006015625,
@@ -33659,7 +33659,7 @@
        }
       }
      },
-     "seconds": 4.3,
+     "seconds": 3.4,
      "share_excludes_map": {
       "0": {
        "disc": 0.006015625,
@@ -33710,7 +33710,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9465,
+     "overall_coverage": 0.9485,
      "per_class": {
       "0": {
        "map_share": 0.006015625,
@@ -33930,7 +33930,7 @@
        }
       }
      },
-     "seconds": 3.6,
+     "seconds": 2.9,
      "share_excludes_map": {
       "0": {
        "disc": 0.006015625,
@@ -33981,7 +33981,7 @@
      "budget": 1000,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.948,
+     "overall_coverage": 0.951,
      "per_class": {
       "0": {
        "map_share": 0.006015625,
@@ -34201,14 +34201,14 @@
        }
       }
      },
-     "seconds": 5.3
+     "seconds": 4.3
     },
     {
      "design": "random",
      "budget": 1000,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9475,
+     "overall_coverage": 0.951,
      "per_class": {
       "0": {
        "map_share": 0.006015625,
@@ -34428,7 +34428,7 @@
        }
       }
      },
-     "seconds": 3.6
+     "seconds": 3.1
     },
     {
      "design": "confidence",
@@ -35339,10 +35339,10 @@
      "seconds": 70.4
     }
    ],
+   "units": "exp/out/exp79_units/olmoearth_base",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/olmoearth_base"
+   ]
   },
   "m_sa_crop_type": {
    "n_units": 4096000,
@@ -35354,7 +35354,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.955,
+     "overall_coverage": 0.9565,
      "per_class": {
       "0": {
        "map_share": 0.60569775390625,
@@ -35667,7 +35667,7 @@
        }
       }
      },
-     "seconds": 69.0,
+     "seconds": 52.5,
      "share_excludes_map": {
       "0": {
        "disc": 0.09677270507812508,
@@ -35736,7 +35736,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.956,
+     "overall_coverage": 0.9565,
      "per_class": {
       "0": {
        "map_share": 0.60569775390625,
@@ -36049,7 +36049,7 @@
        }
       }
      },
-     "seconds": 67.2,
+     "seconds": 51.4,
      "share_excludes_map": {
       "0": {
        "disc": 0.09677270507812508,
@@ -36118,7 +36118,7 @@
      "budget": 1000,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.947,
+     "overall_coverage": 0.953,
      "per_class": {
       "0": {
        "map_share": 0.60569775390625,
@@ -36431,14 +36431,14 @@
        }
       }
      },
-     "seconds": 69.6
+     "seconds": 52.9
     },
     {
      "design": "random",
      "budget": 1000,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.947,
+     "overall_coverage": 0.953,
      "per_class": {
       "0": {
        "map_share": 0.60569775390625,
@@ -36751,7 +36751,7 @@
        }
       }
      },
-     "seconds": 67.0
+     "seconds": 51.3
     },
     {
      "design": "confidence",
@@ -38034,10 +38034,10 @@
      "seconds": 1233.5
     }
    ],
+   "units": "exp/out/exp79_units/olmoearth_base",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/olmoearth_base"
+   ]
   }
  },
  "prereg": {

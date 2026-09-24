@@ -198,7 +198,7 @@ def test_labelling_the_review_set_and_dividing_is_refused_with_the_inflation_nam
     k = int(round(0.05 * n))
     review = np.argsort(margin, kind="stable")[:k]                # least confident first: the review set
     chk = ox.review_set_check(review, margin)
-    assert chk["looks_like_a_review_set"] and chk["median_suspicion_percentile"] > 0.95
+    assert chk["looks_like_a_review_set"] and chk["mean_suspicion_percentile"] > 0.95
     with pytest.raises(ValueError, match="not a sample"):
         ox.estimate_from_indices(review, err[review], margin)
     assert err[review].mean() > 1.7 * err.mean()                  # and it would indeed have been inflated
@@ -208,23 +208,24 @@ def test_a_random_sample_passes_the_guard_and_is_estimated_as_one():
     margin, p1, err, tile = _units("mados")
     idx = np.random.default_rng(0).choice(margin.size, 300, replace=False)
     r = ox.estimate_from_indices(idx, err[idx], margin)
-    assert 0.45 < r["review_set_check"]["median_suspicion_percentile"] < 0.55
+    assert 0.45 < r["review_set_check"]["mean_suspicion_percentile"] < 0.55
     # two hundred random draws: none refused
     for k in range(200):
         j = np.random.default_rng(k).choice(margin.size, 300, replace=False)
         assert not ox.review_set_check(j, margin)["looks_like_a_review_set"], k
-    assert r["low"] <= err.mean() <= r["high"] and r["method"].startswith("Wilson")
+    assert r["low"] <= err.mean() <= r["high"] and r["method"].startswith("exact hypergeometric")
 
 
 def test_the_same_windows_are_estimated_with_their_design_and_refused_without_it():
     """The confidence design oversamples the suspect end on purpose: on MADOS its median suspicion percentile is
     about 0.72 and treating it as random would report 1.9 times the true rate. With its design it carries the
     weights that undo that and is estimated; handed over as bare indices it is refused. That is the guard's job,
-    and at 0.75 the first threshold let it through: the threshold is now four SDs above a random sample's."""
+    and at 0.75 the first threshold let it through: the threshold is four SDs above a random sample's mean
+    percentile (the median until 2026-09-24, which heavy ties defeated)."""
     margin, p1, err, tile = _units("mados")
     s = ox.sample_for_estimation(margin, 300, p1=p1)
     chk = ox.review_set_check(s["indices"], margin)
-    assert chk["median_suspicion_percentile"] > chk["threshold"] and abs(chk["threshold"] - 0.639) < 0.01
+    assert chk["mean_suspicion_percentile"] > chk["threshold"] and abs(chk["threshold"] - 0.566) < 0.01
     assert err[s["indices"]].mean() > 1.5 * err.mean()
     r = ox.estimate_error_rate(s, err[s["indices"]])
     assert r["low"] <= err.mean() <= r["high"]
@@ -353,7 +354,11 @@ def test_nan_margins_are_not_the_suspect_end_so_the_review_set_cannot_hide_behin
         ox.estimate_from_indices(review, err[review], m_nan)
 
 
-def test_a_tied_block_gets_one_percentile_so_raster_position_cannot_decide_the_guard():
+def test_ties_are_ranked_in_a_random_order_so_neither_raster_position_nor_a_large_tie_decides_the_guard():
+    """Raster position cannot decide the verdict: the first and the last 200 windows of a tied block at the
+    suspect end are both flagged, at medians within sampling noise of each other. And a genuine random sample is
+    not refused when most of the map ties at the suspect end: with mid-ranks (until 2026-09-23) a tied block had one
+    percentile near its middle, and at 60% tied every random sample was refused as a review set."""
     rng = np.random.default_rng(0)
     n = 20000
     tied = rng.random(n) < 0.4
@@ -361,8 +366,13 @@ def test_a_tied_block_gets_one_percentile_so_raster_position_cannot_decide_the_g
     first = np.argsort(m, kind="stable")[:200]
     last = np.flatnonzero(tied)[-200:]
     a, b = ox.review_set_check(first, m), ox.review_set_check(last, m)
-    assert a["median_suspicion_percentile"] == pytest.approx(b["median_suspicion_percentile"])
+    assert abs(a["mean_suspicion_percentile"] - b["mean_suspicion_percentile"]) < 0.05
     assert a["looks_like_a_review_set"] and b["looks_like_a_review_set"]
+    for share in (0.5, 0.6, 0.7):
+        heavy = np.where(rng.random(4000) < share, 0.0, 0.05 + 0.95 * rng.random(4000))
+        refused = sum(ox.review_set_check(rng.choice(4000, 300, replace=False), heavy)["looks_like_a_review_set"]
+                      for _ in range(50))
+        assert refused <= 2, (share, refused)
 
 
 def test_estimate_from_indices_refuses_no_data_windows_and_repeats():
@@ -480,7 +490,7 @@ def test_the_exact_interval_is_the_tail_inversion_and_covers_at_least_nominal_by
         tail_up = lambda K: sum(math.comb(K, x) * math.comb(N - K, n - x) for x in range(k, min(n, K) + 1)) / math.comb(N, n)
         tail_dn = lambda K: sum(math.comb(K, x) * math.comb(N - K, n - x) for x in range(max(0, n - (N - K)), k + 1)) / math.comb(N, n)
         keep = [K for K in range(k, N - (n - k) + 1) if tail_up(K) > 0.025 and tail_dn(K) > 0.025]
-        return min(keep) / N, max(keep) / N
+        return min(min(keep) / N, k / n), max(max(keep) / N, k / n)      # widened to hold the sample share
     for k, n, N in ((0, 10, 50), (1, 10, 50), (5, 10, 50), (10, 10, 50), (29, 30, 100), (1, 30, 100), (13, 20, 60)):
         assert est.hypergeom_interval(k, n, N) == pytest.approx(by_scan(k, n, N), abs=1e-12)
     worst = 1.0
@@ -523,3 +533,18 @@ def test_the_exact_interval_refuses_fractional_counts_and_an_impossible_level():
         with pytest.raises(ValueError):
             est.hypergeom_interval(3, 10, 50, conf)
     assert est.hypergeom_interval(np.int64(3), 10.0, 50) == est.hypergeom_interval(3, 10, 50)
+
+
+def test_the_review_set_is_refused_inside_a_large_tied_block():
+    """Verification of the second review: with 60% of the map tied at the suspect end, the median put the tool's
+    own review set (all inside the block) at the block's middle, where a random sample's median also sits, and let it
+    through. The mean separates them: a random sample 0.50, the review set about 0.70."""
+    rng = np.random.default_rng(1)
+    n = 1600
+    m = np.where(rng.random(n) < 0.6, 0.0, 0.05 + 0.95 * rng.random(n))
+    for share in (0.05, 0.10, 0.30):
+        review = np.argsort(m, kind="stable")[:int(share * n)]
+        assert ox.review_set_check(review, m)["looks_like_a_review_set"], share
+    refused = sum(ox.review_set_check(rng.choice(n, 300, replace=False), m)["looks_like_a_review_set"] for _ in range(100))
+    assert refused == 0
+

@@ -16,7 +16,7 @@
   ],
   "min_per_class": 30,
   "seed": 0,
-  "seconds_last_invocation": 37
+  "seconds_last_invocation": 33
  },
  "tasks": {
   "m_eurosat": {
@@ -29,7 +29,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.944,
+     "overall_coverage": 0.96,
      "per_class": {
       "0": {
        "map_share": 0.103,
@@ -411,7 +411,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9425,
+     "overall_coverage": 0.96,
      "per_class": {
       "0": {
        "map_share": 0.103,
@@ -724,7 +724,7 @@
        }
       }
      },
-     "seconds": 0.6,
+     "seconds": 0.5,
      "share_excludes_map": {
       "0": {
        "disc": 0.002999999999999989,
@@ -1429,10 +1429,10 @@
      "seconds": 7.3
     }
    ],
+   "units": "exp/out/exp79_units/clay_large",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/clay_large"
+   ]
   },
   "m_brick_kiln": {
    "n_units": 999,
@@ -1444,7 +1444,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.946,
+     "overall_coverage": 0.951,
      "per_class": {
       "0": {
        "map_share": 0.6746746746746747,
@@ -1530,7 +1530,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.939,
+     "overall_coverage": 0.951,
      "per_class": {
       "0": {
        "map_share": 0.6746746746746747,
@@ -1595,7 +1595,7 @@
        }
       }
      },
-     "seconds": 0.2,
+     "seconds": 0.3,
      "share_excludes_map": {
       "0": {
        "disc": 0.011011011011010985,
@@ -1756,10 +1756,10 @@
      "seconds": 2.0
     }
    ],
+   "units": "exp/out/exp79_units/clay_large",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/clay_large"
+   ]
   },
   "m_forestnet": {
    "n_units": 993,
@@ -1771,7 +1771,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9515,
+     "overall_coverage": 0.965,
      "per_class": {
       "0": {
        "map_share": 0.23564954682779457,
@@ -2146,7 +2146,7 @@
        }
       }
      },
-     "seconds": 1.1,
+     "seconds": 0.9,
      "share_excludes_map": {
       "0": {
        "disc": 0.026183282980866057,
@@ -2227,7 +2227,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9505,
+     "overall_coverage": 0.965,
      "per_class": {
       "0": {
        "map_share": 0.23564954682779457,
@@ -2602,7 +2602,7 @@
        }
       }
      },
-     "seconds": 0.7,
+     "seconds": 0.6,
      "share_excludes_map": {
       "0": {
        "disc": 0.026183282980866057,
@@ -3443,10 +3443,10 @@
      "seconds": 8.9
     }
    ],
+   "units": "exp/out/exp79_units/clay_large",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/clay_large"
+   ]
   },
   "m_so2sat": {
    "n_units": 986,
@@ -3458,7 +3458,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9475,
+     "overall_coverage": 0.958,
      "per_class": {
       "0": {
        "map_share": 0.028397565922920892,
@@ -3988,7 +3988,7 @@
        }
       }
      },
-     "seconds": 1.4,
+     "seconds": 1.2,
      "share_excludes_map": {
       "0": {
        "disc": 0.030425963488843813,
@@ -4099,7 +4099,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9465,
+     "overall_coverage": 0.958,
      "per_class": {
       "0": {
        "map_share": 0.028397565922920892,
@@ -4629,7 +4629,7 @@
        }
       }
      },
-     "seconds": 1.0,
+     "seconds": 0.9,
      "share_excludes_map": {
       "0": {
        "disc": 0.030425963488843813,
@@ -5810,34 +5810,34 @@
      "seconds": 12.0
     }
    ],
+   "units": "exp/out/exp79_units/clay_large",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/clay_large"
+   ]
   },
   "awf_landsat": {
    "n_units": 200,
    "n_classes": 9,
    "family": "classification",
    "cells": [],
-   "carried_over_designs": [],
-   "units": "exp/out/exp79_units/clay_large"
+   "units": "exp/out/exp79_units/clay_large",
+   "carried_over_designs": []
   },
   "awf_sentinel1": {
    "n_units": 200,
    "n_classes": 9,
    "family": "classification",
    "cells": [],
-   "carried_over_designs": [],
-   "units": "exp/out/exp79_units/clay_large"
+   "units": "exp/out/exp79_units/clay_large",
+   "carried_over_designs": []
   },
   "awf_sentinel2": {
    "n_units": 200,
    "n_classes": 9,
    "family": "classification",
    "cells": [],
-   "carried_over_designs": [],
-   "units": "exp/out/exp79_units/clay_large"
+   "units": "exp/out/exp79_units/clay_large",
+   "carried_over_designs": []
   },
   "nandi_landsat": {
    "n_units": 825,
@@ -5849,7 +5849,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9525,
+     "overall_coverage": 0.956,
      "per_class": {
       "0": {
        "map_share": 0.26181818181818184,
@@ -6038,7 +6038,7 @@
        }
       }
      },
-     "seconds": 0.7,
+     "seconds": 0.6,
      "share_excludes_map": {
       "0": {
        "disc": 0.015757575757575776,
@@ -6083,7 +6083,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9525,
+     "overall_coverage": 0.956,
      "per_class": {
       "0": {
        "map_share": 0.26181818181818184,
@@ -6705,10 +6705,10 @@
      "seconds": 4.7
     }
    ],
+   "units": "exp/out/exp79_units/clay_large",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/clay_large"
+   ]
   },
   "nandi_sentinel1": {
    "n_units": 825,
@@ -6720,7 +6720,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9525,
+     "overall_coverage": 0.9585,
      "per_class": {
       "0": {
        "map_share": 0.1696969696969697,
@@ -6909,7 +6909,7 @@
        }
       }
      },
-     "seconds": 0.7,
+     "seconds": 0.6,
      "share_excludes_map": {
       "0": {
        "disc": 0.07636363636363636,
@@ -6954,7 +6954,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.951,
+     "overall_coverage": 0.9585,
      "per_class": {
       "0": {
        "map_share": 0.1696969696969697,
@@ -7576,10 +7576,10 @@
      "seconds": 4.7
     }
    ],
+   "units": "exp/out/exp79_units/clay_large",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/clay_large"
+   ]
   },
   "nandi_sentinel2": {
    "n_units": 825,
@@ -7591,7 +7591,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.948,
+     "overall_coverage": 0.959,
      "per_class": {
       "0": {
        "map_share": 0.19757575757575757,
@@ -7780,7 +7780,7 @@
        }
       }
      },
-     "seconds": 0.7,
+     "seconds": 0.6,
      "share_excludes_map": {
       "0": {
        "disc": 0.04848484848484849,
@@ -7825,7 +7825,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.943,
+     "overall_coverage": 0.959,
      "per_class": {
       "0": {
        "map_share": 0.19757575757575757,
@@ -8447,10 +8447,10 @@
      "seconds": 4.8
     }
    ],
+   "units": "exp/out/exp79_units/clay_large",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/clay_large"
+   ]
   },
   "cropharvest_Togo_12_sentinel1": {
    "n_units": 306,
@@ -8462,7 +8462,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9555,
+     "overall_coverage": 0.9965,
      "per_class": {
       "0": {
        "map_share": 0.49673202614379086,
@@ -8548,7 +8548,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9555,
+     "overall_coverage": 0.9965,
      "per_class": {
       "0": {
        "map_share": 0.49673202614379086,
@@ -8774,10 +8774,10 @@
      "seconds": 1.9
     }
    ],
+   "units": "exp/out/exp79_units/clay_large",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/clay_large"
+   ]
   },
   "cropharvest_Togo_12_sentinel2": {
    "n_units": 306,
@@ -8789,7 +8789,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.972,
+     "overall_coverage": 0.9955,
      "per_class": {
       "0": {
        "map_share": 0.5522875816993464,
@@ -8875,7 +8875,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.972,
+     "overall_coverage": 0.9955,
      "per_class": {
       "0": {
        "map_share": 0.5522875816993464,
@@ -9101,10 +9101,10 @@
      "seconds": 1.8
     }
    ],
+   "units": "exp/out/exp79_units/clay_large",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/clay_large"
+   ]
   },
   "cropharvest_Togo_12_sentinel2_sentinel1": {
    "n_units": 306,
@@ -9116,7 +9116,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9645,
+     "overall_coverage": 0.9925,
      "per_class": {
       "0": {
        "map_share": 0.45098039215686275,
@@ -9202,7 +9202,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.964,
+     "overall_coverage": 0.9925,
      "per_class": {
       "0": {
        "map_share": 0.45098039215686275,
@@ -9428,10 +9428,10 @@
      "seconds": 1.9
     }
    ],
+   "units": "exp/out/exp79_units/clay_large",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/clay_large"
+   ]
   },
   "cropharvest_Peoples_Republic_of_China_6": {
    "n_units": 4397,
@@ -9443,7 +9443,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9495,
+     "overall_coverage": 0.9515,
      "per_class": {
       "0": {
        "map_share": 0.24175574255173982,
@@ -9529,7 +9529,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9475,
+     "overall_coverage": 0.9515,
      "per_class": {
       "0": {
        "map_share": 0.24175574255173982,
@@ -9615,7 +9615,7 @@
      "budget": 1000,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.955,
+     "overall_coverage": 0.9645,
      "per_class": {
       "0": {
        "map_share": 0.24175574255173982,
@@ -9680,14 +9680,14 @@
        }
       }
      },
-     "seconds": 1.1
+     "seconds": 1.0
     },
     {
      "design": "random",
      "budget": 1000,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.957,
+     "overall_coverage": 0.9645,
      "per_class": {
       "0": {
        "map_share": 0.24175574255173982,
@@ -9752,7 +9752,7 @@
        }
       }
      },
-     "seconds": 0.3
+     "seconds": 0.4
     },
     {
      "design": "confidence",
@@ -10043,10 +10043,10 @@
      "seconds": 3.4
     }
    ],
+   "units": "exp/out/exp79_units/clay_large",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/clay_large"
+   ]
   },
   "cropharvest_Peoples_Republic_of_China_6_sentinel1": {
    "n_units": 4397,
@@ -10058,7 +10058,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9435,
+     "overall_coverage": 0.947,
      "per_class": {
       "0": {
        "map_share": 0.09460996133727541,
@@ -10123,7 +10123,7 @@
        }
       }
      },
-     "seconds": 0.6,
+     "seconds": 0.5,
      "share_excludes_map": {
       "0": {
        "disc": 0.36911530589037983,
@@ -10144,7 +10144,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9425,
+     "overall_coverage": 0.947,
      "per_class": {
       "0": {
        "map_share": 0.09460996133727541,
@@ -10230,7 +10230,7 @@
      "budget": 1000,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9505,
+     "overall_coverage": 0.9495,
      "per_class": {
       "0": {
        "map_share": 0.09460996133727541,
@@ -10295,14 +10295,14 @@
        }
       }
      },
-     "seconds": 1.0
+     "seconds": 0.9
     },
     {
      "design": "random",
      "budget": 1000,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9525,
+     "overall_coverage": 0.9495,
      "per_class": {
       "0": {
        "map_share": 0.09460996133727541,
@@ -10367,7 +10367,7 @@
        }
       }
      },
-     "seconds": 0.3
+     "seconds": 0.4
     },
     {
      "design": "confidence",
@@ -10658,10 +10658,10 @@
      "seconds": 3.4
     }
    ],
+   "units": "exp/out/exp79_units/clay_large",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/clay_large"
+   ]
   },
   "cropharvest_Peoples_Republic_of_China_6_sentinel1_sentinel2": {
    "n_units": 4397,
@@ -10673,7 +10673,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9475,
+     "overall_coverage": 0.9535,
      "per_class": {
       "0": {
        "map_share": 0.20513986809188084,
@@ -10759,7 +10759,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9445,
+     "overall_coverage": 0.9535,
      "per_class": {
       "0": {
        "map_share": 0.20513986809188084,
@@ -10845,7 +10845,7 @@
      "budget": 1000,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9585,
+     "overall_coverage": 0.962,
      "per_class": {
       "0": {
        "map_share": 0.20513986809188084,
@@ -10910,14 +10910,14 @@
        }
       }
      },
-     "seconds": 1.1
+     "seconds": 1.0
     },
     {
      "design": "random",
      "budget": 1000,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.958,
+     "overall_coverage": 0.962,
      "per_class": {
       "0": {
        "map_share": 0.20513986809188084,
@@ -10982,7 +10982,7 @@
        }
       }
      },
-     "seconds": 0.3
+     "seconds": 0.4
     },
     {
      "design": "confidence",
@@ -11273,10 +11273,10 @@
      "seconds": 3.4
     }
    ],
+   "units": "exp/out/exp79_units/clay_large",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/clay_large"
+   ]
   },
   "breizhcrops": {
    "n_units": 122614,
@@ -11288,7 +11288,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.955,
+     "overall_coverage": 0.9625,
      "per_class": {
       "0": {
        "map_share": 0.0010765491705677982,
@@ -11570,7 +11570,7 @@
        }
       }
      },
-     "seconds": 3.1,
+     "seconds": 2.6,
      "share_excludes_map": {
       "0": {
        "disc": 0.04767807917529809,
@@ -11633,7 +11633,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9535,
+     "overall_coverage": 0.9625,
      "per_class": {
       "0": {
        "map_share": 0.0010765491705677982,
@@ -11915,7 +11915,7 @@
        }
       }
      },
-     "seconds": 2.2,
+     "seconds": 1.9,
      "share_excludes_map": {
       "0": {
        "disc": 0.04767807917529809,
@@ -11978,7 +11978,7 @@
      "budget": 1000,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9465,
+     "overall_coverage": 0.9495,
      "per_class": {
       "0": {
        "map_share": 0.0010765491705677982,
@@ -12260,14 +12260,14 @@
        }
       }
      },
-     "seconds": 4.9
+     "seconds": 3.3
     },
     {
      "design": "random",
      "budget": 1000,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9465,
+     "overall_coverage": 0.9495,
      "per_class": {
       "0": {
        "map_share": 0.0010765491705677982,
@@ -12549,7 +12549,7 @@
        }
       }
      },
-     "seconds": 2.4
+     "seconds": 2.0
     },
     {
      "design": "confidence",
@@ -13708,10 +13708,10 @@
      "seconds": 48.1
     }
    ],
+   "units": "exp/out/exp79_units/clay_large",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/clay_large"
+   ]
   }
  },
  "prereg": {

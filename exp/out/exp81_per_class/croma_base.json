@@ -16,7 +16,7 @@
   ],
   "min_per_class": 30,
   "seed": 0,
-  "seconds_last_invocation": 32
+  "seconds_last_invocation": 29
  },
  "tasks": {
   "m_eurosat": {
@@ -29,7 +29,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.944,
+     "overall_coverage": 0.958,
      "per_class": {
       "0": {
        "map_share": 0.101,
@@ -342,7 +342,7 @@
        }
       }
      },
-     "seconds": 0.8,
+     "seconds": 0.7,
      "share_excludes_map": {
       "0": {
        "disc": 0.0010000000000000009,
@@ -411,7 +411,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9405,
+     "overall_coverage": 0.958,
      "per_class": {
       "0": {
        "map_share": 0.101,
@@ -1429,10 +1429,10 @@
      "seconds": 5.4
     }
    ],
+   "units": "exp/out/exp79_units/croma_base",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/croma_base"
+   ]
   },
   "m_brick_kiln": {
    "n_units": 999,
@@ -1444,7 +1444,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.966,
+     "overall_coverage": 0.984,
      "per_class": {
       "0": {
        "map_share": 0.6666666666666666,
@@ -1530,7 +1530,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9215,
+     "overall_coverage": 0.984,
      "per_class": {
       "0": {
        "map_share": 0.6666666666666666,
@@ -1595,7 +1595,7 @@
        }
       }
      },
-     "seconds": 0.2,
+     "seconds": 0.3,
      "share_excludes_map": {
       "0": {
        "disc": 0.0030030030030029353,
@@ -1756,10 +1756,10 @@
      "seconds": 2.0
     }
    ],
+   "units": "exp/out/exp79_units/croma_base",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/croma_base"
+   ]
   },
   "m_so2sat": {
    "n_units": 986,
@@ -1771,7 +1771,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9515,
+     "overall_coverage": 0.9575,
      "per_class": {
       "0": {
        "map_share": 0.032454361054766734,
@@ -2301,7 +2301,7 @@
        }
       }
      },
-     "seconds": 1.5,
+     "seconds": 1.2,
      "share_excludes_map": {
       "0": {
        "disc": 0.02636916835699797,
@@ -2412,7 +2412,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9495,
+     "overall_coverage": 0.9575,
      "per_class": {
       "0": {
        "map_share": 0.032454361054766734,
@@ -2942,7 +2942,7 @@
        }
       }
      },
-     "seconds": 1.0,
+     "seconds": 0.9,
      "share_excludes_map": {
       "0": {
        "disc": 0.02636916835699797,
@@ -4123,26 +4123,26 @@
      "seconds": 11.9
     }
    ],
+   "units": "exp/out/exp79_units/croma_base",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/croma_base"
+   ]
   },
   "awf_sentinel1": {
    "n_units": 200,
    "n_classes": 9,
    "family": "classification",
    "cells": [],
-   "carried_over_designs": [],
-   "units": "exp/out/exp79_units/croma_base"
+   "units": "exp/out/exp79_units/croma_base",
+   "carried_over_designs": []
   },
   "awf_sentinel2": {
    "n_units": 200,
    "n_classes": 9,
    "family": "classification",
    "cells": [],
-   "carried_over_designs": [],
-   "units": "exp/out/exp79_units/croma_base"
+   "units": "exp/out/exp79_units/croma_base",
+   "carried_over_designs": []
   },
   "nandi_sentinel1": {
    "n_units": 825,
@@ -4154,7 +4154,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9555,
+     "overall_coverage": 0.9635,
      "per_class": {
       "0": {
        "map_share": 0.15878787878787878,
@@ -4343,7 +4343,7 @@
        }
       }
      },
-     "seconds": 0.7,
+     "seconds": 0.6,
      "share_excludes_map": {
       "0": {
        "disc": 0.08727272727272728,
@@ -4388,7 +4388,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.952,
+     "overall_coverage": 0.9635,
      "per_class": {
       "0": {
        "map_share": 0.15878787878787878,
@@ -5010,10 +5010,10 @@
      "seconds": 4.6
     }
    ],
+   "units": "exp/out/exp79_units/croma_base",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/croma_base"
+   ]
   },
   "nandi_sentinel2": {
    "n_units": 825,
@@ -5025,7 +5025,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.951,
+     "overall_coverage": 0.9595,
      "per_class": {
       "0": {
        "map_share": 0.20242424242424242,
@@ -5214,7 +5214,7 @@
        }
       }
      },
-     "seconds": 0.7,
+     "seconds": 0.6,
      "share_excludes_map": {
       "0": {
        "disc": 0.04363636363636364,
@@ -5259,7 +5259,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.95,
+     "overall_coverage": 0.9595,
      "per_class": {
       "0": {
        "map_share": 0.20242424242424242,
@@ -5881,10 +5881,10 @@
      "seconds": 4.6
     }
    ],
+   "units": "exp/out/exp79_units/croma_base",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/croma_base"
+   ]
   },
   "cropharvest_Togo_12_sentinel1": {
    "n_units": 306,
@@ -5896,7 +5896,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9635,
+     "overall_coverage": 0.996,
      "per_class": {
       "0": {
        "map_share": 0.477124183006536,
@@ -5982,7 +5982,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9635,
+     "overall_coverage": 0.996,
      "per_class": {
       "0": {
        "map_share": 0.477124183006536,
@@ -6208,10 +6208,10 @@
      "seconds": 2.1
     }
    ],
+   "units": "exp/out/exp79_units/croma_base",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/croma_base"
+   ]
   },
   "cropharvest_Togo_12_sentinel2": {
    "n_units": 306,
@@ -6223,7 +6223,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.967,
+     "overall_coverage": 0.994,
      "per_class": {
       "0": {
        "map_share": 0.5392156862745098,
@@ -6309,7 +6309,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.967,
+     "overall_coverage": 0.994,
      "per_class": {
       "0": {
        "map_share": 0.5392156862745098,
@@ -6535,10 +6535,10 @@
      "seconds": 2.1
     }
    ],
+   "units": "exp/out/exp79_units/croma_base",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/croma_base"
+   ]
   },
   "cropharvest_Togo_12_sentinel2_sentinel1": {
    "n_units": 306,
@@ -6550,7 +6550,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.963,
+     "overall_coverage": 0.9965,
      "per_class": {
       "0": {
        "map_share": 0.5196078431372549,
@@ -6636,7 +6636,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9645,
+     "overall_coverage": 0.9965,
      "per_class": {
       "0": {
        "map_share": 0.5196078431372549,
@@ -6862,10 +6862,10 @@
      "seconds": 2.1
     }
    ],
+   "units": "exp/out/exp79_units/croma_base",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/croma_base"
+   ]
   },
   "cropharvest_Peoples_Republic_of_China_6": {
    "n_units": 4397,
@@ -6877,7 +6877,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.947,
+     "overall_coverage": 0.953,
      "per_class": {
       "0": {
        "map_share": 0.2012735956333864,
@@ -6942,7 +6942,7 @@
        }
       }
      },
-     "seconds": 0.6,
+     "seconds": 0.5,
      "share_excludes_map": {
       "0": {
        "disc": 0.26245167159426885,
@@ -6963,7 +6963,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9465,
+     "overall_coverage": 0.953,
      "per_class": {
       "0": {
        "map_share": 0.2012735956333864,
@@ -7049,7 +7049,7 @@
      "budget": 1000,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.952,
+     "overall_coverage": 0.96,
      "per_class": {
       "0": {
        "map_share": 0.2012735956333864,
@@ -7114,14 +7114,14 @@
        }
       }
      },
-     "seconds": 1.0
+     "seconds": 0.9
     },
     {
      "design": "random",
      "budget": 1000,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9505,
+     "overall_coverage": 0.96,
      "per_class": {
       "0": {
        "map_share": 0.2012735956333864,
@@ -7186,7 +7186,7 @@
        }
       }
      },
-     "seconds": 0.3
+     "seconds": 0.4
     },
     {
      "design": "confidence",
@@ -7477,10 +7477,10 @@
      "seconds": 3.4
     }
    ],
+   "units": "exp/out/exp79_units/croma_base",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/croma_base"
+   ]
   },
   "cropharvest_Peoples_Republic_of_China_6_sentinel1": {
    "n_units": 4397,
@@ -7492,7 +7492,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.959,
+     "overall_coverage": 0.964,
      "per_class": {
       "0": {
        "map_share": 0.15760745963156697,
@@ -7557,7 +7557,7 @@
        }
       }
      },
-     "seconds": 0.6,
+     "seconds": 0.5,
      "share_excludes_map": {
       "0": {
        "disc": 0.30611780759608825,
@@ -7578,7 +7578,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9585,
+     "overall_coverage": 0.964,
      "per_class": {
       "0": {
        "map_share": 0.15760745963156697,
@@ -7736,7 +7736,7 @@
      "budget": 1000,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9475,
+     "overall_coverage": 0.948,
      "per_class": {
       "0": {
        "map_share": 0.15760745963156697,
@@ -7801,7 +7801,7 @@
        }
       }
      },
-     "seconds": 0.3
+     "seconds": 0.4
     },
     {
      "design": "confidence",
@@ -8092,10 +8092,10 @@
      "seconds": 3.4
     }
    ],
+   "units": "exp/out/exp79_units/croma_base",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/croma_base"
+   ]
   },
   "cropharvest_Peoples_Republic_of_China_6_sentinel1_sentinel2": {
    "n_units": 4397,
@@ -8107,7 +8107,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.953,
+     "overall_coverage": 0.959,
      "per_class": {
       "0": {
        "map_share": 0.18489879463270412,
@@ -8172,7 +8172,7 @@
        }
       }
      },
-     "seconds": 0.6,
+     "seconds": 0.5,
      "share_excludes_map": {
       "0": {
        "disc": 0.2788264725949511,
@@ -8193,7 +8193,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9505,
+     "overall_coverage": 0.959,
      "per_class": {
       "0": {
        "map_share": 0.18489879463270412,
@@ -8279,7 +8279,7 @@
      "budget": 1000,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9475,
+     "overall_coverage": 0.956,
      "per_class": {
       "0": {
        "map_share": 0.18489879463270412,
@@ -8344,14 +8344,14 @@
        }
       }
      },
-     "seconds": 1.0
+     "seconds": 0.9
     },
     {
      "design": "random",
      "budget": 1000,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.949,
+     "overall_coverage": 0.956,
      "per_class": {
       "0": {
        "map_share": 0.18489879463270412,
@@ -8416,7 +8416,7 @@
        }
       }
      },
-     "seconds": 0.3
+     "seconds": 0.4
     },
     {
      "design": "confidence",
@@ -8707,10 +8707,10 @@
      "seconds": 3.4
     }
    ],
+   "units": "exp/out/exp79_units/croma_base",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/croma_base"
+   ]
   },
   "breizhcrops": {
    "n_units": 122614,
@@ -8722,7 +8722,7 @@
      "budget": 300,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.95,
+     "overall_coverage": 0.954,
      "per_class": {
       "0": {
        "map_share": 0.07288727225276069,
@@ -9004,7 +9004,7 @@
        }
       }
      },
-     "seconds": 3.0,
+     "seconds": 2.4,
      "share_excludes_map": {
       "0": {
        "disc": 0.024132643906894805,
@@ -9067,7 +9067,7 @@
      "budget": 300,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.9505,
+     "overall_coverage": 0.954,
      "per_class": {
       "0": {
        "map_share": 0.07288727225276069,
@@ -9349,7 +9349,7 @@
        }
       }
      },
-     "seconds": 2.2,
+     "seconds": 1.8,
      "share_excludes_map": {
       "0": {
        "disc": 0.024132643906894805,
@@ -9412,7 +9412,7 @@
      "budget": 1000,
      "interval": "wilson",
      "n_draws": 2000,
-     "overall_coverage": 0.9455,
+     "overall_coverage": 0.9515,
      "per_class": {
       "0": {
        "map_share": 0.07288727225276069,
@@ -9694,14 +9694,14 @@
        }
       }
      },
-     "seconds": 4.0
+     "seconds": 3.5
     },
     {
      "design": "random",
      "budget": 1000,
      "interval": "wald",
      "n_draws": 2000,
-     "overall_coverage": 0.944,
+     "overall_coverage": 0.9515,
      "per_class": {
       "0": {
        "map_share": 0.07288727225276069,
@@ -9983,7 +9983,7 @@
        }
       }
      },
-     "seconds": 2.9
+     "seconds": 1.9
     },
     {
      "design": "confidence",
@@ -11142,10 +11142,10 @@
      "seconds": 48.4
     }
    ],
+   "units": "exp/out/exp79_units/croma_base",
    "carried_over_designs": [
     "confidence"
-   ],
-   "units": "exp/out/exp79_units/croma_base"
+   ]
   }
  },
  "prereg": {

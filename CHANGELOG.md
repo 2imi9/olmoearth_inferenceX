@@ -44,6 +44,46 @@
   the landscape itself changed between the dates; until now nothing in the tool noticed, and an agent had to. A
   date string is read whole (trailing characters are refused), a month or year `datetime64` is its whole period,
   and a time with an offset is read in UTC, so one instant written in two time zones is one time.
+- **The second review of 23 September, of every line changed since 1.2.0, and its 33 findings fixed.** Each fix has
+  a test that failed before it. The ones that gave a wrong answer or a crash:
+  - `certify --rule bonferroni` crashed after writing its output whenever it certified a zone.
+  - A sum of stratum weights could round to just above 1 and refuse a valid sample: `estimate --per-class` with
+    every label right on 1 to 3% of maps, `estimate` with every label wrong under the confidence design.
+  - The grid check used a relative tolerance and passed a map shifted 40 m (UTM northing) or 120 m (Web Mercator);
+    it now allows a thousandth of a pixel. `assess --reference` gained the same check and no longer crashes when no
+    window can be graded.
+  - `compare` broke a tied window by confidence on a score map and by lowest class on a class map, so a map and its
+    own probability version differed on 1.8% of windows; with a class map on either side a tied window is now left
+    out and counted. Class and label codes are pooled over a dense range (one stray code of 60000 took 3.3 GB).
+  - `compare_inferences` in Python graded label -1 as a class where the command line skips it.
+  - `certify` and `estimate --per-class` now check that the map is the one the sample was drawn on (population,
+    no-data value, confidence at the sampled windows); another map on the same grid was certified from this map's
+    labels.
+  - A random sample was refused as a review set when half the map or more tied at one margin. Ties are now ranked
+    in a fixed random order and the check reads the mean suspicion percentile, not the median: under heavy ties
+    the median could not tell a random sample from the tool's own review set, both inside the tied block.
+  - A class the map never predicts has a producer's accuracy of exactly 0, not n/a.
+  - `stats.paired_cluster_bootstrap` split every cluster in two when one side's ids were floats (a regression).
+  - `calibrate.fit_side` compared its held-out share with baselines computed on other rows; `fit_ranker`'s lead the same.
+  - Under a random sample the overall error rate, and the overall accuracy beside the per-class table, now use the
+    exact hypergeometric interval (the Wilson form covered 0.79 one window short of a census); the per-class table's
+    overall accuracy is `estimate`'s, graded, instead of an ungraded post-stratified form, which stays beside it as
+    a point. A census under the confidence design is reported as the point. The exact interval is widened to hold
+    the sample share, which near a census can fall between two population values.
+  - `assess(..., form="top1")` returned quantiles and a confidence array on different scales.
+
+  Text an agent reads: the boundary note no longer promises "at least 2.1 times" (the record measured 1.8, 1.5 and
+  1.3 below that); the low-confidence cue quotes the per-scene cut it is drawn with (1.4x to 3.4x, not 2.5x to 5.1x);
+  one map date alone is now "partly stated" and refuses grading; a missing date (NaT) is an unstated one; the Usage
+  example says its GEOID pair is cross-date. New warning, measured in exp81's seventh amendment: "few errors", when
+  a per-class interval rests on one to four sampled errors. Input checks: duplicate, negative and off-grid indices,
+  non-integer classes, `inf` in the CSV, NaN margins and `p1`, `alpha` below 1e-16, a stale zone mask, an ECE of
+  no finite unit, NDWI over negative reflectance, Dawid–Skene's edge inputs, refusals printed as messages.
+
+  Three test layers now run in CI with the suite: every command under every option (`tests/test_cli_matrix.py`),
+  properties on random maps with the extremes included (`tests/test_properties.py`, which found the interval above
+  that did not hold its own estimate), and the command line against the API on the same data
+  (`tests/test_consistency.py`).
 - `reliability.dawid_skene` (moved from `evidence`, which needed torch for nothing it used): the EM now runs to
   its stopping rule (largest posterior change below 1e-6) with a cap of 1,000 and can report whether it converged.
   Until now the cap was 50 iterations; on the suite's 15- and 19-class encoder panels the stop needs 224 and 261,

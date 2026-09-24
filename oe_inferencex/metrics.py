@@ -154,6 +154,8 @@ def expected_calibration_error(confidence, correct, bins=10):
     # confidence of exactly 0.0 fell outside the half-open first bin, returning 0.0 for data whose ECE is 0.5.
     keep = np.isfinite(conf) & np.isfinite(corr)
     conf, corr = conf[keep], corr[keep]
+    if conf.size == 0:
+        return float("nan"), []                                  # undefined, not "perfectly calibrated" (review, 2026-09-23)
     if ((conf < 0) | (conf > 1)).any():
         raise ValueError("confidence must be a probability in [0, 1]")
     edges = np.linspace(0, 1, bins + 1)

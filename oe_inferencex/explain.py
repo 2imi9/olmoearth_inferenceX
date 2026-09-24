@@ -72,7 +72,10 @@ BOLIVIA = "Sen1Floods11 Bolivia hand labels"
 # boundary enrichment runs from 1.24 (m-cashew-plant, 76% of windows on a boundary) to 8.13 (MADOS, 10%): what
 # moves it is the map's fragmentation, and the Bolivia shares above are one point of that range.
 EXP82_BOUNDARY = {"mados": (0.5436, 0.0669), "sen1floods11": (0.4535, 0.1147), "pastis_sentinel1": (0.7766, 0.4354), "pastis_sentinel2": (0.7869, 0.4700), "pastis_sentinel1_sentinel2": (0.7849, 0.4659), "m_cashew_plant": (0.8742, 0.7064), "m_sa_crop_type": (0.7070, 0.2617)}
-EXP82_LOW_CONFIDENCE = {"mados": (0.7829, 0.1537), "sen1floods11": (0.6954, 0.1543), "pastis_sentinel1": (0.4188, 0.1131), "pastis_sentinel2": (0.5307, 0.1224), "pastis_sentinel1_sentinel2": (0.5287, 0.1205), "m_cashew_plant": (0.3302, 0.1307), "m_sa_crop_type": (0.4052, 0.0943)}
+# the low-confidence cue as the tool draws it, the least confident 20% of ONE scene's windows: exp82's per-tile cut
+# (`low_confidence_per_tile`). Until 2026-09-23 these were exp82's cut over a whole task's pooled windows, whose
+# enrichment (2.5x to 5.1x) the per-scene cut does not reach (1.4x to 3.4x); the review of that day found the mismatch
+EXP82_LOW_CONFIDENCE = {"mados": (0.2898, 0.2123), "sen1floods11": (0.4442, 0.1807), "pastis_sentinel1": (0.3762, 0.1326), "pastis_sentinel2": (0.4678, 0.1394), "pastis_sentinel1_sentinel2": (0.4641, 0.1384), "m_cashew_plant": (0.3287, 0.1318), "m_sa_crop_type": (0.3591, 0.1183)}
 # exp82's grain addendum: above this boundary prevalence the cue is nearly universal and the enrichment's ceiling
 # (1 - e)/(p - e) sits near 1; Base's cashew map at a four-times coarser grid (0.896) has a risk ratio of 1.3,
 # AnySat's at that grid (0.966) 0.81 and an enrichment of 0.99
@@ -201,18 +204,20 @@ def explain_review_set(assessment, cues=None, budgets=None, library=CUES, low_co
     if "boundary" in library and library["boundary"].verified and valid.any():
         p = out["scene_share"]["boundary"]
         lo, hi = library["boundary"].verified_range
+        # No floor is promised: "at least 2.1 times on every task" was OlmoEarth Base at its native grain, and the
+        # record itself measured 1.8 on another encoder's map and 1.5 and 1.3 on coarser grids (review, 2026-09-23)
         out["boundary_prevalence_note"] = (
-            f"{100 * p:.0f}% of this map's windows sit on a prediction boundary; on the suite's seven segmentation tasks the "
-            f"cue's enrichment ran from {hi:.1f}x on a map with 10% boundary windows to {lo:.1f}x at 76%, while the error rate "
-            f"inside the boundary set stayed at least 2.1 times the rate outside on every task (exp82)")
+            f"{100 * p:.0f}% of this map's windows sit on a prediction boundary. On the suite's seven segmentation tasks the "
+            f"cue's enrichment ran from {hi:.1f}x on a map with 10% boundary windows to {lo:.1f}x at 76%; the error rate "
+            f"inside the boundary set was 1.8 to 11.2 times the rate outside on five encoders' maps with 7% to 77% "
+            f"boundary windows, and fell as that share rose: 1.5 times at 85%, 1.3 at 90% and below 1 at 97% (exp82 and "
+            f"its grain addendum)")
         if p >= BOUNDARY_SATURATED:
             # exp82's grain addendum: Base's cashew export at a four-times coarser grid has 90% boundary windows and a
             # risk ratio inside/outside of 1.3 (2.1 at the fine grid); AnySat's export at that grid has 97% and 0.81
             out["boundary_prevalence_note"] += (
-                f"; at {100 * p:.0f}% the cue is nearly universal and cannot enrich much (a ratio of shares is bounded by "
-                f"(1 - e)/(p - e) for a map with error rate e): on the suite the error rate inside the boundary set fell to "
-                f"1.3 times the rate outside at 90% boundary windows and below the rate outside at 97%, so on this map the "
-                f"boundary cue is at most a weak reason (exp82, grain addendum)")
+                f" At {100 * p:.0f}% the cue is nearly universal and cannot enrich much (a ratio of shares is bounded by "
+                f"(1 - e)/(p - e) for a map with error rate e), so on this map the boundary cue is at most a weak reason")
     sets = assessment.get("review_sets", {})
     for b, rs in sets.items():
         if budgets is not None and b not in budgets:
@@ -247,11 +252,17 @@ def confusion_pairs(reference, decision, valid=None, top=3):
     sees a label. Windows where the reference is negative (no majority label) or invalid are left out. On the
     suite's ten classification tasks with six or more classes the top three pairs held 18% (ForestNet) to 61%
     (BreizhCrops) of the errors (exp82), so the report says the share it explains beside the pairs."""
-    ref = np.asarray(reference).astype(int).ravel()
-    dec = np.asarray(decision).astype(int).ravel()
+    ref, dec = np.asarray(reference).ravel(), np.asarray(decision).ravel()
+    for name, x in (("reference", ref), ("decision", dec)):
+        # a class is a whole number: astype(int) used to truncate 0.6 to 0 and 1.4 to 1 (review of 2026-09-23)
+        if x.dtype.kind == "f" and not np.all(np.isnan(x) | (np.mod(np.nan_to_num(x), 1) == 0)):
+            raise ValueError(f"{name} must hold whole class ids (negative or NaN for no label)")
+    ref = np.where(np.isnan(ref), -1, ref).astype(int) if ref.dtype.kind == "f" else ref.astype(int)
+    dec = np.where(np.isnan(dec), -1, dec).astype(int) if dec.dtype.kind == "f" else dec.astype(int)
     if ref.size != dec.size:
         raise ValueError(f"reference has {ref.size} windows, the decision {dec.size}")
-    ok = (ref >= 0) & (dec >= 0) & (np.ones(ref.size, bool) if valid is None else np.asarray(valid, bool).ravel())
+    # validity is read as > 0.5, the package's convention for indicators; bool(0.4) was True
+    ok = (ref >= 0) & (dec >= 0) & (np.ones(ref.size, bool) if valid is None else np.asarray(valid, np.float64).ravel() > 0.5)
     e = ok & (dec != ref)
     n_err = int(e.sum())
     if n_err == 0:

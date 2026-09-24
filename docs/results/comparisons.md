@@ -2293,7 +2293,9 @@ on MADOS from 2.508× to 2.510×, and no verdict moved. A third form followed on
 generality run showed the variance-only correction excluding a one-in-a-hundred truth seen once in thirty labels:
 the interval is now the score inversion at the effective size n (N − 1)/(N − n). At this study's sampling fractions
 (300 of 22,598 and above) the two forms differ by at most 1.7e-4 and the summary was not regenerated; the exp81
-section says what moved where the fraction is 0.3.
+section says what moved where the fraction is 0.3. The tool itself has used the exact hypergeometric interval
+for a random sample since the review of 23 September (the Wilson form covered 0.79 one window short of a census);
+the D1/E1 numbers above are the Wilson form's, from this experiment's own harness.
 
 **A correction to this section, the same day.** An audit of the estimator after it shipped found that the
 cluster-corrected arm was the unweighted mean of tile means, which targets the average tile's error rate rather
@@ -2506,7 +2508,7 @@ catches one at a large weight moves it further than the interval reaches. Three 
 Landsat, five are producer's-accuracy and share cells on EuroSAT (classes of 97 to 102 windows with a few errors
 each) and one is on MADOS, where a single missed window of class 7, drawn on 201 of 2,000 draws, sets the
 coverage at 0.8995. No graded random-design user's-accuracy cell covers below 0.947 on any task. The package warns
-for the near-census case; it does not yet warn for the rare-error case. The first reading of this section put
+for the near-census case and, since the seventh amendment, for the rare-error case (below). The first reading of this section put
 Brick Kiln and Nandi Landsat down to strata the allocation samples thinly, and the package gained a warning for
 that; the second audit found none of their strata sampled at under half the overall rate, so the warning never
 fired on them, and the mechanism was the rare-error one.
@@ -2528,7 +2530,19 @@ cell: ten cells widened by 10 to 15%, seven of them one-error EuroSAT classes th
 covered, so the exact interval is wider there without covering more. The prediction that only confidence-design
 and producer's-accuracy cells would remain failed on four random-design share cells on EuroSAT, two under Base
 and one each under AnySat and CROMA Base. At the overall-rate budgets the record uses elsewhere, 300 of at least 12,800 windows, the
-forms give the same exact coverage on every recorded cell, and no number outside this section moves.
+forms give the same exact coverage on every recorded cell, and no number outside this section moves. The property
+tests added by the second review then found the exact interval, near a census, not holding its own estimate: 269
+of 273 labelled is 0.98535, and the only population value left standing was 270 of 274, 0.98540. The interval is
+widened to hold the sample share, which can only raise its coverage; on the five encoders' graded cells no
+recorded per-class value moved.
+
+**A warning for the rare-error case (seventh amendment, preregistered before it was measured).** The package now
+says "few errors" when a per-class interval rests on one to four sampled errors of the kind it counts. On the nine
+rare-error cells it fires on 1,081 of the 1,351 draws whose interval misses the truth, 0.800 against a bar of 0.80:
+at the bar, not past it. It explains EuroSAT's and MADOS's shortfalls almost wholly (796 of 800 misses) and Brick
+Kiln's and Nandi Landsat's about half (285 of 551), whose unwarned draws still cover 0.943 to 0.966. Across 85,281
+graded (draw, class, quantity) cells of the seventeen classification tasks at 300 labels it fires on 11%, so it
+marks a case rather than every class of a clean map. <!-- claim:rare-error-warning-marks-the-misses -->
 
 **P2 fails, in the tool's favour.** Stehman and Wagner's warning, that a sample allocated for the overall rate
 serves the classes worse, does not hold here: the confidence design's per-class user's-accuracy intervals are
@@ -2555,12 +2569,13 @@ the two- and six-class tasks, eight of EuroSAT's ten, four of ForestNet's twelve
 none of So2Sat's seventeen; at 1,000 labels BreizhCrops reaches five. That is the CEOS point, and the tool says
 it per class rather than averaging it away. <!-- claim:per-class-budget-scales-with-classes -->
 
-**Not graded, and said.** The overall accuracy the per-class output prints beside the classes is not a P1
-quantity. In the Wilson form the tool prints it covers below 0.93 on 3 of 64 cells, MADOS at 300 random labels
-(0.913), PASTIS Sentinel-2 at 300 random labels (0.925) and the Togo two-sensor arm under the confidence design
-(0.927); the Wald option adds five more, the lowest 0.911 on Brick Kiln under the confidence design. On MADOS
-`estimate`'s own overall interval covers 0.933 under the same design (exp78, exp79). The tool's overall number
-is `estimate`'s; this one is a by-product of the per-class table and is named here until it is graded.
+**The overall accuracy beside the table is now `estimate`'s.** It used to be a by-product nobody graded, the
+post-stratified form, and it covered 0.913 on MADOS at 300 random labels. Since the second review it is the
+quantity `estimate` reports, with `estimate`'s interval: exact under a random draw, where it covers at least 0.941
+on every Base cell and at least 0.941 to 0.952 on the four other encoders; and under the confidence design the
+stratified Wilson form exp78 graded, which covers 0.927 on the near-census Togo two-sensor arm (300 of 306 windows
+labelled) and at least 0.93 on every other cell in the shipped form. Olofsson's post-stratified figure stays beside
+it as a point, so the table adds up.
 
 **Stated from the audits.** The first run graded bias conditional on the class count, which manufactured a 3–11%
 upward bias on classes at the 30-label line; the second run's design comparison read the Wald cells; the

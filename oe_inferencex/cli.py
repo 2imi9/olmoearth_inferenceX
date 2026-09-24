@@ -122,10 +122,16 @@ def cmd_assess(args):
     _check_scores(scores, valid, args.logits, args.scores)
     reference = None
     if args.reference:
-        ref, rvalid, _ = read_raster(args.reference, None)
+        ref, rvalid, geo_r = read_raster(args.reference, None)
+        if ref.shape != scores.shape[-2:]:
+            raise SystemExit(f"{args.reference} has shape {ref.shape}; the map is {scores.shape[-2:]}")
+        _same_grid(geo, geo_r, args.reference)                  # compare --labels had this check; assess did not
         reference = np.where(rvalid, np.rint(ref).astype(int), -1)
-    out = assess_prediction(scores, is_logit=args.logits, patch=args.patch, nodata_mask=~valid, reference=reference,
-                            budgets=tuple(args.budgets), order=args.order)
+    try:
+        out = assess_prediction(scores, is_logit=args.logits, patch=args.patch, nodata_mask=~valid, reference=reference,
+                                budgets=tuple(args.budgets), order=args.order)
+    except ValueError as exc:                                     # a named refusal, not a traceback
+        raise SystemExit(f"assess: {exc}") from None
     os.makedirs(args.out, exist_ok=True)
     s = summary(out)
     s["inputs"] = {"scores": os.path.abspath(args.scores), "logits": args.logits, "reference": os.path.abspath(args.reference) if args.reference else None}
@@ -160,8 +166,18 @@ def cmd_assess(args):
     s["files"] = written
     with open(os.path.join(args.out, "assessment.json"), "w") as f:
         json.dump(s, f, indent=1)
+    ref_block = s.get("against_reference") or {}
+    if "error_capture_at_budget" in ref_block:
+        ref_text = "; against the reference: error capture " + ", ".join(
+            f"{int(round(float(b) * 100))}% -> {v['errors_captured_fraction']:.2f}" for b, v in ref_block["error_capture_at_budget"].items())
+    elif args.reference:
+        # sparse point labels, an all-no-data or an evenly split reference: no window could be graded, which used to
+        # crash here after the files were written (review of 2026-09-23)
+        ref_text = "; against the reference: no window has both a prediction and a majority reference label, so nothing was graded"
+    else:
+        ref_text = ""
     print(f"{s['n_windows']} windows of {args.patch} px; review sets " + ", ".join(f"{int(round(b * 100))}%: {rs['n_windows']}" for b, rs in out["review_sets"].items()) +
-          f"; boundary windows {100 * s['boundary_window_fraction']:.1f}%" + (f"; against the reference: error capture " + ", ".join(f"{int(round(float(b) * 100))}% -> {v['errors_captured_fraction']:.2f}" for b, v in s["against_reference"]["error_capture_at_budget"].items()) if "against_reference" in s else "") +
+          f"; boundary windows {100 * s['boundary_window_fraction']:.1f}%" + ref_text +
           f"\nwrote {args.out}/assessment.json, explanation.json, review_set_*.csv, suspicion, boundary")
     return 0
 
@@ -209,7 +225,11 @@ def _same_grid(geo_a, geo_b, what):
     another CRS, was compared window by window as though co-registered."""
     if geo_a is None or geo_b is None:
         return
-    if str(geo_a["crs"]) != str(geo_b["crs"]) or not np.allclose(tuple(geo_a["transform"])[:6], tuple(geo_b["transform"])[:6]):
+    ta, tb = np.asarray(tuple(geo_a["transform"])[:6], float), np.asarray(tuple(geo_b["transform"])[:6], float)
+    # an absolute tolerance of a thousandth of a pixel: np.allclose's relative default allowed 50 m at a UTM northing
+    # of 5e6 and 120 m at a Web Mercator easting of 1.2e7, so a map shifted by a whole window passed (review, 2026-09-23)
+    atol = 1e-3 * max(abs(ta[0]), abs(ta[4]), 1e-12)
+    if str(geo_a["crs"]) != str(geo_b["crs"]) or not np.allclose(ta, tb, rtol=0.0, atol=atol):
         raise SystemExit(f"{what} is not on the first map's grid (CRS {geo_b['crs']} vs {geo_a['crs']}, transform "
                          f"{tuple(geo_b['transform'])[:6]} vs {tuple(geo_a['transform'])[:6]}); resample it onto the same grid first")
 
@@ -223,17 +243,10 @@ def cmd_compare(args):
     _same_grid(geo, geo_b, args.b)
     if not 1 <= args.patch <= min(ha.shape):
         raise SystemExit(f"--patch {args.patch} must be at least 1 and no larger than the map, {ha.shape[0]} x {ha.shape[1]} px")
-    n_classes = max(na, nb, 2)
-    # No-data pixels do not vote (they used to argmax to class 0 and could decide a window), and a tied window goes
-    # to the more confident voters, as in assess since 2026-09-22.
-    # Both maps pool over the pixels BOTH predicted: a window half under B's no-data used to be decided from 16 of
-    # A's pixels and 8 of B's, and two identical maps then "differed" there.
+    if args.labels_date and not args.labels:
+        raise SystemExit("compare: --labels-date names the date of a --labels raster, and none was given")
     both = va & vb
-    a_w = _pooled_argmax(np.where(both, ha, -1), n_classes, args.patch, empty=-1, weights=ca)
-    b_w = _pooled_argmax(np.where(both, hb, -1), n_classes, args.patch, empty=-1, weights=cb)
-    ok = pool_valid(va & vb, args.patch) & (a_w >= 0) & (b_w >= 0)
-    labels = groups = None
-    ok_graded = None
+    lab_i = lv = None
     if args.labels:
         lab, lv, geo_l = read_raster(args.labels, None)
         if lab.shape != ha.shape:
@@ -243,13 +256,51 @@ def cmd_compare(args):
         lv = lv & (lab_i >= 0)                              # a negative code is unlabelled whatever the nodata tag says
         if not lv.any():
             raise SystemExit(f"{args.labels}: no valid label pixels")
+    # One code space for both maps and the labels, decided before anything is pooled. Pooling counts one window grid
+    # per class id up to the largest, so a stray code of 60000 took 26 s and 3.3 GB on a 512 x 512 map (review of
+    # 2026-09-23); sparse or negative codes are remapped to 0..K-1 jointly and mapped back in the CSV.
+    map_codes = np.unique(np.concatenate([ha[both].ravel(), hb[both].ravel()])) if both.any() else np.zeros(0, int)
+    lab_codes = np.unique(lab_i[lv]) if lab_i is not None else np.zeros(0, int)
+    all_codes = np.unique(np.concatenate([map_codes, lab_codes])).astype(int)
+    if all_codes.size and (all_codes.min() < 0 or int(all_codes.max()) + 1 > 4 * max(all_codes.size, 16)):
+        code_of = all_codes
+        ha, hb = np.searchsorted(all_codes, ha), np.searchsorted(all_codes, hb)     # pixels outside `both` never vote
+        if lab_i is not None:
+            lab_i = np.where(lv, np.searchsorted(all_codes, lab_i), -1)
+        n_classes = n_lab = max(int(all_codes.size), 2)
+    else:
+        code_of = None
+        n_classes = max(na, nb, 2)
         # The label raster is pooled over ITS OWN class range, never the maps'. _pooled_argmax counts votes only over
         # range(n_classes), so pooling a 0-5 label raster with the maps' n_classes=3 silently dropped every pixel of
         # class 3 and above and let the window label fall to a surviving low index: measured at 44.9% of window labels
         # wrong, with exit 0 and no warning, on the very output that says which inference to believe.
-        n_lab = int(lab_i[lv].max()) + 1
+        n_lab = max(int(lab_codes.max()) + 1, 2) if lab_codes.size else 2
+    # No-data pixels do not vote (they used to argmax to class 0 and could decide a window). Both maps pool over the
+    # pixels BOTH predicted: a window half under B's no-data used to be decided from 16 of A's pixels and 8 of B's,
+    # and two identical maps then "differed" there. A tied window goes to the more confident voters when both maps
+    # carry a confidence, as in assess; when either is a hard class map, which has none, a tied window is left out
+    # of the comparison on both sides, because breaking it one way on one side and another way on the other made
+    # a class map and its own probability version differ on 1.8% of windows (review of 2026-09-23).
+    weighted = ca is not None and cb is not None
+    a_w = _pooled_argmax(np.where(both, ha, -1), n_classes, args.patch, empty=-1, weights=ca if weighted else None,
+                         tie=None if weighted else -2)
+    b_w = _pooled_argmax(np.where(both, hb, -1), n_classes, args.patch, empty=-1, weights=cb if weighted else None,
+                         tie=None if weighted else -2)
+    n_tie_windows = int((pool_valid(both, args.patch) & ((a_w == -2) | (b_w == -2))).sum())
+    if n_tie_windows:
+        notes.append(f"{n_tie_windows} windows are split evenly between two classes on a map with no confidence to break "
+                     "the tie; they are left out of the comparison")
+    ok = pool_valid(va & vb, args.patch) & (a_w >= 0) & (b_w >= 0)
+    if not ok.any():
+        # assess refuses an empty map; compare used to exit 0 with "0 of 0 windows differ"
+        raise SystemExit("compare: no window was predicted by both maps (all no-data, or every window tied), so there is "
+                         "nothing to compare")
+    labels = groups = None
+    ok_graded = None
+    if lab_i is not None:
         # invalid label pixels must not vote; -1 is the non-voting code _assess uses, where 0 is a real class
-        lab_w = _pooled_argmax(np.where(lv, lab_i, -1), max(n_lab, 2), args.patch, empty=-1, tie=-1)   # no majority, no label
+        lab_w = _pooled_argmax(np.where(lv, lab_i, -1), n_lab, args.patch, empty=-1, tie=-1)   # no majority, no label
         # The grading runs on the labelled windows; the label-free numbers stay on every window both maps predicted.
         # Until 2026-09-22 the label mask was ANDed into the whole comparison, so adding --labels changed the numbers
         # the docs call label-free and dropped unlabelled differing windows from the CSV and the raster.
@@ -257,9 +308,11 @@ def cmd_compare(args):
         n_tied = int((ok & labelled & (lab_w < 0)).sum())
         ok_graded = ok & labelled & (lab_w >= 0)            # an evenly split label window has no label to grade
         labels = lab_w
-        if n_lab > n_classes:
-            notes.append(f"the labels carry {n_lab} classes and the two maps predict at most {n_classes}; "
-                         f"windows whose label is a class neither map can predict are counted wrong for both sides")
+        unpredicted = sorted(int(c) for c in set(lab_codes.tolist()) - set(map_codes.tolist()))
+        if unpredicted:
+            # named by class, not by the largest id: "the labels carry 4 classes" was said of a raster holding class 3
+            notes.append(f"the labels hold class(es) {unpredicted[:10]}{' ...' if len(unpredicted) > 10 else ''} that neither "
+                         "map predicts; windows labelled with them are counted wrong for both sides")
         if n_tied:
             notes.append(f"{n_tied} windows have an evenly split label and no majority; they are left out of the grading")
     if args.groups:
@@ -294,6 +347,8 @@ def cmd_compare(args):
         raise SystemExit(f"compare: the two maps describe {reading['a']} and {reading['b']}; pass --labels-date, because a "
                          "window that changed between the dates is right in one map and wrong in the other whatever "
                          "either model did")
+    if labels is not None and reading["status"] == "partly_stated":
+        raise SystemExit(f"compare: {reading['reading']}; give both --date-a and --date-b, or neither, before grading")
     out = compare_inferences(a_w, b_w, ok, groups=groups, cues=cues, dates=dates, labels_date=args.labels_date)
     if labels is not None:
         out["graded"] = compare_inferences(a_w, b_w, ok_graded, groups=groups, labels=labels, cues=cues,
@@ -330,7 +385,8 @@ def cmd_compare(args):
         w = csv.writer(f)
         w.writerow(["window_row", "window_col", "pixel_row", "pixel_col", "x", "y", "a", "b"])
         for i, (r, c) in enumerate(zip(rows, cols)):
-            w.writerow([int(r), int(c), int(pr[i]), int(pc[i]), None if x is None else float(x[i]), None if y is None else float(y[i]), int(a_w[r, c]), int(b_w[r, c])])
+            ca_, cb_ = (int(a_w[r, c]), int(b_w[r, c])) if code_of is None else (int(code_of[a_w[r, c]]), int(code_of[b_w[r, c]]))
+            w.writerow([int(r), int(c), int(pr[i]), int(pc[i]), None if x is None else float(x[i]), None if y is None else float(y[i]), ca_, cb_])
     s["files"]["differing_windows"] = path
     with open(os.path.join(args.out, "comparison.json"), "w") as f:
         json.dump(s, f, indent=1)
@@ -339,7 +395,7 @@ def cmd_compare(args):
           (f"; on a boundary of a {where['boundary_a']['enrichment']:.1f}x as often as the agreeing windows" if where.get("boundary_a", {}).get("enrichment") is not None else "") +
           (f"; with labels: a right on {_pct(s['graded']['which_side']['share_a_right'], 0)}, "
            f"b on {_pct(s['graded']['which_side']['share_b_right'], 0)} of them" if s.get("graded") else "") +
-          (f"\n{s['dates']['reading']}" if s["dates"]["status"] in ("different_time", "overlapping_time") else "") +
+          (f"\n{s['dates']['reading']}" if s["dates"]["status"] in ("different_time", "overlapping_time", "partly_stated") else "") +
           f"\nwrote {args.out}/comparison.json, differing_windows.csv, disagreement")
     return 0
 
@@ -400,6 +456,7 @@ def cmd_sample(args):
                         float(margin[r, c]), ""])
     side = {k: (v.tolist() if isinstance(v, np.ndarray) else v) for k, v in sample.items()}
     side.update({"scores": os.path.abspath(args.scores), "logits": args.logits, "patch": args.patch,
+                 "nodata": args.nodata,                   # estimate --per-class and certify recompute the map with it
                  "grid": [int(hw), int(ww)], "csv": os.path.abspath(args.out),
                  # what a reviewer with a GIS needs to find a window: the CRS, the pixel size, and the window's
                  # footprint in ground units; x and y in the CSV are window centres in that CRS
@@ -437,7 +494,7 @@ def _labelled_sample(path, command):
                          "(semicolon) or with columns removed cannot be matched to its design")
     try:
         idx = np.array([int(float(r["index"])) for r in rows])                # "73.0" after a spreadsheet round trip is 73
-    except ValueError as exc:
+    except (ValueError, OverflowError) as exc:                              # "inf" is an OverflowError, not a ValueError
         raise SystemExit(f"{path}: the `index` column is not the one `sample` wrote: {exc}")
     if not np.array_equal(idx, np.asarray(side["indices"], int)):
         raise SystemExit("the CSV's rows do not match the design in its sidecar; label the file `sample` wrote, in order")
@@ -457,12 +514,28 @@ def _labelled_sample(path, command):
     return side, rows, idx, sample, wrong
 
 
-def _map_windows(side, scores_override, nodata, command):
-    """The map's per-window confidence, class and validity, recomputed from the scores the sample was drawn on."""
+def _rounding_tolerance(text):
+    """Half a unit in the last digit a number was written with, and never less than 1e-6 (a full-precision value
+    still carries float noise from the round trip). "0.412" gives 5e-4; "4.12e-01" the same."""
+    t = str(text).strip().lower()
+    mant, _, exp = t.partition("e")
+    decimals = len(mant.split(".")[1]) if "." in mant else 0
+    return max(0.5 * 10.0 ** (-decimals + (int(exp) if exp else 0)), 1e-6)
+
+
+def _map_windows(side, scores_override, nodata, command, rows=None, idx=None):
+    """The map's per-window confidence, class and validity, recomputed from the scores the sample was drawn on, and
+    checked to be that map: its population must be the sample's, and its confidence at the sampled windows the
+    CSV's (review of 2026-09-23: another map on the same grid was certified from this map's labels, and a sample
+    drawn with --nodata was recomputed without it, with no message). Returns (confidence, class, valid, n_classes)."""
     path = scores_override or side.get("scores")
     if not path or not os.path.exists(path):
         raise SystemExit(f"{command}: the map's scores are needed again ({path or 'no path in the sidecar'} not found); "
                          "pass --scores with the raster `sample` was run on")
+    if nodata is None:
+        nodata = side.get("nodata")                           # the value the sample was drawn with
+    elif side.get("nodata") is not None and float(side["nodata"]) != float(nodata):
+        raise SystemExit(f"{command}: --nodata {nodata:g} differs from the {side['nodata']:g} the sample was drawn with")
     scores, valid, _ = read_raster(path, nodata)
     _check_scores(scores, valid, bool(side.get("logits", False)), path)
     out = assess_prediction(scores, is_logit=bool(side.get("logits", False)), patch=int(side.get("patch", 4)), nodata_mask=~valid)
@@ -470,7 +543,28 @@ def _map_windows(side, scores_override, nodata, command):
     if list(arr["confidence"].shape) != list(side.get("grid", arr["confidence"].shape)):
         raise SystemExit(f"{command}: {path} pools to a {arr['confidence'].shape} window grid, but the sample was drawn on "
                          f"{side.get('grid')}; pass the raster the sample was drawn on")
-    return arr["confidence"], arr["pooled_argmax"], arr["valid"]
+    conf, valid_w = arr["confidence"], arr["valid"]
+    n_pop = int((valid_w & np.isfinite(conf)).sum())
+    if side.get("n_population") is not None and n_pop != int(side["n_population"]):
+        raise SystemExit(f"{command}: {path} has {n_pop} valid windows, but the sample was drawn from {side['n_population']}; "
+                         "pass the raster, and the --nodata value, the sample was drawn with")
+    if rows is not None and idx is not None and "confidence" in rows[0]:
+        try:
+            written = np.array([float(r["confidence"]) for r in rows])
+            # the tolerance follows the digits the CSV holds: a spreadsheet that saved 0.412 for 0.41234 is still
+            # the same map (the verification of the second review found three digits refused at a fixed 1e-4)
+            tol = np.array([_rounding_tolerance(r["confidence"]) for r in rows])
+        except ValueError:
+            written = None
+        if written is not None:
+            off = np.abs(conf.ravel()[idx] - written)
+            if not (off <= tol).all():
+                k = int(np.argmax(off))
+                raise SystemExit(f"{command}: the map's confidence at the sampled windows is not the one the CSV records "
+                                 f"(row {k + 2}: {written[k]:.6g} in the CSV, {conf.ravel()[idx][k]:.6g} now); this is not the "
+                                 "map the sample was drawn on")
+    n_classes = int(scores.shape[0]) if scores.ndim == 3 else 2
+    return conf, arr["pooled_argmax"], valid_w, n_classes
 
 
 def _reference_classes(rows, path):
@@ -485,7 +579,7 @@ def _reference_classes(rows, path):
             v = int(float(s))
             if v < 0 or float(s) != v:
                 raise ValueError
-        except ValueError:
+        except (ValueError, OverflowError):                  # "inf" raised an OverflowError traceback until 2026-09-23
             raise SystemExit(f"{path}: `reference_class` must be a whole number >= 0 in every row; row {i + 2} holds {s!r}")
         vals.append(v)
     return np.array(vals)
@@ -502,11 +596,16 @@ def cmd_estimate(args):
     per_class_text = ""
     if args.per_class:
         ref = _reference_classes(rows, args.sample)
-        _, hard, valid_w = _map_windows(side, args.scores, args.nodata, "estimate --per-class")
+        _, hard, valid_w, n_classes = _map_windows(side, args.scores, args.nodata, "estimate --per-class", rows, idx)
+        if (ref >= n_classes).any():
+            k = int(np.argmax(ref >= n_classes))
+            raise SystemExit(f"estimate --per-class: row {k + 2} gives reference_class {int(ref[k])}, but the map has "
+                             f"{n_classes} classes (0 to {n_classes - 1}); a class id outside them added empty rows")
         map_class = np.where(valid_w, hard, -1).ravel()
-        disagree = int((map_class[idx] != ref).sum() != int(wrong.sum()))
+        # row by row: the count alone matched when `wrong` marked rows 0-9 and the classes disagreed on rows 10-19
+        mismatch = np.flatnonzero((map_class[idx] != ref).astype(int) != wrong)
         try:
-            pc = est.estimate_per_class(sample, ref, map_class)
+            pc = est.estimate_per_class(sample, ref, map_class, n_classes=n_classes)
         except ValueError as exc:
             raise SystemExit(f"estimate --per-class: {exc}")
         res["per_class"] = pc["per_class"]
@@ -515,16 +614,21 @@ def cmd_estimate(args):
         res["per_class_method"] = pc["method"]
         if "warning" in pc:
             res["per_class_warning"] = pc["warning"]
-        if disagree:
-            res["per_class_note"] = ("the `wrong` column and the `reference_class` column disagree on the number of wrong "
-                                     "windows; the error rate above uses `wrong`, the per-class table uses `reference_class`")
+        if pc.get("overall_accuracy_post_stratified") is not None:
+            res["overall_accuracy_post_stratified"] = pc["overall_accuracy_post_stratified"]
+        if mismatch.size:
+            res["per_class_note"] = (f"on {mismatch.size} row(s), first row {int(mismatch[0]) + 2}, `wrong` disagrees with whether "
+                                     "`reference_class` differs from the map's class; the error rate above uses `wrong`, the "
+                                     "per-class table uses `reference_class`")
         lines = []
         for c, row in pc["per_class"].items():
             ua, pa, sh = row["user_accuracy"], row["producer_accuracy"], row["reference_share"]
             f = lambda v: "n/a" if v is None else f"{100 * v['estimate']:.0f}% ({100 * v['low']:.0f}-{100 * v['high']:.0f})"
+            # the tag names the warning's reason; it used to say "few labels" for a near-census class of 500 labels
+            tag = f"  [warning: {', '.join(row.get('warning_codes', ['see the JSON']))}]" if "warning" in row else ""
             lines.append(f"  class {c}: user's accuracy {f(ua)}, producer's {f(pa)}, share of map {100 * row['map_share']:.1f}% "
-                         f"-> error-adjusted {f(sh)}" + ("  [warning: few labels]" if "warning" in row else ""))
-        per_class_text = "\n" + "\n".join(lines)
+                         f"-> error-adjusted {f(sh)}" + tag)
+        per_class_text = "\n" + "\n".join(lines) + (f"\nnote: {res['per_class_note']}" if "per_class_note" in res else "")
     res["sample"] = os.path.abspath(args.sample)
     out = args.out or (args.sample[:-4] + "_estimate.json" if args.sample.endswith(".csv") else args.sample + "_estimate.json")
     with open(out, "w") as f:
@@ -546,7 +650,7 @@ def cmd_certify(args):
         raise SystemExit(f"certify needs a random sample: this CSV was drawn with the {side.get('design')!r} design. The "
                          "guarantee rests on the labelled windows inside each zone being a random sample of that zone, "
                          "which a stratified or tile draw is not. Draw one with `sample --design random`")
-    margin, hard, valid_w = _map_windows(side, args.scores, args.nodata, "certify")
+    margin, hard, valid_w, _ = _map_windows(side, args.scores, args.nodata, "certify", rows, idx)
     try:
         res = est.certify_zone(margin.ravel(), idx, wrong, args.alpha, delta=args.delta, rule=args.rule, valid=valid_w.ravel())
     except ValueError as exc:
@@ -559,6 +663,8 @@ def cmd_certify(args):
         zone[np.asarray(res.pop("zone_indices_in_order"), int)] = True
         np.save(mask_path, zone.reshape(hw, ww))
         res["zone_mask"] = os.path.abspath(mask_path)
+    elif os.path.exists(mask_path):
+        os.remove(mask_path)          # a previous run's zone must not sit beside a result that certifies none
     res["sample"] = os.path.abspath(args.sample)
     with open(out, "w") as f:
         json.dump(res, f, indent=1, default=float)

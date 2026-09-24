@@ -161,7 +161,9 @@ def test_the_assessors_inline_top1_equals_the_signals_implementation():
     rng = np.random.default_rng(6)
     logits = rng.normal(0, 3, (5, 32, 32))
     a = assess_prediction(logits, is_logit=True, patch=1, form="top1")
-    inline = -a["arrays"]["confidence"]                      # assess stores confidence, the negated suspicion
+    # assess stores the window's top-1 probability (on the probability scale since 2026-09-23); its log, negated, is
+    # the suspicion signals computes
+    inline = -np.log(a["arrays"]["confidence"])
     from_signals = confidence(logits, form="top1")
     assert inline.shape == from_signals.shape
     assert np.allclose(inline, from_signals, atol=1e-12), "the package holds two copies of one formula and they differ"

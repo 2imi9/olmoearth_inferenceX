@@ -215,6 +215,11 @@ def assess_prediction(scores, is_logit, patch=4, nodata_mask=None, reference=Non
         # must be on the probability scale. Until 2026-09-22 they were reported as log-probabilities, a median
         # "confidence" of -0.620, under a label naming a probability (audit 2026-09-21, finding 12).
         out["confidence_quantiles"] = {q: float(np.exp(v)) for q, v in out["confidence_quantiles"].items()}
+        # the per-window array on the same scale as its quantiles: a threshold set from the quantiles used to be
+        # compared with log-probabilities, so every window fell below the reported 25% quantile (review, 2026-09-23).
+        # exp is increasing, so the ranking, the review sets and the cues are unchanged.
+        with np.errstate(over="ignore"):
+            out["arrays"]["confidence"] = np.exp(out["arrays"]["confidence"])
         out["confidence_scale"] = "geometric mean of the top-1 probability over the window's pixels"
     return out
 

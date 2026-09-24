@@ -11,7 +11,7 @@
   "allenai/olmoearth-paper-embeddings read the same in two separate cache trees on aicr, which the experiments populated on different days.",
   "allenai/OlmoEarth-v1-Base, allenai/OlmoEarth-v1-Nano and isp-uv-es/WorldFloodsv2 read the same on aicr and on the laptop: two machines, two independent downloads, one sha each."
  ],
- "coverage": "Thirteen repositories. scripts/upstream_revision.py finds eight of them by scanning the code for repo ids on fetcher lines and top-level constants; that scan is a lower bound, since a repo id assigned inside a function (allenai/OlmoEarth-v1-Base, at oe_inferencex/taskcard.py:265) is not reached. The record may pin more than the scan finds, never less, and the test asserts that direction.",
+ "coverage": "Thirteen repositories. scripts/upstream_revision.py finds eight of them by scanning the code for repo ids on fetcher lines and top-level constants; that scan is a lower bound, since a repo id assigned inside a function (allenai/OlmoEarth-v1-Base, at oe_inferencex/taskcard.py:379) is not reached. The record may pin more than the scan finds, never less, and the test asserts that direction.",
  "repos": {
   "125oii/dfc2020": {
    "host": "huggingface",
@@ -55,7 +55,7 @@
    ],
    "carries": "the v1 Base encoder almost every map in the record was inferred with",
    "named_at": [
-    "oe_inferencex/taskcard.py:368"
+    "oe_inferencex/taskcard.py:379"
    ]
   },
   "allenai/OlmoEarth-v1-FT-AWF-Base": {
@@ -92,7 +92,7 @@
    "named_at": [
     "exp/exp03_more_channels.py:6",
     "exp/exp03_more_channels.py:108",
-    "oe_inferencex/taskcard.py:368"
+    "oe_inferencex/taskcard.py:379"
    ]
   },
   "allenai/olmoearth-paper-embeddings": {
@@ -118,7 +118,7 @@
    "read_from": [],
    "carries": "the served land-cover product's dataset card",
    "named_at": [
-    "oe_inferencex/taskcard.py:312"
+    "oe_inferencex/taskcard.py:323"
    ]
   },
   "gastruc/anysat": {

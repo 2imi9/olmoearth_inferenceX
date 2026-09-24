@@ -13,15 +13,15 @@ Three things a user needs, and one they must be stopped from doing.
   spent estimating stratum rates; on exp78's tasks it narrowed the interval to a median 0.80 of a random sample's
   and to 0.63 on the cleanest map, with coverage intact everywhere. A plain random sample and a tile design are
   also offered, the last because that is how people actually label.
-- `estimate_error_rate` turns the labels back into a rate with the interval the design earns: Wilson with a
-  finite-population correction for a random sample, a stratified interval otherwise, and for tile-sampled
+- `estimate_error_rate` turns the labels back into a rate with the interval the design earns: the exact
+  hypergeometric interval for a random sample, a stratified interval otherwise, and for tile-sampled
   labels a ratio estimator with its ultimate-cluster interval, beside the naive one so the difference is visible.
   That last is the weakest of the three and says so: it covered 0.60 of the time on MADOS, whose tiles differ in
   size by a factor of 400. Labelling 19 tiles of
   16 windows and using the ordinary formula gave a "95%" interval that covered on 0.51 to 0.78 of draws; that is
   exp78's practical finding and the reason this function will not compute the naive interval alone.
 - `estimate_from_indices` is for windows labelled without a design. It treats them as a random sample and first
-  checks that they could be one: the median suspicion percentile of a random sample is 0.5, of the tool's own
+  checks that they could be one: the mean suspicion percentile of a random sample is 0.5, of the tool's own
   review set about 0.97, and labelling the review set then dividing gives two to six times the true rate on every
   task of exp78's export. A sample more than four standard deviations above a random one is refused with the
   number rather than estimated.
@@ -34,7 +34,7 @@ Z95 = 1.959963984540054
 N_STRATA = 5
 MIN_PER_STRATUM = 2
 M_PER_TILE = 16
-REVIEW_SET_SIGMAS = 4.0           # a sample whose median suspicion percentile sits this many SDs above 0.5 is refused
+REVIEW_SET_SIGMAS = 4.0           # a sample whose mean suspicion percentile sits this many SDs above 0.5 is refused
 Q_FLOOR = 0.02                    # the confidence design assumes no stratum is better than 98% right until labelled
 MIN_TILES = 5                     # fewer tiles than this and a between-tile standard error is not an estimate
 TILES_WARNING = ("labels taken tile by tile are not independent, and a map whose tiles differ in size is labelled "
@@ -153,7 +153,8 @@ def hypergeom_interval(k, n, N, conf=0.95):
     the one-sided form of the same inversion. exp81's sixth amendment adopted it for the user's accuracy under a
     random sample, where the labelled windows of a map class are a simple random sample of that class: on a grid
     of classes with N <= 1000 it never covered below 0.951, where the finite-population Wilson form fell below
-    0.93 on 40 of 164 cells. A census is the point; an empty sample is everything."""
+    0.93 on 40 of 164 cells. The interval is widened, when needed, to hold the sample share k/n, which near a census
+    can fall between two population values. A census is the point; an empty sample is everything."""
     if not 0 < conf < 1:
         raise ValueError(f"conf must be in (0, 1), got {conf}")
     counts = []
@@ -165,7 +166,13 @@ def hypergeom_interval(k, n, N, conf=0.95):
     if n < 0 or k < 0 or k > n or n > N:
         raise ValueError(f"hypergeom_interval needs 0 <= k <= n <= N, got k={k}, n={n}, N={N}")
     # validated here, cached below on plain ints: a cache in front of the checks let True (equal to 1) through
-    return _hypergeom_interval(k, n, N, float(conf))
+    lo, hi = _hypergeom_interval(k, n, N, float(conf))
+    # The interval is over population values K/N, the estimate the sample share k/n, and near a census the two sit on
+    # different grids: 269 of 273 labelled (0.98535) left only 270 of 274 (0.98540) standing, an interval that did not
+    # contain the estimate printed beside it (property tests, 2026-09-23). Widening to include k/n keeps the coverage.
+    if n:
+        lo, hi = min(lo, k / n), max(hi, k / n)
+    return lo, hi
 
 
 @__import__("functools").lru_cache(maxsize=1 << 16)
@@ -223,7 +230,9 @@ def stratified_mean_and_variance(err, strata, picked, sizes, N):
         ph = float(err[picked][m].mean())
         est += Wh * ph
         var += Wh ** 2 * (1 - nh / Nh) * ph * (1 - ph) / (nh - 1)
-    return est, max(var, 0.0), starved
+    # a sum of weights N_h / N can round to 1.0000000000000002, and the interval then refused a sample with every
+    # label wrong (review of 2026-09-23); the estimate is a proportion
+    return min(max(est, 0.0), 1.0), max(var, 0.0), starved
 
 
 def stratified_interval(err, strata, picked, sizes, N):
@@ -248,6 +257,9 @@ def stratified_interval_wilson(err, strata, picked, sizes, N):
     time: the strata's (1 - f_h) are already inside v. Returns (estimate, low, high, starved strata, n_eff)."""
     est, var, starved = stratified_mean_and_variance(err, strata, picked, sizes, N)
     n = int(np.asarray(picked).size)
+    strata, picked = np.asarray(strata), np.asarray(picked)
+    if all(Nh == 0 or int((strata[picked] == h).sum()) >= Nh for h, Nh in enumerate(sizes)):
+        return est, est, est, starved, float(n)                  # a census has no sampling error
     if var > 0 and 0 < est < 1:
         n_eff = est * (1 - est) / var
     else:
@@ -365,6 +377,12 @@ def sample_for_estimation(margin, budget, design="confidence", p1=None, tiles=No
     """
     margin = np.asarray(margin, dtype=np.float64).ravel()
     valid = np.ones(margin.size, bool) if valid is None else np.asarray(valid, bool).ravel()
+    if valid.size != margin.size:
+        raise ValueError(f"valid has {valid.size} entries for {margin.size} windows")
+    # a window with no finite margin is not in the population: assess's confidence is NaN at no-data, and until
+    # 2026-09-23 those windows were sampled (38 of 100 on a map with 38% no-data), as review_set_check and
+    # zone_order already excluded them
+    valid = valid & np.isfinite(margin)
     pop = np.flatnonzero(valid)
     N = int(pop.size)
     if N == 0:
@@ -386,7 +404,13 @@ def sample_for_estimation(margin, budget, design="confidence", p1=None, tiles=No
             if p1 is None:
                 raise ValueError('design "confidence" needs p1, the top-1 probability per window; pass it, or use '
                                  'design="proportional"')
-            p1 = np.asarray(p1, dtype=np.float64).ravel()[pop]
+            p1 = np.asarray(p1, dtype=np.float64).ravel()
+            if p1.size != margin.size:
+                raise ValueError(f"p1 has {p1.size} entries for {margin.size} windows")
+            p1 = p1[pop]
+            if not np.isfinite(p1).all():
+                # max(Q_FLOOR, nan) is Q_FLOOR in Python, so one NaN silently set its stratum's assumed error rate
+                raise ValueError(f"p1 is not finite at {int((~np.isfinite(p1)).sum())} valid window(s)")
             # The model's own confidence stands in for the stratum's error rate, and it is overconfident exactly
             # where its errors are confident: a stratum whose top-1 probability is exactly 1.0 (float32 saturation,
             # ordinary in real maps) would be allocated the floor of two labels however large it is, and any error
@@ -459,11 +483,18 @@ def estimate_error_rate(sample, wrong):
     if np.unique(idx).size != idx.size:
         raise ValueError(f"{idx.size - np.unique(idx).size} window(s) appear more than once in the sample; each window "
                          "is labelled once, and a repeated one would be counted as extra units of its stratum")
+    if (idx < 0).any():
+        raise ValueError("a sampled window index is negative; indices point into the flattened window grid")
     N, design = int(sample["n_population"]), sample["design"]
     out = {"design": design, "n_labelled": int(idx.size), "n_population": N, "nominal_coverage": 0.95}
     if design == "random":
-        lo, hi = wilson_interval(int(wrong.sum()), idx.size, N)
-        out.update({"estimate": float(wrong.mean()), "low": lo, "high": hi, "method": "Wilson with finite-population correction"})
+        # exact (review of 2026-09-23): the count of wrong windows in a simple random sample is hypergeometric, and
+        # the finite-population Wilson form covered 0.79 one window short of a census and 0.92-0.94 at realistic
+        # cells with few errors; the tail inversion covers at least 95% on every (N, K, n), as the per-class user's
+        # accuracy already does. exp78 and exp79 graded the Wilson form, which stays in the experiments' harness.
+        lo, hi = hypergeom_interval(int(wrong.sum()), idx.size, N)
+        out.update({"estimate": float(wrong.mean()), "low": lo, "high": hi,
+                    "method": "exact hypergeometric interval (simple random sample of a finite map)"})
     elif design in ("confidence", "proportional"):
         # rebuild the per-unit arrays over the population so the stratified estimator sees the sizes it was drawn with
         pop = np.asarray(sample["strata_of_population"], int)
@@ -516,13 +547,20 @@ def estimate_error_rate(sample, wrong):
     return out
 
 
-def review_set_threshold(n):
-    """The median suspicion percentile above which n windows are not a random sample: 0.5 plus REVIEW_SET_SIGMAS
-    standard deviations of the median of n uniform percentiles, 0.6/sqrt(n). At 300 labels that is 0.64. On
-    exp78's units a random 300 sits at 0.50 +/- 0.03 (max 0.59 over 200 draws), the tool's review set near 0.97,
-    and the confidence design's own sample at 0.54 to 0.72, where treating it as random would report 1.05 to
-    1.87 times the true rate; 0.75, the first threshold, let that through."""
-    return min(0.95, 0.5 + REVIEW_SET_SIGMAS * 0.6 / np.sqrt(max(int(n), 1)))
+def review_set_threshold(n, N=None):
+    """The MEAN suspicion percentile above which n windows drawn from N are not a random sample: 0.5 plus
+    REVIEW_SET_SIGMAS standard deviations of the mean of n uniform percentiles drawn without replacement,
+    sqrt(1/12) sqrt((N - n) / ((N - 1) n)); about 0.567 at 300 labels of a large map.
+
+    Until 2026-09-24 the statistic was the median (threshold 0.5 + 4 x 0.6/sqrt(n), 0.64 at 300). Under heavy ties
+    the median cannot separate a random sample from the tool's review set: both land inside a large tied block at
+    the suspect end. With ties ranked in a random order the percentiles are uniform again, and the mean separates
+    them (a random sample 0.50, a review set inside a 60% block about 0.70), which the verification of the second
+    review found the median did not. On exp78's units the review set and the confidence design's own sample are
+    still refused, and two hundred random draws pass (tests/test_estimate.py)."""
+    n = max(int(n), 1)
+    fpc = 1.0 if N is None or int(N) <= 1 else max(int(N) - n, 0) / (int(N) - 1)
+    return min(0.95, 0.5 + REVIEW_SET_SIGMAS * np.sqrt(1.0 / 12.0) * np.sqrt(fpc / n))
 
 
 def review_set_check(indices, margin, valid=None):
@@ -533,22 +571,27 @@ def review_set_check(indices, margin, valid=None):
     # A window with no finite margin is not in the population. assess's confidence array is NaN at no-data, and
     # argsort put NaN at the suspect end, so at 40% no-data the tool's own review set passed as a random sample.
     valid = valid & np.isfinite(margin)
-    idx = np.asarray(indices, int)
+    idx = np.asarray(indices, int).ravel()
     pop = np.flatnonzero(valid)
-    # mid-ranks: tied windows share one percentile, so a tied block cannot pass or fail by raster position
+    # Tied windows are ranked in a fixed random order, independent of raster position, so a random sample's
+    # percentiles are uniform whatever the ties. Mid-ranks, used until 2026-09-23, gave a tied block one percentile
+    # near its middle, and when half the map or more tied at the suspect end a genuine random sample's median fell
+    # inside that block and was refused as a review set (27 of 50 draws at 50% tied, 50 of 50 at 60%).
     s = -margin[pop]
-    order = np.argsort(s, kind="stable")
-    _, first, counts = np.unique(s[order], return_index=True, return_counts=True)
+    order = np.lexsort((np.random.default_rng(0).random(pop.size), s))
     ranks = np.empty(pop.size)
-    ranks[order] = np.repeat(first + (counts - 1) / 2.0, counts)
+    ranks[order] = np.arange(pop.size)
     rank = np.full(margin.size, np.nan)
     rank[pop] = (ranks + 0.5) / pop.size
-    pct = rank[idx]
+    on_grid = (idx >= 0) & (idx < margin.size)                   # a negative index used to wrap to the last window
+    pct = np.full(idx.size, np.nan)
+    pct[on_grid] = rank[idx[on_grid]]
     inside = np.isfinite(pct)
     med = float(np.median(pct[inside])) if inside.any() else float("nan")
-    thr = review_set_threshold(int(inside.sum()))
-    return {"median_suspicion_percentile": med, "threshold": thr,
-            "looks_like_a_review_set": bool(np.isfinite(med) and med > thr),
+    mean = float(np.mean(pct[inside])) if inside.any() else float("nan")
+    thr = review_set_threshold(int(inside.sum()), pop.size)
+    return {"mean_suspicion_percentile": mean, "median_suspicion_percentile": med, "threshold": thr,
+            "looks_like_a_review_set": bool(np.isfinite(mean) and mean > thr),
             "share_in_top_5pct": float(np.mean(pct[inside] > 0.95)) if inside.any() else float("nan"),
             "n_outside_population": int((~inside).sum()), "n_duplicated": int(idx.size - np.unique(idx).size)}
 
@@ -567,7 +610,7 @@ def estimate_from_indices(indices, wrong, margin, valid=None):
         raise ValueError(f"{chk['n_duplicated']} window(s) appear more than once; a repeated label is not a new one")
     if chk["looks_like_a_review_set"]:
         raise ValueError(
-            f"these {len(indices)} windows sit at a median suspicion percentile of {chk['median_suspicion_percentile']:.2f}, "
+            f"these {len(indices)} windows sit at a mean suspicion percentile of {chk['mean_suspicion_percentile']:.2f}, "
             f"above {chk['threshold']:.2f}, the most a random sample of that size reaches (a random sample sits at 0.50, "
             f"the review set near 0.97); {100 * chk['share_in_top_5pct']:.0f}% are in the top 5% most suspect. They are "
             "an enriched set, not a sample, and the rate they give is inflated. Draw a sample with "
@@ -649,6 +692,8 @@ def stratified_model_assisted_interval(err, g, strata, picked, sizes, N, lam=Non
 # sample `sample_for_estimation` draws; the map's own decisions give the class of every window. Preregistered in
 # docs/plan/per_class_assessment.md.
 MIN_PER_CLASS = 30                # a per-class interval on fewer labelled windows is reported with a warning
+RARE_ERRORS = 5                   # a normal-theory per-class interval resting on 1 to 4 sampled errors is warned (review of
+                                  # 2026-09-23: exp81's rare-error cells fail on the draws that catch one or two such errors)
 
 
 def _wald(est, var):
@@ -663,7 +708,7 @@ def _wilson_eff(est, var, n_fallback):
     then falls back to the labelled count of the class, the simple-random bound the design cannot beat without an
     observed error. exp81 graded the Wald form first: on 77 of 324 per-class cells of the classification suite it
     covered as little as 30% of draws, every one of them a class near 0 or 1."""
-    est, var = float(est), max(float(var), 0.0)
+    est, var = min(max(float(est), 0.0), 1.0), max(float(var), 0.0)      # a weighted sum can round past 1
     if var > 0 and 0 < est < 1:
         n_eff = est * (1 - est) / var
     else:
@@ -733,6 +778,15 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
     mc = np.asarray(map_class).ravel()
     if ref.size != idx.size:
         raise ValueError(f"{ref.size} reference labels for {idx.size} labelled windows")
+    if mc.dtype.kind not in "iu":
+        if mc.dtype.kind not in "fb" or not np.isfinite(mc).all() or not np.all(np.mod(mc, 1) == 0):
+            raise ValueError("map_class must hold an integer class per window, negative where the map has no data")
+    mc = mc.astype(int)
+    if ((idx < 0) | (idx >= mc.size)).any():
+        raise ValueError(f"a labelled window index lies outside the map's {mc.size} windows")
+    if np.unique(idx).size != idx.size:
+        raise ValueError(f"{idx.size - np.unique(idx).size} window(s) appear more than once in the sample; each window "
+                         "is labelled once")
     if ref.dtype.kind not in "iu" and not np.all(np.equal(np.mod(ref, 1), 0)):
         raise ValueError("reference classes must be integers")
     ref = ref.astype(int)
@@ -748,6 +802,12 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
         pop = np.flatnonzero(mc >= 0)
     else:
         pop = np.asarray(sample["strata_of_population"], int)
+        # the population is the sample's, so check that map_class describes it: until 2026-09-23 a class map of
+        # another grid or with no-data inside the sampled population passed, or failed with an unrelated error
+        if (pop >= mc.size).any() or (mc[pop] < 0).any() or int((mc >= 0).sum()) != pop.size:
+            raise ValueError(f"map_class does not describe the population the sample was drawn from ({pop.size} windows, "
+                             f"where map_class has {int((mc >= 0).sum())} with a class); pass the class map of the same "
+                             "grid and no-data mask the sample was drawn on")
     N = int(pop.size)
     if N != int(sample["n_population"]):
         raise ValueError(f"map_class has {N} valid windows but the sample was drawn from {sample['n_population']}; pass the "
@@ -775,8 +835,13 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
                             f"by their weight ({float(W[unsampled].sum()):.3f} of the map)")
         share_est = (W[:, None] * u).sum(0)                                                 # A_j = sum_i W_i u_ij
         share_var = (W[:, None] ** 2 * v_u).sum(0)
-        overall = float((W * np.diag(u)).sum())
-        overall_var = float((W ** 2 * np.diag(v_u)).sum())
+        # the overall accuracy is `estimate`'s quantity with `estimate`'s interval, exact under a random draw: the
+        # post-stratified form printed here until 2026-09-23 was never graded and covered 0.913 on one exp81 cell
+        k_right = int(np.trace(conf))
+        o_lo, o_hi = hypergeom_interval(k_right, int(idx.size), N)
+        overall_row = {"estimate": k_right / idx.size, "low": o_lo, "high": o_hi}
+        # Olofsson's post-stratified overall accuracy, sum_i W_i u_ii, kept as a point so the table adds up
+        post_stratified = min(max(float((W * np.diag(u)).sum()), 0.0), 1.0)
         for c in range(C):
             row = {"map_share": float(W[c]), "n_labelled_map_class": int(n_i[c]), "n_labelled_reference_class": int(conf[:, c].sum())}
             if n_i[c] > 0:
@@ -800,6 +865,10 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
                 t2 = pa ** 2 * sum(N_map[i] ** 2 * u[i, c] * (1 - u[i, c]) * fpc[i] / (n_i[i] - 1) for i in others)
                 e, lo, hi = _interval(pa, (t1 + t2) / Nhat_j ** 2, conf[:, c].sum(), interval)
                 row["producer_accuracy"] = {"estimate": e, "low": lo, "high": hi}
+            elif N_map[c] == 0 and conf[:, c].sum() > 0:
+                # the map never predicts a class the labels show exists: its producer's accuracy is exactly 0, the
+                # worst there is (Olofsson's eq. 7), not missing; until 2026-09-23 it printed as n/a
+                row["producer_accuracy"] = {"estimate": 0.0, "low": 0.0, "high": 0.0}
             else:
                 row["producer_accuracy"] = None
             e, lo, hi = _interval(share_est[c], share_var[c], idx.size, interval)
@@ -813,7 +882,13 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
         m_pop = mc[pop]
         r_pop = np.full(N, -1, int)
         r_pop[local] = r_s
-        overall, overall_var, _ = stratified_mean_and_variance((m_pop == r_pop).astype(float), strata, local, sizes, N)
+        right = np.zeros(N)
+        right[local] = (m_s == r_s).astype(float)
+        if interval == "wilson":                                   # `estimate`'s graded form, census included
+            o_est, o_lo, o_hi, _, _ = stratified_interval_wilson(right, strata, local, sizes, N)
+        else:
+            o_est, o_lo, o_hi = _wald(*stratified_mean_and_variance(right, strata, local, sizes, N)[:2])
+        overall_row = {"estimate": o_est, "low": o_lo, "high": o_hi}
         for c in range(C):
             is_map = (m_pop == c).astype(float)
             is_ref = (r_pop == c).astype(float)
@@ -823,17 +898,37 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
             row["user_accuracy"] = None if not np.isfinite(ua) else dict(zip(("estimate", "low", "high"), _interval(ua, v, conf[c].sum(), interval)))
             pa, v = _ht_ratio(both, is_ref, strata, local, sizes)
             row["producer_accuracy"] = None if not np.isfinite(pa) else dict(zip(("estimate", "low", "high"), _interval(pa, v, conf[:, c].sum(), interval)))
+            if N_map[c] == 0 and conf[:, c].sum() > 0:
+                row["producer_accuracy"] = {"estimate": 0.0, "low": 0.0, "high": 0.0}      # exactly 0, as above
             tot, v = _ht_total(is_ref, strata, local, sizes)
             row["reference_share"] = dict(zip(("estimate", "low", "high"), _interval(tot / N, v / N ** 2, idx.size, interval)))
             per[int(c)] = row
         method = "stratified by confidence margin: ratios of Horvitz-Thompson totals with linearised variance; shares as Horvitz-Thompson totals"
     for c, row in per.items():
-        notes = []
+        notes, codes = [], []
         small = [k for k in ("n_labelled_map_class", "n_labelled_reference_class") if row[k] < MIN_PER_CLASS]
         if small:
+            codes.append("few labels")
             notes.append(f"fewer than {MIN_PER_CLASS} labelled windows ({row['n_labelled_map_class']} the map calls this "
                          f"class, {row['n_labelled_reference_class']} the reference does); the interval is wide and, "
                          "below about ten, not to be trusted")
+        if N_map[c] == 0 and conf[:, c].sum() > 0:
+            codes.append("never predicted")
+            notes.append("the map never predicts this class, which the labels show exists: its producer's accuracy is "
+                         "exactly 0 and its user's accuracy is undefined")
+        # the rare-error case (exp81's second audit): a normal-theory interval built on one to four sampled errors of
+        # the kind a quantity counts moves by a whole window's weight when one more or one fewer is drawn
+        commissions, omissions = int(conf[c].sum() - conf[c, c]), int(conf[:, c].sum() - conf[c, c])
+        counted = [("producer's accuracy", omissions), ("share", omissions + commissions)]
+        if design != "random":                                     # the random-design user's accuracy is exact
+            counted.append(("user's accuracy", commissions))
+        rare = [q for q, n_err in counted if 0 < n_err < RARE_ERRORS]
+        if rare and N_map[c] > 0:
+            codes.append("few errors")
+            notes.append(f"the {', '.join(rare)} rest(s) on {min(omissions + commissions, max(omissions, commissions))} to "
+                         f"{omissions + commissions} sampled error(s) ({commissions} the map calls this class wrongly, "
+                         f"{omissions} of this class it misses); one error more or fewer in the draw moves the estimate "
+                         "by a whole window's weight, and the interval can miss it")
         # exp81 measured one case where a nominal 95% interval covers well under 95%: a class nearly all of whose
         # windows are labelled, so the estimate takes a handful of values and a normal interval cannot follow it
         # (0.86-0.92 on five encoders' Togo classes). The thin-strata note below is a caution from the design: the
@@ -841,6 +936,7 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
         # shortfall is the rare-error case, a class whose accuracy rests on a handful of errors that a draw misses
         # or catches at a large weight, for which the package does not yet warn (exp81's second audit)
         if N_map[c] > 0 and row["n_labelled_map_class"] >= 0.9 * N_map[c] and row["n_labelled_map_class"] < N_map[c]:
+            codes.append("near census")
             notes.append("nearly every window of this class is labelled; apart from the user's accuracy under a random sample, "
                          "which is exact, the intervals are a rough guide, since the estimate can only take a few values "
                          "(exp81: coverage 0.86-0.92 on such classes)")
@@ -849,15 +945,18 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
             thin = np.array([sizes[h] > 0 and (strata[local] == h).sum() / sizes[h] < 0.5 * f_all for h in range(len(sizes))])
             in_thin = float((thin[strata[m_pop == c]]).mean()) if (m_pop == c).any() else 0.0
             if in_thin > 0.5:
+                codes.append("thin strata")
                 notes.append(f"{100 * in_thin:.0f}% of this class sits in confidence strata the design samples at under half the "
                              "overall rate; if its errors are rare there they are often not drawn, and the interval is then "
                              "optimistic")
         if notes:
             row["warning"] = "; ".join(notes)
-    e, lo, hi = _interval(overall, overall_var, idx.size, interval)
+            row["warning_codes"] = codes
     out = {"design": design, "interval": interval, "n_labelled": int(idx.size), "n_population": N, "n_classes": C, "nominal_coverage": 0.95,
-           "overall_accuracy": {"estimate": e, "low": lo, "high": hi}, "confusion_counts": conf.tolist(),
+           "overall_accuracy": overall_row, "confusion_counts": conf.tolist(),
            "per_class": per, "method": method}
+    if design == "random":
+        out["overall_accuracy_post_stratified"] = post_stratified
     if warnings:
         out["warning"] = "; ".join(warnings)
     return out
@@ -945,7 +1044,7 @@ def min_labels_to_certify(alpha, delta=ZONE_DELTA):
     import math
     if not (0 < alpha < 1 and 0 < delta < 1):
         raise ValueError(f"alpha and delta must be in (0, 1), got {alpha}, {delta}")
-    return int(math.ceil(math.log(delta) / math.log(1.0 - alpha)))
+    return int(math.ceil(math.log(delta) / math.log1p(-alpha)))   # log1p: log(1 - alpha) is 0.0 below alpha ~ 1e-16
 
 
 def zone_order(margin, valid=None):
@@ -1030,14 +1129,16 @@ def certify_zone(margin, indices, wrong, alpha, delta=ZONE_DELTA, rule="prefix",
         raise ValueError("wrong must be 0 or 1 per window")
     if not (0 < alpha < 1 and 0 < delta < 1):
         raise ValueError(f"alpha and delta must be in (0, 1), got {alpha}, {delta}")
+    if rule not in ZONE_RULES:                                    # checked before a budget too small can hide a typo
+        raise ValueError(f"rule must be one of {ZONE_RULES}, got {rule!r}")
     chk = review_set_check(idx, margin, valid)
     if chk["n_outside_population"]:
         raise ValueError(f"{chk['n_outside_population']} labelled window(s) are outside the valid map")
     if chk["n_duplicated"]:
         raise ValueError(f"{chk['n_duplicated']} window(s) appear more than once")
     if chk["looks_like_a_review_set"]:
-        raise ValueError(f"these {idx.size} windows sit at a median suspicion percentile of "
-                         f"{chk['median_suspicion_percentile']:.2f}, above {chk['threshold']:.2f}: an enriched set, not a "
+        raise ValueError(f"these {idx.size} windows sit at a mean suspicion percentile of "
+                         f"{chk['mean_suspicion_percentile']:.2f}, above {chk['threshold']:.2f}: an enriched set, not a "
                          "random sample, and a zone certified on it would be wrong. Draw the sample at random.")
     order, pos = zone_order(margin, valid)
     N = int(order.size)
@@ -1075,6 +1176,9 @@ def certify_zone(margin, indices, wrong, alpha, delta=ZONE_DELTA, rule="prefix",
     elif rule == "prefix":
         out["note"] = ("valid if the zone's error rate does not fall as the zone grows; on the suite tasks exp80 graded, "
                        "the guarantee held whether or not that was exactly true (docs/results/comparisons.md, exp80)")
+    else:
+        out["note"] = (f"Bonferroni over the {len(cov)} testable levels: valid with no assumption on how the error rate "
+                       "changes with the zone")
     if tied > inside:
         out["note"] = out.get("note", "") + (f"; {tied} windows share the threshold margin and only {inside} of them are inside "
                                             "the zone, so the zone is the set returned, not every window at or above the threshold")

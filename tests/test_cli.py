@@ -140,7 +140,7 @@ def test_labels_are_pooled_over_their_own_classes_not_the_maps(tmp_path):
                  "--labels", str(tmp_path / "lab.npy")]) == 0
     s = json.load(open(out / "comparison.json"))
     assert s.get("notes"), "a label raster with classes the maps cannot predict must say so"
-    assert "6 classes" in s["notes"][0] and "at most 3" in s["notes"][0]
+    assert any("[3, 4, 5]" in n and "neither map predicts" in n for n in s["notes"])
 
 
 def test_two_budgets_that_differ_write_two_files(tmp_path):
@@ -374,9 +374,11 @@ def test_compare_windows_outside_every_zone_belong_to_no_group(tmp_path):
     for n, x in (("a", a), ("b", b), ("g", g)):
         np.save(tmp_path / f"{n}.npy", x)
     s = _cmp(tmp_path, tmp_path / "a.npy", tmp_path / "b.npy", "--groups", tmp_path / "g.npy")
-    # a hard class map carries no confidence, so an 8-8 window ties the same way in a and in its flipped copy
-    assert set(s["per_group"]) == {"0", "2"} and s["per_group"]["0"]["n"] == 64 and s["per_group"]["0"]["rate"] > 0.8
-    assert any("in no group" in n for n in s["notes"])
+    # a hard class map carries no confidence, so an 8-8 window has no way to break its tie; since 2026-09-23 such a
+    # window is left out on both sides (it used to go to class 0 in a and in its flipped copy, and "agree"), so every
+    # compared window of the flipped quadrant differs
+    assert set(s["per_group"]) == {"0", "2"} and s["per_group"]["0"]["n"] < 64 and s["per_group"]["0"]["rate"] == 1.0
+    assert any("in no group" in n for n in s["notes"]) and any("split evenly" in n for n in s["notes"])
 
 
 def test_compare_boundary_cue_ignores_no_data_holes(tmp_path):
@@ -485,3 +487,26 @@ def test_estimate_per_class_reports_every_class_and_needs_the_reference_column(t
     assert main(["estimate", str(conf), "--per-class"]) == 0
     r = json.load(open(tmp_path / "q_estimate.json"))
     assert r["per_class_method"].startswith("stratified")
+
+
+def test_certify_accepts_a_spreadsheet_round_trip_of_the_confidence_column_and_refuses_another_map(tmp_path):
+    """Verification of the second review: at a fixed 1e-4 a confidence column rounded to three digits by a
+    spreadsheet was refused as another map; the tolerance now follows the digits written. Another map is still
+    refused."""
+    from oe_inferencex.cli import _rounding_tolerance
+    assert _rounding_tolerance("0.412") == 5e-4 and _rounding_tolerance("4.12e-01") == 5e-4
+    assert _rounding_tolerance("0.4123456789") == 1e-6
+    path, probs, expert = _sample_map(tmp_path)
+    csv_path = str(tmp_path / "r.csv")
+    assert main(["sample", path, "--budget", "200", "--design", "random", "--out", csv_path]) == 0
+    _fill(csv_path, probs, expert)
+    rows = list(csv.DictReader(open(csv_path)))
+    for r in rows:
+        r["confidence"] = f"{float(r['confidence']):.3g}"
+    with open(csv_path, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=rows[0].keys()); w.writeheader(); w.writerows(rows)
+    assert main(["certify", csv_path, "--alpha", "0.3", "--out", str(tmp_path / "z.json")]) == 0
+    other = tmp_path / "other.npy"
+    np.save(other, np.roll(probs, 7, axis=2))
+    with pytest.raises(SystemExit, match="not the one the CSV records|valid windows"):
+        main(["certify", csv_path, "--alpha", "0.3", "--scores", str(other), "--out", str(tmp_path / "z2.json")])

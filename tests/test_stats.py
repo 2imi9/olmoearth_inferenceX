@@ -188,3 +188,21 @@ def test_paired_cluster_bootstrap_matches_int_and_str_cluster_ids():
     ca, cb = np.repeat(np.arange(10), 30), np.repeat(np.arange(10), 30).astype(str)
     r = paired_cluster_bootstrap(lambda i: float(i.size), ca, lambda i: float(i.size), cb, n_boot=50)
     assert r["n"] == 50
+
+
+def test_paired_cluster_bootstrap_matches_integer_and_float_ids_of_one_cluster():
+    """Review of 2026-09-23: the str cast added for int-against-str ids turned 1 and 1.0 into '1' and '1.0', so
+    every cluster was split in two and the two subsets resampled independently."""
+    rng = np.random.default_rng(0)
+    ca = np.repeat(np.arange(10), 10)
+    va, vb = rng.random(100), rng.random(100) + 0.2
+    fa, fb = (lambda i: float(va[i].mean())), (lambda i: float(vb[i].mean()))
+    same = paired_cluster_bootstrap(fa, ca, fb, ca, n_boot=300, seed=1)
+    mixed = paired_cluster_bootstrap(fa, ca, fb, ca.astype(float), n_boot=300, seed=1)
+    assert same["difference_lo"] == mixed["difference_lo"] and same["difference_hi"] == mixed["difference_hi"]
+
+
+def test_calibration_error_is_undefined_without_a_finite_unit():
+    from oe_inferencex.metrics import expected_calibration_error
+    ece, rows = expected_calibration_error([np.nan, np.nan], [1, 0])
+    assert np.isnan(ece) and rows == []

@@ -218,8 +218,13 @@ def paired_cluster_bootstrap(fn_a, clusters_a, fn_b, clusters_b, n_boot=1000, se
     draw produced enough units in both subsets."""
     rng = np.random.default_rng(seed)
     ca, cb = np.asarray(clusters_a), np.asarray(clusters_b)
-    if ca.dtype.kind != cb.dtype.kind:                  # int ids against str ids matched nothing and returned {n: 0}
-        ca, cb = ca.astype(str), cb.astype(str)
+    if ca.dtype.kind != cb.dtype.kind:
+        if ca.dtype.kind in "iufb" and cb.dtype.kind in "iufb":
+            # numbers against numbers compare as numbers: casting to str turned 1 and 1.0 into '1' and '1.0' and split
+            # every cluster in two (review of 2026-09-23; a regression of the str cast below)
+            ca, cb = ca.astype(np.float64), cb.astype(np.float64)
+        else:                                             # int ids against str ids matched nothing and returned {n: 0}
+            ca, cb = ca.astype(str), cb.astype(str)
     ids = np.unique(np.concatenate([ca, cb]))
     idx_a = {g: np.flatnonzero(ca == g) for g in ids}
     idx_b = {g: np.flatnonzero(cb == g) for g in ids}

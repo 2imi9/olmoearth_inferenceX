@@ -272,3 +272,21 @@ Landsat cells wrong: none of their strata is sampled at under half the overall r
 never fired on them, and their shortfall is the rare-error mechanism the EuroSAT and MADOS cells share (a class
 whose accuracy rests on a handful of errors that a draw misses or catches at a large weight). The package does
 not warn for that case yet; the warning's text no longer cites these cells.
+
+## Seventh amendment, 23 September 2026: a warning for the rare-error case, written before it is measured
+
+The second audit named the mechanism behind nine of the fourteen P1 shortfalls: a class whose accuracy rests on a
+handful of errors, so a draw that misses them, or catches one at a large weight, moves the estimate further than a
+normal-theory interval reaches. The package now warns (`warning_codes` "few errors") when the producer's
+accuracy, the share, or under the confidence design the user's accuracy rests on 1 to 4 sampled errors of the
+kind it counts (`estimate.RARE_ERRORS`). Zero sampled errors is not warned: the interval then falls back to the
+labelled count and errs wide (coverage 0.996 to 1.0 in the review's check).
+
+**Predictions, stated before the run** (`exp/exp81_rare_error_warning.py`, 2,000 draws per cell, Base's export).
+(a) On the nine rare-error cells (EuroSAT's five, MADOS class 7, Brick Kiln's two, Nandi Landsat's one) the warning
+fires on at least **80%** of the draws whose interval misses the truth. (b) On those cells, coverage among the
+unwarned draws is at least **0.93**. (c) Across every graded (draw, class, quantity) of the seventeen
+classification tasks at 300 labels under both designs, the warning fires on at most **20%**, so it marks a case
+rather than every class of a clean map. *What makes each fail:* (a) a shortfall that happens on draws with five or
+more errors, where the mechanism named is not the one at work; (b) the same; (c) a threshold so loose it warns
+everywhere, which would make the warning noise.

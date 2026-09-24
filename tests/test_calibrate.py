@@ -102,3 +102,29 @@ def test_fit_side_on_the_recorded_exp60_decisions():
     assert rep["held_out"]["share_right"] >= rep["baseline"]["share_right"] - 0.02
     with pytest.raises(ValueError):
         fusion.score(side_features(fa, fb), family="FT-S2 v1")
+
+
+def test_fit_side_compares_its_held_out_share_with_baselines_on_the_same_rows():
+    """Review of 2026-09-23, its reproduction: every window disagrees; on tile 0 b is always right, on tile 1 a coin.
+    With two folds by tile one fold is unscored, and the report set the rule's share (scored rows) beside 'always b'
+    over every row, 0.775, where on the scored rows 'always b' is 1.0."""
+    import numpy as np
+    from oe_inferencex.calibrate import fit_side
+    rng = np.random.default_rng(0)
+    n = 400
+    a, b = np.zeros(n, int), np.ones(n, int)
+    g = np.repeat([0, 1], n // 2)
+    lab = np.where(g == 0, 1, rng.integers(0, 2, n))
+    ma, mb = rng.uniform(size=n), rng.uniform(size=n)
+    _, r = fit_side({"m": ma}, {"m": mb}, a, b, np.ones(n), lab, groups=g, folds=2)
+    assert r["n_scored_rows"] == n // 2 and r["comparators_cover"] == "the scored rows"
+    scored_tile = g == 0 if r["always_b"] == 1.0 else g == 1
+    assert r["always_b"] == float((lab[scored_tile] == 1).mean()) and r["always_a"] == float((lab[scored_tile] == 0).mean())
+
+
+def test_fit_side_with_groups_and_no_disagreement_is_undefined_not_refused():
+    import numpy as np
+    from oe_inferencex.calibrate import fit_side
+    a = np.zeros(20, int)
+    _, rep = fit_side({"m": np.ones(20)}, {"m": np.ones(20)}, a, a, np.ones(20, bool), a, groups=np.arange(20) % 2)
+    assert rep["n_disagree"] == 0 and np.isnan(rep["held_out"]["share_right"])

@@ -144,13 +144,17 @@ def _crop(img, size):
 
 
 def ndwi(img, bands=S2_BANDS):
-    """Normalised difference water index (green - NIR) / (green + NIR) per pixel; 0 where both bands are 0.
+    """Normalised difference water index (green - NIR) / (green + NIR) per pixel, bands clipped at 0; 0 where both are 0.
 
     Scale-free, so digital numbers and reflectance give the same index. Until 2026-09-22 the denominator was clipped
     at 1, harmless on integer DN but on reflectance it shrank every value: open water with green 0.10 and NIR 0.02,
     NDWI 0.667, came out 0.08, inside the ndwi_ambiguous cue's band (audit 2026-09-21, finding 16)."""
     x = np.asarray(img).astype(np.float64)
     g, nir = x[..., bands.index("B03"), :, :], x[..., bands.index("B08"), :, :]
+    # A negative reflectance, common in L2A over dark water once the BOA offset is applied, is clipped to 0: green
+    # 0.004 with NIR -0.006 used to give 0 (inside the ambiguous band, for a pixel that is plainly water) and green
+    # 0.03 with NIR -0.005 gave 1.4, outside [-1, 1] (review of 2026-09-23). Digital numbers are never negative.
+    g, nir = np.maximum(g, 0.0), np.maximum(nir, 0.0)
     den = g + nir
     with np.errstate(divide="ignore", invalid="ignore"):
         return np.where(den > 0, (g - nir) / np.where(den > 0, den, 1.0), 0.0)
