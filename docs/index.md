@@ -1,9 +1,25 @@
 # olmoearth_inferenceX
 
-olmoearth_inferenceX measures differences between Earth-observation
-inferences without labels, and shows on expert-labelled testbeds which of
-those differences predict error. It was built around OlmoEarth and has since
-been run on a served global product no one here had a hand in training.
+olmoearth_inferenceX is a Python package for assessing classification maps from Earth-observation models. Without
+reference labels, it ranks a map's windows by the model's confidence for manual review, lists the cues behind each
+flagged window, and compares two maps of the same area. With a labelled sample, it estimates the error rate and
+per-class accuracy with confidence intervals.
+
+The package reads the per-pixel probabilities, logits or class scores that a model exports, as GeoTIFF or `.npy`
+arrays, and needs no access to the model itself. It was developed on OlmoEarth and does not require torch.
+
+## Commands
+
+| Command | What it does |
+|---|---|
+| `demo` | Assesses a real land-cover map shipped with the package and draws the result |
+| `assess` | Ranks a map's windows by confidence into review sets, with the cues behind each window |
+| `compare` | Measures where two maps of the same area differ and, with labels, which one is right there |
+| `sample` | Selects the windows to label |
+| `estimate` | Estimates the error rate from the labelled sample, with a 95% interval; with `--per-class`, per-class accuracy |
+| `certify` | Certifies, from a random labelled sample, the largest most-confident share of the map whose error rate is at most a stated level |
+
+Each command is described in [Usage](Usage.md#command-line).
 
 ## Demo
 
@@ -12,121 +28,29 @@ pip install olmoearth-inferencex
 oe-inferencex demo
 ```
 
-It audits a real map, one tile of Dynamic World land cover, chosen by a rule fixed in advance (the median tile of 18, not the best one), and draws this: <!-- claim:demo-sample-is-the-median-tile -->
+The demo assesses one Dynamic World tile with expert annotation. The tile was selected by a rule fixed before any
+tile was examined, as the lower median by error capture at a 5% budget among the 18 of Dynamic World's 409
+expert-annotated test tiles that meet the rule's criteria (annotated on at least 90% of windows, at least three
+classes on 5% of the windows each, an error rate between 5% and 35%); the selected tile is therefore typical rather
+than the most favourable. <!-- claim:demo-sample-is-the-median-tile -->
 
-![Three panels of a real land-cover map in southern Peru. Left: the 5% of windows to check first, outlined in black along the class boundaries. Middle: the same windows over the map's real errors in red. Right: a random 5% of windows over the same errors](figures/demo_real_map.png)
+![Three panels of a Dynamic World tile in southern Peru: the 5% of windows ranked first, the same windows over the map's errors in red, and a random 5% over the same errors](figures/demo_real_map.png)
 
-*Left: the 5% of windows to check first, found without labels. Middle: the same windows over the real errors, in red: 67% of them are wrong, against 19% of windows picked at random. Right: a random 5%. Most of the red lies outside the flagged windows because the map is 19% wrong and the review is 5%: no 5% could hold more than 26% of the errors, and these hold 17%; a 20% review finds 55%.* <!-- claim:demo-sample-hit-rate -->
+*Left: the 5% of windows ranked first, selected without labels. Middle: the same windows over the map's errors, in
+red; 67% of them are wrong, against 19% of the map. Right: a random 5%. The flagged windows hold 17% of the errors;
+with 19% of the map wrong and 5% reviewed, no selection of that size could hold more than 26%. A 20% review holds
+55%.* <!-- claim:demo-sample-hit-rate -->
 
-Your own map: `oe-inferencex assess your_map.tif --out audit`. What the project found, in six sentences:
-[Findings, in short](Findings.md#in-short).
-
-## The strongest evidence
-
-**On tasks this project did not choose, the model's own margin ranks its errors better than any control that sees no
-model: on 24 of 24.**
-
-The tasks are Ai2's [OlmoEarth paper embedding suite](https://huggingface.co/datasets/allenai/olmoearth-paper-embeddings), with the
-splits fixed in the files, so the result does not rest on testbeds the author picked. On the same tasks the margin also
-beats the alternatives the literature proposes, and it holds under the fifteen other encoders of the suite, on 322 of
-332 tasks. *This is not a leaderboard result: the suite measures accuracy, and no public benchmark measures label-free
-error ranking.*
-
-??? note "The numbers"
-    - **The suite** ([exp70](results/comparisons.md#tasks-we-did-not-choose-ai2s-whole-published-suite-exp70)): all 24 tasks that a top-1 minus top-2 margin is defined for, and all 14 sources behind them; 6,435,473 graded units; accuracy from 0.333 to 0.979; 17 of 17 classification and 7 of 7 segmentation tasks; sign test p = 6e-08. Six tasks come from GEO-Bench 1, a third-party benchmark, and the margin wins on all six.
-    - **Against the alternatives the literature proposes** ([exp73](results/comparisons.md#the-strong-alternatives-on-the-same-suite-exp73)): it beats a five-seed ensemble on 22 of 24, nearest-neighbour typicality on 24 of 24 and a Mahalanobis distance on 24 of 24.
-    - **Under the other encoders** ([exp74](results/comparisons.md#the-suite-under-the-other-encoders-exp74)): eight families outside OlmoEarth (AnySat, Clay, Panopticon, Galileo, CROMA, TerraMind, Satlas, Copernicus-FM) and the OlmoEarth size series; 322 of 332 scored tasks, every encoder at 90% or better.
-    - **Which confidence** ([exp76](results/comparisons.md#which-confidence-which-statistic-which-aggregator-exp76)): the forms are close; on multi-class tasks one minus the top probability is marginally better than top-1 minus top-2.
-
-## What it does
-
-On those testbeds the model's own logit margin is the difference that
-predicts error; disagreement across crops, backbones or encoders does not
-rank errors; the sensor difference says where the shared errors come from;
-the frozen-versus-fine-tuned difference measures how much training moved
-the model. Given a prediction map, it helps with:
-
-1. **Deciding which windows to trust and which to send for review first**, as
-   review sets at a chosen budget, in confidence order or boundary first.
-2. **Explaining why each flagged window is suspect**, with label-free cues that
-   carry measured evidence from expert-labelled testbeds.
-3. **Scoring any candidate audit rule the same way**, against the model's own
-   confidence and a no-model control, on two references at once.
-4. **Auditing a deployed product**, whoever trained it: OlmoEarth's fine-tuned
-   models through their task cards, the served land cover change rasters, and a
-   served global land-cover product audited from nothing but the probabilities it
-   publishes about itself.
-5. **Measuring the difference between two inferences of the same scene**,
-   through shifted crops, across backbones, across sensors, across encoders,
-   before against after fine-tuning, and between two acquisition dates: how much
-   they disagree, what the disagreement windows have in common and, with labels,
-   which side is right.
-6. **Fusing the label-free readings with labels where they exist**: a fitted
-   ranker or side rule, reported held-out and bound to the model family it
-   was fitted on, because such rules do not transfer across families.
-7. **Grading against a reference that is a sample rather than a map**: the
-   design-weighted estimators report the population quantity instead of the
-   sample's, which on a stratified reference is not a fine point. Ignoring the
-   design overstated one lead by a quarter of its size.
-
-Both halves run from the command line without writing Python, `oe-inferencex
-assess` and `oe-inferencex compare`; see
-[Usage: command line](Usage.md#command-line).
-
-![The two-period, two-sensor square on one GEOID-Flood chip: four dated inputs, four inferences on identical windows, the same-date and same-sensor differences on the scene, and the label bridge boxed apart](figures/compare.png)
-
-*Four dated inputs of one GEOID-Flood chip (event EMSR273-1, Lake Shkodër at
-Gruemirë, Albania), each read by its head on identical windows. The same-period
-pairs differ on 22 windows before the event and 44 after; the same-sensor pairs
-on 97 (optical) and 67 (radar). What a difference **is** needs labels, so that
-panel is boxed apart. The event-level numbers are in
-[Comparisons](results/comparisons.md#the-difference-atlas-every-pair-of-inferences-under-one-measurement-exp57).*
-
-A worked flood example, runnable from the committed artifacts, is in
-[Usage: compare two inferences of the same scene](Usage.md#compare-two-inferences-of-the-same-scene);
-the event-level results are in [Comparisons](results/comparisons.md#the-difference-atlas-every-pair-of-inferences-under-one-measurement-exp57).
-
-## What the evidence spans
-
-The ranking result now rests on five kinds of reference whose errors fail in
-different ways, which is the part of this work hardest to argue with:
-
-| The answer key came from | Testbeds |
-|---|---|
-| people reading the same imagery | [Sen1Floods11 hand labels](results/comparisons.md#dense-flood-masks-sen1floods11-exp18), [Copernicus EMS through GEOID-Flood](results/comparisons.md#geoid-flood-the-exception-as-a-rate-over-events-exp55), [WorldFloods v2](results/comparisons.md#the-fourth-cell-post-event-optical-from-worldfloods-completes-the-square-exp62) |
-| another model's output | [DFC2020](results/comparisons.md#dfc2020-eight-class-land-cover-both-sensors-our-own-encoder-two-references-exp66), whose test labels are an iterated random forest, not hand-drawn |
-| experts annotating a served product | [Dynamic World's 409 expert tiles](results/comparisons.md#auditing-a-production-model-with-its-own-probabilities-dynamic-world-exp67), audited from its own published probabilities |
-| surveyors standing in the field | [LUCAS Copernicus 2022](results/comparisons.md#the-protocol-against-ground-observation-lucas-exp68), the only reference here that never saw a pixel |
-| farmers' own declarations | [EuroCrops](results/comparisons.md#eurocrops-a-dense-crop-map-from-declarations-and-a-difference-labelled-on-both-sides-exp69), which also labels both sides of a two-date comparison |
-
-What to do and not do when auditing a map, including the two cautions this evidence produced, is in the
-[Recipe](method/recipe.md).
-
-## New to the repository?
-
-For the short version, read [Findings](Findings.md): what holds, the numbers,
-how a claim gets in, and the limits. Then:
-
-- [Usage](Usage.md) walks through the package: assess a prediction, explain its
-  review set, the production case with an exported confidence band, and how to
-  score a new rule with the same machinery.
-- The [Recipe](method/recipe.md) is the list of what to do and not do when
-  auditing a prediction map.
-- The [technical report](https://github.com/2imi9/olmoearth_inferenceX/blob/main/report/main.pdf)
-  is the whole record in ten pages: what was done, what held, and what did not.
-- [Related work](related_work.md) says where each idea here comes from, with
-  the selective-classification and Earth-observation literature it rests on.
-- The [Technique ledger](TECHNIQUES.md) is everything tried, one line each,
-  with the verdict and the evidence; the [Evidence](results/explanation.md)
-  pages hold the per-cue, per-signal and per-experiment detail.
-- The [API Reference](reference/index.md) documents the torch-free package
-  `oe_inferencex` module by module.
+Another map is assessed with `oe-inferencex assess your_map.tif --out audit`.
 
 ## Installation
 
-The package needs Python 3.11+ (3.12 is what the experiments ran on) and no
-torch; the experiments need the encoder. To use it, `pip install olmoearth-inferencex`
-(add `[geo]` to read and write GeoTIFFs). To work on the repository:
+```bash
+pip install olmoearth-inferencex            # the package; no torch
+pip install "olmoearth-inferencex[geo]"     # with GeoTIFF input and output
+```
+
+The package requires Python 3.11 to 3.13. To work on the repository:
 
 ```bash
 git clone https://github.com/2imi9/olmoearth_inferenceX.git
@@ -135,14 +59,24 @@ uv sync
 uv run pytest
 ```
 
-For the full experiment environment:
+The experiments also require `uv sync --extra encoder --extra geo`
+([Usage: reproducing the experiments](Usage.md#reproducing-the-experiments)).
 
-```bash
-uv sync --extra encoder --extra geo
-uv run python scripts/audit_one_scene.py   # one scene end to end
-```
+## Documentation
 
-## Contact
+- [Findings](Findings.md#in-short): what holds, what was rejected, and the limits; each statement links to its evidence.
+- [Usage](Usage.md): inputs, commands, the Python API and reproducing the experiments.
+- [Recipe](method/recipe.md): what to do and not do when assessing a map.
+- [Comparisons](results/comparisons.md): the record of each experiment; the [technique ledger](TECHNIQUES.md) lists
+  every technique tried with its verdict.
+- [Protocol](method/protocol.md): how results are scored; the [claim ledger](method/claims.md); the
+  [preregistrations and decisions](plan/index.md).
+- [Related work](related_work.md) and the
+  [technical report](https://github.com/2imi9/olmoearth_inferenceX/blob/main/report/main.pdf).
+- [API reference](reference/index.md): the `oe_inferencex` package, module by module.
 
-For questions and suggestions, please
-[open an issue on GitHub](https://github.com/2imi9/olmoearth_inferenceX/issues).
+## Licence and contact
+
+Apache License 2.0 ([LICENSE](https://github.com/2imi9/olmoearth_inferenceX/blob/main/LICENSE)); citation in
+[CITATION.cff](https://github.com/2imi9/olmoearth_inferenceX/blob/main/CITATION.cff). Questions and suggestions as
+[GitHub issues](https://github.com/2imi9/olmoearth_inferenceX/issues).

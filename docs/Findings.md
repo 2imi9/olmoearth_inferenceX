@@ -1,498 +1,200 @@
 # Findings
 
-What the audit found, what holds up, and how well. Every number traces to a
-file under `exp/out/`; the per-experiment detail is in the
-[technique ledger](TECHNIQUES.md) and the results pages.
+This page summarises what the experiments established about assessing Earth-observation classification maps, without
+labels and with a labelled sample. Each result is a claim in the [claim ledger](method/claims.md), checked against its
+artifact under `exp/out/`, with its evidence in the [results record](results/comparisons.md).
 
 ## In short
 
-For a reader with two minutes. No numbers here; each line is argued, with its numbers and its exceptions, further
-down the page.
+- The model's own confidence ranks a map's errors better than every control that does not use the model, on every
+  scored task of Ai2's published suite and against declared and surveyed references.
+- The exceptions found are single flood events or single sensors.
+- Errors concentrate on prediction boundaries, yet reviewing boundary windows first beats confidence alone only on a
+  minority of flood events.
+- Two inferences of one area differ mostly on prediction boundaries, the sensor moves shared errors more than the
+  backbone, and which side is right needs labels.
+- A few hundred random labels give an error rate with an interval that holds its coverage, per-class accuracies and a
+  certified zone.
+- No signal from inside the encoder beats confidence, and a consensus of encoders does not estimate accuracy.
+- For a language-model agent the package is decisive at small scale; at larger scale it contributes the refusal to
+  choose a side that the data cannot settle.
 
-- **The model's own confidence is the best label-free guide to where a map is wrong.** It beats every control that
-  sees no model on every task of Ai2's published embedding suite (there the controls are class rarity and embedding
-  distance; a pixel index cannot be computed from embeddings), nearly always under the other encoders of that suite
-  too, and on every labelled dataset Ai2 suggested. The known exceptions are each one event or one sensor: on a
-  single flood event a plain water index did as well as a frozen head, and that went away once the encoder was
-  fine-tuned; the same index wins on one flood activation in nine, and under the Sentinel-1 probe on the multi-region
-  split.
-- **This is not agreement with annotators.** It still holds when the reference is a surveyor who stood on the
-  ground and never saw a pixel.
-- **Most errors sit on the boundaries of the model's own prediction.** Reviewing boundary windows first, then the
-  rest by confidence, found more errors at small review budgets on the Bolivia flood event's hand labels; it loses
-  to confidence alone on the multi-region flood split under the newer encoder, with eight or more classes, and
-  under a reference coarser than the prediction. The boundary cue's strength is a property of the map's
-  fragmentation, not of its class count: from 1.2x on a dense plantation map to 8x on a sparse marine one.
-- **Comparing two inferences says why, not where.** Differences across crops, backbones and sensors do not rank
-  errors. They show where shared errors come from (the sensor, not the backbone), and that two dates differ far
-  more often than noise even where nothing changed on the ground.
-- **What did not work.** Nothing taken from inside the encoder ranks errors better than confidence: not its
-  pretraining objective, not embedding distances, not ensembles of heads.
-- **What the tool does not say.** How wrong a map is, from the map alone. It orders the windows and explains the
-  order; an error rate needs a reference. Errors the model is confident about stay hidden from it, and so are the
-  errors a panel of other encoders shares with it: agreement across encoder families estimates neither a map's
-  accuracy nor, except where the gaps are large, which encoder is best.
-- **If you can label a few hundred windows, it will tell you how wrong the map is**, with a range. The catch is in
-  how you pick them: label whole scenes and then work out the range the ordinary way, and it comes out far too
-  narrow. The same labels also certify a zone: the most confident part of the map that is wrong at most as often
-  as you specify, with a stated chance of the certificate itself being wrong; on a typical task 300 random labels
-  certify about half the map at half its error rate.
+![The assessment pipeline on a real scene: Sentinel-2 bands, the frozen encoder and head, prediction, confidence and boundary layers, the review set at a 5% budget, the cues per window](figures/pipeline.png)
 
-![The audit pipeline on a real scene: Sentinel-2 bands, the frozen encoder and head, prediction, confidence and boundary layers, the review set at a 5% budget, the reasons per window](figures/pipeline.png)
+*One scene (okavango_80) through the pipeline. The layers are the actual rasters; the orange squares are the 5% review
+set in the boundary-first order.*
 
-*One scene (okavango_80) through the pipeline: the layers are the actual rasters, the orange squares are the 5% review set in the boundary-first order.*
+## Ranking errors without labels
 
-## What holds
+The package scores each window, the block of pixels reviewed as a unit, by the model's margin, the difference between
+its two highest class probabilities, and reviews the smallest margins first. A ranking is graded by excess AURC, the
+area under the risk-coverage curve minus that of a perfect ranking, against no-model controls such as class rarity,
+embedding distance or the normalised difference water index (NDWI).
 
-### Where the map is wrong, and what to do about it
-
-1. **Of the label-free quantities the audit measures, the model's own
-   confidence is the one that best predicts where the map is wrong**, with
-   one exception. It leads on the AWF points,
-   the fine-tuned model run end to end and the multi-region Sen1Floods11
-   split, leading or tying under both backbones and both window designs (exp04, exp16,
-   exp18, exp21, exp45, exp47, exp49). The exception is Sen1Floods11 <!-- claim:confidence-best-single-signal -->
-   Bolivia, a single flood event, where a no-model spectral index ranks the
-   model's errors within 0.002 of its own confidence under v1 and better under
-   v1.2 Base, the encoder the served product uses, for the grid window and
-   for the shift-averaged decision alike (exp45, exp47): on one event,
-   water against land is nearly a spectral threshold, and there a head on
-   raw pixel statistics beats the frozen encoder (exp46). <!-- claim:bolivia-ndwi-exception --> <!-- claim:pixel-head-beats-encoder-bolivia -->
-   Under Ai2's own Sentinel-1 probe the picture flips: its confidence beats
-   the index on Bolivia and loses to it on the multi-region split under both
-   backbones (exp51); the index from the other sensor wins wherever the
-   model's own sensor is the less informative one for water. <!-- claim:s1-probe-ndwi-flip -->
-   Fine-tune the encoder and the exception goes: the trained S2 model's
-   confidence beats the index on Bolivia under both backbones (exp52). <!-- claim:finetune-dissolves-bolivia-exception -->
-   Over 45 GEOID-Flood areas of interest the index beats confidence on 2 for
-   permanent water and the sensor control on 1 for post-event water, but those
-   areas come from only nine and ten CEMS activations and both permanent-water
-   exceptions sit in one of them, so the rate to quote is one activation in nine
-   and not two areas in forty-five (exp55). On four multi-class tasks from Ai2's
-   embeddings confidence beats the embedding-distance control everywhere
-   (exp54). <!-- claim:geoid-exception-rate --> <!-- claim:multiclass-confidence-beats-embedding-control -->
-   A bag of bootstrap heads does not improve on it: an apparent gain under
-   v1 on Bolivia (exp49) did not replicate with a fresh draw (exp50). <!-- claim:bag-not-replicated -->
-2. **Review boundary windows first, then by confidence.** Errors sit on
-   prediction boundaries, 75% of errors against 21% of correct windows, and <!-- claim:errors-sit-on-boundaries -->
-   this order captures more of them than confidence alone at 5% and 10%
-   review budgets on hand labels, preregistered (exp36). No extra inference. <!-- claim:boundary-first-review-order -->
-   Its scope is narrower than that sentence: across 45 flood events it beats
-   confidence at the 5% budget on 40% of them (exp55), and at 15-19 classes
-   it loses pooled while winning per tile (exp54). <!-- claim:geoid-boundary-first-minority --> <!-- claim:boundary-first-many-classes-split -->
-3. **Every flagged window comes with a reason.** 95% of the error windows on
-   hand labels carry at least one label-free cue with a measured enrichment;
-   spectral ambiguity is 7x enriched and the one cue that adds precision
-   inside the review set (exp37). <!-- claim:explanation-cues-cover-errors -->
-   The enrichment a reason carries is the map's, not the library's: verified
-   per task on the suite, the boundary cue's runs from 1.2x on a plantation map
-   where three windows in four sit on a transition to 8x on a sparse marine one,
-   set by the map's fragmentation, while the error rate inside the boundary set
-   stays at least twice the rate outside on every task (exp82). The grain
-   matters as much as the map: on an export whose windows are four times wider,
-   97% of them touch a boundary and the cue enriches nothing (0.99; exp82 on
-   other encoders), and Base's own map coarsened to that grain goes from 2.1 to
-   1.3 times the error rate outside, the cue weakening with the window size on
-   all seven tasks. The tool now quotes the range and the map's own boundary
-   prevalence beside the Bolivia value, and says when that prevalence is too
-   high for the cue to mean much. <!-- claim:boundary-cue-enrichment-is-fragmentation-not-class-count --> <!-- claim:cue-verification-holds-on-other-encoders --> <!-- claim:boundary-cue-weakens-with-the-window-grain -->
-4. **An accuracy needs a coverage.** The fine-tuned model is 0.93 accurate
-   where it claims 0.99; keeping the 80% most confident windows gives 0.945 <!-- claim:accuracy-needs-coverage -->
-   (exp21).
-5. **The served product can be triaged without confidence.** It exports no
-   class confidence; boundary fraction alone captures a median 0.88 of the
-   disagreements at a 5% review budget (exp20). <!-- claim:served-product-boundary-triage -->
-6. **Averaging the tilings improves the map itself.** Run the encoder on the
-   window cropped at four offsets and average the four decisions per pixel:
-   pixel accuracy on hand labels rises by 1.0 points on Bolivia and 0.9 on
-   the multi-region test split, preregistered, no labels, no retraining
-   (exp42). Errors concentrate on windows whose hand labels are mixed, but <!-- claim:w1-accuracy-gain -->
-   that is concentration, not a ceiling: any one-class-per-block decision
-   must miss only 3% of pixels, far below the grid's measured error rate <!-- claim:mixed-label-windows-not-a-ceiling -->
-   (exp43).
-7. **Fusing signals needs labels, and then it works.** A logistic combination
-   of ten label-free signals (confidence, tiling instability, NDWI level, the
-   ensemble entropies, embedding distances, input extremity) fitted on the
-   head's own training split beats confidence on Bolivia under both backbones
-   and on the v1 test split by 24-38% of excess AURC; every label-free
-   midrank fusion had lost (exp47, exp49). On the v1.2 test split the lead is <!-- claim:label-fitted-fusion-three-of-four --> <!-- claim:label-free-midrank-fusion-lost -->
-   below the worthwhile threshold, so this is three arms of four. The weight
-   sits on the no-model NDWI level with the ensemble entropies and confidence
-   behind it, and dropping NDWI level costs the most (exp50). Fitted on tile <!-- claim:fusion-weight-on-ndwi -->
-   failures instead, it beats confidence at the tile level on the multi-region
-   split under both backbones (AURC 0.120 to 0.078 and 0.134 to 0.086), not on
-   Bolivia. SHRUG-FM's own signals, ported to the window, do not beat <!-- claim:tile-fitted-fusion-split-only -->
-   confidence (exp49). <!-- claim:shrug-signals-rejected -->
-8. **Fine-tuning corrects two thirds of the frozen head's Bolivia errors.**
-   Training OlmoEarth Base on the Sen1Floods11 train split with Ai2's recipe
-   corrects 66% of the frozen head's Bolivia errors and 44% of its multi-region
-   errors on identical windows, and takes window accuracy from 0.917 to 0.954
-   and from 0.955 to 0.967, preregistered (exp52); exp21's 55.6% on Ai2's AWF
-   model sits between the two testbeds. Adding Sentinel-1 to the fine-tuned <!-- claim:finetune-corrects-frozen-errors -->
-   Sentinel-2 model adds at most a tenth of a point: the sensor lever exp46
-   found on frozen probes is a frozen-feature property (exp52). <!-- claim:s1-adds-little-after-finetune -->
-
-### Comparing two inferences
-
-**Which differences predict error.** Every comparison here is a label-free
-measurement of how two inferences of the same scene differ: across shifted
-crops (exp42, exp44), backbones (exp45), sensors (exp46), encoders (exp41,
-exp51, exp54) and before against after fine-tuning (exp21, exp52). On the
-labelled testbeds the model's own confidence is the difference that ranks
-its errors; disagreement across crops, backbones or encoders does not rank
-them (exp13, exp19, exp41, exp54), but where the error sets move says what
-moves them: the tiling is not the cause, since fine-tuning corrects more
-than half of the grid's errors on the same windows (exp21) and reading
-Sentinel-1 instead of Sentinel-2 moves the <!-- claim:fine-tuning-corrects-half -->
-error set twice as far as swapping the encoder (exp46); the sensor is the
-largest lever and the backbone the smallest. <!-- claim:modality-dominates-shared-errors -->
-On Ai2's own embeddings, with their probe, seven published encoders err on
-the same windows as OlmoEarth (phi 0.78-0.82, Satlas 0.62; exp51). They also share them on the multi-class tasks: phi 0.38 to 0.58 on
-MADOS and 0.50 to 0.68 on PASTIS Sentinel-2, co-erring on about four in five of
-OlmoEarth's PASTIS error windows (exp63). This page said the opposite until 20
-September 2026, on exp54's phi block, which aligned rows by a hash of the label
-tile and scrambled them where identical tiles were not adjacent; that block is
-withdrawn and the rest of exp54 is unaffected. <!-- claim:cross-encoder-phi-on-their-embeddings --> <!-- claim:shared-errors-task-dependent -->
-
-**Measured as differences, without labels** (exp57, every pair on identical
-windows): two inferences of the same scene disagree on 2 to 4% of the windows
-across crop offsets, backbones and encoders and on 8 to 11% across sensors,
-and the disagreement sits on prediction boundaries everywhere, 3.3 to 7.1
-times as often as the agreement windows on Sen1Floods11 and 21 times on the
-median GEOID-Flood event, preregistered. The sensor difference and the <!-- claim:atlas-disagreement-is-boundary-located -->
-backbone difference are different sets of windows (phi 0.27 and 0.18 between
-their disagreement masks; every pair of differences overlaps at 0.18 to
-0.41), preregistered. Which side is right where they disagree is a labelled <!-- claim:atlas-different-differences -->
-question, and the label answers it only for the differences that changed the
-model: the fine-tuned model is right on 71 to 75% of its disagreements with
-the frozen head and the Sentinel-2 head on 67 to 84% of its disagreements
-with the Sentinel-1 head, while crop offsets, backbones and six of seven
-encoders split their disagreements 39 to 61%. <!-- claim:atlas-which-side -->
-
-**Across two dates the axes separate** (exp60, GEOID-Flood): a same-period
-cross-sensor difference carries none of the later flood (0.4% of its windows
-against 19.5% for the mixed pair, on 23 events against 3), while the same-sensor
-difference across the event carries 26%, not the doubling preregistered, and more
-than half of it is the pre-event radar calling water that neither the label nor the
-month's Landsat water product holds (exp61: 0.1% of those windows are water
-there). <!-- claim:two-periods-sensor-axis-isolated --> <!-- claim:two-periods-time-only-difference --> <!-- claim:residue-not-seasonal-water -->
-
-Where a clear post-event optical pass exists (WorldFloods v2, 544 chips in 6
-events) the fourth cell completes the square: the post-event optical head is
-right on 97% of the windows, and the square is dominated by one event where the
-pre-event optical head finds a quarter of the label's permanent water
-(exp62). <!-- claim:fourth-cell-completed -->
-
-**At 15 and 19 classes** (exp63, Ai2's MADOS and PASTIS embeddings) the sensor and
-encoder differences stay different sets, and refitting the head moves under
-0.4% of windows against 6 to 25% for a change of encoder; but the boundary cue
-locates differences only where boundaries are rare, 3.5 to 6.2 times on MADOS
-and 1.7 to 1.8 times on PASTIS, where 50% of windows border another class,
-so on dense classes it is the low-margin cue that says where two inferences
-differ. <!-- claim:multiclass-boundary-cue-fails-on-parcels --> <!-- claim:multiclass-sensor-vs-encoder-different -->
-
-**Where labels exist, fusing the readings with them pays and does not travel**
-(exp65): a fusion cross-fitted by tile cuts confidence's excess AURC by 20%
-and 30%, a cross-fitted side rule beats the raw margin by 8 to 25 points on
-every pair, and the same rule moved from frozen heads to the fine-tuned model
-falls below the raw margin, so the package binds every fusion to its model
-family. <!-- claim:calibrate-ranker-fusion-beats-confidence --> <!-- claim:calibrate-side-rule-held-out --> <!-- claim:calibrate-family-lock -->
-
-### On the datasets Ai2 suggested
-
-**DFC2020.** On eight-class land cover with our own encoder (exp66, DFC2020, the set Ai2
-suggested) the ranking transfers, the margin beating a pixel index by 0.16
-excess AURC on every arm, and the sensor axis dominates: Sentinel-2 and
-Sentinel-1 differ on 44% of windows against a 1.3% probe-seed floor,
-nine times what the same axis moved on water. Grading the same rankers
-against a second, twenty times coarser reference reverses this repository's
-oldest caveat: a coarse reference penalises a boundary-shaped signal rather
-than flattering it, so flattery needs a reference that resolves boundaries at
-the prediction's own scale. <!-- claim:dfc2020-margin-beats-pixel-control --> <!-- claim:dfc2020-sensor-difference-dominates-land-cover --> <!-- claim:dfc2020-coarse-reference-penalises-the-boundary-order -->
-
-**Dynamic World.** The recipe also survives contact with a model this project had no hand in
-(exp67, Dynamic World's 409 expert-annotated tiles): a served global product's
-own margin ranks its own errors better than a control that never sees the
-imagery, it beats the naive top-probability confidence which ties on 23% of
-windows, and its errors carry the same cues. Its published probabilities,
-though, understate its accuracy by about 0.20 at every confidence level: the
-numbers that order a review well are not the numbers to threshold on. <!-- claim:dw-margin-ranks-a-production-model --> <!-- claim:dw-published-probabilities-are-underconfident -->
-
-**LUCAS.** And it survives the grader this project had never had (exp68, LUCAS Copernicus
-2022, 11,856 in-situ survey polygons): where a surveyor stood at the point and
-never saw a pixel, the margin still beats the best control an operator could
-compute by 0.095 of design-weighted excess AURC, on 94 European regions against
-32, so what this repository has been measuring is not annotator agreement. Two
-things that came with it are worth as much as the result. A probe that memorises
-its fit set reverses the ordering of confidence signals, putting the margin last
-where a properly regularised head puts it first, so a ranking comparison is only
-readable beside its own generalisation gap. And the published practice of
-filtering land-cover reference data to large homogeneous units flatters the tool
-rather than understating it, by 0.097 of AUROC: the mixed and small units the
-convention deletes are where the ranking is weakest. <!-- claim:lucas-ranking-survives-ground-observation --> <!-- claim:lucas-overfitting-inverts-the-ranker-ordering --> <!-- claim:lucas-the-homogeneity-filter-flatters-the-tool -->
-
-**Two dates, one place.** The same polygons carry the cleanest difference measurement here: one place read
-through two acquisitions 118 days apart changes decision on 31% of polygons
-against a 0.3% head-reseed floor, the surveyed class says the near date is the
-right side 917 times against 591, and the change rate is phenology, twice as
-high on cropland as on woodland. <!-- claim:lucas-two-dates-are-phenology -->
-
-**EuroCrops.** That last number had no floor until exp69 (EuroCrops, 106,274 graded windows of
-farmers' declarations in Austria, Denmark and Slovenia), which is the first
-testbed here where both sides of a time axis are labelled, because a parcel
-present in two years carries a declared crop in each. The ranking holds on a
-reference made of declarations, the margin beating the best no-model control in
-all three regions and on all but four of 146 grid cells. And the floor for a
-two-date change rate is finally measurable: between 6% and 37% of windows change
-decision between two summers where the declared crop did not change, against 59%
-to 84% where it did. That floor is one to two orders of magnitude above the
-head-reseed rate this repository had been comparing against. Labelling both dates
-also exposes a case a single reference cannot represent at all: between 5% and 37%
-of differing windows are ones where the model was right about both years, so the
-difference between two inferences was the model correctly following a real crop
-rotation, not either side being wrong. <!-- claim:eurocrops-ranking-holds-on-declarations --> <!-- claim:eurocrops-the-labelled-floor-for-a-two-date-difference --> <!-- claim:eurocrops-a-difference-can-be-the-model-tracking-the-ground -->
-
-### On tasks we did not choose: Ai2's published suite
-
-**The whole suite.** And it answers the objection that all of this rests on testbeds we chose (exp70).
-Ai2's published embedding suite holds 25 tasks they picked for their own paper,
-with the splits fixed in the files. On all 24 that a margin is defined for, and on
-all 14 distinct sources behind them, the model's own margin ranks its errors
-better than the best control that sees no model, over 6.4 million graded units
-spanning an accuracy range from 0.333 to 0.979, on classification and segmentation
-alike. Six of the tasks come from GEO-Bench 1, a third-party benchmark, and the
-margin wins on all six. <!-- claim:suite-margin-wins-every-task -->
-Reseeded ten times (exp79), the 24 of 24 holds under every seed; the closest
-call is CropHarvest Togo Sentinel-1, 306 units, where one seed's lead is +0.0017,
-inside what the GPU type alone moves on that task, so that win is by sign only.
+On all 24 tasks of Ai2's published embedding suite for which a margin is defined, the margin ranks errors better than
+the best no-model control, on all 14 distinct sources and 6,435,473 graded units (exp70).
+<!-- claim:suite-margin-wins-every-task -->
+Under ten probe seeds OlmoEarth Base's lead over that control stays positive on all 24 tasks (exp79).
 <!-- claim:exp79-base-margin-wins-under-every-seed -->
-The other fifteen encoders, reseeded the same way, keep the headline under every
-seed: the margin beats the best control on at least 75% of each encoder's tasks
-under all ten seeds on all sixteen, the lowest share 0.875 (Clay Large). The lead
-is positive in every sensor group, though smaller on Sentinel-2 tasks, and the
-encoder ordering holds as a set, not an order. Five encoders' seed-0 accuracies miss
-the record by up to 5.4e-4 on the largest segmentation tasks, on the record's own
-GPU model: linear-probe training there is not bit-reproducible.
+On all sixteen encoders of the suite the margin beats the best no-model control on at least 75% of each encoder's
+tasks under every seed, the lowest share being 21 of 24 for Clay Large (exp79).
 <!-- claim:exp79-headline-holds-under-every-seed-on-every-encoder -->
+It also beats a five-seed probe ensemble on 22 of 24 tasks and nearest-neighbour and Mahalanobis distances on 24 of
+24 (exp73). <!-- claim:suite-margin-beats-the-strong-alternatives -->
+The margin takes a median 0.68 of the gap between a random and a perfect ranking, and labels reach a fifth to a third
+of the remainder (exp70, exp65). <!-- claim:margin-takes-two-thirds-of-the-ranking-headroom -->
+One minus the top probability ranks slightly better than the margin on 14 of 16 multi-class tasks; on the 8 binary
+tasks the two give one ranking (exp76). <!-- claim:top1-beats-the-margin-on-multiclass -->
 
-**The probe warning, scoped.** That run also scoped the probe warning above. Across those 24 tasks the ordering
-of the confidence signals does degrade with how badly the probe generalises, which
-is the direction LUCAS found, but by four ten-thousandths rather than by an
-outright reversal. Only severe memorisation flips the ordering; mild memorisation
-merely erodes it. <!-- claim:suite-probe-gap-degrades-the-ordering -->
+On 4,778 LUCAS polygons, whose reference is a surveyor's observation on the ground, the margin beats the best control
+computable at inference time on 94 regions against 32 (exp68).
+<!-- claim:lucas-ranking-survives-ground-observation -->
+Dynamic World's own margin ranks its errors better than a class-rarity control on 315 expert-annotated tiles against
+91 (exp67). <!-- claim:dw-margin-ranks-a-production-model -->
+On DFC2020 land cover the margin beats the NDWI control on all three sensor arms (exp66).
+<!-- claim:dfc2020-margin-beats-pixel-control -->
+On 106,274 windows of farmers' crop declarations it beats the best no-model control in all three regions and on all
+but four of 146 grid cells (exp69). <!-- claim:eurocrops-ranking-holds-on-declarations -->
 
-**Against the strong alternatives.** And the bar is not only the no-model control. On the same 24 tasks the margin
-beats a five-seed ensemble on 22 of 24, a nearest-neighbour typicality
-score on 24 of 24 and a class-conditional Mahalanobis distance on
-24 of 24 (exp73), each of which is a real signal on roughly half the
-suite and better than the margin on none of it. <!-- claim:suite-margin-beats-the-strong-alternatives -->
+On Sen1Floods11 Bolivia, one flood event, NDWI ranks the model's errors as well as its confidence under OlmoEarth v1
+and better under v1.2 (exp45, exp47). <!-- claim:bolivia-ndwi-exception -->
+Under the Sentinel-1 probe NDWI instead beats confidence on the multi-region test split and loses on Bolivia (exp51).
+<!-- claim:s1-probe-ndwi-flip -->
+The fine-tuned Sentinel-2 model's confidence beats NDWI on Bolivia under both backbones, so that exception belonged to
+the frozen encoder (exp52). <!-- claim:finetune-dissolves-bolivia-exception -->
+On 45 GEOID-Flood areas of interest NDWI wins on 2 for permanent water and a sensor control on 1 for post-event water;
+both permanent-water cases lie in one Copernicus emergency activation, an exception rate of one activation in nine
+(exp55). <!-- claim:geoid-exception-rate -->
+The ordering among confidence readings degrades as the probe overfits, by four ten-thousandths of excess AURC across
+the suite, and only the severe memorisation of a LUCAS probe reversed it (exp68, exp70).
+<!-- claim:suite-probe-gap-degrades-the-ordering -->
+On the median GEOID-Flood area the 5% of windows that confidence flags hold 88% of the permanent-water errors and 64%
+of the post-event water errors, 17.5 and 12.8 times a random 5%, and 16.9 and 12.1 times when areas are clustered by
+activation (exp55). <!-- claim:geoid-capture-effect-size -->
 
-**Under the other encoders.** Nor is it a property of one encoder. Under the fifteen other encoders Ai2
-published the suite for, eight families outside OlmoEarth and the OlmoEarth
-size series, the margin beats the best no-model control on 322 of 332 scored
-tasks, every encoder at 90% or better, and the three outside families that
-carry the whole suite win on 23, 24 and 24 of 24 (exp74). <!-- claim:suite-holds-under-every-encoder --> <!-- claim:suite-outside-families-hold-at-twenty-two -->
+## Review order and explanations
 
-**How much is left:** on those 24 tasks the margin already takes a median 0.68 of
-the gap between a random and a perfect ranking, and labels buy a fifth to a
-third of the rest (exp65); what remains is errors the model makes confidently,
-which no label-free reading tried has seen. <!-- claim:margin-takes-two-thirds-of-the-ranking-headroom -->
+On Bolivia hand labels 75% of the error windows lie on a prediction boundary, against 21% of the correct windows
+(exp36, exp37). <!-- claim:errors-sit-on-boundaries -->
+There, reviewing boundary windows first, in confidence order, and then the interior catches more errors than
+confidence alone at review budgets (shares of windows reviewed) of 5% and 10%, as preregistered, and not at 20%
+(exp36). <!-- claim:boundary-first-review-order -->
+Inside confidence's review set on Bolivia the error rate is 0.38 at a 5% budget, 0.33 at 10% and 0.26 at 20%, against
+8.8% overall (exp37). <!-- claim:review-set-error-rate -->
+Across GEOID-Flood events the boundary-first order beats confidence at 5% on a minority, 27% to 40% of events by
+target, and ties pooled (exp55). <!-- claim:geoid-boundary-first-minority -->
 
-**Which member of the confidence family:** on the 16 multi-class tasks one minus the
-top probability ranks errors better than top-1 minus top-2 on 14, by a small
-margin, and no score built from the whole logit vector does better; on binary
-tasks the forms are one ranking (exp76). <!-- claim:top1-beats-the-margin-on-multiclass -->
+Each flagged window lists its label-free cues. A cue's enrichment, its share among error windows over its share among
+correct ones, is 3.5 on Bolivia for a prediction boundary (0.750 against 0.214), 3.6 for the least confident 20%
+(0.589 against 0.163) and for tiling instability (0.583 against 0.164), and 7.2 for spectral ambiguity, NDWI near zero
+(0.483 against 0.067), with error rates of 0.25, 0.26, 0.26 and 0.41 among windows carrying each (exp37).
+<!-- claim:cue-enrichment-table -->
+On the suite's seven segmentation tasks the boundary cue's enrichment runs from 1.24 on m-cashew-plant, where 76% of
+windows sit on a boundary, to 8.13 on MADOS, where 10% do; its rank correlation is 1.00 with the ceiling that boundary
+prevalence sets and -0.26 with class count, and the preregistered bar of 2 fails on m-cashew-plant (exp82).
+<!-- claim:boundary-cue-enrichment-is-fragmentation-not-class-count -->
+Coarsening OlmoEarth Base's map to 2 × 2 and 4 × 4 blocks lowers the cue's enrichment on all seven tasks at both
+steps (exp82). <!-- claim:boundary-cue-weakens-with-the-window-grain -->
 
-### The effect a reviewer would feel
+The fine-tuned AWF model is 0.93 accurate where it claims 0.99, so a stated accuracy needs a coverage; its 80% most
+confident windows are 0.945 accurate against 0.881 overall (exp21). <!-- claim:accuracy-needs-coverage -->
+The served land-cover-change rasters export no class confidence, and boundary fraction alone captures a median 0.88
+of their disagreements with WorldCover water at a 5% budget, on the sites that have any (exp20).
+<!-- claim:served-product-boundary-triage -->
 
-The effect size in a reviewer's units (exp55, 45 GEOID-Flood areas of interest
-drawn from nine activations): on the median area the 5% of windows confidence
-flags hold 88% of the permanent-water errors and 64% of the post-event water
-errors, 17.5 and 12.8 times a random 5%; clustering by activation moves that to
-16.9 and 12.1 times, so the effect a reviewer would feel survives the clustering
-even though the exception rate above does not survive it as well. <!-- claim:geoid-capture-effect-size -->
+## Comparing two inferences
 
-### How wrong the map is, if you can label a few hundred windows
+The comparison module measures how two inferences of one area differ. On all 16 preregistered pairs, across crop
+offsets, backbones, sensors, encoders and fine-tuning, disagreement windows lie on a prediction boundary 3.3 to 7.1
+times as often as agreeing ones on Sen1Floods11 and 21 times on the median GEOID-Flood event (exp57).
+<!-- claim:atlas-disagreement-is-boundary-located -->
+Reading Sentinel-1 instead of Sentinel-2 moves a flood model's error set far more than swapping the backbone (phi, the
+correlation of two error masks, 0.38 to 0.39 against 0.70), so the sensor is the largest lever and the backbone the
+smallest (exp46). <!-- claim:modality-dominates-shared-errors -->
+Fine-tuning corrects 35 of the frozen probe's 63 errors on the same AWF windows, so the fixed window grid is not their cause
+(exp21). <!-- claim:fine-tuning-corrects-half -->
 
-Everything above says where to look. The other question needs labels, and exp78
-measures what they buy. Label 300 windows drawn at random and the error rate
-comes back with an honest range: it covers the truth on 93 to 96% of draws on
-all seven segmentation tasks of Ai2's suite, about ±3 points on a clean map and
-±5 on a messy one. <!-- claim:design-based-interval-is-honest -->
+Labels favour one side only where the difference changed the model; the fine-tuned model is right on 71% to 75% of
+its disagreements with the frozen head, while under crop offsets and backbones either side is right on 39% to 61%
+(exp57). <!-- claim:atlas-which-side -->
+Without labels, the side with the larger margin is right on 51% to 70% of disagreement windows, above a coin flip on
+all 15 pairs and short of the preregistered 55% on four pairs, so the prediction fails (exp58).
+<!-- claim:tool-vs-diff-resolution -->
+A side rule fitted to labels on frozen pairs and forced onto the frozen-against-fine-tuned pair is right on 43.8% and
+49.2% of differing windows, below the raw margin's 61.1% and 55.4% and the pair's own fit's 74.9% and 72.8%, so the
+module refuses another model family unless forced (exp65). <!-- claim:calibrate-family-lock -->
 
-The warning matters more than the capability. Nobody labels 300 windows at
-random; they open about 19 scenes and label 16 windows in each. Do that, then
-work out the range the ordinary way, and a range that claims 95% really covers
-51 to 78% on six of the seven tasks. Errors sit next to each other, so 300
-windows from 19 scenes carry nowhere near 300 windows of information. Correcting
-for it afterwards works on a map whose tiles are all the same size, and not on
-one whose tiles differ: on MADOS, whose tiles hold 1 to 400 windows, even the
-corrected range covers the truth 60% of the time. Label a random or
-confidence-guided sample instead. <!-- claim:tile-sampling-breaks-the-naive-interval -->
+Two Sentinel-2 acquisitions a median 118 days apart change decision on 31.2% of 7,109 LUCAS polygons against a 0.30%
+reseed floor, a rate that follows phenology, 44.5% on cropland against 20.8% on woodland (exp68).
+<!-- claim:lucas-two-dates-are-phenology -->
+Because EuroCrops labels both years, the floor for a two-date change rate is measurable there; where the declared crop
+did not change, 0.060 to 0.366 of windows change decision, against 0.589 to 0.843 where it did, a floor one to two
+orders of magnitude above the reseed rate (exp69). <!-- claim:eurocrops-the-labelled-floor-for-a-two-date-difference -->
+Where two years' inferences differ, the model is right about both on 0.051 to 0.367 of windows, the difference being
+the model following a real crop rotation (exp69). <!-- claim:eurocrops-a-difference-can-be-the-model-tracking-the-ground -->
 
-Choosing which windows to label by confidence does save labels, but not
-dramatically: up to 2.5 times at equal precision, and most on maps that are
-already good, because there is little left to gain once a map is a third
-wrong. <!-- claim:confidence-saves-a-quarter-to-a-half-of-the-labels -->
+## Estimating accuracy from a labelled sample
 
-The same 300 random labels buy a guarantee as well as a rate (exp80). Ask for a
-zone that is wrong at most α of the time and the tool certifies the largest most-
-confident share of the map that passes an exact test, so that the statement
-fails on at most one draw in ten; on every one of 112 cells of the 24-task suite
-the guarantee held, with the assumption-free rule violating on 0.5% of draws at
-worst and the rule that assumes errors grow with the zone on 8%. <!-- claim:trust-zone-guarantee-holds -->
-On a typical task that is half the map at half its error rate; a reviewer who
-picks the zone by eye from the same labels is wrong about its quality on a
-quarter to a half of draws. <!-- claim:trust-zone-coverage-at-300-labels --> <!-- claim:plugin-zone-violates-on-most-tasks -->
-The tool also says when a budget cannot certify the level asked for: a 1%
-error rate needs 255 error-free labels inside the zone before any test can
-pass. Without labels the map's own confidence overstates its accuracy by a
-median 6 points across the suite, so no zone is certified from the map alone. <!-- claim:mean-confidence-overstates-accuracy -->
+From 300 random windows the design-based 95% interval for the error rate covers the truth on 0.933 to 0.961 of 2,000
+draws on all seven segmentation tasks (exp78). <!-- claim:design-based-interval-is-honest -->
+The same budget spent as 19 tiles of 16 windows gives an ordinary independent-sample interval that covers on 0.506 to
+0.777 of draws on six of the seven; a cluster correction restores 0.913 to 0.932 on the four tasks with full tiles and
+fails on MADOS, whose tiles hold 1 to 400 windows (0.598) (exp78). <!-- claim:tile-sampling-breaks-the-naive-interval -->
+Choosing the labelled windows by confidence saves up to 2.51 times the labels at equal half-width, above the 1.8 the
+preregistered honesty check allowed (exp78). <!-- claim:confidence-saves-a-quarter-to-a-half-of-the-labels -->
 
-The same sample now also answers the question the map-accuracy literature
-says a producer owes (exp81): per class, how often the map's call is right,
-how much of the class the map found, and the class's corrected share of the
-map, each with an interval. The interval the literature uses collapses to a
-point whenever a class shows no sampled error, and covered as little as 2% of
-draws; 107 of 522 graded cells fell short. The package's forms leave 14 of 628
-short, the lowest at 0.879, each named with its cause, and the user's accuracy
-from a random sample is exact, never below 95% by construction. <!-- claim:per-class-intervals-wald-fails-wilson-nearly-holds -->
+The same labels certify a trust zone, the largest most-confident part of the map with error rate at most α, and the
+certificate may fail with probability at most δ. At δ = 0.1 the zone certified by the exact-test rules exceeded α on
+at most 0.080 of 2,000 draws in all 112 cells of the suite, and the plug-in rule's on up to 0.557 (exp80). <!-- claim:trust-zone-guarantee-holds -->
+With 300 labels and α at half the error rate, the prefix rule certifies a zone on most draws on 14 of 21 tasks,
+covering a median 0.50 of the map (exp80). <!-- claim:trust-zone-coverage-at-300-labels -->
+The package's intervals for user's accuracy (how often a class call is right), producer's accuracy (how much of a class is found)
+and class share leave 14 of 628 cells below 0.93 coverage and none below 0.879; the Wald form common in the literature
+leaves 107 of 522, the worst at 0.019 (exp81). <!-- claim:per-class-intervals-wald-fails-wilson-nearly-holds -->
+Choosing fine-tuning tiles by the audit's suspicion is worse than random on the multi-region test split at every
+budget from 100 to 1,000 labels, and the preregistered predictions of a saving fail (exp56).
+<!-- claim:audit-does-not-save-labels -->
 
-### Does it help an agent
+## The package as an agent tool
 
-And whether any of this helps an agent is now measured rather than assumed
-(exp64, forty cards, three preregistered predictions, Qwen3.8-27B-NVFP4).
-Handed the package as tools, the model reproduces the package's review set,
-grounds 99.4% of what it states, and declines the side
-question on every comparison card; the OlmoEarth Agent as shipped finds the
-package's tools on its own and does the same. <!-- claim:agent-benchmark-tool-arm-reproduces-the-package -->
-
-The one advantage over a numpy sandbox that survived its preregistered test is
-the decline: 10 of 10 cards against 1,
-because the fact that confidence does not settle which side is right is carried
-by the package and not derivable from the arrays. <!-- claim:agent-benchmark-decline-holds -->
-
-The same forty cards at 7B measure the other end: there the package is decisive
-on every axis, grounding 100.0% against the sandbox's 0.1% and
-capturing 0.997 of its errors against 0.144, so what it adds
-over a sandbox is everything at 7B and the decline at 27B. <!-- claim:agent-benchmark-package-is-a-floor-at-7b -->
-
-## The numbers
-
-Sen1Floods11 Bolivia hand labels, 81,984 windows, 8.8% of them errors
-(exp36, exp37):
-
-| Review budget | Errors caught, confidence order | Errors caught, boundary first | Error rate inside the set |
-|---|---|---|---|
-| 5% | 0.259 | 0.274 | 0.38 | <!-- claim:boundary-first-review-order --> <!-- claim:review-set-error-rate -->
-| 10% | 0.465 | 0.494 | 0.33 | <!-- claim:boundary-first-review-order --> <!-- claim:review-set-error-rate -->
-| 20% | 0.749 | 0.732 | 0.26 | <!-- claim:boundary-first-review-order --> <!-- claim:review-set-error-rate -->
-
-Why a window is flagged: share among error windows against correct windows
-on the same testbed, with the error rate among windows carrying the cue
-(exp37):
-
-| Cue | Errors / correct | Enrichment | Error rate with the cue |
-|---|---|---|---|
-| on a prediction boundary | 0.750 / 0.214 | 3.5x | 0.25 | <!-- claim:cue-enrichment-table -->
-| among the least confident 20% | 0.589 / 0.163 | 3.6x | 0.26 | <!-- claim:cue-enrichment-table -->
-| unstable under a tiling shift | 0.583 / 0.164 | 3.6x | 0.26 | <!-- claim:cue-enrichment-table -->
-| spectrally ambiguous, NDWI near zero | 0.483 / 0.067 | 7.2x | 0.41 | <!-- claim:cue-enrichment-table -->
-
-Window design (exp42), pixel accuracy on hand labels over the region every
-tiling covers:
-
-| Decision | Bolivia, 441 tiles | Test split, 800 tiles |
-|---|---|---|
-| grid window (one tiling) | 0.897 | 0.941 | <!-- claim:w1-accuracy-gain -->
-| shift-averaged (four tilings) | 0.907, better on 321 tiles, worse on 66 | 0.950, better on 583, worse on 78 | <!-- claim:w1-accuracy-gain -->
-| share of the grid window's errors on mixed-label windows | 45% (10% of windows) | 58% (10% of windows) | <!-- claim:mixed-label-windows-not-a-ceiling -->
-| errors the block geometry actually forces (oracle) | at most 29% | at most 49% | <!-- claim:mixed-label-windows-not-a-ceiling -->
-| share of the averaged map's own errors on those windows | 43% | 56% | <!-- claim:mixed-label-windows-not-a-ceiling -->
-| segment majority over a spectral partition (exp43) | 0.904, breaks more than it corrects | 0.948, breaks more than it corrects | <!-- claim:segment-majority-rejected -->
-| sixteen crop offsets instead of four (exp44) | 0.9074, +0.04 points, below the worthwhile threshold | 0.9507, +0.04 points | <!-- claim:sixteen-offsets-not-worthwhile -->
-
-Fine-tuned AWF model, end to end (exp21, exp36): confidence catches 22% of
-the errors at a 5% budget, 39% at 10%, 63% at 20%; the boundary-first order
-picks the same 5% set. Selective accuracy is 0.945 at 80% coverage. <!-- claim:fine-tuned-capture-at-budgets -->
-
-## How a claim gets in
-
-![A candidate signal next to the model's confidence and a no-model control, scored on both references on identical windows; supported only if it beats both baselines on expert labels; labels grade, never train](figures/protocol.png)
-
-A candidate rule or cue is tested on two references at once, the ESA
-WorldCover map and hand-labelled flood masks, against the model's own
-confidence and four no-model controls. The primary test and its direction
-are written down before the run. Scores are tie-aware; scenes vote once
-per river; tiles are bootstrapped as clusters. Expert labels grade a rule
-and never train it. A win against the weak map alone is not support. Every
-claim has a check against its artifact; where a check only reads a number back
-from the run that produced it, it catches drift and not a formula wrong from
-the start, so the load-bearing claims carry a second route, a `crosscheck`
-test that recomputes the statistic from per-task or per-unit records. An audit
-on 23 September 2026 found 138 of 167 checks were read-backs; the suite, the
-estimator and the cue claims were rewritten to recompute that night, eighteen
-claims now name their recomputation test, and the rest are listed, with what
-each would need, in `exp/out/audit_ledger_2026-09-23.md`.
-The full rules are in the [protocol](method/protocol.md).
-
-## Limits and the open question
-
-The hand-label testbeds are one flood event (Bolivia) and a multi-region
-split of the same dataset, both scored with a linear probe, and the
-fine-tuned model contributes 41 errors in 344 windows, so the gains above <!-- claim:fine-tuned-model-audit -->
-are real but small, and every Bolivia exception is one event. Tiling instability
-wins 26 of 27 scenes and 8 of 8 rivers against the WorldCover map yet not
-on hand labels; the decisive test needs adjudicated cells on the eight
-rivers ([issue 2](https://github.com/2imi9/olmoearth_inferenceX/issues/2)). <!-- claim:tile-phase-26-of-27-worldcover -->
-With Ai2's own Sentinel-1 probe, v1.2 ranks its Bolivia errors worse than v1
-pooled but not per tile (173/152, p = 0.13), so the v1.2 exception as a
-per-tile finding rests on our S2 head (exp51). <!-- claim:v12-bolivia-their-readout -->
-The review set does not buy label efficiency: choosing fine-tuning tiles by
-the audit's suspicion is worse than random on the multi-region split at every
-budget (exp56). <!-- claim:audit-does-not-save-labels -->
-The comparison tool tells a user only modestly more than a raw disagreement
-map: on the windows where two inferences disagree the more confident side is
-right on 51 to 70%, better than a coin flip everywhere and far below the side
-the labels prefer, and the first inference's confidence does not order the
-disagreement set (exp58). <!-- claim:tool-vs-diff-resolution --> <!-- claim:tool-vs-diff-targeting -->
-Ai2's multi-class embeddings supplied dense few-class testbeds (exp54;
-[issue 7](https://github.com/2imi9/olmoearth_inferenceX/issues/7) closed); a
-second fine-tuned dense task with expert labels and a spatial split is still
-missing (roadmap item 6).
-
-Side product: OlmoEarth v1's pretraining target has effective rank 2, and a
-normalised target is 57 to 70% predictable from context (exp32 to exp34,
-[issue 11](https://github.com/2imi9/olmoearth_inferenceX/issues/11)). <!-- claim:target-effective-rank-2 -->
+On forty task cards with three preregistered predictions (exp64), Qwen3.8-27B-NVFP4 with the package as tools
+reproduces its review set, grounds 99.4% of its stated numbers in tool outputs and declines to pick a side on every
+comparison card; the OlmoEarth Agent as shipped found the tools unaided and did the same.
+<!-- claim:agent-benchmark-tool-arm-reproduces-the-package -->
+A model given only numpy and the arrays captures 0.904 of the package's errors, so the ranking prediction fails.
+<!-- claim:agent-benchmark-sandbox-rediscovers-the-ranking -->
+It grounds 94.2% of its numbers against 99.4%, short of the preregistered gap, so the grounding prediction fails.
+<!-- claim:agent-benchmark-grounding-not-decisive -->
+The third prediction holds, the tool arm declining the side question on 10 of 10 comparison cards against 1 of 10,
+because the package carries the fact that the more confident side is right on only 51% to 70% of differing windows. <!-- claim:agent-benchmark-decline-holds -->
+With Qwen2.5-7B-Instruct all three predictions hold, the tool arm grounding 100.0% against 0.1% and capturing 0.997
+of the package's errors against 0.144. <!-- claim:agent-benchmark-package-is-a-floor-at-7b -->
+At that size the agent as shipped calls the review-set tool on 17 of 40 runs, rejecting the prediction that it
+reproduces the package. <!-- claim:agent-benchmark-7b-agent-does-not-find-the-tool -->
 
 ## What was tried and rejected
 
-Kept as evidence, one line each with the reason, in the
-[technique ledger](TECHNIQUES.md). The short version: no signal derived
-from the encoder's internals, its pretraining objective, a posterior over
-the probe head, feature-space typicality, a second model of the same
-family, or flip-and-rotate consistency ranks errors better than confidence
-on expert labels. <!-- claim:no-encoder-internal-signal-beats-confidence -->
-A twelfth was tried after the others: a window's agreement with its own
-tile's mean token, from the lazy-aggregation mechanism of arXiv 2602.22394. Confident errors are measurably more
-typical of their scene on 5 of 7 segmentation tasks, but the gap needs labels and has no control for class
-frequency, which predicts the same sign; as a ranker it loses to the margin on all seven and to the best no-model
-control on four, and removing that direction from the frozen tokens costs accuracy on every task
-(exp77). <!-- claim:confident-errors-are-scene-typical --> <!-- claim:scene-typicality-loses-to-the-margin -->
-On the 24-task suite the same families clear the no-model control on
-15, 14 and 12 tasks and still lose to the margin on all but two, EuroSAT and AWF
-Landsat, where the ensemble leads by 0.0003 and 0.003; the ensemble is nearly
-the margin's equal on classification and clearly behind on segmentation.
-<!-- claim:suite-alternatives-clear-the-control-and-still-lose -->
+The [technique ledger](TECHNIQUES.md) lists each rejected technique with its reason. No signal from the encoder's
+internals, its pretraining objective, a posterior over the probe head, feature-space typicality, a second model of the
+same family, or flip-and-rotate consistency ranks errors better than confidence on expert labels.
+<!-- claim:no-encoder-internal-signal-beats-confidence -->
+As a side result, OlmoEarth v1's latent masked-image-modelling pretraining target has effective rank 2 on real
+scenes, and a whitened target is 57% to 70% predictable from context (exp32 to exp34).
+<!-- claim:target-effective-rank-2 -->
 
-The benchmark of the tool itself rejected two of its own three predictions,
-and the record says so. A strong model given numpy and the same arrays captures
-0.904 of the package's errors on its own, so the tool is not a
-ranking advantage over such a model. <!-- claim:agent-benchmark-sandbox-rediscovers-the-ranking -->
-It also grounds 94.2% of its stated numbers in what it printed,
-against 99.4% for the tool arm, below the preregistered gap;
-the first grading had said otherwise because the audit skipped numbers in text,
-and that reading was withdrawn. <!-- claim:agent-benchmark-grounding-not-decisive -->
-At 7B the agent as shipped does not find the tool on its own, 17 of 40 runs
-against 40 of 40 at 27B, which rejects the prediction that it would reproduce the package at that
-size; pinning the skill recovers most of it. <!-- claim:agent-benchmark-7b-agent-does-not-find-the-tool -->
+## Limits
+
+The hand-labelled flood testbeds are one event and one split of the same dataset, and the suite is read through
+linear probes on Ai2's embeddings. A confidence ranking reviews the model's confident errors last. On Sen1Floods11,
+where eight encoders share 82% to 87% of their errors, a Dawid-Skene consensus, which estimates each encoder's
+accuracy from agreement alone, returns 0.975 to 0.983 for maps 0.883 to 0.914 accurate, and its rank correlation with
+the true accuracies misses the preregistered 0.8 on MADOS (0.71) (exp83).
+<!-- claim:consensus-order-recovered-only-where-true-gaps-are-large -->
+Open items are in the [roadmap](plan/roadmap.md).
+
+## How a claim is recorded
+
+A candidate signal is scored beside the model's confidence and a no-model control on identical windows, with the
+primary test written down before the run; expert labels grade a signal and never train it. Each claim is an entry in
+`docs/claims.yaml` whose check must hold on its artifact, and load-bearing claims carry a second test that recomputes
+the statistic. The full rules are in the [protocol](method/protocol.md).

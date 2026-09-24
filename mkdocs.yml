@@ -74,14 +74,7 @@ nav:
   - Protocol:
       - method/protocol.md
       - Claim ledger: method/claims.md
-      - Roadmap: plan/roadmap.md
-      - Readout design theory (exp48 preregistration): plan/readout_design_theory.md
-      - Agent benchmark (exp64 preregistration): plan/agent_benchmark.md
-      - Layout decision (ADR-001): plan/adr-001-repository-layout.md
-      - Cleanup audit (2026-09-17): plan/cleanup-audit-2026-09-17.md
-      - Adaptive-encoder readiness: plan/vit3_readiness.md
-      - Scene contamination (exp77 preregistration): plan/scene_contamination.md
-      - Map error estimation (exp78 preregistration): plan/map_error_estimation.md
+      - Preregistrations and decisions: plan/index.md
   - API Reference: reference/
 
 hooks:

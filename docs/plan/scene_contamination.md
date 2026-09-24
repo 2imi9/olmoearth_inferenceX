@@ -5,7 +5,7 @@ Written before the run, from a hypothesis this project did not invent. Runs as
 
 ## The gap this addresses
 
-The record's own limit is stated in [Findings](../Findings.md#in-short): the margin takes a median 0.68 of the
+The record's own limit is stated in [Findings](../Findings.md#ranking-errors-without-labels): the margin takes a median 0.68 of the
 gap between a random and a perfect ranking, labels buy a fifth to a third of the rest, and *what remains is
 errors the model makes confidently, which no label-free reading tried has seen*. Eleven readings from the
 encoder's internals, its pretraining objective, a posterior over the head, feature typicality, a second model of

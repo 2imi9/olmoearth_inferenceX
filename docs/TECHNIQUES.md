@@ -22,7 +22,7 @@ tiers and status terms are defined once in
 | Document | What it holds |
 |---|---|
 | [index.md](index.md) | Documentation landing page |
-| [Findings.md](Findings.md) | What holds, the numbers, how a claim gets in, the limits |
+| [Findings.md](Findings.md) | What holds, what was rejected, the limits, how a claim is recorded |
 | [Usage.md](Usage.md) | The package: quick start, the production case, scoring a new rule |
 | [method/protocol.md](method/protocol.md) | How results are scored, evidence tiers, status terms, related work |
 | [method/recipe.md](method/recipe.md) | What to do and not do when auditing a prediction map |

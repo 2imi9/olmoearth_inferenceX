@@ -30,7 +30,6 @@
       and all(s47['results'][v]['test']['tests']['control NDWI level']['w'] > s47['results'][v]['test']['tests']['control NDWI level']['l'] for v in ('v1', 'v1_2'))
     )(A['exp/out/exp16_summary.json'], A['exp/out/exp18_sen1floods.csv'], A['exp/out/exp21_summary.json'], A['exp/out/exp45_summary.json'], A['exp/out/exp47_summary.json'])
   cited_in:
-    - {file: docs/Findings.md, marker: confidence-best-single-signal}
     - {file: docs/TECHNIQUES.md, marker: confidence-best-single-signal}
   note: On the fine-tuned model tiling instability is indistinguishable from confidence (AURC 0.0235 vs 0.0262, CI spans zero); on the v1 test split with the shift-averaged decision the NDWI-level control's pooled E-AURC is 0.0003 below averaged confidence while confidence wins per tile 316/108 (exp47, exp49).
 
@@ -78,7 +77,6 @@
     (lambda a: a['A0 no encoder'] > a['A1 S2 linear'] and round(a['A0 no encoder'], 4) == 0.9199 and round(a['A1 S2 linear'], 4) == 0.9116
     )(A['exp/out/exp46_summary.json']['results']['bolivia']['accuracy'])
   cited_in:
-    - {file: docs/Findings.md, marker: pixel-head-beats-encoder-bolivia}
     - {file: docs/TECHNIQUES.md, marker: pixel-head-beats-encoder-bolivia}
 
 - id: bag-beats-confidence-v1-bolivia
@@ -112,7 +110,6 @@
       and all(abs(s50['results'][v][n]['pooled_eaurc']['bag16 predictive entropy'] - s50['results'][v][n]['pooled_eaurc']['averaged confidence']) < 0.0025 for v in ('v1', 'v1_2') for n in ('bolivia', 'test'))
     )(A['exp/out/exp49_summary.json'], A['exp/out/exp50_summary.json'])
   cited_in:
-    - {file: docs/Findings.md, marker: bag-not-replicated}
     - {file: docs/TECHNIQUES.md, marker: bag-not-replicated}
     - {file: docs/results/comparisons.md, marker: bag-not-replicated}
 
@@ -175,7 +172,6 @@
       and all(abs(a['review_set']['0.05']['cues'][k]['error_rate_with_cue'] - a['review_set']['0.05']['cues'][k]['error_rate_without_cue']) < 0.05 for k in ('unstable', 'dihedral_disagree'))
     )(A['exp/out/exp37_summary.json']['part_b']['analysis'])
   cited_in:
-    - {file: docs/Findings.md, marker: explanation-cues-cover-errors}
     - {file: docs/TECHNIQUES.md, marker: explanation-cues-cover-errors}
   note: The error rate without the boundary cue inside the 5% set is 0.1547 (the docs print 0.16).
 
@@ -252,7 +248,6 @@
       and round(100 * s['results']['bolivia']['prereg_W1_vs_W0_pixel']['mean_gain'], 1) == 1.0 and round(100 * s['results']['test']['prereg_W1_vs_W0_pixel']['mean_gain'], 1) == 0.9
     )(A['exp/out/exp42_summary.json'])
   cited_in:
-    - {file: docs/Findings.md, marker: w1-accuracy-gain}
     - {file: docs/TECHNIQUES.md, marker: w1-accuracy-gain}
     - {file: docs/results/comparisons.md, marker: w1-accuracy-gain}
 
@@ -272,7 +267,6 @@
       and round(s43['results']['test']['w1_errors_by_grid_window_purity']['share_of_w1_errors_on_impure_windows'], 2) == 0.56
     )(A['exp/out/exp42_summary.json'], A['exp/out/exp43_summary.json'])
   cited_in:
-    - {file: docs/Findings.md, marker: mixed-label-windows-not-a-ceiling}
     - {file: docs/TECHNIQUES.md, marker: mixed-label-windows-not-a-ceiling}
     - {file: docs/results/comparisons.md, marker: mixed-label-windows-not-a-ceiling}
 
@@ -290,7 +284,6 @@
       and all(s['results'][v][n]['pooled_eaurc']['fusion poly2 (labelled)'] > s['results'][v][n]['pooled_eaurc']['fusion linear (labelled)'] for v in ('v1', 'v1_2') for n in ('bolivia', 'test'))
     )(A['exp/out/exp49_summary.json'])
   cited_in:
-    - {file: docs/Findings.md, marker: label-fitted-fusion-three-of-four}
     - {file: docs/TECHNIQUES.md, marker: label-fitted-fusion-three-of-four}
     - {file: docs/results/comparisons.md, marker: label-fitted-fusion-three-of-four}
   note: The relative gains on the three winning arms are 29%, 38% and 24% of confidence's excess AURC (the docs print 24-38%); the absolute leads are 0.0027, 0.0041 and 0.0027.
@@ -309,7 +302,6 @@
       and abs(s['results']['v1_2']['bolivia']['drop_one_pooled_eaurc']['control NDWI level'] - s['results']['v1_2']['bolivia']['pooled_eaurc']['averaged confidence']) < 0.0005
     )(A['exp/out/exp50_summary.json'])
   cited_in:
-    - {file: docs/Findings.md, marker: fusion-weight-on-ndwi}
     - {file: docs/TECHNIQUES.md, marker: fusion-weight-on-ndwi}
     - {file: docs/results/comparisons.md, marker: fusion-weight-on-ndwi}
 
@@ -328,7 +320,6 @@
       and s['results']['v1']['bolivia']['tile_level']['tile-fitted fusion (labelled)']['diff_ci95'][1] > 0
     )(A['exp/out/exp50_summary.json'])
   cited_in:
-    - {file: docs/Findings.md, marker: tile-fitted-fusion-split-only}
     - {file: docs/TECHNIQUES.md, marker: tile-fitted-fusion-split-only}
     - {file: docs/results/comparisons.md, marker: tile-fitted-fusion-split-only}
 
@@ -349,7 +340,6 @@
       and all(s['results'][v]['bolivia']['tile_level']['per_ranker']['ensemble mutual information']['aurc'] > s['results'][v]['bolivia']['tile_level']['per_ranker']['averaged confidence']['aurc'] for v in ('v1', 'v1_2'))
     )(A['exp/out/exp49_summary.json'])
   cited_in:
-    - {file: docs/Findings.md, marker: shrug-signals-rejected}
     - {file: docs/TECHNIQUES.md, marker: shrug-signals-rejected}
     - {file: docs/results/comparisons.md, marker: shrug-signals-rejected}
   note: At the tile level mutual information is the weakest task signal on Bolivia under both backbones; on the v1 test split it is 0.003 better than confidence (0.117 vs 0.120), so 'weakest on every arm' would overstate it.
@@ -364,7 +354,6 @@
       for v in ('v1', 'v1_2') for n in ('bolivia', 'test') for k in ('U+ averaged confidence + tile-phase', 'U+ averaged confidence + NDWI level'))
     )(A['exp/out/exp47_summary.json'])
   cited_in:
-    - {file: docs/Findings.md, marker: label-free-midrank-fusion-lost}
     - {file: docs/TECHNIQUES.md, marker: label-free-midrank-fusion-lost}
 
 - id: fine-tuning-corrects-half
@@ -407,7 +396,6 @@
       and c18[0]['tile-phase (aligned)|W/L'] == '163/187' and 0.2 < float(c18[0]['tile-phase (aligned)|sign_p']) < 0.3
     )(A['exp/out/exp13_summary.json'], A['exp/out/exp13_corrected_stats.csv'], A['exp/out/exp18_sen1floods.csv'], A['exp/out/exp36_summary.json'])
   cited_in:
-    - {file: docs/Findings.md, marker: tile-phase-26-of-27-worldcover}
     - {file: docs/results/comparisons.md, marker: tile-phase-26-of-27-worldcover}
 
 - id: target-effective-rank-2
@@ -787,7 +775,6 @@
       and round(c['ece_10bins'], 3) == 0.080
     )(A['exp/out/exp21_summary.json']['crops']['16'], A['exp/out/exp21_summary.json']['crops']['16']['bootstrap_vs_confidence (lo, hi, P(signal better))'])
   cited_in:
-    - {file: docs/Findings.md, marker: fine-tuned-model-audit}
     - {file: docs/TECHNIQUES.md, marker: fine-tuned-model-audit}
     - {file: docs/results/comparisons.md, marker: fine-tuned-model-audit}
 
@@ -816,7 +803,6 @@
       and awf['16']['lexicographic_vs_confidence']['0.05']['capture_lex'] == awf['16']['lexicographic_vs_confidence']['0.05']['capture_confidence'] and awf['16']['lexicographic_vs_confidence']['0.05']['boot_lo'] == 0.0
     )(A['exp/out/exp21_summary.json']['crops']['16'], A['exp/out/exp36_summary.json']['part_awf']['crops'])
   cited_in:
-    - {file: docs/Findings.md, marker: fine-tuned-capture-at-budgets}
     - {file: docs/results/comparisons.md, marker: fine-tuned-capture-at-budgets}
 
 - id: lcc-lattice-found-seams-absent
@@ -1124,7 +1110,6 @@
       and round(s['results']['bolivia']['primary_k8_hard']['acc_candidate_mean'], 3) == 0.904 and round(s['results']['test']['primary_k8_hard']['acc_candidate_mean'], 3) == 0.948
     )(A['exp/out/exp43_summary.json'])
   cited_in:
-    - {file: docs/Findings.md, marker: segment-majority-rejected}
     - {file: docs/TECHNIQUES.md, marker: segment-majority-rejected}
     - {file: docs/results/comparisons.md, marker: segment-majority-rejected}
 
@@ -1143,7 +1128,6 @@
       and round(s['results']['bolivia']['pixel_accuracy_mean']['W16 (all offsets)'], 4) == 0.9074 and round(s['results']['test']['pixel_accuracy_mean']['W16 (all offsets)'], 4) == 0.9507
     )(A['exp/out/exp44_summary.json'])
   cited_in:
-    - {file: docs/Findings.md, marker: sixteen-offsets-not-worthwhile}
     - {file: docs/TECHNIQUES.md, marker: sixteen-offsets-not-worthwhile}
     - {file: docs/results/comparisons.md, marker: sixteen-offsets-not-worthwhile}
 
@@ -1177,7 +1161,6 @@
       and s['results']['C_v1_2']['test']['accuracy'] > s['results']['B_v1']['test']['accuracy']
     )(A['exp/out/exp51_summary.json'], A['exp/out/exp51_summary.json']['P2_test'])
   cited_in:
-    - {file: docs/Findings.md, marker: v12-bolivia-their-readout}
     - {file: docs/TECHNIQUES.md, marker: v12-bolivia-their-readout}
     - {file: docs/results/comparisons.md, marker: v12-bolivia-their-readout}
 
@@ -1211,7 +1194,6 @@
       and all(ph[k]['aligned_tiles'] == 2419 for k in ph)
     )(A['exp/out/exp51_summary.json']['phi_vs_olmoearth_base'])
   cited_in:
-    - {file: docs/Findings.md, marker: cross-encoder-phi-on-their-embeddings}
     - {file: docs/TECHNIQUES.md, marker: cross-encoder-phi-on-their-embeddings}
     - {file: docs/results/comparisons.md, marker: cross-encoder-phi-on-their-embeddings}
 
@@ -1242,7 +1224,6 @@
       and all(r[n]['window_accuracy'] > r[n]['frozen_window_accuracy'] + 0.01 for n in ('bolivia', 'test'))
     )(A['exp/out/exp52_summary.json'], A['exp/out/exp52_summary.json']['results']['FT-S2 v1'])
   cited_in:
-    - {file: docs/Findings.md, marker: finetune-corrects-frozen-errors}
     - {file: docs/TECHNIQUES.md, marker: finetune-corrects-frozen-errors}
     - {file: docs/results/comparisons.md, marker: finetune-corrects-frozen-errors}
 
@@ -1275,7 +1256,6 @@
       and R['FT-S1 v1']['test']['pooled_eaurc']['control NDWI level'] < R['FT-S1 v1']['test']['pooled_eaurc']['averaged confidence']
     )(A['exp/out/exp52_summary.json']['results'])
   cited_in:
-    - {file: docs/Findings.md, marker: s1-adds-little-after-finetune}
     - {file: docs/TECHNIQUES.md, marker: s1-adds-little-after-finetune}
     - {file: docs/results/comparisons.md, marker: s1-adds-little-after-finetune}
 
@@ -1323,7 +1303,6 @@
       and all(s['results'][t]['olmoearth_base']['tests']['control embedding distance']['pooled_lead'] >= 0.03 and s['results'][t]['olmoearth_base']['tests']['control embedding distance']['sign_p'] < 0.05 for t in s['results'])
     )(A['exp/out/exp54_summary.json'])
   cited_in:
-    - {file: docs/Findings.md, marker: multiclass-confidence-beats-embedding-control}
     - {file: docs/TECHNIQUES.md, marker: multiclass-confidence-beats-embedding-control}
     - {file: docs/results/comparisons.md, marker: multiclass-confidence-beats-embedding-control}
 
@@ -1346,7 +1325,6 @@
       [p['graded']['crosstab']['phi'] for n, p in a['results']['mados']['pairs'].items() if n.startswith('olmoearth_base vs') and 'graded' in p]))(
       A['exp/out/exp63_summary.json'], A['exp/out/exp54_summary.json'])
   cited_in:
-    - {file: docs/Findings.md, marker: shared-errors-task-dependent}
     - {file: docs/TECHNIQUES.md, marker: shared-errors-task-dependent}
     - {file: docs/results/comparisons.md, marker: shared-errors-task-dependent}
   note: >-
@@ -1370,7 +1348,6 @@
       and (r['m_sa_crop_type']['olmoearth_base']['boundary_first_vs_confidence']['0.05']['w'], r['m_sa_crop_type']['olmoearth_base']['boundary_first_vs_confidence']['0.05']['l']) == (647, 196)
     )(A['exp/out/exp54_summary.json']['results'])
   cited_in:
-    - {file: docs/Findings.md, marker: boundary-first-many-classes-split}
     - {file: docs/TECHNIQUES.md, marker: boundary-first-many-classes-split}
     - {file: docs/results/comparisons.md, marker: boundary-first-many-classes-split}
 
@@ -1480,7 +1457,6 @@
       and round(max(cp[t]['phi'][i][j] for t in ('bolivia', 'test') for i in range(4) for j in range(4) if i != j), 2) == 0.41
     )(A['exp/out/exp57_summary.json'], A['exp/out/exp57_summary.json']['results']['cross_pairs']['sensors_vs_backbones'], A['exp/out/exp57_summary.json']['results']['cross_pairs'])
   cited_in:
-    - {file: docs/Findings.md, marker: atlas-different-differences}
     - {file: docs/TECHNIQUES.md, marker: atlas-different-differences}
     - {file: docs/results/comparisons.md, marker: atlas-different-differences}
 
@@ -1611,7 +1587,6 @@
       and all(0.50 <= round(v['capture_50'], 2) <= 0.57 for v in d.values() if v['capture_50'] < 0.6)
     )(A['exp/out/exp58_summary.json'], A['exp/out/exp58_summary.json']['prereg']['detail'], A['exp/out/exp58_summary.json']['results'], A['exp/out/exp58_summary.json']['results']['encoders'])
   cited_in:
-    - {file: docs/Findings.md, marker: tool-vs-diff-targeting}
     - {file: docs/results/comparisons.md, marker: tool-vs-diff-targeting}
     - {file: docs/TECHNIQUES.md, marker: tool-vs-diff-targeting}
 
@@ -1691,7 +1666,6 @@
       and round(T['ratio_pooled'], 2) == 0.02 and T['w'] == 23 and T['l'] == 3 and T['sign_p'] < 1e-4
     )(A['exp/out/exp60_summary.json'], A['exp/out/exp60_summary.json']['results']['pairs'], A['exp/out/exp60_summary.json']['results']['tests']['P2_sensor_vs_mixed'])
   cited_in:
-    - {file: docs/Findings.md, marker: two-periods-sensor-axis-isolated}
     - {file: docs/TECHNIQUES.md, marker: two-periods-sensor-axis-isolated}
     - {file: docs/results/comparisons.md, marker: two-periods-sensor-axis-isolated}
 
@@ -1708,7 +1682,6 @@
       and round(R['time_only']['err_a_share'], 3) == 0.545 and round(R['time_only']['err_b_share'], 3) == 0.196
     )(A['exp/out/exp60_summary.json'], A['exp/out/exp60_summary.json']['results']['pairs'], A['exp/out/exp60_summary.json']['results']['tests']['P1_time_vs_mixed'])
   cited_in:
-    - {file: docs/Findings.md, marker: two-periods-time-only-difference}
     - {file: docs/TECHNIQUES.md, marker: two-periods-time-only-difference}
     - {file: docs/results/comparisons.md, marker: two-periods-time-only-difference}
 
@@ -1744,7 +1717,6 @@
       and t['n_groups'] == 17 and t['w'] == 3 and t['l'] == 14 and t['sign_p'] > 0.05
     )(A['exp/out/exp61_summary.json'], A['exp/out/exp61_summary.json']['results']['residue'], A['exp/out/exp61_summary.json']['results']['P1_test'])
   cited_in:
-    - {file: docs/Findings.md, marker: residue-not-seasonal-water}
     - {file: docs/TECHNIQUES.md, marker: residue-not-seasonal-water}
     - {file: docs/results/comparisons.md, marker: residue-not-seasonal-water}
 
@@ -1776,7 +1748,6 @@
       and round(F['accuracy_water_after_label'], 3) == 0.971 and round(F['agreement_with_worldfloods_water'], 3) == 0.971 and round(F['worldfloods_vs_geoid_water_after'], 3) == 0.984
     )(A['exp/out/exp62_summary.json']['config'], A['exp/out/exp62_summary.json']['results']['fourth_cell'])
   cited_in:
-    - {file: docs/Findings.md, marker: fourth-cell-completed}
     - {file: docs/TECHNIQUES.md, marker: fourth-cell-completed}
     - {file: docs/results/comparisons.md, marker: fourth-cell-completed}
 
@@ -1814,7 +1785,6 @@
       and round(100 * P['olmoearth_base vs galileo_base']['where']['boundary']['share_agree']) == 50
     )(A['exp/out/exp63_summary.json'], A['exp/out/exp63_summary.json']['prereg']['P1_detail'], A['exp/out/exp63_summary.json']['results']['mados']['pairs'], A['exp/out/exp63_summary.json']['results']['pastis_sentinel2']['pairs'])
   cited_in:
-    - {file: docs/Findings.md, marker: multiclass-boundary-cue-fails-on-parcels}
     - {file: docs/TECHNIQUES.md, marker: multiclass-boundary-cue-fails-on-parcels}
     - {file: docs/results/comparisons.md, marker: multiclass-boundary-cue-fails-on-parcels}
 
@@ -1829,7 +1799,6 @@
       and all(0.25 <= x <= 0.35 for x in v['sensor_vs_each_encoder'].values())
     )(A['exp/out/exp63_summary.json'], A['exp/out/exp63_summary.json']['results']['pastis_sentinel2']['sensor_vs_encoder'])
   cited_in:
-    - {file: docs/Findings.md, marker: multiclass-sensor-vs-encoder-different}
     - {file: docs/TECHNIQUES.md, marker: multiclass-sensor-vs-encoder-different}
     - {file: docs/results/comparisons.md, marker: multiclass-sensor-vs-encoder-different}
 
@@ -1867,7 +1836,6 @@
       and all(R[n]['lead_over_confidence'] >= 0.001 and R[n]['tiles_vs_confidence']['sign_p'] < 0.05 for n in ('bolivia', 'test'))
     )(A['exp/out/exp65_summary.json'], A['exp/out/exp65_summary.json']['results']['ranker'])
   cited_in:
-    - {file: docs/Findings.md, marker: calibrate-ranker-fusion-beats-confidence}
     - {file: docs/TECHNIQUES.md, marker: calibrate-ranker-fusion-beats-confidence}
     - {file: docs/results/comparisons.md, marker: calibrate-ranker-fusion-beats-confidence}
 
@@ -1885,7 +1853,6 @@
       and round(min(S[p][n]['gain'] for p in ('offsets', 'backbones', 'sensors', 'finetune') for n in ('bolivia', 'test')), 2) == 0.08
     )(A['exp/out/exp65_summary.json'], A['exp/out/exp65_summary.json']['results']['side'])
   cited_in:
-    - {file: docs/Findings.md, marker: calibrate-side-rule-held-out}
     - {file: docs/TECHNIQUES.md, marker: calibrate-side-rule-held-out}
     - {file: docs/results/comparisons.md, marker: calibrate-side-rule-held-out}
 
@@ -1937,7 +1904,6 @@
       and round(100 * P['sensors']['graded']['which_side']['share_a_right'], 1) == 50.4
     )(A['exp/out/exp66_summary.json'], A['exp/out/exp66_summary.json']['results']['pairs'])
   cited_in:
-    - {file: docs/Findings.md, marker: dfc2020-sensor-difference-dominates-land-cover}
     - {file: docs/TECHNIQUES.md, marker: dfc2020-sensor-difference-dominates-land-cover}
     - {file: docs/results/comparisons.md, marker: dfc2020-sensor-difference-dominates-land-cover}
 
@@ -1955,7 +1921,6 @@
       and round(g['s2']['gap_lc_minus_dfc'], 4) == -0.0313
     )(A['exp/out/exp66_summary.json'], A['exp/out/exp66_summary.json']['results']['reference_gap']['boundary_first_lead_over_margin'])
   cited_in:
-    - {file: docs/Findings.md, marker: dfc2020-coarse-reference-penalises-the-boundary-order}
     - {file: docs/TECHNIQUES.md, marker: dfc2020-coarse-reference-penalises-the-boundary-order}
     - {file: docs/results/comparisons.md, marker: dfc2020-coarse-reference-penalises-the-boundary-order}
 
@@ -2045,7 +2010,6 @@
       and max(b['confidence'] for b in P['reliability']) < 0.85
     )(A['exp/out/exp67_summary.json']['results']['calibration'], A['exp/out/exp67_summary.json']['results']['calibration']['per_pixel'])
   cited_in:
-    - {file: docs/Findings.md, marker: dw-published-probabilities-are-underconfident}
     - {file: docs/TECHNIQUES.md, marker: dw-published-probabilities-are-underconfident}
     - {file: docs/results/comparisons.md, marker: dw-published-probabilities-are-underconfident}
 
@@ -2098,7 +2062,6 @@
     )(A['exp/out/exp68_summary.json']['results'], A['exp/out/exp68_summary.json']['results']['probe_tuning'],
       A['exp/out/exp68_summary.json']['results']['part_a_vs_margin'])
   cited_in:
-    - {file: docs/Findings.md, marker: lucas-overfitting-inverts-the-ranker-ordering}
     - {file: docs/TECHNIQUES.md, marker: lucas-overfitting-inverts-the-ranker-ordering}
     - {file: docs/results/comparisons.md, marker: lucas-overfitting-inverts-the-ranker-ordering}
   note: >-
@@ -2129,7 +2092,6 @@
     )(A['exp/out/exp68_summary.json']['verdicts'],
       A['exp/out/exp68_summary.json']['results']['part_c_filters']['filtered_vs_deleted'])
   cited_in:
-    - {file: docs/Findings.md, marker: lucas-the-homogeneity-filter-flatters-the-tool}
     - {file: docs/TECHNIQUES.md, marker: lucas-the-homogeneity-filter-flatters-the-tool}
     - {file: docs/results/comparisons.md, marker: lucas-the-homogeneity-filter-flatters-the-tool}
   note: >-
@@ -2580,7 +2542,6 @@
       A['exp/out/exp73_summary.json']['results']['tasks'])
   cited_in:
     - {file: docs/results/comparisons.md, marker: suite-alternatives-clear-the-control-and-still-lose}
-    - {file: docs/Findings.md, marker: suite-alternatives-clear-the-control-and-still-lose}
     - {file: docs/TECHNIQUES.md, marker: suite-alternatives-clear-the-control-and-still-lose}
 
 - id: suite-holds-under-every-encoder
@@ -2612,7 +2573,6 @@
       lambda w, l: sum(round(2 ** (sum(log((w + l - k + i) / i) for i in range(1, k + 1)) / log(2))) for k in range(w, w + l + 1)) / 2 ** (w + l))
   cited_in:
     - {file: docs/results/comparisons.md, marker: suite-holds-under-every-encoder}
-    - {file: docs/Findings.md, marker: suite-holds-under-every-encoder}
     - {file: docs/TECHNIQUES.md, marker: suite-holds-under-every-encoder}
 
 - id: suite-outside-families-hold-at-twenty-two
@@ -2634,7 +2594,6 @@
       lambda w, l: sum(round(2 ** (sum(log((w + l - k + i) / i) for i in range(1, k + 1)) / log(2))) for k in range(w, w + l + 1)) / 2 ** (w + l))
   cited_in:
     - {file: docs/results/comparisons.md, marker: suite-outside-families-hold-at-twenty-two}
-    - {file: docs/Findings.md, marker: suite-outside-families-hold-at-twenty-two}
     - {file: docs/TECHNIQUES.md, marker: suite-outside-families-hold-at-twenty-two}
 
 - id: suite-lead-across-olmoearth-sizes
@@ -2939,7 +2898,6 @@
     )({r['task']: (r['contamination']['gap'] if r['contamination'] else None) for r in s['tasks']}))(A['exp/out/exp77_summary.json'])
   cited_in:
     - {file: docs/results/comparisons.md, marker: confident-errors-are-scene-typical}
-    - {file: docs/Findings.md, marker: confident-errors-are-scene-typical}
   note: >-
     The gap is computed from the labels, since separating error windows from correct ones needs them, so it is not a
     label-free reading; the preregistration said otherwise and was corrected in a dated amendment before the numbers
@@ -3003,7 +2961,6 @@
     )(r['results']['tasks']))(A['exp/out/exp77_summary.json'], A['exp/out/exp70_summary.json'])
   cited_in:
     - {file: docs/results/comparisons.md, marker: scene-typicality-loses-to-the-margin}
-    - {file: docs/Findings.md, marker: scene-typicality-loses-to-the-margin}
     - {file: docs/TECHNIQUES.md, marker: scene-typicality-loses-to-the-margin}
     - {file: docs/related_work.md, marker: scene-typicality-loses-to-the-margin}
   note: >-
@@ -3236,7 +3193,6 @@
        if c['alpha_kind'] == 'half_theta' and c['budget'] == 300}))(A['exp/out/exp80_summary.json'])
   cited_in:
     - {file: docs/results/comparisons.md, marker: plugin-zone-violates-on-most-tasks}
-    - {file: docs/Findings.md, marker: plugin-zone-violates-on-most-tasks}
 
 - id: trust-zone-coverage-at-300-labels
   statement: "At 300 labels and alpha = half the map's error rate, the prefix rule certifies a zone on most draws on 14 of the 21 tasks large enough for that budget, with a median certified coverage of 0.50 against an oracle median of 0.60; the assumption-free Bonferroni rule on 13, median 0.35."
@@ -3276,7 +3232,6 @@
     )(sorted(g.values())))({t: row['calibration_gap'] for t, row in A['exp/out/exp80_summary.json']['tasks'].items()})
   cited_in:
     - {file: docs/results/comparisons.md, marker: mean-confidence-overstates-accuracy}
-    - {file: docs/Findings.md, marker: mean-confidence-overstates-accuracy}
   note: >-
     A population fact read from exp78's per-unit export, recomputed in the crosscheck for MADOS from the file itself.
 
@@ -3506,6 +3461,7 @@
       and round(min(T['sen1floods11']['true_accuracy']), 3) == 0.883 and round(max(T['sen1floods11']['true_accuracy']), 3) == 0.914
     )(A['exp/out/exp83_summary.json']['tasks'])
   cited_in:
+    - {file: docs/Findings.md, marker: consensus-order-recovered-only-where-true-gaps-are-large}
     - {file: docs/results/comparisons.md, marker: consensus-order-recovered-only-where-true-gaps-are-large}
 
 - id: disagreement-reads-error-with-a-blind-spot
@@ -3710,7 +3666,6 @@
     )({e: A[f'exp/out/exp82_cues/{e}.json'] for e in ('clay_large', 'copernicusfm', 'anysat', 'croma_base')}, A['exp/out/exp82_summary.json'], A['exp/out/exp74_summary.json']['results']['tasks'])
   cited_in:
     - {file: docs/results/comparisons.md, marker: cue-verification-holds-on-other-encoders}
-    - {file: docs/Findings.md, marker: cue-verification-holds-on-other-encoders}
   note: >-
     Descriptive, the same code as the graded Base run on each encoder's seed-0 export; extended as further exports
     land. The window grid is the export's, so AnySat's coarser grid on the two m-* tasks is a property of its probe's

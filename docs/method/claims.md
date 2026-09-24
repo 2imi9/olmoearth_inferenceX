@@ -15,7 +15,7 @@ artifact fields that carry it, with a marker in every document that states it;
   artifacts: [exp/out/exp42_summary.json]   # committed summary JSON or CSV
   check: |-                                 # Python over A: path -> parsed JSON, or CSV rows
     (lambda s: s['prereg']['supported'] is True and ...)(A['exp/out/exp42_summary.json'])
-  cited_in: [{file: docs/Findings.md, marker: w1-accuracy-gain}]
+  cited_in: [{file: docs/results/comparisons.md, marker: w1-accuracy-gain}]
 ```
 
 Optional: `note` (a caveat) and `superseded_by: expNN` (status `superseded`).
