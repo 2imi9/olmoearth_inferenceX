@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.3.0 (2026-09-24)
 
 **Release checks (24 September 2026).**
 
