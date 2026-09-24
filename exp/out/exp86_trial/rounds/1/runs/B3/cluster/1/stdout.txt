@@ -1,0 +1,26 @@
+
+
+Both runs are direct model outputs (same model, same 128x128 window grid over the shared area), so I loaded their per-window logits and compared them head-to-head.
+
+**Where they differ**
+
+| | C1 (2023) | C2 (2022) |
+|---|---|---|
+| Windows differing | 3,807 of 16,384 (**23.2%**) | |
+| On class boundaries | ~78% of the differing windows sit on predicted class boundaries | |
+| Mean margin where they differ | 2.66 | 3.19 (C2 slightly more confident) |
+
+Most contested zones (windows named by row, col - row 0 = north):
+
+- **North strip (row 0):** a long run of `montane_forest` (C1) vs `woodland_forest` (C2) across cols 3-51 - this is the single biggest disagreement band.
+- **North-west edge:** `grassland_barren`/`urban_dense_development` (C1) vs `shrubland_savanna` (C2) around cols 95-125; e.g. (0,107) urban vs shrub, (0,125) urban vs agriculture.
+- Scattered single-window flips elsewhere, mostly boundary cells between forest/wetland/ag classes.
+
+**Which is right**
+
+I can't grade that, and neither map wins by confidence: the two maps describe different years, so a difference may be real ground change (seasonal cycles included) or an error in either map. Without labels dated to each map, there is no resolvable winner - and even with labels, the more confident side is right on only ~51-70% of differing windows, so confidence alone doesn't pick one.
+
+**If you want to settle it**
+
+1. Give me reference labels (or a `labels_date` matching one map) and I'll re-run the comparison with grading, or
+2. Plan a targeted label effort on the differing windows (olmoearth_plan_label_sample on these scores) to get an honest error rate per map.

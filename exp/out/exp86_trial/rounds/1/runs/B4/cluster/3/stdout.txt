@@ -1,0 +1,14 @@
+
+
+I set up the labeling design for that run; the error rate itself needs your labels first.
+
+**Design ready (olmoearth-inferencex)**
+- Population: **16,384 valid windows** (128×128 grid, 4-px patches), model `OlmoEarth-v1-FT-AWF-Base`, 9 classes, no nodata
+- Your **300 labels** allocated by confidence margin (strata sizes 3,277/3,277/3,276/3,277/3,277 → **106 / 79 / 47 / 34 / 34** windows)
+- Label file (has each window's location + map class): 
+  `/Users/lucas/Desktop/Github/olmoearth_inferenceX/exp/out/exp86_trial/rounds/1/runs/B4/cluster/3/workspace/design_scores_8f3527f9_confidence_300_s0_to_label.csv`
+- For each window in order: set `wrong = 1` if the map's class isn't what's on the ground, else `0` (optionally `reference_class` for per-class accuracy)
+
+Two caveats the design enforces: the score only allocates labels, so the resulting rate stays design-unbiased; but a plain review-set rate would overstate errors, and the simple p±1.96√(p(1−p)/n) formula does not apply here.
+
+When you return the filled CSV (or the 0/1 list), I'll run `olmoearth_estimate_map_error` to give you the estimate with the interval this design actually earns. If you'd rather certify a high-confidence zone at ≤ α error, say so — that requires a `random` design instead, which I can re-cut from the same scores.

@@ -1,0 +1,12 @@
+
+
+This Studio account lists 3 models; 2 are fine-tuned and both are per-pixel regression (a value per pixel, not a class or confidence):
+
+| Model | Type | Predicts | Example run |
+|---|---|---|---|
+| **KarstBinary** (`ac1eb985...`) | fine_tuned | per_pixel_regression — one score value per pixel | KarstBinary PA regular (completed) |
+| **KarstNumber** (`f67d97d9...`) | fine_tuned | per_pixel_regression — one value per pixel | KarstNumber PA regular (completed) |
+
+There's also **KarstEmbedding** (`5aafb53d...`), which is an embeddings model (features, no prediction_type output).
+
+Note: this list covers your Studio account only — Ai2 also publishes additional fine-tuned OlmoEarth models via their olmoearth_projects configurations and task cards that won't appear here. Want me to look up what these models predict at specific locations or draw them onto a map?

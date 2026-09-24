@@ -1,0 +1,14 @@
+
+
+Short answer: none. With these 300 random labels, **no part of the map certifies to a ≤ 5% error rate** (alpha = 0.05, delta = 0.1) — under either the prefix or Bonferroni rule, every candidate zone was rejected.
+
+| Zone (most-confident windows) | Labels inside | Wrong | One-sided upper bound |
+|---|---|---|---|
+| top 15% (~2,372 windows) | 46 | 3 | ~13.9% |
+| top 25% (~3,953) | 68 | 3 | ~9.5% |
+| top 50% (~7,906) | 140 | 13 | ~13.2% |
+| whole map (15,813) | 300 | 69 | ~26.4% |
+
+Even the most confident 15% of the map only reaches a ~14% worst-case error bound — the observed 3/46 errors inside it are too few for the exact test to push the bound under 5%. Nothing outside any tested zone is certified either.
+
+To get a certified zone you'd need either (a) substantially more random labels focused on the confident core (certification needs >= 45 labels per testable zone, and much more to hit alpha = 0.05 given this ~9-14% underlying error level), or (b) accepting a looser guarantee, e.g. alpha ≈ 0.14 would certify roughly the top 15-25% of the map. If you relabel, run the plan again through olmoearth_plan_label_sample and re-certify — happy to set that up.

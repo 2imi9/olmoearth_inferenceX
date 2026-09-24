@@ -1,0 +1,16 @@
+
+
+Compared both runs window-by-window (16,384 windows at 4-px patch; same model revision, but C1 describes 2023 imagery and C2 describes 2022).
+
+**Where they differ**
+- **3,807 of 16,384 windows differ (~23%).**
+- **~78% of those sit on class boundaries** — i.e. mostly edge effects between vegetation classes, not wholesale reclassification.
+- Recurring pattern near the north edge (row 0, cols 3–22): the **2023 run calls montane_forest where the 2022 run calls woodland_forest** — a plausible seasonal/phenology shift rather than random disagreement.
+- Margins on the differing windows are moderate on both sides (mean ~2.7 for 2023, ~3.2 for 2022); no side is systematically "sure" there.
+
+**Which is right: I can't say, and that's the correct answer**
+- The two maps describe different times (2022 vs 2023), so a differing window may simply have **changed on the ground** (seasonal cycle included) — the decisions alone can't separate real change from error.
+- No `labels_date` reference was provided, so even with labels no grading is possible right now.
+- For completeness: even against same-date labels, the more-confident side wins on only ~51–70% of disagreeing windows, so confidence picks no winner here.
+
+**To settle it:** give me dated reference labels for at least one of the two periods (or tell me which period your truth data covers) and I'll grade the windows properly.

@@ -1,0 +1,13 @@
+
+
+Compared both 2025 PA Karst predictions on their shared extent. Key point first: **I can't tell you which is right** — neither has ground-truth labels, so this is model-vs-model comparison only, and the two maps output different quantities (`sample_karst_score` [0–1] vs `sample_number` [0.2–1.2]).
+
+| Metric | Value | Read |
+|---|---|---|
+| Correlation | -0.017 (≈0) | They do not rise/fall together at all |
+| Samples | 25 of 72 grid cells | 47 dropped as no-data/off-raster |
+| Agreement (±0.1) | 0% | Not meaningful — different units, ignore |
+
+**Where they differ:** effectively everywhere sampleable — the near-zero correlation means the two layers describe spatially unrelated patterns over the ~10,091 km² shared area. Do not read the mean gap or RMSE as a real difference, since the properties aren't the same quantity.
+
+To find out which is *right* you'd need labels: I can plan a small labeling effort on one map (confidence-targeted windows from `olmoearth_plan_label_sample`) so you mark karst present/absent on a few dozen points, then compute an error rate and per-class metrics with `olmoearth_classification_metrics`. Want me to set that up for one of the two?

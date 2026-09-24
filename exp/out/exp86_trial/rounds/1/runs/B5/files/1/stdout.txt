@@ -1,0 +1,14 @@
+
+
+**Map error rate: 19.4%** (95% interval **15.7 – 23.6**), from your 300 labelled windows over the design's 15,813-window population. No strata were starved; effective n ≈ 384. Method: *stratified by confidence margin; Wilson interval on the design's effective sample size* — i.e., not a plain random-sample CI.
+
+A few things the labels revealed:
+
+| Class | Map share | Reference share | Note |
+|---|---|---|---|
+| 4 | ~33% | ~46% | map under-calls this class (producer accuracy ~0.80) |
+| 6 | ~16% | ~8% | map over-calls it (user accuracy only ~0.45, wide interval) |
+| 7 | ~45% | ~40% | well matched (~0.92 user / ~0.91 producer accuracy) |
+| 1, 2, 5, 8 | small | small | all with few-label warnings — their per-class numbers are unreliable |
+
+So the overall ~19% error is driven mainly by misallocation between classes 4/6/7 rather than broad disagreement in the dominant classes. Per-class intervals for the sparse classes are wide and flagged by the tool; I'd treat those as indicative only.

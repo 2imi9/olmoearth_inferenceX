@@ -1,0 +1,15 @@
+
+
+Your Studio account has three models, two of which are fine-tuned:
+
+| Model | Type | Predicts |
+|---|---|---|
+| **KarstBinary** (`ac1eb985…`) | fine_tuned | per-pixel regression — one continuous value per pixel (e.g. karst presence score), not a class label or confidence |
+| **KarstNumber** (`f67d97d9…`) | fine_tuned | per-pixel regression — one continuous value per pixel |
+| **KarstEmbedding** (`5aafb53d…`) | embeddings | no per-pixel output of its own (feature embedding for downstream analysis) |
+
+Notes:
+- A `per_pixel_regression` output is a value per pixel — interpret it against the layer's declared range, not as a probability.
+- This list covers your Studio account only. Ai2 also publishes fine-tuned OlmoEarth models (task cards / olmoearth_projects configs) not shown here, so it isn't every model you could run.
+
+Want me to pull the declared output ranges from the recent results so we know what values KarstBinary vs KarstNumber actually produce?

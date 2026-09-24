@@ -1,0 +1,15 @@
+
+
+Two fine-tuned models exist in your Studio account (plus one embeddings model that is not fine-tuned):
+
+| Model | model_id | Predicts | Output band | Range |
+|---|---|---|---|---|
+| **KarstBinary** | ac1eb985…d0dc7f | per-pixel regression | `sample_karst_score` | 0.0 - 1.0 |
+| **KarstNumber** | f67d97d9…1cc0d | per-pixel regression | `sample_number` | 0.2 - 1.2 |
+
+Notes:
+- Both are **per_pixel_regression**: they emit a numeric value per pixel - not a class label, probability, or confidence. The 0-1 range of KarstBinary looks score-like, but it is declared as a regression output.
+- **KarstEmbedding** (5aafb53d…704) is type `embeddings`, not fine-tuned, so it doesn't produce a pixel map directly.
+- This is only this account's listing; Ai2 also publishes fine-tuned OlmoEarth models (task cards) beyond what you can run here.
+
+Want me to submit a new run with either of these on an area?

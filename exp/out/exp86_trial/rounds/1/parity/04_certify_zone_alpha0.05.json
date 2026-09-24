@@ -1,0 +1,195 @@
+{
+ "tool": "olmoearth_certify_zone",
+ "arguments": {
+  "design_path": "F3/design_random_300_s0.json",
+  "labels_path": "F3/labels_random_300_s0.csv",
+  "alpha": 0.05
+ },
+ "result": {
+  "ok": true,
+  "result": {
+   "available": true,
+   "certified": false,
+   "rule": "prefix",
+   "alpha": 0.05,
+   "delta": 0.1,
+   "n_population": 15813,
+   "n_labelled": 300,
+   "min_labels_to_certify": 45,
+   "c_min": 0.15,
+   "levels": [
+    {
+     "coverage": 0.15,
+     "n_zone": 2372,
+     "n_labelled_inside": 46,
+     "n_wrong_inside": 3,
+     "p_value": 0.8030123657752951,
+     "upper_bound": 0.13870151770657674,
+     "accepted": false
+    },
+    {
+     "coverage": 0.2,
+     "n_zone": 3163,
+     "n_labelled_inside": 57,
+     "n_wrong_inside": 3,
+     "p_value": 0.6786055598601533,
+     "upper_bound": 0.11286753082516598,
+     "accepted": false
+    },
+    {
+     "coverage": 0.25,
+     "n_zone": 3953,
+     "n_labelled_inside": 68,
+     "n_wrong_inside": 3,
+     "p_value": 0.5540859219797265,
+     "upper_bound": 0.09511763217809259,
+     "accepted": false
+    },
+    {
+     "coverage": 0.3,
+     "n_zone": 4744,
+     "n_labelled_inside": 88,
+     "n_wrong_inside": 7,
+     "p_value": 0.9273612005967873,
+     "upper_bound": 0.12963743676222597,
+     "accepted": false
+    },
+    {
+     "coverage": 0.35,
+     "n_zone": 5535,
+     "n_labelled_inside": 101,
+     "n_wrong_inside": 7,
+     "p_value": 0.8682121721866266,
+     "upper_bound": 0.11327913279132791,
+     "accepted": false
+    },
+    {
+     "coverage": 0.4,
+     "n_zone": 6325,
+     "n_labelled_inside": 112,
+     "n_wrong_inside": 9,
+     "p_value": 0.9465701588437871,
+     "upper_bound": 0.12347826086956522,
+     "accepted": false
+    },
+    {
+     "coverage": 0.45,
+     "n_zone": 7116,
+     "n_labelled_inside": 126,
+     "n_wrong_inside": 12,
+     "p_value": 0.9899550330864839,
+     "upper_bound": 0.13743676222596965,
+     "accepted": false
+    },
+    {
+     "coverage": 0.5,
+     "n_zone": 7906,
+     "n_labelled_inside": 140,
+     "n_wrong_inside": 13,
+     "p_value": 0.9897788240445242,
+     "upper_bound": 0.13205160637490512,
+     "accepted": false
+    },
+    {
+     "coverage": 0.55,
+     "n_zone": 8697,
+     "n_labelled_inside": 148,
+     "n_wrong_inside": 14,
+     "p_value": 0.9929493221908436,
+     "upper_bound": 0.1328044153156261,
+     "accepted": false
+    },
+    {
+     "coverage": 0.6,
+     "n_zone": 9488,
+     "n_labelled_inside": 166,
+     "n_wrong_inside": 16,
+     "p_value": 0.9960959377407598,
+     "upper_bound": 0.13227234401349072,
+     "accepted": false
+    },
+    {
+     "coverage": 0.65,
+     "n_zone": 10278,
+     "n_labelled_inside": 181,
+     "n_wrong_inside": 20,
+     "p_value": 0.9997285396556491,
+     "upper_bound": 0.1461373808133878,
+     "accepted": false
+    },
+    {
+     "coverage": 0.7,
+     "n_zone": 11069,
+     "n_labelled_inside": 198,
+     "n_wrong_inside": 23,
+     "p_value": 0.9999483243290793,
+     "upper_bound": 0.1505104345469329,
+     "accepted": false
+    },
+    {
+     "coverage": 0.75,
+     "n_zone": 11860,
+     "n_labelled_inside": 216,
+     "n_wrong_inside": 32,
+     "p_value": 0.9999999913339884,
+     "upper_bound": 0.18355817875210792,
+     "accepted": false
+    },
+    {
+     "coverage": 0.8,
+     "n_zone": 12650,
+     "n_labelled_inside": 232,
+     "n_wrong_inside": 36,
+     "p_value": 0.9999999996827124,
+     "upper_bound": 0.18964426877470356,
+     "accepted": false
+    },
+    {
+     "coverage": 0.85,
+     "n_zone": 13441,
+     "n_labelled_inside": 253,
+     "n_wrong_inside": 46,
+     "p_value": 1.0,
+     "upper_bound": 0.21635294992932075,
+     "accepted": false
+    },
+    {
+     "coverage": 0.9,
+     "n_zone": 14232,
+     "n_labelled_inside": 274,
+     "n_wrong_inside": 56,
+     "p_value": 1.0,
+     "upper_bound": 0.23861720067453626,
+     "accepted": false
+    },
+    {
+     "coverage": 0.95,
+     "n_zone": 15022,
+     "n_labelled_inside": 289,
+     "n_wrong_inside": 64,
+     "p_value": 1.0,
+     "upper_bound": 0.25555851417920383,
+     "accepted": false
+    },
+    {
+     "coverage": 1.0,
+     "n_zone": 15813,
+     "n_labelled_inside": 300,
+     "n_wrong_inside": 69,
+     "p_value": 1.0,
+     "upper_bound": 0.26377031556314423,
+     "accepted": false
+    }
+   ],
+   "coverage": null,
+   "n_zone": null,
+   "threshold": null,
+   "upper_bound": null,
+   "note": "no zone certified at alpha=0.05, delta=0.1 with 300 labels; the smallest testable zone (15% of the map) held 46 labels with 3 wrong",
+   "meaning": "The zone is the n_zone most confident windows of the design's population; its error rate is at most alpha=0.05, a statement that fails on at most delta=0.1 of random draws. Nothing outside the zone is certified."
+  }
+ },
+ "made": "2026-09-24T23:02:52+00:00",
+ "agent_commit": "346300287951855ea426c7207e00da84a568a373",
+ "inferencex_version": "1.3.0"
+}

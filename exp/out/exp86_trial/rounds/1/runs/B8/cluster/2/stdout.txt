@@ -1,0 +1,20 @@
+
+
+I read the full logit raster for `C1/awf_namanga_2023_1042061` (OlmoEarth-v1-FT-AWF-Base, revision a347b15; 128x128 window grid, 16,384 windows, no nodata) and ranked all windows by top-1 minus top-2 logit margin, lowest first. At a 5% budget (819 windows), the ten most suspect:
+
+| Rank | Index | Window (row, col) | Predicted class | Margin |
+|------|-------|-------------------|-----------------|--------|
+| 1 | 1821 | (14, 29) | woodland_forest | 0.108 |
+| 2 | 1321 | (10, 41) | montane_forest | 0.149 |
+| 3 | 3037 | (23, 93) | shrubland_savanna | 0.153 |
+| 4 | 907 | (7, 11) | woodland_forest | 0.162 |
+| 5 | 1797 | (14, 5) | montane_forest | 0.176 |
+| 6 | 299 | (2, 43) | montane_forest | 0.177 |
+| 7 | 2466 | (19, 34) | woodland_forest | 0.191 |
+| 8 | 5979 | (46, 91) | grassland_barren | 0.206 |
+| 9 | 2467 | (19, 35) | montane_forest | 0.214 |
+| 10 | 296 | (2, 40) | montane_forest | 0.216 |
+
+**Why these:** each is a 4-px window where the model's two most likely classes nearly tie -- a margin this low means the pixel-level scores don't confidently distinguish, say, woodland from grassland or montane from lava forest, so these are where label errors concentrate. The budget cut sits at margin ~0.99, far below the median margin (4.47); the rest of the map the model called decisively. Most flagged windows sit on predicted class boundaries (window 299 being the notable interior exception). This margin signal is measured: it beat every no-model control and every disagreement/typicality heuristic across Ai2's 24-task suite, and ranks suspicion well but is not a calibrated error probability. Caveat: montane_forest dominates the list, consistent with that pair being hard to separate in this scene.
+
+Want me to expand to the full 819-window list, plan a label sample to estimate the actual error rate, or export this as a shapefile for field verification?

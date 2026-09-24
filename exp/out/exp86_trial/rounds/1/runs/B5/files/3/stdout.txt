@@ -1,0 +1,17 @@
+
+
+Map error rate estimate: **19.4%** with a 95% interval **[15.7%, 23.6%]**.
+
+| Item | Value |
+|---|---|
+| Estimate | 0.194 |
+| Interval | [0.157, 0.236] |
+| Labels used | 300 of 15,813 windows |
+| Effective n | ~384 |
+| Method | Stratified by confidence margin; Wilson interval on the design's effective sample size |
+
+Notes:
+- The rate is of the design's full window population, not just the labelled ones.
+- Biggest per-class issue visible in the labels: class 6 user accuracy is low (~45%) — the map over-predicts that class relative to reference; classes 4 and 7 are well mapped (>90%).
+
+Want me to run `olmoearth_certify_zone` (needs a random-design plan) or dig into any class?

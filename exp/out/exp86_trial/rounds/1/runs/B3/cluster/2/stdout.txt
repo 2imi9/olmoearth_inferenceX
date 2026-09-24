@@ -1,0 +1,18 @@
+
+
+Compared both runs window-by-window (same model revision `OlmoEarth-v1-FT-AWF-Base`, 128x128 window grids, full-model logits pooled per window).
+
+**Where they differ**
+
+| | C1 (2023 imagery) | C2 (2022 imagery) |
+|---|---|---|
+| Date window | 2023-01-01 to 2023-12-31 | 2022-01-01 to 2022-12-31 |
+| Windows | 16,384 valid, 0 no-data | 16,384 valid, 0 no-data |
+
+- **3,807 of 16,384 windows disagree (23.2%)**, e.g. window index 3 (row 0, col 3): C1 says montane_forest, C2 says woodland_forest; index 59 (0, 59): woodland_forest vs shrubland_savanna; index 115 (0, 115): urban_dense vs woodland_forest. I've listed 50 examples above (window indices, row/col); happy to give the full list or a spatial summary of hot zones.
+- The disagreement is **heavily boundary-located**: 78% of differing windows touch a predicted class boundary (vs ~54% overall), i.e. the maps mostly swap classes along edges rather than repainting whole regions.
+- Margins on differing windows: C1 mean 2.66, C2 mean 3.19 — C2 is mildly more confident on average there, but confidence does not identify a winner (the more confident side is right on only ~51-70% of differing windows).
+
+**Which is right: not resolvable from these two maps alone.** The critical wrinkle is that the runs used *different-year* imagery, so every differing window is ambiguous between (a) real ground change / seasonal shift between 2022 and 2023, and (b) an error in one map. With no reference labels, that ambiguity can't be split — I won't pick a side.
+
+To resolve it, give me labels for the area (ideally one set dated to one of the two years) and I can grade each map against its own year's reference with `olmoearth_estimate_map_error`; or run one of the runs over the same dates as the other to isolate pure model error from temporal change.

@@ -1,0 +1,21 @@
+
+
+Compared all 78,028 shared windows; here's what I found:
+
+**Where they differ**
+
+| | |
+|---|---|
+| Windows compared | 78,028 |
+| Differing windows | 1,570 (~2.0%) |
+| Mean margin, side A (Sep 2017) on differing | 0.389 |
+| Mean margin, side B (Apr 2018) on differing | 0.158 |
+
+Most differences are localized blocks — e.g. rows 344–345 (A says class 1, B says 0), rows 1442–1449 where B flips to class 1 with very high A-margins (~0.49, i.e. both sides are near-certain there). Full list of the 1,570 indices/row-cols available if you want it.
+
+**Which is right?** Not gradable, for two reasons:
+
+1. The maps describe dates 216 days apart, so any differing window either **changed on the ground** (seasonal cycles included) or one map is wrong — class scores alone can't separate those.
+2. No reference labels exist for either date (`labels_date` not provided), so even grading isn't possible with what we have. Note also that across-dates, "the more confident side" is right on only ~51–70% of such windows, so confidence doesn't pick a winner either.
+
+To resolve it you'd need a ground-truth/reference covering each date (e.g. photointerpretation or in-situ observation per date); then I can grade both maps per-date. Want me to help set up a labeling plan for the 1,570 differing windows?

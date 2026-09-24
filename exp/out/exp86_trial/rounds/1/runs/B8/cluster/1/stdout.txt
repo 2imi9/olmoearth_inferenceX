@@ -1,0 +1,19 @@
+
+
+Done. Pooled all 16,384 windows (128×128, no nodata) from the run's full pre-argmax logits and ranked them by lowest top-1 − top-2 margin.
+
+**Which to check first:** the most-suspect **5% budget = 819 windows**, led by:
+
+| Rank | Window (row, col) | Predicted class | Margin |
+|---|---|---|---|
+| 1 | 14, 29 | woodland_forest | 0.108 |
+| 2 | 10, 41 | montane_forest | 0.149 |
+| 3 | 23, 93 | shrubland_savanna | 0.153 |
+| 4 | 7, 11 | woodland_forest | 0.162 |
+| 5 | 14, 5 | montane_forest | 0.176 |
+
+**Why this ordering:** these windows have the thinnest gap between the model's top two classes — i.e., where it is least confident — and on Ai2's published embedding suite (24 tasks, ~6.4M graded units) the raw logit margin beat every no-model control, sign test 24/24. The spread is clean: budget cut-off at margin 0.99 vs a population median of 4.47, so the bottom ~5% sit far from the rest. Most top-ranked windows also touch predicted-class boundaries (e.g., #3 touches 6), which is exactly where map errors concentrate.
+
+**Caveats:** the margin ranks relative suspicion only — it is not a calibrated error probability, and capture at any fixed budget is bounded by budget/error_rate. Scores file saved for follow-up (`olmoearth_plan_label_sample` if you later want an honest error rate): `scores_run_OlmoEarth-v1-FT-AWF-Base_a7c40be9_p4.json`.
+
+Want me to list more of the 819, switch to boundary-first ordering, or plan how many labels you'd need for a real error estimate?

@@ -1,0 +1,15 @@
+
+
+Read the run's score raster via olmoearth-inferencex (128x128 windows, 4-px patches, all logits; label-fill channel excluded), then ranked by the model's top-1 minus top-2 logit margin, lowest first. At a 5% budget that flags **819 of 16,384 windows**; these are the ten to open first:
+
+| rank | window | row/col | predicted class | margin | boundary neighbours |
+|---|---|---|---|---|---|
+| 1 | 1821 | 14, 29 | woodland_forest | 0.108 | 4 |
+| 2 | 1321 | 10, 41 | montane_forest | 0.149 | 3 |
+| 3 | 3037 | 23, 93 | shrubland_savanna | 0.153 | 6 |
+| 4 | 907 | 7, 11 | woodland_forest | 0.162 | 8 |
+| 5 | 1797 | 14, 5 | montane_forest | 0.176 | 7 |
+
+**Why this order:** the margin measures how decisively the model separates its top two classes at each window; near-zero margin means genuine uncertainty between two plausible classes, not noise. That signal is validated: on all 24 tasks of Ai2's published suite the margin beat the best no-model control (embedding typicality, cross-model disagreement, ensemble mutual information were all rejected).
+
+**Caveats:** this ranks relative suspicion, not calibrated error probability; with an error rate you'd divide capture by budget/error_rate for a fair ceiling. Forest classes dominate the low-margin list (woodland/montane), so expect most errors there. Want me to flag more windows or design a label-sample plan over them?

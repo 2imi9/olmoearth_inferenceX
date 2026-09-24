@@ -1,0 +1,21 @@
+
+
+Both 2025 PA Karst predictions are complete, and I compared them cell-by-cell on a grid over their shared extent (~10,091 km²). Key finding: **they predict different quantities**, so much of the "difference" is scale, not disagreement.
+
+| | KarstBinary | KarstNumber |
+|---|---|---|
+| Band | `sample_karst_score` | `sample_number` |
+| Type | regression, value per pixel | regression, value per pixel |
+| Declared range | 0.0 – 1.0 | 0.2 – 1.2 |
+| Mean over AOI | ~0.10 | ~0.69 |
+
+Where they differ / how they relate:
+- **Correlation across cells: 0.497** (moderate, not strong) — the two maps do not follow each other's spatial pattern tightly; regions one rates high are not consistently the same as regions the other rates high.
+- Agreement within ±0.1: **0% of sampled cells**. But the tool flags that this is misleading — the bands measure different properties on different scales, so the mean gap (~0.59), RMSE (0.63), and 0% agreement describe *different units*, not one map being "higher" or better. Only the correlation is a fair cross-model number.
+- 53 of 288 sampled cells were no-data in one or both maps and dropped.
+
+Which is right?
+- **Not answerable from these results alone.** There is no ground-truth layer in this project, so neither model's output can be scored for accuracy — the comparison above is model-vs-model agreement only. Neither band is a confidence or class probability; both are per-pixel values.
+- To actually decide, we need labels: I can run a label-sample design on one (or both) maps (`plan_label_sample` → you mark N windows → `estimate_map_error` gives each map an honest error rate), or compare them against any reference karst dataset you have. That would produce per-map accuracy instead of guesses.
+
+Want me to set up the labeled error check on the KarstBinary score, the KarstNumber layer, or both?

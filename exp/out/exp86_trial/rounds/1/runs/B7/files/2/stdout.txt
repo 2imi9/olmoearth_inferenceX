@@ -1,0 +1,23 @@
+
+
+Compared both maps over the 78,028 shared windows. Here's what the result says:
+
+**Differences**
+- **1,570 windows (2.0%) differ** between the pre map (Sep 14–15, 2017) and post map (Apr 19, 2018).
+- Typical flips are between class 0 and class 1; many cluster in contiguous blocks (rows 344–345, 1134–1141, 1442–1449), suggesting coherent features rather than salt-and-pepper noise.
+- Mean model margin on differing windows: **A = 0.39**, **B = 0.16** — the pre map is more confident where they disagree.
+
+**Which is right? Neither verdict is possible from these two maps alone.**
+The dates are 216 days apart, so any differing window has two explanations: it *changed on the ground* (Sep → Apr spans full seasons here, so this is likely a large part of the 2%), or one map is *wrong*. No reference for either date was given, so there's nothing to separate those cases — and even with labels, confidence doesn't decide it: upstream measurements put the more-confident side right on only ~51–70% of differing windows. Declining to pick a side is the correct answer, not a failure.
+
+| Window (row, col) | A (Sep 2017) | B (Apr 2018) | margin A | margin B |
+|---|---|---|---|---|
+| 4819 (344, 3) | 1 | 0 | 0.026 | 0.371 |
+| 10106 (721, 12) | 0 | 1 | 0.040 | 0.050 |
+| 15915 (1136, 11) | 0 | 1 | 0.025 | 0.200 |
+| 20192 (1442, 4) | 0 | 1 | 0.498 | 0.138 |
+| 20278 (1448, 6) | 0 | 1 | 0.499 | 0.349 |
+
+(50 differing windows were listed; I showed 5.)
+
+**To actually settle it:** give me ground-truth labels for one or both dates (with `labels_date` for each) and I'll grade the differing windows per date; or I can pull a review-set ranking so you inspect the most suspect differing windows first.

@@ -1,0 +1,12 @@
+
+
+Compared both maps on their shared 78,028 windows (F4 pre vs post).
+
+**Where they differ**
+- **1,570 windows differ** (~2.0% of all), almost all between classes 0 and 1.
+- Most are small clusters: e.g. row 344–345 cols 0–4 (A says class 1, B says 0), rows 1134–1141 cols 6–12 (mixed directions), and a larger block at rows 1442–1449 cols 4–6 where A is confidently class 0 (margins ~0.49) and B flips to class 1.
+- On differing windows, A's mean margin is 0.389 vs B's 0.158 — A is more confident overall there, but confidence does not identify the winner.
+
+**Which is right: cannot be determined from these two maps.** The maps describe dates 216 days apart (Sep 2017 vs Apr 2018), so any difference is either real change on the ground (seasonal cycle included) or an error in one map — the decisions alone can't separate the two, and no reference date was provided. Even with labels, grading would need to know which reference applies to which date. Measured upstream, the more confident side wins only 51–70% of differing windows, so picking "the confident one" is not justified.
+
+**What would settle it:** ground references for each date (photointerpretation, expert labels, or another acquisition per date) to grade each map separately — I can then compute per-class metrics with `olmoearth_classification_metrics`. Want me to set that up?

@@ -1,0 +1,20 @@
+
+
+Short answer: **none**. At α = 5% (and δ = 0.1), no part of the map clears the exact test with your 300 random labels.
+
+**Why:** the overall label count shows ~69/300 ≈ 23% of windows wrong, so even the most-confident regions fall far short of a 5% error cap:
+
+| Zone | Coverage | Labels inside | Wrong | Upper bound @ δ=0.1 | Certified? |
+|---|---|---|---|---|---|
+| Most confident | 15% | 46 | 3 | 13.9% | ✗ |
+| | 25% | 68 | 3 | 9.5% | ✗ |
+| Whole map | 100% | 300 | 69 | 26.4% | ✗ |
+
+Even the top-15% block (≈2,372 windows) shows 3/46 ≈ 6.5% errors in-sample, with a 13.9% certified ceiling — well above 5%.
+
+**Options if you still want a certified zone:**
+1. **Loosen α** — e.g. α = 15% would make the top-15% zone plausible (its upper bound is already under 15%); I can re-run `certify_zone` with that α.
+2. **Label more** — only 300 random labels were used; a larger budget tightens the bounds (certification needs ≥45 labels inside the zone, which you have, but the observed rates are simply too high).
+3. **Accept uncertified use** — treat the top-confidence areas as "most reliable" descriptively, without a 5% guarantee.
+
+Tell me which you'd like (e.g. "try α=15%") and I'll rerun.

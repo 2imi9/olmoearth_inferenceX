@@ -1,0 +1,18 @@
+
+
+Done — compared both 2025 maps over the PA Karst area (shared extent ~10,091 km², 6x6 window grid, 25 valid samples; 11 no-data dropped).
+
+**Headline:** the two maps do not agree at all — Pearson correlation **-0.017** across sampled windows, i.e. zero relationship. They are near-independent predictions of the same landscape.
+
+| | KarstBinary | KarstNumber |
+|---|---|---|
+| result_id | `419c581d-…f26b` | `afb1cf68-…9ae8` |
+| band | `sample_karst_score` | `sample_number` |
+| range | 0–1 (score) | 0.2–1.2 (count-like value) |
+| mean over sampled windows | 0.10 | 0.68 |
+
+Caveats:
+- The bands are **different quantities**, so only the correlation is meaningful; the mean gap (~0.58), RMSE (0.62) and 0% within-tolerance agreement must not be read as "one is higher/better."
+- Sampled on a coarse grid — an estimate of where they differ, not every pixel. Practically: everywhere is a disagreement zone here, so if you need spatial detail, zoom into the tile layers side-by-side in Studio/QGIS (I can build a QGIS layer pack for either map).
+
+**Which one is right?** I can't answer that honestly from these tools alone: no ground-truth labels exist for this AOI, and without labels model-vs-model comparison reports agreement only, never accuracy (the more confident side wins only ~51–70% of contested windows). To settle it I'd need labeled karst samples — e.g., run a label-sample design on one (or both) results, label those windows, then compute per-map error rates. Say the word and I'll set up the sampling plan.

@@ -1,0 +1,18 @@
+
+
+Short answer: **none of it.** With these 300 random labels I ran the exact certification test (alpha = 0.05, delta = 0.1, prefix rule) and no zone passed - not even the smallest testable one.
+
+| Zone (most-confident windows) | Labels inside | Wrong inside | Upper bound on error | Pass <= 5%? |
+|---|---|---|---|---|
+| 15% of map (2,372 windows) | 46 | 3 | 13.9% | ✗ |
+| 25% of map (3,953) | 68 | 3 | 9.5% | ✗ |
+| 50% of map (7,906) | 140 | 13 | 13.2% | ✗ |
+| Full map (15,813) | 300 | 69 | 26.4% | ✗ |
+
+Context from the same labels: the whole-map error rate estimate is **23%** (95% interval 18.4-28.1%, exact hypergeometric interval). Even the top-of-confidence quarter of the map shows an observed ~4% wrong, but the interval over so few labels doesn't get under 5% with the required 90% assurance (delta = 0.1).
+
+What you can do:
+
+- **Label more windows** - certification needs enough labels inside each zone; 300 spread across 15,813 windows leaves the smallest zone with only 46. A fresh `random` design with a much bigger budget (and then labeling the high-confidence windows densely) is what would certify something.
+- **Relax the guarantee** - if "at most ~9% wrong, with 90% assurance" is acceptable, the top ~25% of the map (by model confidence) nearly qualifies at alpha ≈ 0.10; say the word and I'll rerun with that alpha.
+- Note the per-class picture (class 7: ~94% user accuracy, class 6: ~34%) - if you want trust per land-cover class rather than per window, that's a different analysis I can run.

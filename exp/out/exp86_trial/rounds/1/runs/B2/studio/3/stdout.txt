@@ -1,0 +1,19 @@
+
+
+I ranked the KarstBinary 2025 result (`result_id 419c581d-…f26b`, band `sample_karst_score`, [0, 1]) with the review-set tool on a 10x10 grid: 72 valid windows, 28 dropped as no-data.
+
+**Why these come first:** the band is read as P(positive) at threshold 0.5 (ranking only — not an error probability), and windows closest to the decision line (score near 0.5, smallest margin) are the model's least-committed predictions, so they are opened first. This ordering is backed by Ai2's measured suite where the margin beat every no-model control on all 24 tasks.
+
+**Top windows to check** (row 0 = north):
+
+| Rank | Window (row, col) | Score | Predicted side |
+|---|---|---|---|
+| 1 | (4, 7) idx 47 | 0.352 | ≤0.5 (no karst) |
+| 2 | (4, 2) idx 42 | 0.285 | ≤0.5 |
+| 3 | (0, 5) idx 5 | 0.745 | >0.5 (karst) |
+| 4 | (1, 8) idx 18 | 0.223 | ≤0.5 |
+| 5 | (8, 5) idx 85 | 0.808 | >0.5 |
+
+A 5% review budget covers windows 1–4 (margin cut 0.55); 10% adds up to rank 7.
+
+Caveats: this orders suspicion, it does not calibrate it, and the review set is not a sample — its error rate overstates the map's (upstream 1.8–5.8x). If you want the actual error rate, I can run `olmoearth_plan_label_sample` from the saved scores file to choose honest labeling windows.

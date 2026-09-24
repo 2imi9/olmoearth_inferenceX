@@ -1,0 +1,14 @@
+
+
+Your map's error rate is estimated at **19.4%**, with a 95% CI of **[15.7%, 23.6%]** (equivalently, ~80.6% accuracy) — so roughly 1 in 5 windows on this map is wrong.
+
+| | Value |
+|---|---|
+| Estimate | 0.194 |
+| CI (95%) | 0.157 – 0.236 (half-width 0.039) |
+| Method | Stratified by confidence margin; Wilson interval on effective sample size (eff. n ≈ 384) |
+| Labelled / population | 300 / 15,813 windows; no starved strata |
+
+Caveats from the per-class breakdown: class 4 (user accuracy ~96%) and 7 (~92%) are solidly labeled, but classes 1, 2, 5, 6, and 8 have fewer than 30 labels each, so their per-class intervals are wide — e.g., class 6's user accuracy is only 45% (95% CI 32–59%), which likely drives much of the overall error.
+
+Note: this interval comes from the stratified-design calculation above; the simple random-sample formula (p ± 1.96·sqrt(p(1−p)/n)) does not apply here. I can expand the full confusion matrix or per-class details if you'd like.
