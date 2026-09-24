@@ -3,9 +3,9 @@
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage{lmodern}
+\usepackage{amsmath}
 \usepackage{graphicx}
 \usepackage{booktabs}
-\usepackage{array}
 \usepackage{tabularx}
 \usepackage{natbib}
 \usepackage[hidelinks]{hyperref}
@@ -16,460 +16,490 @@
 % against a committed artifact by scripts/claims.py, and the marker is how a reader finds the check.
 \newcommand{\claim}[1]{{\scriptsize\textsf{\textcolor{gray}{[#1]}}}}
 \newcommand{\pkg}{\texttt{olmoearth\_inferenceX}}
+\newcommand{\code}[1]{\texttt{#1}}
 
-\title{\pkg: what was done, what held, and what did not\\
-\large Technical report, not a submission}
+\title{\pkg: confidence-based review, comparison and accuracy estimation for Earth-observation classification maps\\[6pt]
+\large Technical report, version 1.3.0}
 \author{Ziming Qi\\[2pt] \small \url{https://github.com/2imi9/olmoearth_inferenceX}\\[-1pt]
 \small \url{https://olmoearth-inferencex.readthedocs.io}}
-\date{17 September 2026}
+\date{24 September 2026}
 
 \begin{document}
 \maketitle
 
-\section*{Summary}
+\begin{abstract}
+This report describes \pkg, a Python package for assessing classification maps from Earth-observation models, and
+the record behind it. Without labels, the package ranks a map's windows for review by the model's confidence margin,
+explains each flagged window by label-free cues, and compares two maps with regard to their dates. With a labelled
+sample, it estimates error rate and per-class accuracy with design-based intervals and certifies a high-confidence zone
+whose error rate is bounded with a stated probability. On all 24 tasks
+of the model authors' published embedding suite that define a margin, the margin ranks the model's errors better than
+the best control that does not use the model, and under ten probe seeds it does so on at least 75\% of the tasks of
+each of the suite's sixteen encoders. A simple random sample of 300 windows gives a nominal 95\% interval that covers
+the true error rate on 0.933 to 0.961 of simulated draws on seven segmentation tasks; labelling 19 tiles of 16 windows
+and applying the independent-sample formula covers on 0.506 to 0.777 of draws on six of them. The certified zone met
+its guarantee on all 112 graded cells. The record comprises 86 experiment scripts and 204 ledger claims, each checked
+against a committed artifact, and reports failed predictions as failed.
+\end{abstract}
 
-A prediction map from an Earth-observation foundation model ships over regions
-that have no labels. This project asks one question about such a map, with no
-labels at hand: \emph{which windows should a reviewer check first, why is each
-one suspect, and when two inferences of the same scene disagree, how much do they
-differ, where, and can the map itself say which is right?} Labels are used only
-to grade the answers, never to produce them.
+\section{Introduction}
 
-The answer, across 65 experiments and 146 recorded claims, is short. The model's
-own confidence, the top-1 minus top-2 logit margin on each window, is the signal.
-It ranks the model's own errors on every expert-labelled testbed tried, on five
-kinds of reference that fail in different ways, and on all 24 tasks of the model
-authors' own published evaluation suite, which this project did not choose,
-under OlmoEarth and fifteen other encoders.
-Nothing else tried beats it, on the water testbeds or on that suite: not
-ensembles, not distance from the training distribution, not consistency under perturbation, not the pretraining objective's
-own error, not a second model of the same family. Comparing two inferences of one
-scene says how much they differ and where, and the answer to \emph{which side is
-right} is, without labels, to decline: the more confident side is right on only
-half to two thirds of the differing windows.
+A classification map from an Earth-observation model is usually applied where no reference labels exist. This report addresses three questions: which windows to review first when only a
+fraction can be checked; how two maps of one area differ, when they come from different crops, backbones, sensors,
+encoders, training states or dates; and, once some windows are labelled, how wrong the map is, how accurate each class
+is, and which part of it can be used with a stated error bound.
 
-Three of the project's own predictions failed and are kept. A strong reasoning
-model given a numpy sandbox rediscovers the ranking by itself and grounds its
-numbers nearly as well as a model given the package as tools; what the package
-adds to such a model is the evidence about when not to choose a side, and
-reliability; at 7B the same package is decisive on every axis, and the agent no
-longer finds it unaided. The project's method is its other contribution: predictions written
-before each run with what would falsify them, every documented number pinned to
-a committed artifact by an executable check, and 31 rejected claims recorded as
-prominently as the 40 supported ones.
+\pkg{} ranks $4\times4$-pixel windows by the model's confidence margin with label-free cues (Section~\ref{sec:ranking}),
+compares two maps with regard to their dates (Section~\ref{sec:compare}), estimates error rates and per-class accuracies
+from a labelled sample (Section~\ref{sec:estimate}), and certifies a zone of the most confident windows
+(Section~\ref{sec:zone}). It reads arrays and rasters and loads no model. In the evaluation the label-free readings are graded against labels and never fitted
+to them \claim{labels-grade-never-train}.
 
-This report is written so that Ai2 can read what was done in an hour and decide
-whether any of it is worth refining together. It is not a paper and does not
-claim novelty; each idea's origin is in Section~\ref{sec:origins}.
+\paragraph{Relation to prior work.} No component is new in isolation. Risk-coverage evaluation comes from selective
+classification \citep{chow1970,geifman2017,geifman2019}, softmax confidence as the error-detection baseline from
+\citet{hendrycks2017} and \citet{jaeger2023}, and the margin from margin sampling \citep{scheffer2001,lewis1994}; related
+measures are \citet{rottmann2020} and \citet{meyer2021}. The estimators follow design-based map-accuracy practice
+\citep{olofsson2014,stehman2019}, and the certified zone follows risk control by exact tests
+\citep{bates2021,angelopoulos2021}. This work applies them to Earth-observation maps at the window level and tests the
+known signals against the model's confidence and against controls that do not use the model.
 
-\section{The question, and what is not asked}
+\section{Methods}
+\label{sec:methods}
 
-Given a map, three questions. Which windows to review first at a fixed budget,
-say 5\% of the windows. Why each flagged window is suspect, in terms a reviewer
-can check. And, given a second inference of the same windows (another crop
-offset, another backbone, another sensor, another date, before against after
-fine-tuning), how much the two differ, where the differences sit, and which to
-believe.
+\subsection{Windows, the confidence signal and the ranking}
+\label{sec:ranking}
 
-What is not asked: whether the model is accurate. Accuracy is what the model's
-own benchmarks measure. This measures where a given map is wrong, which no public
-benchmark scores. It is also not out-of-distribution detection: a window can be
-far outside the training distribution and right, or inside it and wrong, and the
-signal here tracks the second.
+Pixels are grouped into windows of $4\times4$ pixels, the unit of ranking, comparison and estimation. A window's
+decision is the majority class of its pixels, and a tie goes to the class whose voting pixels are more
+confident. For a pixel with logits $z_{(1)} \ge z_{(2)} \ge \dots$, the confidence is the margin
+\begin{equation}
+  m = z_{(1)} - z_{(2)},
+\end{equation}
+and for a binary logit map the absolute logit $|z|$. For a probability map it is the top class probability, which ties
+where probabilities saturate, so logits are preferred. The option \code{form="top1"} ranks a multi-class logit map by
+$1 - p_{(1)}$ computed from the logits without ties. A window's confidence $m(w)$ is the pixel confidence averaged over
+the window, and its suspicion is $\sigma(w) = -m(w)$.
+
+A window is a boundary window when any of its eight neighbours has a different decision. The confidence order sorts
+windows by decreasing suspicion; the boundary-first order takes the boundary windows first, each group by suspicion.
+The review set at budget $b$ is the first $\max(1, \mathrm{round}(bN))$ of the $N$ valid windows. Each flagged window
+carries the cues it satisfies: boundary, low confidence (the least confident fifth), tiling instability (a changed
+decision under a two-pixel crop shift) and, for water maps, spectral ambiguity. A cue's enrichment, its share among
+error windows over its share among correct windows, is quoted as measured on labelled data; since version 1.3.0 the
+boundary cue is quoted with the range measured on the suite and the map's own boundary prevalence.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.92\linewidth]{../docs/figures/pipeline.png}
-\caption{One scene through the audit: Sentinel-2 bands, the frozen OlmoEarth
-encoder and a task head, the prediction with its confidence and boundary layers,
-the review set at a 5\% budget, and the reasons per flagged window. One forward
-pass, no labels.}
+\caption{One scene through the label-free assessment: Sentinel-2 bands, the frozen OlmoEarth encoder and a task head,
+the prediction with its confidence and boundary layers, the review set at a 5\% budget, and the cues per flagged window.}
+\label{fig:pipeline}
 \end{figure}
 
-\section{Protocol}
+\subsection{Comparison of two maps}
+\label{sec:compare}
 
-\subsection{Units, signal, statistics}
+For hard window decisions $A$ and $B$ of two maps on one grid, over the windows $V$ both predict, the package reports
+without labels the disagreement rate $D = |\{w \in V : A(w) \neq B(w)\}| / |V|$, pooled and per group (tile, event or
+zone), the enrichment of each cue among differing windows, and the $\phi$ coefficient between two disagreement masks,
+which measures whether two differences occupy the same windows. A rate is read against the reseed floor, the rate at
+which refitting the head with another seed changes decisions. With labels, a separate block adds the cross-tabulation
+of the two error maps and the share of differing windows on which each map matches the label.
 
-The graded unit is a 4-pixel window on the prediction grid, or the sample on
-classification tasks. The signal is the model's own margin, top-1 minus top-2
-logit; its negation is the suspicion score, higher first. Ranking quality is the
-excess area under the risk-coverage curve \citep[E-AURC,][]{geifman2019},
-tie-aware, and the capture at a budget: the share of all errors inside the most
-suspect 5\%, 10\% or 20\% of windows. A budget of $b$ on a map with error rate
-$e$ cannot capture more than $\min(1, b/e)$, so every capture is reported beside
-that attainable ceiling. Comparisons between signals use one-sided exact sign
-tests over independent groups (tiles, events, regions, tasks) and, where a
-reference is a stratified sample, design-weighted estimators
-\citep{olofsson2014} with a cluster bootstrap.
-
-\subsection{Two baselines every rule must beat}
-
-A candidate signal is scored against the model's own confidence and against a
-control that sees no model: a pixel statistic such as a water index or the
-within-window variance, or, where imagery is not published, the distance of a
-sample from the training set's mean embedding and the rarity of the predicted
-class. A signal that does not beat the no-model control does not exist; one that
-beats it and loses to confidence is the interesting case, and most of
-Section~\ref{sec:rejected} is that case.
-
-\subsection{Five kinds of reference}
-
-\begin{table}[h]
-\centering\small
-\begin{tabularx}{\linewidth}{lX}
-\toprule
-The answer key came from & Testbeds \\
-\midrule
-people reading the same imagery & Sen1Floods11 hand labels \citep{bonafilia2020}, Copernicus EMS through GEOID-Flood \citep{chiriaco2026}, WorldFloods~v2 \\
-another model's output & DFC2020 \citep{yokoya2020}, whose test labels are an iterated random forest \\
-experts annotating a served product & Dynamic World \citep{brown2022}, 409 expert tiles, audited from its own published probabilities \\
-surveyors standing in the field & LUCAS Copernicus 2022 \citep{dandrimont2021}, the only reference here that never saw a pixel \\
-farmers' own declarations & EuroCrops \citep{schneider2023}, which also labels both sides of a two-date comparison \\
-\bottomrule
-\end{tabularx}
-\caption{A signal that survives five kinds of answer key is unlikely to be an artifact of one.}
-\end{table}
-
-\subsection{Preregistration and the claim ledger}
-
-Every experiment states its predictions and their falsification conditions in
-its docstring before it runs; a null is not equivalence. Every sentence in the
-documentation that states a number carries a claim id, and \texttt{docs/claims.yaml}
-holds 138 claims, each with a statement, a status, the experiments and artifacts
-it rests on, and an executable check; \texttt{scripts/claims.py stale} fails when
-an artifact no longer says what the prose says. The statuses at the time of
-writing: 40 supported, 44 measured, 21 mixed, 31 rejected, 2 superseded. Labels
-grade signals and never train them \claim{labels-grade-never-train}.
-
-\section{What holds}
-
-\subsection{Confidence ranks the errors}
-
-The model's own confidence is the best single label-free ranker on the AWF
-points, the fine-tuned model and the Sen1Floods11 test split, under both
-backbones and both window designs, leading or tying \claim{confidence-best-single-signal}.
-In a reviewer's units, on the median GEOID-Flood area of interest the 5\% of
-windows it flags hold 88\% of the permanent-water errors and 64\% of the
-post-event water errors, 17.5 and 12.8 times a random 5\% \claim{geoid-capture-effect-size}.
-
-The exception is recorded. On one flood event, Bolivia, a plain water index
-matches confidence, because water against not-water there is close to a spectral
-threshold; over 45 GEOID areas from nine activations the honest exception rate is
-one activation in nine \claim{geoid-exception-rate}, and the exception belongs to
-the frozen encoder: after fine-tuning with the model authors' recipe it is gone
-\claim{finetune-dissolves-bolivia-exception}.
-
-\subsection{Tasks this project did not choose}
-
-The strongest objection to testbeds one picked oneself is answered by the model
-authors' own published embedding suite: 25 tasks chosen by them for their paper
-\citep{herzog2025}, splits fixed in the files, no encoder pass needed. On all 24
-tasks where a margin is defined, and on all 14 distinct sources behind them, the
-margin beats the best no-model control: 6,435,473 graded units, an accuracy range
-from 0.333 to 0.979, 17 of 17 classification and 7 of 7 segmentation tasks,
-sign test $p = 6\times10^{-8}$; six of the tasks come from GEO-Bench
-\citep{lacoste2023} and the margin wins on all six \claim{suite-margin-wins-every-task}.
-
-The bar a practitioner cares about is the alternatives the literature actually
-proposes, run on the same tasks (exp73): a five-seed probe ensemble
-\citep{lakshminarayanan2017}, distance to the tenth nearest training embedding
-\citep{sun2022}, and a class-conditional Mahalanobis distance \citep{lee2018}
-fitted on predicted classes so that labels never train it. Preregistered at
-exp70's own bar, all three hold: the margin beats the ensemble on 22 of
-24 tasks ($p = 1.8e-05$), the nearest-neighbour distance on 24 of 24
-and the Mahalanobis distance on 24 of 24 ($p = 6.0e-08$)
-\claim{suite-margin-beats-the-strong-alternatives}. The alternatives are real
-signals, each beating the no-model control on roughly half the suite (15,
-14 and 12 tasks), and better than the margin on none;
-the ensemble is nearly the margin's equal on classification and clearly behind on
-segmentation \claim{suite-alternatives-clear-the-control-and-still-lose}.
-
-One more input was tried after the release. The same tasks are published embedded from
-different sensors, so a head fitted on another sensor is an expert on a different input,
-and its disagreement with the reference head costs no labels (exp75, five groups,
-464{,}366 units). That disagreement beats every no-model control
-\claim{sensor-disagreement-beats-the-control}, and still does not pay: of the errors
-outside the margin's 10\% review set it finds more than the control on three of five
-groups and not on the largest, and interleaving the two rankings captures no more at 5\%
-or 10\% on any group \claim{sensor-disagreement-does-not-pay-in-a-review-set}. What the
-margin misses is mostly invisible to a second sensor as well; closing it needs labels.
-
-Which member of the confidence family is the last question asked of the suite (exp76).
-Under AUGRC, which for fixed errors orders readings as the failure AUROC does, the
-margin beats the best control on 23 of 24 tasks
-\claim{augrc-leaves-the-suite-result-standing}. One minus the top probability ranks
-errors better than top-1 minus top-2 on 14 of the 16 multi-class tasks, by a median
-$0.0006$ of excess AURC beside a lead over the control of $0.116$, and on binary tasks
-the forms are one ranking \claim{top1-beats-the-margin-on-multiclass}; no score built
-from the whole logit vector, and no aggregation of pixels into a window, does better.
-
-Nor is the result a property of one encoder. Ai2 published the same task
-embeddings for other models with their own probe settings, so exp70's protocol
-was run unchanged on every encoder carrying at least 20 of the 24 tasks
-(exp74): fifteen encoders, from eight families outside OlmoEarth (AnySat, Clay,
-Panopticon, Galileo, CROMA, TerraMind, Satlas, Copernicus-FM) and the OlmoEarth
-size series. Across 332 scored (encoder, task) pairs and 92 million graded
-units the margin beats the best no-model control on 322, every encoder at
-90\% or better (preregistered P1, bar 75\%), eight of them undefeated; the ten
-losses sit on CropHarvest Togo and Nandi Sentinel-1 alone
-\claim{suite-holds-under-every-encoder}. The three outside families that carry
-the whole suite win on 23, 24 and 24 of 24 (P2, bar 22)
-\claim{suite-outside-families-hold-at-twenty-two}, and across the OlmoEarth
-sizes the median lead is flat to slightly narrowing, $+0.131$ at tiny to
-$+0.113$ at large, while the tasks won rise from 22 to 24 (P3, descriptive)
-\claim{suite-lead-across-olmoearth-sizes}. A task an encoder was not published
-for is recorded as absent, never as a loss.
-
-\subsection{Products this project had no hand in}
-
-Dynamic World can be audited from nothing but the probabilities it publishes
-about itself. On its 409 expert-annotated tiles, 4,348,526 windows, the product's
-own margin ranks its own errors better than a control that sees neither the
-imagery nor the probabilities: pooled E-AURC 0.0637 against 0.1120, 315 tiles to
-91, $p = 2.7\times10^{-30}$; as a check, the pooled decision reproduces the
-product's published top-1 on 98.99\% of windows \claim{dw-margin-ranks-a-production-model}.
-The margin also beats one minus the top-1 probability there, and the reason is
-ties: the naive form takes the same value on 23.4\% of windows, the margin on
-3.6\% \claim{dw-margin-beats-naive-confidence}. The explanation cues transfer:
-among the product's error windows the boundary cue fires 2.93 times as often as
-among its correct ones \claim{dw-errors-carry-the-cues}.
-
-On LUCAS, where a surveyor stood at the point and the reference never saw a
-pixel, the margin's design-weighted E-AURC is 0.1468 against 0.2421 for the best
-control an operator could compute at inference time, on 94 regions to 32
-\claim{lucas-ranking-survives-ground-observation}. On EuroCrops, farmers'
-declarations across three countries, it beats the best control in every region
-and on all but four of 146 grid cells \claim{eurocrops-ranking-holds-on-declarations}.
-On DFC2020's eight classes it beats the pixel control on all three sensor arms
-\claim{dfc2020-margin-beats-pixel-control}.
-
-\subsection{Comparing two inferences of one scene}
-
-The package's second command measures the difference between two inferences on
-identical windows. Across every pair tried, crop offsets, backbones, sensors,
-encoders, frozen against fine-tuned, the differing windows sit on class
-boundaries, enriched 3.3 to 7.1 times on Sen1Floods11 and 21 times on the median
-GEOID event \claim{atlas-disagreement-is-boundary-located}; the sensor difference
-and the backbone difference are different sets of windows, $\phi$ 0.27 and 0.18
-\claim{atlas-different-differences}. A same-period cross-sensor difference carries
-none of a later flood, 0.4\% of its windows against 19.5\% for a mixed pair
-\claim{two-periods-sensor-axis-isolated}; on DFC2020 the two sensors differ on
-44.27\% of windows, 33 times what reseeding the probe moves, with the optical
-side right on 50.4\%, the radar side on 17.2\% and both wrong on 32.4\%
-\claim{dfc2020-sensor-difference-dominates-land-cover}.
-
-Which side is right stays a labelled question. Two facts fix that reading. The
-raw margin rule, believe the more confident side, is right on 55 to 61\% of
-differing windows; a rule fitted on labels reaches 73 to 75\% but only within the
-model family it was fitted on, and forced across families it falls to 44 to 49\%
-\claim{calibrate-family-lock}. So the tool declines, and says why.
-
-EuroCrops labels both years of a two-date comparison and gives the floor such a
-comparison needs: the map moves on 6\% to 37\% of windows whose declared crop did
-not change, one to two orders of magnitude above the 0.3\% that reseeding the
-readout moves \claim{eurocrops-the-labelled-floor-for-a-two-date-difference}; and
-on 5\% to 37\% of differing windows the model was right about both years, which is
-the model correctly following a rotation and not either side being wrong
-\claim{eurocrops-a-difference-can-be-the-model-tracking-the-ground}.
+Each map may carry the date or period it represents. At one time a difference implies an error in at least one map;
+across times it may be change on the ground, and the package then grades which map is right only when the labels' date
+is given, reporting which map the labels match in time; with one date stated, grading is refused. Without labels the
+package does not decide which map is right.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.92\linewidth]{../docs/figures/compare.png}
-\caption{Four dated inputs of one GEOID-Flood chip, each read on identical
-windows; the same-period and same-sensor differences on the scene, and the label
-bridge boxed apart, because what a difference \emph{is} needs labels.}
+\caption{Four dated inputs of one GEOID-Flood chip, each read on identical windows: the same-period and same-sensor
+differences on the scene, with the comparison against labels shown separately.}
+\label{fig:compare}
 \end{figure}
 
-\subsection{The review order, the explanation layer, and the labelled fusion}
+\subsection{Design-based estimation}
+\label{sec:estimate}
 
-Reviewing boundary windows first, then the interior in confidence order, captures
-more of the errors than confidence alone at the 5\% and 10\% budgets and is no
-longer ahead at 20\% \claim{boundary-first-review-order}; on a served product that
-exports no confidence, the boundary fraction alone captures a median 0.88 of the
-water disagreements at 5\% \claim{served-product-boundary-triage}. With labels
-where they exist, a fusion of five label-free readings, cross-fitted by tile, cuts
-confidence's E-AURC from 0.0105 to 0.0084 on Bolivia and from 0.0098 to 0.0069 on
-the test split \claim{calibrate-ranker-fusion-beats-confidence}, bound to the
-family it was fitted on.
+Let the map have $N$ valid windows, $e_i = 1$ where the map's class differs from the reference class, and
+$\theta = N^{-1}\sum_i e_i$. A reviewer labels $B$ windows under one of three designs.
 
-\section{What did not work}
-\label{sec:rejected}
+\textbf{Confidence-stratified design (default).} Five strata are cut at the quintiles of the margin, with sizes $N_h$
+and weights $W_h = N_h/N$. The budget follows Neyman's allocation, which minimises the variance of the stratified
+estimate at a fixed budget,
+\begin{equation}
+  n_h = B \, \frac{N_h S_h}{\sum_j N_j S_j}, \qquad S_h \approx \sqrt{q_h (1 - q_h)},
+\end{equation}
+where $q_h$ is the mean of $1 - p_{(1)}$ in stratum $h$, floored at 0.02, and each stratum receives at least two
+labels. With $p_h$ the error share among stratum $h$'s labels and $f_h = n_h/N_h$,
+\begin{equation}
+  \hat\theta = \sum_h W_h \, p_h, \qquad
+  \hat v = \sum_h W_h^2 (1 - f_h) \, \frac{p_h (1 - p_h)}{n_h - 1},
+\end{equation}
+both unbiased under stratified sampling without replacement, with Wilson's interval at the effective sample size
+$\hat\theta(1-\hat\theta)/\hat v$ (Korn and Graubard, 1998).
 
-Thirty-one claims are rejected. Grouped, with the reason, because the reason is
-what a reader can reuse:
+\textbf{Simple random design.} The sampled error count $k$ is hypergeometric, and the interval for $\theta = K/N$ holds
+every $K$ whose two tail probabilities at $k$ both exceed 0.025, widened if needed to contain $k/n$; its coverage is at
+least 95\% for every $(N, K, n)$.
+
+\textbf{Tile design.} With 16 windows labelled in each of $t$ tiles, the estimate is the ratio
+$\hat\theta = \sum_i n_i \bar y_i / \sum_i n_i$ with ultimate-cluster variance
+$\sum_i n_i^2 (\bar y_i - \hat\theta)^2 / (t(t-1)\bar n^2)$, reported beside the independent-sample interval; its
+variance ratio to simple random sampling is the design effect.
+
+\textbf{Review-set check.} Labelling the review set gives the error share $\mathrm{capture}(b)\,\theta/b$, where
+$\mathrm{capture}(b)$ is the set's share of all errors. Windows labelled without a design are accepted as a random
+sample only if their mean suspicion percentile lies within four standard deviations of 0.5.
+
+\textbf{Per-class accuracy.} With map class $m$ and reference class $r$, the user's accuracy is
+$\mathrm{UA}_c = \#\{m{=}c, r{=}c\}/\#\{m{=}c\}$, the producer's accuracy $\mathrm{PA}_c = \#\{m{=}c, r{=}c\}/\#\{r{=}c\}$
+and the error-adjusted share $A_c = \#\{r{=}c\}/N$. Under a random sample $\mathrm{UA}_c$ has the exact interval, and
+$A_c$ and $\mathrm{PA}_c$ \citep{olofsson2014} have Wilson intervals at the effective sample size; under the confidence
+design each is a ratio of Horvitz--Thompson (inverse-probability-weighted) totals with a linearised variance. Warnings
+mark classes with fewer than 30 labels, thin or near-census sampling, one to four sampled errors, or no prediction.
+
+\subsection{The certified zone}
+\label{sec:zone}
+
+Windows are ordered by decreasing margin, ties by index; the zone at coverage $c$ is the first $n_c =
+\mathrm{round}(cN)$ windows, and its risk $R(c)$ is the error rate inside it, for $c \in \{0.05, 0.10, \dots, 1.00\}$.
+From a simple random sample of $B$ labels, of which $b_c$ fall in the zone and $k_c$ of those are errors, the exact
+one-sided p-value against $R(c) > \alpha$ is
+\begin{equation}
+  p_c = P(X \le k_c), \qquad X \sim \mathrm{Hypergeom}\bigl(n_c,\ \lfloor \alpha n_c \rfloor + 1,\ b_c\bigr).
+\end{equation}
+A rule returns a coverage $\hat c$ or no zone and is valid when $P(R(\hat c) > \alpha) \le \delta$ over the draw. The
+prefix rule \citep{bates2021} accepts coverages from the smallest upward while $p_c \le \delta$, valid when $R(c)$ does
+not decrease with $c$; the Bonferroni rule \citep{angelopoulos2021} accepts every coverage with $p_c \le \delta/J$ over
+$J$ levels and assumes nothing. Even without errors, a zone needs $\lceil \ln\delta / \ln(1-\alpha) \rceil$ labels, 45 at
+$\alpha = 0.05$ and 255 at $\alpha = 0.009$ for the default $\delta = 0.1$; the package refuses budgets that cannot
+certify the level and non-random samples, and certifies nothing outside the zone.
+
+\section{Evaluation protocol}
+\label{sec:protocol}
+
+\subsection{Units, statistics and controls}
+
+The graded unit is the window on segmentation maps and the sample on classification tasks. With $n$ units and
+$k$ errors, the selective risk at a coverage is the error rate among the least suspect units kept; AURC is
+its mean over the $n$ coverage levels, in expectation over orderings of tied units. The perfect ranking has
+$\mathrm{AURC}_{\mathrm{o}} = n^{-1}\sum_{i=1}^{n} \max(0, i - (n - k))/i$, the excess AURC is
+$\mathrm{AURC} - \mathrm{AURC}_{\mathrm{o}}$ \citep{geifman2019}, and since a random ranking scores $e = k/n$, a reading
+takes the share $1 - \text{E-AURC}/(e - \mathrm{AURC}_{\mathrm{o}})$ of the ranking headroom. The capture at budget $b$
+is the review set's share of all errors, reported beside its ceiling $\min(1, b/e)$. For a fixed error set AUGRC
+\citep{traub2024} is a decreasing affine function of the failure AUROC. Readings are compared by one-sided exact sign
+tests over independent groups (tiles, events, regions, tasks), design-weighted \citep{olofsson2014} where the reference is
+a probability sample.
+
+A candidate signal is supported only if it beats both the model's confidence and a control that does not use the
+model, and the margin must beat the control. On imagery the controls are pixel statistics such as a water index; on
+the published suite, whose imagery is not released, they are a sample's embedding distance from the training mean and
+the rarity of its predicted class.
+
+\subsection{Kinds of reference}
+
+Table~\ref{tab:refs} lists the labelled testbeds. The OlmoEarth paper's embedding suite \citep{herzog2025} adds 24
+tasks with splits fixed by the model authors; as every unit is labelled, estimators are graded on it over 2,000
+simulated draws of 300 labels.
 
 \begin{table}[h]
 \centering\small
 \begin{tabularx}{\linewidth}{lX}
 \toprule
-Family & What was measured, and why it loses \\
+Origin of the reference & Testbeds \\
 \midrule
-Ensembles and posteriors over the head & Bootstrap bags, probe-seed ensembles, mutual information, a Laplace posterior. Members of one family err on the same windows; the disagreement adds noise to the margin, not information. \claim{internal-state-signals-rejected} \\
-Feature-space typicality & kNN, Mahalanobis, embedding distance, feature-space neighbourhood contradiction. They measure whether the model is outside what it knows, which is a different question from whether this window is wrong. \claim{embedding-dissimilarity-rejected} \\
-A second model & Another backbone version, another encoder family, an outside representation. Every encoder tried errs on 80\% of OlmoEarth's error windows ($\phi$ 0.77--0.81), so two-view disagreement captures 0.24 of the errors at 10\% against 0.45 for confidence. \claim{two-view-disagreement-rejected} \\
-Consistency under perturbation & Flip-and-rotate, masking, test-time augmentation over crop offsets. Instability tracks context reliance and texture, not error. \claim{dihedral-consistency-rejected} \\
-The pretraining objective & The masked-token decoder's own residual, with the native, a whitened and a discrete target. The frozen target has effective rank 2 on real scenes; a reconstruction objective tracks the variance subspace, not the task \citep{esser2025,balestriero2024}. \claim{retargeted-residual-rejected} \\
-Published reliability signals & SHRUG-FM's \citep{gonzalez2025} image-level signals ported to the window: confidence beats each of them, and its own paper never ran the single-model confidence baseline. \claim{shrug-signals-rejected} \\
-Label-free reliability estimation & Dawid--Skene over a model family inflates every member and inverts the ordering, because the family errs together. \claim{family-errs-together-dawid-skene} \\
+people interpreting the imagery & Sen1Floods11 \citep{bonafilia2020}, GEOID-Flood (Copernicus EMS) \citep{chiriaco2026}, WorldFloods~v2 \\
+another model's output & DFC2020 \citep{yokoya2020}, an iterated random forest \\
+experts annotating a product & Dynamic World \citep{brown2022}, 409 tiles \\
+surveyors in the field & LUCAS Copernicus 2022 \citep{dandrimont2021} \\
+farmers' declarations & EuroCrops \citep{schneider2023}, labelled in both years \\
 \bottomrule
 \end{tabularx}
+\caption{Labelled testbeds by origin of the reference.}
+\label{tab:refs}
 \end{table}
 
-None of this is surprising to the failure-detection literature, where plain
-confidence has been the baseline most proposed methods fail to beat
-\citep{hendrycks2017,jaeger2023}. What is measured here is that the same holds
-on Earth-observation maps at the window level, against five kinds of reference.
+\subsection{Preregistration, the claim ledger and corrections}
+\label{sec:protocol-ledger}
 
-\section{Does the package help an agent?}
-\label{sec:agent}
+Each experiment states its predictions and falsification conditions before it runs, with dated amendments. The repository holds 86 experiment scripts named \code{expNN\_*.py}, covering 82 experiment
+numbers from exp01 to exp85. The ledger \code{docs/claims.yaml} holds 204 claims, each with a statement, status,
+artifacts and an executable check; 62 are supported, 67 measured, 29 mixed, 44 rejected and 2 superseded, and
+\code{scripts/claims.py stale} currently flags only the two superseded ones. After an audit on 23 September 2026 found
+that 138 of the then 167 checks read a result back from its own artifact, second routes were added, and 60 of the 204 claims now name a
+\code{crosscheck} test that recomputes the statistic; exp79 and exp84 were recomputed by an independent route before recording.
 
-Everything above is about the measurement. Whether the tool helps was
-preregistered and run as a benchmark (exp64): forty cards from the labelled
-testbeds with hidden labels and a 5\% budget, ten with a second inference, three
-tasks (the review set, the reasons, the comparison with declining as the correct
-answer on which side), four arms sharing one model, and a claims audit that
-matches every number an arm states against that run's tool outputs. The model is
-Qwen3.8-27B in NVFP4, served by vLLM; the plan asked for 30 to 70 billion
-parameters in fp16 or int8, and both deviations are recorded. A fifth arm the
-plan left open, the OlmoEarth Agent as it ships with the package's skill among
-its forty-one tools, was run and is reported descriptively.
+Corrected results appear in their current form. exp78's cluster-corrected arm is now the ratio estimator, which
+restores coverage where tiles are of equal size and not on MADOS, and the earlier statement to the contrary was
+withdrawn. The
+finite-population Wilson interval is now the score inversion at the effective size $n(N-1)/(N-n)$, after the earlier
+form excluded a true rate of 0.010 whenever a 100-window class's single error was sampled in 30 labels. exp70's third
+prediction, reported at $p = 6.9\times10^{-15}$ from 144 task pairs treated as independent, has $p = 0.0054$ by a
+rank-sum test over tasks and still holds. exp54's cross-encoder $\phi$ block was withdrawn.
+
+\section{Results}
+\label{sec:results}
+
+\subsection{Ranking on the labelled testbeds}
+
+The model's own confidence is the best single label-free error ranker on the AWF points, the fine-tuned model and the
+multi-region Sen1Floods11 test split, under both backbones and both window designs, leading or tying
+\claim{confidence-best-single-signal}. On the median of 45 GEOID-Flood areas of interest, the 5\% of windows it flags
+hold 88\% of the permanent-water and 64\% of the post-event water errors, 17.5 and 12.8 times a random 5\%
+\claim{geoid-capture-effect-size}. On Sen1Floods11 Bolivia, one flood event, the NDWI control ranks the errors as well
+as confidence under OlmoEarth v1 and better under v1.2 Base \claim{bolivia-ndwi-exception}; over the GEOID-Flood areas
+the exception rate is one activation in nine \claim{geoid-exception-rate}; and after fine-tuning, the model's confidence
+beats the NDWI control on Bolivia under both backbones \claim{finetune-dissolves-bolivia-exception}.
+
+\subsection{The published embedding suite}
+\label{sec:res-suite}
+
+Of 25 suite tasks, 24 define a margin. On all 24 and all 14 distinct sources, the margin ranks the errors of
+OlmoEarth Base's probe better than the best no-model control, with leads of 0.0157 to 0.2278 of excess AURC over
+6,435,473 units and accuracies from 0.333 to 0.979 (sign test $p = 6\times10^{-8}$) \claim{suite-margin-wins-every-task},
+including all six GEO-Bench tasks \citep{lacoste2023} \claim{suite-holds-in-both-families}. Under ten probe seeds the
+lead stays positive on all 24, the smallest being $+0.0017$ on CropHarvest Togo Sentinel-1
+\claim{exp79-base-margin-wins-under-every-seed}. The margin beats a five-seed ensemble \citep{lakshminarayanan2017} on 22
+of 24 tasks and the nearest-neighbour \citep{sun2022} and Mahalanobis \citep{lee2018} distances on 24 of 24
+\claim{suite-margin-beats-the-strong-alternatives}; only the ensemble beats it, on EuroSAT and AWF Landsat
+\claim{suite-alternatives-clear-the-control-and-still-lose}.
+
+Under the fifteen other encoders of the suite (eight families outside OlmoEarth and the OlmoEarth size series), the
+margin wins on 322 of 332 (encoder, task) pairs, every encoder on at least 90.5\% of its tasks
+\claim{suite-holds-under-every-encoder}; under each of ten seeds it wins on at least 75\% of the tasks of all sixteen
+encoders, the lowest share 0.875 \claim{exp79-headline-holds-under-every-seed-on-every-encoder}. Its 122 failures over the 150 encoder-seeds
+of the fifteen lie on the three 306-unit CropHarvest Togo tasks or on Nandi Sentinel-1 at a probe accuracy of at most
+0.40 \claim{exp84-losses-are-small-or-badly-fitted-tasks}, and the per-encoder sign test survives a Holm correction at
+every seed \claim{exp84-bar-survives-holm}. The margin takes a median 0.68 of the ranking headroom
+\claim{margin-takes-two-thirds-of-the-ranking-headroom}; across encoders the median share runs from 0.551 to 0.693, and
+its standard deviation between tasks is 2.8 times that between encoders within a task
+\claim{the-ranking-ceiling-is-the-tasks-not-the-encoder}.
+The best encoder is OlmoEarth Large or Base under every seed, so the record names a set of leading encoders
+\claim{exp79-encoder-ordering-stable-as-a-set}. One minus the top probability ranks errors better than the margin on 14
+of 16 multi-class tasks, by a median 0.0006 of excess AURC \claim{top1-beats-the-margin-on-multiclass}, and by AUROC,
+hence by AUGRC, the margin beats the best control on 23 of 24 tasks \claim{augrc-leaves-the-suite-result-standing}.
+
+\subsection{References produced independently of this project}
+
+On Dynamic World's 409 expert-annotated tiles, the margin of the product's published probabilities ranks its errors better than a control
+that uses neither imagery nor probabilities, excess AURC 0.0637 against 0.1120 \claim{dw-margin-ranks-a-production-model};
+one minus the top-1 probability ties on 23.4\% of windows and the margin on 3.6\% \claim{dw-margin-beats-naive-confidence}.
+On LUCAS, where a surveyor observed the point, the margin's design-weighted excess AURC is 0.1468 against 0.2421 for the
+best inference-time control \claim{lucas-ranking-survives-ground-observation}. On EuroCrops it beats the best control in all three countries and on
+all but four of 146 grid cells \claim{eurocrops-ranking-holds-on-declarations}, and on DFC2020 it beats the NDWI control
+on all three sensor arms \claim{dfc2020-margin-beats-pixel-control}.
+
+\subsection{Explanation cues and review order}
+\label{sec:res-cues}
+
+On Bolivia hand labels, 75\% of error windows lie on a prediction boundary against 21\% of correct windows
+\claim{errors-sit-on-boundaries}, and 95\% of error windows carry at least one measured cue
+\claim{explanation-cues-cover-errors}. The boundary-first order captures more errors than the confidence order at 5\% and
+10\% there and not at 20\% \claim{boundary-first-review-order}. Elsewhere it wins at 5\% on a minority of GEOID-Flood
+events \claim{geoid-boundary-first-minority}, and on the suite's Sen1Floods11 split it captures fewer errors at 10\% and
+20\% (0.415 against 0.459; 0.650 against 0.695) \claim{boundary-first-loses-on-the-suite-flood-split}. The package's
+default is confidence order.
+
+exp82 verified the cues on the seven segmentation tasks. The boundary cue's enrichment runs from 1.24 (m-cashew-plant,
+76\% of windows on a boundary) to 8.13 (MADOS, 10\%), with a rank correlation of $-0.26$ with the number of classes and
+1.00 with the ceiling $(1-\theta)/(p-\theta)$ for boundary prevalence $p$ and error rate $\theta$; the error rate inside
+the boundary set is at least 2.1 times that outside on every task
+\claim{boundary-cue-enrichment-is-fragmentation-not-class-count}. The Bolivia value formerly quoted on every map, 3.5,
+lies outside every task's 95\% interval \claim{cue-library-value-outside-every-task-interval}; windows with both the
+boundary and low-confidence cues have a higher error rate than windows with either \claim{cue-conjunction-is-purer-than-either-cue};
+and the cue weakens as windows grow \claim{boundary-cue-weakens-with-the-window-grain}, to an inside-to-outside error-rate
+ratio of 0.81 on AnySat's coarser m-cashew-plant grid \claim{cue-verification-holds-on-other-encoders}.
+
+\subsection{Comparison of two maps}
+\label{sec:res-compare}
+
+For every pair of inferences compared (crop offsets, backbones, sensors, encoders, frozen against fine-tuned), the
+differing windows carry the boundary cue 3.3 to 7.1 times as often as the agreeing ones on Sen1Floods11 and 21 times on
+the median GEOID-Flood event \claim{atlas-disagreement-is-boundary-located}, and the sensor and backbone differences
+occupy different windows ($\phi$ 0.27 and 0.18) \claim{atlas-different-differences}. On DFC2020 the two sensors differ on
+44.27\% of windows, 33 times the probe-seed rate \claim{dfc2020-sensor-difference-dominates-land-cover}.
+
+No label-free rule in the record decides which map is right. Believing the side with the larger margin is right on 51\%
+to 70\% of differing windows, above a coin flip on every pair and below the better side wherever one is known
+\claim{tool-vs-diff-resolution}. A side rule fitted on labels and cross-fitted by tile beats it by 8 to 24 points on all eight Sen1Floods11 pairs
+\claim{calibrate-side-rule-held-out}, but a rule fitted on frozen pairs and forced onto the frozen-versus-fine-tuned pair
+is right on 43.8\% and 49.2\%, below the raw rule's 61.1\% and 55.4\% \claim{calibrate-family-lock}. A label-fitted fusion of five readings lowers
+confidence's held-out excess AURC from 0.0105 to 0.0084 on Bolivia and from 0.0098 to 0.0069 on the test split
+\claim{calibrate-ranker-fusion-beats-confidence}. The package therefore reports both sides and locks each fitted rule to
+its model family.
+
+Across dates a difference can be change on the ground. On GEOID-Flood a same-period cross-sensor difference is flooded by
+the label on 0.4\% of its windows, against 19.5\% for a pair mixing sensor and date \claim{two-periods-sensor-axis-isolated}.
+On LUCAS, two acquisitions a median 118 days apart change 31.2\% of decisions against a reseed floor of 0.30\%
+\claim{lucas-two-dates-are-phenology}. On EuroCrops, which labels both years, decisions change on 0.060 to 0.366 of
+windows whose declared crop did not change, one to two orders of magnitude above the reseed rate
+\claim{eurocrops-the-labelled-floor-for-a-two-date-difference}, and on 0.051 to 0.367 of differing windows the model is
+right in both years \claim{eurocrops-a-difference-can-be-the-model-tracking-the-ground}.
+
+\subsection{Estimation from a labelled sample}
+\label{sec:res-estimate}
+
+exp78 graded the estimators on the suite's seven segmentation tasks, from an export that reproduces exp70's
+accuracies \claim{exp78-export-reproduces-the-suite}. With 300 randomly sampled windows the nominal 95\% interval covers the true
+error rate on 0.933 to 0.961 of 2,000 draws on all seven \claim{design-based-interval-is-honest}, with a half-width of
+about 3 points at a low error rate and 5 at a high one. Taken as 19 tiles of 16 windows with the independent-sample formula, it covers
+on 0.506 to 0.777 of draws on six of seven; the ratio estimator covers 0.913 to 0.932 where tiles are full and 0.598 on
+MADOS, whose tiles hold 1 to 400 windows \claim{tile-sampling-breaks-the-naive-interval}. The confidence design narrows
+the interval to a median 0.80 of the random width with coverage intact, but its clause requiring a ratio above 0.94 at
+over 30\% error failed at 0.9361 \claim{confidence-helps-most-where-the-map-is-good}; it saves up to 2.51 times the labels,
+above the preregistered 1.8 \claim{confidence-saves-a-quarter-to-a-half-of-the-labels}. On all sixteen encoders (exp79)
+the naive tile interval covers 0.34 to 0.78 except on m-cashew-plant and the random interval 0.933 to 0.963
+\claim{exp79-estimation-findings-hold-on-every-encoder}. Labelling the 5\% review set and dividing gives 1.8 to 5.8 times
+the true rate, the case the review-set check refuses.
+
+For per-class accuracy (exp81), the Wald interval of the map-accuracy literature leaves 107 of 522 cells below 0.93
+coverage, the worst at 0.019, as it collapses to a point when a class shows no sampled error; the package's forms leave
+14 of 628, none below 0.879, and no random-design user's-accuracy cell below 0.947
+\claim{per-class-intervals-wald-fails-wilson-nearly-holds}. On the nine rare-error cells the few-errors warning fires
+on 1,081 of the 1,351 draws whose interval misses \claim{rare-error-warning-marks-the-misses}, and the confidence design's per-class
+user's-accuracy intervals at 300 labels are narrower than a random sample's on 19 of 21 tasks
+\claim{confidence-design-serves-the-classes-too}.
+exp85 measured a model-assisted difference estimator with a tuned coefficient (PPI++; Angelopoulos, Duchi and Zrnic,
+2023). Under a random sample it covers 0.94 to 0.95 at 0.840 to 0.930 of the Wald width
+\claim{model-assisted-arm-is-honest-and-never-wider}; under the confidence design its stratified form (Fisch et al.,
+2024) saves 3.5\% to 5.4\% of labels at 0.4 to 1.0 points of coverage, and by the preregistered rule it was not adopted
+\claim{model-assisted-gain-beyond-the-design-is-two-percent}.
+
+\subsection{The certified zone}
+
+On OlmoEarth Base's 24 tasks at 100, 300 and 1,000 random labels with $\delta = 0.1$ (exp80), the prefix zone exceeded
+$\alpha$ on at most 0.080 of 2,000 draws and the Bonferroni zone on at most 0.0045, on all 112 cells, against a bound of
+0.120; the plug-in zone, the largest with a sample error rate of at most $\alpha$, exceeded it on up to 0.557
+\claim{trust-zone-guarantee-holds}. At 300 labels and $\alpha$ half the error rate, the plug-in exceeds $\alpha$ on more
+than $\delta$ of draws on 16 of 21 tasks \claim{plugin-zone-violates-on-most-tasks}, and the prefix rule's median
+certified coverage is 0.50 against an oracle median of 0.60 \claim{trust-zone-coverage-at-300-labels}. The guarantee held on four
+other encoders too \claim{trust-zone-guarantee-holds-on-other-encoders}. The mean top-1 probability exceeds accuracy by a
+median 0.061 \claim{mean-confidence-overstates-accuracy}, which is why the zone is calibrated on labels.
+
+\subsection{Use by a language-model agent}
+
+exp64 preregistered whether the package helps an agent, on forty cards with hidden labels, using
+\code{nvidia/Qwen3.8-27B-NVFP4}. With the package as tools, the model reproduced the review set, grounded 99.4\% of its
+numbers and declined to choose a side on every comparison card \claim{agent-benchmark-tool-arm-reproduces-the-package}.
+Two predictions failed. A numpy sandbox captured 0.904 of the package's errors
+\claim{agent-benchmark-sandbox-rediscovers-the-ranking} and grounded 94.2\% of its numbers against 99.4\%, a gap below the
+preregistered 0.2 once a grading that read only JSON fields was withdrawn \claim{agent-benchmark-grounding-not-decisive}. The decline
+held, 10 of 10 cards against 1 of 10 \claim{agent-benchmark-decline-holds}. At 7B all three predictions held
+\claim{agent-benchmark-package-is-a-floor-at-7b}, and the shipped agent called the review-set tool on 17 of 40 runs
+against 40 of 40 at 27B \claim{agent-benchmark-7b-agent-does-not-find-the-tool}.
+
+\subsection{Conditions for reading a ranking}
+
+On LUCAS, a probe that memorised its fit set placed the margin last of four model signals and a regularised probe
+placed it first \claim{lucas-overfitting-inverts-the-ranker-ordering}; on the suite the effect has the same direction at
+a magnitude of four ten-thousandths \claim{suite-probe-gap-degrades-the-ordering}. A ranking comparison should therefore
+be reported with the probe's generalisation gap. Filtering a reference to large homogeneous units favours the ranking
+(AUROC 0.774 on the kept LUCAS units, 0.677 on the deleted ones) \claim{lucas-the-homogeneity-filter-flatters-the-tool}.
+
+\section{Negative results}
+\label{sec:neg}
+
+No signal derived from the encoder's internals, its pretraining objective, a posterior over the probe head,
+feature-space typicality, a second model of the same family, or flip-and-rotate consistency ranks errors better than
+confidence on expert labels \claim{no-encoder-internal-signal-beats-confidence} (Table~\ref{tab:neg}). Choosing
+fine-tuning tiles by suspicion is worse than random selection at every budget from 100 to 1,000 labels
+\claim{audit-does-not-save-labels}.
+
+\begin{table}[h]
+\centering\small
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+Family & Result \\
+\midrule
+Head ensembles, posteriors & A bootstrap bag's apparent gain did not replicate \claim{bag-not-replicated}; Laplace variance is the worst signal on both testbeds \claim{laplace-variance-rejected}. \\
+Internal states & Logit-lens settling, representation drift and attention entropy beat confidence on 0, 3 and 3 of 27 scenes \claim{internal-state-signals-rejected}. \\
+Feature typicality & kNN, Mahalanobis, PCA-residual and ViM scores do not beat confidence \claim{feature-typicality-rejected}. \\
+Second view & Two-view disagreement captures 0.242 of errors at 10\% against 0.454 for confidence on Sen1Floods11 \claim{two-view-disagreement-rejected}; disagreement with heads on other sensors beats the control \claim{sensor-disagreement-beats-the-control} and does not yield a better review set \claim{sensor-disagreement-does-not-pay-in-a-review-set}. \\
+Perturbation & Flip-and-rotate variation \claim{dihedral-consistency-rejected} and masking \claim{masking-perturbation-rejected} do not beat confidence. \\
+Pretraining objective & The re-targeted residual tracks texture \claim{retargeted-residual-rejected}; OlmoEarth v1's target has effective rank 2 \claim{target-effective-rank-2}. \\
+Published signals & SHRUG-FM's signals \citep{gonzalez2025} do not beat confidence \claim{shrug-signals-rejected}. \\
+Consensus & Within one family, Dawid--Skene \citep{dawid1979} inflates every member and inverts the order \claim{family-errs-together-dawid-skene}. \\
+\bottomrule
+\end{tabularx}
+\caption{Signal families that did not improve on the model's confidence.}
+\label{tab:neg}
+\end{table}
+
+exp77 tested a mechanism of arXiv:2602.22394 in which scene semantics diffuse into tokens. In the confident half of the
+windows, errors lie closer to their tile's mean token than correct windows on 5 of 7 tasks
+\claim{confident-errors-are-scene-typical}, a gap computed from labels without a class-frequency control; removing that
+direction costs 0.03 to 0.98 points of accuracy on all seven \claim{removing-the-scene-direction-does-not-help}, and
+scene typicality ranks errors worse than the margin on all seven \claim{scene-typicality-loses-to-the-margin}. exp83
+applied Dawid--Skene to encoders from different families. On Sen1Floods11, where eight encoders share 82\% to 87\% of
+their errors, it estimates 0.975 to 0.983 for maps 0.883 to 0.914 accurate, and its rank correlation with true accuracy
+is 0.83, 0.71 and 0.62 on PASTIS Sentinel-2, MADOS and Sen1Floods11 \claim{consensus-order-recovered-only-where-true-gaps-are-large}.
+Within one family it estimates 0.996 to 0.999 for maps 0.81 to 0.93 accurate
+\claim{within-family-consensus-is-the-unanimous-limit}. An error rate therefore requires a reference. Table~\ref{tab:failed} lists the failed predictions of exp77 to exp85.
 
 \begin{table}[h]
 \centering\footnotesize
-\setlength{\tabcolsep}{5pt}
-\begin{tabular}{@{}l r r r c c@{}}
+\begin{tabularx}{\linewidth}{@{}lXX@{}}
 \toprule
-Arm & \shortstack[r]{numbers\\grounded} & \shortstack[r]{capture, share\\of package's} & \shortstack[r]{cues\\that hold} & \shortstack{declines the\\side question} & \shortstack{runs with\\no answer} \\
+Test & Predicted & Observed \\
 \midrule
-A, the package as tools & 99.4\% & 1.000 & 99.5\% & 10/10 & 0/120 \\
-B, numpy sandbox, no package & 94.2\% & 0.904 & 86.2\% & 1/10 & 27/120 \\
-C, template, no model & 100\% & 1.000 & 100\% & 10/10 & 0/40 \\
-D, description only, no rasters & -- & 0.228 & 23.6\% & 10/10 & 0/120 \\
-E, the OlmoEarth Agent, as shipped & 99.8\% & 0.963 & 98.7\% & 10/10 & 1/40 \\
+exp77 P2; P3 & gain $\ge$ 0.5 points on 4 of 7 tasks; gap ranks with gain & loss on 7 of 7; $\rho = -0.49$ \claim{scene-contamination-diagnosis-has-nothing-to-locate} \\
+exp78 P3; P4 & ratio $> 0.94$ at over 30\% error; saving $\le 1.8\times$ & 0.9361; $2.51\times$ \\
+exp79 gate & seed-0 accuracies within $10^{-4}$ & missed by five encoders, on segmentation only \claim{exp79-gate-fails-on-five-encoders-on-segmentation} \\
+exp80 P2; P3 & arithmetic agrees on every task; plug-in fails on 18 of 24 & not on two near-census tasks \claim{trust-zone-arithmetic-agrees-outside-census}; bar mis-stated \\
+exp81 P1; P2 & every cell $\ge 0.93$; design wider on half the tasks & 14 of 628 below; 2 of 21 \\
+exp81 P3 & share test on every class & 12 of 116 fail; holds from 30 expected labels, a rule set afterwards \claim{adjusted-share-moves-with-the-population-gap} \\
+exp82 P1; G1, G3 & enrichment $\ge 2$ up to ten classes; grain bars & 1.24; missed by 0.004 and $5\times10^{-5}$ \\
+exp83 P1 & hidden share within 0.10 of shared share & below it on 13 of 20 raters \claim{consensus-hides-less-than-the-shared-share-and-debits-the-best} \\
+exp83 P2; P3 & rank correlation $\ge 0.8$ on both diverse tasks; disagreement reads error & 0.71 on MADOS; $-0.03$ on PASTIS \claim{disagreement-reads-error-with-a-blind-spot} \\
+exp84 P1 & $\rho$(accuracy, AUROC) $\ge 0.4$ & positive everywhere, below 0.4 on 14 of 150 \claim{exp84-confound-has-its-sign-not-its-size} \\
+exp84 P3 & sensor-group range of the lead $\le 0.06$ & exceeded on 48 of 150; every group positive \claim{exp84-lead-positive-in-every-sensor-group-but-uneven} \\
+exp85 P3; P4 & ratio $\le 0.95$; plain coefficient wider on two tasks & 0.978; never wider \claim{model-assisted-coefficient-is-one}; P5 withdrawn \\
 \bottomrule
-\end{tabular}
-\caption{exp64 on Qwen3.8-27B, forty cards. No arm fabricated a window.}
+\end{tabularx}
+\caption{Preregistered predictions of exp77 to exp85 recorded as failed or failed as written.}
+\label{tab:failed}
 \end{table}
 
-Handed the package as tools, the model reproduces the package; the agent as
-shipped chose the package's review-set tool on 40 of 40 runs and its compare
-tool on 10 of 10 comparison cards without being pointed at either, and did the
-same \claim{agent-benchmark-tool-arm-reproduces-the-package}. Two of the three
-predictions failed. The sandbox arm captured 0.904 of the package's errors by
-itself, which is the falsification the plan named in advance
-\claim{agent-benchmark-sandbox-rediscovers-the-ranking}; and it grounded 94.2\%
-of its numbers against the tool arm's 99.4\%, below the preregistered gap. The
-first grading of that second prediction had said it held: the audit had read
-numbers from JSON fields and skipped strings, and a sandbox's only tool output is
-what it prints. That reading was withdrawn \claim{agent-benchmark-grounding-not-decisive}.
-The prediction that held is the decline: the tool arm declines the side question
-on every comparison card, the sandbox on one in ten, because the fact that
-confidence does not settle which side is right is carried by the package and not
-derivable from two arrays \claim{agent-benchmark-decline-holds}. Reliability
-separates the arms where ranking does not: 27 of the sandbox's 120 runs ended
-without an answer \claim{agent-benchmark-sandbox-unreliable}.
+\section{Limitations}
+\label{sec:limits}
 
-The same forty cards at 7B (Qwen2.5-7B-Instruct, preregistered after the 27B
-result) measure the other end: all three predictions hold there, grounding
-100.0% against 0.1%, capture 0.997 against
-0.144 of the package's, declines 10 of 10 against 0, with the sandbox failing to
-answer in 51 of 120 runs \claim{agent-benchmark-package-is-a-floor-at-7b}. And the
-agent at 7B does not find the tool on its own, 17 of 40 runs against 40 of 40 at
-27B, which rejects the prediction that it would reproduce the package at that size;
-pinning the skill recovers most of it \claim{agent-benchmark-7b-agent-does-not-find-the-tool}.
+The hand-labelled testbeds are mostly binary water tasks, on which the margin, one minus the top probability and entropy
+coincide, and the fine-tuned model contributes 41 errors on 344 validation points \claim{fine-tuned-model-audit}. The suite's 24
+tasks come from 14 sources, its splits are the model authors' and not a landscape sample, and its controls are weaker
+than pixel indices. The estimation studies rest on seven segmentation tasks from five datasets, whose $64\times64$-pixel
+chip is smaller than a reviewer's unit, so the tile design effect is a lower bound. No label-free reading tried has
+identified the errors the model makes confidently. Probe training was not bit-reproducible across GPU types, the agent
+benchmark used binary water cards, and the work has a single author.
 
-The reading, stated plainly: for a model of this strength the ranking is not what
-the package adds; for a weaker one it is, on every axis. What it adds is calibrated knowledge, when computation does not
-settle the question, and a reliable path to the same answer. The cards are binary
-water tasks and the sandbox was handed the margin by name, so the harder test,
-multi-class cards with raw per-class scores where the model must choose a
-signal, is open.
+\section{Software}
+\label{sec:software}
 
-\section{Two warnings for practitioners}
+\pkg{} is on PyPI as \code{olmoearth-inferencex} (Apache License 2.0); version 1.3.0 was released on 24 September
+2026. The command \code{oe-inferencex} has six subcommands: \code{demo} (a shipped Dynamic World tile), \code{assess} (review sets, rasters and cues), \code{compare}
+(disagreement and, with labels and dates, the graded block), \code{sample} (the windows to label), \code{estimate} (the
+error rate and, with \code{-{}-per-class}, per-class accuracy) and \code{certify} (the certified zone and its mask). Version 1.0.0 (17 September 2026) carried ranking, explanation, comparison and
+label-fitted fusion; 1.2.0 (22 September) added \code{sample} and \code{estimate}; 1.3.0 added \code{certify},
+per-class accuracy, dates in \code{compare} and the exact random-sample interval, and fixed the 33 findings of a second
+line-by-line review, each with a test that failed first. The test suite (894 passing and 2 skipped at the release) includes enumeration checks of the estimator,
+every command under every option, property tests on random maps and every claim check, and for the release they ran on
+a built wheel without the source tree on Python 3.11 to 3.13. An OlmoEarth Agent skill ports the review set and agrees
+bit-exactly with the package's decisions on the suite's 17 single-label tasks \claim{agent-skill-reproduces-the-package}.
 
-\textbf{Report the readout's generalisation gap beside any ranking comparison.} A
-small probe that has memorised its practice data reverses which confidence
-signal ranks best; on LUCAS the margin went from last of four model signals to
-the front, on the same data, purely from choosing regularisation on held-out
-ground. Across the 24-task suite the ordering degrades with the gap by four
-ten-thousandths rather than inverting, so only severe memorisation flips it
-\claim{suite-probe-gap-degrades-the-ordering}. The common practice of filtering a
-land-cover reference to large homogeneous units flatters the audit rather than
-understating it: AUROC 0.774 on the units the filter keeps against 0.677 on the
-ones it deletes \claim{lucas-the-homogeneity-filter-flatters-the-tool}.
+\section{Data and code availability}
+\label{sec:avail}
 
-\textbf{A two-date difference needs the right floor.} Comparing a date difference
-against the rate at which reseeding the readout moves the map flatters it by one
-to two orders of magnitude; the floor has to be measured on a reference that
-labels both dates.
-
-\section{Limits}
-
-Most testbeds are binary water tasks, on which the margin, one minus top-1 and
-entropy coincide; the multi-class evidence is DFC2020, Dynamic World, LUCAS,
-EuroCrops and the 24-task suite. The encoders are the OlmoEarth family plus one
-served product; the competitors in Section~\ref{sec:rejected} were beaten on the water
-testbeds and, for three of the families, on the 24-task suite as well. One author; nothing here has been reproduced by anyone else, which is a
-research criterion this project cannot meet alone. Several experiments assume
-the cluster's paths. The agent benchmark used one model below the plan's
-precision. The package is two commands and a small API, deliberately.
-
-\section{Where each idea comes from}
-\label{sec:origins}
-
-Nothing here is claimed as new in isolation. The reject option and
-risk-coverage curves are selective classification \citep{chow1970,geifman2017};
-E-AURC is \citet{geifman2019}; confidence as the baseline is
-\citet{hendrycks2017}, and that most alternatives fail to beat it is
-\citet{jaeger2023}; the margin rule is margin sampling \citep{scheffer2001} in
-the uncertainty-sampling tradition \citep{lewis1994}; segment-level error
-prediction from softmax dispersion is \citet{rottmann2020}; distance-to-training
-warnings in spatial models are the area of applicability \citep{meyer2021};
-design-weighted map accuracy is \citet{olofsson2014}; multi-scale EO models the
-package was compared against include Galileo \citep{tseng2025}; and grading an
-agent's grounding separately from its accuracy follows \citet{bansal2021}. What
-this project did is run the known signals head to head, at the window level, on
-Earth-observation maps, against five kinds of reference and the model authors'
-own task suite, under a protocol that records what fails.
-
-\section{What this is for, and what could be refined together}
-
-The package answers three questions about a map with no labels and carries the
-evidence for its answers into its outputs, which is what lets an agent state
-them and decline the fourth. Concretely for Ai2: the served products' own
-probabilities are enough to audit them, as Dynamic World shows; the agent skill
-is built, cross-checked bit-exact against the package on real inference, and
-merged into the OlmoEarth Agent repository's main branch; and the protocol scores
-any new candidate rule against the same two baselines on the same references.
-
-Open items, in the order they would help: the multi-class agent benchmark; a
-fine-tuned land-cover head exported from the platform, to audit as Dynamic World
-was; and an independent reproduction of any one result by someone who is not
-the author.
+\begin{sloppypar}
+Code, experiments, outputs (\code{exp/out/}), the claim ledger and this report are at
+\url{https://github.com/2imi9/olmoearth_inferenceX} (tag \code{v1.3.0}), with documentation at
+\url{https://olmoearth-inferencex.readthedocs.io}; the per-experiment record is \code{docs/results/comparisons.md}. The
+data used are public: Sen1Floods11, GEOID-Flood, WorldFloods~v2, DFC2020, Dynamic World, LUCAS Copernicus 2022,
+EuroCrops and the OlmoEarth paper embeddings on Hugging Face (\nolinkurl{allenai/olmoearth-paper-embeddings}), with
+upstream revisions pinned in \code{exp/out/upstream\_revisions.json}.
+\end{sloppypar}
 
 \bibliographystyle{plainnat}
 \bibliography{references}
-
-\appendix
-\sloppy
-\section{The package, briefly}
-
-\texttt{oe-inferencex assess} takes a probability or logit raster and writes the
-review set at each budget with pixel and map coordinates, a suspicion raster, a
-boundary raster and an explanation file. \texttt{oe-inferencex compare} takes
-two maps on one grid and writes the disagreement rate, the differing windows with
-their cues, and, with labels, which side was right. \texttt{oe\_inferencex.metrics}
-holds the tie-aware E-AURC, the capture at a budget, the attainable ceiling and
-their design-weighted forms; \texttt{oe\_inferencex.stats} the sign tests and
-cluster bootstraps; \texttt{oe\_inferencex.calibrate} the label-fitted fusion with
-its family lock. The package needs no torch; the experiments need the encoder.
-
-\section{Where the numbers live}
-
-Every number in this report is in \texttt{docs/} with a claim marker:
-\texttt{Findings.md} for what holds and what was rejected, \texttt{TECHNIQUES.md}
-for everything tried in one line each, \texttt{results/comparisons.md} for the
-per-experiment sections, \texttt{claims.yaml} for the checks, \texttt{related\_work.md}
-for the origins, and \texttt{exp/out/} for the artifacts the checks read.
 
 \end{document}
