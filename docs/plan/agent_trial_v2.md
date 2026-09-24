@@ -6,6 +6,9 @@ agent. A driver, which is not part of this page's change, runs the agent and wri
 layout given below. This page is the specification, and where the scorer had to make a choice, the choice is stated
 here.
 
+Amended once, on 24 September 2026, before any counted run: see [Amendments](#amendments). The amendment supersedes
+the parts of this page that it names; the rest stands as first written.
+
 ## What the first trial found
 
 The first trial (`exp/out/agent_trial_2026-09-24.md`) ran the shipped agent (main at a26a5c7) on four briefs through
@@ -370,4 +373,127 @@ Failures are fixed and the runs repeated. They are not explained away.
 
 ## Amendments
 
-None. Entries made before the first run are dated here. None can be made after it.
+### 24 September 2026, before any counted run
+
+The agent's changes landed as one branch, `2imi9/feature-cluster-scores-provider` at 68f39ee (736 tests, all
+pre-commit hooks passing). This is the one amendment. It supersedes the parts of this page that it names, and
+everything else stands. Each item gives what changed in the agent, what changes here, and whether a threshold or the
+pass rule changes. None of the tolerances (1e-6, 1e-9, exp64's 1e-3 and 1e-4, 1e-4 for the recomputed correlation,
+the range slack, z = 1.96 or 2) changes, and neither do the pass rule (all three runs), the three runs or the ten
+required configurations.
+
+**A1. The cluster scores provider is `olmoearth_scores_from_file`.** It reads a directory written by
+`scripts/score_area.py` (`scores.tif` and `manifest.json`) under the scores root. It pools the raster to windows with
+the package's `assess_prediction` and writes a scores file. It runs nothing: the cluster job runs outside the agent,
+before the trial.
+
+- `PROVIDER` is `("olmoearth_scores_from_file",)`, and the provider group requires a non-empty `run_dir`.
+- The cluster briefs now name the run directory, which is a hashed fixture:
+  - B3 cluster: "The model runs in {run_dir_a} and {run_dir_b} map the same area. Compare the two predictions and
+    tell me where they differ and which is right."
+  - B4 cluster: "How wrong is the map in the model run {run_dir}? I can label 300 windows."
+  - B8 cluster: "Take the model run in {run_dir} and tell me which windows a reviewer should check first, and why."
+- **C1** is the existing run `awf_namanga_2023_1042061`: allenai/OlmoEarth-v1-FT-AWF-Base at revision a347b15, run
+  on a B200 over Namanga, 512 × 512 px, date window 2023, (10, 512, 512) float32 logits with no no-data pixel.
+  The sha256 of its `scores.tif` is `a7c40be990d84a5800e25ed323cd01656cfdb88784a2540a197c6c4df0172ca0`. The
+  provider reads it as 128 × 128 = 16,384 windows of 4 px, all valid, and leaves out channel 9 (the label fill value).
+- **C2** is a second `score_area.py` run of the same model over the same area and grid, with the date window
+  2022-01-01 to 2022-12-31. `score_area.py` runs only this model, so a second prediction of the same windows can only
+  be another date. C2 does not exist yet. It must be built and hashed before the first counted run, and B3 cluster
+  cannot run until then.
+- Because C1 and C2 describe different years, B3 cluster now requires `olmoearth_compare_review` with `date_a` and
+  `date_b` (the provider returns each run's `date_window`), and it adds rule D3 (change), as B7 has. This follows from
+  the fixture; no threshold changes.
+- **The provider's scores file** has `score_kind: window_confidence`. Each row holds the window's confidence at its
+  majority class and 0 elsewhere, beside the window's pooled top-1 probability `p1` and its class `map_class`.
+  - P7's references read `p1` from the file when it is there. Computed from the rows, it would be a softmax of a
+    confidence rather than a probability: on C1 the two differ by up to 0.48, and the package's draw of 300 windows
+    changes.
+  - In comparisons, a window's class is read from `map_class`, because a row with zero confidence cannot carry its
+    class.
+  - P4(a) adds a check: in a `window_confidence` file every score and every `p1` is finite, `p1` lies in [0, 1], and
+    the rows, `p1` and `windows` have one entry per valid window.
+  - P7 adds a check of the provider's own call: the raster sha256 it reports equals the one the run's manifest
+    records, and its file holds one consistent row, `p1` and class for each valid window. The scorer does not rerun
+    the pooling (that would need rasterio); the pooling is the package's `assess_prediction`, and everything that
+    reads the file is compared as before.
+- **Checked before writing this amendment**, on C1, with the agent's handlers called directly (no model): the
+  provider, `olmoearth_review_set` (5%, 819 windows) and `olmoearth_plan_label_sample` (confidence, 300, seed 0) all
+  pass P7 with these references. With `p1` taken from the rows, the plan fails.
+
+**A2. One comparison tool with modes.** `olmoearth_compare_results` now takes `result_ids` and a `mode` (pair, group,
+series, ensemble or auto). It replaced `olmoearth_compare_group`, `olmoearth_trace_shifts` and
+`olmoearth_ensemble_uncertainty`. `olmoearth_search_projects` was merged into `olmoearth_load_context`,
+`olmoearth_litsearch_resolve` into `olmoearth_litsearch`, and `olmoearth_list_skills` was removed.
+
+- **Routing.** The forbidden column may now name a tool together with the arguments that forbid it.
+  - B1's required group drops `olmoearth_search_projects`.
+  - B2 studio forbids `olmoearth_compare_results` in every mode, the ensemble route included, as it forbade both
+    tools before the merge.
+  - B3 studio requires `olmoearth_compare_results` with mode pair, auto, or no mode given, and forbids it with mode
+    group, series or ensemble. Auto reads two results as a pair, so an agent that leaves the default is right. The
+    other modes read the two results as a group, a series, or an ensemble of one quantity. That is not the brief's
+    question, and ensemble would pool a binary score and a count as one quantity.
+  - B8 cluster forbids `olmoearth_compare_results` in every mode. The brief names one model run and no Studio result,
+    and the ensemble mode is the former `olmoearth_ensemble_uncertainty`, which the first trial used as a stand-in
+    ranking.
+  - The removed and merged tools appeared in no other entry.
+- **P4(c).** The result ids are read from the tool's output (`result_id_a` and `result_id_b`, or `result_ids`), not
+  from its arguments; the recorded samples then reproduce the statistic. Only mode pair is recomputed. Outputs of
+  modes group, series and ensemble are checked by P4(a), (b) and (d) and not recomputed. A pair output without a Studio
+  recording is still ungradeable. No threshold changes.
+
+**A3. P6 and the known outputs.** `olmoearth_compare_results` returns no `shared_extent_bbox` and no longitude or
+latitude in any mode (a test in the agent checks every mode). The expectation under "Known at writing" that B3 studio
+fails P6 on every run therefore no longer holds.
+
+`olmoearth_pixel_value` still echoes `queried_point`, the point it was called with. Decision: a coordinate value in an
+output all of whose numbers are the call's own arguments (to the tool's six decimals) is an echo, and it does not count
+under P6. Any other coordinate in an output, and any coordinate in the answer, still counts. The reason is that P6
+grades what a tool adds to the transcript and what the answer says. An echo adds nothing the call did not already
+hold, so counting it would fail P6 for the act of calling the tool. That is P1's question, and `olmoearth_pixel_value`
+is forbidden on every route where it tempts (B2, B3, B4 and B8). The coordinates in a call's arguments are outside P6,
+as they were before; this is a stated limit.
+
+**A4. Ties.** The agent now breaks exact margin ties as the package's `review_order` does, the higher window index
+first.
+
+- P7 now compares the listed windows with `review_order` window by window. Before, it compared only the listed
+  margins, which does not depend on how ties are broken.
+- P3's check of the tool's order is exact when the ranked scores are in the run directory: ascending exact margin, and
+  exact ties by the higher window first. Otherwise it is non-decreasing listed margins, as before.
+- P3's check of the answer is unchanged. Two exactly tied windows are equally suspect, so naming them in either order
+  inverts nothing.
+- The 1e-6 tolerance on margins is unchanged.
+
+**A5. Fixtures per configuration.** This replaces the copying of every fixture into every workspace (Setup). Fixtures
+live under `<trial>/fixtures/<id>/`, with id F1 to F4, C1 or C2, and each configuration's workspace gets only its own:
+
+| Workspace | Fixtures |
+|---|---|
+| any studio run | none, so it cannot be handed the provider's output |
+| B3 cluster | C1 and C2 |
+| B4 cluster, B8 cluster | C1 |
+| B5 | F2 |
+| B6 | F3 |
+| B7 | F4 |
+| `parity/` | F1 to F4 |
+
+The scorer (`WORKSPACE_FIXTURES`) does not count a run whose workspace holds a fixture its configuration does not get.
+
+**A6. Tool-call ids repeat.** Calls recovered from the model's text are numbered call_0, call_1 afresh each turn, so
+an id alone does not name a call. A call is its (turn, id) pair and its place in the event order. A recorded Studio
+sample is assigned to a call as follows:
+
+- by (turn, call id), when the record carries its turn;
+- otherwise, to the last call with its id whose tool_call event came before the record, with a millisecond's slack
+  (the events are timed to the millisecond; tool calls run one at a time);
+- without times, by order.
+
+No threshold changes.
+
+**A7. Tokens.** The tool payload is now about 7,700 tokens per model call, since the deferred tool groups load through
+`olmoearth_load_skill`. Criterion 8 already records tokens per model call (`usage.jsonl`). The summary now also reports
+each run's median and maximum prompt tokens per call and its number of `olmoearth_load_skill` calls.
+`olmoearth_load_skill` is neither required nor forbidden anywhere, so it is never a routing failure. Its text is a
+tool output, and numbers in it count under P2 as any tool output's do. This is descriptive only.

@@ -35,17 +35,20 @@ def _hash(args):
 
 def write_run(d, brief, calls, answer, studio=None, files=None, usage=None, seconds=42.0, meta=None,
               drop_trace_line=False):
-    """One run directory as the driver writes it. `calls`: (name, arguments, result[, ok]) in dispatch order."""
+    """One run directory as the driver writes it. `calls`: (name, arguments, result[, ok[, where]]) in dispatch order,
+    where `where` may set the call's "id", "turn" and "t" (the time of its tool_call event; the result follows 0.5 s
+    later). By default call i has id call{i}, turn i + 1 and t = i."""
     ws = os.path.join(d, "workspace")
     os.makedirs(ws, exist_ok=True)
     events, entries, lines = [], [], []
     for i, c in enumerate(calls):
         name, args, result = c[:3]
         ok = c[3] if len(c) > 3 else True
-        cid = f"call{i}"
-        events.append({"type": "tool_call", "turn": i + 1, "id": cid, "name": name, "arguments": args, "t": float(i)})
-        events.append({"type": "tool_result", "turn": i + 1, "id": cid, "name": name, "ok": ok,
-                       "result": {"ok": ok, "result": result}, "t": i + 0.5})
+        where = c[4] if len(c) > 4 else {}
+        cid, turn, t = where.get("id", f"call{i}"), where.get("turn", i + 1), float(where.get("t", i))
+        events.append({"type": "tool_call", "turn": turn, "id": cid, "name": name, "arguments": args, "t": t})
+        events.append({"type": "tool_result", "turn": turn, "id": cid, "name": name, "ok": ok,
+                       "result": {"ok": ok, "result": result}, "t": t + 0.5})
         entries.append({"run_id": "r", "timestamp": "t", "api_call": name, "request_hash": _hash(args),
                         "response_summary": {"ok": ok}})
         lines.append(f"  [{'ok' if ok else 'FAIL'}] {name}")
@@ -73,6 +76,7 @@ def write_run(d, brief, calls, answer, studio=None, files=None, usage=None, seco
         with open(os.path.join(d, "studio_calls.jsonl"), "w") as fh:
             fh.write("".join(json.dumps(s) + "\n" for s in studio))
     for name, payload in (files or {}).items():
+        os.makedirs(os.path.dirname(os.path.join(ws, name)), exist_ok=True)
         with open(os.path.join(ws, name), "w", newline="") as fh:
             if isinstance(payload, str):
                 fh.write(payload)
@@ -103,7 +107,7 @@ def from_result_output(values, grid=4, budgets=(0.05, 0.10, 0.25), result_id="re
     """What olmoearth_review_set_from_result returns for a [0, 1] score sampled on a grid, with its scores file."""
     n = len(values)
     margins = [abs(2 * s - 1) for s in values]
-    order = sorted(range(n), key=lambda i: margins[i])
+    order = sorted(range(n), key=lambda i: (margins[i], -i))      # exact ties: the higher window first
     k_max = max(1, int(round(max(budgets) * n)))
     review = [{"rank": j + 1, "window_index": i, "predicted_class": int(values[i] > 0.5),
                "margin": round(margins[i], 6), "row": i // grid, "col": i % grid, "score": round(values[i], 6)}
@@ -126,7 +130,7 @@ def from_result_output(values, grid=4, budgets=(0.05, 0.10, 0.25), result_id="re
 def review_set_output(rows, budget=0.05, max_listed=20):
     """What olmoearth_review_set returns for inline score rows (an independent port of its ranking)."""
     margins = [sorted(r, reverse=True)[0] - sorted(r, reverse=True)[1] for r in rows]
-    order = sorted(range(len(rows)), key=lambda i: margins[i])
+    order = sorted(range(len(rows)), key=lambda i: (margins[i], -i))
     k = max(1, int(round(budget * len(rows))))
     review = [{"rank": j + 1, "window_index": i, "predicted_class": int(np.argmax(rows[i])),
                "margin": round(margins[i], 6)} for j, i in enumerate(order[:k][:max_listed])]
@@ -178,7 +182,7 @@ def test_routing_checks_required_arguments_and_the_trace_consistency(tmp_path):
 # --------------------------------------------------------------------------------------------- criterion 2
 def test_grounding_accepts_quoted_and_rounded_numbers_and_fails_an_invented_one(tmp_path):
     out = {"stats": {"correlation": 0.9462, "mean_a": 0.123456, "n_samples": 25}, "samples_requested": 36}
-    calls = [("olmoearth_compare_results", {"result_id_a": "a", "result_id_b": "b"}, out)]
+    calls = [("olmoearth_compare_results", {"result_ids": ["a", "b"], "mode": "pair"}, out)]
     ok = write_run(str(tmp_path / "a"), B3, calls, "Across 25 of the 36 points the correlation is 0.95 (0.9462); "
                                                      "mean A is 0.1235, about 12%. You asked about 2025.")
     g = _grade(ok, "B3/studio", "c2_grounding")
@@ -234,7 +238,8 @@ def _studio_for_compare(rng, n_points=36, n_nodata=11):
 
 def _compare_output(pairs, n_nodata):
     x, y = np.array([a for a, _ in pairs]), np.array([b for _, b in pairs])
-    return {"comparable": True, "value_type": "regression", "property_name": "s", "n_nodata_dropped": n_nodata,
+    return {"comparable": True, "mode": "pair", "result_ids": ["A", "B"], "result_id_a": "A", "result_id_b": "B",
+            "value_type": "regression", "property_name": "s", "n_nodata_dropped": n_nodata,
             "stats": {"n_samples": len(pairs), "mean_a": round(float(x.mean()), 6), "mean_b": round(float(y.mean()), 6),
                       "correlation": round(float(np.corrcoef(x, y)[0, 1]), 4),
                       "agreement_fraction": round(float((np.abs(y - x) <= 0.1).mean()), 4), "tolerance": 0.1}}
@@ -243,7 +248,7 @@ def _compare_output(pairs, n_nodata):
 def test_nodata_fails_the_first_trials_correlation_and_passes_the_fixed_tool(tmp_path):
     """24 September, brief 3: 11 of 36 points were -1 in both maps; the tool reported r = 0.946 instead of -0.017."""
     studio, a, b = _studio_for_compare(np.random.default_rng(3))
-    args = {"result_id_a": "A", "result_id_b": "B", "property_name": "s"}
+    args = {"result_ids": ["A", "B"], "property_name": "s"}                  # the ids are read from the output
     shipped = _compare_output(list(zip(a, b)), 0)                                   # -1 counted as data
     assert shipped["stats"]["correlation"] > 0.8
     run = write_run(str(tmp_path / "a"), B3, [("olmoearth_compare_results", args, shipped)], "r = 0.946",
@@ -279,8 +284,8 @@ def test_nodata_fails_a_sentinel_reported_as_a_value_or_averaged_by_hand(tmp_pat
 
 # --------------------------------------------------------------------------------------------- criterion 5
 def test_declines_pass_a_decline_and_fail_a_pick(tmp_path):
-    out = {"comparable": False, "reason": "different properties"}
-    calls = [("olmoearth_compare_results", {"result_id_a": "a", "result_id_b": "b"}, out)]
+    out = {"comparable": False, "mode": "pair", "reason": "different properties"}
+    calls = [("olmoearth_compare_results", {"result_ids": ["a", "b"]}, out)]
     ok = write_run(str(tmp_path / "a"), B3, calls,
                    "The two maps measure different quantities (a binary score and a count), so they cannot be "
                    "compared value for value, and which one is right cannot be resolved without labels.")
@@ -367,17 +372,17 @@ def test_declines_b6_does_not_claim_a_zone_the_tool_did_not_certify(tmp_path):
 # --------------------------------------------------------------------------------------------- criterion 6
 def test_coordinates_fail_in_a_tool_output_or_the_answer(tmp_path):
     clean = {"comparable": True, "stats": {"n_samples": 25}, "grid": "6x6"}
-    ok = write_run(str(tmp_path / "a"), B3, [("olmoearth_compare_results", {"result_id_a": "a"}, clean)],
+    ok = write_run(str(tmp_path / "a"), B3, [("olmoearth_compare_results", {"result_ids": ["a", "b"]}, clean)],
                    "Window (3, 4) differs; the correlation is 0.95, 0.12 and 0.34 are means.")
     assert _grade(ok, "B3/studio", "c6_coordinates")["status"] == e86.PASS
     leaky = dict(clean, shared_extent_bbox=[-77.61234, 40.51234, -77.21234, 40.91234])
-    g = _grade(write_run(str(tmp_path / "b"), B3, [("olmoearth_compare_results", {"result_id_a": "a"}, leaky)], "x"),
-               "B3/studio", "c6_coordinates")
+    run = write_run(str(tmp_path / "b"), B3, [("olmoearth_compare_results", {"result_ids": ["a", "b"]}, leaky)], "x")
+    g = _grade(run, "B3/studio", "c6_coordinates")
     assert g["status"] == e86.FAIL and "shared_extent_bbox" in g["reasons"][0]
     for text in ("The hotspot is at 40.51234, -77.61234.", "Near 16.4 S, 71.8 W.", "lat 40.512, lon -77.612",
                  "POINT (-77.6 40.5)"):
         run = write_run(str(tmp_path / f"c{abs(hash(text))}"), B3,
-                        [("olmoearth_compare_results", {"result_id_a": "a"}, clean)], text)
+                        [("olmoearth_compare_results", {"result_ids": ["a", "b"]}, clean)], text)
         assert _grade(run, "B3/studio", "c6_coordinates")["status"] == e86.FAIL, text
 
 
@@ -420,7 +425,7 @@ def test_parity_of_the_estimate_passes_the_package_and_fails_a_different_interva
 
 # --------------------------------------------------------------------------------------------- criterion 8 and a trial
 def test_time_and_tokens_are_recorded(tmp_path):
-    run = write_run(str(tmp_path / "a"), B3, [("olmoearth_compare_results", {"result_id_a": "a"}, {})], "x",
+    run = write_run(str(tmp_path / "a"), B3, [("olmoearth_compare_results", {"result_ids": ["a", "b"]}, {})], "x",
                     usage=[{"prompt_tokens": 100, "completion_tokens": 10, "total_tokens": 110}] * 2, seconds=77.0)
     t = e86.time_and_tokens(run)
     assert t["seconds"] == 77.0 and t["total_tokens"] == 220 and t["n_llm_calls"] == 2 and t["n_tool_calls"] == 1
@@ -449,3 +454,189 @@ def test_a_round_needs_three_passing_runs_of_every_configuration(tmp_path):
     assert not r["complete"] and not r["round_passes"] and not s["verdict"]["trial_passes"]
     assert r["predictions"]["P7"]["status"] == "ungradeable"      # no fixed-input parity directory
     json.dumps(s, default=e86._json_default)
+
+
+# --------------------------------------------------------------------------------------------- the amendment, A1 to A7
+B3C = "The model runs in C1/run_2023 and C2/run_2022 map the same area. Compare the two predictions and tell me " \
+      "where they differ and which is right."
+B8C = "Take the model run in C1/run_2023 and tell me which windows a reviewer should check first, and why."
+
+
+def _provider_file(n=400, n_classes=4, seed=1, sha="ab" * 32):
+    """What olmoearth_scores_from_file writes and returns: rows with the window confidence m at the window's class
+    and 0 elsewhere, the pooled top-1 probability p1 beside them (not a function of the row), and the class."""
+    rng = np.random.default_rng(seed)
+    m = np.round(rng.gamma(2.0, 1.0, n), 3)                  # rounded, so exact ties occur
+    m[5] = 0.0                                               # a zero-confidence window: its row cannot carry its class
+    cls = rng.integers(0, n_classes, n)
+    rows = [[float(m[i]) if c == cls[i] else 0.0 for c in range(n_classes)] for i in range(n)]
+    p1 = np.clip(0.4 + 0.1 * m + rng.normal(0, 0.05, n), 0.26, 1.0).round(6)
+    f = {"format": "olmoearth-agent/scores@1", "score_kind": "window_confidence", "grid": [20, 20],
+         "scores": rows, "p1": p1.tolist(), "map_class": cls.tolist(), "classes": {str(c): f"c{c}" for c in range(4)}}
+    out = {"available": True, "scores_path": "/elsewhere/scores_run_awf.json", "run_dir": "run_2023", "grid": [20, 20],
+           "n_valid": n, "raster_check": {"sha256": sha, "matches_manifest": True}}
+    manifest = {"scores": {"file": "scores.tif", "sha256": "ab" * 32, "values": "logits"}}
+    return f, out, manifest
+
+
+def test_a2_routing_reads_the_merged_compare_tool_and_ignores_skill_loads(tmp_path):
+    pair = {"comparable": False, "mode": "pair", "reason": "different properties"}
+    skill = ("olmoearth_load_skill", {"name": "olmoearth-review-set"}, {"loaded": True})
+    for mode, want in ((None, e86.PASS), ("pair", e86.PASS), ("auto", e86.PASS), ("ensemble", e86.FAIL)):
+        args = {"result_ids": ["a", "b"], **({"mode": mode} if mode else {})}
+        run = write_run(str(tmp_path / f"b3_{mode}"), B3, [skill, ("olmoearth_compare_results", args, pair)], "x")
+        assert _grade(run, "B3/studio", "c1_routing")["status"] == want, mode
+    both = write_run(str(tmp_path / "both"), B3, [("olmoearth_compare_results", {"result_ids": ["a", "b"]}, pair),
+                                                  ("olmoearth_compare_results",
+                                                   {"result_ids": ["a", "b"], "mode": "ensemble"}, pair)], "x")
+    g = _grade(both, "B3/studio", "c1_routing")
+    assert g["status"] == e86.FAIL and g["reasons"] == [
+        "forbidden tool(s) called: olmoearth_compare_results with mode=group or series or ensemble"]
+    f, out, _ = _provider_file()
+    rs = review_set_output(f["scores"])
+    good = [("olmoearth_scores_from_file", {"run_dir": "C1/run_2023"}, out),
+            ("olmoearth_review_set", {"scores_path": out["scores_path"]}, rs)]
+    assert _grade(write_run(str(tmp_path / "b8"), B8C, good, "x"), "B8/cluster", "c1_routing")["status"] == e86.PASS
+    bad = good + [("olmoearth_compare_results", {"result_ids": ["a", "b"], "mode": "ensemble"}, pair)]
+    assert _grade(write_run(str(tmp_path / "b8x"), B8C, bad, "x"), "B8/cluster", "c1_routing")["status"] == e86.FAIL
+
+
+def test_a1_the_provider_file_is_read_with_its_own_p1_and_classes(tmp_path):
+    f, out, manifest = _provider_file()
+    margin = np.array([max(r) for r in f["scores"]])
+    p1 = np.array(f["p1"])
+    sample = oe_estimate.sample_for_estimation(margin, 60, design="confidence", p1=p1, seed=0)
+    design = {"format": "olmoearth-agent/label-design@1", "design": "confidence", "budget": 60, "seed": 0,
+              "sample": {k: (v.tolist() if hasattr(v, "tolist") else v) for k, v in sample.items()},
+              "population": {"n_windows": 400, "n_valid": 400, "grid": [20, 20], "score_kind": "window_confidence",
+                             "margin": margin.tolist(), "map_class": f["map_class"], "source": {}}}
+    plan = {"available": True, "design": "confidence", "design_path": "/elsewhere/design_awf.json",
+            "windows": [{"window_index": int(i)} for i in sample["indices"][:20]]}
+    files = {"scores_run_awf.json": f, "design_awf.json": design, "C1/run_2023/manifest.json": manifest}
+    calls = [("olmoearth_scores_from_file", {"run_dir": "C1/run_2023"}, out),
+             ("olmoearth_plan_label_sample", {"scores_path": out["scores_path"], "budget": 60}, plan)]
+    run = write_run(str(tmp_path / "a"), B8C, calls, "x", files=files)
+    g = _grade(run, "B8/cluster", "c7_parity")
+    assert g["status"] == e86.PASS, g
+    # the same design drawn with a top-1 probability computed from the rows is not the package's draw on this file
+    rows_p1 = e86._top1(f["scores"])
+    assert not np.allclose(rows_p1, p1)
+    wrong = oe_estimate.sample_for_estimation(margin, 60, design="confidence", p1=rows_p1, seed=0)
+    design_w = dict(design, sample={k: (v.tolist() if hasattr(v, "tolist") else v) for k, v in wrong.items()})
+    run = write_run(str(tmp_path / "b"), B8C, calls, "x", files={**files, "design_awf.json": design_w})
+    assert _grade(run, "B8/cluster", "c7_parity")["status"] == e86.FAIL
+    # the provider read another raster than its manifest records
+    other = dict(out, raster_check={"sha256": "cd" * 32})
+    run = write_run(str(tmp_path / "c"), B8C, [("olmoearth_scores_from_file", {"run_dir": "C1/run_2023"}, other)],
+                    "x", files=files)
+    g = _grade(run, "B8/cluster", "c7_parity")
+    assert g["status"] == e86.FAIL and "sha256" in g["reasons"][0]
+    # a comparison of two provider files counts a zero-confidence window by its class, not by its row's arg-max
+    g2 = dict(f, map_class=[(c + 1) % 4 if i < 10 else c for i, c in enumerate(f["map_class"])])
+    n_diff = 10
+    cmp_out = {"n_windows": 400, "n_differing": n_diff, "share_differing": n_diff / 400}
+    run = write_run(str(tmp_path / "d"), B3C, [("olmoearth_compare_review", {"scores_path_a": "a.json",
+                                                                             "scores_path_b": "b.json"}, cmp_out)],
+                    "x", files={"a.json": f, "b.json": g2})
+    assert _grade(run, "B3/cluster", "c7_parity")["status"] == e86.PASS
+    # a provider file with a no-data window among its rows
+    bad = dict(f, p1=[float("nan")] + f["p1"][1:])
+    run = write_run(str(tmp_path / "e"), B8C, [("olmoearth_scores_from_file", {"run_dir": "C1/run_2023"}, out)], "x",
+                    files={"scores_run_awf.json": bad})
+    assert _grade(run, "B8/cluster", "c4_nodata")["status"] == e86.FAIL
+
+
+def test_a4_exact_ties_follow_the_packages_order(tmp_path):
+    rows = [[0.7, 0.3], [0.6, 0.4], [0.6, 0.4], [0.6, 0.4], [0.9, 0.1], [0.55, 0.45], [0.55, 0.45], [0.8, 0.2]]
+    rows = rows * 5                                          # 40 windows, exact ties throughout
+    out = review_set_output(rows, budget=0.25)               # the higher window first among exact ties
+    args = {"scores_path": "/elsewhere/tied.json", "budget": 0.25}
+    files = {"tied.json": {"scores": rows}}
+    run = write_run(str(tmp_path / "a"), B8C, [("olmoearth_review_set", args, out)], "x", files=files)
+    assert _grade(run, "B8/cluster", "c7_parity")["status"] == e86.PASS
+    assert _grade(run, "B8/cluster", "c3_ranking")["status"] == e86.FAIL      # no window named: a review brief
+    first = out["review"][0]["window_index"]
+    named = write_run(str(tmp_path / "b"), B8C, [("olmoearth_review_set", args, out)], f"Open window {first} first.",
+                      files=files)
+    assert _grade(named, "B8/cluster", "c3_ranking")["status"] == e86.PASS
+    # the ranking before 68f39ee: exact ties by the lower window first. Same margins, another set of windows
+    margins = [abs(r[0] - r[1]) for r in rows]
+    old = json.loads(json.dumps(out))
+    order = sorted(range(len(rows)), key=lambda i: margins[i])
+    old["review"] = [dict(r, window_index=i) for r, i in zip(out["review"], order)]
+    run = write_run(str(tmp_path / "c"), B8C, [("olmoearth_review_set", args, old)], f"Open window {order[0]} first.",
+                    files=files)
+    assert _grade(run, "B8/cluster", "c7_parity")["status"] == e86.FAIL
+    assert _grade(run, "B8/cluster", "c3_ranking")["status"] == e86.FAIL
+
+
+def test_a6_repeated_call_ids_are_told_apart_by_turn_and_time(tmp_path):
+    """Two comparisons in two turns, both numbered call_0: the first reports the clean statistic, the second the one
+    with no-data counted. Keyed by the id alone the samples of both would mix and neither would reproduce."""
+    rng = np.random.default_rng(3)
+    studio1, a, b = _studio_for_compare(rng)
+    fixed = _compare_output([(x, y) for x, y in zip(a, b) if x >= 0 and y >= 0], 11)
+    shipped = _compare_output(list(zip(a, b)), 0)
+    args = {"result_ids": ["A", "B"], "property_name": "s"}
+    calls = [("olmoearth_compare_results", args, fixed, True, {"id": "call_0", "turn": 1, "t": 10.0}),
+             ("olmoearth_compare_results", args, shipped, True, {"id": "call_0", "turn": 2, "t": 50.0})]
+    timed = [dict(r, call_id="call_0", t=10.2) for r in studio1] + [dict(r, call_id="call_0", t=50.3) for r in studio1]
+    run = write_run(str(tmp_path / "a"), B3, calls, "x", studio=timed)
+    g = _grade(run, "B3/studio", "c4_nodata")
+    assert g["status"] == e86.FAIL and len(g["reasons"]) == 1, g
+    assert [len(v) for _, v in sorted(e86.assign_studio(run).items())] == [len(studio1), len(studio1)]
+    turned = [dict(r, call_id="call_0", turn=1) for r in studio1] + [dict(r, call_id="call_0", turn=2) for r in studio1]
+    assert _grade(write_run(str(tmp_path / "b"), B3, calls, "x", studio=turned), "B3/studio",
+                  "c4_nodata")["status"] == e86.FAIL
+    clean = [calls[0], (calls[1][0], args, fixed, True, calls[1][4])]
+    assert _grade(write_run(str(tmp_path / "c"), B3, clean, "x", studio=timed), "B3/studio",
+                  "c4_nodata")["status"] == e86.PASS
+
+
+def test_a2_group_series_and_ensemble_outputs_are_not_recomputed(tmp_path):
+    ens = {"comparable": True, "mode": "ensemble", "result_ids": ["A", "B", "C"], "value_type": "regression",
+           "n_nodata_dropped": 3, "confidence": 0.8}
+    run = write_run(str(tmp_path / "a"), B3, [("olmoearth_compare_results", {"result_ids": ["A", "B", "C"],
+                                                                             "mode": "ensemble"}, ens)], "x")
+    assert _grade(run, "B3/studio", "c4_nodata")["status"] == e86.NA
+
+
+def test_a3_an_echo_of_the_callers_point_is_not_a_coordinate_the_tool_adds(tmp_path):
+    args = {"result_id": "A", "lon": 36.812345, "lat": -2.551234}
+    echo = {"result_id": "A", "queried_point": {"lon": 36.812345, "lat": -2.551234}, "value": 0.4,
+            "declared_range": [0, 1]}
+    run = write_run(str(tmp_path / "a"), B3, [("olmoearth_pixel_value", args, echo)], "The value there is 0.4.")
+    assert _grade(run, "B3/studio", "c6_coordinates")["status"] == e86.PASS
+    moved = dict(echo, queried_point={"lon": 36.9, "lat": -2.6})
+    run = write_run(str(tmp_path / "b"), B3, [("olmoearth_pixel_value", args, moved)], "x")
+    assert _grade(run, "B3/studio", "c6_coordinates")["status"] == e86.FAIL
+    said = write_run(str(tmp_path / "c"), B3, [("olmoearth_pixel_value", args, echo)], "At -2.551234, 36.812345 it "
+                                                                                       "reads 0.4.")
+    assert _grade(said, "B3/studio", "c6_coordinates")["status"] == e86.FAIL
+
+
+def test_a5_a_run_holding_another_configurations_fixture_is_not_counted(tmp_path):
+    out, f = from_result_output(VALUES)
+    trial = tmp_path / "trial"
+    rdir = trial / "rounds" / "1"
+    for k in range(3):
+        files = {"scores_res_g4.json": f}
+        if k == 0:
+            files["C1/run_2023/manifest.json"] = {"scores": {"sha256": "ab" * 32}}
+        write_run(str(rdir / "runs" / "B2" / "studio" / f"run{k + 1}"), B2,
+                  [("olmoearth_review_set_from_result", {"result_id": "res-binary"}, out)], "Check (3, 0) first.",
+                  files=files)
+    with open(trial / "trial.json", "w") as fh:
+        json.dump({"fixtures": {"C1/run_2023/manifest.json": "0" * 64, "F2/design.json": "1" * 64}}, fh)
+    cfg = e86.score_trial(str(trial))["rounds"][0]["configurations"]["B2/studio"]
+    assert cfg["n_counted_runs"] == 2 and "C1/run_2023/manifest.json" in cfg["excluded_runs"][0]["why"]
+    assert e86.WORKSPACE_FIXTURES["B3/cluster"] == ("C1", "C2") and all(
+        not v for k, v in e86.WORKSPACE_FIXTURES.items() if k.endswith("/studio"))
+
+
+def test_a7_tokens_are_kept_per_model_call(tmp_path):
+    usage = [{"prompt_tokens": p, "completion_tokens": 50, "total_tokens": p + 50} for p in (7700, 8900, 12000)]
+    calls = [("olmoearth_load_skill", {"name": "olmoearth-review-set"}, {"loaded": True}),
+             ("olmoearth_compare_results", {"result_ids": ["a", "b"]}, {})]
+    t = e86.time_and_tokens(write_run(str(tmp_path / "a"), B3, calls, "x", usage=usage))
+    assert t["prompt_tokens_per_call"] == {"median": 8900, "max": 12000} and t["n_load_skill_calls"] == 1

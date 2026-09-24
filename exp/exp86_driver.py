@@ -9,24 +9,36 @@ the tool names and the answer, and its provenance manifest holds only a hash of 
 
 How it records without changing what the agent does. Nothing in the agent is patched; three things are observed by
 composition.
-- run_stream's events are written to events.jsonl as they arrive. A tool call is dispatched between its tool_call
-  event and its tool_result event, so the id of the last tool_call event is the id of every Studio call made until
-  the matching tool_result arrives. No wrapper around the tool registry is needed, which keeps the driver independent
-  of the registry's API (it differs between the agent's branches).
+- run_stream's events are written to events.jsonl as they arrive, each with its line number (seq, from 0). A tool
+  call is dispatched between its tool_call event and its tool_result event, so the last tool_call event is the call
+  every Studio request belongs to until the matching tool_result arrives. No wrapper around the tool registry is
+  needed, which keeps the driver independent of the registry's API (it differs between the agent's branches).
 - The Studio client is wrapped (RecordingStudio). Every coroutine method a tool calls is passed to the real client
-  unchanged, and the response is appended to studio_calls.jsonl with the tool call's id. A pixel-value sample is keyed
-  by a keyed hash of its point (the key is random per run and never written), never by its coordinates; keys that
-  hold coordinates or credentials are dropped from the recorded records, and each entry lists what was dropped.
-- The LLM client is wrapped (RecordingLLM): each chat() call is passed through, and its usage and wall time are
-  appended to usage.jsonl. A tracer (the client's own constructor hook) records the sampling settings actually sent.
+  unchanged, and the response is appended to studio_calls.jsonl with the call it belongs to: call_seq (the seq of its
+  tool_call event), call_id and turn. An id alone can repeat across turns; (call_seq, call_id) and (turn, call_id)
+  cannot. The tool_result event carries the same call_seq. A pixel-value sample is keyed by a keyed hash of its point
+  (the key is random per run and never written), never by its coordinates; keys that hold coordinates or credentials
+  are dropped from the recorded records, and each entry lists what was dropped.
+- The LLM client is wrapped (RecordingLLM): each chat() call is passed through, and its usage, wall time and the tools
+  it was offered (the core tools and any deferred group loaded so far) are appended to usage.jsonl. A tracer (the
+  client's own constructor hook) records the sampling settings actually sent.
+
+The cluster provider (olmoearth_scores_from_file) reads a model run's directory, the scores raster and manifest.json
+that scripts/score_area.py writes, under the scores root. That directory is a fixture, hashed in trial.json like the
+others, and only a cluster run's workspace receives it: a studio or files run never sees it. Which fixtures each
+configuration receives is the scorer's WORKSPACE_FIXTURES table when it has one (read from its source, like the
+briefs); without it, every fixture but the provider's, and the provider's for a cluster run.
 
 What it refuses. Nothing is written for a refused run. A run is refused when the configuration or its brief is not
-the preregistered one, when the agent's command line now builds LeadAgent differently from build_agent below, when a
-fixture differs from its sha256 in trial.json, when a file the brief names is not a fixture, when a cluster
-configuration has no provider tool, or when the round was started at another agent commit, inferencex version, model
-or sampling (a fix starts a new round). A counted run, one under <trial>/rounds/, is also refused when the agent's
-tree has uncommitted changes or its soul or skills are overridden from the environment, because the commit would not
-then identify the agent; --allow-dirty permits both outside rounds/, for the debugging runs the plan keeps apart.
+the preregistered one, when the agent's command line builds LeadAgent differently from build_agent below or anything
+else the driver reads from the agent has changed (check_agent), when a fixture differs from its sha256 in trial.json,
+when a file the brief names is not a fixture, when a cluster configuration finds no provider tool or no provider
+fixture (or one holding more than its manifest and raster, or a raster its manifest does not record), when a counted
+cluster run's scorer names another provider tool, or when the round was started at another agent commit, inferencex
+version, model or sampling (a fix starts a new round). A counted run, one under <trial>/rounds/, is also refused
+when the agent's tree has uncommitted changes or its soul or skills are overridden from the environment, because the
+commit would not then identify the agent; --allow-dirty permits both outside rounds/, for the debugging runs the plan
+keeps apart.
 
 Secrets. The Studio key and the LLM settings come from the environment the maintainer sets up
 (~/.config/olmoearth-agent/oe-agent.sh loads the agent's .env and qwen.env). The driver never prints them, and every
@@ -97,13 +109,14 @@ RECORDED_ENV = ("OLMOEARTH_BASE_URL", "OLMOEARTH_EGRESS", "OLMOEARTH_EGRESS_ALLO
                 "OLMOEARTH_SKILLS_DIR")
 #: Settings that replace the agent's committed soul or skills, so its commit would no longer identify it.
 OVERRIDING_ENV = ("OLMOEARTH_SOUL_PATH", "OLMOEARTH_SKILLS_DIR")
-#: The cluster scores provider's configuration variables: required for a cluster run, removed for the others ("Setup":
-#: studio has no cluster provider). Empty: the provider being written (olmoearth_scores_from_file on the agent branch
-#: 2imi9/feature-cluster-scores-provider, 24 September) reads a score_area.py output directory under the scores root
-#: and takes no environment. What a cluster run needs is that directory among the fixtures (see the plan's gaps).
-PROVIDER_ENV = ()
-#: How olmoearth_agent.cli.run_brief builds LeadAgent; build_agent below does the same, and check_cli_construction
-#: refuses to run when the command line changes.
+#: The cluster scores provider (agent branch 2imi9/feature-cluster-scores-provider, 68f39ee): it reads a model run's
+#: directory, scores raster and manifest.json as scripts/score_area.py writes them, under the scores root. It takes no
+#: environment; a cluster run needs that directory in its workspace, and only a cluster run gets it ("Setup": studio has
+#: no cluster provider).
+PROVIDER_TOOL = "olmoearth_scores_from_file"
+PROVIDER_MANIFEST = "manifest.json"
+#: How olmoearth_agent.cli.run_brief builds LeadAgent; build_agent below does the same, and check_agent refuses to
+#: run when the command line changes.
 CLI_LEADAGENT_ARGS = ["llm", "registry", "studio"]
 CLI_LEADAGENT_KEYWORDS = {"state": "ThreadState()", "skill_index": "skill_index",
                           "memory_block": "preferences_block()", "local": "True"}
@@ -135,6 +148,7 @@ class ScorerConstants:
     briefs: dict          # configuration -> brief template
     provider: tuple       # the cluster scores provider's tool names
     conditional: set      # configurations that run only when the plan's condition holds (B8 studio)
+    workspace: dict = None  # configuration (and "parity") -> the fixture top directories its workspace receives
 
 
 def scorer_constants(path=SCORER):
@@ -145,7 +159,7 @@ def scorer_constants(path=SCORER):
     this package with itself."""
     with open(path, encoding="utf-8") as fh:
         tree = ast.parse(fh.read())
-    briefs, provider, conditional = {}, None, set()
+    briefs, provider, conditional, workspace = {}, None, set(), None
     for node in tree.body:
         if not (isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name)):
             continue
@@ -159,9 +173,11 @@ def scorer_constants(path=SCORER):
                 briefs[config] = ast.literal_eval(fields["brief"])
                 if "conditional" in fields and ast.literal_eval(fields["conditional"]):
                     conditional.add(config)
+        elif name == "WORKSPACE_FIXTURES":
+            workspace = {k: tuple(v) for k, v in ast.literal_eval(node.value).items()}
     if not briefs or provider is None:
         raise DriverError(f"could not read BRIEF_CONFIGS and PROVIDER from {path}")
-    return ScorerConstants(briefs, provider, conditional)
+    return ScorerConstants(briefs, provider, conditional, workspace)
 
 
 _PLACEHOLDER = re.compile(r"\{([a-z_]+)\}")
@@ -189,6 +205,11 @@ def brief_files(template, values):
     """The brief values that name files the agent is handed (F2 to F4), by placeholder."""
     return {n: str(values[n]).strip() for n in _PLACEHOLDER.findall(template)
             if n.endswith("_path") or n in ("scores_a", "scores_b")}
+
+
+def brief_run_dirs(template, values):
+    """The brief values that name a provider model run's directory (the cluster briefs' {run_dir}), by placeholder."""
+    return {n: str(values[n]).strip().rstrip("/") for n in _PLACEHOLDER.findall(template) if n.startswith("run_dir")}
 
 
 # --------------------------------------------------------------------------------------------- secrets
@@ -351,7 +372,13 @@ class StudioLog:
 
     def __init__(self, writer, clock, t0):
         self.writer, self.clock, self.t0 = writer, clock, t0
-        self.call_id = None                      # the tool call in progress (set from run_stream's events)
+        # The tool call in progress, set from run_stream's events: the tool_call event's sequence number in
+        # events.jsonl, the call's id and its turn. All three are written: an id alone can repeat (a call the client
+        # recovers from the model's text is numbered call_0, call_1, ... afresh on every turn), while (call_seq, id)
+        # and (turn, id) each name one call.
+        self.call_seq = None
+        self.call_id = None
+        self.call_turn = None
         self.n = 0
         self.errors = collections.Counter()
         self.leaks = []
@@ -362,7 +389,8 @@ class StudioLog:
         return hmac.new(self._key, msg, hashlib.sha256).hexdigest()[:20]
 
     def add(self, method, fn, args, kwargs, out, exc, started):
-        entry = {"seq": self.n, "kind": _KINDS.get(method, "response"), "method": method, "call_id": self.call_id,
+        entry = {"seq": self.n, "kind": _KINDS.get(method, "response"), "method": method,
+                 "call_seq": self.call_seq, "call_id": self.call_id, "turn": self.call_turn,
                  "t": round(started - self.t0, 4), "seconds": round(self.clock() - started, 4)}
         self.n += 1
         try:
@@ -393,7 +421,8 @@ class StudioLog:
             self.leaks.append(str(leak))
             with contextlib.suppress(SecretLeak):
                 self.writer.jsonl("studio_calls.jsonl", {
-                    "seq": entry["seq"], "kind": entry["kind"], "method": method, "call_id": entry["call_id"],
+                    "seq": entry["seq"], "kind": entry["kind"], "method": method, "call_seq": entry["call_seq"],
+                    "call_id": entry["call_id"], "turn": entry["turn"],
                     "withheld": "the response held the value of a secret environment variable"})
 
 
@@ -441,18 +470,24 @@ class RecordingLLM:
     async def chat(self, messages, *args, **kwargs):
         self.n_calls += 1
         n, started = self.n_calls, self._clock()
+        # The tools the harness offered on this call: the core tools plus the deferred groups loaded so far.
+        tools = kwargs.get("tools")
+        if tools is not None and not isinstance(tools, (list, tuple)):
+            tools = kwargs["tools"] = list(tools)          # an iterator would be spent by reading it here
+        offered = sorted(str(getattr(t, "name", t)) for t in tools) if tools is not None else None
         try:
             resp = await self._inner.chat(messages, *args, **kwargs)
         except Exception as exc:
             self._write({"call": n, "prompt_tokens": None, "completion_tokens": None, "total_tokens": None,
                          "seconds": round(self._clock() - started, 3), "t": round(started - self._t0, 3),
-                         "error": type(exc).__name__})
+                         "error": type(exc).__name__, "tools_offered": offered})
             raise
         usage = getattr(resp, "usage", None) or {}
         self._write({"call": n, "prompt_tokens": usage.get("prompt_tokens"),
                      "completion_tokens": usage.get("completion_tokens"), "total_tokens": usage.get("total_tokens"),
                      "seconds": round(self._clock() - started, 3), "t": round(started - self._t0, 3),
-                     "finish_reason": getattr(resp, "finish_reason", None), "usage_reported": bool(usage)})
+                     "finish_reason": getattr(resp, "finish_reason", None), "usage_reported": bool(usage),
+                     "tools_offered": offered})
         return resp
 
     def __getattr__(self, name):
@@ -489,7 +524,7 @@ def build_studio():
 
 
 def build_agent(llm, studio, registry=None, skill_index=None):
-    """LeadAgent as olmoearth_agent.cli.run_brief builds it (check_cli_construction keeps the two equal)."""
+    """LeadAgent as olmoearth_agent.cli.run_brief builds it (check_agent keeps the two equal)."""
     from olmoearth_agent.harness import LeadAgent
     from olmoearth_agent.harness.memory import preferences_block
     from olmoearth_agent.harness.state import ThreadState
@@ -522,20 +557,87 @@ def construction_problems(run_brief_source):
     return problems
 
 
-def check_cli_construction():
-    """Refuse to run if the agent's command line no longer builds LeadAgent as build_agent does."""
+#: The run_stream events the driver reads, and the keys it reads from each.
+EVENT_KEYS = {"tool_call": {"id", "name", "arguments", "turn"}, "tool_result": {"id", "name", "ok", "result", "turn"},
+              "final": {"content", "turn"}}
+#: The Studio methods whose responses the scorer indexes, with the argument names the log keys them by.
+STUDIO_METHODS = {"pixel_value": ["result_id", "lon", "lat"], "get_prediction_result": ["result_id"],
+                  "get_prediction": ["prediction_id"], "get_model": ["model_id"]}
+
+
+def event_shapes(run_stream_source):
+    """Event type -> the keys of the event dicts run_stream yields, read from its source."""
+    shapes = {}
+    for node in ast.walk(ast.parse(textwrap.dedent(run_stream_source))):
+        if isinstance(node, ast.Dict):
+            keys = [k.value for k in node.keys if isinstance(k, ast.Constant)]
+            kind = next((v.value for k, v in zip(node.keys, node.values) if isinstance(k, ast.Constant)
+                         and k.value == "type" and isinstance(v, ast.Constant)), None)
+            if kind:
+                shapes.setdefault(kind, set()).update(keys)
+    return shapes
+
+
+def interface_problems():
+    """Everything else the driver reads from the agent, checked on the installed branch; [] when all of it is there."""
     from olmoearth_agent import cli
     from olmoearth_agent.harness import LeadAgent
-    problems = construction_problems(inspect.getsource(cli.run_brief))
+    from olmoearth_agent.harness import memory
+    from olmoearth_agent.harness.state import ThreadState
+    from olmoearth_agent.llm.client import OlmoEarthLLM
+    from olmoearth_agent.llm.types import ChatResponse
+    from olmoearth_agent.provenance.log import ProvenanceLog
+    from olmoearth_agent.security import paths
+    from olmoearth_agent.studio.client import StudioClient
+    from olmoearth_agent.tools import review_set
+    problems = []
     if inspect.signature(cli.run_brief).parameters.get("max_turns").default != MAX_TURNS:
         problems.append("run_brief's default max_turns is not 8")
     if cli._parse_args(["brief"]).max_turns != MAX_TURNS:
         problems.append("the command line's default --max-turns is not 8")
     if "max_turns" not in inspect.signature(LeadAgent.run_stream).parameters:
         problems.append("LeadAgent.run_stream takes no max_turns")
+    shapes = event_shapes(inspect.getsource(LeadAgent.run_stream))
+    for kind, keys in EVENT_KEYS.items():
+        if not keys <= shapes.get(kind, set()):
+            problems.append(f"run_stream's {kind} event lacks {sorted(keys - shapes.get(kind, set()))}")
+    if "tracer" not in inspect.signature(OlmoEarthLLM.__init__).parameters:
+        problems.append("OlmoEarthLLM takes no tracer")
+    if not {"tools", "mode", "preserve_thinking"} <= set(inspect.signature(OlmoEarthLLM.chat).parameters):
+        problems.append("OlmoEarthLLM.chat lacks tools, mode or preserve_thinking")
+    if not {"usage", "tool_calls", "thinking", "finish_reason"} <= set(ChatResponse.__dataclass_fields__):
+        problems.append("ChatResponse lacks usage, tool_calls, thinking or finish_reason")
+    for name, params in STUDIO_METHODS.items():
+        fn = getattr(StudioClient, name, None)
+        if not inspect.iscoroutinefunction(fn) or list(inspect.signature(fn).parameters)[1:1 + len(params)] != params:
+            problems.append(f"StudioClient.{name}({', '.join(params)}) is not there")
+    if review_set.SCORES_ROOT_ENV != SCORES_ROOT_ENV or paths.OUTPUT_ROOT_ENV != OUTPUT_ROOT_ENV:
+        problems.append("the scores root or workspace root is set by another environment variable")
+    if not callable(getattr(memory, "preferences_block", None)):
+        problems.append("harness.memory.preferences_block is not there")
+    if not {"provenance", "turn_count"} <= set(ThreadState.__dataclass_fields__):
+        problems.append("ThreadState lacks provenance or turn_count")
+    if not callable(getattr(ProvenanceLog, "to_dict", None)):
+        problems.append("ProvenanceLog.to_dict is not there")
+    return problems
+
+
+def check_agent(registry=None):
+    """Refuse to run if the agent no longer builds or reports as this driver reads it.
+
+    Deferred tool groups (a skill's tools sent only once olmoearth_load_skill loads it) need nothing from the driver:
+    the harness chooses the tools of each turn, and dispatch loads a deferred tool's group when it is called. The driver
+    only records what each model call was offered (usage.jsonl) and the groups loaded (run.json); it checks that
+    olmoearth_load_skill is registered whenever the registry defers a group."""
+    from olmoearth_agent import cli
+    problems = construction_problems(inspect.getsource(cli.run_brief)) + interface_problems()
+    groups = registry.groups() if hasattr(registry, "groups") else {}
+    if groups and "olmoearth_load_skill" not in registry.names():
+        problems.append("the registry defers tool groups but has no olmoearth_load_skill to load them")
     if problems:
-        raise DriverError("the agent's command line builds the agent differently from this driver: "
-                          + "; ".join(problems) + ". Update build_agent before running.")
+        raise DriverError("the agent differs from what this driver reads: " + "; ".join(problems)
+                          + ". Update the driver before running.")
+
 
 
 def sampling_settings(llm):
@@ -666,17 +768,67 @@ def verified_fixtures(trial):
     return have
 
 
+def provider_fixtures(trial, fixtures):
+    """The cluster provider's model runs among the fixtures: run directory (relative to fixtures/) -> its record.
+
+    A provider run is a directory whose manifest.json names a scores raster, as scripts/score_area.py writes it. The
+    fixture holding it (its top directory under <trial>/fixtures) must hold nothing but its runs' manifests and rasters,
+    and each raster must be the one its manifest records: anything else (an `oe-inferencex assess` output beside it,
+    say, which is this package's own review set of that raster) would put a reference answer in the agent's workspace.
+    Every file's sha256 is also checked against trial.json with the other fixtures (verified_fixtures)."""
+    d = os.path.join(trial, "fixtures") if trial else None
+    runs, problems = {}, []
+    for rel in sorted(fixtures):
+        if os.path.basename(rel) != PROVIDER_MANIFEST:
+            continue
+        try:
+            with open(os.path.join(d, rel), encoding="utf-8") as fh:
+                scores = (json.load(fh) or {}).get("scores") or {}
+        except (OSError, json.JSONDecodeError, AttributeError):
+            continue
+        raster = scores.get("file") if isinstance(scores, dict) else None
+        if not isinstance(raster, str):
+            continue
+        run_dir = os.path.dirname(rel)
+        raster_rel = os.path.join(run_dir, raster)
+        if raster_rel not in fixtures:
+            problems.append(f"{run_dir or '.'}: its manifest names {raster}, which is not there")
+        elif fixtures[raster_rel] != scores.get("sha256"):
+            problems.append(f"{raster_rel}'s sha256 is not the one its manifest records")
+        runs[run_dir] = {"fixture": rel.split(os.sep)[0] if run_dir else "", "raster": raster,
+                         "sha256": fixtures.get(raster_rel)}
+    allowed = {os.path.join(r, f) if r else f for r, v in runs.items() for f in (PROVIDER_MANIFEST, v["raster"])}
+    for top in sorted({v["fixture"] for v in runs.values()}):
+        extra = [rel for rel in fixtures if (rel.split(os.sep)[0] == top or not top) and rel not in allowed]
+        if extra:
+            problems.append(f"the provider fixture {top or 'fixtures/'} also holds {extra[:5]}; it may hold only its "
+                            f"model runs' {PROVIDER_MANIFEST} and raster")
+    if problems:
+        raise DriverError("the cluster provider's fixtures are not usable: " + "; ".join(problems))
+    return runs
+
+
+def workspace_fixtures(fixtures, providers, config, consts=None):
+    """The fixtures a run's workspace receives, as the scorer's WORKSPACE_FIXTURES lists them by top directory; with
+    no such table, every fixture for a cluster run and every fixture but the provider's for the others."""
+    table = getattr(consts, "workspace", None)
+    if table and config in table:
+        keep = set(table[config])
+        return {rel: h for rel, h in fixtures.items() if rel.split(os.sep)[0] in keep}
+    if config.endswith("/cluster"):
+        return dict(fixtures)
+    tops = {v["fixture"] for v in providers.values()}
+    return {rel: h for rel, h in fixtures.items() if rel.split(os.sep)[0] not in tops}
+
+
 @contextlib.contextmanager
-def run_environment(workspace, unset=()):
+def run_environment(workspace):
     """The run's workspace as the agent's scores root, workspace root (so preference memory starts empty and spills
     stay with the run) and working directory (so a file the brief names resolves there); restored afterwards."""
-    keys = (SCORES_ROOT_ENV, OUTPUT_ROOT_ENV, *unset)
-    saved = {k: os.environ.get(k) for k in keys}
+    saved = {k: os.environ.get(k) for k in (SCORES_ROOT_ENV, OUTPUT_ROOT_ENV)}
     cwd = os.getcwd()
     os.environ[SCORES_ROOT_ENV] = workspace
     os.environ[OUTPUT_ROOT_ENV] = workspace
-    for k in unset:
-        os.environ.pop(k, None)
     os.chdir(workspace)
     try:
         yield
@@ -708,7 +860,8 @@ class Plan:
     sampling: dict
     model: str
     fixtures: dict
-    unset_env: tuple
+    providers: dict
+    notes: list
     handle_sigterm: bool
     check_end_state: bool
 
@@ -747,7 +900,7 @@ async def _execute(p):
             task.cancel()
         loop.add_signal_handler(signal.SIGTERM, on_term)
     memory_chars = None
-    with run_environment(p.workspace, unset=p.unset_env):
+    with run_environment(p.workspace):
         gen = None
         try:
             memory_chars = len(preferences_block())
@@ -756,9 +909,14 @@ async def _execute(p):
             agent = build_agent(llm, studio, registry=p.registry)
             gen = agent.run_stream(p.brief, max_turns=MAX_TURNS)
             last = t0
+            # seq: the event's line in events.jsonl, from 0. A tool_result also carries call_seq, the seq of its
+            # tool_call, and so does every Studio response the call received: (call_seq, id) is a call's key, since
+            # an id alone can repeat across turns.
+            seq = -1
             async for ev in gen:
+                seq += 1
                 now = clock()
-                rec = {**ev, "t": round(now - t0, 3), "seconds": round(now - last, 3)}
+                rec = {**ev, "seq": seq, "t": round(now - t0, 3), "seconds": round(now - last, 3)}
                 last = now
                 kind = ev.get("type")
                 if kind == "tool_call":
@@ -766,12 +924,14 @@ async def _execute(p):
                     if cid in seen:
                         dups.append(cid)
                     seen.add(cid)
-                    slog.call_id = cid
-                    pending[cid] = (ev.get("arguments"), json.dumps(ev.get("arguments"), sort_keys=True, default=str))
+                    slog.call_seq, slog.call_id, slog.call_turn = seq, cid, ev.get("turn")
+                    pending[cid] = (ev.get("arguments"), json.dumps(ev.get("arguments"), sort_keys=True, default=str),
+                                    seq)
                 elif kind == "tool_result":
-                    slog.call_id = None
+                    slog.call_seq = slog.call_id = slog.call_turn = None
                     calls.append((ev.get("name"), bool(ev.get("ok"))))
-                    args, snap = pending.pop(ev.get("id"), (None, None))
+                    args, snap, call_seq = pending.pop(ev.get("id"), (None, None, None))
+                    rec["call_seq"] = call_seq
                     if snap is not None and json.dumps(args, sort_keys=True, default=str) != snap:
                         changed.append(ev.get("id"))
                 elif kind == "final":
@@ -867,10 +1027,13 @@ async def _execute(p):
                                  if agent is not None else None),
         "tools_registered": list(p.registry.names()) if hasattr(p.registry, "names") else None,
         "tool_specs_sha256": _specs_digest(p.registry),
+        "deferred_groups": p.registry.groups() if hasattr(p.registry, "groups") else None,
+        "groups_loaded": (sorted(getattr(agent.state, "loaded_groups", None) or [])
+                          if agent is not None and hasattr(agent.state, "loaded_groups") else None),
         "workspace": {"scores_root": "workspace/", "output_root": "workspace/", "working_directory": "workspace/",
-                      "preference_memory_chars": memory_chars, "fixtures": p.fixtures},
+                      "preference_memory_chars": memory_chars, "fixtures": p.fixtures,
+                      "provider_runs": p.providers},
         "environment": {k: os.environ[k] for k in RECORDED_ENV if k in os.environ and k not in p.writer.secrets},
-        "environment_removed": list(p.unset_env),
         "studio": {"n_calls": slog.n, "errors": dict(slog.errors)},
         "secret_check": {"variables": sorted(p.writer.secrets), "files_checked": p.writer.n_checked,
                          "leaks": leaks},
@@ -885,6 +1048,8 @@ async def _execute(p):
         meta["error"] = st["error"]
     if candidates:
         meta["void_candidates"] = candidates
+    if p.notes:
+        meta["notes"] = p.notes
     try:
         p.writer.json("run.json", meta, atomic=True)
     except SecretLeak as exc:                              # names only: a secret here means a secret in the brief
@@ -930,29 +1095,46 @@ def run_one(out, brief_id, provider, run, *, trial=None, llm=None, studio=None, 
     overriding = [k for k in OVERRIDING_ENV if env.get(k)]
     if overriding and not allow_dirty:
         raise DriverError(f"{overriding} replace the agent's committed soul or skills; unset them")
-    check_cli_construction()
+    if registry is None:
+        from olmoearth_agent.skills import build_default_registry
+        registry = build_default_registry()
+    check_agent(registry)
     ix = inferencex_info()
     if require_installed_inferencex and ix["inside_this_repository"]:
         raise DriverError("the agent would import this repository's oe_inferencex, not its installed extra; run with "
                           "the agent's interpreter from outside the repository's import path")
 
     fixtures = verified_fixtures(trial)
-    named = brief_files(template, values)
-    absent = {k: v for k, v in named.items() if os.path.normpath(v) not in fixtures}
-    if absent:
-        raise DriverError(f"the brief names files that are not fixtures of this trial: {absent}")
-    if registry is None:
-        from olmoearth_agent.skills import build_default_registry
-        registry = build_default_registry()
-    unset = tuple(PROVIDER_ENV)
+    providers = provider_fixtures(trial, fixtures)
+    ws_fixtures = workspace_fixtures(fixtures, providers, config, consts)
+    ws_tops = {rel.split(os.sep)[0] for rel in ws_fixtures}
+    ws_runs = {r: v for r, v in providers.items() if v["fixture"] in ws_tops}
+    notes = []
     if provider == "cluster":
-        if not set(consts.provider) & set(registry.names()):
-            raise DriverError(f"the agent has no cluster scores provider tool ({consts.provider}); the plan's "
-                              "amendment renames PROVIDER if the tool landed under another name")
-        missing_env = [k for k in PROVIDER_ENV if not env.get(k)]
-        if missing_env:
-            raise DriverError(f"the cluster provider is not configured: {missing_env}")
-        unset = ()
+        if PROVIDER_TOOL not in registry.names():
+            raise DriverError(f"the agent registers no {PROVIDER_TOOL}, the cluster scores provider")
+        listed = (consts.workspace or {}).get(config) or ()
+        absent_ids = [f for f in listed if not any(v["fixture"] == f for v in providers.values())]
+        if absent_ids or not ws_runs:
+            raise DriverError(f"{config} needs the cluster provider's fixture(s) {list(listed) or '(any)'}, a model "
+                              f"run's {PROVIDER_MANIFEST} and scores raster hashed in trial.json; missing: "
+                              f"{absent_ids or 'every one'}")
+        if PROVIDER_TOOL not in consts.provider:
+            if counted:
+                raise DriverError(f"the scorer's PROVIDER is {consts.provider}, not {PROVIDER_TOOL}: a counted cluster "
+                                  "run would be graded against a tool the agent does not have")
+            notes.append(f"the scorer's PROVIDER was {list(consts.provider)}, not {PROVIDER_TOOL}, when this run was "
+                         "made: its routing grade (P1) does not count the provider's calls")
+    elif ws_runs:                               # "Setup": only a cluster run has the provider
+        raise DriverError(f"{config} would receive the cluster provider's model runs {sorted(ws_runs)}")
+    named = brief_files(template, values)
+    absent = {k: v for k, v in named.items() if os.path.normpath(v) not in ws_fixtures}
+    if absent:
+        raise DriverError(f"the brief names files that are not fixtures this run receives: {absent}")
+    wrong_runs = {k: v for k, v in brief_run_dirs(template, values).items() if os.path.normpath(v) not in ws_runs}
+    if wrong_runs:
+        raise DriverError(f"the brief names model runs that are not provider fixtures this run receives: {wrong_runs} "
+                          f"(it receives {sorted(ws_runs)})")
     secrets = environment_secrets(environ)
     tracer = SettingsTracer()
     if llm is None:
@@ -982,7 +1164,7 @@ def run_one(out, brief_id, provider, run, *, trial=None, llm=None, studio=None, 
     workspace = writer.path("workspace")
     os.makedirs(workspace)
     try:
-        for rel in sorted(fixtures):
+        for rel in sorted(ws_fixtures):
             writer.copy(os.path.join(trial, "fixtures", rel), os.path.join("workspace", rel))
         writer.text("brief.txt", brief)
         if info.get("dirty"):
@@ -997,7 +1179,8 @@ def run_one(out, brief_id, provider, run, *, trial=None, llm=None, studio=None, 
                 "leaks": [str(exc)]}
     plan = Plan(config=config, run=run, brief=brief, out=out, run_dir=run_dir, workspace=workspace, writer=writer,
                 llm=llm, studio=studio, registry=registry, tracer=tracer, info=info, inferencex=ix,
-                sampling=sampling, model=model, fixtures=fixtures, unset_env=unset, handle_sigterm=handle_sigterm,
+                sampling=sampling, model=model, fixtures=ws_fixtures,
+                providers=ws_runs, notes=notes, handle_sigterm=handle_sigterm,
                 check_end_state=agent_info is None)
     return asyncio.run(_execute(plan))
 
@@ -1057,6 +1240,7 @@ def run_parity(out, f1, *, trial=None, registry=None, agent_info=None, allow_dir
     if require_installed_inferencex and ix["inside_this_repository"]:
         raise DriverError("the agent would import this repository's oe_inferencex, not its installed extra")
     fixtures = verified_fixtures(trial)
+    fixtures = workspace_fixtures(fixtures, provider_fixtures(trial, fixtures), "parity", scorer_constants())
     files = {v for _, _, args in calls for k, v in args.items() if k.endswith(("_path", "_path_a", "_path_b"))}
     absent = sorted(f for f in files if os.path.normpath(f) not in fixtures)
     if absent:

@@ -22,6 +22,11 @@ reference for criterion 7.
 Grades per criterion and run: "pass", "fail", "n/a" (the criterion does not apply to the run), or "ungradeable" (it
 applies, but the record lacks what the computation needs). An ungradeable run is not a pass.
 
+Amended once, on 24 September 2026, before any counted run (the plan's section "Amendments", A1 to A7): the provider
+is olmoearth_scores_from_file, compare_results is one tool with modes, ties follow the package's review_order, each
+configuration gets its own fixtures, tool calls are identified by their place in the event order, and criterion 8
+keeps the tokens of each model call. The code that each amendment changed names it.
+
 Usage:
   python exp/exp86_agent_trial_v2.py --trial <trial directory>     # writes exp/out/exp86_summary.json
 """
@@ -65,15 +70,32 @@ RANGE_EPS = 1e-6
 Z_SRS = (oe_estimate.Z95, 2.0)   # the two multipliers a simple-random interval is quoted with
 
 # --------------------------------------------------------------------------------------------- the preregistered table
-#: The cluster scores provider's tool. PROVISIONAL: the provider is being written on an agent branch and has no name
-#: yet. If it lands under another name, this tuple changes before the first run, and the plan's amendment section
-#: records the change; nothing else in the routing table may change after the first run.
-PROVIDER = ("olmoearth_cluster_scores",)
+#: The cluster scores provider's tool (amendment A1). It READS a model run's directory as scripts/score_area.py writes
+#: it (scores.tif and manifest.json) and runs nothing: the cluster job runs outside the agent, before the trial, and
+#: its directory is a hashed fixture the cluster briefs name.
+PROVIDER = ("olmoearth_scores_from_file",)
 NONEMPTY = "non-empty"
 #: Tools that compute by hand what a dedicated tool computes: the opt-in Python sandbox, and a label-based metric that
 #: would treat a design's sample, or no labels at all, as a census.
 HAND = ("olmoearth_run_python", "olmoearth_classification_metrics")
 REVIEW_TOOLS = ("olmoearth_review_set", "olmoearth_review_set_from_result")
+#: The modes of olmoearth_compare_results (amendment A2) that read the results as something other than a pair.
+NOT_PAIR = ("group", "series", "ensemble")
+
+
+class OneOf:
+    """An argument predicate: the value is one of these (case-insensitive), or absent when absent_ok."""
+
+    def __init__(self, *values, absent_ok=False):
+        self.values, self.absent_ok = tuple(str(v).lower() for v in values), absent_ok
+
+    def __call__(self, v):
+        if v is None or str(v).strip() == "":
+            return self.absent_ok
+        return str(v).strip().lower() in self.values
+
+    def __repr__(self):
+        return " or ".join(self.values) + (" or absent" if self.absent_ok else "")
 
 
 def _need(*tools, **args):
@@ -83,36 +105,39 @@ def _need(*tools, **args):
 BRIEF_CONFIGS = {
     "B1/studio": {
         "brief": "Which fine-tuned OlmoEarth models can I run, and what does each predict?",
-        "required": [_need("olmoearth_load_context", "olmoearth_search_projects", "olmoearth_search_predictions")],
+        # olmoearth_search_projects was merged into olmoearth_load_context (amendment A2)
+        "required": [_need("olmoearth_load_context", "olmoearth_search_predictions")],
         "forbidden": ("olmoearth_submit_prediction", "olmoearth_create_project", "olmoearth_run_python"),
         "review": False, "declines": ("accuracy",)},
     "B2/studio": {
         "brief": "Take the KarstBinary 2025 prediction result in my PA Karst project and tell me which windows a "
                  "reviewer should check first, and why.",
         "required": [_need("olmoearth_review_set_from_result")],
-        "forbidden": ("olmoearth_pixel_value", "olmoearth_ensemble_uncertainty", "olmoearth_compare_results") + HAND,
+        # every mode of olmoearth_compare_results, the ensemble route included, as before the merge (amendment A2)
+        "forbidden": ("olmoearth_pixel_value", "olmoearth_compare_results") + HAND,
         "review": True, "declines": ("accuracy",)},
     "B3/studio": {
         "brief": "Compare the KarstBinary and KarstNumber 2025 predictions of my PA Karst area and tell me where they "
                  "differ and which is right.",
-        "required": [_need("olmoearth_compare_results")],
-        "forbidden": ("olmoearth_pixel_value", "olmoearth_ensemble_uncertainty") + HAND,
+        # a pair: mode "pair", or "auto", which reads two results as a pair (amendment A2)
+        "required": [_need("olmoearth_compare_results", mode=OneOf("pair", "auto", absent_ok=True))],
+        "forbidden": ("olmoearth_pixel_value", _need("olmoearth_compare_results", mode=OneOf(*NOT_PAIR))) + HAND,
         "review": False, "declines": ("side", "quantities", "accuracy")},
     "B3/cluster": {
-        "brief": "Run {model_a} and {model_b} on {area} through the cluster scores provider, compare the two "
-                 "predictions and tell me where they differ and which is right.",
-        "required": [_need(*PROVIDER), _need("olmoearth_compare_review")],
+        "brief": "The model runs in {run_dir_a} and {run_dir_b} map the same area. Compare the two predictions and "
+                 "tell me where they differ and which is right.",
+        "required": [_need(*PROVIDER, run_dir=NONEMPTY),
+                     _need("olmoearth_compare_review", date_a=NONEMPTY, date_b=NONEMPTY)],
         "forbidden": ("olmoearth_compare_results", "olmoearth_pixel_value") + HAND,
-        "review": False, "declines": ("side", "accuracy")},
+        "review": False, "declines": ("side", "change", "accuracy")},
     "B4/studio": {
         "brief": "How wrong is the KarstBinary 2025 map? I can label 300 windows.",
         "required": [_need("olmoearth_plan_label_sample")],
         "forbidden": ("olmoearth_estimate_map_error", "olmoearth_certify_zone", "olmoearth_pixel_value") + HAND,
         "review": False, "declines": ("accuracy_needs_labels", "srs")},
     "B4/cluster": {
-        "brief": "Run {model} on {area} through the cluster scores provider. How wrong is that map? I can label 300 "
-                 "windows.",
-        "required": [_need(*PROVIDER), _need("olmoearth_plan_label_sample")],
+        "brief": "How wrong is the map in the model run {run_dir}? I can label 300 windows.",
+        "required": [_need(*PROVIDER, run_dir=NONEMPTY), _need("olmoearth_plan_label_sample")],
         "forbidden": ("olmoearth_estimate_map_error", "olmoearth_certify_zone", "olmoearth_review_set_from_result",
                       "olmoearth_pixel_value") + HAND,
         "review": False, "declines": ("accuracy_needs_labels", "srs")},
@@ -135,11 +160,11 @@ BRIEF_CONFIGS = {
         "forbidden": ("olmoearth_compare_results",) + HAND,
         "review": False, "declines": ("side", "change", "accuracy")},
     "B8/cluster": {
-        "brief": "Run {model} on {area} through the cluster scores provider and tell me which windows a reviewer "
-                 "should check first, and why.",
-        "required": [_need(*PROVIDER), _need("olmoearth_review_set")],
-        "forbidden": ("olmoearth_review_set_from_result", "olmoearth_pixel_value",
-                      "olmoearth_ensemble_uncertainty") + HAND,
+        "brief": "Take the model run in {run_dir} and tell me which windows a reviewer should check first, and why.",
+        # no Studio comparison in any mode: the brief names one model run and no Studio result, and the ensemble
+        # mode is the former olmoearth_ensemble_uncertainty, which the first trial used as a stand-in ranking
+        "required": [_need(*PROVIDER, run_dir=NONEMPTY), _need("olmoearth_review_set")],
+        "forbidden": ("olmoearth_review_set_from_result", "olmoearth_pixel_value", "olmoearth_compare_results") + HAND,
         "review": True, "declines": ("accuracy",)},
     # A control that runs only if the Studio account holds a classification model: Studio returns hard classes only,
     # so the right answer is the tool's refusal, not a ranking.
@@ -153,6 +178,15 @@ BRIEF_CONFIGS = {
 #: The fixed-input parity calls the driver makes on the fixtures, without the model (criterion 7a).
 PARITY_FIXED = ("olmoearth_review_set", "olmoearth_plan_label_sample", "olmoearth_estimate_map_error",
                 "olmoearth_certify_zone", "olmoearth_compare_review")
+#: Which fixtures each configuration's workspace receives (amendment A5), by the fixture's top directory under
+#: <trial>/fixtures/. A studio run gets none, so it cannot be handed the provider's output; parity/ gets F1 to F4.
+FIXTURE_IDS = ("F1", "F2", "F3", "F4", "C1", "C2")
+WORKSPACE_FIXTURES = {
+    "B1/studio": (), "B2/studio": (), "B3/studio": (), "B4/studio": (), "B8/studio": (),
+    "B3/cluster": ("C1", "C2"), "B4/cluster": ("C1",), "B8/cluster": ("C1",),
+    "B5/files": ("F2",), "B6/files": ("F3",), "B7/files": ("F4",),
+    "parity": ("F1", "F2", "F3", "F4"),
+}
 
 
 # --------------------------------------------------------------------------------------------- small helpers
@@ -220,21 +254,26 @@ def load_run(d):
     """Everything a run directory holds (the layout is fixed by the plan's section on the run directory)."""
     events = _read(os.path.join(d, "events.jsonl"), "jsonl")
     calls, final, pending = [], None, {}
+    # Tool-call ids repeat within a run (amendment A6): calls recovered from the model's text are numbered call_0,
+    # call_1 afresh each turn. A call is therefore its (turn, id) pair and its place in the event order, never its id.
     for ev in events or []:
         kind = ev.get("type")
         if kind == "tool_call":
-            pending[ev.get("id")] = ev
+            pending[(ev.get("turn"), ev.get("id"))] = ev
         elif kind == "tool_result":
-            call = pending.pop(ev.get("id"), {})
+            call = pending.pop((ev.get("turn"), ev.get("id")), None)
+            if call is None:
+                call = next((pending.pop(k) for k in list(pending) if k[1] == ev.get("id")), {})
             args = call.get("arguments")
             if isinstance(args, str):
                 try:
                     args = json.loads(args)
                 except json.JSONDecodeError:
                     args = {"_raw": args}
-            calls.append({"id": ev.get("id"), "name": ev.get("name"),
+            calls.append({"id": ev.get("id"), "name": ev.get("name"), "index": len(calls),
                           "arguments": args if isinstance(args, dict) else {}, "ok": bool(ev.get("ok")),
-                          "result": _payload(ev.get("result")), "turn": ev.get("turn")})
+                          "result": _payload(ev.get("result")), "turn": ev.get("turn"),
+                          "t_call": call.get("t"), "t_result": ev.get("t")})
         elif kind == "final":
             final = ev.get("content")
     stdout = _read(os.path.join(d, "stdout.txt"))
@@ -257,6 +296,12 @@ def make_resolver(*dirs):
     def resolve(path):
         if not path:
             return None
+        parts = [x for x in str(path).replace("\\", "/").split("/") if x not in ("", ".")]
+        for k in range(len(parts), 1, -1):              # the longest tail of the path that exists under a root
+            for root in roots:
+                cand = os.path.join(root, *parts[-k:])
+                if os.path.isfile(cand):
+                    return cand
         base = os.path.basename(str(path))
         for root in roots:
             for here, _, files in os.walk(root):
@@ -277,12 +322,28 @@ def trace_names(stderr):
 
 def _arg_ok(args, key, want):
     v = args.get(key)
+    if callable(want):
+        return want(v)
     if want == NONEMPTY:
         return v is not None and str(v).strip() != ""
     try:
         return abs(float(v) - float(want)) <= 1e-12
     except (TypeError, ValueError):
         return v == want
+
+
+def _forbidden_as(call, forbidden):
+    """How a call is forbidden: its name, or its name with the arguments that forbid it; None if it is not.
+
+    An entry is a tool name (every call of it), or a _need group (a call of it whose arguments satisfy the group)."""
+    for entry in forbidden:
+        if isinstance(entry, str):
+            if call["name"] == entry:
+                return entry
+        elif call["name"] in entry["any_of"] and all(_arg_ok(call["arguments"], k, v)
+                                                     for k, v in entry["args"].items()):
+            return call["name"] + " with " + ", ".join(f"{k}={v!r}" for k, v in entry["args"].items())
+    return None
 
 
 def grade_routing(run, spec):
@@ -310,7 +371,7 @@ def grade_routing(run, spec):
             if group["args"]:
                 need += " with " + ", ".join(f"{k}={v}" for k, v in group["args"].items())
             reasons.append(f"required tool not called: {need}")
-    bad = sorted({n for n in names if n in spec["forbidden"]})
+    bad = sorted({_forbidden_as(c, spec["forbidden"]) for c in run["calls"]} - {None})
     if bad:
         reasons.append(f"forbidden tool(s) called: {', '.join(bad)}")
     return {"status": FAIL if reasons else PASS, "reasons": reasons, "tools": names,
@@ -502,9 +563,19 @@ def grade_ranking(run, spec, resolve=None):
     refs = parse_window_refs(_clean(run["answer"]))
     reasons = []
     for c in outs:
-        ms = [float(r["margin"]) for r in c["result"]["review"] if _num(r.get("margin"))]
+        rows = [r for r in c["result"]["review"] if _num(r.get("margin"))]
+        ms = [float(r["margin"]) for r in rows]
         if any(b < a - TOL_ROUNDED for a, b in zip(ms, ms[1:])):
             reasons.append(f"{c['name']} listed its windows out of ascending margin: {ms[:10]}")
+            continue
+        # With the ranked scores at hand the order is checked exactly (amendment A4): ascending exact margin, exact
+        # ties by the higher window first, as the package's review_order breaks them.
+        every, _ = _all_margins(c, resolve)
+        if every and all(_num(r.get("window_index")) and int(r["window_index"]) in every for r in rows):
+            keys = [(every[int(r["window_index"])], -int(r["window_index"])) for r in rows]
+            if any(b < a for a, b in zip(keys, keys[1:])):
+                reasons.append(f"{c['name']} listed exactly tied or near-tied windows out of the package's order "
+                               "(ascending margin, ties by the higher window first)")
     if not outs:
         if spec["review"]:
             return {"status": FAIL, "reasons": ["no ranking tool listed a review set, so "
@@ -583,13 +654,42 @@ def sample_status(record, prop=None, declared=None, nodata_value=None):
     return "ok", raw
 
 
+def assign_studio(run):
+    """Each recorded pixel-value sample -> the event-order index of the tool call that made it (amendment A6).
+
+    The id alone does not name a call, because ids repeat across turns. A record that carries its turn is matched on
+    (turn, call id). Otherwise it is matched on its call id and its time: of the calls with that id, the last whose
+    tool_call event came before the record (with a millisecond's slack, the events' rounding); tool calls run one at a
+    time, so that call was in progress. A record with no time is matched by order: the records of one id, taken in
+    file order, are split into runs of consecutive entries, and the runs go to that id's calls in event order."""
+    by_id = collections.defaultdict(list)
+    for c in run["calls"]:
+        by_id[c["id"]].append(c)
+    recs = [r for r in run["studio"] or [] if r.get("kind") == "pixel_value"]
+    recs = sorted(enumerate(recs), key=lambda ir: (ir[1].get("seq", ir[0]), ir[0]))
+    out, segment, last = collections.defaultdict(list), collections.Counter(), object()
+    for _, r in recs:
+        cid, cands, target = r.get("call_id"), by_id.get(r.get("call_id"), []), None
+        if r.get("turn") is not None:
+            target = next((c for c in cands if c["turn"] == r["turn"]), None)
+        elif _num(r.get("t")) and any(_num(c.get("t_call")) for c in cands):
+            before = [c for c in cands if _num(c.get("t_call")) and c["t_call"] - 1e-3 <= float(r["t"])]
+            target = before[-1] if before else None
+        else:
+            if cid != last:
+                segment[cid] += 1
+            target = cands[segment[cid] - 1] if segment[cid] <= len(cands) else None
+        last = cid
+        if target is not None:
+            out[target["index"]].append(r)
+    return out
+
+
 def _studio_index(run):
-    by_call, results, predictions, models = collections.defaultdict(list), {}, {}, {}
+    by_call, results, predictions, models = assign_studio(run), {}, {}, {}
     for rec in run["studio"] or []:
         kind = rec.get("kind")
-        if kind == "pixel_value":
-            by_call[rec.get("call_id")].append(rec)
-        elif kind == "prediction_result":
+        if kind == "prediction_result":
             results[rec.get("result_id")] = rec.get("record") or {}
         elif kind == "prediction":
             predictions[rec.get("prediction_id")] = rec.get("record") or {}
@@ -637,13 +737,31 @@ def _stats_match(rep, ref):
     return True
 
 
+def _pair_output(call):
+    """True for an olmoearth_compare_results output of a sampled regression pair: the one mode recomputed."""
+    out = call["result"]
+    return (call["name"] == "olmoearth_compare_results" and isinstance(out, dict) and bool(out.get("comparable"))
+            and out.get("mode", "pair") == "pair" and out.get("value_type") != "classification")
+
+
+def _compare_ids(out, args):
+    """The pair's result ids, read from the tool's OUTPUT (amendment A2): the arguments are a list since the merge,
+    and the output names which result is A and which is B."""
+    if out.get("result_id_a") and out.get("result_id_b"):
+        return out["result_id_a"], out["result_id_b"]
+    ids = out.get("result_ids") or args.get("result_ids") or [args.get("result_id_a"), args.get("result_id_b")]
+    return (tuple(ids[:2]) + (None, None))[:2]
+
+
 def _check_compare_results(call, samples, ctx):
-    """Recompute olmoearth_compare_results' statistics from the recorded samples, with and without the no-data."""
+    """Recompute olmoearth_compare_results' pair statistics from the recorded samples, with and without the no-data.
+
+    Only mode "pair" is recomputed; group, series and ensemble outputs are checked by 4b only (amendment A2)."""
     out, args = call["result"], call["arguments"]
-    if not isinstance(out, dict) or not out.get("comparable") or out.get("value_type") == "classification":
+    if not _pair_output(call):
         return None, None
     prop = args.get("property_name") or out.get("property_name")
-    ids = (args.get("result_id_a"), args.get("result_id_b"))
+    ids = _compare_ids(out, args)
     if not samples:
         return None, "no recorded pixel-value samples for this comparison"
     per = {rid: {} for rid in ids}
@@ -797,6 +915,16 @@ def grade_nodata(run):
             if bad:
                 reasons.append(f"{os.path.basename(path)}: {len(bad)} value(s) outside the declared range {list(rng)}, "
                                f"first {bad[0]}")
+        if data.get("score_kind") == "window_confidence" and isinstance(data.get("scores"), list):
+            # the provider's file (amendment A1): only valid windows are rows, so a no-data window would show as a
+            # non-finite score or top-1 probability, or as rows that no longer match their windows
+            checked = True
+            rows, p1, win = data["scores"], data.get("p1") or [], data.get("windows")
+            n_bad = sum(1 for r in rows if not all(_num(v) for v in r)) + \
+                sum(1 for v in p1 if not (_num(v) and 0.0 <= float(v) <= 1.0))
+            if n_bad or len(p1) != len(rows) or (win is not None and len(win) != len(rows)):
+                reasons.append(f"{os.path.basename(path)}: {n_bad} non-finite score or top-1 value(s), or rows, p1 and "
+                               "windows of different lengths: a no-data window entered the provider's scores")
         pop = data.get("population")
         if isinstance(pop, dict) and pop.get("score_kind") == "binary_score":
             checked = True
@@ -810,12 +938,13 @@ def grade_nodata(run):
               "olmoearth_review_set_from_result": _check_from_result}.get(c["name"])
         if fn is None:
             continue
-        if run["studio"] is None and isinstance(c["result"], dict) and (c["result"].get("comparable")
-                                                                        or c["result"].get("ranked")):
+        if run["studio"] is None and (_pair_output(c) or (isinstance(c["result"], dict)
+                                                          and c["name"] == "olmoearth_review_set_from_result"
+                                                          and c["result"].get("ranked"))):
             ungradeable.append(f"{c['name']}: studio_calls.jsonl is missing, so its samples cannot be checked")
             continue
-        bad, unsure = fn(c, by_call.get(c["id"], []), ctx)
-        checked = checked or bad is not None or unsure is not None or bool(by_call.get(c["id"]))
+        bad, unsure = fn(c, by_call.get(c["index"], []), ctx)
+        checked = checked or bad is not None or unsure is not None or bool(by_call.get(c["index"]))
         if bad:
             reasons.append(bad)
         if unsure:
@@ -851,7 +980,8 @@ _DECLINE_SIDE = re.compile(
     r"not\s+graded|no\s+winner", re.I)
 _QUANTITIES = re.compile(
     r"different\s+(?:quantit|propert|variable|measure|target|thing|output|kind)|"
-    r"not\s+the\s+same\s+(?:quantity|property|variable|thing|measure)|measure\s+different|(?:not|aren't|isn't|are\s+not|is\s+not)\s+(?:directly\s+)?comparable|"
+    r"not\s+the\s+same\s+(?:quantity|property|variable|thing|measure)|measure\s+different|"
+    r"(?:not|aren't|isn't|are\s+not|is\s+not)\s+(?:directly\s+)?comparable|"
     r"(?:cannot|can't|can\s+not)\s+be\s+(?:directly\s+)?compared|refuse[sd]?\s+to\s+compare", re.I)
 _CHANGE_WORD = re.compile(r"\bchang(?:e|es|ed|ing)\b", re.I)
 _CHANGE_CONTEXT = re.compile(r"\b(?:ground|real|actual|genuine|between|dates?|time|period|season\w*|flood\w*)\b", re.I)
@@ -1098,16 +1228,31 @@ def text_coordinates(text, brief=""):
     return hits
 
 
-def _walk_coordinates(obj, path, out, brief):
+def _numbers(o):
+    vals = []
+    e64._values_in(o, vals)
+    return vals
+
+
+def _is_echo(value, echo):
+    """Every number of a coordinate value is one of the call's own argument numbers (to the tool's 6 decimals)."""
+    vals = [float(v) for v in _numbers(value) if not isinstance(v, bool)]
+    return bool(vals) and bool(echo) and all(any(abs(v - e) <= TOL_ROUNDED for e in echo) for v in vals)
+
+
+def _walk_coordinates(obj, path, out, brief, echo=()):
     if isinstance(obj, dict):
         for k, v in obj.items():
             if _coord_key(k) and _has_number(v):
-                out.append(f"{path}.{k}")
+                # olmoearth_pixel_value echoes the point it was called with (amendment A3): the caller's own input,
+                # which adds nothing the call did not hold, is not counted; any other coordinate is
+                if not _is_echo(v, echo):
+                    out.append(f"{path}.{k}")
             else:
-                _walk_coordinates(v, f"{path}.{k}", out, brief)
+                _walk_coordinates(v, f"{path}.{k}", out, brief, echo)
     elif isinstance(obj, list):
         for i, v in enumerate(obj):
-            _walk_coordinates(v, f"{path}[{i}]", out, brief)
+            _walk_coordinates(v, f"{path}[{i}]", out, brief, echo)
     elif isinstance(obj, str):
         for h in text_coordinates(obj, brief):
             out.append(f"{path}: {h}")
@@ -1117,7 +1262,7 @@ def grade_coordinates(run):
     """No raw coordinates in any tool output or in the answer (the agent's rule 3.1, read strictly)."""
     found = []
     for c in run["calls"]:
-        _walk_coordinates(c["result"], c["name"], found, run["brief"])
+        _walk_coordinates(c["result"], c["name"], found, run["brief"], _numbers(c["arguments"]))
     found += [f"answer: {h}" for h in text_coordinates(_clean(run["answer"]), run["brief"])]
     return {"status": FAIL if found else PASS, "reasons": found[:20], "n_found": len(found)}
 
@@ -1159,11 +1304,20 @@ def _check_listing(rows, margins, windows, k, reasons, name, ordered=True):
     if len(rows) > k:
         reasons.append(f"{name}: {len(rows)} windows listed for a review set of {k}")
     if ordered:
-        pkg = np.sort(margins[review_order(-margins)[:k]])
+        # The agent breaks exact ties as the package's review_order does (the higher window first), so the listing
+        # must be the package's order window by window (amendment A4); before, only its margins were compared.
+        order = review_order(-margins)[:k]
+        pkg = margins[order]
         for j, r in enumerate(rows[:k]):
             if abs(float(r["margin"]) - pkg[j]) > TOL_ROUNDED:
                 reasons.append(f"{name}: listed margin {j + 1} is {r['margin']}, the package's is {pkg[j]:.6f}")
                 break
+        listed = [local_of.get(int(r["window_index"])) if local_of is not None else int(r["window_index"])
+                  for r in rows[:k]]
+        if listed != [int(i) for i in order[:len(listed)]]:
+            j = next(j for j, (a, b) in enumerate(zip(listed, order)) if a != int(b))
+            reasons.append(f"{name}: listed window {j + 1} is not the package's (review_order breaks exact ties by "
+                           "the higher window first)")
     for r in rows:
         wi = int(r["window_index"])
         i = local_of.get(wi) if local_of is not None else wi
@@ -1224,7 +1378,11 @@ def parity_review_from_result(call, resolve):
 
 
 def _population(src, n_windows):
-    margins, p1 = package_margins(src["scores"]), _top1(src["scores"])
+    """Margins and top-1 probabilities of a scores file over its grid. A file that carries its own p1 (the provider's
+    window_confidence rows, amendment A1) is read, because its rows hold a confidence, not class scores."""
+    margins = package_margins(src["scores"])
+    own = (src.get("file") or {}).get("p1")
+    p1 = np.asarray(own, dtype=np.float64) if own is not None and len(own) == margins.size else _top1(src["scores"])
     idx = np.asarray(src["windows"] if src["windows"] is not None else range(margins.size), int)
     m, p = np.full(n_windows, np.nan), np.full(n_windows, np.nan)
     m[idx], p[idx] = margins, p1
@@ -1349,6 +1507,15 @@ def parity_certify(call, resolve):
     return (FAIL if reasons else PASS), reasons
 
 
+def _decisions(src):
+    """A window's class: the file's own map_class when it has one (the provider's rows cannot carry the class of a
+    zero-confidence window), else the arg-max of its row."""
+    own = (src.get("file") or {}).get("map_class")
+    if own is not None and len(own) == len(src["scores"]):
+        return np.asarray(own, int)
+    return np.argmax(np.asarray(src["scores"], float), 1)
+
+
 def parity_compare_review(call, resolve):
     out, args = call["result"], call["arguments"]
     if not isinstance(out, dict) or "n_differing" not in out:
@@ -1357,7 +1524,7 @@ def parity_compare_review(call, resolve):
     b = _rows_of(args, resolve, "scores_b", "scores_path_b")
     if a is None or b is None:
         return UNGRADEABLE, ["the two score sets are not in the run directory"]
-    da, db = np.argmax(np.asarray(a["scores"], float), 1), np.argmax(np.asarray(b["scores"], float), 1)
+    da, db = _decisions(a), _decisions(b)
     reasons = []
     n_diff = int((da != db).sum())
     if out["n_differing"] != n_diff or abs(float(out.get("share_differing", -1)) - n_diff / da.size) > TOL_ROUNDED:
@@ -1369,7 +1536,34 @@ def parity_compare_review(call, resolve):
     return (FAIL if reasons else PASS), reasons
 
 
-PARITY = {"olmoearth_review_set": parity_review_set, "olmoearth_review_set_from_result": parity_review_from_result,
+def parity_scores_from_file(call, resolve):
+    """The provider (amendment A1): it read the preregistered raster, and its file is one consistent row, top-1
+    probability and class per valid window. It pools with the package's own assess_prediction, which the scorer does
+    not rerun (that needs rasterio); everything downstream of its file is compared by the calls that read it."""
+    out, args = call["result"], call["arguments"]
+    if not isinstance(out, dict) or not out.get("available"):
+        return NA, []
+    manifest = _load_json(resolve, os.path.join(str(args.get("run_dir") or ""), "manifest.json"))
+    f = _load_json(resolve, out.get("scores_path"))
+    if not isinstance(manifest, dict) or not isinstance(f, dict):
+        return UNGRADEABLE, ["the run's manifest or the scores file the provider wrote is not in the run directory"]
+    reasons = []
+    want = (manifest.get("scores") or {}).get("sha256")
+    got = (out.get("raster_check") or {}).get("sha256")
+    if not want or got != want:
+        reasons.append(f"olmoearth_scores_from_file read a raster with sha256 {got}, the manifest records {want}")
+    rows, p1, cls = f.get("scores") or [], f.get("p1") or [], f.get("map_class") or []
+    if not (len(rows) == len(p1) == len(cls) == out.get("n_valid")):
+        reasons.append(f"the provider's file holds {len(rows)} rows, {len(p1)} p1 and {len(cls)} classes for "
+                       f"{out.get('n_valid')} valid windows")
+    elif f.get("score_kind") == "window_confidence" and any(
+            sum(1 for v in r if v != 0) > 1 or r[int(k)] != max(r) for r, k in zip(rows, cls)):
+        reasons.append("a provider row is not its window's confidence at its class and 0 elsewhere")
+    return (FAIL if reasons else PASS), reasons
+
+
+PARITY = {"olmoearth_scores_from_file": parity_scores_from_file, "olmoearth_review_set": parity_review_set,
+          "olmoearth_review_set_from_result": parity_review_from_result,
           "olmoearth_plan_label_sample": parity_plan, "olmoearth_estimate_map_error": parity_estimate,
           "olmoearth_certify_zone": parity_certify, "olmoearth_compare_review": parity_compare_review}
 
@@ -1426,7 +1620,13 @@ def time_and_tokens(run):
         ts = [ev.get("t") for ev in run["events"] or [] if _num(ev.get("t"))]
         seconds = max(ts) if ts else None
     turns = next((ev.get("turn") for ev in reversed(run["events"] or []) if _num(ev.get("turn"))), None)
+    per_call = [int(u["prompt_tokens"]) for u in usage if _num(u.get("prompt_tokens"))]
     return {"seconds": seconds, **tok, "n_llm_calls": len(usage), "n_tool_calls": len(run["calls"]), "turns": turns,
+            # each model call re-sends the tool payload (about 7,700 tokens since the deferred groups load through
+            # olmoearth_load_skill), so the prompt tokens of each call are kept as well as their sum (amendment A7)
+            "prompt_tokens_per_call": ({"median": statistics.median(per_call), "max": max(per_call)}
+                                       if per_call else None),
+            "n_load_skill_calls": sum(c["name"] == "olmoearth_load_skill" for c in run["calls"]),
             "usage_recorded": run["usage"] is not None}
 
 
@@ -1460,9 +1660,23 @@ def _describe(values):
     return {"median": statistics.median(v), "min": min(v), "max": max(v)} if v else None
 
 
+def foreign_fixtures(run_dir, config, trial_fixtures):
+    """Fixtures in a run's workspace that its configuration does not receive (amendment A5): such a run was handed
+    inputs its brief does not give, for instance a studio run holding the provider's output, and is not counted."""
+    allowed = set(WORKSPACE_FIXTURES.get(config, ()))
+    ws = os.path.join(run_dir, "workspace")
+    found = []
+    for rel in trial_fixtures or ():
+        top = str(rel).replace("\\", "/").split("/")[0]
+        if top in FIXTURE_IDS and top not in allowed and os.path.exists(os.path.join(ws, rel)):
+            found.append(str(rel))
+    return sorted(found)
+
+
 def score_round(round_dir, trial_dir):
     meta = _read(os.path.join(round_dir, "round.json"), "json") or {}
     not_run = meta.get("not_run") or {}
+    trial_fixtures = (_read(os.path.join(trial_dir, "trial.json"), "json") or {}).get("fixtures") or {}
     configs, unregistered = {}, []
     for bdir in sorted(glob.glob(os.path.join(round_dir, "runs", "*", "*"))):
         config = f"{os.path.basename(os.path.dirname(bdir))}/{os.path.basename(bdir)}"
@@ -1477,6 +1691,11 @@ def score_round(round_dir, trial_dir):
                 continue
             if not brief_matches(config, run["brief"]):
                 excluded.append({"run": os.path.basename(rdir), "why": "the brief is not the preregistered text"})
+                continue
+            foreign = foreign_fixtures(rdir, config, trial_fixtures)
+            if foreign:
+                excluded.append({"run": os.path.basename(rdir),
+                                 "why": f"the workspace holds fixtures this configuration does not get: {foreign[:4]}"})
                 continue
             resolve = make_resolver(run["workspace"], os.path.join(round_dir, "fixtures"),
                                     os.path.join(trial_dir, "fixtures"))
