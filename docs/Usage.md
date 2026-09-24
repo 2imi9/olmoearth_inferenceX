@@ -346,3 +346,22 @@ A reading that screens well enters the record only through a preregistered exper
 exits non-zero if an upstream repository has moved from the commit the record was measured against
 ([upstream_revisions.json](https://github.com/2imi9/olmoearth_inferenceX/blob/main/exp/out/upstream_revisions.json));
 until the difference is attributed, a run against moved files is not comparable with the record.
+
+### Scores from a public fine-tuned model
+
+OlmoEarth Studio returns map tiles and a point lookup, not per-class scores. [`scripts/score_area.py`](https://github.com/2imi9/olmoearth_inferenceX/blob/main/scripts/score_area.py)
+produces the input this package takes by running Ai2's fine-tuned AWF model (`allenai/OlmoEarth-v1-FT-AWF-Base`,
+land use and land cover in southern Kenya) over a small area, with the imagery, windowing and merge of Ai2's
+published configuration. It needs the experiment environment and, in practice, a GPU.
+
+```bash
+uv run --extra encoder --extra geo python scripts/score_area.py --out scores --lat -2.55 --lon 36.81 --size 512
+oe-inferencex assess scores/scores.tif --logits --out scores/assess
+```
+
+The script writes `scores.tif`, a `(10, H, W)` float32 map of logits (probabilities with `--probabilities`) whose
+no-data value is NaN, and `manifest.json`, which records the model revision, the area and grid, the Sentinel-2 scenes
+of each 30-day period, the class names from the [task card](method/taskcards.md) and the software versions. Channel 9
+is the label fill value, never a training target. The scores carry no labels: how wrong the map is still requires
+`sample`, then `estimate` or `certify`. The Slurm job [`scripts/score_area.sh`](https://github.com/2imi9/olmoearth_inferenceX/blob/main/scripts/score_area.sh) runs the
+script on the cluster the experiments used and reads the result back with `assess` and `sample`.
