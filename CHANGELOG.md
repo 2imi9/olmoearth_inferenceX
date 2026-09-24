@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Usage documents a binary score in [0, 1] decided at 0.5, such as an OlmoEarth Studio `per_pixel_regression` output
+  of a two-class task, as an accepted input: ranked by distance from 0.5 like a binary probability map, with no
+  probability of error implied. Found by the OlmoEarth Agent trial of 24 September 2026, where a Studio map of this
+  kind had no documented path into the package.
+
 ## 1.3.0 (2026-09-24)
 
 **Release checks (24 September 2026).**

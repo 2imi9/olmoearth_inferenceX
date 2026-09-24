@@ -140,3 +140,13 @@ passing there. exp72 showed the port bit-exact against this package on real
 inference. The agent's LLM client also gained a defensive decode for
 double-encoded tool arguments, which the 7B pilot exposed.
 
+
+**Trial through Studio (2026-09-24).** The shipped agent (main at a26a5c7) was run on four briefs against the
+user's own Studio project with Qwen3.8-27B-NVFP4, as an outside user would. It lists models and declines to say
+which of two maps is right without labels, as exp64 measured. Three gaps came out, each with its fix assigned: the
+comparison tool counted Studio's no-data value (−1) as data, which turned a correlation of −0.017 into 0.946; no
+tool turns a Studio prediction into the review set's input, so the model ranked by hand and put the most confident
+windows first; and without this package's `sample` and `estimate` the model quoted a simple-random-sample interval
+for a targeted design. Studio returns no probabilities or raster download for these models, only map tiles and a
+point lookup. The log, with each run and its attribution (harness, tool, model, Studio or setup), is
+`exp/out/agent_trial_2026-09-24.md`.

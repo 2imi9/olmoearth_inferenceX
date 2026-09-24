@@ -24,6 +24,7 @@ restrictions.
 |---|---|
 | Hard class map with an exported confidence band | `assess_classmap` (Python); the band ranks only the pixels it separates |
 | Hard class map alone | `compare` only; without a confidence there is no ranking |
+| Binary score in [0, 1] decided at 0.5, such as an OlmoEarth Studio `per_pixel_regression` output of a two-class task | Everything a binary probability map is, passed as one: windows are ranked by distance from 0.5, which needs no calibration, and a design-based estimate stays valid, since the score only allocates the labels. The score is not a probability of error, and no recorded experiment grades this case |
 | Continuous map, such as a regression output | `compare` only, at a cut-off named with `--threshold`; no recorded experiment grades this case |
 
 The package works on square windows of `--patch` pixels (default 4). A window's confidence is the mean confidence
