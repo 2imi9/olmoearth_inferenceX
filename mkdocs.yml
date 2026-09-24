@@ -1,5 +1,5 @@
 site_name: olmoearth_inferenceX
-site_description: Label-free audit of OlmoEarth inference maps, which windows to review first, why each is suspect, and what comparing inferences across crops, backbones and sensors says about where the errors come from
+site_description: A Python package for assessing Earth-observation classification maps. It ranks map windows by model confidence for manual review, compares two maps of the same area, and estimates error rates and per-class accuracy from a labelled sample.
 site_url: https://olmoearth-inferencex.readthedocs.io/
 repo_url: https://github.com/2imi9/olmoearth_inferenceX
 repo_name: 2imi9/olmoearth_inferenceX

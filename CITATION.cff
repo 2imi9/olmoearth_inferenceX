@@ -11,7 +11,10 @@ license: Apache-2.0
 repository-code: "https://github.com/2imi9/olmoearth_inferenceX"
 url: "https://olmoearth-inferencex.readthedocs.io"
 abstract: >-
-  Given a prediction map from an Earth-observation model and no labels: which windows a reviewer should
-  check first, why each is suspect, and how two inferences of the same scene differ. The model's own top-1
-  minus top-2 margin ranks its errors on five kinds of expert reference and on all 24 tasks of the model
-  authors' published evaluation suite; every documented number is pinned to a committed artifact.
+  A Python package for assessing classification maps from Earth-observation models. Without reference
+  labels, it ranks a map's windows by the model's confidence for manual review, lists the cues behind each
+  flagged window, and compares two maps of the same area. With a labelled sample, it estimates the error rate
+  and per-class accuracy with confidence intervals, and identifies the largest high-confidence part of the map
+  whose error rate does not exceed a specified level at a stated confidence. The methods are evaluated on the
+  24 tasks of Ai2's published embedding suite across 16 encoders; each recorded result is linked to a
+  committed artifact and re-checked against it by the test suite.
