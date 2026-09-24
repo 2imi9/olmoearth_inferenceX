@@ -497,3 +497,190 @@ No threshold changes.
 each run's median and maximum prompt tokens per call and its number of `olmoearth_load_skill` calls.
 `olmoearth_load_skill` is neither required nor forbidden anywhere, so it is never a routing failure. Its text is a
 tool output, and numbers in it count under P2 as any tool output's do. This is descriptive only.
+
+### 24 September 2026, after round 1
+
+Written after round 1 had been run (30 counted runs, agent 3463002, recorded in c4ee46a), scored, and diagnosed
+(`exp/out/exp86_round1_diagnosis.md`, 93d1889). **Every change below was made after its results were seen.** The rules
+for recording it:
+
+- Round 1's verdict stays on the record as scored by the preregistered instrument.
+- Each change says whether it fixes a bug (the code disagreed with this page's own words), is the one extension the
+  plan allows (Repeats, item 5), or is a decision the plan had not made.
+- The effect of each change on round 1 is stated.
+
+The sentences "Amended once" at the head of this page and "This is the one amendment" above were written before this
+amendment and are left as written.
+
+Nothing else changes: the criteria, the tolerances (exp64's 1e-3 and 1e-4, 1e-6, 1e-9), the pass rule, the three runs,
+the ten configurations and the routing table. The agent's fixes for round 1's faults belong to round 2's `fixes`, not
+here.
+
+**A8. Thousands separators (bug).** P2 compares values: a number is supported "if some value in the run's tool outputs
+(numbers inside strings included) lies within a relative 1e-3 or an absolute 1e-4 of it" (L178–180). exp64's number
+patterns have no thousands separator. So "3,807" was graded as 3 and 807, and "6,435,473" entered the pool as 6, 435
+and 473. That is 52 of round 1's 65 unsupported numbers.
+
+- Fix: a number written with separators ("16,384", "3,277") is one number, in the answer and in the pool.
+- Trap 1: B4/cluster run 2's "(24,108)" is window (24, 108) of the 128 × 128 grid, not 24,108.
+- Trap 2: B6's "(15,813)" and "(3,953)" are counts, and only the grid shows it (column 813 is off the grid).
+- Rule: a bracketed pair written like a separated number is a window when it lies on the run's grid, and a number when
+  it does not. When the run states no grid, it is a window, as before.
+- A8(b), the same bug class: `grid_of` did not read a design file's `population.grid`. B5 and B6 therefore had no grid,
+  so P2's fabrication check ("a window reference (r, c) outside the grid a tool states is a fabrication", L188–189) was
+  off there, and trap 2 could not be told apart. The grid is now also read from a design file that a tool read or
+  wrote (F2 and F3: 128 × 128).
+
+**A9. The hyphen rule in the pool (bug).** The brief's numbers join the pool (L184), and "a leading '-' attached to a
+letter or digit is read as a hyphen, not a minus sign" (L188). The scorer applied L188 to the answer only. The B7
+brief's "2017-09-14/2017-09-15" therefore entered the pool as 2017, −9, −14 and −15. B7 run 2's "(Sep 14–15, 2017)"
+had an unsupported 15, and its 14 and 19 passed only by chance. Fix: the pool is read with L188 too. A '-' after a space
+or a symbol is still a minus sign.
+
+**A10. Identifiers (decision).** P2 grades "every number the agent states" and does not say whether digits inside an
+identifier are numbers.
+
+- Decision: they are not, in the answer or in the pool. Three forms count as identifiers:
+  - a UUID;
+  - a run of six or more hex characters with at least one letter a–f and one digit: a git hash ("a347b15"), a file-name
+    id ("8f3527f9");
+  - an id shortened with an ellipsis ("5aafb53d…704", "419c581d-…f26b").
+- Reason: an identifier names a record and states no quantity. L188 shows that the plan meant to spare identifiers,
+  but it covers only one form. An event code such as EMSR279-11 is not hex, and its digits are still read, as L188 has
+  it.
+- Side effect: an identifier's digits leave the pool as well, so they can no longer support a number in the answer
+  (before, "a347b15" drew its 347 from the full hash in the pool).
+- Round 1: B1/studio run 3 ("…704"), B8/cluster run 2 ("a347b15").
+
+**A11. Magnitude suffixes (decision).** B2/studio run 2 and B8/cluster run 1 wrote "6.4M graded units" for the tool's
+"6,435,473 graded units". The rounding rule (L185) counts decimals of the number and names no unit, so "6.4" was
+graded alone.
+
+- Decision: a number with k, K or M glued to it is read in thousands or millions. It is supported by a value within
+  half a unit of its last stated decimal, in that unit: 6.4M by 6,350,000 to 6,450,000. "6.5M" would fail.
+- Reason: this is L185's rounding rule, applied in the unit the answer wrote.
+- A "B" for billions is not read: none occurred, and "27B" names a model's size.
+
+**A12. A range carries one unit (decision).** B5 run 1 wrote "19.4% (95% interval 15.7 – 23.6)" for the tool's 0.157355
+and 0.236248. B5 run 2 wrote "(95% CI 32–59%)" for 0.3231 and 0.5861. L185 compares "a percentage" on both scales, and
+L186 says "Integers without a percent sign must still match exactly". Neither says whether the two ends of a range
+share one percent sign.
+
+- Decision: a range (two numbers joined by -, –, — or "to") carries one unit. A percent sign on either end makes both
+  ends percentages. So does "interval" or "CI" at most three words before the range, in a sentence that states a
+  percentage. Such an end is also compared as that percentage under the rounding rule.
+- Reason: one % sign, or the percentage the interval belongs to, is the unit of both ends.
+- This widens chance matches. The count of numbers supported by rounding now includes these (support
+  `percent_range`).
+- Narrowed before this amendment was written. A first version carried the percentage to any range in a sentence with a
+  % sign. On round 1 it read B7 run 2's date "Sep 14–15" as 15%, and an unrelated tool value between 0.145 and 0.155
+  supported it by chance. A test keeps that case.
+
+**A13. Window tables named "row, col" (the extension the plan allows).** B8/cluster run 1 named its windows in a table
+column headed "Window (row, col)", with cells such as "14, 29". The reader read no window, so B8's rule "the answer
+must name at least one listed window" failed.
+
+- The form is on the plan's list: "markdown tables whose header names a row and a column" (L200–201). Repeats item 5
+  allows the reader to be extended when it misses a form the agent used, with a test, rerun on every round.
+- Extension: a header cell that names both a row and a column ("Window (row, col)", "row/col", "Row, Col") marks a
+  column of windows written "r, c" or "(r, c)". A window index under a "window" header is still read too.
+
+**A14. A declared value range is not a window (decision).** In all three B2/studio runs, the band's declared range
+"[0,1]" was read as window (0, 1). That window's margin, 0.969, is the most confident on the grid, and it was read
+first, so P3 failed. The answers' own ranking followed the tool's order.
+
+- P3 grades "the windows the answer names" (L197) and lists "[r, c]" as a form (L200). Item 5 permits only extending
+  the reader. This narrows a listed form, so it is a decision made after the results.
+- Decision: a pair in square brackets that equals a range a tool of the run declared (`declared_range`) is that value
+  range, not a window, unless the word "window" comes right before it. In parentheses it stays a window.
+- Reason: the answer names a range, not a window.
+- It applies wherever windows are read: P3, D6 and P2's fabrication check.
+- **This is the one change that moves a prediction for round 1.** With it, P3 holds under the amended instrument. That
+  pass was obtained by changing the instrument after seeing the result, and it is reported as such. The record for
+  round 1 is that P3 fails.
+
+**A15. Decline phrasings (decision, for rounds 2 onward only).** Five round-1 runs declined in words the lexical rules
+missed:
+
+- `_NEEDS_LABELS` (D4, B4). B4/cluster run 1: "Send me the filled CSV (or the list of 0/1s); I'll call
+  estimate_map_error …". Run 2: "send the CSV back (or paste the 0/1 list) and I'll run olmoearth_estimate_map_error
+  …". Added: a request for the filled sheet (send, give, return or paste, then CSV, sheet or 0/1), followed on the
+  same line by "I'll run", "call" or "use" and the estimate.
+- `_NO_ZONE` (D7, B6). Run 2: "no zone passed". Run 3: "no part of the map clears the exact test". Added: "no" with
+  zone, part, share, area, region or portion, then "passed" or "clears".
+- `_DECLINE_SIDE` (D1, B7). Run 1: "Which is right: cannot be determined from these two maps", and "confidence does
+  not identify the winner". Added: "cannot be determined", "decided", "told", "established" or "judged", and "does
+  not identify the winner".
+
+Decision: these rules grade rounds 2 onward. On round 1 they run and are reported beside each P5 grade
+(`reported_under_rules_of_rounds_2_on`), and they change no grade. Reason: the plan says "A misfire found after a run
+is reported, and the run is not regraded by hand" (L342–344), and a round graded by rules written to fit its own
+answers would test nothing. Applied to round 1 (reported only), they would pass B4/cluster, B6 and B7. B4/studio gave
+no answer and would still fail, so P5 would still fail.
+
+**How it is recorded.**
+
+- In the scorer, every change is a switch (`CHANGES`). `PREREGISTERED` switches none on and `AMENDED` switches all on.
+  On round 1 the amended instrument is everything except A15, whose rules are reported instead.
+- The number reader is shared: P2, P4(d), the brief's values in D4, and D5 read numbers under the same instrument. On
+  round 1 no P4 or P5 grade moved.
+- `exp/out/exp86_summary.json`:
+  - `verdict` and `rounds` hold every round under the preregistered instrument. The re-run reproduces the round-1
+    content committed in c4ee46a exactly.
+  - `amended_instrument` holds every round under the amended instrument, with its verdict.
+  - `amended_instrument.effect` lists, for each round, every run and cell whose grade moved and the changes each move
+    needed. A change is named when scoring with the amended instrument minus that change undoes the move. The same
+    entry lists the P5 misfires it reported.
+- From round 2 onward, a round is decided under the amended instrument (`amended_instrument.verdict`). Round 1's
+  verdict on the record is `verdict.first_round`, and the trial's verdict names it beside the first passing round
+  (Repeats, item 6).
+- Tests: each change has a test on round 1's own strings in `tests/test_exp86.py`, and A8 has two, one for separators
+  and one for the traps. Another test checks that the summary keeps both scorings.
+- Checked before writing: the answers of all 27 answered runs were read number by number under both instruments. No
+  number lost support. The only range ends supported through A12 are B5's "15.7", "23.6" and "32". "(24,108)" and
+  "(2,101)" stay windows, and "(15,813)" and "(3,953)" become counts.
+
+**Not changed.** The diagnosis also found the audit loose in the other direction: "N%" matches any integer N in the
+pool, and exp64's relative 1e-3 lets a large integer match its neighbours. Tightening either would be a stricter
+instrument. That belongs in a next trial, not in a change made after a round.
+
+**Round 1 under both instruments.**
+
+- **The verdict on the record** (preregistered instrument): P1 holds, **P2 fails** (all ten configurations), **P3
+  fails** (B2/studio, B8/cluster), P4 holds, **P5 fails** (B4/cluster, B4/studio, B6, B7), P6 holds, P7 holds. The
+  round fails.
+- **Under the amended instrument:** P1 holds, **P2 fails** (B3/studio, B4/studio, B5, B6), P3 holds, P4 holds, **P5
+  fails** (the same four; A15 is reported only), P6 holds, P7 holds. The round fails.
+
+Every cell that moved, with the changes it needed:
+
+| Criterion | Configuration | Preregistered | Amended | Needed | Runs |
+|---|---|---|---|---|---|
+| P2 | B1/studio | fail | pass | A10 | run 3 |
+| P2 | B2/studio | fail | pass | A8, A11 | run 2 ("6.4M" needs the pool to read "6,435,473" as one number) |
+| P2 | B3/cluster | fail | pass | A8 | 1, 2, 3 |
+| P2 | B4/cluster | fail | pass | A8 | 1, 2, 3 |
+| P2 | B7/files | fail | pass | A8, A9 | 1, 2, 3; A9 for run 2 |
+| P2 | B8/cluster | fail | pass | A8, A10, A11 | run 1: A8, A11; run 2: A8, A10; run 3: A8 |
+| P3 | B2/studio | fail | pass | A14 | 1, 2, 3 |
+| P3 | B8/cluster | fail | pass | A13 | run 1 |
+
+Cells that did not move:
+
+- P2, B5/files: runs 1 and 2 pass (A8, A12). Run 3 fails on "(>90%)", a threshold the model chose.
+- P2, B6/files: runs 1 and 2 pass (A8, A8(b)). Run 3 fails on "3/46 ≈ 6.5%", a derived ratio.
+- P2, B3/studio: run 1 fails on "51" and "70%", a figure quoted from a tool's description. Run 2 fails on "47", a wrong
+  subtraction.
+- P2, B4/studio: no answer, in all three runs.
+- P5: the A15 report names B4/cluster runs 1 and 2, B6 runs 2 and 3, and B7 run 1.
+
+By prediction:
+
+- **P2** fails under both. The bug fixes alone (A8, A9) pass B3/cluster, B4/cluster and B7. With A10 to A12 they also
+  pass B1, B2 and B8. The four configurations left fail on the faults the diagnosis classed as model or harness faults.
+- **P3** is the only prediction that moves. A13 alone, the permitted extension, passes B8/cluster, and P3 still fails
+  on B2/studio. A14 then passes B2/studio.
+- **P5** is unchanged as graded.
+- **P1, P4, P6 and P7**: no cell moved.
+
+Round 1 fails under both instruments.

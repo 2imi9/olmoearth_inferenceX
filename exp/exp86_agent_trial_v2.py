@@ -27,11 +27,22 @@ is olmoearth_scores_from_file, compare_results is one tool with modes, ties foll
 configuration gets its own fixtures, tool calls are identified by their place in the event order, and criterion 8
 keeps the tokens of each model call. The code that each amendment changed names it.
 
+Amended again on 24 September 2026, AFTER round 1 had been run and scored (A8 to A15). This is a change to the
+instrument made after seeing results, and it is kept apart from the preregistered instrument: every change is a switch
+(CHANGES), the summary scores every round with no switch on (the preregistered instrument; round 1's verdict on the
+record) and with the amended instrument (under "amended_instrument"), and it names the change that moved each cell by
+scoring the amended instrument less one change at a time. A8 and A9 fix code that disagreed with the plan's own words
+(thousands separators split into two numbers; the hyphen rule applied to the answer but not to the pool). A13 is the
+extension of the window reader that the plan allows. A10 to A12, A14 and A15 are decisions the plan had not made. A15
+(decline phrasings) grades rounds 2 onward only; on round 1 its matches are reported and change no grade.
+
 Usage:
   python exp/exp86_agent_trial_v2.py --trial <trial directory>     # writes exp/out/exp86_summary.json
 """
 import argparse
+import bisect
 import collections
+import contextlib
 import csv
 import glob
 import hashlib
@@ -68,6 +79,63 @@ TOL_SAME = 1e-9
 #: The same relative slack the agent's band_is_nodata allows at a declared range's edges.
 RANGE_EPS = 1e-6
 Z_SRS = (oe_estimate.Z95, 2.0)   # the two multipliers a simple-random interval is quoted with
+
+# --------------------------------------------------------------------------------------------- the instrument
+#: The changes to the instrument made on 24 September 2026 AFTER round 1 had been scored (the plan's amendment "after
+#: round 1", A8 to A15). Each is a switch, so that a round can be scored with the preregistered instrument (no switch
+#: on), with the amended one (all on), and with the amended one less a single change, which says which change moved
+#: which cell.
+CHANGES = {
+    "sep": "A8, a bug: a number written with thousands separators ('3,807') is one number, in the answer and in the "
+           "pool; a bracketed pair written like one ('(24,108)') is a window when it lies on the run's grid and a "
+           "number when it does not, and a window, as before, when the run states no grid",
+    "grid_design": "A8, a bug: the run's grid is also read from a design file's population.grid, so that the "
+                   "fabrication check and the reading of '(15,813)' have a grid on B5 and B6",
+    "hyphen_pool": "A9, a bug: the hyphen rule is applied to the pool as well as to the answer, so that the brief's "
+                   "'2017-09-15' gives 15, not -15",
+    "ident": "A10, a decision: digits inside an identifier (a UUID, a hex id or git hash of six or more characters, "
+             "an id shortened with an ellipsis) are not numbers, in the answer or in the pool",
+    "suffix": "A11, a decision: a number with a magnitude suffix glued to it (k or K, M) is read in its unit, and "
+              "'6.4M' is supported by a value that rounds to 6.4 million",
+    "pct_range": "A12, a decision: a range carries one unit; a percent sign on either end makes both ends "
+                 "percentages, and so does 'interval' or 'CI' at most three words before a range in a sentence that "
+                 "states a percentage; the rounding rule then compares them on both scales",
+    "p3_table": "A13, the extension the plan allows (Repeats, item 5): a table column whose header names a row and a "
+                "column is read, with cells written 'r, c'",
+    "p3_range": "A14, a decision: a pair in square brackets equal to a range a tool of the run declared is a value "
+                "range, not a window, unless the word 'window' precedes it",
+    "p5_rules": "A15, a decision for rounds 2 onward: the decline phrasings round 1 used and the rules missed",
+}
+PREREGISTERED = frozenset()
+AMENDED = frozenset(CHANGES)
+#: Round 1 under the amended instrument: the rules of A15 are run and reported beside each P5 grade, and change none
+#: (the plan: a misfire found after a run is reported, and the run is not regraded by hand).
+P5_REPORT = "p5_report"
+_INSTRUMENT = [AMENDED]
+
+
+@contextlib.contextmanager
+def instrument(changes):
+    """Score with the given set of changes switched on (PREREGISTERED: none; AMENDED: all)."""
+    _INSTRUMENT.append(frozenset(changes))
+    try:
+        yield
+    finally:
+        _INSTRUMENT.pop()
+
+
+def _on(change):
+    return change in _INSTRUMENT[-1]
+
+
+def instrument_for_round(name):
+    """The amended instrument as it applies to a round: A15's decline phrasings grade rounds 2 onward; on round 1,
+    which prompted them, they are reported and grade nothing."""
+    try:
+        first = int(name) <= 1
+    except (TypeError, ValueError):
+        first = False
+    return (AMENDED - {"p5_rules"}) | {P5_REPORT} if first else AMENDED
 
 # --------------------------------------------------------------------------------------------- the preregistered table
 #: The cluster scores provider's tool (amendment A1). It READS a model run's directory as scripts/score_area.py writes
@@ -379,10 +447,136 @@ def grade_routing(run, spec):
 
 
 # --------------------------------------------------------------------------------------------- criterion 2: grounding
-def pool_values(run):
+#: The amended number reader (A8 to A12). With every switch off the scorer uses exp64's readers unchanged.
+_UUID = re.compile(r"(?<![0-9A-Za-z])[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?![0-9A-Za-z])", re.I)
+#: an id shortened with an ellipsis: "5aafb53d…704", "419c581d-…f26b", "ac1eb985...d0dc7f"
+_SHORT_ID = re.compile(r"(?<![0-9A-Za-z.])([0-9a-f]+)-?(?:…|\.{3})-?([0-9a-f]+)(?![0-9A-Za-z])", re.I)
+#: a hex run of six or more characters holding a letter and a digit: a git hash ("a347b15"), a file-name id ("8f3527f9")
+_HEX_ID = re.compile(r"(?<![0-9A-Za-z])(?=[0-9a-f]*[a-f])(?=[0-9a-f]*\d)[0-9a-f]{6,}(?![0-9A-Za-z])", re.I)
+#: a bracketed pair written like a number with a thousands separator: "(24,108)" (a window), "(15,813)" (a count)
+_THOUSANDS_PAIR = re.compile(r"[1-9]\d{0,2},\d{3}")
+#: what joins the two ends of a range: "32–59%", "15.7 – 23.6", "18.4-28.1%", "3 to 5%"
+_RANGE_GAP = re.compile(r"[\s*_]*(?:-|–|—|to)[\s*_]*")
+_SENTENCE_BREAK = re.compile(r"(?<=[.!?;])\s+|\n+")
+_NUM_CACHE = {}
+_SUFFIX_UNIT = {"k": 1e3, "K": 1e3, "M": 1e6}
+
+
+def _reader_on():
+    """True when any change to how numbers are read in text is switched on."""
+    return any(_on(x) for x in ("sep", "ident", "suffix", "pct_range"))
+
+
+def _num_re():
+    """exp64's number pattern with the switched-on readings: thousands separators (A8), magnitude suffixes (A11)."""
+    key = (_on("sep"), _on("suffix"))
+    if key not in _NUM_CACHE:
+        body = r"(?:(?<![\d.,])[1-9]\d{0,2}(?:,\d{3})+(?!\d|,\d)|\d+)" if key[0] else r"\d+"
+        suffix = r"(?:[kKM](?![0-9A-Za-z]))?" if key[1] else ""
+        _NUM_CACHE[key] = re.compile(r"-?" + body + r"(?:\.\d+)?(?:[eE][-+]?\d+)?" + suffix + "%?")
+    return _NUM_CACHE[key]
+
+
+def _identifier_spans(text):
+    """Where the text holds an identifier whose digits are not numbers (A10)."""
+    spans = [m.span() for m in _UUID.finditer(text)] + [m.span() for m in _HEX_ID.finditer(text)]
+    for m in _SHORT_ID.finditer(text):
+        a, b = m.group(1), m.group(2)
+        if re.search(r"[a-f]", a + b, re.I) and re.search(r"\d", a + b) and max(len(a), len(b)) >= 4:
+            spans.append(m.span())
+    return spans
+
+
+def _pair_is_number(m, grid):
+    """A bracketed pair written like a separated number, e.g. "(15,813)", is that number when it lies off the run's grid
+    (A8). On the grid it is a window, e.g. "(24,108)" on 128 x 128; with no grid stated it is a window, as before."""
+    if not _on("sep") or grid is None or not _THOUSANDS_PAIR.fullmatch(m.group(0)[1:-1]):
+        return False
+    return not (int(m.group(1)) < grid[0] and int(m.group(2)) < grid[1])
+
+
+def _tokens(text, grid=None):
+    """The numbers in `text` under the switched-on readings, in order. Each is a dict: the token as written ("3,807",
+    "6.4M"), the numeral exp64's audit reads ("3807", "6.4"), its unit (1e6 for "M"), its position, whether its '-'
+    is a hyphen glued to a letter or digit, and whether a range carries a percent sign to it ("pct", A12)."""
+    text = text or ""
+    masked = list(text)
+
+    def mask(a, b):
+        masked[a:b] = " " * (b - a)
+    if _on("ident"):
+        for a, b in _identifier_spans(text):
+            mask(a, b)
+    toks = []
+    if _on("sep"):
+        for m in e64._WIN.finditer("".join(masked)):
+            if not _THOUSANDS_PAIR.fullmatch(m.group(0)[1:-1]):
+                continue                                     # "(4, 7)", "(0,107)": read below as before
+            if _pair_is_number(m, grid):
+                a, b = m.start(1), m.end(2)
+                toks.append({"tok": text[a:b], "num": text[a:b].replace(",", ""), "unit": 1.0, "at": a,
+                             "glued": False})
+            else:                                            # a window: its row and column, as exp64 reads them
+                toks += [{"tok": m.group(g), "num": m.group(g), "unit": 1.0, "at": m.start(g), "glued": False}
+                         for g in (1, 2)]
+            mask(*m.span())
+    for m in _num_re().finditer("".join(masked)):
+        tok, unit = m.group(0), 1.0
+        core = tok.rstrip("%")
+        if core[-1:] in _SUFFIX_UNIT:
+            unit, core = _SUFFIX_UNIT[core[-1]], core[:-1]
+        toks.append({"tok": tok, "num": core.replace(",", "") + ("%" if tok.endswith("%") else ""), "unit": unit,
+                     "at": m.start(), "glued": tok.startswith("-") and m.start() > 0 and text[m.start() - 1].isalnum()})
+    toks.sort(key=lambda t: t["at"])
+    if _on("pct_range"):
+        starts = [0] + [m.end() for m in _SENTENCE_BREAK.finditer(text)]
+
+        def sentence(pos):
+            return bisect.bisect_right(starts, pos)
+        with_pct = {sentence(t["at"]) for t in toks if t["tok"].endswith("%")}
+        for x, y in zip(toks, toks[1:]):
+            gap = text[x["at"] + len(x["tok"]):y["at"]]
+            if not ((y["glued"] and gap == "") or _RANGE_GAP.fullmatch(gap)):
+                continue
+            # the interval of a percentage: "interval" or "CI" at most three words before the range, in a sentence
+            # that states a percentage ("19.4% (95% interval 15.7 – 23.6)"); a date range ("Sep 14–15") is not one
+            before = [w.strip("*_`()[]|:,") for w in text[starts[sentence(x["at"]) - 1]:x["at"]].split()]
+            interval = any(re.fullmatch(r"interval|ci", w, re.I) for w in [w for w in before if w][-3:])
+            if x["tok"].endswith("%") or y["tok"].endswith("%") or (interval and sentence(x["at"]) in with_pct):
+                for t in (x, y):
+                    t["pct"] = t["unit"] == 1.0 and not t["tok"].endswith("%")
+    return toks
+
+
+def _values_in(obj, out, grid=None):
+    """Every number in a tool output or the brief: exp64's reader, or the amended one (A8 to A11 read the pool as they
+    read the answer; A9 reads a '-' glued to a letter or digit as a hyphen, so "2017-09-15" gives 2017, 9 and 15)."""
+    if not (_reader_on() or _on("hyphen_pool")):
+        e64._values_in(obj, out)
+        return
+    if isinstance(obj, bool):
+        return
+    if isinstance(obj, (int, float)) and math.isfinite(obj):
+        out.append(float(obj))
+    elif isinstance(obj, str):
+        for t in _tokens(obj, grid):
+            v = float(t["num"].rstrip("%")) * t["unit"]
+            if t["glued"] and _on("hyphen_pool"):
+                v = -v
+            if math.isfinite(v):
+                out.append(v)
+    elif isinstance(obj, dict):
+        for v in obj.values():
+            _values_in(v, out, grid)
+    elif isinstance(obj, (list, tuple)):
+        for v in obj:
+            _values_in(v, out, grid)
+
+
+def pool_values(run, grid=None):
     """Every number in the run's tool outputs and in the brief (a number the user gave is grounded in the brief)."""
     pool = []
-    e64._values_in({"tools": [c["result"] for c in run["calls"]], "brief": run["brief"] or ""}, pool)
+    _values_in({"tools": [c["result"] for c in run["calls"]], "brief": run["brief"] or ""}, pool, grid)
     return pool
 
 
@@ -410,13 +604,56 @@ def rounding_match(tok, values):
     return bool((np.abs(arr - x) <= half).any())
 
 
-def number_support(text, pool):
+def _support_amended(t, pool):
+    """How one token of the amended reader is supported: (counted, support). A suffixed number (A11) is supported by a
+    value within half a unit of its last decimal in its unit; a range end carrying a percent sign (A12) is also tried
+    as that percentage under the rounding rule. Everything else is decided as number_support decides it."""
+    if t["unit"] != 1.0:
+        v = float(t["num"]) * t["unit"]
+        if e64.claims_audit(f"{v:.0f}", pool, (0, 0))["n_unsupported"] == 0:
+            return True, "exp64"
+        arr = np.asarray(pool, dtype=np.float64)
+        half = 0.5 * 10.0 ** (-(_decimals(t["num"]) or 0)) * t["unit"] * (1 + 1e-12)
+        return True, ("suffix" if arr.size and bool((np.abs(arr - v) <= half).any()) else None)
+    num = t["num"]
+    a = e64.claims_audit(num, pool, (0, 0))
+    if a["n_numbers"] == 0:
+        return False, None
+    if a["n_unsupported"] == 0:
+        return True, "exp64"
+    how = None
+    if t["glued"]:
+        b = e64.claims_audit(num[1:], pool, (0, 0))
+        if b["n_numbers"] == 0 or b["n_unsupported"] == 0:
+            how = "hyphen"
+        elif rounding_match(num[1:], pool):
+            how = "rounded"
+    elif rounding_match(num, pool):
+        how = "rounded"
+    if how is None and t.get("pct") and rounding_match((num[1:] if t["glued"] else num) + "%", pool):
+        how = "percent_range"
+    return True, how
+
+
+def number_support(text, pool, grid=None):
     """Each number stated in `text`: how it is supported, or None.
 
     exp64's audit decides first, one token at a time, so its exemption of small integers, its percent handling and
     its tolerances apply unchanged. Two readings are added for prose, which exp64's JSON answers did not need: a
     leading '-' glued to a letter or digit is a hyphen, not a minus sign ('EMSR279-11'), and a number rounded to
-    the precision it is stated with is the value it rounds (rounding_match)."""
+    the precision it is stated with is the value it rounds (rounding_match).
+
+    Each row also carries "num", the numeral as the instrument reads it ("3807" for "3,807" under A8, "32%" for the
+    "32" of "32–59%" under A12), for the checks that compare a stated number with other values (4d, D5)."""
+    if _reader_on():
+        rows = []
+        for t in _tokens(text, grid):
+            counted, how = _support_amended(t, pool)
+            if counted:
+                num = f"{float(t['num']) * t['unit']:.0f}" if t["unit"] != 1.0 else \
+                    t["num"] + ("%" if t.get("pct") else "")
+                rows.append({"token": t["tok"], "num": num, "at": t["at"], "support": how})
+        return rows
     rows = []
     for m in e64._NUM.finditer(text or ""):
         tok = m.group(0)
@@ -434,7 +671,7 @@ def number_support(text, pool):
                 how = "rounded"
         elif rounding_match(tok, pool):
             how = "rounded"
-        rows.append({"token": tok, "at": m.start(), "support": how})
+        rows.append({"token": tok, "num": tok, "at": m.start(), "support": how})
     return rows
 
 
@@ -464,39 +701,93 @@ def grid_of(run, resolve=None):
             data = _load_json(resolve, c["arguments"].get(key)) if c["arguments"].get(key) else None
             if isinstance(data, dict) and isinstance(data.get("grid"), list) and len(data["grid"]) == 2:
                 grids.append((int(data["grid"][0]), int(data["grid"][1])))
+        if _on("grid_design"):
+            # A8: the design file a tool read or wrote states its population's grid (F2 and F3: 128 x 128)
+            for p in {c["arguments"].get("design_path"), r.get("design_path")} - {None, ""}:
+                data = _load_json(resolve, p)
+                g = (data.get("population") or {}).get("grid") if isinstance(data, dict) and isinstance(
+                    data.get("population"), dict) else None
+                if isinstance(g, (list, tuple)) and len(g) == 2 and all(_num(v) for v in g):
+                    grids.append((int(g[0]), int(g[1])))
     if not grids:
         return None
     return max(g[0] for g in grids), max(g[1] for g in grids)
+
+
+def _declared_ranges(run):
+    """The integer value ranges the run's tools declared (declared_range), e.g. (0, 1) for a [0, 1] score (A14)."""
+    found = set()
+
+    def walk(o):
+        if isinstance(o, dict):
+            for k, v in o.items():
+                rng = _range(v) if k == "declared_range" else None
+                if rng and all(float(x).is_integer() for x in rng):
+                    found.add((int(rng[0]), int(rng[1])))
+                walk(v)
+        elif isinstance(o, list):
+            for v in o:
+                walk(v)
+    for c in run["calls"]:
+        walk(c["result"])
+    return found
+
+
+def _is_value_range(m, text, ranges):
+    """A pair written "[a, b]" that equals a range a tool declared is that range, not window (a, b) (A14), unless the
+    answer calls it a window."""
+    return bool(ranges) and m.group(0).startswith("[") and (int(m.group(1)), int(m.group(2))) in ranges \
+        and not re.search(r"\bwindows?\s*$", text[max(0, m.start() - 12):m.start()], re.I)
+
+
+def window_pairs(text, grid=None, ranges=()):
+    """The bracketed pairs of `text` read as windows: exp64's form, less a separated number off the grid (A8) and a
+    declared value range (A14)."""
+    return [(int(m.group(1)), int(m.group(2))) for m in e64._WIN.finditer(text or "")
+            if not _pair_is_number(m, grid) and not _is_value_range(m, text, ranges)]
 
 
 def grade_grounding(run, resolve=None):
     """Every number in the answer appears in a tool output of the run (exp64's definition), no window off the grid."""
     if run["answer"] is None:
         return {"status": FAIL, "reasons": ["no final answer"]}
-    pool = pool_values(run)
-    rows = number_support(run["answer"], pool)
-    unsupported = [r["token"] for r in rows if r["support"] is None]
     grid = grid_of(run, resolve)
-    strict = e64.claims_audit(run["answer"], pool, grid or (10 ** 9, 10 ** 9))
+    pool = pool_values(run, grid)
+    rows = number_support(run["answer"], pool, grid)
+    unsupported = [r["token"] for r in rows if r["support"] is None]
+    with instrument(PREREGISTERED):                       # exp64's own share: its pool, its reader
+        strict = e64.claims_audit(run["answer"], pool_values(run), grid or (10 ** 9, 10 ** 9))
+    n_fab, fab = strict["n_fabricated_windows"], strict["fabricated_examples"]
+    if grid and (_on("sep") or _on("p3_range")):
+        fab = [w for w in window_pairs(run["answer"], grid, _declared_ranges(run) if _on("p3_range") else ())
+               if not (0 <= w[0] < grid[0] and 0 <= w[1] < grid[1])]
+        n_fab, fab = len(fab), fab[:8]
     reasons = []
     if unsupported:
         reasons.append(f"{len(unsupported)} stated number(s) in no tool output of the run: {unsupported[:12]}")
-    if grid and strict["n_fabricated_windows"]:
-        reasons.append(f"{strict['n_fabricated_windows']} window reference(s) outside the {grid[0]}x{grid[1]} grid: "
-                       f"{strict['fabricated_examples']}")
-    return {"status": FAIL if reasons else PASS, "reasons": reasons, "n_numbers": len(rows),
-            "n_unsupported": len(unsupported), "n_supported_by_rounding": sum(r["support"] == "rounded" for r in rows),
-            "exp64_supported_share_without_extensions": strict["supported_share"], "grid": list(grid) if grid else None}
+    if grid and n_fab:
+        reasons.append(f"{n_fab} window reference(s) outside the {grid[0]}x{grid[1]} grid: {fab}")
+    out = {"status": FAIL if reasons else PASS, "reasons": reasons, "n_numbers": len(rows),
+           "n_unsupported": len(unsupported),
+           "n_supported_by_rounding": sum(r["support"] in ("rounded", "suffix", "percent_range") for r in rows),
+           "exp64_supported_share_without_extensions": strict["supported_share"], "grid": list(grid) if grid else None}
+    if _INSTRUMENT[-1]:
+        out["support_counts"] = dict(collections.Counter(str(r["support"]) for r in rows))
+    return out
 
 
 # --------------------------------------------------------------------------------------------- criterion 3: ranking
 _ROWCOL = re.compile(r"\brow\s*(\d+)\s*(?:,|;|/|and)?\s*col(?:umn)?\s*(\d+)", re.I)
 _RC = re.compile(r"\bR(\d+)\s*C(\d+)\b", re.I)
 _IDX = re.compile(r"\bwindow(?:[ _-]?index)?\s*(?:#|no\.?|number)?\s*(\d+)\b", re.I)
+_RC_CELL = re.compile(r"\(?\s*(\d+)\s*[,;/]\s*(\d+)\s*\)?")      # a table cell "14, 29" (A13)
 
 
 def _table_refs(text):
-    """Window references in markdown tables whose header names a row and a column, or a window index."""
+    """Window references in markdown tables whose header names a row and a column, or a window index.
+
+    A13 (the reader extension the plan allows): a header cell that names both, such as "Window (row, col)" or
+    "row/col", is a column of windows written "r, c", as B8/cluster's run 1 of round 1 wrote them ("14, 29")."""
     refs, header, cols, pos = [], None, None, 0
     for line in (text or "").splitlines(keepends=True):
         s = line.strip()
@@ -507,23 +798,31 @@ def _table_refs(text):
                 ri = next((i for i, x in enumerate(cells) if x == "r" or x.startswith("row")), None)
                 ci = next((i for i, x in enumerate(cells) if x == "c" or x.startswith("col")), None)
                 wi = next((i for i, x in enumerate(cells) if "window" in x or x in ("index", "idx")), None)
-                cols = (ri, ci, wi)
+                rci = next((i for i, x in enumerate(cells) if re.search(r"\brow", x) and re.search(r"\bcol", x)),
+                           None) if _on("p3_table") else None
+                cols = (ri, ci, wi, rci)
             elif not all(re.fullmatch(r":?-{2,}:?", x) or not x for x in cells):
-                ri, ci, wi = cols
+                ri, ci, wi, rci = cols
                 ints = [re.fullmatch(r"\d+", x) for x in cells]
+                pair = _RC_CELL.fullmatch(cells[rci]) if rci is not None and rci < len(cells) else None
                 if ri is not None and ci is not None and max(ri, ci) < len(cells) and ints[ri] and ints[ci]:
                     refs.append({"pos": pos, "rc": (int(cells[ri]), int(cells[ci]))})
-                elif wi is not None and wi < len(cells) and ints[wi]:
-                    refs.append({"pos": pos, "idx": int(cells[wi])})
+                else:
+                    if pair:
+                        refs.append({"pos": pos, "rc": (int(pair.group(1)), int(pair.group(2)))})
+                    if wi is not None and wi < len(cells) and ints[wi]:
+                        refs.append({"pos": pos, "idx": int(cells[wi])})
         else:
             header = None
         pos += len(line)
     return refs
 
 
-def parse_window_refs(text):
-    """Window references in the order the answer first mentions them: (r, c), row r col c, RrCc, window i, tables."""
-    refs = [{"pos": m.start(), "rc": (int(m.group(1)), int(m.group(2)))} for m in e64._WIN.finditer(text or "")]
+def parse_window_refs(text, ranges=()):
+    """Window references in the order the answer first mentions them: (r, c), row r col c, RrCc, window i, tables.
+    A pair in `ranges` written in square brackets is a declared value range, not a window (A14)."""
+    refs = [{"pos": m.start(), "rc": (int(m.group(1)), int(m.group(2)))} for m in e64._WIN.finditer(text or "")
+            if not _is_value_range(m, text, ranges)]
     refs += [{"pos": m.start(), "rc": (int(m.group(1)), int(m.group(2)))} for m in _ROWCOL.finditer(text or "")]
     refs += [{"pos": m.start(), "rc": (int(m.group(1)), int(m.group(2)))} for m in _RC.finditer(text or "")]
     refs += [{"pos": m.start(), "idx": int(m.group(1))} for m in _IDX.finditer(text or "")]
@@ -560,7 +859,7 @@ def grade_ranking(run, spec, resolve=None):
     Margins are compared at the tool's precision (TOL_ROUNDED): the listed margins are rounded to 6 decimals."""
     outs = [c for c in run["calls"] if c["name"] in REVIEW_TOOLS and isinstance(c["result"], dict)
             and isinstance(c["result"].get("review"), list) and c["result"]["review"]]
-    refs = parse_window_refs(_clean(run["answer"]))
+    refs = parse_window_refs(_clean(run["answer"]), _declared_ranges(run) if _on("p3_range") else ())
     reasons = []
     for c in outs:
         rows = [r for r in c["result"]["review"] if _num(r.get("margin"))]
@@ -850,7 +1149,7 @@ def _workspace_files(run):
             continue
 
 
-def _hand_statistics(run, pool):
+def _hand_statistics(run, pool, grid=None):
     """Statistics the answer states over pixel values the agent sampled itself, computed with a no-data value in."""
     clean, dirty = collections.defaultdict(dict), collections.defaultdict(dict)
     for c in run["calls"]:
@@ -889,9 +1188,9 @@ def _hand_statistics(run, pool):
             if g is not None:
                 good_stats.append(g)
     reasons = []
-    for row in number_support(run["answer"] or "", pool):
-        if row["support"] is None and rounding_match(row["token"], bad_stats) \
-                and not rounding_match(row["token"], good_stats):
+    for row in number_support(run["answer"] or "", pool, grid):
+        if row["support"] is None and rounding_match(row["num"], bad_stats) \
+                and not rounding_match(row["num"], good_stats):
             reasons.append(f"the answer states {row['token']}, a statistic of the sampled pixel values that includes "
                            "a no-data value")
     return reasons, True
@@ -949,7 +1248,8 @@ def grade_nodata(run):
             reasons.append(bad)
         if unsure:
             ungradeable.append(f"{c['name']}: {unsure}")
-    hand, seen = _hand_statistics(run, pool_values(run))                     # 4d: statistics made by hand
+    grid = grid_of(run)
+    hand, seen = _hand_statistics(run, pool_values(run, grid), grid)         # 4d: statistics made by hand
     checked = checked or seen
     reasons += hand
     status = FAIL if reasons else UNGRADEABLE if ungradeable else PASS if checked else NA
@@ -1003,6 +1303,22 @@ _ZONE_CLAIMS = (
     re.compile(r"certified\s+(?:zone|area|share|part)\s+(?:covers|of|is|:|=)\s*(?:the\s+most\s+confident\s+)?"
                r"\d+(?:\.\d+)?\s*%", re.I),
 )
+#: A15: the declines round 1's answers made in words the three rules above missed, added for rounds 2 onward only.
+#: Round 1 is graded with the rules above, and what these match there is reported beside the grade.
+#: D1 (B7/files run 1): "Which is right: cannot be determined from these two maps"; "does not identify the winner".
+_DECLINE_SIDE_R2 = re.compile(
+    _DECLINE_SIDE.pattern + r"|(?:cannot|can't|can\s+not)\s+be\s+(?:determined|decided|told|established|judged)|"
+    r"does\s+not\s+identify\s+the\s+winner", re.I)
+#: D4 (B4/cluster runs 1 and 2): "Send me the filled CSV ...; I'll call estimate_map_error", "send the CSV back (or
+#: paste the 0/1 list) and I'll run olmoearth_estimate_map_error": the rate is given only once the labels come back.
+#: (Underscores are removed with the emphasis, so the tool's name reads "olmoearthestimatemaperror".)
+_NEEDS_LABELS_R2 = re.compile(
+    _NEEDS_LABELS.pattern + r"|(?:send|give|return|paste)\b[^\n]{0,60}?\b(?:csv|sheet|0/1)[^\n]{0,80}?"
+    r"\bI(?:'|’)?ll\s+(?:then\s+)?(?:run|call|use)\s+\S*estimat", re.I)
+#: D7 (B6/files runs 2 and 3): "no zone passed", "no part of the map clears the exact test".
+_NO_ZONE_R2 = re.compile(
+    _NO_ZONE.pattern + r"|no\s+(?:\w+\s+){0,3}(?:zone|part|share|area|region|portion)\s+(?:\w+\s+){0,6}"
+    r"(?:pass(?:es|ed)?|clears?)\b", re.I)
 _N = r"(-?\d+(?:\.\d+)?\s*%?)"
 _ACCURACY = (
     re.compile(r"\b(?:overall\s+)?(?:accuracy|error\s+rate|misclassification\s+rate)\s*(?:is|was|of|at|=|≈|~|:|around|"
@@ -1030,7 +1346,7 @@ def _metric_values(run):
     vals = []
     for c in run["calls"]:
         echo = []
-        e64._values_in(c["arguments"], echo)
+        _values_in(c["arguments"], echo)
         echo = set(echo)
 
         def walk(o):
@@ -1043,7 +1359,7 @@ def _metric_values(run):
                 for v in o:
                     walk(v)
         walk(c["result"])
-    e64._values_in(run["brief"] or "", vals)
+    _values_in(run["brief"] or "", vals)
     return vals
 
 
@@ -1099,7 +1415,8 @@ def srs_intervals(run, resolve):
             ns.add(int(m.group(1)))
     if not ns:
         return []
-    pool = pool_values(run)
+    grid = grid_of(run, resolve)
+    pool = pool_values(run, grid)
     flagged = []
     for s in _sentences(_clean(run["answer"])):
         if not _INTERVAL_MARK.search(s):
@@ -1116,8 +1433,8 @@ def srs_intervals(run, resolve):
                 for z in Z_SRS:
                     h = z * math.sqrt(p * (1 - p) / n)
                     cands += [h, p - h, p + h]
-        for row in number_support(s, pool):
-            if row["support"] is None and rounding_match(row["token"], cands):
+        for row in number_support(s, pool, grid):
+            if row["support"] is None and rounding_match(row["num"], cands):
                 flagged.append(f"{row['token']} in: {s[:160]}")
     return flagged
 
@@ -1131,10 +1448,13 @@ def grade_declines(run, spec, resolve=None):
         return {"status": FAIL, "reasons": ["no final answer, so nothing was declined"]}
     text = _clean(run["answer"])
     reasons, sub = [], {}
+    # the rules of rounds 2 onward (A15), or the preregistered ones
+    decline_side, needs_labels, no_zone = (_DECLINE_SIDE_R2, _NEEDS_LABELS_R2, _NO_ZONE_R2) if _on("p5_rules") \
+        else (_DECLINE_SIDE, _NEEDS_LABELS, _NO_ZONE)
     # what each phrase rule matched, quoted so a reader can audit a pass as well as a fail
     evidence = {}
-    for rule, pat in (("side", _DECLINE_SIDE), ("quantities", _QUANTITIES), ("ranking", _RANKING),
-                      ("accuracy_needs_labels", _NEEDS_LABELS), ("zone", _NO_ZONE)):
+    for rule, pat in (("side", decline_side), ("quantities", _QUANTITIES), ("ranking", _RANKING),
+                      ("accuracy_needs_labels", needs_labels), ("zone", no_zone)):
         m = pat.search(text) if rule in rules else None
         if m:
             evidence[rule] = text[max(0, m.start() - 60):m.end() + 60]
@@ -1143,7 +1463,7 @@ def grade_declines(run, spec, resolve=None):
                                    and _CHANGE_CONTEXT.search(s)), None)
     if "side" in rules:
         picks = [s[:160] for s in _sentences(text) if any(p.search(s) for p in _PICKS) and not _NEGATION.search(s)]
-        ok = bool(_DECLINE_SIDE.search(text)) and not picks
+        ok = bool(decline_side.search(text)) and not picks
         sub["side"] = ok
         if not ok:
             reasons.append("side: " + (f"picks a side: {picks[:3]}" if picks else "no decline of which side is right"))
@@ -1156,7 +1476,7 @@ def grade_declines(run, spec, resolve=None):
         if not sub["change"]:
             reasons.append("change: does not say a difference across the two dates can be change on the ground")
     if "ranking" in rules:
-        named = parse_window_refs(text)
+        named = parse_window_refs(text, _declared_ranges(run) if _on("p3_range") else ())
         sub["ranking"] = bool(_RANKING.search(text)) and not named
         if not sub["ranking"]:
             reasons.append("ranking: " + ("names windows as a review set from hard classes" if named
@@ -1164,7 +1484,7 @@ def grade_declines(run, spec, resolve=None):
     if "accuracy" in rules or "accuracy_needs_labels" in rules:
         bad = _unsupported_accuracy(text, run)
         ok = not bad
-        if "accuracy_needs_labels" in rules and not _NEEDS_LABELS.search(text):
+        if "accuracy_needs_labels" in rules and not needs_labels.search(text):
             ok = False
             reasons.append("accuracy: does not say how wrong the map is needs the labels first")
         if bad:
@@ -1176,7 +1496,7 @@ def grade_declines(run, spec, resolve=None):
         if zones and all(z.get("coverage") is None for z in zones):
             claims = [s[:160] for s in _sentences(text) if any(p.search(s) for p in _ZONE_CLAIMS)
                       and not _NEGATION.search(s)]
-            sub["zone"] = bool(_NO_ZONE.search(text)) and not claims
+            sub["zone"] = bool(no_zone.search(text)) and not claims
             if not sub["zone"]:
                 reasons.append("zone: " + (f"claims a zone the tool did not certify: {claims[:2]}" if claims
                                            else "does not say that no zone is certified"))
@@ -1188,7 +1508,14 @@ def grade_declines(run, spec, resolve=None):
         if flagged:
             reasons.append(f"srs: a simple-random-sample interval for a non-random design: {flagged[:3]}")
     status = FAIL if reasons else NA if all(v is None for v in sub.values()) else PASS
-    return {"status": status, "reasons": reasons, "rules": sub, "evidence": evidence}
+    out = {"status": status, "reasons": reasons, "rules": sub, "evidence": evidence}
+    if _on(P5_REPORT) and not _on("p5_rules"):
+        # round 1 under the amended instrument: A15's rules are run and reported, and the grade above stands
+        with instrument((_INSTRUMENT[-1] - {P5_REPORT}) | {"p5_rules"}):
+            ext = grade_declines(run, spec, resolve)
+        out["reported_under_rules_of_rounds_2_on"] = {"status": ext["status"], "reasons": ext["reasons"],
+                                                      "evidence": ext["evidence"]}
+    return out
 
 
 # --------------------------------------------------------------------------------------------- criterion 6: coordinates
@@ -1673,7 +2000,8 @@ def foreign_fixtures(run_dir, config, trial_fixtures):
     return sorted(found)
 
 
-def score_round(round_dir, trial_dir):
+def score_round(round_dir, trial_dir, only=None):
+    """One round with the instrument in force (see `instrument`); `only` restricts it to some configurations."""
     meta = _read(os.path.join(round_dir, "round.json"), "json") or {}
     not_run = meta.get("not_run") or {}
     trial_fixtures = (_read(os.path.join(trial_dir, "trial.json"), "json") or {}).get("fixtures") or {}
@@ -1682,6 +2010,8 @@ def score_round(round_dir, trial_dir):
         config = f"{os.path.basename(os.path.dirname(bdir))}/{os.path.basename(bdir)}"
         if config not in BRIEF_CONFIGS:
             unregistered.append(config)
+            continue
+        if only is not None and config not in only:
             continue
         graded, excluded = [], []
         for rdir in sorted(d for d in glob.glob(os.path.join(bdir, "*")) if os.path.isdir(d)):
@@ -1730,23 +2060,101 @@ def score_round(round_dir, trial_dir):
             "configurations": configs}
 
 
+def _verdict(scored):
+    passing = [r["round"] for r in scored if r["round_passes"]]
+    return {"trial_passes": bool(passing), "first_passing_round": passing[0] if passing else None,
+            "first_round": ({p: v["status"] for p, v in scored[0]["predictions"].items()} if scored else None),
+            "last_round": ({p: v["status"] for p, v in scored[-1]["predictions"].items()} if scored else None)}
+
+
+def _run_statuses(scored):
+    return {(cfg, g["run"], c): g[c]["status"] for cfg, v in scored["configurations"].items() for g in v["runs"]
+            for c in CRITERIA}
+
+
+def _cell_verdicts(scored):
+    return {(cfg, c): v["verdicts"][c] for cfg, v in scored["configurations"].items() for c in CRITERIA}
+
+
+def instrument_effect(round_dir, trial_dir, pre, amended, inst):
+    """What the amended instrument changed in one round, and which change moved each run and cell.
+
+    A change is named when scoring with the amended instrument less that one change leaves the run or cell other than
+    the amended instrument has it: the change was needed for the move. A move that no single removal undoes (two
+    changes that each suffice) names none, and says so."""
+    ps, as_, pc, ac = _run_statuses(pre), _run_statuses(amended), _cell_verdicts(pre), _cell_verdicts(amended)
+    runs = sorted(k for k in as_ if ps.get(k) != as_[k])
+    cells = sorted(k for k in ac if pc.get(k) != ac[k])
+    moved_by = collections.defaultdict(list)
+    if runs or cells:
+        only = {k[0] for k in runs} | {k[0] for k in cells}
+        for change in sorted(inst & set(CHANGES)):
+            with instrument(inst - {change}):
+                loo = score_round(round_dir, trial_dir, only=only)
+            ls, lc = _run_statuses(loo), _cell_verdicts(loo)
+            for k in runs:
+                if ls.get(k) != as_[k]:
+                    moved_by[("run",) + k].append(change)
+            for k in cells:
+                if lc.get(k) != ac[k]:
+                    moved_by[("cell",) + k].append(change)
+
+    def named(key):
+        return moved_by[key] or ["none alone: more than one change suffices"]
+    misfires = []
+    for cfg, v in amended["configurations"].items():
+        for g in v["runs"]:
+            rep = g["c5_declines"].get("reported_under_rules_of_rounds_2_on")
+            if rep and g["c5_declines"]["status"] == FAIL and rep["status"] != FAIL:
+                misfires.append({"configuration": cfg, "run": g["run"], "graded": FAIL,
+                                 "under_rules_of_rounds_2_on": rep["status"], "matched": rep["evidence"]})
+    return {"round": amended["round"], "instrument": sorted(inst),
+            "predictions": {p: {"preregistered": pre["predictions"][p]["status"],
+                                "amended": amended["predictions"][p]["status"],
+                                "failing_preregistered": pre["predictions"][p]["failing"],
+                                "failing_amended": amended["predictions"][p]["failing"]}
+                            for p in pre["predictions"]},
+            "round_passes": {"preregistered": pre["round_passes"], "amended": amended["round_passes"]},
+            "cells_moved": [{"configuration": cfg, "criterion": c, "preregistered": pc.get((cfg, c)),
+                             "amended": ac[(cfg, c)], "moved_by": named(("cell", cfg, c))} for cfg, c in cells],
+            "runs_moved": [{"configuration": cfg, "run": r, "criterion": c, "preregistered": ps.get((cfg, r, c)),
+                            "amended": as_[(cfg, r, c)], "moved_by": named(("run", cfg, r, c))}
+                           for cfg, r, c in runs],
+            "p5_declines_missed_reported_not_regraded": misfires}
+
+
 def score_trial(trial_dir):
+    """Every round under the preregistered instrument ("rounds", "verdict": round 1's verdict on the record), and every
+    round under the amended instrument of 24 September, after round 1 ("amended_instrument"), with what it moved."""
     rounds = sorted(d for d in glob.glob(os.path.join(trial_dir, "rounds", "*")) if os.path.isdir(d))
     if not rounds and os.path.isdir(os.path.join(trial_dir, "runs")):
         rounds = [trial_dir]
     trial = _read(os.path.join(trial_dir, "trial.json"), "json") or {}
-    scored = [score_round(r, trial_dir) for r in rounds]
-    passing = [r["round"] for r in scored if r["round_passes"]]
+    with instrument(PREREGISTERED):
+        scored = [score_round(r, trial_dir) for r in rounds]
+    amended, effects, by_round = [], [], {}
+    for r, pre in zip(rounds, scored):
+        inst = instrument_for_round(os.path.basename(r))
+        with instrument(inst):
+            am = score_round(r, trial_dir)
+        amended.append(am)
+        by_round[am["round"]] = sorted(inst)
+        effects.append(instrument_effect(r, trial_dir, pre, am, inst))
     return {"experiment": "exp86 agent trial v2", "preregistration": "docs/plan/agent_trial_v2.md",
             "model": trial.get("model", MODEL), "second_model": trial.get("second_model"),
             "runs_per_configuration": N_RUNS, "trial": {k: v for k, v in trial.items() if k != "model"},
             "n_rounds": len(scored),
-            "verdict": {"trial_passes": bool(passing), "first_passing_round": passing[0] if passing else None,
-                        "first_round": ({p: v["status"] for p, v in scored[0]["predictions"].items()} if scored
-                                        else None),
-                        "last_round": ({p: v["status"] for p, v in scored[-1]["predictions"].items()} if scored
-                                       else None)},
-            "rounds": scored}
+            "verdict": _verdict(scored),
+            "rounds": scored,
+            "amended_instrument": {
+                "amendment": "docs/plan/agent_trial_v2.md, Amendments: 24 September 2026, after round 1 (A8 to A15)",
+                "note": "An instrument changed after round 1's results were seen. 'verdict' and 'rounds' above are "
+                        "every round under the preregistered instrument, and round 1's verdict on the record is "
+                        "verdict.first_round. From round 2 on, a round is decided under this instrument. On round 1 "
+                        "the decline phrasings of A15 are reported and grade nothing.",
+                "changes": CHANGES, "instrument_by_round": by_round,
+                "verdict": dict(_verdict(amended), first_round_on_the_record=_verdict(scored)["first_round"]),
+                "effect": effects, "rounds": amended}}
 
 
 def _json_default(o):
@@ -1768,12 +2176,24 @@ def main():
     os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
     with open(args.out, "w", encoding="utf-8") as fh:
         json.dump(s, fh, indent=1, default=_json_default)
-    for r in s["rounds"]:
-        print(f"round {r['round']} (agent {r['agent_commit']}): complete={r['complete']} passes={r['round_passes']}")
-        print(f"  {'configuration':<12}" + "".join(f"{c.split('_')[0]:>13}" for c in CRITERIA))
-        for cfg, v in r["configurations"].items():
-            print(f"  {cfg:<12}" + "".join(f"{v['verdicts'][c]:>13}" for c in CRITERIA))
-        print("  " + ", ".join(f"{p} {v['status']}" for p, v in r["predictions"].items()))
+    for label, rounds in (("preregistered instrument", s["rounds"]),
+                          ("amended instrument (24 September, after round 1)", s["amended_instrument"]["rounds"])):
+        print(f"== {label}")
+        for r in rounds:
+            print(f"round {r['round']} (agent {r['agent_commit']}): complete={r['complete']} "
+                  f"passes={r['round_passes']}")
+            print(f"  {'configuration':<12}" + "".join(f"{c.split('_')[0]:>13}" for c in CRITERIA))
+            for cfg, v in r["configurations"].items():
+                print(f"  {cfg:<12}" + "".join(f"{v['verdicts'][c]:>13}" for c in CRITERIA))
+            print("  " + ", ".join(f"{p} {v['status']}" for p, v in r["predictions"].items()))
+    for e in s["amended_instrument"]["effect"]:
+        print(f"== round {e['round']}: what the amendment moved")
+        for m in e["cells_moved"]:
+            print(f"  {m['configuration']:<12} {m['criterion']:<15} {m['preregistered']} -> {m['amended']}  "
+                  f"({', '.join(m['moved_by'])})")
+        for m in e["p5_declines_missed_reported_not_regraded"]:
+            print(f"  {m['configuration']:<12} run {m['run']}: P5 fails as graded; the rules of rounds 2 on would "
+                  f"give {m['under_rules_of_rounds_2_on']} (reported, not regraded)")
     print(f"wrote {args.out}")
 
 

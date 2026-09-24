@@ -640,3 +640,252 @@ def test_a7_tokens_are_kept_per_model_call(tmp_path):
              ("olmoearth_compare_results", {"result_ids": ["a", "b"]}, {})]
     t = e86.time_and_tokens(write_run(str(tmp_path / "a"), B3, calls, "x", usage=usage))
     assert t["prompt_tokens_per_call"] == {"median": 8900, "max": 12000} and t["n_load_skill_calls"] == 1
+
+
+# --------------------------------------------------------------------------------------------- after round 1, A8 to A15
+# The amendment of 24 September 2026 made AFTER round 1 was scored. Each test uses the strings round 1's answers wrote
+# (exp/out/exp86_trial/rounds/1/runs/...) and shows the preregistered instrument's reading beside the amended one.
+B7_R1 = ("Map A (F4/emsr279-11_s1_pre.json) describes 2017-09-14/2017-09-15 and map B (F4/emsr279-11_s1_post.json) "
+         "describes 2018-04-19; they cover the same windows. Compare them: where do they differ, and which is right?")
+B4C_R1 = "How wrong is the map in the model run C1/awf_namanga_2023_1042061? I can label 300 windows."
+B6_R1 = ("The windows in F3/design_random_300_s0.json are a simple random sample of this map, labelled in "
+         "F3/labels_random_300_s0.csv. Which part of the map can I trust to be wrong at most 5% of the time?")
+
+
+def _unsupported(run, changes, resolve=True):
+    with e86.instrument(changes):
+        return _grade(run, "B3/studio", "c2_grounding") if resolve else e86.grade_grounding(run)
+
+
+def test_a8_a_number_with_thousands_separators_is_one_number(tmp_path):
+    """B3/cluster, all three runs: "3,807 of 16,384" was read as 3, 807, 16 and 384 (the plan's L178 compares
+    values)."""
+    out = {"n_windows": 16384, "n_differing": 3807, "share_differing": 0.232361,
+           "evidence": "14 distinct sources, 6,435,473 graded units"}
+    run = write_run(str(tmp_path / "a"), B3C, [("olmoearth_compare_review", {"date_a": "2023", "date_b": "2022"},
+                                                out)], "| Windows differing | 3,807 of 16,384 (**23.2%**) | |")
+    pre = _unsupported(run, e86.PREREGISTERED)
+    assert pre["status"] == e86.FAIL and {"807", "384"} <= set(pre["reasons"][0].split("'"))
+    am = _unsupported(run, e86.AMENDED)
+    assert am["status"] == e86.PASS and am["n_unsupported"] == 0
+    with e86.instrument(e86.AMENDED):
+        assert [r["token"] for r in e86.number_support("3,807 of 16,384", e86.pool_values(run))] == ["3,807", "16,384"]
+        assert 6435473.0 in e86.pool_values(run) and 435.0 not in e86.pool_values(run)
+    with e86.instrument(e86.PREREGISTERED):
+        assert 435.0 in e86.pool_values(run) and 6435473.0 not in e86.pool_values(run)
+
+
+def test_a8_a_bracketed_pair_is_a_window_on_the_grid_and_a_count_off_it(tmp_path):
+    """The two traps. B4/cluster run 2's "(24,108)" is a window of the 128 x 128 grid, not 24,108; B6's "(15,813)" and
+    "(3,953)" are counts, which only the grid shows, and the grid is in the design file (F3), which grid_of did not
+    read before."""
+    plan = {"available": True, "n_listed": 10, "windows": [{"row": 0, "col": 40}, {"row": 110, "col": 40},
+                                                           {"row": 24, "col": 108}, {"row": 0, "col": 85}]}
+    answer = ("First 10 windows to label (row, col; map class): (0,40)=montane_forest, (110,40)=grassland_barren, "
+              "(24,108)=shrubland_savanna, (0,85)=shrubland_savanna.")
+    run = write_run(str(tmp_path / "a"), B4C_R1, [("olmoearth_plan_label_sample", {"scores_path": "s.json"}, plan)],
+                    answer, files={"s.json": {"grid": [128, 128], "scores": [[0.6, 0.4]]}})
+    g = _unsupported(run, e86.AMENDED)
+    assert g["status"] == e86.PASS and g["grid"] == [128, 128]
+    with e86.instrument(e86.AMENDED):
+        toks = [r["token"] for r in e86.number_support(answer, e86.pool_values(run, (128, 128)), (128, 128))]
+    assert "24" in toks and "108" in toks and "24,108" not in toks
+    certify = {"available": True, "certified": False, "coverage": None, "n_population": 15813, "n_labelled": 300,
+               "levels": [{"coverage": 0.25, "n_zone": 3953, "n_labelled_inside": 68, "n_wrong_inside": 3,
+                           "upper_bound": 0.0951},
+                          {"coverage": 1.0, "n_zone": 15813, "n_labelled_inside": 300, "n_wrong_inside": 69,
+                           "upper_bound": 0.2641}]}
+    args = {"design_path": "F3/design_random_300_s0.json", "labels_path": "F3/labels.csv", "alpha": 0.05}
+    b6 = write_run(str(tmp_path / "b"), B6_R1, [("olmoearth_certify_zone", args, certify)],
+                   "| 25% of map (3,953) | 68 | 3 | 9.5% | ✗ |\n| Full map (15,813) | 300 | 69 | 26.4% | ✗ |",
+                   files={"F3/design_random_300_s0.json": {"design": "random", "population": {"grid": [128, 128]}}})
+    am = _unsupported(b6, e86.AMENDED)
+    assert am["status"] == e86.PASS and am["grid"] == [128, 128]
+    pre = _unsupported(b6, e86.PREREGISTERED)
+    assert pre["grid"] is None and {"953", "813"} <= set(pre["reasons"][0].split("'"))
+    # the grid without the separator reading turns both counts into fabricated windows
+    no_sep = _unsupported(b6, e86.AMENDED - {"sep"})
+    assert no_sep["status"] == e86.FAIL and "(15, 813)" in no_sep["reasons"][-1] and "(3, 953)" in no_sep["reasons"][-1]
+
+
+def test_a9_the_hyphen_rule_reads_the_pool_too(tmp_path):
+    """B7/files run 2: "(Sep 14–15, 2017)". The brief's "2017-09-14/2017-09-15" entered the pool as -14 and -15."""
+    out = {"n_windows": 78028, "n_differing": 1570, "share_differing": 0.020121}
+    answer = "- **1,570 windows (2.0%) differ** between the pre map (Sep 14–15, 2017) and post map (Apr 19, 2018)."
+    run = write_run(str(tmp_path / "a"), B7_R1, [("olmoearth_compare_review", {"date_a": "x", "date_b": "y"}, out)],
+                    answer)
+    assert _unsupported(run, e86.AMENDED)["status"] == e86.PASS
+    assert _unsupported(run, e86.AMENDED - {"hyphen_pool"})["reasons"] == [
+        "3 stated number(s) in no tool output of the run: ['14', '15', '19']"]
+    with e86.instrument(e86.AMENDED):
+        pool = e86.pool_values(run)
+    assert {14.0, 15.0, 19.0, 9.0, 4.0, 11.0} <= set(pool) and not {-14.0, -15.0, -19.0} & set(pool)
+
+
+def test_a10_digits_inside_an_identifier_are_not_numbers(tmp_path):
+    """B1/studio run 3: "(5aafb53d…704)", the model id shortened; B8/cluster run 2: "revision a347b15", a git hash."""
+    out = {"models": [{"model_id": "5aafb53d-fe88-429e-a645-4f8364990704", "name": "KarstEmbedding"}],
+           "revision": "a347b1546ab881c92aa125400ed5acc8126394ca", "grid": [128, 128], "event": "EMSR279-11"}
+    answer = ("- **KarstEmbedding** (5aafb53d…704) is type `embeddings`.\n"
+              "OlmoEarth-v1-FT-AWF-Base, revision a347b15; 128x128 window grid; event EMSR279-11.")
+    run = write_run(str(tmp_path / "a"), B3, [("olmoearth_load_context", {}, out)], answer)
+    pre = _unsupported(run, e86.PREREGISTERED)
+    assert pre["status"] == e86.FAIL and {"704", "15"} <= set(pre["reasons"][0].split("'"))
+    am = _unsupported(run, e86.AMENDED)
+    assert am["status"] == e86.PASS
+    with e86.instrument(e86.AMENDED):
+        toks = [r["token"] for r in e86.number_support(answer, e86.pool_values(run))]
+    assert toks == ["128", "128", "279", "-11"]          # an event code's digits are still read, as the plan's L188
+
+
+def test_a11_a_magnitude_suffix_is_read_at_its_stated_precision(tmp_path):
+    """B2/studio run 2 and B8/cluster run 1: "6.4M graded units" for the tool's "6,435,473 graded units"."""
+    ev = {"evidence": {"suite": "On all 24 scored tasks of Ai2's own published embedding suite -- 14 distinct sources, "
+                                "6,435,473 graded units, accuracy 0.333 to 0.979"}}
+    answer = "on Ai2's published embedding suite (24 tasks, 6.4M graded units), the model's own margin beat them"
+    run = write_run(str(tmp_path / "a"), B3, [("olmoearth_review_set", {}, ev)], answer)
+    assert _unsupported(run, e86.PREREGISTERED)["reasons"] == ["1 stated number(s) in no tool output of the run: "
+                                                               "['6.4']"]
+    am = _unsupported(run, e86.AMENDED)
+    assert am["status"] == e86.PASS and am["support_counts"].get("suffix") == 1
+    wrong = write_run(str(tmp_path / "b"), B3, [("olmoearth_review_set", {}, ev)], answer.replace("6.4M", "6.5M"))
+    assert _unsupported(wrong, e86.AMENDED)["reasons"] == ["1 stated number(s) in no tool output of the run: "
+                                                           "['6.5M']"]
+
+
+def test_a12_a_range_carries_its_percent_sign(tmp_path):
+    """B5/files run 1: "19.4% (95% interval 15.7 – 23.6)"; run 2: "(95% CI 32–59%)". The tool gave 0.157355 and
+    0.236248, and 0.3231 and 0.5861. A date range in a sentence with a percentage carries nothing."""
+    est = {"available": True, "estimate": 0.194333, "low": 0.157355, "high": 0.236248, "n_labelled": 300, "level": 0.95,
+           "per_class": {"6": {"user_accuracy": {"estimate": 0.45, "low": 0.3231, "high": 0.5861}}}}
+    answer = ("**Map error rate: 19.4%** (95% interval **15.7 – 23.6**), from your 300 labelled windows.\n"
+              "e.g., class 6's user accuracy is only 45% (95% CI 32–59%), which likely drives much of the error.")
+    run = write_run(str(tmp_path / "a"), B5, [("olmoearth_estimate_map_error", {"design_path": "d.json"}, est)],
+                    answer)
+    assert _unsupported(run, e86.PREREGISTERED)["reasons"] == ["3 stated number(s) in no tool output of the run: "
+                                                               "['15.7', '23.6', '32']"]
+    am = _unsupported(run, e86.AMENDED)
+    assert am["status"] == e86.PASS and am["support_counts"]["percent_range"] == 3
+    # "Sep 14–15" beside "2.0%" is a date range: its 15 is not carried to 15%, which 0.1502 would support by chance
+    date = write_run(str(tmp_path / "b"), B3, [("olmoearth_compare_review", {}, {"n_differing": 1570, "share": 0.02,
+                                                                                 "other": 0.1502, "year": 2017})],
+                     "**1,570 windows (2.0%) differ** between the pre map (Sep 14–15, 2017) and the post map.")
+    assert _unsupported(date, e86.AMENDED)["reasons"] == ["2 stated number(s) in no tool output of the run: "
+                                                          "['14', '15']"]
+
+
+B8_R1_TABLE = """**Which to check first:** the most-suspect **5% budget = 819 windows**, led by:
+
+| Rank | Window (row, col) | Predicted class | Margin |
+|---|---|---|---|
+| 1 | 14, 29 | woodland_forest | 0.108 |
+| 2 | 10, 41 | montane_forest | 0.149 |
+| 3 | 23, 93 | shrubland_savanna | 0.153 |
+| 4 | 7, 11 | woodland_forest | 0.162 |
+| 5 | 14, 5 | montane_forest | 0.176 |
+"""
+
+
+def test_a13_a_table_column_named_row_and_col_is_read(tmp_path):
+    """B8/cluster run 1: a "Window (row, col)" column with cells "14, 29" (the reader extension the plan allows)."""
+    with e86.instrument(e86.PREREGISTERED):
+        assert e86.parse_window_refs(B8_R1_TABLE) == []
+    with e86.instrument(e86.AMENDED):
+        assert [r["rc"] for r in e86.parse_window_refs(B8_R1_TABLE)] == [(14, 29), (10, 41), (23, 93), (7, 11), (14, 5)]
+    rows = _rows()
+    out = review_set_output(rows, budget=0.1)
+    for r in out["review"]:                             # the tool's rows on a gridded file carry row and col
+        r["row"], r["col"] = divmod(r["window_index"], 10)
+    table = "| Rank | Window (row, col) | Margin |\n|---|---|---|\n" + "".join(
+        f"| {j + 1} | {r['window_index'] // 10}, {r['window_index'] % 10} | {r['margin']} |\n"
+        for j, r in enumerate(out["review"][:3]))
+    run = write_run(str(tmp_path / "a"), B8C, [("olmoearth_review_set", {"scores_path": "/x/scores.json",
+                                                                         "budget": 0.1}, out)], table,
+                    files={"scores.json": {"grid": [6, 10], "scores": rows}})
+    with e86.instrument(e86.PREREGISTERED):
+        assert _grade(run, "B8/cluster", "c3_ranking")["status"] == e86.FAIL
+    with e86.instrument(e86.AMENDED):
+        g = _grade(run, "B8/cluster", "c3_ranking")
+    assert g["status"] == e86.PASS and g["n_windows_named"] == 3
+
+
+def test_a14_a_declared_value_range_is_not_a_window(tmp_path):
+    """B2/studio, all three runs: "a [0,1] regression score", "declared range [0,1]", "`sample_karst_score`, [0, 1]"
+    were read as window (0, 1), the most confident window of the grid, named first."""
+    for text in ("a [0,1] regression score decided at 0.5", "declared range [0,1]",
+                 "band `sample_karst_score`, [0, 1]"):
+        with e86.instrument(e86.PREREGISTERED):
+            assert [r["rc"] for r in e86.parse_window_refs(text)] == [(0, 1)]
+        with e86.instrument(e86.AMENDED):
+            assert e86.parse_window_refs(text, {(0, 1)}) == []
+    with e86.instrument(e86.AMENDED):                  # a window by name, or in parentheses, stays a window
+        assert [r["rc"] for r in e86.parse_window_refs("check window [0, 1] and (0, 1)", {(0, 1)})] == [(0, 1), (0, 1)]
+    out, f = from_result_output(VALUES)
+    first, second = out["review"][0], out["review"][1]
+    answer = (f"I pulled the KarstBinary 2025 result (band `sample_karst_score`, declared range [0,1]) and ranked it. "
+              f"Check window ({first['row']}, {first['col']}) first, then ({second['row']}, {second['col']}).")
+    run = write_run(str(tmp_path / "a"), B2, [("olmoearth_review_set_from_result", {"result_id": "res-binary"}, out)],
+                    answer, files={"scores_res_g4.json": f})
+    with e86.instrument(e86.PREREGISTERED):
+        pre = _grade(run, "B2/studio", "c3_ranking")
+    assert pre["status"] == e86.FAIL and pre["margins_in_answer_order"][0] == 0.98
+    assert _grade(run, "B2/studio", "c3_ranking")["status"] == e86.PASS
+
+
+def test_a15_round_1s_decline_phrasings_grade_rounds_2_on_and_are_reported_on_round_1(tmp_path):
+    plan = {"available": True, "design": "confidence", "budget": 300, "n_population": 16384}
+    b4 = ("When you've filled it, send the CSV back (or paste the 0/1 list) and I'll run "
+          "`olmoearth_estimate_map_error` to give you the estimate with its proper interval and method.")
+    b4_run1 = ("2. Send me the filled CSV (or the list of 0/1s); I'll call `estimate_map_error` to get the error rate "
+               "with the proper interval for this design.")
+    none = {"available": True, "certified": False, "coverage": None, "alpha": 0.05}
+    b6 = ("Short answer: **none of it.** With these 300 random labels I ran the exact certification test (alpha = "
+          "0.05, delta = 0.1, prefix rule) and no zone passed - not even the smallest testable one.")
+    b6_run3 = ("Short answer: **none**. At α = 5% (and δ = 0.1), no part of the map clears the exact test with your "
+               "300 random labels.")
+    b7 = ("**Which is right: cannot be determined from these two maps.** The maps describe dates 216 days apart (Sep "
+          "2017 vs Apr 2018), so any difference is either real change on the ground (seasonal cycle included) or an "
+          "error in one map.")
+    cases = [("B4/cluster", B4C_R1, [("olmoearth_plan_label_sample", {"scores_path": "s.json", "budget": 300}, plan)],
+              a) for a in (b4, b4_run1)]
+    cases += [("B6/files", B6_R1, [("olmoearth_certify_zone", {"design_path": "d.json", "alpha": 0.05}, none)], a)
+              for a in (b6, b6_run3)]
+    cases += [("B7/files", B7_R1, [("olmoearth_compare_review", {"date_a": "x", "date_b": "y"},
+                                    {"n_differing": 1570})], b7)]
+    for i, (config, brief, calls, answer) in enumerate(cases):
+        run = write_run(str(tmp_path / f"r{i}"), brief, calls, answer)
+        with e86.instrument(e86.PREREGISTERED):
+            pre = _grade(run, config, "c5_declines")
+        assert pre["status"] == e86.FAIL and "reported_under_rules_of_rounds_2_on" not in pre, (config, answer)
+        with e86.instrument(e86.instrument_for_round("1")):
+            r1 = _grade(run, config, "c5_declines")
+        assert r1["status"] == e86.FAIL and r1["reported_under_rules_of_rounds_2_on"]["status"] == e86.PASS, answer
+        with e86.instrument(e86.instrument_for_round("2")):
+            assert _grade(run, config, "c5_declines")["status"] == e86.PASS, (config, answer)
+
+
+def test_the_summary_keeps_the_preregistered_scoring_and_adds_the_amended_one(tmp_path):
+    out, f = from_result_output(VALUES)
+    first = out["review"][0]
+    answer = f"Band `sample_karst_score`, declared range [0,1]. Check window ({first['row']}, {first['col']}) first."
+    trial = tmp_path / "trial"
+    for rnd in ("1", "2"):
+        rdir = trial / "rounds" / rnd
+        for k in range(3):
+            write_run(str(rdir / "runs" / "B2" / "studio" / f"run{k + 1}"), B2,
+                      [("olmoearth_review_set_from_result", {"result_id": "res-binary"}, out)], answer,
+                      files={"scores_res_g4.json": f})
+        with open(rdir / "round.json", "w") as fh:
+            json.dump({"agent_commit": "abc1234", "not_run": {}}, fh)
+    s = e86.score_trial(str(trial))
+    assert s["rounds"][0]["configurations"]["B2/studio"]["verdicts"]["c3_ranking"] == e86.FAIL
+    assert s["verdict"]["first_round"]["P3"] == "fails"
+    am = s["amended_instrument"]
+    assert am["rounds"][0]["configurations"]["B2/studio"]["verdicts"]["c3_ranking"] == e86.PASS
+    assert am["verdict"]["first_round_on_the_record"]["P3"] == "fails"
+    moved = [m for m in am["effect"][0]["cells_moved"] if m["criterion"] == "c3_ranking"]
+    assert moved == [{"configuration": "B2/studio", "criterion": "c3_ranking", "preregistered": e86.FAIL,
+                      "amended": e86.PASS, "moved_by": ["p3_range"]}]
+    assert "p5_rules" not in am["instrument_by_round"]["1"] and e86.P5_REPORT in am["instrument_by_round"]["1"]
+    assert "p5_rules" in am["instrument_by_round"]["2"]
+    json.dumps(s, default=e86._json_default)
