@@ -236,6 +236,14 @@ tool returns the structured evidence.
   (checked 2026-09-09). Asked on 2026-09-09.
 - Confirmation of whether Studio per-project exports match the
   `olmoearth_lcc` export format (partial probabilities).
+- **A raster of each Studio prediction's raw values, and class probabilities
+  for classification models.** Found in the OlmoEarth Agent trial of
+  2026-09-24 (`exp/out/agent_trial_2026-09-24.md`): a prediction result
+  carries map tiles and a point lookup (`pixel-value`, which returns
+  `raw_value` or a hard `classification`), and `output_files` is empty. The
+  review set therefore works on point samples of a Studio map, and not at all
+  on a classification map, whose margin needs the class probabilities. Not
+  yet asked.
 
 ## Suggestions from Ai2, and where each stands
 
