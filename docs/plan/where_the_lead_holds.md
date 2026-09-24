@@ -86,3 +86,14 @@ explicit loops) and the Holm adjustment with an independent implementation; then
 ## Cost
 
 None beyond exp79's exports. Runs per encoder as each export lands; the record is written when all fifteen have.
+
+## Result, 24 September 2026
+
+Graded on the fifteen encoders' 150 encoder-seeds and recomputed by an independent route
+([comparisons](../results/comparisons.md#where-the-lead-holds-by-group-with-its-confound-and-its-multiplicity-exp84)).
+P2 and P4 hold. P1 fails as written: the confound is positive on all 150 encoder-seeds but below 0.4 on 14 (Galileo
+Nano under every seed). P3 fails as written: the sensor-group range exceeds 0.06 on 48, though every group's median
+lead is at least +0.062 and Sentinel-2 is the lowest group on 125. Two statements in the disclosure above were
+wrong, and neither moves a verdict: the record's ten seed-0 losses are on Togo Sentinel-1 (4), Togo Sentinel-2+1
+(2), Togo Sentinel-2 (1) and Nandi Sentinel-1 (3), not on Togo Sentinel-1 or Nandi Sentinel-1 alone; and Base's
+"+0.0001 (seed 3)" is the RTX engine copy's value, the graded B200 export's being +0.0017 (seed 5).

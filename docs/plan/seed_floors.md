@@ -118,6 +118,16 @@ development partition's four-hour limit cuts the slowest encoders' last task (An
 finishes it in a follow-up job merged by `scripts/merge_exp79_partial.py`), and the gate for those fifteen is an
 RTX gate, since exp74 was run on an RTX (job 881793). P1, P3, P4 and P5 are graded when all sixteen are in.
 
+## Final reading, 24 September 2026
+
+All sixteen exports graded ([comparisons](../results/comparisons.md#is-the-record-bigger-than-its-own-seed-noise-final-reading-all-sixteen-encoders-exp79)),
+after an independent recomputation agreed with every verdict (`exp/out/audit_exp79_exp84_2026-09-24.md`). P1 to P5
+hold. Gate G fails on five encoders (CopernicusFM, CROMA Base and Large, TerraMind Base and Large), on segmentation
+tasks only, by up to 5.4e-4, on the record's own GPU model; they are graded against their own seed 0 as item 1 of
+the amendment requires. Two counts on this page were wrong and are corrected here rather than above: P5 has 111
+cells, not 112, because Satlas Base does not carry PASTIS Sentinel-1+2; and P4's seven segmentation tasks are five
+datasets, PASTIS appearing under three sensors.
+
 ## Amendment, 22 September 2026, written while array 1022737 was queued and before any number was read
 
 An adversarial read of this page against `exp/exp79_seed_floors.py`, done by two independent readers in

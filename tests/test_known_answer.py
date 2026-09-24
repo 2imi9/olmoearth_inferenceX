@@ -213,3 +213,95 @@ def test_exp79_base_gate_seed_leads_and_engine_differences_recompute_from_the_ex
     assert wins_same
     eng = json.load(open(os.path.join(ROOT, "exp", "out", "exp79_engine", "summary.json")))
     assert eng["classification"]["tasks_gate_failed_rtx"] == rtx_fail and eng["classification"]["tasks_gate_failed_b200"] == []
+
+
+EXP79_ENCODERS = ["anysat", "clay_large", "copernicusfm", "croma_base", "croma_large", "galileo_base", "galileo_nano",
+                  "galileo_tiny", "olmoearth_base", "olmoearth_large", "olmoearth_nano", "olmoearth_tiny", "panopticon",
+                  "satlas_base", "terramind_base", "terramind_large"]
+
+
+def _exp79_exports():
+    import json
+    out = {}
+    for e in EXP79_ENCODERS:
+        p = os.path.join(ROOT, "exp", "out", "exp79_seeds", f"{e}.json")
+        if not os.path.exists(p):
+            pytest.skip(f"exp79 export for {e} not present")
+        out[e] = json.load(open(p))
+    return out
+
+
+def test_exp79_all_sixteen_gate_p1_and_p3_recompute_by_a_second_route():
+    """exp79's final reading by a route the experiment does not use: the gate against both records, the exact
+    one-sided sign test at every (encoder, seed) with integer binomials, and the per-seed median headroom with the
+    perfect ranker's AURC from its harmonic-number closed form, AURC* = (k - (n - k)(H_n - H_{n-k})) / n, rather
+    than the package's mean over ranks."""
+    import json
+    import math
+    E = _exp79_exports()
+    r74 = json.load(open(os.path.join(ROOT, "exp", "out", "exp74_summary.json")))["results"]["tasks"]
+    r70 = json.load(open(os.path.join(ROOT, "exp", "out", "exp70_summary.json")))["results"]["tasks"]
+    lead = lambda s: min(s["signals"]["ctl_embedding_distance"]["excess_aurc"], s["signals"]["ctl_class_rarity"]["excess_aurc"]) - s["signals"]["margin"]["excess_aurc"]
+    # the gate
+    failing = {}
+    for e, d in E.items():
+        rec = r70 if e == "olmoearth_base" else r74[e]
+        assert set(d["tasks"]) == set(rec)
+        diff = {t: abs(v["seeds"][0]["test_accuracy"] - rec[t]["test_accuracy"]) for t, v in d["tasks"].items()}
+        bad = sorted(t for t, x in diff.items() if x >= 1e-4)
+        if bad:
+            failing[e] = bad
+        else:
+            assert max(diff.values()) < 1e-10, e
+    assert set(failing) == {"copernicusfm", "croma_base", "croma_large", "terramind_base", "terramind_large"}
+    assert {t for v in failing.values() for t in v} <= {"pastis_sentinel1", "pastis_sentinel1_sentinel2", "m_cashew_plant"}
+    # P1 with the exact sign test
+    for e, d in E.items():
+        for s in range(10):
+            L = [lead(v["seeds"][s]) for v in d["tasks"].values()]
+            w, l = sum(x > 0 for x in L), sum(x < 0 for x in L)
+            p = sum(math.comb(w + l, k) for k in range(w, w + l + 1)) / 2 ** (w + l)
+            assert w / len(L) >= 0.75 and p < 0.05, (e, s, w, len(L), p)
+    # P3 with an independent oracle
+    nmax = max(v["n_units"] for d in E.values() for v in d["tasks"].values())
+    H = np.concatenate([[0.0], np.cumsum(1.0 / np.arange(1, nmax + 1))])
+    oracle = lambda n, k: (k - (n - k) * (H[n] - H[n - k])) / n
+    assert abs(oracle(1000, 85) - metrics.oracle_aurc(1000, 85)) < 1e-12        # the closed form is the same quantity
+    rec_h = json.load(open(os.path.join(ROOT, "exp", "out", "headroom_by_encoder.json")))["per_encoder_median_headroom"]
+    ranks = lambda h: {e: sorted(h, key=h.get).index(e) for e in h}
+    rows = []
+    for s in range(10):
+        med = {}
+        for e, d in E.items():
+            hs = []
+            for v in d["tasks"].values():
+                r = v["seeds"][s]
+                n, er = r["n_units"], r["error_rate"]
+                gap = er - oracle(n, int(round(er * n)))
+                if gap > 0:
+                    hs.append(1 - r["signals"]["margin"]["excess_aurc"] / gap)
+            med[e] = float(np.median(hs))
+        a, b = ranks(rec_h), ranks(med)
+        rho = 1 - 6 * sum((a[e] - b[e]) ** 2 for e in med) / (16 * (16 ** 2 - 1))
+        order = sorted(med, key=med.get, reverse=True)
+        rows.append((rho, order[0], order[-1], med[order[0]] - med[order[1]]))
+    assert round(min(r[0] for r in rows), 3) == 0.947
+    assert [r[1] for r in rows].count("olmoearth_large") == 8 and [r[1] for r in rows].count("olmoearth_base") == 2
+    assert all(r[2] == "satlas_base" for r in rows) and round(min(r[3] for r in rows), 4) == 0.0002
+
+
+def test_exp79_monte_carlo_coverage_agrees_with_exact_enumeration_on_every_cell():
+    """P5's 111 Monte Carlo coverages against the exact hypergeometric coverage of the same Wilson interval at each
+    cell's (N, K, 300): within four standard errors of 2,000 draws on every cell, so the harness drew what it says.
+    And the package's current random-draw interval, the exact hypergeometric one, covers at least 0.95 on each."""
+    import json
+    from oe_inferencex import estimate as est
+    per = json.load(open(os.path.join(ROOT, "exp", "out", "exp79_summary.json")))["estimation"]["per_encoder"]
+    cells = [(e, t, r) for e, rows in per.items() for t, r in rows.items()]
+    assert len(cells) == 111
+    for e, t, r in cells:
+        N = r["n_units"]; K = int(round(r["error_rate"] * N))
+        ex = est.exact_coverage_srs(N, K, 300)
+        se = (ex * (1 - ex) / 2000) ** 0.5
+        assert abs(r["srs_coverage"] - ex) <= 4 * se, (e, t, r["srs_coverage"], ex)
+        assert est.exact_coverage_srs(N, K, 300, interval=est.hypergeom_interval) >= 0.95, (e, t)

@@ -30,7 +30,14 @@
    "galileo_base",
    "galileo_nano",
    "galileo_tiny",
-   "olmoearth_base"
+   "olmoearth_base",
+   "olmoearth_large",
+   "olmoearth_nano",
+   "olmoearth_tiny",
+   "panopticon",
+   "satlas_base",
+   "terramind_base",
+   "terramind_large"
   ]
  },
  "gate": {
@@ -239,40 +246,165 @@
     "headroom_seed0": 0.6799869670764211,
     "headroom_recorded": 0.6799869670764211,
     "headroom_abs_diff": 0.0
+   },
+   "olmoearth_large": {
+    "holds": true,
+    "n_tasks_recorded": 24,
+    "n_tasks_exported": 24,
+    "missing_from_export": [],
+    "not_in_record": [],
+    "absent_reasons": [],
+    "max_abs_diff": 1.1102230246251565e-16,
+    "failing": [],
+    "headroom_seed0": 0.6930521982233451,
+    "headroom_recorded": 0.6930521982233451,
+    "headroom_abs_diff": 0.0
+   },
+   "olmoearth_nano": {
+    "holds": true,
+    "n_tasks_recorded": 24,
+    "n_tasks_exported": 24,
+    "missing_from_export": [],
+    "not_in_record": [],
+    "absent_reasons": [],
+    "max_abs_diff": 1.1102230246251565e-16,
+    "failing": [],
+    "headroom_seed0": 0.6538491968337241,
+    "headroom_recorded": 0.6538491968337241,
+    "headroom_abs_diff": 0.0
+   },
+   "olmoearth_tiny": {
+    "holds": true,
+    "n_tasks_recorded": 24,
+    "n_tasks_exported": 24,
+    "missing_from_export": [],
+    "not_in_record": [],
+    "absent_reasons": [],
+    "max_abs_diff": 1.1102230246251565e-16,
+    "failing": [],
+    "headroom_seed0": 0.6482816377051522,
+    "headroom_recorded": 0.6482816428529925,
+    "headroom_abs_diff": 5.1478402651738975e-09
+   },
+   "panopticon": {
+    "holds": true,
+    "n_tasks_recorded": 24,
+    "n_tasks_exported": 24,
+    "missing_from_export": [],
+    "not_in_record": [],
+    "absent_reasons": [],
+    "max_abs_diff": 1.1102230246251565e-16,
+    "failing": [],
+    "headroom_seed0": 0.5849266160491398,
+    "headroom_recorded": 0.5849266160491398,
+    "headroom_abs_diff": 0.0
+   },
+   "satlas_base": {
+    "holds": true,
+    "n_tasks_recorded": 21,
+    "n_tasks_exported": 21,
+    "missing_from_export": [],
+    "not_in_record": [],
+    "absent_reasons": [
+     {
+      "task": "cropharvest_Togo_12_sentinel2_sentinel1",
+      "reason": "RemoteEntryNotFoundError: 404 Client Error. (Request ID: Root=1-6ab435b6-6d6e7b811d5ad5e97057bb8e;7d09a1a0-e581-404e-979b-9fa82d5623cf)\n\nEntry Not Found for url: https://huggingface.co/d"
+     },
+     {
+      "task": "cropharvest_Peoples_Republic_of_China_6_sentinel1_sentinel2",
+      "reason": "RemoteEntryNotFoundError: 404 Client Error. (Request ID: Root=1-6ab435c9-73aa3d783119470c18dc133d;a3938137-6ab8-423e-88d5-094144886c3b)\n\nEntry Not Found for url: https://huggingface.co/d"
+     },
+     {
+      "task": "pastis_sentinel1_sentinel2",
+      "reason": "RemoteEntryNotFoundError: 404 Client Error. (Request ID: Root=1-6ab43a2a-67110bab0e4f3e083fb3d9fd;d253788b-a73c-4012-aaff-76922b6263d8)\n\nEntry Not Found for url: https://huggingface.co/d"
+     }
+    ],
+    "max_abs_diff": 1.1102230246251565e-16,
+    "failing": [],
+    "headroom_seed0": 0.5514582233799528,
+    "headroom_recorded": 0.5514582233799528,
+    "headroom_abs_diff": 0.0
+   },
+   "terramind_base": {
+    "holds": false,
+    "n_tasks_recorded": 20,
+    "n_tasks_exported": 20,
+    "missing_from_export": [],
+    "not_in_record": [],
+    "absent_reasons": [
+     {
+      "task": "m_forestnet",
+      "reason": "RemoteEntryNotFoundError: 404 Client Error. (Request ID: Root=1-6ab448e7-727eef2544bb572e62b15eb6;e128023e-cbdc-470e-a5df-db4e9f4f0f3d)\n\nEntry Not Found for url: https://huggingface.co/d"
+     },
+     {
+      "task": "awf_landsat",
+      "reason": "RemoteEntryNotFoundError: 404 Client Error. (Request ID: Root=1-6ab4491a-4eb3fa99718b0cc0542ebd7a;a080aa01-a570-421f-ad82-35a08a6c358e)\n\nEntry Not Found for url: https://huggingface.co/d"
+     },
+     {
+      "task": "nandi_landsat",
+      "reason": "RemoteEntryNotFoundError: 404 Client Error. (Request ID: Root=1-6ab44922-40ffe5a15e0067ab70a04677;a4a08c9e-6a86-4897-8d04-c63a66fbeaf6)\n\nEntry Not Found for url: https://huggingface.co/d"
+     },
+     {
+      "task": "nandi_sentinel2",
+      "reason": "RemoteEntryNotFoundError: 404 Client Error. (Request ID: Root=1-6ab4492e-2fc81c917f598887520e547a;94a009fc-ef01-4558-8eb9-6c99d26adf3d)\n\nEntry Not Found for url: https://huggingface.co/d"
+     }
+    ],
+    "max_abs_diff": 0.00014608471168975345,
+    "failing": [
+     "pastis_sentinel1",
+     "pastis_sentinel1_sentinel2"
+    ],
+    "headroom_seed0": 0.6161512040502284,
+    "headroom_recorded": 0.6161512040502284,
+    "headroom_abs_diff": 0.0
+   },
+   "terramind_large": {
+    "holds": false,
+    "n_tasks_recorded": 21,
+    "n_tasks_exported": 21,
+    "missing_from_export": [],
+    "not_in_record": [],
+    "absent_reasons": [
+     {
+      "task": "m_forestnet",
+      "reason": "RemoteEntryNotFoundError: 404 Client Error. (Request ID: Root=1-6ab45ea2-6ce8b6ec36cfffd852537b3f;0103619c-686f-4546-b93e-7c0b29d76869)\n\nEntry Not Found for url: https://huggingface.co/d"
+     },
+     {
+      "task": "awf_landsat",
+      "reason": "RemoteEntryNotFoundError: 404 Client Error. (Request ID: Root=1-6ab45ed6-54da8f187431710f071e4dfd;bb3230bb-0b98-4885-a6d7-36ea8f101c5e)\n\nEntry Not Found for url: https://huggingface.co/d"
+     },
+     {
+      "task": "nandi_landsat",
+      "reason": "RemoteEntryNotFoundError: 404 Client Error. (Request ID: Root=1-6ab45ede-0881dd325d7682c57701afd0;62e923c5-6e32-4a6b-a4f5-bb774beadb2f)\n\nEntry Not Found for url: https://huggingface.co/d"
+     }
+    ],
+    "max_abs_diff": 0.0001787902441576783,
+    "failing": [
+     "pastis_sentinel1_sentinel2"
+    ],
+    "headroom_seed0": 0.6749736536932278,
+    "headroom_recorded": 0.6748636425725418,
+    "headroom_abs_diff": 0.00011001112068598218
    }
   },
   "encoders_failing": [
    "copernicusfm",
    "croma_base",
-   "croma_large"
-  ],
-  "encoders_missing": [
-   "olmoearth_large",
-   "olmoearth_nano",
-   "olmoearth_tiny",
-   "panopticon",
-   "satlas_base",
+   "croma_large",
    "terramind_base",
    "terramind_large"
   ],
-  "n_encoders": 9,
+  "encoders_missing": [],
+  "n_encoders": 16,
   "of": 16
  },
  "prereg_A": {
   "P1_headline_survives_reseeding": {
-   "holds": false,
-   "n_encoders": 9,
+   "holds": true,
+   "n_encoders": 16,
    "of": 16,
    "n_seeds": 10,
-   "encoders_missing": [
-    "olmoearth_large",
-    "olmoearth_nano",
-    "olmoearth_tiny",
-    "panopticon",
-    "satlas_base",
-    "terramind_base",
-    "terramind_large"
-   ],
+   "encoders_missing": [],
    "encoders_short_of_seeds": [],
    "failing_encoder_seed": [],
    "min_share": {
@@ -284,7 +416,14 @@
     "galileo_base": 0.9523809523809523,
     "galileo_nano": 0.9523809523809523,
     "galileo_tiny": 0.9047619047619048,
-    "olmoearth_base": 1.0
+    "olmoearth_base": 1.0,
+    "olmoearth_large": 0.9583333333333334,
+    "olmoearth_nano": 0.9583333333333334,
+    "olmoearth_tiny": 0.9166666666666666,
+    "panopticon": 0.9583333333333334,
+    "satlas_base": 0.9047619047619048,
+    "terramind_base": 0.95,
+    "terramind_large": 0.9523809523809523
    },
    "min_wins": {
     "anysat": 22,
@@ -295,12 +434,21 @@
     "galileo_base": 20,
     "galileo_nano": 20,
     "galileo_tiny": 19,
-    "olmoearth_base": 24
+    "olmoearth_base": 24,
+    "olmoearth_large": 23,
+    "olmoearth_nano": 23,
+    "olmoearth_tiny": 22,
+    "panopticon": 23,
+    "satlas_base": 19,
+    "terramind_base": 19,
+    "terramind_large": 20
    },
    "not_comparable_to_record": [
     "copernicusfm",
     "croma_base",
-    "croma_large"
+    "croma_large",
+    "terramind_base",
+    "terramind_large"
    ]
   },
   "P2_which_wins_are_noise": {
@@ -532,20 +680,14 @@
    "not_comparable_to_record": [
     "copernicusfm",
     "croma_base",
-    "croma_large"
+    "croma_large",
+    "terramind_base",
+    "terramind_large"
    ]
   },
   "P3_encoder_ordering_stable_in_sets": {
-   "holds": false,
-   "encoders_missing": [
-    "olmoearth_large",
-    "olmoearth_nano",
-    "olmoearth_tiny",
-    "panopticon",
-    "satlas_base",
-    "terramind_base",
-    "terramind_large"
-   ],
+   "holds": true,
+   "encoders_missing": [],
    "record_order": [
     "olmoearth_large",
     "galileo_base",
@@ -565,15 +707,22 @@
     "satlas_base"
    ],
    "seed0_order": [
+    "olmoearth_large",
     "galileo_base",
     "olmoearth_base",
+    "terramind_large",
     "croma_large",
     "croma_base",
+    "olmoearth_nano",
     "galileo_tiny",
+    "olmoearth_tiny",
     "copernicusfm",
+    "terramind_base",
     "galileo_nano",
     "clay_large",
-    "anysat"
+    "panopticon",
+    "anysat",
+    "satlas_base"
    ],
    "top_set": [
     "galileo_base",
@@ -584,87 +733,87 @@
     "anysat",
     "satlas_base"
    ],
-   "min_rho": 0.9333333333333332,
+   "min_rho": 0.9470588235294116,
    "per_seed": [
     {
      "seed": 0,
      "rho": 1.0,
-     "best": "galileo_base",
-     "worst": "anysat",
+     "best": "olmoearth_large",
+     "worst": "satlas_base",
      "best_in_top": true,
      "worst_in_bottom": true
     },
     {
      "seed": 1,
-     "rho": 0.9666666666666667,
+     "rho": 0.9735294117647056,
      "best": "olmoearth_base",
-     "worst": "clay_large",
+     "worst": "satlas_base",
      "best_in_top": true,
-     "worst_in_bottom": false
+     "worst_in_bottom": true
     },
     {
      "seed": 2,
-     "rho": 0.9833333333333333,
-     "best": "olmoearth_base",
-     "worst": "anysat",
+     "rho": 0.9852941176470588,
+     "best": "olmoearth_large",
+     "worst": "satlas_base",
      "best_in_top": true,
      "worst_in_bottom": true
     },
     {
      "seed": 3,
-     "rho": 0.9666666666666667,
-     "best": "olmoearth_base",
-     "worst": "anysat",
+     "rho": 0.9764705882352941,
+     "best": "olmoearth_large",
+     "worst": "satlas_base",
      "best_in_top": true,
      "worst_in_bottom": true
     },
     {
      "seed": 4,
-     "rho": 0.9500000000000001,
-     "best": "olmoearth_base",
-     "worst": "clay_large",
+     "rho": 0.9647058823529412,
+     "best": "olmoearth_large",
+     "worst": "satlas_base",
      "best_in_top": true,
-     "worst_in_bottom": false
+     "worst_in_bottom": true
     },
     {
      "seed": 5,
-     "rho": 0.9666666666666667,
-     "best": "olmoearth_base",
-     "worst": "anysat",
+     "rho": 0.9735294117647059,
+     "best": "olmoearth_large",
+     "worst": "satlas_base",
      "best_in_top": true,
      "worst_in_bottom": true
     },
     {
      "seed": 6,
-     "rho": 0.9666666666666667,
-     "best": "olmoearth_base",
-     "worst": "clay_large",
+     "rho": 0.9764705882352942,
+     "best": "olmoearth_large",
+     "worst": "satlas_base",
      "best_in_top": true,
-     "worst_in_bottom": false
+     "worst_in_bottom": true
     },
     {
      "seed": 7,
-     "rho": 0.9666666666666667,
-     "best": "olmoearth_base",
-     "worst": "clay_large",
+     "rho": 0.9794117647058824,
+     "best": "olmoearth_large",
+     "worst": "satlas_base",
      "best_in_top": true,
-     "worst_in_bottom": false
+     "worst_in_bottom": true
     },
     {
      "seed": 8,
-     "rho": 0.9333333333333332,
+     "rho": 0.9470588235294116,
      "best": "olmoearth_base",
-     "worst": "clay_large",
+     "worst": "satlas_base",
      "best_in_top": true,
-     "worst_in_bottom": false
+     "worst_in_bottom": true
     },
     {
      "seed": 9,
-     "rho": 0.9500000000000001,
-     "best": "olmoearth_base",
-     "worst": "clay_large",
+     "rho": 0.9588235294117644,
+     "best": "olmoearth_large",
+     "worst": "satlas_base",
      "best_in_top": true,
-     "worst_in_bottom": false
+     "worst_in_bottom": true
     }
    ],
    "headroom_seed0": {
@@ -676,7 +825,14 @@
     "galileo_base": 0.6801633322841558,
     "galileo_nano": 0.6073109470689437,
     "galileo_tiny": 0.6524159901796576,
-    "olmoearth_base": 0.6799869670764211
+    "olmoearth_base": 0.6799869670764211,
+    "olmoearth_large": 0.6930521982233451,
+    "olmoearth_nano": 0.6538491968337241,
+    "olmoearth_tiny": 0.6482816377051522,
+    "panopticon": 0.5849266160491398,
+    "satlas_base": 0.5514582233799528,
+    "terramind_base": 0.6161512040502284,
+    "terramind_large": 0.6749736536932278
    },
    "headroom_recorded": {
     "anysat": 0.5663758821267477,
@@ -699,7 +855,9 @@
    "not_comparable_to_record": [
     "copernicusfm",
     "croma_base",
-    "croma_large"
+    "croma_large",
+    "terramind_base",
+    "terramind_large"
    ]
   }
  },
@@ -715,7 +873,14 @@
    "galileo_base",
    "galileo_nano",
    "galileo_tiny",
-   "olmoearth_base"
+   "olmoearth_base",
+   "olmoearth_large",
+   "olmoearth_nano",
+   "olmoearth_tiny",
+   "panopticon",
+   "satlas_base",
+   "terramind_base",
+   "terramind_large"
   ],
   "per_encoder": {
    "anysat": {
@@ -1365,14 +1530,508 @@
      "cluster_coverage": 0.9315,
      "exact_srs_coverage": null
     }
+   },
+   "olmoearth_large": {
+    "mados": {
+     "n_units": 22598,
+     "error_rate": 0.07009469864589787,
+     "design_effect": 10.899868393605137,
+     "srs_coverage": 0.945,
+     "srs_half_width": 0.028875498355668713,
+     "naive_coverage": 0.4875,
+     "cluster_coverage": 0.609,
+     "exact_srs_coverage": null
+    },
+    "sen1floods11": {
+     "n_units": 592385,
+     "error_rate": 0.08323303257172278,
+     "design_effect": 5.4145623862101315,
+     "srs_coverage": 0.9455,
+     "srs_half_width": 0.03132520098879509,
+     "naive_coverage": 0.6245,
+     "cluster_coverage": 0.831,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel1": {
+     "n_units": 458638,
+     "error_rate": 0.278723088797701,
+     "design_effect": 2.979501549255035,
+     "srs_coverage": 0.9465,
+     "srs_half_width": 0.050357716850374566,
+     "naive_coverage": 0.7455,
+     "cluster_coverage": 0.922,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel2": {
+     "n_units": 458638,
+     "error_rate": 0.18361976111879086,
+     "design_effect": 2.689514224710821,
+     "srs_coverage": 0.963,
+     "srs_half_width": 0.04351545829062872,
+     "naive_coverage": 0.7465,
+     "cluster_coverage": 0.9105,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel1_sentinel2": {
+     "n_units": 458638,
+     "error_rate": 0.18651093018895076,
+     "design_effect": 2.6657034879370527,
+     "srs_coverage": 0.96,
+     "srs_half_width": 0.04378259679400397,
+     "naive_coverage": 0.7585,
+     "cluster_coverage": 0.923,
+     "exact_srs_coverage": null
+    },
+    "m_cashew_plant": {
+     "n_units": 204800,
+     "error_rate": 0.346611328125,
+     "design_effect": 1.1631093243678547,
+     "srs_coverage": 0.9465,
+     "srs_half_width": 0.05342950133093721,
+     "naive_coverage": 0.9435,
+     "cluster_coverage": 0.95,
+     "exact_srs_coverage": null
+    },
+    "m_sa_crop_type": {
+     "n_units": 4096000,
+     "error_rate": 0.343745361328125,
+     "design_effect": 3.491740905169381,
+     "srs_coverage": 0.9475,
+     "srs_half_width": 0.05334534832876356,
+     "naive_coverage": 0.703,
+     "cluster_coverage": 0.926,
+     "exact_srs_coverage": null
+    }
+   },
+   "olmoearth_nano": {
+    "mados": {
+     "n_units": 22598,
+     "error_rate": 0.11270908929993805,
+     "design_effect": 9.440743702065847,
+     "srs_coverage": 0.9445,
+     "srs_half_width": 0.03541770058213045,
+     "naive_coverage": 0.4225,
+     "cluster_coverage": 0.695,
+     "exact_srs_coverage": null
+    },
+    "sen1floods11": {
+     "n_units": 592385,
+     "error_rate": 0.08669361985870676,
+     "design_effect": 5.497431609537315,
+     "srs_coverage": 0.943,
+     "srs_half_width": 0.0318530747957269,
+     "naive_coverage": 0.599,
+     "cluster_coverage": 0.8275,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel1": {
+     "n_units": 458638,
+     "error_rate": 0.36536876578041944,
+     "design_effect": 3.085960073533201,
+     "srs_coverage": 0.9465,
+     "srs_half_width": 0.05407542480806173,
+     "naive_coverage": 0.737,
+     "cluster_coverage": 0.918,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel2": {
+     "n_units": 458638,
+     "error_rate": 0.2490003008908987,
+     "design_effect": 2.9657509619819957,
+     "srs_coverage": 0.9455,
+     "srs_half_width": 0.048570078745954565,
+     "naive_coverage": 0.747,
+     "cluster_coverage": 0.923,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel1_sentinel2": {
+     "n_units": 458638,
+     "error_rate": 0.24913548375843259,
+     "design_effect": 2.950558925563915,
+     "srs_coverage": 0.95,
+     "srs_half_width": 0.04859366967899224,
+     "naive_coverage": 0.748,
+     "cluster_coverage": 0.921,
+     "exact_srs_coverage": null
+    },
+    "m_cashew_plant": {
+     "n_units": 204800,
+     "error_rate": 0.354228515625,
+     "design_effect": 1.1838977513563556,
+     "srs_coverage": 0.943,
+     "srs_half_width": 0.05367858645170695,
+     "naive_coverage": 0.9305,
+     "cluster_coverage": 0.936,
+     "exact_srs_coverage": null
+    },
+    "m_sa_crop_type": {
+     "n_units": 4096000,
+     "error_rate": 0.384828857421875,
+     "design_effect": 3.7689818132567185,
+     "srs_coverage": 0.954,
+     "srs_half_width": 0.054635896755318165,
+     "naive_coverage": 0.715,
+     "cluster_coverage": 0.941,
+     "exact_srs_coverage": null
+    }
+   },
+   "olmoearth_tiny": {
+    "mados": {
+     "n_units": 22598,
+     "error_rate": 0.08637932560403576,
+     "design_effect": 8.777133025222541,
+     "srs_coverage": 0.9585,
+     "srs_half_width": 0.031765706679603614,
+     "naive_coverage": 0.4605,
+     "cluster_coverage": 0.7185,
+     "exact_srs_coverage": null
+    },
+    "sen1floods11": {
+     "n_units": 592385,
+     "error_rate": 0.08784321007452923,
+     "design_effect": 5.651365103519655,
+     "srs_coverage": 0.946,
+     "srs_half_width": 0.03204461732419909,
+     "naive_coverage": 0.589,
+     "cluster_coverage": 0.8335,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel1": {
+     "n_units": 458638,
+     "error_rate": 0.3392305042320959,
+     "design_effect": 3.137680948632096,
+     "srs_coverage": 0.944,
+     "srs_half_width": 0.05317062669213618,
+     "naive_coverage": 0.7385,
+     "cluster_coverage": 0.9275,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel2": {
+     "n_units": 458638,
+     "error_rate": 0.2281821392906824,
+     "design_effect": 2.8311567773248125,
+     "srs_coverage": 0.953,
+     "srs_half_width": 0.047154640164739865,
+     "naive_coverage": 0.7535,
+     "cluster_coverage": 0.923,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel1_sentinel2": {
+     "n_units": 458638,
+     "error_rate": 0.23001800984654563,
+     "design_effect": 2.8250051564190244,
+     "srs_coverage": 0.953,
+     "srs_half_width": 0.04728184974598279,
+     "naive_coverage": 0.7535,
+     "cluster_coverage": 0.9155,
+     "exact_srs_coverage": null
+    },
+    "m_cashew_plant": {
+     "n_units": 204800,
+     "error_rate": 0.36041015625,
+     "design_effect": 1.1832135942638147,
+     "srs_coverage": 0.9555,
+     "srs_half_width": 0.05389269513150786,
+     "naive_coverage": 0.9425,
+     "cluster_coverage": 0.934,
+     "exact_srs_coverage": null
+    },
+    "m_sa_crop_type": {
+     "n_units": 4096000,
+     "error_rate": 0.379173095703125,
+     "design_effect": 3.6343202559697874,
+     "srs_coverage": 0.954,
+     "srs_half_width": 0.05449666720718183,
+     "naive_coverage": 0.697,
+     "cluster_coverage": 0.9325,
+     "exact_srs_coverage": null
+    }
+   },
+   "panopticon": {
+    "mados": {
+     "n_units": 22598,
+     "error_rate": 0.08173289671652359,
+     "design_effect": 11.884773794172416,
+     "srs_coverage": 0.943,
+     "srs_half_width": 0.03085658629002683,
+     "naive_coverage": 0.4825,
+     "cluster_coverage": 0.595,
+     "exact_srs_coverage": null
+    },
+    "sen1floods11": {
+     "n_units": 592385,
+     "error_rate": 0.08776724596335153,
+     "design_effect": 5.696757766988758,
+     "srs_coverage": 0.939,
+     "srs_half_width": 0.031970684081558134,
+     "naive_coverage": 0.597,
+     "cluster_coverage": 0.816,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel1": {
+     "n_units": 458638,
+     "error_rate": 0.3274826769696362,
+     "design_effect": 2.953202518779465,
+     "srs_coverage": 0.955,
+     "srs_half_width": 0.05269199327000111,
+     "naive_coverage": 0.7465,
+     "cluster_coverage": 0.9335,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel2": {
+     "n_units": 458638,
+     "error_rate": 0.27415739646518605,
+     "design_effect": 2.9336899069301197,
+     "srs_coverage": 0.951,
+     "srs_half_width": 0.050098839745463274,
+     "naive_coverage": 0.73,
+     "cluster_coverage": 0.9205,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel1_sentinel2": {
+     "n_units": 458638,
+     "error_rate": 0.27758711663665026,
+     "design_effect": 2.923410406325331,
+     "srs_coverage": 0.943,
+     "srs_half_width": 0.05028963426143481,
+     "naive_coverage": 0.739,
+     "cluster_coverage": 0.925,
+     "exact_srs_coverage": null
+    },
+    "m_cashew_plant": {
+     "n_units": 204800,
+     "error_rate": 0.37107421875,
+     "design_effect": 1.1850957016946373,
+     "srs_coverage": 0.953,
+     "srs_half_width": 0.054218266267271505,
+     "naive_coverage": 0.948,
+     "cluster_coverage": 0.9435,
+     "exact_srs_coverage": null
+    },
+    "m_sa_crop_type": {
+     "n_units": 4096000,
+     "error_rate": 0.35409521484375,
+     "design_effect": 3.625074759034264,
+     "srs_coverage": 0.9565,
+     "srs_half_width": 0.05371481000733389,
+     "naive_coverage": 0.693,
+     "cluster_coverage": 0.9285,
+     "exact_srs_coverage": null
+    }
+   },
+   "satlas_base": {
+    "mados": {
+     "n_units": 22598,
+     "error_rate": 0.21524028675103993,
+     "design_effect": 11.353330924545023,
+     "srs_coverage": 0.96,
+     "srs_half_width": 0.045869270246466094,
+     "naive_coverage": 0.341,
+     "cluster_coverage": 0.698,
+     "exact_srs_coverage": null
+    },
+    "sen1floods11": {
+     "n_units": 592385,
+     "error_rate": 0.11210277100196663,
+     "design_effect": 5.649591563463255,
+     "srs_coverage": 0.956,
+     "srs_half_width": 0.03565232724462896,
+     "naive_coverage": 0.6,
+     "cluster_coverage": 0.8525,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel1": {
+     "n_units": 458638,
+     "error_rate": 0.456059026944998,
+     "design_effect": 3.7738006685336316,
+     "srs_coverage": 0.951,
+     "srs_half_width": 0.05589443023735551,
+     "naive_coverage": 0.6705,
+     "cluster_coverage": 0.9295,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel2": {
+     "n_units": 458638,
+     "error_rate": 0.41273073753156087,
+     "design_effect": 3.5275861275597524,
+     "srs_coverage": 0.947,
+     "srs_half_width": 0.05523405795117063,
+     "naive_coverage": 0.6965,
+     "cluster_coverage": 0.926,
+     "exact_srs_coverage": null
+    },
+    "m_cashew_plant": {
+     "n_units": 204800,
+     "error_rate": 0.4748291015625,
+     "design_effect": 1.122605166295858,
+     "srs_coverage": 0.9495,
+     "srs_half_width": 0.05601886674692818,
+     "naive_coverage": 0.9395,
+     "cluster_coverage": 0.9395,
+     "exact_srs_coverage": null
+    },
+    "m_sa_crop_type": {
+     "n_units": 4096000,
+     "error_rate": 0.385236328125,
+     "design_effect": 3.63996263202841,
+     "srs_coverage": 0.95,
+     "srs_half_width": 0.054651523499222934,
+     "naive_coverage": 0.723,
+     "cluster_coverage": 0.9355,
+     "exact_srs_coverage": null
+    }
+   },
+   "terramind_base": {
+    "mados": {
+     "n_units": 22598,
+     "error_rate": 0.06146561642623241,
+     "design_effect": 9.84236456827,
+     "srs_coverage": 0.9505,
+     "srs_half_width": 0.027149113479067562,
+     "naive_coverage": 0.432,
+     "cluster_coverage": 0.6855,
+     "exact_srs_coverage": null
+    },
+    "sen1floods11": {
+     "n_units": 592385,
+     "error_rate": 0.08616355917182238,
+     "design_effect": 5.7961918685197675,
+     "srs_coverage": 0.9495,
+     "srs_half_width": 0.031747640602590936,
+     "naive_coverage": 0.6005,
+     "cluster_coverage": 0.8145,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel1": {
+     "n_units": 458638,
+     "error_rate": 0.3206930084293059,
+     "design_effect": 3.06440987347582,
+     "srs_coverage": 0.957,
+     "srs_half_width": 0.05242073853255445,
+     "naive_coverage": 0.7425,
+     "cluster_coverage": 0.9255,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel2": {
+     "n_units": 458638,
+     "error_rate": 0.2257030599296177,
+     "design_effect": 2.831207733323158,
+     "srs_coverage": 0.944,
+     "srs_half_width": 0.046970581355709445,
+     "naive_coverage": 0.7595,
+     "cluster_coverage": 0.923,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel1_sentinel2": {
+     "n_units": 458638,
+     "error_rate": 0.22789869134262752,
+     "design_effect": 2.845974560879461,
+     "srs_coverage": 0.951,
+     "srs_half_width": 0.04715206800183142,
+     "naive_coverage": 0.7525,
+     "cluster_coverage": 0.9205,
+     "exact_srs_coverage": null
+    },
+    "m_cashew_plant": {
+     "n_units": 204800,
+     "error_rate": 0.299912109375,
+     "design_effect": 1.157713290502688,
+     "srs_coverage": 0.954,
+     "srs_half_width": 0.05145361964030121,
+     "naive_coverage": 0.9365,
+     "cluster_coverage": 0.9445,
+     "exact_srs_coverage": null
+    },
+    "m_sa_crop_type": {
+     "n_units": 4096000,
+     "error_rate": 0.332705810546875,
+     "design_effect": 3.2796124828794597,
+     "srs_coverage": 0.9505,
+     "srs_half_width": 0.05294737410284313,
+     "naive_coverage": 0.7215,
+     "cluster_coverage": 0.934,
+     "exact_srs_coverage": null
+    }
+   },
+   "terramind_large": {
+    "mados": {
+     "n_units": 22598,
+     "error_rate": 0.05487211257633419,
+     "design_effect": 9.722477653314444,
+     "srs_coverage": 0.9615,
+     "srs_half_width": 0.025856032726905558,
+     "naive_coverage": 0.417,
+     "cluster_coverage": 0.719,
+     "exact_srs_coverage": null
+    },
+    "sen1floods11": {
+     "n_units": 592385,
+     "error_rate": 0.08603019995442153,
+     "design_effect": 5.877274210664476,
+     "srs_coverage": 0.947,
+     "srs_half_width": 0.031713527321362976,
+     "naive_coverage": 0.585,
+     "cluster_coverage": 0.8175,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel1": {
+     "n_units": 458638,
+     "error_rate": 0.3209481115825553,
+     "design_effect": 3.0848301488155574,
+     "srs_coverage": 0.961,
+     "srs_half_width": 0.052399669070030984,
+     "naive_coverage": 0.742,
+     "cluster_coverage": 0.921,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel2": {
+     "n_units": 458638,
+     "error_rate": 0.22423349133739465,
+     "design_effect": 2.8398018773427154,
+     "srs_coverage": 0.95,
+     "srs_half_width": 0.04685697033975964,
+     "naive_coverage": 0.763,
+     "cluster_coverage": 0.918,
+     "exact_srs_coverage": null
+    },
+    "pastis_sentinel1_sentinel2": {
+     "n_units": 458638,
+     "error_rate": 0.22768065445950836,
+     "design_effect": 2.8307537754391645,
+     "srs_coverage": 0.9475,
+     "srs_half_width": 0.047162496456951794,
+     "naive_coverage": 0.7485,
+     "cluster_coverage": 0.9175,
+     "exact_srs_coverage": null
+    },
+    "m_cashew_plant": {
+     "n_units": 204800,
+     "error_rate": 0.282529296875,
+     "design_effect": 1.149092047219198,
+     "srs_coverage": 0.9515,
+     "srs_half_width": 0.05057619334397151,
+     "naive_coverage": 0.94,
+     "cluster_coverage": 0.945,
+     "exact_srs_coverage": null
+    },
+    "m_sa_crop_type": {
+     "n_units": 4096000,
+     "error_rate": 0.32793994140625,
+     "design_effect": 3.2999245250029836,
+     "srs_coverage": 0.9465,
+     "srs_half_width": 0.0527478324671595,
+     "naive_coverage": 0.7415,
+     "cluster_coverage": 0.9305,
+     "exact_srs_coverage": null
+    }
    }
   }
  },
  "prereg_B": {
   "P4_naive_failure_belongs_to_the_task": {
-   "holds": false,
-   "n_encoders_holding": 9,
-   "of": 9,
+   "holds": true,
+   "n_encoders_holding": 16,
+   "of": 16,
    "per_encoder": {
     "anysat": {
      "carried": 7,
@@ -1472,208 +2131,92 @@
      ],
      "median_design_effect": 2.9419455686595803,
      "holds": true
+    },
+    "olmoearth_large": {
+     "carried": 7,
+     "present": 7,
+     "missing": [],
+     "under_covering": 6,
+     "exceptions": [
+      "m_cashew_plant"
+     ],
+     "median_design_effect": 2.979501549255035,
+     "holds": true
+    },
+    "olmoearth_nano": {
+     "carried": 7,
+     "present": 7,
+     "missing": [],
+     "under_covering": 6,
+     "exceptions": [
+      "m_cashew_plant"
+     ],
+     "median_design_effect": 3.085960073533201,
+     "holds": true
+    },
+    "olmoearth_tiny": {
+     "carried": 7,
+     "present": 7,
+     "missing": [],
+     "under_covering": 6,
+     "exceptions": [
+      "m_cashew_plant"
+     ],
+     "median_design_effect": 3.137680948632096,
+     "holds": true
+    },
+    "panopticon": {
+     "carried": 7,
+     "present": 7,
+     "missing": [],
+     "under_covering": 6,
+     "exceptions": [
+      "m_cashew_plant"
+     ],
+     "median_design_effect": 2.953202518779465,
+     "holds": true
+    },
+    "satlas_base": {
+     "carried": 6,
+     "present": 6,
+     "missing": [],
+     "under_covering": 5,
+     "exceptions": [
+      "m_cashew_plant"
+     ],
+     "median_design_effect": 3.706881650281021,
+     "holds": true
+    },
+    "terramind_base": {
+     "carried": 7,
+     "present": 7,
+     "missing": [],
+     "under_covering": 6,
+     "exceptions": [
+      "m_cashew_plant"
+     ],
+     "median_design_effect": 3.06440987347582,
+     "holds": true
+    },
+    "terramind_large": {
+     "carried": 7,
+     "present": 7,
+     "missing": [],
+     "under_covering": 6,
+     "exceptions": [
+      "m_cashew_plant"
+     ],
+     "median_design_effect": 3.0848301488155574,
+     "holds": true
     }
    },
    "failing": []
   },
   "P5_estimator_honest_everywhere": {
-   "holds": false,
-   "n_cells": 63,
+   "holds": true,
+   "n_cells": 111,
    "of": 111,
-   "cells_missing": [
-    [
-     "olmoearth_large",
-     "m_cashew_plant"
-    ],
-    [
-     "olmoearth_large",
-     "m_sa_crop_type"
-    ],
-    [
-     "olmoearth_large",
-     "mados"
-    ],
-    [
-     "olmoearth_large",
-     "pastis_sentinel1"
-    ],
-    [
-     "olmoearth_large",
-     "pastis_sentinel1_sentinel2"
-    ],
-    [
-     "olmoearth_large",
-     "pastis_sentinel2"
-    ],
-    [
-     "olmoearth_large",
-     "sen1floods11"
-    ],
-    [
-     "olmoearth_nano",
-     "m_cashew_plant"
-    ],
-    [
-     "olmoearth_nano",
-     "m_sa_crop_type"
-    ],
-    [
-     "olmoearth_nano",
-     "mados"
-    ],
-    [
-     "olmoearth_nano",
-     "pastis_sentinel1"
-    ],
-    [
-     "olmoearth_nano",
-     "pastis_sentinel1_sentinel2"
-    ],
-    [
-     "olmoearth_nano",
-     "pastis_sentinel2"
-    ],
-    [
-     "olmoearth_nano",
-     "sen1floods11"
-    ],
-    [
-     "olmoearth_tiny",
-     "m_cashew_plant"
-    ],
-    [
-     "olmoearth_tiny",
-     "m_sa_crop_type"
-    ],
-    [
-     "olmoearth_tiny",
-     "mados"
-    ],
-    [
-     "olmoearth_tiny",
-     "pastis_sentinel1"
-    ],
-    [
-     "olmoearth_tiny",
-     "pastis_sentinel1_sentinel2"
-    ],
-    [
-     "olmoearth_tiny",
-     "pastis_sentinel2"
-    ],
-    [
-     "olmoearth_tiny",
-     "sen1floods11"
-    ],
-    [
-     "panopticon",
-     "m_cashew_plant"
-    ],
-    [
-     "panopticon",
-     "m_sa_crop_type"
-    ],
-    [
-     "panopticon",
-     "mados"
-    ],
-    [
-     "panopticon",
-     "pastis_sentinel1"
-    ],
-    [
-     "panopticon",
-     "pastis_sentinel1_sentinel2"
-    ],
-    [
-     "panopticon",
-     "pastis_sentinel2"
-    ],
-    [
-     "panopticon",
-     "sen1floods11"
-    ],
-    [
-     "satlas_base",
-     "m_cashew_plant"
-    ],
-    [
-     "satlas_base",
-     "m_sa_crop_type"
-    ],
-    [
-     "satlas_base",
-     "mados"
-    ],
-    [
-     "satlas_base",
-     "pastis_sentinel1"
-    ],
-    [
-     "satlas_base",
-     "pastis_sentinel2"
-    ],
-    [
-     "satlas_base",
-     "sen1floods11"
-    ],
-    [
-     "terramind_base",
-     "m_cashew_plant"
-    ],
-    [
-     "terramind_base",
-     "m_sa_crop_type"
-    ],
-    [
-     "terramind_base",
-     "mados"
-    ],
-    [
-     "terramind_base",
-     "pastis_sentinel1"
-    ],
-    [
-     "terramind_base",
-     "pastis_sentinel1_sentinel2"
-    ],
-    [
-     "terramind_base",
-     "pastis_sentinel2"
-    ],
-    [
-     "terramind_base",
-     "sen1floods11"
-    ],
-    [
-     "terramind_large",
-     "m_cashew_plant"
-    ],
-    [
-     "terramind_large",
-     "m_sa_crop_type"
-    ],
-    [
-     "terramind_large",
-     "mados"
-    ],
-    [
-     "terramind_large",
-     "pastis_sentinel1"
-    ],
-    [
-     "terramind_large",
-     "pastis_sentinel1_sentinel2"
-    ],
-    [
-     "terramind_large",
-     "pastis_sentinel2"
-    ],
-    [
-     "terramind_large",
-     "sen1floods11"
-    ]
-   ],
+   "cells_missing": [],
    "failing": [],
    "below_bar_but_within_exact": [],
    "min_coverage": 0.933

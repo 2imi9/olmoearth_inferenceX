@@ -265,8 +265,15 @@ margin wins on all six. <!-- claim:suite-margin-wins-every-task -->
 Reseeded ten times (exp79), the 24 of 24 holds under every seed; the closest
 call is CropHarvest Togo Sentinel-1, 306 units, where one seed's lead is +0.0017,
 inside what the GPU type alone moves on that task, so that win is by sign only.
-The other fifteen encoders are being reseeded as this is written.
 <!-- claim:exp79-base-margin-wins-under-every-seed -->
+The other fifteen encoders, reseeded the same way, keep the headline under every
+seed: the margin beats the best control on at least 75% of each encoder's tasks
+under all ten seeds on all sixteen, the lowest share 0.875 (Clay Large). The lead
+is positive in every sensor group, though smaller on Sentinel-2 tasks, and the
+encoder ordering holds as a set, not an order. Five encoders' seed-0 accuracies miss
+the record by up to 5.4e-4 on the largest segmentation tasks, on the record's own
+GPU model: linear-probe training there is not bit-reproducible.
+<!-- claim:exp79-headline-holds-under-every-seed-on-every-encoder -->
 
 **The probe warning, scoped.** That run also scoped the probe warning above. Across those 24 tasks the ordering
 of the confidence signals does degrade with how badly the probe generalises, which

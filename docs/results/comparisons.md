@@ -2657,8 +2657,8 @@ Preregistered in [docs/plan/seed_floors.md](../plan/seed_floors.md) with an amen
 `exp/exp79_seed_floors.py` (export on the cluster, grade and estimate locally); artifacts
 `exp/out/exp79_seeds/<encoder>.json`, `exp/out/exp79_summary.json`, `exp/out/exp79_engine/summary.json`. This
 section is the first reading, written on 23 September 2026 when only OlmoEarth Base's export had landed; the
-fifteen other encoders' exports arrive one at a time on the cluster's development partition, and P1, P3, P4 and
-P5 are graded when all sixteen are in. The suite's headline sentences had never been reseeded; this is what ten
+fifteen other encoders' exports arrived one at a time on the cluster's development partition, and P1, P3, P4 and
+P5 are graded on all sixteen in the final reading below. The suite's headline sentences had never been reseeded; this is what ten
 probe seeds do to them, and what the GPU does.
 
 **Gate G holds on OlmoEarth Base, on the engine the record was made on.** The B200 export carries exp70's 24
@@ -2695,6 +2695,92 @@ B200 export wrote, every design effect, error rate and coverage of exp78's seven
 the third decimal (MADOS naive 0.506, cluster 0.598; the one difference beyond Monte Carlo noise is PASTIS S1's
 cluster coverage, 0.934 against 0.918, on units that differ in a handful of windows), and the per-unit files'
 SHA-256s match the export's manifest.
+
+## Is the record bigger than its own seed noise? Final reading: all sixteen encoders (exp79)
+
+The fifteen other encoders' exports ran on 23 September 2026 as array 1029486 on the cluster's `rtx-devel`
+partition (RTX PRO 6000; exp74's record is job 881793 on `rtx-batch`, the same GPU model), and were graded on 24
+September against the preregistration and its amendments. Every per-unit file matches its export's SHA-256
+manifest. Before this was written, an independent recomputation by a second route (its own code, importing nothing
+from `exp/` or the package) agreed with every verdict and every quoted number to the digit; its report is
+`exp/out/audit_exp79_exp84_2026-09-24.md`. All five predictions hold. The gate does not, on five encoders.
+
+**Gate G fails on five encoders, on segmentation tasks only, on the record's own GPU model.** Eleven of the
+sixteen exports reproduce every recorded seed-0 accuracy exactly (largest difference below 1e-10). CopernicusFM,
+CROMA Base and Large, and TerraMind Base and Large miss the 1e-4 gate on PASTIS Sentinel-1, PASTIS Sentinel-1+2 or
+m-cashew-plant, by 1.2e-4 to 5.4e-4: nine cells, a net 53 to 192 errors on tasks of 204,800 and 458,638 windows.
+The record kept only accuracies, so the net change in the error count is known and the number of windows whose
+prediction moved is not. No verdict leans on them: on those nine cells the margin's smallest lead at any seed is
++0.075. As the preregistration requires, the five are graded against their own seed 0 and marked as not comparable
+to the record. The first reading found the probe's training not bit-identical across GPU types; this finds it not
+bit-identical on one GPU type either, on the largest segmentation tasks, for a third of the encoders.
+<!-- claim:exp79-gate-fails-on-five-encoders-on-segmentation -->
+
+**P1 holds: the headline survives reseeding on every encoder.** Under each of the ten seeds, on all sixteen
+encoders, the margin beats the best no-model control on at least 75% of the tasks the encoder carries, and the sign
+test holds with it. The lowest share at any seed is 0.875 (Clay Large, 21 of 24), then 0.905 (Galileo Tiny and
+Satlas Base, 19 of 21), the two encoders the preregistration named as closest to the bar.
+<!-- claim:exp79-headline-holds-under-every-seed-on-every-encoder -->
+
+**P3 holds, as a set and not as an order.** The per-encoder median headroom keeps a rank correlation of at least
+0.947 with the record's ordering under every seed (bar 0.9). The best encoder is always one of the three the record
+names at the top, OlmoEarth Large under eight seeds and OlmoEarth Base under two, and the worst is Satlas Base under
+all ten. The gap between first and second falls to 0.0002 at one seed, so the record may say that the best is one of
+three, and not which. <!-- claim:exp79-encoder-ordering-stable-as-a-set -->
+
+**P4 and P5 hold on every encoder: exp78's warning is about the tasks, and the estimator is honest everywhere.**
+Rerun on each encoder's seed-0 export at 300 labels over 2,000 draws, the naive tile-sampled interval covers below
+0.85 on every segmentation task but m-cashew-plant, on all sixteen encoders (0.34 to 0.78), and each encoder's
+median design effect is 2.94 to 3.71 (bar 2.0 on 13 of 16). m-cashew-plant is the exception everywhere (design
+effect 1.12 to 1.28), as it was for OlmoEarth Base in exp78. Under a simple random sample the error-rate interval
+covers 0.933 to 0.963 on all 111 (encoder, task) cells, the lowest OlmoEarth Base on MADOS, the cell exp78 named in
+advance; no cell needed P5's second clause. Four qualifications belong beside these numbers. The seven segmentation
+tasks are five datasets, since PASTIS appears under three sensors and supplies every encoder's median design effect.
+The estimation stage draws the same 2,000 samples for every encoder on a task, so the 111 cells are not independent
+tests. P5 graded the Wilson interval, as preregistered; the package's random-draw interval is now the exact
+hypergeometric one, whose exact coverage on the same cells is at least 0.9506. And the preregistration counted 112
+cells where there are 111, because Satlas Base does not carry PASTIS Sentinel-1+2.
+<!-- claim:exp79-estimation-findings-hold-on-every-encoder -->
+
+## Where the lead holds: by group, with its confound and its multiplicity (exp84)
+
+Preregistered in [docs/plan/where_the_lead_holds.md](../plan/where_the_lead_holds.md) before the fifteen encoders'
+seeds were graded, with OlmoEarth Base's values disclosed there rather than predicted; runs as
+`exp/exp84_where_the_lead_holds.py` on exp79's exports; artifact `exp/out/exp84_summary.json`. Graded on 24
+September 2026 over the fifteen encoders other than OlmoEarth Base, ten seeds each (150 encoder-seeds), and
+recomputed by the same independent audit. Two predictions hold and two fail as written.
+
+**P2 holds: the thin cells are small or badly fitted tasks.** Over the 150 encoder-seeds the margin fails to beat
+the best control 122 times, every one on the three 306-unit CropHarvest Togo tasks or on Nandi Sentinel-1 with a
+probe accuracy of at most 0.40. There is no loss anywhere else.
+<!-- claim:exp84-losses-are-small-or-badly-fitted-tasks -->
+
+**P4 holds: the bar survives a multiplicity correction.** At every seed, the sign test of "the margin beats the best
+control" survives a Holm correction over the fifteen encoders; the largest adjusted p is 3.3e-4.
+<!-- claim:exp84-bar-survives-holm -->
+
+**P1 fails as written: the confound has its sign everywhere, but not its size.** Over an encoder's tasks, the rank
+correlation between probe accuracy and the margin's AUROC is positive on all 150 encoder-seeds, and below the 0.4
+bar on 14: Galileo Nano under all ten seeds (0.32 to 0.39), Clay Large and Galileo Tiny under two each. The other
+clause holds everywhere: the correlation of accuracy with the lead is at most −0.19. More accurate probes rank
+their errors better on every encoder, but on Galileo Nano the link is weak.
+<!-- claim:exp84-confound-has-its-sign-not-its-size -->
+
+**P3 fails as written: the lead is positive in every sensor group, but uneven.** The range across sensor groups (S1,
+S2, Landsat, S1+S2) of the median lead exceeds the 0.06 bar on 48 of 150 encoder-seeds. The largest, 0.128 on Satlas
+Base, is one task, because its S1+S2 group is m-so2sat alone; leaving out one-task groups, 38 still fail, so the
+failure is not the grouping. It is not a hole either: the smallest median lead of any sensor group anywhere is
++0.062, and the spread has a direction, with Sentinel-2 the lowest group on 125 of the 150. The sentence the record
+can make is that the margin wins in every sensor group, by less on Sentinel-2 tasks.
+<!-- claim:exp84-lead-positive-in-every-sensor-group-but-uneven -->
+
+**Two corrections to the preregistration's disclosure, neither moving a verdict.** It placed the record's ten
+seed-0 losses on CropHarvest Togo Sentinel-1 or Nandi Sentinel-1; they are on Togo Sentinel-1 (4), Togo
+Sentinel-2+1 (2), Togo Sentinel-2 (1) and Nandi Sentinel-1 (3), all inside P2's bar. Its OlmoEarth Base figure of
++0.0001 (seed 3) for the smallest lead came from the RTX engine copy; the graded B200 export's is +0.0017 (seed 5).
+The descriptive block spread on OlmoEarth Base stands as disclosed: the margin's lead over the class-rarity control
+is positive in 98 to 100% of 50 tile groups on six segmentation tasks and in 79% of the 34 groups with any error on
+MADOS, whose 10th-percentile lead is −0.094; the groups are runs of tiles in export order, not geographic blocks.
 
 ## Does the map's own confidence sharpen the error rate once labels exist? (exp85)
 

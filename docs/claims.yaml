@@ -3795,3 +3795,205 @@
     warning explains EuroSAT's and MADOS's shortfalls almost wholly and Brick Kiln's and Nandi Landsat's about
     half; their unwarned draws still cover 0.943 to 0.966.
 
+
+- id: exp79-gate-fails-on-five-encoders-on-segmentation
+  statement: "At seed 0, eleven of exp79's sixteen exports reproduce every test accuracy the record holds (largest difference below 1e-10) and five miss the 1e-4 gate, on segmentation tasks only: CopernicusFM (PASTIS S1), CROMA Base (m-cashew-plant, PASTIS S1), CROMA Large (m-cashew-plant, PASTIS S1, PASTIS S1+S2), TerraMind Base (PASTIS S1, PASTIS S1+S2) and TerraMind Large (PASTIS S1+S2), by 1.2e-4 to 5.4e-4, a net 53 to 192 errors on tasks of 204,800 and 458,638 windows; on those nine cells the margin's smallest lead at any seed is +0.075."
+  crosscheck: tests/test_known_answer.py::test_exp79_all_sixteen_gate_p1_and_p3_recompute_by_a_second_route
+  status: measured
+  experiments: [exp79]
+  artifacts: [exp/out/exp79_seeds/anysat.json, exp/out/exp79_seeds/clay_large.json, exp/out/exp79_seeds/copernicusfm.json, exp/out/exp79_seeds/croma_base.json, exp/out/exp79_seeds/croma_large.json, exp/out/exp79_seeds/galileo_base.json, exp/out/exp79_seeds/galileo_nano.json, exp/out/exp79_seeds/galileo_tiny.json, exp/out/exp79_seeds/olmoearth_base.json, exp/out/exp79_seeds/olmoearth_large.json, exp/out/exp79_seeds/olmoearth_nano.json, exp/out/exp79_seeds/olmoearth_tiny.json, exp/out/exp79_seeds/panopticon.json, exp/out/exp79_seeds/satlas_base.json, exp/out/exp79_seeds/terramind_base.json, exp/out/exp79_seeds/terramind_large.json, exp/out/exp74_summary.json, exp/out/exp70_summary.json]
+  check: |-
+    (lambda E, r74, r70, lead: (lambda D: (lambda bad:
+      all(set(E[e]['tasks']) == set(r70 if e == 'olmoearth_base' else r74[e]) for e in E) and len(E) == 16
+      and all(max(D[e].values()) < 1e-10 for e in D if e not in bad)
+      and bad == {'copernicusfm': ['pastis_sentinel1'], 'croma_base': ['m_cashew_plant', 'pastis_sentinel1'],
+                  'croma_large': ['m_cashew_plant', 'pastis_sentinel1', 'pastis_sentinel1_sentinel2'],
+                  'terramind_base': ['pastis_sentinel1', 'pastis_sentinel1_sentinel2'], 'terramind_large': ['pastis_sentinel1_sentinel2']}
+      and round(min(D[e][t] for e in bad for t in bad[e]), 5) == 0.00012 and round(max(D[e][t] for e in bad for t in bad[e]), 5) == 0.00054
+      and sorted(round(D[e][t] * E[e]['tasks'][t]['n_units']) for e in bad for t in bad[e])[0] == 53
+      and sorted(round(D[e][t] * E[e]['tasks'][t]['n_units']) for e in bad for t in bad[e])[-1] == 192
+      and sorted({E[e]['tasks'][t]['n_units'] for e in bad for t in bad[e]}) == [204800, 458638]
+      and round(min(min(lead(s) for s in E[e]['tasks'][t]['seeds']) for e in bad for t in bad[e]), 3) == 0.075
+    )({e: sorted(t for t, x in D[e].items() if x >= 1e-4) for e in D if max(D[e].values()) >= 1e-4})
+    )({e: {t: abs(v['seeds'][0]['test_accuracy'] - (r70 if e == 'olmoearth_base' else r74[e])[t]['test_accuracy']) for t, v in E[e]['tasks'].items()} for e in E})
+    )({e: A['exp/out/exp79_seeds/' + e + '.json'] for e in ['anysat', 'clay_large', 'copernicusfm', 'croma_base', 'croma_large', 'galileo_base', 'galileo_nano', 'galileo_tiny', 'olmoearth_base', 'olmoearth_large', 'olmoearth_nano', 'olmoearth_tiny', 'panopticon', 'satlas_base', 'terramind_base', 'terramind_large']},
+      A['exp/out/exp74_summary.json']['results']['tasks'], A['exp/out/exp70_summary.json']['results']['tasks'],
+      lambda s: min(s['signals']['ctl_embedding_distance']['excess_aurc'], s['signals']['ctl_class_rarity']['excess_aurc']) - s['signals']['margin']['excess_aurc'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp79-gate-fails-on-five-encoders-on-segmentation}
+  note: >-
+    Array 1029486 ran the fifteen on the cluster's rtx-devel partition (nodes a0018, a0019); exp74's record is job
+    881793 on rtx-batch (node a0004); both partitions are RTX PRO 6000. The exports themselves record no device, so
+    the engine is known from the scheduler, not the artifact. The record kept only accuracies: the net change in
+    error count is known, the number of windows whose prediction moved is not. Over all nineteen cells that differ
+    at all (the nine plus ten below the gate) the smallest lead at any seed is +0.038.
+
+- id: exp79-headline-holds-under-every-seed-on-every-encoder
+  statement: "Under each of ten probe seeds, on all sixteen encoders of the suite, the margin beats the best no-model control on at least 75% of the tasks the encoder carries (exp79 P1): the lowest share at any seed is 0.875 (Clay Large, 21 of 24), then 0.905 (Galileo Tiny and Satlas Base, 19 of 21); every encoder carries at least 20 tasks."
+  crosscheck: tests/test_known_answer.py::test_exp79_all_sixteen_gate_p1_and_p3_recompute_by_a_second_route
+  status: supported
+  experiments: [exp79]
+  artifacts: [exp/out/exp79_seeds/anysat.json, exp/out/exp79_seeds/clay_large.json, exp/out/exp79_seeds/copernicusfm.json, exp/out/exp79_seeds/croma_base.json, exp/out/exp79_seeds/croma_large.json, exp/out/exp79_seeds/galileo_base.json, exp/out/exp79_seeds/galileo_nano.json, exp/out/exp79_seeds/galileo_tiny.json, exp/out/exp79_seeds/olmoearth_base.json, exp/out/exp79_seeds/olmoearth_large.json, exp/out/exp79_seeds/olmoearth_nano.json, exp/out/exp79_seeds/olmoearth_tiny.json, exp/out/exp79_seeds/panopticon.json, exp/out/exp79_seeds/satlas_base.json, exp/out/exp79_seeds/terramind_base.json, exp/out/exp79_seeds/terramind_large.json]
+  check: |-
+    (lambda E, lead: (lambda S:
+      len(S) == 16 and all(len(v) == 10 for v in S.values()) and min(min(v) for v in S.values()) >= 0.75
+      and min(len(E[e]['tasks']) for e in E) >= 20
+      and sorted(S, key=lambda e: min(S[e]))[0] == 'clay_large' and min(S['clay_large']) == 21 / 24
+      and min(S['galileo_tiny']) == 19 / 21 and min(S['satlas_base']) == 19 / 21
+      and sorted(min(v) for v in S.values())[1:3] == [19 / 21, 19 / 21] and sorted(min(v) for v in S.values())[3] > 0.91
+    )({e: [sum(lead(v['seeds'][s]) > 0 for v in E[e]['tasks'].values()) / len(E[e]['tasks']) for s in range(10)] for e in E})
+    )({e: A['exp/out/exp79_seeds/' + e + '.json'] for e in ['anysat', 'clay_large', 'copernicusfm', 'croma_base', 'croma_large', 'galileo_base', 'galileo_nano', 'galileo_tiny', 'olmoearth_base', 'olmoearth_large', 'olmoearth_nano', 'olmoearth_tiny', 'panopticon', 'satlas_base', 'terramind_base', 'terramind_large']},
+      lambda s: min(s['signals']['ctl_embedding_distance']['excess_aurc'], s['signals']['ctl_class_rarity']['excess_aurc']) - s['signals']['margin']['excess_aurc'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp79-headline-holds-under-every-seed-on-every-encoder}
+    - {file: docs/Findings.md, marker: exp79-headline-holds-under-every-seed-on-every-encoder}
+  note: >-
+    The bar is exp74's: share at least 0.75 and a one-sided sign test below 0.05. With at least 20 tasks a 0.75 share
+    already puts the sign test at or below 0.021 (20 tasks, 15 wins, no ties), so the check reads the share; the
+    crosscheck computes every p exactly with integer binomials. Five encoders are graded against their own seed 0
+    (exp79-gate-fails-on-five-encoders-on-segmentation), which leaves P1 unchanged.
+
+- id: exp79-encoder-ordering-stable-as-a-set
+  statement: "Recomputed per seed from exp79's exports, the per-encoder median headroom (one minus the margin's excess AURC over the random-minus-perfect gap, exact finite-n perfect ranker) keeps a Spearman correlation of at least 0.947 with the record's ordering under all ten seeds (P3, bar 0.9); the best encoder is OlmoEarth Large under eight seeds and OlmoEarth Base under two, both in the record's top three, the worst is Satlas Base under all ten, and the gap between first and second falls to 0.0002, so the record names a set, not a winner."
+  crosscheck: tests/test_known_answer.py::test_exp79_all_sixteen_gate_p1_and_p3_recompute_by_a_second_route
+  status: supported
+  experiments: [exp79]
+  artifacts: [exp/out/exp79_seeds/anysat.json, exp/out/exp79_seeds/clay_large.json, exp/out/exp79_seeds/copernicusfm.json, exp/out/exp79_seeds/croma_base.json, exp/out/exp79_seeds/croma_large.json, exp/out/exp79_seeds/galileo_base.json, exp/out/exp79_seeds/galileo_nano.json, exp/out/exp79_seeds/galileo_tiny.json, exp/out/exp79_seeds/olmoearth_base.json, exp/out/exp79_seeds/olmoearth_large.json, exp/out/exp79_seeds/olmoearth_nano.json, exp/out/exp79_seeds/olmoearth_tiny.json, exp/out/exp79_seeds/panopticon.json, exp/out/exp79_seeds/satlas_base.json, exp/out/exp79_seeds/terramind_base.json, exp/out/exp79_seeds/terramind_large.json, exp/out/headroom_by_encoder.json]
+  check: |-
+    (lambda E, rec: (lambda M: (lambda rows:
+      len(rows) == 10 and round(min(r[0] for r in rows), 3) == 0.947
+      and [r[1] for r in rows].count('olmoearth_large') == 8 and [r[1] for r in rows].count('olmoearth_base') == 2
+      and all(r[1] in sorted(rec, key=rec.get, reverse=True)[:3] for r in rows)
+      and all(r[2] == 'satlas_base' for r in rows) and round(min(r[3] for r in rows), 4) == 0.0002
+    )([(1 - 6 * sum((sorted(rec, key=rec.get).index(e) - sorted(m, key=m.get).index(e)) ** 2 for e in m) / (16 * 255),
+        sorted(m, key=m.get)[-1], sorted(m, key=m.get)[0], m[sorted(m, key=m.get)[-1]] - m[sorted(m, key=m.get)[-2]]) for m in M])
+    )([{e: median([1 - r['signals']['margin']['excess_aurc'] / (r['error_rate'] - oracle_aurc(r['n_units'], int(round(r['error_rate'] * r['n_units']))))
+                   for r in [v['seeds'][s] for v in E[e]['tasks'].values()]
+                   if r['error_rate'] - oracle_aurc(r['n_units'], int(round(r['error_rate'] * r['n_units']))) > 0]) for e in E} for s in range(10)])
+    )({e: A['exp/out/exp79_seeds/' + e + '.json'] for e in ['anysat', 'clay_large', 'copernicusfm', 'croma_base', 'croma_large', 'galileo_base', 'galileo_nano', 'galileo_tiny', 'olmoearth_base', 'olmoearth_large', 'olmoearth_nano', 'olmoearth_tiny', 'panopticon', 'satlas_base', 'terramind_base', 'terramind_large']},
+      A['exp/out/headroom_by_encoder.json']['per_encoder_median_headroom'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp79-encoder-ordering-stable-as-a-set}
+  note: >-
+    The record's top three are OlmoEarth Large (0.693), Galileo Base (0.680) and OlmoEarth Base (0.680); Galileo Base
+    is never first. Recomputed with oracle_aurc here and with the harmonic-number closed form in the crosscheck.
+
+- id: exp79-estimation-findings-hold-on-every-encoder
+  statement: "Rerun on every encoder's seed-0 export at 300 labels over 2,000 draws (111 encoder-by-segmentation-task cells), the naive tile-sampled interval covers below 0.85 on every task but m-cashew-plant on all sixteen encoders (0.34 to 0.78; m-cashew-plant at least 0.92, design effect 1.12 to 1.28), each encoder's median design effect is 2.94 to 3.71 (exp79 P4, bar 2.0 on 13 of 16), and the error-rate interval under a simple random sample covers 0.933 to 0.963 on every cell (P5, bar 0.93), the lowest OlmoEarth Base on MADOS."
+  crosscheck: tests/test_known_answer.py::test_exp79_monte_carlo_coverage_agrees_with_exact_enumeration_on_every_cell
+  status: supported
+  experiments: [exp79]
+  artifacts: [exp/out/exp79_summary.json]
+  check: |-
+    (lambda P: (lambda cells:
+      len(P) == 16 and len(cells) == 111
+      and all(c[2]['naive_coverage'] < 0.85 for c in cells if c[1] != 'm_cashew_plant')
+      and round(min(c[2]['naive_coverage'] for c in cells), 2) == 0.34 and round(max(c[2]['naive_coverage'] for c in cells if c[1] != 'm_cashew_plant'), 2) == 0.78
+      and sum(c[1] == 'm_cashew_plant' for c in cells) == 16 and min(c[2]['naive_coverage'] for c in cells if c[1] == 'm_cashew_plant') >= 0.92
+      and round(min(c[2]['design_effect'] for c in cells if c[1] == 'm_cashew_plant'), 2) == 1.12
+      and round(max(c[2]['design_effect'] for c in cells if c[1] == 'm_cashew_plant'), 2) == 1.28
+      and round(min(median([r['design_effect'] for r in rows.values()]) for rows in P.values()), 2) == 2.94
+      and round(max(median([r['design_effect'] for r in rows.values()]) for rows in P.values()), 2) == 3.71
+      and min(c[2]['srs_coverage'] for c in cells) == 0.933 and max(c[2]['srs_coverage'] for c in cells) == 0.963
+      and [c[:2] for c in cells if c[2]['srs_coverage'] == 0.933] == [('olmoearth_base', 'mados')]
+    )([(e, t, r) for e, rows in P.items() for t, r in rows.items()])
+    )(A['exp/out/exp79_summary.json']['estimation']['per_encoder'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp79-estimation-findings-hold-on-every-encoder}
+  note: >-
+    P5 graded the Wilson interval, as preregistered; no cell needed its second clause. The package's random-draw
+    interval is now the exact hypergeometric one, whose exact coverage on the same cells is at least 0.9506 (the
+    crosscheck asserts at least 0.95 on each). The seven segmentation tasks are five datasets: PASTIS appears under
+    three sensors. The stage reseeds its sampler the same way per task, so encoders share their 2,000 draws within a
+    task and the 111 cells are not independent tests. The preregistration counted 112 cells; Satlas Base does not
+    carry PASTIS S1+S2.
+
+- id: exp84-confound-has-its-sign-not-its-size
+  statement: "Over the fifteen encoders other than OlmoEarth Base, under each of ten probe seeds, Spearman(probe accuracy, the margin's AUROC) over an encoder's tasks is positive on all 150 encoder-seeds but below exp84's 0.4 bar on 14 (Galileo Nano under all ten seeds, 0.32 to 0.39; Clay Large and Galileo Tiny under two each), so P1 fails as written; its other clause holds everywhere, Spearman(accuracy, lead) at most -0.19."
+  crosscheck: tests/test_exp84.py::test_the_confound_and_the_group_medians_recompute_by_explicit_loops
+  status: rejected
+  experiments: [exp84]
+  artifacts: [exp/out/exp79_seeds/anysat.json, exp/out/exp79_seeds/clay_large.json, exp/out/exp79_seeds/copernicusfm.json, exp/out/exp79_seeds/croma_base.json, exp/out/exp79_seeds/croma_large.json, exp/out/exp79_seeds/galileo_base.json, exp/out/exp79_seeds/galileo_nano.json, exp/out/exp79_seeds/galileo_tiny.json, exp/out/exp79_seeds/olmoearth_large.json, exp/out/exp79_seeds/olmoearth_nano.json, exp/out/exp79_seeds/olmoearth_tiny.json, exp/out/exp79_seeds/panopticon.json, exp/out/exp79_seeds/satlas_base.json, exp/out/exp79_seeds/terramind_base.json, exp/out/exp79_seeds/terramind_large.json]
+  check: |-
+    (lambda E, lead, rk: (lambda sp: (lambda R:
+      len(R) == 150 and all(r[2] > 0 for r in R) and round(min(r[2] for r in R), 2) == 0.32
+      and sorted((r[0], r[1]) for r in R if r[2] < 0.4) == sorted([('galileo_nano', s) for s in range(10)] + [('clay_large', 7), ('clay_large', 9), ('galileo_tiny', 4), ('galileo_tiny', 7)])
+      and round(max(r[2] for r in R if r[0] == 'galileo_nano'), 2) == 0.39 and round(max(r[3] for r in R), 2) == -0.19
+    )([(e, s, sp([v['seeds'][s]['test_accuracy'] for v in E[e]['tasks'].values()], [v['seeds'][s]['signals']['margin']['auroc'] for v in E[e]['tasks'].values()]),
+              sp([v['seeds'][s]['test_accuracy'] for v in E[e]['tasks'].values()], [lead(v['seeds'][s]) for v in E[e]['tasks'].values()])) for e in E for s in range(10)])
+    )(lambda x, y: (lambda a, b: sum((p - sum(a) / len(a)) * (q - sum(b) / len(b)) for p, q in zip(a, b))
+        / (sum((p - sum(a) / len(a)) ** 2 for p in a) * sum((q - sum(b) / len(b)) ** 2 for q in b)) ** 0.5)(rk(x), rk(y)))
+    )({e: A['exp/out/exp79_seeds/' + e + '.json'] for e in ['anysat', 'clay_large', 'copernicusfm', 'croma_base', 'croma_large', 'galileo_base', 'galileo_nano', 'galileo_tiny', 'olmoearth_large', 'olmoearth_nano', 'olmoearth_tiny', 'panopticon', 'satlas_base', 'terramind_base', 'terramind_large']},
+      lambda s: min(s['signals']['ctl_embedding_distance']['excess_aurc'], s['signals']['ctl_class_rarity']['excess_aurc']) - s['signals']['margin']['excess_aurc'],
+      lambda v: [sum(u < w for u in v) + (sum(u == w for u in v) + 1) / 2 for w in v])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp84-confound-has-its-sign-not-its-size}
+  note: >-
+    Preregistered in docs/plan/where_the_lead_holds.md before the fifteen were graded; OlmoEarth Base's values were
+    disclosed there, not predicted. Ranks are mid-ranks for ties.
+
+- id: exp84-losses-are-small-or-badly-fitted-tasks
+  statement: "Over the fifteen encoders' 150 encoder-seeds the margin fails to beat the best no-model control 122 times, every one on the three 306-unit CropHarvest Togo tasks or on Nandi Sentinel-1 with a probe accuracy of at most 0.40 (exp84 P2)."
+  crosscheck: tests/test_exp84.py::test_the_confound_and_the_group_medians_recompute_by_explicit_loops
+  status: supported
+  experiments: [exp84]
+  artifacts: [exp/out/exp79_seeds/anysat.json, exp/out/exp79_seeds/clay_large.json, exp/out/exp79_seeds/copernicusfm.json, exp/out/exp79_seeds/croma_base.json, exp/out/exp79_seeds/croma_large.json, exp/out/exp79_seeds/galileo_base.json, exp/out/exp79_seeds/galileo_nano.json, exp/out/exp79_seeds/galileo_tiny.json, exp/out/exp79_seeds/olmoearth_large.json, exp/out/exp79_seeds/olmoearth_nano.json, exp/out/exp79_seeds/olmoearth_tiny.json, exp/out/exp79_seeds/panopticon.json, exp/out/exp79_seeds/satlas_base.json, exp/out/exp79_seeds/terramind_base.json, exp/out/exp79_seeds/terramind_large.json]
+  check: |-
+    (lambda E, lead: (lambda L:
+      len(L) == 122 and sorted({x[0] for x in L}) == ['cropharvest_Togo_12_sentinel1', 'cropharvest_Togo_12_sentinel2', 'cropharvest_Togo_12_sentinel2_sentinel1', 'nandi_sentinel1']
+      and all(x[1] == 306 for x in L if x[0].startswith('cropharvest_Togo')) and all(x[2] <= 0.40 for x in L if x[0] == 'nandi_sentinel1')
+    )([(t, v['n_units'], v['seeds'][s]['test_accuracy']) for e in E for t, v in E[e]['tasks'].items() for s in range(10) if lead(v['seeds'][s]) <= 0])
+    )({e: A['exp/out/exp79_seeds/' + e + '.json'] for e in ['anysat', 'clay_large', 'copernicusfm', 'croma_base', 'croma_large', 'galileo_base', 'galileo_nano', 'galileo_tiny', 'olmoearth_large', 'olmoearth_nano', 'olmoearth_tiny', 'panopticon', 'satlas_base', 'terramind_base', 'terramind_large']},
+      lambda s: min(s['signals']['ctl_embedding_distance']['excess_aurc'], s['signals']['ctl_class_rarity']['excess_aurc']) - s['signals']['margin']['excess_aurc'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp84-losses-are-small-or-badly-fitted-tasks}
+  note: >-
+    A loss is a lead at or below zero, as exp84 counts it. The preregistration's disclosure placed the ten seed-0
+    losses of the record on Togo S1 or Nandi S1; they are on Togo S1 (4), Togo S2+S1 (2), Togo S2 (1) and Nandi S1
+    (3), all inside this bar.
+
+- id: exp84-lead-positive-in-every-sensor-group-but-uneven
+  statement: "Over the fifteen encoders' 150 encoder-seeds, the range across sensor groups (S1, S2, Landsat, S1+S2) of the median lead exceeds exp84's 0.06 bar on 48, so P3 fails as written; the largest, 0.128 on Satlas Base, is one task, its S1+S2 group being m-so2sat alone, and without one-task groups 38 still fail. No group is a hole: the smallest sensor-group median lead anywhere is +0.062, and Sentinel-2 is the lowest group on 125 of the 150."
+  crosscheck: tests/test_exp84.py::test_the_confound_and_the_group_medians_recompute_by_explicit_loops
+  status: rejected
+  experiments: [exp84]
+  artifacts: [exp/out/exp79_seeds/anysat.json, exp/out/exp79_seeds/clay_large.json, exp/out/exp79_seeds/copernicusfm.json, exp/out/exp79_seeds/croma_base.json, exp/out/exp79_seeds/croma_large.json, exp/out/exp79_seeds/galileo_base.json, exp/out/exp79_seeds/galileo_nano.json, exp/out/exp79_seeds/galileo_tiny.json, exp/out/exp79_seeds/olmoearth_large.json, exp/out/exp79_seeds/olmoearth_nano.json, exp/out/exp79_seeds/olmoearth_tiny.json, exp/out/exp79_seeds/panopticon.json, exp/out/exp79_seeds/satlas_base.json, exp/out/exp79_seeds/terramind_base.json, exp/out/exp79_seeds/terramind_large.json]
+  check: |-
+    (lambda E, lead, grp: (lambda G: (lambda R:
+      len(R) == 150 and sum(r[2] > 0.06 for r in R) == 48 and round(max(r[2] for r in R), 3) == 0.128
+      and [r[:2] for r in R if r[2] == max(q[2] for q in R)] == [('satlas_base', 3)]
+      and [t for t in E['satlas_base']['tasks'] if grp(t) == 'S1+S2'] == ['m_so2sat']
+      and sum(r[3] > 0.06 for r in R) == 38 and round(min(r[4] for r in R), 3) == 0.062 and sum(r[5] == 'S2' for r in R) == 125
+    )([(e, s, max(m.values()) - min(m.values()), max(mm.values()) - min(mm.values()), min(m.values()), min(m, key=m.get))
+       for (e, s, m, mm) in [(e, s, {k: median(v) for k, v in g.items()}, {k: median(v) for k, v in g.items() if len(v) > 1}) for (e, s, g) in G]])
+    )([(e, s, {k: [lead(v['seeds'][s]) for t, v in E[e]['tasks'].items() if grp(t) == k] for k in {grp(t) for t in E[e]['tasks']}}) for e in E for s in range(10)])
+    )({e: A['exp/out/exp79_seeds/' + e + '.json'] for e in ['anysat', 'clay_large', 'copernicusfm', 'croma_base', 'croma_large', 'galileo_base', 'galileo_nano', 'galileo_tiny', 'olmoearth_large', 'olmoearth_nano', 'olmoearth_tiny', 'panopticon', 'satlas_base', 'terramind_base', 'terramind_large']},
+      lambda s: min(s['signals']['ctl_embedding_distance']['excess_aurc'], s['signals']['ctl_class_rarity']['excess_aurc']) - s['signals']['margin']['excess_aurc'],
+      lambda t: 'S1+S2' if ('sentinel1_sentinel2' in t or 'sentinel2_sentinel1' in t or t == 'm_so2sat') else ('S1' if 'sentinel1' in t else ('Landsat' if ('landsat' in t or t == 'm_forestnet') else 'S2')))
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp84-lead-positive-in-every-sensor-group-but-uneven}
+  note: >-
+    The groups are exp84's (sensor_group): So2Sat counts as S1+S2 and ForestNet as Landsat. The bar was set from
+    OlmoEarth Base's 0.037 to 0.050; Base's graded export reaches 0.070 at one seed, disclosed on the plan page.
+
+- id: exp84-bar-survives-holm
+  statement: "At each of ten probe seeds, the one-sided sign test of the margin beating the best no-model control on each of the fifteen encoders other than OlmoEarth Base survives a Holm correction over the fifteen; the largest adjusted p is 3.3e-4 (exp84 P4)."
+  crosscheck: tests/test_exp84.py::test_holm_matches_an_independent_step_down_and_a_known_answer
+  status: supported
+  experiments: [exp84]
+  artifacts: [exp/out/exp79_seeds/anysat.json, exp/out/exp79_seeds/clay_large.json, exp/out/exp79_seeds/copernicusfm.json, exp/out/exp79_seeds/croma_base.json, exp/out/exp79_seeds/croma_large.json, exp/out/exp79_seeds/galileo_base.json, exp/out/exp79_seeds/galileo_nano.json, exp/out/exp79_seeds/galileo_tiny.json, exp/out/exp79_seeds/olmoearth_large.json, exp/out/exp79_seeds/olmoearth_nano.json, exp/out/exp79_seeds/olmoearth_tiny.json, exp/out/exp79_seeds/panopticon.json, exp/out/exp79_seeds/satlas_base.json, exp/out/exp79_seeds/terramind_base.json, exp/out/exp79_seeds/terramind_large.json]
+  check: |-
+    (lambda E, lead, comb: (lambda adj:
+      len(adj) == 10 and max(adj) < 0.05 and round(max(adj), 5) == 0.00033
+    )([max(min(1.0, (15 - j) * p) for j, p in enumerate(sorted(
+        [sum(comb(w + l, k) for k in range(w, w + l + 1)) / 2 ** (w + l) for (w, l) in
+         [(sum(lead(v['seeds'][s]) > 0 for v in E[e]['tasks'].values()), sum(lead(v['seeds'][s]) < 0 for v in E[e]['tasks'].values())) for e in E]])))
+       for s in range(10)])
+    )({e: A['exp/out/exp79_seeds/' + e + '.json'] for e in ['anysat', 'clay_large', 'copernicusfm', 'croma_base', 'croma_large', 'galileo_base', 'galileo_nano', 'galileo_tiny', 'olmoearth_large', 'olmoearth_nano', 'olmoearth_tiny', 'panopticon', 'satlas_base', 'terramind_base', 'terramind_large']},
+      lambda s: min(s['signals']['ctl_embedding_distance']['excess_aurc'], s['signals']['ctl_class_rarity']['excess_aurc']) - s['signals']['margin']['excess_aurc'],
+      lambda n, k: round(2.718281828459045 ** sum(log(n - k + j) - log(j) for j in range(1, k + 1))))
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp84-bar-survives-holm}
+  note: >-
+    The largest adjusted p is Holm's step-down value at the last rank, the running maximum of (m - j) p_(j); the
+    binomial coefficients are exact after rounding for n up to 24.
