@@ -541,3 +541,20 @@ def test_the_second_review_of_compare():
         dates_reading(np.datetime64("2020-01-06", "W"), "2020-01-06")
     same = compare_inferences(a, b, np.ones_like(a, bool), labels=np.abs(lab), dates=("2020-06-15", "2020-06-15"))
     assert "labels' date was not given" in same["graded"]["graded_against"]
+
+
+def test_a_labels_date_inside_a_maps_period_is_that_maps_time():
+    """Release check of 24 September: graded_against compared date strings, so a mid-June label of a June composite,
+    or a mid-year label of an annual map, was 'the date of neither map'. The numbers were right; the sentence an agent
+    reads was not."""
+    from oe_inferencex.compare import _graded_against, dates_reading
+    g = lambda *d: _graded_against(dates_reading(*d))
+    assert "inside the period of map b" in g("2020-01-01", "2020-06-01/2020-06-30", "2020-06-15")
+    assert "inside the period of map a" in g("2020-01-01/2020-12-31", "2021-01-01/2021-12-31", "2020-07-01")
+    assert "the date of map b" in g("2020-01-01", "2021-01-01", "2021-01-01")
+    assert "neither map" in g("2020-01-01", "2021-01-01", "2022-01-01")
+    assert "inside both maps' periods" in g("2020-01-01/2020-12-31", "2020-06-01/2021-05-31", "2020-08-01")
+    assert "inside the period both maps describe" in g("2020-06-01/2020-06-30", "2020-06-01/2020-06-30", "2020-06-10")
+    assert "reaches outside" in g("2020-06-01", "2020-06-01", "2020-06-01/2020-06-30")
+    assert g("2020-06-01", "2020-06-01", "2020-06-01").startswith("both maps and the labels describe the same time")
+    assert "partly_stated" in dates_reading.__doc__

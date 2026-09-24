@@ -548,3 +548,25 @@ def test_the_review_set_is_refused_inside_a_large_tied_block():
     refused = sum(ox.review_set_check(rng.choice(n, 300, replace=False), m)["looks_like_a_review_set"] for _ in range(100))
     assert refused == 0
 
+
+
+def test_a_census_is_never_refused_as_a_review_set():
+    """Release check of 24 September: at a census the threshold is exactly 0.5 and the mean percentile is 0.5 up to
+    rounding, so a strict comparison refused 2 to 5% of censuses as enriched sets, in whatever order the indices
+    came; 1.2.0 accepted them. A census is by definition not an enriched sample."""
+    refused = 0
+    for N in range(2, 400):
+        rng = np.random.default_rng(N)
+        m = rng.normal(size=N)
+        for idx in (np.arange(N), rng.permutation(N)):
+            refused += est.review_set_check(idx, m)["looks_like_a_review_set"]
+    assert refused == 0
+    rng = np.random.default_rng(0)
+    m, wrong = rng.normal(size=100), (rng.random(100) < 0.1).astype(int)
+    r = est.estimate_from_indices(np.arange(100), wrong, m)
+    assert r["low"] == r["high"] == r["estimate"] == wrong.mean()
+    z = est.certify_zone(m, np.arange(100), np.zeros(100), 0.1)
+    assert z.get("note")
+    # one window short of a census is still graded as a sample, and the tool's review set is still refused
+    assert not est.review_set_check(np.arange(99), m)["looks_like_a_review_set"]
+    assert est.review_set_check(np.argsort(m)[:10], m)["looks_like_a_review_set"]

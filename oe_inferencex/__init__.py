@@ -18,12 +18,13 @@ Modules, in the order a user meets them:
   explain     why each review window is suspect: label-free cues with their measured enrichment
   compare     how two inferences of the same scene differ: disagreement, where it sits, stability, the label bridge
   calibrate   fuse the readings with labels: a ranker or side rule, held out, bound to its model family
-  estimate    how wrong the map is, from a labelled sample: which windows to label, and the design-based interval
+  estimate    how wrong the map is, from a labelled sample: which windows to label, the design-based interval,
+              per-class accuracy, and a certified zone of the map that is wrong at most alpha of the time
   metrics     tie-aware AURC and excess AURC, capture at a budget, the attainable ceiling, design-weighted forms
   stats       exact sign tests, one-vote-per-cluster tests, block and cluster bootstraps
   signals     the confidence readings and the no-model pixel controls every rule is scored against
   reliability the ensemble and typicality signals that were tested and lost, kept so they can be re-tested
-  cli         `oe-inferencex assess`, `compare`, `sample` and `estimate`: rasters or .npy in, files out
+  cli         `oe-inferencex demo`, `assess`, `compare`, `sample`, `estimate` and `certify`: rasters or .npy in, files out
   taskcard    what each OlmoEarth fine-tuned model is; lcc: a range reader for the served rasters
 By dependency the modules form three groups, and the layout stays flat (docs/plan/adr-001-repository-layout.md):
   numpy only        assess, explain, compare, calibrate, estimate, metrics, stats, signals, reliability, cli

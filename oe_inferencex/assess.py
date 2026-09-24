@@ -152,9 +152,9 @@ def assess_prediction(scores, is_logit, patch=4, nodata_mask=None, reference=Non
 
     `form` is the member of the confidence family used on a (C, H, W) logit map: "margin", the top-1 minus top-2
     logit margin (the default, unchanged since 1.0.0), or "top1", the top softmax probability computed tie-free
-    from the logits. On the 16 multi-class tasks of Ai2's suite "top1" ranked errors better than the margin on 14
-    and the logit margin was the weakest form on all 16 (exp76), so a multi-class logit map scored with the default
-    carries a warning. Binary maps and probability input are unaffected: there the forms are one ranking, and
+    from the logits. On the 16 multi-class tasks of Ai2's suite "top1" ranked errors better than the margin on 14,
+    and the logit margin was the weakest of the three forms on 14 of 16 by AUROC and 15 of 16 by excess AURC (exp76,
+    tying for best on awf_sentinel2), so a multi-class logit map scored with the default carries a warning. Binary maps and probability input are unaffected: there the forms are one ranking, and
     probability input already uses the top probability."""
     if form not in ("margin", "top1"):
         raise ValueError(f"form must be 'margin' or 'top1', got {form!r}")

@@ -564,8 +564,11 @@ def review_set_threshold(n, N=None):
 
 
 def review_set_check(indices, margin, valid=None):
-    """Could these windows be a random sample of the map? The median suspicion percentile of the sample: 0.5 for a
-    random draw, near 1 for the tool's own review set, which is built to be enriched for errors."""
+    """Could these windows be a random sample of the map? The MEAN suspicion percentile of the sample, against
+    review_set_threshold: 0.5 for a random draw, near 1 for the tool's own review set, which is built to be enriched
+    for errors. The median is reported beside it and decides nothing. A census (every valid window, once) is never
+    an enriched set: at a census the threshold is exactly 0.5 and the mean is 0.5 up to rounding, and until the
+    release check of 24 September a sum that rounded up refused 2 to 5% of censuses as review sets."""
     margin = np.asarray(margin, dtype=np.float64).ravel()
     valid = np.ones(margin.size, bool) if valid is None else np.asarray(valid, bool).ravel()
     # A window with no finite margin is not in the population. assess's confidence array is NaN at no-data, and
@@ -590,8 +593,11 @@ def review_set_check(indices, margin, valid=None):
     med = float(np.median(pct[inside])) if inside.any() else float("nan")
     mean = float(np.mean(pct[inside])) if inside.any() else float("nan")
     thr = review_set_threshold(int(inside.sum()), pop.size)
+    census = bool(inside.all() and np.unique(idx[inside]).size == pop.size)
     return {"mean_suspicion_percentile": mean, "median_suspicion_percentile": med, "threshold": thr,
-            "looks_like_a_review_set": bool(np.isfinite(mean) and mean > thr),
+            # 1e-12 is far below any real enrichment (one standard error at 300 labels is 0.017) and far above the
+            # rounding of a mean of percentiles
+            "looks_like_a_review_set": bool(np.isfinite(mean) and not census and mean > thr + 1e-12),
             "share_in_top_5pct": float(np.mean(pct[inside] > 0.95)) if inside.any() else float("nan"),
             "n_outside_population": int((~inside).sum()), "n_duplicated": int(idx.size - np.unique(idx).size)}
 

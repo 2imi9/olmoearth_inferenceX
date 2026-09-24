@@ -8,6 +8,7 @@ import pytest
 
 from oe_inferencex.assess import _pooled_argmax, assess_prediction, summary
 from oe_inferencex.cli import main
+from oe_inferencex.demo import SAMPLE
 
 rasterio = pytest.importorskip("rasterio", reason="the raster path needs rasterio; the .npy path is tested below regardless")
 
@@ -214,7 +215,7 @@ def test_compare_on_probability_maps_is_unchanged_by_the_optional_cutoff(tmp_pat
 # ----------------------------------------------------------------------------- sample / estimate
 def _sample_map(tmp_path):
     """The real Dynamic World tile the package ships, as a (9, H, W) probability .npy and its expert labels."""
-    z = np.load(os.path.join(os.path.dirname(__file__), "..", "oe_inferencex", "sample", "dynamic_world_tile.npz"))
+    z = np.load(SAMPLE)                   # the installed package's copy, so the test also runs against a built wheel
     probs, expert = z["probs"].astype(np.float32), z["expert"].astype(int)
     path = tmp_path / "dw.npy"
     np.save(path, probs)
@@ -250,6 +251,33 @@ def test_sample_then_estimate_round_trip_covers_the_true_rate_of_the_shipped_map
     truth = float((hard != ref).mean())
     assert r["n_labelled"] == 200 and r["low"] <= truth <= r["high"], (r, truth)
     assert r["method"].startswith("stratified") and 0.02 < r["half_width"] < 0.12
+
+
+def test_the_sample_csv_shows_the_class_the_tool_grades_so_a_reviewer_labels_the_same_thing(tmp_path, capsys):
+    """Release check of 24 September: the CSV told the reviewer to judge "the map's class there" without showing it,
+    and the tool's class for a window is the majority of its pixels' classes. A reviewer reading a mixed window
+    another way (a mean probability, the centre pixel) produced `wrong` values the per-class table contradicted.
+    The CSV now carries `map_class`; labels filled from it agree with what `estimate --per-class` grades."""
+    path, probs, expert = _sample_map(tmp_path)
+    out = tmp_path / "m.csv"
+    assert main(["sample", path, "--budget", "300", "--design", "random", "--out", str(out)]) == 0
+    rows = list(csv.DictReader(open(out)))
+    assert list(rows[0])[-2:] == ["map_class", "wrong"]
+    tool = assess_prediction(probs, is_logit=False, patch=4)["arrays"]["pooled_argmax"]
+    assert all(int(r["map_class"]) == tool[int(r["window_row"]), int(r["window_col"])] for r in rows)
+    hard, _ = _fill_with_classes(out, probs, expert)
+    # the helpers' class breaks an 8-8 window toward the lower index, the tool's toward the more confident pixels:
+    # a reviewer could not have inferred the graded class on those windows without the column
+    assert any(int(r["map_class"]) != hard[int(r["window_row"]), int(r["window_col"])] for r in rows)
+    rows = list(csv.DictReader(open(out)))
+    for r in rows:                                     # the reviewer fills `wrong` from the column alone
+        r["wrong"] = str(int(int(r["map_class"]) != int(r["reference_class"])))
+    with open(out, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=rows[0].keys()); w.writeheader(); w.writerows(rows)
+    capsys.readouterr()
+    assert main(["estimate", str(out), "--per-class"]) == 0
+    assert "disagrees" not in capsys.readouterr().out
+    assert "map_class" in json.load(open(tmp_path / "m.json"))["how_to_label"]
 
 
 def test_estimate_refuses_unlabelled_rows_and_a_csv_that_does_not_match_its_design(tmp_path):

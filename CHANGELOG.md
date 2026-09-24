@@ -2,6 +2,43 @@
 
 ## Unreleased
 
+**Release checks (24 September 2026).**
+
+- `sample`'s CSV carries a `map_class` column: the class the map gives each window, the one `estimate`,
+  `estimate --per-class` and `certify` grade. The CSV asked the reviewer to judge "the map's class there" without
+  showing it, and the tool's class for a window is the majority of its pixels with a tie going to the more
+  confident pixels, which a reviewer looking at the pixels cannot infer; labels read another way were contradicted
+  by the per-class table. The column is added before `wrong`; a CSV without it (written by 1.2.0) still reads.
+- A full census (every valid window labelled once) was refused as "an enriched set" by `estimate_from_indices` and
+  `certify` in 2 to 5% of cases: at a census the review-set threshold is exactly 0.5 and the mean percentile is 0.5
+  up to rounding. A regression of 23 September against 1.2.0, found by the release review; a census is now never
+  refused, and a test runs every census size from 2 to 399 in two orders.
+- `compare`'s `graded.graded_against` compared date strings, so a labels date inside a map's period (a mid-June label
+  of a June composite, a mid-year label of an annual map) was called "the date of neither map". It now reads periods:
+  inside a map's period is that map's time. The numbers were unaffected.
+- `estimate --scores` and `--nodata` without `--per-class` are refused instead of ignored; both, and `certify
+  --nodata`, now have help text.
+- Docstrings brought into line: `review_set_check` decides on the mean (it still said the median),
+  `dates_reading` lists `partly_stated`, `assess_prediction` states exp76 as `signals.confidence` does.
+- The test suite runs against a built wheel with the source tree removed (two tests had read package files by
+  their path in the checkout), on Python 3.11, 3.12 and 3.13 and on the lowest declared dependencies (numpy 1.26.4,
+  pyyaml 6.0, huggingface_hub 0.20.0).
+
+**Outputs a script may parse that change in this release** (each is described in its entry below; collected here
+for anyone upgrading from 1.2.0):
+
+- `estimate` under `--design random` (and `estimate_error_rate`, `estimate_from_indices`): `method` is now
+  `"exact hypergeometric interval (simple random sample of a finite map)"`, was `"Wilson with finite-population
+  correction"`, and the interval moves with it.
+- `compare`'s `disagreement.tif` / `disagreement.npy` are float32 (1 differ, 0 agree, NaN not compared), were
+  uint8 / bool; a reader that used the `.npy` as a boolean mask must now use `== 1`.
+- `stats.paired_comparison`'s `perm_p` (given an `rng`) is `(hits + 1) / (n_perm + 1)` on every call, not only where it was 0, and
+  the result gains `n_undefined`.
+- `sample`'s CSV gains `map_class`; `review_set_check` gains `mean_suspicion_percentile` and decides on it;
+  `estimate --per-class` reports `estimate`'s interval as `overall_accuracy` and keeps the post-stratified figure
+  as `overall_accuracy_post_stratified`; `compare` gains `dates`, and grading across two map dates needs
+  `labels_date`.
+
 **A trusted zone with a guarantee, per-class accuracy, and the ledger made able to fail (23 September 2026).**
 
 - `estimate.certify_zone` and `oe-inferencex certify`: from a random labelled sample, the largest most-confident

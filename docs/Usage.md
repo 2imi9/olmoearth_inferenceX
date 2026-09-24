@@ -76,7 +76,7 @@ fitted rule next to the labels it came from.
 
 ## Command line
 
-`oe-inferencex demo` is the first run: it audits a real sample map shipped with the package (one Dynamic World tile with its expert annotation; `--made-up` for a synthetic one) and draws the result, with no data to find. Four commands cover the label-free halves and the one question that needs labels, without writing Python. Inputs are GeoTIFFs
+`oe-inferencex demo` is the first run: it audits a real sample map shipped with the package (one Dynamic World tile with its expert annotation; `--made-up` for a synthetic one) and draws the result, with no data to find. Five commands cover the label-free halves (`assess`, `compare`) and the questions that need labels (`sample`, `estimate`, `certify`), without writing Python. Inputs are GeoTIFFs
 (with the `geo` extra, which brings rasterio) or `.npy` arrays; outputs are plain
 files the caller reads back, and nothing narrates.
 
@@ -126,8 +126,11 @@ oe-inferencex certify random.csv --alpha 0.05
 ```
 
 is how wrong the map is. `sample` writes the 300 windows to label (row, column,
-pixel and map coordinates, stratum, confidence) with an empty `wrong` column, and a
-`to_label.json` beside it carrying the design. The default design stratifies the
+pixel and map coordinates, stratum, confidence, and `map_class`, the class the map
+gives the window: the majority of its pixels, a tie going to the more confident
+ones) with an empty `wrong` column, and a `to_label.json` beside it carrying the
+design. `wrong` is 1 when `map_class` is not what is on the ground: that is the
+class `estimate` grades, so judge that one rather than the window's centre pixel. The default design stratifies the
 map by confidence margin and allocates the budget from the model's own
 confidence, which on exp78's seven tasks narrowed the interval to a median 0.80
 of a random sample's with coverage intact; `--design random` is the plain draw,

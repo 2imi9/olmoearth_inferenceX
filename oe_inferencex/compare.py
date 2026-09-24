@@ -296,9 +296,10 @@ def dates_reading(date_a=None, date_b=None, labels_date=None):
     A difference between two maps of the same ground at the same time is an error in at least one of them. Across
     dates it is either an error or a real change on the ground (a flood, a harvest, a seasonal cycle), and the
     decisions alone cannot say which. Returns {a, b, labels (ISO strings or None), status, days_apart, reading}, where
-    status is "unstated" (a date is missing), "same_time", "different_time" (the periods do not overlap; days_apart is
-    the gap between them) or "overlapping_time" (the periods overlap but differ, so part of the difference can be
-    change)."""
+    status is "unstated" (neither date given), "partly_stated" (one of the two given: grading which map is right is
+    refused, since the tool cannot tell an error from a change), "same_time", "different_time" (the periods do not
+    overlap; days_apart is the gap between them) or "overlapping_time" (the periods overlap but differ, so part of
+    the difference can be change)."""
     pa, pb, pl = _period(date_a, "date_a"), _period(date_b, "date_b"), _period(labels_date, "labels_date")
     out = {"a": _iso(pa), "b": _iso(pb), "labels": _iso(pl), "status": "unstated", "days_apart": None}
     if pa is None and pb is None:
@@ -397,25 +398,47 @@ def compare_inferences(a, b, ok, groups=None, labels=None, cues=None, dates=None
 
 
 
+def _relation(lab, m):
+    """Where the labels' period sits against a map's: "match" (equal, or inside it: a mid-year label of an annual map
+    or a composite), "overlap" (they share days, but the labels reach outside the map's period) or "apart"."""
+    pl, pm = _period(lab, "labels_date"), _period(m, "date")
+    if pm[0] <= pl[0] and pl[1] <= pm[1]:
+        return "match"
+    return "overlap" if pl[0] <= pm[1] and pm[0] <= pl[1] else "apart"
+
+
 def _graded_against(reading):
-    """What 'right' means in the graded block, at the dates given."""
+    """What 'right' means in the graded block, at the dates given. A labels date inside a map's period is that map's
+    time (the release check of 24 September found string equality calling a mid-June label of a June composite 'the
+    date of neither map')."""
     st, lab = reading["status"], reading["labels"]
-    if st == "same_time":
-        if lab is None:
-            return (f"both maps describe {reading['a']} and the labels' date was not given; they are taken to describe "
-                    "the same time, and a map is right where it matches them")
-        if lab != reading["a"]:
-            return (f"the labels describe {lab} and both maps {reading['a']}; where the ground changed between them both "
-                    "maps are counted wrong")
-        return "both maps and the labels describe the same time; a map is right where it matches the labels"
     if st == "unstated":
         return ("the dates were not given; this grades both maps against one reference as if all three describe the same "
                 "moment, which is right only if they do")
-    matched = [s for s in ("a", "b") if reading[s] == lab]
-    other = [s for s in ("a", "b") if s not in matched]
+    if st == "same_time" and lab is None:
+        return (f"both maps describe {reading['a']} and the labels' date was not given; they are taken to describe "
+                "the same time, and a map is right where it matches them")
+    rel = {s: _relation(lab, reading[s]) for s in ("a", "b")}
+    where = lambda s: "the date of" if lab == reading[s] else "inside the period of"
+    if st == "same_time":
+        if lab == reading["a"]:
+            return "both maps and the labels describe the same time; a map is right where it matches the labels"
+        if rel["a"] == "match":
+            return (f"the labels describe {lab}, inside the period both maps describe ({reading['a']}); a map is right "
+                    "where it matches the labels")
+        if rel["a"] == "overlap":
+            return (f"the labels describe {lab}, which reaches outside the time both maps describe ({reading['a']}); where "
+                    "the ground changed within the labels' period but outside the maps', both maps are counted wrong")
+        return (f"the labels describe {lab} and both maps {reading['a']}; where the ground changed between them both "
+                "maps are counted wrong")
+    matched = [s for s in ("a", "b") if rel[s] == "match"]
+    if len(matched) == 2:
+        return (f"the labels describe {lab}, inside both maps' periods ({reading['a']}, {reading['b']}); a map is right "
+                "where it matches the labels, and the part of each period the labels do not cover can hold change")
     if len(matched) == 1:
-        return (f"the labels describe {lab}, the date of map {matched[0]}; map {other[0]} ({reading[other[0]]}) is counted "
-                "wrong wherever the ground changed between the dates, so its share right mixes its errors with real change")
+        m, o = matched[0], "b" if matched[0] == "a" else "a"
+        return (f"the labels describe {lab}, {where(m)} map {m}; map {o} ({reading[o]}) is counted wrong wherever the "
+                "ground changed between the dates, so its share right mixes its errors with real change")
     return (f"the labels describe {lab}, the date of neither map ({reading['a']}, {reading['b']}); each map is counted wrong "
             "wherever the ground changed between its date and the labels'")
 

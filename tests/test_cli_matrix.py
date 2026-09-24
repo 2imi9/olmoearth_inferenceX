@@ -173,6 +173,15 @@ def test_certify_under_each_rule(labelled, tmp_path, rule, alpha):
     assert (z["coverage"] is None) == (not os.path.exists(str(out)[:-5] + ".npy"))
 
 
+def test_estimate_refuses_the_maps_options_without_per_class(labelled, tmp_path):
+    """Release check of 24 September: --scores and --nodata do nothing without --per-class, and a wrong --scores
+    path was accepted with exit 0."""
+    design, csv_path = labelled
+    for extra in (["--scores", str(tmp_path / "missing.npy")], ["--nodata", "5"]):
+        with pytest.raises(SystemExit, match="only with --per-class"):
+            main(["estimate", csv_path, "--out", str(tmp_path / "e.json"), *extra])
+
+
 def test_certify_offers_only_the_rules_with_a_guarantee(labelled, tmp_path):
     design, csv_path = labelled
     if design == "random":

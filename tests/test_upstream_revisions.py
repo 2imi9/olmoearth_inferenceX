@@ -41,12 +41,21 @@ def test_a_revision_is_a_commit_sha_or_says_why_it_is_missing(rid):
         assert e["read_from"], f"{rid} has a sha and does not say which cache it came from"
 
 
+def _resolve(path):
+    """A package file is read from the package the tests import, so run against a built wheel this checks the file
+    that ships; anything else from the checkout."""
+    if path.startswith("oe_inferencex/"):
+        import oe_inferencex
+        return os.path.join(os.path.dirname(oe_inferencex.__file__), path[len("oe_inferencex/"):])
+    return os.path.join(ROOT, path)
+
+
 def test_the_line_numbers_it_cites_still_name_that_repository():
     """A cited file:line that has drifted is a citation to nothing, the defect the claim ledger exists to stop."""
     for rid, e in REPOS.items():
         for where in e["named_at"]:
             path, _, line = where.rpartition(":")
-            with open(os.path.join(ROOT, path), encoding="utf-8") as f:
+            with open(_resolve(path), encoding="utf-8") as f:
                 text = f.readlines()[int(line) - 1]
             assert f'"{rid}"' in text, f"{where} no longer names {rid}: {text.strip()[:90]}"
 

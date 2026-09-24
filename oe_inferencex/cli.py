@@ -426,7 +426,7 @@ def cmd_sample(args):
     _check_scores(scores, valid, args.logits, args.scores)
     out = assess_prediction(scores, is_logit=args.logits, patch=args.patch, nodata_mask=~valid)
     arr = out["arrays"]
-    margin, valid_w = arr["confidence"], arr["valid"]
+    margin, valid_w, klass = arr["confidence"], arr["valid"], arr["pooled_argmax"]
     p1 = np.where(valid, _top1(scores, args.logits), np.nan)
     p1_w = _pool_valid(p1, args.patch) if not valid.all() else _pool(p1, args.patch)
     hw, ww = margin.shape
@@ -447,13 +447,17 @@ def cmd_sample(args):
     os.makedirs(os.path.dirname(os.path.abspath(args.out)) or ".", exist_ok=True)
     with open(args.out, "w", newline="") as f:
         w = csv.writer(f)
-        w.writerow(["index", "window_row", "window_col", "pixel_row", "pixel_col", "x", "y", "stratum", "confidence", "wrong"])
+        # map_class: the class `estimate` and `certify` grade at the window (the majority of its pixels' classes),
+        # shown so the reviewer judges the same thing the tool grades; a mixed window is where a reviewer looking
+        # at the pixels could otherwise read the map's class differently (release check of 24 September)
+        w.writerow(["index", "window_row", "window_col", "pixel_row", "pixel_col", "x", "y", "stratum", "confidence",
+                    "map_class", "wrong"])
         strata = sample.get("strata")
         pos = {int(g): i for i, g in enumerate(sample.get("strata_of_population", []))}
         for k, (i, r, c) in enumerate(zip(idx, rows, cols)):
             w.writerow([int(i), int(r), int(c), int(pr[k]), int(pc[k]), None if x is None else float(x[k]),
                         None if y is None else float(y[k]), None if strata is None else int(strata[pos[int(i)]]),
-                        float(margin[r, c]), ""])
+                        float(margin[r, c]), int(klass[r, c]), ""])
     side = {k: (v.tolist() if isinstance(v, np.ndarray) else v) for k, v in sample.items()}
     side.update({"scores": os.path.abspath(args.scores), "logits": args.logits, "patch": args.patch,
                  "nodata": args.nodata,                   # estimate --per-class and certify recompute the map with it
@@ -466,8 +470,9 @@ def cmd_sample(args):
                  "window_size_ground_units": None if geo is None else [abs(geo["transform"].a) * args.patch, abs(geo["transform"].e) * args.patch],
                  "xy_are": "window centres in the raster's CRS" if geo is not None else "absent: the input had no georeference",
                  "warnings": list(out.get("warnings", [])),
-                 "how_to_label": "open each window, set wrong=1 if the map's class there is not what is on the ground, "
-                                 "else 0; then: oe-inferencex estimate " + os.path.basename(args.out)})
+                 "how_to_label": "open each window, set wrong=1 if the map's class there (the `map_class` column: the "
+                                 "majority of the window's pixels) is not what is on the ground, else 0; then: "
+                                 "oe-inferencex estimate " + os.path.basename(args.out)})
     with open(args.out[:-4] + ".json" if args.out.endswith(".csv") else args.out + ".json", "w") as f:
         json.dump(side, f, indent=1)
     print(f"{len(idx)} windows to label of {sample['n_population']} valid ({args.design} design); wrote {args.out} and its .json. "
@@ -588,6 +593,11 @@ def _reference_classes(rows, path):
 def cmd_estimate(args):
     """The map's error rate with its interval, from a filled-in sample CSV and its sidecar design; with
     --per-class, the user's and producer's accuracy and error-adjusted share per class as well."""
+    if not args.per_class and (args.scores is not None or args.nodata is not None):
+        # the error rate reads the CSV and its sidecar alone; accepting the map's options and ignoring them let a
+        # wrong --scores path pass unnoticed (release check of 24 September)
+        raise SystemExit("estimate: --scores and --nodata are read only with --per-class; the error rate comes from the "
+                         "CSV and its sidecar alone")
     side, rows, idx, sample, wrong = _labelled_sample(args.sample, "estimate")
     try:
         res = est.estimate_error_rate(sample, wrong)
@@ -733,8 +743,10 @@ def build_parser():
     e.add_argument("--per-class", action="store_true",
                    help="also user's accuracy, producer's accuracy and error-adjusted share per class; needs a "
                         "`reference_class` column in the CSV and the map's scores (from the sidecar, or --scores)")
-    e.add_argument("--scores", default=None, help="the raster `sample` was run on, if it has moved")
-    e.add_argument("--nodata", type=float, default=None)
+    e.add_argument("--scores", default=None, help="with --per-class: the raster `sample` was run on, if it has moved")
+    e.add_argument("--nodata", type=float, default=None,
+                   help="with --per-class: the no-data value `sample` was run with (default: the one its sidecar records; "
+                        "a different value is refused); only needed for a sample written by 1.2.0")
     e.set_defaults(func=cmd_estimate)
     z = sub.add_parser("certify", help="which share of the map, from the most confident window down, is wrong at most "
                                         "alpha of the time, with a guarantee (needs a random sample)")
@@ -745,7 +757,9 @@ def build_parser():
     z.add_argument("--rule", choices=("prefix", "bonferroni"), default="prefix",
                    help="prefix (default) assumes the zone's error rate does not fall as the zone grows; bonferroni assumes nothing")
     z.add_argument("--scores", default=None, help="the raster `sample` was run on, if it has moved")
-    z.add_argument("--nodata", type=float, default=None)
+    z.add_argument("--nodata", type=float, default=None,
+                   help="the no-data value `sample` was run with (default: the one its sidecar records; a different value "
+                        "is refused); only needed for a sample written by 1.2.0")
     z.add_argument("--out", default=None, help="JSON to write (default: <sample>_zone.json; the window mask goes beside it as .npy)")
     z.set_defaults(func=cmd_certify)
     return p
