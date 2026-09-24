@@ -1,0 +1,9 @@
+# Every run and parity call copies its fixtures into its own workspace. The copies are byte-identical to
+# ../fixtures (each is checked against trial.json's sha256 before use), so they are not committed; everything
+# the agent's tools write into a workspace is.
+rounds/**/workspace/F1/
+rounds/**/workspace/F2/
+rounds/**/workspace/F3/
+rounds/**/workspace/F4/
+rounds/**/workspace/C1/
+rounds/**/workspace/C2/
