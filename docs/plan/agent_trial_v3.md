@@ -102,9 +102,11 @@ How a claim is decided:
   - estimates and intervals;
   - what certifies at which alpha;
   - the magnitudes of listed margins.
-- **A blinded LLM screen.** It uses no Qwen model, and Claude is at most one of its members.
+- **A blinded LLM screen.** The screen is Claude. It is never Qwen, the model under test. The owner decided on 25
+  September 2026, before freezing, to use no second model: the seeded-error calibration below measures the screen's
+  recall, and the owner confirms every flag.
   - It reads every answer and its run's tool outputs and lists candidate false claims with evidence.
-  - A second pass tries to refute each one.
+  - A second, separate pass tries to refute each one.
   - The screen is blind to round, commit and arm.
 - **Adjudication by the owner.** The repository's owner decides every flagged claim, and also reads a random sample of
   one answer in five from those with no flag. The sample is drawn with the package's sampler, and its seed is fixed
