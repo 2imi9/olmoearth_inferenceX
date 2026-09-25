@@ -75,8 +75,24 @@ number).
 exp86 round 7 showed the need: "the more confident side is right on only about half or less of such windows" was
 graded as a winner claim.
 
-**P8, claims.** No answer states a confirmed false claim of classes E1–E5, and no answer states a derived number
-(E6) that the tools did not return. How a claim is decided:
+**P8, claims.** No answer states a material false claim (below) that the owner confirms. Every confirmed finding is
+reported with its class (E1–E6 or other), material or not.
+
+**Materiality** was decided by the owner on 25 September 2026, before freezing. A confirmed false claim is material
+when it would change what a user believes about the map, the method or the evidence, or what they do next:
+
+- a direction, a place or a magnitude stated wrongly;
+- a number that is wrong, whether a tool returned it or the model derived it (E6);
+- a file, a list or an action claimed that does not exist;
+- advice on a method that does not apply, or that the tool's notes rule out;
+- a fact about the world, stated as fact when no tool looked it up, that is false.
+
+A slip that changes none of these is immaterial, such as a result id called a prediction id. It is reported beside
+the verdict and does not fail the run. A derived number that is correct is reported as E6 and does not fail the run.
+At freezing, every confirmed finding of exp86 rounds 6 and 7 (`exp/out/exp86_audit_rounds_6_7.json`) is sorted under
+this rule, and the sorted list is committed as the anchor set. The owner decides new findings against it.
+
+How a claim is decided:
 
 - **Reference facts in code.** For each configuration, the facts a correct answer may state are computed from the
   fixtures by the package or the agent's tool functions, not by a model:
@@ -112,8 +128,9 @@ to P9 hold on all 18 configurations.
 
 **What a pass means.**
 
-- **Answers with no confirmed false claim.** 0 in 54 bounds the per-answer false-claim rate at about 5.4%, one-sided
-  at 95% (1 − 0.05^(1/54)). It does not show that the rate is zero.
+- **Answers with no material false claim.** 0 in 54 bounds the per-answer rate of material false claims at about
+  5.4%, one-sided at 95% (1 − 0.05^(1/54)). It does not show that the rate is zero, and it says nothing of the
+  immaterial slips, which are reported beside the verdict.
 - **Rules reused.** P1–P7 are exp86's, whose rules were amended after seeing results. The held-out configurations are
   where those rules meet answers the fixes were not built on.
 
