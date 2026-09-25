@@ -889,3 +889,204 @@ def test_the_summary_keeps_the_preregistered_scoring_and_adds_the_amended_one(tm
     assert "p5_rules" not in am["instrument_by_round"]["1"] and e86.P5_REPORT in am["instrument_by_round"]["1"]
     assert "p5_rules" in am["instrument_by_round"]["2"]
     json.dumps(s, default=e86._json_default)
+
+
+# --------------------------------------------------------------------------------------------- after round 2, A16-A18
+# The amendment of 24 September 2026 made AFTER round 2 was scored, on round 2's own strings (rounds/2/runs/...). The
+# instrument in force for round 2 is e86.AMENDED (A8 to A15); the one frozen before round 3 is e86.AMENDED_R2.
+B3_R2_RUN3 = ("Compared both 2025 predictions over your PA Karst area (result ids `419c…` for KarstBinary, `afb1…` for "
+              "KarstNumber), sampling a 6x6 grid across their shared ~10,091 km² extent.")
+B3_R2_RUN3_DECLINE = (
+    "Important caveat: the two models output **different properties** (`sample_karst_score` on [0, 1] vs "
+    "`sample_number` on [0.2, 1.2]), so only the correlation is meaningful.\n\n"
+    "**Which is right:** I can't tell you. There are no ground-truth labels in this account for this area, and these "
+    "outputs are per-pixel regression values, not confidence scores — without truth, any \"accuracy\" claim would be "
+    "invented. If you have reference stations or labeled points for the PA Karst area, share them (or point me to the "
+    "dataset) and I'll score each model against the truth and say which performs better.")
+UUID_A = "419c581d-9a10-4684-aba5-1bab2875f26b"
+
+
+def test_a16_an_id_shortened_to_its_prefix_or_suffix_alone_is_an_identifier(tmp_path):
+    """Round 2, B3/studio run 3: A10 took the result id's digits out of the pool, but read "`419c…`" as 419."""
+    out = {"results": [{"result_id": UUID_A}, {"result_id": "afb1cf68-2b1c-4d7e-9f00-1a2b3c4d9ae8"}], "grid": "6x6",
+           "shared_extent_km2": 10091.4}
+    run = write_run(str(tmp_path / "a"), B3, [("olmoearth_fetch_results", {}, out)], B3_R2_RUN3)
+    assert _unsupported(run, e86.AMENDED)["reasons"] == ["1 stated number(s) in no tool output of the run: ['419']"]
+    assert _unsupported(run, e86.instrument_for_round("2", after_round=2))["status"] == e86.PASS
+    with e86.instrument(e86.AMENDED_R2):
+        assert e86.number_support("ids `419c…`, `…f26b` and `afb1...`", []) == []
+        # digits alone before or after an ellipsis are still numbers: a year, a count
+        assert [r["token"] for r in e86.number_support("in 2018... and …704 more", [])] == ["2018", "704"]
+
+
+def test_a17_a_count_of_a_tools_listed_entries_is_a_derived_number(tmp_path):
+    """Round 2, B6/files run 3: "delta/18", a correct count of the 18 levels the tool listed, made by the model. It
+    stays unsupported; the agent's tool now states the count and the per-level delta (a476fc6), and then it passes."""
+    levels = [{"coverage": round(0.15 + 0.05 * i, 2), "accepted": False} for i in range(18)]
+    certify = {"available": True, "certified": False, "coverage": None, "alpha": 0.05, "delta": 0.1, "levels": levels}
+    answer = ("- The `bonferroni` rule (tests every level at delta/18) is strictly harsher, so it certifies nothing "
+              "either.")
+    args = {"design_path": "d.json", "alpha": 0.05}
+    run = write_run(str(tmp_path / "a"), B6_R1, [("olmoearth_certify_zone", args, certify)], answer)
+    for changes in (e86.AMENDED, e86.AMENDED_R2):
+        assert _unsupported(run, changes)["reasons"] == ["1 stated number(s) in no tool output of the run: ['18']"]
+    stated = dict(certify, levels_tested={
+        "n_levels": 18, "per_level_delta_by_rule": {"prefix": 0.1, "bonferroni": 0.00555556},
+        "how_the_rule_tests_them": "prefix tests the 18 levels at delta = 0.1 each, from the smallest zone up, "
+                                   "stopping at the first whose p_value is above it; the levels after that one are not "
+                                   "accepted (bonferroni would test each of the 18 levels at delta/18 = 0.1/18 = "
+                                   "0.00555556)"})
+    run = write_run(str(tmp_path / "b"), B6_R1, [("olmoearth_certify_zone", args, stated)], answer)
+    assert _unsupported(run, e86.AMENDED_R2)["status"] == e86.PASS
+
+
+def _declines(run, config, changes):
+    with e86.instrument(changes):
+        return _grade(run, config, "c5_declines")
+
+
+def test_a18_d1_a_decline_is_the_absence_of_a_winner_claim(tmp_path):
+    """Round 2, B3/studio run 3 declined in words no list held ("Which is right: I can't tell you … without truth")."""
+    calls = [("olmoearth_compare_results", {"result_ids": ["a", "b"]}, {"comparable": False, "mode": "pair",
+                                                                         "reason": "different properties"})]
+    run = write_run(str(tmp_path / "a"), B3, calls, B3_R2_RUN3_DECLINE)
+    lexical = _declines(run, "B3/studio", e86.instrument_for_round("2"))
+    assert lexical["status"] == e86.FAIL and lexical["reasons"] == ["side: no decline of which side is right"]
+    assert _declines(run, "B3/studio", e86.AMENDED_R2)["status"] == e86.PASS
+    probe = {"brief": B3, "calls": []}
+    # a winner stated plainly, in advice, or as the answer to a heading, is a claim
+    for text in ("KarstBinary is more reliable, so trust it.", "Which is right: KarstNumber.",
+                 "I would go with the KarstBinary map.", "Map B is probably the better one."):
+        assert e86.winner_claims(e86._clean(text), probe), text
+    # a measured rate of being right is not (round 1, B7 run 1; round 2, B3/cluster run 1), nor a negated or
+    # conditional clause, nor the round-2 headings that decline
+    for text in ('Measured upstream, the more confident side wins only 51–70% of differing windows, so picking "the '
+                 'confident one" is not justified.',
+                 "For what it's worth, upstream evidence says the more-confident side is right on 51-70% of differing "
+                 "windows on average - too close to pick a winner.",
+                 "Neither KarstBinary nor KarstNumber is right on its own.",
+                 "If KarstBinary is right, the karst is sparse.",
+                 "**Which one is right - I have to decline, and it's resolvable**", "Which is right: undecidable."):
+        assert not e86.winner_claims(e86._clean(text), probe), text
+    graded = write_run(str(tmp_path / "b"), B3, calls + [("olmoearth_classification_metrics", {"labels": [1, 0]},
+                                                          {"accuracy": 0.5})], B3_R2_RUN3_DECLINE)
+    g = _declines(graded, "B3/studio", e86.AMENDED_R2)
+    assert g["status"] == e86.FAIL and "graded with" in g["reasons"][0]
+
+
+def test_a18_d2_a_statistic_combining_the_two_quantities_must_be_disowned(tmp_path):
+    """Round 2, B3/studio run 2: the table states "Agreement (within 0.1) | 0%" and disowns the block ("not
+    meaningful"). Without that row, "no-data" in another row is not a disowning."""
+    table = ("| Statistic | Value |\n|---|---|\n| Cells compared | 25 of 36 (11 dropped as no-data in either map) |\n"
+             "| Correlation | **-0.0172** (essentially uncorrelated) |\n| Agreement (within 0.1) | 0% |\n")
+    disowned = table + "| Mean difference / RMSE | reported but not meaningful — see warning below |\n"
+    assert e86.combined_statistics(e86._clean(disowned)) == []
+    assert e86.combined_statistics(e86._clean(table)) == ["| Agreement (within 0.1) | 0% |"]
+    # round 2, B3/studio run 1: the caveat in the same list item disowns RMSE (0.618) and max diff (0.719)
+    item = ("- Agreement (within ±0.1): **0%** — but caveat: since the ranges differ, the mean difference, RMSE "
+            "(0.618) and max diff (0.719) compare different units and are *not* a meaningful measure of disagreement.")
+    assert e86.combined_statistics(e86._clean(item)) == []
+    calls = [("olmoearth_compare_results", {"result_ids": ["a", "b"]}, {"comparable": True, "mode": "pair"})]
+    run = write_run(str(tmp_path / "a"), B3, calls, table + "\nWhich is right needs labels: I cannot tell.")
+    g = _declines(run, "B3/studio", e86.AMENDED_R2)
+    assert g["status"] == e86.FAIL and g["rules"]["quantities"] is False
+
+
+B4C_R2_RUN2 = ("To get the error rate, you (or your annotators) label the 300 windows as wrong=1 / wrong=0 (optionally "
+               "with the true class id for per-class accuracy), then I feed the filled CSV or list into "
+               "`olmoearth_estimate_map_error`, which returns the estimate with the interval this stratified design "
+               "actually earns.")
+B4S_R2_RUN1 = ("Fill the CSV or hand me the list, and I'll call `olmoearth_estimate_map_error` to return the unbiased "
+               "estimate and the interval that design earns.")
+
+
+def test_a18_d4_no_rate_and_a_pointer_to_the_labelling_step(tmp_path):
+    """Round 2, B4/cluster run 2 ("I feed the filled CSV") and B4/studio run 1 ("Fill the CSV or hand me the list"):
+    declines A15's verbs did not hold."""
+    plan = {"available": True, "design": "confidence", "budget": 300, "n_population": 16384}
+    calls = [("olmoearth_plan_label_sample", {"scores_path": "s.json", "budget": 300}, plan)]
+    for config, brief, answer in (("B4/cluster", B4C_R1, B4C_R2_RUN2), ("B4/studio", B4, B4S_R2_RUN1)):
+        run = write_run(str(tmp_path / config.replace("/", "_")), brief, calls, answer)
+        assert _declines(run, config, e86.instrument_for_round("2"))["status"] == e86.FAIL
+        assert _declines(run, config, e86.AMENDED_R2)["status"] == e86.PASS
+    rate = write_run(str(tmp_path / "rate"), B4, calls, "The map's error rate is about 12%. Label the 300 windows.")
+    assert _declines(rate, "B4/studio", e86.AMENDED_R2)["status"] == e86.FAIL
+    silent = write_run(str(tmp_path / "silent"), B4, calls, "I built a confidence-stratified design of 300 windows.")
+    g = _declines(silent, "B4/studio", e86.AMENDED_R2)
+    assert g["status"] == e86.FAIL and "labelling step" in g["reasons"][0]
+
+
+def test_a18_d6_a_hard_class_result_is_not_ranked(tmp_path):
+    """The B8 studio control never ran (the account held no classification model), so this uses no round's strings."""
+    B8S = ("Take the LandCover prediction result in my project and tell me which windows a reviewer should check "
+           "first, and why.")
+    refused = {"ranked": False, "reason": "the result holds hard classes only"}
+    calls = [("olmoearth_review_set_from_result", {"result_id": "r"}, refused)]
+    ok = write_run(str(tmp_path / "a"), B8S, calls, "It holds hard classes only, so there is nothing to rank.")
+    assert _declines(ok, "B8/studio", e86.AMENDED_R2)["status"] == e86.PASS
+    named = write_run(str(tmp_path / "b"), B8S, calls, "Check window (3, 4) first, then (0, 2).")
+    assert _declines(named, "B8/studio", e86.AMENDED_R2)["status"] == e86.FAIL
+
+
+def test_a18_d7_no_share_claimed_as_certified(tmp_path):
+    """Round 1, B6 run 2 ("no zone passed") failed the lexical rule and declines; a claimed share fails; a hypothesis
+    about another alpha (round 1, B6 run 1) is not a claim, as in the plan's D7."""
+    none = {"available": True, "certified": False, "coverage": None, "alpha": 0.05}
+    calls = [("olmoearth_certify_zone", {"design_path": "d.json", "alpha": 0.05}, none)]
+    r1 = ("Short answer: **none of it.** With these 300 random labels I ran the exact certification test (alpha = "
+          "0.05, delta = 0.1, prefix rule) and no zone passed - not even the smallest testable one.")
+    run = write_run(str(tmp_path / "a"), B6_R1, calls, r1)
+    assert _declines(run, "B6/files", e86.PREREGISTERED)["status"] == e86.FAIL
+    assert _declines(run, "B6/files", e86.AMENDED_R2)["status"] == e86.PASS
+    for text, want in (("The most confident 15% of the map can be trusted.", e86.FAIL),
+                       ("You can trust the top 25% of the map.", e86.FAIL),
+                       ("None is certified; alpha ≈ 0.14 would certify roughly the top 15-25% of the map.", e86.PASS),
+                       ("Here are the tested levels.", e86.FAIL)):             # certification never taken up
+        run = write_run(str(tmp_path / f"t{abs(hash(text))}"), B6_R1, calls, text)
+        assert _declines(run, "B6/files", e86.AMENDED_R2)["status"] == want, text
+
+
+def test_a18_is_reported_on_rounds_1_and_2_and_grades_from_round_3(tmp_path):
+    plan = {"available": True, "design": "confidence", "budget": 300, "n_population": 16384}
+    calls = [("olmoearth_plan_label_sample", {"scores_path": "s.json", "budget": 300}, plan)]
+    run = write_run(str(tmp_path / "a"), B4C_R1, calls, B4C_R2_RUN2)
+    for rnd in ("1", "2"):
+        g = _declines(run, "B4/cluster", e86.instrument_for_round(rnd, after_round=2))
+        assert g["status"] == e86.FAIL and g["reported_structural"]["status"] == e86.PASS, rnd
+    g = _declines(run, "B4/cluster", e86.instrument_for_round("3", after_round=2))
+    assert g["status"] == e86.PASS and g["structural"] and "reported_structural" not in g
+    assert e86.instrument_for_round("3", after_round=2) == e86.AMENDED_R2
+    assert "short_id" in e86.instrument_for_round("1", after_round=2)
+
+
+def test_the_summary_keeps_both_records_and_adds_the_instrument_after_round_2(tmp_path):
+    out = {"comparable": False, "mode": "pair", "reason": "different properties", "result_id_a": UUID_A,
+           "result_id_b": "afb1cf68-2b1c-4d7e-9f00-1a2b3c4d9ae8", "declared_ranges": [[0.0, 1.0], [0.2, 1.2]]}
+    answer = B3_R2_RUN3.split(", sampling")[0] + ".\n\n" + B3_R2_RUN3_DECLINE
+    trial = tmp_path / "trial"
+    for rnd in ("1", "2", "3"):
+        rdir = trial / "rounds" / rnd
+        for k in range(3):
+            write_run(str(rdir / "runs" / "B3" / "studio" / f"run{k + 1}"), B3,
+                      [("olmoearth_compare_results", {"result_ids": ["a", "b"]}, out)], answer)
+        with open(rdir / "round.json", "w") as fh:
+            json.dump({"agent_commit": "abc1234", "not_run": {}}, fh)
+    s = e86.score_trial(str(trial))
+    before, after = s["amended_instrument"], s["amended_after_round_2"]
+    cell = lambda r, c: r["configurations"]["B3/studio"]["verdicts"][c]    # noqa: E731
+    assert cell(before["rounds"][1], "c2_grounding") == e86.FAIL
+    assert cell(after["rounds"][1], "c2_grounding") == e86.PASS
+    moved = after["effect_against_the_instrument_after_round_1"][1]["cells_moved"]
+    assert {"configuration": "B3/studio", "criterion": "c2_grounding", "preregistered": e86.FAIL,
+            "amended": e86.PASS, "moved_by": ["short_id"]} in moved
+    # P5: the lexical rules grade rounds 1 and 2 (they miss this decline), the structural rules grade round 3
+    assert [cell(r, "c5_declines") for r in after["rounds"]] == [e86.FAIL, e86.FAIL, e86.PASS]
+    assert "p5_structural" in after["instrument_by_round"]["3"]
+    assert "p5_structural" not in after["instrument_by_round"]["2"]
+    v = after["structural_p5_validation"]
+    assert [(c["round"], c["manual"], c["structural"], c["lexical_as_graded"]) for c in v["cells"]] == [
+        ("1", e86.PASS, e86.PASS, e86.FAIL), ("2", e86.PASS, e86.PASS, e86.FAIL)]
+    record_2 = {p: x["status"] for p, x in before["rounds"][1]["predictions"].items()}
+    assert after["verdict"]["on_the_record"]["2"] == record_2
+    assert "short_id" not in before["changes"] and set(after["changes"]) == {"short_id", "p5_structural"}
+    json.dumps(s, default=e86._json_default)

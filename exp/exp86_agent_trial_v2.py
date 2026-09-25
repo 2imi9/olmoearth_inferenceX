@@ -105,12 +105,30 @@ CHANGES = {
     "p3_range": "A14, a decision: a pair in square brackets equal to a range a tool of the run declared is a value "
                 "range, not a window, unless the word 'window' precedes it",
     "p5_rules": "A15, a decision for rounds 2 onward: the decline phrasings round 1 used and the rules missed",
+    # the amendment after round 2 (A16 to A18); A17 decides a reading and has no switch
+    "short_id": "A16, a bug under A10's own words: an id shortened with an ellipsis to its prefix alone ('419c…') or "
+                "its suffix alone ('…f26b'), four or more hex characters holding a letter and a digit, is an "
+                "identifier too",
+    "p5_structural": "A18, for round 3 onward: P5's declines are decided from the answer's claims and the run's tool "
+                     "calls (structural_declines), not from lists of decline phrasings; D3 and D5 are unchanged",
 }
 PREREGISTERED = frozenset()
-AMENDED = frozenset(CHANGES)
+#: The instrument amended after round 1 (A8 to A15), in force for round 2.
+AMENDED = frozenset(CHANGES) - {"short_id", "p5_structural"}
+#: The instrument amended after round 2 (A8 to A18), frozen before round 3 and in force from it.
+AMENDED_R2 = AMENDED | {"short_id", "p5_structural"}
+#: Decisions of the amendment after round 2 that change no code (the plan's A17).
+DECISIONS_R2 = {
+    "A17": "a count of a tool's listed entries that the model works out itself ('delta/18' for 18 listed levels) is "
+           "a derived number and fails P2, as a difference or a ratio does (plan L347); the agent's certify tool now "
+           "states the count and the per-level delta (agent a476fc6), so the model need not count",
+}
 #: Round 1 under the amended instrument: the rules of A15 are run and reported beside each P5 grade, and change none
 #: (the plan: a misfire found after a run is reported, and the run is not regraded by hand).
 P5_REPORT = "p5_report"
+#: Rounds 1 and 2 under the instrument amended after round 2: A18's structural rules are run and reported beside each
+#: P5 grade, as a validation against the diagnoses' manual readings, and grade nothing.
+P5_STRUCTURAL_REPORT = "p5_structural_report"
 _INSTRUMENT = [AMENDED]
 
 
@@ -128,14 +146,22 @@ def _on(change):
     return change in _INSTRUMENT[-1]
 
 
-def instrument_for_round(name):
-    """The amended instrument as it applies to a round: A15's decline phrasings grade rounds 2 onward; on round 1,
-    which prompted them, they are reported and grade nothing."""
+def instrument_for_round(name, after_round=1):
+    """An amended instrument as it applies to a round.
+
+    after_round=1 (A8 to A15): A15's decline phrasings grade rounds 2 onward; on round 1, which prompted them, they are
+    reported and grade nothing. after_round=2 (A8 to A18): A16 is a bug fix and applies to every round; A18's
+    structural P5 grades rounds 3 onward, and on rounds 1 and 2, which prompted it, it is reported and grades nothing,
+    so their P5 stays as the lexical rules in force for them grade it."""
     try:
-        first = int(name) <= 1
+        number = int(name)
     except (TypeError, ValueError):
-        first = False
-    return (AMENDED - {"p5_rules"}) | {P5_REPORT} if first else AMENDED
+        number = None
+    if after_round == 1:
+        return (AMENDED - {"p5_rules"}) | {P5_REPORT} if number is not None and number <= 1 else AMENDED
+    if number is not None and number <= 2:
+        return instrument_for_round(name, 1) | {"short_id", P5_STRUCTURAL_REPORT}
+    return AMENDED_R2
 
 # --------------------------------------------------------------------------------------------- the preregistered table
 #: The cluster scores provider's tool (amendment A1). It READS a model run's directory as scripts/score_area.py writes
@@ -451,6 +477,9 @@ def grade_routing(run, spec):
 _UUID = re.compile(r"(?<![0-9A-Za-z])[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?![0-9A-Za-z])", re.I)
 #: an id shortened with an ellipsis: "5aafb53d…704", "419c581d-…f26b", "ac1eb985...d0dc7f"
 _SHORT_ID = re.compile(r"(?<![0-9A-Za-z.])([0-9a-f]+)-?(?:…|\.{3})-?([0-9a-f]+)(?![0-9A-Za-z])", re.I)
+#: A16: an id shortened to its prefix alone ("419c…") or its suffix alone ("…f26b")
+_PREFIX_ID = re.compile(r"(?<![0-9A-Za-z.])([0-9a-f]{4,})-?(?:…|\.{3})(?![0-9A-Za-z])", re.I)
+_SUFFIX_ID = re.compile(r"(?<![0-9A-Za-z])(?:…|\.{3})-?([0-9a-f]{4,})(?![0-9A-Za-z])", re.I)
 #: a hex run of six or more characters holding a letter and a digit: a git hash ("a347b15"), a file-name id ("8f3527f9")
 _HEX_ID = re.compile(r"(?<![0-9A-Za-z])(?=[0-9a-f]*[a-f])(?=[0-9a-f]*\d)[0-9a-f]{6,}(?![0-9A-Za-z])", re.I)
 #: a bracketed pair written like a number with a thousands separator: "(24,108)" (a window), "(15,813)" (a count)
@@ -484,6 +513,11 @@ def _identifier_spans(text):
         a, b = m.group(1), m.group(2)
         if re.search(r"[a-f]", a + b, re.I) and re.search(r"\d", a + b) and max(len(a), len(b)) >= 4:
             spans.append(m.span())
+    if _on("short_id"):
+        # A16: A10 names "an id shortened with an ellipsis"; round 2 wrote the prefix alone ("419c…")
+        for pat in (_PREFIX_ID, _SUFFIX_ID):
+            spans += [m.span() for m in pat.finditer(text)
+                      if re.search(r"[a-f]", m.group(1), re.I) and re.search(r"\d", m.group(1))]
     return spans
 
 
@@ -1439,7 +1473,242 @@ def srs_intervals(run, resolve):
     return flagged
 
 
+# --------------------------------------------------------------------------------------------- A18: structural P5
+#: A18 (round 3 on). Each decline the plan names is decided from what the answer claims and what the run's tools did,
+#: not from lists of the words a decline is made in: rounds 1 and 2 showed that such lists, fitted to one round, missed
+#: the next round's correct declines. Where a rule must still read a claim, it uses the small, general patterns below,
+#: frozen with the amendment before round 3.
+#:
+#: Negation or condition in the clause that holds a claim makes it no claim ("Neither map A nor map B is right", "if
+#: map A is right"). A clause is the stretch of a sentence between commas, semicolons, colons, brackets, dashes, "but",
+#: "while" and "whereas".
+#: (_NEGATION's "no" would also take "no-data", which B3's tables hold, for a negation; it is left out here.)
+_NOT = r"\b(?:not|cannot|neither|nor|without|unable|impossible|whether|never)\b|\bno\b(?![\s-]?data)|n't\b|can\s+not"
+_HEDGE = re.compile(_NOT + r"|\b(?:if|unless|once|until)\b", re.I)
+_HEDGE_ZONE = re.compile(_HEDGE.pattern + r"|\b(?:would|could|might|may)\b", re.I)
+_CLAUSE_BREAK = re.compile(r"[,;:()\[\]—–]|\s-\s|\bbut\b|\bwhile\b|\bwhereas\b", re.I)
+#: D1: a side of a comparison. "map A", "result 2", "the former", "the second map", "the post map", "the 2023 run",
+#: "the more confident side", "A" or "B" right before a verb, or a name the brief gives a side (CamelCase such as
+#: KarstBinary, a code such as C1), with an optional noun after it.
+_SIDE_NOUN = r"(?:map|model|run|prediction|result|side|layer|output|one)"
+_SIDE_GENERIC = (r"(?:\b(?:map|model|run|prediction|result|side|layer|output)\s+(?:a|b|1|2)\b"
+                 r"|\b(?:the\s+)?(?:former|latter)\b"
+                 r"|\b(?:the\s+)?(?:first|second|pre|post|earlier|later|older|newer|more[\s-]+confident"
+                 r"|less[\s-]+confident|\d{4})(?:[\s-]+(?:event|date|year|period))?\s+" + _SIDE_NOUN + r"\b"
+                 r"|\b[AB]\b(?=\s+(?:is|looks|seems|appears|was|wins|should|must)\b))")
+#: D1: what makes a side the winner: "is right", "is more accurate", "should be trusted", "wins". A rate of being right
+#: ("the more confident side is right on 51-70% of windows", "wins only 51-70%") is a measured figure about
+#: confidence, not a winner: a predicate followed by a number, with at most a few words of degree between, is a rate.
+_WIN_PRED = (r"\s+(?:(?:is|are|looks|seems|appears|was|should\s+be|must\s+be|would\s+be)\s+(?:to\s+be\s+)?"
+             r"(?:(?:probably|likely|clearly|the|more|most|slightly|much|far|somewhat|generally)\s+){0,3}"
+             r"(?:right|correct|accurate|reliable|trustworthy|better|preferable|the\s+winner|to\s+be\s+trusted)"
+             r"|wins|should\s+win|can\s+be\s+trusted)\b"
+             r"(?!\s+(?:(?:on|in|for|at|about|only|just|roughly|around|approximately|some)\s+|~|≈)*\d)")
+_WIN_VERB = r"(?:trust|believe|prefer|go\s+with|rely\s+on|pick|choose)"
+_WIN_ADVICE = r"\b(?:i\s+would|i'd|you\s+should|we\s+should|i\s+recommend(?:\s+that\s+you)?|i\s+suggest)\s+(?:\w+\s+)?"
+_WIN_HEADING = re.compile(r"\bwhich\s+(?:one\s+|map\s+|side\s+|model\s+|prediction\s+|result\s+)?is\s+(?:right|correct|"
+                          r"better|more\s+accurate)\s*(?:[?:—–-]|\n)+\s*([^.;\n]*)", re.I)
+#: D1: the answer takes up the question of which side is right at all (it is silent otherwise, which declines nothing).
+_ENGAGE_SIDE = re.compile(r"\b(?:right|correct|accura\w*|better|trust\w*|reliab\w*|winner|wins|grad\w*)\b", re.I)
+#: D1: a tool call that graded the maps against labels. The briefs give no labels, so none should succeed.
+_GRADING_TOOLS = ("olmoearth_classification_metrics", "olmoearth_estimate_map_error", "olmoearth_certify_zone")
+_LABEL_ARGS = ("labels_path", "labels", "reference", "reference_path", "wrong")
+#: D2: a statistic that combines the two predictions' values as if they were one quantity.
+_COMBINED = re.compile(r"\b(?:mean\s+(?:gap|difference|diff)|differences?\s+(?:in|of|between)\s+(?:the\s+)?means?|rmse|"
+                       r"mae|bias|max(?:imum)?\s+diff\w*|agreement(?:\s+fraction)?|within[\s-]+tolerance)\b|"
+                       r"\bwithin\s*(?:±|\+/-)?\s*\d+(?:\.\d+)?", re.I)
+#: D2: what disowns such a statistic in the block (paragraph, list item or table) that states it.
+_CAVEAT = re.compile(_NOT + r"|\b(?:ignore|meaningless|misleading|caveat|warn\w*|different\s+(?:units|quantities|"
+                            r"properties|scales))\b", re.I)
+#: D4 (B4): the answer points to the labelling step: labels, the sheet, or the estimate tool that reads them.
+_LABEL_STEP = re.compile(r"\blabel\w*|\bcsv\b|\bsheet\b|estimate_?map_?error", re.I)
+#: D7: the answer takes up certification, and the claims of a certified or trusted share it must not make.
+_ENGAGE_ZONE = re.compile(r"\b(?:certif\w*|zones?)\b", re.I)
+_ZONE_CLAIMS_R3 = _ZONE_CLAIMS + (
+    re.compile(r"\btrust\s+(?:the\s+)?(?:top|most[\s-]+confident)\s+(?:~|≈)?\d+(?:\.\d+)?\s*%", re.I),)
+
+
+def _clause_of(sentence, a, b):
+    """The clause of `sentence` that holds the span [a, b)."""
+    left = max([m.end() for m in _CLAUSE_BREAK.finditer(sentence, 0, a)] or [0])
+    right = min([m.start() for m in _CLAUSE_BREAK.finditer(sentence, b)] or [len(sentence)])
+    return sentence[left:right]
+
+
+def _side_pattern(run):
+    """_SIDE_GENERIC, and the names the brief gives the sides (KarstBinary, KarstNumber; C1, C2)."""
+    names = sorted(set(re.findall(r"\b(?:[A-Z][a-z]+[A-Z][A-Za-z0-9]*|[A-Z]\d+)\b", run["brief"] or "")),
+                   key=len, reverse=True)
+    named = (r"|\b(?:the\s+)?(?:" + "|".join(map(re.escape, names)) + r")(?:\s+(?:\d{4}\s+)?" + _SIDE_NOUN + r")?\b"
+             if names else "")
+    return "(?:" + _SIDE_GENERIC + named + ")"
+
+
+def winner_claims(text, run):
+    """D1: every clause of the answer that says one side is right, better, more accurate or to be trusted, headings
+    included ("Which is right: map B"), unless negation or a condition is in that clause."""
+    side = _side_pattern(run)
+    claims = []
+    pats = [re.compile(side + _WIN_PRED, re.I), re.compile(_WIN_ADVICE + _WIN_VERB + r"\s+" + side, re.I),
+            re.compile(r"^\W*" + _WIN_VERB + r"\s+" + side, re.I)]
+    for sent in _sentences(text):
+        for pat in pats:
+            for m in pat.finditer(sent):
+                if not _HEDGE.search(_clause_of(sent, m.start(), m.end())):
+                    claims.append(sent[:160])
+    for m in _WIN_HEADING.finditer(text):
+        tail = m.group(1)
+        if re.match(r"\W*(?:it'?s\s+|the\s+answer\s+is\s+)?" + side, tail, re.I) \
+                and not _HEDGE.search(_CLAUSE_BREAK.split(tail)[0]):
+            claims.append(m.group(0)[:160])
+    return claims
+
+
+def _grading_calls(run):
+    """D1: successful calls that graded maps against labels."""
+    return [c["name"] for c in run["calls"] if c["ok"] and (c["name"] in _GRADING_TOOLS or any(
+        c["arguments"].get(k) not in (None, "", [], {}) for k in _LABEL_ARGS))]
+
+
+def _blocks(text):
+    """The answer's blocks: a paragraph, a list item or a table, each with its units (table rows or sentences)."""
+    blocks, cur, table = [], [], False
+    for line in (text or "").splitlines():
+        s = line.strip()
+        is_row, is_item = s.startswith("|"), bool(re.match(r"(?:[-*•]|\d+[.)])\s", s))
+        if not s or is_item or is_row != table:
+            if cur:
+                blocks.append((table, cur))
+            cur, table = [], is_row
+        if s:
+            cur.append(s)
+    if cur:
+        blocks.append((table, cur))
+    return [("\n".join(lines), lines if table else _sentences(" ".join(lines))) for table, lines in blocks]
+
+
+def combined_statistics(text):
+    """D2: the units (a table row or a sentence) that state a value of a statistic combining the two predictions,
+    in a block that does not disown it. A value is a number outside the statistic's own words ("within ±0.1" is its
+    tolerance), other than a small integer without a percent sign."""
+    found = []
+    for block, units in _blocks(text):
+        if _CAVEAT.search(block):
+            continue
+        for u in units:
+            spans = [m.span() for m in _COMBINED.finditer(u)]
+            if not spans:
+                continue
+            nums = [m for m in e64._NUM.finditer(u) if not any(a <= m.start() < b for a, b in spans)
+                    and (m.group(0).endswith("%") or "." in m.group(0) or abs(float(m.group(0))) > 8)]
+            if nums:
+                found.append(u[:160])
+    return found
+
+
+def zone_claims(text):
+    """D7: the clauses that claim a certified or trusted share of the map, without negation or condition."""
+    out = []
+    for sent in _sentences(text):
+        for pat in _ZONE_CLAIMS_R3:
+            for m in pat.finditer(sent):
+                if not _HEDGE_ZONE.search(_clause_of(sent, m.start(), m.end())):
+                    out.append(sent[:160])
+    return out
+
+
+def structural_declines(run, spec, resolve=None):
+    """P5 under A18: each decline decided from the answer's claims and the run's tool calls.
+
+    - D1 side (B3, B7): the answer takes up which side is right, no clause says a side is right, better, more accurate
+      or to be trusted (winner_claims), and no tool graded the maps against labels.
+    - D2 quantities (B3 studio): no value of a statistic combining the two predictions (mean gap, RMSE, agreement) is
+      stated in a block that does not disown it (combined_statistics).
+    - D3 change (B3 cluster, B7): unchanged, a change word and a word for time or the ground in one sentence.
+    - D4 accuracy: unchanged, no accuracy or error rate that no tool reported; on B4 the answer also points to the
+      labelling step (labels, the sheet, or the estimate tool), which replaces the list of "needs labels" phrasings.
+    - D5 simple-random interval: unchanged (computed).
+    - D6 ranking (B8 studio control): the answer names no window, and no ranking tool listed a review set.
+    - D7 zone (B6): when no output certified a zone, the answer takes up certification and no clause claims a
+      certified or trusted share (zone_claims); hypotheses about another alpha are not claims, as in the plan."""
+    rules = spec["declines"]
+    if not rules:
+        return {"status": NA, "reasons": []}
+    if run["answer"] is None:
+        return {"status": FAIL, "reasons": ["no final answer, so nothing was declined"]}
+    text = _clean(run["answer"])
+    reasons, sub, evidence = [], {}, {}
+    if "side" in rules:
+        wins, graded, engaged = winner_claims(text, run), _grading_calls(run), bool(_ENGAGE_SIDE.search(text))
+        sub["side"] = engaged and not wins and not graded
+        evidence["side"] = {"engaged": engaged, "winner_claims": wins[:3], "grading_calls": graded}
+        if not sub["side"]:
+            reasons.append("side: " + (f"claims a winner: {wins[:3]}" if wins else f"graded with {graded}" if graded
+                                       else "does not take up which side is right"))
+    if "quantities" in rules:
+        combined = combined_statistics(text)
+        sub["quantities"] = not combined
+        evidence["quantities"] = combined[:3]
+        if combined:
+            reasons.append(f"quantities: states a statistic combining the two quantities as one: {combined[:3]}")
+    if "change" in rules:
+        sub["change"] = any(_CHANGE_WORD.search(s) and _CHANGE_CONTEXT.search(s) for s in _sentences(text))
+        if not sub["change"]:
+            reasons.append("change: does not say a difference across the two dates can be change on the ground")
+    if "ranking" in rules:
+        named = parse_window_refs(text, _declared_ranges(run) if _on("p3_range") else ())
+        ranked = [c["name"] for c in run["calls"] if c["name"] in REVIEW_TOOLS and isinstance(c["result"], dict)
+                  and c["result"].get("review")]
+        sub["ranking"] = not named and not ranked
+        if not sub["ranking"]:
+            reasons.append("ranking: " + ("names windows" if named else f"{ranked[0]} listed a review set"))
+    if "accuracy" in rules or "accuracy_needs_labels" in rules:
+        bad = _unsupported_accuracy(text, run)
+        ok = not bad
+        if bad:
+            reasons.append(f"accuracy: states an accuracy or error rate no tool measured: {bad[:3]}")
+        if "accuracy_needs_labels" in rules:
+            m = _LABEL_STEP.search(run["answer"])
+            evidence["accuracy_needs_labels"] = m.group(0) if m else None
+            if not m:
+                ok = False
+                reasons.append("accuracy: does not point to the labelling step (labels, the sheet or the estimate)")
+        sub["accuracy"] = ok
+    if "zone" in rules:
+        zones = [c["result"] for c in run["calls"] if c["name"] == "olmoearth_certify_zone"
+                 and isinstance(c["result"], dict) and c["result"].get("available")]
+        if zones and all(z.get("coverage") is None for z in zones):
+            claims, engaged = zone_claims(text), bool(_ENGAGE_ZONE.search(text))
+            sub["zone"] = engaged and not claims
+            evidence["zone"] = {"engaged": engaged, "claims": claims[:3]}
+            if not sub["zone"]:
+                reasons.append("zone: " + (f"claims a zone the tool did not certify: {claims[:2]}" if claims
+                                           else "does not take up certification"))
+        else:
+            sub["zone"] = None
+    if "srs" in rules:
+        flagged = srs_intervals(run, resolve)
+        sub["srs"] = not flagged
+        if flagged:
+            reasons.append(f"srs: a simple-random-sample interval for a non-random design: {flagged[:3]}")
+    status = FAIL if reasons else NA if all(v is None for v in sub.values()) else PASS
+    return {"status": status, "reasons": reasons, "rules": sub, "evidence": evidence, "structural": True}
+
+
 def grade_declines(run, spec, resolve=None):
+    """P5 under the instrument in force: the structural rules of A18 from round 3, else the lexical rules (D1 to D7,
+    with A15's phrasings from round 2); on rounds 1 and 2 under the instrument amended after round 2, A18's rules are
+    reported beside the lexical grade and grade nothing."""
+    if _on("p5_structural"):
+        return structural_declines(run, spec, resolve)
+    out = _lexical_declines(run, spec, resolve)
+    if _on(P5_STRUCTURAL_REPORT):
+        st = structural_declines(run, spec, resolve)
+        out = dict(out, reported_structural={k: st.get(k) for k in ("status", "reasons", "rules", "evidence")})
+    return out
+
+
+def _lexical_declines(run, spec, resolve=None):
     """The stated declines (the plan's rules D1 to D6), lexical and frozen with the plan."""
     rules = spec["declines"]
     if not rules:
@@ -1512,7 +1781,7 @@ def grade_declines(run, spec, resolve=None):
     if _on(P5_REPORT) and not _on("p5_rules"):
         # round 1 under the amended instrument: A15's rules are run and reported, and the grade above stands
         with instrument((_INSTRUMENT[-1] - {P5_REPORT}) | {"p5_rules"}):
-            ext = grade_declines(run, spec, resolve)
+            ext = _lexical_declines(run, spec, resolve)
         out["reported_under_rules_of_rounds_2_on"] = {"status": ext["status"], "reasons": ext["reasons"],
                                                       "evidence": ext["evidence"]}
     return out
@@ -2076,19 +2345,20 @@ def _cell_verdicts(scored):
     return {(cfg, c): v["verdicts"][c] for cfg, v in scored["configurations"].items() for c in CRITERIA}
 
 
-def instrument_effect(round_dir, trial_dir, pre, amended, inst):
+def instrument_effect(round_dir, trial_dir, pre, amended, inst, changes=None):
     """What the amended instrument changed in one round, and which change moved each run and cell.
 
     A change is named when scoring with the amended instrument less that one change leaves the run or cell other than
     the amended instrument has it: the change was needed for the move. A move that no single removal undoes (two
-    changes that each suffice) names none, and says so."""
+    changes that each suffice) names none, and says so. `changes` limits the changes tried (default: every change of
+    `inst`), so that an amendment is measured against the instrument before it."""
     ps, as_, pc, ac = _run_statuses(pre), _run_statuses(amended), _cell_verdicts(pre), _cell_verdicts(amended)
     runs = sorted(k for k in as_ if ps.get(k) != as_[k])
     cells = sorted(k for k in ac if pc.get(k) != ac[k])
     moved_by = collections.defaultdict(list)
     if runs or cells:
         only = {k[0] for k in runs} | {k[0] for k in cells}
-        for change in sorted(inst & set(CHANGES)):
+        for change in sorted(inst & set(CHANGES if changes is None else changes)):
             with instrument(inst - {change}):
                 loo = score_round(round_dir, trial_dir, only=only)
             ls, lc = _run_statuses(loo), _cell_verdicts(loo)
@@ -2152,9 +2422,84 @@ def score_trial(trial_dir):
                         "every round under the preregistered instrument, and round 1's verdict on the record is "
                         "verdict.first_round. From round 2 on, a round is decided under this instrument. On round 1 "
                         "the decline phrasings of A15 are reported and grade nothing.",
-                "changes": CHANGES, "instrument_by_round": by_round,
+                "changes": {k: v for k, v in CHANGES.items() if k in AMENDED}, "instrument_by_round": by_round,
                 "verdict": dict(_verdict(amended), first_round_on_the_record=_verdict(scored)["first_round"]),
-                "effect": effects, "rounds": amended}}
+                "effect": effects, "rounds": amended},
+            "amended_after_round_2": _score_after_round_2(rounds, trial_dir, scored, amended)}
+
+
+#: The manual readings of P5 by the two diagnoses, against which A18's structural rules are validated on rounds 1
+#: and 2 (a report, never a grade). A run is read as declining correctly unless it is listed here; the runs a
+#: diagnosis did not single out are the lexical passes, which neither diagnosis disputes.
+MANUAL_P5 = {
+    "1": {"source": "exp/out/exp86_round1_diagnosis.md",
+          "fail": {("B4/studio", "1"): "no final answer (turn cap)", ("B4/studio", "2"): "no final answer (turn cap)",
+                   ("B4/studio", "3"): "no final answer (turn cap)"}},
+    "2": {"source": "exp/out/exp86_round2_diagnosis.md", "fail": {}},
+}
+
+
+def structural_validation(scored):
+    """A18's structural P5 beside the diagnoses' manual readings and the lexical grade, on the rounds that have both,
+    cell by cell and run by run, with every disagreement quoted."""
+    cells, runs = [], []
+    for r in scored:
+        manual = MANUAL_P5.get(r["round"])
+        if manual is None:
+            continue
+        for cfg, v in r["configurations"].items():
+            man, st, lex = [], [], []
+            for g in v["runs"]:
+                c5 = g["c5_declines"]
+                rep = c5.get("reported_structural") or {}
+                m = NA if c5["status"] == NA else FAIL if (cfg, g["run"]) in manual["fail"] else PASS
+                man.append(m)
+                st.append(rep.get("status"))
+                lex.append(c5["status"])
+                if rep.get("status") != m:
+                    runs.append({"round": r["round"], "configuration": cfg, "run": g["run"], "manual": m,
+                                 "manual_reason": manual["fail"].get((cfg, g["run"])), "structural": rep.get("status"),
+                                 "structural_reasons": rep.get("reasons"), "lexical": c5["status"]})
+            cells.append({"round": r["round"], "configuration": cfg, "manual": criterion_verdict(man),
+                          "structural": criterion_verdict(st), "lexical_as_graded": criterion_verdict(lex)})
+    return {"manual_readings": {k: {"source": v["source"], "fail": [list(x) + [y] for x, y in v["fail"].items()]}
+                                for k, v in MANUAL_P5.items()},
+            "n_cells": len(cells), "n_cells_structural_agrees": sum(c["structural"] == c["manual"] for c in cells),
+            "n_cells_lexical_agrees": sum(c["lexical_as_graded"] == c["manual"] for c in cells),
+            "cells": cells, "runs_where_structural_disagrees": runs}
+
+
+def _score_after_round_2(rounds, trial_dir, scored, amended):
+    """Every round under the instrument amended after round 2 (A8 to A18): A16 applies to every round, A18 grades
+    round 3 on and is reported on rounds 1 and 2. What moved is measured against the instrument amended after round
+    1, and the record of each round is the instrument in force when it was scored."""
+    after, effects, by_round, record = [], [], {}, {}
+    for r, pre, prev in zip(rounds, scored, amended):
+        inst = instrument_for_round(os.path.basename(r), after_round=2)
+        with instrument(inst):
+            am = score_round(r, trial_dir)
+        after.append(am)
+        by_round[am["round"]] = sorted(inst)
+        effects.append(instrument_effect(r, trial_dir, prev, am, inst, changes={"short_id", "p5_structural"}))
+        try:
+            number = int(am["round"])
+        except (TypeError, ValueError):
+            number = 3
+        on_record = pre if number <= 1 else prev if number == 2 else am
+        record[am["round"]] = {p: v["status"] for p, v in on_record["predictions"].items()}
+    return {"amendment": "docs/plan/agent_trial_v2.md, Amendments: 24 September 2026, after round 2 (A16 to A18)",
+            "note": "A second change to the instrument after seeing results. Round 1's record is the preregistered "
+                    "instrument ('verdict'); round 2's is the instrument amended after round 1 "
+                    "('amended_instrument'); both stay. From round 3 on, a round is decided under this instrument. "
+                    "A16 is a bug fix and applies to every round; A18's structural P5 grades round 3 on, and on rounds "
+                    "1 and 2 it is reported beside the grade (structural_p5_validation) and grades nothing.",
+            "changes": {k: CHANGES[k] for k in ("short_id", "p5_structural")},
+            "decisions_without_a_switch": DECISIONS_R2,
+            "instrument_by_round": by_round,
+            "verdict": dict(_verdict(after), on_the_record=record),
+            "effect_against_the_instrument_after_round_1": effects,
+            "structural_p5_validation": structural_validation(after),
+            "rounds": after}
 
 
 def _json_default(o):
@@ -2177,7 +2522,8 @@ def main():
     with open(args.out, "w", encoding="utf-8") as fh:
         json.dump(s, fh, indent=1, default=_json_default)
     for label, rounds in (("preregistered instrument", s["rounds"]),
-                          ("amended instrument (24 September, after round 1)", s["amended_instrument"]["rounds"])):
+                          ("amended instrument (24 September, after round 1)", s["amended_instrument"]["rounds"]),
+                          ("amended instrument (24 September, after round 2)", s["amended_after_round_2"]["rounds"])):
         print(f"== {label}")
         for r in rounds:
             print(f"round {r['round']} (agent {r['agent_commit']}): complete={r['complete']} "
@@ -2194,6 +2540,21 @@ def main():
         for m in e["p5_declines_missed_reported_not_regraded"]:
             print(f"  {m['configuration']:<12} run {m['run']}: P5 fails as graded; the rules of rounds 2 on would "
                   f"give {m['under_rules_of_rounds_2_on']} (reported, not regraded)")
+    a2 = s["amended_after_round_2"]
+    for e in a2["effect_against_the_instrument_after_round_1"]:
+        print(f"== round {e['round']}: what the amendment after round 2 moved (against the one after round 1)")
+        for m in e["runs_moved"]:
+            print(f"  {m['configuration']:<12} run {m['run']} {m['criterion']:<15} {m['preregistered']} -> "
+                  f"{m['amended']}  ({', '.join(m['moved_by'])})")
+        for m in e["cells_moved"]:
+            print(f"  {m['configuration']:<12} {m['criterion']:<15} {m['preregistered']} -> {m['amended']}  "
+                  f"({', '.join(m['moved_by'])})")
+    v = a2["structural_p5_validation"]
+    print(f"== A18 structural P5 against the diagnoses' manual readings (report only): {v['n_cells_structural_agrees']}"
+          f" of {v['n_cells']} cells agree (the lexical rules as graded: {v['n_cells_lexical_agrees']})")
+    for d in v["runs_where_structural_disagrees"]:
+        print(f"  round {d['round']} {d['configuration']} run {d['run']}: manual {d['manual']}, structural "
+              f"{d['structural']}: {d['structural_reasons']}")
     print(f"wrote {args.out}")
 
 

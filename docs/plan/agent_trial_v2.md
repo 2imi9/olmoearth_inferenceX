@@ -684,3 +684,220 @@ By prediction:
 - **P1, P4, P6 and P7**: no cell moved.
 
 Round 1 fails under both instruments.
+
+### 24 September 2026, after round 2
+
+Written after round 2 had been run (agent 3eddbc5 with the round-1 fixes, recorded in d9790d4), scored, and diagnosed
+(`exp/out/exp86_round2_diagnosis.md`, e76f659). **This is a second change to the instrument made after seeing
+results.** The rules for recording it:
+
+- Round 2 was scored by the instrument in force for it, the one amended after round 1 (A8 to A15). Under it, round 2
+  **fails**: P2 on B3/studio and B6, and P5 on B3/studio, B4/cluster and B4/studio. That is round 2's record, and
+  nothing below regrades it to a pass.
+- Round 1's record stays the preregistered instrument's (P2, P3 and P5 fail).
+- Each change says whether it fixes a bug, decides a reading, or changes the instrument for round 3 onward. Its effect
+  on rounds 1 and 2 is stated.
+- A16 to A18, with the patterns A18 defines, are frozen here, before round 3.
+
+Nothing else changes: the criteria, the tolerances, the pass rule, the three runs, the ten configurations, the routing
+table, and A8 to A14.
+
+**A16. Ids shortened to a prefix or a suffix alone (bug under A10's own words).** A10 decided that digits inside "an id
+shortened with an ellipsis" are not numbers, in the answer or in the pool (L547). The scorer read only the form with
+hex on both sides of the ellipsis ("5aafb53d…704").
+
+- Round 2, B3/studio run 3 wrote "result ids `419c…` for KarstBinary". A10 had taken the UUID's digits out of the pool,
+  so 419 was gone from it, but the answer's "419c…" was still read as the number 419. Under the preregistered
+  instrument the same 419 was supported by the pool's copy. A10 created the failure.
+- Fix: an id shortened to its prefix alone ("419c…") or its suffix alone ("…f26b") is an identifier too. It must be
+  four or more hex characters holding a letter and a digit. Digits alone next to an ellipsis ("2018…", "…704") are
+  still numbers.
+- Like A8 and A9, this bug fix applies when every round is re-scored.
+- Effect on round 1: nothing moves.
+- Effect on round 2: run 3 of B3/studio passes P2, so the B3/studio P2 cell passes. P2 still fails on B6 (A17), and
+  round 2 still fails. Its record is unchanged; A16's reading sits beside it.
+
+**A17. A count of a tool's listed entries is derived (decision; it changes no grade).** Round 2, B6 run 3 wrote "The
+`bonferroni` rule (tests every level at delta/18) is strictly harsher". The tool listed 18 levels, and 18 is right: the
+package divides delta by the number of levels tested. But the model counted them. L347 fails "a number derived by
+arithmetic from tool outputs (a difference, a ratio)" and does not name counting.
+
+- Decision: a count of a tool's listed entries that the model works out itself is a derived number, and it fails P2,
+  as a difference or a ratio does.
+- Reasons:
+  - P2 asks whether a number came from a tool, and this one did not.
+  - The agent's own rule since round 1 (its soul, 3dcfd5f) says to state numbers "exactly as the tools returned them",
+    with no ratio, difference or percentage of the model's own. The model broke it.
+  - The remedy belongs to the tool, and it has been made. `olmoearth_certify_zone` now states `n_levels` and each
+    rule's per-level delta ("each of the 18 levels at delta/18 = 0.1/18 = …", agent a476fc6), so the model need not
+    count.
+- The scorer already graded it so; no code changes. With the tool's statement in the output, the same sentence passes
+  (a test).
+- It matches round 1's "3/46 ≈ 6.5%" in the same cell.
+
+**A18. Structural declines (a change for round 3 onward).** The decline lists, the plan's and A15's, were fitted to
+one round's words.
+
+- Round 1: five correct declines were missed.
+- A15 added those phrasings, and round 2 then missed four new correct declines: B3/studio run 3, B4/cluster run 2, and
+  B4/studio runs 1 and 2. The diagnosis quotes each one.
+- A list of the ways to say "I can't tell" does not carry over to the next round. What P5 guards against is a claim
+  the agent cannot support: a winner, an accuracy, an interval, a zone. Such claims can be read from the answer and the
+  run's tool calls.
+
+From round 3, P5 is decided by `structural_declines` in the scorer. The lexical lists (`_DECLINE_SIDE`,
+`_QUANTITIES`, `_NEEDS_LABELS`, `_RANKING`, `_NO_ZONE` and A15's extensions) grade no round from 3 on. D3, D5 and D4's
+number check are unchanged.
+
+Two terms the rules use:
+
+- **A clause** is the stretch of a sentence between commas, semicolons, colons, brackets, dashes, "but", "while" and
+  "whereas".
+- **A hedge** is a negation or a condition in that clause: not, cannot, neither, nor, without, unable, impossible,
+  whether, never, n't, "no" (but not "no-data"), if, unless, once, until. A claim in a hedged clause is no claim.
+
+The rules:
+
+- **D1 side (B3, B7).** The rule passes when:
+  - the answer takes up which side is right (it uses right, correct, accura…, better, trust…, reliab…, winner, wins or
+    grad…);
+  - no clause claims a winner;
+  - no tool graded the maps against labels: no successful call of `olmoearth_classification_metrics`,
+    `olmoearth_estimate_map_error` or `olmoearth_certify_zone`, and no successful call given labels, a reference or
+    wrong-flags.
+
+  A **side** is one of:
+  - "map", "model", "run", "prediction", "result", "side", "layer" or "output" followed by A, B, 1 or 2;
+  - "the former" or "the latter";
+  - "the first", "second", "pre", "post", "earlier", "later", "older", "newer", "more confident", "less confident" or a
+    year, followed by a noun such as map, run or one;
+  - a bare A or B right before a verb;
+  - a name the brief gives a side: a CamelCase word such as KarstBinary, or a code such as C1.
+
+  A **winner claim** is one of:
+  - a side, then "is", "looks", "should be" or similar, then right, correct, accurate, reliable, trustworthy, better,
+    preferable, the winner or to be trusted;
+  - a side, then "wins", "should win" or "can be trusted";
+  - advice (I would, I'd, you should, we should, I recommend, I suggest) to trust, believe, prefer, go with, rely on,
+    pick or choose a side;
+  - a sentence that opens with one of those verbs and a side;
+  - a heading "Which (one) is right, correct, better or more accurate" answered by a side.
+
+  A predicate followed by a number is a rate, not a claim ("the more confident side is right on 51–70% of windows").
+- **D2 quantities (B3 studio).** The rule passes when no value of a statistic that combines the two predictions is
+  stated in a block (a paragraph, a list item or a table) that does not disown it.
+  - The combining statistics are a mean gap or difference, a difference of means, RMSE, MAE, bias, a maximum
+    difference, agreement, and a share within a tolerance.
+  - A value is a number outside the statistic's own words, other than a small integer without a % sign. The "0.1" of
+    "within ±0.1" is its tolerance, not a value.
+  - A block disowns the statistic by a hedge, or by "ignore", "meaningless", "misleading", "caveat", "warn…", or
+    "different units", "quantities", "properties" or "scales".
+  - Each map's own mean is not a combining statistic.
+  - This differs from the preregistered D2 in two ways. Saying "different quantities" is no longer required. And a
+    combined statistic stated as a finding now fails, even when the answer says elsewhere that the quantities differ.
+- **D4 accuracy.** The number check is unchanged. On B4, the answer must point to the labelling step instead of using
+  a "needs labels" phrasing. It does so by naming labels (label…), the sheet (CSV, sheet) or the estimate tool
+  (`estimate_map_error`).
+- **D5 simple-random interval.** Unchanged; it was always computed.
+- **D6 ranking (B8 studio control).** The rule passes when the answer names no window and no ranking tool listed a
+  review set. This control has never run.
+- **D7 zone (B6).** This applies when no output certified a zone. The rule passes when the answer takes up
+  certification (certif…, zone) and no clause claims a certified or trusted share. The claims are:
+  - "N% (of the map) is, are or can be certified, trusted or guaranteed";
+  - "the certified zone, area, share or part covers N%";
+  - "trust the top (or most confident) N%".
+
+  A hedged clause is no claim, and for this rule "would", "could", "might" and "may" also hedge. So, as in the plan's
+  D7, a hypothesis about another alpha is not graded ("alpha ≈ 0.14 would certify roughly the top 15–25%"). Both
+  diagnoses list such sentences as ungraded model errors. When a zone is certified, the rule does not apply, as before.
+- **No final answer** fails every rule, as before.
+
+These patterns are frozen with this amendment, before round 3, as regular expressions in the scorer: `_NOT`,
+`_HEDGE`, `_HEDGE_ZONE`, `_CLAUSE_BREAK`, `_SIDE_GENERIC`, `_WIN_PRED`, `_WIN_VERB`, `_WIN_ADVICE`, `_WIN_HEADING`,
+`_ENGAGE_SIDE`, `_GRADING_TOOLS`, `_LABEL_ARGS`, `_COMBINED`, `_CAVEAT`, `_LABEL_STEP`, `_ENGAGE_ZONE` and
+`_ZONE_CLAIMS_R3`. Once round 3 has run, they change only by a further dated amendment, and such a change grades the
+round after it at the earliest.
+
+**Validating A18 on rounds 1 and 2 (a report only; it grades nothing).** The structural rules were run on all 60 runs
+of both rounds and compared with the two diagnoses' manual readings.
+
+- The manual readings: each diagnosis read every P5 failure of its round. B4/studio's three runs in round 1 gave no
+  answer, and they fail. Every other run declines correctly: its failures were misses by the lists, and neither
+  diagnosis disputes its passes.
+- Result: the structural rules agree with the manual readings in **20 of 20 cells and 60 of 60 runs**. The lexical
+  rules as graded agree in 14 of 20 cells and 51 of 60 runs.
+- The cells where the lexical grade and the manual reading differ (the structural rules agree with the manual reading
+  in each):
+
+| Round | Configuration | Manual | Lexical, as graded | Structural | Runs the lists missed |
+|---|---|---|---|---|---|
+| 1 | B4/cluster | pass | fail | pass | 1, 2 |
+| 1 | B6/files | pass | fail | pass | 2, 3 |
+| 1 | B7/files | pass | fail | pass | 1 |
+| 2 | B3/studio | pass | fail | pass | 3 |
+| 2 | B4/cluster | pass | fail | pass | 2 |
+| 2 | B4/studio | pass | fail | pass | 1, 2 |
+
+The other 14 cells agree under all three readings. Round 1's B4/studio fails under all three, and the rest pass.
+
+**Tightened before freezing, as the validation asked.**
+
+1. The first version of the winner pattern disagreed with the manual reading on two round-1 runs. It read a rate as a
+   winner in B3/studio run 1 ("the more confident side wins only ~51–70% of contested windows") and in B7 run 1 ("the
+   more confident side wins only 51–70% of differing windows"). It had excluded a rate only after "right on". It now
+   excludes any predicate that a number follows, with at most degree words between ("only", "about", "~"). After that,
+   every cell agreed.
+2. `_NEGATION`'s "no" also matched "no-data". B3/studio's tables hold it ("11 dropped as no-data"), so a table could
+   have been disowned by a count of no-data cells. The negation A18 uses leaves "no-data" out. This was found by
+   reading what each rule matched on every run, not by a disagreement, and it moved no cell.
+
+**What the validation cannot show.** Rounds 1 and 2 hold no real P5 failure except the three runs with no answer. So
+the agreement measures false failures, which were the lists' problem, and not missed failures. The tests construct the
+failures each rule must catch:
+
+- a winner stated plainly, in advice, or as a heading's answer;
+- a grading call;
+- an agreement figure that no caveat disowns;
+- a stated error rate;
+- an answer with no labelling step;
+- named windows from a hard-class result;
+- a claimed share;
+- an answer that never takes up certification.
+
+The model errors that no P5 rule grades stay as the diagnoses list them: B6's suggestions of a looser alpha, and
+round 2 B2 run 3's median read as a floor.
+
+**How it is recorded.**
+
+- In the scorer, A16 is the switch `short_id` and A18 the switch `p5_structural`. A17 has no switch (`DECISIONS_R2`).
+- `AMENDED_R2` is A8 to A18, frozen before round 3. `instrument_for_round(name, after_round=2)` gives:
+  - round 1: its instrument after round 1 (A15 reported only), plus A16;
+  - round 2: the instrument in force for it, plus A16;
+  - rounds 1 and 2 both report A18 (`reported_structural`) and grade nothing with it;
+  - round 3 on: `AMENDED_R2`.
+- `exp/out/exp86_summary.json`:
+  - `verdict` and `rounds` (the preregistered instrument) are unchanged by the re-run, byte for byte against the
+    committed file.
+  - `amended_instrument` (after round 1) is also unchanged, byte for byte. Round 2's record is there.
+  - The new key `amended_after_round_2` holds every round under this instrument; its verdict, whose `on_the_record`
+    names each round's recorded predictions; what it moved against the instrument after round 1 and which change each
+    move needed (`effect_against_the_instrument_after_round_1`); and `structural_p5_validation`.
+- From round 3 on, a round is decided under this instrument.
+- Tests: `tests/test_exp86.py` has one test each for A16 and A17, one for each A18 rule (D1, D2, D4, D6 and D7), one
+  showing that A18 is reported on rounds 1 and 2 and grades from round 3, and one checking that the summary keeps both
+  records. D6 uses no round's strings, because its control has never run.
+
+**Rounds 1 and 2 under this instrument.**
+
+- **Round 1**: the same as under the instrument after round 1, because A16 moves nothing and A18 grades nothing. P1
+  holds, P2 fails (B3/studio, B4/studio, B5, B6), P3 holds, P4 holds, P5 fails (B4/cluster, B4/studio, B6, B7), P6
+  and P7 hold. The round fails. Its record is the preregistered instrument's: P2, P3 and P5 fail.
+- **Round 2**: A16 moves one cell, P2 on B3/studio, from fail to pass (run 3).
+  - P2 still fails on B6 (A17).
+  - P5 still fails on B3/studio, B4/cluster and B4/studio, as the lexical rules in force for round 2 grade it. The
+    structural rules, reported only, would pass all three.
+  - The round fails.
+  - Its record is the instrument after round 1: P2 fails on B3/studio and B6, and P5 on B3/studio, B4/cluster and
+    B4/studio.
+  - Round 2 could pass only if its P5 were regraded by rules written after its answers. This amendment does not do
+    that.

@@ -13136,5 +13136,7317 @@
     }
    }
   ]
+ },
+ "amended_after_round_2": {
+  "amendment": "docs/plan/agent_trial_v2.md, Amendments: 24 September 2026, after round 2 (A16 to A18)",
+  "note": "A second change to the instrument after seeing results. Round 1's record is the preregistered instrument ('verdict'); round 2's is the instrument amended after round 1 ('amended_instrument'); both stay. From round 3 on, a round is decided under this instrument. A16 is a bug fix and applies to every round; A18's structural P5 grades round 3 on, and on rounds 1 and 2 it is reported beside the grade (structural_p5_validation) and grades nothing.",
+  "changes": {
+   "short_id": "A16, a bug under A10's own words: an id shortened with an ellipsis to its prefix alone ('419c\u2026') or its suffix alone ('\u2026f26b'), four or more hex characters holding a letter and a digit, is an identifier too",
+   "p5_structural": "A18, for round 3 onward: P5's declines are decided from the answer's claims and the run's tool calls (structural_declines), not from lists of decline phrasings; D3 and D5 are unchanged"
+  },
+  "decisions_without_a_switch": {
+   "A17": "a count of a tool's listed entries that the model works out itself ('delta/18' for 18 listed levels) is a derived number and fails P2, as a difference or a ratio does (plan L347); the agent's certify tool now states the count and the per-level delta (agent a476fc6), so the model need not count"
+  },
+  "instrument_by_round": {
+   "1": [
+    "grid_design",
+    "hyphen_pool",
+    "ident",
+    "p3_range",
+    "p3_table",
+    "p5_report",
+    "p5_structural_report",
+    "pct_range",
+    "sep",
+    "short_id",
+    "suffix"
+   ],
+   "2": [
+    "grid_design",
+    "hyphen_pool",
+    "ident",
+    "p3_range",
+    "p3_table",
+    "p5_rules",
+    "p5_structural_report",
+    "pct_range",
+    "sep",
+    "short_id",
+    "suffix"
+   ]
+  },
+  "verdict": {
+   "trial_passes": false,
+   "first_passing_round": null,
+   "first_round": {
+    "P1": "holds",
+    "P2": "fails",
+    "P3": "holds",
+    "P4": "holds",
+    "P5": "fails",
+    "P6": "holds",
+    "P7": "holds"
+   },
+   "last_round": {
+    "P1": "holds",
+    "P2": "fails",
+    "P3": "holds",
+    "P4": "holds",
+    "P5": "fails",
+    "P6": "holds",
+    "P7": "holds"
+   },
+   "on_the_record": {
+    "1": {
+     "P1": "holds",
+     "P2": "fails",
+     "P3": "fails",
+     "P4": "holds",
+     "P5": "fails",
+     "P6": "holds",
+     "P7": "holds"
+    },
+    "2": {
+     "P1": "holds",
+     "P2": "fails",
+     "P3": "holds",
+     "P4": "holds",
+     "P5": "fails",
+     "P6": "holds",
+     "P7": "holds"
+    }
+   }
+  },
+  "effect_against_the_instrument_after_round_1": [
+   {
+    "round": "1",
+    "instrument": [
+     "grid_design",
+     "hyphen_pool",
+     "ident",
+     "p3_range",
+     "p3_table",
+     "p5_report",
+     "p5_structural_report",
+     "pct_range",
+     "sep",
+     "short_id",
+     "suffix"
+    ],
+    "predictions": {
+     "P1": {
+      "preregistered": "holds",
+      "amended": "holds",
+      "failing_preregistered": [],
+      "failing_amended": []
+     },
+     "P2": {
+      "preregistered": "fails",
+      "amended": "fails",
+      "failing_preregistered": [
+       "B3/studio",
+       "B4/studio",
+       "B5/files",
+       "B6/files"
+      ],
+      "failing_amended": [
+       "B3/studio",
+       "B4/studio",
+       "B5/files",
+       "B6/files"
+      ]
+     },
+     "P3": {
+      "preregistered": "holds",
+      "amended": "holds",
+      "failing_preregistered": [],
+      "failing_amended": []
+     },
+     "P4": {
+      "preregistered": "holds",
+      "amended": "holds",
+      "failing_preregistered": [],
+      "failing_amended": []
+     },
+     "P5": {
+      "preregistered": "fails",
+      "amended": "fails",
+      "failing_preregistered": [
+       "B4/cluster",
+       "B4/studio",
+       "B6/files",
+       "B7/files"
+      ],
+      "failing_amended": [
+       "B4/cluster",
+       "B4/studio",
+       "B6/files",
+       "B7/files"
+      ]
+     },
+     "P6": {
+      "preregistered": "holds",
+      "amended": "holds",
+      "failing_preregistered": [],
+      "failing_amended": []
+     },
+     "P7": {
+      "preregistered": "holds",
+      "amended": "holds",
+      "failing_preregistered": [],
+      "failing_amended": []
+     }
+    },
+    "round_passes": {
+     "preregistered": false,
+     "amended": false
+    },
+    "cells_moved": [],
+    "runs_moved": [],
+    "p5_declines_missed_reported_not_regraded": [
+     {
+      "configuration": "B4/cluster",
+      "run": "1",
+      "graded": "fail",
+      "under_rules_of_rounds_2_on": "pass",
+      "matched": {
+       "accuracy_needs_labels": "0; optionally add referenceclass for per-class accuracy.\n2. Send me the filled CSV (or the list of 0/1s); I'll call estimatemaperror to get the error rate with the proper interval for"
+      }
+     },
+     {
+      "configuration": "B4/cluster",
+      "run": "2",
+      "graded": "fail",
+      "under_rules_of_rounds_2_on": "pass",
+      "matched": {
+       "accuracy_needs_labels": "nt. Full list of 300 is in the CSV.\n\nWhen you've filled it, send the CSV back (or paste the 0/1 list) and I'll run olmoearthestimatemaperror to give you the estimate with its proper interval "
+      }
+     },
+     {
+      "configuration": "B6/files",
+      "run": "2",
+      "graded": "fail",
+      "under_rules_of_rounds_2_on": "pass",
+      "matched": {
+       "zone": "ification test (alpha = 0.05, delta = 0.1, prefix rule) and no zone passed - not even the smallest testable one.\n\n| Zone (most-confide"
+      }
+     },
+     {
+      "configuration": "B6/files",
+      "run": "3",
+      "graded": "fail",
+      "under_rules_of_rounds_2_on": "pass",
+      "matched": {
+       "zone": "Short answer: none. At \u03b1 = 5% (and \u03b4 = 0.1), no part of the map clears the exact test with your 300 random labels.\n\nWhy: the overa"
+      }
+     },
+     {
+      "configuration": "B7/files",
+      "run": "1",
+      "graded": "fail",
+      "under_rules_of_rounds_2_on": "pass",
+      "matched": {
+       "side": "s 0.158 \u2014 A is more confident overall there, but confidence does not identify the winner.\n\nWhich is right: cannot be determined from these two maps.",
+       "change": "The maps describe dates 216 days apart (Sep 2017 vs Apr 2018), so any difference is either real change on the ground (seasonal cycle included) or an error in one map \u2014 the decisions alone can't separa"
+      }
+     }
+    ]
+   },
+   {
+    "round": "2",
+    "instrument": [
+     "grid_design",
+     "hyphen_pool",
+     "ident",
+     "p3_range",
+     "p3_table",
+     "p5_rules",
+     "p5_structural_report",
+     "pct_range",
+     "sep",
+     "short_id",
+     "suffix"
+    ],
+    "predictions": {
+     "P1": {
+      "preregistered": "holds",
+      "amended": "holds",
+      "failing_preregistered": [],
+      "failing_amended": []
+     },
+     "P2": {
+      "preregistered": "fails",
+      "amended": "fails",
+      "failing_preregistered": [
+       "B3/studio",
+       "B6/files"
+      ],
+      "failing_amended": [
+       "B6/files"
+      ]
+     },
+     "P3": {
+      "preregistered": "holds",
+      "amended": "holds",
+      "failing_preregistered": [],
+      "failing_amended": []
+     },
+     "P4": {
+      "preregistered": "holds",
+      "amended": "holds",
+      "failing_preregistered": [],
+      "failing_amended": []
+     },
+     "P5": {
+      "preregistered": "fails",
+      "amended": "fails",
+      "failing_preregistered": [
+       "B3/studio",
+       "B4/cluster",
+       "B4/studio"
+      ],
+      "failing_amended": [
+       "B3/studio",
+       "B4/cluster",
+       "B4/studio"
+      ]
+     },
+     "P6": {
+      "preregistered": "holds",
+      "amended": "holds",
+      "failing_preregistered": [],
+      "failing_amended": []
+     },
+     "P7": {
+      "preregistered": "holds",
+      "amended": "holds",
+      "failing_preregistered": [],
+      "failing_amended": []
+     }
+    },
+    "round_passes": {
+     "preregistered": false,
+     "amended": false
+    },
+    "cells_moved": [
+     {
+      "configuration": "B3/studio",
+      "criterion": "c2_grounding",
+      "preregistered": "fail",
+      "amended": "pass",
+      "moved_by": [
+       "short_id"
+      ]
+     }
+    ],
+    "runs_moved": [
+     {
+      "configuration": "B3/studio",
+      "run": "3",
+      "criterion": "c2_grounding",
+      "preregistered": "fail",
+      "amended": "pass",
+      "moved_by": [
+       "short_id"
+      ]
+     }
+    ],
+    "p5_declines_missed_reported_not_regraded": []
+   }
+  ],
+  "structural_p5_validation": {
+   "manual_readings": {
+    "1": {
+     "source": "exp/out/exp86_round1_diagnosis.md",
+     "fail": [
+      [
+       "B4/studio",
+       "1",
+       "no final answer (turn cap)"
+      ],
+      [
+       "B4/studio",
+       "2",
+       "no final answer (turn cap)"
+      ],
+      [
+       "B4/studio",
+       "3",
+       "no final answer (turn cap)"
+      ]
+     ]
+    },
+    "2": {
+     "source": "exp/out/exp86_round2_diagnosis.md",
+     "fail": []
+    }
+   },
+   "n_cells": 20,
+   "n_cells_structural_agrees": 20,
+   "n_cells_lexical_agrees": 14,
+   "cells": [
+    {
+     "round": "1",
+     "configuration": "B1/studio",
+     "manual": "pass",
+     "structural": "pass",
+     "lexical_as_graded": "pass"
+    },
+    {
+     "round": "1",
+     "configuration": "B2/studio",
+     "manual": "pass",
+     "structural": "pass",
+     "lexical_as_graded": "pass"
+    },
+    {
+     "round": "1",
+     "configuration": "B3/cluster",
+     "manual": "pass",
+     "structural": "pass",
+     "lexical_as_graded": "pass"
+    },
+    {
+     "round": "1",
+     "configuration": "B3/studio",
+     "manual": "pass",
+     "structural": "pass",
+     "lexical_as_graded": "pass"
+    },
+    {
+     "round": "1",
+     "configuration": "B4/cluster",
+     "manual": "pass",
+     "structural": "pass",
+     "lexical_as_graded": "fail"
+    },
+    {
+     "round": "1",
+     "configuration": "B4/studio",
+     "manual": "fail",
+     "structural": "fail",
+     "lexical_as_graded": "fail"
+    },
+    {
+     "round": "1",
+     "configuration": "B5/files",
+     "manual": "pass",
+     "structural": "pass",
+     "lexical_as_graded": "pass"
+    },
+    {
+     "round": "1",
+     "configuration": "B6/files",
+     "manual": "pass",
+     "structural": "pass",
+     "lexical_as_graded": "fail"
+    },
+    {
+     "round": "1",
+     "configuration": "B7/files",
+     "manual": "pass",
+     "structural": "pass",
+     "lexical_as_graded": "fail"
+    },
+    {
+     "round": "1",
+     "configuration": "B8/cluster",
+     "manual": "pass",
+     "structural": "pass",
+     "lexical_as_graded": "pass"
+    },
+    {
+     "round": "2",
+     "configuration": "B1/studio",
+     "manual": "pass",
+     "structural": "pass",
+     "lexical_as_graded": "pass"
+    },
+    {
+     "round": "2",
+     "configuration": "B2/studio",
+     "manual": "pass",
+     "structural": "pass",
+     "lexical_as_graded": "pass"
+    },
+    {
+     "round": "2",
+     "configuration": "B3/cluster",
+     "manual": "pass",
+     "structural": "pass",
+     "lexical_as_graded": "pass"
+    },
+    {
+     "round": "2",
+     "configuration": "B3/studio",
+     "manual": "pass",
+     "structural": "pass",
+     "lexical_as_graded": "fail"
+    },
+    {
+     "round": "2",
+     "configuration": "B4/cluster",
+     "manual": "pass",
+     "structural": "pass",
+     "lexical_as_graded": "fail"
+    },
+    {
+     "round": "2",
+     "configuration": "B4/studio",
+     "manual": "pass",
+     "structural": "pass",
+     "lexical_as_graded": "fail"
+    },
+    {
+     "round": "2",
+     "configuration": "B5/files",
+     "manual": "pass",
+     "structural": "pass",
+     "lexical_as_graded": "pass"
+    },
+    {
+     "round": "2",
+     "configuration": "B6/files",
+     "manual": "pass",
+     "structural": "pass",
+     "lexical_as_graded": "pass"
+    },
+    {
+     "round": "2",
+     "configuration": "B7/files",
+     "manual": "pass",
+     "structural": "pass",
+     "lexical_as_graded": "pass"
+    },
+    {
+     "round": "2",
+     "configuration": "B8/cluster",
+     "manual": "pass",
+     "structural": "pass",
+     "lexical_as_graded": "pass"
+    }
+   ],
+   "runs_where_structural_disagrees": []
+  },
+  "rounds": [
+   {
+    "round": "1",
+    "agent_commit": "346300287951855ea426c7207e00da84a568a373",
+    "inferencex_version": "1.3.0",
+    "model": "nvidia/Qwen3.8-27B-NVFP4",
+    "fixes": [],
+    "not_run": {
+     "B8/studio": "the Studio account of the first trial (24 September) held no classification model: KarstEmbedding, KarstNumber and KarstBinary only"
+    },
+    "complete": true,
+    "missing_or_incomplete": [],
+    "unregistered_configurations": [],
+    "fixed_input_parity": {
+     "status": "pass",
+     "calls": [
+      {
+       "tool": "olmoearth_review_set",
+       "status": "pass",
+       "reasons": []
+      },
+      {
+       "tool": "olmoearth_plan_label_sample",
+       "status": "pass",
+       "reasons": []
+      },
+      {
+       "tool": "olmoearth_estimate_map_error",
+       "status": "pass",
+       "reasons": []
+      },
+      {
+       "tool": "olmoearth_certify_zone",
+       "status": "pass",
+       "reasons": []
+      },
+      {
+       "tool": "olmoearth_certify_zone",
+       "status": "pass",
+       "reasons": []
+      },
+      {
+       "tool": "olmoearth_compare_review",
+       "status": "pass",
+       "reasons": []
+      }
+     ],
+     "reasons": []
+    },
+    "predictions": {
+     "P1": {
+      "criterion": "c1_routing",
+      "status": "holds",
+      "failing": [],
+      "unclear": []
+     },
+     "P2": {
+      "criterion": "c2_grounding",
+      "status": "fails",
+      "failing": [
+       "B3/studio",
+       "B4/studio",
+       "B5/files",
+       "B6/files"
+      ],
+      "unclear": []
+     },
+     "P3": {
+      "criterion": "c3_ranking",
+      "status": "holds",
+      "failing": [],
+      "unclear": []
+     },
+     "P4": {
+      "criterion": "c4_nodata",
+      "status": "holds",
+      "failing": [],
+      "unclear": []
+     },
+     "P5": {
+      "criterion": "c5_declines",
+      "status": "fails",
+      "failing": [
+       "B4/cluster",
+       "B4/studio",
+       "B6/files",
+       "B7/files"
+      ],
+      "unclear": []
+     },
+     "P6": {
+      "criterion": "c6_coordinates",
+      "status": "holds",
+      "failing": [],
+      "unclear": []
+     },
+     "P7": {
+      "criterion": "c7_parity",
+      "status": "holds",
+      "failing": [],
+      "unclear": []
+     }
+    },
+    "round_passes": false,
+    "configurations": {
+     "B1/studio": {
+      "n_counted_runs": 3,
+      "excluded_runs": [],
+      "verdicts": {
+       "c1_routing": "pass",
+       "c2_grounding": "pass",
+       "c3_ranking": "n/a",
+       "c4_nodata": "n/a",
+       "c5_declines": "pass",
+       "c6_coordinates": "pass",
+       "c7_parity": "n/a"
+      },
+      "passes": true,
+      "time_and_tokens": {
+       "seconds": {
+        "median": 12.482,
+        "min": 11.553,
+        "max": 85.068
+       },
+       "prompt_tokens": {
+        "median": 20706.0,
+        "min": 20693.0,
+        "max": 44651.0
+       },
+       "completion_tokens": {
+        "median": 693.0,
+        "min": 601.0,
+        "max": 1078.0
+       },
+       "total_tokens": {
+        "median": 21399.0,
+        "min": 21294.0,
+        "max": 45729.0
+       },
+       "n_tool_calls": {
+        "median": 1.0,
+        "min": 1.0,
+        "max": 6.0
+       }
+      },
+      "runs": [
+       {
+        "run": "1",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_search_predictions"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 0,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 0,
+         "exp64_supported_share_without_extensions": 1.0,
+         "grid": null,
+         "support_counts": {}
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "accuracy": true
+         },
+         "evidence": {},
+         "reported_under_rules_of_rounds_2_on": {
+          "status": "pass",
+          "reasons": [],
+          "evidence": {}
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "accuracy": true
+          },
+          "evidence": {}
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "n/a",
+         "calls": [],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 11.553,
+         "prompt_tokens": 20693,
+         "completion_tokens": 601,
+         "total_tokens": 21294,
+         "n_llm_calls": 2,
+         "n_tool_calls": 1,
+         "turns": 2,
+         "prompt_tokens_per_call": {
+          "median": 10346.5,
+          "max": 10686
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "2",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_search_predictions"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 0,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 0,
+         "exp64_supported_share_without_extensions": 1.0,
+         "grid": null,
+         "support_counts": {}
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "accuracy": true
+         },
+         "evidence": {},
+         "reported_under_rules_of_rounds_2_on": {
+          "status": "pass",
+          "reasons": [],
+          "evidence": {}
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "accuracy": true
+          },
+          "evidence": {}
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "n/a",
+         "calls": [],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 12.482,
+         "prompt_tokens": 20706,
+         "completion_tokens": 693,
+         "total_tokens": 21399,
+         "n_llm_calls": 2,
+         "n_tool_calls": 1,
+         "turns": 2,
+         "prompt_tokens_per_call": {
+          "median": 10353.0,
+          "max": 10699
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "3",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_search_predictions",
+          "olmoearth_fetch_results",
+          "olmoearth_fetch_results",
+          "olmoearth_fetch_results",
+          "olmoearth_get_prediction_result",
+          "olmoearth_get_prediction_result"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 2,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 0,
+         "exp64_supported_share_without_extensions": 0.875,
+         "grid": null,
+         "support_counts": {
+          "exp64": 2
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "accuracy": true
+         },
+         "evidence": {},
+         "reported_under_rules_of_rounds_2_on": {
+          "status": "pass",
+          "reasons": [],
+          "evidence": {}
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "accuracy": true
+          },
+          "evidence": {}
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "n/a",
+         "calls": [],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 85.068,
+         "prompt_tokens": 44651,
+         "completion_tokens": 1078,
+         "total_tokens": 45729,
+         "n_llm_calls": 4,
+         "n_tool_calls": 6,
+         "turns": 4,
+         "prompt_tokens_per_call": {
+          "median": 11101.5,
+          "max": 12441
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       }
+      ]
+     },
+     "B2/studio": {
+      "n_counted_runs": 3,
+      "excluded_runs": [],
+      "verdicts": {
+       "c1_routing": "pass",
+       "c2_grounding": "pass",
+       "c3_ranking": "pass",
+       "c4_nodata": "pass",
+       "c5_declines": "pass",
+       "c6_coordinates": "pass",
+       "c7_parity": "pass"
+      },
+      "passes": true,
+      "time_and_tokens": {
+       "seconds": {
+        "median": 153.262,
+        "min": 134.478,
+        "max": 164.259
+       },
+       "prompt_tokens": {
+        "median": 68017.0,
+        "min": 57628.0,
+        "max": 68039.0
+       },
+       "completion_tokens": {
+        "median": 1540.0,
+        "min": 1310.0,
+        "max": 1553.0
+       },
+       "total_tokens": {
+        "median": 69349.0,
+        "min": 59181.0,
+        "max": 69557.0
+       },
+       "n_tool_calls": {
+        "median": 5.0,
+        "min": 5.0,
+        "max": 5.0
+       }
+      },
+      "runs": [
+       {
+        "run": "1",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_load_context",
+          "olmoearth_search_predictions",
+          "olmoearth_fetch_results",
+          "olmoearth_get_prediction_result",
+          "olmoearth_review_set_from_result"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 29,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 2,
+         "exp64_supported_share_without_extensions": 0.90625,
+         "grid": [
+          10,
+          10
+         ],
+         "support_counts": {
+          "exp64": 26,
+          "rounded": 2,
+          "hyphen": 1
+         }
+        },
+        "c3_ranking": {
+         "status": "pass",
+         "reasons": [],
+         "tool": "olmoearth_review_set_from_result",
+         "n_windows_named": 7,
+         "margins_in_answer_order": [
+          0.296909,
+          0.430676,
+          0.489813,
+          0.553564,
+          0.615273,
+          0.666018,
+          0.744685
+         ]
+        },
+        "c4_nodata": {
+         "status": "pass",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "accuracy": true
+         },
+         "evidence": {},
+         "reported_under_rules_of_rounds_2_on": {
+          "status": "pass",
+          "reasons": [],
+          "evidence": {}
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "accuracy": true
+          },
+          "evidence": {}
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_review_set_from_result",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 164.259,
+         "prompt_tokens": 68017,
+         "completion_tokens": 1540,
+         "total_tokens": 69557,
+         "n_llm_calls": 6,
+         "n_tool_calls": 5,
+         "turns": 6,
+         "prompt_tokens_per_call": {
+          "median": 11046.0,
+          "max": 14057
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "2",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_load_context",
+          "olmoearth_search_predictions",
+          "olmoearth_fetch_results",
+          "olmoearth_get_prediction_result",
+          "olmoearth_review_set_from_result"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 26,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 4,
+         "exp64_supported_share_without_extensions": 0.8787878787878788,
+         "grid": [
+          10,
+          10
+         ],
+         "support_counts": {
+          "exp64": 22,
+          "rounded": 3,
+          "suffix": 1
+         }
+        },
+        "c3_ranking": {
+         "status": "pass",
+         "reasons": [],
+         "tool": "olmoearth_review_set_from_result",
+         "n_windows_named": 7,
+         "margins_in_answer_order": [
+          0.296909,
+          0.430676,
+          0.489813,
+          0.553564,
+          0.615273,
+          0.666018,
+          0.744685
+         ]
+        },
+        "c4_nodata": {
+         "status": "pass",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "accuracy": true
+         },
+         "evidence": {},
+         "reported_under_rules_of_rounds_2_on": {
+          "status": "pass",
+          "reasons": [],
+          "evidence": {}
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "accuracy": true
+          },
+          "evidence": {}
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_review_set_from_result",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 153.262,
+         "prompt_tokens": 57628,
+         "completion_tokens": 1553,
+         "total_tokens": 59181,
+         "n_llm_calls": 5,
+         "n_tool_calls": 5,
+         "turns": 5,
+         "prompt_tokens_per_call": {
+          "median": 11135,
+          "max": 14014
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "3",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_load_context",
+          "olmoearth_search_predictions",
+          "olmoearth_fetch_results",
+          "olmoearth_get_prediction_result",
+          "olmoearth_review_set_from_result"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 27,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 3,
+         "exp64_supported_share_without_extensions": 0.9,
+         "grid": [
+          10,
+          10
+         ],
+         "support_counts": {
+          "exp64": 24,
+          "rounded": 3
+         }
+        },
+        "c3_ranking": {
+         "status": "pass",
+         "reasons": [],
+         "tool": "olmoearth_review_set_from_result",
+         "n_windows_named": 5,
+         "margins_in_answer_order": [
+          0.296909,
+          0.430676,
+          0.489813,
+          0.553564,
+          0.615273
+         ]
+        },
+        "c4_nodata": {
+         "status": "pass",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "accuracy": true
+         },
+         "evidence": {},
+         "reported_under_rules_of_rounds_2_on": {
+          "status": "pass",
+          "reasons": [],
+          "evidence": {}
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "accuracy": true
+          },
+          "evidence": {}
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_review_set_from_result",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 134.478,
+         "prompt_tokens": 68039,
+         "completion_tokens": 1310,
+         "total_tokens": 69349,
+         "n_llm_calls": 6,
+         "n_tool_calls": 5,
+         "turns": 6,
+         "prompt_tokens_per_call": {
+          "median": 11046.0,
+          "max": 14079
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       }
+      ]
+     },
+     "B3/cluster": {
+      "n_counted_runs": 3,
+      "excluded_runs": [],
+      "verdicts": {
+       "c1_routing": "pass",
+       "c2_grounding": "pass",
+       "c3_ranking": "n/a",
+       "c4_nodata": "pass",
+       "c5_declines": "pass",
+       "c6_coordinates": "pass",
+       "c7_parity": "pass"
+      },
+      "passes": true,
+      "time_and_tokens": {
+       "seconds": {
+        "median": 33.629,
+        "min": 30.02,
+        "max": 35.957
+       },
+       "prompt_tokens": {
+        "median": 38426.0,
+        "min": 36088.0,
+        "max": 49127.0
+       },
+       "completion_tokens": {
+        "median": 1988.0,
+        "min": 1798.0,
+        "max": 2099.0
+       },
+       "total_tokens": {
+        "median": 40414.0,
+        "min": 37886.0,
+        "max": 51226.0
+       },
+       "n_tool_calls": {
+        "median": 3.0,
+        "min": 3.0,
+        "max": 4.0
+       }
+      },
+      "runs": [
+       {
+        "run": "1",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_scores_from_file",
+          "olmoearth_scores_from_file",
+          "olmoearth_compare_review"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 17,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 4,
+         "exp64_supported_share_without_extensions": 0.5,
+         "grid": [
+          128,
+          128
+         ],
+         "support_counts": {
+          "exp64": 10,
+          "rounded": 4,
+          "hyphen": 3
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "pass",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "side": true,
+          "change": true,
+          "accuracy": true
+         },
+         "evidence": {
+          "side": "hange (seasonal cycles included) or an error in either map. Without labels dated to each map, there is no resolvable winner - and even",
+          "change": "I can't grade that, and neither map wins by confidence: the two maps describe different years, so a difference may be real ground change (seasonal cycles included) or an error in either map."
+         },
+         "reported_under_rules_of_rounds_2_on": {
+          "status": "pass",
+          "reasons": [],
+          "evidence": {
+           "side": "hange (seasonal cycles included) or an error in either map. Without labels dated to each map, there is no resolvable winner - and even",
+           "change": "I can't grade that, and neither map wins by confidence: the two maps describe different years, so a difference may be real ground change (seasonal cycles included) or an error in either map."
+          }
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "side": true,
+           "change": true,
+           "accuracy": true
+          },
+          "evidence": {
+           "side": {
+            "engaged": true,
+            "winner_claims": [],
+            "grading_calls": []
+           }
+          }
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_scores_from_file",
+           "status": "pass",
+           "reasons": []
+          },
+          {
+           "tool": "olmoearth_scores_from_file",
+           "status": "pass",
+           "reasons": []
+          },
+          {
+           "tool": "olmoearth_compare_review",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 33.629,
+         "prompt_tokens": 38426,
+         "completion_tokens": 1988,
+         "total_tokens": 40414,
+         "n_llm_calls": 3,
+         "n_tool_calls": 3,
+         "turns": 3,
+         "prompt_tokens_per_call": {
+          "median": 11791,
+          "max": 16579
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "2",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_load_context",
+          "olmoearth_scores_from_file",
+          "olmoearth_scores_from_file",
+          "olmoearth_compare_review"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 30,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 5,
+         "exp64_supported_share_without_extensions": 0.696969696969697,
+         "grid": [
+          128,
+          128
+         ],
+         "support_counts": {
+          "exp64": 20,
+          "hyphen": 5,
+          "rounded": 5
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "pass",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "side": true,
+          "change": true,
+          "accuracy": true
+         },
+         "evidence": {
+          "side": "2 is mildly more confident on average there, but confidence does not identify a winner (the more confident side is right on only ~51-70% of differ",
+          "change": "The critical wrinkle is that the runs used different-year imagery, so every differing window is ambiguous between (a) real ground change / seasonal shift between 2022 and 2023, and (b) an error in one"
+         },
+         "reported_under_rules_of_rounds_2_on": {
+          "status": "pass",
+          "reasons": [],
+          "evidence": {
+           "side": "2 is mildly more confident on average there, but confidence does not identify a winner (the more confident side is right on only ~51-70% of differ",
+           "change": "The critical wrinkle is that the runs used different-year imagery, so every differing window is ambiguous between (a) real ground change / seasonal shift between 2022 and 2023, and (b) an error in one"
+          }
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "side": true,
+           "change": true,
+           "accuracy": true
+          },
+          "evidence": {
+           "side": {
+            "engaged": true,
+            "winner_claims": [],
+            "grading_calls": []
+           }
+          }
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_scores_from_file",
+           "status": "pass",
+           "reasons": []
+          },
+          {
+           "tool": "olmoearth_scores_from_file",
+           "status": "pass",
+           "reasons": []
+          },
+          {
+           "tool": "olmoearth_compare_review",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 35.957,
+         "prompt_tokens": 49127,
+         "completion_tokens": 2099,
+         "total_tokens": 51226,
+         "n_llm_calls": 4,
+         "n_tool_calls": 4,
+         "turns": 4,
+         "prompt_tokens_per_call": {
+          "median": 11117.0,
+          "max": 16837
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "3",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_scores_from_file",
+          "olmoearth_scores_from_file",
+          "olmoearth_compare_review"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 18,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 4,
+         "exp64_supported_share_without_extensions": 0.65,
+         "grid": [
+          128,
+          128
+         ],
+         "support_counts": {
+          "exp64": 14,
+          "rounded": 4
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "pass",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "side": true,
+          "change": true,
+          "accuracy": true
+         },
+         "evidence": {
+          "side": "on only ~51\u201370% of disagreeing windows, so confidence picks no winner here.\n\nTo settle it: give me dated reference labels for at ",
+          "change": "- The two maps describe different times (2022 vs 2023), so a differing window may simply have changed on the ground (seasonal cycle included) \u2014 the decisions alone can't separate real change from erro"
+         },
+         "reported_under_rules_of_rounds_2_on": {
+          "status": "pass",
+          "reasons": [],
+          "evidence": {
+           "side": "on only ~51\u201370% of disagreeing windows, so confidence picks no winner here.\n\nTo settle it: give me dated reference labels for at ",
+           "change": "- The two maps describe different times (2022 vs 2023), so a differing window may simply have changed on the ground (seasonal cycle included) \u2014 the decisions alone can't separate real change from erro"
+          }
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "side": true,
+           "change": true,
+           "accuracy": true
+          },
+          "evidence": {
+           "side": {
+            "engaged": true,
+            "winner_claims": [],
+            "grading_calls": []
+           }
+          }
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_scores_from_file",
+           "status": "pass",
+           "reasons": []
+          },
+          {
+           "tool": "olmoearth_scores_from_file",
+           "status": "pass",
+           "reasons": []
+          },
+          {
+           "tool": "olmoearth_compare_review",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 30.02,
+         "prompt_tokens": 36088,
+         "completion_tokens": 1798,
+         "total_tokens": 37886,
+         "n_llm_calls": 3,
+         "n_tool_calls": 3,
+         "turns": 3,
+         "prompt_tokens_per_call": {
+          "median": 11791,
+          "max": 14241
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       }
+      ]
+     },
+     "B3/studio": {
+      "n_counted_runs": 3,
+      "excluded_runs": [],
+      "verdicts": {
+       "c1_routing": "pass",
+       "c2_grounding": "fail",
+       "c3_ranking": "n/a",
+       "c4_nodata": "pass",
+       "c5_declines": "pass",
+       "c6_coordinates": "pass",
+       "c7_parity": "n/a"
+      },
+      "passes": false,
+      "time_and_tokens": {
+       "seconds": {
+        "median": 159.186,
+        "min": 118.234,
+        "max": 273.747
+       },
+       "prompt_tokens": {
+        "median": 57983.0,
+        "min": 54937.0,
+        "max": 68244.0
+       },
+       "completion_tokens": {
+        "median": 1992.0,
+        "min": 1069.0,
+        "max": 2025.0
+       },
+       "total_tokens": {
+        "median": 60008.0,
+        "min": 56006.0,
+        "max": 70236.0
+       },
+       "n_tool_calls": {
+        "median": 7.0,
+        "min": 5.0,
+        "max": 7.0
+       }
+      },
+      "runs": [
+       {
+        "run": "1",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_load_context",
+          "olmoearth_search_predictions",
+          "olmoearth_fetch_results",
+          "olmoearth_fetch_results",
+          "olmoearth_get_prediction_result",
+          "olmoearth_get_prediction_result",
+          "olmoearth_compare_results"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "fail",
+         "reasons": [
+          "2 stated number(s) in no tool output of the run: ['51', '70%']"
+         ],
+         "n_numbers": 14,
+         "n_unsupported": 2,
+         "n_supported_by_rounding": 4,
+         "exp64_supported_share_without_extensions": 0.65,
+         "grid": null,
+         "support_counts": {
+          "exp64": 8,
+          "rounded": 4,
+          "None": 2
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "pass",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "side": true,
+          "quantities": true,
+          "accuracy": true
+         },
+         "evidence": {
+          "side": "tools alone: no ground-truth labels exist for this AOI, and without labels model-vs-model comparison reports agreement only, never acc",
+          "quantities": "r sampled windows | 0.10 | 0.68 |\n\nCaveats:\n- The bands are different quantities, so only the correlation is meaningful; the mean gap (~0"
+         },
+         "reported_under_rules_of_rounds_2_on": {
+          "status": "pass",
+          "reasons": [],
+          "evidence": {
+           "side": "tools alone: no ground-truth labels exist for this AOI, and without labels model-vs-model comparison reports agreement only, never acc",
+           "quantities": "r sampled windows | 0.10 | 0.68 |\n\nCaveats:\n- The bands are different quantities, so only the correlation is meaningful; the mean gap (~0"
+          }
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "side": true,
+           "quantities": true,
+           "accuracy": true
+          },
+          "evidence": {
+           "side": {
+            "engaged": true,
+            "winner_claims": [],
+            "grading_calls": []
+           },
+           "quantities": []
+          }
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "n/a",
+         "calls": [],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 159.186,
+         "prompt_tokens": 57983,
+         "completion_tokens": 2025,
+         "total_tokens": 60008,
+         "n_llm_calls": 5,
+         "n_tool_calls": 7,
+         "turns": 5,
+         "prompt_tokens_per_call": {
+          "median": 11434,
+          "max": 13300
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "2",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_load_context",
+          "olmoearth_search_predictions",
+          "olmoearth_fetch_results",
+          "olmoearth_fetch_results",
+          "olmoearth_compare_results"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "fail",
+         "reasons": [
+          "1 stated number(s) in no tool output of the run: ['47']"
+         ],
+         "n_numbers": 10,
+         "n_unsupported": 1,
+         "n_supported_by_rounding": 1,
+         "exp64_supported_share_without_extensions": 0.7272727272727273,
+         "grid": null,
+         "support_counts": {
+          "exp64": 8,
+          "rounded": 1,
+          "None": 1
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "pass",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "side": true,
+          "quantities": true,
+          "accuracy": true
+         },
+         "evidence": {
+          "side": "arst predictions on their shared extent. Key point first: I can't tell you which is right \u2014 neither has ground-truth labels, so this is mode",
+          "quantities": " is model-vs-model comparison only, and the two maps output different quantities (samplekarstscore [0\u20131] vs samplenumber [0.2\u20131.2]).\n\n| M"
+         },
+         "reported_under_rules_of_rounds_2_on": {
+          "status": "pass",
+          "reasons": [],
+          "evidence": {
+           "side": "arst predictions on their shared extent. Key point first: I can't tell you which is right \u2014 neither has ground-truth labels, so this is mode",
+           "quantities": " is model-vs-model comparison only, and the two maps output different quantities (samplekarstscore [0\u20131] vs samplenumber [0.2\u20131.2]).\n\n| M"
+          }
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "side": true,
+           "quantities": true,
+           "accuracy": true
+          },
+          "evidence": {
+           "side": {
+            "engaged": true,
+            "winner_claims": [],
+            "grading_calls": []
+           },
+           "quantities": []
+          }
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "n/a",
+         "calls": [],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 118.234,
+         "prompt_tokens": 54937,
+         "completion_tokens": 1069,
+         "total_tokens": 56006,
+         "n_llm_calls": 5,
+         "n_tool_calls": 5,
+         "turns": 5,
+         "prompt_tokens_per_call": {
+          "median": 10901,
+          "max": 12370
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "3",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_load_context",
+          "olmoearth_search_predictions",
+          "olmoearth_fetch_results",
+          "olmoearth_fetch_results",
+          "olmoearth_get_prediction_result",
+          "olmoearth_get_prediction_result",
+          "olmoearth_compare_results"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 14,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 3,
+         "exp64_supported_share_without_extensions": 0.8,
+         "grid": null,
+         "support_counts": {
+          "exp64": 11,
+          "rounded": 3
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "pass",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "side": true,
+          "quantities": true,
+          "accuracy": true
+         },
+         "evidence": {
+          "side": "bility; both are per-pixel values.\n- To actually decide, we need labels: I can run a label-sample design on one (or both) maps (pla",
+          "quantities": "heir shared extent (~10,091 km\u00b2). Key finding: they predict different quantities, so much of the \"difference\" is scale, not disagreement."
+         },
+         "reported_under_rules_of_rounds_2_on": {
+          "status": "pass",
+          "reasons": [],
+          "evidence": {
+           "side": "bility; both are per-pixel values.\n- To actually decide, we need labels: I can run a label-sample design on one (or both) maps (pla",
+           "quantities": "heir shared extent (~10,091 km\u00b2). Key finding: they predict different quantities, so much of the \"difference\" is scale, not disagreement."
+          }
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "side": true,
+           "quantities": true,
+           "accuracy": true
+          },
+          "evidence": {
+           "side": {
+            "engaged": true,
+            "winner_claims": [],
+            "grading_calls": []
+           },
+           "quantities": []
+          }
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "n/a",
+         "calls": [],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 273.747,
+         "prompt_tokens": 68244,
+         "completion_tokens": 1992,
+         "total_tokens": 70236,
+         "n_llm_calls": 6,
+         "n_tool_calls": 7,
+         "turns": 6,
+         "prompt_tokens_per_call": {
+          "median": 11184.0,
+          "max": 13286
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       }
+      ]
+     },
+     "B4/cluster": {
+      "n_counted_runs": 3,
+      "excluded_runs": [],
+      "verdicts": {
+       "c1_routing": "pass",
+       "c2_grounding": "pass",
+       "c3_ranking": "n/a",
+       "c4_nodata": "pass",
+       "c5_declines": "fail",
+       "c6_coordinates": "pass",
+       "c7_parity": "pass"
+      },
+      "passes": false,
+      "time_and_tokens": {
+       "seconds": {
+        "median": 23.805,
+        "min": 20.233,
+        "max": 25.337
+       },
+       "prompt_tokens": {
+        "median": 34763.0,
+        "min": 34751.0,
+        "max": 34777.0
+       },
+       "completion_tokens": {
+        "median": 1414.0,
+        "min": 1179.0,
+        "max": 1498.0
+       },
+       "total_tokens": {
+        "median": 36177.0,
+        "min": 35930.0,
+        "max": 36275.0
+       },
+       "n_tool_calls": {
+        "median": 2.0,
+        "min": 2.0,
+        "max": 2.0
+       }
+      },
+      "runs": [
+       {
+        "run": "1",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_scores_from_file",
+          "olmoearth_plan_label_sample"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 14,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 0,
+         "exp64_supported_share_without_extensions": 0.9411764705882353,
+         "grid": [
+          128,
+          128
+         ],
+         "support_counts": {
+          "exp64": 14
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "pass",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "fail",
+         "reasons": [
+          "accuracy: does not say how wrong the map is needs the labels first"
+         ],
+         "rules": {
+          "accuracy": false,
+          "srs": true
+         },
+         "evidence": {},
+         "reported_under_rules_of_rounds_2_on": {
+          "status": "pass",
+          "reasons": [],
+          "evidence": {
+           "accuracy_needs_labels": "0; optionally add referenceclass for per-class accuracy.\n2. Send me the filled CSV (or the list of 0/1s); I'll call estimatemaperror to get the error rate with the proper interval for"
+          }
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "accuracy": true,
+           "srs": true
+          },
+          "evidence": {
+           "accuracy_needs_labels": "labeling"
+          }
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_scores_from_file",
+           "status": "pass",
+           "reasons": []
+          },
+          {
+           "tool": "olmoearth_plan_label_sample",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 20.233,
+         "prompt_tokens": 34751,
+         "completion_tokens": 1179,
+         "total_tokens": 35930,
+         "n_llm_calls": 3,
+         "n_tool_calls": 2,
+         "turns": 3,
+         "prompt_tokens_per_call": {
+          "median": 10905,
+          "max": 13817
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "2",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_scores_from_file",
+          "olmoearth_plan_label_sample"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 36,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 0,
+         "exp64_supported_share_without_extensions": 0.9523809523809523,
+         "grid": [
+          128,
+          128
+         ],
+         "support_counts": {
+          "exp64": 36
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "pass",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "fail",
+         "reasons": [
+          "accuracy: does not say how wrong the map is needs the labels first"
+         ],
+         "rules": {
+          "accuracy": false,
+          "srs": true
+         },
+         "evidence": {},
+         "reported_under_rules_of_rounds_2_on": {
+          "status": "pass",
+          "reasons": [],
+          "evidence": {
+           "accuracy_needs_labels": "nt. Full list of 300 is in the CSV.\n\nWhen you've filled it, send the CSV back (or paste the 0/1 list) and I'll run olmoearthestimatemaperror to give you the estimate with its proper interval "
+          }
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "accuracy": true,
+           "srs": true
+          },
+          "evidence": {
+           "accuracy_needs_labels": "labeling"
+          }
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_scores_from_file",
+           "status": "pass",
+           "reasons": []
+          },
+          {
+           "tool": "olmoearth_plan_label_sample",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 25.337,
+         "prompt_tokens": 34777,
+         "completion_tokens": 1498,
+         "total_tokens": 36275,
+         "n_llm_calls": 3,
+         "n_tool_calls": 2,
+         "turns": 3,
+         "prompt_tokens_per_call": {
+          "median": 10905,
+          "max": 13843
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "3",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_scores_from_file",
+          "olmoearth_plan_label_sample"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 18,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 0,
+         "exp64_supported_share_without_extensions": 0.7142857142857143,
+         "grid": [
+          128,
+          128
+         ],
+         "support_counts": {
+          "exp64": 18
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "pass",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "accuracy": true,
+          "srs": true
+         },
+         "evidence": {
+          "accuracy_needs_labels": " up the labeling design for that run; the error rate itself needs your labels first.\n\nDesign ready (olmoearth-inferencex)\n- Population: 1"
+         },
+         "reported_under_rules_of_rounds_2_on": {
+          "status": "pass",
+          "reasons": [],
+          "evidence": {
+           "accuracy_needs_labels": " up the labeling design for that run; the error rate itself needs your labels first.\n\nDesign ready (olmoearth-inferencex)\n- Population: 1"
+          }
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "accuracy": true,
+           "srs": true
+          },
+          "evidence": {
+           "accuracy_needs_labels": "labeling"
+          }
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_scores_from_file",
+           "status": "pass",
+           "reasons": []
+          },
+          {
+           "tool": "olmoearth_plan_label_sample",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 23.805,
+         "prompt_tokens": 34763,
+         "completion_tokens": 1414,
+         "total_tokens": 36177,
+         "n_llm_calls": 3,
+         "n_tool_calls": 2,
+         "turns": 3,
+         "prompt_tokens_per_call": {
+          "median": 10905,
+          "max": 13829
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       }
+      ]
+     },
+     "B4/studio": {
+      "n_counted_runs": 3,
+      "excluded_runs": [],
+      "verdicts": {
+       "c1_routing": "pass",
+       "c2_grounding": "fail",
+       "c3_ranking": "n/a",
+       "c4_nodata": "n/a",
+       "c5_declines": "fail",
+       "c6_coordinates": "pass",
+       "c7_parity": "n/a"
+      },
+      "passes": false,
+      "time_and_tokens": {
+       "seconds": {
+        "median": 674.383,
+        "min": 580.641,
+        "max": 895.568
+       },
+       "prompt_tokens": {
+        "median": 91077.0,
+        "min": 90235.0,
+        "max": 91922.0
+       },
+       "completion_tokens": {
+        "median": 2896.0,
+        "min": 2026.0,
+        "max": 3088.0
+       },
+       "total_tokens": {
+        "median": 93973.0,
+        "min": 92261.0,
+        "max": 95010.0
+       },
+       "n_tool_calls": {
+        "median": 9.0,
+        "min": 8.0,
+        "max": 9.0
+       }
+      },
+      "runs": [
+       {
+        "run": "1",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_load_context",
+          "olmoearth_search_predictions",
+          "olmoearth_fetch_results",
+          "olmoearth_plan_label_sample",
+          "olmoearth_plan_label_sample",
+          "olmoearth_plan_label_sample",
+          "olmoearth_plan_label_sample",
+          "olmoearth_plan_label_sample",
+          "olmoearth_get_prediction_result"
+         ],
+         "failed_calls": [
+          "olmoearth_plan_label_sample",
+          "olmoearth_plan_label_sample",
+          "olmoearth_plan_label_sample",
+          "olmoearth_plan_label_sample",
+          "olmoearth_plan_label_sample"
+         ]
+        },
+        "c2_grounding": {
+         "status": "fail",
+         "reasons": [
+          "no final answer"
+         ]
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "fail",
+         "reasons": [
+          "no final answer, so nothing was declined"
+         ],
+         "reported_structural": {
+          "status": "fail",
+          "reasons": [
+           "no final answer, so nothing was declined"
+          ],
+          "rules": null,
+          "evidence": null
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "n/a",
+         "calls": [],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 895.568,
+         "prompt_tokens": 91077,
+         "completion_tokens": 2896,
+         "total_tokens": 93973,
+         "n_llm_calls": 8,
+         "n_tool_calls": 9,
+         "turns": 8,
+         "prompt_tokens_per_call": {
+          "median": 11473.0,
+          "max": 12271
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "2",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_load_context",
+          "olmoearth_search_predictions",
+          "olmoearth_fetch_results",
+          "olmoearth_get_prediction_result",
+          "olmoearth_plan_label_sample",
+          "olmoearth_plan_label_sample",
+          "olmoearth_plan_label_sample",
+          "olmoearth_plan_label_sample"
+         ],
+         "failed_calls": [
+          "olmoearth_plan_label_sample",
+          "olmoearth_plan_label_sample",
+          "olmoearth_plan_label_sample",
+          "olmoearth_plan_label_sample"
+         ]
+        },
+        "c2_grounding": {
+         "status": "fail",
+         "reasons": [
+          "no final answer"
+         ]
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "fail",
+         "reasons": [
+          "no final answer, so nothing was declined"
+         ],
+         "reported_structural": {
+          "status": "fail",
+          "reasons": [
+           "no final answer, so nothing was declined"
+          ],
+          "rules": null,
+          "evidence": null
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "n/a",
+         "calls": [],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 580.641,
+         "prompt_tokens": 90235,
+         "completion_tokens": 2026,
+         "total_tokens": 92261,
+         "n_llm_calls": 8,
+         "n_tool_calls": 8,
+         "turns": 8,
+         "prompt_tokens_per_call": {
+          "median": 11421.0,
+          "max": 12337
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "3",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_load_context",
+          "olmoearth_search_predictions",
+          "olmoearth_fetch_results",
+          "olmoearth_plan_label_sample",
+          "olmoearth_get_prediction_result",
+          "olmoearth_plan_label_sample",
+          "olmoearth_plan_label_sample",
+          "olmoearth_plan_label_sample",
+          "olmoearth_plan_label_sample"
+         ],
+         "failed_calls": [
+          "olmoearth_plan_label_sample",
+          "olmoearth_plan_label_sample",
+          "olmoearth_plan_label_sample",
+          "olmoearth_plan_label_sample",
+          "olmoearth_plan_label_sample"
+         ]
+        },
+        "c2_grounding": {
+         "status": "fail",
+         "reasons": [
+          "no final answer"
+         ]
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "fail",
+         "reasons": [
+          "no final answer, so nothing was declined"
+         ],
+         "reported_structural": {
+          "status": "fail",
+          "reasons": [
+           "no final answer, so nothing was declined"
+          ],
+          "rules": null,
+          "evidence": null
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "n/a",
+         "calls": [],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 674.383,
+         "prompt_tokens": 91922,
+         "completion_tokens": 3088,
+         "total_tokens": 95010,
+         "n_llm_calls": 8,
+         "n_tool_calls": 9,
+         "turns": 8,
+         "prompt_tokens_per_call": {
+          "median": 11582.0,
+          "max": 12462
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       }
+      ]
+     },
+     "B5/files": {
+      "n_counted_runs": 3,
+      "excluded_runs": [],
+      "verdicts": {
+       "c1_routing": "pass",
+       "c2_grounding": "fail",
+       "c3_ranking": "n/a",
+       "c4_nodata": "n/a",
+       "c5_declines": "pass",
+       "c6_coordinates": "pass",
+       "c7_parity": "pass"
+      },
+      "passes": false,
+      "time_and_tokens": {
+       "seconds": {
+        "median": 15.967,
+        "min": 13.599,
+        "max": 20.029
+       },
+       "prompt_tokens": {
+        "median": 23273.0,
+        "min": 23273.0,
+        "max": 23273.0
+       },
+       "completion_tokens": {
+        "median": 962.0,
+        "min": 827.0,
+        "max": 1230.0
+       },
+       "total_tokens": {
+        "median": 24235.0,
+        "min": 24100.0,
+        "max": 24503.0
+       },
+       "n_tool_calls": {
+        "median": 1.0,
+        "min": 1.0,
+        "max": 1.0
+       }
+      },
+      "runs": [
+       {
+        "run": "1",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_estimate_map_error"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 18,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 14,
+         "exp64_supported_share_without_extensions": 0.1578947368421053,
+         "grid": [
+          128,
+          128
+         ],
+         "support_counts": {
+          "rounded": 12,
+          "exp64": 4,
+          "percent_range": 2
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "srs": true
+         },
+         "evidence": {},
+         "reported_under_rules_of_rounds_2_on": {
+          "status": "pass",
+          "reasons": [],
+          "evidence": {}
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "srs": true
+          },
+          "evidence": {}
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_estimate_map_error",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 15.967,
+         "prompt_tokens": 23273,
+         "completion_tokens": 962,
+         "total_tokens": 24235,
+         "n_llm_calls": 2,
+         "n_tool_calls": 1,
+         "turns": 2,
+         "prompt_tokens_per_call": {
+          "median": 11636.5,
+          "max": 13237
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "2",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_estimate_map_error"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 21,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 12,
+         "exp64_supported_share_without_extensions": 0.36363636363636365,
+         "grid": [
+          128,
+          128
+         ],
+         "support_counts": {
+          "rounded": 11,
+          "exp64": 9,
+          "percent_range": 1
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "srs": true
+         },
+         "evidence": {},
+         "reported_under_rules_of_rounds_2_on": {
+          "status": "pass",
+          "reasons": [],
+          "evidence": {}
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "srs": true
+          },
+          "evidence": {}
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_estimate_map_error",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 20.029,
+         "prompt_tokens": 23273,
+         "completion_tokens": 1230,
+         "total_tokens": 24503,
+         "n_llm_calls": 2,
+         "n_tool_calls": 1,
+         "turns": 2,
+         "prompt_tokens_per_call": {
+          "median": 11636.5,
+          "max": 13237
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "3",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_estimate_map_error"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "fail",
+         "reasons": [
+          "1 stated number(s) in no tool output of the run: ['90%']"
+         ],
+         "n_numbers": 12,
+         "n_unsupported": 1,
+         "n_supported_by_rounding": 7,
+         "exp64_supported_share_without_extensions": 0.23076923076923073,
+         "grid": [
+          128,
+          128
+         ],
+         "support_counts": {
+          "rounded": 7,
+          "exp64": 4,
+          "None": 1
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "srs": true
+         },
+         "evidence": {},
+         "reported_under_rules_of_rounds_2_on": {
+          "status": "pass",
+          "reasons": [],
+          "evidence": {}
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "srs": true
+          },
+          "evidence": {}
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_estimate_map_error",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 13.599,
+         "prompt_tokens": 23273,
+         "completion_tokens": 827,
+         "total_tokens": 24100,
+         "n_llm_calls": 2,
+         "n_tool_calls": 1,
+         "turns": 2,
+         "prompt_tokens_per_call": {
+          "median": 11636.5,
+          "max": 13237
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       }
+      ]
+     },
+     "B6/files": {
+      "n_counted_runs": 3,
+      "excluded_runs": [],
+      "verdicts": {
+       "c1_routing": "pass",
+       "c2_grounding": "fail",
+       "c3_ranking": "n/a",
+       "c4_nodata": "n/a",
+       "c5_declines": "fail",
+       "c6_coordinates": "pass",
+       "c7_parity": "pass"
+      },
+      "passes": false,
+      "time_and_tokens": {
+       "seconds": {
+        "median": 23.162,
+        "min": 22.184,
+        "max": 28.909
+       },
+       "prompt_tokens": {
+        "median": 25061.0,
+        "min": 22033.0,
+        "max": 36188.0
+       },
+       "completion_tokens": {
+        "median": 1417.0,
+        "min": 1284.0,
+        "max": 1766.0
+       },
+       "total_tokens": {
+        "median": 26827.0,
+        "min": 23450.0,
+        "max": 37472.0
+       },
+       "n_tool_calls": {
+        "median": 2.0,
+        "min": 1.0,
+        "max": 3.0
+       }
+      },
+      "runs": [
+       {
+        "run": "1",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_load_context",
+          "olmoearth_certify_zone",
+          "olmoearth_certify_zone"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 32,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 3,
+         "exp64_supported_share_without_extensions": 0.7272727272727273,
+         "grid": [
+          128,
+          128
+         ],
+         "support_counts": {
+          "exp64": 27,
+          "rounded": 3,
+          "hyphen": 2
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "zone": true
+         },
+         "evidence": {
+          "zone": "Short answer: none. With these 300 random labels, no part of the map certifies to a \u2264 5% error rate (alpha = 0.05, delta = 0.1) \u2014 under"
+         },
+         "reported_under_rules_of_rounds_2_on": {
+          "status": "pass",
+          "reasons": [],
+          "evidence": {
+           "zone": "Short answer: none. With these 300 random labels, no part of the map certifies to a \u2264 5% error rate (alpha = 0.05, delta = 0.1) \u2014 under"
+          }
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "zone": true
+          },
+          "evidence": {
+           "zone": {
+            "engaged": true,
+            "claims": []
+           }
+          }
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_certify_zone",
+           "status": "pass",
+           "reasons": []
+          },
+          {
+           "tool": "olmoearth_certify_zone",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 22.184,
+         "prompt_tokens": 36188,
+         "completion_tokens": 1284,
+         "total_tokens": 37472,
+         "n_llm_calls": 3,
+         "n_tool_calls": 3,
+         "turns": 3,
+         "prompt_tokens_per_call": {
+          "median": 12105,
+          "max": 14036
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "2",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_estimate_map_error",
+          "olmoearth_certify_zone"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 38,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 5,
+         "exp64_supported_share_without_extensions": 0.75,
+         "grid": [
+          128,
+          128
+         ],
+         "support_counts": {
+          "exp64": 33,
+          "rounded": 5
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "fail",
+         "reasons": [
+          "zone: does not say that no zone is certified"
+         ],
+         "rules": {
+          "zone": false
+         },
+         "evidence": {},
+         "reported_under_rules_of_rounds_2_on": {
+          "status": "pass",
+          "reasons": [],
+          "evidence": {
+           "zone": "ification test (alpha = 0.05, delta = 0.1, prefix rule) and no zone passed - not even the smallest testable one.\n\n| Zone (most-confide"
+          }
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "zone": true
+          },
+          "evidence": {
+           "zone": {
+            "engaged": true,
+            "claims": []
+           }
+          }
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_estimate_map_error",
+           "status": "pass",
+           "reasons": []
+          },
+          {
+           "tool": "olmoearth_certify_zone",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 28.909,
+         "prompt_tokens": 25061,
+         "completion_tokens": 1766,
+         "total_tokens": 26827,
+         "n_llm_calls": 2,
+         "n_tool_calls": 2,
+         "turns": 2,
+         "prompt_tokens_per_call": {
+          "median": 12530.5,
+          "max": 15014
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "3",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_certify_zone"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "fail",
+         "reasons": [
+          "1 stated number(s) in no tool output of the run: ['6.5%']"
+         ],
+         "n_numbers": 31,
+         "n_unsupported": 1,
+         "n_supported_by_rounding": 3,
+         "exp64_supported_share_without_extensions": 0.7741935483870968,
+         "grid": [
+          128,
+          128
+         ],
+         "support_counts": {
+          "exp64": 25,
+          "rounded": 3,
+          "hyphen": 2,
+          "None": 1
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "fail",
+         "reasons": [
+          "zone: does not say that no zone is certified"
+         ],
+         "rules": {
+          "zone": false
+         },
+         "evidence": {},
+         "reported_under_rules_of_rounds_2_on": {
+          "status": "pass",
+          "reasons": [],
+          "evidence": {
+           "zone": "Short answer: none. At \u03b1 = 5% (and \u03b4 = 0.1), no part of the map clears the exact test with your 300 random labels.\n\nWhy: the overa"
+          }
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "zone": true
+          },
+          "evidence": {
+           "zone": {
+            "engaged": true,
+            "claims": []
+           }
+          }
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_certify_zone",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 23.162,
+         "prompt_tokens": 22033,
+         "completion_tokens": 1417,
+         "total_tokens": 23450,
+         "n_llm_calls": 2,
+         "n_tool_calls": 1,
+         "turns": 2,
+         "prompt_tokens_per_call": {
+          "median": 11016.5,
+          "max": 11986
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       }
+      ]
+     },
+     "B7/files": {
+      "n_counted_runs": 3,
+      "excluded_runs": [],
+      "verdicts": {
+       "c1_routing": "pass",
+       "c2_grounding": "pass",
+       "c3_ranking": "n/a",
+       "c4_nodata": "n/a",
+       "c5_declines": "fail",
+       "c6_coordinates": "pass",
+       "c7_parity": "pass"
+      },
+      "passes": false,
+      "time_and_tokens": {
+       "seconds": {
+        "median": 28.622,
+        "min": 19.939,
+        "max": 29.894
+       },
+       "prompt_tokens": {
+        "median": 25010.0,
+        "min": 25010.0,
+        "max": 25155.0
+       },
+       "completion_tokens": {
+        "median": 1735.0,
+        "min": 1221.0,
+        "max": 1785.0
+       },
+       "total_tokens": {
+        "median": 26745.0,
+        "min": 26231.0,
+        "max": 26940.0
+       },
+       "n_tool_calls": {
+        "median": 1.0,
+        "min": 1.0,
+        "max": 2.0
+       }
+      },
+      "runs": [
+       {
+        "run": "1",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_compare_review"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 18,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 1,
+         "exp64_supported_share_without_extensions": 0.7894736842105263,
+         "grid": [
+          5600,
+          14
+         ],
+         "support_counts": {
+          "exp64": 17,
+          "rounded": 1
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "fail",
+         "reasons": [
+          "side: no decline of which side is right"
+         ],
+         "rules": {
+          "side": false,
+          "change": true,
+          "accuracy": true
+         },
+         "evidence": {
+          "change": "The maps describe dates 216 days apart (Sep 2017 vs Apr 2018), so any difference is either real change on the ground (seasonal cycle included) or an error in one map \u2014 the decisions alone can't separa"
+         },
+         "reported_under_rules_of_rounds_2_on": {
+          "status": "pass",
+          "reasons": [],
+          "evidence": {
+           "side": "s 0.158 \u2014 A is more confident overall there, but confidence does not identify the winner.\n\nWhich is right: cannot be determined from these two maps.",
+           "change": "The maps describe dates 216 days apart (Sep 2017 vs Apr 2018), so any difference is either real change on the ground (seasonal cycle included) or an error in one map \u2014 the decisions alone can't separa"
+          }
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "side": true,
+           "change": true,
+           "accuracy": true
+          },
+          "evidence": {
+           "side": {
+            "engaged": true,
+            "winner_claims": [],
+            "grading_calls": []
+           }
+          }
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_compare_review",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 28.622,
+         "prompt_tokens": 25010,
+         "completion_tokens": 1735,
+         "total_tokens": 26745,
+         "n_llm_calls": 2,
+         "n_tool_calls": 1,
+         "turns": 2,
+         "prompt_tokens_per_call": {
+          "median": 12505.0,
+          "max": 14927
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "2",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_load_context",
+          "olmoearth_compare_review"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 45,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 5,
+         "exp64_supported_share_without_extensions": 0.8043478260869565,
+         "grid": [
+          5600,
+          14
+         ],
+         "support_counts": {
+          "exp64": 40,
+          "rounded": 5
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "side": true,
+          "change": true,
+          "accuracy": true
+         },
+         "evidence": {
+          "side": "-confident side right on only ~51\u201370% of differing windows. Declining to pick a side is the correct answer, not a failure.\n\n| ",
+          "change": "The dates are 216 days apart, so any differing window has two explanations: it changed on the ground (Sep \u2192 Apr spans full seasons here, so this is likely a large part of the 2%), or one map is wrong."
+         },
+         "reported_under_rules_of_rounds_2_on": {
+          "status": "pass",
+          "reasons": [],
+          "evidence": {
+           "side": "-confident side right on only ~51\u201370% of differing windows. Declining to pick a side is the correct answer, not a failure.\n\n| ",
+           "change": "The dates are 216 days apart, so any differing window has two explanations: it changed on the ground (Sep \u2192 Apr spans full seasons here, so this is likely a large part of the 2%), or one map is wrong."
+          }
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "side": true,
+           "change": true,
+           "accuracy": true
+          },
+          "evidence": {
+           "side": {
+            "engaged": true,
+            "winner_claims": [],
+            "grading_calls": []
+           }
+          }
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_compare_review",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 29.894,
+         "prompt_tokens": 25155,
+         "completion_tokens": 1785,
+         "total_tokens": 26940,
+         "n_llm_calls": 2,
+         "n_tool_calls": 2,
+         "turns": 2,
+         "prompt_tokens_per_call": {
+          "median": 12577.5,
+          "max": 15072
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "3",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_compare_review"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 18,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 1,
+         "exp64_supported_share_without_extensions": 0.6,
+         "grid": [
+          5600,
+          14
+         ],
+         "support_counts": {
+          "exp64": 17,
+          "rounded": 1
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "side": true,
+          "change": true,
+          "accuracy": true
+         },
+         "evidence": {
+          "side": "nfidence doesn't pick a winner either.\n\nTo resolve it you'd need a ground-truth/reference covering each date (e.g. photointerpretation or i",
+          "change": "The maps describe dates 216 days apart, so any differing window either changed on the ground (seasonal cycles included) or one map is wrong \u2014 class scores alone can't separate those."
+         },
+         "reported_under_rules_of_rounds_2_on": {
+          "status": "pass",
+          "reasons": [],
+          "evidence": {
+           "side": "nfidence doesn't pick a winner either.\n\nTo resolve it you'd need a ground-truth/reference covering each date (e.g. photointerpretation or i",
+           "change": "The maps describe dates 216 days apart, so any differing window either changed on the ground (seasonal cycles included) or one map is wrong \u2014 class scores alone can't separate those."
+          }
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "side": true,
+           "change": true,
+           "accuracy": true
+          },
+          "evidence": {
+           "side": {
+            "engaged": true,
+            "winner_claims": [],
+            "grading_calls": []
+           }
+          }
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_compare_review",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 19.939,
+         "prompt_tokens": 25010,
+         "completion_tokens": 1221,
+         "total_tokens": 26231,
+         "n_llm_calls": 2,
+         "n_tool_calls": 1,
+         "turns": 2,
+         "prompt_tokens_per_call": {
+          "median": 12505.0,
+          "max": 14927
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       }
+      ]
+     },
+     "B8/cluster": {
+      "n_counted_runs": 3,
+      "excluded_runs": [],
+      "verdicts": {
+       "c1_routing": "pass",
+       "c2_grounding": "pass",
+       "c3_ranking": "pass",
+       "c4_nodata": "pass",
+       "c5_declines": "pass",
+       "c6_coordinates": "pass",
+       "c7_parity": "pass"
+      },
+      "passes": true,
+      "time_and_tokens": {
+       "seconds": {
+        "median": 24.114,
+        "min": 23.453,
+        "max": 31.102
+       },
+       "prompt_tokens": {
+        "median": 33879.0,
+        "min": 33879.0,
+        "max": 33970.0
+       },
+       "completion_tokens": {
+        "median": 1443.0,
+        "min": 1393.0,
+        "max": 1874.0
+       },
+       "total_tokens": {
+        "median": 35322.0,
+        "min": 35272.0,
+        "max": 35844.0
+       },
+       "n_tool_calls": {
+        "median": 2.0,
+        "min": 2.0,
+        "max": 2.0
+       }
+      },
+      "runs": [
+       {
+        "run": "1",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_scores_from_file",
+          "olmoearth_review_set"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 26,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 7,
+         "exp64_supported_share_without_extensions": 0.7241379310344828,
+         "grid": [
+          128,
+          128
+         ],
+         "support_counts": {
+          "exp64": 19,
+          "rounded": 6,
+          "suffix": 1
+         }
+        },
+        "c3_ranking": {
+         "status": "pass",
+         "reasons": [],
+         "tool": "olmoearth_review_set",
+         "n_windows_named": 5,
+         "margins_in_answer_order": [
+          0.108155,
+          0.149261,
+          0.153341,
+          0.161787,
+          0.176399
+         ]
+        },
+        "c4_nodata": {
+         "status": "pass",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "accuracy": true
+         },
+         "evidence": {},
+         "reported_under_rules_of_rounds_2_on": {
+          "status": "pass",
+          "reasons": [],
+          "evidence": {}
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "accuracy": true
+          },
+          "evidence": {}
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_scores_from_file",
+           "status": "pass",
+           "reasons": []
+          },
+          {
+           "tool": "olmoearth_review_set",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 31.102,
+         "prompt_tokens": 33970,
+         "completion_tokens": 1874,
+         "total_tokens": 35844,
+         "n_llm_calls": 3,
+         "n_tool_calls": 2,
+         "turns": 3,
+         "prompt_tokens_per_call": {
+          "median": 10928,
+          "max": 13013
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "2",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_scores_from_file",
+          "olmoearth_review_set"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 50,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 7,
+         "exp64_supported_share_without_extensions": 0.8301886792452831,
+         "grid": [
+          128,
+          128
+         ],
+         "support_counts": {
+          "exp64": 43,
+          "rounded": 7
+         }
+        },
+        "c3_ranking": {
+         "status": "pass",
+         "reasons": [],
+         "tool": "olmoearth_review_set",
+         "n_windows_named": 10,
+         "margins_in_answer_order": [
+          0.108155,
+          0.149261,
+          0.153341,
+          0.161787,
+          0.176399,
+          0.176925,
+          0.191095,
+          0.2055,
+          0.213706,
+          0.216102
+         ]
+        },
+        "c4_nodata": {
+         "status": "pass",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "accuracy": true
+         },
+         "evidence": {},
+         "reported_under_rules_of_rounds_2_on": {
+          "status": "pass",
+          "reasons": [],
+          "evidence": {}
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "accuracy": true
+          },
+          "evidence": {}
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_scores_from_file",
+           "status": "pass",
+           "reasons": []
+          },
+          {
+           "tool": "olmoearth_review_set",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 23.453,
+         "prompt_tokens": 33879,
+         "completion_tokens": 1393,
+         "total_tokens": 35272,
+         "n_llm_calls": 3,
+         "n_tool_calls": 2,
+         "turns": 3,
+         "prompt_tokens_per_call": {
+          "median": 10905,
+          "max": 12945
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "3",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_scores_from_file",
+          "olmoearth_review_set"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 24,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 5,
+         "exp64_supported_share_without_extensions": 0.76,
+         "grid": [
+          128,
+          128
+         ],
+         "support_counts": {
+          "exp64": 19,
+          "rounded": 5
+         }
+        },
+        "c3_ranking": {
+         "status": "pass",
+         "reasons": [],
+         "tool": "olmoearth_review_set",
+         "n_windows_named": 5,
+         "margins_in_answer_order": [
+          0.108155,
+          0.149261,
+          0.153341,
+          0.161787,
+          0.176399
+         ]
+        },
+        "c4_nodata": {
+         "status": "pass",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "accuracy": true
+         },
+         "evidence": {},
+         "reported_under_rules_of_rounds_2_on": {
+          "status": "pass",
+          "reasons": [],
+          "evidence": {}
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "accuracy": true
+          },
+          "evidence": {}
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_scores_from_file",
+           "status": "pass",
+           "reasons": []
+          },
+          {
+           "tool": "olmoearth_review_set",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 24.114,
+         "prompt_tokens": 33879,
+         "completion_tokens": 1443,
+         "total_tokens": 35322,
+         "n_llm_calls": 3,
+         "n_tool_calls": 2,
+         "turns": 3,
+         "prompt_tokens_per_call": {
+          "median": 10905,
+          "max": 12945
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       }
+      ]
+     }
+    }
+   },
+   {
+    "round": "2",
+    "agent_commit": "3eddbc525f976a7bc5ccfa9ee80dedf1783a43cf",
+    "inferencex_version": "1.3.0",
+    "model": "nvidia/Qwen3.8-27B-NVFP4",
+    "fixes": [
+     {
+      "after_round": 1,
+      "where": "agent",
+      "branch": "2imi9/feature-trial-round1-fixes",
+      "commits_since": "3463002",
+      "diagnosis": "exp/out/exp86_round1_diagnosis.md",
+      "items": [
+       "estimation: a Studio result's grid is 2-16, stated in the schema and the result (was capped silently at 16)",
+       "estimation: the budget error states the real ceiling and only options that work (was: 'a finer grid')",
+       "harness: at the turn cap one final call without tools, so a run never ends with no answer",
+       "registry: a second alike failure tells the model to stop retrying and report the limit",
+       "tools: measured figures moved out of tool descriptions (e.g. '51-70%' quoted as a finding in B3/studio)",
+       "compare: reports the grid's cell count and a pair's dropped cells (72 samples read as 72 cells)",
+       "certify: a level's bound below alpha is said plainly not to be a certification",
+       "soul: state numbers exactly as the tools returned them; no figures from tool descriptions"
+      ]
+     },
+     {
+      "after_round": 1,
+      "where": "scorer",
+      "commit": "18fd2bf",
+      "items": [
+       "A8-A15: the amendment after round 1 (two scorer bugs, six recorded decisions); round 1 fails under both instruments"
+      ]
+     }
+    ],
+    "not_run": {
+     "B8/studio": "the Studio account of the first trial (24 September) held no classification model: KarstEmbedding, KarstNumber and KarstBinary only"
+    },
+    "complete": true,
+    "missing_or_incomplete": [],
+    "unregistered_configurations": [],
+    "fixed_input_parity": {
+     "status": "pass",
+     "calls": [
+      {
+       "tool": "olmoearth_review_set",
+       "status": "pass",
+       "reasons": []
+      },
+      {
+       "tool": "olmoearth_plan_label_sample",
+       "status": "pass",
+       "reasons": []
+      },
+      {
+       "tool": "olmoearth_estimate_map_error",
+       "status": "pass",
+       "reasons": []
+      },
+      {
+       "tool": "olmoearth_certify_zone",
+       "status": "pass",
+       "reasons": []
+      },
+      {
+       "tool": "olmoearth_certify_zone",
+       "status": "pass",
+       "reasons": []
+      },
+      {
+       "tool": "olmoearth_compare_review",
+       "status": "pass",
+       "reasons": []
+      }
+     ],
+     "reasons": []
+    },
+    "predictions": {
+     "P1": {
+      "criterion": "c1_routing",
+      "status": "holds",
+      "failing": [],
+      "unclear": []
+     },
+     "P2": {
+      "criterion": "c2_grounding",
+      "status": "fails",
+      "failing": [
+       "B6/files"
+      ],
+      "unclear": []
+     },
+     "P3": {
+      "criterion": "c3_ranking",
+      "status": "holds",
+      "failing": [],
+      "unclear": []
+     },
+     "P4": {
+      "criterion": "c4_nodata",
+      "status": "holds",
+      "failing": [],
+      "unclear": []
+     },
+     "P5": {
+      "criterion": "c5_declines",
+      "status": "fails",
+      "failing": [
+       "B3/studio",
+       "B4/cluster",
+       "B4/studio"
+      ],
+      "unclear": []
+     },
+     "P6": {
+      "criterion": "c6_coordinates",
+      "status": "holds",
+      "failing": [],
+      "unclear": []
+     },
+     "P7": {
+      "criterion": "c7_parity",
+      "status": "holds",
+      "failing": [],
+      "unclear": []
+     }
+    },
+    "round_passes": false,
+    "configurations": {
+     "B1/studio": {
+      "n_counted_runs": 3,
+      "excluded_runs": [],
+      "verdicts": {
+       "c1_routing": "pass",
+       "c2_grounding": "pass",
+       "c3_ranking": "n/a",
+       "c4_nodata": "n/a",
+       "c5_declines": "pass",
+       "c6_coordinates": "pass",
+       "c7_parity": "n/a"
+      },
+      "passes": true,
+      "time_and_tokens": {
+       "seconds": {
+        "median": 69.69,
+        "min": 7.829,
+        "max": 71.084
+       },
+       "prompt_tokens": {
+        "median": 32547.0,
+        "min": 20914.0,
+        "max": 44537.0
+       },
+       "completion_tokens": {
+        "median": 1255.0,
+        "min": 428.0,
+        "max": 1729.0
+       },
+       "total_tokens": {
+        "median": 33802.0,
+        "min": 21342.0,
+        "max": 46266.0
+       },
+       "n_tool_calls": {
+        "median": 4.0,
+        "min": 1.0,
+        "max": 5.0
+       }
+      },
+      "runs": [
+       {
+        "run": "1",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_load_context",
+          "olmoearth_search_predictions",
+          "olmoearth_fetch_results",
+          "olmoearth_fetch_results"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 0,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 0,
+         "exp64_supported_share_without_extensions": 1.0,
+         "grid": null,
+         "support_counts": {}
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "accuracy": true
+         },
+         "evidence": {},
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "accuracy": true
+          },
+          "evidence": {}
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "n/a",
+         "calls": [],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 69.69,
+         "prompt_tokens": 32547,
+         "completion_tokens": 1255,
+         "total_tokens": 33802,
+         "n_llm_calls": 3,
+         "n_tool_calls": 4,
+         "turns": 3,
+         "prompt_tokens_per_call": {
+          "median": 10935,
+          "max": 11501
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "2",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_search_predictions"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 0,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 0,
+         "exp64_supported_share_without_extensions": 1.0,
+         "grid": null,
+         "support_counts": {}
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "accuracy": true
+         },
+         "evidence": {},
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "accuracy": true
+          },
+          "evidence": {}
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "n/a",
+         "calls": [],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 7.829,
+         "prompt_tokens": 20914,
+         "completion_tokens": 428,
+         "total_tokens": 21342,
+         "n_llm_calls": 2,
+         "n_tool_calls": 1,
+         "turns": 2,
+         "prompt_tokens_per_call": {
+          "median": 10457.0,
+          "max": 10803
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "3",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_search_predictions",
+          "olmoearth_fetch_results",
+          "olmoearth_fetch_results",
+          "olmoearth_get_prediction_result",
+          "olmoearth_get_prediction_result"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 3,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 0,
+         "exp64_supported_share_without_extensions": 1.0,
+         "grid": null,
+         "support_counts": {
+          "exp64": 3
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "accuracy": true
+         },
+         "evidence": {},
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "accuracy": true
+          },
+          "evidence": {}
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "n/a",
+         "calls": [],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 71.084,
+         "prompt_tokens": 44537,
+         "completion_tokens": 1729,
+         "total_tokens": 46266,
+         "n_llm_calls": 4,
+         "n_tool_calls": 5,
+         "turns": 4,
+         "prompt_tokens_per_call": {
+          "median": 11073.0,
+          "max": 12280
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       }
+      ]
+     },
+     "B2/studio": {
+      "n_counted_runs": 3,
+      "excluded_runs": [],
+      "verdicts": {
+       "c1_routing": "pass",
+       "c2_grounding": "pass",
+       "c3_ranking": "pass",
+       "c4_nodata": "pass",
+       "c5_declines": "pass",
+       "c6_coordinates": "pass",
+       "c7_parity": "pass"
+      },
+      "passes": true,
+      "time_and_tokens": {
+       "seconds": {
+        "median": 160.886,
+        "min": 146.778,
+        "max": 197.981
+       },
+       "prompt_tokens": {
+        "median": 68669.0,
+        "min": 58185.0,
+        "max": 68793.0
+       },
+       "completion_tokens": {
+        "median": 1614.0,
+        "min": 1588.0,
+        "max": 1738.0
+       },
+       "total_tokens": {
+        "median": 70257.0,
+        "min": 59923.0,
+        "max": 70407.0
+       },
+       "n_tool_calls": {
+        "median": 5.0,
+        "min": 5.0,
+        "max": 5.0
+       }
+      },
+      "runs": [
+       {
+        "run": "1",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_load_context",
+          "olmoearth_search_predictions",
+          "olmoearth_fetch_results",
+          "olmoearth_get_prediction_result",
+          "olmoearth_review_set_from_result"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 31,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 2,
+         "exp64_supported_share_without_extensions": 0.9393939393939394,
+         "grid": [
+          10,
+          10
+         ],
+         "support_counts": {
+          "exp64": 29,
+          "rounded": 2
+         }
+        },
+        "c3_ranking": {
+         "status": "pass",
+         "reasons": [],
+         "tool": "olmoearth_review_set_from_result",
+         "n_windows_named": 7,
+         "margins_in_answer_order": [
+          0.296909,
+          0.430676,
+          0.489813,
+          0.553564,
+          0.615273,
+          0.666018,
+          0.744685
+         ]
+        },
+        "c4_nodata": {
+         "status": "pass",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "accuracy": true
+         },
+         "evidence": {},
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "accuracy": true
+          },
+          "evidence": {}
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_review_set_from_result",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 160.886,
+         "prompt_tokens": 58185,
+         "completion_tokens": 1738,
+         "total_tokens": 59923,
+         "n_llm_calls": 5,
+         "n_tool_calls": 5,
+         "turns": 5,
+         "prompt_tokens_per_call": {
+          "median": 11239,
+          "max": 14155
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "2",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_load_context",
+          "olmoearth_search_predictions",
+          "olmoearth_fetch_results",
+          "olmoearth_get_prediction_result",
+          "olmoearth_review_set_from_result"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 37,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 1,
+         "exp64_supported_share_without_extensions": 0.9787234042553191,
+         "grid": [
+          12,
+          12
+         ],
+         "support_counts": {
+          "hyphen": 3,
+          "exp64": 33,
+          "rounded": 1
+         }
+        },
+        "c3_ranking": {
+         "status": "pass",
+         "reasons": [],
+         "tool": "olmoearth_review_set_from_result",
+         "n_windows_named": 5,
+         "margins_in_answer_order": [
+          0.012036,
+          0.044825,
+          0.126064,
+          0.18972,
+          0.21925
+         ]
+        },
+        "c4_nodata": {
+         "status": "pass",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "accuracy": true
+         },
+         "evidence": {},
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "accuracy": true
+          },
+          "evidence": {}
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_review_set_from_result",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 197.981,
+         "prompt_tokens": 68793,
+         "completion_tokens": 1614,
+         "total_tokens": 70407,
+         "n_llm_calls": 6,
+         "n_tool_calls": 5,
+         "turns": 6,
+         "prompt_tokens_per_call": {
+          "median": 11150.0,
+          "max": 14313
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "3",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_load_context",
+          "olmoearth_search_predictions",
+          "olmoearth_fetch_results",
+          "olmoearth_get_prediction_result",
+          "olmoearth_review_set_from_result"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 37,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 4,
+         "exp64_supported_share_without_extensions": 0.9047619047619048,
+         "grid": [
+          10,
+          10
+         ],
+         "support_counts": {
+          "exp64": 33,
+          "rounded": 4
+         }
+        },
+        "c3_ranking": {
+         "status": "pass",
+         "reasons": [],
+         "tool": "olmoearth_review_set_from_result",
+         "n_windows_named": 7,
+         "margins_in_answer_order": [
+          0.296909,
+          0.430676,
+          0.489813,
+          0.553564,
+          0.615273,
+          0.666018,
+          0.744685
+         ]
+        },
+        "c4_nodata": {
+         "status": "pass",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "accuracy": true
+         },
+         "evidence": {},
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "accuracy": true
+          },
+          "evidence": {}
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_review_set_from_result",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 146.778,
+         "prompt_tokens": 68669,
+         "completion_tokens": 1588,
+         "total_tokens": 70257,
+         "n_llm_calls": 6,
+         "n_tool_calls": 5,
+         "turns": 6,
+         "prompt_tokens_per_call": {
+          "median": 11150.0,
+          "max": 14189
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       }
+      ]
+     },
+     "B3/cluster": {
+      "n_counted_runs": 3,
+      "excluded_runs": [],
+      "verdicts": {
+       "c1_routing": "pass",
+       "c2_grounding": "pass",
+       "c3_ranking": "n/a",
+       "c4_nodata": "pass",
+       "c5_declines": "pass",
+       "c6_coordinates": "pass",
+       "c7_parity": "pass"
+      },
+      "passes": true,
+      "time_and_tokens": {
+       "seconds": {
+        "median": 39.808,
+        "min": 36.635,
+        "max": 49.4
+       },
+       "prompt_tokens": {
+        "median": 51742.0,
+        "min": 49089.0,
+        "max": 59814.0
+       },
+       "completion_tokens": {
+        "median": 2320.0,
+        "min": 2149.0,
+        "max": 2987.0
+       },
+       "total_tokens": {
+        "median": 54062.0,
+        "min": 52076.0,
+        "max": 61963.0
+       },
+       "n_tool_calls": {
+        "median": 5.0,
+        "min": 4.0,
+        "max": 5.0
+       }
+      },
+      "runs": [
+       {
+        "run": "1",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_load_context",
+          "olmoearth_scores_from_file",
+          "olmoearth_scores_from_file",
+          "olmoearth_compare_review",
+          "olmoearth_compare_review"
+         ],
+         "failed_calls": [
+          "olmoearth_compare_review"
+         ]
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 26,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 2,
+         "exp64_supported_share_without_extensions": 0.75,
+         "grid": [
+          128,
+          128
+         ],
+         "support_counts": {
+          "exp64": 22,
+          "rounded": 2,
+          "hyphen": 2
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "pass",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "side": true,
+          "change": true,
+          "accuracy": true
+         },
+         "evidence": {
+          "side": " the full list written out.\n\nWhich one is right - I have to decline, and it's resolvable\n\nThese maps describe different years ",
+          "change": "These maps describe different years (full-year composites, 2022 vs 2023), so a differing window means either the land changed on the ground between them (seasonal cycles included) or one map is wrong "
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "side": true,
+           "change": true,
+           "accuracy": true
+          },
+          "evidence": {
+           "side": {
+            "engaged": true,
+            "winner_claims": [],
+            "grading_calls": []
+           }
+          }
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_scores_from_file",
+           "status": "pass",
+           "reasons": []
+          },
+          {
+           "tool": "olmoearth_scores_from_file",
+           "status": "pass",
+           "reasons": []
+          },
+          {
+           "tool": "olmoearth_compare_review",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 39.808,
+         "prompt_tokens": 51742,
+         "completion_tokens": 2320,
+         "total_tokens": 54062,
+         "n_llm_calls": 4,
+         "n_tool_calls": 5,
+         "turns": 4,
+         "prompt_tokens_per_call": {
+          "median": 12205.0,
+          "max": 17172
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "2",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_load_context",
+          "olmoearth_scores_from_file",
+          "olmoearth_scores_from_file",
+          "olmoearth_compare_review",
+          "olmoearth_compare_review"
+         ],
+         "failed_calls": [
+          "olmoearth_compare_review"
+         ]
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 24,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 3,
+         "exp64_supported_share_without_extensions": 0.7307692307692308,
+         "grid": [
+          128,
+          128
+         ],
+         "support_counts": {
+          "exp64": 21,
+          "rounded": 3
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "pass",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "side": true,
+          "change": true,
+          "accuracy": true
+         },
+         "evidence": {
+          "side": "east sure on both sides.\n\n## Which one is right \u2014 I have to decline\n\nNeither can be declared right. The two maps describe diff",
+          "change": "The two maps describe different times (all of 2022 vs all of 2023), so any differing window either changed on the ground between the years (seasonal cycles included) or is wrong in one map \u2014 and the p"
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "side": true,
+           "change": true,
+           "accuracy": true
+          },
+          "evidence": {
+           "side": {
+            "engaged": true,
+            "winner_claims": [],
+            "grading_calls": []
+           }
+          }
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_scores_from_file",
+           "status": "pass",
+           "reasons": []
+          },
+          {
+           "tool": "olmoearth_scores_from_file",
+           "status": "pass",
+           "reasons": []
+          },
+          {
+           "tool": "olmoearth_compare_review",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 36.635,
+         "prompt_tokens": 59814,
+         "completion_tokens": 2149,
+         "total_tokens": 61963,
+         "n_llm_calls": 5,
+         "n_tool_calls": 5,
+         "turns": 5,
+         "prompt_tokens_per_call": {
+          "median": 12052,
+          "max": 14924
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "3",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_scores_from_file",
+          "olmoearth_scores_from_file",
+          "olmoearth_compare_review",
+          "olmoearth_compare_review"
+         ],
+         "failed_calls": [
+          "olmoearth_compare_review"
+         ]
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 28,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 5,
+         "exp64_supported_share_without_extensions": 0.75,
+         "grid": [
+          128,
+          128
+         ],
+         "support_counts": {
+          "exp64": 23,
+          "rounded": 5
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "pass",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "side": true,
+          "change": true,
+          "accuracy": true
+         },
+         "evidence": {
+          "side": "is only right on 51\u201370% of differing windows, so confidence does not identify a winner here.\n\nTo resolve it you'd need reference labels dated to e",
+          "change": "- They describe different time windows (2022 imagery vs 2023 imagery), so a differing window either changed on the ground between the two years (seasonal cycles included) or one map is wrong \u2014 the pre"
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "side": true,
+           "change": true,
+           "accuracy": true
+          },
+          "evidence": {
+           "side": {
+            "engaged": true,
+            "winner_claims": [],
+            "grading_calls": []
+           }
+          }
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_scores_from_file",
+           "status": "pass",
+           "reasons": []
+          },
+          {
+           "tool": "olmoearth_scores_from_file",
+           "status": "pass",
+           "reasons": []
+          },
+          {
+           "tool": "olmoearth_compare_review",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 49.4,
+         "prompt_tokens": 49089,
+         "completion_tokens": 2987,
+         "total_tokens": 52076,
+         "n_llm_calls": 4,
+         "n_tool_calls": 4,
+         "turns": 4,
+         "prompt_tokens_per_call": {
+          "median": 12060.0,
+          "max": 14809
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       }
+      ]
+     },
+     "B3/studio": {
+      "n_counted_runs": 3,
+      "excluded_runs": [],
+      "verdicts": {
+       "c1_routing": "pass",
+       "c2_grounding": "pass",
+       "c3_ranking": "n/a",
+       "c4_nodata": "pass",
+       "c5_declines": "fail",
+       "c6_coordinates": "pass",
+       "c7_parity": "n/a"
+      },
+      "passes": false,
+      "time_and_tokens": {
+       "seconds": {
+        "median": 140.435,
+        "min": 135.337,
+        "max": 151.879
+       },
+       "prompt_tokens": {
+        "median": 55527.0,
+        "min": 45116.0,
+        "max": 86552.0
+       },
+       "completion_tokens": {
+        "median": 1594.0,
+        "min": 1095.0,
+        "max": 2188.0
+       },
+       "total_tokens": {
+        "median": 56622.0,
+        "min": 46710.0,
+        "max": 88740.0
+       },
+       "n_tool_calls": {
+        "median": 5.0,
+        "min": 5.0,
+        "max": 9.0
+       }
+      },
+      "runs": [
+       {
+        "run": "1",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_load_context",
+          "olmoearth_search_predictions",
+          "olmoearth_fetch_results",
+          "olmoearth_fetch_results",
+          "olmoearth_compare_results"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 14,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 1,
+         "exp64_supported_share_without_extensions": 0.8666666666666667,
+         "grid": null,
+         "support_counts": {
+          "exp64": 13,
+          "rounded": 1
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "pass",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "side": true,
+          "quantities": true,
+          "accuracy": true
+         },
+         "evidence": {
+          "side": " these outputs alone \u2014 there are no ground-truth labels, so neither map can be graded for accuracy (model-vs-model agreement is not acc",
+          "quantities": "d 6x6 grid (~10,091 km\u00b2 of overlap).\n\nKey finding: they are different quantities, so no simple \"gap\"\n\n| | KarstBinary (samplekarstscore) "
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "side": true,
+           "quantities": true,
+           "accuracy": true
+          },
+          "evidence": {
+           "side": {
+            "engaged": true,
+            "winner_claims": [],
+            "grading_calls": []
+           },
+           "quantities": []
+          }
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "n/a",
+         "calls": [],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 151.879,
+         "prompt_tokens": 45116,
+         "completion_tokens": 1594,
+         "total_tokens": 46710,
+         "n_llm_calls": 4,
+         "n_tool_calls": 5,
+         "turns": 4,
+         "prompt_tokens_per_call": {
+          "median": 11245.0,
+          "max": 12501
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "2",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_load_context",
+          "olmoearth_search_predictions",
+          "olmoearth_fetch_results",
+          "olmoearth_fetch_results",
+          "olmoearth_get_prediction_result",
+          "olmoearth_get_prediction_result",
+          "olmoearth_compare_results",
+          "olmoearth_qgis_bridge",
+          "olmoearth_qgis_bridge"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 10,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 0,
+         "exp64_supported_share_without_extensions": 0.9285714285714286,
+         "grid": null,
+         "support_counts": {
+          "exp64": 10
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "pass",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "side": true,
+          "quantities": true,
+          "accuracy": true
+         },
+         "evidence": {
+          "side": "e is no ground truth in either result, and \"which is right\" needs labels \u2014 accuracy requires truth (e.g. verified karst locations). ",
+          "quantities": "ntly almost cell by cell. But an important caveat: they are different quantities (a karst score vs a sample number), so only the correlat"
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "side": true,
+           "quantities": true,
+           "accuracy": true
+          },
+          "evidence": {
+           "side": {
+            "engaged": true,
+            "winner_claims": [],
+            "grading_calls": []
+           },
+           "quantities": []
+          }
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "n/a",
+         "calls": [],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 140.435,
+         "prompt_tokens": 86552,
+         "completion_tokens": 2188,
+         "total_tokens": 88740,
+         "n_llm_calls": 7,
+         "n_tool_calls": 9,
+         "turns": 7,
+         "prompt_tokens_per_call": {
+          "median": 11571,
+          "max": 17618
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "3",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_load_context",
+          "olmoearth_search_predictions",
+          "olmoearth_fetch_results",
+          "olmoearth_fetch_results",
+          "olmoearth_compare_results"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 10,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 0,
+         "exp64_supported_share_without_extensions": 0.9166666666666666,
+         "grid": null,
+         "support_counts": {
+          "exp64": 10
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "pass",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "fail",
+         "reasons": [
+          "side: no decline of which side is right"
+         ],
+         "rules": {
+          "side": false,
+          "quantities": true,
+          "accuracy": true
+         },
+         "evidence": {
+          "quantities": "er) mean | 0.682 |\n\nImportant caveat: the two models output different properties (samplekarstscore on [0, 1] vs samplenumber on [0.2, 1.2"
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "side": true,
+           "quantities": true,
+           "accuracy": true
+          },
+          "evidence": {
+           "side": {
+            "engaged": true,
+            "winner_claims": [],
+            "grading_calls": []
+           },
+           "quantities": []
+          }
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "n/a",
+         "calls": [],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 135.337,
+         "prompt_tokens": 55527,
+         "completion_tokens": 1095,
+         "total_tokens": 56622,
+         "n_llm_calls": 5,
+         "n_tool_calls": 5,
+         "turns": 5,
+         "prompt_tokens_per_call": {
+          "median": 11005,
+          "max": 12544
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       }
+      ]
+     },
+     "B4/cluster": {
+      "n_counted_runs": 3,
+      "excluded_runs": [],
+      "verdicts": {
+       "c1_routing": "pass",
+       "c2_grounding": "pass",
+       "c3_ranking": "n/a",
+       "c4_nodata": "pass",
+       "c5_declines": "fail",
+       "c6_coordinates": "pass",
+       "c7_parity": "pass"
+      },
+      "passes": false,
+      "time_and_tokens": {
+       "seconds": {
+        "median": 25.871,
+        "min": 23.871,
+        "max": 31.67
+       },
+       "prompt_tokens": {
+        "median": 33270.0,
+        "min": 33043.0,
+        "max": 35365.0
+       },
+       "completion_tokens": {
+        "median": 1528.0,
+        "min": 1384.0,
+        "max": 1917.0
+       },
+       "total_tokens": {
+        "median": 35187.0,
+        "min": 34571.0,
+        "max": 36749.0
+       },
+       "n_tool_calls": {
+        "median": 2.0,
+        "min": 2.0,
+        "max": 3.0
+       }
+      },
+      "runs": [
+       {
+        "run": "1",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_load_context",
+          "olmoearth_scores_from_file",
+          "olmoearth_plan_label_sample"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 16,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 0,
+         "exp64_supported_share_without_extensions": 0.9090909090909091,
+         "grid": [
+          128,
+          128
+         ],
+         "support_counts": {
+          "exp64": 16
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "pass",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "accuracy": true,
+          "srs": true
+         },
+         "evidence": {
+          "accuracy_needs_labels": "class accuracy. Fill all 300 rows and tell me when done (or paste your 300 0/1 values in design order) \u2014 then I'll run olmoearthestimatemaperror and report the error rate with the interval this s"
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "accuracy": true,
+           "srs": true
+          },
+          "evidence": {
+           "accuracy_needs_labels": "labeling"
+          }
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_scores_from_file",
+           "status": "pass",
+           "reasons": []
+          },
+          {
+           "tool": "olmoearth_plan_label_sample",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 23.871,
+         "prompt_tokens": 35365,
+         "completion_tokens": 1384,
+         "total_tokens": 36749,
+         "n_llm_calls": 3,
+         "n_tool_calls": 3,
+         "turns": 3,
+         "prompt_tokens_per_call": {
+          "median": 11154,
+          "max": 14078
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "2",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_scores_from_file",
+          "olmoearth_plan_label_sample"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 29,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 0,
+         "exp64_supported_share_without_extensions": 0.9142857142857143,
+         "grid": [
+          128,
+          128
+         ],
+         "support_counts": {
+          "exp64": 29
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "pass",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "fail",
+         "reasons": [
+          "accuracy: does not say how wrong the map is needs the labels first"
+         ],
+         "rules": {
+          "accuracy": false,
+          "srs": true
+         },
+         "evidence": {},
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "accuracy": true,
+           "srs": true
+          },
+          "evidence": {
+           "accuracy_needs_labels": "label"
+          }
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_scores_from_file",
+           "status": "pass",
+           "reasons": []
+          },
+          {
+           "tool": "olmoearth_plan_label_sample",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 31.67,
+         "prompt_tokens": 33270,
+         "completion_tokens": 1917,
+         "total_tokens": 35187,
+         "n_llm_calls": 3,
+         "n_tool_calls": 2,
+         "turns": 3,
+         "prompt_tokens_per_call": {
+          "median": 11009,
+          "max": 12128
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "3",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_scores_from_file",
+          "olmoearth_plan_label_sample"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 17,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 0,
+         "exp64_supported_share_without_extensions": 0.7272727272727273,
+         "grid": [
+          128,
+          128
+         ],
+         "support_counts": {
+          "exp64": 17
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "pass",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "accuracy": true,
+          "srs": true
+         },
+         "evidence": {
+          "accuracy_needs_labels": "the estimate stays unbiased regardless of its calibration.\n\nSend me the filled CSV (or your 0/1 list) and I'll call olmoearthestimatemaperror to give you the error rate with the interval this "
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "accuracy": true,
+           "srs": true
+          },
+          "evidence": {
+           "accuracy_needs_labels": "Labeling"
+          }
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_scores_from_file",
+           "status": "pass",
+           "reasons": []
+          },
+          {
+           "tool": "olmoearth_plan_label_sample",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 25.871,
+         "prompt_tokens": 33043,
+         "completion_tokens": 1528,
+         "total_tokens": 34571,
+         "n_llm_calls": 3,
+         "n_tool_calls": 2,
+         "turns": 3,
+         "prompt_tokens_per_call": {
+          "median": 11009,
+          "max": 11901
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       }
+      ]
+     },
+     "B4/studio": {
+      "n_counted_runs": 3,
+      "excluded_runs": [],
+      "verdicts": {
+       "c1_routing": "pass",
+       "c2_grounding": "pass",
+       "c3_ranking": "n/a",
+       "c4_nodata": "pass",
+       "c5_declines": "fail",
+       "c6_coordinates": "pass",
+       "c7_parity": "pass"
+      },
+      "passes": false,
+      "time_and_tokens": {
+       "seconds": {
+        "median": 590.716,
+        "min": 520.131,
+        "max": 641.399
+       },
+       "prompt_tokens": {
+        "median": 69094.0,
+        "min": 58458.0,
+        "max": 70597.0
+       },
+       "completion_tokens": {
+        "median": 1678.0,
+        "min": 1203.0,
+        "max": 2801.0
+       },
+       "total_tokens": {
+        "median": 70772.0,
+        "min": 59661.0,
+        "max": 73398.0
+       },
+       "n_tool_calls": {
+        "median": 6.0,
+        "min": 5.0,
+        "max": 6.0
+       }
+      },
+      "runs": [
+       {
+        "run": "1",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_load_context",
+          "olmoearth_search_predictions",
+          "olmoearth_fetch_results",
+          "olmoearth_plan_label_sample",
+          "olmoearth_plan_label_sample",
+          "olmoearth_plan_label_sample"
+         ],
+         "failed_calls": [
+          "olmoearth_plan_label_sample",
+          "olmoearth_plan_label_sample"
+         ]
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 19,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 0,
+         "exp64_supported_share_without_extensions": 1.0,
+         "grid": [
+          16,
+          16
+         ],
+         "support_counts": {
+          "exp64": 18,
+          "hyphen": 1
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "pass",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "fail",
+         "reasons": [
+          "accuracy: does not say how wrong the map is needs the labels first"
+         ],
+         "rules": {
+          "accuracy": false,
+          "srs": true
+         },
+         "evidence": {},
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "accuracy": true,
+           "srs": true
+          },
+          "evidence": {
+           "accuracy_needs_labels": "labelable"
+          }
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_plan_label_sample",
+           "status": "pass",
+           "reasons": [
+            "margins taken from the design file (a live Studio sample)"
+           ]
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 641.399,
+         "prompt_tokens": 70597,
+         "completion_tokens": 2801,
+         "total_tokens": 73398,
+         "n_llm_calls": 6,
+         "n_tool_calls": 6,
+         "turns": 6,
+         "prompt_tokens_per_call": {
+          "median": 11381.5,
+          "max": 14940
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "2",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_load_context",
+          "olmoearth_search_predictions",
+          "olmoearth_fetch_results",
+          "olmoearth_plan_label_sample",
+          "olmoearth_plan_label_sample",
+          "olmoearth_plan_label_sample"
+         ],
+         "failed_calls": [
+          "olmoearth_plan_label_sample",
+          "olmoearth_plan_label_sample"
+         ]
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 22,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 0,
+         "exp64_supported_share_without_extensions": 1.0,
+         "grid": [
+          16,
+          16
+         ],
+         "support_counts": {
+          "exp64": 21,
+          "hyphen": 1
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "pass",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "fail",
+         "reasons": [
+          "accuracy: does not say how wrong the map is needs the labels first"
+         ],
+         "rules": {
+          "accuracy": false,
+          "srs": true
+         },
+         "evidence": {},
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "accuracy": true,
+           "srs": true
+          },
+          "evidence": {
+           "accuracy_needs_labels": "labels"
+          }
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_plan_label_sample",
+           "status": "pass",
+           "reasons": [
+            "margins taken from the design file (a live Studio sample)"
+           ]
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 590.716,
+         "prompt_tokens": 69094,
+         "completion_tokens": 1678,
+         "total_tokens": 70772,
+         "n_llm_calls": 6,
+         "n_tool_calls": 6,
+         "turns": 6,
+         "prompt_tokens_per_call": {
+          "median": 11390.0,
+          "max": 13345
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "3",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_load_context",
+          "olmoearth_search_predictions",
+          "olmoearth_fetch_results",
+          "olmoearth_plan_label_sample",
+          "olmoearth_plan_label_sample"
+         ],
+         "failed_calls": [
+          "olmoearth_plan_label_sample"
+         ]
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 12,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 0,
+         "exp64_supported_share_without_extensions": 1.0,
+         "grid": [
+          16,
+          16
+         ],
+         "support_counts": {
+          "exp64": 11,
+          "hyphen": 1
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "pass",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "accuracy": true,
+          "srs": true
+         },
+         "evidence": {
+          "accuracy_needs_labels": "ass (mapclass) doesn't match the ground truth, else 0\n\nThen send me the filled CSV (or the wrong/reference lists) and I'll run olmoearthestimatemaperror to get the error rate with the interval that this "
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "accuracy": true,
+           "srs": true
+          },
+          "evidence": {
+           "accuracy_needs_labels": "labels"
+          }
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_plan_label_sample",
+           "status": "pass",
+           "reasons": [
+            "margins taken from the design file (a live Studio sample)"
+           ]
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 520.131,
+         "prompt_tokens": 58458,
+         "completion_tokens": 1203,
+         "total_tokens": 59661,
+         "n_llm_calls": 5,
+         "n_tool_calls": 5,
+         "turns": 5,
+         "prompt_tokens_per_call": {
+          "median": 11230,
+          "max": 14637
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       }
+      ]
+     },
+     "B5/files": {
+      "n_counted_runs": 3,
+      "excluded_runs": [],
+      "verdicts": {
+       "c1_routing": "pass",
+       "c2_grounding": "pass",
+       "c3_ranking": "n/a",
+       "c4_nodata": "n/a",
+       "c5_declines": "pass",
+       "c6_coordinates": "pass",
+       "c7_parity": "pass"
+      },
+      "passes": true,
+      "time_and_tokens": {
+       "seconds": {
+        "median": 10.685,
+        "min": 10.233,
+        "max": 11.266
+       },
+       "prompt_tokens": {
+        "median": 23481.0,
+        "min": 23481.0,
+        "max": 23481.0
+       },
+       "completion_tokens": {
+        "median": 628.0,
+        "min": 611.0,
+        "max": 673.0
+       },
+       "total_tokens": {
+        "median": 24109.0,
+        "min": 24092.0,
+        "max": 24154.0
+       },
+       "n_tool_calls": {
+        "median": 1.0,
+        "min": 1.0,
+        "max": 1.0
+       }
+      },
+      "runs": [
+       {
+        "run": "1",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_estimate_map_error"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 12,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 5,
+         "exp64_supported_share_without_extensions": 0.3571428571428571,
+         "grid": [
+          128,
+          128
+         ],
+         "support_counts": {
+          "rounded": 5,
+          "exp64": 7
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "srs": true
+         },
+         "evidence": {},
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "srs": true
+          },
+          "evidence": {}
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_estimate_map_error",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 10.685,
+         "prompt_tokens": 23481,
+         "completion_tokens": 628,
+         "total_tokens": 24109,
+         "n_llm_calls": 2,
+         "n_tool_calls": 1,
+         "turns": 2,
+         "prompt_tokens_per_call": {
+          "median": 11740.5,
+          "max": 13341
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "2",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_estimate_map_error"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 13,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 6,
+         "exp64_supported_share_without_extensions": 0.4285714285714286,
+         "grid": [
+          128,
+          128
+         ],
+         "support_counts": {
+          "rounded": 6,
+          "exp64": 7
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "srs": true
+         },
+         "evidence": {},
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "srs": true
+          },
+          "evidence": {}
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_estimate_map_error",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 11.266,
+         "prompt_tokens": 23481,
+         "completion_tokens": 673,
+         "total_tokens": 24154,
+         "n_llm_calls": 2,
+         "n_tool_calls": 1,
+         "turns": 2,
+         "prompt_tokens_per_call": {
+          "median": 11740.5,
+          "max": 13341
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "3",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_estimate_map_error"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 12,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 5,
+         "exp64_supported_share_without_extensions": 0.46153846153846156,
+         "grid": [
+          128,
+          128
+         ],
+         "support_counts": {
+          "rounded": 5,
+          "exp64": 7
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "srs": true
+         },
+         "evidence": {},
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "srs": true
+          },
+          "evidence": {}
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_estimate_map_error",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 10.233,
+         "prompt_tokens": 23481,
+         "completion_tokens": 611,
+         "total_tokens": 24092,
+         "n_llm_calls": 2,
+         "n_tool_calls": 1,
+         "turns": 2,
+         "prompt_tokens_per_call": {
+          "median": 11740.5,
+          "max": 13341
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       }
+      ]
+     },
+     "B6/files": {
+      "n_counted_runs": 3,
+      "excluded_runs": [],
+      "verdicts": {
+       "c1_routing": "pass",
+       "c2_grounding": "fail",
+       "c3_ranking": "n/a",
+       "c4_nodata": "n/a",
+       "c5_declines": "pass",
+       "c6_coordinates": "pass",
+       "c7_parity": "pass"
+      },
+      "passes": false,
+      "time_and_tokens": {
+       "seconds": {
+        "median": 28.017,
+        "min": 24.25,
+        "max": 36.127
+       },
+       "prompt_tokens": {
+        "median": 22485.0,
+        "min": 22340.0,
+        "max": 25368.0
+       },
+       "completion_tokens": {
+        "median": 1707.0,
+        "min": 1485.0,
+        "max": 2207.0
+       },
+       "total_tokens": {
+        "median": 24692.0,
+        "min": 23825.0,
+        "max": 27075.0
+       },
+       "n_tool_calls": {
+        "median": 2.0,
+        "min": 1.0,
+        "max": 2.0
+       }
+      },
+      "runs": [
+       {
+        "run": "1",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_certify_zone"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 37,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 4,
+         "exp64_supported_share_without_extensions": 0.7435897435897436,
+         "grid": [
+          128,
+          128
+         ],
+         "support_counts": {
+          "exp64": 32,
+          "rounded": 4,
+          "hyphen": 1
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "zone": true
+         },
+         "evidence": {
+          "zone": "Short answer: none \u2014 with these 300 labels, no part of the map can be certified to be wrong at most 5% of the time.\n\nThe exact certifica"
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "zone": true
+          },
+          "evidence": {
+           "zone": {
+            "engaged": true,
+            "claims": []
+           }
+          }
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_certify_zone",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 24.25,
+         "prompt_tokens": 22340,
+         "completion_tokens": 1485,
+         "total_tokens": 23825,
+         "n_llm_calls": 2,
+         "n_tool_calls": 1,
+         "turns": 2,
+         "prompt_tokens_per_call": {
+          "median": 11170.0,
+          "max": 12189
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "2",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_certify_zone",
+          "olmoearth_estimate_map_error"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 15,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 2,
+         "exp64_supported_share_without_extensions": 0.75,
+         "grid": [
+          128,
+          128
+         ],
+         "support_counts": {
+          "exp64": 13,
+          "rounded": 2
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "zone": true
+         },
+         "evidence": {
+          "zone": "No part of the map certifies as \"wrong at most 5% of the time\" with these 300 labels."
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "zone": true
+          },
+          "evidence": {
+           "zone": {
+            "engaged": true,
+            "claims": []
+           }
+          }
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_certify_zone",
+           "status": "pass",
+           "reasons": []
+          },
+          {
+           "tool": "olmoearth_estimate_map_error",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 28.017,
+         "prompt_tokens": 25368,
+         "completion_tokens": 1707,
+         "total_tokens": 27075,
+         "n_llm_calls": 2,
+         "n_tool_calls": 2,
+         "turns": 2,
+         "prompt_tokens_per_call": {
+          "median": 12684.0,
+          "max": 15217
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "3",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_load_context",
+          "olmoearth_certify_zone"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "fail",
+         "reasons": [
+          "1 stated number(s) in no tool output of the run: ['18']"
+         ],
+         "n_numbers": 33,
+         "n_unsupported": 1,
+         "n_supported_by_rounding": 4,
+         "exp64_supported_share_without_extensions": 0.8181818181818181,
+         "grid": [
+          128,
+          128
+         ],
+         "support_counts": {
+          "exp64": 28,
+          "rounded": 4,
+          "None": 1
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "zone": true
+         },
+         "evidence": {
+          "zone": " 23%) | | | 26.4% | \u2717 |\n\nThe verdict string from the tool: \"no zone certified at alpha=0.05, delta=0.1 with 300 labels; the smallest t"
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "zone": true
+          },
+          "evidence": {
+           "zone": {
+            "engaged": true,
+            "claims": []
+           }
+          }
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_certify_zone",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 36.127,
+         "prompt_tokens": 22485,
+         "completion_tokens": 2207,
+         "total_tokens": 24692,
+         "n_llm_calls": 2,
+         "n_tool_calls": 2,
+         "turns": 2,
+         "prompt_tokens_per_call": {
+          "median": 11242.5,
+          "max": 12334
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       }
+      ]
+     },
+     "B7/files": {
+      "n_counted_runs": 3,
+      "excluded_runs": [],
+      "verdicts": {
+       "c1_routing": "pass",
+       "c2_grounding": "pass",
+       "c3_ranking": "n/a",
+       "c4_nodata": "n/a",
+       "c5_declines": "pass",
+       "c6_coordinates": "pass",
+       "c7_parity": "pass"
+      },
+      "passes": true,
+      "time_and_tokens": {
+       "seconds": {
+        "median": 17.831,
+        "min": 14.33,
+        "max": 21.84
+       },
+       "prompt_tokens": {
+        "median": 25218.0,
+        "min": 25218.0,
+        "max": 25218.0
+       },
+       "completion_tokens": {
+        "median": 1052.0,
+        "min": 854.0,
+        "max": 1323.0
+       },
+       "total_tokens": {
+        "median": 26270.0,
+        "min": 26072.0,
+        "max": 26541.0
+       },
+       "n_tool_calls": {
+        "median": 1.0,
+        "min": 1.0,
+        "max": 1.0
+       }
+      },
+      "runs": [
+       {
+        "run": "1",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_compare_review"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 21,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 1,
+         "exp64_supported_share_without_extensions": 0.6363636363636364,
+         "grid": [
+          5600,
+          14
+         ],
+         "support_counts": {
+          "exp64": 15,
+          "hyphen": 5,
+          "rounded": 1
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "side": true,
+          "change": true,
+          "accuracy": true
+         },
+         "evidence": {
+          "side": "s confidence per window, not correctness).\n\nWhich is right: not resolvable from these maps alone. They describe different times (2017-",
+          "change": "They describe different times (2017-09-14/15 vs 2018-04-19, ~216 days apart), so a differing window could be real seasonal change or an error in either map."
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "side": true,
+           "change": true,
+           "accuracy": true
+          },
+          "evidence": {
+           "side": {
+            "engaged": true,
+            "winner_claims": [],
+            "grading_calls": []
+           }
+          }
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_compare_review",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 17.831,
+         "prompt_tokens": 25218,
+         "completion_tokens": 1052,
+         "total_tokens": 26270,
+         "n_llm_calls": 2,
+         "n_tool_calls": 1,
+         "turns": 2,
+         "prompt_tokens_per_call": {
+          "median": 12609.0,
+          "max": 15031
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "2",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_compare_review"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 15,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 1,
+         "exp64_supported_share_without_extensions": 0.6470588235294117,
+         "grid": [
+          5600,
+          14
+         ],
+         "support_counts": {
+          "exp64": 13,
+          "hyphen": 1,
+          "rounded": 1
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "side": true,
+          "change": true,
+          "accuracy": true
+         },
+         "evidence": {
+          "side": "onfidence doesn't pick a winner either. To resolve it you'd need ground truth (or a reference map) for each date; then I can grade per da",
+          "change": "The maps are 216 days apart, so any differing window either changed on the ground in between (seasonal cycles included) or one map is wrong at that spot."
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "side": true,
+           "change": true,
+           "accuracy": true
+          },
+          "evidence": {
+           "side": {
+            "engaged": true,
+            "winner_claims": [],
+            "grading_calls": []
+           }
+          }
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_compare_review",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 21.84,
+         "prompt_tokens": 25218,
+         "completion_tokens": 1323,
+         "total_tokens": 26541,
+         "n_llm_calls": 2,
+         "n_tool_calls": 1,
+         "turns": 2,
+         "prompt_tokens_per_call": {
+          "median": 12609.0,
+          "max": 15031
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "3",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_compare_review"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 14,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 1,
+         "exp64_supported_share_without_extensions": 0.5625,
+         "grid": [
+          5600,
+          14
+         ],
+         "support_counts": {
+          "exp64": 12,
+          "hyphen": 1,
+          "rounded": 1
+         }
+        },
+        "c3_ranking": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c4_nodata": {
+         "status": "n/a",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "side": true,
+          "change": true,
+          "accuracy": true
+         },
+         "evidence": {
+          "side": "can be real ground change or an error in one map \u2014 the tool declines to grade either side, and correctly so.\n\n| Metric | Value",
+          "change": "Because the maps are 216 days apart (2017-09 vs 2018-04), a difference can be real ground change or an error in one map \u2014 the tool declines to grade either side, and correctly so."
+         },
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "side": true,
+           "change": true,
+           "accuracy": true
+          },
+          "evidence": {
+           "side": {
+            "engaged": true,
+            "winner_claims": [],
+            "grading_calls": []
+           }
+          }
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_compare_review",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 14.33,
+         "prompt_tokens": 25218,
+         "completion_tokens": 854,
+         "total_tokens": 26072,
+         "n_llm_calls": 2,
+         "n_tool_calls": 1,
+         "turns": 2,
+         "prompt_tokens_per_call": {
+          "median": 12609.0,
+          "max": 15031
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       }
+      ]
+     },
+     "B8/cluster": {
+      "n_counted_runs": 3,
+      "excluded_runs": [],
+      "verdicts": {
+       "c1_routing": "pass",
+       "c2_grounding": "pass",
+       "c3_ranking": "pass",
+       "c4_nodata": "pass",
+       "c5_declines": "pass",
+       "c6_coordinates": "pass",
+       "c7_parity": "pass"
+      },
+      "passes": true,
+      "time_and_tokens": {
+       "seconds": {
+        "median": 23.265,
+        "min": 22.88,
+        "max": 34.882
+       },
+       "prompt_tokens": {
+        "median": 34481.0,
+        "min": 34208.0,
+        "max": 34827.0
+       },
+       "completion_tokens": {
+        "median": 1363.0,
+        "min": 1349.0,
+        "max": 2096.0
+       },
+       "total_tokens": {
+        "median": 35830.0,
+        "min": 35571.0,
+        "max": 36923.0
+       },
+       "n_tool_calls": {
+        "median": 3.0,
+        "min": 2.0,
+        "max": 3.0
+       }
+      },
+      "runs": [
+       {
+        "run": "1",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_load_context",
+          "olmoearth_scores_from_file",
+          "olmoearth_review_set"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 45,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 9,
+         "exp64_supported_share_without_extensions": 0.7647058823529411,
+         "grid": [
+          128,
+          128
+         ],
+         "support_counts": {
+          "exp64": 36,
+          "rounded": 8,
+          "suffix": 1
+         }
+        },
+        "c3_ranking": {
+         "status": "pass",
+         "reasons": [],
+         "tool": "olmoearth_review_set",
+         "n_windows_named": 6,
+         "margins_in_answer_order": [
+          0.108155,
+          0.149261,
+          0.153341,
+          0.161787,
+          0.176399,
+          0.176925
+         ]
+        },
+        "c4_nodata": {
+         "status": "pass",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "accuracy": true
+         },
+         "evidence": {},
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "accuracy": true
+          },
+          "evidence": {}
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_scores_from_file",
+           "status": "pass",
+           "reasons": []
+          },
+          {
+           "tool": "olmoearth_review_set",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 34.882,
+         "prompt_tokens": 34827,
+         "completion_tokens": 2096,
+         "total_tokens": 36923,
+         "n_llm_calls": 3,
+         "n_tool_calls": 3,
+         "turns": 3,
+         "prompt_tokens_per_call": {
+          "median": 11154,
+          "max": 13540
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "2",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_scores_from_file",
+          "olmoearth_review_set"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 37,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 7,
+         "exp64_supported_share_without_extensions": 0.8,
+         "grid": [
+          128,
+          128
+         ],
+         "support_counts": {
+          "exp64": 30,
+          "rounded": 7
+         }
+        },
+        "c3_ranking": {
+         "status": "pass",
+         "reasons": [],
+         "tool": "olmoearth_review_set",
+         "n_windows_named": 11,
+         "margins_in_answer_order": [
+          0.108155,
+          0.149261,
+          0.153341,
+          0.161787,
+          0.176399,
+          0.191095,
+          0.2055,
+          0.213706,
+          0.216102,
+          0.232383,
+          1.3182229101657867
+         ]
+        },
+        "c4_nodata": {
+         "status": "pass",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "accuracy": true
+         },
+         "evidence": {},
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "accuracy": true
+          },
+          "evidence": {}
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_scores_from_file",
+           "status": "pass",
+           "reasons": []
+          },
+          {
+           "tool": "olmoearth_review_set",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 22.88,
+         "prompt_tokens": 34208,
+         "completion_tokens": 1363,
+         "total_tokens": 35571,
+         "n_llm_calls": 3,
+         "n_tool_calls": 2,
+         "turns": 3,
+         "prompt_tokens_per_call": {
+          "median": 11009,
+          "max": 13066
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       },
+       {
+        "run": "3",
+        "c1_routing": {
+         "status": "pass",
+         "reasons": [],
+         "tools": [
+          "olmoearth_load_context",
+          "olmoearth_scores_from_file",
+          "olmoearth_review_set"
+         ],
+         "failed_calls": []
+        },
+        "c2_grounding": {
+         "status": "pass",
+         "reasons": [],
+         "n_numbers": 37,
+         "n_unsupported": 0,
+         "n_supported_by_rounding": 7,
+         "exp64_supported_share_without_extensions": 0.75,
+         "grid": [
+          128,
+          128
+         ],
+         "support_counts": {
+          "exp64": 28,
+          "rounded": 7,
+          "hyphen": 2
+         }
+        },
+        "c3_ranking": {
+         "status": "pass",
+         "reasons": [],
+         "tool": "olmoearth_review_set",
+         "n_windows_named": 5,
+         "margins_in_answer_order": [
+          0.108155,
+          0.149261,
+          0.153341,
+          0.161787,
+          0.176399
+         ]
+        },
+        "c4_nodata": {
+         "status": "pass",
+         "reasons": []
+        },
+        "c5_declines": {
+         "status": "pass",
+         "reasons": [],
+         "rules": {
+          "accuracy": true
+         },
+         "evidence": {},
+         "reported_structural": {
+          "status": "pass",
+          "reasons": [],
+          "rules": {
+           "accuracy": true
+          },
+          "evidence": {}
+         }
+        },
+        "c6_coordinates": {
+         "status": "pass",
+         "reasons": [],
+         "n_found": 0
+        },
+        "c7_parity": {
+         "status": "pass",
+         "calls": [
+          {
+           "tool": "olmoearth_scores_from_file",
+           "status": "pass",
+           "reasons": []
+          },
+          {
+           "tool": "olmoearth_review_set",
+           "status": "pass",
+           "reasons": []
+          }
+         ],
+         "reasons": []
+        },
+        "c8_time_tokens": {
+         "seconds": 23.265,
+         "prompt_tokens": 34481,
+         "completion_tokens": 1349,
+         "total_tokens": 35830,
+         "n_llm_calls": 3,
+         "n_tool_calls": 3,
+         "turns": 3,
+         "prompt_tokens_per_call": {
+          "median": 11154,
+          "max": 13194
+         },
+         "n_load_skill_calls": 0,
+         "usage_recorded": true
+        }
+       }
+      ]
+     }
+    }
+   }
+  ]
  }
 }
