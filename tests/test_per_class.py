@@ -169,6 +169,23 @@ def test_refusals():
         est.estimate_per_class(s, np.zeros(60, int), bad)
 
 
+def test_the_few_errors_note_gives_each_quantity_its_own_count():
+    """The exp86 round 6 audit: a class with 3 omissions and 20 commissions had its producer's accuracy said to rest on
+    "20 to 23" sampled errors; it rests on its 3 omissions (the share on 23, which is not few)."""
+    N = 2000
+    mc = np.repeat([0, 1], N // 2)
+    sample = {"design": "random", "indices": np.arange(0, N, 5), "n_population": N, "budget": N // 5}
+    idx = sample["indices"]
+    ref = mc[idx].copy()
+    ref[np.flatnonzero(mc[idx] == 1)[:20]] = 0              # the map calls 20 windows class 1 wrongly
+    ref[np.flatnonzero(mc[idx] == 0)[:3]] = 1               # and misses 3 windows of class 1
+    row = est.estimate_per_class(sample, ref, mc, n_classes=2)["per_class"][1]
+    assert "few errors" in row["warning_codes"]
+    assert "the producer's accuracy rests on 3 sampled errors" in row["warning"]
+    assert "share" not in row["warning"].split("(")[0] and "20 to 23" not in row["warning"]
+    assert "(20 the map calls this class wrongly, 3 of this class it misses)" in row["warning"]
+
+
 def test_the_few_errors_warning_fires_on_one_to_four_sampled_errors_and_not_on_zero_or_five():
     """Seventh amendment: the producer's accuracy and the share rest on the sampled errors of the kind they count;
     one to four of them is warned, none (the interval falls back wide) and five or more are not."""

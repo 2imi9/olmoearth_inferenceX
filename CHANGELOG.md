@@ -6,6 +6,11 @@
   of a two-class task, as an accepted input: ranked by distance from 0.5 like a binary probability map, with no
   probability of error implied. Found by the OlmoEarth Agent trial of 24 September 2026, where a Studio map of this
   kind had no documented path into the package.
+- The per-class "few errors" note named the wrong count. It gave one range for every quantity it listed, the
+  smaller of the two error kinds to their sum, so a user's accuracy resting on 4 commissions of a class with 27
+  omissions was said to rest on "27 to 31" sampled errors (the OlmoEarth Agent trial's audit of round 6, on its F2
+  fixture: class 4, and class 6's producer's accuracy, "24 to 27" for 3). Each quantity now carries its own count
+  ("the user's accuracy rests on 4 sampled errors"). When the note fires, and its `warning_codes`, are unchanged.
 
 ## 1.3.0 (2026-09-24)
 

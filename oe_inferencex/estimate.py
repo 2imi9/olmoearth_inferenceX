@@ -928,13 +928,15 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
         counted = [("producer's accuracy", omissions), ("share", omissions + commissions)]
         if design != "random":                                     # the random-design user's accuracy is exact
             counted.append(("user's accuracy", commissions))
-        rare = [q for q, n_err in counted if 0 < n_err < RARE_ERRORS]
+        rare = [(q, n_err) for q, n_err in counted if 0 < n_err < RARE_ERRORS]
         if rare and N_map[c] > 0:
             codes.append("few errors")
-            notes.append(f"the {', '.join(rare)} rest(s) on {min(omissions + commissions, max(omissions, commissions))} to "
-                         f"{omissions + commissions} sampled error(s) ({commissions} the map calls this class wrongly, "
-                         f"{omissions} of this class it misses); one error more or fewer in the draw moves the estimate "
-                         "by a whole window's weight, and the interval can miss it")
+            # each quantity with its own count: a user's accuracy resting on 4 commissions is not "27 to 31" errors
+            # because the same class has 27 omissions (the exp86 round 6 audit)
+            rests = "; ".join(f"the {q} rests on {n_err} sampled error{'' if n_err == 1 else 's'}" for q, n_err in rare)
+            notes.append(f"{rests} ({commissions} the map calls this class wrongly, {omissions} of this class it misses); "
+                         "one error more or fewer in the draw moves the estimate by a whole window's weight, and the "
+                         "interval can miss it")
         # exp81 measured one case where a nominal 95% interval covers well under 95%: a class nearly all of whose
         # windows are labelled, so the estimate takes a handful of values and a normal interval cannot follow it
         # (0.86-0.92 on five encoders' Togo classes). The thin-strata note below is a caution from the design: the
