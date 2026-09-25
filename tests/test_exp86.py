@@ -1090,3 +1090,87 @@ def test_the_summary_keeps_both_records_and_adds_the_instrument_after_round_2(tm
     assert after["verdict"]["on_the_record"]["2"] == record_2
     assert "short_id" not in before["changes"] and set(after["changes"]) == {"short_id", "p5_structural"}
     json.dumps(s, default=e86._json_default)
+
+
+# --------------------------------------------------------------------------------------------- after round 3, A19-A20
+# The amendment of 25 September 2026 made AFTER round 3 was scored, on round 3's own strings (rounds/3/runs/...). The
+# instrument in force for round 3 is e86.AMENDED_R2 (A8 to A18); the one frozen before round 4 is e86.AMENDED_R3.
+B3_R3_RUN3 = ("| Statistic | Value | Meaning here |\n|---|---|---|\n"
+              "| Correlation | **−0.017** | The maps rise/fall independently — near-zero association |\n")
+B8_R3_RUN3 = ("The run is `awf_namanga_2023_1042061`, pooled to a **128x128 window grid = 16,384 windows**, all valid, "
+              "date window 2023.\n\n")
+
+
+def test_a19_a_minus_written_u2212_is_a_minus_sign(tmp_path):
+    """Round 3, B3/studio run 3: "−0.017" (U+2212) for the tool's −0.0172 was read as 0.017, which nothing supports."""
+    run = write_run(str(tmp_path / "a"), B3, [("olmoearth_compare_results", {"result_ids": ["a", "b"]},
+                                               {"correlation": -0.0172, "n_cells": 36})], B3_R3_RUN3)
+    assert _unsupported(run, e86.AMENDED_R2)["reasons"] == ["1 stated number(s) in no tool output of the run: ['0.017']"]
+    assert _unsupported(run, e86.instrument_for_round("3", after_round=3))["status"] == e86.PASS
+    with e86.instrument(e86.AMENDED_R3):
+        assert [r["num"] for r in e86.number_support("r = −0.017", [])] == ["-0.017"]
+        # the sign is read, not dropped: a positive value does not support a stated negative one
+        assert e86.number_support("r = −0.017", [0.0172])[0]["support"] is None
+        # and in the pool: a tool's text "−0.0172" supports "-0.017"
+        pool = e86.pool_values({"calls": [{"result": {"text": "r = −0.0172"}}], "brief": ""})
+        assert -0.0172 in pool
+        # a hyphen glued to a letter or digit is still a hyphen, not this minus
+        assert [r["num"] for r in e86.number_support("EMSR279-11", [279, 11])] == ["279", "-11"]
+
+
+def test_a20_a_date_window_is_not_a_grid_window(tmp_path):
+    """Round 3, B8/cluster run 3: "date window 2023" was read as window index 2023 and graded first."""
+    with e86.instrument(e86.AMENDED_R2):
+        assert [r.get("idx") for r in e86.parse_window_refs("date window 2023")] == [2023]
+    with e86.instrument(e86.AMENDED_R3):
+        for text in ("date window 2023", "Date-window 2023", "a time window 5", "time_window 12"):
+            assert e86.parse_window_refs(text) == [], text
+        # a window by name stays a window
+        assert [r["idx"] for r in e86.parse_window_refs("check window 2023, then window #7")] == [2023, 7]
+        table = "| Date window | Margin |\n|---|---|\n| 2023 | 0.1 |\n"
+        assert e86.parse_window_refs(table) == []
+        assert [r["idx"] for r in e86.parse_window_refs(table.replace("Date window", "Window"))] == [2023]
+    rows = _rows()
+    out = review_set_output(rows, budget=0.1)
+    listed = "".join(f"| {j + 1} | {r['window_index']} | {r['margin']} |\n" for j, r in enumerate(out["review"][:3]))
+    answer = B8_R3_RUN3 + "| Rank | Index | Margin |\n|---|---|---|\n" + listed
+    far = max(range(len(rows)), key=lambda i: sorted(rows[i])[-1] - sorted(rows[i])[-2])
+    answer = answer.replace("2023", str(far))               # the year names a confident window of this small grid
+    run = write_run(str(tmp_path / "a"), B8C, [("olmoearth_review_set", {"scores_path": "/x/scores.json",
+                                                                         "budget": 0.1}, out)], answer,
+                    files={"scores.json": {"grid": [6, 10], "scores": rows}})
+    with e86.instrument(e86.AMENDED_R2):
+        assert _grade(run, "B8/cluster", "c3_ranking")["status"] == e86.FAIL
+    with e86.instrument(e86.instrument_for_round("3", after_round=3)):
+        g = _grade(run, "B8/cluster", "c3_ranking")
+    assert g["status"] == e86.PASS and g["n_windows_named"] == 3
+
+
+def test_a19_a20_apply_to_every_round_and_the_summary_keeps_every_record(tmp_path):
+    for rnd in ("1", "2", "3", "4"):
+        inst = e86.instrument_for_round(rnd, after_round=3)
+        assert {"unicode_minus", "date_window"} <= inst
+        assert inst - {"unicode_minus", "date_window"} == e86.instrument_for_round(rnd, after_round=2)
+    assert e86.instrument_for_round("4", after_round=3) == e86.AMENDED_R3
+    assert not {"unicode_minus", "date_window"} & (e86.AMENDED | e86.AMENDED_R2)
+    out = {"correlation": -0.0172, "n_cells": 36}
+    trial = tmp_path / "trial"
+    for rnd in ("1", "2", "3"):
+        rdir = trial / "rounds" / rnd
+        for k in range(3):
+            write_run(str(rdir / "runs" / "B3" / "studio" / f"run{k + 1}"), B3,
+                      [("olmoearth_compare_results", {"result_ids": ["a", "b"]}, out)], B3_R3_RUN3)
+        with open(rdir / "round.json", "w") as fh:
+            json.dump({"agent_commit": "abc1234", "not_run": {}}, fh)
+    s = e86.score_trial(str(trial))
+    before, after = s["amended_after_round_2"], s["amended_after_round_3"]
+    cell = lambda r, c: r["configurations"]["B3/studio"]["verdicts"][c]    # noqa: E731
+    assert [cell(r, "c2_grounding") for r in before["rounds"]] == [e86.FAIL] * 3
+    assert [cell(r, "c2_grounding") for r in after["rounds"]] == [e86.PASS] * 3
+    moved = after["effect_against_the_instrument_after_round_2"][2]["cells_moved"]
+    assert {"configuration": "B3/studio", "criterion": "c2_grounding", "preregistered": e86.FAIL,
+            "amended": e86.PASS, "moved_by": ["unicode_minus"]} in moved
+    record_3 = {p: x["status"] for p, x in before["rounds"][2]["predictions"].items()}
+    assert after["verdict"]["on_the_record"]["3"] == record_3
+    assert set(after["changes"]) == {"unicode_minus", "date_window"}
+    json.dumps(s, default=e86._json_default)

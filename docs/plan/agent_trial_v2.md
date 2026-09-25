@@ -901,3 +901,63 @@ round 2 B2 run 3's median read as a floor.
     B4/studio.
   - Round 2 could pass only if its P5 were regraded by rules written after its answers. This amendment does not do
     that.
+
+### 25 September 2026, after round 3
+
+Written after round 3 had been run (agent 7090f66 with the round-2 fixes, recorded in 90c3190), scored, and diagnosed
+(`exp/out/exp86_round3_diagnosis.md`, fe50c3c). **This is a third change to the instrument made after seeing
+results.** The rules for recording it are those of the amendment after round 2:
+
+- Round 3 was scored by the instrument in force for it, the one amended after round 2 (A8 to A18). Under it, round 3
+  **fails**: P2 on B3/studio and B8/cluster, and P3 on B8/cluster. That is round 3's record, and nothing below
+  regrades it.
+- The records of rounds 1 and 2 stay as they are.
+- A19 and A20 are frozen here, before round 4.
+
+Nothing else changes: the criteria, the tolerances, the pass rule, the three runs, the ten configurations, the routing
+table, A8 to A18 and the patterns A18 froze.
+
+Both changes are bugs against the plan's wording, of the same kind as A8 and A16: the reader misread what the answer
+wrote. Neither decides a reading.
+
+**A19. A minus sign written as U+2212 is a minus sign.**
+
+- Round 3, B3/studio run 3 wrote "Correlation | **−0.017**" with U+2212. The tool returned −0.0172, which rounds to
+  −0.017 at the precision stated, so the number is grounded.
+- The reader's pattern opened with an optional ASCII "-". It dropped the sign and read 0.017, which nothing supports.
+- Fix: U+2212 before a number is its sign, in the answer and in the pool. The sign is read, not ignored: a stated
+  −0.017 is not supported by +0.0172. A hyphen glued to a letter or digit stays a hyphen (A9); U+2212 is never one.
+
+**A20. "date window N" and "time window N" do not name a grid window.**
+
+- Round 3, B8/cluster run 3 wrote "pooled to a 128x128 window grid = 16,384 windows, all valid, date window 2023". The
+  window reader matched "window 2023" and graded window index 2023 (margin 1.222) as the first window named. The
+  answer's table lists the tool's ten lowest-margin windows in the tool's order.
+- P3 grades "the windows the answer names". "date window 2023" names the provider's `date_window`, a year.
+- Fix: "window N" preceded by "date" or "time" (with a space, "_" or "-" between) is not a window reference. A table
+  column whose header says "date window" or "time window" is not a column of windows. "window N" alone, "window #N"
+  and "window index N" are windows, as before.
+
+**How it is recorded.**
+
+- In the scorer, A19 is the switch `unicode_minus` and A20 the switch `date_window`. `AMENDED_R3` is A8 to A20, frozen
+  before round 4. `instrument_for_round(name, after_round=3)` gives each round's instrument after round 2 plus A19
+  and A20, which apply to every round when it is re-scored.
+- `exp/out/exp86_summary.json`:
+  - `verdict`, `rounds`, `amended_instrument` and `amended_after_round_2` are unchanged by the re-run.
+  - The new key `amended_after_round_3` holds every round under this instrument; its verdict, whose `on_the_record`
+    names each round's recorded predictions (round 3: the instrument after round 2); and what it moved against the
+    instrument after round 2, with the change each move needed.
+- From round 4 on, a round is decided under this instrument.
+- Tests: `tests/test_exp86.py` has one test each for A19 and A20, on round 3's strings, and one checking that both
+  apply to every round and that the summary keeps every record.
+
+**Rounds 1 to 3 under this instrument.**
+
+- **Rounds 1 and 2**: nothing moves.
+- **Round 3**: A19 moves B3/studio's P2 from fail to pass (run 3), and A20 moves B8/cluster's P3 from fail to pass
+  (run 3).
+  - P2 still fails on B8/cluster. Run 1 states "5,565+ windows still remain below the median but above the cut". No
+    tool returned that figure, and the run's scores give 7,373.
+  - The round fails. Its record is the instrument after round 2: P2 fails on B3/studio and B8/cluster, and P3 on
+    B8/cluster.

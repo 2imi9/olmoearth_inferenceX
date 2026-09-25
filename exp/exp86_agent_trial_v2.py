@@ -111,12 +111,20 @@ CHANGES = {
                 "identifier too",
     "p5_structural": "A18, for round 3 onward: P5's declines are decided from the answer's claims and the run's tool "
                      "calls (structural_declines), not from lists of decline phrasings; D3 and D5 are unchanged",
+    # the amendment after round 3 (A19, A20): two bugs against the plan's wording
+    "unicode_minus": "A19, a bug: a minus sign written as U+2212 ('\u22120.017') is a minus sign, in the answer and in "
+                     "the pool; the reader had dropped it and read the number as positive",
+    "date_window": "A20, a bug: 'window N' preceded by 'date' or 'time' names a date or time window, not a grid window; "
+                   "nor is a table column whose header says 'date window' or 'time window' a column of windows",
 }
 PREREGISTERED = frozenset()
 #: The instrument amended after round 1 (A8 to A15), in force for round 2.
-AMENDED = frozenset(CHANGES) - {"short_id", "p5_structural"}
+AMENDED = frozenset(CHANGES) - {"short_id", "p5_structural", "unicode_minus", "date_window"}
 #: The instrument amended after round 2 (A8 to A18), frozen before round 3 and in force from it.
 AMENDED_R2 = AMENDED | {"short_id", "p5_structural"}
+#: The instrument amended after round 3 (A8 to A20), frozen before round 4 and in force from it. A19 and A20 are bug
+#: fixes and apply to every round when it is re-scored.
+AMENDED_R3 = AMENDED_R2 | {"unicode_minus", "date_window"}
 #: Decisions of the amendment after round 2 that change no code (the plan's A17).
 DECISIONS_R2 = {
     "A17": "a count of a tool's listed entries that the model works out itself ('delta/18' for 18 listed levels) is "
@@ -152,11 +160,14 @@ def instrument_for_round(name, after_round=1):
     after_round=1 (A8 to A15): A15's decline phrasings grade rounds 2 onward; on round 1, which prompted them, they are
     reported and grade nothing. after_round=2 (A8 to A18): A16 is a bug fix and applies to every round; A18's
     structural P5 grades rounds 3 onward, and on rounds 1 and 2, which prompted it, it is reported and grades nothing,
-    so their P5 stays as the lexical rules in force for them grade it."""
+    so their P5 stays as the lexical rules in force for them grade it. after_round=3 (A8 to A20): each round's
+    instrument after round 2, plus A19 and A20, which are bug fixes and apply to every round."""
     try:
         number = int(name)
     except (TypeError, ValueError):
         number = None
+    if after_round == 3:
+        return instrument_for_round(name, 2) | {"unicode_minus", "date_window"}
     if after_round == 1:
         return (AMENDED - {"p5_rules"}) | {P5_REPORT} if number is not None and number <= 1 else AMENDED
     if number is not None and number <= 2:
@@ -498,11 +509,12 @@ def _reader_on():
 
 def _num_re():
     """exp64's number pattern with the switched-on readings: thousands separators (A8), magnitude suffixes (A11)."""
-    key = (_on("sep"), _on("suffix"))
+    key = (_on("sep"), _on("suffix"), _on("unicode_minus"))
     if key not in _NUM_CACHE:
         body = r"(?:(?<![\d.,])[1-9]\d{0,2}(?:,\d{3})+(?!\d|,\d)|\d+)" if key[0] else r"\d+"
         suffix = r"(?:[kKM](?![0-9A-Za-z]))?" if key[1] else ""
-        _NUM_CACHE[key] = re.compile(r"-?" + body + r"(?:\.\d+)?(?:[eE][-+]?\d+)?" + suffix + "%?")
+        sign = "[-\u2212]?" if key[2] else "-?"            # A19: U+2212 is a minus sign
+        _NUM_CACHE[key] = re.compile(sign + body + r"(?:\.\d+)?(?:[eE][-+]?\d+)?" + suffix + "%?")
     return _NUM_CACHE[key]
 
 
@@ -559,6 +571,7 @@ def _tokens(text, grid=None):
         core = tok.rstrip("%")
         if core[-1:] in _SUFFIX_UNIT:
             unit, core = _SUFFIX_UNIT[core[-1]], core[:-1]
+        core = core.replace("\u2212", "-")                  # A19: read as the minus it is
         toks.append({"tok": tok, "num": core.replace(",", "") + ("%" if tok.endswith("%") else ""), "unit": unit,
                      "at": m.start(), "glued": tok.startswith("-") and m.start() > 0 and text[m.start() - 1].isalnum()})
     toks.sort(key=lambda t: t["at"])
@@ -814,6 +827,9 @@ def grade_grounding(run, resolve=None):
 _ROWCOL = re.compile(r"\brow\s*(\d+)\s*(?:,|;|/|and)?\s*col(?:umn)?\s*(\d+)", re.I)
 _RC = re.compile(r"\bR(\d+)\s*C(\d+)\b", re.I)
 _IDX = re.compile(r"\bwindow(?:[ _-]?index)?\s*(?:#|no\.?|number)?\s*(\d+)\b", re.I)
+#: A20: "date window 2023", "time window" name a date or time window, not a grid window
+_DATE_WORD_BEFORE = re.compile(r"\b(?:date|time)[\s_-]*$", re.I)
+_DATE_WINDOW = re.compile(r"\b(?:date|time)[\s_-]*window", re.I)
 _RC_CELL = re.compile(r"\(?\s*(\d+)\s*[,;/]\s*(\d+)\s*\)?")      # a table cell "14, 29" (A13)
 
 
@@ -831,7 +847,8 @@ def _table_refs(text):
                 header = cells
                 ri = next((i for i, x in enumerate(cells) if x == "r" or x.startswith("row")), None)
                 ci = next((i for i, x in enumerate(cells) if x == "c" or x.startswith("col")), None)
-                wi = next((i for i, x in enumerate(cells) if "window" in x or x in ("index", "idx")), None)
+                wi = next((i for i, x in enumerate(cells) if ("window" in x and not (_on("date_window") and
+                           _DATE_WINDOW.search(x))) or x in ("index", "idx")), None)
                 rci = next((i for i, x in enumerate(cells) if re.search(r"\brow", x) and re.search(r"\bcol", x)),
                            None) if _on("p3_table") else None
                 cols = (ri, ci, wi, rci)
@@ -859,7 +876,8 @@ def parse_window_refs(text, ranges=()):
             if not _is_value_range(m, text, ranges)]
     refs += [{"pos": m.start(), "rc": (int(m.group(1)), int(m.group(2)))} for m in _ROWCOL.finditer(text or "")]
     refs += [{"pos": m.start(), "rc": (int(m.group(1)), int(m.group(2)))} for m in _RC.finditer(text or "")]
-    refs += [{"pos": m.start(), "idx": int(m.group(1))} for m in _IDX.finditer(text or "")]
+    refs += [{"pos": m.start(), "idx": int(m.group(1))} for m in _IDX.finditer(text or "")
+             if not (_on("date_window") and _DATE_WORD_BEFORE.search((text or "")[:m.start()]))]
     refs += _table_refs(text)
     return sorted(refs, key=lambda r: r["pos"])
 
@@ -2425,7 +2443,8 @@ def score_trial(trial_dir):
                 "changes": {k: v for k, v in CHANGES.items() if k in AMENDED}, "instrument_by_round": by_round,
                 "verdict": dict(_verdict(amended), first_round_on_the_record=_verdict(scored)["first_round"]),
                 "effect": effects, "rounds": amended},
-            "amended_after_round_2": _score_after_round_2(rounds, trial_dir, scored, amended)}
+            "amended_after_round_2": (a2 := _score_after_round_2(rounds, trial_dir, scored, amended)),
+            "amended_after_round_3": _score_after_round_3(rounds, trial_dir, scored, amended, a2["rounds"])}
 
 
 #: The manual readings of P5 by the two diagnoses, against which A18's structural rules are validated on rounds 1
@@ -2502,6 +2521,37 @@ def _score_after_round_2(rounds, trial_dir, scored, amended):
             "rounds": after}
 
 
+def _score_after_round_3(rounds, trial_dir, scored, amended, after_r2):
+    """Every round under the instrument amended after round 3 (A8 to A20). A19 and A20 are bug fixes and apply to every
+    round; what they moved is measured against the instrument amended after round 2. The record of each round is the
+    instrument in force when it was scored: round 1 the preregistered one, round 2 the one after round 1, round 3 the
+    one after round 2, and round 4 on this one."""
+    after, effects, by_round, record = [], [], {}, {}
+    for r, pre, prev1, prev2 in zip(rounds, scored, amended, after_r2):
+        inst = instrument_for_round(os.path.basename(r), after_round=3)
+        with instrument(inst):
+            am = score_round(r, trial_dir)
+        after.append(am)
+        by_round[am["round"]] = sorted(inst)
+        effects.append(instrument_effect(r, trial_dir, prev2, am, inst, changes={"unicode_minus", "date_window"}))
+        try:
+            number = int(am["round"])
+        except (TypeError, ValueError):
+            number = 4
+        on_record = pre if number <= 1 else prev1 if number == 2 else prev2 if number == 3 else am
+        record[am["round"]] = {p: v["status"] for p, v in on_record["predictions"].items()}
+    return {"amendment": "docs/plan/agent_trial_v2.md, Amendments: 25 September 2026, after round 3 (A19, A20)",
+            "note": "A third change to the instrument after seeing results: two reader bugs against the plan's wording, "
+                    "applied to every round when it is re-scored. Each round's record stays the instrument in force "
+                    "when it was scored ('verdict', 'amended_instrument', 'amended_after_round_2'). From round 4 on, "
+                    "a round is decided under this instrument.",
+            "changes": {k: CHANGES[k] for k in ("unicode_minus", "date_window")},
+            "instrument_by_round": by_round,
+            "verdict": dict(_verdict(after), on_the_record=record),
+            "effect_against_the_instrument_after_round_2": effects,
+            "rounds": after}
+
+
 def _json_default(o):
     if isinstance(o, (np.integer,)):
         return int(o)
@@ -2523,7 +2573,8 @@ def main():
         json.dump(s, fh, indent=1, default=_json_default)
     for label, rounds in (("preregistered instrument", s["rounds"]),
                           ("amended instrument (24 September, after round 1)", s["amended_instrument"]["rounds"]),
-                          ("amended instrument (24 September, after round 2)", s["amended_after_round_2"]["rounds"])):
+                          ("amended instrument (24 September, after round 2)", s["amended_after_round_2"]["rounds"]),
+                          ("amended instrument (25 September, after round 3)", s["amended_after_round_3"]["rounds"])):
         print(f"== {label}")
         for r in rounds:
             print(f"round {r['round']} (agent {r['agent_commit']}): complete={r['complete']} "
@@ -2555,6 +2606,14 @@ def main():
     for d in v["runs_where_structural_disagrees"]:
         print(f"  round {d['round']} {d['configuration']} run {d['run']}: manual {d['manual']}, structural "
               f"{d['structural']}: {d['structural_reasons']}")
+    for e in s["amended_after_round_3"]["effect_against_the_instrument_after_round_2"]:
+        print(f"== round {e['round']}: what the amendment after round 3 moved (against the one after round 2)")
+        for m in e["runs_moved"]:
+            print(f"  {m['configuration']:<12} run {m['run']} {m['criterion']:<15} {m['preregistered']} -> "
+                  f"{m['amended']}  ({', '.join(m['moved_by'])})")
+        for m in e["cells_moved"]:
+            print(f"  {m['configuration']:<12} {m['criterion']:<15} {m['preregistered']} -> {m['amended']}  "
+                  f"({', '.join(m['moved_by'])})")
     print(f"wrote {args.out}")
 
 
