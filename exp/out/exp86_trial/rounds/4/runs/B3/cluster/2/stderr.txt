@@ -1,0 +1,7 @@
+  [ok] olmoearth_load_context
+  [FAIL] olmoearth_get_prediction
+  [FAIL] olmoearth_get_prediction
+  [ok] olmoearth_scores_from_file
+  [ok] olmoearth_scores_from_file
+  [ok] olmoearth_compare_review
+  (4 turn(s), 6 provenance entries)

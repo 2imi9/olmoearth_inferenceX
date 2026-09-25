@@ -1,0 +1,19 @@
+
+
+I ran the review-set ranking on the KarstBinary 2025 result (`419c581d`, band `sample_karst_score`, declared range [0,1]).
+
+**How it works:** each of the 12x12 grid windows is scored as P(karst) at its cell centre; the signal is the margin |2s - 1| — distance from the 0.5 decision boundary. Lowest margin = least decided prediction = opened first. 91 of 144 windows were valid (53 no-data dropped). Note this ranks suspicion, not calibrated error probability — the score near 0.5 means "model isn't confident," not "this one is wrong with probability X."
+
+**Check first (5% budget, cut margin 0.219):**
+
+| Rank | Window (row, col) | Index | Score | Class | Margin |
+|---|---|---|---|---|---|
+| 1 | (4, 9) | 57 | 0.494 | karst=0 | 0.012 |
+| 2 | (5, 10) | 70 | 0.478 | karst=0 | 0.045 |
+| 3 | (9, 9) | 117 | 0.563 | karst=1 | 0.126 |
+| 4 | (10, 8) | 128 | 0.595 | karst=1 | 0.190 |
+| 5 | (3, 3) | 39 | 0.390 | karst=0 | 0.219 |
+
+At a 10% budget, add ranks 6-9: (10, 9), (4, 7), (6, 6), (9, 10) — all still predicted karst=0 with margins 0.26-0.52. The remaining 82 unlisted windows are much more confident (margins 0.534-0.991); the map-wide median margin is 0.964, so these bottom-9 stand out as the clearly undecided cells, clustered in rows 3-5 cols 3-10 and the south-east corner around rows 9-10.
+
+Caveats worth knowing: window indices are row/col only (no coordinates in this listing), and if you later want to know how wrong the map is overall, pass the returned scores path to `olmoearth_plan_label_sample` — don't divide the errors found here by the review size, since a targeted review set overstates the true error rate.

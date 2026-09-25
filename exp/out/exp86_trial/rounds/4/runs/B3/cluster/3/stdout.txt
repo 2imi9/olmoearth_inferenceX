@@ -1,0 +1,26 @@
+
+
+## Comparison of C1 (2023) vs C2 (2022), Namanga area
+
+Both maps use the same model (OlmoEarth-v1-FT-AWF-Base, same checkpoint revision), full-resolution logits pooled to a 128x128 window grid (16,384 windows, no no-data).
+
+**Where they differ**
+
+| Metric | Value |
+|---|---|
+| Windows differing | 3,807 / 16,384 |
+| Share differing | ~23.2% |
+| Differing windows on class boundaries | ~78.3% |
+| Mean margin, C1 (2023) on differing windows | 2.66 |
+| Mean margin, C2 (2022) on differing windows | 3.19 |
+
+A large part of the disagreement sits right at class edges — e.g. row 0, cols 3–38 flips between **montane_forest (class 6)** in 2023 and **woodland_forest (class 0)** in 2022, with the 2022 map looking more confident there.
+
+**Which is right: not determinable**
+
+I can't pick a winner, for two reasons:
+
+1. The maps describe **different periods** (2022-01-01/2022-12-31 vs 2023-01-01/2023-12-31), so any difference may be genuine ground change (e.g. seasonal cycle) rather than an error.
+2. No reference labels (`labels_date`) were provided. Without them there is nothing to grade either map against. Even with per-date reference labels, only labeled windows could settle it.
+
+If you want a verdict on accuracy, supply expert/reference labels dated to one of the two periods (or both) and I'll re-run the comparison with `labels_date`, then compute per-class metrics on the graded subset.

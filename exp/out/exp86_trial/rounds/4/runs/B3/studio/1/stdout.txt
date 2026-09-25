@@ -1,0 +1,17 @@
+
+
+Here's the comparison of your two 2025 PA Karst predictions (both completed, same period Jan–Dec 2025):
+
+**What was done:** fetched both results, then ran a cross-model pair comparison on a 6×6 grid over their shared extent (~10,091 km²; 25 cells compared, 11 dropped as no-data).
+
+| Metric | Value |
+|---|---|
+| Property A (KarstBinary) | `sample_karst_score`, regression 0–1 |
+| Property B (KarstNumber) | `sample_number`, regression 0.2–1.2 |
+| Correlation (A vs B) | -0.0172 |
+| Agreement within tolerance 0.1 | 0.0 |
+| Cells compared / dropped | 25 / 11 |
+
+**Where they differ:** effectively everywhere — they share almost no signal. The correlation is -0.0172 (essentially zero), so the two maps do not rise and fall together at all. Note that the two models predict *different quantities* (`sample_karst_score` vs `sample_number`), so the mean difference, RMSE (0.618) and per-cell gaps between them are not meaningful gaps between the same thing — only the near-zero correlation is a fair reading.
+
+**Which is right:** I can't tell you, and no tool can without ground-truth labels. This is model-vs-model agreement, not accuracy, and neither result has a reference to check against. If you want a real answer, I can plan a targeted labeling design (`olmoearth_plan_label_sample`) for one or both maps — e.g. pick the most suspect windows from each — and after you label N of them I can compute an honest error rate per map. Want me to set that up?

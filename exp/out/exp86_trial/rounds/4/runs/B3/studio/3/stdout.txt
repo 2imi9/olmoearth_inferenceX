@@ -1,0 +1,15 @@
+
+
+Here's how your two 2025 PA Karst predictions compare (KarstBinary result `419c581d`, KarstNumber result `afb1cf68`):
+
+| Statistic | Value |
+|---|---|
+| Cells compared | 25 of 36 (11 dropped as no-data) |
+| Correlation | -0.0172 (~zero; they don't rise/fall together) |
+| Mean A / B | 0.100 vs 0.682 |
+| RMSE between models | 0.618 |
+| Agreement within ±0.1 | 0% |
+
+**Where they differ:** effectively everywhere on the sampled grid — but with an important caveat: the models predict *different quantities* (KarstBinary = `sample_karst_score` [0–1]; KarstNumber = `sample_number` [0.2–1.2]). So only the correlation is meaningful, and it shows the two maps are independent of each other rather than one being "wrong."
+
+**Which is right?** Not determinable here — there are no ground-truth labels in this run, so I can report agreement/movement, not accuracy. If you have labeled karst points for the area, I can compute per-class precision/recall/F1 against them to grade each model honestly.

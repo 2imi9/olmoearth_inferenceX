@@ -1,0 +1,22 @@
+
+
+Label-sample plan is ready for `C1/awf_namanga_2023_1042061` (model **OlmoEarth-v1-FT-AWF-Base**, revision `a347b15…`).
+
+**Design summary**
+
+| Item | Value |
+|---|---|
+| Population | 16,384 valid windows (128×128 grid, patch 4 px), no nodata |
+| Budget | 300 windows |
+| Design | confidence (stratified by margin, allocated from the model's own scores) |
+| Strata / allocation | 5 strata → [106, 79, 47, 34, 34] |
+| Design file | `…/workspace/design_scores_8f3527f9_confidence_300_s0.json` |
+| Label CSV | `…/workspace/design_scores_8f3527f9_confidence_300_s0_to_label.csv` (holds each window's location and map_class) |
+
+**How to label**
+For each of the 300 windows, set `wrong = 1` when the map's class (`map_class`) does not match the ground truth, else `0`; optionally add `reference_class` (the true class id) for per-class accuracy. The score only allocates where you look — the estimate stays unbiased whatever the calibration.
+
+**Next step**
+Send me the filled CSV (or your 0/1 list) and I'll call `olmoearth_estimate_map_error` to return the error rate with the interval that this stratified design earns.
+
+Two caveats to keep in mind: this targeted design estimates the map's overall error honestly, but it cannot certify a "high-confidence zone" (that would need a `random` design); and if you later want to compare against a second run or audit ranking power, say so.

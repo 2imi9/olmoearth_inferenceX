@@ -1,0 +1,18 @@
+
+
+The map's error rate needs labeled windows; here's the plan built for you on the KarstBinary 2025 map (result `419c581d-...`, prediction `dd504793-...`).
+
+**Note:** you offered 300 labels, but a Studio result tops out at a 16x16 sampling grid = 256 points, of which **173 are valid windows** (83 no-data). So the design uses all 173; if you want coverage of every pixel on the whole raster instead, that needs a direct model run's scores file (olmoearth_scores_from_file) rather than the Studio result.
+
+| Item | Value |
+|---|---|
+| Design | confidence (stratified by margin, least-decided windows first) |
+| Population / budget | 173 valid windows, all 173 planned |
+| Grid | 16 x 16 cells over the result extent |
+| Decision | score treated as P(positive) at 0.5 (ranking only) |
+| Label file | `.../design_419c581d-9a1_8ca17d7d_confidence_173_s0_to_label.csv` (holds each window's location; fill `wrong` = 1 when the map class is not what's on the ground, else 0) |
+| Estimate step | after labeling, call olmoearth_estimate_map_error with the design path — report its interval + method, never p ± 1.96√(p(1-p)/n) |
+
+First 10 windows to open (order → row,col): 0→(13,10), 1→(13,13), 2→(1,9), 3→(13,7), 4→(14,8), 5→(14,9), 6→(14,10), 7→(10,2), 8→(12,13), 9→(8,9).
+
+Once you've filled the CSV, send me the 0/1 list and I'll compute the error estimate.

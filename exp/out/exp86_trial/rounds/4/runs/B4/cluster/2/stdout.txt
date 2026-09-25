@@ -1,0 +1,12 @@
+
+
+Map scored: **OlmoEarth-v1-FT-AWF-Base** (revision `a347b15`), 9 land-cover classes, 128x128 window grid = **16,384 valid windows**, no no-data. I designed a **confidence-stratified label plan for your 300 labels** — the score only allocates where you look; the resulting error rate stays unbiased whatever the model's calibration.
+
+| Item | Value |
+|---|---|
+| Population | 16,384 valid windows of the run |
+| Budget | 300 labels across 5 confidence strata (106 / 79 / 47 / 34 / 34) |
+| Design path | `design_scores_8f3527f9_confidence_300_s0.json` |
+| Label sheet | `..._to_label.csv` (each row holds the window location + its map class) |
+
+Next step — for each of the 300 windows, in order, mark **wrong = 1** if the map's class isn't what's on the ground, else **0** (optionally add `reference_class`, the true class id, for per-class accuracy). Fill the CSV or paste me the 0/1 list, and I'll run the estimator, which returns the error rate with the interval this design earns (not a plain p ± 1.96 formula).

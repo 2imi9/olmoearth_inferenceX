@@ -1,0 +1,21 @@
+
+
+**Short answer: none.** No share of this map can be certified at ≤5% errors with the current 300 labels.
+
+- Rule tested: `prefix`, α = 0.05, δ = 0.1 (random-sample design, as required)
+- Map size: 15,813 windows; 300 labelled
+- Certification needs ≥45 labels inside a zone, so only zones covering ≥15% of the map were testable — **none passed**
+
+| Zone share | Labels inside | Wrong | Bound vs α=0.05 | Accepted |
+|---|---|---|---|---|
+| 15% (most confident) | 46 | 3 | 0.139 | ✗ |
+| 25% | 68 | 3 | 0.095 | ✗ |
+| 100% (whole map) | 300 | 69 | 0.264 | ✗ |
+
+Even the most confident 15–25% zone shows ~4–5% observed errors, but its exact-test upper bound (0.095–0.139) is still above 5%, so no honest certification follows yet.
+
+Options:
+1. **Label more** — extend the same random design (e.g., another 300–500 labels) and re-run certification; the top-quarter zone is the most likely to clear 5%.
+2. Accept a looser guarantee (larger α) — note the guarantee only covers an α fixed before seeing labels.
+
+Want me to plan the next labeling batch targeting the most-confident windows?

@@ -1,0 +1,7 @@
+
+
+**Where they differ:** 1,570 of 78,028 shared windows (~2.0%) have different classes. Transitions run both ways — e.g. A says class 1 / B says class 0 at rows 344-345 (cols 0-4) and row 1065-1068 col 0, while A says class 0 / B says class 1 at rows 1442-1449 cols 4-6. On those differing windows, map A is more confident (mean margin 0.389 vs B's 0.158).
+
+**Which is right:** not gradeable. The maps describe different dates, 216 days apart (2017-09-14/15 vs 2018-04-19), so any difference may be genuine ground change (including seasonal cycle) rather than an error in one map. Without reference labels dated to each acquisition, there is no way to tell error from real change — and declining to pick a side is the correct answer here.
+
+To resolve it you would need a labeled reference for **each** date (photointerpretation or imagery for both periods); then I can grade the two maps separately against their respective references. Want me to set up a label plan for the 1,570 differing windows?

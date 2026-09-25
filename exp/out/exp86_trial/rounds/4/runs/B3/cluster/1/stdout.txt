@@ -1,0 +1,13 @@
+
+
+Both runs loaded fine (same model OlmoEarth-v1-FT-AWF-Base @ a347b154, 128x128 windows). Here's what `olmoearth_compare_review` found:
+
+**Where they differ**
+- 3,807 of 16,384 windows differ — **23.2%** of the shared area.
+- The differences sit mostly on class boundaries (78.3% of differing windows touch a boundary; 53.9% overall), so much of it is edge placement rather than wholesale disagreement.
+- Largest visible block: along the north edge (row 0), the 2023 map (C1) says **montane_forest** where the 2022 map (C2) says **woodland_forest** (e.g. window index 3–33, margins on the C1 side up to ~8.3 vs 0.5–0.9 on the C2 side). Other differing pairs include grassland_barren vs shrubland_savanna and urban_dense_development vs agriculture_settlement near cols 95–125 of row 0.
+
+**Which one is right**
+I can't call this one. The two maps describe different periods (2023 vs 2022), so any difference may be real ground change (seasonal cycle included) or an error in one map — and you haven't supplied reference labels for either date. Measured upstream, confidence doesn't resolve these either: on differing windows like this, the more-confident side is right only about 51–70% of the time, so neither map's confidence marks out the winner.
+
+To actually settle it, label a sample against dated references (one set per year) — I can design that with `olmoearth_plan_label_sample` if you want to spend N labels on it.

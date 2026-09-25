@@ -1,0 +1,9 @@
+
+
+**Map error rate: 19.4% [15.7%, 23.6%]** (nominal coverage 95%)
+
+- n_labelled = 300 of 15,813 population windows; effective n ≈ 384
+- Method: *stratified by confidence margin; Wilson interval on the design's effective sample size* — do not use the simple-random p ± 1.96 formula for this design
+- Overall accuracy ≈ 80.6% [76.4%, 84.3%]
+
+Per-class notes (wide intervals where labelled counts are small): class 7 and 4 are well labelled (>110 each); classes 1, 2, 5, 8 have very few labels, so their per-class figures should not be trusted. Error hotspots in the confusion counts: the map over-predicts class 6 (user accuracy ~45%) and misses some of class 4 (producer accuracy ~80%).

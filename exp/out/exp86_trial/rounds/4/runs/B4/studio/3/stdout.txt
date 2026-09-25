@@ -1,0 +1,16 @@
+
+
+Set up. One catch: the KarstBinary 2025 map can only support **173 labels**, not 300 — Studio results sample on a grid, and its largest grid (16x16) gives 173 valid windows over this map (83 sampled points were no-data and dropped). So your 300-window budget caps out here.
+
+**Labeling plan (confidence-stratified):**
+
+| Item | Value |
+|---|---|
+| Map / prediction | `419c581d-9a10-4684-aba5-1bab2875f26b` (KarstBinary--01-01-2025--12-31-2025--PA regular) |
+| Design | confidence, budget 173 (full population), strata by model margin |
+| Windows to open | lowest-margin first (score nearest 0.5) — most likely to be wrong |
+| Labels file | `.../workspace/design_419c581d-9a1_8ca17d7d_confidence_173_s0_to_label.csv` (holds each window's location) |
+
+For each window, set `wrong = 1` when the map's class (below/above the 0.5 karst-score threshold) is not what's on the ground, else `0`. When you return the filled labels, I'll run `olmoearth_estimate_map_error` for the error rate with the interval this design earns.
+
+Notes: the score is treated as P(positive) for ranking only — these orderings aren't error probabilities. If you specifically want a *certified* zone, say so and I'll redo the plan with design=`random`. Want me to walk through the first 10 windows now, or do you have the raster to work from directly (a direct model run would cover more than 173 windows)?

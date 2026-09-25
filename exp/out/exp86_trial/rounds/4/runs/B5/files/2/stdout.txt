@@ -1,0 +1,12 @@
+
+
+Your map's error rate, from the 300 labels on the confidence design (population 15,813 windows):
+
+| Metric | Value |
+|---|---|
+| Error rate | **19.4%** (0.19377) |
+| 95% CI | [15.7%, 23.6%] |
+| Effective n | 384.1 |
+| Overall accuracy | 80.6% [76.4%, 84.3%] |
+
+Method as computed: *stratified by confidence margin; Wilson interval on the design's effective sample size*. No starved strata. Per-class detail is available (e.g., class 6 producer accuracy ~87%, user accuracy ~45%) — say the word if you want that breakdown.

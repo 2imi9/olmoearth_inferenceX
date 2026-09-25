@@ -1,0 +1,15 @@
+
+
+Compared the two maps over their shared area (dates given, so the dates block applies):
+
+| Metric | Value |
+|---|---|
+| Windows compared | 78,028 |
+| Differing windows | 1,570 (~2.0%, share 0.020121) |
+| Mean margin on differing windows, map A (pre, 2017‑09‑14/15) | 0.389362 |
+| Mean margin on differing windows, map B (post, 2018‑04‑19) | 0.157536 |
+| Days between dates | 216 |
+
+**Where they differ:** 1,570 of 78,028 windows flip class (mostly at rows ~344–345 cols 0–4, rows ~1065–1068, ~1134–1141, ~1338–1340, and a large block at rows 1442–1449 cols 4–6); full list available on request.
+
+**Which is right:** not resolvable from these scores alone. The maps describe different times 216 days apart, so any differing window either changed on the ground (seasonal cycles included) or one map is wrong — the tool declines to grade because no `labels_date` reference exists. Note the confidence reading: mean margins on the differing set are higher for map A (0.389362 vs 0.157536), but measured evidence says the more-confident side wins only 51–70% of such windows, so that does not pick a winner. To settle it you'd need a labeled reference dated to each acquisition.

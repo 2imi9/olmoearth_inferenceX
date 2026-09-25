@@ -1,0 +1,17 @@
+
+
+Checked the KarstBinary 2025 result (`419c581d` in project `Karst Features in Pennsylvania`). I sampled its `sample_karst_score` band on a 10x10 grid (72 valid windows; 28 dropped as no-data) and ranked by the model's own margin: the score is a [0,1] binary score decided at 0.5, treated as P(positive) for ranking only, so windows nearest 0.5 are opened first. These rank suspicion, not probabilities of error.
+
+**Check these first (lowest margin = least decided):**
+
+| Rank | Window (row, col) | Score | Predicted class |
+|---|---|---|---|
+| 1 | (4, 7) | 0.352 | not karst |
+| 2 | (4, 2) | 0.285 | not karst |
+| 3 | (0, 5) | 0.745 | karst |
+| 4 | (1, 8) | 0.223 | not karst |
+| 5 | (8, 5) | 0.808 | karst |
+
+At a 5% budget that's windows 1-4 (margin cut 0.554); at 10%, add ranks 5-7. The remaining 65 windows have margins from 0.786 up, i.e. clearly one side of the threshold.
+
+**Why this order:** on Ai2's published suite the model's own margin beat every no-model control (typicality, disagreement, entropy-based signals) on all 24 scored tasks, which is why the confident end comes last. Caveat: this review set is chosen to hold errors, so don't divide its mislabels by its size to estimate map accuracy - use `olmoearth_plan_label_sample` (scores saved to the returned path) if you want an honest error rate.

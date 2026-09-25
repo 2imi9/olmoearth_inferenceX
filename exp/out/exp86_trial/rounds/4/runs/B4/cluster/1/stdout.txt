@@ -1,0 +1,21 @@
+
+
+I read the run's full pre‑argmax scores and built a **300‑window confidence‑stratified** label design (seed 0). The honest error rate isn't computable until you grade those 300 windows — no reliable number exists yet, so I won't invent one. Here's the setup:
+
+| Item | Value |
+|---|---|
+| Model | OlmoEarth‑v1‑FT‑AWF‑Base (revision a347b154…) |
+| Grid / windows | 128×128 = 16,384, all valid (0 nodata) |
+| Score type | multi‑class logits, ranked by top‑1 minus top‑2 logit margin |
+| Design | confidence‑stratified, budget 300, seed 0 |
+| Stratum allocation | 106 / 79 / 47 / 34 / 34 (5 confidence strata) |
+
+**Why a stratified plan and not "just check the suspicious ones":** a targeted review set is *not* a sample — its error rate overstates the map's true rate (1.8–5.8× on the package's own suite), and the simple‑random‑sample interval p±1.96√(p(1‑p)/n) doesn't apply to it. The confidence design stays design‑unbiased because the score only *allocates* labels; it doesn't enter the estimate.
+
+**Files to work from**
+- Design: `…/workspace/design_scores_8f3527f9_confidence_300_s0.json`
+- Label sheet (fill `wrong` 0/1 per window, optional `reference_class`): `…/design_scores_8f3527f9_confidence_300_s0_to_label.csv`
+
+**Next step:** label the 300 windows (wrong=1 where the map class ≠ ground truth), then I'll run `olmoearth_estimate_map_error` on that design to return the map's error rate plus the interval this design earns. Send me the filled CSV (or paste the 0/1 list) when ready.
+
+Note: if your real goal was "where should I look first" rather than a calibrated whole‑map error rate, say so — that's the review‑set route instead.

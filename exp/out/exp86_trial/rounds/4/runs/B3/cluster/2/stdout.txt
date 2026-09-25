@@ -1,0 +1,17 @@
+
+
+Compared the two runs (same model `OlmoEarth-v1-FT-AWF-Base`, 128×128 window grid, 16,384 windows each; A = C1/awf_namanga_2023, B = C2/awf_namanga_2022):
+
+| Metric | Value |
+|---|---|
+| Differing windows | 3,807 / 16,384 (~23%) |
+| Share of differing windows on a class boundary | ~78% |
+| Typical change | montane_forest ↔ woodland_forest (row 0, cols 3–33 etc.), also shrubland↔grassland and urban/agriculture edges |
+
+**Which is right — that can't be answered from these runs alone.** The two maps describe different dates (all of 2023 vs all of 2022), so a differing window either changed on the ground between years (seasonal cycle included) or one map is wrong. Without a reference (labels) pinned to a date, grading is impossible even in principle — and measured evidence says confidence doesn't decide it: the more-confident side is right on only 51–70% of differing windows, and the margins here barely separate the two sides (mean margin on differing windows: A ≈ 2.66, B ≈ 3.19 logits). Declining to pick a winner is the correct call, not an omission.
+
+To resolve it:
+- Supply reference labels for one or both dates and I will grade each map against its matching reference.
+- Or tell me how many labels you can spend and I'll design a stratified label sample over both grids (`olmoearth_plan_label_sample`) for an honest per-map error rate.
+
+Want me to run either?

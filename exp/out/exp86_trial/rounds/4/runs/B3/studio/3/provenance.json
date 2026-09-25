@@ -1,0 +1,79 @@
+{
+ "run_id": "9623bc06-c1a9-4854-8aa8-d1d6f60c7f1a",
+ "entry_count": 5,
+ "entries": [
+  {
+   "run_id": "9623bc06-c1a9-4854-8aa8-d1d6f60c7f1a",
+   "timestamp": "2026-09-25T05:00:31.215643+00:00",
+   "api_call": "olmoearth_load_context",
+   "request_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+   "response_summary": {
+    "total": 1,
+    "project_count": 1,
+    "ok": true
+   },
+   "prediction_id": null,
+   "model_id": null,
+   "dataset_hashes": null
+  },
+  {
+   "run_id": "9623bc06-c1a9-4854-8aa8-d1d6f60c7f1a",
+   "timestamp": "2026-09-25T05:00:33.359453+00:00",
+   "api_call": "olmoearth_search_predictions",
+   "request_hash": "1ef2ae0bd44a5be1ff728c495340843a8316721b3c23217096bcc4c927087ff1",
+   "response_summary": {
+    "total": 3,
+    "ok": true
+   },
+   "prediction_id": null,
+   "model_id": null,
+   "dataset_hashes": null
+  },
+  {
+   "run_id": "9623bc06-c1a9-4854-8aa8-d1d6f60c7f1a",
+   "timestamp": "2026-09-25T05:00:56.219529+00:00",
+   "api_call": "olmoearth_fetch_results",
+   "request_hash": "9b25f0e394645e6a0ddf40066af6fb43ec0cad185da7d49ced766e0938823df7",
+   "response_summary": {
+    "ok": true
+   },
+   "prediction_id": "dd504793-1ac3-4a1c-a389-707dbaab56c5",
+   "model_id": null,
+   "dataset_hashes": null
+  },
+  {
+   "run_id": "9623bc06-c1a9-4854-8aa8-d1d6f60c7f1a",
+   "timestamp": "2026-09-25T05:01:20.866052+00:00",
+   "api_call": "olmoearth_fetch_results",
+   "request_hash": "15164ff54468b7e7334eb17e72e2d8b2bd421577d7773474ada69dcbf0e22d12",
+   "response_summary": {
+    "ok": true
+   },
+   "prediction_id": "a83ca800-458c-4264-89f3-a7b34f43508c",
+   "model_id": null,
+   "dataset_hashes": null
+  },
+  {
+   "run_id": "9623bc06-c1a9-4854-8aa8-d1d6f60c7f1a",
+   "timestamp": "2026-09-25T05:02:30.313264+00:00",
+   "api_call": "olmoearth_compare_results",
+   "request_hash": "59e8ffd4e37dc5306bb6965f592e408aae8fc937bad5cae3637521817133c814",
+   "response_summary": {
+    "ok": true
+   },
+   "prediction_id": null,
+   "model_id": null,
+   "dataset_hashes": null
+  }
+ ],
+ "egress_count": 1,
+ "egress": [
+  {
+   "timestamp": "2026-09-25T05:00:28.980162+00:00",
+   "capability": "studio",
+   "host": "olmoearth.allenai.org",
+   "allowed": true,
+   "reason": "host on allowlist"
+  }
+ ]
+}

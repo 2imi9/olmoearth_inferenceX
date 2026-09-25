@@ -1,0 +1,14 @@
+
+
+Compared both maps on their shared window grid.
+
+**Where they differ**
+- **1,570 of 78,028 windows (~2.0%) disagree**; the rest agree.
+- On those windows, map A's mean margin is 0.389 vs map B's 0.158 — so where they disagree, A tends to look "more decisive" than B, but that is not evidence A is right.
+- Example differing windows (row, col): 344/3, 345/0–4 (A=class 1, B=class 0), 1136/11, 1141/7, and a block near rows 1442–1449, cols 4–6 (A=0, B=1). Full list has 1,570 entries; I can expand it.
+
+**Which is right — can't say**
+- The maps are **216 days apart** (Sep 2017 vs Apr 2018), so a differing window either *changed on the ground* (seasonality included) or one map is wrong — the difference alone cannot separate these.
+- No `labels_date` (reference imagery/labels tied to a specific date) was provided, so no grading is possible even with labels at hand. Per measured results, the more-confident side is right only ~51–70% of the time on differing windows, so picking by confidence is not reliable.
+
+To resolve it, provide a reference (e.g., an independent image or labels) dated to each map's period, and I'll grade per-window correctness against it.

@@ -1,0 +1,20 @@
+
+
+Ready — but not at exactly 300. Here's the state:
+
+**KarstBinary 2025 map** (`419c581d-9a10-4684-aba5-1bab2875f26b`, band `sample_karst_score`, [0,1] read at 0.5)
+
+| Item | Value |
+|---|---|
+| Design | `confidence` (strata by margin, least-decided first) |
+| Population | 173 valid windows (16x16 = 256 sampled, 83 no-data dropped) |
+| Budget used | 173 (max possible; your 300 exceeds it) |
+| Strata sizes | 35 / 34 / 35 / 34 / 35 |
+
+Why not 300: a Studio result caps at 16x16 sampling, and only 173 of those points are valid — so no grid on this result reaches 300 labels. If you need the whole map covered (~300 windows), I'd need the direct model run's scores raster (run dir under `OLMOEARTH_SCORES_ROOT`) to pool every window via `olmoearth_scores_from_file`.
+
+**How to label:** fill the CSV in order — `design_419c581d-9a1_8ca17d7d_confidence_173_s0_to_label.csv` — setting `wrong = 1` when the map's class (`map_class`: 0 = at/below threshold, 1 = above) doesn't match ground truth, else `0` (optionally `reference_class`). First 12 windows for orientation: indices 218, 221, 25, 215, 232, 233, 234, 162, 205, 137, 77, 71.
+
+Once filled, send me the results (or the filled CSV) and I'll call `olmoearth_estimate_map_error` to get the error rate with the interval this stratified design earns. Note: the 0.5-threshold decision is an assumption for ranking only, not a probability of error.
+
+Want the design path/CSV location again, or should I set up the full-map version instead?

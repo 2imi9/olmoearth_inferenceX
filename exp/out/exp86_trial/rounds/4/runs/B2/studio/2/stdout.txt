@@ -1,0 +1,21 @@
+
+
+Reviewed the KarstBinary 2025 result (`419c581d…f26b`, band `sample_karst_score`, range 0–1 decided at 0.5). A 12×12 grid gave 144 windows; 91 valid, 53 no-data dropped. The band is read as P(positive) for ranking only — it's not a calibrated error probability.
+
+**Windows to check first (5% budget = 5 of 91):**
+
+| Rank | Window | (row, col) | Score | Margin | Predicted |
+|------|--------|-----------|-------|--------|-----------|
+| 1 | 57 | (4, 9) | 0.494 | 0.012 | below 0.5 |
+| 2 | 70 | (5, 10) | 0.478 | 0.045 | below 0.5 |
+| 3 | 117 | (9, 9) | 0.563 | 0.126 | above 0.5 |
+| 4 | 128 | (10, 8) | 0.595 | 0.190 | above 0.5 |
+| 5 | 39 | (3, 3) | 0.390 | 0.219 | below 0.5 |
+
+**Why these:** margin = distance from the 0.5 decision. The model is least decided where the score sits nearest 0.5, so those cells are the most likely to flip — i.e., where the map is most suspect. Confidence/margin ranking is backed by measured evidence (Ai2's published suite: the model's own margin beat every no-model control across all 24 tasks, including feature-typicality and disagreement-style signals), while alternatives like ensemble or cross-model disagreement were rejected on measured comparisons.
+
+At a 10% budget the list extends to 9 windows (next: 129, 55, 78, 118); 82 windows have margins ≥ 0.534 and can be skipped last.
+
+**Caveats:**
+- Windows are named by index/(row, col), not coordinates — no raw lat/lon here.
+- This ranks relative suspicion; it is not a sample, so you must not divide errors found here by 5 to estimate the map's error rate. To quantify how wrong the map is, I can run `olmoearth_plan_label_sample` using the saved scores file — say the word.

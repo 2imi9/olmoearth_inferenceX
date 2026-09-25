@@ -1,0 +1,18 @@
+
+
+I compared both 2025 PA Karst predictions head-to-head on their shared extent (~10,091 km²), sampling each map on a 6×6 grid (25 of 36 cells valid; 11 were no-data in at least one map).
+
+| Statistic | Value |
+|---|---|
+| KarstBinary score range | 0.0 – 1.0 |
+| KarstNumber range | 0.2 – 1.2 |
+| Correlation | **-0.0172** |
+| Agreement within 0.1 | 0% of compared cells |
+| RMSE between maps | 0.618 |
+
+Key points:
+
+- The two models measure **different quantities** (`sample_karst_score` vs `sample_number`), so only the correlation is meaningful here. Near-zero correlation means they essentially do not rise and fall together over the shared area.
+- **Which is right: I can't answer that from these runs.** There are no ground-truth labels in this comparison, so this is model-vs-model agreement, not accuracy. Saying one "wins" would be unverifiable.
+
+If you want a defensible verdict, the next step is a small labeled check: I can plan a label sample for either or both maps, you mark which are wrong, and I compute an error rate with proper intervals. Alternatively, I can flag the most uncertain windows of each map for manual spot-checks. Which would you like?

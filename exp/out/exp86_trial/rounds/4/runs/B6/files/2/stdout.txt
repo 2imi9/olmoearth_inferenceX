@@ -1,0 +1,16 @@
+
+
+Short answer: **no part of the map is certified yet** — with these 300 random labels, no zone passes the exact test for "wrong at most 5%" (alpha = 0.05, delta = 0.1, prefix rule).
+
+Why: a zone needs at least 45 in-zone labels to be testable, so the smallest candidate holds only 46 — and even that best case is far from qualifying:
+
+| Zone share | Labels inside | Wrong | Upper bound on error rate | Certified? |
+|---|---|---|---|---|
+| 15% (smallest testable) | 46 | 3 | ~0.139 | no |
+| 25% | 68 | 3 | ~0.095 | no |
+| 50% | 140 | 13 | ~0.132 | no |
+| 100% (whole map) | 300 | 69 | ~0.264 | no |
+
+What it would take: roughly **a much larger simple-random label budget**. To certify even a 15% zone at alpha = 0.05 you need enough labels inside it that its observed error count drives the upper bound below 0.05 — the tool's `min_labels_to_certify` logic implies several hundred more labels are needed before any zone can clear the bar (the current whole-map estimate is already near 23% wrong, so expect a big sample).
+
+If you relabel with a fresh `design='random'` plan (larger budget) and re-run `olmoearth_certify_zone`, I'll report the largest certified share then.

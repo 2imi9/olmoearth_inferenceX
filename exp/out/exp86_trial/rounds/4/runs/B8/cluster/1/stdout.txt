@@ -1,0 +1,16 @@
+
+
+Checked via olmoearth-inferencex on the full pre-argmax logits (model `OlmoEarth-v1-FT-AWF-Base`, revision a347b154...). Grid: 128x128 = 16,384 windows, all valid, no nodata. At a 5% review budget that's **819 windows**; the most suspect 12:
+
+| Rank | Window (row, col) | Index | Predicted class | Margin | Boundary nbrs |
+|---|---|---|---|---|---|
+| 1 | (14, 29) | 1821 | woodland_forest | 0.108 | 4 |
+| 2 | (10, 41) | 1321 | montane_forest | 0.149 | 3 |
+| 3 | (23, 93) | 3037 | shrubland_savanna | 0.153 | 6 |
+| 4 | (7, 11) | 907 | woodland_forest | 0.162 | 8 |
+| 5 | (14, 5) | 1797 | montane_forest | 0.176 | 7 |
+| 6 | (2, 43) | 299 | montane_forest | 0.177 | 0 |
+
+**Why these:** windows are ranked by the mean top-1 minus top-2 **logit margin** per window (label-fill channel excluded) — lowest first. These sit at ~0.11–0.24 vs a median margin of 4.47 across all windows, i.e. the model is barely choosing between two classes there. Many also touch predicted-class boundaries (4–8 neighbouring windows of a different class), where misclassification risk concentrates. The top few span montane forest, woodland and grassland/barren.
+
+Caveats: this ranks relative suspicion, not calibrated error probability; it measures the OlmoEarth family at window level, not every possible failure mode. If you next want an honest error rate, pass the saved scores file to a label-sample plan rather than reviewing this set alone (a review set's error rate is inflated). I can list more windows or set up that sample if you'd like.

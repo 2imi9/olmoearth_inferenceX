@@ -1,0 +1,13 @@
+
+
+**Map error rate: 19.4%** (300 labelled windows out of a population of 15,813).
+
+| Quantity | Value |
+|---|---|
+| Error rate | 0.194 |
+| 95% interval | [0.157, 0.236] |
+| Overall accuracy | 0.806 ([0.764, 0.843]) |
+| Effective n | ~384 |
+| Method | stratified by confidence margin; Wilson interval on the design's effective sample size |
+
+Per-class detail shows class 7 is strongest (producer accuracy ~0.91), while classes 1, 6 and a few rare classes have wide or unreliable per-class intervals due to few labels. Want me to break down any specific class?

@@ -1,0 +1,19 @@
+
+
+**None.** No part of the map is certified to be wrong at most 5% of the time under your random design (alpha = 0.05, delta = 0.1, rule = prefix): all 18 tested coverage levels from 15% up to 100% of the map were rejected (`certified: false`).
+
+A few details from the test:
+
+| Coverage | Labels in zone | Wrong | Upper bound | Accepted |
+|---|---|---|---|---|
+| 15% (smallest testable) | 46 | 3 | 0.139 | ✗ |
+| 25% | 68 | 3 | 0.095 | ✗ |
+| 50% | 140 | 13 | 0.132 | ✗ |
+| 100% (whole map) | 300 | 69 | 0.264 | ✗ |
+
+Notes:
+- A zone needs at least **45 labels** inside to be testable at this alpha/delta, so nothing below 15% coverage was even examined.
+- The whole-map error estimate is ~23% (69/300), well above 5%, so no realistic subzone passes a 5% gate.
+- Per the tool's reading note, certification holds only for an alpha fixed before seeing the labels, so I would not relax alpha until one passes.
+
+If you want a certified zone, options are more labels (a larger random sample) or a looser pre-specified alpha matched to what the data supports; happy to re-run either way.

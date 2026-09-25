@@ -1,0 +1,70 @@
+{
+ "brief_values": {
+  "B3/cluster": {
+   "run_dir_a": "C1/awf_namanga_2023_1042061",
+   "run_dir_b": "C2/awf_namanga_2022_1042294"
+  },
+  "B4/cluster": {
+   "run_dir": "C1/awf_namanga_2023_1042061"
+  },
+  "B8/cluster": {
+   "run_dir": "C1/awf_namanga_2023_1042061"
+  },
+  "B5/files": {
+   "design_path": "F2/design_confidence_300_s0.json",
+   "labels_path": "F2/labels_confidence_300_s0.csv"
+  },
+  "B6/files": {
+   "design_path": "F3/design_random_300_s0.json",
+   "labels_path": "F3/labels_random_300_s0.csv"
+  },
+  "B7/files": {
+   "scores_a": "F4/emsr279-11_s1_pre.json",
+   "scores_b": "F4/emsr279-11_s1_post.json",
+   "date_a": "2017-09-14/2017-09-15",
+   "date_b": "2018-04-19"
+  }
+ },
+ "not_run": {
+  "B8/studio": "the Studio account of the first trial (24 September) held no classification model: KarstEmbedding, KarstNumber and KarstBinary only"
+ },
+ "fixes": [
+  {
+   "after_round": 3,
+   "where": "agent",
+   "branch": "2imi9/feature-trial-round3-fixes",
+   "commits_since": "7090f66",
+   "diagnosis": "exp/out/exp86_round3_diagnosis.md",
+   "items": [
+    "the harness checks the final answer's numbers against the run's tool results and the user's messages before it is shown; when one is found in none of them, one more call without tools asks the model once to rewrite the answer without it; an event (grounding_check) records the numbers and whether the rewrite still states some",
+    "soul: one sentence saying the harness checks the numbers"
+   ]
+  },
+  {
+   "after_round": 3,
+   "where": "scorer",
+   "commit": "6c6a5d8",
+   "items": [
+    "A19 a minus written U+2212 is a minus sign",
+    "A20 'date window N' and 'time window N' are not grid windows"
+   ]
+  }
+ ],
+ "agent_commit": "0d791d3a3a706bd98db5544f43e95e8e0b08fce8",
+ "agent_dirty": false,
+ "agent_diff_sha256": null,
+ "inferencex_version": "1.3.0",
+ "model": "nvidia/Qwen3.8-27B-NVFP4",
+ "sampling": {
+  "mode": "thinking_general",
+  "temperature": 1.0,
+  "top_p": 0.95,
+  "top_k": 20,
+  "presence_penalty": 1.5,
+  "max_tokens": 32768,
+  "preserve_thinking": true
+ },
+ "max_turns": 8,
+ "agent_branch": "2imi9/feature-trial-round3-fixes",
+ "first_run": "2026-09-25T04:46:03+00:00"
+}

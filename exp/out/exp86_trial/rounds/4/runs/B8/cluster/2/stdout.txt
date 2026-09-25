@@ -1,0 +1,18 @@
+
+
+I read the run's full score raster (`olmoearth_scores_from_file`) and ran `olmoearth_review_set` at a 5% budget on the 128x128 grid. Of 16,384 windows, 819 make the review set; the top ten are below. They sit where the model's top-1 vs top-2 logit margin is smallest (median margin across the map is 4.47, budget-cut margin 0.994), i.e. where OlmoEarth-v1-FT-AWF-Base (AWF land-cover task, 2023 imagery) is least confident, and several hug predicted class boundaries (3-8 boundary neighbours).
+
+| Rank | Window (row, col) | Predicted class | Margin | Boundary nbrs |
+|---|---|---|---|---|
+| 1 | (14, 29) | woodland_forest | 0.108 | 4 |
+| 2 | (10, 41) | montane_forest | 0.149 | 3 |
+| 3 | (23, 93) | shrubland_savanna | 0.153 | 6 |
+| 4 | (7, 11) | woodland_forest | 0.162 | 8 |
+| 5 | (14, 5) | montane_forest | 0.176 | 7 |
+| 6 | (2, 43) | montane_forest | 0.177 | 0 |
+| 7 | (19, 34) | woodland_forest | 0.191 | 3 |
+| 8 | (46, 91) | grassland_barren | 0.206 | 6 |
+
+Why this order: the margin ranks relative suspicion, and the tool's evidence shows it is measured to work -- on all 24 tasks of Ai2's published suite the model's own margin beat the best no-model control (median excess-AURC lead 0.1158, sign test 24/24, p = 6e-08), while ensemble disagreement, feature-space typicality, cross-model disagreement and two-view disagreement were all rejected. Notably, montane_forest windows dominate the top 10 (5 of 10), so that class pairing with forest edge may deserve extra scrutiny.
+
+Caveats: this orders what to look at first; it is not a calibrated error probability, and the review set is not a sample (never divide its errors by its size). If you label these windows, feed the saved scores file to `olmoearth_plan_label_sample` / `olmoearth_estimate_map_error` for an honest error rate. Want me to plan a label budget next?

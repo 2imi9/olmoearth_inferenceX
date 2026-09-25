@@ -1,0 +1,19 @@
+
+
+I loaded the run's full score raster (direct model run, `OlmoEarth-v1-FT-AWF-Base`, rev a7c40be9, 128x128 = **16,384 windows**, 0 nodata) and computed the review set with olmoearth-inferencex's logit-margin signal.
+
+**What to check first:** at a 5% budget you'd open **819 windows**. The most suspect ones (lowest mean top-1 minus top-2 logit margin, fill channel excluded):
+
+| Rank | Window (row, col) | Predicted class | Margin |
+|---|---|---|---|
+| 1 | (14, 29) | woodland_forest | 0.108 |
+| 2 | (10, 41) | montane_forest | 0.149 |
+| 3 | (23, 93) | shrubland_savanna | 0.153 |
+| 4 | (7, 11) | woodland_forest | 0.162 |
+| 5 | (14, 5) | montane_forest | 0.176 |
+
+The rest of the list (ranks 6–20, margins up to 0.268) skews to montane_forest, woodland_forest, and grassland_barren windows; median margin across all windows is 4.468, so these sit far below typical — i.e., the model is close to splitting two classes there.
+
+**Why these:** the ranker uses each window's pre-argmax logit margin — lower means the model can't distinguish its top two classes — which is measured to beat no-model controls (embedding distance, feature-space typicality, ensemble disagreement) on Ai2's suite for this model family.
+
+**Caveats:** this orders *suspicion*, not probability of error; 8,823 of the windows touch a class boundary, so expect many diffs there; and it is not OOD/outside-area-of-applicability detection. If you want an error rate instead, pass these scores to `olmoearth_plan_label_sample` to design a label audit.

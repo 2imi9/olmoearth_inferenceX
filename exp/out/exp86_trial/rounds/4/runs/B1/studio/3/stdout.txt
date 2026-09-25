@@ -1,0 +1,15 @@
+
+
+Your Studio account has three saved models, two of which are fine-tuned (KarstEmbedding is an embeddings model, so it isn't a regression/classification head you'd "run" for a map):
+
+| Model | Type | Predicts | model_id |
+|---|---|---|---|
+| KarstBinary | fine_tuned | Per-pixel regression value (a number per pixel; from prior runs: karst presence indicator over PA, 2025) | `ac1eb985…0dc7f` |
+| KarstNumber | fine_tuned | Per-pixel regression value (karst count/score per pixel) | `f67d97d9…1cc0d` |
+| KarstEmbedding | embeddings | Feature vector per pixel (not a direct prediction) | `5aafb53d…990704` |
+
+Two caveats:
+- A `per_pixel_regression` output is a value per pixel, not a class probability or confidence score.
+- This listing is only your account's models. Ai2 also publishes other fine-tuned OlmoEarth models (task cards / olmoearth_projects configs) that aren't shown here, so this is not every model you could run.
+
+All three already have completed 2025 predictions in your **Karst Features in Pennsylvania** project, so any of the fine-tuned ones can be re-submitted to a new area or date range right away. Want me to set one up?
