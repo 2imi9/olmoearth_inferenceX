@@ -346,6 +346,69 @@ def sanitize(obj, dropped, path=""):
     return obj
 
 
+#: A Studio account record (users/me) is recognised by these keys; its identity is withheld whole, since its id,
+#: name, e-mail and organisations name the account holder and the record is published.
+_ACCOUNT_MARKERS = frozenset({"firebase_user_id", "last_login_time", "terms_accepted_at"})
+#: Keys whose value names the person, in any record or tool result.
+_PERSON_KEYS = frozenset({"email", "user_email", "user_name", "firebase_user_id"})
+#: A signed URL's query carries a signature (and the signer's account); the path alone is kept.
+_SIGNED_URL = re.compile(r"[?&](?:X-Goog-Signature|X-Amz-Signature|Signature)=", re.I)
+WITHHELD = "[withheld]"
+
+
+class Redactor:
+    """Withholds the account holder's identity and URL signatures from what a run writes.
+
+    The identity values (e-mail, name, ids) are learned from the account records and person keys it sees, so a later
+    occurrence in free text (a thinking trace, the answer) is withheld too. Coordinates and credentials are
+    `sanitize`'s; this covers what identifies a person in a published record (the trial's audit of round 6 found the
+    Studio account's e-mail and ids in every round's studio_calls.jsonl)."""
+
+    def __init__(self):
+        self.values = set()
+
+    def learn(self, obj):
+        if isinstance(obj, dict):
+            account = "email" in obj and bool(_ACCOUNT_MARKERS & set(obj))
+            for k, v in obj.items():
+                if isinstance(v, str) and len(v) >= 4 and (str(k).lower() in _PERSON_KEYS or
+                                                            (account and k in ("id", "name"))):
+                    self.values.add(v)
+                self.learn(v)
+        elif isinstance(obj, list):
+            for v in obj:
+                self.learn(v)
+
+    def text(self, t):
+        for v in sorted(self.values, key=len, reverse=True):
+            t = t.replace(v, WITHHELD)
+        return t
+
+    def __call__(self, obj, dropped=None, path=""):
+        dropped = [] if dropped is None else dropped
+        if isinstance(obj, dict):
+            if "email" in obj and _ACCOUNT_MARKERS & set(obj):
+                dropped.append(path or "<record>")
+                return {"withheld": "a Studio account record: the account holder's identity is not published"}
+            out = {}
+            for k, v in obj.items():
+                where = f"{path}.{k}" if path else str(k)
+                if str(k).lower() in _PERSON_KEYS and v not in (None, ""):
+                    dropped.append(where)
+                    out[k] = WITHHELD
+                else:
+                    out[k] = self(v, dropped, where)
+            return out
+        if isinstance(obj, list):
+            return [self(v, dropped, f"{path}[]") for v in obj]
+        if isinstance(obj, str):
+            if _SIGNED_URL.search(obj):
+                dropped.append(f"{path}?signature")
+                obj = obj.split("?")[0]
+            return self.text(obj)
+        return obj
+
+
 def jsonable(o, depth=0):
     """A Studio response as JSON data: records, envelopes (dataclasses) and contexts; an HTTP response as its status."""
     if depth > 50:
@@ -383,6 +446,7 @@ class StudioLog:
         self.errors = collections.Counter()
         self.leaks = []
         self._key = os.urandom(32)               # never written: the point keys cannot be inverted to coordinates
+        self.redact = Redactor()                 # the account holder's identity and URL signatures are not written
 
     def point_key(self, lon, lat):
         msg = f"{float(lon):.9f},{float(lat):.9f}".encode()
@@ -412,7 +476,9 @@ class StudioLog:
             self.errors[str(status) if status is not None else type(exc).__name__] += 1
         else:
             dropped = []
-            entry["record"] = sanitize(jsonable(out), dropped)
+            record = sanitize(jsonable(out), dropped)
+            self.redact.learn(record)
+            entry["record"] = self.redact(record, dropped)
             if dropped:
                 entry["dropped_keys"] = sorted(set(dropped))
         try:
@@ -938,7 +1004,8 @@ async def _execute(p):
                     st["final"], st["turns"] = ev.get("content"), ev.get("turn")
                 elif kind == "max_turns":
                     st["hit"], st["turns"] = True, ev.get("turns")
-                p.writer.jsonl("events.jsonl", rec)
+                slog.redact.learn(rec)
+                p.writer.jsonl("events.jsonl", slog.redact(rec))
                 if slog.leaks or llm.leaks:
                     raise SecretLeak("; ".join(slog.leaks + llm.leaks))
             st["status"] = "answered" if st["final"] is not None else "no_answer"
@@ -977,7 +1044,7 @@ async def _execute(p):
             st["leaks"].append(str(exc))
 
     final = st["final"]
-    attempt(p.writer.text, "stdout.txt", (final + "\n") if isinstance(final, str) else "")
+    attempt(p.writer.text, "stdout.txt", (slog.redact.text(final) + "\n") if isinstance(final, str) else "")
     lines = [f"  [{'ok' if ok else 'FAIL'}] {name}" for name, ok in calls]
     if agent is not None:
         turns = st["turns"] if st["turns"] is not None else agent.state.turn_count

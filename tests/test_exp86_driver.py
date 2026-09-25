@@ -724,3 +724,41 @@ def test_the_parity_calls_are_graded_by_the_scorer(tmp_path):
     with pytest.raises(drv.DriverError, match="once per round"):
         drv.run_parity(rdir, "F1/f1_scores.json", registry=registry, agent_info=dict(AGENT),
                        require_installed_inferencex=False)
+
+
+# --------------------------------------------------------------------------------------------- identity withheld
+_ACCOUNT = {"id": "u-7f3a9c", "email": "someone@example.org", "firebase_user_id": "fb-91ab22c", "name": "Some Person",
+            "organizations": [{"id": "org-1", "name": "An University"}], "last_login_time": "2026-09-24T12:00:00",
+            "creation_time": "2026-01-01T00:00:00", "terms_accepted_at": "2026-01-01T00:00:00", "role": "user",
+            "disabled": False, "additional_permissions": []}
+
+
+def test_the_account_record_is_withheld_whole():
+    """The audit of round 6: users/me (e-mail, ids, name, organisations) was in every round's studio_calls.jsonl."""
+    r, dropped = drv.Redactor(), []
+    r.learn(_ACCOUNT)
+    out = r({"records": [_ACCOUNT]}, dropped)
+    assert out == {"records": [{"withheld": "a Studio account record: the account holder's identity is not published"}]}
+    assert dropped == ["records[]"]
+    # a model record without the account's markers keeps everything the scorer reads
+    model = {"id": "m-1", "name": "KarstBinary", "wizard_answers": {"nodata_value": -1}}
+    assert r(model) == model
+
+
+def test_a_person_key_is_withheld_and_learned_for_free_text():
+    r = drv.Redactor()
+    ctx = {"ok": True, "result": {"user_name": "Some Person", "organization": "An University", "projects": 1}}
+    r.learn(ctx)
+    assert r(ctx)["result"] == {"user_name": drv.WITHHELD, "organization": "An University", "projects": 1}
+    assert r.text("Hello Some Person, here is the map.") == f"Hello {drv.WITHHELD}, here is the map."
+    assert r({"type": "thinking", "text": "the user Some Person asked"})["text"] == f"the user {drv.WITHHELD} asked"
+
+
+def test_a_signed_url_keeps_its_path_only():
+    r, dropped = drv.Redactor(), []
+    url = ("https://storage.googleapis.com/bucket/results/r1.tif?X-Goog-Algorithm=GOOG4-RSA-SHA256"
+           "&X-Goog-Credential=sa%40proj.iam&X-Goog-Expires=604800&X-Goog-Signature=abc123")
+    assert r({"file_path": url}, dropped) == {"file_path": "https://storage.googleapis.com/bucket/results/r1.tif"}
+    assert dropped == ["file_path?signature"]
+    plain = "https://olmoearth.allenai.org/api/v1/prediction-results/r1?limit=5"
+    assert r({"u": plain}) == {"u": plain}
