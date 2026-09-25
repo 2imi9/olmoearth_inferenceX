@@ -116,15 +116,23 @@ CHANGES = {
                      "the pool; the reader had dropped it and read the number as positive",
     "date_window": "A20, a bug: 'window N' preceded by 'date' or 'time' names a date or time window, not a grid window; "
                    "nor is a table column whose header says 'date window' or 'time window' a column of windows",
+    # the amendment after round 4 (A21), made to follow an agent change before round 5 ran, not for any grade
+    "reported_stats": "A21, a reading made necessary by the agent's fix after round 4: 4c compares, of the statistics "
+                      "the plan lists (count, means, correlation, agreement), those the output reports; a comparison of "
+                      "different properties no longer reports an agreement fraction, and an absent statistic is "
+                      "neither reproduced nor contradicted. The sample count is always compared",
 }
 PREREGISTERED = frozenset()
 #: The instrument amended after round 1 (A8 to A15), in force for round 2.
-AMENDED = frozenset(CHANGES) - {"short_id", "p5_structural", "unicode_minus", "date_window"}
+AMENDED = frozenset(CHANGES) - {"short_id", "p5_structural", "unicode_minus", "date_window", "reported_stats"}
 #: The instrument amended after round 2 (A8 to A18), frozen before round 3 and in force from it.
 AMENDED_R2 = AMENDED | {"short_id", "p5_structural"}
 #: The instrument amended after round 3 (A8 to A20), frozen before round 4 and in force from it. A19 and A20 are bug
 #: fixes and apply to every round when it is re-scored.
 AMENDED_R3 = AMENDED_R2 | {"unicode_minus", "date_window"}
+#: The instrument amended after round 4 (A8 to A21), frozen before round 5 and in force from it. A21 applies to every
+#: round when it is re-scored.
+AMENDED_R4 = AMENDED_R3 | {"reported_stats"}
 #: Decisions of the amendment after round 2 that change no code (the plan's A17).
 DECISIONS_R2 = {
     "A17": "a count of a tool's listed entries that the model works out itself ('delta/18' for 18 listed levels) is "
@@ -161,11 +169,14 @@ def instrument_for_round(name, after_round=1):
     reported and grade nothing. after_round=2 (A8 to A18): A16 is a bug fix and applies to every round; A18's
     structural P5 grades rounds 3 onward, and on rounds 1 and 2, which prompted it, it is reported and grades nothing,
     so their P5 stays as the lexical rules in force for them grade it. after_round=3 (A8 to A20): each round's
-    instrument after round 2, plus A19 and A20, which are bug fixes and apply to every round."""
+    instrument after round 2, plus A19 and A20, which are bug fixes and apply to every round. after_round=4 (A8 to A21):
+    each round's instrument after round 3, plus A21, which applies to every round."""
     try:
         number = int(name)
     except (TypeError, ValueError):
         number = None
+    if after_round == 4:
+        return instrument_for_round(name, 3) | {"reported_stats"}
     if after_round == 3:
         return instrument_for_round(name, 2) | {"unicode_minus", "date_window"}
     if after_round == 1:
@@ -1080,6 +1091,8 @@ def _stats_match(rep, ref):
     if rep.get("n_samples") != ref.get("n_samples"):
         return False
     for key, tol in (("mean_a", 1e-6), ("mean_b", 1e-6), ("correlation", 1e-4), ("agreement_fraction", 1e-4)):
+        if _on("reported_stats") and key not in rep:
+            continue                                    # A21: a statistic the output does not report
         a, b = rep.get(key), ref.get(key)
         if a is None and b is None:
             continue
@@ -2444,7 +2457,9 @@ def score_trial(trial_dir):
                 "verdict": dict(_verdict(amended), first_round_on_the_record=_verdict(scored)["first_round"]),
                 "effect": effects, "rounds": amended},
             "amended_after_round_2": (a2 := _score_after_round_2(rounds, trial_dir, scored, amended)),
-            "amended_after_round_3": _score_after_round_3(rounds, trial_dir, scored, amended, a2["rounds"])}
+            "amended_after_round_3": (a3 := _score_after_round_3(rounds, trial_dir, scored, amended, a2["rounds"])),
+            "amended_after_round_4": _score_after_round_4(rounds, trial_dir, [scored, amended, a2["rounds"],
+                                                                               a3["rounds"]])}
 
 
 #: The manual readings of P5 by the two diagnoses, against which A18's structural rules are validated on rounds 1
@@ -2552,6 +2567,37 @@ def _score_after_round_3(rounds, trial_dir, scored, amended, after_r2):
             "rounds": after}
 
 
+def _score_after_round_4(rounds, trial_dir, in_force):
+    """Every round under the instrument amended after round 4 (A8 to A21). A21 applies to every round; what it moved is
+    measured against the instrument amended after round 3. `in_force` holds each earlier instrument's scoring of every
+    round (preregistered, after round 1, after round 2, after round 3); round k's record is the scoring by the instrument
+    in force when it was scored, and round 5 on is decided under this one."""
+    after, effects, by_round, record = [], [], {}, {}
+    for i, r in enumerate(rounds):
+        inst = instrument_for_round(os.path.basename(r), after_round=4)
+        with instrument(inst):
+            am = score_round(r, trial_dir)
+        after.append(am)
+        by_round[am["round"]] = sorted(inst)
+        effects.append(instrument_effect(r, trial_dir, in_force[3][i], am, inst, changes={"reported_stats"}))
+        try:
+            number = int(am["round"])
+        except (TypeError, ValueError):
+            number = 5
+        on_record = in_force[min(number, 4) - 1][i] if number <= 4 else am
+        record[am["round"]] = {p: v["status"] for p, v in on_record["predictions"].items()}
+    return {"amendment": "docs/plan/agent_trial_v2.md, Amendments: 25 September 2026, after round 4 (A21)",
+            "note": "A change to the instrument made after round 4 was recorded, to follow the agent's fix after round 4 "
+                    "(a comparison of different properties no longer reports an agreement fraction), before round 5 "
+                    "ran; it answers no grade of rounds 1 to 4. Each round's record stays the instrument in force when "
+                    "it was scored. From round 5 on, a round is decided under this instrument.",
+            "changes": {"reported_stats": CHANGES["reported_stats"]},
+            "instrument_by_round": by_round,
+            "verdict": dict(_verdict(after), on_the_record=record),
+            "effect_against_the_instrument_after_round_3": effects,
+            "rounds": after}
+
+
 def _json_default(o):
     if isinstance(o, (np.integer,)):
         return int(o)
@@ -2574,7 +2620,8 @@ def main():
     for label, rounds in (("preregistered instrument", s["rounds"]),
                           ("amended instrument (24 September, after round 1)", s["amended_instrument"]["rounds"]),
                           ("amended instrument (24 September, after round 2)", s["amended_after_round_2"]["rounds"]),
-                          ("amended instrument (25 September, after round 3)", s["amended_after_round_3"]["rounds"])):
+                          ("amended instrument (25 September, after round 3)", s["amended_after_round_3"]["rounds"]),
+                          ("amended instrument (25 September, after round 4)", s["amended_after_round_4"]["rounds"])):
         print(f"== {label}")
         for r in rounds:
             print(f"round {r['round']} (agent {r['agent_commit']}): complete={r['complete']} "
@@ -2614,6 +2661,11 @@ def main():
         for m in e["cells_moved"]:
             print(f"  {m['configuration']:<12} {m['criterion']:<15} {m['preregistered']} -> {m['amended']}  "
                   f"({', '.join(m['moved_by'])})")
+    for e in s["amended_after_round_4"]["effect_against_the_instrument_after_round_3"]:
+        print(f"== round {e['round']}: what the amendment after round 4 moved (against the one after round 3)")
+        for m in e["runs_moved"] + e["cells_moved"]:
+            print(f"  {m['configuration']:<12} {m.get('run', '')} {m['criterion']:<15} {m['preregistered']} -> "
+                  f"{m['amended']}  ({', '.join(m['moved_by'])})")
     print(f"wrote {args.out}")
 
 

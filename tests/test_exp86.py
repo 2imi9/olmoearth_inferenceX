@@ -1174,3 +1174,39 @@ def test_a19_a20_apply_to_every_round_and_the_summary_keeps_every_record(tmp_pat
     assert after["verdict"]["on_the_record"]["3"] == record_3
     assert set(after["changes"]) == {"unicode_minus", "date_window"}
     json.dumps(s, default=e86._json_default)
+
+
+# --------------------------------------------------------------------------------------------- after round 4, A21
+def _without_mixed(out):
+    """What the agent's compare tool returns after round 4 for two different properties (agent 9176be9)."""
+    x = dict(out)
+    x["stats"] = {k: v for k, v in out["stats"].items() if k in ("n_samples", "mean_a", "mean_b", "correlation")}
+    x["statistics_left_out"] = ["agreement_fraction", "tolerance"]
+    return x
+
+
+def test_a21_4c_compares_the_statistics_the_output_reports(tmp_path):
+    """The agent's fix after round 4 leaves the agreement fraction out of a comparison of different properties. Under
+    the instrument after round 3 that correct output reproduces neither way (ungradeable); under A21 it passes, and a
+    contaminated one still fails through its correlation."""
+    studio, a, b = _studio_for_compare(np.random.default_rng(3))
+    args = {"result_ids": ["A", "B"], "property_name": "s"}
+    fixed = _without_mixed(_compare_output([(x, y) for x, y in zip(a, b) if x >= 0 and y >= 0], 11))
+    run = write_run(str(tmp_path / "a"), B3, [("olmoearth_compare_results", args, fixed)], "ok", studio=studio)
+    with e86.instrument(e86.AMENDED_R3):
+        assert _grade(run, "B3/studio", "c4_nodata")["status"] == e86.UNGRADEABLE
+    with e86.instrument(e86.instrument_for_round("5", after_round=4)):
+        assert _grade(run, "B3/studio", "c4_nodata")["status"] == e86.PASS
+        shipped = _without_mixed(_compare_output(list(zip(a, b)), 0))              # -1 counted as data
+        run = write_run(str(tmp_path / "b"), B3, [("olmoearth_compare_results", args, shipped)], "ok", studio=studio)
+        g = _grade(run, "B3/studio", "c4_nodata")
+        assert g["status"] == e86.FAIL and "no-data pair(s) counted as data" in g["reasons"][0]
+        # a reported statistic that is wrong still fails to reproduce
+        wrong = dict(fixed, stats=dict(fixed["stats"], mean_a=fixed["stats"]["mean_a"] + 0.01))
+        run = write_run(str(tmp_path / "c"), B3, [("olmoearth_compare_results", args, wrong)], "ok", studio=studio)
+        assert _grade(run, "B3/studio", "c4_nodata")["status"] == e86.UNGRADEABLE
+    for rnd in ("1", "2", "3", "4", "5"):
+        inst = e86.instrument_for_round(rnd, after_round=4)
+        assert inst - {"reported_stats"} == e86.instrument_for_round(rnd, after_round=3)
+    assert e86.instrument_for_round("5", after_round=4) == e86.AMENDED_R4
+    assert "reported_stats" not in e86.AMENDED_R3

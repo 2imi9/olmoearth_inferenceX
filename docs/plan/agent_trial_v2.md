@@ -961,3 +961,33 @@ wrote. Neither decides a reading.
     tool returned that figure, and the run's scores give 7,373.
   - The round fails. Its record is the instrument after round 2: P2 fails on B3/studio and B8/cluster, and P3 on
     B8/cluster.
+
+### 25 September 2026, after round 4
+
+Written after round 4 had been run (agent 0d791d3, recorded in bf640e5), scored, and diagnosed
+(`exp/out/exp86_round4_diagnosis.md`, c9e7eb5). Round 4 **fails** under the instrument in force for it (A8 to A20),
+on P5 alone: runs 1 and 2 of B3/studio state an agreement fraction or an RMSE between the two different quantities in a
+table and disown it only in a later block, which is the case A18 decided. That is round 4's record, and nothing below
+touches it.
+
+**A21 answers no grade.** It follows a change to the agent made after round 4, just as A1 to A7 followed the agent's
+branches before any run. It is frozen here, before round 5.
+
+**A21. Check 4c compares the statistics the output reports.**
+
+- The agent's fix after round 4 (9176be9): given `allow_different_properties`, `olmoearth_compare_results` now reports
+  for a pair only the sample count, each map's own mean and the correlation. The mean difference, the RMSE and the
+  agreement fraction would mix two quantities, and it names them in `statistics_left_out`.
+- 4c recomputes "sample count, means within 1e-6, correlation and agreement within 1e-4" from the recorded samples. The
+  scorer compared all four, so a correct output without an agreement fraction would reproduce neither way and be
+  ungradeable.
+- Reading: of the statistics 4c lists, those the output reports are compared. The sample count is always compared. A
+  statistic the output does not report is neither reproduced nor contradicted.
+- What 4c guards against is unchanged. A no-data sample counted as data still shows in the count, the means and the
+  correlation, which is how the first trial's fault was found (r = 0.946 against −0.017). A test shows a contaminated
+  output still fails and a wrong reported mean still does not reproduce.
+- In the scorer this is the switch `reported_stats`. `AMENDED_R4` is A8 to A21. `instrument_for_round(name,
+  after_round=4)` gives each round's instrument after round 3 plus A21, which applies to every round.
+- `exp/out/exp86_summary.json` gains `amended_after_round_4`. Every earlier key is unchanged by the re-run. From round
+  5 on, a round is decided under this instrument.
+- Effect on rounds 1 to 4: nothing moves. Every compare output of those rounds reported all four statistics.
