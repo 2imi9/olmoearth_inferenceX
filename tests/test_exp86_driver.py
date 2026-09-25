@@ -391,7 +391,11 @@ def test_provenance_json_is_the_agents_manifest_and_agrees_with_the_events(b2_ro
 def test_events_jsonl_carries_every_event_with_the_full_tool_output_and_its_timing(b2_round):
     run_ = _load(b2_round["run_dir"])
     types = [e["type"] for e in run_["events"]]
-    assert types == ["tool_call", "tool_result", "thinking", "final"]
+    # An agent with exp87's answer checks appends the statement the review tool requires, which this scripted answer
+    # leaves out, and records it as a check event; exp86's agent has none.
+    checks = [e for e in run_["events"] if e["type"] == "check"]
+    assert all(e["check"] == "must_state" and e["action"] == "appended" for e in checks)
+    assert [t for t in types if t != "check"] == ["tool_call", "tool_result", "thinking", "final"]
     assert all(isinstance(e["t"], float) and isinstance(e["seconds"], float) for e in run_["events"])
     out = run_["calls"][0]["result"]
     assert out["ranked"] and out["sampling"]["n_valid"] == 14 and out["sampling"]["n_nodata_dropped"] == 2
