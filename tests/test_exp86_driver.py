@@ -743,6 +743,10 @@ def test_the_account_record_is_withheld_whole():
     # a model record without the account's markers keeps everything the scorer reads
     model = {"id": "m-1", "name": "KarstBinary", "wizard_answers": {"nodata_value": -1}}
     assert r(model) == model
+    # a person's id under a record's own key is withheld even when no account record was seen in the run (round 7)
+    fresh = drv.Redactor()
+    pred = {"id": "p-1", "model_id": "m-1", "requester_id": "u-7f3a9c", "created_by": "u-7f3a9c"}
+    assert fresh(pred) == {"id": "p-1", "model_id": "m-1", "requester_id": drv.WITHHELD, "created_by": drv.WITHHELD}
 
 
 def test_a_person_key_is_withheld_and_learned_for_free_text():

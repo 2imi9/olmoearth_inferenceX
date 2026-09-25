@@ -349,8 +349,10 @@ def sanitize(obj, dropped, path=""):
 #: A Studio account record (users/me) is recognised by these keys; its identity is withheld whole, since its id,
 #: name, e-mail and organisations name the account holder and the record is published.
 _ACCOUNT_MARKERS = frozenset({"firebase_user_id", "last_login_time", "terms_accepted_at"})
-#: Keys whose value names the person, in any record or tool result.
-_PERSON_KEYS = frozenset({"email", "user_email", "user_name", "firebase_user_id"})
+#: Keys whose value names or identifies the person, in any record or tool result. The id keys are withheld by key, not
+#: only by a learned value: a prediction's requester_id appears in runs that never fetch the account record (round 7).
+_PERSON_KEYS = frozenset({"email", "user_email", "user_name", "firebase_user_id", "requester_id", "created_by",
+                          "user_id", "owner_id", "creator_id", "author_id"})
 #: A signed URL's query carries a signature (and the signer's account); the path alone is kept.
 _SIGNED_URL = re.compile(r"[?&](?:X-Goog-Signature|X-Amz-Signature|Signature)=", re.I)
 WITHHELD = "[withheld]"
