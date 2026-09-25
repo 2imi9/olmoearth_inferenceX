@@ -1,0 +1,12 @@
+
+
+**Map error rate: 19.4%** (estimate 0.1938), with a 95% interval of **15.7% – 23.6%**.
+
+| Item | Value |
+|---|---|
+| Estimate | 0.1938 (≈ 19.4% of the 15,813 population windows) |
+| Interval | [0.1574, 0.2362] (± 0.0394 half-width) |
+| Design | confidence, 300 labels, effective n ≈ 384 |
+| Method | stratified by confidence margin; Wilson interval on the design's effective sample size |
+
+Per-class detail is available too — notably class 4 (map share ~33%) has user accuracy ~96.4% but producer accuracy only ~80.1%, while class 6 (~16% map share) is weaker at ~45.1% user accuracy. Want me to break down any class further?

@@ -1,0 +1,23 @@
+
+
+## Comparison: 2023 vs 2022 land-cover maps (same area)
+
+**Where they differ:** 3,807 of 16,384 windows (23.2%) disagree. 78.3% of the differing windows sit on a predicted class boundary — mostly edge/transition cells rather than whole regions flipping.
+
+Top disagreements (C1 = 2023 map, C2 = 2022 map):
+
+| Change (2023 ↔ 2022) | Windows | Share of differing |
+|---|---|---|
+| grassland_barren ↔ shrubland_savanna | 1,409 | 37.0% |
+| montane_forest ↔ woodland_forest | 447 | 11.7% |
+| woodland_forest ↔ shrubland_savanna | 388 | 10.2% |
+| urban_dense ↔ grassland_barren | 336 | 8.8% |
+| urban_dense ↔ shrubland_savanna | 308 | 8.1% |
+
+The most confidence-split zone runs along row 0 (cols 3–51), where the two maps flip between montane_forest and woodland_forest.
+
+**Which is right: cannot be determined.** The tool declines to pick a side, for two measured reasons:
+- The maps describe different times (2022 vs 2023), so any difference may be real seasonal change on the ground — the decisions alone can't separate "changed" from "wrong in one map." No reference date was given, so even with labels, grading would require a per-date reference.
+- Without ground truth, accuracy is undefined. As a weak signal only: over the differing windows, C1 (2023) held the higher margin in 42.2% of cases, while C2 (2022) had the higher mean margin overall (3.19 vs 2.66) — but confidence ordering does not identify a winner here.
+
+**Next step if you want a verdict:** provide reference labels dated to one of the two years, or run a third dated map so the 2022→2023 delta can be checked for reversals. I can also rank the lowest-margin differing windows for a human review pass.

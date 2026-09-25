@@ -1,0 +1,13 @@
+
+
+**Map error rate: 19.4% (estimate 0.1938), 95% CI [0.157, 0.236]**
+
+| Quantity | Value |
+|---|---|
+| Estimate | 0.1938 (~19.4%) |
+| Interval | [0.1574, 0.2362] |
+| Design | confidence, n_labelled 300 / population 15,813 windows |
+| Effective n | ~384.1; half-width ~0.0394 |
+| Method | stratified by confidence margin; Wilson interval on the design's effective sample size |
+
+Worst per-class spots: class 6 (user accuracy 0.451) and class 4 (producer accuracy 0.801); classes with fewer than 30 labelled windows have wide, low-trust intervals. Note this rate applies to the design's population windows — a targeted confidence review set is not a random sample, so don't substitute the simple p ± z formula.

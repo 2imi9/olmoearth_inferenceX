@@ -1,0 +1,15 @@
+
+
+Done — scored the run and built your 300-window label plan. The map's error rate comes from your labels; here's the setup:
+
+| Item | Value |
+|---|---|
+| Model | OlmoEarth-v1-FT-AWF-Base (rev a7c40be9), 9 land-cover classes |
+| Area | 128×128 windows (patch 4 px) = 16,384 valid, 0 no-data |
+| Design | confidence-stratified, 300 labels across 5 margin strata (106/79/47/34/34) |
+| Design file | `.../workspace/design_scores_8f3527f9_confidence_300_s0.json` |
+| Label sheet | `.../design_scores_8f3527f9_confidence_300_s0_to_label.csv` (each row has the window location + `map_class`) |
+
+**Your turn:** open the CSV and set `wrong = 1` where the map's class doesn't match the ground, else `0` (optionally also the true class id, so you get per-class accuracy). All 300 rows are included.
+
+Once filled, send me back (or point me at the CSV) and I'll run `olmoearth_estimate_map_error` to give you the honest error rate with the interval this stratified design actually earns — note a targeted review set would overstate errors 1.8–5.8×, so this stratified scheme is what keeps the estimate unbiased.

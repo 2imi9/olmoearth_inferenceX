@@ -1,0 +1,14 @@
+
+
+Done. For the KarstBinary 2025 result (`419c581d...`, band `sample_karst_score`, declared range [0, 1]), I sampled a 10×10 grid over the extent — 72 valid windows, 28 dropped as no-data — and ranked them by how close each window's score sits to the 0.5 decision boundary. The score is treated as P(positive) **for ranking only** (margins here are not error probabilities): the least-decided windows come first.
+
+Why this ordering: in Ai2's published embedding-suite evidence, the model's own margin beat every no-model control (ensemble/feature-typicality signals all lost) across 24 scored tasks, so "distance from the decision" is the best available suspicion signal without labels.
+
+| Rank | Window (row, col) | Score | Margin (lower = more suspect) |
+|---|---|---|---|
+| 1 | 47 (4, 7) | 0.351545 | 0.296909 |
+| 2 | 42 (4, 2) | 0.284662 | 0.430676 |
+| 3 | 5 (0, 5) | 0.744907 | 0.489813 |
+| 4 | 18 (1, 8) | 0.223218 | 0.553564 |
+
+At a 5% budget these 4 windows suffice; at 10%, add ranks 5–7 (85, 28, 13). The remaining 65 unlisted windows have margins between 0.785875 and 0.991517 — confidently non-karst or karst. Note this review set is chosen to hold errors, so its error rate would overstate the map's true one; if you want an honest map error estimate next, I can run a label-sample plan on the saved scores file. Want me to list the rest or proceed with a labeling plan?

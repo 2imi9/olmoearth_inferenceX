@@ -1,0 +1,13 @@
+
+
+I set up the labeling plan for the KarstBinary 2025 map (result `419c581d…`, band `sample_karst_score`, decided at 0.5). One catch: **your 300-window budget exceeds the labelable population** — Studio sampling tops out at a 16x16 grid, which gives only 173 valid windows here (83 no-data dropped). So the design uses all 173.
+
+| Item | Value |
+|---|---|
+| Design | confidence-stratified (5 margin strata, 34–35 each), seed 0 |
+| Population | 173 valid windows of the 256 sampled |
+| What it estimates | error rate of the map at those sampled points |
+| Labels to fill | `design_419c581d-9a1_8ca17d7d_confidence_173_s0_to_label.csv` (set `wrong=1/0` per window, plus `reference_class` if you want per-class accuracy) |
+| Design file | saved at `.../design_419c581d-9a1_8ca17d7d_confidence_173_s0.json` |
+
+**Next:** open the CSV, mark each window right/wrong, send it back (or the 0/1 list), and I'll run `olmoearth_estimate_map_error` to get the point estimate and the interval that this design earns. Note: because this is a targeted/stratified design, I won't quote a plain p ± 1.96√p(1−p)/n interval.

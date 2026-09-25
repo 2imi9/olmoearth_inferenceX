@@ -1,0 +1,17 @@
+
+
+Checked first from the KarstBinary 2025 result (`419c581d...`, band `sample_karst_score`, 12x12 grid; 91 valid windows, 53 no-data dropped).
+
+**Why this ordering:** the score sits in [0, 1] with decision at 0.5, so each window's "margin" = |2s − 1|. Windows nearest 0.5 are the least decided by the model and are opened first; the most confident (near 0 or 1) come last. This is relative suspicion ranking, not an error probability.
+
+| Rank | Window (row, col) | Score | Margin | Side |
+|------|-------------------|-------|--------|------|
+| 1 | #57 (4, 9) | 0.494 | 0.012 | below |
+| 2 | #70 (5, 10) | 0.478 | 0.045 | below |
+| 3 | #117 (9, 9) | 0.563 | 0.126 | above |
+| 4 | #128 (10, 8) | 0.595 | 0.190 | above |
+| 5 | #39 (3, 3) | 0.390 | 0.219 | below |
+
+At a 5% budget you'd open ranks 1–5 (cut margin 0.219); at 10%, ranks 1–9 (cut 0.516). For context, the median window margin over all 91 is 0.964, so these nine are strikingly undecided.
+
+Caveats: this review set holds errors, so its error rate would overstate the map's (upstream measured 1.8–5.8x inflation) — use `olmoearth_plan_label_sample` with the saved `scores_path` if you want an honest error estimate. Say the word and I'll plan that label budget.

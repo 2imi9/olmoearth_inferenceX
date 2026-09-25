@@ -1,0 +1,19 @@
+
+
+Found it: the **KarstBinary--01-01-2025--12-31-2025--PA regular** prediction (id `dd504793`) in your "Karst Features in Pennsylvania" project, result id `419c581d`. I sampled its `sample_karst_score` band (a [0, 1] regression score) on a 10x10 grid — 72 valid windows, 28 no-data dropped — and ranked by decision margin at a 5% review budget (4 windows).
+
+| Rank | Window (row, col) | Index | Score | Margin | Class side |
+|------|-------------------|-------|-------|--------|------------|
+| 1 | (4, 7) | 47 | 0.352 | 0.297 | below 0.5 |
+| 2 | (4, 2) | 42 | 0.285 | 0.431 | below 0.5 |
+| 3 | (0, 5) | 5 | 0.745 | 0.490 | above 0.5 |
+| 4 | (1, 8) | 18 | 0.223 | 0.554 | below 0.5 |
+
+**Why these four:** each sits nearest the 0.5 decision boundary — the score is read as [1 - s, s], so the margin is |2s - 1|, and the least decisive windows come first. The other 68 windows are far more confident (margins 0.615 to 0.992; median margin 0.965). Measured evidence behind this rule: on Ai2's published suite the model's own margin beat every no-model control on all 24 scored tasks, while disagreement/typicality signals lost.
+
+Caveats worth keeping:
+- This ranks **suspicion**, not error probability — the numbers are not calibrated (median margin here is high, so the map looks overall confident except in these few cells).
+- A review set is chosen to hold errors; it is **not** a random sample, so don't divide its mistakes by 4 to get a map error rate. If you want an honest error estimate, label per `olmoearth_plan_label_sample` using the saved scores file (`scores_419c581d...g10.json`, returned as `scores_path`).
+- Each window is one pixel sample at a cell centre, not the whole cell.
+
+Want me to design the label sample next, or run a comparison against your KarstNumber result over the same area?

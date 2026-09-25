@@ -1,0 +1,22 @@
+
+
+Read the run's full logits (`awf_namanga_2023_1042061`, OlmoEarth-v1-FT-AWF-Base rev a347b15, 128×128 window grid, 16,384 windows, no nodata) and ranked all windows by the mean top-1 minus top-2 logit margin — lowest first, so the most uncertain windows lead. At a 5% budget that means **819 windows to check first**.
+
+**Why these:** the margin is the model's own confidence signal, and on Ai2's 24-task suite it beat every no-model control (embedding distance, ensemble disagreement, feature typicality — p = 6e-08 sign test). Many top-ranked windows also sit on predicted-class boundaries (0–8 neighbouring windows of another class), where multi-class errors concentrate. Note the margins are uncalibrated: this orders *suspicion*, not error probability.
+
+Top 10 windows (row, col from north-west):
+
+| Rank | Window # | row, col | Predicted class | Margin | Boundary neighbours |
+|------|----------|----------|-----------------|--------|---------------------|
+| 1 | 1821 | 14, 29 | woodland_forest | 0.108 | 4 |
+| 2 | 1321 | 10, 41 | montane_forest | 0.149 | 3 |
+| 3 | 3037 | 23, 93 | shrubland_savanna | 0.153 | 6 |
+| 4 | 907 | 7, 11 | woodland_forest | 0.162 | 8 |
+| 5 | 1797 | 14, 5 | montane_forest | 0.176 | 7 |
+| 6 | 299 | 2, 43 | montane_forest | 0.177 | 0 |
+| 7 | 2466 | 19, 34 | woodland_forest | 0.191 | 3 |
+| 8 | 5979 | 46, 91 | grassland_barren | 0.206 | 6 |
+| 9 | 2467 | 19, 35 | montane_forest | 0.214 | 7 |
+| 10 | 296 | 2, 40 | montane_forest | 0.216 | 4 |
+
+Margin stats: lowest 0.108, median 4.468, highest 14.82; the 819th (budget cut) margin is 0.994. If you want the rest of the 819 listed, or next steps (how wrong the map is via `olmoearth_plan_label_sample` / error estimate, or a certified zone), say the word.

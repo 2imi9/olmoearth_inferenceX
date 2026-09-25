@@ -1,0 +1,20 @@
+
+
+Comparison complete — all 78,028 shared windows compared across the two dates (216 days apart).
+
+## Where they differ
+
+| Metric | Value |
+|---|---|
+| Windows compared | 78,028 |
+| Differing windows | 1,570 (~2.0%) |
+| Direction A→B class 0 → class 1 | 1,247 (79.4% of differences) |
+| Direction A→B class 1 → class 0 | 323 (20.6%) |
+| Mean margin on differing windows | A: 0.389 / B: 0.158 |
+| Differing windows where A is more confident | 77.6% |
+
+## Which is right?
+
+Neither can be called right from this comparison alone. The maps describe different times, so every differing window is ambiguous: it either **changed on the ground** between 2017-09 and 2018-04 (seasonal cycles included) or one map is wrong there, and scores plus margins cannot separate those cases. Confidence does not identify a winner — upstream evidence shows the more-confident side is right only ~51–70% of such windows, so declining to pick a side is the correct answer.
+
+To resolve it you need a labeled reference **per date**: give me ground-truth labels dated to Sep 2017 and Apr 2018 (pass `labels_date`) and I can grade each map against its own reference, or run a confidence-stratified label sample on each map separately.

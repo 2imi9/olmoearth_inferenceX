@@ -1,0 +1,22 @@
+
+
+Compared both runs (same model OlmoEarth-v1-FT-AWF-Base, same 128×128 window grid, all 16,384 windows valid, no nodata) via `olmoearth_compare_review`.
+
+**Where they differ:** 3,807 windows (23.2%) have different argmax classes. Of those, 78.3% sit on a predicted class boundary. Top transitions (A = C1/2023 → B = C2/2022):
+
+| Transition (2023 → 2022) | Windows | Share of differing |
+|---|---|---|
+| grassland_barren → shrubland_savanna | 1,409 | 37.0% |
+| montane_forest → woodland_forest | 447 | 11.7% |
+| woodland_forest → shrubland_savanna | 388 | 10.2% |
+| urban_dense_development → grassland_barren | 336 | 8.8% |
+| urban_dense_development → shrubland_savanna | 308 | 8.1% |
+
+(28 transitions total; full list available if you want it.)
+
+**Which is right — not determinable from these maps alone.** Two reasons, measured rather than assumed:
+
+- **Different dates.** The maps describe 2023 vs 2022 (one-year windows apart), so a differing window may simply be real ground change or seasonal cycle between the two years, not an error in either map.
+- **No reference labels.** Even with labels, none were given that describe a specific date (`labels_date`), so grading is impossible. Confidence can't break the tie either: on the differing windows C2 (2022) has a higher mean logit margin (3.19 vs 2.66 for C1), but upstream measurement puts the more-confident-side-wins rate at only 51–70% of differing windows — it does not identify a winner, and declining to pick a side is the correct call.
+
+If you have photointerpretation or other reference data dated for each year, I can grade each map against its own date and quantify per-class accuracy.

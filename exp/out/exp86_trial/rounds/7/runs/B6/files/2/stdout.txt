@@ -1,0 +1,22 @@
+
+
+Short answer: with those 300 labels, **no part of this map can be certified** as wrong at most 5% of the time (exact test, alpha = 0.05, delta = 0.1, prefix rule).
+
+| Zone (most-confident share) | Windows | Labels inside | Wrong | Upper bound @ delta=0.1 | Certified? |
+|---|---|---|---|---|---|
+| 15% of map | 2,372 | 46 | 3 | 13.9% | ✗ |
+| 25% of map | 3,953 | 68 | 3 | 9.5% | ✗ |
+| 50% of map | 7,906 | 140 | 13 | 13.2% | ✗ |
+
+Details:
+
+- Population is 15,813 windows; a zone needs at least 45 labelled windows to be testable, so the smallest zone checked was 15% of the map, and all 18 levels tested failed.
+- The closest case is the most-confident 25% zone (3 wrong of 68): its point estimate looks fine, but the exact upper bound is still 9.5%, above the 5% bar.
+- For context, the full-map upper bound is 26.4% (69 wrong of 300).
+
+What would change the answer:
+
+- More simple-random labels overall (the design already meets the `random` requirement); you need enough labels concentrated in the high-confidence region with few errors that its exact upper bound drops below 5%.
+- Note the guarantee applies to an alpha fixed **before** seeing the labels, so relaxing alpha afterwards is not a valid way to "earn" a certification.
+
+Want me to compute how many additional random labels you'd need, or run the same test under the Bonferroni rule?

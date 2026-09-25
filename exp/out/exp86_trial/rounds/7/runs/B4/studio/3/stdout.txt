@@ -1,0 +1,21 @@
+
+
+I set up the label plan for the KarstBinary 2025 map — one catch on your budget:
+
+**Setup**
+| Item | Value |
+|---|---|
+| Prediction | `dd504793` (KarstBinary, Jan–Dec 2025, completed) |
+| Result | `419c581d`, band `sample_karst_score` ([0,1], decided at 0.5) |
+| Your budget | 300 windows → **capped at 173** |
+
+Why capped: a Studio result can be sampled at most on a 16×16 grid (256 points), and 83 of those were no-data, leaving **173 valid windows**. So the design plans all 173, allocated across 5 confidence-margins strata (~35 each) — least-decided windows first. If you truly need 300+ labels over the whole map, that requires a direct model run's scores raster read via `olmoearth_scores_from_file`.
+
+**Label file (fill in `wrong`: 1 = map class wrong there, else 0; optionally `reference_class`)**
+`/Users/lucas/Desktop/Github/olmoearth_inferenceX/exp/out/exp86_trial/rounds/7/runs/B4/studio/3/workspace/design_419c581d-9a1_8ca17d7d_confidence_173_s0_to_label.csv`
+
+Notes
+- Design is `confidence` (stratified by margin) — gives an honest error-rate estimate; it stays unbiased whatever the score calibration is. For a certified zone instead, rerun with `design='random'`.
+- This estimates the error rate at the sampled points (window = one pixel at its cell centre), not per-pixel.
+
+When your labels are in the CSV, tell me and I'll run `olmoearth_estimate_map_error` to give you the rate with its proper interval.

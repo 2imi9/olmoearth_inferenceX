@@ -1,0 +1,22 @@
+
+
+Review set for `C1/awf_namanga_2023_1042061` (model OlmoEarth-v1-FT-AWF-Base, revision a347b15..., 9 AWF classes). The run gives full per-pixel logits pooled to a 128x128 window grid = **16,384 windows** (all valid, no nodata). At a 5% review budget that is **819 windows**, ranked boundary-first by the package's confidence signal: the mean top-1 minus top-2 **logit margin** per window (lower margin = more suspect).
+
+Top ~10 to check first:
+
+| rank | window (idx) | row, col | predicted class | margin | boundary neighbours |
+|---|---|---|---|---|---|
+| 1 | 1821 | 14, 29 | woodland_forest | 0.108 | 4 |
+| 2 | 1321 | 10, 41 | montane_forest | 0.149 | 3 |
+| 3 | 3037 | 23, 93 | shrubland_savanna | 0.153 | 6 |
+| 4 | 907 | 7, 11 | woodland_forest | 0.162 | 8 |
+| 5 | 1797 | 14, 5 | montane_forest | 0.176 | 7 |
+| 6 | 2466 | 19, 34 | woodland_forest | 0.191 | 3 |
+| 7 | 5979 | 46, 91 | grassland_barren | 0.206 | 6 |
+| 8 | 2467 | 19, 35 | montane_forest | 0.214 | 7 |
+| 9 | 296 | 2, 40 | montane_forest | 0.216 | 4 |
+| 10 | 10700 | 83, 76 | grassland_barren | 0.232 | 6 |
+
+**Why these:** their top-1 vs top-2 logit gap is tiny compared with the map-wide distribution (median margin 4.468; lowest overall 0.108; the 819th-ranked margin at the budget cut is 0.994). They also sit on predicted-class boundaries (4-8 of 8 neighbours in other classes), where fine-grained land-cover transitions (forest/shrub/grass) most often flip wrongly. The label-fill channel was excluded from the margin vote.
+
+Caveats: this ranks suspicion, not calibrated error probability; it is not an OOD statement, and capture at 5% budget is bounded by budget/error_rate. If you later get labels on some of these windows, I can convert the review set into a planned label sample to estimate how wrong the map actually is.

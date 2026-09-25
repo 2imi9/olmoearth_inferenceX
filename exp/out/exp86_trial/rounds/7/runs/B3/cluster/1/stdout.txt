@@ -1,0 +1,21 @@
+
+
+Compared both runs (same model OlmoEarth-v1-FT-AWF-Base @ revision a347b15, same 128x128 window grid, all 16,384 windows valid).
+
+**Where they differ**
+
+| Metric | Value |
+|---|---|
+| Differing windows | 3,807 / 16,384 (23.2%) |
+| Share touching a predicted class boundary | 78.3% |
+| Mean margin, C1 (2023 map) | 2.66 |
+| Mean margin, C2 (2022 map) | 3.19 |
+
+Top transitions (C1 -> C2): grassland_barren -> shrubland_savanna (37.0% of diffs), montane_forest -> woodland_forest (11.7%), woodland_forest -> shrubland_savanna (10.2%), urban_dense -> grassland_barren (8.8%). Full list has 28 distinct class pairs; the top-50 differing windows sit mostly in row 0 (north edge).
+
+**Which is right -- I can't tell you, and that's the correct answer**
+
+- The two maps describe different times (2022-01-01/2022-12-31 vs 2023-01-01/2023-12-31), so any difference is either real ground change between the years or an error in one map. Without reference labels dated to each map, the tool refuses to grade, and no label-free method can.
+- Confidence doesn't pick a winner: C2 is more confident on average over the differing windows, but C1 is more confident on 42.2% of them, and upstream evidence shows the more confident side is right on only about half or less of such windows.
+
+If you want a verdict, provide reference labels (or a third map per date) describing each period and I'll re-grade with `labels_date`, or design a labeling sample (olmoearth_plan_label_sample) to measure each map's error rate. Say the word and I'll expand the full 28-transition table or walk through specific windows.

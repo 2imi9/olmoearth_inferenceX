@@ -1,0 +1,13 @@
+
+
+Your Studio account has three models (two fine-tuned, one embeddings-only):
+
+| Model | Type | Predicts |
+|---|---|---|
+| **KarstBinary** (`ac1eb985…`) | fine-tuned | per-pixel regression — a value per pixel, not a class probability or confidence |
+| **KarstNumber** (`f67d97d9…`) | fine-tuned | per-pixel regression — a numeric value per pixel |
+| **KarstEmbedding** (`5aafb53d…`) | embeddings | frozen-feature embeddings (no direct map output) |
+
+All three have already produced completed 2025 PA karst predictions you can reuse.
+
+Note: this list covers your account only. Ai2 also publishes fine-tuned OlmoEarth models (published project configurations / task cards) that don't appear here — I can search the literature for those if you want.

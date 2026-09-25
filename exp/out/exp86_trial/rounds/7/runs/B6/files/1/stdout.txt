@@ -1,0 +1,15 @@
+
+
+**Short answer: none — no part of this map is certified to be wrong at most 5% of the time.**
+
+- Overall map error from your 300-label simple random sample: **23%** [18.4%, 28.1%], exact hypergeometric interval.
+- Certification (alpha = 0.05, delta = 0.1, prefix rule): **not certified**. A zone must hold at least 45 labels, so the smallest testable zone is the top **15%** of the map (2,372 most-confident windows). That zone held 46 labels with **3 wrong**, giving an upper bound of **0.1387** — far above 5%, and every larger level fails too.
+
+| Zone share | Windows | Labels inside | Wrong | Upper bound | Certified |
+|---|---|---|---|---|---|
+| 15% | 2,372 | 46 | 3 | 0.1387 | no |
+| 25% | 3,953 | 68 | 3 | 0.0951 | no |
+| 50% | 7,906 | 140 | 13 | 0.1321 | no |
+| 100% | 15,813 | 300 | 69 | 0.2638 | no |
+
+With 300 random labels, even the most-confident slice can't clear a 5% bar. To get a certified zone you'd need more labels from a `design='random'` plan (and the alpha must be fixed before labels are seen — relaxing it after the fact is not covered by the guarantee). Want me to plan a larger random labeling budget to see how many labels would suffice?

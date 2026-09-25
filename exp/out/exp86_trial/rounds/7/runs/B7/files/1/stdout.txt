@@ -1,0 +1,19 @@
+
+
+Compared the two maps over their 78,028 shared windows.
+
+**Where they differ**
+
+| Metric | Value |
+|---|---|
+| Differing windows | 1,570 (about 2.0%) |
+| Direction 0 → 1 (positive in post) | 1,247 (~79% of changes) |
+| Direction 1 → 0 | 323 (~21%) |
+| A more confident on differing windows | ~78% |
+| Mean margin (A / B) on differing windows | 0.389 / 0.158 |
+
+Changes cluster spatially (e.g., blocks at rows 344–345, rows 1139–1141, and rows 1442–1449), consistent with changed patches rather than scattered noise.
+
+**Which is right: not resolvable.** The maps are 216 days apart (Sep 2017 vs Apr 2018), so any difference could be real ground change (seasonal cycles included) or an error in either map — the decisions alone cannot separate these, and no labels date was given. Confidence does not pick a winner here: upstream, the more-confident side is right on only 51 to 70 percent of differing windows.
+
+To settle it, provide labels for one or both dates, or treat this as a change-detection layer rather than a contest between the two maps.

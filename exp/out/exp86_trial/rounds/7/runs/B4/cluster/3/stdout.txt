@@ -1,0 +1,11 @@
+
+
+I set up an honest error-rate design for that run (16,384 windows, 9 classes, model `OlmoEarth-v1-FT-AWF-Base` rev `a7c40be9`).
+
+**Design:** confidence-stratified, budget 300 labels, seed 0 — strata by logit margin (3,277 / 3,277 / 3,276 / 3,277 / 3,277), allocation 106/79/47/34/34. This targets low-margin windows while keeping the estimate unbiased; it is not a random sample, so no certified zone comes from it.
+
+To label:
+- **Labels CSV to fill:** `.../workspace/design_scores_8f3527f9_confidence_300_s0_to_label.csv` (each row has the window location + `map_class`; set `wrong`=1 if the map's class is not what is on the ground, else 0; optionally add `reference_class`)
+- **Design file:** `design_scores_8f3527f9_confidence_300_s0.json`
+
+Label all 300 in order, then send me the filled CSV (or the wrong/reference lists) and I'll compute the error rate with the interval this design earns via `olmoearth_estimate_map_error`.

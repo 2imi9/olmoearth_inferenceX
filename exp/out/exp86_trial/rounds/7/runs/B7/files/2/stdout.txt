@@ -1,0 +1,17 @@
+
+
+Compared both score files (same 78,028 windows). They describe **different times** — 2017-09-14/15 vs 2018-04-19, 216 days apart — so the comparison reports movement, not accuracy.
+
+**Where they differ**
+
+| Measure | Value |
+|---|---|
+| Windows compared | 78,028 |
+| Differing windows | 1,570 (2.0% share) |
+| class 0 in A -> 1 in B | 1,247 (79% of differing) |
+| class 1 in A -> 0 in B | 323 (21% of differing) |
+| Mean margin on differing | A: 0.389, B: 0.158 |
+
+Net direction is toward class 1 between Sept 2017 and Apr 2018, with the pre-map (A) more confident at the differing windows (A holds the higher margin on 77.6% of them). Example differing windows include indices 4819–4834 (rows 344–345, cols 0–4, A=1 -> B=0) and 10106, 10188 (A=0 -> B=1); the listing is window-order only, not a sample.
+
+**Which is right:** not gradable, and correctly declined. With no `labels_date` reference for each date, a differing window may be real ground change (seasonal cycle over 216 days included) or an error in one map — the decisions alone cannot tell which. Even with labels, confidence only wins ~51–70% of differing windows upstream, so the more-confident map (A here) is not a reliable pick. To separate change from error you'd need dated references (e.g., WorldCover for each period) or field labels per date.

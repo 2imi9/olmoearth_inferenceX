@@ -1,0 +1,18 @@
+
+
+Sample designed. Here's the plan for your 300 labels:
+
+| | |
+|---|---|
+| Design | `confidence` (stratified by model margin, 5 strata) |
+| Population | 16,384 valid windows (128x128 grid, patch 4 px) |
+| Allocation per stratum | 106 / 79 / 47 / 34 / 34 = 300 |
+| Scores file | `scores_run_OlmoEarth-v1-FT-AWF-Base_a7c40be9_p4.json` (logits, 9 classes) |
+| Design | `design_scores_8f3527f9_confidence_300_s0.json` |
+| Label sheet | `design_scores_8f3527f9_confidence_300_s0_to_label.csv` |
+
+**How to label:** in the CSV (it holds each window's location), set `wrong = 1` when the map's class (`map_class`) isn't what's on the ground there, else `0`, and add `reference_class` for the true class id. Then send me back the filled CSV or the 0/1 list, and I'll run `olmoearth_estimate_map_error` to give you the map's error rate with the interval this design earns.
+
+Two caveats up front:
+- A confidence design estimates the whole-map error rate (design-unbiased), but it won't certify a high-confidence zone — that needs `design='random'`. Say the word if you'd rather have certifiable coverage from these same 300 labels.
+- If your real goal were "which 300 windows look most wrong" rather than the overall error rate, that's the review-set tool instead; tell me which one serves you.

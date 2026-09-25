@@ -1,0 +1,22 @@
+
+
+Done — I read the run's full score raster via `olmoearth_scores_from_file` (16,384 windows on a 128x128 grid, 9 real classes + an excluded nodata fill channel), then ranked them with `olmoearth_review_set`.
+
+**Budget:** 5% of windows → **819 to check first** (the bottom 5% by margin). The full list is saved in the scores file at `/Users/lucas/Desktop/Github/olmoearth_inferenceX/exp/out/exp86_trial/rounds/7/runs/B8/cluster/1/workspace/scores_run_OlmoEarth-v1-FT-AWF-Base_a7c40be9_p4.json`.
+
+**Top 10 most suspect windows** (lowest top-1 vs top-2 logit margin, so the model is least sure there):
+
+| Rank | Window (row, col) | Index | Predicted class | Margin |
+|---|---|---|---|---|
+| 1 | (14, 29) | 1821 | woodland_forest | 0.108 |
+| 2 | (10, 41) | 1321 | montane_forest | 0.149 |
+| 3 | (23, 93) | 3037 | shrubland_savanna | 0.153 |
+| 4 | (7, 11) | 907 | woodland_forest | 0.162 |
+| 5 | (14, 5) | 1797 | montane_forest | 0.176 |
+| 6 | (2, 43) | 299 | montane_forest | 0.177 |
+| 7 | (19, 34) | 2466 | woodland_forest | 0.191 |
+| 8 | (46, 91) | 5979 | grassland_barren | 0.206 |
+| 9 | (19, 35) | 2467 | montane_forest | 0.214 |
+| 10 | (2, 40) | 296 | montane_forest | 0.216 |
+
+**Why this ordering:** the reviewer should look where the model is least confident — here measured by the mean per-pixel difference between the top two logits inside each window (lower = more suspect). Many of these sit next to several differently-classified neighbours (e.g. rank 4 has 8 boundary neighbours), i.e. likely true class-boundary pixels. Context for trust in the signal: on Ai2's own suite the model's margin beat every no-model alternative (feature typicality, ensemble disagreement, embedding distance) at error ranking, with a sign-test p of about 6e-08. Caveat: it ranks suspicion, not calibrated probability, and 5% capture is capped by budget/error-rate, so if you need an actual error estimate, follow up with `olmoearth_plan_label_sample` on this same file.

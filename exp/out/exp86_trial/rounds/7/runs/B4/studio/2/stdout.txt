@@ -1,0 +1,14 @@
+
+
+Sampling plan is set for the KarstBinary 2025 map (result `419c581d…`, band `sample_karst_score`). One limitation: Studio grid-sampling caps at 16×16 = 256 points, and 83 of those were no-data, so **only 173 windows can be labelled**, not 300. If you want all 300, we'd need the raw scores raster from a direct model run instead — let me know.
+
+**The 173-window confidence design** (least-decided windows first):
+
+| Item | Value |
+|---|---|
+| Design file | `…/workspace/design_419c581d-9a1_8ca17d7d_confidence_173_s0.json` |
+| Label CSV (has each window's location) | `…/design_419c581d-9a1_8ca17d7d_confidence_173_s0_to_label.csv` |
+| Layout | 5 strata by confidence margin, ~34–35 windows each |
+| Scoring assumption | band treated as P(karst) decided at 0.5, ranking only — not an error probability |
+
+**How to label:** for each window in order, set `wrong = 1` if the map's class (`map_class`: 0 = below threshold, 1 = above) does not match the ground, else `0`; optionally add `reference_class`. Fill the CSV, then send it back (or give me the 0/1 list) and I'll run `olmoearth_estimate_map_error` to return the map's error rate with the interval this stratified design actually earns.

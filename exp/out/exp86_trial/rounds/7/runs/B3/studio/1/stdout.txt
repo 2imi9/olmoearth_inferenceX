@@ -1,0 +1,20 @@
+
+
+Both 2025 runs are complete, but they output **different quantities**, so I compared them the way that is defensible and skipped anything that would mix the two scales.
+
+**What was compared** (project *Karst Features in Pennsylvania*, same AOI, 2025-01-01 to 2025-12-31):
+
+| | KarstBinary | KarstNumber |
+|---|---|---|
+| Result id | `419c581d-9a10-4684-aba5-1bab2875f26b` | `afb1cf68-8be3-4b7e-a0d1-ceb7c9739ae8` |
+| Output property | `sample_karst_score` (regression, 0–1) | `sample_number` (regression, 0.2–1.2) |
+
+**Where they differ:** On a 12x12 sample of the shared extent (~10,091 km²), 91 cells were valid and 53 dropped as no-data. Because the bands measure different quantities, only co-variation is meaningful: **correlation 0.4974** across those 91 cells — a moderate degree of overlap, meaning large parts of the AOI show similar relative patterns while much of the rest disagrees. A point-by-point difference, RMSE, or "agreement fraction" is not computable between the two (different units/ranges), and I did not work one out. Each map's own mean level differs too: KarstBinary averages ~0.096 on its 0–1 scale; KarstNumber ~0.691 on its 0.2–1.2 scale.
+
+**Which is right:** I can't say. There are no ground-truth labels for this AOI in Studio, so "accuracy" or "the correct model" cannot be established from these results alone — what I computed is model-vs-model agreement, not correctness. Both are per-pixel regressions (values, not confidences).
+
+If you want a real verdict, options:
+- Give me reference karst locations/labels (or let me draw an AOI around known sites) and I'll score each model against them.
+- I can plan a small labeled-check design (`olmoearth_plan_label_sample`) so you spend N labels on the most informative windows, then estimate each map's error rate honestly.
+
+Want me to set up either of those?

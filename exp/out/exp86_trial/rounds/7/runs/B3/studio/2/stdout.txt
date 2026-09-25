@@ -1,0 +1,22 @@
+
+
+Comparison done. Here's what I found:
+
+**What the two models predict (per-pixel regression values, not confidences)**
+
+| | KarstBinary result | KarstNumber result |
+|---|---|---|
+| Property | `sample_karst_score` (0–1) | `sample_number` (0.2–1.2) |
+| Result id | `419c581d-…f26b` | `afb1cf68-…ae8` |
+| Mean over shared extent | 0.10049 | 0.681763 |
+
+**Where they differ**
+- The two results measure *different quantities*, so only their correlation is meaningful: **correlation −0.0172** across the 25 comparable grid cells (of 36 sampled; 11 cells dropped as no-data in either map, over ~10,091 km² of shared extent). In practice the two maps do not agree in pattern at all — one reads high where the other reads low on average, and they rise/fall together essentially nowhere.
+
+**Which one is right**
+I can't tell you, and any answer would be made up: there are no ground-truth karst labels for this area, so neither map's accuracy is assessable, and mixing the two scales to call a winner isn't valid. Two honest next steps:
+
+1. **If you have a reference karst map/labels**, I'll score both against it (per-window error rates, classification metrics).
+2. **If you don't**, I can design a label plan (e.g., spend N window inspections via `olmoearth_plan_label_sample`) to estimate how wrong each map is before committing to one.
+
+Want me to set up option 2?

@@ -1,0 +1,15 @@
+
+
+**Short answer: none.** Your random sample supports **no** part of the map that can be certified wrong at most 5% of the time.
+
+- Map-wide error rate: **23%** (95% CI [18.4%, 28.1%], exact hypergeometric interval, simple random sample of 15,813 windows, 300 labelled).
+- Certification at alpha = 0.05, delta = 0.1, rule `prefix`: **no zone accepted**. A zone must hold at least 45 labels to be testable, so the smallest testable share is the most-confident 15% of the map — its upper bound was **13.9%** (46 labels, 3 wrong), still far above 5%. Every larger zone is worse (whole-map bound 26.4%).
+
+| Zone share | Labels inside | Wrong | Upper bound | Certified? |
+|---|---|---|---|---|
+| top 15% (most confident) | 46 | 3 | 13.9% | no |
+| top 25% | 68 | 3 | 9.5% | no |
+| top 50% | 140 | 13 | 13.2% | no |
+| whole map | 300 | 69 | 26.4% | no |
+
+Caveats: the guarantee applies to an alpha fixed **before** seeing these labels, so don't hunt up through looser alphas on this same draw to get a pass. To certify a zone at 5%, you'd need more labels (at least 45 inside the candidate zone, with essentially no errors among them) — e.g., a larger random sample focused on the high-confidence part of the map, planned with `olmoearth_plan_label_sample`.
