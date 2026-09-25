@@ -1,0 +1,25 @@
+
+
+Compared both runs' full score rasters (same model `allenai/OlmoEarth-v1-FT-AWF-Base`, revision `a347b15`, 128x128 grid, 16,384 windows each, same area).
+
+**Where they differ**
+
+| Measure | Value |
+|---|---|
+| Windows compared | 16,384 |
+| Differing windows | 3,807 (23.2%) |
+| On a predicted class boundary | 68.6% of the differing ones |
+| Mean margin, C2/2022 side | 3.19 |
+| Mean margin, C1/2023 side | 2.66 |
+
+The first listed disagreements cluster at row 0, cols 3–8 and 12–15 (indices 3–8, 12–15): **woodland_forest** in the 2022 map vs **montane_forest** in the 2023 map, with the 2023 side usually more confident (e.g. idx 7: margin 0.47 vs 7.75; idx 8: 0.73 vs 8.26).
+
+**Which is right**
+
+I can't tell, and it would be wrong to pick a side:
+
+- Both maps use the same model weights, so this isn't a model-vs-model contest.
+- They describe different time windows (2022 imagery vs 2023 imagery), so a differing window either changed on the ground between the two years (seasonal cycles included) or one map is wrong — the predictions alone cannot separate those two causes.
+- Measured upstream, even the more confident side is only right on 51–70% of differing windows, so confidence does not identify a winner here.
+
+To resolve it you'd need reference labels dated to each map (photointerpretation or field data for 2022 vs 2023); with those I could grade the differences per date. If you just want to know how much *movement* is real versus noise, a third date for one side would let me separate steady change from reversal.

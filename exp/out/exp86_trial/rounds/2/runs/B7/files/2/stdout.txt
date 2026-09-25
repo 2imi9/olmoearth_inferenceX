@@ -1,0 +1,15 @@
+
+
+Compared both score files over their shared extent (78,028 windows).
+
+**Where they differ**
+
+| | Value |
+|---|---|
+| Differing windows | 1,570 (2.01% of 78,028) |
+| Mean margin on differing windows, map A (2017-09) | 0.389 |
+| Mean margin on differing windows, map B (2018-04) | 0.158 |
+
+Most differing windows flip between class 0 and class 1; e.g. index 4819 (A=1, B=0), 10106 (A=0, B=1), 18745 (A=1, B=0). Full list available on request.
+
+**Which is right: undecidable.** The maps are 216 days apart, so any differing window either changed on the ground in between (seasonal cycles included) or one map is wrong at that spot. No reference dated to each period was supplied, so no grading is possible even in principle; and measured evidence says the more-confident side is right on only ~51–70% of differing windows, so confidence doesn't pick a winner either. To resolve it you'd need ground truth (or a reference map) for **each** date; then I can grade per date and separate real change from error.

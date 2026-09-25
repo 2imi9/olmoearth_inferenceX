@@ -1,0 +1,14 @@
+
+
+Labeling plan for run `C1/awf_namanga_2023_1042061` (model OlmoEarth-v1-FT-AWF-Base) is ready.
+
+| Item | Value |
+|---|---|
+| Population | 16,384 valid windows (4x4 px), 9 land-cover classes |
+| Design | confidence-stratified, 300 labels (strata sizes 3,277/3,277/3,276/3,277/3,277; allocation 106/79/47/34/34) |
+| Design file | `.../design_scores_8f3527f9_confidence_300_s0.json` |
+| Labels CSV | `.../design_scores_8f3527f9_confidence_300_s0_to_label.csv` |
+
+**How to label:** in the CSV order, set `wrong = 1` when the window's `map_class` doesn't match the ground truth, else `0` (optionally fill `reference_class` for per-class accuracy). The score only allocates labels, so the estimate stays unbiased regardless of its calibration.
+
+Send me the filled CSV (or your 0/1 list) and I'll call `olmoearth_estimate_map_error` to give you the error rate with the interval this design earns. Note: a confidence-stratified design cannot certify a zone — that requires `design='random'`, which I can re-run if you want one instead.

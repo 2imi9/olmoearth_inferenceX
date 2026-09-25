@@ -1,0 +1,13 @@
+
+
+Your Studio account has three runnable models (in project **Karst Features in Pennsylvania**, all with completed runs):
+
+| Model | Type | Predicts | Output band (from results) |
+|---|---|---|---|
+| **KarstBinary** (`ac1eb985`) | fine-tuned | Per-pixel regression value, not a class or confidence | `sample_karst_score` |
+| **KarstNumber** (`f67d97d9`) | fine-tuned | Per-pixel regression value | `sample_number` |
+| **KarstEmbedding** (`5aafb53d`) | embeddings | No declared prediction type — feature/embeddings output rather than a per-pixel value | n/a |
+
+So the two fine-tuned models each produce a continuous score per pixel over their AOI (runnable via `olmoearth_submit_prediction` with a model_id, area, and date range); the embeddings model doesn't emit a plain per-pixel map.
+
+One caveat: this list covers only your Studio account. Ai2 also publishes additional fine-tuned OlmoEarth models (task cards) outside this account, so it isn't the complete universe of models you could run — tell me if you'd like help running one of these over an area.

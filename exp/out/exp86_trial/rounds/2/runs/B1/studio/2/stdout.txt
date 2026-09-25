@@ -1,0 +1,11 @@
+
+
+Two fine-tuned models exist in your Studio account, plus one embeddings model:
+
+| Model | Type | Predicts |
+|---|---|---|
+| **KarstBinary** (`ac1eb985…`) | fine_tuned | Per-pixel regression — a value per pixel, not a class probability or confidence |
+| **KarstNumber** (`f67d97d9…`) | fine_tuned | Per-pixel regression — a value per pixel, not a class probability or confidence |
+| KarstEmbedding (`5aafb53d…`) | embeddings | Frozen-feature embeddings (no per-pixel prediction) |
+
+Note: this list covers only models in your account. Ai2 also publishes fine-tuned OlmoEarth models (task cards / olmoearth_projects configurations) that aren't shown here, so it isn't exhaustive. Want me to fetch the declared output range for either model's recent predictions?

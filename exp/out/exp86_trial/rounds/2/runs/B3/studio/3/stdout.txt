@@ -1,0 +1,16 @@
+
+
+Compared both 2025 predictions over your PA Karst area (result ids `419c…` for KarstBinary, `afb1…` for KarstNumber), sampling a 6x6 grid across their shared ~10,091 km² extent.
+
+**Where they differ**
+
+| Statistic | Value |
+|---|---|
+| Cells compared | 25 of 36 (11 no-data, dropped) |
+| Correlation | **-0.0172** — essentially uncorrelated |
+| KarstBinary (`sample_karst_score`) mean | 0.100 |
+| KarstNumber (`sample_number`) mean | 0.682 |
+
+Important caveat: the two models output **different properties** (`sample_karst_score` on [0, 1] vs `sample_number` on [0.2, 1.2]), so only the correlation is meaningful. Near-zero correlation means they are not tracking the same surface pattern — where one model sees karst signal rising, the other does not. Do not read the means as "KarstNumber finds more karst."
+
+**Which is right:** I can't tell you. There are no ground-truth labels in this account for this area, and these outputs are per-pixel regression values, not confidence scores — without truth, any "accuracy" claim would be invented. If you have reference stations or labeled points for the PA Karst area, share them (or point me to the dataset) and I'll score each model against the truth and say which performs better.

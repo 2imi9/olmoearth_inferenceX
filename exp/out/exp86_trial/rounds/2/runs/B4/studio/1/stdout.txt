@@ -1,0 +1,17 @@
+
+
+The KarstBinary 2025 map is ready for error estimation — with one catch on your budget.
+
+**Max labelable from this Studio result:** **173 windows**, not 300. Studio results can be sampled on at most a 16x16 grid; here 256 points were sampled, 83 were no-data, leaving 173 valid windows that can serve as the population. Your 300 labels won't all fit — 173 is the ceiling from this map alone. (If you want the full map's error rate at scale, a direct model run's scores raster via `olmoearth_scores_from_file` puts every window in the population.)
+
+I set up a **confidence-stratified sampling design** (least-decided windows first, score s treated as P(positive) at threshold 0.5 for ranking only):
+
+| Item | Value |
+|---|---|
+| Design path | `.../design_419c581d-9a1_8ca17d7d_confidence_173_s0.json` |
+| Labels CSV | same folder, suffix `_to_label.csv` (holds each window's location) |
+| Grid | 16 x 16, strata by confidence margin, 5 strata (~34–35 each) |
+
+**Next step:** for each of the 173 windows in order, open the map cell and mark `wrong = 1` if the map class (0 = below threshold, 1 = above) disagrees with ground truth (optionally add `reference_class` for per-class accuracy). Fill the CSV or hand me the list, and I'll call `olmoearth_estimate_map_error` to return the unbiased estimate and the interval that design earns.
+
+Want me to list all 173 windows (row/col + expected class) so you can start labeling?

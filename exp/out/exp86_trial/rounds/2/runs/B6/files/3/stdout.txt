@@ -1,0 +1,22 @@
+
+
+**Short answer: none.** Running the exact certification on `F3/design_random_300_s0.json` + `F3/labels_random_300_s0.csv` (rule `prefix`, alpha = 0.05, delta = 0.1):
+
+| Zone size | Labels inside | Wrong | Upper bound | Accepted |
+|---|---|---|---|---|
+| 15% (smallest testable, 2,372 windows) | 46 | 3 | 13.9% | ✗ |
+| 20% | 57 | 3 | 11.3% | ✗ |
+| 25% | 68 | 3 | 9.5% | ✗ |
+| …through 100% (69/300 wrong map-wide, 23%) | | | 26.4% | ✗ |
+
+The verdict string from the tool: *"no zone certified at alpha=0.05, delta=0.1 with 300 labels; the smallest testable zone (15% of the map) held 46 labels with 3 wrong."*
+
+Why it fails:
+- A random-sample design needs **45+ labels** before anything is testable, so the most-confident slice is only 15% of the map, and even there the exact test bounds its error at ~13.9%, above your 5% bar.
+- The `bonferroni` rule (tests every level at delta/18) is strictly harsher, so it certifies nothing either.
+
+Options if you want a certified zone:
+1. **Label more windows** — ideally concentrated where confidence is highest (a `confidence`-design plan via `olmoearth_plan_label_sample` would spend labels better than pure random for this goal).
+2. **Relax alpha** — the observed numbers suggest something around ~14–15% error could plausibly be certified at the 15–20% coverage levels; I can rerun `olmoearth_certify_zone` at a higher alpha to find the largest certifiable statement.
+
+Want me to do either of those?

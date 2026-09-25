@@ -1,0 +1,75 @@
+{
+ "brief_values": {
+  "B3/cluster": {
+   "run_dir_a": "C1/awf_namanga_2023_1042061",
+   "run_dir_b": "C2/awf_namanga_2022_1042294"
+  },
+  "B4/cluster": {
+   "run_dir": "C1/awf_namanga_2023_1042061"
+  },
+  "B8/cluster": {
+   "run_dir": "C1/awf_namanga_2023_1042061"
+  },
+  "B5/files": {
+   "design_path": "F2/design_confidence_300_s0.json",
+   "labels_path": "F2/labels_confidence_300_s0.csv"
+  },
+  "B6/files": {
+   "design_path": "F3/design_random_300_s0.json",
+   "labels_path": "F3/labels_random_300_s0.csv"
+  },
+  "B7/files": {
+   "scores_a": "F4/emsr279-11_s1_pre.json",
+   "scores_b": "F4/emsr279-11_s1_post.json",
+   "date_a": "2017-09-14/2017-09-15",
+   "date_b": "2018-04-19"
+  }
+ },
+ "not_run": {
+  "B8/studio": "the Studio account of the first trial (24 September) held no classification model: KarstEmbedding, KarstNumber and KarstBinary only"
+ },
+ "fixes": [
+  {
+   "after_round": 1,
+   "where": "agent",
+   "branch": "2imi9/feature-trial-round1-fixes",
+   "commits_since": "3463002",
+   "diagnosis": "exp/out/exp86_round1_diagnosis.md",
+   "items": [
+    "estimation: a Studio result's grid is 2-16, stated in the schema and the result (was capped silently at 16)",
+    "estimation: the budget error states the real ceiling and only options that work (was: 'a finer grid')",
+    "harness: at the turn cap one final call without tools, so a run never ends with no answer",
+    "registry: a second alike failure tells the model to stop retrying and report the limit",
+    "tools: measured figures moved out of tool descriptions (e.g. '51-70%' quoted as a finding in B3/studio)",
+    "compare: reports the grid's cell count and a pair's dropped cells (72 samples read as 72 cells)",
+    "certify: a level's bound below alpha is said plainly not to be a certification",
+    "soul: state numbers exactly as the tools returned them; no figures from tool descriptions"
+   ]
+  },
+  {
+   "after_round": 1,
+   "where": "scorer",
+   "commit": "18fd2bf",
+   "items": [
+    "A8-A15: the amendment after round 1 (two scorer bugs, six recorded decisions); round 1 fails under both instruments"
+   ]
+  }
+ ],
+ "agent_commit": "3eddbc525f976a7bc5ccfa9ee80dedf1783a43cf",
+ "agent_dirty": false,
+ "agent_diff_sha256": null,
+ "inferencex_version": "1.3.0",
+ "model": "nvidia/Qwen3.8-27B-NVFP4",
+ "sampling": {
+  "mode": "thinking_general",
+  "temperature": 1.0,
+  "top_p": 0.95,
+  "top_k": 20,
+  "presence_penalty": 1.5,
+  "max_tokens": 32768,
+  "preserve_thinking": true
+ },
+ "max_turns": 8,
+ "agent_branch": "2imi9/feature-trial-round1-fixes",
+ "first_run": "2026-09-25T01:11:22+00:00"
+}

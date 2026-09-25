@@ -1,0 +1,503 @@
+{
+ "tool": "olmoearth_review_set",
+ "arguments": {
+  "scores_path": "F1/dw_scores.json",
+  "budget": 0.05
+ },
+ "result": {
+  "ok": true,
+  "result": {
+   "n_windows": 15813,
+   "n_classes": 9,
+   "budget": 0.05,
+   "n_review": 791,
+   "realised_budget": 0.050022,
+   "order": "confidence",
+   "signal": "top-1 minus top-2 margin (lower = more suspect)",
+   "score_type": "probability",
+   "score_type_detected": "probability",
+   "review": [
+    {
+     "rank": 1,
+     "window_index": 11556,
+     "predicted_class": 7,
+     "margin": 0.0,
+     "class_name": "bare",
+     "row": 90,
+     "col": 36
+    },
+    {
+     "rank": 2,
+     "window_index": 8983,
+     "predicted_class": 4,
+     "margin": 0.0,
+     "class_name": "crops",
+     "row": 70,
+     "col": 23
+    },
+    {
+     "rank": 3,
+     "window_index": 7603,
+     "predicted_class": 4,
+     "margin": 0.0,
+     "class_name": "crops",
+     "row": 59,
+     "col": 51
+    },
+    {
+     "rank": 4,
+     "window_index": 5133,
+     "predicted_class": 1,
+     "margin": 0.0,
+     "class_name": "trees",
+     "row": 40,
+     "col": 13
+    },
+    {
+     "rank": 5,
+     "window_index": 449,
+     "predicted_class": 6,
+     "margin": 0.0,
+     "class_name": "built",
+     "row": 3,
+     "col": 65
+    },
+    {
+     "rank": 6,
+     "window_index": 14896,
+     "predicted_class": 5,
+     "margin": 0.000122,
+     "class_name": "shrub_and_scrub",
+     "row": 116,
+     "col": 48
+    },
+    {
+     "rank": 7,
+     "window_index": 10149,
+     "predicted_class": 6,
+     "margin": 0.000122,
+     "class_name": "built",
+     "row": 79,
+     "col": 37
+    },
+    {
+     "rank": 8,
+     "window_index": 7831,
+     "predicted_class": 5,
+     "margin": 0.000122,
+     "class_name": "shrub_and_scrub",
+     "row": 61,
+     "col": 23
+    },
+    {
+     "rank": 9,
+     "window_index": 12047,
+     "predicted_class": 7,
+     "margin": 0.000244,
+     "class_name": "bare",
+     "row": 94,
+     "col": 15
+    },
+    {
+     "rank": 10,
+     "window_index": 11606,
+     "predicted_class": 4,
+     "margin": 0.000244,
+     "class_name": "crops",
+     "row": 90,
+     "col": 86
+    },
+    {
+     "rank": 11,
+     "window_index": 9601,
+     "predicted_class": 5,
+     "margin": 0.000244,
+     "class_name": "shrub_and_scrub",
+     "row": 75,
+     "col": 1
+    },
+    {
+     "rank": 12,
+     "window_index": 6235,
+     "predicted_class": 7,
+     "margin": 0.000244,
+     "class_name": "bare",
+     "row": 48,
+     "col": 91
+    },
+    {
+     "rank": 13,
+     "window_index": 3804,
+     "predicted_class": 6,
+     "margin": 0.000244,
+     "class_name": "built",
+     "row": 29,
+     "col": 92
+    },
+    {
+     "rank": 14,
+     "window_index": 2831,
+     "predicted_class": 6,
+     "margin": 0.000244,
+     "class_name": "built",
+     "row": 22,
+     "col": 15
+    },
+    {
+     "rank": 15,
+     "window_index": 14215,
+     "predicted_class": 1,
+     "margin": 0.000366,
+     "class_name": "trees",
+     "row": 111,
+     "col": 7
+    },
+    {
+     "rank": 16,
+     "window_index": 15503,
+     "predicted_class": 4,
+     "margin": 0.000488,
+     "class_name": "crops",
+     "row": 121,
+     "col": 15
+    },
+    {
+     "rank": 17,
+     "window_index": 14211,
+     "predicted_class": 1,
+     "margin": 0.000488,
+     "class_name": "trees",
+     "row": 111,
+     "col": 3
+    },
+    {
+     "rank": 18,
+     "window_index": 10057,
+     "predicted_class": 6,
+     "margin": 0.000488,
+     "class_name": "built",
+     "row": 78,
+     "col": 73
+    },
+    {
+     "rank": 19,
+     "window_index": 7863,
+     "predicted_class": 5,
+     "margin": 0.000488,
+     "class_name": "shrub_and_scrub",
+     "row": 61,
+     "col": 55
+    },
+    {
+     "rank": 20,
+     "window_index": 6657,
+     "predicted_class": 4,
+     "margin": 0.000488,
+     "class_name": "crops",
+     "row": 52,
+     "col": 1
+    },
+    {
+     "rank": 21,
+     "window_index": 5256,
+     "predicted_class": 4,
+     "margin": 0.000488,
+     "class_name": "crops",
+     "row": 41,
+     "col": 8
+    },
+    {
+     "rank": 22,
+     "window_index": 4060,
+     "predicted_class": 8,
+     "margin": 0.000488,
+     "class_name": "snow_and_ice",
+     "row": 31,
+     "col": 92
+    },
+    {
+     "rank": 23,
+     "window_index": 3240,
+     "predicted_class": 6,
+     "margin": 0.000488,
+     "class_name": "built",
+     "row": 25,
+     "col": 40
+    },
+    {
+     "rank": 24,
+     "window_index": 2689,
+     "predicted_class": 4,
+     "margin": 0.000488,
+     "class_name": "crops",
+     "row": 21,
+     "col": 1
+    },
+    {
+     "rank": 25,
+     "window_index": 15123,
+     "predicted_class": 5,
+     "margin": 0.00061,
+     "class_name": "shrub_and_scrub",
+     "row": 118,
+     "col": 19
+    },
+    {
+     "rank": 26,
+     "window_index": 8465,
+     "predicted_class": 6,
+     "margin": 0.00061,
+     "class_name": "built",
+     "row": 66,
+     "col": 17
+    },
+    {
+     "rank": 27,
+     "window_index": 8463,
+     "predicted_class": 6,
+     "margin": 0.00061,
+     "class_name": "built",
+     "row": 66,
+     "col": 15
+    },
+    {
+     "rank": 28,
+     "window_index": 5508,
+     "predicted_class": 4,
+     "margin": 0.00061,
+     "class_name": "crops",
+     "row": 43,
+     "col": 4
+    },
+    {
+     "rank": 29,
+     "window_index": 15666,
+     "predicted_class": 1,
+     "margin": 0.000732,
+     "class_name": "trees",
+     "row": 122,
+     "col": 50
+    },
+    {
+     "rank": 30,
+     "window_index": 14087,
+     "predicted_class": 2,
+     "margin": 0.000732,
+     "class_name": "grass",
+     "row": 110,
+     "col": 7
+    },
+    {
+     "rank": 31,
+     "window_index": 11679,
+     "predicted_class": 7,
+     "margin": 0.000732,
+     "class_name": "bare",
+     "row": 91,
+     "col": 31
+    },
+    {
+     "rank": 32,
+     "window_index": 9108,
+     "predicted_class": 4,
+     "margin": 0.000732,
+     "class_name": "crops",
+     "row": 71,
+     "col": 20
+    },
+    {
+     "rank": 33,
+     "window_index": 8091,
+     "predicted_class": 5,
+     "margin": 0.000732,
+     "class_name": "shrub_and_scrub",
+     "row": 63,
+     "col": 27
+    },
+    {
+     "rank": 34,
+     "window_index": 7352,
+     "predicted_class": 5,
+     "margin": 0.000732,
+     "class_name": "shrub_and_scrub",
+     "row": 57,
+     "col": 56
+    },
+    {
+     "rank": 35,
+     "window_index": 4038,
+     "predicted_class": 6,
+     "margin": 0.000732,
+     "class_name": "built",
+     "row": 31,
+     "col": 70
+    },
+    {
+     "rank": 36,
+     "window_index": 3993,
+     "predicted_class": 7,
+     "margin": 0.000732,
+     "class_name": "bare",
+     "row": 31,
+     "col": 25
+    },
+    {
+     "rank": 37,
+     "window_index": 2819,
+     "predicted_class": 5,
+     "margin": 0.000732,
+     "class_name": "shrub_and_scrub",
+     "row": 22,
+     "col": 3
+    },
+    {
+     "rank": 38,
+     "window_index": 15148,
+     "predicted_class": 4,
+     "margin": 0.000854,
+     "class_name": "crops",
+     "row": 118,
+     "col": 44
+    },
+    {
+     "rank": 39,
+     "window_index": 14772,
+     "predicted_class": 5,
+     "margin": 0.000854,
+     "class_name": "shrub_and_scrub",
+     "row": 115,
+     "col": 52
+    },
+    {
+     "rank": 40,
+     "window_index": 8287,
+     "predicted_class": 7,
+     "margin": 0.000854,
+     "class_name": "bare",
+     "row": 64,
+     "col": 95
+    },
+    {
+     "rank": 41,
+     "window_index": 1194,
+     "predicted_class": 5,
+     "margin": 0.000854,
+     "class_name": "shrub_and_scrub",
+     "row": 9,
+     "col": 42
+    },
+    {
+     "rank": 42,
+     "window_index": 16047,
+     "predicted_class": 5,
+     "margin": 0.000977,
+     "class_name": "shrub_and_scrub",
+     "row": 125,
+     "col": 47
+    },
+    {
+     "rank": 43,
+     "window_index": 14810,
+     "predicted_class": 4,
+     "margin": 0.000977,
+     "class_name": "crops",
+     "row": 115,
+     "col": 90
+    },
+    {
+     "rank": 44,
+     "window_index": 11692,
+     "predicted_class": 6,
+     "margin": 0.000977,
+     "class_name": "built",
+     "row": 91,
+     "col": 44
+    },
+    {
+     "rank": 45,
+     "window_index": 10421,
+     "predicted_class": 6,
+     "margin": 0.000977,
+     "class_name": "built",
+     "row": 81,
+     "col": 53
+    },
+    {
+     "rank": 46,
+     "window_index": 9873,
+     "predicted_class": 6,
+     "margin": 0.000977,
+     "class_name": "built",
+     "row": 77,
+     "col": 17
+    },
+    {
+     "rank": 47,
+     "window_index": 7854,
+     "predicted_class": 4,
+     "margin": 0.000977,
+     "class_name": "crops",
+     "row": 61,
+     "col": 46
+    },
+    {
+     "rank": 48,
+     "window_index": 6930,
+     "predicted_class": 4,
+     "margin": 0.000977,
+     "class_name": "crops",
+     "row": 54,
+     "col": 18
+    },
+    {
+     "rank": 49,
+     "window_index": 5890,
+     "predicted_class": 6,
+     "margin": 0.000977,
+     "class_name": "built",
+     "row": 46,
+     "col": 2
+    },
+    {
+     "rank": 50,
+     "window_index": 5582,
+     "predicted_class": 5,
+     "margin": 0.000977,
+     "class_name": "shrub_and_scrub",
+     "row": 43,
+     "col": 78
+    }
+   ],
+   "n_review_listed": 50,
+   "margin_summary": {
+    "min": 0.0,
+    "median": 0.300171,
+    "max": 0.734039,
+    "cut_at_budget": 0.02417
+   },
+   "evidence": {
+    "suite-margin-wins-every-task": "The headline result. On all 24 scored tasks of Ai2's own published embedding suite -- tasks Ai2 chose for their own paper, 14 distinct sources, 6,435,473 graded units, accuracy 0.333 to 0.979 -- the model's own margin beat the best no-model control on every one. Excess-AURC leads 0.0157 to 0.2278, median 0.1158; one-sided exact sign test 24/24, p = 6e-08. One of the two controls is embedding distance, i.e. a feature-space-typicality score.",
+    "shrug-signals-rejected": "Ensemble mutual information (the disagreement component) and -NCDD lose to the model's own confidence on both testbeds under OlmoEarth v1.2, preregistered: pooled excess-AURC lead +0.0060 and +0.0022, per tile 263/61 and 352/76. The embedding and input signals are 3-9x worse on all four arms.",
+    "feature-typicality-rejected": "kNN distance, Mahalanobis distance, PCA residual and ViM against three reference sets: no score beats confidence on either testbed, and every one loses on at least 317 of 351 Bolivia tiles.",
+    "embedding-dissimilarity-rejected": "Embedding dissimilarity to the training features has no scale-free advantage over confidence (13/27 scenes, sign p=1.00); every feature-typicality generalisation loses on both testbeds.",
+    "cross-model-disagreement-rejected": "Disagreement with a second model of the same family beats confidence on only 10 of 27 scenes against WorldCover, and on 84/265 Bolivia tiles against hand labels.",
+    "two-view-disagreement-rejected": "A head on an outside representation errs where OlmoEarth errs, so two-view disagreement captures 0.242 of the errors at a 10% budget against 0.454 for confidence (excess AURC 0.067 vs 0.0215).",
+    "backbone-version-disagreement-rejected": "Disagreement between OlmoEarth v1 and v1.2 is not a useful error signal.",
+    "anysat-witness-rejected": "An outside representation as the neighbourhood space adds nothing over the model's own (159/143, p=0.19).",
+    "no-encoder-internal-signal-beats-confidence": "No signal from the encoder's internals, its pretraining objective, a posterior over the probe head, feature-space typicality, a second model of the same family, or flip-and-rotate consistency ranks errors better than confidence on expert labels."
+   },
+   "caveats": [
+    "Measured on the OlmoEarth family at window level against seven references (photointerpretation, another model's output, expert annotation of a served product, in-situ ground observation, farmers' declarations). Not a general theorem about every model or every task.",
+    "Known exception: on one Sen1Floods11 flood event (Bolivia) a no-model NDWI control ranked errors as well as confidence, and better under v1.2 -- a cheap physical control is worth running alongside.",
+    "This ranks suspicion; it does not calibrate it. Capture at a fixed budget is bounded by budget/error_rate, so it is not comparable across populations with different error rates (use AUROC for that).",
+    "If a fitted readout produced these scores, report its generalisation gap: a probe that memorised its practice data reversed which confidence signal ranked best. The ordering degrades with memorisation and only severe memorisation reverses it.",
+    "The margin does NOT beat ensemble PREDICTIVE ENTROPY -- it ties it. The rejection above is of the disagreement component (mutual information), not of entropy, and at tile level on the v1 test split ensemble mutual information was 0.003 better than confidence. If you already have an ensemble, its entropy is a fair alternative; its disagreement is not.",
+    "These numbers order a review well and are badly miscalibrated as probabilities: good for deciding what to look at first, poor for deciding what to trust at a threshold.",
+    "These look like probabilities over >2 classes. The measured evidence is for the LOGIT margin; with more than two classes the softmax margin can order windows differently. Pass logits when you have them."
+   ]
+  }
+ },
+ "made": "2026-09-25T02:06:49+00:00",
+ "agent_commit": "3eddbc525f976a7bc5ccfa9ee80dedf1783a43cf",
+ "inferencex_version": "1.3.0"
+}

@@ -1,0 +1,22 @@
+
+
+Here's the reviewer queue for the **KarstBinary 2025** run (project *Karst Features in Pennsylvania*).
+
+- Prediction: `dd504793...` (status completed) -> Result `419c581d...`, band `sample_karst_score` (a [0, 1] karst likelihood score, decided at 0.5).
+- Method: the result's extent was cut into a 10x10 grid (100 windows, one pixel-value sample each); 72 valid, 28 dropped as no-data. Windows are ranked by how undecided the score is - the ones nearest 0.5 (smallest margin from the decision) go first. That ranks *suspicion*, not the probability a window is wrong.
+
+**Check these first** (budgets: 5% = 4 windows, 10% = 7):
+
+| Rank | Window (row, col) | Score | Predicted side | Margin |
+|---|---|---|---|---|
+| 1 | (4, 7) | 0.352 | below 0.5 | 0.297 |
+| 2 | (4, 2) | 0.285 | below 0.5 | 0.431 |
+| 3 | (0, 5) | 0.745 | above 0.5 | 0.490 |
+| 4 | (1, 8) | 0.223 | below 0.5 | 0.554 |
+| 5 | (8, 5) | 0.808 | above 0.5 | 0.615 |
+| 6 | (2, 8) | 0.167 | below 0.5 | 0.666 |
+| 7 | (1, 3) | 0.872 | above 0.5 | 0.745 |
+
+Why these: their scores sit closest to the 0.5 boundary, so the model is least certain about its own call there - flipping one is most likely on field check. All other windows' scores ranged from ~0.96 to ~0.99 away from the boundary (median margin 0.965), i.e. firmly one side or the other.
+
+Caveats: this set targets errors, so it is not a random sample - don't divide its mistakes by its size to estimate map accuracy (use `olmoearth_plan_label_sample` with the saved scores file if you want an honest error rate). The score is treated as P(karst) for ranking only; the numbers aren't calibrated error probabilities. Scores + window locations are saved at `workspace/scores_419c581d_9a1_sample_karst_score_g10.json`.

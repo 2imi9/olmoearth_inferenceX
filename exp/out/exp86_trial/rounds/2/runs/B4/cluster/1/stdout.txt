@@ -1,0 +1,12 @@
+
+
+The scoring file loaded cleanly (128x128 = 16,384 valid windows, multi-class logits, model `OlmoEarth-v1-FT-AWF-Base` rev a347b15) and I've built your 300-window labeling plan.
+
+| Item | Value |
+|---|---|
+| Design | confidence-stratified (5 strata by margin: 106 / 79 / 47 / 34 / 34) |
+| Population | 16,384 valid windows of run C1/awf_namanga_2023_1042061 |
+| Seed | 0 |
+| Labels file | `.../workspace/design_scores_8f3527f9_confidence_300_s0_to_label.csv` (holds each window's location + map_class) |
+
+**How to label:** open that CSV, and for each row set `wrong = 1` if the mapped class (`map_class`) is not what is on the ground, else `0`; optionally add `reference_class` with the true class id for per-class accuracy. Fill all 300 rows and tell me when done (or paste your 300 0/1 values in design order) — then I'll run `olmoearth_estimate_map_error` and report the error rate with the interval this stratified design earns. Note: the first 50 windows are already listed in the tool output above; the CSV has the full ordered list.

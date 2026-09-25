@@ -1,0 +1,18 @@
+
+
+Short answer: **none** — with these 300 labels, no part of the map can be certified to be wrong at most 5% of the time.
+
+The exact certification test (rule `prefix`, alpha = 0.05, delta = 0.1, population 15,813 windows) rejected every candidate zone:
+
+| Zone share | Windows | Labels inside | Wrong | Upper bound @delta | Accepted |
+|---|---|---|---|---|---|
+| 15% (most confident) | 2,372 | 46 | 3 | 13.9% | ✗ |
+| 25% | 3,953 | 68 | 3 | 9.5% | ✗ |
+| 50% | 7,906 | 140 | 13 | 13.2% | ✗ |
+| 100% (whole map) | 15,813 | 300 | 69 | 26.4% | ✗ |
+
+Why: 300 random labels spread across the whole map means even the top-confidence 15% zone holds only 46 labels — too few to prove its error rate is under 5% at failure probability 0.1 (the package needs at least 45 labels *and* the zone's bound must fall below alpha; here it sits at 13.9%). The overall map error estimate is ~23% (upper bound 26.4%), so the bulk of the map is clearly not meeting your target either.
+
+Options if you want a certifiable zone:
+- Label more windows inside the high-confidence region (a targeted round on the top ~15–25% of confidence, via a fresh `design='random'` plan restricted or stratified appropriately), then re-run certification.
+- Accept a weaker claim: report per-zone upper bounds (e.g., "top-25% zone estimated ≤ 9.5% error") without calling it a 5% certification.

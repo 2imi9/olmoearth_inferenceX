@@ -1,0 +1,23 @@
+
+
+I compared the two completed 2025 runs on your PA Karst area ("Karst Features in Pennsylvania" project) by sampling both maps on a shared 6x6 grid (~10,091 km² of overlap).
+
+**Key finding: they are different quantities, so no simple "gap"**
+
+| | KarstBinary (`sample_karst_score`) | KarstNumber (`sample_number`) |
+|---|---|---|
+| Declared range | 0.0 – 1.0 | 0.2 – 1.2 |
+| Mean over compared cells | 0.100 | 0.682 |
+| No-data cells dropped | part of 11 of 36 total | |
+
+Across the **25 comparable cells**:
+
+- Correlation between the two: **-0.017** (essentially zero — they do not rise and fall together anywhere on the grid)
+- Agreement (within ±0.1): **0%** — but caveat: since the ranges differ, the mean difference, RMSE (0.618) and max diff (0.719) compare different units and are *not* a meaningful measure of disagreement. Only the near-zero correlation is interpretable: the two maps mark up largely different places as karst.
+
+**Which one is right?** That cannot be answered from these outputs alone — there are no ground-truth labels, so neither map can be graded for accuracy (model-vs-model agreement is not accuracy). To settle it you need reference labels, e.g.:
+
+1. Label a confidence-based sample from one map, then estimate its error rate (honest accuracy test), or
+2. Review a low-margin review set — the windows where each model is least confident — against field reports/USGS data.
+
+Want me to set up a label-sample design for one of the two maps?

@@ -1,0 +1,13 @@
+
+
+No part of the map certifies as "wrong at most 5% of the time" with these 300 labels.
+
+| Check | Result |
+|---|---|
+| Map-wide error rate | 23% wrong, [18.4%, 28.1%] (exact hypergeometric, random sample of 15,813 windows) |
+| Certified zone at alpha=0.05 (delta=0.1, rule 'prefix') | **None** — `certified: false` |
+| Smallest testable zone (most-confident 15%, ~2,372 windows) | 3 wrong in 46 labelled; upper bound 13.9% — still far above 5% |
+
+Why: even the most confident slice of the map holds too few labelled errors (3) to prove its error rate is below 5% at this confidence. Every larger zone fares worse (up to 26.4% upper bound for the whole map).
+
+Options if you need a certified zone: label more windows (especially inside high-confidence areas), re-run the certification after adding labels, or accept a looser alpha — but I'd rather not guess at a new threshold than certify something that isn't earned. Want me to re-check at a different alpha or plan additional labels to close this gap?

@@ -1,0 +1,19 @@
+
+
+**Run:** `C1/awf_namanga_2023_1042061` — OlmoEarth-v1-FT-AWF-Base (rev a7c40be9), 128x128 windows (16,384, all valid, no nodata), 9 land-cover classes. Loaded via `olmoearth_scores_from_file` (full logits from the raster, pooled to 4-px windows).
+
+**Review set:** ranked by the mean per-window **top-1 minus top-2 logit margin**, lowest first (the model's own confidence; the label-fill channel 9 was excluded from the margin). At a 5% budget that flags **819 windows**; the cut margin is ~0.99 vs a median of 4.47 — i.e., flagged windows are decisively less confident than typical ones.
+
+| rank | window (row, col) | predicted class | margin | boundary neighbours |
+|---|---|---|---|---|
+| 1 | #1821 (14, 29) | woodland_forest | 0.108 | 4 |
+| 2 | #1321 (10, 41) | montane_forest | 0.149 | 3 |
+| 3 | #3037 (23, 93) | shrubland_savanna | 0.153 | 6 |
+| 4 | #907 (7, 11) | woodland_forest | 0.162 | 8 |
+| 5 | #1797 (14, 5) | montane_forest | 0.176 | 7 |
+
+Ranks 6-10 continue with margins 0.177-0.216 (mostly montane_forest and grassland_barren); I can list them if you want.
+
+**Why this ordering (measured evidence, not folklore):** on Ai2's published 24-task suite, the model's own margin beat every no-model control (including feature-space typicality / embedding distance) on all 24 tasks (median excess-AURC lead 0.116, sign test 24/24), while ensemble-disagreement, cross-model disagreement, and two-view disagreement were pre-registered and rejected. Caveats: it ranks relative suspicion, not calibrated error probability, and one measured exception exists (a Sen1Floods flood event where an NDWI control tied confidence) — worth running a physical control alongside for water-class confusion here.
+
+Want me to also plan a labeled sample (design + how many labels needed for an honest error rate) or a boundary-first ordering?

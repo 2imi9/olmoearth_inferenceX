@@ -1,0 +1,21 @@
+
+
+Both runs were read through olmoearth-inferencex (same model revision, 128x128 windows, 16,384 windows each, no no-data) and compared window-by-window with `olmoearth_compare_review`, dates declared (A = 2023, B = 2022).
+
+**Where they differ**
+
+| Measure | Value |
+|---|---|
+| Windows compared | 16,384 |
+| Differing windows | 3,807 (23.2%) |
+| Share of differing windows on a predicted class boundary | 78.3% (vs 53.9% map-wide) |
+| Mean top-1-top-2 margin on differing, 2023 run | 2.663 |
+| Mean margin on differing, 2022 run | 3.186 |
+
+Most disagreements cluster at class edges. The common swaps in the first 50 listed differers: **montane_forest vs woodland_forest** (row 0, cols 3-33), **grassland_barren vs shrubland_savanna**, and **urban_dense_development vs other classes** (e.g. index 115: urban 2023 vs open_water 2022, margin_b only 0.34 - a very low-confidence call). Window locations are indexed by (row, col); say the word if you want the full list written out.
+
+**Which one is right - I have to decline, and it's resolvable**
+
+These maps describe *different years* (full-year composites, 2022 vs 2023), so a differing window means either the land changed on the ground between them (seasonal cycles included) or one map is wrong - and the outputs alone cannot separate those two readings. No reference labels dated to a specific time were provided, so no grading is possible even in principle here. For what it's worth, upstream evidence says the more-confident side is right on 51-70% of differing windows on average - too close to pick a winner, and confidence doesn't order this set.
+
+To actually settle it, give me a reference (photointerpretation, expert labels, etc.) dated to 2022 or 2023 and the tool will grade the two sides; or I can plan a targeted labeling budget (`olmoearth_plan_label_sample`) per map to measure each one's error rate instead. Which would you like?

@@ -1,0 +1,26 @@
+
+
+Read the run's full scores raster (not Studio point samples) via `olmoearth_scores_from_file` — run `C1/awf_namanga_2023_1042061`, model **OlmoEarth-v1-FT-AWF-Base** (rev a7c40be9), 2023, 9 land-cover classes, 128x128 grid = 16,384 windows (all valid, 0 nodata; label-fill channel excluded from margins). Then ranked with `olmoearth_review_set` at a 5% review budget.
+
+## Which windows to check first
+
+Top of the 819-window review set (budget 5%, cut-off margin = 0.994; lower margin = more suspect):
+
+| Rank | Window idx | (row, col) | Predicted class | Margin | Boundary neighbours |
+|---|---|---|---|---|---|
+| 1 | 1821 | (14, 29) | woodland_forest | 0.108 | 4 |
+| 2 | 1321 | (10, 41) | montane_forest | 0.149 | 3 |
+| 3 | 3037 | (23, 93) | shrubland_savanna | 0.153 | 6 |
+| 4 | 907 | (7, 11) | woodland_forest | 0.162 | 8 |
+| 5 | 1797 | (14, 5) | montane_forest | 0.176 | 7 |
+| 6 | 299 | (2, 43) | montane_forest | 0.177 | 0 |
+
+Median margin over all windows is 4.468, so anything under ~0.99 is an outlier worth human eyes; the top few sit at 0.1–0.2. The rest of the set follows the same pattern: mostly montane_forest / woodland_forest / grassland_barren windows at the north rows (rows 2–23) and mid-grid, many on predicted-class boundaries (8,823 of 16,384 windows touch a boundary).
+
+## Why this ranking
+
+- **Signal:** each window's mean top-1 minus top-2 logit margin over its 4x4-pixel pixels, with the label-fill channel left out. The model is "most unsure" where two classes score nearly equally, so those go first.
+- **Measured evidence:** in the package's test suite (Ai2's published embedding suite, 24 tasks, ~6.4M graded units), this margin beat every no-model control — ensemble/cross-model disagreement, feature-space typicality, backbone-version and two-view disagreement — on all 24/24 (sign test p = 6e-08). So "check low-margin windows first" is the empirically validated policy here, not just intuition.
+- **Caveats:** this orders suspicion, it does not calibrate error probability; capture at your budget is bounded by budget/error_rate, and known exception: for one flood-event task a cheap NDWI physical control ranked as well — worth considering if water edges dominate.
+
+Scores saved at `scores_run_OlmoEarth-v1-FT-AWF-Base_a7c40be9_p4.json`. If you want, I can next plan a label sample (`olmoearth_plan_label_sample`) from these scores to estimate how wrong the map actually is, or list more of the 819 windows.

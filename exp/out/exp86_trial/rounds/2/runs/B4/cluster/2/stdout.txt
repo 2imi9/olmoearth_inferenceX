@@ -1,0 +1,15 @@
+
+
+I pulled the full scores raster from run **C1/awf_namanga_2023_1042061** (OlmoEarth-v1-FT-AWF-Base, rev a347b15, 128x128 grid = 16,384 valid windows, no no-data) and built a 300-label **confidence-stratified** sampling design from it.
+
+| Item | Value |
+|---|---|
+| Population | 16,384 valid windows of the run's map |
+| Design | confidence (stratified by top-1 minus top-2 logit margin), seed 0 |
+| Budget | 300 windows across 5 strata (106 / 79 / 47 / 34 / 34) |
+| Design file | `design_scores_8f3527f9_confidence_300_s0.json` (in the run's workspace dir) |
+| Label sheet | `..._to_label.csv` alongside it — holds each window's location, its map_class, and a `wrong` column to fill |
+
+To get the error rate, you (or your annotators) label the 300 windows as wrong=1 / wrong=0 (optionally with the true class id for per-class accuracy), then I feed the filled CSV or list into `olmoearth_estimate_map_error`, which returns the estimate with the interval this stratified design actually earns. Two caveats up front: a targeted review set is not a sample (its naive error rate overstates the map's, so I won't quote one from that), and the simple p ± 1.96·sqrt(p(1-p)/n) formula does not apply here. If you want a certified zone (an honest upper bound on the confident region) instead, say so and I'll rebuild the plan with `design='random'`.
+
+First few windows in label order, if useful: idx 40 (row 0, col 40; map class 6), idx 14120 (110, 40; class 4), idx 3180 (24, 108; class 2), idx 85 (0, 85; class 2), idx 15663 (122, 47; class 2). Send me the filled labels whenever you're ready.

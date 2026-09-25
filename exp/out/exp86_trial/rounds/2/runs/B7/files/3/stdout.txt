@@ -1,0 +1,12 @@
+
+
+Compared both maps over their shared extent: **1,570 of 78,028 windows differ (~2.0%)**. Because the maps are 216 days apart (2017-09 vs 2018-04), a difference can be real ground change *or* an error in one map — the tool declines to grade either side, and correctly so.
+
+| Metric | Value |
+|---|---|
+| Windows compared | 78,028 |
+| Differing windows | 1,570 (share 0.0201) |
+| Mean margin, Map A on differing | 0.389 |
+| Mean margin, Map B on differing | 0.158 |
+
+Which is right? **Cannot be determined from these two files.** Measured evidence says even the more-confident side is right on only ~51–70% of differing windows, so confidence picks no winner; with different dates, a third thing — a reference for each date — is required to separate change from error. If you have labels or a dated reference for either date (e.g. `labels_date` plus a per-date truth set), I can re-run the comparison to grade them, or design a small label plan (`olmoearth_plan_label_sample`) to spend your labeling budget where it's most informative.

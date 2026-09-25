@@ -1,0 +1,17 @@
+
+
+I ran the Studio review-set tool on the KarstBinary 2025 result (`419c581d`, band `sample_karst_score`, a [0, 1] per-pixel score decided at 0.5). It sampled a 10 x 10 grid over the result extent: 72 valid windows, 28 dropped as no-data. Windows are opened **least-decided first** — i.e., where the score sits closest to the 0.5 threshold, because that is where the model's own confidence is lowest (ranked by margin |2s − 1|; measured evidence shows this signal beats no-model controls, but it ranks suspicion, it is not a calibrated error probability).
+
+| Rank | Window (idx) | Row, Col | Score | Called |
+|------|--------------|----------|-------|--------|
+| 1 | #47 | 4, 7 | 0.3515 | below 0.5 |
+| 2 | #42 | 4, 2 | 0.2847 | below 0.5 |
+| 3 | #5 | 0, 5 | 0.7449 | above 0.5 |
+| 4 | #18 | 1, 8 | 0.2232 | below 0.5 |
+| 5 | #85 | 8, 5 | 0.8076 | above 0.5 |
+| 6 | #28 | 2, 8 | 0.1670 | below 0.5 |
+| 7 | #13 | 1, 3 | 0.8723 | above 0.5 |
+
+Budget cuts: at ~1% of valid windows check rank 1 alone; at ~5.6% (4 windows) through rank 4; at ~9.7% (7 windows) through rank 7. Median margin across all valid windows is 0.9647, so even the "most suspect" windows here are fairly decided — nothing is truly close to the threshold.
+
+Two caveats: the assumption is the score is read as P(positive) for ranking only, and this review set is not a sample — its error rate would overstate the map's. To measure how wrong the map actually is, pass the returned scores file to `olmoearth_plan_label_sample` first; I can do that next if you want.

@@ -1,0 +1,7 @@
+
+
+**Where they differ:** Of 78,028 shared windows, **1,570 (about 2.0%)** have different classes between the two maps. Most listed cases flip 1→0 or 0→1; e.g. rows 344–345 (class 1 in Sep-2017, class 0 in Apr-2018) and rows 1442–1449 cols 4–6 (class 0 → 1).
+
+**Margins on differing windows:** map A mean margin 0.389 vs map B mean margin 0.158 — so where they disagree, A is the more confident side there (and B is more confident on its own predictions overall patterns aside, this says confidence per window, not correctness).
+
+**Which is right:** not resolvable from these maps alone. They describe different times (2017-09-14/15 vs 2018-04-19, ~216 days apart), so a differing window could be real seasonal change *or* an error in either map. No `labels_date` reference was given, so even with labels for only one date, grading would be blocked. Measured evidence: across the upstream benchmark suite the more-confident side was right on 51–70% of differing windows — i.e. confidence weakly favors A but does not identify a winner. To settle it you'd need a dated reference label (photointerpretation or expert annotation) for each date; happy to plan a small label sample on the 1,570 differing windows if you want that.

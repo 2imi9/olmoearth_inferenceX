@@ -1,0 +1,29 @@
+{
+ "run_id": "5ec86505-ca9e-42fa-b018-0b043daf8e4c",
+ "entry_count": 1,
+ "entries": [
+  {
+   "run_id": "5ec86505-ca9e-42fa-b018-0b043daf8e4c",
+   "timestamp": "2026-09-25T01:12:36.881494+00:00",
+   "api_call": "olmoearth_search_predictions",
+   "request_hash": "59676b023081bf7f8c99c6255d3efc0f772483ebdbe0c39f09cbf9228b65baa0",
+   "response_summary": {
+    "total": 3,
+    "ok": true
+   },
+   "prediction_id": null,
+   "model_id": null,
+   "dataset_hashes": null
+  }
+ ],
+ "egress_count": 1,
+ "egress": [
+  {
+   "timestamp": "2026-09-25T01:12:33.199728+00:00",
+   "capability": "studio",
+   "host": "olmoearth.allenai.org",
+   "allowed": true,
+   "reason": "host on allowlist"
+  }
+ ]
+}

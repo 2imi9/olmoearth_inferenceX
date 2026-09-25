@@ -1,0 +1,29 @@
+
+
+Compared both runs window-by-window (128×128 grid = 16,384 windows, same model `OlmoEarth-v1-FT-AWF-Base`, 2023 vs 2022 imagery).
+
+## Where they differ
+
+| Statistic | Value |
+|---|---|
+| Windows that differ | 3,807 of 16,384 (**23.2%**) |
+| Share of differing windows on a class boundary | **78.3%** |
+| Dominant disagreement type | montane_forest (C1/2023) vs woodland_forest (C2/2022), e.g. windows (row 0, col 3–8, 12–15, 21–25) |
+| Mean confidence margin on differing windows | C1 (2023): 2.66; C2 (2022): 3.19 |
+
+Most disagreements sit along forest-type borders, where the model is least sure on both sides.
+
+## Which one is right — I have to decline
+
+**Neither can be declared right.** The two maps describe different times (all of 2022 vs all of 2023), so any differing window either changed on the ground between the years (seasonal cycles included) or is wrong in one map — and the predictions alone cannot separate those. Without reference labels dated to each map, no grading is possible at all. Two measured caveats from the package:
+
+- "Different-time" differences are expected behavior, not evidence of error.
+- Even with labels absent, picking the more-confident side would win only ~51–70% of differing windows upstream — confidence doesn't identify a winner here.
+
+## How to settle it
+
+- Provide ground-truth/reference labels for **each** date (or one common date, `labels_date`) and I can grade each map separately against its own reference.
+- Or, if you just want to know how wrong each map is on its own, I can run a label-sample design (`plan_label_sample` + your labels) for each run.
+- Alternatively, treat this pair as a change signal: I can rank the 3,807 differing windows by suspicion so a human reviewer checks the ambiguous ones first.
+
+Want me to set up one of these?

@@ -1,0 +1,18 @@
+
+
+Here's the honest picture for the **KarstBinary 2025** map (result `419c581d`, band `sample_karst_score`):
+
+| Item | Value |
+|---|---|
+| Requested budget | 300 windows |
+| Max possible from this Studio result | **173** (16×16 grid, 83 of 256 points were no-data) |
+| Design created | confidence-stratified, seed 0, 5 strata by margin (≈34–35 each) |
+
+You can't spend 300 labels on a Studio result — even the largest allowed grid (16×16 = 256 sample points) yields only **173 valid windows**. I set up the plan at that ceiling instead. Two ways forward:
+
+1. **Use the 173-label plan as-is.** Open the label CSV (`.../design_419c581d-9a1_8ca17d7d_confidence_173_s0_to_label.csv`) and set `wrong = 1/0` per window (plus the true class id), in the listed order. Then I'll call `olmoearth_estimate_map_error` with the design path to give you the error rate plus the interval that this stratified design actually earns.
+2. **If you really need 300+ labeled windows over the whole map**, we'd need the model's full scores raster from a direct run read via `olmoearth_scores_from_file` — every pixel-window of that raster becomes part of the population. No such raster exists in this account right now.
+
+One caveat to keep in mind: each "window" here is one pixel-value sample at a cell centre on the 16×16 grid, so the rate describes the map at those points; and the band is treated as P(positive) decided at 0.5 for ranking only — it's not a probability of error.
+
+Want me to note that your default labeling budget is 300 so future plans start there?

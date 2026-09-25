@@ -1,0 +1,17 @@
+
+
+Found it: prediction `KarstBinary--01-01-2025--12-31-2025--PA regular` (id `dd504793...`), result `419c581d-9a10-4684-aba5-1bab2875f26b`, band `sample_karst_score` (regression, [0,1]). I ran the review-set sampling on a 12×12 grid: **144 windows sampled, 91 valid, 53 dropped as no-data.**
+
+**Check these windows first** (least-decided by the model, i.e. scores nearest the 0.5 cut):
+
+| Rank | Window | (row, col) | Score | Predicted | Margin |
+|---|---|---|---|---|---|
+| 1 | 57 | 4, 9 | 0.494 | karst=0 | 0.012 |
+| 2 | 70 | 5, 10 | 0.478 | karst=0 | 0.045 |
+| 3 | 117 | 9, 9 | 0.563 | karst=1 | 0.126 |
+| 4 | 128 | 10, 8 | 0.595 | karst=1 | 0.190 |
+| 5 | 39 | 3, 3 | 0.390 | karst=0 | 0.219 |
+
+Budgets: 5% → open 5 windows (cut at margin 0.219); 10% → open 9 (cut at 0.516). The scores file with every window's location was saved at `scores_419c581d..._g12.json`.
+
+**Why these:** each window's score s near 0.5 means the model is undecided between karst / not-karst, so its margin (|2s−1|) is smallest there; confidence/margin ranks errors better than alternative suspicion signals (disagreement, feature typicality) on Ai2's published suite, so opening the least-decided windows first is the validated order. Caveats: the score is treated as P(positive) for ranking only — the margins are **not** error probabilities, and this set is not a random sample, so you can't compute an error rate from it. To quantify how wrong the map actually is, I'd next plan a proper label sample from these scores (`olmoearth_plan_label_sample`) — say the word if you want that.

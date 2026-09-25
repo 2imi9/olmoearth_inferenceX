@@ -1,0 +1,218 @@
+{
+ "tool": "olmoearth_certify_zone",
+ "arguments": {
+  "design_path": "F3/design_random_300_s0.json",
+  "labels_path": "F3/labels_random_300_s0.csv",
+  "alpha": 0.25
+ },
+ "result": {
+  "ok": true,
+  "result": {
+   "available": true,
+   "certified": true,
+   "rule": "prefix",
+   "alpha": 0.25,
+   "delta": 0.1,
+   "n_population": 15813,
+   "n_labelled": 300,
+   "min_labels_to_certify": 9,
+   "c_min": 0.03,
+   "levels": [
+    {
+     "coverage": 0.05,
+     "n_zone": 791,
+     "n_labelled_inside": 15,
+     "n_wrong_inside": 1,
+     "p_value": 0.07781666068793944,
+     "upper_bound": 0.23388116308470291,
+     "accepted": true
+    },
+    {
+     "coverage": 0.1,
+     "n_zone": 1581,
+     "n_labelled_inside": 30,
+     "n_wrong_inside": 2,
+     "p_value": 0.009920087972170448,
+     "upper_bound": 0.16635041113219481,
+     "accepted": true
+    },
+    {
+     "coverage": 0.15,
+     "n_zone": 2372,
+     "n_labelled_inside": 46,
+     "n_wrong_inside": 3,
+     "p_value": 0.0011209931383008652,
+     "upper_bound": 0.13870151770657674,
+     "accepted": true
+    },
+    {
+     "coverage": 0.2,
+     "n_zone": 3163,
+     "n_labelled_inside": 57,
+     "n_wrong_inside": 3,
+     "p_value": 8.6548336127025e-05,
+     "upper_bound": 0.11286753082516598,
+     "accepted": true
+    },
+    {
+     "coverage": 0.25,
+     "n_zone": 3953,
+     "n_labelled_inside": 68,
+     "n_wrong_inside": 3,
+     "p_value": 5.876016049337673e-06,
+     "upper_bound": 0.09511763217809259,
+     "accepted": true
+    },
+    {
+     "coverage": 0.3,
+     "n_zone": 4744,
+     "n_labelled_inside": 88,
+     "n_wrong_inside": 7,
+     "p_value": 3.359279084830127e-05,
+     "upper_bound": 0.12963743676222597,
+     "accepted": true
+    },
+    {
+     "coverage": 0.35,
+     "n_zone": 5535,
+     "n_labelled_inside": 101,
+     "n_wrong_inside": 7,
+     "p_value": 2.0316505649879612e-06,
+     "upper_bound": 0.11327913279132791,
+     "accepted": true
+    },
+    {
+     "coverage": 0.4,
+     "n_zone": 6325,
+     "n_labelled_inside": 112,
+     "n_wrong_inside": 9,
+     "p_value": 3.1977107307194915e-06,
+     "upper_bound": 0.12347826086956522,
+     "accepted": true
+    },
+    {
+     "coverage": 0.45,
+     "n_zone": 7116,
+     "n_labelled_inside": 126,
+     "n_wrong_inside": 12,
+     "p_value": 8.08171263089164e-06,
+     "upper_bound": 0.13743676222596965,
+     "accepted": true
+    },
+    {
+     "coverage": 0.5,
+     "n_zone": 7906,
+     "n_labelled_inside": 140,
+     "n_wrong_inside": 13,
+     "p_value": 1.7282883522573033e-06,
+     "upper_bound": 0.13205160637490512,
+     "accepted": true
+    },
+    {
+     "coverage": 0.55,
+     "n_zone": 8697,
+     "n_labelled_inside": 148,
+     "n_wrong_inside": 14,
+     "p_value": 1.1911760403815687e-06,
+     "upper_bound": 0.1328044153156261,
+     "accepted": true
+    },
+    {
+     "coverage": 0.6,
+     "n_zone": 9488,
+     "n_labelled_inside": 166,
+     "n_wrong_inside": 16,
+     "p_value": 3.765747727170166e-07,
+     "upper_bound": 0.13227234401349072,
+     "accepted": true
+    },
+    {
+     "coverage": 0.65,
+     "n_zone": 10278,
+     "n_labelled_inside": 181,
+     "n_wrong_inside": 20,
+     "p_value": 1.7970948115875948e-06,
+     "upper_bound": 0.1461373808133878,
+     "accepted": true
+    },
+    {
+     "coverage": 0.7,
+     "n_zone": 11069,
+     "n_labelled_inside": 198,
+     "n_wrong_inside": 23,
+     "p_value": 1.7791792324079064e-06,
+     "upper_bound": 0.1505104345469329,
+     "accepted": true
+    },
+    {
+     "coverage": 0.75,
+     "n_zone": 11860,
+     "n_labelled_inside": 216,
+     "n_wrong_inside": 32,
+     "p_value": 0.00016830206226319718,
+     "upper_bound": 0.18355817875210792,
+     "accepted": true
+    },
+    {
+     "coverage": 0.8,
+     "n_zone": 12650,
+     "n_labelled_inside": 232,
+     "n_wrong_inside": 36,
+     "p_value": 0.0002877179776165773,
+     "upper_bound": 0.18964426877470356,
+     "accepted": true
+    },
+    {
+     "coverage": 0.85,
+     "n_zone": 13441,
+     "n_labelled_inside": 253,
+     "n_wrong_inside": 46,
+     "p_value": 0.005759475312117261,
+     "upper_bound": 0.21635294992932075,
+     "accepted": true
+    },
+    {
+     "coverage": 0.9,
+     "n_zone": 14232,
+     "n_labelled_inside": 274,
+     "n_wrong_inside": 56,
+     "p_value": 0.04302007551192418,
+     "upper_bound": 0.23861720067453626,
+     "accepted": true
+    },
+    {
+     "coverage": 0.95,
+     "n_zone": 15022,
+     "n_labelled_inside": 289,
+     "n_wrong_inside": 64,
+     "p_value": 0.14318995530459597,
+     "upper_bound": 0.25555851417920383,
+     "accepted": false
+    },
+    {
+     "coverage": 1.0,
+     "n_zone": 15813,
+     "n_labelled_inside": 300,
+     "n_wrong_inside": 69,
+     "p_value": 0.2304604203530155,
+     "upper_bound": 0.26377031556314423,
+     "accepted": false
+    }
+   ],
+   "coverage": 0.9,
+   "n_zone": 14232,
+   "threshold": 0.0528564453125,
+   "upper_bound": 0.23861720067453626,
+   "n_tied_at_threshold": 1,
+   "n_tied_inside_zone": 1,
+   "note": "valid if the zone's error rate does not fall as the zone grows; on the suite tasks exp80 graded, the guarantee held whether or not that was exactly true (docs/results/comparisons.md, exp80)",
+   "zone_path": "/Users/lucas/Desktop/Github/olmoearth_inferenceX/exp/out/exp86_trial/rounds/2/parity/workspace/design_random_300_s0_zone_a0.25.json",
+   "verdict": "certified: the 14232 most confident windows (coverage 0.9 of the population) under rule 'prefix' at alpha=0.25, delta=0.1",
+   "meaning": "The zone is the n_zone most confident windows of the design's population; its error rate is at most alpha=0.25, a statement that fails on at most delta=0.1 of random draws. Nothing outside the zone is certified.",
+   "reading_levels": "Each level's upper_bound is that zone's own bound at delta, before the rule is applied. A level whose upper_bound is below alpha, this alpha or any other, is not thereby certified: certification is the package's exact test under the chosen rule ('prefix' accepts levels from the smallest zone up and stops at the first that fails; 'bonferroni' tests every level at delta divided by the number of levels), and which levels are tested depends on alpha. Only a level marked accepted at this call's alpha is certified; whether another alpha certifies a zone is known only by calling this tool with it."
+  }
+ },
+ "made": "2026-09-25T02:06:49+00:00",
+ "agent_commit": "3eddbc525f976a7bc5ccfa9ee80dedf1783a43cf",
+ "inferencex_version": "1.3.0"
+}

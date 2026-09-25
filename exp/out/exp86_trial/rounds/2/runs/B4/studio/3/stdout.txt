@@ -1,0 +1,9 @@
+
+
+I set up an honest error-rate design for the KarstBinary 2025 map (result `419c581d`, prediction `dd504793`). One constraint first: a Studio result caps at a 16x16 window grid, so only **173 valid windows** exist here (83 dropped as no-data) — your 300 labels can't all be used on this map, so the design takes all 173.
+
+- Design: confidence-stratified (least-decision windows labeled first), budget 173/173
+- Labels file to fill: `design_419c581d-9a1_8ca17d7d_confidence_173_s0_to_label.csv` (full path in the workspace `exp/out/exp86_trial/rounds/2/runs/B4/studio/3/workspace/`)
+- For each row in order: set `wrong = 1` when the map class (`map_class`) doesn't match the ground truth, else `0`
+
+Then send me the filled CSV (or the wrong/reference lists) and I'll run `olmoearth_estimate_map_error` to get the error rate with the interval that this design earns. Note this estimate covers the sampled points of the map's extent; if you want the whole-raster population, that requires a direct model-run scores raster via `olmoearth_scores_from_file`.

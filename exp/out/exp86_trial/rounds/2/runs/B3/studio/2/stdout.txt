@@ -1,0 +1,22 @@
+
+
+## KarstBinary vs KarstNumber (PA Karst, 2025)
+
+Compared both results on a shared grid over ~10,091 km²: **KarstBinary** result `419c581d-…` (`sample_karst_score`, range 0–1) vs **KarstNumber** result `afb1cf68-…` (`sample_number`, range 0.2–1.2).
+
+| Statistic | Value |
+|---|---|
+| Cells compared | 25 of 36 (11 dropped as no-data in either map) |
+| Correlation | **-0.0172** (essentially uncorrelated) |
+| Agreement (within 0.1) | 0% |
+| Mean difference / RMSE | reported but not meaningful — see warning below |
+
+**Where they differ:** nearly everywhere — with correlation ≈ 0 and zero agreement, the two maps rank pixels differently almost cell by cell. But an important caveat: they are *different quantities* (a karst score vs a sample number), so only the correlation is a fair comparison; the tool explicitly warns against reading the mean difference or agreement fraction as "one reads higher than the other." So the honest answer is: the maps don't rise and fall together, i.e. they are measuring something effectively unrelated pixel-to-pixel.
+
+**Which is right:** I can't tell from these runs alone. There is no ground truth in either result, and "which is right" needs labels — accuracy requires truth (e.g. verified karst locations). Without labels, this is model-vs-model agreement only, not accuracy.
+
+To get a defensible answer, I can:
+1. **Plan a labeling exercise** (`olmoearth_plan_label_sample`) targeting the windows where each map looks uncertain, then estimate each map's error rate from your labels.
+2. If you already have labeled karst points/areas, run `olmoearth_classification_metrics` per model directly.
+
+QGIS-ready layer packs (qlr + SLD ramps for both layers) are generated if you want to inspect them visually side-by-side. Want me to proceed with option 1 or 2?

@@ -1,0 +1,20 @@
+
+
+**Review set for `C1/awf_namanga_2023_1042061`** — model `OlmoEarth-v1-FT-AWF-Base`, 128x128 grid, 16,384 windows (all valid). At a 5% budget (~819 windows) with **boundary-first** ordering, the first ten to check are:
+
+| Rank | Window (row, col) | Predicted class | Margin |
+|---|---|---|---|
+| 1 | (14, 29) | woodland_forest | 0.108 |
+| 2 | (10, 41) | montane_forest | 0.149 |
+| 3 | (23, 93) | shrubland_savanna | 0.153 |
+| 4 | (7, 11) | woodland_forest | 0.162 |
+| 5 | (14, 5) | montane_forest | 0.176 |
+| 6 | (19, 34) | woodland_forest | 0.191 |
+| 7 | (46, 91) | grassland_barren | 0.206 |
+| 8 | (19, 35) | montane_forest | 0.214 |
+| 9 | (2, 40) | montane_forest | 0.216 |
+| 10 | (83, 76) | grassland_barren | 0.232 |
+
+**Why these:** ranked by the window's mean top-1 minus top-2 logit margin — the lowest-margin windows are where the model is least decisive about its own class assignment — then prioritized among those for touching predicted class boundaries (windows 1, 2, 4-5, 8, 10 have 3+ boundary neighbours; window 4 has 8). Woodland vs. other forest and montane-forest edges dominate the suspicious set, which is typical for fine land-cover distinctions.
+
+Caveats: this ranks relative suspicion, not error probability, and it is not calibrated at any threshold. The scores file is saved (`scores_run_OlmoEarth-v1-FT-AWF-Base_a7c40be9_p4.json`) if you want to follow up with a label-sample plan or a comparison against another run.
