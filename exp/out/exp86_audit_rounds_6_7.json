@@ -1,0 +1,2364 @@
+{
+ "what": "blind audit of exp86 rounds 6 and 7 under opaque labels; four auditors, each followed by an adversarial verifier (workflow wf_1a2031a9-555, 25 September 2026)",
+ "key": {
+  "label_of_round": {
+   "6": "X",
+   "7": "Y"
+  }
+ },
+ "groups": [
+  {
+   "group": "studio_early",
+   "audit": {
+    "runs": [
+     {
+      "label": "X",
+      "configuration": "B1/studio",
+      "run": "1",
+      "findings": []
+     },
+     {
+      "label": "X",
+      "configuration": "B1/studio",
+      "run": "2",
+      "findings": []
+     },
+     {
+      "label": "X",
+      "configuration": "B1/studio",
+      "run": "3",
+      "findings": [
+       {
+        "cls": "OTHER",
+        "quote": "with completed predictions already available (`419c581d\u2026` for KarstBinary, `afb1cf68\u2026` for KarstNumber)",
+        "evidence": "olmoearth_fetch_results: result_id 419c581d-9a10-\u2026 belongs to prediction_id dd504793-\u2026, and result_id afb1cf68-8be3-\u2026 belongs to prediction_id a83ca800-\u2026. The ids quoted are result ids, not prediction ids.",
+        "why": "The answer calls them completed predictions. A user who passes them where a prediction_id is needed gets the wrong object. Low severity: the ids are mislabelled, not invented."
+       }
+      ]
+     },
+     {
+      "label": "Y",
+      "configuration": "B1/studio",
+      "run": "1",
+      "findings": []
+     },
+     {
+      "label": "Y",
+      "configuration": "B1/studio",
+      "run": "2",
+      "findings": [
+       {
+        "cls": "OTHER",
+        "quote": "you can reuse their `model_id` to submit new predictions on any area/date range",
+        "evidence": "olmoearth_search_predictions returns one completed run per model, 'PA regular', 2025-01-01 to 2025-12-31, plus model_type and prediction_type. Nothing says where or when these models apply.",
+        "why": "'Any area/date range' is a scope claim that no tool output supports, for fine-tuned karst models seen on one PA 2025 run only. Low severity."
+       }
+      ]
+     },
+     {
+      "label": "Y",
+      "configuration": "B1/studio",
+      "run": "3",
+      "findings": [
+       {
+        "cls": "OTHER",
+        "quote": "KarstNumber | fine_tuned | Per-pixel regression value (karst count/score per pixel)",
+        "evidence": "olmoearth_search_predictions gives only name KarstNumber, fine_tuned, per_pixel_regression. This run fetched no range. In other runs, get_prediction_result gives sample_number a declared range of 0.2 to 1.2, which a count cannot have.",
+        "why": "'Count' is read off the model name, and no tool output gives that meaning. Low severity."
+       }
+      ]
+     },
+     {
+      "label": "X",
+      "configuration": "B2/studio",
+      "run": "1",
+      "findings": [
+       {
+        "cls": "E5",
+        "quote": "measured to beat every no-model control (feature typicality, ensemble disagreement, etc.) in Ai2's published suite",
+        "evidence": "review_set evidence 'suite-margin-wins-every-task': the suite had two controls ('One of the two controls is embedding distance'). Ensemble mutual information was tested 'on both testbeds under OlmoEarth v1.2', not on the suite (shrug-signals-rejected). Caveats: 'Known exception: ... a no-model NDWI control ranked errors as well as confidence, and better under v1.2' and 'The margin does NOT beat ensemble PREDICTIVE ENTROPY -- it ties it'. assumption: 'no recorded experiment grades this case'.",
+        "why": "It widens the suite result. Ensemble disagreement is not a no-model control and was not in the suite, and a named no-model control (NDWI) did not lose. The evidence is also presented as covering this KarstBinary regression score, which the tool says no experiment grades."
+       },
+       {
+        "cls": "E5",
+        "quote": "65 unlisted windows have margins 0.786\u20130.992, meaning the model is nearly certain there",
+        "evidence": "models_note: a *_regression output is 'not a class probability and not a confidence'. assumption: 'these numbers are not probabilities of error'. caveat: 'badly miscalibrated as probabilities ... poor for deciding what to trust at a threshold'. A margin of 0.786 is a score of 0.107 or 0.893.",
+        "why": "This turns an uncalibrated ranking margin on a regression band into near-certainty, which the tool's notes rule out."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "so margin = distance from 0.5",
+        "evidence": "assumption: 'its margin is |2s - 1|', which is twice the distance from 0.5. The answer's own table lists score 0.352 with margin 0.297, while 0.5 - 0.352 = 0.148.",
+        "why": "The definition given is off by a factor of 2 and does not match the numbers in the table. Minor. The tool's 'signal' line uses similarly loose wording."
+       }
+      ]
+     },
+     {
+      "label": "X",
+      "configuration": "B2/studio",
+      "run": "2",
+      "findings": [
+       {
+        "cls": "OTHER",
+        "quote": "**Check these first** (top of the 10% budget, i.e. ~7 windows):",
+        "evidence": "The table lists only ranks 1-5. The tool's review list gives rank 6 (2,8) margin 0.666 and rank 7 (1,3) margin 0.745, both inside the 10% budget (n_review 7). The answer then says 'the remaining 65 listed-later windows have margins \u2265 0.786'. The tool's not_listed n=65 excludes ranks 6-7, so 67 windows remain beyond the 5 shown.",
+        "why": "The reviewer is told about ~7 windows but shown 5. The two missing windows are also not covered by the '\u2265 0.786' statement about the rest, so the claim about the remaining windows is false for (2,8) and (1,3)."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "margin = distance of the score from the 0.5 decision line",
+        "evidence": "assumption: margin is |2s - 1|. The table shows score 0.352 with margin 0.297, while the distance from 0.5 is 0.148.",
+        "why": "Off by a factor of 2 and inconsistent with the table's own numbers. Minor."
+       }
+      ]
+     },
+     {
+      "label": "X",
+      "configuration": "B2/studio",
+      "run": "3",
+      "findings": [
+       {
+        "cls": "OTHER",
+        "quote": "so flipping one of these pixels changes the map most",
+        "evidence": "No tool field says this. sampling.what_a_window_is: each window is 'ONE pixel-value sample at its cell centre'. A score near 0.5 means a small change flips its class, not that the flip changes the map more.",
+        "why": "This is an invented rationale. Flipping any one pixel's class changes the map by exactly that pixel. The tool's reason is that low-margin windows are the most suspect."
+       },
+       {
+        "cls": "E5",
+        "quote": "Everything else is far more confident (median margin 0.964; the 82 unlisted windows have margins 0.534\u20130.991).",
+        "evidence": "The answer shows ranks 1-5, up to margin 0.219. The tool's review list has ranks 6-9 at margins 0.261, 0.387, 0.467 and 0.516 (inside the 10% budget). Those four are not in the tool's 82 not_listed windows and are not shown in the answer.",
+        "why": "The next window (margin 0.261) is barely above rank 5 (0.219), so 'far more confident' is false. The four omitted windows fall in neither group the answer describes."
+       }
+      ]
+     },
+     {
+      "label": "Y",
+      "configuration": "B2/studio",
+      "run": "1",
+      "findings": [
+       {
+        "cls": "OTHER",
+        "quote": "so these nine are strikingly undecided",
+        "evidence": "The table shows only ranks 1-5. Ranks 6-9 in the tool's review list (#129 (10,9), #55 (4,7), #78 (6,6), #118 (9,10)) are never given. Rank 9 has score 0.242 and margin 0.516.",
+        "why": "It refers to nine windows the reader cannot identify, and 'strikingly undecided' overstates it for a window scored 0.24. Minor."
+       }
+      ]
+     },
+     {
+      "label": "Y",
+      "configuration": "B2/studio",
+      "run": "2",
+      "findings": [
+       {
+        "cls": "E5",
+        "quote": "Measured evidence behind this rule: on Ai2's published suite the model's own margin beat every no-model control on all 24 scored tasks, while disagreement/typicality signals lost.",
+        "evidence": "assumption: 'no recorded experiment grades this case'. Caveats: 'Not a general theorem about every model or every task'. Also: 'The margin does NOT beat ensemble PREDICTIVE ENTROPY -- it ties it ... ensemble mutual information was 0.003 better than confidence' at tile level on the v1 test split. The disagreement and typicality results come from other testbeds, not the 24-task suite.",
+        "why": "Suite evidence is presented as backing the rule for this KarstBinary regression band, which the tool says no experiment grades. 'Disagreement signals lost' ignores the tie with predictive entropy and the MI exception the tool names."
+       },
+       {
+        "cls": "E5",
+        "quote": "The other 68 windows are far more confident (margins 0.615 to 0.992; median margin 0.965).",
+        "evidence": "The tool's not_listed margin_range starts at 0.615273, just above the rank-4 cut of 0.553564. models_note: a regression output is 'not a confidence'.",
+        "why": "The next window's margin (0.615) is close to the last listed one (0.554), so 'far more confident' overstates the gap."
+       },
+       {
+        "cls": "E5",
+        "quote": "median margin here is high, so the map looks overall confident except in these few cells",
+        "evidence": "caveat: 'badly miscalibrated as probabilities: good for deciding what to look at first, poor for deciding what to trust'. models_note: regression is not a confidence. sampling: 72 single-pixel samples, 28 dropped as no-data.",
+        "why": "It draws a map-wide trust conclusion from uncalibrated margins on 72 point samples, which the tool's notes warn against."
+       }
+      ]
+     },
+     {
+      "label": "Y",
+      "configuration": "B2/studio",
+      "run": "3",
+      "findings": [
+       {
+        "cls": "E5",
+        "quote": "the model's own margin beat every no-model control (ensemble/feature-typicality signals all lost) across 24 scored tasks, so \"distance from the decision\" is the best available suspicion signal without labels",
+        "evidence": "evidence 'suite-margin-wins-every-task': the suite had two controls, one of them embedding distance. Ensemble signals were tested on other testbeds. Caveats: the margin 'ties' ensemble predictive entropy ('its entropy is a fair alternative'), and a no-model NDWI control 'ranked errors as well as confidence, and better under v1.2'. assumption: 'no recorded experiment grades this case'.",
+        "why": "It widens the suite result to ensemble signals, calls ensemble signals no-model controls, and says 'best available' although the tool names a tie (entropy) and an exception (NDWI) and says this case is ungraded."
+       },
+       {
+        "cls": "E5",
+        "quote": "The remaining 65 unlisted windows have margins between 0.785875 and 0.991517 \u2014 confidently non-karst or karst.",
+        "evidence": "class_meaning: 0 = 'at or below the threshold 0.5', 1 = 'above the threshold 0.5', not karst or non-karst. models_note: regression is 'not a class probability and not a confidence'. caveat: 'poor for deciding what to trust at a threshold'.",
+        "why": "It turns uncalibrated margins into confident karst or non-karst labels, which the tool explicitly disclaims."
+       }
+      ]
+     },
+     {
+      "label": "X",
+      "configuration": "B3/studio",
+      "run": "1",
+      "findings": [
+       {
+        "cls": "E5",
+        "quote": "the two maps do not rise and fall together anywhere on the sampled grid",
+        "evidence": "compare_results returns a single pooled correlation of -0.0172 over n_samples 25 and no per-cell output. For context, a 12x12 grid of the same pair returned 0.4974 over 91 cells in another run.",
+        "why": "One pooled correlation over 25 points cannot say anything about co-variation at particular locations, so 'anywhere' overstates what the evidence covers."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "There's no ground-truth labels for this area",
+        "evidence": "compare_results says only that this comparison has 'no ground truth, so this is model-vs-model agreement'. No tool searched for labels.",
+        "why": "It asserts, without checking, that no labels exist. Low severity."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "then `olmoearth_classification_metrics` against those labels would finally show which model is closer to truth",
+        "evidence": "compare_results: both properties are value_type regression, and the warning says they are 'different quantities'. sample_number has range 0.2 to 1.2 and no class or threshold. The proposed label sample is planned 'on either result'.",
+        "why": "Nothing in the run supports classification metrics on two regressions of different quantities, or one model's label design ranking both models. Low to moderate severity."
+       }
+      ]
+     },
+     {
+      "label": "X",
+      "configuration": "B3/studio",
+      "run": "2",
+      "findings": [
+       {
+        "cls": "OTHER",
+        "quote": "these two maps predict *different quantities* \u2014 a score vs. a count",
+        "evidence": "compare_results property_b: sample_number regression, min 0.2, max 1.2, mean_b 0.681763.",
+        "why": "A band with declared range 0.2 to 1.2 and mean 0.68 is not a count. The meaning is invented from the model name."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "I can build a human review set (lowest-confidence windows first) for either map",
+        "evidence": "models_note: a regression output is 'not a class probability and not a confidence'. KarstNumber's sample_number (0.2 to 1.2) has no decision threshold in any tool output. The answer also offers to 'compute real accuracy per model' for regression outputs.",
+        "why": "No tool output supports a confidence ranking or an accuracy figure for KarstNumber. Low severity."
+       }
+      ]
+     },
+     {
+      "label": "X",
+      "configuration": "B3/studio",
+      "run": "3",
+      "findings": [
+       {
+        "cls": "E5",
+        "quote": "Mean over shared area | 0.10049 | 0.681763",
+        "evidence": "compare_results method: 'pointwise pixel-value sampled on a grid over the shared extent (an estimate, not every pixel)'. The means cover 25 sampled cells after 11 were dropped.",
+        "why": "Means of 25 point samples are presented as the mean over the area. Minor."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "(a karst score vs a count value)",
+        "evidence": "compare_results property_b: sample_number range 0.2 to 1.2, mean_b 0.681763.",
+        "why": "Not a count. The meaning is invented from the model name."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "their values rise and fall independently over the area",
+        "evidence": "correlation -0.0172, n_samples 25.",
+        "why": "A near-zero linear correlation on 25 points does not establish independence. Minor overstatement."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "The near-zero correlation suggests they're capturing different aspects of karst, not conflicting measurements of one thing.",
+        "evidence": "compare_results gives only the correlation and the framing 'model-vs-model agreement (no ground truth), not accuracy'. Nothing says what either band measures.",
+        "why": "The interpretation is unsupported. A near-zero correlation is just as consistent with one or both maps being wrong, and the claim steers the user away from the 'which is right' question."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "then estimate each map's error rate honestly",
+        "evidence": "No tool output defines an error rate for KarstNumber, a regression of 0.2 to 1.2 with no threshold. A label plan is designed on one result's scores.",
+        "why": "The advice is unsupported for the regression map. Low severity."
+       }
+      ]
+     },
+     {
+      "label": "Y",
+      "configuration": "B3/studio",
+      "run": "1",
+      "findings": [
+       {
+        "cls": "OTHER",
+        "quote": "a moderate degree of overlap, meaning large parts of the AOI show similar relative patterns while much of the rest disagrees",
+        "evidence": "compare_results returns only a pooled correlation of 0.4974 over n_samples 91, with no per-cell agreement.",
+        "why": "A correlation coefficient does not split the AOI into agreeing and disagreeing parts. This spatial pattern is invented."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "Each map's own mean level differs too: KarstBinary averages ~0.096 on its 0\u20131 scale; KarstNumber ~0.691 on its 0.2\u20131.2 scale.",
+        "evidence": "compare_results warning: values are 'different quantities ... do not work one out, and do not say one reads higher than the other'. mean_a 0.096252 and mean_b 0.691163 are over 91 sampled cells.",
+        "why": "It compares the mean levels of two different quantities, which the tool forbids, and calls sample means map averages."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "There are no ground-truth labels for this AOI in Studio",
+        "evidence": "No tool searched Studio for labels. compare_results says only that this comparison has no ground truth.",
+        "why": "It asserts an absence it never checked. Low severity."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "so you spend N labels on the most informative windows, then estimate each map's error rate honestly",
+        "evidence": "No tool output defines an error rate for KarstNumber (regression, 0.2 to 1.2, no threshold). plan_label_sample was never called.",
+        "why": "Estimating both maps' error rates from one label plan is unsupported for the regression map. Low severity."
+       }
+      ]
+     },
+     {
+      "label": "Y",
+      "configuration": "B3/studio",
+      "run": "2",
+      "findings": [
+       {
+        "cls": "E5",
+        "quote": "Mean over shared extent | 0.10049 | 0.681763",
+        "evidence": "compare_results method: sampled on a grid, 'an estimate, not every pixel'. The means cover 25 cells.",
+        "why": "Sample means are presented as extent means. Minor."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "one reads high where the other reads low on average",
+        "evidence": "correlation -0.0172 over 25 cells, which the tool treats as essentially zero. warning: 'do not say one reads higher than the other'.",
+        "why": "It reads an inverse relationship into a near-zero correlation, breaking the tool's warning. This is closest to a misread direction (E2)."
+       },
+       {
+        "cls": "E5",
+        "quote": "they rise/fall together essentially nowhere",
+        "evidence": "A single pooled correlation over 25 points. No per-location output exists.",
+        "why": "A global statistic is stated as a claim about every location."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "there are no ground-truth karst labels for this area",
+        "evidence": "No tool searched for labels. The comparison only reports no ground truth for itself.",
+        "why": "It asserts an absence it never checked. Low severity."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "I'll score both against it (per-window error rates, classification metrics)",
+        "evidence": "Both bands are value_type regression. sample_number (0.2 to 1.2) has no class or threshold in any tool output.",
+        "why": "Classification metrics and error rates for the regression map are unsupported. Low severity."
+       }
+      ]
+     },
+     {
+      "label": "Y",
+      "configuration": "B3/studio",
+      "run": "3",
+      "findings": [
+       {
+        "cls": "OTHER",
+        "quote": "then estimate each map's error rate",
+        "evidence": "No tool output defines an error rate for KarstNumber (regression, 0.2 to 1.2, no threshold). plan_label_sample was never called.",
+        "why": "Unsupported for the regression map. Low severity. The rest of this answer matches the tool output."
+       }
+      ]
+     }
+    ]
+   },
+   "verify": {
+    "verdicts": [
+     {
+      "label": "X",
+      "configuration": "B1/studio",
+      "run": "3",
+      "quote": "with completed predictions already available (`419c581d\u2026` for KarstBinary, `afb1cf68\u2026` for KarstNumber)",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "olmoearth_fetch_results in this run gives result_id 419c581d-9a10-\u2026 under prediction_id dd504793-\u2026, and result_id afb1cf68-8be3-\u2026 under prediction_id a83ca800-\u2026. The answer calls the result ids 'completed predictions'. A user who passes them where a prediction_id is expected gets the wrong object. Low severity: the ids are mislabelled, not invented."
+     },
+     {
+      "label": "Y",
+      "configuration": "B1/studio",
+      "run": "2",
+      "quote": "you can reuse their `model_id` to submit new predictions on any area/date range",
+      "cls": "OTHER",
+      "verdict": "refuted",
+      "cls_final": "OTHER",
+      "reason": "The sentence is about what the user can do mechanically, and the agent's own olmoearth_submit_prediction spec supports it: 'Get a model_id by reusing one from olmoearth_search_predictions', with free area_id and start_time/end_time and no stated restriction. The answer does not claim the karst models give valid output outside PA. It is true that nothing says where the models apply, but that bears on a claim of validity the answer does not make. X B1 run 2 ('re-run any over a new area') and Y B1 run 3 ('re-submitted to a new area or date range') say the same thing and were not flagged."
+     },
+     {
+      "label": "Y",
+      "configuration": "B1/studio",
+      "run": "3",
+      "quote": "KarstNumber | fine_tuned | Per-pixel regression value (karst count/score per pixel)",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "This run called only load_context and search_predictions, which give the name KarstNumber, fine_tuned and per_pixel_regression. Nothing says what the value means, so 'count' is read off the model name. One correction to the auditor's evidence: the declared range of 0.2 to 1.2 (from other runs) does not rule out a count, because a regression trained on counts outputs fractional expected values. The finding stands as unsupported, not as proven false. Low severity."
+     },
+     {
+      "label": "X",
+      "configuration": "B2/studio",
+      "run": "1",
+      "quote": "measured to beat every no-model control (feature typicality, ensemble disagreement, etc.) in Ai2's published suite",
+      "cls": "E5",
+      "verdict": "confirmed",
+      "cls_final": "E5",
+      "reason": "evidence 'suite-margin-wins-every-task': the suite beat 'the best no-model control', and 'One of the two controls is embedding distance'. Ensemble mutual information was tested 'on both testbeds under OlmoEarth v1.2' (shrug-signals-rejected), not on the suite, and an ensemble is not a no-model control. So listing 'ensemble disagreement, etc.' as suite no-model controls widens the evidence. The answer also presents this as the reason these windows rank first, while the assumption says 'no recorded experiment grades this case'. One part of the auditor's evidence does not apply: the NDWI exception is on Sen1Floods11 Bolivia, outside the suite, so it does not contradict a claim scoped to the suite."
+     },
+     {
+      "label": "X",
+      "configuration": "B2/studio",
+      "run": "1",
+      "quote": "65 unlisted windows have margins 0.786\u20130.992, meaning the model is nearly certain there",
+      "cls": "E5",
+      "verdict": "confirmed",
+      "cls_final": "E5",
+      "reason": "The numbers are right (not_listed n 65, margin_range [0.785875, 0.991517]). The reading is not. models_note says a *_regression output is 'not a class probability and not a confidence'. The assumption says 'these numbers are not probabilities of error'. A caveat says they are 'badly miscalibrated as probabilities ... poor for deciding what to trust'. A margin of 0.786 is a score of 0.107 or 0.893, which is not 'nearly certain' even if the score were read as P(positive). The tool's own wording is only 'most confident windows'."
+     },
+     {
+      "label": "X",
+      "configuration": "B2/studio",
+      "run": "1",
+      "quote": "so margin = distance from 0.5",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "The assumption field defines margin as |2s - 1|, which is twice the distance from 0.5. The answer's own table shows score 0.352 with margin 0.297, while 0.5 - 0.352 = 0.148. The tool's looser 'signal' line ('margin = distance from the decision') invites the error, but the exact definition and the table contradict it. Minor: the ranking is unchanged."
+     },
+     {
+      "label": "X",
+      "configuration": "B2/studio",
+      "run": "2",
+      "quote": "**Check these first** (top of the 10% budget, i.e. ~7 windows):",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "In this run the 10% budget has n_review 7, and the review list includes rank 6 (2,8) margin 0.666018 and rank 7 (1,3) margin 0.744685. The table shows ranks 1-5 only. The answer then says 'the remaining 65 listed-later windows have margins \u2265 0.786', which is the tool's not_listed set and excludes ranks 6-7. So 5 + 65 = 70 of the 72 valid windows are accounted for, and the two budget windows are neither shown nor covered by the '\u2265 0.786' statement."
+     },
+     {
+      "label": "X",
+      "configuration": "B2/studio",
+      "run": "2",
+      "quote": "margin = distance of the score from the 0.5 decision line",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "This is the same error as in run 1. The assumption gives margin = |2s - 1|, and the table shows score 0.352 with margin 0.297, while the distance from 0.5 is 0.148. The factor of 2 is wrong. Minor."
+     },
+     {
+      "label": "X",
+      "configuration": "B2/studio",
+      "run": "3",
+      "quote": "so flipping one of these pixels changes the map most",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "No tool field says this. sampling.what_a_window_is gives each window as 'ONE pixel-value sample at its cell centre'. The tool's rationale is that low-margin windows are 'least decided' and 'more suspect'. Flipping the class of any one pixel changes the map by the same one pixel, so the stated reason is invented and wrong."
+     },
+     {
+      "label": "X",
+      "configuration": "B2/studio",
+      "run": "3",
+      "quote": "Everything else is far more confident (median margin 0.964; the 82 unlisted windows have margins 0.534\u20130.991).",
+      "cls": "E5",
+      "verdict": "confirmed",
+      "cls_final": "E5",
+      "reason": "The review list has 9 windows at the 10% budget: ranks 6-9 have margins 0.260755, 0.386571, 0.467432 and 0.515879. The answer shows only ranks 1-5 (up to 0.21925). 'Everything else' therefore includes rank 6 at 0.261, barely above rank 5. The four omitted windows are also not among the 82 not_listed, so 5 + 82 = 87 of 91 windows are described. 'Far more confident' is false for the next windows."
+     },
+     {
+      "label": "Y",
+      "configuration": "B2/studio",
+      "run": "1",
+      "quote": "so these nine are strikingly undecided",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "The table shows ranks 1-5. Ranks 6-9 ((10,9), (4,7), (6,6), (9,10)), which the answer tells the reader to open at 10%, are never identified. Rank 9 has score 0.242061 and margin 0.515879. It is less decided than the median (0.964) but is not 'strikingly undecided' in absolute terms. Minor. This is partly a magnitude overstatement (E5-like), but OTHER is defensible because of the omission."
+     },
+     {
+      "label": "Y",
+      "configuration": "B2/studio",
+      "run": "2",
+      "quote": "Measured evidence behind this rule: on Ai2's published suite the model's own margin beat every no-model control on all 24 scored tasks, while disagreement/typicality signals lost.",
+      "cls": "E5",
+      "verdict": "refuted",
+      "cls_final": "E5",
+      "reason": "The first clause restates suite-margin-wins-every-task correctly (it beat 'the best no-model control on every one' of 24 tasks). 'Disagreement/typicality signals lost' matches the tool's evidence entries (shrug-signals-rejected, feature-typicality-rejected, cross-model/two-view/backbone-version disagreement rejected), and the sentence does not explicitly place them on the suite. The entropy tie is not a disagreement signal: the tool says 'The rejection above is of the disagreement component (mutual information), not of entropy'. 'Evidence behind this rule' does not claim this case was graded. Unlike X B2 run 1 and Y B2 run 3, no ensemble signal is called a no-model suite control. The only real exception (tile-level MI +0.003 on v1) is a narrow caveat under the tool's own headline rejection. This is not a false statement."
+     },
+     {
+      "label": "Y",
+      "configuration": "B2/studio",
+      "run": "2",
+      "quote": "The other 68 windows are far more confident (margins 0.615 to 0.992; median margin 0.965).",
+      "cls": "E5",
+      "verdict": "confirmed",
+      "cls_final": "E5",
+      "reason": "not_listed n 68, margin_range [0.615273, 0.991517]. The last listed window's margin is 0.553564. From the same 10x10 grid (review lists in X B2 run 1 and Y B2 run 3), the next three have margins 0.615, 0.666 and 0.745, so 'far more confident' is false for the lowest of the 68. It holds for the bulk (median 0.965), and the answer prints the range. Low severity."
+     },
+     {
+      "label": "Y",
+      "configuration": "B2/studio",
+      "run": "2",
+      "quote": "median margin here is high, so the map looks overall confident except in these few cells",
+      "cls": "E5",
+      "verdict": "refuted",
+      "cls_final": "E5",
+      "reason": "The sentence is inside a caveat that says 'the numbers are not calibrated' and 'This ranks suspicion, not error probability'. 'Looks overall confident' describes the score distribution (median margin 0.96469) in the tool's own words ('the most confident windows (s near 0 or 1)'). It draws no trust or accuracy conclusion. The one inaccurate part, that only 'these few cells' are undecided when margins 0.615-0.745 also exist, is already covered by the confirmed 'far more confident' finding."
+     },
+     {
+      "label": "Y",
+      "configuration": "B2/studio",
+      "run": "3",
+      "quote": "the model's own margin beat every no-model control (ensemble/feature-typicality signals all lost) across 24 scored tasks, so \"distance from the decision\" is the best available suspicion signal without labels",
+      "cls": "E5",
+      "verdict": "confirmed",
+      "cls_final": "E5",
+      "reason": "The parenthetical makes ensemble signals no-model controls of the 24-task suite. The tool says the suite had two controls ('One of the two controls is embedding distance'), and ensemble MI was tested 'on both testbeds under OlmoEarth v1.2'. 'Best available' also ignores caveats the tool gives: the margin 'ties' ensemble predictive entropy ('its entropy is a fair alternative'), and 'a cheap physical control is worth running alongside' after NDWI matched confidence on Bolivia. And the assumption says 'no recorded experiment grades this case'."
+     },
+     {
+      "label": "Y",
+      "configuration": "B2/studio",
+      "run": "3",
+      "quote": "The remaining 65 unlisted windows have margins between 0.785875 and 0.991517 \u2014 confidently non-karst or karst.",
+      "cls": "E5",
+      "verdict": "confirmed",
+      "cls_final": "E5",
+      "reason": "The numbers are right (not_listed n 65). class_meaning defines the classes only as 'at or below' / 'above the threshold 0.5'. models_note: regression is 'not a class probability and not a confidence'. caveat: 'poor for deciding what to trust at a threshold'. The answer calls 65 windows confidently karst or non-karst, which decides what to trust at the threshold. Low to moderate severity."
+     },
+     {
+      "label": "X",
+      "configuration": "B3/studio",
+      "run": "1",
+      "quote": "the two maps do not rise and fall together anywhere on the sampled grid",
+      "cls": "E5",
+      "verdict": "confirmed",
+      "cls_final": "E5",
+      "reason": "compare_results returns one pooled correlation of -0.0172 over n_samples 25 and no per-location output, so 'anywhere' is a spatial claim a pooled statistic cannot make. With n = 25 the Fisher 95% interval is about [-0.41, 0.38] (my computation), so no co-variation is not established either. The same pair on a 12x12 grid (Y B3 run 1) gave 0.4974 over 91 cells, with 95% interval [0.32, 0.64]."
+     },
+     {
+      "label": "X",
+      "configuration": "B3/studio",
+      "run": "1",
+      "quote": "There's no ground-truth labels for this area",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "compare_results says only that this comparison is 'model-vs-model agreement (no ground truth)'. No tool searched for labels. Both models are fine_tuned in this project, so training labels plausibly exist. The claim that no labels exist is unchecked. Low severity."
+     },
+     {
+      "label": "X",
+      "configuration": "B3/studio",
+      "run": "1",
+      "quote": "then `olmoearth_classification_metrics` against those labels would finally show which model is closer to truth",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "Both bands are value_type regression, and the warning says they are 'different quantities'. sample_number (0.2-1.2) has no class or threshold in any output, so classification metrics cannot rank KarstNumber. There is a further, E4-like problem. The agent's classification_metrics takes plain aligned y_true/y_pred lists. The plan_label_sample default design is 'confidence', not random, and its tool spec says the interval 'comes from olmoearth_estimate_map_error'. Plain accuracy on that design ignores the design. The claim 'plan a label sample on either result' fails the same way: the agent's sampler refuses a regression band whose range is not [0,1] unless given a threshold."
+     },
+     {
+      "label": "X",
+      "configuration": "B3/studio",
+      "run": "2",
+      "quote": "these two maps predict *different quantities* \u2014 a score vs. a count",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "compare_results gives property_b as sample_number, regression, 0.2 to 1.2, mean_b 0.681763. No output says it is a count; the meaning comes from the name KarstNumber. The auditor's argument that the range proves it is not a count is too strong, since a count regression can output fractions. The claim is unsupported rather than shown false. Low severity."
+     },
+     {
+      "label": "X",
+      "configuration": "B3/studio",
+      "run": "2",
+      "quote": "I can build a human review set (lowest-confidence windows first) for either map",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "models_note: a regression output is 'not a class probability and not a confidence'. KarstNumber's sample_number declares 0.2-1.2 and no threshold in any output. The agent's review-set tool refuses a regression band that is not [0,1] unless a threshold is passed ('ranking it needs a decision threshold'), and no threshold exists for it. 'Compute real accuracy per model' is likewise undefined for that regression. Low severity."
+     },
+     {
+      "label": "X",
+      "configuration": "B3/studio",
+      "run": "3",
+      "quote": "Mean over shared area | 0.10049 | 0.681763",
+      "cls": "E5",
+      "verdict": "refuted",
+      "cls_final": "E5",
+      "reason": "These are the tool's own mean_a and mean_b, and they are its estimate of exactly that quantity (method: 'sampled on a grid over the shared extent (an estimate, not every pixel)'). A denser 12x12 grid of the same pair (Y B3 run 1) gives 0.096252 and 0.691163, within 0.01, so the user is not misled about magnitude. Leaving out the word 'estimate' is a labelling matter, not an overclaim. The table does not say one map reads higher than the other."
+     },
+     {
+      "label": "X",
+      "configuration": "B3/studio",
+      "run": "3",
+      "quote": "(a karst score vs a count value)",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "This is the same issue as X run 2. No output gives sample_number a meaning (regression, 0.2-1.2, mean_b 0.681763), so 'count' comes from the model name. The claim is unsupported, not proven false. Low severity."
+     },
+     {
+      "label": "X",
+      "configuration": "B3/studio",
+      "run": "3",
+      "quote": "their values rise and fall independently over the area",
+      "cls": "OTHER",
+      "verdict": "reclassified",
+      "cls_final": "E5",
+      "reason": "The statement is unsupported. A correlation of -0.0172 over 25 points does not establish independence: the Fisher 95% interval is about [-0.41, 0.38], and a 12x12 grid of the same pair gave 0.4974. The auditor classed the same kind of overclaim as E5 in X run 1 ('anywhere') and Y run 2 ('essentially nowhere'), so it is E5 (overclaimed evidence) here too, not OTHER."
+     },
+     {
+      "label": "X",
+      "configuration": "B3/studio",
+      "run": "3",
+      "quote": "The near-zero correlation suggests they're capturing different aspects of karst, not conflicting measurements of one thing.",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "compare_results gives only the correlation and the framing 'model-vs-model agreement (no ground truth), not accuracy'. Nothing says what either band measures or that both are valid. If both maps described karst correctly, related quantities would be expected to co-vary, so a near-zero r on 25 points fits one or both maps being wrong at least as well. The inference steers the user away from 'which is right'."
+     },
+     {
+      "label": "X",
+      "configuration": "B3/studio",
+      "run": "3",
+      "quote": "then estimate each map's error rate honestly",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "No output defines an error rate for KarstNumber (regression, 0.2-1.2, no threshold). The agent's plan_label_sample and review-set tools refuse a regression band that is not [0,1] unless a threshold is given, and none exists for it. Low severity."
+     },
+     {
+      "label": "Y",
+      "configuration": "B3/studio",
+      "run": "1",
+      "quote": "a moderate degree of overlap, meaning large parts of the AOI show similar relative patterns while much of the rest disagrees",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "compare_results returns only a pooled correlation of 0.4974 over n_samples 91, with no per-cell agreement. A correlation coefficient does not divide an area into agreeing and disagreeing parts. This spatial pattern is invented."
+     },
+     {
+      "label": "Y",
+      "configuration": "B3/studio",
+      "run": "1",
+      "quote": "Each map's own mean level differs too: KarstBinary averages ~0.096 on its 0\u20131 scale; KarstNumber ~0.691 on its 0.2\u20131.2 scale.",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "The warning says the values are 'different quantities ... A mean difference ... would mix two quantities ... do not work one out, and do not say one reads higher than the other'. Under 'Where they differ', 'mean level differs too' compares the levels of the two quantities anyway. The numbers are right (mean_a 0.096252, mean_b 0.691163), and calling a 91-point sample mean an average is a minor secondary point."
+     },
+     {
+      "label": "Y",
+      "configuration": "B3/studio",
+      "run": "1",
+      "quote": "There are no ground-truth labels for this AOI in Studio",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "No tool searched Studio for labels. compare_results reports only that this comparison has no ground truth. Both models are fine-tuned in this project, so training labels plausibly exist in Studio. The absence is asserted without being checked. Low severity."
+     },
+     {
+      "label": "Y",
+      "configuration": "B3/studio",
+      "run": "1",
+      "quote": "so you spend N labels on the most informative windows, then estimate each map's error rate honestly",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "plan_label_sample was never called. KarstNumber (regression, 0.2-1.2) has no threshold or class in any output, so no error rate is defined for it, and the agent's sampler refuses such a band without a threshold. Low severity."
+     },
+     {
+      "label": "Y",
+      "configuration": "B3/studio",
+      "run": "2",
+      "quote": "Mean over shared extent | 0.10049 | 0.681763",
+      "cls": "E5",
+      "verdict": "refuted",
+      "cls_final": "E5",
+      "reason": "This is the same as X B3 run 3. They are the tool's mean_a and mean_b, its estimate of the shared-extent mean, and a 12x12 grid gives nearly the same values (0.096, 0.691). Leaving out 'estimate' is not an overclaim a user would be misled by."
+     },
+     {
+      "label": "Y",
+      "configuration": "B3/studio",
+      "run": "2",
+      "quote": "one reads high where the other reads low on average",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "The correlation is -0.0172 over 25 cells, essentially zero, with a 95% interval of about [-0.41, 0.38]. Reading an inverse pattern into it is unsupported, and the answer contradicts itself when it also says they 'rise/fall together essentially nowhere'. It is not E2, because the tool states no direction that was reversed; OTHER (or E5) fits."
+     },
+     {
+      "label": "Y",
+      "configuration": "B3/studio",
+      "run": "2",
+      "quote": "they rise/fall together essentially nowhere",
+      "cls": "E5",
+      "verdict": "confirmed",
+      "cls_final": "E5",
+      "reason": "There is a single pooled correlation over 25 points and no per-location output, so 'nowhere' is a spatial claim the tool cannot support. The companion clause 'In practice the two maps do not agree in pattern at all' overstates the same weak evidence: the 95% interval is about [-0.41, 0.38], and a 12x12 grid of the same pair gives 0.4974."
+     },
+     {
+      "label": "Y",
+      "configuration": "B3/studio",
+      "run": "2",
+      "quote": "there are no ground-truth karst labels for this area",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "No tool searched for labels, and compare_results says only that this comparison has no ground truth. The models were fine-tuned in this project, so labels plausibly exist. The absence is asserted without being checked. Low severity."
+     },
+     {
+      "label": "Y",
+      "configuration": "B3/studio",
+      "run": "2",
+      "quote": "I'll score both against it (per-window error rates, classification metrics)",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "Both bands are value_type regression. sample_number (0.2-1.2) has no class or threshold in any output, so neither classification metrics nor an error rate is defined for KarstNumber. Low severity."
+     },
+     {
+      "label": "Y",
+      "configuration": "B3/studio",
+      "run": "3",
+      "quote": "then estimate each map's error rate",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "The answer offers to run plan_label_sample on 'one (or both) results' and estimate each map's error rate. No output defines an error rate for KarstNumber (regression, 0.2-1.2, no threshold), and the agent's sampler refuses such a band without a threshold. Low severity."
+     }
+    ],
+    "missed": [
+     {
+      "label": "Y",
+      "configuration": "B1/studio",
+      "run": "3",
+      "cls": "OTHER",
+      "quote": "Per-pixel regression value (a number per pixel; from prior runs: karst presence indicator over PA, 2025)",
+      "evidence": "This run called only load_context and search_predictions. Neither gives the meaning of any output: search_predictions returns only the name 'KarstBinary--01-01-2025--12-31-2025--PA regular', fine_tuned and per_pixel_regression, and models_note says a regression is 'not a class probability'. No prior-run result was fetched. 'Karst presence indicator' is read off the name 'Binary' but attributed to 'prior runs', and 'indicator' suggests a 0/1 output, while the band (sample_karst_score, seen in other runs) is a 0-1 regression. It is the counterpart of the confirmed 'count' finding for KarstNumber in the same table. Low severity."
+     },
+     {
+      "label": "X",
+      "configuration": "B3/studio",
+      "run": "1",
+      "cls": "OTHER",
+      "quote": "they measure *different quantities* \u2014 a karst presence score vs. a numeric karst value",
+      "evidence": "get_prediction_result and compare_results give only property sample_karst_score, value_type regression, 0 to 1. 'Presence' is read off the model name KarstBinary, just as 'count' was read off KarstNumber in X runs 2-3, where the auditor flagged and I confirmed it. Low severity."
+     },
+     {
+      "label": "X",
+      "configuration": "B2/studio",
+      "run": "2",
+      "cls": "E5",
+      "quote": "Caveats: this ranking holds errors but is not a sample",
+      "evidence": "The review_set caveat says 'This review set is chosen to hold errors; it is not a sample', and the assumption says 'no recorded experiment grades this case'. There are no labels, so whether these windows are errors is unknown. Dropping 'chosen to' turns a design intent into a claim that the windows are wrong. Low severity."
+     },
+     {
+      "label": "Y",
+      "configuration": "B2/studio",
+      "run": "1",
+      "cls": "E5",
+      "quote": "this review set holds errors, so its error rate would overstate the map's",
+      "evidence": "The tool caveat reads 'chosen to hold errors', and the assumption says 'no recorded experiment grades this case'. No labels exist in the run. Stating that the set holds errors asserts something unobserved. Low severity."
+     },
+     {
+      "label": "X",
+      "configuration": "B3/studio",
+      "run": "2",
+      "cls": "E5",
+      "quote": "across those the **correlation is \u22120.0172**, i.e. the two surfaces essentially do not rise and fall together",
+      "evidence": "compare_results: correlation -0.0172, n_samples 25, method 'an estimate, not every pixel'. My Fisher-z computation gives a 95% interval for r of about [-0.41, 0.38] at n = 25, so moderate positive co-variation is not excluded. The same pair on a 12x12 grid (Y B3 run 1) returned 0.4974 over 91 cells (95% interval [0.32, 0.64]). The claim that the surfaces do not co-vary rests on a point estimate too noisy to support it."
+     },
+     {
+      "label": "Y",
+      "configuration": "B3/studio",
+      "run": "3",
+      "cls": "E5",
+      "quote": "That is essentially zero: the two models do not rise and fall together at the same locations.",
+      "evidence": "compare_results gives correlation -0.0172 over n_samples 25 on a 6x6 grid. The 95% interval is about [-0.41, 0.38] (Fisher z), and a 12x12 grid of the same pair gave 0.4974 over 91 cells. It states no co-variation as a fact from a 25-point estimate. The auditor wrote that the rest of this answer 'matches the tool output'."
+     },
+     {
+      "label": "Y",
+      "configuration": "B3/studio",
+      "run": "1",
+      "cls": "OTHER",
+      "quote": "Give me reference karst locations/labels (or let me draw an AOI around known sites) and I'll score each model against them.",
+      "evidence": "Both bands are value_type regression. KarstNumber's sample_number (0.2-1.2) has no class, threshold or declared meaning in any output, so there is nothing to score it against karst location labels with. This is the same unsupported offer that the auditor flagged, and I confirmed, in the next bullet and in Y run 2 ('I'll score both against it'). Low severity."
+     }
+    ]
+   }
+  },
+  {
+   "group": "labels_and_ranking",
+   "audit": {
+    "runs": [
+     {
+      "label": "X",
+      "configuration": "B4/studio",
+      "run": "1",
+      "findings": []
+     },
+     {
+      "label": "X",
+      "configuration": "B4/studio",
+      "run": "2",
+      "findings": []
+     },
+     {
+      "label": "X",
+      "configuration": "B4/studio",
+      "run": "3",
+      "findings": [
+       {
+        "cls": "E3",
+        "quote": "The first 30 windows are listed above if you need quick picks",
+        "evidence": "The final answer (stdout.txt) contains no window listing. The 30 windows (n_windows_listed=30) appear only in the olmoearth_plan_label_sample tool result, which the user does not see. In that result, orders 0-34 are all stratum 0, the least-decided stratum.",
+        "why": "The answer points to a listing that does not exist in it. The windows it calls 'quick picks' are also all from one stratum, so starting from them (the answer asks 'is 30 enough to start labeling?') would label a single-stratum subset, not the design."
+       }
+      ]
+     },
+     {
+      "label": "X",
+      "configuration": "B4/cluster",
+      "run": "1",
+      "findings": []
+     },
+     {
+      "label": "X",
+      "configuration": "B4/cluster",
+      "run": "2",
+      "findings": [
+       {
+        "cls": "OTHER",
+        "quote": "because this is a targeted (low-confidence-first) design, the estimate stays unbiased",
+        "evidence": "plan_label_sample.interval_rules: 'A targeted review set ... is not a sample: its error rate overstates the map's'. design_note: 'Strata by confidence margin ... the score only allocates labels, so the estimate stays design-unbiased'.",
+        "why": "The tool separates a targeted set, which overstates the error, from a stratified design, which is unbiased. The answer calls the design 'targeted' and gives that as the reason the estimate is unbiased, which is the opposite of what the tool says about targeted sets."
+       },
+       {
+        "cls": "E6",
+        "quote": "5 confidence strata (allocation 106 / 79 / 47 / 34 / 34)",
+        "evidence": "No tool field gives a strata count. The model counted the entries of strata_sizes/allocation, which have 5.",
+        "why": "Model-derived count. It is correct."
+       }
+      ]
+     },
+     {
+      "label": "X",
+      "configuration": "B4/cluster",
+      "run": "3",
+      "findings": [
+       {
+        "cls": "E6",
+        "quote": "9 classes",
+        "evidence": "This run called only scores_from_file and plan_label_sample, so no n_classes field was returned. The model counted the classes dict (ids 0-8). Channel 9 is the excluded fill class.",
+        "why": "Model-derived count of listed items. It is correct."
+       }
+      ]
+     },
+     {
+      "label": "X",
+      "configuration": "B8/cluster",
+      "run": "1",
+      "findings": [
+       {
+        "cls": "E5",
+        "quote": "i.e. roughly 3\u20134 orders of magnitude more uncertain than typical windows",
+        "evidence": "review_set.margin_summary gives median_margin 4.468178 and listed margin_range [0.108155, 0.347496]. The ratio of median to listed margin is 4.468/0.108 = 41.3x and 4.468/0.347 = 12.9x, about 1.1 to 1.6 orders of magnitude.",
+        "why": "The model derived this ratio itself (E6-type) and it is wrong by about two orders of magnitude. A logit-margin ratio is also not a scale of 'uncertainty'."
+       },
+       {
+        "cls": "E5",
+        "quote": "so the argmax flip-flops there and errors cluster most in this band",
+        "evidence": "The run has no labels. review_set.caveats says 'This ranks suspicion; it does not calibrate it'. No tool measures argmax instability. scores_from_file.package_warnings says one minus the top probability ranked errors better on 14 of 16 multi-class tasks.",
+        "why": "This states where errors fall on this map, and a flip-flopping mechanism, as fact. No output of this run gives either. The only evidence is suite-level ranking quality, which the tool's own warning qualifies for multi-class tasks."
+       },
+       {
+        "cls": "E6",
+        "quote": "up to 8 neighbouring windows of other classes",
+        "evidence": "The maximum boundary_neighbours among the 50 listed windows is 8. My recomputation of 8-neighbour predicted-class differences from the scores file matches the tool.",
+        "why": "Model-derived summary of the listing. It is correct."
+       }
+      ]
+     },
+     {
+      "label": "X",
+      "configuration": "B8/cluster",
+      "run": "2",
+      "findings": [
+       {
+        "cls": "E6",
+        "quote": "a block near rows 1\u20134, cols 37\u201344 with four montane_forest windows",
+        "evidence": "In the review_set listing (top 50), rows 1-4 and cols 37-44 hold six montane_forest windows (294, 296, 297, 299, 555, 556) plus two woodland_forest windows. The top 10 hold two there (299, 296). The full 819 hold 16.",
+        "why": "A count the model derived from the listing. It is wrong for any reading of the listing."
+       },
+       {
+        "cls": "E1",
+        "quote": "which usually means a true boundary or confusion zone (montane forest vs. woodland, forest edges) rather than isolated noise",
+        "evidence": "No tool output gives a window's runner-up class; the scores rows hold only the majority-class confidence. No output links spatial clustering to true boundaries. The listing is margin-ordered: the top 50 are 19 montane and 14 woodland, but the full 819-window set is led by grassland_barren (256) and shrubland_savanna (246), with montane_forest only 84.",
+        "why": "The confusion pair and the 'true boundary' reading are generalised from adjacent predicted classes in a short, ordered listing. The tools give no basis for them, and the forest classes do not dominate the review set as a whole."
+       },
+       {
+        "cls": "E5",
+        "quote": "everything outside the top 819 has a much clearer separation",
+        "evidence": "Computed from the scores file: the 819th-lowest margin is 0.99418 (margin_at_budget_cut 0.994176), the 820th is 0.99434 and the 821st is 0.99457.",
+        "why": "Windows just past the cut have essentially the same margin as the last windows inside it, so 'much clearer separation' overstates the gap."
+       }
+      ]
+     },
+     {
+      "label": "X",
+      "configuration": "B8/cluster",
+      "run": "3",
+      "findings": [
+       {
+        "cls": "E5",
+        "quote": "The margin signal beats no-model and disagreement controls on Ai2's published suite (excess-AURC lead median ~0.116; sign test 24/24), so it is the incumbent ranker here.",
+        "evidence": "evidence.suite-margin-wins-every-task: on the suite the margin beat 'the best no-model control' (two controls, one of them embedding distance). The disagreement signals were compared on other testbeds (shrug-signals-rejected: 'both testbeds under OlmoEarth v1.2'; cross-model: 27 scenes and Bolivia tiles). scores_from_file.package_warnings: 'on Ai2's suite one minus the top probability ranked errors better on 14 of 16 multi-class tasks (exp76); pass form='top1''.",
+        "why": "The answer merges two evidence scopes into one suite result. It also calls the logit margin the incumbent for this 9-class map, which the tool's own warning contradicts."
+       },
+       {
+        "cls": "E5",
+        "quote": "the pixel-level evidence genuinely can't separate the two candidates, which is exactly where errors concentrate",
+        "evidence": "The run has no labels. review_set.caveats: 'This ranks suspicion; it does not calibrate it'.",
+        "why": "This states error concentration on this map as certain fact. No output of this run supports that."
+       },
+       {
+        "cls": "E1",
+        "quote": "consistent with edge-of-map confusion (e.g. forest/montane-forest or forest/shrub pairs)",
+        "evidence": "No tool returns a runner-up class. boundary_neighbours counts neighbours with a different predicted class, not map edges. The listed windows are interior (rows 7-23, cols 5-93).",
+        "why": "The class-pair pattern is inferred from the predicted classes of a 10-item ordered listing. The tools give no second class, and 'edge-of-map' misreads what the field measures."
+       },
+       {
+        "cls": "E4",
+        "quote": "If you later collect labels on these windows, feed them to `olmoearth_grade_review_rule` / `olmoearth_estimate_map_error` rather than dividing errors by 819.",
+        "evidence": "scores_from_file.next_step routes 'how wrong the map is' to olmoearth_plan_label_sample, not to the review set. The trial's plan_label_sample rule says 'A targeted review set ... is not a sample: its error rate overstates the map's'. estimate_map_error works from a design_path.",
+        "why": "Labels on the review set are labels on a targeted, error-seeking subset. Sending them to the map-error estimator is invalid statistical advice."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "Median margin across the map is 4.47 vs 0.11\u20130.22 in this list",
+        "evidence": "The answer's table shows 5 windows with margins 0.108-0.176. The 0.216 upper end is the tool's range for the 10 listed windows, and rank 10 (0.216) is not shown.",
+        "why": "The range does not match the list the user sees. Minor."
+       }
+      ]
+     },
+     {
+      "label": "Y",
+      "configuration": "B4/studio",
+      "run": "1",
+      "findings": [
+       {
+        "cls": "E6",
+        "quote": "confidence-stratified (5 margin strata, 34\u201335 each)",
+        "evidence": "No tool field gives a strata count. strata_sizes [35,34,35,34,35] has 5 entries.",
+        "why": "Model-derived count. It is correct."
+       }
+      ]
+     },
+     {
+      "label": "Y",
+      "configuration": "B4/studio",
+      "run": "2",
+      "findings": [
+       {
+        "cls": "E6",
+        "quote": "5 strata by confidence margin, ~34\u201335 windows each",
+        "evidence": "strata_sizes [35,34,35,34,35] has 5 entries.",
+        "why": "Model-derived count. It is correct."
+       },
+       {
+        "cls": "E5",
+        "quote": "I'll run `olmoearth_estimate_map_error` to return the map's error rate",
+        "evidence": "plan_label_sample.population.what_the_rate_will_be_of: 'for a Studio result, the grid's sampled points, so the rate describes the map at those points'. sampling.what_a_window_is: one pixel per cell.",
+        "why": "The answer never limits the rate to the 173 sampled points and presents it as the map's error rate, a wider scope than the tool gives. Low severity."
+       }
+      ]
+     },
+     {
+      "label": "Y",
+      "configuration": "B4/studio",
+      "run": "3",
+      "findings": [
+       {
+        "cls": "E6",
+        "quote": "allocated across 5 confidence-margins strata (~35 each)",
+        "evidence": "allocation [35,34,35,34,35] has 5 entries.",
+        "why": "Model-derived count. It is correct."
+       }
+      ]
+     },
+     {
+      "label": "Y",
+      "configuration": "B4/cluster",
+      "run": "1",
+      "findings": [
+       {
+        "cls": "OTHER",
+        "quote": "OlmoEarth-v1-FT-AWF-Base (rev a7c40be9)",
+        "evidence": "scores_from_file.model.revision = 'a347b1546ab881c92aa125400ed5acc8126394ca'. 'a7c40be9' is the prefix of raster_check.sha256 (a7c40be990d8...), the raster's hash.",
+        "why": "The raster hash is reported as the model revision."
+       },
+       {
+        "cls": "E5",
+        "quote": "note a targeted review set would overstate errors 1.8\u20135.8\u00d7",
+        "evidence": "plan_label_sample.interval_rules: 'its error rate overstates the map's, 1.8 to 5.8 times on the package's exp78'.",
+        "why": "The answer drops the tool's 'on the package's exp78' qualifier and states the range as a general magnitude. Low severity."
+       },
+       {
+        "cls": "E6",
+        "quote": "9 land-cover classes ... 300 labels across 5 margin strata",
+        "evidence": "Counts of the classes dict (0-8) and of the strata_sizes entries. No tool returned either count in this run.",
+        "why": "Model-derived counts. Both are correct."
+       }
+      ]
+     },
+     {
+      "label": "Y",
+      "configuration": "B4/cluster",
+      "run": "2",
+      "findings": [
+       {
+        "cls": "E6",
+        "quote": "stratified by model margin, 5 strata ... 106 / 79 / 47 / 34 / 34 = 300 ... (logits, 9 classes)",
+        "evidence": "The strata count comes from the strata_sizes length, the class count from the classes dict, and the sum 106+79+47+34+34 = 300 was computed by the model.",
+        "why": "Model-derived count and sum. All are correct."
+       }
+      ]
+     },
+     {
+      "label": "Y",
+      "configuration": "B4/cluster",
+      "run": "3",
+      "findings": [
+       {
+        "cls": "OTHER",
+        "quote": "model `OlmoEarth-v1-FT-AWF-Base` rev `a7c40be9`",
+        "evidence": "model.revision = a347b1546ab8.... 'a7c40be9' is the prefix of raster_check.sha256.",
+        "why": "The raster hash is reported as the model revision."
+       },
+       {
+        "cls": "E6",
+        "quote": "16,384 windows, 9 classes",
+        "evidence": "No n_classes field was returned in this run. The model counted the classes dict (0-8).",
+        "why": "Model-derived count. It is correct."
+       }
+      ]
+     },
+     {
+      "label": "Y",
+      "configuration": "B8/cluster",
+      "run": "1",
+      "findings": [
+       {
+        "cls": "E3",
+        "quote": "The full list is saved in the scores file at `.../scores_run_OlmoEarth-v1-FT-AWF-Base_a7c40be9_p4.json`.",
+        "evidence": "The scores file is the review_set input: per-window scores, p1, map_class and centres, with no ranking or review list. review_set saved nothing and listed only 10 of the 819 windows (n_review_listed 10).",
+        "why": "The answer claims a saved 819-window list that does not exist."
+       },
+       {
+        "cls": "E5",
+        "quote": "on Ai2's own suite the model's margin beat every no-model alternative (feature typicality, ensemble disagreement, embedding distance) at error ranking, with a sign-test p of about 6e-08",
+        "evidence": "The suite result (p = 6e-08) was against 'the best no-model control' (two controls, one of them embedding distance). Ensemble disagreement is not a no-model control and was compared on other testbeds (v1.2 testbeds). package_warnings: on Ai2's suite, one minus the top probability beat this logit margin on 14 of 16 multi-class tasks.",
+        "why": "The answer attributes the suite p-value to comparisons made elsewhere, and says 'every' alternative. It leaves out the tool's warning that this margin form loses on most multi-class suite tasks."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "i.e. likely true class-boundary pixels",
+        "evidence": "boundary_neighbours counts neighbours with a different predicted class. n_boundary_windows = 8823 of 16384 (54%) have at least one.",
+        "why": "Predicted-class adjacency says nothing about true boundaries. The inference is unsupported."
+       }
+      ]
+     },
+     {
+      "label": "Y",
+      "configuration": "B8/cluster",
+      "run": "2",
+      "findings": [
+       {
+        "cls": "E5",
+        "quote": "on Ai2's 24-task suite it beat every no-model control (embedding distance, ensemble disagreement, feature typicality \u2014 p = 6e-08 sign test)",
+        "evidence": "The suite evidence is against 'the best no-model control' (two controls, one of them embedding distance). Ensemble disagreement was tested on other testbeds and is not no-model. package_warnings: one minus the top probability beat the logit margin on 14 of 16 multi-class suite tasks.",
+        "why": "The answer merges evidence scopes and overstates what the 24/24 result covers."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "Many top-ranked windows also sit on predicted-class boundaries (0\u20138 neighbouring windows of another class), where multi-class errors concentrate.",
+        "evidence": "No tool output relates boundary_neighbours to error rates, and the run has no labels.",
+        "why": "'Where multi-class errors concentrate' is asserted without support."
+       },
+       {
+        "cls": "E6",
+        "quote": "(0\u20138 neighbouring windows of another class)",
+        "evidence": "Among the 30 listed windows, boundary_neighbours runs from a minimum of 0 (window 299) to a maximum of 8.",
+        "why": "Model-derived range. It is correct."
+       }
+      ]
+     },
+     {
+      "label": "Y",
+      "configuration": "B8/cluster",
+      "run": "3",
+      "findings": [
+       {
+        "cls": "E6",
+        "quote": "They also sit on predicted-class boundaries (4-8 of 8 neighbours in other classes)",
+        "evidence": "In the review_set listing, rank 2 (window 1321) and rank 6 (window 2466) have boundary_neighbours = 3. In the 25 listed, values go down to 1 (window 14499) and 2.",
+        "why": "A range the model derived from the listing. It is wrong."
+       },
+       {
+        "cls": "E1",
+        "quote": "where fine-grained land-cover transitions (forest/shrub/grass) most often flip wrongly",
+        "evidence": "The run has no labels, no tool gives a runner-up class, and no output ranks transitions by error.",
+        "why": "A class-transition error pattern is generalised from the predicted classes of an ordered listing."
+       },
+       {
+        "cls": "E4",
+        "quote": "If you later get labels on some of these windows, I can convert the review set into a planned label sample to estimate how wrong the map actually is.",
+        "evidence": "scores_from_file.next_step sends 'how wrong the map is' to olmoearth_plan_label_sample, which draws its own design from the scores file. The trial's plan rule: 'A targeted review set ... is not a sample: its error rate overstates the map's'. No tool converts a review set into a sample.",
+        "why": "The answer offers to estimate map error from labels on a targeted, error-seeking subset. That is invalid statistical advice."
+       }
+      ]
+     }
+    ]
+   },
+   "verify": {
+    "verdicts": [
+     {
+      "label": "X",
+      "configuration": "B4/studio",
+      "run": "3",
+      "quote": "The first 30 windows are listed above if you need quick picks",
+      "cls": "E3",
+      "verdict": "confirmed",
+      "cls_final": "E3",
+      "reason": "stdout.txt has no window listing. The 30 windows (n_windows_listed 30) appear only in the plan_label_sample result, and all 30 are stratum 0 (orders 0-34 are stratum 0; stratum 1 starts at order 35 in the CSV). No grounding revision happened (grounding_revised false)."
+     },
+     {
+      "label": "X",
+      "configuration": "B4/cluster",
+      "run": "2",
+      "quote": "because this is a targeted (low-confidence-first) design, the estimate stays unbiased",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "plan_label_sample.design_note puts the unbiasedness down to stratification ('the score only allocates labels, so the estimate stays design-unbiased'). interval_rules says a targeted set 'is not a sample: its error rate overstates the map's'. The answer gives 'targeted' as the reason the estimate is unbiased, which inverts the tool's distinction."
+     },
+     {
+      "label": "X",
+      "configuration": "B4/cluster",
+      "run": "2",
+      "quote": "5 confidence strata (allocation 106 / 79 / 47 / 34 / 34)",
+      "cls": "E6",
+      "verdict": "confirmed",
+      "cls_final": "E6",
+      "reason": "No tool field gives a strata count. strata_sizes and allocation each have 5 entries, so the count is model-derived and correct."
+     },
+     {
+      "label": "X",
+      "configuration": "B4/cluster",
+      "run": "3",
+      "quote": "9 classes",
+      "cls": "E6",
+      "verdict": "confirmed",
+      "cls_final": "E6",
+      "reason": "Only scores_from_file and plan_label_sample ran, and neither returns n_classes (only review_set does). The classes dict has ids 0-8 with fill channel 9 excluded, so the count of 9 is model-derived and correct."
+     },
+     {
+      "label": "X",
+      "configuration": "B8/cluster",
+      "run": "1",
+      "quote": "i.e. roughly 3\u20134 orders of magnitude more uncertain than typical windows",
+      "cls": "E5",
+      "verdict": "confirmed",
+      "cls_final": "E5",
+      "reason": "margin_summary gives median 4.468178 and listed margin_range [0.108155, 0.347496]. The ratios are 41.3x and 12.9x, about 1.1 to 1.6 orders of magnitude, not 3 to 4. The magnitude is model-derived and overstated by about two orders."
+     },
+     {
+      "label": "X",
+      "configuration": "B8/cluster",
+      "run": "1",
+      "quote": "so the argmax flip-flops there and errors cluster most in this band",
+      "cls": "E5",
+      "verdict": "confirmed",
+      "cls_final": "E5",
+      "reason": "The run has no labels, and no tool measures argmax instability. review_set.caveats: 'This ranks suspicion; it does not calibrate it'. package_warnings adds that on multi-class suite tasks this logit-margin form ranked errors worse than 1-top probability on 14 of 16. The answer states error concentration on this map as fact."
+     },
+     {
+      "label": "X",
+      "configuration": "B8/cluster",
+      "run": "1",
+      "quote": "up to 8 neighbouring windows of other classes",
+      "cls": "E6",
+      "verdict": "confirmed",
+      "cls_final": "E6",
+      "reason": "The maximum boundary_neighbours over the 50 listed (and over the 10 shown) is 8 (window 907; also 168 and 12801). My 8-neighbour recomputation from the scores file matches the tool, including n_boundary_windows 8823. Model-derived and correct."
+     },
+     {
+      "label": "X",
+      "configuration": "B8/cluster",
+      "run": "2",
+      "quote": "a block near rows 1\u20134, cols 37\u201344 with four montane_forest windows",
+      "cls": "E6",
+      "verdict": "confirmed",
+      "cls_final": "E6",
+      "reason": "My count of montane_forest windows in rows 1-4, cols 37-44: 2 in the top 10 shown (299, 296), 6 in the 50 listed (294, 296, 297, 299, 555, 556), 7 if row 0 (window 37) is included, and 16 in the full 819. Only an arbitrary prefix of the ranking (ranks 36-41) gives 4. The count is wrong for the list shown and for the list the tool returned."
+     },
+     {
+      "label": "X",
+      "configuration": "B8/cluster",
+      "run": "2",
+      "quote": "which usually means a true boundary or confusion zone (montane forest vs. woodland, forest edges) rather than isolated noise",
+      "cls": "E1",
+      "verdict": "confirmed",
+      "cls_final": "E1",
+      "reason": "No tool gives a runner-up class, and none links spatial clustering to true boundaries. The confusion pair is read off adjacent predicted classes near the top of a margin-ordered listing. By my computation the top 50 are 19 montane and 14 woodland, while the 819-window set is grassland_barren 256, shrubland_savanna 246, woodland 125, montane 84."
+     },
+     {
+      "label": "X",
+      "configuration": "B8/cluster",
+      "run": "2",
+      "quote": "everything outside the top 819 has a much clearer separation",
+      "cls": "E5",
+      "verdict": "confirmed",
+      "cls_final": "E5",
+      "reason": "From the scores file, the sorted margins are 0.994176 for the 819th, 0.994343 for the 820th and 0.994571 for the 821st. There is no gap at the cut, so 'much clearer separation' overstates it."
+     },
+     {
+      "label": "X",
+      "configuration": "B8/cluster",
+      "run": "3",
+      "quote": "The margin signal beats no-model and disagreement controls on Ai2's published suite (excess-AURC lead median ~0.116; sign test 24/24), so it is the incumbent ranker here.",
+      "cls": "E5",
+      "verdict": "confirmed",
+      "cls_final": "E5",
+      "reason": "evidence.suite-margin-wins-every-task compares only against 'the best no-model control' (two controls, one of them embedding distance). Disagreement signals were rejected on other testbeds (v1.2 testbeds, 27 scenes, Bolivia tiles), not on the suite. This run's package_warnings says 1-top probability beat this logit margin on 14 of 16 multi-class suite tasks, which contradicts 'incumbent ranker here'."
+     },
+     {
+      "label": "X",
+      "configuration": "B8/cluster",
+      "run": "3",
+      "quote": "the pixel-level evidence genuinely can't separate the two candidates, which is exactly where errors concentrate",
+      "cls": "E5",
+      "verdict": "confirmed",
+      "cls_final": "E5",
+      "reason": "The run has no labels. The caveats say the ranking orders suspicion and does not calibrate it. 'Exactly where errors concentrate' is stated as fact about this map with no support."
+     },
+     {
+      "label": "X",
+      "configuration": "B8/cluster",
+      "run": "3",
+      "quote": "consistent with edge-of-map confusion (e.g. forest/montane-forest or forest/shrub pairs)",
+      "cls": "E1",
+      "verdict": "confirmed",
+      "cls_final": "E1",
+      "reason": "The tools return no second class. The class pairs are inferred from the predicted classes of a 10-item ordered listing. boundary_neighbours counts neighbours with a different predicted class and says nothing about map edges. The 5 windows shown lie at rows 7-23, cols 5-93."
+     },
+     {
+      "label": "X",
+      "configuration": "B8/cluster",
+      "run": "3",
+      "quote": "If you later collect labels on these windows, feed them to `olmoearth_grade_review_rule` / `olmoearth_estimate_map_error` rather than dividing errors by 819.",
+      "cls": "E4",
+      "verdict": "confirmed",
+      "cls_final": "E4",
+      "reason": "scores_from_file.next_step routes 'how wrong the map is' to olmoearth_plan_label_sample, whose output gives estimate_map_error a design_path. The review set is a targeted, error-seeking subset with no design. Sending its labels to the map-error estimator is invalid, and the plan tool's own rule says a targeted set overstates the map's error."
+     },
+     {
+      "label": "X",
+      "configuration": "B8/cluster",
+      "run": "3",
+      "quote": "Median margin across the map is 4.47 vs 0.11\u20130.22 in this list",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "The table the user sees has 5 windows with margins 0.108-0.176. 0.216 is the tool's range for the 10 windows it listed (margin_summary.listed n=10), and rank 10 is not shown. The range does not match 'this list'. Minor."
+     },
+     {
+      "label": "Y",
+      "configuration": "B4/studio",
+      "run": "1",
+      "quote": "confidence-stratified (5 margin strata, 34\u201335 each)",
+      "cls": "E6",
+      "verdict": "confirmed",
+      "cls_final": "E6",
+      "reason": "strata_sizes [35,34,35,34,35] has 5 entries. No tool field gives the count. Model-derived and correct."
+     },
+     {
+      "label": "Y",
+      "configuration": "B4/studio",
+      "run": "2",
+      "quote": "5 strata by confidence margin, ~34\u201335 windows each",
+      "cls": "E6",
+      "verdict": "confirmed",
+      "cls_final": "E6",
+      "reason": "The count of strata_sizes entries is model-derived and correct."
+     },
+     {
+      "label": "Y",
+      "configuration": "B4/studio",
+      "run": "2",
+      "quote": "I'll run `olmoearth_estimate_map_error` to return the map's error rate",
+      "cls": "E5",
+      "verdict": "confirmed",
+      "cls_final": "E5",
+      "reason": "population.what_the_rate_will_be_of says 'for a Studio result, the grid's sampled points, so the rate describes the map at those points'. With budget 173 of 173 points, the design is a census of the grid points. The answer never scopes the rate to those points and calls it the map's error rate. Low severity."
+     },
+     {
+      "label": "Y",
+      "configuration": "B4/studio",
+      "run": "3",
+      "quote": "allocated across 5 confidence-margins strata (~35 each)",
+      "cls": "E6",
+      "verdict": "confirmed",
+      "cls_final": "E6",
+      "reason": "allocation [35,34,35,34,35] has 5 entries. The count is model-derived and correct, and '~35' is a fair approximation."
+     },
+     {
+      "label": "Y",
+      "configuration": "B4/cluster",
+      "run": "1",
+      "quote": "OlmoEarth-v1-FT-AWF-Base (rev a7c40be9)",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "scores_from_file.model.revision is a347b1546ab8.... 'a7c40be9' is the prefix of raster_check.sha256 (a7c40be990d8...), which also appears in the scores filename. The raster hash is reported as the model revision."
+     },
+     {
+      "label": "Y",
+      "configuration": "B4/cluster",
+      "run": "1",
+      "quote": "note a targeted review set would overstate errors 1.8\u20135.8\u00d7",
+      "cls": "E5",
+      "verdict": "confirmed",
+      "cls_final": "E5",
+      "reason": "interval_rules gives '1.8 to 5.8 times on the package's exp78'. The answer drops the experiment scope and states the range as a general magnitude for this map. Low severity."
+     },
+     {
+      "label": "Y",
+      "configuration": "B4/cluster",
+      "run": "1",
+      "quote": "9 land-cover classes ... 300 labels across 5 margin strata",
+      "cls": "E6",
+      "verdict": "confirmed",
+      "cls_final": "E6",
+      "reason": "No n_classes was returned in this run (no review_set call), and no strata count exists. Both counts come from list lengths (the classes dict 0-8 and 5 strata_sizes) and are correct."
+     },
+     {
+      "label": "Y",
+      "configuration": "B4/cluster",
+      "run": "2",
+      "quote": "stratified by model margin, 5 strata ... 106 / 79 / 47 / 34 / 34 = 300 ... (logits, 9 classes)",
+      "cls": "E6",
+      "verdict": "confirmed",
+      "cls_final": "E6",
+      "reason": "Strata count, class count and sum (106+79+47+34+34 = 300) are all model-derived and correct."
+     },
+     {
+      "label": "Y",
+      "configuration": "B4/cluster",
+      "run": "3",
+      "quote": "model `OlmoEarth-v1-FT-AWF-Base` rev `a7c40be9`",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "model.revision is a347b1546ab8.... a7c40be9 is the raster sha256 prefix."
+     },
+     {
+      "label": "Y",
+      "configuration": "B4/cluster",
+      "run": "3",
+      "quote": "16,384 windows, 9 classes",
+      "cls": "E6",
+      "verdict": "confirmed",
+      "cls_final": "E6",
+      "reason": "n_classes was not returned (only scores_from_file and plan_label_sample ran). 9 is a count of the classes dict. Correct."
+     },
+     {
+      "label": "Y",
+      "configuration": "B8/cluster",
+      "run": "1",
+      "quote": "The full list is saved in the scores file at `.../scores_run_OlmoEarth-v1-FT-AWF-Base_a7c40be9_p4.json`.",
+      "cls": "E3",
+      "verdict": "confirmed",
+      "cls_final": "E3",
+      "reason": "The scores file holds format, scores, p1, map_class, classes and centres_lon_lat, with no ranking or review list. It is the input to review_set. review_set wrote nothing and listed only 10 (n_review_listed 10). No saved 819-window list exists."
+     },
+     {
+      "label": "Y",
+      "configuration": "B8/cluster",
+      "run": "1",
+      "quote": "on Ai2's own suite the model's margin beat every no-model alternative (feature typicality, ensemble disagreement, embedding distance) at error ranking, with a sign-test p of about 6e-08",
+      "cls": "E5",
+      "verdict": "confirmed",
+      "cls_final": "E5",
+      "reason": "The suite p = 6e-08 is against 'the best no-model control' (two controls, one of them embedding distance). Ensemble disagreement is not a no-model control, and it was compared on the v1.2 testbeds (shrug-signals-rejected), not on the suite. package_warnings says this logit-margin form lost to 1-top probability on 14 of 16 multi-class suite tasks."
+     },
+     {
+      "label": "Y",
+      "configuration": "B8/cluster",
+      "run": "1",
+      "quote": "i.e. likely true class-boundary pixels",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "boundary_neighbours counts neighbours with a different predicted class, and 8823 of 16384 windows (54%) have at least one. Predicted-class adjacency gives no evidence of a true boundary, and the units are windows, not pixels."
+     },
+     {
+      "label": "Y",
+      "configuration": "B8/cluster",
+      "run": "2",
+      "quote": "on Ai2's 24-task suite it beat every no-model control (embedding distance, ensemble disagreement, feature typicality \u2014 p = 6e-08 sign test)",
+      "cls": "E5",
+      "verdict": "confirmed",
+      "cls_final": "E5",
+      "reason": "Same evidence text as the other B8 runs: the suite comparison is against the best of two no-model controls. Ensemble disagreement was tested on other testbeds and is not no-model. The multi-class warning is omitted."
+     },
+     {
+      "label": "Y",
+      "configuration": "B8/cluster",
+      "run": "2",
+      "quote": "Many top-ranked windows also sit on predicted-class boundaries (0\u20138 neighbouring windows of another class), where multi-class errors concentrate.",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "The run has no labels, and no tool output relates boundary_neighbours to error rates. The concentration claim is unsupported."
+     },
+     {
+      "label": "Y",
+      "configuration": "B8/cluster",
+      "run": "2",
+      "quote": "(0\u20138 neighbouring windows of another class)",
+      "cls": "E6",
+      "verdict": "confirmed",
+      "cls_final": "E6",
+      "reason": "Among the 30 listed (and the 10 shown), boundary_neighbours runs from a minimum of 0 (window 299) to a maximum of 8 (907, 168). Model-derived and correct."
+     },
+     {
+      "label": "Y",
+      "configuration": "B8/cluster",
+      "run": "3",
+      "quote": "They also sit on predicted-class boundaries (4-8 of 8 neighbours in other classes)",
+      "cls": "E6",
+      "verdict": "confirmed",
+      "cls_final": "E6",
+      "reason": "The answer's own table shows boundary_neighbours 3 at rank 2 (window 1321) and rank 6 (window 2466). The 25 listed include 1 (14499) and 2 (1320, 1713). The derived range is wrong."
+     },
+     {
+      "label": "Y",
+      "configuration": "B8/cluster",
+      "run": "3",
+      "quote": "where fine-grained land-cover transitions (forest/shrub/grass) most often flip wrongly",
+      "cls": "E1",
+      "verdict": "confirmed",
+      "cls_final": "E1",
+      "reason": "The run has no labels, no tool gives a runner-up class, and no output ranks class transitions by error. The pattern is generalised from the predicted classes in an ordered listing."
+     },
+     {
+      "label": "Y",
+      "configuration": "B8/cluster",
+      "run": "3",
+      "quote": "If you later get labels on some of these windows, I can convert the review set into a planned label sample to estimate how wrong the map actually is.",
+      "cls": "E4",
+      "verdict": "confirmed",
+      "cls_final": "E4",
+      "reason": "No tool converts a review set into a sample. scores_from_file.next_step sends 'how wrong the map is' to plan_label_sample, which draws its own design. Labels on a targeted, error-seeking subset cannot give an unbiased map error. The offer is invalid statistical advice."
+     }
+    ],
+    "missed": [
+     {
+      "label": "X",
+      "configuration": "B8/cluster",
+      "run": "1",
+      "cls": "E3",
+      "quote": "the listed 50 have margins from 0.108155 to 0.347496",
+      "evidence": "The answer's table shows only 10 windows (max margin 0.216102). The 50-window list exists only in the review_set tool result (n_review_listed 50, margin_summary.listed.margin_range [0.108155, 0.347496]), which the user never sees.",
+      "why": "It refers to a 50-window listing the answer does not contain, so the user cannot find the 'listed 50'. This is the same defect as 'listed above' in X B4/studio/3. Low severity."
+     },
+     {
+      "label": "X",
+      "configuration": "B8/cluster",
+      "run": "1",
+      "cls": "OTHER",
+      "quote": "Many also touch predicted-class boundaries (up to 8 neighbouring windows of other classes), where confusable land covers meet.",
+      "evidence": "boundary_neighbours counts 8-neighbours with a different predicted class. 8823 of 16384 windows (54%) have one. No tool returns a runner-up class or any measure of class confusability, and the run has no labels.",
+      "why": "Predicted-class adjacency does not show that the adjacent classes are confusable or confused. This is the same unsupported inference the auditor flagged in Y B8/cluster/1 ('likely true class-boundary pixels') and Y B8/cluster/2 ('where multi-class errors concentrate'). Low severity."
+     }
+    ]
+   }
+  },
+  {
+   "group": "comparisons",
+   "audit": {
+    "runs": [
+     {
+      "label": "X",
+      "configuration": "B3/cluster",
+      "run": "1",
+      "findings": [
+       {
+        "cls": "E1",
+        "quote": "dominated by a long strip in the north edge (row 0, cols ~3\u201348) where C1 says *montane_forest* and C2 says *woodland_forest*",
+        "evidence": "olmoearth_compare_review 'differing' lists only the first 50 of n_differing=3807 windows in window-index order, and all 50 are in row 0 (cols 3\u2013125). Computed on the workspace scores files: row 0 holds 51 of the 3,807 differing windows (1.3%). montane_forest\u2192woodland_forest covers 447/3807 (11.7%) and sits in rows 0\u201321. The largest change is grassland_barren\u2192shrubland_savanna, 1,409 (37.0%). Differences are spread across the grid: by 16-row band, 844, 656, 433, 310, 278, 416, 528, 342.",
+        "why": "The answer calls the difference dominated by a row-0 strip, but that strip is only the start of an index-ordered, truncated listing. It is not where the differences concentrate, and montane\u2192woodland is not the dominant change."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "scattered flips among *urban_dense_development / shrubland_savanna / grassland_barren / herbaceous_wetland* (e.g., rows 0\u20131, cols 59, 85, 95, 103, 107, 115\u2013125)",
+        "evidence": "Every listed window is in row 0, none in row 1. The cited windows at cols 59 and 85 are woodland_forest\u2194shrubland_savanna (class 0\u21942), col 125 is urban\u2192agriculture_settlement (8\u21925), and no listed window involves herbaceous_wetland (class 3).",
+        "why": "The examples given as evidence do not match the tool listing: there is no row 1, and the classes named do not match the cited windows."
+       }
+      ]
+     },
+     {
+      "label": "X",
+      "configuration": "B3/cluster",
+      "run": "2",
+      "findings": [
+       {
+        "cls": "E1",
+        "quote": "The dominant contrast is **montane_forest vs woodland_forest** (e.g., windows 3\u201330 along row 0)",
+        "evidence": "The tool call used max_listed=20, so the listing holds the first 20 of 3,807 differing windows in index order, all in row 0 and all 6\u21920. Computed on the fixtures: montane_forest\u2192woodland_forest is 447/3807 (11.7%). grassland_barren\u2192shrubland_savanna is 1,409 (37.0%), and grassland\u2194shrubland in both directions is 1,677 (44.1%). Windows 9\u201311 and 16\u201320 in the cited range 3\u201330 do not differ.",
+        "why": "The dominant pair was read off a 20-row truncated listing ordered by window index. By the full data, grassland\u2194shrubland dominates, at about four times the montane/woodland count."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "or run a third date and look at the trajectory",
+        "evidence": "compare_review dates.reading says the decisions alone cannot tell change from error and that 'a reference for each date separates the two'. which_side_is_right is 'not graded' for lack of dated labels.",
+        "why": "This is offered as a way to settle which map is right. A third map from the same model adds only more model decisions, not a reference, so it cannot tell which of C1 or C2 is correct."
+       }
+      ]
+     },
+     {
+      "label": "X",
+      "configuration": "B3/cluster",
+      "run": "3",
+      "findings": [
+       {
+        "cls": "OTHER",
+        "quote": "So most disagreement looks like boundary placement rather than whole-window flips.",
+        "evidence": "Every counted difference is a whole-window flip: n_differing counts windows whose argmax class differs. The 78.3% boundary share only says the flipped window touches a boundary, and 53.9% of all windows touch one. Computed: 512 of C1's 555 montane_forest windows differ in C2 (447 become woodland_forest), 293 of them inside C1's montane patches. The flips are strongly one-directional (grassland\u2192shrubland 1409 vs 268 back; montane\u2192woodland 447 vs 0; urban\u2192grassland 336 vs 30), and 1,259 differing windows (33%) are interior in C1.",
+        "why": "The disagreement includes whole regions being relabelled in one direction, not boundary jitter, and the unit being compared is the whole window."
+       },
+       {
+        "cls": "E5",
+        "quote": "agriculture cycles alone could explain much of this",
+        "evidence": "Computed on the fixtures: only 317 of 3,807 differing windows (8.3%) involve agriculture_settlement on either side. No tool output attributes the differences to agriculture.",
+        "why": "This claim about how much of the difference one cause explains has no support. The class that agricultural cycles would affect is in under a tenth of the differences."
+       }
+      ]
+     },
+     {
+      "label": "X",
+      "configuration": "B7/files",
+      "run": "1",
+      "findings": [
+       {
+        "cls": "E2",
+        "quote": "As a weak hint only: B (post) is usually the more confident side (mean margin 0.158 vs A's 0.389 on differing windows is inverted \u2014 B tends to hold high-margin calls where A is near its decision boundary)",
+        "evidence": "olmoearth_compare_review gives mean_margin_a_on_differing=0.389362 and mean_margin_b_on_differing=0.157536. Computed on the F4 fixtures: A has the higher margin on 77.6% of the 1,570 differing windows and B on only 22.4%.",
+        "why": "The direction is backwards. A (pre) is the more confident side on differing windows, by both the mean and the per-window share."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "(e.g., windows ~4819\u20134834 at row 344\u2013345, ~20192\u201320207 at row 1442\u20131443 have near-zero margins on one side)",
+        "evidence": "In the tool listing, windows 20192\u201320207 have margin_a 0.497\u20130.498 (near the 0.5 maximum) and margin_b 0.104\u20130.302. For 4820\u20134834, margin_a is 0.134\u20130.298 and margin_b 0.254\u20130.477. Only 4819 (margin_a 0.026) is near zero.",
+        "why": "Most of the cited windows do not have a near-zero margin on either side. The block at 20192\u201320207 is where A is at its most confident."
+       }
+      ]
+     },
+     {
+      "label": "X",
+      "configuration": "B7/files",
+      "run": "2",
+      "findings": [
+       {
+        "cls": "OTHER",
+        "quote": "The higher mean margin on A's side reflects that A tended to flip its own high-confidence windows",
+        "evidence": "The tool returns only mean_margin_a_on_differing=0.389 vs b=0.158. No tool output describes A 'flipping' anything; A and B are two independent maps compared window by window.",
+        "why": "The mechanism is invented. The margin means only that A's calls are more confident on the differing windows. It does not mean A flipped its own windows."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "No reference labels exist for either date, so grading isn't possible",
+        "evidence": "The tool says only 'no labels_date was given' (dates.labels=null).",
+        "why": "The tool shows that none were supplied, not that none exist. The answer turns a missing input into a claim that no reference exists."
+       }
+      ]
+     },
+     {
+      "label": "X",
+      "configuration": "B7/files",
+      "run": "3",
+      "findings": [
+       {
+        "cls": "E2",
+        "quote": "Most differing windows flip class 1 -> 0 (A positive, B negative)",
+        "evidence": "Computed on the F4 fixtures: 1,247 of 1,570 differing windows (79.4%) are 0\u21921 (not water in A, water in B), and only 323 (20.6%) are 1\u21920. Even the tool's 50-window listing has 34 of 50 as 0\u21921.",
+        "why": "The flip direction is reversed. Most flips are A not-water \u2192 B water."
+       },
+       {
+        "cls": "E5",
+        "quote": "that kind of coherent patch is a signature of real ground change (e.g., seasonal flooding between Sep 2017 and Apr 2018) rather than isolated misclassification",
+        "evidence": "compare_review dates.reading: 'a window where they differ either changed on the ground between them ... or is wrong in one map, and the decisions alone cannot say which'. The tool gives no spatial-coherence test.",
+        "why": "The answer presents spatial coherence as evidence of real change. The tool says the decisions cannot separate change from error, and spatially coherent model errors are equally possible. The 'partly systematic rather than random noise' framing overclaims in the same way."
+       },
+       {
+        "cls": "E3",
+        "quote": "The full differing-window list was saved; I've shown only the first few above.",
+        "evidence": "The only tool call is olmoearth_compare_review, with no output-path argument. It returned n_differing_listed=50 of 1,570 inline, the run has no workspace directory, and the answer shows no window list 'above'.",
+        "why": "No list was saved, the full list of 1,570 was never produced, and no examples appear above."
+       }
+      ]
+     },
+     {
+      "label": "Y",
+      "configuration": "B3/cluster",
+      "run": "1",
+      "findings": [
+       {
+        "cls": "E2",
+        "quote": "upstream evidence shows the more confident side is right on only about half or less of such windows",
+        "evidence": "compare_review caveat: 'The more confident side is right on 51 to 70 percent of differing windows (exp58, upstream)'.",
+        "why": "The tool's range starts at 51% and runs up to 70%, so 'half or less' reads the bound backwards."
+       },
+       {
+        "cls": "E1",
+        "quote": "the top-50 differing windows sit mostly in row 0 (north edge)",
+        "evidence": "The tool's listing_order says the listed windows are 'the first differing windows in window order (from the top rows of the grid), not a sample of them'. Computed: row 0 holds 51 of 3,807 differing windows (1.3%).",
+        "why": "The listed windows are the first 50 by index, not the top 50 by any measure. They are in row 0 because of their index order, so the statement reports a property of the listing as if it were a spatial finding."
+       }
+      ]
+     },
+     {
+      "label": "Y",
+      "configuration": "B3/cluster",
+      "run": "2",
+      "findings": []
+     },
+     {
+      "label": "Y",
+      "configuration": "B3/cluster",
+      "run": "3",
+      "findings": [
+       {
+        "cls": "E1",
+        "quote": "The most confidence-split zone runs along row 0 (cols 3\u201351), where the two maps flip between montane_forest and woodland_forest.",
+        "evidence": "No tool output ranks zones by how far the two maps' confidence differs. Row 0 cols 3\u201351 is just the start of the 50-window listing, and listing_order says it is window-order, not a sample. Computed: by mean |margin_a\u2212margin_b| over differing windows, row 0 is not in the top 8 rows (the top rows are 69, 22 and 64). Of 480 differing windows where both margins exceed 3, row 0 has 7. Montane\u2192woodland spans rows 0\u201321, not row 0.",
+        "why": "The answer invents a superlative spatial pattern from the head of an index-ordered listing, which the tool said not to read patterns from."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "78.3% of the differing windows sit on a predicted class boundary \u2014 mostly edge/transition cells rather than whole regions flipping.",
+        "evidence": "Computed: 512 of C1's 555 montane_forest windows differ in C2 (447 become woodland_forest, 293 of them inside C1's montane patches). The tool's class_changes also shows one-directional shifts: montane\u2192woodland 447 with no reverse, and grassland\u2192shrubland 1,409 vs 268 back. The 53.9% overall boundary share makes boundary adjacency common anyway.",
+        "why": "A whole region (C1's montane forest) does flip, so the stated contrast is false."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "| grassland_barren \u2194 shrubland_savanna | 1,409 | 37.0% |",
+        "evidence": "Tool class_changes gives directed pairs: class_a=4\u2192class_b=2, n=1409. Computed: the reverse direction adds 268, for 1,677 (44.1%). woodland\u2194shrubland is likewise 388 one way and 479 both ways.",
+        "why": "The tool's direction is dropped in favour of '\u2194', which reads as either direction. Read that way, the counts are too low."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "while C2 (2022) had the higher mean margin overall (3.19 vs 2.66)",
+        "evidence": "The tool gives 3.19 and 2.66 as mean_margin_b/a_on_differing. Computed over all windows, the means are 5.75 (C2) and 5.11 (C1).",
+        "why": "These are means over the differing windows only. Calling them 'overall' misstates what the numbers are (minor; the direction happens to hold)."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "or run a third dated map so the 2022\u21922023 delta can be checked for reversals",
+        "evidence": "dates.reading says the decisions alone cannot say whether a difference is change or error, and 'a reference for each date separates the two'.",
+        "why": "This is offered as a way to get a verdict, but a third model map is more decisions, not a reference. It cannot establish which of the two maps is right."
+       }
+      ]
+     },
+     {
+      "label": "Y",
+      "configuration": "B7/files",
+      "run": "1",
+      "findings": [
+       {
+        "cls": "E1",
+        "quote": "Changes cluster spatially (e.g., blocks at rows 344\u2013345, rows 1139\u20131141, and rows 1442\u20131449)",
+        "evidence": "These rows are the first 50 differing windows by index (rows 344\u20131449 of a 5,600-row grid). The tool's listing_order says to read nothing from the list. Rows 1139\u20131141 hold only 3 windows in different columns (12, 7, 7), not a block. Computed: the densest concentration is rows 2900\u20132999 (249 of 1,570 differing windows), where rows 2969\u20132981 differ across all 14 columns, and it is never mentioned.",
+        "why": "The spatial pattern was generalised from the head of an index-ordered, truncated listing, and it misses where the differences actually concentrate."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "consistent with changed patches rather than scattered noise",
+        "evidence": "dates.reading: a differing window 'either changed on the ground ... or is wrong in one map, and the decisions alone cannot say which'.",
+        "why": "Even hedged, this favours real change on the basis of spatial coherence. Coherent patches are equally consistent with spatially correlated model error, which the tool says cannot be separated from change."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "To settle it, provide labels for one or both dates, or treat this as a change-detection layer rather than a contest between the two maps.",
+        "evidence": "which_side_is_right is not graded, and the tool says the decisions cannot separate change from error.",
+        "why": "Treating the differences as a change layer assumes every difference is real change. It does not settle which map is right (minor)."
+       }
+      ]
+     },
+     {
+      "label": "Y",
+      "configuration": "B7/files",
+      "run": "2",
+      "findings": [
+       {
+        "cls": "OTHER",
+        "quote": "To separate change from error you'd need dated references (e.g., WorldCover for each period)",
+        "evidence": "No tool output suggests WorldCover. ESA WorldCover is published only for 2020 and 2021, and it is an annual land-cover model product, not a single-date water reference.",
+        "why": "The suggested reference does not exist for either 2017-09-14/15 or 2018-04-19, and an annual map cannot describe single-date water state."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "Example differing windows include indices 4819\u20134834 (rows 344\u2013345, cols 0\u20134, A=1 -> B=0)",
+        "evidence": "The tool listing has only 4819, 4820 (row 344, cols 3\u20134) and 4830\u20134834 (row 345, cols 0\u20134) in that range. Indices 4821\u20134829 do not differ.",
+        "why": "The range claims 16 windows, and the row/col box claims 10, but only 7 differ (minor)."
+       }
+      ]
+     },
+     {
+      "label": "Y",
+      "configuration": "B7/files",
+      "run": "3",
+      "findings": []
+     }
+    ]
+   },
+   "verify": {
+    "verdicts": [
+     {
+      "label": "X",
+      "configuration": "B3/cluster",
+      "run": "1",
+      "quote": "dominated by a long strip in the north edge (row 0, cols ~3\u201348) where C1 says *montane_forest* and C2 says *woodland_forest*",
+      "cls": "E1",
+      "verdict": "confirmed",
+      "cls_final": "E1",
+      "reason": "This run's compare_review listed the first 50 of 3,807 differing windows in index order (max_listed=50), and all 50 are in row 0. On the workspace scores files (identical across runs) row 0 holds 51 of 3,807 differing windows. montane\u2192woodland is 447 (11.7%) and spans rows 0\u201321, while grassland\u2192shrubland is 1,409 (37.0%). By 16-row band the differing windows are 844/656/433/310/278/416/528/342. The dominance claim comes from the head of the listing."
+     },
+     {
+      "label": "X",
+      "configuration": "B3/cluster",
+      "run": "1",
+      "quote": "scattered flips among *urban_dense_development / shrubland_savanna / grassland_barren / herbaceous_wetland* (e.g., rows 0\u20131, cols 59, 85, 95, 103, 107, 115\u2013125)",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "Every cited window in the listing is in row 0. col 59 is 0\u21922 (woodland\u2192shrubland), col 85 is 2\u21920, col 115 is 8\u21920 and col 125 is 8\u21925 (urban\u2192agriculture). No listed window involves class 3 (herbaceous_wetland), so the class set named does not match the examples cited as evidence."
+     },
+     {
+      "label": "X",
+      "configuration": "B3/cluster",
+      "run": "2",
+      "quote": "The dominant contrast is **montane_forest vs woodland_forest** (e.g., windows 3\u201330 along row 0)",
+      "cls": "E1",
+      "verdict": "confirmed",
+      "cls_final": "E1",
+      "reason": "The call used max_listed=20, and all 20 listed windows are 6\u21920 in row 0. Indices 9\u201311 and 16\u201320 are missing from the listing, so they do not differ. The full data show grassland\u2192shrubland 1,409 (37.0%), or 1,677 counting both directions, against 447 for montane\u2192woodland. The 'dominant contrast' was read from a truncated, index-ordered list."
+     },
+     {
+      "label": "X",
+      "configuration": "B3/cluster",
+      "run": "2",
+      "quote": "or run a third date and look at the trajectory",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "This is offered under 'To settle it'. dates.reading says the decisions alone cannot separate change from error and that 'a reference for each date separates the two'. A third run of the same model adds decisions, not a reference, so it cannot establish which of C1 or C2 is right. Minor."
+     },
+     {
+      "label": "X",
+      "configuration": "B3/cluster",
+      "run": "3",
+      "quote": "So most disagreement looks like boundary placement rather than whole-window flips.",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "The conclusion holds, but some of the auditor's numbers use a different boundary definition. The tool's boundary is 8-neighbour on map A: I reproduce 0.538513 and 0.782506 exactly. Under that definition, 828 differing windows (21.7%) are interior in C1, not 1,259. For montane\u2192woodland, 249 of 447 are interior in C1, not 293. The 1,259 and 293 figures come from a 4-neighbour rule. Whole regions do flip: 512 of C1's 555 montane windows differ (C2 has only 43 montane), and the flips run one way (6\u21920 is 447 with 0 back; 4\u21922 is 1,409 with 268 back). Contiguous components of differing windows reach 493 and 434 windows. Every counted difference is a whole-window argmax change, so 'rather than whole-window flips' is also incoherent."
+     },
+     {
+      "label": "X",
+      "configuration": "B3/cluster",
+      "run": "3",
+      "quote": "agriculture cycles alone could explain much of this",
+      "cls": "E5",
+      "verdict": "confirmed",
+      "cls_final": "E5",
+      "reason": "No tool output attributes the differences to any cause. Only 317 of 3,807 differing windows (8.3%) involve agriculture_settlement on either side, and in this run's 50-window listing only window 125 (8\u21925) does."
+     },
+     {
+      "label": "X",
+      "configuration": "B7/files",
+      "run": "1",
+      "quote": "As a weak hint only: B (post) is usually the more confident side (mean margin 0.158 vs A's 0.389 on differing windows is inverted \u2014 B tends to hold high-margin calls where A is near its decision boundary)",
+      "cls": "E2",
+      "verdict": "confirmed",
+      "cls_final": "E2",
+      "reason": "The tool gives mean_margin_a_on_differing=0.389362 and mean_margin_b_on_differing=0.157536. On the F4 fixtures, A has the higher margin on 1,219 of 1,570 differing windows (77.6%). The answer reads the direction backwards."
+     },
+     {
+      "label": "X",
+      "configuration": "B7/files",
+      "run": "1",
+      "quote": "(e.g., windows ~4819\u20134834 at row 344\u2013345, ~20192\u201320207 at row 1442\u20131443 have near-zero margins on one side)",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "Margins here run 0 to about 0.5. Of the listed windows 4819/4820/4830\u20134834, margin_a is 0.026, 0.134, 0.137, 0.245, 0.260, 0.298 and 0.251, and margin_b is 0.25\u20130.48, so only 4819 is near zero. For 20192/20193/20194/20206/20207, margin_a is 0.497\u20130.498, the most confident A gets, and margin_b is 0.104\u20130.302. Indices 4821\u20134829 do not differ at all."
+     },
+     {
+      "label": "X",
+      "configuration": "B7/files",
+      "run": "2",
+      "quote": "The higher mean margin on A's side reflects that A tended to flip its own high-confidence windows",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "The tool returns only the two mean margins on the differing windows (0.389 vs 0.158). A and B are two separate maps compared window by window, and nothing in the output supports a mechanism in which A 'flips' its own windows. The mechanism is invented."
+     },
+     {
+      "label": "X",
+      "configuration": "B7/files",
+      "run": "2",
+      "quote": "No reference labels exist for either date, so grading isn't possible",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "The tool shows dates.labels=null and says 'no labels_date was given'. That means none were supplied, not that none exist. The same answer goes on to talk about providing one, which contradicts it. Minor."
+     },
+     {
+      "label": "X",
+      "configuration": "B7/files",
+      "run": "3",
+      "quote": "Most differing windows flip class 1 -> 0 (A positive, B negative)",
+      "cls": "E2",
+      "verdict": "confirmed",
+      "cls_final": "E2",
+      "reason": "On the F4 fixtures, 1,247 of 1,570 flips (79.4%) are 0\u21921 and 323 are 1\u21920. Even this run's 50-window listing has 34 flips 0\u21921 and 16 flips 1\u21920. The flip direction is reversed."
+     },
+     {
+      "label": "X",
+      "configuration": "B7/files",
+      "run": "3",
+      "quote": "that kind of coherent patch is a signature of real ground change (e.g., seasonal flooding between Sep 2017 and Apr 2018) rather than isolated misclassification",
+      "cls": "E5",
+      "verdict": "confirmed",
+      "cls_final": "E5",
+      "reason": "dates.reading says a differing window 'either changed on the ground ... or is wrong in one map, and the decisions alone cannot say which'. Calling spatial coherence a signature of real change claims diagnostic evidence the tool denies. One qualification: 'partly systematic rather than random noise' is supported by the data. 93% of differing windows have a differing 8-neighbour, against about 15% expected at random. So only the 'signature of real change' part overclaims."
+     },
+     {
+      "label": "X",
+      "configuration": "B7/files",
+      "run": "3",
+      "quote": "The full differing-window list was saved; I've shown only the first few above.",
+      "cls": "E3",
+      "verdict": "confirmed",
+      "cls_final": "E3",
+      "reason": "The only tool call is olmoearth_compare_review, with no output-path argument, and it returned 50 of 1,570 windows inline. The run has no workspace directory. The answer shows no window list 'above', only summary statistics and a row/column range."
+     },
+     {
+      "label": "Y",
+      "configuration": "B3/cluster",
+      "run": "1",
+      "quote": "upstream evidence shows the more confident side is right on only about half or less of such windows",
+      "cls": "E2",
+      "verdict": "confirmed",
+      "cls_final": "E2",
+      "reason": "The tool caveat says 'The more confident side is right on 51 to 70 percent of differing windows'. The range never goes below 51%, so 'half or less' inverts the bound."
+     },
+     {
+      "label": "Y",
+      "configuration": "B3/cluster",
+      "run": "1",
+      "quote": "the top-50 differing windows sit mostly in row 0 (north edge)",
+      "cls": "E1",
+      "verdict": "confirmed",
+      "cls_final": "E1",
+      "reason": "listing_order says the listed windows are 'the first differing windows in window order ... not a sample'. They are the first 50 by index, not a top 50 by any measure, and they are in row 0 only because of that order. Row 0 holds 51 of 3,807 differing windows (1.3%)."
+     },
+     {
+      "label": "Y",
+      "configuration": "B3/cluster",
+      "run": "3",
+      "quote": "The most confidence-split zone runs along row 0 (cols 3\u201351), where the two maps flip between montane_forest and woodland_forest.",
+      "cls": "E1",
+      "verdict": "confirmed",
+      "cls_final": "E1",
+      "reason": "No tool output ranks zones by confidence split. Row 0 cols 3\u201351 is the head of the window-order listing. Computed by mean |margin_a\u2212margin_b| over differing windows per row, row 0 ranks 23rd (2.48), and the top rows are 69, 22 and 64. Of 480 differing windows where both margins exceed 3, row 0 has 7. montane\u2192woodland spans rows 0\u201321."
+     },
+     {
+      "label": "Y",
+      "configuration": "B3/cluster",
+      "run": "3",
+      "quote": "78.3% of the differing windows sit on a predicted class boundary \u2014 mostly edge/transition cells rather than whole regions flipping.",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "Whole regions do flip. 512 of C1's 555 montane windows differ, and C2 keeps only 43 montane windows. Under the tool's own boundary rule (8-neighbour on C1), 249 of the 447 montane\u2192woodland windows are interior; the auditor's 293 uses a 4-neighbour rule. The largest contiguous blocks of differing windows are 493 and 434 windows. The 78.3% figure is from the tool, but 'rather than whole regions flipping' is false."
+     },
+     {
+      "label": "Y",
+      "configuration": "B3/cluster",
+      "run": "3",
+      "quote": "| grassland_barren \u2194 shrubland_savanna | 1,409 | 37.0% |",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "class_changes are directed: 4\u21922 has n=1409, and the reverse 2\u21924 has 268, for 1,677 (44.1%) in both directions. The other rows have the same problem: 0\u21942 is 388+91=479, 8\u21944 is 336+30=366 and 8\u21942 is 308+6=314. The table uses '\u2194' and heads its column 'Change (2023 \u2194 2022)', so its counts understate the two-way totals and drop the tool's direction."
+     },
+     {
+      "label": "Y",
+      "configuration": "B3/cluster",
+      "run": "3",
+      "quote": "while C2 (2022) had the higher mean margin overall (3.19 vs 2.66)",
+      "cls": "OTHER",
+      "verdict": "refuted",
+      "cls_final": "OTHER",
+      "reason": "The sentence opens with 'over the differing windows', and that scopes both clauses. Here 'overall' contrasts the aggregate mean with the per-window 42.2% share; it does not claim a mean over all windows. The numbers and direction match the tool (3.185611 vs 2.66326). Nothing false."
+     },
+     {
+      "label": "Y",
+      "configuration": "B3/cluster",
+      "run": "3",
+      "quote": "or run a third dated map so the 2022\u21922023 delta can be checked for reversals",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "This is offered as a 'Next step if you want a verdict'. dates.reading says the decisions alone cannot say whether a difference is change or error and that 'a reference for each date separates the two'. Another run of the model adds decisions, not a reference, so a reversal check cannot say which map is right. Minor."
+     },
+     {
+      "label": "Y",
+      "configuration": "B7/files",
+      "run": "1",
+      "quote": "Changes cluster spatially (e.g., blocks at rows 344\u2013345, rows 1139\u20131141, and rows 1442\u20131449)",
+      "cls": "E1",
+      "verdict": "confirmed",
+      "cls_final": "E1",
+      "reason": "All three examples come from the first 50 windows in index order, and listing_order says to read patterns from class_changes, not the list. Rows 1139\u20131141 hold 3 windows (cols 12, 7, 7), which is not a block. The largest concentration, rows 2968\u20132981 (all 14 cols except row 2971 with 13; 195 windows, all 0\u21921), goes unmentioned. Nuance: clustering is true of the data (93% of differing windows have a differing 8-neighbour), but no tool output supports it and the examples are artifacts of the listing."
+     },
+     {
+      "label": "Y",
+      "configuration": "B7/files",
+      "run": "1",
+      "quote": "consistent with changed patches rather than scattered noise",
+      "cls": "OTHER",
+      "verdict": "refuted",
+      "cls_final": "OTHER",
+      "reason": "The sentence is accurate as written. The differences are strongly clustered (93% have a differing 8-neighbour, against about 15% expected at random), so they are not scattered noise, and clustering is consistent with changed patches. It does not claim coherence rules out map error. The next paragraph says change and error cannot be separated. Unlike X/B7/3's 'signature of real ground change', it claims no diagnostic power."
+     },
+     {
+      "label": "Y",
+      "configuration": "B7/files",
+      "run": "1",
+      "quote": "To settle it, provide labels for one or both dates, or treat this as a change-detection layer rather than a contest between the two maps.",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "This is offered as a way 'to settle it'. Reframing the differences as a change layer does not say which map is right, and it assumes the differences are change, which the tool says the decisions cannot establish ('or is wrong in one map'). Minor."
+     },
+     {
+      "label": "Y",
+      "configuration": "B7/files",
+      "run": "2",
+      "quote": "To separate change from error you'd need dated references (e.g., WorldCover for each period)",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "No tool output suggests WorldCover. ESA WorldCover exists for 2020 and 2021 only, so there is none for 2017-09 or 2018-04. It is also an annual land-cover product, not a single-date water or flood reference. The example reference is unavailable for either date."
+     },
+     {
+      "label": "Y",
+      "configuration": "B7/files",
+      "run": "2",
+      "quote": "Example differing windows include indices 4819\u20134834 (rows 344\u2013345, cols 0\u20134, A=1 -> B=0)",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "This run's listing (max_listed=10) and the fixtures agree: only 4819 and 4820 (row 344, cols 3\u20134) and 4830\u20134834 (row 345, cols 0\u20134) differ. Indices 4821\u20134829 do not. The index range implies 16 windows and the row/column box implies 10, but only 7 differ. Minor."
+     }
+    ],
+    "missed": [
+     {
+      "label": "X",
+      "configuration": "B7/files",
+      "run": "1",
+      "cls": "E1",
+      "quote": "Class flips are mostly 1\u21920 or 0\u21921 along cluster edges",
+      "evidence": "This run's compare_review for F4 has no boundary fields at all (no boundary_share, no 'where'), so the only source is the 30-window listing. I applied the tool's boundary rule, reproduced exactly on B3 as 8-neighbour on map A: only 21.6% of the 1,570 differing windows touch a class boundary in A (3.0% of all windows do). Measured on B's map the share is 59.8%. '1\u21920 or 0\u21921' is simply every flip in a binary map.",
+      "why": "This is a spatial pattern (differences lie along edges) that no tool output gives. It was read off the listing head, and under the tool's own boundary rule applied to map A it is false: most differing windows are not on A's edges."
+     },
+     {
+      "label": "X",
+      "configuration": "B7/files",
+      "run": "3",
+      "cls": "OTHER",
+      "quote": "provide reference labels for the 2018-04-19 date (and ideally also for mid-Sep 2017). Then I can grade each side against its own-date reference and tell you which map errs more",
+      "evidence": "dates.reading says 'a reference for each date separates the two'. Grading A (2017-09-14/15) against its own-date reference needs the 2017 reference, which the answer calls optional ('ideally also').",
+      "why": "With only the 2018-04-19 reference, map A cannot be graded, so the promise to say which map errs more cannot be kept. The advice understates what the tool says is needed. Minor."
+     },
+     {
+      "label": "X",
+      "configuration": "B3/cluster",
+      "run": "1",
+      "cls": "OTHER",
+      "quote": "give me ground truth for one or both years (and I'll pass `labels_date` to grade each map separately",
+      "evidence": "dates.reading says 'a reference for each date separates the two'. Each map describes a different year (2023 vs 2022).",
+      "why": "Ground truth for one year grades only that year's map, not 'each map separately'. Minor."
+     },
+     {
+      "label": "Y",
+      "configuration": "B7/files",
+      "run": "2",
+      "cls": "OTHER",
+      "quote": "so the comparison reports movement, not accuracy",
+      "evidence": "dates.reading says a differing window 'either changed on the ground between them ... or is wrong in one map, and the decisions alone cannot say which'. The answer adds 'Net direction is toward class 1 between Sept 2017 and Apr 2018', which puts the maps' net difference down to time.",
+      "why": "Calling the 1,570 differences 'movement' presents them as change on the ground, when the tool says they may be errors in either map. The later hedge in the same answer softens this. Minor."
+     }
+    ]
+   }
+  },
+  {
+   "group": "estimation",
+   "audit": {
+    "runs": [
+     {
+      "label": "X",
+      "configuration": "B5/files",
+      "run": "1",
+      "findings": [
+       {
+        "cls": "E2",
+        "quote": "class 4 misses (user accuracy only ~0.96 driven by 27 missed class-4 windows)",
+        "evidence": "olmoearth_estimate_map_error per_class['4']: user_accuracy 0.964, producer_accuracy 0.801. confusion_counts (rows = map, cols = reference): row 4 has 4 off-diagonal windows (commissions); column 4 has 27 off-diagonal windows (7+1+3+13+3, omissions). The tool's own warning text for class 4 reads 'the user's accuracy rest(s) on 27 to 31 sampled error(s) (4 the map calls this class wrongly, 27 of this class it misses)'.",
+        "why": "The 27 missed class-4 windows are omissions. They set producer's accuracy (0.80), not user's accuracy. User's accuracy (0.96) rests on the 4 commissions and is the class's strong side, so 'only ~0.96' presents it as a weakness. User and producer accuracy are swapped. The tool's warning wording probably misled the model here, but the tool's numbers contradict the sentence."
+       }
+      ]
+     },
+     {
+      "label": "X",
+      "configuration": "B5/files",
+      "run": "2",
+      "findings": []
+     },
+     {
+      "label": "X",
+      "configuration": "B5/files",
+      "run": "3",
+      "findings": []
+     },
+     {
+      "label": "Y",
+      "configuration": "B5/files",
+      "run": "1",
+      "findings": [
+       {
+        "cls": "OTHER",
+        "quote": "a targeted confidence review set is not a random sample, so don't substitute the simple p \u00b1 z formula",
+        "evidence": "olmoearth_estimate_map_error: design 'confidence', method 'stratified by confidence margin; Wilson interval on the design's effective sample size'. The fixture design has 5 strata, sizes [3161,3163,3162,3164,3163], allocation [58,59,61,62,60], drawn at random within each stratum. interval_rules separate 'A targeted review set (e.g. the windows olmoearth_review_set lists) is not a sample: its error rate overstates the map's' from 'a stratified or targeted design'.",
+        "why": "Low severity. The answer calls the user's stratified random design a 'targeted review set', which the tool says is not a sample and overstates error. The design is a valid stratified sample, and the 19.4% is a valid estimate for the map. The warning against p \u00b1 z is right, but the stated reason describes the design wrongly and could make the user doubt a valid estimate."
+       }
+      ]
+     },
+     {
+      "label": "Y",
+      "configuration": "B5/files",
+      "run": "2",
+      "findings": []
+     },
+     {
+      "label": "Y",
+      "configuration": "B5/files",
+      "run": "3",
+      "findings": []
+     },
+     {
+      "label": "X",
+      "configuration": "B6/files",
+      "run": "1",
+      "findings": [
+       {
+        "cls": "E4",
+        "quote": "Want me to re-test with a different alpha, or estimate how many labels a certified zone would require?",
+        "evidence": "olmoearth_certify_zone reading_levels: 'Another alpha tests other levels, so this output says nothing about it; and the guarantee holds for an alpha fixed before the labels were seen, so trying looser alphas until one certifies is not covered by it.' Every level at alpha 0.05 has already been seen to fail.",
+        "why": "The answer offers to re-test the same labels at a different alpha after seeing that none certify. That is the post-hoc alpha search the tool says the guarantee does not cover. The answer's own caveat that alpha 'must be fixed before seeing the labels' contradicts the offer."
+       },
+       {
+        "cls": "E6",
+        "quote": "The observed whole-map error rate (~23%)",
+        "evidence": "This run called only olmoearth_certify_zone, which gives the 100% level as 69 wrong of 300 labelled and no error rate. 69/300 = 0.23.",
+        "why": "The model computed the percentage itself. It is right: 0.23, which matches the estimate tool's 0.23 in other runs on the same fixture."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "The observed whole-map error rate (~23%) leaves even the most confident region well above the 5% bar.",
+        "evidence": "certify_zone levels: the 15% zone has 3 wrong of 46 (observed 6.5%, upper_bound 0.1387). The 25% zone has 3 wrong of 68 (observed 4.4%, upper_bound 0.0951).",
+        "why": "Low severity. This is a causal claim the tool does not support. A zone's result depends on its own labels, not on the whole-map rate, and the most-confident zone's observed error (6.5%) is not 'well above' 5%. Only its bound (13.9%) is."
+       }
+      ]
+     },
+     {
+      "label": "X",
+      "configuration": "B6/files",
+      "run": "2",
+      "findings": [
+       {
+        "cls": "E4",
+        "quote": "A looser \u03b1 (e.g. 0.15) would certify the top ~15% zone on these numbers",
+        "evidence": "reading_levels: 'A level whose upper_bound is below alpha, this alpha or any other, is not thereby certified ... Another alpha tests other levels, so this output says nothing about it'. I re-ran oe_inferencex.estimate.certify_zone on the F3 fixture at alpha=0.15. c_min falls to 0.05. The prefix rule starts at the 5% zone (15 labels, 1 wrong, p=0.314 > delta 0.1) and stops, so nothing is certified. Bonferroni at 0.15 also certifies nothing (15% level p=0.069 > 0.1/20).",
+        "why": "This is false and statistically invalid. The model read the 15% level's upper bound (0.1387 < 0.15) as certification under a looser alpha, which the tool says does not follow, and the computation shows alpha 0.15 certifies no zone. Calling a post-hoc alpha 'exploratory' does not make the factual claim true."
+       },
+       {
+        "cls": "E4",
+        "quote": "To certify a 5%-wrong zone you'd need many more labels in the high-confidence region",
+        "evidence": "certify_zone design_requirement: 'Certification needs design='random' (a simple random sample of the map); olmoearth_certify_zone refuses a 'confidence' or 'proportional' design, so recommend only a random design for a certified zone.'",
+        "why": "Borderline. The answer never says the extra labels must come from a simple random sample of the whole map. Read literally, it tells the user to put labels in the high-confidence region, which is a targeted design that cannot certify a zone."
+       },
+       {
+        "cls": "E6",
+        "quote": "the whole map shows ~23% wrong overall",
+        "evidence": "certify_zone 100% level: 69 wrong of 300. This run did not call estimate_map_error. 69/300 = 0.23.",
+        "why": "The model derived the percentage itself. It is right."
+       }
+      ]
+     },
+     {
+      "label": "X",
+      "configuration": "B6/files",
+      "run": "3",
+      "findings": [
+       {
+        "cls": "E6",
+        "quote": "Every larger level up to 100% also fails (upper bounds range ~0.11\u20130.26)",
+        "evidence": "certify_zone levels: upper_bound at 25% = 0.0951, 20% = 0.1129, 35% = 0.1133, ..., 100% = 0.2638. The minimum over the larger levels is 0.0951, not ~0.11.",
+        "why": "The model derived the range itself, and the range is wrong. It leaves out the lowest bound (0.095 at 25% coverage), which is the level closest to passing."
+       },
+       {
+        "cls": "E1",
+        "quote": "Best level tested \u2014 top 15% most-confident zone (2,372 windows): 3 wrong of 46 labels, upper bound 0.139",
+        "evidence": "certify_zone levels: the 15% bound is 0.1387, but 20% is 0.1129, 25% is 0.0951, 30% is 0.1296, 35% is 0.1133, 40% is 0.1235, 45% is 0.1374 and 50% is 0.1321. All are lower.",
+        "why": "The model took the first row of the coverage-ordered listing as the best level. Eight larger zones have lower upper bounds, and the 25% zone is the closest to the 5% bar."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "To push toward certification you would need more labels (the whole-map rate alone suggests far more than 300)",
+        "evidence": "No tool output gives a label requirement. certify_zone results depend on the error count inside each zone (e.g. 3 of 46 at 15%, 3 of 68 at 25%), not on the whole-map rate of 69/300.",
+        "why": "The stated basis is invalid: the whole-map error rate does not decide how many labels a high-confidence zone needs. 'Far more than 300' has no tool support, though my own rough reasoning suggests the size may be plausible."
+       }
+      ]
+     },
+     {
+      "label": "Y",
+      "configuration": "B6/files",
+      "run": "1",
+      "findings": []
+     },
+     {
+      "label": "Y",
+      "configuration": "B6/files",
+      "run": "2",
+      "findings": [
+       {
+        "cls": "E6",
+        "quote": "The closest case is the most-confident 25% zone (3 wrong of 68): its point estimate looks fine",
+        "evidence": "certify_zone 25% level: n_labelled_inside 68, n_wrong_inside 3, upper_bound 0.0951, the lowest of all 18 levels. The point estimate is not returned. 3/68 = 0.044.",
+        "why": "The model derived the point-estimate comparison (4.4% < 5%) itself. It is right, and '25% is the closest case' is also right."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "or run the same test under the Bonferroni rule?",
+        "evidence": "certify_zone levels_tested.per_level_delta_by_rule.bonferroni = 0.00556. Every level's p_value is at least 0.554. My re-run of certify_zone with rule='bonferroni' at alpha 0.05 certifies nothing.",
+        "why": "Low severity. Offering a different rule after seeing the results implies it could change the answer. The tool's own p-values show it cannot, and choosing a rule after seeing the labels falls outside the guarantee, for the same reason as choosing alpha afterwards."
+       }
+      ]
+     },
+     {
+      "label": "Y",
+      "configuration": "B6/files",
+      "run": "3",
+      "findings": [
+       {
+        "cls": "E1",
+        "quote": "Every larger zone is worse (whole-map bound 26.4%).",
+        "evidence": "certify_zone levels: the 15% bound is 0.1387. Nine larger levels have lower bounds: 20% 0.1129, 25% 0.0951, 30% 0.1296, 35% 0.1133, 40% 0.1235, 45% 0.1374, 50% 0.1321, 55% 0.1328, 60% 0.1323. The answer's own table shows 25% at 9.5% and 50% at 13.2%.",
+        "why": "The model assumed from the ordered listing that bounds rise with coverage. The tool's levels contradict this, and so does the answer's own table."
+       },
+       {
+        "cls": "E4",
+        "quote": "e.g., a larger random sample focused on the high-confidence part of the map, planned with `olmoearth_plan_label_sample`",
+        "evidence": "certify_zone design_requirement: 'Certification needs design='random' (a simple random sample of the map); olmoearth_certify_zone refuses a 'confidence' or 'proportional' design, so recommend only a random design for a certified zone.' The certify_zone docstring also says indices 'must be a simple random sample of the valid windows'.",
+        "why": "A sample focused on the high-confidence part is not a simple random sample of the map. It is a targeted or stratified design, and the tool refuses to certify from one. The recommended design could not produce the certification the user asked for."
+       }
+      ]
+     }
+    ]
+   },
+   "verify": {
+    "verdicts": [
+     {
+      "label": "X",
+      "configuration": "B5/files",
+      "run": "1",
+      "quote": "class 4 misses (user accuracy only ~0.96 driven by 27 missed class-4 windows)",
+      "cls": "E2",
+      "verdict": "reclassified",
+      "cls_final": "OTHER",
+      "reason": "The sentence is false. In confusion_counts (rows are the map, columns the reference), row 4 has 4 off-diagonal windows (commissions), which set user_accuracy 0.964. Column 4 has 27 (omissions: 7+1+3+13+3), which set producer_accuracy 0.801. So the 27 misses drive producer's accuracy, not user's. But the model did not read a stated direction backwards: the tool's own warning for class 4 says 'the user's accuracy rest(s) on 27 to 31 sampled error(s) (4 the map calls this class wrongly, 27 of this class it misses)'. The model copied the tool's wrong pairing of user's accuracy with omissions. That makes it a metric mix-up taken from the tool text, which is OTHER rather than E2."
+     },
+     {
+      "label": "Y",
+      "configuration": "B5/files",
+      "run": "1",
+      "quote": "a targeted confidence review set is not a random sample, so don't substitute the simple p \u00b1 z formula",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "The F2 design has 5 margin strata (sizes [3161,3163,3162,3164,3163], allocation [58,59,61,62,60]). sample_for_estimation draws within each stratum with rng.choice(pool, nh, replace=False), so it is a stratified random sample, not a targeted review set. The interval_rules separate 'a targeted review set ... is not a sample: its error rate overstates the map's' from a stratified design. The advice not to use p \u00b1 z is right, but the stated reason describes the user's valid design wrongly. Low severity."
+     },
+     {
+      "label": "X",
+      "configuration": "B6/files",
+      "run": "1",
+      "quote": "Want me to re-test with a different alpha, or estimate how many labels a certified zone would require?",
+      "cls": "E4",
+      "verdict": "confirmed",
+      "cls_final": "E4",
+      "reason": "The user fixed 5% in the question, and every level at alpha 0.05 has already been seen to fail. certify_zone reading_levels says: 'the guarantee holds for an alpha fixed before the labels were seen, so trying looser alphas until one certifies is not covered by it.' Offering to re-test the same labels at another alpha is the post-hoc search the note rules out. The answer's own caveat, that alpha must be fixed before seeing the labels, contradicts the offer."
+     },
+     {
+      "label": "X",
+      "configuration": "B6/files",
+      "run": "1",
+      "quote": "The observed whole-map error rate (~23%)",
+      "cls": "E6",
+      "verdict": "confirmed",
+      "cls_final": "E6",
+      "reason": "This run called only olmoearth_certify_zone, which returns 69 wrong of 300 at the 100% level and no error rate. The model computed 69/300 = 0.23 itself. It is right: the estimate tool gives 0.23 on the same fixture in other runs."
+     },
+     {
+      "label": "X",
+      "configuration": "B6/files",
+      "run": "1",
+      "quote": "The observed whole-map error rate (~23%) leaves even the most confident region well above the 5% bar.",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "The causal claim is unsupported. Each level is tested on its own labels: the 15% zone has 3 of 46 wrong (p 0.803, upper_bound 0.1387), and the 25% zone has 3 of 68 wrong (bound 0.0951). The whole-map 69/300 plays no part in those tests. The zone's bound (13.9%) is well above 5%, but its observed rate (6.5%) is not. Low severity."
+     },
+     {
+      "label": "X",
+      "configuration": "B6/files",
+      "run": "2",
+      "quote": "A looser \u03b1 (e.g. 0.15) would certify the top ~15% zone on these numbers",
+      "cls": "E4",
+      "verdict": "confirmed",
+      "cls_final": "E4",
+      "reason": "I re-ran oe_inferencex.estimate.certify_zone on the F3 fixture. It reproduces the run's alpha 0.05 levels exactly. At alpha 0.15, c_min is 0.05 and min_labels_to_certify is 15. The prefix rule starts at the 5% level (15 labels, 1 wrong, p 0.314 > delta 0.1) and stops, so nothing is certified. The 15% level's p is 0.069. Bonferroni at 0.15 also returns coverage None. The claim is false. It is the reading that reading_levels rules out ('A level whose upper_bound is below alpha, this alpha or any other, is not thereby certified ... Another alpha tests other levels'), and it floats a post-hoc alpha."
+     },
+     {
+      "label": "X",
+      "configuration": "B6/files",
+      "run": "2",
+      "quote": "To certify a 5%-wrong zone you'd need many more labels in the high-confidence region",
+      "cls": "E4",
+      "verdict": "refuted",
+      "cls_final": "E4",
+      "reason": "The sentence states a true necessary condition: a zone can only be tested and certified once more labels fall inside it, which is what min_labels_to_certify and c_min encode. It does not recommend a targeted or stratified design. The user's existing labels are a random sample, and nothing in the sentence tells them to change design. An omission of the design requirement is not a false statement or invalid advice here. Contrast Y/B6/3, which does recommend a sample 'focused on the high-confidence part'."
+     },
+     {
+      "label": "X",
+      "configuration": "B6/files",
+      "run": "2",
+      "quote": "the whole map shows ~23% wrong overall",
+      "cls": "E6",
+      "verdict": "confirmed",
+      "cls_final": "E6",
+      "reason": "This run called only olmoearth_certify_zone (100% level: 69 wrong of 300, no rate). The model derived 69/300 = 0.23 itself. It is right."
+     },
+     {
+      "label": "X",
+      "configuration": "B6/files",
+      "run": "3",
+      "quote": "Every larger level up to 100% also fails (upper bounds range ~0.11\u20130.26)",
+      "cls": "E6",
+      "verdict": "confirmed",
+      "cls_final": "E6",
+      "reason": "The model built the range from the levels list itself, and it is wrong. The lowest bound among the larger levels is 0.0951 at 25% coverage (3 of 68), not ~0.11. The top end, 0.2638, is right. The range leaves out the level closest to passing."
+     },
+     {
+      "label": "X",
+      "configuration": "B6/files",
+      "run": "3",
+      "quote": "Best level tested \u2014 top 15% most-confident zone (2,372 windows): 3 wrong of 46 labels, upper bound 0.139",
+      "cls": "E1",
+      "verdict": "confirmed",
+      "cls_final": "E1",
+      "reason": "The 15% level's bound is 0.1387, but nine larger levels have lower bounds: 20% 0.1129, 25% 0.0951, 30% 0.1296, 35% 0.1133, 40% 0.1235, 45% 0.1374, 50% 0.1321, 55% 0.1328, 60% 0.1323. The auditor wrote 'eight'; the correct count is nine. The model took the first row of the coverage-ordered listing as the best. Together with the next sentence, it implies bounds rise with coverage, which the tool's levels contradict."
+     },
+     {
+      "label": "X",
+      "configuration": "B6/files",
+      "run": "3",
+      "quote": "To push toward certification you would need more labels (the whole-map rate alone suggests far more than 300)",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "No tool output gives a label requirement. The whole-map rate (69/300) does not decide how many labels a high-confidence zone needs: certification turns on each zone's own count (3 of 46 at 15%, 3 of 68 at 25%) and on c_min. The conclusion may be plausible, since the labelled top zones run about 6.5% wrong (1/15, 2/30, 3/46), but the stated basis is a non-sequitur. Low severity."
+     },
+     {
+      "label": "Y",
+      "configuration": "B6/files",
+      "run": "2",
+      "quote": "The closest case is the most-confident 25% zone (3 wrong of 68): its point estimate looks fine",
+      "cls": "E6",
+      "verdict": "confirmed",
+      "cls_final": "E6",
+      "reason": "certify_zone returns no point estimate. The judgement that it 'looks fine' rests on the model's own 3/68 = 0.044 < 0.05, which is right. The 25% level does have the lowest upper_bound of all 18 levels (0.0951), so 'closest case' is also right."
+     },
+     {
+      "label": "Y",
+      "configuration": "B6/files",
+      "run": "2",
+      "quote": "or run the same test under the Bonferroni rule?",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "reason": "In the tool output, per_level_delta_by_rule.bonferroni is 0.00556 and every level's p_value is at least 0.554. My re-run with rule='bonferroni' at alpha 0.05 returns coverage None. The offer implies a rule switch could change the answer when the tool's numbers show it cannot. Choosing between rules after seeing the labels also falls outside the single-rule guarantee. Low severity."
+     },
+     {
+      "label": "Y",
+      "configuration": "B6/files",
+      "run": "3",
+      "quote": "Every larger zone is worse (whole-map bound 26.4%).",
+      "cls": "E1",
+      "verdict": "confirmed",
+      "cls_final": "E1",
+      "reason": "The 15% bound is 0.1387, and nine larger levels have lower bounds (20% 0.1129, 25% 0.0951, 30% 0.1296, 35% 0.1133, 40% 0.1235, 45% 0.1374, 50% 0.1321, 55% 0.1328, 60% 0.1323). The answer's own table shows 25% at 9.5% and 50% at 13.2%, both below 13.9%. The claim assumes a monotone pattern that the ordered listing does not show."
+     },
+     {
+      "label": "Y",
+      "configuration": "B6/files",
+      "run": "3",
+      "quote": "e.g., a larger random sample focused on the high-confidence part of the map, planned with `olmoearth_plan_label_sample`",
+      "cls": "E4",
+      "verdict": "confirmed",
+      "cls_final": "E4",
+      "reason": "The certify_zone output's design_requirement says: 'Certification needs design=\"random\" (a simple random sample of the map); olmoearth_certify_zone refuses a \"confidence\" or \"proportional\" design, so recommend only a random design for a certified zone.' The package docstring says the indices must be 'a simple random sample of the valid windows'. The agent handler refuses any design other than 'random'. A sample focused on the high-confidence part is not a simple random sample of the map, so the recommended design cannot produce the certification the user asked for."
+     }
+    ],
+    "missed": [
+     {
+      "label": "X",
+      "configuration": "B5/files",
+      "run": "1",
+      "cls": "E4",
+      "quote": "Want me to expand the per-class breakdown or certify a high-confidence zone from these labels?",
+      "evidence": "The labels come from F2/design_confidence_300_s0.json (design 'confidence', 5 margin strata). The olmoearth_certify_zone tool description the model sees says: 'Needs a design=\"random\" plan and its labels; a stratified design is refused.' The agent handler (OlmoEarth-Agent src/olmoearth_agent/tools/estimation.py, _certify_zone) returns certified false for any design other than 'random', with the reason 'a certified zone needs a simple random sample of the map'. The package's certify_zone also requires 'a simple random sample of the valid windows'. The answer offers to certify a zone from a confidence-stratified design, which the tool refuses and whose guarantee would not hold."
+     },
+     {
+      "label": "X",
+      "configuration": "B5/files",
+      "run": "3",
+      "cls": "E4",
+      "quote": "Want me to break down the per-class confusion table or run a certified-zone analysis?",
+      "evidence": "The context is the user's confidence-stratified labels (F2, design 'confidence'). The olmoearth_certify_zone description says 'a stratified design is refused', and the handler refuses any design other than 'random'. The offer implies a certified-zone analysis on these labels is possible, and it is not. This is weaker than X/B5/1 because the answer does not say 'from these labels' explicitly."
+     },
+     {
+      "label": "Y",
+      "configuration": "B5/files",
+      "run": "1",
+      "cls": "OTHER",
+      "quote": "Worst per-class spots: class 6 (user accuracy 0.451) and class 4 (producer accuracy 0.801)",
+      "evidence": "olmoearth_estimate_map_error per_class shows several classes worse than both. Class 1: user_accuracy 0.225 [0.065, 0.550], producer_accuracy 0.111 [0.031, 0.328]. Class 5: user_accuracy 0.0 [0, 0.278], with all 10 labelled map-5 windows wrong. Classes 2 and 8: user_accuracy 0.0. Class 1's producer upper bound (0.328) and class 5's user upper bound (0.278) both lie below class 6's user estimate (0.451) and class 4's producer estimate (0.801). The small-sample caveat does not rescue the ranking: class 6 carries the same 'fewer than 30 labelled windows' warning, and these gaps remain after interval uncertainty. So class 6 and class 4 are not the worst spots."
+     }
+    ]
+   }
+  }
+ ]
+}
