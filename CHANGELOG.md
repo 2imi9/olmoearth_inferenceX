@@ -11,6 +11,9 @@
   omissions was said to rest on "27 to 31" sampled errors (the OlmoEarth Agent trial's audit of round 6, on its F2
   fixture: class 4, and class 6's producer's accuracy, "24 to 27" for 3). Each quantity now carries its own count
   ("the user's accuracy rests on 4 sampled errors"). When the note fires, and its `warning_codes`, are unchanged.
+- The dates reading of two periods also says how far apart they start. Consecutive years read "1 days apart" (the
+  documented `days_apart`, end to start), which suggests two maps of the same time; the reading now says "periods 1
+  day apart (their starts 365 days apart)". `days_apart` is unchanged. Found by the same audit (B3/cluster).
 
 ## 1.3.0 (2026-09-24)
 

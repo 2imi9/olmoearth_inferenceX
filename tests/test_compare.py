@@ -463,6 +463,12 @@ def test_dates_say_what_a_difference_can_mean():
     assert r["status"] == "unstated" and r["days_apart"] is None and "real change" in r["reading"]
     r = dates_reading("2018-03-11", dt.date(2018, 3, 11))
     assert r["status"] == "same_time" and r["days_apart"] == 0 and "wrong in at least one" in r["reading"]
+    # consecutive years: the documented gap is one day, and the reading also gives how far apart they start
+    r = dates_reading("2023-01-01/2023-12-31", "2022-01-01/2022-12-31")
+    assert r["status"] == "different_time" and r["days_apart"] == 1
+    assert "periods 1 day apart (their starts 365 days apart)" in r["reading"]
+    r = dates_reading("2017-09-15", "2018-04-19")
+    assert r["days_apart"] == 216 and "216 days apart:" in r["reading"] and "starts" not in r["reading"]
     r = dates_reading("2017-03-11", "2018-03-28T10:15:00")
     assert r["status"] == "different_time" and r["days_apart"] == 382 and r["b"] == "2018-03-28" and "changed on the ground" in r["reading"]
     r = dates_reading("2020-01-01/2020-12-31", "2021-01-01/2021-12-31")

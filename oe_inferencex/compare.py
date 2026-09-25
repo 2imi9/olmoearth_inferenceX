@@ -322,8 +322,13 @@ def dates_reading(date_a=None, date_b=None, labels_date=None):
     early, late = sorted((pa, pb))
     gap = (late[0] - early[1]).days
     if gap > 0:
+        # two periods are also said by how far apart they start: consecutive years are one day apart end to start,
+        # which read alone suggests two maps of the same time (the exp86 round 6 audit)
+        apart = f"{gap} day{'' if gap == 1 else 's'} apart"
+        if pa[0] != pa[1] or pb[0] != pb[1]:
+            apart = f"periods {apart} (their starts {(late[0] - early[0]).days} days apart)"
         out.update(status="different_time", days_apart=gap,
-                   reading=f"the maps describe {_iso(pa)} and {_iso(pb)}, {gap} days apart: a window where they differ either "
+                   reading=f"the maps describe {_iso(pa)} and {_iso(pb)}, {apart}: a window where they differ either "
                            "changed on the ground between them (seasonal cycles included) or is wrong in one map, and the "
                            "decisions alone cannot say which; a reference for each date separates the two")
     else:
