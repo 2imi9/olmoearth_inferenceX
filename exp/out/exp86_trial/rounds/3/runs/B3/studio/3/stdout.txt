@@ -1,0 +1,17 @@
+
+
+I compared your two 2025 runs over the shared PA Karst area (results `419c…f26b` = KarstBinary, `afb1…9ae8` = KarstNumber; 36-cell grid, 25 comparable cells, 11 dropped as no-data in either map):
+
+| Statistic | Value | Meaning here |
+|---|---|---|
+| Correlation | **−0.017** | The maps rise/fall independently — near-zero association |
+| Mean (score) | 0.10 | where KarstBinary scores ~10% average |
+| Mean (number) | 0.68 | where KarstNumber reads ~0.68 average |
+| Agreement within 0.1 | 0% | — but see caveat below |
+
+Key caveats:
+
+- **They measure different quantities.** KarstBinary outputs `sample_karst_score` (0–1); KarstNumber outputs `sample_number` (0.2–1.2). So the mean gap (~0.58), RMSE, and agreement fraction compare two different numbers and are **not** a valid "how much do they differ" metric — only the correlation (essentially none) is meaningful.
+- **Which is right cannot be answered from this comparison.** Both are per-pixel regression models with no ground-truth labels in the run, so the tool reports model-vs-model agreement only, never accuracy. To decide which is more accurate you'd need labeled karst samples, then use a label-sample plan (`plan_label_sample` → review windows → `estimate_map_error`) on each map separately.
+
+If you have (or can draw) labeled karst locations, I can set up that honest error-rate test for both maps.

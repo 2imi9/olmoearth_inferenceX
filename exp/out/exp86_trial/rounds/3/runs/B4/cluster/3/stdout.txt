@@ -1,0 +1,22 @@
+
+
+I loaded the run's full logits (16,384 valid windows, 128x128 grid, OlmoEarth-v1-FT-AWF-Base rev a347b154, 9 land-cover classes) and built your 300-label design. **No error rate exists yet** — the number comes only after you label the windows; here is what to do.
+
+**Design** (saved):
+- Type: `confidence` (stratified by logit margin; allocation stays unbiased whatever the model's calibration)
+- Population: all 16,384 valid windows; 0 nodata
+- Strata sizes: 3,277 / 3,277 / 3,276 / 3,277 / 3,277; labels allocated 106 / 79 / 47 / 34 / 34
+- Design file: `/Users/lucas/Desktop/Github/olmoearth_inferenceX/exp/out/exp86_trial/rounds/3/runs/B4/cluster/3/workspace/design_scores_8f3527f9_confidence_300_s0.json`
+- Label CSV (has each window's location): `design_scores_8f3527f9_confidence_300_s0_to_label.csv`
+
+**How to label**: for each of the 300 windows, in the CSV's order, set `wrong = 1` if the map's class is not the ground truth, else `0`. First rows look like this:
+
+| # | row, col | map class |
+|---|----------|-----------|
+| 0 | 0, 40 | 6 montane_forest |
+| 1 | 110, 40 | 4 grassland_barren |
+| 2 | 24, 108 | 2 shrubland_savanna |
+| 3 | 0, 85 | 2 shrubland_savanna |
+| 4 | 122, 47 | 2 shrubland_savanna |
+
+Fill the CSV (or send me the 300 wrong=0/1 values) and I'll call `olmoearth_estimate_map_error` to give you the error rate plus the interval this design earns. Note: this targeted design measures the whole map honestly, but if you also want a *certified* zone later, that requires a separate `random` design.

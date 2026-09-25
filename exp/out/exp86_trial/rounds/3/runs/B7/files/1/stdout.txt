@@ -1,0 +1,21 @@
+
+
+Comparison done: 1,570 of 78,028 windows differ (2.0%) between the Sept-2017 map and the Apr-2018 map.
+
+**Key numbers**
+
+| Measure | Value |
+|---|---|
+| Windows compared | 78,028 |
+| Differing windows | 1,570 (2.01%) |
+| Mean margin on A (Sept 2017) where they differ | 0.389 |
+| Mean margin on B (Apr 2018) where they differ | 0.158 |
+
+**Which is right?** Neither can be judged from these maps alone. The two maps describe dates 216 days apart, so a differing window may have genuinely changed on the ground (season included), or one map may be wrong — the scores don't resolve that. Even with confidence, the more confident side is only right ~51–70% of such windows upstream, so I'm declining to pick a winner. To separate real change from error you'd need a reference (labels or an independent product) dated to each acquisition.
+
+**Where they differ (top of list, by window)** — mostly scattered single-window flips plus dense patches, e.g.:
+- Rows ~1442–1449, cols 4–6: contiguous A=0/B=1 patch (high margins both sides, ~0.49 vs ~0.2–0.4)
+- Rows ~1134–1141, cols 6–12: mixed 0/1 flips, low margins on both sides (~0.03–0.18) — most suspect
+- Rows ~344–345 and ~1338–1340: other small clusters
+
+The full list has 1,570 windows; I've listed 50 here — say the word if you want all of them or a per-class breakdown.

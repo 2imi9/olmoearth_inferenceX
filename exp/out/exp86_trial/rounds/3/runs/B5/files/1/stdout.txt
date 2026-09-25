@@ -1,0 +1,9 @@
+
+
+Map error rate from your labelled design (300 windows of 15,813):
+
+- **Error rate: 19.4%** — 95% CI **[15.7%, 23.6%]**
+- Overall accuracy: ~80.6% (CI [76.4%, 84.3%])
+- Method: *stratified by confidence margin; Wilson interval on the design's effective sample size* (effective n ≈ 384)
+
+Per-class notes worth flagging: class 6 has only 45% user accuracy (the map over-predicts it, reference share just ~7.7%), and several rare classes have fewer than 30 labels so their per-class intervals are unreliable. Want me to break down which classes drive most of the errors?

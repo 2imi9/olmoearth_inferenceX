@@ -1,0 +1,20 @@
+
+
+## Comparison: F4 pre (Sep 2017) vs post (Apr 2018)
+
+**Where they differ:** 1,570 of 78,028 shared windows (~2.0%) flip between the two maps. On those windows map B (post) is notably less confident (mean margin 0.158 vs 0.389 for map A). Top examples:
+
+| Window | Row, Col | Class A | Class B | Margin A | Margin B |
+|---|---|---|---|---|---|
+| 4819 | 344, 3 | 1 | 0 | 0.026 | 0.371 |
+| 10106 | 721, 12 | 0 | 1 | 0.040 | 0.050 |
+| 20192 | 1442, 4 | 0 | 1 | 0.498 | 0.138 |
+
+(50 of 1,570 listed; I can list more or save a full window index if useful.)
+
+**Which one is right: I can't grade it, and that's the correct answer.** The maps are 216 days apart, so any differing window either changed on the ground (seasonality included) or is wrong in one map — the scores alone cannot separate those. Two concrete points from the run:
+
+- No reference labels were supplied for either date, so grading isn't even possible here.
+- Even with labels: published measurements show the more confident side is right on only ~51–70% of differing windows, so picking "the side with the bigger margin" (map A here) would not identify a winner.
+
+To resolve it you'd need a dated reference per period (e.g. photo-interpreted or expert-labeled windows for Sep 2017 **and** Apr 2018); then `olmoearth_classification_metrics` against each map separately tells you where each failed. Want me to plan such a label set?

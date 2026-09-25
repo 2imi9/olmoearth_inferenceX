@@ -1,0 +1,22 @@
+
+
+The run is `awf_namanga_2023_1042061` (model **allenai/OlmoEarth-v1-FT-AWF-Base**, rev `a347b15`, full pre-argmax logits, pooled to a **128x128 window grid = 16,384 windows**, all valid, date window 2023). I passed the scores file through olmoearth-inferencex's review-set machinery (not hand-sampled pixels).
+
+**Why these windows:** they rank lowest on the model's own confidence signal — the mean top-1 minus top-2 logit margin per window, label-fill channel excluded. Low margin means the model was torn between two classes there; across Ai2's 24-task suite this margin beats every no-model control at finding real errors, so low-margin windows are where review effort pays off most. Note: median margin over all windows is 4.47, so the listed ones sit at the extreme suspicious end.
+
+**Top 10 of the 819-window review budget (5%):**
+
+| Rank | Window (row, col) | Index | Predicted class | Margin | Boundary neighbours |
+|---|---|---|---|---|---|
+| 1 | (14, 29) | 1821 | woodland_forest | 0.108 | 4 |
+| 2 | (10, 41) | 1321 | montane_forest | 0.149 | 3 |
+| 3 | (23, 93) | 3037 | shrubland_savanna | 0.153 | 6 |
+| 4 | (7, 11) | 907 | woodland_forest | 0.162 | 8 |
+| 5 | (14, 5) | 1797 | montane_forest | 0.176 | 7 |
+| 6 | (2, 43) | 299 | montane_forest | 0.177 | 0 |
+| 7 | (19, 34) | 2466 | woodland_forest | 0.191 | 3 |
+| 8 | (46, 91) | 5979 | grassland_barren | 0.206 | 6 |
+| 9 | (19, 35) | 2467 | montane_forest | 0.214 | 7 |
+| 10 | (2, 40) | 296 | montane_forest | 0.216 | 4 |
+
+Caveats from the tool: this ranks suspicion, not calibrated error probability (capture is bounded by budget/error-rate), and the measured evidence is at window level on the OlmoEarth family. If you want, I can list more windows, switch to boundary-first ordering (8,823 windows touch class boundaries here), or plan a stratified label sample from this same design.

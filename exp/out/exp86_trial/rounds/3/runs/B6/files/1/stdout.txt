@@ -1,0 +1,19 @@
+
+
+**Short answer: none.** With your 300-label simple random sample, no share of the map can be certified as wrong at most 5% of the time.
+
+The exact test (rule "prefix", delta = 0.1, population of 15,813 windows) tested 18 zone sizes from the smallest feasible one up; not one passed:
+
+| Zone coverage | Labels inside | Wrong inside | Upper bound on error rate | Certified at 5%? |
+|---|---|---|---|---|
+| 15% (smallest testable) | 46 | 3 | 13.9% | ✗ |
+| 25% | 68 | 3 | 9.5% | ✗ |
+| 50% | 140 | 13 | 13.2% | ✗ |
+| 100% (whole map) | 300 | 69 | 26.4% | ✗ |
+
+Two caveats from the tool's output:
+
+- A zone needs at least **45 labels inside it** to be certifiable at alpha = 0.05, so with only 300 labels nothing below 15% coverage could even be tested — and that floor still fails.
+- The guarantee holds for an alpha fixed *before* seeing the labels; trying looser alphas until one certifies would not be covered by the same guarantee.
+
+So the honest statement you can make: the best-supported claim for the most-confident ~15% of the map is that its error rate is under ~13.9% (one-sided, failure probability ≤ 0.1), and for the whole map under ~26%. If you need a true "≤5% wrong" certified zone, you'd need more labels — roughly in the thousands — drawn as a fresh simple random sample. Want me to estimate how many additional labels would plausibly certify a 15–20% zone?

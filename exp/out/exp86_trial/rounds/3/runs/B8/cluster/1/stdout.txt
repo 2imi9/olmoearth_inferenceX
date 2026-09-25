@@ -1,0 +1,26 @@
+
+
+Loaded the run's scores (full logits from `C1/awf_namanga_2023_1042061`, model **OlmoEarth-v1-FT-AWF-Base**, 9 land-cover classes) into 128x128 = **16,384 windows** (all valid, no nodata), then ranked them for review at a **5% budget (819 windows)** using the package's confidence signal: the mean per-pixel **top-1 minus top-2 logit margin** over each window (lower margin = more suspect), with the label-fill channel excluded so windows rank on real classes only.
+
+**Top windows to check first**
+
+| Rank | Window (row, col) | Index | Predicted class | Margin | Boundary neighbours |
+|---|---|---|---|---|---|
+| 1 | (14, 29) | 1821 | woodland_forest | 0.108 | 4 |
+| 2 | (10, 41) | 1321 | montane_forest | 0.149 | 3 |
+| 3 | (23, 93) | 3037 | shrubland_savanna | 0.153 | 6 |
+| 4 | (7, 11) | 907 | woodland_forest | 0.162 | 8 |
+| 5 | (14, 5) | 1797 | montane_forest | 0.176 | 7 |
+| 6 | (2, 43) | 299 | montane_forest | 0.177 | 0 |
+| 7 | (19, 34) | 2466 | woodland_forest | 0.191 | 3 |
+| 8 | (46, 91) | 5979 | grassland_barren | 0.206 | 6 |
+| 9 | (19, 35) | 2467 | montane_forest | 0.214 | 7 |
+| 10 | (2, 40) | 296 | montane_forest | 0.216 | 4 |
+
+**Why these**
+
+- The median margin across all 16,384 windows is **4.47**; the 819-window cut falls at margin **0.994**, so everything listed sits in the extreme low-confidence tail — the model is essentially torn between two classes there.
+- Most top-ranked windows sit **on predicted class boundaries** (4–8 neighbouring windows of a different class, e.g. woodland/montane forest transitions), where confusion is expected; only window 299 (rank 6) is interior.
+- The margin signal is well supported: on Ai2's suite the model's own margin beats every no-model control and all rejected "shrug" signals (ensemble disagreement, cross-model disagreement, feature typicality, etc.) on every scored task.
+
+**Caveats**: this ranks *relative suspicion*, not calibrated error probability; capture at this budget is bounded by budget/error-rate, and 5,565+ windows still remain below the median but above the cut. If you want, I can plan an honest labeling sample from these scores (`olmoearth_plan_label_sample`) to estimate how wrong the map actually is.

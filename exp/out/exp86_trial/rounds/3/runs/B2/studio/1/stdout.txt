@@ -1,0 +1,17 @@
+
+
+I ranked the KarstBinary 2025 result (`419c581d`) on a 10x10 grid: 72 valid windows (28 no-data dropped), scored by distance of `sample_karst_score` from the 0.5 decision threshold — lowest margin first.
+
+**Check these first:**
+
+| Rank | Window (row, col) | Score | Class at 0.5 | Margin |
+|---|---|---|---|---|
+| 1 | (4, 7) | 0.352 | below | 0.2969 |
+| 2 | (4, 2) | 0.285 | below | 0.4307 |
+| 3 | (0, 5) | 0.745 | above | 0.4898 |
+| 4 | (1, 8) | 0.223 | below | 0.5536 |
+| 5 | (8, 5) | 0.808 | above | 0.6153 |
+
+Budgets: 1% → 1 window; 5% → 4; 10% → 7 (margin cut 0.7447). The other 65 windows sit well past threshold (margins 0.786–0.992) and come last.
+
+**Why this ordering:** for a [0,1] score band the tool treats s as P(positive) and ranks by margin |2s − 1|, so windows whose score sits nearest 0.5 are the least decided. This is suspicion ranking, not an error probability, and no calibration exists for this map specifically. It is also not a random sample — don't read its errors back as the map's error rate. If you want an honest error estimate next, I can run `olmoearth_plan_label_sample` on the saved scores file.

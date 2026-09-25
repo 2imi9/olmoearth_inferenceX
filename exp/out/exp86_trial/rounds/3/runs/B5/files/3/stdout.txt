@@ -1,0 +1,12 @@
+
+
+Your map's error rate (confidence design, 300 of 15,813 windows):
+
+| | Value |
+|---|---|
+| Error estimate | **19.4%** [95% CI 15.7–23.6] |
+| Overall accuracy | 80.6% [76.4–84.3] |
+| Method | Stratified by confidence margin; Wilson interval on effective sample size (effective n ≈ 384) |
+| Starved strata | 0 |
+
+Per-class notes: class 4 has high user accuracy (~96%) but producer accuracy ~80%; class 6 is the weak spot — the map overpredicts it (map share ~15.5% vs reference ~7.7%), with user accuracy only ~45%. Several rare classes (0, 2, 3, 5, 8) have too few labels for trustworthy per-class numbers.

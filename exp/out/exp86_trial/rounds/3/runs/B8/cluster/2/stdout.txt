@@ -1,0 +1,27 @@
+
+
+**Review set for `C1/awf_namanga_2023_1042061`** (OlmoEarth-v1-FT-AWF-Base, 2023, 128x128 = 16,384 windows)
+
+I read every pixel's pre-argmax logits from the run's raster, pooled them to windows, and ranked by the top-1 minus top-2 logit margin — lowest margin first. A 5% budget means **819 windows** to open; here are the top 10:
+
+| Rank | Window (row, col) | Index | Predicted class | Margin | Boundary neighbours |
+|---|---|---|---|---|---|
+| 1 | (14, 29) | 1821 | woodland_forest | 0.108 | 4 |
+| 2 | (10, 41) | 1321 | montane_forest | 0.149 | 3 |
+| 3 | (23, 93) | 3037 | shrubland_savanna | 0.153 | 6 |
+| 4 | (7, 11) | 907 | woodland_forest | 0.162 | 8 |
+| 5 | (14, 5) | 1797 | montane_forest | 0.176 | 7 |
+| 6 | (2, 43) | 299 | montane_forest | 0.177 | 0 |
+| 7 | (19, 34) | 2466 | woodland_forest | 0.191 | 3 |
+| 8 | (46, 91) | 5979 | grassland_barren | 0.206 | 6 |
+| 9 | (19, 35) | 2467 | montane_forest | 0.214 | 7 |
+| 10 | (2, 40) | 296 | montane_forest | 0.216 | 4 |
+
+**Why these:** each sits where the model itself is least decisive — the gap between its top two class scores is tiny (0.11–0.22 logit units vs. a map-wide median of ~4.47), so those pixels could flip class with little evidence change. Many also sit at predicted class boundaries (high neighbour counts), which is where cartographic mislabeling concentrates. Cluster zones worth prioritising: rows 2–19 cols ~5–43 (montane/woodland forest boundary zone) and row 46+ / row 112–113 col 35 (grassland patches).
+
+Caveats, per the tool's own evidence block:
+- This ranks **suspicion, not calibrated error probability**; capture is bounded by budget/error-rate.
+- Measured on the OlmoEarth family only; on one flood event a cheap physical control (NDWI) matched confidence, so consider running that alongside if any flooded areas exist here.
+- The label-fill channel (nodata_value_9) was excluded, so no window was ranked on spurious "nodata" votes.
+
+Want me to list all 819 windows, or plan a proper labelling design (`olmoearth_plan_label_sample`) to estimate the actual map error?

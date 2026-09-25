@@ -1,0 +1,17 @@
+
+
+I read both runs' full score rasters (same model, OlmoEarth-v1-FT-AWF-Base revision a347b154; 16,384 windows each, no nodata) and compared them window-by-window.
+
+**Where they differ**
+
+| Metric | Value |
+|---|---|
+| Windows differing | 3,807 / 16,384 (23.2%) |
+| Differing windows on a predicted class boundary | 78.3% |
+| Mean logit margin on differing windows, C1 (2023) / C2 (2022) | 2.66 / 3.19 |
+
+Most of the differences cluster along transitions: e.g. montane_forest vs woodland_forest across the top row (windows row 0, cols 3-33), grassland_barren vs shrubland_savanna, and several urban_dense_development votes in C1 where C2 shows open classes (e.g. indices 115, 125).
+
+**Which is right - I can't answer that, and neither map wins by confidence.** The maps describe different dates (C1 = 2023, C2 = 2022), so a differing window either changed on the ground between years (seasonality included) or one map is wrong there; the model scores alone cannot separate these. On measured evidence, the more-confident side is right on only ~51-70% of differing windows, so the modestly higher 2022 margin (3.19 vs 2.66) does not make C2 the winner. Cross-model disagreement has repeatedly been shown *not* to rank errors better than each model's own confidence.
+
+To actually settle it you need a reference per date: give me `labels_date` (or a dated ground-truth) and I'll re-run the comparison with grading, or I can design a small label sample (olmoearth_plan_label_sample) for you to label the most contested windows.

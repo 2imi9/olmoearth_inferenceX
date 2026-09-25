@@ -1,0 +1,12 @@
+
+
+Label plan ready for the run **C1/awf_namanga_2023_1042061** (model OlmoEarth-v1-FT-AWF-Base, 9 land-cover classes, grid 128x128 = 16,384 windows, all valid).
+
+| Step | Result |
+|---|---|
+| Scores loaded | logits pooled per window (patch 4 px), fill channel excluded |
+| Design | confidence-stratified, budget 300 of 16,384 (5 strata: 106 / 79 / 47 / 34 / 34) |
+| Design file | `design_scores_8f3527f9_confidence_300_s0.json` |
+| Labels CSV | `design_scores_8f3527f9_confidence_300_s0_to_label.csv` (each row has the window's location + map_class) |
+
+**How to proceed:** open the CSV in order and set `wrong = 1` where the mapped class is not what is on the ground, `reference_class` to the true class id (for per-class accuracy). Then send me the filled CSV (or the list of wrongs) and I'll run `estimate_map_error` to get the error rate with the interval this stratified design earns — don't use plain p +/- 1.96 sqrt(p(1-p)/n); that formula doesn't apply here.

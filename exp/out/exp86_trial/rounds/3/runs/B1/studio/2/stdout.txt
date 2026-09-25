@@ -1,0 +1,11 @@
+
+
+Your Studio account has three models you can run for predictions; two are fine-tuned, one is an embedding model:
+
+| Model | Type | Predicts |
+|---|---|---|
+| **KarstBinary** (ac1eb985) | fine-tuned | per-pixel regression — a value per pixel over PA karst features (2025 imagery), not a class probability |
+| **KarstNumber** (f67d97d9) | fine-tuned | per-pixel regression — a value per pixel over PA karst features (2025 imagery) |
+| **KarstEmbedding** (5aafb53d) | embeddings | frozen features rather than a per-pixel output — used for kNN/probe/clustering-style analysis, not direct mapping |
+
+Notes: all three already have completed runs in your "Karst Features in Pennsylvania" project, so any can be re-run on another area/time range. This list covers only your Studio account — Ai2 also publishes additional fine-tuned OlmoEarth models (task cards) that don't appear here, so I can't claim it's the complete catalog. Want me to kick off a new run with one of these?

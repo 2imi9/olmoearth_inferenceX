@@ -1,0 +1,28 @@
+
+
+Here's the review order for **KarstBinary--01-01-2025--12-31-2025--PA regular** (result `419c581d…f26b`, band `sample_karst_score`, declared range [0,1]).
+
+**How it was ranked:** the 10×10 grid gave 100 windows, 72 valid (28 dropped as no-data). Each score s is read as P(karst) at threshold 0.5, so its margin is |2s − 1|. Windows with the *smallest* margin — i.e., where the model is least decided between karst and not-karst — are opened first, because that is where an error would most likely change the map.
+
+**Check these first** (5% budget = 4 windows; 10% = 7):
+
+| Rank | Window (row, col) | Index | Score | Called | Margin |
+|---|---|---|---|---|---|
+| 1 | (4, 7) | 47 | 0.352 | not karst | 0.297 |
+| 2 | (4, 2) | 42 | 0.285 | not karst | 0.431 |
+| 3 | (0, 5) | 5 | 0.745 | karst | 0.490 |
+| 4 | (1, 8) | 18 | 0.223 | not karst | 0.554 |
+| 5 | (8, 5) | 85 | 0.808 | karst | 0.615 |
+| 6 | (2, 8) | 28 | 0.167 | not karst | 0.666 |
+| 7 | (1, 3) | 13 | 0.872 | karst | 0.745 |
+
+All other 65 windows have margins ≥ 0.786 (median 0.965) — the model is strongly decided there.
+
+**Why this signal:** upstream evaluation showed the model's own margin beat every no-model control (embedding distance, second-model disagreement, feature typicality) on all 24 tested tasks, so lowest-margin-first is the best available ordering without labels.
+
+**Caveats:**
+- These margins rank relative suspicion; they are *not* probabilities of being wrong.
+- A review set is deliberately targeted, so it is not a random sample — don't divide its errors by 72. If you want an honest error rate for the map, pass the saved scores file to a label-sample design (I can run that next).
+- Scores + window locations are saved at `…/B2/studio/2/workspace/scores_419c581d…_g10.json` for the reviewer.
+
+Want me to also flag boundary-window priority or set up the labeling design?

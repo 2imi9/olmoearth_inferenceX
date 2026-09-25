@@ -1,0 +1,17 @@
+
+
+Review set computed for the KarstBinary 2025 result (`419c581d…f26b`, band `sample_karst_score`).
+
+**Why these first:** the band is a [0, 1] score decided at 0.5, so each window is read as `[1-s, s]` and ranked by margin = distance from 0.5. Windows whose score sits nearest 0.5 are the model's *least decided* calls, so they're opened first; confident windows (s near 0 or 1) come last. Of 72 valid windows (28 no-data dropped), the median margin is 0.96 vs a low of 0.30 — this map is broadly decisive, and the bottom of the list stands out.
+
+**Check these first** (row, col in a 10x10 grid, row 0 north):
+
+| Rank | Window | Row, Col | Score | Side of threshold | Margin |
+|---|---|---|---|---|---|
+| 1 | #47 | 4, 7 | 0.352 | negative | 0.297 |
+| 2 | #42 | 4, 2 | 0.285 | negative | 0.431 |
+| 3 | #5 | 0, 5 | 0.745 | positive | 0.490 |
+| 4 | #18 | 1, 8 | 0.223 | negative | 0.554 |
+| 5–7 | #85, #28, #13 | 8/2/1 row | 0.81 / 0.17 / 0.87 | mixed | 0.62–0.74 |
+
+Caveats: margins rank suspicion only — they are not error probabilities, and this review set is not a sample (its error rate overstates the map's). To actually measure how wrong the map is, run a label-budget design next — I saved the scores file and can plan a proper sampling scheme if you want.

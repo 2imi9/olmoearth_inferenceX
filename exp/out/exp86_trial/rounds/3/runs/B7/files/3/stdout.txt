@@ -1,0 +1,17 @@
+
+
+Compared both score files on their shared window set (same windows, as you said).
+
+**Where they differ**
+- 78,028 windows total; **1,570 differ (2.0%)**, mostly class 0 vs 1 disagreements in a handful of contiguous clusters (e.g. the row 344-345 block, rows 1065-1068, rows 1442-1449).
+- On those differing windows, map A's mean margin is 0.389 vs map B's 0.158 - A is the more confident side, but per the measured evidence, the more-confident side is right only on 51-70% of such windows, so confidence does not pick a winner here.
+
+**Which is right**
+- Not resolvable from these two maps alone. They describe different times (2017-09-14/15 vs 2018-04-19, 216 days apart), so a differing window may have genuinely changed on the ground (season included) or be wrong in one map - the scores can't separate those cases. No `labels_date` was given, so grading isn't possible even with labels.
+
+| | A (Sep 2017) | B (Apr 2018) |
+|---|---|---|
+| Role | pre-flood period | post period |
+| Mean margin on differing windows | 0.389 | 0.158 |
+
+To actually grade them you'd need a reference for each date (photo-interpreted labels or another dated product), then I can run the head-to-head grading (`olmoearth_grade_review_rule`) against the model-margin baseline. If you have labels covering either date, share them and I'll proceed.

@@ -1,0 +1,20 @@
+
+
+Both runs loaded as full-window logit files (128x128 grid, same model OlmoEarth-v1-FT-AWF-Base, same area). Here is the comparison:
+
+**Where they differ**
+- **3,807 of 16,384 windows differ = 23.2%**
+- **78.3% of the differing windows sit on predicted class boundaries**, so most disagreement is boundary placement rather than wholesale mismatch
+- The dominant pattern is along the top edge (row 0): C1 says **montane_forest** where C2 says **woodland_forest** (windows 3–49), plus scattered grassland_barren/shrubland_savanna swaps (e.g. windows 95, 103, 117) and urban/forest swaps at cols 107, 115
+- On the differing windows, C2 (2022) is on average more confident (mean margin 3.19 vs 2.66 for C1/2023)
+
+**Which is right**
+✗ This cannot be graded, and that's not an evasion:
+1. The two maps describe **different years** (2022 vs 2023), so a difference may simply be real ground change (seasonal cycles included) — there is no single "right" answer per window.
+2. No labels were provided, and none were given for either date. Without a reference for each date, change-vs-error is unresolvable. Measured upstream, the more confident side is right on only ~51–70% of differing windows, so picking the higher-margin map is a bad rule anyway.
+
+**To actually decide**, give me either:
+- labels for one of the dates → I plan a label sample (`olmoearth_plan_label_sample`) and estimate each map's error rate, or
+- labels dated to either year → `olmoearth_compare_review` will split true change from map errors.
+
+If you just want to know which windows to eyeball first, I can build a confidence-ranked review set from either run instead.

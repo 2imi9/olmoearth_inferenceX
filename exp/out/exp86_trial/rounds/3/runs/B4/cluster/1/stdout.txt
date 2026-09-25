@@ -1,0 +1,13 @@
+
+
+Your 300-label budget is now planned as a **confidence-stratified sampling design** over the run's full 128×128 window grid (16,384 windows, all valid, 9 AWF land-cover classes) — that design gives an unbiased error-rate estimate with the matching interval, which a plain "check the shakiest windows first" review set would not (it would overstate errors).
+
+| Item | Value |
+|---|---|
+| Model | `allenai/OlmoEarth-v1-FT-AWF-Base`, revision `a347b15` (matches manifest) |
+| Windows | 16,384 valid, 4 px patch, 9 classes |
+| Design | confidence-stratified, 300 labels, seed 0 (strata 3277/3277/3276/3277/3277 → allocation 106/79/47/34/34) |
+| Design file | `.../B4/cluster/1/workspace/design_scores_8f3527f9_confidence_300_s0.json` |
+| Labels CSV | same folder, `design_scores_8f3527f9_confidence_300_s0_to_label.csv` (holds each window's location) |
+
+**Next step:** open the CSV, set `wrong = 1` where the map class disagrees with the ground truth (and optionally `reference_class`), then send me back the 0/1 list (or the filled CSV). I'll run `olmoearth_estimate_map_error` on it and report the map's error rate with the design's proper interval. Note I have no ground-truth labels yet, so I cannot quote an error number until you return them.

@@ -1,0 +1,18 @@
+
+
+Compared both 2025 PA Karst predictions on their shared extent (~10,091 km²). One important caveat up front: **they output different properties**, so most "difference" stats are not directly comparable — only how they move together is meaningful.
+
+| Metric | Value | Meaning |
+|---|---|---|
+| Correlation | 0.4974 (91 cells) | Weak-to-moderate: karst score and number tend to rise/fall together |
+| Cells compared / dropped | 91 / 53 | Half the grid is no-data in at least one map |
+| Mean A (score) / B (number) | 0.096 / 0.691 | Different units — not a "gap" between models |
+| RMSE / agreement fraction | reported but not interpretable | Mixing two quantities |
+
+**Where they differ:** per the tool's own warning, the mean difference, RMSE and agreement fraction mix two quantities, so I won't quote them as a discrepancy. The honest statement: the two maps agree spatially only moderately (r = 0.497), with substantial no-data mismatch (53/144 sampled cells missing from one side).
+
+**Which is right?** I can't say from these tools alone — neither model has ground-truth labels attached, and cross-model agreement is not accuracy. To settle it:
+1. Provide ground-truth karst labels (pixel/class lists) and I'll run `olmoearth_classification_metrics` for accuracy, precision/recall per class.
+2. Or plan a targeted labeling effort (`olmoearth_plan_label_sample`) so your N field labels give an honest per-map error rate.
+
+Want me to set up option 2, or do you have label data ready?

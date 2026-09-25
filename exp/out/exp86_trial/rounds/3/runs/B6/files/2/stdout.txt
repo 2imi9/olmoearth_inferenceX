@@ -1,0 +1,15 @@
+
+
+**Short answer: none.** With your 300 random labels, no share of the map can be certified as wrong at most 5% of the time (exact test, rule "prefix", delta = 0.1).
+
+| Best-tested zone | Window count | Labels inside | Wrong | Upper bound on error rate | Certified? |
+|---|---|---|---|---|---|
+| Top-15% most confident | 2,372 | 46 | 3 | ~13.9% | No |
+| Top-25% most confident | 3,953 | 68 | 3 | ~9.5% | No |
+| Whole map | 15,813 | 300 | 69 | ~26.4% | No |
+
+Key points:
+
+- A zone needs at least **45 labels inside it** to be certifiable at alpha = 0.05, so the smallest testable zone was 15% of the map; its error upper bound (~13.9%) is still far above 5%.
+- The map-wide estimate is ~23% wrong (69/300), so a 5%-error zone would require either a much smaller, more confident region than your data resolves, or the true high-confidence region just doesn't exist at that scale.
+- Practical options: label **more windows** (a larger random sample certifies smaller zones), or fix a looser alpha *before* looking at results (e.g. "at most ~14% wrong") if you can live with it — but don't pick an alpha after seeing these bounds, the guarantee doesn't cover that.

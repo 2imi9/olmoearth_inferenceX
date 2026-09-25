@@ -1,0 +1,17 @@
+
+
+Labeled-plan ready. The KarstBinary 2025 map (prediction `dd504793`, result `419c581d`) is a per-pixel regression band `sample_karst_score`; for labeling I treat it as a [0,1] score decided at 0.5. Your 300-label budget exceeds what this Studio result allows, so the plan uses all 173 valid windows — the full coverage available here.
+
+| Item | Value |
+|---|---|
+| Design | confidence-stratified, 16x16 grid, seed 0 |
+| Valid windows | 173 of 256 sampled (83 no-data, dropped) |
+| Strata | 5 margin strata, allocated 35/34/35/34/35 |
+| Label file | `design_419c581d-9a1_8ca17d7d_confidence_173_s0_to_label.csv` (in workspace dir) |
+| Design path | `…/studio/3/workspace/design_419c581d-9a1_8ca17d7d_confidence_173_s0.json` |
+
+How to proceed:
+
+- In the CSV, set **wrong = 1** where the map class (`map_class`: 0 = at/below threshold, 1 = above) does not match the ground, else 0; optionally add `reference_class` for per-class accuracy.
+- Send me the filled CSV (or the 173-value list) and I'll run `olmoearth_estimate_map_error` to report the error rate with the interval that design earns.
+- Caveats: the score only allocates labels (estimate stays unbiased); the rate describes the map at these 173 grid-cell points, not every pixel; and if you ever need a certified zone, that requires a `random` design instead. If you want the whole-raster population (not just the sampled grid), we'd do a direct model run read via `olmoearth_scores_from_file`.

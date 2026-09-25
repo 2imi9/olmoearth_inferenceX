@@ -1,0 +1,9 @@
+
+
+This map's error rate is **19.4% [15.7%, 23.6%]** (95% CI).
+
+- Design: confidence, 300 labelled windows out of a 15,813-window population
+- Method: stratified by confidence margin; Wilson interval on the design's effective sample size (effective n ≈ 384)
+- Overall accuracy correspondingly ~80.6% [76.4%, 84.3%]
+
+Per-class detail (if useful): the biggest problem class is 6 — the map calls it in ~15.5% of windows but user accuracy there is only ~45% (intervals wide, few labels), while classes 4 and 7 are well handled (~96% and ~92%). Many rare classes have too few labelled windows for trustworthy per-class numbers. Want me to expand the per-class table?

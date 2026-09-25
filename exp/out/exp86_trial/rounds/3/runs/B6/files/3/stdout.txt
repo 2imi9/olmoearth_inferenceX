@@ -1,0 +1,20 @@
+
+
+Short answer: none. With these 300 random labels, no share of the map certifies as wrong at most 5% of the time (rule `prefix`, delta = 0.1).
+
+**Overall map error** (from your simple random sample, n = 300 of 15,813 windows):
+- Estimate: **23%** wrong, 95% interval **[18.4%, 28.1%]**
+- Method: exact hypergeometric interval (simple random sample of a finite map)
+
+**Certification at alpha = 0.05 — every tested zone rejected:**
+
+| Zone (top-confident share) | Labels inside | Wrong inside | Upper bound | Accepted |
+|---|---|---|---|---|
+| 15% (smallest testable) | 46 | 3 | 13.9% | ✗ |
+| 25% | 68 | 3 | 9.5% | ✗ |
+| 50% | 140 | 13 | 13.2% | ✗ |
+| 100% (whole map) | 300 | 69 | 26.4% | ✗ |
+
+Even the best-15% slice contains 3 wrong windows out of 46 labelled ones, putting its exact upper bound near 13.9% — well above the 5% bar. Stricter rules (bonferroni) would only reject more.
+
+Note the guarantee applies to an alpha fixed *before* seeing the labels, so I did not re-test at looser thresholds. To certify anything, you'd need more random labels concentrated where the map is most confident (currently only 46 labels sit inside the top-15% slice). If you want, I can plan a targeted follow-up random sample focused on the high-confidence regions.

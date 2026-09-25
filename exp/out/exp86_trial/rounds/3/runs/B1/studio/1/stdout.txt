@@ -1,0 +1,12 @@
+
+
+Your Studio account has two fine-tuned models, both regression (a value per pixel, not a class probability or confidence):
+
+| Model | Predicts | Output range | Recent run |
+|---|---|---|---|
+| **KarstBinary** (`ac1eb985`) | `sample_karst_score` — karst likelihood score per pixel | 0.0 – 1.0 | "KarstBinary--...PA regular" (completed) |
+| **KarstNumber** (`f67d97d9`) | `sample_number` — per-pixel value | 0.2 – 1.2 | "KarstNumber--...PA regular" (completed) |
+
+There is also a third model, **KarstEmbedding**, but it is an embeddings model, not a fine-tuned predictor.
+
+Note: this listing covers your Studio account only. Ai2 also publishes additional fine-tuned OlmoEarth models (project configurations / task cards) that don't appear here. Say the word and I can submit a run with either model over a given area and date range.

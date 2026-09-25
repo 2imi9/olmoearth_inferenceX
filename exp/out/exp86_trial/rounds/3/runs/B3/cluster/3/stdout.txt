@@ -1,0 +1,16 @@
+
+
+Compared all 16,384 windows (128x128 grid, patch 4px) between the two runs — same fine-tuned model (OlmoEarth-v1-FT-AWF-Base, revision a347b15), but different date windows: C1 = 2023, C2 = 2022.
+
+**Where they differ**
+
+| | |
+|---|---|
+| Windows differing | 3,807 of 16,384 (**23.2%**) |
+| Mostly located | on class boundaries — 78.3% of differing windows touch a predicted boundary (53.9% overall) |
+| Typical split | montane_forest vs woodland_forest, e.g. along the north row (windows 3–25): C1 says montane_forest, C2 says woodland_forest |
+| Confidence on differing windows | mean margin C1 (2023) 2.66, C2 (2022) 3.19 — C2 is slightly more confident where they disagree |
+
+**Which is right — I have to decline that part.** These maps describe different years, so a difference in a window can be either real ground change over that year (seasonal cycles included) or an error in one map; the logits alone cannot separate the two, and no reference/labels_date was given, so even with labels the package would not grade one side without a dated reference. Upstream evidence in the result: on the confident-vs-unconfident question, the more confident side turns out right only 51–70% of the time — not enough to pick a winner by confidence.
+
+To settle it you'd need one dated reference per window (e.g., photointerpretation or labels for 2022 and 2023 separately); then I can run the comparison with `labels_date` and grade each side. Alternatively, if your goal is "where did land cover change between 2022 and 2023", the boundary-clustered disagreement list above is the starting review set — I can hand you the full list of the 3,807 windows.

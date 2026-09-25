@@ -1,0 +1,12 @@
+
+
+I set up the labeling design for the KarstBinary 2025 map (result `419c581d-9a10-4684-aba5-1bab2875f26b`, band `sample_karst_score`).
+
+**Why 173 labels, not 300:** Studio results can be sampled on at most a 16x16 grid; after dropping 83 no-data cells only **173 valid windows** exist, so the design covers all of them (a census of the sampled points — any more labels would need the raw scores raster from a direct model run via `olmoearth_scores_from_file`).
+
+**Your task:**
+- Design file: `/Users/lucas/Desktop/Github/olmoearth_inferenceX/exp/out/exp86_trial/rounds/3/runs/B4/studio/2/workspace/design_419c581d-9a1_8ca17d7d_confidence_173_s0.json`
+- Fill-in sheet: `..._to_label.csv` (holds each window's location; open windows there)
+- For each row set `wrong = 1` if the map's call is not what's on the ground, else `0` (`map_class`: 0 = score ≤ 0.5, 1 = score > 0.5)
+
+Send me the filled list (or path) and I'll call `olmoearth_estimate_map_error` to get the error rate with the interval this stratified design earns.

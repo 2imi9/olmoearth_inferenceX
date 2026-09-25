@@ -1,0 +1,15 @@
+
+
+Your Studio account has **3** models; two are fine-tuned predictions you can run directly:
+
+| Model | Type | Predicts |
+|---|---|---|
+| **KarstBinary** | fine_tuned | per-pixel regression (a karst-likelihood value per pixel, not a class or confidence) |
+| **KarstNumber** | fine_tuned | per-pixel regression (same, separate target/label field) |
+| KarstEmbedding | embeddings | frozen features only — no per-pixel prediction output |
+
+Notes:
+- "per_pixel_regression" means each model outputs a continuous value at every pixel, not a probability or accuracy score.
+- This list covers **your account only**. Ai2 also publishes additional fine-tuned OlmoEarth models (via `olmoearth_projects` task cards) that don't appear here.
+
+Want me to run one over your PA Karst AOI, or look up the published (Ai2) models?

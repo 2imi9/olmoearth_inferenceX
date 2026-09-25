@@ -1,0 +1,14 @@
+
+
+Both predictions are completed and I compared them over your PA Karst area (shared extent ~10,091 km²), sampled on a 6x6 grid:
+
+- **Different properties, not the same quantity**: KarstBinary outputs `sample_karst_score` (0–1); KarstNumber outputs `sample_number` (0.2–1.2). So only their co-variation is meaningful.
+- **They barely agree spatially**: correlation **-0.017** across the 25 valid cells; 11 of 36 cells dropped as no-data in at least one map. Means differ by design (A ≈ 0.10, B ≈ 0.68), but per the tool's warning those figures don't measure a gap between the maps.
+
+| Item | Value |
+|---|---|
+| Cells compared / dropped | 25 / 11 (no-data) |
+| Correlation (A vs B) | -0.0172 (essentially none) |
+| RMSE / agreement fraction | 0.618 / 0.0 (not meaningful across properties) |
+
+**Which is right:** I can't say. This is model-vs-model agreement with no ground truth — neither output has labels in your Studio account, so accuracy/verified change isn't resolvable from these two maps alone. To settle it you'd need labeled karst samples for part of the AOI; I can then design a label-budget plan and compute real error rates per model. Want me to set that up?

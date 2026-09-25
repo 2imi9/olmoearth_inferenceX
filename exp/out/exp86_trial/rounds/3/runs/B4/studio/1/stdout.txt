@@ -1,0 +1,21 @@
+
+
+Design built. Two constraints worth knowing before you label:
+
+| Item | Value |
+|---|---|
+| Map | KarstBinary 2025, prediction `dd504793...`, result `419c581d...` |
+| Band / decision | `sample_karst_score` in [0,1] at 0.5 (class 0 = below, 1 = above) |
+| Grid | 16x16 (Studio max); 256 points sampled, **173 valid**, 83 no-data dropped |
+| Budget you offered | 300 → capped at **173** (the whole valid population) |
+| Design | Stratified by confidence margin (35/34/35/34/35); design-unbiased estimate |
+
+To use your full 300 on the whole map (every pixel window), I would instead need the scores raster + manifest from a direct model run (read via `olmoearth_scores_from_file`) — say the word if you have one.
+
+Next step: fill in the label CSV below, `wrong` = 1 where the map's class is not on-the-ground truth, else 0 (optionally `reference_class` = true class id for per-class accuracy):
+
+```
+/Users/lucas/Desktop/Github/olmoearth_inferenceX/exp/out/exp86_trial/rounds/3/runs/B4/studio/1/workspace/design_419c581d-9a1_8ca17d7d_confidence_173_s0_to_label.csv
+```
+
+Once filled, paste back the `wrong` list (or point me at the saved file) and I'll compute the error rate with its proper interval via `olmoearth_estimate_map_error`. A note: this estimates the error rate over the valid windows of the grid-sampled population, not every pixel of the AOI.
