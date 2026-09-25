@@ -139,7 +139,7 @@ def test_the_brief_values_fill_the_preregistered_briefs_with_fixtures():
 @built
 def test_f1_is_the_fixture_the_plan_describes():
     payload = json.load(open(os.path.join(TRIAL, "fixtures", "F1", "dw_scores.json")))
-    z = np.load(fx.DW)
+    z = np.load(fx.dw_tile())
     reference = z["expert"].astype(int).ravel()[payload["windows"]]
     facts = fx.f1_facts(payload, reference)
     assert {k: (tuple(v) if k == "tie_at_cut" else v) for k, v in facts.items() if k in fx.PLAN_F1} == fx.PLAN_F1
@@ -149,7 +149,7 @@ def test_f1_is_the_fixture_the_plan_describes():
 
 @built
 def test_the_sheets_are_the_designs_windows_labelled_by_the_expert():
-    z = np.load(fx.DW)
+    z = np.load(fx.dw_tile())
     expert = z["expert"].astype(int).ravel()
     meta = json.load(open(os.path.join(TRIAL, "trial.json")))
     for tag, design in (("F2", "confidence"), ("F3", "random")):

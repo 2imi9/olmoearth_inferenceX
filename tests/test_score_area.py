@@ -50,14 +50,16 @@ def linear_stub(crops):
 
 
 def _cli(*args):
+    # the entry point of the Python running the tests first: it is the package under test, installed or editable
+    # (the release check runs the suite against the wheel, where `uv run` has no project to run in)
+    exe = os.path.join(os.path.dirname(sys.executable), "oe-inferencex")
     uv = shutil.which("uv")
-    if uv:
+    if os.path.exists(exe):
+        cmd = [exe, *args]
+    elif uv:
         cmd = [uv, "run", "--no-sync", "oe-inferencex", *args]
     else:
-        exe = os.path.join(os.path.dirname(sys.executable), "oe-inferencex")
-        if not os.path.exists(exe):
-            pytest.skip("neither uv nor the oe-inferencex entry point is on this machine")
-        cmd = [exe, *args]
+        pytest.skip("neither the oe-inferencex entry point nor uv is on this machine")
     return subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT, timeout=300)
 
 

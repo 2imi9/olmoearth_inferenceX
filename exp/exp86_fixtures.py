@@ -55,7 +55,6 @@ EXP_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(EXP_DIR)
 TRIAL = os.path.join(EXP_DIR, "out", "exp86_trial")
 MODEL = "nvidia/Qwen3.8-27B-NVFP4"
-DW = os.path.join(ROOT, "oe_inferencex", "sample", "dynamic_world_tile.npz")
 EXP60 = os.path.join(EXP_DIR, "out", "exp60_masks.npz")
 EVENT = "EMSR279-11"
 BUDGET, SEED = 300, 0
@@ -88,6 +87,13 @@ _ACQ = re.compile(r"(?P<tile>[A-Za-z0-9]+-\d+-\d+)_s1grd_(?P<pas>pre|post)_(?P<t
 #: otherwise, because the fixtures would then not be the preregistered ones.
 PLAN_F1 = {"n_windows": 15813, "n_left_out": 571, "review_cut": 791, "tie_at_cut": (1, 3), "error_rate": 0.193}
 PLAN_F3 = {"coverage_at_0.05": None, "coverage_at_0.25": 0.9}
+
+
+def dw_tile():
+    """The Dynamic World sample tile the package ships, installed or in this repository (imported here, not at the
+    top, so that importing this module does not choose which oe_inferencex a later check sees)."""
+    from oe_inferencex import demo
+    return demo.SAMPLE
 
 
 def sha256_file(path):
@@ -140,7 +146,7 @@ def f1_facts(payload, reference):
 
 
 def build_f1(fixtures):
-    z = np.load(DW)
+    z = np.load(dw_tile())
     meta = json.loads(str(z["meta"]))
     probs = z["probs"].astype(np.float32).astype(np.float64)       # the float16 values, exactly
     payload, reference = f1_payload(probs, z["expert"].astype(np.int64), meta["classes"])
