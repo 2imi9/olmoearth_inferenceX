@@ -1,0 +1,17 @@
+
+
+Your map's error rate (confidence design, 300 labelled of 15,813 windows):
+
+- **Error rate: 19.4%** [95% CI 15.7%, 23.6%]
+- Method: stratified by confidence margin; Wilson interval on the design's effective sample size (effective n ≈ 384)
+
+Per-class highlights (from the 9-class confusion table):
+
+| Class | Map share | User accuracy | Notes |
+|---|---|---|---|
+| 7 | 45.1% | 92.3% | best class |
+| 4 | 32.8% | 96.4% (producer: 80.1%) | map over-maps it vs reference (45.8%) |
+| 6 | 15.5% | 45.1% | biggest problem area — map calls it wrongly in ~half of cases |
+| others | small shares | — | flagged "few labels", wide intervals |
+
+Caveats: per-class figures rest on <30 labelled windows for most classes, so trust only the overall rate. Want a certified zone or a re-labeling plan focused on class 6?

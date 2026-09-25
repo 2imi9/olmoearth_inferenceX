@@ -1,0 +1,25 @@
+
+
+I ran the direct-run scores through `olmoearth-inferencex` (`assess_prediction`, patch=4): 16,384 windows, all valid, no nodata; model `OlmoEarth-v1-FT-AWF-Base` @ rev a7c40be9, raster hash matches the manifest. The review set ranks by each window's mean **top-1 minus top-2 logit margin** (label-fill channel excluded) — lowest margin = most suspect, because the model is least committed to its predicted class there.
+
+## Windows to check first (5% budget: 819 of 16,384 windows; top 10 shown)
+
+| Rank | Window (row, col) | Index | Predicted class | Margin |
+|---|---|---|---|---|
+| 1 | (14, 29) | 1821 | woodland_forest | 0.108 |
+| 2 | (10, 41) | 1321 | montane_forest | 0.149 |
+| 3 | (23, 93) | 3037 | shrubland_savanna | 0.153 |
+| 4 | (7, 11) | 907 | woodland_forest | 0.162 |
+| 5 | (14, 5) | 1797 | montane_forest | 0.176 |
+| 6 | (2, 43) | 299 | montane_forest | 0.177 |
+| 7 | (19, 34) | 2466 | woodland_forest | 0.191 |
+| 8 | (46, 91) | 5979 | grassland_barren | 0.206 |
+| 9 | (19, 35) | 2467 | montane_forest | 0.214 |
+| 10 | (2, 40) | 296 | montane_forest | 0.216 |
+
+Most of the top ranks sit on or next to predicted-class boundaries (ranks 1–5 have 3–8 boundary neighbours), which reinforces the reading.
+
+## Why this ranking, and what it does not say
+
+- **Why**: margins here are tiny compared with the map-wide median of 4.47 — the top 819 windows end at margin 0.994, i.e. orders of magnitude less confident than a typical window. On Ai2's published suite the model's own margin beat every no-model control (ensemble disagreement, feature typicality, cross-model disagreement) on all 24 scored tasks, so this is the validated ordering for where to look.
+- **Not**: an error rate or calibrated probability. This ranks *relative suspicion*, and capture at a fixed budget is bounded by budget/error-rate. If you want an honest estimate of how wrong this map is, I can run `olmoearth_plan_label_sample` (e.g. confidence vs random design) against these same scores, then score your labels with `olmoearth_estimate_map_error`. Say the word and how many labels you can spend.

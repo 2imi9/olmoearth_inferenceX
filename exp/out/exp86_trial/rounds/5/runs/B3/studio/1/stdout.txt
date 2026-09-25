@@ -1,0 +1,18 @@
+
+
+**Comparison done.** Both 2025 predictions for PA Karst are complete; I compared them on their shared extent (~10,091 km²):
+
+| Item | Value |
+|---|---|
+| KarstBinary band | `sample_karst_score`, range 0–1 |
+| KarstNumber band | `sample_number`, range 0.2–1.2 |
+| Cells compared | 25 of 36 (11 dropped as no-data in either map) |
+| Correlation | −0.0172 (essentially none) |
+
+**Where they differ:** these two maps measure *different quantities* — a per-pixel karst score vs. a per-pixel number value — so the comparison engine only reports how much they rise/fall together, not a difference map. Across the sampled area they do not track each other at all (near-zero correlation), meaning the two models disagree essentially everywhere rather than just in patches.
+
+**Which is right:** I can't answer that — no ground-truth labels exist for this area, so neither accuracy nor agreement can be established. What I can do next:
+- run **olmoearth_plan_label_sample** to design where you should label N windows, then estimate each model's error rate honestly; or
+- if you already have labeled data, pass it in and I'll compute per-model accuracy / F1.
+
+Want me to set up the labeling plan?

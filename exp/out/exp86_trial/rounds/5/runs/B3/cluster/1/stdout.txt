@@ -1,0 +1,17 @@
+
+
+Both runs were parsed into full score files (same model revision `OlmoEarth-v1-FT-AWF-Base@a347b15`, 128x128 window grid, 16,384 windows, no no-data), and compared over their shared area.
+
+**Where they differ**
+
+| Metric | Value |
+|---|---|
+| Differing windows | 3,807 of 16,384 (23.2%) |
+| On predicted class boundaries | 78.3% of differing windows (53.9% overall) |
+| Mean margin on differing windows | C1 (2023): 2.66, C2 (2022): 3.19 |
+
+The dominant difference pattern in the top of the list is **montane_forest (C1) vs woodland_forest (C2)** along row 0, cols 3-30 - e.g. window index 3, row 0 col 3, where C2's margin there is only 0.56 (low confidence) while C1 is high (3.95).
+
+**Which is right: I can't tell, and that's the defensible answer.** The maps describe different years (2022 vs 2023), so any differing window either genuinely changed on the ground between the seasons or is wrong in one map - the scores alone cannot separate those two readings. No reference labels were provided, so grading is impossible even in principle here; upstream measurements also show the more-confident side is right on only about 51-70% of differing windows, so picking by confidence isn't valid either.
+
+If you have dated ground truth (or imagery/reference per year), I can grade both maps against it (`labels_date` in the comparison, or per-map error estimation via a label sampling plan) and tell you which side wins where. Otherwise, I can flag the most suspect differing windows (lowest margins) as a review set for you to check.

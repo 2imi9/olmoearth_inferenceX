@@ -1,0 +1,15 @@
+
+
+For the KarstBinary 2025 result (`result_id 419c581d`, band `sample_karst_score`), I ranked all 144 grid windows by how undecided the model is — the score (declared [0,1], decided at 0.5) is treated as P(positive) **for ranking only**, and each window's margin |2s − 1| is its distance from the decision. Lowest margin = opened first. 91 windows were valid; 53 no-data samples were dropped.
+
+**Check first (top 5 of 9 at a ~10% budget):**
+
+| Rank | Window (row, col) | Score | Predicted | Margin |
+|------|-------------------|-------|-----------|--------|
+| 1 | (4, 9) idx 57 | 0.494 | karst ≤ 0.5 | 0.012 |
+| 2 | (5, 10) idx 70 | 0.478 | karst ≤ 0.5 | 0.045 |
+| 3 | (9, 9) idx 117 | 0.563 | karst > 0.5 | 0.126 |
+| 4 | (10, 8) idx 128 | 0.595 | karst > 0.5 | 0.190 |
+| 5 | (3, 3) idx 39 | 0.390 | karst ≤ 0.5 | 0.219 |
+
+**Why:** the tool orders by relative suspicion, not calibrated error probability — these are the windows closest to the 0.5 decision boundary, where the map is least certain. Evidence backing this ordering: on Ai2's published embedding suite (24 tasks, 6.4M graded units), the model's own margin beat every no-model control on all 24, while ensemble/cross-model disagreement and feature-typicality signals were rejected. Caveats: this is *not* a sample — its error rate overstates the map's (1.8–5.8x upstream), so don't quote an error rate from it. The scores file was saved for the next step; if you want to estimate how wrong the map actually is, I can run `olmoearth_plan_label_sample` on it.

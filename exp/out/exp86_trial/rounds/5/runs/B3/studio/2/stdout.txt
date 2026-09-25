@@ -1,0 +1,19 @@
+
+
+I compared the two completed 2025 predictions in your project **"Karst Features in Pennsylvania"** (project id `56b6e1f0-bc02-4d33-bf27-c43a0bd4e6b8`). Key finding: they are **different quantities**, so there is no like-for-like "difference" map.
+
+**What was compared** (pair mode, cross-model, 6x6 grid over the shared extent, ~10,091 km²):
+
+| Item | KarstBinary (`sample_karst_score`) | KarstNumber (`sample_number`) |
+|---|---|---|
+| Result id | `419c581d-9a10-4684-aba5-1bab2875f26b` | `afb1cf68-8be3-4b7e-a0d1-ceb7c9739ae8` |
+| Predicted range | 0.0 – 1.0 (per-pixel score) | 0.2 – 1.2 (per-pixel value) |
+| Mean over 25 compared cells | 0.10049 | 0.681763 |
+
+**Where they differ:** because the two bands measure different things, no per-cell difference, RMSE, or agreement fraction is defined or reported — computing one would mix two quantities. The only meaningful joint statistic is how they co-vary: **correlation = -0.0172** across 25 cells, i.e. essentially none — the two surfaces rise and fall almost independently over the area. Additionally, **11 of 36 sampled cells had no-data in at least one map** and were excluded (this is the main spatial mismatch between the two outputs).
+
+**Which is right:** I can't say — neither result has ground-truth labels, so this is model-vs-model agreement, not accuracy, and "right" requires reference labels. Note also the models predict different targets (a binary-style karst score vs a numeric karst quantity), so even with labels they'd be graded on different criteria.
+
+If you want, I can next:
+- grade both models against your labeled karst samples (classification metrics / error-rate estimate), or
+- produce a review-set window list for each result showing where each model is least confident, so field verification goes where it counts.

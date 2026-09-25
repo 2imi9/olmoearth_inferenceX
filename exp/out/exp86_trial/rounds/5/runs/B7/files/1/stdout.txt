@@ -1,0 +1,21 @@
+
+
+Compared both score files with `olmoearth_compare_review` (dates registered as map A = 2017-09-14/15, map B = 2018-04-19).
+
+**Where they differ**
+
+| Metric | Value |
+|---|---|
+| Windows compared | 78,028 |
+| Differing windows | 1,570 |
+| Share differing | ~2.0% |
+| Mean margin of A on differing windows | 0.389 |
+| Mean margin of B on differing windows | 0.158 |
+
+The first 50 differing windows are listed by index/row-col in the tool output if you want the specifics.
+
+**Which side is right: not resolvable from these two maps.**
+
+The dates block explains why: the maps are **216 days apart**, so a differing window either changed on the ground between them (seasonal cycles included) or one map is wrong there — and the predictions alone cannot separate those two cases. This is also true even if labels existed but weren't tied to a date (`labels_date` was not given), since the same window can be "right" at one date and wrong at another.
+
+To actually grade sides, give me a reference label set with its own date (e.g. photointerpretation or ground labels from near 2018-04-19 vs. 2017-09), and I'll re-run the comparison with `labels_date` to split real change from per-map error.

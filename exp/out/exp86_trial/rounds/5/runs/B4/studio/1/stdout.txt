@@ -1,0 +1,14 @@
+
+
+The KarstBinary 2025 map (result `419c581d`) is a per-pixel regression band decided at 0.5, and a Studio result caps out at a 16×16 sampling grid — that gives **256 candidate points, 173 valid** (83 no-data). So your 300-label budget exceeds the max; I built the design at the full 173, which means labelling all of them (a census of the sampled population, not a subsample):
+
+| Item | Value |
+|---|---|
+| Design | confidence-stratified (least-decided windows first), 5 strata |
+| Budget | 173 of 173 valid windows |
+| Label file | `design_419c581d-..._confidence_173_s0_to_label.csv` (window locations + order inside) |
+| Design path | `design_419c581d-9a1_8ca17d7d_confidence_173_s0.json` |
+
+To finish: for each window in order, set `wrong = 1` if the map class (0 = below threshold, 1 = above) disagrees with the ground there, else `0`. Then hand me back the 0/1 list (or the filled CSV) and I'll run `olmoearth_estimate_map_error` — don't use the plain p ± 1.96√(p(1-p)/n) interval, since this is a stratified design.
+
+Two caveats: the error rate describes the map at those 173 grid points, not every pixel. If you need the whole-raster population (so all 300 labels matter), that requires the model's scores raster from a direct run via `olmoearth_scores_from_file` — tell me if you want that route instead.

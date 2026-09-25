@@ -1,0 +1,15 @@
+
+
+The KarstBinary 2025 map (prediction `dd504793`, result `419c581d`, band `sample_karst_score`, range [0, 1]) was sampled on a 12x12 grid: 91 valid windows (53 no-data dropped). A reviewer should open the windows where the score is closest to the 0.5 decision — that's the model's least-decided output, and margin-based ranking is what beats no-model controls in the evidence behind this tool (not probabilities of error).
+
+Check first (top 5 at ~5% budget, margin cut 0.219):
+
+| Rank | Window (row, col) | Index | Score | Margin | Read |
+|------|-------------------|-------|-------|--------|------|
+| 1 | (4, 9) | 57 | 0.494 | 0.012 | essentially undecided; predicted class 0 |
+| 2 | (5, 10) | 70 | 0.478 | 0.045 | just under threshold; class 0 |
+| 3 | (9, 9) | 117 | 0.563 | 0.126 | just over threshold; class 1 |
+| 4 | (10, 8) | 128 | 0.595 | 0.190 | near threshold; class 1 |
+| 5 | (3, 3) | 39 | 0.390 | 0.219 | below threshold; class 0 |
+
+Why these: each is within ~0.22 of the decision boundary, so one small data change flips its label — exactly where mislabels concentrate. The other 86 windows have margins from 0.26 to 0.99 (median 0.964), i.e. confidently scored and lower priority. Caveat: this ranks suspicion, not error probability; if you also want an honest estimate of how wrong the whole map is, use the saved scores file to plan a proper label sample rather than treating this review set as one.

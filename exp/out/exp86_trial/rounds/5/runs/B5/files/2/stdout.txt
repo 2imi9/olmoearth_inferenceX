@@ -1,0 +1,9 @@
+
+
+Your map's error rate is **19.4%** — estimate **0.1938** with a 95% interval of **[0.1574, 0.2362]** (half-width 0.0394).
+
+- Design: `confidence` (300 labelled windows out of a population of 15,813), effective n ≈ 384.1, no starved strata
+- Method (as returned): "stratified by confidence margin; Wilson interval on the design's effective sample size"
+- Per-class detail: classes 4 and 7 dominate and are well estimated; several minor classes have warnings for few labels (< 30 labelled windows), so their per-class intervals are wide and should not be trusted individually
+
+If you'd like, I can expand into the full per-class accuracy table (user/producer accuracy and confusion counts) next.

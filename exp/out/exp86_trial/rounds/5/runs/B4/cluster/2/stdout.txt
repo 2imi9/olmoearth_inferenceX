@@ -1,0 +1,14 @@
+
+
+The run loaded cleanly: 16,384 valid 4-px windows on a 128x128 grid, 9 land-cover classes, logits pooled per window by olmoearth-inferex v1.3.0. I designed your 300-label budget as a **confidence-stratified sample** (not random): windows are ranked by the model's own top-1 minus top-2 logit margin, so the most suspect windows get labelled first while the estimate stays unbiased for the whole map.
+
+| Item | Value |
+|---|---|
+| Population | 16,384 windows (all valid, no nodata) |
+| Design | confidence, 5 strata, allocation 106 / 79 / 47 / 34 / 34, seed 0 |
+| Design file | `.../workspace/design_scores_8f3527f9_confidence_300_s0.json` |
+| Label CSV | `.../workspace/design_scores_8f3527f9_confidence_300_s0_to_label.csv` |
+
+First five windows to check (in order): #40 at row 0/col 40 (map says montane_forest), #14120 at row 110/col 40 (grassland_barren), #3180 at row 24/col 108 (shrubland_savanna), #85 at row 0/col 85 (shrubland_savanna), #15663 at row 122/col 47 (shrubland_savanna).
+
+To finish: in the CSV (which holds each window's location), set `wrong = 1` when the map's class isn't what's on the ground there, else `0`, and optionally the true class id in `reference_class`. Send me the filled CSV or just the 300 0/1 values in order, and I'll run `olmoearth_estimate_map_error` to give you the error rate with the interval this design earns (a targeted review set is not a plain random sample, so that simple p +/- formula does not apply here). Note a certified zone would need `design='random'` instead.

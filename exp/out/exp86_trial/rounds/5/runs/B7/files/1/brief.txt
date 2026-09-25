@@ -1,0 +1,1 @@
+Map A (F4/emsr279-11_s1_pre.json) describes 2017-09-14/2017-09-15 and map B (F4/emsr279-11_s1_post.json) describes 2018-04-19; they cover the same windows. Compare them: where do they differ, and which is right?

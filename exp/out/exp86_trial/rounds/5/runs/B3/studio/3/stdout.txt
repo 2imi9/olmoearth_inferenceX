@@ -1,0 +1,16 @@
+
+
+Compared both completed 2025 predictions on the PA Karst project. Key finding: they measure **different quantities**, so a direct "where they differ" map doesn't exist.
+
+| Item | KarstBinary | KarstNumber |
+|---|---|---|
+| Result id | `419c581d…f26b` | `afb1cf68…9ae8` |
+| Property | `sample_karst_score` (0.0–1.0) | `sample_number` (0.2–1.2) |
+| Model type | fine_tuned, per-pixel regression | fine_tuned, per-pixel regression |
+| Mean over shared grid | 0.10049 | 0.681763 |
+
+**How they relate:** sampled on a 6x6 grid over the shared extent (~10,091 km²); 25 cells compared, 11 dropped as no-data in either map. Correlation between the two bands: **-0.0172** — essentially zero, i.e. they do not rise and fall together. Because the bands are different quantities, no difference/RMSE/agreement statistics are meaningful, and the tool correctly refused them.
+
+**Which is right:** neither can be declared right from this comparison alone — there is no ground-truth label set here, so model-vs-model agreement is not accuracy, and since the outputs aren't even the same quantity, the low correlation doesn't establish that either is wrong. It does suggest they are capturing different signals (a binary-style karst score vs. a count-like number).
+
+If you want a verdict, tell me how many windows you can review and I'll generate labeled review sets from each map, then compute an error rate per map with `olmoearth_plan_label_sample` + `olmoearth_estimate_map_error`.

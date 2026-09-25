@@ -1,0 +1,15 @@
+
+
+**Review order for KarstBinary 2025 (result `419c581d`)** — sampled on a 12x12 grid, 91 valid windows (53 no-data dropped). The band is a [0, 1] score decided at 0.5, so the reviewer should open the **least-decided windows first** (score nearest 0.5 = lowest margin); those are where the model is most likely wrong:
+
+| Rank | Window (row, col) | Score | Margin | Predicted class |
+|---|---|---|---|---|
+| 1 | 57 (4, 9) | 0.494 | 0.012 | 0 |
+| 2 | 70 (5, 10) | 0.478 | 0.045 | 0 |
+| 3 | 117 (9, 9) | 0.563 | 0.126 | 1 |
+| 4 | 128 (10, 8) | 0.595 | 0.190 | 1 |
+| 5 | 39 (3, 3) | 0.390 | 0.219 | 0 |
+
+**Why these first:** margins sort suspicion — window 57 sits almost exactly on the decision boundary (0.494), so flipping one sample would flip its label; ranks 1–5 cover roughly a 5% review budget. For context, the median margin across all 91 windows is 0.964, i.e. most of the map is confidently far from the threshold, which is exactly why the low-margin tail is worth looking at.
+
+Caveats from the tool: scores near 0.5 are treated as P(positive) for ranking only — they are not error probabilities. This set is a priority list, not a random sample, so its error rate overstates the map's; if you want an honest error estimate, I can pass the saved scores file (`scores_..._g12.json`) to `olmoearth_plan_label_sample`. Want me to set that up?

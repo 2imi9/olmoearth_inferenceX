@@ -1,0 +1,16 @@
+
+
+No part of the map can be certified as wrong at most 5% of the time.
+
+With your 300 random-sample labels (`design_random_300_s0.json` + `labels_random_300_s0.csv`), the exact-test certification (rule `prefix`, alpha=0.05, delta=0.1) found **0 accepted zones** across all 18 tested coverages:
+
+| Level | Zone size | Labels in zone | Wrong in zone | Upper bound | Certified |
+|---|---|---|---|---|---|
+| 15% (smallest testable) | 2,372 windows | 46 | 3 | 13.9% | ✗ |
+| 30% | 4,744 | 88 | 7 | 13.0% | ✗ |
+| 50% | 7,906 | 140 | 13 | 13.2% | ✗ |
+| 100% (whole map) | 15,813 | 300 | 69 | 26.4% | ✗ |
+
+Why it fails: the whole map runs ~23% wrong (69/300), and even the most confident quarter stays well above the 5% bar. Note the guarantee requires alpha fixed before seeing the labels — relaxing alpha after the fact isn't covered by it.
+
+Options if you want a certified zone: collect many more random labels (each zone needs ≥45 inside), tighten the map (better model / threshold), or lower the target error rate to match reality. Want me to re-certify at a different alpha or plan a larger label budget?

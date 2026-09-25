@@ -1,0 +1,12 @@
+
+
+**No part of the map can be certified.** With your simple-random design (`F3/design_random_300_s0.json`, 300 labels) and the exact-test certification (alpha = 5%, delta = 10%, prefix rule), zero of the 18 tested levels passed:
+
+| Zone share | Labels in zone | Wrong | Upper error bound | Accepted? |
+|---|---|---|---|---|
+| 15% (smallest testable) | 46 | 3 | 13.9% | no |
+| 25% | 68 | 3 | 9.5% | no |
+| 50% | 140 | 13 | 13.2% | no |
+| 100% (whole map) | 300 | 69 | 26.4% | no |
+
+Even the most confident 15% of windows (a zone must hold at least 45 labels to be testable) has a certified upper bound of **13.9%**, well above the 5% bar — so no sub-area meets "wrong at most 5% of the time." The whole map's observed error is ~23% (69/300), so the data simply don't support a 5%-certified zone; more labels would be needed before any slice qualifies.

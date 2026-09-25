@@ -1,0 +1,15 @@
+
+
+**Design done.** One catch first: 300 labels isn't reachable from this Studio result — the sampling grid caps at 16×16, and on the default 10×10 grid only **72 windows are valid** (28 dropped as no-data). So the design covers **all 72**, which means the resulting error rate describes the map at those sampled points rather than being an estimate from a smaller random subset.
+
+| Item | Value |
+|---|---|
+| Result | `419c581d-9a10-4684-aba5-1bab2875f26b` (KarstBinary 2025, band `sample_karst_score`) |
+| Design | confidence-stratified, 5 strata (sizes 15/14/14/14/15), seed 0 |
+| Population | 72 valid windows on a 10×10 grid |
+| Labels CSV | `.../workspace/design_419c581d-9a1_b7fa23e4_confidence_72_s0_to_label.csv` |
+| Design file | `.../design_419c581d-9a1_b7fa23e4_confidence_72_s0.json` |
+
+One assumption to keep in mind: the band is read as a [0, 1] score decided at 0.5, so class 0 = below threshold, 1 = above; the ranking is by distance from 0.5, not a probability of error.
+
+**Next step:** open each window's location in the CSV in order and set `wrong = 1` when the mapped class is not what's on the ground (else 0; optionally add `reference_class`). Send me the completed CSV (or the list of 0/1 values) and I'll run `olmoearth_estimate_map_error` to give you the map's error rate with the interval this design earns.

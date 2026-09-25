@@ -1,0 +1,21 @@
+
+
+Compared both runs (same model `allenai/OlmoEarth-v1-FT-AWF-Base`, revision `a347b154`, 128x128 window grid, 16,384 valid windows each; C1 = 2023 imagery, C2 = 2022).
+
+**Where they differ**
+
+| Metric | Value |
+|---|---|
+| Windows differing | 3,807 of 16,384 (23.2%) |
+| Share of differences on predicted class boundaries | 78.3% |
+| Mean top-1/2 logit margin among differing windows (C1 / C2) | 2.66 / 3.19 |
+
+A typical difference looks like montane_forest (class 6) in the 2023 map vs woodland_forest (class 0) in the 2022 map, e.g. windows at rows 0, cols 3-8 (indices 3-8). Differences concentrate where the two maps disagree about which vegetation class covers a patch - most sit right on a boundary between predicted classes, which is exactly where the model is least decisive.
+
+**Which is right?** I can't tell, and the honest answer is "undecidable here":
+
+- The two maps describe **different time periods** (2022 vs 2023), so any window that differs may simply have changed on the ground between them (seasonal cycles included) - the disagreement itself cannot separate real change from a wrong map.
+- No ground-truth labels dated to one of the periods were supplied, so there is nothing to grade against.
+- Even as a tiebreaker, confidence does not pick a winner: the higher-margin side (here the 2022 run) is right on only 51-70% of differing windows in upstream measurements, so favoring C2 would be guessing.
+
+To resolve it, supply a labeled reference for one date (then compare_review with `labels_date` can grade each differing window), or interpret the shared area as land-cover change detection over 2022-2023 instead of a right/wrong question. Want me to set up the label sample for that?

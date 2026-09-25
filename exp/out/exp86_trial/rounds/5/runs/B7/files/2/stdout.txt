@@ -1,0 +1,15 @@
+
+
+Compared both score files over their shared windows; here's what the tool found.
+
+**Where they differ**
+- 78,028 windows total; **1,570 differ (2.0%)**.
+- Mean model margin on the differing windows: map A = 0.389, map B = 0.158 — so B (post) is generally less confident there.
+- The listed differences cluster in a few blocks, e.g. rows ~344–345 (A says class 1, B says class 0) and rows ~1442–1449 cols 4–6 (A says class 0, B says class 1); only the first 50 of 1,570 are listed above.
+
+**Which is right**
+Not resolvable, and that's the correct answer rather than a guess:
+- The maps describe dates **216 days apart** (2017-09-14/15 vs 2018-04-19), so a differing window either changed on the ground between them (seasonal cycles included) or is wrong in one map.
+- No `labels_date` was given, so even with labels the tool could not grade a side. A reference dated to each acquisition period is what would separate real change from error.
+
+Bottom line: expect genuine between-date change plus some misclassification; to pin down which, you'd need ground references for the Sep 2017 and Apr 2018 dates. Want me to walk through the full differing-window list or set up a graded comparison if you can supply labels?

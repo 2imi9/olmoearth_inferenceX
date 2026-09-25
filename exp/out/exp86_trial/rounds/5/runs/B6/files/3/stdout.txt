@@ -1,0 +1,25 @@
+
+
+**Short answer: none.** With these 300 random labels, no share of the map passes certification at α = 0.05 (δ = 0.1, rule `prefix`). The tool refused every tested level, so I can't claim any part of this map is wrong at most 5% of the time.
+
+Key numbers from the test:
+
+| Zone (top-confidence share) | Windows in zone | Labels inside | Wrong | Upper bound @ δ=0.1 | Certified? |
+|---|---|---|---|---|---|
+| 15% (smallest testable) | 2,372 | 46 | 3 | 13.9% | no |
+| 30% | 4,744 | 88 | 7 | 13.0% | no |
+| 50% | 7,906 | 140 | 13 | 13.2% | no |
+| 100% (whole map) | 15,813 | 300 | 69 | 26.4% | no |
+
+Why this failed:
+
+- **Minimum label count:** a zone needs ≥ 45 labels to be certifiable at α = 0.05, δ = 0.1, so nothing below 15% coverage could even be tested with 300 labels.
+- **The whole map looks ~23% wrong** (69/300), and even the top-15% zone's bound (~13.9%) is far above 5%. Unless accuracy varies strongly by model confidence, more labels won't easily produce a ≤5% zone — the data suggest the best achievable zone is roughly in the low-teens %.
+
+Options:
+
+1. **Label more windows** under another simple-random design (`olmoearth_plan_label_sample`, design=`random`) — e.g. 1,000+ labels — and re-run certification.
+2. **Accept a higher α** (the guarantee must be fixed before seeing labels, so pick it deliberately, e.g. α = 0.15) — the 15–30% zones already clear such a bar comfortably.
+3. Treat the top-15% zone as your **most trustworthy region** descriptively (only 3/46 observed wrong), understanding that is an estimate, not a certified guarantee.
+
+Want me to plan a larger random labeling round or re-test at a different α?

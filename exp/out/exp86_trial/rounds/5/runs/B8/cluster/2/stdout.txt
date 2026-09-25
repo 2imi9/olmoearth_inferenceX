@@ -1,0 +1,19 @@
+
+
+## Review set for `C1/awf_namanga_2023_1042061`
+
+I read the full pre-argmax scores from the run's raster via `olmoearth_scores_from_file` (model **OlmoEarth-v1-FT-AWF-Base**, 9 land-cover classes, 128x128 = 16,384 windows, zero no-data) and ranked them with `olmoearth_review_set` at a 5% budget (819 windows to check first, lowest margin first).
+
+**Top windows a reviewer should open:**
+
+| Rank | Window | Predicted class | Margin |
+|---|---|---|---|
+| 1 | #1821 (row 14, col 29) | woodland_forest | 0.108 |
+| 2 | #1321 (row 10, col 41) | montane_forest | 0.149 |
+| 3 | #3037 (row 23, col 93) | shrubland_savanna | 0.153 |
+| 4 | #907 (row 7, col 11) | woodland_forest | 0.162 |
+| 5 | #1797 (row 14, col 5) | montane_forest | 0.176 |
+
+**Why these:** each window's ranking score is the mean top-1 minus top-2 logit margin over its pixels (label-fill channel excluded), lower = more suspect. These sit far below the median margin of 4.47 and near the floor of 0.108 - the model is nearly tied between its two favourite classes there. Two patterns stand out in the top of the list: forest boundaries (woodland_forest vs montane_forest, most flagged windows border other predicted classes) and grassland_barren windows further down where the margin creeps up past 0.2. The 5% budget cut lands at margin 0.994, so everything above it is the 819-window review queue.
+
+**Caveat:** this ranks *suspicion*, not error probability - it tells you what to look at first, not how wrong the map is. If you want an error rate, pass this scores file to `olmoearth_plan_label_sample` to design an honest label budget. Say the word and I'll do that or expand the listing beyond the top 5.

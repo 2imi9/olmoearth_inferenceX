@@ -1,0 +1,15 @@
+
+
+Compared all 16,384 shared windows between the two runs (C1 = 2023 imagery, C2 = 2022 imagery, same OlmoEarth-v1-FT-AWF-Base model).
+
+**Where they differ**
+| | |
+|---|---|
+| Windows compared | 16,384 (128 x 128 grid, 4 px windows) |
+| Different argmax class | 3,807 (share 0.232361) |
+| Differing windows on a class boundary | 0.782506 share |
+| Mean margin on differing windows | A (C1/2023): 2.66326; B (C2/2022): 3.185611 |
+
+Differences cluster mostly **at class boundaries**, dominated by **montane_forest (class 6) vs woodland_forest (class 0)** near row 0 (north edge), plus agriculture_settlement vs urban_dense_development and grassland_barren/shrubland_savanna swaps elsewhere. The full list is in the scores files under `.../workspace/scores_run_..._p4.json` (window indices, not coordinates).
+
+**Which is right: not gradable.** The two maps describe different years (2023 vs 2022), so any differing window is either real ground change (including seasonal cycle) or an error in one map, and these scores alone cannot tell which. Upstream evidence: on differing windows, the more confident side is right only ~51–70% of the time, so neither map's higher average margin makes it the winner. If you have reference labels dated to each year (e.g., photo-interpreted tiles or WorldCover for each period), give me the dates and I can re-run the comparison with `labels_date` set, or label-sample the discrepancies honestly.

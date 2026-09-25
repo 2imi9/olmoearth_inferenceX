@@ -1,0 +1,19 @@
+
+
+**Map error rate (confidence design, 300 of 15,813 windows):**
+
+| Statistic | Value |
+|---|---|
+| Error rate estimate | **~19.4%** (0.1938) |
+| 95% interval | **[0.1574, 0.2362]** |
+| Overall accuracy | ~80.6% |
+| Effective n | 384.1 |
+| Method | Stratified by confidence margin; Wilson interval on the design's effective sample size |
+
+Key caveats from the per-class table:
+
+- **Class 6 is the big problem**: map share ~15.5% but only ~45% user accuracy — much of it the map calls class 6 wrongly (producer accuracy still ~87%).
+- Class 7 (~45% of the map) is solid at ~92% user / ~91% producer accuracy.
+- Classes 1, 2, 5, 8 have few labels (<30); their intervals are wide and not trustworthy.
+
+The rate is for the design's population windows, so this ~19.4% applies to the whole map under the stated method — don't substitute a simple random-sample formula for the interval. Want me to look into the class-6 errors next?

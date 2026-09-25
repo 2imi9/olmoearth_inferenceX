@@ -1,0 +1,20 @@
+
+
+The plan is ready. One catch: your 300-window budget exceeds what this Studio result can support — at most **173** labels can be planned from it.
+
+**Labeling plan for the KarstBinary 2025 map**
+
+| Item | Value |
+|---|---|
+| Map | `KarstBinary--01-01-2025--12-31-2025--PA regular` (score band `sample_karst_score`) |
+| Design | confidence-stratified, decision threshold 0.5 (weakest-confidence windows opened first) |
+| Labelable windows | **173** (16×16 = 256 sample points, 83 no-data dropped) |
+| Budget used | 173 of your 300 |
+| Design file | `design_419c581d-9a1_..._confidence_173_s0.json` |
+| Labels CSV | `design_419c581d-9a1_..._to_label.csv` (window locations + order included) |
+
+For each window, set `wrong = 1` when the mapped class (0 = below 0.5, 1 = above) doesn't match the ground, else `0` — fill the CSV or send me the list, and I'll run `olmoearth_estimate_map_error` to give you the error rate plus the interval this stratified design actually earns.
+
+Notes:
+- The remaining labels stay unused here because a Studio result's population tops out at its grid. If you want more of the map covered, we'd need the model's raw scores raster read through `scores_from_file` instead.
+- A certified zone would require re-running with `design='random'`; say the word and I'll regenerate.

@@ -1,0 +1,17 @@
+
+
+Scored the run (OlmoEarth-v1-FT-AWF-Base, 16,384 valid windows on a 128x128 grid, no nodata) and set up a **confidence-stratified** sampling design for your 300 labels.
+
+| Item | Value |
+|---|---|
+| Design | confidence (5 strata by margin), budget 300 |
+| Population | 16,384 windows, majority-class grade |
+| Allocation per stratum | 106 / 79 / 47 / 34 / 34 |
+| To-label CSV | `...B4/cluster/3/workspace/design_scores_8f3527f9_confidence_300_s0_to_label.csv` |
+| Design file | `design_scores_8f3527f9_confidence_300_s0.json` |
+
+How to finish:
+1. For each of the 300 windows in the CSV's order, set `wrong = 1` if the map's class (`map_class`) doesn't match the ground, else `0`. Optionally add the true class id (`reference_class`) for per-class accuracy.
+2. Send me the filled list (or path) and I'll call `olmoearth_estimate_map_error` — it returns the error rate with the interval this stratified design actually earns (not a plain p ± 1.96 formula).
+
+Want me to re-list any window's row/col or map class while you label?

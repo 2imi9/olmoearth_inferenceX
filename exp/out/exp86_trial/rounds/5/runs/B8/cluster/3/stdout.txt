@@ -1,0 +1,22 @@
+
+
+Done. I pooled every pixel's pre-argmax logits from the run (`C1/awf_namanga_2023_1042061`, model OlmoEarth-v1-FT-AWF-Base rev `a347b15`, 2023 imagery) into 16,384 windows on a 128x128 grid, then ranked them by the mean top-1 minus top-2 logit margin (lowest first = most suspect).
+
+**At a 5% review budget (819 of 16,384 windows), check these first:**
+
+| Rank | Window (row, col) | Index | Predicted class | Margin | Boundary neighbours |
+|---|---|---|---|---|---|
+| 1 | (14, 29) | 1821 | woodland_forest | 0.108 | 4 |
+| 2 | (10, 41) | 1321 | montane_forest | 0.149 | 3 |
+| 3 | (23, 93) | 3037 | shrubland_savanna | 0.153 | 6 |
+| 4 | (7, 11) | 907 | woodland_forest | 0.162 | 8 |
+| 5 | (14, 5) | 1797 | montane_forest | 0.176 | 7 |
+| 6 | (2, 43) | 299 | montane_forest | 0.177 | 0 |
+| 7 | (19, 34) | 2466 | woodland_forest | 0.191 | 3 |
+| 8 | (46, 91) | 5979 | grassland_barren | 0.206 | 6 |
+| 9 | (19, 35) | 2467 | montane_forest | 0.214 | 7 |
+| 10 | (2, 40) | 296 | montane_forest | 0.216 | 4 |
+
+**Why this order:** a small top-1 vs top-2 margin means the model itself was torn between two classes there, so those are where errors concentrate. For reference, the median margin across all windows is 4.47 and the budget cut-off is 0.994, so anything below ~1.0 is worth looking at; 8,823 of the windows sit next to a predicted class boundary (mismaps cluster there too).
+
+**Caveats:** this ranks relative suspicion, not calibrated error probability; and no no-data pixels were found, so nothing was dropped. If you later label a sample of these, I can compute the true error rate and interval for the map. Want me to list more of the 819, or switch to boundary-first ordering?
