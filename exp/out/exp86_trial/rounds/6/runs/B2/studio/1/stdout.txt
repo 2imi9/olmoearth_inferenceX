@@ -1,0 +1,16 @@
+
+
+I ranked the KarstBinary 2025 result (result `419c581d…`, band `sample_karst_score`) on a 10x10 grid — 72 of 100 cells valid (28 no-data dropped). A reviewer should open the least-decided windows first, i.e. scores nearest the 0.5 decision:
+
+**Top 4 at a 5% budget:**
+
+| Rank | Window (row, col) | Index | Score | Margin | Why first |
+|---|---|---|---|---|---|
+| 1 | (4, 7) | 47 | 0.352 | 0.297 | Closest to the 0.5 cut — model barely "below karst" |
+| 2 | (4, 2) | 42 | 0.285 | 0.431 | Weakly below threshold |
+| 3 | (0, 5) | 5 | 0.745 | 0.490 | Weakly above threshold |
+| 4 | (1, 8) | 18 | 0.223 | 0.554 | Below threshold but near it |
+
+At a 10% budget add windows (8,5), (2,8) and (1,3) (indices 85, 28, 13; margins 0.615–0.745).
+
+**Why this ordering:** The score is treated as P(karst) for ranking only (stated assumption), so margin = distance from 0.5, and the model's own confidence is what ranks these — measured to beat every no-model control (feature typicality, ensemble disagreement, etc.) in Ai2's published suite. These are relative-suspicion rankings, not error probabilities; 65 unlisted windows have margins 0.786–0.992, meaning the model is nearly certain there. If you later want an actual error-rate estimate, pass the saved scores file to `olmoearth_plan_label_sample` rather than using this review set as a sample.

@@ -1,0 +1,13 @@
+
+
+Compared `F4/emsr279-11_s1_pre.json` (Sep 14–15, 2017) against `F4/emsr279-11_s1_post.json` (Apr 19, 2018) over their shared windows.
+
+**Where they differ**
+- Total windows: 78,028; differing: **1,570 (2.0%)**
+- Class flips are mostly 1→0 or 0→1 along cluster edges (e.g., windows ~4819–4834 at row 344–345, ~20192–20207 at row 1442–1443 have near-zero margins on one side)
+
+**Which is right**
+- Not determinable, and that is the correct answer: the maps are 216 days apart, so any differing window either changed on the ground (seasonal cycle included) or one map is wrong — the two decisions alone cannot separate those cases.
+- As a weak hint only: B (post) is usually the more confident side (mean margin 0.158 vs A's 0.389 on differing windows is inverted — B tends to hold high-margin calls where A is near its decision boundary), but confidence ranks suspicion, it does not pick a winner (the more-confident side is right only ~51–70% of such windows upstream).
+
+**To resolve it** you'd need a ground-truth reference dated for each acquisition (labels_date per map), after which I can grade each side's errors. Alternatively, treat the 1,570 windows as the candidate change set and review them directly — say the word and I'll build a review plan for them.

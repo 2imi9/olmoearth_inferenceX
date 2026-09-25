@@ -1,0 +1,17 @@
+
+
+**No part of the map can be certified wrong ≤5% of the time with these labels.**
+
+| Check | Result |
+|---|---|
+| Map size / labels | 15,813 windows / 300 labelled (design_random_300_s0.json + labels CSV) |
+| Certification target | α = 0.05, δ = 0.1, rule `prefix` |
+| Smallest testable zone | 15% of the map (needs ≥45 labels; c_min = 0.15) |
+| Outcome at that level | 46 labels inside, 3 wrong, p = 0.803 → upper bound ≈ 0.1387 > 0.05, rejected |
+| All 18 tested coverages (15%–100%) | every one rejected; 0 zones accepted |
+
+So even the most-confident 15% of the map fails: its own exact upper bound at δ = 0.1 is about 13.9%, well above 5%. Nothing smaller is testable with 300 random labels.
+
+Two honest notes:
+- A looser α (e.g. 0.15) would certify the top ~15% zone on these numbers, but the guarantee only covers an α fixed **before** seeing the labels — picking one afterwards isn't covered, so treat that as exploratory only.
+- To certify a 5%-wrong zone you'd need many more labels in the high-confidence region (the whole map shows ~23% wrong overall, so the tail has to be genuinely clean AND well-sampled).

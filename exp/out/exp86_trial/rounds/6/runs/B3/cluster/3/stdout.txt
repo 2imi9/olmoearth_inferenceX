@@ -1,0 +1,18 @@
+
+
+**Comparison done** — same model (OlmoEarth-v1-FT-AWF-Base, revision a347b15) run over the Namanga AOI for **C1: 2023** and **C2: 2022**, 128×128 window grid, 16,384 windows each, all valid.
+
+| | Value |
+|---|---|
+| Windows differing in argmax class | 3,807 (23.2%) |
+| Share of differing windows on a predicted-class boundary | 78.3% (overall boundary share 53.9%) |
+| Mean margin among differing windows | C1 (2023): 2.66; C2 (2022): 3.19 |
+
+The differences cluster heavily at class edges — e.g. montane_forest vs woodland_forest along rows near the top of the area, shrubland_savanna vs grassland_barren/urban patches elsewhere. So most disagreement looks like boundary placement rather than whole-window flips.
+
+**Which is right? Neither can be adjudicated.** Two separate reasons:
+
+1. The maps describe **different years** (2022 vs 2023). Any difference may be genuine seasonal/annual change — agriculture cycles alone could explain much of this — so "differs" is not "one is wrong".
+2. No ground-truth reference was supplied for either date. Without labels dated to each map, grading is impossible in principle; with them, you'd need a reference for *each* date to separate real change from error.
+
+Suggested next step: provide reference labels for the 2022 and 2023 periods (or point me at an existing label set), and I'll grade each map against its own-date reference and report per-class accuracy.

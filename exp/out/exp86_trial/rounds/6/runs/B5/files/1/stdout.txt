@@ -1,0 +1,12 @@
+
+
+**Map error rate (confidence design, 300 of 15,813 windows labelled):**
+
+| Statistic | Value |
+|---|---|
+| Error rate estimate | **0.194** (about 19.4%) |
+| 95% interval | [0.157, 0.236] |
+| Effective n | 384.1 |
+| Method | stratified by confidence margin; Wilson interval on the design's effective sample size |
+
+So overall accuracy is about 80.6%. The main confusion: class 6 → 4 (map calls it 6 where reference is 4), class 4 misses (user accuracy only ~0.96 driven by 27 missed class-4 windows), and a handful of small classes (0, 1, 2, 3, 5, 8) have too few labels for trustworthy per-class numbers — flagged in the result's warnings. Want me to expand the per-class breakdown or certify a high-confidence zone from these labels?

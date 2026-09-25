@@ -1,0 +1,451 @@
+{
+ "tool": "olmoearth_plan_label_sample",
+ "arguments": {
+  "scores_path": "F1/dw_scores.json",
+  "budget": 300,
+  "design": "confidence",
+  "seed": 0
+ },
+ "result": {
+  "ok": true,
+  "result": {
+   "available": true,
+   "design": "confidence",
+   "budget": 300,
+   "n_population": 15813,
+   "seed": 0,
+   "design_path": "/Users/lucas/Desktop/Github/olmoearth_inferenceX/exp/out/exp86_trial/rounds/6/parity/workspace/design_scores_39fe40be_confidence_300_s0.json",
+   "labels_csv_path": "/Users/lucas/Desktop/Github/olmoearth_inferenceX/exp/out/exp86_trial/rounds/6/parity/workspace/design_scores_39fe40be_confidence_300_s0_to_label.csv",
+   "windows": [
+    {
+     "order": 0,
+     "window_index": 427,
+     "row": 3,
+     "col": 43,
+     "map_class": 6,
+     "stratum": 0
+    },
+    {
+     "order": 1,
+     "window_index": 667,
+     "row": 5,
+     "col": 27,
+     "map_class": 7,
+     "stratum": 0
+    },
+    {
+     "order": 2,
+     "window_index": 555,
+     "row": 4,
+     "col": 43,
+     "map_class": 5,
+     "stratum": 0
+    },
+    {
+     "order": 3,
+     "window_index": 304,
+     "row": 2,
+     "col": 48,
+     "map_class": 6,
+     "stratum": 0
+    },
+    {
+     "order": 4,
+     "window_index": 14391,
+     "row": 112,
+     "col": 55,
+     "map_class": 4,
+     "stratum": 0
+    },
+    {
+     "order": 5,
+     "window_index": 8952,
+     "row": 69,
+     "col": 120,
+     "map_class": 7,
+     "stratum": 0
+    },
+    {
+     "order": 6,
+     "window_index": 8079,
+     "row": 63,
+     "col": 15,
+     "map_class": 4,
+     "stratum": 0
+    },
+    {
+     "order": 7,
+     "window_index": 5433,
+     "row": 42,
+     "col": 57,
+     "map_class": 4,
+     "stratum": 0
+    },
+    {
+     "order": 8,
+     "window_index": 9588,
+     "row": 74,
+     "col": 116,
+     "map_class": 4,
+     "stratum": 0
+    },
+    {
+     "order": 9,
+     "window_index": 15394,
+     "row": 120,
+     "col": 34,
+     "map_class": 4,
+     "stratum": 0
+    },
+    {
+     "order": 10,
+     "window_index": 10299,
+     "row": 80,
+     "col": 59,
+     "map_class": 5,
+     "stratum": 0
+    },
+    {
+     "order": 11,
+     "window_index": 10245,
+     "row": 80,
+     "col": 5,
+     "map_class": 7,
+     "stratum": 0
+    },
+    {
+     "order": 12,
+     "window_index": 5517,
+     "row": 43,
+     "col": 13,
+     "map_class": 6,
+     "stratum": 0
+    },
+    {
+     "order": 13,
+     "window_index": 5983,
+     "row": 46,
+     "col": 95,
+     "map_class": 4,
+     "stratum": 0
+    },
+    {
+     "order": 14,
+     "window_index": 15100,
+     "row": 117,
+     "col": 124,
+     "map_class": 1,
+     "stratum": 0
+    },
+    {
+     "order": 15,
+     "window_index": 7603,
+     "row": 59,
+     "col": 51,
+     "map_class": 4,
+     "stratum": 0
+    },
+    {
+     "order": 16,
+     "window_index": 15765,
+     "row": 123,
+     "col": 21,
+     "map_class": 4,
+     "stratum": 0
+    },
+    {
+     "order": 17,
+     "window_index": 4021,
+     "row": 31,
+     "col": 53,
+     "map_class": 5,
+     "stratum": 0
+    },
+    {
+     "order": 18,
+     "window_index": 10332,
+     "row": 80,
+     "col": 92,
+     "map_class": 2,
+     "stratum": 0
+    },
+    {
+     "order": 19,
+     "window_index": 14151,
+     "row": 110,
+     "col": 71,
+     "map_class": 5,
+     "stratum": 0
+    },
+    {
+     "order": 20,
+     "window_index": 16316,
+     "row": 127,
+     "col": 60,
+     "map_class": 4,
+     "stratum": 0
+    },
+    {
+     "order": 21,
+     "window_index": 11725,
+     "row": 91,
+     "col": 77,
+     "map_class": 4,
+     "stratum": 0
+    },
+    {
+     "order": 22,
+     "window_index": 823,
+     "row": 6,
+     "col": 55,
+     "map_class": 7,
+     "stratum": 0
+    },
+    {
+     "order": 23,
+     "window_index": 12504,
+     "row": 97,
+     "col": 88,
+     "map_class": 6,
+     "stratum": 0
+    },
+    {
+     "order": 24,
+     "window_index": 10808,
+     "row": 84,
+     "col": 56,
+     "map_class": 5,
+     "stratum": 0
+    },
+    {
+     "order": 25,
+     "window_index": 14492,
+     "row": 113,
+     "col": 28,
+     "map_class": 4,
+     "stratum": 0
+    },
+    {
+     "order": 26,
+     "window_index": 2083,
+     "row": 16,
+     "col": 35,
+     "map_class": 1,
+     "stratum": 0
+    },
+    {
+     "order": 27,
+     "window_index": 13639,
+     "row": 106,
+     "col": 71,
+     "map_class": 4,
+     "stratum": 0
+    },
+    {
+     "order": 28,
+     "window_index": 13480,
+     "row": 105,
+     "col": 40,
+     "map_class": 6,
+     "stratum": 0
+    },
+    {
+     "order": 29,
+     "window_index": 11684,
+     "row": 91,
+     "col": 36,
+     "map_class": 8,
+     "stratum": 0
+    },
+    {
+     "order": 30,
+     "window_index": 2858,
+     "row": 22,
+     "col": 42,
+     "map_class": 1,
+     "stratum": 0
+    },
+    {
+     "order": 31,
+     "window_index": 54,
+     "row": 0,
+     "col": 54,
+     "map_class": 2,
+     "stratum": 0
+    },
+    {
+     "order": 32,
+     "window_index": 10461,
+     "row": 81,
+     "col": 93,
+     "map_class": 4,
+     "stratum": 0
+    },
+    {
+     "order": 33,
+     "window_index": 3995,
+     "row": 31,
+     "col": 27,
+     "map_class": 6,
+     "stratum": 0
+    },
+    {
+     "order": 34,
+     "window_index": 13578,
+     "row": 106,
+     "col": 10,
+     "map_class": 4,
+     "stratum": 0
+    },
+    {
+     "order": 35,
+     "window_index": 9276,
+     "row": 72,
+     "col": 60,
+     "map_class": 7,
+     "stratum": 0
+    },
+    {
+     "order": 36,
+     "window_index": 176,
+     "row": 1,
+     "col": 48,
+     "map_class": 6,
+     "stratum": 0
+    },
+    {
+     "order": 37,
+     "window_index": 144,
+     "row": 1,
+     "col": 16,
+     "map_class": 1,
+     "stratum": 0
+    },
+    {
+     "order": 38,
+     "window_index": 11125,
+     "row": 86,
+     "col": 117,
+     "map_class": 4,
+     "stratum": 0
+    },
+    {
+     "order": 39,
+     "window_index": 9047,
+     "row": 70,
+     "col": 87,
+     "map_class": 4,
+     "stratum": 0
+    },
+    {
+     "order": 40,
+     "window_index": 1730,
+     "row": 13,
+     "col": 66,
+     "map_class": 7,
+     "stratum": 0
+    },
+    {
+     "order": 41,
+     "window_index": 14208,
+     "row": 111,
+     "col": 0,
+     "map_class": 4,
+     "stratum": 0
+    },
+    {
+     "order": 42,
+     "window_index": 8494,
+     "row": 66,
+     "col": 46,
+     "map_class": 7,
+     "stratum": 0
+    },
+    {
+     "order": 43,
+     "window_index": 9616,
+     "row": 75,
+     "col": 16,
+     "map_class": 4,
+     "stratum": 0
+    },
+    {
+     "order": 44,
+     "window_index": 10033,
+     "row": 78,
+     "col": 49,
+     "map_class": 6,
+     "stratum": 0
+    },
+    {
+     "order": 45,
+     "window_index": 9446,
+     "row": 73,
+     "col": 102,
+     "map_class": 1,
+     "stratum": 0
+    },
+    {
+     "order": 46,
+     "window_index": 7698,
+     "row": 60,
+     "col": 18,
+     "map_class": 4,
+     "stratum": 0
+    },
+    {
+     "order": 47,
+     "window_index": 7856,
+     "row": 61,
+     "col": 48,
+     "map_class": 4,
+     "stratum": 0
+    },
+    {
+     "order": 48,
+     "window_index": 9465,
+     "row": 73,
+     "col": 121,
+     "map_class": 4,
+     "stratum": 0
+    },
+    {
+     "order": 49,
+     "window_index": 12419,
+     "row": 97,
+     "col": 3,
+     "map_class": 7,
+     "stratum": 0
+    }
+   ],
+   "n_windows_listed": 50,
+   "how_to_label": "For each window, in this order, set wrong = 1 when the map's class (map_class) is not what is on the ground there, else 0 (and reference_class to the true class id for per-class accuracy). Fill the CSV (it holds each window's location) or pass the list; then call olmoearth_estimate_map_error with design_path.",
+   "interval_rules": [
+    "A targeted review set (e.g. the windows olmoearth_review_set lists) is not a sample: its error rate overstates the map's, 1.8 to 5.8 times on the package's exp78.",
+    "The simple-random-sample interval p +/- 1.96 sqrt(p(1 - p)/n) does not apply to a stratified or targeted design, nor to a pool of both; report the interval and method olmoearth_estimate_map_error returns instead."
+   ],
+   "population": {
+    "score_kind": "class_scores",
+    "what_the_rate_will_be_of": "the valid windows of this population"
+   },
+   "strata_sizes": [
+    3161,
+    3163,
+    3162,
+    3164,
+    3163
+   ],
+   "allocation": [
+    58,
+    59,
+    61,
+    62,
+    60
+   ],
+   "design_note": "Strata by confidence margin, labels allocated from the model's own top-1 score; the score only allocates labels, so the estimate stays design-unbiased whatever its calibration. A certified zone needs design='random'."
+  }
+ },
+ "made": "2026-09-25T07:55:24+00:00",
+ "agent_commit": "7bacc4d04cc99be44d41151cab2ce48f440a379f",
+ "inferencex_version": "1.3.0"
+}

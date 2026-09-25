@@ -1,0 +1,24 @@
+
+
+**Run:** `C1/awf_namanga_2023_1042061` — OlmoEarth-v1-FT-AWF-Base (rev a347b15…), full direct model output pooled to a 128×128 window grid (16,384 valid windows, 9 land-cover classes, nodata fill channel excluded from the margin).
+
+**What to check first:** at a 5% review budget, open the **819 lowest-margin windows**. Ranking signal = mean per-pixel top-1 − top-2 logit margin within each window; the smaller the gap, the more torn the model was between two classes, i.e. where it is most likely wrong. Median margin map-wide is 4.47, so the listed windows sit far below what the model normally "sees."
+
+Top 10 by rank:
+
+| Rank | Window | Class | Margin | Row, Col |
+|---|---|---|---|---|
+| 1 | #1821 | woodland_forest | 0.108 | 14, 29 |
+| 2 | #1321 | montane_forest | 0.149 | 10, 41 |
+| 3 | #3037 | shrubland_savanna | 0.153 | 23, 93 |
+| 4 | #907 | woodland_forest | 0.162 | 7, 11 |
+| 5 | #1797 | montane_forest | 0.176 | 14, 5 |
+| 6 | #299 | montane_forest | 0.177 | 2, 43 |
+| 7 | #2466 | woodland_forest | 0.191 | 19, 34 |
+| 8 | #5979 | grassland_barren | 0.206 | 46, 91 |
+| 9 | #2467 | montane_forest | 0.214 | 19, 35 |
+| 10 | #296 | montane_forest | 0.216 | 2, 40 |
+
+**Why these:** several cluster spatially (e.g., #2466/#2467 adjacent at row 19 cols 34–35; a block near rows 1–4, cols 37–44 with four montane_forest windows), which usually means a true boundary or confusion zone (montane forest vs. woodland, forest edges) rather than isolated noise. The budget cut sits at margin 0.994 — everything outside the top 819 has a much clearer separation.
+
+**Caveats:** margin ranks *suspicion*, not error probability, and capture is bounded by budget/error_rate; it is an ordering, not calibrated trust. If you want the actual error rate, pass this scores file to `olmoearth_plan_label_sample`. Want me to list more windows or build a label-budget plan?

@@ -1,0 +1,20 @@
+
+
+**Review set ready.** The run (model `allenai/OlmoEarth-v1-FT-AWF-Base`, revision a347b15) scored all 16,384 windows of the 128×128 grid — no no-data, label-fill channel excluded. Ranked by lowest top-1 minus top-2 logit margin (lowest = model least sure), at a 5% budget (819 windows; cut at margin 0.994176). Top 10 to check first:
+
+| Rank | Window (row, col) | Predicted class | Margin | Boundary neighbours |
+|---|---|---|---|---|
+| 1 | (14, 29) | woodland_forest | 0.108155 | 4 |
+| 2 | (10, 41) | montane_forest | 0.149261 | 3 |
+| 3 | (23, 93) | shrubland_savanna | 0.153341 | 6 |
+| 4 | (7, 11) | woodland_forest | 0.161787 | 8 |
+| 5 | (14, 5) | montane_forest | 0.176399 | 7 |
+| 6 | (2, 43) | montane_forest | 0.176925 | 0 |
+| 7 | (19, 34) | woodland_forest | 0.191095 | 3 |
+| 8 | (46, 91) | grassland_barren | 0.2055 | 6 |
+| 9 | (19, 35) | montane_forest | 0.213706 | 7 |
+| 10 | (2, 40) | montane_forest | 0.216102 | 4 |
+
+**Why these windows:** the margin is the mean per-pixel top-1-minus-top-2 logit gap inside each window — near-zero means two land-cover classes are nearly tied in the model's pre-argmax scores, so the argmax flip-flops there and errors cluster most in this band. Margin spread across all windows: min 0.108155, median 4.468178, max 14.820428 — the listed 50 have margins from 0.108155 to 0.347496, i.e. roughly 3–4 orders of magnitude more uncertain than typical windows. Many also touch predicted-class boundaries (up to 8 neighbouring windows of other classes), where confusable land covers meet. Note the ranking is suspicion order, not an error probability; it does not tell you how many of these are actually wrong.
+
+The scores file is saved for follow-up (e.g. plan_label_sample if you want to spend N labels for an honest error rate, or compare_review against another run). Want the full 819-window list, or a boundary-first ordering?

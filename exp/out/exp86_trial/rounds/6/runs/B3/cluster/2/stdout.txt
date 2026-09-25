@@ -1,0 +1,16 @@
+
+
+## C1 (2023) vs C2 (2022) — same 128×128 window grid, 16,384 windows
+
+**Where they differ**
+- **3,807 windows differ** (23.2% of the area) — same model revision (`OlmoEarth-v1-FT-AWF-Base`, rev `a347b15`) in both runs.
+- Differences sit mostly **on class boundaries** (78.3% of differing windows touch a boundary vs 53.9% overall).
+- The dominant contrast is **montane_forest vs woodland_forest** (e.g., windows 3–30 along row 0), where one run calls the pixels montane forest and the other woodland forest.
+- On those differing windows the mean logit margin is higher for C2 (3.19) than C1 (2.66) — i.e., C2 looks more confident there, but that is not evidence it is right.
+
+**Which is right — I can't grade this, and here is why**
+- The two runs describe **different time windows** (2022 vs 2023), so any differing window may simply be real land-cover change or seasonal cycle, not an error.
+- No reference labels for either date were provided, so even with them, grading would need a **reference per date** (`labels_date`); decisions alone cannot separate "changed on the ground" from "one map is wrong."
+- Measured evidence says the confident side is right only ~51–70% of the time on such differing sets, so confidence does not pick a winner.
+
+**To settle it:** label a sample of the differing windows against imagery/reference for each year (I can plan that labeling design if you give me a budget), or run a third date and look at the trajectory.

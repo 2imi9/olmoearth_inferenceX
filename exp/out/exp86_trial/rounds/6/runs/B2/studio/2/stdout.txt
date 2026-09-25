@@ -1,0 +1,18 @@
+
+
+**Review set for KarstBinary 2025** (prediction `dd504793…`, result `419c581d…`, band `sample_karst_score`, [0,1] score decided at 0.5)
+
+The map was cut into a 10×10 grid: **100 windows, 72 valid, 28 dropped as no-data**. Windows are ranked by how undecided the model is — margin = distance of the score from the 0.5 decision line, lowest first. These are relative suspicion, not calibrated error probabilities.
+
+**Check these first** (top of the 10% budget, i.e. ~7 windows):
+
+| Rank | Window (row, col) | Score | Margin | Read |
+|---|---|---|---|---|
+| 1 | (4, 7) | 0.352 | 0.297 | Just below threshold — most uncertain |
+| 2 | (4, 2) | 0.285 | 0.431 | Below threshold |
+| 3 | (0, 5) | 0.745 | 0.490 | Just above threshold |
+| 4 | (1, 8) | 0.223 | 0.554 | Below threshold |
+| 5 | (8, 5) | 0.808 | 0.615 | Above threshold |
+
+- Why these: each sits nearest the 0.5 decision boundary, so the model has least conviction there; the remaining 65 listed-later windows have margins ≥ 0.786 (median margin across all 72 is 0.965), i.e. near-decided.
+- Caveats: this ranking holds errors but is not a sample — its local error rate would overstate the map's, so use `olmoearth_plan_label_sample` on the saved scores file if you want an honest error-rate estimate. Window locations are in the saved scores file rather than quoted here (no raw coordinates in chat).

@@ -1,0 +1,11 @@
+
+
+No part of this map qualifies: with your 300 random labels, **no zone was certified at alpha = 0.05** (delta = 0.1, prefix rule). Certification needs at least 45 labels inside the zone, so only zones covering >= 15% of the map (15,813 windows total) could be tested — and every one failed.
+
+| Coverage | Zone size | Labels in zone | Wrong | Upper bound on error | Certified? |
+|---|---|---|---|---|---|
+| 15% (smallest testable) | 2,372 | 46 | 3 | ~13.9% | No |
+| 50% | 7,906 | 140 | 13 | ~13.2% | No |
+| 100% (whole map) | 15,813 | 300 | 69 | ~26.4% | No |
+
+The observed whole-map error rate (~23%) leaves even the most confident region well above the 5% bar. To get a certified zone you would need many more labels — roughly enough that the most-confident region's labelled subset shows near-zero errors with margin to spare (and any looser alpha must be fixed before seeing the labels). Want me to re-test with a different alpha, or estimate how many labels a certified zone would require?

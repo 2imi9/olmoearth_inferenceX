@@ -1,0 +1,18 @@
+
+
+Label plan is ready. One constraint first: this Studio map can only support **173 labels**, not your full budget of 300 — at the maximum 16×16 sampling grid it has 256 points, of which 83 are no-data. I planned all 173 valid windows instead; the remaining label capacity on this result is unused (a whole-map count would need a direct model run's scores raster via `olmoearth_scores_from_file`).
+
+**What was set up**
+
+| Item | Value |
+|---|---|
+| Prediction / result | `dd504793…` / `419c581d-9a10-4684-aba5-1bab2875f26b` (KarstBinary, 2025) |
+| Band | `sample_karst_score`, [0,1] decided at 0.5 (score = P(karst) for ranking only) |
+| Design | confidence-stratified (least-decided windows first), 173 labels, seed 0 |
+| Population note | rate describes the map at the 16×16 sampled points, not every pixel |
+
+**Files**
+- Design: `/Users/lucas/Desktop/Github/olmoearth_inferenceX/exp/out/exp86_trial/rounds/6/runs/B4/studio/2/workspace/design_419c581d-9a1_8ca17d7d_confidence_173_s0.json`
+- Labels CSV (holds each window's location): `design_419c581d-9a1_8ca17d7d_confidence_173_s0_to_label.csv` in the same folder
+
+**Next step:** open the CSV and for each window set `wrong = 1` when the map's class (at/below vs above 0.5) does not match the ground truth, else 0 (optionally add `reference_class`). Send me the filled values (or a 0/1 list in order) and I'll run `olmoearth_estimate_map_error` to give you the error rate with the interval this design actually earns.

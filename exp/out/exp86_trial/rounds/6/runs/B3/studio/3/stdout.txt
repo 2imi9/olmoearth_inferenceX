@@ -1,0 +1,16 @@
+
+
+I compared your two 2025 PA Karst predictions (KarstBinary vs KarstNumber, same area, Jan 1 – Dec 31 2025).
+
+**Key finding: they measure different things, so "which is right" can't be settled by comparing them.**
+
+| | KarstBinary | KarstNumber |
+|---|---|---|
+| Property | `sample_karst_score` (0–1) | `sample_number` (0.2–1.2) |
+| Output type | per-pixel regression | per-pixel regression |
+| Mean over shared area | 0.10049 | 0.681763 |
+
+- **Where they differ:** across 25 comparable grid cells (11 dropped as no-data), the two maps show a correlation of **-0.0172** — essentially no relationship, i.e. their values rise and fall independently over the area. Since the bands are different quantities (a karst score vs a count value), difference/RMSE-style stats are not computable or meaningful; only the correlation is returned.
+- **Which is right:** I can't say. These are two model-vs-model estimates with no ground-truth labels, so neither is verified — agreement metrics here would be wrong to call "accuracy". The near-zero correlation suggests they're capturing different aspects of karst, not conflicting measurements of one thing.
+
+If you'd like, I can help verify one or both against real labels: design a label sample (`plan_label_sample`) for a reviewer to check N windows, then estimate each map's error rate honestly.

@@ -1,0 +1,21 @@
+
+
+## Comparison of F4 pre/post maps
+
+The two maps agree on most windows but diverge in a way that looks partly systematic rather than random noise:
+
+| Statistic | Value |
+|---|---|
+| Total windows compared | 78,028 |
+| Differing windows | 1,570 (~2.0%) |
+| Mean margin on differing windows, A (Sep 2017) | 0.389 |
+| Mean margin on differing windows, B (Apr 2018) | 0.158 |
+
+**Where they differ:** Most differing windows flip class 1 -> 0 (A positive, B negative), usually with A fairly confident and B less certain. There is also a tight spatial cluster (rows ~1442-1449, cols 4-6) where A calls class 0 with very high margin (~0.49) and B consistently flips to class 1 - that kind of coherent patch is a signature of real ground change (e.g., seasonal flooding between Sep 2017 and Apr 2018) rather than isolated misclassification. The full differing-window list was saved; I've shown only the first few above.
+
+**Which is right? Not gradable from these two files alone.** The tool confirms it declined to pick a winner, for two compounding reasons:
+
+1. **Different dates, 216 days apart** - a differing window may simply have changed on the ground between 2017-09-14/15 and 2018-04-19. Without a reference dated to one (ideally both) of those times, disagreement is ambiguous: real change vs. one map being wrong.
+2. **Even with same-date data, the confident side is only moderately reliable** - upstream evidence puts the more-confident side right on 51-70% of differing windows, so confidence alone never certifies a winner.
+
+**To resolve it:** provide reference labels for the 2018-04-19 date (and ideally also for mid-Sep 2017). Then I can grade each side against its own-date reference and tell you which map errs more - or run the change-detection read if the question is really "what changed between the two dates."

@@ -1,0 +1,18 @@
+
+
+Ran the review-set tool on the KarstBinary 2025 result (`result_id` 419c581d-9a10-4684-aba5-1bab2875f26b, band `sample_karst_score`, declared [0, 1]). A 12x12 grid gave 144 windows; 91 valid, 53 dropped as no-data. Ranked by distance from the 0.5 decision threshold — nearest 0.5 first — at a ~5% budget (top 5):
+
+| Rank | Window (row, col) | Index | Score (s) | Margin \|2s-1\| | Side |
+|---|---|---|---|---|---|
+| 1 | (4, 9) | 57 | 0.494 | 0.012 | just below 0.5 |
+| 2 | (5, 10) | 70 | 0.478 | 0.045 | just below 0.5 |
+| 3 | (9, 9) | 117 | 0.563 | 0.126 | just above 0.5 |
+| 4 | (10, 8) | 128 | 0.595 | 0.190 | just above 0.5 |
+| 5 | (3, 3) | 39 | 0.390 | 0.219 | below 0.5 |
+
+**Why these:** the model was least *decided* here — its score sits closest to the 0.5 cutoff, so flipping one of these pixels changes the map most. Everything else is far more confident (median margin 0.964; the 82 unlisted windows have margins 0.534–0.991).
+
+Caveats to keep in mind:
+- The tool assumes the score acts like P(positive) **for ranking only**; these margins are not error probabilities, and this ranks relative suspicion, not calibrated likelihood of being wrong.
+- Each window is one sample at the cell centre, not every pixel in the cell.
+- This review set is not a sample: if you want to know how wrong the map actually is, pass the saved `scores_path` to `olmoearth_plan_label_sample`. Say the word and I'll set that up.

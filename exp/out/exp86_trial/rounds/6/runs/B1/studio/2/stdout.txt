@@ -1,0 +1,11 @@
+
+
+Your Studio account has three models you can run (this list covers your account only; Ai2 also publishes additional fine-tuned OlmoEarth models as task cards that aren't shown here):
+
+| Model | Type | What it predicts |
+|---|---|---|
+| **KarstBinary** (`ac1eb985`) | fine_tuned | Per-pixel regression — a single value per pixel, not a class probability or confidence |
+| **KarstNumber** (`f67d97d9`) | fine_tuned | Per-pixel regression — a value per pixel |
+| **KarstEmbedding** (`5aafb53d`) | embeddings | Not a direct prediction — frozen feature embeddings for downstream kNN / linear probe / clustering |
+
+All three already have completed 2025 PA karst predictions, so you could re-run any over a new area with `olmoearth_submit_prediction`. Want me to look up what one of these outputs at a specific location?

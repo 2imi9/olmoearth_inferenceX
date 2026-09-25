@@ -1,0 +1,18 @@
+
+
+Label sampling plan is ready for that run.
+
+**Run:** `C1/awf_namanga_2023_1042061` — OlmoEarth-v1-FT-AWF-Base (rev a347b15), 9 classes, grid 128x128 = 16,384 valid windows (no no-data).
+
+**Design:** confidence-stratified, budget 300 (strata by logit margin, allocation 106 / 79 / 47 / 34 / 34) — this keeps the error estimate design-unbiased, so you get an honest "how wrong is the map" with your 300 labels.
+
+| File | Path |
+|---|---|
+| Design | `.../workspace/design_scores_8f3527f9_confidence_300_s0.json` |
+| Labels CSV | `.../workspace/design_scores_8f3527f9_confidence_300_s0_to_label.csv` |
+
+First windows to check (row, col): (0,40), (110,40), (24,108), (0,85), (122,47)… full list of 300 in the CSV, each with its map class (e.g. window 0 at (0,40) is montane_forest).
+
+**How to label:** set `wrong = 1` where the map class isn't on the ground, else `0`; add `reference_class` if you want per-class accuracy.
+
+**Next step:** send me the filled CSV (or the 0/1 list in design order) and I'll call `olmoearth_estimate_map_error` to give you the error rate with the interval this design earns. Note: it can't be computed until you've labelled; a review-set shortcut would overstate the error, which is why we used this design.

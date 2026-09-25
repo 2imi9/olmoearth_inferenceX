@@ -1,0 +1,17 @@
+
+
+**Map error rate (confidence design, 300 labelled windows):**
+
+| Quantity | Value |
+|---|---|
+| Estimate | 0.1938 (~19.4%) |
+| 95% interval | [0.1574, 0.2362] |
+| Half-width | 0.0394 |
+| Effective n | 384.1 |
+| Population | 15,813 windows; no starved strata |
+
+- **Method:** stratified by confidence margin; Wilson interval on the design's effective sample size.
+- Overall accuracy: 0.8062 [0.7638, 0.8426].
+- Per-class notes: class 7 (largest class, ~45% of the map) has user/producer accuracy ~0.92/0.91; class 4 has high user accuracy (~0.964) but producer accuracy only ~0.80; class 6 has weak user accuracy (~0.45). Many rare classes have <30 labels, so their intervals are wide.
+
+Want me to break down the per-class confusion table or run a certified-zone analysis?

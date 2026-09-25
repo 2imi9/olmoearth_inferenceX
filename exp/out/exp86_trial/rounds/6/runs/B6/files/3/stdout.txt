@@ -1,0 +1,9 @@
+
+
+**None.** With these 300 random labels, no part of the map certifies to ≤5% error at δ = 0.1 (rule `prefix`).
+
+- Population: 15,813 windows; 300 labelled (min needed to certify any zone: 45, so coverage < 15% is untestable).
+- Best level tested — top **15%** most-confident zone (2,372 windows): 3 wrong of 46 labels, upper bound **0.139**, still above α = 0.05, so not accepted.
+- Every larger level up to 100% also fails (upper bounds range ~0.11–0.26); at full coverage 69/300 are wrong (bound 0.264).
+
+In short: the sample is too small / errors too common for any share of this map to carry a "wrong at most 5%" guarantee. To push toward certification you would need more labels (the whole-map rate alone suggests far more than 300), and α must be fixed before seeing the labels.

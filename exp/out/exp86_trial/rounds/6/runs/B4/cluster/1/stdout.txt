@@ -1,0 +1,15 @@
+
+
+I loaded the run's full logit scores (model `OlmoEarth-v1-FT-AWF-Base`, 128×128 grid = **16,384 valid windows**, 0 no-data) and built an honest error-rate plan for your 300 labels.
+
+| Item | Value |
+|---|---|
+| Design | simple random sample, seed 0 (unbiased error rate; usable later for zone certification) |
+| Budget / population | 300 / 16,384 windows |
+| Label file to fill | `.../workspace/design_scores_8f3527f9_random_300_s0_to_label.csv` (holds each window's location + map class) |
+
+How to finish:
+1. For each window in that CSV (in order), set `wrong = 1` if the mapped class isn't what's on the ground, else `0`; add the true class id if you want per-class accuracy.
+2. Send me the filled list — I'll call `olmoearth_estimate_map_error`, which returns the map's error rate with the interval this design actually earns (not p ± 1.96·√(p(1-p)/n)).
+
+First 5 windows to start: index 13088 (row 102, col 32; mapped grassland_barren), 4453 (grassland_barren), 10440 (shrubland_savanna), 13475 (grassland_barren), 11115 (shrubland_savanna). Want the rest of the 300 listed here too?

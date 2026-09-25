@@ -1,0 +1,14 @@
+
+
+Plan is set. One constraint: the Studio result caps at a 16×16 grid = 173 valid windows, so your budget becomes **173 labels**, not 300.
+
+**Labeling design (confidence-stratified, seed 0)**
+- Result: KarstBinary 2025 (`result_id 419c581d-…f26b`, band `sample_karst_score`, treated as [0,1] score decided at 0.5 for ranking only)
+- Population: 173 valid windows (83 no-data dropped); strata by margin, ~34–35 labels per stratum; least-decided windows (score nearest 0.5) come first
+- How to label: for each window in order, set `wrong = 1` if the map class (`map_class`) doesn't match ground truth, else `0` (and `reference_class` for per-class accuracy)
+
+Fill either one and send me the back:
+- CSV: `/Users/lucas/Desktop/Github/olmoearth_inferenceX/exp/out/exp86_trial/rounds/6/runs/B4/studio/1/workspace/design_419c581d-9a1_8ca17d7d_confidence_173_s0_to_label.csv`
+- Or paste the 0/1 list in design order
+
+When you return the labels I'll run `estimate_map_error` for the error rate + the interval this design earns (not a plain binomial interval). If you'd rather spend labels on the full raster beyond the 173-point grid, that would need a direct model run read via `scores_from_file` — say the word if you want that instead.

@@ -1,0 +1,13 @@
+
+
+I compared both 2025 PA Karst predictions (same area, same period) using the Studio pair-comparison over their shared extent (~10,091 km²), sampling a 6×6 grid:
+
+| Item | Value |
+|---|---|
+| Models | KarstBinary → `sample_karst_score` [0–1]; KarstNumber → `sample_number` [0.2–1.2] |
+| Cells compared | 25 of 36 (11 dropped as no-data in either map) |
+| Correlation | −0.0172 |
+
+**Where they differ:** they measure *different quantities* — a karst presence score vs. a numeric karst value — so the only meaningful cross-statistic is correlation, and it's essentially zero: the two maps do not rise and fall together anywhere on the sampled grid. No difference/RMSE/agreement figure is computed because mixing the two quantities would be invalid.
+
+**Which is right:** I can't say, and no comparison can. There's no ground-truth labels for this area, so this is model-vs-model agreement, not accuracy — without labels it's unresolvable. If you want a definitive answer, the path forward is a labeled review set: I can plan a label sample on either result (`olmoearth_plan_label_sample`) so N field checks yield an honest error rate, then `olmoearth_classification_metrics` against those labels would finally show which model is closer to truth. Want me to set that up?

@@ -1,0 +1,11 @@
+
+
+Your Studio account has **two fine-tuned models** you can run (plus one embeddings model noted below):
+
+| Model | model_id | Predicts |
+|---|---|---|
+| **KarstBinary** | `ac1eb985…` | Per-pixel regression — a value per pixel, not a class label or confidence |
+| **KarstNumber** | `f67d97d9…` | Per-pixel regression — a value per pixel |
+| ~ KarstEmbedding (`5aafb53d…`) | embeddings model, not fine-tuned; no declared prediction type |
+
+Both fine-tuned models have completed runs over PA (Jan–Dec 2025) if you need reference results. Note this lists only your account's models — Ai2 also publishes additional fine-tuned OlmoEarth models (task cards) that aren't shown here. Want me to show the output ranges from a completed run, or set up a new prediction with one of these models?

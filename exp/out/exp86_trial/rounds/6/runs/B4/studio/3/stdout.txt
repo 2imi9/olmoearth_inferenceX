@@ -1,0 +1,15 @@
+
+
+Design done — but note the cap: Studio maps sample at most a 16×16 grid (256 points), and this result has **173 valid windows** (83 no-data dropped). So you can't get 300 independent labels from this map; I planned the full 173.
+
+**How to get an error rate from it:**
+
+1. Fill `design_419c581d-9a1_8ca17d7d_confidence_173_s0_to_label.csv` with `wrong` = 1 when the map's class (`map_class`) doesn't match the ground, else 0 (optionally `reference_class` too). The first 30 windows are listed above if you need quick picks; each window is one pixel sample at its 16×16 cell center, so a window stands for its cell only as far as that pixel does.
+2. Send me the filled labels (or the returned CSV), and I'll run `olmoearth_estimate_map_error` — it returns the estimate plus the interval this stratified (confidence) design actually earns; don't use plain p ± 1.96·sqrt(p(1−p)/n) here, it doesn't apply to this design.
+
+Two caveats worth flagging now:
+
+- This is a **stratified "confidence" design**: the score only allocates which windows you label, so the estimate stays design-unbiased regardless of score calibration — but a targeted review set would overstate errors, which is why we use this design.
+- If you want a **certified zone** later (largest high-confidence area with error ≤ α, exact-test backed), re-run the plan with `design='random'`.
+
+Want me to list more than the first 30 windows, or is 30 enough to start labeling?

@@ -1,0 +1,21 @@
+
+
+## Comparison: C1 (2023) vs C2 (2022)
+
+Both runs are the **same model** (`OlmoEarth-v1-FT-AWF-Base`, identical revision) over the same 128x128 window grid (16,384 windows, no nodata) — the only difference is the imagery year.
+
+| Metric | Value |
+|---|---|
+| Windows that differ in argmax class | 3,807 / 16,384 (**23.2%**) |
+| Share of differing windows touching a class boundary | 78.3% |
+| Mean margin on differing windows — C1 (2023) | 2.66 |
+| Mean margin on differing windows — C2 (2022) | 3.19 |
+
+**Where they differ:** mostly on class boundaries, dominated by a long strip in the north edge (row 0, cols ~3–48) where C1 says *montane_forest* and C2 says *woodland_forest*, plus scattered flips among *urban_dense_development / shrubland_savanna / grassland_barren / herbaceous_wetland* (e.g., rows 0–1, cols 59, 85, 95, 103, 107, 115–125).
+
+**Which is right:** I can't determine that, and I won't guess. Two reasons:
+
+1. The maps describe **different times** (2023 vs 2022), so a differing window may be genuine ground change (seasonal cycle included), not an error in either map.
+2. Even within same-date comparisons, the more-confident side is right on only ~51–70% of differing windows upstream — confidence does not reliably pick a winner here (C2's higher margin is not a verdict).
+
+**To settle it**, you need dated reference labels: give me ground truth for one or both years (and I'll pass `labels_date` to grade each map separately, e.g. via `olmoearth_classification_metrics`), or I can design a small label budget over these windows (`olmoearth_plan_label_sample`) so your N checks yield an honest error rate per map. Want me to set up one of those?

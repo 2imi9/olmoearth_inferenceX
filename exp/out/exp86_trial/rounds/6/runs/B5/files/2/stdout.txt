@@ -1,0 +1,10 @@
+
+
+**Map error rate: 19.4%** (95% interval [15.7%, 23.6%])
+
+- Design: confidence-stratified, 300 of 15,813 population windows labelled
+- Method (as returned): "stratified by confidence margin; Wilson interval on the design's effective sample size" (effective n = 384.1)
+- Overall accuracy mirrors this at 80.6% [76.4%, 84.3%]
+- Per-class: class 7 most accurate (~92% user / ~91% producer accuracy); class 4 well-mapped when present (96% user accuracy) but heavily missed (producer accuracy ~80%); classes 2, 5, 8 are mapped rarely or not at all in the reference. Several per-class estimates rest on fewer than 30 labels and carry wide intervals — treat those as indicative only.
+
+Want me to zoom into any specific class pair or compute what additional labels would tighten this interval?

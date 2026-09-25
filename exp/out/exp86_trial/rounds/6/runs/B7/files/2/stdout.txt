@@ -1,0 +1,15 @@
+
+
+Compared both score maps over their shared 78,028 windows.
+
+| | Value |
+|---|---|
+| Windows compared | 78,028 |
+| Differing windows | 1,570 (share 0.020121) |
+| Mean margin of A on differing windows | 0.389362 |
+| Mean margin of B on differing windows | 0.157536 |
+| Dates apart | 216 days (A: 2017-09-14/15, B: 2018-04-19) |
+
+**Which is right? Neither can be declared right.** Because the maps describe different dates, any window where they differ either changed on the ground in those ~216 days (seasonal cycles included) or is wrong in one map — and the decisions alone cannot separate these two causes. No reference labels exist for either date, so grading isn't possible; providing one would still require a separate reference *for each* date to distinguish real change from error. The higher mean margin on A's side reflects that A tended to flip its own high-confidence windows, but confidence does not identify a winner (the more confident side is only right on 51–70% of differing windows in upstream measurements).
+
+Top listed differing examples (first few of 50): window 4819 at row 344 col 3 (A class 1, B class 0), window 10106 at row 721 col 12 (A class 0, B class 1), window 20192 at row 1442 col 4 (A class 0, B class 1). Happy to list more if you want.

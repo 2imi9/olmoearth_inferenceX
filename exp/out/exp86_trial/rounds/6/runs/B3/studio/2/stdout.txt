@@ -1,0 +1,13 @@
+
+
+I pulled both completed predictions from your **Karst Features in Pennsylvania** project and ran a paired comparison over their shared extent (~10,091 km²):
+
+| | KarstBinary | KarstNumber |
+|---|---|---|
+| result id | 419c581d…f26b | afb1cf68…ae8 |
+| band | `sample_karst_score` (0–1) | `sample_number` (0.2–1.2) |
+| mean over compared cells | 0.10 | 0.68 |
+
+**Where they differ:** these two maps predict *different quantities* — a score vs. a count — so the tool refuses difference/RMSE/agreement statistics (mixing units would be meaningless). It compares 25 of 36 grid cells (11 dropped as no-data in at least one map), and across those the **correlation is −0.0172**, i.e. the two surfaces essentially do not rise and fall together.
+
+**Which is right:** I can't answer that, and any answer would be invented. Neither result carries class labels, so with no ground truth there is nothing to grade either map against — the comparison above is model-vs-model agreement, not accuracy. If you have reference karst locations (CSV/GeoJSON/stations), I can run the data-prep skill to make them label-ready and then compute real accuracy per model. Alternatively, I can build a human review set (lowest-confidence windows first) for either map so you can spot-check before trusting it.

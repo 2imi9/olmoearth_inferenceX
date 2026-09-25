@@ -1,0 +1,19 @@
+
+
+**What I did:** read the full pre-argmax logit raster for `C1/awf_namanga_2023_1042061` (OlmoEarth-v1-FT-AWF-Base, rev a347b15), pooled it to a 128x128 window grid (16,384 valid windows, no nodata; label-fill channel 9 left out of the margin), then ranked by the package's confidence signal — mean top-1 minus top-2 logit margin per window, lowest first.
+
+**Review budget (5% = 819 windows).** The most suspect windows:
+
+| Rank | Window | Class predicted | Margin | Boundary nbrs |
+|---|---|---|---|---|
+| 1 | #1821 (row 14, col 29) | woodland_forest | 0.108 | 4 |
+| 2 | #1321 (row 10, col 41) | montane_forest | 0.149 | 3 |
+| 3 | #3037 (row 23, col 93) | shrubland_savanna | 0.153 | 6 |
+| 4 | #907 (row 7, col 11) | woodland_forest | 0.162 | 8 |
+| 5 | #1797 (row 14, col 5) | montane_forest | 0.176 | 7 |
+
+**Why these:** a near-zero margin means the model's top two class logits are nearly tied — the pixel-level evidence genuinely can't separate the two candidates, which is exactly where errors concentrate. Median margin across the map is 4.47 vs 0.11–0.22 in this list, so these sit far off the confident bulk; the cut at the 5% budget is margin 0.994. Boundary-neighbour counts (windows touching other predicted classes) are also high for several, consistent with edge-of-map confusion (e.g. forest/montane-forest or forest/shrub pairs).
+
+**Caveats:** this orders suspicion, not calibrated error probability, and capture is bounded by budget/error-rate. The margin signal beats no-model and disagreement controls on Ai2's published suite (excess-AURC lead median ~0.116; sign test 24/24), so it is the incumbent ranker here. If you later collect labels on these windows, feed them to `olmoearth_grade_review_rule` / `olmoearth_estimate_map_error` rather than dividing errors by 819. Scores saved at `.../B8/cluster/3/workspace/scores_run_OlmoEarth-v1-FT-AWF-Base_a7c40be9_p4.json`.
+
+Want me to list all 819, switch to boundary-first ordering, or plan how many labels would give an honest error rate?
