@@ -1,0 +1,19 @@
+
+
+Loaded the run's scores into olmoearth-inferencex (model `allenai/OlmoEarth-v1-FT-AWF-Base`, rev a347b15; 128x128 window grid, 16,384 valid windows, no nodata) and ranked windows for review at a 5% budget: **819 windows** with the lowest top-1 minus top-2 logit margin go in the review set (margins 0.108–0.994, vs. a map-wide median margin of 4.468). Windows there are the ones where the model was least decided between classes — i.e., most suspect, and many sit next to windows predicted differently (a map boundary), which is exactly where mislabels concentrate.
+
+Top of the review order (check these first):
+
+| Rank | Window (idx, row,col) | Predicted class | Margin |
+|---|---|---|---|
+| 1 | 1821, (14, 29) | woodland_forest | 0.108 |
+| 2 | 1321, (10, 41) | montane_forest | 0.149 |
+| 3 | 3037, (23, 93) | shrubland_savanna | 0.153 |
+| 4 | 907, (7, 11) | woodland_forest | 0.162 |
+| 5 | 1797, (14, 5) | montane_forest | 0.176 |
+
+Of all 819, the biggest groups are grassland_barren (256, 31.3%), shrubland_savanna (246, 30.0%) and woodland_forest (125, 15.3%). The full ordered list (rank, index, row/col, margin, class) is saved at `.../workspace/review_list_49faf61fce.csv`.
+
+Two caveats worth stating:
+- This ranking uses the logit margin; on Ai2's suite, one-minus-top-probability ranked errors better on 14 of 16 multi-class tasks (exp76), so the evidence for this particular signal form only partly covers this case.
+- A low margin means "least decided," not "probably wrong": the margin is not an error probability, and the review set is targeted, not a random sample — don't divide its errors by 819 to get an error rate. If you want an honest error estimate later, use `olmoearth_plan_label_sample` on the same scores file.

@@ -1,0 +1,16 @@
+
+
+I planned a confidence-stratified label sample for this run; the map's error rate isn't known until you label its windows — no tool can state it from scores alone.
+
+| Item | Value |
+|---|---|
+| Model / revision | OlmoEarth-v1-FT-AWF-Base @ a347b15 |
+| Windows | 16,384 (128x128, patch 4 px), all valid |
+| Classes | 9 land-cover classes (fill channel excluded) |
+| Budget | 300 windows across 5 confidence strata (106/79/47/34/34) |
+
+**Next steps:**
+1. Label every window in `design_scores_8f3527f9_confidence_300_s0_to_label.csv` (`wrong` = 1 if map_class is not ground truth; optionally `reference_class`). All 300 must be labelled — the first rows are only the least-confident stratum.
+2. Send me the filled sheet (or the 0/1 list) and I'll call `olmoearth_estimate_map_error` with the design to get the error rate plus the interval this design earns.
+
+Note: this gives an estimate, not a certification; a certified zone would need a separate random-design plan fixed before labelling.

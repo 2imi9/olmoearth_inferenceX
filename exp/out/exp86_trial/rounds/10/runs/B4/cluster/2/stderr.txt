@@ -1,0 +1,4 @@
+  [ok] olmoearth_load_context
+  [ok] olmoearth_scores_from_file
+  [ok] olmoearth_plan_label_sample
+  (3 turn(s), 3 provenance entries)

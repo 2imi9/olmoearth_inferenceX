@@ -1,0 +1,24 @@
+
+
+Done — the run (`awf_namanga_2023_1042061`, model `allenai/OlmoEarth-v1-FT-AWF-Base`, 16,384 windows of 4 px, no no-data) was read into scores and ranked for review. The ranking signal is each window's mean **top-1 minus top-2 logit margin** (the label-fill channel is excluded): the least-decided windows are the most suspect, so they get checked first. At a 5 % budget that flags **819 windows** with margins 0.108–0.994, versus a median margin of 4.468 across all windows.
+
+Top windows to check first:
+
+| Rank | Window (row, col) | Predicted class | Margin | Boundary neighbours |
+|---|---|---|---|---|
+| 1 | #1821 (14, 29) | woodland_forest | 0.108 | 4 |
+| 2 | #1321 (10, 41) | montane_forest | 0.149 | 3 |
+| 3 | #3037 (23, 93) | shrubland_savanna | 0.153 | 6 |
+| 4 | #907 (7, 11) | woodland_forest | 0.162 | 8 |
+| 5 | #1797 (14, 5) | montane_forest | 0.176 | 7 |
+
+Why these: their predicted class sits barely ahead of the runner-up class (margin ~13–41x below the map-wide median), and most touch other predicted classes in neighbouring windows — i.e., soft map boundaries where confusion between adjacent land-cover classes is expected. Over the full 819-window review set the mix is grassland_barren 31.3 %, shrubland_savanna 30.0 %, woodland_forest 15.3 %, montane_forest 10.3 %, urban_dense_development 6.5 %, agriculture_settlement 3.7 %, herbaceous_wetland 3.1 %.
+
+Two caveats you should know:
+- The margin orders suspicion only; it is **not** a probability of error, and the review set is targeted, so its error rate would be inflated relative to the map overall (use a designed label sample to measure the map's actual error rate).
+- On Ai2's suite, one-minus-top-probability ranked errors better than the logit margin used here on 14 of 16 multi-class tasks, so the ranking evidence covers this case only in part.
+
+Full 819-window list (rank, index, row/col, margin, class; no coordinates) saved to:
+`.../workspace/review_list_49faf61fce.csv`
+
+Want me to plan a label sample over these windows to estimate the map's error rate?

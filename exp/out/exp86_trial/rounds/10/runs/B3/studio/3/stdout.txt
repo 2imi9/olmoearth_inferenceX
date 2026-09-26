@@ -1,0 +1,20 @@
+
+
+Compared both 2025 PA Karst predictions on their shared extent (~10,091 km²). Headline result:
+
+**They measure different quantities, so "where they differ" isn't directly computable.**
+
+| | KarstBinary | KarstNumber |
+|---|---|---|
+| Result id | `419c581d…f26b` | `afb1cf68…9ae8` |
+| Band | `sample_karst_score` ([0, 1] regression) | `sample_number` ([0.2, 1.2] regression) |
+| Sampled mean | 0.100 | 0.682 |
+
+- The only legitimate between-map statistic is their **correlation: -0.0172 over 25 cells** (95% CI -0.41 to +0.38). That interval holds both "no relation" and a moderate one, so this sample **cannot say whether the maps co-vary**. Difference/RMSE/agreement figures are refused because they'd mix two different units, and a single pooled number has no location anyway — it can't show *where* maps agree or differ. [unverified: claims]
+- Of the 36 sampled windows, 11 were dropped before any statistic, all of them no-data (n_nodata_dropped: 11, n_failed_dropped: 0).
+
+**Which is right:** not answerable from this run — the comparison takes no ground truth, and I have no tool that looks up the Studio label fields the models were fine-tuned on. Nothing here says either model is more accurate.
+
+Useful next steps (say which you want):
+1. Denser re-comparison (grid=12, 144 cells) to tighten the correlation's interval.
+2. Per-map error estimation: pick one band, name a threshold (KarstNumber needs one, e.g. a cutoff on [0.2, 1.2]), and I'll plan a label design (`olmoearth_plan_label_sample`) for you/reviewers to label, then compute an honest error rate — that's the only path to "which is right."

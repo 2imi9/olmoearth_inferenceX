@@ -1,0 +1,23 @@
+
+
+**What differs** (same model, OlmoEarth-v1-FT-AWF-Base rev a347b15; C1 = 2023 window, C2 = 2022 window, 128x128 = 16,384 windows):
+
+| Finding | Value |
+|---|---|
+| Differing windows | 3,807 of 16,384 (23.2%) |
+| Most common change | class 4 (grassland_barren) in map A (C1, 2023) to class 2 (shrubland_savanna) in map B (C2, 2022): 1,409 of 3,807 differing windows (37.0%); the opposite direction (class 2 in A to class 4 in B): 268 (7.0%) |
+| Concentration | north row band (rows 0-31) holds 39.4% of the differing windows vs 25.0% expected; west col band (cols 0-31) holds 34.0% |
+| Boundary proximity | 78.3% of differing windows touch another class neighbour in C1's predicted classes, vs 53.9% overall |
+| Confidence | C2 has the larger logit margin on 57.8% of differing windows, C1 on 42.2% - a margin, not evidence of correctness |
+
+All 3,807 differing windows (class + margin per side) are saved at `compare_differing_df789c0586.json` in the run workspace.
+
+**Which is right: not answerable from this run.** Two reasons:
+- No ground-truth labels were given, and the comparison tool takes none; nothing here shows either map right where they differ.
+- The maps describe *different years* (2022 vs 2023). A differing window is either a real on-ground change between the dates or an error in one map, and the two cannot be separated by the predictions alone. Even labels for one date would grade only that date's map and count the other wrong wherever the ground changed - each map needs its own date's reference. (No tool of this agent can look up whether such references exist.)
+
+**Suggested next steps** (if you have label access):
+1. `olmoearth_plan_label_sample(budget)` separately on each scores file (e.g. N windows per map), then reviewer 0/1 labels, then `olmoearth_estimate_map_error` per map - that gives each map an honest error rate with interval, graded against its own date's reference.
+2. `olmoearth_review_set` per map (using each scores file) to rank which windows to eyeball first, lowest margin.
+
+Want me to plan the label sample? If so, tell me how many windows you can label per map.

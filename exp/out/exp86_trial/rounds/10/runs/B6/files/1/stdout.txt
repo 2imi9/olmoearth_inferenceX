@@ -1,0 +1,18 @@
+
+
+**No part of the map can be certified.** Running `olmoearth_certify_zone` on the random design (300 labels of 15,813 windows) at alpha = 0.05, delta = 0.1 under rule `prefix`: **zero levels accepted**, including the smallest testable zone (15% coverage, 2,372 windows), where the draw held 46 labels with 3 wrong (its own upper bound was 13.9% — still above 5%). A random design makes certification *possible*, not certain.
+
+For context, what these same labels do say about the whole map:
+
+| Quantity | Value |
+|---|---|
+| Whole-map error rate | 0.23 (95% interval 0.184–0.281) |
+| Method | exact hypergeometric interval (SRS of a finite map) |
+| Overall accuracy | 0.77 (0.7187–0.8160) |
+| Weakest classes (user's accuracy) | class 5: 0/7 correct; class 1: 1/11; class 6: 19/56 |
+
+Caveats from the tool output:
+- You cannot rescue this by re-running at a looser alpha or a different rule after seeing the result — the guarantee only covers an alpha/rule fixed before the labels were seen.
+- No design, budget, or plan can promise a certifiable region; a larger new random sample may also certify nothing.
+
+**Proposed next step:** label more windows under a *new* random design with a larger budget (`olmoearth_plan_label_sample`, design='random'), fixing alpha/delta/rule in advance — I can set that up if you tell me how many more labels you can spend.

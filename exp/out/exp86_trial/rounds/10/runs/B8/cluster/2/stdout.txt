@@ -1,0 +1,26 @@
+
+
+Read the run's full scores raster into a scores file (`scores_run_OlmoEarth-v1-FT-AWF-Base_a7c40be9_p4.json`, grid [128, 128], 16,384 windows, no no-data) and ranked it for review at a 5% budget.
+
+**What to check first and why:** 819 windows (the lowest 5%) by the model's own decision strength — the mean per-pixel top-1 minus top-2 logit margin, label-fill channel excluded. Low margin = least decided = most suspect; many also sit on predicted class boundaries. This orders suspicion only — it is **not** a probability of error, so none of these is "likely wrong" until labelled.
+
+Top 10 (of 819):
+
+| Rank | Window (row, col) | Index | Predicted class | Margin | Boundary neighbours |
+|---|---|---|---|---|---|
+| 1 | (14, 29) | 1821 | woodland_forest | 0.108 | 4 |
+| 2 | (10, 41) | 1321 | montane_forest | 0.149 | 3 |
+| 3 | (23, 93) | 3037 | shrubland_savanna | 0.153 | 6 |
+| 4 | (7, 11) | 907 | woodland_forest | 0.162 | 8 |
+| 5 | (14, 5) | 1797 | montane_forest | 0.176 | 7 |
+| 6 | (2, 43) | 299 | montane_forest | 0.177 | 0 |
+| 7 | (19, 34) | 2466 | woodland_forest | 0.191 | 3 |
+| 8 | (46, 91) | 5979 | grassland_barren | 0.206 | 6 |
+| 9 | (19, 35) | 2467 | montane_forest | 0.214 | 7 |
+| 10 | (2, 40) | 296 | montane_forest | 0.216 | 4 |
+
+Context: the median margin across all windows is 4.468, so the top-10 margins (0.108 to 0.216) sit far below it. The review set skews toward grassland_barren (31.3%), shrubland_savanna (30.0%), woodland_forest (15.3%) and montane_forest (10.3%). Full 819-window list: `review_list_49faf61fce.csv` in the workspace.
+
+Caveat: this ranking uses the logit margin; on Ai2's suite one-minus-top-probability ranked errors better on 14 of 16 multi-class tasks, so treat the ordering as suggestive, not validated for this case.
+
+Next step if you want an actual error rate for this map: plan a label sample from these scores (`olmoearth_plan_label_sample`), then have a reviewer label those windows — say the word and I'll do it.

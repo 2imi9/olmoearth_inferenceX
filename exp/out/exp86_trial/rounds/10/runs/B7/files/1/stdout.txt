@@ -1,0 +1,17 @@
+
+
+## Comparison of maps A vs B
+
+Compared all 78,028 shared windows; **1,570 differ (2.0%)**. The maps describe dates 216 days apart, so any difference could be real ground change or an error in one map.
+
+**Direction of change:**
+
+| Direction | Windows | Share of differing |
+|---|---|---|
+| A not water -> B water | 1,247 | 79.4% |
+| A water -> B not water | 323 | 20.6% |
+
+- **Confidence:** Map A has the larger margin on 77.6% of the differing windows (B on 22.4%) — but a larger margin does not make A right.
+- **Where:** differences concentrate in rows 2800-4199 (the grid's 50-75% band), which holds 46.8% of all differing windows; scores carry no georeference, so rows need not run north-south. All 1,570 differing windows are listed in `compare_differing_eec2555155.json` (path above).
+
+**Which side is right?** Neither can be graded from this comparison. A difference across these two dates either reflects change on the ground (seasonal cycles included) or an error in one map, and the decisions alone cannot separate the two. Each map needs a reference dated to its own date: labels for 2017 grade only map A, labels for 2018 only map B. If you have reference data for either (or both) dates, I can plan a label sample per map with `olmoearth_plan_label_sample` and then estimate each map's error rate.

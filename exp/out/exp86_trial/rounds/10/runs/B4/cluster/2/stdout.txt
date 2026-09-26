@@ -1,0 +1,18 @@
+
+
+The audit plan is ready — no error rate exists yet, since nothing has been labelled.
+
+**What I did**
+- Read the run `C1/awf_namanga_2023_1042061`: the tool returned model `allenai/OlmoEarth-v1-FT-AWF-Base`, revision `a347b1546ab881c92aa125400ed5acc8126394ca`, n_valid 16384, patch_px 4, values "logits".
+- Planned your 300-label sample as a **confidence-stratified design** (5 margin strata; labels allocated 106 / 79 / 47 / 34 / 34 so least-confident windows get graded first). The estimate stays unbiased whatever the model's calibration.
+
+**Your step**
+Fill in this CSV — one row per window, in order: set `wrong` = 1 if the map's class (`map_class`) is wrong there, else 0, plus `reference_class` = true class id (for per-class accuracy):
+
+```
+.../workspace/design_scores_8f3527f9_confidence_300_s0_to_label.csv
+```
+
+Label all 300 rows (the sheet lists stratum-by-stratum; labelling only early rows biases the result). Send me the filled CSV when done and I'll run `olmoearth_estimate_map_error` for the error rate + interval this design earns.
+
+**Note:** this confidence design gives an estimate only; a certified zone would need a separate `design='random'` plan fixed before labelling.

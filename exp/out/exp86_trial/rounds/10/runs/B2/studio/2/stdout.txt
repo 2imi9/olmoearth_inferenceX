@@ -1,0 +1,16 @@
+
+
+Done. I ranked the KarstBinary 2025 result (`sample_karst_score`, a [0,1] score) on a 10x10 grid; 72 valid windows, 28 dropped as no-data. A reviewer should check these four first (budget 5% of valid windows), least decided at threshold 0.5 first:
+
+| Rank | Window (row, col) | Score vs 0.5 | Margin |
+|---|---|---|---|
+| 1 | (4, 7) | 0.352 (class 0) | 0.297 |
+| 2 | (4, 2) | 0.285 (class 0) | 0.431 |
+| 3 | (0, 5) | 0.745 (class 1) | 0.490 |
+| 4 | (1, 8) | 0.223 (class 0) | 0.554 |
+
+Why these: they sit closest to the 0.5 decision — the model is most uncertain there, while the median window margin over all 72 is 0.965 (these are 1.74 to 3.25 times below it). Three of four predict class 0, one class 1.
+
+Caveats:
+- The score is treated as P(positive) for ranking only; margins are not error probabilities, so call them the least-decided / most suspect windows — which are actually wrong is known only after labelling. No recorded experiment grades a regression score read this way.
+- This review set is chosen to hold errors, not a sample, so its error rate would overstate the map's. To measure how wrong the map is, I can run `olmoearth_plan_label_sample` using the saved scores file — say the word and how many labels you can spend.

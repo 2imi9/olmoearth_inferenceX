@@ -1,0 +1,15 @@
+
+
+**Plan ready.** The KarstBinary 2025 map (result `419c581d-9a10-4684-aba5-1bab2875f26b`, band `sample_karst_score` [0–1]) is sampled on a 16×16 grid = 256 points, of which **173 are valid** (83 no-data). So the plan holds **173 windows, not the 300 requested** — that's every labelable window this Studio result exposes; the remaining 127 labels have no window to go to.
+
+| | |
+|---|---|
+| Design | confidence (5 strata by distance from the 0.5 decision: 35/34/35/34/35) |
+| Windows | 173 (all valid windows; least-decided first) |
+| Sheet to fill | `design_419c581d-9a1_8ca17d7d_confidence_173_s0_to_label.csv` (saved in workspace, each window has its location) |
+
+**How to proceed:**
+1. Fill `wrong` (1 = map class wrong there) for **every one** of the 173 windows in that CSV — labelling only the first rows would bias the estimate, and unlabelled windows are refused.
+2. Send me the filled sheet and I'll call `olmoearth_estimate_map_error` with the design, which returns the error rate plus the interval this design earns.
+
+Notes: the resulting rate describes the map at those 173 sampled grid points (one pixel-value each), not every pixel; and this confidence design gives an estimate, not a certified zone — certification needs a separate plan with `design='random'`. For more than 173 windows, a direct model run's scores raster (via `olmoearth_scores_from_file`) would put the whole map in the population.

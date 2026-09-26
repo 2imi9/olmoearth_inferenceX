@@ -1,0 +1,13 @@
+
+
+Short answer: none. The exact-test certification (rule 'prefix', alpha = 0.05, delta = 0.1) marked every level from 15% up to 100% of the map as not accepted (accepted: false), because the smallest zone's p-value (0.803) was already above delta = 0.1, so no part of the map is shown to be wrong at most 5% of the time from these 300 labels.
+
+| Item | Value |
+|---|---|
+| Windows on map | 15,813 |
+| Labelled | 300 (min needed for one zone: 45) |
+| Smallest testable zone | 15% of map (2,372 windows): 46 labels, 3 wrong, p = 0.803 > 0.1 -> not accepted |
+| Largest bound tested | 100%: upper bound 26.4% |
+| Whole-map estimate | 23.0% errors (95% interval 18.4%-28.1%, exact hypergeometric) |
+
+Two caveats: retrying with a looser alpha or a different rule now would not be a valid certification, since those must be fixed before the labels are seen. To get a certified zone, run a **new** random design in advance with a larger budget - e.g. `olmoearth_plan_label_sample` with design='random', with alpha, delta and the rule set beforehand - then certify on those fresh labels. It may still certify nothing. Alternatively, I can just report the whole-map estimate above as your accuracy statement.

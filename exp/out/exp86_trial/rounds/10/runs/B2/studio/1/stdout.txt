@@ -1,0 +1,21 @@
+
+
+**Review set for KarstBinary 2025 (PA regular)** — result `419c581d`, prediction `dd504793` (model KarstBinary).
+
+The band `sample_karst_score` is a [0, 1] score decided at 0.5, so windows are ranked by their margin from the decision: **least-decided scores first**, most confident last. The tool samples the extent on a 10x10 grid; of 100 windows, 72 were valid (28 no-data dropped).
+
+Why these go first: their scores sit closest to 0.5, i.e., the model is least sure there — relative suspicion, not a probability of error. Note that no recorded experiment grades this ranking for a regression score read as a probability, so treat the order as "check first," not "most likely wrong."
+
+| Rank | Window (row, col) | Score | Margin | Side of threshold |
+|---|---|---|---|---|
+| 1 | (4, 7) idx 47 | 0.351545 | 0.296909 | below 0.5 |
+| 2 | (4, 2) idx 42 | 0.284662 | 0.430676 | below 0.5 |
+| 3 | (0, 5) idx 5 | 0.744907 | 0.489813 | above 0.5 |
+| 4 | (1, 8) idx 18 | 0.223218 | 0.553564 | below 0.5 |
+| 5 | (8, 5) idx 85 | 0.807637 | 0.615273 | above 0.5 |
+| 6 | (2, 8) idx 28 | 0.166991 | 0.666018 | below 0.5 |
+| 7 | (1, 3) idx 13 | 0.872343 | 0.744685 | above 0.5 |
+
+Context: median margin across all 72 windows is 0.96469 — these 7 are the clear outliers near the decision boundary (a ~5% budget reaches 4 windows; ~10% reaches all 7).
+
+Next steps if you want them: pass the saved `scores_path` to `olmoearth_plan_label_sample` to design an honest label plan for estimating the map's error rate, or hand these window locations to a reviewer now.

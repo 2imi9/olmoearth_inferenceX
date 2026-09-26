@@ -1,0 +1,18 @@
+
+
+**Setup done, but no error rate exists yet — labels must come from you first.** A confidence score is not a probability of error, so nothing can be stated or guessed before 300 windows are labelled.
+
+What's ready:
+
+| Item | Value |
+|---|---|
+| Run | C1/awf_namanga_2023_1042061 (OlmoEarth-v1-FT-AWF-Base, revision a347b15) |
+| Population | 16,384 valid windows, 9 land-cover classes, no no-data |
+| Design | Confidence-stratified, budget 300, seed 0 (strata: 106 / 79 / 47 / 34 / 34) |
+| Label sheet | `design_scores_8f3527f9_confidence_300_s0_to_label.csv` in the run workspace |
+
+Next steps:
+1. **Label all 300 windows** in that CSV — `wrong` = 1 when the map class (`map_class`) doesn't match the ground; add `reference_class` if you want per-class accuracy. Every window must be labelled; labelling only early rows (the least-confident ones) would bias the estimate.
+2. Then I call `olmoearth_estimate_map_error` with the design path and filled sheet — it returns the map's error rate plus the interval this stratified design earns (not the simple p ± 1.96 SE formula).
+
+Note: this confidence design yields an honest estimate, not a certification. If you also want a certified zone, that requires a separate plan drawn up *before* labelling with `design='random'` — say the word and I'll set one up too.

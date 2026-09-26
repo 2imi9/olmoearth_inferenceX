@@ -1,0 +1,20 @@
+
+
+The labeling design for the KarstBinary 2025 map is ready — you'll get an error-rate estimate once the windows are labelled.
+
+**What was planned**
+
+| | |
+|---|---|
+| Map | KarstBinary, `sample_karst_score` ([0, 1] score, decided at 0.5) |
+| Grid | 16 x 16 sampled points (the max for a Studio result) |
+| Windows planned | **173** of your 300 labels — 83 sample points were no-data and dropped, so 127 labels have no window to spend on |
+| Design | `confidence`: 5 strata by margin from 0.5, allocated [35, 34, 35, 34, 35] |
+
+**Files**
+- Sheet to fill: `.../workspace/design_419c581d-9a1_8ca17d7d_confidence_173_s0_to_label.csv` (each window's location included; first rows listed in the plan above)
+- Design: `design_419c581d-9a1_8ca17d7d_confidence_173_s0.json`
+
+**How to label:** for each window, set `wrong = 1` when the map's class (0 = at or below threshold, 1 = above) doesn't match the ground there, else `0`; optionally add `reference_class` for per-class accuracy.
+
+**Next step:** send me the filled sheet (or the wrong list) and I'll run `olmoearth_estimate_map_error`, which returns the error rate and the interval this design earns — it refuses any window left unlabelled, so all 173 must be covered. Note the resulting rate describes the map at those 173 sampled grid points, not every pixel; if you want the whole-map population, that needs a direct model run's scores raster instead (a Studio result caps at 16x16).

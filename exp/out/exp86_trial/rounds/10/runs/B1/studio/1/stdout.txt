@@ -1,0 +1,11 @@
+
+
+Your Studio account has three runnable models (this list covers your account only — Ai2 also publishes fine-tuned OlmoEarth task cards not shown here):
+
+| Model | Type | Predicts |
+|---|---|---|
+| **KarstBinary** (`ac1eb985…`) | fine-tuned (75/25 split) | per-pixel regression value on its label field — a number per pixel, not a class probability or confidence |
+| **KarstNumber** (`f67d97d9…`) | fine-tuned (75/25 split) | per-pixel regression value on a different label field |
+| **KarstEmbedding** (`5aafb53d…`) | embeddings model | no declared output band (embedding-style predictions; used for similarity/kNN rather than a scalar map) |
+
+The search also returned three completed predictions named "KarstBinary/KarstNumber/KarstEmbedding … PA" for 2025, but it did not report which project they belong to, so I can't confirm they sit in "Karst Features in Pennsylvania". Say the word if you'd like me to pull one prediction's results and tile URLs, or compare KarstBinary vs KarstNumber over their shared area.

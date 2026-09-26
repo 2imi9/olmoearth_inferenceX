@@ -1,0 +1,13 @@
+
+
+Your Studio account has three runnable models, two of them fine-tuned:
+
+| Model | Type | Predicts | Trained on labels |
+|---|---|---|---|
+| **KarstBinary** (`ac1eb985`) | fine_tuned | per-pixel regression — a value per pixel (not a class or confidence) | yes, label field `0bc0d29c`, 75/25 split |
+| **KarstNumber** (`f67d97d9`) | fine_tuned | per-pixel regression — a value per pixel | yes, label field `be8b6411`, 75/25 split |
+| **KarstEmbedding** (`5aafb53d`) | embeddings | feature vectors (no declared prediction output) | none |
+
+Note: this listing covers only your Studio account. Ai2 also publishes fine-tuned OlmoEarth models (task-card configurations) that are not shown here; I can't tell you their details from this run.
+
+To actually run one, I'd need a project, an area (I can ask you to draw it), and a date range. Want me to submit a prediction for any of these?

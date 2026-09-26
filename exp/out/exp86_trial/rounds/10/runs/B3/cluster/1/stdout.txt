@@ -1,0 +1,23 @@
+
+
+Both runs are the same model (OlmoEarth-v1-FT-AWF-Base, rev a347b15) at a 128×128 window grid — C1 = 2023 ("A"), C2 = 2022 ("B"). **3,807 of 16,384 windows (23.2%) differ**, so the maps do not agree over nearly a quarter of the area.
+
+**Where they differ**
+- Concentrated in the north: rows 0–31 hold 39.4% of differing windows vs 25% expected for an even spread (next most: cols 0–31, 34.0%).
+- 78.3% of differing windows touch a class boundary in map A (vs 53.9% overall) — differences cluster at edges rather than whole regions flipping.
+
+**Class changes (A=2023 → B=2022), top 5 of 3,807**
+
+| Change | Windows | Share |
+|---|---|---|
+| grassland_barren → shrubland_savanna | 1,409 | 37.0% |
+| montane_forest → woodland_forest | 447 | 11.7% |
+| woodland_forest → shrubland_savanna | 388 | 10.2% |
+| urban_dense_development → grassland_barren | 336 | 8.8% |
+| urban_dense_development → shrubland_savanna | 308 | 8.1% |
+
+Full list of all 3,807 windows: `compare_differing_df789c0586.json` (in the scores workspace).
+
+**Which is right: not decidable from these runs.** The maps describe different years, so any differing window either changed on the ground between 2022 and 2023 (seasonal cycles included) or is wrong in one map. No labels were given and none are looked up by any tool here. Note also that B having the larger confidence margin on 57.8% of differing windows (A on 42.2%) does not make B right — a margin is not a label. And a single reference graded against one year would only grade that year's map and count the other wrong wherever the ground genuinely changed — each map needs a reference of its own date.
+
+**What you can do next:** if you can supply ground-truth labels for some windows dated to 2022 and separately to 2023, I can run `olmoearth_plan_label_sample` on each map (tell me how many labels you can spend per map), have those windows labelled, then `olmoearth_estimate_map_error` to get an error rate for each year's map separately. Without labels, no tool of this agent can pick a winner.

@@ -1,0 +1,21 @@
+
+
+Checked the KarstBinary 2025 result (prediction `dd504793`, result `419c581d`) on a 10x10 grid: 72 valid windows, 28 no-data dropped. The band is a [0, 1] karst score decided at 0.5, so ranking opens the **least-decided windows first** — scores nearest 0.5 are most suspect.
+
+**Check first (budget 10% = 7 windows):**
+
+| Rank | Window (row, col) | Score | Margin | Predicted class |
+|---|---|---|---|---|
+| 1 | (4, 7) | 0.352 | 0.297 | 0 |
+| 2 | (4, 2) | 0.285 | 0.431 | 0 |
+| 3 | (0, 5) | 0.745 | 0.490 | 1 |
+| 4 | (1, 8) | 0.223 | 0.554 | 0 |
+| 5 | (8, 5) | 0.808 | 0.615 | 1 |
+| 6 | (2, 8) | 0.167 | 0.666 | 0 |
+| 7 | (1, 3) | 0.872 | 0.745 | 1 |
+
+**Why these:** each window's margin is its distance from the 0.5 decision — the model was least certain here, so this is where mislabeling risk concentrates. All 72 windows' median margin is 0.965, vs 0.30–0.74 for these. Scores were saved to `scores_419c581d..._g10.json` with locations for the reviewer.
+
+Caveats: margin orders suspicion, it is **not** an error probability (no recorded experiment grades a regression score read this way), and this set is not a sample — its error rate would overstate the map's.
+
+Next step, if you want: pass these scores to `olmoearth_plan_label_sample` to design an honest label budget for estimating how wrong the map actually is.

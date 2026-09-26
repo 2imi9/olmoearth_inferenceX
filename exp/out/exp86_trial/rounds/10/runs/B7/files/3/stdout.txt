@@ -1,0 +1,14 @@
+
+
+Compared the two maps over their 78,028 shared windows (grid 5600 x 14). They differ in **1,570 windows (2.0%)**, 216 days apart in time, so a difference may be real change or an error — not resolvable from the maps alone.
+
+| Aspect | Result |
+|---|---|
+| Direction | Not water in A → water in B: 1,247 (79.4%); reverse (water → not water): 323 (20.6%) |
+| Confidence | Map A has the larger margin on 77.6% of differing windows; B on 22.4% |
+| Concentration | Most differing in row band 2 (rows 2800–4199, 46.8%); spread roughly even across columns. No georeference in scores, so rows needn't run north-to-south |
+| All differing windows | Listed with both classes + margins in `compare_differing_eec2555155.json` (workspace) |
+
+**Which is right?** Neither can be graded from this comparison — it takes no labels, none were given, and no recorded experiment covers this pair. Maps of different dates describe possibly-changed ground, so even reference labels would grade only the map of their own date: each map needs a reference dated to its own period. Margin differences show relative confidence, not correctness.
+
+If you want, I can plan a label sample for one of the maps to estimate its error rate (needs your reviewer's 0/1 labels on the sampled windows).

@@ -1,0 +1,18 @@
+
+
+**Short answer: none.** With these 300 random labels, no share of the map passed the exact certification test at α = 0.05, δ = 0.1 (rule: prefix) — so I cannot certify any region as being wrong at most 5% of the time.
+
+| Fact | Value |
+|---|---|
+| Map population | 15,813 windows (300 labelled) |
+| Certified zone | none (smallest testable zone needs ≥ 45 labels, i.e. ≥ 15% coverage) |
+| Smallest zone tested (15%, 2,372 windows) | 3 wrong / 46 labels; p = 0.803 vs δ = 0.1 → not accepted |
+| Whole-map error estimate | 23.0% (95% interval 18.4% to 28.1%, exact hypergeometric) |
+
+Why it failed: the fewest-labelled confident zone still held 3 errors out of 46, far above what a 5%-bound test can tolerate. Note this does not mean the map is untrustworthy — only that the existing labels are too sparse for a 5% guarantee anywhere.
+
+Options from the tool:
+- **Label more windows under a new random design** (`olmoearth_plan_label_sample`, design='random', larger budget) with α, δ and rule fixed before labelling — this could make certification possible, though it may still certify nothing.
+- **Report the whole-map figure instead**: ~23% error (95% CI 18.4–28.1%).
+
+I won't re-run with a different rule or looser α on these same labels — the guarantee covers only parameters fixed before seeing the labels.

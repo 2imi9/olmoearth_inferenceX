@@ -1,0 +1,14 @@
+
+
+The tool compared the two maps over 78,028 windows; the maps' dates (2017-09-14/15 and 2018-04-19) are 216 days apart. They disagree on **1,570 windows (2.0%)**, almost entirely water/not-water flips:
+
+| Finding | Result |
+|---|---|
+| Not water (A) -> water (B) | 1,247 of 1,570 differing (79.4%) |
+| Water (A) -> not water (B) | 323 (20.6%) |
+| Most concentrated band | Rows 2800-4199 (middle third of the 5,600-row grid): 46.8% of differing windows; no compass meaning (scores carry no georeference) |
+| Confidence | Map A has the larger margin on 77.6% of differing windows - but a margin is not a label |
+
+**Which is right? Neither can be picked.** The maps describe different times, so where they differ, either the ground changed between Sep 2017 and Apr 2018 (seasonal cycles included) or one map is wrong - the decisions alone cannot separate those. Labels for only one date would grade only that date's map. To settle it, each map needs a reference of its own date: a tool can plan the windows to label per date with `olmoearth_plan_label_sample` (needs a budget), and once a reviewer has supplied 0/1 labels for the planned windows, `olmoearth_estimate_map_error` gives each map's error rate - no tool of this agent fetches ground-truth labels itself.
+
+All 1,570 differing windows (class + both margins, window order) are in `compare_differing_eec2555155.json`.

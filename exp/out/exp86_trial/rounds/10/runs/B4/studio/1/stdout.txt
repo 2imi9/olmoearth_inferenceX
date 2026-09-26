@@ -1,0 +1,16 @@
+
+
+**Labeling plan created for the KarstBinary 2025 map.** The band `sample_karst_score` is a [0, 1] score decided at 0.5, so no extra threshold was needed.
+
+| Item | Value |
+|---|---|
+| Prediction / result | `dd504793-...` / `419c581d-...` |
+| Design | confidence-stratified, seed 0 |
+| Windows planned | **173** (all valid; you offered 300, but a Studio result sampled on the max 16×16 grid yields only 173 valid windows — 83 nodata points were dropped) |
+| Labels file | `.../workspace/design_419c581d-9a1_8ca17d7d_confidence_173_s0_to_label.csv` |
+
+How to proceed:
+1. Fill `wrong` (1 if the map's class at that window is not what's on the ground, else 0) in the CSV — and `reference_class` too if you want per-class accuracy. Every one of the 173 rows must be labelled.
+2. Tell me when done; I'll run `olmoearth_estimate_map_error` with the design to get the error rate plus the interval this design earns.
+
+Note: the resulting rate describes the map at those 173 sampled grid points, not every pixel. If you later want a **certified zone**, that needs a separate plan with design='random' fixed before labelling — this confidence design can only give an estimate.

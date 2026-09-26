@@ -1,0 +1,14 @@
+
+
+This map's error rate: **19.4%** (95% interval **15.7% – 23.6%**)
+
+| Item | Value |
+|---|---|
+| Estimate | 0.1938 |
+| 95% interval | [0.1574, 0.2362] |
+| Labels used | 300 windows (of a population of 15,813) |
+| Method | stratified by confidence margin; Wilson interval on the design's effective sample size |
+
+Weakest classes by user's accuracy (classes with at least 5 map-labelled windows): class 5 (0/10 correct), class 1 (2/9 correct), class 6 (20/44 correct). Classes 0, 2 and 8 had too few labels to rank.
+
+Note: this is a confidence design, so no zone can be certified from these labels (that would need a new plan with design='random'). If you'd like, I can plan that next, or walk through the per-class table in more detail.

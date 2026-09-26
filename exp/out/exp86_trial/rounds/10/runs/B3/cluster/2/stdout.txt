@@ -1,0 +1,27 @@
+
+
+Both runs are the same model (allenai/OlmoEarth-v1-FT-AWF-Base, rev a347b15) pooled to 128×128 windows (16,384 windows each, no no-data). **3,807 of 16,384 windows differ (23.2%)** between C1 (map A, 2023) and C2 (map B, 2022).
+
+**Where they differ**
+- Concentrated north-west: the northmost row band (rows 0–31) holds 39.4% of all differing windows vs 25% expected if even; the westernmost column band (cols 0–31) holds 34.0%.
+- 78.3% of differing windows sit on map A's predicted-class boundaries (vs 53.9% of all windows) — i.e., most disagreement is along class edges, though every differing window is a whole-window class flip.
+
+**What flips (top changes, A=2023 → B=2022)**
+
+| Change | Windows | Share of differing |
+|---|---|---|
+| grassland_barren (A) -> shrubland_savanna (B) | 1,409 | 37.0% |
+| montane_forest (A) -> woodland_forest (B) | 447 | 11.7% |
+| woodland_forest (A) -> shrubland_savanna (B) | 388 | 10.2% |
+| urban_dense_development (A) -> grassland_barren (B) | 336 | 8.8% |
+| urban_dense_development (A) -> shrubland_savanna (B) | 308 | 8.1% |
+
+The grassland/shrubland pair dominates both directions combined (1,677 windows, 44.1% of differing).
+
+**Which is right: undecidable from these runs.** The maps describe different periods (full 2023 vs full 2022), so any difference could be real ground change or an error in one map. No recorded experiment grades which of these two maps is right, and without labels neither side can be picked; a larger logit margin does not make a map right (mean margin on differing windows: A 2.66, B 3.19; B is more confident on 57.8% of them, but that is not evidence of correctness).
+
+All 3,807 differing windows with both maps' classes and margins are in `compare_differing_df789c0586.json` (workspace path).
+
+**To settle it**, provide ground-truth reference dated to each map (labels must come from you; no tool here can look them up):
+- With labels for each year: `olmoearth_plan_label_sample` + `olmoearth_estimate_map_error` gives an honest error rate per map; `olmoearth_classification_metrics` gives accuracy per class.
+- A single reference for one year grades only that year's map and would count the other wrong wherever the ground genuinely changed.

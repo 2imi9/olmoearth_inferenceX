@@ -1,0 +1,15 @@
+
+
+Your Studio account has **two fine-tuned models** (plus one embeddings model):
+
+| Model | ID (short) | Output type | Trained on |
+|---|---|---|---|
+| **KarstBinary** | `ac1eb985` | per-pixel regression — a numeric value per pixel, not a class probability or confidence | your label field `0bc0d29c` (75/25 train/val split) |
+| **KarstNumber** | `f67d97d9` | per-pixel regression — a numeric value per pixel | your label field `be8b6411` (75/25 train/val split) |
+| KarstEmbedding *(not fine-tuned)* | `5aafb53d` | frozen-embedding features, no prediction type | none |
+
+Notes:
+- Both regressions were trained in Studio on your project's label fields; the search output does not say what quantity each label field represents, so that is not known from this run.
+- This list is your account only; Ai2 also publishes fine-tuned OlmoEarth models/task cards not included above.
+
+Both have completed 2025 predictions already (e.g., `dd504793`, `a83ca800`). [unverified: claims] I can fetch those results, or re-run either model over a period/area you choose (I'd need a project, an area_id or drawn AOI, and a start/end time).

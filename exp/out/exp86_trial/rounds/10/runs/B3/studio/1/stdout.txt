@@ -1,0 +1,21 @@
+
+
+Done. Both 2025 predictions completed; I compared them as a cross-model pair over their shared PA extent (sampled on a 12x12 grid: 91 cells compared, 53 dropped as no-data).
+
+**Key finding:** the two maps measure *different* quantities — KarstBinary outputs `sample_karst_score` on [0, 1], KarstNumber outputs `sample_number` on [0.2, 1.2]. The comparison therefore returns only one meaningful statistic between them:
+
+| Statistic | Value |
+|---|---|
+| Correlation (B vs A) | 0.4974 (95% CI 0.32–0.64) |
+| Mean of KarstBinary band | 0.0963 |
+| Mean of KarstNumber band | 0.6912 |
+| Cells compared / dropped | 91 / 53 (no-data) |
+
+- **Where they differ:** not quantifiable from this run. With different properties, no per-window difference, agreement share, or RMSE is computed (mixing the two quantities would be meaningless), and a single correlation carries no location, so it cannot say where the maps agree or disagree. Neither map can be said to read "higher" than the other.
+- **Which is right:** not determinable here. No ground-truth labels were given to the comparison (it takes none), and no tool of this run looked up whether labels exist for this area. Both models were fine-tuned in Studio on *different* label fields (75/25 splits), but what their training data held and any training metrics are not known from this run.
+
+**Next steps I can offer:**
+1. If you have ground-truth karst labels for the PA area, share them — I can then evaluate the maps. [unverified: claims] Note the KarstNumber band is a per-pixel regression with no decision threshold, so it has no classification metric until a threshold is named; once you give one, I can compute per-class metrics or run a planned label-sample design (`plan_label_sample`) and estimate each map's error rate, which would let us judge which is better. [unverified: forbidden_claims] [unverified: claims]
+2. I can build QGIS layer packs for both results so you can inspect them side by side visually.
+
+Result ids: KarstBinary `419c581d…f26b`, KarstNumber `afb1cf68…9ae8`. Want either follow-up?
