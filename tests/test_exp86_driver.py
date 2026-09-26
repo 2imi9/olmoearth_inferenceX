@@ -145,7 +145,9 @@ B2_CALL = ("olmoearth_review_set_from_result", {"result_id": "res-binary", "grid
 
 
 def b2_llm():
-    return ScriptedLLM([[B2_CALL], b2_answer])
+    # the third step is the claim check's reply (an agent with the round-10 claim check reads the answer with its
+    # own model once more; "[]" flags nothing); an agent without it never asks for it
+    return ScriptedLLM([[B2_CALL], b2_answer, "[]"])
 
 
 def b2_studio(extra=None):
@@ -392,9 +394,10 @@ def test_events_jsonl_carries_every_event_with_the_full_tool_output_and_its_timi
     run_ = _load(b2_round["run_dir"])
     types = [e["type"] for e in run_["events"]]
     # An agent with exp87's answer checks appends the statement the review tool requires, which this scripted answer
-    # leaves out, and records it as a check event; exp86's agent has none.
+    # leaves out, and records it as a check event; with the round-10 claim check it also records that check's pass.
+    # exp86's agent has neither.
     checks = [e for e in run_["events"] if e["type"] == "check"]
-    assert all(e["check"] == "must_state" and e["action"] == "appended" for e in checks)
+    assert all((e["check"], e["action"]) in {("must_state", "appended"), ("claims", "passed")} for e in checks), checks
     assert [t for t in types if t != "check"] == ["tool_call", "tool_result", "thinking", "final"]
     assert all(isinstance(e["t"], float) and isinstance(e["seconds"], float) for e in run_["events"])
     out = run_["calls"][0]["result"]
@@ -405,10 +408,11 @@ def test_events_jsonl_carries_every_event_with_the_full_tool_output_and_its_timi
 @needs_agent
 def test_usage_jsonl_has_one_line_per_model_call(b2_round):
     run_ = _load(b2_round["run_dir"])
-    assert len(run_["usage"]) == 2
+    claim_checks = sum(e["type"] == "check" and e["check"] == "claims" for e in run_["events"])
+    assert len(run_["usage"]) == 2 + claim_checks          # the claim check is one more model call
     assert all({"prompt_tokens", "completion_tokens", "total_tokens", "seconds"} <= set(u) for u in run_["usage"])
     t = e86.time_and_tokens(run_)
-    assert t["n_llm_calls"] == 2 and t["total_tokens"] == sum(u["total_tokens"] for u in run_["usage"])
+    assert t["n_llm_calls"] == 2 + claim_checks and t["total_tokens"] == sum(u["total_tokens"] for u in run_["usage"])
 
 
 @needs_agent
