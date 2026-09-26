@@ -1,0 +1,16 @@
+
+
+The KarstBinary 2025 map (prediction `dd504793-...`, result `419c581d-9a10-4684-aba5-1bab2875f26b`) is ready for labelling — but first, one number to know: a Studio result sampled at the maximum 16x16 grid holds only **173 valid windows**, so your plan uses all 173, not 300 (127 labels would go unused).
+
+**What I set up**
+
+| Item | Value |
+|---|---|
+| Design | confidence (stratified by margin, least-decided windows first) |
+| Population | 173 valid of 256 sampled grid points (83 no-data dropped) |
+| Labels needed | 173 (wrong: 0/1; reference_class optional for per-class accuracy) |
+| Label sheet | `.../workspace/design_419c581d-9a1_8ca17d7d_confidence_173_s0_to_label.csv` |
+
+**How to label**: in each row, set `wrong = 1` when the map's class (`map_class`: 0 = score at/below threshold, 1 = above) is not what's on the ground, else 0; optionally add `reference_class`. All 173 rows must be filled — labelling only the early rows would bias the estimate, since the sheet lists the least-confident strata first.
+
+Two caveats to hold until after labelling: no error rate exists yet (the score alone cannot yield one), and the resulting rate describes the map at those 173 sampled grid points, not every pixel. Once the CSV is filled, I'll run `olmoearth_estimate_map_error` on it and report the estimate and the interval this design earns. If you truly need >173 labelled windows, we'd need the model's full scores raster from a direct run instead — say the word and I'll set that up.

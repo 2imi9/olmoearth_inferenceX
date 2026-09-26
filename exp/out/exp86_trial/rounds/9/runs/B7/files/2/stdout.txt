@@ -1,0 +1,20 @@
+
+
+Compared both score files with `olmoearth_compare_review` (dates passed, so the time gap was assessed).
+
+**Where they differ**
+- **1,570 of 78,028 windows differ (2.0%).**
+- Direction: mostly not water → water (1,247 = 79.4% of differences); reverse water → not water (323 = 20.6%).
+- Spatially: differences concentrate in the middle row band (rows 2,800–4,199, the grid's 50–75% strip holds 46.8% of all differing windows, vs ~25% per band if even); column spread is roughly even (~22–28% each band). Note: the scores carry no georeference, so these bands are not compass directions.
+- Mean margin on differing windows: map A 0.389, map B 0.158; A has the larger margin on 77.6% of them.
+
+**Which is right** — cannot be answered. The maps describe periods 216 days apart (2017-09-14/15 vs 2018-04-19), so any difference could be real ground change (e.g., seasonal flooding) or an error in one map. Without labels dated to each map, neither side can be graded; a reference for one date grades only that date's map. Margin size doesn't settle it either — a margin is not a label.
+
+| | value |
+|---|---|
+| Differing windows | 1,570 / 78,028 (2.0%) |
+| Dominant change | not water → water (79.4%) |
+| Peak band | rows 2,800–4,199 (46.8% of differences) |
+| More-confident side | A (77.6% of differing windows) |
+
+All 1,570 differing windows are listed in `differing_path` (compare_differing_eec2555155.json) if you want the full window list. If you have labeled references for either date, I can grade that specific map's accuracy instead.

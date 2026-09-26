@@ -1,0 +1,15 @@
+{
+ "run_id": "42b0b246-b359-46d1-b075-fb207a42d4d7",
+ "entry_count": 0,
+ "entries": [],
+ "egress_count": 1,
+ "egress": [
+  {
+   "timestamp": "2026-09-26T06:01:58.087730+00:00",
+   "capability": "studio",
+   "host": "olmoearth.allenai.org",
+   "allowed": true,
+   "reason": "host on allowlist"
+  }
+ ]
+}

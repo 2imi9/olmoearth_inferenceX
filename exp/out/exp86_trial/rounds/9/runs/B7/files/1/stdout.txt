@@ -1,0 +1,15 @@
+
+
+**Comparison of map A (2017-09-14/15) vs map B (2018-04-19)** — 78,028 shared windows, **1,570 differ (~2.0%)**:
+
+| Direction | Windows | Share of differing |
+|---|---|---|
+| not water (A) → water (B) | 1,247 | 79.4% |
+| water (A) → not water (B) | 323 | 20.6% |
+
+- **Confidence:** map A has the larger margin on 77.6% of the differing windows (B on 22.4%) — but a margin is not a label, so this does not make A right.
+- **Where they differ:** most concentrated in row band 2 (rows 2,800–4,199 of the 5,600-row grid), holding 46.8% of the differing windows; column bands are more evenly spread. The scores carry no georeference, so these rows need not run north–south. All 1,570 differing windows are listed in `differing_path` above.
+
+**Which map is right? Not answerable from these two maps alone.** They describe dates 216 days apart, so any differing window either changed on the ground (seasonal cycles included) or one map is wrong there — and only a reference dated to *each* map's own time can separate those cases. Labels for one date would grade only that date's map; a second unlabelled run settles nothing. If you want a verdict, I can plan a label sample per map (olmoearth_plan_label_sample) or rerun the comparison with `labels_date` once references exist.
+
+Note from the tool: No recorded experiment grades which of these two maps is right; without labels neither side can be picked.

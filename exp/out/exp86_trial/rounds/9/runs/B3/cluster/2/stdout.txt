@@ -1,0 +1,16 @@
+
+
+Compared all 16,384 matching windows between the two runs (same model revision `a347b15`; C1 = 2023 imagery year, C2 = 2022). They disagree in **3,807 windows (23.2%)**.
+
+**Where the differences concentrate**
+| Pattern | Detail |
+|---|---|
+| Most common flip | grassland_barren (2023) vs shrubland_savanna (2022): 1,409 windows (37.0%) |
+| Next | montane_forest vs woodland_forest: 447 (11.7%); woodland vs shrubland: 388 (10.2%) |
+| Urban flips | urban_dense_development vs grassland_barren: 336 (8.8%); urban vs shrubland_savanna: 308 (8.1%) |
+| Location | 78.3% of differing windows sit on map-A's predicted class boundaries; 39.4% fall in the northmost quarter of the grid (rows 0-31) |
+| Full list | all 3,807 window indices at `compare_differing_df789c0586.json` |
+
+**Which is right - not determinable.** The maps describe different years (2023 vs 2022), so any difference may be real on-the-ground change, a seasonal cycle, or an error in one map. Without dated ground-truth labels, neither side can be judged correct; C2 also has the higher logit margin on 57.8% of differing windows, but a margin is not a label.
+
+To settle it, each map needs its own dated reference: give me 2022-dated and 2023-dated labels (or station tables), and I'll run a proper label-sample design per map (`plan_label_sample` + `estimate_map_error`) and grade them separately.

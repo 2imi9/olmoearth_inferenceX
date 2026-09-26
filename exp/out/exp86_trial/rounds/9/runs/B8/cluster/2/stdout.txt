@@ -1,0 +1,24 @@
+
+
+I read the run's full scores raster (128x128 grid, 16,384 windows, 9 classes + nodata fill excluded) and ranked windows by the model's own confidence — the mean top-1 minus top-2 logit margin per window, lowest first. At a 5% review budget that flags **819 windows**; here are the top 10:
+
+| Rank | Window (row, col) | Predicted class | Margin | Boundary neighbours |
+|---|---|---|---|---|
+| 1 | (14, 29) | woodland_forest | 0.108 | 4 |
+| 2 | (10, 41) | montane_forest | 0.149 | 3 |
+| 3 | (23, 93) | shrubland_savanna | 0.153 | 6 |
+| 4 | (7, 11) | woodland_forest | 0.162 | 8 |
+| 5 | (14, 5) | montane_forest | 0.176 | 7 |
+| 6 | (2, 43) | montane_forest | 0.177 | 0 |
+| 7 | (19, 34) | woodland_forest | 0.191 | 3 |
+| 8 | (46, 91) | grassland_barren | 0.206 | 6 |
+| 9 | (19, 35) | montane_forest | 0.214 | 7 |
+| 10 | (2, 40) | montane_forest | 0.216 | 4 |
+
+**Why these:** the margins of the flagged windows (0.108-0.994) sit far below the map-wide median margin (4.47) — the model was weakest there, so they're most likely mislabeled. Many also sit next to windows of a different predicted class (boundary neighbourhoods), where confusion is expected. montane_forest vs woodland_forest pairs dominate the list.
+
+Caveats:
+- A low margin means "model unsure", i.e. relative suspicion, not a probability of error; this review set is not a random sample, so don't divide its errors by its size to get an error rate.
+- The ranking uses the logit margin; on Ai2's suite one-minus-top-probability ranked errors better on 14 of 16 multi-class tasks, so treat this as a reasonable-but-unvalidated ordering.
+
+Full ordered list of all 819 windows: `/Users/lucas/Desktop/Github/olmoearth_inferenceX/exp/out/exp86_trial/rounds/9/runs/B8/cluster/2/workspace/review_list_49faf61fce.csv`. If you label some of these, I can turn them into a proper error-rate estimate via a designed label sample.

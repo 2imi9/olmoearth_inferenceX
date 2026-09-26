@@ -1,0 +1,17 @@
+
+
+**Map error rate: ~19.4%** (95% interval **15.7% to 23.6%**), from 300 labelled windows of 15,813. Method as returned: *stratified by confidence margin; Wilson interval on the design's effective sample size* (effective n ≈ 384). No strata were starved.
+
+Weakest classes by user's accuracy (only classes with ≥ 5 map-labelled windows are ranked):
+
+| Class | User's accuracy | 95% interval |
+|---|---|---|
+| 5 | 0.0% | 0.0% – 27.8% |
+| 1 | 22.5% | 6.5% – 55.0% |
+| 6 | 45.1% | 32.3% – 58.6% |
+| 7 | 92.3% | 86.3% – 95.8% |
+| 4 | 96.4% | 91.3% – 98.5% |
+
+Notes:
+- Don't substitute p ± 1.96·sqrt(p(1-p)/n) here — this is a stratified design, so only the returned interval applies.
+- No zone can be certified from this confidence design; certification would need a new plan with `design='random'`.

@@ -1,0 +1,18 @@
+
+
+**Review order for KarstBinary 2025** (result `419c581d-…f26b`, band `sample_karst_score`, 72 valid windows on a 10x10 grid):
+
+Open these first — lowest margin = most undecided at the 0.5 cut:
+
+| Rank | Window (row, col) | Score | Side of threshold | Margin |
+|---|---|---|---|---|
+| 1 | (4, 7) | 0.3515 | below | 0.2969 |
+| 2 | (4, 2) | 0.2847 | below | 0.4307 |
+| 3 | (0, 5) | 0.7449 | above | 0.4898 |
+| 4 | (1, 8) | 0.2232 | below | 0.5536 |
+| 5 | (8, 5) | 0.8076 | above | 0.6153 |
+| 6–7 | (2, 8), (1, 3) | 0.1670 / 0.8723 | below / above | 0.6660 / 0.7447 |
+
+That's the full set at budget 0.1; ranks 1–4 cover budget 0.05.
+
+**Why:** the tool reads each score as P(positive) and ranks by distance from the decision boundary (0.5); windows whose scores sit nearest 0.5 are the least confident calls, so a label there is most informative. The median margin over all windows is 0.96469, vs 0.296909–0.744685 in this set — every window here is far less decided than the typical one. Caveats: margins rank suspicion, not error probability, and no recorded experiment grades a regression score read as a probability; the review set isn't a sample, so don't infer an error rate from it. Scores file saved with window locations if you want to take the list offline.

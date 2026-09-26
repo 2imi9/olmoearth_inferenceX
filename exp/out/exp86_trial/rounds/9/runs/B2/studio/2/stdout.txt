@@ -1,0 +1,17 @@
+
+
+I pulled the KarstBinary 2025 result (`419c581d-...`) and ran the review-set ranking. It's a [0, 1] karst-score layer decided at 0.5; 10×10 grid over the AOI gave **72 valid windows** (28 no-data dropped). The tool ranks by margin — distance from the 0.5 decision — so the least-decided windows come first.
+
+**Check these first** (at a 5% budget: rows 1–4; at 10%: all 7):
+
+| Rank | Window (row, col) | Score vs 0.5 | Margin | Note |
+|---|---|---|---|---|
+| 1 | #47 (4, 7) | 0.352 (below) | 0.297 | least decided |
+| 2 | #42 (4, 2) | 0.285 (below) | 0.431 | near-boundary |
+| 3 | #5 (0, 5) | 0.745 (above) | 0.490 | near-boundary |
+| 4 | #18 (1, 8) | 0.223 (below) | 0.554 | below cut for 5% budget |
+| 5–7 | #85 (8,5), #28 (2,8), #13 (1,3) | 0.808 / 0.167 / 0.872 | 0.615–0.745 | in 10% set only |
+
+Why: these sit closest to the karst/non-karst boundary, where the model is least committed; context-wide margins range 0.297–0.992 (median 0.965), so this set is clearly separated from the confident majority.
+
+Caveats: the score is treated as P(positive) for ranking only — it's not an error probability, and no recorded experiment grades a regression score read this way. This set is designed to hold errors, not sample them, so use `olmoearth_plan_label_sample` with the saved scores file if you want an honest error rate. Say the word and I'll set that up.

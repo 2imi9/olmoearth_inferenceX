@@ -1,0 +1,31 @@
+
+
+Both 2025 runs (Jan 1–Dec 31) over your PA Karst area are completed, but there's an important catch before the comparison:
+
+## What I compared
+
+| | KarstBinary | KarstNumber |
+|---|---|---|
+| Prediction | `dd504793` | `a83ca800` |
+| Result id | `419c581d-…f26b` | `afb1cf68-…ae8` |
+| Output band | `sample_karst_score`, range [0.0, 1.0] | `sample_number`, range [0.2, 1.2] |
+
+**They predict different quantities**, so a value-by-value difference (who reads higher where, RMSE, agreement share) is not meaningful between them — mixing two units would be nonsense. The only honest statistic between them is whether they co-vary.
+
+## Result (pair comparison, 6x6 grid, 25 cells; 11 dropped as no-data)
+
+- Correlation: **-0.0172**, 95% interval **-0.41 to +0.38**
+- That interval spans both "no relation" and "moderate relation," so this sample **cannot tell whether the maps co-vary at all**
+- No statistic places *where* they differ — a pooled correlation has no location, so I can't name spots of disagreement from this run alone
+
+## Which is right?
+
+I can't say, and no tool result supports saying it: no ground-truth labels were involved in either prediction, so nothing here measures accuracy of either model. A per-pixel regression output with no decision threshold also has no error rate until a threshold is named.
+
+## Options if you want to go further
+
+1. **Denser grid** (grid=12, up to 144 cells) to narrow the correlation's interval
+2. **Pick a threshold** for each band, then run a proper label-sample design (`olmoearth_plan_label_sample`) with N labels from your side — that yields a defensible error rate for each map, which is the only way to ask "which is right"
+3. **Review set** per map to find windows worth a human look first
+
+Want me to run any of these?

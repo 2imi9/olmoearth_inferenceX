@@ -1,0 +1,16 @@
+
+
+Here's what your Studio account has available:
+
+| Model | Type | Predicts |
+|---|---|---|
+| KarstBinary (`ac1eb985`) | fine-tuned | per-pixel regression — one continuous karst-related score per pixel |
+| KarstNumber (`f67d97d9`) | fine-tuned | per-pixel regression — one continuous karst-related value per pixel |
+| KarstEmbedding (`5aafb53d`) | embeddings | feature embedding per pixel (not a prediction model itself) |
+
+Notes:
+- Both fine-tuned outputs are regression values per pixel — not class labels, probabilities, or confidences.
+- This lists only **your** Studio account. Ai2 also publishes additional fine-tuned OlmoEarth models (via task cards / olmoearth_projects configurations) that are not in this listing.
+- All three have completed 2025 PA-area predictions already on file, so the first two are ready to reuse via `olmoearth_submit_prediction`.
+
+Want me to pull the declared output ranges for either model, or point you at the published Ai2 models?

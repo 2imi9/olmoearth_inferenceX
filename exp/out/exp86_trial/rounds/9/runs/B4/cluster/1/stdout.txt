@@ -1,0 +1,14 @@
+
+
+Plan ready for run `C1/awf_namanga_2023_1042061` (16,384 valid windows, OlmoEarth-v1-FT-AWF-Base). Here's how wrong the map is, in two steps:
+
+| Step | What happens |
+|---|---|
+| Done | Loaded all pixel scores; built a **confidence** label-sample of **300 windows** (5 confidence strata, allocation 106/79/47/34/34) — score only allocates labels, so the eventual estimate stays design-unbiased |
+| You | Label all 300 windows in this CSV: `wrong` = 1 if the map's class isn't on the ground there, plus `reference_class` (true class id) for per-class accuracy. The CSV holds each window's location. |
+| Then | Give me the filled sheet (or the 0/1 list) and I'll call `olmoearth_estimate_map_error`, which returns the error rate with the interval this stratified design earns (the naive p ± 1.96 sqrt(p(1-p)/n) formula does not apply here) |
+
+CSV path:
+`.../B4/cluster/1/workspace/design_scores_8f3527f9_confidence_300_s0_to_label.csv`
+
+Two caveats: until every one of the 300 rows is labelled, no error rate or interval exists — a confidence score is not a probability of error, and labelling only the first (least-confident) rows would bias the result. And if you want a *certified zone* rather than just an estimate, that needs a separate plan with `design='random'` fixed before labelling — say so now and I'll also build that one.

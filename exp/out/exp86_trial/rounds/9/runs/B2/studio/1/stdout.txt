@@ -1,0 +1,20 @@
+
+
+Reviewed the KarstBinary 2025 result (`419c581d-9a10-4684-aba5-1bab2875f26b`) on a 12x12 grid: 144 windows sampled, 91 valid (53 no-data dropped). The band `sample_karst_score` is a [0, 1] score read at threshold 0.5 and ranked by margin — lowest margin first (score nearest 0.5 = most suspect).
+
+**Check these windows first (top of the 5% budget; full 9-window list for 10% budget saved at `review_list_a838c777d1.csv`):**
+
+| Rank | Window (row, col) | Score | Margin | Predicted |
+|---|---|---|---|---|
+| 1 | (4, 9) | 0.494 | 0.012 | not karst |
+| 2 | (5, 10) | 0.478 | 0.045 | not karst |
+| 3 | (9, 9) | 0.563 | 0.126 | karst |
+| 4 | (10, 8) | 0.595 | 0.190 | karst |
+| 5 | (3, 3) | 0.390 | 0.219 | not karst |
+
+**Why:** their scores sit almost exactly on the 0.5 decision line, so the model is least decided there — any of them could flip with a small score change, making them the likeliest spots for a wrong call. Context: the median margin over all 91 windows is 0.964 (very confident); even the 5th-ranked window here is well below it, while the other 83 windows have margins 0.516 to 0.991.
+
+Caveats:
+- The score is treated as P(positive) for ranking only; margins are not error probabilities.
+- No recorded experiment grades a regression score read this way, so treat this as relative suspicion ordering, not calibrated risk.
+- A review set is not a sample — don't divide its errors by its size. To estimate how wrong the map actually is, next step is `olmoearth_plan_label_sample` (scores file already saved: `scores_419c581d...g12.json`). Want me to plan that label sample?

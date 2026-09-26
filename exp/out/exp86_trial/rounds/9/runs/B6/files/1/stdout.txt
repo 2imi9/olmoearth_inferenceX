@@ -1,0 +1,16 @@
+
+
+**No part of the map can be certified as wrong at most 5% of the time.** The exact test (alpha = 0.05, delta = 0.1, rule `prefix`) found no certifiable zone out of all 18 levels tested.
+
+Key figures from the 300 labels (population = 15,813 windows):
+
+| Zone size | Labels inside | Wrong inside | Error-rate upper bound | Accepted? |
+|---|---|---|---|---|
+| 15% of map (smallest testable) | 46 | 3 | 13.9% | ✗ |
+| 25% of map | 68 | 3 | 9.5% | ✗ |
+| 50% of map | 140 | 13 | 13.2% | ✗ |
+| Whole map | 300 | 69 | 26.4% | ✗ |
+
+The prefix rule stops at the smallest zone whose test fails (p = 0.803 > 0.1), so nothing after it counts either; under `bonferroni` no level would pass at all. For context, the whole-map error rate estimates **23.0%** (95% interval 18.4%–28.1%), which is well above 5% — that's the honest summary figure you can quote.
+
+Note: picking a looser alpha now or switching rules after this result wouldn't be covered by the guarantee; those must be fixed before labels are seen. If you need a certified zone, run a **new** random-design plan with a larger labeling budget (via `olmoearth_plan_label_sample`, `design='random'`), with alpha/delta/rule set in advance — though even then certification isn't guaranteed.

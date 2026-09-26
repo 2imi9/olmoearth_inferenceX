@@ -1,0 +1,24 @@
+
+
+Compared. Two important caveats up front: the models output **different quantities** (a score vs a number on different scales), and neither has ground-truth labels attached, so the comparison says how they relate — not which is right.
+
+| | KarstBinary | KarstNumber |
+|---|---|---|
+| Result id | `419c581d…f26b` | `afb1cf68…9ae8` |
+| Band | `sample_karst_score`, range 0–1 | `sample_number`, range 0.2–1.2 |
+| Mean over sampled AOI | 0.10 | 0.68 |
+
+**Where they differ:** because the two bands measure different things, a pixel-by-pixel "difference" between them is not defined — only whether they rise and fall together is meaningful. Across the shared extent (25 of 36 grid cells valid; 11 no-data in at least one map):
+
+- Correlation = **-0.017**, 95% interval **-0.41 to 0.38**.
+
+That interval spans both "no relation" and "moderate relation," so this sample cannot even establish whether the two maps co-vary spatially; it certainly doesn't locate disagreement anywhere in the area.
+
+**Which is right:** I can't say, and no statistic here can. Nothing compares either map to observed karst locations, so accuracy, error rates, and a "winner" are off the table until labels are involved.
+
+Options to move forward:
+1. **More cells:** rerun the pair at a 12×12 grid to narrow the correlation's interval.
+2. **Judge each map separately:** pick a decision threshold for each regression band (e.g., what value counts as "karst present"), and if you have station/locality karst labels, I'll plan a label sample at that threshold and estimate each map's error rate — that's the only way to answer "which is right."
+3. **Ambiguity review:** rank each map's own most-uncertain windows so you know where to check first.
+
+Want me to run any of these?

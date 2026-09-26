@@ -1,0 +1,22 @@
+
+
+**Run:** `awf_namanga_2023_1042061` — OlmoEarth-v1-FT-AWF-Base (rev a347b15), 9-class land cover over Namanga, 2023; 128x128 grid, 16,384 windows, all valid (no no-data).
+
+**Why these windows:** ranked by the model's own confidence — mean per-pixel top-1 minus top-2 logit margin (label-fill channel excluded). Lowest margin = least confident window, checked first. At the 5% budget that's **819 windows**; the full ordered list is in the CSV at `review_list_49faf61fce.csv`. Top of the list:
+
+| Rank | Window (row, col) | Predicted class | Margin |
+|---|---|---|---|
+| 1 | (14, 29) | woodland_forest | 0.108 |
+| 2 | (10, 41) | montane_forest | 0.149 |
+| 3 | (23, 93) | shrubland_savanna | 0.153 |
+| 4 | (7, 11) | woodland_forest | 0.162 |
+| 5 | (14, 5) | montane_forest | 0.176 |
+
+Context: median margin over all windows is 4.47, so the top-10 windows sit ~21–41x below the median; most flagged windows also border predicted-class boundaries.
+
+**Caveats to state:**
+- This ranks relative suspicion, not error probability; without labels, no error rate can be claimed from it. For a measured error rate, design a label sample (`plan_label_sample`) next.
+- Evidence scope is partial: Ai2's suite found one-minus-top-probability ranked errors better than this logit-margin form on 14 of 16 multi-class tasks, so treat the ordering as indicative.
+- boundary_neighbours counts map boundaries (predicted-class changes), not true ones.
+
+Want me to set up the label-sample plan for an actual error estimate?

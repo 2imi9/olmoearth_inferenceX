@@ -1,0 +1,13 @@
+
+
+Your Studio account holds three models; two are fine-tuned regressions you can run immediately, plus an embeddings model:
+
+| Model | Type | Predicts | Output band / range |
+|---|---|---|---|
+| **KarstBinary** (`ac1eb985`) | fine_tuned | Per-pixel karst score — a single value per pixel, not a class or confidence | `sample_karst_score`, regression [0.0, 1.0] |
+| **KarstNumber** (`f67d97d9`) | fine_tuned | Per-pixel numeric sample value | `sample_number`, regression [0.2, 1.2] |
+| KarstEmbedding (`5aafb53d`) | embeddings | Embeddings features only (no per-pixel label) — typically for downstream kNN/probe, not a direct prediction | n/a |
+
+Both fine-tuned models have completed runs over your PA Karst AOI for 2025, so their tile layers are already viewable in Studio.
+
+One caveat: this is only your account's listing. Ai2 also publishes additional fine-tuned OlmoEarth models via its `olmoearth_projects` configurations and task cards that aren't shown here, so this isn't the full catalog of what you could technically run. Want me to submit either model on a new area/date, or pull up the task-card models?

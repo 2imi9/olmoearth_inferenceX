@@ -1,0 +1,19 @@
+
+
+From a **simple random sample** of 300 labelled windows, the only thing you can cleanly certify is a guarantee for the **map as a whole** — not an arbitrary subregion — unless your candidate subregion was itself targeted by the sampling design.
+
+**Decision rule (this is what decides "which part"):**
+- Sample error rate `p̂ = #wrong / 300`.
+- Compare the **one‑sided upper confidence bound** `U` (at your chosen coverage) against `0.05` — *not* `p̂`. With n=300 the bound sits above the point estimate, so even a point estimate under 5% can have `U > 5%`.
+- **If `U ≤ 0.05`** → you can trust the **entire map** to be wrong at most 5% of the time.
+- **If `U > 0.05`** → you **cannot certify the whole map**. A spatial slice (e.g. "the high‑confidence windows") earns its own bound only if you have labels drawn *from inside that slice*; otherwise it is a risk screen, not a guarantee.
+
+**Why "which part" resists a free answer here:**
+
+| What you have | What it licenses |
+| --- | --- |
+| SRS of 300 + labels | Whole‑map error‑rate upper bound |
+| Per‑window scores | Risk *screening* only, not a guarantee |
+| Labels drawn from a chosen part | A certified bound for that part |
+
+**To hand you the exact number:** I need the count of wrong windows out of the 300. Give me that count and I'll compute `U` and tell you plainly whether the whole map clears the 5% bar, or whether you must fall back to a targeted subregion.

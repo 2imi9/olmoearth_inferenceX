@@ -1,0 +1,18 @@
+
+
+Your map's error rate can't be stated before you label — the scores alone carry no truth. I've built the design so your 300 labels answer it honestly:
+
+| Item | Value |
+|---|---|
+| Model run | OlmoEarth-v1-FT-AWF-Base @ a347b15, raster sha256 a7c40be9 |
+| Grid | 128 x 128 = 16,384 valid windows (patch 4 px) |
+| Design | **confidence** (stratified by top-1 minus top-2 logit margin; labels allocated from the model's own score, so the estimate stays design-unbiased) |
+| Budget | 300 windows across 5 strata (106 / 79 / 47 / 34 / 34) |
+| Label sheet | `.../B4/cluster/3/workspace/design_scores_8f3527f9_confidence_300_s0_to_label.csv` |
+
+How to proceed:
+1. In the CSV, set `wrong = 1` when the window's `map_class` is not on the ground, else `0`; optionally add `reference_class` for per-class accuracy.
+2. **Label all 300 rows** — only the first rows (least confident) would bias the estimate.
+3. Send me the filled sheet (or pass its path) and I'll call `olmoearth_estimate_map_error`, which returns the error rate plus the interval this design earns.
+
+Two caveats: this confidence design gives an estimate, not a certification — if you want a certified zone too, I'd need to plan a separate `design='random'` sample as well.

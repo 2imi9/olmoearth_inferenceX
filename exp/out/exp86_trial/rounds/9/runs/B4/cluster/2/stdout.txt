@@ -1,0 +1,21 @@
+
+
+I set up the audit for that run. No error rate exists yet — one needs your labels first.
+
+**Run**: `C1/awf_namanga_2023_1042061` — OlmoEarth-v1-FT-AWF-Base (rev a347b15), 128×128 grid = 16,384 valid windows, 0 nodata.
+
+**Labeling design** (confidence-stratified, budget 300):
+
+| Stratum (by confidence margin) | Size | Allocated |
+|---|---|---|
+| 0 (least confident) | 3,277 | 106 |
+| 1 | 3,277 | 79 |
+| 2 | 3,276 | 47 |
+| 3 | 3,277 | 34 |
+| 4 (most confident) | 3,277 | 34 |
+
+- Design file: `design_scores_8f3527f9_confidence_300_s0.json` (workspace dir under exp86_trial/B4/cluster/2)
+- Fill-in sheet (has each window's location + map class): `..._to_label.csv`
+- For each row set `wrong` = 1 if the map class is wrong, else 0 (plus `reference_class` for per-class accuracy). **All 300 rows must be labelled** — partial labelling biases the estimate.
+
+When the sheet is filled, send it back and I'll run `olmoearth_estimate_map_error` with the design to get the error rate and the interval this design earns. Note this confidence design gives an estimate only; a certified zone would require a separate random-design plan.

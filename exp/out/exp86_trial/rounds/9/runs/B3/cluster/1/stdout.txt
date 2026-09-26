@@ -1,0 +1,21 @@
+
+
+Compared all 16,384 windows between C1 (2023) and C2 (2022), same model and revision:
+
+**Where they differ**
+- 3,807 windows differ (~23.2%); all are whole-window class changes.
+- 78.3% of differing windows sit on predicted class boundaries (vs 53.9% overall).
+- Spatially concentrated north and west: the top quarter of rows holds 39.4% of the differences, the leftmost column quarter 34.0%.
+- Top class flips (A = C1/2023, B = C2/2022):
+
+| Change | Windows | Share |
+|---|---|---|
+| grassland_barren (A) vs shrubland_savanna (B) | 1,677 (1,409 / 268) | 44.1% |
+| woodland_forest vs shrubland_savanna | 479 (388 / 91) | 12.6% |
+| montane_forest (A) vs woodland_forest (B) | 447 | 11.7% |
+| urban_dense_development (A) vs grassland_barren (B) | 366 (336 / 30) | 9.6% |
+
+All 3,807 differing windows are listed in `compare_differing_df789c0586.json` (window indices only, no coordinates).
+
+**Which is right**
+Neither can be declared right from these maps alone: the two runs describe different years (2023 vs 2022), so any difference may be real ground change or an error in one map. The decision margins cannot arbitrate — map B has the larger margin on 57.8% of the differing windows (mean 3.19 vs 2.66), but a margin is not a label, and no recorded experiment grades which side wins. To settle it you would need labels/reference imagery dated to *each* year (one reference per map), and I can then run `olmoearth_classification_metrics` per map.

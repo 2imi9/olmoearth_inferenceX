@@ -1,0 +1,15 @@
+
+
+I set up the error-estimation design for the KarstBinary 2025 map (result `419c581d`, band `sample_karst_score` decided at 0.5). No error rate exists yet — one comes only after you fill in the labels.
+
+**Key facts from the plan:**
+- Only **173 windows** could be planned, not 300: a Studio result's grid caps at 16×16 (256 sample points), of which 173 were valid; 127 of your labels would have no window.
+- Design: **confidence** stratified (least-decided scores first) — this gives an unbiased *estimate* of the map's error rate at these sampled points, but it **cannot certify a zone** (that needs a separate `design='random'` plan).
+- The rate describes the map at the 173 sampled grid points, not every pixel.
+
+**Next steps:**
+1. Label all 173 windows in this sheet (set `wrong = 1/0`, optionally `reference_class` for per-class accuracy):
+   `/Users/lucas/Desktop/Github/olmoearth_inferenceX/exp/out/exp86_trial/rounds/9/runs/B4/studio/3/workspace/design_419c581d-9a1_8ca17d7d_confidence_173_s0_to_label.csv`
+2. Send me the filled sheet (or the 0/1 list); I'll run `olmoearth_estimate_map_error` and report the estimate plus the interval this design earns.
+
+Note: labelling only part of the sheet biases the estimate — every listed window must be labelled. Want a random-design plan instead so a certified zone becomes possible?

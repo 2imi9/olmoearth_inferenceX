@@ -1,0 +1,15 @@
+
+
+The plan is set up — but there's no error rate yet; it only exists once you've filled in the labels. Here's what I did:
+
+- Found the KarstBinary 2025 run: prediction `dd504793...` ("KarstBinary--01-01-2025--12-31-2025--PA regular"), completed; result id `419c581d-9a10-4684-aba5-1bab2875f26b`, band `sample_karst_score`.
+- Your 300-label budget exceeds what this Studio map can hold: its finest sampling is a 16×16 grid = 256 points, of which **173** are valid (83 no-data dropped). So the plan takes **all 173 windows** — 127 of your labels have no window to go to.
+- Design: **confidence** stratification on a 16×16 grid, 5 strata of ~35 windows each, least-confident windows first.
+
+To get the "how wrong" number:
+
+1. Open the label sheet and mark `wrong` = 1/0 for **every** one of the 173 windows (plus `reference_class` if you want per-class accuracy):
+   `/Users/lucas/Desktop/Github/olmoearth_inferenceX/exp/out/exp86_trial/rounds/9/runs/B4/studio/2/workspace/design_419c581d-9a1_8ca17d7d_confidence_173_s0_to_label.csv`
+2. Send me the filled sheet (or the list) and I'll run `olmoearth_estimate_map_error` to give the error rate plus the interval this design earns.
+
+Two caveats to keep in mind: the rate describes the map at the 173 sampled grid points (one pixel each), not every pixel; and labelling only the early rows would bias it — all 173 must be filled. If you'd rather certify a zone at some max error rate, say so before labelling and I'll make a separate random-design plan instead.

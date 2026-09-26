@@ -1,0 +1,27 @@
+
+
+Loaded the run C1/awf_namanga_2023_1042061 (model allenai/OlmoEarth-v1-FT-AWF-Base, 128x128 window grid = 16,384 windows, all valid) and ran the package's review-set ranking at a 5% budget. That yields **819 windows to check**, ordered lowest first by the mean per-window top-1-minus-top-2 logit margin (margin 0.108 to 0.994 for the full set, versus a median of 4.468 across all windows — so these are the windows where the model was least decisive between its two leading classes).
+
+**Why these windows:** the signal is the model's own uncertainty — when the top two class logits are nearly tied, the argmax label is most likely wrong there. Many of the top windows also sit on map class boundaries (boundary_neighbours counts differing predicted neighbours), which compounds the suspicion.
+
+Top 10 windows to open first (rank, index, row/col, margin, predicted class):
+
+| Rank | Index | Row, Col | Margin | Predicted class |
+|---|---|---|---|---|
+| 1 | 1821 | 14, 29 | 0.1082 | woodland_forest |
+| 2 | 1321 | 10, 41 | 0.1493 | montane_forest |
+| 3 | 3037 | 23, 93 | 0.1533 | shrubland_savanna |
+| 4 | 907 | 7, 11 | 0.1618 | woodland_forest |
+| 5 | 1797 | 14, 5 | 0.1764 | montane_forest |
+| 6 | 299 | 2, 43 | 0.1769 | montane_forest |
+| 7 | 2466 | 19, 34 | 0.1911 | woodland_forest |
+| 8 | 5979 | 46, 91 | 0.2055 | grassland_barren |
+| 9 | 2467 | 19, 35 | 0.2137 | montane_forest |
+| 10 | 296 | 2, 40 | 0.2161 | montane_forest |
+
+Caveats worth knowing:
+- This orders **relative suspicion, not a probability of error**, and the review set is targeted, not a sample — so no error rate can be quoted from it without labelling a designed sample (`olmoearth_plan_label_sample`).
+- Caveat on the signal form: Ai2's suite found that one-minus-top-probability ranked errors better than the logit margin on 14 of 16 multi-class tasks (exp76); the suite evidence therefore covers this ranking only in part.
+- Full list of all 819 windows (in review order): `/Users/lucas/Desktop/Github/olmoearth_inferenceX/exp/out/exp86_trial/rounds/9/runs/B8/cluster/3/workspace/review_list_49faf61fce.csv`
+
+Want me to expand the listing beyond rank 10, or design a label-sample plan to actually measure how wrong this map is?

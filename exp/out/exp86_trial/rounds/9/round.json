@@ -1,0 +1,75 @@
+{
+ "brief_values": {
+  "B3/cluster": {
+   "run_dir_a": "C1/awf_namanga_2023_1042061",
+   "run_dir_b": "C2/awf_namanga_2022_1042294"
+  },
+  "B4/cluster": {
+   "run_dir": "C1/awf_namanga_2023_1042061"
+  },
+  "B8/cluster": {
+   "run_dir": "C1/awf_namanga_2023_1042061"
+  },
+  "B5/files": {
+   "design_path": "F2/design_confidence_300_s0.json",
+   "labels_path": "F2/labels_confidence_300_s0.csv"
+  },
+  "B6/files": {
+   "design_path": "F3/design_random_300_s0.json",
+   "labels_path": "F3/labels_random_300_s0.csv"
+  },
+  "B7/files": {
+   "scores_a": "F4/emsr279-11_s1_pre.json",
+   "scores_b": "F4/emsr279-11_s1_post.json",
+   "date_a": "2017-09-14/2017-09-15",
+   "date_b": "2018-04-19"
+  }
+ },
+ "not_run": {
+  "B8/studio": "the Studio account of the first trial (24 September) held no classification model: KarstEmbedding, KarstNumber and KarstBinary only"
+ },
+ "note": "Round 9 is a development round on the fixes of round 8's audit, run before exp87's preregistration is frozen. It uses exp86's briefs and fixtures only; exp87's sealed held-out briefs stay sealed. The trial's verdict does not depend on it. The agent's commits since 6d25307 are not yet signed off; the owner signs them after the round, with identical trees, as for rounds 4 to 6. The agent's tools import olmoearth-inferencex 1.3.1 as installed.",
+ "fixes": [
+  {
+   "after_round": 8,
+   "where": "agent",
+   "branch": "2imi9/feature-trial-round3-fixes (local, unsigned)",
+   "commits_since": "6d25307",
+   "diagnosis": "exp/out/exp86_round8_diagnosis.md",
+   "items": [
+    "six forbidden-claim ids: spatial_pattern_from_one_correlation, agreement_from_uncertain_correlation, review_set_for_unthresholded_regression, one_reference_settles_two_dates, evidence_outside_its_scope, certification_guaranteed",
+    "a correlation is a fact with n and a 95% interval (Fisher's z), and must_state says one correlation says nothing about where two maps agree",
+    "evidence that does not cover the case keeps its figures and dataset names in the evidence file only",
+    "a review set listed short writes its full ranked list to a CSV and names it; the evidence file is said to hold no windows",
+    "margin_ratio names the windows it covers and gives the first ten listed their own ratio",
+    "'north' only for a georeferenced grid",
+    "estimate_map_error gives weakest_classes computed by code; a random design makes certification possible, not certain",
+    "the harness gains a detector per new id, a stricter subset-labelling detector, and a check that a file named as holding a list holds it"
+   ],
+   "signed_off": null
+  },
+  {
+   "after_round": 8,
+   "where": "scorer",
+   "commit": null,
+   "items": []
+  }
+ ],
+ "agent_commit": "c62538f695d9a4c2b8086720906ef859b424da1a",
+ "agent_dirty": false,
+ "agent_diff_sha256": null,
+ "inferencex_version": "1.3.1",
+ "model": "nvidia/Qwen3.8-27B-NVFP4",
+ "sampling": {
+  "mode": "thinking_general",
+  "temperature": 1.0,
+  "top_p": 0.95,
+  "top_k": 20,
+  "presence_penalty": 1.5,
+  "max_tokens": 32768,
+  "preserve_thinking": true
+ },
+ "max_turns": 8,
+ "agent_branch": "2imi9/feature-trial-round3-fixes",
+ "first_run": "2026-09-26T05:15:41+00:00"
+}

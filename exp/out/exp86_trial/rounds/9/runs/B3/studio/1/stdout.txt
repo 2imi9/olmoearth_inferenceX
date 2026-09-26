@@ -1,0 +1,19 @@
+
+
+## Comparison: KarstBinary vs KarstNumber, PA Karst (2025)
+
+Both predictions (`dd504793...` Binary, `a83ca800...` Number) ran over the same PA extent (~10,091 km² shared) for 2025-01-01 to 2025-12-31. I compared the two results on a 12x12 grid.
+
+| Item | Result |
+|---|---|
+| Quantities measured | Binary: `sample_karst_score` [0, 1]; Number: `sample_number` [0.2, 1.2] - different units |
+| Co-variation (correlation) | 0.4974 across 91 valid cells (95% interval 0.32 to 0.64) - moderate positive, they tend to rise and fall together |
+| Cells dropped | 53 of 144 (no-data in at least one map) |
+
+**Where they differ:** the comparison can't place that spatially - a single pooled correlation has no location, and because the maps are different quantities the tool returns no per-window difference, RMSE, or agreement share (mixing the two units would be meaningless). Only their co-varying trend is measurable between them.
+
+**Which is right:** not answerable from these results alone - no ground-truth labels exist, so nothing in the data says either map is more accurate. A correlation says nothing about correctness.
+
+Suggested next steps (say which you want):
+1. **Overlay in QGIS** - I can package both tile layers (QGIS definition + legend) so you can eyeball spatial disagreement directly.
+2. **Check accuracy properly** - name a decision threshold for each map (e.g. karst present/absent), then I'll design a label sample with `plan_label_sample`, and once you mark the windows, `estimate_map_error` gives each map's error rate with an interval.

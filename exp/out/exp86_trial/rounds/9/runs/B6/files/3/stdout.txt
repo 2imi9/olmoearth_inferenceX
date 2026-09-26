@@ -1,0 +1,17 @@
+
+
+**None.** No part of the map can be certified as wrong at most 5% of the time under your random design.
+
+What the exact test (alpha = 0.05, delta = 0.1, rule `prefix`) found:
+
+| Item | Value |
+|---|---|
+| Certified zone | none (`certified = false`) |
+| Map population / labelled | 15,813 windows / 300 labels |
+| Smallest testable zone | 15% of the map (needs ≥ 45 labels to certify) |
+| Smallest zone's own bound | 3 wrong in 46 labels, upper bound ≈ 13.9%, p-value 0.803 |
+| Whole-map error estimate | 23.0% (95% interval 18.4% – 28.1%, exact hypergeometric) |
+
+Even the most-confident quarter of the map fails the exact test, so there is no share of the map you can defend at the 5%-wrong guarantee with these labels. Note that picking a looser alpha or a different rule after seeing this result is not covered by the guarantee — the decision has to be fixed before the labels.
+
+If you need a certified zone, the route the tool recommends is a **new** simple-random design with a larger label budget, with alpha, delta and rule set in advance; then re-run certification on those labels. Want me to plan such a design?

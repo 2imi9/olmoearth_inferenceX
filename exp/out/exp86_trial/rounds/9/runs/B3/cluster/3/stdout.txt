@@ -1,0 +1,25 @@
+
+
+Compared both runs (same model, OlmoEarth-v1-FT-AWF-Base rev a347b15; A = C1 covering 2023, B = C2 covering 2022) on their shared 128x128 window grid via `olmoearth_compare_review`.
+
+**Where they differ**
+- 3,807 of 16,384 windows differ (23.2%).
+- 78.3% of the differing windows sit on class boundaries (vs. 53.9% of all windows) - mostly boundary reclassification rather than wholesale area flips.
+- Geographically concentrated: the northmost quarter (rows 0-31) holds 39.4% of all differing windows; westmost columns also elevated (31.6% within-band share).
+
+Largest class changes (A=2023 vs B=2022):
+
+| Direction | Windows | Share of differing |
+|---|---|---|
+| grassland_barren > shrubland_savanna | 1,409 | 37.0% |
+| montane_forest > woodland_forest | 447 | 11.7% |
+| woodland_forest > shrubland_savanna | 388 | 10.2% |
+| urban_dense_development > grassland_barren | 336 | 8.8% |
+| urban_dense_development > shrubland_savanna | 308 | 8.1% |
+
+(All 3,807 differing windows are listed in `compare_differing_df789c0586.json` under the workspace dir if you want the full set.)
+
+**Which is right: I can't say, and here's why**
+- The two maps describe **different dates** (2023 vs 2022). Any difference is either real ground change between the years (seasonality included) or an error in one map - the comparison alone cannot separate those.
+- Confidence doesn't settle it either: map B has the larger margin on 57.8% of differing windows, but a margin is not a label, and no recorded experiment grades which side of such a pair is right.
+- What would resolve it: reference labels **dated to each map's own year**. One reference only grades its own date's map and would count the other wrong wherever the ground genuinely changed. If you can supply 2022 and 2023 references (or I can plan a label sample per map with `olmoearth_plan_label_sample`), I can grade each map separately and attribute the differences correctly.

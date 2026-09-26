@@ -1,0 +1,180 @@
+{
+ "experiment": "exp86 agent trial v2",
+ "configuration": "B5/files",
+ "brief_id": "B5",
+ "provider": "files",
+ "run": "1",
+ "brief": "I labelled the windows of the design in F2/design_confidence_300_s0.json; the filled sheet is F2/labels_confidence_300_s0.csv. What is this map's error rate?",
+ "started": "2026-09-26T06:01:31+00:00",
+ "ended": "2026-09-26T06:01:38+00:00",
+ "seconds": 6.152,
+ "exit_code": 0,
+ "driver_exit_code": 0,
+ "status": "answered",
+ "model": "nvidia/Qwen3.8-27B-NVFP4",
+ "max_turns": 8,
+ "turns": 2,
+ "hit_max_turns": false,
+ "n_tool_calls": 1,
+ "n_llm_calls": 2,
+ "tokens": {
+  "prompt_tokens": 25207,
+  "completion_tokens": 911,
+  "total_tokens": 26118
+ },
+ "agent": {
+  "repo": "OlmoEarth-Agent",
+  "commit": "c62538f695d9a4c2b8086720906ef859b424da1a",
+  "branch": "2imi9/feature-trial-round3-fixes",
+  "dirty": false,
+  "changed": [],
+  "diff_sha256": null,
+  "submodules": [],
+  "version": "1.4.0",
+  "state_at_end": {
+   "commit": "c62538f695d9a4c2b8086720906ef859b424da1a",
+   "diff_sha256": null
+  },
+  "changed_during_run": false
+ },
+ "inferencex": {
+  "version": "1.3.1",
+  "imported_from": "the installed distribution",
+  "inside_this_repository": false
+ },
+ "sampling": {
+  "mode": "thinking_general",
+  "temperature": 1.0,
+  "top_p": 0.95,
+  "top_k": 20,
+  "presence_penalty": 1.5,
+  "max_tokens": 32768,
+  "preserve_thinking": true
+ },
+ "sampling_sent": [
+  {
+   "model": "nvidia/Qwen3.8-27B-NVFP4",
+   "max_tokens": 32768,
+   "temperature": 1.0,
+   "top_p": 0.95,
+   "presence_penalty": 1.5,
+   "extra_body": {
+    "top_k": 20,
+    "chat_template_kwargs": {
+     "preserve_thinking": true
+    }
+   }
+  }
+ ],
+ "system_prompt_sha256": "ab08430786440261179f04d623ec9eb874e6a21ffd83301a14f77b038fa166e5",
+ "tools_registered": [
+  "olmoearth_load_context",
+  "olmoearth_create_project",
+  "olmoearth_request_aoi",
+  "olmoearth_get_prediction",
+  "olmoearth_search_predictions",
+  "olmoearth_submit_prediction",
+  "olmoearth_fetch_results",
+  "olmoearth_get_prediction_result",
+  "olmoearth_pixel_value",
+  "olmoearth_compare_results",
+  "olmoearth_change_detect",
+  "olmoearth_classification_metrics",
+  "olmoearth_review_set",
+  "olmoearth_review_set_from_result",
+  "olmoearth_compare_review",
+  "olmoearth_grade_review_rule",
+  "olmoearth_review_budget_ceiling",
+  "olmoearth_scores_from_file",
+  "olmoearth_plan_label_sample",
+  "olmoearth_estimate_map_error",
+  "olmoearth_certify_zone",
+  "olmoearth_case_narrative",
+  "olmoearth_litsearch",
+  "olmoearth_export_data",
+  "olmoearth_qgis_bridge",
+  "olmoearth_provenance_summary",
+  "olmoearth_automate",
+  "olmoearth_rslearn_recommend",
+  "olmoearth_rslearn_validate",
+  "olmoearth_rslearn_compose",
+  "olmoearth_rslearn_diagnose",
+  "olmoearth_baseline_compare",
+  "olmoearth_cv_inflation_check",
+  "olmoearth_nndm_cv",
+  "olmoearth_similarity_search",
+  "olmoearth_area_of_applicability",
+  "olmoearth_cloud_mask_audit",
+  "olmoearth_negative_sampler",
+  "olmoearth_load_skill",
+  "olmoearth_remember",
+  "olmoearth_forget"
+ ],
+ "tool_specs_sha256": "9c2c0dafef4352d632385d83b4eaa7ff39a7ee02550bf7f76e9d8ce01cc7ffb4",
+ "deferred_groups": {
+  "olmoearth-embeddings": [
+   "olmoearth_automate"
+  ],
+  "olmoearth-rslearn": [
+   "olmoearth_rslearn_recommend",
+   "olmoearth_rslearn_validate",
+   "olmoearth_rslearn_compose",
+   "olmoearth_rslearn_diagnose"
+  ],
+  "olmoearth-baseline-compare": [
+   "olmoearth_baseline_compare"
+  ],
+  "olmoearth-evaluate": [
+   "olmoearth_cv_inflation_check",
+   "olmoearth_nndm_cv"
+  ],
+  "olmoearth-similarity": [
+   "olmoearth_similarity_search"
+  ],
+  "olmoearth-uncertainty": [
+   "olmoearth_area_of_applicability"
+  ],
+  "olmoearth-cloud-mask-audit": [
+   "olmoearth_cloud_mask_audit"
+  ],
+  "olmoearth-negative-sampler": [
+   "olmoearth_negative_sampler"
+  ]
+ },
+ "groups_loaded": [],
+ "workspace": {
+  "scores_root": "workspace/",
+  "output_root": "workspace/",
+  "working_directory": "workspace/",
+  "preference_memory_chars": 0,
+  "fixtures": {
+   "F2/design_confidence_300_s0.json": "4f2dcc7d48d1e387eab6077ff7a99e59271b18df221dd2d03160b5a21fb3351c",
+   "F2/labels_confidence_300_s0.csv": "e28f4667aaf1faf222a51071d9264a4ee093988f577b1ac2985904b94822dd56"
+  },
+  "provider_runs": {}
+ },
+ "environment": {},
+ "studio": {
+  "n_calls": 0,
+  "errors": {}
+ },
+ "secret_check": {
+  "variables": [
+   "CLAUDE_CODE_MESSAGING_TOKEN",
+   "LLM_API_KEY",
+   "LLM_ENDPOINT",
+   "OLMOEARTH_API_KEY"
+  ],
+  "files_checked": 15,
+  "leaks": []
+ },
+ "arguments_changed_by_dispatch": [],
+ "duplicate_call_ids": [],
+ "driver": {
+  "script": "exp/exp86_driver.py",
+  "commit": "4a97861bc9cc66448e05db7ca9b23bd71446599e",
+  "dirty": false,
+  "diff_sha256": null
+ },
+ "python": "3.13.2"
+}
