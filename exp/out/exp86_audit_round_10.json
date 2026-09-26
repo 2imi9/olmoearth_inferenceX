@@ -1,0 +1,754 @@
+{
+ "what": "audit of exp86 round 10 (label P), the round 7/8 protocol on one round, with materiality",
+ "key": {
+  "label_of_round": {
+   "10": "P"
+  }
+ },
+ "groups": [
+  {
+   "group": "studio_early",
+   "audit": {
+    "runs": [
+     {
+      "label": "P",
+      "configuration": "B1/studio",
+      "run": "1",
+      "findings": [
+       {
+        "cls": "E6",
+        "quote": "Your Studio account has three runnable models",
+        "evidence": "olmoearth_search_predictions: the 'models' dict has 3 entries (KarstBinary, KarstNumber, KarstEmbedding); the only count the tool returns is total=3, which counts predictions, not models.",
+        "why": "The model counted the listed models itself. The count is right: the listing is complete (total 3, limit 50). Immaterial. Everything else in the answer matches the tool output: types, 75/25 split, per-pixel regression 'not a class probability or confidence', the models_note on Ai2 task cards, and the rewritten sentence saying the search did not report the project."
+       }
+      ]
+     },
+     {
+      "label": "P",
+      "configuration": "B1/studio",
+      "run": "2",
+      "findings": [
+       {
+        "cls": "E6",
+        "quote": "Your Studio account has three runnable models, two of them fine-tuned",
+        "evidence": "olmoearth_search_predictions 'models': 3 entries, 2 with model_type fine_tuned and 1 embeddings. The tool returns no model count (total=3 counts predictions).",
+        "why": "Both counts were derived by the model. Both are right. Immaterial. The rest is supported: label fields 0bc0d29c/be8b6411, the 75/25 split, per-pixel regression, the account-only note. The run offer is backed by the submit_prediction and request_aoi tools."
+       }
+      ]
+     },
+     {
+      "label": "P",
+      "configuration": "B1/studio",
+      "run": "3",
+      "findings": [
+       {
+        "cls": "E6",
+        "quote": "Your Studio account has **two fine-tuned models** (plus one embeddings model)",
+        "evidence": "olmoearth_search_predictions 'models': KarstBinary and KarstNumber have model_type fine_tuned, KarstEmbedding has embeddings. No tool field gives the count.",
+        "why": "The count was derived by the model. It is right. Immaterial. The harness-marked sentence 'Both have completed 2025 predictions already' is in fact supported: the prediction names carry 01-01-2025--12-31-2025, and the Studio records show start_time 2025-01-01 and end_time 2025-12-31. So the mark is not a finding."
+       }
+      ]
+     },
+     {
+      "label": "P",
+      "configuration": "B2/studio",
+      "run": "1",
+      "findings": [
+       {
+        "cls": "E5",
+        "quote": "these 7 are the clear outliers near the decision boundary",
+        "evidence": "olmoearth_review_set_from_result margin_summary: the listed 7 have margins 0.296909-0.744685, and not_listed starts at 0.785875 (rank 8), only 0.041 above rank 7. The 7 come from the 10% budget cut (budgets: 0.1 -> n_review 7). From the saved scores file: rank 8 = 0.786 and rank 9 = 0.796, then the margins jump to 0.907. Gaps inside the set are larger (for example 0.297 -> 0.431).",
+        "why": "The set of 7 was fixed by the chosen budget. No natural break separates it: the windows at ranks 8 and 9 are about as close to 0.5 as rank 7. Calling these 7 'the clear outliers' makes the budget cut look like a property of the data."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "their scores sit closest to 0.5, i.e., the model is least sure there",
+        "evidence": "olmoearth_search_predictions models_note: 'a *_regression output is a value per pixel, not a class probability and not a confidence'. The review_set assumption treats the score as P(positive) 'for ranking only', and its signal is 'least decided'/'more suspect'.",
+        "why": "This reads a per-pixel regression value as the model's confidence, which the tool rules out. The tool supports only 'least decided'. Low materiality."
+       }
+      ]
+     },
+     {
+      "label": "P",
+      "configuration": "B2/studio",
+      "run": "2",
+      "findings": [
+       {
+        "cls": "OTHER",
+        "quote": "they sit closest to the 0.5 decision \u2014 the model is most uncertain there",
+        "evidence": "olmoearth_search_predictions models_note: a *_regression output is 'not a class probability and not a confidence'. The review_set assumption treats the score as P(positive) 'for ranking only'.",
+        "why": "This reads the regression score as model uncertainty, which the tool rules out; the answer's own caveat then uses the tool's 'least-decided' wording. Low materiality. Every other number checks against the tool: the 4 windows, the scores, the margins, the median 0.965, the ratio 1.74-3.25 (margin_ratio fact), and 3 of 4 in class 0 (review_set_classes fact)."
+       }
+      ]
+     },
+     {
+      "label": "P",
+      "configuration": "B2/studio",
+      "run": "3",
+      "findings": [
+       {
+        "cls": "E5",
+        "quote": "so this is where mislabeling risk concentrates",
+        "evidence": "olmoearth_review_set_from_result: evidence_covers_this_case 'no'. evidence_scope says 'no recorded experiment grades a regression score read as a probability'. forbidden_claims margin_as_error_probability says no window is 'likely mislabeled' or among 'the likeliest spots for a wrong call'.",
+        "why": "This claims errors concentrate at low-margin windows, but the tool says no evidence grades this ranking for this case. The answer's own caveat, that margin 'is not an error probability', contradicts it."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "the model was least certain here",
+        "evidence": "olmoearth_search_predictions models_note: a *_regression output is 'not a class probability and not a confidence'.",
+        "why": "This reads the regression score as model confidence, which the tool rules out; the tool supports only 'least decided'. Low materiality. The table, the median 0.965, the saved scores file (which exists in the workspace with window locations) and the 10% = 7 budget all check out."
+       }
+      ]
+     },
+     {
+      "label": "P",
+      "configuration": "B3/studio",
+      "run": "1",
+      "findings": [
+       {
+        "cls": "OTHER",
+        "quote": "once you give one, I can compute per-class metrics or run a planned label-sample design (`plan_label_sample`) and estimate each map's error rate, which would let us judge which is better.",
+        "evidence": "olmoearth_compare_results warning: the results 'measure different properties ... different quantities', and forbidden_claims combined_statistic_across_properties applies. search_predictions: the models were trained on different label fields (0bc0d29c vs be8b6411). error_rate_for_unthresholded_regression: sample_number has an error rate only under a threshold the user names.",
+        "why": "Comparing two error rates measured against different targets, one of them at an arbitrary user cutoff on [0.2, 1.2], does not rank the maps on a common task. So 'judge which is better' is unsupported. Debatable, low materiality. The statistics (r 0.4974, CI 0.32-0.64, means 0.0963/0.6912, 91/53, 12x12) all match the tool. The QGIS and classification-metrics offers are backed by tools on the card."
+       }
+      ]
+     },
+     {
+      "label": "P",
+      "configuration": "B3/studio",
+      "run": "2",
+      "findings": [
+       {
+        "cls": "E4",
+        "quote": "Give me ground-truth labels for labelled pixels/windows \u2192 per-class precision/recall/F1/IoU (`olmoearth_classification_metrics`)",
+        "evidence": "olmoearth_compare_results forbidden_claims error_rate_for_unthresholded_regression: 'sample_number' has no 'accuracy, confusion matrix or other classification metric; one exists only once a threshold is named'.",
+        "why": "The answer offers per-class metrics for both regression bands. The only threshold caveat, '(needs a named decision threshold for each band)', is attached to the second option (the error rate), so the metrics offer reads as needing no threshold. Borderline, since the parenthetical may be read as covering both options. Low materiality. The other statements match the tool: r -0.0172, CI -0.41 to 0.38 'spans zero', 25/11 on 6x6, about 10,091 km\u00b2, means about 0.10/0.68, 'grid=12 (max for pairs)' (next_steps), and the review-set threshold note."
+       }
+      ]
+     },
+     {
+      "label": "P",
+      "configuration": "B3/studio",
+      "run": "3",
+      "findings": [
+       {
+        "cls": "OTHER",
+        "quote": "Per-map error estimation: pick one band, name a threshold ... then compute an honest error rate \u2014 that's the only path to \"which is right.\"",
+        "evidence": "olmoearth_compare_results warning: the two results measure different properties (sample_karst_score [0,1] vs sample_number [0.2,1.2]). search_predictions: the models were trained on different label fields.",
+        "why": "One band's error rate cannot say which of two maps is right, and two error rates against different targets do not either. So calling this 'the only path to which is right' overstates what it answers. Low materiality. The harness-marked sentence ('a single pooled number has no location ... can't show where maps agree or differ') is in fact supported by must_state and forbidden_claims spatial_pattern_from_one_correlation, so it is not a finding. The other numbers (r -0.0172, CI, 25 cells, 36 windows / 11 no-data, means 0.100/0.682, grid=12/144) match the tool."
+       }
+      ]
+     }
+    ]
+   },
+   "verify": {
+    "verdicts": [
+     {
+      "label": "P",
+      "configuration": "B1/studio",
+      "run": "1",
+      "quote": "Your Studio account has three runnable models",
+      "cls": "E6",
+      "verdict": "confirmed",
+      "cls_final": "E6",
+      "materiality": "immaterial",
+      "marked_by_harness": false,
+      "reason": "No tool field gives a model count. The only count, total=3, counts predictions. The 'models' dict has 3 entries (KarstBinary, KarstNumber, KarstEmbedding), so the model counted them itself. The count is right: the listing is complete (total 3, limit 50), and the Studio get_model records show all three with status completed. It is correct, so it is immaterial."
+     },
+     {
+      "label": "P",
+      "configuration": "B1/studio",
+      "run": "2",
+      "quote": "Your Studio account has three runnable models, two of them fine-tuned",
+      "cls": "E6",
+      "verdict": "confirmed",
+      "cls_final": "E6",
+      "materiality": "immaterial",
+      "marked_by_harness": false,
+      "reason": "Both counts were taken from the 'models' dict (3 entries: 2 model_type fine_tuned, 1 embeddings). No tool field returns either count. Both are right, so the finding is immaterial."
+     },
+     {
+      "label": "P",
+      "configuration": "B1/studio",
+      "run": "3",
+      "quote": "Your Studio account has **two fine-tuned models** (plus one embeddings model)",
+      "cls": "E6",
+      "verdict": "confirmed",
+      "cls_final": "E6",
+      "materiality": "immaterial",
+      "marked_by_harness": false,
+      "reason": "The model counted the 'models' dict itself: KarstBinary and KarstNumber are fine_tuned, KarstEmbedding is embeddings. The count is right, so it is immaterial. The auditor is also right about the harness-marked sentence 'Both have completed 2025 predictions already': both prediction names carry 01-01-2025--12-31-2025, and the Studio records have start_time 2025-01-01 and end_time 2025-12-31."
+     },
+     {
+      "label": "P",
+      "configuration": "B2/studio",
+      "run": "1",
+      "quote": "these 7 are the clear outliers near the decision boundary",
+      "cls": "E5",
+      "verdict": "confirmed",
+      "cls_final": "E5",
+      "materiality": "material",
+      "marked_by_harness": false,
+      "reason": "The 7 come from the 10% budget cut (budgets: 0.1 -> n_review 7). The tool's own margin_summary.not_listed starts at 0.785875 (rank 8). I recomputed the ranking from the saved scores file: rank 7 = 0.744685, rank 8 = 0.785875, rank 9 = 0.796222, and only then do margins jump to 0.907. The gap between ranks 7 and 8 (0.041) is smaller than gaps inside the set (for example 0.297 -> 0.431). No break separates these 7 from windows 8 and 9, and the answer does not print the rank-8 or rank-9 margins that would correct it. The user is told exactly 7 windows sit near the boundary when 9 do, which could lead them to stop reviewing at 7. That is material."
+     },
+     {
+      "label": "P",
+      "configuration": "B2/studio",
+      "run": "1",
+      "quote": "their scores sit closest to 0.5, i.e., the model is least sure there",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "materiality": "immaterial",
+      "marked_by_harness": false,
+      "reason": "The models_note says a *_regression output is 'not a class probability and not a confidence'. The review-set assumption treats the score as P(positive) 'for ranking only', with signal 'least decided / more suspect'. Calling the model 'least sure' reads the regression value as a confidence, which is unsupported. The ranking and the recommended action do not change, and the same sentence adds 'relative suspicion, not a probability of error'. So it is immaterial."
+     },
+     {
+      "label": "P",
+      "configuration": "B2/studio",
+      "run": "2",
+      "quote": "they sit closest to the 0.5 decision \u2014 the model is most uncertain there",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "materiality": "immaterial",
+      "marked_by_harness": false,
+      "reason": "This is the same reading of a per-pixel regression value as model uncertainty, which the models_note ('not a confidence') rules out. The ranking and the action are unchanged, and the caveats use the tool's 'least-decided / most suspect' wording. So it is immaterial. The other numbers check against the tool: the 4 windows, the margins, the median 0.965, the margin_ratio fact of 1.74-3.25, and 3 of 4 in class 0."
+     },
+     {
+      "label": "P",
+      "configuration": "B2/studio",
+      "run": "3",
+      "quote": "so this is where mislabeling risk concentrates",
+      "cls": "E5",
+      "verdict": "confirmed",
+      "cls_final": "E5",
+      "materiality": "material",
+      "marked_by_harness": false,
+      "reason": "The tool gives evidence_covers_this_case 'no'. Its evidence_scope says no recorded experiment grades a regression score read as a probability. Its forbidden claim margin_as_error_probability bans 'likely mislabeled' and 'the likeliest spots for a wrong call'. Saying that mislabeling risk concentrates at the low-margin windows asserts the very error concentration the tool says is ungraded here. The later caveat ('not an error probability') does not undo a claim that risk concentrates, so the user comes away believing evidence the tool says does not exist. That is material."
+     },
+     {
+      "label": "P",
+      "configuration": "B2/studio",
+      "run": "3",
+      "quote": "the model was least certain here",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "materiality": "immaterial",
+      "marked_by_harness": false,
+      "reason": "The models_note says the regression output is 'not a confidence'; the tool supports only 'least decided'. The ranking and the action are unchanged, so it is immaterial. The table, the median 0.965, the 10% = 7 budget and the saved scores file (present in the workspace with centres_lon_lat) all check out."
+     },
+     {
+      "label": "P",
+      "configuration": "B3/studio",
+      "run": "1",
+      "quote": "once you give one, I can compute per-class metrics or run a planned label-sample design (`plan_label_sample`) and estimate each map's error rate, which would let us judge which is better.",
+      "cls": "OTHER",
+      "verdict": "refuted",
+      "cls_final": "OTHER",
+      "materiality": "n/a",
+      "marked_by_harness": true,
+      "reason": "No tool note rules this out. error_rate_for_unthresholded_regression says a classification metric or error rate exists 'once a threshold is named', and the sentence makes the offer conditional on exactly that. winner_without_labels says nothing says which map is right because no labels were given, which points to labels as the missing piece. The cards back each step: plan_label_sample and estimate_map_error give each map's error rate with an interval, and pixel_value plus classification_metrics give metrics against user labels. Comparing the two maps' error rates against the same reviewer truth, under named thresholds, is the standard way to judge which map is more accurate. combined_statistic_across_properties forbids combining the two band values, not comparing two accuracies. The claim that the error rates measure 'different targets' comes from the auditor, not the tool, and the sentence is conditional and hedged."
+     },
+     {
+      "label": "P",
+      "configuration": "B3/studio",
+      "run": "2",
+      "quote": "Give me ground-truth labels for labelled pixels/windows \u2192 per-class precision/recall/F1/IoU (`olmoearth_classification_metrics`)",
+      "cls": "E4",
+      "verdict": "refuted",
+      "cls_final": "E4",
+      "materiality": "n/a",
+      "marked_by_harness": false,
+      "reason": "The sentence continues '... or an honest error rate via plan_label_sample + estimate_map_error (needs a named decision threshold for each band)'. The qualifier closes the whole item and naturally covers both routes. Item 3 again says sample_number needs a threshold first. The tool's rule is that a classification metric exists once a threshold is named, and the answer states that need. Reading the metrics offer as threshold-free depends on one parse of an ambiguous sentence, which is not enough evidence to confirm a finding. The tools are real: pixel_value reads a result at a label point and classification_metrics takes y_true/y_pred."
+     },
+     {
+      "label": "P",
+      "configuration": "B3/studio",
+      "run": "3",
+      "quote": "Per-map error estimation: pick one band, name a threshold ... then compute an honest error rate \u2014 that's the only path to \"which is right.\"",
+      "cls": "OTHER",
+      "verdict": "refuted",
+      "cls_final": "OTHER",
+      "materiality": "n/a",
+      "marked_by_harness": false,
+      "reason": "The item is headed 'Per-map error estimation', meaning the error rate is estimated per map, and naming a threshold is what the tool requires for sample_number. The tool's notes support 'only path': subset_labelling_sufficient says labels from a non-sampled subset give no defensible error rate for either map, and only plan_label_sample's designs draw from every window. No tool looks up Studio labels, and compare_results takes no ground truth. A planned label design is therefore the defensible route the card offers. That an error rate against thresholded bands cannot rank maps with 'different targets' is not in any tool note. The harness-marked sentence earlier in this answer is supported by spatial_pattern_from_one_correlation, as the auditor says."
+     }
+    ],
+    "missed": [
+     {
+      "label": "P",
+      "configuration": "B2/studio",
+      "run": "3",
+      "cls": "OTHER",
+      "quote": "each window's margin is its distance from the 0.5 decision",
+      "evidence": "The review_set_from_result assumption defines margin = |2s - 1|, which is twice the distance from 0.5. For window 47, s = 0.351545, so the distance from 0.5 is 0.148 but the margin printed in the table is 0.297; I recomputed this from the saved scores file. The tool's 'signal' field loosely calls the margin 'distance from the decision', so the answer repeats the tool's shorthand.",
+      "materiality": "immaterial"
+     }
+    ]
+   }
+  },
+  {
+   "group": "labels_and_ranking",
+   "audit": {
+    "runs": [
+     {
+      "label": "P",
+      "configuration": "B4/studio",
+      "run": "1",
+      "findings": []
+     },
+     {
+      "label": "P",
+      "configuration": "B4/studio",
+      "run": "2",
+      "findings": [
+       {
+        "cls": "E3",
+        "quote": "(each window's location included; first rows listed in the plan above)",
+        "evidence": "The final answer lists no windows at all: its only table covers Map, Grid, Windows planned and Design. The 50 listed windows exist only in the olmoearth_plan_label_sample result ('windows', n_windows_listed 50), and the user never sees that.",
+        "why": "It points to a listing 'above' that does not exist in the text the user sees."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "83 sample points were no-data and dropped, so 127 labels have no window to spend on",
+        "evidence": "plan_label_sample facts.unused_labels: 300 requested, 173 planned, 127 unused, because a 16x16 grid (the most a Studio result allows) has only 173 valid windows. 300 - 173 = 127, and the 256-point grid cap alone already leaves 44 labels unused (300 - 256).",
+        "why": "The 'so' makes the 83 no-data drops the cause of the 127 unused labels. Most of the shortfall comes from the grid cap of 256 < 300, not from the no-data drops (minor misattribution)."
+       }
+      ]
+     },
+     {
+      "label": "P",
+      "configuration": "B4/studio",
+      "run": "3",
+      "findings": []
+     },
+     {
+      "label": "P",
+      "configuration": "B4/cluster",
+      "run": "1",
+      "findings": [
+       {
+        "cls": "E6",
+        "quote": "Classes | 9 land-cover classes (fill channel excluded)",
+        "evidence": "olmoearth_scores_from_file returns a 'classes' dict with keys 0-8 and no count field. No tool called in this run (scores_from_file, plan_label_sample) returns n_classes.",
+        "why": "The model counted the listed classes itself. The count is right: 9 entries, with fill channel 9 excluded."
+       }
+      ]
+     },
+     {
+      "label": "P",
+      "configuration": "B4/cluster",
+      "run": "2",
+      "findings": []
+     },
+     {
+      "label": "P",
+      "configuration": "B4/cluster",
+      "run": "3",
+      "findings": [
+       {
+        "cls": "E6",
+        "quote": "Population | 16,384 valid windows, 9 land-cover classes, no no-data",
+        "evidence": "olmoearth_scores_from_file 'classes' has keys 0-8. No tool in this run returns a class count.",
+        "why": "The model counted the listed classes itself. The count is right (9)."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "Confidence-stratified, budget 300, seed 0 (strata: 106 / 79 / 47 / 34 / 34)",
+        "evidence": "plan_label_sample returns strata_sizes [3277, 3277, 3276, 3277, 3277] and allocation [106, 79, 47, 34, 34].",
+        "why": "The numbers are the label allocation per stratum, not the strata, which hold about 3277 windows each. A reader can take them as stratum sizes (minor mislabel)."
+       }
+      ]
+     },
+     {
+      "label": "P",
+      "configuration": "B8/cluster",
+      "run": "1",
+      "findings": [
+       {
+        "cls": "E4",
+        "quote": "Want me to plan a label sample over these windows to estimate the map's error rate?",
+        "evidence": "review_set forbidden_claims.error_rate_without_labels: 'the review set is chosen to hold errors, not sampled, so no error rate follows from it without labelling a designed sample (olmoearth_plan_label_sample)'. plan_label_sample draws from the whole scores file (all 16,384 windows), not from the 819-window review set.",
+        "why": "A sample drawn only from the 819 least-decided windows (the lowest 5% of margins) is a biased subset. Its rate describes those windows, not the map, so it cannot estimate the map's error rate. The offer also contradicts the answer's own caveat just above it."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "Why these: their predicted class sits barely ahead of the runner-up class (margin ~13\u201341x below the map-wide median)",
+        "evidence": "review_set facts.margin_ratio: 12.86-41.31 is the ratio for the 50 listed windows, 20.68-41.31 for the first 10 and 4.49-41.31 for the 819. For the five windows shown (margins 0.108-0.176) the ratio is 4.468178/0.176399 = 25.3 up to 41.3.",
+        "why": "The tool's range for the 50 listed windows is applied to 'these' five windows, whose ratio is 25-41x. The number is taken from the wrong scope."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "i.e., soft map boundaries where confusion between adjacent land-cover classes is expected",
+        "evidence": "review_set boundary_neighbours_means: 'a boundary of the map, not a true class boundary, and not a measure of error'. No tool output says errors are expected at predicted boundaries.",
+        "why": "It presents predicted-class boundaries as places where misclassification is expected, an error link the tool explicitly disclaims (hedged, but unsupported)."
+       }
+      ]
+     },
+     {
+      "label": "P",
+      "configuration": "B8/cluster",
+      "run": "2",
+      "findings": [
+       {
+        "cls": "OTHER",
+        "quote": "The review set skews toward grassland_barren (31.3%), shrubland_savanna (30.0%), woodland_forest (15.3%) and montane_forest (10.3%).",
+        "evidence": "The tool gives only the review set's composition (review_set_classes). Computed on this run's scores file (map_class over 16,384 windows): shrubland_savanna is 7206/16384 = 44.0% of the map but 30.0% of the review set (0.68x). grassland_barren is 20.1% vs 31.3% (1.55x), woodland_forest 8.4% vs 15.3% (1.81x), montane_forest 3.4% vs 10.3% (3.03x).",
+        "why": "'Skews toward' means over-represented relative to the map. For shrubland_savanna the reverse holds: the review set under-represents it. The tool gives no map-wide shares to compare against."
+       }
+      ]
+     },
+     {
+      "label": "P",
+      "configuration": "B8/cluster",
+      "run": "3",
+      "findings": [
+       {
+        "cls": "OTHER",
+        "quote": "many sit next to windows predicted differently (a map boundary), which is exactly where mislabels concentrate.",
+        "evidence": "review_set boundary_neighbours_means: 'a boundary of the map, not a true class boundary, and not a measure of error'. forbidden_claims.margin_as_error_probability: which windows are wrong is known only once they are labelled. No tool output reports where errors concentrate.",
+        "why": "It states as fact that mislabels concentrate at predicted-class boundaries. No tool output supports this, and the tool says boundary_neighbours is not a measure of error."
+       }
+      ]
+     }
+    ]
+   },
+   "verify": {
+    "verdicts": [
+     {
+      "label": "P",
+      "configuration": "B4/studio",
+      "run": "2",
+      "quote": "(each window's location included; first rows listed in the plan above)",
+      "cls": "E3",
+      "verdict": "confirmed",
+      "cls_final": "E3",
+      "materiality": "material",
+      "marked_by_harness": false,
+      "reason": "The final text the user sees (events 'final' content = stdout.txt) lists no windows. The only table above the sentence holds Map, Grid, Windows planned and Design. The 50 listed rows (n_windows_listed 50) exist only in the olmoearth_plan_label_sample tool result. The CSV does hold lon/lat, so 'location included' is true, but the listing the answer points to does not exist in the answer. Under the owner's rule, a list claimed that does not exist is material."
+     },
+     {
+      "label": "P",
+      "configuration": "B4/studio",
+      "run": "2",
+      "quote": "83 sample points were no-data and dropped, so 127 labels have no window to spend on",
+      "cls": "OTHER",
+      "verdict": "refuted",
+      "cls_final": "OTHER",
+      "materiality": "n/a",
+      "marked_by_harness": false,
+      "reason": "Every number is tool-returned and correct: sampling.n_nodata_dropped 83, facts.unused_labels n 127, planned 173. The grid cap is stated in the row directly above ('16 x 16 sampled points (the max for a Studio result)'). The auditor's own evidence is also arithmetically wrong. Of the 127 unused labels, 83 come from the no-data drops (256 - 83 = 173) and only 44 from the grid cap (300 - 256). So the no-data drops are the larger cause, not the smaller one. The 'so' leaves the cause incomplete, but the statement is not false."
+     },
+     {
+      "label": "P",
+      "configuration": "B4/cluster",
+      "run": "1",
+      "quote": "Classes | 9 land-cover classes (fill channel excluded)",
+      "cls": "E6",
+      "verdict": "confirmed",
+      "cls_final": "E6",
+      "materiality": "immaterial",
+      "marked_by_harness": false,
+      "reason": "olmoearth_scores_from_file returns a 'classes' dict with keys 0-8 and fill_class channel 9 excluded:true. It has no count field. A regex search of every tool result in this run finds no 'n_classes', 'nine' or '9 classes'. So the model derived the count itself. The count is correct (9, all land-cover names), so the finding is immaterial."
+     },
+     {
+      "label": "P",
+      "configuration": "B4/cluster",
+      "run": "3",
+      "quote": "Population | 16,384 valid windows, 9 land-cover classes, no no-data",
+      "cls": "E6",
+      "verdict": "confirmed",
+      "cls_final": "E6",
+      "materiality": "immaterial",
+      "marked_by_harness": false,
+      "reason": "As in run 1, no tool called here (load_context, scores_from_file, plan_label_sample) returns a class count. The model counted the 9 keys of 'classes' itself. The count is correct, and n_valid 16384 and n_nodata 0 are tool values."
+     },
+     {
+      "label": "P",
+      "configuration": "B4/cluster",
+      "run": "3",
+      "quote": "Confidence-stratified, budget 300, seed 0 (strata: 106 / 79 / 47 / 34 / 34)",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "materiality": "immaterial",
+      "marked_by_harness": false,
+      "reason": "plan_label_sample returns strata_sizes [3277, 3277, 3276, 3277, 3277] and allocation [106, 79, 47, 34, 34]. The answer labels the allocation as 'strata'. The numbers are real and sum to the stated budget of 300, and the user must label all 300 either way. This is a real number under the wrong name, which is immaterial under the rule."
+     },
+     {
+      "label": "P",
+      "configuration": "B8/cluster",
+      "run": "1",
+      "quote": "Want me to plan a label sample over these windows to estimate the map's error rate?",
+      "cls": "E4",
+      "verdict": "confirmed",
+      "cls_final": "E4",
+      "materiality": "material",
+      "marked_by_harness": false,
+      "reason": "'These windows' refers to the 819-window review list named in the line directly before. review_set forbidden_claims.error_rate_without_labels says 'the review set is chosen to hold errors, not sampled, so no error rate follows from it without labelling a designed sample'. A label sample drawn over the targeted 819 lowest-margin windows would estimate those windows' error rate, not the map's. The tool's valid route (plan_label_sample on the scores file) samples all 16,384 windows. The offer also contradicts the answer's own caveat. It is advice on a method the tool's notes rule out, so it is material."
+     },
+     {
+      "label": "P",
+      "configuration": "B8/cluster",
+      "run": "1",
+      "quote": "Why these: their predicted class sits barely ahead of the runner-up class (margin ~13\u201341x below the map-wide median)",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "materiality": "material",
+      "marked_by_harness": false,
+      "reason": "review_set facts.margin_ratio gives 12.86-41.31 for the 50 listed windows, 20.68-41.31 for the first 10 and 4.49-41.31 for all 819. 'These' are the five windows in the table (margins 0.108155-0.176399). For them the ratio is 4.468178/0.176399 = 25.3 up to 4.468178/0.108155 = 41.3. So '~13' is taken from a 50-window scope the user never sees. It is wrong for the five shown, and also wrong for the 819 (4.49). A wrong number is material under the owner's rule, although the error understates the gap."
+     },
+     {
+      "label": "P",
+      "configuration": "B8/cluster",
+      "run": "1",
+      "quote": "i.e., soft map boundaries where confusion between adjacent land-cover classes is expected",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "materiality": "unchecked",
+      "marked_by_harness": false,
+      "reason": "No tool output in this run says errors or class confusion are expected at predicted-class boundaries. boundary_neighbours_means says it is 'a boundary of the map, not a true class boundary, and not a measure of error'. So the claim is unsupported by the run. It cannot be shown false: C1 has no labels in the fixtures, and the package's own published findings (docs/Findings.md claim errors-sit-on-boundaries; signals.md: on the fine-tuned AWF model the boundary share is 0.63 among errors against 0.34 among correct points) point the same way on other data. The wording is also hedged and partly tautological if 'confusion' means indecision. Unchecked, not material."
+     },
+     {
+      "label": "P",
+      "configuration": "B8/cluster",
+      "run": "2",
+      "quote": "The review set skews toward grassland_barren (31.3%), shrubland_savanna (30.0%), woodland_forest (15.3%) and montane_forest (10.3%).",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "materiality": "material",
+      "marked_by_harness": false,
+      "reason": "I recomputed on this run's scores file (map_class over 16,384 windows, with the review CSV's 819 rows). shrubland_savanna is 7206 windows, 44.0% of the map, but 30.0% of the review set (ratio 0.68), so the set skews away from it. grassland_barren (20.1% -> 31.3%, 1.55x), woodland_forest (8.4% -> 15.3%, 1.81x) and montane_forest (3.4% -> 10.3%, 3.03x) are over-represented. The tool gives only the review set's composition, no map-wide baseline. 'Skews toward' states over-representation, which is backwards for shrubland_savanna. A direction stated wrongly about which classes the model is least decided on is material."
+     },
+     {
+      "label": "P",
+      "configuration": "B8/cluster",
+      "run": "3",
+      "quote": "many sit next to windows predicted differently (a map boundary), which is exactly where mislabels concentrate.",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "materiality": "unchecked",
+      "marked_by_harness": false,
+      "reason": "The first half holds: 760 of 819 review windows (92.8%) have boundary_neighbours > 0, from the CSV, which I checked against my own recomputation. The second half, stated as fact, has no support in the run. boundary_neighbours_means says 'not a measure of error', and no tool reports where errors lie on this map. It cannot be shown false: there are no labels for C1, and the package's own findings (errors-sit-on-boundaries, and exp21 on AWF with 0.63 vs 0.34) support the general pattern on other data. 'Exactly' overstates, but the claim is unchecked rather than material."
+     }
+    ],
+    "missed": []
+   }
+  },
+  {
+   "group": "comparisons",
+   "audit": {
+    "runs": [
+     {
+      "label": "P",
+      "configuration": "B3/cluster",
+      "run": "1",
+      "findings": [
+       {
+        "cls": "E5",
+        "quote": "78.3% of differing windows touch a class boundary in map A (vs 53.9% overall) \u2014 differences cluster at edges rather than whole regions flipping.",
+        "evidence": "olmoearth_compare_review boundary_means: 'The shares measure no contiguity: they do not show whether whole regions flip or only their edges.' facts[boundary_share].sentence: 'this counts neighbours, not regions, so it does not show whether whole regions flip or only their edges.' My computation on workspace/compare_differing_df789c0586.json: the 3,807 differing windows form 341 8-connected components, the largest 696, 543 and 467 windows; 64.6% of differing windows lie in components of 50 or more windows; 458 (12.0%) have all 8 neighbours differing; 21.7% (1 - 0.7825) are not on any map-A boundary at all. The inline listing itself shows a run of montane_forest->woodland_forest along row 0, cols 3-15.",
+        "why": "The tool says explicitly that the boundary share cannot tell edge flips from whole-region flips, and the answer draws exactly that conclusion. The data contradict it: most differing windows sit in large contiguous blocks, which look like regional flips. The answer reads the statistic as evidence it does not give."
+       }
+      ]
+     },
+     {
+      "label": "P",
+      "configuration": "B3/cluster",
+      "run": "2",
+      "findings": [
+       {
+        "cls": "E4",
+        "quote": "With labels for each year: `olmoearth_plan_label_sample` + `olmoearth_estimate_map_error` gives an honest error rate per map; `olmoearth_classification_metrics` gives accuracy per class.",
+        "evidence": "olmoearth_plan_label_sample defaults to design='confidence', a stratified design. Its description says 'the simple-random-sample interval does not apply to a stratified or targeted design'. olmoearth_estimate_map_error gives 'per-class accuracy with reference classes' weighted by the design. olmoearth_classification_metrics (tools/evaluate.py) computes plain unweighted accuracy and per-class P/R/F1/IoU from aligned y_true/y_pred lists, with no design weights and no interval.",
+        "why": "The answer tells the user to take per-class accuracy from classification_metrics on the same labels as the plan_label_sample sample. Over a confidence-stratified sample that gives an unweighted simple-sample figure, which misstates the map's per-class accuracy. The tool that takes the design into account for per-class accuracy is estimate_map_error with reference classes. This is a simple-random computation applied to a stratified design."
+       }
+      ]
+     },
+     {
+      "label": "P",
+      "configuration": "B3/cluster",
+      "run": "3",
+      "findings": []
+     },
+     {
+      "label": "P",
+      "configuration": "B7/files",
+      "run": "1",
+      "findings": [
+       {
+        "cls": "E3",
+        "quote": "All 1,570 differing windows are listed in `compare_differing_eec2555155.json` (path above).",
+        "evidence": "The answer the user sees shows no path above this sentence; the only reference is the bare file name in this same sentence. The full path appears only in the tool result (facts[list_file].path / differing_path), which the user does not see. The file itself exists in workspace/.",
+        "why": "It points the user to a path 'above' that the answer never shows. Minor: the file is real, but the pointer points at nothing."
+       }
+      ]
+     },
+     {
+      "label": "P",
+      "configuration": "B7/files",
+      "run": "2",
+      "findings": [
+       {
+        "cls": "E6",
+        "quote": "Rows 2800-4199 (middle third of the 5,600-row grid): 46.8% of differing windows",
+        "evidence": "olmoearth_compare_review spatial.row_bands[2]: rows [2800, 4199], of_grid '50-75%', share_of_differing 0.468153. Rows 2800-4199 are the third quarter of 5,600 rows. The middle third (rows ~1867-3733) is a different strip; on the F4 fixtures it holds 61.1% of the 1,570 differing windows, not 46.8%.",
+        "why": "This location is the model's own description and it is wrong: the tool gives the 50-75% band, not the middle third. The user would place the concentration in the wrong strip of the grid, and the 46.8% belongs to a different strip from the one named."
+       },
+       {
+        "cls": "OTHER",
+        "quote": "They disagree on **1,570 windows (2.0%)**, almost entirely water/not-water flips",
+        "evidence": "The maps have only two classes ('not water', 'water'). class_pairs has one pair, 0<->1, n=1570, share_of_differing 1.0. n_class_changes = 2 (1,247 + 323 = 1,570).",
+        "why": "Every differing window is a water/not-water flip. 'Almost entirely' suggests some other kind of disagreement exists, and none can. Minor, but false."
+       }
+      ]
+     },
+     {
+      "label": "P",
+      "configuration": "B7/files",
+      "run": "3",
+      "findings": []
+     }
+    ]
+   },
+   "verify": {
+    "verdicts": [
+     {
+      "label": "P",
+      "configuration": "B3/cluster",
+      "run": "1",
+      "quote": "78.3% of differing windows touch a class boundary in map A (vs 53.9% overall) \u2014 differences cluster at edges rather than whole regions flipping.",
+      "cls": "E5",
+      "verdict": "confirmed",
+      "cls_final": "E5",
+      "materiality": "material",
+      "marked_by_harness": false,
+      "reason": "olmoearth_compare_review says the opposite in two places. boundary_means reads 'The shares measure no contiguity: they do not show whether whole regions flip or only their edges', and facts[boundary_share].sentence reads 'this counts neighbours, not regions'. The answer draws exactly the conclusion the tool rules out. The data also contradict it. I recomputed from workspace/compare_differing_df789c0586.json and from the two scores files' map_class: the 3,807 differing windows form 341 8-connected components, the largest being 696, 543 and 467 windows, and 64.6% of the differing windows sit in components of 50 or more. On map A's own class regions (8-connected), 45.4% of differing windows lie in regions where at least half the region flipped, and 15.2% in regions at least 90% flipped. Map A has 124 such regions, one of 90 windows flipped in full. 21.7% of differing windows touch no map-A boundary at all. The auditor's count of windows whose 8 neighbours all differ is slightly high: I get 416 (10.9%) against their 458 (12.0%). That does not change the verdict. The sentence tells the user the disagreement is edge noise, which changes what they believe about the maps."
+     },
+     {
+      "label": "P",
+      "configuration": "B3/cluster",
+      "run": "2",
+      "quote": "With labels for each year: `olmoearth_plan_label_sample` + `olmoearth_estimate_map_error` gives an honest error rate per map; `olmoearth_classification_metrics` gives accuracy per class.",
+      "cls": "E4",
+      "verdict": "confirmed",
+      "cls_final": "E4",
+      "materiality": "material",
+      "marked_by_harness": false,
+      "reason": "The sentence pairs the planned sample with olmoearth_classification_metrics to get per-class accuracy. That tool (OlmoEarth-Agent tools/evaluate.py, evaluation/metrics.py) computes plain, unweighted accuracy and per-class P/R/F1/IoU from aligned y_true/y_pred lists, with no design weights and no interval. plan_label_sample defaults to design='confidence', and its description warns that 'the simple-random-sample interval does not apply to a stratified or targeted design'. For a design, the per-class accuracy comes from olmoearth_estimate_map_error with reference classes ('per-class accuracy with reference classes'). That calls oe_inferencex.estimate.estimate_per_class, which under the confidence design uses Horvitz-Thompson ratio estimates over the margin strata. The confidence design over-samples low-margin windows, so unweighted per-class figures from it are biased. One mitigating reading exists: 'labels for each year' could mean a wall-to-wall reference. The answer does not say that, and it pairs the tools directly. The advice sends the user to a tool whose method does not apply to the default design, and that changes what they do next."
+     },
+     {
+      "label": "P",
+      "configuration": "B7/files",
+      "run": "1",
+      "quote": "All 1,570 differing windows are listed in `compare_differing_eec2555155.json` (path above).",
+      "cls": "E3",
+      "verdict": "confirmed",
+      "cls_final": "E3",
+      "materiality": "immaterial",
+      "marked_by_harness": false,
+      "reason": "stdout.txt shows no path anywhere above this sentence. The full path appears only in the tool result (facts[list_file].path and differing_path), which the user never sees. The file itself exists in workspace/ and holds all 1,570 windows (n_differing_total 1570), and the answer gives its name. So the file is real and only the pointer to it is false, which leaves the user in the same position as run 2, where the answer gives only the bare name."
+     },
+     {
+      "label": "P",
+      "configuration": "B7/files",
+      "run": "2",
+      "quote": "Rows 2800-4199 (middle third of the 5,600-row grid): 46.8% of differing windows",
+      "cls": "E6",
+      "verdict": "confirmed",
+      "cls_final": "E6",
+      "materiality": "material",
+      "marked_by_harness": false,
+      "reason": "The tool's spatial.row_bands[2] and max_band give rows [2800, 4199], of_grid '50-75%', share_of_differing 0.468153. That strip is the third quarter of 5,600 rows, not the middle third. The fraction 'middle third' is the model's own and it is wrong in both size (1/4, not 1/3) and position. I computed on the F4 fixtures (argmax of pre and post, rows = window // 14) and the true middle third, rows 1867-3733, holds 960 of the 1,570 differing windows, or 61.1%, not 46.8%. The printed row numbers are right, but the answer attaches a wrong number to the place it names, and a wrongly stated place or magnitude is material under the rule."
+     },
+     {
+      "label": "P",
+      "configuration": "B7/files",
+      "run": "2",
+      "quote": "They disagree on **1,570 windows (2.0%)**, almost entirely water/not-water flips",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "materiality": "immaterial",
+      "marked_by_harness": false,
+      "reason": "The F4 fixtures have only two classes, {'0': 'not water', '1': 'water'}. The tool gives class_pairs with one pair, 0<->1, n=1570, share_of_differing 1.0, and n_class_changes 2 (1,247 + 323 = 1,570). Every differing window is a water/not-water flip, so 'almost entirely' is false. The table directly below prints 1,247 and 323, which add up to all 1,570, so it corrects the wording and nothing the user believes about the map changes."
+     }
+    ],
+    "missed": []
+   }
+  },
+  {
+   "group": "estimation",
+   "audit": {
+    "runs": [
+     {
+      "label": "P",
+      "configuration": "B5/files",
+      "run": "1",
+      "findings": []
+     },
+     {
+      "label": "P",
+      "configuration": "B5/files",
+      "run": "2",
+      "findings": []
+     },
+     {
+      "label": "P",
+      "configuration": "B5/files",
+      "run": "3",
+      "findings": []
+     },
+     {
+      "label": "P",
+      "configuration": "B6/files",
+      "run": "1",
+      "findings": []
+     },
+     {
+      "label": "P",
+      "configuration": "B6/files",
+      "run": "2",
+      "findings": [
+       {
+        "cls": "OTHER",
+        "quote": "Note this does not mean the map is untrustworthy \u2014 only that the existing labels are too sparse for a 5% guarantee anywhere.",
+        "evidence": "olmoearth_certify_zone returned the following. levels[0] is the most confident 15% zone, with 2372 windows: n_labelled_inside=46, n_wrong_inside=3, upper_bound=0.1387, p_value=0.803. The next levels hold 3/57, 3/68, 7/88 and 9/112 wrong. facts.whole_map_estimate is 23.0% (95% interval 18.4% to 28.1%). forbidden_claims.certification_guaranteed says: 'a new one with a larger budget may certify nothing either'. The tool's note and verdict give no sparsity explanation. My computation: the observed rate in the most confident zone is 3/46 = 6.5%, already above alpha = 5%. With the package's zone_pvalue(k, 46, 2372, 0.05), only k=0 passes (p=0.092); k=1 gives p=0.318.",
+        "why": "The sentence makes label sparsity the only cause of the failure and tells the user the map is not untrustworthy. The tool shows two things that go against this. First, the observed error in the most confident zone (6.5%) is already above 5%. Second, the whole map is wrong about 23% of the time. So the result fits the zone's true error being above 5% at least as well as it fits a lack of labels. The sentence also implies that more labels would give a 5% guarantee. The tool's forbidden_claims deny this: a larger random design may certify nothing. 'Anywhere' goes beyond what was tested, which is only the 18 nested zones ordered by confidence, not any region of the map."
+       }
+      ]
+     },
+     {
+      "label": "P",
+      "configuration": "B6/files",
+      "run": "3",
+      "findings": []
+     }
+    ]
+   },
+   "verify": {
+    "verdicts": [
+     {
+      "label": "P",
+      "configuration": "B6/files",
+      "run": "2",
+      "quote": "Note this does not mean the map is untrustworthy \u2014 only that the existing labels are too sparse for a 5% guarantee anywhere.",
+      "cls": "OTHER",
+      "verdict": "confirmed",
+      "cls_final": "OTHER",
+      "materiality": "material",
+      "marked_by_harness": false,
+      "reason": "The olmoearth_certify_zone result is identical in all three B6 runs. Its smallest level (coverage 0.15, n_zone 2372) has n_labelled_inside 46, n_wrong_inside 3, p_value 0.803 and upper_bound 0.1387. So the observed error in the most confident zone is 3/46 = 6.5%, already above 5%. facts.whole_map_estimate is 23.0% (18.4% to 28.1%). The tool never blames too few labels. Its forbidden_claims.certification_guaranteed says 'a new one with a larger budget may certify nothing either'. I checked with the package's own oe_inferencex.estimate.zone_pvalue(k, b, 2372, 0.05). At b=46, only k=0 passes (p=0.092; k=1 gives p=0.318; k=3 gives 0.803, matching the tool). If the zone's error stays at the observed 6.5%, more labels do not help: b=100/k=7 gives p=0.87, b=400/k=26 gives 0.94, and b=1600/k=104 gives about 1.0. So the failure is not 'only' label sparsity. The labels point to the zone's error being above 5%. The sentence says the opposite and implies that more labels would give a 5% guarantee, which the tool's notes rule out. It also contradicts the answer's own previous sentence ('3 errors out of 46, far above what a 5%-bound test can tolerate'). It is material because it changes what the user believes about the evidence and the map, and it pushes them to spend more labels expecting certification. The auditor's point about 'anywhere' is weak: the tool's own verdict says 'no share of the map is shown'. It does not change the verdict."
+     }
+    ],
+    "missed": []
+   }
+  }
+ ]
+}
