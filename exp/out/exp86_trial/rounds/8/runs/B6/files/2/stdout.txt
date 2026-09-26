@@ -1,0 +1,14 @@
+
+
+**No part of the map is certified.** I ran the exact zone-certification test on your simple random sample (300 labels, population 15,813) at alpha = 0.05, delta = 0.1 under the default 'prefix' rule: every level failed, so `certified = false`. The guarantee holds only for an alpha fixed before the labels were seen, so trying a looser alpha or switching rule now would not be a valid certification either.
+
+| Zone (most confident share) | Windows | Labels inside | Wrong | p-value | Upper bound @delta | Accepted? |
+|---|---|---|---|---|---|---|
+| Top 15% (smallest testable) | 2,372 | 46 | 3 | 0.803 | 13.9% | ✗ |
+| Top 25% | 3,953 | 68 | 3 | 0.554 | 9.5% | ✗ |
+| Top 50% | 7,906 | 140 | 13 | 0.990 | 13.2% | ✗ |
+| Whole map | 15,813 | 300 | 69 | 1.000 | 26.4% | ✗ |
+
+For context, the same labels estimate the **whole-map error rate at 23.0% (95% interval 18.4% – 28.1%, exact hypergeometric)** — that is an estimate, not a certification, and it shows why even the most-confident slice (3/46 wrong) cannot be shown to sit below 5%.
+
+To get a certifiable zone, you need a **new** random-design labeling round (e.g. `olmoearth_plan_label_sample` with `design='random'` and a larger budget) with alpha, delta, and rule fixed in advance — ideally several hundred more labels, since the current design can only test zones ≥15% coverage. Want me to plan that follow-up labeling round?

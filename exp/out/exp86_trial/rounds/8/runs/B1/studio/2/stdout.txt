@@ -1,0 +1,15 @@
+
+
+Your Studio account holds **2 fine-tuned models** (plus 1 embeddings model):
+
+| Model | Model ID | Type | Output (from latest run) |
+|---|---|---|---|
+| KarstBinary | ac1eb985-e439-4a61-ae96-8e3139d0dc7f | fine_tuned | `sample_karst_score` — per-pixel regression value (not a class probability/confidence) |
+| KarstNumber | f67d97d9-62f8-4858-9fdc-a0bf1061cc0d | fine_tuned | `sample_number` — per-pixel regression value |
+
+Notes:
+- Both are reusable in your project "Karst Features in Pennsylvania" (id 56b6e1f0); they already have completed 2025 runs on PA.
+- KarstEmbedding (5aafb53d) is an *embeddings* model, not fine-tuned, with no declared pixel-output type.
+- This listing covers your Studio account only — Ai2 also publishes other fine-tuned OlmoEarth models (task cards) that are not listed here.
+
+Want me to run one of them over an area, or expand details (tile layers, value ranges)?

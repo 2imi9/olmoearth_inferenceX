@@ -1,0 +1,11 @@
+
+
+Your Studio account has three models; two are fine-tuned (the third is embeddings):
+
+| Model | Type | Predicts |
+|---|---|---|
+| KarstBinary | fine_tuned | per-pixel regression — a numeric value at each pixel (not a class probability or confidence) |
+| KarstNumber | fine_tuned | per-pixel regression — a numeric value at each pixel |
+| KarstEmbedding | embeddings | feature vectors (no direct prediction output) |
+
+Note: this listing covers your account only — Ai2 also publishes other fine-tuned OlmoEarth models (task cards / olmoearth_projects configs) you could potentially use, which aren't shown here. Both karst runs above completed over 01-01-2025 to 12-31-2025 for PA; want me to pull their result ranges or submit one of these to a new area?

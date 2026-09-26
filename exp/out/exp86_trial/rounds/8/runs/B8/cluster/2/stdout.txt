@@ -1,0 +1,24 @@
+
+
+**What I did:** Read the full scores raster for run `C1/awf_namanga_2023_1042061` (model allenai/OlmoEarth-v1-FT-AWF-Base, 9 land-cover classes) into 128x128 windows via olmoearth-inferencex, then ranked all 16,384 windows by review priority at a 5% budget with olmoearth_review_set. **Why these windows first:** ranking is by the model's own confidence — the mean top-1 minus top-2 logit margin per window, lowest first. Low margin means the model nearly tied its top two candidate classes there, so those are the windows most likely to be wrong; most listed windows also sit on predicted class boundaries. All 16,384 windows were valid (0 no-data).
+
+**Top 10 most suspect windows** (check first):
+
+| Rank | Window (row, col) | Predicted class | Margin | Boundary neighbours |
+|---|---|---|---|---|
+| 1 | 14, 29 | woodland_forest | 0.108 | 4 |
+| 2 | 10, 41 | montane_forest | 0.149 | 3 |
+| 3 | 23, 93 | shrubland_savanna | 0.153 | 6 |
+| 4 | 7, 11 | woodland_forest | 0.162 | 8 |
+| 5 | 14, 5 | montane_forest | 0.176 | 7 |
+| 6 | 2, 43 | montane_forest | 0.177 | 0 |
+| 7 | 19, 34 | woodland_forest | 0.191 | 3 |
+| 8 | 46, 91 | grassland_barren | 0.206 | 6 |
+| 9 | 19, 35 | montane_forest | 0.214 | 7 |
+| 10 | 2, 40 | montane_forest | 0.216 | 4 |
+
+For context, the median margin across all windows is 4.468, so these top windows have margins roughly 13 to 41 times below typical. The full review set is **819 windows** (margins up to 0.994); the rest of the list and the evidence file are saved under the run's workspace (`review_set_evidence.json`).
+
+Two caveats worth stating:
+- This ranking uses the **logit margin**; on Ai2's suite, one-minus-top-probability ranked errors slightly better on 14 of 16 multi-class tasks, so the ordering is strong relative suspicion, not a calibrated error probability.
+- The review set is not a sample — you can't derive an error rate from it without labelling a designed sample (olmoearth_plan_label_sample). Say the word if you want me to design that next.

@@ -1,0 +1,73 @@
+{
+ "brief_values": {
+  "B3/cluster": {
+   "run_dir_a": "C1/awf_namanga_2023_1042061",
+   "run_dir_b": "C2/awf_namanga_2022_1042294"
+  },
+  "B4/cluster": {
+   "run_dir": "C1/awf_namanga_2023_1042061"
+  },
+  "B8/cluster": {
+   "run_dir": "C1/awf_namanga_2023_1042061"
+  },
+  "B5/files": {
+   "design_path": "F2/design_confidence_300_s0.json",
+   "labels_path": "F2/labels_confidence_300_s0.csv"
+  },
+  "B6/files": {
+   "design_path": "F3/design_random_300_s0.json",
+   "labels_path": "F3/labels_random_300_s0.csv"
+  },
+  "B7/files": {
+   "scores_a": "F4/emsr279-11_s1_pre.json",
+   "scores_b": "F4/emsr279-11_s1_post.json",
+   "date_a": "2017-09-14/2017-09-15",
+   "date_b": "2018-04-19"
+  }
+ },
+ "not_run": {
+  "B8/studio": "the Studio account of the first trial (24 September) held no classification model: KarstEmbedding, KarstNumber and KarstBinary only"
+ },
+ "note": "Round 8 is a development round on the exp87 build, run after exp86 passed at round 6 and before exp87's preregistration is frozen. It uses exp86's briefs and fixtures only; exp87's sealed held-out briefs stay sealed. The trial's verdict does not depend on it. The agent's tools import olmoearth-inferencex 1.3.1 as installed in the agent's environment. It is not a counted exp87 round.",
+ "fixes": [
+  {
+   "after_round": 7,
+   "where": "agent",
+   "branch": "2imi9/feature-trial-round3-fixes",
+   "commits_since": "43ca1f8",
+   "diagnosis": "exp/out/exp86_round7_diagnosis.md",
+   "items": [
+    "tool outputs share one contract: facts (dominant change, more confident side, where differences concentrate, margin ratios, unused labels, whole-map estimate), must_state (at most three sentences) and forbidden_claims (fixed ids with the tool's reason)",
+    "a comparison counts where its differences sit (row and column bands) and moves its listing to a file; evidence is one sentence scoped to the case",
+    "statistical rules in code: the design records alpha, certification refuses another, next steps come from the design type",
+    "the answer is checked before it is shown (numbers, directions and places, claimed files and actions, forbidden claims), with one rewrite in REVISION_MODE and [unverified: <check>] marks on what still fails; a missing required statement is appended as 'Note from the tool:'",
+    "the loop runs as a middleware chain with LangChain 1.x's hook interface, behaviour-identical to the loop before it",
+    "the inferencex extra requires olmoearth-inferencex 1.3.1"
+   ],
+   "signed_off": "all 33 commits signed off by their author on 25 September 2026 (43ca1f8..6d25307)"
+  },
+  {
+   "after_round": 7,
+   "where": "scorer",
+   "commit": null,
+   "items": []
+  }
+ ],
+ "agent_commit": "6d2530711fcd66065132a21b1f8f23b4c6bb397f",
+ "agent_dirty": false,
+ "agent_diff_sha256": null,
+ "inferencex_version": "1.3.1",
+ "model": "nvidia/Qwen3.8-27B-NVFP4",
+ "sampling": {
+  "mode": "thinking_general",
+  "temperature": 1.0,
+  "top_p": 0.95,
+  "top_k": 20,
+  "presence_penalty": 1.5,
+  "max_tokens": 32768,
+  "preserve_thinking": true
+ },
+ "max_turns": 8,
+ "agent_branch": "2imi9/feature-trial-round3-fixes",
+ "first_run": "2026-09-26T01:30:20+00:00"
+}

@@ -1,0 +1,18 @@
+
+
+Compared all 78,028 shared windows; **1,570 differ (2.0%)**. Full list of differing windows: `.../workspace/compare_differing_eec2555155.json`
+
+**Direction of change**
+
+| A (2017-09) | B (2018-04) | Windows | Share |
+|---|---|---|---|
+| not water | water | 1,247 | 79.4% |
+| water | not water | 323 | 20.6% |
+
+Net direction: mostly drier-to-flooded between the two dates.
+
+**Where they concentrate**: most differing windows are in rows 2,800–4,199 (mid-south of the grid, 46.8%); the north band has the fewest (1.6%). Changes are spread fairly evenly across columns.
+
+**Confidence**: map A holds the larger margin on 77.6% of differing windows (mean margin A 0.389 vs B 0.158). That does not make A right — upstream evidence says the more-confident side was correct on only 51–70% of differing windows, and that record does not cover this pair.
+
+**Which is right? Neither can be.** The maps are 216 days apart, so any difference may be real ground change rather than an error; without labels dated to each map, no one side can be picked. To settle it you'd need references for both dates (a label set per period, then re-run with `labels_date`).

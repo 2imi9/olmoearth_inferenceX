@@ -1,0 +1,1 @@
+The windows in F3/design_random_300_s0.json are a simple random sample of this map, labelled in F3/labels_random_300_s0.csv. Which part of the map can I trust to be wrong at most 5% of the time?

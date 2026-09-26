@@ -1,0 +1,22 @@
+
+
+Compared the two runs window-by-window (same model, allenai/OlmoEarth-v1-FT-AWF-Base; C1 = 2023 map, C2 = 2022 map).
+
+**Where they differ**
+
+| Finding | Value |
+|---|---|
+| Differing windows | 3,807 of 16,384 (23.2%) |
+| On a class boundary | 78.3% of the differing windows |
+| Dominant change | C1 grassland_barren -> C2 shrubland_savanna, 1,409 windows (37.0%; reverse direction only 268) |
+| Next largest | montane_forest -> woodland_forest, 447 (11.7%); woodland -> shrubland, 388 (10.2%) |
+| Concentration | Northmost row band (rows 0–31) holds 39.4% of all differences, vs 25% expected if even |
+
+Full list of the 3,807 differing windows: `.../workspace/compare_differing_df789c0586.json`.
+
+**Which is right: can't tell, for two reasons.**
+
+1. The maps describe different years (2023 vs 2022), so where they differ the ground may simply have changed (seasonality included) - a difference is not by itself an error.
+2. No ground-truth labels were given, so neither side can be graded. Confidence doesn't settle it either: C2 has the larger margin on 57.8% of differing windows, but being more confident isn't being right.
+
+If you have reference labels for either date (ideally one set per year, with their dates), I can grade which map is right at the differing windows.

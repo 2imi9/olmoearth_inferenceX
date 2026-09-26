@@ -1,0 +1,27 @@
+
+
+Done. I ran the review-set design on the KarstBinary 2025 result (`sample_karst_score`, a [0, 1] regression score decided at 0.5). Here's what a reviewer should check first and why.
+
+## Which windows, and why
+
+The tool ranked all **72 valid windows** (100 sampled on a 10x10 grid; 28 dropped as no-data) by **margin = distance from the decision value 0.5**. Windows nearest 0.5 are the ones the model is least decided on, so errors concentrate there first; windows with scores near 0 or 1 are the most confident and come last. The median margin over all windows was **0.96469**, versus 0.297–0.745 for the review set below — these are the clear underdogs, roughly 1.3x to 3.25x less decided than the median.
+
+| Rank | Window (row, col) | Score | Predicted class | Margin |
+|---|---|---|---|---|
+| 1 | 47 (4, 7) | 0.352 | below 0.5 | 0.297 |
+| 2 | 42 (4, 2) | 0.285 | below 0.5 | 0.431 |
+| 3 | 5 (0, 5) | 0.745 | above 0.5 | 0.490 |
+| 4 | 18 (1, 8) | 0.223 | below 0.5 | 0.554 |
+| 5 | 85 (8, 5) | 0.808 | above 0.5 | 0.615 |
+| 6 | 28 (2, 8) | 0.167 | below 0.5 | 0.666 |
+| 7 | 13 (1, 3) | 0.872 | above 0.5 | 0.745 |
+
+Budget cuts: opening the most-suspect **1** window covers the 1% budget, **4** windows ~5%, **7** windows ~10%.
+
+## Caveats you should know
+
+- **Assumption:** the score is treated as P(positive) *for ranking only* — the margin orders suspicion, it is **not a probability of error**, and no recorded experiment grades a regression score read as a probability.
+- This review set is chosen to hold errors, so it is **not a sample**: don't divide its mistakes by its size. To estimate how wrong the map really is, run `olmoearth_plan_label_sample` with the saved scores file.
+- A saved scores file with each window's location is at `scores_419c581d..._g10.json` in the workspace — hand it to the reviewer.
+
+Want me to set up the label-sample design next, so the reviewer can produce an honest error rate?

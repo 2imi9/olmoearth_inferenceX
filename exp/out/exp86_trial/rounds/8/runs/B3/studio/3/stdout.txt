@@ -1,0 +1,18 @@
+
+
+Done — compared both 2025 predictions over your PA Karst area. Key point first: the two models output **different quantities** (different properties), so most pairwise stats are undefined and only the correlation is meaningful.
+
+| Item | KarstBinary | KarstNumber |
+|---|---|---|
+| Band | `sample_karst_score` | `sample_number` |
+| Declared range | [0, 1] | [0.2, 1.2] |
+| Sampled mean | 0.100 | 0.682 |
+
+**Where they differ:** across the shared extent (~10,091 km²) on a 6x6 grid, 25 of 36 cells were valid (11 dropped as no-data). Their correlation is **-0.017**, i.e. essentially zero — the two maps do not rise and fall together anywhere in the sampled region. Because they measure different properties, the tool does not (and cannot) compute a cell-by-cell difference, agreement share, or RMSE; saying one "reads higher/lower" than the other wouldn't be a valid comparison either. If you want to *see* the divergence spatially, I can turn both into QGIS layer packs so you can overlay them.
+
+**Which is right:** I can't tell you, and neither can any tool here without ground-truth labels — no labels were used, so nothing indicates which map is more accurate. To settle it, pick one path:
+
+1. You supply reference karst locations (points/polygons) → I evaluate both maps against them (each needs a named threshold first, since both are un-thresholded regressions).
+2. You name a decision threshold for each regression band → I design a targeted labeling sample from the lower-confidence windows of each map, you label them, and I compute defensible error rates per map.
+
+Which do you prefer, or would you like the QGIS overlay first?

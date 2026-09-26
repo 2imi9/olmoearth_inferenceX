@@ -1,0 +1,13 @@
+
+
+**No part of the map can be certified as wrong at most 5% of the time.** Under the exact test (rule `prefix`, alpha = 0.05, delta = 0.1) on your 300 labelled windows:
+
+| Item | Value |
+|---|---|
+| Certified zone | none (0 of 18 tested levels accepted) |
+| Smallest testable zone (coverage 15%) | upper bound 13.9%, still > 5% |
+| Whole-map error estimate | 23.0% (95% interval 18.4% to 28.1%) |
+
+Why: each level fails its exact test (smallest p-value across levels is 0.554, far above the allowed 0.1), and a zone needs at least 45 labels — the smallest possible zone (15% of the 15,813-window map) only held 46, with 3 wrong. The guarantee requires alpha and the rule fixed before seeing the labels, so loosening alpha or switching rules now would not count as certification either.
+
+**To get a certified zone:** label more windows under a *new* random design (larger budget) with alpha, delta, and rule chosen in advance — I can plan that for you with `olmoearth_plan_label_sample` if you tell me how many more labels you can spend.

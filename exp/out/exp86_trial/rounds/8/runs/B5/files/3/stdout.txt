@@ -1,0 +1,15 @@
+
+
+**Map error rate: 19.4%** (95% interval **15.7%–23.6%**)
+
+| Item | Value |
+|---|---|
+| Estimate | 0.194 (19.4%) |
+| Interval | [0.157, 0.236] at nominal 95% |
+| Labels used | 300 of a population of 15,813 windows |
+| Method | stratified by confidence margin; Wilson interval on the design's effective sample size |
+
+Notes:
+- Overall accuracy is the complement: ~80.6% (76.4%–84.3%).
+- This confidence (targeted) design gives an honest whole-map estimate, but no zone can be certified from it — that would require a fresh `design='random'` plan.
+- Per-class detail exists, but many classes have fewer than 30 labelled windows, so their intervals are wide; happy to list them if you want.

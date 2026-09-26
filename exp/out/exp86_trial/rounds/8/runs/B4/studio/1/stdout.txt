@@ -1,0 +1,12 @@
+
+
+I set up a confidence-stratified labeling plan for the KarstBinary 2025 map (prediction `dd504793...`, result `419c581d-9a10-4684-aba5-1bab2875f26b`). One catch: this Studio result caps at a 16x16 grid with **173 valid windows** (83 no-data dropped), so the plan holds 173 windows, not 300 — 127 of your labels would go unused. For more than that you'd need the model's scores raster via `olmoearth_scores_from_file`.
+
+| Item | Value |
+|---|---|
+| Design | confidence (strata by margin), seed 0 |
+| Windows planned | 173 (5 strata ~35 each) |
+| Labels needed | all 173 (design refuses partial labelling) |
+| Label sheet | `design_419c581d-9a1_8ca17d7d_confidence_173_s0_to_label.csv` (in workspace dir shown above; has each window's location, order, and map_class) |
+
+How to proceed: open the CSV, set `wrong = 1/0` per window (and `reference_class` if you want per-class accuracy), then send me back — I'll run `olmoearth_estimate_map_error` to give you the error rate with the interval this design actually earns. Note the resulting rate describes the map at these sampled grid points, not every pixel; and this confidence design yields an estimate only — certifying a zone would require a separate random-design plan made before labelling.

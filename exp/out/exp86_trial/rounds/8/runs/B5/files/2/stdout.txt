@@ -1,0 +1,15 @@
+
+
+The map's error rate, from your 300 labelled windows of a population of 15,813:
+
+| Statistic | Value |
+|---|---|
+| Error rate | **19.4%** (estimate 0.194) |
+| 95% interval | 15.7% – 23.6% |
+| Design / method | confidence; stratified by confidence margin, Wilson interval on effective sample size (effective n ≈ 384) |
+
+Notes:
+
+- This is an honest whole-map estimate — do not use the simple p ± 1.96·√(p(1−p)/n) formula here (it does not apply to this stratified design).
+- Overall accuracy is the complement: ~80.6%. The weakest classes are class 1 (user accuracy 22.5%) and class 6 (45.1%), while classes 4 and 7 are strong (~96% / ~92%).
+- No zone can be certified from a confidence design; certification would need a new plan with `design='random'`. Happy to plan that if you want a guaranteed-certifiable region.

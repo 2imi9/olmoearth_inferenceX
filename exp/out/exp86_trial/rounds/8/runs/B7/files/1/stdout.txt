@@ -1,0 +1,17 @@
+
+
+Compared the two flood maps window-by-window (78,028 windows each). Here's what the diff shows:
+
+**Where they differ**
+- **1,570 windows differ** — 2.0% of all windows.
+- All differences are not-water <-> water flips. Dominant direction: A says not water, B says water — 1,247 windows (79.4%); the reverse is 323 (20.6%).
+- Spatially, differences cluster in the middle rows of the grid: rows 2800–4199 (the 50–75% band) hold 46.8% of the differing windows vs 25.1% of all windows; the northmost band holds only 1.6% of the differences. Column bands are roughly even.
+- Confidence note: map A has the larger class margin on 77.6% of differing windows (B on 22.4%), but per upstream experiments the more confident side was right on only 51 to 70 percent of differing windows — so this does not identify a winner.
+
+**Which one is right?**
+Not gradable from these two maps alone, for two reasons the tool flags explicitly:
+
+1. **Different dates**: A covers 2017-09-14/15 and B covers 2018-04-19 — 216 days apart. A differing window either changed on the ground between those dates (floods seasonally come and go) or is wrong in one map; the two predictions cannot tell which case it is. Only a reference dated to each map would separate them.
+2. **No labels**: no recorded experiment grades which of these two maps is right here, and confidence/margin is not accuracy.
+
+To settle it you'd need expert-labeled references for both periods (or for at least one, plus a date-matched second inference) — happy to run an error-rate estimate or classification metrics once you have labels.

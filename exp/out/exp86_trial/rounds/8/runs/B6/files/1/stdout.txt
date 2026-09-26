@@ -1,0 +1,18 @@
+
+
+Short answer: **none** — with these 300 labels no share of the map can be certified to be wrong at most 5% of the time.
+
+| Check | Result |
+|---|---|
+| Design | simple random sample, OK for certification |
+| Population / labelled | 15,813 windows / 300 labels |
+| Whole-map error estimate | 23.0% (95% interval 18.4%–28.1%, exact hypergeometric) |
+| Smallest certifiable zone | top-confidence 15% of the map (needs ≥45 labels inside); held 46 labels, 3 wrong, one-sided bound 13.9% > 5% → rejected |
+| Larger zones | all fail too (e.g. 25% zone: bound 9.5%; 50% zone: 13.2%) |
+| Rule outcome | `prefix` (δ=0.1): first p-value 0.803 already above δ, so zero levels accepted; `bonferroni` would accept none either |
+
+So the honest statement is: the map's overall error rate is estimated at ~23% with an interval of ~18.4–28.1%, but no sub-region — including the most confident part — has been shown to meet a ≤5% error guarantee.
+
+To get a certified zone you would need a **new** random-design label plan fixed in advance (with α, δ, and rule set before seeing those labels), e.g. via `olmoearth_plan_label_sample` with `design='random'` and a larger budget. Picking a looser α or a different rule on these same labels now would be a second look and is not covered by the guarantee.
+
+Want me to size up how many labels a pre-fixed random design would need to certify, say, the top-25% of the map?

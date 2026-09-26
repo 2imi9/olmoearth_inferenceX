@@ -1,0 +1,17 @@
+
+
+Compared all 78,028 shared windows between the two Sen1Floods11 flood maps.
+
+**Where they differ:** 1,570 windows (2.0% of the total). The dominant direction is not-water in map A (2017‑09‑14/15) → water in map B (2018‑04‑19): 1,247 of the 1,570 (79.4%), vs. 323 (20.6%) the reverse. Differences are spread fairly evenly across columns but concentrated vertically: 46.8% fall in rows 2,800–4,199 (the middle 50–75% band of the grid).
+
+| Item | Value |
+|---|---|
+| Differing windows | 1,570 of 78,028 (2.0%) |
+| Not-water → water (A→B) | 1,247 (79.4%) |
+| Water → not-water (A→B) | 323 (20.6%) |
+| More confident side | A on 77.6% of differing windows |
+| Peak concentration | Row band 50–75% of grid (46.8%) |
+
+**Which is right: not determinable.** The maps are 216 days apart, so any differing window either changed on the ground between dates or one map is wrong there — and without reference labels dated to each map, neither can be separated. Map A is also the more confident side on most differing windows, but confidence is not correctness: in the closest recorded labeling study (exp58, window level on 15 expert-labeled Sen1Floods11 pairs), the more confident side was right on only 51–70% of differing windows, and that study does not cover this pair.
+
+To settle it you'd need ground-truth or reference flood maps for both 2017‑09 and 2018‑04; if you have them, pass `labels_date` per map and I can grade each side. All 1,570 differing windows (with margins) are saved at `differing_path` (`.../compare_differing_eec2555155.json`).

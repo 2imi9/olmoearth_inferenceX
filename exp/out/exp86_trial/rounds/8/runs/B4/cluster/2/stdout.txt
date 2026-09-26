@@ -1,0 +1,21 @@
+
+
+I read the run's full scores raster into 128×128 windows (16,384 valid, no nodata; model allenai/OlmoEarth-v1-FT-AWF-Base rev a347b15) and built your 300-label design.
+
+**Design (confidence-stratified, seed 0)**
+| | |
+|---|---|
+| Population | 16,384 valid windows |
+| Budget | 300 labels |
+| Strata (by margin) | sizes 3277 / 3277 / 3276 / 3277 / 3277 → allocated 106 / 79 / 47 / 34 / 34 |
+| What it measures | error rate over every valid window, graded on the majority class |
+
+**Files**
+- Design: `.../workspace/design_scores_8f3527f9_confidence_300_s0.json`
+- Label sheet: `.../design_scores_8f3527f9_confidence_300_s0_to_label.csv`
+
+**Next steps**
+1. Label **all 300** windows in the CSV in order: `wrong = 1` if the map's class ≠ ground truth, else `0`; add `reference_class` for per-class accuracy. Labelling only the first rows (the least-confident ones) biases the estimate.
+2. Send me the filled sheet and I'll run `olmoearth_estimate_map_error`, which returns the error rate plus the interval this stratified design earns (not p ± 1.96√p(1-p)/n).
+
+Note: until those labels exist, no error rate or accuracy exists — the confidence score allocates labels but is not a probability of error. If you later need a *certified* zone, that requires a separate random-design plan.

@@ -1,0 +1,25 @@
+
+
+Read the run's scores file (`awf_namanga_2023_1042061`, model `allenai/OlmoEarth-v1-FT-AWF-Base`, 128x128 window grid, 16,384 windows, all valid, no nodata) and built the review set with a 5% budget.
+
+**Why these windows:** ranking is by the model's own confidence — the mean top-1 minus top-2 **logit margin** per window, lowest first. A small margin means the model was torn between two land-cover classes there, so those are the most likely places for a wrong label. The median margin over the map is 4.468178; the 10 listed windows' margins (0.108155 to 0.216102) are 20.68 to 41.31 times below that median (most also sit on predicted class boundaries, which concentrates the uncertainty where classes meet).
+
+| Rank | Window (row, col) | Predicted class | Margin | Boundary neighbours |
+|---|---|---|---|---|
+| 1 | 14, 29 | woodland_forest | 0.108155 | 4 |
+| 2 | 10, 41 | montane_forest | 0.149261 | 3 |
+| 3 | 23, 93 | shrubland_savanna | 0.153341 | 6 |
+| 4 | 7, 11 | woodland_forest | 0.161787 | 8 |
+| 5 | 14, 5 | montane_forest | 0.176399 | 7 |
+| 6 | 2, 43 | montane_forest | 0.176925 | 0 |
+| 7 | 19, 34 | woodland_forest | 0.191095 | 3 |
+| 8 | 46, 91 | grassland_barren | 0.2055 | 6 |
+| 9 | 19, 35 | montane_forest | 0.213706 | 7 |
+| 10 | 2, 40 | montane_forest | 0.216102 | 4 |
+
+That is 10 of the full set: **819 windows** (margins 0.108155 to 0.994176 vs the median 4.468178). Two caveats worth stating plainly:
+
+- This ranks **relative suspicion, not error probability**, and no error rate follows without labelling a designed sample.
+- Evidence covers this case only in part: the ranking uses the *logit* margin, while on Ai2's multi-class suite the one-minus-top-probability form ranked errors better on 14 of 16 tasks.
+
+Scores are saved at `.../scores_run_OlmoEarth-v1-FT-AWF-Base_a7c40be9_p4.json`. If you want an honest error estimate, I can design a label sample from this run next.

@@ -1,0 +1,17 @@
+
+
+I ran a review-set analysis on the KarstBinary 2025 result (`419c581d`) — 12x12 grid over the PA extent, 91 of 144 sampled windows valid (53 no-data dropped). The band `sample_karst_score` is a [0,1] score decided at 0.5, so windows are ranked by **margin from the decision**: scores nearest 0.5 mean the model is least committed to either side, so those are opened first.
+
+**Check first (top 5, ~5% budget):**
+
+| Rank | Window (row, col) | Predicted | Score | Margin |
+|---|---|---|---|---|
+| 1 | (4, 9) idx 57 | non-karst (below 0.5) | 0.494 | 0.012 |
+| 2 | (5, 10) idx 70 | non-karst | 0.478 | 0.045 |
+| 3 | (9, 9) idx 117 | karst (above 0.5) | 0.563 | 0.126 |
+| 4 | (10, 8) idx 128 | karst | 0.595 | 0.190 |
+| 5 | (3, 3) idx 39 | non-karst | 0.390 | 0.219 |
+
+At a 10% budget (9 windows) add (10,9), (4,7), (6,6), (9,10) — all with scores 0.24–0.37, i.e. moderately confident non-karst calls still within the contested band.
+
+**Why these:** the remaining 82 windows have margins 0.53–0.99 (the map's median margin is 0.964), so the model is strongly one way or the other there; the windows above sit right at the boundary where a small label difference flips the call. Note the assumption: the score is read as P(positive) *for ranking only* — these margins order relative suspicion and are not probabilities of error, and no recorded experiment grades a regression score read this way. If you want an actual error rate for the map, I can pass the saved scores file to `olmoearth_plan_label_sample` to design a proper labelling sample.

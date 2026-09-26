@@ -1,0 +1,27 @@
+
+
+Compared all 16,384 windows of both runs (same model revision, 2023 vs 2022 date windows) with `olmoearth_compare_review`.
+
+## Where they differ
+
+- **3,807 of 16,384 windows (23.2%)** have a different predicted class; full list in `compare_differing_df789c0586.json`
+- Differences concentrate **on class boundaries** (78.3% of differing windows sit on a boundary of map A's predicted classes)
+- Most common change: **grassland_barren (2023) -> shrubland_savanna (2022)**, 1,409 windows (37.0% of differences); other notable pairs: montane_forest->woodland_forest (447), woodland_forest->shrubland_savanna (388), urban_dense_development->grassland_barren (336)
+- Spatially, the most differs lie in the **north row band (rows 0–31)**: 39.4% of all differing windows; also higher toward the left columns (0–25%: 34.0%)
+
+| Pair | Windows | Share of differing |
+|---|---|---|
+| shrubland_savanna <-> grassland_barren | 1,677 | 44.1% |
+| woodland_forest <-> shrubland_savanna | 479 | 12.6% |
+| montane_forest <-> woodland_forest | 447 | 11.7% |
+| grassland_barren <-> urban_dense_development | 366 | 9.6% |
+| shrubland_savanna <-> urban_dense_development | 314 | 8.2% |
+
+## Which is right?
+
+I cannot tell you — and no comparison tool can:
+
+1. The maps describe **different periods** (2022 vs 2023), so a difference may be real ground change or seasonal effect, not an error in either map.
+2. No reference/labels were provided for either date, so nothing grades either side. The 2022 map has a larger logit margin on 57.8% of differing windows, but upstream evidence shows the more confident side was only right 51–70% of the time in comparable cases — confidence does not settle it.
+
+To pick a winner you would need labels (or a dated reference) for each map; happy to plan a labeling design (`olmoearth_plan_label_sample`) if you want to spend effort grading these.

@@ -1,0 +1,17 @@
+
+
+**Review set for `awf_namanga_2023` (model `allenai/OlmoEarth-v1-FT-AWF-Base`, rev a347b15)**
+
+The run's pre-argmax logits were pooled into 16,384 windows (128x128 grid, patch 4 px, 0 no-data). Ranked by lowest top-1 minus top-2 margin, the **5% budget flags 819 windows** (margins 0.108 to 0.994) versus a median margin of 4.468 over all windows — so these sit far below typical confidence. Top windows to check first:
+
+| Rank | Window (row, col) | Predicted class | Margin | Boundary neighbours |
+|---|---|---|---|---|
+| 1 | (14, 29) | woodland_forest | 0.108 | 4 |
+| 2 | (10, 41) | montane_forest | 0.149 | 3 |
+| 3 | (23, 93) | shrubland_savanna | 0.153 | 6 |
+| 4 | (7, 11) | woodland_forest | 0.162 | 8 |
+| 5 | (14, 5) | montane_forest | 0.176 | 7 |
+
+**Why these:** they are where the model itself is most torn between two classes (smallest margin); several also border predicted-class edges, which typically concentrates mistakes. Full list (819 windows) and per-window scores are saved in the run's workspace (`review_set_evidence.json`).
+
+Two caveats: the margin orders relative suspicion, it is not a probability of error, and without labels no error rate follows from this set. Also, the package warns that on multi-class tasks the probability form of the margin (1 - top prob) ranked errors slightly better than the logit margin used here. If you want to estimate how wrong the map actually is, I can design a labelling sample from these scores.

@@ -1,0 +1,18 @@
+
+
+## KarstBinary vs KarstNumber (PA Karst, 2025)
+
+Compared on a 6x6 grid over the shared area (~10,091 km²); 25 cells valid, 11 dropped as no-data in at least one map.
+
+| Statistic | Value |
+|---|---|
+| KarstBinary (`sample_karst_score`, [0,1]) mean | 0.10049 |
+| KarstNumber (`sample_number`, [0.2,1.2]) mean | 0.681763 |
+| Correlation between the two | -0.0172 |
+
+**Key caveats from the comparison:**
+
+- The two models output **different quantities** (a karst score vs a number), so direct difference/RMSE statistics are not computed and I won't work any out. Only whether they rise and fall together is comparable — and with correlation ≈ **-0.0172**, they effectively do not agree spatially: one going high says essentially nothing about the other.
+- **Which is right: cannot be told.** No ground-truth labels were used, so this is model-vs-model agreement, not accuracy, and neither map is judged better or more accurate. A thresholded error rate would need labeled windows.
+
+If you want, I can next design a label sample (olmoearth_plan_label_sample) so N labels give an honest error estimate for one or both maps, or run a per-class review set to flag where each map looks uncertain.

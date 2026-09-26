@@ -1,0 +1,529 @@
+{
+ "tool": "olmoearth_review_set",
+ "arguments": {
+  "scores_path": "F1/dw_scores.json",
+  "budget": 0.05
+ },
+ "result": {
+  "ok": true,
+  "result": {
+   "n_windows": 15813,
+   "n_classes": 9,
+   "budget": 0.05,
+   "n_review": 791,
+   "realised_budget": 0.050022,
+   "order": "confidence",
+   "signal": "top-1 minus top-2 margin (lower = more suspect)",
+   "score_type": "probability",
+   "score_type_detected": "probability",
+   "review": [
+    {
+     "rank": 1,
+     "window_index": 11556,
+     "predicted_class": 7,
+     "margin": 0.0,
+     "class_name": "bare",
+     "row": 90,
+     "col": 36
+    },
+    {
+     "rank": 2,
+     "window_index": 8983,
+     "predicted_class": 4,
+     "margin": 0.0,
+     "class_name": "crops",
+     "row": 70,
+     "col": 23
+    },
+    {
+     "rank": 3,
+     "window_index": 7603,
+     "predicted_class": 4,
+     "margin": 0.0,
+     "class_name": "crops",
+     "row": 59,
+     "col": 51
+    },
+    {
+     "rank": 4,
+     "window_index": 5133,
+     "predicted_class": 1,
+     "margin": 0.0,
+     "class_name": "trees",
+     "row": 40,
+     "col": 13
+    },
+    {
+     "rank": 5,
+     "window_index": 449,
+     "predicted_class": 6,
+     "margin": 0.0,
+     "class_name": "built",
+     "row": 3,
+     "col": 65
+    },
+    {
+     "rank": 6,
+     "window_index": 14896,
+     "predicted_class": 5,
+     "margin": 0.000122,
+     "class_name": "shrub_and_scrub",
+     "row": 116,
+     "col": 48
+    },
+    {
+     "rank": 7,
+     "window_index": 10149,
+     "predicted_class": 6,
+     "margin": 0.000122,
+     "class_name": "built",
+     "row": 79,
+     "col": 37
+    },
+    {
+     "rank": 8,
+     "window_index": 7831,
+     "predicted_class": 5,
+     "margin": 0.000122,
+     "class_name": "shrub_and_scrub",
+     "row": 61,
+     "col": 23
+    },
+    {
+     "rank": 9,
+     "window_index": 12047,
+     "predicted_class": 7,
+     "margin": 0.000244,
+     "class_name": "bare",
+     "row": 94,
+     "col": 15
+    },
+    {
+     "rank": 10,
+     "window_index": 11606,
+     "predicted_class": 4,
+     "margin": 0.000244,
+     "class_name": "crops",
+     "row": 90,
+     "col": 86
+    },
+    {
+     "rank": 11,
+     "window_index": 9601,
+     "predicted_class": 5,
+     "margin": 0.000244,
+     "class_name": "shrub_and_scrub",
+     "row": 75,
+     "col": 1
+    },
+    {
+     "rank": 12,
+     "window_index": 6235,
+     "predicted_class": 7,
+     "margin": 0.000244,
+     "class_name": "bare",
+     "row": 48,
+     "col": 91
+    },
+    {
+     "rank": 13,
+     "window_index": 3804,
+     "predicted_class": 6,
+     "margin": 0.000244,
+     "class_name": "built",
+     "row": 29,
+     "col": 92
+    },
+    {
+     "rank": 14,
+     "window_index": 2831,
+     "predicted_class": 6,
+     "margin": 0.000244,
+     "class_name": "built",
+     "row": 22,
+     "col": 15
+    },
+    {
+     "rank": 15,
+     "window_index": 14215,
+     "predicted_class": 1,
+     "margin": 0.000366,
+     "class_name": "trees",
+     "row": 111,
+     "col": 7
+    },
+    {
+     "rank": 16,
+     "window_index": 15503,
+     "predicted_class": 4,
+     "margin": 0.000488,
+     "class_name": "crops",
+     "row": 121,
+     "col": 15
+    },
+    {
+     "rank": 17,
+     "window_index": 14211,
+     "predicted_class": 1,
+     "margin": 0.000488,
+     "class_name": "trees",
+     "row": 111,
+     "col": 3
+    },
+    {
+     "rank": 18,
+     "window_index": 10057,
+     "predicted_class": 6,
+     "margin": 0.000488,
+     "class_name": "built",
+     "row": 78,
+     "col": 73
+    },
+    {
+     "rank": 19,
+     "window_index": 7863,
+     "predicted_class": 5,
+     "margin": 0.000488,
+     "class_name": "shrub_and_scrub",
+     "row": 61,
+     "col": 55
+    },
+    {
+     "rank": 20,
+     "window_index": 6657,
+     "predicted_class": 4,
+     "margin": 0.000488,
+     "class_name": "crops",
+     "row": 52,
+     "col": 1
+    },
+    {
+     "rank": 21,
+     "window_index": 5256,
+     "predicted_class": 4,
+     "margin": 0.000488,
+     "class_name": "crops",
+     "row": 41,
+     "col": 8
+    },
+    {
+     "rank": 22,
+     "window_index": 4060,
+     "predicted_class": 8,
+     "margin": 0.000488,
+     "class_name": "snow_and_ice",
+     "row": 31,
+     "col": 92
+    },
+    {
+     "rank": 23,
+     "window_index": 3240,
+     "predicted_class": 6,
+     "margin": 0.000488,
+     "class_name": "built",
+     "row": 25,
+     "col": 40
+    },
+    {
+     "rank": 24,
+     "window_index": 2689,
+     "predicted_class": 4,
+     "margin": 0.000488,
+     "class_name": "crops",
+     "row": 21,
+     "col": 1
+    },
+    {
+     "rank": 25,
+     "window_index": 15123,
+     "predicted_class": 5,
+     "margin": 0.00061,
+     "class_name": "shrub_and_scrub",
+     "row": 118,
+     "col": 19
+    },
+    {
+     "rank": 26,
+     "window_index": 8465,
+     "predicted_class": 6,
+     "margin": 0.00061,
+     "class_name": "built",
+     "row": 66,
+     "col": 17
+    },
+    {
+     "rank": 27,
+     "window_index": 8463,
+     "predicted_class": 6,
+     "margin": 0.00061,
+     "class_name": "built",
+     "row": 66,
+     "col": 15
+    },
+    {
+     "rank": 28,
+     "window_index": 5508,
+     "predicted_class": 4,
+     "margin": 0.00061,
+     "class_name": "crops",
+     "row": 43,
+     "col": 4
+    },
+    {
+     "rank": 29,
+     "window_index": 15666,
+     "predicted_class": 1,
+     "margin": 0.000732,
+     "class_name": "trees",
+     "row": 122,
+     "col": 50
+    },
+    {
+     "rank": 30,
+     "window_index": 14087,
+     "predicted_class": 2,
+     "margin": 0.000732,
+     "class_name": "grass",
+     "row": 110,
+     "col": 7
+    },
+    {
+     "rank": 31,
+     "window_index": 11679,
+     "predicted_class": 7,
+     "margin": 0.000732,
+     "class_name": "bare",
+     "row": 91,
+     "col": 31
+    },
+    {
+     "rank": 32,
+     "window_index": 9108,
+     "predicted_class": 4,
+     "margin": 0.000732,
+     "class_name": "crops",
+     "row": 71,
+     "col": 20
+    },
+    {
+     "rank": 33,
+     "window_index": 8091,
+     "predicted_class": 5,
+     "margin": 0.000732,
+     "class_name": "shrub_and_scrub",
+     "row": 63,
+     "col": 27
+    },
+    {
+     "rank": 34,
+     "window_index": 7352,
+     "predicted_class": 5,
+     "margin": 0.000732,
+     "class_name": "shrub_and_scrub",
+     "row": 57,
+     "col": 56
+    },
+    {
+     "rank": 35,
+     "window_index": 4038,
+     "predicted_class": 6,
+     "margin": 0.000732,
+     "class_name": "built",
+     "row": 31,
+     "col": 70
+    },
+    {
+     "rank": 36,
+     "window_index": 3993,
+     "predicted_class": 7,
+     "margin": 0.000732,
+     "class_name": "bare",
+     "row": 31,
+     "col": 25
+    },
+    {
+     "rank": 37,
+     "window_index": 2819,
+     "predicted_class": 5,
+     "margin": 0.000732,
+     "class_name": "shrub_and_scrub",
+     "row": 22,
+     "col": 3
+    },
+    {
+     "rank": 38,
+     "window_index": 15148,
+     "predicted_class": 4,
+     "margin": 0.000854,
+     "class_name": "crops",
+     "row": 118,
+     "col": 44
+    },
+    {
+     "rank": 39,
+     "window_index": 14772,
+     "predicted_class": 5,
+     "margin": 0.000854,
+     "class_name": "shrub_and_scrub",
+     "row": 115,
+     "col": 52
+    },
+    {
+     "rank": 40,
+     "window_index": 8287,
+     "predicted_class": 7,
+     "margin": 0.000854,
+     "class_name": "bare",
+     "row": 64,
+     "col": 95
+    },
+    {
+     "rank": 41,
+     "window_index": 1194,
+     "predicted_class": 5,
+     "margin": 0.000854,
+     "class_name": "shrub_and_scrub",
+     "row": 9,
+     "col": 42
+    },
+    {
+     "rank": 42,
+     "window_index": 16047,
+     "predicted_class": 5,
+     "margin": 0.000977,
+     "class_name": "shrub_and_scrub",
+     "row": 125,
+     "col": 47
+    },
+    {
+     "rank": 43,
+     "window_index": 14810,
+     "predicted_class": 4,
+     "margin": 0.000977,
+     "class_name": "crops",
+     "row": 115,
+     "col": 90
+    },
+    {
+     "rank": 44,
+     "window_index": 11692,
+     "predicted_class": 6,
+     "margin": 0.000977,
+     "class_name": "built",
+     "row": 91,
+     "col": 44
+    },
+    {
+     "rank": 45,
+     "window_index": 10421,
+     "predicted_class": 6,
+     "margin": 0.000977,
+     "class_name": "built",
+     "row": 81,
+     "col": 53
+    },
+    {
+     "rank": 46,
+     "window_index": 9873,
+     "predicted_class": 6,
+     "margin": 0.000977,
+     "class_name": "built",
+     "row": 77,
+     "col": 17
+    },
+    {
+     "rank": 47,
+     "window_index": 7854,
+     "predicted_class": 4,
+     "margin": 0.000977,
+     "class_name": "crops",
+     "row": 61,
+     "col": 46
+    },
+    {
+     "rank": 48,
+     "window_index": 6930,
+     "predicted_class": 4,
+     "margin": 0.000977,
+     "class_name": "crops",
+     "row": 54,
+     "col": 18
+    },
+    {
+     "rank": 49,
+     "window_index": 5890,
+     "predicted_class": 6,
+     "margin": 0.000977,
+     "class_name": "built",
+     "row": 46,
+     "col": 2
+    },
+    {
+     "rank": 50,
+     "window_index": 5582,
+     "predicted_class": 5,
+     "margin": 0.000977,
+     "class_name": "shrub_and_scrub",
+     "row": 43,
+     "col": 78
+    }
+   ],
+   "n_review_listed": 50,
+   "margin_summary": {
+    "n_windows": 15813,
+    "lowest_margin": 0.0,
+    "median_margin": 0.300171,
+    "highest_margin": 0.734039,
+    "margin_at_budget_cut": 0.02417,
+    "listed": {
+     "n": 50,
+     "margin_range": [
+      0.0,
+      0.000977
+     ]
+    },
+    "not_listed": {
+     "n": 15763,
+     "margin_range": [
+      0.000977,
+      0.734039
+     ]
+    },
+    "review_set": {
+     "n": 791,
+     "margin_range": [
+      0.0,
+      0.02417
+     ]
+    },
+    "reading": "Over all 15813 windows: lowest_margin is the smallest margin (the most suspect window) and highest_margin the largest; median_margin is the middle value (half the windows lie below it), not a lower end. margin_at_budget_cut is the 791-th lowest margin (n_review at the budget); review_set is the margin range of all 791 windows in the review set, listed or not. The 15763 windows not listed (not_listed) have margins from 0.000977 to 0.734039."
+   },
+   "evidence_scope": "Ai2's 24-task embedding suite (exp70: window level, OlmoEarth family) found the top-1 minus top-2 probability margin ranked errors better than the best no-model control on all 24 tasks, which may not cover this case: these scores do not name the model they came from.",
+   "evidence_covers_this_case": "not known",
+   "must_state": [
+    "The ranking evidence is for OlmoEarth models; these scores do not name their model, so it may not apply."
+   ],
+   "facts": [
+    {
+     "id": "margin_ratio",
+     "listed_low": 307.24,
+     "listed_high": null,
+     "review_set_low": 12.42,
+     "review_set_high": null,
+     "versus": "median",
+     "sentence": "The median margin over all 15,813 windows (0.300171) is at least 307.24 times the margins of the 50 listed windows (0 to 0.000977) and at least 12.42 times those of all 791 windows in the review set (0 to 0.02417); a margin of 0 is a tie between a window's top two classes, so no ratio bounds it."
+    }
+   ],
+   "forbidden_claims": [
+    {
+     "id": "error_rate_without_labels",
+     "why": "the margin orders windows for review; it is not a probability of error, and the review set is chosen to hold errors, not sampled, so no error rate follows from it without labelling a designed sample (olmoearth_plan_label_sample)"
+    }
+   ],
+   "evidence_detail_path": "/Users/lucas/Desktop/Github/olmoearth_inferenceX/exp/out/exp86_trial/rounds/8/parity/workspace/review_set_evidence.json"
+  }
+ },
+ "made": "2026-09-26T02:20:47+00:00",
+ "agent_commit": "6d2530711fcd66065132a21b1f8f23b4c6bb397f",
+ "inferencex_version": "1.3.1"
+}

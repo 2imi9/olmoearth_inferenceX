@@ -1,0 +1,21 @@
+
+
+Done — comparison run on your PA area (project *Karst Features in Pennsylvania*). Both predictions are completed for 2025-01-01 → 2025-12-31.
+
+**What I found**
+
+| Item | KarstBinary | KarstNumber |
+|---|---|---|
+| Result id | `419c581d…f26b` | `afb1cf68…9ae8` |
+| Band | `sample_karst_score`, [0, 1] | `sample_number`, [0.2, 1.2] |
+| Type | per-pixel regression | per-pixel regression |
+
+- **They measure different quantities**, so a cell-by-cell "difference" is undefined — only whether they rise and fall together is meaningful between them.
+- Over the shared extent (~10,091 km²; 25 of 36 grid cells valid, 11 no-data dropped), the correlation is **-0.0172** — effectively zero. The two models do not agree spatially at all: one is high where the other is indifferent, and vice versa.
+- Which is right: **not resolvable from these maps alone.** No ground-truth labels were used, and neither band has a decision threshold, so no accuracy exists until someone labels a sample.
+
+**Next steps I can run**
+1. Build a label-sample design (`olmoearth_plan_label_sample`, with a threshold per map) and grade it with `olmoearth_estimate_map_error` to get an honest error rate for each.
+2. Run `olmoearth_review_set_from_result` on each result to flag its own most-ambiguous (lowest-margin) windows — where each model is likely wrong, independent of the other.
+
+Want me to proceed with either?

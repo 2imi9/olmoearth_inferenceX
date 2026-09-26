@@ -1,0 +1,17 @@
+
+
+I set up the error-rate measurement for that run, but the error rate doesn't exist until you label — here's where things stand:
+
+**Run facts**
+- Model: `allenai/OlmoEarth-v1-FT-AWF-Base` (rev `a347b15`), raster sha `a7c40be9`, 9 land-cover classes, date window 2023
+- Map pooled to **16,384 windows** (128x128 grid, 4 px patch), all valid, no nodata; logits used for ranking
+
+**Label plan (confidence design, budget 300)**
+- Strata by top-1 minus top-2 logit margin, allocated [106, 79, 47, 34, 34] across 5 confidence strata — design-unbiased for the whole map
+- Sheet to fill: `design_scores_8f3527f9_confidence_300_s0_to_label.csv` (all 300 windows, each with location + `map_class`)
+
+**Next steps**
+1. For every one of the 300 rows, set `wrong = 1` if the map class is not what's on the ground, else `0`; add `reference_class` for per-class accuracy. Label all 300 — only the first rows biases the estimate.
+2. Send me the filled sheet (or the 0/1 list) and I'll call `olmoearth_estimate_map_error` to get the error rate plus the interval this design earns.
+
+Note: this gives an honest estimate, not a certification — if you also want a certified zone, that needs a separate random-design plan fixed before labelling.

@@ -1,0 +1,20 @@
+
+
+I ranked the KarstBinary 2025 result (`419c581d...`, prediction `dd504793...`) on a 10x10 grid over the PA area. Of 100 sampled windows, 28 were no-data; 72 valid windows were ranked by how close each `sample_karst_score` sits to the 0.5 decision threshold — **lowest margin first**, i.e., where the model is least sure between karst / not-karst.
+
+**Windows to check first (5% budget = 4 windows; 10% budget = 7):**
+
+| Rank | Window (row, col) | Score | Side of threshold | Margin |
+|------|------------------|-------|-------------------|--------|
+| 1 | (4, 7) | 0.352 | not karst | 0.297 |
+| 2 | (4, 2) | 0.285 | not karst | 0.431 |
+| 3 | (0, 5) | 0.745 | karst | 0.490 |
+| 4 | (1, 8) | 0.223 | not karst | 0.554 |
+| 5-7 | (8, 5), (2, 8), (1, 3) | 0.808 / 0.167 / 0.872 | mixed | 0.615-0.745 |
+
+Why these: they sit nearest 0.5, so a small score error flips the predicted class there. For context, the median window margin is 0.965 — the review set's margins are 1.3 to 3.25 times lower than the median, so they stand out as genuinely undecided. The remaining 65 windows have margins 0.786-0.992 and can wait.
+
+Caveats:
+- A low margin means "model is unsure," not "likely wrong" — it is relative suspicion, not an error probability, and no recorded experiment grades a regression score read this way.
+- Each window is one pixel sample at the cell centre, not every pixel.
+- This set is biased toward errors by design, so do not compute an error rate from it; to quantify accuracy, I can run `olmoearth_plan_label_sample` on the saved scores file instead.
