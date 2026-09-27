@@ -1,9 +1,19 @@
-# Agent trial v3: claims, required content and held-out briefs (exp87 preregistration, DRAFT)
+# Agent trial v3: claims, required content and held-out briefs (exp87 preregistration, frozen)
 
-**Status: draft, not frozen.** This page was first written on 25 September 2026, before the fixes it tests were
-built. It was revised on 27 September 2026, after exp86's development rounds 8–10 and before the held-out set is
-revealed; the revision is dated in the text. It is frozen, with the held-out set revealed, before any counted run.
-After freezing, it changes only as stated under [Changes after freezing](#changes-after-freezing).
+**Status: frozen on 27 September 2026, before any counted run.**
+
+- **Drafted** 25 September 2026. Revised 27 September, after exp86 development rounds 8–10 and before the held-out
+  set was revealed (c96d521).
+- **Revealed** in 46c8faf. The recomputed digest matches the one committed in 42e8a24.
+- **Calibration** (`exp/out/exp87_calibration.json`) passed. The audit found all 12 seeded errors, and judged each
+  one material, against a bar of 11. No control was judged material.
+- **Frozen setup:**
+  - agent: PR 156 at fa993ae, with the claim check off;
+  - model: Qwen3.8-27B-NVFP4;
+  - package: olmoearth-inferencex 1.3.1;
+  - analysis: `exp/exp87_result.py` (7e887dc).
+
+From here the page changes only as stated under [Changes after freezing](#changes-after-freezing).
 
 ## Why a third trial
 
