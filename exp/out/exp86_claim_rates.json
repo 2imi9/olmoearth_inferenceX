@@ -1,38 +1,63 @@
-[
- {
-  "round": 7,
-  "answers": 30,
-  "sentences": 425,
-  "confirmed": 63,
-  "material": 32,
-  "answers_with_any": 26,
-  "answers_with_material": 16
- },
- {
-  "round": 8,
-  "answers": 30,
-  "sentences": 437,
-  "confirmed": 35,
-  "material": 17,
-  "answers_with_any": 24,
-  "answers_with_material": 11
- },
- {
-  "round": 9,
-  "answers": 30,
-  "sentences": 475,
-  "confirmed": 32,
-  "material": 16,
-  "answers_with_any": 21,
-  "answers_with_material": 10
- },
- {
-  "round": 10,
-  "answers": 30,
-  "sentences": 459,
-  "confirmed": 23,
-  "material": 10,
-  "answers_with_any": 17,
-  "answers_with_material": 9
+{
+ "rounds": [
+  {
+   "round": 7,
+   "answers": 30,
+   "sentences": 425,
+   "confirmed": 63,
+   "material": 32,
+   "answers_with_any": 26,
+   "answers_with_material": 16,
+   "material_per_sentence_brief_bootstrap_95": [
+    0.03759398496240601,
+    0.11157894736842106
+   ]
+  },
+  {
+   "round": 8,
+   "answers": 30,
+   "sentences": 437,
+   "confirmed": 35,
+   "material": 17,
+   "answers_with_any": 24,
+   "answers_with_material": 11,
+   "material_per_sentence_brief_bootstrap_95": [
+    0.012376237623762377,
+    0.06986899563318777
+   ]
+  },
+  {
+   "round": 9,
+   "answers": 30,
+   "sentences": 475,
+   "confirmed": 32,
+   "material": 16,
+   "answers_with_any": 21,
+   "answers_with_material": 10,
+   "material_per_sentence_brief_bootstrap_95": [
+    0.01643192488262911,
+    0.051001821493624776
+   ]
+  },
+  {
+   "round": 10,
+   "answers": 30,
+   "sentences": 459,
+   "confirmed": 23,
+   "material": 10,
+   "answers_with_any": 17,
+   "answers_with_material": 9,
+   "material_per_sentence_brief_bootstrap_95": [
+    0.00980392156862745,
+    0.03285420944558522
+   ]
+  }
+ ],
+ "fall_7_to_10": {
+  "round_7_minus_round_10_95": [
+   0.01814283358073561,
+   0.0918704626476668
+  ],
+  "share_of_resamples_without_a_fall": 0.0004
  }
-]
+}

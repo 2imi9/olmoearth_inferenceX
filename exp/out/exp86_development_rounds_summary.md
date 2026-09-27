@@ -23,17 +23,22 @@ The table comes from `exp/exp86_claim_rates.py`, which also writes `exp86_claim_
 
 | Round | What changed before it | Answers with a material finding | Material findings per sentence | Answers with any finding | Any finding per sentence | Sentences per answer |
 |---|---|---|---|---|---|---|
-| 7 | baseline (43ca1f8) | 16/30 = 53% (36% to 70%) | 32/425 = 7.5% (5.4% to 10.4%) | 26/30 = 87% | 63/425 = 14.8% | 14.2 |
-| 8 | tool outputs state conclusions and limits; statistical rules in code; answer checks (6d25307) | 11/30 = 37% (22% to 54%) | 17/437 = 3.9% (2.4% to 6.1%) | 24/30 = 80% | 35/437 = 8.0% | 14.6 |
-| 9 | fixes for round 8's findings (c62538f) | 10/30 = 33% (19% to 51%) | 16/475 = 3.4% (2.1% to 5.4%) | 21/30 = 70% | 32/475 = 6.7% | 15.8 |
-| 10 | a capability card; tool outputs that state what the model had guessed; an LLM claim check (7561672) | 9/30 = 30% (17% to 48%) | 10/459 = 2.2% (1.2% to 4.0%) | 17/30 = 57% | 23/459 = 5.0% | 15.3 |
+| 7 | baseline (43ca1f8) | 16/30 = 53% (36% to 70%) | 32/425 = 7.5% (3.8% to 11.2%) | 26/30 = 87% | 63/425 = 14.8% | 14.2 |
+| 8 | tool outputs state conclusions and limits; statistical rules in code; answer checks (6d25307) | 11/30 = 37% (22% to 54%) | 17/437 = 3.9% (1.2% to 7.0%) | 24/30 = 80% | 35/437 = 8.0% | 14.6 |
+| 9 | fixes for round 8's findings (c62538f) | 10/30 = 33% (19% to 51%) | 16/475 = 3.4% (1.6% to 5.1%) | 21/30 = 70% | 32/475 = 6.7% | 15.8 |
+| 10 | a capability card; tool outputs that state what the model had guessed; an LLM claim check (7561672) | 9/30 = 30% (17% to 48%) | 10/459 = 2.2% (1.0% to 3.3%) | 17/30 = 57% | 23/459 = 5.0% | 15.3 |
 
-Intervals are Wilson 95% intervals.
+Per answer, intervals are Wilson 95% intervals. Per sentence, they are bootstrap 95% intervals that resample whole
+briefs. Sentences cluster within answers, and answers within briefs, so an interval over single sentences is too
+narrow. This page first gave such intervals (5.4% to 10.4% for round 7, 1.2% to 4.0% for round 10). The literature
+review of 27 September 2026 flagged the clustering: it is the design effect the package measures on maps.
 
 ## What this shows
 
-- **Material false statements per sentence fell from 7.5% to 2.2%.** The two intervals do not overlap. The answers
-  did not get shorter (14 to 16 sentences each).
+- **Material false statements per sentence fell from 7.5% to 2.2%.**
+  - The two intervals do not overlap, even when whole briefs are resampled.
+  - Paired by brief, the fall is 1.8 to 9.2 points (95%). Fewer than 1 resample in 2,000 shows no fall.
+  - The answers did not get shorter (14 to 16 sentences each).
 - **The fixes that worked made each tool state its conclusion, its limits and what it cannot do,** so the model had
   nothing to guess. Two things did not work:
   - **Rules that catch wording.** They caught about half of new wordings of the same claims.
