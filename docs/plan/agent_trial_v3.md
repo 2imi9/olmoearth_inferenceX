@@ -1,8 +1,9 @@
 # Agent trial v3: claims, required content and held-out briefs (exp87 preregistration, DRAFT)
 
-**Status: draft, not frozen.** This page is written on 25 September 2026, before the fixes it tests are built. It is
-frozen, with the held-out set revealed, after the fixes are committed and before any counted run. Until then it may
-change. After freezing, it changes only as stated under [Changes after freezing](#changes-after-freezing).
+**Status: draft, not frozen.** This page was first written on 25 September 2026, before the fixes it tests were
+built. It was revised on 27 September 2026, after exp86's development rounds 8–10 and before the held-out set is
+revealed; the revision is dated in the text. It is frozen, with the held-out set revealed, before any counted run.
+After freezing, it changes only as stated under [Changes after freezing](#changes-after-freezing).
 
 ## Why a third trial
 
@@ -32,7 +33,22 @@ avoids exp86's two faults:
 
 ## What is tested
 
-The OlmoEarth Agent after the fixes decided on 25 September 2026. They came from two reviews: a survey of current
+**Revised 27 September 2026.** The agent under test is PR 156's head at freezing, fa993ae or its successor if only a
+driver-facing change follows, named in `round.json`:
+
+- it adds exp86 development rounds 8–10 to the fixes listed below;
+- a capability card is in the system prompt;
+- tool outputs state what the model had guessed;
+- the LLM claim check is built but off (`OLMOEARTH_CHECK_CLAIMS` unset).
+
+Round 10 ran the claim check on. Of its 20 flags, 2 or 3 were real, and it caught none of that round's 10 material
+findings (`exp/out/exp86_round10_diagnosis.md`). exp87 does not run it. Neither the rounds nor the fixes read the
+held-out set. It stays sealed until this page is frozen, and no fix to the agent follows the reveal.
+
+The model is the same as in exp86: Qwen3.8-27B-NVFP4, served the same way. The package is olmoearth-inferencex 1.3.1.
+
+The text below, from 25 September, lists the first fixes. The OlmoEarth Agent after the fixes decided on 25 September
+2026. They came from two reviews: a survey of current
 harness designs, and a close reading of Google's Planetary Prediction Engine paper, both in the working notes. The
 fixes are listed here as built, at the commit named in `round.json`:
 
@@ -67,15 +83,43 @@ replacement.
 
 Each configuration is run three times, like exp86's. A round is 18 configurations, 54 runs.
 
+## The main result (revised 27 September 2026)
+
+The question exp87 answers is whether the fixes were fitted to exp86's eight briefs. The main result compares the
+held-out configurations (H) with B1–B8 in the same round, under the same agent, audit and owner review.
+
+- **Endpoint.** Material false statements per sentence:
+  - **Numerator:** findings the audit's verifier confirms and judges material, that the owner then confirms.
+  - **Denominator:** sentences of three words or more in the answers, counted with the agent's own splitter, after
+    dropping any "Note from the tool:" the harness appended.
+  - **Method:** as in `exp/exp86_claim_rates.py`, which reports rounds 7–10 the same way.
+- **Verdict, decided by the owner before the reveal.** The fixes generalise if both hold, on point estimates:
+  - H's rate is at most 3.0%;
+  - H's rate is at most 2.0 points above B1–B8's rate in the same round.
+
+  Otherwise they do not generalise, and the report says by how much.
+- **Uncertainty.** Each rate is given with a 95% bootstrap interval that resamples whole configurations. The
+  difference is given the same way, resampling each set's configurations independently. The verdict reads the point
+  estimates. The intervals are reported beside it and do not change it.
+- **Reported beside it:**
+  - per-answer rates;
+  - sentences per answer for H and for B1–B8, so that a lower rate from shorter answers shows;
+  - every finding, material or not, by class.
+
 ## Criteria
 
 **P1–P7** are exp86's criteria under its final instrument (A8–A21), unchanged, with one decision made before any
-exp87 run. D1's rate exclusion also counts a number written in words, such as "about half" or "a third" ("most" is not a
+exp87 run. They are graded on B1–B8 only (revised 27 September 2026): exp86's scorer holds rules for its own briefs.
+B1–B8 run as exp86 round 11, beside the held-out configurations and on the same agent. The held-out configurations are
+graded by the audit. D1's rate exclusion also counts a number written in words, such as "about half" or "a third" ("most" is not a
 number).
 exp86 round 7 showed the need: "the more confident side is right on only about half or less of such windows" was
 graded as a winner claim.
 
-**P8, claims.** No answer states a material false claim (below) that the owner confirms. Every confirmed finding is
+**P8, claims.** Reported, not the verdict (revised 27 September 2026): the main result above replaces P8's rule
+that no answer may state a material false claim. At round 10's level, that rule fails on almost any round and says only
+that the agent is not perfect. P8 as first written: no answer states a material false claim (below) that the owner
+confirms. Every confirmed finding is
 reported with its class (E1–E6 or other), material or not.
 
 **Materiality** was decided by the owner on 25 September 2026, before freezing. A confirmed false claim is material
@@ -89,8 +133,8 @@ when it would change what a user believes about the map, the method or the evide
 
 A slip that changes none of these is immaterial, such as a result id called a prediction id. It is reported beside
 the verdict and does not fail the run. A derived number that is correct is reported as E6 and does not fail the run.
-At freezing, every confirmed finding of exp86 rounds 6 and 7 (`exp/out/exp86_audit_rounds_6_7.json`) is sorted under
-this rule, and the sorted list is committed as the anchor set. The owner decides new findings against it.
+The owner's sorting of rounds 6 and 7's findings under this rule (an anchor set) was proposed on 26 September. The
+revision of 27 September does not require it: the owner reviews each material finding directly (below).
 
 How a claim is decided:
 
@@ -102,15 +146,22 @@ How a claim is decided:
   - estimates and intervals;
   - what certifies at which alpha;
   - the magnitudes of listed margins.
+- **The audit (revised 27 September 2026).** The screen is the audit protocol of exp86 rounds 9 and 10, with its
+  prompts and the materiality rule above: four auditors by group of configurations, and one adversarial verifier each,
+  who refutes, reclassifies and judges materiality. It runs over all 18 configurations under opaque configuration
+  labels, so the auditors cannot tell held-out briefs from B1–B8. As first written:
 - **A blinded LLM screen.** The screen is Claude. It is never Qwen, the model under test. The owner decided on 25
   September 2026, before freezing, to use no second model: the seeded-error calibration below measures the screen's
   recall, and the owner confirms every flag.
   - It reads every answer and its run's tool outputs and lists candidate false claims with evidence.
   - A second, separate pass tries to refute each one.
   - The screen is blind to round, commit and arm.
-- **Adjudication by the owner.** The repository's owner decides every flagged claim, and also reads a random sample of
-  one answer in five from those with no flag. The sample is drawn with the package's sampler, and its seed is fixed
-  at freezing.
+- **Adjudication by the owner (revised 27 September 2026).** The owner decides every finding the verifier judges
+  material, and reads a random one in ten of the answers with no material finding. The sample is drawn with
+  `random.Random(870927)` over the answers sorted by configuration label and run. A material false statement found in
+  that sample is counted, and it is reported as the audit's miss. Findings judged immaterial are recorded and are not
+  reviewed one by one. As first written: the repository's owner decides every flagged claim, and also reads a random
+  sample of one answer in five from those with no flag.
   - A claim counts as false only when the owner confirms it.
   - A false claim found in the random sample is reported, and the screen's miss rate is estimated from it.
 - **Drafts too.** When the harness's check rewrote an answer, the draft is screened as well. Its false claims are
@@ -125,8 +176,10 @@ How a claim is decided:
 The required items are listed per configuration, B1–B8 and the held-out set, at freezing. The owner adjudicates, and
 the screen flags missing items. P9 keeps P8 from being passed by saying less.
 
-**The pass rule** is exp86's: a configuration passes a criterion when all three runs pass it. A round passes when P1
-to P9 hold on all 18 configurations.
+**P9** is reported beside the main result, with sentences per answer (revised 27 September 2026).
+
+**The pass rule** as first written, reported and not the verdict: a configuration passes a criterion when all three
+runs pass it. A round passes when P1 to P9 hold on all 18 configurations.
 
 **What a pass means.**
 
@@ -144,9 +197,15 @@ to P9 hold on all 18 configurations.
     derived percentage.
   - The seeded set also holds as many clean controls: true paraphrases, correct derived numbers the tools stated, and
     true hedges.
-  - The seeded answers are confirmed by the owner.
-- **The bar is at least 90% recall on each class.** Where the screen misses more, the owner reads every answer of
-  that class's configurations.
+  - The seeded answers are confirmed by the owner. Revised 27 September 2026: a second agent confirms each one
+    instead, checking that each seeded error is false and each control true against the run's tool outputs. The set
+    is built from rounds 8–10's answers: two seeded answers per form, and as many controls.
+- **The bar is at least 90% recall.**
+  - As first written, the bar applied to each class. Where the screen missed more, the owner read every answer of
+    that class's configurations.
+  - Revised 27 September 2026, with two seeded answers per form: the bar is at least 11 of the 12 seeded errors found.
+  - Below it, the owner reads a random one in five of the answers with no material finding, not one in ten.
+  - Each form's recall is reported.
 - **The screen's false-flag rate** on the controls is reported.
 
 ## Changes after freezing
