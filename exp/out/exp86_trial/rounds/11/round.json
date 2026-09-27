@@ -1,0 +1,52 @@
+{
+ "brief_values": {
+  "B3/cluster": {
+   "run_dir_a": "C1/awf_namanga_2023_1042061",
+   "run_dir_b": "C2/awf_namanga_2022_1042294"
+  },
+  "B4/cluster": {
+   "run_dir": "C1/awf_namanga_2023_1042061"
+  },
+  "B8/cluster": {
+   "run_dir": "C1/awf_namanga_2023_1042061"
+  },
+  "B5/files": {
+   "design_path": "F2/design_confidence_300_s0.json",
+   "labels_path": "F2/labels_confidence_300_s0.csv"
+  },
+  "B6/files": {
+   "design_path": "F3/design_random_300_s0.json",
+   "labels_path": "F3/labels_random_300_s0.csv"
+  },
+  "B7/files": {
+   "scores_a": "F4/emsr279-11_s1_pre.json",
+   "scores_b": "F4/emsr279-11_s1_post.json",
+   "date_a": "2017-09-14/2017-09-15",
+   "date_b": "2018-04-19"
+  }
+ },
+ "not_run": {
+  "B8/studio": "the Studio account of the first trial (24 September) held no classification model: KarstEmbedding, KarstNumber and KarstBinary only"
+ },
+ "note": "Round 11 runs exp86's B1-B8 as the regression half of exp87 round 1 (docs/plan/agent_trial_v3.md): the same agent, model and session as exp87's held-out configurations, after exp87's preregistration is frozen. P1-P7 are graded here under exp86's final instrument; the claim audit and the main result are exp87's.",
+ "fixes": [
+  {
+   "after_round": 10,
+   "where": "agent",
+   "branch": "2imi9/feature-trial-round3-fixes",
+   "commits_since": "7561672",
+   "diagnosis": "exp/out/exp86_round10_diagnosis.md",
+   "items": [
+    "the LLM claim check is opt-in (off by default)",
+    "no other change to the agent after round 10's commit but the linearisation and sign-off of PR 156 (fa993ae)"
+   ],
+   "signed_off": "PR 156 head fa993ae, signed by its author"
+  },
+  {
+   "after_round": 10,
+   "where": "scorer",
+   "commit": null,
+   "items": []
+  }
+ ]
+}
