@@ -3802,6 +3802,7 @@
   cited_in:
     - {file: docs/results/comparisons.md, marker: exp79-headline-holds-under-every-seed-on-every-encoder}
     - {file: docs/Findings.md, marker: exp79-headline-holds-under-every-seed-on-every-encoder}
+    - {file: README.md, marker: exp79-headline-holds-under-every-seed-on-every-encoder}
   note: >-
     The bar is exp74's: share at least 0.75 and a one-sided sign test below 0.05. With at least 20 tasks a 0.75 share
     already puts the sign test at or below 0.021 (20 tasks, 15 wins, no ties), so the check reads the share; the
