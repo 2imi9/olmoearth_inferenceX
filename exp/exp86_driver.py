@@ -180,6 +180,34 @@ def scorer_constants(path=SCORER):
     return ScorerConstants(briefs, provider, conditional, workspace)
 
 
+#: A trial's own configurations: exp87's held-out briefs are not the scorer's, so a trial directory may carry them.
+TRIAL_BRIEFS = "briefs.json"
+
+
+def constants_for(trial):
+    """The scorer's constants, or, when <trial>/briefs.json exists, the trial's own briefs and workspaces.
+
+    briefs.json is {"briefs": {configuration: brief}, "workspace": {configuration: [fixture top directories]}}. The
+    provider's tool names still come from the scorer. Every configuration must name its workspace: exp87's held-out
+    fixtures sit beside files a run must not see (the sealed build's own outputs), so no default applies."""
+    base = scorer_constants()
+    path = os.path.join(trial, TRIAL_BRIEFS) if trial else None
+    if not path or not os.path.exists(path):
+        return base
+    with open(path, encoding="utf-8") as fh:
+        spec = json.load(fh) or {}
+    briefs = spec.get("briefs") or {}
+    workspace = {k: tuple(v) for k, v in (spec.get("workspace") or {}).items()}
+    if not briefs:
+        raise DriverError(f"{path} lists no briefs")
+    bad = [c for c in briefs if not re.fullmatch(r"[A-Z][A-Z0-9]*/(studio|cluster|files)", c)]
+    missing = sorted(set(briefs) - set(workspace))
+    if bad or missing:
+        raise DriverError(f"{path}: configurations must read <BRIEF>/<provider> ({bad}) and each needs a workspace "
+                          f"({missing})")
+    return ScorerConstants(dict(briefs), base.provider, set(), workspace)
+
+
 _PLACEHOLDER = re.compile(r"\{([a-z_]+)\}")
 
 
@@ -1137,7 +1165,8 @@ def run_one(out, brief_id, provider, run, *, trial=None, llm=None, studio=None, 
 
     llm, studio, registry and agent_info are injected by the tests; left None, they are built as the agent's command
     line builds them, from the environment."""
-    consts = scorer_constants()
+    trial = os.path.abspath(trial) if trial else trial_of(os.path.abspath(out))
+    consts = constants_for(trial)
     config = f"{brief_id}/{provider}"
     if config not in consts.briefs:
         raise DriverError(f"{config} is not a preregistered configuration: {sorted(consts.briefs)}")
@@ -1148,7 +1177,6 @@ def run_one(out, brief_id, provider, run, *, trial=None, llm=None, studio=None, 
     counted = _under_rounds(out)
     if allow_dirty and counted:
         raise DriverError("--allow-dirty is for debugging runs, which the plan keeps outside rounds/")
-    trial = os.path.abspath(trial) if trial else trial_of(out)
     meta = load_round(out)
     values = (meta["brief_values"] or {}).get(config) or {}
     template = consts.briefs[config]
@@ -1378,7 +1406,7 @@ def fill_round(out, *, trial=None, attempts=5):
     A void run is kept, and the fill stops there (a rerun replaces it by the next number); a refused run stops that
     configuration. The conditional B8 studio control runs when round.json fills its brief and does not list it under
     not_run."""
-    consts = scorer_constants()
+    consts = constants_for(os.path.abspath(trial) if trial else trial_of(os.path.abspath(out)))
     meta = load_round(out)
     configs = [c for c in consts.briefs if c not in consts.conditional]
     configs += [c for c in sorted(consts.conditional)
@@ -1410,7 +1438,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--out", required=True, help="the round directory, <trial>/rounds/<r>")
     ap.add_argument("--trial", help="the trial directory (default: two levels above --out when it is under rounds/)")
-    ap.add_argument("--brief", help="B1 to B8")
+    ap.add_argument("--brief", help="B1 to B8, or a brief of the trial's own briefs.json (exp87's held-out HB2 to HB8)")
     ap.add_argument("--provider", choices=("studio", "cluster", "files"))
     ap.add_argument("--run", help="the run number, a positive integer; a void run is replaced by a new number")
     ap.add_argument("--all", action="store_true", help="bring every configuration to three counted runs")

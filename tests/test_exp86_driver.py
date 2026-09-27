@@ -774,3 +774,21 @@ def test_a_signed_url_keeps_its_path_only():
     assert dropped == ["file_path?signature"]
     plain = "https://olmoearth.allenai.org/api/v1/prediction-results/r1?limit=5"
     assert r({"u": plain}) == {"u": plain}
+
+
+def test_a_trial_may_carry_its_own_briefs_and_workspaces(tmp_path):
+    """exp87's held-out configurations are not the scorer's: a trial's briefs.json gives them, each with the fixture
+    directories its workspace receives; without the file, the scorer's constants apply."""
+    assert set(drv.constants_for(str(tmp_path)).briefs) == set(drv.scorer_constants().briefs)
+    spec = {"briefs": {"HB7/files": "Map A (H1/map_a.json) ...", "HB2/studio": "Which parts ..."},
+            "workspace": {"HB7/files": ["H1"], "HB2/studio": []}}
+    (tmp_path / "briefs.json").write_text(json.dumps(spec))
+    c = drv.constants_for(str(tmp_path))
+    assert c.briefs == spec["briefs"] and c.workspace == {"HB7/files": ("H1",), "HB2/studio": ()}
+    assert c.provider == drv.scorer_constants().provider and c.conditional == set()
+    fixtures = {"H1/map_a.json": "a", "H4/design.json": "b", "loose.json": "c"}
+    assert drv.workspace_fixtures(fixtures, {}, "HB7/files", c) == {"H1/map_a.json": "a"}
+    del spec["workspace"]["HB2/studio"]
+    (tmp_path / "briefs.json").write_text(json.dumps(spec))
+    with pytest.raises(drv.DriverError, match="needs a workspace"):
+        drv.constants_for(str(tmp_path))

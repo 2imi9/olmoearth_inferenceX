@@ -1,0 +1,36 @@
+{
+ "note": "exp87's held-out configurations as the driver runs them: each brief as sealed in heldout_briefs.json, and the fixture top directories its workspace receives (only the fixtures the brief names)",
+ "briefs": {
+  "HB2/studio": "Which parts of my KarstBinary 2025 result should I double-check first, and why those?",
+  "HB3/cluster": "I have two runs of the fine-tuned AWF model over the same area, one for 2021 (C3/awf_namanga_2021_1064570) and one for 2024 (C4/awf_namanga_2024_1064570). What changed between them, which classes turned into which, and where? Which of the two maps should I believe?",
+  "HB3/studio": "Do my KarstBinary and KarstNumber 2025 results agree? Where do they disagree most, and which should I trust?",
+  "HB4/cluster": "I can label about 200 windows of the Amboseli run in C5/awf_amboseli_2023_1064570. How wrong is this map?",
+  "HB5/files": "I labelled the windows of the design in H4/design_scores_39fe40be_confidence_250_s7.json; the filled sheet is H4/design_scores_39fe40be_confidence_250_s7_to_label.csv. How wrong is this map, and which classes are the worst?",
+  "HB6/files": "These 400 windows (H5/design_scores_39fe40be_random_400_s11.json, labelled in H5/design_scores_39fe40be_random_400_s11_to_label.csv) are a simple random sample of the map. Is there a part of the map I can trust to be wrong at most 5% of the time? If not, what can I say instead?",
+  "HB7/files": "Map A (H1/map_a.json) describes 2018-04-19 and map B (H1/map_b.json) describes 2017-09-14 to 2017-09-15; they cover the same windows. How do they differ, mostly in which direction, and which one is right?",
+  "HB8/cluster": "Take the model run in C5/awf_amboseli_2023_1064570. Which windows should a reviewer check first, and how much less confident are they than a typical window?"
+ },
+ "workspace": {
+  "HB3/cluster": [
+   "C3",
+   "C4"
+  ],
+  "HB8/cluster": [
+   "C5"
+  ],
+  "HB4/cluster": [
+   "C5"
+  ],
+  "HB7/files": [
+   "H1"
+  ],
+  "HB5/files": [
+   "H4"
+  ],
+  "HB6/files": [
+   "H5"
+  ],
+  "HB2/studio": [],
+  "HB3/studio": []
+ }
+}

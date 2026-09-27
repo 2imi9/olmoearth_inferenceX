@@ -1,0 +1,33 @@
+{
+ "experiment": "exp87 agent trial v3 (held-out configurations)",
+ "preregistration": "docs/plan/agent_trial_v3.md",
+ "model": "nvidia/Qwen3.8-27B-NVFP4",
+ "built": "2026-09-25 (sealed; revealed 2026-09-27, commit 46c8faf)",
+ "built_by": "exp/out/exp87_trial/build_heldout.py and add_cluster.py (sealed)",
+ "fixtures": {
+  "design_scores_02c83f47_confidence_200_s3_to_label.csv": "c5f0bec11f0d44075becb137b876034f456e464010b00b3b3633579b9f748c90",
+  "scores_run_OlmoEarth-v1-FT-AWF-Base_3f79630b_p4.json": "57b48cbf2040d1cc810f012423841571034e7c8c7cb453ddbce6731a7fa22301",
+  "scores_run_OlmoEarth-v1-FT-AWF-Base_451e0a2f_p4.json": "1f8edba1606da9471c4951005e0b57f34479c57a349d38fac3d1c1d4af5ad7f4",
+  "design_scores_02c83f47_confidence_200_s3.json": "2a05ddb7596dbf3b1b4dbdf6762c3435ab29b9cf3e9cee1dd8824e99a1161f48",
+  "scores_run_OlmoEarth-v1-FT-AWF-Base_04be4d71_p4.json": "e694ca2727e2692a93d1992930c76e242acb79bdc5e48454f5bed441c7f539ea",
+  "H5/design_scores_39fe40be_random_400_s11_to_label.csv": "305a8da6972a4fff34dcc11f5680f545c50da3034259907a375ac5dc75c44764",
+  "H5/design_scores_39fe40be_random_400_s11.json": "2185d38cd6c1146db146a6889cd0359ebf7dbfd74dbc749c2a8e578eabdb1729",
+  "H4/design_scores_39fe40be_confidence_250_s7_to_label.csv": "4d6bc6197aad673c5c9f566442f83a158b0be5f26e613ddbb2de99d1dc7161e0",
+  "H4/design_scores_39fe40be_confidence_250_s7.json": "a2643c013d148a34e722165dfcd8233abb863cb903285fc5ef1d6ce4cb261b22",
+  "H1/map_b.json": "7241c92819375d423f2d87fd56a7d83e4b62ca79932f038b741127300b387475",
+  "H1/map_a.json": "07daa61010f7851a031bdd5fcf552dae34725bfad2b2304a09d3b26889927b8b",
+  "C3/awf_namanga_2021_1064570/scores.tif": "451e0a2f82fb99a07073f88c0cb45203b4861308935e6573c3bbbe6818fa7960",
+  "C3/awf_namanga_2021_1064570/manifest.json": "fc04a4a1ef97b80a81d3a7b346e402fadae270f0b5d5cd9de03af4226be265fe",
+  "C4/awf_namanga_2024_1064570/scores.tif": "04be4d715e2effabc5583bac0ddcb98bd7c52d5463517f01206dafbdae8a3f93",
+  "C4/awf_namanga_2024_1064570/manifest.json": "af06e004c22d408a2f7eaaaad6c6934bc1ce7d542a052b348fc251cd4500a415",
+  "C5/awf_amboseli_2023_1064570/scores.tif": "3f79630bbae097a3cc54961d1e22b919bfb8d069d653274f620a8b0e3f4d0683",
+  "C5/awf_amboseli_2023_1064570/manifest.json": "cfc19bf8a5586817918d2ae2c181138d5494b8fa717e71e1243fb0a8aaef0532",
+  "F1/dw_scores.json": "791e4fc89fcd7a97aa44088735525d5a2ae1e9fa7f979e070555f9242c87ac5e"
+ },
+ "fixture_notes": {
+  "sealed": "the fixtures are the sealed set's, byte for byte; SEALED_MANIFEST.sha256 reproduces the digest committed in 42e8a24",
+  "unused": "design_scores_02c83f47_confidence_200_s3.* and scores_run_*_p4.json are outputs of the sealed build kept for the digest; no workspace receives them"
+ },
+ "pending": {},
+ "brief_values": {}
+}
