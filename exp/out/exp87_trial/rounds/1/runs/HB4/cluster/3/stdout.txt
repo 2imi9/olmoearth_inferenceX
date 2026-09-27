@@ -1,0 +1,9 @@
+
+
+A 200-window label design is planned for the Amboseli map (model `allenai/OlmoEarth-v1-FT-AWF-Base`, revision a347b15; 16,384 valid windows, 9 land-cover classes). The error rate does not exist until you label those 200 windows, so here is the next step:
+
+- **Fill the sheet**: `/Users/lucas/Desktop/Github/olmoearth_inferenceX/exp/out/exp87_trial/rounds/1/runs/HB4/cluster/3/workspace/design_scores_02c83f47_confidence_200_s0_to_label.csv` — set `wrong = 1` if the map's class is not on the ground, else `0`; optionally add `reference_class` (true class id) for per-class accuracy.
+- Design: confidence-stratified (strata sizes 3,277 / 3,277 / 3,276 / 3,277 / 3,277; allocation 80 / 49 / 23 / 24 / 24 across the five strata). Label all 200 rows — labelling only the first rows (the least-confident stratum) biases the estimate.
+- Once returned, I will call `olmoearth_estimate_map_error` with the design path and your labels to report the estimate plus the interval this design earns (the simple p ± 1.96·√(p(1-p)/n) formula does not apply to this stratified design).
+
+Note: a confidence design gives an estimate, not a certified zone; if you want a certifiable region later, that needs a separate plan with `design='random'` before labelling, and even then nothing may certify.

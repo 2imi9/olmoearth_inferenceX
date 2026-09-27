@@ -1,0 +1,19 @@
+
+
+I ran the review-set tool on your **KarstBinary** 2025 result (`sample_karst_score`, decided at 0.5): prediction `dd504793-…`, result `419c581d-…`. It sampled the extent on a 16×16 grid (173 valid windows, 83 no-data dropped) and ranked them by distance from the decision.
+
+**Check first (top 5 of 17):**
+
+| rank | window | row,col | score | predicted |
+|---|---|---|---|---|
+| 1 | idx 233 | 14, 9 | 0.462 | karst-NO (≤0.5) |
+| 2 | idx 70 | 4, 6 | 0.567 | karst-yes (>0.5) |
+| 3 | idx 142 | 8, 14 | 0.320 | karst-NO |
+| 4 | idx 220 | 13, 12 | 0.685 | karst-yes |
+| 5 | idx 51 | 3, 3 | 0.309 | karst-NO |
+
+Full 17-window list (margins ≤ 0.703, the 10% budget) is saved at `review_list_b36f14e5a9.csv`; the 5% budget covers 9 windows (margin cut 0.527).
+
+**Why these:** their scores sit closest to the 0.5 threshold, i.e. the model is least decisive there (margin 0.076–0.703 vs a median margin of 0.965 across the map, so everything else is strongly one way or the other). Caveats from the tool: the score is treated as P(positive) for ranking only, margins are **not probabilities of error** (no recorded experiment grades this case), and this review set is biased toward errors — it is not a sample, so don't quote an error rate from it.
+
+**Next steps:** open the listed windows to verify, or I can use `olmoearth_plan_label_sample` on the saved scores to design an unbiased labelling set if you want a real estimate of how wrong the map is.

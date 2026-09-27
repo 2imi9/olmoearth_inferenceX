@@ -1,0 +1,22 @@
+
+
+I found both 2025 runs (completed, same PA area, period 2025-01-01 to 2025-12-31) and ran a cross-model comparison over their shared extent (~10,091 km²). Two important caveats come out of it.
+
+**Key finding: the two maps predict different quantities.**
+
+| Run | Model | Band (declared range) | Result id |
+|---|---|---|---|
+| KarstBinary (pred `dd504793`) | fine-tuned, per-pixel regression | `sample_karst_score` [0.0, 1.0] | `419c581d` |
+| KarstNumber (pred `a83ca800`) | fine-tuned, per-pixel regression | `sample_number` [0.2, 1.2] | `afb1cf68` |
+
+Because the bands are different units, a direct "difference / agreement" between them would mix two quantities, so none is computed — only whether they rise and fall together:
+
+- **Correlation: r = −0.0172** (25 of 36 grid cells compared; 11 dropped as no-data; 95% interval −0.41 to 0.38). That interval spans zero, so this sample **cannot say whether the maps co-vary at all** — the signal is consistent with no relationship and with a moderate one.
+
+**Which is right?** Not answerable from this run: no ground truth was involved, and nothing here measures either map's accuracy. (Both models were fine-tuned on separate Studio label fields, but this run looked up no labels for this area.) A map-vs-map comparison tells you how they relate, never which matches the ground.
+
+**To settle "which is right", options within this agent's capabilities:**
+1. You supply reference labels at specific points → I run `olmoearth_classification_metrics` on named thresholds, giving per-class accuracy/IoU per map.
+2. Name a threshold per band → I plan a label sample (`olmoearth_plan_label_sample`) and later estimate each map's error rate from your reviewer labels (`olmoearth_estimate_map_error`).
+
+Want me to go with option 1 (tell me coordinates or points you have labels for) or plan option 2?

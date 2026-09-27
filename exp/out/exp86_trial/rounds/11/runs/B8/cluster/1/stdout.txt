@@ -1,0 +1,17 @@
+
+
+Read the run's scores (model `allenai/OlmoEarth-v1-FT-AWF-Base`, rev a347b15; 128x128 window grid, 16,384 windows, all valid) and ranked them for review with olmoearth-inferencex's review-set machinery (budget 5% = **819 windows**, full list saved to `review_list_49faf61fce.csv`).
+
+**Why this order:** windows are ranked by the model's own decision strength — the mean over each window's pixels of the top-1 minus top-2 logit margin (label-fill channel excluded). A low margin means the two leading classes were nearly tied there, i.e. the model was least decided. The top windows' margins (0.108–0.206) sit 21.7–41.3x below the median margin over all 16,384 windows (4.47), so they stand out sharply from the rest. They are *least decided / most suspect*, not flagged as errors: the margin orders review priority and is not a probability of being wrong.
+
+| Rank | Window | Row, Col | Predicted class | Margin |
+|---|---|---|---|---|
+| 1 | 1821 | 14, 29 | woodland_forest | 0.108 |
+| 2 | 1321 | 10, 41 | montane_forest | 0.149 |
+| 3 | 3037 | 23, 93 | shrubland_savanna | 0.153 |
+| 4 | 907 | 7, 11 | woodland_forest | 0.162 |
+| 5 | 1797 | 14, 5 | montane_forest | 0.176 |
+
+Context: of the 819 in the review set, grassland_barren is 31.3% and shrubland_savanna 30.0% of it — the low-margin zones concentrate there rather than on forest classes. One caveat the tool requires me to state: this ranking uses the logit margin, while on Ai2's suite one-minus-the-top-probability ranked errors better on 14 of 16 multi-class tasks — so treat the order as relative suspicion, and don't infer which of these windows are actually wrong until labelled.
+
+If you next want to know how wrong the map overall is, I can design a label sample over the same scores with `plan_label_sample` (pass it to your reviewer, then estimate the error rate from their labels); or if you have a second run over these same windows (e.g. another date or encoder), `compare_review` will show where the two maps disagree.

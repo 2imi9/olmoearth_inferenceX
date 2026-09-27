@@ -1,0 +1,18 @@
+
+
+**Review set for KarstBinary 2025** (result `419c581d…f26b`, band `sample_karst_score`, [0,1] score) — at a 5% budget, rank the windows by distance from the decision at 0.5; least-decided first:
+
+| Rank | Window | Row/Col | Score | Margin | Predicted |
+|------|--------|---------|-------|--------|-----------|
+| 1 | #47 | 4,7 | 0.3515 | 0.2969 | class 0 (≤0.5) |
+| 2 | #42 | 4,2 | 0.2847 | 0.4307 | class 0 |
+| 3 | #5 | 0,5 | 0.7449 | 0.4898 | class 1 (>0.5) |
+| 4 | #18 | 1,8 | 0.2232 | 0.5536 | class 0 |
+
+**Why these:** the model is "undecided" where the score sits near 0.5, so those cells are opened first. The median margin across all 72 valid windows is 0.9647 — the four above sit at 0.2969–0.5536, i.e. far closer to the decision than typical (the remaining 68 range 0.6153–0.9915). 28 of 100 sampled windows were no-data and dropped before ranking.
+
+Caveats to state honestly:
+- The band is treated as P(positive) **for ranking only**; margins are not error probabilities, and no recorded experiment grades a regression score read this way. So call them "least decided / most suspect", not "most likely wrong".
+- This review set is chosen to hold errors, not sampled — its own error rate would overstate the map's. To get an honest error rate, pass `scores_path` (`workspace/scores_419c581d-9a1_sample_karst_score_g10.json`) to `olmoearth_plan_label_sample`, then label the planned windows with `olmoearth_estimate_map_error`.
+
+Want me to run that label-sample plan next?

@@ -1,0 +1,14 @@
+
+
+**None.** Certification at α = 0.05 (δ = 0.1, prefix rule) found **no zone** on this map whose error rate can be certified at ≤ 5% from these 300 random labels.
+
+| Level | Coverage | Labels inside | Wrong | Upper bound | Accepted |
+|---|---|---|---|---|---|
+| 1 | 15% (min testable) | 46 | 3 | 13.9% | ✗ |
+| 2 | 30% | 88 | 7 | 13.0% | ✗ |
+| 3 | 50% | 140 | 13 | 13.2% | ✗ |
+| 4 | 100% (whole map) | 300 | 69 | 26.4% | ✗ |
+
+Even the most-confident 15% of windows fails the exact test; the whole-map error rate estimates at **23.0%** (95% interval 18.4% to 28.1%), so the map's overall accuracy is well below what a 5%-certified zone needs. Note the guarantee only holds for α fixed before seeing labels, so "trying" a looser α now would not count.
+
+**Next step that could help:** plan a *new* random sample (`olmoearth_plan_label_sample`, `design='random'`, larger budget) with α and δ fixed in advance, label it, then re-certify. A larger random budget makes a certified zone possible, but never certain — it may still certify nothing. Want me to plan that new sample?

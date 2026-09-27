@@ -1,0 +1,20 @@
+
+
+I ranked the KarstBinary 2025 result (`419c581d-...`) on a 10x10 grid: 72 valid windows after dropping 28 no-data. The model outputs a karst score in [0, 1], so each window's **margin = distance from the 0.5 decision** — windows nearest 0.5 are the *least decided* and go first. Check these first:
+
+| Rank | Window (row, col) | Score | Margin | Predicted |
+|---|---|---|---|---|
+| 1 | (4, 7) | 0.352 | 0.2969 | class 0 |
+| 2 | (4, 2) | 0.285 | 0.4307 | class 0 |
+| 3 | (0, 5) | 0.745 | 0.4898 | class 1 |
+| 4 | (1, 8) | 0.223 | 0.5536 | class 0 |
+| 5 | (8, 5) | 0.808 | 0.6153 | class 1 |
+
+A budget of 5% (~4 windows) has margin cut 0.5536; 10% (~7 windows) has cut 0.7447. All 7 remaining listed windows span margins 0.297–0.745, versus the median margin of 0.9647 over all 72 windows.
+
+Why this order: the score is treated as P(positive) for ranking only, so low-margin windows sit on both sides of the decision boundary — exactly where the model could flip with a small input change. Note the caveats:
+
+- These numbers are **not probabilities of error**; which windows are wrong is known only once labelled. No recorded experiment grades a regression score read as a probability.
+- A review set holds suspected errors by design; its error rate would overstate the map's.
+
+Next step: to estimate how wrong the map actually is, pass the saved scores file to `olmoearth_plan_label_sample` and label those planned windows — say the word and I'll set up the sampling design.

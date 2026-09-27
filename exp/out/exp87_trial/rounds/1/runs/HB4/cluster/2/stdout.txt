@@ -1,0 +1,13 @@
+
+
+I've prepared your 200-window labeling plan for the Amboseli run (model `OlmoEarth-v1-FT-AWF-Base`, revision a347b15; 16,384 windows on a 128x128 grid, all valid).
+
+| Item | Value |
+|---|---|
+| Design | confidence-stratified (strata by margin: 3,277/3,277/3,276/3,277/3,277 windows) |
+| Budget | 200 of 16,384 windows (allocation 80/49/23/24/24 across strata) |
+| Label sheet | `design_scores_02c83f47_confidence_200_s0_to_label.csv` in the workspace dir `.../exp87_trial/rounds/1/runs/HB4/cluster/2/workspace/` |
+
+**Important:** no error rate or accuracy exists yet — none can be stated or guessed before you label the windows. A confidence score is not a probability of error.
+
+To get the number: fill in `wrong` (1 = map's class is not what's on the ground) and optionally `reference_class` for each of the 200 windows in that CSV, then tell me and I'll run the estimate — it returns the error rate with the interval this design earns. Note that labelling only the first rows would bias it; every window in the sheet needs a label.

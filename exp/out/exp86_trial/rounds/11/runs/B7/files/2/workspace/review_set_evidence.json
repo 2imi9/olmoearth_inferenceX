@@ -1,0 +1,31 @@
+{
+ "format": "olmoearth-agent/review-evidence@1",
+ "source": "2imi9/olmoearth_inferenceX, docs/claims.yaml (claim ids below)",
+ "ranking": {
+  "measured": "Ai2's 24-task embedding suite (exp70: window level, OlmoEarth family) found the top-1 minus top-2 probability margin ranked errors better than the best no-model control on all 24 tasks.",
+  "claims": {
+   "suite-margin-wins-every-task": "The headline result. On all 24 scored tasks of Ai2's own published embedding suite -- tasks Ai2 chose for their own paper, 14 distinct sources, 6,435,473 graded units, accuracy 0.333 to 0.979 -- the model's own margin beat the best no-model control on every one. Excess-AURC leads 0.0157 to 0.2278, median 0.1158; one-sided exact sign test 24/24, p = 6e-08. One of the two controls is embedding distance, i.e. a feature-space-typicality score.",
+   "shrug-signals-rejected": "Ensemble mutual information (the disagreement component) and -NCDD lose to the model's own confidence on both testbeds under OlmoEarth v1.2, preregistered: pooled excess-AURC lead +0.0060 and +0.0022, per tile 263/61 and 352/76. The embedding and input signals are 3-9x worse on all four arms.",
+   "feature-typicality-rejected": "kNN distance, Mahalanobis distance, PCA residual and ViM against three reference sets: no score beats confidence on either testbed, and every one loses on at least 317 of 351 Bolivia tiles.",
+   "embedding-dissimilarity-rejected": "Embedding dissimilarity to the training features has no scale-free advantage over confidence (13/27 scenes, sign p=1.00); every feature-typicality generalisation loses on both testbeds.",
+   "cross-model-disagreement-rejected": "Disagreement with a second model of the same family beats confidence on only 10 of 27 scenes against WorldCover, and on 84/265 Bolivia tiles against hand labels.",
+   "two-view-disagreement-rejected": "A head on an outside representation errs where OlmoEarth errs, so two-view disagreement captures 0.242 of the errors at a 10% budget against 0.454 for confidence (excess AURC 0.067 vs 0.0215).",
+   "backbone-version-disagreement-rejected": "Disagreement between OlmoEarth v1 and v1.2 is not a useful error signal.",
+   "anysat-witness-rejected": "An outside representation as the neighbourhood space adds nothing over the model's own (159/143, p=0.19).",
+   "no-encoder-internal-signal-beats-confidence": "No signal from the encoder's internals, its pretraining objective, a posterior over the probe head, feature-space typicality, a second model of the same family, or flip-and-rotate consistency ranks errors better than confidence on expert labels."
+  },
+  "limits": [
+   "Measured on the OlmoEarth family at window level against seven references (photointerpretation, another model's output, expert annotation of a served product, in-situ ground observation, farmers' declarations). Not a general theorem about every model or every task.",
+   "Known exception: on one Sen1Floods11 flood event (Bolivia) a no-model NDWI control ranked errors as well as confidence, and better under v1.2 -- a cheap physical control is worth running alongside.",
+   "This ranks suspicion; it does not calibrate it. Capture at a fixed budget is bounded by budget/error_rate, so it is not comparable across populations with different error rates (use AUROC for that).",
+   "If a fitted readout produced these scores, report its generalisation gap: a probe that memorised its practice data reversed which confidence signal ranked best. The ordering degrades with memorisation and only severe memorisation reverses it.",
+   "The margin does NOT beat ensemble PREDICTIVE ENTROPY -- it ties it. The rejection above is of the disagreement component (mutual information), not of entropy, and at tile level on the v1 test split ensemble mutual information was 0.003 better than confidence. If you already have an ensemble, its entropy is a fair alternative; its disagreement is not.",
+   "These numbers order a review well and are badly miscalibrated as probabilities: good for deciding what to look at first, poor for deciding what to trust at a threshold."
+  ],
+  "multi_class": "On the suite's 16 multi-class tasks one minus the top probability ranked errors better than the top-1 minus top-2 probability margin on 14, by a small amount (claim top1-beats-the-margin-on-multiclass), and the logit margin ranked errors worse than the probability margin on all 16 (claim no-whole-vector-score-beats-the-probability-forms); exp76."
+ },
+ "comparison": {
+  "measured": "On 15 pairs of Sen1Floods11 flood maps with expert labels (exp58: window level; crop offsets, backbones, sensors, fine-tuning and encoders) the more confident side was right on 51 to 70 percent of differing windows.",
+  "reading": "The more confident side is right on 51 to 70 percent of differing windows (exp58, upstream) and confidence does not order the set, so this comparison does not identify a winner; declining to pick a side is the correct answer."
+ }
+}

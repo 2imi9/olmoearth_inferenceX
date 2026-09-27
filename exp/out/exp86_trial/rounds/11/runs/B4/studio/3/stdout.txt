@@ -1,0 +1,15 @@
+
+
+Labeling plan is ready for the **KarstBinary 2025** map (result `419c581d-...`). Two things to know before you start:
+
+| Item | Value |
+|---|---|
+| Result / band | KarstBinary--01-01-2025--12-31-2025, `sample_karst_score` ([0,1] score, decided at 0.5) |
+| Grid | 16x16 = 256 cells; **173 valid windows** (83 no-data dropped) |
+| Design | confidence-stratified (least-decided windows first), all 173 labelled |
+| Budget | You offered 300 labels; only 173 windows exist at this grid, so 127 would go unused |
+
+- Labels file to fill: `design_419c581d-9a1_8ca17d7d_confidence_173_s0_to_label.csv` — set `wrong` (1 = map wrong) and `reference_class` for each window, in order. Every one of the 173 must be filled; labelling only the first rows would bias the estimate.
+- What the number will mean: the error rate of the map at those 173 sampled points, not every pixel. The interval comes from `olmoearth_estimate_map_error` once you have the labels — I won't guess it now.
+
+Once you've labelled the sheet, send me the `wrong` values (or the filled CSV path) and I'll compute the error rate and its interval. If you'd also like a certified high-confidence zone, that needs a separate random design planned before labelling — say the word and I'll set one up alongside.

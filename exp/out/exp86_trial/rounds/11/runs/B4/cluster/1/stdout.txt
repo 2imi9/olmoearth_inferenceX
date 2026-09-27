@@ -1,0 +1,19 @@
+
+
+No error rate exists yet — that number only appears after your 300 labels. I've set up the sampling design for run **C1/awf_namanga_2023_1042061** (OlmoEarth-v1-FT-AWF-Base, rev a347b15; 16,384 valid windows on a 128×128 grid, 9 land-cover classes, nodata fill channel excluded).
+
+**Design: `confidence`, budget 300**
+| | |
+|---|---|
+| Population | 16,384 valid windows |
+| Strata / allocation | 5 confidence strata (~3,277 each) → 106 / 79 / 47 / 34 / 34 labels |
+| Design file | .../workspace/design_scores_8f3527f9_confidence_300_s0.json |
+| Label sheet (CSV with locations) | .../workspace/design_scores_8f3527f9_confidence_300_s0_to_label.csv |
+
+**How to label:** for each of the 300 windows (in order), set `wrong` = 1 when the map class differs from what's on the ground, else 0; add `reference_class` (true class id) if you want per-class accuracy.
+
+Two caveats from the tool:
+- Label **all 300**, not just the first rows — the sheet lists the least-confident stratum first, so a partial label would describe those windows, not the map.
+- The confidence design yields an estimate with the interval its design earns; do not quote p ± 1.96·√(p(1−p)/n). If you later want a **certified zone**, that needs a separate plan with `design='random'` fixed before labelling (and even then certification may come back empty).
+
+Send me the filled CSV (or the 0/1 list) and I'll run `olmoearth_estimate_map_error` to get the error rate, its interval, and per-class accuracy.

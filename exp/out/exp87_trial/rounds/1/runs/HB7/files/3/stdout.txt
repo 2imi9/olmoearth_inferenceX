@@ -1,0 +1,19 @@
+
+
+Compared both maps over all 78,028 shared windows. They differ in only **1,570 windows (~2.0%)**.
+
+**Direction of the difference** (all differences are between "water" and "not water"):
+- Water in A (2018-04-19) → not water in B (2017-09-14/15): **1,247 (79.4%)**
+- Reverse (not water in A → water in B): 323 (20.6%)
+
+So mostly, map A calls more places water than map B does.
+
+**Confidence:** Map B had the larger decision margin on 77.6% of the differing windows (A on 22.4%). That is a measure of decisiveness, not correctness.
+
+**Where:** Differences concentrate in the middle rows of the grid (rows 2800–4199, ~50–75%, hold 46.8% of them). The scores carry no georeference, so these are grid positions, not compass directions.
+
+**Which one is right?** Neither can be established from this run:
+- No ground-truth labels were given, and none exist in this comparison to check against.
+- The maps are 216 days apart, so a differing window may be real seasonal change (e.g., reservoir levels or flooding), not an error in either map.
+
+To settle it, you would need a reference dated to each map (e.g., water masks for 2018-04-19 and for mid-September 2017); labels for one date grade only that date's map. All 1,570 differing windows with both classes and margins are saved at `compare_differing_6193d3204b.json` if you want to inspect them.

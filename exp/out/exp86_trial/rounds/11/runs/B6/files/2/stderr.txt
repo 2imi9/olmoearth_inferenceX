@@ -1,0 +1,3 @@
+  [ok] olmoearth_load_context
+  [ok] olmoearth_certify_zone
+  (2 turn(s), 2 provenance entries)

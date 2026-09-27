@@ -1,0 +1,19 @@
+
+
+The map's error rate is **19.4%**, with a 95% interval of **15.7% to 23.6%** — estimated from your 300 labelled windows out of a population of 15,813. Method as computed: *stratified by confidence margin; Wilson interval on the design's effective sample size* (effective n ≈ 384).
+
+**Weakest classes** (by user's accuracy, over classes with at least 5 map-labelled windows):
+
+| Class | Windows | Correct | User accuracy | 95% interval |
+|---|---|---|---|---|
+| 5 | 10 | 0 | 0.0% | 0.0%–27.8% |
+| 1 | 9 | 2 | 22.5% | 6.5%–55.0% |
+| 6 | 44 | 20 | 45.1% | 32.3%–58.6% |
+
+By contrast, class 4 sits at 96.4% and class 7 at 92.3%.
+
+Notes:
+- No zone can be certified from this confidence design — certification needs a new plan with `design='random'`.
+- A narrower interval needs more labels under a new plan with a larger budget.
+
+Want me to walk through planning a random-design sample for certification, or look deeper at the weak classes?

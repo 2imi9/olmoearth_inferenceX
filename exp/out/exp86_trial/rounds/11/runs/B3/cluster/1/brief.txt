@@ -1,0 +1,1 @@
+The model runs in C1/awf_namanga_2023_1042061 and C2/awf_namanga_2022_1042294 map the same area. Compare the two predictions and tell me where they differ and which is right.

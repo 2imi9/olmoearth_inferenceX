@@ -1,0 +1,24 @@
+
+
+Your map's error rate from the F2 confidence design (300 labelled windows out of 15,813):
+
+| | Value |
+|---|---|
+| Error rate | **19.4%** (95% CI 15.7% to 23.6%) |
+| Overall accuracy | 80.6% (CI 76.4% to 84.3%) |
+| Effective n | 384.1; nominal coverage 0.95 |
+| Method | stratified by confidence margin; Wilson interval on the design's effective sample size |
+
+Weakest classes by user's accuracy (classes with >= 5 map-labelled windows):
+
+| Class | Correct / labelled | Accuracy (95% CI) |
+|---|---|---|
+| 5 | 0 / 10 | 0.0% (0.0% to 27.8%) |
+| 1 | 2 / 9 | 22.5% (6.5% to 55.0%) |
+| 6 | 20 / 44 | 45.1% (32.3% to 58.6%) |
+
+Classes 0, 2 and 8 have too few labels (<5) to rank.
+
+Possible next steps:
+- A narrower interval needs more labels under a new plan with a larger budget, fixed before labelling.
+- A certified zone is not possible from this confidence design; it needs a new plan with `design='random'`, all drawn windows labelled, and alpha/delta/rule fixed in advance (and even then it may certify nothing).

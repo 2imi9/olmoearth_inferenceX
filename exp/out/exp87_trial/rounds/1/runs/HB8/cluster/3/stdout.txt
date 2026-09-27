@@ -1,0 +1,21 @@
+
+
+Read the run's scores into a scores file (16,384 windows, patch 4px, model allenai/OlmoEarth-v1-FT-AWF-Base rev a347b15) and ranked them for review at a 5% budget: **819 windows** should be checked first (full list in `review_list_c6db1e4c19.csv`).
+
+Top 6 least-decided windows:
+
+| Rank | Window (row, col) | Predicted class | Margin |
+|---|---|---|---|
+| 1 | 6845 (53, 61) | open_water | 0.072297 |
+| 2 | 6974 (54, 62) | open_water | 0.098783 |
+| 3 | 6718 (52, 62) | open_water | 0.116223 |
+| 4 | 3643 (28, 59) | shrubland_savanna | 0.119892 |
+| 5 | 6590 (51, 62) | shrubland_savanna | 0.132909 |
+| 6 | 5989 (46, 101) | open_water | 0.137809 |
+
+How much less confident than typical:
+- Margins of the whole review set span 0.0723 to 0.6805; the median margin over all 16,384 windows is **5.57**.
+- So the median window is **8.19 to 77.07 times** more decided than the 819 review windows (and 34.81 to 77.07x for the 10 listed).
+- Classes in the set: herbaceous_wetland 28.4%, shrubland_savanna 28.3%, grassland_barren 26.9%, open_water 16.0%.
+
+Caveats: this ranking uses the logit margin — on Ai2's suite, one minus the top probability ranked errors better on 14 of 16 multi-class tasks — and a low margin means "least decided," not "likely wrong." To get an honest error rate, plan a label sample next (`olmoearth_plan_label_sample`, budget you can spend).

@@ -1,0 +1,20 @@
+
+
+The error rate doesn't exist yet — it comes from your 0/1 labels on a planned design — but the plan is ready. One catch up front:
+
+**Your 300 labels exceed what a Studio result can hold.** KarstBinary's 2025 result (`419c581d...`) sampled at the maximum 16x16 grid has only **173 valid windows** (256 points, 83 no-data). So the plan takes all 173 and 127 of your labels go unused. A map-wide rate over more windows would need a direct model run's scores raster via `olmoearth_scores_from_file` (no such run exists in this workspace).
+
+| Item | Value |
+|---|---|
+| Design | confidence (least-decided windows first, stratified by margin) |
+| Windows planned | 173 (every valid window) |
+| Grid | 16x16, one pixel sample per cell |
+| Decision | band `sample_karst_score` [0,1] at 0.5, treated as P(positive) for ranking only |
+| Labels sheet | `design_419c581d-9a1_8ca17d7d_confidence_173_s0_to_label.csv` (each window's location + map_class) |
+
+Notes:
+- Every one of the 173 windows must be labelled (wrong = 1 if the map's class is not ground truth); labelling only early rows biases the estimate.
+- The resulting rate describes the map at those 173 sampled points, not every pixel.
+- This design yields an estimate, not a certification; a certified zone would need a separate random design.
+
+Next step: fill the CSV, then I'll run `olmoearth_estimate_map_error` to give the error rate with the interval this design earns. If you want more coverage than 173 windows, tell me and I'll point you at the direct-run route instead.

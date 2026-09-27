@@ -1,0 +1,43 @@
+{
+ "run_id": "a085f58d-2fc9-493d-bd24-03e88179ed8b",
+ "entry_count": 2,
+ "entries": [
+  {
+   "run_id": "a085f58d-2fc9-493d-bd24-03e88179ed8b",
+   "timestamp": "2026-09-27T20:40:31.439455+00:00",
+   "api_call": "olmoearth_load_context",
+   "request_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+   "response_summary": {
+    "total": 1,
+    "project_count": 1,
+    "ok": true
+   },
+   "prediction_id": null,
+   "model_id": null,
+   "dataset_hashes": null
+  },
+  {
+   "run_id": "a085f58d-2fc9-493d-bd24-03e88179ed8b",
+   "timestamp": "2026-09-27T20:40:31.920538+00:00",
+   "api_call": "olmoearth_search_predictions",
+   "request_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+   "response_summary": {
+    "total": 3,
+    "ok": true
+   },
+   "prediction_id": null,
+   "model_id": null,
+   "dataset_hashes": null
+  }
+ ],
+ "egress_count": 1,
+ "egress": [
+  {
+   "timestamp": "2026-09-27T20:40:26.336841+00:00",
+   "capability": "studio",
+   "host": "olmoearth.allenai.org",
+   "allowed": true,
+   "reason": "host on allowlist"
+  }
+ ]
+}

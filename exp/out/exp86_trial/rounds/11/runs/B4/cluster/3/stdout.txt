@@ -1,0 +1,17 @@
+
+
+I planned how to spend your 300 labels on the run's full scores (16,384 valid windows, model OlmoEarth-v1-FT-AWF-Base rev a347b15). The design is a **confidence-stratified sample** — it allocates labels by the model's own margin, so the error-rate estimate stays unbiased, but it is only an *estimate*: this design cannot certify a zone.
+
+| Item | Value |
+|---|---|
+| Population | 16,384 valid windows (9 classes + nodata fill channel excluded) |
+| Design | confidence, budget 300, seed 0 |
+| Stratification | 5 strata (3,276–3,277 each); allocation 106 / 79 / 47 / 34 / 34 |
+| Label sheet | `design_scores_8f3527f9_confidence_300_s0_to_label.csv` in the run's workspace dir |
+
+**No error rate exists yet** — it comes from your labels. Next step:
+
+1. Fill `wrong` (1 = map class ≠ ground truth) for **all 300 rows** (optionally `reference_class` for per-class accuracy). A partial sheet biases the result — label every row, not just the first ones.
+2. Send me the filled sheet (or its `labels_path`) and I'll call `olmoearth_estimate_map_error` to get the error rate with the interval this design earns.
+
+Note: if you later want a *certified* high-confidence zone, that needs a separate plan with `design='random'` drawn before labelling — it may still certify nothing.

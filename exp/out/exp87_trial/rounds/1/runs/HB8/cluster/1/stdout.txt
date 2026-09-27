@@ -1,0 +1,24 @@
+
+
+Loaded the direct run `C5/awf_amboseli_2023_1064570` (model allenai/OlmoEarth-v1-FT-AWF-Base, 16,384 windows on a 128x128 grid) and ranked windows for review at the default 5% budget — that gives **819 windows** (the least-decided, i.e. lowest-margin windows), not a sample and not an error rate.
+
+Top windows to check first (lowest margin = least decided):
+
+| Rank | Window index | Row/Col | Predicted class | Margin |
+|---|---|---|---|---|
+| 1 | 6845 | 53/61 | open_water | 0.072297 |
+| 2 | 6974 | 54/62 | open_water | 0.098783 |
+| 3 | 6718 | 52/62 | open_water | 0.116223 |
+| 4 | 3643 | 28/59 | shrubland_savanna | 0.119892 |
+| 5 | 6590 | 51/62 | shrubland_savanna | 0.132909 |
+
+How much less confident than a typical window:
+
+- Typical window: **median margin 5.572159** over all 16,384 windows.
+- The 819 review-set windows have margins from **0.072297 to 0.680488**; the typical window's margin is **8.19 to 77.07 times** theirs (tool-computed).
+- For the 50 listed above: median is **24.32 to 77.07 times** their margins; for the first 10, **34.81 to 77.07 times**.
+- Class mix of the review set: mostly herbaceous_wetland (28.4%), shrubland_savanna (28.3%), grassland_barren (26.9%), open_water (16.0%).
+
+Caveat to state: this ranking uses the logit margin; on Ai2's suite, one minus the top probability ranked errors better on 14 of 16 multi-class tasks, so the ranking covers this case only in part. The full 819-window list (with ranks, indices, row/col, margins) is saved at `.../workspace/review_list_c6db1e4c19.csv`.
+
+Possible next step: plan a label-budget sample (`olmoearth_plan_label_sample`) on these scores if you want an actual error-rate estimate with labels.

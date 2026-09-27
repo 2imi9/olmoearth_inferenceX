@@ -1,0 +1,17 @@
+
+
+**Short answer: no.** `olmoearth_certify_zone` tested 18 zone sizes under the exact prefix test (alpha = 0.05, delta = 0.1) and **certified none** — even the smallest testable zone (top 15% by confidence, 2,372 windows, 63 labels, 5 wrong) failed (p = 0.907). A zone needs >= 45 labels inside to be certifiable; with 400 labels nothing reached that bar.
+
+What you *can* say from the same 400 labels (of 15,813 population windows):
+
+| Claim | Value | Status |
+|---|---|---|
+| Whole-map error rate | 19.2% | estimate |
+| 95% interval | 15.6% – 23.4% | exact hypergeometric interval (SRS of finite map) |
+| Post-stratified overall accuracy | 82.5% | estimate, not a guarantee |
+| Class 7 (user's accuracy) | 95.9% (163/170) | estimate |
+| Class 4 (user's accuracy) | 95.4% (125/131) | estimate |
+
+So you can report per-class or whole-map **estimates with intervals** — e.g. "the map's overall error is estimated at about 19% (95% CI 15.6–23.4%)", with classes 4 and 7 estimated accurate at roughly 95% each — but none of this is a certification; the guarantee that "this part is wrong at most 5% of the time" requires the exact test to pass, which it did not. The weakest classes ranked by user's accuracy (>= 5 labelled windows) are class 5 (0/17 correct), class 6 (28/64, 43.8%) and class 1 (7/16, 43.8%).
+
+If you need a certified zone, the only supported path is a **new** random design fixed in advance: `olmoearth_plan_label_sample` with design='random' and a larger budget, with alpha, delta and rule chosen before any of its labels are seen. Note this may certify nothing either — a random design makes certification possible, never certain. I'd also flag that trying a looser alpha on these same labels after seeing this result would not count as a certification.

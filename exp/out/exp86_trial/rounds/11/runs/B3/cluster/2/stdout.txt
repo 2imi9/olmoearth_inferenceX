@@ -1,0 +1,26 @@
+
+
+Compared both runs (same model, OlmoEarth-v1-FT-AWF-Base rev a347b15) window-by-window over their shared 128x128 grid (16,384 windows). Map A = C2/2022, Map B = C1/2023.
+
+**Where they differ**
+- **3,807 windows differ (23.2%)** of the area.
+- Concentrated in the **north**: the top row band (rows 0–31) holds **39.4%** of all differing windows; also skews west (west column band 34.0%).
+- Mostly at edges: **68.6%** of differing windows touch a predicted-class boundary in the 2022 map (vs 49.2% of all windows).
+- Main class flips (of the 3,807):
+
+| Change (2022 -> 2023) | n | Share |
+|---|---|---|
+| shrubland_savanna -> grassland_barren | 1,409 | 37.0% |
+| woodland_forest -> montane_forest | 447 | 11.7% (one-directional) |
+| shrubland_savanna -> woodland_forest | 388 | 10.2% |
+| grassland_barren -> urban_dense_development | 336 | 8.8% |
+| shrubland_savanna -> urban_dense_development | 308 | 8.1% |
+
+All 3,807 differing windows (with both classes + margins) are saved at `compare_differing_1cca89d91a.json` in the workspace.
+
+**Which is right: cannot be determined from this run**
+The two maps describe different years (2022 vs 2023), so every differing window is either real ground change (including seasonal cycles) or an error in one map. No tool output grades either side: the more confident margin belongs to the 2022 map on 57.8% of differing windows vs 42.2% for 2023, but a margin is not a label. Labels for one year would grade only that year's map.
+
+**Next steps (need your input)**
+- Give me reference labels for 2022 and for 2023 (a tool can't look these up), and I'll compute per-map accuracy with `olmoearth_classification_metrics`.
+- Or I can plan how to spend N labels honestly per map (`olmoearth_plan_label_sample`, then `olmoearth_estimate_map_error`) — say a budget, e.g. 200.

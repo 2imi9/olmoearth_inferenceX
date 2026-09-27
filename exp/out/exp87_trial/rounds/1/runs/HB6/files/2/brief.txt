@@ -1,0 +1,1 @@
+These 400 windows (H5/design_scores_39fe40be_random_400_s11.json, labelled in H5/design_scores_39fe40be_random_400_s11_to_label.csv) are a simple random sample of the map. Is there a part of the map I can trust to be wrong at most 5% of the time? If not, what can I say instead?

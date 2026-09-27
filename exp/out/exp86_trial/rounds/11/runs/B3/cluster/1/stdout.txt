@@ -1,0 +1,20 @@
+
+
+Compared both runs (same model, OlmoEarth-v1-FT-AWF-Base; 16,384 windows each, all valid).
+
+**Where they differ**
+- **3,807 windows differ (23.2%)**; 78.3% of them sit on map A's predicted-class boundaries.
+- They concentrate in the **northmost quarter of the grid (rows 0–31)**, which holds 39.4% of all differing windows vs 25% expected if evenly spread.
+- Top class swaps (A = 2023 run C1, B = 2022 run C2):
+  | Change (2023 → 2022) | Windows | Share of differing |
+  |---|---|---|
+  | grassland_barren → shrubland_savanna | 1,409 | 37.0% |
+  | montane_forest → woodland_forest | 447 | 11.7% |
+  | woodland_forest → shrubland_savanna | 388 | 10.2% |
+  | urban_dense_development → grassland_barren | 336 | 8.8% |
+- Map B has the larger margin on 57.8% of differing windows (A: 42.2%). All 3,807 differing windows are listed with both classes and margins in `compare_differing_df789c0586.json`.
+
+**Which is right**
+Neither can be shown right here: the comparison takes no labels, none were given, and the maps describe different years (2023 vs 2022), so a differing window may be real ground change rather than an error. A larger margin does not make B right. To settle it, each map needs its own dated reference: I can plan a label sample per run (via `olmoearth_plan_label_sample` on each scores file) and estimate each map's error rate once you (or a reviewer) label those windows.
+
+Note from the tool: No recorded experiment grades which of these two maps is right; without labels neither side can be picked.

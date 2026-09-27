@@ -1,0 +1,16 @@
+
+
+**No.** The certification test certified nothing at alpha = 0.05, delta = 0.1 (rule "prefix"): no share of the map — even the smallest testable zone, 15% of the map holding 63 labels with 5 wrong — passed its exact test. So I cannot say any part of this map is wrong at most 5% of the time.
+
+What you *can* say, from the same 400 labels (population 15,813):
+
+| Claim | Value |
+|---|---|
+| Whole-map error rate | **19.2%** (95% interval **15.6% to 23.4%**) |
+| Method | Exact hypergeometric interval, simple random sample of a finite map |
+| Best classes (user's accuracy) | class 7: 95.9% (163/170); class 4: 95.4% (125/131) |
+| Weakest classes | class 5: 0% (0/17); class 6: 43.8% (28/64); class 1: 43.8% (7/16) |
+
+So the honest statement is: the map as a whole is about 81% accurate, but the strongest-confidence region fails the 5% test — the errors are spread too evenly for a high-confidence core to stand out.
+
+If a certified zone matters for your use, the only clean route is a **new random design with a larger budget**, planned (with alpha and delta fixed) before its labels are seen — I can plan that via `olmoearth_plan_label_sample` when you tell me how many more windows you can label. Note that even then certification may certify nothing; it makes it possible, not certain.

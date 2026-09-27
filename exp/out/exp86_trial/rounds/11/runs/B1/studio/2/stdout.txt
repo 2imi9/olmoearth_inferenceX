@@ -1,0 +1,15 @@
+
+
+Your Studio account has two fine-tuned models, plus one embeddings model:
+
+| Model | Type | Predicts | Trained on labels |
+|---|---|---|---|
+| **KarstBinary** (`ac1eb985`) | fine_tuned | per-pixel regression — a value per pixel over the AOI (not a class probability) | yes (75/25 train/val split) |
+| **KarstNumber** (`f67d97d9`) | fine_tuned | per-pixel regression — a value per pixel | yes (75/25 train/val split) |
+| KarstEmbedding (`5aafb53d`) | embeddings | none directly (feature extraction; no prediction_type) | no |
+
+Notes:
+- Both regression models were fine-tuned in your "Karst Features in Pennsylvania" project against distinct label fields, but the tools don't expose those fields' names or values, so I can't say exactly which karst quantity each predicts from this run alone.
+- This is only your account's listing; Ai2 also publishes additional fine-tuned OlmoEarth models (task cards) not shown here.
+
+Next steps if you want to use one: give me an area (or I'll ask you to draw one) plus a date window, and I can submit a prediction with either model, then fetch its tile results.

@@ -1,0 +1,15 @@
+
+
+**No.** At alpha = 0.05, delta = 0.1 (prefix rule), the certification test found no zone of this map whose error rate is provably below 5%. With 400 labels, a zone must hold at least 45 labelled windows to be testable, so testing began at 15% coverage; even there, 5 of 63 labels inside were wrong (upper bound ~14.1%). No level up to the whole map was accepted.
+
+**What you can say instead** (from the same 400-label random sample):
+
+| Claim | Value | Method |
+|---|---|---|
+| Whole-map error rate | **19.2%** (95% interval 15.6% to 23.4%) | exact hypergeometric interval, simple random sample of 15,813 windows |
+| Overall accuracy | 80.8% (76.6% to 84.4%) | same labels |
+| Weakest map classes (user's accuracy) | class 5: 0/17 correct; class 6: 28/64 (43.8%); class 1: 7/16 (43.8%) | per-class Wilson intervals |
+
+Note: the strong classes (4: 95.4%, 7: 95.9%) are descriptive only — they are **not** a certified zone, and switching alpha or rule after seeing this failure would not be covered by the guarantee either.
+
+If you need a guaranteed-accurate region, the only route is more evidence under a plan fixed in advance: run `olmoearth_plan_label_sample` with a new random design at a larger budget (alpha, delta, rule set before its labels are seen) and label those windows. A larger sample may still certify nothing — that's possible, never certain.

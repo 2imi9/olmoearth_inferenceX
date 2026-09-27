@@ -1,0 +1,24 @@
+
+
+Compared the two maps over their shared 78,028 windows. Here's where they differ — but neither can be called right from this alone.
+
+**Differences**
+
+| | Count | Share of differing |
+|---|---|---|
+| Not water (A) → water (B) | 1,247 | 79.4% |
+| Water (A) → not water (B) | 323 | 20.6% |
+| **Total differing** | **1,570** | **2.0% of all windows** |
+
+- They are 216 days apart, so a differing window either changed on the ground (season included) or one map is wrong there; the decisions alone cannot tell which.
+- The changes concentrate in rows 2,800–4,199 (band 2 of 4 row bands, ~50–75% down the grid), which holds 46.8% of the differing windows against 25.1% of all windows. No compass meaning: the scores carry no georeference.
+- Map A has the larger margin on 77.6% of the differing windows (mean margins 0.389 vs 0.158). That is confidence, not correctness — nothing grades it as right.
+- All 1,570 differing windows (both classes and margins each) are saved in `compare_differing_eec2555155.json`.
+
+**Which is right?** Not resolvable here, for three reasons:
+
+1. This comparison takes no labels, and none were given — so no map is shown right anywhere it differs.
+2. Even labels for one date would settle only that date's map; with the maps 216 days apart, one reference would count the other wrong wherever the ground really changed. Each map needs a reference dated to itself.
+3. A third unlabelled map (any model, any date) also settles nothing.
+
+If you want to grade them, next steps I can run once you provide per-date references: accuracy/per-class metrics via `olmoearth_classification_metrics`, or an error-rate design per map via `olmoearth_plan_label_sample` + `olmoearth_estimate_map_error`.

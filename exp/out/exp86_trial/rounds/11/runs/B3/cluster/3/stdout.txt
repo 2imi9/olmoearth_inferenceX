@@ -1,0 +1,27 @@
+
+
+Compared both runs (same model, OlmoEarth-v1-FT-AWF-Base; A = C1/awf_namanga_2023_1042061 mapped 2023, B = C2/awf_namanga_2022_1042294 mapped 2022; 128x128 window grid, all 16,384 windows valid).
+
+## Where they differ
+
+- **3,807 of 16,384 windows differ** (23.2%). All are listed in `compare_differing_df789c0586.json` in the workspace.
+- Concentration: **39.4% of differing windows lie in the northmost quarter of the area** (rows 0-31 of 128, the row band holding the most); also elevated on the left edge (col band 0: 34.0%).
+- Most differences sit near class boundaries: 78.3% of differing windows have a neighbouring window of another class in map A, vs 53.9% overall.
+
+## Top class flips (A=2023 -> B=2022)
+
+| Change | Windows | Share of differing |
+|---|---|---|
+| grassland_barren (A) vs shrubland_savanna (B) | 1,409 | 37.0% |
+| montane_forest (A) vs woodland_forest (B) | 447 | 11.7% |
+| woodland_forest (A) vs shrubland_savanna (B) | 388 | 10.2% |
+| urban_dense_development (A) vs grassland_barren (B) | 336 | 8.8% |
+| urban_dense_development (A) vs shrubland_savanna (B) | 308 | 8.1% |
+
+Map B has the larger logit margin on 57.8% of the differing windows, but that is confidence, not correctness.
+
+## Which is right?
+
+I cannot say, and this comparison will not settle it: the maps describe different times (2023 vs 2022), so any difference can be either real ground change between the years or an error in one map. The tool explicitly notes that no recorded experiment grades these two maps against each other, and without labels neither side can be picked. Even labels for only one year would grade only that year's map.
+
+To actually find the right answer: provide ground-truth labels **dated to each year**, then I can run `olmoearth_plan_label_sample` per map (a proper sampling design, not just the differing windows) and estimate each map's error rate separately. Alternatively, if you already hold labels for the differing windows in `compare_differing_df789c0586.json`, send them and I'll compute accuracy directly with `olmoearth_classification_metrics`.

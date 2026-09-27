@@ -1,0 +1,16 @@
+
+
+Label plan is ready for the run (model `allenai/OlmoEarth-v1-FT-AWF-Base`, 9-class map, 128x128 = 16,384 valid windows).
+
+**Design**: 300-window *confidence* stratified sample (strata by the model's own top-1 minus top-2 logit margin; allocation 106/79/47/34/34 across strata), seed 0.
+
+| File | Purpose |
+|---|---|
+| `.../design_scores_8f3527f9_confidence_300_s0.json` | design (pass as `design_path`) |
+| `.../design_scores_8f3527f9_confidence_300_s0_to_label.csv` | fill in `wrong` (1 if map class != ground truth, else 0) and optionally `reference_class` per window |
+
+Two rules before estimating:
+- Label **all 300** rows in order — partial or first-rows-only labelling biases the estimate.
+- No error rate exists until the labels are in; once you send me the filled sheet, I'll run `olmoearth_estimate_map_error` to get the rate + the interval this design earns.
+
+Note: this confidence design yields an estimate only — a certified zone would need a separate `random` plan fixed beforehand.

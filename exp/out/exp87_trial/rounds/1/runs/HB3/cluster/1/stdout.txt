@@ -1,0 +1,19 @@
+
+
+Compared both runs' full score rasters (same 128x128 window grid, 16,384 windows) with `olmoearth_compare_review`. **5,165 windows (31.5%) classify differently** between 2021 and 2024.
+
+**Main class transitions (2021 -> 2024):**
+
+| Change | Windows | Share of differing |
+|---|---|---|
+| shrubland_savanna -> agriculture_settlement | 1,341 | 26.0% |
+| shrubland_savanna -> woodland_forest | 920 | 17.8% |
+| grassland_barren -> agriculture_settlement | 690 | 13.4% |
+| woodland_forest -> montane_forest | 390 | 7.6% |
+| grassland_barren -> urban_dense_development | 357 | 6.9% |
+
+14 class pairs change in total; the dominant one is nearly one-directional (only 5 reverses).
+
+**Where:** most differing windows sit in columns 32-63 (25-50% east of the grid's west edge, 32.0% of all differences); north-south they spread fairly evenly (each quarter of rows holds ~24-28%). Differences concentrate on class boundaries: 73.0% of differing windows touch another class in the 2021 map, vs 53.8% overall -- but that counts neighbours, not whether whole regions flip. All 5,165 differing windows (with both classes and margins) are in `compare_differing_c8589f3f12.json` in the workspace.
+
+**Which map to believe: neither can be graded from this run.** The maps describe different times, so a differing window either really changed on the ground or is wrong in one map, and the tool takes no labels -- the fact that the 2021 map has the larger margin on 51.7% of differing windows does not make it right there. No recorded experiment grades which side of this pair is correct. To settle it, each map needs a reference dated to its own period: label windows per map via `olmoearth_plan_label_sample` (a review set would overstate errors, so use a proper design), then get an error rate per map from `olmoearth_estimate_map_error`. Want me to plan label samples for both runs now?

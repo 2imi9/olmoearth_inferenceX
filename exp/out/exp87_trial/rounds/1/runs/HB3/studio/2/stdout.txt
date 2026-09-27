@@ -1,0 +1,24 @@
+
+
+**They can't be compared as an agreement question.** Both 2025 runs are per-pixel regressions, but on *different* bands: KarstBinary's `sample_karst_score` (declared range [0, 1]) and KarstNumber's `sample_number` ([0.2, 1.2]). Mixing those quantities is meaningless, so only whether they rise and fall together (correlation) is valid to ask:
+
+| Evidence (6x6 grid over shared extent) | Value |
+|---|---|
+| Correlation B vs A | **−0.0172** (n = 25 cells) |
+| 95% interval | −0.41 to 0.38 (spans zero) |
+| Cells dropped as no-data in either map | 11 of 36 |
+| Model-vs-model kind | cross_model, no ground truth used |
+
+Because the interval holds both "no relation" and "moderate relation", this sample **cannot say whether the maps co-vary** — agreement is unknown, not disproven.
+
+**Where they disagree most:** not locatable from this run. A cross-property comparison returns only the pooled correlation — it has no position, and no per-window difference statistics are computed between two different quantities, so I won't invent one. (Neither map is shown as "higher" than the other; the declared ranges simply differ.)
+
+**Which to trust:** not decidable here. No labels were given or looked up, and no tool of this run grades accuracy without them. Both models were fine-tuned in Studio on separate label fields of your PA Karst project (train/val 0.75/0.25), so project labels *may* exist — but none was retrieved in this run, and that alone says nothing about which model is better.
+
+Suggested next steps:
+1. Re-compare on a denser grid (up to grid = 12, ~144 cells) to narrow the correlation's interval.
+2. Name a decision threshold for each band, then pull each map's least-confident windows (review sets: KarstBinary's [0, 1] band works as-is; KarstNumber needs the threshold).
+3. Once a threshold is named for each band, plan a label sample and, with ground-truth karst labels at the planned windows, estimate each map's error rate to see which one to trust.
+4. Package both tile layers for QGIS so you can eyeball them side by side.
+
+Results involved: `419c581d…f26b` (KarstBinary) and `afb1cf68…9ae8` (KarstNumber). Want me to run step 1 now?

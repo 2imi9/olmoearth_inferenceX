@@ -1,0 +1,21 @@
+
+
+Both 2025 predictions completed (project *Karst Features in Pennsylvania*), and I compared them directly with the cross-model pairing tool. Short answer: they measure **different quantities**, so "agreement" only makes sense as co-variation, and that one statistic is inconclusive here.
+
+| | KarstBinary result | KarstNumber result |
+|---|---|---|
+| Prediction id | `dd504793…c5` | `a83ca800…8c` |
+| Result id | `419c581d…6b` | `afb1cf68…e8` |
+| Band | `sample_karst_score` | `sample_number` |
+| Declared range | 0–1 | 0.2–1.2 |
+| Sample mean | 0.10049 | 0.681763 |
+
+**Do they agree?** Across 25 shared cells (11 of 36 dropped as no-data, over ~10,091 km² of shared extent), the correlation is **-0.0172**, 95% interval **-0.41 to 0.38**. Because the interval spans both "no relation" and a moderate one, this run cannot say whether the maps co-vary at all. Since the bands are different quantities, no difference, RMSE, or agreement fraction exists between them — those mixes of units are not meaningful.
+
+**Where do they disagree most?** Not determinable from this run: the correlation is a single pooled number with no location, and the tool declines per-cell disagreement for two different properties. Sampling individual pixels by hand would only give you scattered point readings, not a defensible map of disagreement.
+
+**Which should you trust?** Neither — nothing in this run names a winner. Both models were Studio fine-tunes (train/val 75/25) on separate label fields, but no metrics or ground truth were looked up for this area, and without labels no tool here can rank them.
+
+Suggested next steps:
+- Re-run the pair comparison on a denser grid (`grid=12`, up to 144 cells) to narrow the correlation interval.
+- To pick a trusted map, ground-truth is required: label planned windows via the label-sample design (the `sample_number` band needs a named decision threshold first), then estimate each map's error — or supply existing ground-truth labels for me to score directly.

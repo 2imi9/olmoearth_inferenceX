@@ -1,0 +1,1 @@
+I labelled the windows of the design in F2/design_confidence_300_s0.json; the filled sheet is F2/labels_confidence_300_s0.csv. What is this map's error rate?

@@ -1,0 +1,14 @@
+
+
+**No part of the map is certified.** With your 300 simple-random labels, `olmoearth_certify_zone` (alpha=0.05, delta=0.1, prefix rule) tested 18 zone sizes from 15% to 100% coverage and accepted none — the smallest testable zone (15% of the map, needing at least 45 labels inside) held 3 errors in 46 labels, which is too many for the exact test at alpha=0.05.
+
+Context from the same labels:
+
+| Quantity | Value |
+|---|---|
+| Whole-map error estimate | 23.0% |
+| 95% interval | 18.4% – 28.1% |
+| Population size | 15,813 windows |
+| Certified zone at ≤5% error | none |
+
+That whole-map figure is an estimate, not a certification. To get a certified zone you'd need to label **more windows under a new random design fixed in advance** (larger budget via `olmoearth_plan_label_sample` with `design='random'`, alpha/delta set before seeing any labels); note even then it may certify nothing. I can plan that larger sample if you give me a budget.

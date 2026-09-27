@@ -1,0 +1,21 @@
+
+
+## Map error estimate
+
+**20.7% error rate (95% interval: 16.5–25.7%)** from your 250 labelled windows out of a population of 15,813. Method: *stratified by confidence margin; Wilson interval on the design's effective sample size* (effective n ≈ 300). Overall accuracy ≈ 79.3%.
+
+## Worst classes
+
+Ranked by user's accuracy over the 5 classes with ≥5 map-labelled windows:
+
+| Class | Correct / Labelled | Accuracy | 95% interval |
+|-------|-------------------|----------|--------------|
+| 5 | 0 / 5 | 0.0% | 0.0 – 43.4% |
+| 1 | 2 / 10 | 19.8% | 5.6 – 50.6% |
+| 6 | 19 / 45 | 42.1% | 30.3 – 55.0% |
+| 7 | 106 / 113 | 93.6% | 87.7 – 96.8% |
+| 4 | 72 / 74 | 97.3% | 90.6 – 99.2% |
+
+Classes 0, 2 and 8 had too few map-labelled windows (0, 3, 0) to rank. Note class 6 stands out in volume: it is ~15.5% of the map yet only 42% accurate, so fixing it would cut the overall error most. Estimates are weighted under this stratified design, so they need not equal correct-over-labelled.
+
+Possible next steps: re-run with more labels for a narrower interval, or plan a `design='random'` draw if you want a certifiable low-error zone.

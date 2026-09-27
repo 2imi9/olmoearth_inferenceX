@@ -1,0 +1,23 @@
+
+
+## What changed (2021 vs 2024, same area)
+
+Compared on a 128×128 grid (16,384 windows, same model revision both years): **5,165 windows differ (31.5%)**. Top class transitions (A = 2021, B = 2024):
+
+| From (2021) | To (2024) | Windows | Share of diffs |
+|---|---|---|---|
+| shrubland_savanna | agriculture_settlement | 1,341 | 26.0% |
+| shrubland_savanna | woodland_forest | 920 | 17.8% |
+| grassland_barren | agriculture_settlement | 690 | 13.4% |
+| woodland_forest | montane_forest | 390 | 7.6% |
+| grassland_barren | urban_dense_development | 357 | 6.9% |
+
+Most reversals are near-absent (e.g. only 5 windows went back the other way on the top pair), so the changes read as directional rather than noise.
+
+**Where:** changes concentrate south and mid-west of center — the most in any band is columns 25–50% of the grid (32.0% of all differing windows); rows sit at ~24–28% per quarter-band. 73.0% of differing windows touch a predicted-class boundary in the 2021 map, but that counts neighbours, not whole regions flipping. All 5,165 windows are listed with margins in `compare_differing_c8589f3f12.json` (workspace).
+
+## Which map should you believe?
+
+Neither can be picked from these two maps alone: they are 731 days apart, so every differing window either changed on the ground or is an error in one map, and decisions/margins can't tell which. The 2021 map has the larger margin on 51.7% of differing windows — a margin is not a label, and no recorded experiment grades which side is right here.
+
+**To settle it**, each map needs a reference of its own date: give me ground-truth labels for labeled windows (or say how many you can label) and I'll run `olmoearth_plan_label_sample` separately on the 2021 and 2024 runs and report each map's error rate with its interval. With per-date references I could also split the "change" signal from true disagreement.

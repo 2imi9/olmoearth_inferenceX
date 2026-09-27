@@ -1,0 +1,3 @@
+  [ok] olmoearth_load_context
+  [ok] olmoearth_search_predictions
+  (2 turn(s), 2 provenance entries)

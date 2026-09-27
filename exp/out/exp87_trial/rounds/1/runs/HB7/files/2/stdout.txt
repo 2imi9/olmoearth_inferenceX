@@ -1,0 +1,12 @@
+
+
+Maps differ in **1,570 of 78,028 shared windows (2.0%)**. The dominant direction is **water in map A (2018-04-19) vs not water in map B (2017-09-14/15)**: 1,247 windows (79.4% of differences), versus 323 (20.6%) the other way. Map B holds the larger model margin on 77.6% of the differing windows (mean margin 0.389 vs 0.158 there), but a margin is not a label. Differences concentrate in rows 2800-4199 (50-75% of the grid's 5,600 rows): 46.8% of all differing windows.
+
+| Question | Answer |
+|---|---|
+| Share differing | 1,570 / 78,028 = 2.0% |
+| Main direction | A water, B not water: 1,247 (79.4%) |
+| Reverse direction | A not water, B water: 323 (20.6%) |
+| More confident side | B on 77.6% of differing windows |
+
+**Which one is right: not answerable from this comparison.** The maps are 216 days apart, so a differing window either changed on the ground between mid-September 2017 and mid-April 2018 (seasonal water-level cycles included) or is wrong in one map — the two cannot be separated without references. No labels were given to this run and none were looked up. To settle it, each map needs a reference dated to its own period (one reference for both would count the other map wrong wherever the ground legitimately changed); with such labels you could then use `olmoearth_plan_label_sample` + `olmoearth_estimate_map_error` per map, or `olmoearth_classification_metrics` directly. All 1,570 differing windows are listed in `compare_differing_6193d3204b.json` if you want to inspect them.

@@ -1,0 +1,18 @@
+
+
+Comparison done via `olmoearth_compare_review` on the two score files.
+
+**Where they differ** (maps 216 days apart):
+
+| | |
+|---|---|
+| Windows compared | 78,028 |
+| Differing | 1,570 (2.0%) |
+| Not water (A) → water (B) | 1,247 (79.4% of differences) |
+| Water (A) → not water (B) | 323 (20.6%) |
+| Most confident side | A on 77.6% of differing windows (margin alone does not make it right) |
+| Concentration | Rows 2,800-4,199 (middle of the 5,600-row grid) hold 46.8% of the differing windows |
+
+All 1,570 differing windows are listed in `compare_differing_eec2555155.json` (in workspace), each with both classes and margins.
+
+**Which is right: not answerable from this comparison.** The maps describe different times, so a differing window either changed on the ground between Sep 2017 and Apr 2018 or one map is wrong there - and neither fact can tell which. No recorded experiment grades these two maps, and this tool takes no labels. To settle it, each map needs its own dated reference: labels for the 2017-09-14/15 period grade only map A, labels for 2018-04-19 grade only map B. If you have such references (or want a plan for spending N labels per map), I can use `olmoearth_plan_label_sample` / `olmoearth_estimate_map_error` next.

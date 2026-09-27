@@ -1,0 +1,14 @@
+
+
+**How they differ:** Of 78,028 shared windows, 1,570 (2.0%) disagree, all on the water / not-water boundary. They are concentrated in the middle of the grid (rows 2800–4199 hold 46.8% of the differences).
+
+| Direction | Windows | Share of differing |
+|---|---|---|
+| A = water, B = not water | 1,247 | 79.4% |
+| A = not water, B = water | 323 | 20.6% |
+
+So the dominant shift is **drying**: map A (2018-04-19) calls a window water where map B (2017-09-14/15) calls it not water. On the differing windows map B has the larger margin on 77.6%, but a margin is not a label.
+
+**Which one is right:** Not determinable from this run. The maps are 216 days apart, so any difference may be real ground change (e.g., seasonal flooding/recession) rather than error; no labels were given, none exist from this run, and no recorded experiment grades this pair. To settle it, each map would need its own reference dated to its own period (labels for one date grade only that date's map).
+
+All 1,570 differing windows are listed in `compare_differing_6193d3204b.json` if you want to inspect them.

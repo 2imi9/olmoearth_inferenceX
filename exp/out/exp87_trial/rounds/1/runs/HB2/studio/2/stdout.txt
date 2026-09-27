@@ -1,0 +1,18 @@
+
+
+I ranked the KarstBinary 2025 result (`result_id` 419c581d-9a10-4684-aba5-1bab2875f26b, band `sample_karst_score`, declared range 0–1) for review. The extent was sampled on a 10×10 grid: 100 windows, 72 valid, 28 dropped as no-data. The windows to double-check first are the **least decided** ones — their scores sit nearest the 0.5 decision, so they have the smallest margin and would be easiest to misclassify:
+
+| Rank | Window (row, col) | Score | Margin | Predicted side |
+|---|---|---|---|---|
+| 1 | (4, 7) | 0.351545 | 0.296909 | below 0.5 |
+| 2 | (4, 2) | 0.284662 | 0.430676 | below 0.5 |
+| 3 | (0, 5) | 0.744907 | 0.489813 | above 0.5 |
+| 4 | (1, 8) | 0.223218 | 0.553564 | below 0.5 |
+
+(These cover ~5% of the valid windows.) For contrast, the median margin across all 72 windows is 0.96469 — every other window is far more firmly on one side of the threshold.
+
+Two honest caveats:
+- The margin orders windows by suspicion only; it is **not** a probability of error, so I can't say any of these is "likely wrong" until you label them. Also, no recorded experiment grades this case (a regression score read as P(positive)), so the ranking's value here is unverified.
+- This review set is biased toward holding errors, so its hit rate would overstate the map's true error. If you want to quantify how wrong the map is, I can plan a proper label sample from the saved scores file (at that point the reviewer labels the planned windows, then the tool computes the error estimate with its interval).
+
+Want me to run that label-sample design next?

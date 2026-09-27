@@ -1,0 +1,25 @@
+
+
+Compared both maps over their shared 78,028 windows (dates 216 days apart). Here is what differs, and why nobody can say which is right.
+
+**Where they differ**
+
+| Item | Value |
+|---|---|
+| Differing windows | 1,570 of 78,028 (2.0%) |
+| Not water (A) -> water (B) | 1,247 (79.4% of differences) |
+| Water (A) -> not water (B) | 323 (20.6%) |
+| Most concentrated strip | rows 2800–4199 (grid middle band): 46.8% of differences |
+| More-confident side | A on 77.6% of differing windows (mean margin A 0.389 vs B 0.158) |
+
+All 1,570 differing windows (with both classes and margins) are saved to `compare_differing_eec2555155.json` in the workspace.
+
+**Which is right?**
+
+Neither side can be declared right from this comparison:
+
+- The maps are dated differently (Sept 2017 vs Apr 2018), so any differing window either **changed on the ground** (seasonal flood cycles are plausible for a water map ~7 months apart) or is wrong in one map — the decision margins alone cannot tell which.
+- No recorded experiment grades this pair, and margins are not labels: A being more confident on most differing windows says nothing about accuracy.
+- A single reference would not settle it either: labels dated to one map grade only that map and count the other wrong wherever the ground genuinely changed. Each map would need a reference of its own date.
+
+If you can supply pixel labels (or references) for each date, I can run per-class accuracy via classification metrics on each map separately.

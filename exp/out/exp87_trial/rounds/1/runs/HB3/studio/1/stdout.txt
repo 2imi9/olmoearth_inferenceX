@@ -1,0 +1,20 @@
+
+
+Compared both 2025 PA runs head-to-head (`olmoearth_compare_results`, over their ~10,091 km² shared area). The two maps carry different properties (`sample_karst_score` [0,1] vs `sample_number` [0.2,1.2]), so only the correlation — whether the two co-vary — is meaningful between them; no difference, RMSE or agreement share is computed.
+
+| Question | Result |
+|---|---|
+| Do they agree? | Coarse 6x6 grid (25 cells): r = -0.0172, 95% CI -0.41 to 0.38. Denser 12x12 grid (91 cells, 53 dropped as no-data): r = 0.4974, 95% CI 0.32 to 0.64. |
+| Where do they disagree most? | Not locatable from this run: no per-window difference statistic exists between two different properties, and one correlation says nothing about where two maps agree or differ. |
+| Which to trust? | Can't say without ground truth: both are per-pixel regressions, no labels were given or looked up, so no accuracy or "winner" follows. |
+
+A correlation whose 95% interval spans zero (the 6x6 result) cannot say whether the maps co-vary; the denser 12x12 interval does not span zero. One correlation says nothing about where two maps agree or differ.
+
+Result ids: KarstBinary `419c581d-…f26b`, KarstNumber `afb1cf68-…9ae8`.
+
+Ways forward (each needs a precondition):
+- **Find ambiguous windows**: `olmoearth_review_set_from_result` works on the KarstBinary score as-is ([0,1]); the KarstNumber band needs a decision threshold in [0.2, 1.2] first.
+- **Quantify which is better**: pick a review budget N, `olmoearth_plan_label_sample` per map, have those windows labelled, then `olmoearth_estimate_map_error` gives each map an error rate with an interval to compare (again, a threshold for KarstNumber).
+- **See the spatial mismatch directly**: `olmoearth_qgis_bridge` packages both tile layers for side-by-side visual inspection.
+
+Want me to start one of these (e.g., pull a review set for the KarstBinary score)?

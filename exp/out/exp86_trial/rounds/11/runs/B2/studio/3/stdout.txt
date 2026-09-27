@@ -1,0 +1,14 @@
+
+
+The KarstBinary 2025 result (`419c581d-9a10-4684-aba5-1bab2875f26b`, band `sample_karst_score`, range [0,1]) was sampled on a 10x10 grid: 72 valid windows, 28 dropped as no-data. Ranked by how close each window sits to the 0.5 decision threshold (least decided first), at a 5% review budget the reviewer should check these 4 windows first:
+
+| Rank | Window (row, col) | Score | Margin | Predicted side |
+|------|-------------------|-------|--------|----------------|
+| 1 | (4, 7) idx 47 | 0.352 | 0.297 | karst-absent (<0.5) |
+| 2 | (4, 2) idx 42 | 0.285 | 0.431 | karst-absent |
+| 3 | (0, 5) idx 5  | 0.745 | 0.490 | karst-present (>0.5) |
+| 4 | (1, 8) idx 18 | 0.223 | 0.554 | karst-absent |
+
+Why these: for a [0,1] score the margin is the distance from the decision at 0.5, so these are the **least decided** windows - the model is closest to flipping its call there. The other 68 windows have margins of 0.615 to 0.992 (median margin 0.965, 1.74-3.25x these four). Caveats from the tool: the score is treated as P(positive) **for ranking only** - it is not a probability of error, and which of these are actually wrong is known only once labelled. No recorded experiment grades a regression score read as a probability, so treat the order as relative suspicion.
+
+If you want an actual error rate, next step: pass the saved `scores_path` to `olmoearth_plan_label_sample` with your label budget, then label those windows - a review set itself cannot be used as a sample.

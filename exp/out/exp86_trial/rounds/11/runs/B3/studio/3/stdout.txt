@@ -1,0 +1,20 @@
+
+
+I compared the two completed 2025 predictions over your shared PA Karst extent (~10,091 km²; 25 cells compared, 11 dropped as no-data in either map). Here's what the comparison shows:
+
+| | KarstBinary (result `419c581d…`) | KarstNumber (result `afb1cf68…`) |
+|---|---|---|
+| Band | `sample_karst_score` | `sample_number` |
+| Type | per-pixel regression, range [0, 1] | per-pixel regression, range [0.2, 1.2] |
+| Mean (sampled) | 0.10049 | 0.681763 |
+
+**Where they differ / how related they are:** The maps measure *different quantities*, so the only statistic between them is their correlation: **r = -0.0172**, 95% interval **-0.41 to +0.38**. That interval spans zero, so this sample cannot say whether the two maps co-vary at all — they may be essentially unrelated, and no agreement fraction or difference is computed (it would mix two units).
+
+**Which is right:** Not resolvable from this run. Neither model was given ground truth by this comparison, so nothing here says which map is more accurate or better — and no tool of this run looked up whether Studio holds validation labels for these projects' label fields. A single correlation also has no location, so it can't say *where* they agree or disagree anywhere.
+
+Defensible next steps I can run:
+- Denser comparison (grid 12, up to 144 cells) to narrow the correlation's interval.
+- If you provide ground-truth labels and name a decision threshold for each regression band, I can score accuracy / per-class metrics against that truth.
+- Plan a label budget on each map (the [0,1] `sample_karst_score` band can be sampled now; `sample_number` needs you to name a decision threshold first) and estimate each map's error rate from your reviewed windows.
+
+Tell me which of those you'd like, or paste/point me at labels and I'll score both against truth.

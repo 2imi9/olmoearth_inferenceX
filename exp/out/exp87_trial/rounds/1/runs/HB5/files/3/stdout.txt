@@ -1,0 +1,20 @@
+
+
+## Map error estimate
+
+- **Error rate: 20.7%** (95% interval **16.5–25.7%**) from 250 labelled windows of a population of 15,813
+- Method (as returned): stratified by confidence margin; Wilson interval on the design's effective sample size
+
+## Weakest classes
+
+Ranked by user's accuracy over classes with at least 5 map-labelled windows (classes 0, 2 and 8 had too few labels to rank):
+
+| Class | Correct / labelled | User accuracy (95% CI) |
+|---|---|---|
+| 5 | 0 / 5 | 0.0% (0.0–43.4%) |
+| 1 | 2 / 10 | 19.8% (5.6–50.6%) |
+| 6 | 19 / 45 | 42.1% (30.3–55.0%) |
+| 7 | 106 / 113 | 93.6% (87.7–96.8%) |
+| 4 | 72 / 74 | 97.3% (90.6–99.2%) |
+
+The model is strongly wrong where it assigns class 5 and class 1, and only about right half the time on class 6. Note the design was confidence-stratified, so no certified zone can be produced from these labels — that would require a new plan with design='random' and its windows labelled first. Want me to set up such a plan?

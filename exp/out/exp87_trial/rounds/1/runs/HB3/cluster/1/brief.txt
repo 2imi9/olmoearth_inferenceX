@@ -1,0 +1,1 @@
+I have two runs of the fine-tuned AWF model over the same area, one for 2021 (C3/awf_namanga_2021_1064570) and one for 2024 (C4/awf_namanga_2024_1064570). What changed between them, which classes turned into which, and where? Which of the two maps should I believe?

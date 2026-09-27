@@ -1,0 +1,19 @@
+
+
+I planned a confidence-design labeling set for the KarstBinary 2025 map (result `419c581d-9a10-4684-aba5-1bab2875f26b`, band `sample_karst_score`, decided at 0.5 on a 16x16 grid).
+
+| Item | Value |
+|---|---|
+| Map | `dd504793...` (KarstBinary, 2025 PA regular) |
+| Design | confidence, stratified by margin around 0.5 |
+| Windows planned | **173** (grid holds at most 256; 83 were no-data — so 127 of your 300 labels have no window to go to) |
+| Design file | `/Users/lucas/Desktop/Github/olmoearth_inferenceX/exp/out/exp86_trial/rounds/11/runs/B4/studio/1/workspace/design_419c581d-9a1_8ca17d7d_confidence_173_s0.json` |
+| Label sheet | `..._confidence_173_s0_to_label.csv` (same dir) |
+
+What the rate will measure: whether the map's class is right at those 173 sampled grid points (one pixel-value each), not every pixel.
+
+Your turn:
+1. Open the CSV; for each row in order, set `wrong = 1` if the map's class (`map_class`) does not match the ground there, else `0` (and `reference_class` to the true class id if you want per-class accuracy). All 173 rows must be labelled — labelling only the early rows biases the estimate.
+2. Send me back the filled CSV (or the wrong list); I'll then run `olmoearth_estimate_map_error`, which returns the error rate plus the interval this design earns. No rate or interval can be quoted before labels exist.
+
+Optional later: if you also want a certified zone, that needs a separate random-design plan (fixed before labelling) — say the word now and I'll plan one alongside this.

@@ -1,0 +1,14 @@
+
+
+**Error rate of this map:**
+
+| Quantity | Value |
+|---|---|
+| Estimate | **19.4%** (0.1938) |
+| 95% interval | **15.7% to 23.6%** |
+| Labels / population windows | 300 of 15,813 |
+| Method | stratified by confidence margin; Wilson interval on the design's effective sample size |
+
+Weakest classes by user's accuracy (classes with ≥5 map-labelled windows): class 5 (0.0%, 0–10 correct), class 1 (22.5%), class 6 (45.1%) — while classes 7 and 4 are solid at 92.3% and 96.4%.
+
+Note: because this is a confidence-stratified design, no certified zone can be drawn from these labels — that would need a fresh plan with design='random'. I can help set up such a plan or a larger-budget plan for a narrower interval if you want.

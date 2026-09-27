@@ -48,5 +48,22 @@
    "commit": null,
    "items": []
   }
- ]
+ ],
+ "agent_commit": "fa993ae893fb950d90be966b4601da258cfa2df1",
+ "agent_dirty": false,
+ "agent_diff_sha256": null,
+ "inferencex_version": "1.3.1",
+ "model": "nvidia/Qwen3.8-27B-NVFP4",
+ "sampling": {
+  "mode": "thinking_general",
+  "temperature": 1.0,
+  "top_p": 0.95,
+  "top_k": 20,
+  "presence_penalty": 1.5,
+  "max_tokens": 32768,
+  "preserve_thinking": true
+ },
+ "max_turns": 8,
+ "agent_branch": "2imi9/feature-trial-round3-fixes",
+ "first_run": "2026-09-27T20:40:26+00:00"
 }

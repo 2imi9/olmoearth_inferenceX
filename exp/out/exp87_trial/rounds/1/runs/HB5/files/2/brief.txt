@@ -1,0 +1,1 @@
+I labelled the windows of the design in H4/design_scores_39fe40be_confidence_250_s7.json; the filled sheet is H4/design_scores_39fe40be_confidence_250_s7_to_label.csv. How wrong is this map, and which classes are the worst?

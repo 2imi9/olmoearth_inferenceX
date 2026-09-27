@@ -1,0 +1,27 @@
+
+
+Done. I read the run's full scores raster into a scores file (16,384 windows, 9 classes, model `OlmoEarth-v1-FT-AWF-Base` rev a347b15) and ranked them for review at a 5% budget — **819 windows** to check first, listed in order in `review_list_49faf61fce.csv` (in the run's workspace dir).
+
+**Why these windows:** they are ranked by the mean top-1 minus top-2 logit margin per window — lowest margin first, i.e. where the model was least decided between its two leading classes. The most suspect window has margin 0.108 vs a median of 4.47 across all windows, so the head of the list sits ~13–41x below typical confidence.
+
+**Top 10 to check first:**
+
+| Rank | Window (row, col) | Predicted class | Margin | Boundary neighbours |
+|------|-------------------|-----------------|--------|---------------------|
+| 1 | 14, 29 | woodland_forest | 0.108 | 4 |
+| 2 | 10, 41 | montane_forest | 0.149 | 3 |
+| 3 | 23, 93 | shrubland_savanna | 0.153 | 6 |
+| 4 | 7, 11 | woodland_forest | 0.162 | 8 |
+| 5 | 14, 5 | montane_forest | 0.176 | 7 |
+| 6 | 2, 43 | montane_forest | 0.177 | 0 |
+| 7 | 19, 34 | woodland_forest | 0.191 | 3 |
+| 8 | 46, 91 | grassland_barren | 0.206 | 6 |
+| 9 | 19, 35 | montane_forest | 0.214 | 7 |
+| 10 | 2, 40 | montane_forest | 0.216 | 4 |
+
+Notes:
+- A low margin means "least decided", not "likely wrong" — which are actually wrong is known only after labelling.
+- Caveat from the tooling: this ranking uses the **logit** margin; on Ai2's suite, one-minus-top-probability ranked errors better than the logit margin on 14 of 16 multi-class tasks, so treat the ordering as an approximation.
+- Most-suspect classes overall: grassland_barren (31.3%) and shrubland_savanna (30.0%) dominate the 819-window set.
+
+Want me to re-rank with the probability form (`form='top1'`), or plan a label-sample design (e.g. N labels via `olmoearth_plan_label_sample`) so you can get an error rate?

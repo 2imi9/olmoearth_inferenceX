@@ -1,0 +1,1 @@
+Map A (H1/map_a.json) describes 2018-04-19 and map B (H1/map_b.json) describes 2017-09-14 to 2017-09-15; they cover the same windows. How do they differ, mostly in which direction, and which one is right?

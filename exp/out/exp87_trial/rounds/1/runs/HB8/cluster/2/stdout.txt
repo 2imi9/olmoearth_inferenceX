@@ -1,0 +1,18 @@
+
+
+Loaded the direct run (model allenai/OlmoEarth-v1-FT-AWF-Base, 16,384 windows on a 128×128 grid, full pre-argmax scores pooled to windows) and ranked them by the package's logit margin, lowest first. At a 5% review budget that gives **819 windows to check first** (margins 0.0723 to 0.6805); the full ordered list is saved to `review_list_c6db1e4c19.csv`.
+
+Top 6 windows (window_index, predicted class, row/col, logit margin):
+
+| Rank | Window | Predicted class | Margin |
+|---|---|---|---|
+| 1 | 6845 | open_water | 0.0723 |
+| 2 | 6974 | open_water | 0.0988 |
+| 3 | 6718 | open_water | 0.1162 |
+| 4 | 3643 | shrubland_savanna | 0.1199 |
+| 5 | 6590 | shrubland_savanna | 0.1329 |
+| 6 | 5989 | open_water | 0.1378 |
+
+How much less confident than a typical window: the median margin over all 16,384 windows is 5.572, which is 24.3 to 77.1 times the margins of the top-50 listed (0.072 to 0.229) and 8.2 to 77.1 times those of all 819 review-set windows. Most of the review set sits on map boundaries: 28.4% herbaceous_wetland, 28.3% shrubland_savanna, 26.9% grassland_barren, 16.0% open_water, 0.2% urban, 0.1% agriculture.
+
+Two caveats the tools attach: the margin orders suspicion, it is not a probability of error; and on Ai2's suite one-minus-the-top-probability ranked errors better than the logit margin on 14 of 16 multi-class tasks, so treat this ranking as indicative only. If you want an actual error rate, next step is olmoearth_plan_label_sample on this scores file.

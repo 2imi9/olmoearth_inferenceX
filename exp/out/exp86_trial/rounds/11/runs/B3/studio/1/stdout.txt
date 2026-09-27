@@ -1,0 +1,24 @@
+
+
+I compared both 2025 predictions over the PA Karst area (shared extent ~10,091 km²). Key point up front: the two models output **different quantities**, so most pairwise stats are undefined between them.
+
+| | KarstBinary | KarstNumber |
+|---|---|---|
+| result_id | `419c581d` | `afb1cf68` |
+| band | sample_karst_score (0–1) | sample_number (0.2–1.2) |
+| own mean (of 25 valid cells) | 0.10 | 0.68 |
+
+**What the comparison found**
+
+- Correlation: **-0.0172** across 25 valid cells, 95% interval **-0.41 to 0.38**. The interval spans zero, so this sample cannot even say whether the maps co-vary, let alone where they differ or agree. 11 of 36 grid cells were dropped (no-data in at least one map).
+- Because the bands are different quantities, no difference, agreement share, or RMSE between them is meaningful — and one correlation has no location, so it cannot say *where* the maps differ. A direct "where they differ" stat is not computable between these two results.
+
+**Which is right?**
+
+Neither can be declared right here: the comparison takes no ground truth, and no tool of this run looked up labels for this area. Both models were fine-tuned in Studio on the project's own label fields, so labeled data may exist in your project — I just haven't checked. An unthresholded regression like "sample_number" also has no accuracy until a threshold is named.
+
+**Possible next steps**
+
+1. **Estimate each map's error honestly**: if you supply 0/1 "is karst?" labels (or confirm where existing labels live), I can run `olmoearth_plan_label_sample` for each map (budget = how many you'll label; a threshold for "sample_number"), then `olmoearth_estimate_map_error`.
+2. **Review sets**: for the [0, 1] score band (KarstBinary) I can run `olmoearth_review_set_from_result` now; for "sample_number" it needs a threshold first.
+3. **Denser correlation**: rerun the pair comparison at grid=12 (144 cells) to narrow the uncertainty interval.

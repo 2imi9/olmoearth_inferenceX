@@ -1,0 +1,12 @@
+
+
+I planned your 200-label review for the Amboseli run (16,384 windows, model OlmoEarth-v1-FT-AWF-Base rev a347b15; scores file `scores_run_OlmoEarth-v1-FT-AWF-Base_3f79630b_p4.json`). The error rate does not exist yet — it comes only from your labels on this design.
+
+**How to use the plan**
+- Design: confidence-stratified (strata by margin; allocation 80/49/23/24/24), seed 0. The score only allocates labels, so the estimate stays unbiased regardless of calibration.
+- Label sheet (has each window's location): `design_scores_02c83f47_confidence_200_s0_to_label.csv`
+- For every one of the 200 windows set `wrong` = 1 if the map's class isn't what's on the ground, else 0; add `reference_class` (true class id) if you want per-class accuracy.
+- Label all 200 — labelling only early rows biases the result (the sheet lists least-confident stratum first), and the estimator refuses partial designs.
+
+**Next step**
+Once filled, send me the labels (or pass the CSV) and I'll call `olmoearth_estimate_map_error` to get the error rate plus the interval this design earns. Note this confidence design gives an estimate, not a certification — a certified zone would need a separate plan with design='random' before labelling.

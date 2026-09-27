@@ -1,0 +1,1 @@
+Take the model run in C5/awf_amboseli_2023_1064570. Which windows should a reviewer check first, and how much less confident are they than a typical window?
