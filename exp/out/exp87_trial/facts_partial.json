@@ -1,0 +1,151 @@
+{
+ "H1": {
+  "n_windows": 78028,
+  "n_differing": 1570,
+  "class_changes": [
+   {
+    "class_a": 1,
+    "class_b": 0,
+    "n": 1247,
+    "share": 0.7943
+   },
+   {
+    "class_a": 0,
+    "class_b": 1,
+    "n": 323,
+    "share": 0.2057
+   }
+  ],
+  "a_more_confident_share_of_differing": 0.2236,
+  "mean_margin_a_on_differing": 0.157536,
+  "mean_margin_b_on_differing": 0.389362,
+  "spatial": {
+   "row_band_shares_top_to_bottom": [
+    0.0159,
+    0.3866,
+    0.4682,
+    0.1293
+   ],
+   "col_band_shares_left_to_right": [
+    0.2898,
+    0.2108,
+    0.2911,
+    0.2083
+   ]
+  },
+  "classes": {
+   "0": "not water",
+   "1": "water"
+  },
+  "date_a": "2018-04-19",
+  "date_b": "2017-09-14/2017-09-15",
+  "note": "F4 with A and B swapped: A is the post-event map, B the pre-event map"
+ },
+ "H4": {
+  "design": "confidence",
+  "budget": 250,
+  "n_wrong": 51,
+  "estimate": {
+   "estimate": 0.20734022825597706,
+   "low": 0.16531766419603638,
+   "high": 0.25675876032297085
+  },
+  "method": "stratified by confidence margin; Wilson interval on the design's effective sample size",
+  "per_class_user_accuracy": {
+   "0": null,
+   "1": 0.1976176749691336,
+   "2": 0.0,
+   "3": null,
+   "4": 0.9727120916185307,
+   "5": 0.0,
+   "6": 0.42138707694850125,
+   "7": 0.9363262104137244,
+   "8": null
+  },
+  "per_class_warnings": {
+   "0": [
+    "few labels"
+   ],
+   "1": [
+    "few labels"
+   ],
+   "2": [
+    "few labels",
+    "few errors"
+   ],
+   "3": [
+    "few labels"
+   ],
+   "4": [
+    "few errors"
+   ],
+   "5": [
+    "few labels"
+   ],
+   "6": [
+    "few labels",
+    "few errors"
+   ],
+   "7": [
+    "few errors"
+   ],
+   "8": [
+    "few labels"
+   ]
+  }
+ },
+ "H5": {
+  "design": "random",
+  "budget": 400,
+  "n_wrong": 77,
+  "estimate": {
+   "estimate": 0.1925,
+   "low": 0.1555049642699045,
+   "high": 0.23404793524315437
+  },
+  "method": "exact hypergeometric interval (simple random sample of a finite map)",
+  "per_class_user_accuracy": {
+   "0": null,
+   "1": 0.4375,
+   "2": 0.0,
+   "3": null,
+   "4": 0.9541984732824428,
+   "5": 0.0,
+   "6": 0.4375,
+   "7": 0.9588235294117647,
+   "8": null
+  },
+  "per_class_warnings": {
+   "0": [
+    "few labels"
+   ],
+   "1": [
+    "few labels"
+   ],
+   "2": [
+    "few labels",
+    "few errors"
+   ],
+   "3": [
+    "few labels"
+   ],
+   "5": [
+    "few labels"
+   ],
+   "6": [
+    "few errors"
+   ],
+   "8": [
+    "few labels"
+   ]
+  },
+  "certify_coverage_by_alpha": {
+   "0.05": null,
+   "0.1": null,
+   "0.15": 0.05,
+   "0.2": 0.95,
+   "0.25": 1.0,
+   "0.3": 1.0
+  }
+ }
+}

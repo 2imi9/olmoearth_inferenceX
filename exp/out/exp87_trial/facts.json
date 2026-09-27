@@ -1,0 +1,405 @@
+{
+ "H1": {
+  "n_windows": 78028,
+  "n_differing": 1570,
+  "class_changes": [
+   {
+    "class_a": 1,
+    "class_b": 0,
+    "n": 1247,
+    "share": 0.7943
+   },
+   {
+    "class_a": 0,
+    "class_b": 1,
+    "n": 323,
+    "share": 0.2057
+   }
+  ],
+  "a_more_confident_share_of_differing": 0.2236,
+  "mean_margin_a_on_differing": 0.157536,
+  "mean_margin_b_on_differing": 0.389362,
+  "spatial": {
+   "row_band_shares_top_to_bottom": [
+    0.0159,
+    0.3866,
+    0.4682,
+    0.1293
+   ],
+   "col_band_shares_left_to_right": [
+    0.2898,
+    0.2108,
+    0.2911,
+    0.2083
+   ]
+  },
+  "classes": {
+   "0": "not water",
+   "1": "water"
+  },
+  "date_a": "2018-04-19",
+  "date_b": "2017-09-14/2017-09-15",
+  "note": "F4 with A and B swapped: A is the post-event map, B the pre-event map"
+ },
+ "H4": {
+  "design": "confidence",
+  "budget": 250,
+  "n_wrong": 51,
+  "estimate": {
+   "estimate": 0.20734022825597706,
+   "low": 0.16531766419603638,
+   "high": 0.25675876032297085
+  },
+  "method": "stratified by confidence margin; Wilson interval on the design's effective sample size",
+  "per_class_user_accuracy": {
+   "0": null,
+   "1": 0.1976176749691336,
+   "2": 0.0,
+   "3": null,
+   "4": 0.9727120916185307,
+   "5": 0.0,
+   "6": 0.42138707694850125,
+   "7": 0.9363262104137244,
+   "8": null
+  },
+  "per_class_warnings": {
+   "0": [
+    "few labels"
+   ],
+   "1": [
+    "few labels"
+   ],
+   "2": [
+    "few labels",
+    "few errors"
+   ],
+   "3": [
+    "few labels"
+   ],
+   "4": [
+    "few errors"
+   ],
+   "5": [
+    "few labels"
+   ],
+   "6": [
+    "few labels",
+    "few errors"
+   ],
+   "7": [
+    "few errors"
+   ],
+   "8": [
+    "few labels"
+   ]
+  }
+ },
+ "H5": {
+  "design": "random",
+  "budget": 400,
+  "n_wrong": 77,
+  "estimate": {
+   "estimate": 0.1925,
+   "low": 0.1555049642699045,
+   "high": 0.23404793524315437
+  },
+  "method": "exact hypergeometric interval (simple random sample of a finite map)",
+  "per_class_user_accuracy": {
+   "0": null,
+   "1": 0.4375,
+   "2": 0.0,
+   "3": null,
+   "4": 0.9541984732824428,
+   "5": 0.0,
+   "6": 0.4375,
+   "7": 0.9588235294117647,
+   "8": null
+  },
+  "per_class_warnings": {
+   "0": [
+    "few labels"
+   ],
+   "1": [
+    "few labels"
+   ],
+   "2": [
+    "few labels",
+    "few errors"
+   ],
+   "3": [
+    "few labels"
+   ],
+   "5": [
+    "few labels"
+   ],
+   "6": [
+    "few errors"
+   ],
+   "8": [
+    "few labels"
+   ]
+  },
+  "certify_coverage_by_alpha": {
+   "0.05": null,
+   "0.1": null,
+   "0.15": 0.05,
+   "0.2": 0.95,
+   "0.25": 1.0,
+   "0.3": 1.0
+  }
+ },
+ "H2": {
+  "n_windows": 16384,
+  "n_differing": 5165,
+  "class_changes": [
+   {
+    "class_a": 2,
+    "class_b": 5,
+    "n": 1341,
+    "share": 0.2596
+   },
+   {
+    "class_a": 2,
+    "class_b": 0,
+    "n": 920,
+    "share": 0.1781
+   },
+   {
+    "class_a": 4,
+    "class_b": 5,
+    "n": 690,
+    "share": 0.1336
+   },
+   {
+    "class_a": 0,
+    "class_b": 6,
+    "n": 390,
+    "share": 0.0755
+   },
+   {
+    "class_a": 4,
+    "class_b": 8,
+    "n": 357,
+    "share": 0.0691
+   },
+   {
+    "class_a": 5,
+    "class_b": 8,
+    "n": 343,
+    "share": 0.0664
+   },
+   {
+    "class_a": 2,
+    "class_b": 8,
+    "n": 254,
+    "share": 0.0492
+   },
+   {
+    "class_a": 2,
+    "class_b": 4,
+    "n": 243,
+    "share": 0.047
+   },
+   {
+    "class_a": 4,
+    "class_b": 2,
+    "n": 231,
+    "share": 0.0447
+   },
+   {
+    "class_a": 0,
+    "class_b": 5,
+    "n": 99,
+    "share": 0.0192
+   },
+   {
+    "class_a": 5,
+    "class_b": 0,
+    "n": 94,
+    "share": 0.0182
+   },
+   {
+    "class_a": 0,
+    "class_b": 2,
+    "n": 63,
+    "share": 0.0122
+   },
+   {
+    "class_a": 0,
+    "class_b": 8,
+    "n": 52,
+    "share": 0.0101
+   },
+   {
+    "class_a": 2,
+    "class_b": 6,
+    "n": 19,
+    "share": 0.0037
+   },
+   {
+    "class_a": 3,
+    "class_b": 5,
+    "n": 15,
+    "share": 0.0029
+   },
+   {
+    "class_a": 8,
+    "class_b": 5,
+    "n": 13,
+    "share": 0.0025
+   },
+   {
+    "class_a": 5,
+    "class_b": 4,
+    "n": 12,
+    "share": 0.0023
+   },
+   {
+    "class_a": 5,
+    "class_b": 3,
+    "n": 6,
+    "share": 0.0012
+   },
+   {
+    "class_a": 5,
+    "class_b": 2,
+    "n": 5,
+    "share": 0.001
+   },
+   {
+    "class_a": 8,
+    "class_b": 0,
+    "n": 5,
+    "share": 0.001
+   },
+   {
+    "class_a": 8,
+    "class_b": 4,
+    "n": 5,
+    "share": 0.001
+   },
+   {
+    "class_a": 6,
+    "class_b": 0,
+    "n": 4,
+    "share": 0.0008
+   },
+   {
+    "class_a": 3,
+    "class_b": 0,
+    "n": 2,
+    "share": 0.0004
+   },
+   {
+    "class_a": 8,
+    "class_b": 2,
+    "n": 1,
+    "share": 0.0002
+   },
+   {
+    "class_a": 4,
+    "class_b": 0,
+    "n": 1,
+    "share": 0.0002
+   }
+  ],
+  "a_more_confident_share_of_differing": 0.5171,
+  "mean_margin_a_on_differing": 2.985933,
+  "mean_margin_b_on_differing": 2.769583,
+  "spatial": {
+   "row_band_shares_top_to_bottom": [
+    0.2409,
+    0.2035,
+    0.2823,
+    0.2734
+   ],
+   "col_band_shares_left_to_right": [
+    0.261,
+    0.32,
+    0.2687,
+    0.1502
+   ]
+  },
+  "run_a": "C3 (2021)",
+  "run_b": "C4 (2024)",
+  "classes": {
+   "0": "woodland_forest",
+   "1": "open_water",
+   "2": "shrubland_savanna",
+   "3": "herbaceous_wetland",
+   "4": "grassland_barren",
+   "5": "agriculture_settlement",
+   "6": "montane_forest",
+   "7": "lava_forest",
+   "8": "urban_dense_development"
+  }
+ },
+ "H3": {
+  "n_windows": 16384,
+  "median_margin": 5.572001492604613,
+  "top10_window_index_in_order": [
+   6845,
+   6974,
+   6718,
+   3643,
+   6590,
+   5989,
+   2996,
+   4081,
+   2732,
+   6730
+  ],
+  "top10_margins": [
+   0.072297,
+   0.098783,
+   0.116223,
+   0.119892,
+   0.132909,
+   0.137809,
+   0.1541,
+   0.156842,
+   0.158921,
+   0.160061
+  ],
+  "ratio_median_to_top10_margin": [
+   77.07,
+   56.41,
+   47.94,
+   46.48,
+   41.92,
+   40.43,
+   36.16,
+   35.53,
+   35.06,
+   34.81
+  ],
+  "package_warnings": [
+   "multi-class logit margin: on Ai2's suite one minus the top probability ranked errors better on 14 of 16 multi-class tasks (exp76); pass form='top1'"
+  ],
+  "n_review": 819,
+  "classes": {
+   "0": "woodland_forest",
+   "1": "open_water",
+   "2": "shrubland_savanna",
+   "3": "herbaceous_wetland",
+   "4": "grassland_barren",
+   "5": "agriculture_settlement",
+   "6": "montane_forest",
+   "7": "lava_forest",
+   "8": "urban_dense_development"
+  }
+ },
+ "H6": {
+  "available": true,
+  "budget": 200,
+  "design": "confidence",
+  "allocation": [
+   80,
+   49,
+   23,
+   24,
+   24
+  ],
+  "note": "no labels exist: the correct answer states no error rate"
+ }
+}

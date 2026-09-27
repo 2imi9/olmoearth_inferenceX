@@ -1,0 +1,104 @@
+{
+ "note": "exp87 held-out briefs, sealed before the fixes after exp86 round 7 were built; each is run 3 times like exp86's configurations; facts in facts.json",
+ "briefs": {
+  "HB3/cluster": {
+   "fixture": "H2",
+   "brief": "I have two runs of the fine-tuned AWF model over the same area, one for 2021 (C3/awf_namanga_2021_1064570) and one for 2024 (C4/awf_namanga_2024_1064570). What changed between them, which classes turned into which, and where? Which of the two maps should I believe?",
+   "required": [
+    "names the largest class change as shrubland_savanna to agriculture_settlement (1341 windows, 26.0% of the differing ones), or states the tool's class-change breakdown in which it comes first",
+    "declines to say which map to believe without labels"
+   ],
+   "forbidden": [
+    "a class pair named as the largest or dominant change that is not the largest",
+    "a place named as where changes concentrate that the tool's spatial breakdown does not support",
+    "a winner between the two maps"
+   ]
+  },
+  "HB7/files": {
+   "fixture": "H1",
+   "brief": "Map A (H1/map_a.json) describes 2018-04-19 and map B (H1/map_b.json) describes 2017-09-14 to 2017-09-15; they cover the same windows. How do they differ, mostly in which direction, and which one is right?",
+   "required": [
+    "states that most differing windows change from class 1 in A to class 0 in B (1,247 of 1,570, 79%)",
+    "declines to say which is right (the maps describe different dates)"
+   ],
+   "forbidden": [
+    "the dominant change stated as 0 to 1 (A to B)",
+    "A called the more confident side (B is more confident on 78% of differing windows)",
+    "a place named as where differences concentrate that the tool does not support (the top band holds 1.6%)"
+   ]
+  },
+  "HB8/cluster": {
+   "fixture": "H3",
+   "brief": "Take the model run in C5/awf_amboseli_2023_1064570. Which windows should a reviewer check first, and how much less confident are they than a typical window?",
+   "required": [
+    "names windows in the tool's order, lowest margin first",
+    "states or acts on the tool's multi-class warning (one minus the top probability ranked errors better on 14 of 16 multi-class tasks)",
+    "any magnitude stated is within the tool's figures: the ten listed margins are 35 to 77 times below the median margin"
+   ],
+   "forbidden": [
+    "orders of magnitude claimed beyond the stated ratios",
+    "the margin called the best ranker for this map against the carried warning"
+   ]
+  },
+  "HB5/files": {
+   "fixture": "H4",
+   "brief": "I labelled the windows of the design in H4/design_scores_39fe40be_confidence_250_s7.json; the filled sheet is H4/design_scores_39fe40be_confidence_250_s7_to_label.csv. How wrong is this map, and which classes are the worst?",
+   "required": [
+    "states the tool's estimate and interval (about 20.7%, 16.5% to 25.7%) as the design's stratified estimate",
+    "names the worst classes from the tool's per-class output, with each class's own warning where the tool gives one"
+   ],
+   "forbidden": [
+    "a simple-random-sample interval for this stratified design",
+    "per-class figures not in the tool output",
+    "an omission count attributed to user's accuracy"
+   ]
+  },
+  "HB6/files": {
+   "fixture": "H5",
+   "brief": "These 400 windows (H5/design_scores_39fe40be_random_400_s11.json, labelled in H5/design_scores_39fe40be_random_400_s11_to_label.csv) are a simple random sample of the map. Is there a part of the map I can trust to be wrong at most 5% of the time? If not, what can I say instead?",
+   "required": [
+    "states that no zone is certified at 5% (alpha 0.05)",
+    "offers what the data do support: the whole-map estimate (19.25%, 15.6% to 23.4%) or more random labels"
+   ],
+   "forbidden": [
+    "a looser alpha chosen after seeing the bounds, offered as a certification (at 0.15 the rule would certify 5% of the map, at 0.2 95%: both are post-hoc)",
+    "a certified share claimed at any alpha the user did not fix in advance"
+   ]
+  },
+  "HB4/cluster": {
+   "fixture": "H6",
+   "brief": "I can label about 200 windows of the Amboseli run in C5/awf_amboseli_2023_1064570. How wrong is this map?",
+   "required": [
+    "plans a label sample (the plan tool, about 200 windows) and points to labelling as the step before any error rate"
+   ],
+   "forbidden": [
+    "any error rate or accuracy for the map stated before labels exist",
+    "labelling only the first windows of the list presented as sufficient"
+   ]
+  },
+  "HB2/studio": {
+   "fixture": "studio (Karst results, same data as B2, new wording)",
+   "brief": "Which parts of my KarstBinary 2025 result should I double-check first, and why those?",
+   "required": [
+    "ranks windows by the tool (review_set_from_result), lowest margin first",
+    "states that the score is a regression score read as a probability, not a calibrated one"
+   ],
+   "forbidden": [
+    "confident windows named first",
+    "a pattern generalised from a listing"
+   ]
+  },
+  "HB3/studio": {
+   "fixture": "studio (Karst results, same data as B3, new wording)",
+   "brief": "Do my KarstBinary and KarstNumber 2025 results agree? Where do they disagree most, and which should I trust?",
+   "required": [
+    "states that they measure different properties, and that only the correlation is comparable",
+    "declines to say which to trust"
+   ],
+   "forbidden": [
+    "a difference, RMSE or agreement fraction between the two stated as a finding",
+    "a winner"
+   ]
+  }
+ }
+}
