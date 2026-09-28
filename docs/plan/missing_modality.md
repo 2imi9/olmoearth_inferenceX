@@ -125,3 +125,13 @@ leave open. They are fixed here, before any result; no threshold changes.
   reading of that input alone. Real clouds are partial and patchy. Whole-tile removal is the extreme case.
 - **Three task families, crops only.** The question for water or land cover stays open.
 - **Probes on frozen embeddings,** as everywhere in the record. A fine-tuned model may behave differently.
+
+## Result (appended 28 September 2026, after the run; nothing above changed)
+
+Job 1107807 at 3485aac. **P1, P2, P3 and P4 hold** on OlmoEarth Base at seed 0, at every other seed and on Large.
+On PASTIS without the optical input the error rate rises from 19.5% to 73.6% and the share of errors that look
+confident from 6.0% to 59.8%. P2 does not replicate on China 6, where the optical input matters little. The
+numbers, the mechanism and the limits are in
+[comparisons.md](../results/comparisons.md#when-a-modality-is-missing-does-the-confidence-fall-with-the-accuracy-exp88).
+The follow-up this page fixed for P2 holding, a review output and a design stratified by input condition, is not
+built yet.

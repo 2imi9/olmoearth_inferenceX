@@ -3953,3 +3953,98 @@
   note: >-
     The largest adjusted p is Holm's step-down value at the last rank, the running maximum of (m - j) p_(j); the
     binomial coefficients are exact after rounding for n up to 24.
+
+- id: missing-optical-errors-are-confident
+  statement: "On PASTIS, a probe trained on OlmoEarth Base's S1+S2 embeddings and read with no refit on the S1-only embeddings of the same 458,638 test windows (the optical input missing) errs on 73.6% of them against 19.5% with full input, and 59.8% of its errors carry a margin at or above the median margin of the windows full input gets right, against 6.0% (exp88 P1 and P2); over five probe seeds 73.5% to 73.9% and 59.2% to 60.1%. On OlmoEarth Large the error rate rises to 49.9% to 51.0% and the confident share from 5.7% to 12.8% to 13.8%."
+  crosscheck: tests/test_exp88.py::test_the_recorded_run_by_a_second_route
+  status: supported
+  experiments: [exp88]
+  artifacts: [exp/out/exp88_summary.json]
+  check: |-
+    (lambda R: (lambda c: (lambda b, l:
+      round(c(b['0'], 'full')['error_rate'], 3) == 0.195 and round(c(b['0'], 'optical_missing')['error_rate'], 3) == 0.736
+      and round(c(b['0'], 'full')['confident_errors']['share'], 3) == 0.060
+      and round(c(b['0'], 'optical_missing')['confident_errors']['share'], 3) == 0.598
+      and all(c(s, 'optical_missing')['error_rate'] - c(s, 'full')['error_rate'] >= 0.05 for s in b.values())
+      and all(c(s, 'optical_missing')['confident_errors']['share'] - c(s, 'full')['confident_errors']['share'] >= 0.05 for s in b.values())
+      and round(min(c(s, 'optical_missing')['error_rate'] for s in b.values()), 3) == 0.735
+      and round(max(c(s, 'optical_missing')['error_rate'] for s in b.values()), 3) == 0.739
+      and round(min(c(s, 'optical_missing')['confident_errors']['share'] for s in b.values()), 3) == 0.592
+      and round(max(c(s, 'optical_missing')['confident_errors']['share'] for s in b.values()), 3) == 0.601
+      and len(b) == 5 and len(l) == 5
+      and round(min(c(s, 'optical_missing')['error_rate'] for s in l.values()), 3) == 0.499
+      and round(max(c(s, 'optical_missing')['error_rate'] for s in l.values()), 3) == 0.510
+      and round(min(c(s, 'full')['confident_errors']['share'] for s in l.values()), 3) == 0.057
+      and round(min(c(s, 'optical_missing')['confident_errors']['share'] for s in l.values()), 3) == 0.128
+      and round(max(c(s, 'optical_missing')['confident_errors']['share'] for s in l.values()), 3) == 0.138
+    )(R['olmoearth_base']['seeds'], R['olmoearth_large']['seeds'])
+    )(lambda s, k: s['families']['pastis']['conditions'][k])
+    )(A['exp/out/exp88_summary.json']['results'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: missing-optical-errors-are-confident}
+  note: >-
+    Ai2's S1-only embeddings are the encoder's reading of radar alone over the whole tile, the extreme of a cloud;
+    real clouds are partial. Graded on Base at seed 0; the other seeds and Large are replication.
+
+- id: missing-modality-confident-errors-follow-the-shift-not-the-sensor
+  statement: "The confident-error rise does not replicate on CropHarvest China 6 when the optical input is missing: its error rate rises from 22.6% to 28.9% and the confident share falls from 13.3% to 6.5% (OlmoEarth Base, seed 0). It appears there when radar is missing instead (error 44.1%, confident share 70.9%), and on Togo 12 when the optical input is missing (error 21.9% to 43.8%, confident share 10.4% to 48.5%)."
+  crosscheck: tests/test_exp88.py::test_the_recorded_run_by_a_second_route
+  status: measured
+  experiments: [exp88]
+  artifacts: [exp/out/exp88_summary.json]
+  check: |-
+    (lambda F: (lambda c:
+      round(c('china6', 'full')['error_rate'], 3) == 0.226 and round(c('china6', 'optical_missing')['error_rate'], 3) == 0.289
+      and round(c('china6', 'full')['confident_errors']['share'], 3) == 0.133
+      and round(c('china6', 'optical_missing')['confident_errors']['share'], 3) == 0.065
+      and round(c('china6', 'radar_missing')['error_rate'], 3) == 0.441
+      and round(c('china6', 'radar_missing')['confident_errors']['share'], 3) == 0.709
+      and round(c('togo12', 'full')['error_rate'], 3) == 0.219 and round(c('togo12', 'optical_missing')['error_rate'], 3) == 0.438
+      and round(c('togo12', 'full')['confident_errors']['share'], 3) == 0.104
+      and round(c('togo12', 'optical_missing')['confident_errors']['share'], 3) == 0.485
+    )(lambda f, k: F[f]['conditions'][k])
+    )(A['exp/out/exp88_summary.json']['results']['olmoearth_base']['seeds']['0']['families'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: missing-modality-confident-errors-follow-the-shift-not-the-sensor}
+  note: >-
+    China 6's P1 and P2 were preregistered as replication, Togo 12 as reported only (306 samples). China 6's
+    unsuffixed task is Sentinel-2 alone (the embeddings' dataset card).
+
+- id: margin-still-ranks-inside-the-cloudy-part
+  statement: "With the optical input missing the margin still beats the best no-model control within the condition, by 0.039 in excess AURC on PASTIS and 0.064 on CropHarvest China 6 (exp88 P3), but its AUROC for errors on PASTIS falls from 0.83 with full input to 0.59."
+  crosscheck: tests/test_exp88.py::test_the_recorded_run_by_a_second_route
+  status: supported
+  experiments: [exp88]
+  artifacts: [exp/out/exp88_summary.json]
+  check: |-
+    (lambda F: (lambda r:
+      round(min(r('pastis', 'optical_missing')['controls_excess_aurc'].values()) - r('pastis', 'optical_missing')['margin_excess_aurc'], 3) == 0.039
+      and round(min(r('china6', 'optical_missing')['controls_excess_aurc'].values()) - r('china6', 'optical_missing')['margin_excess_aurc'], 3) == 0.064
+      and round(r('pastis', 'full')['margin_auroc'], 2) == 0.83 and round(r('pastis', 'optical_missing')['margin_auroc'], 2) == 0.59
+    )(lambda f, k: F[f]['conditions'][k]['ranking'])
+    )(A['exp/out/exp88_summary.json']['results']['olmoearth_base']['seeds']['0']['families'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: margin-still-ranks-inside-the-cloudy-part}
+
+- id: pooled-error-rate-misstates-the-cloudy-part
+  statement: "On a PASTIS map with half its tiles read without the optical input, the cloudy part's error rate is 74.1% and the clear part's 19.7%. A random sample of 300 windows estimates 46.9% on average, 27 points below the cloudy part, and its interval covers the cloudy part's rate on none of 2,000 draws; split by condition, each part's interval covers its own rate on 95.6% and 95.7% of draws (exp88 P4). A 5% review set ordered by margin holds 4.3% of the cloudy part's errors and 18.3% of the clear part's, although the cloudy part carries 79% of all errors."
+  crosscheck: tests/test_exp88.py::test_the_recorded_run_by_a_second_route
+  status: supported
+  experiments: [exp88]
+  artifacts: [exp/out/exp88_summary.json]
+  check: |-
+    (lambda m: (lambda t, p, st, rv:
+      round(t['cloudy'], 3) == 0.741 and round(t['clear'], 3) == 0.197
+      and round(p['mean_estimate'], 3) == 0.469 and p['mean_estimate'] - t['cloudy'] <= -0.05 and round(p['mean_estimate'] - t['cloudy'], 2) == -0.27
+      and p['interval_covers_cloudy_part'] == 0.0
+      and round(st['cloudy']['coverage'], 3) == 0.956 and round(st['clear']['coverage'], 3) == 0.957
+      and round(rv['cloudy_errors_in_review_share'], 3) == 0.043 and round(rv['clear_errors_in_review_share'], 3) == 0.183
+      and round(rv['cloudy_share_of_all_errors'], 2) == 0.79
+    )(m['error_rate'], m['estimation']['pooled'], m['estimation']['stratified'], m['review_set'])
+    )(A['exp/out/exp88_summary.json']['results']['olmoearth_base']['seeds']['0']['mixed_map'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: pooled-error-rate-misstates-the-cloudy-part}
+  note: >-
+    Each part's interval is the package's exact interval for a random sample, which covers at least 95% by
+    construction; the finite-population Wilson interval exp78 graded covers 94.7% and 95.0%. On a half-cloudy map
+    the pooled estimate misses the cloudy part by half the gap between the parts.

@@ -2829,6 +2829,83 @@ package's tuning floor is now 30 labels per stratum, at which the stratified gai
 cells' collapse (EuroSAT 0.27 for the classical stratified arm too) is exp78's harness allocation without the
 package's floor on the assumed stratum rate; the shipped design covers 0.93–0.95 there.
 
+## When a modality is missing, does the confidence fall with the accuracy? (exp88)
+
+Preregistered in [docs/plan/missing_modality.md](../plan/missing_modality.md), frozen before any result; runs as
+`exp/exp88_missing_modality.py` (job 1107807, CPU, 16 minutes); artifacts `exp/out/exp88_summary.json`,
+`exp88_units.npz` and `exp88_alignment.json`. Run on 28 September 2026 on Ai2's published embeddings at the
+record's revision.
+
+**The question.** A model trained on radar and optical input (Sentinel-1 and Sentinel-2) is run with the optical
+input missing, as under cloud. Its errors rise. If its confidence falls with them, the review order still points at
+the windows to check. If it does not, the extra errors are confident ones and only a sample drawn under the same
+conditions finds them. The probe is trained on the S1+S2 embeddings of the train split and read, with no refit, on
+the S1+S2, S1-only and S2-only embeddings of the same test windows.
+
+| OlmoEarth Base, seed 0 | error rate | errors that look confident | margin's AUROC for errors |
+|---|---|---|---|
+| PASTIS, full input | 19.5% | 6.0% | 0.83 |
+| PASTIS, optical missing | 73.6% | 59.8% | 0.59 |
+| PASTIS, radar missing | 27.7% | 11.6% | 0.78 |
+| China 6, full input | 22.6% | 13.3% | 0.72 |
+| China 6, optical missing | 28.9% | 6.5% | 0.63 |
+| China 6, radar missing | 44.1% | 70.9% | 0.78 |
+| Togo 12, full input | 21.9% | 10.4% | 0.78 |
+| Togo 12, optical missing | 43.8% | 48.5% | 0.64 |
+
+An error "looks confident" when its margin is at or above the median margin of the windows full input gets right:
+it sits in the half of the map a reviewer would trust.
+
+**On PASTIS, the extra errors are confident ones (P1 and P2 hold).** Without the optical input the error rate
+rises from 19.5% to 73.6%, and the share of errors that look confident from 6.0% to 59.8%. The median margin of the
+errors, 0.92, is above the median margin of the correct windows under full input, 0.82. The five probe seeds agree
+to within a point. OlmoEarth Large degrades less (49.9% to 51.0% errors) and its confident share rises less, from
+5.7% to 12.8–13.8%, still above the 5-point bar. <!-- claim:missing-optical-errors-are-confident -->
+
+**It follows the size of the shift, not the sensor.** On CropHarvest China 6 the optical input matters little (the
+error rate rises 6 points) and the confident share falls, so the confidence tracks the lost information there;
+P2 does not replicate. Losing radar costs China 6 more (44.1% errors), and there 70.9% of the errors look
+confident. On Togo 12, losing the optical input doubles the error rate and 48.5% of the errors look confident.
+<!-- claim:missing-modality-confident-errors-follow-the-shift-not-the-sensor -->
+
+**The margin still ranks errors inside the cloudy part, weakly (P3 holds).** Within the optical-missing condition
+it beats the best no-model control by 0.039 in excess AURC on PASTIS and 0.064 on China 6, but its AUROC on PASTIS
+falls from 0.83 to 0.59. <!-- claim:margin-still-ranks-inside-the-cloudy-part -->
+
+**On a half-cloudy map, one error rate misstates the cloudy half, and one review order misses it (P4 holds).**
+Half of PASTIS's test tiles, drawn at random, take the optical-missing reading. The cloudy part's error rate is
+74.1%, the clear part's 19.7%.
+
+- A random sample of 300 windows estimates 46.9% on average, 27 points below the cloudy part, and its interval
+  covers the cloudy part's rate on none of 2,000 draws. It is an honest estimate of the whole map (it covers the
+  whole map's rate on 95% of draws), but not of either part.
+- Split by condition, each part's interval covers its own rate on 95.6% and 95.7% of draws. The package's exact
+  interval does this by construction; the finite-population Wilson interval exp78 graded covers 94.7% and 95.0%.
+- A 5% review set ordered by margin holds 4.3% of the cloudy part's errors and 18.3% of the clear part's, although
+  the cloudy part carries 79% of all errors.
+
+<!-- claim:pooled-error-rate-misstates-the-cloudy-part -->
+
+**How it happens (read from the per-unit file, not preregistered).** Without the optical input, the Base probe
+calls 82.6% of PASTIS's windows the same class, which holds 20.7% of the labels and 19.8% of the decisions under
+full input. On China 6 without radar it calls 97.7% of the samples one class; OlmoEarth Large on Togo 12 without
+the optical input calls every sample one class. The errors are confident because the probe collapses onto one
+class with a high margin. That collapse is visible without labels, in the class shares of the decisions, which
+suggests a label-free check. It has not been tested.
+
+**What it does not show.**
+
+- Ai2's single-sensor embeddings are the encoder's reading of one sensor over the whole tile. Real clouds are
+  partial and patchy; this is the extreme case.
+- Three crop families. Water and land cover are open.
+- Probes on frozen embeddings. A model fine-tuned with modality dropout may behave differently.
+- One oddity is reported, not explained: OlmoEarth Large on China 6 errs less without the optical input (14.2%)
+  than with it (26.9%). Under full input its probe calls 80% of samples one class that holds 54% of the labels.
+
+**What follows.** The preregistration fixed it: the ranking is not valid across input conditions. The review
+output should say so and offer a design stratified by condition (cloud cover or modalities present) whenever the
+map records it, with the error rate and the certification issued per condition. The package does not do this yet.
+
 ## The ceiling belongs to the task, not to the model (from exp74 and exp70)
 
 The margin takes a median 0.68 of the gap between a random ranking and a perfect one on the 24 tasks. A fair

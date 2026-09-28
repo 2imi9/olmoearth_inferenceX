@@ -156,3 +156,47 @@ def test_the_units_file_drops_the_replication_encoders_seeds_first(tmp_path):
         assert f"{e88.BASE}/f/seed1/full/err" in z.files and f"{e88.LARGE}/f/seed1/full/err" not in z.files
     both = e88.write_units(a, str(tmp_path / "u.npz"), limit=50_000)
     assert both["written"] and both["replicate_seeds_dropped_for"] == "all" and both["n_arrays"] == 2
+
+
+RUN_UNITS = os.path.join(ROOT, "exp", "out", "exp88_units.npz")
+RUN_SUMMARY = os.path.join(ROOT, "exp", "out", "exp88_summary.json")
+
+
+@pytest.mark.skipif(not os.path.exists(RUN_UNITS), reason="the recorded run's per-unit file is not present")
+def test_the_recorded_run_by_a_second_route():
+    """The recorded numbers recomputed from the per-unit file with plain numpy, none of exp88's code: the error
+    rates and confident shares on every family and seed, the mixed map's truths, the review set's capture, and the
+    one-class collapse the record quotes."""
+    z = np.load(RUN_UNITS)
+    s = json.load(open(RUN_SUMMARY))
+    for enc, res in s["results"].items():
+        for seed, rs in res["seeds"].items():
+            for fam, rf in rs["families"].items():
+                base = f"{enc}/{fam}/seed{seed}/"
+                if base + "full/err" not in z.files:
+                    continue
+                full_err = z[base + "full/err"].astype(bool)
+                thr = np.median(z[base + "full/margin"][~full_err])
+                assert abs(thr - rf["threshold_confident"]) < 1e-6
+                for cond, rc in rf["conditions"].items():
+                    err = z[base + cond + "/err"].astype(bool)
+                    margin = z[base + cond + "/margin"]
+                    assert abs(err.mean() - rc["error_rate"]) < 1e-12
+                    confident = sum(1 for m, e in zip(margin, err) if e and m >= thr) if len(err) < 10000 \
+                        else int(((margin >= thr) & err).sum())
+                    assert abs(confident / err.sum() - rc["confident_errors"]["share"]) < 1e-12
+    b = "olmoearth_base/pastis/"
+    cloudy = np.isin(z[b + "tile"], z[b + "cloudy_tiles"])
+    err = np.where(cloudy, z[b + "seed0/optical_missing/err"], z[b + "seed0/full/err"]).astype(bool)
+    margin = np.where(cloudy, z[b + "seed0/optical_missing/margin"], z[b + "seed0/full/margin"])
+    mm = s["results"]["olmoearth_base"]["seeds"]["0"]["mixed_map"]
+    assert abs(err[cloudy].mean() - mm["error_rate"]["cloudy"]) < 1e-12
+    assert abs(err[~cloudy].mean() - mm["error_rate"]["clear"]) < 1e-12
+    review = np.zeros(len(err), bool)
+    review[np.argsort(margin, kind="stable")[:round(0.05 * len(err))]] = True
+    assert abs((review & err & cloudy).sum() / (err & cloudy).sum()
+               - mm["review_set"]["cloudy_errors_in_review_share"]) < 2e-3, "ties at the cut may split differently"
+    assert abs((review & err & ~cloudy).sum() / (err & ~cloudy).sum()
+               - mm["review_set"]["clear_errors_in_review_share"]) < 2e-3
+    dec = z[b + "seed0/optical_missing/dec"]
+    assert round(float((dec == 1).mean()), 3) == 0.826 and round(float((z[b + "y"] == 1).mean()), 3) == 0.207
