@@ -1,11 +1,17 @@
-# When a modality is missing: does the confidence fall with the accuracy? (exp88 preregistration, DRAFT)
+# When a modality is missing: does the confidence fall with the accuracy? (exp88 preregistration)
 
-**Status: draft, not frozen.** Written 28 September 2026. The owner confirmed the thresholds the same day. The page
-is frozen before any result is computed.
+**Status: frozen on 28 September 2026, before any result on real embeddings.** Drafted and confirmed by the owner
+the same day (055f14b, b30b256); the readings below were fixed in e5bdc04. Nothing on this page changes after this
+line.
 
-- **Before freezing,** a smoke run on synthetic embeddings is allowed. So is an alignment check that reads the real
-  embeddings' sample identifiers and shapes and computes no probe, prediction or error.
-- **No run on real embeddings** comes before freezing.
+- **Before freezing,** only two runs touched the real files, both allowed by the draft:
+  - the smoke tests on synthetic embeddings;
+  - the alignment check (job 1107181, commit dac3f08), which read identifiers and shapes and computed no probe,
+    prediction or error.
+- **The alignment check passed** for all three families on OlmoEarth Base and Large. The three inputs carry the same
+  units, with labels equal in order, on the train and test splits. The files are the record's revision of Ai2's
+  embeddings (6ea2c79). On PASTIS, 1,966 of the 1,984 test tiles have a label sequence no other tile shares, so a swap
+  the check cannot see is confined to the other 18. Large runs as the replication.
 
 ## The question
 
