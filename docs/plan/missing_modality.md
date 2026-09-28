@@ -80,6 +80,31 @@ was trained on. The nearest evidence points both ways:
   - the condition-stratified intervals cover each part's true rate in at least 93% of 2,000 draws (the package's
     coverage bar, exp79).
 
+## Readings fixed before freezing
+
+The implementation (`exp/exp88_missing_modality.py`, 0a072fa) and its review raised points the predictions above
+leave open. They are fixed here, before any result; no threshold changes.
+
+- **Grading.** Every prediction is graded on OlmoEarth Base at probe seed 0. Seeds 1 to 4 and Large are reported.
+- **P2's task** is PASTIS, as P1's. China 6's P1 and P2 are reported as replication.
+- **P3's control** is the record's best no-model control: the better, by excess AURC, of the embedding distance and
+  the class rarity, chosen per condition (exp70, exp74, exp84). The embedding distance is measured from the mean of
+  the probe's own S1+S2 training embeddings. The lead over the embedding distance alone is reported, not graded.
+- **P4's "off by at least 5 points"** is the pooled estimator's bias for the cloudy part over the 2,000 draws (its
+  mean estimate minus the part's true rate), not the mean absolute error of single draws. Both are reported.
+- **P4's stratified estimate** post-stratifies the one random sample of 300 by condition. Each part's interval is the
+  package's interval for a random sample (`estimate_error_rate`, the exact hypergeometric interval), with the part's
+  size as the population. A draw that labels no window of a part counts as not covering.
+- **Consequences, stated so the result is not over-read:**
+  - The exact interval covers at least 95% by construction, so P4's coverage half checks the implementation more
+    than it tests a hypothesis. The finite-population Wilson interval that exp78 and exp79 graded is reported beside
+    it.
+  - On a map half cloudy, the pooled estimate misses the cloudy part's rate by half the gap between the parts. P4's
+    bias half therefore needs a rise of about 10 points in P1's measure.
+- **The alignment check** compares the three inputs' labels in order. A swap between two windows with identical
+  labels cannot be seen, which weakens the check on China 6 and Togo, with few classes. The count of tiles with a
+  unique label sequence is reported.
+
 ## What follows, whatever the outcome
 
 - **If P2 holds,** the package says in its review output that the ranking is not valid across input conditions. It
