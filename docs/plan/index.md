@@ -20,7 +20,8 @@ for preregistering are in the [protocol](../method/protocol.md).
 | [Where the lead holds](where_the_lead_holds.md) | exp84 | 2026-09-23 | The suite result by task group, with its confound, multiplicity and spread | [exp84](../results/comparisons.md#where-the-lead-holds-by-group-with-its-confound-and-its-multiplicity-exp84) |
 | [Model-assisted estimation](model_assisted_estimation.md) | exp85 | 2026-09-23 | Whether the map's confidence narrows the error-rate interval once labels exist | [exp85](../results/comparisons.md#does-the-maps-own-confidence-sharpen-the-error-rate-once-labels-exist-exp85) |
 | [Agent trial v2](agent_trial_v2.md) | exp86 | 2026-09-24 | Whether the OlmoEarth Agent, after the Studio fixes, calls the right tool, grounds its numbers, keeps the margin order, drops no-data, declines where it must, leaks no coordinates and matches the package | Passed at round 6 under the instrument amended after seeing results (A8–A21); a blind audit found false prose in at least 8 of 30 answers (exp86_round6_audit.md) |
-| [Agent trial v3](agent_trial_v3.md) | exp87 | 2026-09-25 | The same agent after the audit's fixes: claims (P8) and required content (P9) added, on exp86's briefs and eight sealed held-out briefs | Draft |
+| [Agent trial v3](agent_trial_v3.md) | exp87 | 2026-09-25 | The same agent after the audit's fixes: claims (P8) and required content (P9) added, on exp86's briefs and eight sealed held-out briefs | Frozen 2026-09-27; round 1 run, owner review pending |
+| [Missing modality](missing_modality.md) | exp88 | 2026-09-28 | Whether the margin falls with the accuracy when a modality is missing at inference (clouds over the optical input), and whether a pooled error estimate misstates the cloudy part | Draft |
 
 ## Plans and decisions
 
