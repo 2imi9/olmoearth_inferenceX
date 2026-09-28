@@ -1,7 +1,11 @@
 # When a modality is missing: does the confidence fall with the accuracy? (exp88 preregistration, DRAFT)
 
-**Status: draft, not frozen.** Written 28 September 2026. It is frozen before any result is computed. A smoke run on
-synthetic embeddings is allowed before freezing; a run on real embeddings is not.
+**Status: draft, not frozen.** Written 28 September 2026. The owner confirmed the thresholds the same day. The page
+is frozen before any result is computed.
+
+- **Before freezing,** a smoke run on synthetic embeddings is allowed. So is an alignment check that reads the real
+  embeddings' sample identifiers and shapes and computes no probe, prediction or error.
+- **No run on real embeddings** comes before freezing.
 
 ## The question
 
@@ -61,7 +65,7 @@ was trained on. The nearest evidence points both ways:
    - a random sample of 300 windows, with the error rate estimated pooled and stratified by condition: the pooled
      estimate's error for the cloudy part, and each stratum's interval coverage over 2,000 draws.
 
-## Predictions (one-sided; thresholds to be confirmed by the owner before freezing)
+## Predictions (one-sided; thresholds confirmed by the owner on 28 September 2026)
 
 - **P1, errors rise without optical input.** On PASTIS, the error rate under optical-missing exceeds full input's by
   at least 5 points.
