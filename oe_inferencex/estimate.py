@@ -12,7 +12,10 @@ Three things a user needs, and one they must be stopped from doing.
   margin into quintiles and allocates the budget by Neyman's rule from the model's own confidence, so no label is
   spent estimating stratum rates; on exp78's tasks it narrowed the interval to a median 0.80 of a random sample's
   and to 0.63 on the cleanest map, with coverage intact everywhere. A plain random sample and a tile design are
-  also offered, the last because that is how people actually label.
+  also offered, the last because that is how people actually label. When the map records each window's input
+  condition (a cloud flag, the modalities present), the "condition" design splits the labels equally across the
+  conditions, never from the model's confidence, which overstates the accuracy of a condition with an input
+  missing (exp88); each condition then gets its own exact interval, and `certify_by_condition` a zone of its own.
 - `estimate_error_rate` turns the labels back into a rate with the interval the design earns: the exact
   hypergeometric interval for a random sample, a stratified interval otherwise, and for tile-sampled
   labels a ratio estimator with its ultimate-cluster interval, beside the naive one so the difference is visible.
@@ -42,6 +45,30 @@ TILES_WARNING = ("labels taken tile by tile are not independent, and a map whose
                  "tasks it covered 51 to 78% of the time while claiming 95%. This interval is better and still not "
                  "honest everywhere: on exp78's tasks it covered 0.91 to 0.94 where tiles were of equal size, 0.82 on "
                  "Sen1Floods11 and 0.60 on MADOS, whose tiles hold 1 to 400 windows. Prefer the confidence design")
+# What a whole-map number does not say when part of the map was read with an input missing (exp88). The first two
+# travel in the outputs of estimate_error_rate and certify_zone when no input condition is recorded; the others go
+# with the per-condition results. The numbers are exp88's (exp/out/exp88_summary.json).
+SCOPE_ESTIMATE = ("This is the error rate of the whole map. If part of the map was predicted with an input missing, "
+                  "that part's rate can differ widely from it. On a PASTIS map with half its tiles read without the "
+                  "optical input, it was 74.1% against 19.7% on the rest, while a random sample of 300 estimated 46.9% "
+                  "(exp88). Draw the sample with --condition to get each part's rate.")
+SCOPE_CERTIFY = ("The zone's error rate is certified over all its windows together. Where part of the map was predicted "
+                 "with an input missing, its errors can be confident ones (exp88), and that part of the zone can be "
+                 "wrong more often than the rest. To certify each input condition on its own, draw the sample with "
+                 "--condition.")
+CONDITION_NOTE = ("Each condition's interval is its own 95% statement; the intervals do not hold jointly at 95%. The "
+                  "whole-map rate weights each condition by its share of the map and can hide a condition that is much "
+                  "worse.")
+CONDITION_NOT_GRADED = ("The whole-map interval is the stratified interval the confidence design uses; with input "
+                        "conditions as strata its coverage has not been graded.")
+FAMILY_NOTE = ("Certified per input condition. Each of the {L} conditions with at least {b1} labels is tested at delta "
+               "{d:g}, so all their statements hold together except on at most {delta:g} of samples. On that event the "
+               "certified windows taken together are wrong at most {alpha:g} of the time. Conditions with fewer labels "
+               "are not tested. Outside the certified windows nothing is certified.")
+UNRECORDED = "unrecorded"          # the name of the windows with no recorded condition; reserved
+CONFIDENCE_REFUSAL = ("that design allocates labels from the model's confidence, which overstates the accuracy of a "
+                      "condition with an input missing (exp88). Use --design condition (the default with --condition) "
+                      "or --design random.")
 
 
 # ----------------------------------------------------------------------------- intervals
@@ -353,6 +380,50 @@ def neyman_allocation(sizes, spread, budget, floor=MIN_PER_STRATUM):
     return n
 
 
+def equal_allocation(sizes, budget, floor=MIN_PER_STRATUM):
+    """The same number of labels for every stratum, by water-filling: a stratum too small for an equal share is
+    labelled in full, and the rest of the budget is shared equally by the others, again and again until no stratum
+    left is that small. The input conditions of the "condition" design are its strata. It never reads the model's
+    confidence, which overstates the accuracy of a condition with an input missing (exp88).
+
+    Returns n_h with sum n_h = budget and n_h <= N_h; strata not labelled in full differ by at most one label, and
+    n_h >= min(N_h, 2) whenever budget >= sum min(N_h, 2). A budget below sum min(N_h, floor) is refused, as by
+    `neyman_allocation`. `neyman_allocation(sizes, 1 / sizes, budget)` is not an equal split: it gives (33, 7, 20)
+    for sizes (100, 7, 50) at 60, where this gives (27, 7, 26)."""
+    sizes = np.asarray(sizes, int)
+    N = int(sizes.sum())
+    need = int(np.minimum(sizes, floor).sum())
+    if budget > N:
+        raise ValueError(f"a budget of {budget} is more than the {N} units of the strata")
+    if budget < need:
+        raise ValueError(
+            f"a budget of {budget} cannot give each of the {int((sizes > 0).sum())} non-empty strata its {floor} labels "
+            f"(needs {need})")
+    n = np.zeros(sizes.size, int)
+    open_ = np.ones(sizes.size, bool)
+    left = int(budget)
+    while open_.any():
+        share = left / int(open_.sum())
+        small = open_ & (sizes <= share)
+        if not small.any():
+            break
+        n[small] = sizes[small]                                 # too small for an equal share: a census
+        left -= int(sizes[small].sum())
+        open_ &= ~small
+    k = int(open_.sum())
+    if k:
+        n[open_] = left // k
+        rem = left - (left // k) * k
+        # The remainder goes one label each to the `rem` open strata with the most units left, lowest index on ties.
+        # The spec (condition_spec.md 2.5) read "one label at a time to the open stratum with most units left",
+        # re-ranked after each label; that gives (4, 2, 2) for sizes (6, 3, 3) at 8, two strata not labelled in full
+        # that differ by two, against the guarantee it states. No stratum gets more than one label of the remainder.
+        opened = np.flatnonzero(open_)
+        rank = opened[np.lexsort((opened, -(sizes[opened] - n[opened])))]
+        n[rank[:rem]] += 1
+    return n
+
+
 def draw_stratified(rng, strata, sizes, allocation):
     """A without-replacement draw of `allocation[h]` units from each stratum."""
     idx = []
@@ -362,8 +433,62 @@ def draw_stratified(rng, strata, sizes, allocation):
     return np.concatenate(idx)
 
 
+def _condition_index(condition, pop, n_windows, condition_names=None):
+    """The input condition of every population window as an index c = 0..K-1: the recorded values present in the
+    population in ascending order, then "unrecorded" last if any window has none. Returns (index per population
+    window, values with None for unrecorded, names, sizes, notes)."""
+    cond = np.asarray(condition).ravel()
+    if cond.size != n_windows:
+        raise ValueError(f"condition has {cond.size} entries for {n_windows} windows")
+    if cond.dtype.kind == "b":
+        cond = cond.astype(np.int64)
+    elif cond.dtype.kind == "f":
+        finite = np.isfinite(cond)
+        if not np.all(np.mod(cond[finite], 1) == 0):
+            raise ValueError("condition must hold an integer per window, negative where none is recorded; bin a "
+                             "continuous layer, such as cloud fraction, first")
+        cond = np.where(finite, cond, -1).astype(np.int64)      # NaN is unrecorded, as at the pixel level
+    elif cond.dtype.kind in "iu":
+        cond = cond.astype(np.int64)
+    else:
+        raise ValueError(f"condition must hold an integer per window, got dtype {cond.dtype}")
+    cp = cond[pop]
+    rec = cp >= 0
+    vals = np.unique(cp[rec])
+    if vals.size == 0:
+        raise ValueError("no window of the population has a recorded condition: every one is unrecorded (a tie, or "
+                         "no pixel with a value), so there is nothing to split the labels by")
+    has_unrecorded = bool((~rec).any())
+    K = int(vals.size) + int(has_unrecorded)
+    index = np.full(cp.size, K - 1, dtype=np.int64)             # unrecorded windows form the last condition
+    index[rec] = np.searchsorted(vals, cp[rec])
+    given = {}
+    for key, name in (condition_names or {}).items():
+        try:
+            v = int(key)
+            if isinstance(key, (bool, np.bool_)) or float(key) != v:
+                raise ValueError
+        except (TypeError, ValueError):
+            raise ValueError(f"condition_names maps a condition value (an integer) to its name; got the key {key!r}") from None
+        if v < 0:
+            raise ValueError(f"condition_names gives a name to {v}, but a negative value means unrecorded")
+        if not isinstance(name, str) or not name.strip():
+            raise ValueError(f"the name of condition {v} must be a non-empty string, got {name!r}")
+        if name == UNRECORDED:
+            raise ValueError(f'"{UNRECORDED}" is reserved for the windows with no recorded condition; name {v} otherwise')
+        given[v] = name
+    values = [int(v) for v in vals] + ([None] if has_unrecorded else [])
+    names = [given.get(int(v), str(int(v))) for v in vals] + ([UNRECORDED] if has_unrecorded else [])
+    if len(set(names)) != len(names):
+        dup = sorted({n for n in names if names.count(n) > 1})
+        raise ValueError(f"two conditions share the name {dup[0]!r}; condition names must be unique")
+    notes = [f"value {v} ({name}) holds no window" for v, name in sorted(given.items()) if v not in set(vals.tolist())]
+    sizes = np.bincount(index, minlength=K)
+    return index, values, names, sizes, notes
+
+
 def sample_for_estimation(margin, budget, design="confidence", p1=None, tiles=None, per_tile=M_PER_TILE,
-                          n_strata=N_STRATA, valid=None, seed=0):
+                          n_strata=N_STRATA, valid=None, seed=0, condition=None, condition_names=None):
     """Which windows to label so that `estimate_error_rate` can give an honest rate afterwards.
 
     margin  : per-window confidence margin, higher = more confident (assess's `arrays["confidence"]`, flattened)
@@ -371,14 +496,30 @@ def sample_for_estimation(margin, budget, design="confidence", p1=None, tiles=No
     design  : "confidence" (default) stratifies by margin quintile and allocates by Neyman's rule from the model's
               own top-1 probability `p1`, which it needs; "proportional" stratifies and allocates by size;
               "random" is a simple random sample; "tiles" labels `per_tile` windows in each of budget // per_tile
-              tiles drawn at random, which needs `tiles`, the tile id of every window
+              tiles drawn at random, which needs `tiles`, the tile id of every window; "condition" stratifies by
+              input condition and splits the labels equally (`equal_allocation`), which needs `condition`
     valid   : optional mask of windows that exist; invalid windows are never sampled and never counted
+    condition : optional input condition of every window (assess's `arrays["condition"]`, flattened), an integer,
+              negative where none is recorded. The "condition" design draws within it; "random" records it and
+              draws as without it; the other designs refuse it. Windows with no recorded condition stay in the
+              population as one more condition, "unrecorded", placed last
+    condition_names : optional {value: name}; names are unique and non-empty, "unrecorded" is reserved, and the
+              default name is str(value)
     Returns the sample: its `indices` into the flattened window grid, and everything the estimator needs.
     """
     margin = np.asarray(margin, dtype=np.float64).ravel()
     valid = np.ones(margin.size, bool) if valid is None else np.asarray(valid, bool).ravel()
     if valid.size != margin.size:
         raise ValueError(f"valid has {valid.size} entries for {margin.size} windows")
+    if condition is None and condition_names:
+        raise ValueError("condition_names names the values of `condition`, and no condition was given")
+    if condition is not None and design in ("confidence", "proportional"):
+        raise ValueError(f"the {design} design does not take a condition: {CONFIDENCE_REFUSAL}")
+    if condition is not None and design == "tiles":
+        raise ValueError("the tiles design does not take a condition: a tile can span conditions, and the tile interval "
+                         "is not graded per condition.")
+    if condition is None and design == "condition":
+        raise ValueError('design "condition" needs `condition`, the input condition of every window (--condition)')
     # a window with no finite margin is not in the population: assess's confidence is NaN at no-data, and until
     # 2026-09-23 those windows were sampled (38 of 100 on a map with 38% no-data), as review_set_check and
     # zone_order already excluded them
@@ -392,8 +533,17 @@ def sample_for_estimation(margin, budget, design="confidence", p1=None, tiles=No
         raise ValueError(f"budget must be between 1 and the {N} valid windows, got {budget}")
     rng = np.random.default_rng(seed)
     out = {"design": design, "budget": budget, "n_population": N, "seed": seed}
+    if condition is not None:
+        c_pop, c_values, c_names, c_sizes, c_notes = _condition_index(condition, pop, margin.size, condition_names)
     if design == "random":
-        out["indices"] = pop[rng.choice(N, budget, replace=False)]
+        out["indices"] = pop[rng.choice(N, budget, replace=False)]      # the same draw with or without a condition
+    elif design == "condition":
+        # a simple random sample within each condition; with one condition this is the random design's own draw
+        # (draw_stratified with one stratum returns the indices of rng.choice(N, budget))
+        alloc = equal_allocation(c_sizes, budget)
+        local = draw_stratified(rng, c_pop, c_sizes, alloc)
+        out.update({"indices": pop[local], "strata": c_pop, "strata_of_population": pop, "sizes": c_sizes.tolist(),
+                    "allocation": alloc.tolist(), "n_strata": int(c_sizes.size)})
     elif design in ("confidence", "proportional"):
         s = confidence_strata(margin[pop], n_strata)
         sizes = np.bincount(s, minlength=n_strata)
@@ -462,17 +612,108 @@ def sample_for_estimation(margin, budget, design="confidence", p1=None, tiles=No
                     # the population size of every tile, over valid windows: the ratio estimator weights by it
                     "tile_ids": [int(t) for t in by], "tile_valid_sizes": [int(v.size) for v in by.values()]})
     else:
-        raise ValueError(f'design must be "confidence", "proportional", "random" or "tiles", got {design!r}')
+        raise ValueError(f'design must be "confidence", "proportional", "random", "tiles" or "condition", got {design!r}')
     out["indices"] = np.asarray(out["indices"], int)
+    if condition is not None:
+        grid = np.full(margin.size, -1, dtype=np.int64)          # condition index per window, -1 outside the population
+        grid[pop] = c_pop
+        out["condition"] = {"values": c_values, "names": c_names, "sizes": c_sizes.tolist(),
+                            "n_labelled": np.bincount(grid[out["indices"]], minlength=c_sizes.size).tolist(),
+                            "allocation_rule": "equal" if design == "condition" else None}
+        out["condition_grid"] = grid
+        notes = list(c_notes)
+        if c_sizes.size == 1:
+            notes.insert(0, "one condition covers the whole population; this is a simple random sample")
+        if notes:
+            out["note"] = "; ".join(notes)
     return out
 
 
 # ----------------------------------------------------------------------------- estimates
+def _condition_guards(sample, idx):
+    """Check a sample that records an input condition against itself, and return (condition grid, values, names,
+    sizes). The condition is fixed at sampling time and the sidecar is its source of truth, so an edited or mixed-up
+    sample is refused here rather than estimated: a stray condition index would otherwise be dropped in silence."""
+    grid = np.asarray(sample["condition_grid"])
+    if grid.ndim != 1:
+        raise ValueError(f"condition_grid must be one value per window of the flattened grid; it has shape {grid.shape}")
+    if grid.dtype.kind not in "iu":
+        if grid.dtype.kind != "f" or not np.isfinite(grid).all() or not np.all(np.mod(grid, 1) == 0):
+            raise ValueError("condition_grid must hold an integer condition index per window, -1 outside the population")
+    grid = grid.astype(np.int64)
+    if (idx >= grid.size).any():
+        raise ValueError(f"a labelled window index lies beyond the {grid.size} windows of the condition grid")
+    if (grid[idx] < 0).any():
+        raise ValueError(f"{int((grid[idx] < 0).sum())} labelled window(s) sit outside the population the condition "
+                         "grid records")
+    N = int(sample["n_population"])
+    if int((grid >= 0).sum()) != N:
+        raise ValueError(f"the condition grid holds {int((grid >= 0).sum())} population windows, but the sample was drawn "
+                         f"from {N}")
+    info = sample.get("condition") or {}
+    values, names, sizes = list(info.get("values", [])), list(info.get("names", [])), list(info.get("sizes", []))
+    K = len(names)
+    if K == 0 or not len(values) == len(sizes) == K:
+        raise ValueError(f"the sample's condition block lists {len(values)} values, {K} names and {len(sizes)} sizes; "
+                         "they must be one per condition")
+    if int(grid.max()) >= K:
+        raise ValueError(f"the condition grid holds a condition index of {int(grid.max())}, but the sample names {K} "
+                         "conditions")
+    counted = np.bincount(grid[grid >= 0], minlength=K)
+    if [int(s) for s in sizes] != counted.tolist():
+        raise ValueError(f"the condition sizes {[int(s) for s in sizes]} are not the counts of the condition grid "
+                         f"{counted.tolist()}")
+    if sample.get("design") == "condition":
+        if int(sample.get("n_strata", -1)) != K:
+            raise ValueError(f"a condition sample has one stratum per condition: n_strata is {sample.get('n_strata')}, "
+                             f"with {K} conditions")
+        strata = np.asarray(sample["strata"])
+        if strata.size and (int(strata.min()) < 0 or int(strata.max()) >= K):
+            raise ValueError(f"a stratum id lies outside the {K} conditions (0 to {K - 1})")
+        sop = np.asarray(sample["strata_of_population"], int)
+        if (sop.size != strata.size or sop.size != N or (sop < 0).any() or (sop >= grid.size).any()
+                or not np.array_equal(strata.astype(np.int64), grid[sop])):
+            raise ValueError("the strata of this condition sample are not the conditions of its population windows")
+        if [int(s) for s in sample["sizes"]] != counted.tolist() or int(np.sum(sample["sizes"])) != N:
+            raise ValueError(f"the strata sizes {list(sample['sizes'])} do not add up to the population of {N} windows "
+                             "as the condition grid counts it")
+        n_c = np.bincount(grid[idx], minlength=K)
+        if n_c.tolist() != [int(a) for a in sample["allocation"]]:
+            raise ValueError(f"the labelled windows per condition {n_c.tolist()} are not the design's allocation "
+                             f"{[int(a) for a in sample['allocation']]}")
+    return grid, values, names, [int(s) for s in sizes]
+
+
+def _per_condition(grid, values, names, sizes, idx, wrong, N, whole):
+    """Each condition's error rate with its exact interval. Under the condition design n_c is fixed; under a random
+    sample the labels that fall in c are a simple random sample of c given their count n_c. Either way
+    `hypergeom_interval(k_c, n_c, N_c)` covers at least 95%."""
+    cidx = grid[idx]
+    method = "exact hypergeometric interval (the labels in the condition are a simple random sample of it)"
+    per, outside = {}, []
+    for c, (v, name, Nc) in enumerate(zip(values, names, sizes)):
+        m = cidx == c
+        n_c, k_c = int(m.sum()), int(wrong[m].sum())
+        row = {"value": v, "n_population": int(Nc), "share_of_map": int(Nc) / N, "n_labelled": n_c, "n_wrong": k_c}
+        lo, hi = hypergeom_interval(k_c, n_c, int(Nc))            # (0, 1) with no label
+        row.update({"estimate": k_c / n_c if n_c else None, "low": lo, "high": hi, "half_width": (hi - lo) / 2,
+                    "method": method})
+        if n_c == 0:
+            row["note"] = "no labelled window fell in this condition; nothing can be said about it"
+        elif not lo <= whole <= hi:
+            outside.append(name)
+        per[name] = row
+    return per, outside
+
+
 def estimate_error_rate(sample, wrong):
     """The error rate of the whole map from the labelled sample, with the interval its design earns.
 
     sample : what `sample_for_estimation` returned
     wrong  : 0/1 per labelled window, in the order of sample["indices"]: 1 where the label disagrees with the map
+
+    A sample that records an input condition (`condition_grid`) also gets each condition's rate with its exact
+    interval (`per_condition`); one that does not gets `scope`, what a whole-map rate does not say (exp88).
     """
     wrong = np.asarray(wrong, dtype=np.float64).ravel()
     idx = np.asarray(sample["indices"], int)
@@ -487,7 +728,61 @@ def estimate_error_rate(sample, wrong):
         raise ValueError("a sampled window index is negative; indices point into the flattened window grid")
     N, design = int(sample["n_population"]), sample["design"]
     out = {"design": design, "n_labelled": int(idx.size), "n_population": N, "nominal_coverage": 0.95}
-    if design == "random":
+    by_condition = sample.get("condition_grid") is not None
+    if design == "condition" and not by_condition:
+        raise ValueError('a sample of the "condition" design carries its condition_grid, and this one has none')
+    if by_condition:
+        if design not in ("random", "condition"):
+            raise ValueError(f"an input condition is recorded only with the random and condition designs; this sample "
+                             f"was drawn with the {design!r} design")
+        grid, c_values, c_names, c_sizes = _condition_guards(sample, idx)
+    if design == "condition" and len(c_names) == 1:
+        # one condition is the whole population and the draw was the random design's own: the same numbers
+        lo, hi = hypergeom_interval(int(wrong.sum()), idx.size, N)
+        out.update({"estimate": float(wrong.mean()), "low": lo, "high": hi,
+                    "method": "exact hypergeometric interval (simple random sample of a finite map)"})
+    elif design == "condition":
+        pop = np.asarray(sample["strata_of_population"], int)
+        pos = {int(g): i for i, g in enumerate(pop)}
+        stray = [int(g) for g in idx if int(g) not in pos]
+        if stray:
+            raise ValueError(f"{len(stray)} sampled window(s), first {stray[0]}, are not in the population this sample "
+                             "was drawn from (an invalid window, or a sample built against another mask)")
+        local = np.array([pos[int(g)] for g in idx])
+        err = np.zeros(pop.size)
+        err[local] = wrong
+        strata, sizes = np.asarray(sample["strata"]), list(sample["sizes"])
+        # theta = sum_c W_c k_c / n_c and v = sum_c W_c^2 (1 - n_c / N_c) p_c (1 - p_c) / (n_c - 1), W_c = N_c / N:
+        # the confidence design's stratified estimator with the conditions as strata, and its interval unchanged
+        est_, lo, hi, _, n_eff = stratified_interval_wilson(err, strata, local, sizes, N)
+        var = stratified_mean_and_variance(err, strata, local, sizes, N)[1]
+        n_h = np.bincount(strata[local], minlength=len(sizes))
+        # a condition labelled in full (a one-window condition, say) has no sampling error and is not starved
+        starved = int(((n_h < MIN_PER_STRATUM) & (n_h < np.asarray(sizes))).sum())
+        out.update({"estimate": est_, "low": lo, "high": hi, "starved_strata": starved, "effective_n": n_eff,
+                    "design_variance": var,
+                    "method": "stratified by input condition; Wilson interval on the design's effective sample size"})
+        notes = []
+        partial = n_h < np.asarray(sizes)
+        if est_ in (0.0, 1.0):
+            notes.append(f"{'no' if est_ == 0 else 'every'} labelled window was wrong, so the design's variance is zero and "
+                         f"the interval is the simple-random Wilson bound at {idx.size} labels; the stratification "
+                         "cannot narrow it without an observed error")
+        elif var == 0 and partial.any():
+            k_h = np.bincount(strata[local], weights=wrong, minlength=len(sizes))
+            pure = bool(np.all((k_h == 0) | (k_h == n_h)))
+            # the spec's wording holds when every condition is pure; when a condition labelled in full is mixed, its
+            # variance is zero because nothing in it is unobserved, and the note says only what is true
+            notes.append(("every condition's labels were all right or all wrong" if pure else
+                          "every condition not labelled in full had its labels all right or all wrong") +
+                         f", so the design's variance is zero; the interval is the simple-random Wilson bound at "
+                         f"{idx.size} labels")
+        if starved:
+            notes.append(f"{starved} of {sample['n_strata']} strata had fewer than {MIN_PER_STRATUM} labelled windows "
+                         "and contribute no variance; the interval is narrower than it should be")
+        if notes:
+            out["warning"] = "; ".join(notes)
+    elif design == "random":
         # exact (review of 2026-09-23): the count of wrong windows in a simple random sample is hypergeometric, and
         # the finite-population Wilson form covered 0.79 one window short of a census and 0.92-0.94 at realistic
         # cells with few errors; the tail inversion covers at least 95% on every (N, K, n), as the per-class user's
@@ -544,6 +839,13 @@ def estimate_error_rate(sample, wrong):
     else:
         raise ValueError(f"unknown design {design!r}")
     out["half_width"] = (out["high"] - out["low"]) / 2
+    if by_condition:
+        per, outside = _per_condition(grid, c_values, c_names, c_sizes, idx, wrong, N, out["estimate"])
+        note = CONDITION_NOTE + (" " + CONDITION_NOT_GRADED if design == "condition" and len(c_names) >= 2 else "")
+        out.update({"by_condition": True, "per_condition": per, "condition_note": note,
+                    "outside_condition_intervals": outside})
+    else:
+        out["scope"] = SCOPE_ESTIMATE
     return out
 
 
@@ -764,7 +1066,7 @@ def _ht_ratio(num, den, strata, picked, sizes):
 def estimate_per_class(sample, reference, map_class, n_classes=None, interval="wilson"):
     """User's accuracy, producer's accuracy and error-adjusted share per class, from the labelled sample.
 
-    sample    : what `sample_for_estimation` returned (designs "random", "confidence" or "proportional")
+    sample    : what `sample_for_estimation` returned (designs "random", "confidence", "proportional" or "condition")
     reference : the reference class of every labelled window, in the order of sample["indices"], integers >= 0
     map_class : the map's class of EVERY window (the flattened grid `sample` was drawn on); negative at no-data,
                 and the count of non-negative entries must equal the population the sample was drawn from
@@ -774,7 +1076,8 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
     `interval` does not apply to it; the class shares are post-stratified by
     map class (Olofsson et al. 2014, eq. 4 and 5) and the producer's accuracy follows their eq. 7. Under the
     confidence design every quantity is a ratio of Horvitz-Thompson totals over the margin strata with a
-    linearised variance, because a class cuts across strata. Intervals are Wilson on the effective sample size
+    linearised variance, because a class cuts across strata; the condition design runs the same estimators with the
+    input conditions as strata, which no experiment has graded, and the method says so. Intervals are Wilson on the effective sample size
     (interval="wilson", the default; "wald" is the field's convention and is kept for the record, where exp81
     shows it collapsing to a point on classes with no sampled error). Tile samples are refused: the per-class
     cluster form is not graded yet. A class with fewer than MIN_PER_CLASS labelled windows carries a warning; a map class no
@@ -802,8 +1105,10 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
     if design == "tiles":
         raise ValueError("per-class accuracy from a tile sample is not graded yet (exp81 covers random and confidence "
                          "designs); label a random or confidence-designed sample")
-    if design not in ("random", "confidence", "proportional"):
+    if design not in ("random", "confidence", "proportional", "condition"):
         raise ValueError(f"unknown design {design!r}")
+    if design == "condition":
+        _condition_guards(sample, idx)                             # a stray condition id would be dropped in silence
     if design == "random":
         pop = np.flatnonzero(mc >= 0)
     else:
@@ -909,7 +1214,10 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
             tot, v = _ht_total(is_ref, strata, local, sizes)
             row["reference_share"] = dict(zip(("estimate", "low", "high"), _interval(tot / N, v / N ** 2, idx.size, interval)))
             per[int(c)] = row
-        method = "stratified by confidence margin: ratios of Horvitz-Thompson totals with linearised variance; shares as Horvitz-Thompson totals"
+        method = ("stratified by input condition: ratios of Horvitz-Thompson totals with linearised variance; shares as "
+                  "Horvitz-Thompson totals; with input conditions as strata these intervals have not been graded"
+                  if design == "condition" else
+                  "stratified by confidence margin: ratios of Horvitz-Thompson totals with linearised variance; shares as Horvitz-Thompson totals")
     for c, row in per.items():
         notes, codes = [], []
         small = [k for k in ("n_labelled_map_class", "n_labelled_reference_class") if row[k] < MIN_PER_CLASS]
@@ -954,7 +1262,7 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
             in_thin = float((thin[strata[m_pop == c]]).mean()) if (m_pop == c).any() else 0.0
             if in_thin > 0.5:
                 codes.append("thin strata")
-                notes.append(f"{100 * in_thin:.0f}% of this class sits in confidence strata the design samples at under half the "
+                notes.append(f"{100 * in_thin:.0f}% of this class sits in {'' if design == 'condition' else 'confidence '}strata the design samples at under half the "
                              "overall rate; if its errors are rare there they are often not drawn, and the interval is then "
                              "optimistic")
         if notes:
@@ -1153,7 +1461,8 @@ def certify_zone(margin, indices, wrong, alpha, delta=ZONE_DELTA, rule="prefix",
     cov, sizes, c_min = zone_levels(N, idx.size, alpha, delta, grid)
     out = {"rule": rule, "alpha": float(alpha), "delta": float(delta), "n_population": N, "n_labelled": int(idx.size),
            "min_labels_to_certify": min_labels_to_certify(alpha, delta), "c_min": float(c_min), "levels": [],
-           "coverage": None, "n_zone": None, "threshold": None, "upper_bound": None}
+           "coverage": None, "n_zone": None, "threshold": None, "upper_bound": None,
+           "scope": SCOPE_CERTIFY}             # what a zone over the whole map does not say (exp88)
     if not cov:
         out["note"] = (f"{idx.size} labels cannot certify any zone at alpha={alpha:g}, delta={delta:g}: even a zone with "
                        f"no error among its labels needs {out['min_labels_to_certify']} of them, more than the budget")
@@ -1191,3 +1500,85 @@ def certify_zone(margin, indices, wrong, alpha, delta=ZONE_DELTA, rule="prefix",
         out["note"] = out.get("note", "") + (f"; {tied} windows share the threshold margin and only {inside} of them are inside "
                                             "the zone, so the zone is the set returned, not every window at or above the threshold")
     return out
+
+
+def certify_by_condition(sample, wrong, margin, alpha, delta=ZONE_DELTA, rule="prefix", grid=ZONE_GRID, valid=None):
+    """A certified zone inside each input condition, with delta split so that all the statements hold together.
+
+    sample  : a sample of the "random" or "condition" design that records a condition (`condition_grid`)
+    wrong   : 0/1 per labelled window, in the order of sample["indices"]
+    margin  : per-window confidence on the flattened grid the sample was drawn on; `valid` as for `certify_zone`
+
+    Why it is valid. L, the number of conditions holding at least min_labels_to_certify(alpha, delta) labels, is
+    fixed by the label counts before any label is read. Given the counts, the labels in each condition are a simple
+    random sample of it, so `certify_zone` inside condition c at delta / L fails with probability at most delta / L,
+    and by the union bound all L statements hold together except on at most delta of samples. On that event the
+    certified windows taken together are wrong at most alpha of the time: the union of the zones has error rate
+    sum |Z_c| R_c / sum |Z_c| <= alpha. A condition with fewer labels is not tested.
+
+    Returns the whole-map keys of `certify_zone` with `coverage`, `n_zone`, `threshold` and `upper_bound` None (the
+    union of the zones is not "the most confident share of the map"), and per condition the output of
+    `certify_zone` inside it. `zone_indices_in_order` concatenates the certified zones."""
+    design = sample.get("design")
+    if design not in ("random", "condition"):
+        raise ValueError(f"certifying per input condition needs a random or condition-designed sample; this one was drawn "
+                         f"with the {design!r} design. The guarantee rests on the labelled windows inside each zone being "
+                         "a random sample of that zone, which a draw stratified by confidence or by tile is not")
+    if sample.get("condition_grid") is None:
+        raise ValueError("this sample records no input condition (condition_grid); certify the map as a whole with "
+                         "certify_zone, or draw the sample with a condition")
+    margin = np.asarray(margin, dtype=np.float64).ravel()
+    valid = np.ones(margin.size, bool) if valid is None else np.asarray(valid, bool).ravel()
+    idx = np.asarray(sample["indices"], int).ravel()
+    wrong = np.asarray(wrong, dtype=np.float64).ravel()
+    if wrong.size != idx.size:
+        raise ValueError(f"{wrong.size} labels for {idx.size} labelled windows")
+    if not np.isin(wrong, (0.0, 1.0)).all():
+        raise ValueError("wrong must be 0 or 1 per window")
+    if not (0 < alpha < 1 and 0 < delta < 1):
+        raise ValueError(f"alpha and delta must be in (0, 1), got {alpha}, {delta}")
+    if rule not in ZONE_RULES:
+        raise ValueError(f"rule must be one of {ZONE_RULES}, got {rule!r}")
+    if (idx < 0).any():
+        raise ValueError("a labelled window index is negative; indices point into the flattened window grid")
+    if np.unique(idx).size != idx.size:
+        raise ValueError(f"{idx.size - np.unique(idx).size} window(s) appear more than once")
+    cgrid, values, names, sizes = _condition_guards(sample, idx)
+    if valid.size != margin.size or margin.size != cgrid.size or not np.array_equal(
+            np.flatnonzero(valid & np.isfinite(margin)), np.flatnonzero(cgrid >= 0)):
+        raise ValueError("the map is not the one the sample was drawn on: its valid windows are not the population the "
+                         "sample's condition grid records")
+    N = int(sample["n_population"])
+    K = len(names)
+    n_c = np.bincount(cgrid[idx], minlength=K)
+    b1 = min_labels_to_certify(alpha, delta)
+    tested = [c for c in range(K) if n_c[c] >= b1]               # fixed by the counts, before any label is read
+    L = len(tested)
+    d = delta / L if L else None
+    per, zones, n_cert = {}, [], 0
+    for c in range(K):
+        if c in tested:
+            m = cgrid[idx] == c
+            r = certify_zone(margin, idx[m], wrong[m], alpha, delta=d, rule=rule, grid=grid, valid=valid & (cgrid == c))
+            r.pop("scope", None)
+            r.update({"value": values[c], "tested": True, "reason": None})
+            if r["coverage"] is not None:
+                n_cert += int(r["n_zone"])
+                zones.append(np.asarray(r["zone_indices_in_order"], int))
+        else:
+            r = {"value": values[c], "tested": False, "delta": None, "n_population": int(sizes[c]),
+                 "n_labelled": int(n_c[c]), "coverage": None, "n_zone": None, "threshold": None, "upper_bound": None,
+                 "levels": [],
+                 "reason": f"{int(n_c[c])} labels; certifying any zone at alpha {alpha:g} needs at least {b1}"}
+        per[names[c]] = r
+    if L:
+        note = FAMILY_NOTE.format(L=L, b1=b1, d=d, delta=delta, alpha=alpha)
+    else:
+        # FAMILY_NOTE divides delta over the tested conditions; with none tested it has no delta to state
+        note = (f"Certified per input condition. No condition holds the {b1} labels that certifying any zone at alpha "
+                f"{alpha:g} needs, so none was tested and nothing is certified.")
+    return {"rule": rule, "alpha": float(alpha), "delta": float(delta), "n_population": N, "n_labelled": int(idx.size),
+            "min_labels_to_certify": b1, "levels": [], "coverage": None, "n_zone": None, "threshold": None,
+            "upper_bound": None, "by_condition": True, "delta_per_condition": d, "n_conditions_tested": L,
+            "certified_share_of_map": n_cert / N if zones else None, "n_certified": n_cert, "per_condition": per,
+            "zone_indices_in_order": np.concatenate(zones) if zones else np.zeros(0, int), "note": note}
