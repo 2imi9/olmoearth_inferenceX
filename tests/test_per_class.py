@@ -201,3 +201,52 @@ def test_the_few_errors_warning_fires_on_one_to_four_sampled_errors_and_not_on_z
         out = est.estimate_per_class(sample, ref_c0, mc, n_classes=2)
         codes = out["per_class"][1].get("warning_codes", [])
         assert ("few errors" in codes) is expect, (n_missed, codes)
+
+
+# ----------------------------------------------------------------------------- the input-condition design
+def _wilson(p, n):
+    z = est.Z95
+    d = 1 + z * z / n
+    centre, half = (p + z * z / (2 * n)) / d, z * np.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / d
+    return max(0.0, centre - half), min(1.0, centre + half)
+
+
+def test_per_class_under_the_condition_design():
+    """Per-class accuracy is allowed under the condition design, with the input conditions as the strata of the same
+    Horvitz-Thompson estimators, and the method says it is not graded. The numbers are written out here per
+    stratum, without the package's helpers; the wording names the design."""
+    cond = np.array([0] * 5 + [1] * 4 + [-1] * 3)                     # the strata above, as conditions (the third unrecorded)
+    s = est.sample_for_estimation(np.linspace(1, 0, N), 6, design="condition", condition=cond)
+    assert s["allocation"] == list(ALLOC) and np.array_equal(s["strata"], STRATA)
+    local = np.array([0, 3, 5, 7, 9, 11])
+    out = est.estimate_per_class(dict(s, indices=local), REF[local], MAP)
+    assert out["method"].startswith("stratified by input condition: ratios of Horvitz-Thompson totals")
+    assert "not been graded" in out["method"] and "confidence margin" not in out["method"]
+    c = 1
+    num, den = ((MAP == c) & (REF == c)).astype(float), (MAP == c).astype(float)
+    tot = lambda v: sum(Nh * v[local][STRATA[local] == h].mean() for h, Nh in enumerate(SIZES))
+    R = tot(num) / tot(den)                                             # the user's accuracy, a ratio of HT totals
+    z = (num - R * den) / tot(den)
+    var = sum(Nh ** 2 * (1 - 2 / Nh) * z[local][STRATA[local] == h].var(ddof=1) / 2 for h, Nh in enumerate(SIZES))
+    ua = out["per_class"][c]["user_accuracy"]
+    assert abs(ua["estimate"] - R) < 1e-12
+    n_eff = R * (1 - R) / var if var > 0 and 0 < R < 1 else float(((MAP[local] == c)).sum())
+    assert (ua["low"], ua["high"]) == pytest.approx(_wilson(R, n_eff), abs=1e-12)
+    is_ref = (REF == c).astype(float)
+    assert abs(out["per_class"][c]["producer_accuracy"]["estimate"] - tot(num) / tot(is_ref)) < 1e-12
+    assert abs(out["per_class"][c]["reference_share"]["estimate"] - tot(is_ref) / N) < 1e-12
+    # the thin-strata note under this design says "strata", not "confidence strata": a condition three times the
+    # others' size gets a third of the labels, under half the overall rate
+    rng = np.random.default_rng(2)
+    cond2 = np.r_[np.zeros(600, int), np.ones(60, int), np.full(60, 2)]
+    mc = np.where(cond2 == 0, 0, rng.integers(0, 3, cond2.size))
+    ref = np.where(rng.random(cond2.size) < 0.8, mc, rng.integers(0, 3, cond2.size))
+    s2 = est.sample_for_estimation(np.linspace(1, 0, cond2.size), 90, design="condition", condition=cond2)
+    row = est.estimate_per_class(s2, ref[s2["indices"]], mc)["per_class"][0]
+    assert "thin strata" in row["warning_codes"]
+    assert "of this class sits in strata the design samples at under half the overall rate" in row["warning"]
+    assert "confidence strata" not in row["warning"]
+    # under a random sample with a condition recorded, the per-class table is the random design's, unchanged
+    r1 = est.sample_for_estimation(np.linspace(1, 0, cond2.size), 90, design="random", seed=4)
+    r2 = est.sample_for_estimation(np.linspace(1, 0, cond2.size), 90, design="random", seed=4, condition=cond2)
+    assert est.estimate_per_class(r1, ref[r1["indices"]], mc) == est.estimate_per_class(r2, ref[r2["indices"]], mc)

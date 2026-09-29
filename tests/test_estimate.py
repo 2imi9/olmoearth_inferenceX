@@ -570,3 +570,36 @@ def test_a_census_is_never_refused_as_a_review_set():
     # one window short of a census is still graded as a sample, and the tool's review set is still refused
     assert not est.review_set_check(np.arange(99), m)["looks_like_a_review_set"]
     assert est.review_set_check(np.argsort(m)[:10], m)["looks_like_a_review_set"]
+
+
+# ----------------------------------------------------------------------------- the input-condition design on exp88's map
+def test_the_condition_design_on_exp88s_mixed_map():
+    """exp88's mixed PASTIS map (Base, probe seed 0): half the tiles read without the optical input, rebuilt from the
+    recorded units with exp88's own mixed_map. The condition design with the cloud flag as the condition, 200 seeds
+    at 300 labels: each part's exact interval and the whole-map stratified interval cover their truth on at least
+    0.93 of draws. A check of the tool on one real map, not a recorded claim."""
+    import sys
+    sys.path.insert(0, os.path.join(ROOT, "exp"))
+    import exp88_missing_modality as e88
+    d = np.load(os.path.join(ROOT, "exp", "out", "exp88_units.npz"))
+    base = "olmoearth_base/pastis"
+    units = {c: {k: d[f"{base}/seed0/{c}/{k}"] for k in ("margin", "p1", "err")} for c in ("full", "optical_missing")}
+    n_tiles = json.load(open(os.path.join(ROOT, "exp", "out", "exp88_summary.json")))[
+        "results"]["olmoearth_base"]["seeds"]["0"]["mixed_map"]["n_tiles"]
+    mm = e88.mixed_map(units["full"], units["optical_missing"], d[f"{base}/tile"], n_tiles)
+    assert np.array_equal(mm["cloudy_tiles"], d[f"{base}/cloudy_tiles"])        # the recorded mix, rebuilt
+    err, cond = (mm["err"] > 0.5).astype(float), mm["cloudy"].astype(int)
+    truth = {"whole": err.mean(), "clear": err[cond == 0].mean(), "cloudy": err[cond == 1].mean()}
+    assert (round(truth["cloudy"], 3), round(truth["clear"], 3)) == (0.741, 0.197)   # exp88's 74.1% and 19.7%
+    cover = {k: 0 for k in truth}
+    for seed in range(200):
+        s = ox.sample_for_estimation(mm["margin"], 300, design="condition", condition=cond,
+                                     condition_names={0: "clear", 1: "cloudy"}, seed=seed)
+        assert s["allocation"] == [150, 150] and s["condition"]["names"] == ["clear", "cloudy"]
+        r = ox.estimate_error_rate(s, err[s["indices"]])
+        cover["whole"] += r["low"] <= truth["whole"] <= r["high"]
+        for part in ("clear", "cloudy"):
+            row = r["per_condition"][part]
+            cover[part] += row["low"] <= truth[part] <= row["high"]
+    for k, v in cover.items():
+        assert v / 200 >= 0.93, (k, v / 200)
