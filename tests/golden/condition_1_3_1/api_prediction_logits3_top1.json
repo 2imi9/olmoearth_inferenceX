@@ -1,0 +1,269 @@
+{
+ "n_windows": 256,
+ "patch_px": 4,
+ "n_classes": 3,
+ "confidence_quantiles": {
+  "0.05": 0.6444076010669391,
+  "0.25": 0.7051858481204529,
+  "0.5": 0.7616487700338671,
+  "0.75": 0.8366027038263151,
+  "0.95": 0.9421656299703852
+ },
+ "boundary_window_fraction": 0.54296875,
+ "class_share": {
+  "0": 0.34765625,
+  "1": 0.1640625,
+  "2": 0.48828125
+ },
+ "signal": "1 - max probability (from logits)",
+ "review_order": "confidence",
+ "warnings": [
+  "9 windows have an evenly split reference and no majority label; they are left unscored",
+  "the reference covers 247 of the 256 valid windows; error capture at each budget is measured over those, so it is not a property of the review set of the same budget above"
+ ],
+ "review_sets": {
+  "0.01": {
+   "n_windows": 3,
+   "windows_rowcol": [
+    [
+     10,
+     4
+    ],
+    [
+     4,
+     8
+    ],
+    [
+     10,
+     5
+    ]
+   ],
+   "boundary_share_in_set": 1.0
+  },
+  "0.05": {
+   "n_windows": 13,
+   "windows_rowcol": [
+    [
+     10,
+     4
+    ],
+    [
+     4,
+     8
+    ],
+    [
+     10,
+     5
+    ],
+    [
+     5,
+     7
+    ],
+    [
+     8,
+     7
+    ],
+    [
+     2,
+     10
+    ],
+    [
+     2,
+     11
+    ],
+    [
+     15,
+     11
+    ],
+    [
+     6,
+     7
+    ],
+    [
+     0,
+     13
+    ],
+    [
+     15,
+     14
+    ],
+    [
+     5,
+     6
+    ],
+    [
+     7,
+     8
+    ]
+   ],
+   "boundary_share_in_set": 0.9230769230769231
+  },
+  "0.1": {
+   "n_windows": 26,
+   "windows_rowcol": [
+    [
+     10,
+     4
+    ],
+    [
+     4,
+     8
+    ],
+    [
+     10,
+     5
+    ],
+    [
+     5,
+     7
+    ],
+    [
+     8,
+     7
+    ],
+    [
+     2,
+     10
+    ],
+    [
+     2,
+     11
+    ],
+    [
+     15,
+     11
+    ],
+    [
+     6,
+     7
+    ],
+    [
+     0,
+     13
+    ],
+    [
+     15,
+     14
+    ],
+    [
+     5,
+     6
+    ],
+    [
+     7,
+     8
+    ],
+    [
+     10,
+     7
+    ],
+    [
+     9,
+     4
+    ],
+    [
+     7,
+     3
+    ],
+    [
+     3,
+     10
+    ],
+    [
+     0,
+     12
+    ],
+    [
+     15,
+     15
+    ],
+    [
+     6,
+     6
+    ],
+    [
+     5,
+     8
+    ],
+    [
+     15,
+     12
+    ],
+    [
+     9,
+     5
+    ],
+    [
+     13,
+     10
+    ],
+    [
+     15,
+     0
+    ],
+    [
+     9,
+     6
+    ]
+   ],
+   "boundary_share_in_set": 0.9230769230769231
+  }
+ },
+ "confidence_distinct_pooled": 256,
+ "pixels_outside_window_grid": 0,
+ "against_reference": {
+  "n_windows_scored": 247,
+  "n_windows_reference_tied": 9,
+  "error_rate": 0.08502024291497975,
+  "aurc_confidence": 0.03276282064798673,
+  "population": "windows with both a prediction and a reference; the capture budgets below are fractions of these, not of the review sets above",
+  "excess_aurc_confidence": 0.028869720059534847,
+  "aurc_boundary": 0.026894873027166262,
+  "aurc_random_expected": 0.08502024291497975,
+  "error_capture_at_budget": {
+   "0.01": {
+    "n_reviewed": 2,
+    "errors_captured_fraction": 0.0,
+    "precision_in_set": 0.0
+   },
+   "0.05": {
+    "n_reviewed": 12,
+    "errors_captured_fraction": 0.09523809523809523,
+    "precision_in_set": 0.16666666666666666
+   },
+   "0.1": {
+    "n_reviewed": 25,
+    "errors_captured_fraction": 0.23809523809523808,
+    "precision_in_set": 0.2
+   }
+  },
+  "boundary_share_among_errors": 0.9523809523809523,
+  "confusion_pairs": {
+   "n_errors": 21,
+   "n_pairs": 5,
+   "pairs": [
+    {
+     "predicted": 0,
+     "reference": 1,
+     "n": 7,
+     "share": 0.3333333333333333
+    },
+    {
+     "predicted": 1,
+     "reference": 2,
+     "n": 5,
+     "share": 0.23809523809523808
+    },
+    {
+     "predicted": 2,
+     "reference": 1,
+     "n": 4,
+     "share": 0.19047619047619047
+    }
+   ],
+   "share_of_errors_in_top": 0.7619047619047619
+  },
+  "caveat": "reference-product labels can flatter boundary-type signals (exp18); treat as expert truth only if it is"
+ },
+ "confidence_scale": "geometric mean of the top-1 probability over the window's pixels"
+}

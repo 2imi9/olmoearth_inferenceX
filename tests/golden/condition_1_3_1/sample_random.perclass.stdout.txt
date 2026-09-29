@@ -1,0 +1,12 @@
+error rate 19.0%, 95% interval 15.4% to 23.0% (half-width 3.8 points), from 300 labelled windows of 1024; exact hypergeometric interval (simple random sample of a finite map)
+  class 0: user's accuracy n/a, producer's n/a, share of map 0.0% -> error-adjusted 0% (0-1)  [warning: few labels]
+  class 1: user's accuracy 100% (38-100), producer's 20% (14-26), share of map 1.3% -> error-adjusted 7% (5-9)  [warning: few labels]
+  class 2: user's accuracy n/a, producer's n/a, share of map 0.2% -> error-adjusted 0% (0-1)  [warning: few labels]
+  class 3: user's accuracy n/a, producer's n/a, share of map 0.0% -> error-adjusted 0% (0-1)  [warning: few labels]
+  class 4: user's accuracy 95% (90-98), producer's 79% (74-83), share of map 33.8% -> error-adjusted 41% (38-43)
+  class 5: user's accuracy 0% (0-50), producer's n/a, share of map 1.6% -> error-adjusted 0% (0-1)  [warning: few labels, few errors]
+  class 6: user's accuracy 31% (21-43), producer's 94% (76-99), share of map 16.5% -> error-adjusted 5% (4-8)  [warning: few labels, few errors]
+  class 7: user's accuracy 92% (87-95), producer's 91% (87-94), share of map 46.6% -> error-adjusted 47% (44-49)
+  class 8: user's accuracy 0% (0-0), producer's n/a, share of map 0.1% -> error-adjusted 0% (0-1)  [warning: few labels, few errors]
+warning: map class(es) [2] have no labelled window; the reference shares below are short by their weight (0.002 of the map)
+wrote <TMP>/sample_random_perclass.json

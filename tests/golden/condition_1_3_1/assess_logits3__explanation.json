@@ -1,0 +1,469 @@
+{
+ "cues": [
+  "boundary",
+  "low_confidence"
+ ],
+ "quotes": {
+  "boundary": "sits on a prediction boundary (75% of error windows vs 21% of correct ones, 3.5x; Sen1Floods11 Bolivia hand labels; exp18, exp36, exp37); on the suite's seven segmentation tasks 1.2x to 8.1x (exp82)",
+  "low_confidence": "is among the least confident 20% of the scene's windows (ties included) (59% of error windows vs 16% of correct ones, 3.6x; Sen1Floods11 Bolivia hand labels; exp37); on the suite's seven segmentation tasks 1.4x to 3.4x (exp82)"
+ },
+ "n_windows": 256,
+ "scene_share": {
+  "boundary": 0.5390625,
+  "low_confidence": 0.203125
+ },
+ "budgets": {
+  "0.01": {
+   "n_windows": 3,
+   "windows": [
+    {
+     "row": 10,
+     "col": 4,
+     "confidence": 0.7538548195007024,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 8,
+     "col": 7,
+     "confidence": 0.7825778833648656,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 10,
+     "col": 5,
+     "confidence": 0.8148738806594338,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    }
+   ],
+   "count": {
+    "boundary": 3,
+    "low_confidence": 3
+   },
+   "share_in_set": {
+    "boundary": 1.0,
+    "low_confidence": 1.0
+   },
+   "cooccurrence": [
+    [
+     3,
+     3
+    ],
+    [
+     3,
+     3
+    ]
+   ],
+   "n_without_cue": 0,
+   "windows_without_cue": []
+  },
+  "0.05": {
+   "n_windows": 13,
+   "windows": [
+    {
+     "row": 10,
+     "col": 4,
+     "confidence": 0.7538548195007024,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 8,
+     "col": 7,
+     "confidence": 0.7825778833648656,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 10,
+     "col": 5,
+     "confidence": 0.8148738806594338,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 4,
+     "col": 8,
+     "confidence": 0.9460216410225257,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 5,
+     "col": 7,
+     "confidence": 0.954162625130266,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 10,
+     "col": 7,
+     "confidence": 1.0448827659711242,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 0,
+     "col": 13,
+     "confidence": 1.0465211054543033,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 9,
+     "col": 4,
+     "confidence": 1.052332312334329,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 6,
+     "col": 7,
+     "confidence": 1.0594891275977716,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 15,
+     "col": 14,
+     "confidence": 1.0606955034309067,
+     "cues": [
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 2,
+     "col": 10,
+     "confidence": 1.080474663991481,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 15,
+     "col": 11,
+     "confidence": 1.1031350009143353,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 7,
+     "col": 8,
+     "confidence": 1.1264161602593958,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    }
+   ],
+   "count": {
+    "boundary": 12,
+    "low_confidence": 13
+   },
+   "share_in_set": {
+    "boundary": 0.9230769230769231,
+    "low_confidence": 1.0
+   },
+   "cooccurrence": [
+    [
+     12,
+     12
+    ],
+    [
+     12,
+     13
+    ]
+   ],
+   "n_without_cue": 0,
+   "windows_without_cue": []
+  },
+  "0.1": {
+   "n_windows": 26,
+   "windows": [
+    {
+     "row": 10,
+     "col": 4,
+     "confidence": 0.7538548195007024,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 8,
+     "col": 7,
+     "confidence": 0.7825778833648656,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 10,
+     "col": 5,
+     "confidence": 0.8148738806594338,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 4,
+     "col": 8,
+     "confidence": 0.9460216410225257,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 5,
+     "col": 7,
+     "confidence": 0.954162625130266,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 10,
+     "col": 7,
+     "confidence": 1.0448827659711242,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 0,
+     "col": 13,
+     "confidence": 1.0465211054543033,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 9,
+     "col": 4,
+     "confidence": 1.052332312334329,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 6,
+     "col": 7,
+     "confidence": 1.0594891275977716,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 15,
+     "col": 14,
+     "confidence": 1.0606955034309067,
+     "cues": [
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 2,
+     "col": 10,
+     "confidence": 1.080474663991481,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 15,
+     "col": 11,
+     "confidence": 1.1031350009143353,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 7,
+     "col": 8,
+     "confidence": 1.1264161602593958,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 13,
+     "col": 10,
+     "confidence": 1.1288010757416487,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 6,
+     "col": 5,
+     "confidence": 1.1289473969954997,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 9,
+     "col": 5,
+     "confidence": 1.1397997183958068,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 15,
+     "col": 0,
+     "confidence": 1.1551668629981577,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 2,
+     "col": 11,
+     "confidence": 1.1630674842745066,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 2,
+     "col": 13,
+     "confidence": 1.1663232054561377,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 6,
+     "col": 6,
+     "confidence": 1.1725506075890735,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 1,
+     "col": 13,
+     "confidence": 1.1731166392564774,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 3,
+     "col": 10,
+     "confidence": 1.175343262962997,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 0,
+     "col": 11,
+     "confidence": 1.1770032907370478,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 2,
+     "col": 9,
+     "confidence": 1.1802437806036323,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 11,
+     "col": 8,
+     "confidence": 1.1858448628336191,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 9,
+     "col": 6,
+     "confidence": 1.2301718723028898,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    }
+   ],
+   "count": {
+    "boundary": 25,
+    "low_confidence": 26
+   },
+   "share_in_set": {
+    "boundary": 0.9615384615384616,
+    "low_confidence": 1.0
+   },
+   "cooccurrence": [
+    [
+     25,
+     25
+    ],
+    [
+     25,
+     26
+    ]
+   ],
+   "n_without_cue": 0,
+   "windows_without_cue": []
+  }
+ },
+ "boundary_prevalence_note": "54% of this map's windows sit on a prediction boundary. On the suite's seven segmentation tasks the cue's enrichment ran from 8.1x on a map with 10% boundary windows to 1.2x at 76%; the error rate inside the boundary set was 1.8 to 11.2 times the rate outside on five encoders' maps with 7% to 77% boundary windows, and fell as that share rose: 1.5 times at 85%, 1.3 at 90% and below 1 at 97% (exp82 and its grain addendum)"
+}

@@ -1,0 +1,134 @@
+{
+ "rule": "prefix",
+ "alpha": 0.02,
+ "delta": 0.1,
+ "n_population": 1024,
+ "n_labelled": 300,
+ "min_labels_to_certify": 114,
+ "c_min": 0.38,
+ "levels": [
+  {
+   "coverage": 0.4,
+   "n_zone": 410,
+   "n_labelled_inside": 114,
+   "n_wrong_inside": 8,
+   "p_value": 0.9999921512296419,
+   "upper_bound": 0.1048780487804878,
+   "accepted": false
+  },
+  {
+   "coverage": 0.45,
+   "n_zone": 461,
+   "n_labelled_inside": 129,
+   "n_wrong_inside": 9,
+   "p_value": 0.999997729009471,
+   "upper_bound": 0.1019522776572668,
+   "accepted": false
+  },
+  {
+   "coverage": 0.5,
+   "n_zone": 512,
+   "n_labelled_inside": 148,
+   "n_wrong_inside": 10,
+   "p_value": 0.9999991035351716,
+   "upper_bound": 0.095703125,
+   "accepted": false
+  },
+  {
+   "coverage": 0.55,
+   "n_zone": 563,
+   "n_labelled_inside": 163,
+   "n_wrong_inside": 12,
+   "p_value": 1.0,
+   "upper_bound": 0.10124333925399645,
+   "accepted": false
+  },
+  {
+   "coverage": 0.6,
+   "n_zone": 614,
+   "n_labelled_inside": 176,
+   "n_wrong_inside": 15,
+   "p_value": 1.0,
+   "upper_bound": 0.11237785016286644,
+   "accepted": false
+  },
+  {
+   "coverage": 0.65,
+   "n_zone": 666,
+   "n_labelled_inside": 194,
+   "n_wrong_inside": 17,
+   "p_value": 1.0,
+   "upper_bound": 0.11411411411411411,
+   "accepted": false
+  },
+  {
+   "coverage": 0.7,
+   "n_zone": 717,
+   "n_labelled_inside": 211,
+   "n_wrong_inside": 20,
+   "p_value": 1.0,
+   "upper_bound": 0.1199442119944212,
+   "accepted": false
+  },
+  {
+   "coverage": 0.75,
+   "n_zone": 768,
+   "n_labelled_inside": 226,
+   "n_wrong_inside": 25,
+   "p_value": 1.0,
+   "upper_bound": 0.13671875,
+   "accepted": false
+  },
+  {
+   "coverage": 0.8,
+   "n_zone": 819,
+   "n_labelled_inside": 242,
+   "n_wrong_inside": 28,
+   "p_value": 1.0,
+   "upper_bound": 0.14163614163614163,
+   "accepted": false
+  },
+  {
+   "coverage": 0.85,
+   "n_zone": 870,
+   "n_labelled_inside": 256,
+   "n_wrong_inside": 34,
+   "p_value": 1.0,
+   "upper_bound": 0.15862068965517243,
+   "accepted": false
+  },
+  {
+   "coverage": 0.9,
+   "n_zone": 922,
+   "n_labelled_inside": 273,
+   "n_wrong_inside": 40,
+   "p_value": 1.0,
+   "upper_bound": 0.17245119305856832,
+   "accepted": false
+  },
+  {
+   "coverage": 0.95,
+   "n_zone": 973,
+   "n_labelled_inside": 289,
+   "n_wrong_inside": 50,
+   "p_value": 1.0,
+   "upper_bound": 0.19938335046248715,
+   "accepted": false
+  },
+  {
+   "coverage": 1.0,
+   "n_zone": 1024,
+   "n_labelled_inside": 300,
+   "n_wrong_inside": 57,
+   "p_value": 1.0,
+   "upper_bound": 0.216796875,
+   "accepted": false
+  }
+ ],
+ "coverage": null,
+ "n_zone": null,
+ "threshold": null,
+ "upper_bound": null,
+ "note": "no zone certified at alpha=0.02, delta=0.1 with 300 labels; the smallest testable zone (40% of the map) held 114 labels with 8 wrong",
+ "sample": "<TMP>/sample_random.csv"
+}

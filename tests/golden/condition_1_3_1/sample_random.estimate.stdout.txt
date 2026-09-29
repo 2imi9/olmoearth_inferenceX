@@ -1,0 +1,2 @@
+error rate 19.0%, 95% interval 15.4% to 23.0% (half-width 3.8 points), from 300 labelled windows of 1024; exact hypergeometric interval (simple random sample of a finite map)
+wrote <TMP>/sample_random_estimate.json

@@ -1,0 +1,11 @@
+error rate 17.3%, 95% interval 13.5% to 22.0% (half-width 4.3 points), from 200 labelled windows of 1024; stratified by confidence margin; Wilson interval on the design's effective sample size
+  class 0: user's accuracy n/a, producer's n/a, share of map 0.0% -> error-adjusted 0% (0-2)  [warning: few labels]
+  class 1: user's accuracy 0% (0-66), producer's 0% (0-23), share of map 1.3% -> error-adjusted 6% (4-10)  [warning: few labels, few errors]
+  class 2: user's accuracy n/a, producer's n/a, share of map 0.2% -> error-adjusted 0% (0-2)  [warning: few labels]
+  class 3: user's accuracy n/a, producer's n/a, share of map 0.0% -> error-adjusted 0% (0-2)  [warning: few labels]
+  class 4: user's accuracy 95% (89-98), producer's 81% (72-87), share of map 33.8% -> error-adjusted 39% (33-45)  [warning: few errors]
+  class 5: user's accuracy 0% (0-49), producer's n/a, share of map 1.6% -> error-adjusted 0% (0-2)  [warning: few labels, few errors]
+  class 6: user's accuracy 50% (37-64), producer's 100% (82-100), share of map 16.5% -> error-adjusted 9% (6-12)  [warning: few labels]
+  class 7: user's accuracy 91% (84-94), producer's 92% (86-96), share of map 46.6% -> error-adjusted 46% (40-52)
+  class 8: user's accuracy n/a, producer's n/a, share of map 0.1% -> error-adjusted 0% (0-2)  [warning: few labels]
+wrote <TMP>/sample_proportional_perclass.json

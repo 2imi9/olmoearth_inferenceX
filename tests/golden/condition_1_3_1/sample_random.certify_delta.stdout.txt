@@ -1,0 +1,3 @@
+the 55% most confident windows (563 of 1024, confidence margin >= 0.4301) are wrong at most 10% of the time; this statement fails on at most 20% of samples like this one (prefix rule; the exact upper bound on the zone's error rate at that level is 9.2%). Outside the zone nothing is certified.
+valid if the zone's error rate does not fall as the zone grows; on the suite tasks exp80 graded, the guarantee held whether or not that was exactly true (docs/results/comparisons.md, exp80)
+wrote <TMP>/sample_random_zone_delta.json and the window mask <TMP>/sample_random_zone_delta.npy

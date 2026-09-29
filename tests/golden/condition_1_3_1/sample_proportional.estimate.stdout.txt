@@ -1,0 +1,2 @@
+error rate 17.3%, 95% interval 13.5% to 22.0% (half-width 4.3 points), from 200 labelled windows of 1024; stratified by confidence margin; Wilson interval on the design's effective sample size
+wrote <TMP>/sample_proportional_estimate.json

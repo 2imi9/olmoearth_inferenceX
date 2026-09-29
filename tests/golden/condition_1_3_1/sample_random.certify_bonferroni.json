@@ -1,0 +1,200 @@
+{
+ "rule": "bonferroni",
+ "alpha": 0.15,
+ "delta": 0.1,
+ "n_population": 1024,
+ "n_labelled": 300,
+ "min_labels_to_certify": 15,
+ "c_min": 0.05,
+ "levels": [
+  {
+   "coverage": 0.05,
+   "n_zone": 51,
+   "n_labelled_inside": 13,
+   "n_wrong_inside": 0,
+   "p_value": 0.07680014096295575,
+   "upper_bound": 0.13725490196078433,
+   "accepted": false
+  },
+  {
+   "coverage": 0.1,
+   "n_zone": 102,
+   "n_labelled_inside": 28,
+   "n_wrong_inside": 1,
+   "p_value": 0.030472702371226634,
+   "upper_bound": 0.11764705882352941,
+   "accepted": false
+  },
+  {
+   "coverage": 0.15,
+   "n_zone": 154,
+   "n_labelled_inside": 42,
+   "n_wrong_inside": 2,
+   "p_value": 0.01596626452455154,
+   "upper_bound": 0.11038961038961038,
+   "accepted": false
+  },
+  {
+   "coverage": 0.2,
+   "n_zone": 205,
+   "n_labelled_inside": 56,
+   "n_wrong_inside": 3,
+   "p_value": 0.010542494194253932,
+   "upper_bound": 0.1024390243902439,
+   "accepted": false
+  },
+  {
+   "coverage": 0.25,
+   "n_zone": 256,
+   "n_labelled_inside": 70,
+   "n_wrong_inside": 3,
+   "p_value": 0.001225665150833447,
+   "upper_bound": 0.08203125,
+   "accepted": true
+  },
+  {
+   "coverage": 0.3,
+   "n_zone": 307,
+   "n_labelled_inside": 87,
+   "n_wrong_inside": 4,
+   "p_value": 0.00039550711454825377,
+   "upper_bound": 0.08143322475570032,
+   "accepted": true
+  },
+  {
+   "coverage": 0.35,
+   "n_zone": 358,
+   "n_labelled_inside": 104,
+   "n_wrong_inside": 6,
+   "p_value": 0.0007247013888471214,
+   "upper_bound": 0.09217877094972067,
+   "accepted": true
+  },
+  {
+   "coverage": 0.4,
+   "n_zone": 410,
+   "n_labelled_inside": 114,
+   "n_wrong_inside": 8,
+   "p_value": 0.002318835725287609,
+   "upper_bound": 0.1048780487804878,
+   "accepted": true
+  },
+  {
+   "coverage": 0.45,
+   "n_zone": 461,
+   "n_labelled_inside": 129,
+   "n_wrong_inside": 9,
+   "p_value": 0.0010447762328112536,
+   "upper_bound": 0.1019522776572668,
+   "accepted": true
+  },
+  {
+   "coverage": 0.5,
+   "n_zone": 512,
+   "n_labelled_inside": 148,
+   "n_wrong_inside": 10,
+   "p_value": 0.0003489267496425515,
+   "upper_bound": 0.095703125,
+   "accepted": true
+  },
+  {
+   "coverage": 0.55,
+   "n_zone": 563,
+   "n_labelled_inside": 163,
+   "n_wrong_inside": 12,
+   "p_value": 0.00047593431233785736,
+   "upper_bound": 0.10124333925399645,
+   "accepted": true
+  },
+  {
+   "coverage": 0.6,
+   "n_zone": 614,
+   "n_labelled_inside": 176,
+   "n_wrong_inside": 15,
+   "p_value": 0.0019312720398222706,
+   "upper_bound": 0.11237785016286644,
+   "accepted": true
+  },
+  {
+   "coverage": 0.65,
+   "n_zone": 666,
+   "n_labelled_inside": 194,
+   "n_wrong_inside": 17,
+   "p_value": 0.001988783011861156,
+   "upper_bound": 0.11411411411411411,
+   "accepted": true
+  },
+  {
+   "coverage": 0.7,
+   "n_zone": 717,
+   "n_labelled_inside": 211,
+   "n_wrong_inside": 20,
+   "p_value": 0.0038476911849828757,
+   "upper_bound": 0.1199442119944212,
+   "accepted": true
+  },
+  {
+   "coverage": 0.75,
+   "n_zone": 768,
+   "n_labelled_inside": 226,
+   "n_wrong_inside": 25,
+   "p_value": 0.026007482424875737,
+   "upper_bound": 0.13671875,
+   "accepted": false
+  },
+  {
+   "coverage": 0.8,
+   "n_zone": 819,
+   "n_labelled_inside": 242,
+   "n_wrong_inside": 28,
+   "p_value": 0.044240953219285103,
+   "upper_bound": 0.14163614163614163,
+   "accepted": false
+  },
+  {
+   "coverage": 0.85,
+   "n_zone": 870,
+   "n_labelled_inside": 256,
+   "n_wrong_inside": 34,
+   "p_value": 0.2007676510058624,
+   "upper_bound": 0.15862068965517243,
+   "accepted": false
+  },
+  {
+   "coverage": 0.9,
+   "n_zone": 922,
+   "n_labelled_inside": 273,
+   "n_wrong_inside": 40,
+   "p_value": 0.45105968771518845,
+   "upper_bound": 0.17245119305856832,
+   "accepted": false
+  },
+  {
+   "coverage": 0.95,
+   "n_zone": 973,
+   "n_labelled_inside": 289,
+   "n_wrong_inside": 50,
+   "p_value": 0.9183129205729399,
+   "upper_bound": 0.19938335046248715,
+   "accepted": false
+  },
+  {
+   "coverage": 1.0,
+   "n_zone": 1024,
+   "n_labelled_inside": 300,
+   "n_wrong_inside": 57,
+   "p_value": 0.9904169266351408,
+   "upper_bound": 0.216796875,
+   "accepted": false
+  }
+ ],
+ "coverage": 0.7,
+ "n_zone": 717,
+ "threshold": 0.3752288818359375,
+ "upper_bound": 0.1199442119944212,
+ "n_tied_at_threshold": 1,
+ "n_tied_inside_zone": 1,
+ "note": "Bonferroni over the 20 testable levels: valid with no assumption on how the error rate changes with the zone",
+ "zone_mask": "<TMP>/sample_random_zone_bonferroni.npy",
+ "sample": "<TMP>/sample_random.csv"
+}

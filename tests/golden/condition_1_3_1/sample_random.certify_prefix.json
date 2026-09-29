@@ -1,0 +1,191 @@
+{
+ "rule": "prefix",
+ "alpha": 0.12,
+ "delta": 0.1,
+ "n_population": 1024,
+ "n_labelled": 300,
+ "min_labels_to_certify": 19,
+ "c_min": 0.06333333333333334,
+ "levels": [
+  {
+   "coverage": 0.1,
+   "n_zone": 102,
+   "n_labelled_inside": 28,
+   "n_wrong_inside": 1,
+   "p_value": 0.07688325578905687,
+   "upper_bound": 0.11764705882352941,
+   "accepted": true
+  },
+  {
+   "coverage": 0.15,
+   "n_zone": 154,
+   "n_labelled_inside": 42,
+   "n_wrong_inside": 2,
+   "p_value": 0.06311496438272152,
+   "upper_bound": 0.11038961038961038,
+   "accepted": true
+  },
+  {
+   "coverage": 0.2,
+   "n_zone": 205,
+   "n_labelled_inside": 56,
+   "n_wrong_inside": 3,
+   "p_value": 0.04898650441796425,
+   "upper_bound": 0.1024390243902439,
+   "accepted": true
+  },
+  {
+   "coverage": 0.25,
+   "n_zone": 256,
+   "n_labelled_inside": 70,
+   "n_wrong_inside": 3,
+   "p_value": 0.01147358627259729,
+   "upper_bound": 0.08203125,
+   "accepted": true
+  },
+  {
+   "coverage": 0.3,
+   "n_zone": 307,
+   "n_labelled_inside": 87,
+   "n_wrong_inside": 4,
+   "p_value": 0.0067163252347016335,
+   "upper_bound": 0.08143322475570032,
+   "accepted": true
+  },
+  {
+   "coverage": 0.35,
+   "n_zone": 358,
+   "n_labelled_inside": 104,
+   "n_wrong_inside": 6,
+   "p_value": 0.012457654725633953,
+   "upper_bound": 0.09217877094972067,
+   "accepted": true
+  },
+  {
+   "coverage": 0.4,
+   "n_zone": 410,
+   "n_labelled_inside": 114,
+   "n_wrong_inside": 8,
+   "p_value": 0.030254402518550726,
+   "upper_bound": 0.1048780487804878,
+   "accepted": true
+  },
+  {
+   "coverage": 0.45,
+   "n_zone": 461,
+   "n_labelled_inside": 129,
+   "n_wrong_inside": 9,
+   "p_value": 0.021400992862441508,
+   "upper_bound": 0.1019522776572668,
+   "accepted": true
+  },
+  {
+   "coverage": 0.5,
+   "n_zone": 512,
+   "n_labelled_inside": 148,
+   "n_wrong_inside": 10,
+   "p_value": 0.010678589496784022,
+   "upper_bound": 0.095703125,
+   "accepted": true
+  },
+  {
+   "coverage": 0.55,
+   "n_zone": 563,
+   "n_labelled_inside": 163,
+   "n_wrong_inside": 12,
+   "p_value": 0.017327704250244713,
+   "upper_bound": 0.10124333925399645,
+   "accepted": true
+  },
+  {
+   "coverage": 0.6,
+   "n_zone": 614,
+   "n_labelled_inside": 176,
+   "n_wrong_inside": 15,
+   "p_value": 0.05571835721378578,
+   "upper_bound": 0.11237785016286644,
+   "accepted": true
+  },
+  {
+   "coverage": 0.65,
+   "n_zone": 666,
+   "n_labelled_inside": 194,
+   "n_wrong_inside": 17,
+   "p_value": 0.06126135109062196,
+   "upper_bound": 0.11411411411411411,
+   "accepted": true
+  },
+  {
+   "coverage": 0.7,
+   "n_zone": 717,
+   "n_labelled_inside": 211,
+   "n_wrong_inside": 20,
+   "p_value": 0.09845978811886191,
+   "upper_bound": 0.1199442119944212,
+   "accepted": true
+  },
+  {
+   "coverage": 0.75,
+   "n_zone": 768,
+   "n_labelled_inside": 226,
+   "n_wrong_inside": 25,
+   "p_value": 0.3289720599286121,
+   "upper_bound": 0.13671875,
+   "accepted": false
+  },
+  {
+   "coverage": 0.8,
+   "n_zone": 819,
+   "n_labelled_inside": 242,
+   "n_wrong_inside": 28,
+   "p_value": 0.43452949574804284,
+   "upper_bound": 0.14163614163614163,
+   "accepted": false
+  },
+  {
+   "coverage": 0.85,
+   "n_zone": 870,
+   "n_labelled_inside": 256,
+   "n_wrong_inside": 34,
+   "p_value": 0.7958011230388224,
+   "upper_bound": 0.15862068965517243,
+   "accepted": false
+  },
+  {
+   "coverage": 0.9,
+   "n_zone": 922,
+   "n_labelled_inside": 273,
+   "n_wrong_inside": 40,
+   "p_value": 0.9529266412874361,
+   "upper_bound": 0.17245119305856832,
+   "accepted": false
+  },
+  {
+   "coverage": 0.95,
+   "n_zone": 973,
+   "n_labelled_inside": 289,
+   "n_wrong_inside": 50,
+   "p_value": 0.9995305494976913,
+   "upper_bound": 0.19938335046248715,
+   "accepted": false
+  },
+  {
+   "coverage": 1.0,
+   "n_zone": 1024,
+   "n_labelled_inside": 300,
+   "n_wrong_inside": 57,
+   "p_value": 0.9999940789655367,
+   "upper_bound": 0.216796875,
+   "accepted": false
+  }
+ ],
+ "coverage": 0.7,
+ "n_zone": 717,
+ "threshold": 0.3752288818359375,
+ "upper_bound": 0.1199442119944212,
+ "n_tied_at_threshold": 1,
+ "n_tied_inside_zone": 1,
+ "note": "valid if the zone's error rate does not fall as the zone grows; on the suite tasks exp80 graded, the guarantee held whether or not that was exactly true (docs/results/comparisons.md, exp80)",
+ "zone_mask": "<TMP>/sample_random_zone_prefix.npy",
+ "sample": "<TMP>/sample_random.csv"
+}

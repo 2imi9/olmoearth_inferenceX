@@ -1,0 +1,73 @@
+{
+ "design": "confidence",
+ "n_labelled": 100,
+ "n_population": 1020,
+ "nominal_coverage": 0.95,
+ "estimate": 0.0,
+ "low": 0.0,
+ "high": 0.03699349820698568,
+ "starved_strata": 0,
+ "effective_n": 100.0,
+ "method": "stratified by confidence margin; Wilson interval on the design's effective sample size",
+ "warning": "no labelled window was wrong, so the design's variance is zero and the interval is the simple-random Wilson bound at 100 labels; the stratification cannot narrow it without an observed error",
+ "half_width": 0.01849674910349284,
+ "per_class": {
+  "0": {
+   "map_share": 0.765686274509804,
+   "n_labelled_map_class": 67,
+   "n_labelled_reference_class": 67,
+   "user_accuracy": {
+    "estimate": 1.0,
+    "low": 0.9457738606086981,
+    "high": 1.0
+   },
+   "producer_accuracy": {
+    "estimate": 1.0,
+    "low": 0.9457738606086981,
+    "high": 1.0
+   },
+   "reference_share": {
+    "estimate": 0.6677587909166856,
+    "low": 0.5731649183444854,
+    "high": 0.7505140515120101
+   }
+  },
+  "1": {
+   "map_share": 0.23431372549019608,
+   "n_labelled_map_class": 33,
+   "n_labelled_reference_class": 33,
+   "user_accuracy": {
+    "estimate": 1.0,
+    "low": 0.895730002457548,
+    "high": 1.0
+   },
+   "producer_accuracy": {
+    "estimate": 1.0,
+    "low": 0.895730002457548,
+    "high": 1.0
+   },
+   "reference_share": {
+    "estimate": 0.33224120908331434,
+    "low": 0.24948594848798974,
+    "high": 0.42683508165551454
+   }
+  }
+ },
+ "confusion_counts": [
+  [
+   67,
+   0
+  ],
+  [
+   0,
+   33
+  ]
+ ],
+ "overall_accuracy": {
+  "estimate": 1.0,
+  "low": 0.9630065017930143,
+  "high": 1.0
+ },
+ "per_class_method": "stratified by confidence margin: ratios of Horvitz-Thompson totals with linearised variance; shares as Horvitz-Thompson totals",
+ "sample": "<TMP>/sample_scene_confidence.csv"
+}

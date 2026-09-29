@@ -1,0 +1,14 @@
+{
+ "design": "confidence",
+ "n_labelled": 200,
+ "n_population": 1024,
+ "nominal_coverage": 0.95,
+ "estimate": 0.16098194611378205,
+ "low": 0.12200699709141197,
+ "high": 0.20943742983502175,
+ "starved_strata": 0,
+ "effective_n": 270.8949215294654,
+ "method": "stratified by confidence margin; Wilson interval on the design's effective sample size",
+ "half_width": 0.043715216371804894,
+ "sample": "<TMP>/sample_confidence.csv"
+}

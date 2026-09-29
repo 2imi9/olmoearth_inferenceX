@@ -1,0 +1,2 @@
+200 windows to label of 1024 valid (confidence design); wrote <TMP>/sample_confidence.csv and its .json. Fill the `wrong` column with 1 or 0 per window, then run: oe-inferencex estimate <TMP>/sample_confidence.csv
+warning: probability input: confidence ties where probabilities saturate; prefer logits

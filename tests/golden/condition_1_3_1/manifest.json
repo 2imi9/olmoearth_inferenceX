@@ -1,0 +1,442 @@
+{
+ "generated_at": "725dffaef1085798b5c55b2dd0c64ecd522209fc",
+ "placeholder": "<TMP>",
+ "steps": [
+  {
+   "name": "assess_dw",
+   "argv": [
+    "assess",
+    "<TMP>/in/dw.npy",
+    "--out",
+    "<TMP>/assess_dw"
+   ],
+   "files": [
+    "assessment.json",
+    "boundary.npy",
+    "explanation.json",
+    "review_set_01pct.csv",
+    "review_set_05pct.csv",
+    "review_set_10pct.csv",
+    "suspicion.npy"
+   ]
+  },
+  {
+   "name": "assess_scene",
+   "argv": [
+    "assess",
+    "<TMP>/in/scene.tif",
+    "--reference",
+    "<TMP>/in/scene_ref.tif",
+    "--budgets",
+    "0.05",
+    "0.10",
+    "--order",
+    "boundary_first",
+    "--out",
+    "<TMP>/assess_scene"
+   ],
+   "files": [
+    "assessment.json",
+    "boundary.tif",
+    "explanation.json",
+    "review_set_05pct.csv",
+    "review_set_10pct.csv",
+    "suspicion.tif"
+   ]
+  },
+  {
+   "name": "assess_logits3",
+   "argv": [
+    "assess",
+    "<TMP>/in/logits3.npy",
+    "--logits",
+    "--reference",
+    "<TMP>/in/truth3.npy",
+    "--out",
+    "<TMP>/assess_logits3"
+   ],
+   "files": [
+    "assessment.json",
+    "boundary.npy",
+    "explanation.json",
+    "review_set_01pct.csv",
+    "review_set_05pct.csv",
+    "review_set_10pct.csv",
+    "suspicion.npy"
+   ]
+  },
+  {
+   "name": "sample_confidence",
+   "argv": [
+    "sample",
+    "<TMP>/in/dw.npy",
+    "--budget",
+    "200",
+    "--out",
+    "<TMP>/sample_confidence.csv"
+   ],
+   "labelled_from": "dw",
+   "estimate": [
+    "estimate",
+    "<TMP>/sample_confidence.csv",
+    "--out",
+    "<TMP>/sample_confidence_estimate.json"
+   ],
+   "per_class": [
+    "estimate",
+    "<TMP>/sample_confidence.csv",
+    "--per-class",
+    "--out",
+    "<TMP>/sample_confidence_perclass.json"
+   ],
+   "certify": []
+  },
+  {
+   "name": "sample_proportional",
+   "argv": [
+    "sample",
+    "<TMP>/in/dw.npy",
+    "--budget",
+    "200",
+    "--design",
+    "proportional",
+    "--out",
+    "<TMP>/sample_proportional.csv"
+   ],
+   "labelled_from": "dw",
+   "estimate": [
+    "estimate",
+    "<TMP>/sample_proportional.csv",
+    "--out",
+    "<TMP>/sample_proportional_estimate.json"
+   ],
+   "per_class": [
+    "estimate",
+    "<TMP>/sample_proportional.csv",
+    "--per-class",
+    "--out",
+    "<TMP>/sample_proportional_perclass.json"
+   ],
+   "certify": []
+  },
+  {
+   "name": "sample_random",
+   "argv": [
+    "sample",
+    "<TMP>/in/dw.npy",
+    "--budget",
+    "300",
+    "--design",
+    "random",
+    "--out",
+    "<TMP>/sample_random.csv"
+   ],
+   "labelled_from": "dw",
+   "estimate": [
+    "estimate",
+    "<TMP>/sample_random.csv",
+    "--out",
+    "<TMP>/sample_random_estimate.json"
+   ],
+   "per_class": [
+    "estimate",
+    "<TMP>/sample_random.csv",
+    "--per-class",
+    "--out",
+    "<TMP>/sample_random_perclass.json"
+   ],
+   "certify": [
+    [
+     "certify",
+     "<TMP>/sample_random.csv",
+     "--alpha",
+     "0.12",
+     "--out",
+     "<TMP>/sample_random_zone_prefix.json"
+    ],
+    [
+     "certify",
+     "<TMP>/sample_random.csv",
+     "--alpha",
+     "0.15",
+     "--rule",
+     "bonferroni",
+     "--out",
+     "<TMP>/sample_random_zone_bonferroni.json"
+    ],
+    [
+     "certify",
+     "<TMP>/sample_random.csv",
+     "--alpha",
+     "0.3",
+     "--out",
+     "<TMP>/sample_random_zone_whole.json"
+    ],
+    [
+     "certify",
+     "<TMP>/sample_random.csv",
+     "--alpha",
+     "0.02",
+     "--out",
+     "<TMP>/sample_random_zone_none.json"
+    ],
+    [
+     "certify",
+     "<TMP>/sample_random.csv",
+     "--alpha",
+     "0.1",
+     "--delta",
+     "0.2",
+     "--out",
+     "<TMP>/sample_random_zone_delta.json"
+    ]
+   ]
+  },
+  {
+   "name": "sample_tiles",
+   "argv": [
+    "sample",
+    "<TMP>/in/dw.npy",
+    "--budget",
+    "160",
+    "--design",
+    "tiles",
+    "--tile",
+    "8",
+    "--per-tile",
+    "16",
+    "--out",
+    "<TMP>/sample_tiles.csv"
+   ],
+   "labelled_from": "dw",
+   "estimate": [
+    "estimate",
+    "<TMP>/sample_tiles.csv",
+    "--out",
+    "<TMP>/sample_tiles_estimate.json"
+   ],
+   "certify": []
+  },
+  {
+   "name": "sample_scene_confidence",
+   "argv": [
+    "sample",
+    "<TMP>/in/scene.tif",
+    "--budget",
+    "100",
+    "--seed",
+    "3",
+    "--out",
+    "<TMP>/sample_scene_confidence.csv"
+   ],
+   "labelled_from": "scene",
+   "estimate": [
+    "estimate",
+    "<TMP>/sample_scene_confidence.csv",
+    "--out",
+    "<TMP>/sample_scene_confidence_estimate.json"
+   ],
+   "per_class": [
+    "estimate",
+    "<TMP>/sample_scene_confidence.csv",
+    "--per-class",
+    "--out",
+    "<TMP>/sample_scene_confidence_perclass.json"
+   ],
+   "certify": []
+  },
+  {
+   "name": "sample_scene_random",
+   "argv": [
+    "sample",
+    "<TMP>/in/scene.tif",
+    "--budget",
+    "120",
+    "--design",
+    "random",
+    "--seed",
+    "5",
+    "--out",
+    "<TMP>/sample_scene_random.csv"
+   ],
+   "labelled_from": "scene",
+   "estimate": [
+    "estimate",
+    "<TMP>/sample_scene_random.csv",
+    "--out",
+    "<TMP>/sample_scene_random_estimate.json"
+   ],
+   "per_class": [
+    "estimate",
+    "<TMP>/sample_scene_random.csv",
+    "--per-class",
+    "--out",
+    "<TMP>/sample_scene_random_perclass.json"
+   ],
+   "certify": [
+    [
+     "certify",
+     "<TMP>/sample_scene_random.csv",
+     "--alpha",
+     "0.2",
+     "--out",
+     "<TMP>/sample_scene_random_zone_prefix.json"
+    ]
+   ]
+  },
+  {
+   "name": "sample_logits3_random",
+   "argv": [
+    "sample",
+    "<TMP>/in/logits3.npy",
+    "--budget",
+    "80",
+    "--design",
+    "random",
+    "--logits",
+    "--seed",
+    "2",
+    "--out",
+    "<TMP>/sample_logits3_random.csv"
+   ],
+   "labelled_from": "logits3",
+   "estimate": [
+    "estimate",
+    "<TMP>/sample_logits3_random.csv",
+    "--out",
+    "<TMP>/sample_logits3_random_estimate.json"
+   ],
+   "per_class": [
+    "estimate",
+    "<TMP>/sample_logits3_random.csv",
+    "--per-class",
+    "--out",
+    "<TMP>/sample_logits3_random_perclass.json"
+   ],
+   "certify": [
+    [
+     "certify",
+     "<TMP>/sample_logits3_random.csv",
+     "--alpha",
+     "0.3",
+     "--out",
+     "<TMP>/sample_logits3_random_zone_prefix.json"
+    ]
+   ]
+  }
+ ],
+ "api": [
+  "api_classmap",
+  "api_classmap_boundary_first",
+  "api_prediction_dw",
+  "api_prediction_logits3_margin",
+  "api_prediction_logits3_top1",
+  "api_prediction_scene"
+ ],
+ "files": [
+  "api_classmap.json",
+  "api_classmap_boundary_first.json",
+  "api_prediction_dw.json",
+  "api_prediction_logits3_margin.json",
+  "api_prediction_logits3_top1.json",
+  "api_prediction_scene.json",
+  "assess_dw.stdout.txt",
+  "assess_dw__assessment.json",
+  "assess_dw__boundary.npy",
+  "assess_dw__explanation.json",
+  "assess_dw__review_set_01pct.csv",
+  "assess_dw__review_set_05pct.csv",
+  "assess_dw__review_set_10pct.csv",
+  "assess_dw__suspicion.npy",
+  "assess_logits3.stdout.txt",
+  "assess_logits3__assessment.json",
+  "assess_logits3__boundary.npy",
+  "assess_logits3__explanation.json",
+  "assess_logits3__review_set_01pct.csv",
+  "assess_logits3__review_set_05pct.csv",
+  "assess_logits3__review_set_10pct.csv",
+  "assess_logits3__suspicion.npy",
+  "assess_scene.stdout.txt",
+  "assess_scene__assessment.json",
+  "assess_scene__boundary.grid.json",
+  "assess_scene__boundary.npy",
+  "assess_scene__explanation.json",
+  "assess_scene__review_set_05pct.csv",
+  "assess_scene__review_set_10pct.csv",
+  "assess_scene__suspicion.grid.json",
+  "assess_scene__suspicion.npy",
+  "sample_confidence.csv",
+  "sample_confidence.estimate.json",
+  "sample_confidence.estimate.stdout.txt",
+  "sample_confidence.json",
+  "sample_confidence.labelled.csv",
+  "sample_confidence.perclass.json",
+  "sample_confidence.perclass.stdout.txt",
+  "sample_confidence.stdout.txt",
+  "sample_logits3_random.certify_prefix.json",
+  "sample_logits3_random.certify_prefix.stdout.txt",
+  "sample_logits3_random.csv",
+  "sample_logits3_random.estimate.json",
+  "sample_logits3_random.estimate.stdout.txt",
+  "sample_logits3_random.json",
+  "sample_logits3_random.labelled.csv",
+  "sample_logits3_random.perclass.json",
+  "sample_logits3_random.perclass.stdout.txt",
+  "sample_logits3_random.stdout.txt",
+  "sample_proportional.csv",
+  "sample_proportional.estimate.json",
+  "sample_proportional.estimate.stdout.txt",
+  "sample_proportional.json",
+  "sample_proportional.labelled.csv",
+  "sample_proportional.perclass.json",
+  "sample_proportional.perclass.stdout.txt",
+  "sample_proportional.stdout.txt",
+  "sample_random.certify_bonferroni.json",
+  "sample_random.certify_bonferroni.mask.npy",
+  "sample_random.certify_bonferroni.stdout.txt",
+  "sample_random.certify_delta.json",
+  "sample_random.certify_delta.mask.npy",
+  "sample_random.certify_delta.stdout.txt",
+  "sample_random.certify_none.json",
+  "sample_random.certify_none.stdout.txt",
+  "sample_random.certify_prefix.json",
+  "sample_random.certify_prefix.mask.npy",
+  "sample_random.certify_prefix.stdout.txt",
+  "sample_random.certify_whole.json",
+  "sample_random.certify_whole.mask.npy",
+  "sample_random.certify_whole.stdout.txt",
+  "sample_random.csv",
+  "sample_random.estimate.json",
+  "sample_random.estimate.stdout.txt",
+  "sample_random.json",
+  "sample_random.labelled.csv",
+  "sample_random.perclass.json",
+  "sample_random.perclass.stdout.txt",
+  "sample_random.stdout.txt",
+  "sample_scene_confidence.csv",
+  "sample_scene_confidence.estimate.json",
+  "sample_scene_confidence.estimate.stdout.txt",
+  "sample_scene_confidence.json",
+  "sample_scene_confidence.labelled.csv",
+  "sample_scene_confidence.perclass.json",
+  "sample_scene_confidence.perclass.stdout.txt",
+  "sample_scene_confidence.stdout.txt",
+  "sample_scene_random.certify_prefix.json",
+  "sample_scene_random.certify_prefix.mask.npy",
+  "sample_scene_random.certify_prefix.stdout.txt",
+  "sample_scene_random.csv",
+  "sample_scene_random.estimate.json",
+  "sample_scene_random.estimate.stdout.txt",
+  "sample_scene_random.json",
+  "sample_scene_random.labelled.csv",
+  "sample_scene_random.perclass.json",
+  "sample_scene_random.perclass.stdout.txt",
+  "sample_scene_random.stdout.txt",
+  "sample_tiles.csv",
+  "sample_tiles.estimate.json",
+  "sample_tiles.estimate.stdout.txt",
+  "sample_tiles.json",
+  "sample_tiles.labelled.csv",
+  "sample_tiles.stdout.txt"
+ ]
+}

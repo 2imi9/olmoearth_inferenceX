@@ -1,0 +1,5 @@
+error rate 7.5%, 95% interval 3.5% to 14.1% (half-width 5.3 points), from 80 labelled windows of 256; exact hypergeometric interval (simple random sample of a finite map)
+  class 0: user's accuracy 86% (72-94), producer's 95% (82-99), share of map 35.2% -> error-adjusted 32% (28-36)  [warning: few labels, few errors]
+  class 1: user's accuracy 82% (54-95), producer's 78% (59-90), share of map 16.0% -> error-adjusted 17% (13-22)  [warning: few labels, few errors]
+  class 2: user's accuracy 100% (93-100), producer's 95% (86-98), share of map 48.8% -> error-adjusted 51% (48-55)  [warning: few errors]
+wrote <TMP>/sample_logits3_random_perclass.json

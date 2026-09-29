@@ -1,0 +1,1550 @@
+{
+ "cues": [
+  "boundary",
+  "low_confidence"
+ ],
+ "quotes": {
+  "boundary": "sits on a prediction boundary (75% of error windows vs 21% of correct ones, 3.5x; Sen1Floods11 Bolivia hand labels; exp18, exp36, exp37); on the suite's seven segmentation tasks 1.2x to 8.1x (exp82)",
+  "low_confidence": "is among the least confident 20% of the scene's windows (ties included) (59% of error windows vs 16% of correct ones, 3.6x; Sen1Floods11 Bolivia hand labels; exp37); on the suite's seven segmentation tasks 1.4x to 3.4x (exp82)"
+ },
+ "n_windows": 1024,
+ "scene_share": {
+  "boundary": 0.6337890625,
+  "low_confidence": 0.2001953125
+ },
+ "budgets": {
+  "0.01": {
+   "n_windows": 10,
+   "windows": [
+    {
+     "row": 31,
+     "col": 4,
+     "confidence": 0.20623779296875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 10,
+     "col": 5,
+     "confidence": 0.2135467529296875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 0,
+     "col": 14,
+     "confidence": 0.21651458740234375,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 9,
+     "col": 5,
+     "confidence": 0.22650909423828125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 10,
+     "col": 3,
+     "confidence": 0.23465728759765625,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 27,
+     "col": 18,
+     "confidence": 0.23636627197265625,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 28,
+     "col": 17,
+     "confidence": 0.23839569091796875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 31,
+     "col": 5,
+     "confidence": 0.24040985107421875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 5,
+     "col": 3,
+     "confidence": 0.247528076171875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 15,
+     "col": 13,
+     "confidence": 0.2479248046875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    }
+   ],
+   "count": {
+    "boundary": 10,
+    "low_confidence": 10
+   },
+   "share_in_set": {
+    "boundary": 1.0,
+    "low_confidence": 1.0
+   },
+   "cooccurrence": [
+    [
+     10,
+     10
+    ],
+    [
+     10,
+     10
+    ]
+   ],
+   "n_without_cue": 0,
+   "windows_without_cue": []
+  },
+  "0.05": {
+   "n_windows": 51,
+   "windows": [
+    {
+     "row": 31,
+     "col": 4,
+     "confidence": 0.20623779296875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 10,
+     "col": 5,
+     "confidence": 0.2135467529296875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 0,
+     "col": 14,
+     "confidence": 0.21651458740234375,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 9,
+     "col": 5,
+     "confidence": 0.22650909423828125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 10,
+     "col": 3,
+     "confidence": 0.23465728759765625,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 27,
+     "col": 18,
+     "confidence": 0.23636627197265625,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 28,
+     "col": 17,
+     "confidence": 0.23839569091796875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 31,
+     "col": 5,
+     "confidence": 0.24040985107421875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 5,
+     "col": 3,
+     "confidence": 0.247528076171875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 15,
+     "col": 13,
+     "confidence": 0.2479248046875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 26,
+     "col": 2,
+     "confidence": 0.2489166259765625,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 20,
+     "col": 13,
+     "confidence": 0.24915313720703125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 19,
+     "col": 3,
+     "confidence": 0.24968719482421875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 30,
+     "col": 4,
+     "confidence": 0.25208282470703125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 17,
+     "col": 25,
+     "confidence": 0.25384521484375,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 14,
+     "col": 4,
+     "confidence": 0.255615234375,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 19,
+     "col": 4,
+     "confidence": 0.25635528564453125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 0,
+     "col": 13,
+     "confidence": 0.25720977783203125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 30,
+     "col": 8,
+     "confidence": 0.2606964111328125,
+     "cues": [
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 26,
+     "col": 18,
+     "confidence": 0.26143646240234375,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 14,
+     "col": 14,
+     "confidence": 0.26258087158203125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 8,
+     "col": 6,
+     "confidence": 0.26470947265625,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 15,
+     "col": 4,
+     "confidence": 0.264984130859375,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 30,
+     "col": 29,
+     "confidence": 0.26572418212890625,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 28,
+     "col": 6,
+     "confidence": 0.26729583740234375,
+     "cues": [
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 16,
+     "col": 16,
+     "confidence": 0.26752471923828125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 30,
+     "col": 10,
+     "confidence": 0.26861572265625,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 7,
+     "col": 17,
+     "confidence": 0.2686767578125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 4,
+     "col": 9,
+     "confidence": 0.26900482177734375,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 16,
+     "col": 17,
+     "confidence": 0.26970672607421875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 30,
+     "col": 9,
+     "confidence": 0.26979827880859375,
+     "cues": [
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 15,
+     "col": 1,
+     "confidence": 0.2705078125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 10,
+     "col": 20,
+     "confidence": 0.27141571044921875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 21,
+     "col": 9,
+     "confidence": 0.2720184326171875,
+     "cues": [
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 17,
+     "col": 26,
+     "confidence": 0.2720794677734375,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 5,
+     "col": 1,
+     "confidence": 0.27272796630859375,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 29,
+     "col": 29,
+     "confidence": 0.27370452880859375,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 11,
+     "col": 23,
+     "confidence": 0.27448272705078125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 27,
+     "col": 0,
+     "confidence": 0.275115966796875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 29,
+     "col": 12,
+     "confidence": 0.275543212890625,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 14,
+     "col": 13,
+     "confidence": 0.27559661865234375,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 19,
+     "col": 7,
+     "confidence": 0.27632904052734375,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 5,
+     "col": 2,
+     "confidence": 0.27732086181640625,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 31,
+     "col": 29,
+     "confidence": 0.277618408203125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 10,
+     "col": 4,
+     "confidence": 0.2776336669921875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 2,
+     "col": 14,
+     "confidence": 0.2779998779296875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 2,
+     "col": 9,
+     "confidence": 0.2781829833984375,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 16,
+     "col": 3,
+     "confidence": 0.278350830078125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 22,
+     "col": 9,
+     "confidence": 0.27867889404296875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 27,
+     "col": 1,
+     "confidence": 0.278717041015625,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 18,
+     "col": 29,
+     "confidence": 0.27935028076171875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    }
+   ],
+   "count": {
+    "boundary": 47,
+    "low_confidence": 51
+   },
+   "share_in_set": {
+    "boundary": 0.9215686274509803,
+    "low_confidence": 1.0
+   },
+   "cooccurrence": [
+    [
+     47,
+     47
+    ],
+    [
+     47,
+     51
+    ]
+   ],
+   "n_without_cue": 0,
+   "windows_without_cue": []
+  },
+  "0.1": {
+   "n_windows": 102,
+   "windows": [
+    {
+     "row": 31,
+     "col": 4,
+     "confidence": 0.20623779296875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 10,
+     "col": 5,
+     "confidence": 0.2135467529296875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 0,
+     "col": 14,
+     "confidence": 0.21651458740234375,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 9,
+     "col": 5,
+     "confidence": 0.22650909423828125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 10,
+     "col": 3,
+     "confidence": 0.23465728759765625,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 27,
+     "col": 18,
+     "confidence": 0.23636627197265625,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 28,
+     "col": 17,
+     "confidence": 0.23839569091796875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 31,
+     "col": 5,
+     "confidence": 0.24040985107421875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 5,
+     "col": 3,
+     "confidence": 0.247528076171875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 15,
+     "col": 13,
+     "confidence": 0.2479248046875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 26,
+     "col": 2,
+     "confidence": 0.2489166259765625,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 20,
+     "col": 13,
+     "confidence": 0.24915313720703125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 19,
+     "col": 3,
+     "confidence": 0.24968719482421875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 30,
+     "col": 4,
+     "confidence": 0.25208282470703125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 17,
+     "col": 25,
+     "confidence": 0.25384521484375,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 14,
+     "col": 4,
+     "confidence": 0.255615234375,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 19,
+     "col": 4,
+     "confidence": 0.25635528564453125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 0,
+     "col": 13,
+     "confidence": 0.25720977783203125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 30,
+     "col": 8,
+     "confidence": 0.2606964111328125,
+     "cues": [
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 26,
+     "col": 18,
+     "confidence": 0.26143646240234375,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 14,
+     "col": 14,
+     "confidence": 0.26258087158203125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 8,
+     "col": 6,
+     "confidence": 0.26470947265625,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 15,
+     "col": 4,
+     "confidence": 0.264984130859375,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 30,
+     "col": 29,
+     "confidence": 0.26572418212890625,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 28,
+     "col": 6,
+     "confidence": 0.26729583740234375,
+     "cues": [
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 16,
+     "col": 16,
+     "confidence": 0.26752471923828125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 30,
+     "col": 10,
+     "confidence": 0.26861572265625,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 7,
+     "col": 17,
+     "confidence": 0.2686767578125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 4,
+     "col": 9,
+     "confidence": 0.26900482177734375,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 16,
+     "col": 17,
+     "confidence": 0.26970672607421875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 30,
+     "col": 9,
+     "confidence": 0.26979827880859375,
+     "cues": [
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 15,
+     "col": 1,
+     "confidence": 0.2705078125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 10,
+     "col": 20,
+     "confidence": 0.27141571044921875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 21,
+     "col": 9,
+     "confidence": 0.2720184326171875,
+     "cues": [
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 17,
+     "col": 26,
+     "confidence": 0.2720794677734375,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 5,
+     "col": 1,
+     "confidence": 0.27272796630859375,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 29,
+     "col": 29,
+     "confidence": 0.27370452880859375,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 11,
+     "col": 23,
+     "confidence": 0.27448272705078125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 27,
+     "col": 0,
+     "confidence": 0.275115966796875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 29,
+     "col": 12,
+     "confidence": 0.275543212890625,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 14,
+     "col": 13,
+     "confidence": 0.27559661865234375,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 19,
+     "col": 7,
+     "confidence": 0.27632904052734375,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 5,
+     "col": 2,
+     "confidence": 0.27732086181640625,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 31,
+     "col": 29,
+     "confidence": 0.277618408203125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 10,
+     "col": 4,
+     "confidence": 0.2776336669921875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 2,
+     "col": 14,
+     "confidence": 0.2779998779296875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 2,
+     "col": 9,
+     "confidence": 0.2781829833984375,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 16,
+     "col": 3,
+     "confidence": 0.278350830078125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 22,
+     "col": 9,
+     "confidence": 0.27867889404296875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 27,
+     "col": 1,
+     "confidence": 0.278717041015625,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 18,
+     "col": 29,
+     "confidence": 0.27935028076171875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 30,
+     "col": 11,
+     "confidence": 0.27950286865234375,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 11,
+     "col": 5,
+     "confidence": 0.27971649169921875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 13,
+     "col": 18,
+     "confidence": 0.28177642822265625,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 29,
+     "col": 10,
+     "confidence": 0.2822723388671875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 30,
+     "col": 5,
+     "confidence": 0.2830047607421875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 7,
+     "col": 18,
+     "confidence": 0.28318023681640625,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 1,
+     "col": 15,
+     "confidence": 0.28350830078125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 29,
+     "col": 11,
+     "confidence": 0.2837677001953125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 6,
+     "col": 12,
+     "confidence": 0.28435516357421875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 10,
+     "col": 22,
+     "confidence": 0.2846221923828125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 3,
+     "col": 10,
+     "confidence": 0.28499603271484375,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 1,
+     "col": 14,
+     "confidence": 0.2855072021484375,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 18,
+     "col": 18,
+     "confidence": 0.28566741943359375,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 22,
+     "col": 19,
+     "confidence": 0.28607177734375,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 17,
+     "col": 3,
+     "confidence": 0.2862091064453125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 7,
+     "col": 8,
+     "confidence": 0.28631591796875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 5,
+     "col": 11,
+     "confidence": 0.28762054443359375,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 14,
+     "col": 16,
+     "confidence": 0.2876434326171875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 16,
+     "col": 5,
+     "confidence": 0.28786468505859375,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 15,
+     "col": 16,
+     "confidence": 0.2879791259765625,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 14,
+     "col": 20,
+     "confidence": 0.28801727294921875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 11,
+     "col": 0,
+     "confidence": 0.28802490234375,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 7,
+     "col": 13,
+     "confidence": 0.28832244873046875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 4,
+     "col": 10,
+     "confidence": 0.2891998291015625,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 15,
+     "col": 14,
+     "confidence": 0.2898712158203125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 19,
+     "col": 0,
+     "confidence": 0.2900390625,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 27,
+     "col": 17,
+     "confidence": 0.29027557373046875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 27,
+     "col": 19,
+     "confidence": 0.29071044921875,
+     "cues": [
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 17,
+     "col": 2,
+     "confidence": 0.29095458984375,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 0,
+     "col": 12,
+     "confidence": 0.29129791259765625,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 3,
+     "col": 9,
+     "confidence": 0.29181671142578125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 13,
+     "col": 13,
+     "confidence": 0.29205322265625,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 15,
+     "col": 11,
+     "confidence": 0.2921600341796875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 10,
+     "col": 23,
+     "confidence": 0.2921905517578125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 21,
+     "col": 13,
+     "confidence": 0.29233551025390625,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 13,
+     "col": 10,
+     "confidence": 0.2930755615234375,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 0,
+     "col": 4,
+     "confidence": 0.293212890625,
+     "cues": [
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 15,
+     "col": 12,
+     "confidence": 0.29326629638671875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 8,
+     "col": 7,
+     "confidence": 0.2945098876953125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 13,
+     "col": 16,
+     "confidence": 0.29474639892578125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 11,
+     "col": 24,
+     "confidence": 0.295196533203125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 22,
+     "col": 8,
+     "confidence": 0.296295166015625,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 18,
+     "col": 7,
+     "confidence": 0.2964019775390625,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 20,
+     "col": 9,
+     "confidence": 0.29666900634765625,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 19,
+     "col": 10,
+     "confidence": 0.29734039306640625,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 1,
+     "col": 13,
+     "confidence": 0.29840850830078125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 0,
+     "col": 5,
+     "confidence": 0.299346923828125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 10,
+     "col": 2,
+     "confidence": 0.30023956298828125,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 15,
+     "col": 5,
+     "confidence": 0.30037689208984375,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 21,
+     "col": 29,
+     "confidence": 0.30062103271484375,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    },
+    {
+     "row": 17,
+     "col": 20,
+     "confidence": 0.3010711669921875,
+     "cues": [
+      "boundary",
+      "low_confidence"
+     ]
+    }
+   ],
+   "count": {
+    "boundary": 96,
+    "low_confidence": 102
+   },
+   "share_in_set": {
+    "boundary": 0.9411764705882353,
+    "low_confidence": 1.0
+   },
+   "cooccurrence": [
+    [
+     96,
+     96
+    ],
+    [
+     96,
+     102
+    ]
+   ],
+   "n_without_cue": 0,
+   "windows_without_cue": []
+  }
+ },
+ "boundary_prevalence_note": "63% of this map's windows sit on a prediction boundary. On the suite's seven segmentation tasks the cue's enrichment ran from 8.1x on a map with 10% boundary windows to 1.2x at 76%; the error rate inside the boundary set was 1.8 to 11.2 times the rate outside on five encoders' maps with 7% to 77% boundary windows, and fell as that share rose: 1.5 times at 85%, 1.3 at 90% and below 1 at 97% (exp82 and its grain addendum)"
+}

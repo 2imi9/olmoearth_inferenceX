@@ -1,0 +1,2 @@
+no zone certified at alpha=0.02, delta=0.1 from 300 labels. no zone certified at alpha=0.02, delta=0.1 with 300 labels; the smallest testable zone (40% of the map) held 114 labels with 8 wrong
+wrote <TMP>/sample_random_zone_none.json

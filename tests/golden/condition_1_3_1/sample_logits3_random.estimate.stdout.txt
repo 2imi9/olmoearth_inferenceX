@@ -1,0 +1,2 @@
+error rate 7.5%, 95% interval 3.5% to 14.1% (half-width 5.3 points), from 80 labelled windows of 256; exact hypergeometric interval (simple random sample of a finite map)
+wrote <TMP>/sample_logits3_random_estimate.json

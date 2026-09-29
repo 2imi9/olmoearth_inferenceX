@@ -1,0 +1,2 @@
+1020 windows of 4 px; review sets 5%: 51, 10%: 102; boundary windows 13.7%; against the reference: error capture 5% -> 0.00, 10% -> 0.00
+wrote <TMP>/assess_scene/assessment.json, explanation.json, review_set_*.csv, suspicion, boundary

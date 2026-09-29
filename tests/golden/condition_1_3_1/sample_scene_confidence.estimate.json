@@ -1,0 +1,15 @@
+{
+ "design": "confidence",
+ "n_labelled": 100,
+ "n_population": 1020,
+ "nominal_coverage": 0.95,
+ "estimate": 0.0,
+ "low": 0.0,
+ "high": 0.03699349820698568,
+ "starved_strata": 0,
+ "effective_n": 100.0,
+ "method": "stratified by confidence margin; Wilson interval on the design's effective sample size",
+ "warning": "no labelled window was wrong, so the design's variance is zero and the interval is the simple-random Wilson bound at 100 labels; the stratification cannot narrow it without an observed error",
+ "half_width": 0.01849674910349284,
+ "sample": "<TMP>/sample_scene_confidence.csv"
+}

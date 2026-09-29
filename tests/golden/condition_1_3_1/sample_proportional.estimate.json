@@ -1,0 +1,14 @@
+{
+ "design": "proportional",
+ "n_labelled": 200,
+ "n_population": 1024,
+ "nominal_coverage": 0.95,
+ "estimate": 0.17330228365384615,
+ "low": 0.13478423100959444,
+ "high": 0.22002859169705183,
+ "starved_strata": 0,
+ "effective_n": 301.94722906991126,
+ "method": "stratified by confidence margin; Wilson interval on the design's effective sample size",
+ "half_width": 0.042622180343728694,
+ "sample": "<TMP>/sample_proportional.csv"
+}

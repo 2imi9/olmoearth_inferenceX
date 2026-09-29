@@ -1,0 +1,4 @@
+error rate 0.0%, 95% interval 0.0% to 2.8% (half-width 1.4 points), from 120 labelled windows of 1020; exact hypergeometric interval (simple random sample of a finite map)
+  class 0: user's accuracy 100% (97-100), producer's 100% (96-100), share of map 76.6% -> error-adjusted 77% (68-83)
+  class 1: user's accuracy 100% (87-100), producer's 100% (87-100), share of map 23.4% -> error-adjusted 23% (17-32)  [warning: few labels]
+wrote <TMP>/sample_scene_random_perclass.json

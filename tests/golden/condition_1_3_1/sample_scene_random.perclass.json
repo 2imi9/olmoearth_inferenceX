@@ -1,0 +1,75 @@
+{
+ "design": "random",
+ "n_labelled": 120,
+ "n_population": 1020,
+ "nominal_coverage": 0.95,
+ "estimate": 0.0,
+ "low": 0.0,
+ "high": 0.028431372549019607,
+ "method": "exact hypergeometric interval (simple random sample of a finite map)",
+ "half_width": 0.014215686274509804,
+ "per_class": {
+  "0": {
+   "map_share": 0.765686274509804,
+   "n_labelled_map_class": 95,
+   "n_labelled_reference_class": 95,
+   "user_accuracy": {
+    "estimate": 1.0,
+    "low": 0.9654289372599232,
+    "high": 1.0
+   },
+   "producer_accuracy": {
+    "estimate": 1.0,
+    "low": 0.9611351464605271,
+    "high": 1.0
+   },
+   "reference_share": {
+    "estimate": 0.765686274509804,
+    "low": 0.6823909691522816,
+    "high": 0.8324988463389564
+   }
+  },
+  "1": {
+   "map_share": 0.23431372549019608,
+   "n_labelled_map_class": 25,
+   "n_labelled_reference_class": 25,
+   "user_accuracy": {
+    "estimate": 1.0,
+    "low": 0.8702928870292888,
+    "high": 1.0
+   },
+   "producer_accuracy": {
+    "estimate": 1.0,
+    "low": 0.8668077490609515,
+    "high": 1.0
+   },
+   "reference_share": {
+    "estimate": 0.23431372549019608,
+    "low": 0.16750115366104362,
+    "high": 0.31760903084771847
+   },
+   "warning": "fewer than 30 labelled windows (25 the map calls this class, 25 the reference does); the interval is wide and, below about ten, not to be trusted",
+   "warning_codes": [
+    "few labels"
+   ]
+  }
+ },
+ "confusion_counts": [
+  [
+   95,
+   0
+  ],
+  [
+   0,
+   25
+  ]
+ ],
+ "overall_accuracy": {
+  "estimate": 1.0,
+  "low": 0.9715686274509804,
+  "high": 1.0
+ },
+ "per_class_method": "random sample: exact hypergeometric interval per map class for user's accuracy; shares post-stratified by map class and producer's accuracy by Olofsson et al. 2014 eq. 7",
+ "overall_accuracy_post_stratified": 1.0,
+ "sample": "<TMP>/sample_scene_random.csv"
+}

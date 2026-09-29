@@ -1,0 +1,2 @@
+no zone certified at alpha=0.3, delta=0.1 from 80 labels. no zone certified at alpha=0.3, delta=0.1 with 80 labels; the smallest testable zone (10% of the map) held 5 labels with 0 wrong
+wrote <TMP>/sample_logits3_random_zone_prefix.json

@@ -1,0 +1,2 @@
+300 windows to label of 1024 valid (random design); wrote <TMP>/sample_random.csv and its .json. Fill the `wrong` column with 1 or 0 per window, then run: oe-inferencex estimate <TMP>/sample_random.csv
+warning: probability input: confidence ties where probabilities saturate; prefer logits

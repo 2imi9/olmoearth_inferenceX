@@ -1,0 +1,19 @@
+{
+ "design": "tiles",
+ "n_labelled": 160,
+ "n_population": 1024,
+ "nominal_coverage": 0.95,
+ "estimate": 0.10625,
+ "low": 0.01187570285852585,
+ "high": 0.20062429714147414,
+ "design_effect": 2.9324923442570503,
+ "n_tiles": 10,
+ "method": "ratio estimator over tiles, ultimate-cluster variance, t on 9 df",
+ "naive_interval_if_treated_as_random": {
+  "low": 0.06993331117496662,
+  "high": 0.1582178499816072
+ },
+ "warning": "labels taken tile by tile are not independent, and a map whose tiles differ in size is labelled unevenly; the naive interval beside this one is what the ordinary formula says, and on exp78's tasks it covered 51 to 78% of the time while claiming 95%. This interval is better and still not honest everywhere: on exp78's tasks it covered 0.91 to 0.94 where tiles were of equal size, 0.82 on Sen1Floods11 and 0.60 on MADOS, whose tiles hold 1 to 400 windows. Prefer the confidence design",
+ "half_width": 0.09437429714147415,
+ "sample": "<TMP>/sample_tiles.csv"
+}

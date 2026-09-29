@@ -1,0 +1,5 @@
+error rate 0.0%, 95% interval 0.0% to 3.7% (half-width 1.8 points), from 100 labelled windows of 1020; stratified by confidence margin; Wilson interval on the design's effective sample size
+warning: no labelled window was wrong, so the design's variance is zero and the interval is the simple-random Wilson bound at 100 labels; the stratification cannot narrow it without an observed error
+  class 0: user's accuracy 100% (95-100), producer's 100% (95-100), share of map 76.6% -> error-adjusted 67% (57-75)
+  class 1: user's accuracy 100% (90-100), producer's 100% (90-100), share of map 23.4% -> error-adjusted 33% (25-43)
+wrote <TMP>/sample_scene_confidence_perclass.json

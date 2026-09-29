@@ -1,0 +1,112 @@
+{
+ "design": "random",
+ "n_labelled": 80,
+ "n_population": 256,
+ "nominal_coverage": 0.95,
+ "estimate": 0.075,
+ "low": 0.03515625,
+ "high": 0.140625,
+ "method": "exact hypergeometric interval (simple random sample of a finite map)",
+ "half_width": 0.052734375,
+ "per_class": {
+  "0": {
+   "map_share": 0.3515625,
+   "n_labelled_map_class": 29,
+   "n_labelled_reference_class": 26,
+   "user_accuracy": {
+    "estimate": 0.8620689655172413,
+    "low": 0.7222222222222222,
+    "high": 0.9444444444444444
+   },
+   "producer_accuracy": {
+    "estimate": 0.9541616870349666,
+    "low": 0.8187293507522333,
+    "high": 0.9896837322843011
+   },
+   "reference_share": {
+    "estimate": 0.31763077978056425,
+    "low": 0.2751367321382126,
+    "high": 0.3633976206138468
+   },
+   "warning": "fewer than 30 labelled windows (29 the map calls this class, 26 the reference does); the interval is wide and, below about ten, not to be trusted; the producer's accuracy rests on 1 sampled error (4 the map calls this class wrongly, 1 of this class it misses); one error more or fewer in the draw moves the estimate by a whole window's weight, and the interval can miss it",
+   "warning_codes": [
+    "few labels",
+    "few errors"
+   ]
+  },
+  "1": {
+   "map_share": 0.16015625,
+   "n_labelled_map_class": 11,
+   "n_labelled_reference_class": 12,
+   "user_accuracy": {
+    "estimate": 0.8181818181818182,
+    "low": 0.5365853658536586,
+    "high": 0.9512195121951219
+   },
+   "producer_accuracy": {
+    "estimate": 0.78275181040158,
+    "low": 0.5940449547741737,
+    "high": 0.8986977286207556
+   },
+   "reference_share": {
+    "estimate": 0.16740546630094044,
+    "low": 0.12626408532189498,
+    "high": 0.21859833207656548
+   },
+   "warning": "fewer than 30 labelled windows (11 the map calls this class, 12 the reference does); the interval is wide and, below about ten, not to be trusted; the producer's accuracy rests on 3 sampled errors (2 the map calls this class wrongly, 3 of this class it misses); one error more or fewer in the draw moves the estimate by a whole window's weight, and the interval can miss it",
+   "warning_codes": [
+    "few labels",
+    "few errors"
+   ]
+  },
+  "2": {
+   "map_share": 0.48828125,
+   "n_labelled_map_class": 40,
+   "n_labelled_reference_class": 42,
+   "user_accuracy": {
+    "estimate": 1.0,
+    "low": 0.928,
+    "high": 1.0
+   },
+   "producer_accuracy": {
+    "estimate": 0.948185666048414,
+    "low": 0.8572981715964373,
+    "high": 0.9823764509570504
+   },
+   "reference_share": {
+    "estimate": 0.5149637539184952,
+    "low": 0.483685564060741,
+    "high": 0.5461251611143739
+   },
+   "warning": "the producer's accuracy rests on 2 sampled errors; the share rests on 2 sampled errors (0 the map calls this class wrongly, 2 of this class it misses); one error more or fewer in the draw moves the estimate by a whole window's weight, and the interval can miss it",
+   "warning_codes": [
+    "few errors"
+   ]
+  }
+ },
+ "confusion_counts": [
+  [
+   25,
+   3,
+   1
+  ],
+  [
+   1,
+   9,
+   1
+  ],
+  [
+   0,
+   0,
+   40
+  ]
+ ],
+ "overall_accuracy": {
+  "estimate": 0.925,
+  "low": 0.859375,
+  "high": 0.96484375
+ },
+ "per_class_method": "random sample: exact hypergeometric interval per map class for user's accuracy; shares post-stratified by map class and producer's accuracy by Olofsson et al. 2014 eq. 7",
+ "overall_accuracy_post_stratified": 0.9223893025078369,
+ "sample": "<TMP>/sample_logits3_random.csv"
+}

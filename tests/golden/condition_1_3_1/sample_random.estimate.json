@@ -1,0 +1,12 @@
+{
+ "design": "random",
+ "n_labelled": 300,
+ "n_population": 1024,
+ "nominal_coverage": 0.95,
+ "estimate": 0.19,
+ "low": 0.154296875,
+ "high": 0.23046875,
+ "method": "exact hypergeometric interval (simple random sample of a finite map)",
+ "half_width": 0.0380859375,
+ "sample": "<TMP>/sample_random.csv"
+}

@@ -1,0 +1,188 @@
+{
+ "rule": "prefix",
+ "alpha": 0.3,
+ "delta": 0.1,
+ "n_population": 256,
+ "n_labelled": 80,
+ "min_labels_to_certify": 7,
+ "c_min": 0.0875,
+ "levels": [
+  {
+   "coverage": 0.1,
+   "n_zone": 26,
+   "n_labelled_inside": 5,
+   "n_wrong_inside": 0,
+   "p_value": 0.1302523563393121,
+   "upper_bound": 0.3076923076923077,
+   "accepted": false
+  },
+  {
+   "coverage": 0.15,
+   "n_zone": 38,
+   "n_labelled_inside": 7,
+   "n_wrong_inside": 0,
+   "p_value": 0.052122555992525306,
+   "upper_bound": 0.23684210526315788,
+   "accepted": false
+  },
+  {
+   "coverage": 0.2,
+   "n_zone": 51,
+   "n_labelled_inside": 12,
+   "n_wrong_inside": 0,
+   "p_value": 0.00525627705037117,
+   "upper_bound": 0.13725490196078433,
+   "accepted": false
+  },
+  {
+   "coverage": 0.25,
+   "n_zone": 64,
+   "n_labelled_inside": 16,
+   "n_wrong_inside": 0,
+   "p_value": 0.0008530027195738756,
+   "upper_bound": 0.109375,
+   "accepted": false
+  },
+  {
+   "coverage": 0.3,
+   "n_zone": 77,
+   "n_labelled_inside": 23,
+   "n_wrong_inside": 0,
+   "p_value": 2.5625135291091687e-05,
+   "upper_bound": 0.07792207792207792,
+   "accepted": false
+  },
+  {
+   "coverage": 0.35,
+   "n_zone": 90,
+   "n_labelled_inside": 26,
+   "n_wrong_inside": 0,
+   "p_value": 7.225074541753219e-06,
+   "upper_bound": 0.06666666666666667,
+   "accepted": false
+  },
+  {
+   "coverage": 0.4,
+   "n_zone": 102,
+   "n_labelled_inside": 31,
+   "n_wrong_inside": 0,
+   "p_value": 9.220543060899618e-07,
+   "upper_bound": 0.058823529411764705,
+   "accepted": false
+  },
+  {
+   "coverage": 0.45,
+   "n_zone": 115,
+   "n_labelled_inside": 36,
+   "n_wrong_inside": 0,
+   "p_value": 8.234293242222574e-08,
+   "upper_bound": 0.043478260869565216,
+   "accepted": false
+  },
+  {
+   "coverage": 0.5,
+   "n_zone": 128,
+   "n_labelled_inside": 41,
+   "n_wrong_inside": 0,
+   "p_value": 7.268503446418627e-09,
+   "upper_bound": 0.0390625,
+   "accepted": false
+  },
+  {
+   "coverage": 0.55,
+   "n_zone": 141,
+   "n_labelled_inside": 48,
+   "n_wrong_inside": 0,
+   "p_value": 1.888915126764589e-10,
+   "upper_bound": 0.03546099290780142,
+   "accepted": false
+  },
+  {
+   "coverage": 0.6,
+   "n_zone": 154,
+   "n_labelled_inside": 55,
+   "n_wrong_inside": 0,
+   "p_value": 4.593078531702695e-12,
+   "upper_bound": 0.032467532467532464,
+   "accepted": false
+  },
+  {
+   "coverage": 0.65,
+   "n_zone": 166,
+   "n_labelled_inside": 58,
+   "n_wrong_inside": 0,
+   "p_value": 2.1237531164433876e-12,
+   "upper_bound": 0.030120481927710843,
+   "accepted": false
+  },
+  {
+   "coverage": 0.7,
+   "n_zone": 179,
+   "n_labelled_inside": 61,
+   "n_wrong_inside": 1,
+   "p_value": 3.2182688951755324e-11,
+   "upper_bound": 0.05027932960893855,
+   "accepted": false
+  },
+  {
+   "coverage": 0.75,
+   "n_zone": 192,
+   "n_labelled_inside": 65,
+   "n_wrong_inside": 2,
+   "p_value": 1.4217057465093396e-10,
+   "upper_bound": 0.06770833333333333,
+   "accepted": false
+  },
+  {
+   "coverage": 0.8,
+   "n_zone": 205,
+   "n_labelled_inside": 68,
+   "n_wrong_inside": 3,
+   "p_value": 7.575750954050721e-10,
+   "upper_bound": 0.08292682926829269,
+   "accepted": false
+  },
+  {
+   "coverage": 0.85,
+   "n_zone": 218,
+   "n_labelled_inside": 70,
+   "n_wrong_inside": 4,
+   "p_value": 5.029614897713602e-09,
+   "upper_bound": 0.10091743119266056,
+   "accepted": false
+  },
+  {
+   "coverage": 0.9,
+   "n_zone": 230,
+   "n_labelled_inside": 72,
+   "n_wrong_inside": 4,
+   "p_value": 2.2226445384679693e-09,
+   "upper_bound": 0.09565217391304348,
+   "accepted": false
+  },
+  {
+   "coverage": 0.95,
+   "n_zone": 243,
+   "n_labelled_inside": 76,
+   "n_wrong_inside": 5,
+   "p_value": 7.48134132035343e-09,
+   "upper_bound": 0.10699588477366255,
+   "accepted": false
+  },
+  {
+   "coverage": 1.0,
+   "n_zone": 256,
+   "n_labelled_inside": 80,
+   "n_wrong_inside": 6,
+   "p_value": 1.3783051946940174e-08,
+   "upper_bound": 0.1171875,
+   "accepted": false
+  }
+ ],
+ "coverage": null,
+ "n_zone": null,
+ "threshold": null,
+ "upper_bound": null,
+ "note": "no zone certified at alpha=0.3, delta=0.1 with 80 labels; the smallest testable zone (10% of the map) held 5 labels with 0 wrong",
+ "sample": "<TMP>/sample_logits3_random.csv"
+}
