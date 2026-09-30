@@ -6,6 +6,9 @@
     oe-inferencex compare a.tif b.tif --out DIR [--patch 4] [--nodata V] [--labels labels.tif] [--groups ids.tif]
                           [--threshold T]
     oe-inferencex demo    [--out DIR] [--made-up]   a first run on the real sample map shipped with the package
+    oe-inferencex sample  scores.tif --budget 300 --out to_label.csv [--design D] [--condition layer.tif]
+    oe-inferencex estimate to_label.csv [--per-class]       once the reviewer has filled the `wrong` column
+    oe-inferencex certify  to_label.csv --alpha 0.05        from a random sample, or one drawn with --condition
 
 Inputs are GeoTIFFs (any rasterio-readable raster) or .npy arrays: (H, W) for a binary map, (C, H, W) for per-class
 scores or, for `compare`, an integer class map. `compare` also takes two continuous maps (a regression output) when the
@@ -14,6 +17,13 @@ from the raster's own value, NaN, or --nodata. Outputs are
 plain files the caller reads back: JSON summaries (assess.summary / compare's dict), CSVs of the review windows with
 pixel and map coordinates, and rasters on the window grid (patch x patch pixels per window) when the input was one.
 Nothing here narrates; the JSON is the evidence (docs/method/agent_integration.md).
+
+The confidence ranking compares windows read from the same inputs; where part of the map was read with an input
+missing, as under cloud, the errors there can be confident ones (exp88). --condition takes one integer band on the
+map's grid, each pixel's input condition (a cloud flag, the modalities present, a sensor id). assess then ranks each
+condition on its own. sample splits the labels equally across the conditions (with --design random it only records
+them) and writes each window's condition to its sidecar, from which estimate gives each condition's rate and certify
+each condition's zone. Without it, the JSON outputs carry `scope`, what a whole-map result does not show.
 """
 import argparse
 import csv
@@ -1005,7 +1015,8 @@ def build_parser():
     sm.add_argument("--nodata", type=float, default=None)
     sm.add_argument("--seed", type=int, default=0)
     sm.set_defaults(func=cmd_sample)
-    e = sub.add_parser("estimate", help="the map's error rate with an interval, from the labelled sample CSV")
+    e = sub.add_parser("estimate", help="the map's error rate with an interval, from the labelled sample CSV, and each "
+                                        "input condition's when the sample was drawn with --condition")
     e.add_argument("sample", help="the CSV `sample` wrote, with its `wrong` column filled in")
     e.add_argument("--out", default=None, help="JSON to write (default: <sample>_estimate.json)")
     e.add_argument("--per-class", action="store_true",
@@ -1023,7 +1034,9 @@ def build_parser():
                                   "column filled in")
     z.add_argument("--alpha", type=float, required=True, help="the error rate the certified zone may not exceed, e.g. 0.05")
     z.add_argument("--delta", type=float, default=est.ZONE_DELTA,
-                   help=f"the probability the statement is allowed to be wrong (default {est.ZONE_DELTA})")
+                   help=f"the probability the statement is allowed to be wrong (default {est.ZONE_DELTA}); for a sample "
+                        "drawn with --condition, that any of the per-condition statements is, split over the conditions "
+                        "tested")
     z.add_argument("--rule", choices=("prefix", "bonferroni"), default="prefix",
                    help="prefix (default) assumes the zone's error rate does not fall as the zone grows; bonferroni assumes nothing")
     z.add_argument("--scores", default=None, help="the raster `sample` was run on, if it has moved")

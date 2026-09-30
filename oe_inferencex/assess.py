@@ -2,9 +2,12 @@
 
 The recipe that the experiments support (docs/method/recipe.md): rank
 windows by the model's own confidence, use prediction-boundary proximity as
-a triage cue, report operating points, and state the caveats. This module
-turns a prediction array into that assessment. It generates evidence only;
-narration belongs to the caller.
+a triage cue, report operating points, and state the caveats. The ranking
+compares windows read from the same inputs: where part of the map was read
+with an input missing, as under cloud, the model can be confidently wrong
+there (exp88), so a map that records each pixel's input condition is also
+ranked within each condition. This module turns a prediction array into that
+assessment. It generates evidence only; narration belongs to the caller.
 
 Inputs
     scores      : (C, H, W) logits or probabilities for C classes, or
@@ -518,8 +521,11 @@ def _condition_block(pooled, condition_names, valid_w, conf_w, pooled_hard, n_cl
 
 def review_order(suspicion, valid=None):
     """Flat window indices in review order: most suspicious first, invalid windows last, ties broken by descending
-    raster position (an ascending stable sort, reversed). The one definition of the review order; exp37 and the
-    explanation layer use it so that a review set means the same thing everywhere."""
+    raster position (an ascending stable sort, reversed). The one definition of the review order; exp37, the
+    explanation layer and the per-condition review sets use it so that a review set is built the same way
+    everywhere. It compares every window's score with every other's, and a score means the same thing only within
+    one input condition: with an input missing the errors can be confident ones (exp88). A per-condition review set
+    is this order kept to the windows of that condition."""
     s = np.asarray(suspicion, dtype=np.float64)
     flat = np.where(np.asarray(valid, dtype=bool), s, -np.inf).ravel() if valid is not None else s.ravel()
     return np.argsort(flat, kind="stable")[::-1]

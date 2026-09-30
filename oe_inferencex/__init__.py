@@ -1,10 +1,10 @@
 """olmoearth_inferenceX: assess a prediction map, and measure how two inferences differ, without labels.
 
 The public surface is what this module exports. Everything here is numpy only: a prediction map in, a review
-set and its reasons out; two maps in, their difference out; and the statistics that graded every claim in the
-documentation. Labels are never needed to produce a result, only to grade one — with one exception that says so
-in its name: `estimate` turns a labelled sample back into how wrong the map is, with the interval its sampling
-design earns, because that question has no label-free answer.
+set and its reasons out, per input condition when the map records one; two maps in, their difference out; and the
+statistics that graded every claim in the documentation. Labels are never needed to produce a result, only to grade
+one — with one exception that says so in its name: `estimate` turns a labelled sample back into how wrong the map
+is, with the interval its sampling design earns, because that question has no label-free answer.
 
     import numpy as np, oe_inferencex as ox
     out = ox.assess_prediction(scores, is_logit=True)        # (C, H, W) scores -> review sets, cues, operating points
@@ -14,12 +14,15 @@ design earns, because that question has no label-free answer.
     ox.estimate_error_rate(s, wrong)                          # ... -> the error rate, with a 95% interval
 
 Modules, in the order a user meets them:
-  assess      a prediction or served class map -> review sets at budgets, boundary-first order, reference scoring
+  assess      a prediction or served class map -> review sets at budgets, boundary-first order, reference scoring,
+              and with an input-condition layer (a cloud flag, the modalities present) each condition on its own
   explain     why each review window is suspect: label-free cues with their measured enrichment
   compare     how two inferences of the same scene differ: disagreement, where it sits, stability, the label bridge
   calibrate   fuse the readings with labels: a ranker or side rule, held out, bound to its model family
   estimate    how wrong the map is, from a labelled sample: which windows to label, the design-based interval,
-              per-class accuracy, and a certified zone of the map that is wrong at most alpha of the time
+              per-class accuracy, and a certified zone of the map that is wrong at most alpha of the time; with an
+              input condition, labels split equally across the conditions, each condition's exact interval, and a
+              zone per condition with delta split over them (exp88)
   metrics     tie-aware AURC and excess AURC, capture at a budget, the attainable ceiling, design-weighted forms
   stats       exact sign tests, one-vote-per-cluster tests, block and cluster bootstraps
   signals     the confidence readings and the no-model pixel controls every rule is scored against

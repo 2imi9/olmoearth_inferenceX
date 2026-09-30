@@ -1435,7 +1435,9 @@ def certify_zone(margin, indices, wrong, alpha, delta=ZONE_DELTA, rule="prefix",
               "bonferroni" (no assumption), "plugin" (no guarantee; what a reviewer would do unaided)
 
     Returns coverage None when nothing can be certified, with the reason; a labelled set that looks like the
-    tool's own review set is refused, because the hypergeometric argument needs a random draw."""
+    tool's own review set is refused, because the hypergeometric argument needs a random draw. `scope` says that the
+    rate is certified over all the zone's windows together; for a map read from different inputs in different
+    places, `certify_by_condition` certifies each input condition on its own (exp88)."""
     margin = np.asarray(margin, dtype=np.float64).ravel()
     idx = np.asarray(indices, int).ravel()
     wrong = np.asarray(wrong, dtype=np.float64).ravel()
