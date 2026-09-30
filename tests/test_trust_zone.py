@@ -202,7 +202,13 @@ def test_delta_split_known_answers():
             else:
                 assert part["reason"] == f"{n} labels; certifying any zone at alpha 0.05 needs at least 45"
                 assert part["coverage"] is None and part["delta"] is None
-        assert r["note"] == est.FAMILY_NOTE.format(L=L, b1=45, d=0.1 / L, delta=0.1, alpha=0.05)
+        assert r["note"] == (est.FAMILY_NOTE if L > 1 else est.FAMILY_NOTE_ONE).format(L=L, b1=45, d=0.1 / L, delta=0.1,
+                                                                                    alpha=0.05)
+        if L == 1:                          # one condition tested: the note speaks of it, not of "each of the 1"
+            assert r["note"] == ("Certified per input condition. The one condition with at least 45 labels is tested "
+                                 "at delta 0.1, so its statement fails on at most 0.1 of samples. When it holds, the "
+                                 "certified windows are wrong at most 0.05 of the time. Conditions with fewer labels "
+                                 "are not tested. Outside the certified windows nothing is certified.")
         if L == 3:
             assert all(p["coverage"] is None and "needs 67" in p["note"] for p in r["per_condition"].values())
             assert r["certified_share_of_map"] is None
@@ -450,6 +456,7 @@ def test_certify_by_condition_union():
             if p["coverage"] is not None:
                 assert (grid[p["zone_indices_in_order"]] == c).all()             # each zone lies in its condition
         if r["n_conditions_tested"]:
-            assert r["note"] == est.FAMILY_NOTE.format(L=r["n_conditions_tested"], b1=r["min_labels_to_certify"],
-                                                       d=r["delta_per_condition"], delta=0.2, alpha=0.2)
+            note = est.FAMILY_NOTE if r["n_conditions_tested"] > 1 else est.FAMILY_NOTE_ONE
+            assert r["note"] == note.format(L=r["n_conditions_tested"], b1=r["min_labels_to_certify"],
+                                            d=r["delta_per_condition"], delta=0.2, alpha=0.2)
     assert seen > 20

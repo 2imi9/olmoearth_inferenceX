@@ -66,6 +66,10 @@ FAMILY_NOTE = ("Certified per input condition. Each of the {L} conditions with a
                "{d:g}, so all their statements hold together except on at most {delta:g} of samples. On that event the "
                "certified windows taken together are wrong at most {alpha:g} of the time. Conditions with fewer labels "
                "are not tested. Outside the certified windows nothing is certified.")
+FAMILY_NOTE_ONE = ("Certified per input condition. The one condition with at least {b1} labels is tested at delta {d:g}, "
+                   "so its statement fails on at most {delta:g} of samples. When it holds, the certified windows are "
+                   "wrong at most {alpha:g} of the time. Conditions with fewer labels are not tested. Outside the "
+                   "certified windows nothing is certified.")
 UNRECORDED = "unrecorded"          # the name of the windows with no recorded condition; reserved
 CONFIDENCE_REFUSAL = ("that design allocates labels from the model's confidence, which overstates the accuracy of a "
                       "condition with an input missing (exp88). Use --design condition (the default with --condition) "
@@ -1617,7 +1621,7 @@ def certify_by_condition(sample, wrong, margin, alpha, delta=ZONE_DELTA, rule="p
                  "reason": f"{int(n_c[c])} labels; certifying any zone at alpha {alpha:g} needs at least {b1}"}
         per[names[c]] = r
     if L:
-        note = FAMILY_NOTE.format(L=L, b1=b1, d=d, delta=delta, alpha=alpha)
+        note = (FAMILY_NOTE if L > 1 else FAMILY_NOTE_ONE).format(L=L, b1=b1, d=d, delta=delta, alpha=alpha)
     else:
         # FAMILY_NOTE divides delta over the tested conditions; with none tested it has no delta to state
         note = (f"Certified per input condition. No condition holds the {b1} labels that certifying any zone at alpha "
