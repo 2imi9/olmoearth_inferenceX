@@ -154,15 +154,22 @@ def test_estimate_under_each_design(labelled, tmp_path):
         assert all(_interval_ok(row) for row in r["per_condition"].values() if row["estimate"] is not None)
 
 
-def test_estimate_per_class_under_each_design(labelled, tmp_path):
+def test_estimate_per_class_under_each_design(labelled, tmp_path, capsys):
     design, csv_path = labelled
     out = tmp_path / "pc.json"
     if design == "tiles":
         with pytest.raises(SystemExit, match="not graded yet"):
             main(["estimate", csv_path, "--per-class", "--out", str(out)])
         return
+    capsys.readouterr()
     assert main(["estimate", csv_path, "--per-class", "--out", str(out)]) == 0
+    printed = capsys.readouterr().out.splitlines()
+    from oe_inferencex import estimate as est
+    # under the condition design the per-class intervals are not graded, and the printed table says so as the JSON's
+    # method does; no other design prints the note
+    assert (f"note: {est.PER_CLASS_NOT_GRADED}" in printed) == (design == "condition")
     r = _json(out)
+    assert ("have not been graded" in r["per_class_method"]) == (design == "condition")
     assert _interval_ok(r["overall_accuracy"]) and len(r["per_class"]) == C
     for row in r["per_class"].values():
         for q in ("user_accuracy", "producer_accuracy", "reference_share"):

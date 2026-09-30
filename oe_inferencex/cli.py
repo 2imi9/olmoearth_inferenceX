@@ -824,6 +824,10 @@ def cmd_estimate(args):
             tag = f"  [warning: {', '.join(row.get('warning_codes', ['see the JSON']))}]" if "warning" in row else ""
             lines.append(f"  class {c}: user's accuracy {f(ua)}, producer's {f(pa)}, share of map {100 * row['map_share']:.1f}% "
                          f"-> error-adjusted {f(sh)}" + tag)
+        if res["design"] == "condition" and len(res.get("per_condition", {})) > 1:
+            # the method string says so, and the printed table did not: the per-class intervals under this design
+            # are not graded (review of 2026-09-29); with one condition the table is the random design's
+            lines.append(f"note: {est.PER_CLASS_NOT_GRADED}")
         per_class_text = "\n" + "\n".join(lines) + (f"\nnote: {res['per_class_note']}" if "per_class_note" in res else "")
     res["sample"] = os.path.abspath(args.sample)
     out = args.out or (args.sample[:-4] + "_estimate.json" if args.sample.endswith(".csv") else args.sample + "_estimate.json")

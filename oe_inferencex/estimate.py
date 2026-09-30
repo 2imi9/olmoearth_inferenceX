@@ -62,6 +62,8 @@ CONDITION_NOTE = ("Each condition's interval is its own 95% statement; the inter
 CONDITION_NOT_GRADED = ("The whole-map interval is the stratified interval the confidence design uses, with a floor "
                         "on the variance of a condition whose labels nearly all agree; with input conditions as strata "
                         "its coverage has not been graded.")
+PER_CLASS_NOT_GRADED = ("The per-class intervals take the input conditions as strata, and with conditions as strata "
+                        "their coverage has not been graded.")
 FAMILY_NOTE = ("Certified per input condition. Each of the {L} conditions with at least {b1} labels is tested at delta "
                "{d:g}, so all their statements hold together except on at most {delta:g} of samples. On that event the "
                "certified windows taken together are wrong at most {alpha:g} of the time. Conditions with fewer labels "

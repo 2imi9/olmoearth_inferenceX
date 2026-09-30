@@ -214,8 +214,8 @@ that belong to it), the producer's accuracy (the share of windows of the class m
 error-adjusted share of the map, each with an interval. A class is flagged for fewer than 30 labels (`few labels`), one
 to four sampled errors (`few errors`), nearly all windows labelled (`near census`), thin sampling (`thin strata`), or
 no window predicted (`never predicted`, producer's accuracy 0). Under the condition design the same estimators run
-with the conditions as strata; their intervals have not been graded there, and `method` says so. With one
-condition the table is the random design's, numbers and method alike.
+with the conditions as strata; their intervals have not been graded there, and `method` and a printed note say so.
+With one condition the table is the random design's, numbers and method alike.
 
 **The review set is not a sample.** It is selected to contain errors, so its error rate overstates the map's (1.8 to
 5.8 times on exp78's tasks). `sample` draws windows with weights the estimator undoes; the review set has none.
