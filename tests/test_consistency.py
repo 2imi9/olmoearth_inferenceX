@@ -51,10 +51,12 @@ def scored(tmp_path_factory):
     return d, probs.astype(np.float32), truth
 
 
-def _sampled(scored, design, budget=120):
+def _sampled(scored, design, budget=120, condition=None):
     d, probs, truth = scored
-    csv_path = str(d / f"{design}.csv")
-    assert main(["sample", str(d / "p.npy"), "--budget", str(budget), "--design", design, "--out", csv_path, "--seed", "1"]) == 0
+    csv_path = str(d / f"{design}{'_cond' if condition else ''}.csv")
+    extra = ["--condition", condition] if condition else []
+    assert main(["sample", str(d / "p.npy"), "--budget", str(budget), "--design", design, "--out", csv_path, "--seed", "1",
+                 *extra]) == 0
     arr = assess_prediction(probs, is_logit=False)["arrays"]
     with open(csv_path, newline="") as f:
         rows = list(csv.DictReader(f))
@@ -65,7 +67,8 @@ def _sampled(scored, design, budget=120):
     with open(csv_path, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0])); w.writeheader(); w.writerows(rows)
     side = _json(csv_path[:-4] + ".json")
-    sample = {k: (np.asarray(v) if k in ("indices", "strata", "strata_of_population", "tiles") else v) for k, v in side.items()}
+    sample = {k: (np.asarray(v) if k in ("indices", "strata", "strata_of_population", "tiles", "condition_grid") else v)
+              for k, v in side.items()}
     idx = np.array([int(r["index"]) for r in rows])
     wrong = np.array([int(r["wrong"]) for r in rows])
     ref = np.array([int(r["reference_class"]) for r in rows])
@@ -97,3 +100,36 @@ def test_certify_cli_and_api_agree(scored, tmp_path, rule):
     api = est.certify_zone(arr["confidence"].ravel(), idx, wrong, 0.4, rule=rule, valid=arr["valid"].ravel())
     assert cli["coverage"] == api["coverage"] and cli["n_zone"] == api["n_zone"]
     assert [lv["accepted"] for lv in cli["levels"]] == [lv["accepted"] for lv in api["levels"]]
+
+
+@pytest.mark.parametrize("design", ["condition", "random"])
+def test_condition_cli_and_api_agree(scored, tmp_path, design):
+    """A sample drawn with --condition: the command line's per-condition rates and zones are the API's, exactly."""
+    d, probs, truth = scored
+    cond = np.where(np.arange(64)[None, :] < 24, 3, 8) * np.ones((64, 1), int)
+    cond[:, 60:] = -1                                                   # the last column of windows records none
+    np.save(d / "cond.npy", cond)
+    csv_path, sample, idx, wrong, ref, arr = _sampled(scored, design, budget=200, condition=str(d / "cond.npy"))
+    assert sample["condition"]["names"] == ["3", "8", "unrecorded"]
+    out = tmp_path / "e.json"
+    assert main(["estimate", csv_path, "--out", str(out)]) == 0
+    cli = _json(out)
+    api = est.estimate_error_rate(sample, wrong)
+    assert (cli["estimate"], cli["low"], cli["high"], cli["method"]) == (api["estimate"], api["low"], api["high"], api["method"])
+    assert cli["per_condition"] == json.loads(json.dumps(api["per_condition"]))
+    assert cli["outside_condition_intervals"] == api["outside_condition_intervals"]
+    for rule in ("prefix", "bonferroni"):
+        zout = tmp_path / f"z_{rule}.json"
+        assert main(["certify", csv_path, "--alpha", "0.4", "--rule", rule, "--out", str(zout)]) == 0
+        z = _json(zout)
+        zapi = est.certify_by_condition(sample, wrong, arr["confidence"].ravel(), 0.4, rule=rule, valid=arr["valid"].ravel())
+        assert z["n_conditions_tested"] == zapi["n_conditions_tested"] and z["delta_per_condition"] == zapi["delta_per_condition"]
+        assert z["certified_share_of_map"] == zapi["certified_share_of_map"] and z["n_certified"] == zapi["n_certified"]
+        for name, e in zapi["per_condition"].items():
+            for k in ("tested", "coverage", "n_zone", "threshold", "upper_bound", "delta", "n_labelled", "n_population"):
+                assert z["per_condition"][name][k] == e.get(k), (rule, name, k)
+            assert [lv["accepted"] for lv in z["per_condition"][name]["levels"]] == [lv["accepted"] for lv in e["levels"]]
+        assert zapi["certified_share_of_map"] or rule == "bonferroni"         # the comparison is not of two empty results
+        if zapi["certified_share_of_map"] is not None:
+            mask = np.load(str(zout)[:-5] + ".npy").ravel()
+            assert np.array_equal(np.flatnonzero(mask), np.sort(zapi["zone_indices_in_order"]))

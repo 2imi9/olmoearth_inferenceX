@@ -28,11 +28,15 @@ def maps(tmp_path_factory):
     probs = np.exp(logits - logits.max(0)); probs /= probs.sum(0)
     truth = np.where(rng.random((H, W)) < 0.85, probs.argmax(0), rng.integers(0, C, (H, W)))
     groups = (np.arange(H)[:, None] // 32) * 2 + (np.arange(W)[None, :] // 32)
+    # an input condition per pixel: clear on the left, cloudy on the right, nothing recorded in the bottom windows
+    cond = np.where(np.arange(W)[None, :] < 40, 0, 1) * np.ones((H, 1), int)
+    cond[H - 4:] = -1
     paths = {}
     for name, arr in (("probs", probs.astype(np.float32)), ("logits", logits.astype(np.float32)),
                       ("probs_b", np.roll(probs, 3, axis=2).astype(np.float32)), ("cls", probs.argmax(0)),
                       ("cls_b", np.roll(probs.argmax(0), 3, axis=1)), ("truth", truth), ("groups", groups),
-                      ("binary", probs[0].astype(np.float32)), ("cover", (100 * probs[0]).astype(np.float32))):
+                      ("binary", probs[0].astype(np.float32)), ("cover", (100 * probs[0]).astype(np.float32)),
+                      ("cond", cond)):
         paths[name] = str(d / f"{name}.npy")
         np.save(paths[name], arr)
     paths["dir"] = d
@@ -66,7 +70,8 @@ def _interval_ok(block):
 
 # ----------------------------------------------------------------------------- assess
 @pytest.mark.parametrize("extra", [[], ["--order", "boundary_first"], ["--budgets", "0.02", "0.2"],
-                                   ["--reference", "truth"], ["--nodata", "-1"]])
+                                   ["--reference", "truth"], ["--nodata", "-1"],
+                                   ["--condition", "cond", "--condition-names", "0=clear", "1=cloudy"]])
 def test_assess_under_each_option(maps, tmp_path, extra):
     extra = [maps[x] if x in maps else x for x in extra]
     out = tmp_path / "a"
@@ -75,6 +80,9 @@ def test_assess_under_each_option(maps, tmp_path, extra):
     assert s["n_windows"] == (H // PATCH) * (W // PATCH) and s["review_sets"]
     if "--reference" in extra:
         assert "error_capture_at_budget" in s["against_reference"]
+    if "--condition" in extra:
+        assert list(s["conditions"]["per_condition"]) == ["clear", "cloudy", "unrecorded"]
+        assert os.path.exists(out / "condition.npy") and os.path.exists(out / "review_set_05pct_by_condition.csv")
 
 
 def test_assess_with_logits(maps, tmp_path):
@@ -123,11 +131,13 @@ def test_compare_refusals(maps, tmp_path, extra, why):
 
 
 # ----------------------------------------------------------------------------- sample, estimate, certify
-@pytest.fixture(scope="module", params=["confidence", "proportional", "random", "tiles"])
+@pytest.fixture(scope="module", params=["confidence", "proportional", "random", "tiles", "condition", "random+condition"])
 def labelled(maps, request):
-    design = request.param
-    csv_path = str(maps["dir"] / f"s_{design}.csv")
+    design = request.param.split("+")[0]
+    csv_path = str(maps["dir"] / f"s_{request.param}.csv")
     extra = ["--tile", "4", "--per-tile", "5"] if design == "tiles" else []
+    if request.param.endswith("condition"):
+        extra = ["--condition", maps["cond"], "--condition-names", "0=clear", "1=cloudy"]
     assert main(["sample", maps["probs"], "--budget", "80", "--design", design, "--out", csv_path, "--seed", "3", *extra]) == 0
     _label(csv_path, maps["probs"], maps["truth"])
     return design, csv_path
@@ -139,6 +149,9 @@ def test_estimate_under_each_design(labelled, tmp_path):
     assert main(["estimate", csv_path, "--out", str(out)]) == 0
     r = _json(out)
     assert r["design"] == design and _interval_ok(r)
+    if "condition" in csv_path:
+        assert r["by_condition"] and list(r["per_condition"]) == ["clear", "cloudy", "unrecorded"]
+        assert all(_interval_ok(row) for row in r["per_condition"].values() if row["estimate"] is not None)
 
 
 def test_estimate_per_class_under_each_design(labelled, tmp_path):
@@ -163,14 +176,20 @@ def test_certify_under_each_rule(labelled, tmp_path, rule, alpha):
     design, csv_path = labelled
     out = tmp_path / "z.json"
     args = ["certify", csv_path, "--alpha", str(alpha), "--rule", rule, "--delta", "0.2", "--out", str(out)]
-    if design != "random":
+    by_condition = "condition" in csv_path                  # a sample drawn with --condition: per condition
+    if design != "random" and not by_condition:
         with pytest.raises(SystemExit, match="needs a random sample"):
             main(args)
         return
     assert main(args) == 0                                   # bonferroni used to crash here on every certified zone
     z = _json(out)
     assert z["rule"] == rule and z.get("note")
-    assert (z["coverage"] is None) == (not os.path.exists(str(out)[:-5] + ".npy"))
+    if by_condition:                                         # the mask is the union of the conditions' zones
+        assert z["coverage"] is None and z["by_condition"] and (z["n_conditions_tested"] > 0) == (alpha == 0.3)
+        assert (z["certified_share_of_map"] is None) == (not os.path.exists(str(out)[:-5] + ".npy"))
+        assert all(e["rule"] == rule for e in z["per_condition"].values() if e["tested"])
+    else:
+        assert (z["coverage"] is None) == (not os.path.exists(str(out)[:-5] + ".npy"))
 
 
 def test_estimate_refuses_the_maps_options_without_per_class(labelled, tmp_path):
@@ -184,6 +203,6 @@ def test_estimate_refuses_the_maps_options_without_per_class(labelled, tmp_path)
 
 def test_certify_offers_only_the_rules_with_a_guarantee(labelled, tmp_path):
     design, csv_path = labelled
-    if design == "random":
+    if design in ("random", "condition"):
         with pytest.raises(SystemExit):
             main(["certify", csv_path, "--rule", "plugin", "--out", str(tmp_path / "p.json")])
