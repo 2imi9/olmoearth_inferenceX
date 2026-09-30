@@ -356,7 +356,11 @@ def test_certify_by_condition_equals_certify_zone_within_each_condition():
                                      valid=valid & (grid == c))
             assert set(alone) - set(part) == {"scope"} and set(part) - set(alone) == {"value", "tested", "reason"}
             for k, v in alone.items():
-                if k != "scope":
+                if k == "note" and part["coverage"] is None and part["levels"]:
+                    # the smallest testable zone is a share of the condition, and the entry says so
+                    at = f"({100 * part['levels'][0]['coverage']:.0f}% of the"
+                    assert part[k] == v.replace(f"{at} map)", f"{at} condition)") and "of the map" not in part[k]
+                elif k != "scope":
                     assert np.array_equal(v, part[k]) if isinstance(v, np.ndarray) else v == part[k], k
             n_tested += 1
             n_cert += part["coverage"] is not None
@@ -399,6 +403,25 @@ def test_certify_by_condition_refusals():
     hand = dict(est.sample_for_estimation(margin, 200, design="random", condition=cond), indices=np.r_[review, rest])
     with pytest.raises(ValueError, match="enriched set"):
         est.certify_by_condition(hand, err[hand["indices"]], margin, 0.1)
+
+
+def test_the_smallest_testable_zone_is_given_as_a_share_of_the_condition():
+    """Inside certify_by_condition each condition is the population certify_zone sees, so the smallest testable zone
+    in its note is a share of the condition. The entry says "of the condition", as the printed line does; the zone
+    JSON is where a reader looks for it. certify_zone's own note on the whole map is unchanged."""
+    cond, margin, err = _condition_map((1000, 3000), (0.3, 0.3), seed=2)
+    s = est.sample_for_estimation(margin, 300, design="condition", condition=cond)
+    idx = s["indices"]
+    r = est.certify_by_condition(s, err[idx], margin, 0.05)
+    assert r["n_conditions_tested"] == 2 and r["certified_share_of_map"] is None
+    for c, part in enumerate(r["per_condition"].values()):
+        lv = part["levels"][0]
+        assert part["coverage"] is None and part["n_population"] == (1000, 3000)[c]
+        assert part["note"] == (f"no zone certified at alpha=0.05, delta=0.05 with 150 labels; the smallest testable zone "
+                                f"({100 * lv['coverage']:.0f}% of the condition) held {lv['n_labelled_inside']} labels "
+                                f"with {lv['n_wrong_inside']} wrong")
+    whole = est.certify_zone(margin, idx, err[idx], 0.05)
+    assert whole["coverage"] is None and "% of the map) held" in whole["note"]
 
 
 def test_certify_by_condition_union():
