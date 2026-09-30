@@ -179,11 +179,10 @@ def _condition_args(args, command):
 def _unrecorded_note(n_split, n_no_code):
     """What makes a window 'unrecorded', counted; None when no window is."""
     if n_split and n_no_code:
-        return (f"{n_split} windows are split evenly between two condition values and {n_no_code} carry none; both "
-                "count as the condition 'unrecorded'")
+        return (f"{n_split} windows are tied between condition values and {n_no_code} carry none; both count as "
+                "the condition 'unrecorded'")
     if n_split:
-        return (f"{n_split} windows are split evenly between two condition values; they count as the condition "
-                "'unrecorded'")
+        return f"{n_split} windows are tied between condition values; they count as the condition 'unrecorded'"
     if n_no_code:
         return f"{n_no_code} windows carry no condition value; they count as the condition 'unrecorded'"
     return None

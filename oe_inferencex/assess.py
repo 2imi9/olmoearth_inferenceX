@@ -125,7 +125,7 @@ def pool_condition(condition, patch, predicted=None):
     encodes that in the layer.
 
     Returns {"grid": (h, w) int64 value per window, -1 unrecorded and outside the map's valid windows,
-    "values": the sorted values that won a valid window, "n_split": valid windows split evenly between two values,
+    "values": the sorted values that won a valid window, "n_split": valid windows whose votes are tied between condition values,
     "n_no_code": valid windows with no voting pixel}. A valid window is at least half predicted pixels, as in assess.
 
     Refused: a layer that is not one band, a shape other than the map's, a value that is not an integer, a value
@@ -177,7 +177,7 @@ def pool_condition(condition, patch, predicted=None):
     won = np.unique(grid[grid >= 0])
     if won.size == 0:
         raise ValueError(f"no window takes a condition: of the map's {int(valid_w.sum())} valid windows, {n_no_code} "
-                         f"have no pixel with a recorded condition and {n_split} are split evenly between two values")
+                         f"have no pixel with a recorded condition and {n_split} are tied between condition values")
     return {"grid": grid, "values": [int(v) for v in won], "n_split": n_split, "n_no_code": n_no_code}
 
 

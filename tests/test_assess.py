@@ -266,6 +266,12 @@ def test_pool_condition_known_answer():
     assert got["grid"].tolist() == [[-1, 2], [-1, -1]] and got["values"] == [2]
     assert got["n_no_code"] == 0 and got["n_split"] == 1
 
+    # a tie among three values counts as tied, as a tie between two does: 5, 5 and 5 votes and one unrecorded pixel
+    three = np.zeros((8, 8), int)
+    three[:4, :4] = np.array([0] * 5 + [1] * 5 + [2] * 5 + [-1]).reshape(4, 4)
+    got = pool_condition(three, 4)
+    assert got["grid"].tolist() == [[-1, 0], [0, 0]] and got["n_split"] == 1 and got["n_no_code"] == 0
+
     # NaN, a negative value and a masked pixel are unrecorded; a float layer of whole numbers is read as integers
     f = lay.astype(float)
     f[:4, 4:] = np.where(lay[:4, 4:] == 2, np.nan, f[:4, 4:])                  # the 2s gone: 6 of 0 win
@@ -299,7 +305,7 @@ def test_pool_condition_refusals():
         assess_prediction(np.zeros((8, 8)) + 1.0, is_logit=True, condition=np.zeros((2, 2), int))  # a window grid
     with pytest.raises(ValueError, match="no window takes a condition"):
         pool_condition(np.full((8, 8), -1), 4)
-    with pytest.raises(ValueError, match="4 are split evenly"):
+    with pytest.raises(ValueError, match="4 are tied between condition values"):
         pool_condition(np.indices((8, 8)).sum(0) % 2, 4)                       # a checkerboard: every window tied
     with pytest.raises(ValueError, match="int32"):
         pool_condition(np.where(lay == 1, 3.4028235e38, lay), 4)               # a float32 no-data left in the layer

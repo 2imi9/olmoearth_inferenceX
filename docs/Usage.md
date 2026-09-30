@@ -90,7 +90,7 @@ oe-inferencex assess scores.tif --logits --out audit --condition cloud_flag.tif 
 Without `--condition`, `assessment.json` differs from 1.3.1's only by `scope`, and nothing printed changes. `scope`
 says that a window read with an input missing can be confidently wrong and come late in the order (exp88). With
 `--condition`, `assessment.json` also records `inputs.condition` and `inputs.condition_names` and adds `conditions`:
-the rule above, the counts of windows split between two values (`n_windows_split`) and with none
+the rule above, the counts of windows tied between condition values (`n_windows_split`) and with none
 (`n_windows_no_code`), and `per_condition`, which gives each condition's share of the map, its confidence quantiles,
 its class shares, its share of each whole-map review set and its own review sets. A condition's review set is the
 whole map's order kept to that condition, at the same budget of that condition's windows. The class shares are
