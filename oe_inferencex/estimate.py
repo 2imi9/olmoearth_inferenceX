@@ -60,11 +60,15 @@ SCOPE_CERTIFY = ("The zone's error rate is certified over all its windows togeth
 CONDITION_NOTE = ("Each condition's interval is its own 95% statement; the intervals do not hold jointly at 95%. The "
                   "whole-map rate weights each condition by its share of the map and can hide a condition that is much "
                   "worse.")
-CONDITION_NOT_GRADED = ("The whole-map interval is the stratified interval the confidence design uses, with a floor "
-                        "on the variance of a condition whose labels nearly all agree; with input conditions as strata "
-                        "its coverage has not been graded.")
-PER_CLASS_NOT_GRADED = ("The per-class intervals take the input conditions as strata, and with conditions as strata "
-                        "their coverage has not been graded.")
+# Under the condition design, what is graded and what is not. Each condition's own interval is exact: the tests
+# enumerate its coverage, and under a random sample exp88 graded it (95.6% and 95.7% of 2,000 draws, the claim
+# pooled-error-rate-misstates-the-cloudy-part). The whole-map interval and the per-class intervals under this design
+# have not been graded.
+CONDITION_NOT_GRADED = ("Each condition's own interval is exact. The whole-map interval is the stratified interval the "
+                        "confidence design uses, with a floor on the variance of a condition whose labels nearly all "
+                        "agree. With input conditions as strata, its coverage has not been graded.")
+PER_CLASS_NOT_GRADED = ("The per-class intervals take the input conditions as strata. With conditions as strata, their "
+                        "coverage has not been graded; each condition's error-rate interval is exact.")
 FAMILY_NOTE = ("Certified per input condition. Each of the {L} conditions with at least {b1} labels is tested at delta "
                "{d:g}, so all their statements hold together except on at most {delta:g} of samples. On that event the "
                "certified windows taken together are wrong at most {alpha:g} of the time. Conditions with fewer labels "
@@ -725,8 +729,8 @@ def estimate_error_rate(sample, wrong):
     A sample that records an input condition (`condition_grid`) also gets each condition's rate with its exact
     interval (`per_condition`); one that does not gets `scope`, what a whole-map rate does not say (exp88). Under the
     condition design the whole-map interval is the stratified one with a floor on the variance of a condition whose
-    labels all agree, or all but one (`floored_conditions`, `interval_variance`); it is not graded with conditions as
-    strata, and `condition_note` says so.
+    labels all agree, or all but one (`floored_conditions`, `interval_variance`). Its coverage with conditions as strata
+    has not been graded, unlike each condition's own interval, which is exact; `condition_note` says so.
     """
     wrong = np.asarray(wrong, dtype=np.float64).ravel()
     idx = np.asarray(sample["indices"], int)
@@ -1261,7 +1265,7 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
             row["reference_share"] = dict(zip(("estimate", "low", "high"), _interval(tot / N, v / N ** 2, idx.size, interval)))
             per[int(c)] = row
         method = ("stratified by input condition: ratios of Horvitz-Thompson totals with linearised variance; shares as "
-                  "Horvitz-Thompson totals; with input conditions as strata these intervals have not been graded"
+                  "Horvitz-Thompson totals; with input conditions as strata these per-class intervals have not been graded"
                   if design == "condition" else
                   "stratified by confidence margin: ratios of Horvitz-Thompson totals with linearised variance; shares as Horvitz-Thompson totals")
     for c, row in per.items():

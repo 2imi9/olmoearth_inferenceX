@@ -26,15 +26,17 @@ one `scope` note.
   refuse a layer, with the reason. The condition is fixed at sampling time: the sidecar records it and `estimate` and
   `certify` never read the raster again; a CSV whose `condition` column was edited is refused.
 - `estimate` gives each condition's error rate with its exact hypergeometric interval, under the condition design and
-  under a random sample alike, beside the whole-map rate, and names the conditions whose interval excludes the
-  whole-map rate, saying which are worse than the map as a whole and which better. Under the condition design the
-  whole-map interval is the stratified Wilson interval of the confidence design with the conditions as strata; its
-  coverage with conditions as strata has not been graded, and the JSON and the printed result say so. A condition not
-  labelled in full whose labels all agree, or all but one, enters that interval's variance at the rate 1.92 / (n +
-  3.84) rather than at nearly zero: without this floor a large clean condition beside a small degraded one gave an
-  interval that covered as little as 53% of the time (exact, 4,000 windows at 0.5% wrong beside 200 at 50%, 150 labels
-  each); with it, 99%. `--per-class` runs under the condition design and says its intervals are not graded there; with
-  one condition it gives the random design's table, numbers and method alike.
+  under a random sample alike (under random samples of 300 on exp88's half-cloudy PASTIS map, each part's interval
+  covered its own rate on 95.6% and 95.7% of 2,000 draws), beside the whole-map rate, and names the conditions whose
+  interval excludes the whole-map rate, saying which are worse than the map as a whole and which better. Under the
+  condition design the whole-map interval is the stratified Wilson interval of the confidence design with the
+  conditions as strata; its coverage with conditions as strata has not been graded, and the JSON and the printed
+  result say so. A condition not labelled in full whose labels all agree, or all but one, enters that interval's
+  variance at the rate 1.92 / (n + 3.84) rather than at nearly zero: without this floor a large clean condition beside
+  a small degraded one gave an interval that covered as little as 53% of the time (exact, 4,000 windows at 0.5% wrong
+  beside 200 at 50%, 150 labels each); with it, 99%. `--per-class` runs under the condition design and says its
+  per-class intervals are not graded there; with one condition it gives the random design's table, numbers and method
+  alike.
 - `certify` on a sample that records a condition certifies a zone inside each condition that holds enough labels,
   at delta divided by the number of such conditions, so that all the statements hold together at delta
   (`certify_by_condition`, prefix or Bonferroni rule; it refuses the plug-in rule, which has no guarantee to split). A

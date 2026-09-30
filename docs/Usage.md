@@ -159,9 +159,9 @@ pixels. **The reviewer sets `wrong` to 1 when `map_class` is not what is on the 
 |---|---|---|
 | `confidence` (default without `--condition`) | Strata by confidence margin, budget allocated from the model's confidence | Wilson at the design's effective sample size |
 | `proportional` | The same strata, budget allocated by stratum size | The same |
-| `random` | Simple random sample; required by `certify` without a condition | Exact hypergeometric |
+| `random` | Simple random sample; required by `certify` without a condition | Exact hypergeometric; with `--condition`, also exact per condition, graded in exp88 |
 | `tiles` | `--per-tile` windows (default 16) in each of a random set of tiles of `--tile` windows per side (default 16) | Ratio estimator over tiles, with the naive interval beside it |
-| `condition` (default with `--condition`) | Strata by input condition, labels split equally | Exact per condition; whole map: stratified Wilson with a variance floor, not graded with conditions as strata |
+| `condition` (default with `--condition`) | Strata by input condition, labels split equally | Exact per condition; whole map: stratified Wilson with a variance floor, not graded with conditions as strata; per class: not graded |
 
 The tile design matches how reviewers often label, and its intervals under-cover: on exp78's tasks the naive one
 covered the true rate 51 to 78% of the time at a nominal 95%, the corrected one 91 to 94% with tiles of equal size and
@@ -198,28 +198,32 @@ For a sample that records a condition, `estimate` also prints one line per condi
 `high`, `half_width`, `method`), `condition_note` and `outside_condition_intervals`, the conditions whose interval
 excludes the whole-map rate. A printed note says which of them are worse than the map as a whole and which better.
 Each condition's interval is exact hypergeometric, under the condition design and under a random sample alike, and is
-its own 95% statement; the intervals do not hold jointly. A condition no label fell in reads `estimate: null`, from 0
-to 1. Under a random sample the whole-map rate is the one given without a condition. Under the condition design it
-weights each condition by its share of the map: it is the stratified estimate and interval the confidence design uses,
-with the conditions as strata, and its coverage there has not been graded; a printed note says so. One change guards
-the design's own use case, a large clean condition beside a small degraded one. A condition not labelled in full whose
-labels all agree, or all but one, adds nothing or little to the stratified variance, as if its rate were known, and
-the interval was then far too narrow: on a map of 4,000 windows at 0.5% wrong beside 200 at 50%, with 150 labels each,
-it covered 53% of the time (exact, by enumeration in the tests). Such a condition enters the interval's variance at
-the rate 1.92 / (n + 3.84), the centre of Wilson's interval for no error in its n labels, which brings that case to
-99%. The floor only widens the interval. When it applies, the JSON names the conditions (`floored_conditions`), gives
-the variance used (`interval_variance`) beside the design's unbiased one (`design_variance`), and a warning says so.
-With one condition it is the random design's exact interval.
+its own 95% statement; the intervals do not hold jointly. Under a random sample this was graded: on exp88's
+half-cloudy PASTIS map (OlmoEarth Base), each part's interval covered its own rate on 95.6% and 95.7% of 2,000 random
+samples of 300. Under the condition design the interval is exact by construction, and the tests enumerate its
+coverage. A condition no label fell in reads `estimate: null`, from 0 to 1. Under a random sample the whole-map rate
+is the one given without a condition. Under the condition design it weights each condition by its share of the map: it
+is the stratified estimate and interval the confidence design uses, with the conditions as strata. The coverage of
+this whole-map interval with conditions as strata has not been graded, unlike each condition's own interval; a printed
+note says so. One change guards the design's own use case, a large clean condition beside a small degraded one. A
+condition not labelled in full whose labels all agree, or all but one, adds nothing or little to the stratified
+variance, as if its rate were known, and the interval was then far too narrow: on a map of 4,000 windows at 0.5% wrong
+beside 200 at 50%, with 150 labels each, it covered 53% of the time (exact, by enumeration in the tests). Such a
+condition enters the interval's variance at the rate 1.92 / (n + 3.84), the centre of Wilson's interval for no error
+in its n labels, which brings that case to 99%. The floor only widens the interval. When it applies, the JSON names
+the conditions (`floored_conditions`), gives the variance used (`interval_variance`) beside the design's unbiased one
+(`design_variance`), and a warning says so. With one condition it is the random design's exact interval.
 
 `--per-class` needs a `reference_class` column (the class the reviewer saw, in the map's class ids) and the map's
 scores, from the sidecar's path or `--scores`; `--scores` and `--nodata` are accepted only with `--per-class`. It adds
 `confusion_counts`, `overall_accuracy` and, per class, the user's accuracy (the share of windows mapped as the class
-that belong to it), the producer's accuracy (the share of windows of the class mapped as it) and `reference_share`, the
-error-adjusted share of the map, each with an interval. A class is flagged for fewer than 30 labels (`few labels`), one
-to four sampled errors (`few errors`), nearly all windows labelled (`near census`), thin sampling (`thin strata`), or
-no window predicted (`never predicted`, producer's accuracy 0). Under the condition design the same estimators run
-with the conditions as strata; their intervals have not been graded there, and `method` and a printed note say so.
-With one condition the table is the random design's, numbers and method alike.
+that belong to it), the producer's accuracy (the share of windows of the class mapped as it) and `reference_share`,
+the error-adjusted share of the map, each with an interval. A class is flagged for fewer than 30 labels
+(`few labels`), one to four sampled errors (`few errors`), nearly all windows labelled (`near census`), thin sampling
+(`thin strata`), or no window predicted (`never predicted`, producer's accuracy 0). Under the condition design the
+same estimators run with the conditions as strata. These per-class intervals have not been graded there, and `method`
+and a printed note say so; each condition's error-rate interval is still exact. With one condition the table is the
+random design's, numbers and method alike.
 
 **The review set is not a sample.** It is selected to contain errors, so its error rate overstates the map's (1.8 to
 5.8 times on exp78's tasks). `sample` draws windows with weights the estimator undoes; the review set has none.
