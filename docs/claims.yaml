@@ -4123,3 +4123,71 @@
     19.7%), so estimating the rate per condition stays justified; ranking across conditions is safe here only
     because each condition's windows were read by a probe trained on that input. Large's full-input row is exp88's;
     exp79's second run of the same probe differs from it on 104 of the 458,638 units.
+
+- id: suite-controls-are-near-chance
+  statement: "On exp70's 24 tasks the two no-model controls are near chance. Take a random order's excess AURC (the error rate minus the perfect order's AURC) as the gap to close: the better of the two controls closes a median 0.094 of it and does no better than a random order on 9 of the 24 tasks, while the margin closes a median 0.680. The embedding-distance control ranks errors below chance (AUROC under 0.5) on 21 of the 24 tasks. Beating both controls on 24 of 24 tasks therefore mostly shows that the margin beats a random order."
+  crosscheck: tests/test_recorded.py::test_suite_controls_margin_and_ten_percent_review_by_a_second_route
+  status: measured
+  experiments: [exp70]
+  artifacts: [exp/out/exp70_summary.json]
+  check: |-
+    (lambda T: (lambda rnd, best, mar:
+      len(T) == 24 and all(mar[t] < best[t] for t in T)
+      and sum(1 for t in T if best[t] >= rnd[t]) == 9
+      and round(median([1 - best[t] / rnd[t] for t in T]), 3) == 0.094
+      and round(median([1 - mar[t] / rnd[t] for t in T]), 3) == 0.680
+      and sum(1 for t in T if T[t]['signals']['ctl_embedding_distance']['auroc'] < 0.5) == 21
+    )({t: T[t]['error_rate'] - oracle_aurc(T[t]['n_units'], round(T[t]['error_rate'] * T[t]['n_units'])) for t in T},
+      {t: min(T[t]['signals'][c]['excess_aurc'] for c in ('ctl_embedding_distance', 'ctl_class_rarity')) for t in T},
+      {t: T[t]['signals']['margin']['excess_aurc'] for t in T})
+    )(A['exp/out/exp70_summary.json']['results']['tasks'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: suite-controls-are-near-chance}
+  note: >-
+    The gap uses the exact finite-n perfect order (oracle_aurc), so it is not mixed with the asymptotic form the
+    claim margin-takes-two-thirds-of-the-ranking-headroom uses; both give 0.68 for the margin. The class-rarity
+    control reads how rare the probe's predicted class is, so it is not wholly free of the model. Other references
+    carry informative controls (LUCAS, Dynamic World, EuroCrops); this claim is about the suite.
+
+- id: exp79-margin-beats-random-everywhere
+  statement: "The margin ranks errors better than a random order in every one of exp79's 3,560 cells (16 encoders, each encoder's scored tasks, 10 probe seeds each). Its AUROC for errors is above 0.5 in all of them, and its excess AURC is below a random order's in all of them. The lowest AUROC, 0.503, is Clay Large on Nandi Sentinel-1, close to chance."
+  crosscheck: tests/test_recorded.py::test_exp79_margin_beats_random_in_every_cell_by_a_second_route
+  status: measured
+  experiments: [exp79]
+  artifacts: [exp/out/exp79_seeds/anysat.json, exp/out/exp79_seeds/clay_large.json, exp/out/exp79_seeds/copernicusfm.json, exp/out/exp79_seeds/croma_base.json, exp/out/exp79_seeds/croma_large.json, exp/out/exp79_seeds/galileo_base.json, exp/out/exp79_seeds/galileo_nano.json, exp/out/exp79_seeds/galileo_tiny.json, exp/out/exp79_seeds/olmoearth_base.json, exp/out/exp79_seeds/olmoearth_large.json, exp/out/exp79_seeds/olmoearth_nano.json, exp/out/exp79_seeds/olmoearth_tiny.json, exp/out/exp79_seeds/panopticon.json, exp/out/exp79_seeds/satlas_base.json, exp/out/exp79_seeds/terramind_base.json, exp/out/exp79_seeds/terramind_large.json]
+  check: |-
+    (lambda E: (lambda cells:
+      len(cells) == 3560 and len(E) == 16
+      and all(c[0] > 0.5 for c in cells) and round(min(cells)[0], 3) == 0.503 and min(cells)[1:3] == ('clay_large', 'nandi_sentinel1')
+      and all(c[3]['signals']['margin']['excess_aurc'] < c[3]['error_rate'] - oracle_aurc(c[3]['n_units'], round(c[3]['error_rate'] * c[3]['n_units'])) for c in cells)
+    )([(s['signals']['margin']['auroc'], e, t, s) for e in sorted(E) for t, r in E[e]['tasks'].items() for s in r['seeds']])
+    )({e: A['exp/out/exp79_seeds/' + e + '.json'] for e in ['anysat', 'clay_large', 'copernicusfm', 'croma_base', 'croma_large', 'galileo_base', 'galileo_nano', 'galileo_tiny', 'olmoearth_base', 'olmoearth_large', 'olmoearth_nano', 'olmoearth_tiny', 'panopticon', 'satlas_base', 'terramind_base', 'terramind_large']})
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp79-margin-beats-random-everywhere}
+  note: >-
+    A cell is one encoder, one task and one probe seed; the 3,560 are 24 tasks on seven encoders, 21 on eight and 20
+    on TerraMind Base, each at ten seeds. The per-unit files behind the cells are not committed beyond OlmoEarth
+    Base's seed 0 (exp78_units), so the crosscheck recomputes the AUROC there and the random order's excess AURC
+    everywhere.
+
+- id: suite-review-at-ten-percent
+  statement: "On exp70's 24 tasks, reviewing the 10% of units with the lowest margin finds a median 0.214 of the errors, against 0.10 for a random 10% and a median 0.410 for a perfect order, so the margin closes a median 0.40 of the gap between the two. It finds more than 10% of the errors on every task; the lowest is 0.115, on Nandi Sentinel-1."
+  crosscheck: tests/test_recorded.py::test_suite_controls_margin_and_ten_percent_review_by_a_second_route
+  status: measured
+  experiments: [exp70]
+  artifacts: [exp/out/exp70_summary.json]
+  check: |-
+    (lambda T: (lambda cap, ceil:
+      len(T) == 24 and all(cap[t] > 0.1 for t in T)
+      and round(median(cap.values()), 3) == 0.214 and round(median(ceil.values()), 3) == 0.41
+      and round(median([(cap[t] - 0.1) / (ceil[t] - 0.1) for t in T]), 2) == 0.4
+      and min(cap, key=cap.get) == 'nandi_sentinel1' and round(cap['nandi_sentinel1'], 3) == 0.115
+    )({t: T[t]['signals']['margin']['capture']['0.1'] for t in T},
+      {t: attainable_ceiling(0.1, T[t]['error_rate'], T[t]['n_units']) for t in T})
+    )(A['exp/out/exp70_summary.json']['results']['tasks'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: suite-review-at-ten-percent}
+  note: >-
+    The capture is exp70's tie-aware share of all errors inside the round(0.1 n) least confident units; the perfect
+    order's is min(k, E) / E for that realised set (attainable_ceiling with n). A random 10% finds 0.10 in
+    expectation.

@@ -1040,3 +1040,81 @@ def test_exp78_coverages_reproduce_in_a_small_seeded_monte_carlo_from_the_per_un
             assert saving > 1.8
         else:
             assert theta > 0.20 and np.mean(hw["D1/E1"]) > 0.04          # no arm reaches +/-4 points where the map is a third wrong
+
+
+def _enumerated_random_excess(n, k):
+    """A random order's excess AURC written out: its expected AURC is the error rate k / n, and the perfect order's
+    selective risk at coverage i / n is max(0, i - (n - k)) / i, averaged over i; no package function is used."""
+    i = np.arange(1, n + 1, dtype=np.float64)
+    return k / n - float(np.mean(np.maximum(0.0, i - (n - k)) / i))
+
+
+def test_suite_controls_margin_and_ten_percent_review_by_a_second_route():
+    """suite-controls-are-near-chance and suite-review-at-ten-percent by two other routes. exp79's OlmoEarth Base
+    seed-0 record, a second run of exp70's probes, gives the control counts and the 10% capture; exp78's per-unit
+    export gives the margin's share of the gap (its AURC with ties broken at random, seeded, against an enumerated
+    perfect order) and a plain stable-sort 10% review set. The export stores margins in float32, so a few tied
+    windows move the per-unit numbers slightly; the tolerances say how much."""
+    rec = json.load(open(_need("exp70_summary.json")))["results"]["tasks"]
+    b = json.load(open(_need(os.path.join("exp79_seeds", "olmoearth_base.json"))))["tasks"]
+    assert set(b) == set(rec) and len(rec) == 24
+    ctl = ("ctl_embedding_distance", "ctl_class_rarity")
+    share, at_or_below, below_half, cap79 = [], 0, 0, []
+    for t, v in b.items():
+        s = v["seeds"][0]
+        rnd = _enumerated_random_excess(s["n_units"], int(round(s["error_rate"] * s["n_units"])))
+        best = min(s["signals"][c]["excess_aurc"] for c in ctl)
+        share.append(1 - best / rnd)
+        at_or_below += best >= rnd
+        below_half += s["signals"]["ctl_embedding_distance"]["auroc"] < 0.5
+        cap79.append(s["signals"]["margin"]["capture"]["0.1"])
+    assert at_or_below == 9 and below_half == 21
+    assert abs(np.median(share) - 0.094) < 1e-3 and abs(np.median(cap79) - 0.214) < 1e-3
+    rng = np.random.default_rng(0)
+    margin_share, cap, ceil = {}, {}, {}
+    for t in rec:
+        z = np.load(_need(os.path.join("exp78_units", f"{t}.npz")))
+        m, e = z["margin"].astype(np.float64), z["err"].astype(np.float64)
+        n, k = e.size, int(e.sum())
+        order = np.lexsort((rng.random(n), -m))                  # most confident first, ties in a random order
+        aurc = float(np.mean(np.cumsum(e[order]) / np.arange(1, n + 1)))
+        rnd = _enumerated_random_excess(n, k)
+        margin_share[t] = 1 - (aurc - (k / n - rnd)) / rnd
+        kk = max(1, round(0.1 * n))
+        cap[t] = e[np.argsort(m, kind="stable")[:kk]].sum() / k
+        ceil[t] = min(kk, k) / k
+    assert abs(np.median(list(margin_share.values())) - 0.680) < 5e-3
+    assert all(v > 0.1 for v in cap.values()) and min(cap, key=cap.get) == "nandi_sentinel1"
+    assert abs(np.median(list(cap.values())) - 0.214) < 3e-3 and abs(np.median(list(ceil.values())) - 0.410) < 3e-3
+    assert abs(np.median([(cap[t] - 0.1) / (ceil[t] - 0.1) for t in rec]) - 0.40) < 5e-3
+
+
+def test_exp79_margin_beats_random_in_every_cell_by_a_second_route():
+    """exp79-margin-beats-random-everywhere by another statistic and another file. In all 3,560 cells the margin's
+    recorded excess AURC is below a random order's, written out by enumeration here; and on OlmoEarth Base at seed 0,
+    whose per-unit export is committed (exp78_units), a mid-rank AUROC computed from the units is above 0.5 on every
+    task. The export's float32 margins tie on a few classification tasks (377 of m-eurosat's 1,000 windows at the
+    top), which moves that AUROC by up to 0.023 from exp79's float64 reading."""
+    import glob
+    files = sorted(glob.glob(os.path.join(OUT, "exp79_seeds", "*.json")))
+    assert len(files) == 16
+    cells, cache = 0, {}
+    for f in files:
+        for t, r in json.load(open(f))["tasks"].items():
+            for s in r["seeds"]:
+                n, k = s["n_units"], int(round(s["error_rate"] * s["n_units"]))
+                if (n, k) not in cache:
+                    cache[(n, k)] = _enumerated_random_excess(n, k)
+                assert s["signals"]["margin"]["excess_aurc"] < cache[(n, k)], (f, t, s["seed"])
+                cells += 1
+    assert cells == 3560
+    b = json.load(open(os.path.join(OUT, "exp79_seeds", "olmoearth_base.json")))["tasks"]
+    for t, v in b.items():
+        z = np.load(_need(os.path.join("exp78_units", f"{t}.npz")))
+        score, pos = -z["margin"].astype(np.float64), z["err"].astype(bool)
+        _, inv, counts = np.unique(score, return_inverse=True, return_counts=True)
+        ranks = (np.concatenate([[0], np.cumsum(counts)[:-1]]) + (counts + 1) / 2.0)[inv]
+        n1, n0 = int(pos.sum()), int((~pos).sum())
+        auroc = (ranks[pos].sum() - n1 * (n1 + 1) / 2.0) / (n1 * n0)
+        assert auroc > 0.5, t
+        assert abs(auroc - v["seeds"][0]["signals"]["margin"]["auroc"]) < 0.03, t

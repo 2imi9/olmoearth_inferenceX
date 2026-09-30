@@ -1896,6 +1896,8 @@ event in exp45 and no such control can be computed here. Runtime 12 minutes on o
 B200, no downloads beyond the cached embeddings (job 837407). Source
 `exp/out/exp70_summary.json` and `exp/out/exp70_tasks.csv`, one row per task.
 
+<!-- claim:suite-controls-are-near-chance --> <!-- claim:suite-review-at-ten-percent -->
+
 ## The strong alternatives on the same suite (exp73)
 
 exp70's bar was the best no-model control, which a signal must clear to exist
@@ -2741,6 +2743,8 @@ tests. P5 graded the Wilson interval, as preregistered; the package's random-dra
 hypergeometric one, whose exact coverage on the same cells is at least 0.9506. And the preregistration counted 112
 cells where there are 111, because Satlas Base does not carry PASTIS Sentinel-1+2.
 <!-- claim:exp79-estimation-findings-hold-on-every-encoder -->
+
+<!-- claim:exp79-margin-beats-random-everywhere -->
 
 ## Where the lead holds: by group, with its confound and its multiplicity (exp84)
 
