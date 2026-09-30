@@ -45,8 +45,9 @@ itself, and "unrecorded" is reserved. A window takes the condition held by most 
 and a recorded condition. A tie, or no such pixel, makes it "unrecorded", and those windows form one more condition,
 listed last. A layer with more than 64 values, or with values that are not integers, is refused: bin a continuous
 layer, such as cloud fraction, first. A user who wants "any cloud makes the window cloudy" encodes that in the layer.
-Fix the layer before labelling: a layer drawn around known errors makes every statement wrong. For a map read from
-optical input alone, cloud is already no-data and needs no layer.
+Fix the layer before labelling: a layer drawn around known errors makes every statement wrong. Do not assume that a
+map read from optical input alone needs no layer. Unless its pipeline masked cloud as no-data before predicting, the
+model predicted over the cloud, and there it can be confidently wrong. Pass the cloud flag as the layer.
 
 The package refuses what it cannot rank, in Python as on the command line. Probability input outside [0, 1] raises
 an error rather than being cut at 0.5 and scored. A review set whose cut-off falls inside a run of equal scores (a
@@ -96,11 +97,11 @@ the rule above, the counts of windows tied between condition values (`n_windows_
 (`n_windows_no_code`), and `per_condition`, which gives each condition's share of the map, its confidence quantiles,
 its class shares, its share of each whole-map review set and its own review sets. A condition's review set is the
 whole map's order kept to that condition, at the same budget of that condition's windows. The class shares are
-descriptive only; no experiment has tested whether a difference between conditions signals errors. One line per
-condition is printed, with its share of the map and of the 5% review set. With two or more conditions, `scope` says
-that the whole-map sets rank the conditions together and that the ranking inside a condition with an input missing
-can be weak: on PASTIS without the optical input, the margin's AUROC for errors fell from 0.83 to 0.59 (exp88). Which
-condition is more accurate needs labels.
+descriptive only; no experiment has tested whether a difference between conditions signals errors. One printed line
+lists every condition, with its share of the map and of the 5% review set, or of the review set whose budget is
+nearest 5%. With two or more conditions, `scope` says that the whole-map sets rank the conditions together and that
+the ranking inside a condition with an input missing can be weak: on PASTIS without the optical input, the margin's
+AUROC for errors fell from 0.83 to 0.59 (exp88). Which condition is more accurate needs labels.
 
 `--order boundary_first` reviews the windows on a class boundary first, then the interior, each by confidence; the
 [Recipe](method/recipe.md) states when to use it. `--reference labels.tif`, an integer class raster on the same grid,
