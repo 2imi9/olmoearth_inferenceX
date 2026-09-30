@@ -4003,7 +4003,7 @@
     real clouds are partial. Graded on Base at seed 0; the other seeds and Large are replication.
 
 - id: missing-modality-confident-errors-follow-the-shift-not-the-sensor
-  statement: "The confident-error rise does not replicate on CropHarvest China 6 when the optical input is missing: its error rate rises from 22.6% to 28.9% and the confident share falls from 13.3% to 6.5% (OlmoEarth Base, seed 0). It appears there when radar is missing instead (error 44.1%, confident share 70.9%), and on Togo 12 when the optical input is missing (error 21.9% to 43.8%, confident share 10.4% to 48.5%)."
+  statement: "With the S1+S2 probe read, no refit, on one input, the confident-error rise does not replicate on CropHarvest China 6 when the optical input is missing: its error rate rises from 22.6% to 28.9% and the confident share falls from 13.3% to 6.5% (OlmoEarth Base, seed 0). It appears there when radar is missing instead (error 44.1%, confident share 70.9%), and on Togo 12 when the optical input is missing (error 21.9% to 43.8%, confident share 10.4% to 48.5%)."
   crosscheck: tests/test_exp88.py::test_the_recorded_run_by_a_second_route
   status: measured
   experiments: [exp88]
@@ -4029,7 +4029,7 @@
     unsuffixed task is Sentinel-2 alone (the embeddings' dataset card).
 
 - id: margin-still-ranks-inside-the-cloudy-part
-  statement: "With the optical input missing the margin still beats the best no-model control within the condition, by 0.039 in excess AURC on PASTIS and 0.064 on CropHarvest China 6 (exp88 P3), but its AUROC for errors on PASTIS falls from 0.83 with full input to 0.59."
+  statement: "With the S1+S2 probe read on the S1 input alone (the optical input missing), the margin still beats the best no-model control within the condition, by 0.039 in excess AURC on PASTIS and 0.064 on CropHarvest China 6 (exp88 P3), but its AUROC for errors on PASTIS falls from 0.83 with full input to 0.59."
   crosscheck: tests/test_exp88.py::test_the_recorded_run_by_a_second_route
   status: supported
   experiments: [exp88]
@@ -4046,7 +4046,7 @@
     - {file: docs/TECHNIQUES.md, marker: margin-still-ranks-inside-the-cloudy-part}
 
 - id: pooled-error-rate-misstates-the-cloudy-part
-  statement: "On a PASTIS map with half its tiles read without the optical input, the cloudy part's error rate is 74.1% and the clear part's 19.7%. A random sample of 300 windows estimates 46.9% on average, 27 points below the cloudy part, and its interval covers the cloudy part's rate on none of 2,000 draws; split by condition, each part's interval covers its own rate on 95.6% and 95.7% of draws (exp88 P4). A 5% review set ordered by margin holds 4.3% of the cloudy part's errors and 18.3% of the clear part's, although the cloudy part carries 79% of all errors."
+  statement: "On a PASTIS map with half its tiles read by the S1+S2 probe without the optical input, the cloudy part's error rate is 74.1% and the clear part's 19.7%. A random sample of 300 windows estimates 46.9% on average, 27 points below the cloudy part, and its interval covers the cloudy part's rate on none of 2,000 draws; split by condition, each part's interval covers its own rate on 95.6% and 95.7% of draws (exp88 P4). A 5% review set ordered by margin holds 4.3% of the cloudy part's errors and 18.3% of the clear part's, although the cloudy part carries 79% of all errors."
   crosscheck: tests/test_exp88.py::test_the_recorded_run_by_a_second_route
   status: supported
   experiments: [exp88]
@@ -4069,3 +4069,57 @@
     Each part's interval is the package's exact interval for a random sample, which covers at least 95% by
     construction; the finite-population Wilson interval exp78 graded covers 94.7% and 95.0%. On a half-cloudy map
     the pooled estimate misses the cloudy part by half the gap between the parts.
+
+- id: exp88-matched-head-ranks-normally
+  statement: "On the same 458,638 PASTIS windows, the confident errors belong to a probe read on an input it was not trained on. OlmoEarth Base's S1+S2 probe read on the S1 embeddings errs on 73.6% of the windows; 59.8% of its errors have a margin at or above 0.8206, the median margin of the windows it gets right on S1+S2, and its margin's AUROC for errors is 0.59. The probe the record trained on the S1 embeddings errs on 28.4%; 3.9% of its errors are that confident, and its AUROC is 0.79 (the S1+S2 probe on S1+S2: 19.5%, 6.0% and 0.83). On exp88's half-cloudy map with the S1 probe on the cloudy tiles, the parts err on 28.3% and 19.7%, and the 5% review set by margin holds 13.4% of the cloudy part's errors and 12.9% of the clear part's (4.3% and 18.3% with exp88's probe). OlmoEarth Large: 49.9%, 12.8% and 0.72 with the S1+S2 probe on S1; 27.9%, 2.9% and 0.80 with the S1 probe; 14.0% and 12.6% in the review set."
+  crosscheck: tests/test_exp88.py::test_the_matched_head_by_a_second_route
+  status: measured
+  experiments: [exp88, exp78, exp79]
+  artifacts: [exp/out/exp88_matched_head.json, exp/out/exp88_summary.json, exp/out/exp78_units/manifest.json]
+  check: |-
+    (lambda E, S, man: (lambda b, l, rb:
+      # every share recomputed from the counts in the file
+      all(abs(r['error_rate'] - r['n_errors'] / r['n_units']) < 1e-12
+          and abs(r['confident_share'] - r['n_confident_errors'] / r['n_errors']) < 1e-12
+          for x in (b, l) for r in x['families']['pastis']['rows'].values())
+      and all(abs(m['error_rate'][p] - m['n_errors'][p] / n) < 1e-12
+              for x in (b, l) for m in x['mixed_map'].values() if isinstance(m, dict)
+              for p, n in (('cloudy', m['n_cloudy_windows']), ('clear', m['n_windows'] - m['n_cloudy_windows'])))
+      and b['families']['pastis']['n_units'] == 458638 and round(b['families']['pastis']['threshold_confident'], 4) == 0.8206
+      # exp88's own rows are what exp88 recorded, and the S1 probe's row is exp78's recorded export
+      and abs(b['families']['pastis']['threshold_confident'] - rb['threshold_confident']) < 1e-6
+      and all(abs(b['families']['pastis']['rows'][n]['error_rate'] - rb['conditions'][c]['error_rate']) < 1e-12
+              and abs(b['families']['pastis']['rows'][n]['confident_share'] - rb['conditions'][c]['confident_errors']['share']) < 1e-12
+              and abs(b['families']['pastis']['rows'][n]['margin_auroc'] - rb['conditions'][c]['ranking']['margin_auroc']) < 1e-6
+              for n, c in (('s1s2_head_on_s1s2', 'full'), ('s1s2_head_on_s1', 'optical_missing')))
+      and abs(b['families']['pastis']['rows']['s1_head_on_s1']['error_rate'] - man['pastis_sentinel1']['error_rate']) < 1e-12
+      and abs(b['families']['pastis']['rows']['s1_head_on_s1']['margin_excess_aurc'] - man['pastis_sentinel1']['margin_excess_aurc']) < 1e-9
+      and b['mixed_map']['mismatched_agrees_with_exp88_summary'] is True and l['mixed_map']['mismatched_agrees_with_exp88_summary'] is True
+      and [round(v, 3) for v in (b['families']['pastis']['rows']['s1s2_head_on_s1']['error_rate'], b['families']['pastis']['rows']['s1s2_head_on_s1']['confident_share'],
+                                 b['families']['pastis']['rows']['s1_head_on_s1']['error_rate'], b['families']['pastis']['rows']['s1_head_on_s1']['confident_share'],
+                                 b['families']['pastis']['rows']['s1s2_head_on_s1s2']['error_rate'], b['families']['pastis']['rows']['s1s2_head_on_s1s2']['confident_share'])] == [0.736, 0.598, 0.284, 0.039, 0.195, 0.060]
+      and [round(b['families']['pastis']['rows'][n]['margin_auroc'], 2) for n in ('s1s2_head_on_s1', 's1_head_on_s1', 's1s2_head_on_s1s2')] == [0.59, 0.79, 0.83]
+      and [round(v, 3) for v in (b['mixed_map']['matched']['error_rate']['cloudy'], b['mixed_map']['matched']['error_rate']['clear'],
+                                 b['mixed_map']['matched']['review_set']['cloudy_errors_in_review_share'], b['mixed_map']['matched']['review_set']['clear_errors_in_review_share'],
+                                 b['mixed_map']['mismatched']['review_set']['cloudy_errors_in_review_share'], b['mixed_map']['mismatched']['review_set']['clear_errors_in_review_share'])] == [0.283, 0.197, 0.134, 0.129, 0.043, 0.183]
+      # the matched probe ranks the cloudy part's errors no worse than the clear part's, where exp88's did far worse
+      and b['mixed_map']['matched']['review_set']['cloudy_errors_in_review_share'] >= b['mixed_map']['matched']['review_set']['clear_errors_in_review_share']
+      and [round(v, 3) for v in (l['families']['pastis']['rows']['s1s2_head_on_s1']['error_rate'], l['families']['pastis']['rows']['s1s2_head_on_s1']['confident_share'],
+                                 l['families']['pastis']['rows']['s1_head_on_s1']['error_rate'], l['families']['pastis']['rows']['s1_head_on_s1']['confident_share'],
+                                 l['mixed_map']['matched']['review_set']['cloudy_errors_in_review_share'], l['mixed_map']['matched']['review_set']['clear_errors_in_review_share'])] == [0.499, 0.128, 0.279, 0.029, 0.140, 0.126]
+      and [round(l['families']['pastis']['rows'][n]['margin_auroc'], 2) for n in ('s1s2_head_on_s1', 's1_head_on_s1')] == [0.72, 0.80]
+      and l['families']['pastis']['rows']['s1_head_on_s1']['source']['sha256_matches'] == 'exp/out/exp79_seeds/olmoearth_large.json'
+    )(E['olmoearth_base'], E['olmoearth_large'], S['olmoearth_base']['seeds']['0']['families']['pastis'])
+    )(A['exp/out/exp88_matched_head.json']['encoders'], A['exp/out/exp88_summary.json']['results'], A['exp/out/exp78_units/manifest.json']['tasks'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp88-matched-head-ranks-normally}
+  note: >-
+    Not preregistered: a reading of committed per-unit files after exp88 was recorded, prompted by the red team of
+    30 September 2026. The matched probe is exp70's seed-0 probe as exported per unit by exp78 (Base, committed) and
+    exp79 (Large; exp79_units is not committed, and each file is used only when its sha256 equals the one
+    exp/out/exp79_seeds/olmoearth_large.json records). The probes differ in learning rate: Base's S1 probe was
+    trained at 0.1 (exp70's default for a task exp54 lists no rate for) and its S1+S2 probe at 0.01; Large's at
+    0.005 and 0.1 (Ai2's per-size file). Error rates per condition still differ with matched probes (28.3% against
+    19.7%), so estimating the rate per condition stays justified; ranking across conditions is safe here only
+    because each condition's windows were read by a probe trained on that input. Large's full-input row is exp88's;
+    exp79's second run of the same probe differs from it on 104 of the 458,638 units.

@@ -200,3 +200,75 @@ def test_the_recorded_run_by_a_second_route():
                - mm["review_set"]["clear_errors_in_review_share"]) < 2e-3
     dec = z[b + "seed0/optical_missing/dec"]
     assert round(float((dec == 1).mean()), 3) == 0.826 and round(float((z[b + "y"] == 1).mean()), 3) == 0.207
+
+
+MATCHED = os.path.join(ROOT, "exp", "out", "exp88_matched_head.json")
+
+
+def _midrank_auroc(score, positive):
+    """Mann-Whitney AUROC of `score` for `positive`, ties at their mid-rank, written without the package."""
+    score = np.asarray(score, dtype=np.float64)
+    positive = np.asarray(positive, bool)
+    _, inv, counts = np.unique(score, return_inverse=True, return_counts=True)
+    before = np.concatenate([[0], np.cumsum(counts)[:-1]])
+    ranks = (before + (counts + 1) / 2.0)[inv]
+    n1, n0 = int(positive.sum()), int((~positive).sum())
+    return (ranks[positive].sum() - n1 * (n1 + 1) / 2.0) / (n1 * n0)
+
+
+def _tiles_of(export):
+    """The tile of every exported window, from the packed validity mask and the (tiles, rows, cols) grid."""
+    n, h, w = (int(v) for v in export["grid"])
+    ok = np.unpackbits(export["ok_packed"])[:int(export["ok_len"][0])].astype(bool)
+    return np.repeat(np.arange(n), h * w)[ok]
+
+
+@pytest.mark.skipif(not (os.path.exists(RUN_UNITS) and os.path.exists(MATCHED)), reason="the recorded files are not present")
+def test_the_matched_head_by_a_second_route():
+    """exp88_matched_head.json recomputed with plain numpy from the per-unit files: exp88's probe and the probe
+    trained on each input, on the same PASTIS windows, the confident share at exp88's threshold, a mid-rank AUROC,
+    and the half-cloudy map with a plain stable-sort review set. Large is read only where its export is present."""
+    z = np.load(RUN_UNITS)
+    rec = json.load(open(MATCHED))
+    sources = {"olmoearth_base": os.path.join(ROOT, "exp", "out", "exp78_units"),
+               "olmoearth_large": os.path.join(ROOT, "exp", "out", "exp79_units", "olmoearth_large")}
+    checked = []
+    for enc, d in sources.items():
+        s1_path = os.path.join(d, "pastis_sentinel1.npz")
+        if not os.path.exists(s1_path):
+            continue
+        b = f"{enc}/pastis/"
+        y, tile = z[b + "y"].astype(int), z[b + "tile"]
+        s1 = np.load(s1_path)
+        assert np.array_equal(_tiles_of(s1), tile)
+        s1_err = s1["err"].astype(bool)
+        assert np.array_equal(s1["dec"].astype(int) == y, ~s1_err), "the S1 export is not in exp88's unit order"
+        full_err = z[b + "seed0/full/err"].astype(bool)
+        full_m = z[b + "seed0/full/margin"].astype(np.float64)
+        thr = np.median(full_m[~full_err])
+        R = rec["encoders"][enc]["families"]["pastis"]
+        assert abs(thr - R["threshold_confident"]) < 1e-9
+        heads = {"s1s2_head_on_s1s2": (full_m, full_err),
+                 "s1s2_head_on_s1": (z[b + "seed0/optical_missing/margin"].astype(np.float64),
+                                     z[b + "seed0/optical_missing/err"].astype(bool)),
+                 "s1_head_on_s1": (s1["margin"].astype(np.float64), s1_err)}
+        for name, (m, e) in heads.items():
+            r = R["rows"][name]
+            assert abs(e.mean() - r["error_rate"]) < 1e-12, (enc, name)
+            assert abs(np.count_nonzero(m[e] >= thr) / e.sum() - r["confident_share"]) < 1e-12, (enc, name)
+            assert abs(_midrank_auroc(-m, e) - r["margin_auroc"]) < 1e-9, (enc, name)
+        cloudy = np.isin(tile, z[b + "cloudy_tiles"])
+        for variant, cloud in (("mismatched", "s1s2_head_on_s1"), ("matched", "s1_head_on_s1")):
+            m = np.where(cloudy, heads[cloud][0], full_m)
+            e = np.where(cloudy, heads[cloud][1], full_err)
+            mm = rec["encoders"][enc]["mixed_map"][variant]
+            assert abs(e[cloudy].mean() - mm["error_rate"]["cloudy"]) < 1e-12
+            assert abs(e[~cloudy].mean() - mm["error_rate"]["clear"]) < 1e-12
+            review = np.zeros(e.size, bool)
+            review[np.argsort(m, kind="stable")[:round(0.05 * e.size)]] = True
+            for part, mask in (("cloudy", cloudy), ("clear", ~cloudy)):
+                got = (review & e & mask).sum() / (e & mask).sum()
+                assert abs(got - mm["review_set"][f"{part}_errors_in_review_share"]) < 2e-3, (enc, variant, part)
+            assert abs((review & e).sum() / e.sum() - mm["review_set"]["all_errors_in_review_share"]) < 2e-3
+        checked.append(enc)
+    assert "olmoearth_base" in checked, "OlmoEarth Base's export is committed and must be checked"

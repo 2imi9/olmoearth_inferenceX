@@ -2910,6 +2910,8 @@ whole-map result does not show (`scope`), and a condition layer (`--condition`) 
 splits the labels equally across the conditions, gives each its exact interval, and certifies each condition that
 holds enough labels with δ split over them ([Usage](../Usage.md#sample-and-estimate)).
 
+<!-- claim:exp88-matched-head-ranks-normally -->
+
 ## The ceiling belongs to the task, not to the model (from exp74 and exp70)
 
 The margin takes a median 0.68 of the gap between a random ranking and a perfect one on the 24 tasks. A fair
