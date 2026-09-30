@@ -1118,3 +1118,28 @@ def test_exp79_margin_beats_random_in_every_cell_by_a_second_route():
         auroc = (ranks[pos].sum() - n1 * (n1 + 1) / 2.0) / (n1 * n0)
         assert auroc > 0.5, t
         assert abs(auroc - v["seeds"][0]["signals"]["margin"]["auroc"]) < 0.03, t
+
+
+def test_exp64_declines_recount_from_the_recorded_answers():
+    """agent-benchmark-decline-holds by a second route: the 27B answers themselves (exp64_answers.jsonl), read on
+    the ten cards with a second inference (exp64_cards.csv), with the grader's own rule for what a pick is and what
+    a decline is. Arm D, which has no rasters and no package, declines on every run, as arm A does."""
+    cards = {r["card"] for r in csv.DictReader(open(_need("exp64_cards.csv"))) if r["has_second"] == "True"}
+    assert len(cards) == 10
+    picks = {"first", "a", "second", "b"}
+    declines = ("decline", "neither", "none", "cannot", "can't", "unresolv", "not resolv", "without label",
+                "no way to", "insufficient", "unknown", "not possible")           # exp64_arms.grade_comparison
+    tally = collections.defaultdict(collections.Counter)
+    for line in open(_need("exp64_answers.jsonl")):
+        run = json.loads(line)
+        if run["card"] not in cards:
+            continue
+        comp = (run.get("answer") or {}).get("comparison")
+        if not isinstance(comp, dict):
+            tally[run["arm"]]["unanswered"] += 1
+            continue
+        said = str(comp.get("believe", "")).strip().lower()
+        kind = "pick" if said in picks else "decline" if said and any(w in said for w in declines) else "other"
+        tally[run["arm"]][kind] += 1
+    assert tally["A"] == {"decline": 30} and tally["D"] == {"decline": 30}
+    assert tally["B"] == {"pick": 18, "decline": 3, "unanswered": 9}
