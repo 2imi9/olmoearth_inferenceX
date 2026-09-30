@@ -2,6 +2,7 @@
 
     oe-inferencex assess  scores.tif --out DIR [--logits] [--patch 4] [--nodata V] [--reference labels.tif]
                           [--budgets 0.01 0.05 0.10] [--order confidence|boundary_first]
+                          [--condition layer.tif [--condition-names 0=clear 1=cloudy]]
     oe-inferencex compare a.tif b.tif --out DIR [--patch 4] [--nodata V] [--labels labels.tif] [--groups ids.tif]
                           [--threshold T]
     oe-inferencex demo    [--out DIR] [--made-up]   a first run on the real sample map shipped with the package
@@ -22,7 +23,8 @@ import sys
 
 import numpy as np
 
-from oe_inferencex.assess import _boundary_valid, _pool, _pool_valid, _pooled_argmax, assess_prediction, summary
+from oe_inferencex.assess import (RULE_TEXT, _boundary_valid, _pool, _pool_valid, _pooled_argmax, assess_prediction,
+                                  pool_condition, summary)
 from oe_inferencex import estimate as est
 from oe_inferencex.compare import compare_inferences
 from oe_inferencex.explain import explain_review_set
@@ -117,6 +119,80 @@ def _check_scores(scores, valid, is_logit, path):
             f"See assess_classmap in the Python API.")
 
 
+# ----------------------------------------------------------------------------- the input-condition layer
+def _condition_names(items, command):
+    """{value: name} from `--condition-names 0=clear 1=cloudy`, or None. Unique, non-empty names and the reserved
+    "unrecorded" are the API's to check."""
+    if not items:
+        return None
+    names = {}
+    for item in items:
+        key, sep, name = str(item).partition("=")
+        try:
+            value = int(key.strip())
+        except ValueError:
+            value = None
+        if not sep or value is None:
+            raise SystemExit(f"{command}: --condition-names takes value=name pairs, such as 0=clear 1=cloudy; got {item!r}")
+        if value in names:
+            raise SystemExit(f"{command}: --condition-names names the value {value} twice")
+        names[value] = name
+    return names
+
+
+def _read_condition(path, shape, geo, command):
+    """The per-pixel input condition layer, checked to lie on the map's grid, as a masked array: the raster's own
+    no-data is masked, and NaN and negative values record no condition either (pool_condition). The layer must be
+    one band; its values are pool_condition's to check."""
+    a, valid, geo_c = read_raster(path, None)
+    if a.ndim == 3 and a.shape[0] == 1:                   # a single-band .npy saved as (1, H, W)
+        a = a[0]
+    if a.ndim != 2:
+        raise SystemExit(f"{command}: {path} has shape {a.shape}; the condition layer is one band, one value per pixel "
+                         "of the map")
+    if a.shape != tuple(shape):
+        raise SystemExit(f"{path} has shape {a.shape}; the map is {tuple(shape)}")
+    _same_grid(geo, geo_c, path)
+    return np.ma.masked_array(a, mask=~valid)
+
+
+def _condition_args(args, command):
+    """(path of the condition raster or None, {value: name} or None), read with getattr: demo.py and the tests build
+    the argument Namespace by hand, without these attributes."""
+    path = getattr(args, "condition", None)
+    names = _condition_names(getattr(args, "condition_names", None), command)
+    if names and not path:
+        raise SystemExit(f"{command}: --condition-names names the values of a --condition raster, and none was given")
+    return path, names
+
+
+def _unrecorded_note(n_split, n_no_code):
+    """What makes a window 'unrecorded', counted; None when no window is."""
+    if n_split and n_no_code:
+        return (f"{n_split} windows are split evenly between two condition values and {n_no_code} carry none; both "
+                "count as the condition 'unrecorded'")
+    if n_split:
+        return (f"{n_split} windows are split evenly between two condition values; they count as the condition "
+                "'unrecorded'")
+    if n_no_code:
+        return f"{n_no_code} windows carry no condition value; they count as the condition 'unrecorded'"
+    return None
+
+
+def _certify_need_note(names, n_labelled, alpha=0.05, delta=est.ZONE_DELTA):
+    """How many labels a condition needs before `certify` can say anything about it, at an illustrative alpha: delta
+    is split over the conditions holding at least min_labels_to_certify(alpha, delta) labels (certify_by_condition)."""
+    b1 = est.min_labels_to_certify(alpha, delta)
+    L = sum(int(n) >= b1 for n in n_labelled)
+    short = ", ".join(f"{name} gets {int(n)}" for name, n in zip(names, n_labelled) if int(n) < b1)
+    if L == 0:
+        return (f"to certify at alpha {alpha:g} (delta {delta:g}), a condition needs at least {b1} labels, and none has "
+                f"that many: {short}")
+    bL = est.min_labels_to_certify(alpha, delta / L)
+    return (f"to certify at alpha {alpha:g} (delta {delta:g} split across the {L} condition{'s' if L > 1 else ''} with "
+            f"at least {b1} labels), each needs at least {bL} labels" + (f"; {short}" if short else ""))
+
+
 def cmd_assess(args):
     scores, valid, geo = read_raster(args.scores, args.nodata)
     _check_scores(scores, valid, args.logits, args.scores)
@@ -127,9 +203,12 @@ def cmd_assess(args):
             raise SystemExit(f"{args.reference} has shape {ref.shape}; the map is {scores.shape[-2:]}")
         _same_grid(geo, geo_r, args.reference)                  # compare --labels had this check; assess did not
         reference = np.where(rvalid, np.rint(ref).astype(int), -1)
+    cond_path, cond_names = _condition_args(args, "assess")
+    layer = None if cond_path is None else _read_condition(cond_path, scores.shape[-2:], geo, "assess")
     try:
         out = assess_prediction(scores, is_logit=args.logits, patch=args.patch, nodata_mask=~valid, reference=reference,
-                                budgets=tuple(args.budgets), order=args.order)
+                                budgets=tuple(args.budgets), order=args.order, condition=layer,
+                                condition_names=cond_names)
     except ValueError as exc:                                     # a named refusal, not a traceback
         raise SystemExit(f"assess: {exc}") from None
     os.makedirs(args.out, exist_ok=True)
@@ -137,6 +216,15 @@ def cmd_assess(args):
     s["inputs"] = {"scores": os.path.abspath(args.scores), "logits": args.logits, "reference": os.path.abspath(args.reference) if args.reference else None}
     arr = out["arrays"]
     conf, bnd = arr["confidence"], arr["boundary"]
+    per_cond = name_at = None
+    if layer is not None:
+        # recorded only with a layer: without one, assessment.json differs from 1.3.1's by `scope` alone
+        s["inputs"].update({"condition": os.path.abspath(cond_path),
+                            "condition_names": {str(k): v for k, v in cond_names.items()} if cond_names else None})
+        s["conditions"]["source"] = os.path.abspath(cond_path)
+        per_cond = out["conditions"]["per_condition"]
+        name_of = {e["value"]: name for name, e in per_cond.items()}          # None is the unrecorded windows' value
+        name_at = lambda r, c: name_of[int(arr["condition"][r, c]) if arr["condition"][r, c] >= 0 else None]
     written = {}
     for b, rs in out["review_sets"].items():
         rc = np.asarray(rs["windows_rowcol"], dtype=int).reshape(-1, 2)
@@ -149,16 +237,36 @@ def cmd_assess(args):
         path = os.path.join(args.out, f"review_set_{tag}pct.csv")
         with open(path, "w", newline="") as f:
             w = csv.writer(f)
-            w.writerow(["rank", "window_row", "window_col", "pixel_row", "pixel_col", "x", "y", "confidence", "boundary"])
+            w.writerow(["rank", "window_row", "window_col", "pixel_row", "pixel_col", "x", "y", "confidence", "boundary"]
+                       + ([] if layer is None else ["condition"]))
             for i, (r, c) in enumerate(rc):
-                w.writerow([i + 1, int(r), int(c), int(pr[i]), int(pc[i]), None if x is None else float(x[i]), None if y is None else float(y[i]), float(conf[r, c]), float(bnd[r, c])])
+                w.writerow([i + 1, int(r), int(c), int(pr[i]), int(pc[i]), None if x is None else float(x[i]), None if y is None else float(y[i]), float(conf[r, c]), float(bnd[r, c])]
+                           + ([] if layer is None else [name_at(r, c)]))
         written[f"review_set_{b}"] = path
+        if layer is not None:
+            # each condition's own review set: the whole map's order kept to that condition, ranked from 1 within it
+            path = os.path.join(args.out, f"review_set_{tag}pct_by_condition.csv")
+            with open(path, "w", newline="") as f:
+                w = csv.writer(f)
+                w.writerow(["condition", "rank_in_condition", "window_row", "window_col", "pixel_row", "pixel_col", "x",
+                            "y", "confidence", "boundary"])
+                for name, e in per_cond.items():
+                    rcc = np.asarray(e["review_sets"][b]["windows_rowcol"], dtype=int).reshape(-1, 2)
+                    pr_c, pc_c, x_c, y_c = window_coords(rcc[:, 0], rcc[:, 1], geo, args.patch)
+                    for i, (r, c) in enumerate(rcc):
+                        w.writerow([name, i + 1, int(r), int(c), int(pr_c[i]), int(pc_c[i]),
+                                    None if x_c is None else float(x_c[i]), None if y_c is None else float(y_c[i]),
+                                    float(conf[r, c]), float(bnd[r, c])])
+            written[f"review_set_{b}_by_condition"] = path
     # SUSPICION, not confidence. Until 2026-09-21 this wrote `conf`, so ranking the file descending, which is what
     # its name invites, returned the exact inverse of the review set: on a 256-window scene the top 13 of the
     # raster overlapped the 13-window 5% review set in 0 of 13. A reviewer opening it with a hot-is-bad ramp
     # inspected the windows the model was most confident about.
     written["suspicion"] = write_raster(os.path.join(args.out, "suspicion.tif"), np.where(arr["valid"], -conf, np.nan).astype(np.float32), geo, args.patch, nodata=None)
     written["boundary"] = write_raster(os.path.join(args.out, "boundary.tif"), np.where(arr["valid"], bnd, np.nan).astype(np.float32), geo, args.patch, nodata=None)
+    if layer is not None:                                   # each window's condition value, -1 where none is recorded
+        written["condition"] = write_raster(os.path.join(args.out, "condition.tif"), arr["condition"].astype(np.int32),
+                                            geo, args.patch, nodata=-1)
     exp = explain_review_set(out)
     with open(os.path.join(args.out, "explanation.json"), "w") as f:
         json.dump(exp, f, indent=1)
@@ -176,8 +284,18 @@ def cmd_assess(args):
         ref_text = "; against the reference: no window has both a prediction and a majority reference label, so nothing was graded"
     else:
         ref_text = ""
+    cond_text = ""
+    if layer is not None:
+        blk = out["conditions"]
+        K = blk["n_conditions"]
+        b5 = min(out["review_sets"], key=lambda b: abs(b - 0.05))        # the 5% review set, or the budget nearest it
+        cond_text = (f"\n{K} input condition{'s' if K != 1 else ''}: " + "; ".join(
+            f"{name} {100 * e['share_of_map']:.1f}% of windows, {100 * e['share_of_review_set'][b5]:.0f}% of the "
+            f"{100 * b5:.3g}% review set" for name, e in per_cond.items())
+            + (f"\nnote: {out['scope']}" if "scope" in out else "")
+            + "".join(f"\nnote: {n}" for n in blk.get("notes", [])))
     print(f"{s['n_windows']} windows of {args.patch} px; review sets " + ", ".join(f"{int(round(b * 100))}%: {rs['n_windows']}" for b, rs in out["review_sets"].items()) +
-          f"; boundary windows {100 * s['boundary_window_fraction']:.1f}%" + ref_text +
+          f"; boundary windows {100 * s['boundary_window_fraction']:.1f}%" + ref_text + cond_text +
           f"\nwrote {args.out}/assessment.json, explanation.json, review_set_*.csv, suspicion, boundary")
     return 0
 
@@ -421,9 +539,28 @@ def _top1(scores, is_logit):
 
 def cmd_sample(args):
     """Which windows to label, written as a CSV with an empty `wrong` column for the reviewer, and a sidecar
-    JSON carrying the design so `estimate` can give the rate the design earns."""
+    JSON carrying the design so `estimate` can give the rate the design earns. With --condition, the input condition
+    of every window is fixed here and recorded in the sidecar; `estimate` and `certify` read it from there."""
+    cond_path, cond_names = _condition_args(args, "sample")
+    # None resolves to the condition design when a layer is given, to the confidence design otherwise
+    design = getattr(args, "design", None) or ("condition" if cond_path else "confidence")
+    if cond_path and design in ("confidence", "proportional"):
+        raise SystemExit(f"sample: --design {design} does not take --condition: {est.CONFIDENCE_REFUSAL}")
+    if cond_path and design == "tiles":
+        raise SystemExit("sample: --design tiles does not take --condition: a tile can span conditions, and the tile "
+                         "interval is not graded per condition.")
+    if design == "condition" and not cond_path:
+        raise SystemExit("sample: --design condition needs --condition, a raster of each pixel's input condition (a "
+                         "cloud flag, the modalities present, a sensor id)")
     scores, valid, geo = read_raster(args.scores, args.nodata)
     _check_scores(scores, valid, args.logits, args.scores)
+    pooled = None
+    if cond_path:
+        layer = _read_condition(cond_path, scores.shape[-2:], geo, "sample")
+        try:
+            pooled = pool_condition(layer, args.patch, predicted=valid)     # the window grid assess gives
+        except ValueError as exc:
+            raise SystemExit(f"sample: {exc}") from None
     out = assess_prediction(scores, is_logit=args.logits, patch=args.patch, nodata_mask=~valid)
     arr = out["arrays"]
     margin, valid_w, klass = arr["confidence"], arr["valid"], arr["pooled_argmax"]
@@ -431,15 +568,18 @@ def cmd_sample(args):
     p1_w = _pool_valid(p1, args.patch) if not valid.all() else _pool(p1, args.patch)
     hw, ww = margin.shape
     tiles = None
-    if args.design == "tiles":
+    if design == "tiles":
         t = max(1, args.tile)
         tiles = (np.arange(hw)[:, None] // t) * ((ww + t - 1) // t) + (np.arange(ww)[None, :] // t)
     try:
-        sample = est.sample_for_estimation(margin, args.budget, design=args.design, p1=p1_w, tiles=tiles,
-                                           per_tile=args.per_tile, valid=valid_w, seed=args.seed)
+        sample = est.sample_for_estimation(margin, args.budget, design=design, p1=p1_w, tiles=tiles,
+                                           per_tile=args.per_tile, valid=valid_w, seed=args.seed,
+                                           condition=None if pooled is None else pooled["grid"].ravel(),
+                                           condition_names=cond_names)
     except ValueError as exc:
         raise SystemExit(f"sample: {exc}")
     idx = sample["indices"]
+    cond = sample.get("condition")
     rows, cols = np.divmod(idx, ww)
     pr, pc, x, y = window_coords(rows, cols, geo, args.patch)
     if os.path.isdir(args.out):
@@ -450,15 +590,24 @@ def cmd_sample(args):
         # map_class: the class `estimate` and `certify` grade at the window (the majority of its pixels' classes),
         # shown so the reviewer judges the same thing the tool grades; a mixed window is where a reviewer looking
         # at the pixels could otherwise read the map's class differently (release check of 24 September)
-        w.writerow(["index", "window_row", "window_col", "pixel_row", "pixel_col", "x", "y", "stratum", "confidence",
-                    "map_class", "wrong"])
+        # with --condition, the condition's name follows `stratum` (under the condition design, the stratum is the
+        # condition's index); map_class and wrong stay the last two columns
+        w.writerow(["index", "window_row", "window_col", "pixel_row", "pixel_col", "x", "y", "stratum"]
+                   + ([] if cond is None else ["condition"]) + ["confidence", "map_class", "wrong"])
         strata = sample.get("strata")
         pos = {int(g): i for i, g in enumerate(sample.get("strata_of_population", []))}
         for k, (i, r, c) in enumerate(zip(idx, rows, cols)):
             w.writerow([int(i), int(r), int(c), int(pr[k]), int(pc[k]), None if x is None else float(x[k]),
-                        None if y is None else float(y[k]), None if strata is None else int(strata[pos[int(i)]]),
-                        float(margin[r, c]), int(klass[r, c]), ""])
+                        None if y is None else float(y[k]), None if strata is None else int(strata[pos[int(i)]])]
+                       + ([] if cond is None else [cond["names"][int(sample["condition_grid"][int(i)])]])
+                       + [float(margin[r, c]), int(klass[r, c]), ""])
     side = {k: (v.tolist() if isinstance(v, np.ndarray) else v) for k, v in sample.items()}
+    if cond is not None:
+        # the design's source of truth for `estimate` and `certify`, which never read the raster again
+        side["condition"] = {"source": os.path.abspath(cond_path), "rule": RULE_TEXT, "values": cond["values"],
+                             "names": cond["names"], "sizes": cond["sizes"], "n_labelled": cond["n_labelled"],
+                             "allocation_rule": cond["allocation_rule"], "n_windows_split": pooled["n_split"],
+                             "n_windows_no_code": pooled["n_no_code"]}
     side.update({"scores": os.path.abspath(args.scores), "logits": args.logits, "patch": args.patch,
                  "nodata": args.nodata,                   # estimate --per-class and certify recompute the map with it
                  "grid": [int(hw), int(ww)], "csv": os.path.abspath(args.out),
@@ -475,10 +624,22 @@ def cmd_sample(args):
                                  "oe-inferencex estimate " + os.path.basename(args.out)})
     with open(args.out[:-4] + ".json" if args.out.endswith(".csv") else args.out + ".json", "w") as f:
         json.dump(side, f, indent=1)
-    print(f"{len(idx)} windows to label of {sample['n_population']} valid ({args.design} design); wrote {args.out} and its .json. "
+    what, notes = f"{design} design", []
+    if cond is not None:
+        counts = ", ".join(f"{name} {int(n)}" for name, n in zip(cond["names"], cond["n_labelled"]))
+        what = f"condition design: {counts}" if design == "condition" else f"random design; by chance: {counts}"
+        K = len(cond["names"])
+        if design == "condition" and K >= 2:
+            notes.append(f"labels are split equally across the {K} input conditions so that each gets its own error "
+                         "rate; the whole-map rate weights each condition by its share of the map")
+        notes.append(_unrecorded_note(pooled["n_split"], pooled["n_no_code"]))
+        if K >= 2:
+            notes.append(_certify_need_note(cond["names"], cond["n_labelled"]))
+    print(f"{len(idx)} windows to label of {sample['n_population']} valid ({what}); wrote {args.out} and its .json. "
           f"Fill the `wrong` column with 1 or 0 per window, then run: oe-inferencex estimate {args.out}"
           + "".join(f"\nwarning: {w}" for w in out.get("warnings", []))
-          + (f"\nnote: {sample['note']}" if "note" in sample else ""))
+          + (f"\nnote: {sample['note']}" if "note" in sample else "")
+          + "".join(f"\nnote: {n}" for n in notes if n))
     return 0
 
 
@@ -515,7 +676,23 @@ def _labelled_sample(path, command):
         raise SystemExit(f"`wrong` must be exactly 1 or 0 per window; {len(bad)} row(s) are not, first at row {bad[0][0]}: "
                          f"{bad[0][1]!r}. A window you could not judge should be left out of the budget, not scored")
     wrong = np.array([ok[str(r["wrong"]).strip()] for r in rows])
-    sample = {k: (np.asarray(v) if k in ("indices", "strata", "strata_of_population", "tiles") else v) for k, v in side.items()}
+    cond = side.get("condition")
+    if "condition" in rows[0] and isinstance(cond, dict) and side.get("condition_grid") is not None:
+        # The condition is fixed when the sample is drawn, and the sidecar is its source of truth: the raster is never
+        # read again. A row whose `condition` was edited would be counted in the condition the sidecar says, so the
+        # edit is refused rather than ignored.
+        grid, names = np.asarray(side["condition_grid"]), list(cond.get("names", []))
+        def recorded(i):
+            return names[int(grid[i])] if 0 <= i < grid.size and 0 <= int(grid[i]) < len(names) else None
+        bad = [(k + 2, r["condition"], recorded(int(i))) for k, (r, i) in enumerate(zip(rows, idx))
+               if recorded(int(i)) is None or str(r["condition"]).strip() != recorded(int(i)).strip()]
+        if bad:
+            raise SystemExit(f"{path}: the `condition` column disagrees with the design in its sidecar on {len(bad)} "
+                             f"row(s), first at row {bad[0][0]}: {bad[0][1]!r} where the sample recorded {bad[0][2]!r}. "
+                             "The condition of each window is fixed when the sample is drawn; label the file `sample` "
+                             "wrote without changing that column")
+    sample = {k: (np.asarray(v) if k in ("indices", "strata", "strata_of_population", "tiles", "condition_grid") else v)
+              for k, v in side.items()}
     return side, rows, idx, sample, wrong
 
 
@@ -643,31 +820,53 @@ def cmd_estimate(args):
     out = args.out or (args.sample[:-4] + "_estimate.json" if args.sample.endswith(".csv") else args.sample + "_estimate.json")
     with open(out, "w") as f:
         json.dump(res, f, indent=1, default=float)
+    cond_text = ""
+    if res.get("by_condition"):
+        # each condition's own exact interval, one line each after the whole map's
+        lines = []
+        for name, row in res["per_condition"].items():
+            where = (f"{row['n_labelled']} labelled of {row['n_population']} windows "
+                     f"({100 * row['share_of_map']:.1f}% of the map)")
+            if row["estimate"] is None:
+                lines.append(f"{name}: no labelled window fell in this condition, so nothing can be said about it; {where}")
+            else:
+                lines.append(f"{name} {100 * row['estimate']:.1f}% ({100 * row['low']:.1f}% to {100 * row['high']:.1f}%), "
+                             f"{where}")
+        if res["outside_condition_intervals"]:
+            lines.append(f"note: the whole-map rate, {100 * res['estimate']:.1f}%, lies outside the interval of "
+                         f"{', '.join(res['outside_condition_intervals'])}; it weights each condition by its share of "
+                         "the map and can hide a condition that is much worse")
+        cond_text = "\n" + "\n".join(lines)
     # the interval is printed as its two ends: it is not symmetric about the estimate (Wilson never is, and a
     # clipped one is not), so "estimate +/- x" would name an interval that is not the one written
     print(f"error rate {100 * res['estimate']:.1f}%, 95% interval {100 * res['low']:.1f}% to {100 * res['high']:.1f}% "
           f"(half-width {100 * res['half_width']:.1f} points), from {res['n_labelled']} labelled windows of {res['n_population']}; "
-          f"{res['method']}" + (f"\nwarning: {res['warning']}" if "warning" in res else "") + per_class_text
+          f"{res['method']}" + (f"\nwarning: {res['warning']}" if "warning" in res else "") + cond_text + per_class_text
           + (f"\nwarning: {res['per_class_warning']}" if "per_class_warning" in res else "") + f"\nwrote {out}")
     return 0
 
 
 def cmd_certify(args):
     """The largest most-confident share of the map that is wrong at most --alpha of the time, certified from a
-    random labelled sample so that the statement fails with probability at most --delta (exp80)."""
+    random labelled sample so that the statement fails with probability at most --delta (exp80). A sample that
+    records an input condition is certified per condition instead, with --delta split over the conditions tested
+    (certify_by_condition); no whole-map zone is issued for it."""
     side, rows, idx, sample, wrong = _labelled_sample(args.sample, "certify")
-    if side.get("design") != "random":
+    by_condition = side.get("condition_grid") is not None and side.get("design") in ("random", "condition")
+    if side.get("design") != "random" and not by_condition:
         raise SystemExit(f"certify needs a random sample: this CSV was drawn with the {side.get('design')!r} design. The "
                          "guarantee rests on the labelled windows inside each zone being a random sample of that zone, "
                          "which a stratified or tile draw is not. Draw one with `sample --design random`")
     margin, hard, valid_w, _ = _map_windows(side, args.scores, args.nodata, "certify", rows, idx)
+    out = args.out or (args.sample[:-4] + "_zone.json" if args.sample.endswith(".csv") else args.sample + "_zone.json")
+    mask_path = out[:-5] + ".npy" if out.endswith(".json") else out + ".npy"
+    if by_condition:
+        return _certify_by_condition(args, sample, wrong, margin, valid_w, out, mask_path)
     try:
         res = est.certify_zone(margin.ravel(), idx, wrong, args.alpha, delta=args.delta, rule=args.rule, valid=valid_w.ravel())
     except ValueError as exc:
         raise SystemExit(f"certify: {exc}")
     hw, ww = margin.shape
-    out = args.out or (args.sample[:-4] + "_zone.json" if args.sample.endswith(".csv") else args.sample + "_zone.json")
-    mask_path = out[:-5] + ".npy" if out.endswith(".json") else out + ".npy"
     if res["coverage"] is not None:
         zone = np.zeros(hw * ww, bool)
         zone[np.asarray(res.pop("zone_indices_in_order"), int)] = True
@@ -689,6 +888,61 @@ def cmd_certify(args):
     return 0
 
 
+def _certify_by_condition(args, sample, wrong, margin, valid_w, out, mask_path):
+    """certify for a sample that records an input condition: a zone inside each condition with enough labels, and
+    the union of the zones as the window mask. The top-level zone fields stay null, since the union is not "the
+    most confident share of the map" that readers of those fields take them to be."""
+    try:
+        res = est.certify_by_condition(sample, wrong, margin.ravel(), args.alpha, delta=args.delta, rule=args.rule,
+                                       valid=valid_w.ravel())
+    except ValueError as exc:
+        raise SystemExit(f"certify: {exc}")
+    hw, ww = margin.shape
+    union = np.asarray(res.pop("zone_indices_in_order"), int)
+    for entry in res["per_condition"].values():
+        entry.pop("zone_indices_in_order", None)
+    if res["certified_share_of_map"] is not None:
+        zone = np.zeros(hw * ww, bool)
+        zone[union] = True
+        np.save(mask_path, zone.reshape(hw, ww))
+        res["zone_mask"] = os.path.abspath(mask_path)
+    elif os.path.exists(mask_path):
+        os.remove(mask_path)          # a previous run's zone must not sit beside a result that certifies none
+    res["sample"] = os.path.abspath(args.sample)
+    with open(out, "w") as f:
+        json.dump(res, f, indent=1, default=float)
+    a, d, b1 = args.alpha, args.delta, res["min_labels_to_certify"]
+    if res["n_conditions_tested"]:
+        lines = [f"certified per input condition at alpha={100 * a:g}%, delta={100 * d:g}% (each tested condition at "
+                 f"{100 * res['delta_per_condition']:.3g}%, so the statements hold together on at least "
+                 f"{100 * (1 - d):g}% of samples):"]
+    else:
+        lines = [f"certified per input condition at alpha={100 * a:g}%, delta={100 * d:g}%: no condition holds the {b1} "
+                 "labels that certifying any zone needs, so none was tested:"]
+    for name, e in res["per_condition"].items():
+        if not e["tested"]:
+            lines.append(f"  {name}: not tested; {e['n_labelled']} labels, and certifying any zone at alpha {a:g} needs "
+                         f"at least {b1}")
+        elif e["coverage"] is not None:
+            lines.append(f"  {name}: the {100 * e['coverage']:.0f}% most confident windows of this condition ({e['n_zone']} "
+                         f"of {e['n_population']}, margin >= {e['threshold']:.4f}) are wrong at most {100 * a:g}% of "
+                         "the time")
+        elif e["levels"]:
+            lv = e["levels"][0]
+            lines.append(f"  {name}: no zone certified; the smallest testable zone ({100 * lv['coverage']:.0f}% of the "
+                         f"condition) held {lv['n_labelled_inside']} labels with {lv['n_wrong_inside']} wrong")
+        else:                         # enough labels to be tested at delta, too few at delta split over the others
+            lines.append(f"  {name}: no zone certified; {e['n_labelled']} labels, and certifying any zone at alpha {a:g} "
+                         f"and delta {e['delta']:.3g} needs at least {e['min_labels_to_certify']}")
+    if res["certified_share_of_map"] is not None:
+        lines.append(f"together the certified windows are {100 * res['certified_share_of_map']:.1f}% of the map (mask "
+                     f"{mask_path}); outside them nothing is certified")
+    else:
+        lines.append("no zone is certified in any condition, so nothing is certified")
+    print("\n".join(lines) + f"\nwrote {out}")
+    return 0
+
+
 def build_parser():
     p = argparse.ArgumentParser(prog="oe-inferencex", description=__doc__.split("\n\n")[0])
     sub = p.add_subparsers(dest="command", required=True)
@@ -701,6 +955,12 @@ def build_parser():
     a.add_argument("--reference", default=None, help="optional integer class raster treated as truth (the caveat applies)")
     a.add_argument("--budgets", type=float, nargs="+", default=[0.01, 0.05, 0.10], help="review budgets as fractions of windows")
     a.add_argument("--order", choices=("confidence", "boundary_first"), default="confidence", help="review order")
+    a.add_argument("--condition", default=None,
+                   help="optional integer raster on the map's grid: each pixel's input condition (a cloud flag, the "
+                        "modalities present, a sensor id); negative, NaN or no-data where none is recorded. Each "
+                        "condition is then described and ranked on its own")
+    a.add_argument("--condition-names", nargs="+", default=None, metavar="VALUE=NAME",
+                   help="names for the condition values, e.g. 0=clear 1=cloudy (default: the value itself)")
     a.set_defaults(func=cmd_assess)
     d = sub.add_parser("demo", help="first run: audit the real sample map shipped with the package (or a made-up one) and draw the result")
     d.add_argument("--out", default="oe_inferencex_demo", help="output directory (default oe_inferencex_demo)")
@@ -727,9 +987,17 @@ def build_parser():
     sm.add_argument("scores", help="the same map `assess` takes: (H, W) probability or logit map, or (C, H, W) scores")
     sm.add_argument("--budget", type=int, required=True, help="number of windows to label (exp78 measured 300)")
     sm.add_argument("--out", required=True, help="CSV to write; a .json sidecar with the design goes beside it")
-    sm.add_argument("--design", choices=("confidence", "proportional", "random", "tiles"), default="confidence",
-                    help="confidence (default): stratified by margin, allocated from the model's own confidence; "
-                         "tiles: how people actually label, with the cluster interval that requires")
+    sm.add_argument("--design", choices=("confidence", "proportional", "random", "tiles", "condition"), default=None,
+                    help="confidence (default without --condition): stratified by margin, allocated from the model's "
+                         "own confidence; tiles: how people actually label, with the cluster interval that requires; "
+                         "condition (default with --condition): stratified by input condition, labels split equally, "
+                         "never from the model's confidence; random takes --condition too and only records it")
+    sm.add_argument("--condition", default=None,
+                    help="optional integer raster on the map's grid: each pixel's input condition (a cloud flag, the "
+                         "modalities present); each condition then gets its own error rate from `estimate` and its "
+                         "own zone from `certify`")
+    sm.add_argument("--condition-names", nargs="+", default=None, metavar="VALUE=NAME",
+                    help="names for the condition values, e.g. 0=clear 1=cloudy (default: the value itself)")
     sm.add_argument("--tile", type=int, default=16, help="tiles design: tile side in windows (default 16)")
     sm.add_argument("--per-tile", type=int, default=16, help="tiles design: windows labelled per tile (default 16)")
     sm.add_argument("--logits", action="store_true")
@@ -749,8 +1017,10 @@ def build_parser():
                         "a different value is refused); only needed for a sample written by 1.2.0")
     e.set_defaults(func=cmd_estimate)
     z = sub.add_parser("certify", help="which share of the map, from the most confident window down, is wrong at most "
-                                        "alpha of the time, with a guarantee (needs a random sample)")
-    z.add_argument("sample", help="the CSV `sample --design random` wrote, with its `wrong` column filled in")
+                                        "alpha of the time, with a guarantee (needs a random sample; a sample drawn "
+                                        "with --condition is certified per input condition)")
+    z.add_argument("sample", help="the CSV `sample --design random` (or `sample --condition`) wrote, with its `wrong` "
+                                  "column filled in")
     z.add_argument("--alpha", type=float, required=True, help="the error rate the certified zone may not exceed, e.g. 0.05")
     z.add_argument("--delta", type=float, default=est.ZONE_DELTA,
                    help=f"the probability the statement is allowed to be wrong (default {est.ZONE_DELTA})")
