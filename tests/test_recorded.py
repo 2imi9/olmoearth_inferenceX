@@ -1143,3 +1143,48 @@ def test_exp64_declines_recount_from_the_recorded_answers():
         tally[run["arm"]][kind] += 1
     assert tally["A"] == {"decline": 30} and tally["D"] == {"decline": 30}
     assert tally["B"] == {"pick": 18, "decline": 3, "unanswered": 9}
+
+
+def test_exp86_claim_rates_brief_level_fall_recomputes_from_the_per_brief_counts():
+    """exp86_claim_rates.json: the eight briefs pool the ten brief-by-backend configurations, the totals match, and
+    the exact brief-level test of the round 7 to round 10 fall is recomputed here by enumerating the 256 swaps of the
+    two rounds within briefs (and the 128 without brief B3); the sign test over the briefs' own rates likewise."""
+    import itertools
+    import math
+    d = json.load(open(_need("exp86_claim_rates.json")))
+    R = {r["round"]: r for r in d["rounds"]}
+    for r in R.values():
+        assert r["n_configurations"] == 10 and r["n_briefs"] == 8
+        pooled = collections.defaultdict(lambda: [0, 0])
+        for cfg, (k, s) in r["per_configuration"].items():
+            pooled[cfg.split("/")[0]][0] += k
+            pooled[cfg.split("/")[0]][1] += s
+        assert dict(pooled) == r["per_brief"]
+        assert sum(v[0] for v in r["per_brief"].values()) == r["material"]
+        assert sum(v[1] for v in r["per_brief"].values()) == r["sentences"]
+
+    def exact(a, b):
+        keys = sorted(a)
+        rate = lambda u: sum(u[k][0] for k in keys) / sum(u[k][1] for k in keys)          # noqa: E731
+        obs = rate(a) - rate(b)
+        hits = sum(rate({k: b[k] if f else a[k] for k, f in zip(keys, fl)})
+                   - rate({k: a[k] if f else b[k] for k, f in zip(keys, fl)}) >= obs - 1e-12
+                   for fl in itertools.product((0, 1), repeat=len(keys)))
+        return hits, 2 ** len(keys), obs
+
+    a, b = R[7]["per_brief"], R[10]["per_brief"]
+    F = d["fall_7_to_10"]
+    hits, n, obs = exact(a, b)
+    assert (hits, n) == (4, 256) and F["exact_brief_permutation"]["n_at_least_observed"] == 4
+    assert abs(obs - F["exact_brief_permutation"]["observed_fall"]) < 1e-12
+    down = sum(a[k][0] / a[k][1] > b[k][0] / b[k][1] for k in a)
+    up = sum(a[k][0] / a[k][1] < b[k][0] / b[k][1] for k in a)
+    assert (down, up) == (6, 1)
+    assert abs(sum(math.comb(7, j) for j in range(6, 8)) / 2 ** 7 - F["brief_sign_test"]["p_one_sided"]) < 1e-12
+    rest = {k: v for k, v in a.items() if k != "B3"}, {k: v for k, v in b.items() if k != "B3"}
+    hits, n, obs = exact(*rest)
+    assert (hits, n) == (4, 128) and abs(obs - F["without_B3"]["fall"]) < 1e-12
+    assert a["B3"][0] * 2 == R[7]["material"], "brief B3 carries half of round 7's material findings"
+    # the configuration-level numbers are the 27 September ones, unchanged by the brief-level additions
+    assert [round(v, 4) for v in R[7]["material_per_sentence_bootstrap_by_configuration_95"]] == [0.0376, 0.1116]
+    assert [round(v, 4) for v in F["by_configuration"]["round_7_minus_round_10_95"]] == [0.0181, 0.0919]

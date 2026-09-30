@@ -1,4 +1,8 @@
 {
+ "resampling_units": {
+  "configuration": "brief by backend, 10 per round (B3 and B4 run on two backends)",
+  "brief": "the 8 briefs, a brief's configurations pooled"
+ },
  "rounds": [
   {
    "round": 7,
@@ -8,10 +12,97 @@
    "material": 32,
    "answers_with_any": 26,
    "answers_with_material": 16,
-   "material_per_sentence_brief_bootstrap_95": [
+   "n_configurations": 10,
+   "n_briefs": 8,
+   "material_per_sentence_bootstrap_by_configuration_95": [
     0.03759398496240601,
     0.11157894736842106
-   ]
+   ],
+   "material_per_sentence_bootstrap_by_brief_95": [
+    0.02843601895734597,
+    0.12065439672801637
+   ],
+   "per_configuration": {
+    "B1/studio": [
+     0,
+     30
+    ],
+    "B2/studio": [
+     3,
+     49
+    ],
+    "B3/cluster": [
+     9,
+     50
+    ],
+    "B3/studio": [
+     7,
+     46
+    ],
+    "B4/cluster": [
+     0,
+     36
+    ],
+    "B4/studio": [
+     0,
+     37
+    ],
+    "B5/files": [
+     1,
+     34
+    ],
+    "B6/files": [
+     4,
+     39
+    ],
+    "B7/files": [
+     3,
+     42
+    ],
+    "B8/cluster": [
+     5,
+     62
+    ]
+   },
+   "per_brief": {
+    "B1": [
+     0,
+     30
+    ],
+    "B2": [
+     3,
+     49
+    ],
+    "B3": [
+     16,
+     96
+    ],
+    "B4": [
+     0,
+     73
+    ],
+    "B5": [
+     1,
+     34
+    ],
+    "B6": [
+     4,
+     39
+    ],
+    "B7": [
+     3,
+     42
+    ],
+    "B8": [
+     5,
+     62
+    ]
+   },
+   "without_B3": {
+    "material": 16,
+    "sentences": 329,
+    "rate": 0.0486322188449848
+   }
   },
   {
    "round": 8,
@@ -21,10 +112,97 @@
    "material": 17,
    "answers_with_any": 24,
    "answers_with_material": 11,
-   "material_per_sentence_brief_bootstrap_95": [
+   "n_configurations": 10,
+   "n_briefs": 8,
+   "material_per_sentence_bootstrap_by_configuration_95": [
     0.012376237623762377,
     0.06986899563318777
-   ]
+   ],
+   "material_per_sentence_bootstrap_by_brief_95": [
+    0.008379888268156424,
+    0.0710172744721689
+   ],
+   "per_configuration": {
+    "B1/studio": [
+     0,
+     26
+    ],
+    "B2/studio": [
+     0,
+     55
+    ],
+    "B3/cluster": [
+     3,
+     50
+    ],
+    "B3/studio": [
+     7,
+     45
+    ],
+    "B4/cluster": [
+     0,
+     43
+    ],
+    "B4/studio": [
+     0,
+     39
+    ],
+    "B5/files": [
+     2,
+     33
+    ],
+    "B6/files": [
+     0,
+     33
+    ],
+    "B7/files": [
+     2,
+     51
+    ],
+    "B8/cluster": [
+     3,
+     62
+    ]
+   },
+   "per_brief": {
+    "B1": [
+     0,
+     26
+    ],
+    "B2": [
+     0,
+     55
+    ],
+    "B3": [
+     10,
+     95
+    ],
+    "B4": [
+     0,
+     82
+    ],
+    "B5": [
+     2,
+     33
+    ],
+    "B6": [
+     0,
+     33
+    ],
+    "B7": [
+     2,
+     51
+    ],
+    "B8": [
+     3,
+     62
+    ]
+   },
+   "without_B3": {
+    "material": 7,
+    "sentences": 342,
+    "rate": 0.02046783625730994
+   }
   },
   {
    "round": 9,
@@ -34,10 +212,97 @@
    "material": 16,
    "answers_with_any": 21,
    "answers_with_material": 10,
-   "material_per_sentence_brief_bootstrap_95": [
+   "n_configurations": 10,
+   "n_briefs": 8,
+   "material_per_sentence_bootstrap_by_configuration_95": [
     0.01643192488262911,
     0.051001821493624776
-   ]
+   ],
+   "material_per_sentence_bootstrap_by_brief_95": [
+    0.016172506738544475,
+    0.05188679245283019
+   ],
+   "per_configuration": {
+    "B1/studio": [
+     0,
+     28
+    ],
+    "B2/studio": [
+     1,
+     53
+    ],
+    "B3/cluster": [
+     2,
+     56
+    ],
+    "B3/studio": [
+     3,
+     54
+    ],
+    "B4/cluster": [
+     0,
+     42
+    ],
+    "B4/studio": [
+     1,
+     40
+    ],
+    "B5/files": [
+     0,
+     39
+    ],
+    "B6/files": [
+     4,
+     42
+    ],
+    "B7/files": [
+     1,
+     55
+    ],
+    "B8/cluster": [
+     4,
+     66
+    ]
+   },
+   "per_brief": {
+    "B1": [
+     0,
+     28
+    ],
+    "B2": [
+     1,
+     53
+    ],
+    "B3": [
+     5,
+     110
+    ],
+    "B4": [
+     1,
+     82
+    ],
+    "B5": [
+     0,
+     39
+    ],
+    "B6": [
+     4,
+     42
+    ],
+    "B7": [
+     1,
+     55
+    ],
+    "B8": [
+     4,
+     66
+    ]
+   },
+   "without_B3": {
+    "material": 11,
+    "sentences": 365,
+    "rate": 0.030136986301369864
+   }
   },
   {
    "round": 10,
@@ -47,17 +312,157 @@
    "material": 10,
    "answers_with_any": 17,
    "answers_with_material": 9,
-   "material_per_sentence_brief_bootstrap_95": [
+   "n_configurations": 10,
+   "n_briefs": 8,
+   "material_per_sentence_bootstrap_by_configuration_95": [
     0.00980392156862745,
     0.03285420944558522
-   ]
+   ],
+   "material_per_sentence_bootstrap_by_brief_95": [
+    0.012345679012345678,
+    0.033816425120772944
+   ],
+   "per_configuration": {
+    "B1/studio": [
+     0,
+     29
+    ],
+    "B2/studio": [
+     2,
+     48
+    ],
+    "B3/cluster": [
+     2,
+     66
+    ],
+    "B3/studio": [
+     0,
+     58
+    ],
+    "B4/cluster": [
+     0,
+     37
+    ],
+    "B4/studio": [
+     1,
+     43
+    ],
+    "B5/files": [
+     0,
+     34
+    ],
+    "B6/files": [
+     1,
+     40
+    ],
+    "B7/files": [
+     1,
+     45
+    ],
+    "B8/cluster": [
+     3,
+     59
+    ]
+   },
+   "per_brief": {
+    "B1": [
+     0,
+     29
+    ],
+    "B2": [
+     2,
+     48
+    ],
+    "B3": [
+     2,
+     124
+    ],
+    "B4": [
+     1,
+     80
+    ],
+    "B5": [
+     0,
+     34
+    ],
+    "B6": [
+     1,
+     40
+    ],
+    "B7": [
+     1,
+     45
+    ],
+    "B8": [
+     3,
+     59
+    ]
+   },
+   "without_B3": {
+    "material": 8,
+    "sentences": 335,
+    "rate": 0.023880597014925373
+   }
   }
  ],
  "fall_7_to_10": {
-  "round_7_minus_round_10_95": [
-   0.01814283358073561,
-   0.0918704626476668
-  ],
-  "share_of_resamples_without_a_fall": 0.0004
+  "by_configuration": {
+   "round_7_minus_round_10_95": [
+    0.01814283358073561,
+    0.0918704626476668
+   ],
+   "share_of_resamples_without_a_fall": 0.0004,
+   "n_units": 10,
+   "draws": 20000
+  },
+  "by_brief": {
+   "round_7_minus_round_10_95": [
+    0.010373831775700934,
+    0.10114525618324098
+   ],
+   "share_of_resamples_without_a_fall": 0.00115,
+   "n_units": 8,
+   "draws": 20000
+  },
+  "exact_brief_permutation": {
+   "observed_fall": 0.05350762527233115,
+   "n_relabelings": 256,
+   "n_at_least_observed": 4,
+   "p_one_sided": 0.015625,
+   "n_units": 8
+  },
+  "brief_sign_test": {
+   "units_falling": 6,
+   "units_rising": 1,
+   "ties": 1,
+   "p_one_sided": 0.0625
+  },
+  "without_B3": {
+   "round_7": 0.0486322188449848,
+   "round_10": 0.023880597014925373,
+   "fall": 0.02475162183005943,
+   "by_brief": {
+    "round_7_minus_round_10_95": [
+     0.0037013867167135853,
+     0.04712970219435736
+    ],
+    "share_of_resamples_without_a_fall": 0.005,
+    "n_units": 7,
+    "draws": 20000
+   },
+   "exact_brief_permutation": {
+    "observed_fall": 0.02475162183005943,
+    "n_relabelings": 128,
+    "n_at_least_observed": 4,
+    "p_one_sided": 0.03125,
+    "n_units": 7
+   },
+   "brief_sign_test": {
+    "units_falling": 5,
+    "units_rising": 1,
+    "ties": 1,
+    "p_one_sided": 0.109375
+   }
+  }
  }
 }
