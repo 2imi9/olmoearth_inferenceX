@@ -1742,7 +1742,7 @@ its pixels are labelled and three quarters agree. Splits are by 20 km grid cell.
 | Slovenia | 14,880 | 0.845 | 0.0317 | +0.0521 over class rarity | 23/1, 1e-06 | 0.383 |
 
 **The ranking holds on a reference made of declarations.** The margin beats the
-best no-model control in all three regions and on all but four of the 146 grid
+best no-model control in all three regions and on all but four of the 147 grid
 cells that carry enough graded windows to score, which is preregistered P1. It is
 also the best or equal-best of the four model signals everywhere, within 0.001 of
 one minus the top-1 probability and ahead of entropy and the boundary-first order,

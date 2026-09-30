@@ -48,7 +48,9 @@ review of 27 September 2026 flagged the clustering: it is the design effect the 
 ## What it does not show
 
 - **Whether it holds on other questions.** Every round used the same eight briefs the fixes were built against.
-  Eight held-out briefs are sealed (`exp87_sealed_commitment.md`) and have not been run.
+  Eight held-out briefs were sealed for this (`exp87_sealed_commitment.md`). Update of 30 September 2026: exp87 has
+  since run them once (`exp87_trial/rounds/1`). The blind audit is done, and the result waits for the owner's review of
+  its material findings.
 - **Per answer, round 7 and round 10 are not separable.** 30 answers per round are too few: the intervals, 36% to 70%
   and 17% to 48%, overlap.
 - **The differences between rounds 8, 9 and 10 are within the audits' own variation.** Two audits of round 7 counted
@@ -66,5 +68,6 @@ review of 27 September 2026 flagged the clustering: it is the design effect the 
 - **The agent:** PR 156 (https://github.com/2imi9/OlmoEarth-Agent/pull/156), head fa993ae. The claim check is off by
   default.
 - **The package:** olmoearth-inferencex 1.3.1 on PyPI. Its code has not changed since the release.
-- **exp87:** the preregistered test on the held-out briefs, drafted in `docs/plan/agent_trial_v3.md` and not yet
-  frozen or run.
+- **exp87:** the preregistered test on the held-out briefs (`docs/plan/agent_trial_v3.md`, frozen in 4a75b2f). Update
+  of 30 September 2026: round 1 is run and audited blind. The result is not computed until the owner has reviewed the
+  material findings.

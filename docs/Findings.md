@@ -54,7 +54,7 @@ Dynamic World's own margin ranks its errors better than a class-rarity control o
 On DFC2020 land cover the margin beats the NDWI control on all three sensor arms (exp66).
 <!-- claim:dfc2020-margin-beats-pixel-control -->
 On 106,274 windows of farmers' crop declarations it beats the best no-model control in all three regions and on all
-but four of 146 grid cells (exp69). <!-- claim:eurocrops-ranking-holds-on-declarations -->
+but four of 147 grid cells (exp69). <!-- claim:eurocrops-ranking-holds-on-declarations -->
 
 On Sen1Floods11 Bolivia, one flood event, NDWI ranks the model's errors as well as its confidence under OlmoEarth v1
 and better under v1.2 (exp45, exp47). <!-- claim:bolivia-ndwi-exception -->

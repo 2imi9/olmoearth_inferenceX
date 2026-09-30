@@ -2166,7 +2166,7 @@
     not change, whose closest observable bound here is the most stable class, woodland at 0.208.
 
 - id: eurocrops-ranking-holds-on-declarations
-  statement: "On 106,274 graded 4-px windows of farmers' declared crops across Austria, Denmark and Slovenia, a reference that is neither photointerpretation nor another model's output nor a field visit but a legal declaration of what was sown, the model's own margin beats the best no-model control in every region, by 0.0527, 0.1348 and 0.0521 of excess AURC, and on all but four of the 146 20 km grid cells carrying enough graded windows to score (50/3, 70/0 and 23/1; p = 3e-12, 8e-22 and 1e-06); preregistered P1 holds, the margin is the best or equal-best of the four model signals in all three regions, and every number is reproduced at a fixed reference probe as well as at the tuned one, the leads differing by at most 0.003."
+  statement: "On 106,274 graded 4-px windows of farmers' declared crops across Austria, Denmark and Slovenia, a reference that is neither photointerpretation nor another model's output nor a field visit but a legal declaration of what was sown, the model's own margin beats the best no-model control in every region, by 0.0527, 0.1348 and 0.0521 of excess AURC, and on all but four of the 147 20 km grid cells carrying enough graded windows to score (50/3, 70/0 and 23/1; p = 3e-12, 8e-22 and 1e-06); preregistered P1 holds, the margin is the best or equal-best of the four model signals in all three regions, and every number is reproduced at a fixed reference probe as well as at the tuned one, the leads differing by at most 0.003."
   crosscheck: tests/test_recorded.py::test_exp69_eurocrops_recomputes_from_the_committed_windows
   status: supported
   experiments: [exp69]
