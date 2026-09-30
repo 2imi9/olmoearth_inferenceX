@@ -6,6 +6,7 @@ zone error rate does not fall as the zone grows, for the prefix rule. On a popul
 compared with delta; the hypergeometric sums are checked against exact rational arithmetic; and the arithmetic
 limit on what a budget can certify is checked at both edges."""
 import itertools
+import json
 import math
 from fractions import Fraction
 
@@ -402,13 +403,61 @@ def test_certify_by_condition_refusals():
     # most samples in review). The command line never offers it; the API refuses it here
     with pytest.raises(ValueError, match="plug-in rule has no guarantee"):
         est.certify_by_condition(s, err[idx], margin, 0.1, rule="plugin")
-    # the tool's own review set inside a part is not a random sample of it, and certify_zone's refusal propagates
+
+
+@pytest.mark.parametrize("design", ["condition", "random"])
+def test_a_condition_whose_labels_look_chosen_is_not_tested(design):
+    """certify_zone refuses labels that sit at the suspect end of the map as an enriched set. Inside
+    certify_by_condition that check runs per condition: a condition whose labels fail it is reported not tested, with
+    a reason that fits the design the sample was drawn with, and the other conditions are certified at the delta / L
+    the label counts fixed. Until 2026-09-29 the refusal stopped every condition and told the user to "Draw the
+    sample at random", which a condition-designed sample already was."""
+    cond, margin, err = _condition_map((600, 500), (0.02, 0.2), seed=4)
+    s = est.sample_for_estimation(margin, 200, design=design, condition=cond)
+    idx = s["indices"]
     part0 = np.flatnonzero(cond == 0)
-    review = part0[np.argsort(margin[part0])[:100]]                   # the 100 least confident windows of condition 0
-    rest = np.random.default_rng(0).choice(np.flatnonzero(cond == 1), 100, replace=False)
-    hand = dict(est.sample_for_estimation(margin, 200, design="random", condition=cond), indices=np.r_[review, rest])
-    with pytest.raises(ValueError, match="enriched set"):
-        est.certify_by_condition(hand, err[hand["indices"]], margin, 0.1)
+    n0 = int((cond[idx] == 0).sum())
+    chosen = part0[np.argsort(margin[part0])[:n0]]                    # condition 0's least confident windows
+    hand = dict(s, indices=np.r_[chosen, idx[cond[idx] == 1]])        # the same count in each condition
+    hidx = hand["indices"]
+    with pytest.raises(ValueError, match="enriched set"):             # certify_zone alone refuses them
+        est.certify_zone(margin, chosen, err[chosen], 0.1, valid=cond == 0)
+    r = est.certify_by_condition(hand, err[hidx], margin, 0.1)
+    b1 = est.min_labels_to_certify(0.1, 0.1)
+    assert r["delta_per_condition"] == 0.05 and r["n_conditions_tested"] == 1   # the split still counts both
+    p0, p1 = r["per_condition"]["0"], r["per_condition"]["1"]
+    assert not p0["tested"] and p0["coverage"] is None and p0["levels"] == [] and p0["delta"] is None
+    chk = est.review_set_check(chosen, margin, cond == 0)
+    assert p0["review_set_check"] == {"mean_suspicion_percentile": chk["mean_suspicion_percentile"],
+                                      "threshold": chk["threshold"]}
+    how = ("the condition design draws each condition's labels at random within it" if design == "condition"
+           else "the labels of a random sample that fall in a condition are a random sample of it")
+    assert p0["reason"] == (f"its {n0} labels sit at a mean suspicion percentile of {chk['mean_suspicion_percentile']:.2f} "
+                            f"within the condition, above {chk['threshold']:.2f}. They look chosen for low confidence, "
+                            f"yet {how}. A zone certified on chosen labels could be wrong. If these are the labels "
+                            "`sample` drew, unedited, this is a rare chance draw")
+    assert "Draw the sample at random" not in json.dumps(r, default=str)
+    m = cond[hidx] == 1
+    alone = est.certify_zone(margin, hidx[m], err[hidx][m], 0.1, delta=0.05, valid=cond == 1)
+    assert p1["tested"] and p1["delta"] == 0.05
+    for k, v in alone.items():
+        if k not in ("scope", "note"):
+            assert np.array_equal(v, p1[k]) if isinstance(v, np.ndarray) else v == p1[k], k
+    assert r["note"] == (f"Certified per input condition. Delta 0.1 is split over the 2 conditions with at least {b1} "
+                         "labels, 0.05 each. Condition '0' was not tested: its labels do not look like a random sample "
+                         "of the condition. The one condition tested has delta 0.05, so its statement fails on at most "
+                         "0.05 of samples. When it holds, the certified windows are wrong at most 0.1 of the time. "
+                         "Conditions with fewer labels are not tested. Outside the certified windows nothing is certified.")
+    # with one condition, and its labels chosen, nothing is tested and nothing certified; no error is raised
+    one = np.zeros(cond.size, int)
+    s1 = est.sample_for_estimation(margin, 100, design=design, condition=one)
+    pick = np.argsort(margin)[:100]
+    r1 = est.certify_by_condition(dict(s1, indices=pick), err[pick], margin, 0.1)
+    assert r1["n_conditions_tested"] == 0 and r1["delta_per_condition"] == 0.1 and r1["certified_share_of_map"] is None
+    assert not r1["per_condition"]["0"]["tested"] and "review_set_check" in r1["per_condition"]["0"]
+    assert r1["note"] == (f"Certified per input condition. Condition '0' holds at least {b1} labels but was not tested: "
+                          "its labels do not look like a random sample of the condition. No condition was tested, so "
+                          "nothing is certified.")
 
 
 def test_the_smallest_testable_zone_is_given_as_a_share_of_the_condition():

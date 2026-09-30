@@ -930,11 +930,15 @@ def _certify_by_condition(args, sample, wrong, margin, valid_w, out, mask_path):
         lines = [f"certified per input condition at alpha={100 * a:g}%, delta={100 * d:g}% (each tested condition at "
                  f"{100 * res['delta_per_condition']:.3g}%, so the statements hold together on at least "
                  f"{100 * (1 - d):g}% of samples):"]
+    elif res["delta_per_condition"] is not None:          # enough labels somewhere, and none that look drawn at random
+        lines = [f"certified per input condition at alpha={100 * a:g}%, delta={100 * d:g}%: no condition was tested:"]
     else:
         lines = [f"certified per input condition at alpha={100 * a:g}%, delta={100 * d:g}%: no condition holds the {b1} "
                  "labels that certifying any zone needs, so none was tested:"]
     for name, e in res["per_condition"].items():
-        if not e["tested"]:
+        if "review_set_check" in e:                      # enough labels, but they do not look like a random sample
+            lines.append(f"  {name}: not tested; {e['reason']}")
+        elif not e["tested"]:
             lines.append(f"  {name}: not tested; {e['n_labelled']} labels, and certifying any zone at alpha {a:g} needs "
                          f"at least {b1}")
         elif e["coverage"] is not None:

@@ -249,7 +249,10 @@ per condition, and no whole-map zone is issued for it. `L`, the number of condit
 `min_labels_to_certify(α, δ)` labels (45 at α = 5% and δ = 0.1), is fixed by the label counts before any label is
 read. Each of those conditions is certified inside itself at δ/L, with its own zone order, levels and review-set
 check, so all the statements hold together except on at most δ of samples. On that event the certified windows taken
-together are wrong at most α of the time. A condition with fewer labels is reported as not tested. The split is
+together are wrong at most α of the time. A condition with fewer labels is reported as not tested. So is a
+condition whose labels fail its review-set check, with the reason: they sit at its suspect end, as the tool's own
+review set would. On `sample`'s own draw that happens rarely, by chance. The other conditions are still certified at
+δ/L; the check reads where the labels sit, not what they say, so the split stays valid. The split is
 needed: conditions each tested at the full δ can fail together more often than δ. The labels a condition needs
 before it can certify any zone, at α = 5% and δ = 0.1:
 

@@ -1540,6 +1540,30 @@ def certify_zone(margin, indices, wrong, alpha, delta=ZONE_DELTA, rule="prefix",
     return out
 
 
+def _family_note(L, refused, b1, d, delta, alpha):
+    """certify_by_condition's note: delta split over the L conditions with at least b1 labels, of which those named
+    in `refused` were not tested, since their labels do not look like a random sample of the condition."""
+    if not refused:
+        return (FAMILY_NOTE if L > 1 else FAMILY_NOTE_ONE).format(L=L, b1=b1, d=d, delta=delta, alpha=alpha)
+    one, T = len(refused) == 1, L - len(refused)
+    who = ("Condition " if one else "Conditions ") + ", ".join(f"'{n}'" for n in refused)
+    why = (f"{'was' if one else 'were'} not tested: {'its' if one else 'their'} labels do not look like a random sample "
+           "of the condition.")
+    if T == 0:
+        return (f"Certified per input condition. {who} {'holds' if one else 'hold'} at least {b1} labels but {why} No "
+                "condition was tested, so nothing is certified.")
+    if T == 1:
+        held = (f"The one condition tested has delta {d:g}, so its statement fails on at most {d:g} of samples. When "
+                f"it holds, the certified windows are wrong at most {alpha:g} of the time.")
+    else:
+        held = (f"The {T} conditions tested have delta {d:g} each, so their statements hold together except on at "
+                f"most {T * d:g} of samples. On that event the certified windows taken together are wrong at most "
+                f"{alpha:g} of the time.")
+    return (f"Certified per input condition. Delta {delta:g} is split over the {L} conditions with at least {b1} labels, "
+            f"{d:g} each. {who} {why} {held} Conditions with fewer labels are not tested. Outside the certified windows "
+            "nothing is certified.")
+
+
 def certify_by_condition(sample, wrong, margin, alpha, delta=ZONE_DELTA, rule="prefix", grid=ZONE_GRID, valid=None):
     """A certified zone inside each input condition, with delta split so that all the statements hold together.
 
@@ -1554,6 +1578,11 @@ def certify_by_condition(sample, wrong, margin, alpha, delta=ZONE_DELTA, rule="p
     and by the union bound all L statements hold together except on at most delta of samples. On that event the
     certified windows taken together are wrong at most alpha of the time: the union of the zones has error rate
     sum |Z_c| R_c / sum |Z_c| <= alpha. A condition with fewer labels is not tested.
+
+    Inside each condition `certify_zone` checks that the labels could be a random sample of it (review_set_check). A
+    condition whose labels fail that check is reported not tested, with the reason, and the others are certified at
+    the delta / L already fixed. The check reads where the labels sit, never what they say, so leaving that condition
+    out only leaves its share of delta unused. On the tool's own draw the check fails rarely, by chance.
 
     Returns the whole-map keys of `certify_zone` with `coverage`, `n_zone`, `threshold` and `upper_bound` None (the
     union of the zones is not "the most confident share of the map"), and per condition the output of
@@ -1598,10 +1627,27 @@ def certify_by_condition(sample, wrong, margin, alpha, delta=ZONE_DELTA, rule="p
     tested = [c for c in range(K) if n_c[c] >= b1]               # fixed by the counts, before any label is read
     L = len(tested)
     d = delta / L if L else None
-    per, zones, n_cert = {}, [], 0
+    per, zones, n_cert, refused = {}, [], 0, []
     for c in range(K):
-        if c in tested:
-            m = cgrid[idx] == c
+        m = cgrid[idx] == c
+        chk = review_set_check(idx[m], margin, valid & (cgrid == c)) if c in tested else None
+        if chk is not None and chk["looks_like_a_review_set"]:
+            # certify_zone would refuse these labels as an enriched set, and until 2026-09-29 that refusal stopped
+            # every condition. The check reads where the labels sit, not what they say, so leaving this condition out
+            # after the split was fixed only leaves its share of delta unused: the others still hold together.
+            how = ("the condition design draws each condition's labels at random within it" if design == "condition"
+                   else "the labels of a random sample that fall in a condition are a random sample of it")
+            r = {"value": values[c], "tested": False, "delta": None, "n_population": int(sizes[c]),
+                 "n_labelled": int(n_c[c]), "coverage": None, "n_zone": None, "threshold": None, "upper_bound": None,
+                 "levels": [],
+                 "review_set_check": {"mean_suspicion_percentile": chk["mean_suspicion_percentile"],
+                                      "threshold": chk["threshold"]},
+                 "reason": (f"its {int(n_c[c])} labels sit at a mean suspicion percentile of "
+                            f"{chk['mean_suspicion_percentile']:.2f} within the condition, above {chk['threshold']:.2f}. "
+                            f"They look chosen for low confidence, yet {how}. A zone certified on chosen labels could "
+                            "be wrong. If these are the labels `sample` drew, unedited, this is a rare chance draw")}
+            refused.append(names[c])
+        elif c in tested:
             r = certify_zone(margin, idx[m], wrong[m], alpha, delta=d, rule=rule, grid=grid, valid=valid & (cgrid == c))
             r.pop("scope", None)
             if r["coverage"] is None and r["levels"] and K > 1:
@@ -1621,13 +1667,13 @@ def certify_by_condition(sample, wrong, margin, alpha, delta=ZONE_DELTA, rule="p
                  "reason": f"{int(n_c[c])} labels; certifying any zone at alpha {alpha:g} needs at least {b1}"}
         per[names[c]] = r
     if L:
-        note = (FAMILY_NOTE if L > 1 else FAMILY_NOTE_ONE).format(L=L, b1=b1, d=d, delta=delta, alpha=alpha)
+        note = _family_note(L, refused, b1, d, delta, alpha)
     else:
         # FAMILY_NOTE divides delta over the tested conditions; with none tested it has no delta to state
         note = (f"Certified per input condition. No condition holds the {b1} labels that certifying any zone at alpha "
                 f"{alpha:g} needs, so none was tested and nothing is certified.")
     return {"rule": rule, "alpha": float(alpha), "delta": float(delta), "n_population": N, "n_labelled": int(idx.size),
             "min_labels_to_certify": b1, "levels": [], "coverage": None, "n_zone": None, "threshold": None,
-            "upper_bound": None, "by_condition": True, "delta_per_condition": d, "n_conditions_tested": L,
+            "upper_bound": None, "by_condition": True, "delta_per_condition": d, "n_conditions_tested": L - len(refused),
             "certified_share_of_map": n_cert / N if zones else None, "n_certified": n_cert, "per_condition": per,
             "zone_indices_in_order": np.concatenate(zones) if zones else np.zeros(0, int), "note": note}

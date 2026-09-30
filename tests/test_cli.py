@@ -899,6 +899,47 @@ def test_certify_by_condition_writes_the_union_mask_and_removes_a_stale_one(tmp_
     assert "not tested; " in printed and "needs at least" in printed
 
 
+def test_certify_prints_a_condition_whose_labels_look_chosen_as_not_tested(tmp_path, capsys):
+    """One condition's labels moved to its least confident windows: certify reports that condition not tested, with
+    the reason, and certifies the other one at the delta the counts fixed, instead of refusing the whole sample."""
+    path, probs, expert, cpath = _dw_condition(tmp_path)
+    out = tmp_path / "r.csv"
+    assert main(["sample", path, "--budget", "200", "--design", "random", "--out", str(out), "--condition", cpath,
+                 "--condition-names", "0=clear", "1=cloudy"]) == 0
+    _fill(out, probs, expert)
+    side_path = tmp_path / "r.json"
+    side = json.load(open(side_path))
+    grid, idx = np.asarray(side["condition_grid"]), np.asarray(side["indices"])
+    conf = assess_prediction(probs, is_logit=False, patch=4, nodata_mask=~np.isfinite(probs).all(0))["arrays"]["confidence"]
+    cloudy = np.flatnonzero(grid == 1)
+    n1 = int((grid[idx] == 1).sum())
+    chosen = cloudy[np.lexsort((cloudy, conf.ravel()[cloudy]))[:n1]]        # cloudy's least confident windows
+    new = np.r_[idx[grid[idx] != 1], chosen]
+    side["indices"] = new.tolist()
+    json.dump(side, open(side_path, "w"))
+    rows = _rows(out)
+    by = {int(r["index"]): r for r in rows}
+    fresh = []
+    for i in new:
+        r = dict(by.get(int(i), rows[0]))
+        r.update({"index": str(int(i)), "window_row": str(int(i) // 32), "window_col": str(int(i) % 32),
+                  "condition": side["condition"]["names"][int(grid[i])], "confidence": repr(float(conf.ravel()[i])),
+                  "wrong": r["wrong"] if int(i) in by else "0"})
+        fresh.append(r)
+    _write_rows(out, fresh)
+    capsys.readouterr()
+    assert main(["certify", str(out), "--alpha", "0.3"]) == 0
+    printed = capsys.readouterr().out.splitlines()
+    z = json.load(open(tmp_path / "r_zone.json"))
+    e = z["per_condition"]["cloudy"]
+    L = sum(p["n_labelled"] >= 7 for p in z["per_condition"].values())      # 7 labels certify at alpha 0.3
+    assert L == 3 and z["delta_per_condition"] == pytest.approx(0.1 / 3, abs=1e-15)   # the split counts cloudy
+    assert not e["tested"] and z["n_conditions_tested"] == 2
+    assert z["per_condition"]["clear"]["tested"] and z["per_condition"]["unrecorded"]["tested"]
+    assert f"  cloudy: not tested; {e['reason']}" in printed and "look chosen for low confidence" in e["reason"]
+    assert printed[0].startswith("certified per input condition at alpha=30%, delta=10% (each tested condition at 3.33%")
+
+
 def test_cmd_assess_namespace_without_condition_still_runs(tmp_path):
     """demo.py and tests build the argument Namespace by hand, without the new attributes; the commands read them
     with getattr and behave as 1.3.1 did."""
