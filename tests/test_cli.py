@@ -674,7 +674,7 @@ def test_sample_condition_writes_design_and_columns(tmp_path, capsys):
     (["--condition", "{float}"], "not integers"),
     (["--condition", "{many}"], "at most 64"),
     (["--condition", "{bands}"], "one band"),
-    (["--condition", "{small}"], "has shape"),
+    (["--condition", "{small}"], r"^sample: .*small\.npy has shape \(64, 128\); the map is \(128, 128\)$"),
     (["--condition", "{none}"], "no window takes a condition"),
     (["--condition", "{c}", "--condition-names", "clear"], "value=name pairs"),
     (["--condition", "{c}", "--condition-names", "x=clear"], "value=name pairs"),
@@ -710,8 +710,13 @@ def test_sample_condition_refuses_a_layer_on_another_grid(tmp_path):
         dst.write(np.zeros((1, 128, 128), "int16"))
     for cmd in (["sample", str(tmp_path / "p.tif"), "--budget", "50", "--out", str(tmp_path / "x.csv")],
                 ["assess", str(tmp_path / "p.tif"), "--out", str(tmp_path / "a")]):
-        with pytest.raises(SystemExit, match="not on the first map's grid"):
+        with pytest.raises(SystemExit, match=f"^{cmd[0]}: .*c\\.tif is not on the first map's grid"):
             main([*cmd, "--condition", str(tmp_path / "c.tif")])
+    np.save(tmp_path / "small.npy", np.zeros((64, 128), int))           # the shape refusal names the command too
+    for cmd in (["sample", str(tmp_path / "p.tif"), "--budget", "50", "--out", str(tmp_path / "x.csv")],
+                ["assess", str(tmp_path / "p.tif"), "--out", str(tmp_path / "a")]):
+        with pytest.raises(SystemExit, match=f"^{cmd[0]}: .*small\\.npy has shape"):
+            main([*cmd, "--condition", str(tmp_path / "small.npy")])
 
 
 def test_random_with_condition_draws_the_same_windows(tmp_path, capsys):

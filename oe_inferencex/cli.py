@@ -161,8 +161,8 @@ def _read_condition(path, shape, geo, command):
         raise SystemExit(f"{command}: {path} has shape {a.shape}; the condition layer is one band, one value per pixel "
                          "of the map")
     if a.shape != tuple(shape):
-        raise SystemExit(f"{path} has shape {a.shape}; the map is {tuple(shape)}")
-    _same_grid(geo, geo_c, path)
+        raise SystemExit(f"{command}: {path} has shape {a.shape}; the map is {tuple(shape)}")
+    _same_grid(geo, geo_c, f"{command}: {path}")        # every other refusal of the layer names the command
     return np.ma.masked_array(a, mask=~valid)
 
 
