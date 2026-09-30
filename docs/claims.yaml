@@ -66,6 +66,7 @@
   cited_in:
     - {file: docs/Findings.md, marker: bolivia-ndwi-exception}
     - {file: docs/TECHNIQUES.md, marker: bolivia-ndwi-exception}
+    - {file: README.md, marker: bolivia-ndwi-exception}
   note: "'As well as' under v1 means within 0.002 pooled E-AURC (grid 0.0119 vs 0.0105, shift-averaged 0.0113 vs 0.0094); per tile the control loses 142/174 on the shift-averaged decision under v1 (exp47)."
 
 - id: pixel-head-beats-encoder-bolivia
@@ -777,6 +778,7 @@
   cited_in:
     - {file: docs/TECHNIQUES.md, marker: fine-tuned-model-audit}
     - {file: docs/results/comparisons.md, marker: fine-tuned-model-audit}
+    - {file: README.md, marker: fine-tuned-model-audit}
 
 - id: fine-tuned-vs-probe-errors
   statement: 28 of the fine-tuned model's 41 errors are also errors of the frozen probe, and disagreement with the probe ranks the fine-tuned model's errors significantly worse than its confidence.
@@ -1181,6 +1183,7 @@
     - {file: docs/Findings.md, marker: s1-probe-ndwi-flip}
     - {file: docs/TECHNIQUES.md, marker: s1-probe-ndwi-flip}
     - {file: docs/results/comparisons.md, marker: s1-probe-ndwi-flip}
+    - {file: README.md, marker: s1-probe-ndwi-flip}
 
 - id: cross-encoder-phi-on-their-embeddings
   statement: On Ai2's published Sen1Floods11 embeddings with their probe, six of seven other encoders share OlmoEarth Base's error windows at phi 0.78-0.82 and Satlas (2 x 2 token grid) at 0.62; exp41's shared-error result replicates on their sensor and readout.
@@ -1570,6 +1573,7 @@
     - {file: docs/Findings.md, marker: tool-vs-diff-resolution}
     - {file: docs/results/comparisons.md, marker: tool-vs-diff-resolution}
     - {file: docs/TECHNIQUES.md, marker: tool-vs-diff-resolution}
+    - {file: README.md, marker: tool-vs-diff-resolution}
 
 - id: tool-vs-diff-targeting
   statement: "Ordering the disagreement windows by the first inference's confidence holds 50-57% of its errors in the least confident half on twelve of the fifteen pairs, no better than the unordered set's 50%; it helps only where the other side is much worse (the S1 head, 74% / 92% on Bolivia / test; Satlas, 72%); P2 fails."
@@ -1961,6 +1965,7 @@
     - {file: docs/Findings.md, marker: dw-margin-ranks-a-production-model}
     - {file: docs/TECHNIQUES.md, marker: dw-margin-ranks-a-production-model}
     - {file: docs/results/comparisons.md, marker: dw-margin-ranks-a-production-model}
+    - {file: README.md, marker: dw-margin-ranks-a-production-model}
 
 - id: dw-margin-beats-naive-confidence
   statement: "On Dynamic World's test tiles the top-1 minus top-2 margin beats one minus the top-1 probability as a ranker of the product's own errors (pooled excess AURC 0.0637 against 0.0651, better on 238 tiles against 167, one-sided p = 2.4e-04), and the reason is ties: the naive form takes the same value on 1,017,570 of the 4,348,526 windows (23.4%) where the margin ties on 156,842 (3.6%); preregistered P2 holds, on a model this project had no hand in, for the design choice made in exp13."
@@ -2035,6 +2040,7 @@
     - {file: docs/Findings.md, marker: lucas-ranking-survives-ground-observation}
     - {file: docs/TECHNIQUES.md, marker: lucas-ranking-survives-ground-observation}
     - {file: docs/results/comparisons.md, marker: lucas-ranking-survives-ground-observation}
+    - {file: README.md, marker: lucas-ranking-survives-ground-observation}
   note: >-
     The estimand is the LUCAS Copernicus polygon population, not EU area, since LUCAS's own design weights are not in
     the distributed file; it is exact up to the 1.8% of sampled polygons that returned no usable scene. The pooled lead
@@ -2187,6 +2193,7 @@
     - {file: docs/Findings.md, marker: eurocrops-ranking-holds-on-declarations}
     - {file: docs/TECHNIQUES.md, marker: eurocrops-ranking-holds-on-declarations}
     - {file: docs/results/comparisons.md, marker: eurocrops-ranking-holds-on-declarations}
+    - {file: README.md, marker: eurocrops-ranking-holds-on-declarations}
   note: >-
     A declaration is authoritative about crop identity and can be wrong about extent, which is a cadastral boundary
     rather than what the sensor sees, about timing, and about whether the declared crop was planted. Slovenia's codes
@@ -3037,6 +3044,7 @@
   cited_in:
     - {file: docs/results/comparisons.md, marker: design-based-interval-is-honest}
     - {file: docs/Findings.md, marker: design-based-interval-is-honest}
+    - {file: README.md, marker: design-based-interval-is-honest}
   note: >-
     MADOS sits on the 0.93 bar, which the preregistration predicted in advance as Wilson's discreteness at about 22
     errors in a 300-window sample rather than a defect. The check recomputes the coverages from the per-task records
@@ -3067,6 +3075,7 @@
   cited_in:
     - {file: docs/results/comparisons.md, marker: tile-sampling-breaks-the-naive-interval}
     - {file: docs/Findings.md, marker: tile-sampling-breaks-the-naive-interval}
+    - {file: README.md, marker: tile-sampling-breaks-the-naive-interval}
   note: >-
     Five of the seven tasks were seen in the pilot disclosed in the preregistration, which is also what moved P2's
     threshold from 0.75 to 0.85. Of the two genuinely out-of-sample tasks only m-SA-crop-type confirms; m-cashew-plant
@@ -3148,6 +3157,7 @@
   cited_in:
     - {file: docs/results/comparisons.md, marker: trust-zone-guarantee-holds}
     - {file: docs/Findings.md, marker: trust-zone-guarantee-holds}
+    - {file: README.md, marker: trust-zone-guarantee-holds}
   note: >-
     The bound and the maxima are recomputed from every cell's violation rate, not read from the verdict block. Two
     cells (EuroSAT at B = 100 for both alphas) have no testable level and count as trivially valid; the 110 cells
@@ -3213,6 +3223,7 @@
   cited_in:
     - {file: docs/results/comparisons.md, marker: trust-zone-coverage-at-300-labels}
     - {file: docs/Findings.md, marker: trust-zone-coverage-at-300-labels}
+    - {file: README.md, marker: trust-zone-coverage-at-300-labels}
   note: >-
     Medians over 21 tasks are the 11th sorted value; a task whose rule certifies nothing on most draws enters as 0.
 
@@ -3984,6 +3995,7 @@
     - {file: docs/results/comparisons.md, marker: missing-optical-errors-are-confident}
     - {file: docs/TECHNIQUES.md, marker: missing-optical-errors-are-confident}
     - {file: docs/Findings.md, marker: missing-optical-errors-are-confident}
+    - {file: README.md, marker: missing-optical-errors-are-confident}
   note: >-
     Ai2's S1-only embeddings are the encoder's reading of radar alone over the whole tile, the extreme of a cloud;
     real clouds are partial. Graded on Base at seed 0; the other seeds and Large are replication.

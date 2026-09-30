@@ -20,6 +20,25 @@ it. To use it now, install from the repository:
 pip install "olmoearth-inferencex[geo] @ git+https://github.com/2imi9/olmoearth_inferenceX"
 ```
 
+## Quick start
+
+Every command below runs on 1.3.1. `scores.tif` is a map of per-class probabilities; add `--logits` for logits.
+
+```bash
+pip install "olmoearth-inferencex[geo]"
+oe-inferencex demo                                   # a real map shipped with the package; needs no data
+oe-inferencex assess scores.tif --out audit          # which windows to check first; no labels
+oe-inferencex sample scores.tif --budget 300 --design random --out to_label.csv
+# fill the `wrong` column of to_label.csv with 1 or 0 on every row
+oe-inferencex estimate to_label.csv                  # the error rate with a 95% interval
+oe-inferencex certify to_label.csv --alpha 0.10      # the certified zone
+```
+
+`--design random` lets one set of labels serve both `estimate` and `certify`. Without it `sample` stratifies by
+confidence, which `estimate` reads and `certify` refuses. `certify` can return nothing, and says so;
+[certify](#certify) gives the labels a level needs. The [README](https://github.com/2imi9/olmoearth_inferenceX#quick-start) shows the
+lines these commands print on a test map. Each command is described under [Command line](#command-line).
+
 ## Inputs
 
 A map is a GeoTIFF or `.npy` array of the scores a model's classification head produces before the argmax: `(H, W)`

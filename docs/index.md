@@ -24,7 +24,7 @@ Each command is described in [Usage](Usage.md#command-line).
 ## Demo
 
 ```bash
-pip install olmoearth-inferencex
+pip install "olmoearth-inferencex[geo]"     # without [geo] the package reads .npy arrays only
 oe-inferencex demo
 ```
 
@@ -41,7 +41,8 @@ red; 67% of them are wrong, against 19% of the map. Right: a random 5%. The flag
 with 19% of the map wrong and 5% reviewed, no selection of that size could hold more than 26%. A 20% review holds
 55%.* <!-- claim:demo-sample-hit-rate -->
 
-Another map is assessed with `oe-inferencex assess your_map.tif --out audit`.
+Another map is assessed with `oe-inferencex assess your_map.tif --out audit`. The [quick start](Usage.md#quick-start)
+goes from there to an error rate and a certified zone.
 
 ## Installation
 
