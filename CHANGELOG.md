@@ -2,13 +2,13 @@
 
 ## Unreleased
 
-**Per input condition: review, sampling, estimation and certification for a map read from different inputs in
-different places (exp88).** On PASTIS without the optical input, as under cloud, 59.8% of OlmoEarth Base's errors
-looked confident against 6.0% with it (OlmoEarth Large's: 5.7% to 12.8-13.8%), and on a map with half its tiles read
-that way random samples of 300 estimated 46.9% on average against the cloudy part's 74.1%. The package now says what a
-whole-map result does not show, and takes a layer of each pixel's input condition (a cloud flag, the modalities
-present, a sensor id). Without a layer every number, CSV, sidecar and printed line is unchanged; the JSON outputs gain
-one `scope` note.
+**Per input condition: review, sampling, estimation and certification (exp88).** Some maps are read from different
+inputs in different places. On PASTIS without the optical input, as under cloud, 59.8% of OlmoEarth Base's errors
+looked confident, against 6.0% with it. OlmoEarth Large's share rose only from 5.7% to 12.8-13.8%. On a map with half
+its tiles read that way, random samples of 300 estimated 46.9% on average. The cloudy part's rate was 74.1%. The
+package now says what a whole-map result does not show. It also takes a layer of each pixel's input condition, such as
+a cloud flag, the modalities present or a sensor id. Without a layer, every number, CSV, sidecar and printed line is
+unchanged. The JSON outputs gain one `scope` note.
 
 - `assess --condition RASTER [--condition-names 0=clear 1=cloudy]` (`condition=`, `condition_names=` in
   `assess_prediction` and `assess_classmap`). A window takes the condition held by most of its pixels that have a

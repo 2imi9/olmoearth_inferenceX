@@ -186,12 +186,12 @@ scenes, and a whitened target is 57% to 70% predictable from context (exp32 to e
 
 The hand-labelled flood testbeds are one event and one split of the same dataset, and the suite is read through
 linear probes on Ai2's embeddings. A confidence ranking reviews the model's confident errors last.
-The ranking is only comparable between windows read from the same inputs, and without a condition layer it ranks all
-windows together; a whole-map error rate can misstate the part read from other inputs: on PASTIS without the optical
-input, as under cloud, 59.8% of OlmoEarth Base's errors look confident against 6.0% with it (OlmoEarth Large's: 5.7%
-to 12.8-13.8%), and on a map with half its tiles read that way random samples estimate 46.9% on average against the
-cloudy half's 74.1%, so where a map records each pixel's input condition the package ranks, samples and certifies each
-condition on its own (exp88).
+The ranking is only comparable between windows read from the same inputs. Without a condition layer it ranks all
+windows together. On PASTIS without the optical input, as under cloud, 59.8% of OlmoEarth Base's errors look
+confident, against 6.0% with it. OlmoEarth Large's share rises only from 5.7% to 12.8-13.8%. A whole-map error rate
+can also misstate the part read from other inputs. On a map with half its tiles read that way, random samples estimate
+46.9% on average. The cloudy half's rate is 74.1%. Where a map records each pixel's input condition, the package
+ranks, samples and certifies each condition on its own (`--condition`, not yet released; exp88).
 <!-- claim:missing-optical-errors-are-confident --> <!-- claim:pooled-error-rate-misstates-the-cloudy-part -->
 On Sen1Floods11, where eight encoders share 82% to 87% of their errors, a Dawid-Skene consensus, which estimates each
 encoder's accuracy from agreement alone, returns 0.975 to 0.983 for maps 0.883 to 0.914 accurate, and its rank

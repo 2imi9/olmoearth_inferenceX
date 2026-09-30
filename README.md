@@ -6,9 +6,10 @@ as a raster of per-class probabilities or logits (or one band for a binary task)
 - **Without reference labels,** it ranks the map's windows by the model's confidence for manual
   review. Confidence is only comparable between windows read from the same inputs, and by
   default all windows are ranked together. Given a layer of each pixel's input condition, such
-  as a cloud flag, it also ranks each condition on its own, so that windows are compared only
-  with windows read from the same inputs. It lists the cues behind each flagged window, and it
-  compares two maps of the same area.
+  as a cloud flag (`--condition`, not yet released: 1.3.1 on PyPI lacks it), it also ranks each
+  condition on its own, so that windows are compared only with windows read from the same
+  inputs. It lists the cues behind each flagged window, and it compares two maps of the same
+  area.
 - **With a labelled sample,** it estimates the error rate and per-class accuracy with confidence
   intervals. From a simple random sample, it finds the largest zone, most confident first, whose
   error rate is at most a chosen level.
@@ -57,9 +58,9 @@ Method
    only comparable between windows read from the same inputs: with an input missing, as under
    cloud, the errors can be confident ones. Without a condition layer all windows are ranked
    together. A map that records each pixel's input condition is also ranked within each
-   condition, which makes the ranking comparable there. A ranking is scored by excess AURC,
-   `AURC(s) − AURC(oracle)`, against two controls that do not use the model: class rarity and
-   embedding distance.
+   condition, which makes the ranking comparable there (not yet released). A ranking is scored
+   by excess AURC, `AURC(s) − AURC(oracle)`, against two controls that do not use the model:
+   class rarity and embedding distance.
 2. **Comparison.** For two maps `A`, `B` on one window grid, it reports three quantities, each
    against the reseed floor: `P(A ≠ B)`, its enrichment among the errors, and
    `P(confidence identifies the correct map | A ≠ B)`. Across dates, a difference may reflect
@@ -77,10 +78,11 @@ Method
    - **Certified zone.** From a simple random sample, exact hypergeometric tests run from the
      most confident windows outward. They give the largest zone with error rate at most `α` at
      error probability `δ`, given at least `ln δ / ln(1−α)` labels.
-   - **Per input condition.** Given a condition layer, the labels are split equally across the
-     conditions, never from the model's confidence. Each condition gets its own rate with an
-     exact hypergeometric interval, and its own certified zone at `δ/L`, where `L` is the number
-     of conditions holding enough labels, so that all the statements hold together at `δ`.
+   - **Per input condition (not yet released).** Given a condition layer, the labels are split
+     equally across the conditions, never from the model's confidence. Each condition gets its
+     own rate with an exact hypergeometric interval, and its own certified zone at `δ/L`, where
+     `L` is the number of conditions holding enough labels, so that all the statements hold
+     together at `δ`.
 
 <img src="https://raw.githubusercontent.com/2imi9/olmoearth_inferenceX/main/docs/figures/pipeline.png" alt="One scene through the assessment: Sentinel-2 bands, the frozen OlmoEarth encoder and the task head, the prediction, confidence and boundary layers, the review set at a 5% budget drawn on the scene, and the cues per flagged window" width="760">
 

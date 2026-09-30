@@ -13,6 +13,13 @@ pip install "olmoearth-inferencex[geo]"     # with GeoTIFF input and output
 
 The package requires Python 3.11 to 3.13. Without the `geo` extra, which brings rasterio, the commands read and write `.npy` arrays.
 
+The input-condition layer below (`--condition`, `condition=`) is not yet released: 1.3.1, the release on PyPI, lacks
+it. To use it now, install from the repository:
+
+```bash
+pip install "olmoearth-inferencex[geo] @ git+https://github.com/2imi9/olmoearth_inferenceX"
+```
+
 ## Inputs
 
 A map is a GeoTIFF or `.npy` array of the scores a model's classification head produces before the argmax: `(H, W)`
@@ -31,11 +38,11 @@ The package works on square windows of `--patch` pixels (default 4). A window's 
 margin of its valid pixels and its class the majority class of its pixels; a window less than half valid is left
 out. No-data comes from the raster's no-data value, from NaN or from `--nodata`.
 
-**The input condition.** The confidence ranking is only comparable between windows read from the same inputs, and
-without a layer `assess` ranks every window with every other. Where part of a map was predicted with an input missing,
-such as the optical image under cloud, the model can be confidently wrong there: on PASTIS without the optical input,
-59.8% of OlmoEarth Base's errors were at least as confident as the typical correct window with full input, against
-6.0% with it. OlmoEarth Large's share rose only from 5.7% to 12.8-13.8%
+**The input condition (not yet released).** The confidence ranking is only comparable between windows read from the
+same inputs, and without a layer `assess` ranks every window with every other. Where part of a map was predicted with
+an input missing, such as the optical image under cloud, the model can be confidently wrong there: on PASTIS without
+the optical input, 59.8% of OlmoEarth Base's errors were at least as confident as the typical correct window with full
+input, against 6.0% with it. OlmoEarth Large's share rose only from 5.7% to 12.8-13.8%
 ([exp88](results/comparisons.md#when-a-modality-is-missing-does-the-confidence-fall-with-the-accuracy-exp88)). A map
 that records each pixel's input condition can pass it as `--condition` (`condition=` in Python), and each condition is
 then also ranked on its own, among windows read from the same inputs. The layer is one integer band on the map's grid,
@@ -167,7 +174,8 @@ The tile design matches how reviewers often label, and its intervals under-cover
 covered the true rate 51 to 78% of the time at a nominal 95%, the corrected one 91 to 94% with tiles of equal size and
 60% with tiles of 1 to 400 windows. If labelling has not started, use the default design.
 
-**Sampling by input condition.** A map with a condition layer is sampled, estimated and certified per condition:
+**Sampling by input condition (not yet released).** A map with a condition layer is sampled, estimated and certified
+per condition:
 
 ```bash
 oe-inferencex sample scores.tif --logits --budget 300 --out to_label.csv --condition cloud_flag.tif --condition-names 0=clear 1=cloudy
@@ -253,17 +261,17 @@ It writes `random_zone.json` (`coverage`, the certified share; `threshold`, the 
 - Without a condition, the zone JSON gains `scope`: the zone's rate is certified over all its windows together, and
   the part of it read with an input missing can be wrong more often than the rest (exp88).
 
-**Per input condition.** A sample drawn with `--condition`, under the `condition` design or `random`, is certified
-per condition, and no whole-map zone is issued for it. `L`, the number of conditions holding at least
-`min_labels_to_certify(α, δ)` labels (45 at α = 5% and δ = 0.1), is fixed by the label counts before any label is
-read. Each of those conditions is certified inside itself at δ/L, with its own zone order, levels and review-set
+**Per input condition (not yet released).** A sample drawn with `--condition`, under the `condition` design or
+`random`, is certified per condition, and no whole-map zone is issued for it. `L`, the number of conditions holding at
+least `min_labels_to_certify(α, δ)` labels (45 at α = 5% and δ = 0.1), is fixed by the label counts before any label
+is read. Each of those conditions is certified inside itself at δ/L, with its own zone order, levels and review-set
 check, so all the statements hold together except on at most δ of samples. On that event the certified windows taken
-together are wrong at most α of the time. A condition with fewer labels is reported as not tested. So is a
-condition whose labels fail its review-set check, with the reason: they sit at its suspect end, as the tool's own
-review set would. On `sample`'s own draw that happens rarely, by chance. The other conditions are still certified at
-δ/L; the check reads where the labels sit, not what they say, so the split stays valid. The split is
-needed: conditions each tested at the full δ can fail together more often than δ. The labels a condition needs
-before it can certify any zone, at α = 5% and δ = 0.1:
+together are wrong at most α of the time. A condition with fewer labels is reported as not tested. So is a condition
+whose labels fail its review-set check, with the reason: they sit at its suspect end, as the tool's own review set
+would. On `sample`'s own draw that happens rarely, by chance. The other conditions are still certified at δ/L; the
+check reads where the labels sit, not what they say, so the split stays valid. The split is needed: conditions each
+tested at the full δ can fail together more often than δ. The labels a condition needs before it can certify any zone,
+at α = 5% and δ = 0.1:
 
 | Conditions tested (`L`) | 1 | 2 | 3 | 4 | 5 |
 |---|---|---|---|---|---|
@@ -313,9 +321,9 @@ why["quotes"]["ndwi_ambiguous"]             # "is spectrally ambiguous ... (48% 
   HTTP range request.
 - `reference=` (class labels, negative for none) adds `against_reference`. Grade on expert labels; never train a rule
   on them.
-- `condition=` (an `(H, W)` integer layer, negative or NaN where none is recorded) and `condition_names=` (`{value:
-  name}`) add `arrays["condition"]`, the window grid, and `conditions`, as on the command line. `pool_condition(layer,
-  patch, predicted)` gives the window grid alone.
+- `condition=` (not yet released; an `(H, W)` integer layer, negative or NaN where none is recorded) and
+  `condition_names=` (`{value: name}`) add `arrays["condition"]`, the window grid, and `conditions`, as on the command
+  line. `pool_condition(layer, patch, predicted)` gives the window grid alone.
 
 ### Compare two inferences of the same scene
 
