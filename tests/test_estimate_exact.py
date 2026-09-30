@@ -193,6 +193,11 @@ def test_equal_allocation_known_answers():
                            ((228665, 229973), 300, (150, 150)), ((436323, 22315), 300, (150, 150)),
                            ((6, 3, 3), 8, (3, 3, 2))]:          # never two labels of the remainder to one condition
         assert tuple(int(x) for x in est.equal_allocation(sizes, B)) == want, (sizes, B)
+    # The answers above put the largest condition first, where a rule that gives the remainder to the lowest index
+    # agrees. Here the largest is last or in the middle, so only "most windows left" gives these.
+    for sizes, B, want in [((3, 4, 5), 7, (2, 2, 3)), ((50, 7, 100), 60, (26, 7, 27)), ((3, 3, 6), 8, (3, 2, 3)),
+                           ((3, 5, 4), 7, (2, 3, 2)), ((4, 6, 5), 8, (2, 3, 3)), ((7, 100, 50), 60, (7, 27, 26))]:
+        assert tuple(int(x) for x in est.equal_allocation(sizes, B)) == want, (sizes, B)
     with pytest.raises(ValueError, match=r"\(needs 6\)"):
         est.equal_allocation((100, 100, 100), 5)
     with pytest.raises(ValueError, match="more than the 12 units"):
