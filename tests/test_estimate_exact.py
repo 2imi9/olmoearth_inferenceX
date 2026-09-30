@@ -448,31 +448,43 @@ def _wilson_by_hand(p, n):
 
 def test_condition_whole_map_by_a_second_route():
     """The whole-map rate under the condition design, written out from the spec's formulas: theta = sum_c W_c k_c /
-    n_c, v = sum_c W_c^2 (1 - n_c / N_c) p_c (1 - p_c) / (n_c - 1), Wilson at n_eff = theta (1 - theta) / v. When
-    every condition's labels are all right or all wrong v is zero, a note says so, and n_eff is the label count."""
+    n_c, v = sum_c W_c^2 (1 - n_c / N_c) p_c (1 - p_c) / (n_c - 1), Wilson at n_eff = theta (1 - theta) / v, with
+    the floor of 2026-09-29: a condition not labelled in full enters the interval's variance at no less than
+    p0 (1 - p0), p0 = (z^2 / 2) / (n_c + z^2). When every condition's labels are all right or all wrong v is zero, a
+    note says so, and n_eff is the label count unless the floor gives a smaller one."""
     rng = np.random.default_rng(8)
     cond = np.r_[np.zeros(400, int), np.ones(250, int), np.full(90, 5), np.full(30, -1)]
     err = (rng.random(cond.size) < np.select([cond == 0, cond == 1, cond == 5], [0.1, 0.45, 0.7], 0.3)).astype(float)
-    for seed in range(5):
+    n_floored = 0
+    for seed in range(8):
         s = _condition_sample(120, condition=cond, seed=seed)
         idx = s["indices"]
         r = est.estimate_error_rate(s, err[idx])
         N = cond.size
-        theta = v = 0.0
+        theta = v = vf = 0.0
+        low = []
         for c, val in enumerate((0, 1, 5, -1)):
             m = cond[idx] == val
             Nc, nc = int((cond == val).sum()), int(m.sum())
             p = err[idx][m].mean()
             theta += Nc / N * p
             v += (Nc / N) ** 2 * (1 - nc / Nc) * p * (1 - p) / (nc - 1)
-        n_eff = theta * (1 - theta) / v
+            p0 = (est.Z95 ** 2 / 2) / (nc + est.Z95 ** 2)
+            if nc < Nc and p * (1 - p) < p0 * (1 - p0):
+                low.append(s["condition"]["names"][c])
+                p = p0
+            vf += (Nc / N) ** 2 * (1 - nc / Nc) * p * (1 - p) / (nc - 1)
+        n_eff = theta * (1 - theta) / vf
         lo, hi = _wilson_by_hand(theta, n_eff)
         assert abs(r["estimate"] - theta) < 1e-12 and abs(r["design_variance"] - v) < 1e-15
         assert abs(r["effective_n"] - n_eff) < 1e-9 and abs(r["low"] - lo) < 1e-12 and abs(r["high"] - hi) < 1e-12
-        assert r["starved_strata"] == 0 and "warning" not in r
+        assert r["starved_strata"] == 0 and r.get("floored_conditions", []) == low
+        assert ("warning" in r) == bool(low) and ("interval_variance" in r) == bool(low)
+        n_floored += bool(low)
         assert r["condition_note"] == est.CONDITION_NOTE + " " + est.CONDITION_NOT_GRADED
         assert set(r["outside_condition_intervals"]) == {c for c, row in r["per_condition"].items()
                                                         if not row["low"] <= r["estimate"] <= row["high"]}
+    assert 0 < n_floored < 8                                        # both branches are run
     # every condition pure but the map is not: the design's variance is zero, and the interval falls back to Wilson
     # at the label count
     pure = (cond == 1).astype(float)
@@ -495,3 +507,78 @@ def test_condition_whole_map_by_a_second_route():
     row = r1["per_condition"]["7"]
     assert row["n_labelled"] == 1 and row["low"] == row["high"] == row["estimate"]
     assert r1["starved_strata"] == 0 and "fewer than" not in r1.get("warning", "")
+
+
+def _whole_map_coverage(N0, N1, K0, K1, budget):
+    """The exact coverage of the condition design's whole-map interval on two conditions of N0 and N1 windows holding
+    K0 and K1 errors. The interval depends on the labels only through each condition's error count, so every pair
+    (k0, k1) is run once through estimate_error_rate and weighted by its hypergeometric probability (pairs below
+    1e-14 are left out, which can only lower the sum)."""
+    cond, err = _two_conditions(N0, N1, K0, K1)
+    base = _condition_sample(budget, condition=cond)
+    n0, n1 = base["allocation"]
+    pools = [(np.flatnonzero((cond == c) & (err == 1)), np.flatnonzero((cond == c) & (err == 0))) for c in (0, 1)]
+    pmf = lambda Nc, Kc, nc, k: math.comb(Kc, k) * math.comb(Nc - Kc, nc - k) / math.comb(Nc, nc)
+    theta, cover, cover_unfloored = (K0 + K1) / (N0 + N1), 0.0, 0.0
+    for k0 in range(max(0, n0 - (N0 - K0)), min(n0, K0) + 1):
+        for k1 in range(max(0, n1 - (N1 - K1)), min(n1, K1) + 1):
+            pr = pmf(N0, K0, n0, k0) * pmf(N1, K1, n1, k1)
+            if pr < 1e-14:
+                continue
+            picked = np.r_[pools[0][0][:k0], pools[0][1][:n0 - k0], pools[1][0][:k1], pools[1][1][:n1 - k1]]
+            r = est.estimate_error_rate(dict(base, indices=picked), err[picked])
+            cover += pr * (r["low"] <= theta <= r["high"])
+            lo, hi = est.stratified_interval_wilson(err, cond, picked, [N0, N1], N0 + N1)[1:3]   # the spec's, unfloored
+            cover_unfloored += pr * (lo <= theta <= hi)
+    return cover, cover_unfloored
+
+
+@pytest.mark.parametrize("K0,K1,unfloored", [(20, 100, 0.531), (40, 148, 0.776), (3960, 100, 0.772)])
+def test_the_whole_map_interval_covers_when_a_large_condition_looks_clean(K0, K1, unfloored):
+    """A large condition beside a small degraded one, 150 labels each, the design's own use case: 4,000 windows at
+    0.5% or 1% wrong (or 99%) beside 200 at 50% or 74%. The large condition often shows no error, or one, in its
+    labels, and the stratified variance then counts it as known almost exactly. Without a floor on that variance the
+    whole-map interval covers 0.53, 0.78 and 0.77 (the review of 2026-09-29 found 0.67 and 0.76 by simulation on
+    larger maps). With the floor it covers at least 0.95, by exact enumeration of every pair of error counts."""
+    cover, before = _whole_map_coverage(4000, 200, K0, K1, 300)
+    assert round(before, 3) == unfloored and cover >= 0.95
+
+
+def test_the_variance_floor_by_a_second_route():
+    """The floor, written out: a condition not labelled in full whose p_c (1 - p_c) falls below p0 (1 - p0), with
+    p0 = (z^2 / 2) / (n_c + z^2) the centre of Wilson's interval for no error in n_c labels, enters the interval's
+    variance at p0. `design_variance` stays the spec's unbiased v; the interval uses `interval_variance`, and the
+    warning names the condition. Two errors among 150 labels are above the floor, and nothing changes."""
+    cond, err = _two_conditions(4000, 200, 40, 148)
+    base = _condition_sample(300, condition=cond)
+    assert base["allocation"] == [150, 150]
+    wrong0, right0 = np.flatnonzero((cond == 0) & (err == 1)), np.flatnonzero((cond == 0) & (err == 0))
+    wrong1, right1 = np.flatnonzero((cond == 1) & (err == 1)), np.flatnonzero((cond == 1) & (err == 0))
+    W0, W1, z2 = 4000 / 4200, 200 / 4200, est.Z95 ** 2
+    p0 = (z2 / 2) / (150 + z2)
+    for k0 in (0, 1, 2):
+        picked = np.r_[wrong0[:k0], right0[:150 - k0], wrong1[:111], right1[:39]]
+        r = est.estimate_error_rate(dict(base, indices=picked), err[picked])
+        q0, q1 = k0 / 150, 111 / 150
+        theta = W0 * q0 + W1 * q1
+        v = W0 ** 2 * (1 - 150 / 4000) * q0 * (1 - q0) / 149 + W1 ** 2 * (1 - 150 / 200) * q1 * (1 - q1) / 149
+        assert abs(r["estimate"] - theta) < 1e-12 and abs(r["design_variance"] - v) < 1e-15
+        if k0 < 2:
+            vf = W0 ** 2 * (1 - 150 / 4000) * p0 * (1 - p0) / 149 + W1 ** 2 * (1 - 150 / 200) * q1 * (1 - q1) / 149
+            assert abs(r["interval_variance"] - vf) < 1e-15 and r["floored_conditions"] == ["0"]
+            assert "in 0 at most one label differed from the rest" in r["warning"]
+        else:
+            vf = v
+            assert "interval_variance" not in r and "floored_conditions" not in r and "warning" not in r
+        n_eff = theta * (1 - theta) / vf
+        lo, hi = _wilson_by_hand(theta, n_eff)
+        assert abs(r["effective_n"] - n_eff) < 1e-9 and abs(r["low"] - lo) < 1e-12 and abs(r["high"] - hi) < 1e-12
+        # the floor only widens: the interval holds the one the unfloored variance gives
+        ulo, uhi = _wilson_by_hand(theta, theta * (1 - theta) / v) if v > 0 else _wilson_by_hand(theta, 300)
+        assert r["low"] <= ulo + 1e-12 and uhi <= r["high"] + 1e-12
+    # the review's case: no error among the clear part's labels, 111 of 150 in the cloudy part. The two per-condition
+    # intervals allow a whole-map rate up to their weighted upper ends; the floored interval now reaches past the
+    # estimate by more than the unfloored one's 0.3 points
+    picked = np.r_[right0[:150], wrong1[:111], right1[:39]]
+    r = est.estimate_error_rate(dict(base, indices=picked), err[picked])
+    assert r["high"] - r["estimate"] > 0.015

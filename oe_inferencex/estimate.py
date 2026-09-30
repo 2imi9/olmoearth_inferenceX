@@ -59,8 +59,9 @@ SCOPE_CERTIFY = ("The zone's error rate is certified over all its windows togeth
 CONDITION_NOTE = ("Each condition's interval is its own 95% statement; the intervals do not hold jointly at 95%. The "
                   "whole-map rate weights each condition by its share of the map and can hide a condition that is much "
                   "worse.")
-CONDITION_NOT_GRADED = ("The whole-map interval is the stratified interval the confidence design uses; with input "
-                        "conditions as strata its coverage has not been graded.")
+CONDITION_NOT_GRADED = ("The whole-map interval is the stratified interval the confidence design uses, with a floor "
+                        "on the variance of a condition whose labels nearly all agree; with input conditions as strata "
+                        "its coverage has not been graded.")
 FAMILY_NOTE = ("Certified per input condition. Each of the {L} conditions with at least {b1} labels is tested at delta "
                "{d:g}, so all their statements hold together except on at most {delta:g} of samples. On that event the "
                "certified windows taken together are wrong at most {alpha:g} of the time. Conditions with fewer labels "
@@ -713,7 +714,10 @@ def estimate_error_rate(sample, wrong):
     wrong  : 0/1 per labelled window, in the order of sample["indices"]: 1 where the label disagrees with the map
 
     A sample that records an input condition (`condition_grid`) also gets each condition's rate with its exact
-    interval (`per_condition`); one that does not gets `scope`, what a whole-map rate does not say (exp88).
+    interval (`per_condition`); one that does not gets `scope`, what a whole-map rate does not say (exp88). Under the
+    condition design the whole-map interval is the stratified one with a floor on the variance of a condition whose
+    labels all agree, or all but one (`floored_conditions`, `interval_variance`); it is not graded with conditions as
+    strata, and `condition_note` says so.
     """
     wrong = np.asarray(wrong, dtype=np.float64).ravel()
     idx = np.asarray(sample["indices"], int)
@@ -753,23 +757,51 @@ def estimate_error_rate(sample, wrong):
         err[local] = wrong
         strata, sizes = np.asarray(sample["strata"]), list(sample["sizes"])
         # theta = sum_c W_c k_c / n_c and v = sum_c W_c^2 (1 - n_c / N_c) p_c (1 - p_c) / (n_c - 1), W_c = N_c / N:
-        # the confidence design's stratified estimator with the conditions as strata, and its interval unchanged
+        # the confidence design's stratified estimator with the conditions as strata
         est_, lo, hi, _, n_eff = stratified_interval_wilson(err, strata, local, sizes, N)
         var = stratified_mean_and_variance(err, strata, local, sizes, N)[1]
         n_h = np.bincount(strata[local], minlength=len(sizes))
+        k_h = np.bincount(strata[local], weights=wrong, minlength=len(sizes))
+        sz = np.asarray(sizes, dtype=np.float64)
+        partial = n_h < sz
+        # A floor on each condition's variance, a divergence from the spec (2.7 took the interval unchanged; review of
+        # 2026-09-29). A condition not labelled in full whose labels all agree adds nothing to v, as if its rate were
+        # known, and one error in 150 adds little. Equal allocation makes that likely for a large clean condition
+        # beside a small degraded one, the design's own use case: there the interval covered 0.53 to 0.78 (exact, in
+        # tests/test_estimate_exact.py). Such a condition enters the interval's variance at p0 = (z^2 / 2) / (n_c +
+        # z^2), the centre of Wilson's interval for no error in its n_c labels, whenever p_c (1 - p_c) is smaller.
+        # That is at most one label differing from the rest. The variance only grows, so the interval only widens;
+        # `design_variance` stays the unbiased v.
+        m2 = partial & (n_h >= MIN_PER_STRATUM)                  # a starved condition is flagged below instead
+        q = np.divide(k_h, n_h, out=np.zeros(len(sizes)), where=n_h > 0)
+        p0 = (Z95 ** 2 / 2) / (n_h + Z95 ** 2)
+        low = m2 & (q * (1 - q) < p0 * (1 - p0))
+        floored = []
+        if low.any() and 0 < est_ < 1:
+            nl, Nl = n_h[low], sz[low]
+            var_i = var + float(((Nl / N) ** 2 * (1 - nl / Nl) * (p0[low] * (1 - p0[low]) - q[low] * (1 - q[low]))
+                                 / (nl - 1)).sum())
+            if est_ * (1 - est_) / var_i < n_eff:           # never narrower than the stratified interval
+                n_eff = est_ * (1 - est_) / var_i
+                lo, hi = wilson_interval(est_ * n_eff, n_eff)
+                floored = [c_names[c] for c in np.flatnonzero(low)]
+                out.update({"interval_variance": var_i, "floored_conditions": floored})
         # a condition labelled in full (a one-window condition, say) has no sampling error and is not starved
-        starved = int(((n_h < MIN_PER_STRATUM) & (n_h < np.asarray(sizes))).sum())
+        starved = int(((n_h < MIN_PER_STRATUM) & partial).sum())
         out.update({"estimate": est_, "low": lo, "high": hi, "starved_strata": starved, "effective_n": n_eff,
                     "design_variance": var,
                     "method": "stratified by input condition; Wilson interval on the design's effective sample size"})
         notes = []
-        partial = n_h < np.asarray(sizes)
         if est_ in (0.0, 1.0):
             notes.append(f"{'no' if est_ == 0 else 'every'} labelled window was wrong, so the design's variance is zero and "
                          f"the interval is the simple-random Wilson bound at {idx.size} labels; the stratification "
                          "cannot narrow it without an observed error")
+        elif floored:
+            notes.append(f"in {', '.join(floored)} at most one label differed from the rest, so the design's variance "
+                         f"would treat {'that condition' if len(floored) == 1 else 'those conditions'} as known almost "
+                         "exactly and the interval would be too narrow; each such condition's variance is taken at the "
+                         "rate 1.92 / (n + 3.84) instead, the centre of Wilson's interval for no error in its n labels")
         elif var == 0 and partial.any():
-            k_h = np.bincount(strata[local], weights=wrong, minlength=len(sizes))
             pure = bool(np.all((k_h == 0) | (k_h == n_h)))
             # the spec's wording holds when every condition is pure; when a condition labelled in full is mixed, its
             # variance is zero because nothing in it is unobserved, and the note says only what is true

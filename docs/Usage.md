@@ -158,7 +158,7 @@ pixels. **The reviewer sets `wrong` to 1 when `map_class` is not what is on the 
 | `proportional` | The same strata, budget allocated by stratum size | The same |
 | `random` | Simple random sample; required by `certify` without a condition | Exact hypergeometric |
 | `tiles` | `--per-tile` windows (default 16) in each of a random set of tiles of `--tile` windows per side (default 16) | Ratio estimator over tiles, with the naive interval beside it |
-| `condition` (default with `--condition`) | Strata by input condition, labels split equally | Exact per condition; whole map: stratified Wilson, not graded with conditions as strata |
+| `condition` (default with `--condition`) | Strata by input condition, labels split equally | Exact per condition; whole map: stratified Wilson with a variance floor, not graded with conditions as strata |
 
 The tile design matches how reviewers often label, and its intervals under-cover: on exp78's tasks the naive one
 covered the true rate 51 to 78% of the time at a nominal 95%, the corrected one 91 to 94% with tiles of equal size and
@@ -196,8 +196,16 @@ excludes the whole-map rate. Each condition's interval is exact hypergeometric, 
 a random sample alike, and is its own 95% statement; the intervals do not hold jointly. A condition no label fell in
 reads `estimate: null`, from 0 to 1. Under a random sample the whole-map rate is the one given without a condition.
 Under the condition design it weights each condition by its share of the map: it is the stratified estimate and
-interval the confidence design uses, with the conditions as strata, and its coverage there has not been graded. With
-one condition it is the random design's exact interval.
+interval the confidence design uses, with the conditions as strata, and its coverage there has not been graded; a
+printed note says so. One change guards the design's own use case, a large clean condition beside a small degraded
+one. A condition not labelled in full whose labels all agree, or all but one, adds nothing or little to the
+stratified variance, as if its rate were known, and the interval was then far too narrow: on a map of 4,000 windows
+at 0.5% wrong beside 200 at 50%, with 150 labels each, it covered 53% of the time (exact, by enumeration in the
+tests). Such a condition enters the interval's variance at the rate 1.92 / (n + 3.84), the centre of Wilson's
+interval for no error in its n labels, which brings that case to 99%. The floor only widens the interval. When it
+applies, the JSON names the conditions (`floored_conditions`), gives the variance used (`interval_variance`) beside
+the design's unbiased one (`design_variance`), and a warning says so. With one condition it is the random design's
+exact interval.
 
 `--per-class` needs a `reference_class` column (the class the reviewer saw, in the map's class ids) and the map's
 scores, from the sidecar's path or `--scores`; `--scores` and `--nodata` are accepted only with `--per-class`. It adds

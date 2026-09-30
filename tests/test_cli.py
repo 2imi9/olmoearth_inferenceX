@@ -838,7 +838,17 @@ def test_estimate_prints_each_condition_after_the_whole_map(tmp_path, capsys):
     if r["outside_condition_intervals"]:
         assert tail[0].startswith(f"note: the whole-map rate, {100 * r['estimate']:.1f}%, lies outside the interval of "
                                   + ", ".join(r["outside_condition_intervals"]))
-    assert tail[-1].startswith("wrote ")
+    # the whole-map line says "95% interval"; under the condition design the line below says it is not graded
+    assert tail[-2] == f"note: {est.CONDITION_NOT_GRADED}" and tail[-1].startswith("wrote ")
+
+    # under a random sample the whole-map interval is the exact one, and no such note is printed
+    rnd = tmp_path / "r.csv"
+    assert main(["sample", path, "--budget", "300", "--design", "random", "--out", str(rnd), "--condition", cpath]) == 0
+    _fill(rnd, probs, expert)
+    capsys.readouterr()
+    assert main(["estimate", str(rnd)]) == 0
+    printed = capsys.readouterr().out
+    assert "not been graded" not in printed and json.load(open(tmp_path / "r_estimate.json"))["by_condition"] is True
 
 
 def test_certify_by_condition_writes_the_union_mask_and_removes_a_stale_one(tmp_path, capsys):

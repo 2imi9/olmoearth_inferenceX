@@ -28,7 +28,11 @@ sidecar and printed line is unchanged; the JSON outputs gain one `scope` note.
   and under a random sample alike, beside the whole-map rate, and names the conditions whose interval excludes the
   whole-map rate. Under the condition design the whole-map interval is the stratified Wilson interval of the
   confidence design with the conditions as strata; its coverage with conditions as strata has not been graded, and
-  the output says so. `--per-class` runs under the condition design and says its intervals are not graded there.
+  the JSON and the printed result say so. A condition not labelled in full whose labels all agree, or all but one,
+  enters that interval's variance at the rate 1.92 / (n + 3.84) rather than at nearly zero: without this floor a
+  large clean condition beside a small degraded one gave an interval that covered as little as 53% of the time
+  (exact, 4,000 windows at 0.5% wrong beside 200 at 50%, 150 labels each); with it, 99%. `--per-class` runs under
+  the condition design and says its intervals are not graded there.
 - `certify` on a sample that records a condition certifies a zone inside each condition that holds enough labels,
   at delta divided by the number of such conditions, so that all the statements hold together at delta
   (`certify_by_condition`, prefix or Bonferroni rule; it refuses the plug-in rule, which has no guarantee to split). A
@@ -54,9 +58,11 @@ sidecar and printed line is unchanged; the JSON outputs gain one `scope` note.
   `assess` writes `condition.tif` and the `_by_condition` review sets, and its review-set CSVs gain `condition`;
   `sample`'s CSV gains `condition` after `stratum` (`map_class` and `wrong` stay last) and its sidecar gains
   `condition` and `condition_grid`; the estimate JSON gains `by_condition`, `per_condition`, `condition_note` and
-  `outside_condition_intervals`; the zone JSON gains `by_condition`, `delta_per_condition`, `n_conditions_tested`,
-  `certified_share_of_map`, `n_certified` and `per_condition`, and keeps `coverage`, `n_zone`, `threshold` and
-  `upper_bound` null, because the union of the zones is not the most confident share of the map.
+  `outside_condition_intervals`, and under the condition design `design_variance`, with `interval_variance` and
+  `floored_conditions` when the variance floor applies; the zone JSON gains `by_condition`, `delta_per_condition`,
+  `n_conditions_tested`, `certified_share_of_map`, `n_certified` and `per_condition`, and keeps `coverage`,
+  `n_zone`, `threshold` and `upper_bound` null, because the union of the zones is not the most confident share of
+  the map.
 - `sample --design` defaults to none, which resolves to `condition` with `--condition` and to `confidence` without;
   the design written to the sidecar is unchanged without a layer.
 
