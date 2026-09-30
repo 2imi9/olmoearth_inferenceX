@@ -50,8 +50,8 @@ TILES_WARNING = ("labels taken tile by tile are not independent, and a map whose
 # with the per-condition results. The numbers are exp88's (exp/out/exp88_summary.json).
 SCOPE_ESTIMATE = ("This is the error rate of the whole map. If part of the map was predicted with an input missing, "
                   "that part's rate can differ widely from it. On a PASTIS map with half its tiles read without the "
-                  "optical input, it was 74.1% against 19.7% on the rest, while a random sample of 300 estimated 46.9% "
-                  "(exp88). Draw the sample with --condition to get each part's rate.")
+                  "optical input, it was 74.1% against 19.7% on the rest, while random samples of 300 estimated 46.9% "
+                  "on average (exp88). Draw the sample with --condition to get each part's rate.")
 SCOPE_CERTIFY = ("The zone's error rate is certified over all its windows together. Where part of the map was predicted "
                  "with an input missing, its errors can be confident ones (exp88), and that part of the zone can be "
                  "wrong more often than the rest. To certify each input condition on its own, draw the sample with "

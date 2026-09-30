@@ -473,11 +473,15 @@ def test_scope_notes_quote_exp88_as_recorded():
     assert missing_auc == base["optical_missing"]["ranking"]["margin_auroc"]
     assert f"fell from {full_auc:.2f} to {missing_auc:.2f}" in SCOPE_ASSESS_K                             # 0.83, 0.59
 
-    # the mixed map: each part's truth, and the pooled estimate of a random sample of 300 (its mean over the
-    # recorded draws, which is what "estimated" reports)
+    # the mixed map: each part's truth, and the pooled estimate of random samples of 300. The record's number is
+    # the mean over its draws, so the note says "on average": one sample of 300 gives k/300, and 46.9% is not one
     p4 = pre["P4"]
+    draws = rec["results"]["olmoearth_base"]["seeds"]["0"]["mixed_map"]["estimation"]["pooled"]
+    assert p4["pooled_mean_estimate"] == draws["mean_estimate"] and rec["config"]["draws"] > 1
     assert f"{100 * p4['truth']['cloudy']:.1f}% against {100 * p4['truth']['clear']:.1f}% on the rest" in SCOPE_ESTIMATE
-    assert f"a random sample of {rec['config']['sample']} estimated {100 * p4['pooled_mean_estimate']:.1f}%" in SCOPE_ESTIMATE
+    assert (f"random samples of {rec['config']['sample']} estimated {100 * p4['pooled_mean_estimate']:.1f}% on average"
+            in SCOPE_ESTIMATE)
+    assert "a random sample of" not in SCOPE_ESTIMATE
     assert "(exp88)" in SCOPE_CERTIFY and not any(ch.isdigit() for ch in SCOPE_CERTIFY.replace("exp88", ""))
 
 
