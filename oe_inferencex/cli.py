@@ -776,6 +776,29 @@ def _reference_classes(rows, path):
     return np.array(vals)
 
 
+def _outside_note(res):
+    """The closing note of `estimate` when the whole-map rate lies outside some conditions' intervals, worded by the
+    direction observed: a condition whose interval lies above the whole-map rate is worse than the map as a whole,
+    one whose interval lies below it better. Until 2026-09-29 the note said the whole-map rate "can hide a condition
+    that is much worse" whatever the direction, for a better condition too, and for a condition labelled in full,
+    whose interval is its exact rate."""
+    per, whole = res["per_condition"], res["estimate"]
+
+    def named(names):
+        names = [n + (" (labelled in full, so its interval is its exact rate)"
+                      if per[n]["n_labelled"] == per[n]["n_population"] else "") for n in names]
+        return names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
+
+    said = [f"note: the whole-map rate is {100 * whole:.1f}%."]
+    for names, side, how in (([n for n in res["outside_condition_intervals"] if per[n]["low"] > whole], "below", "worse"),
+                             ([n for n in res["outside_condition_intervals"] if per[n]["high"] < whole], "above", "better")):
+        if names:
+            one = len(names) == 1
+            said.append(f"It lies {side} the interval{'' if one else 's'} of {named(names)}, so "
+                        f"{'that condition is' if one else 'those conditions are'} {how} than the map as a whole.")
+    return " ".join(said + ["The whole-map rate weights each condition by its share of the map."])
+
+
 def cmd_estimate(args):
     """The map's error rate with its interval, from a filled-in sample CSV and its sidecar design; with
     --per-class, the user's and producer's accuracy and error-adjusted share per class as well."""
@@ -846,9 +869,7 @@ def cmd_estimate(args):
                 lines.append(f"{name} {100 * row['estimate']:.1f}% ({100 * row['low']:.1f}% to {100 * row['high']:.1f}%), "
                              f"{where}")
         if res["outside_condition_intervals"]:
-            lines.append(f"note: the whole-map rate, {100 * res['estimate']:.1f}%, lies outside the interval of "
-                         f"{', '.join(res['outside_condition_intervals'])}; it weights each condition by its share of "
-                         "the map and can hide a condition that is much worse")
+            lines.append(_outside_note(res))
         if res["design"] == "condition" and len(res["per_condition"]) > 1:
             # the whole-map line says "95% interval"; with conditions as strata that interval is not graded, and
             # the JSON's condition_note alone did not reach a reader of the printed result (review of 2026-09-29)

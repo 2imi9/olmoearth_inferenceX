@@ -835,9 +835,23 @@ def test_estimate_prints_each_condition_after_the_whole_map(tmp_path, capsys):
     first = printed.index(lines[0])
     assert printed[first:first + len(lines)] == lines and first == 1 + ("warning" in r)
     tail = printed[first + len(lines):]
-    if r["outside_condition_intervals"]:
-        assert tail[0].startswith(f"note: the whole-map rate, {100 * r['estimate']:.1f}%, lies outside the interval of "
-                                  + ", ".join(r["outside_condition_intervals"]))
+    # the closing note is worded by the direction observed: on the shipped map clear is worse than the map as a whole,
+    # cloudy better, and unrecorded, labelled in full, has its exact rate below it (review of 2026-09-29)
+    per = r["per_condition"]
+    assert [n for n in r["outside_condition_intervals"] if per[n]["low"] > r["estimate"]] == ["clear"]
+    assert [n for n in r["outside_condition_intervals"] if per[n]["high"] < r["estimate"]] == ["cloudy", "unrecorded"]
+    assert per["unrecorded"]["n_labelled"] == per["unrecorded"]["n_population"]
+    assert tail[0] == (f"note: the whole-map rate is {100 * r['estimate']:.1f}%. It lies below the interval of clear, so "
+                       "that condition is worse than the map as a whole. It lies above the intervals of cloudy and "
+                       "unrecorded (labelled in full, so its interval is its exact rate), so those conditions are better "
+                       "than the map as a whole. The whole-map rate weights each condition by its share of the map.")
+    assert "much worse" not in "\n".join(printed)
+    from oe_inferencex.cli import _outside_note
+    one = {"estimate": 0.3, "outside_condition_intervals": ["clear"],
+           "per_condition": {"clear": {"low": 0.1, "high": 0.2, "n_labelled": 150, "n_population": 5000}}}
+    assert _outside_note(one) == ("note: the whole-map rate is 30.0%. It lies above the interval of clear, so that "
+                                  "condition is better than the map as a whole. The whole-map rate weights each "
+                                  "condition by its share of the map.")
     # the whole-map line says "95% interval"; under the condition design the line below says it is not graded
     assert tail[-2] == f"note: {est.CONDITION_NOT_GRADED}" and tail[-1].startswith("wrote ")
 

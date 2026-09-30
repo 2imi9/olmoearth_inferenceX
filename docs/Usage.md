@@ -192,20 +192,20 @@ tiles read without the optical input, that part's error rate was 74.1% and the r
 For a sample that records a condition, `estimate` also prints one line per condition and adds `by_condition`,
 `per_condition` (per condition: `value`, `n_population`, `share_of_map`, `n_labelled`, `n_wrong`, `estimate`, `low`,
 `high`, `half_width`, `method`), `condition_note` and `outside_condition_intervals`, the conditions whose interval
-excludes the whole-map rate. Each condition's interval is exact hypergeometric, under the condition design and under
-a random sample alike, and is its own 95% statement; the intervals do not hold jointly. A condition no label fell in
-reads `estimate: null`, from 0 to 1. Under a random sample the whole-map rate is the one given without a condition.
-Under the condition design it weights each condition by its share of the map: it is the stratified estimate and
-interval the confidence design uses, with the conditions as strata, and its coverage there has not been graded; a
-printed note says so. One change guards the design's own use case, a large clean condition beside a small degraded
-one. A condition not labelled in full whose labels all agree, or all but one, adds nothing or little to the
-stratified variance, as if its rate were known, and the interval was then far too narrow: on a map of 4,000 windows
-at 0.5% wrong beside 200 at 50%, with 150 labels each, it covered 53% of the time (exact, by enumeration in the
-tests). Such a condition enters the interval's variance at the rate 1.92 / (n + 3.84), the centre of Wilson's
-interval for no error in its n labels, which brings that case to 99%. The floor only widens the interval. When it
-applies, the JSON names the conditions (`floored_conditions`), gives the variance used (`interval_variance`) beside
-the design's unbiased one (`design_variance`), and a warning says so. With one condition it is the random design's
-exact interval.
+excludes the whole-map rate. A printed note says which of them are worse than the map as a whole and which better.
+Each condition's interval is exact hypergeometric, under the condition design and under a random sample alike, and is
+its own 95% statement; the intervals do not hold jointly. A condition no label fell in reads `estimate: null`, from 0
+to 1. Under a random sample the whole-map rate is the one given without a condition. Under the condition design it
+weights each condition by its share of the map: it is the stratified estimate and interval the confidence design uses,
+with the conditions as strata, and its coverage there has not been graded; a printed note says so. One change guards
+the design's own use case, a large clean condition beside a small degraded one. A condition not labelled in full whose
+labels all agree, or all but one, adds nothing or little to the stratified variance, as if its rate were known, and
+the interval was then far too narrow: on a map of 4,000 windows at 0.5% wrong beside 200 at 50%, with 150 labels each,
+it covered 53% of the time (exact, by enumeration in the tests). Such a condition enters the interval's variance at
+the rate 1.92 / (n + 3.84), the centre of Wilson's interval for no error in its n labels, which brings that case to
+99%. The floor only widens the interval. When it applies, the JSON names the conditions (`floored_conditions`), gives
+the variance used (`interval_variance`) beside the design's unbiased one (`design_variance`), and a warning says so.
+With one condition it is the random design's exact interval.
 
 `--per-class` needs a `reference_class` column (the class the reviewer saw, in the map's class ids) and the map's
 scores, from the sidecar's path or `--scores`; `--scores` and `--nodata` are accepted only with `--per-class`. It adds
