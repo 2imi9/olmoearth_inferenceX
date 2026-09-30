@@ -73,6 +73,11 @@ unchanged. The JSON outputs gain one `scope` note.
 - `sample --design` defaults to none, which resolves to `condition` with `--condition` and to `confidence` without;
   the design written to the sidecar is unchanged without a layer.
 
+**A quick start that can be run.** `examples/quickstart_map.py` writes the README's test map: two four-class
+probability maps of one synthetic scene, and its truth. With `--label` it fills in a sample's labels from that truth.
+`tests/test_readme_quickstart.py` runs the README's commands on the map and compares the printed lines. The package
+is unchanged.
+
 ## 1.3.1 (2026-09-25)
 
 - Usage documents a binary score in [0, 1] decided at 0.5, such as an OlmoEarth Studio `per_pixel_regression` output

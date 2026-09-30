@@ -17,8 +17,13 @@ The input-condition layer below (`--condition`, `condition=`) is not yet release
 it. To use it now, install from the repository:
 
 ```bash
+pip uninstall -y olmoearth-inferencex
 pip install "olmoearth-inferencex[geo] @ git+https://github.com/2imi9/olmoearth_inferenceX"
 ```
+
+The first line is needed where the release is already installed. The repository still carries the version number
+1.3.1, so pip takes the release as up to date, changes nothing and reports no error. Afterwards
+`oe-inferencex assess --help` lists `--condition`.
 
 ## Quick start
 
@@ -37,14 +42,17 @@ oe-inferencex certify to_label.csv --alpha 0.10      # the certified zone
 `--design random` lets one set of labels serve both `estimate` and `certify`. Without it `sample` stratifies by
 confidence, which `estimate` reads and `certify` refuses. `certify` can return nothing, and says so;
 [certify](#certify) gives the labels a level needs. The [README](https://github.com/2imi9/olmoearth_inferenceX#quick-start) shows the
-lines these commands print on a test map. Each command is described under [Command line](#command-line).
+lines these commands print on a test map, and `examples/quickstart_map.py` writes that map and fills in its labels.
+Each command is described under [Command line](#command-line).
 
 ## Inputs
 
 A map is a GeoTIFF or `.npy` array of the scores a model's classification head produces before the argmax: `(H, W)`
-probabilities or logits for a binary task, `(C, H, W)` per class otherwise. Logits are preferred, because
-probabilities tie where they saturate; pass `--logits` (`is_logit=True` in Python). Other maps are accepted with
-restrictions.
+probabilities or logits for a binary task, `(C, H, W)` per class otherwise. For a binary task logits are preferred,
+because probabilities tie where they saturate; pass `--logits` (`is_logit=True` in Python). For a map of more than
+two classes, pass probabilities to the command line: with `--logits` it ranks by the logit margin, and the package
+warns that one minus the top probability ranks errors better ([exp76](results/comparisons.md#which-confidence-which-statistic-which-aggregator-exp76));
+in Python, `form="top1"` reads logits that way. Other maps are accepted with restrictions.
 
 | Map | Accepted by |
 |---|---|

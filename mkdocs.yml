@@ -57,6 +57,7 @@ theme:
 nav:
   - Home:
       - index.md
+      - Summary: Summary.md
       - Findings: Findings.md
       - Recipe: method/recipe.md
       - Related work: related_work.md

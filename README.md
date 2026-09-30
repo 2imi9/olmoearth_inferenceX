@@ -19,13 +19,19 @@ One raster of the model's scores, taken before the argmax:
 - probabilities between 0 and 1 (not 0 to 100), or logits with `--logits`.
 
 The class map alone is not enough. Without scores there is nothing to rank by, and only
-`compare` reads a plain class map. Labels are needed only for an error rate, and the package
-picks which windows to label.
+`compare` reads a plain class map. The documentation shows
+[how to write the scores out of a fine-tuned OlmoEarth model](https://olmoearth-inferencex.readthedocs.io/en/latest/Usage/#scores-from-a-public-fine-tuned-model).
 
 The package works on **windows**: square blocks of pixels, 4 x 4 by default (`--patch`). These
 are not rslearn windows. It ranks, samples and counts windows, not pixels. A window's
 **confidence** is how sure the model is of its class: the top class probability, or with
 `--logits` the gap between the two highest logits, averaged over the window's pixels.
+
+For a two-class map, pass logits if you have them: probabilities tie where they reach 0 or 1.
+For a map of more than two classes, pass probabilities.
+
+Labels are needed for an error rate and for a certified zone. The package picks which windows
+to label.
 
 
 Quick start
@@ -49,16 +55,25 @@ windows, here 5%, the ones to check first:
 
 The tile was chosen by a rule fixed in advance: the median of 18 eligible tiles, not the best. <!-- claim:demo-sample-is-the-median-tile -->
 
-**Your own map** takes three steps. The lines below were printed by 1.3.1 on a synthetic
-four-class test map of 256 x 256 pixels. Its true error rate is 9.0%, and a script filled in
-the labels from the known truth.
+**Your own map** takes three steps. To try them before you have a map, download the script
+that writes a test map:
+
+```bash
+curl -O https://raw.githubusercontent.com/2imi9/olmoearth_inferenceX/main/examples/quickstart_map.py
+python quickstart_map.py
+```
+
+It writes three files. `scores.tif` is a synthetic four-class probability map of 256 x 256
+pixels. Of its windows, 7.3% are wrong. `other.tif` is a second map of the same scene.
+`truth.tif` holds the class that is really there. The lines below were printed by 1.3.1 on
+these files, so you can run each command and compare.
 
 **1. Which parts to check first.** No labels are needed. Add `--logits` if the scores are
 logits.
 
 ```console
 $ oe-inferencex assess scores.tif --out audit
-4096 windows of 4 px; review sets 1%: 41, 5%: 205, 10%: 410; boundary windows 52.6%
+4096 windows of 4 px; review sets 1%: 41, 5%: 205, 10%: 410; boundary windows 40.0%
 wrote audit/assessment.json, explanation.json, review_set_*.csv, suspicion, boundary
 ```
 
@@ -77,44 +92,51 @@ $ oe-inferencex sample scores.tif --budget 300 --design random --out to_label.cs
 warning: probability input: confidence ties where probabilities saturate; prefer logits
 ```
 
+The warning is printed for every probability map. For a map of more than two classes, keep
+the probabilities (see [What you give it](#what-you-give-it)).
+
 Open `to_label.csv`. For each row, look at the window in imagery or on the ground. Set `wrong`
-to 1 if `map_class` is not what is there, otherwise to 0. Fill every row, keep the row order, and keep
-`to_label.json` beside the CSV.
+to 1 if `map_class` is not what is there, otherwise to 0. Fill every row, keep the row order,
+and keep `to_label.json` beside the CSV. On the test map,
+`python quickstart_map.py --label to_label.csv` does this from `truth.tif`.
 
 ```console
 $ oe-inferencex estimate to_label.csv
-error rate 9.7%, 95% interval 6.7% to 13.4% (half-width 3.4 points), from 300 labelled windows of 4096; exact hypergeometric interval (simple random sample of a finite map)
+error rate 7.0%, 95% interval 4.5% to 10.4% (half-width 2.9 points), from 300 labelled windows of 4096; exact hypergeometric interval (simple random sample of a finite map)
 wrote to_label_estimate.json
 ```
 
-With a `reference_class` column filled in as well, `--per-class` adds each class's accuracy.
+`sample` does not write a `reference_class` column. Add one holding the class that is really
+in each window, and `--per-class` gives each class's accuracy. The script adds it on the test
+map.
 
 **3. Which part can be trusted.** The same labels give a **certified zone**: the most confident
 share of the map whose error rate is at most the level `--alpha`. The statement may be wrong for
 at most 10% of the samples that could have been drawn (`--delta`).
 
 ```console
-$ oe-inferencex certify to_label.csv --alpha 0.10
-the 95% most confident windows (3891 of 4096, confidence margin >= 0.3876) are wrong at most 10% of the time; this statement fails on at most 10% of samples like this one (prefix rule; the exact upper bound on the zone's error rate at that level is 7.9%). Outside the zone nothing is certified.
+$ oe-inferencex certify to_label.csv --alpha 0.05
+the 90% most confident windows (3686 of 4096, confidence margin >= 0.6662) are wrong at most 5% of the time; this statement fails on at most 10% of samples like this one (prefix rule; the exact upper bound on the zone's error rate at that level is 2.4%). Outside the zone nothing is certified.
 valid if the zone's error rate does not fall as the zone grows; on the suite tasks exp80 graded, the guarantee held whether or not that was exactly true (docs/results/comparisons.md, exp80)
 wrote to_label_zone.json and the window mask to_label_zone.npy
 ```
 
-`certify` can return nothing. With `--alpha 0.05` the same labels gave `no zone certified`;
-adding `--rule bonferroni` certified the most confident 50% of the map at that level. `certify`
-needs a sample drawn with `--design random`. Without that option `sample` stratifies by
+In these lines `confidence margin` is the window's confidence, and `prefix rule` is the default
+test. `certify` can return nothing: with `--alpha 0.01` the same labels gave `no zone certified`.
+It needs a sample drawn with `--design random`. Without that option `sample` stratifies by
 confidence, which `estimate` reads and `certify` refuses.
 
 **Two maps of one area**, on the same grid:
 
 ```console
 $ oe-inferencex compare scores.tif other.tif --out diff
-540 of 4096 windows differ (13.18%); on a boundary of a 2.1x as often as the agreeing windows
+507 of 4096 windows differ (12.38%); on a boundary of a 2.6x as often as the agreeing windows
 wrote diff/comparison.json, differing_windows.csv, disagreement
 ```
 
 The second figure says that the differing windows sit on a class boundary of the first map
-2.1 times as often as the agreeing windows.
+2.6 times as often as the agreeing windows. `compare` does not say which map is right there.
+With a raster of labels it does: add `--labels truth.tif`.
 
 
 Commands
@@ -132,9 +154,7 @@ Commands
 `oe-inferencex <command> --help` lists the options.
 [Usage](https://olmoearth-inferencex.readthedocs.io/en/latest/Usage/) describes every command,
 the files it writes and the Python functions behind it. It also lists
-[the other inputs the package accepts](https://olmoearth-inferencex.readthedocs.io/en/latest/Usage/#inputs)
-and shows
-[how to write the scores out of a fine-tuned OlmoEarth model](https://olmoearth-inferencex.readthedocs.io/en/latest/Usage/#scores-from-a-public-fine-tuned-model).
+[the other inputs the package accepts](https://olmoearth-inferencex.readthedocs.io/en/latest/Usage/#inputs).
 
 
 Before you trust it
@@ -146,7 +166,8 @@ Before you trust it
    position. The warning is only in `assessment.json`.
 2. **Without labels it says where to look, not how wrong the map is.** For an error rate, label
    the windows that `sample` draws. The review set is not such a sample. It is chosen to hold
-   errors, so its error rate is far above the map's, and `estimate` and `certify` refuse it.
+   errors, so its error rate is far above the map's. `estimate` and `certify` refuse it, as
+   they refuse any CSV that `sample` did not write.
 3. **Confidence is only comparable between windows read from the same inputs**, meaning the
    same sensors and the same cloud state. An error the model is sure of is checked last, and
    a missing input can make the model sure and wrong. Version 1.3.1 ranks all the windows
@@ -164,100 +185,39 @@ zone. It does not improve the ranking inside a part read with an input missing. 
 before the next release:
 
 ```bash
+pip uninstall -y olmoearth-inferencex
 pip install "olmoearth-inferencex[geo] @ git+https://github.com/2imi9/olmoearth_inferenceX"
 ```
 
-
-What has been measured
-----------------------
-
-Each line is a claim in the project's ledger, checked against its result file. The
-[findings](https://olmoearth-inferencex.readthedocs.io/en/latest/Findings/#in-short) list them
-all, with the evidence.
-
-- **Ranking.** Ai2's published embedding suite has 25 tasks for OlmoEarth Base. A confidence is
-  defined on 24 of them; the other is multi-label. Read through linear probes on those
-  embeddings, confidence ranked the errors better than both baselines that do not use the model
-  (how rare the predicted class is, and distance in embedding space) on all 24 tasks. <!-- claim:suite-margin-wins-every-task -->
-- **Other encoders.** Sixteen encoders of that suite carry at least 20 of the 24 tasks
-  (OlmoEarth, Galileo, CROMA, TerraMind, Clay, Copernicus-FM, AnySat, Panopticon and Satlas).
-  Under each of ten probe seeds, confidence beat both baselines on at least 87.5% of each
-  encoder's tasks. <!-- claim:exp79-headline-holds-under-every-seed-on-every-encoder -->
-- **Other references.**
-  Against ground survey labels (LUCAS), confidence ranked the errors better than the best
-  baseline in 94 regions and worse in 32. <!-- claim:lucas-ranking-survives-ground-observation -->
-  Against farmers' crop declarations (EuroCrops), it did so in all three countries. <!-- claim:eurocrops-ranking-holds-on-declarations -->
-  For Dynamic World, a model this project did not train, its own confidence beat a class-rarity
-  baseline on 315 expert-annotated tiles and lost on 91. <!-- claim:dw-margin-ranks-a-production-model -->
-- **Error rate.** From 300 randomly drawn windows, the 95% interval held the true rate in 93.3%
-  to 96.1% of 2,000 repeated draws, on each of the suite's seven segmentation tasks. <!-- claim:design-based-interval-is-honest -->
-- **Certified zone.** On OlmoEarth Base's 24 tasks, a certified zone was worse than its level
-  in at most 8% of 2,000 draws, where 10% is allowed. <!-- claim:trust-zone-guarantee-holds -->
+The first line is needed: `main` still carries the version number 1.3.1, so pip would take an
+installed release as up to date. Afterwards `oe-inferencex assess --help` lists `--condition`.
 
 
-Known limits
-------------
+Results and limits
+------------------
 
-The [findings](https://olmoearth-inferencex.readthedocs.io/en/latest/Findings/#limits) give the
-detail.
+Ai2's published embedding suite has 25 tasks for OlmoEarth Base. A confidence is defined on 24
+of them; the other is multi-label. Read through linear probes on those embeddings, confidence
+ranked the errors better than both baselines that do not use the model (how rare the predicted
+class is, and distance in embedding space) on all 24 tasks. <!-- claim:suite-margin-wins-every-task -->
+On the sixteen encoders of that suite that carry at least 20 of the 24 tasks, under each of ten
+probe seeds, confidence beat both baselines on at least 87.5% of each encoder's tasks. <!-- claim:exp79-headline-holds-under-every-seed-on-every-encoder -->
 
-- **Confident errors.** They are checked last, and a missing input can make more of them. One
-  case was simulated: a PASTIS probe trained on Sentinel-1 and Sentinel-2 embeddings, then read
-  on Sentinel-1 alone, as under full cloud. 59.8% of OlmoEarth Base's errors were then as
-  confident as a typical correct window, against 6.0% with both inputs. For OlmoEarth Large the
-  share was 12.8% to 13.8%. No real cloud has been tested. <!-- claim:missing-optical-errors-are-confident -->
-- **Kind of model.** Most of the evidence is linear probes on frozen embeddings. Of Ai2's
-  fine-tuned models, one was tested: FT-AWF, on 344 validation points. <!-- claim:fine-tuned-model-audit -->
-- **Two maps.** Without labels, `compare` cannot say which map is right where they differ. On
-  15 pairs of flood maps, trusting the more confident map was right on 51% to 70% of the
-  differing windows. <!-- claim:tool-vs-diff-resolution -->
-- **Floods.** A plain water index (NDWI) ranked the errors as well as or better than confidence
-  on one Sen1Floods11 event, Bolivia. <!-- claim:bolivia-ndwi-exception -->
-  For a Sentinel-1 probe it ranked them better on the whole multi-region test split. <!-- claim:s1-probe-ndwi-flip -->
-- **Certifying.** `certify` can return nothing. With 300 labels and a level of half the map's
-  error rate, it found a zone on most draws on only 14 of 21 tasks. <!-- claim:trust-zone-coverage-at-300-labels -->
-- **Labels collected by tile.** The interval holds for the windows `sample` draws. 300 labels
-  collected as 19 whole tiles and treated as independent gave a 95% interval that held the true
-  rate in only 51% to 78% of draws, on six of seven tasks. <!-- claim:tile-sampling-breaks-the-naive-interval -->
-- **Scope and size.** The package covers single-label classification. Multi-label maps are not
-  covered, and a regression map is read by `compare` only. Each command reads the whole raster
-  into memory.
+Most of this evidence is linear probes on frozen embeddings, and errors the model is sure of
+are checked last. The documentation holds the rest:
 
-
-How it works
-------------
-
-<img src="https://raw.githubusercontent.com/2imi9/olmoearth_inferenceX/main/docs/figures/pipeline.png" alt="One scene through the assessment: Sentinel-2 bands, the frozen OlmoEarth encoder and the task head, the prediction, confidence and boundary layers, the review set at a 5% budget drawn on the scene, and the cues per flagged window" width="760">
-
-*One scene through `assess`. The figure shows the `--order boundary_first` option and two cues, tiling instability and NDWI, that only the Python API computes.*
-
-1. **Ranking.** A window's confidence is the mean over its valid pixels, and the least
-   confident windows come first. `--order boundary_first` puts the windows on a class boundary
-   ahead of the rest.
-2. **Comparison.** Two maps are pooled to one window grid. `compare` reports the share of
-   windows whose class differs, where they are, and how much more often they sit on a class
-   boundary. Across two dates a difference can be real change on the ground, so grading against
-   labels requires the labels' date.
-3. **Estimation.** `sample` draws the windows by a recorded random design, and `estimate` uses
-   that design. The interval is exact hypergeometric for a simple random sample, a Wilson
-   interval at the effective sample size for a stratified one, and cluster-corrected for
-   labels collected by tile.
-4. **Certified zone.** Exact hypergeometric tests run on zones of growing size, most confident
-   windows first. They give the largest zone with error rate at most `α`, at error probability
-   `δ`. With no error among its labels, a zone needs about `ln δ / ln(1 − α)` labels: 45 at
-   `α` = 5% and `δ` = 0.1.
-
-The formulas are in the
-[protocol](https://olmoearth-inferencex.readthedocs.io/en/latest/method/protocol/#the-estimators-closed-forms),
-and the record of each experiment in the
-[comparisons](https://olmoearth-inferencex.readthedocs.io/en/latest/results/comparisons/).
+- [what has been measured](https://olmoearth-inferencex.readthedocs.io/en/latest/Summary/#what-has-been-measured);
+- [the known limits](https://olmoearth-inferencex.readthedocs.io/en/latest/Summary/#known-limits);
+- [how it works](https://olmoearth-inferencex.readthedocs.io/en/latest/Summary/#how-it-works);
+- [the findings](https://olmoearth-inferencex.readthedocs.io/en/latest/Findings/#in-short), with the record of each experiment.
 
 
 Development and license
 -----------------------
 
 To work on the repository, clone it, then run `uv sync` and `uv run pytest`. The experiments
-also require `uv sync --extra encoder --extra geo`.
+also require `uv sync --extra encoder --extra geo`. One test runs the quick start on the test
+map and compares what the commands print with the lines on this page.
 
 - License: Apache License 2.0 ([LICENSE](https://github.com/2imi9/olmoearth_inferenceX/blob/main/LICENSE)).
 - Citation: [CITATION.cff](https://github.com/2imi9/olmoearth_inferenceX/blob/main/CITATION.cff).
