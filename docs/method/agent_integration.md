@@ -40,11 +40,21 @@ against one reference unless `--labels-date` is given; with only one of the
 two map dates it refuses to grade at all. The caution travels with the tool
 rather than depending on the model knowing it.
 
+The input-condition caution travels the same way. Without a condition layer,
+`assessment.json`, the estimate JSON and the zone JSON carry `scope`: what a
+whole-map ranking, rate or zone does not show when part of the map was read
+with an input missing, as under cloud (exp88). When the map records each
+pixel's input condition, the
+agent passes it as `--condition` to `assess` and `sample`; the outputs then
+rank, estimate and certify each condition on its own (`conditions`,
+`per_condition`), and a sample drawn with it is certified per condition, with
+the zone's top-level fields null.
+
 ## What this repo provides
 
 | Module | Provides |
 |---|---|
-| `oe_inferencex.assess` | `assess_prediction` (logits or probabilities), `assess_classmap` (hard class map plus an exported confidence band), both with `order="confidence"` or `"boundary_first"` for the review sets (exp36), `summary` (JSON-safe view) |
+| `oe_inferencex.assess` | `assess_prediction` (logits or probabilities), `assess_classmap` (hard class map plus an exported confidence band), both with `order="confidence"` or `"boundary_first"` for the review sets (exp36) and an optional input-condition layer (`condition=`, exp88), `summary` (JSON-safe view) |
 | `oe_inferencex.taskcard` | What task, legend, goal and audit settings a fine-tuned model has |
 | `oe_inferencex.lcc` | HTTP range reader for the served change rasters |
 | `oe_inferencex.metrics` | Tie-aware AURC, excess AURC, error capture at a budget, selective accuracy, ECE; torch-free |
@@ -69,7 +79,10 @@ pytest`), and against the experiment modules when the encoder is installed.
 **Rule:** summary statistics only cross the tool boundary. Per-window
 rasters, the flagged-window GeoJSON and the summary JSON are written under
 `exports/` and referenced by handle. The five recipe caveats are returned
-verbatim.
+verbatim. A sixth, the input-condition caution above, is an agent-side change
+not yet made: returning `scope` among the caveats, and having the agent's
+certify tool read `per_condition` rather than the whole-map fields, belong to
+the agent repository.
 
 The agent imports this package lazily and reports `{"available": false}`
 with install instructions when it is missing, so the agent runs without it.

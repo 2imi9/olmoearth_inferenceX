@@ -29,7 +29,12 @@ testbed — AWF point labels (exp04, exp16), Sen1Floods11 dense masks with a
 geographic hold-out (exp18), the fine-tuned AWF model itself (exp21) — the
 logit margin ranked errors at least as well as every constructed signal.
 Score it as the negative absolute logit (or top-1 minus top-2) rather than
-`1 - max probability`, so saturated probabilities do not tie.
+`1 - max probability`, so saturated probabilities do not tie. Rank within one
+input condition: where part of the map was read with an input missing, as
+under cloud, the model can be confidently wrong there. On PASTIS without the
+optical input, 59.8% of the errors looked confident against 6.0% with it
+(exp88). If the map records each pixel's input condition, pass it as
+`--condition`, and each condition is ranked, sampled and certified on its own.
 
 **2. Use prediction-boundary proximity as a triage cue, not a ranker.**
 About 75% of error patches lie on boundaries of the model's own prediction
@@ -142,5 +147,10 @@ see [the ViT3 readiness page](../plan/vit3_readiness.md).
 ## What would change this recipe
 
 A signal that beats confidence on expert-labelled dense maps, on more than
-one task family, at a fixed review budget. None has been found. Open items
-are in [../plan/roadmap.md](../plan/roadmap.md).
+one task family, at a fixed review budget. None has been found. One change
+has been made: a map read from different inputs in different places is ranked
+and estimated per input condition, because on PASTIS a missing optical input
+made the extra errors confident ones and a whole-map rate misstated the
+cloudy part (exp88). On CropHarvest China 6, where the optical input matters
+little, the confidence tracked the lost information. Open items are in
+[../plan/roadmap.md](../plan/roadmap.md).

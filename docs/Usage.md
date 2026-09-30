@@ -31,6 +31,21 @@ The package works on square windows of `--patch` pixels (default 4). A window's 
 margin of its valid pixels and its class the majority class of its pixels; a window less than half valid is left
 out. No-data comes from the raster's no-data value, from NaN or from `--nodata`.
 
+**The input condition.** The confidence ranking compares windows read from the same inputs. Where part of a map was
+predicted with an input missing, such as the optical image under cloud, the model can be confidently wrong there: on
+PASTIS without the optical input, 59.8% of the errors were at least as confident as the typical correct window with
+full input, against 6.0% with it
+([exp88](results/comparisons.md#when-a-modality-is-missing-does-the-confidence-fall-with-the-accuracy-exp88)). A map
+that records each pixel's input condition can pass it as `--condition` (`condition=` in Python): one integer band on
+the map's grid, such as a cloud flag, the modalities present, a sensor id or an acquisition group. A negative value,
+NaN or the raster's no-data records none. `--condition-names 0=clear 1=cloudy` names the values; the default name is
+the value itself, and "unrecorded" is reserved. A window takes the condition held by most of its pixels that have a
+prediction and a recorded condition. A tie, or no such pixel, makes it "unrecorded", and those windows form one more
+condition, listed last. A layer with more than 64 values, or with values that are not integers, is refused: bin a
+continuous layer, such as cloud fraction, first. A user who wants "any cloud makes the window cloudy" encodes that in
+the layer. Fix the layer before labelling: a layer drawn around known errors makes every statement wrong. For a map
+read from optical input alone, cloud is already no-data and needs no layer.
+
 The package refuses what it cannot rank, in Python as on the command line. Probability input outside [0, 1] raises
 an error rather than being cut at 0.5 and scored. A review set whose cut-off falls inside a run of equal scores (a
 hard mask, a quantized band, a constant map) carries `tied_at_cutoff` and a warning, since the order among the tied
@@ -61,10 +76,29 @@ wrote audit/assessment.json, explanation.json, review_set_*.csv, suspicion, boun
 
 | File | Content |
 |---|---|
-| `assessment.json` | Window count, confidence quantiles, boundary share, `warnings`; per budget, the review set and `tied_at_cutoff` |
-| `review_set_05pct.csv` | One per budget (`--budgets`, default 0.01 0.05 0.10): rank, window, pixel and map coordinates, confidence, boundary |
+| `assessment.json` | Window count, confidence quantiles, boundary share, `warnings`; per budget, the review set and `tied_at_cutoff`; `scope`, what the whole-map order does not show |
+| `review_set_05pct.csv` | One per budget (`--budgets`, default 0.01 0.05 0.10): rank, window, pixel and map coordinates, confidence, boundary; with `--condition`, the window's `condition` last |
 | `explanation.json` | The cues of each review window, each cue's measured enrichment (`quotes`), the windows no cue explains |
 | `suspicion.tif`, `boundary.tif` | The ranking score and the boundary indicator |
+| `review_set_05pct_by_condition.csv` | With `--condition`, one per budget: each condition's own review set: `condition`, `rank_in_condition`, window, pixel and map coordinates, confidence, boundary |
+| `condition.tif` | With `--condition`: each window's condition value, -1 where none is recorded |
+
+```bash
+oe-inferencex assess scores.tif --logits --out audit --condition cloud_flag.tif --condition-names 0=clear 1=cloudy
+```
+
+Without `--condition`, `assessment.json` differs from 1.3.1's only by `scope`, and nothing printed changes. `scope`
+says that a window read with an input missing can be confidently wrong and come late in the order (exp88). With
+`--condition`, `assessment.json` also records `inputs.condition` and `inputs.condition_names` and adds `conditions`:
+the rule above, the counts of windows split between two values (`n_windows_split`) and with none
+(`n_windows_no_code`), and `per_condition`, which gives each condition's share of the map, its confidence quantiles,
+its class shares, its share of each whole-map review set and its own review sets. A condition's review set is the
+whole map's order kept to that condition, at the same budget of that condition's windows. The class shares are
+descriptive only; no experiment has tested whether a difference between conditions signals errors. One line per
+condition is printed, with its share of the map and of the 5% review set. With two or more conditions, `scope` says
+that the whole-map sets rank the conditions together and that the ranking inside a condition with an input missing
+can be weak: on PASTIS without the optical input, the margin's AUROC for errors fell from 0.83 to 0.59 (exp88). Which
+condition is more accurate needs labels.
 
 `--order boundary_first` reviews the windows on a class boundary first, then the interior, each by confidence; the
 [Recipe](method/recipe.md) states when to use it. `--reference labels.tif`, an integer class raster on the same grid,
@@ -112,24 +146,58 @@ oe-inferencex estimate to_label.csv --per-class    # once a `reference_class` co
 ```
 
 `sample` writes the CSV (`index`, window, pixel and map coordinates, `stratum`, `confidence`, `map_class`, an empty
-`wrong`) and a sidecar `to_label.json` with the design, the scores' path and the grid. `map_class` is the majority
-class of the window's pixels. **The reviewer sets `wrong` to 1 when `map_class` is not what is on the ground, and to 0
-otherwise**; `estimate` grades that class, not the window's centre pixel. The recorded experiments used 300 windows
+`wrong`) and a sidecar `to_label.json` with the design, the scores' path and the grid. With `--condition`, a
+`condition` column holding the condition's name follows `stratum`. `map_class` is the majority class of the window's
+pixels. **The reviewer sets `wrong` to 1 when `map_class` is not what is on the ground, and to 0 otherwise**;
+`estimate` grades that class, not the window's centre pixel. The recorded experiments used 300 windows
 ([exp78](results/comparisons.md#how-wrong-is-this-map-what-a-reviewers-labels-buy-exp78)).
 
 | `--design` | Draw | Interval in `estimate` |
 |---|---|---|
-| `confidence` (default) | Strata by confidence margin, budget allocated from the model's confidence | Wilson at the design's effective sample size |
+| `confidence` (default without `--condition`) | Strata by confidence margin, budget allocated from the model's confidence | Wilson at the design's effective sample size |
 | `proportional` | The same strata, budget allocated by stratum size | The same |
-| `random` | Simple random sample; required by `certify` | Exact hypergeometric |
+| `random` | Simple random sample; required by `certify` without a condition | Exact hypergeometric |
 | `tiles` | `--per-tile` windows (default 16) in each of a random set of tiles of `--tile` windows per side (default 16) | Ratio estimator over tiles, with the naive interval beside it |
+| `condition` (default with `--condition`) | Strata by input condition, labels split equally | Exact per condition; whole map: stratified Wilson, not graded with conditions as strata |
 
 The tile design matches how reviewers often label, and its intervals under-cover: on exp78's tasks the naive one
 covered the true rate 51 to 78% of the time at a nominal 95%, the corrected one 91 to 94% with tiles of equal size and
 60% with tiles of 1 to 400 windows. If labelling has not started, use the default design.
 
+**Sampling by input condition.** A map with a condition layer is sampled, estimated and certified per condition:
+
+```bash
+oe-inferencex sample scores.tif --logits --budget 300 --out to_label.csv --condition cloud_flag.tif --condition-names 0=clear 1=cloudy
+oe-inferencex estimate to_label.csv                  # the whole map and each condition
+oe-inferencex certify to_label.csv --alpha 0.05      # a zone per condition
+```
+
+`sample --condition` fixes each window's condition when the sample is drawn and records it in the sidecar
+(`condition`, with the names, sizes and labels per condition, and `condition_grid`); `estimate` and `certify` read it
+from there and never read the raster again, and a row whose `condition` was edited is refused. The `condition` design
+gives every condition the same number of labels: a condition too small for an equal share is labelled in full, and the
+others share the rest. The split never reads the model's confidence, which overstates the accuracy of a condition with
+an input missing (exp88), so an allocation from it would starve that condition. `--design random --condition` draws
+the same windows as without a layer and only records each window's condition; each condition's count is then left to
+chance. The `confidence`, `proportional` and `tiles` designs refuse a layer, and `--design condition` refuses to run
+without one. The printed line gives the labels per condition and, for two or more, the labels each needs before
+`certify` can say anything about it.
+
 `estimate` writes `to_label_estimate.json` (`estimate`, `low`, `high`, `half_width`, `effective_n`, `method`). It
-refuses a blank `wrong`, a `wrong` other than 0 or 1, and rows other than those the design drew.
+refuses a blank `wrong`, a `wrong` other than 0 or 1, and rows other than those the design drew. Without a condition
+the JSON gains `scope`: a whole-map rate can hide a part read with an input missing. On a PASTIS map with half its
+tiles read without the optical input, that part's error rate was 74.1% and the rest's 19.7%, while random samples of
+300 estimated 46.9% on average (exp88).
+
+For a sample that records a condition, `estimate` also prints one line per condition and adds `by_condition`,
+`per_condition` (per condition: `value`, `n_population`, `share_of_map`, `n_labelled`, `n_wrong`, `estimate`, `low`,
+`high`, `half_width`, `method`), `condition_note` and `outside_condition_intervals`, the conditions whose interval
+excludes the whole-map rate. Each condition's interval is exact hypergeometric, under the condition design and under
+a random sample alike, and is its own 95% statement; the intervals do not hold jointly. A condition no label fell in
+reads `estimate: null`, from 0 to 1. Under a random sample the whole-map rate is the one given without a condition.
+Under the condition design it weights each condition by its share of the map: it is the stratified estimate and
+interval the confidence design uses, with the conditions as strata, and its coverage there has not been graded. With
+one condition it is the random design's exact interval.
 
 `--per-class` needs a `reference_class` column (the class the reviewer saw, in the map's class ids) and the map's
 scores, from the sidecar's path or `--scores`; `--scores` and `--nodata` are accepted only with `--per-class`. It adds
@@ -137,7 +205,8 @@ scores, from the sidecar's path or `--scores`; `--scores` and `--nodata` are acc
 that belong to it), the producer's accuracy (the share of windows of the class mapped as it) and `reference_share`, the
 error-adjusted share of the map, each with an interval. A class is flagged for fewer than 30 labels (`few labels`), one
 to four sampled errors (`few errors`), nearly all windows labelled (`near census`), thin sampling (`thin strata`), or
-no window predicted (`never predicted`, producer's accuracy 0).
+no window predicted (`never predicted`, producer's accuracy 0). Under the condition design the same estimators run
+with the conditions as strata; their intervals have not been graded there, and `method` says so.
 
 **The review set is not a sample.** It is selected to contain errors, so its error rate overstates the map's (1.8 to
 5.8 times on exp78's tasks). `sample` draws windows with weights the estimator undoes; the review set has none.
@@ -164,6 +233,30 @@ It writes `random_zone.json` (`coverage`, the certified share; `threshold`, the 
   about `ln(δ) / ln(1 − α)` labels (`min_labels_to_certify`): 45 at α = 5% and 255 at α = 0.9%, for δ = 0.1.
 - The confidence is recomputed from the scores the sidecar names (`--scores` if the raster has moved) and checked
   against the CSV; another raster, or another `--nodata`, is refused.
+- Without a condition, the zone JSON gains `scope`: the zone's rate is certified over all its windows together, and
+  the part of it read with an input missing can be wrong more often than the rest (exp88).
+
+**Per input condition.** A sample drawn with `--condition`, under the `condition` design or `random`, is certified
+per condition, and no whole-map zone is issued for it. `L`, the number of conditions holding at least
+`min_labels_to_certify(α, δ)` labels (45 at α = 5% and δ = 0.1), is fixed by the label counts before any label is
+read. Each of those conditions is certified inside itself at δ/L, with its own zone order, levels and review-set
+check, so all the statements hold together except on at most δ of samples. On that event the certified windows taken
+together are wrong at most α of the time. A condition with fewer labels is reported as not tested. The split is
+needed: conditions each tested at the full δ can fail together more often than δ. The labels a condition needs
+before it can certify any zone, at α = 5% and δ = 0.1:
+
+| Conditions tested (`L`) | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|
+| δ per condition | 0.1 | 0.05 | 0.033 | 0.025 | 0.02 |
+| Labels needed per condition | 45 | 59 | 67 | 72 | 77 |
+
+A condition counted in `L` with fewer labels than its column asks is tested and certifies nothing. The zone JSON
+keeps `coverage`, `n_zone`, `threshold` and `upper_bound` null, because the union of the zones is not the most
+confident share of the map. It adds `by_condition`, `delta_per_condition`, `n_conditions_tested`,
+`certified_share_of_map`, `n_certified` and `per_condition`: each condition's certify result with `tested`, and a
+`reason` when it was not tested. The window mask, `<sample>_zone.npy`, is then the union of the certified zones; it is
+not written, and a stale one is removed, when nothing is certified. `--delta` keeps its meaning: the probability that
+any of the statements is wrong.
 
 ## Python API
 
@@ -200,6 +293,9 @@ why["quotes"]["ndwi_ambiguous"]             # "is spectrally ambiguous ... (48% 
   HTTP range request.
 - `reference=` (class labels, negative for none) adds `against_reference`. Grade on expert labels; never train a rule
   on them.
+- `condition=` (an `(H, W)` integer layer, negative or NaN where none is recorded) and `condition_names=` (`{value:
+  name}`) add `arrays["condition"]`, the window grid, and `conditions`, as on the command line. `pool_condition(layer,
+  patch, predicted)` gives the window grid alone.
 
 ### Compare two inferences of the same scene
 
@@ -275,6 +371,22 @@ estimate_per_class(s, reference, map_class)                           # per_clas
 certify_zone(margin.ravel(), s["indices"], wrong, alpha=0.05, valid=valid.ravel())   # random samples only
 ```
 
+With an input-condition layer:
+
+```python
+from oe_inferencex.estimate import certify_by_condition
+
+names = {0: "clear", 1: "cloudy"}
+out = assess_prediction(scores, is_logit=True, condition=cloud_flag, condition_names=names)
+cond = out["arrays"]["condition"].ravel()                             # each window's condition value, -1 unrecorded
+s = sample_for_estimation(margin, 300, design="condition", valid=valid, condition=cond, condition_names=names)
+estimate_error_rate(s, wrong)["per_condition"]                        # each condition's rate, exact interval
+certify_by_condition(s, wrong, margin.ravel(), alpha=0.05, valid=valid.ravel())   # a zone per condition, delta split
+```
+
+`equal_allocation(sizes, budget)` is the condition design's split. Under `design="random"`, `condition=` is only
+recorded, and the draw is the one made without it.
+
 `estimate_from_indices(indices, wrong, margin, valid)` treats windows labelled without a design as a random sample
 once it has checked that they could be one. A random sample sits at a mean suspicion percentile near 0.50 and a review
 set near 0.97; a review set is refused with that number, and a census of every valid window is accepted.
@@ -310,10 +422,10 @@ On this pair most of the accuracy comes from the post-event side being usually r
 
 | Module | Contents |
 |---|---|
-| `assess` | Review sets; with a reference, error rate, capture and tie-aware AURC |
+| `assess` | Review sets; with a reference, error rate, capture and tie-aware AURC; with a condition layer, each condition on its own |
 | `explain` | The cues behind each flagged window, with their measured enrichment |
 | `compare` | Where two inferences differ; with labels, the cross-tab and which side is right; `determinism_check` |
-| `estimate` | Sampling designs, the error rate, per-class accuracy, the certified zone, the review-set check |
+| `estimate` | Sampling designs, the error rate, per-class accuracy, the certified zone, the review-set check; each per input condition |
 | `calibrate` | A fitted ranker or side rule, bound to its model family |
 | `signals` | Confidence, the boundary indicator, tiling instability, NDWI cues, no-model controls, `crop_dependence` |
 | `metrics`, `stats` | AURC, capture, calibration error and their design-weighted forms; sign tests and bootstraps |
