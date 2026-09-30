@@ -872,9 +872,9 @@ def cmd_estimate(args):
         if res["outside_condition_intervals"]:
             lines.append(_outside_note(res))
         if res["design"] == "condition" and len(res["per_condition"]) > 1:
-            # the whole-map line says "95% interval"; with conditions as strata that interval is not graded, and
-            # the JSON's condition_note alone did not reach a reader of the printed result (review of 2026-09-29)
-            lines.append(f"note: {est.CONDITION_NOT_GRADED}")
+            # the whole-map line says "95% interval": this says how it holds and why it is wider than a stratified
+            # one; the JSON's condition_note alone did not reach a reader of the printed result (review of 2026-09-29)
+            lines.append(f"note: {est.CONDITION_WHOLE_MAP}")
         cond_text = "\n" + "\n".join(lines)
     # the interval is printed as its two ends: it is not symmetric about the estimate (Wilson never is, and a
     # clipped one is not), so "estimate +/- x" would name an interval that is not the one written

@@ -576,8 +576,9 @@ def test_a_census_is_never_refused_as_a_review_set():
 def test_the_condition_design_on_exp88s_mixed_map():
     """exp88's mixed PASTIS map (Base, probe seed 0): half the tiles read without the optical input, rebuilt from the
     recorded units with exp88's own mixed_map. The condition design with the cloud flag as the condition, 200 seeds
-    at 300 labels: each part's exact interval and the whole-map stratified interval cover their truth on at least
-    0.93 of draws. A check of the tool on one real map, not a recorded claim."""
+    at 300 labels: each part's exact interval and the whole-map interval, the parts' exact intervals at 97.5%
+    weighted by share, cover their truth on at least 0.93 of draws, and the whole-map one on at least 0.95. A check
+    of the tool on one real map, not a recorded claim."""
     import sys
     sys.path.insert(0, os.path.join(ROOT, "exp"))
     import exp88_missing_modality as e88
@@ -597,9 +598,13 @@ def test_the_condition_design_on_exp88s_mixed_map():
                                      condition_names={0: "clear", 1: "cloudy"}, seed=seed)
         assert s["allocation"] == [150, 150] and s["condition"]["names"] == ["clear", "cloudy"]
         r = ox.estimate_error_rate(s, err[s["indices"]])
+        assert r["conditions_in_interval"] == 2
         cover["whole"] += r["low"] <= truth["whole"] <= r["high"]
         for part in ("clear", "cloudy"):
             row = r["per_condition"][part]
             cover[part] += row["low"] <= truth[part] <= row["high"]
     for k, v in cover.items():
         assert v / 200 >= 0.93, (k, v / 200)
+    # the whole-map interval holds at least 95% by construction, and it does here (0.995); the stratified Wilson
+    # interval with the conditions as strata, without a floor, held 0.945 of these draws
+    assert cover["whole"] / 200 >= 0.95, cover["whole"] / 200

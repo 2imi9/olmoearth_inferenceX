@@ -18,7 +18,8 @@ Three things a user needs, and one they must be stopped from doing.
   an input missing: it did on PASTIS without the optical input, though not on CropHarvest China 6 (exp88). Each
   condition then gets its own exact interval, and `certify_by_condition` a zone of its own.
 - `estimate_error_rate` turns the labels back into a rate with the interval the design earns: the exact
-  hypergeometric interval for a random sample, a stratified interval otherwise, and for tile-sampled
+  hypergeometric interval for a random sample, the weighted sum of each condition's exact interval under the
+  condition design, a stratified interval under the confidence and proportional designs, and for tile-sampled
   labels a ratio estimator with its ultimate-cluster interval, beside the naive one so the difference is visible.
   That last is the weakest of the three and says so: it covered 0.60 of the time on MADOS, whose tiles differ in
   size by a factor of 400. Labelling 19 tiles of
@@ -60,13 +61,16 @@ SCOPE_CERTIFY = ("The zone's error rate is certified over all its windows togeth
 CONDITION_NOTE = ("Each condition's interval is its own 95% statement; the intervals do not hold jointly at 95%. The "
                   "whole-map rate weights each condition by its share of the map and can hide a condition that is much "
                   "worse.")
-# Under the condition design, what is graded and what is not. Each condition's own interval is exact: the tests
-# enumerate its coverage, and under a random sample exp88 graded it (95.6% and 95.7% of 2,000 draws, the claim
-# pooled-error-rate-misstates-the-cloudy-part). The whole-map interval and the per-class intervals under this design
-# have not been graded.
-CONDITION_NOT_GRADED = ("Each condition's own interval is exact. The whole-map interval is the stratified interval the "
-                        "confidence design uses, with a floor on the variance of a condition whose labels nearly all "
-                        "agree. With input conditions as strata, its coverage has not been graded.")
+# Under the condition design, what holds by construction and what is not graded. Each condition's own interval is
+# exact: the tests enumerate its coverage, and under a random sample exp88 graded it (95.6% and 95.7% of 2,000 draws,
+# the claim pooled-error-rate-misstates-the-cloudy-part). The whole-map interval adds up the conditions' exact
+# intervals at 1 - 0.05 / L (`_union_interval`), so it covers at least 95% by construction; the tests enumerate that
+# too. The per-class intervals under this design have not been graded.
+CONDITION_WHOLE_MAP = ("Each condition's own interval is exact. The whole-map interval takes each condition's exact "
+                       "interval at 1 - 0.05/L, where L is the number of conditions not labelled in full, and weights it "
+                       "by the condition's share of the map. At that level the L intervals hold together at least 95% of "
+                       "the time, so the whole-map interval covers at least 95% by construction. It is wider than a "
+                       "stratified interval would be; that is the price of the guarantee.")
 PER_CLASS_NOT_GRADED = ("The per-class intervals take the input conditions as strata. With conditions as strata, their "
                         "coverage has not been graded; each condition's error-rate interval is exact.")
 FAMILY_NOTE = ("Certified per input condition. Each of the {L} conditions with at least {b1} labels is tested at delta "
@@ -720,6 +724,52 @@ def _per_condition(grid, values, names, sizes, idx, wrong, N, whole):
     return per, outside
 
 
+def _union_interval(k, n, sizes, alpha=0.05):
+    """The whole-map estimate and interval of the condition design, from each condition's error count k_c among its
+    n_c labels and its size N_c. The estimate is the stratified one, sum_c W_c k_c / n_c with W_c = N_c / N. The
+    interval runs from sum_c W_c low_c to sum_c W_c high_c, where (low_c, high_c) is condition c's exact interval
+    `hypergeom_interval(k_c, n_c, N_c, 1 - alpha / L)` and L is the number of conditions not labelled in full. A
+    condition labelled in full enters at its exact rate. By the union bound the L intervals hold together with
+    probability at least 1 - alpha, and when they do the weighted sums bracket the whole-map rate sum_c W_c K_c /
+    N_c: coverage at least 1 - alpha for every population and every allocation, with no approximation. With one
+    condition it is `hypergeom_interval(k, n, N)`.
+
+    It replaced a stratified Wilson interval with a floor on the variance (review of 2026-09-29). By exact
+    enumeration of 101,772 cells that one covered as little as 0.719, and where the estimate came from a small
+    condition and the variance from a floored large one it was up to 35 times too wide: [0, 70.4%] at 99/1 of a
+    million windows, 300 labels each, errors (0, 1), beside condition intervals of [0, 1.22%] and [0.01%, 1.82%].
+
+    The three sums are taken in exact fractions and each rounded once to the nearest float. Summed in floats, an end
+    could land one float past a truth that sits on it. On the 14 small maps of the tests that happened on every
+    map, and at some error counts no sample's interval held the truth. Rounding to the nearest float keeps order,
+    and the truth K / N is rounded the same way, so the float interval holds every truth the exact one holds; the
+    estimate stays between the ends, and a census is a point. With one condition the single term is
+    `hypergeom_interval`'s own ends and the sample's share k / n, so the two designs agree to the last bit.
+    Returns (estimate, low, high, L)."""
+    from fractions import Fraction
+    k, n, sizes = [int(x) for x in k], [int(x) for x in n], [int(x) for x in sizes]
+    if not len(k) == len(n) == len(sizes) or any(not 0 <= kc <= nc <= Nc for kc, nc, Nc in zip(k, n, sizes)):
+        raise ValueError(f"_union_interval needs 0 <= k_c <= n_c <= N_c for each condition, got {k}, {n}, {sizes}")
+    N = sum(sizes)
+    L = sum(nc < Nc for nc, Nc in zip(n, sizes))
+    conf = float(1 - alpha / max(L, 1))
+    theta = lo = hi = Fraction(0)
+    for kc, nc, Nc in zip(k, n, sizes):
+        if Nc == 0:
+            continue
+        # hypergeom_interval's ends, exactly: population counts over N_c (the exact rate when n_c == N_c, 0 to 1
+        # with no label), widened to hold k_c / n_c. The float K / N_c times N_c is within far less than 1/2 of K.
+        a, b = _hypergeom_interval(kc, nc, Nc, conf)
+        a, b = Fraction(round(a * Nc), Nc), Fraction(round(b * Nc), Nc)
+        W = Fraction(Nc, N)
+        if nc:                                                   # a condition with no label adds 0 to the estimate
+            theta += W * Fraction(kc, nc)
+            a, b = min(a, Fraction(kc, nc)), max(b, Fraction(kc, nc))
+        lo += W * a
+        hi += W * b
+    return float(theta), float(lo), float(hi), L
+
+
 def estimate_error_rate(sample, wrong):
     """The error rate of the whole map from the labelled sample, with the interval its design earns.
 
@@ -728,9 +778,11 @@ def estimate_error_rate(sample, wrong):
 
     A sample that records an input condition (`condition_grid`) also gets each condition's rate with its exact
     interval (`per_condition`); one that does not gets `scope`, what a whole-map rate does not say (exp88). Under the
-    condition design the whole-map interval is the stratified one with a floor on the variance of a condition whose
-    labels all agree, or all but one (`floored_conditions`, `interval_variance`). Its coverage with conditions as strata
-    has not been graded, unlike each condition's own interval, which is exact; `condition_note` says so.
+    condition design the whole-map estimate is the stratified one, sum_c W_c k_c / n_c. Its interval weights each
+    condition's exact interval at 1 - 0.05 / L by the condition's share, where L is the number of conditions not
+    labelled in full (`conditions_in_interval`), and so covers at least 95% by construction; it is wider than a
+    stratified interval would be. `design_variance` is the stratified estimate's unbiased variance, for information;
+    the interval does not use it. `condition_note` says what each interval is.
     """
     wrong = np.asarray(wrong, dtype=np.float64).ravel()
     idx = np.asarray(sample["indices"], int)
@@ -753,12 +805,7 @@ def estimate_error_rate(sample, wrong):
             raise ValueError(f"an input condition is recorded only with the random and condition designs; this sample "
                              f"was drawn with the {design!r} design")
         grid, c_values, c_names, c_sizes = _condition_guards(sample, idx)
-    if design == "condition" and len(c_names) == 1:
-        # one condition is the whole population and the draw was the random design's own: the same numbers
-        lo, hi = hypergeom_interval(int(wrong.sum()), idx.size, N)
-        out.update({"estimate": float(wrong.mean()), "low": lo, "high": hi,
-                    "method": "exact hypergeometric interval (simple random sample of a finite map)"})
-    elif design == "condition":
+    if design == "condition":
         pop = np.asarray(sample["strata_of_population"], int)
         pos = {int(g): i for i, g in enumerate(pop)}
         stray = [int(g) for g in idx if int(g) not in pos]
@@ -769,64 +816,30 @@ def estimate_error_rate(sample, wrong):
         err = np.zeros(pop.size)
         err[local] = wrong
         strata, sizes = np.asarray(sample["strata"]), list(sample["sizes"])
-        # theta = sum_c W_c k_c / n_c and v = sum_c W_c^2 (1 - n_c / N_c) p_c (1 - p_c) / (n_c - 1), W_c = N_c / N:
-        # the confidence design's stratified estimator with the conditions as strata
-        est_, lo, hi, _, n_eff = stratified_interval_wilson(err, strata, local, sizes, N)
+        # v, the unbiased variance of the stratified estimate with the conditions as strata, is kept as
+        # `design_variance` and does not enter the interval
         var = stratified_mean_and_variance(err, strata, local, sizes, N)[1]
         n_h = np.bincount(strata[local], minlength=len(sizes))
-        k_h = np.bincount(strata[local], weights=wrong, minlength=len(sizes))
-        sz = np.asarray(sizes, dtype=np.float64)
-        partial = n_h < sz
-        # A floor on each condition's variance, a divergence from the spec (2.7 took the interval unchanged; review of
-        # 2026-09-29). A condition not labelled in full whose labels all agree adds nothing to v, as if its rate were
-        # known, and one error in 150 adds little. Equal allocation makes that likely for a large clean condition
-        # beside a small degraded one, the design's own use case: there the interval covered 0.53 to 0.78 (exact, in
-        # tests/test_estimate_exact.py). Such a condition enters the interval's variance at p0 = (z^2 / 2) / (n_c +
-        # z^2), the centre of Wilson's interval for no error in its n_c labels, whenever p_c (1 - p_c) is smaller.
-        # That is at most one label differing from the rest. The variance only grows, so the interval only widens;
-        # `design_variance` stays the unbiased v.
-        m2 = partial & (n_h >= MIN_PER_STRATUM)                  # a starved condition is flagged below instead
-        q = np.divide(k_h, n_h, out=np.zeros(len(sizes)), where=n_h > 0)
-        p0 = (Z95 ** 2 / 2) / (n_h + Z95 ** 2)
-        low = m2 & (q * (1 - q) < p0 * (1 - p0))
-        floored = []
-        if low.any() and 0 < est_ < 1:
-            nl, Nl = n_h[low], sz[low]
-            var_i = var + float(((Nl / N) ** 2 * (1 - nl / Nl) * (p0[low] * (1 - p0[low]) - q[low] * (1 - q[low]))
-                                 / (nl - 1)).sum())
-            if est_ * (1 - est_) / var_i < n_eff:           # never narrower than the stratified interval
-                n_eff = est_ * (1 - est_) / var_i
-                lo, hi = wilson_interval(est_ * n_eff, n_eff)
-                floored = [c_names[c] for c in np.flatnonzero(low)]
-                out.update({"interval_variance": var_i, "floored_conditions": floored})
+        k_h = np.bincount(strata[local], weights=wrong, minlength=len(sizes)).round().astype(int)
         # a condition labelled in full (a one-window condition, say) has no sampling error and is not starved
-        starved = int(((n_h < MIN_PER_STRATUM) & partial).sum())
-        out.update({"estimate": est_, "low": lo, "high": hi, "starved_strata": starved, "effective_n": n_eff,
-                    "design_variance": var,
-                    "method": "stratified by input condition; Wilson interval on the design's effective sample size"})
-        notes = []
-        if est_ in (0.0, 1.0):
-            notes.append(f"{'no' if est_ == 0 else 'every'} labelled window was wrong, so the design's variance is zero and "
-                         f"the interval is the simple-random Wilson bound at {idx.size} labels; the stratification "
-                         "cannot narrow it without an observed error")
-        elif floored:
-            notes.append(f"in {', '.join(floored)} at most one label differed from the rest, so the design's variance "
-                         f"would treat {'that condition' if len(floored) == 1 else 'those conditions'} as known almost "
-                         "exactly and the interval would be too narrow; each such condition's variance is taken at the "
-                         "rate 1.92 / (n + 3.84) instead, the centre of Wilson's interval for no error in its n labels")
-        elif var == 0 and partial.any():
-            pure = bool(np.all((k_h == 0) | (k_h == n_h)))
-            # the spec's wording holds when every condition is pure; when a condition labelled in full is mixed, its
-            # variance is zero because nothing in it is unobserved, and the note says only what is true
-            notes.append(("every condition's labels were all right or all wrong" if pure else
-                          "every condition not labelled in full had its labels all right or all wrong") +
-                         f", so the design's variance is zero; the interval is the simple-random Wilson bound at "
-                         f"{idx.size} labels")
-        if starved:
-            notes.append(f"{starved} of {sample['n_strata']} strata had fewer than {MIN_PER_STRATUM} labelled windows "
-                         "and contribute no variance; the interval is narrower than it should be")
-        if notes:
-            out["warning"] = "; ".join(notes)
+        starved = int(((n_h < MIN_PER_STRATUM) & (n_h < np.asarray(sizes))).sum())
+        # theta = sum_c W_c k_c / n_c, W_c = N_c / N, the stratified estimate; its interval weights each condition's
+        # exact interval at 1 - 0.05 / L by its share: at least 95% by construction. It replaced spec 2.7's stratified
+        # Wilson interval and 523efde's variance floor (review of 2026-09-29; the reason is in `_union_interval`)
+        est_, lo, hi, L = _union_interval(k_h, n_h, sizes)
+        if len(c_names) == 1:
+            # one condition is the whole population and the draw was the random design's own: the same numbers
+            out.update({"estimate": est_, "low": lo, "high": hi,
+                        "method": "exact hypergeometric interval (simple random sample of a finite map)"})
+        else:
+            out.update({"estimate": est_, "low": lo, "high": hi, "conditions_in_interval": L,
+                        "starved_strata": starved, "design_variance": var,
+                        "method": "stratified by input condition; sum of each condition's exact interval at 1 - 0.05/L, "
+                                  "weighted by its share of the map (union bound); covers at least 95% by construction"})
+            if starved:
+                out["warning"] = (f"{starved} of {sample['n_strata']} conditions had fewer than {MIN_PER_STRATUM} "
+                                  "labelled windows and add nothing to design_variance; the whole-map interval does not "
+                                  "use that variance")
     elif design == "random":
         # exact (review of 2026-09-23): the count of wrong windows in a simple random sample is hypergeometric, and
         # the finite-population Wilson form covered 0.79 one window short of a census and 0.92-0.94 at realistic
@@ -886,7 +899,7 @@ def estimate_error_rate(sample, wrong):
     out["half_width"] = (out["high"] - out["low"]) / 2
     if by_condition:
         per, outside = _per_condition(grid, c_values, c_names, c_sizes, idx, wrong, N, out["estimate"])
-        note = CONDITION_NOTE + (" " + CONDITION_NOT_GRADED if design == "condition" and len(c_names) >= 2 else "")
+        note = CONDITION_NOTE + (" " + CONDITION_WHOLE_MAP if design == "condition" and len(c_names) >= 2 else "")
         out.update({"by_condition": True, "per_condition": per, "condition_note": note,
                     "outside_condition_intervals": outside})
     else:

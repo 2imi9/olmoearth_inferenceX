@@ -833,9 +833,21 @@ def test_estimate_prints_each_condition_after_the_whole_map(tmp_path, capsys):
     assert main(["estimate", str(out)]) == 0
     printed = capsys.readouterr().out.splitlines()
     r = json.load(open(tmp_path / "s_estimate.json"))
-    assert r["by_condition"] is True and r["method"] == "stratified by input condition; Wilson interval on the design's effective sample size"
-    assert r["condition_note"] == est.CONDITION_NOTE + " " + est.CONDITION_NOT_GRADED and "scope" not in r
-    assert printed[0].startswith("error rate ")
+    assert r["by_condition"] is True and r["method"] == ("stratified by input condition; sum of each condition's exact "
+                                                         "interval at 1 - 0.05/L, weighted by its share of the map (union "
+                                                         "bound); covers at least 95% by construction")
+    assert r["condition_note"] == est.CONDITION_NOTE + " " + est.CONDITION_WHOLE_MAP and "scope" not in r
+    # unrecorded is labelled in full, so L counts clear and cloudy; the floor's keys and effective_n are gone
+    assert r["conditions_in_interval"] == 2 and not {"effective_n", "interval_variance", "floored_conditions"} & set(r)
+    # the whole-map interval, from the JSON's own rows: each condition's exact interval at 1 - 0.05/2, weighted by its
+    # share of the map (unrecorded is labelled in full and enters at its rate)
+    ends = [sum(row["share_of_map"] * est.hypergeom_interval(row["n_wrong"], row["n_labelled"], row["n_population"],
+                                                             conf=0.975)[i] for row in r["per_condition"].values())
+            for i in (0, 1)]
+    assert abs(r["low"] - ends[0]) < 1e-15 and abs(r["high"] - ends[1]) < 1e-15
+    assert printed[0] == (f"error rate {100 * r['estimate']:.1f}%, 95% interval {100 * r['low']:.1f}% to "
+                          f"{100 * r['high']:.1f}% (half-width {100 * r['half_width']:.1f} points), from {r['n_labelled']} labelled "
+                          f"windows of {r['n_population']}; {r['method']}")
     lines = [f"{name} {100 * row['estimate']:.1f}% ({100 * row['low']:.1f}% to {100 * row['high']:.1f}%), "
              f"{row['n_labelled']} labelled of {row['n_population']} windows ({100 * row['share_of_map']:.1f}% of the map)"
              for name, row in r["per_condition"].items()]
@@ -859,8 +871,9 @@ def test_estimate_prints_each_condition_after_the_whole_map(tmp_path, capsys):
     assert _outside_note(one) == ("note: the whole-map rate is 30.0%. It lies above the interval of clear, so that "
                                   "condition is better than the map as a whole. The whole-map rate weights each "
                                   "condition by its share of the map.")
-    # the whole-map line says "95% interval"; under the condition design the line below says it is not graded
-    assert tail[-2] == f"note: {est.CONDITION_NOT_GRADED}" and tail[-1].startswith("wrote ")
+    # the whole-map line says "95% interval"; under the condition design the line below says how it holds
+    assert tail[-2] == f"note: {est.CONDITION_WHOLE_MAP}" and tail[-1].startswith("wrote ")
+    assert "not been graded" not in "\n".join(printed)
 
     # under a random sample the whole-map interval is the exact one, and no such note is printed
     rnd = tmp_path / "r.csv"
@@ -869,7 +882,7 @@ def test_estimate_prints_each_condition_after_the_whole_map(tmp_path, capsys):
     capsys.readouterr()
     assert main(["estimate", str(rnd)]) == 0
     printed = capsys.readouterr().out
-    assert "not been graded" not in printed and json.load(open(tmp_path / "r_estimate.json"))["by_condition"] is True
+    assert "1 - 0.05/L" not in printed and json.load(open(tmp_path / "r_estimate.json"))["by_condition"] is True
 
 
 def test_certify_by_condition_writes_the_union_mask_and_removes_a_stale_one(tmp_path, capsys):

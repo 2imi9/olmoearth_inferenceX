@@ -29,14 +29,14 @@ unchanged. The JSON outputs gain one `scope` note.
   under a random sample alike (under random samples of 300 on exp88's half-cloudy PASTIS map, each part's interval
   covered its own rate on 95.6% and 95.7% of 2,000 draws), beside the whole-map rate, and names the conditions whose
   interval excludes the whole-map rate, saying which are worse than the map as a whole and which better. Under the
-  condition design the whole-map interval is the stratified Wilson interval of the confidence design with the
-  conditions as strata; its coverage with conditions as strata has not been graded, and the JSON and the printed
-  result say so. A condition not labelled in full whose labels all agree, or all but one, enters that interval's
-  variance at the rate 1.92 / (n + 3.84) rather than at nearly zero: without this floor a large clean condition beside
-  a small degraded one gave an interval that covered as little as 53% of the time (exact, 4,000 windows at 0.5% wrong
-  beside 200 at 50%, 150 labels each); with it, 99%. `--per-class` runs under the condition design and says its
-  per-class intervals are not graded there; with one condition it gives the random design's table, numbers and method
-  alike.
+  condition design the whole-map interval weights each condition's exact interval at 1 − 0.05/L by its share of the
+  map, where L is the number of conditions not labelled in full. It covers at least 95% by construction, since at
+  that level the L intervals hold together at least 95% of the time. It is wider than a stratified interval would
+  be; that is the price of the guarantee, and the JSON and the printed result say so. A stratified interval with the
+  conditions as strata covered as little as 53% of the time where a large clean condition sat beside a small
+  degraded one (exact, 4,000 windows at 0.5% wrong beside 200 at 50%, 150 labels each). `--per-class` runs under
+  the condition design and says its per-class intervals are not graded there; with one condition it gives the
+  random design's table, numbers and method alike.
 - `certify` on a sample that records a condition certifies a zone inside each condition that holds enough labels,
   at delta divided by the number of such conditions, so that all the statements hold together at delta
   (`certify_by_condition`, prefix or Bonferroni rule; it refuses the plug-in rule, which has no guarantee to split). A
@@ -48,8 +48,9 @@ unchanged. The JSON outputs gain one `scope` note.
 - `pool_condition`, `equal_allocation` and `certify_by_condition` are exported. The existing designs, intervals and
   `certify_zone`'s arguments are unchanged.
 - Tests by enumeration or known answer for each new formula: the allocation over every small case, the condition
-  design unbiased over every sample, each condition's interval exact, the delta split held over all 12,870 draws of
-  a two-condition case, one condition equal to the random design. Golden outputs of 1.3.1 pin the case without a
+  design unbiased over every sample, each condition's interval exact, the whole-map interval covering at least 95%
+  at every error count of 14 small maps of two and three conditions, the delta split held over all 12,870 draws of a
+  two-condition case, one condition equal to the random design. Golden outputs of 1.3.1 pin the case without a
   layer: every CSV, sidecar, raster, `explanation.json` and printed line is byte-identical, and the assessment,
   estimate and zone JSON differ only by `scope`.
 
@@ -64,8 +65,8 @@ unchanged. The JSON outputs gain one `scope` note.
   `assess` writes `condition.tif` and the `_by_condition` review sets, and its review-set CSVs gain `condition`;
   `sample`'s CSV gains `condition` after `stratum` (`map_class` and `wrong` stay last) and its sidecar gains
   `condition` and `condition_grid`; the estimate JSON gains `by_condition`, `per_condition`, `condition_note` and
-  `outside_condition_intervals`, and under the condition design `design_variance`, with `interval_variance` and
-  `floored_conditions` when the variance floor applies; the zone JSON gains `by_condition`, `delta_per_condition`,
+  `outside_condition_intervals`, and under the condition design `conditions_in_interval` (L) and `design_variance`
+  (for information; the interval does not use it); the zone JSON gains `by_condition`, `delta_per_condition`,
   `n_conditions_tested`, `certified_share_of_map`, `n_certified` and `per_condition`, and keeps `coverage`,
   `n_zone`, `threshold` and `upper_bound` null, because the union of the zones is not the most confident share of
   the map.

@@ -168,7 +168,7 @@ pixels. **The reviewer sets `wrong` to 1 when `map_class` is not what is on the 
 | `proportional` | The same strata, budget allocated by stratum size | The same |
 | `random` | Simple random sample; required by `certify` without a condition | Exact hypergeometric; with `--condition`, also exact per condition, graded in exp88 |
 | `tiles` | `--per-tile` windows (default 16) in each of a random set of tiles of `--tile` windows per side (default 16) | Ratio estimator over tiles, with the naive interval beside it |
-| `condition` (default with `--condition`) | Strata by input condition, labels split equally | Exact per condition; whole map: stratified Wilson with a variance floor, not graded with conditions as strata; per class: not graded |
+| `condition` (default with `--condition`) | Strata by input condition, labels split equally | Exact per condition; whole map: the conditions' exact intervals at 1 − 0.05/L, weighted by share, at least 95% by construction; per class: not graded |
 
 The tile design matches how reviewers often label, and its intervals under-cover: on exp78's tasks the naive one
 covered the true rate 51 to 78% of the time at a nominal 95%, the corrected one 91 to 94% with tiles of equal size and
@@ -195,11 +195,11 @@ layer and only records each window's condition; each condition's count is then l
 line gives the labels per condition and, for two or more, the labels each needs before `certify` can say anything
 about it.
 
-`estimate` writes `to_label_estimate.json` (`estimate`, `low`, `high`, `half_width`, `effective_n`, `method`). It
-refuses a blank `wrong`, a `wrong` other than 0 or 1, and rows other than those the design drew. Without a condition
-the JSON gains `scope`: a whole-map rate can hide a part read with an input missing. On a PASTIS map with half its
-tiles read without the optical input, that part's error rate was 74.1% and the rest's 19.7%, while random samples of
-300 estimated 46.9% on average (exp88).
+`estimate` writes `to_label_estimate.json` (`estimate`, `low`, `high`, `half_width`, `method`, and `effective_n`
+under the confidence and proportional designs). It refuses a blank `wrong`, a `wrong` other than 0 or 1, and rows
+other than those the design drew. Without a condition the JSON gains `scope`: a whole-map rate can hide a part read
+with an input missing. On a PASTIS map with half its tiles read without the optical input, that part's error rate was
+74.1% and the rest's 19.7%, while random samples of 300 estimated 46.9% on average (exp88).
 
 For a sample that records a condition, `estimate` also prints one line per condition and adds `by_condition`,
 `per_condition` (per condition: `value`, `n_population`, `share_of_map`, `n_labelled`, `n_wrong`, `estimate`, `low`,
@@ -210,17 +210,17 @@ its own 95% statement; the intervals do not hold jointly. Under a random sample 
 half-cloudy PASTIS map (OlmoEarth Base), each part's interval covered its own rate on 95.6% and 95.7% of 2,000 random
 samples of 300. Under the condition design the interval is exact by construction, and the tests enumerate its
 coverage. A condition no label fell in reads `estimate: null`, from 0 to 1. Under a random sample the whole-map rate
-is the one given without a condition. Under the condition design it weights each condition by its share of the map: it
-is the stratified estimate and interval the confidence design uses, with the conditions as strata. The coverage of
-this whole-map interval with conditions as strata has not been graded, unlike each condition's own interval; a printed
-note says so. One change guards the design's own use case, a large clean condition beside a small degraded one. A
-condition not labelled in full whose labels all agree, or all but one, adds nothing or little to the stratified
-variance, as if its rate were known, and the interval was then far too narrow: on a map of 4,000 windows at 0.5% wrong
-beside 200 at 50%, with 150 labels each, it covered 53% of the time (exact, by enumeration in the tests). Such a
-condition enters the interval's variance at the rate 1.92 / (n + 3.84), the centre of Wilson's interval for no error
-in its n labels, which brings that case to 99%. The floor only widens the interval. When it applies, the JSON names
-the conditions (`floored_conditions`), gives the variance used (`interval_variance`) beside the design's unbiased one
-(`design_variance`), and a warning says so. With one condition it is the random design's exact interval.
+is the one given without a condition. Under the condition design the whole-map rate weights each condition's rate by
+its share of the map. Its interval is built from each condition's exact interval taken at 1 − 0.05/L, where L is the
+number of conditions not labelled in full (`conditions_in_interval`); a condition labelled in full enters at its exact
+rate. The interval runs from the weighted sum of the lower ends to the weighted sum of the upper ends. At that level
+the L intervals hold together at least 95% of the time, and when they do the whole-map rate lies between the two
+sums. So the interval covers at least 95% by construction, for every map and every split of the labels; the tests
+enumerate it on small maps. It is wider than a stratified interval would be, and a printed note says so. That is the
+price of the guarantee: with the conditions as strata, the stratified interval covered 53% of the time on a map of
+4,000 windows at 0.5% wrong beside 200 at 50%, with 150 labels each (exact, by enumeration in the tests).
+`design_variance` is the stratified estimate's unbiased variance, for information; the interval does not use it. With
+one condition the interval is the random design's exact one.
 
 `--per-class` needs a `reference_class` column (the class the reviewer saw, in the map's class ids) and the map's
 scores, from the sidecar's path or `--scores`; `--scores` and `--nodata` are accepted only with `--per-class`. It adds
