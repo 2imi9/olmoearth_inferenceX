@@ -1568,9 +1568,10 @@ def certify_by_condition(sample, wrong, margin, alpha, delta=ZONE_DELTA, rule="p
             m = cgrid[idx] == c
             r = certify_zone(margin, idx[m], wrong[m], alpha, delta=d, rule=rule, grid=grid, valid=valid & (cgrid == c))
             r.pop("scope", None)
-            if r["coverage"] is None and r["levels"]:
+            if r["coverage"] is None and r["levels"] and K > 1:
                 # certify_zone gives the smallest testable zone as a share of the population it was handed, which
-                # here is the condition, not the map
+                # here is the condition, not the map. A single condition is the whole map, and its entry stays
+                # certify_zone's result word for word
                 at = f"({r['levels'][0]['coverage']:.0%} of the"
                 r["note"] = r["note"].replace(f"{at} map)", f"{at} condition)")
             r.update({"value": values[c], "tested": True, "reason": None})
