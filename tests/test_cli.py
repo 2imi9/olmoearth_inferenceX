@@ -666,7 +666,9 @@ def test_sample_condition_writes_design_and_columns(tmp_path, capsys):
 
 @pytest.mark.parametrize("extra,why", [
     (["--design", "confidence", "--condition", "{c}"], "that design allocates labels from the model's confidence, which "
-                                                       "overstates the accuracy of a condition with an input missing"),
+                                                       "can overstate the accuracy of a condition with an input missing: "
+                                                       "it did on PASTIS without the optical input, though not on "
+                                                       "CropHarvest China 6"),
     (["--design", "proportional", "--condition", "{c}"], r"Use --design condition \(the default with --condition\) or --design random"),
     (["--design", "tiles", "--condition", "{c}"], "a tile can span conditions, and the tile interval is not graded per condition"),
     (["--design", "condition"], "--design condition needs --condition"),

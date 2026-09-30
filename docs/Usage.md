@@ -176,12 +176,13 @@ oe-inferencex certify to_label.csv --alpha 0.05      # a zone per condition
 (`condition`, with the names, sizes and labels per condition, and `condition_grid`); `estimate` and `certify` read it
 from there and never read the raster again, and a row whose `condition` was edited is refused. The `condition` design
 gives every condition the same number of labels: a condition too small for an equal share is labelled in full, and the
-others share the rest. The split never reads the model's confidence, which overstates the accuracy of a condition with
-an input missing (exp88), so an allocation from it would starve that condition. `--design random --condition` draws
-the same windows as without a layer and only records each window's condition; each condition's count is then left to
-chance. The `confidence`, `proportional` and `tiles` designs refuse a layer, and `--design condition` refuses to run
-without one. The printed line gives the labels per condition and, for two or more, the labels each needs before
-`certify` can say anything about it.
+others share the rest. The split never reads the model's confidence, which can overstate the accuracy of a condition
+with an input missing: it did on PASTIS without the optical input, though not on CropHarvest China 6 (exp88). An
+allocation from it could then starve that condition. `--design random --condition` draws the same windows as without a
+layer and only records each window's condition; each condition's count is then left to chance. The `confidence`,
+`proportional` and `tiles` designs refuse a layer, and `--design condition` refuses to run without one. The printed
+line gives the labels per condition and, for two or more, the labels each needs before `certify` can say anything
+about it.
 
 `estimate` writes `to_label_estimate.json` (`estimate`, `low`, `high`, `half_width`, `effective_n`, `method`). It
 refuses a blank `wrong`, a `wrong` other than 0 or 1, and rows other than those the design drew. Without a condition

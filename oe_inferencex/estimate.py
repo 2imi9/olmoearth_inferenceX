@@ -14,8 +14,9 @@ Three things a user needs, and one they must be stopped from doing.
   and to 0.63 on the cleanest map, with coverage intact everywhere. A plain random sample and a tile design are
   also offered, the last because that is how people actually label. When the map records each window's input
   condition (a cloud flag, the modalities present), the "condition" design splits the labels equally across the
-  conditions, never from the model's confidence, which overstates the accuracy of a condition with an input
-  missing (exp88); each condition then gets its own exact interval, and `certify_by_condition` a zone of its own.
+  conditions, never from the model's confidence. That confidence can overstate the accuracy of a condition with
+  an input missing: it did on PASTIS without the optical input, though not on CropHarvest China 6 (exp88). Each
+  condition then gets its own exact interval, and `certify_by_condition` a zone of its own.
 - `estimate_error_rate` turns the labels back into a rate with the interval the design earns: the exact
   hypergeometric interval for a random sample, a stratified interval otherwise, and for tile-sampled
   labels a ratio estimator with its ultimate-cluster interval, beside the naive one so the difference is visible.
@@ -73,9 +74,10 @@ FAMILY_NOTE_ONE = ("Certified per input condition. The one condition with at lea
                    "wrong at most {alpha:g} of the time. Conditions with fewer labels are not tested. Outside the "
                    "certified windows nothing is certified.")
 UNRECORDED = "unrecorded"          # the name of the windows with no recorded condition; reserved
-CONFIDENCE_REFUSAL = ("that design allocates labels from the model's confidence, which overstates the accuracy of a "
-                      "condition with an input missing (exp88). Use --design condition (the default with --condition) "
-                      "or --design random.")
+CONFIDENCE_REFUSAL = ("that design allocates labels from the model's confidence, which can overstate the accuracy of "
+                      "a condition with an input missing: it did on PASTIS without the optical input, though not on "
+                      "CropHarvest China 6 (exp88). Use --design condition (the default with --condition) or --design "
+                      "random.")
 
 
 # ----------------------------------------------------------------------------- intervals
@@ -391,7 +393,8 @@ def equal_allocation(sizes, budget, floor=MIN_PER_STRATUM):
     """The same number of labels for every stratum, by water-filling: a stratum too small for an equal share is
     labelled in full, and the rest of the budget is shared equally by the others, again and again until no stratum
     left is that small. The input conditions of the "condition" design are its strata. It never reads the model's
-    confidence, which overstates the accuracy of a condition with an input missing (exp88).
+    confidence, which can overstate the accuracy of a condition with an input missing: it did on PASTIS without the
+    optical input, though not on CropHarvest China 6 (exp88).
 
     Returns n_h with sum n_h = budget and n_h <= N_h; strata not labelled in full differ by at most one label, and
     n_h >= min(N_h, 2) whenever budget >= sum min(N_h, 2). A budget below sum min(N_h, floor) is refused, as by

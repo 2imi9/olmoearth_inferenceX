@@ -19,11 +19,11 @@ sidecar and printed line is unchanged; the JSON outputs gain one `scope` note.
   `review_set_<b>pct_by_condition.csv`; the whole-map review-set CSVs gain a `condition` column at the end.
 - `sample --condition`: the new `condition` design, the default when a layer is given, splits the labels equally
   across the conditions (`equal_allocation`, water-filling: a condition too small for an equal share is labelled in
-  full). It never reads the model's confidence, which overstates the accuracy of a condition with an input missing.
-  `--design random --condition` draws the same windows as without a layer and records the condition. The
-  confidence, proportional and tiles designs refuse a layer, with the reason. The condition is fixed at sampling
-  time: the sidecar records it and `estimate` and `certify` never read the raster again; a CSV whose `condition`
-  column was edited is refused.
+  full). It never reads the model's confidence, which can overstate the accuracy of a condition with an input missing:
+  it did on PASTIS without the optical input, though not on CropHarvest China 6 (exp88). `--design random --condition`
+  draws the same windows as without a layer and records the condition. The confidence, proportional and tiles designs
+  refuse a layer, with the reason. The condition is fixed at sampling time: the sidecar records it and `estimate` and
+  `certify` never read the raster again; a CSV whose `condition` column was edited is refused.
 - `estimate` gives each condition's error rate with its exact hypergeometric interval, under the condition design and
   under a random sample alike, beside the whole-map rate, and names the conditions whose interval excludes the
   whole-map rate, saying which are worse than the map as a whole and which better. Under the condition design the
