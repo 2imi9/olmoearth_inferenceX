@@ -387,6 +387,11 @@ def test_certify_by_condition_refusals():
         est.certify_by_condition(s, err[idx][:-1], margin, 0.1)
     with pytest.raises(ValueError, match="rule must be"):
         est.certify_by_condition(s, err[idx], margin, 0.1, rule="nope")
+    # the plug-in rule has no guarantee: there is no delta to split, and the family note's joint statement would be
+    # false (two conditions at a 30% error rate, alpha 0.28: some certified zone was wrong more often than alpha on
+    # most samples in review). The command line never offers it; the API refuses it here
+    with pytest.raises(ValueError, match="plug-in rule has no guarantee"):
+        est.certify_by_condition(s, err[idx], margin, 0.1, rule="plugin")
     # the tool's own review set inside a part is not a random sample of it, and certify_zone's refusal propagates
     part0 = np.flatnonzero(cond == 0)
     review = part0[np.argsort(margin[part0])[:100]]                   # the 100 least confident windows of condition 0

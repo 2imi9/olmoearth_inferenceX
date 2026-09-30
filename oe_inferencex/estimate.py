@@ -1510,6 +1510,7 @@ def certify_by_condition(sample, wrong, margin, alpha, delta=ZONE_DELTA, rule="p
     sample  : a sample of the "random" or "condition" design that records a condition (`condition_grid`)
     wrong   : 0/1 per labelled window, in the order of sample["indices"]
     margin  : per-window confidence on the flattened grid the sample was drawn on; `valid` as for `certify_zone`
+    rule    : "prefix" or "bonferroni"; the plug-in rule is refused, since it has no guarantee to split
 
     Why it is valid. L, the number of conditions holding at least min_labels_to_certify(alpha, delta) labels, is
     fixed by the label counts before any label is read. Given the counts, the labels in each condition are a simple
@@ -1541,6 +1542,10 @@ def certify_by_condition(sample, wrong, margin, alpha, delta=ZONE_DELTA, rule="p
         raise ValueError(f"alpha and delta must be in (0, 1), got {alpha}, {delta}")
     if rule not in ZONE_RULES:
         raise ValueError(f"rule must be one of {ZONE_RULES}, got {rule!r}")
+    if rule == "plugin":
+        # certify_zone accepts it as the comparator; here the family note would state a joint guarantee it lacks
+        raise ValueError("the plug-in rule has no guarantee, so there is no delta to split over the conditions and "
+                         "no joint statement to make; use the prefix or bonferroni rule")
     if (idx < 0).any():
         raise ValueError("a labelled window index is negative; indices point into the flattened window grid")
     if np.unique(idx).size != idx.size:

@@ -31,9 +31,10 @@ sidecar and printed line is unchanged; the JSON outputs gain one `scope` note.
   the output says so. `--per-class` runs under the condition design and says its intervals are not graded there.
 - `certify` on a sample that records a condition certifies a zone inside each condition that holds enough labels,
   at delta divided by the number of such conditions, so that all the statements hold together at delta
-  (`certify_by_condition`). A condition with fewer labels is reported as not tested. No whole-map zone is issued; the
-  window mask is the union of the certified zones, and a stale mask is removed when nothing is certified. At alpha 5%
-  and delta 0.1 a condition needs 45, 59, 67, 72 or 77 labels with one to five conditions tested.
+  (`certify_by_condition`, prefix or Bonferroni rule; it refuses the plug-in rule, which has no guarantee to split). A
+  condition with fewer labels is reported as not tested. No whole-map zone is issued; the window mask is the union of
+  the certified zones, and a stale mask is removed when nothing is certified. At alpha 5% and delta 0.1 a condition
+  needs 45, 59, 67, 72 or 77 labels with one to five conditions tested.
 - `pool_condition`, `equal_allocation` and `certify_by_condition` are exported. The existing designs, intervals and
   `certify_zone`'s arguments are unchanged.
 - Tests by enumeration or known answer for each new formula: the allocation over every small case, the condition

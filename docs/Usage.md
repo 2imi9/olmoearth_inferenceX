@@ -385,7 +385,8 @@ certify_by_condition(s, wrong, margin.ravel(), alpha=0.05, valid=valid.ravel()) 
 ```
 
 `equal_allocation(sizes, budget)` is the condition design's split. Under `design="random"`, `condition=` is only
-recorded, and the draw is the one made without it.
+recorded, and the draw is the one made without it. `certify_by_condition` takes `rule="prefix"` or `"bonferroni"`; it
+refuses `"plugin"`, which has no guarantee to split over the conditions.
 
 `estimate_from_indices(indices, wrong, margin, valid)` treats windows labelled without a design as a random sample
 once it has checked that they could be one. A random sample sits at a mean suspicion percentile near 0.50 and a review
