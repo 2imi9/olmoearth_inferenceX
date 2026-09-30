@@ -33,8 +33,8 @@ out. No-data comes from the raster's no-data value, from NaN or from `--nodata`.
 
 **The input condition.** The confidence ranking compares windows read from the same inputs. Where part of a map was
 predicted with an input missing, such as the optical image under cloud, the model can be confidently wrong there: on
-PASTIS without the optical input, 59.8% of the errors were at least as confident as the typical correct window with
-full input, against 6.0% with it
+PASTIS without the optical input, 59.8% of OlmoEarth Base's errors were at least as confident as the typical correct
+window with full input, against 6.0% with it. OlmoEarth Large's share rose only from 5.7% to 12.8-13.8%
 ([exp88](results/comparisons.md#when-a-modality-is-missing-does-the-confidence-fall-with-the-accuracy-exp88)). A map
 that records each pixel's input condition can pass it as `--condition` (`condition=` in Python): one integer band on
 the map's grid, such as a cloud flag, the modalities present, a sensor id or an acquisition group. A negative value,

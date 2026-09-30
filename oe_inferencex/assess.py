@@ -50,10 +50,11 @@ RULE_TEXT = ("A window takes the condition held by most of its pixels that have 
 SCOPE_ASSESS = ("The review order compares the confidence of every window with every other. Where part of the map was "
                 "predicted with an input missing, for example the optical image under cloud, the model can be "
                 "confidently wrong there, and those errors come late in this order. On PASTIS without the optical "
-                "input, 59.8% of the errors were at least as confident as the typical correct window with full input, "
-                "against 6.0% with it (exp88). This did not happen on CropHarvest China 6, where the optical input "
-                "matters little. If the map records each pixel's input condition, pass it as condition (--condition) "
-                "to rank, sample and certify each condition on its own.")
+                "input, 59.8% of OlmoEarth Base's errors were at least as confident as the typical correct window with "
+                "full input, against 6.0% with it. OlmoEarth Large's share rose only from 5.7% to 12.8-13.8% (exp88). "
+                "This did not happen on CropHarvest China 6, where the optical input matters little. If the map "
+                "records each pixel's input condition, pass it as condition (--condition) to rank, sample and certify "
+                "each condition on its own.")
 SCOPE_ASSESS_K = ("The review sets above rank all {K} input conditions together, and the model's confidence need not "
                   "mean the same thing in each (exp88). conditions.per_condition ranks each condition on its own. In a "
                   "condition with an input missing that ranking can be weak: on PASTIS without the optical input, the "

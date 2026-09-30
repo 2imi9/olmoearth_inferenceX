@@ -467,8 +467,17 @@ def test_scope_notes_quote_exp88_as_recorded():
     p2 = pre["P2"]                                  # errors at least as confident as the typical correct full-input window
     assert p2["confident_share_optical_missing"] == base["optical_missing"]["confident_errors"]["share"]
     assert p2["confident_share_full"] == base["full"]["confident_errors"]["share"]
-    assert f"{100 * p2['confident_share_optical_missing']:.1f}% of the errors" in SCOPE_ASSESS            # 59.8%
+    # the graded numbers are OlmoEarth Base's (graded_on above), and the note says so
+    assert f"{100 * p2['confident_share_optical_missing']:.1f}% of OlmoEarth Base's errors" in SCOPE_ASSESS  # 59.8%
     assert f"against {100 * p2['confident_share_full']:.1f}% with it" in SCOPE_ASSESS                     # 6.0%
+    # OlmoEarth Large, over its five probe seeds: the full-input share is one number to a tenth of a point, and the
+    # optical-missing share a range
+    large = [v["families"]["pastis"]["conditions"] for v in rec["results"]["olmoearth_large"]["seeds"].values()]
+    full_l = {f"{100 * c['full']['confident_errors']['share']:.1f}" for c in large}
+    miss_l = [c["optical_missing"]["confident_errors"]["share"] for c in large]
+    assert len(large) == 5 and len(full_l) == 1
+    assert (f"OlmoEarth Large's share rose only from {full_l.pop()}% to {100 * min(miss_l):.1f}-{100 * max(miss_l):.1f}% "
+            "(exp88)") in SCOPE_ASSESS                                                                    # 5.7%, 12.8-13.8%
     china = pre["replication_china6"]["P2"]         # the direction on China 6: the confident share fell
     assert china["holds"] is False and china["confident_share_optical_missing"] < china["confident_share_full"]
     assert "did not happen on CropHarvest China 6" in SCOPE_ASSESS

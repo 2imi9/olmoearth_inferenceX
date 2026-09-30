@@ -32,8 +32,8 @@ Score it as the negative absolute logit (or top-1 minus top-2) rather than
 `1 - max probability`, so saturated probabilities do not tie. Rank within one
 input condition: where part of the map was read with an input missing, as
 under cloud, the model can be confidently wrong there. On PASTIS without the
-optical input, 59.8% of the errors looked confident against 6.0% with it
-(exp88). If the map records each pixel's input condition, pass it as
+optical input, 59.8% of OlmoEarth Base's errors looked confident against 6.0%
+with it; OlmoEarth Large's share rose only from 5.7% to 12.8-13.8% (exp88). If the map records each pixel's input condition, pass it as
 `--condition`, and each condition is ranked, sampled and certified on its own.
 
 **2. Use prediction-boundary proximity as a triage cue, not a ranker.**
