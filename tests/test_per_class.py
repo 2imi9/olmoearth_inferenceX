@@ -250,3 +250,27 @@ def test_per_class_under_the_condition_design():
     r1 = est.sample_for_estimation(np.linspace(1, 0, cond2.size), 90, design="random", seed=4)
     r2 = est.sample_for_estimation(np.linspace(1, 0, cond2.size), 90, design="random", seed=4, condition=cond2)
     assert est.estimate_per_class(r1, ref[r1["indices"]], mc) == est.estimate_per_class(r2, ref[r2["indices"]], mc)
+
+
+def test_per_class_with_one_condition_is_the_random_design():
+    """With one input condition the condition design draws the random design's windows (condition_spec.md 2.9), so
+    its per-class table is the random design's: the same numbers, the same method, the post-stratified overall
+    accuracy beside the exact one. Only `design` records how the sample was drawn."""
+    for seed in range(10):
+        rng = np.random.default_rng(50 + seed)
+        n = int(rng.integers(300, 900))
+        margin = rng.random(n)
+        mc = rng.integers(0, 3, n)
+        mc[rng.random(n) < 0.05] = -1                                  # no-data windows are outside the population
+        margin[mc < 0] = np.nan
+        ref = np.where(rng.random(n) < 0.2, rng.integers(0, 3, n), mc)
+        cond = np.full(n, int(rng.integers(0, 4)))
+        B = int(rng.integers(60, 250))
+        r = est.sample_for_estimation(margin, B, design="random", seed=seed)
+        c = est.sample_for_estimation(margin, B, design="condition", condition=cond, seed=seed)
+        assert np.array_equal(r["indices"], c["indices"])
+        pr = est.estimate_per_class(r, ref[r["indices"]], mc)
+        pc = est.estimate_per_class(c, ref[c["indices"]], mc)
+        assert pc.pop("design") == "condition" and pr.pop("design") == "random"
+        assert pc == pr, seed
+        assert pc["method"].startswith("random sample: exact hypergeometric") and "graded" not in pc["method"]

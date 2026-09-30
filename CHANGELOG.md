@@ -32,7 +32,8 @@ sidecar and printed line is unchanged; the JSON outputs gain one `scope` note.
   enters that interval's variance at the rate 1.92 / (n + 3.84) rather than at nearly zero: without this floor a
   large clean condition beside a small degraded one gave an interval that covered as little as 53% of the time
   (exact, 4,000 windows at 0.5% wrong beside 200 at 50%, 150 labels each); with it, 99%. `--per-class` runs under
-  the condition design and says its intervals are not graded there.
+  the condition design and says its intervals are not graded there; with one condition it gives the random
+  design's table, numbers and method alike.
 - `certify` on a sample that records a condition certifies a zone inside each condition that holds enough labels,
   at delta divided by the number of such conditions, so that all the statements hold together at delta
   (`certify_by_condition`, prefix or Bonferroni rule; it refuses the plug-in rule, which has no guarantee to split). A

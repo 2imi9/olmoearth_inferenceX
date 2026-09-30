@@ -1113,8 +1113,9 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
     map class (Olofsson et al. 2014, eq. 4 and 5) and the producer's accuracy follows their eq. 7. Under the
     confidence design every quantity is a ratio of Horvitz-Thompson totals over the margin strata with a
     linearised variance, because a class cuts across strata; the condition design runs the same estimators with the
-    input conditions as strata, which no experiment has graded, and the method says so. Intervals are Wilson on the effective sample size
-    (interval="wilson", the default; "wald" is the field's convention and is kept for the record, where exp81
+    input conditions as strata, which no experiment has graded, and the method says so. With one condition the
+    condition design is the random design, and gets the random design's estimators and method. Intervals are Wilson
+    on the effective sample size (interval="wilson", the default; "wald" is the field's convention and is kept for the record, where exp81
     shows it collapsing to a point on classes with no sampled error). Tile samples are refused: the per-class
     cluster form is not graded yet. A class with fewer than MIN_PER_CLASS labelled windows carries a warning; a map class no
     labelled window fell in leaves the share estimates short by its weight, and that is said."""
@@ -1143,8 +1144,12 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
                          "designs); label a random or confidence-designed sample")
     if design not in ("random", "confidence", "proportional", "condition"):
         raise ValueError(f"unknown design {design!r}")
+    # With one input condition the condition design is the random design, drawn by the same rng call, so it gets the
+    # random design's estimators, numbers and method (condition_spec.md 2.9); until 2026-09-29 it ran the
+    # Horvitz-Thompson form with one stratum and said "not graded"
+    srs = design == "random"
     if design == "condition":
-        _condition_guards(sample, idx)                             # a stray condition id would be dropped in silence
+        srs = len(_condition_guards(sample, idx)[2]) == 1          # a stray condition id would be dropped in silence
     if design == "random":
         pop = np.flatnonzero(mc >= 0)
     else:
@@ -1170,7 +1175,7 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
     N_map = np.bincount(mc[pop], minlength=C).astype(float)
     W = N_map / N
     per, warnings = {}, []
-    if design == "random":
+    if srs:
         n_i = conf.sum(1).astype(float)
         u = np.divide(conf, n_i[:, None], out=np.zeros((C, C)), where=n_i[:, None] > 0)   # n_ij / n_i.
         fpc = np.where(N_map > 0, 1 - np.divide(n_i, N_map, out=np.zeros(C), where=N_map > 0), 0.0)
@@ -1270,7 +1275,7 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
         # the kind a quantity counts moves by a whole window's weight when one more or one fewer is drawn
         commissions, omissions = int(conf[c].sum() - conf[c, c]), int(conf[:, c].sum() - conf[c, c])
         counted = [("producer's accuracy", omissions), ("share", omissions + commissions)]
-        if design != "random":                                     # the random-design user's accuracy is exact
+        if not srs:                                                # the random-design user's accuracy is exact
             counted.append(("user's accuracy", commissions))
         rare = [(q, n_err) for q, n_err in counted if 0 < n_err < RARE_ERRORS]
         if rare and N_map[c] > 0:
@@ -1292,7 +1297,7 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
             notes.append("nearly every window of this class is labelled; apart from the user's accuracy under a random sample, "
                          "which is exact, the intervals are a rough guide, since the estimate can only take a few values "
                          "(exp81: coverage 0.86-0.92 on such classes)")
-        if design != "random":
+        if not srs:
             f_all = idx.size / N
             thin = np.array([sizes[h] > 0 and (strata[local] == h).sum() / sizes[h] < 0.5 * f_all for h in range(len(sizes))])
             in_thin = float((thin[strata[m_pop == c]]).mean()) if (m_pop == c).any() else 0.0
@@ -1307,7 +1312,7 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
     out = {"design": design, "interval": interval, "n_labelled": int(idx.size), "n_population": N, "n_classes": C, "nominal_coverage": 0.95,
            "overall_accuracy": overall_row, "confusion_counts": conf.tolist(),
            "per_class": per, "method": method}
-    if design == "random":
+    if srs:
         out["overall_accuracy_post_stratified"] = post_stratified
     if warnings:
         out["warning"] = "; ".join(warnings)
