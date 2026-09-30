@@ -1,10 +1,15 @@
-"""The assessor (oe_inferencex.assess): recipe items 1, 2 and 6 on a synthetic prediction, and its JSON view."""
+"""The assessor (oe_inferencex.assess): recipe items 1, 2 and 6 on a synthetic prediction, its JSON view, and the
+input-condition layer."""
+import importlib.util
 import json
+import os
 
 import numpy as np
 import pytest
 
-from oe_inferencex.assess import assess_classmap, assess_prediction, summary
+from oe_inferencex.assess import (CLASS_SHARE_TEXT, MAX_CONDITIONS, RULE_TEXT, SCOPE_ASSESS, SCOPE_ASSESS_K,
+                                  assess_classmap, assess_prediction, boundary_first_score, pool_condition,
+                                  review_mask, review_order, summary)
 from oe_inferencex.metrics import aurc_expected, capture_at_budget, oracle_aurc
 from oe_inferencex.signals import boundary_indicator
 
@@ -219,3 +224,279 @@ def test_top1_confidence_array_is_on_the_scale_of_its_quantiles():
     assert 0 < conf.min() and conf.max() <= 1 and 0.2 < float(np.mean(conf <= q25)) < 0.3
     ref = assess_prediction(logits, is_logit=True, form="top1")
     assert all(np.array_equal(ref["review_sets"][b]["windows_rowcol"], out["review_sets"][b]["windows_rowcol"]) for b in out["review_sets"])
+
+
+# --------------------------------------------------------------------------- the input-condition layer (1.4.0)
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+GOLDEN = os.path.join(ROOT, "tests", "golden", "condition_1_3_1")
+
+
+def _layer_8x8():
+    """Four windows of 4 x 4: 16 of 1; 10 of 2 against 6 of 0; 8 of 0 against 8 of 1; nothing recorded."""
+    lay = np.empty((8, 8), dtype=np.int64)
+    lay[:4, :4] = 1
+    w = np.array([2] * 10 + [0] * 6)
+    lay[:4, 4:] = w.reshape(4, 4)
+    lay[4:, :4] = np.array([0, 1] * 8).reshape(4, 4)
+    lay[4:, 4:] = np.array([-1, -5] * 8).reshape(4, 4)
+    return lay
+
+
+def test_pool_condition_known_answer():
+    lay = _layer_8x8()
+    got = pool_condition(lay, 4)
+    assert got["grid"].tolist() == [[1, 2], [-1, -1]] and got["grid"].dtype == np.int64
+    assert got["values"] == [1, 2] and got["n_split"] == 1 and got["n_no_code"] == 1
+
+    # no-data pixels do not vote: five of the ten 2s and one 1 of the even split lose their vote
+    pred = np.ones((8, 8), bool)
+    pred[:4, 4:] = (np.array([False] * 5 + [True] * 11)).reshape(4, 4)      # 5 of 2 and 6 of 0 remain
+    pred[4, 1] = False                                                        # 8 of 0 against 7 of 1
+    got = pool_condition(lay, 4, predicted=pred)
+    assert got["grid"].tolist() == [[1, 0], [0, -1]] and got["n_split"] == 0 and got["n_no_code"] == 1
+    assert got["values"] == [0, 1]
+
+    # a window at least half without a prediction is not a window of the map: -1 even where its few predicted
+    # pixels agree, and not counted as split or as carrying no value
+    pred = np.ones((8, 8), bool)
+    pred[:4, :4] = np.array([False] * 9 + [True] * 7).reshape(4, 4)          # seven 1s still vote
+    pred[4:, 4:6] = False
+    pred[4, 6] = False
+    got = pool_condition(lay, 4, predicted=pred)
+    assert got["grid"].tolist() == [[-1, 2], [-1, -1]] and got["values"] == [2]
+    assert got["n_no_code"] == 0 and got["n_split"] == 1
+
+    # NaN, a negative value and a masked pixel are unrecorded; a float layer of whole numbers is read as integers
+    f = lay.astype(float)
+    f[:4, 4:] = np.where(lay[:4, 4:] == 2, np.nan, f[:4, 4:])                  # the 2s gone: 6 of 0 win
+    assert pool_condition(f, 4)["grid"].tolist() == [[1, 0], [-1, -1]]
+    m = np.ma.masked_array(lay, mask=np.zeros((8, 8), bool))
+    m.mask[:4, :4] = True                                                     # the 1s of the first window masked
+    got = pool_condition(m, 4)
+    assert got["grid"].tolist() == [[-1, 2], [-1, -1]] and got["n_no_code"] == 2
+    assert pool_condition(lay == 1, 4)["grid"].tolist() == [[1, 0], [-1, 0]]           # a bool cloud flag
+
+    # through the assessor: the window grid is the one pool_condition gives with the map's valid pixels
+    scores = np.random.default_rng(0).normal(size=(8, 8))
+    nod = ~np.ones((8, 8), bool)
+    nod[:4, 4:] = ~(np.array([False] * 5 + [True] * 11)).reshape(4, 4)
+    out = assess_prediction(scores, is_logit=True, nodata_mask=nod, condition=lay)
+    assert out["arrays"]["condition"].tolist() == pool_condition(lay, 4, predicted=~nod)["grid"].tolist()
+    assert out["conditions"]["n_windows_split"] == 1 and out["conditions"]["n_windows_no_code"] == 1
+
+
+def test_pool_condition_refusals():
+    lay = _layer_8x8()
+    with pytest.raises(ValueError, match="not integers"):
+        pool_condition(np.where(lay == 1, 0.5, lay), 4)
+    with pytest.raises(ValueError, match="one band"):
+        pool_condition(np.stack([lay, lay]), 4)
+    with pytest.raises(ValueError, match="pass layer"):
+        pool_condition(lay[None], 4)
+    with pytest.raises(ValueError, match="8 x 9 px and the map is 8 x 8"):
+        pool_condition(np.zeros((8, 9), int), 4, predicted=np.ones((8, 8), bool))
+    with pytest.raises(ValueError, match="one condition value per pixel"):
+        assess_prediction(np.zeros((8, 8)) + 1.0, is_logit=True, condition=np.zeros((2, 2), int))  # a window grid
+    with pytest.raises(ValueError, match="no window takes a condition"):
+        pool_condition(np.full((8, 8), -1), 4)
+    with pytest.raises(ValueError, match="4 are split evenly"):
+        pool_condition(np.indices((8, 8)).sum(0) % 2, 4)                       # a checkerboard: every window tied
+    with pytest.raises(ValueError, match="int32"):
+        pool_condition(np.where(lay == 1, 3.4028235e38, lay), 4)               # a float32 no-data left in the layer
+
+    v = np.arange(256).reshape(16, 16) % MAX_CONDITIONS
+    v[:4, :4] = 0                                                             # one window won; 64 values in all
+    assert pool_condition(v, 4)["values"] == [0]
+    v = np.arange(256).reshape(16, 16) % (MAX_CONDITIONS + 1)
+    v[:4, :4] = 0
+    with pytest.raises(ValueError, match=f"65 distinct values .* at most {MAX_CONDITIONS}"):
+        pool_condition(v, 4)
+
+    s = np.random.default_rng(1).normal(size=(8, 8))
+    with pytest.raises(ValueError, match="no condition was given"):
+        assess_prediction(s, is_logit=True, condition_names={0: "clear"})
+    for names, why in (({1: "unrecorded"}, "reserved"), ({1: "a", 2: "a"}, "unique"), ({1: ""}, "non-empty")):
+        with pytest.raises(ValueError, match=why):
+            assess_prediction(s, is_logit=True, condition=lay, condition_names=names)
+
+
+def _golden_calls():
+    """The six assess_* calls of tests/golden/condition_1_3_1/generate.py, on the same fixtures."""
+    spec = importlib.util.spec_from_file_location("golden_1_3_1", os.path.join(GOLDEN, "generate.py"))
+    gen = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(gen)
+    from oe_inferencex.demo import SAMPLE
+    z = np.load(SAMPLE)
+    dw = z["probs"].astype(np.float32)
+    p, water = gen._scene()
+    logits, probs3, truth3 = gen._three_class()
+    hard3, band = probs3.argmax(0), probs3.max(0)
+    nd3 = np.zeros(hard3.shape, bool)
+    nd3[:6, :10] = True
+    return {
+        "api_prediction_dw": (assess_prediction, (dw,), dict(is_logit=False)),
+        "api_prediction_scene": (assess_prediction, (p,), dict(is_logit=False, nodata_mask=np.isnan(p),
+                                                               reference=water.astype(int), budgets=(0.05, 0.10),
+                                                               order="boundary_first")),
+        "api_prediction_logits3_margin": (assess_prediction, (logits,), dict(is_logit=True)),
+        "api_prediction_logits3_top1": (assess_prediction, (logits,), dict(is_logit=True, form="top1", reference=truth3)),
+        "api_classmap": (assess_classmap, (hard3, band, 3), dict(nodata_mask=nd3, reference=truth3)),
+        "api_classmap_boundary_first": (assess_classmap, (hard3, np.round(band, 2), 3),
+                                        dict(patch=8, order="boundary_first", budgets=(0.02, 0.2))),
+    }
+
+
+def test_without_a_condition_only_scope_is_added():
+    """Against the summaries generated at 725dffa, before the layer was built: byte for byte once `scope` is taken
+    out, and `scope` is SCOPE_ASSESS, outside the warnings."""
+    calls = _golden_calls()
+    assert sorted(calls) == json.load(open(os.path.join(GOLDEN, "manifest.json")))["api"]
+    for name, (fn, args, kw) in calls.items():
+        out = fn(*args, **kw)
+        s = summary(out)
+        assert s.pop("scope") == SCOPE_ASSESS, name
+        assert SCOPE_ASSESS not in s["warnings"] and "conditions" not in s and "condition" not in out["arrays"], name
+        with open(os.path.join(GOLDEN, f"{name}.json"), "rb") as f:
+            assert (json.dumps(s, indent=1) + "\n").encode() == f.read(), name
+
+
+def _two_condition_map(seed=3, size=48):
+    """Logits, a no-data corner, and a layer: clear on the left, cloudy on the right, a strip with no value."""
+    rng = np.random.default_rng(seed)
+    logit = rng.normal(0, 1.5, (size, size))
+    logit[:, : size // 2] += 2.0                                  # the clear half is more confident
+    nod = np.zeros((size, size), bool)
+    nod[:8, :8] = True
+    lay = np.where(np.arange(size)[None, :] < size // 2, 0, 1) * np.ones((size, 1), int)
+    lay[size - 4:, :] = -1                                         # the bottom row of windows records nothing
+    return logit, nod, lay
+
+
+@pytest.mark.parametrize("order", ["confidence", "boundary_first"])
+def test_condition_review_sets(order):
+    logit, nod, lay = _two_condition_map()
+    kw = dict(is_logit=True, nodata_mask=nod, budgets=(0.02, 0.05, 0.2), order=order)
+    plain = assess_prediction(logit, **kw)
+    out = assess_prediction(logit, condition=lay, condition_names={0: "clear", 1: "cloudy"}, **kw)
+    # the whole map is untouched: every key, the review sets, the warnings and the arrays
+    a, b = summary(plain), summary(out)
+    for s in (a, b):
+        s.pop("scope")
+    b.pop("conditions")
+    assert a == b
+    assert set(out["arrays"]) == set(plain["arrays"]) | {"condition"}
+    for k in plain["arrays"]:
+        np.testing.assert_array_equal(plain["arrays"][k], out["arrays"][k])       # NaN outside the map is equal
+
+    arr = out["arrays"]
+    score = -arr["confidence"] if order == "confidence" else boundary_first_score(-arr["confidence"], arr["boundary"])
+    grid, valid = arr["condition"], arr["valid"]
+    full = review_order(score, valid)
+    per = out["conditions"]["per_condition"]
+    assert list(per) == ["clear", "cloudy", "unrecorded"] and [e["value"] for e in per.values()] == [0, 1, None]
+    for name, e in per.items():
+        inc = valid & (grid == (-1 if e["value"] is None else e["value"]))
+        assert e["n_windows"] == int(inc.sum()) > 0
+        for bud, rs in e["review_sets"].items():
+            m = review_mask(score, inc, bud)
+            rc = np.asarray(rs["windows_rowcol"])
+            got = np.zeros(grid.shape, bool)
+            got[rc[:, 0], rc[:, 1]] = True
+            assert (got == m).all() and rs["n_windows"] == int(m.sum()), (name, bud)
+            in_order = [i for i in full if inc.ravel()[i]][: rs["n_windows"]]     # and in the whole map's order
+            assert np.ravel_multi_index((rc[:, 0], rc[:, 1]), grid.shape).tolist() == in_order
+
+    # a reference that grades nothing returns early; the block and the note are there all the same
+    graded = assess_prediction(logit, condition=lay, reference=np.full(lay.shape, -1), **kw)
+    assert graded["against_reference"]["n_windows_scored"] == 0
+    assert "conditions" in graded and graded["scope"] == SCOPE_ASSESS_K.format(K=3)
+
+
+def test_per_condition_blocks():
+    rng = np.random.default_rng(4)
+    logits = rng.normal(0, 2, (4, 48, 48))
+    _, nod, lay = _two_condition_map()
+    names = {0: "clear", 1: "cloudy", 7: "snow"}
+    for form in ("top1", "margin"):
+        out = assess_prediction(logits, is_logit=True, nodata_mask=nod, form=form, condition=lay, condition_names=names)
+        blk = out["conditions"]
+        assert blk["rule"] == RULE_TEXT and blk["class_share_status"] == CLASS_SHARE_TEXT and blk["source"] is None
+        assert blk["notes"] == ["value 7 (snow) holds no window"] and blk["n_conditions"] == 3
+        per, arr = blk["per_condition"], out["arrays"]
+        assert sum(e["share_of_map"] for e in per.values()) == pytest.approx(1.0, abs=1e-12)
+        for bud in out["review_sets"]:
+            assert sum(e["share_of_review_set"][bud] for e in per.values()) == pytest.approx(1.0, abs=1e-12)
+        for e in per.values():
+            inc = arr["valid"] & (arr["condition"] == (-1 if e["value"] is None else e["value"]))
+            assert e["n_windows"] == int(inc.sum()) and e["share_of_map"] == inc.sum() / arr["valid"].sum()
+            hard = arr["pooled_argmax"][inc]
+            assert e["class_share"] == {k: float(np.sum(hard == k) / hard.size) for k in range(4)}
+            for bud, rs in out["review_sets"].items():
+                idx = np.ravel_multi_index(tuple(np.asarray(rs["windows_rowcol"]).T), inc.shape)
+                assert e["share_of_review_set"][bud] == float(inc.ravel()[idx].mean())
+            conf = arr["confidence"][inc]
+            for q, v in e["confidence_quantiles"].items():
+                if form == "top1":       # the probability scale, as the whole map's quantiles: exp of the log quantile
+                    assert 0 < v <= 1 and v == pytest.approx(float(np.exp(np.nanquantile(np.log(conf), q))), rel=1e-12)
+                else:
+                    assert v == float(np.nanquantile(conf, q))
+        if form == "top1":
+            assert out["confidence_scale"] and all(0 < v <= 1 for v in out["confidence_quantiles"].values())
+    # the class-share note makes no claim a number could carry
+    assert not any(ch.isdigit() for ch in CLASS_SHARE_TEXT) and "exp88" not in CLASS_SHARE_TEXT
+    # a class map takes the layer too
+    cm = assess_classmap(logits.argmax(0), logits.max(0), 4, nodata_mask=nod, condition=lay)
+    assert list(cm["conditions"]["per_condition"]) == ["0", "1", "unrecorded"]
+    assert json.loads(json.dumps(summary(cm)))["conditions"]["per_condition"]["unrecorded"]["value"] is None
+
+
+def test_scope_notes_quote_exp88_as_recorded():
+    """Every number the scope notes quote is exp88's, read from its summary (as test_explain reads exp37's)."""
+    from oe_inferencex.estimate import SCOPE_CERTIFY, SCOPE_ESTIMATE
+    rec = json.load(open(os.path.join(ROOT, "exp", "out", "exp88_summary.json")))
+    pre = rec["prereg"]
+    assert rec["prereg_status"] == "frozen" and pre["graded_on"] == "olmoearth_base, probe seed 0"
+    base = rec["results"]["olmoearth_base"]["seeds"]["0"]["families"]["pastis"]["conditions"]
+
+    p2 = pre["P2"]                                  # errors at least as confident as the typical correct full-input window
+    assert p2["confident_share_optical_missing"] == base["optical_missing"]["confident_errors"]["share"]
+    assert p2["confident_share_full"] == base["full"]["confident_errors"]["share"]
+    assert f"{100 * p2['confident_share_optical_missing']:.1f}% of the errors" in SCOPE_ASSESS            # 59.8%
+    assert f"against {100 * p2['confident_share_full']:.1f}% with it" in SCOPE_ASSESS                     # 6.0%
+    china = pre["replication_china6"]["P2"]         # the direction on China 6: the confident share fell
+    assert china["holds"] is False and china["confident_share_optical_missing"] < china["confident_share_full"]
+    assert "did not happen on CropHarvest China 6" in SCOPE_ASSESS
+    assert "China_6" in rec["config"]["families"]["china6"]["optical_missing"]
+
+    full_auc = base["full"]["ranking"]["margin_auroc"]
+    missing_auc = pre["P3"]["per_family"]["pastis"]["margin_auroc"]
+    assert missing_auc == base["optical_missing"]["ranking"]["margin_auroc"]
+    assert f"fell from {full_auc:.2f} to {missing_auc:.2f}" in SCOPE_ASSESS_K                             # 0.83, 0.59
+
+    # the mixed map: each part's truth, and the pooled estimate of a random sample of 300 (its mean over the
+    # recorded draws, which is what "estimated" reports)
+    p4 = pre["P4"]
+    assert f"{100 * p4['truth']['cloudy']:.1f}% against {100 * p4['truth']['clear']:.1f}% on the rest" in SCOPE_ESTIMATE
+    assert f"a random sample of {rec['config']['sample']} estimated {100 * p4['pooled_mean_estimate']:.1f}%" in SCOPE_ESTIMATE
+    assert "(exp88)" in SCOPE_CERTIFY and not any(ch.isdigit() for ch in SCOPE_CERTIFY.replace("exp88", ""))
+
+
+def test_single_condition_has_no_scope():
+    logit, nod, _ = _two_condition_map()
+    kw = dict(is_logit=True, nodata_mask=nod, budgets=(0.05, 0.2))
+    plain = assess_prediction(logit, **kw)
+    out = assess_prediction(logit, condition=np.full(logit.shape, 3), condition_names={3: "clear"}, **kw)
+    assert "scope" not in out
+    blk = out["conditions"]
+    assert blk["n_conditions"] == 1 and list(blk["per_condition"]) == ["clear"]
+    e = blk["per_condition"]["clear"]
+    assert e["value"] == 3 and e["n_windows"] == out["n_windows"] and e["share_of_map"] == 1.0
+    assert e["confidence_quantiles"] == plain["confidence_quantiles"] and e["class_share"] == plain["class_share"]
+    for bud, rs in plain["review_sets"].items():                      # one condition ranks as the whole map does
+        assert e["share_of_review_set"][bud] == 1.0
+        assert np.array_equal(e["review_sets"][bud]["windows_rowcol"], rs["windows_rowcol"])
+    # one value and some windows with none are two conditions, as the sample counts them
+    lay = np.full(logit.shape, 3)
+    lay[-4:] = -1
+    two = assess_prediction(logit, condition=lay, **kw)
+    assert two["conditions"]["n_conditions"] == 2 and two["scope"] == SCOPE_ASSESS_K.format(K=2)
