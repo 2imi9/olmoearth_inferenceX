@@ -20,6 +20,11 @@ Inputs
                   it (with the reference caveat attached)
     budgets     : review budgets (fractions of windows) at which to report
                   the flagged set and, with a reference, the error capture
+    condition   : optional (H, W) integer layer, the input condition of each
+                  pixel (a cloud flag, the modalities present, a sensor id);
+                  negative or NaN where none is recorded. Each condition is
+                  then ranked and described on its own (pool_condition)
+    condition_names : optional {value: name} for the condition values
 
 Output: a dict of summary statistics plus per-window arrays. The arrays are
 returned so the caller can write them to files and pass handles onward;
@@ -29,8 +34,30 @@ import warnings
 
 import numpy as np
 
+from oe_inferencex.estimate import _condition_index
 from oe_inferencex.metrics import aurc_expected
 from oe_inferencex.signals import boundary_indicator, midrank_pct
+
+QUANTILES = (0.05, 0.25, 0.5, 0.75, 0.95)
+MAX_CONDITIONS = 64               # distinct condition values a layer may hold; more is a continuous layer, not a category
+RULE_TEXT = ("A window takes the condition held by most of its pixels that have a prediction and a recorded condition. "
+             "A tie, or no such pixel, makes it 'unrecorded'.")
+# What the review order does not say when part of the map was read with an input missing. The numbers are exp88's
+# (exp/out/exp88_summary.json); tests/test_assess.py reads them back from there.
+SCOPE_ASSESS = ("The review order compares the confidence of every window with every other. Where part of the map was "
+                "predicted with an input missing, for example the optical image under cloud, the model can be "
+                "confidently wrong there, and those errors come late in this order. On PASTIS without the optical "
+                "input, 59.8% of the errors were at least as confident as the typical correct window with full input, "
+                "against 6.0% with it (exp88). This did not happen on CropHarvest China 6, where the optical input "
+                "matters little. If the map records each pixel's input condition, pass it as condition (--condition) "
+                "to rank, sample and certify each condition on its own.")
+SCOPE_ASSESS_K = ("The review sets above rank all {K} input conditions together, and the model's confidence need not "
+                  "mean the same thing in each (exp88). conditions.per_condition ranks each condition on its own. In a "
+                  "condition with an input missing that ranking can be weak: on PASTIS without the optical input, the "
+                  "margin's AUROC for errors fell from 0.83 to 0.59 (exp88). Which condition is more accurate needs "
+                  "labels: sample with --condition.")
+CLASS_SHARE_TEXT = ("Descriptive only: the share of windows the map calls each class, within each condition. No "
+                    "experiment has tested whether a difference between conditions signals errors.")
 
 
 def _pool(a, patch):
@@ -84,6 +111,73 @@ def _pooled_argmax(hard, n_classes, patch, empty=0, weights=None, tie=None):
     return np.where(counts.sum(-1) > 0, res, empty)
 
 
+def pool_condition(condition, patch, predicted=None):
+    """The input condition of each window, from a per-pixel layer.
+
+    `condition` is an (H, W) layer of integer values: a cloud flag, the modalities present, a sensor id or an
+    acquisition group. A negative value, NaN or a masked pixel (a numpy masked array) records none. A pixel votes
+    when it holds a recorded value and has a prediction (`predicted`, the map's valid pixels; all of them if None).
+    A window takes the value held by most of its voting pixels. A tie, or a window with no voting pixel, is
+    unrecorded (-1): a tie never goes to the lowest value. A user who wants "any cloud makes the window cloudy"
+    encodes that in the layer.
+
+    Returns {"grid": (h, w) int64 value per window, -1 unrecorded and outside the map's valid windows,
+    "values": the sorted values that won a valid window, "n_split": valid windows split evenly between two values,
+    "n_no_code": valid windows with no voting pixel}. A valid window is at least half predicted pixels, as in assess.
+
+    Refused: a layer that is not one band, a shape other than the map's, a value that is not an integer, a value
+    beyond int32 (the condition.tif the command line writes), more than MAX_CONDITIONS distinct voting values, and
+    a layer from which no valid window takes a value."""
+    mask = np.ma.getmaskarray(condition) if np.ma.isMaskedArray(condition) else None
+    a = np.asarray(np.ma.getdata(condition))
+    if a.ndim != 2:
+        hint = "; pass layer[0]" if a.ndim == 3 and a.shape[0] == 1 else ""
+        raise ValueError(f"the condition layer has shape {a.shape}; it must be one band, (H, W), with one value per "
+                         f"pixel{hint}")
+    if predicted is None:
+        predicted = np.ones(a.shape, dtype=bool)
+    predicted = np.asarray(predicted, dtype=bool)
+    if predicted.shape != a.shape:
+        raise ValueError(f"the condition layer is {a.shape[0]} x {a.shape[1]} px and the map is {predicted.shape[0]} x "
+                         f"{predicted.shape[1]} px; give one condition value per pixel of the map")
+    H, W = a.shape
+    if patch > H or patch > W:
+        raise ValueError(f"the window of {patch} px is larger than the map, {H} x {W} px; pass a smaller --patch")
+    unmasked = ~mask if mask is not None else np.ones(a.shape, dtype=bool)
+    if a.dtype.kind == "b":
+        a = a.astype(np.int64)
+    elif a.dtype.kind == "f":
+        finite = np.isfinite(a) & unmasked
+        if not np.all(np.mod(a[finite], 1) == 0):
+            raise ValueError("the condition layer holds values that are not integers; a condition is a category, such "
+                             "as a cloud flag or a sensor id. Bin a continuous layer, such as cloud fraction, first")
+        unmasked = finite
+    elif a.dtype.kind not in "iu":
+        raise ValueError(f"the condition layer must hold integers, got dtype {a.dtype}")
+    votes = unmasked & predicted & (a >= 0)
+    if votes.any() and float(a[votes].max()) > np.iinfo(np.int32).max:
+        raise ValueError(f"the condition layer holds the value {float(a[votes].max()):g}, beyond what a condition "
+                         f"value can be (int32); if it is the raster's no-data value, declare it as no-data or set it "
+                         f"negative")
+    vals, codes_v = np.unique(a[votes].astype(np.int64), return_inverse=True)
+    if vals.size > MAX_CONDITIONS:
+        raise ValueError(f"the condition layer holds {vals.size} distinct values where the map has a prediction; at "
+                         f"most {MAX_CONDITIONS} are allowed. A condition is a category, such as a cloud flag or a "
+                         f"sensor id; bin a continuous layer first")
+    codes = np.full(a.shape, -1, dtype=np.int64)
+    codes[votes] = codes_v.ravel()
+    res = _pooled_argmax(codes, max(int(vals.size), 1), patch, empty=-1, tie=-2)
+    valid_w = _pool(predicted.astype(float), patch) >= 0.5          # the map's valid windows, as _assess finds them
+    grid = np.where(res >= 0, vals[np.clip(res, 0, None)] if vals.size else -1, -1).astype(np.int64)
+    grid[~valid_w] = -1
+    n_split, n_no_code = int(((res == -2) & valid_w).sum()), int(((res == -1) & valid_w).sum())
+    won = np.unique(grid[grid >= 0])
+    if won.size == 0:
+        raise ValueError(f"no window takes a condition: of the map's {int(valid_w.sum())} valid windows, {n_no_code} "
+                         f"have no pixel with a recorded condition and {n_split} are split evenly between two values")
+    return {"grid": grid, "values": [int(v) for v in won], "n_split": n_split, "n_no_code": n_no_code}
+
+
 def _boundary_valid(pooled_hard, valid):
     """boundary_indicator, except that a neighbour with no prediction cannot disagree with anything.
 
@@ -126,24 +220,26 @@ def boundary_first_score(suspicion, boundary):
 
 
 def assess_classmap(hard, confidence, n_classes, patch=4, nodata_mask=None, reference=None, budgets=(0.01, 0.05, 0.10),
-                    signal="exported top-1 probability", order="confidence"):
+                    signal="exported top-1 probability", order="confidence", condition=None, condition_names=None):
     """Production case: a hard class map plus an exported per-pixel confidence
     band (for instance the top-1 probability bands of the LCC rasters), with
     no logits. Ties in `confidence` are reported, because a quantized or
-    saturated band can only rank the pixels it separates."""
+    saturated band can only rank the pixels it separates. `condition` and
+    `condition_names` are as in assess_prediction."""
     hard = np.asarray(hard).astype(int)
     conf = np.asarray(confidence, dtype=np.float64)
     valid = ~nodata_mask if nodata_mask is not None else np.ones(conf.shape, dtype=bool)
     vals, counts = np.unique(conf[valid], return_counts=True)
     warnings = [f"confidence band has {len(vals)} distinct values; {counts.max() / counts.sum():.3f} of pixels share the modal value {vals[counts.argmax()]:.4g}"]
-    out = _assess(conf, hard, n_classes, patch, nodata_mask, reference, budgets, signal, warnings, order)
+    out = _assess(conf, hard, n_classes, patch, nodata_mask, reference, budgets, signal, warnings, order,
+                  condition, condition_names)
     out["confidence_distinct_values"] = int(len(vals))
     out["confidence_modal_share"] = float(counts.max() / counts.sum())
     return out
 
 
 def assess_prediction(scores, is_logit, patch=4, nodata_mask=None, reference=None, budgets=(0.01, 0.05, 0.10), order="confidence",
-                      form="margin"):
+                      form="margin", condition=None, condition_names=None):
     """Assess a prediction map: `scores` is (H, W) of binary logits or probabilities, or (C, H, W) per class.
 
     `order` is the review order of the review sets: "confidence" (least confident first, the ranker every
@@ -155,7 +251,14 @@ def assess_prediction(scores, is_logit, patch=4, nodata_mask=None, reference=Non
     from the logits. On the 16 multi-class tasks of Ai2's suite "top1" ranked errors better than the margin on 14,
     and the logit margin was the weakest of the three forms on 14 of 16 by AUROC and 15 of 16 by excess AURC (exp76,
     tying for best on awf_sentinel2), so a multi-class logit map scored with the default carries a warning. Binary maps and probability input are unaffected: there the forms are one ranking, and
-    probability input already uses the top probability."""
+    probability input already uses the top probability.
+
+    `condition` is an optional (H, W) integer layer on the map's grid: the input condition of each pixel, such as a
+    cloud flag or the modalities present, negative or NaN where none is recorded (pool_condition gives the rule).
+    With it, `arrays["condition"]` holds each window's value and `conditions` describes and ranks each condition on
+    its own, with its review sets. Nothing that exists without it changes. `condition_names` is {value: name};
+    names are unique and non-empty, "unrecorded" is reserved, and a value's default name is str(value). Without a
+    condition, or with two or more, `scope` says what the whole-map ranking does not show (exp88)."""
     if form not in ("margin", "top1"):
         raise ValueError(f"form must be 'margin' or 'top1', got {form!r}")
     scores = np.asarray(scores, dtype=np.float64)
@@ -209,12 +312,14 @@ def assess_prediction(scores, is_logit, patch=4, nodata_mask=None, reference=Non
         n_classes = C
     out = _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets,
                   ("1 - max probability (from logits)" if form == "top1" and scores.ndim == 3 else "negative logit margin")
-                  if is_logit else "1 - max probability", warnings, order)
+                  if is_logit else "1 - max probability", warnings, order, condition, condition_names)
     if is_logit and form == "top1" and scores.ndim == 3:
         # The ranking reads the window mean of log p1, which is tie-free; the quantiles a user sets thresholds from
         # must be on the probability scale. Until 2026-09-22 they were reported as log-probabilities, a median
         # "confidence" of -0.620, under a label naming a probability (audit 2026-09-21, finding 12).
         out["confidence_quantiles"] = {q: float(np.exp(v)) for q, v in out["confidence_quantiles"].items()}
+        for entry in out.get("conditions", {}).get("per_condition", {}).values():     # each condition on the same scale
+            entry["confidence_quantiles"] = {q: float(np.exp(v)) for q, v in entry["confidence_quantiles"].items()}
         # the per-window array on the same scale as its quantiles: a threshold set from the quantiles used to be
         # compared with log-probabilities, so every window fell below the reported 25% quantile (review, 2026-09-23).
         # exp is increasing, so the ranking, the review sets and the cues are unchanged.
@@ -239,7 +344,8 @@ def _check_probabilities(scores, nodata_mask):
             f"class confidence and is not supported here; two inferences of it can be compared at a cut-off instead.")
 
 
-def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, signal, warnings, order="confidence"):
+def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, signal, warnings, order="confidence",
+            condition=None, condition_names=None):
     if order not in ORDERS:
         raise ValueError(f"order must be one of {ORDERS}, got {order!r}")
     margin = np.asarray(margin, dtype=np.float64)
@@ -247,6 +353,11 @@ def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, sig
     H, W = hard.shape[-2:]
     if patch > H or patch > W:
         raise ValueError(f"the window of {patch} px is larger than the map, {H} x {W} px; pass a smaller --patch")
+    if condition is None and condition_names:
+        raise ValueError("condition_names names the values of `condition`, and no condition was given")
+    # the layer is checked before any work on the map, so a refusal comes first
+    pooled = None if condition is None else pool_condition(
+        condition, patch, ~np.asarray(nodata_mask, dtype=bool) if nodata_mask is not None else np.ones((H, W), dtype=bool))
     if nodata_mask is not None:
         margin = np.where(nodata_mask, np.nan, margin)
         hard = np.where(nodata_mask, -1, hard)  # no-prediction pixels do not vote in pooling or boundaries
@@ -260,7 +371,7 @@ def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, sig
 
     out = {
         "n_windows": int(valid_w.sum()), "patch_px": patch, "n_classes": n_classes,
-        "confidence_quantiles": {q: float(np.nanquantile(conf_w[valid_w], q)) for q in (0.05, 0.25, 0.5, 0.75, 0.95)},
+        "confidence_quantiles": {q: float(np.nanquantile(conf_w[valid_w], q)) for q in QUANTILES},
         "boundary_window_fraction": float((bnd_w[valid_w] > 0).mean()),
         "class_share": {int(c): float((pooled_hard[valid_w] == c).mean()) for c in range(n_classes)},
         "signal": signal,
@@ -299,6 +410,19 @@ def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, sig
             warnings.append(f"review set at {b:g}: {inside} of its {k} windows share the cut-off score with "
                             f"{int(tied.sum()) - inside} windows left outside; among those the order is raster position, "
                             f"not evidence")
+
+    # The input condition. Everything above is the whole map's and does not change with a layer; the layer adds its
+    # own block and a note on what the whole-map order does not show (exp88). Set before the reference, whose branch
+    # can return early.
+    if pooled is None:
+        out["scope"] = SCOPE_ASSESS
+    else:
+        out["arrays"]["condition"] = pooled["grid"]
+        out["conditions"] = _condition_block(pooled, condition_names, valid_w, conf_w, pooled_hard, n_classes, rank,
+                                             out["review_sets"])
+        K = out["conditions"]["n_conditions"]
+        if K >= 2:
+            out["scope"] = SCOPE_ASSESS_K.format(K=K)
 
     if reference is not None:
         ref = np.asarray(reference).astype(int)  # values < 0 mean no reference
@@ -355,6 +479,41 @@ def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, sig
         rc["caveat"] = "reference-product labels can flatter boundary-type signals (exp18); treat as expert truth only if it is"
         out["against_reference"] = rc
     return out
+
+
+def _condition_block(pooled, condition_names, valid_w, conf_w, pooled_hard, n_classes, rank, review_sets):
+    """Each input condition described and ranked on its own. The conditions are indexed as the sample's are
+    (estimate._condition_index): the recorded values in ascending order, then "unrecorded" last if any valid window
+    has none, so the names and the order here are the ones `sample --condition` uses."""
+    grid = pooled["grid"]
+    pop = np.flatnonzero(valid_w.ravel())
+    index, values, names, sizes, notes = _condition_index(grid.ravel(), pop, grid.size, condition_names)
+    cidx = np.full(grid.size, -1, dtype=np.int64)          # condition index per window, -1 outside the valid windows
+    cidx[pop] = index
+    n_valid = int(pop.size)
+    per = {}
+    for c, (name, value) in enumerate(zip(names, values)):
+        inc = (cidx == c).reshape(grid.shape)
+        n_c = int(sizes[c])
+        # A condition's review set is the whole-map order kept to that condition: equal to review_mask of the
+        # review score over valid & (condition == c), under either order, since dropping the other windows changes
+        # no two windows' relative order.
+        ranked = rank[cidx[rank] == c]
+        entry = {"value": value, "n_windows": n_c, "share_of_map": n_c / n_valid,
+                 "confidence_quantiles": {q: float(np.nanquantile(conf_w[inc], q)) for q in QUANTILES},
+                 "class_share": {int(k): float((pooled_hard[inc] == k).mean()) for k in range(n_classes)},
+                 "share_of_review_set": {}, "review_sets": {}}
+        for b, rs in review_sets.items():
+            entry["share_of_review_set"][b] = float((cidx[rank[:rs["n_windows"]]] == c).mean())
+            k = min(n_c, max(1, int(round(b * n_c))))
+            rows, cols = np.unravel_index(ranked[:k], grid.shape)
+            entry["review_sets"][b] = {"n_windows": int(k), "windows_rowcol": np.stack([rows, cols], 1)}
+        per[name] = entry
+    block = {"source": None, "rule": RULE_TEXT, "n_conditions": len(names), "n_windows_split": pooled["n_split"],
+             "n_windows_no_code": pooled["n_no_code"], "class_share_status": CLASS_SHARE_TEXT, "per_condition": per}
+    if notes:
+        block["notes"] = notes                             # a name given to a value that holds no window
+    return block
 
 
 def review_order(suspicion, valid=None):

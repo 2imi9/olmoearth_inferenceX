@@ -37,8 +37,8 @@ https://olmoearth-inferencex.readthedocs.io
 """
 from importlib.metadata import PackageNotFoundError, version as _version
 
-from .assess import (assess_classmap, assess_prediction, boundary_first_score, review_mask, review_order,
-                     summary)
+from .assess import (assess_classmap, assess_prediction, boundary_first_score, pool_condition, review_mask,
+                     review_order, summary)
 from .calibrate import fit_ranker, fit_side, side_features
 from .estimate import (certify_by_condition, cluster_interval, confidence_strata, design_effect, equal_allocation, estimate_error_rate, estimate_from_indices, exact_coverage_srs,
                        hypergeom_interval,
@@ -67,6 +67,7 @@ __all__ = [
     "__version__",
     # assess
     "assess_prediction", "assess_classmap", "review_order", "review_mask", "boundary_first_score", "summary",
+    "pool_condition",
     # explain
     "explain_review_set", "derive_cues", "cue_enrichment", "library_table", "CUES",
     # compare
