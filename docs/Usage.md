@@ -31,20 +31,22 @@ The package works on square windows of `--patch` pixels (default 4). A window's 
 margin of its valid pixels and its class the majority class of its pixels; a window less than half valid is left
 out. No-data comes from the raster's no-data value, from NaN or from `--nodata`.
 
-**The input condition.** The confidence ranking compares windows read from the same inputs. Where part of a map was
-predicted with an input missing, such as the optical image under cloud, the model can be confidently wrong there: on
-PASTIS without the optical input, 59.8% of OlmoEarth Base's errors were at least as confident as the typical correct
-window with full input, against 6.0% with it. OlmoEarth Large's share rose only from 5.7% to 12.8-13.8%
+**The input condition.** The confidence ranking is only comparable between windows read from the same inputs, and
+without a layer `assess` ranks every window with every other. Where part of a map was predicted with an input missing,
+such as the optical image under cloud, the model can be confidently wrong there: on PASTIS without the optical input,
+59.8% of OlmoEarth Base's errors were at least as confident as the typical correct window with full input, against
+6.0% with it. OlmoEarth Large's share rose only from 5.7% to 12.8-13.8%
 ([exp88](results/comparisons.md#when-a-modality-is-missing-does-the-confidence-fall-with-the-accuracy-exp88)). A map
-that records each pixel's input condition can pass it as `--condition` (`condition=` in Python): one integer band on
-the map's grid, such as a cloud flag, the modalities present, a sensor id or an acquisition group. A negative value,
-NaN or the raster's no-data records none. `--condition-names 0=clear 1=cloudy` names the values; the default name is
-the value itself, and "unrecorded" is reserved. A window takes the condition held by most of its pixels that have a
-prediction and a recorded condition. A tie, or no such pixel, makes it "unrecorded", and those windows form one more
-condition, listed last. A layer with more than 64 values, or with values that are not integers, is refused: bin a
-continuous layer, such as cloud fraction, first. A user who wants "any cloud makes the window cloudy" encodes that in
-the layer. Fix the layer before labelling: a layer drawn around known errors makes every statement wrong. For a map
-read from optical input alone, cloud is already no-data and needs no layer.
+that records each pixel's input condition can pass it as `--condition` (`condition=` in Python), and each condition is
+then also ranked on its own, among windows read from the same inputs. The layer is one integer band on the map's grid,
+such as a cloud flag, the modalities present, a sensor id or an acquisition group. A negative value, NaN or the
+raster's no-data records none. `--condition-names 0=clear 1=cloudy` names the values; the default name is the value
+itself, and "unrecorded" is reserved. A window takes the condition held by most of its pixels that have a prediction
+and a recorded condition. A tie, or no such pixel, makes it "unrecorded", and those windows form one more condition,
+listed last. A layer with more than 64 values, or with values that are not integers, is refused: bin a continuous
+layer, such as cloud fraction, first. A user who wants "any cloud makes the window cloudy" encodes that in the layer.
+Fix the layer before labelling: a layer drawn around known errors makes every statement wrong. For a map read from
+optical input alone, cloud is already no-data and needs no layer.
 
 The package refuses what it cannot rank, in Python as on the command line. Probability input outside [0, 1] raises
 an error rather than being cut at 0.5 and scored. A review set whose cut-off falls inside a run of equal scores (a

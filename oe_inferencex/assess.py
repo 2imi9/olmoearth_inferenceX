@@ -3,10 +3,12 @@
 The recipe that the experiments support (docs/method/recipe.md): rank
 windows by the model's own confidence, use prediction-boundary proximity as
 a triage cue, report operating points, and state the caveats. The ranking
-compares windows read from the same inputs: where part of the map was read
-with an input missing, as under cloud, the model can be confidently wrong
-there (exp88), so a map that records each pixel's input condition is also
-ranked within each condition. This module turns a prediction array into that
+is only comparable between windows read from the same inputs: where part of
+the map was read with an input missing, as under cloud, the model can be
+confidently wrong there (exp88). Without a condition layer every window is
+ranked with every other. With one, each condition is also ranked on its own,
+so that windows are compared only with windows read from the same inputs.
+This module turns a prediction array into that
 assessment. It generates evidence only; narration belongs to the caller.
 
 Inputs
