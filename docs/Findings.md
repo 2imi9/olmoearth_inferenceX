@@ -185,10 +185,16 @@ scenes, and a whitened target is 57% to 70% predictable from context (exp32 to e
 ## Limits
 
 The hand-labelled flood testbeds are one event and one split of the same dataset, and the suite is read through
-linear probes on Ai2's embeddings. A confidence ranking reviews the model's confident errors last. On Sen1Floods11,
-where eight encoders share 82% to 87% of their errors, a Dawid-Skene consensus, which estimates each encoder's
-accuracy from agreement alone, returns 0.975 to 0.983 for maps 0.883 to 0.914 accurate, and its rank correlation with
-the true accuracies misses the preregistered 0.8 on MADOS (0.71) (exp83).
+linear probes on Ai2's embeddings. A confidence ranking reviews the model's confident errors last.
+The ranking compares windows read from the same inputs, and a whole-map error rate can misstate the part read from
+other inputs: on PASTIS without the optical input, as under cloud, 59.8% of the errors look confident against 6.0%
+with it, and on a map with half its tiles read that way random samples estimate 46.9% on average against the cloudy
+half's 74.1%, so where a map records each pixel's input condition the package ranks, samples and certifies each
+condition on its own (exp88).
+<!-- claim:missing-optical-errors-are-confident --> <!-- claim:pooled-error-rate-misstates-the-cloudy-part -->
+On Sen1Floods11, where eight encoders share 82% to 87% of their errors, a Dawid-Skene consensus, which estimates each
+encoder's accuracy from agreement alone, returns 0.975 to 0.983 for maps 0.883 to 0.914 accurate, and its rank
+correlation with the true accuracies misses the preregistered 0.8 on MADOS (0.71) (exp83).
 <!-- claim:consensus-order-recovered-only-where-true-gaps-are-large -->
 Open items are in the [roadmap](plan/roadmap.md).
 

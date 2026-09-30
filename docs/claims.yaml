@@ -3982,6 +3982,8 @@
     )(A['exp/out/exp88_summary.json']['results'])
   cited_in:
     - {file: docs/results/comparisons.md, marker: missing-optical-errors-are-confident}
+    - {file: docs/TECHNIQUES.md, marker: missing-optical-errors-are-confident}
+    - {file: docs/Findings.md, marker: missing-optical-errors-are-confident}
   note: >-
     Ai2's S1-only embeddings are the encoder's reading of radar alone over the whole tile, the extreme of a cloud;
     real clouds are partial. Graded on Base at seed 0; the other seeds and Large are replication.
@@ -4006,6 +4008,7 @@
     )(A['exp/out/exp88_summary.json']['results']['olmoearth_base']['seeds']['0']['families'])
   cited_in:
     - {file: docs/results/comparisons.md, marker: missing-modality-confident-errors-follow-the-shift-not-the-sensor}
+    - {file: docs/TECHNIQUES.md, marker: missing-modality-confident-errors-follow-the-shift-not-the-sensor}
   note: >-
     China 6's P1 and P2 were preregistered as replication, Togo 12 as reported only (306 samples). China 6's
     unsuffixed task is Sentinel-2 alone (the embeddings' dataset card).
@@ -4025,6 +4028,7 @@
     )(A['exp/out/exp88_summary.json']['results']['olmoearth_base']['seeds']['0']['families'])
   cited_in:
     - {file: docs/results/comparisons.md, marker: margin-still-ranks-inside-the-cloudy-part}
+    - {file: docs/TECHNIQUES.md, marker: margin-still-ranks-inside-the-cloudy-part}
 
 - id: pooled-error-rate-misstates-the-cloudy-part
   statement: "On a PASTIS map with half its tiles read without the optical input, the cloudy part's error rate is 74.1% and the clear part's 19.7%. A random sample of 300 windows estimates 46.9% on average, 27 points below the cloudy part, and its interval covers the cloudy part's rate on none of 2,000 draws; split by condition, each part's interval covers its own rate on 95.6% and 95.7% of draws (exp88 P4). A 5% review set ordered by margin holds 4.3% of the cloudy part's errors and 18.3% of the clear part's, although the cloudy part carries 79% of all errors."
@@ -4044,6 +4048,8 @@
     )(A['exp/out/exp88_summary.json']['results']['olmoearth_base']['seeds']['0']['mixed_map'])
   cited_in:
     - {file: docs/results/comparisons.md, marker: pooled-error-rate-misstates-the-cloudy-part}
+    - {file: docs/TECHNIQUES.md, marker: pooled-error-rate-misstates-the-cloudy-part}
+    - {file: docs/Findings.md, marker: pooled-error-rate-misstates-the-cloudy-part}
   note: >-
     Each part's interval is the package's exact interval for a random sample, which covers at least 95% by
     construction; the finite-population Wilson interval exp78 graded covers 94.7% and 95.0%. On a half-cloudy map

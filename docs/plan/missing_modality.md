@@ -135,3 +135,5 @@ numbers, the mechanism and the limits are in
 [comparisons.md](../results/comparisons.md#when-a-modality-is-missing-does-the-confidence-fall-with-the-accuracy-exp88).
 The follow-up this page fixed for P2 holding, a review output and a design stratified by input condition, is not
 built yet.
+
+Built (appended 29 September 2026; nothing above changed): the follow-up is in the package, not yet released: `scope` in the outputs of `assess`, `estimate` and `certify`, and a condition layer (`--condition`) that ranks each condition on its own, splits the labels equally across the conditions, gives each its exact interval, and certifies each condition that holds enough labels with delta split over them.

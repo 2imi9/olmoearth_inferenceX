@@ -1,5 +1,64 @@
 # Changelog
 
+## Unreleased
+
+**Per input condition: review, sampling, estimation and certification for a map read from different inputs in
+different places (exp88).** On PASTIS without the optical input, as under cloud, 59.8% of the errors looked confident
+against 6.0% with it, and on a map with half its tiles read that way random samples of 300 estimated 46.9% on average
+against the cloudy part's 74.1%. The package now says what a whole-map result does not show, and takes a layer of
+each pixel's input condition (a cloud flag, the modalities present, a sensor id). Without a layer every number, CSV,
+sidecar and printed line is unchanged; the JSON outputs gain one `scope` note.
+
+- `assess --condition RASTER [--condition-names 0=clear 1=cloudy]` (`condition=`, `condition_names=` in
+  `assess_prediction` and `assess_classmap`). A window takes the condition held by most of its pixels that have a
+  prediction and a recorded condition; a tie, or no such pixel, makes it "unrecorded", never the lowest value
+  (`pool_condition`). The layer must be one integer band on the map's grid with at most 64 values; a negative value,
+  NaN or the raster's no-data records none. The whole-map review sets are unchanged. `conditions.per_condition`
+  gives each condition's share of the map, confidence quantiles, class shares (descriptive only), share of each
+  review set, and its own review sets: the whole map's order kept to that condition. New files: `condition.tif` and
+  `review_set_<b>pct_by_condition.csv`; the whole-map review-set CSVs gain a `condition` column at the end.
+- `sample --condition`: the new `condition` design, the default when a layer is given, splits the labels equally
+  across the conditions (`equal_allocation`, water-filling: a condition too small for an equal share is labelled in
+  full). It never reads the model's confidence, which overstates the accuracy of a condition with an input missing.
+  `--design random --condition` draws the same windows as without a layer and records the condition. The
+  confidence, proportional and tiles designs refuse a layer, with the reason. The condition is fixed at sampling
+  time: the sidecar records it and `estimate` and `certify` never read the raster again; a CSV whose `condition`
+  column was edited is refused.
+- `estimate` gives each condition's error rate with its exact hypergeometric interval, under the condition design
+  and under a random sample alike, beside the whole-map rate, and names the conditions whose interval excludes the
+  whole-map rate. Under the condition design the whole-map interval is the stratified Wilson interval of the
+  confidence design with the conditions as strata; its coverage with conditions as strata has not been graded, and
+  the output says so. `--per-class` runs under the condition design and says its intervals are not graded there.
+- `certify` on a sample that records a condition certifies a zone inside each condition that holds enough labels,
+  at delta divided by the number of such conditions, so that all the statements hold together at delta
+  (`certify_by_condition`). A condition with fewer labels is reported as not tested. No whole-map zone is issued; the
+  window mask is the union of the certified zones, and a stale mask is removed when nothing is certified. At alpha 5%
+  and delta 0.1 a condition needs 45, 59, 67, 72 or 77 labels with one to five conditions tested.
+- `pool_condition`, `equal_allocation` and `certify_by_condition` are exported. The existing designs, intervals and
+  `certify_zone`'s arguments are unchanged.
+- Tests by enumeration or known answer for each new formula: the allocation over every small case, the condition
+  design unbiased over every sample, each condition's interval exact, the delta split held over all 12,870 draws of
+  a two-condition case, one condition equal to the random design. Golden outputs of 1.3.1 pin the case without a
+  layer: every CSV, sidecar, raster, `explanation.json` and printed line is byte-identical, and the assessment,
+  estimate and zone JSON differ only by `scope`.
+
+**Outputs a script may parse that change in this release:**
+
+- `assessment.json` (and the dicts of `assess_prediction` and `assess_classmap`), the estimate JSON (and
+  `estimate_error_rate`'s result) and the zone JSON (and `certify_zone`'s result) gain `scope`, a note on what a
+  whole-map ranking, rate or zone does not show. With one input condition `assessment.json` has no `scope`; with two or
+  more it holds a second note. The estimate and zone results of a sample that records a condition carry
+  `condition_note` or `note` instead.
+- With `--condition` only: `assessment.json` gains `inputs.condition`, `inputs.condition_names` and `conditions`;
+  `assess` writes `condition.tif` and the `_by_condition` review sets, and its review-set CSVs gain `condition`;
+  `sample`'s CSV gains `condition` after `stratum` (`map_class` and `wrong` stay last) and its sidecar gains
+  `condition` and `condition_grid`; the estimate JSON gains `by_condition`, `per_condition`, `condition_note` and
+  `outside_condition_intervals`; the zone JSON gains `by_condition`, `delta_per_condition`, `n_conditions_tested`,
+  `certified_share_of_map`, `n_certified` and `per_condition`, and keeps `coverage`, `n_zone`, `threshold` and
+  `upper_bound` null, because the union of the zones is not the most confident share of the map.
+- `sample --design` defaults to none, which resolves to `condition` with `--condition` and to `confidence` without;
+  the design written to the sidecar is unchanged without a layer.
+
 ## 1.3.1 (2026-09-25)
 
 - Usage documents a binary score in [0, 1] decided at 0.5, such as an OlmoEarth Studio `per_pixel_regression` output
