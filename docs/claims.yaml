@@ -4209,3 +4209,35 @@
     The capture is exp70's tie-aware share of all errors inside the round(0.1 n) least confident units; the perfect
     order's is min(k, E) / E for that realised set (attainable_ceiling with n). A random 10% finds 0.10 in
     expectation.
+
+- id: shipped-tile-design-coverage
+  statement: "The tiles design as the package ships it (tiles in a random order until 300 labels are met, up to 16 per tile, and estimate_error_rate's ratio interval with a t quantile) covers the true error rate on 94.5% to 95.4% of 4,000 draws on five of exp78's seven segmentation tasks: the three PASTIS inputs, m-cashew-plant and m-SA-crop-type. It falls short on the other two, 84.3% on Sen1Floods11 and 68.5% on MADOS. Those are the two tasks where a tenth of the tiles hold most of the errors (56% and 91%, against 13% to 25% on the five). exp78's own tile design, exactly 18 tiles with a normal quantile, covered 91.3% to 93.6% on the five."
+  crosscheck: tests/test_recorded.py::test_exp78_shipped_tile_design_coverage_by_an_independent_implementation
+  status: measured
+  experiments: [exp78]
+  artifacts: [exp/out/exp78_shipped_tiles.json, exp/out/exp78_summary.json]
+  check: |-
+    (lambda T, R: (lambda five, cov, top:
+      len(T) == 7 and sorted(five + ['sen1floods11', 'mados']) == sorted(T)
+      and all(T[t]['shipped']['draws'] == 4000 and T[t]['shipped']['labels_min'] == T[t]['shipped']['labels_max'] == 300 for t in T)
+      and all(abs(T[t]['error_rate'] - R[t]['error_rate']) < 1e-12 for t in T)
+      and round(min(cov[t] for t in five), 3) == 0.945 and round(max(cov[t] for t in five), 3) == 0.954
+      and round(cov['sen1floods11'], 3) == 0.843 and round(cov['mados'], 3) == 0.685
+      and sorted(T, key=top.get)[-2:] == ['sen1floods11', 'mados']
+      and round(top['sen1floods11'], 2) == 0.56 and round(top['mados'], 2) == 0.91
+      and round(min(top[t] for t in five), 2) == 0.13 and round(max(top[t] for t in five), 2) == 0.25
+      and all(T[t]['exp78_recorded']['D4/E1_cluster'] == R[t]['budgets']['300']['D4/E1_cluster']['coverage'] for t in T)
+      and round(min(R[t]['budgets']['300']['D4/E1_cluster']['coverage'] for t in five), 3) == 0.913
+      and round(max(R[t]['budgets']['300']['D4/E1_cluster']['coverage'] for t in five), 3) == 0.936
+    )(['pastis_sentinel1', 'pastis_sentinel2', 'pastis_sentinel1_sentinel2', 'm_cashew_plant', 'm_sa_crop_type'],
+      {t: T[t]['shipped']['covered'] / T[t]['shipped']['draws'] for t in T},
+      {t: T[t]['tiles']['share_of_errors_in_top_tenth_of_tiles'] for t in T})
+    )(A['exp/out/exp78_shipped_tiles.json']['tasks'], A['exp/out/exp78_summary.json']['tasks'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: shipped-tile-design-coverage}
+  note: >-
+    Not preregistered: a check of the shipped code (package 1.3.1) on exp78's per-unit files, prompted by the red team
+    of 30 September 2026; draws use seeds 0 to 3,999, and the Monte Carlo standard error is about 0.0035 on the five
+    and 0.006 to 0.007 on the two. The shipped design used 19 or 20 tiles per draw on the five, 19 to 21 on Sen1Floods11
+    and 27 to 60 on MADOS; exp78's D4 used 300 // 16 = 18. Where the errors crowd into few tiles is a description of the two failing tasks, not a
+    tested cause; MADOS's tiles are also small (median 6 valid windows) and Sen1Floods11's are mostly full.

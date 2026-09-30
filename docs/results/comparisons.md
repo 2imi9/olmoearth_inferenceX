@@ -2313,6 +2313,8 @@ about 0.01, the two equal-tile tasks not at all, and none of P1 to P4 reads this
 changed is the sentence: correcting tile-sampled labels afterwards works on a map of equal tiles and does not on
 one whose tiles differ.
 
+<!-- claim:shipped-tile-design-coverage -->
+
 ## Which part of the map can be trusted, with a guarantee (exp80)
 
 Preregistered in [docs/plan/trust_zone.md](../plan/trust_zone.md); runs as `exp/exp80_trust_zone.py`; artifact

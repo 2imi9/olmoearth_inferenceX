@@ -1188,3 +1188,47 @@ def test_exp86_claim_rates_brief_level_fall_recomputes_from_the_per_brief_counts
     # the configuration-level numbers are the 27 September ones, unchanged by the brief-level additions
     assert [round(v, 4) for v in R[7]["material_per_sentence_bootstrap_by_configuration_95"]] == [0.0376, 0.1116]
     assert [round(v, 4) for v in F["by_configuration"]["round_7_minus_round_10_95"]] == [0.0181, 0.0919]
+
+
+def test_exp78_shipped_tile_design_coverage_by_an_independent_implementation():
+    """exp78_shipped_tiles.json by a second route: the shipped design written out here from its description (tiles
+    in a random order, up to 16 windows from each, until 300 labels; the ratio estimator weighted by each tile's valid
+    windows, its with-replacement between-tile variance and scipy's t quantile on tiles - 1 df), none of the package's
+    code, 800 fresh draws per task. Each coverage must sit within four Monte Carlo standard errors of the record, on
+    the two tasks where the record says the design falls short and on one where it holds."""
+    from scipy.stats import t as student_t
+    d = json.load(open(_need("exp78_shipped_tiles.json")))
+    assert d["config"]["budget"] == 300 and d["config"]["per_tile"] == 16
+    R, rng = 800, np.random.default_rng(20260930)
+    for task in ("mados", "sen1floods11", "pastis_sentinel2"):
+        z = np.load(_need(os.path.join("exp78_units", f"{task}.npz")))
+        n, h, w = (int(v) for v in z["grid"])
+        ok = np.unpackbits(z["ok_packed"])[:int(z["ok_len"][0])].astype(bool)
+        tile = np.repeat(np.arange(n), h * w)[ok]
+        err = z["err"].astype(np.float64)
+        theta = err.mean()
+        order = np.argsort(tile, kind="stable")
+        ids, starts, counts = np.unique(tile[order], return_index=True, return_counts=True)
+        members = [order[a:a + c] for a, c in zip(starts, counts)]
+        cover = 0
+        for _ in range(R):
+            sizes, means, total = [], [], 0
+            for j in rng.permutation(ids.size):
+                if total >= 300:
+                    break
+                take = min(16, counts[j], 300 - total)
+                pick = rng.choice(members[j], take, replace=False)
+                sizes.append(counts[j])
+                means.append(err[pick].mean())
+                total += take
+            sizes, means = np.array(sizes, float), np.array(means)
+            k = sizes.size
+            est = (sizes * means).sum() / sizes.sum()
+            var = ((sizes * (means - est)) ** 2).sum() / (k * (k - 1)) / sizes.mean() ** 2
+            half = student_t.ppf(0.975, k - 1) * np.sqrt(var)
+            cover += max(0.0, est - half) <= theta <= min(1.0, est + half)
+        rec = d["tasks"][task]["shipped"]
+        assert abs(d["tasks"][task]["error_rate"] - theta) < 1e-12
+        c = cover / R
+        se = np.sqrt(rec["coverage"] * (1 - rec["coverage"]) * (1 / R + 1 / rec["draws"]))
+        assert abs(c - rec["coverage"]) <= 4 * se, (task, c, rec["coverage"])
