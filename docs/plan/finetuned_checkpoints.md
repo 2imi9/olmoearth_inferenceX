@@ -1,18 +1,49 @@
 # Do the package's three outputs hold on Ai2's other fine-tuned models? (exp89 preregistration)
 
 **Status: DRAFT, not frozen.** Written 1 October 2026. The owner confirmed every threshold as proposed the same day,
-chose to run arm A (FT-AWF, graded on P2 and P3 only) and chose a torch MLP for K3 (no new dependency). No
-Mangrove or Nandi data has been downloaded, and no model has been run on them.
+chose to run arm A (FT-AWF, then graded on P2 and P3 only) and chose a torch MLP for K3 (no new dependency). Amended
+the same day by the owner's decision below: arms F and A are report-only, and arm M waits for Ai2's validation split.
+The Mangrove inventory ran on the cluster on 1 October; the AWF inventory failed there (see the amendment). No model
+has been run on a validation window.
 
 - **Allowed before freezing:**
   - the smoke tests on synthetic data;
-  - the inventory job: it lists the Mangrove tar and the checkpoint keys, and counts windows and labels per split. It runs no model on a validation window;
+  - the inventory job: it lists an arm's tar and the checkpoint keys, and counts windows and labels per split. It runs no model on a validation window;
   - the model smoke on training windows only. It is in-sample and never graded.
-- **Not allowed before freezing:** any prediction on a validation window. That includes the accuracy gate.
-- **Open before freezing** (found in the review of the run script, 1 October):
-  - Arm A's gate was not on this page. It is now proposed below, and the owner confirms or changes it.
-  - The inventory decides whether `mangrove.tar` holds imagery for the validation windows. Its size makes that unlikely. 62,433,280 bytes is 121,940 tar blocks, and one 2x2 window with 12 item groups takes about 60 to 200 blocks, so the tar can carry imagery for about 2,000 windows at most. If it does not hold the imagery, a fetch mode is written, and the gate uses its 1.0-point tolerance for refetched imagery.
+- **Not allowed before freezing:** any prediction on a validation window. That includes the accuracy gate and, for arms F and A, the alignment check. So arms F and A run once the page is frozen.
+- **Open before freezing:**
+  - The owner confirms arm A's alignment tolerance (2.0 points, below) and arm F's readings: its population, input, controls, clusters and α levels (marked "proposed" below).
+  - Arm F's inventory checks that the tar's validation windows match Ai2's: 109 windows with `split` "val", all eight image layers and the label completed, and a label among the ten classes. Ai2's matrix gives 44 agriculture, 30 burned, 18 none, 6 hurricane, 4 logging, 4 road and one each of landslide, mining and river (if its rows are the true class, not verified).
+  - Arm F's tar SHA-256 is recorded by its first download and then pinned in the run script beside its size and MD5.
+  - Arm M: when Ai2 shares its split, its reader and a fetch mode for its imagery are written and pinned here, as a dated amendment, before its gate runs. Its predictions and thresholds do not change.
   - The owner confirms the section "Readings fixed by the run script".
+
+## Amendment of 1 October 2026: arms F and A report-only, arm M waits
+
+The owner's decision. Ai2's public fine-tuned evaluation sets are too small to grade exp89 as written.
+
+- **Arm F (Forest Loss Driver, new) and arm A (FT-AWF) are report-only.**
+  - They run with the same measures, controls, clusters and studies as a graded arm. Every number and every interval is reported.
+  - No prediction is graded on them, and no pass or fail verdict is drawn. Arm A's grading on P2 and P3 is withdrawn.
+  - Why: arm F's validation set holds 109 windows and arm A's 344 points. At Ai2's accuracies (76.1% and 89.5%) that is about 26 and about 36 errors, below the error floor of 40. And N/5 is 21.8 and 68.8, below the smallest budget of 300 (a budget is graded only where B ≤ N/5 and N ≥ 1,500).
+  - What is reported, for each prediction, is the numbers it would read, with no threshold applied:
+    - P1: confidence's capture of the errors at 5%, 10% and 20%, beside random and the attainable ceiling;
+    - P2: the best informative control and its AUROC;
+    - P3: confidence minus that control at 5% and 10%, and in AURC, each with its cluster-bootstrap 95% interval (and the one-sided 5th percentile at 10%);
+    - P4: the estimate's coverage and median widths per design, where a budget fits (arm A at B = 300; arm F at neither budget);
+    - P5: the certificate's violation rate, median coverage and share certifying nothing, beside K3a's median coverage, where a budget fits; and c*(α) from all labels for both orders, on both arms.
+  - Measures 1 to 7 are reported in full.
+- **The accuracy gate stays for arms F and A as a reported alignment check, with its tolerance.**
+  - Arm F: within 2.0 points of Ai2's 76.1% (83 of 109 windows), accuracy per window, two-sided. The accuracy under each of rslearn's four flips is reported beside it (Ai2's validation flipped at random); only the unflipped accuracy is checked.
+  - Arm A: within 2.0 points of Ai2's 89.5%, accuracy per point, two-sided (exp21's replica was 1.4 points off).
+  - It keeps the gate's rules: run after freezing, logged to the ledger outside the checkout, at most three attempts in all, on the pinned checkpoint.
+  - A check outside the tolerance does not stop the run. The arm's numbers are then reported as "replica not aligned". The record and the run say "aligned" or "replica not aligned", never pass or fail.
+- **Arm M (Mangrove) keeps its graded predictions (P1 to P5) and waits for Ai2's validation split.**
+  - The public tar holds 100,000 points and 2,000 task areas, with no train/val split and no imagery (the inventory on the cluster, 1 October 2026).
+  - Ai2 was asked for the split in Slack on 1 October 2026. Arm M runs once the split is shared and pinned in the run script; until then every mode that scores a window reports it as not run.
+  - Its imagery will have to be fetched, so its gate uses the 1.0-point tolerance for refetched imagery.
+- **Arm N (Nandi) stays not run:** its checkpoint and dataset are not public.
+- **Arm A's data.** Arm A reads the pinned AWF tar (`allenai/olmoearth_projects_awf` at da8eb6aa, sha256 d0837f14...) that the job downloads and extracts under its scratch data directory. It no longer reads exp21's `data/awf`, whose files the 30-day scratch purge had partly removed, which is why the AWF inventory failed on 1 October. Every extraction keeps a manifest of its files. A file the purge removes later is found before any window is read, and the tar is extracted again.
 
 ## The question
 
@@ -47,12 +78,17 @@ Checked on 1 October 2026 with HF API calls only.
   - its split assigns 2x2 cells by hash, so it does not hold out space.
 
   exp89 does not test the boundary or tiling signals. It tests the model's confidence, the estimate and the certificate, and none of these needs spatial context. The hash split stays a limit (below). Mangrove does not meet the roadmap's need for "a second fine-tuned dense task with expert labels and a spatial split". Nandi would meet part of that need.
+- **Forest Loss Driver is public (added with the amendment).**
+  - Model `allenai/OlmoEarth-v1-FT-ForestLossDriver-Base` at 15502f8a; `model.ckpt` is 381,184,175 bytes, sha256 682c20b9.... Its training config is rslearn_projects `data/forest_loss_driver/20251104/config.yaml`, which that project's README ties to the Hub checkpoint.
+  - Dataset: one tar on Google Cloud Storage, `ai2-olmoearth-projects-public-data/projects/forest_loss_driver/20251029/dataset.tar`, 42,214,604,800 bytes, object generation 1761857427036506, MD5 6abc5b94... (an HTTP HEAD on 1 October 2026).
+  - Ai2's 76.1% is 83 of 109 validation windows, micro accuracy, read from its confusion matrix.
 
-exp89 has three arms:
+exp89 has four arms:
 
-- **Arm M, Mangrove.** Graded on P1 to P5.
+- **Arm M, Mangrove.** Graded on P1 to P5. Waits for Ai2's validation split (the amendment).
 - **Arm N, Nandi.** Frozen with this page under the same thresholds. It runs only if Ai2 publishes the checkpoint and the dataset; until then it is reported as not run. Its thresholds do not change after arm M's result.
-- **Arm A, FT-AWF (run: the owner's choice on 1 October).** exp21's confidence result has already been seen, so arm A is graded on P2 and P3 only. P2 asks whether the informative control is informative there, and P3 whether confidence beats it.
+- **Arm A, FT-AWF (run: the owner's choice on 1 October).** Report-only since the amendment. It had been graded on P2 and P3 only, because exp21's confidence result has already been seen.
+- **Arm F, Forest Loss Driver (added with the amendment).** Report-only.
 
 ## Design
 
@@ -72,13 +108,20 @@ exp89 has three arms:
     - tree points annotated in Studio.
   - Class indices (from `olmoearth_run.yaml`): 0 coffee, 1 grassland, 2 trees, 3 maize, 4 sugarcane, 5 tea, 6 vegetables, 7 legumes, 8 water, 9 builtup, and 10 nodata.
   - Split: 128-px (1.28 km) cells, 75/25.
-- **AWF (arm A).** exp21's 344 validation points, unchanged.
+- **AWF (arm A).** exp21's 344 validation points, read from the pinned tar (the amendment).
+- **Forest Loss Driver (arm F)** (proposed; the owner confirms):
+  - Population: the validation set as Ai2's training config reads it. Every window, in any group, whose option `split` is "val", whose eight image layers (`pre_sentinel2` and `.1` to `.3`, `post_sentinel2` and `.1` to `.3`) and label layer carry rslearn's completed marker, and whose label is one of the ten classes. Ai2's split script gives "val" only to the Brazil and Colombia phase 1 and 2 groups, by the first hex digit of the SHA-256 of the window's name (0 to 3).
+  - The option `olmoearth_evals_split` belongs to the OlmoEarth paper's evaluation, not to this checkpoint, and is never read.
+  - Unit: one window, one prediction.
+  - Labels: `new_label` of the first feature of `layers/label/data.geojson` that holds one of the ten classes, in the order agriculture, mining, airstrip, road, logging, burned, landslide, hurricane, river, none. This is rslearn's ClassificationTask with unknown categories skipped. A window with no such feature is dropped and counted. `label.json` and `old_label` are never read.
+  - Split: by a hash of the window's name within four groups, not by space, so a validation window can have training neighbours.
 
 ### Clusters (for the bootstrap only)
 
 - **Mangrove:** the 0.1° longitude/latitude cell. olmoearth_run partitions Mangrove requests on the same 0.1° grid. The 1° cell is reported. (confirmed)
 - **Nandi:** the 128-px split cell. If the windows record a polygon id, cells that share a source polygon are merged. The 0.05° cell is reported. (confirmed)
 - **AWF:** exp21's 30 annotation tasks.
+- **Forest Loss Driver:** the 1° cell of the window's centre (proposed). The window group cannot be the cluster: validation windows come from four groups only. The group is the stratum of the by-stratum report.
 
 The estimate and certify study draws from the finite validation set, so its coverage needs no clusters. The clusters matter only for the bootstrap of the ranking comparison.
 
@@ -100,6 +143,15 @@ The replica does not use rslearn, as in exp21. The checkpoint's encoder keys are
 - Head: the pooling decoder's amax over a 1x1 map (which does nothing), then `Linear(768, 4)`. The expected keys are `model.decoders.mangrove_classification.0.output_layer.{weight,bias}` (inferred, not verified).
 - Output: four logits per window.
 
+**Forest Loss Driver (arm F):**
+
+- Input: the eight layers in the config's order (four pre, then four post), 12 bands each in OlmoEarth's order, cropped by rslearn's centre Pad to 64 px (pixels 32 to 95 of a 128-px window) on the raw values, then normalised.
+- Encoder: rslearn's SimpleTimeSeries with 48 channels per image runs the encoder twice at patch size 4, once on the four pre layers and once on the four post layers. Each pass has timestamps day 1, months 0 to 3, year 2024, and is mean-pooled over timesteps and band sets. The two 768x16x16 maps are concatenated, pre then post.
+- Head: rslearn's PoolingDecoder, loaded strictly from `model.decoder.0`: a 3x3 convolution to 128 channels with ReLU, the maximum over the map, two linear layers of 512 with ReLU, and a linear layer to 10.
+- The encoder keys sit under `model.encoder.0.encoder.model.` (one level deeper if the wrapper kept the whole model). The strict load decides which.
+- Ai2's validation used random flips and bfloat16 autocast. The replica uses no flip and fp32. The alignment check reports the accuracy under each flip; S2 reports the bfloat16 difference on training windows.
+- Output: ten logits per window. All ten channels are trained.
+
 **Nandi:**
 
 - Input: the 16x16 crop of the 63x63 window that puts the label pixel at row 8, column 8 (exp21's rule with shift 0), at patch size 1. Ai2's validation used a random crop; ours is fixed.
@@ -109,7 +161,7 @@ The replica does not use rslearn, as in exp21. The checkpoint's encoder keys are
 ### Prediction and confidence
 
 - **Prediction:** the argmax over all output channels, as rslearn takes it. A window predicted as an untrained channel (Mangrove 0, Nandi 10) counts as an error. The count is reported; it is expected to be zero.
-- **Confidence, graded:** the top-1 softmax probability over the trained channels only (Mangrove 1 to 3, Nandi 0 to 9). It is the package's `form="top1"`, through `assess_prediction` at patch 1. The reason: exp76 found top-1 better than the margin on 14 of 16 multi-class tasks, and the package warns about the margin for multi-class logits. (confirmed)
+- **Confidence, graded:** the top-1 softmax probability over the trained channels only (Mangrove 1 to 3, Nandi 0 to 9; AWF 0 to 8 and arm F 0 to 9, reported). For arms F and A the same confidence is computed and reported, not graded. It is the package's `form="top1"`, through `assess_prediction` at patch 1. The reason: exp76 found top-1 better than the margin on 14 of 16 multi-class tasks, and the package warns about the margin for multi-class logits. (confirmed)
   - The package computes it from its logarithm, which has no ties, but returns the probability. That rounds to exactly 1.0 when the top trained logit leads the others by about 37 or more, so such windows tie.
   - The ranking measures are tie-aware. The certificate's order breaks the ties by window index, which is fixed before any label is seen, so the certificate stays valid.
   - The number of tied windows is reported (`n_p1_saturated`).
@@ -145,6 +197,11 @@ All controls are fixed here and computed from the same 12 mosaics. None is tuned
     - the temporal standard deviation of NDVI at the label pixel (exp21's control);
     - the 3x3 standard deviation of NDVI around the label pixel.
 - **K5, cloud and missing data.** The number of months that are empty or whose B02 reflectance exceeds 0.2. In the harmonised L2A digital numbers the tar stores, that is 2,000. (confirmed with the other thresholds; the draft's marker was left unchanged by mistake)
+- **Arm F's K3, K4 and K5** (proposed; arm F has eight timesteps, not twelve months, and a loss to read):
+  - K3's features (128 per window) come from the 64-px crop the model sees. For each stack (pre and post): the per-pixel median over its non-empty timesteps, as 12 bands plus NDVI (B08, B04) and NBR (B08, B12); their spatial mean and standard deviation over the crop and their mean over the centre 16 px. Then post minus pre of those, then each stack's count of empty timesteps. The MLP and its settings are K3's above; it is fitted on every training window that passes the population's layer rule.
+  - K4: minus the NDVI drop and minus the NBR drop from the pre to the post composite at the centre 16 px. A small or negative drop is a weak loss signal, so it is suspect.
+  - K5: the number of the eight timesteps that are empty or whose centre mean B02 exceeds 2,000.
+  - K2 is the record's class rarity, from the training windows' labels.
 
 **The best informative control** is whichever of K2 to K5 has the lowest AURC on the validation set. Choosing it on the graded data favours the control, so the comparison is conservative for the package.
 
@@ -178,7 +235,7 @@ The validation labels are the truth for the whole population of N windows, and �
   - Per cell: the coverage of the 95% interval, the median width, the bias and the RMSE.
 - **Certify:**
   - Call: `certify_zone(confidence, indices, wrong, alpha, delta=0.10, rule="prefix")` on the random design's draws. The Bonferroni rule is reported beside it.
-  - α levels: Mangrove 0.02 (graded) and 0.01 (reported); Nandi 0.05 (graded) and 0.10 (reported). (confirmed)
+  - α levels: Mangrove 0.02 (graded) and 0.01 (reported); Nandi 0.05 (graded) and 0.10 (reported). (confirmed) AWF 0.05 and 0.10, and arm F 0.10 and 0.15, all reported (proposed; Ai2's error rates are 10.5% and 23.9%). At 109 windows arm F fits neither budget, so only its c*(α) is reported.
   - Each graded α is below Ai2's reported error rate (2.4% and 12.7%). So the whole map cannot be certified, and only the order can help.
   - At δ = 0.10 a zone needs at least 114 labels at α = 0.02, 230 at 0.01, 45 at 0.05 and 22 at 0.10. So at B = 300, α = 0.01 cannot certify any zone smaller than 80% of the map.
   - Per cell:
@@ -202,14 +259,16 @@ The validation labels are the truth for the whole population of N windows, and �
 - **S2, model smoke.** Runs before freezing, on training windows only.
   - The checkpoint loads strictly, every key is listed, and the head has the expected shape.
   - One batch at patch size 2 (Mangrove) or 1 (Nandi) gives the expected output shape.
-  - Accuracy on 512 training windows, drawn with seed 89, is at least 0.95 for Mangrove. This is in-sample and only checks the loading.
+  - Accuracy on 512 training windows, drawn with seed 89, is at least 0.95 for Mangrove. This is in-sample and only checks the loading. For arms F and A it is reported with no bar.
+  - Arm F: the logits under bfloat16 autocast beside fp32, as their largest difference and the number of predictions that change.
   - The untrained channel is never the argmax.
   - The largest logit difference between the two timestamp conventions is reported.
 - **G, the alignment gate.** Runs after freezing, and reads accuracy only.
   - The gate job reads the validation windows and computes the predictions. It writes only the window count, the error count and the accuracy. It writes no confidence and no control.
   - **Mangrove passes** when our recomputed pixel-level micro accuracy is within 0.5 points of Ai2's 97.6% if the imagery came from the tar. If the imagery had to be fetched again, the tolerance is 1.0 point. (confirmed)
   - **Nandi passes** within 2.0 points of Ai2's 87.3%. exp21's AWF replica was 1.4 points from Ai2's figure. (confirmed)
-  - **AWF (arm A) passes** within 2.0 points of Ai2's 89.5%, as Nandi does, on the accuracy per window. exp21's replica was 1.4 points off. (proposed after the owner's review; the owner confirms it before freezing)
+  - **AWF (arm A) passes** within 2.0 points of Ai2's 89.5%, as Nandi does, on the accuracy per window. exp21's replica was 1.4 points off. (proposed after the owner's review; the owner confirms it before freezing) Since the amendment this is arm A's alignment check: it is reported, and outside the tolerance the arm's numbers read "replica not aligned".
+  - **Arm F's alignment check** is within 2.0 points of Ai2's 76.1%, on the accuracy per window, reported in the same way, with the accuracy under each flip beside it.
   - The gate is two-sided: a replica far above Ai2's figure is as suspect as one below it.
   - A failed gate may be retried after a fix to the replica. There are at most three attempts in all: the first and two retries.
   - Each attempt is logged with its commit, the page's status and the checkpoint's sha256. It goes to a ledger kept outside the git checkout before it goes to the gate file, so a reset of the checkout cannot lower the count. The run accepts a pass only if the ledger holds it, it was made on the frozen page, and it scored the pinned checkpoint.
@@ -228,7 +287,7 @@ The validation labels are the truth for the whole population of N windows, and �
 4. Selective accuracy at 50%, 80%, 90% and 100% coverage, and the ECE over 10 bins of the top-1 probability.
 5. The estimate study (above), per design and budget.
 6. The certify study (above), per α and budget, for confidence and for K3a.
-7. Reported by stratum, not graded: Mangrove by label class, and Nandi by label source.
+7. Reported by stratum, not graded: Mangrove and AWF by label class, Nandi by label source, and arm F by window group.
 
 ## Predictions
 
@@ -248,7 +307,7 @@ All predictions are one-sided. Each is graded per arm, never pooled.
   - the violation rate is at most 0.12, which is δ = 0.10 plus three Monte Carlo standard errors at R = 2,000;
   - the median certified coverage is at least 0.50 on Mangrove and at least 0.30 on Nandi (confirmed);
   - it exceeds the median coverage certified with K3a's order by at least 0.10 (confirmed).
-- **Arm A, if run:** graded on P2 and P3 only, with the thresholds above.
+- **Arms F and A:** no prediction is graded (the amendment). The numbers each prediction reads are reported with their intervals.
 
 ## Readings fixed before freezing
 
@@ -269,7 +328,7 @@ All predictions are one-sided. Each is graded per arm, never pooled.
 - **The best informative control.** The candidates are K2, K3a, K3b, each K4 index and K5, each counted as one candidate.
 - **P3's bound.** The one-sided 95% lower bound is the 5th percentile of the cluster bootstrap of the capture difference at 10%.
 - **Draws and the certificate.**
-  - `SeedSequence([89, arm, design, B]).generate_state(R)` gives one seed per draw. The arm is Mangrove 0, Nandi 1 or AWF 2; the design is random 0 or confidence 1.
+  - `SeedSequence([89, arm, design, B]).generate_state(R)` gives one seed per draw. The arm is Mangrove 0, Nandi 1, AWF 2 or Forest Loss Driver 3; the design is random 0 or confidence 1.
   - The certificate reuses the random design's draws.
   - A violation is a certified zone whose true error rate exceeds α. A draw that certifies nothing, or that the review-set guard refuses, has coverage 0 and no violation. Refusals are counted.
   - c*(α) is the largest grid coverage whose zone, in that order, has a true error rate of at most α.
@@ -284,6 +343,9 @@ All predictions are one-sided. Each is graded per arm, never pooled.
   - A window with fewer than 12 completed item groups is run with its own number of timesteps, batched by that number. This is what rslearn's masked pooling over missing timesteps reduces to.
 - **The smoke** certifies on 300 of the 2,000 draws and bootstraps 300 resamples, so it finishes in about a minute. The run uses 2,000 everywhere.
 - **Nandi's windows.** The polygon id is looked for under the option keys `polygon_id`, `source_polygon`, `polygon` and `source_id`, a guess until the windows are seen. The label source is read from the option key `source`.
+- **The report-only arms' record.** The gate's record for arms F and A holds `aligned` where a graded arm holds `pass`, and `alignment` reads "aligned" or "replica not aligned". The run needs a recorded check, made on the frozen page and the pinned checkpoint and held by the ledger, but not an aligned one. The summary holds the reported numbers under `reported`, with no threshold and no verdict, and the arm's `alignment`.
+- **Arm F's data.** The job downloads the tar at its pinned object generation with a resumable curl. The script checks its size and MD5 against the pin, records its SHA-256, and streams it once, writing only the eight image layers, the label layer, each window's own files and the dataset's config. Every other layer (Landsat, Sentinel-1, Sentinel-2 groups `.4` and `.5`, the masks) is counted and skipped. Groups are not filtered, because the split is read per window.
+- **Arm F's training windows** are every window with `split` "train" that passes the population's layer rule; K2's frequencies and K3's fit read them.
 
 ## What follows, whatever the outcome
 
@@ -296,6 +358,7 @@ All predictions are one-sided. Each is graded per arm, never pooled.
 - **P4's width fails:** the confidence design gives no narrower interval on this map. The default stays, and the docs give the measured range.
 - **P5's validity fails:** an implementation defect, which is fixed and regraded.
 - **P5's usefulness fails:** at 1,000 labels, certification returns little on this map. The docs state what it costs.
+- **Arms F and A, whatever their numbers:** no claim is made from them. They are recorded as report-only, beside their alignment ("aligned" or "replica not aligned"), and the docs may cite them only as such.
 
 ## Limits stated in advance
 
@@ -310,6 +373,7 @@ All predictions are one-sided. Each is graded per arm, never pooled.
 - **One checkpoint per task,** chosen by Ai2 on this same validation set. Its reported accuracy is optimistic, and its errors are those of a selected checkpoint.
 - **Ai2's own validation split is the population.** It is not a random sample of any map, so the estimate and certify results are statements about these points only.
 - **Mangrove has no spatial context.** The boundary and tiling signals are not tested. The roadmap's reasons for declining Mangrove still hold for those questions.
+- **Arm F's validation set is small and was used to choose the checkpoint.** Its 109 windows come from four groups in Brazil and Colombia; Peru is never validated. The training config kept the best validation accuracy, and Ai2's figure was measured with random flips.
 - **The replica is ours, not rslearn's.** The gate bounds the difference in accuracy, not in which windows are wrong.
 - **Package functions, not the command line.** Points are not a raster map. exp89 therefore calls `assess_prediction`, `sample_for_estimation`, `estimate_error_rate` and `certify_zone` directly. It does not run the `assess`, `sample`, `estimate` or `certify` commands end to end.
 - **No correction for multiple predictions.** Each prediction is graded on its own and reported as such.
