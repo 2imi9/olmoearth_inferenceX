@@ -2284,13 +2284,13 @@ variance formula that treats a stratified sample as simple — and under this de
 construction, so it found none. <!-- claim:design-based-interval-is-honest -->
 
 **The interval a reviewer would actually compute is badly wrong, and this is the practical finding.** Spend the
-same 300-label budget the way a person would — open 18 scenes (300 // 16) and label 16 windows in each — then apply the ordinary
-formula to those labels as though they were independent, and the nominal-95% interval covers on 0.506 to 0.777
+same 300-label budget the way a person would: open 18 scenes (300 // 16), label 16 windows in each, then apply the
+ordinary formula to those labels as though they were independent, and the nominal-95% interval covers on 0.506 to 0.777
 of draws on six of the seven tasks, with a median design effect of 2.94 (P2, holds on 6 of 7). An interval that
 claims 95% and delivers 51% is not conservative or approximate; it is wrong in the direction that makes a map
 look better established than it is. Errors sit next to each other, so the windows of 18 scenes carry nowhere
-near as much information as as many independent windows. Three honest qualifications. **Correcting for the clustering helps only where
-the tiles are of equal size.** The cluster-corrected interval restores coverage to 0.913–0.932 on the four tasks
+near as much information as as many independent windows. Three honest qualifications. **Correcting for the
+clustering helps only where the tiles are of equal size.** The cluster-corrected interval restores coverage to 0.913–0.932 on the four tasks
 whose tiles are full (the three PASTIS variants and m-SA-crop-type), only to 0.824 on Sen1Floods11, and on MADOS
 not at all: 0.598. MADOS's tiles hold 1 to 400 valid windows, so 18 of them are too few and too unequal for any
 between-tile variance to be estimated well, and on MADOS the naive estimate is itself biased upward, because a
