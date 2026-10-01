@@ -75,7 +75,10 @@ CONDITION_WHOLE_MAP = ("Each condition's own interval is exact. The whole-map in
                        "interval at 1 - 0.05/L, where L is the number of conditions not labelled in full, and weights it "
                        "by the condition's share of the map. At that level the L intervals hold together at least 95% of "
                        "the time, so the whole-map interval covers at least 95% by construction. It is wider than a "
-                       "stratified interval would be; that is the price of the guarantee.")
+                       "stratified interval would be. When the conditions' error rates are close, it is also wider than "
+                       "the exact interval of a random sample of the same size. What the design buys is each condition's "
+                       "own rate: a small condition gets as many labels as a large one, or all its windows. If only the "
+                       "whole-map rate is needed, --design random can give a narrower interval.")
 PER_CLASS_NOT_GRADED = ("The per-class intervals take the input conditions as strata. With conditions as strata, their "
                         "coverage has not been graded; each condition's error-rate interval is exact.")
 FAMILY_NOTE = ("Certified per input condition. Each of the {L} conditions with at least {b1} labels is tested at delta "
@@ -788,8 +791,10 @@ def estimate_error_rate(sample, wrong):
     condition design the whole-map estimate is the stratified one, sum_c W_c k_c / n_c. Its interval weights each
     condition's exact interval at 1 - 0.05 / L by the condition's share, where L is the number of conditions not
     labelled in full (`conditions_in_interval`), and so covers at least 95% by construction; it is wider than a
-    stratified interval would be. `design_variance` is the stratified estimate's unbiased variance, for information;
-    the interval does not use it. `condition_note` says what each interval is.
+    stratified interval would be and, when the conditions' error rates are close, wider than a random sample's
+    exact interval of the same size; it can be narrower when they are far apart (tests/test_estimate_exact.py,
+    expected widths computed exactly). `design_variance` is the stratified estimate's unbiased variance, for
+    information; the interval does not use it. `condition_note` says what each interval is.
     """
     wrong = np.asarray(wrong, dtype=np.float64).ravel()
     idx = np.asarray(sample["indices"], int)

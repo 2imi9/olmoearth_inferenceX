@@ -651,3 +651,44 @@ def test_the_whole_map_interval_covers_when_a_large_condition_looks_clean(K0, K1
     enumeration of every pair of error counts."""
     cover, before = _whole_map_coverage(4000, 200, K0, K1, 300)
     assert round(before, 3) == stratified and cover >= 0.95
+
+
+def _expected_width(N_, K, n, conf):
+    """The mean width of hypergeom_interval(k, n, N_, conf) over every sample of n from N_ windows holding K errors,
+    each count weighted by its hypergeometric probability: exact up to float rounding."""
+    ks = range(max(0, n - (N_ - K)), min(n, K) + 1)
+    pmf = [math.comb(K, k) * math.comb(N_ - K, n - k) / math.comb(N_, n) for k in ks]
+    assert abs(sum(pmf) - 1) < 1e-12
+    return sum(p * (lambda iv: iv[1] - iv[0])(est.hypergeom_interval(k, n, N_, conf=conf)) for p, k in zip(pmf, ks))
+
+
+@pytest.mark.parametrize("sizes,rates,wider", [
+    ((1500, 1500), (0.20, 0.22), True), ((2700, 300), (0.20, 0.22), True),     # close rates, equal and 90/10 shares
+    ((1500, 1500), (0.20, 0.74), True),                                        # far apart, and still wider
+    ((1500, 1500), (0.02, 0.95), False), ((2700, 300), (0.02, 0.95), False)])  # very far apart: narrower
+def test_the_condition_designs_whole_map_interval_against_a_random_samples(sizes, rates, wider):
+    """What CONDITION_WHOLE_MAP says beside its guarantee: when the conditions' error rates are close, the condition
+    design's whole-map interval is wider than the exact interval of a random sample of the same 300 labels, so a
+    user who needs only the whole-map rate can do better with --design random. It is not wider everywhere: with
+    rates of 2% and 95% it is narrower. The mean width of each design's interval over every sample is computed
+    exactly. The condition design's interval is the weighted sum of each condition's exact interval at 1 - 0.05 / L,
+    so its mean width is the weighted sum of their mean widths; that sum is checked against estimate_error_rate's own
+    interval at three pairs of counts."""
+    N_, Ks = sum(sizes), [round(r * s) for r, s in zip(rates, sizes)]
+    cond, err = _two_conditions(*sizes, *Ks)
+    base = _condition_sample(300, condition=cond)
+    n = base["allocation"]
+    assert n == [150, 150]
+    conf = 1 - 0.05 / 2
+    for k in ((0, 0), (Ks[0] * 150 // sizes[0], Ks[1] * 150 // sizes[1]), (150, 150)):
+        wrong = np.r_[np.arange(150) < k[0], np.arange(150) < k[1]].astype(float)
+        order = np.r_[np.flatnonzero(cond[base["indices"]] == 0), np.flatnonzero(cond[base["indices"]] == 1)]
+        r = est.estimate_error_rate(dict(base, indices=base["indices"][order]), wrong)
+        by_hand = sum(Nc / N_ * (lambda iv: iv[1] - iv[0])(est.hypergeom_interval(kc, 150, Nc, conf=conf))
+                      for kc, Nc in zip(k, sizes))
+        assert abs((r["high"] - r["low"]) - by_hand) < 1e-12, k
+    condition = sum(Nc / N_ * _expected_width(Nc, Kc, 150, conf) for Nc, Kc in zip(sizes, Ks))
+    random = _expected_width(N_, sum(Ks), 300, 0.95)
+    assert (condition > random) == wider, (condition, random)
+    assert "When the conditions' error rates are close, it is also wider than the exact interval of a random sample" \
+        in est.CONDITION_WHOLE_MAP and "--design random can give a narrower interval" in est.CONDITION_WHOLE_MAP
