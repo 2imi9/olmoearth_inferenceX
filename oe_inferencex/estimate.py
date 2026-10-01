@@ -523,9 +523,10 @@ def sample_for_estimation(margin, budget, design="confidence", p1=None, tiles=No
     budget  : number of windows to label
     design  : "confidence" (default) stratifies by margin quintile and allocates by Neyman's rule from the model's
               own top-1 probability `p1`, which it needs; "proportional" stratifies and allocates by size;
-              "random" is a simple random sample; "tiles" labels `per_tile` windows in each of budget // per_tile
-              tiles drawn at random, which needs `tiles`, the tile id of every window; "condition" stratifies by
-              input condition and splits the labels equally (`equal_allocation`), which needs `condition`
+              "random" is a simple random sample; "tiles" takes tiles in a random order and labels up to
+              `per_tile` windows of each until the budget is met, which needs `tiles`, the tile id of every window;
+              "condition" stratifies by input condition and splits the labels equally (`equal_allocation`), which
+              needs `condition`
     valid   : optional mask of windows that exist; invalid windows are never sampled and never counted
     condition : optional input condition of every window (assess's `arrays["condition"]`, flattened), an integer,
               negative where none is recorded. The "condition" design draws within it; "random" records it and
