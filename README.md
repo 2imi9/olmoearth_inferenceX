@@ -122,8 +122,8 @@ prefix rule: fixed-sequence testing, valid on any map whatever the shape of its 
 wrote to_label_zone.json and the window mask to_label_zone.npy
 ```
 
-In these lines `confidence margin` is the window's confidence, and `prefix rule` is the default
-test. `certify` can return nothing: with `--alpha 0.01` the same labels gave `no zone certified`.
+In these lines `confidence margin` is the window's confidence (for this probability map, the
+window mean of the top class probability), and `prefix rule` is the default test. `certify` can return nothing: with `--alpha 0.01` the same labels gave `no zone certified`.
 It needs a sample drawn with `--design random`. Without that option `sample` stratifies by
 confidence, which `estimate` reads and `certify` refuses.
 

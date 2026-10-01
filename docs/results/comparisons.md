@@ -1995,6 +1995,15 @@ not a tuning of this one. The largest task, m_sa_crop_type at 4,096,000 windows,
 is the one that made the first run of this experiment die of memory and taught it
 to checkpoint each task as it finishes.
 
+**Added 30 September 2026: on segmentation the ensemble's reading is near random.**
+On the window path the ensemble yields no bag margin, so its primary reading there
+is vote disagreement, and that reading's AUROC for errors runs from 0.505 to 0.537
+on the seven segmentation tasks; it loses to the better no-model control on all
+seven. The +0.1336 above is therefore a lead over a near-random reading. Against
+the ensemble's other window reading, the spread of the five seeds' margins, the
+margin still wins on 7 of 7, by a median 0.018.
+<!-- claim:exp73-segmentation-ensemble-vote-is-near-random -->
+
 Outputs: `exp/out/exp73_summary.json`, `exp73_tasks.csv`.
 
 ## The suite under the other encoders (exp74)

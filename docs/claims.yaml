@@ -2662,6 +2662,30 @@
     - {file: docs/results/comparisons.md, marker: suite-alternatives-clear-the-control-and-still-lose}
     - {file: docs/TECHNIQUES.md, marker: suite-alternatives-clear-the-control-and-still-lose}
 
+- id: exp73-segmentation-ensemble-vote-is-near-random
+  statement: "On exp73's seven segmentation tasks the ensemble's primary reading, the vote disagreement of five probe seeds, is near random: its AUROC for errors runs from 0.505 to 0.537 and it loses to the better no-model control on all seven. So the margin's median lead of 0.134 over the ensemble on segmentation is a lead over a near-random reading. Against the ensemble's other window reading, the spread of the five seeds' margins, the margin still wins on 7 of 7, by a median 0.018 of excess AURC."
+  status: measured
+  experiments: [exp73]
+  artifacts: [exp/out/exp73_summary.json]
+  check: |-
+    (lambda T: (lambda seg:
+      len(seg) == 7 and all(T[t]['ensemble_primary'] == 'ens_vote_dis' for t in seg)
+      and round(min(T[t]['signals']['ens_vote_dis']['auroc'] for t in seg), 3) == 0.505
+      and round(max(T[t]['signals']['ens_vote_dis']['auroc'] for t in seg), 3) == 0.537
+      and all(T[t]['signals']['ens_vote_dis']['excess_aurc'] > min(T[t]['signals'][c]['excess_aurc'] for c in ('ctl_embedding_distance', 'ctl_class_rarity')) for t in seg)
+      and round(median([T[t]['signals']['ens_vote_dis']['excess_aurc'] - T[t]['signals']['margin']['excess_aurc'] for t in seg]), 3) == 0.134
+      and all(T[t]['signals']['margin']['excess_aurc'] < T[t]['signals']['ens_margin_std']['excess_aurc'] for t in seg)
+      and round(median([T[t]['signals']['ens_margin_std']['excess_aurc'] - T[t]['signals']['margin']['excess_aurc'] for t in seg]), 3) == 0.018
+    )([t for t in T if T[t]['family'] == 'segmentation'])
+    )(A['exp/out/exp73_summary.json']['results']['tasks'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp73-segmentation-ensemble-vote-is-near-random}
+    - {file: docs/Findings.md, marker: exp73-segmentation-ensemble-vote-is-near-random}
+  note: >-
+    Read from the committed summary after the red team of 30 September 2026. On the window path the probe ensemble
+    yields no bag margin, so exp73 graded vote disagreement as the ensemble's primary reading there and recorded the
+    spread of margins beside it.
+
 - id: suite-holds-under-every-encoder
   statement: "exp70's protocol on the fifteen other encoders Ai2 published the suite for (AnySat, Clay large, Panopticon, OlmoEarth tiny, nano and large, Galileo tiny, nano and base, CROMA base and large, TerraMind base and large, Satlas base, Copernicus-FM), each with Ai2's own per-model probe settings: across 332 scored (encoder, task) pairs and 92,019,785 graded units the margin beats the best no-model control on 322, every encoder on at least 90.5% of its scored tasks with a one-sided sign test p of at most 1.1e-04 (preregistered P1, bar 75% and p < 0.05, holds for all fifteen), eight encoders undefeated; the ten losses are CropHarvest Togo in its three modality variants (seven) and Nandi Sentinel-1 (three); the 28 (encoder, task) pairs an encoder does not carry are recorded as absent, never as losses, and are files that do not exist on the Hub."
   status: supported

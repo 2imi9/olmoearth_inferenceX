@@ -67,6 +67,9 @@ Over the other fifteen encoders and ten seeds, every loss is on the three 306-sa
 Sentinel-1, where the probe is at most 0.40 accurate (exp84). <!-- claim:exp84-losses-are-small-or-badly-fitted-tasks -->
 It also beats a five-seed probe ensemble on 22 of 24 tasks and nearest-neighbour and Mahalanobis distances on 24 of
 24 (exp73). <!-- claim:suite-margin-beats-the-strong-alternatives -->
+On the seven segmentation tasks the ensemble's primary reading, vote disagreement, is near random (AUROC 0.505 to
+0.537); against the spread of the five seeds' margins the margin wins 7 of 7 by a median 0.018 (exp73).
+<!-- claim:exp73-segmentation-ensemble-vote-is-near-random -->
 One minus the top probability ranks slightly better than the margin on 14 of 16 multi-class tasks; on the 8 binary
 tasks the two give one ranking (exp76). <!-- claim:top1-beats-the-margin-on-multiclass -->
 
