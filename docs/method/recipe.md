@@ -42,8 +42,9 @@ of the map was read from such an input combination, such as radar alone under
 cloud for a model trained on radar plus optical, the model can be confidently
 wrong there. On PASTIS such a probe of OlmoEarth Base was 73.6% wrong, and
 59.8% of its errors looked confident against 6.0% with both inputs; a probe
-trained on radar alone was 28.4% wrong, and 3.9% of its errors looked
-confident. OlmoEarth Large's share rose only from 5.7% to 12.8-13.8% (exp88).
+trained on radar alone was 28.4% wrong and ranked its errors with an AUROC of
+0.79, against 0.83 with both inputs, and 3.9% of its errors reached the same
+threshold, which is set by the probe trained on both. OlmoEarth Large's share rose only from 5.7% to 12.8-13.8% (exp88).
 Even with a model trained on each input, the error rate can differ between
 input conditions. If the map records each pixel's input condition, pass it as
 `--condition`, and each condition is ranked, sampled and certified on its own.

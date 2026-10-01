@@ -23,15 +23,17 @@ Three things a user needs, and one they must be stopped from doing.
   hypergeometric interval for a random sample, the weighted sum of each condition's exact interval under the
   condition design, a stratified interval under the confidence and proportional designs, and for tile-sampled
   labels a ratio estimator with its ultimate-cluster interval, beside the naive one so the difference is visible.
-  That last is the weakest of the three and says so: it covered 0.60 of the time on MADOS, whose tiles differ in
-  size by a factor of 400. Labelling 19 tiles of
-  16 windows and using the ordinary formula gave a "95%" interval that covered on 0.51 to 0.78 of draws; that is
-  exp78's practical finding and the reason this function will not compute the naive interval alone.
-- `estimate_from_indices` is for windows labelled without a design. It treats them as a random sample and first
-  checks that they could be one: the mean suspicion percentile of a random sample is 0.5, of the tool's own
-  review set about 0.97, and labelling the review set then dividing gives two to six times the true rate on every
-  task of exp78's export. A sample more than four standard deviations above a random one is refused with the
-  number rather than estimated.
+  That last is the weakest of the three and says so: as shipped, it covered 94.5% to 95.4% of the time on five of
+  exp78's tasks, 84.3% on Sen1Floods11 and 68.5% on MADOS, the two where a tenth of the tiles hold most of the errors
+  (exp/out/exp78_shipped_tiles.json). Labelling 18 tiles of 16 windows and using the ordinary formula gave a "95%"
+  interval that covered on 0.51 to 0.78 of draws; that is exp78's practical finding and the reason this function
+  will not compute the naive interval alone.
+- `estimate_from_indices` is for windows labelled without a design. It treats them as a random sample after
+  checking only that they do not look like a review list: the mean suspicion percentile of a random sample is 0.5,
+  of the tool's own review set about 0.97, and labelling the review set then dividing gives two to six times the
+  true rate on every task of exp78's export. A sample more than four standard deviations above a random one is
+  refused with the number rather than estimated. The check does not make the labels a random sample: labels from
+  the confident end of the map, or clustered by tile, pass it, and the interval is then not valid.
 
 Every function is numpy only. The estimators are the ones exp78 ran; that script imports them from here.
 """
@@ -44,11 +46,15 @@ M_PER_TILE = 16
 REVIEW_SET_SIGMAS = 4.0           # a sample whose mean suspicion percentile sits this many SDs above 0.5 is refused
 Q_FLOOR = 0.02                    # the confidence design assumes no stratum is better than 98% right until labelled
 MIN_TILES = 5                     # fewer tiles than this and a between-tile standard error is not an estimate
+# The coverage this warning quotes for "this interval" is the shipped design's (exp/exp78_shipped_tiles.py, artifact
+# exp/out/exp78_shipped_tiles.json); 1.3.1 quoted exp78's own design of exactly 18 tiles and a normal quantile.
+# tests/test_estimate.py reads the numbers back from the artifact.
 TILES_WARNING = ("labels taken tile by tile are not independent, and a map whose tiles differ in size is labelled "
-                 "unevenly; the naive interval beside this one is what the ordinary formula says, and on exp78's "
-                 "tasks it covered 51 to 78% of the time while claiming 95%. This interval is better and still not "
-                 "honest everywhere: on exp78's tasks it covered 0.91 to 0.94 where tiles were of equal size, 0.82 on "
-                 "Sen1Floods11 and 0.60 on MADOS, whose tiles hold 1 to 400 windows. Prefer the confidence design")
+                 "unevenly; the naive interval beside this one is what the ordinary formula says, and in exp78, with "
+                 "18 tiles of 16 windows, it covered 51 to 78% of the time on six of seven tasks while claiming 95%. "
+                 "This interval is better and still not honest everywhere: graded on exp78's tasks it covered 94.5 to "
+                 "95.4% of the time on five, 84.3% on Sen1Floods11 and 68.5% on MADOS, where a tenth of the tiles hold "
+                 "most of the errors. Prefer the confidence design")
 # What a whole-map number does not say when part of the map was read from other inputs (exp88). The first two
 # travel in the outputs of estimate_error_rate and certify_zone when no input condition is recorded; the others go
 # with the per-condition results. The numbers are exp88's (exp/out/exp88_summary.json) and its matched-head
@@ -937,9 +943,10 @@ def review_set_threshold(n, N=None):
 
 
 def review_set_check(indices, margin, valid=None):
-    """Could these windows be a random sample of the map? The MEAN suspicion percentile of the sample, against
-    review_set_threshold: 0.5 for a random draw, near 1 for the tool's own review set, which is built to be enriched
-    for errors. The median is reported beside it and decides nothing. A census (every valid window, once) is never
+    """Do these windows look like a review list rather than a random sample of the map? The MEAN suspicion
+    percentile of the sample, against review_set_threshold: 0.5 for a random draw, near 1 for the tool's own review
+    set, which is built to be enriched for errors. Passing does not make the windows a random sample: labels from the
+    confident end of the map, or clustered by tile, pass. The median is reported beside it and decides nothing. A census (every valid window, once) is never
     an enriched set: at a census the threshold is exactly 0.5 and the mean is 0.5 up to rounding, and until the
     release check of 24 September a sum that rounded up refused 2 to 5% of censuses as review sets."""
     margin = np.asarray(margin, dtype=np.float64).ravel()
@@ -976,9 +983,10 @@ def review_set_check(indices, margin, valid=None):
 
 
 def estimate_from_indices(indices, wrong, margin, valid=None):
-    """An error rate from windows labelled without a design, treated as a simple random sample after checking
-    that they could be one. The tool's own review set is refused: it is built to hold errors, and labelling it
-    then dividing gave two to six times the true rate on every task of exp78's export."""
+    """An error rate from windows labelled without a design, treated as a simple random sample after checking only
+    that they do not look like a review list. The tool's own review set is refused: it is built to hold errors, and
+    labelling it then dividing gave two to six times the true rate on every task of exp78's export. Labels from the
+    confident end of the map, or clustered by tile, pass the check, and the interval is then not valid."""
     margin = np.asarray(margin, dtype=np.float64).ravel()
     valid = (np.ones(margin.size, bool) if valid is None else np.asarray(valid, bool).ravel()) & np.isfinite(margin)
     chk = review_set_check(indices, margin, valid)
@@ -1630,7 +1638,8 @@ def certify_by_condition(sample, wrong, margin, alpha, delta=ZONE_DELTA, rule="p
     certified windows taken together are wrong at most alpha of the time: the union of the zones has error rate
     sum |Z_c| R_c / sum |Z_c| <= alpha. A condition with fewer labels is not tested.
 
-    Inside each condition `certify_zone` checks that the labels could be a random sample of it (review_set_check). A
+    Inside each condition `certify_zone` checks that the labels do not look like a review list (review_set_check);
+    labels from the confident end or clustered by tile pass that check. A
     condition whose labels fail that check is reported not tested, with the reason, and the others are certified at
     the delta / L already fixed. The check reads where the labels sit, never what they say, so leaving that condition
     out only leaves its share of delta unused. On the tool's own draw the check fails rarely, by chance.

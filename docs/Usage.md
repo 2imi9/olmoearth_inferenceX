@@ -72,11 +72,13 @@ between the two highest class probabilities of the window's mean probabilities. 
 of a map was predicted from an input combination the model was not trained on, such as radar alone under cloud for a
 model trained on radar plus optical, the model can be confidently wrong there. On PASTIS such a probe of OlmoEarth Base
 was 73.6% wrong, and 59.8% of its errors were at least as confident as the typical correct window with full input,
-against 6.0% with full input. A probe trained on radar alone was 28.4% wrong, and 3.9% of its errors were that
-confident. OlmoEarth Large's share rose only from 5.7% to 12.8-13.8%
+against 6.0% with full input. A probe trained on radar alone was 28.4% wrong and ranked its errors with an AUROC of
+0.79, against 0.83 with full input; 3.9% of its errors reached the same threshold, which is set by the probe trained
+on both. OlmoEarth Large's share rose only from 5.7% to 12.8-13.8%
 ([exp88](results/comparisons.md#when-a-modality-is-missing-does-the-confidence-fall-with-the-accuracy-exp88)). If a
 model can run with an input missing, compare confidence only between windows read from the same inputs, unless the
-model was trained with that input missing. Even a model trained on each input can be wrong more often under one
+model was trained on that input combination. That exception was tested only for a separate probe trained on the
+remaining input, not for one model trained with modality dropout. Even a model trained on each input can be wrong more often under one
 input than under another (28.3% against 19.7% on a half-cloudy PASTIS map), so the error rate is worth estimating per
 condition either way. A map
 that records each pixel's input condition can pass it as `--condition` (`condition=` in Python), and each condition is
@@ -132,7 +134,8 @@ wrote audit/assessment.json, explanation.json, review_set_*.csv, suspicion, boun
 oe-inferencex assess scores.tif --logits --out audit --condition cloud_flag.tif --condition-names 0=clear 1=cloudy
 ```
 
-Without `--condition`, `assessment.json` differs from 1.3.1's only by `scope`, and nothing printed changes. `scope`
+Without `--condition`, `assessment.json` differs from 1.3.1's only by `scope` and by two corrected warning texts, on a
+multi-class logit map and on a probability map (see the changelog); nothing `assess` prints changes. `scope`
 says that a window predicted from an input combination the model was not trained on can be confidently wrong and come
 late in the order (exp88). With
 `--condition`, `assessment.json` also records `inputs.condition` and `inputs.condition_names` and adds `conditions`:
@@ -201,9 +204,10 @@ pixels. **The reviewer sets `wrong` to 1 when `map_class` is not what is on the 
 
 `estimate` and `certify` treat the labels as right. Their interval and zone describe agreement with the reviewer's
 labels; if the reviewer marks correct windows wrong or misses errors, the true rate can fall outside them. No
-experiment here measured how often reviewers err. Labelling blind keeps the labels independent of the map: hide the
-`map_class` column from the reviewer, record the class seen in a `reference_class` column, and set `wrong` to 1
-where it differs from `map_class`.
+experiment here measured how often reviewers err. Labelling blind keeps the reviewer from anchoring on the map's
+class, though how much that changes the labels was not measured either: hide the `map_class` column from the
+reviewer, record the class seen in a `reference_class` column, and set `wrong` to 1 where it differs from
+`map_class`.
 
 | `--design` | Draw | Interval in `estimate` |
 |---|---|---|
@@ -213,13 +217,13 @@ where it differs from `map_class`.
 | `tiles` | `--per-tile` windows (default 16) in each of a random set of tiles of `--tile` windows per side (default 16) | Ratio estimator over tiles, with the naive interval beside it |
 | `condition` (default with `--condition`) | Strata by input condition, labels split equally | Exact per condition; whole map: the conditions' exact intervals at 1 − 0.05/L, weighted by share, at least 95% by construction; per class: not graded |
 
-The tile design matches how reviewers often label, and its intervals can under-cover. On exp78's tasks the naive
-interval covered the true rate 51 to 78% of the time at a nominal 95%. The corrected interval, as `--design tiles`
+The tile design matches how reviewers often label, and its intervals can under-cover. On six of exp78's seven tasks
+the naive interval covered the true rate 51 to 78% of the time at a nominal 95%. The corrected interval, as `--design tiles`
 ships it, covered 94.5% to 95.4% on five tasks and fell short on Sen1Floods11 (84.3%) and MADOS (68.5%), where a tenth
 of the tiles hold most of the errors
 ([exp78](results/comparisons.md#how-wrong-is-this-map-what-a-reviewers-labels-buy-exp78)). The warning `estimate`
-prints for a tiles sample still quotes exp78's own design (an exact 18 tiles and a normal quantile). If labelling has
-not started, draw single windows rather than tiles. If only the whole-map rate is needed, `--design random` gives the
+prints for a tiles sample quotes these numbers on `main`; 1.3.1's quoted exp78's own design (an exact 18 tiles and a
+normal quantile). If labelling has not started, draw single windows rather than tiles. If only the whole-map rate is needed, `--design random` gives the
 exact interval and is the design `certify` needs.
 
 **Sampling by input condition (not yet released).** A map with a condition layer is sampled, estimated and certified

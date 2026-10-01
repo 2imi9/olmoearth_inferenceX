@@ -3001,6 +3001,9 @@ Base, seed 0, with the threshold above:
 | S1+S2 probe on S1 (exp88's optical-missing row) | 73.6% | 59.8% | 0.59 |
 | S1 probe on S1 | 28.4% | 3.9% | 0.79 |
 
+Every row's confident share is read at the same threshold, the S1+S2 probe's, so it compares the rows at one margin
+and is not each probe's own calibration. The AUROC needs no threshold.
+
 - **A probe trained on radar alone is less accurate than the full-input probe, and it ranks its errors normally.**
   So the confident errors come from running a probe on an input combination it was not trained on, not from the
   missing input as such. OlmoEarth Large behaves the same way: 49.9% wrong, 12.8% confident and AUROC 0.72 for its

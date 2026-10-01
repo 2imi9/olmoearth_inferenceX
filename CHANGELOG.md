@@ -6,12 +6,13 @@
 inputs in different places. A model run on an input combination it was not trained on can be sure and wrong there.
 On PASTIS, OlmoEarth Base's probe trained on radar plus optical, run on radar alone as under cloud, was 73.6% wrong,
 and 59.8% of its errors looked confident, against 6.0% with full input. A probe trained on radar alone was 28.4%
-wrong, and 3.9% of its errors looked confident. OlmoEarth Large's share rose only from 5.7% to 12.8-13.8%. On a map
+wrong and ranked its errors with an AUROC of 0.79, against 0.83 with full input; 3.9% of its errors reached the same
+threshold, which is set by the probe trained on both. OlmoEarth Large's share rose only from 5.7% to 12.8-13.8%. On a map
 with half its tiles read by the first probe without the optical input, random samples of 300 estimated 46.9% on
 average. The cloudy part's rate was 74.1%; read by the radar-only probe, it was still 28.3% against 19.7% on the rest.
 The package now says what a whole-map result does not show. It also takes a layer of each pixel's input condition,
 such as a cloud flag, the modalities present or a sensor id. Without a layer, every number, CSV, sidecar and printed
-line is unchanged, but for two texts corrected on purpose (below). The JSON outputs gain one `scope` note.
+line is unchanged, but for four texts corrected on purpose (below). The JSON outputs gain one `scope` note.
 
 - `assess --condition RASTER [--condition-names 0=clear 1=cloudy]` (`condition=`, `condition_names=` in
   `assess_prediction` and `assess_classmap`). A window takes the condition held by most of its pixels that have a
@@ -58,10 +59,10 @@ line is unchanged, but for two texts corrected on purpose (below). The JSON outp
   at every error count of 14 small maps of two and three conditions, the delta split held over all 12,870 draws of a
   two-condition case, one condition equal to the random design. Golden outputs of 1.3.1 pin the case without a
   layer: every CSV, sidecar, raster, `explanation.json` and printed line is byte-identical, and the assessment,
-  estimate and zone JSON differ only by `scope`, but for the two texts below.
+  estimate and zone JSON differ only by `scope`, but for the four texts below.
   `tests/golden/condition_1_3_1/changes.py` lists each with 1.3.1's text, the new text and the files that hold it.
 
-**Two printed texts corrected.**
+**Four printed texts corrected.**
 
 - `certify`'s note on the prefix rule said the rule is valid only if the zone's error rate does not fall as the zone
   grows. The rule is fixed-sequence testing and valid on any map. The note now says so, and that the rule certifies
@@ -70,6 +71,13 @@ line is unchanged, but for two texts corrected on purpose (below). The JSON outp
 - The warning on a multi-class logit map scored by the logit margin said "pass form='top1'", a Python argument with no
   command-line option. It now says that the command line gets a top-probability reading from the class
   probabilities passed without `--logits`, and how that reading differs from `form='top1'`.
+- The warning on every probability map ended "prefer logits". For a map of more than two classes that is wrong: the
+  logit margin ranked errors worse than the probability margin on 16 of 16 of the suite's multi-class tasks (exp76),
+  and the warning above tells the command line to pass probabilities. It now says that logits avoid the ties for two
+  classes and that for more than two the probabilities should be kept.
+- The warning on a tiles sample quoted, for the interval beside it, the coverage of exp78's own design (exactly 18
+  tiles, a normal quantile). It now quotes the shipped design's: 94.5 to 95.4% on five tasks, 84.3% on Sen1Floods11
+  and 68.5% on MADOS. It also says that the naive interval's 51 to 78% is exp78's, on six of its seven tasks.
 
 **Outputs a script may parse that change in this release:**
 
@@ -89,13 +97,14 @@ line is unchanged, but for two texts corrected on purpose (below). The JSON outp
   the map.
 - `sample --design` defaults to none, which resolves to `condition` with `--condition` and to `confidence` without;
   the design written to the sidecar is unchanged without a layer.
-- The zone JSON's `note` under the prefix rule, and the multi-class logit warning in `warnings` (`assessment.json`,
-  the sample sidecar and `assess_prediction`'s result), have the new texts above.
+- The zone JSON's `note` under the prefix rule, the multi-class logit warning and the probability warning in
+  `warnings` (`assessment.json`, the sample sidecar and `assess_prediction`'s result), and the estimate JSON's
+  `warning` for a tiles sample have the new texts above.
 
-**The record says no more than its data (documentation only).** A red team of 30 September 2026 read the docs
-against the committed artifacts. No headline number was made up; several sentences said more than the numbers do, and a few small counts
-were wrong. The
-package is unchanged by this; the corrections are in the docs and the claim ledger.
+**The record says no more than its data.** A red team of 30 September 2026 read the docs against the committed
+artifacts. No headline number was made up; several sentences said more than the numbers do, and a few small counts
+were wrong. The corrections are in the docs, the claim ledger and the package's docstrings, and in the two printed
+warnings above on probability maps and tiles samples; no computation changed.
 
 - **The suite headline.** The two no-model controls computable from Ai2's embeddings are near chance: the better one
   closes a median 0.094 of the gap between a random and a perfect order and is no better than random on 9 of 24
@@ -104,7 +113,8 @@ package is unchanged by this; the corrections are in the docs and the claim ledg
   controls were beaten on LUCAS, Dynamic World and EuroCrops. The sign test is given over the 14 sources (p =
   6.1e-05) beside the one over tasks. Six of the seven segmentation outcomes were on record before exp70's
   preregistration; on the other 18 tasks the margin wins 18 of 18.
-- **exp88.** A probe trained on radar alone was 28.4% wrong on PASTIS, and 3.9% of its errors looked confident, so
+- **exp88.** A probe trained on radar alone was 28.4% wrong on PASTIS and ranked its errors with an AUROC of 0.79
+  (0.83 with full input); 3.9% of its errors reached the threshold set by the probe trained on both. So
   the confident errors belong to a model run on inputs it was not trained on. Per-condition error rates stay
   justified; ranking each condition on its own matters where a model is read on inputs it was not trained on.
 - **exp64.** Arm D, with no package and no rasters, declined to pick a side as often as the tool arm, and the grader
@@ -112,9 +122,10 @@ package is unchanged by this; the corrections are in the docs and the claim ledg
 - **Estimation and certification.** The interval and the zone treat the reviewer's labels as right; blind labelling
   is recommended. The prefix rule is fixed-sequence testing and was valid all along; earlier entries below call it a
   monotone-prefix rule that assumes the risk does not fall, and Bonferroni assumption-free, which undersold it. The
-  tiles design as shipped covers 94.5% to 95.4% on five tasks and 84.3% and 68.5% on Sen1Floods11 and MADOS; the
-  warning `estimate` prints for a tiles sample still quotes exp78's own design. Undesigned labels passed to
-  `estimate_from_indices` are only checked for not looking like a review list.
+  tiles design as shipped covers 94.5% to 95.4% on five tasks and 84.3% and 68.5% on Sen1Floods11 and MADOS, and
+  the warning `estimate` prints for a tiles sample now quotes these numbers. Undesigned labels passed to
+  `estimate_from_indices` are only checked for not looking like a review list; the module's docstrings said they
+  were checked to see whether they could be a random sample, and now say the same as this entry.
 - **Smaller facts.** exp78's tile design drew 18 tiles, not 19; five sources are shared by the suite's tasks, not four;
   exp57 graded 2,308 of 2,419 Sen1Floods11 tiles; exp63 does not align by construction; the EuroCrops margin is within
   0.001 of one minus top-1 rather than best; the fine-tuned AWF model's confidence is tied with tiling instability;

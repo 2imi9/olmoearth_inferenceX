@@ -231,7 +231,8 @@ def cmd_assess(args):
     conf, bnd = arr["confidence"], arr["boundary"]
     per_cond = name_at = None
     if layer is not None:
-        # recorded only with a layer: without one, assessment.json differs from 1.3.1's by `scope` alone
+        # recorded only with a layer: without one, assessment.json differs from 1.3.1's by `scope` and the corrected
+        # warning texts listed in tests/golden/condition_1_3_1/changes.py
         s["inputs"].update({"condition": os.path.abspath(cond_path),
                             "condition_names": {str(k): v for k, v in cond_names.items()} if cond_names else None})
         s["conditions"]["source"] = os.path.abspath(cond_path)

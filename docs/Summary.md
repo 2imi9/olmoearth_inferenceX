@@ -16,13 +16,13 @@ all, with the evidence.
   perfect one. <!-- claim:margin-takes-two-thirds-of-the-ranking-headroom -->
   A review of the least confident 10% found a median 0.214 of the errors, about twice a random
   10%. <!-- claim:suite-review-at-ten-percent -->
-  Confidence also beat both baselines computable from the embeddings alone (how rare the
-  predicted class is, and distance in embedding space) on all 24 tasks, but those baselines are
-  near chance on this suite, so that comparison shows little. <!-- claim:suite-margin-wins-every-task --> <!-- claim:suite-controls-are-near-chance -->
+  Confidence also beat the suite's two baselines, how rare the probe's predicted class is and
+  distance in embedding space, on all 24 tasks, but those baselines are near chance on this
+  suite, so that comparison shows little. <!-- claim:suite-margin-wins-every-task --> <!-- claim:suite-controls-are-near-chance -->
 - **Other encoders.** Sixteen encoders of that suite carry at least 20 of the 24 tasks
   (OlmoEarth, Galileo, CROMA, TerraMind, Clay, Copernicus-FM, AnySat, Panopticon and Satlas).
   Under each of ten probe seeds, confidence ranked the errors better than a random order on
-  every task, 3,560 cells in all. <!-- claim:exp79-margin-beats-random-everywhere -->
+  every task, 3,560 cells in all, though the lowest AUROC, 0.503, is close to chance. <!-- claim:exp79-margin-beats-random-everywhere -->
   It beat both baselines on at least 87.5% of each encoder's tasks. <!-- claim:exp79-headline-holds-under-every-seed-on-every-encoder -->
 - **Other references.** Here the baselines carry information, and confidence still beat them.
   Against ground survey labels (LUCAS), confidence ranked the errors better than the best
@@ -51,8 +51,9 @@ detail.
   PASTIS, the largest, the map was then 73.6% wrong, and 59.8% of OlmoEarth Base's errors were as
   confident as a typical correct window, against 6.0% with both inputs. For OlmoEarth Large the
   share was 12.8% to 13.8%. <!-- claim:missing-optical-errors-are-confident -->
-  A probe trained on Sentinel-1 alone was 28.4% wrong, and only 3.9% of its errors were that
-  confident. <!-- claim:exp88-matched-head-ranks-normally -->
+  A probe trained on Sentinel-1 alone was 28.4% wrong and ranked its errors with an AUROC of
+  0.79, against 0.83 with both inputs; 3.9% of its errors reached the same threshold, which is
+  set by the probe trained on both. <!-- claim:exp88-matched-head-ranks-normally -->
   For the probe trained on both inputs, the share rose on Togo 12, from 10.4% to 48.5%, and fell
   on China 6, from 13.3% to 6.5%. <!-- claim:missing-modality-confident-errors-follow-the-shift-not-the-sensor -->
   No real cloud has been tested.

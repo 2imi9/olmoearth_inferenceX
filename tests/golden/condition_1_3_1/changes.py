@@ -38,6 +38,35 @@ CHANGES = (
      "constant": ("oe_inferencex.assess", "MARGIN_FORM_WARNING"),
      "files": ("api_prediction_logits3_margin.json", "assess_logits3__assessment.json", "sample_logits3_random.json",
                "sample_logits3_random.stdout.txt")},
+    {"why": "the warning on every probability map. 1.3.1 ended it \"prefer logits\", which is wrong for a map of more "
+            "than two classes, where the logit margin ranked errors worse than the probability margin on 16 of 16 "
+            "multi-class tasks (exp76) and the multi-class logit warning itself says to pass probabilities",
+     "old": "probability input: confidence ties where probabilities saturate; prefer logits",
+     "new": ("probability input: confidence ties where probabilities saturate. For two classes, logits avoid the ties; "
+             "for more than two, keep the probabilities (exp76)"),
+     "constant": ("oe_inferencex.assess", "PROBABILITY_WARNING"),
+     "files": ("api_prediction_dw.json", "api_prediction_scene.json", "assess_dw__assessment.json",
+               "assess_scene__assessment.json", "sample_confidence.json", "sample_confidence.stdout.txt",
+               "sample_proportional.json", "sample_proportional.stdout.txt", "sample_random.json",
+               "sample_random.stdout.txt", "sample_scene_confidence.json", "sample_scene_confidence.stdout.txt",
+               "sample_scene_random.json", "sample_scene_random.stdout.txt", "sample_tiles.json",
+               "sample_tiles.stdout.txt")},
+    {"why": "the warning on a tiles sample. 1.3.1 quoted for 'this interval' the coverage of exp78's own design (exactly "
+            "18 tiles, a normal quantile); the warning now quotes the shipped design's (exp/out/exp78_shipped_tiles.json), "
+            "and says the naive interval's 51 to 78% is exp78's, on six of its seven tasks",
+     "old": ("labels taken tile by tile are not independent, and a map whose tiles differ in size is labelled unevenly; "
+             "the naive interval beside this one is what the ordinary formula says, and on exp78's tasks it covered 51 "
+             "to 78% of the time while claiming 95%. This interval is better and still not honest everywhere: on "
+             "exp78's tasks it covered 0.91 to 0.94 where tiles were of equal size, 0.82 on Sen1Floods11 and 0.60 on "
+             "MADOS, whose tiles hold 1 to 400 windows. Prefer the confidence design"),
+     "new": ("labels taken tile by tile are not independent, and a map whose tiles differ in size is labelled unevenly; "
+             "the naive interval beside this one is what the ordinary formula says, and in exp78, with 18 tiles of 16 "
+             "windows, it covered 51 to 78% of the time on six of seven tasks while claiming 95%. This interval is "
+             "better and still not honest everywhere: graded on exp78's tasks it covered 94.5 to 95.4% of the time on "
+             "five, 84.3% on Sen1Floods11 and 68.5% on MADOS, where a tenth of the tiles hold most of the errors. "
+             "Prefer the confidence design"),
+     "constant": ("oe_inferencex.estimate", "TILES_WARNING"),
+     "files": ("sample_tiles.estimate.json", "sample_tiles.estimate.stdout.txt")},
 )
 LINE_PREFIXES = ("", "warning: ")
 

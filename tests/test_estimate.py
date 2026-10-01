@@ -180,6 +180,31 @@ def test_the_tile_design_reports_the_cluster_interval_and_the_naive_one_beside_i
     assert wider >= 60 and np.median(deffs) > 3
 
 
+def test_the_tiles_warning_quotes_the_shipped_design_and_exp78_naive_interval():
+    """Every number in the warning is read back from the artifact that measured it. "This interval" is the shipped
+    design's (exp/out/exp78_shipped_tiles.json); the naive interval's 51 to 78% is exp78's own 18-tile design, on six of
+    its seven tasks (recorded beside each task in the same file). 1.3.1 quoted exp78's design for both."""
+    rec = json.load(open(os.path.join(ROOT, "exp", "out", "exp78_shipped_tiles.json")))
+    T = rec["tasks"]
+    assert len(T) == 7 and rec["config"]["budget"] == 300 and rec["config"]["per_tile"] == est.M_PER_TILE
+    cov = {t: v["shipped"]["coverage"] for t, v in T.items()}
+    short = sorted(cov, key=cov.get)[:2]
+    assert short == ["mados", "sen1floods11"]
+    rest = [cov[t] for t in cov if t not in short]
+    w = est.TILES_WARNING
+    assert len(rest) == 5 and f"covered {100 * min(rest):.1f} to {100 * max(rest):.1f}% of the time on five," in w  # 94.5, 95.4
+    assert f"{100 * cov['sen1floods11']:.1f}% on Sen1Floods11 and {100 * cov['mados']:.1f}% on MADOS" in w   # 84.3, 68.5
+    # a tenth of the tiles hold most of the errors on those two, and on none of the other five
+    tenth = {t: v["tiles"]["share_of_errors_in_top_tenth_of_tiles"] for t, v in T.items()}
+    assert all(tenth[t] > 0.5 for t in short) and all(tenth[t] < 0.5 for t in T if t not in short)
+    naive = {t: v["exp78_recorded"]["D4/E2_naive"] for t, v in T.items()}
+    assert all(v["exp78_recorded"]["tiles"] == 300 // est.M_PER_TILE == 18 for v in T.values())
+    inside = [x for x in naive.values() if x < 0.8]
+    assert len(inside) == 6 and f"{round(100 * min(inside))} to {round(100 * max(inside))}%" == "51 to 78%"
+    assert "18 tiles of 16 windows" in w and "on six of seven tasks while claiming 95%" in w
+    assert "0.91 to 0.94" not in w and "0.60 on MADOS" not in w
+
+
 def test_estimate_refuses_mismatched_or_non_binary_labels():
     margin = np.random.default_rng(0).random(500)
     s = ox.sample_for_estimation(margin, 50, design="random")

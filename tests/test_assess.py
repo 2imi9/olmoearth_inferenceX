@@ -391,9 +391,9 @@ def _golden_changes():
 
 def test_without_a_condition_only_scope_is_added():
     """Against the summaries generated at 725dffa, before the layer was built: byte for byte once `scope` is taken
-    out, and `scope` is SCOPE_ASSESS, outside the warnings. The one deliberate change is the multi-class logit
-    warning of api_prediction_logits3_margin, listed with its old and new text in golden/condition_1_3_1/changes.py;
-    every other byte is 1.3.1's."""
+    out, and `scope` is SCOPE_ASSESS, outside the warnings. The deliberate changes are the multi-class logit
+    warning of api_prediction_logits3_margin and the probability warning of the two probability summaries, listed
+    with their old and new texts in golden/condition_1_3_1/changes.py; every other byte is 1.3.1's."""
     calls = _golden_calls()
     changes = _golden_changes()
     assert sorted(calls) == json.load(open(os.path.join(GOLDEN, "manifest.json")))["api"]
@@ -524,9 +524,12 @@ def test_scope_notes_quote_exp88_as_recorded():
             "run on radar alone, as under cloud.") in SCOPE_ASSESS                                          # 73.6%
     assert f"Of its errors, {100 * p2['confident_share_optical_missing']:.1f}% were at least as confident" in SCOPE_ASSESS  # 59.8%
     assert f"against {100 * p2['confident_share_full']:.1f}% of its errors with full input" in SCOPE_ASSESS  # 6.0%
-    # the probe trained on radar alone, on the same windows and against the same threshold
-    assert (f"A probe trained on radar alone was {100 * matched['error_rate']:.1f}% wrong, and "
-            f"{100 * matched['confident_share']:.1f}% of its errors were that confident.") in SCOPE_ASSESS  # 28.4%, 3.9%
+    # the probe trained on radar alone, on the same windows: its AUROC first, since the confident share is read at the
+    # threshold of the probe trained on both, not at its own
+    assert (f"A probe trained on radar alone was {100 * matched['error_rate']:.1f}% wrong and ranked its errors with an "
+            f"AUROC of {matched['margin_auroc']:.2f}, against {base['full']['ranking']['margin_auroc']:.2f} for the probe "
+            f"trained on both with full input; {100 * matched['confident_share']:.1f}% of its errors reached the same "
+            "threshold, which is set by the probe trained on both.") in SCOPE_ASSESS  # 28.4%, 0.79, 0.83, 3.9%
     assert mh["encoders"]["olmoearth_base"]["families"]["pastis"]["threshold_confident"] == pytest.approx(
         mh["encoders"]["olmoearth_base"]["families"]["pastis"]["threshold_recorded_by_exp88"], abs=1e-6)
     # OlmoEarth Large, over its five probe seeds: the full-input share is one number to a tenth of a point, and the

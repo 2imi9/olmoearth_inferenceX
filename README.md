@@ -66,8 +66,9 @@ python quickstart_map.py
 It writes three files. `scores.tif` is a synthetic four-class probability map of 256 x 256
 pixels. Of its windows, 7.3% are wrong. `other.tif` is a second map of the same scene.
 `truth.tif` holds the class that is really there. The lines below were printed on these files,
-so you can run each command and compare. 1.3.1 prints them too, except the second line of
-`certify`, its note on the prefix rule, which is new on `main`.
+so you can run each command and compare. 1.3.1 prints them too, except two lines new on
+`main`: the warning of `sample`, which 1.3.1 ended with "prefer logits", and the second line
+of `certify`, its note on the prefix rule.
 
 **1. Which parts to check first.** No labels are needed. Add `--logits` if the scores are
 logits.
@@ -90,14 +91,15 @@ experiments used 300.
 ```console
 $ oe-inferencex sample scores.tif --budget 300 --design random --out to_label.csv
 300 windows to label of 4096 valid (random design); wrote to_label.csv and its .json. Fill the `wrong` column with 1 or 0 per window, then run: oe-inferencex estimate to_label.csv
-warning: probability input: confidence ties where probabilities saturate; prefer logits
+warning: probability input: confidence ties where probabilities saturate. For two classes, logits avoid the ties; for more than two, keep the probabilities (exp76)
 ```
 
-The warning is printed for every probability map. For a map of more than two classes, keep
-the probabilities (see [What you give it](#what-you-give-it)).
+The warning is printed for every probability map. This one has four classes, so keep the
+probabilities (see [What you give it](#what-you-give-it)).
 
 Open `to_label.csv`. For each row, look at the window in imagery or on the ground. Set `wrong`
-to 1 if `map_class` is not what is there, otherwise to 0. Fill every row, keep the row order,
+to 1 if `map_class` is not what is there, otherwise to 0, or label blind as item 4 of
+[Before you trust it](#before-you-trust-it) describes. Fill every row, keep the row order,
 and keep `to_label.json` beside the CSV. On the test map,
 `python quickstart_map.py --label to_label.csv` does this from `truth.tif`.
 
@@ -174,11 +176,14 @@ Before you trust it
 3. **A model run on inputs it was not trained on can be sure and wrong.** An error the model
    is sure of is checked last. On PASTIS, a probe trained on radar plus optical and run on
    radar alone, as under cloud, was 74% wrong, and 60% of its errors were as confident as a
-   typical correct window. A probe trained on radar alone was 28% wrong, only 4% of its errors
-   were that confident, and it ranked its errors normally (exp88). <!-- claim:missing-optical-errors-are-confident --> <!-- claim:exp88-matched-head-ranks-normally -->
+   typical correct window with full input. A probe trained on radar alone was 28% wrong and
+   ranked its errors with an AUROC of 0.79, against 0.83 with full input; 4% of its errors
+   reached the same threshold, which is set by the probe trained on both (exp88). <!-- claim:missing-optical-errors-are-confident --> <!-- claim:exp88-matched-head-ranks-normally -->
    If a model can run with an input missing, compare confidence only between windows read from
-   the same inputs, unless the model was trained with that input missing. Version 1.3.1 ranks
-   all the windows together and prints no warning about this.
+   the same inputs, unless the model was trained on that input combination. That exception was
+   tested only for a separate probe trained on the remaining input, not for one model trained
+   with modality dropout. Version 1.3.1 ranks all the windows together and prints no warning
+   about this.
 4. **The interval and the zone assume the labels are right.** They describe agreement with
    the reviewer's labels. If the reviewer makes mistakes, the true rate can fall outside them.
    Label blind: hide the `map_class` column, write the class you see in `reference_class`, and
@@ -213,10 +218,11 @@ a median 0.68 of the way from a random order of the errors to a perfect one. <!-
 A review of the least confident 10% found a median 0.214 of the errors, about twice a random
 10%. <!-- claim:suite-review-at-ten-percent -->
 On the sixteen encoders of that suite, under each of ten probe seeds, confidence ranked the
-errors better than a random order on every task. <!-- claim:exp79-margin-beats-random-everywhere -->
-Confidence also beat both baselines computable from the embeddings alone (how rare the predicted
-class is, and distance in embedding space) on all 24 tasks for OlmoEarth Base, but those
-baselines are near chance on this suite. <!-- claim:suite-margin-wins-every-task --> <!-- claim:suite-controls-are-near-chance -->
+errors better than a random order on every task, though barely on some: the lowest AUROC was
+0.503, close to chance. <!-- claim:exp79-margin-beats-random-everywhere -->
+Confidence also beat the suite's two baselines, how rare the probe's predicted class is and
+distance in embedding space, on all 24 tasks for OlmoEarth Base, but those baselines are near
+chance on this suite. <!-- claim:suite-margin-wins-every-task --> <!-- claim:suite-controls-are-near-chance -->
 On every encoder it beat them on at least 87.5% of the encoder's tasks. <!-- claim:exp79-headline-holds-under-every-seed-on-every-encoder -->
 Where the baselines carry information, against ground survey labels (LUCAS), Dynamic World's
 expert tiles and farmers' crop declarations (EuroCrops), confidence beat them too. <!-- claim:external-references-carry-informative-controls -->

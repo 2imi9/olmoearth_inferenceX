@@ -142,8 +142,8 @@ Built (appended 29 September 2026; nothing above changed): the follow-up is in t
 
 Not preregistered. A red team found that the record already held, for PASTIS, a probe trained on the S1 embeddings
 alone (exp70's, exported per unit by exp78) on the same 458,638 windows. Read beside this page's probe (OlmoEarth
-Base, seed 0), it errs on 28.4%, and 3.9% of its errors look confident, with a margin AUROC of 0.79. This page's
-probe, trained on S1+S2 and read on S1, gives 73.6%, 59.8% and 0.59. So P1 and P2 hold for a probe run on an input
+Base, seed 0), it errs on 28.4% with a margin AUROC of 0.79, and 3.9% of its errors reach this page's threshold,
+which is set by the S1+S2 probe. This page's probe, trained on S1+S2 and read on S1, gives 73.6%, 0.59 and 59.8%. So P1 and P2 hold for a probe run on an input
 combination it was not trained on. They are not a property of the missing input as such. With matched probes on the
 half-cloudy map, the parts still err on 28.3% and 19.7%, so the per-condition estimate this page recommends stays
 justified. The ranking argument for it holds only where part of the map was read by a model on inputs it was not

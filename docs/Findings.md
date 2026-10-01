@@ -10,14 +10,15 @@ artifact under `exp/out/`, with its evidence in the [results record](results/com
   (24 tasks, linear probes on OlmoEarth Base) it gets a median 0.68 of the way from a random order to a perfect one,
   and a review of the least confident 10% finds about twice the errors a random 10% finds. It beats a random order in
   all 3,560 cells of sixteen encoders, their tasks and ten probe seeds.
-- The two no-model controls computable on that suite are near chance, so beating them there shows little. Informative
-  controls were beaten on external references: ground survey (LUCAS), Dynamic World's expert tiles and farmers' crop
+- The suite's two controls, the distance in embedding space and how rare the probe's predicted class is, are near
+  chance, so beating them there shows little. Informative controls were beaten on external references: ground survey (LUCAS), Dynamic World's expert tiles and farmers' crop
   declarations (EuroCrops).
-- The exceptions found: a water index (NDWI) ranks flood errors as well as or better than confidence on Sen1Floods11
-  (one event under a Sentinel-2 probe, the whole test split under a Sentinel-1 probe), and other encoders lose to a
-  control on small or poorly fitted crop tasks (CropHarvest Togo, Nandi Sentinel-1).
+- Exceptions include a water index (NDWI) that ranks flood errors as well as or better than confidence on
+  Sen1Floods11 (one event under a Sentinel-2 probe, the whole test split under a Sentinel-1 probe) and on 2 of 45
+  GEOID-Flood areas, both in one emergency activation, a sensor control on 1 GEOID-Flood area, and other encoders
+  losing to a control on small or poorly fitted crop tasks (CropHarvest Togo, Nandi Sentinel-1).
 - A model run on an input combination it was not trained on, such as radar alone under cloud for a model trained on
-  radar plus optical, can be sure and wrong, and its errors then come last in the review order.
+  radar plus optical, can be sure and wrong, and its errors then come late in the review order.
 - Errors concentrate on prediction boundaries. Whether reviewing boundary windows first beats confidence alone depends
   on the event, the unit and the metric.
 - Two inferences of one area differ mostly on prediction boundaries, the sensor moves shared errors more than the
@@ -42,7 +43,8 @@ window's pixels: the top class probability for class probabilities, the gap betw
 `--logits`, and for a two-class probability map the distance from 0.5. The experiments graded the margin between the
 two highest class probabilities of the window's mean probabilities; exp76 compares the forms. A ranking is graded by
 excess AURC, the area under the risk-coverage curve minus that of a perfect ranking, against a random order and
-against no-model controls such as class rarity, embedding distance or the normalised difference water index (NDWI).
+against controls that do not read the model's confidence, such as class rarity (how rare the predicted class is),
+embedding distance or the normalised difference water index (NDWI).
 
 On the 24 tasks of Ai2's published embedding suite for which a margin is defined, read through linear probes on
 OlmoEarth Base, the margin takes a median 0.68 of the gap between a random and a perfect ranking, and labels reach a
@@ -51,8 +53,8 @@ That median averages over every review budget. A review of the 10% least confide
 errors, against 0.10 for a random 10% and 0.410 for a perfect order (exp70). <!-- claim:suite-review-at-ten-percent -->
 Over sixteen encoders, their tasks and ten probe seeds, the margin ranks errors better than a random order in all
 3,560 cells; the lowest AUROC is 0.503, close to chance (exp79). <!-- claim:exp79-margin-beats-random-everywhere -->
-The margin also beats the better of the two no-model controls computable from the embeddings, how rare the probe's
-predicted class is and the distance to the training mean, on all 24 tasks (sign test p = 6e-08) and on all 14
+The margin also beats the better of the suite's two controls, how rare the probe's predicted class is and the
+distance to the training mean, on all 24 tasks (sign test p = 6e-08) and on all 14
 distinct sources (p = 6.1e-05) (exp70). <!-- claim:suite-margin-wins-every-task -->
 Those controls are near chance on this suite: the better one closes a median 0.094 of the gap and is no better than a
 random order on 9 of the 24 tasks (exp70). <!-- claim:suite-controls-are-near-chance -->
@@ -230,8 +232,8 @@ when a model is run on an input combination it was not trained on. On PASTIS a p
 and read on radar alone, as under cloud, was 73.6% wrong, and 59.8% of OlmoEarth Base's errors looked as confident as
 a typical correct window, against 6.0% with both inputs; OlmoEarth Large's share rose only from 5.7% to 12.8-13.8%.
 <!-- claim:missing-optical-errors-are-confident -->
-A probe trained on radar alone was 28.4% wrong, only 3.9% of its errors looked that confident, and it ranked its
-errors normally. So the risk is a model read on inputs it was not trained on, not the missing input as such (exp88).
+A probe trained on radar alone was 28.4% wrong and ranked its errors with an AUROC of 0.79, against 0.83 with both
+inputs; 3.9% of its errors reached the same threshold, which is set by the probe trained on both. So the risk is a model read on inputs it was not trained on, not the missing input as such (exp88).
 <!-- claim:exp88-matched-head-ranks-normally -->
 A whole-map error rate can still misstate a part read from other inputs. On a map with half its tiles read by the
 first probe without the optical input, random samples estimate 46.9% on average, while the cloudy half's rate is
@@ -240,7 +242,8 @@ each pixel's input condition, the package ranks, samples and certifies each cond
 yet released; exp88). <!-- claim:pooled-error-rate-misstates-the-cloudy-part -->
 Every interval and certified zone describes agreement with the reviewer's labels, which the package treats as right.
 If the reviewer makes mistakes, the true rate can fall outside them, and no experiment here measured how often
-reviewers err. Labelling blind, with the map's class hidden, keeps the labels independent of the map.
+reviewers err. Labelling blind, with the map's class hidden, keeps the reviewer from anchoring on the map's class;
+how much that changes the labels was not measured.
 On Sen1Floods11, where eight encoders share 82% to 87% of their errors, a Dawid-Skene consensus, which estimates each
 encoder's accuracy from agreement alone, returns 0.975 to 0.983 for maps 0.883 to 0.914 accurate, and its rank
 correlation with the true accuracies misses the preregistered 0.8 on MADOS (0.71) (exp83).

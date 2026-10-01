@@ -17,10 +17,15 @@ that assessment. It generates evidence only; narration belongs to the caller.
 Inputs
     scores      : (C, H, W) logits or probabilities for C classes, or
                   (H, W) probability of the positive class for binary tasks
-    is_logit    : whether `scores` are logits (preferred: confidence is then
-                  the top-1 minus top-2 logit margin, tie-free) or
-                  probabilities (confidence is 1 - max probability, which
-                  ties where probabilities saturate)
+    is_logit    : whether `scores` are logits (confidence is then the top-1
+                  minus top-2 logit margin, tie-free, or with form='top1'
+                  the top probability) or probabilities (confidence is the
+                  top probability, or for a two-class map the distance from
+                  0.5, which ties where probabilities saturate). Logits avoid
+                  the ties on a two-class map; on a map of more than two
+                  classes the logit margin ranked errors worse than the
+                  probability forms (exp76), so pass probabilities or use
+                  form='top1'
     patch       : pooling size in pixels for the per-window ranking
     nodata_mask : optional (H, W) boolean, True where no prediction exists
     reference   : optional (H, W) integer class map treated as truth; when
@@ -58,7 +63,9 @@ SCOPE_ASSESS = ("The review order compares the confidence of every window with e
                 "there, and those errors come late in this order. On PASTIS, OlmoEarth Base's probe trained on radar plus "
                 "optical was 73.6% wrong when run on radar alone, as under cloud. Of its errors, 59.8% were at least as "
                 "confident as the typical correct window with full input, against 6.0% of its errors with full input. A "
-                "probe trained on radar alone was 28.4% wrong, and 3.9% of its errors were that confident. For OlmoEarth "
+                "probe trained on radar alone was 28.4% wrong and ranked its errors with an AUROC of 0.79, against 0.83 "
+                "for the probe trained on both with full input; 3.9% of its errors reached the same threshold, which is "
+                "set by the probe trained on both. For OlmoEarth "
                 "Large's probe trained on both inputs, the share rose only from 5.7% to 12.8-13.8%. On CropHarvest China "
                 "6, Base's probe trained on both showed no such rise (exp88). A model trained on each input can still be "
                 "wrong more often under one input condition than under another. If the map records each pixel's input "
@@ -70,6 +77,11 @@ SCOPE_ASSESS_K = ("The review sets above rank all {K} input conditions together.
                   "was 0.59 for a probe trained on radar plus optical and run on radar alone, against 0.83 on both "
                   "inputs and 0.79 for a probe trained on radar alone (exp88). Which condition is more accurate needs "
                   "labels: sample with --condition.")
+# The warning on every probability map. 1.3.1 ended it "prefer logits", which is wrong for a map of more than two
+# classes: there the logit margin ranked errors worse than the probability margin on 16 of 16 of the suite's
+# multi-class tasks (exp76), and passing probabilities is how the command line reaches the top probability.
+PROBABILITY_WARNING = ("probability input: confidence ties where probabilities saturate. For two classes, logits avoid "
+                       "the ties; for more than two, keep the probabilities (exp76)")
 # The warning on a multi-class logit map scored by the default form. `form` is a Python argument only (1.3.1 said
 # "pass form='top1'" alone). The command line reaches a top-probability reading through probability input: the
 # window mean of the top probability, where form='top1' takes the window mean of its log, so the two orders agree
@@ -314,7 +326,7 @@ def assess_prediction(scores, is_logit, patch=4, nodata_mask=None, reference=Non
         else:
             margin = np.abs(p1 - 0.5) * 2
             hard = (p1 > 0.5).astype(int)
-            warnings.append("probability input: confidence ties where probabilities saturate; prefer logits")
+            warnings.append(PROBABILITY_WARNING)
         n_classes = 2
     else:
         C = scores.shape[0]
@@ -332,7 +344,7 @@ def assess_prediction(scores, is_logit, patch=4, nodata_mask=None, reference=Non
                 warnings.append(MARGIN_FORM_WARNING)
         else:
             margin = srt[-1]  # top-1 probability
-            warnings.append("probability input: confidence ties where probabilities saturate; prefer logits")
+            warnings.append(PROBABILITY_WARNING)
         hard = scores.argmax(0)
         n_classes = C
     out = _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets,
