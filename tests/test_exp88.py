@@ -271,4 +271,28 @@ def test_the_matched_head_by_a_second_route():
                 assert abs(got - mm["review_set"][f"{part}_errors_in_review_share"]) < 2e-3, (enc, variant, part)
             assert abs((review & e).sum() / e.sum() - mm["review_set"]["all_errors_in_review_share"]) < 2e-3
         checked.append(enc)
+        # CropHarvest China 6: every head on its input, by the same plain route (samples, so no tiles)
+        c1 = os.path.join(d, "cropharvest_Peoples_Republic_of_China_6_sentinel1.npz")
+        c2 = os.path.join(d, "cropharvest_Peoples_Republic_of_China_6.npz")
+        b = f"{enc}/china6/"
+        y = z[b + "y"].astype(int)
+        R = rec["encoders"][enc]["families"]["china6"]
+        full_err = z[b + "seed0/full/err"].astype(bool)
+        thr = np.median(z[b + "seed0/full/margin"].astype(np.float64)[~full_err])
+        assert abs(thr - R["threshold_confident"]) < 1e-9
+        rows = {name: (z[b + f"seed0/{key}/margin"].astype(np.float64), z[b + f"seed0/{key}/err"].astype(bool))
+                for name, key in (("s1s2_head_on_s1s2", "full"), ("s1s2_head_on_s1", "optical_missing"),
+                                  ("s1s2_head_on_s2", "radar_missing"))}
+        for name, path in (("s1_head_on_s1", c1), ("s2_head_on_s2", c2)):
+            ex = np.load(path)
+            err = ex["err"].astype(bool)
+            assert np.array_equal(ex["dec"].astype(int) == y, ~err), (enc, name, "not in exp88's sample order")
+            rows[name] = (ex["margin"].astype(np.float64), err)
+        for name, (m, e) in rows.items():
+            r = R["rows"][name]
+            assert abs(e.mean() - r["error_rate"]) < 1e-12, (enc, "china6", name)
+            assert abs(np.count_nonzero(m[e] >= thr) / e.sum() - r["confident_share"]) < 1e-12, (enc, "china6", name)
+            assert abs(_midrank_auroc(-m, e) - r["margin_auroc"]) < 1e-9, (enc, "china6", name)
+        # with a head trained on each input, the optical input is the more useful one on China 6
+        assert rows["s2_head_on_s2"][1].mean() < rows["s1_head_on_s1"][1].mean()
     assert "olmoearth_base" in checked, "OlmoEarth Base's export is committed and must be checked"

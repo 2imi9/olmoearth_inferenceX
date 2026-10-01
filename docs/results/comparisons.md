@@ -2902,8 +2902,8 @@ errors, 0.92, is above the median margin of the correct windows under full input
 to within a point. OlmoEarth Large degrades less (49.9% to 51.0% errors) and its confident share rises less, from
 5.7% to 12.8–13.8%, still above the 5-point bar. <!-- claim:missing-optical-errors-are-confident -->
 
-**It follows the size of the shift, not the sensor.** On CropHarvest China 6 the optical input matters little (the
-error rate rises 6 points) and the confident share falls, so the confidence tracks the lost information there;
+**It follows the size of the shift, not the sensor.** On CropHarvest China 6 the S1+S2 probe loses little without
+the optical input (its error rate rises 6 points) and the confident share falls, so the confidence tracks the lost information there;
 P2 does not replicate. Losing radar costs China 6 more (44.1% errors), and there 70.9% of the errors look
 confident. On Togo 12, losing the optical input doubles the error rate and 48.5% of the errors look confident.
 <!-- claim:missing-modality-confident-errors-follow-the-shift-not-the-sensor -->
@@ -2950,7 +2950,38 @@ whole-map result does not show (`scope`), and a condition layer (`--condition`) 
 splits the labels equally across the conditions, gives each its exact interval, and certifies each condition that
 holds enough labels with δ split over them ([Usage](../Usage.md#sample-and-estimate)).
 
-<!-- claim:exp88-matched-head-ranks-normally -->
+**Addendum, 30 September 2026: the confident errors belong to a probe read on an input it was not trained on.** Not
+preregistered. The red team of 30 September 2026 noticed that the record already held a probe trained on PASTIS's
+S1 embeddings alone: exp70 trained it and exp78 exported it per unit, on the same 458,638 windows. The follow-up
+reads it beside exp88's probe (`exp/exp88_matched_head.py`, artifact `exp/out/exp88_matched_head.json`). OlmoEarth
+Base, seed 0, with the threshold above:
+
+| PASTIS, OlmoEarth Base | error rate | errors that look confident | margin's AUROC for errors |
+|---|---|---|---|
+| S1+S2 probe on S1+S2 | 19.5% | 6.0% | 0.83 |
+| S1+S2 probe on S1 (exp88's optical-missing row) | 73.6% | 59.8% | 0.59 |
+| S1 probe on S1 | 28.4% | 3.9% | 0.79 |
+
+- **A probe trained on radar alone is less accurate than the full-input probe, and it ranks its errors normally.**
+  So the confident errors come from running a probe on an input combination it was not trained on, not from the
+  missing input as such. OlmoEarth Large behaves the same way: 49.9% wrong, 12.8% confident and AUROC 0.72 for its
+  S1+S2 probe on S1, against 27.9%, 2.9% and 0.80 for its S1 probe.
+- **On the half-cloudy map with the S1 probe on the cloudy tiles,** the parts err on 28.3% and 19.7%. The 5% review
+  set holds 13.4% of the cloudy part's errors and 12.9% of the clear part's, against 4.3% and 18.3% with exp88's
+  probe (Large: 14.0% and 12.6%).
+- **On China 6, with a probe trained on each input, the optical input is the more useful one.** Base's S1 probe
+  errs on 35.6% and its S2 probe on 26.6% (full input 22.6%); Large's on 36.7% and 27.4% (full input 26.9%). "The
+  S1+S2 probe loses little without the optical input" is true of that probe read without refit, not of the input.
+- **The probes differ in learning rate:** Base's S1 probe was trained at 0.1 and its S1+S2 probe at 0.01; Large's
+  at 0.005 and 0.1.
+
+What changes. P1 to P4 hold as graded, for the probe exp88 preregistered; the reading of them narrows. Estimating
+the error rate per condition stays justified: with matched probes the parts still err at different rates, and a
+whole-map rate averages them. Ranking each condition on its own matters when part of a map was read by a model on
+inputs it was not trained on. With a probe trained on each input, one review order took a similar share of each
+part's errors. The limit above, "a model fine-tuned with modality dropout may behave differently", was too weak:
+a probe trained on the input it reads already removes the effect here. Whether a probe trained with modality
+dropout does the same is not tested. <!-- claim:exp88-matched-head-ranks-normally -->
 
 ## The ceiling belongs to the task, not to the model (from exp74 and exp70)
 

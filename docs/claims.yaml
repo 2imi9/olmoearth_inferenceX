@@ -4161,7 +4161,7 @@
     the pooled estimate misses the cloudy part by half the gap between the parts.
 
 - id: exp88-matched-head-ranks-normally
-  statement: "On the same 458,638 PASTIS windows, the confident errors belong to a probe read on an input it was not trained on. OlmoEarth Base's S1+S2 probe read on the S1 embeddings errs on 73.6% of the windows; 59.8% of its errors have a margin at or above 0.8206, the median margin of the windows it gets right on S1+S2, and its margin's AUROC for errors is 0.59. The probe the record trained on the S1 embeddings errs on 28.4%; 3.9% of its errors are that confident, and its AUROC is 0.79 (the S1+S2 probe on S1+S2: 19.5%, 6.0% and 0.83). On exp88's half-cloudy map with the S1 probe on the cloudy tiles, the parts err on 28.3% and 19.7%, and the 5% review set by margin holds 13.4% of the cloudy part's errors and 12.9% of the clear part's (4.3% and 18.3% with exp88's probe). OlmoEarth Large: 49.9%, 12.8% and 0.72 with the S1+S2 probe on S1; 27.9%, 2.9% and 0.80 with the S1 probe; 14.0% and 12.6% in the review set."
+  statement: "On the same 458,638 PASTIS windows, the confident errors belong to a probe read on an input it was not trained on. OlmoEarth Base's S1+S2 probe read on the S1 embeddings errs on 73.6% of the windows; 59.8% of its errors have a margin at or above 0.8206, the median margin of the windows it gets right on S1+S2, and its margin's AUROC for errors is 0.59. The probe the record trained on the S1 embeddings errs on 28.4%; 3.9% of its errors are that confident, and its AUROC is 0.79 (the S1+S2 probe on S1+S2: 19.5%, 6.0% and 0.83). On exp88's half-cloudy map with the S1 probe on the cloudy tiles, the parts err on 28.3% and 19.7%, and the 5% review set by margin holds 13.4% of the cloudy part's errors and 12.9% of the clear part's (4.3% and 18.3% with exp88's probe). OlmoEarth Large: 49.9%, 12.8% and 0.72 with the S1+S2 probe on S1; 27.9%, 2.9% and 0.80 with the S1 probe; 14.0% and 12.6% in the review set. On CropHarvest China 6, with a probe trained on each input, the optical input is the more useful one: Base's S1 probe errs on 35.6% and its S2 probe on 26.6% (the S1+S2 probe: 22.6% on S1+S2 and 28.9% read on S1 without refit), and Large's on 36.7% and 27.4% (full input 26.9%)."
   crosscheck: tests/test_exp88.py::test_the_matched_head_by_a_second_route
   status: measured
   experiments: [exp88, exp78, exp79]
@@ -4199,6 +4199,12 @@
                                  l['mixed_map']['matched']['review_set']['cloudy_errors_in_review_share'], l['mixed_map']['matched']['review_set']['clear_errors_in_review_share'])] == [0.499, 0.128, 0.279, 0.029, 0.140, 0.126]
       and [round(l['families']['pastis']['rows'][n]['margin_auroc'], 2) for n in ('s1s2_head_on_s1', 's1_head_on_s1')] == [0.72, 0.80]
       and l['families']['pastis']['rows']['s1_head_on_s1']['source']['sha256_matches'] == 'exp/out/exp79_seeds/olmoearth_large.json'
+      # China 6: with a probe trained on each input, the optical-only probe errs less than the radar-only one, on both sizes
+      and [round(b['families']['china6']['rows'][n]['error_rate'], 3) for n in ('s1_head_on_s1', 's2_head_on_s2', 's1s2_head_on_s1s2', 's1s2_head_on_s1')] == [0.356, 0.266, 0.226, 0.289]
+      and [round(l['families']['china6']['rows'][n]['error_rate'], 3) for n in ('s1_head_on_s1', 's2_head_on_s2', 's1s2_head_on_s1s2')] == [0.367, 0.274, 0.269]
+      and all(abs(x['families']['china6']['rows'][n]['error_rate'] - x['families']['china6']['rows'][n]['n_errors'] / x['families']['china6']['n_units']) < 1e-12
+              for x in (b, l) for n in x['families']['china6']['rows'])
+      and all(x['families']['china6']['rows']['s2_head_on_s2']['n_errors'] < x['families']['china6']['rows']['s1_head_on_s1']['n_errors'] for x in (b, l))
     )(E['olmoearth_base'], E['olmoearth_large'], S['olmoearth_base']['seeds']['0']['families']['pastis'])
     )(A['exp/out/exp88_matched_head.json']['encoders'], A['exp/out/exp88_summary.json']['results'], A['exp/out/exp78_units/manifest.json']['tasks'])
   cited_in:
