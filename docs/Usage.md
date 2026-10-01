@@ -61,16 +61,24 @@ in Python, `form="top1"` reads logits that way. Other maps are accepted with res
 | Binary score in [0, 1] decided at 0.5, such as an OlmoEarth Studio `per_pixel_regression` output of a two-class task | Everything a binary probability map is, passed as one: windows are ranked by distance from 0.5, which needs no calibration, and a design-based estimate stays valid, since the score only allocates the labels. The score is not a probability of error, and no recorded experiment grades this case |
 | Continuous map, such as a regression output | `compare` only, at a cut-off named with `--threshold`; no recorded experiment grades this case |
 
-The package works on square windows of `--patch` pixels (default 4). A window's confidence is the mean confidence
-margin of its valid pixels and its class the majority class of its pixels; a window less than half valid is left
-out. No-data comes from the raster's no-data value, from NaN or from `--nodata`.
+The package works on square windows of `--patch` pixels (default 4). A window's confidence is the mean over its valid
+pixels of each pixel's confidence, and its class the majority class of its pixels; a window less than half valid is
+left out. A pixel's confidence is its top class probability for class probabilities, the gap between its two highest
+logits with `--logits` (with `form="top1"` in Python, the log of its top probability), and for a two-class map the
+distance of the probability from 0.5, or the absolute logit. The experiments graded a close relative: the margin
+between the two highest class probabilities of the window's mean probabilities. exp76 compares the forms. No-data comes from the raster's no-data value, from NaN or from `--nodata`.
 
-**The input condition (not yet released).** The confidence ranking is only comparable between windows read from the
-same inputs, and without a layer `assess` ranks every window with every other. Where part of a map was predicted with
-an input missing, such as the optical image under cloud, the model can be confidently wrong there: on PASTIS without
-the optical input, 59.8% of OlmoEarth Base's errors were at least as confident as the typical correct window with full
-input, against 6.0% with it. OlmoEarth Large's share rose only from 5.7% to 12.8-13.8%
-([exp88](results/comparisons.md#when-a-modality-is-missing-does-the-confidence-fall-with-the-accuracy-exp88)). A map
+**The input condition (not yet released).** Without a layer `assess` ranks every window with every other. Where part
+of a map was predicted from an input combination the model was not trained on, such as radar alone under cloud for a
+model trained on radar plus optical, the model can be confidently wrong there. On PASTIS such a probe of OlmoEarth Base
+was 73.6% wrong, and 59.8% of its errors were at least as confident as the typical correct window with full input,
+against 6.0% with full input. A probe trained on radar alone was 28.4% wrong, and 3.9% of its errors were that
+confident. OlmoEarth Large's share rose only from 5.7% to 12.8-13.8%
+([exp88](results/comparisons.md#when-a-modality-is-missing-does-the-confidence-fall-with-the-accuracy-exp88)). If a
+model can run with an input missing, compare confidence only between windows read from the same inputs, unless the
+model was trained with that input missing. Even a model trained on each input can be wrong more often under one
+input than under another (28.3% against 19.7% on a half-cloudy PASTIS map), so the error rate is worth estimating per
+condition either way. A map
 that records each pixel's input condition can pass it as `--condition` (`condition=` in Python), and each condition is
 then also ranked on its own, among windows read from the same inputs. The layer is one integer band on the map's grid,
 such as a cloud flag, the modalities present, a sensor id or an acquisition group. A negative value, NaN or the
@@ -125,7 +133,8 @@ oe-inferencex assess scores.tif --logits --out audit --condition cloud_flag.tif 
 ```
 
 Without `--condition`, `assessment.json` differs from 1.3.1's only by `scope`, and nothing printed changes. `scope`
-says that a window read with an input missing can be confidently wrong and come late in the order (exp88). With
+says that a window predicted from an input combination the model was not trained on can be confidently wrong and come
+late in the order (exp88). With
 `--condition`, `assessment.json` also records `inputs.condition` and `inputs.condition_names` and adds `conditions`:
 the rule above, the counts of windows tied between condition values (`n_windows_split`) and with none
 (`n_windows_no_code`), and `per_condition`, which gives each condition's share of the map, its confidence quantiles,
@@ -134,8 +143,9 @@ whole map's order kept to that condition, at the same budget of that condition's
 descriptive only; no experiment has tested whether a difference between conditions signals errors. One printed line
 lists every condition, with its share of the map and of the 5% review set, or of the review set whose budget is
 nearest 5%. With two or more conditions, `scope` says that the whole-map sets rank the conditions together and that
-the ranking inside a condition with an input missing can be weak: on PASTIS without the optical input, the margin's
-AUROC for errors fell from 0.83 to 0.59 (exp88). Which condition is more accurate needs labels.
+the ranking inside a condition read from inputs the model was not trained on can be weak: on PASTIS the margin's AUROC
+for errors was 0.59 for a probe trained on radar plus optical and run on radar alone, against 0.83 on both inputs and
+0.79 for a probe trained on radar alone (exp88). Which condition is more accurate needs labels.
 
 `--order boundary_first` reviews the windows on a class boundary first, then the interior, each by confidence; the
 [Recipe](method/recipe.md) states when to use it. `--reference labels.tif`, an integer class raster on the same grid,
@@ -189,6 +199,12 @@ pixels. **The reviewer sets `wrong` to 1 when `map_class` is not what is on the 
 `estimate` grades that class, not the window's centre pixel. The recorded experiments used 300 windows
 ([exp78](results/comparisons.md#how-wrong-is-this-map-what-a-reviewers-labels-buy-exp78)).
 
+`estimate` and `certify` treat the labels as right. Their interval and zone describe agreement with the reviewer's
+labels; if the reviewer marks correct windows wrong or misses errors, the true rate can fall outside them. No
+experiment here measured how often reviewers err. Labelling blind keeps the labels independent of the map: hide the
+`map_class` column from the reviewer, record the class seen in a `reference_class` column, and set `wrong` to 1
+where it differs from `map_class`.
+
 | `--design` | Draw | Interval in `estimate` |
 |---|---|---|
 | `confidence` (default without `--condition`) | Strata by confidence margin, budget allocated from the model's confidence | Wilson at the design's effective sample size |
@@ -197,9 +213,14 @@ pixels. **The reviewer sets `wrong` to 1 when `map_class` is not what is on the 
 | `tiles` | `--per-tile` windows (default 16) in each of a random set of tiles of `--tile` windows per side (default 16) | Ratio estimator over tiles, with the naive interval beside it |
 | `condition` (default with `--condition`) | Strata by input condition, labels split equally | Exact per condition; whole map: the conditions' exact intervals at 1 − 0.05/L, weighted by share, at least 95% by construction; per class: not graded |
 
-The tile design matches how reviewers often label, and its intervals under-cover: on exp78's tasks the naive one
-covered the true rate 51 to 78% of the time at a nominal 95%, the corrected one 91 to 94% with tiles of equal size and
-60% with tiles of 1 to 400 windows. If labelling has not started, use the default design.
+The tile design matches how reviewers often label, and its intervals can under-cover. On exp78's tasks the naive
+interval covered the true rate 51 to 78% of the time at a nominal 95%. The corrected interval, as `--design tiles`
+ships it, covered 94.5% to 95.4% on five tasks and fell short on Sen1Floods11 (84.3%) and MADOS (68.5%), where a tenth
+of the tiles hold most of the errors
+([exp78](results/comparisons.md#how-wrong-is-this-map-what-a-reviewers-labels-buy-exp78)). The warning `estimate`
+prints for a tiles sample still quotes exp78's own design (an exact 18 tiles and a normal quantile). If labelling has
+not started, draw single windows rather than tiles. If only the whole-map rate is needed, `--design random` gives the
+exact interval and is the design `certify` needs.
 
 **Sampling by input condition (not yet released).** A map with a condition layer is sampled, estimated and certified
 per condition:
@@ -215,8 +236,8 @@ oe-inferencex certify to_label.csv --alpha 0.05      # a zone per condition
 from there and never read the raster again, and a row whose `condition` was edited is refused. The `condition` design
 gives every condition the same number of labels: a condition too small for an equal share is labelled in full, and the
 others share the rest. The split never reads the model's confidence, which can overstate the accuracy of a condition
-with an input missing: it did on PASTIS without the optical input, though not on CropHarvest China 6 (exp88). An
-allocation from it could then starve that condition. `--design random --condition` draws the same windows as without a
+read from inputs the model was not trained on: it did on PASTIS for a probe trained on radar plus optical and run on
+radar alone, though not on CropHarvest China 6 (exp88). An allocation from it could then starve that condition. `--design random --condition` draws the same windows as without a
 layer and only records each window's condition; each condition's count is then left to chance. The `confidence`,
 `proportional` and `tiles` designs refuse a layer, and `--design condition` refuses to run without one. The printed
 line gives the labels per condition and, for two or more, the labels each needs before `certify` can say anything
@@ -225,8 +246,9 @@ about it.
 `estimate` writes `to_label_estimate.json` (`estimate`, `low`, `high`, `half_width`, `method`, and `effective_n`
 under the confidence and proportional designs). It refuses a blank `wrong`, a `wrong` other than 0 or 1, and rows
 other than those the design drew. Without a condition the JSON gains `scope`: a whole-map rate can hide a part read
-with an input missing. On a PASTIS map with half its tiles read without the optical input, that part's error rate was
-74.1% and the rest's 19.7%, while random samples of 300 estimated 46.9% on average (exp88).
+from other inputs. On a PASTIS map with half its tiles read without the optical input by a probe trained on radar plus
+optical, that part's error rate was 74.1% and the rest's 19.7%, while random samples of 300 estimated 46.9% on
+average. Read by a probe trained on radar alone, that part was still 28.3% wrong (exp88).
 
 For a sample that records a condition, `estimate` also prints one line per condition and adds `by_condition`,
 `per_condition` (per condition: `value`, `n_population`, `share_of_map`, `n_labelled`, `n_wrong`, `estimate`, `low`,
@@ -243,9 +265,12 @@ number of conditions not labelled in full (`conditions_in_interval`); a conditio
 rate. The interval runs from the weighted sum of the lower ends to the weighted sum of the upper ends. At that level
 the L intervals hold together at least 95% of the time, and when they do the whole-map rate lies between the two
 sums. So the interval covers at least 95% by construction, for every map and every split of the labels; the tests
-enumerate it on small maps. It is wider than a stratified interval would be, and a printed note says so. That is the
-price of the guarantee: with the conditions as strata, the stratified interval covered 53% of the time on a map of
-4,000 windows at 0.5% wrong beside 200 at 50%, with 150 labels each (exact, by enumeration in the tests).
+enumerate it on small maps. It is wider than a stratified interval would be. When the conditions' error rates are
+close, it is also wider than a random sample's exact interval of the same size, which is guaranteed too; a printed
+note says so, and that `--design random` can be narrower when only the whole-map rate is needed. The condition design
+pays off for the error rates of small conditions, each of which gets an equal share of the labels. A stratified
+interval is no way out: with the conditions as strata, it covered 53% of the time on a map of 4,000 windows at 0.5%
+wrong beside 200 at 50%, with 150 labels each (exact, by enumeration in the tests).
 `design_variance` is the stratified estimate's unbiased variance, for information; the interval does not use it. With
 one condition the interval is the random design's exact one.
 
@@ -279,8 +304,12 @@ It writes `random_zone.json` (`coverage`, the certified share; `threshold`, the 
 
 - A stratified or tile sample is refused, because the guarantee rests on the labels inside each candidate zone being
   a random sample of that zone.
-- `--rule prefix` (default) assumes the zone's error rate does not fall as the zone grows; `--rule bonferroni` assumes
-  nothing.
+- `--rule prefix` (default) tests the zones from the most confident share up and stops at the first it cannot
+  certify. It is fixed-sequence testing, so it is valid on any map, whatever the shape of its error rate. It
+  certifies little when the most confident windows hold many errors; there `--rule bonferroni`, which tests every
+  level at δ divided by the number of levels, can certify more. Neither is the more powerful in general (exp80).
+- Like `estimate`, `certify` treats the labels as right: the zone's guarantee is about agreement with the reviewer's
+  labels.
 - When the budget cannot certify the level asked for, `certify` says so. With no error among its labels a zone needs
   about `ln(δ) / ln(1 − α)` labels (`min_labels_to_certify`): 45 at α = 5% and 255 at α = 0.9%, for δ = 0.1.
 - The confidence is recomputed from the scores the sidecar names (`--scores` if the raster has moved) and checked
@@ -340,6 +369,8 @@ why["quotes"]["ndwi_ambiguous"]             # "is spectrally ambiguous ... (48% 
 
 - `form="top1"` ranks a multi-class logit map by one minus the top probability; the default remains the logit margin,
   with a warning on such maps ([exp76](results/comparisons.md#which-confidence-which-statistic-which-aggregator-exp76)).
+  The command line has no such option: class probabilities passed without `--logits` are ranked by the window mean of
+  the top probability, where `form="top1"` takes the window mean of its log.
 - `explain_review_set` derives the boundary and low-confidence cues itself. Other cues are boolean arrays of window
   shape, such as spectral ambiguity (above) or tiling instability (`signals.aligned_tile_phase`); cues in
   `explain.CUES` are quoted with their measured enrichment, other names as unmeasured.
@@ -444,8 +475,11 @@ recorded, and the draw is the one made without it. `certify_by_condition` takes 
 refuses `"plugin"`, which has no guarantee to split over the conditions.
 
 `estimate_from_indices(indices, wrong, margin, valid)` treats windows labelled without a design as a random sample
-once it has checked that they could be one. A random sample sits at a mean suspicion percentile near 0.50 and a review
-set near 0.97; a review set is refused with that number, and a census of every valid window is accepted.
+once it has checked that they do not look like a review list. A random sample sits at a mean suspicion percentile near
+0.50 and a review set near 0.97; a review set is refused with that number, and a census of every valid window is
+accepted. The check does not make the labels a random sample: labels drawn from the confident end of a map, or
+clustered by tile, pass it, and the interval is then not valid. Use it only for labels known to be a simple random
+sample.
 
 ### Fuse the readings with labels
 

@@ -1431,6 +1431,7 @@
     )(A['exp/out/exp55_summary.json']['prereg']['descriptive'], A['exp/out/exp55_summary.json']['results'])
   cited_in:
     - {file: docs/Findings.md, marker: geoid-boundary-first-minority}
+    - {file: docs/TECHNIQUES.md, marker: geoid-boundary-first-minority}
 
 - id: atlas-disagreement-is-boundary-located
   statement: On the disagreement windows of every pair of inferences (crop offsets 0 vs 2, v1 vs v1.2, the S2 head vs the S1 head and frozen vs fine-tuned on both Sen1Floods11 testbeds; seven encoders against OlmoEarth Base on Ai2's embeddings; the two sensors on the median GEOID-Flood event) the boundary cue is enriched more than twofold, 3.3x to 7.1x on Sen1Floods11 and 21x on the median GEOID event (preregistered P1, 16 of 16 pairs).
@@ -2364,6 +2365,7 @@
   cited_in:
     - {file: docs/results/comparisons.md, marker: suite-six-segmentation-outcomes-were-on-record}
     - {file: docs/Findings.md, marker: suite-six-segmentation-outcomes-were-on-record}
+    - {file: docs/TECHNIQUES.md, marker: suite-six-segmentation-outcomes-were-on-record}
   note: >-
     Not disclosed when exp70 was recorded; found by the red team of 30 September 2026. The dates are from the history,
     not from an artifact: exp51 was recorded in 486ef3f and exp54 in f74eb7c, both on 10 September 2026; exp70's script,
@@ -4237,6 +4239,7 @@
     - {file: docs/Findings.md, marker: exp88-matched-head-ranks-normally}
     - {file: docs/Summary.md, marker: exp88-matched-head-ranks-normally}
     - {file: README.md, marker: exp88-matched-head-ranks-normally}
+    - {file: docs/TECHNIQUES.md, marker: exp88-matched-head-ranks-normally}
   note: >-
     Not preregistered: a reading of committed per-unit files after exp88 was recorded, prompted by the red team of
     30 September 2026. The matched probe is exp70's seed-0 probe as exported per unit by exp78 (Base, committed) and
@@ -4270,6 +4273,7 @@
     - {file: docs/Findings.md, marker: suite-controls-are-near-chance}
     - {file: docs/Summary.md, marker: suite-controls-are-near-chance}
     - {file: README.md, marker: suite-controls-are-near-chance}
+    - {file: docs/TECHNIQUES.md, marker: suite-controls-are-near-chance}
   note: >-
     The gap uses the exact finite-n perfect order (oracle_aurc), so it is not mixed with the asymptotic form the
     claim margin-takes-two-thirds-of-the-ranking-headroom uses; both give 0.68 for the margin. The class-rarity
@@ -4320,6 +4324,7 @@
     - {file: docs/Findings.md, marker: suite-review-at-ten-percent}
     - {file: docs/Summary.md, marker: suite-review-at-ten-percent}
     - {file: README.md, marker: suite-review-at-ten-percent}
+    - {file: docs/TECHNIQUES.md, marker: suite-review-at-ten-percent}
   note: >-
     The capture is exp70's tie-aware share of all errors inside the round(0.1 n) least confident units; the perfect
     order's is min(k, E) / E for that realised set (attainable_ceiling with n). A random 10% finds 0.10 in

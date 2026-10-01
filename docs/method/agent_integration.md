@@ -43,7 +43,10 @@ rather than depending on the model knowing it.
 The input-condition caution travels the same way. Without a condition layer,
 `assessment.json`, the estimate JSON and the zone JSON carry `scope`: what a
 whole-map ranking, rate or zone does not show when part of the map was read
-with an input missing, as under cloud (exp88). The OlmoEarth Agent does not
+from other inputs, as under cloud. A model run on an input combination it was
+not trained on can be confidently wrong there, so its errors come late in the
+order; a model trained on each input can still err more under one than under
+another (exp88). The OlmoEarth Agent does not
 pass a condition layer yet. Once it supports one, it should pass the layer as
 `--condition` to `assess` and `sample` whenever the map records each pixel's
 input condition. The outputs then rank, estimate and certify each condition on

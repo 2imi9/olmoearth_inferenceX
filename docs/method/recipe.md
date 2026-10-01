@@ -28,12 +28,24 @@ rewritten, [../TECHNIQUES.md](../TECHNIQUES.md) is the complete index and
 testbed — AWF point labels (exp04, exp16), Sen1Floods11 dense masks with a
 geographic hold-out (exp18), the fine-tuned AWF model itself (exp21) — the
 logit margin ranked errors at least as well as every constructed signal.
-Score it as the negative absolute logit (or top-1 minus top-2) rather than
-`1 - max probability`, so saturated probabilities do not tie. Rank within one
-input condition: where part of the map was read with an input missing, as
-under cloud, the model can be confidently wrong there. On PASTIS without the
-optical input, 59.8% of OlmoEarth Base's errors looked confident against 6.0%
-with it; OlmoEarth Large's share rose only from 5.7% to 12.8-13.8% (exp88). If the map records each pixel's input condition, pass it as
+For a two-class map, score the absolute logit, so saturated probabilities do
+not tie. For a map of more than two classes, one minus the top probability
+ranked errors slightly better than the probability margin on 14 of 16
+multi-class tasks, and the logit margin worse than the probability margin on
+all 16 (exp76).
+The package's default reads the top probability from class probabilities and
+the logit margin from logits (`--logits`); in Python, `form="top1"` reads the
+top probability from logits.
+
+Do not compare confidence across inputs a model was not trained on. Where part
+of the map was read from such an input combination, such as radar alone under
+cloud for a model trained on radar plus optical, the model can be confidently
+wrong there. On PASTIS such a probe of OlmoEarth Base was 73.6% wrong, and
+59.8% of its errors looked confident against 6.0% with both inputs; a probe
+trained on radar alone was 28.4% wrong, and 3.9% of its errors looked
+confident. OlmoEarth Large's share rose only from 5.7% to 12.8-13.8% (exp88).
+Even with a model trained on each input, the error rate can differ between
+input conditions. If the map records each pixel's input condition, pass it as
 `--condition`, and each condition is ranked, sampled and certified on its own.
 
 **2. Use prediction-boundary proximity as a triage cue, not a ranker.**
@@ -149,8 +161,11 @@ see [the ViT3 readiness page](../plan/vit3_readiness.md).
 A signal that beats confidence on expert-labelled dense maps, on more than
 one task family, at a fixed review budget. None has been found. One change
 has been made: a map read from different inputs in different places is ranked
-and estimated per input condition, because on PASTIS a missing optical input
-made the extra errors confident ones and a whole-map rate misstated the
-cloudy part (exp88). On CropHarvest China 6, where the optical input matters
-little, the confidence tracked the lost information. Open items are in
+and estimated per input condition (exp88). On PASTIS a probe trained on radar
+plus optical and run without the optical input made confident errors, and a
+whole-map rate misstated the cloudy part. A probe trained on radar alone made
+few confident errors, but the two parts still erred at different rates, which
+is why the estimate stays per condition. On CropHarvest China 6 the probe
+trained on both inputs lost little without the optical input, and its
+confidence tracked the lost information. Open items are in
 [../plan/roadmap.md](../plan/roadmap.md).
