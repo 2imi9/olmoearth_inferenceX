@@ -3125,7 +3125,8 @@ windows and that confidence does not order the set. That fact is carried by the
 package and stated in its tool output; it is not something a model derives from
 two arrays, and the sandbox arm, which had both arrays, did not. What the
 package adds to a strong model is not computation but the evidence about when
-computation does not settle the question. <!-- claim:agent-benchmark-decline-holds -->
+computation does not settle the question. (This reading was withdrawn on 30 September
+2026: arm D, with no package and no rasters, declined as often. See the addendum at the end of this section.)
 
 **Reliability separates the arms where ranking does not.** The sandbox arm
 produced no gradeable answer in 27 of 120 runs, every one of them at the
@@ -3162,13 +3163,14 @@ grounds 100.0% of its numbers against the sandbox's
 0.1%, a difference of 0.999 on
 40 cards to 0; it captures
 0.997 of the package's errors against the sandbox's
-0.144, a difference of +0.198 on
-39 to 0; it declines the side question on
+0.144 (in raw capture at the 5% budget, 0.230 against 0.032, a difference of +0.198) on
+39 cards to 0; it declines the side question on
 10 of 10 comparison cards and the sandbox on 0.
 The sandbox arm produced no gradeable answer in 51 of 120 runs and left
 53.3% of comparison questions unanswered; the no-raster arm fabricated
 372 windows. Beside the 27B run, where P1 and P2 failed, this is the size
-contrast measured: what the package adds over a sandbox is everything at 7B and the decline at 27B.
+contrast measured: what the package adds over a sandbox is everything at 7B. At 27B it is not the decline: the
+no-raster arm, with no package and no data, declined on every comparison run too (see the addendum below).
 <!-- claim:agent-benchmark-package-is-a-floor-at-7b -->
 
 **The agent at 7B does not find the tool, and that prediction fails.** Given
@@ -3191,6 +3193,17 @@ hold on 55.0% of its windows against 99.5% at 27B: it copies the
 review set correctly and mislabels the reasons. Reproducing the set is the
 easier task; explaining it is where the model's strength shows.
 <!-- claim:agent-benchmark-7b-tool-arm-cues-degrade -->
+
+**Addendum, 30 September 2026: arm D declines too, so P3 does not show what the package adds.** A red team
+recounted the comparison answers from `exp64_answers.jsonl`. Arm D has only the card's text, with no rasters and no
+package. At 27B it declines to pick a side on all 30 comparison runs (10 cards, 3 runs each), as arm A does. Arm C
+and both variants of arm E also decline on every comparison card. Arm B declines on 3 runs, picks a side on 18 and
+leaves 9 unanswered. The grader scores any decline as full marks (`exp/exp64_arms.py`, `grade_comparison`), so a
+decline cannot score below a pick. Every arm without a code sandbox declined, so the benchmark cannot tell whether
+the package adds anything to the decline. P3 holds as preregistered. The reading in the P3 paragraph above, that the
+package carries the fact behind the decline, is withdrawn, and the claim is recorded as mixed. The runs are at
+temperature 0, so the three runs of a card are close to repeats and the effective sample is the 10 cards. At 7B,
+arm D declined on none and left every comparison question unanswered. <!-- claim:agent-benchmark-decline-holds -->
 
 ## Served land cover change rasters (exp20)
 
