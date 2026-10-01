@@ -1190,6 +1190,27 @@ def test_exp86_claim_rates_brief_level_fall_recomputes_from_the_per_brief_counts
     assert [round(v, 4) for v in F["by_configuration"]["round_7_minus_round_10_95"]] == [0.0181, 0.0919]
 
 
+def test_exp86_audit_variation_and_the_answers_no_rule_touched_recount_from_the_audits():
+    """exp86_development_rounds_summary.md quotes two counts read from the committed audits, recounted here with the
+    rule exp86_claim_rates.py uses (a finding counts when its verdict is confirmed or reclassified). Two audits of the
+    same round-7 answers confirmed 48 and 63 findings. In round 8 the answer checks rewrote three answers (B3/studio
+    run 3, B7/files run 1, B8/cluster run 1, exp86_round8_diagnosis.md); in the other 27 configuration-run positions,
+    material findings fell from 26 in round 7 to 14 in round 8."""
+    def counted(name, rnd):
+        audit = json.load(open(_need(name)))
+        label = audit["key"]["label_of_round"][rnd]
+        return [v for g in audit["groups"] for v in g["verify"]["verdicts"]
+                if v["label"] == label and v["verdict"] in ("confirmed", "reclassified")]
+    first, second = counted("exp86_audit_rounds_6_7.json", "7"), counted("exp86_audit_rounds_7_8.json", "7")
+    assert (len(first), len(second)) == (48, 63)
+    assert len(second) == json.load(open(_need("exp86_claim_rates.json")))["rounds"][0]["confirmed"]
+    assert not any("materiality" in v for v in first), "the first audit judged no materiality"
+    touched = {("B3/studio", "3"), ("B7/files", "1"), ("B8/cluster", "1")}
+    untouched = {rnd: sum(v.get("materiality") == "material" and (v["configuration"], v["run"]) not in touched
+                          for v in counted("exp86_audit_rounds_7_8.json", rnd)) for rnd in ("7", "8")}
+    assert untouched == {"7": 26, "8": 14}
+
+
 def test_exp78_shipped_tile_design_coverage_by_an_independent_implementation():
     """exp78_shipped_tiles.json by a second route: the shipped design written out here from its description (tiles
     in a random order, up to 16 windows from each, until 300 labels; the ratio estimator weighted by each tile's valid
