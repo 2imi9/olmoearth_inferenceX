@@ -1074,7 +1074,8 @@ def build_parser():
                         "drawn with --condition, that any of the per-condition statements is, split over the conditions "
                         "tested")
     z.add_argument("--rule", choices=("prefix", "bonferroni"), default="prefix",
-                   help="prefix (default) assumes the zone's error rate does not fall as the zone grows; bonferroni assumes nothing")
+                   help="prefix (default): fixed-sequence testing, valid on any map; it certifies little when the most "
+                        "confident windows hold many errors. bonferroni: valid on any map; it can certify more in that case")
     z.add_argument("--scores", default=None, help="the raster `sample` was run on, if it has moved")
     z.add_argument("--nodata", type=float, default=None,
                    help="the no-data value `sample` was run with (default: the one its sidecar records; a different value "

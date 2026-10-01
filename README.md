@@ -117,7 +117,7 @@ at most 10% of the samples that could have been drawn (`--delta`).
 ```console
 $ oe-inferencex certify to_label.csv --alpha 0.05
 the 90% most confident windows (3686 of 4096, confidence margin >= 0.6662) are wrong at most 5% of the time; this statement fails on at most 10% of samples like this one (prefix rule; the exact upper bound on the zone's error rate at that level is 2.4%). Outside the zone nothing is certified.
-valid if the zone's error rate does not fall as the zone grows; on the suite tasks exp80 graded, the guarantee held whether or not that was exactly true (docs/results/comparisons.md, exp80)
+prefix rule: fixed-sequence testing, valid on any map whatever the shape of its error rate; it stops at the first zone it cannot certify, so it certifies little when the most confident windows hold many errors, where the bonferroni rule can certify more
 wrote to_label_zone.json and the window mask to_label_zone.npy
 ```
 

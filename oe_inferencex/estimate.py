@@ -1357,6 +1357,15 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
 ZONE_GRID = tuple(round(j / 20, 2) for j in range(1, 21))
 ZONE_DELTA = 0.10
 ZONE_RULES = ("prefix", "bonferroni", "plugin")
+# The note a prefix certification carries. The prefix rule is fixed-sequence testing (Angelopoulos et al. 2021, Learn
+# then Test): the levels are ordered before any label is read and each p-value is exact, so a zone wrong more than
+# alpha of the time is certified only if the first such level in the order passes its test, which happens on at
+# most delta of samples, on any map. Until 1.3.1 the note said the rule was valid only if the zone's error rate does
+# not fall as the zone grows; it needs no such assumption. tests/test_trust_zone.py enumerates every error pattern of
+# small maps, monotone or not, and every draw, for both rules.
+PREFIX_NOTE = ("prefix rule: fixed-sequence testing, valid on any map whatever the shape of its error rate; it stops at "
+               "the first zone it cannot certify, so it certifies little when the most confident windows hold many "
+               "errors, where the bonferroni rule can certify more")
 
 
 def _log_choose(n, r):
@@ -1470,10 +1479,12 @@ def zone_counts(positions, wrong, sizes):
 
 def apply_zone_rule(p, b, k, alpha, delta=ZONE_DELTA, rule="prefix"):
     """Which grid levels a rule accepts, and the largest one; levels are in increasing coverage.
-    prefix      accept while p <= delta from the smallest zone up, stop at the first failure (Bates et al. 2021;
-                valid when the zone's error rate is nondecreasing in coverage)
+    prefix      accept while p <= delta from the smallest zone up, stop at the first failure: fixed-sequence
+                testing (Angelopoulos et al. 2021, Learn then Test), valid on any map whatever the shape of the
+                zone's error rate; weak when the most confident windows hold many errors, since it stops early
     bonferroni  accept every level with p <= delta / J, J the number of levels (Angelopoulos et al. 2021, Learn
-                then Test; valid with no assumption on the shape)
+                then Test; valid on any map); it can pass a level the prefix rule stops at, and needs a smaller
+                p-value at every level
     plugin      accept every level whose sample rate k / b is at most alpha; no guarantee, the comparator"""
     p, b, k = np.asarray(p, float), np.asarray(b, int), np.asarray(k, int)
     if rule == "prefix":
@@ -1501,8 +1512,9 @@ def certify_zone(margin, indices, wrong, alpha, delta=ZONE_DELTA, rule="prefix",
     margin  : per-window confidence, higher = more trusted; NaN and invalid windows are outside the population
     indices : the labelled windows, which must be a simple random sample of the valid windows
     wrong   : 0/1 per labelled window, in the order of `indices`
-    rule    : "prefix" (assumes the zone's error rate does not fall as the zone grows; the powerful rule),
-              "bonferroni" (no assumption), "plugin" (no guarantee; what a reviewer would do unaided)
+    rule    : "prefix" (fixed-sequence testing, valid on any map; certifies little when the most confident windows
+              hold many errors), "bonferroni" (valid on any map; can certify more in that case and less in others),
+              "plugin" (no guarantee; what a reviewer would do unaided)
 
     Returns coverage None when nothing can be certified, with the reason; a labelled set that looks like the
     tool's own review set is refused, because the hypergeometric argument needs a random draw. `scope` says that the
@@ -1563,8 +1575,7 @@ def certify_zone(margin, indices, wrong, alpha, delta=ZONE_DELTA, rule="prefix",
     if rule == "plugin":
         out["note"] = "plug-in rule: no guarantee; the largest zone whose sample rate is at most alpha"
     elif rule == "prefix":
-        out["note"] = ("valid if the zone's error rate does not fall as the zone grows; on the suite tasks exp80 graded, "
-                       "the guarantee held whether or not that was exactly true (docs/results/comparisons.md, exp80)")
+        out["note"] = PREFIX_NOTE
     else:
         out["note"] = (f"Bonferroni over the {len(cov)} testable levels: valid with no assumption on how the error rate "
                        "changes with the zone")

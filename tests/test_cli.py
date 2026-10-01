@@ -762,17 +762,34 @@ def _golden_module():
 
 
 def test_existing_outputs_are_byte_identical_to_1_3_1(tmp_path):
-    """Without a layer, every output of 1.3.1 is unchanged: the stdout of assess, sample (four designs), estimate
-    (with and without --per-class) and certify, the sample CSVs and sidecars, the review sets, the rasters and
-    explanation.json byte for byte; and the JSON outputs byte for byte once `scope`, the one added key, is taken
-    out. The files were generated at 725dffa, before any edit (tests/golden/condition_1_3_1/generate.py)."""
+    """Without a layer, every output of 1.3.1 is unchanged but for the changes made on purpose: the stdout of assess,
+    sample (four designs), estimate (with and without --per-class) and certify, the sample CSVs and sidecars, the
+    review sets, the rasters and explanation.json byte for byte; and the JSON outputs byte for byte once `scope`, the
+    one added key, is taken out. The files were generated at 725dffa, before any edit
+    (tests/golden/condition_1_3_1/generate.py).
+
+    The changes made on purpose are listed in tests/golden/condition_1_3_1/changes.py, each with 1.3.1's whole text,
+    the new text and the files that hold it, and nothing else may differ:
+    - certify's note on the prefix rule, a line of the stdout and the `note` of the zone JSON, in the four prefix
+      certifications (sample_random certify_prefix, certify_delta and certify_whole, sample_scene_random
+      certify_prefix)."""
     from oe_inferencex.assess import SCOPE_ASSESS
     from oe_inferencex.estimate import SCOPE_CERTIFY, SCOPE_ESTIMATE
     gen = _golden_module()
+    spec = importlib.util.spec_from_file_location("golden_1_3_1_changes", os.path.join(GOLDEN, "changes.py"))
+    changes = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(changes)
     files, manifest = gen.produce(str(tmp_path))
     golden = json.load(open(os.path.join(GOLDEN, "manifest.json")))
     assert sorted(files) == golden["files"]                     # no file added or lost, condition.tif included
     assert manifest["steps"] == golden["steps"] and manifest["api"] == golden["api"]
+    # the list is exact: one change, in exactly these eight files, every one of them a golden file, and each new
+    # text is the one the package keeps
+    listed = sorted(n for c in changes.CHANGES for n in c["files"])
+    assert len(changes.CHANGES) == 1 and len(listed) == len(set(listed)) == 8 and set(listed) <= set(golden["files"])
+    for c in changes.CHANGES:
+        module, constant = c["constant"]
+        assert getattr(importlib.import_module(module), constant) == c["new"], constant
 
     def scope_of(name):
         if name.startswith("api_") or name.endswith("__assessment.json"):
@@ -786,7 +803,7 @@ def test_existing_outputs_are_byte_identical_to_1_3_1(tmp_path):
     n_scoped = 0
     for name, data in sorted(files.items()):
         with open(os.path.join(GOLDEN, name), "rb") as f:
-            want = f.read()
+            want = changes.expected(name, f.read())          # 1.3.1's bytes with the listed changes, and no others
         scope = scope_of(name)
         if scope is None:
             assert data == want, name

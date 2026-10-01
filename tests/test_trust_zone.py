@@ -1,10 +1,11 @@
 """The trusted-zone certification (docs/plan/trust_zone.md, exp80), checked by enumeration rather than simulation.
 
-The guarantee P(zone error rate > alpha) <= delta is a theorem for the Bonferroni rule and, on a population whose
-zone error rate does not fall as the zone grows, for the prefix rule. On a population of 20 windows and a budget of
-8 every one of the 125,970 possible draws can be enumerated, so the violation probability is computed exactly and
-compared with delta; the hypergeometric sums are checked against exact rational arithmetic; and the arithmetic
-limit on what a budget can certify is checked at both edges."""
+The guarantee P(zone error rate > alpha) <= delta is a theorem for both rules on any map: Bonferroni over the
+levels, and the prefix rule, which is fixed-sequence testing over levels ordered before any label is read. Neither
+needs the zone error rate to rise as the zone grows. On a population of 20 windows and a budget of 8 every one of
+the 125,970 possible draws can be enumerated, so the violation probability is computed exactly and compared with
+delta; on maps of 10 and 12 windows every error pattern meets every draw; the hypergeometric sums are checked
+against exact rational arithmetic; and the arithmetic limit on what a budget can certify is checked at both edges."""
 import itertools
 import json
 import math
@@ -145,6 +146,103 @@ def test_the_plugin_rule_violates_far_more_often_than_delta_at_the_boundary():
     err[13:] = 1
     viol, cert, cov, R = _every_draw_outcome(err, "plugin")
     assert viol > 2 * DELTA
+
+
+# ----------------------------------------------------------------------------- every error pattern of a small map
+# The prefix rule is fixed-sequence testing (Angelopoulos et al. 2021, Learn then Test). The levels are ordered before
+# any label is read and each p-value is exact, so a zone wrong more than alpha of the time is certified only if the
+# first such level in the order passes its test, which happens on at most delta of samples. That needs no assumption on how the
+# zone's error rate changes as the zone grows, though 1.3.1's printed note said it did. Here every error pattern of
+# a small map, the non-monotone ones included, meets every draw, for both rules.
+RULES3 = ("prefix", "bonferroni", "uncorrected")
+
+
+def _pattern_outcomes(N, B, alpha, delta, patterns):
+    """For each error pattern of N windows in zone order (position 0 the most confident): whether its zone error rate
+    falls somewhere as the zone grows, whether some tested zone is wrong more than alpha of the time, and per rule the
+    number of the C(N, B) draws that certify such a zone and the certified windows summed over the draws. One level
+    per window (grid j / N), cut by the budget as the package cuts it. The truth is exact arithmetic; the p-values
+    and the rules are the package's zone_pvalue and apply_zone_rule, once per distinct (k, b) of a draw. A draw's
+    counts are cumulative sums over its 0/1 row, the count test_zone_counts_agree_with_a_direct_count checks. Beside
+    the two rules runs a third with no guarantee, "uncorrected": the largest level whose own p-value is at most
+    delta, neither stopping at a failure nor splitting delta. It shows the enumeration can catch an invalid rule."""
+    cov, sizes, _ = est.zone_levels(N, B, alpha, delta, tuple(j / N for j in range(1, N + 1)))
+    sizes = np.asarray(sizes, dtype=np.int64)
+    draws = np.array(list(itertools.combinations(range(N), B)))
+    S = np.zeros((len(draws), N), np.int64)
+    S[np.arange(len(draws))[:, None], draws] = 1
+    b_all = S.cumsum(1)[:, sizes - 1]
+    a = Fraction(str(alpha))
+    memo = {}
+
+    def best(k, b, rule):                                 # the certified level for one draw's counts, memoised
+        key = (rule, k.tobytes(), b.tobytes())
+        if key not in memo:
+            p = [est.zone_pvalue(int(kk), int(bb), int(n), alpha) for kk, bb, n in zip(k, b, sizes)]
+            if rule == "uncorrected":
+                ok = np.flatnonzero(np.asarray(p) <= delta)
+                memo[key] = int(ok.max()) if ok.size else None
+            else:
+                memo[key] = est.apply_zone_rule(p, b, k, alpha, delta, rule)[1]
+        return memo[key]
+
+    out = []
+    for err in patterns:
+        err = np.asarray(err, np.int64)
+        c = np.cumsum(err)[sizes - 1]
+        bad = [Fraction(int(cj), int(nj)) > a for cj, nj in zip(c, sizes)]
+        falls = any(c[j + 1] * sizes[j] < c[j] * sizes[j + 1] for j in range(len(sizes) - 1))
+        k_all = (S * err).cumsum(1)[:, sizes - 1]
+        rows, inv, mult = np.unique(np.hstack([k_all, b_all]), axis=0, return_inverse=True, return_counts=True)
+        viol, covered = dict.fromkeys(RULES3, 0), dict.fromkeys(RULES3, 0)
+        for row, m in zip(rows, mult):
+            for rule in viol:
+                j = best(row[:len(sizes)], row[len(sizes):], rule)
+                if j is not None:
+                    viol[rule] += int(m) * bad[j]
+                    covered[rule] += int(m) * int(sizes[j])
+        out.append({"err": err, "falls": falls, "bad": any(bad), "viol": viol, "covered": covered})
+    return out, len(draws), sizes
+
+
+def _every_pattern(N, B, alpha, delta):
+    return _pattern_outcomes(N, B, alpha, delta, [[(bits >> i) & 1 for i in range(N)] for bits in range(2 ** N)])
+
+
+@pytest.mark.parametrize("N,B,alpha,delta,levels,uncorrected_fails", [
+    (10, 6, 0.5, 0.2, [5, 6, 7, 8, 9, 10], False), (12, 8, 0.4, 0.2, [6, 7, 8, 9, 10, 11, 12], False),
+    (10, 6, 0.4, 0.3, [5, 6, 7, 8, 9, 10], True), (11, 7, 0.4, 0.2, [7, 8, 9, 10, 11], True)])
+def test_both_rules_hold_delta_on_every_error_pattern_of_a_small_map(N, B, alpha, delta, levels, uncorrected_fails):
+    """Over all 2^N error patterns and all C(N, B) draws, the probability that either rule certifies a zone wrong
+    more than alpha of the time is at most delta, computed exactly. The patterns whose zone error rate falls as the
+    zone grows are most of them, and the prefix rule does certify a bad zone on some of them, below delta: the
+    enumeration reaches the case 1.3.1's note excluded. On two of the four maps the uncorrected rule exceeds delta on
+    some pattern, so the enumeration would catch a rule that is not valid."""
+    res, n_draws, sizes = _every_pattern(N, B, alpha, delta)
+    assert sizes.tolist() == levels                       # several levels, so the order of the tests matters
+    d = Fraction(str(delta))
+    for rule in ("prefix", "bonferroni"):
+        worst = max(r["viol"][rule] for r in res)
+        assert Fraction(worst, n_draws) <= d, rule
+    assert (Fraction(max(r["viol"]["uncorrected"] for r in res), n_draws) > d) == uncorrected_fails
+    falling = [r for r in res if r["falls"] and r["bad"]]
+    assert len(falling) > len(res) // 2
+    assert max(r["viol"]["prefix"] for r in falling) > 0
+
+
+def test_bonferroni_certifies_more_when_the_most_confident_windows_hold_the_errors():
+    """What the prefix note says beside its guarantee. With three errors among the three most confident of 12
+    windows, the smallest zone is wrong more than alpha of the time, so the prefix rule, which stops at the first
+    level it cannot pass, certifies little; Bonferroni can pass a later level. With the same three errors at the
+    least confident end, the prefix rule certifies more. Means over every draw, exact."""
+    N, B, alpha, delta = 12, 8, 0.4, 0.2
+    (top, bottom), n_draws, sizes = _pattern_outcomes(N, B, alpha, delta, [[1, 1, 1] + [0] * 9, [0] * 9 + [1, 1, 1]])
+    assert top["bad"] and not bottom["bad"]               # 3 of the 6 most confident windows are wrong: 0.5 > 0.4
+    assert top["covered"]["bonferroni"] > 2 * top["covered"]["prefix"]
+    assert bottom["covered"]["prefix"] > bottom["covered"]["bonferroni"]
+    # and the note the package prints says so
+    assert "valid on any map" in est.PREFIX_NOTE and "most confident windows hold many errors" in est.PREFIX_NOTE
+    assert "bonferroni rule can certify more" in est.PREFIX_NOTE and "does not fall" not in est.PREFIX_NOTE
 
 
 # ----------------------------------------------------------------------------- end to end
