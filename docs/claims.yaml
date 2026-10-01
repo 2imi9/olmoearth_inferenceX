@@ -2363,6 +2363,7 @@
       A['exp/out/exp51_summary.json']['results']['A_olmoearth_base']['matched'])
   cited_in:
     - {file: docs/results/comparisons.md, marker: suite-six-segmentation-outcomes-were-on-record}
+    - {file: docs/Findings.md, marker: suite-six-segmentation-outcomes-were-on-record}
   note: >-
     Not disclosed when exp70 was recorded; found by the red team of 30 September 2026. The dates are from the history,
     not from an artifact: exp51 was recorded in 486ef3f and exp54 in f74eb7c, both on 10 September 2026; exp70's script,
@@ -2396,6 +2397,9 @@
       A['exp/out/exp69_summary.json']['results']['regions'])
   cited_in:
     - {file: docs/results/comparisons.md, marker: external-references-carry-informative-controls}
+    - {file: docs/Findings.md, marker: external-references-carry-informative-controls}
+    - {file: docs/Summary.md, marker: external-references-carry-informative-controls}
+    - {file: README.md, marker: external-references-carry-informative-controls}
   note: >-
     Read from the three experiments' committed summaries after the red team of 30 September 2026 found the suite's
     controls near chance (suite-controls-are-near-chance). A random review of 10% finds 0.10 of the errors in
@@ -2811,6 +2815,8 @@
   cited_in:
     - {file: docs/results/comparisons.md, marker: margin-takes-two-thirds-of-the-ranking-headroom}
     - {file: docs/Findings.md, marker: margin-takes-two-thirds-of-the-ranking-headroom}
+    - {file: docs/Summary.md, marker: margin-takes-two-thirds-of-the-ranking-headroom}
+    - {file: README.md, marker: margin-takes-two-thirds-of-the-ranking-headroom}
 
 - id: augrc-leaves-the-suite-result-standing
   statement: "For a fixed set of errors AUGRC orders readings as the failure AUROC does, and by AUROC the margin beats the best no-model control on 23 of exp70's 24 tasks, in exp70's own artifact and again in exp76; the exception is cropharvest_Togo_12_sentinel1, where the class-rarity control leads by under 0.001 of AUROC. Across every reading exp76 computed, the best one is the same under excess AURC and under AUROC on 22 of 24 tasks. exp76's probability margin reproduces exp70's excess AURC to within 1e-4 on 18 of 24 tasks and to within 0.004 on all."
@@ -4023,6 +4029,7 @@
       lambda s: min(s['signals']['ctl_embedding_distance']['excess_aurc'], s['signals']['ctl_class_rarity']['excess_aurc']) - s['signals']['margin']['excess_aurc'])
   cited_in:
     - {file: docs/results/comparisons.md, marker: exp84-losses-are-small-or-badly-fitted-tasks}
+    - {file: docs/Findings.md, marker: exp84-losses-are-small-or-badly-fitted-tasks}
   note: >-
     A loss is a lead at or below zero, as exp84 counts it. The preregistration's disclosure placed the ten seed-0
     losses of the record on Togo S1 or Nandi S1; they are on Togo S1 (4), Togo S2+S1 (2), Togo S2 (1) and Nandi S1
@@ -4105,6 +4112,7 @@
     - {file: docs/TECHNIQUES.md, marker: missing-optical-errors-are-confident}
     - {file: docs/Findings.md, marker: missing-optical-errors-are-confident}
     - {file: docs/Summary.md, marker: missing-optical-errors-are-confident}
+    - {file: README.md, marker: missing-optical-errors-are-confident}
   note: >-
     Ai2's S1-only embeddings are the encoder's reading of radar alone over the whole tile, the extreme of a cloud;
     real clouds are partial. Graded on Base at seed 0; the other seeds and Large are replication.
@@ -4226,6 +4234,9 @@
     )(A['exp/out/exp88_matched_head.json']['encoders'], A['exp/out/exp88_summary.json']['results'], A['exp/out/exp78_units/manifest.json']['tasks'])
   cited_in:
     - {file: docs/results/comparisons.md, marker: exp88-matched-head-ranks-normally}
+    - {file: docs/Findings.md, marker: exp88-matched-head-ranks-normally}
+    - {file: docs/Summary.md, marker: exp88-matched-head-ranks-normally}
+    - {file: README.md, marker: exp88-matched-head-ranks-normally}
   note: >-
     Not preregistered: a reading of committed per-unit files after exp88 was recorded, prompted by the red team of
     30 September 2026. The matched probe is exp70's seed-0 probe as exported per unit by exp78 (Base, committed) and
@@ -4256,6 +4267,9 @@
     )(A['exp/out/exp70_summary.json']['results']['tasks'])
   cited_in:
     - {file: docs/results/comparisons.md, marker: suite-controls-are-near-chance}
+    - {file: docs/Findings.md, marker: suite-controls-are-near-chance}
+    - {file: docs/Summary.md, marker: suite-controls-are-near-chance}
+    - {file: README.md, marker: suite-controls-are-near-chance}
   note: >-
     The gap uses the exact finite-n perfect order (oracle_aurc), so it is not mixed with the asymptotic form the
     claim margin-takes-two-thirds-of-the-ranking-headroom uses; both give 0.68 for the margin. The class-rarity
@@ -4277,6 +4291,9 @@
     )({e: A['exp/out/exp79_seeds/' + e + '.json'] for e in ['anysat', 'clay_large', 'copernicusfm', 'croma_base', 'croma_large', 'galileo_base', 'galileo_nano', 'galileo_tiny', 'olmoearth_base', 'olmoearth_large', 'olmoearth_nano', 'olmoearth_tiny', 'panopticon', 'satlas_base', 'terramind_base', 'terramind_large']})
   cited_in:
     - {file: docs/results/comparisons.md, marker: exp79-margin-beats-random-everywhere}
+    - {file: docs/Findings.md, marker: exp79-margin-beats-random-everywhere}
+    - {file: docs/Summary.md, marker: exp79-margin-beats-random-everywhere}
+    - {file: README.md, marker: exp79-margin-beats-random-everywhere}
   note: >-
     A cell is one encoder, one task and one probe seed; the 3,560 are 24 tasks on seven encoders, 21 on eight and 20
     on TerraMind Base, each at ten seeds. The per-unit files behind the cells are not committed beyond OlmoEarth
@@ -4300,6 +4317,9 @@
     )(A['exp/out/exp70_summary.json']['results']['tasks'])
   cited_in:
     - {file: docs/results/comparisons.md, marker: suite-review-at-ten-percent}
+    - {file: docs/Findings.md, marker: suite-review-at-ten-percent}
+    - {file: docs/Summary.md, marker: suite-review-at-ten-percent}
+    - {file: README.md, marker: suite-review-at-ten-percent}
   note: >-
     The capture is exp70's tie-aware share of all errors inside the round(0.1 n) least confident units; the perfect
     order's is min(k, E) / E for that realised set (attainable_ceiling with n). A random 10% finds 0.10 in
@@ -4330,6 +4350,8 @@
     )(A['exp/out/exp78_shipped_tiles.json']['tasks'], A['exp/out/exp78_summary.json']['tasks'])
   cited_in:
     - {file: docs/results/comparisons.md, marker: shipped-tile-design-coverage}
+    - {file: docs/Findings.md, marker: shipped-tile-design-coverage}
+    - {file: docs/Summary.md, marker: shipped-tile-design-coverage}
   note: >-
     Not preregistered: a check of the shipped code (package 1.3.1) on exp78's per-unit files, prompted by the red team
     of 30 September 2026; draws use seeds 0 to 3,999, and the Monte Carlo standard error is about 0.0035 on the five

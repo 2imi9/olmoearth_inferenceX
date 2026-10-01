@@ -6,18 +6,29 @@ artifact under `exp/out/`, with its evidence in the [results record](results/com
 
 ## In short
 
-- The model's own confidence ranks a map's errors better than every control that does not use the model, on every
-  scored task of Ai2's published suite and against declared and surveyed references.
-- The exceptions found are single flood events or single sensors.
-- Errors concentrate on prediction boundaries, yet reviewing boundary windows first beats confidence alone only on a
-  minority of flood events.
+- The model's own confidence ranks a map's errors far better than a random order. On Ai2's published embedding suite
+  (24 tasks, linear probes on OlmoEarth Base) it gets a median 0.68 of the way from a random order to a perfect one,
+  and a review of the least confident 10% finds about twice the errors a random 10% finds. It beats a random order in
+  all 3,560 cells of sixteen encoders, their tasks and ten probe seeds.
+- The two no-model controls computable on that suite are near chance, so beating them there shows little. Informative
+  controls were beaten on external references: ground survey (LUCAS), Dynamic World's expert tiles and farmers' crop
+  declarations (EuroCrops).
+- The exceptions found: a water index (NDWI) ranks flood errors as well as or better than confidence on Sen1Floods11
+  (one event under a Sentinel-2 probe, the whole test split under a Sentinel-1 probe), and other encoders lose to a
+  control on small or poorly fitted crop tasks (CropHarvest Togo, Nandi Sentinel-1).
+- A model run on an input combination it was not trained on, such as radar alone under cloud for a model trained on
+  radar plus optical, can be sure and wrong, and its errors then come last in the review order.
+- Errors concentrate on prediction boundaries. Whether reviewing boundary windows first beats confidence alone depends
+  on the event, the unit and the metric.
 - Two inferences of one area differ mostly on prediction boundaries, the sensor moves shared errors more than the
   backbone, and which side is right needs labels.
 - A few hundred random labels give an error rate with an interval that holds its coverage, per-class accuracies and a
-  certified zone.
+  certified zone, provided the labels are right.
 - No signal from inside the encoder beats confidence, and a consensus of encoders does not estimate accuracy.
-- For a language-model agent the package is decisive at small scale; at larger scale it contributes the refusal to
-  choose a side that the data cannot settle.
+- For a language-model agent at 7B the package is decisive when its tools are given directly; the agent as shipped
+  found them on 17 of 40 runs. At 27B a model with a numpy sandbox nearly matches the package's ranking, and every arm
+  without a sandbox declined to pick between two maps, including one with no package and no data, so the benchmark
+  does not show that the package causes the decline.
 
 ![The assessment pipeline on a real scene: Sentinel-2 bands, the frozen encoder and head, prediction, confidence and boundary layers, the review set at a 5% budget, the cues per window](figures/pipeline.png)
 
@@ -26,31 +37,49 @@ set in the boundary-first order.*
 
 ## Ranking errors without labels
 
-The package scores each window, the block of pixels reviewed as a unit, by the model's margin, the difference between
-its two highest class probabilities, and reviews the smallest margins first. A ranking is graded by excess AURC, the
-area under the risk-coverage curve minus that of a perfect ranking, against no-model controls such as class rarity,
-embedding distance or the normalised difference water index (NDWI).
+The package scores each window, the block of pixels reviewed as a unit, by the model's confidence averaged over the
+window's pixels: the top class probability for class probabilities, the gap between the two highest logits with
+`--logits`, and for a two-class probability map the distance from 0.5. The experiments graded the margin between the
+two highest class probabilities of the window's mean probabilities; exp76 compares the forms. A ranking is graded by
+excess AURC, the area under the risk-coverage curve minus that of a perfect ranking, against a random order and
+against no-model controls such as class rarity, embedding distance or the normalised difference water index (NDWI).
 
-On all 24 tasks of Ai2's published embedding suite for which a margin is defined, the margin ranks errors better than
-the best no-model control, on all 14 distinct sources and 6,435,473 graded units (exp70).
-<!-- claim:suite-margin-wins-every-task -->
-Under ten probe seeds OlmoEarth Base's lead over that control stays positive on all 24 tasks (exp79).
+On the 24 tasks of Ai2's published embedding suite for which a margin is defined, read through linear probes on
+OlmoEarth Base, the margin takes a median 0.68 of the gap between a random and a perfect ranking, and labels reach a
+fifth to a third of the remainder (exp70, exp65). <!-- claim:margin-takes-two-thirds-of-the-ranking-headroom -->
+That median averages over every review budget. A review of the 10% least confident units finds a median 0.214 of the
+errors, against 0.10 for a random 10% and 0.410 for a perfect order (exp70). <!-- claim:suite-review-at-ten-percent -->
+Over sixteen encoders, their tasks and ten probe seeds, the margin ranks errors better than a random order in all
+3,560 cells; the lowest AUROC is 0.503, close to chance (exp79). <!-- claim:exp79-margin-beats-random-everywhere -->
+The margin also beats the better of the two no-model controls computable from the embeddings, how rare the probe's
+predicted class is and the distance to the training mean, on all 24 tasks (sign test p = 6e-08) and on all 14
+distinct sources (p = 6.1e-05) (exp70). <!-- claim:suite-margin-wins-every-task -->
+Those controls are near chance on this suite: the better one closes a median 0.094 of the gap and is no better than a
+random order on 9 of the 24 tasks (exp70). <!-- claim:suite-controls-are-near-chance -->
+The preregistration was not blind on six of the seven segmentation tasks, whose margin scores were already on record
+from exp54 and exp51; on the other 18 tasks the margin beats both controls on 18 of 18 (p = 3.8e-06).
+<!-- claim:suite-six-segmentation-outcomes-were-on-record -->
+Under ten probe seeds OlmoEarth Base's lead over the better control stays positive on all 24 tasks (exp79).
 <!-- claim:exp79-base-margin-wins-under-every-seed -->
-On all sixteen encoders of the suite the margin beats the best no-model control on at least 75% of each encoder's
-tasks under every seed, the lowest share being 21 of 24 for Clay Large (exp79).
-<!-- claim:exp79-headline-holds-under-every-seed-on-every-encoder -->
+On all sixteen encoders the margin beats the better control on at least 75% of each encoder's tasks under every seed,
+the lowest share being 21 of 24 for Clay Large (exp79). <!-- claim:exp79-headline-holds-under-every-seed-on-every-encoder -->
+Over the other fifteen encoders and ten seeds, every loss is on the three 306-sample CropHarvest Togo tasks or on Nandi
+Sentinel-1, where the probe is at most 0.40 accurate (exp84). <!-- claim:exp84-losses-are-small-or-badly-fitted-tasks -->
 It also beats a five-seed probe ensemble on 22 of 24 tasks and nearest-neighbour and Mahalanobis distances on 24 of
 24 (exp73). <!-- claim:suite-margin-beats-the-strong-alternatives -->
-The margin takes a median 0.68 of the gap between a random and a perfect ranking, and labels reach a fifth to a third
-of the remainder (exp70, exp65). <!-- claim:margin-takes-two-thirds-of-the-ranking-headroom -->
 One minus the top probability ranks slightly better than the margin on 14 of 16 multi-class tasks; on the 8 binary
 tasks the two give one ranking (exp76). <!-- claim:top1-beats-the-margin-on-multiclass -->
 
-On 4,778 LUCAS polygons, whose reference is a surveyor's observation on the ground, the margin beats the best control
-computable at inference time on 94 regions against 32 (exp68).
-<!-- claim:lucas-ranking-survives-ground-observation -->
+The controls carry information on the external references, and the margin beats them there too. On 4,778 LUCAS
+polygons, whose reference is a surveyor's observation on the ground, the margin beats the best control computed from
+the imagery, the pixel variance inside a window, on 94 regions against 32. Its lead over a signal read from the map
+alone, how much a window's class disagrees with its neighbours, is smaller: 0.029 of excess AURC (cluster bootstrap
+0.011 to 0.049) (exp68). <!-- claim:lucas-ranking-survives-ground-observation -->
 Dynamic World's own margin ranks its errors better than a class-rarity control on 315 expert-annotated tiles against
 91 (exp67). <!-- claim:dw-margin-ranks-a-production-model -->
+That control finds 0.217 of Dynamic World's errors in a 10% review, about twice a random 10%, and on EuroCrops the
+class-rarity control ranks errors with an AUROC of 0.70 in two of the three countries (exp67, exp69).
+<!-- claim:external-references-carry-informative-controls -->
 On DFC2020 land cover the margin beats the NDWI control on all three sensor arms (exp66).
 <!-- claim:dfc2020-margin-beats-pixel-control -->
 On 106,274 windows of farmers' crop declarations it beats the best no-model control in all three regions and on all
@@ -81,8 +110,10 @@ confidence alone at review budgets (shares of windows reviewed) of 5% and 10%, a
 (exp36). <!-- claim:boundary-first-review-order -->
 Inside confidence's review set on Bolivia the error rate is 0.38 at a 5% budget, 0.33 at 10% and 0.26 at 20%, against
 8.8% overall (exp37). <!-- claim:review-set-error-rate -->
-Across GEOID-Flood events the boundary-first order beats confidence at 5% on a minority, 27% to 40% of events by
-target, and ties pooled (exp55). <!-- claim:geoid-boundary-first-minority -->
+Across GEOID-Flood events neither order wins consistently. At a 5% budget the boundary-first order captures more
+errors than confidence on 27% to 40% of events by target and fewer on 20% to 40%, the rest tying; by per-event excess
+AURC it is ahead on 28 to 30 of about 45 events, by tiny margins; pooled, the two tie (exp55).
+<!-- claim:geoid-boundary-first-minority -->
 
 Each flagged window lists its label-free cues. A cue's enrichment, its share among error windows over its share among
 correct ones, is 3.5 on Bolivia for a prediction boundary (0.750 against 0.214), 3.6 for the least confident 20%
@@ -137,9 +168,12 @@ the model following a real crop rotation (exp69). <!-- claim:eurocrops-a-differe
 
 From 300 random windows the design-based 95% interval for the error rate covers the truth on 0.933 to 0.961 of 2,000
 draws on all seven segmentation tasks (exp78). <!-- claim:design-based-interval-is-honest -->
-The same budget spent as 19 tiles of 16 windows gives an ordinary independent-sample interval that covers on 0.506 to
+The same budget spent as 18 tiles of 16 windows gives an ordinary independent-sample interval that covers on 0.506 to
 0.777 of draws on six of the seven; a cluster correction restores 0.913 to 0.932 on the four tasks with full tiles and
 fails on MADOS, whose tiles hold 1 to 400 windows (0.598) (exp78). <!-- claim:tile-sampling-breaks-the-naive-interval -->
+The tiles design as the package ships it, which takes tiles until the budget is met and uses a t quantile, covers on
+0.945 to 0.954 of draws on five tasks and falls short on Sen1Floods11 (0.843) and MADOS (0.685), the two tasks where a
+tenth of the tiles hold most of the errors (exp78). <!-- claim:shipped-tile-design-coverage -->
 Choosing the labelled windows by confidence saves up to 2.51 times the labels at equal half-width, above the 1.8 the
 preregistered honesty check allowed (exp78). <!-- claim:confidence-saves-a-quarter-to-a-half-of-the-labels -->
 
@@ -165,10 +199,13 @@ A model given only numpy and the arrays captures 0.904 of the package's errors, 
 <!-- claim:agent-benchmark-sandbox-rediscovers-the-ranking -->
 It grounds 94.2% of its numbers against 99.4%, short of the preregistered gap, so the grounding prediction fails.
 <!-- claim:agent-benchmark-grounding-not-decisive -->
-The third prediction holds, the tool arm declining the side question on 10 of 10 comparison cards against 1 of 10,
-because the package carries the fact that the more confident side is right on only 51% to 70% of differing windows. <!-- claim:agent-benchmark-decline-holds -->
-With Qwen2.5-7B-Instruct all three predictions hold, the tool arm grounding 100.0% against 0.1% and capturing 0.997
-of the package's errors against 0.144. <!-- claim:agent-benchmark-package-is-a-floor-at-7b -->
+The third prediction holds as graded, the tool arm declining the side question on 10 of 10 comparison cards against
+the sandbox's 1 of 10. It does not show that the package causes the decline: arm D, with only the card's text and no
+package or data, also declined on all 30 of its comparison runs, and the rubric scores any decline as full marks.
+<!-- claim:agent-benchmark-decline-holds -->
+With Qwen2.5-7B-Instruct all three predictions hold: given the package's tools directly, the tool arm grounds 100.0%
+of its numbers against 0.1% and captures 0.997 of the package's errors against 0.144.
+<!-- claim:agent-benchmark-package-is-a-floor-at-7b -->
 At that size the agent as shipped calls the review-set tool on 17 of 40 runs, rejecting the prediction that it
 reproduces the package. <!-- claim:agent-benchmark-7b-agent-does-not-find-the-tool -->
 
@@ -185,14 +222,22 @@ scenes, and a whitened target is 57% to 70% predictable from context (exp32 to e
 ## Limits
 
 The hand-labelled flood testbeds are one event and one split of the same dataset, and the suite is read through
-linear probes on Ai2's embeddings. A confidence ranking reviews the model's confident errors last.
-The ranking is only comparable between windows read from the same inputs. Without a condition layer it ranks all
-windows together. On PASTIS without the optical input, as under cloud, 59.8% of OlmoEarth Base's errors look
-confident, against 6.0% with it. OlmoEarth Large's share rises only from 5.7% to 12.8-13.8%. A whole-map error rate
-can also misstate the part read from other inputs. On a map with half its tiles read that way, random samples estimate
-46.9% on average. The cloudy half's rate is 74.1%. Where a map records each pixel's input condition, the package
-ranks, samples and certifies each condition on its own (`--condition`, not yet released; exp88).
-<!-- claim:missing-optical-errors-are-confident --> <!-- claim:pooled-error-rate-misstates-the-cloudy-part -->
+linear probes on Ai2's embeddings. A confidence ranking reviews the model's confident errors last. They are common
+when a model is run on an input combination it was not trained on. On PASTIS a probe trained on radar plus optical
+and read on radar alone, as under cloud, was 73.6% wrong, and 59.8% of OlmoEarth Base's errors looked as confident as
+a typical correct window, against 6.0% with both inputs; OlmoEarth Large's share rose only from 5.7% to 12.8-13.8%.
+<!-- claim:missing-optical-errors-are-confident -->
+A probe trained on radar alone was 28.4% wrong, only 3.9% of its errors looked that confident, and it ranked its
+errors normally. So the risk is a model read on inputs it was not trained on, not the missing input as such (exp88).
+<!-- claim:exp88-matched-head-ranks-normally -->
+A whole-map error rate can still misstate a part read from other inputs. On a map with half its tiles read by the
+first probe without the optical input, random samples estimate 46.9% on average, while the cloudy half's rate is
+74.1%. Even with the radar-only probe on the cloudy half, the two halves err on 28.3% and 19.7%. Where a map records
+each pixel's input condition, the package ranks, samples and certifies each condition on its own (`--condition`, not
+yet released; exp88). <!-- claim:pooled-error-rate-misstates-the-cloudy-part -->
+Every interval and certified zone describes agreement with the reviewer's labels, which the package treats as right.
+If the reviewer makes mistakes, the true rate can fall outside them, and no experiment here measured how often
+reviewers err. Labelling blind, with the map's class hidden, keeps the labels independent of the map.
 On Sen1Floods11, where eight encoders share 82% to 87% of their errors, a Dawid-Skene consensus, which estimates each
 encoder's accuracy from agreement alone, returns 0.975 to 0.983 for maps 0.883 to 0.914 accurate, and its rank
 correlation with the true accuracies misses the preregistered 0.8 on MADOS (0.71) (exp83).
@@ -203,5 +248,6 @@ Open items are in the [roadmap](plan/roadmap.md).
 
 A candidate signal is scored beside the model's confidence and a no-model control on identical windows, with the
 primary test written down before the run; expert labels grade a signal and never train it. Each claim is an entry in
-`docs/claims.yaml` whose check must hold on its artifact, and load-bearing claims carry a second test that recomputes
-the statistic. The full rules are in the [protocol](method/protocol.md).
+`docs/claims.yaml` whose check must hold on its artifact. Claims from exp79 on also name a second test that reaches
+the number by another route, and some earlier claims do too; most claims before exp79, the suite's headline among
+them, have only their check. The full rules are in the [protocol](method/protocol.md).

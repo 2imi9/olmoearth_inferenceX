@@ -65,8 +65,9 @@ python quickstart_map.py
 
 It writes three files. `scores.tif` is a synthetic four-class probability map of 256 x 256
 pixels. Of its windows, 7.3% are wrong. `other.tif` is a second map of the same scene.
-`truth.tif` holds the class that is really there. The lines below were printed by 1.3.1 on
-these files, so you can run each command and compare.
+`truth.tif` holds the class that is really there. The lines below were printed on these files,
+so you can run each command and compare. 1.3.1 prints them too, except the second line of
+`certify`, its note on the prefix rule, which is new on `main`.
 
 **1. Which parts to check first.** No labels are needed. Add `--logits` if the scores are
 logits.
@@ -162,16 +163,26 @@ Before you trust it
 
 1. **It needs the scores, not only the class map.** `assess` refuses a class map of several
    classes. It does not refuse a 0/1 class map, or any class map passed with `--logits`: it
-   reads the class ids as scores, the windows tie, and the review set is then ordered by raster
-   position. The warning is only in `assessment.json`.
+   reads the class ids as scores. Read as probabilities, a 0/1 map ties everywhere and the
+   review set follows raster position. Read with `--logits`, the windows of class 0 come
+   first, so on a coherent map the 5% review set can be all class 0. The warning is only in
+   `assessment.json`.
 2. **Without labels it says where to look, not how wrong the map is.** For an error rate, label
    the windows that `sample` draws. The review set is not such a sample. It is chosen to hold
    errors, so its error rate is far above the map's. `estimate` and `certify` refuse it, as
    they refuse any CSV that `sample` did not write.
-3. **Confidence is only comparable between windows read from the same inputs**, meaning the
-   same sensors and the same cloud state. An error the model is sure of is checked last, and
-   a missing input can make the model sure and wrong. Version 1.3.1 ranks all the windows
-   together and prints no warning about this.
+3. **A model run on inputs it was not trained on can be sure and wrong.** An error the model
+   is sure of is checked last. On PASTIS, a probe trained on radar plus optical and run on
+   radar alone, as under cloud, was 74% wrong, and 60% of its errors were as confident as a
+   typical correct window. A probe trained on radar alone was 28% wrong, only 4% of its errors
+   were that confident, and it ranked its errors normally (exp88). <!-- claim:missing-optical-errors-are-confident --> <!-- claim:exp88-matched-head-ranks-normally -->
+   If a model can run with an input missing, compare confidence only between windows read from
+   the same inputs, unless the model was trained with that input missing. Version 1.3.1 ranks
+   all the windows together and prints no warning about this.
+4. **The interval and the zone assume the labels are right.** They describe agreement with
+   the reviewer's labels. If the reviewer makes mistakes, the true rate can fall outside them.
+   Label blind: hide the `map_class` column, write the class you see in `reference_class`, and
+   set `wrong` where the two differ.
 
 
 Released and not yet released
@@ -197,11 +208,18 @@ Results and limits
 ------------------
 
 Ai2's published embedding suite has 25 tasks for OlmoEarth Base. A confidence is defined on 24
-of them; the other is multi-label. Read through linear probes on those embeddings, confidence
-ranked the errors better than both baselines that do not use the model (how rare the predicted
-class is, and distance in embedding space) on all 24 tasks. <!-- claim:suite-margin-wins-every-task -->
-On the sixteen encoders of that suite that carry at least 20 of the 24 tasks, under each of ten
-probe seeds, confidence beat both baselines on at least 87.5% of each encoder's tasks. <!-- claim:exp79-headline-holds-under-every-seed-on-every-encoder -->
+of them; the other is multi-label. Read through linear probes on those embeddings, confidence got
+a median 0.68 of the way from a random order of the errors to a perfect one. <!-- claim:margin-takes-two-thirds-of-the-ranking-headroom -->
+A review of the least confident 10% found a median 0.214 of the errors, about twice a random
+10%. <!-- claim:suite-review-at-ten-percent -->
+On the sixteen encoders of that suite, under each of ten probe seeds, confidence ranked the
+errors better than a random order on every task. <!-- claim:exp79-margin-beats-random-everywhere -->
+Confidence also beat both baselines computable from the embeddings alone (how rare the predicted
+class is, and distance in embedding space) on all 24 tasks for OlmoEarth Base, but those
+baselines are near chance on this suite. <!-- claim:suite-margin-wins-every-task --> <!-- claim:suite-controls-are-near-chance -->
+On every encoder it beat them on at least 87.5% of the encoder's tasks. <!-- claim:exp79-headline-holds-under-every-seed-on-every-encoder -->
+Where the baselines carry information, against ground survey labels (LUCAS), Dynamic World's
+expert tiles and farmers' crop declarations (EuroCrops), confidence beat them too. <!-- claim:external-references-carry-informative-controls -->
 
 Most of this evidence is linear probes on frozen embeddings, and errors the model is sure of
 are checked last. The documentation holds the rest:

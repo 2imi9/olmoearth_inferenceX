@@ -12,18 +12,27 @@ all, with the evidence.
 
 - **Ranking.** Ai2's published embedding suite has 25 tasks for OlmoEarth Base. A confidence is
   defined on 24 of them; the other is multi-label. Read through linear probes on those
-  embeddings, confidence ranked the errors better than both baselines that do not use the model
-  (how rare the predicted class is, and distance in embedding space) on all 24 tasks. <!-- claim:suite-margin-wins-every-task -->
+  embeddings, confidence got a median 0.68 of the way from a random order of the errors to a
+  perfect one. <!-- claim:margin-takes-two-thirds-of-the-ranking-headroom -->
+  A review of the least confident 10% found a median 0.214 of the errors, about twice a random
+  10%. <!-- claim:suite-review-at-ten-percent -->
+  Confidence also beat both baselines computable from the embeddings alone (how rare the
+  predicted class is, and distance in embedding space) on all 24 tasks, but those baselines are
+  near chance on this suite, so that comparison shows little. <!-- claim:suite-margin-wins-every-task --> <!-- claim:suite-controls-are-near-chance -->
 - **Other encoders.** Sixteen encoders of that suite carry at least 20 of the 24 tasks
   (OlmoEarth, Galileo, CROMA, TerraMind, Clay, Copernicus-FM, AnySat, Panopticon and Satlas).
-  Under each of ten probe seeds, confidence beat both baselines on at least 87.5% of each
-  encoder's tasks. <!-- claim:exp79-headline-holds-under-every-seed-on-every-encoder -->
-- **Other references.**
+  Under each of ten probe seeds, confidence ranked the errors better than a random order on
+  every task, 3,560 cells in all. <!-- claim:exp79-margin-beats-random-everywhere -->
+  It beat both baselines on at least 87.5% of each encoder's tasks. <!-- claim:exp79-headline-holds-under-every-seed-on-every-encoder -->
+- **Other references.** Here the baselines carry information, and confidence still beat them.
   Against ground survey labels (LUCAS), confidence ranked the errors better than the best
-  baseline there, the variance of the pixels inside a window, in 94 regions and worse in 32. <!-- claim:lucas-ranking-survives-ground-observation -->
+  baseline computed from the imagery, the variance of the pixels inside a window, in 94 regions
+  and worse in 32. Its lead was smaller over a signal read from the map alone, how much a
+  window's class disagrees with its neighbours. <!-- claim:lucas-ranking-survives-ground-observation -->
   Against farmers' crop declarations (EuroCrops), it did so in all three countries. <!-- claim:eurocrops-ranking-holds-on-declarations -->
   For Dynamic World, a model this project did not train, the gap between its two highest class
   probabilities beat a class-rarity baseline on 315 expert-annotated tiles and lost on 91. <!-- claim:dw-margin-ranks-a-production-model -->
+  That baseline found about twice a random share of the errors there. <!-- claim:external-references-carry-informative-controls -->
 - **Error rate.** From 300 randomly drawn windows, a 95% Wilson interval held the true rate in
   93.3% to 96.1% of 2,000 repeated draws, on each of the suite's seven segmentation tasks. <!-- claim:design-based-interval-is-honest -->
   `estimate` now prints the exact hypergeometric interval instead, which covers at least 95% by
@@ -36,13 +45,21 @@ all, with the evidence.
 The [findings](Findings.md#limits) give the
 detail.
 
-- **Confident errors.** They are checked last, and a missing input can make more of them.
-  Three crop tasks were simulated: a probe trained on Sentinel-1 and Sentinel-2 embeddings,
-  then read on Sentinel-1 alone, as under full cloud. On PASTIS, the largest, 59.8% of
-  OlmoEarth Base's errors were then as confident as a typical correct window, against 6.0%
-  with both inputs. For OlmoEarth Large the share was 12.8% to 13.8%. <!-- claim:missing-optical-errors-are-confident -->
-  On Togo 12 the share rose from 10.4% to 48.5%. On China 6 it fell, from 13.3% to 6.5%. <!-- claim:missing-modality-confident-errors-follow-the-shift-not-the-sensor -->
+- **Confident errors.** They are checked last. They are common where a model is run on an input
+  combination it was not trained on. Three crop tasks were simulated: a probe trained on
+  Sentinel-1 and Sentinel-2 embeddings, then read on Sentinel-1 alone, as under full cloud. On
+  PASTIS, the largest, the map was then 73.6% wrong, and 59.8% of OlmoEarth Base's errors were as
+  confident as a typical correct window, against 6.0% with both inputs. For OlmoEarth Large the
+  share was 12.8% to 13.8%. <!-- claim:missing-optical-errors-are-confident -->
+  A probe trained on Sentinel-1 alone was 28.4% wrong, and only 3.9% of its errors were that
+  confident. <!-- claim:exp88-matched-head-ranks-normally -->
+  For the probe trained on both inputs, the share rose on Togo 12, from 10.4% to 48.5%, and fell
+  on China 6, from 13.3% to 6.5%. <!-- claim:missing-modality-confident-errors-follow-the-shift-not-the-sensor -->
   No real cloud has been tested.
+- **Labels.** Every interval and certified zone describes agreement with the reviewer's labels,
+  which the package treats as right. If the reviewer makes mistakes, the true rate can fall
+  outside them; how often reviewers err was not measured. Label blind: hide the `map_class`
+  column, record the class seen in `reference_class`, then set `wrong` where the two differ.
 - **Kind of model.** Most of the evidence is linear probes on frozen embeddings. Of Ai2's
   fine-tuned models, one was tested: FT-AWF, on 344 validation points. <!-- claim:fine-tuned-model-audit -->
 - **Two maps.** Without labels, `compare` cannot say which map is right where they differ. On
@@ -53,11 +70,13 @@ detail.
   For a Sentinel-1 probe it ranked them better on the whole multi-region test split. <!-- claim:s1-probe-ndwi-flip -->
 - **Certifying.** `certify` can return nothing. With 300 labels and a level of half the map's
   error rate, it found a zone on most draws on only 14 of 21 tasks. <!-- claim:trust-zone-coverage-at-300-labels -->
-- **Labels collected by tile.** The coverage measured above is for windows drawn at random.
-  300 labels collected as 19 whole tiles and treated as independent gave a 95% interval that
-  held the true rate in only 51% to 78% of draws, on six of seven tasks. For labels drawn with
-  `--design tiles`, `estimate` corrects for the tiles. Its interval still fell short on those
-  six: 91% to 93% on four, 82% on Sen1Floods11 and 60% on MADOS, whose tiles differ in size. <!-- claim:tile-sampling-breaks-the-naive-interval -->
+- **Labels collected by tile.** The coverage measured above is for windows drawn at random. A
+  300-label budget collected as 18 whole tiles and treated as independent gave a 95% interval that
+  held the true rate in only 51% to 78% of draws, on six of seven tasks. <!-- claim:tile-sampling-breaks-the-naive-interval -->
+  For labels drawn with `--design tiles`, `estimate` corrects for the tiles. As the package
+  ships it, that interval held the true rate in 94.5% to 95.4% of draws on five tasks, and fell
+  short on Sen1Floods11 (84.3%) and MADOS (68.5%), where a tenth of the tiles hold most of the
+  errors. <!-- claim:shipped-tile-design-coverage -->
 - **Scope and size.** The package covers single-label classification. Multi-label maps are not
   covered, and a regression map is read by `compare` only. Each command reads the whole raster
   into memory.
@@ -68,7 +87,8 @@ detail.
 
 *One scene through `assess`. The figure shows the `--order boundary_first` option and two cues, tiling instability and NDWI, that only the Python API computes.*
 
-1. **Ranking.** A window's confidence is the mean over its valid pixels, and the least
+1. **Ranking.** A window's confidence is the mean over its valid pixels of the top class
+   probability, or with `--logits` of the gap between the two highest logits, and the least
    confident windows come first. `--order boundary_first` puts the windows on a class boundary
    ahead of the rest.
 2. **Comparison.** Two maps are pooled to one window grid. `compare` reports the share of
@@ -78,7 +98,8 @@ detail.
 3. **Estimation.** `sample` draws the windows by a recorded random design, and `estimate` uses
    that design. The interval is exact hypergeometric for a simple random sample, a Wilson
    interval at the effective sample size for a stratified one, and cluster-corrected for
-   labels collected by tile. The last one under-covers (see [Known limits](#known-limits)).
+   labels collected by tile. The last one under-covers where a few tiles hold most of the errors
+   (see [Known limits](#known-limits)).
 4. **Certified zone.** Exact hypergeometric tests run on zones of growing size, most confident
    windows first. They give the largest zone with error rate at most `α`, at error probability
    `δ`. With no error among its labels, a zone needs about `ln δ / ln(1 − α)` labels: 45 at
