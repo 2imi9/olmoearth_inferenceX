@@ -138,6 +138,29 @@ probability maps of one synthetic scene, and its truth. With `--label` it fills 
 `tests/test_readme_quickstart.py` runs the README's commands on the map and compares the printed lines. The package
 is unchanged.
 
+**A local MCP server for agents.** `oe-inferencex mcp` starts an MCP server on stdio (`oe_inferencex.mcp_server`),
+so that an agent such as Claude Code, Claude Desktop, Cursor or the OlmoEarth Agent can run the package on the user's
+own files. Nothing is hosted. Install with the new `mcp` extra, `pip install "olmoearth-inferencex[geo,mcp]"`, and
+connect with `claude mcp add oe-inferencex -- oe-inferencex mcp`; without the extra the command says how to install
+it.
+
+- Tools `assess`, `compare`, `sample`, `estimate` and `certify` run the command of the same name in-process, so they
+  give its numbers and its refusals. Each takes file paths and an output directory and returns JSON: the files
+  written, the summary numbers, `conclusion`, `limits` (with the package's own warnings and notes) and `next` (what
+  can be done next, with its preconditions). A refusal is a tool error carrying the package's message; a review set
+  passed to `estimate` or `certify` is also named as one.
+- Each tool's description is its capability card: what it does, what it needs and what it cannot do. The server's
+  instructions, also returned by the tool `guide`, give the standard order (assess; sample, label, estimate; certify;
+  compare; per condition) and the rules the package enforces. This copies the changes of the OlmoEarth Agent trial
+  (exp86) after which its answers held fewer material false statements; the trial does not show which change did
+  most.
+- `skills/oe-inferencex/SKILL.md` holds the same teaching as a Claude skill, for an agent that runs the commands.
+- The extra pins the official MCP Python SDK, `mcp>=1.26,<2` (MIT licence). mcp 2 renamed FastMCP to MCPServer.
+  Tested with 1.20.0, 1.26.0 and 1.30.0.
+- `tests/test_mcp_server.py` drives the server through the SDK's own client, in-process and as `oe-inferencex mcp`
+  over stdio, on the README's quick-start map. It skips when the extra is absent.
+- No existing output changes; `oe-inferencex --help` lists the new command.
+
 ## 1.3.1 (2026-09-25)
 
 - Usage documents a binary score in [0, 1] decided at 0.5, such as an OlmoEarth Studio `per_pixel_regression` output

@@ -208,6 +208,11 @@ pip install "olmoearth-inferencex[geo] @ git+https://github.com/2imi9/olmoearth_
 The first line is needed: `main` still carries the version number 1.3.1, so pip would take an
 installed release as up to date. Afterwards `oe-inferencex assess --help` lists `--condition`.
 
+Also on `main` only: `oe-inferencex mcp`, a local MCP server through which an agent such as
+Claude Code runs these commands on your files (install with `[geo,mcp]` in place of `[geo]`, then
+`claude mcp add oe-inferencex -- oe-inferencex mcp`;
+[Usage](https://olmoearth-inferencex.readthedocs.io/en/latest/Usage/#use-from-an-agent-mcp) covers other agents).
+
 
 Results and limits
 ------------------

@@ -346,6 +346,50 @@ confident share of the map. It adds `by_condition`, `delta_per_condition`, `n_co
 not written, and a stale one is removed, when nothing is certified. `--delta` keeps its meaning: the probability that
 any of the statements is wrong.
 
+## Use from an agent (MCP)
+
+Not yet released: 1.3.1 lacks it. `oe-inferencex mcp` starts a local MCP server on stdio, so that an agent can run
+`assess`, `compare`, `sample`, `estimate` and `certify` on your own files. The agent starts the server and talks to
+it; nothing is hosted, and the tools read and write files on your machine only. To use it now, install from the
+repository with the `mcp` extra:
+
+```bash
+pip uninstall -y olmoearth-inferencex
+pip install "olmoearth-inferencex[geo,mcp] @ git+https://github.com/2imi9/olmoearth_inferenceX"
+claude mcp add oe-inferencex -- oe-inferencex mcp     # Claude Code
+```
+
+Other agents, such as Claude Desktop, Cursor or the OlmoEarth Agent, take the same command in their MCP
+configuration. Where the package sits in a virtual environment, give the full path of its `oe-inferencex`:
+
+```json
+{
+  "mcpServers": {
+    "oe-inferencex": {"command": "oe-inferencex", "args": ["mcp"]}
+  }
+}
+```
+
+- **The tools.** `assess`, `compare`, `sample`, `estimate` and `certify` run the command of the same name, with the
+  same numbers and the same refusals. They take file paths and an output directory; pass absolute paths. `guide`
+  returns the instructions below and every tool's description.
+- **What a tool returns.** JSON with the files written and the summary numbers, and three texts to quote:
+  `conclusion` (what it found), `limits` (what it does not show, with the package's own warnings and notes) and
+  `next` (what can be done next, with its preconditions).
+- **What a tool's description says.** What the tool does, what it needs and what it cannot do.
+- **The server's instructions.** The standard order: `assess` for where to look; `sample`, labels and `estimate` for
+  how wrong the map is; `certify` for which part to trust; `compare` for two maps; and a condition layer for each
+  input condition on its own. Then the rules the package enforces: a review set is not a sample; `certify` needs a
+  random sample; without labels `compare` cannot say which map is right; labels are assumed right; ranking needs the
+  scores, not only the class map.
+- **A refusal.** A tool error carrying the package's own message. The message names command-line options; each is
+  the tool parameter of the same name (`--labels-date` is `labels_date`).
+
+The extra pins the MCP Python SDK (MIT licence) below version 2, which renamed the server class this module uses.
+For an agent that runs the commands itself instead,
+[`skills/oe-inferencex/SKILL.md`](https://github.com/2imi9/olmoearth_inferenceX/blob/main/skills/oe-inferencex/SKILL.md)
+holds the same teaching as a skill; for Claude Code, copy its folder into `~/.claude/skills/`.
+
 ## Python API
 
 The commands wrap functions that take and return arrays. Each result is a dict whose arrays stay in `out["arrays"]`;
@@ -526,6 +570,7 @@ On this pair most of the accuracy comes from the post-event side being usually r
 | `reliability`, `evidence` | SHRUG-FM's reliability signals, torch-free; the heads a candidate rule is scored with |
 | `taskcard`, `lcc` | The [task cards](method/taskcards.md) of OlmoEarth's fine-tuned models; a reader for the served change rasters |
 | `cli`, `demo` | The `oe-inferencex` commands |
+| `mcp_server` | The commands as tools of a local MCP server, `oe-inferencex mcp` (not yet released; the `mcp` extra) |
 
 ## Reproducing the experiments
 
