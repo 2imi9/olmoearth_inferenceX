@@ -80,7 +80,7 @@ bootstrap over the 30 annotation tasks):
 | Signal | AURC | Verdict |
 |---|---|---|
 | Aligned tiling instability | 0.0235 | indistinguishable from confidence (CI [-0.0068, +0.0010], P(better) 0.93) |
-| **Confidence** | **0.0262** | best supported | <!-- claim:fine-tuned-model-audit -->
+| **Confidence** | **0.0262** | best supported, tied with aligned tiling instability | <!-- claim:fine-tuned-model-audit -->
 | Boundary indicator | 0.0765 | significantly worse |
 | Disagreement with the frozen probe | 0.0852 | worse |
 | NDVI temporal-variability control | 0.0937 | worse |
@@ -803,9 +803,13 @@ found, passed. The result is the signature of scrambling: 0.08 is what phi
 becomes when one side is shuffled. The two runs disagree on their face, because
 exp54's own conditional (a 0.246 chance that OlmoEarth is wrong where Galileo
 is) implies at least a 30.9% decision disagreement on PASTIS while exp63
-measures 13.6% on the same windows. exp63 aligns by construction and carries a
-comment warning of exactly this hazard, so its numbers stand and exp54's phi
-block is withdrawn. Nothing else in exp54 rests on that alignment: its
+measures 13.6% on the same windows. exp63 carries a comment warning of exactly
+this hazard, so its numbers stand and exp54's phi block is withdrawn. (Corrected
+on 30 September 2026: exp63 does not align by construction. Where several tiles
+share one label sequence, its alignment copies one of them over the others. A red
+team found this on a small share of tiles and estimated the effect on the
+disagreement rates as small; exp63 has not been rerun with exp54's permutation
+guard.) Nothing else in exp54 rests on that alignment: its
 preregistered result, that the probe's confidence beats the embedding-distance
 control on all five tasks, is computed per encoder before any alignment and is
 unaffected. `exp/exp54_multiclass_embeddings.py` now refuses to align unless the
@@ -906,7 +910,9 @@ grid) on Bolivia (441 tiles, 71,373 windows) and the multi-region test split
 OlmoEarth v1 against v1.2 Base, the S2 head against the S1 head on v1, and the
 frozen S2 head against FT-S2 v1, fine-tuned once more with exp52's recipe. The
 seven encoders of exp51 are paired with OlmoEarth Base on Ai2's published
-embeddings and probe (their test split, 2,419 tiles, 563,969 windows), and per
+embeddings and probe (their test split: 2,308 of its 2,419 tiles were graded,
+563,969 of its 592,385 windows, because the alignment by label hash left 111 tiles
+out of every pair; corrected on 30 September 2026), and per
 GEOID-Flood event (exp55's 55 events, 870,728 windows) the pre-event S2 head
 (permanent water) with the post-event S1 head (water after the event), each
 error map graded against its own task label. Two inferences disagree on
@@ -1549,7 +1555,7 @@ disjoint fit and report halves. Every number is reported naively and
 Horvitz-Thompson weighted, the weight being the stratum's population over the
 polygons actually in hand.
 
-| Ranker on 4,778 field-surveyed polygons in held-out regions | weighted excess AURC | lead over the margin | regions, p | capture at 5 / 10 / 20% |
+| Ranker on 4,778 field-surveyed polygons in held-out regions | weighted excess AURC | lead over the margin | regions won / lost (unweighted count), p | capture at 5 / 10 / 20% |
 |---|---|---|---|---|
 | boundary first, then margin | 0.1466 | -0.0002, not significant | 49/62, 0.91 | 0.083 / 0.166 / 0.307 |
 | margin | 0.1468 | reference |  | 0.083 / 0.165 / 0.302 |
@@ -1571,7 +1577,11 @@ ignoring the sampling design, although ignoring it would have overstated the
 lead by 0.0216. P1b holds too, so the model's own confidence beats simply
 knowing how small and mixed the unit is, by 0.0622. This is the result the
 experiment existed to get, and its falsification would have put every capture
-number in this repository in question. <!-- claim:lucas-ranking-survives-ground-observation -->
+number in this repository in question. (Added 30 September 2026.) The pixel variance
+is the best control computed from the imagery. An operator can also compute the
+neighbourhood disagreement in the table from the delivered map alone, and it comes
+closer: the margin's lead over it is 0.029 (cluster bootstrap 0.011 to 0.049), and
+it wins 39 of the 126 regions by the table's unweighted count. <!-- claim:lucas-ranking-survives-ground-observation -->
 
 The lead is not uniform, and the record should say where it lives. By class it
 runs from +0.016 on grassland, which carries 23% of the population weight and is
@@ -1743,11 +1753,13 @@ its pixels are labelled and three quarters agree. Splits are by 20 km grid cell.
 
 **The ranking holds on a reference made of declarations.** The margin beats the
 best no-model control in all three regions and on all but four of the 147 grid
-cells that carry enough graded windows to score, which is preregistered P1. It is
-also the best or equal-best of the four model signals everywhere, within 0.001 of
-one minus the top-1 probability and ahead of entropy and the boundary-first order,
-so the ordering exp68 found once its probe was properly regularised holds here
-too. <!-- claim:eurocrops-ranking-holds-on-declarations -->
+cells that carry enough graded windows to score, which is preregistered P1. Among
+the four model signals it is within 0.001 of one minus the top-1 probability in
+every region, which is slightly ahead in Denmark and Slovenia, and ahead of entropy
+and the boundary-first order. (Corrected on 30 September 2026: this sentence said
+the margin was best or equal-best and that exp68's ordering held here; exp68 had
+the boundary-first order tied with the margin, and here it is last of the four.)
+<!-- claim:eurocrops-ranking-holds-on-declarations -->
 
 **A two-date difference is mostly the ground moving, and now that has a number.**
 

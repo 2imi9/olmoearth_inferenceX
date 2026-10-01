@@ -762,7 +762,7 @@
   note: no artifact; exp07 left only a feature cache (exp/out/exp07_tiny_feats.npy), no summary or figure
 
 - id: fine-tuned-model-audit
-  statement: The replica of the fine-tuned AWF model reproduces the reported accuracy (0.881 vs 0.895) on the 344 validation points with 41 errors; confidence ranks its errors best (AURC 0.0262), tiling instability is indistinguishable (0.0235, CI spans zero), everything else is significantly worse, and it is overconfident (ECE 0.080).
+  statement: The replica of the fine-tuned AWF model reproduces the reported accuracy (0.881 vs 0.895) on the 344 validation points with 41 errors; confidence (AURC 0.0262) and tiling instability (0.0235) rank its errors best and are tied (the CI of their difference spans zero, P(instability better) 0.93), everything else is significantly worse, and it is overconfident (ECE 0.080).
   crosscheck: tests/test_recorded.py::test_exp21_fine_tuned_model_metrics_from_the_per_window_table
   status: supported
   experiments: [exp21]
@@ -1412,14 +1412,23 @@
     - {file: docs/results/comparisons.md, marker: geoid-sensor-flip-not-general}
 
 - id: geoid-boundary-first-minority
-  statement: Across GEOID-Flood's events the boundary-first order beats confidence at the 5% budget on 40% (permanent water), 27% (post-event water) and 32% (flooded only) of events, a minority, while tying pooled.
+  statement: "Across GEOID-Flood's events neither review order wins consistently. At the 5% budget the boundary-first order captures more errors than confidence on 18, 12 and 14 events and fewer on 9, 18 and 10 (permanent water, post-event water, flooded only; the rest tie), so it wins outright on a minority of events, 40%, 27% and 32%. By per-event excess AURC it is ahead on 30 of 45, 29 of 45 and 28 of 44 events, by medians under 1e-5. Pooled, the two tie."
   status: measured
   experiments: [exp55, exp36]
   artifacts: [exp/out/exp55_summary.json]
   check: |-
-    (lambda d:
-      all(d[k]['holds'] is False and d[k]['share'] < 0.5 for k in ('A_boundary_first_beats_confidence_at_5pct_on_majority', 'B_boundary_first_beats_confidence_at_5pct_on_majority', 'C_boundary_first_beats_confidence_at_5pct_on_majority'))
-    )(A['exp/out/exp55_summary.json']['prereg']['descriptive'])
+    (lambda d, R:
+      all(d[k]['holds'] is False and d[k]['share'] < 0.5 for k in ('A_boundary_first_beats_confidence_at_5pct_on_majority',
+          'B_boundary_first_beats_confidence_at_5pct_on_majority', 'C_boundary_first_beats_confidence_at_5pct_on_majority'))
+      # capture at 5%: boundary-first wins, losses and ties per target
+      and [tuple(R[t]['across_events']['boundary_first_vs_confidence_capture5'][k] for k in ('lex_wins', 'confidence_wins', 'ties'))
+           for t in 'ABC'] == [(18, 9, 18), (12, 18, 15), (14, 10, 20)]
+      # per-event excess AURC: the boundary-first order (the "control" side of that test) ahead on most events, by tiny medians
+      and [(R[t]['across_events']['boundary first, then confidence']['control_wins'], R[t]['across_events']['boundary first, then confidence']['confidence_wins']
+            + R[t]['across_events']['boundary first, then confidence']['control_wins'] + R[t]['across_events']['boundary first, then confidence']['ties'])
+           for t in 'ABC'] == [(30, 45), (29, 45), (28, 44)]
+      and all(abs(R[t]['across_events']['boundary first, then confidence']['median_lead']) < 1e-5 for t in 'ABC')
+    )(A['exp/out/exp55_summary.json']['prereg']['descriptive'], A['exp/out/exp55_summary.json']['results'])
   cited_in:
     - {file: docs/Findings.md, marker: geoid-boundary-first-minority}
 
@@ -2019,13 +2028,13 @@
     - {file: docs/results/comparisons.md, marker: dw-published-probabilities-are-underconfident}
 
 - id: lucas-ranking-survives-ground-observation
-  statement: "On 4,778 LUCAS Copernicus 2022 polygons in held-out NUTS2 regions, where a surveyor stood at the point and the reference never saw the satellite imagery, the model's own margin ranks its own errors better than the best control an operator could compute at inference time: design-weighted excess AURC 0.1468 against the within-window pixel variance's 0.2421, a lead of 0.0953 on 94 regions against 32 (one-sided p = 1.5e-08) with a NUTS2 cluster bootstrap of [0.071, 0.120]; it also beats oracle-side metadata about the unit's own size and mixedness by 0.0622, and the lead is not an artifact of the stratified sampling design, which if ignored would overstate it by 0.0216; preregistered P1, P1b and P4 all hold, so what this repository measures on photointerpreted references is not annotator agreement."
+  statement: "On 4,778 LUCAS Copernicus 2022 polygons in held-out NUTS2 regions, where a surveyor stood at the point and the reference never saw the satellite imagery, the model's own margin ranks its own errors better than the best control an operator could compute at inference time: design-weighted excess AURC 0.1468 against the within-window pixel variance's 0.2421, a lead of 0.0953 on 94 regions against 32 (one-sided p = 1.5e-08) with a NUTS2 cluster bootstrap of [0.071, 0.120]; it also beats oracle-side metadata about the unit's own size and mixedness by 0.0622, and the lead is not an artifact of the stratified sampling design, which if ignored would overstate it by 0.0216; preregistered P1, P1b and P4 all hold, so what this repository measures on photointerpreted references is not annotator agreement. The pixel variance is the best control computable from the imagery; a signal read from the delivered map alone, how much a window's class disagrees with its neighbours, comes closer: the margin's lead over it is 0.029 (cluster bootstrap 0.011 to 0.049), and by an unweighted count of regions the neighbourhood signal wins 39 of 126."
   crosscheck: tests/test_known_answer.py::test_exp68_design_weighted_lead_is_unbiased_under_its_own_design
   status: supported
   experiments: [exp68]
   artifacts: [exp/out/exp68_summary.json]
   check: |-
-    (lambda V, A_:
+    (lambda V, A_, M:
       V['P1']['holds'] is True and V['P1b']['holds'] is True and V['P4']['holds'] is True
       and V['P1']['against'] == 'ctl_pixel_variance' and V['P1']['sign_test']['estimator'] == 'design-weighted'
       and round(V['P1']['lead_weighted'], 4) == 0.0953 and round(V['P1b']['lead_weighted'], 4) == 0.0622
@@ -2035,7 +2044,14 @@
       and round(V['P4']['naive_minus_weighted'], 4) == 0.0216
       and A_['n'] == 4778 and round(A_['signals']['margin']['excess_aurc_weighted'], 4) == 0.1468
       and round(A_['signals']['ctl_pixel_variance']['excess_aurc_weighted'], 4) == 0.2421
-    )(A['exp/out/exp68_summary.json']['verdicts'], A['exp/out/exp68_summary.json']['results']['part_a'])
+      # the map-only neighbourhood-disagreement signal: the margin's lead over it, its bootstrap and the unweighted region count
+      and (lambda b: round(-b['beats_margin_by_weighted'], 3) == 0.029
+           and round(-b['cluster_bootstrap']['hi'], 3) == 0.011 and round(-b['cluster_bootstrap']['lo'], 3) == 0.049
+           and b['region_sign_test_vs_margin']['wins'] == 39 and b['region_sign_test_vs_margin']['n_regions'] == 126
+           and b['region_sign_test_vs_margin']['estimator'] == 'unweighted'
+          )(M['boundary_only'])
+    )(A['exp/out/exp68_summary.json']['verdicts'], A['exp/out/exp68_summary.json']['results']['part_a'],
+      A['exp/out/exp68_summary.json']['results']['part_a_vs_margin'])
   cited_in:
     - {file: docs/Findings.md, marker: lucas-ranking-survives-ground-observation}
     - {file: docs/TECHNIQUES.md, marker: lucas-ranking-survives-ground-observation}
@@ -2166,7 +2182,7 @@
     not change, whose closest observable bound here is the most stable class, woodland at 0.208.
 
 - id: eurocrops-ranking-holds-on-declarations
-  statement: "On 106,274 graded 4-px windows of farmers' declared crops across Austria, Denmark and Slovenia, a reference that is neither photointerpretation nor another model's output nor a field visit but a legal declaration of what was sown, the model's own margin beats the best no-model control in every region, by 0.0527, 0.1348 and 0.0521 of excess AURC, and on all but four of the 147 20 km grid cells carrying enough graded windows to score (50/3, 70/0 and 23/1; p = 3e-12, 8e-22 and 1e-06); preregistered P1 holds, the margin is the best or equal-best of the four model signals in all three regions, and every number is reproduced at a fixed reference probe as well as at the tuned one, the leads differing by at most 0.003."
+  statement: "On 106,274 graded 4-px windows of farmers' declared crops across Austria, Denmark and Slovenia, a reference that is neither photointerpretation nor another model's output nor a field visit but a legal declaration of what was sown, the model's own margin beats the best no-model control in every region, by 0.0527, 0.1348 and 0.0521 of excess AURC, and on all but four of the 147 20 km grid cells carrying enough graded windows to score (50/3, 70/0 and 23/1; p = 3e-12, 8e-22 and 1e-06); preregistered P1 holds, the margin is within 0.001 of excess AURC of one minus the top-1 probability in every region (which is slightly ahead in Denmark and Slovenia) and ahead of entropy and the boundary-first order, and every number is reproduced at a fixed reference probe as well as at the tuned one, the leads differing by at most 0.003."
   crosscheck: tests/test_recorded.py::test_exp69_eurocrops_recomputes_from_the_committed_windows
   status: supported
   experiments: [exp69]
@@ -2182,10 +2198,11 @@
       and round(R['at']['part_a']['margin_lead'], 4) == 0.0527
       and round(R['dk']['part_a']['margin_lead'], 4) == 0.1348
       and round(R['si']['part_a']['margin_lead'], 4) == 0.0521
-      # the margin is best or within a whisker of best among the four model signals, in every region
-      and all(R[r]['part_a']['signals']['margin']['excess_aurc']
-              <= min(R[r]['part_a']['signals'][k]['excess_aurc']
-                     for k in ('one_minus_top1', 'entropy', 'boundary_first')) + 0.0015 for r in R)
+      # the margin is within 0.001 of one minus top-1 in every region (top-1 ahead in Denmark and Slovenia),
+      # and ahead of entropy and the boundary-first order everywhere
+      and all(abs(R[r]['part_a']['signals']['margin']['excess_aurc'] - R[r]['part_a']['signals']['one_minus_top1']['excess_aurc']) < 0.001 for r in R)
+      and [r for r in sorted(R) if R[r]['part_a']['signals']['one_minus_top1']['excess_aurc'] < R[r]['part_a']['signals']['margin']['excess_aurc']] == ['dk', 'si']
+      and all(R[r]['part_a']['signals']['margin']['excess_aurc'] < min(R[r]['part_a']['signals'][k]['excess_aurc'] for k in ('entropy', 'boundary_first')) for r in R)
       # and the conclusion does not depend on how long the probe trained
       and all(abs(R[r]['reference_probe']['margin_lead'] - R[r]['part_a']['margin_lead']) <= 0.003 for r in R)
     )(A['exp/out/exp69_summary.json']['verdicts'], A['exp/out/exp69_summary.json']['results']['regions'])
