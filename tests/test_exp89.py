@@ -20,6 +20,13 @@ from oe_inferencex import metrics, stats    # noqa: E402
 
 FROZEN = "# exp89\n\n**Status: frozen on 2 October 2026, before any run.**\n"
 DRAFT = "# exp89\n\n**Status: DRAFT, not frozen.** Written 1 October 2026.\n"
+PINNED_MANGROVE = e89.ARMS["mangrove"]["model_sha256"]
+
+
+@pytest.fixture(autouse=True)
+def _ledger_beside_the_gate_file(monkeypatch):
+    """The gate's ledger defaults to the gate file's directory; a cluster setting in the shell must not leak in."""
+    monkeypatch.delenv("E89_GATE_LEDGER", raising=False)
 
 
 @pytest.fixture(scope="module")
@@ -248,6 +255,81 @@ def test_the_certificate_reads_violation_and_coverage_from_the_true_zone():
     assert c["min_labels_to_certify"] == 114 and "confidence/bonferroni/300/0.02" in out
 
 
+def test_the_certificate_counts_violations_from_the_true_zone_rate(monkeypatch):
+    """certify_zone is replaced by a script of outcomes, one per draw, so every count is known by hand: a clean zone, a
+    zone at exactly alpha, one between alpha and 2 alpha, one far above, a draw that certifies nothing and a draw the
+    review-set guard refuses. A violation is a certified zone whose true rate exceeds alpha, and only that."""
+    N, alpha = 1000, 0.02
+    err = np.zeros(N)
+    err[:50] = 1
+    z_clean = np.arange(100, 400)                                        # 0 of 300
+    z_at = np.r_[np.arange(0, 6), np.arange(100, 394)]                   # 6 of 300 = alpha: not a violation
+    z_slight = np.r_[np.arange(0, 9), np.arange(100, 400)]               # 9 of 309 = 0.029: between alpha and 2 alpha
+    z_bad = np.r_[np.arange(0, 50), np.arange(100, 150)]                 # 50 of 100
+    script = {0: (0.30, z_clean), 1: (0.30, z_at), 2: (0.31, z_slight), 3: (0.10, z_bad), 4: None, 5: "refuse"}
+
+    def fake_certify(score, idx, wrong, a, delta, rule):
+        assert a == alpha and delta == e89.DELTA
+        out = script[int(idx[0])]
+        if out == "refuse":
+            raise ValueError("the review set is not a random sample of the map: it looks enriched")
+        if out is None:
+            return {"coverage": None, "zone_indices_in_order": np.array([], int)}
+        return {"coverage": out[0], "zone_indices_in_order": out[1]}
+    monkeypatch.setattr(e89.est, "certify_zone", fake_certify)
+    draws = {300: np.stack([np.r_[r, np.arange(500, 799)] for r in range(6)])}
+    res = e89.certify_study(err, {"confidence": np.linspace(1, 0, N)}, draws, (alpha,))
+    for rule in ("prefix", "bonferroni"):
+        c = res[f"confidence/{rule}/300/0.02"]
+        assert c["draws"] == 6
+        assert c["violation_rate"] == pytest.approx(2 / 6), "the 0.029 zone and the 0.5 zone, not the one at alpha"
+        assert c["median_coverage"] == pytest.approx(np.median([0.30, 0.30, 0.31, 0.10, 0.0, 0.0]))
+        assert c["share_certifying_nothing"] == pytest.approx(2 / 6) and c["refused_by_review_set_guard"] == 1
+        assert c["median_true_rate_of_certified_zones"] == pytest.approx(np.median([0.0, 0.02, 9 / 309, 0.5]))
+
+
+def test_the_best_control_is_the_lowest_aurc_where_the_aurc_and_the_auroc_disagree():
+    """The page picks the best informative control by the lowest AURC. Here one control has the higher AUROC and the
+    higher AURC (two errors at its trusted end), so a pick by AUROC would choose the other control."""
+    N, K = 200, 20
+    err = np.zeros(N)
+    err[:K] = 1
+    corr = np.arange(K, N)
+    high_auroc = np.zeros(N)
+    high_auroc[corr] = np.linspace(0.1, 0.9, N - K)
+    high_auroc[:18] = 1.0 + np.arange(18) * 0.01                          # 18 errors at the suspect end
+    high_auroc[18:20] = [-1.0, -0.9]                                     # 2 errors at the trusted end
+    low_aurc = np.zeros(N)
+    low_aurc[corr] = np.linspace(0.0, 1.0, N - K)
+    low_aurc[:K] = 0.62 + np.arange(K) * 0.001                           # every error in the middle
+    ones = np.ones(N)
+    assert metrics.aurc_expected(low_aurc, err) < metrics.aurc_expected(high_auroc, err)
+    assert metrics.weighted_auroc(low_aurc, err, ones) < metrics.weighted_auroc(high_auroc, err, ones)
+    controls = {"k4_high_auroc": high_auroc, "k5_low_aurc": low_aurc}
+    conf = np.where(err > 0, 0.9, np.linspace(0, 0.5, N))
+    rank = e89.ranking(err, conf, conf, conf, controls, np.arange(N) % 10, n_boot=20)
+    assert rank["best_control"] == "k5_low_aurc"
+    p2 = e89.grade_p2(rank, 40, "mangrove")
+    assert p2["best_control"] == "k5_low_aurc" and p2["auroc"] == pytest.approx(rank["signals"]["k5_low_aurc"]["auroc"])
+
+
+def test_the_random_designs_coverage_matches_its_exact_coverage(smoke):
+    """The study's coverage is read against the population's theta. For the random design the package computes the
+    exact coverage of the hypergeometric interval, so the 2,000 draws must agree with it within Monte Carlo error.
+    A coverage read against anything else (the draw's own estimate covers itself) sits 8 or more errors away."""
+    n_cells = 0
+    for case, res in smoke["cases"].items():
+        for key, cell in res["estimate"]["cells"].items():
+            if not (key.startswith("random/") and cell["run"]):
+                continue
+            ex = cell["exact_coverage"]
+            se = np.sqrt(ex * (1 - ex) / cell["draws"])
+            assert 1 - ex >= 6 * se, (case, key, "the check has teeth only if a coverage of 1 is far from exact")
+            assert abs(cell["coverage"] - ex) <= 4 * se, (case, key, cell["coverage"], ex)
+            n_cells += 1
+    assert n_cells >= 7
+
+
 # ----------------------------------------------------------------------------- the guards
 def _page(tmp_path, monkeypatch, text):
     page = tmp_path / "page.md"
@@ -292,7 +374,8 @@ def test_the_run_is_refused_until_the_gate_passes(tmp_path, monkeypatch, capsys)
     assert e89.cmd_run(_args(tmp_path)) == 2, "a closed gate"
     assert not called
     assert "the gate is closed" in capsys.readouterr().out
-    json.dump({"passed": True, "closed": False, "attempts": [{"pass": True}]}, open(gate, "w"))
+    os.remove(gate)
+    _pass_gate(tmp_path, monkeypatch)
     assert e89.cmd_run(_args(tmp_path)) == 0 and len(called) == 1
 
 
@@ -313,19 +396,177 @@ def test_arm_n_is_reported_as_not_run(tmp_path, monkeypatch, capsys):
     assert e89.ARMS["nandi"]["model_revision"] is None and e89.ARMS["nandi"]["data_revision"] is None
 
 
-class _Rec(dict):
-    pass
-
-
-def _fake_population(n, n_err, n_out=4, label=1):
-    """(records, records with imagery, logits) for the gate: n Mangrove windows, the first n_err predicted wrong."""
+def _fake_population(n, n_err, n_out=4, label=1, n_no_imagery=0):
+    """(records, records with imagery, logits) for the gate: n Mangrove windows, the first n_err predicted wrong, one
+    window dropped by the label rule, and n_no_imagery windows without imagery."""
     recs = [{"label": label, "drop": None, "pixel_labels": np.full(4, label), "input": 0} for _ in range(n)]
     recs.append({"label": None, "drop": "label pixels disagree", "pixel_labels": np.array([1, 1, 2, 2]), "input": 0})
     lg = np.zeros((n + 1, n_out))
     lg[:, label] = 5.0
     lg[:n_err, label] = -5.0
     lg[:n_err, 3] = 5.0
-    return recs, recs, lg
+    blind = [{"label": label, "drop": "no imagery", "no_imagery": True} for _ in range(n_no_imagery)]
+    return recs + blind, recs, lg
+
+
+class _Rep:
+    """A replica as the gate sees it: only the scored checkpoint's sha256."""
+    def __init__(self, sha=PINNED_MANGROVE):
+        self.checkpoint_sha256 = sha
+
+
+def _pass_gate(out_dir, monkeypatch, rep=None):
+    """A real pass: run_gate on a frozen page, 24 of 1000 windows wrong (97.6% pixel accuracy), the pinned checkpoint."""
+    monkeypatch.setattr(e89, "predict_population", lambda *a, **k: _fake_population(1000, 24))
+    rec = e89.run_gate("mangrove", rep or _Rep(), [], str(out_dir), log=lambda *a: None)
+    assert rec["passed"] is True
+    return rec
+
+
+def test_a_rolled_back_gate_file_cannot_reset_the_attempt_count(tmp_path, monkeypatch):
+    """The job resets the checkout to origin/main, which restores a committed gate file over a later attempt. The ledger
+    keeps the count: the file is restored from it, and the third failure still closes the gate."""
+    _page(tmp_path, monkeypatch, FROZEN)
+    monkeypatch.setattr(e89, "predict_population", lambda *a, **k: _fake_population(1000, 100))
+    gate = tmp_path / "exp89_gate_mangrove.json"
+    e89.run_gate("mangrove", _Rep(), [], str(tmp_path))
+    committed = gate.read_text()                                          # attempt 1, as committed and pushed
+    e89.run_gate("mangrove", _Rep(), [], str(tmp_path))                   # attempt 2, never committed
+    gate.write_text(committed)                                            # git reset --hard origin/main
+    rec = e89.run_gate("mangrove", _Rep(), [], str(tmp_path))
+    assert [a["attempt"] for a in rec["attempts"]] == [1, 2, 3] and rec["closed"] is True
+    ledger, _ = e89.read_ledger("mangrove", str(tmp_path))
+    assert [a["attempt"] for a in ledger] == [1, 2, 3]
+    monkeypatch.setattr(e89, "predict_population", lambda *a, **k: pytest.fail("a closed gate does not run"))
+    gate.write_text(committed)
+    assert e89.run_gate("mangrove", _Rep(), [], str(tmp_path))["closed"] is True
+
+
+def test_a_gate_pass_its_ledger_does_not_hold_is_refused(tmp_path, monkeypatch, capsys):
+    """A pass written by hand, or carried from elsewhere, is not a pass: neither the gate nor the run accepts it."""
+    _page(tmp_path, monkeypatch, FROZEN)
+    rec = _pass_gate(tmp_path, monkeypatch)
+    os.remove(e89.read_ledger("mangrove", str(tmp_path))[1])
+    monkeypatch.setattr(e89, "run_arm", lambda *a, **k: pytest.fail("no run without a verified pass"))
+    monkeypatch.setattr(e89, "build_arm", lambda *a, **k: pytest.fail("no build without a verified pass"))
+    assert e89.cmd_run(_args(tmp_path)) == 2
+    assert "ledger" in capsys.readouterr().out
+    with pytest.raises(e89.GateRefused, match="ledger"):
+        e89.run_gate("mangrove", _Rep(), [], str(tmp_path))
+    with pytest.raises(e89.GateRefused, match="ledger"):
+        e89.require_gate("mangrove", str(tmp_path))
+    assert rec["attempts"][0]["checkpoint_sha256"] == PINNED_MANGROVE
+
+
+@pytest.mark.parametrize("field,value,why", [("prereg_status", "draft", "frozen"),
+                                             ("checkpoint_sha256", "0" * 64, "pinned checkpoint"),
+                                             ("checkpoint_sha256", None, "pinned checkpoint")])
+def test_the_run_checks_how_the_pass_was_made(tmp_path, monkeypatch, field, value, why):
+    """The pass must have been made on a frozen page and on the pinned checkpoint; the file and its ledger are edited
+    together here, so only this rule can refuse it."""
+    _page(tmp_path, monkeypatch, FROZEN)
+    _pass_gate(tmp_path, monkeypatch)
+    gate = tmp_path / "exp89_gate_mangrove.json"
+    rec = json.load(open(gate))
+    rec["attempts"][-1][field] = value
+    json.dump(rec, open(gate, "w"))
+    with open(e89.read_ledger("mangrove", str(tmp_path))[1], "w") as f:
+        f.write("".join(json.dumps(a) + "\n" for a in rec["attempts"]))
+    with pytest.raises(e89.GateRefused, match=why):
+        e89.require_gate("mangrove", str(tmp_path))
+    monkeypatch.setattr(e89, "build_arm", lambda *a, **k: pytest.fail("no build without a verified pass"))
+    assert e89.cmd_run(_args(tmp_path)) == 2
+
+
+def test_run_arm_and_compute_units_check_the_gate_themselves(tmp_path, monkeypatch):
+    _page(tmp_path, monkeypatch, FROZEN)
+    monkeypatch.setattr(e89, "predict_population", lambda *a, **k: pytest.fail("no window is scored without a pass"))
+    monkeypatch.setattr(e89, "read_units_file", lambda *a, **k: pytest.fail("nothing is graded without a pass"))
+    with pytest.raises(e89.GateRefused):
+        e89.run_arm("mangrove", str(tmp_path), units_file=str(tmp_path / "units.npz"))
+    with pytest.raises(e89.GateRefused):
+        e89.run_arm("mangrove", str(tmp_path), rep=_Rep(), windows=[])
+    with pytest.raises(e89.GateRefused):
+        e89.compute_units("mangrove", _Rep(), [], out_dir=str(tmp_path))
+
+
+def test_the_gate_refuses_a_population_with_no_imagery_and_counts_windows_without_it(tmp_path, monkeypatch):
+    """No kept window with imagery: nothing to gate on, and no attempt is spent. Windows without imagery are counted."""
+    _page(tmp_path, monkeypatch, FROZEN)
+    monkeypatch.setattr(e89, "predict_population", lambda *a, **k: ([{"label": 1, "drop": "no imagery"}], [],
+                                                                     np.zeros((0, 4))))
+    with pytest.raises(e89.GateRefused, match="imagery"):
+        e89.run_gate("mangrove", _Rep(), [], str(tmp_path))
+    assert not (tmp_path / "exp89_gate_mangrove.json").exists() and not e89.read_ledger("mangrove", str(tmp_path))[0]
+    monkeypatch.setattr(e89, "predict_population", lambda *a, **k: _fake_population(1000, 24, n_no_imagery=7))
+    att = e89.run_gate("mangrove", _Rep(), [], str(tmp_path))["attempts"][0]
+    assert att["n_windows_no_imagery"] == 7 and att["n_windows"] == 1000 and att["n_windows_dropped"] == 8
+
+
+def test_a_local_checkpoint_must_match_the_pin(tmp_path, monkeypatch):
+    """--ckpt used to skip the sha256 check in the gate and the run; now a local file is hashed and refused unless it
+    is the pinned checkpoint, before anything is loaded."""
+    ck = tmp_path / "model.ckpt"
+    ck.write_bytes(b"not the pinned checkpoint")
+    monkeypatch.setattr(e89, "resolve_data", lambda *a, **k: (str(tmp_path), None))
+    monkeypatch.setattr(e89, "Replica", lambda *a, **k: pytest.fail("a checkpoint off the pin is never loaded"))
+    args = _args(tmp_path)
+    args.ckpt = str(ck)
+    with pytest.raises(RuntimeError, match="sha256"):
+        e89.build_arm(args)
+
+
+def test_the_encoder_config_is_read_at_the_pinned_revision(monkeypatch):
+    """load_model_from_id reads OlmoEarth v1-Base's config.json at the Hub's current main; the page names 4bd1392a. The
+    replica builds the encoder from the config at that revision, and the pin agrees with upstream_revisions.json."""
+    import enum
+    import inspect
+    import types
+    calls = {}
+
+    class ModelID(str, enum.Enum):
+        OLMOEARTH_V1_BASE = "OlmoEarth-v1-Base"
+        OLMOEARTH_V1_NANO = "OlmoEarth-v1-Nano"
+
+        def repo_id(self):
+            return f"allenai/{self.value}"
+
+    def fake_download(repo_id, filename, revision=None, **kw):
+        calls["download"] = (repo_id, filename, revision)
+        return f"/hub/models--allenai--x/snapshots/{revision}/{filename}"
+
+    def fake_from_path(path, load_weights=True):
+        calls["from_path"] = (path, load_weights)
+        return "encoder"
+    ml = types.ModuleType("olmoearth_pretrain.model_loader")
+    ml.ModelID, ml.load_model_from_path = ModelID, fake_from_path
+    ml.load_model_from_id = lambda *a, **k: pytest.fail("the unpinned loader is not used")
+    monkeypatch.setitem(sys.modules, "olmoearth_pretrain", types.ModuleType("olmoearth_pretrain"))
+    monkeypatch.setitem(sys.modules, "olmoearth_pretrain.model_loader", ml)
+    import huggingface_hub
+    monkeypatch.setattr(huggingface_hub, "hf_hub_download", fake_download)
+    assert e89.encoder_skeleton("OLMOEARTH_V1_BASE") == "encoder"
+    pin = "4bd1392a4539404d2c74276c39f3cb4cfff466cc"
+    assert calls["download"] == ("allenai/OlmoEarth-v1-Base", "config.json", pin)
+    assert calls["from_path"] == (f"/hub/models--allenai--x/snapshots/{pin}", False)
+    rec = json.load(open(os.path.join(ROOT, "exp", "out", "upstream_revisions.json")))["repos"]
+    for name, rev in e89.ENCODER_REVISIONS.items():
+        assert rec[ModelID[name].repo_id()]["revision"] == rev, name
+    src = inspect.getsource(e89)
+    assert "load_model_from_id" not in src, "every encoder skeleton is built at a pinned revision"
+
+
+def test_the_page_and_the_script_agree_on_what_the_owner_settled():
+    """The page is the preregistration: what the script reads by interpretation is written on it before freezing."""
+    with open(e89.PLAN, encoding="utf-8") as f:
+        page = f.read()
+    assert "(threshold: owner to confirm)" not in page, "K5 was confirmed with the other thresholds"
+    assert "optional, owner to decide" not in page, "the owner chose to run arm A (status line)"
+    assert "89.5%" in page and "AWF (arm A) passes" in page, "arm A's gate is on the page"
+    assert e89.MAX_GATE_ATTEMPTS == 3 and "at most three attempts in all" in page
+    assert "retried at most three times" not in page
+    assert "n_p1_saturated" in page, "the graded top-1 probability can tie at 1.0, and the page says so"
+    assert "Readings fixed by the run script" in page
 
 
 def test_the_gate_writes_counts_and_accuracy_only_and_closes_after_three_failures(tmp_path, monkeypatch):
@@ -399,6 +640,52 @@ def test_the_mangrove_reader_crops_the_centre_and_counts_drops(tmp_path):
     assert np.array_equal(rec["input"], stack[1:3, 1:3]), "rslearn's centre crop of a 4x4 window"
     drops = [e89.unit_of("mangrove", w["dir"], w["meta"], with_stack=False)["drop"] for w in windows]
     assert "a label pixel is 0" in drops and "label pixels disagree" in drops
+
+
+class _FakeReplica:
+    """The replica as compute_units uses it: the arm's channels, a normalisation and logits from the inputs."""
+    def __init__(self, arm):
+        self.arm, self.A = arm, e89.ARMS[arm]
+
+    def normalize(self, raw):
+        return np.asarray(raw, dtype=np.float64) / 10000.0
+
+    def logits(self, stacks, locs=None, timestamps="rslearn"):
+        m = np.asarray(stacks, dtype=np.float64).mean(axis=tuple(range(1, np.ndim(stacks))))
+        L = np.zeros((len(m), self.A["n_out"]))
+        L[:, 1], L[:, 2], L[:, 3] = m / 1000.0, 2.0, 1.5
+        return L
+
+
+def test_k2_and_k3_are_fitted_on_training_windows_only(tmp_path, monkeypatch):
+    """compute_units on a synthetic rslearn dataset with class_rarity and the K3 fit spied on: K2's frequencies come
+    from the training labels, and K3 is fitted on the training windows' features and labels, never a validation one."""
+    pytest.importorskip("rasterio")
+    root, _ = e89.synthetic_dataset(str(tmp_path), "mangrove", n_train=14, n_val=8)
+    windows = e89.list_windows(os.path.join(root, "windows"), "sample_100K")
+    seen = {}
+    real_rarity = e89.class_rarity
+
+    def spy_rarity(pred, train_labels, trained):
+        seen["k2_labels"] = np.asarray(train_labels).copy()
+        return real_rarity(pred, train_labels, trained)
+
+    def spy_fit(x_train, y_train, classes, x_eval, seed=e89.SEED):
+        seen["x_train"], seen["y_train"] = np.asarray(x_train).copy(), np.asarray(y_train).copy()
+        return np.full((len(x_eval), len(classes)), 1.0 / len(classes)), {"n_train": len(y_train)}
+    monkeypatch.setattr(e89, "class_rarity", spy_rarity)
+    monkeypatch.setattr(e89, "fit_no_encoder_classifier", spy_fit)
+    rep = _FakeReplica("mangrove")
+    units, meta = e89.compute_units("mangrove", rep, windows, log=lambda *a: None, synthetic=True)
+    train = [w for w in windows if w["split"] == "train"]
+    tr = [r for r in e89.read_units("mangrove", train, need="model", log=lambda *a: None)
+          if "series" in r and r["label"] is not None]
+    assert len(tr) >= 8 and len(units["label"]) >= 4
+    assert np.array_equal(seen["k2_labels"], [r["label"] for r in tr]), "K2 reads the training labels"
+    assert np.array_equal(seen["y_train"], [r["label"] for r in tr]), "K3's labels are the training labels"
+    want = e89.k3_features(np.stack([r["series"] for r in tr]), rep.normalize, "mangrove")
+    assert np.array_equal(seen["x_train"], want), "K3's features are the training windows' features"
+    assert meta["n_train_for_k3"] == len(tr) and meta["n_train_windows_labelled"] == len(tr)
 
 
 def test_the_tar_round_trip_and_the_inventory_without_a_model(tmp_path):

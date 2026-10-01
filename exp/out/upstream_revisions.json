@@ -68,7 +68,7 @@
    "carries": "the fine-tuned AWF head of exp21",
    "named_at": [
     "exp/exp21_finetuned_awf.py:54",
-    "exp/exp89_finetuned_checkpoints.py:104"
+    "exp/exp89_finetuned_checkpoints.py:118"
    ]
   },
   "allenai/OlmoEarth-v1-FT-Mangrove-Base": {
@@ -80,7 +80,7 @@
    ],
    "carries": "the fine-tuned Mangrove checkpoint of exp89 (model.ckpt, 1,041,362,118 bytes, sha256 ffb51fbb...)",
    "named_at": [
-    "exp/exp89_finetuned_checkpoints.py:100"
+    "exp/exp89_finetuned_checkpoints.py:114"
    ]
   },
   "allenai/OlmoEarth-v1-FT-Nandi-Base": {
@@ -91,7 +91,7 @@
    "read_from": [],
    "carries": "the fine-tuned Nandi checkpoint, exp89's arm N (not run)",
    "named_at": [
-    "exp/exp89_finetuned_checkpoints.py:102"
+    "exp/exp89_finetuned_checkpoints.py:116"
    ]
   },
   "allenai/OlmoEarth-v1-Nano": {
@@ -154,7 +154,7 @@
    ],
    "carries": "the AWF rslearn dataset (dataset.tar, 1,869,219,840 bytes) exp89's arm A downloads if the cluster's data/awf was purged; exp04 to exp21 read an earlier unpinned download",
    "named_at": [
-    "exp/exp89_finetuned_checkpoints.py:105"
+    "exp/exp89_finetuned_checkpoints.py:119"
    ]
   },
   "allenai/olmoearth_projects_mangrove": {
@@ -166,7 +166,7 @@
    ],
    "carries": "the Mangrove rslearn dataset of exp89 (mangrove.tar, 62,433,280 bytes, sha256 ef9dba6a...; annotation_features.geojson)",
    "named_at": [
-    "exp/exp89_finetuned_checkpoints.py:101"
+    "exp/exp89_finetuned_checkpoints.py:115"
    ]
   },
   "allenai/olmoearth_projects_nandi": {
@@ -177,7 +177,7 @@
    "read_from": [],
    "carries": "the Nandi rslearn dataset, exp89's arm N (not run)",
    "named_at": [
-    "exp/exp89_finetuned_checkpoints.py:103"
+    "exp/exp89_finetuned_checkpoints.py:117"
    ]
   },
   "gastruc/anysat": {

@@ -20,6 +20,9 @@
 #
 # Every mode writes tracked files in exp/out, and the hard reset below restores tracked files: never let two of these
 # jobs, or this and another job that writes tracked outputs, overlap (chain with --dependency=afterany).
+# The gate's attempts are also appended to a ledger outside the checkout (E89_GATE_LEDGER below). A reset that restores
+# an older committed exp89_gate_<arm>.json cannot lower the attempt count: the gate restores the file from the ledger,
+# and the run accepts a pass only when the ledger holds it. Never delete that directory.
 #SBATCH -A p2026_0089_neu
 #SBATCH -c 8
 #SBATCH --mem=32G
@@ -35,6 +38,7 @@ export PYTHONUNBUFFERED=1
 export HF_HOME=$SCRATCH/hf                 # every download (checkpoint, tar, geojson, encoder config) lands on scratch
 export UV_CACHE_DIR=$SCRATCH/uv-cache
 export E89_DATA=$SCRATCH/data/exp89        # each arm's tar is extracted under $E89_DATA/<arm>
+export E89_GATE_LEDGER=/home/qi_zim_neu/exp89_gate_ledger   # outside the checkout and off the purged scratch
 export PATH="$HOME/.local/bin:$PATH"
 if [ "$ARM" = "awf" ]; then DATA=$SCRATCH/data/awf; else DATA=$E89_DATA/$ARM; fi
 RUN="uv run --extra encoder --extra geo"
@@ -73,6 +77,8 @@ case "$MODE" in
     $PY --gate --arm "$ARM" --data "$DATA"
     rc=$?
     cat exp/out/exp89_gate_"$ARM".json 2>/dev/null
+    echo "== the gate's ledger =="
+    cat "$E89_GATE_LEDGER/exp89_gate_$ARM.ledger.jsonl" 2>/dev/null
     exit $rc ;;
   run)
     echo "== the full run =="

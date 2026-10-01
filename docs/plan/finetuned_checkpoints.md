@@ -9,6 +9,10 @@ Mangrove or Nandi data has been downloaded, and no model has been run on them.
   - the inventory job: it lists the Mangrove tar and the checkpoint keys, and counts windows and labels per split. It runs no model on a validation window;
   - the model smoke on training windows only. It is in-sample and never graded.
 - **Not allowed before freezing:** any prediction on a validation window. That includes the accuracy gate.
+- **Open before freezing** (found in the review of the run script, 1 October):
+  - Arm A's gate was not on this page. It is now proposed below, and the owner confirms or changes it.
+  - The inventory decides whether `mangrove.tar` holds imagery for the validation windows. Its size makes that unlikely. 62,433,280 bytes is 121,940 tar blocks, and one 2x2 window with 12 item groups takes about 60 to 200 blocks, so the tar can carry imagery for about 2,000 windows at most. If it does not hold the imagery, a fetch mode is written, and the gate uses its 1.0-point tolerance for refetched imagery.
+  - The owner confirms the section "Readings fixed by the run script".
 
 ## The question
 
@@ -48,7 +52,7 @@ exp89 has three arms:
 
 - **Arm M, Mangrove.** Graded on P1 to P5.
 - **Arm N, Nandi.** Frozen with this page under the same thresholds. It runs only if Ai2 publishes the checkpoint and the dataset; until then it is reported as not run. Its thresholds do not change after arm M's result.
-- **Arm A, FT-AWF (optional, owner to decide).** exp21's confidence result has already been seen, so arm A is graded on P2 and P3 only. P2 asks whether the informative control is informative there, and P3 whether confidence beats it.
+- **Arm A, FT-AWF (run: the owner's choice on 1 October).** exp21's confidence result has already been seen, so arm A is graded on P2 and P3 only. P2 asks whether the informative control is informative there, and P3 whether confidence beats it.
 
 ## Design
 
@@ -105,7 +109,10 @@ The replica does not use rslearn, as in exp21. The checkpoint's encoder keys are
 ### Prediction and confidence
 
 - **Prediction:** the argmax over all output channels, as rslearn takes it. A window predicted as an untrained channel (Mangrove 0, Nandi 10) counts as an error. The count is reported; it is expected to be zero.
-- **Confidence, graded:** the top-1 softmax probability over the trained channels only (Mangrove 1 to 3, Nandi 0 to 9). It is computed from the logits without ties: the package's `form="top1"`, through `assess_prediction` at patch 1. The reason: exp76 found top-1 better than the margin on 14 of 16 multi-class tasks, and the package warns about the margin for multi-class logits. (confirmed)
+- **Confidence, graded:** the top-1 softmax probability over the trained channels only (Mangrove 1 to 3, Nandi 0 to 9). It is the package's `form="top1"`, through `assess_prediction` at patch 1. The reason: exp76 found top-1 better than the margin on 14 of 16 multi-class tasks, and the package warns about the margin for multi-class logits. (confirmed)
+  - The package computes it from its logarithm, which has no ties, but returns the probability. That rounds to exactly 1.0 when the top trained logit leads the others by about 37 or more, so such windows tie.
+  - The ranking measures are tie-aware. The certificate's order breaks the ties by window index, which is fixed before any label is seen, so the certificate stays valid.
+  - The number of tied windows is reported (`n_p1_saturated`).
 - **Reported, not graded:**
   - the logit margin, which is the default on the command line;
   - the entropy;
@@ -137,7 +144,7 @@ All controls are fixed here and computed from the same 12 mosaics. None is tuned
   - Nandi:
     - the temporal standard deviation of NDVI at the label pixel (exp21's control);
     - the 3x3 standard deviation of NDVI around the label pixel.
-- **K5, cloud and missing data.** The number of months that are empty or whose B02 reflectance exceeds 0.2. (threshold: owner to confirm)
+- **K5, cloud and missing data.** The number of months that are empty or whose B02 reflectance exceeds 0.2. In the harmonised L2A digital numbers the tar stores, that is 2,000. (confirmed with the other thresholds; the draft's marker was left unchanged by mistake)
 
 **The best informative control** is whichever of K2 to K5 has the lowest AURC on the validation set. Choosing it on the graded data favours the control, so the comparison is conservative for the package.
 
@@ -202,8 +209,11 @@ The validation labels are the truth for the whole population of N windows, and �
   - The gate job reads the validation windows and computes the predictions. It writes only the window count, the error count and the accuracy. It writes no confidence and no control.
   - **Mangrove passes** when our recomputed pixel-level micro accuracy is within 0.5 points of Ai2's 97.6% if the imagery came from the tar. If the imagery had to be fetched again, the tolerance is 1.0 point. (confirmed)
   - **Nandi passes** within 2.0 points of Ai2's 87.3%. exp21's AWF replica was 1.4 points from Ai2's figure. (confirmed)
+  - **AWF (arm A) passes** within 2.0 points of Ai2's 89.5%, as Nandi does, on the accuracy per window. exp21's replica was 1.4 points off. (proposed after the owner's review; the owner confirms it before freezing)
   - The gate is two-sided: a replica far above Ai2's figure is as suspect as one below it.
-  - A failed gate may be retried after a fix to the replica, at most three times. Each attempt is logged with its commit.
+  - A failed gate may be retried after a fix to the replica. There are at most three attempts in all: the first and two retries.
+  - Each attempt is logged with its commit, the page's status and the checkpoint's sha256. It goes to a ledger kept outside the git checkout before it goes to the gate file, so a reset of the checkout cannot lower the count. The run accepts a pass only if the ledger holds it, it was made on the frozen page, and it scored the pinned checkpoint.
+  - When no kept validation window has imagery, the gate refuses and spends no attempt. Windows without imagery are counted.
   - Nothing is graded until the gate passes.
 - **Error floor.** The ranking predictions (P1 to P3) are graded only if the population holds at least 40 errors, exp21's level. Below that they are reported only.
 
@@ -249,6 +259,31 @@ All predictions are one-sided. Each is graded per arm, never pooled.
 - **What a pass on P1 alone means:** little. On the suite, confidence beats random everywhere. The informative result is P3 together with P2.
 - **The one fact read early:** Ai2's reported accuracies (97.6% and 87.3%) set α and P1's thresholds. They are public figures, not our result.
 - **Nandi's thresholds** are frozen now, before arm M runs, and do not change after it.
+
+## Readings fixed by the run script
+
+`exp/exp89_finetuned_checkpoints.py` reads this page as below where the page leaves a detail open. None changes a threshold. The owner confirms them when freezing.
+
+- **Mangrove's label rule.** A window is kept when all four pixels of its 2x2 block, after rslearn's centre pad to 2, hold the same class from 1 to 3. The gate's pixel micro accuracy counts every valid (non-zero) label pixel of every validation window with imagery, kept or not, as Ai2's metric does.
+- **The margin.** The logit margin is taken over the trained channels. The estimate's confidence design stratifies by it (margin quintiles) and allocates by the top-1 probability, as `sample --logits` does. A window whose top two channels include the untrained one is counted.
+- **The best informative control.** The candidates are K2, K3a, K3b, each K4 index and K5, each counted as one candidate.
+- **P3's bound.** The one-sided 95% lower bound is the 5th percentile of the cluster bootstrap of the capture difference at 10%.
+- **Draws and the certificate.**
+  - `SeedSequence([89, arm, design, B]).generate_state(R)` gives one seed per draw. The arm is Mangrove 0, Nandi 1 or AWF 2; the design is random 0 or confidence 1.
+  - The certificate reuses the random design's draws.
+  - A violation is a certified zone whose true error rate exceeds α. A draw that certifies nothing, or that the review-set guard refuses, has coverage 0 and no violation. Refusals are counted.
+  - c*(α) is the largest grid coverage whose zone, in that order, has a true error rate of at most α.
+- **K3's features** are z-scored with the training split's mean and standard deviation. Nothing is fitted on the validation split.
+- **K4's indices.**
+  - Nandi and AWF use exp21's NDVI over all twelve months, (B08 - B04) / max(B08 + B04, 1e-6). So AWF's temporal control equals exp21's.
+  - The 3x3 control is the spatial standard deviation of each pixel's median NDVI over the months.
+  - Mangrove's indices use the valid months only, as f is defined over valid months.
+- **Imagery.**
+  - Imagery is read from the tar only. There is no fetch mode yet (see "Open before freezing").
+  - A validation window with no completed Sentinel-2 item group is dropped and counted.
+  - A window with fewer than 12 completed item groups is run with its own number of timesteps, batched by that number. This is what rslearn's masked pooling over missing timesteps reduces to.
+- **The smoke** certifies on 300 of the 2,000 draws and bootstraps 300 resamples, so it finishes in about a minute. The run uses 2,000 everywhere.
+- **Nandi's windows.** The polygon id is looked for under the option keys `polygon_id`, `source_polygon`, `polygon` and `source_id`, a guess until the windows are seen. The label source is read from the option key `source`.
 
 ## What follows, whatever the outcome
 

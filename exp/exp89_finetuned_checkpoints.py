@@ -21,7 +21,9 @@ the estimate and the certificate are oe_inferencex.estimate (sample_for_estimati
 exact_coverage_srs, certify_zone, zone_order, min_labels_to_certify), called unchanged. The confidence is
 oe_inferencex.assess.assess_prediction at patch 1 with form "top1" on the trained channels; the logit margin is the
 same call with form "margin". Arm A reads its windows with oe_inferencex.awf (list_windows, load_window_full) and runs
-exp21's forward pass (logits_grid, crop_at) unchanged; only the checkpoint is loaded here, at the pinned revision.
+exp21's forward pass (logits_grid) unchanged. Its crop is this file's crop_at, which applies exp21's rule at H = W = 63
+(tested against exp21's numbers). Only the checkpoint is loaded here, at the pinned revision, and the encoder is built
+from OlmoEarth v1-Base's config.json at the revision the page names (ENCODER_REVISIONS).
 
 Interpretations of the plan page, each flagged in the commit that added this file; none changes a threshold:
   a. Mangrove's label rule "a window is kept when its valid label pixels all agree and none is 0" is read as: all
@@ -46,29 +48,41 @@ Interpretations of the plan page, each flagged in the commit that added this fil
      so AWF's temporal control equals exp21's recorded one. The 3x3 control is the spatial standard deviation of each
      pixel's median NDVI over the months, in the 3x3 block around the label pixel. Mangrove's indices use the valid
      months only, as the page defines f over valid months.
-  h. K5's threshold, B02 above 0.2 reflectance, is 2,000 in the harmonised L2A digital numbers the tar stores. The page
-     still marks it "(threshold: owner to confirm)".
-  i. Arm A's gate is not on the page. It is read as Nandi's: within 2.0 points of Ai2's 89.5% for AWF (exp21's
-     replica was 1.4 points off), two-sided. Agreement with exp21's recorded predictions is reported in the run's
-     summary, not in the gate file, which holds counts and accuracy only.
-  j. The gate counts attempts. A third failed attempt closes the gate: nothing is graded. A passed gate is not rerun.
+  h. K5's threshold, B02 above 0.2 reflectance, is 2,000 in the harmonised L2A digital numbers the tar stores. The
+     owner confirmed it with the other thresholds; the page's marker now says so.
+  i. Arm A's gate is read as Nandi's: within 2.0 points of Ai2's 89.5% for AWF (exp21's replica was 1.4 points off),
+     two-sided. The page now states it and leaves it for the owner to confirm before freezing. Agreement with exp21's
+     recorded predictions is reported in the run's summary, not in the gate file, which holds counts and accuracy only.
+  j. The gate counts attempts: at most three in all, the first and two retries. A third failed attempt closes the gate
+     and nothing is graded. A passed gate is not rerun. Each attempt is appended to a ledger before the gate file is
+     written. On the cluster the ledger lives outside the git checkout (E89_GATE_LEDGER), so the job's hard reset cannot
+     roll the count back: a gate file behind its ledger is restored from it, and one that holds an attempt the ledger
+     lacks is refused. The run checks the pass itself (require_gate): made on a frozen page, on the pinned checkpoint,
+     and held by the ledger.
   k. --smoke runs the estimate study at the run's R = 2,000 draws but certifies on the first SMOKE_DRAWS of the random
      design's draws and bootstraps SMOKE_BOOT resamples, so it finishes in under a minute; the run uses R = 2,000
      and 2,000 resamples everywhere, as the page fixes.
   l. Imagery is read from the tar only. There is no fetch mode yet: if the inventory finds no Sentinel-2 layers in
-     mangrove.tar, a fetch mode, and the gate's 1.0-point tolerance for refetched imagery, come before freezing.
+     mangrove.tar, a fetch mode, and the gate's 1.0-point tolerance for refetched imagery, come before freezing. The
+     tar's size makes that likely: 62,433,280 bytes is 121,940 tar blocks, and a 2x2 window with 12 item groups takes
+     about 60 to 200 of them, so the tar can carry imagery for at most about 2,000 windows, not the page's expected
+     12,500 validation windows. A validation window with no completed item group is dropped and counted (the gate
+     records the count), and the gate refuses, recording no attempt, when no kept window has imagery.
   m. A window with fewer than 12 completed item groups is run with its own number of timesteps (batched by it), which
      is what rslearn's masked pooling over the missing timesteps reduces to; the inventory and the run count them.
   n. Nandi's polygon id is looked for under the option keys in NANDI_POLYGON_KEYS, a guess until its windows are seen,
      and its label source under the option key "source".
 
-Safety, not interpretation. The checkpoint is checked against its pinned sha256 and loaded with weights_only=True;
-any other global it pickles becomes an inert stub class, and a global naming code execution is refused.
-predict_population is the one function that scores validation windows, and it refuses before the page is frozen.
+Safety, not interpretation. The checkpoint is checked against its pinned sha256, a local --ckpt included, and loaded
+with weights_only=True; any other global it pickles becomes an inert stub class, and a global naming code execution is
+refused. The scored checkpoint's sha256 is recorded in the replica's info and in every gate attempt.
+predict_population is the one function that scores validation windows, and it refuses before the page is frozen;
+compute_units and run_arm refuse without a verified gate pass.
 
 Outputs (exp/out): exp89_inventory_<arm>.json (--inventory), exp89_s2_<arm>.json (--smoke-torch --real),
-exp89_gate_<arm>.json (--gate), exp89_units_<arm>.npz and exp89_summary.json (the run); exp89_summary_smoke.json
-from --smoke. --out-dir moves them. Downloads go to HF_HOME (scratch on the cluster) and are checked against the
+exp89_gate_<arm>.json (--gate) and its ledger exp89_gate_<arm>.ledger.jsonl (in E89_GATE_LEDGER when set, else beside
+it), exp89_units_<arm>.npz and exp89_summary.json (the run); exp89_summary_smoke.json from --smoke. --out-dir moves
+them. Downloads go to HF_HOME (scratch on the cluster) and are checked against the
 pinned sha256 before use; the tar is extracted under --data.
 """
 import argparse
@@ -187,6 +201,9 @@ ARMS = {
     },
 }
 ENCODER_PREFIXES = ("model.encoder.0.model.", "model.encoder.0.model.encoder.", "model.encoder.0.")
+# The encoder skeletons' config.json at the revisions exp/out/upstream_revisions.json records (the page names Base's)
+ENCODER_REVISIONS = {"OLMOEARTH_V1_BASE": "4bd1392a4539404d2c74276c39f3cb4cfff466cc",
+                     "OLMOEARTH_V1_NANO": "529248a4dc3c54014c56b7504641cec98de31d1c"}
 # A Lightning checkpoint pickles globals besides tensors (rslearn and jsonargparse objects in hyper_parameters, numpy
 # scalars in callback state). Each is mapped to an inert stub class under its own name: nothing is imported or run.
 # A global that names code execution has no place in a checkpoint and is refused outright.
@@ -194,8 +211,14 @@ REFUSED_PREFIXES = ("os.", "posix.", "nt.", "subprocess.", "sys.", "builtins.", 
                     "runpy.", "pickle.", "marshal.", "code.", "ctypes.", "pty.", "multiprocessing.", "webbrowser.")
 GATE_KEYS = ("arm", "prereg_status", "ai2_accuracy", "metric", "tolerance_points", "imagery_route", "attempts",
              "passed", "closed", "max_attempts")
-ATTEMPT_KEYS = ("attempt", "utc", "commit", "dirty", "n_windows", "n_errors", "accuracy", "n_windows_dropped",
-                "n_pixels", "n_pixel_errors", "accuracy_pixel", "gap_points", "pass")
+ATTEMPT_KEYS = ("attempt", "utc", "commit", "dirty", "prereg_status", "checkpoint_sha256", "n_windows", "n_errors",
+                "accuracy", "n_windows_dropped", "n_windows_no_imagery", "n_pixels", "n_pixel_errors", "accuracy_pixel",
+                "gap_points", "pass")
+GATE_LEDGER_ENV = "E89_GATE_LEDGER"          # the gate's ledger directory; exp/jobs/e89.sh puts it outside the checkout
+
+
+class GateRefused(RuntimeError):
+    """The gate, or a run that needs its pass, refuses: nothing is scored or graded."""
 
 
 # ----------------------------------------------------------------------------- small helpers
@@ -1271,6 +1294,16 @@ def checkpoint_inventory(sd, arm):
 
 
 # ----------------------------------------------------------------------------- the replica (torch)
+def encoder_skeleton(model_id):
+    """OlmoEarth's model with random weights, built from its config.json at the pinned revision. The package's loader
+    by model id reads the config at the Hub's current main; a changed config that keeps every parameter shape would
+    still load strictly and change the model without a word."""
+    from huggingface_hub import hf_hub_download
+    from olmoearth_pretrain.model_loader import ModelID, load_model_from_path
+    cfg = hf_hub_download(ModelID[model_id].repo_id(), "config.json", revision=ENCODER_REVISIONS[model_id])
+    return load_model_from_path(os.path.dirname(cfg), load_weights=False)
+
+
 class Replica:
     """The fine-tuned model without rslearn: the encoder keys loaded strictly into olmoearth_pretrain's encoder
     (OlmoEarth v1-Base for the real checkpoints), tokens mean-pooled over timesteps and band sets, the arm's head.
@@ -1278,19 +1311,20 @@ class Replica:
     the 16-px crop, a 1x1 conv to 11 channels read at the label pixel. AWF: exp21's logits_grid (patch 4, the 1x1
     conv on patch features, bilinear x4) at the label pixel, unchanged. fp32, TF32 off."""
 
-    def __init__(self, arm, ckpt_path, model_id="OLMOEARTH_V1_BASE", device=None):
+    def __init__(self, arm, ckpt_path, model_id="OLMOEARTH_V1_BASE", device=None, checkpoint_sha256=None):
         import torch
         from olmoearth_pretrain.data.constants import Modality
         from olmoearth_pretrain.data.normalize import Normalizer, Strategy
-        from olmoearth_pretrain.model_loader import ModelID, load_model_from_id
         torch.backends.cuda.matmul.allow_tf32 = False
         torch.backends.cudnn.allow_tf32 = False
         self.arm, self.A = arm, ARMS[arm]
         if tuple(Modality.SENTINEL2_L2A.band_order) != OLMO_BANDS:
             raise RuntimeError(f"the encoder's band order {Modality.SENTINEL2_L2A.band_order} is not {OLMO_BANDS}")
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        self.checkpoint_sha256 = checkpoint_sha256 or sha256(ckpt_path)
+        self.model_id, self.encoder_revision = model_id, ENCODER_REVISIONS[model_id]
         sd, self.load_how, self.top_level = load_checkpoint(ckpt_path)
-        model = load_model_from_id(ModelID[model_id], load_weights=False)
+        model = encoder_skeleton(model_id)
         self.encoder_prefix, errors = None, {}
         for pre in ENCODER_PREFIXES:
             sub = {k[len(pre):]: v for k, v in sd.items() if k.startswith(pre)}
@@ -1362,7 +1396,9 @@ class Replica:
             return (v @ self.w.T + self.b).double().cpu().numpy()
 
     def info(self):
-        return {"arm": self.arm, "device": str(self.device), "load": self.load_how, "top_level": self.top_level,
+        return {"arm": self.arm, "device": str(self.device), "checkpoint_sha256": self.checkpoint_sha256,
+                "encoder_config": {"model_id": self.model_id, "revision": self.encoder_revision},
+                "load": self.load_how, "top_level": self.top_level,
                 "encoder_prefix": self.encoder_prefix, "n_encoder_keys": self.n_encoder_keys,
                 "n_checkpoint_keys": self.n_checkpoint_keys, "head_shape": self.head_shape, "dtype": "float32",
                 "tf32": False, "patch": self.A["patch"]}
@@ -1517,6 +1553,11 @@ def cmd_inventory(args):
                                   "sha256_pinned": A["model_sha256"],
                                   "matches": (got == A["model_sha256"]) if A["model_sha256"] else None}
     if ckpt:
+        if args.ckpt:                                   # a local file: listed, never scored, and its hash recorded
+            got = sha256(ckpt)
+            files["--ckpt"] = {"path": ckpt, "bytes": os.path.getsize(ckpt), "sha256": got,
+                               "sha256_pinned": A["model_sha256"],
+                               "matches": (got == A["model_sha256"]) if A["model_sha256"] else None}
         sd, how, top = load_checkpoint(ckpt)
         inv["checkpoint"] = {"load": how, "top_level": top, **checkpoint_inventory(sd, arm)}
     if "annotation_features.geojson" in files:
@@ -1675,6 +1716,74 @@ def gate_passed(arm, out_dir=None):
     return bool(rec and rec.get("passed") is True), rec
 
 
+def ledger_path(arm, out_dir):
+    """The gate's append-only ledger, one JSON line per attempt. In E89_GATE_LEDGER when set (the cluster job sets it
+    outside the git checkout, so a hard reset cannot touch it), else beside the gate file."""
+    return os.path.join(os.environ.get(GATE_LEDGER_ENV) or out_dir, f"exp89_gate_{arm}.ledger.jsonl")
+
+
+def read_ledger(arm, out_dir):
+    path = ledger_path(arm, out_dir)
+    if not os.path.exists(path):
+        return [], path
+    with open(path) as f:
+        return [json.loads(line) for line in f if line.strip()], path
+
+
+def append_ledger(arm, out_dir, attempt):
+    path = ledger_path(arm, out_dir)
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    with open(path, "a") as f:
+        f.write(json.dumps(e78.jsonable(attempt), sort_keys=True) + "\n")
+        f.flush()
+        os.fsync(f.fileno())
+    return path
+
+
+def _canon(attempts):
+    return [json.dumps(e78.jsonable(a), sort_keys=True) for a in attempts]
+
+
+def reconcile_gate(arm, out_dir, rec):
+    """The gate file's attempts against the ledger's. The ledger is the count: a file behind it (a reset restored an
+    older committed file) is restored from it; a file holding an attempt the ledger does not hold, in order, was
+    edited or written elsewhere, and is refused. Returns (the ledger's attempts, whether the file was behind)."""
+    ledger, lpath = read_ledger(arm, out_dir)
+    held = (rec or {}).get("attempts") or []
+    if _canon(held) != _canon(ledger)[:len(held)]:
+        raise GateRefused(f"exp89_gate_{arm}.json holds {len(held)} attempts that the gate's ledger ({lpath}, "
+                          f"{len(ledger)} attempts) does not hold: the file was edited or written elsewhere. Nothing "
+                          "is scored or graded until the two agree.")
+    return ledger, len(ledger) > len(held)
+
+
+def require_gate(arm, out_dir, ledger_required=True):
+    """The run's own check of the gate, beside cmd_run's: a pass on the last attempt, within the attempt limit, every
+    attempt made on a frozen page, the passing attempt on the pinned checkpoint, and (when the run scores windows) the
+    same attempts in the ledger. Returns the gate record or raises GateRefused."""
+    rec, _ = gate_record(arm, out_dir)
+    if rec is None:
+        raise GateRefused("no gate record")
+    if rec.get("closed"):
+        raise GateRefused("the gate is closed")
+    att = rec.get("attempts") or []
+    if rec.get("passed") is not True or not att or att[-1].get("pass") is not True:
+        raise GateRefused("the gate has not passed")
+    if len(att) > MAX_GATE_ATTEMPTS:
+        raise GateRefused(f"the gate record holds {len(att)} attempts, more than the {MAX_GATE_ATTEMPTS} allowed")
+    if any(a.get("prereg_status") != "frozen" for a in att):
+        raise GateRefused("an attempt was made while the page was not frozen")
+    pinned = ARMS[arm]["model_sha256"]
+    if pinned and att[-1].get("checkpoint_sha256") != pinned:
+        raise GateRefused(f"the passing attempt scored {att[-1].get('checkpoint_sha256')}, not the pinned checkpoint "
+                          f"{pinned}")
+    if ledger_required:
+        ledger, lpath = read_ledger(arm, out_dir)
+        if _canon(ledger) != _canon(att):
+            raise GateRefused(f"the gate's ledger ({lpath}) does not hold the attempts of exp89_gate_{arm}.json")
+    return rec
+
+
 def predict_population(arm, rep, windows, log=print, synthetic=False):
     """Every validation window with imagery: (records, logits). Used by the gate and the run, after freezing. The only
     function that scores a validation window; it refuses before the page is frozen, except on the synthetic smoke's
@@ -1690,33 +1799,45 @@ def predict_population(arm, rep, windows, log=print, synthetic=False):
 
 
 def run_gate(arm, rep, windows, out_dir, imagery_route="tar", log=print, synthetic=False):
-    """G: predictions on the validation windows; only the window count, the error count and the accuracy are kept."""
+    """G: predictions on the validation windows; only the window counts, the error counts and the accuracy are kept.
+    Each attempt goes to the ledger first, then to the gate file (see reconcile_gate)."""
     A = ARMS[arm]
     rec, path = gate_record(arm, out_dir)
+    attempts, behind = reconcile_gate(arm, out_dir, rec)
     rec = rec or {"arm": arm, "ai2_accuracy": A["ai2_accuracy"],
                   "metric": ("pixel micro accuracy over valid label pixels" if arm == "mangrove"
                              else "accuracy per window (one label pixel)"),
                   "tolerance_points": A["gate_tolerance"][imagery_route] * 100, "imagery_route": imagery_route,
                   "attempts": [], "passed": False, "closed": False, "max_attempts": MAX_GATE_ATTEMPTS}
+    rec["attempts"] = attempts
+    rec["passed"] = bool(attempts and attempts[-1]["pass"] is True)
+    rec["closed"] = (not rec["passed"]) and len(attempts) >= MAX_GATE_ATTEMPTS
     rec["prereg_status"] = prereg_status()
+    if behind:
+        dump(rec, path)
+        log(f"gate {arm}: the gate file was behind its ledger; restored to the ledger's {len(attempts)} attempts")
     if rec["passed"]:
         log(f"gate {arm}: already passed on attempt {rec['attempts'][-1]['attempt']}; not rerun")
         return rec
-    if len(rec["attempts"]) >= MAX_GATE_ATTEMPTS:
-        rec["closed"] = True
+    if rec["closed"]:
         dump(rec, path)
         log(f"gate {arm}: closed after {len(rec['attempts'])} failed attempts; nothing is graded")
         return rec
     recs, have, lg = predict_population(arm, rep, windows, log, synthetic=synthetic)
     pred = lg.argmax(1)
     kept = [i for i, r in enumerate(have) if r["label"] is not None]
+    if not kept:
+        raise GateRefused(f"gate {arm}: none of the {len(recs)} validation windows has both imagery and a kept label "
+                          f"({len(recs) - len(have)} have no imagery). Nothing to gate on; no attempt is recorded.")
     label = np.array([have[i]["label"] for i in kept])
     n_err = int((pred[kept] != label).sum())
     acc_w = 1.0 - n_err / len(kept)
     commit, dirty = git_state()
     att = {"attempt": len(rec["attempts"]) + 1, "utc": utc_now(), "commit": commit, "dirty": dirty,
+           "prereg_status": prereg_status(), "checkpoint_sha256": getattr(rep, "checkpoint_sha256", None),
            "n_windows": len(kept), "n_errors": n_err, "accuracy": acc_w,
-           "n_windows_dropped": len(recs) - len(kept), "n_pixels": None, "n_pixel_errors": None, "accuracy_pixel": None}
+           "n_windows_dropped": len(recs) - len(kept), "n_windows_no_imagery": len(recs) - len(have),
+           "n_pixels": None, "n_pixel_errors": None, "accuracy_pixel": None}
     if arm == "mangrove":
         att.update(pixel_accuracy(have, pred))
         gated = att["accuracy_pixel"]
@@ -1724,6 +1845,8 @@ def run_gate(arm, rep, windows, out_dir, imagery_route="tar", log=print, synthet
         gated = acc_w
     att["gap_points"] = (gated - A["ai2_accuracy"]) * 100
     att["pass"] = bool(abs(gated - A["ai2_accuracy"]) <= A["gate_tolerance"][imagery_route] + EPS)
+    att = json.loads(json.dumps(e78.jsonable(att)))                 # the file's and the ledger's form, identical
+    append_ledger(arm, out_dir, att)                                # the count first, so a crash cannot lose it
     rec["attempts"].append(att)
     rec["passed"] = att["pass"]
     rec["closed"] = (not att["pass"]) and len(rec["attempts"]) >= MAX_GATE_ATTEMPTS
@@ -1745,23 +1868,48 @@ def cmd_gate(args):
         if st["status"] != "readable and pinned":
             print(f"arm N not run: {st['reason']}", flush=True)
             return 0
-    rep, windows = build_arm(args)
-    rec = run_gate(args.arm, rep, windows, args.out_dir or OUT)
+    out_dir = args.out_dir or OUT
+    try:
+        # the ledger is read before any download or model load: a passed or closed gate needs no model, a file that
+        # disagrees with its ledger is refused
+        attempts, _ = reconcile_gate(args.arm, out_dir, gate_record(args.arm, out_dir)[0])
+        if (attempts and attempts[-1]["pass"] is True) or len(attempts) >= MAX_GATE_ATTEMPTS:
+            rec = run_gate(args.arm, None, [], out_dir)
+        else:
+            rep, windows = build_arm(args)
+            rec = run_gate(args.arm, rep, windows, out_dir)
+    except GateRefused as ex:
+        print(f"refused: {ex}", flush=True)
+        return 2
     return 0 if rec["passed"] else 1
 
 
-def build_arm(args, model_id="OLMOEARTH_V1_BASE"):
+def checkpoint_path(args):
+    """(path, sha256) of the arm's checkpoint: the pinned download, or a local --ckpt that must hash to the pin."""
     A = ARMS[args.arm]
+    if not args.ckpt:
+        return hub_file(A["model"], A["model_file"], A["model_revision"], "model", A["model_sha256"])
+    got = sha256(args.ckpt)
+    if A["model_sha256"] and got != A["model_sha256"]:
+        raise RuntimeError(f"--ckpt {args.ckpt}: sha256 {got}, pinned {A['model_sha256']} "
+                           f"({A['model']}@{A['model_revision'][:8]}); only the pinned checkpoint is scored")
+    return args.ckpt, got
+
+
+def build_arm(args, model_id="OLMOEARTH_V1_BASE"):
+    ckpt, sha = checkpoint_path(args)                       # refused off the pin before any data is read
     windows_root, _ = resolve_data(args.arm, args.data or default_data_dir(args.arm), download=not args.offline)
-    ckpt = args.ckpt or hub_file(A["model"], A["model_file"], A["model_revision"], "model", A["model_sha256"])[0]
-    rep = Replica(args.arm, ckpt, model_id=model_id)
+    rep = Replica(args.arm, ckpt, model_id=model_id, checkpoint_sha256=sha)
     return rep, arm_windows(args.arm, windows_root)
 
 
 # ----------------------------------------------------------------------------- the full run
-def compute_units(arm, rep, windows, log=print, k3_cap=None, synthetic=False):
-    """Logits, controls and K3 on the validation windows; K2's frequencies and K3's fit on the training windows."""
+def compute_units(arm, rep, windows, log=print, k3_cap=None, synthetic=False, out_dir=None):
+    """Logits, controls and K3 on the validation windows; K2's frequencies and K3's fit on the training windows.
+    Refused without a verified gate pass, except on the synthetic smoke's windows."""
     A = ARMS[arm]
+    if not synthetic:
+        require_gate(arm, out_dir or OUT)
     recs, have, lg = predict_population(arm, rep, windows, log, synthetic=synthetic)
     rd_pred = lg.argmax(1)
     keep = np.array([r["label"] is not None for r in have])
@@ -1877,13 +2025,18 @@ def summary_path(out_dir):
 
 def run_arm(arm, out_dir, rep=None, windows=None, units_file=None, draws=DRAWS, n_boot=BOOT, log=print, k3_cap=None,
             synthetic=False):
-    """The run past both guards: units (computed, or read from a units file), the grading, the summary."""
+    """The run past both guards: units (computed, or read from a units file), the grading, the summary. It checks the
+    gate itself (require_gate); grading a units file needs the pass but not the ledger, which stays on the cluster."""
     t0 = time.time()
+    if not synthetic:
+        if prereg_status() != "frozen":
+            raise GateRefused(f"{os.path.relpath(PLAN, ROOT)} is not frozen: nothing is graded")
+        require_gate(arm, out_dir, ledger_required=not units_file)
     if units_file:
         units, meta = read_units_file(units_file), {"from_units_file": units_file}
         units_info = {"path": units_file, "sha256": sha256(units_file)}
     else:
-        units, meta = compute_units(arm, rep, windows, log, k3_cap=k3_cap, synthetic=synthetic)
+        units, meta = compute_units(arm, rep, windows, log, k3_cap=k3_cap, synthetic=synthetic, out_dir=out_dir)
         units_info = write_units(units, os.path.join(out_dir, f"exp89_units_{arm}.npz"))
         meta["replica"] = rep.info()
     res = grade_units(units, arm, draws=draws, n_boot=n_boot)
@@ -1928,17 +2081,17 @@ def cmd_run(args):
         if st["status"] != "readable and pinned":
             print(f"arm N not run: {st['reason']}", flush=True)
             return 0
-    ok, rec = gate_passed(args.arm, out_dir)
-    if not ok:
-        why = "no gate record" if rec is None else ("the gate is closed" if rec.get("closed") else "the gate has not passed")
-        print(f"refused: {why} for arm {args.arm} (exp89_gate_{args.arm}.json). Nothing is graded until it passes.",
+    try:
+        require_gate(args.arm, out_dir, ledger_required=not args.from_units)
+        if args.from_units:
+            res = run_arm(args.arm, out_dir, units_file=args.from_units)
+        else:
+            rep, windows = build_arm(args)
+            res = run_arm(args.arm, out_dir, rep, windows)
+    except GateRefused as ex:
+        print(f"refused: {ex} for arm {args.arm} (exp89_gate_{args.arm}.json). Nothing is graded until it passes.",
               flush=True)
         return 2
-    if args.from_units:
-        res = run_arm(args.arm, out_dir, units_file=args.from_units)
-    else:
-        rep, windows = build_arm(args)
-        res = run_arm(args.arm, out_dir, rep, windows)
     return 0 if res["prereg"]["complete"] else 1
 
 
@@ -2034,9 +2187,8 @@ def synthetic_checkpoint(path, arm, model_id="OLMOEARTH_V1_NANO", seed=0):
     import sys as _sys
     import types
     import torch
-    from olmoearth_pretrain.model_loader import ModelID, load_model_from_id
     torch.manual_seed(seed)
-    enc = load_model_from_id(ModelID[model_id], load_weights=False).encoder
+    enc = encoder_skeleton(model_id).encoder
     D = int(enc.embedding_size)
     A = ARMS[arm]
     sd = {ENCODER_PREFIXES[0] + k: v.clone() for k, v in enc.state_dict().items()}
@@ -2154,7 +2306,19 @@ def smoke_torch(args):
                 assert prereg_status() == "frozen", "a validation window was scored before freezing"
             assert os.path.exists(os.path.join(sub_out, f"exp89_units_{arm}.npz"))
             again = run_arm(arm, sub_out, units_file=os.path.join(sub_out, f"exp89_units_{arm}.npz"), draws=20,
-                            n_boot=20)
+                            n_boot=20, synthetic=True)
+            assert again["inputs"]["from_units_file"]
+            if prereg_status() != "frozen":
+                # the guards on a draft page, on the synthetic outputs: no grading and no scoring without a pass
+                for call in (lambda: run_arm(arm, sub_out, units_file=os.path.join(sub_out, f"exp89_units_{arm}.npz")),
+                             lambda: compute_units(arm, rep, windows, out_dir=sub_out)):
+                    try:
+                        call()
+                    except GateRefused:
+                        pass
+                    else:
+                        raise AssertionError("a run on a draft page must be refused")
+            assert g["attempts"][0]["checkpoint_sha256"] == rep.checkpoint_sha256 == sha256(ck)
             assert again["n_units"] == res["n_units"] and again["n_errors"] == res["n_errors"]
             if arm == "mangrove":
                 assert res["accuracy"]["accuracy_pixel_micro"]["n_pixels"] > 0
