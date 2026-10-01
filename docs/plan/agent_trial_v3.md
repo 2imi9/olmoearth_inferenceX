@@ -234,3 +234,23 @@ runs pass it. A round passes when P1 to P9 hold on all 18 configurations.
   owner decides them from outside knowledge.
 - Whether the fixes help on briefs unlike B1–B8 and the held-out set. Eight held-out briefs are a check on fitting,
   not a test of generality.
+
+## Addendum, 30 September 2026: what exp87 can show (nothing above changed)
+
+Written before any exp87 result was opened. The round 1 answers are committed (8fb8948). The result has not been
+computed, and the writer of this addendum has not read the answers, the audit or its findings.
+
+- **What exp87 tests.** The held-out briefs are rewordings of exp86's eight task types, or the same task types with
+  new values. So exp87 checks whether the fixes hold up under rewording and new values within those eight task
+  types. It does not test whether they help on task types the fixes were not built for. The last section above
+  already says this; the main result's question, "whether the fixes were fitted to exp86's eight briefs", is to be
+  read in that narrower sense.
+- **Reported beside the verdict.** H − B (the held-out rate minus B1–B8's in the same round) and H/B (their ratio),
+  each with a 95% bootstrap interval that resamples whole briefs, not configurations. B3 and B4 run on two backends,
+  so their configurations are pooled into one unit each, as `exp/exp86_claim_rates.py` now does for exp86. The
+  configuration-level intervals stay as specified above.
+- **What does not change.** The verdict, its thresholds (H at most 3.0%, and at most 2.0 points above B1–B8), the
+  endpoint, the criteria and the pass rule are as frozen. The new intervals are reported and do not change the
+  verdict.
+- **Why.** The red team of 30 September 2026 found that exp86's interval resampled ten brief-by-backend
+  configurations while its text called them briefs, and that with eight briefs the brief is the honest unit.
