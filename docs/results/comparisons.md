@@ -2256,19 +2256,19 @@ load. <!-- claim:exp78-export-reproduces-the-suite -->
 
 **The design-based interval is honest, on all seven.** Under a simple random sample of 300 windows the
 nominal-95% interval covers the true error rate on 0.933 to 0.961 of 2,000 draws, clearing the 0.93 bar
-everywhere (P1, holds 7 of 7). MADOS sits exactly on the bar, which the preregistration predicted in advance and
-named as Wilson's discreteness at an error rate that puts about 22 errors in a 300-window sample, not a defect.
+everywhere (P1, holds 7 of 7). MADOS sits exactly on the bar, where the pilot had already put it (0.933); the
+preregistration named it in advance as Wilson's discreteness at an error rate that puts about 22 errors in a 300-window sample, not a defect.
 P1's job was to catch a bug in the estimator — a finite-population correction against the wrong population, a
 variance formula that treats a stratified sample as simple — and under this design the units are exchangeable by
 construction, so it found none. <!-- claim:design-based-interval-is-honest -->
 
 **The interval a reviewer would actually compute is badly wrong, and this is the practical finding.** Spend the
-same 300 labels the way a person would — open 19 scenes and label 16 windows in each — then apply the ordinary
-formula to the 300 labels as though they were independent, and the nominal-95% interval covers on 0.506 to 0.777
+same 300-label budget the way a person would — open 18 scenes (300 // 16) and label 16 windows in each — then apply the ordinary
+formula to those labels as though they were independent, and the nominal-95% interval covers on 0.506 to 0.777
 of draws on six of the seven tasks, with a median design effect of 2.94 (P2, holds on 6 of 7). An interval that
 claims 95% and delivers 51% is not conservative or approximate; it is wrong in the direction that makes a map
-look better established than it is. Errors sit next to each other, so 300 windows from 19 scenes carry nowhere
-near 300 windows of information. Three honest qualifications. **Correcting for the clustering helps only where
+look better established than it is. Errors sit next to each other, so the windows of 18 scenes carry nowhere
+near as much information as as many independent windows. Three honest qualifications. **Correcting for the clustering helps only where
 the tiles are of equal size.** The cluster-corrected interval restores coverage to 0.913–0.932 on the four tasks
 whose tiles are full (the three PASTIS variants and m-SA-crop-type), only to 0.824 on Sen1Floods11, and on MADOS
 not at all: 0.598. MADOS's tiles hold 1 to 400 valid windows, so 18 of them are too few and too unequal for any
@@ -2343,7 +2343,17 @@ about 0.01, the two equal-tile tasks not at all, and none of P1 to P4 reads this
 changed is the sentence: correcting tile-sampled labels afterwards works on a map of equal tiles and does not on
 one whose tiles differ.
 
-<!-- claim:shipped-tile-design-coverage -->
+**Addendum, 30 September 2026: the tiles design as the package ships it.** The design graded above is exp78's own:
+exactly 18 tiles (300 // 16) and a normal quantile. The package's `--design tiles` differs. It takes tiles in a
+random order until 300 labels are met, up to 16 per tile, and its ratio interval uses a t quantile. Graded on
+exp78's per-unit files over 4,000 draws (`exp/exp78_shipped_tiles.py`, artifact `exp/out/exp78_shipped_tiles.json`),
+it covers the true error rate on 94.5% to 95.4% of draws on the three PASTIS inputs, m-cashew-plant and
+m-SA-crop-type, against 91.3% to 93.6% for exp78's design on the same five. It falls short on the other two:
+84.3% on Sen1Floods11 and 68.5% on MADOS. On those two tasks a tenth of the tiles hold most of the errors (56% and
+91%, against 13% to 25% on the other five). That describes the two tasks; it is not a tested cause. It also
+narrows the sentence above: Sen1Floods11's tiles are mostly full, so unequal tile sizes do not explain its
+shortfall, while MADOS's tiles are both small and unequal. Not preregistered; prompted by the red team of 30
+September 2026. <!-- claim:shipped-tile-design-coverage -->
 
 ## Which part of the map can be trusted, with a guarantee (exp80)
 
@@ -2356,16 +2366,18 @@ user cannot. What they can do is label B windows drawn at random, and what they 
 confident share of the map that is wrong at most α of the time, with the statement itself failing on at most δ
 of draws. The field's rule for this is risk control (Bates et al. 2021; Angelopoulos et al. 2021, *Learn then
 Test*), never before applied to a map audit or graded on one. Two rules were run beside the plug-in a reviewer
-would use unaided: a **prefix** rule that assumes the zone's error rate does not fall as the zone grows and
-accepts zones from the smallest up while an exact hypergeometric test rejects "worse than α", and an
-assumption-free **Bonferroni** rule over the grid. The grid is cut below the coverage a budget can certify at
+would use unaided: a **prefix** rule that accepts zones from the smallest up while an exact hypergeometric test
+rejects "worse than α" and stops at the first it cannot reject, and a **Bonferroni** rule over the grid. The
+prefix rule is fixed-sequence testing: the order and the grid are fixed before any label is read, so it is valid
+on any map, whatever the shape of its error rate (corrected on 30 September 2026; this paragraph first said the
+rule assumes the zone's error rate does not fall as the zone grows). The grid is cut below the coverage a budget can certify at
 all: with no error among its labels a zone still needs at least ⌈ln δ / ln(1−α)⌉ labels in the large-population
 limit, 45 at α = 0.05 and 255 at α = 0.009, which is the honest refusal the tool now states.
 
 **P1 (validity) holds on all 112 cells.** Bound δ + 3 SE = 0.120; largest violation frequency 0.080 for the
 prefix rule (PASTIS S2, α = θ/2, B = 1000), 0.0045 for Bonferroni, against 0.557 for the plug-in. The prefix
-rule stayed under δ = 0.10 on every cell, including the tasks where its monotonicity assumption is broken (by at
-most 0.034 in the zone risk between adjacent grid levels). <!-- claim:trust-zone-guarantee-holds -->
+rule stayed under δ = 0.10 on every cell, including the tasks where the zone risk is not monotone (by at most
+0.034 between adjacent grid levels). That is what fixed-sequence testing guarantees, not luck. <!-- claim:trust-zone-guarantee-holds -->
 
 **P2 (the run agrees with the arithmetic) fails as written, on the two near-census cells.** On the two
 CropHarvest Togo tasks (306 units, 300 labelled) the first tested zone is fully drawn on 52% of draws, where the
@@ -2397,8 +2409,10 @@ last grid step). Where the plug-in has a real sample to be wrong on, it is wrong
 | m-SA-crop-type (0.340) | 0.60 | 0.50 (0.035) | 0.45 (0.000) | 0.372 |
 
 Read across: at 300 labels the prefix rule certifies a zone on most draws on 14 of the 21 tasks, median
-certified coverage 0.50 against an oracle median of 0.60, and the price of assuming nothing (Bonferroni) is
-about a tenth of the map (medians 0.35 against 0.50). At an absolute α = 0.05 the picture is the budget's: the
+certified coverage 0.50 against an oracle median of 0.60, and Bonferroni, which splits δ over the grid,
+certifies about a tenth of the map less (medians 0.35 against 0.50). Neither rule is the more powerful in
+general: where the most confident windows hold many errors the prefix rule stops early, and on Brick Kiln
+Bonferroni certifies 0.75 against the prefix rule's 0.50. At an absolute α = 0.05 the picture is the budget's: the
 two near-perfect maps certify all or 95% of themselves, MADOS 0.85 and Sen1Floods11 0.75, the PASTIS arms
 0.30–0.35, and eleven tasks nothing on most draws, because their error rate is above 5% almost everywhere. At
 B = 100 the prefix rule certifies on most draws on 7 tasks, at B = 1000 on 10 of the 11 large enough.

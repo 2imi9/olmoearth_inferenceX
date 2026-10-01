@@ -3137,12 +3137,12 @@
     - {file: docs/Findings.md, marker: design-based-interval-is-honest}
     - {file: docs/Summary.md, marker: design-based-interval-is-honest}
   note: >-
-    MADOS sits on the 0.93 bar, which the preregistration predicted in advance as Wilson's discreteness at about 22
-    errors in a 300-window sample rather than a defect. The check recomputes the coverages from the per-task records
+    MADOS sits on the 0.93 bar. The pilot had already shown it there (0.933), and the preregistration named it in
+    advance as Wilson's discreteness at about 22 errors in a 300-window sample rather than a defect. The check recomputes the coverages from the per-task records
     instead of reading the verdict, so editing the verdict block alone cannot make it pass.
 
 - id: tile-sampling-breaks-the-naive-interval
-  statement: "Spending a 300-window budget as 19 tiles of 16 windows and then applying the ordinary independent-sample formula gives a nominal-95% interval that covers on 0.506 to 0.777 of draws on 6 of the 7 segmentation tasks, with a median design effect of 2.94; a cluster-corrected ratio estimator restores coverage to 0.913-0.932 on the four tasks with full tiles, to 0.824 on Sen1Floods11, and not on MADOS, whose tiles hold 1 to 400 valid windows, where it covers 0.598."
+  statement: "Spending a 300-window budget as 18 tiles of 16 windows (300 // 16) and then applying the ordinary independent-sample formula gives a nominal-95% interval that covers on 0.506 to 0.777 of draws on 6 of the 7 segmentation tasks, with a median design effect of 2.94; a cluster-corrected ratio estimator restores coverage to 0.913-0.932 on the four tasks with full tiles, to 0.824 on Sen1Floods11, and not on MADOS, whose tiles hold 1 to 400 valid windows, where it covers 0.598."
   crosscheck: tests/test_recorded.py::test_exp78_coverages_reproduce_in_a_small_seeded_monte_carlo_from_the_per_unit_files
   status: supported
   experiments: [exp78]
@@ -3228,7 +3228,7 @@
     between a quarter and a half of the labels, not the order of magnitude it is worth for finding errors.
 
 - id: trust-zone-guarantee-holds
-  statement: "From 300 (or 100 or 1,000) random labels on OlmoEarth Base's 24 suite tasks, a zone certified as wrong at most alpha of the time by the exact-test rules (monotone prefix, or Bonferroni over the grid) exceeded alpha on at most 0.080 (prefix) and 0.0045 (Bonferroni) of 2,000 draws on every one of 112 cells, against a bound of delta + 3 SE = 0.120 at delta = 0.1; the plug-in a reviewer would use exceeded it on up to 0.557."
+  statement: "From 300 (or 100 or 1,000) random labels on OlmoEarth Base's 24 suite tasks, a zone certified as wrong at most alpha of the time by the exact-test rules (the prefix rule, which is fixed-sequence testing, or Bonferroni over the grid; both are valid on any map) exceeded alpha on at most 0.080 (prefix) and 0.0045 (Bonferroni) of 2,000 draws on every one of 112 cells, against a bound of delta + 3 SE = 0.120 at delta = 0.1; the plug-in a reviewer would use exceeded it on up to 0.557."
   crosscheck: tests/test_known_answer.py::test_exp80_zone_guarantee_and_coverage_reproduce_from_a_fresh_draw
   status: supported
   experiments: [exp80]
@@ -3296,7 +3296,7 @@
     - {file: docs/results/comparisons.md, marker: plugin-zone-violates-on-most-tasks}
 
 - id: trust-zone-coverage-at-300-labels
-  statement: "At 300 labels and alpha = half the map's error rate, the prefix rule certifies a zone on most draws on 14 of the 21 tasks large enough for that budget, with a median certified coverage of 0.50 against an oracle median of 0.60; the assumption-free Bonferroni rule on 13, median 0.35."
+  statement: "At 300 labels and alpha = half the map's error rate, the prefix rule certifies a zone on most draws on 14 of the 21 tasks large enough for that budget, with a median certified coverage of 0.50 against an oracle median of 0.60; the Bonferroni rule on 13, median 0.35."
   crosscheck: tests/test_known_answer.py::test_exp80_zone_guarantee_and_coverage_reproduce_from_a_fresh_draw
   status: measured
   experiments: [exp80]

@@ -155,3 +155,15 @@ every future reanalysis built on it is about a different map.
 One sbatch on `cpu` for the export: the probe fits are one pass where exp77 did five, so roughly 20 minutes for
 the segmentation tasks plus 10 for the classification ones, and a few minutes of I/O. Request four hours. The
 estimation stage is minutes on a laptop. No new dependencies; fp32 throughout.
+
+## Addendum, 30 September 2026: two corrections to this page (nothing above changed)
+
+- **P1 was piloted.** The pilot table above reports P1's own statistic, the simple random sample's coverage (E1),
+  on four arms, MADOS at 0.933 among them. "P1, P3 and P4 were not piloted" is wrong for P1. The record's exp78
+  section now says that MADOS's place on the bar was seen in the pilot, not predicted.
+- **D4 drew 18 tiles, not 19.** The run took `max(1, B // m)` tiles, 300 // 16 = 18, each with up to 16 windows.
+  P2 above says T = 19.
+
+The package's own tiles design, which takes tiles until the budget is met and uses a t quantile, was graded
+separately on 30 September 2026 (`exp/out/exp78_shipped_tiles.json`); the result is in the exp78 section of
+[comparisons.md](../results/comparisons.md#how-wrong-is-this-map-what-a-reviewers-labels-buy-exp78).

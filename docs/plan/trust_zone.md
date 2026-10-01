@@ -179,3 +179,15 @@ task. When the exp79 seed-0 exports for the other fifteen encoders arrive, the s
 record states whether the certifiable coverage is a property of the task or of the encoder, as exp79 P4 does for
 the design effect. The procedure ships as `oe_inferencex.estimate.certify_zone` and `oe-inferencex certify`
 only after P1 holds; the experiment imports the package's implementation so that there is one.
+
+## Addendum, 30 September 2026: the prefix rule needs no monotone risk (nothing above changed)
+
+Rule A1 above is described as valid when the risk is monotone, and A2 as the assumption-free rule. That understated
+A1. The zone order and the grid are fixed before any label is read, each level has an exact p-value, and the rule
+stops at the first level it cannot reject. That is fixed-sequence testing, so a false certification needs the first
+true null to be rejected, which happens with probability at most δ whatever the shape of the risk curve. Learn then
+Test (Angelopoulos et al. 2021) gives the general argument. A test in `tests/test_trust_zone.py` now enumerates every
+error pattern of maps of 10, 11 and 12 windows against every draw, and both rules hold δ on all of them. So exp80's
+result on the tasks whose risk is not monotone is what the rule guarantees, not luck. Neither rule is the more
+powerful in general: Bonferroni can certify more where the most confident windows hold many errors, and it did on
+Brick Kiln (0.75 against 0.50). The package's printed note was corrected to say this, in changes not yet released.
