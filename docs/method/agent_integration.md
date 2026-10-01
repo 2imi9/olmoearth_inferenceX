@@ -141,9 +141,14 @@ reproduces the package's review set and declines the side question on every
 comparison card, and the OlmoEarth Agent as shipped finds the tools on its own
 and does the same. Two of the three preregistered predictions failed: a numpy
 sandbox with the same arrays captures 0.904 of the package's
-errors by itself and grounds 94.2% of its numbers, so what the
-package adds to a model of that strength is the evidence about when not to
-choose, and reliability, not the ranking.
+errors by itself and grounds 94.2% of its numbers, so the package does not add
+the ranking to a model of that strength. The third holds as graded, and it does
+not show what the package adds either: an arm with no package and no rasters
+also declined to pick between two maps on every comparison run, and the grader
+scores any decline as full marks. What separated the tool arm from the sandbox
+was reliability, which was not preregistered: the sandbox gave no gradeable
+answer in 27 of 120 runs, and its stated cues held on 86.2% of its windows
+against 99.5%.
 
 ## Status (2026-09-16)
 

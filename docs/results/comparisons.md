@@ -3154,7 +3154,7 @@ difference of 0.052 below the preregistered 0.2, on
 5 cards to 1, p = 0.11. The withdrawn
 reading is kept in the commit history and not in the ledger. <!-- claim:agent-benchmark-grounding-not-decisive -->
 
-**P3 holds, and it is the one advantage that survives.** The tool arm declines
+**P3 holds as graded; the reading first given here is withdrawn (see the addendum).** The tool arm declines
 to pick a side on 10 of 10 comparison cards; the sandbox
 arm declines on 1, picks a side on
 6, and leaves
@@ -3208,7 +3208,8 @@ grounds 100.0% of its numbers against the sandbox's
 The sandbox arm produced no gradeable answer in 51 of 120 runs and left
 53.3% of comparison questions unanswered; the no-raster arm fabricated
 372 windows. Beside the 27B run, where P1 and P2 failed, this is the size
-contrast measured: what the package adds over a sandbox is everything at 7B. At 27B it is not the decline: the
+contrast measured: at 7B the package separates the arms on all three measures,
+grounding, capture and the decline. At 27B it is not the decline: the
 no-raster arm, with no package and no data, declined on every comparison run too (see the addendum below).
 <!-- claim:agent-benchmark-package-is-a-floor-at-7b -->
 
