@@ -2436,6 +2436,18 @@ def reconcile_gate(arm, out_dir, rec):
     return ledger, len(ledger) > len(held)
 
 
+def counted_attempts(arm, attempts):
+    """The attempts that count: all but a synthetic smoke's (made on a draft page and another checkpoint than the pinned
+    one). A synthetic smoke once wrote its gate attempt
+    into the real ledger (job 1151248's smoke, a synthetic checkpoint on a draft page, found by job 1151373); such an
+    attempt stays in the ledger as history but neither counts towards the limit nor blocks the run."""
+    pinned = ARMS[arm]["model_sha256"]
+    # dropped only when both hold: made before freezing (so it scored no validation window, which predict_population
+    # refuses before freezing) and on another checkpoint than the pinned one (so it was the synthetic smoke's)
+    return [a for a in attempts
+            if not (pinned and a.get("prereg_status") != "frozen" and a.get("checkpoint_sha256") != pinned)]
+
+
 def require_gate(arm, out_dir, ledger_required=True):
     """The run's own check of the gate, beside cmd_run's: a pass on the last attempt (a graded arm) or a recorded
     alignment check, aligned or not (a report-only arm), within the attempt limit, every attempt made on a frozen
@@ -2446,7 +2458,8 @@ def require_gate(arm, out_dir, ledger_required=True):
     rec, _ = gate_record(arm, out_dir)
     if rec is None:
         raise GateRefused(f"no {what} record")
-    att = rec.get("attempts") or []
+    full = rec.get("attempts") or []
+    att = counted_attempts(arm, full)
     if ro:
         if not att:
             raise GateRefused("no alignment check is recorded")
@@ -2465,7 +2478,7 @@ def require_gate(arm, out_dir, ledger_required=True):
                           f"{pinned}")
     if ledger_required:
         ledger, lpath = read_ledger(arm, out_dir)
-        if _canon(ledger) != _canon(att):
+        if _canon(ledger) != _canon(full):
             raise GateRefused(f"the gate's ledger ({lpath}) does not hold the attempts of exp89_gate_{arm}.json")
     return rec
 
@@ -2502,8 +2515,9 @@ def run_gate(arm, rep, windows, out_dir, imagery_route="tar", log=print, synthet
                   "tolerance_points": A["gate_tolerance"][imagery_route] * 100, "imagery_route": imagery_route,
                   "attempts": [], rkey: False, "closed": False, "max_attempts": MAX_GATE_ATTEMPTS}
     rec["attempts"] = attempts
-    rec[rkey] = bool(attempts and attempts[-1][akey] is True)
-    rec["closed"] = (not rec[rkey]) and len(attempts) >= MAX_GATE_ATTEMPTS
+    counted = counted_attempts(arm, attempts)
+    rec[rkey] = bool(counted and counted[-1][akey] is True)
+    rec["closed"] = (not rec[rkey]) and len(counted) >= MAX_GATE_ATTEMPTS
     rec["prereg_status"] = prereg_status()
     if ro:
         rec["report_only"], rec["alignment"] = True, alignment_label(attempts)
@@ -2553,7 +2567,7 @@ def run_gate(arm, rep, windows, out_dir, imagery_route="tar", log=print, synthet
     append_ledger(arm, out_dir, att)                                # the count first, so a crash cannot lose it
     rec["attempts"].append(att)
     rec[rkey] = att[akey]
-    rec["closed"] = (not att[akey]) and len(rec["attempts"]) >= MAX_GATE_ATTEMPTS
+    rec["closed"] = (not att[akey]) and len(counted_attempts(arm, rec["attempts"])) >= MAX_GATE_ATTEMPTS
     if ro:
         rec["alignment"] = alignment_label(rec["attempts"])
     dump(rec, path)
@@ -2577,7 +2591,8 @@ def cmd_gate(args):
         # the ledger is read before any download or model load: a passed or closed gate needs no model, a file that
         # disagrees with its ledger is refused
         attempts, _ = reconcile_gate(args.arm, out_dir, gate_record(args.arm, out_dir)[0])
-        if (attempts and attempts[-1][akey] is True) or len(attempts) >= MAX_GATE_ATTEMPTS:
+        counted = counted_attempts(args.arm, attempts)
+        if (counted and counted[-1][akey] is True) or len(counted) >= MAX_GATE_ATTEMPTS:
             rec = run_gate(args.arm, None, [], out_dir)
         else:
             rep, windows = build_arm(args)
@@ -3045,7 +3060,25 @@ def synthetic_checkpoint(path, arm, model_id="OLMOEARTH_V1_NANO", seed=0):
 
 
 def smoke_torch(args):
-    """S2's code end to end on synthetic data, or (with --real) on the pinned checkpoint and real training windows."""
+    """S2's code end to end on synthetic data, or (with --real) on the pinned checkpoint and real training windows. The
+    synthetic run keeps its gate ledger in a temporary directory, never in E89_GATE_LEDGER."""
+    if args.real:
+        return _smoke_torch(args)
+    import tempfile
+    old = os.environ.get(GATE_LEDGER_ENV)
+    with tempfile.TemporaryDirectory() as ledger_tmp:
+        os.environ[GATE_LEDGER_ENV] = ledger_tmp
+        try:
+            return _smoke_torch(args)
+        finally:
+            if old is None:
+                os.environ.pop(GATE_LEDGER_ENV, None)
+            else:
+                os.environ[GATE_LEDGER_ENV] = old
+
+
+def _smoke_torch(args):
+    """The body of smoke_torch."""
     import tempfile
     out_dir = args.out_dir or OUT
     if args.real:

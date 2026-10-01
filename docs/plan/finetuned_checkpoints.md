@@ -385,3 +385,13 @@ All predictions are one-sided. Each is graded per arm, never pooled.
 - The predictions, thresholds, controls, clusters, budgets and seeds do not change once the gate has run.
 - A bug in a reader may be fixed if the fix is shown on the smoke cases and every arm is regraded. The change is listed beside the verdict.
 - A change of rule starts a new experiment.
+
+## Addendum of 1 October 2026, after freezing and before any result was read
+
+A reader bug fixed under "Changes after freezing". The synthetic smoke of job 1151248 wrote its gate attempt (a
+synthetic checkpoint, made while the page was a draft) into the real gate ledger of arm A, and the run guard then
+refused arm A's run (job 1151373) although its real alignment check was made on the frozen page and the pinned
+checkpoint. Two changes, each with a test that failed first: the synthetic smoke keeps its ledger in a temporary
+directory; and an attempt made before freezing on another checkpoint than the pinned one no longer counts towards the
+limit or blocks the run. It stays in the ledger as history. No rule, threshold or reading changed, and no number had
+been read.

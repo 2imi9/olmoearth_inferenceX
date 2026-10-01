@@ -1180,3 +1180,46 @@ def test_arm_f_replica_matches_rslearns_simple_time_series_path(tmp_path):
     assert np.allclose(ours, theirs, atol=1e-4), np.abs(ours - theirs).max()
     swapped = rep.logits(np.concatenate([x[..., 4:, :], x[..., :4, :]], axis=3))
     assert not np.allclose(ours, swapped, atol=1e-4), "pre and post are not interchangeable"
+
+
+def test_a_synthetic_attempt_in_the_real_ledger_neither_counts_nor_blocks(tmp_path, monkeypatch):
+    """Job 1151373 was refused because the synthetic smoke of job 1151248 had written its gate attempt (a synthetic
+    checkpoint, a draft page) into the real ledger. Only attempts on the pinned checkpoint count; the synthetic one
+    stays in the ledger as history."""
+    import json as _json
+    ledger_dir = tmp_path / "ledger"
+    monkeypatch.setenv(e89.GATE_LEDGER_ENV, str(ledger_dir))
+    pinned = e89.ARMS["awf"]["model_sha256"]
+    synthetic = {"attempt": 1, "aligned": False, "checkpoint_sha256": "6ce4" + "0" * 60, "prereg_status": "draft",
+                 "accuracy": 0.17}
+    real = {"attempt": 2, "aligned": True, "checkpoint_sha256": pinned, "prereg_status": "frozen", "accuracy": 0.88}
+    for a in (synthetic, real):
+        e89.append_ledger("awf", str(tmp_path), a)
+    rec = {"arm": "awf", "attempts": [synthetic, real], "aligned": True, "closed": False, "report_only": True}
+    (tmp_path / "exp89_gate_awf.json").write_text(_json.dumps(rec))
+    assert e89.counted_attempts("awf", [synthetic, real]) == [real]
+    assert e89.require_gate("awf", str(tmp_path))["attempts"][-1]["accuracy"] == 0.88
+    # the synthetic attempt alone is no alignment check
+    (tmp_path / "exp89_gate_awf.json").write_text(_json.dumps({**rec, "attempts": [synthetic]}))
+    e89.ledger_path("awf", str(tmp_path))
+    with open(e89.ledger_path("awf", str(tmp_path)), "w") as f:
+        f.write(_json.dumps(synthetic, sort_keys=True) + "\n")
+    with pytest.raises(e89.GateRefused):
+        e89.require_gate("awf", str(tmp_path))
+
+
+def test_the_synthetic_smoke_never_writes_the_real_ledger(tmp_path, monkeypatch):
+    real_dir = tmp_path / "real_ledger"
+    monkeypatch.setenv(e89.GATE_LEDGER_ENV, str(real_dir))
+    seen = {}
+
+    def fake(args):
+        seen["ledger"] = os.environ.get(e89.GATE_LEDGER_ENV)
+        e89.append_ledger("awf", str(tmp_path), {"attempt": 1, "checkpoint_sha256": "x"})
+        return 0
+
+    monkeypatch.setattr(e89, "_smoke_torch", fake)
+    args = type("A", (), {"real": False})()
+    assert e89.smoke_torch(args) == 0
+    assert seen["ledger"] != str(real_dir) and not real_dir.exists()
+    assert os.environ.get(e89.GATE_LEDGER_ENV) == str(real_dir)
