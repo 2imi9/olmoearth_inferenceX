@@ -1,17 +1,25 @@
 """exp89: do the review order, the estimate and the certificate hold on Ai2's other public fine-tuned models?
 
-Preregistered in docs/plan/finetuned_checkpoints.md; read that page first, this file is the run. Three arms:
-  mangrove  allenai/OlmoEarth-v1-FT-Mangrove-Base on the sample_100K validation windows, graded on P1 to P5;
+Preregistered in docs/plan/finetuned_checkpoints.md; read that page first, this file is the run. Four arms, as the
+owner's decision of 1 October 2026 amends the page:
+  mangrove  allenai/OlmoEarth-v1-FT-Mangrove-Base, graded on P1 to P5. Not run until Ai2 shares its validation split:
+            the public mangrove.tar holds 100,000 points and 2,000 task areas, with no split and no imagery. Every mode
+            that scores a window reports it as not run while ARMS["mangrove"]["split_source"] is None;
   nandi     frozen under the same thresholds and not run: its checkpoint and dataset return 401 on the Hub. Every
             mode reports it as not run unless both become readable and their revisions are pinned here;
-  awf       FT-AWF on exp21's 344 validation points, graded on P2 and P3 only.
+  awf       FT-AWF on Ai2's 344 validation points (exp21's), REPORT-ONLY: every measure, control, cluster and study,
+            every number and interval, and no verdict on any prediction;
+  fld       allenai/OlmoEarth-v1-FT-ForestLossDriver-Base on Ai2's validation windows (options.split "val", 109 in
+            Ai2's confusion matrix), REPORT-ONLY as arm A.
+For the report-only arms the accuracy gate is an alignment check: it is reported with its tolerance, and a check
+outside it labels every number "replica not aligned". Nothing in their outputs is a pass or a fail.
 
     python exp/exp89_finetuned_checkpoints.py --smoke                      # S1: numpy only, synthetic units
     python exp/exp89_finetuned_checkpoints.py --smoke-torch                # S2 code on a synthetic tar and checkpoint
-    python exp/exp89_finetuned_checkpoints.py --smoke-torch --real --arm mangrove   # S2 on 512 real TRAINING windows
-    python exp/exp89_finetuned_checkpoints.py --inventory --arm mangrove   # files, keys, windows and labels per split
-    python exp/exp89_finetuned_checkpoints.py --gate --arm mangrove        # accuracy only; refused until frozen
-    python exp/exp89_finetuned_checkpoints.py --arm mangrove               # the full run: frozen AND gate passed
+    python exp/exp89_finetuned_checkpoints.py --smoke-torch --real --arm fld        # S2 on 512 real TRAINING windows
+    python exp/exp89_finetuned_checkpoints.py --inventory --arm fld --tar T  # files, keys, windows and labels per split
+    python exp/exp89_finetuned_checkpoints.py --gate --arm fld             # accuracy only; refused until frozen
+    python exp/exp89_finetuned_checkpoints.py --arm fld                    # the full run: frozen AND gate recorded
 
 What is reused, not rewritten. Every statistic is the package's: the ranking measures are oe_inferencex.metrics
 (aurc_expected, excess_aurc, oracle_aurc, capture_at_budget_expected, attainable_ceiling, weighted_auroc with unit
@@ -20,9 +28,10 @@ oe_inferencex.stats.cluster_bootstrap_difference, and the capture bootstrap draw
 the estimate and the certificate are oe_inferencex.estimate (sample_for_estimation, estimate_error_rate,
 exact_coverage_srs, certify_zone, zone_order, min_labels_to_certify), called unchanged. The confidence is
 oe_inferencex.assess.assess_prediction at patch 1 with form "top1" on the trained channels; the logit margin is the
-same call with form "margin". Arm A reads its windows with oe_inferencex.awf (list_windows, load_window_full) and runs
-exp21's forward pass (logits_grid) unchanged. Its crop is this file's crop_at, which applies exp21's rule at H = W = 63
-(tested against exp21's numbers). Only the checkpoint is loaded here, at the pinned revision, and the encoder is built
+same call with form "margin". Arm A reads its windows with oe_inferencex.awf (list_windows, given the root of the
+pinned tar extracted under E89_DATA, and load_window_full) and runs exp21's forward pass (logits_grid) unchanged. Its
+crop is this file's crop_at, which applies exp21's rule at H = W = 63 (tested against exp21's numbers). Only the
+checkpoint is loaded here, at the pinned revision, and the encoder is built
 from OlmoEarth v1-Base's config.json at the revision the page names (ENCODER_REVISIONS).
 
 Interpretations of the plan page, each flagged in the commit that added this file; none changes a threshold:
@@ -37,7 +46,8 @@ Interpretations of the plan page, each flagged in the commit that added this fil
      as one candidate.
   d. P3's one-sided 95% lower bound is the 5th percentile of the cluster bootstrap of the capture difference at 10%.
   e. The estimate draws: SeedSequence([89, arm, design, B]).generate_state(R) gives one seed per draw; arm is
-     mangrove 0, nandi 1, awf 2 and design random 0, confidence 1. The certificate reuses the random design's draws.
+     mangrove 0, nandi 1, awf 2, fld 3 and design random 0, confidence 1. The certificate reuses the random design's
+     draws.
      A draw whose zone is certified and whose zone's true error rate exceeds alpha is a violation; a draw that
      certifies nothing, or that the review-set guard refuses, counts as coverage 0 and no violation (refusals are
      counted). c*(alpha) is the largest grid coverage whose zone, in that order, has a true error rate of at most alpha.
@@ -51,14 +61,17 @@ Interpretations of the plan page, each flagged in the commit that added this fil
   h. K5's threshold, B02 above 0.2 reflectance, is 2,000 in the harmonised L2A digital numbers the tar stores. The
      owner confirmed it with the other thresholds; the page's marker now says so.
   i. Arm A's gate is read as Nandi's: within 2.0 points of Ai2's 89.5% for AWF (exp21's replica was 1.4 points off),
-     two-sided. The page now states it and leaves it for the owner to confirm before freezing. Agreement with exp21's
+     two-sided. Since the amendment of 1 October 2026 it is arm A's alignment check (see j). Agreement with exp21's
      recorded predictions is reported in the run's summary, not in the gate file, which holds counts and accuracy only.
   j. The gate counts attempts: at most three in all, the first and two retries. A third failed attempt closes the gate
      and nothing is graded. A passed gate is not rerun. Each attempt is appended to a ledger before the gate file is
      written. On the cluster the ledger lives outside the git checkout (E89_GATE_LEDGER), so the job's hard reset cannot
      roll the count back: a gate file behind its ledger is restored from it, and one that holds an attempt the ledger
      lacks is refused. The run checks the pass itself (require_gate): made on a frozen page, on the pinned checkpoint,
-     and held by the ledger.
+     and held by the ledger. For the report-only arms (A and F) the same machinery is an alignment check: an attempt
+     records "aligned" (true or false) where a graded arm records "pass", the file says "aligned" or "replica not
+     aligned", and the run needs a recorded check, not an aligned one. A check outside the tolerance labels every
+     number of the run "replica not aligned"; a second or third attempt is allowed after a fix to the replica.
   k. --smoke runs the estimate study at the run's R = 2,000 draws but certifies on the first SMOKE_DRAWS of the random
      design's draws and bootstraps SMOKE_BOOT resamples, so it finishes in under a minute; the run uses R = 2,000
      and 2,000 resamples everywhere, as the page fixes.
@@ -72,18 +85,59 @@ Interpretations of the plan page, each flagged in the commit that added this fil
      is what rslearn's masked pooling over the missing timesteps reduces to; the inventory and the run count them.
   n. Nandi's polygon id is looked for under the option keys in NANDI_POLYGON_KEYS, a guess until its windows are seen,
      and its label source under the option key "source".
+Arm F's readings (added with the amendment of 1 October 2026; the page marks them proposed, owner to confirm):
+  o. The population is rslearn's validation set as Ai2's training config reads it: every window, in any group, whose
+     options.split is "val", whose eight image layers (pre_sentinel2 and .1 to .3, post_sentinel2 and .1 to .3) and
+     label layer carry rslearn's completed marker (check_window with load_all_layers), and whose label is valid. The
+     label is ClassificationTask's: the first feature of layers/label/data.geojson whose new_label is one of the ten
+     classes (skip_unknown_categories, allow_invalid). label.json and old_label are never read.
+     options.olmoearth_evals_split belongs to the paper's evaluation, not to the checkpoint, and is never read.
+  p. The model's input is rslearn's: the eight layers in the config's order, 12 bands each in OlmoEarth's order,
+     Pad(64, center) on the raw values, then OlmoEarth's normalisation. SimpleTimeSeries(image_channels=48,
+     groups=[[0], [1]]) runs the encoder once on the four pre layers and once on the four post layers (timestamps day
+     1, months 0 to 3, 2024, both passes), mean-pools each over timesteps and band sets, and concatenates pre then
+     post (1,536 channels on a 16x16 map at patch 4). The head is rslearn's PoolingDecoder (conv 3x3 to 128 + ReLU,
+     amax over the map, Linear 512 + ReLU twice, Linear to 10), loaded strictly from model.decoder.0. Ai2's
+     validation used random flips and bf16 autocast; the replica uses no flip and fp32. The alignment check records
+     the accuracy under each of the four flips beside it, and S2 reports the bf16 difference on training windows.
+  q. K3's features (128 per window) come from the 64-px crop the model sees. Per stack (pre, post): the per-pixel
+     median over its non-empty timesteps (a timestep is empty when every pixel and band is 0), its 12 bands plus NDVI
+     (B08, B04) and NBR (B08, B12); their spatial mean and standard deviation over the crop and their mean over the
+     centre 16 px (42 per stack); then post minus pre of those 42; then each stack's count of empty timesteps. K4 is
+     the loss signal at the centre: minus the NDVI drop and minus the NBR drop from the pre to the post composite (a
+     small or negative drop is suspect). K5 counts the eight timesteps that are empty or whose centre mean B02
+     exceeds 2,000. K3 is fitted on every training window (options.split "train") that passes o's layer rule.
+  r. The bootstrap's cluster is the 1 degree cell of the window's centre. The window group cannot be one: Ai2's split
+     script gives validation windows to four groups only, and four clusters cannot carry a bootstrap. The group is the
+     stratum of the by-stratum report.
+  s. The tar is on Google Cloud Storage, not the Hub. It is pinned by its object generation, size and MD5 (an HTTP
+     HEAD on 1 October 2026). The job downloads it with a resumable curl; verify_tar hashes it once (MD5 and SHA-256
+     in one pass), refuses it unless the size and the MD5 match the pin, and records the SHA-256, which is checked
+     too once it is pinned here. extract_layers then streams it once and writes only what the run reads: the eight
+     image layers, the label layer, every window's top-level files and the dataset's config. Every other layer
+     (Landsat, Sentinel-1, Sentinel-2 groups .4 and .5, the masks) is counted and skipped. Groups are not filtered:
+     the split is read per window, and group names are not verified until the inventory.
+  t. Certification for arm F is studied at alpha 0.10 and 0.15 (Ai2's error rate is 23.9%). At 109 windows neither
+     budget (300, 1,000) fits, so its estimate and certify cells are reported as not run; c*(alpha) from all labels
+     is reported for both orders.
+Arm A's data (fixed with the amendment): arm A reads the pinned AWF tar the job downloads and extracts under
+E89_DATA/awf, never the old data/awf (exp21's location, which the scratch purge has partly removed). Every arm's
+extraction keeps a manifest; a file the purge removed later is found before anything is read, and the tar is
+extracted again.
 
 Safety, not interpretation. The checkpoint is checked against its pinned sha256, a local --ckpt included, and loaded
 with weights_only=True; any other global it pickles becomes an inert stub class, and a global naming code execution is
 refused. The scored checkpoint's sha256 is recorded in the replica's info and in every gate attempt.
 predict_population is the one function that scores validation windows, and it refuses before the page is frozen;
-compute_units and run_arm refuse without a verified gate pass.
+compute_units and run_arm refuse without a verified gate pass (graded arms) or a verified alignment check (report-only
+arms).
 
 Outputs (exp/out): exp89_inventory_<arm>.json (--inventory), exp89_s2_<arm>.json (--smoke-torch --real),
 exp89_gate_<arm>.json (--gate) and its ledger exp89_gate_<arm>.ledger.jsonl (in E89_GATE_LEDGER when set, else beside
 it), exp89_units_<arm>.npz and exp89_summary.json (the run); exp89_summary_smoke.json from --smoke. --out-dir moves
-them. Downloads go to HF_HOME (scratch on the cluster) and are checked against the
-pinned sha256 before use; the tar is extracted under --data.
+them. Hub downloads go to HF_HOME (scratch on the cluster) and are checked against the pinned sha256 before use; the
+tar is extracted under --data. Arm F's tar is given with --tar (the job downloads it) and checked against its pinned
+size and MD5.
 """
 import argparse
 import hashlib
@@ -117,8 +171,36 @@ NANDI_MODEL = "allenai/OlmoEarth-v1-FT-Nandi-Base"
 NANDI_DATA = "allenai/olmoearth_projects_nandi"
 AWF_MODEL = "allenai/OlmoEarth-v1-FT-AWF-Base"
 AWF_DATA = "allenai/olmoearth_projects_awf"
+FLD_MODEL = "allenai/OlmoEarth-v1-FT-ForestLossDriver-Base"
+# Arm F's dataset is on Google Cloud Storage, not the Hub. Pinned by an HTTP HEAD on 1 October 2026: the object
+# generation (a GET at another generation returns 404), the size and the MD5 of x-goog-hash (equal to the ETag).
+FLD_DATA_URL = ("https://storage.googleapis.com/ai2-olmoearth-projects-public-data/projects/forest_loss_driver/"
+                "20251029/dataset.tar")
 # olmoearth_projects (GitHub) at the commit whose olmoearth_run_data configs the replica below follows
 CONFIG_REVISION = "589bce143f17fb3e522a8b09ba6dfa8d36aa36ae"
+# Arm F's training config: rslearn_projects data/forest_loss_driver/20251104/config.yaml, which its README ties to the
+# Hub checkpoint; olmoearth_projects cec89c1660 added the 76.1% to docs/forest_loss_driver.md (30 October 2025)
+FLD_CONFIG = "rslearn_projects data/forest_loss_driver/20251104/config.yaml"
+FLD_CLASSES = ("agriculture", "mining", "airstrip", "road", "logging", "burned", "landslide", "hurricane", "river",
+               "none")
+FLD_PRE = ("pre_sentinel2", "pre_sentinel2.1", "pre_sentinel2.2", "pre_sentinel2.3")
+FLD_POST = ("post_sentinel2", "post_sentinel2.1", "post_sentinel2.2", "post_sentinel2.3")
+FLD_LAYERS = FLD_PRE + FLD_POST                  # rslearn concatenates them in this order: pre timesteps, then post
+FLD_KEEP_LAYERS = FLD_LAYERS + ("label",)        # what extract_layers writes; every other layer is counted and skipped
+FLD_CROP = 64                                    # Pad(size=64, mode="center") on the 128-px window
+FLD_CENTRE = 16                                  # K3's and K4's centre support: the centre 16 px of the crop
+# Ai2's split script (rslearn_projects rslp/forest_loss_driver/scripts/assign_split.py at eef0353f) gives "val" only to
+# these groups, by sha256(window name)[0] in 0 to 3; reported, the population is read from options.split
+FLD_VAL_GROUPS = ("20250428_brazil_phase1", "20250428_colombia_phase1", "20250428_brazil_phase2",
+                  "20250428_colombia_phase2")
+FLD_AI2_VAL_WINDOWS = 109                        # the sum of Ai2's confusion matrix (83 of 109 = 76.1%), reported
+FLD_ENCODER_PREFIX = "model.encoder.0.encoder.model."
+FLD_HEAD_PREFIX = "model.decoder.0."
+FLD_HEAD_KEYS = ("model.decoder.0.conv_layers.0.0.weight", "model.decoder.0.conv_layers.0.0.bias",
+                 "model.decoder.0.fc_layers.0.0.weight", "model.decoder.0.fc_layers.0.0.bias",
+                 "model.decoder.0.fc_layers.1.0.weight", "model.decoder.0.fc_layers.1.0.bias",
+                 "model.decoder.0.output_layer.weight", "model.decoder.0.output_layer.bias")
+FLIPS = ("none", "h", "v", "hv")                 # rslearn's Flip: h reverses the columns, v the rows
 
 # ----------------------------------------------------------------------------- fixed by the page
 SEED = 89
@@ -140,7 +222,8 @@ P5_LEAD = 0.10
 EPS = 1e-12
 K5_B02 = 2000.0                              # 0.2 reflectance in harmonised L2A digital numbers
 MAX_GATE_ATTEMPTS = 3
-ARM_INDEX = {"mangrove": 0, "nandi": 1, "awf": 2}
+ARM_INDEX = {"mangrove": 0, "nandi": 1, "awf": 2, "fld": 3}
+ARM_LETTER = {"mangrove": "M", "nandi": "N", "awf": "A", "fld": "F"}
 DESIGN_INDEX = {"random": 0, "confidence": 1}
 OLMO_BANDS = ("B02", "B03", "B04", "B08", "B05", "B06", "B07", "B8A", "B11", "B12", "B01", "B09")
 N_MONTHS = 12
@@ -149,6 +232,7 @@ K3_HIDDEN, K3_DROPOUT, K3_LR, K3_WD, K3_BATCH, K3_EPOCHS = 256, 0.1, 1e-3, 1e-4,
 K3_CAP_MANGROVE = 20000
 S2_WINDOWS = 512
 S2_MIN_ACCURACY = 0.95                       # Mangrove only; in-sample, a loading check
+PREDICTIONS = ("P1", "P2", "P3", "P4", "P5")
 
 ARMS = {
     "mangrove": {
@@ -168,6 +252,15 @@ ARMS = {
         "ai2_accuracy": 0.976, "gate_tolerance": {"tar": 0.005, "fetched": 0.010},
         "graded": ("P1", "P2", "P3", "P4", "P5"), "p1_capture": 0.40, "alpha": 0.02, "alpha_reported": (0.01,),
         "p5_coverage": 0.50, "k3_cap": K3_CAP_MANGROVE, "clusters": "0.1 degree cell", "clusters_reported": "1 degree cell",
+        "report_only": False,
+        # where Ai2's validation split for the sample_100K windows comes from; None until Ai2 shares it (asked in Slack
+        # on 1 October 2026). While None, every mode that scores a window reports arm M as not run.
+        "split_source": None,
+        "not_run_reason": "the public mangrove.tar (allenai/olmoearth_projects_mangrove at 3a878b8a) holds 100,000 "
+                          "labelled points and 2,000 task areas, with no train/val split and no imagery (the inventory "
+                          "on the cluster, 1 October 2026), so Ai2's 97.6% cannot be matched. Ai2 was asked for the "
+                          "validation split on 1 October 2026; arm M keeps its graded predictions and runs once the "
+                          "split is shared and pinned here",
     },
     "nandi": {
         "model": NANDI_MODEL, "model_revision": None, "model_file": "model.ckpt", "model_sha256": None,
@@ -181,7 +274,7 @@ ARMS = {
         "ai2_accuracy": 0.873, "gate_tolerance": {"tar": 0.020, "fetched": 0.020},
         "graded": ("P1", "P2", "P3", "P4", "P5"), "p1_capture": 0.30, "alpha": 0.05, "alpha_reported": (0.10,),
         "p5_coverage": 0.30, "k3_cap": None, "clusters": "128-px split cell, merged by source polygon",
-        "clusters_reported": "0.05 degree cell",
+        "clusters_reported": "0.05 degree cell", "report_only": False,
         "not_run_reason": "allenai/OlmoEarth-v1-FT-Nandi-Base and allenai/olmoearth_projects_nandi returned 401 on the "
                           "Hub on 1 October 2026; arm N runs only if Ai2 publishes both and their revisions are pinned",
     },
@@ -196,11 +289,33 @@ ARMS = {
         "crop": 16, "head_keys": ("model.decoders.segment.1.layer.weight", "model.decoders.segment.1.layer.bias"),
         "head_kind": "conv1x1_up4",
         "ai2_accuracy": 0.895, "gate_tolerance": {"tar": 0.020, "fetched": 0.020},
-        "graded": ("P2", "P3"), "p1_capture": None, "alpha": 0.05, "alpha_reported": (0.10,), "p5_coverage": None,
-        "k3_cap": None, "clusters": "exp21's annotation task", "clusters_reported": None,
+        # report-only since the amendment of 1 October 2026: 344 validation points, about 36 errors at Ai2's 89.5%
+        "graded": (), "report_only": True, "p1_capture": None, "alpha": 0.05, "alpha_reported": (0.10,),
+        "p5_coverage": None, "k3_cap": None, "clusters": "exp21's annotation task", "clusters_reported": None,
+    },
+    "fld": {
+        "model": FLD_MODEL, "model_revision": "15502f8acb4caed6e3a7d777b0fb569c1f7eb791", "model_file": "model.ckpt",
+        "model_sha256": "682c20b99f44a81769ad7d3ce1b64d933fae3810bcf5978f9999cfebf1c11855", "model_bytes": 381184175,
+        "data": None, "data_revision": None, "data_file": "dataset.tar", "extra_files": {},
+        "data_url": FLD_DATA_URL, "data_generation": "1761857427036506",
+        "data_md5": "6abc5b944c64330f0a545d5ed7ddddf4", "data_bytes": 42214604800,
+        # not known before the first download (Cloud Storage gives MD5 and CRC32C only); verify_tar records it and
+        # checks it once it is pinned here
+        "data_sha256": None,
+        "group": None, "n_out": 10, "trained": tuple(range(10)), "untrained": (),
+        "class_names": dict(enumerate(FLD_CLASSES)), "label_layer": ("label", "data.geojson"), "label_fill": None,
+        "unit": "window", "patch": 4, "crop": FLD_CROP, "head_keys": FLD_HEAD_KEYS, "head_kind": "pooling_decoder",
+        "ai2_accuracy": 0.761, "gate_tolerance": {"tar": 0.020, "fetched": 0.020},
+        # report-only: 109 validation windows, about 26 errors at Ai2's 76.1%
+        "graded": (), "report_only": True, "p1_capture": None, "alpha": 0.10, "alpha_reported": (0.15,),
+        "p5_coverage": None, "k3_cap": None, "clusters": "1 degree cell", "clusters_reported": None,
     },
 }
-ENCODER_PREFIXES = ("model.encoder.0.model.", "model.encoder.0.model.encoder.", "model.encoder.0.")
+# Where the encoder's keys sit. Arm F wraps OlmoEarth in SimpleTimeSeries, so its keys sit one level deeper: with
+# rslearn 0.0.12's wrapper (which keeps the model's encoder as .model) under model.encoder.0.encoder.model., and one
+# level deeper still if the wrapper kept the whole model. A strict load into the encoder decides which one holds.
+ENCODER_PREFIXES = ("model.encoder.0.model.", "model.encoder.0.model.encoder.", FLD_ENCODER_PREFIX,
+                    FLD_ENCODER_PREFIX + "encoder.", "model.encoder.0.")
 # The encoder skeletons' config.json at the revisions exp/out/upstream_revisions.json records (the page names Base's)
 ENCODER_REVISIONS = {"OLMOEARTH_V1_BASE": "4bd1392a4539404d2c74276c39f3cb4cfff466cc",
                      "OLMOEARTH_V1_NANO": "529248a4dc3c54014c56b7504641cec98de31d1c"}
@@ -213,7 +328,11 @@ GATE_KEYS = ("arm", "prereg_status", "ai2_accuracy", "metric", "tolerance_points
              "passed", "closed", "max_attempts")
 ATTEMPT_KEYS = ("attempt", "utc", "commit", "dirty", "prereg_status", "checkpoint_sha256", "n_windows", "n_errors",
                 "accuracy", "n_windows_dropped", "n_windows_no_imagery", "n_pixels", "n_pixel_errors", "accuracy_pixel",
-                "gap_points", "pass")
+                "accuracy_by_flip", "gap_points", "pass")
+# the report-only arms' alignment check: the same record with "aligned" where a graded arm has "pass" and "passed"
+ALIGN_KEYS = tuple(k for k in GATE_KEYS if k != "passed") + ("aligned", "alignment", "report_only")
+ALIGN_ATTEMPT_KEYS = tuple(k for k in ATTEMPT_KEYS if k != "pass") + ("aligned",)
+NOT_ALIGNED = "replica not aligned"
 GATE_LEDGER_ENV = "E89_GATE_LEDGER"          # the gate's ledger directory; exp/jobs/e89.sh puts it outside the checkout
 
 
@@ -278,6 +397,18 @@ def bkey(b):
     return repr(float(b))
 
 
+def is_report_only(arm):
+    """Arms A and F since the amendment of 1 October 2026: every measure is reported, no prediction is graded."""
+    return bool(ARMS[arm].get("report_only"))
+
+
+def waiting_reason(arm):
+    """Why arm M cannot score a window yet (None once Ai2's split is pinned in ARMS["mangrove"]["split_source"])."""
+    if arm == "mangrove" and ARMS["mangrove"].get("split_source") is None:
+        return ARMS["mangrove"]["not_run_reason"]
+    return None
+
+
 # ----------------------------------------------------------------------------- the channel and label rules per arm
 def pad_center(a, size, fill=0):
     """rslearn's Pad(size, mode="center") on the last two axes: pad equally (the extra pixel after) when smaller,
@@ -321,6 +452,45 @@ def single_pixel_label(lab, fill, trained):
     if c not in trained:
         return None, f"class {c} outside the trained classes"
     return (int(rows[0]), int(cols[0]), c), None
+
+
+def fld_label_from_features(features):
+    """(class index or None, drop reason or None, the new_label read: the valid one, else the first one seen):
+    rslearn's ClassificationTask with
+    property_name new_label, skip_unknown_categories and allow_invalid. A feature without properties or without
+    new_label is passed over, and so is one whose new_label is not one of the ten classes; the first feature with one
+    of the ten classes gives the window's class. A window with none is invalid (masked out of Ai2's accuracy)."""
+    first = None
+    for ft in features or []:
+        props = (ft or {}).get("properties")
+        if not props or "new_label" not in props:
+            continue
+        v = props["new_label"]
+        if first is None:
+            first = v
+        if v in FLD_CLASSES:
+            return FLD_CLASSES.index(v), None, v
+    return None, ("no feature has new_label" if first is None else "new_label outside the ten classes"), first
+
+
+def fld_label(wdir):
+    """Arm F's label from the vector layer `label` (layers/label/data.geojson), which rslearn reads. label.json at the
+    window's top is never read (rslearn does not read it, and Ai2's label sync rewrites data.geojson only). The label
+    layer must carry rslearn's completed marker, as check_window requires of the targets."""
+    ldir = os.path.join(wdir, "layers", "label")
+    if not os.path.exists(os.path.join(ldir, "completed")):
+        return None, "label layer not completed", None
+    path = os.path.join(ldir, "data.geojson")
+    if not os.path.exists(path):
+        return None, "no data.geojson in the label layer", None
+    with open(path) as f:
+        return fld_label_from_features(json.load(f).get("features"))
+
+
+def fld_layers_completed(wdir):
+    """Arm F's eight image layers that carry rslearn's completed marker. check_window with load_all_layers keeps a
+    window only when all eight do."""
+    return [n for n in FLD_LAYERS if os.path.exists(os.path.join(wdir, "layers", n, "completed"))]
 
 
 def crop_at(H, W, r, c, size, shift=0):
@@ -482,6 +652,76 @@ def class_rarity(pred, train_labels, trained):
     lab = np.asarray(train_labels)
     freq = {int(c): float((lab == c).mean()) if lab.size else 0.0 for c in trained}
     return -np.array([freq.get(int(p), 0.0) for p in pred], dtype=np.float64), freq
+
+
+# ----------------------------------------------------------------------------- arm F's controls, from the model's crop
+def _ratio(a, b):
+    """(a - b) / max(a + b, 1e-6), exp21's guard, for NDVI and NBR."""
+    a, b = np.asarray(a, dtype=np.float64), np.asarray(b, dtype=np.float64)
+    return (a - b) / np.maximum(a + b, 1e-6)
+
+
+def fld_composite(stack4):
+    """One stack (S, S, 4, 12) raw -> its per-pixel median over the non-empty timesteps (S, S, 12) and the number of
+    empty timesteps. A timestep is empty when every pixel and band is 0; a stack with no non-empty timestep is 0."""
+    s = np.asarray(stack4, dtype=np.float64)
+    empty = (s == 0).all(axis=(0, 1, 3))
+    if empty.all():
+        return np.zeros(s.shape[:2] + (s.shape[3],)), int(empty.sum())
+    return np.median(s[:, :, ~empty, :], axis=2), int(empty.sum())
+
+
+def fld_window_features(crop):
+    """Arm F's no-encoder features (K3) and index inputs (K4, K5) from the model's crop (S, S, 8, 12) raw, pre
+    timesteps 0 to 3 then post 4 to 7, bands in OlmoEarth's order. Per stack: the composite's 12 bands, NDVI (B08, B04)
+    and NBR (B08, B12); their spatial mean and standard deviation over the crop and their mean over the centre 16 px
+    (42 per stack). Then post minus pre of those 42, then each stack's count of empty timesteps: 128 features."""
+    crop = np.asarray(crop, dtype=np.float64)
+    if crop.ndim != 4 or crop.shape[2] != len(FLD_LAYERS) or crop.shape[3] != len(OLMO_BANDS):
+        raise ValueError(f"arm F's crop is (S, S, 8, 12), not {crop.shape}")
+    S = crop.shape[0]
+    c0 = max((S - FLD_CENTRE) // 2, 0)
+    centre = slice(c0, c0 + FLD_CENTRE)
+    bi = {b: OLMO_BANDS.index(b) for b in ("B02", "B04", "B08", "B12")}
+    per, idx = {}, {}
+    for name, sl in (("pre", slice(0, 4)), ("post", slice(4, 8))):
+        comp, n_empty = fld_composite(crop[:, :, sl, :])
+        ndvi = _ratio(comp[..., bi["B08"]], comp[..., bi["B04"]])
+        nbr = _ratio(comp[..., bi["B08"]], comp[..., bi["B12"]])
+        img = np.concatenate([comp, ndvi[..., None], nbr[..., None]], axis=-1)            # (S, S, 14)
+        cen = img[centre, centre]
+        per[name] = np.concatenate([img.mean((0, 1)), img.std((0, 1)), cen.mean((0, 1))])
+        idx[name] = {"ndvi_centre": float(cen[..., 12].mean()), "nbr_centre": float(cen[..., 13].mean()),
+                     "n_empty": n_empty}
+    x = np.concatenate([per["pre"], per["post"], per["post"] - per["pre"],
+                        [idx["pre"]["n_empty"], idx["post"]["n_empty"]]])
+    empty_t = (crop == 0).all(axis=(0, 1, 3))
+    b02 = crop[centre, centre, :, bi["B02"]].mean((0, 1))
+    idx["cloud_timesteps"] = int((empty_t | (b02 > K5_B02)).sum())
+    return x, idx
+
+
+def _fld_feature_names():
+    """The 128 names of fld_window_features' vector, in its order."""
+    base = list(OLMO_BANDS) + ["NDVI", "NBR"]
+    one = [f"{s}_{b}" for s in ("crop_mean", "crop_std", "centre_mean") for b in base]
+    return ([f"pre_{n}" for n in one] + [f"post_{n}" for n in one] + [f"diff_{n}" for n in one]
+            + ["pre_empty_timesteps", "post_empty_timesteps"])
+
+
+FLD_FEATURE_NAMES = _fld_feature_names()
+
+
+def fld_index_controls(indices):
+    """K4 and K5 per window for arm F (higher = more suspect): minus the centre's NDVI drop and minus its NBR drop
+    from the pre to the post composite (a small or negative drop is a weak loss signal), and the timesteps that are
+    empty or cloudy at the centre (K5)."""
+    pre_ndvi = np.array([d["pre"]["ndvi_centre"] for d in indices], dtype=np.float64)
+    post_ndvi = np.array([d["post"]["ndvi_centre"] for d in indices], dtype=np.float64)
+    pre_nbr = np.array([d["pre"]["nbr_centre"] for d in indices], dtype=np.float64)
+    post_nbr = np.array([d["post"]["nbr_centre"] for d in indices], dtype=np.float64)
+    return {"k4_ndvi_drop_weak": -(pre_ndvi - post_ndvi), "k4_nbr_drop_weak": -(pre_nbr - post_nbr),
+            "k5_cloud_timesteps": np.array([d["cloud_timesteps"] for d in indices], dtype=np.float64)}
 
 
 # ----------------------------------------------------------------------------- measures 1-4: accuracy and ranking
@@ -693,7 +933,7 @@ def grade_p1(rank, n_err, arm):
     A = ARMS[arm]
     cap = rank["signals"]["confidence"]["capture"][bkey(0.10)]
     if "P1" not in A["graded"]:
-        return _not_graded("arm A is graded on P2 and P3 only", capture_10=cap)
+        return _not_graded("not graded on this arm", capture_10=cap)
     if n_err < ERROR_FLOOR:
         return _not_graded(f"{n_err} errors, below the floor of {ERROR_FLOOR}: reported only", capture_10=cap,
                            threshold=A["p1_capture"])
@@ -801,12 +1041,20 @@ def grade_units(units, arm, draws=DRAWS, n_boot=BOOT, certify_draws=None):
                                                 np.asarray(units["stratum"]))
     N = int(label.size)
     cells, random_draws = estimate_study(err, rd["margin"], rd["p1"], arm, draws)
-    res["estimate"] = {"graded_budgets": graded_budgets(N), "cells": cells}
     alphas = (A["alpha"],) + tuple(A["alpha_reported"])
     orders = {"confidence": rd["p1"], "k3a": 1.0 - controls["k3a_no_encoder_uncertainty"]}
     if certify_draws is not None:
         random_draws = {B: v[:certify_draws] for B, v in random_draws.items()}
     res["certify"] = certify_study(err, orders, random_draws, alphas)
+    # c*(alpha) from all labels, per order: reported on every arm, and the only certify number an arm whose population
+    # is below both budgets has
+    res["certify_best_coverage"] = {f"{o}/{a:g}": best_coverage(sc, err, a) for o, sc in orders.items() for a in alphas}
+    if is_report_only(arm):
+        res["estimate"] = {"budgets_run": [B for B in EST_BUDGETS if B <= N], "cells": cells}
+        res["report_only"] = True
+        res["reported"] = report_measures(rank, cells, res["certify"], res["certify_best_coverage"], N, n_err, arm)
+        return res
+    res["estimate"] = {"graded_budgets": graded_budgets(N), "cells": cells}
     if rank is None:
         res["prereg"] = {p: _not_graded("no error in the population") for p in ("P1", "P2", "P3", "P4", "P5")}
     else:
@@ -816,6 +1064,58 @@ def grade_units(units, arm, draws=DRAWS, n_boot=BOOT, certify_draws=None):
     res["prereg"]["complete"] = all(res["prereg"][p]["holds"] is not None for p in A["graded"])
     res["prereg"]["graded_on_this_arm"] = list(A["graded"])
     return res
+
+
+def report_measures(rank, cells, cert, best_cov, N, n_err, arm):
+    """The report-only arms (A and F): the numbers each prediction reads, with their intervals, and nothing else. No
+    threshold is applied and nothing here says whether a prediction would hold: the page amended on 1 October 2026
+    draws no verdict on these arms. Why: their validation sets are too small for the page's error floor and budget
+    rule (stated in `why`, with the counts)."""
+    A = ARMS[arm]
+    out = {"why": (f"report-only by the owner's decision of 1 October 2026: Ai2's validation set is too small to "
+                   f"grade ({N} units, {n_err} errors here; the page's error floor is {ERROR_FLOOR} errors, and a "
+                   f"budget is graded only where it is at most N/5 with N at least {MIN_N_GRADED}). Every number "
+                   "below is reported; none is graded"),
+           "n_units": N, "n_errors": n_err}
+    if rank is not None:
+        sig = rank["signals"]
+        out["review_order"] = {k: sig["confidence"][k] for k in ("auroc", "capture", "capture_random", "ceiling",
+                                                                  "excess_aurc", "gap_closed")}
+        best = rank.get("best_control")
+        if best is not None:
+            out["best_informative_control"] = {"name": best, "auroc": sig[best]["auroc"],
+                                               "capture": sig[best]["capture"], "aurc": sig[best]["aurc"]}
+        lead = rank.get("confidence_minus_best_control")
+        if lead is not None:
+            out["confidence_minus_best_control"] = lead
+    else:
+        out["review_order"] = {"note": "no error: nothing to rank"}
+    est_out = {}
+    for B in EST_BUDGETS:
+        c, r = cells.get(f"confidence/{B}", {}), cells.get(f"random/{B}", {})
+        if not (c.get("run") and r.get("run")):
+            est_out[str(B)] = {"run": False, "reason": c.get("reason") or r.get("reason")}
+            continue
+        est_out[str(B)] = {"run": True, "theta": c["theta"], "confidence_coverage": c["coverage"],
+                           "random_coverage": r["coverage"], "random_exact_coverage": r.get("exact_coverage"),
+                           "confidence_median_width": c["median_width"], "random_median_width": r["median_width"],
+                           "width_ratio": c["median_width"] / r["median_width"] if r["median_width"] else float("nan")}
+    out["estimate"] = est_out
+    cert_out = {}
+    for key, c in cert.items():
+        order, rule, B, a = key.split("/")
+        if order != "confidence" or rule != "prefix":
+            continue
+        k = cert.get(f"k3a/prefix/{B}/{a}")
+        cert_out[f"{B}/{a}"] = {"budget": int(B), "alpha": float(a), "violation_rate": c["violation_rate"],
+                                "median_coverage": c["median_coverage"],
+                                "share_certifying_nothing": c["share_certifying_nothing"],
+                                "median_coverage_k3a": k["median_coverage"] if k else None,
+                                "coverage_minus_k3a": c["median_coverage"] - k["median_coverage"] if k else None}
+    out["certify"] = cert_out or {"run": False, "reason": f"no budget fits the {N} units"}
+    out["certify_best_coverage"] = best_cov
+    out["alphas"] = [A["alpha"], *A["alpha_reported"]]
+    return out
 
 
 def by_stratum(err, conf_u, ctl_u, stratum):
@@ -839,13 +1139,38 @@ SMOKE_EXPECTED = {
     "beats": {"P1": True, "P2": True, "P3": True, "P4": True, "P5": True},
     "control_wins": {"P1": True, "P2": True, "P3": False, "P4": True, "P5": False},
     "weak": {"P1": False, "P2": False, "P3": False, "P4": False, "P5": False},
-    "awf_beats": {"P1": None, "P2": True, "P3": True, "P4": None, "P5": None},
 }
+# the report-only arms' cases: every measure is computed and nothing is graded, whatever the numbers say
+SMOKE_REPORT_ONLY = ("awf_report", "fld_report")
 # (arm, N, error rate, confidence errors' suspicion band, K3 errors' band)
 SMOKE_CASES = {"beats": ("mangrove", 6000, 0.024, (0.93, 1.0), (0.50, 1.0)),
                "control_wins": ("mangrove", 6000, 0.024, (0.82, 1.0), (0.97, 1.0)),
                "weak": ("mangrove", 6000, 0.024, (0.0, 1.0), (0.05, 1.0)),
-               "awf_beats": ("awf", 400, 0.12, (0.90, 1.0), (0.50, 1.0))}
+               "awf_report": ("awf", 400, 0.12, (0.90, 1.0), (0.50, 1.0)),
+               "fld_report": ("fld", 120, 0.24, (0.80, 1.0), (0.50, 1.0))}
+# what a pass/fail verdict looks like in an output: report-only arms must hold none of these keys or words
+VERDICT_KEYS = ("holds", "pass", "passed", "verdict", "graded", "complete", "coverage_ok", "width_ok", "valid",
+                "useful", "beats", "beats_k3a", "points_met", "bound_above_zero", "accuracy_ok", "ok",
+                "graded_budgets", "graded_on_this_arm", "prereg")
+VERDICT_WORDS = ("PASS", "FAIL", "holds", "passed", "failed")
+
+
+def verdicts_in(obj, path=""):
+    """Every place in a JSON-like object that reads as a pass/fail verdict: a key from VERDICT_KEYS, or a string value
+    holding a word from VERDICT_WORDS. The report-only arms' outputs must give an empty list."""
+    found = []
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            if str(k) in VERDICT_KEYS:
+                found.append(f"{path}/{k}")
+            found += verdicts_in(v, f"{path}/{k}")
+    elif isinstance(obj, (list, tuple)):
+        for i, v in enumerate(obj):
+            found += verdicts_in(v, f"{path}[{i}]")
+    elif isinstance(obj, str):
+        if any(re.search(rf"\b{w}\b", obj) for w in VERDICT_WORDS):
+            found.append(f"{path}={obj[:60]!r}")
+    return found
 
 
 def logits_from_p1(p1, pred, n_out, trained, delta=1.0):
@@ -892,14 +1217,13 @@ def synthetic_units(case, seed=SEED):
     controls = {"k2_class_rarity": class_rarity(pred, rng.choice(trained, 5000, p=prior), trained)[0],
                 "k3a_no_encoder_uncertainty": 1.0 - k3_top,
                 "k3b_no_encoder_disagreement": (t > 0.97).astype(np.float64)}
-    if arm == "mangrove":
-        for name in ("k4_inundation_ambiguity", "k4_mndwi_near_zero", "k4_ndvi_month_std"):
-            controls[name] = rng.standard_normal(N) + 0.1 * is_err
-    else:
-        controls["k4_ndvi_temporal_std"] = rng.standard_normal(N) + 0.1 * is_err
-        controls["k4_ndvi_3x3_std"] = rng.standard_normal(N) + 0.1 * is_err
-    controls["k5_cloud_months"] = rng.poisson(1.0 + 0.2 * is_err).astype(np.float64)
-    n_cl = 300 if arm == "mangrove" else 30
+    k4 = {"mangrove": ("k4_inundation_ambiguity", "k4_mndwi_near_zero", "k4_ndvi_month_std"),
+          "fld": ("k4_ndvi_drop_weak", "k4_nbr_drop_weak")}.get(arm, ("k4_ndvi_temporal_std", "k4_ndvi_3x3_std"))
+    for name in k4:
+        controls[name] = rng.standard_normal(N) + 0.1 * is_err
+    k5 = "k5_cloud_timesteps" if arm == "fld" else "k5_cloud_months"
+    controls[k5] = rng.poisson(1.0 + 0.2 * is_err).astype(np.float64)
+    n_cl = {"mangrove": 300, "fld": 25}.get(arm, 30)
     clusters = rng.integers(0, n_cl, N)
     return {"label": label, "logits": logits, "clusters": clusters.astype(str),
             "clusters_coarse": (clusters // 10).astype(str), "controls": controls,
@@ -929,10 +1253,15 @@ def planted_checks():
     c["P1_below"] = grade_p1(rank_with(0.3999, 0.1, 0.7, 0.1), 40, "mangrove")["holds"] is False
     c["P1_nandi_threshold"] = grade_p1(rank_with(0.30, 0.1, 0.7, 0.1), 40, "nandi")["holds"] is True
     c["P1_floor_reported_only"] = grade_p1(rank_with(0.9, 0.1, 0.7, 0.1), 39, "mangrove")["holds"] is None
-    c["P1_not_graded_on_awf"] = grade_p1(rank_with(0.9, 0.1, 0.7, 0.1), 41, "awf")["holds"] is None
     c["P2_at_threshold"] = grade_p2(rank_with(0.5, 0.1, 0.65, 0.1), 40, "mangrove")["holds"] is True
     c["P2_below"] = grade_p2(rank_with(0.5, 0.1, 0.6499, 0.1), 40, "mangrove")["holds"] is False
-    c["P2_graded_on_awf"] = grade_p2(rank_with(0.5, 0.1, 0.70, 0.1), 41, "awf")["holds"] is True
+    for arm in ("awf", "fld"):                                     # report-only: no grade, whatever the numbers
+        c[f"none_graded_on_{arm}"] = (
+            grade_p1(rank_with(0.9, 0.1, 0.7, 0.1), 400, arm)["holds"] is None
+            and grade_p2(rank_with(0.9, 0.1, 0.9, 0.1), 400, arm)["holds"] is None
+            and grade_p3(rank_with(0.9, 0.1, 0.9, 0.1), 400, arm, {"holds": True})["holds"] is None
+            and grade_p4(cells_with(0.95, 0.95, 0.5, 1.0), 5000, arm)["holds"] is None
+            and grade_p5(cert_with(1000, 0.0, 0.9, 0.1, a=ARMS[arm]["alpha"]), 5000, arm)["holds"] is None)
     p2 = {"holds": True}
     c["P3_at_threshold"] = grade_p3(rank_with(0.45, 0.40, 0.7, 0.001), 40, "mangrove", p2)["holds"] is True
     c["P3_points_short"] = grade_p3(rank_with(0.4499, 0.40, 0.7, 0.001), 40, "mangrove", p2)["holds"] is False
@@ -961,7 +1290,7 @@ def smoke(out_dir=None, draws=DRAWS, certify_draws=SMOKE_DRAWS, n_boot=SMOKE_BOO
     out_dir = out_dir or OUT
     t0 = time.time()
     cases = {}
-    for case in SMOKE_EXPECTED:
+    for case in (*SMOKE_EXPECTED, *SMOKE_REPORT_ONLY):
         arm = SMOKE_CASES[case][0]
         cases[case] = grade_units(synthetic_units(case), arm, draws=draws, n_boot=n_boot, certify_draws=certify_draws)
     out = {"experiment": "exp89 smoke S1: synthetic units with known answers", "smoke": True, "draws": draws,
@@ -985,8 +1314,15 @@ def smoke(out_dir=None, draws=DRAWS, certify_draws=SMOKE_DRAWS, n_boot=SMOKE_BOO
               f" | errors {cases[case]['n_errors']} of {cases[case]['n_units']}", flush=True)
         if got != want:
             raise AssertionError(f"smoke case {case}: graded {got}, the synthetic design implies {want}")
-    print(f"smoke OK in {out['seconds']:.1f}s: every case grades as designed, planted grades hold at their thresholds, "
-          "the freeze guard reads the status line", flush=True)
+    for case in SMOKE_REPORT_ONLY:
+        res = cases[case]
+        found = verdicts_in(res)
+        if found or not res.get("report_only") or "reported" not in res:
+            raise AssertionError(f"smoke case {case}: a report-only arm must carry no verdict, found {found}")
+        print(f"smoke case {case}: report-only, nothing graded | errors {res['n_errors']} of {res['n_units']}",
+              flush=True)
+    print(f"smoke OK in {out['seconds']:.1f}s: every graded case grades as designed, planted grades hold at their "
+          "thresholds, the report-only cases carry no verdict, the freeze guard reads the status line", flush=True)
     return out
 
 
@@ -1098,6 +1434,54 @@ def read_stack(wdir, meta, layer="sentinel2"):
     return stack, len(groups)
 
 
+def read_fld_stack(wdir, meta):
+    """(H, W, 8, 12) raw stack of arm F's eight layers in the config's order (pre_sentinel2, .1 to .3, then
+    post_sentinel2, .1 to .3), bands in OlmoEarth's order, warped onto the window's 10 m grid where a band set is
+    stored at another resolution."""
+    H, W, crs, tr = window_grid(meta)
+    stack = np.zeros((H, W, len(FLD_LAYERS), len(OLMO_BANDS)), dtype=np.float32)
+    for t, name in enumerate(FLD_LAYERS):
+        bands = read_band_sets(os.path.join(wdir, "layers", name), H, W, crs, tr)
+        missing = [b for b in OLMO_BANDS if b not in bands]
+        if missing:
+            raise RuntimeError(f"{wdir} {name}: bands {missing} are missing")
+        for j, b in enumerate(OLMO_BANDS):
+            stack[:, :, t, j] = bands[b]
+    return stack
+
+
+def fld_unit(wdir, meta, with_stack=True):
+    """One arm F window by rslearn's rules (reading o): all eight image layers and the label layer completed, and a
+    label among the ten classes; else dropped with the reason. With the stack: the 64-px centre crop the model sees
+    (rslearn's Pad on the raw values) and the K3 features and K4/K5 indices read from it."""
+    rec = {"label": None, "drop": None}
+    done = fld_layers_completed(wdir)
+    rec["n_layers_completed"] = len(done)
+    lab, why, raw = fld_label(wdir)
+    rec["new_label"] = raw
+    if not done:
+        rec["no_imagery"] = True
+    if len(done) < len(FLD_LAYERS):
+        rec["drop"] = f"{len(FLD_LAYERS) - len(done)} of the 8 image layers not completed"
+    elif lab is None:
+        rec["drop"] = why
+    else:
+        rec["label"] = lab
+    if not with_stack or rec["drop"]:
+        return rec
+    stack = read_fld_stack(wdir, meta)
+    crop = np.moveaxis(pad_center(np.moveaxis(stack, (0, 1), (-2, -1)), FLD_CROP, fill=0), (-2, -1), (0, 1))
+    rec["input"] = np.ascontiguousarray(crop)                                   # (64, 64, 8, 12) raw
+    rec["n_groups"] = len(FLD_LAYERS)
+    rec["features"], rec["indices"] = fld_window_features(crop)
+    return rec
+
+
+def has_input(rec):
+    """A unit record that carries the model's input (Mangrove and arm F: "input"; Nandi and AWF: "crops")."""
+    return "input" in rec or "crops" in rec
+
+
 def read_label(wdir, arm):
     import rasterio
     layer, band = ARMS[arm]["label_layer"]
@@ -1113,6 +1497,8 @@ def unit_of(arm, wdir, meta, with_stack=True):
     series the controls read. Mangrove: rslearn's centre Pad to 2 on the image and the label. Nandi: the 16-px crop
     at shifts 0 to 3 (shift 0 is the graded input) and the 3x3 NDVI block around the label pixel."""
     A = ARMS[arm]
+    if arm == "fld":
+        return fld_unit(wdir, meta, with_stack)
     lab = read_label(wdir, arm)
     rec = {"label": None, "drop": None}
     if lab is None:
@@ -1168,6 +1554,9 @@ def ndvi_block3(stack, r, c):
 
 def cluster_ids(arm, rec_meta, name, lonlat):
     """The bootstrap's cluster and the reported coarser one."""
+    if arm == "fld":
+        lon, lat = lonlat
+        return f"{int(np.floor(lon))}_{int(np.floor(lat))}", None
     if arm == "mangrove":
         lon, lat = lonlat
         return (f"{int(np.floor(lon / 0.1))}_{int(np.floor(lat / 0.1))}",
@@ -1290,7 +1679,8 @@ def checkpoint_inventory(sd, arm):
             "keys": {k: list(v.shape) for k, v in sd.items()}, "key_groups": groups,
             "encoder_prefix_counts": prefixes,
             "head_expected": {k: (list(sd[k].shape) if k in sd else None) for k in A["head_keys"]},
-            "decoder_keys": {k: list(v.shape) for k, v in sd.items() if k.startswith("model.decoders.")}}
+            "decoder_keys": {k: list(v.shape) for k, v in sd.items()
+                             if k.startswith(("model.decoders.", "model.decoder."))}}
 
 
 # ----------------------------------------------------------------------------- the replica (torch)
@@ -1304,12 +1694,62 @@ def encoder_skeleton(model_id):
     return load_model_from_path(os.path.dirname(cfg), load_weights=False)
 
 
+def make_pooling_decoder(in_channels, out_channels, num_conv_layers, num_fc_layers, conv_channels, fc_channels):
+    """rslearn's PoolingDecoder (rslearn.models.pooling_decoder, 0.0.12) with its parameter names, so a checkpoint's
+    model.decoder.0.* keys load into it strictly: 3x3 convolutions with ReLU, the amax over the map, fully connected
+    layers with ReLU, the output layer."""
+    import torch
+
+    class PoolingDecoder(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            conv, prev = [], in_channels
+            for _ in range(num_conv_layers):
+                conv.append(torch.nn.Sequential(torch.nn.Conv2d(prev, conv_channels, 3, padding=1), torch.nn.ReLU()))
+                prev = conv_channels
+            self.conv_layers = torch.nn.Sequential(*conv)
+            fc = []
+            for _ in range(num_fc_layers):
+                fc.append(torch.nn.Sequential(torch.nn.Linear(prev, fc_channels), torch.nn.ReLU()))
+                prev = fc_channels
+            self.fc_layers = torch.nn.Sequential(*fc)
+            self.output_layer = torch.nn.Linear(prev, out_channels)
+
+        def forward(self, x):                                     # (B, C, H', W') -> (B, out_channels)
+            x = self.conv_layers(x)
+            x = torch.amax(x, dim=(2, 3))
+            return self.output_layer(self.fc_layers(x))
+    return PoolingDecoder()
+
+
+def load_pooling_decoder(sd, prefix, out_channels, in_channels):
+    """The head under `prefix`, its shape read from its own tensors and checked, loaded strictly."""
+    sub = {k[len(prefix):]: v.float() for k, v in sd.items() if k.startswith(prefix)}
+    if "output_layer.weight" not in sub:
+        raise RuntimeError(f"no pooling decoder under {prefix}; decoder keys: "
+                           f"{[k for k in sd if k.startswith(('model.decoder.', 'model.decoders.'))]}")
+    n_conv = len({k.split(".")[1] for k in sub if k.startswith("conv_layers.")})
+    n_fc = len({k.split(".")[1] for k in sub if k.startswith("fc_layers.")})
+    conv_ch = sub["conv_layers.0.0.weight"].shape[0] if n_conv else in_channels
+    fc_ch = sub["fc_layers.0.0.weight"].shape[0] if n_fc else conv_ch
+    first_in = sub["conv_layers.0.0.weight"].shape[1] if n_conv else sub["output_layer.weight"].shape[1]
+    if first_in != in_channels:
+        raise RuntimeError(f"the head reads {first_in} channels; the encoder gives {in_channels} (pre and post)")
+    head = make_pooling_decoder(in_channels, out_channels, n_conv, n_fc, conv_ch, fc_ch)
+    head.load_state_dict(sub, strict=True)
+    return head, {"num_conv_layers": n_conv, "num_fc_layers": n_fc, "conv_channels": int(conv_ch),
+                  "fc_channels": int(fc_ch), "in_channels": int(in_channels), "out_channels": int(out_channels),
+                  "n_keys": len(sub)}
+
+
 class Replica:
     """The fine-tuned model without rslearn: the encoder keys loaded strictly into olmoearth_pretrain's encoder
     (OlmoEarth v1-Base for the real checkpoints), tokens mean-pooled over timesteps and band sets, the arm's head.
     Mangrove: patch 2 on the 2x2 block, the pooling decoder's amax over a 1x1 map, Linear(D, 4). Nandi: patch 1 on
     the 16-px crop, a 1x1 conv to 11 channels read at the label pixel. AWF: exp21's logits_grid (patch 4, the 1x1
-    conv on patch features, bilinear x4) at the label pixel, unchanged. fp32, TF32 off."""
+    conv on patch features, bilinear x4) at the label pixel, unchanged. Arm F: SimpleTimeSeries' two passes (the four
+    pre layers, then the four post layers) at patch 4 on the 64-px crop, concatenated, then rslearn's PoolingDecoder.
+    fp32, TF32 off."""
 
     def __init__(self, arm, ckpt_path, model_id="OLMOEARTH_V1_BASE", device=None, checkpoint_sha256=None):
         import torch
@@ -1338,6 +1778,21 @@ class Replica:
                 errors[pre] = str(ex)[:300]
         if self.encoder_prefix is None:
             raise RuntimeError(f"no prefix loads the encoder strictly: {errors}")
+        self.n_checkpoint_keys = len(sd)
+        self.normalizer = Normalizer(Strategy.COMPUTED)                  # std multiplier 2, rslearn's default
+        self.modality = Modality.SENTINEL2_L2A
+        self.n_band_sets = len(Modality.SENTINEL2_L2A.band_sets)
+        D = int(getattr(model.encoder, "embedding_size", 0) or 0)
+        if self.A["head_kind"] == "pooling_decoder":
+            if not D:
+                raise RuntimeError("the encoder does not say its embedding size")
+            head, self.head_info = load_pooling_decoder(sd, FLD_HEAD_PREFIX, self.A["n_out"], 2 * D)
+            used = {k for k in sd if k.startswith(self.encoder_prefix) or k.startswith(FLD_HEAD_PREFIX)}
+            self.unused_keys = sorted(set(sd) - used)
+            self.head_shape = [self.A["n_out"], 2 * D]
+            self.model = model.to(self.device).eval()
+            self.head = head.to(self.device).eval()
+            return
         wk, bk = self.A["head_keys"]
         if wk not in sd or bk not in sd:
             raise RuntimeError(f"head keys {wk}, {bk} not in the checkpoint; decoder keys: "
@@ -1347,16 +1802,13 @@ class Replica:
             if w.shape[2:] != (1, 1):
                 raise RuntimeError(f"{wk}: {tuple(w.shape)} is not a 1x1 convolution")
             w = w[:, :, 0, 0]
-        D = int(getattr(model.encoder, "embedding_size", w.shape[1]))
+        D = D or int(w.shape[1])
         if tuple(w.shape) != (self.A["n_out"], D) or tuple(b.shape) != (self.A["n_out"],):
             raise RuntimeError(f"head {tuple(w.shape)} + {tuple(b.shape)}, expected ({self.A['n_out']}, {D})")
         self.head_shape = list(w.shape)
-        self.n_checkpoint_keys = len(sd)
+        self.head_info, self.unused_keys = None, None
         self.model = model.to(self.device).eval()
         self.w, self.b = w.to(self.device), b.to(self.device)
-        self.normalizer = Normalizer(Strategy.COMPUTED)                  # std multiplier 2, rslearn's default
-        self.modality = Modality.SENTINEL2_L2A
-        self.n_band_sets = len(Modality.SENTINEL2_L2A.band_sets)
 
     def normalize(self, raw):
         return self.normalizer.normalize(self.modality, np.asarray(raw, dtype=np.float64))
@@ -1376,11 +1828,26 @@ class Replica:
                                 * MaskValue.ONLINE_ENCODER.value),
             timestamps=ts)
 
-    def logits(self, stacks, locs=None, timestamps="rslearn"):
-        """(B, n_out) logits at each unit."""
+    def logits(self, stacks, locs=None, timestamps="rslearn", precision="fp32"):
+        """(B, n_out) logits at each unit. precision "bf16" runs arm F's encoder under bfloat16 autocast, as Ai2's
+        validation did (the head stays fp32); it is reported by S2, never scored."""
+        import contextlib
         import torch
         stacks = np.asarray(stacks, dtype=np.float32)
         with torch.no_grad():
+            if self.arm == "fld":
+                ctx = (torch.autocast(device_type=torch.device(self.device).type, dtype=torch.bfloat16)
+                       if precision == "bf16" else contextlib.nullcontext())
+                maps = []
+                for part in (slice(0, len(FLD_PRE)), slice(len(FLD_PRE), len(FLD_LAYERS))):
+                    with ctx:
+                        out = self.model.encoder(self.sample(stacks[..., part, :], timestamps), fast_pass=True,
+                                                 patch_size=self.A["patch"])
+                    tok = out["tokens_and_masks"].sentinel2_l2a.float().mean(dim=[3, 4])      # (B, H', W', D)
+                    maps.append(tok.permute(0, 3, 1, 2))
+                return self.head(torch.cat(maps, dim=1)).double().cpu().numpy()      # pre channels, then post
+            if precision != "fp32":
+                raise ValueError("only arm F reports a bf16 pass")
             if self.arm == "awf":
                 import exp21_finetuned_awf as exp21
                 from oe_inferencex import awf
@@ -1401,10 +1868,11 @@ class Replica:
                 "load": self.load_how, "top_level": self.top_level,
                 "encoder_prefix": self.encoder_prefix, "n_encoder_keys": self.n_encoder_keys,
                 "n_checkpoint_keys": self.n_checkpoint_keys, "head_shape": self.head_shape, "dtype": "float32",
-                "tf32": False, "patch": self.A["patch"]}
+                "tf32": False, "patch": self.A["patch"], "head": self.head_info,
+                "unused_checkpoint_keys": self.unused_keys}
 
 
-def batched_logits(rep, inputs, locs, T_groups, batch, timestamps="rslearn"):
+def batched_logits(rep, inputs, locs, T_groups, batch, timestamps="rslearn", precision="fp32"):
     """Logits for every unit, batched by the number of item groups so each batch has one T and runs with
     fast_pass (a window with fewer groups is read with its own T, as rslearn's masked pooling reads it)."""
     n_out = rep.A["n_out"]
@@ -1415,64 +1883,203 @@ def batched_logits(rep, inputs, locs, T_groups, batch, timestamps="rslearn"):
         for i in range(0, idx.size, batch):
             j = idx[i:i + batch]
             st = np.stack([inputs[k][..., :T, :] for k in j])
-            out[j] = rep.logits(st, [locs[k] for k in j] if locs is not None else None, timestamps)
+            kw = {"precision": precision} if precision != "fp32" else {}
+            out[j] = rep.logits(st, [locs[k] for k in j] if locs is not None else None, timestamps, **kw)
     return out
 
 
-BATCH = {"mangrove": 1024, "nandi": 2, "awf": 32}
+BATCH = {"mangrove": 1024, "nandi": 2, "awf": 32, "fld": 16}
 
 
 # ----------------------------------------------------------------------------- reading an arm's windows
-def resolve_data(arm, data_dir, download=True):
-    """The arm's extracted dataset: the pinned tar is fetched (when `download`), checked and extracted under
-    data_dir once. Arm A uses an existing data/awf when present."""
-    A = ARMS[arm]
-    if arm == "awf":
-        for cand in (os.path.join(data_dir, "dataset", "windows", "spatial_split"),
-                     os.path.join(data_dir, "windows", "spatial_split")):
-            if os.path.isdir(cand):
-                return os.path.dirname(cand), None
-    marker = os.path.join(data_dir, ".exp89_extracted")
+MARKER = ".exp89_extracted"
+MANIFEST = ".exp89_manifest.json"
+
+
+def manifest_missing(data_dir):
+    """Files of the extraction's manifest that are gone or changed size (the scratch purge removes files by age), or
+    None when the extraction has no manifest (one made before the manifest existed)."""
+    path = os.path.join(data_dir, MANIFEST)
+    if not os.path.exists(path):
+        return None
+    with open(path) as f:
+        files = json.load(f)
+    bad = []
+    for rel, size in files.items():
+        full = os.path.join(data_dir, rel)
+        try:
+            if os.path.getsize(full) != size:
+                bad.append(rel)
+        except OSError:
+            bad.append(rel)
+    return bad
+
+
+def resolve_data(arm, data_dir, download=True, tar=None, log=print):
+    """The arm's extracted dataset under data_dir, extracted once from its pinned tar and checked against the
+    extraction's manifest on every use. Arm M, N and A: the tar is fetched from the Hub (when `download`) or given
+    with --tar, and checked against its pinned sha256. Arm F: the tar is downloaded by the job (exp/jobs/e89.sh) and
+    given with --tar; verify_tar checks its size and MD5, and only the layers the run reads are extracted. An
+    extraction with a file missing, or with no manifest, is extracted again from its tar; none of the old locations
+    (data/awf) is read."""
+    marker = os.path.join(data_dir, MARKER)
     if os.path.exists(marker):
-        return find_windows_root(data_dir), json.load(open(marker))
-    if not download:
-        raise FileNotFoundError(f"{data_dir} holds no extracted dataset and downloads are off")
-    path, got = hub_file(A["data"], A["data_file"], A["data_revision"], "dataset", A["data_sha256"])
+        with open(marker) as f:
+            info = json.load(f)
+        missing = manifest_missing(data_dir)
+        if missing == []:
+            return find_windows_root(data_dir), info
+        why = ("it has no manifest" if missing is None else
+               f"{len(missing)} of its files are missing or changed, e.g. {missing[:3]}")
+        log(f"{data_dir}: the extraction is extracted again: {why}")
+        tar = tar or (info.get("tar") if info.get("tar") and os.path.exists(info["tar"]) else None)
+        os.remove(marker)
+    A = ARMS[arm]
+    if arm == "fld":
+        if not tar:
+            raise FileNotFoundError(f"{data_dir} holds no complete extraction of arm F's dataset and no --tar was "
+                                    "given: the job downloads it (exp/jobs/e89.sh, E89_MODE=inv)")
+        info = extract_layers(tar, data_dir, FLD_KEEP_LAYERS, verify_tar(tar, arm, log=log), log=log)
+        return find_windows_root(data_dir), info
+    if tar:
+        got = sha256(tar)
+        if A["data_sha256"] and got != A["data_sha256"]:
+            raise RuntimeError(f"--tar {tar}: sha256 {got}, pinned {A['data_sha256']} ({A['data']}@"
+                               f"{A['data_revision'][:8]})")
+        path = tar
+    elif not download:
+        raise FileNotFoundError(f"{data_dir} holds no complete extracted dataset and downloads are off")
+    else:
+        path, got = hub_file(A["data"], A["data_file"], A["data_revision"], "dataset", A["data_sha256"])
     info = extract_tar(path, data_dir, got)
     return find_windows_root(data_dir), info
 
 
-def extract_tar(path, data_dir, sha=None):
-    """Extract a dataset tar under data_dir once, refusing absolute or parent paths, and leave a marker."""
-    os.makedirs(data_dir, exist_ok=True)
-    with tarfile.open(path) as tf:
-        members = tf.getmembers()
-        for m in members:
-            if m.name.startswith("/") or ".." in m.name.split("/"):
-                raise RuntimeError(f"unsafe member in the tar: {m.name}")
-        # the data filter refuses links out of the directory and special files where Python has it (3.12, 3.11.4)
-        tf.extractall(data_dir, **({"filter": "data"} if hasattr(tarfile, "data_filter") else {}))
-    info = {"tar": path, "sha256": sha or sha256(path), "n_members": len(members), "extracted_utc": utc_now()}
-    with open(os.path.join(data_dir, ".exp89_extracted"), "w") as f:
+def _safe_member(m):
+    if m.name.startswith("/") or ".." in m.name.split("/"):
+        raise RuntimeError(f"unsafe member in the tar: {m.name}")
+
+
+def _write_extraction(data_dir, info, manifest):
+    """The manifest first, then the marker: a marker always has its manifest."""
+    with open(os.path.join(data_dir, MANIFEST), "w") as f:
+        json.dump(manifest, f)
+    info = {**info, "n_files": len(manifest), "extracted_utc": utc_now()}
+    with open(os.path.join(data_dir, MARKER), "w") as f:
         json.dump(info, f)
     return info
 
 
+def extract_tar(path, data_dir, sha=None):
+    """Extract a dataset tar under data_dir, refusing absolute or parent paths, and leave a manifest of its files
+    and a marker."""
+    os.makedirs(data_dir, exist_ok=True)
+    with tarfile.open(path) as tf:
+        members = tf.getmembers()
+        for m in members:
+            _safe_member(m)
+        # the data filter refuses links out of the directory and special files where Python has it (3.12, 3.11.4)
+        tf.extractall(data_dir, **({"filter": "data"} if hasattr(tarfile, "data_filter") else {}))
+    manifest = {m.name: m.size for m in members if m.isfile()}
+    return _write_extraction(data_dir, {"tar": path, "sha256": sha or sha256(path), "n_members": len(members)},
+                             manifest)
+
+
+def verify_tar(path, arm, log=print):
+    """Arm F's tar against its pin: the size, then the MD5 and the SHA-256 in one pass. The size and the MD5 are pinned
+    (Cloud Storage's metadata); the SHA-256 is recorded, and checked once ARMS["fld"]["data_sha256"] pins it."""
+    A = ARMS[arm]
+    size = os.path.getsize(path)
+    if size != A["data_bytes"]:
+        raise RuntimeError(f"{path}: {size} bytes, pinned {A['data_bytes']} (an incomplete download: the job's curl "
+                           "resumes it)")
+    md5, sha = hashlib.md5(), hashlib.sha256()
+    t0 = time.time()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 24), b""):
+            md5.update(chunk)
+            sha.update(chunk)
+    got_md5, got_sha = md5.hexdigest(), sha.hexdigest()
+    log(f"{path}: {size} bytes, md5 {got_md5}, sha256 {got_sha} ({time.time() - t0:.0f}s)")
+    if got_md5 != A["data_md5"]:
+        raise RuntimeError(f"{path}: md5 {got_md5}, pinned {A['data_md5']} (generation {A['data_generation']})")
+    if A["data_sha256"] and got_sha != A["data_sha256"]:
+        raise RuntimeError(f"{path}: sha256 {got_sha}, pinned {A['data_sha256']}")
+    return {"tar": path, "url": A.get("data_url"), "generation": A.get("data_generation"), "bytes": size,
+            "md5": got_md5, "md5_pinned": A["data_md5"], "sha256": got_sha, "sha256_pinned": A["data_sha256"]}
+
+
+def member_layer(name):
+    """The rslearn layer a tar member belongs to (.../windows/<group>/<window>/layers/<layer>/...), or None for a
+    window's own files and anything outside the windows."""
+    parts = name.split("/")
+    if "windows" not in parts:
+        return None
+    j = parts.index("windows")
+    if len(parts) > j + 4 and parts[j + 3] == "layers":
+        return parts[j + 4]
+    return None
+
+
+def extract_layers(path, data_dir, keep_layers, info, log=print):
+    """Stream a dataset tar once and write only the members the run reads: the layers in `keep_layers`, every
+    window's own files (metadata.json, items.json) and the dataset's config. Every other layer is counted (members
+    and bytes) and skipped. Links and special files are skipped and counted. Leaves a manifest and a marker."""
+    os.makedirs(data_dir, exist_ok=True)
+    filt = {"filter": "data"} if hasattr(tarfile, "data_filter") else {}
+    kept, skipped, other = {}, {}, {"links_or_special": 0}
+    manifest = {}
+    t0 = time.time()
+    with tarfile.open(path, "r|*") as tf:
+        for i, m in enumerate(tf):
+            _safe_member(m)
+            layer = member_layer(m.name)
+            if layer is not None and layer not in keep_layers:
+                e = skipped.setdefault(layer, {"members": 0, "bytes": 0})
+                e["members"] += 1
+                e["bytes"] += m.size
+                continue
+            if m.isdir():
+                continue
+            if not m.isfile():
+                other["links_or_special"] += 1
+                continue
+            tf.extract(m, data_dir, **filt)
+            manifest[m.name] = m.size
+            e = kept.setdefault(layer or "window and dataset files", {"members": 0, "bytes": 0})
+            e["members"] += 1
+            e["bytes"] += m.size
+            if (i + 1) % 200000 == 0:
+                log(f"  {i + 1} members read, {len(manifest)} written, {time.time() - t0:.0f}s")
+    return _write_extraction(data_dir, {**info, "kept_layers": list(keep_layers), "kept": kept,
+                                        "skipped": skipped, **other}, manifest)
+
+
 def arm_windows(arm, windows_root):
-    """Every window of the arm's group with its split, sorted by name."""
+    """Every window of the arm's group with its split, sorted by name; every group for arm F (its population is read
+    from each window's options.split). Arm A lists through oe_inferencex.awf.list_windows, given the extracted tar's
+    group directory, so the module's ROOT (exp21's data/awf) is neither read nor changed."""
     if arm == "awf":
         from oe_inferencex import awf
-        awf.ROOT = os.path.join(windows_root, ARMS["awf"]["group"])
         out = []
-        for wdir, split, r, c, cat in awf.list_windows():
-            out.append({"dir": wdir, "name": os.path.basename(wdir), "split": split, "rc": (r, c), "label": cat,
-                        "meta": json.load(open(os.path.join(wdir, "metadata.json")))})
+        for wdir, split, r, c, cat in awf.list_windows(os.path.join(windows_root, ARMS["awf"]["group"])):
+            with open(os.path.join(wdir, "metadata.json")) as f:
+                meta = json.load(f)
+            out.append({"dir": wdir, "name": os.path.basename(wdir), "group": ARMS["awf"]["group"], "split": split,
+                        "rc": (r, c), "label": cat, "meta": meta})
+        return out
+    if arm == "fld":
+        out = []
+        for g in sorted(d for d in os.listdir(windows_root) if os.path.isdir(os.path.join(windows_root, d))):
+            out += list_windows(windows_root, g)
         return out
     return list_windows(windows_root, ARMS[arm]["group"])
 
 
 def read_units(arm, windows, need="model", log=print):
-    """Read windows into unit records. `need`: "label" (labels only) or "model" (labels, input, series)."""
+    """Read windows into unit records. `need`: "label" (labels only), "model" (labels, input, series) or
+    "features" (as "model", then arm F's crop is dropped once its K3 features and indices are read, so thousands of
+    training windows fit in memory)."""
     out = []
     t0 = time.time()
     for i, w in enumerate(windows):
@@ -1489,17 +2096,30 @@ def read_units(arm, windows, need="model", log=print):
                 rec["series"] = stack[r, c]
                 rec["ndvi3x3"] = ndvi_block3(stack, r, c)
         else:
-            rec = unit_of(arm, w["dir"], w["meta"], with_stack=(need == "model"))
-        rec["name"], rec["split"], rec["meta"] = w["name"], w["split"], w["meta"]
+            rec = unit_of(arm, w["dir"], w["meta"], with_stack=(need in ("model", "features")))
+            if need == "features":
+                rec.pop("input", None)
+        rec["name"], rec["split"], rec["meta"], rec["group"] = w["name"], w["split"], w["meta"], w.get("group")
         out.append(rec)
         if (i + 1) % 2000 == 0:
             log(f"  read {i + 1}/{len(windows)} windows, {time.time() - t0:.0f}s")
     return out
 
 
-def model_inputs(arm, recs, shift=0):
-    if arm == "mangrove":
-        return [r["input"] for r in recs], None
+def flip_input(a, flip):
+    """rslearn's Flip on one unit's (S, S, T, C) input: "h" reverses the columns, "v" the rows."""
+    if flip in ("h", "hv"):
+        a = a[:, ::-1]
+    if flip in ("v", "hv"):
+        a = a[::-1]
+    return np.ascontiguousarray(a)
+
+
+def model_inputs(arm, recs, shift=0, flip="none"):
+    if flip != "none" and arm != "fld":
+        raise ValueError("flips are read for arm F only (its validation used rslearn's Flip)")
+    if arm in ("mangrove", "fld"):
+        return [flip_input(r["input"], flip) if flip != "none" else r["input"] for r in recs], None
     return [r["crops"][shift] for r in recs], [r["locs"][shift] for r in recs]
 
 
@@ -1519,7 +2139,7 @@ def cmd_inventory(args):
     out_dir = args.out_dir or OUT
     inv = {"experiment": "exp89 inventory: files, checkpoint keys, windows and labels per split; no model is run",
            "arm": arm, "utc": utc_now(), "prereg_status": prereg_status(), "commit": git_state()[0],
-           "config_revision": CONFIG_REVISION,
+           "config_revision": CONFIG_REVISION, "report_only": is_report_only(arm),
            "nandi": nandi_status() if not args.offline else {"status": "not checked (offline)"}}
     if arm == "nandi" and inv["nandi"]["status"] != "readable and pinned" and not getattr(args, "synthetic", False):
         inv["status"] = "not run"
@@ -1527,19 +2147,19 @@ def cmd_inventory(args):
         print(f"arm N not run: {ARMS['nandi']['not_run_reason']}", flush=True)
         return 0
     A = ARMS[arm]
+    if waiting_reason(arm):
+        inv["waiting"] = waiting_reason(arm)                  # the inventory may run; scoring a window may not
     data_dir = args.data or default_data_dir(arm)
     files = {}
-    if not args.offline:
+    windows_root, extracted = resolve_data(arm, data_dir, download=not args.offline, tar=getattr(args, "tar", None))
+    if not args.offline and arm != "fld":
         for fname, sha in [(A["data_file"], A["data_sha256"])] + list(A["extra_files"].items()):
-            if arm == "awf" and os.path.isdir(os.path.join(data_dir, "dataset", "windows")):
-                break
             p, got = hub_file(A["data"], fname, A["data_revision"], "dataset", sha)
             files[fname] = {"path": p, "bytes": os.path.getsize(p), "sha256": got, "sha256_pinned": sha,
                             "matches": got == sha}
-    windows_root, extracted = resolve_data(arm, data_dir, download=not args.offline)
     inv["files"], inv["extracted"], inv["windows_root"] = files, extracted, windows_root
     tar_path = (extracted or {}).get("tar")
-    if tar_path and os.path.exists(tar_path):
+    if arm != "fld" and tar_path and os.path.exists(tar_path):     # arm F's 42 GB tar: its extraction counted it
         with tarfile.open(tar_path) as tf:
             names = tf.getnames()
         top = {}
@@ -1565,8 +2185,9 @@ def cmd_inventory(args):
     inv["dataset"] = dataset_summary(arm, windows_root)
     dump(inv, os.path.join(out_dir, f"exp89_inventory_{arm}.json"))
     d = inv["dataset"]
-    print(json.dumps(e78.jsonable({"windows_per_split": d["windows_per_split"], "units_per_split": d["units_per_split"],
-                                   "item_groups": d["item_groups_per_window"], "window_px": d["window_px"]}), indent=1))
+    keys = ("windows_per_split", "units_per_split", "item_groups_per_window", "window_px") + (
+        ("val_units_per_group", "ai2_val_windows") if arm == "fld" else ())
+    print(json.dumps(e78.jsonable({k: d.get(k) for k in keys}), indent=1))
     return 0
 
 
@@ -1599,7 +2220,7 @@ def dataset_summary(arm, windows_root):
         for w in ws:
             _count(sp, str(w["split"]))
         per_group[g] = {"n_windows": len(ws), "splits": sp}
-    windows = arm_windows(arm, windows_root) if arm == "awf" else list_windows(windows_root, A["group"])
+    windows = arm_windows(arm, windows_root)
     out = {"groups": per_group, "group": A["group"], "windows_per_split": {}, "units_per_split": {},
            "dropped_per_split": {}, "unit_classes_per_split": {}, "pixel_classes_per_split": {}, "window_px": {},
            "crs": {}, "time_range": {"min_start": None, "max_end": None, "durations_days": {}}, "layers": {},
@@ -1631,11 +2252,14 @@ def dataset_summary(arm, windows_root):
                 e = out["layers"].setdefault(base, {"dirs": 0, "completed": 0})
                 e["dirs"] += 1
                 e["completed"] += os.path.exists(os.path.join(ldir, d, "completed"))
-                if base == "sentinel2" and "." not in d:
+                if base in ("sentinel2", "pre_sentinel2", "post_sentinel2") and "." not in d:
                     for bs in os.listdir(os.path.join(ldir, d)):
                         if os.path.isdir(os.path.join(ldir, d, bs)):
                             _count(out["band_sets"], bs)
-        _count(out["item_groups_per_window"], str(len(completed_groups(w["dir"], "sentinel2"))))
+        if arm == "fld":                                  # of the eight layers the model reads, how many completed
+            _count(out["item_groups_per_window"], str(len(fld_layers_completed(w["dir"]))))
+        else:
+            _count(out["item_groups_per_window"], str(len(completed_groups(w["dir"], "sentinel2"))))
         out["items_json"] += os.path.exists(os.path.join(w["dir"], "items.json"))
         if arm == "awf":
             rec = {"label": w["label"], "drop": None}
@@ -1646,18 +2270,47 @@ def dataset_summary(arm, windows_root):
         else:
             _count(out["units_per_split"], sp)
             _count(out["unit_classes_per_split"].setdefault(sp, {}), str(rec["label"]))
+        if arm == "fld":
+            fld_window_counts(out, w, sp, rec)
         if "pixel_labels" in rec:
             for v, n in zip(*np.unique(rec["pixel_labels"], return_counts=True)):
                 _count(out["pixel_classes_per_split"].setdefault(sp, {}), str(int(v)), int(n))
     return out
 
 
+def fld_window_counts(out, w, sp, rec):
+    """Arm F's inventory, per window (reported, never a filter): the units per group in Ai2's validation split (the
+    decisive check: the sum should be Ai2's 109 if the tar's splits are those of training), the raw new_label values,
+    the paper's olmoearth_evals_split beside options.split, and windows whose label.json names another label than
+    data.geojson (label.json is never read for the label)."""
+    g = str(w.get("group"))
+    if sp == "val" and rec["label"] is not None:
+        _count(out.setdefault("val_units_per_group", {}), g)
+    _count(out.setdefault("new_label_values_per_split", {}).setdefault(sp, {}), str(rec.get("new_label")))
+    opts = w["meta"].get("options") or {}
+    if "olmoearth_evals_split" in opts:
+        _count(out.setdefault("olmoearth_evals_split_beside_split", {}),
+               f"split={sp} evals={opts['olmoearth_evals_split']}")
+    lj = os.path.join(w["dir"], "label.json")
+    if os.path.exists(lj):
+        out["label_json"] = out.get("label_json", 0) + 1
+        try:
+            with open(lj) as f:
+                d = json.load(f)
+            v = d.get("new_label", d.get("label")) if isinstance(d, dict) else None
+        except (OSError, ValueError):
+            v = "unreadable"
+        if v is not None and v != rec.get("new_label"):
+            out["label_json_differs"] = out.get("label_json_differs", 0) + 1
+    out["ai2_val_windows"] = FLD_AI2_VAL_WINDOWS
+    out["ai2_val_groups"] = list(FLD_VAL_GROUPS)
+
+
 def default_data_dir(arm):
+    """E89_DATA/<arm> (the job sets E89_DATA on scratch), else data/exp89_<arm>. Never data/awf, exp21's location."""
     base = os.environ.get("E89_DATA")
     if base:
         return os.path.join(base, arm)
-    if arm == "awf":
-        return os.path.join(ROOT, "data", "awf")
     return os.path.join(ROOT, "data", f"exp89_{arm}")
 
 
@@ -1673,7 +2326,7 @@ def model_smoke(arm, rep, windows, out_path, n=S2_WINDOWS, log=print):
     pick = sorted(rng.choice(len(usable), min(n, len(usable)), replace=False).tolist())
     chosen = [usable[i] for i in pick]
     assert all(w["split"] == "train" for w in chosen), "S2 reads training windows only"
-    recs = [r for r in read_units(arm, chosen, need="model", log=log) if "series" in r and r["label"] is not None]
+    recs = [r for r in read_units(arm, chosen, need="model", log=log) if has_input(r) and r["label"] is not None]
     inputs, locs = model_inputs(arm, recs)
     T = [r["n_groups"] for r in recs]
     lg = batched_logits(rep, inputs, locs, T, BATCH[arm])
@@ -1694,6 +2347,15 @@ def model_smoke(arm, rep, windows, out_path, n=S2_WINDOWS, log=print):
         res["timestamp_conventions"] = {"rslearn": "day 1, month index, 2024", "exp21": "day 15, month index, 2023",
                                         "max_abs_logit_difference": float(np.abs(lg - lg15).max()) if lg.size else None,
                                         "n_predictions_changed": int((lg15.argmax(1) != pred).sum())}
+    if arm == "fld":
+        # Ai2's validation ran the encoder under bf16 autocast; the replica is fp32. Reported on training windows only.
+        lgb = batched_logits(rep, inputs, locs, T, BATCH[arm], precision="bf16")
+        res["bf16_autocast"] = {"max_abs_logit_difference": float(np.abs(lg - lgb).max()) if lg.size else None,
+                                "n_predictions_changed": int((lgb.argmax(1) != pred).sum()),
+                                "accuracy_in_sample_bf16": (float((lgb.argmax(1) == label).mean()) if label.size
+                                                            else None)}
+        res["k3_features"] = {"n": len(FLD_FEATURE_NAMES), "finite": bool(all(np.isfinite(r["features"]).all()
+                                                                              for r in recs))}
     res["ok"] = bool(res["one_batch_output_shape"][-1] == ARMS[arm]["n_out"] and res["n_pred_untrained"] == 0
                      and (res["accuracy_ok"] is not False))
     dump(res, out_path)
@@ -1712,8 +2374,21 @@ def gate_record(arm, out_dir):
 
 
 def gate_passed(arm, out_dir=None):
+    """(whether the last attempt passed, or for a report-only arm whether the replica is aligned; the record)."""
     rec, _ = gate_record(arm, out_dir or OUT)
-    return bool(rec and rec.get("passed") is True), rec
+    return bool(rec and rec.get(gate_keys(arm)[1]) is True), rec
+
+
+def gate_keys(arm):
+    """(the attempt's key, the record's key): ("pass", "passed") for a graded arm, ("aligned", "aligned") for a
+    report-only arm, whose gate is an alignment check and never a pass or a fail."""
+    return ("aligned", "aligned") if is_report_only(arm) else ("pass", "passed")
+
+
+def alignment_label(attempts):
+    """A report-only arm's label for its numbers: "aligned" when the last check is within the tolerance, else
+    "replica not aligned" (also when no check is recorded)."""
+    return "aligned" if attempts and attempts[-1].get("aligned") is True else NOT_ALIGNED
 
 
 def ledger_path(arm, out_dir):
@@ -1758,24 +2433,31 @@ def reconcile_gate(arm, out_dir, rec):
 
 
 def require_gate(arm, out_dir, ledger_required=True):
-    """The run's own check of the gate, beside cmd_run's: a pass on the last attempt, within the attempt limit, every
-    attempt made on a frozen page, the passing attempt on the pinned checkpoint, and (when the run scores windows) the
-    same attempts in the ledger. Returns the gate record or raises GateRefused."""
+    """The run's own check of the gate, beside cmd_run's: a pass on the last attempt (a graded arm) or a recorded
+    alignment check, aligned or not (a report-only arm), within the attempt limit, every attempt made on a frozen
+    page, the last attempt on the pinned checkpoint, and (when the run scores windows) the same attempts in the
+    ledger. Returns the gate record or raises GateRefused."""
+    ro = is_report_only(arm)
+    what = "alignment check" if ro else "gate"
     rec, _ = gate_record(arm, out_dir)
     if rec is None:
-        raise GateRefused("no gate record")
-    if rec.get("closed"):
-        raise GateRefused("the gate is closed")
+        raise GateRefused(f"no {what} record")
     att = rec.get("attempts") or []
-    if rec.get("passed") is not True or not att or att[-1].get("pass") is not True:
-        raise GateRefused("the gate has not passed")
+    if ro:
+        if not att:
+            raise GateRefused("no alignment check is recorded")
+    else:
+        if rec.get("closed"):
+            raise GateRefused("the gate is closed")
+        if rec.get("passed") is not True or not att or att[-1].get("pass") is not True:
+            raise GateRefused("the gate has not passed")
     if len(att) > MAX_GATE_ATTEMPTS:
-        raise GateRefused(f"the gate record holds {len(att)} attempts, more than the {MAX_GATE_ATTEMPTS} allowed")
+        raise GateRefused(f"the {what} record holds {len(att)} attempts, more than the {MAX_GATE_ATTEMPTS} allowed")
     if any(a.get("prereg_status") != "frozen" for a in att):
         raise GateRefused("an attempt was made while the page was not frozen")
     pinned = ARMS[arm]["model_sha256"]
     if pinned and att[-1].get("checkpoint_sha256") != pinned:
-        raise GateRefused(f"the passing attempt scored {att[-1].get('checkpoint_sha256')}, not the pinned checkpoint "
+        raise GateRefused(f"the last attempt scored {att[-1].get('checkpoint_sha256')}, not the pinned checkpoint "
                           f"{pinned}")
     if ledger_required:
         ledger, lpath = read_ledger(arm, out_dir)
@@ -1784,76 +2466,95 @@ def require_gate(arm, out_dir, ledger_required=True):
     return rec
 
 
-def predict_population(arm, rep, windows, log=print, synthetic=False):
+def predict_population(arm, rep, windows, log=print, synthetic=False, flip="none"):
     """Every validation window with imagery: (records, logits). Used by the gate and the run, after freezing. The only
     function that scores a validation window; it refuses before the page is frozen, except on the synthetic smoke's
-    windows."""
+    windows. `flip` (arm F only) applies rslearn's Flip to every input, for the gate's reported accuracy by flip."""
     if not synthetic and prereg_status() != "frozen":
         raise RuntimeError(f"{os.path.relpath(PLAN, ROOT)} is not frozen: no validation window is scored")
+    if not synthetic and waiting_reason(arm):
+        raise RuntimeError(f"arm {ARM_LETTER[arm]} not run: {waiting_reason(arm)}")
     val = [w for w in windows if w["split"] == "val"]
     recs = read_units(arm, val, need="model", log=log)
-    have = [r for r in recs if "series" in r or "input" in r]
-    inputs, locs = model_inputs(arm, have)
+    have = [r for r in recs if "series" in r or has_input(r)]
+    inputs, locs = model_inputs(arm, have, flip=flip)
     lg = batched_logits(rep, inputs, locs, [r["n_groups"] for r in have], BATCH[arm])
     return recs, have, lg
 
 
 def run_gate(arm, rep, windows, out_dir, imagery_route="tar", log=print, synthetic=False):
     """G: predictions on the validation windows; only the window counts, the error counts and the accuracy are kept.
-    Each attempt goes to the ledger first, then to the gate file (see reconcile_gate)."""
+    Each attempt goes to the ledger first, then to the gate file (see reconcile_gate). For a report-only arm the same
+    record is an alignment check: "aligned" where a graded arm has "pass", and "alignment" says "aligned" or
+    "replica not aligned"; it never says pass or fail."""
     A = ARMS[arm]
+    ro = is_report_only(arm)
+    akey, rkey = gate_keys(arm)
     rec, path = gate_record(arm, out_dir)
     attempts, behind = reconcile_gate(arm, out_dir, rec)
     rec = rec or {"arm": arm, "ai2_accuracy": A["ai2_accuracy"],
                   "metric": ("pixel micro accuracy over valid label pixels" if arm == "mangrove"
-                             else "accuracy per window (one label pixel)"),
+                             else "accuracy per window" + ("" if arm == "fld" else " (one label pixel)")),
                   "tolerance_points": A["gate_tolerance"][imagery_route] * 100, "imagery_route": imagery_route,
-                  "attempts": [], "passed": False, "closed": False, "max_attempts": MAX_GATE_ATTEMPTS}
+                  "attempts": [], rkey: False, "closed": False, "max_attempts": MAX_GATE_ATTEMPTS}
     rec["attempts"] = attempts
-    rec["passed"] = bool(attempts and attempts[-1]["pass"] is True)
-    rec["closed"] = (not rec["passed"]) and len(attempts) >= MAX_GATE_ATTEMPTS
+    rec[rkey] = bool(attempts and attempts[-1][akey] is True)
+    rec["closed"] = (not rec[rkey]) and len(attempts) >= MAX_GATE_ATTEMPTS
     rec["prereg_status"] = prereg_status()
+    if ro:
+        rec["report_only"], rec["alignment"] = True, alignment_label(attempts)
+    word = (lambda ok: "aligned" if ok else NOT_ALIGNED) if ro else (lambda ok: "PASS" if ok else "FAIL")
     if behind:
         dump(rec, path)
         log(f"gate {arm}: the gate file was behind its ledger; restored to the ledger's {len(attempts)} attempts")
-    if rec["passed"]:
-        log(f"gate {arm}: already passed on attempt {rec['attempts'][-1]['attempt']}; not rerun")
+    if rec[rkey]:
+        log(f"gate {arm}: {'aligned' if ro else 'already passed'} on attempt {rec['attempts'][-1]['attempt']}; "
+            "not rerun")
         return rec
     if rec["closed"]:
         dump(rec, path)
-        log(f"gate {arm}: closed after {len(rec['attempts'])} failed attempts; nothing is graded")
+        log(f"gate {arm}: closed after {len(rec['attempts'])} attempts outside the tolerance; " +
+            ("every number of the run is labelled 'replica not aligned'" if ro else "nothing is graded"))
         return rec
     recs, have, lg = predict_population(arm, rep, windows, log, synthetic=synthetic)
     pred = lg.argmax(1)
     kept = [i for i, r in enumerate(have) if r["label"] is not None]
+    n_blind = sum(1 for r in recs if r.get("no_imagery"))
     if not kept:
         raise GateRefused(f"gate {arm}: none of the {len(recs)} validation windows has both imagery and a kept label "
-                          f"({len(recs) - len(have)} have no imagery). Nothing to gate on; no attempt is recorded.")
+                          f"({n_blind} have no imagery). Nothing to gate on; no attempt is recorded.")
     label = np.array([have[i]["label"] for i in kept])
     n_err = int((pred[kept] != label).sum())
     acc_w = 1.0 - n_err / len(kept)
+    by_flip = None
+    if arm == "fld":                                 # Ai2's validation flipped at random; reported beside, not gated
+        by_flip = {"none": acc_w}
+        for f in FLIPS[1:]:
+            pf = predict_population(arm, rep, windows, log, synthetic=synthetic, flip=f)[2].argmax(1)
+            by_flip[f] = float((pf[kept] == label).mean())
     commit, dirty = git_state()
     att = {"attempt": len(rec["attempts"]) + 1, "utc": utc_now(), "commit": commit, "dirty": dirty,
            "prereg_status": prereg_status(), "checkpoint_sha256": getattr(rep, "checkpoint_sha256", None),
            "n_windows": len(kept), "n_errors": n_err, "accuracy": acc_w,
-           "n_windows_dropped": len(recs) - len(kept), "n_windows_no_imagery": len(recs) - len(have),
-           "n_pixels": None, "n_pixel_errors": None, "accuracy_pixel": None}
+           "n_windows_dropped": len(recs) - len(kept), "n_windows_no_imagery": n_blind,
+           "n_pixels": None, "n_pixel_errors": None, "accuracy_pixel": None, "accuracy_by_flip": by_flip}
     if arm == "mangrove":
         att.update(pixel_accuracy(have, pred))
         gated = att["accuracy_pixel"]
     else:
         gated = acc_w
     att["gap_points"] = (gated - A["ai2_accuracy"]) * 100
-    att["pass"] = bool(abs(gated - A["ai2_accuracy"]) <= A["gate_tolerance"][imagery_route] + EPS)
+    att[akey] = bool(abs(gated - A["ai2_accuracy"]) <= A["gate_tolerance"][imagery_route] + EPS)
     att = json.loads(json.dumps(e78.jsonable(att)))                 # the file's and the ledger's form, identical
     append_ledger(arm, out_dir, att)                                # the count first, so a crash cannot lose it
     rec["attempts"].append(att)
-    rec["passed"] = att["pass"]
-    rec["closed"] = (not att["pass"]) and len(rec["attempts"]) >= MAX_GATE_ATTEMPTS
+    rec[rkey] = att[akey]
+    rec["closed"] = (not att[akey]) and len(rec["attempts"]) >= MAX_GATE_ATTEMPTS
+    if ro:
+        rec["alignment"] = alignment_label(rec["attempts"])
     dump(rec, path)
     log(f"gate {arm} attempt {att['attempt']}: accuracy {gated:.4f} against Ai2's {A['ai2_accuracy']:.3f} "
-        f"(gap {att['gap_points']:+.2f} points, tolerance {rec['tolerance_points']:.1f}): "
-        f"{'PASS' if att['pass'] else 'FAIL'}")
+        f"(gap {att['gap_points']:+.2f} points, tolerance {rec['tolerance_points']:.1f}): {word(att[akey])}")
     return rec
 
 
@@ -1863,17 +2564,16 @@ def cmd_gate(args):
         print(f"refused: {os.path.relpath(PLAN, ROOT)} says the preregistration is {status}. The gate scores "
               "validation windows and runs only after freezing.", flush=True)
         return 2
-    if args.arm == "nandi":
-        st = nandi_status()
-        if st["status"] != "readable and pinned":
-            print(f"arm N not run: {st['reason']}", flush=True)
-            return 0
+    if not_run_message(args.arm):
+        print(not_run_message(args.arm), flush=True)
+        return 0
     out_dir = args.out_dir or OUT
+    akey, rkey = gate_keys(args.arm)
     try:
         # the ledger is read before any download or model load: a passed or closed gate needs no model, a file that
         # disagrees with its ledger is refused
         attempts, _ = reconcile_gate(args.arm, out_dir, gate_record(args.arm, out_dir)[0])
-        if (attempts and attempts[-1]["pass"] is True) or len(attempts) >= MAX_GATE_ATTEMPTS:
+        if (attempts and attempts[-1][akey] is True) or len(attempts) >= MAX_GATE_ATTEMPTS:
             rec = run_gate(args.arm, None, [], out_dir)
         else:
             rep, windows = build_arm(args)
@@ -1881,7 +2581,21 @@ def cmd_gate(args):
     except GateRefused as ex:
         print(f"refused: {ex}", flush=True)
         return 2
+    if is_report_only(args.arm):
+        return 0                                    # an alignment check is reported, whichever way it reads
     return 0 if rec["passed"] else 1
+
+
+def not_run_message(arm):
+    """The line every scoring mode prints for an arm that cannot run: N while the Hub answers 401, M until Ai2's
+    validation split is pinned. None for an arm that can run."""
+    if arm == "nandi":
+        st = nandi_status()
+        if st["status"] != "readable and pinned":
+            return f"arm N not run: {st['reason']}"
+    if waiting_reason(arm):
+        return f"arm M not run: {waiting_reason(arm)}"
+    return None
 
 
 def checkpoint_path(args):
@@ -1898,7 +2612,8 @@ def checkpoint_path(args):
 
 def build_arm(args, model_id="OLMOEARTH_V1_BASE"):
     ckpt, sha = checkpoint_path(args)                       # refused off the pin before any data is read
-    windows_root, _ = resolve_data(args.arm, args.data or default_data_dir(args.arm), download=not args.offline)
+    windows_root, _ = resolve_data(args.arm, args.data or default_data_dir(args.arm), download=not args.offline,
+                                   tar=getattr(args, "tar", None))
     rep = Replica(args.arm, ckpt, model_id=model_id, checkpoint_sha256=sha)
     return rep, arm_windows(args.arm, windows_root)
 
@@ -1906,7 +2621,8 @@ def build_arm(args, model_id="OLMOEARTH_V1_BASE"):
 # ----------------------------------------------------------------------------- the full run
 def compute_units(arm, rep, windows, log=print, k3_cap=None, synthetic=False, out_dir=None):
     """Logits, controls and K3 on the validation windows; K2's frequencies and K3's fit on the training windows.
-    Refused without a verified gate pass, except on the synthetic smoke's windows."""
+    Refused without a verified gate pass (a graded arm) or a recorded alignment check (a report-only arm), except on
+    the synthetic smoke's windows."""
     A = ARMS[arm]
     if not synthetic:
         require_gate(arm, out_dir or OUT)
@@ -1928,15 +2644,26 @@ def compute_units(arm, rep, windows, log=print, k3_cap=None, synthetic=False, ou
     if cap is not None and len(tr_ok) > cap:
         pick = np.sort(rng.choice(len(tr_ok), cap, replace=False))
         tr_ok = [tr_ok[i] for i in pick]
-    tr_recs = [r for r in read_units(arm, tr_ok, need="model", log=log) if "series" in r and r["label"] is not None]
-    xtr = k3_features(np.stack([r["series"] for r in tr_recs]), rep.normalize, arm)
+    if arm == "fld":
+        # K3 on the 128 crop statistics of reading q, the training windows read without keeping their crops
+        tr_recs = [r for r in read_units(arm, tr_ok, need="features", log=log)
+                   if "features" in r and r["label"] is not None]
+        xtr = np.stack([r["features"] for r in tr_recs])
+        xva = np.stack([r["features"] for r in units])
+    else:
+        tr_recs = [r for r in read_units(arm, tr_ok, need="model", log=log)
+                   if "series" in r and r["label"] is not None]
+        xtr = k3_features(np.stack([r["series"] for r in tr_recs]), rep.normalize, arm)
+        series = np.stack([r["series"] for r in units])
+        xva = k3_features(series, rep.normalize, arm)
     ytr = np.array([r["label"] for r in tr_recs])
-    series = np.stack([r["series"] for r in units])
-    xva = k3_features(series, rep.normalize, arm)
     prob, k3_fit = fit_no_encoder_classifier(xtr, ytr, A["trained"], xva)
     k3, k3_class = k3_signals(prob, A["trained"], pred)
-    controls = {"k2_class_rarity": k2, **k3,
-                **index_controls(arm, series, np.stack([r["ndvi3x3"] for r in units]) if arm != "mangrove" else None)}
+    if arm == "fld":
+        indices = fld_index_controls([r["indices"] for r in units])
+    else:
+        indices = index_controls(arm, series, np.stack([r["ndvi3x3"] for r in units]) if arm != "mangrove" else None)
+    controls = {"k2_class_rarity": k2, **k3, **indices}
     names = [r["name"] for r in units]
     lonlat = [window_lonlat(r["meta"]) for r in units]
     cl = [cluster_ids(arm, r["meta"], r["name"], ll) for r, ll in zip(units, lonlat)]
@@ -1947,8 +2674,10 @@ def compute_units(arm, rep, windows, log=print, k3_cap=None, synthetic=False, ou
            "clusters": np.array(clusters), "clusters_coarse": np.array([c[1] for c in cl]) if cl and cl[0][1] else None,
            "controls": controls, "k3_prob": prob, "k3_class": k3_class,
            "n_groups": np.array([r["n_groups"] for r in units]),
-           "stratum": np.array([str(v) for v in label]) if arm != "nandi" else
-           np.array([str((r["meta"].get("options") or {}).get("source", "unrecorded")) for r in units])}
+           "stratum": (np.array([str((r["meta"].get("options") or {}).get("source", "unrecorded")) for r in units])
+                       if arm == "nandi" else
+                       np.array([str(r.get("group")) for r in units]) if arm == "fld" else
+                       np.array([str(v) for v in label]))}
     meta = {"n_val_windows": len(recs), "n_val_with_imagery": len(have), "n_units": int(keep.sum()),
             "dropped": {}, "k2_training_frequency": freq, "k3": k3_fit, "k3_cap": cap,
             "n_train_windows_labelled": int(tr_labels.size), "n_train_for_k3": len(tr_recs)}
@@ -1962,6 +2691,9 @@ def compute_units(arm, rep, windows, log=print, k3_cap=None, synthetic=False, ou
         controls["reported_context_shift_instability"] = context_shift(rep, units, pred)
     if arm == "awf":
         meta["exp21_agreement"] = exp21_agreement(names, pred)
+    if arm == "fld":
+        meta["k3_feature_names"] = FLD_FEATURE_NAMES
+        meta["val_units_per_group"] = {str(g): int(n) for g, n in zip(*np.unique(out["stratum"], return_counts=True))}
     return out, meta
 
 
@@ -2026,7 +2758,8 @@ def summary_path(out_dir):
 def run_arm(arm, out_dir, rep=None, windows=None, units_file=None, draws=DRAWS, n_boot=BOOT, log=print, k3_cap=None,
             synthetic=False):
     """The run past both guards: units (computed, or read from a units file), the grading, the summary. It checks the
-    gate itself (require_gate); grading a units file needs the pass but not the ledger, which stays on the cluster."""
+    gate itself (require_gate); grading a units file needs the pass but not the ledger, which stays on the cluster.
+    A report-only arm needs a recorded alignment check, aligned or not, and its numbers carry the check's label."""
     t0 = time.time()
     if not synthetic:
         if prereg_status() != "frozen":
@@ -2040,8 +2773,11 @@ def run_arm(arm, out_dir, rep=None, windows=None, units_file=None, draws=DRAWS, 
         units_info = write_units(units, os.path.join(out_dir, f"exp89_units_{arm}.npz"))
         meta["replica"] = rep.info()
     res = grade_units(units, arm, draws=draws, n_boot=n_boot)
-    res.update({"inputs": meta, "units_file": units_info, "seconds": time.time() - t0,
-                "gate": gate_passed(arm, out_dir)[1]})
+    gate = gate_passed(arm, out_dir)[1]
+    res.update({"inputs": meta, "units_file": units_info, "seconds": time.time() - t0, "gate": gate})
+    if is_report_only(arm):
+        # "aligned", or "replica not aligned" when the last check is outside the tolerance or none is recorded
+        res["alignment"] = alignment_label((gate or {}).get("attempts") or [])
     path = summary_path(out_dir)
     summary = json.load(open(path)) if os.path.exists(path) else {
         "experiment": "exp89: the package's three outputs on Ai2's fine-tuned models",
@@ -2055,7 +2791,18 @@ def run_arm(arm, out_dir, rep=None, windows=None, units_file=None, draws=DRAWS, 
                                "k5_b02": K5_B02, "config_revision": CONFIG_REVISION}})
     summary["arms"][arm] = res
     summary["arms"]["nandi"] = summary["arms"].get("nandi") if arm == "nandi" else nandi_status_safe()
+    if arm != "mangrove" and waiting_reason("mangrove"):
+        summary["arms"]["mangrove"] = {"status": "not run", "reason": waiting_reason("mangrove")}
     dump(summary, path)
+    if is_report_only(arm):
+        rep_ = res["reported"]
+        cap = (rep_.get("review_order") or {}).get("capture", {}).get(bkey(0.10))
+        best = rep_.get("best_informative_control") or {}
+        au = best.get("auroc")
+        log(f"{arm}: report-only, {res['alignment']} | {res['n_errors']} errors of {res['n_units']} | confidence "
+            f"captures {cap if cap is None else round(cap, 3)} of the errors in a 10% review; best informative "
+            f"control {best.get('name')} (AUROC {au if au is None else round(au, 3)}) | {res['seconds']:.0f}s")
+        return res
     g = res["prereg"]
     log(f"{arm}: " + ", ".join(f"{p} {g[p]['holds']}" for p in ("P1", "P2", "P3", "P4", "P5")) +
         f" | {res['n_errors']} errors of {res['n_units']} | {res['seconds']:.0f}s")
@@ -2076,11 +2823,9 @@ def cmd_run(args):
               "scored before freezing; --inventory and --smoke-torch --real (training windows) are allowed.", flush=True)
         return 2
     out_dir = args.out_dir or OUT
-    if args.arm == "nandi":
-        st = nandi_status()
-        if st["status"] != "readable and pinned":
-            print(f"arm N not run: {st['reason']}", flush=True)
-            return 0
+    if not_run_message(args.arm):
+        print(not_run_message(args.arm), flush=True)
+        return 0
     try:
         require_gate(args.arm, out_dir, ledger_required=not args.from_units)
         if args.from_units:
@@ -2089,9 +2834,12 @@ def cmd_run(args):
             rep, windows = build_arm(args)
             res = run_arm(args.arm, out_dir, rep, windows)
     except GateRefused as ex:
-        print(f"refused: {ex} for arm {args.arm} (exp89_gate_{args.arm}.json). Nothing is graded until it passes.",
-              flush=True)
+        tail = ("Nothing is run until an alignment check is recorded." if is_report_only(args.arm)
+                else "Nothing is graded until it passes.")
+        print(f"refused: {ex} for arm {args.arm} (exp89_gate_{args.arm}.json). {tail}", flush=True)
         return 2
+    if is_report_only(args.arm):
+        return 0
     return 0 if res["prereg"]["complete"] else 1
 
 
@@ -2115,6 +2863,8 @@ def synthetic_dataset(root, arm, n_train=24, n_val=16, seed=0, size=None, datase
     crop), one band set B01..B12 at 10 m, label_raster/label with classes 1..3 (a few mixed or 0 blocks). Nandi and
     AWF: `size` px windows with one labelled pixel in label/category (fill 10 or 9), the three band groups at 10, 20
     and 60 m (AWF's tar layout); one window with two labelled pixels and one month with no mosaic."""
+    if arm == "fld":
+        return synthetic_fld_dataset(root, n_train=n_train, n_val=n_val, seed=seed, size=size or 72)
     from rasterio.transform import Affine
     A = ARMS[arm]
     rng = np.random.default_rng(seed)
@@ -2172,6 +2922,71 @@ def synthetic_dataset(root, arm, n_train=24, n_val=16, seed=0, size=None, datase
     return os.path.join(root, "dataset"), names
 
 
+FLD_SYN_GROUPS = ("20250428_brazil_phase1", "peru3")
+FLD_SYN_EXTRA_LAYERS = ("pre_sentinel2.4", "post_sentinel1", "mask")      # in the tar, never extracted
+FLD_BAND_SET = "B01_B02_B03_B04_B05_B06_B07_B08_B8A_B09_B11_B12"
+
+
+def synthetic_fld_dataset(root, n_train=10, n_val=6, seed=0, size=72):
+    """Arm F's rslearn layout as the investigation describes it: windows/<group>/<name>/metadata.json (options.split
+    beside a contradicting olmoearth_evals_split), the eight image layers pre_sentinel2[.k] and post_sentinel2[.k]
+    (k 1 to 3), each one band set of the 12 bands at 10 m with rslearn's `completed` marker, the vector label layer
+    layers/label/data.geojson (new_label) with its marker, and a stale label.json at the window's top that must never
+    be read. Also layers the run never reads (pre_sentinel2.4, post_sentinel1, mask). Special windows: the first
+    validation window lacks one image layer's marker (rslearn drops it), the second has new_label "unknown" (invalid),
+    the third has a first feature without properties, and the fourth's pre_sentinel2.2 is all 0 (an empty timestep).
+    Post layers have less NIR than pre layers where the class is not "none" (a loss signal for K4)."""
+    from rasterio.transform import Affine
+    rng = np.random.default_rng(seed)
+    names = []
+    for i in range(n_train + n_val):
+        split = "train" if i < n_train else "val"
+        j = i - n_train                                              # the validation index, negative for training
+        group = FLD_SYN_GROUPS[0] if (split == "val" or i % 2) else FLD_SYN_GROUPS[1]
+        name = f"fld_{i:04d}"
+        wdir = os.path.join(root, "dataset", "windows", group, name)
+        os.makedirs(wdir, exist_ok=True)
+        x0, y0 = 30000 + 200 * i, -900000 - 150 * i
+        meta = {"group": group, "name": name,
+                "projection": {"crs": "EPSG:32722", "x_resolution": 10, "y_resolution": -10},
+                "bounds": [x0, y0, x0 + size, y0 + size],
+                "time_range": ["2024-03-01T00:00:00+00:00", "2024-03-02T00:00:00+00:00"],
+                "options": {"split": split, "olmoearth_evals_split": "train" if split == "val" else "val"}}
+        with open(os.path.join(wdir, "metadata.json"), "w") as f:
+            json.dump(meta, f)
+        cls = int(rng.integers(0, len(FLD_CLASSES)))
+        new_label = "unknown" if j == 1 else FLD_CLASSES[cls]
+        feats = [{"type": "Feature", "geometry": {"type": "Point", "coordinates": [x0 * 10.0, y0 * -10.0]},
+                  "properties": {"new_label": new_label, "old_label": "logging"}}]
+        if j == 2:
+            feats.insert(0, {"type": "Feature", "geometry": None, "properties": None})
+        ldir = os.path.join(wdir, "layers", "label")
+        os.makedirs(ldir, exist_ok=True)
+        with open(os.path.join(ldir, "data.geojson"), "w") as f:
+            json.dump({"type": "FeatureCollection", "features": feats}, f)
+        open(os.path.join(ldir, "completed"), "w").close()
+        with open(os.path.join(wdir, "label.json"), "w") as f:
+            json.dump({"new_label": "mining" if new_label != "mining" else "road"}, f)    # stale, never read
+        tr = Affine(10, 0, x0 * 10, 0, -10, y0 * -10)
+        loss = FLD_CLASSES[cls] != "none"
+        for t, lname in enumerate(FLD_LAYERS + FLD_SYN_EXTRA_LAYERS):
+            post = lname.startswith("post")
+            base = rng.integers(200, 800, (12, size, size))
+            nir = 3200 - (1600 if (post and loss) else 0) + 30 * t
+            data = base.astype(np.uint16)
+            data[FLD_BAND_SET.split("_").index("B08")] = nir + rng.integers(0, 200, (size, size))
+            data[FLD_BAND_SET.split("_").index("B04")] = 400 + 600 * (post and loss)
+            if j == 3 and lname == "pre_sentinel2.2":
+                data[:] = 0                                              # an empty timestep
+            write_tif(os.path.join(wdir, "layers", lname, FLD_BAND_SET, "geotiff.tif"), data, "EPSG:32722", tr)
+            if not (j == 0 and lname == "post_sentinel2.2"):
+                open(os.path.join(wdir, "layers", lname, "completed"), "w").close()
+        names.append(name)
+    with open(os.path.join(root, "dataset", "config.json"), "w") as f:
+        json.dump({"layers": {n: {"type": "raster"} for n in FLD_LAYERS} | {"label": {"type": "vector"}}}, f)
+    return os.path.join(root, "dataset"), names
+
+
 def synthetic_tar(root, arm, **kw):
     """The synthetic dataset packed as a tar the way the Hub's mangrove.tar is fetched and extracted."""
     ds, names = synthetic_dataset(os.path.join(root, "src"), arm, **kw)
@@ -2191,13 +3006,19 @@ def synthetic_checkpoint(path, arm, model_id="OLMOEARTH_V1_NANO", seed=0):
     enc = encoder_skeleton(model_id).encoder
     D = int(enc.embedding_size)
     A = ARMS[arm]
-    sd = {ENCODER_PREFIXES[0] + k: v.clone() for k, v in enc.state_dict().items()}
-    wk, bk = A["head_keys"]
-    w = torch.randn(A["n_out"], D) * 0.05
-    sd[wk] = w if A["head_kind"] == "linear" else w[:, :, None, None]
-    b = torch.zeros(A["n_out"])
-    b[list(A["untrained"])] = -100.0                                        # the untrained channel is never chosen
-    sd[bk] = b
+    if A["head_kind"] == "pooling_decoder":
+        # SimpleTimeSeries around the wrapper: the encoder one level deeper, rslearn's PoolingDecoder at decoder.0
+        sd = {FLD_ENCODER_PREFIX + k: v.clone() for k, v in enc.state_dict().items()}
+        head = make_pooling_decoder(2 * D, A["n_out"], 1, 2, 128, 512)
+        sd.update({FLD_HEAD_PREFIX + k: v.clone() for k, v in head.state_dict().items()})
+    else:
+        sd = {ENCODER_PREFIXES[0] + k: v.clone() for k, v in enc.state_dict().items()}
+        wk, bk = A["head_keys"]
+        w = torch.randn(A["n_out"], D) * 0.05
+        sd[wk] = w if A["head_kind"] == "linear" else w[:, :, None, None]
+        b = torch.zeros(A["n_out"])
+        b[list(A["untrained"])] = -100.0                                    # the untrained channel is never chosen
+        sd[bk] = b
     # a stand-in rslearn package, registered only while saving, so the checkpoint pickles an rslearn global as a real
     # one does; it is gone before anything loads the file
     added = [m for m in ("rslearn", "rslearn.fake_config") if m not in _sys.modules]
@@ -2224,11 +3045,9 @@ def smoke_torch(args):
     import tempfile
     out_dir = args.out_dir or OUT
     if args.real:
-        if args.arm == "nandi":
-            st = nandi_status()
-            if st["status"] != "readable and pinned":
-                print(f"arm N not run: {st['reason']}", flush=True)
-                return 0
+        if not_run_message(args.arm):
+            print(not_run_message(args.arm), flush=True)
+            return 0
         rep, windows = build_arm(args)
         res = model_smoke(args.arm, rep, windows, os.path.join(out_dir, f"exp89_s2_{args.arm}.json"))
         return 0 if res["ok"] else 1
@@ -2252,24 +3071,34 @@ def smoke_torch(args):
     # 2. each arm: synthetic tar -> extraction -> inventory -> S2 -> gate -> run, past the freeze guard only
     for arm, kw in (("mangrove", {"n_train": 30, "n_val": 22}),
                     ("nandi", {"n_train": 6, "n_val": 4, "size": 24, "dataset_bands": "three"}),
-                    ("awf", {"n_train": 10, "n_val": 6, "size": 63, "dataset_bands": "three"})):
+                    ("awf", {"n_train": 10, "n_val": 6, "size": 63, "dataset_bands": "three"}),
+                    ("fld", {"n_train": 10, "n_val": 7, "size": 72})):
         with tempfile.TemporaryDirectory() as tmp:
             tar_path, names = synthetic_tar(tmp, arm, **kw)
             data_dir = os.path.join(tmp, "data")
-            extract_tar(tar_path, data_dir)
+            if arm == "fld":                       # the layer filter; the size and MD5 pins are the real tar's
+                ext = extract_layers(tar_path, data_dir, FLD_KEEP_LAYERS, {"tar": tar_path, "synthetic": True})
+                assert set(ext["skipped"]) == set(FLD_SYN_EXTRA_LAYERS), ext["skipped"]
+            else:
+                extract_tar(tar_path, data_dir)
             ck, D = synthetic_checkpoint(os.path.join(tmp, "m.ckpt"), arm)
             sub_out = os.path.join(tmp, "out")
             # synthetic=True lets arm N's code run here, on synthetic data only; every real mode keeps refusing it
             ns = argparse.Namespace(arm=arm, data=data_dir, ckpt=ck, out_dir=sub_out, offline=True, real=False,
-                                    from_units=None, synthetic=True)
+                                    from_units=None, synthetic=True, tar=None)
             assert cmd_inventory(ns) == 0
             inv = json.load(open(os.path.join(sub_out, f"exp89_inventory_{arm}.json")))
             d = inv["dataset"]
             # oe_inferencex.awf lists only windows with one labelled pixel, so arm A never sees the two-pixel window
             n_train = kw["n_train"] - (arm == "awf")
             assert d["windows_per_split"] == {"train": n_train, "val": kw["n_val"]}, d["windows_per_split"]
-            assert d["item_groups_per_window"] == {"12": n_train + kw["n_val"]}
-            assert inv["checkpoint"]["head_expected"][ARMS[arm]["head_keys"][0]] is not None
+            if arm == "fld":
+                assert d["item_groups_per_window"] == {"8": n_train + kw["n_val"] - 1, "7": 1}
+                assert d["units_per_split"]["val"] == kw["n_val"] - 2, "a layer missing and an unknown label"
+                assert d["label_json_differs"] == n_train + kw["n_val"], "label.json is stale and never read"
+            else:
+                assert d["item_groups_per_window"] == {"12": n_train + kw["n_val"]}
+            assert all(v is not None for v in inv["checkpoint"]["head_expected"].values())
             if arm == "mangrove":
                 assert sum(d["dropped_per_split"].get("val", {}).values()) + d["units_per_split"]["val"] == kw["n_val"]
                 assert "4x4" in d["window_px"]
@@ -2288,16 +3117,24 @@ def smoke_torch(args):
                 legacy = rep.sample(x, "rslearn").timestamps[0]
                 assert legacy[:, 0].tolist() == [1] * 12 and legacy[:, 1].tolist() == list(range(12))
                 assert legacy[:, 2].tolist() == [2024] * 12, "rslearn's legacy stamps: day 1, month index, 2024"
-            windows = arm_windows(arm, find_windows_root(data_dir) if arm != "awf" else
-                                  os.path.join(data_dir, "dataset", "windows"))
+            windows = arm_windows(arm, find_windows_root(data_dir))
             s2 = model_smoke(arm, rep, windows, os.path.join(sub_out, f"exp89_s2_{arm}.json"), n=8)
             assert s2["one_batch_output_shape"][-1] == ARMS[arm]["n_out"] and s2["n_pred_untrained"] == 0, s2
             if arm != "awf":
                 assert s2["timestamp_conventions"]["max_abs_logit_difference"] is not None
+            if arm == "fld":
+                assert s2["bf16_autocast"]["max_abs_logit_difference"] is not None and s2["k3_features"]["finite"]
             g = run_gate(arm, rep, windows, sub_out, synthetic=True)
-            assert set(g) == set(GATE_KEYS), sorted(g)
-            assert set(g["attempts"][0]) == set(ATTEMPT_KEYS), sorted(g["attempts"][0])
+            ro = is_report_only(arm)
+            assert set(g) == set(ALIGN_KEYS if ro else GATE_KEYS), sorted(g)
+            assert set(g["attempts"][0]) == set(ALIGN_ATTEMPT_KEYS if ro else ATTEMPT_KEYS), sorted(g["attempts"][0])
+            if arm == "fld":
+                assert set(g["attempts"][0]["accuracy_by_flip"]) == set(FLIPS)
+                assert g["attempts"][0]["n_windows"] == kw["n_val"] - 2
             res = run_arm(arm, sub_out, rep, windows, draws=20, n_boot=20, k3_cap=12, synthetic=True)
+            if ro:
+                assert res["report_only"] and res["alignment"] in ("aligned", NOT_ALIGNED)
+                assert not verdicts_in({k: v for k, v in res.items() if k != "gate"}), verdicts_in(res)
             try:
                 predict_population(arm, rep, windows)
             except RuntimeError as ex:
@@ -2350,6 +3187,8 @@ def main(argv=None):
     ap.add_argument("--from-units", default=None, help="the full run from a units file (grading only)")
     ap.add_argument("--data", default=None, help="where the arm's dataset is (or is extracted to)")
     ap.add_argument("--ckpt", default=None, help="a local checkpoint instead of the pinned download")
+    ap.add_argument("--tar", default=None, help="the arm's dataset tar on disk (arm F: required for the first "
+                                                "extraction; the job downloads it), checked against its pin")
     ap.add_argument("--offline", action="store_true", help="no Hub access: use --data and --ckpt as they are")
     ap.add_argument("--out-dir", default=None, help="where the outputs go (default: exp/out)")
     args = ap.parse_args(argv)

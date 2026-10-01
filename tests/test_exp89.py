@@ -1,10 +1,14 @@
 """exp89's grades, guards and per-arm rules before the preregistration is frozen and before any real run
-(docs/plan/finetuned_checkpoints.md). Synthetic units with known answers go through every measure and every grade:
-in one case the model's confidence beats an informative control on every prediction, in one the control wins, in one
-nothing is informative, and arm A's case is graded on P2 and P3 only. The grades are also checked on planted numbers
-at their thresholds. The guards are checked without a model: no full run before the page is frozen and the gate has
-passed, and a gate file that holds counts and accuracy only. The channel, fill and label rules of each arm, and the
-reader on an rslearn layout written to disk, are checked here too. K3's fit runs only where torch is installed."""
+(docs/plan/finetuned_checkpoints.md, amended 1 October 2026). Synthetic units with known answers go through every
+measure and every grade: in one case the model's confidence beats an informative control on every prediction, in one
+the control wins, in one nothing is informative. Arms A and F are report-only: their cases go through every measure
+and must carry no verdict anywhere, in what is written or printed. The grades are also checked on planted numbers at
+their thresholds. The guards are checked without a model: no full run before the page is frozen and the gate has
+passed (or, for a report-only arm, an alignment check is recorded), and a gate file that holds counts and accuracy
+only. Arm M is reported as not run until Ai2's split is pinned. The channel, fill and label rules of each arm, the
+readers on rslearn layouts written to disk (arm F's and arm A's included), arm F's tar filter and pin, and the
+extraction manifest that catches the scratch purge are checked here too. K3's fit and the replica's forward pass run
+only where torch is installed."""
 import argparse
 import json
 import os
@@ -21,12 +25,21 @@ from oe_inferencex import metrics, stats    # noqa: E402
 FROZEN = "# exp89\n\n**Status: frozen on 2 October 2026, before any run.**\n"
 DRAFT = "# exp89\n\n**Status: DRAFT, not frozen.** Written 1 October 2026.\n"
 PINNED_MANGROVE = e89.ARMS["mangrove"]["model_sha256"]
+PINNED_FLD = e89.ARMS["fld"]["model_sha256"]
+MANGROVE_SPLIT_AS_SHIPPED = e89.ARMS["mangrove"]["split_source"]
 
 
 @pytest.fixture(autouse=True)
 def _ledger_beside_the_gate_file(monkeypatch):
     """The gate's ledger defaults to the gate file's directory; a cluster setting in the shell must not leak in."""
     monkeypatch.delenv("E89_GATE_LEDGER", raising=False)
+
+
+@pytest.fixture(autouse=True)
+def _mangrove_split_pinned(monkeypatch):
+    """The guard tests below drive arm M's gate and run, which wait for Ai2's split; here a split is taken as pinned.
+    test_arm_m_waits_for_ai2s_split checks the shipped value and the not-run path."""
+    monkeypatch.setitem(e89.ARMS["mangrove"], "split_source", "a split pinned for the tests")
 
 
 @pytest.fixture(scope="module")
@@ -60,12 +73,33 @@ def test_the_grades_do_not_rest_on_their_thresholds(smoke):
     assert weak["P5"]["median_coverage"] == 0.0
 
 
-def test_arm_a_is_graded_on_p2_and_p3_only(smoke):
-    g = smoke["cases"]["awf_beats"]["prereg"]
-    assert g["graded_on_this_arm"] == ["P2", "P3"]
-    assert g["P1"]["graded"] is False and "P2 and P3 only" in g["P1"]["reason"]
-    assert g["P4"]["holds"] is None and g["P5"]["holds"] is None
-    assert smoke["cases"]["awf_beats"]["estimate"]["graded_budgets"] == [], "N = 400: no budget is graded"
+@pytest.mark.parametrize("case", e89.SMOKE_REPORT_ONLY)
+def test_the_report_only_arms_carry_no_verdict(smoke, case):
+    """Arms A and F: every measure is computed and reported with its interval, and nothing says pass, fail or holds,
+    though the synthetic numbers would clear some of the page's thresholds."""
+    res = smoke["cases"][case]
+    assert res["report_only"] is True and "prereg" not in res
+    assert e89.verdicts_in(res) == []
+    rep = res["reported"]
+    assert "report-only" in rep["why"] and "none is graded" in rep["why"]
+    assert set(rep["review_order"]["capture"]) == {"0.05", "0.1", "0.2"}
+    lead = rep["confidence_minus_best_control"]["0.1"]["bootstrap"]
+    assert lead["lo95"] <= lead["hi95"], "the interval is reported"
+    assert rep["review_order"]["capture"]["0.1"] >= 0.2, "a case that would clear P1's bar, and is still not graded"
+    assert set(rep["certify_best_coverage"]) == {f"{o}/{a:g}" for o in ("confidence", "k3a")
+                                                 for a in rep["alphas"]}
+    if case == "awf_report":
+        assert res["estimate"]["budgets_run"] == [300] and rep["estimate"]["300"]["run"] is True
+        assert rep["certify"]["300/0.05"]["violation_rate"] is not None
+    else:
+        assert res["estimate"]["budgets_run"] == [] and rep["certify"]["run"] is False
+
+
+def test_the_verdict_finder_finds_verdicts():
+    """verdicts_in is what keeps the report-only outputs clean, so it must catch a verdict where one is."""
+    assert e89.verdicts_in({"a": {"holds": None}}) == ["/a/holds"]
+    assert e89.verdicts_in({"x": [{"note": "the gate: PASS"}]}) == ["/x[0]/note='the gate: PASS'"]
+    assert e89.verdicts_in({"alignment": "replica not aligned", "aligned": False, "capture": 0.4}) == []
 
 
 def test_planted_grades_at_their_thresholds(smoke):
@@ -91,7 +125,8 @@ def test_the_graded_confidence_is_the_package_top1_over_the_trained_channels():
 
 @pytest.mark.parametrize("arm,n_out,trained,untrained", [("mangrove", 4, (1, 2, 3), (0,)),
                                                          ("nandi", 11, tuple(range(10)), (10,)),
-                                                         ("awf", 10, tuple(range(9)), (9,))])
+                                                         ("awf", 10, tuple(range(9)), (9,)),
+                                                         ("fld", 10, tuple(range(10)), ())])
 def test_each_arms_channels(arm, n_out, trained, untrained):
     A = e89.ARMS[arm]
     assert (A["n_out"], A["trained"], A["untrained"]) == (n_out, trained, untrained)
@@ -569,6 +604,28 @@ def test_the_page_and_the_script_agree_on_what_the_owner_settled():
     assert "Readings fixed by the run script" in page
 
 
+def test_the_page_states_the_amendment_the_script_follows():
+    """The amendment of 1 October 2026 is on the page, dated, with the page still a draft: arms F and A report-only
+    and why, their alignment tolerances and the label a check outside them gives, arm M waiting for Ai2's split, arm N
+    not run, and arm A's data path."""
+    with open(e89.PLAN, encoding="utf-8") as f:
+        page = f.read()
+    assert e89.prereg_status(page) == "draft"
+    assert "## Amendment of 1 October 2026" in page
+    assert "report-only" in page and "no pass or fail verdict is drawn" in page
+    assert "109 windows" in page and "344 points" in page and "error floor of 40" in page and "N/5" in page
+    assert "within 2.0 points of Ai2's 76.1%" in page and "within 2.0 points of Ai2's 89.5%" in page
+    assert '"replica not aligned"' in page and e89.NOT_ALIGNED == "replica not aligned"
+    assert "waits for Ai2's validation split" in page and "Slack on 1 October 2026" in page
+    assert "Arm N (Nandi) stays not run" in page
+    assert "no longer reads exp21's `data/awf`" in page
+    assert "olmoearth_evals_split" in page and "never read" in page
+    assert "—" not in page, "no em dashes"
+    for arm in ("awf", "fld"):
+        A = e89.ARMS[arm]
+        assert f"{A['ai2_accuracy'] * 100:.1f}%" in page and A["gate_tolerance"]["tar"] == 0.02
+
+
 def test_the_gate_writes_counts_and_accuracy_only_and_closes_after_three_failures(tmp_path, monkeypatch):
     _page(tmp_path, monkeypatch, FROZEN)
     monkeypatch.setattr(e89, "predict_population", lambda *a, **k: _fake_population(1000, 100))
@@ -705,7 +762,352 @@ def test_every_repo_exp89_names_is_pinned_or_says_why():
     rec = json.load(open(os.path.join(ROOT, "exp", "out", "upstream_revisions.json")))["repos"]
     for arm, A in e89.ARMS.items():
         for key, rev in (("model", A["model_revision"]), ("data", A["data_revision"])):
+            if A[key] is None:                          # arm F's dataset is not on the Hub; pinned below instead
+                continue
             entry = rec[A[key]]
             assert entry["revision"] == rev, (arm, key)
             if rev is None:
                 assert "401" in entry["why"]
+    F = e89.ARMS["fld"]
+    assert F["data"] is None and F["data_url"].startswith("https://storage.googleapis.com/")
+    assert (F["data_generation"], F["data_md5"], F["data_bytes"]) == (
+        "1761857427036506", "6abc5b944c64330f0a545d5ed7ddddf4", 42214604800), "the HEAD of 1 October 2026"
+    assert (F["model_revision"], F["model_bytes"]) == ("15502f8acb4caed6e3a7d777b0fb569c1f7eb791", 381184175)
+
+
+# ----------------------------------------------------------------------------- the amendment of 1 October 2026
+def test_arm_m_waits_for_ai2s_split(tmp_path, monkeypatch, capsys):
+    """Arm M keeps its graded predictions and is reported as not run, by every mode that scores a window, until Ai2's
+    validation split is pinned."""
+    assert MANGROVE_SPLIT_AS_SHIPPED is None, "no split is pinned yet"
+    monkeypatch.setitem(e89.ARMS["mangrove"], "split_source", None)
+    _page(tmp_path, monkeypatch, FROZEN)
+    monkeypatch.setattr(e89, "build_arm", lambda *a, **k: pytest.fail("arm M must not be built"))
+    assert e89.cmd_run(_args(tmp_path)) == 0
+    assert e89.cmd_gate(_args(tmp_path)) == 0
+    args = _args(tmp_path)
+    args.real = True
+    assert e89.smoke_torch(args) == 0
+    out = capsys.readouterr().out
+    assert out.count("arm M not run") == 3 and "validation split" in out
+    with pytest.raises(RuntimeError, match="not run"):
+        e89.predict_population("mangrove", None, [{"split": "val"}])
+    assert e89.ARMS["mangrove"]["graded"] == ("P1", "P2", "P3", "P4", "P5") and not e89.is_report_only("mangrove")
+
+
+def test_arms_a_and_f_are_report_only():
+    for arm in ("awf", "fld"):
+        A = e89.ARMS[arm]
+        assert e89.is_report_only(arm) and A["graded"] == ()
+    assert (e89.ARMS["fld"]["ai2_accuracy"], e89.ARMS["fld"]["gate_tolerance"]["tar"]) == (0.761, 0.020)
+    assert (e89.ARMS["awf"]["ai2_accuracy"], e89.ARMS["awf"]["gate_tolerance"]["tar"]) == (0.895, 0.020)
+    assert not e89.is_report_only("nandi") and e89.ARMS["nandi"]["graded"] == ("P1", "P2", "P3", "P4", "P5")
+
+
+def _fld_population(n, n_err, flip_err=None):
+    """(records, records with imagery, logits) for arm F's gate: n kept windows of class 0 (agriculture), the first
+    n_err predicted as burned, one window dropped by the layer rule and one without imagery."""
+    recs = [{"label": 0, "drop": None, "input": 0, "n_groups": 8} for _ in range(n)]
+    lg = np.zeros((n, 10))
+    lg[:, 0] = 5.0
+    lg[:n_err, 0], lg[:n_err, 5] = -5.0, 5.0
+    blind = [{"label": None, "drop": "8 of the 8 image layers not completed", "no_imagery": True},
+             {"label": None, "drop": "1 of the 8 image layers not completed"}]
+    return recs + blind, recs, lg
+
+
+class _RepF:
+    checkpoint_sha256 = PINNED_FLD
+
+
+def test_the_alignment_check_says_aligned_or_replica_not_aligned_never_pass_or_fail(tmp_path, monkeypatch, capsys):
+    """Arm F's gate is an alignment check within 2.0 points of Ai2's 76.1%: 80 of 109 (73.4%) is outside it and reads
+    "replica not aligned"; the record holds "aligned", never "pass" or "passed", and the log never says PASS or FAIL.
+    The flips are reported beside, and only the unflipped accuracy is checked."""
+    _page(tmp_path, monkeypatch, FROZEN)
+    calls = []
+
+    def fake(arm, rep, windows, log=print, synthetic=False, flip="none"):
+        calls.append(flip)
+        return _fld_population(109, 29 if flip == "none" else 26)
+    monkeypatch.setattr(e89, "predict_population", fake)
+    rec = e89.run_gate("fld", _RepF(), [], str(tmp_path))
+    assert set(rec) == set(e89.ALIGN_KEYS) and "passed" not in rec
+    att = rec["attempts"][0]
+    assert set(att) == set(e89.ALIGN_ATTEMPT_KEYS) and "pass" not in att
+    assert att["aligned"] is False and rec["alignment"] == "replica not aligned"
+    assert att["n_windows"] == 109 and att["n_errors"] == 29 and att["n_windows_no_imagery"] == 1
+    assert att["n_windows_dropped"] == 2 and att["accuracy"] == pytest.approx(80 / 109)
+    assert att["accuracy_by_flip"]["none"] == pytest.approx(80 / 109)
+    assert att["accuracy_by_flip"]["hv"] == pytest.approx(83 / 109), "reported beside, never checked"
+    assert calls == ["none", "h", "v", "hv"]
+    out = capsys.readouterr().out
+    assert "replica not aligned" in out and "PASS" not in out and "FAIL" not in out
+    assert e89.verdicts_in(json.load(open(tmp_path / "exp89_gate_fld.json"))) == []
+    # a second attempt at Ai2's 83 of 109 reads aligned, and is not rerun
+    monkeypatch.setattr(e89, "predict_population", lambda *a, **k: _fld_population(109, 26))
+    rec = e89.run_gate("fld", _RepF(), [], str(tmp_path))
+    assert rec["aligned"] is True and rec["alignment"] == "aligned" and len(rec["attempts"]) == 2
+    monkeypatch.setattr(e89, "predict_population", lambda *a, **k: pytest.fail("an aligned check is not rerun"))
+    assert e89.run_gate("fld", _RepF(), [], str(tmp_path))["aligned"] is True
+
+
+def test_a_report_only_run_goes_ahead_after_a_check_outside_the_tolerance(tmp_path, monkeypatch, capsys):
+    """The run needs a recorded alignment check (frozen page, pinned checkpoint, in the ledger), not an aligned one;
+    its numbers then carry "replica not aligned", and neither the summary nor the log holds a verdict."""
+    _page(tmp_path, monkeypatch, FROZEN)
+    monkeypatch.setitem(e89.ARMS["mangrove"], "split_source", None)       # as shipped: arm M waits
+    with pytest.raises(e89.GateRefused, match="no alignment check"):
+        e89.require_gate("fld", str(tmp_path))
+    monkeypatch.setattr(e89, "predict_population", lambda *a, **k: _fld_population(109, 40))
+    e89.run_gate("fld", _RepF(), [], str(tmp_path))
+    assert e89.require_gate("fld", str(tmp_path))["alignment"] == "replica not aligned"
+    units = e89.synthetic_units("fld_report")
+    path = tmp_path / "units_fld.npz"
+    e89.write_units(units, str(path))
+    capsys.readouterr()
+    res = e89.run_arm("fld", str(tmp_path), units_file=str(path), draws=40, n_boot=40)
+    assert res["alignment"] == "replica not aligned" and res["report_only"] is True
+    summary = json.load(open(tmp_path / "exp89_summary.json"))
+    assert e89.verdicts_in(summary["arms"]["fld"]) == []
+    assert summary["arms"]["mangrove"]["status"] == "not run" and "split" in summary["arms"]["mangrove"]["reason"]
+    out = capsys.readouterr().out
+    assert "report-only, replica not aligned" in out
+    for word in ("PASS", "FAIL", "holds", " True", " False"):
+        assert word not in out, word
+    # a record made before freezing, or on another checkpoint, is still refused
+    gate = tmp_path / "exp89_gate_fld.json"
+    rec = json.load(open(gate))
+    rec["attempts"][-1]["checkpoint_sha256"] = "0" * 64
+    json.dump(rec, open(gate, "w"))
+    with open(e89.read_ledger("fld", str(tmp_path))[1], "w") as f:
+        f.write("".join(json.dumps(a) + "\n" for a in rec["attempts"]))
+    with pytest.raises(e89.GateRefused, match="pinned checkpoint"):
+        e89.require_gate("fld", str(tmp_path))
+
+
+def test_cmd_gate_and_cmd_run_return_zero_on_a_report_only_arm(tmp_path, monkeypatch):
+    _page(tmp_path, monkeypatch, FROZEN)
+    monkeypatch.setattr(e89, "predict_population", lambda *a, **k: _fld_population(109, 40))
+    monkeypatch.setattr(e89, "build_arm", lambda *a, **k: (_RepF(), []))
+    assert e89.cmd_gate(_args(tmp_path, arm="fld")) == 0, "a check outside the tolerance is reported, not failed"
+    monkeypatch.setattr(e89, "run_arm", lambda *a, **k: {"report_only": True})
+    assert e89.cmd_run(_args(tmp_path, arm="fld")) == 0
+
+
+# ----------------------------------------------------------------------------- arm F's rules
+def _ft(label=None, props=True):
+    return {"type": "Feature", "properties": ({"new_label": label} if label is not None else {}) if props else None}
+
+
+def test_arm_f_label_is_classification_tasks_first_valid_new_label():
+    assert e89.FLD_CLASSES[0] == "agriculture" and e89.FLD_CLASSES[-1] == "none" and len(e89.FLD_CLASSES) == 10
+    assert e89.fld_label_from_features([_ft("burned")])[:2] == (5, None)
+    assert e89.fld_label_from_features([_ft(props=False), _ft(), _ft("unknown"), _ft("river")]) == (8, None, "river")
+    assert e89.fld_label_from_features([_ft("agriculture-generic"), _ft("coca")]) == (
+        None, "new_label outside the ten classes", "agriculture-generic"), "ClassificationTask has no remap"
+    assert e89.fld_label_from_features([_ft(props=False)])[1] == "no feature has new_label"
+    assert e89.fld_label_from_features([])[0] is None
+
+
+def test_arm_f_features_by_hand():
+    """A 64-px crop with known values: the composites, NDVI and NBR, the centre means, the difference, the empty
+    timesteps, K4's drops and K5's cloudy timesteps."""
+    S = 64
+    crop = np.zeros((S, S, 8, 12))
+    b = {n: e89.OLMO_BANDS.index(n) for n in ("B02", "B04", "B08", "B12")}
+    for t in range(8):
+        if t == 2:
+            continue                                                   # an empty pre timestep
+        crop[:, :, t, :] = 500.0
+        crop[:, :, t, b["B04"]] = 400.0
+        crop[:, :, t, b["B08"]] = 3000.0 if t < 4 else 1500.0
+        crop[:, :, t, b["B12"]] = 1000.0 if t < 4 else 2000.0
+    crop[24:40, 24:40, 6, b["B02"]] = 2500.0                           # a cloudy post timestep at the centre
+    x, idx = e89.fld_window_features(crop)
+    assert x.shape == (128,) and len(e89.FLD_FEATURE_NAMES) == 128
+    f = dict(zip(e89.FLD_FEATURE_NAMES, x))
+    ndvi_pre, ndvi_post = (3000 - 400) / 3400, (1500 - 400) / 1900
+    nbr_pre, nbr_post = (3000 - 1000) / 4000, (1500 - 2000) / 3500
+    assert f["pre_crop_mean_NDVI"] == pytest.approx(ndvi_pre) and f["post_centre_mean_NBR"] == pytest.approx(nbr_post)
+    assert f["diff_crop_mean_NDVI"] == pytest.approx(ndvi_post - ndvi_pre)
+    assert f["pre_crop_std_B08"] == 0.0 and f["pre_empty_timesteps"] == 1 and f["post_empty_timesteps"] == 0
+    assert f["pre_crop_mean_B08"] == 3000.0, "the median over the three non-empty pre timesteps"
+    k = e89.fld_index_controls([idx])
+    assert k["k4_ndvi_drop_weak"][0] == pytest.approx(-(ndvi_pre - ndvi_post))
+    assert k["k4_nbr_drop_weak"][0] == pytest.approx(-(nbr_pre - nbr_post))
+    assert k["k5_cloud_timesteps"][0] == 2, "one empty timestep and one cloudy at the centre"
+    with pytest.raises(ValueError):
+        e89.fld_window_features(np.zeros((64, 64, 12, 12)))
+
+
+def test_arm_f_reader_on_an_rslearn_layout(tmp_path):
+    """The population is options.split "val" with all eight layers and the label completed and a valid new_label;
+    olmoearth_evals_split and label.json are never read. The crop is rslearn's centre Pad to 64 (rows and columns 32 to
+    95 of a 128-px window), and the stack runs pre_sentinel2, .1 to .3, then post_sentinel2, .1 to .3."""
+    pytest.importorskip("rasterio")
+    import rasterio
+    root, names = e89.synthetic_fld_dataset(str(tmp_path), n_train=1, n_val=5, size=128)
+    windows = e89.arm_windows("fld", os.path.join(root, "windows"))
+    assert {w["group"] for w in windows} == set(e89.FLD_SYN_GROUPS), "every group is listed"
+    val = [w for w in windows if w["split"] == "val"]
+    assert len(val) == 5 and all(w["meta"]["options"]["olmoearth_evals_split"] == "train" for w in val)
+    recs = e89.read_units("fld", val, need="model", log=lambda *a: None)
+    by = {r["name"]: r for r in recs}
+    v = sorted(by)
+    assert by[v[0]]["drop"] == "1 of the 8 image layers not completed" and "input" not in by[v[0]]
+    assert by[v[1]]["drop"] == "new_label outside the ten classes" and by[v[1]]["new_label"] == "unknown"
+    assert by[v[2]]["label"] is not None, "a feature without properties is passed over"
+    with open(os.path.join(next(w["dir"] for w in val if w["name"] == v[2]), "label.json")) as f:
+        assert e89.FLD_CLASSES.index(json.load(f)["new_label"]) != by[v[2]]["label"], "label.json is stale"
+    r = by[v[4]]
+    assert r["input"].shape == (64, 64, 8, 12) and r["n_groups"] == 8 and r["features"].shape == (128,)
+    w = next(w for w in val if w["name"] == v[4])
+    with rasterio.open(os.path.join(w["dir"], "layers", "post_sentinel2.1", e89.FLD_BAND_SET, "geotiff.tif")) as src:
+        b08 = src.read(e89.FLD_BAND_SET.split("_").index("B08") + 1)
+    assert np.array_equal(r["input"][:, :, 5, e89.OLMO_BANDS.index("B08")], b08[32:96, 32:96]), \
+        "layer 5 is post_sentinel2.1, B08 sits at OlmoEarth's index 3, and the crop is rows and columns 32 to 95"
+    assert by[v[3]]["indices"]["pre"]["n_empty"] == 1, "the all-zero pre_sentinel2.2 is an empty timestep"
+    # rslearn's check_window: the population ignores olmoearth_evals_split, whatever it says
+    tr = [w for w in windows if w["split"] == "train"]
+    assert tr and all(w["meta"]["options"]["olmoearth_evals_split"] == "val" for w in tr)
+
+
+def _fld_tar(tmp_path, **kw):
+    pytest.importorskip("rasterio")
+    tar, names = e89.synthetic_tar(str(tmp_path / "src"), "fld", **kw)
+    return tar
+
+
+def _pin_tar(monkeypatch, tar, sha=None):
+    import hashlib
+    monkeypatch.setitem(e89.ARMS["fld"], "data_bytes", os.path.getsize(tar))
+    monkeypatch.setitem(e89.ARMS["fld"], "data_md5", hashlib.md5(open(tar, "rb").read()).hexdigest())
+    monkeypatch.setitem(e89.ARMS["fld"], "data_sha256", sha)
+
+
+def test_arm_f_tar_is_checked_against_its_pin(tmp_path, monkeypatch):
+    """Size, then MD5, then (once pinned) SHA-256; the SHA-256 is recorded either way."""
+    import hashlib
+    tar = _fld_tar(tmp_path, n_train=2, n_val=1)
+    with pytest.raises(RuntimeError, match="bytes, pinned 42214604800"):
+        e89.verify_tar(tar, "fld", log=lambda *a: None)
+    _pin_tar(monkeypatch, tar)
+    info = e89.verify_tar(tar, "fld", log=lambda *a: None)
+    sha = hashlib.sha256(open(tar, "rb").read()).hexdigest()
+    assert info["sha256"] == sha and info["sha256_pinned"] is None and info["generation"] == "1761857427036506"
+    monkeypatch.setitem(e89.ARMS["fld"], "data_sha256", "0" * 64)
+    with pytest.raises(RuntimeError, match="sha256"):
+        e89.verify_tar(tar, "fld", log=lambda *a: None)
+    monkeypatch.setitem(e89.ARMS["fld"], "data_sha256", sha)
+    monkeypatch.setitem(e89.ARMS["fld"], "data_md5", "0" * 32)
+    with pytest.raises(RuntimeError, match="md5"):
+        e89.verify_tar(tar, "fld", log=lambda *a: None)
+
+
+def test_arm_f_extraction_keeps_only_what_the_run_reads_and_survives_the_purge(tmp_path, monkeypatch):
+    """The tar is streamed once: the eight image layers, the label layer, the window files and the dataset's config
+    are written, every other layer is counted and skipped. A file the scratch purge removes later is caught by the
+    manifest, and the extraction is made again from the tar."""
+    tar = _fld_tar(tmp_path, n_train=2, n_val=2)
+    _pin_tar(monkeypatch, tar)
+    data = tmp_path / "data"
+    with pytest.raises(FileNotFoundError, match="--tar"):
+        e89.resolve_data("fld", str(data), download=False)
+    root, info = e89.resolve_data("fld", str(data), tar=tar, log=lambda *a: None)
+    assert set(info["skipped"]) == set(e89.FLD_SYN_EXTRA_LAYERS) and info["md5"] == e89.ARMS["fld"]["data_md5"]
+    assert set(info["kept"]) == set(e89.FLD_KEEP_LAYERS) | {"window and dataset files"}
+    w = os.path.join(root, e89.FLD_SYN_GROUPS[0], "fld_0002")
+    assert os.path.exists(os.path.join(w, "layers", "post_sentinel2.3", e89.FLD_BAND_SET, "geotiff.tif"))
+    assert not os.path.exists(os.path.join(w, "layers", "pre_sentinel2.4"))
+    assert os.path.exists(os.path.join(w, "metadata.json")) and os.path.exists(data / "dataset" / "config.json")
+    assert e89.manifest_missing(str(data)) == []
+    victim = os.path.join(w, "layers", "pre_sentinel2.1", e89.FLD_BAND_SET, "geotiff.tif")
+    os.remove(victim)                                                 # the 30-day purge
+    assert e89.manifest_missing(str(data)) != []
+    said = []
+    root2, _ = e89.resolve_data("fld", str(data), download=False, log=said.append)
+    assert os.path.exists(victim) and "extracted again" in said[0] and root2 == root
+    assert e89.member_layer("dataset/windows/g/w/layers/pre_sentinel2.4/B/geotiff.tif") == "pre_sentinel2.4"
+    assert e89.member_layer("dataset/windows/g/w/metadata.json") is None
+    assert e89.member_layer("dataset/windows/g/layers/metadata.json") is None, "a window named layers is a window"
+
+
+# ----------------------------------------------------------------------------- arm A's data path
+def test_arm_a_never_reads_the_old_data_awf(tmp_path, monkeypatch):
+    """The inventory of 1 October failed on data/awf, which the scratch purge had partly removed. Arm A now reads only
+    the pinned tar's extraction under E89_DATA: a bare windows directory without the extraction's marker is not used,
+    and the job points every arm at E89_DATA/<arm>."""
+    monkeypatch.delenv("E89_DATA", raising=False)
+    assert e89.default_data_dir("awf") == os.path.join(e89.ROOT, "data", "exp89_awf")
+    monkeypatch.setenv("E89_DATA", str(tmp_path / "e89"))
+    assert e89.default_data_dir("awf") == str(tmp_path / "e89" / "awf")
+    old = tmp_path / "awf" / "dataset" / "windows" / "spatial_split" / "task_0_point_0"
+    old.mkdir(parents=True)
+    with pytest.raises(FileNotFoundError):
+        e89.resolve_data("awf", str(tmp_path / "awf"), download=False)
+    job = open(os.path.join(ROOT, "exp", "jobs", "e89.sh")).read()
+    assert "data/awf" not in job.replace("never reads data/awf", "") and "DATA=$E89_DATA/$ARM" in job
+
+
+def test_arm_a_reads_the_extracted_tar_without_touching_the_awf_module(tmp_path, monkeypatch):
+    """A tar off the pin is refused; the pinned one is extracted, and arm_windows gives oe_inferencex.awf.list_windows
+    the extraction's group directory. The module's ROOT is not changed, so its other callers keep exp21's default."""
+    pytest.importorskip("torch")
+    pytest.importorskip("olmoearth_pretrain")
+    pytest.importorskip("rasterio")
+    from oe_inferencex import awf
+    before = awf.ROOT
+    tar, _ = e89.synthetic_tar(str(tmp_path / "src"), "awf", n_train=4, n_val=3, size=63, dataset_bands="three")
+    with pytest.raises(RuntimeError, match="pinned d0837f14"):
+        e89.resolve_data("awf", str(tmp_path / "data"), tar=tar)
+    monkeypatch.setitem(e89.ARMS["awf"], "data_sha256", e89.sha256(tar))
+    root, info = e89.resolve_data("awf", str(tmp_path / "data"), tar=tar)
+    assert info["sha256"] and e89.manifest_missing(str(tmp_path / "data")) == []
+    ws = e89.arm_windows("awf", root)
+    assert awf.ROOT == before == "data/awf/dataset/windows/spatial_split"
+    assert sorted(w["split"] for w in ws) == ["train"] * 3 + ["val"] * 3, "the two-pixel window is not listed"
+    assert all(w["dir"].startswith(str(tmp_path / "data")) for w in ws)
+
+
+def test_the_awf_module_lists_its_default_root_as_before(tmp_path, monkeypatch):
+    pytest.importorskip("torch")
+    pytest.importorskip("olmoearth_pretrain")
+    from oe_inferencex import awf
+    monkeypatch.setattr(awf, "ROOT", str(tmp_path / "nothing_here"))
+    assert awf.list_windows() == [], "with no argument it reads ROOT at call time"
+
+
+# ----------------------------------------------------------------------------- arm F's replica against rslearn's path
+def test_arm_f_replica_matches_rslearns_simple_time_series_path(tmp_path):
+    """The replica's forward pass against a direct transcription of rslearn's: the 96 channels concatenated layer by
+    layer, SimpleTimeSeries' reshape into two 48-channel images, the wrapper's rearrange "b (t c) h w -> b h w t c",
+    the mean over timesteps and band sets, the concatenation of the two maps, the PoolingDecoder."""
+    torch = pytest.importorskip("torch")
+    pytest.importorskip("olmoearth_pretrain")
+    from einops import rearrange
+    from olmoearth_pretrain.datatypes import MaskedOlmoEarthSample, MaskValue
+    ck, D = e89.synthetic_checkpoint(str(tmp_path / "f.ckpt"), "fld")
+    rep = e89.Replica("fld", str(ck), model_id="OLMOEARTH_V1_NANO", device="cpu")
+    rng = np.random.default_rng(3)
+    x = rng.uniform(0, 4000, (2, 64, 64, 8, 12)).astype(np.float32)
+    ours = rep.logits(x)
+    # rslearn: CHW with the eight layers' 12 bands one after another, normalised per band and timestep
+    chw = np.stack([np.concatenate([np.moveaxis(rep.normalize(x[b, :, :, t, :]), -1, 0) for t in range(8)])
+                    for b in range(2)])                                                   # (2, 96, 64, 64)
+    images = torch.tensor(chw, dtype=torch.float32).reshape(2 * 2, 48, 64, 64)            # SimpleTimeSeries
+    cur = rearrange(images, "b (t c) h w -> b h w t c", t=4)
+    ts = torch.zeros((4, 4, 3), dtype=torch.int32)
+    ts[:, :, 0], ts[:, :, 1], ts[:, :, 2] = 1, torch.arange(4)[None, :], 2024
+    sample = MaskedOlmoEarthSample(sentinel2_l2a=cur, timestamps=ts, sentinel2_l2a_mask=torch.ones(
+        cur.shape[:4] + (rep.n_band_sets,), dtype=torch.int32) * MaskValue.ONLINE_ENCODER.value)
+    with torch.no_grad():
+        tok = rep.model.encoder(sample, fast_pass=True, patch_size=4)["tokens_and_masks"].sentinel2_l2a
+        pooled = rearrange(tok.mean(dim=[3, 4]), "b h w c -> b c h w")
+        maps = pooled.reshape(2, 2, pooled.shape[1], 16, 16)
+        feat = torch.cat([maps[:, 0], maps[:, 1]], dim=1)                                 # groups [[0], [1]]
+        theirs = rep.head(feat).double().numpy()
+    assert ours.shape == (2, 10)
+    assert np.allclose(ours, theirs, atol=1e-4), np.abs(ours - theirs).max()
+    swapped = rep.logits(np.concatenate([x[..., 4:, :], x[..., :4, :]], axis=3))
+    assert not np.allclose(ours, swapped, atol=1e-4), "pre and post are not interchangeable"
