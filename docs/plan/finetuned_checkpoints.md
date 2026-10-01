@@ -1,10 +1,12 @@
 # Do the package's three outputs hold on Ai2's other fine-tuned models? (exp89 preregistration)
 
-**Status: DRAFT, not frozen.** Written 1 October 2026. The owner confirmed every threshold as proposed the same day,
-chose to run arm A (FT-AWF, then graded on P2 and P3 only) and chose a torch MLP for K3 (no new dependency). Amended
-the same day by the owner's decision below: arms F and A are report-only, and arm M waits for Ai2's validation split.
-The Mangrove inventory ran on the cluster on 1 October; the AWF inventory failed there (see the amendment). No model
-has been run on a validation window.
+**Status: frozen on 1 October 2026, before any prediction on a validation window.** Written the same day. The owner
+confirmed every threshold, chose arm A (FT-AWF) and a torch MLP for K3, then amended the plan: arms F (Forest Loss
+Driver) and A are report-only, and arm M (Mangrove) waits for Ai2's validation split. At freezing the owner also
+confirmed arm F's population, input, controls, 1° clusters and α levels (0.10 and 0.15) and arm A's 2.0-point
+alignment tolerance. Arm F's inventory (the 42 GB download) was still running: its count of validation windows
+against Ai2's 109 is reported beside the alignment check and changes no rule. Arm M's split reader and imagery
+fetch come later as a dated amendment, with its predictions and thresholds unchanged.
 
 - **Allowed before freezing:**
   - the smoke tests on synthetic data;
@@ -12,7 +14,7 @@ has been run on a validation window.
   - the model smoke on training windows only. It is in-sample and never graded.
 - **Not allowed before freezing:** any prediction on a validation window. That includes the accuracy gate and, for arms F and A, the alignment check. So arms F and A run once the page is frozen.
 - **Open before freezing:**
-  - The owner confirms arm A's alignment tolerance (2.0 points, below) and arm F's readings: its population, input, controls, clusters and α levels (marked "proposed" below).
+  - Done at freezing: the owner confirmed arm A's alignment tolerance (2.0 points, below) and arm F's readings: its population, input, controls, clusters and α levels.
   - Arm F's inventory checks that the tar's validation windows match Ai2's: 109 windows with `split` "val", all eight image layers and the label completed, and a label among the ten classes. Ai2's matrix gives 44 agriculture, 30 burned, 18 none, 6 hurricane, 4 logging, 4 road and one each of landslide, mining and river (if its rows are the true class, not verified).
   - Arm F's tar SHA-256 is recorded by its first download and then pinned in the run script beside its size and MD5.
   - Arm M: when Ai2 shares its split, its reader and a fetch mode for its imagery are written and pinned here, as a dated amendment, before its gate runs. Its predictions and thresholds do not change.
@@ -109,7 +111,7 @@ exp89 has four arms:
   - Class indices (from `olmoearth_run.yaml`): 0 coffee, 1 grassland, 2 trees, 3 maize, 4 sugarcane, 5 tea, 6 vegetables, 7 legumes, 8 water, 9 builtup, and 10 nodata.
   - Split: 128-px (1.28 km) cells, 75/25.
 - **AWF (arm A).** exp21's 344 validation points, read from the pinned tar (the amendment).
-- **Forest Loss Driver (arm F)** (proposed; the owner confirms):
+- **Forest Loss Driver (arm F)** (confirmed at freezing):
   - Population: the validation set as Ai2's training config reads it. Every window, in any group, whose option `split` is "val", whose eight image layers (`pre_sentinel2` and `.1` to `.3`, `post_sentinel2` and `.1` to `.3`) and label layer carry rslearn's completed marker, and whose label is one of the ten classes. Ai2's split script gives "val" only to the Brazil and Colombia phase 1 and 2 groups, by the first hex digit of the SHA-256 of the window's name (0 to 3).
   - The option `olmoearth_evals_split` belongs to the OlmoEarth paper's evaluation, not to this checkpoint. It never chooses a window; the inventory only reports it beside `split`.
   - Unit: one window, one prediction.
@@ -121,7 +123,7 @@ exp89 has four arms:
 - **Mangrove:** the 0.1° longitude/latitude cell. olmoearth_run partitions Mangrove requests on the same 0.1° grid. The 1° cell is reported. (confirmed)
 - **Nandi:** the 128-px split cell. If the windows record a polygon id, cells that share a source polygon are merged. The 0.05° cell is reported. (confirmed)
 - **AWF:** exp21's 30 annotation tasks.
-- **Forest Loss Driver:** the 1° cell of the window's centre (proposed). The window group cannot be the cluster: validation windows come from four groups only. The group is the stratum of the by-stratum report.
+- **Forest Loss Driver:** the 1° cell of the window's centre (confirmed at freezing). The window group cannot be the cluster: validation windows come from four groups only. The group is the stratum of the by-stratum report.
 
 The estimate and certify study draws from the finite validation set, so its coverage needs no clusters. The clusters matter only for the bootstrap of the ranking comparison.
 
@@ -197,7 +199,7 @@ All controls are fixed here and computed from the same 12 mosaics. None is tuned
     - the temporal standard deviation of NDVI at the label pixel (exp21's control);
     - the 3x3 standard deviation of NDVI around the label pixel.
 - **K5, cloud and missing data.** The number of months that are empty or whose B02 reflectance exceeds 0.2. In the harmonised L2A digital numbers the tar stores, that is 2,000. (confirmed with the other thresholds; the draft's marker was left unchanged by mistake)
-- **Arm F's K3, K4 and K5** (proposed; arm F has eight timesteps, not twelve months, and a loss to read):
+- **Arm F's K3, K4 and K5** (confirmed at freezing; arm F has eight timesteps, not twelve months, and a loss to read):
   - K3's features (128 per window) come from the 64-px crop the model sees. For each stack (pre and post): the per-pixel median over its non-empty timesteps, as 12 bands plus NDVI (B08, B04) and NBR (B08, B12); their spatial mean and standard deviation over the crop and their mean over the centre 16 px. Then post minus pre of those, then each stack's count of empty timesteps. The MLP and its settings are K3's above; it is fitted on every training window that passes the population's layer rule.
   - K4: minus the NDVI drop and minus the NBR drop from the pre to the post composite at the centre 16 px. A small or negative drop is a weak loss signal, so it is suspect.
   - K5: the number of the eight timesteps that are empty or whose centre mean B02 exceeds 2,000.
@@ -235,7 +237,7 @@ The validation labels are the truth for the whole population of N windows, and �
   - Per cell: the coverage of the 95% interval, the median width, the bias and the RMSE.
 - **Certify:**
   - Call: `certify_zone(confidence, indices, wrong, alpha, delta=0.10, rule="prefix")` on the random design's draws. The Bonferroni rule is reported beside it.
-  - α levels: Mangrove 0.02 (graded) and 0.01 (reported); Nandi 0.05 (graded) and 0.10 (reported). (confirmed) AWF 0.05 and 0.10, and arm F 0.10 and 0.15, all reported (proposed; Ai2's error rates are 10.5% and 23.9%). At 109 windows arm F fits neither budget, so only its c*(α) is reported.
+  - α levels: Mangrove 0.02 (graded) and 0.01 (reported); Nandi 0.05 (graded) and 0.10 (reported). (confirmed) AWF 0.05 and 0.10, and arm F 0.10 and 0.15, all reported (confirmed at freezing; Ai2's error rates are 10.5% and 23.9%). At 109 windows arm F fits neither budget, so only its c*(α) is reported.
   - Each graded α is below Ai2's reported error rate (2.4% and 12.7%). So the whole map cannot be certified, and only the order can help.
   - At δ = 0.10 a zone needs at least 114 labels at α = 0.02, 230 at 0.01, 45 at 0.05 and 22 at 0.10. So at B = 300, α = 0.01 cannot certify any zone smaller than 80% of the map.
   - Per cell:
@@ -267,7 +269,7 @@ The validation labels are the truth for the whole population of N windows, and �
   - The gate job reads the validation windows and computes the predictions. It writes only the window count, the error count and the accuracy. It writes no confidence and no control.
   - **Mangrove passes** when our recomputed pixel-level micro accuracy is within 0.5 points of Ai2's 97.6% if the imagery came from the tar. If the imagery had to be fetched again, the tolerance is 1.0 point. (confirmed)
   - **Nandi passes** within 2.0 points of Ai2's 87.3%. exp21's AWF replica was 1.4 points from Ai2's figure. (confirmed)
-  - **AWF (arm A) passes** within 2.0 points of Ai2's 89.5%, as Nandi does, on the accuracy per window. exp21's replica was 1.4 points off. (proposed after the owner's review; the owner confirms it before freezing) Since the amendment this is arm A's alignment check: it is reported, and outside the tolerance the arm's numbers read "replica not aligned".
+  - **AWF (arm A) passes** within 2.0 points of Ai2's 89.5%, as Nandi does, on the accuracy per window. exp21's replica was 1.4 points off. (confirmed at freezing) Since the amendment this is arm A's alignment check: it is reported, and outside the tolerance the arm's numbers read "replica not aligned".
   - **Arm F's alignment check** is within 2.0 points of Ai2's 76.1%, on the accuracy per window, reported in the same way, with the accuracy under each flip beside it.
   - The gate is two-sided: a replica far above Ai2's figure is as suspect as one below it.
   - A failed gate may be retried after a fix to the replica. There are at most three attempts in all: the first and two retries.

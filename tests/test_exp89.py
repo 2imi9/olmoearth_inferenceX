@@ -605,12 +605,12 @@ def test_the_page_and_the_script_agree_on_what_the_owner_settled():
 
 
 def test_the_page_states_the_amendment_the_script_follows():
-    """The amendment of 1 October 2026 is on the page, dated, with the page still a draft: arms F and A report-only
+    """The amendment of 1 October 2026 is on the page, dated, and the page is now frozen: arms F and A report-only
     and why, their alignment tolerances and the label a check outside them gives, arm M waiting for Ai2's split, arm N
     not run, and arm A's data path."""
     with open(e89.PLAN, encoding="utf-8") as f:
         page = f.read()
-    assert e89.prereg_status(page) == "draft"
+    assert e89.prereg_status(page) == "frozen"
     assert "## Amendment of 1 October 2026" in page
     assert "report-only" in page and "no pass or fail verdict is drawn" in page
     assert "109 windows" in page and "344 points" in page and "error floor of 40" in page and "N/5" in page
@@ -1053,7 +1053,7 @@ def test_the_page_says_what_the_inventory_reads_and_what_is_still_proposed():
     with open(os.path.join(ROOT, "docs", "plan", "index.md"), encoding="utf-8") as f:
         row = next(line for line in f if "| exp89 |" in line)
     status = row.rstrip().rstrip("|").rsplit("|", 1)[-1]
-    assert "proposed" in status, status
+    assert "Frozen" in status and "proposed" not in status, status   # frozen on 1 October 2026 with every reading confirmed
 
 
 class _FakeReplicaF:
