@@ -61,6 +61,10 @@ geo = [
     "scipy>=1.11",
 ]
 
+# A local MCP server on stdio, `oe-inferencex mcp`, so that an agent can call the commands on the user's own files
+# (oe_inferencex.mcp_server). The official MCP Python SDK, MIT licence. Below 2: mcp 2 renamed FastMCP to MCPServer.
+mcp = ["mcp>=1.26,<2"]
+
 [dependency-groups]
 # `uv run pytest`: the assessment layer against the recorded numbers in exp/out (encoder-free);
 # the equality checks against the experiment modules run only when the encoder extra is installed.

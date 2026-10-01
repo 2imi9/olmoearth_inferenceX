@@ -28,11 +28,13 @@ Modules, in the order a user meets them:
   signals     the confidence readings and the no-model pixel controls every rule is scored against
   reliability the ensemble and typicality signals that were tested and lost, kept so they can be re-tested
   cli         `oe-inferencex demo`, `assess`, `compare`, `sample`, `estimate` and `certify`: rasters or .npy in, files out
+  mcp_server  the same commands as tools of a local MCP server for an agent, `oe-inferencex mcp`
   taskcard    what each OlmoEarth fine-tuned model is; lcc: a range reader for the served rasters
 By dependency the modules form three groups, and the layout stays flat (docs/plan/adr-001-repository-layout.md):
   numpy only        assess, explain, compare, calibrate, estimate, metrics, stats, signals, reliability, cli
   standard library  taskcard, lcc
-  guarded extras    evidence (torch); awf and data (the "encoder" and "geo" extras); figstyle (matplotlib).
+  guarded extras    evidence (torch); awf and data (the "encoder" and "geo" extras); figstyle (matplotlib);
+                    mcp_server's server (the "mcp" extra; its texts and tool functions are numpy only).
                     Not imported here; each names its extra if imported without it.
 
 The evidence behind each function is in the documentation, one claim id per number:

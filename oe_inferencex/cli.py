@@ -9,6 +9,7 @@
     oe-inferencex sample  scores.tif --budget 300 --out to_label.csv [--design D] [--condition layer.tif]
     oe-inferencex estimate to_label.csv [--per-class]       once the reviewer has filled the `wrong` column
     oe-inferencex certify  to_label.csv --alpha 0.05        from a random sample, or one drawn with --condition
+    oe-inferencex mcp                                       a local MCP server on stdio, for an agent (the mcp extra)
 
 Inputs are GeoTIFFs (any rasterio-readable raster) or .npy arrays: (H, W) for a binary map, (C, H, W) for per-class
 scores or, for `compare`, an integer class map. `compare` also takes two continuous maps (a regression output) when the
@@ -990,6 +991,18 @@ def _certify_by_condition(args, sample, wrong, margin, valid_w, out, mask_path):
     return 0
 
 
+def cmd_mcp(args):
+    """Serve the commands above as MCP tools on stdio, for an agent on the user's machine (oe_inferencex.mcp_server).
+    The agent starts this; nobody types into it. Without the mcp extra it says how to install it."""
+    from oe_inferencex import mcp_server
+    try:
+        server = mcp_server.build_server()
+    except ImportError as exc:
+        raise SystemExit(f"oe-inferencex mcp: {exc}") from None
+    server.run("stdio")
+    return 0
+
+
 def build_parser():
     p = argparse.ArgumentParser(prog="oe-inferencex", description=__doc__.split("\n\n")[0])
     sub = p.add_subparsers(dest="command", required=True)
@@ -1086,6 +1099,9 @@ def build_parser():
                         "is refused); only needed for a sample written by 1.2.0")
     z.add_argument("--out", default=None, help="JSON to write (default: <sample>_zone.json; the window mask goes beside it as .npy)")
     z.set_defaults(func=cmd_certify)
+    m = sub.add_parser("mcp", help="serve these commands as tools to an agent on this machine (a local MCP server on "
+                                    "stdio; needs the mcp extra)")
+    m.set_defaults(func=cmd_mcp)
     return p
 
 
