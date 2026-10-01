@@ -68,7 +68,7 @@
    "carries": "the fine-tuned AWF head of exp21",
    "named_at": [
     "exp/exp21_finetuned_awf.py:54",
-    "exp/exp89_finetuned_checkpoints.py:172"
+    "exp/exp89_finetuned_checkpoints.py:174"
    ]
   },
   "allenai/OlmoEarth-v1-FT-ForestLossDriver-Base": {
@@ -80,7 +80,7 @@
    ],
    "carries": "the fine-tuned Forest Loss Driver checkpoint of exp89's arm F (model.ckpt, 381,184,175 bytes, sha256 682c20b9...); its dataset is a Cloud Storage object, pinned in the run script by generation, size and MD5",
    "named_at": [
-    "exp/exp89_finetuned_checkpoints.py:174"
+    "exp/exp89_finetuned_checkpoints.py:176"
    ]
   },
   "allenai/OlmoEarth-v1-FT-Mangrove-Base": {
@@ -92,7 +92,7 @@
    ],
    "carries": "the fine-tuned Mangrove checkpoint of exp89 (model.ckpt, 1,041,362,118 bytes, sha256 ffb51fbb...)",
    "named_at": [
-    "exp/exp89_finetuned_checkpoints.py:168"
+    "exp/exp89_finetuned_checkpoints.py:170"
    ]
   },
   "allenai/OlmoEarth-v1-FT-Nandi-Base": {
@@ -103,7 +103,7 @@
    "read_from": [],
    "carries": "the fine-tuned Nandi checkpoint, exp89's arm N (not run)",
    "named_at": [
-    "exp/exp89_finetuned_checkpoints.py:170"
+    "exp/exp89_finetuned_checkpoints.py:172"
    ]
   },
   "allenai/OlmoEarth-v1-Nano": {
@@ -166,7 +166,7 @@
    ],
    "carries": "the AWF rslearn dataset (dataset.tar, 1,869,219,840 bytes) exp89's arm A downloads and extracts under E89_DATA (it no longer reads the cluster's data/awf, which the scratch purge had partly removed); exp04 to exp21 read an earlier unpinned download",
    "named_at": [
-    "exp/exp89_finetuned_checkpoints.py:173"
+    "exp/exp89_finetuned_checkpoints.py:175"
    ]
   },
   "allenai/olmoearth_projects_mangrove": {
@@ -178,7 +178,7 @@
    ],
    "carries": "the Mangrove rslearn dataset of exp89 (mangrove.tar, 62,433,280 bytes, sha256 ef9dba6a...; annotation_features.geojson)",
    "named_at": [
-    "exp/exp89_finetuned_checkpoints.py:169"
+    "exp/exp89_finetuned_checkpoints.py:171"
    ]
   },
   "allenai/olmoearth_projects_nandi": {
@@ -189,7 +189,7 @@
    "read_from": [],
    "carries": "the Nandi rslearn dataset, exp89's arm N (not run)",
    "named_at": [
-    "exp/exp89_finetuned_checkpoints.py:171"
+    "exp/exp89_finetuned_checkpoints.py:173"
    ]
   },
   "gastruc/anysat": {

@@ -111,9 +111,9 @@ exp89 has four arms:
 - **AWF (arm A).** exp21's 344 validation points, read from the pinned tar (the amendment).
 - **Forest Loss Driver (arm F)** (proposed; the owner confirms):
   - Population: the validation set as Ai2's training config reads it. Every window, in any group, whose option `split` is "val", whose eight image layers (`pre_sentinel2` and `.1` to `.3`, `post_sentinel2` and `.1` to `.3`) and label layer carry rslearn's completed marker, and whose label is one of the ten classes. Ai2's split script gives "val" only to the Brazil and Colombia phase 1 and 2 groups, by the first hex digit of the SHA-256 of the window's name (0 to 3).
-  - The option `olmoearth_evals_split` belongs to the OlmoEarth paper's evaluation, not to this checkpoint, and is never read.
+  - The option `olmoearth_evals_split` belongs to the OlmoEarth paper's evaluation, not to this checkpoint. It never chooses a window; the inventory only reports it beside `split`.
   - Unit: one window, one prediction.
-  - Labels: `new_label` of the first feature of `layers/label/data.geojson` that holds one of the ten classes, in the order agriculture, mining, airstrip, road, logging, burned, landslide, hurricane, river, none. This is rslearn's ClassificationTask with unknown categories skipped. A window with no such feature is dropped and counted. `label.json` and `old_label` are never read.
+  - Labels: `new_label` of the first feature of `layers/label/data.geojson` that holds one of the ten classes, in the order agriculture, mining, airstrip, road, logging, burned, landslide, hurricane, river, none. This is rslearn's ClassificationTask with unknown categories skipped. A window with no such feature is dropped and counted. `label.json` and `old_label` never give a label; the inventory only counts the windows whose `label.json` names another label.
   - Split: by a hash of the window's name within four groups, not by space, so a validation window can have training neighbours.
 
 ### Clusters (for the bootstrap only)
@@ -344,7 +344,7 @@ All predictions are one-sided. Each is graded per arm, never pooled.
 - **The smoke** certifies on 300 of the 2,000 draws and bootstraps 300 resamples, so it finishes in about a minute. The run uses 2,000 everywhere.
 - **Nandi's windows.** The polygon id is looked for under the option keys `polygon_id`, `source_polygon`, `polygon` and `source_id`, a guess until the windows are seen. The label source is read from the option key `source`.
 - **The report-only arms' record.** The gate's record for arms F and A holds `aligned` where a graded arm holds `pass`, and `alignment` reads "aligned" or "replica not aligned". The run needs a recorded check, made on the frozen page and the pinned checkpoint and held by the ledger, but not an aligned one. The summary holds the reported numbers under `reported`, with no threshold and no verdict, and the arm's `alignment`.
-- **Arm F's data.** The job downloads the tar at its pinned object generation with a resumable curl. The script checks its size and MD5 against the pin, records its SHA-256, and streams it once, writing only the eight image layers, the label layer, each window's own files and the dataset's config. Every other layer (Landsat, Sentinel-1, Sentinel-2 groups `.4` and `.5`, the masks) is counted and skipped. Groups are not filtered, because the split is read per window.
+- **Arm F's data.** The job downloads the tar at its pinned object generation with a resumable curl. The script checks its size and MD5 against the pin, records its SHA-256, and streams it once, writing only the eight image layers, the label layer, each window's own files and every file outside the windows (the dataset's config). Every other layer (Landsat, Sentinel-1, Sentinel-2 groups `.4` and `.5`, the masks) is counted and skipped. Groups are not filtered, because the split is read per window.
 - **Arm F's training windows** are every window with `split` "train" that passes the population's layer rule; K2's frequencies and K3's fit read them.
 
 ## What follows, whatever the outcome

@@ -90,8 +90,9 @@ Arm F's readings (added with the amendment of 1 October 2026; the page marks the
      options.split is "val", whose eight image layers (pre_sentinel2 and .1 to .3, post_sentinel2 and .1 to .3) and
      label layer carry rslearn's completed marker (check_window with load_all_layers), and whose label is valid. The
      label is ClassificationTask's: the first feature of layers/label/data.geojson whose new_label is one of the ten
-     classes (skip_unknown_categories, allow_invalid). label.json and old_label are never read.
-     options.olmoearth_evals_split belongs to the paper's evaluation, not to the checkpoint, and is never read.
+     classes (skip_unknown_categories, allow_invalid). label.json and old_label never give a label (the inventory
+     counts the windows whose label.json names another one). options.olmoearth_evals_split belongs to the paper's
+     evaluation, not to the checkpoint: it never chooses a window (the inventory reports it beside options.split).
   p. The model's input is rslearn's: the eight layers in the config's order, 12 bands each in OlmoEarth's order,
      Pad(64, center) on the raw values, then OlmoEarth's normalisation. SimpleTimeSeries(image_channels=48,
      groups=[[0], [1]]) runs the encoder once on the four pre layers and once on the four post layers (timestamps day
@@ -114,9 +115,10 @@ Arm F's readings (added with the amendment of 1 October 2026; the page marks the
      HEAD on 1 October 2026). The job downloads it with a resumable curl; verify_tar hashes it once (MD5 and SHA-256
      in one pass), refuses it unless the size and the MD5 match the pin, and records the SHA-256, which is checked
      too once it is pinned here. extract_layers then streams it once and writes only what the run reads: the eight
-     image layers, the label layer, every window's top-level files and the dataset's config. Every other layer
-     (Landsat, Sentinel-1, Sentinel-2 groups .4 and .5, the masks) is counted and skipped. Groups are not filtered:
-     the split is read per window, and group names are not verified until the inventory.
+     image layers, the label layer, every window's top-level files and every file outside the windows (the
+     dataset's config). Every other layer (Landsat, Sentinel-1, Sentinel-2 groups .4 and .5, the masks) is counted
+     and skipped. Groups are not filtered: the split is read per window, and group names are not verified until the
+     inventory.
   t. Certification for arm F is studied at alpha 0.10 and 0.15 (Ai2's error rate is 23.9%). At 109 windows neither
      budget (300, 1,000) fits, so its estimate and certify cells are reported as not run; c*(alpha) from all labels
      is reported for both orders.
@@ -2023,8 +2025,8 @@ def member_layer(name):
 
 def extract_layers(path, data_dir, keep_layers, info, log=print):
     """Stream a dataset tar once and write only the members the run reads: the layers in `keep_layers`, every
-    window's own files (metadata.json, items.json) and the dataset's config. Every other layer is counted (members
-    and bytes) and skipped. Links and special files are skipped and counted. Leaves a manifest and a marker."""
+    window's own files (metadata.json, items.json) and every file outside the windows (the dataset's config). Every
+    other layer is counted (members and bytes) and skipped. Links and special files are skipped and counted. Leaves a manifest and a marker."""
     os.makedirs(data_dir, exist_ok=True)
     filt = {"filter": "data"} if hasattr(tarfile, "data_filter") else {}
     kept, skipped, other = {}, {}, {"links_or_special": 0}

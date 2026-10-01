@@ -619,7 +619,7 @@ def test_the_page_states_the_amendment_the_script_follows():
     assert "waits for Ai2's validation split" in page and "Slack on 1 October 2026" in page
     assert "Arm N (Nandi) stays not run" in page
     assert "no longer reads exp21's `data/awf`" in page
-    assert "olmoearth_evals_split" in page and "never read" in page
+    assert "olmoearth_evals_split" in page and "It never chooses a window" in page
     assert "—" not in page, "no em dashes"
     for arm in ("awf", "fld"):
         A = e89.ARMS[arm]
@@ -1031,6 +1031,75 @@ def test_arm_f_extraction_keeps_only_what_the_run_reads_and_survives_the_purge(t
     assert e89.member_layer("dataset/windows/g/w/layers/pre_sentinel2.4/B/geotiff.tif") == "pre_sentinel2.4"
     assert e89.member_layer("dataset/windows/g/w/metadata.json") is None
     assert e89.member_layer("dataset/windows/g/layers/metadata.json") is None, "a window named layers is a window"
+
+
+def test_the_page_says_what_the_inventory_reads_and_what_is_still_proposed():
+    """The inventory reads olmoearth_evals_split and label.json, to report them beside split and data.geojson, so the
+    page says they never choose or label a window, not that they are never read. The extraction keeps every file
+    outside the windows, and the page says so. The plan index does not call arm F's readings or the alignment
+    tolerances confirmed."""
+    import inspect
+    counts = inspect.getsource(e89.fld_window_counts)
+    assert "olmoearth_evals_split" in counts and '"label.json"' in counts, "the inventory reads both"
+    for fn in (e89.fld_unit, e89.fld_label, e89.fld_label_from_features, e89.arm_windows, e89.list_windows,
+               e89.predict_population, e89.compute_units):
+        src = inspect.getsource(fn)
+        assert "olmoearth_evals_split" not in src and '"label.json"' not in src, fn.__name__
+    with open(e89.PLAN, encoding="utf-8") as f:
+        page = f.read()
+    assert "and is never read" not in page and "`old_label` are never read" not in page
+    assert "the inventory only reports it beside `split`" in page
+    assert "every file outside the windows" in page
+    with open(os.path.join(ROOT, "docs", "plan", "index.md"), encoding="utf-8") as f:
+        row = next(line for line in f if "| exp89 |" in line)
+    status = row.rstrip().rstrip("|").rsplit("|", 1)[-1]
+    assert "proposed" in status, status
+
+
+class _FakeReplicaF:
+    """Arm F's replica as compute_units uses it: ten channels, logits from the input's mean."""
+    def __init__(self):
+        self.arm, self.A = "fld", e89.ARMS["fld"]
+
+    def logits(self, stacks, locs=None, timestamps="rslearn"):
+        m = np.asarray(stacks, dtype=np.float64).mean(axis=tuple(range(1, np.ndim(stacks))))
+        L = np.zeros((len(m), 10))
+        L[:, 0], L[:, 5], L[:, 9] = m / 1000.0, 0.6, 0.4
+        return L
+
+
+def test_arm_f_k2_and_k3_are_fitted_on_training_windows_only(tmp_path, monkeypatch):
+    """compute_units on arm F's rslearn layout with class_rarity and the K3 fit spied on: K2's frequencies come from
+    the training windows' labels, and K3 is fitted on the training windows' 128 crop statistics, never a validation
+    window's."""
+    pytest.importorskip("rasterio")
+    root, _ = e89.synthetic_fld_dataset(str(tmp_path), n_train=8, n_val=6, size=72)
+    windows = e89.arm_windows("fld", os.path.join(root, "windows"))
+    seen = {}
+    real_rarity = e89.class_rarity
+
+    def spy_rarity(pred, train_labels, trained):
+        seen["k2_labels"] = np.asarray(train_labels).copy()
+        return real_rarity(pred, train_labels, trained)
+
+    def spy_fit(x_train, y_train, classes, x_eval, seed=e89.SEED):
+        seen["x_train"], seen["y_train"], seen["x_eval"] = (np.asarray(x_train).copy(), np.asarray(y_train).copy(),
+                                                            np.asarray(x_eval).copy())
+        return np.full((len(x_eval), len(classes)), 1.0 / len(classes)), {"n_train": len(y_train)}
+    monkeypatch.setattr(e89, "class_rarity", spy_rarity)
+    monkeypatch.setattr(e89, "fit_no_encoder_classifier", spy_fit)
+    units, meta = e89.compute_units("fld", _FakeReplicaF(), windows, log=lambda *a: None, synthetic=True)
+    train = [w for w in windows if w["split"] == "train"]
+    tr = [r for r in e89.read_units("fld", train, need="features", log=lambda *a: None) if r["label"] is not None]
+    va = [r for r in e89.read_units("fld", [w for w in windows if w["split"] == "val"], need="features",
+                                    log=lambda *a: None) if r["label"] is not None]
+    assert len(tr) == 8 and len(va) == 4 == len(units["label"])
+    assert np.array_equal(seen["k2_labels"], [r["label"] for r in tr]), "K2 reads the training labels"
+    assert np.array_equal(seen["y_train"], [r["label"] for r in tr]), "K3's labels are the training labels"
+    assert np.array_equal(seen["x_train"], np.stack([r["features"] for r in tr]))
+    assert np.array_equal(seen["x_eval"], np.stack([r["features"] for r in va]))
+    assert not any((seen["x_train"] == v).all(1).any() for v in seen["x_eval"]), "no validation window in the fit"
+    assert set(units["stratum"]) == {e89.FLD_SYN_GROUPS[0]} and units["clusters_coarse"] is None
 
 
 # ----------------------------------------------------------------------------- arm A's data path
