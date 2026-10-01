@@ -11,7 +11,7 @@
   "allenai/olmoearth-paper-embeddings read the same in two separate cache trees on aicr, which the experiments populated on different days.",
   "allenai/OlmoEarth-v1-Base, allenai/OlmoEarth-v1-Nano and isp-uv-es/WorldFloodsv2 read the same on aicr and on the laptop: two machines, two independent downloads, one sha each."
  ],
- "coverage": "Thirteen repositories. scripts/upstream_revision.py finds eight of them by scanning the code for repo ids on fetcher lines and top-level constants; that scan is a lower bound, since a repo id assigned inside a function (allenai/OlmoEarth-v1-Base, at oe_inferencex/taskcard.py:379) is not reached. The record may pin more than the scan finds, never less, and the test asserts that direction.",
+ "coverage": "Nineteen repositories. scripts/upstream_revision.py finds fourteen of them by scanning the code for repo ids on fetcher lines and top-level constants; that scan is a lower bound, since a repo id assigned inside a function (allenai/OlmoEarth-v1-Base, at oe_inferencex/taskcard.py:379) is not reached. The record may pin more than the scan finds, never less, and the test asserts that direction. The five entries exp89 added on 1 October 2026 were resolved with the Hub API before any exp89 run, not read back from a cache; two of them have no revision because the Hub answers 401.",
  "repos": {
   "125oii/dfc2020": {
    "host": "huggingface",
@@ -67,7 +67,31 @@
    ],
    "carries": "the fine-tuned AWF head of exp21",
    "named_at": [
-    "exp/exp21_finetuned_awf.py:54"
+    "exp/exp21_finetuned_awf.py:54",
+    "exp/exp89_finetuned_checkpoints.py:104"
+   ]
+  },
+  "allenai/OlmoEarth-v1-FT-Mangrove-Base": {
+   "host": "huggingface",
+   "repo_type": "model",
+   "revision": "57ee738b5b4474ad61391ed612e4fbc2a034353e",
+   "read_from": [
+    "hf-api:2026-10-01 (resolved before any run; no cache has read it back yet)"
+   ],
+   "carries": "the fine-tuned Mangrove checkpoint of exp89 (model.ckpt, 1,041,362,118 bytes, sha256 ffb51fbb...)",
+   "named_at": [
+    "exp/exp89_finetuned_checkpoints.py:100"
+   ]
+  },
+  "allenai/OlmoEarth-v1-FT-Nandi-Base": {
+   "host": "huggingface",
+   "repo_type": "model",
+   "revision": null,
+   "why": "The Hub answers 401 (checked 1 October 2026), though Ai2's doc links it. exp89's arm N runs only if it is published and pinned here.",
+   "read_from": [],
+   "carries": "the fine-tuned Nandi checkpoint, exp89's arm N (not run)",
+   "named_at": [
+    "exp/exp89_finetuned_checkpoints.py:102"
    ]
   },
   "allenai/OlmoEarth-v1-Nano": {
@@ -119,6 +143,41 @@
    "carries": "the served land-cover product's dataset card",
    "named_at": [
     "oe_inferencex/taskcard.py:323"
+   ]
+  },
+  "allenai/olmoearth_projects_awf": {
+   "host": "huggingface",
+   "repo_type": "dataset",
+   "revision": "da8eb6aab65b518cb8223912ba9091cbaa5dad2f",
+   "read_from": [
+    "hf-api:2026-10-01 (resolved before any run; no cache has read it back yet)"
+   ],
+   "carries": "the AWF rslearn dataset (dataset.tar, 1,869,219,840 bytes) exp89's arm A downloads if the cluster's data/awf was purged; exp04 to exp21 read an earlier unpinned download",
+   "named_at": [
+    "exp/exp89_finetuned_checkpoints.py:105"
+   ]
+  },
+  "allenai/olmoearth_projects_mangrove": {
+   "host": "huggingface",
+   "repo_type": "dataset",
+   "revision": "3a878b8a9e54ef627939d48cab334f74e89fa634",
+   "read_from": [
+    "hf-api:2026-10-01 (resolved before any run; no cache has read it back yet)"
+   ],
+   "carries": "the Mangrove rslearn dataset of exp89 (mangrove.tar, 62,433,280 bytes, sha256 ef9dba6a...; annotation_features.geojson)",
+   "named_at": [
+    "exp/exp89_finetuned_checkpoints.py:101"
+   ]
+  },
+  "allenai/olmoearth_projects_nandi": {
+   "host": "huggingface",
+   "repo_type": "dataset",
+   "revision": null,
+   "why": "The Hub answers 401 (checked 1 October 2026), though Ai2's doc links it. exp89's arm N runs only if it is published and pinned here.",
+   "read_from": [],
+   "carries": "the Nandi rslearn dataset, exp89's arm N (not run)",
+   "named_at": [
+    "exp/exp89_finetuned_checkpoints.py:103"
    ]
   },
   "gastruc/anysat": {
