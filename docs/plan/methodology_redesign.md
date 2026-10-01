@@ -136,3 +136,10 @@ the sections are in `docs/results/comparisons.md`.
 - **exp84** is preregistered on the fifteen other encoders' seeds and runs as their exports land; exp79's
   OlmoEarth Base export passed the record's gate on all 24 tasks on the B200 and the margin's lead survived all
   ten seeds on every task, with the GPU's contribution measured beside the seed's (`exp/out/exp79_engine/`).
+
+## Addendum, 30 September 2026 (nothing above changed)
+
+Item 1 calls the prefix rule a monotone-prefix rule and the Bonferroni rule assumption-free. The prefix rule is
+fixed-sequence testing: the order and the grid are fixed before any label is read, so it holds δ on any map, whatever
+the shape of its error rate. Both rules are valid, and neither is the more powerful in general; Bonferroni certified
+more on Brick Kiln in exp80. See the addendum of the same date in [trust_zone.md](trust_zone.md).

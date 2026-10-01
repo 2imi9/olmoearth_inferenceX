@@ -93,7 +93,8 @@ line is unchanged, but for two texts corrected on purpose (below). The JSON outp
   the sample sidecar and `assess_prediction`'s result), have the new texts above.
 
 **The record says no more than its data (documentation only).** A red team of 30 September 2026 read the docs
-against the committed artifacts. No headline number was wrong; several sentences said more than the numbers do. The
+against the committed artifacts. No headline number was made up; several sentences said more than the numbers do, and a few small counts
+were wrong. The
 package is unchanged by this; the corrections are in the docs and the claim ledger.
 
 - **The suite headline.** The two no-model controls computable from Ai2's embeddings are near chance: the better one
