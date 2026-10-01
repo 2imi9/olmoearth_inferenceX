@@ -1927,9 +1927,10 @@ Sentinel-1 probe covers the whole test split) and the source-level p-value. The 
 - **The preregistration was not blind on six of the seven segmentation tasks.** exp54 had already scored the
   margin on MADOS, both PASTIS inputs with optical, m-cashew-plant and m-SA-crop-type, on the same windows with the
   same excess AURC, and exp51 had scored Sen1Floods11 the same way. Both were committed three days before exp70's
-  preregistration, and this section did not say so. On the other 18 tasks, which no earlier artifact scores, the
-  margin beats both controls on 18 of 18 (p = 3.8e-06), so the result stands on tasks that were not seen.
-  <!-- claim:suite-six-segmentation-outcomes-were-on-record -->
+  preregistration, and this section did not say so. On the other 18 tasks the margin beats both controls on 18 of
+  18 (p = 3.8e-06). Only one of them appears in an earlier artifact: exp41 had scored OlmoEarth Base's confidence on
+  AWF Sentinel-2 with another probe (61 errors in 200, against exp70's 34) and without exp70's controls. So the
+  result stands on tasks whose outcome was not seen. <!-- claim:suite-six-segmentation-outcomes-were-on-record -->
 - **Where the controls carry information, the margin still wins, and that is the stronger evidence.** On Dynamic
   World's expert tiles the class-rarity control finds 0.217 of the errors in a 10% review, about twice a random
   10%; on EuroCrops it ranks errors with an AUROC of 0.70 in Austria and Slovenia; on LUCAS the pixel variance finds

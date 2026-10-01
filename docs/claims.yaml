@@ -2336,12 +2336,12 @@
     weaker than the pixel indices used elsewhere here, because the imagery is not published with them.
 
 - id: suite-six-segmentation-outcomes-were-on-record
-  statement: "exp70's preregistration was not blind on six of its seven segmentation tasks. On five of them (MADOS, PASTIS Sentinel-2, PASTIS Sentinel-1+2, m-cashew-plant and m-SA-crop-type) exp54 had already scored OlmoEarth Base's margin on the same windows, with the same excess AURC, and found it ahead of an embedding-distance control; on Sen1Floods11 exp51's arm A had scored the same 592,385 windows with the same excess AURC. Both were committed three days before exp70's script and preregistration. On the other 18 tasks, which no earlier artifact scores, the margin beats both controls on 18 of 18 (one-sided exact sign test, p = 3.8e-06)."
+  statement: "exp70's preregistration was not blind on six of its seven segmentation tasks. On five of them (MADOS, PASTIS Sentinel-2, PASTIS Sentinel-1+2, m-cashew-plant and m-SA-crop-type) exp54 had already scored OlmoEarth Base's margin on the same windows, with the same excess AURC, and found it ahead of an embedding-distance control; on Sen1Floods11 exp51's arm A had scored the same 592,385 windows with the same excess AURC. Both were committed three days before exp70's script and preregistration. On the other 18 tasks the margin beats both controls on 18 of 18 (one-sided exact sign test, p = 3.8e-06). Only one of them appears in an earlier artifact: exp41 had scored OlmoEarth Base's confidence on AWF Sentinel-2 with another probe (61 errors in 200, against exp70's 34) and without exp70's controls."
   status: measured
-  experiments: [exp70, exp54, exp51]
-  artifacts: [exp/out/exp70_summary.json, exp/out/exp54_summary.json, exp/out/exp51_summary.json]
+  experiments: [exp70, exp54, exp51, exp41]
+  artifacts: [exp/out/exp70_summary.json, exp/out/exp54_summary.json, exp/out/exp51_summary.json, exp/out/exp41_summary.json]
   check: |-
-    (lambda T, s54, s51:
+    (lambda T, s54, s51, s41:
       # the five tasks exp54 scored for OlmoEarth Base: the same windows and the same margin excess AURC as exp70,
       # and the margin ahead of exp54's embedding-distance control
       sorted(s54) == ['m_cashew_plant', 'm_sa_crop_type', 'mados', 'pastis_sentinel1_sentinel2', 'pastis_sentinel2']
@@ -2360,8 +2360,12 @@
             T[t]['signals']['margin']['excess_aurc'] < min(T[t]['signals'][c]['excess_aurc'] for c in ('ctl_embedding_distance', 'ctl_class_rarity'))
             for t in rest))([t for t in T if t not in s54 and t != 'sen1floods11'])
       and round(0.5 ** 18, 7) == 3.8e-06
+      # exp41 scored one of the 18, AWF Sentinel-2, with another probe on the same 200 test units
+      and sorted(s41) == ['awf_sentinel2', 'sen1floods11']
+      and s41['awf_sentinel2']['n_test_windows'] == T['awf_sentinel2']['n_units'] == 200
+      and s41['awf_sentinel2']['n_test_errors'] == 61 and round(T['awf_sentinel2']['error_rate'] * 200) == 34
     )(A['exp/out/exp70_summary.json']['results']['tasks'], A['exp/out/exp54_summary.json']['results'],
-      A['exp/out/exp51_summary.json']['results']['A_olmoearth_base']['matched'])
+      A['exp/out/exp51_summary.json']['results']['A_olmoearth_base']['matched'], A['exp/out/exp41_summary.json']['tasks'])
   cited_in:
     - {file: docs/results/comparisons.md, marker: suite-six-segmentation-outcomes-were-on-record}
     - {file: docs/Findings.md, marker: suite-six-segmentation-outcomes-were-on-record}
@@ -2372,7 +2376,8 @@
     which carries its preregistration, entered in f843556 on 13 September and its result in b899b73 the same day. exp54's
     embedding-distance control is not exp70's (its excess AURC differs), and exp51 scored a sensor-level and an NDWI
     control rather than exp70's two, so what was on record is the margin's own score on those windows, not the exp70
-    comparison itself. No artifact committed before f843556 names any of the other 18 tasks.
+    comparison itself. Of the other 18 tasks, only AWF Sentinel-2 is named in an artifact committed before f843556
+    (exp41, 2219ec0, 8 September 2026), with another probe.
 
 - id: external-references-carry-informative-controls
   statement: "Unlike the suite's two controls, the best no-model control on three external references finds errors well above chance, and the margin beats it there too. On Dynamic World's expert tiles the class-rarity control finds 0.217 of the errors in a 10% review, where a random 10% finds 0.10, and the margin's lead over it is 0.048 of excess AURC; on EuroCrops the class-rarity control ranks errors with an AUROC of 0.70 in Austria and in Slovenia (in Denmark the pixel variance is the better control); on LUCAS the within-window pixel variance finds 0.149 of the design-weighted errors in a 10% review."
