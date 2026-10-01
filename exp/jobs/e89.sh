@@ -23,6 +23,7 @@
 #   ssh aicr 'E89_MODE=inv E89_ARM=awf sbatch --parsable -p cpu -t 01:00:00' < exp/jobs/e89.sh
 #   ssh aicr 'E89_MODE=smoke E89_ARM=fld sbatch --parsable -p b200-devel,rtx-devel -q interactive --gpus=1 -t 01:00:00' < exp/jobs/e89.sh
 #   ssh aicr 'E89_MODE=gate E89_ARM=fld sbatch --parsable -p b200-devel,rtx-devel -q interactive --gpus=1 -t 01:00:00' < exp/jobs/e89.sh
+#   On the CPU instead (used since job 1151050): E89_DEVICE=cpu ... sbatch -p cpu -c 32 --mem=120G
 #   ssh aicr 'E89_MODE=run E89_ARM=fld sbatch --parsable -p b200-devel,rtx-devel -q interactive --gpus=1 -t 03:00:00 --dependency=afterok:GATE_JOB' < exp/jobs/e89.sh
 #
 # Every mode writes tracked files in exp/out, and the hard reset below restores tracked files: never let two of these
@@ -78,7 +79,9 @@ fetch_fld() {
 echo "== $(date -Is) job ${SLURM_JOB_ID:-none} on $(hostname): mode $MODE, arm $ARM, data $DATA, commit $(git rev-parse --short HEAD) =="
 case "$MODE" in
   smoke|gate|run)
-    if ! nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader; then
+    if [ "${E89_DEVICE:-}" = "cpu" ]; then
+      echo "E89_DEVICE=cpu: the model runs on the CPU (the GPU path hit a device mismatch in job 1151050)"
+    elif ! nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader; then
       echo "mode $MODE runs the model and needs a GPU: submit with -p b200-devel,rtx-devel -q interactive --gpus=1"
       exit 2
     fi ;;

@@ -1762,7 +1762,9 @@ class Replica:
         self.arm, self.A = arm, ARMS[arm]
         if tuple(Modality.SENTINEL2_L2A.band_order) != OLMO_BANDS:
             raise RuntimeError(f"the encoder's band order {Modality.SENTINEL2_L2A.band_order} is not {OLMO_BANDS}")
-        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        # E89_DEVICE=cpu forces the CPU: on aicr's GPUs the encoder's band-index buffers stayed on the CPU while the
+        # sample went to cuda (job 1151050, index_select device mismatch); the validation sets are small enough for CPU
+        self.device = device or os.environ.get("E89_DEVICE") or ("cuda" if torch.cuda.is_available() else "cpu")
         self.checkpoint_sha256 = checkpoint_sha256 or sha256(ckpt_path)
         self.model_id, self.encoder_revision = model_id, ENCODER_REVISIONS[model_id]
         sd, self.load_how, self.top_level = load_checkpoint(ckpt_path)
