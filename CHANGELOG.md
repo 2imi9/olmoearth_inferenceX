@@ -92,6 +92,34 @@ line is unchanged, but for two texts corrected on purpose (below). The JSON outp
 - The zone JSON's `note` under the prefix rule, and the multi-class logit warning in `warnings` (`assessment.json`,
   the sample sidecar and `assess_prediction`'s result), have the new texts above.
 
+**The record says no more than its data (documentation only).** A red team of 30 September 2026 read the docs
+against the committed artifacts. No headline number was wrong; several sentences said more than the numbers do. The
+package is unchanged by this; the corrections are in the docs and the claim ledger.
+
+- **The suite headline.** The two no-model controls computable from Ai2's embeddings are near chance: the better one
+  closes a median 0.094 of the gap between a random and a perfect order and is no better than random on 9 of 24
+  tasks. The headline now leads with the margin's median 0.68 of that gap, a 10% review that finds a median 0.214 of
+  the errors (a random 10% finds 0.10), and the margin beating a random order in all 3,560 cells of exp79. Informative
+  controls were beaten on LUCAS, Dynamic World and EuroCrops. The sign test is given over the 14 sources (p =
+  6.1e-05) beside the one over tasks. Six of the seven segmentation outcomes were on record before exp70's
+  preregistration; on the other 18 tasks the margin wins 18 of 18.
+- **exp88.** A probe trained on radar alone was 28.4% wrong on PASTIS, and 3.9% of its errors looked confident, so
+  the confident errors belong to a model run on inputs it was not trained on. Per-condition error rates stay
+  justified; ranking each condition on its own matters where a model is read on inputs it was not trained on.
+- **exp64.** Arm D, with no package and no rasters, declined to pick a side as often as the tool arm, and the grader
+  scores any decline as full marks, so the benchmark does not show that the package causes the decline.
+- **Estimation and certification.** The interval and the zone treat the reviewer's labels as right; blind labelling
+  is recommended. The prefix rule is fixed-sequence testing and was valid all along; earlier entries below call it a
+  monotone-prefix rule that assumes the risk does not fall, and Bonferroni assumption-free, which undersold it. The
+  tiles design as shipped covers 94.5% to 95.4% on five tasks and 84.3% and 68.5% on Sen1Floods11 and MADOS; the
+  warning `estimate` prints for a tiles sample still quotes exp78's own design. Undesigned labels passed to
+  `estimate_from_indices` are only checked for not looking like a review list.
+- **Smaller facts.** exp78's tile design drew 18 tiles, not 19; five sources are shared by the suite's tasks, not four;
+  exp57 graded 2,308 of 2,419 Sen1Floods11 tiles; exp63 does not align by construction; the EuroCrops margin is within
+  0.001 of one minus top-1 rather than best; the fine-tuned AWF model's confidence is tied with tiling instability;
+  boundary-first review neither wins nor loses consistently across GEOID-Flood events; exp86's interval resampled
+  configurations, not briefs. The protocol page's novelty claim is replaced by the literature search's verdicts.
+
 **A quick start that can be run.** `examples/quickstart_map.py` writes the README's test map: two four-class
 probability maps of one synthetic scene, and its truth. With `--label` it fills in a sample's labels from that truth.
 `tests/test_readme_quickstart.py` runs the README's commands on the map and compares the printed lines. The package
