@@ -772,7 +772,10 @@ def test_existing_outputs_are_byte_identical_to_1_3_1(tmp_path):
     the new text and the files that hold it, and nothing else may differ:
     - certify's note on the prefix rule, a line of the stdout and the `note` of the zone JSON, in the four prefix
       certifications (sample_random certify_prefix, certify_delta and certify_whole, sample_scene_random
-      certify_prefix)."""
+      certify_prefix);
+    - the warning on a multi-class logit map scored by the logit margin, a line of sample_logits3_random's stdout and
+      an entry of `warnings` in its sidecar, in assess_logits3's assessment.json and in the API summary
+      api_prediction_logits3_margin."""
     from oe_inferencex.assess import SCOPE_ASSESS
     from oe_inferencex.estimate import SCOPE_CERTIFY, SCOPE_ESTIMATE
     gen = _golden_module()
@@ -783,10 +786,10 @@ def test_existing_outputs_are_byte_identical_to_1_3_1(tmp_path):
     golden = json.load(open(os.path.join(GOLDEN, "manifest.json")))
     assert sorted(files) == golden["files"]                     # no file added or lost, condition.tif included
     assert manifest["steps"] == golden["steps"] and manifest["api"] == golden["api"]
-    # the list is exact: one change, in exactly these eight files, every one of them a golden file, and each new
+    # the list is exact: two changes, in exactly these twelve files, every one of them a golden file, and each new
     # text is the one the package keeps
     listed = sorted(n for c in changes.CHANGES for n in c["files"])
-    assert len(changes.CHANGES) == 1 and len(listed) == len(set(listed)) == 8 and set(listed) <= set(golden["files"])
+    assert len(changes.CHANGES) == 2 and len(listed) == len(set(listed)) == 12 and set(listed) <= set(golden["files"])
     for c in changes.CHANGES:
         module, constant = c["constant"]
         assert getattr(importlib.import_module(module), constant) == c["new"], constant

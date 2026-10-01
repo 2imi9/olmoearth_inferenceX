@@ -995,7 +995,10 @@ def build_parser():
     a = sub.add_parser("assess", help="rank the windows of one prediction map for review and explain them")
     a.add_argument("scores", help="raster or .npy: (H, W) binary probability or logit map, or (C, H, W) per-class scores")
     a.add_argument("--out", required=True, help="output directory")
-    a.add_argument("--logits", action="store_true", help="the scores are logits (tie-free confidence); default probabilities")
+    a.add_argument("--logits", action="store_true",
+                   help="the scores are logits (tie-free confidence); default probabilities. A multi-class logit map is "
+                        "ranked by its logit margin; for a top-probability reading, pass the class probabilities "
+                        "instead (in Python, form='top1' gives one from the logits)")
     a.add_argument("--patch", type=int, default=4, help="window size in pixels (default 4)")
     a.add_argument("--nodata", type=float, default=None, help="no-data value (default: the raster's own, plus NaN)")
     a.add_argument("--reference", default=None, help="optional integer class raster treated as truth (the caveat applies)")

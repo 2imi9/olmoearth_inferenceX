@@ -70,6 +70,15 @@ SCOPE_ASSESS_K = ("The review sets above rank all {K} input conditions together.
                   "was 0.59 for a probe trained on radar plus optical and run on radar alone, against 0.83 on both "
                   "inputs and 0.79 for a probe trained on radar alone (exp88). Which condition is more accurate needs "
                   "labels: sample with --condition.")
+# The warning on a multi-class logit map scored by the default form. `form` is a Python argument only (1.3.1 said
+# "pass form='top1'" alone). The command line reaches a top-probability reading through probability input: the
+# window mean of the top probability, where form='top1' takes the window mean of its log, so the two orders agree
+# window by window only at a patch of one pixel (tests/test_assess.py).
+MARGIN_FORM_WARNING = ("multi-class logit margin: on Ai2's suite one minus the top probability ranked errors better on "
+                       "14 of 16 multi-class tasks (exp76). In Python, pass form='top1'. The command line has no such "
+                       "option: pass the class probabilities without --logits. That also ranks by the top probability, "
+                       "averaged over each window where form='top1' averages its log, and can tie where probabilities "
+                       "saturate")
 CLASS_SHARE_TEXT = ("Descriptive only: the share of windows the map calls each class, within each condition. No "
                     "experiment has tested whether a difference between conditions signals errors.")
 
@@ -264,8 +273,11 @@ def assess_prediction(scores, is_logit, patch=4, nodata_mask=None, reference=Non
     logit margin (the default, unchanged since 1.0.0), or "top1", the top softmax probability computed tie-free
     from the logits. On the 16 multi-class tasks of Ai2's suite "top1" ranked errors better than the margin on 14,
     and the logit margin was the weakest of the three forms on 14 of 16 by AUROC and 15 of 16 by excess AURC (exp76,
-    tying for best on awf_sentinel2), so a multi-class logit map scored with the default carries a warning. Binary maps and probability input are unaffected: there the forms are one ranking, and
-    probability input already uses the top probability.
+    tying for best on awf_sentinel2), so a multi-class logit map scored with the default carries a warning. Binary
+    maps and probability input are unaffected: there the forms are one ranking, and probability input already uses
+    the top probability. `form` has no command-line option. There, probability input gives a top-probability
+    reading: the window mean of the top probability, where "top1" takes the window mean of its log, with ties where
+    probabilities saturate (MARGIN_FORM_WARNING).
 
     `condition` is an optional (H, W) integer layer on the map's grid: the input condition of each pixel, such as a
     cloud flag or the modalities present, negative or NaN where none is recorded (pool_condition gives the rule).
@@ -317,8 +329,7 @@ def assess_prediction(scores, is_logit, patch=4, nodata_mask=None, reference=Non
         elif is_logit:
             margin = srt[-1] - srt[-2]
             if C > 2:
-                warnings.append("multi-class logit margin: on Ai2's suite one minus the top probability ranked errors "
-                                "better on 14 of 16 multi-class tasks (exp76); pass form='top1'")
+                warnings.append(MARGIN_FORM_WARNING)
         else:
             margin = srt[-1]  # top-1 probability
             warnings.append("probability input: confidence ties where probabilities saturate; prefer logits")

@@ -177,6 +177,34 @@ def test_assess_prediction_top1_form_on_multiclass_logits_and_the_warning_on_the
         assess_prediction(z, is_logit=True, form="entropy")
 
 
+def test_the_command_line_route_the_margin_warning_names():
+    """The warning on the default form says the command line, which has no `form`, gets a top-probability reading
+    from the class probabilities passed without --logits. That input is scored by the window mean of the top
+    probability, with no margin warning; form='top1' takes the window mean of its log. At a patch of one pixel the two
+    are the same number for every window, and at the default patch of four they are not the same order."""
+    from oe_inferencex.assess import MARGIN_FORM_WARNING
+    rng = np.random.default_rng(5)
+    z = rng.standard_normal((4, 32, 32)) * 2
+    p = np.exp(z - z.max(0))
+    p /= p.sum(0)
+    assert summary(assess_prediction(z, is_logit=True))["warnings"].count(MARGIN_FORM_WARNING) == 1
+    assert "pass the class probabilities without --logits" in MARGIN_FORM_WARNING
+    assert "In Python, pass form='top1'" in MARGIN_FORM_WARNING
+    for patch in (1, 4):
+        cli_route = assess_prediction(p, is_logit=False, patch=patch)
+        python_route = assess_prediction(z, is_logit=True, form="top1", patch=patch)
+        assert MARGIN_FORM_WARNING not in summary(cli_route)["warnings"]
+        assert summary(cli_route)["signal"] == "1 - max probability"
+        w = 32 // patch
+        window_mean = p.max(0).reshape(w, patch, w, patch).mean((1, 3))
+        np.testing.assert_allclose(cli_route["arrays"]["confidence"], window_mean, rtol=0, atol=1e-12)
+        a, b = cli_route["arrays"]["confidence"].ravel(), python_route["arrays"]["confidence"].ravel()
+        if patch == 1:
+            np.testing.assert_allclose(a, b, rtol=0, atol=1e-12)
+        else:
+            assert not np.array_equal(np.argsort(-a, kind="stable"), np.argsort(-b, kind="stable"))
+
+
 @pytest.mark.parametrize("scores,why", [
     (np.full((32, 32), 80.0) + np.arange(32)[None, :], "a regression output, such as fuel moisture in percent"),
     (np.stack([np.full((32, 32), 120.0), np.full((32, 32), 30.0)]), "per-class scores that are not probabilities"),
@@ -353,10 +381,21 @@ def _golden_calls():
     }
 
 
+def _golden_changes():
+    """tests/golden/condition_1_3_1/changes.py: the outputs changed on purpose since 1.3.1, and nothing else."""
+    spec = importlib.util.spec_from_file_location("golden_1_3_1_changes", os.path.join(GOLDEN, "changes.py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
 def test_without_a_condition_only_scope_is_added():
     """Against the summaries generated at 725dffa, before the layer was built: byte for byte once `scope` is taken
-    out, and `scope` is SCOPE_ASSESS, outside the warnings."""
+    out, and `scope` is SCOPE_ASSESS, outside the warnings. The one deliberate change is the multi-class logit
+    warning of api_prediction_logits3_margin, listed with its old and new text in golden/condition_1_3_1/changes.py;
+    every other byte is 1.3.1's."""
     calls = _golden_calls()
+    changes = _golden_changes()
     assert sorted(calls) == json.load(open(os.path.join(GOLDEN, "manifest.json")))["api"]
     for name, (fn, args, kw) in calls.items():
         out = fn(*args, **kw)
@@ -364,7 +403,7 @@ def test_without_a_condition_only_scope_is_added():
         assert s.pop("scope") == SCOPE_ASSESS, name
         assert SCOPE_ASSESS not in s["warnings"] and "conditions" not in s and "condition" not in out["arrays"], name
         with open(os.path.join(GOLDEN, f"{name}.json"), "rb") as f:
-            assert (json.dumps(s, indent=1) + "\n").encode() == f.read(), name
+            assert (json.dumps(s, indent=1) + "\n").encode() == changes.expected(f"{name}.json", f.read()), name
 
 
 def _two_condition_map(seed=3, size=48):

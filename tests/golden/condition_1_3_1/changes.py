@@ -6,8 +6,9 @@ whole string value; in a stdout file it is a whole line, alone or after "warning
 golden file as the package must now write it: the listed changes applied, every other byte as 1.3.1 wrote it. A
 listed text that is not where the list says, or that sits in a file the list does not name, fails the test, so the
 list is exact. The new texts are written out here, not imported, so a later edit of the package's text fails the
-test until it is listed too; `constant` names where the package keeps each one.
-tests/test_cli.py::test_existing_outputs_are_byte_identical_to_1_3_1 uses this file.
+test until it is listed too; `constant` names where the package keeps each one. Two tests use this file:
+tests/test_cli.py::test_existing_outputs_are_byte_identical_to_1_3_1 and
+tests/test_assess.py::test_without_a_condition_only_scope_is_added.
 """
 import json
 
@@ -25,6 +26,18 @@ CHANGES = (
                "sample_random.certify_prefix.json", "sample_random.certify_prefix.stdout.txt",
                "sample_random.certify_whole.json", "sample_random.certify_whole.stdout.txt",
                "sample_scene_random.certify_prefix.json", "sample_scene_random.certify_prefix.stdout.txt")},
+    {"why": "the warning on a multi-class logit map scored by the logit margin. 1.3.1 said only \"pass form='top1'\", "
+            "which is a Python argument with no command-line option; the warning now says how the command line gets "
+            "a top-probability reading and how it differs",
+     "old": ("multi-class logit margin: on Ai2's suite one minus the top probability ranked errors better on 14 of 16 "
+             "multi-class tasks (exp76); pass form='top1'"),
+     "new": ("multi-class logit margin: on Ai2's suite one minus the top probability ranked errors better on 14 of 16 "
+             "multi-class tasks (exp76). In Python, pass form='top1'. The command line has no such option: pass the "
+             "class probabilities without --logits. That also ranks by the top probability, averaged over each window "
+             "where form='top1' averages its log, and can tie where probabilities saturate"),
+     "constant": ("oe_inferencex.assess", "MARGIN_FORM_WARNING"),
+     "files": ("api_prediction_logits3_margin.json", "assess_logits3__assessment.json", "sample_logits3_random.json",
+               "sample_logits3_random.stdout.txt")},
 )
 LINE_PREFIXES = ("", "warning: ")
 
