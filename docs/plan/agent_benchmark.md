@@ -127,3 +127,13 @@ Which open model (a 30 to 70 billion parameter instruct model that fits one
 B200 in fp16 or int8, named in the summary); whether the OlmoEarth Agent is
 run as a fifth arm after the reproducible loop, which needs its repository
 and its own tool schema.
+
+## Addendum, 30 September 2026: what P3 shows (nothing above changed)
+
+P3 compares arm A with arm B only. Arm D, which has the card's text and no rasters or package, also declined to
+pick a side on all 30 of its comparison runs at 27B, and the grader scores any decline as full marks. So P3 holding
+does not show that the package's contract reaches the agent: a model with no package and no data declined as
+often. The claim is recorded as mixed; the detail is in the addendum to the exp64 section of
+[Comparisons](../results/comparisons.md#does-the-package-help-an-agent-the-preregistered-benchmark-exp64). A test
+that could separate the two would give a sandbox arm the one-sentence exp58 fact without the package, and credit a
+correct pick as well as a decline.
