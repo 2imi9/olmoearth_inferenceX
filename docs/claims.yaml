@@ -3365,6 +3365,18 @@
       and med([c['rules']['prefix']['median_coverage'] or 0.0 for c in cells]) == 0.5
       and med([c['rules']['bonferroni']['median_coverage'] or 0.0 for c in cells]) == 0.35
       and med([c['oracle_coverage'] for c in cells]) == 0.6
+      # the prose beside it: Brick Kiln's Bonferroni median is over a quarter of the draws, and over all 112 cells
+      # which rule certified on more draws
+      and (lambda bk: bk['bonferroni']['no_zone_rate'] == 0.748 and bk['bonferroni']['median_coverage'] == 0.75
+           and bk['prefix']['no_zone_rate'] == 0.0 and bk['prefix']['median_coverage'] == 0.5)(
+          [c for c in s['tasks']['m_brick_kiln']['cells'] if c['alpha_kind'] == 'half_theta' and c['budget'] == 300][0]['rules'])
+      and (lambda ch: round(1 - ch['bonferroni']['no_zone_rate'], 3) == 0.932 and round(1 - ch['prefix']['no_zone_rate'], 4) == 0.4375)(
+          [c for c in s['tasks']['cropharvest_Peoples_Republic_of_China_6_sentinel1']['cells']
+           if c['alpha_kind'] == 'half_theta' and c['budget'] == 300][0]['rules'])
+      and (lambda all_cells: (len(all_cells),
+           sum(1 for c in all_cells if c['rules']['bonferroni']['no_zone_rate'] < c['rules']['prefix']['no_zone_rate']),
+           sum(1 for c in all_cells if c['rules']['bonferroni']['no_zone_rate'] > c['rules']['prefix']['no_zone_rate']))
+          == (112, 25, 72))([c for row in s['tasks'].values() for c in row['cells']])
     )(lambda v: sorted(v)[len(v) // 2]))([c for row in s['tasks'].values() for c in row['cells']
                                           if c['alpha_kind'] == 'half_theta' and c['budget'] == 300]))(A['exp/out/exp80_summary.json'])
   cited_in:
@@ -3372,7 +3384,12 @@
     - {file: docs/Findings.md, marker: trust-zone-coverage-at-300-labels}
     - {file: docs/Summary.md, marker: trust-zone-coverage-at-300-labels}
   note: >-
-    Medians over 21 tasks are the 11th sorted value; a task whose rule certifies nothing on most draws enters as 0.
+    Medians over 21 tasks are the 11th sorted value of each task's median coverage over the draws on which the rule
+    certified a zone; a task whose rule never certifies enters as 0. A task whose rule certifies on few draws enters
+    with the median of those few: Bonferroni on Brick Kiln certifies nothing on 74.8% of draws and enters as 0.75
+    (corrected on 30 September 2026; this note said a task certifying nothing on most draws enters as 0). The check
+    also pins the counts the comparisons paragraph gives beside the claim: over all 112 cells Bonferroni certified a
+    zone on more draws than the prefix rule on 25 and on fewer on 72.
 
 - id: mean-confidence-overstates-accuracy
   statement: "The mean top-1 probability of OlmoEarth Base's probe exceeds its accuracy by a median 0.061 and up to 0.184 (So2Sat) over the 24 suite tasks, on 19 of them; the three PASTIS arms and the two multi-class segmentation tasks understate it by 0.009 to 0.046."

@@ -2431,10 +2431,13 @@ last grid step). Where the plug-in has a real sample to be wrong on, it is wrong
 | m-SA-crop-type (0.340) | 0.60 | 0.50 (0.035) | 0.45 (0.000) | 0.372 |
 
 Read across: at 300 labels the prefix rule certifies a zone on most draws on 14 of the 21 tasks, median
-certified coverage 0.50 against an oracle median of 0.60, and Bonferroni, which splits δ over the grid,
-certifies about a tenth of the map less (medians 0.35 against 0.50). Neither rule is the more powerful in
-general: where the most confident windows hold many errors the prefix rule stops early, and on Brick Kiln
-Bonferroni certifies 0.75 against the prefix rule's 0.50. At an absolute α = 0.05 the picture is the budget's: the
+certified coverage 0.50 against an oracle median of 0.60, and Bonferroni, which splits δ over the grid, on 13,
+median 0.35. The coverage columns are medians over the draws on which a rule certified a zone, so a rule that
+rarely certifies can still show a large one. On Brick Kiln Bonferroni certified nothing on 74.8% of draws and its
+0.75 is the median of the rest, while the prefix rule certified 0.50 on every draw. Neither rule is the more
+powerful in general. Over the 112 cells Bonferroni certified a zone on more draws than the prefix rule on 25, the
+prefix rule on 72, and the two tied on 15; on CropHarvest China S1 in the table Bonferroni certified on 93.2% of
+draws against the prefix rule's 43.8%. At an absolute α = 0.05 the picture is the budget's: the
 two near-perfect maps certify all or 95% of themselves, MADOS 0.85 and Sen1Floods11 0.75, the PASTIS arms
 0.30–0.35, and eleven tasks nothing on most draws, because their error rate is above 5% almost everywhere. At
 B = 100 the prefix rule certifies on most draws on 7 tasks, at B = 1000 on 10 of the 11 large enough.

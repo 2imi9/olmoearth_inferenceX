@@ -189,5 +189,8 @@ true null to be rejected, which happens with probability at most δ whatever the
 Test (Angelopoulos et al. 2021) gives the general argument. A test in `tests/test_trust_zone.py` now enumerates every
 error pattern of maps of 10, 11 and 12 windows against every draw, and both rules hold δ on all of them. So exp80's
 result on the tasks whose risk is not monotone is what the rule guarantees, not luck. Neither rule is the more
-powerful in general: Bonferroni can certify more where the most confident windows hold many errors, and it did on
-Brick Kiln (0.75 against 0.50). The package's printed note was corrected to say this, in changes not yet released.
+powerful in general. Bonferroni can certify more where the most confident windows hold many errors, as a toy map in
+`tests/test_trust_zone.py` shows. In exp80 it certified a zone on more draws than the prefix rule on 25 of the 112
+cells, and on fewer on 72. Brick Kiln is not such a case: there Bonferroni certified nothing on 74.8% of draws, and
+the 0.75 the results record gives is its median over the rest, while the prefix rule certified 0.50 on every draw.
+The package's printed note was corrected to say that Bonferroni can certify more, in changes not yet released.

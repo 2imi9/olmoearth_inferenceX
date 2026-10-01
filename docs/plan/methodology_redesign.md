@@ -141,5 +141,6 @@ the sections are in `docs/results/comparisons.md`.
 
 Item 1 calls the prefix rule a monotone-prefix rule and the Bonferroni rule assumption-free. The prefix rule is
 fixed-sequence testing: the order and the grid are fixed before any label is read, so it holds δ on any map, whatever
-the shape of its error rate. Both rules are valid, and neither is the more powerful in general; Bonferroni certified
-more on Brick Kiln in exp80. See the addendum of the same date in [trust_zone.md](trust_zone.md).
+the shape of its error rate. Both rules are valid, and neither is the more powerful in general: over exp80's 112
+cells Bonferroni certified a zone on more draws on 25 and the prefix rule on 72. See the addendum of the same date in
+[trust_zone.md](trust_zone.md).
