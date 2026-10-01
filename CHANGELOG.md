@@ -3,12 +3,15 @@
 ## Unreleased
 
 **Per input condition: review, sampling, estimation and certification (exp88).** Some maps are read from different
-inputs in different places. On PASTIS without the optical input, as under cloud, 59.8% of OlmoEarth Base's errors
-looked confident, against 6.0% with it. OlmoEarth Large's share rose only from 5.7% to 12.8-13.8%. On a map with half
-its tiles read that way, random samples of 300 estimated 46.9% on average. The cloudy part's rate was 74.1%. The
-package now says what a whole-map result does not show. It also takes a layer of each pixel's input condition, such as
-a cloud flag, the modalities present or a sensor id. Without a layer, every number, CSV, sidecar and printed line is
-unchanged. The JSON outputs gain one `scope` note.
+inputs in different places. A model run on an input combination it was not trained on can be sure and wrong there.
+On PASTIS, OlmoEarth Base's probe trained on radar plus optical, run on radar alone as under cloud, was 73.6% wrong,
+and 59.8% of its errors looked confident, against 6.0% with full input. A probe trained on radar alone was 28.4%
+wrong, and 3.9% of its errors looked confident. OlmoEarth Large's share rose only from 5.7% to 12.8-13.8%. On a map
+with half its tiles read by the first probe without the optical input, random samples of 300 estimated 46.9% on
+average. The cloudy part's rate was 74.1%; read by the radar-only probe, it was still 28.3% against 19.7% on the rest.
+The package now says what a whole-map result does not show. It also takes a layer of each pixel's input condition,
+such as a cloud flag, the modalities present or a sensor id. Without a layer, every number, CSV, sidecar and printed
+line is unchanged, but for two texts corrected on purpose (below). The JSON outputs gain one `scope` note.
 
 - `assess --condition RASTER [--condition-names 0=clear 1=cloudy]` (`condition=`, `condition_names=` in
   `assess_prediction` and `assess_classmap`). A window takes the condition held by most of its pixels that have a
@@ -20,8 +23,9 @@ unchanged. The JSON outputs gain one `scope` note.
   `review_set_<b>pct_by_condition.csv`; the whole-map review-set CSVs gain a `condition` column at the end.
 - `sample --condition`: the new `condition` design, the default when a layer is given, splits the labels equally
   across the conditions (`equal_allocation`, water-filling: a condition too small for an equal share is labelled in
-  full). It never reads the model's confidence, which can overstate the accuracy of a condition with an input missing:
-  it did on PASTIS without the optical input, though not on CropHarvest China 6 (exp88). `--design random --condition`
+  full). It never reads the model's confidence, which can overstate the accuracy of a condition read from an input
+  combination the model was not trained on: it did on PASTIS for a probe trained on radar plus optical and run on
+  radar alone, though not on CropHarvest China 6 (exp88). `--design random --condition`
   draws the same windows as without a layer and records the condition. The confidence, proportional and tiles designs
   refuse a layer, with the reason. The condition is fixed at sampling time: the sidecar records it and `estimate` and
   `certify` never read the raster again; a CSV whose `condition` column was edited is refused.
@@ -32,7 +36,9 @@ unchanged. The JSON outputs gain one `scope` note.
   condition design the whole-map interval weights each condition's exact interval at 1 − 0.05/L by its share of the
   map, where L is the number of conditions not labelled in full. It covers at least 95% by construction, since at
   that level the L intervals hold together at least 95% of the time. It is wider than a stratified interval would
-  be; that is the price of the guarantee, and the JSON and the printed result say so. A stratified interval with the
+  be and, when the conditions' error rates are close, wider than a random sample's exact interval of the same size.
+  The JSON and the printed result say so, and that `--design random` can be narrower when only the whole-map rate is
+  needed. A stratified interval with the
   conditions as strata covered as little as 53% of the time where a large clean condition sat beside a small
   degraded one (exact, 4,000 windows at 0.5% wrong beside 200 at 50%, 150 labels each). `--per-class` runs under
   the condition design and says its per-class intervals are not graded there; with one condition it gives the
@@ -52,7 +58,18 @@ unchanged. The JSON outputs gain one `scope` note.
   at every error count of 14 small maps of two and three conditions, the delta split held over all 12,870 draws of a
   two-condition case, one condition equal to the random design. Golden outputs of 1.3.1 pin the case without a
   layer: every CSV, sidecar, raster, `explanation.json` and printed line is byte-identical, and the assessment,
-  estimate and zone JSON differ only by `scope`.
+  estimate and zone JSON differ only by `scope`, but for the two texts below.
+  `tests/golden/condition_1_3_1/changes.py` lists each with 1.3.1's text, the new text and the files that hold it.
+
+**Two printed texts corrected.**
+
+- `certify`'s note on the prefix rule said the rule is valid only if the zone's error rate does not fall as the zone
+  grows. The rule is fixed-sequence testing and valid on any map. The note now says so, and that the rule certifies
+  little when the most confident windows hold many errors, where `--rule bonferroni` can certify more. A test
+  enumerates every error pattern of maps of 10 to 12 windows against every draw, for both rules.
+- The warning on a multi-class logit map scored by the logit margin said "pass form='top1'", a Python argument with no
+  command-line option. It now says that the command line gets a top-probability reading from the class
+  probabilities passed without `--logits`, and how that reading differs from `form='top1'`.
 
 **Outputs a script may parse that change in this release:**
 
@@ -72,6 +89,8 @@ unchanged. The JSON outputs gain one `scope` note.
   the map.
 - `sample --design` defaults to none, which resolves to `condition` with `--condition` and to `confidence` without;
   the design written to the sidecar is unchanged without a layer.
+- The zone JSON's `note` under the prefix rule, and the multi-class logit warning in `warnings` (`assessment.json`,
+  the sample sidecar and `assess_prediction`'s result), have the new texts above.
 
 **A quick start that can be run.** `examples/quickstart_map.py` writes the README's test map: two four-class
 probability maps of one synthetic scene, and its truth. With `--label` it fills in a sample's labels from that truth.
