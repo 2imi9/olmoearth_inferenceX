@@ -36,7 +36,7 @@ whose error rate is bounded with a stated probability. On all 24 tasks
 of the model authors' published embedding suite that define a margin, the margin ranks the model's errors better than
 the best control that does not use the model, and under ten probe seeds it does so on at least 75\% of the tasks of
 each of the suite's sixteen encoders. A simple random sample of 300 windows gives a nominal 95\% interval that covers
-the true error rate on 0.933 to 0.961 of simulated draws on seven segmentation tasks; labelling 19 tiles of 16 windows
+the true error rate on 0.933 to 0.961 of simulated draws on seven segmentation tasks; labelling 18 tiles of 16 windows
 and applying the independent-sample formula covers on 0.506 to 0.777 of draws on six of them. The certified zone met
 its guarantee on all 112 graded cells. The record comprises 86 experiment scripts and 204 ledger claims, each checked
 against a committed artifact, and reports failed predictions as failed.
@@ -344,7 +344,7 @@ right in both years \claim{eurocrops-a-difference-can-be-the-model-tracking-the-
 exp78 graded the estimators on the suite's seven segmentation tasks, from an export that reproduces exp70's
 accuracies \claim{exp78-export-reproduces-the-suite}. With 300 randomly sampled windows the nominal 95\% interval covers the true
 error rate on 0.933 to 0.961 of 2,000 draws on all seven \claim{design-based-interval-is-honest}, with a half-width of
-about 3 points at a low error rate and 5 at a high one. Taken as 19 tiles of 16 windows with the independent-sample formula, it covers
+about 3 points at a low error rate and 5 at a high one. Taken as 18 tiles of 16 windows with the independent-sample formula, it covers
 on 0.506 to 0.777 of draws on six of seven; the ratio estimator covers 0.913 to 0.932 where tiles are full and 0.598 on
 MADOS, whose tiles hold 1 to 400 windows \claim{tile-sampling-breaks-the-naive-interval}. The confidence design narrows
 the interval to a median 0.80 of the random width with coverage intact, but its clause requiring a ratio above 0.94 at
