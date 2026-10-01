@@ -170,6 +170,11 @@ it.
   over stdio, on the README's quick-start map. It skips when the extra is absent.
 - No existing output changes; `oe-inferencex --help` lists the new command.
 
+**`oe_inferencex.awf.list_windows` takes the group directory to list.** `list_windows(root)` lists the windows under a
+directory the caller gives. With no argument it reads the module's `ROOT` at call time, as before, so no caller's
+result changes. exp89's arm A uses it to read the pinned AWF tar it extracts on scratch, without setting the module's
+`ROOT`.
+
 ## 1.3.1 (2026-09-25)
 
 - Usage documents a binary score in [0, 1] decided at 0.5, such as an OlmoEarth Studio `per_pixel_regression` output

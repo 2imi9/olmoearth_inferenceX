@@ -35,10 +35,12 @@ GROUPS = {
 }
 
 
-def list_windows():
-    """[(window_dir, split, label_row, label_col, category)] for all windows."""
+def list_windows(root=None):
+    """[(window_dir, split, label_row, label_col, category)] for all windows under `root`, the group directory
+    (default ROOT, read at call time)."""
+    root = ROOT if root is None else root
     out = []
-    for wdir in sorted(glob.glob(ROOT + "/*")):
+    for wdir in sorted(glob.glob(root + "/*")):
         meta = json.load(open(wdir + "/metadata.json"))
         split = meta["options"].get("split")
         lab_path = wdir + "/layers/label/category/geotiff.tif"
