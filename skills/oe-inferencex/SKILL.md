@@ -7,7 +7,12 @@ description: Check a classification map made by an Earth-observation model with 
 
 If the oe-inferencex MCP server is connected (tools `assess`, `compare`, `sample`, `estimate`, `certify`, `guide`),
 call the tools: each returns a `conclusion`, its `limits` and what can be done `next`. Otherwise run the commands
-below. Install: `pip install "olmoearth-inferencex[geo]"`, with `[geo,mcp]` for the server.
+below.
+
+Install: the MCP server and `--condition` are not yet released. 1.3.1, the release on PyPI, lacks both, and pip
+skips its unknown `mcp` extra. Until the next release, install from the repository:
+`pip install "olmoearth-inferencex[geo,mcp] @ git+https://github.com/2imi9/olmoearth_inferenceX"`. If you need
+neither, `pip install "olmoearth-inferencex[geo]"` from PyPI gives the other commands.
 
 ## Input
 
@@ -33,15 +38,19 @@ blocks of `--patch` pixels, 4 by default.
 
 ## Hard rules
 
-The package enforces them; do not work around them.
+Do not work around them. The package refuses only what a rule says it refuses; the rest is up to you.
 
 - A review set is not a sample. It is chosen to hold errors, so its error rate overstates the map's. estimate and
   certify refuse it.
 - certify needs a random sample: draw it with design "random", or with a condition layer. The default design
-  serves estimate only.
+  serves estimate only; certify refuses it.
 - Without labels, compare cannot say which map is right. Two maps that agree can both be wrong.
 - Labels are assumed right. The interval and the zone describe agreement with the reviewer's labels.
-- Ranking needs the scores, not only the class map. A class map alone works only in compare.
+- Ranking needs the scores, not only the class map. A class map alone works only in compare. assess refuses a
+  class map of more than two classes read as probabilities, but not a 0/1 map, nor any class map passed with
+  logits=true: it reads the class ids as scores, and the order it gives is not evidence.
+
+On the command line, logits=true is `--logits`.
 
 ## How to report
 

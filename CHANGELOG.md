@@ -146,14 +146,23 @@ it.
 
 - Tools `assess`, `compare`, `sample`, `estimate` and `certify` run the command of the same name in-process, so they
   give its numbers and its refusals. Each takes file paths and an output directory and returns JSON: the files
-  written, the summary numbers, `conclusion`, `limits` (with the package's own warnings and notes) and `next` (what
-  can be done next, with its preconditions). A refusal is a tool error carrying the package's message; a review set
-  passed to `estimate` or `certify` is also named as one.
+  written, the summary numbers, `conclusion`, `limits` (with the package's own warnings and notes, each class's
+  warning under `per_class` included) and `next` (what can be done next, with its preconditions). A refusal is a tool
+  error carrying the package's message; a review set passed to `estimate` or `certify`, a condition's own included,
+  is also named as one. The tools read the files the agent passes, the sidecar beside a sample and the scores raster
+  it records.
+- Where the package accepts a class map read as scores (a 0/1 map, or class ids passed with `logits=true`), its
+  review sets tie at the cut-off. `assess` then says the order is not evidence, in place of "check the least
+  confident windows first", and the package's refusal of a class map of several classes, which names `--logits`,
+  gains a sentence saying that `logits=true` does not help for a class map.
 - Each tool's description is its capability card: what it does, what it needs and what it cannot do. The server's
   instructions, also returned by the tool `guide`, give the standard order (assess; sample, label, estimate; certify;
-  compare; per condition) and the rules the package enforces. This copies the changes of the OlmoEarth Agent trial
-  (exp86) after which its answers held fewer material false statements; the trial does not show which change did
-  most.
+  compare; per condition) and the hard rules, with which of them the package refuses on. The cards and the
+  conclusions and limits follow the OlmoEarth Agent trial (exp86). There, material false statements per sentence fell
+  from 7.5% to 2.2% on the eight development briefs the fixes were built against, mostly in round 8, which bundled
+  tool outputs that state conclusions and limits, statistical rules in code and answer checks. No single change is shown to have caused the fall, the owner has not adjudicated materiality, and the
+  held-out test (exp87) has no result yet. The round-10 capability card's own effect is within audit variation. The
+  standard order is the owner's addition, not a change the trial tested.
 - `skills/oe-inferencex/SKILL.md` holds the same teaching as a Claude skill, for an agent that runs the commands.
 - The extra pins the official MCP Python SDK, `mcp>=1.26,<2` (MIT licence). mcp 2 renamed FastMCP to MCPServer.
   Tested with 1.20.0, 1.26.0 and 1.30.0.

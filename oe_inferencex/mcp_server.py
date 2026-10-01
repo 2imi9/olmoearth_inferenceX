@@ -4,20 +4,29 @@
     oe-inferencex mcp                                      # stdio; the agent starts it, nobody types into it
     claude mcp add oe-inferencex -- oe-inferencex mcp      # Claude Code
 
-Nothing is hosted. The server runs on the user's machine, reads the paths the agent passes and writes its files where
-the agent says, by running the command line's own code (`cli.main`), so a tool and its command give the same numbers
-and refuse the same inputs. Each tool returns compact JSON: the files written, the summary numbers, and three plain
-texts the agent can quote: `conclusion` (what the tool found), `limits` (what it does not show, with the package's
-own warnings and notes) and `next` (what can be done next, with its preconditions). A refusal of the package comes
-back as a tool error carrying the package's own message.
+Nothing is hosted. The server runs on the user's machine and writes its files where the agent says. It reads the
+files the agent passes, the sidecar beside a sample and the scores raster it records (estimate with per_class, and
+certify, read the map's scores from the path the sidecar holds unless scores is given). It runs the command line's
+own code (`cli.main`), so a tool and its command give the same numbers and refuse the same inputs. Each tool returns
+compact JSON: the files written, the summary numbers, and three plain texts the agent can quote: `conclusion` (what
+the tool found), `limits` (what it does not show, with the package's own warnings and notes) and `next` (what can be
+done next, with its preconditions). A refusal of the package comes back as a tool error carrying the package's own
+message.
 
-The teaching copies three changes of the OlmoEarth Agent trial (exp86), after which the agent's answers held fewer
-material false statements; the trial does not show which change did most
-(exp/out/exp86_development_rounds_summary.md):
+The teaching follows the OlmoEarth Agent trial (exp86, exp/out/exp86_development_rounds_summary.md). There, material
+false statements per sentence fell from 7.5% to 2.2% on the eight development briefs the fixes were built against,
+mostly in round 8, which bundled tool outputs that state conclusions and limits, statistical rules in code and answer
+checks. No single change is shown to have caused the fall; the differences between rounds 8, 9 and 10 are within
+audit variation; the owner has not adjudicated materiality; and the held-out test (exp87) has no result yet. Two of
+its changes are copied here:
 
-- a capability card per tool: what it does, what it needs and what it cannot do. Here it is the tool's description;
-- tool outputs that state their conclusion and their limits in plain words, so that the model does not guess;
-- instructions with the standard order and the rules the package enforces (`INSTRUCTIONS`, also the `guide` tool).
+- tool outputs that state their conclusion and their limits in plain words, so that the model does not guess
+  (round 8);
+- a capability card per tool: what it does, what it needs and what it cannot do, with two rules: state as fact only
+  what a tool returned, and propose only what the tools can do (round 10). Here the card is the tool's description.
+
+The standard order and the hard rules in the instructions (`INSTRUCTIONS`, also the `guide` tool) are the owner's
+addition, not a change the trial tested.
 
 skills/oe-inferencex/SKILL.md holds the same teaching for an agent that runs the command line instead.
 
@@ -30,6 +39,7 @@ import csv
 import io
 import json
 import os
+import threading
 from typing import Annotated, Any, Literal
 
 try:                                       # the annotations below are strings until FastMCP reads them (with mcp)
@@ -49,10 +59,12 @@ HARD_RULES = (
     "A review set is not a sample. It is chosen to hold errors, so its error rate overstates the map's. estimate and "
     "certify refuse it.",
     "certify needs a random sample: draw it with design \"random\", or with a condition layer. The default design "
-    "serves estimate only.",
+    "serves estimate only; certify refuses it.",
     "Without labels, compare cannot say which map is right. Two maps that agree can both be wrong.",
     "Labels are assumed right. The interval and the zone describe agreement with the reviewer's labels.",
-    "Ranking needs the scores, not only the class map. A class map alone works only in compare.",
+    "Ranking needs the scores, not only the class map. A class map alone works only in compare. assess refuses a "
+    "class map of more than two classes read as probabilities, but not a 0/1 map, nor any class map passed with "
+    "logits=true: it reads the class ids as scores, and the order it gives is not evidence.",
 )
 
 INSTRUCTIONS = "\n".join([
@@ -74,7 +86,8 @@ INSTRUCTIONS = "\n".join([
     "rate and zone. A model run on inputs it was not trained on can be sure and wrong, and its errors then come late "
     "in a ranking of the whole map.",
     "",
-    "Hard rules. The package enforces them; do not work around them:",
+    "Hard rules. Do not work around them. The package refuses only what a rule says it refuses; the rest is up to "
+    "you:",
     *[f"- {rule}" for rule in HARD_RULES],
     "",
     "How to report:",
@@ -106,9 +119,10 @@ CARDS = {
         "grades the order against that raster, taken as truth.",
         "Needs: the model's scores before the argmax: (C, H, W) per-class probabilities, or (H, W) for two classes, "
         "as GeoTIFF or .npy; logits=true for logits. A GeoTIFF needs rasterio (the geo extra). An output directory.",
-        "Cannot: say how wrong the map is (that needs labels: sample, then estimate); rank a plain class map (one of "
-        "more than two classes is refused; a 0/1 map is read as scores and ties); find the errors the model is sure "
-        "of, which come last; label windows.",
+        "Cannot: say how wrong the map is (that needs labels: sample, then estimate); rank a class map. One of more "
+        "than two classes read as probabilities is refused, but a 0/1 map, or any class map passed with logits=true, "
+        "is read as scores: its windows tie and the order is not evidence. It cannot find the errors the model is "
+        "sure of, which come last, or label windows.",
     ]),
     "compare": "\n".join([
         "Where two maps of the same area differ, window by window.",
@@ -186,14 +200,18 @@ def _opt(argv, flag, value):
         argv.append(f"{flag}={_num(value)}")
 
 
+_CAPTURE = threading.Lock()
+
+
 def _run(argv):
     """Run one `oe-inferencex` command in this process and return what it printed. stdout is the protocol's
     channel on stdio, so nothing may print there: both streams are captured. A refusal (SystemExit with a message)
-    becomes Refused with that message; an argparse error carries its message on stderr. FastMCP 1.x calls a sync tool
-    on the event loop, one call at a time, so no two calls share the redirection."""
+    becomes Refused with that message; an argparse error carries its message on stderr. The redirection is the whole
+    process's, so a lock keeps one call inside it at a time: FastMCP 1.30 calls a sync tool on the event loop, one at
+    a time, but a later 1.x could run tools on worker threads, and two calls would then restore each other's stdout."""
     out, err = io.StringIO(), io.StringIO()
     try:
-        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+        with _CAPTURE, contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
             cli.main(argv)
     except SystemExit as exc:
         if isinstance(exc.code, str):
@@ -234,14 +252,23 @@ def _notes(texts):
     return [f"Note: {str(n).strip()}" for n in texts if n is not None and str(n).strip()]
 
 
+def _core(text):
+    """A text without its `Note: ` or `Warning: ` head and its full stop, to tell whether it is already said."""
+    for head in ("Note: ", "Warning: "):
+        if text.startswith(head):
+            text = text[len(head):]
+    return text.rstrip(".")
+
+
 def _join(texts):
-    """One text from several, each once: a text already inside another is left out, and so is None."""
+    """One text from several, each once: a text already inside another is left out, and so is None. The heads are
+    left out of the comparison, so a note printed alone is seen inside the longer note that holds it."""
     kept = []
     for t in texts:
         t = _sentence(t)
-        if t is None or any(t.rstrip(".") in k for k in kept):
+        if t is None or any(_core(t) in k for k in kept):
             continue
-        kept = [k for k in kept if k.rstrip(".") not in t] + [t]
+        kept = [k for k in kept if _core(k) not in t] + [t]
     return " ".join(kept)
 
 
@@ -265,7 +292,8 @@ def _review_set_hint(path):
             header = next(csv.reader(f), [])
     except (OSError, UnicodeDecodeError):
         return ""
-    if "rank" in header and "index" not in header:
+    # the whole map's review set has `rank`, each condition's own has `rank_in_condition`; a sample has `index`
+    if ("rank" in header or "rank_in_condition" in header) and "index" not in header:
         return (" This CSV is a review set that assess wrote. " + HARD_RULES[0] + " Draw a sample with the sample "
                 "tool and have every row of it labelled.")
     return ""
@@ -276,7 +304,33 @@ def _labelled(path, argv):
     try:
         return _run(argv)
     except Refused as exc:
-        raise Refused(str(exc) + _review_set_hint(path)) from None
+        hint = _review_set_hint(path)
+        raise Refused((_sentence(str(exc)) if hint else str(exc)) + hint) from None
+
+
+def _scored(argv):
+    """Run assess or sample. The package's refusal of a class map as probabilities names --logits; for a class map
+    that would only trade a refusal for an order that is not evidence, so the refusal says so."""
+    try:
+        return _run(argv)
+    except Refused as exc:
+        msg = str(exc)
+        if "which is not a probability map. Pass --logits" in msg:
+            msg = (_sentence(msg) + " If the file holds class ids (a class map), logits=true does not help: it reads "
+                   "the ids as scores, the windows tie and the order is not evidence. Pass the model's per-class "
+                   "scores.")
+        raise Refused(msg) from None
+
+
+def _condition_argv(names):
+    """--condition-names and its values. A value that starts with `-` would be read as another option, such as
+    --out, so each must be value=name with a whole number value."""
+    for n in names:
+        key, sep, _ = str(n).partition("=")
+        if str(n).startswith("-") or not sep or not key.strip().isdigit():
+            raise Refused(f"condition_names: {str(n)!r} is not value=name with a whole number value of 0 or more, "
+                          "such as \"0=clear\"")
+    return ["--condition-names", *[str(n) for n in names]]
 
 
 # ----------------------------------------------------------------------------- the tools
@@ -321,15 +375,27 @@ def assess(
     if condition is not None:
         argv.append(f"--condition={_input(condition, 'condition')}")
     if condition_names:
-        argv += ["--condition-names", *[str(n) for n in condition_names]]
-    printed = _run(argv)
+        argv += _condition_argv(condition_names)
+    printed = _scored(argv)
     s = _read_json(os.path.join(out, "assessment.json"))
     files = {k: os.path.abspath(v) for k, v in s["files"].items()}
     files["assessment"] = os.path.join(out, "assessment.json")
     rs = s["review_sets"]
     b5 = min(rs, key=lambda b: abs(float(b) - 0.05))
     sets = ", ".join(f"{rs[b]['n_windows']} ({_budget(b)})" for b in rs)
-    said = [f"Check the least confident windows first. Of {s['n_windows']} windows of {s['patch_px']} x "
+    # a review set most of whose windows tie at its cut-off is ordered by raster position: a class map read as
+    # scores (a 0/1 map, or class ids passed as logits) does this, and the package does not refuse it
+    tied = {b: rs[b]["tied_at_cutoff"] for b in rs if rs[b].get("tied_at_cutoff")}
+    loose = [b for b, t in tied.items() if 2 * t["inside"] > rs[b]["n_windows"]]
+    if loose:
+        bt = b5 if b5 in loose else loose[0]
+        opener = (f"The order is not evidence here: {tied[bt]['inside']} of the {rs[bt]['n_windows']} windows of the "
+                  f"{_budget(bt)} review set share the cut-off score with {tied[bt]['outside']} windows left outside, "
+                  "so among them the order is raster position. A class map passed with logits=true, or a 0/1 map, is "
+                  "read as scores and ties like this; if the file is one, pass the model's per-class scores instead.")
+    else:
+        opener = "Check the least confident windows first."
+    said = [f"{opener} Of {s['n_windows']} windows of {s['patch_px']} x "
             f"{s['patch_px']} pixels, the review sets hold {sets} windows, each listed least confident first with "
             f"pixel and map coordinates. The {_budget(b5)} review set is in {files.get(f'review_set_{b5}')}; files "
             "names the others.",
@@ -338,6 +404,8 @@ def assess(
             "signal": s.get("signal"), "review_order": s.get("review_order"),
             "review_sets": {b: rs[b]["n_windows"] for b in rs},
             "boundary_window_fraction": s["boundary_window_fraction"]}
+    if tied:
+        summ["tied_at_cutoff"] = tied
     limits = ["This says where to look, not how wrong the map is: no labels were used." if reference is None else
               "The order says where to look. Its grade against the reference holds for this map and this reference only.",
               "The review set is not a sample. It is chosen to hold errors, so its error rate overstates the map's.",
@@ -409,8 +477,16 @@ def compare(
     s = _read_json(os.path.join(out, "comparison.json"))
     files = {k: os.path.abspath(v) for k, v in s["files"].items()}
     files["comparison"] = os.path.join(out, "comparison.json")
-    said = [f"{s['n_disagree']} of {s['n_windows']} windows differ ({_pc(s['disagreement_rate'], 2)}). They are "
-            f"listed in {files['differing_windows']}, and {files['disagreement']} marks them."]
+    if s["n_disagree"]:
+        said = [f"{s['n_disagree']} of {s['n_windows']} windows differ ({_pc(s['disagreement_rate'], 2)}). They are "
+                f"listed in {files['differing_windows']}, and {files['disagreement']} marks them."]
+    else:
+        said = [f"0 of {s['n_windows']} windows differ. The two maps give the same class in every window both "
+                "predict."]
+    if s.get("per_group"):
+        said.append("Per group: " + "; ".join(
+            f"group {g}, {e['n_disagree']} of {e['n']}" + (" windows differ" if i == 0 else "")
+            + f" ({_pc(e['rate'])})" for i, (g, e) in enumerate(s["per_group"].items())) + ".")
     where = s.get("where") or {}
     enr = {k: (where.get(k) or {}).get("enrichment") for k in ("boundary_a", "boundary_b")}
     if enr["boundary_a"] is not None:
@@ -419,12 +495,23 @@ def compare(
                                                   is not None else "."))
     summ = {"n_windows": s["n_windows"], "n_disagree": s["n_disagree"], "disagreement_rate": s["disagreement_rate"],
             "boundary_enrichment": enr, "dates_status": s["dates"]["status"]}
+    if s.get("per_group"):
+        summ["per_group"] = s["per_group"]
     graded = s.get("graded")
     if graded:
         ws = graded["which_side"]
-        said.append(f"Against the labels, where the maps differ, a is right on {_pc(ws['share_a_right'], 0)} and b on "
-                    f"{_pc(ws['share_b_right'], 0)} of the {ws['n_disagree']} windows, and neither on the other "
-                    f"{ws['neither']}.")
+        if ws["n_disagree"]:
+            said.append(f"Against the labels, where the maps differ, a is right on {_pc(ws['share_a_right'], 0)} and b "
+                        f"on {_pc(ws['share_b_right'], 0)} of the {ws['n_disagree']} windows, and neither on the other "
+                        f"{ws['neither']}.")
+        else:
+            said.append("The maps differ on no labelled window, so the labels have nothing to grade between them.")
+        og = graded.get("over_groups")
+        if og and og.get("n_groups"):
+            said.append(f"Against the labels, b is right more often than a in {og['w']} of the {og['n_groups']} groups, "
+                        f"a more often in {og['l']}, equally often in {og['t']}.")
+            summ["over_groups"] = og
+            summ["graded_per_group"] = graded.get("per_group")
         summ["which_side"] = ws
         summ["crosstab"] = graded.get("crosstab")
         limits = ["The labels are assumed right: the grading describes agreement with them."]
@@ -471,8 +558,8 @@ def sample(
     if condition is not None:
         argv.append(f"--condition={_input(condition, 'condition')}")
     if condition_names:
-        argv += ["--condition-names", *[str(n) for n in condition_names]]
-    printed = _run(argv)
+        argv += _condition_argv(condition_names)
+    printed = _scored(argv)
     side_path = path[:-4] + ".json" if path.endswith(".csv") else path + ".json"
     side = _read_json(side_path)
     d = side["design"]
@@ -549,23 +636,39 @@ def estimate(
                             f"{row['n_labelled']} labelled of {row['n_population']} windows")
         said.append("Per input condition: " + "; ".join(rows) + ".")
         if r.get("outside_condition_intervals"):
-            said.append(cli._outside_note(r)[len("note: "):])
+            said.append(_cap(cli._outside_note(r)[len("note: "):]))
         summ["per_condition"] = {name: {k: row.get(k) for k in ("estimate", "low", "high", "n_labelled", "n_population",
                                                                 "share_of_map")}
                                  for name, row in r["per_condition"].items()}
+    class_warnings = []
     if per_class:
         oa = r["overall_accuracy"]
         said.append(f"Overall accuracy {_pc(oa['estimate'])} ({_pc(oa['low'])} to {_pc(oa['high'])}); each class's "
                     "user's and producer's accuracy, with intervals, is in summary.per_class.")
         summ["overall_accuracy"] = oa
-        summ["per_class"] = {c: {k: row.get(k) for k in ("user_accuracy", "producer_accuracy", "reference_share",
-                                                         "map_share")} for c, row in r["per_class"].items()}
+        summ["per_class"] = {c: {**{k: row.get(k) for k in ("user_accuracy", "producer_accuracy", "reference_share",
+                                                            "map_share")},
+                                 **{k: row[k] for k in ("warning", "warning_codes") if k in row}}
+                             for c, row in r["per_class"].items()}
+        # the command prints each class's warning inside its table line, not on a `warning: ` line
+        warned = {c: row for c, row in r["per_class"].items() if row.get("warning")}
+        if warned:
+            names = list(warned)
+            which = (f"Class {names[0]} carries" if len(names) == 1 else
+                     f"Classes {', '.join(names[:-1])} and {names[-1]} carry")
+            codes = sorted({code for row in warned.values() for code in row.get("warning_codes", [])})
+            said.append(f"{which} a warning ({', '.join(codes)}): read {'its' if len(names) == 1 else 'their'} "
+                        "accuracies with the warning in limits.")
+            class_warnings = [f"class {c}: {row['warning']}" for c, row in warned.items()]
     limits = ["Labels are assumed right: the interval describes agreement with the reviewer's labels. If the reviewer "
               "makes mistakes, the true rate can fall outside it.",
               "It is a rate over the windows; it does not say which windows are wrong."]
-    limits += _warnings(_tagged(printed, "warning")) + _warnings([r.get("per_class_warning")])
+    limits += _warnings(_tagged(printed, "warning")) + _warnings([r.get("per_class_warning")]) + _warnings(class_warnings)
     limits += _notes([r.get("per_class_note"), r.get("condition_note"), r.get("scope")] + _tagged(printed, "note"))
-    if r["design"] in ("random", "condition"):
+    if r.get("by_condition"):
+        nxt = (f"certify with sample_csv={path} and an alpha, such as 0.05, gives, for each input condition with "
+               "enough labels, the most confident share of that condition whose error rate is at most alpha.")
+    elif r["design"] in ("random", "condition"):
         nxt = (f"certify with sample_csv={path} and an alpha, such as 0.05, gives the most confident share of the map "
                "whose error rate is at most alpha.")
     else:
@@ -626,7 +729,16 @@ def certify(
                 f"zone's error rate at that level is {_pc(r['upper_bound'])})."]
         certified = True
     else:
-        said = [f"No zone was certified at alpha {a:g}%, delta {d:g}%, from {r['n_labelled']} labels. {r['note']}"]
+        # the package's note restates alpha, delta and the labels before its reason; the reason is what is new
+        note = r["note"]
+        if note.startswith("no zone certified") and "; " in note:
+            reason = note.split("; ", 1)[1]
+        elif "labels cannot certify any zone" in note and ": " in note:
+            reason = note.split(": ", 1)[1]
+        else:
+            reason = None
+        said = [f"No zone was certified at alpha {a:g}%, delta {d:g}%, from {r['n_labelled']} labels"
+                + (f": {_sentence(reason)}" if reason else f". {_cap(note)}")]
         certified = False
     if certified and not r.get("by_condition"):
         said.append(f"The window mask {files['zone_mask']} marks the certified windows (True inside).")
@@ -634,14 +746,42 @@ def certify(
               "The rate holds for the certified windows together, not for each window.",
               "Labels are assumed right: the zone describes agreement with the reviewer's labels. The guarantee also "
               "needs the labelled windows to be a random sample."]
-    limits += _notes([r.get("note"), r.get("scope")])
-    if certified:
+    # with no zone and no condition, the note is the conclusion's reason, said there once
+    limits += _notes([r.get("note") if certified or r.get("by_condition") else None, r.get("scope")])
+    if r.get("by_condition"):
+        nxt = _condition_need(r, float(alpha), float(delta))
+        if certified:
+            nxt = ("The mask is a boolean array on the window grid. Outside it, each condition's own review set, from "
+                   "assess with the condition layer, says which windows to check first."
+                   + (" " + nxt if any(e.get("coverage") is None for e in r["per_condition"].values()) else ""))
+    elif certified:
         nxt = ("The mask is a boolean array on the window grid. Outside it, the review sets of assess say which "
                "windows to check first.")
     else:
         nxt = (f"Any zone needs at least {r['min_labels_to_certify']} labels at this alpha and delta. A larger random "
                "sample (sample with design \"random\" and a larger budget, labelled in full) can certify more.")
     return {"conclusion": " ".join(said), "limits": _join(limits), "next": nxt, "files": files, "summary": summ}
+
+
+def _condition_need(r, alpha, delta):
+    """How many labels a condition needs before certify can say anything about it. A condition is tested only with
+    min_labels_to_certify(alpha, delta) labels, and then at delta split over the conditions that hold that many
+    (certify_by_condition), which needs more."""
+    per = r["per_condition"]
+    b1 = r["min_labels_to_certify"]
+    held = sum(int(e["n_labelled"]) >= b1 for e in per.values())
+    k = held or len(per)
+    need = f"Each condition needs at least {b1} labels to be tested"
+    if k > 1:
+        bk = est.min_labels_to_certify(alpha, delta / k)
+        if held:
+            need += (f"; with delta split over the {held} conditions that hold that many ({delta / k:.3g} each), a "
+                     f"zone in one needs at least {bk}")
+        else:
+            need += (f"; once {'both' if k == 2 else f'all {k}'} are tested, delta is split over them "
+                     f"({delta / k:.3g} each) and a zone in one needs at least {bk}")
+    return (need + ". A larger sample drawn with the same condition layer (sample with condition and a larger budget, "
+            "labelled in full) can certify more.")
 
 
 TOOLS = {"guide": guide, "assess": assess, "compare": compare, "sample": sample, "estimate": estimate,
@@ -671,6 +811,8 @@ def build_server():
         return call
 
     server = FastMCP("oe-inferencex", instructions=INSTRUCTIONS)
+    # FastMCP 1.x leaves the low-level server's version unset, and the handshake then gives the SDK's own version
+    server._mcp_server.version = __version__
     for name, fn in TOOLS.items():
         hints = (ToolAnnotations(readOnlyHint=True, openWorldHint=False) if name == "guide" else
                  ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=True, openWorldHint=False))

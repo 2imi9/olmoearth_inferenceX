@@ -117,6 +117,26 @@ def _label(path, qs):
         quickstart_map.label(str(path), truth_path=str(qs / "truth.tif"))
 
 
+def _layer(path, layer):
+    """An integer raster on the quick-start map's grid."""
+    import rasterio
+    from rasterio.transform import from_origin
+    with rasterio.open(path, "w", driver="GTiff", height=256, width=256, count=1, dtype="int16", crs="EPSG:32632",
+                       transform=from_origin(500000, 5000000, 10, 10)) as dst:
+        dst.write(layer.astype(np.int16), 1)
+    return str(path)
+
+
+@pytest.fixture(scope="module")
+def cond(qs):
+    """A condition layer: the left half of the map 0 (clear), the right half 1 (cloudy)."""
+    if not HAVE_GEO:
+        pytest.skip("needs rasterio")
+    layer = np.zeros((256, 256), np.int16)
+    layer[:, 128:] = 1
+    return _layer(qs / "condition.tif", layer)
+
+
 # ----------------------------------------------------------------------------- the teaching, without the extra
 def test_every_card_says_what_the_tool_does_needs_and_cannot_do():
     assert set(mcp_server.CARDS) == TOOLS == set(mcp_server.TOOLS)
@@ -154,6 +174,79 @@ def test_the_skill_holds_the_same_teaching():
                     "oe-inferencex compare", "--condition", "--design random"):
         assert command in body, command
     assert "\u2014" not in text
+    # 1.3.1 on PyPI has neither the server nor --condition: the skill says so and gives the install from the repository
+    assert "not yet released" in body
+    assert 'pip install "olmoearth-inferencex[geo,mcp] @ git+https://github.com/2imi9/olmoearth_inferenceX"' in body
+
+
+def test_the_texts_say_what_exp86_shows_and_what_the_server_reads():
+    """The trial's fall was measured on the briefs its fixes were built against, mostly with round 8's tool-output
+    changes; the standard order is the owner's addition; and a tool reads more than the paths it is given."""
+    doc = _flat(mcp_server.__doc__)
+    log = open(os.path.join(ROOT, "CHANGELOG.md"), encoding="utf-8").read()
+    entry = _flat(log[log.index("**A local MCP server for agents.**"):log.index("## 1.3.1")])
+    usage = _flat(open(os.path.join(ROOT, "docs", "Usage.md"), encoding="utf-8").read())
+    for text in (doc, entry):
+        assert "after which" not in text
+        assert "7.5% to 2.2%" in text and "eight development briefs" in text and "round 8" in text
+        assert "exp87" in text and "owner's addition" in text
+    assert "the sidecar beside a sample and the scores raster it records" in doc
+    assert "the sidecar beside a sample and the scores raster it records" in usage
+    assert "read and write files on your machine only" not in usage
+
+
+def test_the_rules_do_not_claim_a_refusal_the_package_does_not_make():
+    """assess refuses a class map of several classes read as probabilities, not a 0/1 map nor a class map passed
+    as logits (README, Before you trust it, item 1)."""
+    text = _flat(mcp_server.INSTRUCTIONS)
+    assert "The package enforces them" not in text
+    assert "The package refuses only what a rule says it refuses" in text
+    rule = mcp_server.HARD_RULES[4]
+    assert "not a 0/1 map" in rule and "logits=true" in rule
+    cannot = mcp_server.CARDS["assess"].split("\nCannot: ")[1]
+    assert "logits=true" in cannot and "not evidence" in cannot
+    skill = _flat(open(os.path.join(ROOT, "skills", "oe-inferencex", "SKILL.md"), encoding="utf-8").read())
+    assert "The package enforces them" not in skill
+
+
+def test_two_calls_at_once_do_not_share_the_capture(monkeypatch):
+    """stdout is redirected for the whole process. If the SDK ever ran two sync tools on worker threads at once, one
+    call could restore the real stdout while the other still printed, and leave the process writing into a buffer.
+    A lock keeps one call inside the redirection at a time."""
+    import threading
+    a_in, b_in, a_done = threading.Event(), threading.Event(), threading.Event()
+
+    def fake_main(argv):
+        if argv[0] == "a":
+            print("a")
+            a_in.set()
+            b_in.wait(0.5)                  # with the lock, b cannot start until a has finished
+        else:
+            b_in.set()
+            a_done.wait(5)
+            print("b")
+
+    monkeypatch.setattr(mcp_server.cli, "main", fake_main)
+    got, real = {}, sys.stdout
+
+    def run(name):
+        got[name] = mcp_server._run([name])
+        if name == "a":
+            a_done.set()
+
+    try:
+        ta = threading.Thread(target=run, args=("a",))
+        ta.start()
+        a_in.wait(5)
+        tb = threading.Thread(target=run, args=("b",))
+        tb.start()
+        ta.join(5)
+        tb.join(5)
+        left = sys.stdout
+    finally:
+        sys.stdout = real
+    assert got == {"a": "a\n", "b": "b\n"}
+    assert left is real
 
 
 def test_the_mcp_command_says_how_to_install_the_extra(monkeypatch):
@@ -190,6 +283,7 @@ def test_the_server_lists_six_tools_each_described_by_its_card():
     init, tools = _session(work)
     assert init.instructions == mcp_server.INSTRUCTIONS
     assert init.serverInfo.name == "oe-inferencex"
+    assert init.serverInfo.version == mcp_server.__version__          # the package's version, not the SDK's
     assert {t.name for t in tools} == TOOLS
     for t in tools:
         assert t.description == mcp_server.CARDS[t.name]
@@ -337,15 +431,7 @@ def test_refusals_carry_the_package_message(qs):
 
 
 @needs_map
-def test_each_input_condition_on_its_own(qs):
-    import rasterio
-    from rasterio.transform import from_origin
-    layer = np.zeros((256, 256), np.int16)
-    layer[:, 128:] = 1
-    cond = qs / "condition.tif"
-    with rasterio.open(cond, "w", driver="GTiff", height=256, width=256, count=1, dtype="int16", crs="EPSG:32632",
-                       transform=from_origin(500000, 5000000, 10, 10)) as dst:
-        dst.write(layer, 1)
+def test_each_input_condition_on_its_own(qs, cond):
     names = ["0=clear", "1=cloudy"]
     out = _ok("assess", scores=str(qs / "scores.tif"), out_dir=str(qs / "audit_c"), condition=str(cond),
               condition_names=names)
@@ -366,6 +452,125 @@ def test_each_input_condition_on_its_own(qs):
     assert res["conclusion"].startswith("Certified per input condition at alpha=5%")
     assert "clear: the 85% most confident windows of this condition" in res["conclusion"]
     assert np.load(res["files"]["zone_mask"]).sum() == res["summary"]["n_certified"]
+
+
+@needs_map
+def test_estimate_per_class_keeps_each_class_warning(qs):
+    """With 40 labels every class rests on a few windows. The package tags each such class with a warning; the tool
+    must pass it on in limits, in summary.per_class and in the conclusion, not only the class accuracies."""
+    out = _ok("sample", scores=str(qs / "scores.tif"), out_dir=str(qs / "pc40"), budget=40, design="random", seed=3)
+    _label(out["files"]["sample_csv"], qs)
+    res = _ok("estimate", sample_csv=out["files"]["sample_csv"], per_class=True)
+    written = json.load(open(res["files"]["estimate"]))
+    warned = {c: row for c, row in written["per_class"].items() if "warning" in row}
+    assert warned, "the 40-label sample is meant to carry per-class warnings"
+    limits = _flat(res["limits"])
+    for c, row in warned.items():
+        assert res["summary"]["per_class"][c]["warning"] == row["warning"]
+        assert res["summary"]["per_class"][c]["warning_codes"] == row["warning_codes"]
+        assert _flat(f"Warning: class {c}: {row['warning']}") in limits
+    assert "carry a warning" in res["conclusion"]
+
+
+@needs_map
+def test_a_class_map_read_as_scores_is_not_called_a_ranking(qs):
+    """A 4-class map refused as probabilities names logits; read as logits, or a 0/1 map read as probabilities, it
+    is accepted, and its review sets tie. The conclusion must not tell the agent to check them first."""
+    text = _refused("assess", scores=str(qs / "truth.tif"), out_dir=str(qs / "cm0"))
+    assert "values run 0 to 3, which is not a probability map" in text
+    assert "logits=true does not help" in text
+
+    out = _ok("assess", scores=str(qs / "truth.tif"), out_dir=str(qs / "cm_logits"), logits=True)
+    assert not out["conclusion"].startswith("Check the least confident windows first")
+    assert "The order is not evidence here: 205 of the 205 windows of the 5% review set share the cut-off score with " \
+           "524 windows left outside" in out["conclusion"]
+    assert out["summary"]["tied_at_cutoff"]["0.05"] == {"inside": 205, "outside": 524}
+
+    import rasterio
+    with rasterio.open(qs / "truth.tif") as src:
+        np.save(qs / "binary.npy", (src.read(1) == 0).astype(np.float32))
+    out = _ok("assess", scores=str(qs / "binary.npy"), out_dir=str(qs / "cm_binary"))
+    assert out["conclusion"].startswith("The order is not evidence here")
+
+    out = _ok("assess", scores=str(qs / "scores.tif"), out_dir=str(qs / "audit_ties"))
+    assert out["conclusion"].startswith("Check the least confident windows first")     # real scores: no ties
+    assert "tied_at_cutoff" not in out["summary"]
+
+
+@needs_map
+def test_condition_names_cannot_pass_options(qs, cond):
+    """A name that starts with `-` would be read as a command-line option, here moving every output elsewhere."""
+    elsewhere = qs / "elsewhere"
+    for tool, extra in (("assess", {}), ("sample", {"budget": 30})):
+        text = _refused(tool, scores=str(qs / "scores.tif"), out_dir=str(qs / "inj"), condition=cond,
+                        condition_names=["0=clear", f"--out={elsewhere}"], **extra)
+        assert "condition_names" in text and "value=name" in text
+    assert not elsewhere.exists() and not (qs / "inj").exists()
+
+
+@needs_map
+def test_the_per_condition_review_set_is_named_as_a_review_set(qs, cond):
+    _ok("assess", scores=str(qs / "scores.tif"), out_dir=str(qs / "audit_rsc"), condition=cond)
+    review = qs / "audit_rsc" / "review_set_05pct_by_condition.csv"
+    text = _refused("estimate", sample_csv=str(review))
+    assert "beside the CSV. This CSV is a review set that assess wrote. A review set is not a sample." in text
+
+
+@needs_map
+def test_texts_read_as_sentences_and_say_each_thing_once(qs):
+    """No zone: the package's note is the conclusion, once, with a capital. Two identical maps with labels: no
+    'undefined' shares."""
+    out = _ok("sample", scores=str(qs / "scores.tif"), out_dir=str(qs / "once"), budget=300, design="random")
+    _label(out["files"]["sample_csv"], qs)
+    res = _ok("certify", sample_csv=out["files"]["sample_csv"], alpha=0.01)
+    assert res["conclusion"] == ("No zone was certified at alpha 1%, delta 10%, from 300 labels: the smallest testable "
+                                 "zone (80% of the map) held 243 labels with 1 wrong.")
+    assert "smallest testable zone" not in res["limits"]
+
+    res = _ok("compare", a=str(qs / "scores.tif"), b=str(qs / "scores.tif"), out_dir=str(qs / "same"),
+              labels=str(qs / "truth.tif"))
+    assert "undefined" not in res["conclusion"]
+    assert "The two maps give the same class in every window" in res["conclusion"]
+
+
+@needs_map
+def test_a_condition_sample_reads_as_one(qs, cond):
+    """estimate's notes once each, its outside note as a sentence; certify's next names the labels a condition
+    needs at delta split over the conditions, and a sample with the same layer."""
+    layer = np.zeros((256, 256), np.int16)
+    layer[104:120, 220:236] = 1                    # 16 windows, labelled in full, 9 of them wrong
+    small = _layer(qs / "condition_small.tif", layer)
+    out = _ok("sample", scores=str(qs / "scores.tif"), out_dir=str(qs / "small"), budget=300, condition=small,
+              condition_names=["0=clear", "1=hazy"])
+    _label(out["files"]["sample_csv"], qs)
+    res = _ok("estimate", sample_csv=out["files"]["sample_csv"])
+    assert json.load(open(res["files"]["estimate"]))["outside_condition_intervals"] == ["hazy"]
+    assert "windows. The whole-map rate is 5.5%. It lies below the interval of hazy" in res["conclusion"]
+    assert res["limits"].count(est.CONDITION_WHOLE_MAP) == 1
+    assert "for each input condition" in res["next"]
+
+    out = _ok("sample", scores=str(qs / "scores.tif"), out_dir=str(qs / "by_cond_next"), budget=300, condition=cond,
+              condition_names=["0=clear", "1=cloudy"])
+    _label(out["files"]["sample_csv"], qs)
+    res = _ok("certify", sample_csv=out["files"]["sample_csv"], alpha=0.01)
+    need_full, need_split = est.min_labels_to_certify(0.01), est.min_labels_to_certify(0.01, 0.1 / 2)
+    assert (need_full, need_split) == (230, 299)
+    assert f"at least {need_full} labels to be tested" in res["next"] and f"at least {need_split}" in res["next"]
+    assert "the same condition layer" in res["next"]
+    assert "Any zone needs" not in res["next"]
+
+
+@needs_map
+def test_compare_returns_its_groups(qs, cond):
+    out = _ok("compare", a=str(qs / "scores.tif"), b=str(qs / "other.tif"), out_dir=str(qs / "diff_g"), groups=cond)
+    written = json.load(open(out["files"]["comparison"]))
+    assert out["summary"]["per_group"] == written["per_group"]
+    assert "Per group: group 0, 332 of 2048 windows differ (16.2%); group 1, 175 of 2048 (8.5%)." in out["conclusion"]
+    out = _ok("compare", a=str(qs / "scores.tif"), b=str(qs / "other.tif"), out_dir=str(qs / "diff_gl"), groups=cond,
+              labels=str(qs / "truth.tif"))
+    written = json.load(open(out["files"]["comparison"]))
+    assert out["summary"]["over_groups"] == written["graded"]["over_groups"]
+    assert "b is right more often than a in 1 of the 2 groups, a more often in 0, equally often in 1" in out["conclusion"]
 
 
 # ----------------------------------------------------------------------------- the server, as an agent starts it

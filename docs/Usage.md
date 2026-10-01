@@ -350,8 +350,9 @@ any of the statements is wrong.
 
 Not yet released: 1.3.1 lacks it. `oe-inferencex mcp` starts a local MCP server on stdio, so that an agent can run
 `assess`, `compare`, `sample`, `estimate` and `certify` on your own files. The agent starts the server and talks to
-it; nothing is hosted, and the tools read and write files on your machine only. To use it now, install from the
-repository with the `mcp` extra:
+it; nothing is hosted. The tools read the files you pass, the sidecar beside a sample and the scores raster it
+records, and write where you say, all on your machine. To use it now, install from the repository with the `mcp`
+extra:
 
 ```bash
 pip uninstall -y olmoearth-inferencex
@@ -379,9 +380,11 @@ configuration. Where the package sits in a virtual environment, give the full pa
 - **What a tool's description says.** What the tool does, what it needs and what it cannot do.
 - **The server's instructions.** The standard order: `assess` for where to look; `sample`, labels and `estimate` for
   how wrong the map is; `certify` for which part to trust; `compare` for two maps; and a condition layer for each
-  input condition on its own. Then the rules the package enforces: a review set is not a sample; `certify` needs a
-  random sample; without labels `compare` cannot say which map is right; labels are assumed right; ranking needs the
-  scores, not only the class map.
+  input condition on its own. Then the hard rules: a review set is not a sample (`estimate` and `certify` refuse
+  one); `certify` needs a random sample (it refuses the default design); without labels `compare` cannot say which
+  map is right; labels are assumed right; ranking needs the scores, not only the class map. `assess` refuses a class
+  map of more than two classes, but not a 0/1 map or a class map passed with `logits=true`; for those, whose
+  review sets tie, its conclusion says the order is not evidence.
 - **A refusal.** A tool error carrying the package's own message. The message names command-line options; each is
   the tool parameter of the same name (`--labels-date` is `labels_date`).
 
