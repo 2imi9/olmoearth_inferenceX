@@ -1841,7 +1841,7 @@ else here. 6,435,473 graded units in total, from 200 samples on the AWF sensors
 to 4,096,000 windows on m_sa_crop_type.
 
 **The margin beats the best no-model control on all 24, and on all 14 distinct
-sources.** One-sided exact sign test over tasks, p = 6e-08. The lead runs from
+sources.** One-sided exact sign test over tasks, p = 6e-08; over the 14 sources, p = 6.1e-05. The lead runs from
 +0.0157 on a two-class cropharvest split to +0.2278 on the seventeen-class
 so2sat, median +0.1158, against controls that see either no model at all (how far
 a sample sits from the training set's mean embedding) or only the decision (how
@@ -1885,18 +1885,48 @@ margin ranks errors on a suite somebody else fixed".
 Limits. The embeddings are Ai2's, extracted with their settings, so this inherits
 their extraction and is not an independent implementation of their models. The
 24 tasks are not 24 independent datasets: three AWF sensors, three nandi sensors,
-six cropharvest variants and three PASTIS variants share four sources between
+six cropharvest variants and three PASTIS variants share five sources between
 them, which is why the count by distinct source, 14 of 14, is reported beside the
 count by task. Where a task's test split is small, 200 samples on the AWF
 sensors, its excess AURC is noisy, which is why the headline is a count over
 tasks and not a pooled number. The controls available from embeddings alone are
 weaker than the pixel indices used elsewhere here, because the imagery is not
-published with them; a no-model spectral index beat confidence on one Sen1Floods11
-event in exp45 and no such control can be computed here. Runtime 12 minutes on one
+published with them. A no-model spectral index, NDWI, beat confidence on the
+Sen1Floods11 Bolivia event in exp45 and, under the Sentinel-1 probe, on the whole
+Sen1Floods11 test split in exp51, whose arm A is this table's sen1floods11 row
+(the same 592,385 windows); no such control can be computed here. Runtime 12 minutes on one
 B200, no downloads beyond the cached embeddings (job 837407). Source
 `exp/out/exp70_summary.json` and `exp/out/exp70_tasks.csv`, one row per task.
 
-<!-- claim:suite-controls-are-near-chance --> <!-- claim:suite-review-at-ten-percent -->
+**Addendum, 30 September 2026: what the 24 of 24 means.** A red team read the record against its own artifacts.
+Nothing above was changed except two plain errors of fact (five shared sources, not four; NDWI's win under the
+Sentinel-1 probe covers the whole test split) and the source-level p-value. The reading changes in four ways.
+
+- **The two controls are near chance on this suite.** Take a random order's excess AURC as the gap to close. The
+  better of the two controls closes a median 0.094 of it and is no better than a random order on 9 of the 24 tasks.
+  The embedding-distance control ranks errors below chance (AUROC under 0.5) on 21 of the 24. The margin closes a
+  median 0.680. So "beats both controls on 24 of 24" mostly shows that the margin beats a random order. The
+  class-rarity control reads how rare the probe's predicted class is, so it is not wholly free of the model either.
+  <!-- claim:suite-controls-are-near-chance -->
+- **At a reviewer's budget the gain is smaller than the median 0.68 suggests.** That number averages over every
+  review budget. A review of the 10% least confident units finds a median 0.214 of the errors, against 0.10 for a
+  random 10% and 0.410 for a perfect order, so it closes a median 0.40 of the gap at that budget. It finds more than
+  a random 10% on every task; the lowest is 0.115, on Nandi Sentinel-1. <!-- claim:suite-review-at-ten-percent -->
+- **The preregistration was not blind on six of the seven segmentation tasks.** exp54 had already scored the
+  margin on MADOS, both PASTIS inputs with optical, m-cashew-plant and m-SA-crop-type, on the same windows with the
+  same excess AURC, and exp51 had scored Sen1Floods11 the same way. Both were committed three days before exp70's
+  preregistration, and this section did not say so. On the other 18 tasks, which no earlier artifact scores, the
+  margin beats both controls on 18 of 18 (p = 3.8e-06), so the result stands on tasks that were not seen.
+  <!-- claim:suite-six-segmentation-outcomes-were-on-record -->
+- **Where the controls carry information, the margin still wins, and that is the stronger evidence.** On Dynamic
+  World's expert tiles the class-rarity control finds 0.217 of the errors in a 10% review, about twice a random
+  10%; on EuroCrops it ranks errors with an AUROC of 0.70 in Austria and Slovenia; on LUCAS the pixel variance finds
+  0.149 of the design-weighted errors in a 10% review. The margin beats the best control on all three references
+  (exp67, exp68, exp69). <!-- claim:external-references-carry-informative-controls -->
+
+Two counts belong beside the 24 of 24. Seventeen of the tasks are per-sample classification; the evidence about
+maps, where the graded unit is a window, is the 7 segmentation tasks from five datasets. And one task,
+m_sa_crop_type, holds 4,096,000 of the 6,435,473 graded units, so the unit count says little about breadth.
 
 ## The strong alternatives on the same suite (exp73)
 
@@ -2746,7 +2776,11 @@ hypergeometric one, whose exact coverage on the same cells is at least 0.9506. A
 cells where there are 111, because Satlas Base does not carry PASTIS Sentinel-1+2.
 <!-- claim:exp79-estimation-findings-hold-on-every-encoder -->
 
-<!-- claim:exp79-margin-beats-random-everywhere -->
+**Added 30 September 2026, from the same files: the margin beats a random order in every cell.** The controls
+above are near chance on this suite (see the exp70 addendum), so the comparison that says most is the one against a
+random order. In all 3,560 cells (16 encoders, each encoder's 20 to 24 tasks, ten probe seeds) the margin's AUROC
+for errors is above 0.5, and its excess AURC is below a random order's. The lowest AUROC, 0.503 for Clay Large on
+Nandi Sentinel-1, is close to chance. <!-- claim:exp79-margin-beats-random-everywhere -->
 
 ## Where the lead holds: by group, with its confound and its multiplicity (exp84)
 

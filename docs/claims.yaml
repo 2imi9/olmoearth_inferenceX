@@ -2276,7 +2276,7 @@
     rotation for the model to follow.
 
 - id: suite-margin-wins-every-task
-  statement: "On all 24 scored tasks of Ai2's published embedding suite, chosen by them for their own paper and not by us, the model's own margin ranks its errors better than the best no-model control, with a lead from 0.0157 to 0.2278 of excess AURC and a median of 0.1158 (one-sided exact sign test over tasks, 24 of 24, p = 6e-08); the win also holds on all 14 distinct sources, since three AWF sensors, three nandi sensors, six cropharvest variants and three PASTIS variants are not twelve independent datasets, and it holds across an accuracy range from 0.333 to 0.979 over 6,435,473 graded units; preregistered P1 holds, and this is the answer to the objection that the testbeds in this repository were chosen with knowledge of the answer."
+  statement: "On all 24 scored tasks of Ai2's published embedding suite, chosen by them for their own paper and not by us, the model's own margin ranks its errors better than the better of the two no-model controls computable from the embeddings (distance to the training mean, and how rare the probe's predicted class is), with a lead from 0.0157 to 0.2278 of excess AURC and a median of 0.1158 (one-sided exact sign test over tasks, 24 of 24, p = 6e-08). The win also holds on all 14 distinct sources (sign test over sources, 14 of 14, p = 6.1e-05); the tasks are not 24 independent datasets, since fifteen of them (three AWF sensors, three nandi sensors, six cropharvest variants and three PASTIS variants) share five sources. It holds across an accuracy range from 0.333 to 0.979 over 6,435,473 graded units, and preregistered P1 holds. The two controls are near chance on this suite (suite-controls-are-near-chance), and six of the seven segmentation outcomes were on record before the preregistration (suite-six-segmentation-outcomes-were-on-record)."
   status: supported
   experiments: [exp70]
   artifacts: [exp/out/exp70_summary.json]
@@ -2289,6 +2289,10 @@
       and sign_p(w, l) < 1e-6 and round(sign_p(w, l), 9) == 6e-08
       # a source is won when the mean lead over the tasks sharing it is positive, as exp70 counts it: 14 of 14
       and len(srcs) == 14 and sum(1 for v in srcs.values() if sum(v) / len(v) > 0) == 14
+      # the same exact test over the 14 sources, 14 of 14: 0.5 ** 14 = 6.1e-05
+      and round(sign_p(14, 0), 6) == 6.1e-05
+      # fifteen tasks share five sources; the other nine are one task each
+      and sorted(len(v) for v in srcs.values()) == [1] * 9 + [3, 3, 3, 3, 3]
       and round(min(lead.values()), 4) == 0.0157 and round(max(lead.values()), 4) == 0.2278
       and round(median(lead.values()), 4) == 0.1158
       and round(min(R[t]['test_accuracy'] for t in R), 3) == 0.333
@@ -2312,6 +2316,74 @@
     implementation of their models. The suite measures accuracy and no public benchmark measures label-free error
     ranking, so this is a task set and not a leaderboard result. The controls available from embeddings alone are
     weaker than the pixel indices used elsewhere here, because the imagery is not published with them.
+
+- id: suite-six-segmentation-outcomes-were-on-record
+  statement: "exp70's preregistration was not blind on six of its seven segmentation tasks. On five of them (MADOS, PASTIS Sentinel-2, PASTIS Sentinel-1+2, m-cashew-plant and m-SA-crop-type) exp54 had already scored OlmoEarth Base's margin on the same windows, with the same excess AURC, and found it ahead of an embedding-distance control; on Sen1Floods11 exp51's arm A had scored the same 592,385 windows with the same excess AURC. Both were committed three days before exp70's script and preregistration. On the other 18 tasks, which no earlier artifact scores, the margin beats both controls on 18 of 18 (one-sided exact sign test, p = 3.8e-06)."
+  status: measured
+  experiments: [exp70, exp54, exp51]
+  artifacts: [exp/out/exp70_summary.json, exp/out/exp54_summary.json, exp/out/exp51_summary.json]
+  check: |-
+    (lambda T, s54, s51:
+      # the five tasks exp54 scored for OlmoEarth Base: the same windows and the same margin excess AURC as exp70,
+      # and the margin ahead of exp54's embedding-distance control
+      sorted(s54) == ['m_cashew_plant', 'm_sa_crop_type', 'mados', 'pastis_sentinel1_sentinel2', 'pastis_sentinel2']
+      and all(s54[t]['olmoearth_base']['n_windows'] == T[t]['n_units']
+              and abs(s54[t]['olmoearth_base']['pooled_eaurc']['probe confidence'] - T[t]['signals']['margin']['excess_aurc']) < 1e-9
+              and s54[t]['olmoearth_base']['pooled_eaurc']['probe confidence'] < s54[t]['olmoearth_base']['pooled_eaurc']['control embedding distance']
+              for t in s54)
+      # Sen1Floods11: exp51's arm A on Ai2's embeddings, the same windows, accuracy and margin excess AURC
+      and s51['n_windows'] == T['sen1floods11']['n_units'] == 592385
+      and abs(s51['accuracy'] - T['sen1floods11']['test_accuracy']) < 1e-12
+      and abs(s51['pooled_eaurc']['probe confidence'] - T['sen1floods11']['signals']['margin']['excess_aurc']) < 1e-8
+      # the seventh segmentation task, PASTIS Sentinel-1, was in neither
+      and sorted(t for t in T if T[t]['family'] == 'segmentation') == sorted(list(s54) + ['sen1floods11', 'pastis_sentinel1'])
+      # the other 18 tasks: the margin beats both controls on every one; the exact sign test, 0.5 ** 18
+      and (lambda rest: len(rest) == 18 and all(
+            T[t]['signals']['margin']['excess_aurc'] < min(T[t]['signals'][c]['excess_aurc'] for c in ('ctl_embedding_distance', 'ctl_class_rarity'))
+            for t in rest))([t for t in T if t not in s54 and t != 'sen1floods11'])
+      and round(0.5 ** 18, 7) == 3.8e-06
+    )(A['exp/out/exp70_summary.json']['results']['tasks'], A['exp/out/exp54_summary.json']['results'],
+      A['exp/out/exp51_summary.json']['results']['A_olmoearth_base']['matched'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: suite-six-segmentation-outcomes-were-on-record}
+  note: >-
+    Not disclosed when exp70 was recorded; found by the red team of 30 September 2026. The dates are from the history,
+    not from an artifact: exp51 was recorded in 486ef3f and exp54 in f74eb7c, both on 10 September 2026; exp70's script,
+    which carries its preregistration, entered in f843556 on 13 September and its result in b899b73 the same day. exp54's
+    embedding-distance control is not exp70's (its excess AURC differs), and exp51 scored a sensor-level and an NDWI
+    control rather than exp70's two, so what was on record is the margin's own score on those windows, not the exp70
+    comparison itself. No artifact committed before f843556 names any of the other 18 tasks.
+
+- id: external-references-carry-informative-controls
+  statement: "Unlike the suite's two controls, the best no-model control on three external references finds errors well above chance, and the margin beats it there too. On Dynamic World's expert tiles the class-rarity control finds 0.217 of the errors in a 10% review, where a random 10% finds 0.10, and the margin's lead over it is 0.048 of excess AURC; on EuroCrops the class-rarity control ranks errors with an AUROC of 0.70 in Austria and in Slovenia (in Denmark the pixel variance is the better control); on LUCAS the within-window pixel variance finds 0.149 of the design-weighted errors in a 10% review."
+  status: measured
+  experiments: [exp67, exp68, exp69]
+  artifacts: [exp/out/exp67_summary.json, exp/out/exp68_summary.json, exp/out/exp69_summary.json]
+  check: |-
+    (lambda D, L, E:
+      # Dynamic World: the class-rarity control's capture at a 10% budget, and the margin's pooled lead over it
+      round(D['capture']['control class rarity']['0.1'], 3) == 0.217
+      and round(D['tests']['control class rarity']['pooled_lead'], 3) == 0.048
+      and D['pooled_excess_aurc']['margin'] < D['pooled_excess_aurc']['control class rarity']
+      # LUCAS: the pixel variance is the best control; its design-weighted capture at 10%, and the margin ahead of it
+      and L['best_control'] == 'ctl_pixel_variance'
+      and round(L['signals']['ctl_pixel_variance']['capture_weighted']['0.1'], 3) == 0.149
+      and round(L['signals']['ctl_pixel_variance']['capture_naive']['0.1'], 3) == 0.101
+      and L['signals']['margin']['excess_aurc_weighted'] < L['signals']['ctl_pixel_variance']['excess_aurc_weighted']
+      # EuroCrops: class rarity is the best control in Austria and Slovenia, AUROC 0.70 in both; the margin leads everywhere
+      and {r: E[r]['part_a']['best_control'] for r in E} == {'at': 'ctl_class_rarity', 'dk': 'ctl_pixel_variance', 'si': 'ctl_class_rarity'}
+      and round(E['at']['part_a']['signals']['ctl_class_rarity']['auroc'], 2) == 0.70
+      and round(E['si']['part_a']['signals']['ctl_class_rarity']['auroc'], 2) == 0.70
+      and all(E[r]['part_a']['margin_lead'] > 0 for r in E)
+    )(A['exp/out/exp67_summary.json']['results']['ranking'], A['exp/out/exp68_summary.json']['results']['part_a'],
+      A['exp/out/exp69_summary.json']['results']['regions'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: external-references-carry-informative-controls}
+  note: >-
+    Read from the three experiments' committed summaries after the red team of 30 September 2026 found the suite's
+    controls near chance (suite-controls-are-near-chance). A random review of 10% finds 0.10 of the errors in
+    expectation. LUCAS's capture is under the Horvitz-Thompson weights its design needs; unweighted the pixel
+    variance finds 0.101, no better than random.
 
 - id: suite-holds-in-both-families
   statement: "The result is not a property of one task family: the margin beats the best no-model control on 17 of 17 classification tasks, where the graded unit is the sample, and on 7 of 7 segmentation tasks, where it is the 4 px window used everywhere else in this repository, so preregistered P2 holds and the claim does not have to be narrowed to a family by name; six of the tasks come from GEO-Bench 1, a third-party benchmark with its own paper, and the margin wins on all six."
