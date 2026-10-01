@@ -229,9 +229,12 @@ From a search of the 2025 and 2026 literature; each entry was checked against it
 
 - Gonzalez-Calabuig, M. et al. (2025). SHRUG-FM: reliability-aware foundation
   models for Earth observation. [arXiv:2511.10370](https://arxiv.org/abs/2511.10370).
-  Image-level reliability signals with a label-fitted gate. Ported to the
-  window and scored here (exp49); the original does not run a single-model
-  confidence baseline.
+  Image-level reliability signals with a label-fitted gate; accepted for the
+  CVPR EarthVision 2026 proceedings. Ported to the window and scored here
+  (exp49). Its revised abstract reports beating single-signal baselines such
+  as predictive entropy, so the earlier note here, that it runs no
+  single-model confidence baseline, is out of date (literature search of 27
+  September 2026).
 - Meyer, H. and Pebesma, E. (2021). Predicting into unknown space? Estimating
   the area of applicability of spatial prediction models. *Methods in Ecology
   and Evolution* 12:1620–1633.

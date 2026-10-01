@@ -2819,6 +2819,7 @@
     - {file: docs/Findings.md, marker: margin-takes-two-thirds-of-the-ranking-headroom}
     - {file: docs/Summary.md, marker: margin-takes-two-thirds-of-the-ranking-headroom}
     - {file: README.md, marker: margin-takes-two-thirds-of-the-ranking-headroom}
+    - {file: docs/method/protocol.md, marker: margin-takes-two-thirds-of-the-ranking-headroom}
 
 - id: augrc-leaves-the-suite-result-standing
   statement: "For a fixed set of errors AUGRC orders readings as the failure AUROC does, and by AUROC the margin beats the best no-model control on 23 of exp70's 24 tasks, in exp70's own artifact and again in exp76; the exception is cropharvest_Togo_12_sentinel1, where the class-rarity control leads by under 0.001 of AUROC. Across every reading exp76 computed, the best one is the same under excess AURC and under AUROC on 22 of 24 tasks. exp76's probability margin reproduces exp70's excess AURC to within 1e-4 on 18 of 24 tasks and to within 0.004 on all."
@@ -3192,6 +3193,7 @@
     - {file: docs/results/comparisons.md, marker: tile-sampling-breaks-the-naive-interval}
     - {file: docs/Findings.md, marker: tile-sampling-breaks-the-naive-interval}
     - {file: docs/Summary.md, marker: tile-sampling-breaks-the-naive-interval}
+    - {file: docs/method/protocol.md, marker: tile-sampling-breaks-the-naive-interval}
   note: >-
     Five of the seven tasks were seen in the pilot disclosed in the preregistration, which is also what moved P2's
     threshold from 0.75 to 0.85. Of the two genuinely out-of-sample tasks only m-SA-crop-type confirms; m-cashew-plant
@@ -3984,6 +3986,7 @@
     )(A['exp/out/exp79_summary.json']['estimation']['per_encoder'])
   cited_in:
     - {file: docs/results/comparisons.md, marker: exp79-estimation-findings-hold-on-every-encoder}
+    - {file: docs/method/protocol.md, marker: exp79-estimation-findings-hold-on-every-encoder}
   note: >-
     P5 graded the Wilson interval, as preregistered; no cell needed its second clause. The package's random-draw
     interval is now the exact hypergeometric one, whose exact coverage on the same cells is at least 0.9506 (the
@@ -4240,6 +4243,7 @@
     - {file: docs/Summary.md, marker: exp88-matched-head-ranks-normally}
     - {file: README.md, marker: exp88-matched-head-ranks-normally}
     - {file: docs/TECHNIQUES.md, marker: exp88-matched-head-ranks-normally}
+    - {file: docs/method/protocol.md, marker: exp88-matched-head-ranks-normally}
   note: >-
     Not preregistered: a reading of committed per-unit files after exp88 was recorded, prompted by the red team of
     30 September 2026. The matched probe is exp70's seed-0 probe as exported per unit by exp78 (Base, committed) and
@@ -4298,6 +4302,7 @@
     - {file: docs/Findings.md, marker: exp79-margin-beats-random-everywhere}
     - {file: docs/Summary.md, marker: exp79-margin-beats-random-everywhere}
     - {file: README.md, marker: exp79-margin-beats-random-everywhere}
+    - {file: docs/method/protocol.md, marker: exp79-margin-beats-random-everywhere}
   note: >-
     A cell is one encoder, one task and one probe seed; the 3,560 are 24 tasks on seven encoders, 21 on eight and 20
     on TerraMind Base, each at ten seeds. The per-unit files behind the cells are not committed beyond OlmoEarth

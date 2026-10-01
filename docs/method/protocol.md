@@ -328,19 +328,38 @@ the [AWF task config](https://github.com/allenai/olmoearth_projects/blob/main/ol
 whose classes and split are reused here, and
 [olmoearth_pretrain/evals](https://github.com/allenai/olmoearth_pretrain/tree/main/olmoearth_pretrain/evals).
 
-**What we did not find in the EO literature**, and what this repository
-targets: selective-prediction evaluation (risk-coverage / AURC) of land
-cover inference; cross-model disagreement as an audit signal; and the
-combination of such signals into an audit scored against the audited
-model's own confidence, with no-model controls, over regions without
-labels.
+**What is known and what is new.** These verdicts come from a literature search of 27 September 2026
+(`exp/out/literature_positioning_2026-09-27.md`), which is not exhaustive. They replace a paragraph that said no
+EO work evaluates selective prediction with risk-coverage curves or uses disagreement as an audit signal; the
+related-work page itself lists such work.
 
-**The contribution claim** is the comparison protocol itself — pre-registered
-selection, spatial hold-out, tie-aware metrics, a no-model control and an
-exact significance test, applied to label-free comparison of inference
-outputs — plus its finding that a perturbation-based instability signal —
-statistically
-indistinguishable from proximity to a boundary in the model's own
-prediction map — ranks errors better than confidence on the rule-selected
-scenes (exp13/exp14), while failing to do so against expert labels
-(exp18/exp21).
+- **Review order, ranking errors by confidence.** Known. The model's own confidence is the standard baseline for
+  finding misclassified examples (Hendrycks & Gimpel 2017). In land cover, per-pixel confidence maps go back to
+  McIver & Friedl 2001, and maps of predicted per-pixel accuracy to Khatami et al. 2017. EO segmentation uncertainty
+  has been scored by how well it finds errors (Rey et al. 2025), quality control of land-cover maps has been
+  prioritised by uncertainty (Choi et al. 2026), and selective prediction with risk-coverage curves exists for EO
+  foundation models (SHRUG-FM). Partly new: the label-free ranking within one map framed as a review order, reported
+  as the share of the random-to-perfect gap it closes. Beating the suite's no-model controls is not a contribution,
+  because those controls are near chance there.
+- **Error estimation.** Known. The estimator is standard (Olofsson et al. 2014); Stehman 2014 covers strata that are
+  not map classes, Stehman 1997 shows that clustered samples understate the standard error, and Kumar & Raj 2018
+  stratify by a classifier's own confidence to estimate its accuracy. Model-assisted and prediction-powered estimators
+  do the same job (Stehman 2009; Angelopoulos et al. 2023; Shirota 2026). Partly new: coverage measured on many
+  encoder-task cells for foundation-model maps, and the size of the tile-sampling design effect for such maps.
+- **Certified zones.** Known. Keeping the most confident part and bounding its error with probability 1 − δ is
+  Geifman & El-Yaniv 2017. The prefix rule is fixed-sequence testing, justified in general by Learn then Test
+  (Angelopoulos et al. 2021). Partly new: the calibration sample is a probability design over a map's windows, and
+  the output is a certified region of a map.
+- **Comparing two maps.** Known. Disagreement maps between land-cover products, used to point reviewers at places
+  to check (Fritz & See 2008), and paired accuracy tests on a shared sample (Foody 2004). Partly new: each model's
+  confidence attached to where two foundation-model maps differ, in one tool. Little more can be defended.
+
+**The contribution, stated as measured scope.** The statistical parts all exist. This repository joins them in one
+tool that reads a model's scores after the fact, and measures the result at scale. The margin's ranking was graded
+over 16 encoders, 24 tasks and 10 probe seeds: it beats a random order in every one of the 3,560 cells, and on
+OlmoEarth Base it gets a median 0.68 of the way from a random to a perfect order. The interval's coverage was graded
+on 111 encoder-task cells. Labels collected by tile break the naive interval, with a median design effect near 3. And
+exp88 gives a deployment warning: a model run on an input combination it was not trained on can be confidently wrong.
+The perturbation-based instability signal of exp13 and exp14 is not part of the contribution. It beat confidence
+against WorldCover and failed against expert labels (exp18, exp21), and the technique ledger rates it mixed.
+<!-- claim:exp79-margin-beats-random-everywhere --> <!-- claim:margin-takes-two-thirds-of-the-ranking-headroom --> <!-- claim:exp79-estimation-findings-hold-on-every-encoder --> <!-- claim:tile-sampling-breaks-the-naive-interval --> <!-- claim:exp88-matched-head-ranks-normally -->
