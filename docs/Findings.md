@@ -11,8 +11,8 @@ artifact under `exp/out/`, with its evidence in the [results record](results/com
   and a review of the least confident 10% finds about twice the errors a random 10% finds. It beats a random order in
   all 3,560 cells of sixteen encoders, their tasks and ten probe seeds.
 - The suite's two controls, the distance in embedding space and how rare the probe's predicted class is, are near
-  chance, so beating them there shows little. Informative controls were beaten on external references: ground survey (LUCAS), Dynamic World's expert tiles and farmers' crop
-  declarations (EuroCrops).
+  chance, so beating them there shows little. Informative controls were beaten on external references: ground
+  survey (LUCAS), Dynamic World's expert tiles and farmers' crop declarations (EuroCrops).
 - Exceptions include a water index (NDWI) that ranks flood errors as well as or better than confidence on
   Sen1Floods11 (one event under a Sentinel-2 probe, the whole test split under a Sentinel-1 probe) and on 2 of 45
   GEOID-Flood areas, both in one emergency activation, a sensor control on 1 GEOID-Flood area, and other encoders
@@ -54,12 +54,14 @@ errors, against 0.10 for a random 10% and 0.410 for a perfect order (exp70). <!-
 Over sixteen encoders, their tasks and ten probe seeds, the margin ranks errors better than a random order in all
 3,560 cells; the lowest AUROC is 0.503, close to chance (exp79). <!-- claim:exp79-margin-beats-random-everywhere -->
 The margin also beats the better of the suite's two controls, how rare the probe's predicted class is and the
-distance to the training mean, on all 24 tasks (sign test p = 6e-08) and on all 14
-distinct sources (p = 6.1e-05) (exp70). <!-- claim:suite-margin-wins-every-task -->
+distance to the training mean, on all 24 tasks (sign test p = 6e-08) and on all 14 distinct sources (p = 6.1e-05)
+(exp70). <!-- claim:suite-margin-wins-every-task -->
 Those controls are near chance on this suite: the better one closes a median 0.094 of the gap and is no better than a
 random order on 9 of the 24 tasks (exp70). <!-- claim:suite-controls-are-near-chance -->
 The preregistration was not blind on six of the seven segmentation tasks, whose margin scores were already on record
-from exp54 and exp51; on the other 18 tasks the margin beats both controls on 18 of 18 (p = 3.8e-06).
+from exp54 and exp51; on the other 18 tasks the margin beats both controls on 18 of 18 (p = 3.8e-06). One of those
+18, AWF Sentinel-2, had been graded before on the AWF project's own split, where confidence ranked best (exp04,
+exp16); on the other 17 the margin wins 17 of 17 (p = 7.6e-06).
 <!-- claim:suite-six-segmentation-outcomes-were-on-record -->
 Under ten probe seeds OlmoEarth Base's lead over the better control stays positive on all 24 tasks (exp79).
 <!-- claim:exp79-base-margin-wins-under-every-seed -->

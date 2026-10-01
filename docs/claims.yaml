@@ -772,6 +772,7 @@
       round(c['accuracy'], 3) == 0.881 and c['n_errors'] == 41
       and round(c['aurc']['confidence (neg logit margin)'], 4) == 0.0262 and round(c['aurc']['tiling instability (aligned)'], 4) == 0.0235
       and b['tiling instability (aligned)'][0] < 0 < b['tiling instability (aligned)'][1]
+      and round(b['tiling instability (aligned)'][2], 2) == 0.93
       and all(b[k][0] > 0 for k in ('boundary indicator', 'probe disagreement', 'control (NDVI temporal std)'))
       and round(c['ece_10bins'], 3) == 0.080
     )(A['exp/out/exp21_summary.json']['crops']['16'], A['exp/out/exp21_summary.json']['crops']['16']['bootstrap_vs_confidence (lo, hi, P(signal better))'])
@@ -2336,12 +2337,12 @@
     weaker than the pixel indices used elsewhere here, because the imagery is not published with them.
 
 - id: suite-six-segmentation-outcomes-were-on-record
-  statement: "exp70's preregistration was not blind on six of its seven segmentation tasks. On five of them (MADOS, PASTIS Sentinel-2, PASTIS Sentinel-1+2, m-cashew-plant and m-SA-crop-type) exp54 had already scored OlmoEarth Base's margin on the same windows, with the same excess AURC, and found it ahead of an embedding-distance control; on Sen1Floods11 exp51's arm A had scored the same 592,385 windows with the same excess AURC. Both were committed three days before exp70's script and preregistration. On the other 18 tasks the margin beats both controls on 18 of 18 (one-sided exact sign test, p = 3.8e-06). Only one of them appears in an earlier artifact: exp41 had scored OlmoEarth Base's confidence on AWF Sentinel-2 with another probe (61 errors in 200, against exp70's 34) and without exp70's controls."
+  statement: "exp70's preregistration was not blind on six of its seven segmentation tasks. On five of them (MADOS, PASTIS Sentinel-2, PASTIS Sentinel-1+2, m-cashew-plant and m-SA-crop-type) exp54 had already scored OlmoEarth Base's margin on the same windows, with the same excess AURC, and found it ahead of an embedding-distance control; on Sen1Floods11 exp51's arm A had scored the same 592,385 windows with the same excess AURC. Both were committed three days before exp70's script and preregistration. On the other 18 tasks the margin beats both controls on 18 of 18 (one-sided exact sign test, p = 3.8e-06). Only one of them, AWF Sentinel-2, appears in earlier artifacts, and its outcome was partly seen: exp41 had scored OlmoEarth Base's confidence on its 200 test units with another probe (61 errors, against exp70's 34) and without exp70's controls, and exp04 and exp16 had found confidence ranking errors best of the signals they graded on AWF's expert labels with Sentinel-2, on the AWF project's own split (344 points). On the 17 tasks without an earlier artifact the margin wins 17 of 17 (p = 7.6e-06)."
   status: measured
-  experiments: [exp70, exp54, exp51, exp41]
-  artifacts: [exp/out/exp70_summary.json, exp/out/exp54_summary.json, exp/out/exp51_summary.json, exp/out/exp41_summary.json]
+  experiments: [exp70, exp54, exp51, exp41, exp04, exp16]
+  artifacts: [exp/out/exp70_summary.json, exp/out/exp54_summary.json, exp/out/exp51_summary.json, exp/out/exp41_summary.json, exp/out/exp16_summary.json]
   check: |-
-    (lambda T, s54, s51, s41:
+    (lambda T, s54, s51, s41, s16:
       # the five tasks exp54 scored for OlmoEarth Base: the same windows and the same margin excess AURC as exp70,
       # and the margin ahead of exp54's embedding-distance control
       sorted(s54) == ['m_cashew_plant', 'm_sa_crop_type', 'mados', 'pastis_sentinel1_sentinel2', 'pastis_sentinel2']
@@ -2364,8 +2365,14 @@
       and sorted(s41) == ['awf_sentinel2', 'sen1floods11']
       and s41['awf_sentinel2']['n_test_windows'] == T['awf_sentinel2']['n_units'] == 200
       and s41['awf_sentinel2']['n_test_errors'] == 61 and round(T['awf_sentinel2']['error_rate'] * 200) == 34
+      # exp16 (exp04's errors, the AWF project's own split): confidence had the lowest AURC of the signals it graded
+      and s16['n'] == 344 and s16['aurc']['baseline'] == min(s16['aurc'].values()) and len(s16['aurc']) == 3
+      # without AWF Sentinel-2, 17 of 17; the exact sign test, 0.5 ** 17
+      and T['awf_sentinel2']['signals']['margin']['excess_aurc'] < min(T['awf_sentinel2']['signals'][c]['excess_aurc'] for c in ('ctl_embedding_distance', 'ctl_class_rarity'))
+      and round(0.5 ** 17, 7) == 7.6e-06
     )(A['exp/out/exp70_summary.json']['results']['tasks'], A['exp/out/exp54_summary.json']['results'],
-      A['exp/out/exp51_summary.json']['results']['A_olmoearth_base']['matched'], A['exp/out/exp41_summary.json']['tasks'])
+      A['exp/out/exp51_summary.json']['results']['A_olmoearth_base']['matched'], A['exp/out/exp41_summary.json']['tasks'],
+      A['exp/out/exp16_summary.json'])
   cited_in:
     - {file: docs/results/comparisons.md, marker: suite-six-segmentation-outcomes-were-on-record}
     - {file: docs/Findings.md, marker: suite-six-segmentation-outcomes-were-on-record}
@@ -2377,10 +2384,14 @@
     embedding-distance control is not exp70's (its excess AURC differs), and exp51 scored a sensor-level and an NDWI
     control rather than exp70's two, so what was on record is the margin's own score on those windows, not the exp70
     comparison itself. Of the other 18 tasks, only AWF Sentinel-2 is named in an artifact committed before f843556
-    (exp41, 2219ec0, 8 September 2026), with another probe.
+    (exp41, 2219ec0, 8 September 2026), with another probe. AWF's expert labels with Sentinel-2 were also graded from
+    31 August on the AWF project's own split (exp04 in b6013ea, exp16 in 515118d on 2 September), where confidence
+    ranked errors best (claim awf-confidence-lowest-aurc); that split is not the suite's 200 test units, but the
+    outcome on that data was known, so the count without AWF Sentinel-2, 17 of 17, is given beside the 18 of 18. Added
+    on 30 September 2026 after a reviewer of the red-team corrections pointed to exp04.
 
 - id: external-references-carry-informative-controls
-  statement: "Unlike the suite's two controls, the best no-model control on three external references finds errors well above chance, and the margin beats it there too. On Dynamic World's expert tiles the class-rarity control finds 0.217 of the errors in a 10% review, where a random 10% finds 0.10, and the margin's lead over it is 0.048 of excess AURC; on EuroCrops the class-rarity control ranks errors with an AUROC of 0.70 in Austria and in Slovenia (in Denmark the pixel variance is the better control); on LUCAS the within-window pixel variance finds 0.149 of the design-weighted errors in a 10% review."
+  statement: "Unlike the suite's two controls, the best no-model control on three external references finds errors above chance, about twice a random review on Dynamic World and less on LUCAS, and the margin beats it there too. On Dynamic World's expert tiles the class-rarity control finds 0.217 of the errors in a 10% review, where a random 10% finds 0.10, and the margin's lead over it is 0.048 of excess AURC; on EuroCrops the class-rarity control ranks errors with an AUROC of 0.70 in Austria and in Slovenia (in Denmark the pixel variance is the better control); on LUCAS the within-window pixel variance finds 0.149 of the design-weighted errors in a 10% review."
   status: measured
   experiments: [exp67, exp68, exp69]
   artifacts: [exp/out/exp67_summary.json, exp/out/exp68_summary.json, exp/out/exp69_summary.json]
@@ -2636,7 +2647,7 @@
     - {file: docs/TECHNIQUES.md, marker: suite-margin-beats-the-strong-alternatives}
 
 - id: suite-alternatives-clear-the-control-and-still-lose
-  statement: "The alternatives are real signals and still lose: on the 24-task suite the five-seed ensemble beats the best no-model control on 15 tasks, the nearest-neighbour distance on 14 and the Mahalanobis distance on 12; the two distance signals beat the margin on none of those tasks and the ensemble on two of its fifteen (EuroSAT by 0.0003 and AWF Landsat by 0.0030, a statement corrected on 2026-09-23 when the check was made to recompute); the ensemble is nearly the margin's equal on classification (median lead of the margin +0.0114) and clearly behind on segmentation (+0.1336), the feature-space signals are far behind on both (medians +0.0913 and +0.1118 on classification, +0.1121 and +0.1166 on segmentation), mutual information beats vote disagreement on 17 of 17 classification tasks, and the bag margin beats the single margin on 6 of 17."
+  statement: "The alternatives clear the suite's near-chance controls on some tasks and still lose: on the 24-task suite the five-seed ensemble beats the best no-model control on 15 tasks, the nearest-neighbour distance on 14 and the Mahalanobis distance on 12; the two distance signals beat the margin on none of those tasks and the ensemble on two of its fifteen (EuroSAT by 0.0003 and AWF Landsat by 0.0030, a statement corrected on 2026-09-23 when the check was made to recompute); the ensemble is nearly the margin's equal on classification (median lead of the margin +0.0114) and behind on segmentation (+0.1336, a lead over a near-random vote disagreement), the feature-space signals are far behind on both (medians +0.0913 and +0.1118 on classification, +0.1121 and +0.1166 on segmentation), mutual information beats vote disagreement on 17 of 17 classification tasks, and the bag margin beats the single margin on 6 of 17."
   status: measured
   experiments: [exp73]
   artifacts: [exp/out/exp73_summary.json]
@@ -2686,6 +2697,7 @@
   cited_in:
     - {file: docs/results/comparisons.md, marker: exp73-segmentation-ensemble-vote-is-near-random}
     - {file: docs/Findings.md, marker: exp73-segmentation-ensemble-vote-is-near-random}
+    - {file: docs/TECHNIQUES.md, marker: exp73-segmentation-ensemble-vote-is-near-random}
   note: >-
     Read from the committed summary after the red team of 30 September 2026. On the window path the probe ensemble
     yields no bag margin, so exp73 graded vote disagreement as the ensemble's primary reading there and recorded the
@@ -3791,7 +3803,7 @@
 
 - id: trust-zone-guarantee-holds-on-other-encoders
   statement: "On the seed-0 exports of Clay Large (24 tasks), Copernicus-FM (21), AnySat (24) and CROMA Base (21) the certified zone exceeded alpha on at most 0.075, 0.082, 0.061 and 0.079 of draws for the prefix rule and at most 0.005 for Bonferroni on every cell (bound 0.120); at 300 labels and alpha = half the error rate the prefix rule certified a zone on most draws on 10 of 21, 12 of 19, 15 of 21 and 9 of 19 tasks, median coverages 0.25, 0.45, 0.25 and 0.50 against oracle medians 0.40, 0.50, 0.40 and 0.50."
-  crosscheck: tests/test_trust_zone.py::test_the_guarantee_holds_exactly_on_a_monotone_population
+  crosscheck: tests/test_trust_zone.py::test_both_rules_hold_delta_on_every_error_pattern_of_a_small_map
   status: measured
   experiments: [exp80]
   artifacts: [exp/out/exp80_zones/clay_large.json, exp/out/exp80_zones/copernicusfm.json, exp/out/exp80_zones/anysat.json, exp/out/exp80_zones/croma_base.json]

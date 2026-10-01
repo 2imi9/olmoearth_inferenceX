@@ -329,9 +329,11 @@ whose classes and split are reused here, and
 [olmoearth_pretrain/evals](https://github.com/allenai/olmoearth_pretrain/tree/main/olmoearth_pretrain/evals).
 
 **What is known and what is new.** These verdicts come from a literature search of 27 September 2026
-(`exp/out/literature_positioning_2026-09-27.md`), which is not exhaustive. They replace a paragraph that said no
-EO work evaluates selective prediction with risk-coverage curves or uses disagreement as an audit signal; the
-related-work page itself lists such work.
+(`exp/out/literature_positioning_2026-09-27.md`), which is not exhaustive, with one verdict changed on 30 September:
+the memo lists the head-to-head of the margin against no-model controls on the suite as appearing new, and the red
+team of 30 September found those controls near chance there, so it is not claimed below. They replace a paragraph
+that said no EO work evaluates selective prediction with risk-coverage curves or uses disagreement as an audit
+signal; the related-work page itself lists such work.
 
 - **Review order, ranking errors by confidence.** Known. The model's own confidence is the standard baseline for
   finding misclassified examples (Hendrycks & Gimpel 2017). In land cover, per-pixel confidence maps go back to
@@ -356,9 +358,9 @@ related-work page itself lists such work.
 
 **The contribution, stated as measured scope.** The statistical parts all exist. This repository joins them in one
 tool that reads a model's scores after the fact, and measures the result at scale. The margin's ranking was graded
-over 16 encoders, 24 tasks and 10 probe seeds: it beats a random order in every one of the 3,560 cells, and on
-OlmoEarth Base it gets a median 0.68 of the way from a random to a perfect order. The interval's coverage was graded
-on 111 encoder-task cells. Labels collected by tile break the naive interval, with a median design effect near 3. And
+over 16 encoders, each encoder's 20 to 24 tasks, and 10 probe seeds: it beats a random order in every one of the
+3,560 cells, and on OlmoEarth Base it gets a median 0.68 of the way from a random to a perfect order. The interval's
+coverage was graded on 111 encoder-task cells. Labels collected by tile break the naive interval, with a median design effect near 3. And
 exp88 gives a deployment warning: a model run on an input combination it was not trained on can be confidently wrong.
 The perturbation-based instability signal of exp13 and exp14 is not part of the contribution. It beat confidence
 against WorldCover and failed against expert labels (exp18, exp21), and the technique ledger rates it mixed.

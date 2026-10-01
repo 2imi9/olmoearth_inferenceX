@@ -112,7 +112,8 @@ warnings above on probability maps and tiles samples; no computation changed.
   the errors (a random 10% finds 0.10), and the margin beating a random order in all 3,560 cells of exp79. Informative
   controls were beaten on LUCAS, Dynamic World and EuroCrops. The sign test is given over the 14 sources (p =
   6.1e-05) beside the one over tasks. Six of the seven segmentation outcomes were on record before exp70's
-  preregistration; on the other 18 tasks the margin wins 18 of 18.
+  preregistration; on the other 18 tasks the margin wins 18 of 18, and 17 of 17 without AWF Sentinel-2, whose
+  outcome on the AWF project's own split was on record from exp04 (31 August).
 - **exp88.** A probe trained on radar alone was 28.4% wrong on PASTIS and ranked its errors with an AUROC of 0.79
   (0.83 with full input); 3.9% of its errors reached the threshold set by the probe trained on both. So
   the confident errors belong to a model run on inputs it was not trained on. Per-condition error rates stay

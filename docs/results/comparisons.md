@@ -1928,9 +1928,12 @@ Sentinel-1 probe covers the whole test split) and the source-level p-value. The 
   margin on MADOS, both PASTIS inputs with optical, m-cashew-plant and m-SA-crop-type, on the same windows with the
   same excess AURC, and exp51 had scored Sen1Floods11 the same way. Both were committed three days before exp70's
   preregistration, and this section did not say so. On the other 18 tasks the margin beats both controls on 18 of
-  18 (p = 3.8e-06). Only one of them appears in an earlier artifact: exp41 had scored OlmoEarth Base's confidence on
-  AWF Sentinel-2 with another probe (61 errors in 200, against exp70's 34) and without exp70's controls. So the
-  result stands on tasks whose outcome was not seen. <!-- claim:suite-six-segmentation-outcomes-were-on-record -->
+  18 (p = 3.8e-06). Only one of them, AWF Sentinel-2, appears in earlier artifacts, and its outcome was partly seen.
+  exp41 had scored OlmoEarth Base's confidence on its 200 test units with another probe (61 errors, against exp70's
+  34) and without exp70's controls. From 31 August, exp04 and exp16 had found confidence ranking errors best of the
+  signals they graded on AWF's expert labels with Sentinel-2, on the AWF project's own split. On the 17 tasks with
+  no earlier artifact the margin wins 17 of 17 (p = 7.6e-06), so the result stands on tasks whose outcome was not
+  seen. <!-- claim:suite-six-segmentation-outcomes-were-on-record -->
 - **Where the controls carry information, the margin still wins, and that is the stronger evidence.** On Dynamic
   World's expert tiles the class-rarity control finds 0.217 of the errors in a 10% review, about twice a random
   10%; on EuroCrops it ranks errors with an AUROC of 0.70 in Austria and Slovenia; on LUCAS the pixel variance finds
@@ -1965,12 +1968,12 @@ and the Mahalanobis distance on 24 of 24 (p = 6.0e-08, median lead
 +0.1123). The ensemble's two losses are ties in all but name,
 awf_landsat at -0.0030, m_eurosat at -0.0003. <!-- claim:suite-margin-beats-the-strong-alternatives -->
 
-**They are real signals, and they still lose.** The descriptive P4 is the part
-worth carrying: the ensemble beats the best no-model control on 15
-of 24 tasks, the nearest-neighbour distance on 14 and the Mahalanobis
-distance on 12, so on roughly half the suite each of them
-measures something, and on none of those tasks does it measure it better than
-the margin. The shape of the loss is informative. On classification the ensemble
+**They clear the suite's controls on about half the tasks, and they still lose.** The descriptive P4: the
+ensemble beats the best no-model control on 15 of 24 tasks, the nearest-neighbour distance on 14 and the
+Mahalanobis distance on 12. Those controls are near chance on this suite (corrected on 30 September 2026, see the
+exp70 addendum; this paragraph first read clearing them as each alternative measuring something), so clearing them
+shows little, and on none of those tasks does an alternative rank errors better than the margin. The shape of the
+loss is informative. On classification the ensemble
 is nearly the margin's equal, median lead +0.0114; on
 segmentation the margin pulls clearly ahead, +0.1336. The
 feature-space signals are far behind everywhere, medians +0.0913
