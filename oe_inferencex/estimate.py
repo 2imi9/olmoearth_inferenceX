@@ -14,9 +14,11 @@ Three things a user needs, and one they must be stopped from doing.
   and to 0.63 on the cleanest map, with coverage intact everywhere. A plain random sample and a tile design are
   also offered, the last because that is how people actually label. When the map records each window's input
   condition (a cloud flag, the modalities present), the "condition" design splits the labels equally across the
-  conditions, never from the model's confidence. That confidence can overstate the accuracy of a condition with
-  an input missing: it did on PASTIS without the optical input, though not on CropHarvest China 6 (exp88). Each
-  condition then gets its own exact interval, and `certify_by_condition` a zone of its own.
+  conditions, never from the model's confidence. That confidence can overstate the accuracy of a condition read
+  from an input combination the model was not trained on: it did on PASTIS for a probe trained on radar plus optical
+  and run on radar alone, though not on CropHarvest China 6 (exp88). Even a model trained on each input can be wrong
+  more often in one condition than in another. Each condition then gets its own exact interval, and
+  `certify_by_condition` a zone of its own.
 - `estimate_error_rate` turns the labels back into a rate with the interval the design earns: the exact
   hypergeometric interval for a random sample, the weighted sum of each condition's exact interval under the
   condition design, a stratified interval under the confidence and proportional designs, and for tile-sampled
@@ -47,17 +49,20 @@ TILES_WARNING = ("labels taken tile by tile are not independent, and a map whose
                  "tasks it covered 51 to 78% of the time while claiming 95%. This interval is better and still not "
                  "honest everywhere: on exp78's tasks it covered 0.91 to 0.94 where tiles were of equal size, 0.82 on "
                  "Sen1Floods11 and 0.60 on MADOS, whose tiles hold 1 to 400 windows. Prefer the confidence design")
-# What a whole-map number does not say when part of the map was read with an input missing (exp88). The first two
+# What a whole-map number does not say when part of the map was read from other inputs (exp88). The first two
 # travel in the outputs of estimate_error_rate and certify_zone when no input condition is recorded; the others go
-# with the per-condition results. The numbers are exp88's (exp/out/exp88_summary.json).
-SCOPE_ESTIMATE = ("This is the error rate of the whole map. If part of the map was predicted with an input missing, "
-                  "that part's rate can differ widely from it. On a PASTIS map with half its tiles read without the "
-                  "optical input, it was 74.1% against 19.7% on the rest, while random samples of 300 estimated 46.9% "
-                  "on average (exp88). Draw the sample with --condition to get each part's rate.")
+# with the per-condition results. The numbers are exp88's (exp/out/exp88_summary.json) and its matched-head
+# follow-up's (exp/out/exp88_matched_head.json); tests/test_assess.py reads them back from there.
+SCOPE_ESTIMATE = ("This is the error rate of the whole map. If part of the map was predicted from other inputs, that "
+                  "part's rate can differ widely from it. On a PASTIS map with half its tiles read without the optical "
+                  "input by a probe trained on radar plus optical, that half's rate was 74.1% against 19.7% on the "
+                  "rest, while random samples of 300 estimated 46.9% on average. Read by a probe trained on radar "
+                  "alone, that half was still 28.3% wrong against 19.7% (exp88). Draw the sample with --condition to "
+                  "get each part's rate.")
 SCOPE_CERTIFY = ("The zone's error rate is certified over all its windows together. Where part of the map was predicted "
-                 "with an input missing, its errors can be confident ones (exp88), and that part of the zone can be "
-                 "wrong more often than the rest. To certify each input condition on its own, draw the sample with "
-                 "--condition.")
+                 "from other inputs, that part of the zone can be wrong more often than the rest. If the model was not "
+                 "trained on those inputs, its errors there can be confident ones and fall inside the zone (exp88). To "
+                 "certify each input condition on its own, draw the sample with --condition.")
 CONDITION_NOTE = ("Each condition's interval is its own 95% statement; the intervals do not hold jointly at 95%. The "
                   "whole-map rate weights each condition by its share of the map and can hide a condition that is much "
                   "worse.")
@@ -83,9 +88,10 @@ FAMILY_NOTE_ONE = ("Certified per input condition. The one condition with at lea
                    "certified windows nothing is certified.")
 UNRECORDED = "unrecorded"          # the name of the windows with no recorded condition; reserved
 CONFIDENCE_REFUSAL = ("that design allocates labels from the model's confidence, which can overstate the accuracy of "
-                      "a condition with an input missing: it did on PASTIS without the optical input, though not on "
-                      "CropHarvest China 6 (exp88). Use --design condition (the default with --condition) or --design "
-                      "random.")
+                      "a condition read from an input combination the model was not trained on: it did on PASTIS for a "
+                      "probe trained on radar plus optical and run on radar alone, though not on CropHarvest China 6 "
+                      "(exp88). The tool cannot tell which inputs the model was trained on. Use --design condition (the "
+                      "default with --condition) or --design random.")
 
 
 # ----------------------------------------------------------------------------- intervals
@@ -401,8 +407,9 @@ def equal_allocation(sizes, budget, floor=MIN_PER_STRATUM):
     """The same number of labels for every stratum, by water-filling: a stratum too small for an equal share is
     labelled in full, and the rest of the budget is shared equally by the others, again and again until no stratum
     left is that small. The input conditions of the "condition" design are its strata. It never reads the model's
-    confidence, which can overstate the accuracy of a condition with an input missing: it did on PASTIS without the
-    optical input, though not on CropHarvest China 6 (exp88).
+    confidence, which can overstate the accuracy of a condition read from an input combination the model was not
+    trained on: it did on PASTIS for a probe trained on radar plus optical and run on radar alone, though not on
+    CropHarvest China 6 (exp88).
 
     Returns n_h with sum n_h = budget and n_h <= N_h; strata not labelled in full differ by at most one label, and
     n_h >= min(N_h, 2) whenever budget >= sum min(N_h, 2). A budget below sum min(N_h, floor) is refused, as by

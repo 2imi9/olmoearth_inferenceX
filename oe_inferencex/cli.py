@@ -18,13 +18,16 @@ plain files the caller reads back: JSON summaries (assess.summary / compare's di
 pixel and map coordinates, and rasters on the window grid (patch x patch pixels per window) when the input was one.
 Nothing here narrates; the JSON is the evidence (docs/method/agent_integration.md).
 
-The confidence ranking is only comparable between windows read from the same inputs; where part of the map was read
-with an input missing, as under cloud, the errors there can be confident ones (exp88). Without --condition, assess
-ranks all windows together. --condition takes one integer band on the map's grid, each pixel's input condition (a
-cloud flag, the modalities present, a sensor id). assess then also ranks each condition on its own, so that windows
-are compared only with windows read from the same inputs. sample splits the labels equally across the conditions (with --design random it only records
-them) and writes each window's condition to its sidecar, from which estimate gives each condition's rate and certify
-each condition's zone. Without it, the JSON outputs carry `scope`, what a whole-map result does not show.
+The confidence ranking compares every window with every other. A model run on an input combination it was not trained
+on can be confidently wrong there: on PASTIS a probe trained on radar plus optical and run on radar alone, as under
+cloud, was sure and wrong, while a probe trained on radar alone ranked its errors normally (exp88). Even a model trained
+on each input can be wrong more often under one input than under another. Without --condition, assess ranks all
+windows together. --condition takes one integer band on the map's grid, each pixel's input condition (a cloud flag,
+the modalities present, a sensor id). assess then also ranks each condition on its own, so that windows are compared
+only with windows read from the same inputs. sample splits the labels equally across the conditions (with --design
+random it only records them) and writes each window's condition to its sidecar, from which estimate gives each
+condition's rate and certify each condition's zone. Without it, the JSON outputs carry `scope`, what a whole-map
+result does not show.
 """
 import argparse
 import csv

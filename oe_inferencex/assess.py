@@ -3,13 +3,16 @@
 The recipe that the experiments support (docs/method/recipe.md): rank
 windows by the model's own confidence, use prediction-boundary proximity as
 a triage cue, report operating points, and state the caveats. The ranking
-is only comparable between windows read from the same inputs: where part of
-the map was read with an input missing, as under cloud, the model can be
-confidently wrong there (exp88). Without a condition layer every window is
-ranked with every other. With one, each condition is also ranked on its own,
-so that windows are compared only with windows read from the same inputs.
-This module turns a prediction array into that
-assessment. It generates evidence only; narration belongs to the caller.
+compares every window's confidence with every other's. A model run on an
+input combination it was not trained on can be confidently wrong there: on
+PASTIS a probe trained on radar plus optical and run on radar alone, as
+under cloud, was sure and wrong, while a probe trained on radar alone
+ranked its errors normally (exp88). Even a model trained on each input can
+be wrong more often under one input than under another. Without a
+condition layer every window is ranked with every other. With one, each
+condition is also ranked on its own, so that windows are compared only with
+windows read from the same inputs. This module turns a prediction array into
+that assessment. It generates evidence only; narration belongs to the caller.
 
 Inputs
     scores      : (C, H, W) logits or probabilities for C classes, or
@@ -47,20 +50,25 @@ QUANTILES = (0.05, 0.25, 0.5, 0.75, 0.95)
 MAX_CONDITIONS = 64               # distinct condition values a layer may hold; more is a continuous layer, not a category
 RULE_TEXT = ("A window takes the condition held by most of its pixels that have a prediction and a recorded condition. "
              "A tie, or no such pixel, makes it 'unrecorded'.")
-# What the review order does not say when part of the map was read with an input missing. The numbers are exp88's
-# (exp/out/exp88_summary.json); tests/test_assess.py reads them back from there.
+# What the review order does not say when part of the map was read from inputs the model was not trained on. The
+# numbers are exp88's (exp/out/exp88_summary.json) and its matched-head follow-up's (exp/out/exp88_matched_head.json);
+# tests/test_assess.py reads them back from there.
 SCOPE_ASSESS = ("The review order compares the confidence of every window with every other. Where part of the map was "
-                "predicted with an input missing, for example the optical image under cloud, the model can be "
-                "confidently wrong there, and those errors come late in this order. On PASTIS without the optical "
-                "input, 59.8% of OlmoEarth Base's errors were at least as confident as the typical correct window with "
-                "full input, against 6.0% with it. OlmoEarth Large's share rose only from 5.7% to 12.8-13.8% (exp88). "
-                "This did not happen on CropHarvest China 6, where the optical input matters little. If the map "
-                "records each pixel's input condition, pass it as condition (--condition) to rank, sample and certify "
-                "each condition on its own.")
-SCOPE_ASSESS_K = ("The review sets above rank all {K} input conditions together, and the model's confidence need not "
-                  "mean the same thing in each (exp88). conditions.per_condition ranks each condition on its own. In a "
-                  "condition with an input missing that ranking can be weak: on PASTIS without the optical input, the "
-                  "margin's AUROC for errors fell from 0.83 to 0.59 (exp88). Which condition is more accurate needs "
+                "predicted from an input combination the model was not trained on, the model can be confidently wrong "
+                "there, and those errors come late in this order. On PASTIS, OlmoEarth Base's probe trained on radar plus "
+                "optical was 73.6% wrong when run on radar alone, as under cloud. Of its errors, 59.8% were at least as "
+                "confident as the typical correct window with full input, against 6.0% of its errors with full input. A "
+                "probe trained on radar alone was 28.4% wrong, and 3.9% of its errors were that confident. For OlmoEarth "
+                "Large's probe trained on both inputs, the share rose only from 5.7% to 12.8-13.8%. On CropHarvest China "
+                "6, Base's probe trained on both showed no such rise (exp88). A model trained on each input can still be "
+                "wrong more often under one input condition than under another. If the map records each pixel's input "
+                "condition, pass it as condition (--condition) to rank, sample and certify each condition on its own.")
+SCOPE_ASSESS_K = ("The review sets above rank all {K} input conditions together. The model's confidence need not mean "
+                  "the same thing in each, least of all where the model was not trained on a condition's inputs "
+                  "(exp88). conditions.per_condition ranks each condition on its own. In a condition read from inputs "
+                  "the model was not trained on, that ranking can be weak too: on PASTIS the margin's AUROC for errors "
+                  "was 0.59 for a probe trained on radar plus optical and run on radar alone, against 0.83 on both "
+                  "inputs and 0.79 for a probe trained on radar alone (exp88). Which condition is more accurate needs "
                   "labels: sample with --condition.")
 CLASS_SHARE_TEXT = ("Descriptive only: the share of windows the map calls each class, within each condition. No "
                     "experiment has tested whether a difference between conditions signals errors.")
@@ -526,9 +534,9 @@ def review_order(suspicion, valid=None):
     """Flat window indices in review order: most suspicious first, invalid windows last, ties broken by descending
     raster position (an ascending stable sort, reversed). The one definition of the review order; exp37, the
     explanation layer and the per-condition review sets use it so that a review set is built the same way
-    everywhere. It compares every window's score with every other's, and a score means the same thing only within
-    one input condition: with an input missing the errors can be confident ones (exp88). A per-condition review set
-    is this order kept to the windows of that condition."""
+    everywhere. It compares every window's score with every other's, and a score need not mean the same thing in two
+    input conditions: a model run on an input combination it was not trained on can be confidently wrong there
+    (exp88). A per-condition review set is this order kept to the windows of that condition."""
     s = np.asarray(suspicion, dtype=np.float64)
     flat = np.where(np.asarray(valid, dtype=bool), s, -np.inf).ravel() if valid is not None else s.ravel()
     return np.argsort(flat, kind="stable")[::-1]
