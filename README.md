@@ -193,7 +193,8 @@ Before you trust it
 Released and not yet released
 -----------------------------
 
-Version 1.3.1 is on PyPI. Every `oe-inferencex` command on this page runs on it.
+Version 1.3.1 is on PyPI. Every `oe-inferencex` command on this page runs on it, except
+`oe-inferencex mcp` under [Use from an agent](#use-from-an-agent).
 
 `--condition` is on the `main` branch only. It takes a raster of each pixel's input condition,
 such as a cloud flag, and gives each condition its own review set, error rate and certified
@@ -208,10 +209,38 @@ pip install "olmoearth-inferencex[geo] @ git+https://github.com/2imi9/olmoearth_
 The first line is needed: `main` still carries the version number 1.3.1, so pip would take an
 installed release as up to date. Afterwards `oe-inferencex assess --help` lists `--condition`.
 
-Also on `main` only: `oe-inferencex mcp`, a local MCP server through which an agent such as
-Claude Code runs these commands on your files (install with `[geo,mcp]` in place of `[geo]`, then
-`claude mcp add oe-inferencex -- oe-inferencex mcp`;
-[Usage](https://olmoearth-inferencex.readthedocs.io/en/latest/Usage/#use-from-an-agent-mcp) covers other agents).
+
+Use from an agent
+-----------------
+
+On `main` only, not yet released: `oe-inferencex mcp` is a local MCP server through which an
+agent such as Claude Code runs these commands on your files. Nothing is hosted. With
+[uv](https://docs.astral.sh/uv/) installed, one line connects it, with nothing else to install:
+
+```bash
+claude mcp add oe-inferencex -- uvx --from "olmoearth-inferencex[geo,mcp] @ git+https://github.com/2imi9/olmoearth_inferenceX" oe-inferencex mcp
+```
+
+After the next release, `uvx --from "olmoearth-inferencex[geo,mcp]" oe-inferencex mcp` will do.
+[Usage](https://olmoearth-inferencex.readthedocs.io/en/latest/Usage/#use-from-an-agent-mcp)
+gives the configuration for other agents.
+
+To see a result in a minute, write the demo tile into an empty folder, start the agent there
+and ask the question below:
+
+```bash
+uvx --from olmoearth-inferencex oe-inferencex demo
+```
+
+> Where should I look first in oe_inferencex_demo/sample_probabilities.npy? Use windows of
+> 1 pixel, and grade the order against oe_inferencex_demo/sample_truth.npy.
+
+The agent calls `assess`. Its answer is the review set of the picture above, graded against
+the tile's expert labels.
+
+The tools answer four questions, in this order: where should I look first (`assess`); how
+wrong is the map (`sample`, then `estimate`); which part can I trust (`certify`); and which
+of two maps is better, and where do they differ (`compare`).
 
 
 Results and limits

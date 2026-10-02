@@ -144,6 +144,13 @@ own files. Nothing is hosted. Install with the new `mcp` extra, `pip install "ol
 connect with `claude mcp add oe-inferencex -- oe-inferencex mcp`; without the extra the command says how to install
 it.
 
+- One line connects the server with nothing installed but uv:
+  `claude mcp add oe-inferencex -- uvx --from "olmoearth-inferencex[geo,mcp] @ git+https://github.com/2imi9/olmoearth_inferenceX" oe-inferencex mcp`,
+  and after the next release `uvx --from "olmoearth-inferencex[geo,mcp]" oe-inferencex mcp`. Usage gives the JSON
+  configuration for other agents. A first question on the demo tile, which
+  `uvx --from olmoearth-inferencex oe-inferencex demo` writes, shows a result in a minute; the README and Usage give
+  it. A test checks that every documented setup line and configuration names this package, its extras, its
+  repository and a command it has, and that the first question, asked of `assess`, gives the demo's own numbers.
 - Tools `assess`, `compare`, `sample`, `estimate` and `certify` run the command of the same name in-process, so they
   give its numbers and its refusals. Each takes file paths and an output directory and returns JSON: the files
   written, the summary numbers, `conclusion`, `limits` (with the package's own warnings and notes, each class's

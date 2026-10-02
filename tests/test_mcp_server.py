@@ -13,6 +13,7 @@ import io
 import json
 import os
 import re
+import shlex
 import sys
 
 import numpy as np
@@ -307,6 +308,106 @@ def test_the_extra_pins_the_sdk_below_2():
     text = open(os.path.join(ROOT, "pyproject.toml"), encoding="utf-8").read()
     pin = re.search(r'^mcp = \["mcp>=([\d.]+),<2"\]', text, re.M)
     assert pin, "the mcp extra pins the MCP Python SDK to a range below 2"
+
+
+# ----------------------------------------------------------------------------- the setup lines in the docs
+SETUP_DOCS = ("README.md", "docs/Usage.md", "skills/oe-inferencex/SKILL.md", "CHANGELOG.md")
+GIT_ONE_LINER = ('claude mcp add oe-inferencex -- uvx --from "olmoearth-inferencex[geo,mcp] @ '
+                 'git+https://github.com/2imi9/olmoearth_inferenceX" oe-inferencex mcp')
+PYPI_FORM = 'uvx --from "olmoearth-inferencex[geo,mcp]" oe-inferencex mcp'
+COMMAND = re.compile(r'(?:uvx --from (?:"[^"]+"|[^\s`"]+) |claude mcp add oe-inferencex -- )oe-inferencex [a-z-]+')
+
+
+def _doc(path):
+    return open(os.path.join(ROOT, path), encoding="utf-8").read()
+
+
+def _project():
+    import tomllib
+    with open(os.path.join(ROOT, "pyproject.toml"), "rb") as f:
+        return tomllib.load(f)["project"]
+
+
+def _texts():
+    """Every text that gives a setup line: the docs, and the server module's own docstring."""
+    return [(path, _doc(path)) for path in SETUP_DOCS] + [("oe_inferencex/mcp_server.py", mcp_server.__doc__)]
+
+
+def _check_command(argv, where):
+    """A command a reader is told to run: uvx's requirement names this package, its extras and its repository, and
+    the command and subcommand exist (the subcommand's --help exits 0)."""
+    project = _project()
+    if argv[0] == "uvx":
+        assert argv[1] == "--from", (where, argv)
+        req = re.fullmatch(r"([a-z-]+)(?:\[([a-z,]+)\])?(?: @ (\S+))?", argv[2])
+        assert req, (where, argv[2])
+        extras = set(filter(None, (req.group(2) or "").split(",")))
+        assert req.group(1) == project["name"], where
+        assert extras <= set(project["optional-dependencies"]), (where, extras)
+        assert req.group(3) in (None, "git+" + project["urls"]["Repository"]), where
+        argv = argv[3:]
+        if argv[1:] == ["mcp"]:
+            assert "mcp" in extras, where
+    assert argv[0] in project["scripts"], (where, argv)
+    with contextlib.redirect_stdout(io.StringIO()), pytest.raises(SystemExit) as exc:
+        cli.main([*argv[1:], "--help"])
+    assert exc.value.code == 0, (where, argv)
+
+
+def test_every_setup_line_and_config_names_a_command_that_exists():
+    """The one-liners (uvx from the repository, uvx from PyPI after the next release, the installed command) and the
+    JSON configurations name this package, its extras and its repository, and a command and subcommand it has."""
+    found = []
+    for where, text in _texts():
+        flat = _flat(text)
+        for line in COMMAND.findall(flat):
+            argv = shlex.split(line)
+            if argv[0] == "claude":
+                argv = argv[argv.index("--") + 1:]
+            _check_command(argv, where)
+            found.append((where, argv[0], argv[-1]))
+        for block in re.findall(r"```json\n(.*?)\n```", text, re.S):
+            for name, server in json.loads(block)["mcpServers"].items():
+                assert name == "oe-inferencex", where
+                _check_command([server["command"], *server["args"]], where)
+                found.append((where, server["command"], "json"))
+        for inline in re.findall(r'`(\{"command": [^`]+\})`', text):
+            server = json.loads(inline)
+            _check_command([server["command"], *server["args"]], where)
+            found.append((where, server["command"], "json"))
+    # the git one-liner works today; the PyPI form is said to wait for the next release
+    for where, text in _texts():
+        if where != "CHANGELOG.md":
+            flat = _flat(text)
+            assert GIT_ONE_LINER in flat, where
+            assert PYPI_FORM in flat, where
+            assert re.search(r"after the next release[^.]*" + re.escape(PYPI_FORM) + "|" + re.escape(PYPI_FORM)
+                             + r"[^.]*after the next release", flat, re.I), where
+    assert ("docs/Usage.md", "uvx", "json") in found and ("docs/Usage.md", "oe-inferencex", "json") in found
+    assert ("README.md", "uvx", "demo") in found and ("CHANGELOG.md", "oe-inferencex", "mcp") in found
+
+
+def test_the_first_question_runs_on_the_demo_tile(tmp_path, monkeypatch, capsys):
+    """The first question of the README and of Usage names the files `oe-inferencex demo` writes. Asked of assess as
+    it says, with windows of 1 pixel and the tile's expert labels as reference, the answer is the demo's own: the 5%
+    review set holds the share of the errors the demo's pinned audit records."""
+    asked = set()
+    for path in ("README.md", "docs/Usage.md"):
+        quote = re.search(r"^> (Where should I look first.*?)\n\n", _doc(path), re.M | re.S)
+        assert quote, path
+        asked.add(_flat(quote.group(1).replace("\n> ", " ")))
+    assert len(asked) == 1, asked
+    question = asked.pop()
+    scores, truth = re.findall(r"oe_inferencex_demo/\S+?\.npy", question)
+    assert "windows of 1 pixel" in question and "grade the order against" in question
+    monkeypatch.chdir(tmp_path)
+    assert cli.main(["demo"]) == 0
+    capsys.readouterr()
+    out = mcp_server.assess(scores, str(tmp_path / "first"), patch=1, reference=truth)
+    pinned = json.load(open(os.path.join(ROOT, "exp", "out", "demo_sample_audit.json")))["review_sets"]["0.05"]
+    assert out["summary"]["against_reference"]["errors_captured_fraction"]["0.05"] == pinned["errors_captured_fraction"]
+    assert out["summary"]["review_sets"]["0.05"] == pinned["n_windows"]
+    assert f"the 5% review set holds {100 * pinned['errors_captured_fraction']:.0f}% of those" in out["conclusion"]
 
 
 # ----------------------------------------------------------------------------- the server, in process

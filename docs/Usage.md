@@ -351,8 +351,34 @@ any of the statements is wrong.
 Not yet released: 1.3.1 lacks it. `oe-inferencex mcp` starts a local MCP server on stdio, so that an agent can run
 `assess`, `compare`, `sample`, `estimate` and `certify` on your own files. The agent starts the server and talks to
 it; nothing is hosted. The tools read the files you pass, the sidecar beside a sample and the scores raster it
-records, and write where you say, all on your machine. To use it now, install from the repository with the `mcp`
-extra:
+records, and write where you say, all on your machine.
+
+**Connect it in one line.** With [uv](https://docs.astral.sh/uv/) installed, this line connects Claude Code to the
+server on `main`, with nothing else to install:
+
+```bash
+claude mcp add oe-inferencex -- uvx --from "olmoearth-inferencex[geo,mcp] @ git+https://github.com/2imi9/olmoearth_inferenceX" oe-inferencex mcp
+```
+
+`uvx` installs the package and its extras into an environment of its own, kept in uv's cache, and runs the server
+from there. After the next release the PyPI form will do:
+`uvx --from "olmoearth-inferencex[geo,mcp]" oe-inferencex mcp`. Other agents, such as Claude Desktop, Cursor or the
+OlmoEarth Agent, take the same command in their MCP configuration. If the agent does not find `uvx`, give its full
+path, which `which uvx` prints:
+
+```json
+{
+  "mcpServers": {
+    "oe-inferencex": {
+      "command": "uvx",
+      "args": ["--from", "olmoearth-inferencex[geo,mcp] @ git+https://github.com/2imi9/olmoearth_inferenceX",
+               "oe-inferencex", "mcp"]
+    }
+  }
+}
+```
+
+**Or install the package**, and the agent starts the installed command:
 
 ```bash
 pip uninstall -y olmoearth-inferencex
@@ -360,16 +386,24 @@ pip install "olmoearth-inferencex[geo,mcp] @ git+https://github.com/2imi9/olmoea
 claude mcp add oe-inferencex -- oe-inferencex mcp     # Claude Code
 ```
 
-Other agents, such as Claude Desktop, Cursor or the OlmoEarth Agent, take the same command in their MCP
-configuration. Where the package sits in a virtual environment, give the full path of its `oe-inferencex`:
+In a JSON configuration the server is then `{"command": "oe-inferencex", "args": ["mcp"]}`. Where the package sits
+in a virtual environment, give the full path of its `oe-inferencex`.
 
-```json
-{
-  "mcpServers": {
-    "oe-inferencex": {"command": "oe-inferencex", "args": ["mcp"]}
-  }
-}
+**A first question.** The [demo](#demo) tile needs no data of your own. Write it into an empty folder:
+
+```bash
+uvx --from olmoearth-inferencex oe-inferencex demo
 ```
+
+Start the agent in that folder and ask:
+
+> Where should I look first in oe_inferencex_demo/sample_probabilities.npy? Use windows of 1 pixel, and grade the
+> order against oe_inferencex_demo/sample_truth.npy.
+
+The agent calls `assess` with `reference`. Its answer is the review set of the demo's picture, graded against the
+tile's expert labels, with the same share of the errors as the demo prints. For a test map that the other tools can
+run on, `examples/quickstart_map.py` writes `scores.tif`, `other.tif` and `truth.tif`, and fills in a sample's labels
+from `truth.tif` (`python quickstart_map.py --label to_label.csv`).
 
 The tools answer four questions, in the standard order. Each tool runs the command of the same name, with the same
 numbers and the same refusals. The tool names are unchanged; each tool's title starts with its question.
