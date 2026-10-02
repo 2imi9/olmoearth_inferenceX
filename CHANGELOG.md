@@ -1,5 +1,36 @@
 # Changelog
 
+## Unreleased
+
+**The MCP server's texts, after an agent test on real OlmoEarth outputs (2 October 2026).** Agents answered five
+user questions through the released server on Ai2's fine-tuned FT-AWF (344 points) and Forest Loss Driver (109
+windows) outputs, and an adversarial grader checked every reply against the tool outputs and the truth. The tools'
+numbers were right; Sonnet's replies passed, and Haiku's failed on all five: it quoted conclusions and dropped the
+limits beside them, labelled a review set to estimate the error rate, and named the better of two maps without labels.
+The changes, all in `oe_inferencex.mcp_server` unless named:
+
+- Each conclusion carries its main limit. assess: the order does not say how wrong the map is, and labels on the
+  review set do not give the error rate. compare without labels: it says neither which map is better nor which is
+  right where they differ. sample: nothing is known until the reviewer fills `wrong`. estimate: the rate is
+  agreement with labels assumed right, and per-condition intervals do not hold jointly. certify: the zone's rate holds
+  for its windows as a group, not for each window, and delta can be set lower. The instructions ask the agent to keep
+  that limit in its reply.
+- Texts name the server's parameters, not command-line options (`design="random"`, `condition`, `patch`,
+  `logits=false`), refusals included. The logit-margin warning says what an MCP caller can do: pass the class
+  probabilities with `logits=false`.
+- assess says when a .npy carries no map coordinates, sizes the suggested budget to a map of 300 windows or fewer,
+  states what the review-set CSVs' `confidence` column holds, and turns the class-boundary share into a caveat when
+  the window grid is one window high or wide. The exp88 scope paragraph is one sentence in the MCP texts (the JSON
+  files keep the full note).
+- estimate says when certify would certify nothing at alpha 0.05 because no condition, or the sample, holds enough
+  labels. compare prints its boundary enrichment to two decimals (1.05 was "1.1").
+- `estimate.CONDITION_WHOLE_MAP` no longer contradicts the method it describes: the union-bound interval is wider
+  than "the usual stratified interval, which adds up the conditions' variances", not than "a stratified interval".
+
+Rerun with Haiku on the same five questions: two replies now pass with minor issues (none before), and hard-rule
+breaches fell from three replies to one; the remaining failures are mostly limits left out of the reply. The test is
+a pilot, not preregistered.
+
 ## 1.4.0 (2026-10-02)
 
 **Release checks (2 October 2026).** The suite ran against the built wheel with the source tree removed: on Python

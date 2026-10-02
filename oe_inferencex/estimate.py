@@ -80,8 +80,9 @@ CONDITION_NOTE = ("Each condition's interval is its own 95% statement; the inter
 CONDITION_WHOLE_MAP = ("Each condition's own interval is exact. The whole-map interval takes each condition's exact "
                        "interval at 1 - 0.05/L, where L is the number of conditions not labelled in full, and weights it "
                        "by the condition's share of the map. At that level the L intervals hold together at least 95% of "
-                       "the time, so the whole-map interval covers at least 95% by construction. It is wider than a "
-                       "stratified interval would be. When the conditions' error rates are close, it is also wider than "
+                       "the time, so the whole-map interval covers at least 95% by construction. It is wider than the "
+                       "usual stratified interval, which adds up the conditions' variances, would be. When the "
+                       "conditions' error rates are close, it is also wider than "
                        "the exact interval of a random sample of the same size. What the design buys is each condition's "
                        "own rate: a small condition gets as many labels as a large one, or all its windows. If only the "
                        "whole-map rate is needed, --design random can give a narrower interval.")

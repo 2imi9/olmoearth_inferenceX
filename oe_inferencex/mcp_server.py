@@ -44,6 +44,7 @@ import csv
 import io
 import json
 import os
+import re
 import threading
 from typing import Annotated, Any, Literal
 
@@ -53,6 +54,7 @@ except ImportError:                        # pragma: no cover - pydantic comes w
     Field = None
 
 from oe_inferencex import __version__, cli
+from oe_inferencex import assess as _assess
 from oe_inferencex import estimate as est
 
 NEEDS_EXTRA = ("the MCP server needs the mcp extra: pip install \"olmoearth-inferencex[geo,mcp]\". The extra pins the "
@@ -113,15 +115,15 @@ INSTRUCTIONS = "\n".join([
     *[f"- {rule}" for rule in HARD_RULES],
     "",
     "How to report:",
-    "- State as fact only what a tool returned. Quote its conclusion and its limits.",
+    "- State as fact only what a tool returned. Quote its conclusion and its limits. Each conclusion carries the "
+    "limit that matters most; keep it in your reply.",
     "- Give an interval as its two ends. Never recompute it as p +/- 1.96 sqrt(p(1-p)/n).",
     "- A window's confidence ranks windows. It is not the probability that the window is wrong.",
     "- No tool labels windows, fetches labels, runs a model or knows whether labels exist. Labels come from the user "
     "or a reviewer.",
     "- Propose only what these tools can do, with their preconditions.",
     "- A refusal is a tool error carrying the package's reason. Change the input it names; do not retry the same "
-    "call. The reasons name command-line options: --design is the parameter design, --labels-date is labels_date, "
-    "and so on.",
+    "call.",
 ])
 
 CARDS = {
@@ -266,7 +268,7 @@ def _cap(text):
 
 def _warnings(texts):
     """The package's warnings, each after `Warning: `, as the command prints them."""
-    return [f"Warning: {str(w).strip()}" for w in texts if w is not None and str(w).strip()]
+    return [f"Warning: {str(_mcp_warning(w)).strip()}" for w in texts if w is not None and str(w).strip()]
 
 
 def _notes(texts):
@@ -294,6 +296,67 @@ def _join(texts):
         kept = [k for k in kept if _core(k) not in t] + [t]
     return " ".join(kept)
 
+
+
+# The package's texts are written for the command line and name its options. Through this server the agent sets
+# parameters instead, so each text returned here names the parameter (the agent test of 2 October 2026: outputs that
+# said "--design random" or "--condition" sent a small model looking for options it does not have).
+_FLAGS = {"design", "condition", "condition-names", "per-class", "labels-date", "patch", "nodata", "scores", "alpha",
+          "delta", "rule", "budget", "seed", "labels", "reference", "threshold", "date-a", "date-b", "groups", "order",
+          "budgets", "tile", "per-tile"}
+
+
+def _mcp_words(text):
+    """A package text with each command-line option written as this server's parameter."""
+    if not text:
+        return text
+    text = text.replace("without --logits", "with logits=false")
+    text = re.sub(r"--(design|rule|order)[ =]([a-z_]+)", r'\1="\2"', text)
+    text = re.sub(r"--logits\b", "logits=true", text)
+    text = re.sub(r"--out\b", "out_dir", text)
+    return re.sub(r"--([a-z][a-z-]*)", lambda m: m.group(1).replace("-", "_") if m.group(1) in _FLAGS else m.group(0),
+                  text)
+
+
+# The margin warning names a Python argument and a command-line route, neither of which an MCP caller has.
+MCP_MARGIN_WARNING = ("multi-class logit margin: these logits are ranked by the gap between the two highest. On Ai2's "
+                      "suite one minus the top probability ranked errors better on 14 of 16 multi-class tasks (exp76). "
+                      "To rank by the top probability here, pass the class probabilities (the softmax of the logits) "
+                      "with logits=false")
+# The scope notes quote exp88's numbers at length; through this server each is one sentence, and the JSON the tool
+# writes keeps the full note.
+MCP_SCOPE = {
+    "assess": ("If part of the map was predicted from inputs the model was not trained on, the model can be "
+               "confidently wrong there and those errors come late in this order; pass a raster of each pixel's input "
+               "condition as condition to rank each part on its own (exp88)."),
+    "estimate": ("This is the whole map's rate. A part predicted from other inputs can err at a very different rate; "
+                 "draw the sample with condition to get each part's rate (exp88)."),
+    "certify": ("The zone's rate holds over all its windows. A part predicted from other inputs can be wrong more "
+                "often inside it; draw the sample with condition to certify each part on its own (exp88)."),
+}
+
+
+def _mcp_warning(text):
+    return MCP_MARGIN_WARNING if str(text).strip() == _assess.MARGIN_FORM_WARNING else text
+
+
+def _reply(conclusion, limits, nxt, files, summary):
+    """A tool's result, every text in this server's words."""
+    return {"conclusion": _mcp_words(conclusion), "limits": _mcp_words(limits), "next": _mcp_words(nxt),
+            "files": files, "summary": summary}
+
+
+def _grid_shape(path):
+    """The (rows, columns) of a raster the package wrote on the window grid, or None if it cannot be read."""
+    try:
+        if str(path).endswith(".npy"):
+            import numpy as np
+            return tuple(np.load(path, mmap_mode="r").shape[-2:])
+        import rasterio
+        with rasterio.open(path) as src:
+            return (src.height, src.width)
+    except Exception:                      # pragma: no cover - a shape we cannot read only drops a caveat
+        return None
 
 def _read_json(path):
     with open(path) as f:
@@ -419,12 +482,20 @@ def assess(
                   "so among them the order is raster position. A class map passed with logits=true, or a 0/1 map, is "
                   "read as scores and ties like this; if the file is one, pass the model's per-class scores instead.")
     else:
-        opener = "Check the least confident windows first."
+        opener = ("Check the least confident windows first. This ranks the windows; it does not say how wrong the map "
+                  "is, and labels on the review set do not give the error rate, because the review set is not a "
+                  "sample.")
+    # a .npy carries no georeferencing, so the CSVs' x and y are empty (the agent test of 2 October 2026)
+    where = "pixel and map coordinates" if not scores.lower().endswith(".npy") else (
+        "pixel coordinates (a .npy has no georeferencing, so x and y are empty)")
     said = [f"{opener} Of {s['n_windows']} windows of {s['patch_px']} x "
             f"{s['patch_px']} pixels, the review sets hold {sets} windows, each listed least confident first with "
-            f"pixel and map coordinates. The {_budget(b5)} review set is in {files.get(f'review_set_{b5}')}; files "
-            "names the others.",
-            f"{_pc(s['boundary_window_fraction'])} of all windows sit on a class boundary of the map."]
+            f"{where}. The {_budget(b5)} review set is in {files.get(f'review_set_{b5}')}; files names the others."]
+    boundary = f"{_pc(s['boundary_window_fraction'])} of all windows sit on a class boundary of the map."
+    grid = _grid_shape(files.get("boundary", ""))
+    line = grid is not None and min(grid) == 1 and max(grid) > 1
+    if not line:
+        said.append(boundary)
     summ = {"n_windows": s["n_windows"], "patch_px": s["patch_px"], "n_classes": s.get("n_classes"),
             "signal": s.get("signal"), "review_order": s.get("review_order"),
             "review_sets": {b: rs[b]["n_windows"] for b in rs},
@@ -435,7 +506,13 @@ def assess(
               "The order says where to look. Its grade against the reference holds for this map and this reference only.",
               "The review set is not a sample. It is chosen to hold errors, so its error rate overstates the map's.",
               "A window's confidence ranks windows; it is not the probability that the window is wrong.",
-              "Errors the model is sure of come last in this order, so a review of the review set does not find them."]
+              "Errors the model is sure of come last in this order, so a review of the review set does not find them.",
+              "In the review-set CSVs, confidence is the score the order ranks by, higher meaning more confident: "
+              + ("the gap between the two highest logits, which has no upper bound." if logits else
+                 "read from the class probabilities.")]
+    if line:
+        limits.append(boundary[:-1] + f", but the window grid is one window {'high' if grid[0] == 1 else 'wide'}, so "
+                      "this share counts neighbours along one line only and says little about the map.")
     ref = s.get("against_reference") or {}
     if reference is not None:
         cap = ref.get("error_capture_at_budget") or {}
@@ -459,12 +536,16 @@ def assess(
         summ["conditions"] = {name: {"share_of_map": e["share_of_map"], "share_of_review_set": e["share_of_review_set"]}
                               for name, e in per.items()}
     limits += _warnings(s.get("warnings", []))
-    limits += _notes([s.get("scope")] + _tagged(printed, "note"))
-    nxt = ("For how wrong the map is: sample with design \"random\" and a budget (the recorded experiments used 300), "
-           "have the user or a reviewer fill `wrong` on every row, then estimate; the same labels then serve certify.")
+    scope = s.get("scope")
+    limits += _notes([MCP_SCOPE["assess"] if scope == _assess.SCOPE_ASSESS else scope] + _tagged(printed, "note"))
+    n = int(s["n_windows"])
+    budget = ("a budget (the recorded experiments used 300)" if n > 300 else
+              f"a budget of up to {n}: the map has {n} windows, and labelling all of them gives its exact rate")
+    nxt = (f"For how wrong the map is: sample with design \"random\" and {budget}, have the user or a reviewer fill "
+           "`wrong` on every row, then estimate; the same labels then serve certify.")
     if condition is None:
         nxt += " If a raster records each pixel's input condition, pass it as condition to assess and to sample."
-    return {"conclusion": " ".join(said), "limits": _join(limits), "next": nxt, "files": files, "summary": summ}
+    return _reply(" ".join(said), _join(limits), nxt, files, summ)
 
 
 def compare(
@@ -515,8 +596,8 @@ def compare(
     where = s.get("where") or {}
     enr = {k: (where.get(k) or {}).get("enrichment") for k in ("boundary_a", "boundary_b")}
     if enr["boundary_a"] is not None:
-        said.append(f"The differing windows sit on a class boundary of map a {enr['boundary_a']:.1f} times as often "
-                    "as the agreeing windows" + (f" (of map b, {enr['boundary_b']:.1f} times)." if enr["boundary_b"]
+        said.append(f"The differing windows sit on a class boundary of map a {enr['boundary_a']:.2f} times as often "
+                    "as the agreeing windows" + (f" (of map b, {enr['boundary_b']:.2f} times)." if enr["boundary_b"]
                                                   is not None else "."))
     summ = {"n_windows": s["n_windows"], "n_disagree": s["n_disagree"], "disagreement_rate": s["disagreement_rate"],
             "boundary_enrichment": enr, "dates_status": s["dates"]["status"]}
@@ -542,12 +623,15 @@ def compare(
         limits = ["The labels are assumed right: the grading describes agreement with them."]
     else:
         limits = [HARD_RULES[2]]
+        # the limit a small model dropped when it named the better map anyway (the agent test of 2 October 2026)
+        said.append("Without labels this says neither which map is better nor which is right where they differ.")
     if s["dates"]["status"] in ("different_time", "overlapping_time", "partly_stated"):
         said.append(s["dates"]["reading"][0].upper() + s["dates"]["reading"][1:] + ".")
     limits += ["A difference between the maps says neither map's error rate."] + _notes(s.get("notes", []))
-    nxt = ("With a label raster on the same grid, compare again with labels to see which map is right where they "
-           "differ." if not graded else "For either map's error rate: sample on that map's scores, label, estimate.")
-    return {"conclusion": " ".join(said), "limits": _join(limits), "next": nxt, "files": files, "summary": summ}
+    nxt = ("To learn which map is right where they differ, compare again with labels: an integer class raster on the "
+           "same grid. For either map's error rate: sample on that map's scores, have a reviewer label every row, then "
+           "estimate." if not graded else "For either map's error rate: sample on that map's scores, label, estimate.")
+    return _reply(" ".join(said), _join(limits), nxt, files, summ)
 
 
 def sample(
@@ -594,6 +678,8 @@ def sample(
             f"the design is in {side_path}."]
     if per:
         said.append("Labels per condition: " + ", ".join(f"{k} {int(v)}" for k, v in per.items()) + ".")
+    said.append("No window is labelled yet, so nothing is known about the error rate until the user or a reviewer "
+                "fills `wrong` on every row.")
     limits = ["No window is labelled yet: no tool labels windows, fetches labels or knows whether labels exist.",
               HARD_RULES[3] + " To label blind, hide map_class, write the class seen in a reference_class column and "
               "set wrong where the two differ."]
@@ -608,10 +694,9 @@ def sample(
            f"call estimate with sample_csv={path}.")
     if d in ("random", "condition"):
         nxt += " The same labels then serve certify."
-    return {"conclusion": " ".join(said), "limits": _join(limits), "next": nxt,
-            "files": {"sample_csv": path, "sidecar": side_path},
-            "summary": {"design": d, "n_labelled": len(side["indices"]), "n_population": side["n_population"],
-                        "per_condition": per, "seed": side.get("seed")}}
+    return _reply(" ".join(said), _join(limits), nxt, {"sample_csv": path, "sidecar": side_path},
+                  {"design": d, "n_labelled": len(side["indices"]), "n_population": side["n_population"],
+                   "per_condition": per, "seed": side.get("seed")})
 
 
 def _out_json(sample_csv, out_dir, suffix):
@@ -649,7 +734,8 @@ def estimate(
     out = out or (path[:-4] + "_estimate.json" if path.endswith(".csv") else path + "_estimate.json")
     r = _read_json(out)
     said = [f"The map's error rate is {_pc(r['estimate'])}, 95% interval {_pc(r['low'])} to {_pc(r['high'])}, from "
-            f"{r['n_labelled']} labelled windows of {r['n_population']}; {r['method']}."]
+            f"{r['n_labelled']} labelled windows of {r['n_population']}; {r['method']}. It is the rate of "
+            "disagreement with the reviewer's labels, which are assumed right."]
     summ = {k: r.get(k) for k in ("estimate", "low", "high", "method", "design", "n_labelled", "n_population")}
     if r.get("by_condition"):
         rows = []
@@ -659,7 +745,8 @@ def estimate(
             else:
                 rows.append(f"{name} {_pc(row['estimate'])} ({_pc(row['low'])} to {_pc(row['high'])}), "
                             f"{row['n_labelled']} labelled of {row['n_population']} windows")
-        said.append("Per input condition: " + "; ".join(rows) + ".")
+        said.append("Per input condition: " + "; ".join(rows) + ". Each condition's interval is its own 95% "
+                    "statement; the intervals do not hold jointly.")
         if r.get("outside_condition_intervals"):
             said.append(_cap(cli._outside_note(r)[len("note: "):]))
         summ["per_condition"] = {name: {k: row.get(k) for k in ("estimate", "low", "high", "n_labelled", "n_population",
@@ -689,20 +776,32 @@ def estimate(
               "makes mistakes, the true rate can fall outside it.",
               "It is a rate over the windows; it does not say which windows are wrong."]
     limits += _warnings(_tagged(printed, "warning")) + _warnings([r.get("per_class_warning")]) + _warnings(class_warnings)
-    limits += _notes([r.get("per_class_note"), r.get("condition_note"), r.get("scope")] + _tagged(printed, "note"))
+    scope = r.get("scope")
+    limits += _notes([r.get("per_class_note"), r.get("condition_note"),
+                      MCP_SCOPE["estimate"] if scope == est.SCOPE_ESTIMATE else scope] + _tagged(printed, "note"))
+    # certify tests a zone only with min_labels_to_certify labels in it; say so before suggesting it (the agent
+    # test of 2 October 2026: estimate pointed to certify where no condition could be certified at alpha 0.05)
+    b1 = est.min_labels_to_certify(0.05, est.ZONE_DELTA)
     if r.get("by_condition"):
+        most = max(int(row["n_labelled"]) for row in r["per_condition"].values())
         nxt = (f"certify with sample_csv={path} and an alpha, such as 0.05, gives, for each input condition with "
                "enough labels, the most confident share of that condition whose error rate is at most alpha.")
+        if most < b1:
+            nxt += (f" At alpha 0.05 and delta {est.ZONE_DELTA:g} a condition needs at least {b1} labels and the most "
+                    f"any holds is {most}, so it would certify nothing there; a looser alpha needs fewer labels, and a "
+                    "larger sample drawn with the same condition layer can certify more.")
     elif r["design"] in ("random", "condition"):
         nxt = (f"certify with sample_csv={path} and an alpha, such as 0.05, gives the most confident share of the map "
                "whose error rate is at most alpha.")
+        if int(r["n_labelled"]) < b1:
+            nxt += (f" At alpha 0.05 and delta {est.ZONE_DELTA:g} a zone needs at least {b1} labels and this sample "
+                    f"has {r['n_labelled']}, so it would certify nothing; a looser alpha needs fewer labels.")
     else:
         nxt = (f"certify refuses a {r['design']} sample. To certify a zone, draw a new sample with design \"random\" "
                "and have it labelled.")
     if not per_class:
         nxt += " With a reference_class column (the class seen in each window), per_class=true gives each class's accuracy."
-    return {"conclusion": " ".join(said), "limits": _join(limits), "next": nxt, "files": {"estimate": out},
-            "summary": summ}
+    return _reply(" ".join(said), _join(limits), nxt, {"estimate": out}, summ)
 
 
 def certify(
@@ -741,6 +840,8 @@ def certify(
         per_line = [ln.strip() for ln in lines if ln.startswith("  ")]
         rest = [ln for ln in lines[1:] if not ln.startswith("  ")]
         said = [_cap(lines[0])[:-1] + " " + "; ".join(per_line) + "."] + [_cap(ln) for ln in rest]
+        said.append("Each rate holds for a condition's certified windows as a group, not for each window; outside them "
+                    f"nothing is certified. delta ({d:g}% here) can be set lower for a stronger statement.")
         summ.update({k: r.get(k) for k in ("by_condition", "delta_per_condition", "n_conditions_tested",
                                            "certified_share_of_map", "n_certified")})
         summ["per_condition"] = {name: {k: e.get(k) for k in ("tested", "coverage", "n_zone", "n_population",
@@ -748,10 +849,14 @@ def certify(
                                  for name, e in r["per_condition"].items()}
         certified = r.get("certified_share_of_map") is not None
     elif r["coverage"] is not None:
-        said = [f"The {100 * r['coverage']:.0f}% most confident windows ({r['n_zone']} of {r['n_population']}, "
-                f"confidence margin >= {r['threshold']:.4f}) are wrong at most {a:g}% of the time. This statement "
-                f"fails on at most {d:g}% of samples like this one ({r['rule']} rule; the exact upper bound on the "
-                f"zone's error rate at that level is {_pc(r['upper_bound'])})."]
+        # "are wrong at most 5% of the time" was read as a promise for each window, and delta as fixed (the agent
+        # test of 2 October 2026)
+        said = [f"Taken together, the {100 * r['coverage']:.0f}% most confident windows ({r['n_zone']} of "
+                f"{r['n_population']}, confidence >= {r['threshold']:.4f}) are wrong at most {a:g}% of the time. The "
+                "rate holds for them as a group, not for each window, and outside them nothing is certified. This "
+                f"statement fails on at most {d:g}% of samples like this one (delta, which can be set lower; "
+                f"{r['rule']} rule; the exact upper bound on the zone's error rate at that level is "
+                f"{_pc(r['upper_bound'])})."]
         certified = True
     else:
         # the package's note restates alpha, delta and the labels before its reason; the reason is what is new
@@ -772,7 +877,9 @@ def certify(
               "Labels are assumed right: the zone describes agreement with the reviewer's labels. The guarantee also "
               "needs the labelled windows to be a random sample."]
     # with no zone and no condition, the note is the conclusion's reason, said there once
-    limits += _notes([r.get("note") if certified or r.get("by_condition") else None, r.get("scope")])
+    scope = r.get("scope")
+    limits += _notes([r.get("note") if certified or r.get("by_condition") else None,
+                      MCP_SCOPE["certify"] if scope == est.SCOPE_CERTIFY else scope])
     if r.get("by_condition"):
         nxt = _condition_need(r, float(alpha), float(delta))
         if certified:
@@ -785,7 +892,7 @@ def certify(
     else:
         nxt = (f"Any zone needs at least {r['min_labels_to_certify']} labels at this alpha and delta. A larger random "
                "sample (sample with design \"random\" and a larger budget, labelled in full) can certify more.")
-    return {"conclusion": " ".join(said), "limits": _join(limits), "next": nxt, "files": files, "summary": summ}
+    return _reply(" ".join(said), _join(limits), nxt, files, summ)
 
 
 def _condition_need(r, alpha, delta):
@@ -832,7 +939,7 @@ def build_server():
             try:
                 return fn(*args, **kwargs)
             except Refused as exc:                       # the package's own message, as a tool error
-                raise ToolError(str(exc)) from None
+                raise ToolError(_mcp_words(str(exc))) from None
             except (OSError, ValueError) as exc:         # a file the package could not read, said plainly
                 raise ToolError(f"{type(exc).__name__}: {exc}") from None
         return call

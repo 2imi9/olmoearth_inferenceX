@@ -260,7 +260,8 @@ number of conditions not labelled in full (`conditions_in_interval`); a conditio
 rate. The interval runs from the weighted sum of the lower ends to the weighted sum of the upper ends. At that level
 the L intervals hold together at least 95% of the time, and when they do the whole-map rate lies between the two
 sums. So the interval covers at least 95% by construction, for every map and every split of the labels; the tests
-enumerate it on small maps. It is wider than a stratified interval would be. When the conditions' error rates are
+enumerate it on small maps. It is wider than the usual stratified interval, which adds up the conditions' variances,
+would be. When the conditions' error rates are
 close, it is also wider than a random sample's exact interval of the same size, which is guaranteed too; a printed
 note says so, and that `--design random` can be narrower when only the whole-map rate is needed. The condition design
 pays off for the error rates of small conditions, each of which gets an equal share of the labels. A stratified

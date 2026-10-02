@@ -21,6 +21,7 @@ import pytest
 import yaml
 
 from oe_inferencex import cli, mcp_server
+from oe_inferencex import assess as assess_mod
 from oe_inferencex import estimate as est
 
 try:
@@ -542,8 +543,12 @@ def test_assess_says_where_to_look_and_that_it_is_not_an_error_rate(qs, capsys):
     assert "40.0% of all windows sit on a class boundary" in out["conclusion"]
     written = json.load(open(qs / "audit" / "assessment.json"))
     for said in ("not how wrong the map is", "The review set is not a sample", "not the probability that the window "
-                 "is wrong", "Errors the model is sure of come last", written["scope"], written["warnings"][0]):
+                 "is wrong", "Errors the model is sure of come last", mcp_server.MCP_SCOPE["assess"],
+                 written["warnings"][0], "confidence is the score the order ranks by"):
         assert said in out["limits"], said
+    # the limit a small model dropped is inside the conclusion itself; the JSON keeps the package's full scope note
+    assert "it does not say how wrong the map is" in out["conclusion"] and "review set is not a" in out["conclusion"]
+    assert written["scope"] == assess_mod.SCOPE_ASSESS and written["scope"] not in out["limits"]
     assert "sample with design \"random\"" in out["next"]
 
 
@@ -564,14 +569,18 @@ def test_sample_estimate_certify_give_the_readme_numbers(qs):
     assert out["conclusion"].startswith("The map's error rate is 7.0%, 95% interval 4.5% to 10.4%, from 300 labelled "
                                         "windows of 4096; exact hypergeometric interval")
     written = json.load(open(out["files"]["estimate"]))
-    assert "Labels are assumed right" in out["limits"] and f"Note: {written['scope']}" in out["limits"]
+    assert "Labels are assumed right" in out["limits"] and f"Note: {mcp_server.MCP_SCOPE['estimate']}" in out["limits"]
+    assert "disagreement with the reviewer's labels, which are assumed right" in out["conclusion"]
+    assert written["scope"] == est.SCOPE_ESTIMATE
     assert "certify with sample_csv=" in out["next"]
 
     out = _ok("certify", sample_csv=csv_path, alpha=0.05)
     s = out["summary"]
     assert (s["coverage"], s["n_zone"], s["n_population"]) == (0.9, 3686, 4096)
-    assert out["conclusion"].startswith("The 90% most confident windows (3686 of 4096, confidence margin >= 0.6662) are "
-                                        "wrong at most 5% of the time.")
+    assert out["conclusion"].startswith("Taken together, the 90% most confident windows (3686 of 4096, confidence >= "
+                                        "0.6662) are wrong at most 5% of the time. The rate holds for them as a group, "
+                                        "not for each window, and outside them nothing is certified.")
+    assert "delta, which can be set lower" in out["conclusion"]
     assert np.load(out["files"]["zone_mask"]).sum() == 3686
     assert "Outside the certified windows nothing is certified" in out["limits"] and f"Note: {est.PREFIX_NOTE}" in out["limits"]
 
@@ -586,8 +595,11 @@ def test_compare_does_not_say_which_map_is_right_without_labels(qs):
     out = _ok("compare", a=str(qs / "scores.tif"), b=str(qs / "other.tif"), out_dir=str(qs / "diff"))
     assert out["summary"]["n_disagree"] == 507 and out["summary"]["n_windows"] == 4096
     assert out["conclusion"].startswith("507 of 4096 windows differ (12.38%).")
-    assert "on a class boundary of map a 2.6 times as often" in out["conclusion"]
+    enr = out["summary"]["boundary_enrichment"]                                # two decimals: 1.05 is not "1.1"
+    assert round(enr["boundary_a"], 1) == 2.6
+    assert f"on a class boundary of map a {enr['boundary_a']:.2f} times as often" in out["conclusion"]
     assert mcp_server.HARD_RULES[2] in out["limits"]
+    assert "neither which map is better nor which is right" in out["conclusion"]
     assert "Note: the dates the two maps describe were not given" in out["limits"]
     assert "compare again with labels" in out["next"]
 
@@ -647,7 +659,7 @@ def test_refusals_carry_the_package_message(qs):
     text = _refused("assess", scores=str(qs / "missing.tif"), out_dir=str(qs / "x"))
     assert "missing.tif is not a file" in text
     text = _refused("sample", scores=str(qs / "scores.tif"), out_dir=str(qs / "x"), budget=300, design="condition")
-    assert "--design condition needs --condition" in text
+    assert 'design="condition" needs condition' in text and "--" not in text       # the server's parameter names
 
 
 @needs_map
@@ -765,8 +777,10 @@ def test_a_condition_sample_reads_as_one(qs, cond):
     _label(out["files"]["sample_csv"], qs)
     res = _ok("estimate", sample_csv=out["files"]["sample_csv"])
     assert json.load(open(res["files"]["estimate"]))["outside_condition_intervals"] == ["hazy"]
-    assert "windows. The whole-map rate is 5.5%. It lies below the interval of hazy" in res["conclusion"]
-    assert res["limits"].count(est.CONDITION_WHOLE_MAP) == 1
+    assert ("windows. Each condition's interval is its own 95% statement; the intervals do not hold jointly. The "
+            "whole-map rate is 5.5%. It lies below the interval of hazy") in res["conclusion"]
+    assert res["limits"].count(mcp_server._mcp_words(est.CONDITION_WHOLE_MAP)) == 1     # in the server's words
+    assert 'design="random" can give a narrower interval' in res["limits"] and "--design" not in res["limits"]
     assert "for each input condition" in res["next"]
 
     out = _ok("sample", scores=str(qs / "scores.tif"), out_dir=str(qs / "by_cond_next"), budget=300, condition=cond,
@@ -814,3 +828,79 @@ def test_oe_inferencex_mcp_serves_over_stdio(qs):
     out = json.loads(res.content[0].text)
     assert out["summary"]["review_sets"]["0.05"] == 205
     assert out["files"]["review_set_0.05"] == str(qs / "audit_stdio" / "review_set_05pct.csv")
+
+
+# ----------------------------------------------------------------------------- what the agent test of 2 October found
+def test_the_server_writes_its_own_parameter_names():
+    """The package's texts name command-line options; through the server each is the parameter the agent sets."""
+    w = mcp_server._mcp_words
+    assert w("draw the sample with --condition") == "draw the sample with condition"
+    assert w("--design random can give a narrower interval") == 'design="random" can give a narrower interval'
+    assert w("pass the class probabilities without --logits") == "pass the class probabilities with logits=false"
+    assert w("pass a smaller --patch; --labels-date is needed, --per-class too") == (
+        "pass a smaller patch; labels_date is needed, per_class too")
+    assert w("--rule=bonferroni, --out") == 'rule="bonferroni", out_dir'
+    assert w("at 1 - 0.05/L, --unknown-flag stays") == "at 1 - 0.05/L, --unknown-flag stays"
+
+
+@needs_mcp
+def test_a_one_row_logit_map_through_the_whole_flow(tmp_path):
+    """The agent test's layout: points in one row of one-pixel windows, as logits of four classes, with a two-value
+    condition layer. No text names a command-line option; the logit warning says what an MCP caller can do; the
+    boundary share is a caveat, not a finding; x and y are said to be empty; the budget fits the map; estimate says
+    when certify would certify nothing; certify says its rate is the zone's as a group and that delta can be lowered."""
+    rs = np.random.RandomState(0)
+    n = 120
+    logits = rs.normal(0, 3, size=(4, 1, n)).astype(np.float32)
+    np.save(tmp_path / "logits.npy", logits)
+    region = (np.arange(n) >= 80).astype(np.int16)[None, :]
+    np.save(tmp_path / "region.npy", region)
+    texts = []
+
+    out = _ok("assess", scores=str(tmp_path / "logits.npy"), out_dir=str(tmp_path / "a"), logits=True, patch=1)
+    texts.append(out)
+    assert "pixel coordinates (a .npy has no georeferencing, so x and y are empty)" in out["conclusion"]
+    assert "sit on a class boundary" not in out["conclusion"] and "one window high" in out["limits"]
+    assert mcp_server.MCP_MARGIN_WARNING in out["limits"] and "form='top1'" not in out["limits"]
+    assert "the gap between the two highest logits, which has no upper bound" in out["limits"]
+    assert f"a budget of up to {n}" in out["next"]
+
+    out = _ok("sample", scores=str(tmp_path / "logits.npy"), out_dir=str(tmp_path / "s"), budget=40, logits=True,
+              patch=1, condition=str(tmp_path / "region.npy"), condition_names=["0=north", "1=south"])
+    texts.append(out)
+    assert "No window is labelled yet, so nothing is known about the error rate" in out["conclusion"]
+    csv_path = out["files"]["sample_csv"]
+    with open(csv_path, newline="") as f:
+        rows = list(csv.DictReader(f))
+    for i, row in enumerate(rows):
+        row["wrong"] = int(i % 4 == 0)
+    with open(csv_path, "w", newline="") as f:
+        wr = csv.DictWriter(f, fieldnames=list(rows[0]))
+        wr.writeheader()
+        wr.writerows(rows)
+
+    out = _ok("estimate", sample_csv=csv_path)
+    texts.append(out)
+    assert "the intervals do not hold jointly" in out["conclusion"]
+    b1 = est.min_labels_to_certify(0.05)
+    assert f"a condition needs at least {b1} labels and the most any holds is 20" in out["next"]
+
+    out = _ok("sample", scores=str(tmp_path / "logits.npy"), out_dir=str(tmp_path / "r"), budget=n, logits=True,
+              patch=1, design="random")
+    csv_path = out["files"]["sample_csv"]
+    with open(csv_path, newline="") as f:
+        rows = list(csv.DictReader(f))
+    for row in rows:
+        row["wrong"] = 0
+    with open(csv_path, "w", newline="") as f:
+        wr = csv.DictWriter(f, fieldnames=list(rows[0]))
+        wr.writeheader()
+        wr.writerows(rows)
+    out = _ok("certify", sample_csv=csv_path, alpha=0.05)
+    texts.append(out)
+    assert out["conclusion"].startswith("Taken together, the ") and "not for each window" in out["conclusion"]
+    assert "delta, which can be set lower" in out["conclusion"]
+
+    for t in texts:
+        for key in ("conclusion", "limits", "next"):
+            assert not re.search(r"--[a-z]", t[key]), (key, t[key])
