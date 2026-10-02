@@ -1,6 +1,13 @@
 # Changelog
 
-## Unreleased
+## 1.5.0 (2026-10-02)
+
+**Release checks (2 October 2026).** A three-lens review of these changes (statistics, code edge cases, docs and
+tests) found the certify reviewer-miss defect described below, which was removed, and eight smaller defects and
+untested behaviours, all fixed; eleven mutations it named are caught by the tests. The suite ran against the built
+wheel with the source tree removed on Python 3.11, 3.12 and 3.13 with the geo and mcp extras (1,253 passed each), on
+the lowest declared core dependencies (1,149 passed, the geo tests skipped) and, for the MCP server's and the new
+tests, on mcp 1.26.0 (59 passed). The source archive carries the package alone, without lean/ or the tests.
 
 **A window the reviewer cannot judge, and a reviewer who errs.** Until now `sample` asked for 1 or 0 in every row,
 `estimate` refused anything else and told the reviewer to leave out a window they could not judge, and a CSV that did
