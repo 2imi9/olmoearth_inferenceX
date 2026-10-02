@@ -155,9 +155,14 @@ it.
   review sets tie at the cut-off. `assess` then says the order is not evidence, in place of "check the least
   confident windows first", and the package's refusal of a class map of several classes, which names `--logits`,
   gains a sentence saying that `logits=true` does not help for a class map.
-- Each tool's description is its capability card: what it does, what it needs and what it cannot do. The server's
-  instructions, also returned by the tool `guide`, give the standard order (assess; sample, label, estimate; certify;
-  compare; per condition) and the hard rules, with which of them the package refuses on. The cards and the
+- The tools are presented by the user's question each answers, in the standard order: "Where should I look first?"
+  (`assess`), "How wrong is the map?" (`sample`, label, `estimate`), "Which part can I trust?" (`certify`) and
+  "Which of two maps is better, and where do they differ?" (`compare`), then per condition. Each tool's title is
+  its question (`sample` and `estimate` add their step), set as the tool's title and its annotations' title; the
+  tool names are unchanged.
+- Each tool's description is its capability card: the question it answers, what it does, what it needs and what it
+  cannot do. The server's instructions, also returned by the tool `guide` with the cards under their questions, give
+  the four questions in the standard order and the hard rules, with which of them the package refuses on. The cards and the
   conclusions and limits follow the OlmoEarth Agent trial (exp86). There, material false statements per sentence fell
   from 7.5% to 2.2% on the eight development briefs the fixes were built against, mostly in round 8, which bundled
   tool outputs that state conclusions and limits, statistical rules in code and answer checks. No single change is shown to have caused the fall, the owner has not adjudicated materiality, and the

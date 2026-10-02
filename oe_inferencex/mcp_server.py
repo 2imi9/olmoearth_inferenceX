@@ -26,7 +26,8 @@ its changes are copied here:
   what a tool returned, and propose only what the tools can do (round 10). Here the card is the tool's description.
 
 The standard order and the hard rules in the instructions (`INSTRUCTIONS`, also the `guide` tool) are the owner's
-addition, not a change the trial tested.
+addition, not a change the trial tested. So are the user's questions (`QUESTIONS`) by which the instructions, the
+`guide`, each tool's title and the first line of its card present the tools; the tool names stay as they were.
 
 skills/oe-inferencex/SKILL.md holds the same teaching for an agent that runs the command line instead.
 
@@ -55,6 +56,22 @@ NEEDS_EXTRA = ("the MCP server needs the mcp extra: pip install \"olmoearth-infe
                "needs its own install of the package")
 
 # ----------------------------------------------------------------------------- the teaching
+# The questions a user asks, in the standard order, and the tools that answer each. The tools keep their names (an
+# agent's configuration and earlier calls use them); the question is in each tool's title and description.
+LOOK, HOW_WRONG, TRUST, TWO_MAPS = ("Where should I look first?", "How wrong is the map?", "Which part can I trust?",
+                                    "Which of two maps is better, and where do they differ?")
+QUESTIONS = {LOOK: ("assess",), HOW_WRONG: ("sample", "estimate"), TRUST: ("certify",), TWO_MAPS: ("compare",)}
+
+# A tool's title: the name a client may show in place of the tool's name.
+TITLES = {
+    "assess": LOOK,
+    "sample": f"{HOW_WRONG} Step 1: pick the windows to label",
+    "estimate": f"{HOW_WRONG} Step 2: the error rate from the labels",
+    "certify": TRUST,
+    "compare": TWO_MAPS,
+    "guide": "How do I use these tools?",
+}
+
 HARD_RULES = (
     "A review set is not a sample. It is chosen to hold errors, so its error rate overstates the map's. estimate and "
     "certify refuse it.",
@@ -73,14 +90,15 @@ INSTRUCTIONS = "\n".join([
     "classes; probabilities from 0 to 1, or logits with logits=true. It works on windows: square blocks of patch x "
     "patch pixels, 4 by default. The tools read and write local files only. Pass absolute paths.",
     "",
-    "The standard order:",
-    "1. assess: where to look. It ranks the windows from least to most confident. The review set is the least "
-    "confident share, the windows to check first. No labels.",
-    "2. sample, label, estimate: how wrong the map is. sample picks the windows to label. The user or a reviewer "
-    "fills the `wrong` column with 1 or 0 on every row. estimate gives the error rate with a 95% interval.",
-    "3. certify: which part to trust. From the same labels, the most confident share of the map whose error rate is "
-    "at most alpha.",
-    "4. compare: two maps of one area. Where they differ; with labels, which map is right there.",
+    "The questions the tools answer, in the standard order. Match the user's question to a step:",
+    f"1. {LOOK} (assess) It ranks the windows from least to most confident. The review set is the least confident "
+    "share, the windows to check first. No labels.",
+    f"2. {HOW_WRONG} (sample, label, estimate) sample picks the windows to label. The user or a reviewer fills the "
+    "`wrong` column with 1 or 0 on every row. estimate gives the error rate with a 95% interval.",
+    f"3. {TRUST} (certify) From the same labels, the most confident share of the map whose error rate is at most "
+    "alpha. It can certify nothing, and then says why.",
+    f"4. {TWO_MAPS} (compare) Where two maps of one area differ, window by window. Only with labels does it say which "
+    "map is right where they differ.",
     "5. Per condition: when a raster records each pixel's input condition (a cloud flag, the modalities present, a "
     "sensor id), pass it as condition to assess and to sample. estimate and certify then give each condition its own "
     "rate and zone. A model run on inputs it was not trained on can be sure and wrong, and its errors then come late "
@@ -104,14 +122,14 @@ INSTRUCTIONS = "\n".join([
 
 CARDS = {
     "guide": "\n".join([
-        "How to use these tools: the standard order, the hard rules and how to report.",
-        "Does: returns the server's instructions, every tool's capability card and the directory relative paths are "
-        "read from.",
+        "How to use these tools: the questions they answer, the standard order, the hard rules and how to report.",
+        "Does: returns the server's instructions, every tool's capability card under the question it answers, and "
+        "the directory relative paths are read from.",
         "Needs: nothing.",
         "Cannot: run anything or read any file.",
     ]),
     "assess": "\n".join([
-        "Which windows of one map to check first. No labels.",
+        f"Answers \"{LOOK}\": which windows of one map to check first. No labels.",
         "Does: reads a score raster, splits it into windows of patch x patch pixels and ranks them from least to "
         "most confident. Writes the review sets (the least confident 1%, 5% and 10% by default) as CSVs with pixel "
         "and map coordinates, suspicion and boundary rasters, explanation.json (the cues behind each flagged window) "
@@ -125,7 +143,8 @@ CARDS = {
         "sure of, which come last, or label windows.",
     ]),
     "compare": "\n".join([
-        "Where two maps of the same area differ, window by window.",
+        f"Answers \"{TWO_MAPS}\": where two maps of the same area differ, window by window, and with labels "
+        "which map is right there.",
         "Does: reads two maps on one grid (class maps, probability maps or per-class scores), counts the windows "
         "whose classes differ and says whether they sit on class boundaries. Writes comparison.json, "
         "differing_windows.csv and a disagreement raster. With labels, it says which map matches the labels where "
@@ -136,7 +155,7 @@ CARDS = {
         "another grid; give either map's error rate (that is sample, then estimate, on its scores).",
     ]),
     "sample": "\n".join([
-        "Which windows to label, so that estimate can give the map's error rate.",
+        f"Answers \"{HOW_WRONG}\", step 1: which windows to label, so that estimate can give the map's error rate.",
         "Does: draws budget windows and writes them to a CSV with an empty `wrong` column for the reviewer, and a "
         ".json sidecar holding the design, which estimate and certify read. Designs: confidence (the default without "
         "condition: stratified by confidence; estimate reads it, certify refuses it), random (serves estimate and "
@@ -147,7 +166,7 @@ CARDS = {
         "`wrong`); turn a review set into a sample.",
     ]),
     "estimate": "\n".join([
-        "The map's error rate with a 95% interval, from the labelled sample.",
+        f"Answers \"{HOW_WRONG}\", step 2: the map's error rate with a 95% interval, from the labelled sample.",
         "Does: reads the CSV that sample wrote, once `wrong` holds 1 or 0 on every row, and its .json sidecar. Gives "
         "the error rate with the interval the sample's design earns, and each input condition's rate when the sample "
         "recorded a condition. With per_class, each class's user's and producer's accuracy and its error-adjusted "
@@ -159,8 +178,8 @@ CARDS = {
         "labels are right (they are assumed right); say which windows are wrong.",
     ]),
     "certify": "\n".join([
-        "Which share of the map, from the most confident window down, is wrong at most alpha of the time, with a "
-        "guarantee.",
+        f"Answers \"{TRUST}\": which share of the map, from the most confident window down, is wrong at most alpha "
+        "of the time, with a guarantee.",
         "Does: from the labelled sample, finds the largest most-confident share of the map whose error rate is at "
         "most alpha; the statement fails on at most delta of the samples that could have been drawn. Writes the "
         "result JSON and a window mask (.npy, True inside the zone). A sample drawn with condition is certified per "
@@ -338,10 +357,12 @@ P = Field  # a parameter's description, read by FastMCP
 
 
 def guide() -> str:
-    """The server's instructions and every tool's capability card."""
-    cards = "\n\n".join(f"## {name}\n{card}" for name, card in CARDS.items())
-    return (f"{INSTRUCTIONS}\n\nRelative paths are read from {os.getcwd()}.\n\n# Capability cards\n\n{cards}\n\n"
-            f"olmoearth-inferencex {__version__}")
+    """The server's instructions and every tool's capability card, under the question the tool answers."""
+    groups = [*QUESTIONS.items(), (TITLES["guide"], ("guide",))]
+    cards = "\n\n".join(f"## {question}\n\n" + "\n\n".join(f"### {name}\n{CARDS[name]}" for name in names)
+                        for question, names in groups)
+    return (f"{INSTRUCTIONS}\n\nRelative paths are read from {os.getcwd()}.\n\n# Capability cards, by question\n\n"
+            f"{cards}\n\nolmoearth-inferencex {__version__}")
 
 
 def assess(
@@ -790,7 +811,9 @@ TOOLS = {"guide": guide, "assess": assess, "compare": compare, "sample": sample,
 
 # ----------------------------------------------------------------------------- the server
 def build_server():
-    """The FastMCP server with the six tools, each described by its capability card. Needs the mcp extra."""
+    """The FastMCP server with the six tools, each described by its capability card and titled by the question it
+    answers. The title is set twice: the tool's own (protocol 2025-06-18) and its annotations' (read by clients of
+    the earlier protocol). Needs the mcp extra."""
     try:
         from mcp.server.fastmcp import FastMCP
         from mcp.server.fastmcp.exceptions import ToolError
@@ -814,9 +837,10 @@ def build_server():
     # FastMCP 1.x leaves the low-level server's version unset, and the handshake then gives the SDK's own version
     server._mcp_server.version = __version__
     for name, fn in TOOLS.items():
-        hints = (ToolAnnotations(readOnlyHint=True, openWorldHint=False) if name == "guide" else
-                 ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=True, openWorldHint=False))
-        server.add_tool(as_tool(fn), name=name, description=CARDS[name], annotations=hints)
+        hints = (ToolAnnotations(title=TITLES[name], readOnlyHint=True, openWorldHint=False) if name == "guide" else
+                 ToolAnnotations(title=TITLES[name], readOnlyHint=False, destructiveHint=True, idempotentHint=True,
+                                 openWorldHint=False))
+        server.add_tool(as_tool(fn), name=name, title=TITLES[name], description=CARDS[name], annotations=hints)
     return server
 
 

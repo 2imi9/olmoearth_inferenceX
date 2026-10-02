@@ -371,20 +371,29 @@ configuration. Where the package sits in a virtual environment, give the full pa
 }
 ```
 
-- **The tools.** `assess`, `compare`, `sample`, `estimate` and `certify` run the command of the same name, with the
-  same numbers and the same refusals. They take file paths and an output directory; pass absolute paths. `guide`
-  returns the instructions below and every tool's description.
+The tools answer four questions, in the standard order. Each tool runs the command of the same name, with the same
+numbers and the same refusals. The tool names are unchanged; each tool's title starts with its question.
+
+| The question | The tools | What they cannot do |
+|---|---|---|
+| Where should I look first? | `assess` | Say how wrong the map is, since it uses no labels; find the errors the model is sure of, which come last |
+| How wrong is the map? | `sample`, then labels from you or a reviewer, then `estimate` | Label a window; check the labels, which are assumed right |
+| Which part can I trust? | `certify`, on the labels of a random sample | Promise a zone: with too few labels, or errors among the most confident windows, it certifies nothing and says why |
+| Which of two maps is better, and where do they differ? | `compare` | Say which map is better without labels; with a label raster it says which is right where they differ |
+
+- **The tools.** They take file paths and an output directory; pass absolute paths. `guide` returns the instructions
+  below and every tool's description, under the question the tool answers.
 - **What a tool returns.** JSON with the files written and the summary numbers, and three texts to quote:
   `conclusion` (what it found), `limits` (what it does not show, with the package's own warnings and notes) and
   `next` (what can be done next, with its preconditions).
-- **What a tool's description says.** What the tool does, what it needs and what it cannot do.
-- **The server's instructions.** The standard order: `assess` for where to look; `sample`, labels and `estimate` for
-  how wrong the map is; `certify` for which part to trust; `compare` for two maps; and a condition layer for each
-  input condition on its own. Then the hard rules: a review set is not a sample (`estimate` and `certify` refuse
-  one); `certify` needs a random sample (it refuses the default design); without labels `compare` cannot say which
-  map is right; labels are assumed right; ranking needs the scores, not only the class map. `assess` refuses a class
-  map of more than two classes, but not a 0/1 map or a class map passed with `logits=true`; for those, whose
-  review sets tie, its conclusion says the order is not evidence.
+- **What a tool's description says.** The question it answers, what the tool does, what it needs and what it cannot
+  do.
+- **The server's instructions.** The four questions in the standard order, each with its tools, as in the table
+  above, and a condition layer for each input condition on its own. Then the hard rules: a review set is not a
+  sample (`estimate` and `certify` refuse one); `certify` needs a random sample (it refuses the default design);
+  without labels `compare` cannot say which map is right; labels are assumed right; ranking needs the scores, not
+  only the class map. `assess` refuses a class map of more than two classes, but not a 0/1 map or a class map
+  passed with `logits=true`; for those, whose review sets tie, its conclusion says the order is not evidence.
 - **A refusal.** A tool error carrying the package's own message. The message names command-line options; each is
   the tool parameter of the same name (`--labels-date` is `labels_date`).
 

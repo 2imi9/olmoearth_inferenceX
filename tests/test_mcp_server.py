@@ -17,6 +17,7 @@ import sys
 
 import numpy as np
 import pytest
+import yaml
 
 from oe_inferencex import cli, mcp_server
 from oe_inferencex import estimate as est
@@ -149,8 +150,13 @@ def test_every_card_says_what_the_tool_does_needs_and_cannot_do():
 def test_the_instructions_give_the_order_and_the_hard_rules():
     text = mcp_server.INSTRUCTIONS
     steps = [line for line in text.splitlines() if re.match(r"\d\. ", line)]
-    assert [s.split(":")[0] for s in steps] == ["1. assess", "2. sample, label, estimate", "3. certify", "4. compare",
-                                                "5. Per condition"]
+    # each step is the user's question, then the tools that answer it, in the standard order
+    asked = [re.match(r"\d\. (.+?\?) \(([^)]+)\) ", s) for s in steps[:4]]
+    assert all(asked), steps
+    assert [(m.group(1), m.group(2)) for m in asked] == [
+        ("Where should I look first?", "assess"), ("How wrong is the map?", "sample, label, estimate"),
+        ("Which part can I trust?", "certify"), ("Which of two maps is better, and where do they differ?", "compare")]
+    assert steps[4].startswith("5. Per condition: ")
     for rule in mcp_server.HARD_RULES:
         assert f"- {rule}" in text
     flat = _flat(" ".join(mcp_server.HARD_RULES))
@@ -160,12 +166,41 @@ def test_the_instructions_give_the_order_and_the_hard_rules():
     assert "\u2014" not in text
 
 
+def test_the_tools_are_presented_by_the_question_each_answers():
+    """Four questions in the standard order; every tool but guide answers one, under its own name, with the question
+    in its title and on the first line of its card."""
+    assert list(mcp_server.QUESTIONS) == ["Where should I look first?", "How wrong is the map?",
+                                          "Which part can I trust?",
+                                          "Which of two maps is better, and where do they differ?"]
+    answered = [name for names in mcp_server.QUESTIONS.values() for name in names]
+    assert sorted(answered) == sorted(TOOLS - {"guide"})
+    assert set(mcp_server.TITLES) == TOOLS and len(set(mcp_server.TITLES.values())) == len(TOOLS)
+    for question, names in mcp_server.QUESTIONS.items():
+        for name in names:
+            assert mcp_server.TITLES[name].startswith(question), name
+            assert mcp_server.CARDS[name].splitlines()[0].startswith(f'Answers "{question}"'), name
+    assert "\u2014" not in " ".join(mcp_server.TITLES.values())
+
+
+def test_the_skill_and_usage_give_the_same_questions():
+    """SKILL.md's steps and Usage's table name the server's questions in its order, each with its tools."""
+    skill = open(os.path.join(ROOT, "skills", "oe-inferencex", "SKILL.md"), encoding="utf-8").read()
+    steps = re.findall(r"^\d\. \*\*(.+?\?)\*\* (.+)$", skill, re.M)
+    assert [q for q, _ in steps] == list(mcp_server.QUESTIONS)
+    usage = open(os.path.join(ROOT, "docs", "Usage.md"), encoding="utf-8").read()
+    rows = re.findall(r"^\| (.+?\?) \| (.+?) \|", usage, re.M)
+    assert [q for q, _ in rows] == list(mcp_server.QUESTIONS)
+    for (_, said), (_, tools), names in zip(steps, rows, mcp_server.QUESTIONS.values()):
+        assert re.findall(r"`(\w+)`", said.split(". ")[0]) == list(names)
+        assert re.findall(r"`(\w+)`", tools) == list(names)
+
+
 def test_the_skill_holds_the_same_teaching():
     path = os.path.join(ROOT, "skills", "oe-inferencex", "SKILL.md")
     text = open(path, encoding="utf-8").read()
     head = re.match(r"---\n(.*?)\n---\n", text, re.S)
     assert head, "SKILL.md starts with a frontmatter block"
-    fields = dict(line.split(": ", 1) for line in head.group(1).splitlines() if ": " in line)
+    fields = yaml.safe_load(head.group(1))                      # as a skill loader reads it: no stray ": " in a value
     assert fields["name"] == "oe-inferencex" and len(fields["description"]) > 40
     body = _flat(text)
     for rule in mcp_server.HARD_RULES:
@@ -287,6 +322,7 @@ def test_the_server_lists_six_tools_each_described_by_its_card():
     assert {t.name for t in tools} == TOOLS
     for t in tools:
         assert t.description == mcp_server.CARDS[t.name]
+        assert t.title == t.annotations.title == mcp_server.TITLES[t.name]      # the question it answers
         for part in ("\nDoes: ", "\nNeeds: ", "\nCannot: "):
             assert part in t.description, (t.name, part)
         assert t.annotations.openWorldHint is False
@@ -304,6 +340,10 @@ def test_guide_returns_the_instructions_and_every_card():
     assert not err
     assert text.startswith(mcp_server.INSTRUCTIONS)
     assert all(card in text for card in mcp_server.CARDS.values())
+    # the cards come under the question each tool answers, in the standard order, guide last
+    heads = re.findall(r"^## (.+)$", text, re.M)
+    assert heads == [*mcp_server.QUESTIONS, mcp_server.TITLES["guide"]]
+    assert re.findall(r"^### (\w+)$", text, re.M) == ["assess", "sample", "estimate", "certify", "compare", "guide"]
     assert f"Relative paths are read from {os.getcwd()}." in text
 
 
