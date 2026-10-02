@@ -357,13 +357,14 @@ records, and write where you say, all on your machine.
 server on `main`, with nothing else to install:
 
 ```bash
-claude mcp add oe-inferencex -- uvx --from "olmoearth-inferencex[geo,mcp] @ git+https://github.com/2imi9/olmoearth_inferenceX" oe-inferencex mcp
+claude mcp add --scope user oe-inferencex -- uvx --from "olmoearth-inferencex[geo,mcp] @ git+https://github.com/2imi9/olmoearth_inferenceX" oe-inferencex mcp
 ```
 
-`uvx` installs the package and its extras into an environment of its own, kept in uv's cache, and runs the server
-from there. After the next release the PyPI form will do:
-`uvx --from "olmoearth-inferencex[geo,mcp]" oe-inferencex mcp`. Other agents, such as Claude Desktop, Cursor or the
-OlmoEarth Agent, take the same command in their MCP configuration:
+`--scope user` makes the server available in every folder. Without it, Claude Code adds the server only to the folder
+the line is run in. `uvx` installs the package and its extras into an environment of its own, kept in uv's cache,
+and runs the server from there; the first start downloads them, which can take half a minute. After the next
+release the PyPI form will do: `uvx --from "olmoearth-inferencex[geo,mcp]" oe-inferencex mcp`. Other agents, such as
+Claude Desktop, Cursor or the OlmoEarth Agent, take the same command in their MCP configuration:
 
 ```json
 {
@@ -384,7 +385,7 @@ If the agent does not find `uvx`, give its full path as `command`; `which uvx` p
 ```bash
 pip uninstall -y olmoearth-inferencex
 pip install "olmoearth-inferencex[geo,mcp] @ git+https://github.com/2imi9/olmoearth_inferenceX"
-claude mcp add oe-inferencex -- oe-inferencex mcp     # Claude Code
+claude mcp add --scope user oe-inferencex -- oe-inferencex mcp     # Claude Code
 ```
 
 In a JSON configuration the server is then `{"command": "oe-inferencex", "args": ["mcp"]}`. Where the package sits
@@ -404,14 +405,19 @@ Start the agent in that folder and ask:
 The agent calls `assess` with `reference`. Its answer is the review set of the demo's picture, graded against the
 tile's expert labels, with the same share of the errors as the demo prints. For a test map that the other tools can
 run on, `examples/quickstart_map.py` writes `scores.tif`, `other.tif` and `truth.tif`, and fills in a sample's labels
-from `truth.tif` (`python quickstart_map.py --label to_label.csv`).
+from `truth.tif` (`--label to_label.csv`). It needs numpy and rasterio. With nothing installed but uv:
+
+```bash
+curl -O https://raw.githubusercontent.com/2imi9/olmoearth_inferenceX/main/examples/quickstart_map.py
+uv run --with "olmoearth-inferencex[geo]" python quickstart_map.py
+```
 
 The tools answer four questions, in the standard order. Each tool runs the command of the same name, with the same
 numbers and the same refusals. The tool names are unchanged; each tool's title starts with its question.
 
 | The question | The tools | What they cannot do |
 |---|---|---|
-| Where should I look first? | `assess` | Say how wrong the map is, since it uses no labels; find the errors the model is sure of, which come last |
+| Where should I look first? | `assess` | Say how wrong the map is without labels; find the errors the model is sure of, which come last |
 | How wrong is the map? | `sample`, then labels from you or a reviewer, then `estimate` | Label a window; check the labels, which are assumed right |
 | Which part can I trust? | `certify`, on the labels of a random sample | Promise a zone: with too few labels, or errors among the most confident windows, it certifies nothing and says why |
 | Which of two maps is better, and where do they differ? | `compare` | Say which map is better without labels; with a label raster it says which is right where they differ |
@@ -437,7 +443,7 @@ and `truth.tif`), each with the tools it uses and what the answer can and cannot
 
 - "Where should I look first in scores.tif?" Uses `assess`. The answer is a list of windows to check first, least
   confident first. It is not an error rate, and the errors the model is sure of come last. It needs the model's
-  per-class scores: a class map alone cannot be ranked.
+  per-class scores: a class map alone is refused, or gives an order that is not evidence.
 - "How wrong is scores.tif? Pick 300 windows at random for me to label." Uses `sample`, then `estimate`. In between,
   you set `wrong` to 1 or 0 on every row of the sample. The answer is an error rate with a 95% interval. No tool
   labels a window, and the interval assumes your labels are right.

@@ -12,7 +12,7 @@ below.
 Install: the MCP server and `--condition` are not yet released. 1.3.1, the release on PyPI, lacks both, and pip
 skips its unknown `mcp` extra. With uv, one line connects the server from the repository to Claude Code, with
 nothing else to install:
-`claude mcp add oe-inferencex -- uvx --from "olmoearth-inferencex[geo,mcp] @ git+https://github.com/2imi9/olmoearth_inferenceX" oe-inferencex mcp`.
+`claude mcp add --scope user oe-inferencex -- uvx --from "olmoearth-inferencex[geo,mcp] @ git+https://github.com/2imi9/olmoearth_inferenceX" oe-inferencex mcp`.
 After the next release, `uvx --from "olmoearth-inferencex[geo,mcp]" oe-inferencex mcp` will do. To install the
 commands and the server instead:
 `pip install "olmoearth-inferencex[geo,mcp] @ git+https://github.com/2imi9/olmoearth_inferenceX"`. If you need
@@ -55,7 +55,7 @@ each with the tools it uses and what the answer can and cannot be:
 
 - "Where should I look first in scores.tif?" Uses `assess`. The answer is a list of windows to check first, least
   confident first. It is not an error rate, and the errors the model is sure of come last. It needs the model's
-  per-class scores: a class map alone cannot be ranked.
+  per-class scores: a class map alone is refused, or gives an order that is not evidence.
 - "How wrong is scores.tif? Pick 300 windows at random for me to label." Uses `sample`, then `estimate`. In between,
   you set `wrong` to 1 or 0 on every row of the sample. The answer is an error rate with a 95% interval. No tool
   labels a window, and the interval assumes your labels are right.

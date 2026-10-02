@@ -218,10 +218,11 @@ agent such as Claude Code runs these commands on your files. Nothing is hosted. 
 [uv](https://docs.astral.sh/uv/) installed, one line connects it, with nothing else to install:
 
 ```bash
-claude mcp add oe-inferencex -- uvx --from "olmoearth-inferencex[geo,mcp] @ git+https://github.com/2imi9/olmoearth_inferenceX" oe-inferencex mcp
+claude mcp add --scope user oe-inferencex -- uvx --from "olmoearth-inferencex[geo,mcp] @ git+https://github.com/2imi9/olmoearth_inferenceX" oe-inferencex mcp
 ```
 
-After the next release, `uvx --from "olmoearth-inferencex[geo,mcp]" oe-inferencex mcp` will do.
+After the next release, the part after `--` can be
+`uvx --from "olmoearth-inferencex[geo,mcp]" oe-inferencex mcp`.
 [Usage](https://olmoearth-inferencex.readthedocs.io/en/latest/Usage/#use-from-an-agent-mcp)
 gives the configuration for other agents.
 
@@ -242,11 +243,13 @@ The tools answer four questions, in this order: where should I look first (`asse
 wrong is the map (`sample`, then `estimate`); which part can I trust (`certify`); and which
 of two maps is better, and where do they differ (`compare`).
 
-Example questions, on the files of the quick start above:
+Example questions, on the files of the quick start above. Without the package installed,
+`uv run --with "olmoearth-inferencex[geo]" python quickstart_map.py` writes them.
 
 - "Where should I look first in scores.tif?" Uses `assess`. The answer is a list of windows to
   check first, least confident first. It is not an error rate, and the errors the model is sure
-  of come last. It needs the model's per-class scores: a class map alone cannot be ranked.
+  of come last. It needs the model's per-class scores: a class map alone is refused, or gives an
+  order that is not evidence.
 - "How wrong is scores.tif? Pick 300 windows at random for me to label." Uses `sample`, then
   `estimate`. In between, you set `wrong` to 1 or 0 on every row of the sample. The answer is
   an error rate with a 95% interval. No tool labels a window, and the interval assumes your

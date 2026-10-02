@@ -1,13 +1,13 @@
 """A local MCP server: the package's commands as tools that an agent calls on the user's own files.
 
-    pip install "olmoearth-inferencex[geo,mcp]"
+    pip install "olmoearth-inferencex[geo,mcp]"            # after the next release; until then from the repository
     oe-inferencex mcp                                      # stdio; the agent starts it, nobody types into it
-    claude mcp add oe-inferencex -- oe-inferencex mcp      # Claude Code
+    claude mcp add --scope user oe-inferencex -- oe-inferencex mcp      # Claude Code, in every folder
 
 Without installing the package, uv's `uvx` runs the server in an environment of its own, here from the repository.
 After the next release, `uvx --from "olmoearth-inferencex[geo,mcp]" oe-inferencex mcp` will do.
 
-    claude mcp add oe-inferencex -- uvx --from "olmoearth-inferencex[geo,mcp] @ git+https://github.com/2imi9/olmoearth_inferenceX" oe-inferencex mcp
+    claude mcp add --scope user oe-inferencex -- uvx --from "olmoearth-inferencex[geo,mcp] @ git+https://github.com/2imi9/olmoearth_inferenceX" oe-inferencex mcp
 
 Nothing is hosted. The server runs on the user's machine and writes its files where the agent says. It reads the
 files the agent passes, the sidecar beside a sample and the scores raster it records (estimate with per_class, and

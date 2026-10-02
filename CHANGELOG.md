@@ -141,20 +141,24 @@ is unchanged.
 **A local MCP server for agents.** `oe-inferencex mcp` starts an MCP server on stdio (`oe_inferencex.mcp_server`),
 so that an agent such as Claude Code, Claude Desktop, Cursor or the OlmoEarth Agent can run the package on the user's
 own files. Nothing is hosted. Install with the new `mcp` extra, `pip install "olmoearth-inferencex[geo,mcp]"`, and
-connect with `claude mcp add oe-inferencex -- oe-inferencex mcp`; without the extra the command says how to install
-it.
+connect with `claude mcp add --scope user oe-inferencex -- oe-inferencex mcp`; without the extra the command says
+how to install it.
 
 - One line connects the server with nothing installed but uv:
-  `claude mcp add oe-inferencex -- uvx --from "olmoearth-inferencex[geo,mcp] @ git+https://github.com/2imi9/olmoearth_inferenceX" oe-inferencex mcp`,
+  `claude mcp add --scope user oe-inferencex -- uvx --from "olmoearth-inferencex[geo,mcp] @ git+https://github.com/2imi9/olmoearth_inferenceX" oe-inferencex mcp`,
   and after the next release `uvx --from "olmoearth-inferencex[geo,mcp]" oe-inferencex mcp`. Usage gives the JSON
   configuration for other agents. A first question on the demo tile, which
   `uvx --from olmoearth-inferencex oe-inferencex demo` writes, shows a result in a minute; the README and Usage give
   it. A test checks that every documented setup line and configuration names this package, its extras, its
   repository and a command it has, and that the first question, asked of `assess`, gives the demo's own numbers.
+  Every Claude Code line says `--scope user`: without it Claude Code adds the server only to the folder the line is
+  run in, and the first question is asked in a new folder.
 - Four example questions in the README, Usage and SKILL.md, on the quick-start test map, one per question the tools
-  answer. Each names the tools it uses and says what the answer can and cannot be: `assess` gives no error rate and
-  cannot rank a class map alone; no tool labels a window; `certify` can certify nothing; `compare` cannot say which
-  map is better without labels. A test checks that the three lists are the same and name only tools that exist.
+  answer. Each names the tools it uses and says what the answer can and cannot be: `assess` gives no error rate, and
+  a class map alone is refused or gets an order that is not evidence; no tool labels a window; `certify` can certify
+  nothing; `compare` cannot say which map is better without labels. A test checks that the three lists are the same
+  and name only tools that exist. The README and Usage give uv's form of the script that writes the test map,
+  `uv run --with "olmoearth-inferencex[geo]" python quickstart_map.py`, for a reader who installed nothing.
 - Tools `assess`, `compare`, `sample`, `estimate` and `certify` run the command of the same name in-process, so they
   give its numbers and its refusals. Each takes file paths and an output directory and returns JSON: the files
   written, the summary numbers, `conclusion`, `limits` (with the package's own warnings and notes, each class's

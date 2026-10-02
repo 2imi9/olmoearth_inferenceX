@@ -312,10 +312,13 @@ def test_the_extra_pins_the_sdk_below_2():
 
 # ----------------------------------------------------------------------------- the setup lines in the docs
 SETUP_DOCS = ("README.md", "docs/Usage.md", "skills/oe-inferencex/SKILL.md", "CHANGELOG.md")
-GIT_ONE_LINER = ('claude mcp add oe-inferencex -- uvx --from "olmoearth-inferencex[geo,mcp] @ '
+GIT_ONE_LINER = ('claude mcp add --scope user oe-inferencex -- uvx --from "olmoearth-inferencex[geo,mcp] @ '
                  'git+https://github.com/2imi9/olmoearth_inferenceX" oe-inferencex mcp')
 PYPI_FORM = 'uvx --from "olmoearth-inferencex[geo,mcp]" oe-inferencex mcp'
-COMMAND = re.compile(r'(?:uvx --from (?:"[^"]+"|[^\s`"]+) |claude mcp add oe-inferencex -- )oe-inferencex [a-z-]+')
+COMMAND = re.compile(r'(?:uvx --from (?:"[^"]+"|[^\s`"]+) |claude mcp add --scope user oe-inferencex -- )'
+                     r'oe-inferencex [a-z-]+')
+# uv's form of `python quickstart_map.py`, for a reader who installed nothing: the script needs numpy and rasterio
+QUICKSTART_UV = re.compile(r'uv run --with "([^"]+)" python quickstart_map\.py')
 
 
 def _doc(path):
@@ -387,6 +390,32 @@ def test_every_setup_line_and_config_names_a_command_that_exists():
     assert ("README.md", "uvx", "demo") in found and ("CHANGELOG.md", "oe-inferencex", "mcp") in found
 
 
+def test_every_claude_code_line_adds_the_server_for_every_folder():
+    """Claude Code adds a server for the folder `claude mcp add` is run in unless the line says --scope user. The
+    first question is asked in a new folder, so a line without it leaves the agent there with no server."""
+    for where, text in _texts():
+        lines = re.findall(r"claude mcp add[^`\n]*", _flat(text))
+        assert lines, where
+        for line in lines:
+            assert line.startswith("claude mcp add --scope user oe-inferencex -- "), (where, line)
+
+
+def test_the_quick_start_map_can_be_written_with_nothing_installed():
+    """The example questions run on the files examples/quickstart_map.py writes. A reader who connected the server
+    with uvx has installed nothing, so the README and Usage give uv's form of the script, which brings the package's
+    geo extra: the script needs numpy and rasterio."""
+    project = _project()
+    assert "rasterio" in quickstart_map.__doc__
+    for path in ("README.md", "docs/Usage.md"):
+        reqs = QUICKSTART_UV.findall(_flat(_doc(path)))
+        assert reqs, path
+        for req in reqs:
+            m = re.fullmatch(r"([a-z-]+)\[([a-z,]+)\]", req)
+            assert m and m.group(1) == project["name"], (path, req)
+            assert any(dep.startswith("rasterio") for extra in m.group(2).split(",")
+                       for dep in project["optional-dependencies"][extra]), (path, req)
+
+
 def test_the_first_question_runs_on_the_demo_tile(tmp_path, monkeypatch, capsys):
     """The first question of the README and of Usage names the files `oe-inferencex demo` writes. Asked of assess as
     it says, with windows of 1 pixel and the tile's expert labels as reference, the answer is the demo's own: the 5%
@@ -414,7 +443,9 @@ def test_the_first_question_runs_on_the_demo_tile(tmp_path, monkeypatch, capsys)
 EXAMPLE_DOCS = ("README.md", "docs/Usage.md", "skills/oe-inferencex/SKILL.md")
 # what each tool's example must say the answer cannot be, or can be: nothing, no ranking, no verdict without labels
 EXAMPLE_LIMITS = {
-    "assess": ("It is not an error rate", "a class map alone cannot be ranked"),
+    # a class map of several classes is refused; a 0/1 map, or a class map passed as logits, is ranked by raster
+    # position, which the tool's conclusion calls not evidence (test_a_class_map_read_as_scores_is_not_called_a_ranking)
+    "assess": ("It is not an error rate", "a class map alone is refused, or gives an order that is not evidence"),
     "estimate": ("No tool labels a window", "the interval assumes your labels are right"),
     "certify": ("It can be nothing", f"fails on at most {est.ZONE_DELTA:.0%} of samples", "random sample"),
     "compare": ("Without labels it cannot say which map is better",),
