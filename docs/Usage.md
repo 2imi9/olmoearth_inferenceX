@@ -18,7 +18,7 @@ extra) are new in 1.4.0.
 
 ## Quick start
 
-Every command below runs on 1.4.0. `scores.tif` is a map of per-class probabilities; add `--logits` for logits.
+Every command below runs on 1.4.1. `scores.tif` is a map of per-class probabilities; add `--logits` for logits.
 
 ```bash
 pip install "olmoearth-inferencex[geo]"
@@ -381,6 +381,14 @@ claude mcp add --scope user oe-inferencex -- oe-inferencex mcp     # Claude Code
 
 In a JSON configuration the server is then `{"command": "oe-inferencex", "args": ["mcp"]}`. Where the package sits
 in a virtual environment, give the full path of its `oe-inferencex`.
+
+**Which model.** Use a strong model. In a pilot on 2 October 2026 (not preregistered), agents answered five questions
+through the server on the outputs of two of Ai2's fine-tuned models, FT-AWF and Forest Loss Driver, and a grader
+checked every reply against the tools' outputs and the truth. Claude Sonnet's replies kept the tools' numbers and
+their limits on all five. Claude Haiku's dropped the limits on most, named the better of two maps without labels and
+advised labelling a review set to get the error rate. After the server's texts were changed to carry each tool's main
+limit inside its conclusion, two of Haiku's five replies passed and one still gave that advice. estimate and certify
+refuse a review set, so a weak model's advice cannot turn into a wrong number, but its reply can still mislead.
 
 **A first question.** The [demo](#demo) tile needs no data of your own. Write it into an empty folder:
 

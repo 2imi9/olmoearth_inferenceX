@@ -1,12 +1,19 @@
 # Changelog
 
-## Unreleased
+## 1.4.1 (2026-10-02)
+
+**Release checks (2 October 2026).** A three-lens review of the changes since 1.4.0 (code, the truth of each new text,
+whether each new test can fail) found three defects and six untested behaviours, all fixed below and each pinned by a
+test that fails without its fix. The suite ran against the built wheel with the source tree removed on Python 3.11,
+3.12 and 3.13 with the geo and mcp extras (1,230 passed each), on the lowest declared core dependencies (1,127
+passed, the geo tests skipped) and, for the MCP server's tests, on mcp 1.26.0 (36 passed).
 
 **The MCP server's texts, after an agent test on real OlmoEarth outputs (2 October 2026).** Agents answered five
 user questions through the released server on Ai2's fine-tuned FT-AWF (344 points) and Forest Loss Driver (109
 windows) outputs, and an adversarial grader checked every reply against the tool outputs and the truth. The tools'
 numbers were right; Sonnet's replies passed, and Haiku's failed on all five: it quoted conclusions and dropped the
-limits beside them, labelled a review set to estimate the error rate, and named the better of two maps without labels.
+limits beside them, advised labelling a review set to get the error rate, and named the better of two maps without
+labels.
 The changes, all in `oe_inferencex.mcp_server` unless named:
 
 - Each conclusion carries its main limit. assess: the order does not say how wrong the map is, and labels on the
@@ -29,7 +36,25 @@ The changes, all in `oe_inferencex.mcp_server` unless named:
 
 Rerun with Haiku on the same five questions: two replies now pass with minor issues (none before), and hard-rule
 breaches fell from three replies to one; the remaining failures are mostly limits left out of the reply. The test is
-a pilot, not preregistered.
+a pilot, not preregistered. README and Usage now say to use a strong model, with what the pilot found.
+
+The rerun's graders found smaller issues, fixed here:
+
+- The multi-class logit warning, which `assess` and `sample` write into assessment.json and the sample's sidecar,
+  named only the Python and command-line routes; an agent reading those files met advice the MCP texts contradicted.
+  It now names each interface's route (on the command line without --logits, through the MCP server with
+  logits=false). It is already one of the four deliberate changes in the 1.3.1 golden list (the second); its new text
+  is updated there.
+- compare on a window grid one window high or wide gives its boundary enrichment as a caveat, as assess does.
+- assess says what the suspicion raster holds: minus the confidence score, higher meaning more suspect, ranking the
+  windows as summary.signal does (its values are not those of the signal's name: for a map of class probabilities it
+  is minus the top probability, for a two-class probability map minus twice the distance from 0.5).
+- A refusal for a missing file given as a relative path names the directory relative paths are read from.
+- certify's upper bound is "on this zone's error rate", not "at that level", which read as alpha or delta.
+- estimate's note on conditions outside the whole-map interval is said once, in the conclusion.
+- Found by the pre-release review: the translation of options into parameter names now leaves paths alone (an
+  out_dir named run--patch8 came back as runpatch8), and per-condition certify no longer says delta can be lowered
+  when it certified nothing.
 
 ## 1.4.0 (2026-10-02)
 

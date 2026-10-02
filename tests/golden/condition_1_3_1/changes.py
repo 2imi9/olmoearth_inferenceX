@@ -27,14 +27,15 @@ CHANGES = (
                "sample_random.certify_whole.json", "sample_random.certify_whole.stdout.txt",
                "sample_scene_random.certify_prefix.json", "sample_scene_random.certify_prefix.stdout.txt")},
     {"why": "the warning on a multi-class logit map scored by the logit margin. 1.3.1 said only \"pass form='top1'\", "
-            "which is a Python argument with no command-line option; the warning now says how the command line gets "
-            "a top-probability reading and how it differs",
+            "which is a Python argument with no command-line option; the warning now says how the command line and "
+            "the MCP server get a top-probability reading and how it differs",
      "old": ("multi-class logit margin: on Ai2's suite one minus the top probability ranked errors better on 14 of 16 "
              "multi-class tasks (exp76); pass form='top1'"),
      "new": ("multi-class logit margin: on Ai2's suite one minus the top probability ranked errors better on 14 of 16 "
-             "multi-class tasks (exp76). In Python, pass form='top1'. The command line has no such option: pass the "
-             "class probabilities without --logits. That also ranks by the top probability, averaged over each window "
-             "where form='top1' averages its log, and can tie where probabilities saturate"),
+             "multi-class tasks (exp76). In Python, pass form='top1'. Elsewhere, pass the class probabilities (the "
+             "softmax of the logits) instead of logits: on the command line without --logits, through the MCP server "
+             "with logits=false. That also ranks by the top probability, averaged over each window where form='top1' "
+             "averages its log, and can tie where probabilities saturate"),
      "constant": ("oe_inferencex.assess", "MARGIN_FORM_WARNING"),
      "files": ("api_prediction_logits3_margin.json", "assess_logits3__assessment.json", "sample_logits3_random.json",
                "sample_logits3_random.stdout.txt")},

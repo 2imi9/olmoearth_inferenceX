@@ -211,7 +211,9 @@ def _input(path, what):
     """An input file as an absolute path, refused when it is not there."""
     p = _abs(path)
     if not os.path.isfile(p):
-        raise Refused(f"{what}: {p} is not a file")
+        # an agent that guessed the base of a relative path needs to know it (the agent test of 2 October 2026)
+        where = "" if os.path.isabs(os.path.expanduser(str(path))) else f" (relative paths are read from {os.getcwd()})"
+        raise Refused(f"{what}: {p} is not a file{where}")
     return p
 
 
@@ -310,12 +312,14 @@ def _mcp_words(text):
     """A package text with each command-line option written as this server's parameter."""
     if not text:
         return text
-    text = text.replace("without --logits", "with logits=false")
-    text = re.sub(r"--(design|rule|order)[ =]([a-z_]+)", r'\1="\2"', text)
-    text = re.sub(r"--logits\b", "logits=true", text)
-    text = re.sub(r"--out\b", "out_dir", text)
-    return re.sub(r"--([a-z][a-z-]*)", lambda m: m.group(1).replace("-", "_") if m.group(1) in _FLAGS else m.group(0),
-                  text)
+    # an option starts a word: a path such as /data/run--patch8 or a name such as one-sided--seed is left alone
+    start = r"(?<![\w/.\-])"
+    text = re.sub(start + r"without --logits\b", "with logits=false", text)
+    text = re.sub(start + r"--(design|rule|order)[ =]([a-z_]+)", r'\1="\2"', text)
+    text = re.sub(start + r"--logits\b", "logits=true", text)
+    text = re.sub(start + r"--out\b(?!-)", "out_dir", text)
+    return re.sub(start + r"--([a-z][a-z-]*)",
+                  lambda m: m.group(1).replace("-", "_") if m.group(1) in _FLAGS else m.group(0), text)
 
 
 # The margin warning names a Python argument and a command-line route, neither of which an MCP caller has.
@@ -509,7 +513,8 @@ def assess(
               "Errors the model is sure of come last in this order, so a review of the review set does not find them.",
               "In the review-set CSVs, confidence is the score the order ranks by, higher meaning more confident: "
               + ("the gap between the two highest logits, which has no upper bound." if logits else
-                 "read from the class probabilities.")]
+                 "read from the class probabilities.") + " The suspicion raster holds minus that score, so higher is "
+              "more suspect; it ranks the windows as summary.signal does."]
     if line:
         limits.append(boundary[:-1] + f", but the window grid is one window {'high' if grid[0] == 1 else 'wide'}, so "
                       "this share counts neighbours along one line only and says little about the map.")
@@ -595,10 +600,17 @@ def compare(
             + f" ({_pc(e['rate'])})" for i, (g, e) in enumerate(s["per_group"].items())) + ".")
     where = s.get("where") or {}
     enr = {k: (where.get(k) or {}).get("enrichment") for k in ("boundary_a", "boundary_b")}
+    caveats = []
     if enr["boundary_a"] is not None:
-        said.append(f"The differing windows sit on a class boundary of map a {enr['boundary_a']:.2f} times as often "
-                    "as the agreeing windows" + (f" (of map b, {enr['boundary_b']:.2f} times)." if enr["boundary_b"]
-                                                  is not None else "."))
+        line = (f"The differing windows sit on a class boundary of map a {enr['boundary_a']:.2f} times as often as the "
+                "agreeing windows" + (f" (of map b, {enr['boundary_b']:.2f} times)." if enr["boundary_b"] is not None
+                                      else "."))
+        grid = _grid_shape(files.get("disagreement", ""))
+        if grid is not None and min(grid) == 1 and max(grid) > 1:
+            caveats.append(line[:-1] + f", but the window grid is one window {'high' if grid[0] == 1 else 'wide'}, so "
+                           "boundaries are counted along one line only and this says little about the maps.")
+        else:
+            said.append(line)
     summ = {"n_windows": s["n_windows"], "n_disagree": s["n_disagree"], "disagreement_rate": s["disagreement_rate"],
             "boundary_enrichment": enr, "dates_status": s["dates"]["status"]}
     if s.get("per_group"):
@@ -627,7 +639,7 @@ def compare(
         said.append("Without labels this says neither which map is better nor which is right where they differ.")
     if s["dates"]["status"] in ("different_time", "overlapping_time", "partly_stated"):
         said.append(s["dates"]["reading"][0].upper() + s["dates"]["reading"][1:] + ".")
-    limits += ["A difference between the maps says neither map's error rate."] + _notes(s.get("notes", []))
+    limits += ["A difference between the maps says neither map's error rate."] + caveats + _notes(s.get("notes", []))
     nxt = ("To learn which map is right where they differ, compare again with labels: an integer class raster on the "
            "same grid. For either map's error rate: sample on that map's scores, have a reviewer label every row, then "
            "estimate." if not graded else "For either map's error rate: sample on that map's scores, label, estimate.")
@@ -777,8 +789,11 @@ def estimate(
               "It is a rate over the windows; it does not say which windows are wrong."]
     limits += _warnings(_tagged(printed, "warning")) + _warnings([r.get("per_class_warning")]) + _warnings(class_warnings)
     scope = r.get("scope")
+    # the note on conditions outside the whole-map interval is said in the conclusion; once is enough
+    outside = cli._outside_note(r)[len("note: "):] if r.get("outside_condition_intervals") else None
     limits += _notes([r.get("per_class_note"), r.get("condition_note"),
-                      MCP_SCOPE["estimate"] if scope == est.SCOPE_ESTIMATE else scope] + _tagged(printed, "note"))
+                      MCP_SCOPE["estimate"] if scope == est.SCOPE_ESTIMATE else scope]
+                     + [t for t in _tagged(printed, "note") if t != outside])
     # certify tests a zone only with min_labels_to_certify labels in it; say so before suggesting it (the agent
     # test of 2 October 2026: estimate pointed to certify where no condition could be certified at alpha 0.05)
     b1 = est.min_labels_to_certify(0.05, est.ZONE_DELTA)
@@ -840,8 +855,9 @@ def certify(
         per_line = [ln.strip() for ln in lines if ln.startswith("  ")]
         rest = [ln for ln in lines[1:] if not ln.startswith("  ")]
         said = [_cap(lines[0])[:-1] + " " + "; ".join(per_line) + "."] + [_cap(ln) for ln in rest]
-        said.append("Each rate holds for a condition's certified windows as a group, not for each window; outside them "
-                    f"nothing is certified. delta ({d:g}% here) can be set lower for a stronger statement.")
+        if r.get("certified_share_of_map") is not None:
+            said.append("Each rate holds for a condition's certified windows as a group, not for each window; outside "
+                        f"them nothing is certified. delta ({d:g}% here) can be set lower for a stronger statement.")
         summ.update({k: r.get(k) for k in ("by_condition", "delta_per_condition", "n_conditions_tested",
                                            "certified_share_of_map", "n_certified")})
         summ["per_condition"] = {name: {k: e.get(k) for k in ("tested", "coverage", "n_zone", "n_population",
@@ -855,7 +871,7 @@ def certify(
                 f"{r['n_population']}, confidence >= {r['threshold']:.4f}) are wrong at most {a:g}% of the time. The "
                 "rate holds for them as a group, not for each window, and outside them nothing is certified. This "
                 f"statement fails on at most {d:g}% of samples like this one (delta, which can be set lower; "
-                f"{r['rule']} rule; the exact upper bound on the zone's error rate at that level is "
+                f"{r['rule']} rule; the exact upper bound on this zone's error rate is "
                 f"{_pc(r['upper_bound'])})."]
         certified = True
     else:

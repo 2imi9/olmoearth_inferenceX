@@ -188,7 +188,8 @@ def test_the_command_line_route_the_margin_warning_names():
     p = np.exp(z - z.max(0))
     p /= p.sum(0)
     assert summary(assess_prediction(z, is_logit=True))["warnings"].count(MARGIN_FORM_WARNING) == 1
-    assert "pass the class probabilities without --logits" in MARGIN_FORM_WARNING
+    assert "on the command line without --logits" in MARGIN_FORM_WARNING
+    assert "through the MCP server with logits=false" in MARGIN_FORM_WARNING
     assert "In Python, pass form='top1'" in MARGIN_FORM_WARNING
     for patch in (1, 4):
         cli_route = assess_prediction(p, is_logit=False, patch=patch)

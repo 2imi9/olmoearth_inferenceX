@@ -40,7 +40,7 @@ Quick start
 The package needs Python 3.11 to 3.13.
 
 ```bash
-pip install "olmoearth-inferencex[geo]"    # 1.4.0; without [geo] it reads .npy only, no GeoTIFF
+pip install "olmoearth-inferencex[geo]"    # 1.4.1; without [geo] it reads .npy only, no GeoTIFF
 oe-inferencex demo
 ```
 
@@ -210,6 +210,11 @@ claude mcp add --scope user oe-inferencex -- uvx --from "olmoearth-inferencex[ge
 
 [Usage](https://olmoearth-inferencex.readthedocs.io/en/latest/Usage/#use-from-an-agent-mcp)
 gives the configuration for other agents.
+
+Use a strong model. In a pilot on two of Ai2's fine-tuned models (not preregistered), Claude
+Sonnet's replies kept the tools' numbers and their limits. Claude Haiku's often dropped the
+limits and advised labelling a review set to get the error rate. The tools refuse that input,
+so the numbers stay right, but the advice misleads.
 
 To see a result in a minute, write the demo tile into an empty folder, start the agent there
 and ask the question below:

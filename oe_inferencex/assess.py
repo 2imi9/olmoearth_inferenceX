@@ -83,12 +83,14 @@ SCOPE_ASSESS_K = ("The review sets above rank all {K} input conditions together.
 PROBABILITY_WARNING = ("probability input: confidence ties where probabilities saturate. For two classes, logits avoid "
                        "the ties; for more than two, keep the probabilities (exp76)")
 # The warning on a multi-class logit map scored by the default form. `form` is a Python argument only (1.3.1 said
-# "pass form='top1'" alone). The command line reaches a top-probability reading through probability input: the
+# "pass form='top1'" alone). The warning is written into assessment.json and a sample's sidecar, which an agent on the
+# MCP server reads too, so it names each interface's route (the agent test of 2 October 2026). The command line reaches a top-probability reading through probability input: the
 # window mean of the top probability, where form='top1' takes the window mean of its log, so the two orders agree
 # window by window only at a patch of one pixel (tests/test_assess.py).
 MARGIN_FORM_WARNING = ("multi-class logit margin: on Ai2's suite one minus the top probability ranked errors better on "
-                       "14 of 16 multi-class tasks (exp76). In Python, pass form='top1'. The command line has no such "
-                       "option: pass the class probabilities without --logits. That also ranks by the top probability, "
+                       "14 of 16 multi-class tasks (exp76). In Python, pass form='top1'. Elsewhere, pass the class "
+                       "probabilities (the softmax of the logits) instead of logits: on the command line without "
+                       "--logits, through the MCP server with logits=false. That also ranks by the top probability, "
                        "averaged over each window where form='top1' averages its log, and can tie where probabilities "
                        "saturate")
 CLASS_SHARE_TEXT = ("Descriptive only: the share of windows the map calls each class, within each condition. No "

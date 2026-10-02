@@ -548,6 +548,7 @@ def test_assess_says_where_to_look_and_that_it_is_not_an_error_rate(qs, capsys):
         assert said in out["limits"], said
     # the limit a small model dropped is inside the conclusion itself; the JSON keeps the package's full scope note
     assert "it does not say how wrong the map is" in out["conclusion"] and "review set is not a" in out["conclusion"]
+    assert "read from the class probabilities" in out["limits"] and "two highest logits" not in out["limits"]
     assert written["scope"] == assess_mod.SCOPE_ASSESS and written["scope"] not in out["limits"]
     assert "sample with design \"random\"" in out["next"]
 
@@ -583,6 +584,8 @@ def test_sample_estimate_certify_give_the_readme_numbers(qs):
     assert "delta, which can be set lower" in out["conclusion"]
     assert np.load(out["files"]["zone_mask"]).sum() == 3686
     assert "Outside the certified windows nothing is certified" in out["limits"] and f"Note: {est.PREFIX_NOTE}" in out["limits"]
+    assert f"Note: {mcp_server.MCP_SCOPE['certify']}" in out["limits"] and est.SCOPE_CERTIFY not in out["limits"]
+    assert json.load(open(out["files"]["zone"]))["scope"] == est.SCOPE_CERTIFY
 
     out = _ok("certify", sample_csv=csv_path, alpha=0.01, out_dir=str(qs / "strict"))
     assert out["summary"]["coverage"] is None and out["conclusion"].startswith("No zone was certified at alpha 1%")
@@ -657,7 +660,7 @@ def test_refusals_carry_the_package_message(qs):
     text = _refused("assess", scores=str(qs / "truth.tif"), out_dir=str(qs / "classmap"))
     assert "values run 0 to 3, which is not a probability map" in text           # scores, not only the class map
     text = _refused("assess", scores=str(qs / "missing.tif"), out_dir=str(qs / "x"))
-    assert "missing.tif is not a file" in text
+    assert "missing.tif is not a file" in text and "relative paths are read from" not in text
     text = _refused("sample", scores=str(qs / "scores.tif"), out_dir=str(qs / "x"), budget=300, design="condition")
     assert 'design="condition" needs condition' in text and "--" not in text       # the server's parameter names
 
@@ -779,6 +782,8 @@ def test_a_condition_sample_reads_as_one(qs, cond):
     assert json.load(open(res["files"]["estimate"]))["outside_condition_intervals"] == ["hazy"]
     assert ("windows. Each condition's interval is its own 95% statement; the intervals do not hold jointly. The "
             "whole-map rate is 5.5%. It lies below the interval of hazy") in res["conclusion"]
+    # the outside note is said once, in the conclusion, not again in limits
+    assert "It lies below the interval of hazy" not in res["limits"]
     assert res["limits"].count(mcp_server._mcp_words(est.CONDITION_WHOLE_MAP)) == 1     # in the server's words
     assert 'design="random" can give a narrower interval' in res["limits"] and "--design" not in res["limits"]
     assert "for each input condition" in res["next"]
@@ -792,6 +797,12 @@ def test_a_condition_sample_reads_as_one(qs, cond):
     assert f"at least {need_full} labels to be tested" in res["next"] and f"at least {need_split}" in res["next"]
     assert "the same condition layer" in res["next"]
     assert "Any zone needs" not in res["next"]
+    # nothing certified: no rate to hold as a group, and lowering delta would only need more labels
+    assert res["summary"]["certified_share_of_map"] is None
+    assert "not for each window" not in res["conclusion"] and "can be set lower" not in res["conclusion"]
+    res = _ok("certify", sample_csv=out["files"]["sample_csv"], alpha=0.05, out_dir=str(qs / "by_cond_05"))
+    assert res["summary"]["certified_share_of_map"] is not None
+    assert "not for each window" in res["conclusion"] and "can be set lower" in res["conclusion"]
 
 
 @needs_map
@@ -863,7 +874,25 @@ def test_a_one_row_logit_map_through_the_whole_flow(tmp_path):
     assert "sit on a class boundary" not in out["conclusion"] and "one window high" in out["limits"]
     assert mcp_server.MCP_MARGIN_WARNING in out["limits"] and "form='top1'" not in out["limits"]
     assert "the gap between the two highest logits, which has no upper bound" in out["limits"]
+    assert "The suspicion raster holds minus that score, so higher is more suspect" in out["limits"]
     assert f"a budget of up to {n}" in out["next"]
+
+    other = logits + rs.normal(0, 3, size=logits.shape).astype(np.float32)
+    np.save(tmp_path / "other.npy", other)
+    out = _ok("compare", a=str(tmp_path / "logits.npy"), b=str(tmp_path / "other.npy"), out_dir=str(tmp_path / "c"),
+              patch=1)
+    texts.append(out)
+    assert "times as often" not in out["conclusion"]              # a one-row grid: a caveat, not a finding
+    assert "the window grid is one window high, so boundaries are counted along one line only" in out["limits"]
+    assert "neither which map is better nor which is right" in out["conclusion"]
+
+    cwd = os.getcwd()
+    try:
+        os.chdir(tmp_path)
+        text = _refused("assess", scores="maps/missing.npy", out_dir=str(tmp_path / "x"), logits=True, patch=1)
+    finally:
+        os.chdir(cwd)
+    assert f"(relative paths are read from {tmp_path}" in text
 
     out = _ok("sample", scores=str(tmp_path / "logits.npy"), out_dir=str(tmp_path / "s"), budget=40, logits=True,
               patch=1, condition=str(tmp_path / "region.npy"), condition_names=["0=north", "1=south"])
@@ -896,11 +925,63 @@ def test_a_one_row_logit_map_through_the_whole_flow(tmp_path):
         wr = csv.DictWriter(f, fieldnames=list(rows[0]))
         wr.writeheader()
         wr.writerows(rows)
+    out = _ok("estimate", sample_csv=csv_path)
+    texts.append(out)
+    assert "a zone needs" not in out["next"]                      # 120 labels are enough at alpha 0.05
+    small = _ok("sample", scores=str(tmp_path / "logits.npy"), out_dir=str(tmp_path / "r30"), budget=30, logits=True,
+                patch=1, design="random")
+    with open(small["files"]["sample_csv"], newline="") as f:
+        few = list(csv.DictReader(f))
+    for row in few:
+        row["wrong"] = 0
+    with open(small["files"]["sample_csv"], "w", newline="") as f:
+        wr = csv.DictWriter(f, fieldnames=list(few[0]))
+        wr.writeheader()
+        wr.writerows(few)
+    out = _ok("estimate", sample_csv=small["files"]["sample_csv"])
+    assert f"a zone needs at least {est.min_labels_to_certify(0.05)} labels and this sample has 30" in out["next"]
+
     out = _ok("certify", sample_csv=csv_path, alpha=0.05)
     texts.append(out)
     assert out["conclusion"].startswith("Taken together, the ") and "not for each window" in out["conclusion"]
     assert "delta, which can be set lower" in out["conclusion"]
+    assert "the exact upper bound on this zone's error rate is" in out["conclusion"]
 
     for t in texts:
         for key in ("conclusion", "limits", "next"):
             assert not re.search(r"--[a-z]", t[key]), (key, t[key])
+
+
+@needs_mcp
+def test_a_one_column_map_and_a_path_with_dashes(tmp_path):
+    """A grid one window wide is said to be wide; an output directory whose name holds an option-like `--patch` comes
+    back unchanged in every text (review of 1.4.1: the translation turned run--patch8 into runpatch8)."""
+    rs = np.random.RandomState(1)
+    np.save(tmp_path / "col.npy", rs.normal(0, 3, size=(4, 90, 1)).astype(np.float32))
+    np.save(tmp_path / "col2.npy", rs.normal(0, 3, size=(4, 90, 1)).astype(np.float32))
+    out_dir = tmp_path / "run--patch8"
+    out = _ok("assess", scores=str(tmp_path / "col.npy"), out_dir=str(out_dir), logits=True, patch=1)
+    assert "one window wide" in out["limits"] and "one window high" not in out["limits"]
+    assert out["files"]["review_set_0.05"] in out["conclusion"] and "run--patch8" in out["conclusion"]
+    out = _ok("compare", a=str(tmp_path / "col.npy"), b=str(tmp_path / "col2.npy"), out_dir=str(out_dir / "c--out"),
+              patch=1)
+    assert "one window wide" in out["limits"] and "times as often" not in out["conclusion"]
+    assert out["files"]["differing_windows"] in out["conclusion"]
+
+
+@needs_map
+def test_a_one_row_geotiff_gets_the_caveat(tmp_path):
+    """The caveat reads the window grid from a GeoTIFF too, through rasterio."""
+    import rasterio
+    from rasterio.transform import from_origin
+    rs = np.random.RandomState(2)
+    for name in ("row.tif", "row2.tif"):
+        p = rs.dirichlet(np.ones(3), size=(1, 80)).transpose(2, 0, 1).astype(np.float32)
+        with rasterio.open(tmp_path / name, "w", driver="GTiff", height=1, width=80, count=3, dtype="float32",
+                           crs="EPSG:32632", transform=from_origin(500000, 4000000, 10, 10)) as dst:
+            dst.write(p)
+    out = _ok("assess", scores=str(tmp_path / "row.tif"), out_dir=str(tmp_path / "a"), patch=1)
+    assert "one window high" in out["limits"] and "sit on a class boundary" not in out["conclusion"]
+    assert "pixel and map coordinates" in out["conclusion"]
+    out = _ok("compare", a=str(tmp_path / "row.tif"), b=str(tmp_path / "row2.tif"), out_dir=str(tmp_path / "c"), patch=1)
+    assert "one window high" in out["limits"] and "times as often" not in out["conclusion"]
