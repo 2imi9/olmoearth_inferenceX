@@ -319,12 +319,12 @@ def test_estimate_refuses_half_labels_other_delimiters_and_says_so_without_a_tra
     rows[3]["wrong"] = "0.5"
     with open(out, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=rows[0].keys()); w.writeheader(); w.writerows(rows)
-    with pytest.raises(SystemExit, match="exactly 1 or 0.*row 5"):
+    with pytest.raises(SystemExit, match=r"exactly 1, 0 or \? per window.*row 5"):
         main(["estimate", str(out)])
     rows[3]["wrong"] = "2"
     with open(out, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=rows[0].keys()); w.writeheader(); w.writerows(rows)
-    with pytest.raises(SystemExit, match="exactly 1 or 0"):
+    with pytest.raises(SystemExit, match=r"exactly 1, 0 or \?"):
         main(["estimate", str(out)])
     rows[3]["wrong"] = "1"
     with open(out, "w", newline="") as f:
@@ -792,7 +792,9 @@ def test_existing_outputs_are_byte_identical_to_1_3_1(tmp_path):
       stdout of the six probability samples and an entry of `warnings` in their sidecars, in the two probability
       assessments and in the two probability API summaries;
     - the warning on a tiles sample, which quoted exp78's design for the shipped one: a line of
-      sample_tiles.estimate's stdout and the `warning` of its JSON."""
+      sample_tiles.estimate's stdout and the `warning` of its JSON;
+    - the instruction sample prints for the reviewer, which now offers ? for a window that cannot be judged: a stretch
+      of the first line of the seven sample outputs."""
     from oe_inferencex.assess import SCOPE_ASSESS
     from oe_inferencex.estimate import SCOPE_CERTIFY, SCOPE_ESTIMATE
     gen = _golden_module()
@@ -803,10 +805,12 @@ def test_existing_outputs_are_byte_identical_to_1_3_1(tmp_path):
     golden = json.load(open(os.path.join(GOLDEN, "manifest.json")))
     assert sorted(files) == golden["files"]                     # no file added or lost, condition.tif included
     assert manifest["steps"] == golden["steps"] and manifest["api"] == golden["api"]
-    # the list is exact: four changes, in exactly these thirty files, every one of them a golden file, and each new
-    # text is the one the package keeps
-    listed = sorted(n for c in changes.CHANGES for n in c["files"])
-    assert len(changes.CHANGES) == 4 and len(listed) == len(set(listed)) == 30 and set(listed) <= set(golden["files"])
+    # the list is exact: four changes of whole texts in exactly these thirty files, and the reviewer's instruction
+    # in the seven sample outputs, every one of them a golden file, and each new text is the one the package keeps
+    listed = sorted(n for c in changes.CHANGES[:4] for n in c["files"])
+    assert len(changes.CHANGES) == 5 and len(listed) == len(set(listed)) == 30 and set(listed) <= set(golden["files"])
+    fill = changes.CHANGES[4]["files"]
+    assert len(fill) == len(set(fill)) == 7 and set(fill) <= set(golden["files"]) and changes.CHANGES[4]["within_line"]
     for c in changes.CHANGES:
         module, constant = c["constant"]
         assert getattr(importlib.import_module(module), constant) == c["new"], constant
@@ -947,7 +951,7 @@ def test_certify_by_condition_writes_the_union_mask_and_removes_a_stale_one(tmp_
     assert all(z[k] is None for k in ("coverage", "n_zone", "threshold", "upper_bound")) and z["levels"] == []
     assert z["by_condition"] is True and "zone_indices_in_order" not in json.dumps(z)
     assert z["zone_mask"] == str(tmp_path / "r_zone.npy")
-    _, _, idx, sample, wrong = _labelled_sample(str(out), "certify")
+    _, _, idx, sample, wrong, _ = _labelled_sample(str(out), "certify")
     arr = assess_prediction(probs, is_logit=False, patch=4, nodata_mask=~np.isfinite(probs).all(0))["arrays"]
     api = est.certify_by_condition(sample, wrong, arr["confidence"].ravel(), 0.3, valid=arr["valid"].ravel())
     union = np.zeros(32 * 32, bool)

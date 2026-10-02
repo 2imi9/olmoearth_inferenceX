@@ -651,16 +651,23 @@ def cmd_sample(args):
         if K >= 2:
             notes.append(_certify_need_note(cond["names"], cond["n_labelled"]))
     print(f"{len(idx)} windows to label of {sample['n_population']} valid ({what}); wrote {args.out} and its .json. "
-          f"Fill the `wrong` column with 1 or 0 per window, then run: oe-inferencex estimate {args.out}"
+          f"{FILL_INSTRUCTION} oe-inferencex estimate {args.out}"
           + "".join(f"\nwarning: {w}" for w in out.get("warnings", []))
           + (f"\nnote: {sample['note']}" if "note" in sample else "")
           + "".join(f"\nnote: {n}" for n in notes if n))
     return 0
 
 
+# What `sample` prints for the reviewer. Until 1.4.1 it asked for 1 or 0 only, and a reviewer who could not judge a
+# window had no way to say so that `estimate` accepted.
+FILL_INSTRUCTION = ("Fill the `wrong` column with 1 or 0 per window, or ? where a window cannot be judged (keep its row), "
+                    "then run:")
+
+
 def _labelled_sample(path, command):
-    """A filled-in sample CSV and its sidecar design, checked: the rows are the design's, every `wrong` is 0 or 1.
-    Returns (sidecar, rows, indices, sample dict for the estimators, wrong)."""
+    """A filled-in sample CSV and its sidecar design, checked: the rows are the design's, every `wrong` is 0, 1 or `?`
+    (a window the reviewer could not judge). Returns (sidecar, rows, indices, sample dict for the estimators, wrong,
+    unjudged), with `wrong` 0 where the row is `?`."""
     side_path = path[:-4] + ".json" if path.endswith(".csv") else path + ".json"
     if not os.path.exists(side_path):
         raise SystemExit(f"{side_path} not found; `{command}` needs the sidecar `sample` wrote beside the CSV")
@@ -682,15 +689,20 @@ def _labelled_sample(path, command):
     blank = [i for i, r in enumerate(rows) if str(r.get("wrong", "")).strip() == ""]
     if blank:
         raise SystemExit(f"{len(blank)} of {len(rows)} windows have no `wrong` value (first at row {blank[0] + 2}); "
-                         "every sampled window needs a 1 or a 0, or the design's interval is not the one you get")
+                         "every sampled window needs a 1 or a 0, or a ? where it cannot be judged, or the design's "
+                         "interval is not the one you get")
     # Exactly 0 or 1. int(float(x)) would read a reviewer's "0.5" (not sure) as right and "1.9" as wrong, with
     # exit 0; a spreadsheet's "TRUE" is refused rather than guessed at.
-    ok = {"0": 0, "1": 1, "0.0": 0, "1.0": 1}
+    # A window the reviewer cannot judge is `?`: it stays in the design (until 1.4.1 this message told the reviewer
+    # to leave it out, and a CSV that did was refused for not matching its design), and estimate and certify bound it.
+    ok = {"0": 0, "1": 1, "0.0": 0, "1.0": 1, "?": 0}
     bad = [(i + 2, r["wrong"]) for i, r in enumerate(rows) if str(r["wrong"]).strip() not in ok]
     if bad:
-        raise SystemExit(f"`wrong` must be exactly 1 or 0 per window; {len(bad)} row(s) are not, first at row {bad[0][0]}: "
-                         f"{bad[0][1]!r}. A window you could not judge should be left out of the budget, not scored")
+        raise SystemExit(f"`wrong` must be exactly 1, 0 or ? per window; {len(bad)} row(s) are not, first at row "
+                         f"{bad[0][0]}: {bad[0][1]!r}. Write ? where you cannot judge a window: estimate then bounds it "
+                         "both ways and certify counts it as wrong; do not remove its row")
     wrong = np.array([ok[str(r["wrong"]).strip()] for r in rows])
+    unjudged = np.array([str(r["wrong"]).strip() == "?" for r in rows])
     cond = side.get("condition")
     if "condition" in rows[0] and isinstance(cond, dict) and side.get("condition_grid") is not None:
         # The condition is fixed when the sample is drawn, and the sidecar is its source of truth: the raster is never
@@ -708,7 +720,7 @@ def _labelled_sample(path, command):
                              "wrote without changing that column")
     sample = {k: (np.asarray(v) if k in ("indices", "strata", "strata_of_population", "tiles", "condition_grid") else v)
               for k, v in side.items()}
-    return side, rows, idx, sample, wrong
+    return side, rows, idx, sample, wrong, unjudged
 
 
 def _rounding_tolerance(text):
@@ -782,22 +794,31 @@ def _reference_classes(rows, path):
     return np.array(vals)
 
 
+def _rate(res):
+    """A rate as printed: the estimate, or the range unjudged windows and reviewer error leave (`estimate_range`)."""
+    if res.get("estimate") is None and res.get("estimate_range"):
+        lo, hi = res["estimate_range"]
+        return f"{100 * lo:.1f}% to {100 * hi:.1f}%"
+    return f"{100 * res['estimate']:.1f}%"
+
+
 def _outside_note(res):
     """The closing note of `estimate` when the whole-map rate lies outside some conditions' intervals, worded by the
     direction observed: a condition whose interval lies above the whole-map rate is worse than the map as a whole,
     one whose interval lies below it better. Until 2026-09-29 the note said the whole-map rate "can hide a condition
     that is much worse" whatever the direction, for a better condition too, and for a condition labelled in full,
     whose interval is its exact rate."""
-    per, whole = res["per_condition"], res["estimate"]
+    per = res["per_condition"]
+    lo_w, hi_w = res["estimate_range"] if res.get("estimate") is None else (res["estimate"], res["estimate"])
 
     def named(names):
         names = [n + (" (labelled in full, so its interval is its exact rate)"
                       if per[n]["n_labelled"] == per[n]["n_population"] else "") for n in names]
         return names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
 
-    said = [f"note: the whole-map rate is {100 * whole:.1f}%."]
-    for names, side, how in (([n for n in res["outside_condition_intervals"] if per[n]["low"] > whole], "below", "worse"),
-                             ([n for n in res["outside_condition_intervals"] if per[n]["high"] < whole], "above", "better")):
+    said = [f"note: the whole-map rate is {_rate(res)}."]
+    for names, side, how in (([n for n in res["outside_condition_intervals"] if per[n]["low"] > hi_w], "below", "worse"),
+                             ([n for n in res["outside_condition_intervals"] if per[n]["high"] < lo_w], "above", "better")):
         if names:
             one = len(names) == 1
             said.append(f"It lies {side} the interval{'' if one else 's'} of {named(names)}, so "
@@ -813,9 +834,18 @@ def cmd_estimate(args):
         # wrong --scores path pass unnoticed (release check of 24 September)
         raise SystemExit("estimate: --scores and --nodata are read only with --per-class; the error rate comes from the "
                          "CSV and its sidecar alone")
-    side, rows, idx, sample, wrong = _labelled_sample(args.sample, "estimate")
+    side, rows, idx, sample, wrong, unjudged = _labelled_sample(args.sample, "estimate")
+    fa, miss = args.reviewer_false_alarm or 0.0, args.reviewer_miss or 0.0
+    for flag, v in (("--reviewer-false-alarm", fa), ("--reviewer-miss", miss)):
+        if not 0 <= v < 1:
+            raise SystemExit(f"estimate: {flag} must be at least 0 and below 1, got {v:g}")
+    if args.per_class and (unjudged.any() or fa or miss):
+        raise SystemExit("estimate --per-class needs the class seen in every window and a reviewer taken as right: "
+                         + (f"{int(unjudged.sum())} window(s) are ? (could not be judged)" if unjudged.any() else
+                            "--reviewer-false-alarm and --reviewer-miss do not apply to the per-class table")
+                         + ". Run estimate without --per-class for the error rate with its bounds")
     try:
-        res = est.estimate_error_rate(sample, wrong)
+        res = est.estimate_error_rate(sample, wrong, unjudged=unjudged, reviewer_false_alarm=fa, reviewer_miss=miss)
     except ValueError as exc:
         raise SystemExit(f"estimate: {exc}")
     per_class_text = ""
@@ -869,11 +899,10 @@ def cmd_estimate(args):
         for name, row in res["per_condition"].items():
             where = (f"{row['n_labelled']} labelled of {row['n_population']} windows "
                      f"({100 * row['share_of_map']:.1f}% of the map)")
-            if row["estimate"] is None:
+            if not row["n_labelled"]:
                 lines.append(f"{name}: no labelled window fell in this condition, so nothing can be said about it; {where}")
             else:
-                lines.append(f"{name} {100 * row['estimate']:.1f}% ({100 * row['low']:.1f}% to {100 * row['high']:.1f}%), "
-                             f"{where}")
+                lines.append(f"{name} {_rate(row)} ({100 * row['low']:.1f}% to {100 * row['high']:.1f}%), {where}")
         if res["outside_condition_intervals"]:
             lines.append(_outside_note(res))
         if res["design"] == "condition" and len(res["per_condition"]) > 1:
@@ -883,9 +912,10 @@ def cmd_estimate(args):
         cond_text = "\n" + "\n".join(lines)
     # the interval is printed as its two ends: it is not symmetric about the estimate (Wilson never is, and a
     # clipped one is not), so "estimate +/- x" would name an interval that is not the one written
-    print(f"error rate {100 * res['estimate']:.1f}%, 95% interval {100 * res['low']:.1f}% to {100 * res['high']:.1f}% "
+    print(f"error rate {_rate(res)}, 95% interval {100 * res['low']:.1f}% to {100 * res['high']:.1f}% "
           f"(half-width {100 * res['half_width']:.1f} points), from {res['n_labelled']} labelled windows of {res['n_population']}; "
-          f"{res['method']}" + (f"\nwarning: {res['warning']}" if "warning" in res else "") + cond_text + per_class_text
+          f"{res['method']}" + (f"\nnote: {res['bounds_note']}" if res.get("bounds_note") else "")
+          + (f"\nwarning: {res['warning']}" if "warning" in res else "") + cond_text + per_class_text
           + (f"\nwarning: {res['per_class_warning']}" if "per_class_warning" in res else "") + f"\nwrote {out}")
     return 0
 
@@ -895,7 +925,16 @@ def cmd_certify(args):
     random labelled sample so that the statement fails with probability at most --delta (exp80). A sample that
     records an input condition is certified per condition instead, with --delta split over the conditions tested
     (certify_by_condition); no whole-map zone is issued for it."""
-    side, rows, idx, sample, wrong = _labelled_sample(args.sample, "certify")
+    side, rows, idx, sample, wrong, unjudged = _labelled_sample(args.sample, "certify")
+    # A window that could not be judged counts as wrong: that can only certify less, so the guarantee holds whatever
+    # made it hard to judge. certify takes no reviewer error rate: testing at alpha (1 - miss) would need the miss
+    # rate to hold inside every zone the test can certify, where a model's confident errors sit, and a rate measured
+    # on the whole map does not give that (review of 2 October 2026: misses placed in the confident half certified a
+    # zone wrong 10% of the time at alpha 5% on every draw).
+    wrong = np.where(unjudged, 1, wrong)
+    alpha = args.alpha
+    bounds = ([f"{int(unjudged.sum())} window(s) that could not be judged (?) are counted as wrong, which keeps the "
+               "guarantee whatever made them hard to judge and certifies less"] if unjudged.any() else [])
     by_condition = side.get("condition_grid") is not None and side.get("design") in ("random", "condition")
     if side.get("design") != "random" and not by_condition:
         raise SystemExit(f"certify needs a random sample: this CSV was drawn with the {side.get('design')!r} design. The "
@@ -905,9 +944,9 @@ def cmd_certify(args):
     out = args.out or (args.sample[:-4] + "_zone.json" if args.sample.endswith(".csv") else args.sample + "_zone.json")
     mask_path = out[:-5] + ".npy" if out.endswith(".json") else out + ".npy"
     if by_condition:
-        return _certify_by_condition(args, sample, wrong, margin, valid_w, out, mask_path)
+        return _certify_by_condition(args, sample, wrong, margin, valid_w, out, mask_path, bounds, int(unjudged.sum()))
     try:
-        res = est.certify_zone(margin.ravel(), idx, wrong, args.alpha, delta=args.delta, rule=args.rule, valid=valid_w.ravel())
+        res = est.certify_zone(margin.ravel(), idx, wrong, alpha, delta=args.delta, rule=args.rule, valid=valid_w.ravel())
     except ValueError as exc:
         raise SystemExit(f"certify: {exc}")
     hw, ww = margin.shape
@@ -919,20 +958,24 @@ def cmd_certify(args):
     elif os.path.exists(mask_path):
         os.remove(mask_path)          # a previous run's zone must not sit beside a result that certifies none
     res["sample"] = os.path.abspath(args.sample)
+    if bounds:
+        res.update({"n_unjudged": int(unjudged.sum()), "bounds_note": "; ".join(bounds)})
     with open(out, "w") as f:
         json.dump(res, f, indent=1, default=float)
+    tail = "".join(f"\nnote: {b}" for b in bounds)
     if res["coverage"] is None:
-        print(f"no zone certified at alpha={args.alpha:g}, delta={args.delta:g} from {res['n_labelled']} labels. {res['note']}\nwrote {out}")
+        print(f"no zone certified at alpha={args.alpha:g}, delta={args.delta:g} from {res['n_labelled']} labels. {res['note']}"
+              f"{tail}\nwrote {out}")
     else:
         print(f"the {100 * res['coverage']:.0f}% most confident windows ({res['n_zone']} of {res['n_population']}, confidence margin >= "
               f"{res['threshold']:.4f}) are wrong at most {100 * args.alpha:g}% of the time; this statement fails on at most "
               f"{100 * args.delta:g}% of samples like this one ({args.rule} rule; the exact upper bound on the zone's error "
               f"rate at that level is {100 * res['upper_bound']:.1f}%). Outside the zone nothing is certified.\n"
-              f"{res['note']}\nwrote {out} and the window mask {mask_path}")
+              f"{res['note']}{tail}\nwrote {out} and the window mask {mask_path}")
     return 0
 
 
-def _certify_by_condition(args, sample, wrong, margin, valid_w, out, mask_path):
+def _certify_by_condition(args, sample, wrong, margin, valid_w, out, mask_path, bounds=(), n_unjudged=0):
     """certify for a sample that records an input condition: a zone inside each condition with enough labels, and
     the union of the zones as the window mask. The top-level zone fields stay null, since the union is not "the
     most confident share of the map" that readers of those fields take them to be."""
@@ -953,6 +996,8 @@ def _certify_by_condition(args, sample, wrong, margin, valid_w, out, mask_path):
     elif os.path.exists(mask_path):
         os.remove(mask_path)          # a previous run's zone must not sit beside a result that certifies none
     res["sample"] = os.path.abspath(args.sample)
+    if bounds:
+        res.update({"n_unjudged": n_unjudged, "bounds_note": "; ".join(bounds)})
     with open(out, "w") as f:
         json.dump(res, f, indent=1, default=float)
     a, d, b1 = args.alpha, args.delta, res["min_labels_to_certify"]
@@ -987,6 +1032,7 @@ def _certify_by_condition(args, sample, wrong, margin, valid_w, out, mask_path):
                      f"{mask_path}); outside them nothing is certified")
     else:
         lines.append("no zone is certified in any condition, so nothing is certified")
+    lines += [f"note: {b}" for b in bounds]
     print("\n".join(lines) + f"\nwrote {out}")
     return 0
 
@@ -1076,6 +1122,12 @@ def build_parser():
                    help="also user's accuracy, producer's accuracy and error-adjusted share per class; needs a "
                         "`reference_class` column in the CSV and the map's scores (from the sidecar, or --scores)")
     e.add_argument("--scores", default=None, help="with --per-class: the raster `sample` was run on, if it has moved")
+    e.add_argument("--reviewer-false-alarm", type=float, default=None, metavar="E0",
+                   help="at most this share of the truly correct windows does the reviewer mark wrong (0 to below 1); "
+                        "widens the interval's lower end")
+    e.add_argument("--reviewer-miss", type=float, default=None, metavar="E1",
+                   help="at most this share of the truly wrong windows does the reviewer mark right (0 to below 1); "
+                        "widens the interval's upper end")
     e.add_argument("--nodata", type=float, default=None,
                    help="with --per-class: the no-data value `sample` was run with (default: the one its sidecar records; "
                         "a different value is refused); only needed for a sample written by 1.2.0")

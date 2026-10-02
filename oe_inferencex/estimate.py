@@ -820,7 +820,129 @@ def _union_interval(k, n, sizes, alpha=0.05):
     return float(theta), float(lo), float(hi), L
 
 
-def estimate_error_rate(sample, wrong):
+# Windows the reviewer could not judge, and a reviewer who errs (the CLI defect of 1 October 2026: the command told a
+# reviewer to leave out a window they could not judge, and refused every CSV that did). Both rest on one property: the
+# exact intervals are monotone in the error count, and the stratified estimate in each stratum's, so an interval that
+# covers at the worst case covers at every case in between.
+UNJUDGED_NOTE = ("{u} of the {n} labelled windows could not be judged (`?`). The lower end counts every one of them as "
+                 "right and the upper end every one as wrong, so the interval covers at least 95% whatever made them "
+                 "hard to judge, and the estimate is a range for the same reason. Judging them narrows it.")
+UNJUDGED_STRATIFIED_NOTE = ("Under this design any `?` also replaces the design's Wilson interval, which does not move one way "
+                            "with the error count, by the union bound over its strata, which does and is much wider: most "
+                            "of the width comes from that switch, not from the `?` windows themselves. Judging every "
+                            "window restores the narrower interval; a random sample bounds `?` at the cost of each "
+                            "window's own range.")
+REVIEWER_NOTE = ("The interval is widened for a reviewer who marks at most {fa:.3g} of the truly correct windows wrong "
+                 "(false alarms) and misses at most {miss:.3g} of the truly wrong ones: the lower end of the labels' "
+                 "interval becomes (low - {fa:.3g}) / (1 - {fa:.3g}) and the upper end high / (1 - {miss:.3g}). It covers "
+                 "the true rate whenever the labels' interval covers the rate the reviewer's labels would show on every "
+                 "window and the reviewer errs no more often than that; the bounds are the user's, not measured here. "
+                 "Per input condition they must hold within each condition.")
+
+
+def _stratum_union(sample, wrong):
+    """The stratified estimate and the union-bound interval over a confidence or proportional design's strata: each
+    stratum's exact interval at 1 - 0.05 / L, weighted by its share of the map (`_union_interval`). Exact and monotone
+    in each stratum's error count, so it bounds windows the reviewer could not judge, where the design's own Wilson
+    interval on an effective sample size is neither. Returns (estimate, low, high, L)."""
+    idx = np.asarray(sample["indices"], int)
+    pop = np.asarray(sample["strata_of_population"], int)
+    pos = {int(g): i for i, g in enumerate(pop)}
+    local = np.array([pos[int(g)] for g in idx])
+    strata, sizes = np.asarray(sample["strata"]), list(sample["sizes"])
+    n_h = np.bincount(strata[local], minlength=len(sizes))
+    k_h = np.bincount(strata[local], weights=np.asarray(wrong, float), minlength=len(sizes)).round().astype(int)
+    return _union_interval(k_h, n_h, sizes)
+
+
+def estimate_error_rate(sample, wrong, unjudged=None, reviewer_false_alarm=0.0, reviewer_miss=0.0):
+    """The error rate of the whole map from the labelled sample, with the interval its design earns
+    (`_estimate_core`), and, when asked, bounded for windows the reviewer could not judge and for a reviewer who errs.
+
+    unjudged : True per labelled window the reviewer could not judge (`?` in the CSV), in the order of the indices;
+        its `wrong` value is ignored. The interval's lower end counts these windows as right and its upper end as
+        wrong; the exact intervals are monotone in the error count, so the interval covers at least 95% whatever made
+        them hard to judge. Under the confidence and proportional designs the interval is then the union bound over
+        their strata (`_stratum_union`), exact, in place of the design's Wilson interval, which is not monotone. The
+        tiles design refuses unjudged windows.
+    reviewer_false_alarm, reviewer_miss : bounds the user states, in [0, 1): the share of truly correct windows the
+        reviewer marks wrong and of truly wrong windows the reviewer marks right. The labels show the rate
+        p = theta (1 - e1) + (1 - theta) e0, so theta lies in [(p - E0) / (1 - E0), p / (1 - E1)], and those maps,
+        increasing in p, are applied to the interval's ends (the identified set is sharp, proved in Lean in the
+        repository's lean/ folder; tests/test_unjudged.py checks the coverage by exact enumeration).
+    Without these the result is `_estimate_core`'s, unchanged. With them `estimate_range` gives the range the labels
+    allow, and `estimate` is None unless that range is one value; each condition's row is bounded the same way.
+    Sharpness is proved in lean/, not tested here; tests/test_unjudged.py checks coverage and the formulas."""
+    fa, miss = float(reviewer_false_alarm), float(reviewer_miss)
+    for name, v in (("reviewer_false_alarm", fa), ("reviewer_miss", miss)):
+        if not 0 <= v < 1:
+            raise ValueError(f"{name} must be at least 0 and below 1, got {v:g}")
+    wrong = np.asarray(wrong, dtype=np.float64).ravel()
+    unk = np.zeros(wrong.size, bool) if unjudged is None else np.asarray(unjudged, bool).ravel()
+    if unk.size != wrong.size:
+        raise ValueError(f"{unk.size} unjudged flags for {wrong.size} labels")
+    u = int(unk.sum())
+    if u == 0 and fa == 0 and miss == 0:
+        return _estimate_core(sample, wrong)
+    design = sample["design"]
+    if u and design == "tiles":
+        raise ValueError("windows that could not be judged are not supported under the tiles design: its cluster "
+                         "interval is not monotone in the error count, so no worst case bounds them. Judge every "
+                         "window, or draw a random sample")
+    w_lo, w_hi = np.where(unk, 0.0, wrong), np.where(unk, 1.0, wrong)
+    lo_res = _estimate_core(sample, w_lo)
+    hi_res = _estimate_core(sample, w_hi) if u else lo_res
+    out = dict(lo_res)
+
+    def down(x):                               # the lower end for a reviewer with false alarms
+        return x if not fa else max(0.0, (x - fa) / (1 - fa))
+
+    def up(x):                                 # the upper end for a reviewer who misses errors
+        return x if not miss else min(1.0, x / (1 - miss))
+
+    if u and design in ("confidence", "proportional"):
+        e_lo, low, _, L = _stratum_union(sample, w_lo)
+        e_hi, _, high, _ = _stratum_union(sample, w_hi)
+        for k in ("effective_n", "starved_strata", "warning"):     # they describe the Wilson interval, not this one
+            out.pop(k, None)
+        out.update({"strata_in_interval": L,
+                    "method": (f"stratified by confidence margin; with windows that could not be judged, the sum of each "
+                               f"stratum's exact interval at 1 - 0.05/{L}, weighted by its share of the map (union "
+                               "bound), which covers at least 95% by construction")})
+    else:
+        e_lo, e_hi, low, high = lo_res["estimate"], hi_res["estimate"], lo_res["low"], hi_res["high"]
+    if fa or miss:
+        out["labels_interval"] = {"low": low, "high": high}
+    out.update({"estimate": None, "estimate_range": [down(e_lo), up(e_hi)], "low": down(low), "high": up(high),
+                "n_unjudged": u, "reviewer_false_alarm": fa, "reviewer_miss": miss})
+    if out["estimate_range"][0] == out["estimate_range"][1]:      # nothing to bound: the value, not "x% to x%"
+        out["estimate"] = out["estimate_range"][0]
+    out["half_width"] = (out["high"] - out["low"]) / 2
+    notes = ([UNJUDGED_NOTE.format(u=u, n=int(wrong.size))] if u else []) + (
+        [UNJUDGED_STRATIFIED_NOTE] if u and design in ("confidence", "proportional") else []) + (
+        [REVIEWER_NOTE.format(fa=fa, miss=miss)] if fa or miss else [])
+    out["bounds_note"] = " ".join(notes)
+    if lo_res.get("by_condition"):
+        per, outside = {}, []
+        r_lo, r_hi = out["estimate_range"]
+        for name, row_lo in lo_res["per_condition"].items():
+            row_hi = hi_res["per_condition"][name]
+            row = dict(row_lo)
+            if row_lo["n_labelled"]:
+                row.update({"estimate": None, "estimate_range": [down(row_lo["estimate"]), up(row_hi["estimate"])],
+                            "low": down(row_lo["low"]), "high": up(row_hi["high"]),
+                            "n_unjudged": int(row_hi["n_wrong"] - row_lo["n_wrong"])})
+                row["half_width"] = (row["high"] - row["low"]) / 2
+                if row["estimate_range"][0] == row["estimate_range"][1]:
+                    row["estimate"] = row["estimate_range"][0]
+                if row["low"] > r_hi or row["high"] < r_lo:
+                    outside.append(name)
+            per[name] = row
+        out.update({"per_condition": per, "outside_condition_intervals": outside})
+    return out
+
+
+def _estimate_core(sample, wrong):
     """The error rate of the whole map from the labelled sample, with the interval its design earns.
 
     sample : what `sample_for_estimation` returned

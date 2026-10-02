@@ -68,18 +68,32 @@ CHANGES = (
              "Prefer the confidence design"),
      "constant": ("oe_inferencex.estimate", "TILES_WARNING"),
      "files": ("sample_tiles.estimate.json", "sample_tiles.estimate.stdout.txt")},
+    {"why": "the instruction sample prints for the reviewer. It asked for 1 or 0 only, and a reviewer who could not "
+            "judge a window had no way to say so that estimate accepted: the refusal of anything else told them to "
+            "leave the window out, and a CSV without it did not match its design. ? is now accepted and bounded",
+     "old": "Fill the `wrong` column with 1 or 0 per window, then run:",
+     "new": ("Fill the `wrong` column with 1 or 0 per window, or ? where a window cannot be judged (keep its row), "
+             "then run:"),
+     "within_line": True,
+     "constant": ("oe_inferencex.cli", "FILL_INSTRUCTION"),
+     "files": ("sample_confidence.stdout.txt", "sample_logits3_random.stdout.txt", "sample_proportional.stdout.txt",
+               "sample_random.stdout.txt", "sample_scene_confidence.stdout.txt", "sample_scene_random.stdout.txt",
+               "sample_tiles.stdout.txt")},
 )
 LINE_PREFIXES = ("", "warning: ")
 
 
-def _replace(name, data, old, new):
+def _replace(name, data, old, new, within_line=False):
     """(data with every whole occurrence of old replaced by new, the number replaced). Only JSON and stdout files
-    can hold a change; any other file (arrays, CSVs) is returned as it is."""
+    can hold a change; any other file (arrays, CSVs) is returned as it is. A change `within_line` is a stretch of a
+    stdout line (a line that also holds a path or a count); it is replaced wherever it occurs in a stdout file."""
     if name.endswith(".json"):
         o, n = json.dumps(old).encode(), json.dumps(new).encode()     # a whole string value, quotes included
         return data.replace(o, n), data.count(o)
     if not name.endswith(".stdout.txt"):
         return data, 0
+    if within_line:
+        return data.replace(old.encode(), new.encode()), data.count(old.encode())
     lines, count = data.decode().split("\n"), 0
     for i, line in enumerate(lines):
         for pre in LINE_PREFIXES:
@@ -92,7 +106,7 @@ def expected(name, data):
     """The golden file `name` (its 1.3.1 bytes `data`) as the package must write it now."""
     for c in CHANGES:
         assert c["old"] != c["new"] and json.dumps(c["new"])[1:-1] == c["new"], c["why"]   # no escaping to hide in
-        data, count = _replace(name, data, c["old"], c["new"])
+        data, count = _replace(name, data, c["old"], c["new"], c.get("within_line", False))
         want = 1 if name in c["files"] else 0
         assert count == want, f"{name}: {count} whole occurrences of a listed 1.3.1 text, expected {want}: {c['why']}"
         assert c["old"].encode() not in data, f"{name}: a listed 1.3.1 text is left inside other text: {c['why']}"

@@ -88,7 +88,7 @@ experiments used 300.
 
 ```console
 $ oe-inferencex sample scores.tif --budget 300 --design random --out to_label.csv
-300 windows to label of 4096 valid (random design); wrote to_label.csv and its .json. Fill the `wrong` column with 1 or 0 per window, then run: oe-inferencex estimate to_label.csv
+300 windows to label of 4096 valid (random design); wrote to_label.csv and its .json. Fill the `wrong` column with 1 or 0 per window, or ? where a window cannot be judged (keep its row), then run: oe-inferencex estimate to_label.csv
 warning: probability input: confidence ties where probabilities saturate. For two classes, logits avoid the ties; for more than two, keep the probabilities (exp76)
 ```
 
@@ -241,7 +241,8 @@ Example questions, on the files of the quick start above. Without the package in
   of come last. It needs the model's per-class scores: a class map alone is refused, or gives an
   order that is not evidence.
 - "How wrong is scores.tif? Pick 300 windows at random for me to label." Uses `sample`, then
-  `estimate`. In between, you set `wrong` to 1 or 0 on every row of the sample. The answer is
+  `estimate`. In between, you set `wrong` to 1 or 0 on every row of the sample, or `?` where a
+  window cannot be judged. The answer is
   an error rate with a 95% interval. No tool labels a window, and the interval assumes your
   labels are right.
 - "Which part of scores.tif can I trust at 5% error?" Uses `certify`, on the labels of that

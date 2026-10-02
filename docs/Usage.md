@@ -181,7 +181,7 @@ interval.
 
 ```bash
 oe-inferencex sample water_prob.tif --budget 300 --out to_label.csv
-# the reviewer fills the `wrong` column with 1 or 0 for each window
+# the reviewer fills the `wrong` column with 1 or 0 for each window, or ? where it cannot be judged
 oe-inferencex estimate to_label.csv
 oe-inferencex estimate to_label.csv --per-class    # once a `reference_class` column is filled in as well
 ```
@@ -190,12 +190,42 @@ oe-inferencex estimate to_label.csv --per-class    # once a `reference_class` co
 `wrong`) and a sidecar `to_label.json` with the design, the scores' path and the grid. With `--condition`, a
 `condition` column holding the condition's name follows `stratum`. `map_class` is the majority class of the window's
 pixels. **The reviewer sets `wrong` to 1 when `map_class` is not what is on the ground, and to 0 otherwise**;
-`estimate` grades that class, not the window's centre pixel. The recorded experiments used 300 windows
+`estimate` grades that class, not the window's centre pixel. Where a window cannot be judged (cloud, a mixed window,
+too little detail), the reviewer writes `?` and keeps the row. The recorded experiments used 300 windows
 ([exp78](results/comparisons.md#how-wrong-is-this-map-what-a-reviewers-labels-buy-exp78)).
+
+**Windows marked `?`.** `estimate` bounds them both ways: the interval's lower end counts every `?` as right and its
+upper end every `?` as wrong, and the estimate is the range between. The exact intervals move one way with the error
+count, so the interval still covers at least 95% whatever made those windows hard to judge, even when the hard
+windows are mostly the wrong ones (tests/test_unjudged.py checks this by exact enumeration against such an
+adversary). Under the confidence and proportional designs the interval is then the sum of each stratum's exact
+interval at 1 - 0.05/L, weighted by its share of the map, in place of the Wilson interval, which does not move one
+way, and is much wider: under those designs most of the width comes from that switch, not from the `?` windows
+themselves. The tiles design and `--per-class` refuse `?`. `certify` counts every `?` as wrong, which certifies less
+and keeps the guarantee. Each `?` widens the result, so judging them is worth it where possible.
 
 `estimate` and `certify` treat the labels as right. Their interval and zone describe agreement with the reviewer's
 labels; if the reviewer marks correct windows wrong or misses errors, the true rate can fall outside them. No
-experiment here measured how often reviewers err. Labelling blind keeps the reviewer from anchoring on the map's
+experiment here measured how often reviewers err. If you can bound it, for example from windows a second reviewer
+labelled again, pass the bounds:
+
+```bash
+oe-inferencex estimate to_label.csv --reviewer-false-alarm 0.05 --reviewer-miss 0.10
+```
+
+`--reviewer-false-alarm E0` is the most the reviewer marks wrong of the windows that are truly right, and
+`--reviewer-miss E1` the most the reviewer marks right of the windows that are truly wrong. The labels then show the
+rate p = θ(1 - e1) + (1 - θ)e0, so the true rate θ lies between (p - E0)/(1 - E0) and p/(1 - E1), and `estimate`
+applies those two maps to its interval's ends. The bounds are sharp, proved in Lean in the repository's `lean/`
+folder; tests/test_unjudged.py checks the interval's coverage by exact enumeration against reviewers who err as much
+as the bounds allow. The bounds are yours: they are not measured here, and if the reviewer errs more often the result
+does not hold. Per input condition they must hold within each condition.
+
+`certify` takes no reviewer error rate. Allowing for misses would mean testing at α(1 - E1), which holds only if the
+reviewer misses at most E1 of the wrong windows inside every zone the test can certify. Those are the most confident
+windows, where a model's confident errors sit and a reviewer may be fooled too, and a miss rate measured on the whole
+map, such as one from a second review of a random sample, does not establish it: misses placed in the confident half
+of a map made such a test certify a zone wrong 10% of the time at α = 5% on every draw (review of 2 October 2026). Labelling blind keeps the reviewer from anchoring on the map's
 class, though how much that changes the labels was not measured either: hide the `map_class` column from the
 reviewer, record the class seen in a `reference_class` column, and set `wrong` to 1 where it differs from
 `map_class`.
@@ -444,7 +474,8 @@ and `truth.tif`), each with the tools it uses and what the answer can and cannot
   confident first. It is not an error rate, and the errors the model is sure of come last. It needs the model's
   per-class scores: a class map alone is refused, or gives an order that is not evidence.
 - "How wrong is scores.tif? Pick 300 windows at random for me to label." Uses `sample`, then `estimate`. In between,
-  you set `wrong` to 1 or 0 on every row of the sample. The answer is an error rate with a 95% interval. No tool
+  you set `wrong` to 1 or 0 on every row of the sample, or `?` where a window cannot be judged. The answer is an
+  error rate with a 95% interval. No tool
   labels a window, and the interval assumes your labels are right.
 - "Which part of scores.tif can I trust at 5% error?" Uses `certify`, on the labels of that random sample. The answer
   is the most confident share of the map that is wrong at most 5% of the time, a statement that fails on at most 10%

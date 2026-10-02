@@ -1,5 +1,34 @@
 # Changelog
 
+## Unreleased
+
+**A window the reviewer cannot judge, and a reviewer who errs.** Until now `sample` asked for 1 or 0 in every row,
+`estimate` refused anything else and told the reviewer to leave out a window they could not judge, and a CSV that did
+was refused for not matching its design: there was no way to record "cannot tell".
+
+- `?` in the `wrong` column marks a window that cannot be judged; the row stays. `estimate` bounds it both ways: the
+  interval's lower end counts every `?` as right and its upper end every `?` as wrong, and the estimate becomes the
+  range between (`estimate_range`; `estimate` is null unless the range is one value). The exact intervals move one way
+  with the error count, so the interval covers at least 95% whatever made those windows hard to judge, even when the
+  hard windows are mostly the wrong ones. Under the confidence and proportional designs any `?` replaces the design's
+  Wilson interval, which does not move one way, by the union bound over its strata, which is much wider; the output
+  says that most of that width comes from the switch. Per input condition, each condition is bounded with its own
+  `?` rows. The tiles design and `--per-class` refuse `?`. `certify` counts every `?` as wrong, which keeps its
+  guarantee and certifies less. `sample` prints the new instruction (the fifth deliberate change against 1.3.1's
+  outputs, listed in the golden file). Python: `estimate_error_rate(sample, wrong, unjudged=...)`.
+- `estimate --reviewer-false-alarm E0 --reviewer-miss E1` (MCP: `reviewer_false_alarm`, `reviewer_miss`; Python:
+  the same keywords): for a reviewer who marks at most E0 of the truly correct windows wrong and misses at most E1 of
+  the truly wrong ones, the interval's ends become (low - E0)/(1 - E0) and high/(1 - E1), the sharp bounds. The rates
+  are the user's, not measured; per condition they must hold within each condition. `certify` takes no reviewer
+  error rate: testing at alpha (1 - E1) would need the miss rate to hold inside every zone it can certify, and a
+  pre-release review showed misses placed in a map's confident half making such a test certify a zone wrong 10% of
+  the time at alpha 5% on every draw, with a whole-map miss rate of exactly E1.
+- The proofs are in the new `lean/` folder (Lean 4.35.0-rc3 with a pinned Mathlib): the sharp bounds and that the `?`
+  interval holds the interval the full labels would give. Both files were compiled byte for byte on the cluster (job
+  1162226). The CI does not build them. `tests/test_unjudged.py` checks the package's own intervals by exact
+  enumeration: coverage against an adversary who picks which sampled windows go unjudged, and against reviewers who
+  err as much as the bounds allow.
+
 ## 1.4.1 (2026-10-02)
 
 **Release checks (2 October 2026).** A three-lens review of the changes since 1.4.0 (code, the truth of each new text,

@@ -84,7 +84,8 @@ HARD_RULES = (
     "certify needs a random sample: draw it with design \"random\", or with a condition layer. The default design "
     "serves estimate only; certify refuses it.",
     "Without labels, compare cannot say which map is right. Two maps that agree can both be wrong.",
-    "Labels are assumed right. The interval and the zone describe agreement with the reviewer's labels.",
+    "Labels are assumed right. The interval and the zone describe agreement with the reviewer's labels; only estimate "
+    "can widen its interval for a reviewer who errs, at rates the user states.",
     "Ranking needs the scores, not only the class map. A class map alone works only in compare. assess refuses a "
     "class map of more than two classes read as probabilities, but not a 0/1 map, nor any class map passed with "
     "logits=true: it reads the class ids as scores, and the order it gives is not evidence.",
@@ -100,7 +101,8 @@ INSTRUCTIONS = "\n".join([
     f"1. {LOOK} (assess) It ranks the windows from least to most confident. The review set is the least confident "
     "share, the windows to check first. No labels.",
     f"2. {HOW_WRONG} (sample, label, estimate) sample picks the windows to label. The user or a reviewer fills the "
-    "`wrong` column with 1 or 0 on every row. estimate gives the error rate with a 95% interval.",
+    "`wrong` column with 1 or 0 on every row, or ? where a window cannot be judged. estimate gives the error rate with "
+    "a 95% interval.",
     f"3. {TRUST} (certify) From the same labels, the most confident share of the map whose error rate is at most "
     "alpha. It can certify nothing, and then says why.",
     f"4. {TWO_MAPS} (compare) Where two maps of one area differ, window by window. Only with labels does it say which "
@@ -177,9 +179,11 @@ CARDS = {
         "the error rate with the interval the sample's design earns, and each input condition's rate when the sample "
         "recorded a condition. With per_class, each class's user's and producer's accuracy and its error-adjusted "
         "share of the map.",
-        "Needs: the CSV sample wrote, filled on every row and kept in its order, with its .json beside it. per_class "
-        "needs a `reference_class` column (the class seen in each window) and the map's scores (from the sidecar, or "
-        "scores).",
+        "Needs: the CSV sample wrote, filled on every row (1, 0, or ? where a window cannot be judged) and kept in "
+        "its order, with its .json beside it. Windows marked ? are bounded both ways, so the estimate is a range. "
+        "reviewer_false_alarm and reviewer_miss, when the user knows how often the reviewer errs, widen the interval "
+        "for it. per_class needs a `reference_class` column (the class seen in each window), every row judged, and "
+        "the map's scores (from the sidecar, or scores).",
         "Cannot: estimate from a review set or from any CSV that sample did not write (refused); check that the "
         "labels are right (they are assumed right); say which windows are wrong.",
     ]),
@@ -190,10 +194,11 @@ CARDS = {
         "most alpha; the statement fails on at most delta of the samples that could have been drawn. Writes the "
         "result JSON and a window mask (.npy, True inside the zone). A sample drawn with condition is certified per "
         "condition. It may certify nothing, and then says why.",
-        "Needs: a sample drawn with design \"random\" (or with condition), labelled on every row; alpha, such as "
-        "0.05; the map's scores (from the sidecar, or scores).",
+        "Needs: a sample drawn with design \"random\" (or with condition), labelled on every row (? counts as wrong, "
+        "which keeps the guarantee); alpha, such as 0.05; the map's scores (from the sidecar, or scores).",
         "Cannot: certify from the default confidence design, a review set or windows chosen by hand (refused); say "
-        "anything about the windows outside the zone; check that the labels are right.",
+        "anything about the windows outside the zone; check that the labels are right, or allow for a reviewer who "
+        "misses errors (that would need the miss rate inside every zone it can certify).",
     ]),
 }
 
@@ -305,7 +310,7 @@ def _join(texts):
 # said "--design random" or "--condition" sent a small model looking for options it does not have).
 _FLAGS = {"design", "condition", "condition-names", "per-class", "labels-date", "patch", "nodata", "scores", "alpha",
           "delta", "rule", "budget", "seed", "labels", "reference", "threshold", "date-a", "date-b", "groups", "order",
-          "budgets", "tile", "per-tile"}
+          "budgets", "tile", "per-tile", "reviewer-false-alarm", "reviewer-miss"}
 
 
 def _mcp_words(text):
@@ -702,8 +707,8 @@ def sample(
                       "with design \"random\".")
     limits += _warnings(_tagged(printed, "warning")) + _notes(_tagged(printed, "note"))
     nxt = (f"Ask the user or a reviewer to open each window of {path} and set `wrong` to 1 if map_class is not what "
-           f"is there, else 0, on every row, keeping the row order and {os.path.basename(side_path)} beside it. Then "
-           f"call estimate with sample_csv={path}.")
+           f"is there, else 0, or ? where the window cannot be judged, on every row, keeping the row order and "
+           f"{os.path.basename(side_path)} beside it. Then call estimate with sample_csv={path}.")
     if d in ("random", "condition"):
         nxt += " The same labels then serve certify."
     return _reply(" ".join(said), _join(limits), nxt, {"sample_csv": path, "sidecar": side_path},
@@ -731,10 +736,16 @@ def estimate(
     nodata: Annotated[float | None, P(description="With per_class: the no-data value sample was run with, only for "
                                                   "a sample written by 1.2.0")] = None,
     out_dir: Annotated[str | None, P(description="Directory for the result JSON (default: beside the CSV)")] = None,
+    reviewer_false_alarm: Annotated[float | None, P(description="At most this share of the truly correct windows "
+                                                                "does the reviewer mark wrong, as the user states it")] = None,
+    reviewer_miss: Annotated[float | None, P(description="At most this share of the truly wrong windows does the "
+                                                         "reviewer mark right, as the user states it")] = None,
 ) -> dict[str, Any]:
     path = _input(sample_csv, "sample_csv")
     out = _out_json(path, out_dir, "estimate")
     argv = ["estimate", path]
+    _opt(argv, "--reviewer-false-alarm", None if reviewer_false_alarm is None else float(reviewer_false_alarm))
+    _opt(argv, "--reviewer-miss", None if reviewer_miss is None else float(reviewer_miss))
     if per_class:
         argv.append("--per-class")
     if scores is not None:
@@ -745,24 +756,35 @@ def estimate(
     printed = _labelled(path, argv)
     out = out or (path[:-4] + "_estimate.json" if path.endswith(".csv") else path + "_estimate.json")
     r = _read_json(out)
-    said = [f"The map's error rate is {_pc(r['estimate'])}, 95% interval {_pc(r['low'])} to {_pc(r['high'])}, from "
-            f"{r['n_labelled']} labelled windows of {r['n_population']}; {r['method']}. It is the rate of "
-            "disagreement with the reviewer's labels, which are assumed right."]
+    rate = (f"between {_pc(r['estimate_range'][0])} and {_pc(r['estimate_range'][1])}" if r.get("estimate") is None
+            else _pc(r["estimate"]))
+    stated = bool(r.get("reviewer_false_alarm") or r.get("reviewer_miss"))
+    unjudged = bool(r.get("n_unjudged"))
+    trust = (("It bounds the windows that could not be judged both ways. " if unjudged else "")
+             + ("It allows for a reviewer who errs at most as often as the user stated." if stated else
+                "It is the rate of disagreement with the reviewer's labels, which are assumed right."))
+    said = [f"The map's error rate is {rate}, 95% interval {_pc(r['low'])} to {_pc(r['high'])}, from "
+            f"{r['n_labelled']} labelled windows of {r['n_population']}; {r['method']}. {trust}"]
     summ = {k: r.get(k) for k in ("estimate", "low", "high", "method", "design", "n_labelled", "n_population")}
+    for k in ("estimate_range", "n_unjudged", "reviewer_false_alarm", "reviewer_miss", "labels_interval"):
+        if r.get(k) is not None:
+            summ[k] = r[k]
     if r.get("by_condition"):
         rows = []
         for name, row in r["per_condition"].items():
-            if row["estimate"] is None:
+            if not row["n_labelled"]:
                 rows.append(f"{name}: no labelled window fell in this condition, so nothing can be said about it")
             else:
-                rows.append(f"{name} {_pc(row['estimate'])} ({_pc(row['low'])} to {_pc(row['high'])}), "
+                value = (f"{_pc(row['estimate_range'][0])} to {_pc(row['estimate_range'][1])}"
+                         if row.get("estimate") is None else _pc(row["estimate"]))
+                rows.append(f"{name} {value} ({_pc(row['low'])} to {_pc(row['high'])}), "
                             f"{row['n_labelled']} labelled of {row['n_population']} windows")
         said.append("Per input condition: " + "; ".join(rows) + ". Each condition's interval is its own 95% "
                     "statement; the intervals do not hold jointly.")
         if r.get("outside_condition_intervals"):
             said.append(_cap(cli._outside_note(r)[len("note: "):]))
-        summ["per_condition"] = {name: {k: row.get(k) for k in ("estimate", "low", "high", "n_labelled", "n_population",
-                                                                "share_of_map")}
+        summ["per_condition"] = {name: {k: row.get(k) for k in ("estimate", "estimate_range", "low", "high", "n_labelled",
+                                                                "n_population", "share_of_map")}
                                  for name, row in r["per_condition"].items()}
     class_warnings = []
     if per_class:
@@ -784,9 +806,11 @@ def estimate(
             said.append(f"{which} a warning ({', '.join(codes)}): read {'its' if len(names) == 1 else 'their'} "
                         "accuracies with the warning in limits.")
             class_warnings = [f"class {c}: {row['warning']}" for c, row in warned.items()]
-    limits = ["Labels are assumed right: the interval describes agreement with the reviewer's labels. If the reviewer "
-              "makes mistakes, the true rate can fall outside it.",
-              "It is a rate over the windows; it does not say which windows are wrong."]
+    limits = ([_cap(r["bounds_note"])] if r.get("bounds_note") else []) + (
+        ["Labels are assumed right: the interval describes agreement with the reviewer's labels. If the reviewer "
+         "makes mistakes, the true rate can fall outside it; reviewer_false_alarm and reviewer_miss widen it for a "
+         "reviewer who errs as often as the user states."] if not (r.get("reviewer_false_alarm") or r.get("reviewer_miss"))
+        else []) + ["It is a rate over the windows; it does not say which windows are wrong."]
     limits += _warnings(_tagged(printed, "warning")) + _warnings([r.get("per_class_warning")]) + _warnings(class_warnings)
     scope = r.get("scope")
     # the note on conditions outside the whole-map interval is said in the conclusion; once is enough
@@ -890,7 +914,8 @@ def certify(
         said.append(f"The window mask {files['zone_mask']} marks the certified windows (True inside).")
     limits = ["Outside the certified windows nothing is certified.",
               "The rate holds for the certified windows together, not for each window.",
-              "Labels are assumed right: the zone describes agreement with the reviewer's labels. The guarantee also "
+              ((_cap(r["bounds_note"]) + " ") if r.get("bounds_note") else "")
+              + "Labels are assumed right: the zone describes agreement with the reviewer's labels. The guarantee also "
               "needs the labelled windows to be a random sample."]
     # with no zone and no condition, the note is the conclusion's reason, said there once
     scope = r.get("scope")

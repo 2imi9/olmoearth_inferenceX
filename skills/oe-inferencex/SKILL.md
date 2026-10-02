@@ -34,8 +34,10 @@ Match the user's question to a step. The tool and the command of each step have 
    sets.
 2. **How wrong is the map?** `sample`, label, `estimate`.
    `oe-inferencex sample scores.tif --budget 300 --design random --out to_label.csv`. The user or a reviewer
-   fills `wrong` with 1 or 0 on every row, keeping the order and `to_label.json` beside it. Then
-   `oe-inferencex estimate to_label.csv` gives the error rate with a 95% interval.
+   fills `wrong` with 1 or 0 on every row, or `?` where a window cannot be judged, keeping the order and
+   `to_label.json` beside it. Then `oe-inferencex estimate to_label.csv` gives the error rate with a 95%
+   interval; windows marked `?` make it a range. If the user knows how often the reviewer errs, add
+   `--reviewer-false-alarm E0 --reviewer-miss E1` (shares of the correct and of the wrong windows).
 3. **Which part can I trust?** `certify`. `oe-inferencex certify to_label.csv --alpha 0.05`: the most confident
    share of the map whose error rate is at most alpha. It may certify nothing, and says why.
 4. **Which of two maps is better, and where do they differ?** `compare`.
@@ -54,7 +56,7 @@ each with the tools it uses and what the answer can and cannot be:
   confident first. It is not an error rate, and the errors the model is sure of come last. It needs the model's
   per-class scores: a class map alone is refused, or gives an order that is not evidence.
 - "How wrong is scores.tif? Pick 300 windows at random for me to label." Uses `sample`, then `estimate`. In between,
-  you set `wrong` to 1 or 0 on every row of the sample. The answer is an error rate with a 95% interval. No tool
+  you set `wrong` to 1 or 0 on every row of the sample, or `?` where a window cannot be judged. The answer is an error rate with a 95% interval. No tool
   labels a window, and the interval assumes your labels are right.
 - "Which part of scores.tif can I trust at 5% error?" Uses `certify`, on the labels of that random sample. The answer
   is the most confident share of the map that is wrong at most 5% of the time, a statement that fails on at most 10%
@@ -73,7 +75,8 @@ Do not work around them. The package refuses only what a rule says it refuses; t
 - certify needs a random sample: draw it with design "random", or with a condition layer. The default design
   serves estimate only; certify refuses it.
 - Without labels, compare cannot say which map is right. Two maps that agree can both be wrong.
-- Labels are assumed right. The interval and the zone describe agreement with the reviewer's labels.
+- Labels are assumed right. The interval and the zone describe agreement with the reviewer's labels; only estimate
+  can widen its interval for a reviewer who errs, at rates the user states.
 - Ranking needs the scores, not only the class map. A class map alone works only in compare. assess refuses a
   class map of more than two classes read as probabilities, but not a 0/1 map, nor any class map passed with
   logits=true: it reads the class ids as scores, and the order it gives is not evidence.

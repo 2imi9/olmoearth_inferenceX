@@ -985,3 +985,44 @@ def test_a_one_row_geotiff_gets_the_caveat(tmp_path):
     assert "pixel and map coordinates" in out["conclusion"]
     out = _ok("compare", a=str(tmp_path / "row.tif"), b=str(tmp_path / "row2.tif"), out_dir=str(tmp_path / "c"), patch=1)
     assert "one window high" in out["limits"] and "times as often" not in out["conclusion"]
+
+
+@needs_map
+def test_unjudged_windows_and_reviewer_error_through_the_server(qs):
+    """Rows marked ? make the estimate a range, said in the conclusion; the reviewer's stated error rates widen the
+    interval and replace the labels-assumed-right limit; certify counts ? as wrong and tests at alpha (1 - miss)."""
+    out = _ok("sample", scores=str(qs / "scores.tif"), out_dir=str(qs / "unjudged"), budget=300, design="random")
+    csv_path = out["files"]["sample_csv"]
+    assert "or ? where the window cannot be judged" in out["next"]
+    _label(csv_path, qs)
+    with open(csv_path, newline="") as f:
+        rows = list(csv.DictReader(f))
+    for row in rows[:10]:
+        row["wrong"] = "?"
+    with open(csv_path, "w", newline="") as f:
+        wr = csv.DictWriter(f, fieldnames=list(rows[0]))
+        wr.writeheader()
+        wr.writerows(rows)
+    res = _ok("estimate", sample_csv=csv_path)
+    assert res["summary"]["estimate"] is None and res["summary"]["n_unjudged"] == 10
+    lo, hi = res["summary"]["estimate_range"]
+    assert f"The map's error rate is between {100 * lo:.1f}% and {100 * hi:.1f}%" in res["conclusion"]
+    # ? alone: the windows are bounded, and the judged labels are still taken as right
+    assert "bounds the windows that could not be judged both ways" in res["conclusion"]
+    assert "which are assumed right" in res["conclusion"] and "user stated" not in res["conclusion"]
+    assert "10 of the 300 labelled windows could not be judged" in res["limits"]
+    assert "Labels are assumed right" in res["limits"]
+
+    res = _ok("estimate", sample_csv=csv_path, reviewer_false_alarm=0.05, reviewer_miss=0.1,
+              out_dir=str(qs / "unjudged_rev"))
+    s = res["summary"]
+    assert s["low"] == pytest.approx(max(0.0, (s["labels_interval"]["low"] - 0.05) / 0.95))
+    assert s["high"] == pytest.approx(min(1.0, s["labels_interval"]["high"] / 0.9))
+    assert "misses at most 0.1 of the truly wrong ones" in res["limits"]
+    assert "Labels are assumed right" not in res["limits"] and "as often as the user stated" in res["conclusion"]
+    assert "reviewer_miss must be at least 0" in _refused("estimate", sample_csv=csv_path, reviewer_miss=1.0)
+
+    res = _ok("certify", sample_csv=csv_path, alpha=0.05)
+    assert "10 window(s) that could not be judged (?) are counted as wrong" in res["limits"]
+    assert "Labels are assumed right" in res["limits"]
+    assert "reviewer_miss" not in json.dumps(res)
