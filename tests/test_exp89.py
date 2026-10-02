@@ -1223,3 +1223,50 @@ def test_the_synthetic_smoke_never_writes_the_real_ledger(tmp_path, monkeypatch)
     assert e89.smoke_torch(args) == 0
     assert seen["ledger"] != str(real_dir) and not real_dir.exists()
     assert os.environ.get(e89.GATE_LEDGER_ENV) == str(real_dir)
+
+
+def _plain_auroc(score, err):
+    """The AUROC for errors by counting every (error, correct) pair, a tie counting one half."""
+    score, err = np.asarray(score, dtype=np.float64), np.asarray(err, bool)
+    d = score[err][:, None] - score[~err][None, :]
+    return float(((d > 0).sum() + 0.5 * (d == 0).sum()) / d.size)
+
+def test_the_report_only_numbers_by_a_second_route():
+    """exp89's report-only numbers recomputed with plain numpy from the per-unit files: the top-1 probability over the
+    trained channels, the errors, a mid-rank AUROC for confidence and every control, the capture at each review budget
+    by a stable sort, the confidence's AURC as the mean running risk, the clusters that hold an error, and c*(alpha)
+    for both certification orders from all labels."""
+    rec = json.load(open(os.path.join(ROOT, "exp", "out", "exp89_summary.json")))["arms"]
+    for arm, trained in (("awf", 9), ("fld", 10)):
+        z = np.load(os.path.join(ROOT, "exp", "out", f"exp89_units_{arm}.npz"))
+        R = rec[arm]
+        logits, y = z["logits"].astype(np.float64), z["label"].astype(int)
+        t = logits[:, :trained]
+        p = np.exp(t - t.max(axis=1, keepdims=True))
+        p /= p.sum(axis=1, keepdims=True)
+        conf = p.max(axis=1)
+        err = logits.argmax(axis=1) != y
+        assert (err.size, int(err.sum())) == (R["n_units"], R["n_errors"])
+        assert len(np.unique(conf)) == conf.size            # no ties, so plain sorts suffice below
+        sig = R["ranking"]["signals"]
+        assert abs(_plain_auroc(-conf, err) - sig["confidence"]["auroc"]) < 1e-9, arm
+        for name in R["ranking"]["candidates"]:
+            assert abs(_plain_auroc(z["controls/" + name], err) - sig[name]["auroc"]) < 1e-9, (arm, name)
+        order = np.argsort(-conf, kind="stable")             # most confident first
+        for b in (0.05, 0.1, 0.2):
+            k = max(1, int(round(b * err.size)))
+            assert abs(err[order[::-1]][:k].sum() / err.sum() - sig["confidence"]["capture"][str(b)]) < 1e-12, (arm, b)
+        running = np.cumsum(err[order]) / np.arange(1, err.size + 1)
+        assert abs(running.mean() - sig["confidence"]["aurc"]) < 1e-9, arm
+        clusters = z["clusters"]
+        assert (len(np.unique(clusters)), len(np.unique(clusters[err]))) == (
+            R["accuracy"]["n_clusters"], R["accuracy"]["n_clusters_with_an_error"])
+        for oname, score in (("confidence", conf), ("k3a", 1.0 - z["controls/k3a_no_encoder_uncertainty"])):
+            zone = np.argsort(-score, kind="stable")         # descending, ties by index
+            for alpha in R["reported"]["alphas"]:
+                best = 0.0
+                for j in range(1, 21):
+                    n = max(1, int(round(j / 20 * zone.size)))
+                    if err[zone[:n]].mean() <= alpha + 1e-12:
+                        best = round(j / 20, 2)
+                assert best == R["certify_best_coverage"][f"{oname}/{alpha:g}"], (arm, oname, alpha)

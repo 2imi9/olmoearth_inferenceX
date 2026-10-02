@@ -63,6 +63,9 @@ detail.
   column, record the class seen in `reference_class`, then set `wrong` where the two differ.
 - **Kind of model.** Most of the evidence is linear probes on frozen embeddings. Of Ai2's
   fine-tuned models, one was tested: FT-AWF, on 344 validation points. <!-- claim:fine-tuned-model-audit -->
+  A second, Forest Loss Driver (109 windows), was run with FT-AWF report-only, its validation set
+  too small to grade: a 10% review held 41.5% and 32.0% of the errors, against 19.5% and 18.3%
+  for the best no-encoder control, a lead whose 95% interval includes zero on both. <!-- claim:exp89-finetuned-report-only -->
 - **Two maps.** Without labels, `compare` cannot say which map is right where they differ. On
   15 pairs of flood maps, trusting the more confident map was right on 51% to 70% of the
   differing windows. <!-- claim:tool-vs-diff-resolution -->

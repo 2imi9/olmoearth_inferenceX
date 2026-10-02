@@ -395,3 +395,12 @@ checkpoint. Two changes, each with a test that failed first: the synthetic smoke
 directory; and an attempt made before freezing on another checkpoint than the pinned one no longer counts towards the
 limit or blocks the run. It stays in the ledger as history. No rule, threshold or reading changed, and no number had
 been read.
+
+## Result, appended 2 October 2026 (nothing above changed)
+
+Arms A and F ran on the frozen page and the pinned checkpoints; both replicas are aligned (FT-AWF 88.1% against
+Ai2's 89.5%, the same predictions as exp21 on all 344 points; Forest Loss Driver 77.1% against 76.1% on Ai2's 109
+windows). As the amendment fixed, no prediction is graded and no claim of support is drawn. The numbers each
+prediction reads, with their intervals, are in
+[comparisons.md](../results/comparisons.md#ai2s-own-fine-tuned-models-report-only-ft-awf-and-forest-loss-driver-exp89)
+and the ledger entry `exp89-finetuned-report-only`. Arm M waits for Ai2's Mangrove split; arm N is not public.

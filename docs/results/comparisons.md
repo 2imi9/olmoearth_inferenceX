@@ -3028,6 +3028,106 @@ part's errors. The limit above, "a model fine-tuned with modality dropout may be
 a probe trained on the input it reads already removes the effect here. Whether a probe trained with modality
 dropout does the same is not tested. <!-- claim:exp88-matched-head-ranks-normally -->
 
+## Ai2's own fine-tuned models, report-only: FT-AWF and Forest Loss Driver (exp89)
+
+Preregistered in [docs/plan/finetuned_checkpoints.md](../plan/finetuned_checkpoints.md), frozen on 1 October 2026
+before any prediction on a validation window; runs as `exp/exp89_finetuned_checkpoints.py` on the cluster's CPU
+partition (arm A at a89c3ce, arm F at 0174a96). Artifacts `exp/out/exp89_summary.json`,
+`exp89_units_{awf,fld}.npz`, `exp89_gate_{awf,fld}.json`, `exp89_inventory_{awf,fld}.json` and
+`exp89_s2_{awf,fld}.json`.
+
+**The question.** Do the package's three outputs (the review order, the estimate and the certificate) hold on Ai2's
+public fine-tuned models, and does the model's confidence find their errors better than an informative control that
+uses no encoder? Ai2's validation labels are the truth.
+
+**Report-only.** Both validation sets are too small to grade: 344 points with 41 errors, and 109 windows with 25
+errors. The owner made both arms report-only before any result: every number below is reported with no threshold and
+no verdict, and no claim of support is drawn from them. Mangrove, the graded arm, waits for Ai2's validation split
+(the public tar holds no split and no imagery). Nandi is not public.
+
+**The replicas are aligned with Ai2's figures.**
+
+| Model | validation units | errors | our accuracy | Ai2's |
+|---|---|---|---|---|
+| FT-AWF | 344 points | 41 | 88.1% | 89.5% |
+| Forest Loss Driver | 109 windows | 25 | 77.1% | 76.1% |
+
+FT-AWF's replica gives exp21's prediction on all 344 points. Forest Loss Driver's validation split holds 113
+windows; 4 carry a label outside the ten classes and are dropped, leaving Ai2's 109. Its accuracy is the same under
+each of the four flips Ai2's validation drew from.
+
+**The review order.** Confidence is the top-1 probability over the trained channels, as graded on the frozen page.
+The best informative control is whichever of the six no-encoder signals has the lowest AURC, chosen on these same
+labels, which favours the control.
+
+| | FT-AWF | Forest Loss Driver |
+|---|---|---|
+| error rate | 11.9% | 22.9% |
+| confidence's AUROC for errors | 0.867 | 0.808 |
+| 10% review: confidence | 41.5% of the errors | 32.0% |
+| 10% review: random | 9.9% | 10.1% |
+| 10% review: any order's ceiling | 82.9% | 44.0% |
+| best informative control | the no-encoder classifier's uncertainty, AUROC 0.641 | class rarity, AUROC 0.646 |
+| 10% review: that control | 19.5% | 18.3% |
+| confidence minus control at 10%, 95% interval | +22.0 points (−2.1 to +40.6) | +13.7 points (−7.7 to +28.5) |
+| AURC difference, 95% interval | −0.043 (−0.064 to −0.022) | −0.061 (−0.117 to −0.014) |
+
+The intervals are cluster bootstraps: FT-AWF's 30 annotation tasks (18 hold an error) and Forest Loss Driver's 1°
+cells (90 cells, 23 with an error, so close to a bootstrap of windows).
+
+- **On both models the confidence order closes most of the gap from random to perfect** (0.84 and 0.73 of it, in
+  AURC) and its AURC is lower than the best control's, with an interval that excludes zero.
+- **At a 10% review the lead is large but uncertain.** The 95% intervals of the capture difference include zero on
+  both models. The one-sided 5th percentile the graded arm reads is +2.1 points on FT-AWF and −4.5 on Forest Loss
+  Driver.
+- **The controls are informative only moderately.** The best reaches AUROC 0.641 and 0.646, just under the 0.65 the
+  graded arm asks of an informative control. Class rarity ranks FT-AWF's errors worse than random (AUROC 0.342).
+- On Forest Loss Driver the entropy ranks slightly better than the top-1 probability (AUROC 0.824) and the logit
+  margin slightly worse (0.775).
+
+<!-- claim:exp89-finetuned-report-only -->
+
+**The estimate and the certificate.** Only FT-AWF fits a budget, and 300 labels of its 344 points are close to a
+census, so these cells check the implementation more than they show what labels buy on a map.
+
+- **Estimate (300 labels, 2,000 draws).** The random design's exact interval covers the true rate on 96.1% of draws,
+  with a median width of 2.6 points. The confidence design covers 94.1%, at 0.70 of that width.
+- **Certify (300 labels, δ = 0.10).** At α = 0.05 the confidence order certifies a median 75% of the points, the most
+  any certificate could on this order, and its zone exceeds α on 1.75% of draws; the no-encoder classifier's order
+  certifies 20%. At α = 0.10: 90% against 40%, with no draw exceeding α.
+
+**With every label known,** the largest zone each order could certify, c\*(α), is a property of the order, not a
+certificate:
+
+| | confidence order | no-encoder classifier's order |
+|---|---|---|
+| FT-AWF, α = 0.05 | 75% | 25% |
+| FT-AWF, α = 0.10 | 95% | 75% |
+| Forest Loss Driver, α = 0.10 | 60% | 10% |
+| Forest Loss Driver, α = 0.15 | 80% | 50% |
+
+On Forest Loss Driver the no-encoder classifier is the weaker of the controls (AUROC 0.584). The frozen page fixed it
+as the comparator for certification because it is the best continuous one.
+
+**Calibration.** Both models are overconfident. FT-AWF's 299 points with a top-1 probability above 0.9 average 0.993
+and are right on 93.0%. The expected calibration error over 10 bins is 0.081 and 0.085; at 80% coverage the most
+confident points are right on 94.5% and 85.1%.
+
+**What it does not show.**
+
+- **Small samples, report-only.** No prediction was graded, and the docs may cite these numbers only as report-only.
+- **Ai2 chose each checkpoint on these validation sets.** The errors are those of a selected checkpoint, and its
+  accuracy is optimistic.
+- **The splits do not hold out space.** Forest Loss Driver's validation windows are drawn by a hash of their name
+  within two groups (Brazil and Colombia, phase 1: 75 and 34 windows) and have training neighbours; Peru is never
+  validated.
+- **Labels are taken as right.** An error is a disagreement with Ai2's label.
+- **Points, not a raster.** The package's functions were called directly; the commands were not run end to end.
+
+**What follows.** As the frozen page fixed: no claim. The record can now say that on two of Ai2's fine-tuned
+models, read report-only, confidence ranks the errors well above random and ahead of a no-encoder control in AURC,
+with a 10% review lead whose interval includes zero. The graded test is arm M, once Ai2 shares Mangrove's split.
+
 ## The ceiling belongs to the task, not to the model (from exp74 and exp70)
 
 The margin takes a median 0.68 of the gap between a random ranking and a perfect one on the 24 tasks. A fair
