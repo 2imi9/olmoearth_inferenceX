@@ -210,9 +210,9 @@ def test_the_skill_holds_the_same_teaching():
                     "oe-inferencex compare", "--condition", "--design random"):
         assert command in body, command
     assert "\u2014" not in text
-    # 1.3.1 on PyPI has neither the server nor --condition: the skill says so and gives the install from the repository
-    assert "not yet released" in body
-    assert 'pip install "olmoearth-inferencex[geo,mcp] @ git+https://github.com/2imi9/olmoearth_inferenceX"' in body
+    # the server and --condition came with 1.4.0: the skill names the release and installs it from PyPI
+    assert "not yet released" not in body and "1.4.0" in body
+    assert 'pip install "olmoearth-inferencex[geo,mcp]"' in body
 
 
 def test_the_texts_say_what_exp86_shows_and_what_the_server_reads():
@@ -312,9 +312,7 @@ def test_the_extra_pins_the_sdk_below_2():
 
 # ----------------------------------------------------------------------------- the setup lines in the docs
 SETUP_DOCS = ("README.md", "docs/Usage.md", "skills/oe-inferencex/SKILL.md", "CHANGELOG.md")
-GIT_ONE_LINER = ('claude mcp add --scope user oe-inferencex -- uvx --from "olmoearth-inferencex[geo,mcp] @ '
-                 'git+https://github.com/2imi9/olmoearth_inferenceX" oe-inferencex mcp')
-PYPI_FORM = 'uvx --from "olmoearth-inferencex[geo,mcp]" oe-inferencex mcp'
+PYPI_ONE_LINER = 'claude mcp add --scope user oe-inferencex -- uvx --from "olmoearth-inferencex[geo,mcp]" oe-inferencex mcp'
 COMMAND = re.compile(r'(?:uvx --from (?:"[^"]+"|[^\s`"]+) |claude mcp add --scope user oe-inferencex -- )'
                      r'oe-inferencex [a-z-]+')
 # uv's form of `python quickstart_map.py`, for a reader who installed nothing: the script needs numpy and rasterio
@@ -358,7 +356,7 @@ def _check_command(argv, where):
 
 
 def test_every_setup_line_and_config_names_a_command_that_exists():
-    """The one-liners (uvx from the repository, uvx from PyPI after the next release, the installed command) and the
+    """The one-liners (uvx from PyPI, the installed command) and the
     JSON configurations name this package, its extras and its repository, and a command and subcommand it has."""
     found = []
     for where, text in _texts():
@@ -378,14 +376,11 @@ def test_every_setup_line_and_config_names_a_command_that_exists():
             server = json.loads(inline)
             _check_command([server["command"], *server["args"]], where)
             found.append((where, server["command"], "json"))
-    # the git one-liner works today; the PyPI form is said to wait for the next release
+    # since 1.4.0 the server is on PyPI: every text gives the PyPI one-liner, and none still waits for a release
     for where, text in _texts():
-        if where != "CHANGELOG.md":
-            flat = _flat(text)
-            assert GIT_ONE_LINER in flat, where
-            assert PYPI_FORM in flat, where
-            assert re.search(r"after the next release[^.]*" + re.escape(PYPI_FORM) + "|" + re.escape(PYPI_FORM)
-                             + r"[^.]*after the next release", flat, re.I), where
+        flat = _flat(text)
+        assert PYPI_ONE_LINER in flat, where
+        assert not re.search(r"next release|not yet released", flat, re.I), where
     assert ("docs/Usage.md", "uvx", "json") in found and ("docs/Usage.md", "oe-inferencex", "json") in found
     assert ("README.md", "uvx", "demo") in found and ("CHANGELOG.md", "oe-inferencex", "mcp") in found
 

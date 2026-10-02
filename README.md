@@ -40,7 +40,7 @@ Quick start
 The package needs Python 3.11 to 3.13.
 
 ```bash
-pip install "olmoearth-inferencex[geo]"    # 1.3.1; without [geo] it reads .npy only, no GeoTIFF
+pip install "olmoearth-inferencex[geo]"    # 1.4.0; without [geo] it reads .npy only, no GeoTIFF
 oe-inferencex demo
 ```
 
@@ -66,9 +66,7 @@ python quickstart_map.py
 It writes three files. `scores.tif` is a synthetic four-class probability map of 256 x 256
 pixels. Of its windows, 7.3% are wrong. `other.tif` is a second map of the same scene.
 `truth.tif` holds the class that is really there. The lines below were printed on these files,
-so you can run each command and compare. 1.3.1 prints them too, except two lines new on
-`main`: the warning of `sample`, which 1.3.1 ended with "prefer logits", and the second line
-of `certify`, its note on the prefix rule.
+so you can run each command and compare.
 
 **1. Which parts to check first.** No labels are needed. Add `--logits` if the scores are
 logits.
@@ -182,47 +180,34 @@ Before you trust it
    If a model can run with an input missing, compare confidence only between windows read from
    the same inputs, unless the model was trained on that input combination. That exception was
    tested only for a separate probe trained on the remaining input, not for one model trained
-   with modality dropout. Version 1.3.1 ranks all the windows together and prints no warning
-   about this.
+   with modality dropout. Given a layer of each pixel's input condition, `assess` ranks each
+   condition on its own ([Input conditions](#input-conditions)).
 4. **The interval and the zone assume the labels are right.** They describe agreement with
    the reviewer's labels. If the reviewer makes mistakes, the true rate can fall outside them.
    Label blind: hide the `map_class` column, write the class you see in `reference_class`, and
    set `wrong` where the two differ.
 
 
-Released and not yet released
------------------------------
+Input conditions
+----------------
 
-Version 1.3.1 is on PyPI. Every `oe-inferencex` command on this page runs on it, except
-`oe-inferencex mcp` under [Use from an agent](#use-from-an-agent).
-
-`--condition` is on the `main` branch only. It takes a raster of each pixel's input condition,
-such as a cloud flag, and gives each condition its own review set, error rate and certified
-zone. It does not improve the ranking inside a part read with an input missing. To use it
-before the next release:
-
-```bash
-pip uninstall -y olmoearth-inferencex
-pip install "olmoearth-inferencex[geo] @ git+https://github.com/2imi9/olmoearth_inferenceX"
-```
-
-The first line is needed: `main` still carries the version number 1.3.1, so pip would take an
-installed release as up to date. Afterwards `oe-inferencex assess --help` lists `--condition`.
+`--condition`, new in 1.4.0, takes a raster of each pixel's input condition, such as a cloud
+flag, and gives each condition its own review set, error rate and certified zone. It does not
+improve the ranking inside a part read with an input missing.
+[Usage](https://olmoearth-inferencex.readthedocs.io/en/latest/Usage/) gives the details.
 
 
 Use from an agent
 -----------------
 
-On `main` only, not yet released: `oe-inferencex mcp` is a local MCP server through which an
+`oe-inferencex mcp`, new in 1.4.0, is a local MCP server through which an
 agent such as Claude Code runs these commands on your files. Nothing is hosted. With
 [uv](https://docs.astral.sh/uv/) installed, one line connects it, with nothing else to install:
 
 ```bash
-claude mcp add --scope user oe-inferencex -- uvx --from "olmoearth-inferencex[geo,mcp] @ git+https://github.com/2imi9/olmoearth_inferenceX" oe-inferencex mcp
+claude mcp add --scope user oe-inferencex -- uvx --from "olmoearth-inferencex[geo,mcp]" oe-inferencex mcp
 ```
 
-After the next release, the part after `--` can be
-`uvx --from "olmoearth-inferencex[geo,mcp]" oe-inferencex mcp`.
 [Usage](https://olmoearth-inferencex.readthedocs.io/en/latest/Usage/#use-from-an-agent-mcp)
 gives the configuration for other agents.
 

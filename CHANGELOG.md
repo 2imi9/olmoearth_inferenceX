@@ -1,6 +1,12 @@
 # Changelog
 
-## Unreleased
+## 1.4.0 (2026-10-02)
+
+**Release checks (2 October 2026).** The suite ran against the built wheel with the source tree removed: on Python
+3.11, 3.12 and 3.13 with the geo and mcp extras (1,226 passed each), on the lowest declared core dependencies (numpy
+1.26.4, pyyaml 6.0, huggingface_hub 0.20.0; 1,126 passed, the geo tests skipped) and, for the MCP server's tests, on
+mcp 1.26.0. One recorded-number test imported scipy, which comes with the geo extra, and now skips without it. On
+Linux the CI passes again, after the fix below for a p-value equal to its level.
 
 **Per input condition: review, sampling, estimation and certification (exp88).** Some maps are read from different
 inputs in different places. A model run on an input combination it was not trained on can be sure and wrong there.
@@ -145,8 +151,8 @@ connect with `claude mcp add --scope user oe-inferencex -- oe-inferencex mcp`; w
 how to install it.
 
 - One line connects the server with nothing installed but uv:
-  `claude mcp add --scope user oe-inferencex -- uvx --from "olmoearth-inferencex[geo,mcp] @ git+https://github.com/2imi9/olmoearth_inferenceX" oe-inferencex mcp`,
-  and after the next release `uvx --from "olmoearth-inferencex[geo,mcp]" oe-inferencex mcp`. Usage gives the JSON
+  `claude mcp add --scope user oe-inferencex -- uvx --from "olmoearth-inferencex[geo,mcp]" oe-inferencex mcp`.
+  Usage gives the JSON
   configuration for other agents. A first question on the demo tile, which
   `uvx --from olmoearth-inferencex oe-inferencex demo` writes, shows a result in a minute; the README and Usage give
   it. A test checks that every documented setup line and configuration names this package, its extras, its

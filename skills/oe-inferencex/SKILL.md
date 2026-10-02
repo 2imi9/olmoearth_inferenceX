@@ -9,14 +9,11 @@ If the oe-inferencex MCP server is connected (tools `assess`, `compare`, `sample
 call the tools: each returns a `conclusion`, its `limits` and what can be done `next`. Otherwise run the commands
 below.
 
-Install: the MCP server and `--condition` are not yet released. 1.3.1, the release on PyPI, lacks both, and pip
-skips its unknown `mcp` extra. With uv, one line connects the server from the repository to Claude Code, with
-nothing else to install:
-`claude mcp add --scope user oe-inferencex -- uvx --from "olmoearth-inferencex[geo,mcp] @ git+https://github.com/2imi9/olmoearth_inferenceX" oe-inferencex mcp`.
-After the next release, `uvx --from "olmoearth-inferencex[geo,mcp]" oe-inferencex mcp` will do. To install the
-commands and the server instead:
-`pip install "olmoearth-inferencex[geo,mcp] @ git+https://github.com/2imi9/olmoearth_inferenceX"`. If you need
-neither the server nor `--condition`, `pip install "olmoearth-inferencex[geo]"` from PyPI gives the other commands.
+Install: the MCP server and `--condition` need 1.4.0 or later. With uv, one line connects the server to Claude
+Code, with nothing else to install:
+`claude mcp add --scope user oe-inferencex -- uvx --from "olmoearth-inferencex[geo,mcp]" oe-inferencex mcp`.
+To install the commands and the server instead: `pip install "olmoearth-inferencex[geo,mcp]"`; without the server,
+`pip install "olmoearth-inferencex[geo]"` gives the commands.
 
 No map yet? `oe-inferencex demo` (or `uvx --from olmoearth-inferencex oe-inferencex demo`) writes a real land-cover
 tile with expert labels. Assess `oe_inferencex_demo/sample_probabilities.npy` with windows of 1 pixel (`--patch 1`,

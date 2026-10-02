@@ -13,21 +13,12 @@ pip install "olmoearth-inferencex[geo]"     # with GeoTIFF input and output
 
 The package requires Python 3.11 to 3.13. Without the `geo` extra, which brings rasterio, the commands read and write `.npy` arrays.
 
-The input-condition layer below (`--condition`, `condition=`) is not yet released: 1.3.1, the release on PyPI, lacks
-it. To use it now, install from the repository:
-
-```bash
-pip uninstall -y olmoearth-inferencex
-pip install "olmoearth-inferencex[geo] @ git+https://github.com/2imi9/olmoearth_inferenceX"
-```
-
-The first line is needed where the release is already installed. The repository still carries the version number
-1.3.1, so pip takes the release as up to date, changes nothing and reports no error. Afterwards
-`oe-inferencex assess --help` lists `--condition`.
+The input-condition layer below (`--condition`, `condition=`) and the MCP server (`oe-inferencex mcp`, the `mcp`
+extra) are new in 1.4.0.
 
 ## Quick start
 
-Every command below runs on 1.3.1. `scores.tif` is a map of per-class probabilities; add `--logits` for logits.
+Every command below runs on 1.4.0. `scores.tif` is a map of per-class probabilities; add `--logits` for logits.
 
 ```bash
 pip install "olmoearth-inferencex[geo]"
@@ -68,7 +59,7 @@ logits with `--logits` (with `form="top1"` in Python, the log of its top probabi
 distance of the probability from 0.5, or the absolute logit. The experiments graded a close relative: the margin
 between the two highest class probabilities of the window's mean probabilities. exp76 compares the forms. No-data comes from the raster's no-data value, from NaN or from `--nodata`.
 
-**The input condition (not yet released).** Without a layer `assess` ranks every window with every other. Where part
+**The input condition.** Without a layer `assess` ranks every window with every other. Where part
 of a map was predicted from an input combination the model was not trained on, such as radar alone under cloud for a
 model trained on radar plus optical, the model can be confidently wrong there. On PASTIS such a probe of OlmoEarth Base
 was 73.6% wrong, and 59.8% of its errors were at least as confident as the typical correct window with full input,
@@ -222,11 +213,11 @@ the naive interval covered the true rate 51 to 78% of the time at a nominal 95%.
 ships it, covered 94.5% to 95.4% on five tasks and fell short on Sen1Floods11 (84.3%) and MADOS (68.5%), where a tenth
 of the tiles hold most of the errors
 ([exp78](results/comparisons.md#how-wrong-is-this-map-what-a-reviewers-labels-buy-exp78)). The warning `estimate`
-prints for a tiles sample quotes these numbers on `main`; 1.3.1's quoted exp78's own design (an exact 18 tiles and a
+prints for a tiles sample quotes these numbers since 1.4.0; 1.3.1's quoted exp78's own design (an exact 18 tiles and a
 normal quantile). If labelling has not started, draw single windows rather than tiles. If only the whole-map rate is needed, `--design random` gives the
 exact interval and is the design `certify` needs.
 
-**Sampling by input condition (not yet released).** A map with a condition layer is sampled, estimated and certified
+**Sampling by input condition.** A map with a condition layer is sampled, estimated and certified
 per condition:
 
 ```bash
@@ -321,7 +312,7 @@ It writes `random_zone.json` (`coverage`, the certified share; `threshold`, the 
 - Without a condition, the zone JSON gains `scope`: the zone's rate is certified over all its windows together, and
   the part of it read with an input missing can be wrong more often than the rest (exp88).
 
-**Per input condition (not yet released).** A sample drawn with `--condition`, under the `condition` design or
+**Per input condition.** A sample drawn with `--condition`, under the `condition` design or
 `random`, is certified per condition, and no whole-map zone is issued for it. `L`, the number of conditions holding at
 least `min_labels_to_certify(α, δ)` labels (45 at α = 5% and δ = 0.1), is fixed by the label counts before any label
 is read. Each of those conditions is certified inside itself at δ/L, with its own zone order, levels and review-set
@@ -348,22 +339,23 @@ any of the statements is wrong.
 
 ## Use from an agent (MCP)
 
-Not yet released: 1.3.1 lacks it. `oe-inferencex mcp` starts a local MCP server on stdio, so that an agent can run
+New in 1.4.0. `oe-inferencex mcp` starts a local MCP server on stdio, so that an agent can run
 `assess`, `compare`, `sample`, `estimate` and `certify` on your own files. The agent starts the server and talks to
 it; nothing is hosted. The tools read the files you pass, the sidecar beside a sample and the scores raster it
 records, and write where you say, all on your machine.
 
 **Connect it in one line.** With [uv](https://docs.astral.sh/uv/) installed, this line connects Claude Code to the
-server on `main`, with nothing else to install:
+server, with nothing else to install:
 
 ```bash
-claude mcp add --scope user oe-inferencex -- uvx --from "olmoearth-inferencex[geo,mcp] @ git+https://github.com/2imi9/olmoearth_inferenceX" oe-inferencex mcp
+claude mcp add --scope user oe-inferencex -- uvx --from "olmoearth-inferencex[geo,mcp]" oe-inferencex mcp
 ```
 
 `--scope user` makes the server available in every folder. Without it, Claude Code adds the server only to the folder
 the line is run in. `uvx` installs the package and its extras into an environment of its own, kept in uv's cache,
-and runs the server from there; the first start downloads them, which can take half a minute. After the next
-release the PyPI form will do: `uvx --from "olmoearth-inferencex[geo,mcp]" oe-inferencex mcp`. Other agents, such as
+and runs the server from there; the first start downloads them, which can take half a minute. To run the server from the repository's `main`
+instead, put `"olmoearth-inferencex[geo,mcp] @ git+https://github.com/2imi9/olmoearth_inferenceX"` after `--from`.
+Other agents, such as
 Claude Desktop, Cursor or the OlmoEarth Agent, take the same command in their MCP configuration:
 
 ```json
@@ -371,8 +363,7 @@ Claude Desktop, Cursor or the OlmoEarth Agent, take the same command in their MC
   "mcpServers": {
     "oe-inferencex": {
       "command": "uvx",
-      "args": ["--from", "olmoearth-inferencex[geo,mcp] @ git+https://github.com/2imi9/olmoearth_inferenceX",
-               "oe-inferencex", "mcp"]
+      "args": ["--from", "olmoearth-inferencex[geo,mcp]", "oe-inferencex", "mcp"]
     }
   }
 }
@@ -383,8 +374,7 @@ If the agent does not find `uvx`, give its full path as `command`; `which uvx` p
 **Or install the package**, and the agent starts the installed command:
 
 ```bash
-pip uninstall -y olmoearth-inferencex
-pip install "olmoearth-inferencex[geo,mcp] @ git+https://github.com/2imi9/olmoearth_inferenceX"
+pip install "olmoearth-inferencex[geo,mcp]"
 claude mcp add --scope user oe-inferencex -- oe-inferencex mcp     # Claude Code
 ```
 
@@ -497,7 +487,7 @@ why["quotes"]["ndwi_ambiguous"]             # "is spectrally ambiguous ... (48% 
   HTTP range request.
 - `reference=` (class labels, negative for none) adds `against_reference`. Grade on expert labels; never train a rule
   on them.
-- `condition=` (not yet released; an `(H, W)` integer layer, negative or NaN where none is recorded) and
+- `condition=` (an `(H, W)` integer layer, negative or NaN where none is recorded) and
   `condition_names=` (`{value: name}`) add `arrays["condition"]`, the window grid, and `conditions`, as on the command
   line. `pool_condition(layer, patch, predicted)` gives the window grid alone.
 
@@ -640,7 +630,7 @@ On this pair most of the accuracy comes from the post-event side being usually r
 | `reliability`, `evidence` | SHRUG-FM's reliability signals, torch-free; the heads a candidate rule is scored with |
 | `taskcard`, `lcc` | The [task cards](method/taskcards.md) of OlmoEarth's fine-tuned models; a reader for the served change rasters |
 | `cli`, `demo` | The `oe-inferencex` commands |
-| `mcp_server` | The commands as tools of a local MCP server, `oe-inferencex mcp` (not yet released; the `mcp` extra) |
+| `mcp_server` | The commands as tools of a local MCP server, `oe-inferencex mcp` (the `mcp` extra) |
 
 ## Reproducing the experiments
 

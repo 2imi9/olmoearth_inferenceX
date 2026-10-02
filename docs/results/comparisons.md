@@ -2987,7 +2987,7 @@ suggests a label-free check. It has not been tested.
 **What follows.** The preregistration fixed it: the ranking is not valid across input conditions. The review
 output should say so and offer a design stratified by condition (cloud cover or modalities present) whenever the
 map records it, with the error rate and the certification issued per condition. The package now does this, in
-changes not yet released (listed under Unreleased in the CHANGELOG): `assess`, `estimate` and `certify` say what a
+changes released in 1.4.0: `assess`, `estimate` and `certify` say what a
 whole-map result does not show (`scope`), and a condition layer (`--condition`) ranks each condition on its own,
 splits the labels equally across the conditions, gives each its exact interval, and certifies each condition that
 holds enough labels with δ split over them ([Usage](../Usage.md#sample-and-estimate)).

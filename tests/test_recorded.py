@@ -1217,7 +1217,7 @@ def test_exp78_shipped_tile_design_coverage_by_an_independent_implementation():
     windows, its with-replacement between-tile variance and scipy's t quantile on tiles - 1 df), none of the package's
     code, 800 fresh draws per task. Each coverage must sit within four Monte Carlo standard errors of the record, on
     the two tasks where the record says the design falls short and on one where it holds."""
-    from scipy.stats import t as student_t
+    student_t = pytest.importorskip("scipy.stats").t         # scipy comes with the geo extra
     d = json.load(open(_need("exp78_shipped_tiles.json")))
     assert d["config"]["budget"] == 300 and d["config"]["per_tile"] == 16
     R, rng = 800, np.random.default_rng(20260930)
