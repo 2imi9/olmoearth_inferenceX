@@ -195,6 +195,19 @@ directory the caller gives. With no argument it reads the module's `ROOT` at cal
 result changes. exp89's arm A uses it to read the pinned AWF tar it extracts on scratch, without setting the module's
 `ROOT`.
 
+**The same labels certify the same zone on every system.** `certify`'s p-values and the exact interval's tails are
+computed through `math.lgamma` and `math.exp`, whose last digits differ between C libraries, so a p-value exactly
+equal to its level fell on either side of it. One error among three labels of a 5-window zone at alpha 0.4 has the
+p-value 3/10, computed as 0.29999999999999977 on macOS and 0.30000000000000004 on Linux (glibc 2.34): at delta 0.3,
+macOS certified the zone and Linux did not. A p-value within 1e-9 of its level, and an exact interval's tail within
+1e-9 of (1 - conf) / 2, is now decided in integer arithmetic against the level as written (0.3 is 3/10). An exact
+p-value equal to delta may be accepted, so the guarantee is unchanged. Away from a tie nothing changes, and no test
+or recorded check changed its result. `apply_zone_rule` takes the zone sizes (`n=`) to decide ties this way;
+`certify_zone` passes them, and without them the float decides as before. Found by the CI, which had failed on Linux
+since 30 September 2026: the golden test of 1.3.1's outputs, written on macOS, compared the certify JSONs' p-values
+to the last digit, and the small-map enumeration counted a tie as a failure. The golden test now allows floats to
+differ by 1e-12 and nothing else to differ.
+
 ## 1.3.1 (2026-09-25)
 
 - Usage documents a binary score in [0, 1] decided at 0.5, such as an OlmoEarth Studio `per_pixel_regression` output

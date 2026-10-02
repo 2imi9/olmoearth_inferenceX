@@ -2,6 +2,7 @@
 import csv
 import importlib.util
 import json
+import math
 import os
 
 import numpy as np
@@ -754,6 +755,17 @@ def test_random_with_condition_draws_the_same_windows(tmp_path, capsys):
     assert "to certify" not in printed
 
 
+def _same_but_last_digits(a, b):
+    """Equal JSON values with the keys in the same order, floats allowed to differ in their last digits only."""
+    if isinstance(a, float) or isinstance(b, float):
+        return (isinstance(a, (int, float)) and isinstance(b, (int, float)) and not isinstance(a, bool)
+                and not isinstance(b, bool) and math.isclose(a, b, rel_tol=1e-12, abs_tol=1e-15))
+    if isinstance(a, dict):
+        return isinstance(b, dict) and list(a) == list(b) and all(_same_but_last_digits(a[k], b[k]) for k in a)
+    if isinstance(a, list):
+        return isinstance(b, list) and len(a) == len(b) and all(_same_but_last_digits(x, y) for x, y in zip(a, b))
+    return type(a) is type(b) and a == b
+
 def _golden_module():
     spec = importlib.util.spec_from_file_location("golden_1_3_1", os.path.join(GOLDEN, "generate.py"))
     gen = importlib.util.module_from_spec(spec)
@@ -820,7 +832,12 @@ def test_existing_outputs_are_byte_identical_to_1_3_1(tmp_path):
         assert got.pop("scope") == scope, name
         # the golden JSON reads back to itself, so equal bytes after the dump mean equal bytes but for `scope`
         assert (json.dumps(json.loads(want), indent=1) + ("\n" if name.startswith("api_") else "")).encode() == want, name
-        assert (json.dumps(got, indent=1) + ("\n" if name.startswith("api_") else "")).encode() == want, name
+        if (json.dumps(got, indent=1) + ("\n" if name.startswith("api_") else "")).encode() != want:
+            # The golden files were written on macOS. On Linux the certify JSONs' p-values differ in their last digits
+            # (math.lgamma and math.exp differ between C libraries; the CI run of 2 October 2026 and the cluster), and
+            # nothing else does: the same keys in the same order, the same decisions, every float within 1e-12.
+            assert name.endswith(".json") and ".certify_" in name, name
+            assert _same_but_last_digits(got, json.loads(want)), name
         n_scoped += 1
     # six API summaries, three assessments, seven estimates and six per-class, seven zones; the stdout of each run
     assert n_scoped == 6 + 3 + 13 + 7 and sum(n.endswith(".stdout.txt") for n in files) == 3 + 7 + 7 + 6 + 7

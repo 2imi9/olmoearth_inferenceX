@@ -204,6 +204,38 @@ def _hyper_tail(k, n, N, K, upper):
     return min(1.0, math.exp(lead + m + math.log(math.exp(-m) + float(np.exp(cs - m).sum()))))
 
 
+
+# The tails above are computed through math.lgamma and math.exp, whose last digits differ between C libraries. A tail
+# exactly equal to a level then falls on either side of it: one error among three labels of a 5-window zone at alpha
+# 0.4 has the p-value 3/10, computed as 0.29999999999999977 on macOS and 0.30000000000000004 on Linux (glibc 2.34),
+# so at delta 0.3 the same labels certified a zone on one system and not on the other. Where a tail lies within _TIE
+# of its level, the comparison is redone in integer arithmetic against the level as written (0.3 is 3/10), so every
+# system decides alike. Away from the level the float decides, as before.
+_TIE = 1e-9
+
+
+def _level(x):
+    """A level as written: 0.1 is 1/10, not the binary float nearest to it."""
+    from fractions import Fraction
+    return x if isinstance(x, Fraction) else Fraction(repr(float(x)))
+
+
+def _hyper_tail_exact(k, n, N, K, upper):
+    """_hyper_tail in integer arithmetic, as a Fraction: P(X >= k) when `upper`, else P(X <= k)."""
+    import math
+    from fractions import Fraction
+    lo, hi = max(0, n - (N - K)), min(n, K)
+    xs = range(max(k, lo), hi + 1) if upper else range(lo, min(k, hi) + 1)
+    return Fraction(sum(math.comb(K, x) * math.comb(N - K, n - x) for x in xs), math.comb(N, n))
+
+
+def _at_most(value, level, exact):
+    """value <= level for a tail computed in floating point; within _TIE of the level, exact() decides."""
+    level = _level(level)
+    if abs(value - float(level)) > _TIE * float(level):
+        return value <= float(level)
+    return exact() <= level
+
 def hypergeom_interval(k, n, N, conf=0.95):
     """Exact equal-tailed interval for the share K/N of marked units in a finite population of N, from k marked
     among a simple random sample of n: every K whose two tails at the observed k both exceed (1 - conf)/2, the
@@ -240,12 +272,12 @@ def _hypergeom_interval(k, n, N, conf):
         return 0.0, 1.0
     if n >= N:
         return k / n, k / n
-    a = (1.0 - conf) / 2.0
+    a = (1 - _level(conf)) / 2                                   # as written: 0.95 gives 1/40
     lo_K, hi_K = k, N - (n - k)                                  # the counts the sample does not rule out outright
     left, right = lo_K, hi_K                                     # smallest K with P(X >= k | K) > a (nondecreasing in K)
     while left < right:
         mid = (left + right) // 2
-        if _hyper_tail(k, n, N, mid, upper=True) > a:
+        if not _at_most(_hyper_tail(k, n, N, mid, upper=True), a, lambda: _hyper_tail_exact(k, n, N, mid, upper=True)):
             right = mid
         else:
             left = mid + 1
@@ -253,7 +285,7 @@ def _hypergeom_interval(k, n, N, conf):
     left, right = lo_K, hi_K                                     # largest K with P(X <= k | K) > a (nonincreasing in K)
     while left < right:
         mid = (left + right + 1) // 2
-        if _hyper_tail(k, n, N, mid, upper=False) > a:
+        if not _at_most(_hyper_tail(k, n, N, mid, upper=False), a, lambda: _hyper_tail_exact(k, n, N, mid, upper=False)):
             left = mid
         else:
             right = mid - 1
@@ -1425,6 +1457,20 @@ def zone_pvalue(k, b, n, alpha):
     return hypergeom_cdf(k, n, K0, b)
 
 
+
+def zone_pvalue_exact(k, b, n, alpha):
+    """zone_pvalue in integer arithmetic, as a Fraction; used where a p-value lies within _TIE of its level."""
+    import math
+    from fractions import Fraction
+    n, b, k = int(n), int(b), int(k)
+    if b == 0:
+        return Fraction(1)
+    K0 = math.floor(alpha * n) + 1              # the same null count as zone_pvalue
+    if K0 > n:
+        return Fraction(0)
+    return _hyper_tail_exact(k, b, n, K0, upper=False)
+
+
 def zone_upper_bound(k, b, n, delta=ZONE_DELTA):
     """The largest error rate K/n of a zone of n windows that k errors among b sampled do not reject at level
     delta: the exact hypergeometric upper confidence bound. With no labels it is 1."""
@@ -1432,11 +1478,13 @@ def zone_upper_bound(k, b, n, delta=ZONE_DELTA):
     if b == 0:
         return 1.0
     lo, hi = k, n - (b - k)                     # K must allow k wrong and b - k right among the sample
-    if hypergeom_cdf(k, n, hi, b) > delta:
+    def keeps(K):                               # P(X <= k | K) > delta: K is not rejected
+        return not _at_most(hypergeom_cdf(k, n, K, b), delta, lambda: _hyper_tail_exact(k, b, n, K, upper=False))
+    if keeps(hi):
         return hi / n
     while hi - lo > 1:                          # P(X <= k | K) is nonincreasing in K: bisect
         mid = (lo + hi) // 2
-        if hypergeom_cdf(k, n, mid, b) > delta:
+        if keeps(mid):
             lo = mid
         else:
             hi = mid
@@ -1491,7 +1539,7 @@ def zone_counts(positions, wrong, sizes):
     return b.astype(int), cum[b].astype(int)
 
 
-def apply_zone_rule(p, b, k, alpha, delta=ZONE_DELTA, rule="prefix"):
+def apply_zone_rule(p, b, k, alpha, delta=ZONE_DELTA, rule="prefix", n=None):
     """Which grid levels a rule accepts, and the largest one; levels are in increasing coverage.
     prefix      accept while p <= delta from the smallest zone up, stop at the first failure: fixed-sequence
                 testing (Angelopoulos et al. 2021, Learn then Test), valid on any map whatever the shape of the
@@ -1499,17 +1547,25 @@ def apply_zone_rule(p, b, k, alpha, delta=ZONE_DELTA, rule="prefix"):
     bonferroni  accept every level with p <= delta / J, J the number of levels (Angelopoulos et al. 2021, Learn
                 then Test; valid on any map); it can pass a level the prefix rule stops at, and needs a smaller
                 p-value at every level
-    plugin      accept every level whose sample rate k / b is at most alpha; no guarantee, the comparator"""
+    plugin      accept every level whose sample rate k / b is at most alpha; no guarantee, the comparator
+    `n`, the zone sizes, lets a p-value within _TIE of its level be decided in integer arithmetic, so that every
+    system certifies the same zone from the same labels; `certify_zone` passes it. Without it the float decides."""
     p, b, k = np.asarray(p, float), np.asarray(b, int), np.asarray(k, int)
+
+    def passes(j, level):
+        if n is None:
+            return p[j] <= float(level)
+        return _at_most(p[j], level, lambda: zone_pvalue_exact(k[j], b[j], n[j], alpha))
     if rule == "prefix":
         acc = np.zeros(p.size, bool)
         for j in range(p.size):
-            if p[j] <= delta:
+            if passes(j, delta):
                 acc[j] = True
             else:
                 break
     elif rule == "bonferroni":
-        acc = p <= delta / max(p.size, 1)
+        level = _level(delta) / max(p.size, 1) if n is not None else delta / max(p.size, 1)
+        acc = np.array([passes(j, level) for j in range(p.size)], bool)
     elif rule == "plugin":
         with np.errstate(invalid="ignore", divide="ignore"):
             acc = (b > 0) & (k <= alpha * b)
@@ -1567,7 +1623,7 @@ def certify_zone(margin, indices, wrong, alpha, delta=ZONE_DELTA, rule="prefix",
         return out
     b, k = zone_counts(pos[idx], wrong, sizes)
     p = np.array([zone_pvalue(kk, bb, n, alpha) for kk, bb, n in zip(k, b, sizes)])
-    acc, best = apply_zone_rule(p, b, k, alpha, delta, rule)
+    acc, best = apply_zone_rule(p, b, k, alpha, delta, rule, n=sizes)
     for j, c in enumerate(cov):
         out["levels"].append({"coverage": c, "n_zone": sizes[j], "n_labelled_inside": int(b[j]), "n_wrong_inside": int(k[j]),
                               "p_value": float(p[j]), "upper_bound": zone_upper_bound(k[j], b[j], sizes[j], delta),

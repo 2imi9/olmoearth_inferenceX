@@ -179,11 +179,12 @@ def _pattern_outcomes(N, B, alpha, delta, patterns):
         key = (rule, k.tobytes(), b.tobytes())
         if key not in memo:
             p = [est.zone_pvalue(int(kk), int(bb), int(n), alpha) for kk, bb, n in zip(k, b, sizes)]
-            if rule == "uncorrected":
-                ok = np.flatnonzero(np.asarray(p) <= delta)
-                memo[key] = int(ok.max()) if ok.size else None
+            if rule == "uncorrected":                    # decided as the package decides a level, ties exactly
+                ok = [j for j in range(len(p)) if est._at_most(
+                    p[j], delta, lambda j=j: est.zone_pvalue_exact(int(k[j]), int(b[j]), int(sizes[j]), alpha))]
+                memo[key] = max(ok) if ok else None
             else:
-                memo[key] = est.apply_zone_rule(p, b, k, alpha, delta, rule)[1]
+                memo[key] = est.apply_zone_rule(p, b, k, alpha, delta, rule, n=sizes)[1]
         return memo[key]
 
     out = []
@@ -607,3 +608,41 @@ def test_certify_by_condition_union():
             assert r["note"] == note.format(L=r["n_conditions_tested"], b1=r["min_labels_to_certify"],
                                             d=r["delta_per_condition"], delta=0.2, alpha=0.2)
     assert seen > 20
+
+
+# ----------------------------------------------------------------------------- a p-value equal to its level
+def test_a_p_value_equal_to_its_level_is_decided_alike_on_every_system(monkeypatch):
+    """One error among three labels of a 5-window zone at alpha 0.4 has the p-value 3/10 exactly. macOS computed
+    0.29999999999999977 and Linux (glibc 2.34) 0.30000000000000004, so at delta 0.3 the same labels certified a zone
+    on one and not on the other (the CI run of 2 October 2026). Both floats now give the exact decision, accept, and
+    a p-value clearly above the level is still refused."""
+    from fractions import Fraction
+    assert est.zone_pvalue_exact(1, 3, 5, 0.4) == Fraction(3, 10)
+    for p in (0.29999999999999977, 0.30000000000000004):
+        acc, best = est.apply_zone_rule([p], [3], [1], 0.4, 0.3, "prefix", n=[5])
+        assert acc.tolist() == [True] and best == 0, p
+        assert est.apply_zone_rule([p], [3], [1], 0.4, 0.6, "bonferroni", n=[5])[0].tolist() == [True], p
+    assert est.apply_zone_rule([0.3 + 1e-6], [3], [1], 0.4, 0.3, "prefix", n=[5])[1] is None
+    # the whole certificate, with the p-value as either system computes it
+    margin = np.arange(5, 0, -1, dtype=float)            # zone order 0..4
+    for p in (0.29999999999999977, 0.30000000000000004):
+        monkeypatch.setattr(est, "zone_pvalue", lambda k, b, n, a, p=p: p if (k, b, n) == (1, 3, 5) else 1.0)
+        out = est.certify_zone(margin, [0, 1, 2], [1, 0, 0], 0.4, delta=0.3, rule="prefix", grid=(1.0,))
+        assert out["levels"][0]["accepted"] is True, p
+
+
+def test_the_exact_interval_is_decided_alike_on_every_system(monkeypatch):
+    """A tail exactly equal to (1 - conf) / 2 sits on the interval's edge: one marked unit drawn alone from 40 has
+    P(X >= 1 | K = 1) = 1/40, the level at conf 0.95. Nudged a last digit either way, the interval is the same, the
+    one integer arithmetic gives."""
+    from fractions import Fraction
+    assert est._hyper_tail_exact(1, 1, 40, 1, upper=True) == Fraction(1, 40)
+    real = est._hyper_tail
+    seen = []
+    for nudge in (1 - 4e-16, 1 + 4e-16):
+        monkeypatch.setattr(est, "_hyper_tail", lambda *a, nudge=nudge, **kw: real(*a, **kw) * nudge)
+        est._hypergeom_interval.cache_clear()
+        seen.append(est.hypergeom_interval(1, 1, 40))
+    est._hypergeom_interval.cache_clear()
+    assert seen[0] == seen[1] == (2 / 40, 1.0)
+
