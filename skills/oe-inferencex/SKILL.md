@@ -48,6 +48,25 @@ Match the user's question to a step. The tool and the command of each step have 
    sensor id), pass `--condition layer.tif` to `assess` and `sample`. `estimate` and `certify` then give each
    condition its own rate and zone.
 
+## Example questions
+
+Questions a user may ask, here on the README's test map (`scores.tif`, `other.tif` and `truth.tif`),
+each with the tools it uses and what the answer can and cannot be:
+
+- "Where should I look first in scores.tif?" Uses `assess`. The answer is a list of windows to check first, least
+  confident first. It is not an error rate, and the errors the model is sure of come last. It needs the model's
+  per-class scores: a class map alone cannot be ranked.
+- "How wrong is scores.tif? Pick 300 windows at random for me to label." Uses `sample`, then `estimate`. In between,
+  you set `wrong` to 1 or 0 on every row of the sample. The answer is an error rate with a 95% interval. No tool
+  labels a window, and the interval assumes your labels are right.
+- "Which part of scores.tif can I trust at 5% error?" Uses `certify`, on the labels of that random sample. The answer
+  is the most confident share of the map that is wrong at most 5% of the time, a statement that fails on at most 10%
+  of samples. It can be nothing: with too few labels, or errors among the most confident windows, it certifies no
+  zone and says why.
+- "Which is better, scores.tif or other.tif, and where do they differ?" Uses `compare`. The answer says where the two
+  maps differ, window by window. Without labels it cannot say which map is better; with truth.tif as labels it says
+  which is right where they differ.
+
 ## Hard rules
 
 Do not work around them. The package refuses only what a rule says it refuses; the rest is up to you.

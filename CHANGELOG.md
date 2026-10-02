@@ -151,6 +151,10 @@ it.
   `uvx --from olmoearth-inferencex oe-inferencex demo` writes, shows a result in a minute; the README and Usage give
   it. A test checks that every documented setup line and configuration names this package, its extras, its
   repository and a command it has, and that the first question, asked of `assess`, gives the demo's own numbers.
+- Four example questions in the README, Usage and SKILL.md, on the quick-start test map, one per question the tools
+  answer. Each names the tools it uses and says what the answer can and cannot be: `assess` gives no error rate and
+  cannot rank a class map alone; no tool labels a window; `certify` can certify nothing; `compare` cannot say which
+  map is better without labels. A test checks that the three lists are the same and name only tools that exist.
 - Tools `assess`, `compare`, `sample`, `estimate` and `certify` run the command of the same name in-process, so they
   give its numbers and its refusals. Each takes file paths and an output directory and returns JSON: the files
   written, the summary numbers, `conclusion`, `limits` (with the package's own warnings and notes, each class's

@@ -363,8 +363,7 @@ claude mcp add oe-inferencex -- uvx --from "olmoearth-inferencex[geo,mcp] @ git+
 `uvx` installs the package and its extras into an environment of its own, kept in uv's cache, and runs the server
 from there. After the next release the PyPI form will do:
 `uvx --from "olmoearth-inferencex[geo,mcp]" oe-inferencex mcp`. Other agents, such as Claude Desktop, Cursor or the
-OlmoEarth Agent, take the same command in their MCP configuration. If the agent does not find `uvx`, give its full
-path, which `which uvx` prints:
+OlmoEarth Agent, take the same command in their MCP configuration:
 
 ```json
 {
@@ -377,6 +376,8 @@ path, which `which uvx` prints:
   }
 }
 ```
+
+If the agent does not find `uvx`, give its full path as `command`; `which uvx` prints it.
 
 **Or install the package**, and the agent starts the installed command:
 
@@ -430,6 +431,23 @@ numbers and the same refusals. The tool names are unchanged; each tool's title s
   passed with `logits=true`; for those, whose review sets tie, its conclusion says the order is not evidence.
 - **A refusal.** A tool error carrying the package's own message. The message names command-line options; each is
   the tool parameter of the same name (`--labels-date` is `labels_date`).
+
+**Example questions**, on the test map that `examples/quickstart_map.py` writes (`scores.tif`, `other.tif`
+and `truth.tif`), each with the tools it uses and what the answer can and cannot be:
+
+- "Where should I look first in scores.tif?" Uses `assess`. The answer is a list of windows to check first, least
+  confident first. It is not an error rate, and the errors the model is sure of come last. It needs the model's
+  per-class scores: a class map alone cannot be ranked.
+- "How wrong is scores.tif? Pick 300 windows at random for me to label." Uses `sample`, then `estimate`. In between,
+  you set `wrong` to 1 or 0 on every row of the sample. The answer is an error rate with a 95% interval. No tool
+  labels a window, and the interval assumes your labels are right.
+- "Which part of scores.tif can I trust at 5% error?" Uses `certify`, on the labels of that random sample. The answer
+  is the most confident share of the map that is wrong at most 5% of the time, a statement that fails on at most 10%
+  of samples. It can be nothing: with too few labels, or errors among the most confident windows, it certifies no
+  zone and says why.
+- "Which is better, scores.tif or other.tif, and where do they differ?" Uses `compare`. The answer says where the two
+  maps differ, window by window. Without labels it cannot say which map is better; with truth.tif as labels it says
+  which is right where they differ.
 
 The extra pins the MCP Python SDK (MIT licence) below version 2, which renamed the server class this module uses.
 For an agent that runs the commands itself instead,

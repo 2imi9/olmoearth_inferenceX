@@ -242,6 +242,23 @@ The tools answer four questions, in this order: where should I look first (`asse
 wrong is the map (`sample`, then `estimate`); which part can I trust (`certify`); and which
 of two maps is better, and where do they differ (`compare`).
 
+Example questions, on the files of the quick start above:
+
+- "Where should I look first in scores.tif?" Uses `assess`. The answer is a list of windows to
+  check first, least confident first. It is not an error rate, and the errors the model is sure
+  of come last. It needs the model's per-class scores: a class map alone cannot be ranked.
+- "How wrong is scores.tif? Pick 300 windows at random for me to label." Uses `sample`, then
+  `estimate`. In between, you set `wrong` to 1 or 0 on every row of the sample. The answer is
+  an error rate with a 95% interval. No tool labels a window, and the interval assumes your
+  labels are right.
+- "Which part of scores.tif can I trust at 5% error?" Uses `certify`, on the labels of that
+  random sample. The answer is the most confident share of the map that is wrong at most 5% of
+  the time, a statement that fails on at most 10% of samples. It can be nothing: with too few
+  labels, or errors among the most confident windows, it certifies no zone and says why.
+- "Which is better, scores.tif or other.tif, and where do they differ?" Uses `compare`. The
+  answer says where the two maps differ, window by window. Without labels it cannot say which
+  map is better; with truth.tif as labels it says which is right where they differ.
+
 
 Results and limits
 ------------------

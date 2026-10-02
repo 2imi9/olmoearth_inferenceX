@@ -410,6 +410,59 @@ def test_the_first_question_runs_on_the_demo_tile(tmp_path, monkeypatch, capsys)
     assert f"the 5% review set holds {100 * pinned['errors_captured_fraction']:.0f}% of those" in out["conclusion"]
 
 
+# ----------------------------------------------------------------------------- the example questions in the docs
+EXAMPLE_DOCS = ("README.md", "docs/Usage.md", "skills/oe-inferencex/SKILL.md")
+# what each tool's example must say the answer cannot be, or can be: nothing, no ranking, no verdict without labels
+EXAMPLE_LIMITS = {
+    "assess": ("It is not an error rate", "a class map alone cannot be ranked"),
+    "estimate": ("No tool labels a window", "the interval assumes your labels are right"),
+    "certify": ("It can be nothing", f"fails on at most {est.ZONE_DELTA:.0%} of samples", "random sample"),
+    "compare": ("Without labels it cannot say which map is better",),
+}
+
+
+def _examples(path):
+    """(question, tools, text) per example bullet of a doc: `- "Question?" Uses `tool`, then `tool`. ...`."""
+    found = []
+    for bullet in re.findall(r'^- ("[^\n]*(?:\n  [^\n]*)*)', _doc(path), re.M):
+        said = _flat(bullet)
+        m = re.match(r'"([^"]+\?[^"]*)" Uses (.+?)\. ', said)
+        assert m, (path, said)
+        found.append((m.group(1), re.findall(r"`([^`]+)`", m.group(2)), said))
+    return found
+
+
+def test_each_example_question_names_only_tools_that_exist():
+    """Three to five example questions, the same in the README, Usage and SKILL.md; each names the tools it uses, all
+    of them tools of the server and commands of the command line, and says what the answer can and cannot be."""
+    per_doc = {path: _examples(path) for path in EXAMPLE_DOCS}
+    first = per_doc[EXAMPLE_DOCS[0]]
+    assert 3 <= len(first) <= 5
+    for path, examples in per_doc.items():
+        assert examples == first, path
+    for question, tools, said in first:
+        assert tools, question
+        assert set(tools) <= set(mcp_server.TOOLS), (question, tools)
+        for tool in tools:                                          # each runs the command of the same name
+            _check_command(["oe-inferencex", tool], question)
+        for tool in tools:
+            for limit in EXAMPLE_LIMITS.get(tool, ()):
+                assert limit in said, (question, limit)
+        assert "\u2014" not in said
+    # together they ask the four questions: every tool but guide is used
+    assert set().union(*(set(tools) for _, tools, _ in first)) == set(mcp_server.TOOLS) - {"guide"}
+
+
+@pytest.mark.skipif(not HAVE_GEO, reason="the quick-start map is a GeoTIFF")
+def test_the_example_questions_name_the_quick_start_files(qs):
+    """The files the questions name are the ones examples/quickstart_map.py writes."""
+    named = {f for question, _, _ in _examples("README.md") for f in re.findall(r"\w+\.tif", question)}
+    assert named == {"scores.tif", "other.tif"}
+    for name in named | {"truth.tif"}:
+        assert (qs / name).is_file(), name
+    assert "truth.tif" in _examples("README.md")[-1][2]
+
+
 # ----------------------------------------------------------------------------- the server, in process
 @needs_mcp
 def test_the_server_lists_six_tools_each_described_by_its_card():
