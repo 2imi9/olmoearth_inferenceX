@@ -1916,3 +1916,85 @@ def certify_by_condition(sample, wrong, margin, alpha, delta=ZONE_DELTA, rule="p
             "upper_bound": None, "by_condition": True, "delta_per_condition": d, "n_conditions_tested": L - len(refused),
             "certified_share_of_map": n_cert / N if zones else None, "n_certified": n_cert, "per_condition": per,
             "zone_indices_in_order": np.concatenate(zones) if zones else np.zeros(0, int), "note": note}
+
+
+# ----------------------------------------------------------------------------- which of two maps is more accurate
+# Where two maps of the same windows give the same class, both are right or both are wrong; their accuracies differ
+# only through the windows where they differ. So the difference acc_a - acc_b = (K_a - K_b) / N, with K_a and K_b the
+# differing windows where a, and where b, is right, and a random sample of the D differing windows estimates it with
+# about N / D times fewer labels than a sample of the whole map (exp90: a median of 4.8 times on the record's maps).
+WHICH_MAP_NOTE = ("The difference is over the windows compared: both maps predict them and neither splits evenly between "
+                  "two classes. This says which map is more accurate and by how much, not either map's accuracy: where the maps agree "
+                  "they are both right or both wrong, and how often needs a sample of all windows (sample --design random "
+                  "on each map). Labels are assumed right; a window marked ? is counted for each map both ways.")
+
+
+def sample_disagreement(class_a, class_b, budget, valid=None, seed=0):
+    """A simple random sample of the windows where two maps' classes differ, for `compare_from_disagreement`.
+    class_a, class_b: each window's class (flattened alike); valid: windows both maps predict. A budget at least the
+    number of differing windows labels them all."""
+    a, b = np.asarray(class_a).ravel(), np.asarray(class_b).ravel()
+    if a.shape != b.shape:
+        raise ValueError(f"the two maps have {a.size} and {b.size} windows; they must share one window grid")
+    ok = np.ones(a.size, bool) if valid is None else np.asarray(valid, bool).ravel()
+    budget = int(budget)
+    if budget < 1:
+        raise ValueError(f"the budget must be at least 1, got {budget}")
+    pop = np.flatnonzero(ok & (a != b))
+    if pop.size == 0:
+        raise ValueError("the two maps give the same class in every window both predict: neither is more accurate, and "
+                         "there is nothing to label")
+    rng = np.random.default_rng(seed)
+    m = min(budget, pop.size)
+    return {"design": "disagreement", "indices": pop[rng.choice(pop.size, m, replace=False)],
+            "n_population": int(ok.sum()), "n_disagree": int(pop.size), "budget": budget, "seed": int(seed)}
+
+
+def compare_from_disagreement(sample, class_a, class_b, reference, unjudged=None, conf=0.95):
+    """Which of two maps is more accurate, from a labelled `sample_disagreement`.
+
+    class_a, class_b: each sampled window's class in the two maps, in the order of sample["indices"]; reference: the
+    class the reviewer saw there (ignored where `unjudged`). Among the n labelled windows of the D differing ones, a are
+    right in map a and b in map b (a window can be right in at most one). Each count gets its exact hypergeometric
+    interval over the D windows at 1 - (1 - conf) / 2, so the two hold together with probability at least conf (union
+    bound), and the accuracy difference over the N windows both maps predict, (K_a - K_b) / N, lies in
+    [(lo_a - hi_b) D / N, (hi_a - lo_b) D / N]. A window marked ? counts as wrong for a map at that map's lower end and
+    as right at its upper end; the intervals move one way with the count, so the bound holds whatever made the windows
+    hard to judge. The verdict names a map when the interval excludes 0."""
+    idx = np.asarray(sample["indices"], int)
+    ca, cb = np.asarray(class_a).ravel(), np.asarray(class_b).ravel()
+    ref = np.asarray(reference).ravel()
+    unj = np.zeros(idx.size, bool) if unjudged is None else np.asarray(unjudged, bool).ravel()
+    if not ca.size == cb.size == ref.size == unj.size == idx.size:
+        raise ValueError(f"{idx.size} sampled windows but {ca.size}, {cb.size}, {ref.size} and {unj.size} classes, "
+                         "references and flags")
+    if (ca == cb).any():
+        raise ValueError("a sampled window has the same class in both maps; the sample must hold differing windows only")
+    if not 0 < conf < 1:
+        raise ValueError(f"conf must be in (0, 1), got {conf}")
+    N, D, n = int(sample["n_population"]), int(sample["n_disagree"]), int(idx.size)
+    judged = ~unj
+    a = int((judged & (ref == ca)).sum())
+    b = int((judged & (ref == cb)).sum())
+    u = int(unj.sum())
+    c = n - a - b - u
+    side = 1 - (1 - conf) / 2
+    lo_a, _ = hypergeom_interval(a, n, D, side)
+    _, hi_a = hypergeom_interval(a + u, n, D, side)
+    lo_b, _ = hypergeom_interval(b, n, D, side)
+    _, hi_b = hypergeom_interval(b + u, n, D, side)
+    w = D / N
+    low, high = (lo_a - hi_b) * w, (hi_a - lo_b) * w
+    est_lo, est_hi = (a - (b + u)) / n * w, ((a + u) - b) / n * w
+    verdict = "a" if low > 0 else "b" if high < 0 else None
+    return {"design": "disagreement", "n_population": N, "n_disagree": D, "disagree_share": D / N, "n_labelled": n,
+            "n_unjudged": u, "n_a_right": a, "n_b_right": b, "n_neither": c,
+            "share_a_right": {"low": lo_a, "high": hi_a}, "share_b_right": {"low": lo_b, "high": hi_b},
+            "difference": {"estimate": est_lo if est_lo == est_hi else None, "estimate_range": [est_lo, est_hi],
+                           "low": low, "high": high},
+            "verdict": verdict, "conf": conf,
+            "method": (f"labels on a simple random sample of the {D} windows where the maps differ; each map's share of "
+                       f"them that is right gets its exact interval at {side:.3g}, and the difference of the two, times "
+                       f"{D}/{N}, covers the whole map's accuracy difference at least {conf:.0%} of the time (union "
+                       "bound)"),
+            "note": WHICH_MAP_NOTE}

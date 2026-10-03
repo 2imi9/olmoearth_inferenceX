@@ -1,5 +1,27 @@
 # Changelog
 
+## Unreleased
+
+**Which of two maps is more accurate, with few labels.** `compare` says where two maps differ but, without a label
+raster, not which is better. Where two maps give the same class, both are right or both are wrong, so their
+accuracies differ only through the windows where they differ.
+
+- `sample a.tif --other b.tif --budget 100 --out pairs.csv` draws windows at random among those where the two maps'
+  classes differ, read as `compare` reads them (`_two_map_windows`, now shared by both commands), and writes
+  `class_a`, `class_b` and an empty `reference_class` for the reviewer to fill with the class seen, or `?`.
+- `estimate pairs.csv` says which map is more accurate and by how much: a 95% interval on the whole map's accuracy
+  difference, a minus b, from each map's exact interval over the differing windows at 97.5% (union bound; it is
+  conservative), with `?` counted both ways. It names a map only when the interval excludes 0, and it does not give
+  either map's accuracy. `certify` refuses this sample.
+- Python: `estimate.sample_disagreement`, `estimate.compare_from_disagreement`. MCP: `sample` takes `other` and
+  `threshold`; `estimate` answers the comparison; `compare`'s next step names the route.
+- exp90 (not preregistered) checked the design on every pair of encoders run on the same units of the 24 tasks of
+  Ai2's suite (2,514 pairs), with the full truth: 100 labels on the differing windows named the right map on 60% of
+  draws against 13% for 100 windows of the whole map analysed on the differing windows they held (43% against 11% on
+  the 1,709 pairs that differ on more than 100 windows); the coverage was at least 95% on every pair up to the draws'
+  noise, and the wrong map was named on at most 4% of a pair's draws. tests/test_which_map.py checks the coverage by
+  exact enumeration, with an adversary marking `?`.
+
 ## 1.5.0 (2026-10-02)
 
 **Release checks (2 October 2026).** A three-lens review of these changes (statistics, code edge cases, docs and

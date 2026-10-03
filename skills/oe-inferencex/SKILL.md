@@ -42,7 +42,10 @@ Match the user's question to a step. The tool and the command of each step have 
    share of the map whose error rate is at most alpha. It may certify nothing, and says why.
 4. **Which of two maps is better, and where do they differ?** `compare`.
    `oe-inferencex compare a.tif b.tif --out diff` says where they differ. Only with labels does it say which map
-   is right there: add `--labels truth.tif`, and `--date-a`, `--date-b` when the maps describe dates.
+   is right there: add `--labels truth.tif`, and `--date-a`, `--date-b` when the maps describe dates. With few
+   labels: `oe-inferencex sample a.tif --other b.tif --budget 100 --out pairs.csv` draws windows only where the
+   maps differ; the reviewer writes the class seen in `reference_class` (or `?`); `oe-inferencex estimate
+   pairs.csv` says which map is more accurate and by how much.
 5. **Per condition.** When a raster records each pixel's input condition (a cloud flag, the modalities present, a
    sensor id), pass `--condition layer.tif` to `assess` and `sample`. `estimate` and `certify` then give each
    condition its own rate and zone.
@@ -64,7 +67,8 @@ each with the tools it uses and what the answer can and cannot be:
   zone and says why.
 - "Which is better, scores.tif or other.tif, and where do they differ?" Uses `compare`. The answer says where the two
   maps differ, window by window. Without labels it cannot say which map is better; with truth.tif as labels it says
-  which is right where they differ.
+  which is right where they differ. With labels on a few of the differing windows instead, sample with other.tif as the
+  second map and then estimate say which map is more accurate.
 
 ## Hard rules
 

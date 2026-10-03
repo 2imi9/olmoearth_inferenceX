@@ -106,7 +106,9 @@ INSTRUCTIONS = "\n".join([
     f"3. {TRUST} (certify) From the same labels, the most confident share of the map whose error rate is at most "
     "alpha. It can certify nothing, and then says why.",
     f"4. {TWO_MAPS} (compare) Where two maps of one area differ, window by window. Only with labels does it say which "
-    "map is right where they differ.",
+    "map is right where they differ. With few labels: sample with other set to the second map draws windows only "
+    "where the maps differ, the reviewer writes the class seen in reference_class, and estimate says which map is more "
+    "accurate and by how much.",
     "5. Per condition: when a raster records each pixel's input condition (a cloud flag, the modalities present, a "
     "sensor id), pass it as condition to assess and to sample. estimate and certify then give each condition its own "
     "rate and zone. A model run on inputs it was not trained on can be sure and wrong, and its errors then come late "
@@ -165,7 +167,9 @@ CARDS = {
     "sample": "\n".join([
         f"Answers \"{HOW_WRONG}\", step 1: which windows to label, so that estimate can give the map's error rate.",
         "Does: draws budget windows and writes them to a CSV with an empty `wrong` column for the reviewer, and a "
-        ".json sidecar holding the design, which estimate and certify read. Designs: confidence (the default without "
+        ".json sidecar holding the design, which estimate and certify read. With other (a second map of the same "
+        "grid) it draws only windows where the two maps differ, with an empty `reference_class` column, for estimate "
+        "to say which map is more accurate. Designs: confidence (the default without "
         "condition: stratified by confidence; estimate reads it, certify refuses it), random (serves estimate and "
         "certify), proportional, tiles (a cluster design for labelling tile by tile) and condition (the default with "
         "condition: labels split equally across the input conditions).",
@@ -178,7 +182,8 @@ CARDS = {
         "Does: reads the CSV that sample wrote, once `wrong` holds 1 or 0 on every row, and its .json sidecar. Gives "
         "the error rate with the interval the sample's design earns, and each input condition's rate when the sample "
         "recorded a condition. With per_class, each class's user's and producer's accuracy and its error-adjusted "
-        "share of the map.",
+        "share of the map. On a sample drawn with other (reference_class filled), it says instead which map is more "
+        "accurate and by how much; no reviewer rate or per_class applies there.",
         "Needs: the CSV sample wrote, filled on every row (1, 0, or ? where a window cannot be judged) and kept in "
         "its order, with its .json beside it. Windows marked ? are bounded both ways, so the estimate is a range. "
         "reviewer_false_alarm and reviewer_miss, when the user knows how often the reviewer errs, widen the interval "
@@ -310,7 +315,7 @@ def _join(texts):
 # said "--design random" or "--condition" sent a small model looking for options it does not have).
 _FLAGS = {"design", "condition", "condition-names", "per-class", "labels-date", "patch", "nodata", "scores", "alpha",
           "delta", "rule", "budget", "seed", "labels", "reference", "threshold", "date-a", "date-b", "groups", "order",
-          "budgets", "tile", "per-tile", "reviewer-false-alarm", "reviewer-miss"}
+          "budgets", "tile", "per-tile", "reviewer-false-alarm", "reviewer-miss", "other", "threshold"}
 
 
 def _mcp_words(text):
@@ -645,9 +650,11 @@ def compare(
     if s["dates"]["status"] in ("different_time", "overlapping_time", "partly_stated"):
         said.append(s["dates"]["reading"][0].upper() + s["dates"]["reading"][1:] + ".")
     limits += ["A difference between the maps says neither map's error rate."] + caveats + _notes(s.get("notes", []))
-    nxt = ("To learn which map is right where they differ, compare again with labels: an integer class raster on the "
-           "same grid. For either map's error rate: sample on that map's scores, have a reviewer label every row, then "
-           "estimate." if not graded else "For either map's error rate: sample on that map's scores, label, estimate.")
+    nxt = ("To learn which map is more accurate with few labels: sample on map a with other set to map b draws windows "
+           "only where they differ; a reviewer writes the class seen in each, and estimate says which map is more "
+           "accurate and by how much. With a label raster on the same grid, compare again with labels. For either "
+           "map's own error rate: sample on that map's scores, label, estimate." if not graded else
+           "For either map's error rate: sample on that map's scores, label, estimate.")
     return _reply(" ".join(said), _join(limits), nxt, files, summ)
 
 
@@ -668,6 +675,10 @@ def sample(
     seed: Annotated[int, P(description="Seed of the draw")] = 0,
     tile: Annotated[int, P(description="tiles design: tile side in windows")] = 16,
     per_tile: Annotated[int, P(description="tiles design: windows labelled per tile")] = 16,
+    other: Annotated[str | None, P(description="A second map of the same grid: sample only the windows where the two "
+                                               "maps differ, to learn which is more accurate")] = None,
+    threshold: Annotated[float | None, P(description="With other: cut-off of a 2-D continuous map (0.5 for a "
+                                                     "probability map when omitted)")] = None,
 ) -> dict[str, Any]:
     scores = _input(scores, "scores")
     out = _abs(out_dir)
@@ -685,6 +696,25 @@ def sample(
         argv.append(f"--condition={_input(condition, 'condition')}")
     if condition_names:
         argv += _condition_argv(condition_names)
+    _opt(argv, "--threshold", None if threshold is None else float(threshold))      # refused without other
+    if other is not None:
+        argv.append(f"--other={_input(other, 'other')}")
+        _run(argv)
+        side_path = path[:-4] + ".json" if path.endswith(".csv") else path + ".json"
+        side = _read_json(side_path)
+        D, N = side["n_disagree"], side["n_population"]
+        said = [f"{len(side['indices'])} windows to label of the {D} where the two maps differ ({_pc(D / N)} of the {N} "
+                f"windows compared), listed in {path}; the design is in {side_path}. No window is labelled yet."]
+        limits = ["This sample says which map is more accurate and by how much once labelled, not either map's accuracy, "
+                  "and certify refuses it.", "The windows compared are those both maps predict where neither splits "
+                  "evenly between two classes.", "Labels are assumed right; no reviewer error rate applies to this "
+                  "comparison."] + _notes(side.get("notes", []))
+        nxt = (f"Ask the user or a reviewer to open each window of {path} and write in `reference_class` the class that "
+               "is there, in the maps' class codes, or ? where it cannot be judged, keeping every row (hide class_a and "
+               f"class_b to label blind). Then call estimate with sample_csv={path}.")
+        return _reply(" ".join(said), _join(limits), nxt, {"sample_csv": path, "sidecar": side_path},
+                      {"design": "disagreement", "n_labelled": len(side["indices"]), "n_disagree": D,
+                       "n_population": N, "seed": side.get("seed")})
     printed = _scored(argv)
     side_path = path[:-4] + ".json" if path.endswith(".csv") else path + ".json"
     side = _read_json(side_path)
@@ -727,8 +757,9 @@ def _out_json(sample_csv, out_dir, suffix):
 
 
 def estimate(
-    sample_csv: Annotated[str, P(description="The CSV that sample wrote, with `wrong` filled on every row; its .json "
-                                             "sidecar must sit beside it")],
+    sample_csv: Annotated[str, P(description="The CSV that sample wrote, with `wrong` filled on every row (or, for a "
+                                             "sample drawn with other, `reference_class`); its .json sidecar must sit "
+                                             "beside it")],
     per_class: Annotated[bool, P(description="Also each class's user's and producer's accuracy; needs a "
                                              "reference_class column")] = False,
     scores: Annotated[str | None, P(description="With per_class: the score raster sample was run on, if it has "
@@ -756,6 +787,8 @@ def estimate(
     printed = _labelled(path, argv)
     out = out or (path[:-4] + "_estimate.json" if path.endswith(".csv") else path + "_estimate.json")
     r = _read_json(out)
+    if r.get("design") == "disagreement":
+        return _which_map(r, out)
     rate = (f"between {_pc(r['estimate_range'][0])} and {_pc(r['estimate_range'][1])}" if r.get("estimate") is None
             else _pc(r["estimate"]))
     stated = bool(r.get("reviewer_false_alarm") or r.get("reviewer_miss"))
@@ -840,6 +873,34 @@ def estimate(
                "and have it labelled.")
     if not per_class:
         nxt += " With a reference_class column (the class seen in each window), per_class=true gives each class's accuracy."
+    return _reply(" ".join(said), _join(limits), nxt, {"estimate": out}, summ)
+
+
+def _which_map(r, out):
+    """estimate's reply on a sample of the windows where two maps differ."""
+    d, v = r["difference"], r["verdict"]
+    if v == "a":
+        head = (f"Map a is more accurate than map b, by {100 * d['low']:.1f} to {100 * d['high']:.1f} points over the "
+                "windows compared (95% interval).")
+    elif v == "b":
+        head = (f"Map b is more accurate than map a, by {-100 * d['high']:.1f} to {-100 * d['low']:.1f} points over the "
+                "windows compared (95% interval).")
+    else:
+        head = ("The labels cannot tell which map is more accurate: the difference, a minus b, lies between "
+                f"{100 * d['low']:+.1f} and {100 * d['high']:+.1f} points (95% interval).")
+    said = [head, f"From {r['n_labelled']} labelled windows of the {r['n_disagree']} where the maps differ "
+            f"({_pc(r['disagree_share'])} of the {r['n_population']} windows compared): a right on {r['n_a_right']}, "
+            f"b right on {r['n_b_right']}, neither on {r['n_neither']}"
+            + (f", {r['n_unjudged']} could not be judged." if r["n_unjudged"] else ".")]
+    limits = [r["note"], "The interval is a union bound over the two maps' shares of the differing windows, each exact, "
+              "so it covers the accuracy difference at least 95% of the time; it is not either map's accuracy."] + \
+        _notes(r.get("notes", []))
+    nxt = ("For either map's own accuracy: sample with design \"random\" on that map's scores, have a reviewer label "
+           "every row, then estimate." if v else
+           "More labels on the same differing windows narrow the interval: draw a larger sample with other (a new seed "
+           "gives a new draw; label all of it).")
+    summ = {k: r.get(k) for k in ("verdict", "difference", "n_labelled", "n_disagree", "n_population", "n_a_right",
+                                  "n_b_right", "n_neither", "n_unjudged", "share_a_right", "share_b_right")}
     return _reply(" ".join(said), _join(limits), nxt, {"estimate": out}, summ)
 
 

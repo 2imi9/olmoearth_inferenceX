@@ -174,6 +174,34 @@ the dates differ, grading is refused until `--labels-date` gives the labels' dat
 right in one map and wrong in the other whatever either model did; `graded.graded_against` then names the map the
 labels match in time.
 
+**Which map is more accurate, with few labels.** Where two maps give the same class, both are right or both are
+wrong, so their accuracies differ only through the windows where they differ. Label a random sample of those:
+
+```bash
+oe-inferencex sample a.tif --other b.tif --budget 100 --out pairs.csv
+# the reviewer writes in `reference_class` the class seen in each window (or ? where it cannot be judged);
+# hide class_a and class_b to label blind
+oe-inferencex estimate pairs.csv
+```
+
+`estimate` then says which map is more accurate and by how much, as a 95% interval on the difference in accuracy over
+the whole map, a minus b. Each map's share of the differing windows that is right gets its exact interval at 97.5%,
+and the difference of the two, scaled by the differing windows' share of the map, covers at least 95% by the union
+bound; it is conservative. A window marked `?` is counted for each map both ways. The maps are read as `compare`
+reads them (class maps, probability maps cut at `--threshold`, or per-class scores argmaxed), and the windows are the
+ones `compare` counts as differing. It does not give either map's accuracy: where the maps agree they are both right
+or both wrong, and how often needs a random sample of all windows (`sample --design random` on each map). `certify`
+refuses this sample.
+
+On the record's own maps (exp90: every pair of encoders run on the same units of each of the 24 tasks of Ai2's suite,
+2,514 pairs, with the full truth, 400 draws per pair; not preregistered; the maps are linear probes, not map products),
+100 labels on the differing windows named the right map on 60% of draws. The same 100 labels drawn from the whole map
+named it on 13%, analysed on the differing windows they happened to hold. A third of the pairs (805) differed on 100
+windows or fewer and were labelled in full; on the other 1,709 the rates were 43% against 11%, with median widths of
+8.5 against 18.9 points. The coverage was at least 95% on every pair up to the draws' noise, and a wrong map was named
+on at most 4% of a pair's draws. The maps differed on a median 21% of the windows.
+<!-- claim:exp90-which-map-few-labels -->
+
 ### sample and estimate
 
 `sample` selects the windows to label; `estimate` reads the labels back and reports the map's error rate with a 95%
@@ -449,7 +477,7 @@ numbers and the same refusals. The tool names are unchanged; each tool's title s
 | Where should I look first? | `assess` | Say how wrong the map is without labels; find the errors the model is sure of, which come last |
 | How wrong is the map? | `sample`, then labels from you or a reviewer, then `estimate` | Label a window; check the labels, which are assumed right |
 | Which part can I trust? | `certify`, on the labels of a random sample | Promise a zone: with too few labels, or errors among the most confident windows, it certifies nothing and says why |
-| Which of two maps is better, and where do they differ? | `compare` | Say which map is better without labels; with a label raster it says which is right where they differ |
+| Which of two maps is better, and where do they differ? | `compare` | Say which map is better without labels. With labels on some of the windows where they differ (`sample` with `other`, then `estimate`), it says which map is more accurate and by how much, not either map's accuracy |
 
 - **The tools.** They take file paths and an output directory; pass absolute paths. `guide` returns the instructions
   below and every tool's description, under the question the tool answers.
@@ -464,8 +492,8 @@ numbers and the same refusals. The tool names are unchanged; each tool's title s
   without labels `compare` cannot say which map is right; labels are assumed right; ranking needs the scores, not
   only the class map. `assess` refuses a class map of more than two classes, but not a 0/1 map or a class map
   passed with `logits=true`; for those, whose review sets tie, its conclusion says the order is not evidence.
-- **A refusal.** A tool error carrying the package's own message. The message names command-line options; each is
-  the tool parameter of the same name (`--labels-date` is `labels_date`).
+- **A refusal.** A tool error carrying the package's own message, with each command-line option it names written as
+  the tool parameter (`--labels-date` becomes `labels_date`).
 
 **Example questions**, on the test map that `examples/quickstart_map.py` writes (`scores.tif`, `other.tif`
 and `truth.tif`), each with the tools it uses and what the answer can and cannot be:
@@ -483,7 +511,8 @@ and `truth.tif`), each with the tools it uses and what the answer can and cannot
   zone and says why.
 - "Which is better, scores.tif or other.tif, and where do they differ?" Uses `compare`. The answer says where the two
   maps differ, window by window. Without labels it cannot say which map is better; with truth.tif as labels it says
-  which is right where they differ.
+  which is right where they differ. With labels on a few of the differing windows instead, sample with other.tif as the
+  second map and then estimate say which map is more accurate.
 
 The extra pins the MCP Python SDK (MIT licence) below version 2, which renamed the server class this module uses.
 For an agent that runs the commands itself instead,

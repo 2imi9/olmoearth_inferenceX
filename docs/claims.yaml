@@ -4478,3 +4478,45 @@
     labels, which favours it; both best controls fall just under the 0.65 AUROC the graded arm asks of an
     informative control. FT-AWF's estimate and certify cells use 300 of 344 points, close to a census. Mangrove (the
     graded arm) waits for Ai2's validation split; Nandi is not public.
+
+- id: exp90-which-map-few-labels
+  statement: "On every pair of encoders run on the same units of each of the 24 tasks of Ai2's suite (2,514 pairs from 16 encoders, full truth, 400 draws per pair and budget; not preregistered; the maps are the record's linear probes), labelling a random sample of the windows where the two maps differ and taking the union-bound interval on the accuracy difference named the right map on 42.5%, 60.3% and 70.9% of draws at 50, 100 and 200 labels, against 4.0%, 12.7% and 33.9% for that many windows of the whole map analysed on the differing windows they held, with median widths of 9.2, 5.5 and 3.3 points against 24.5, 17.0 and 11.0. Pairs differing on no more windows than the budget (250, 805 and 872) are labelled in full; on the others the rates were 36.5%, 42.8% and 56.7% against 4.2%, 11.3% and 23.1%, with median widths of 10.3, 8.5 and 5.7 points against 25.4, 18.9 and 13.6. The lowest coverage over the pairs was 95.5% at each budget, with medians of 99.25 to 99.5%; the most draws of a pair naming the wrong map were 3.75%, 4.0% and 1.75%. The maps differed on a median 20.7% of the windows; the median absolute true difference was 3.4 points. Where it was 5 to 10 points, 100 labels named the right map on 80.7% of draws (21.2% from the whole map); above 10 points on 96.4% (59.6%). The earlier analysis of the whole-map draw, each count over all N windows, gave 1.2%, 6.3% and 25.2%."
+  crosscheck: tests/test_which_map.py::test_exp90_by_a_second_route
+  status: measured
+  experiments: [exp90, exp79]
+  artifacts: [exp/out/exp90_which_map.json]
+  check: |-
+    (lambda d: (lambda cells, sm, B, G:
+      d["preregistered"] is False and d["draws"] == 400 and len(cells) == 2514 and len({c["task"] for c in cells}) == 24
+      and sm["encoders"] == len({c["a"] for c in cells} | {c["b"] for c in cells}) == 16
+      # every summary number recomputed from the per-pair cells
+      and all(sm[f"{g}_{n}"]["cells"] == sum(1 for c in cells if f"{g}_{n}" in c) for g in G for n in B)
+      and all(abs(sm[f"{g}_{n}"]["decides_right_mean"] - sum(c[f"{g}_{n}"]["decides_right"] for c in cells if f"{g}_{n}" in c) / sm[f"{g}_{n}"]["cells"]) < 1e-12
+              and sm[f"{g}_{n}"]["coverage_min"] == min(c[f"{g}_{n}"]["coverage"] for c in cells if f"{g}_{n}" in c)
+              and sm[f"{g}_{n}"]["decides_wrong_max"] == max(c[f"{g}_{n}"]["decides_wrong"] for c in cells if f"{g}_{n}" in c)
+              for g in G for n in B)
+      and all(sm[f"census_{n}"]["pairs_labelled_in_full"] == sum(1 for c in cells if 0 < c["D"] <= n)
+              and sm[f"census_{n}"]["other_pairs"] == sum(1 for c in cells if c["D"] > n) for n in B)
+      and all(abs(c["delta"] - (c["KA"] - c["KB"]) / c["N"]) < 1e-12 and 0 <= c["KA"] + c["KB"] <= c["D"] <= c["N"] for c in cells)
+      and [round(100 * sm[f"{g}_{n}"]["decides_right_mean"], 1) for g in G for n in B] == [42.5, 60.3, 70.9, 4.0, 12.7, 33.9, 1.2, 6.3, 25.2]
+      and [round(sm[f"{g}_{n}"]["median_width_points"], 1) for g in G[:2] for n in B] == [9.2, 5.5, 3.3, 24.5, 17.0, 11.0]
+      and [sm[f"disagree_{n}"]["coverage_min"] for n in B] == [0.955, 0.955, 0.955]
+      and [sm[f"disagree_{n}"]["coverage_median"] for n in B] == [0.9925, 0.995, 0.995]
+      and [sm[f"disagree_{n}"]["decides_wrong_max"] for n in B] == [0.0375, 0.04, 0.0175]
+      and [sm[f"census_{n}"]["pairs_labelled_in_full"] for n in B] == [250, 805, 872]
+      and [round(100 * sm[f"census_{n}"][k], 1) for k in ("decides_right_mean_other", "random_decides_right_mean_other") for n in B] == [36.5, 42.8, 56.7, 4.2, 11.3, 23.1]
+      and [round(sm[f"census_{n}"][k], 1) for k in ("median_width_points_other", "random_median_width_points_other") for n in B] == [10.3, 8.5, 5.7, 25.4, 18.9, 13.6]
+      and round(100 * sm["disagree_share_median"], 1) == 20.7 and round(sm["abs_delta_points_median"], 1) == 3.4
+      and [round(100 * sum(c[f"{g}_100"]["decides_right"] for c in sel) / len(sel), 1) for g in ("disagree", "random") for sel in
+           ([c for c in cells if "disagree_100" in c and 5 <= 100 * abs(c["delta"]) < 10],
+            [c for c in cells if "disagree_100" in c and 100 * abs(c["delta"]) >= 10])] == [80.7, 96.4, 21.2, 59.6]
+    )(d["cells"], d["summary"], (50, 100, 200), ("disagree", "random", "random_naive")))(A["exp/out/exp90_which_map.json"])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp90-which-map-few-labels}
+    - {file: docs/Usage.md, marker: exp90-which-map-few-labels}
+  note: >-
+    Not preregistered: a check of the design before it was documented. Coverage is a Monte Carlo share over 400
+    draws (standard error about one point near 95%); the guarantee itself is the union bound, and the test file
+    checks it by exact enumeration on small populations. The whole-map comparison was first analysed with each count
+    over all N windows (kept as random_naive); the review of 3 October 2026 replaced it with the analysis on the
+    differing windows the draw holds. exp79_units is not committed; the artifact records each input file's sha256.

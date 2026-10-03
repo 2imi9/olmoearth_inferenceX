@@ -251,7 +251,9 @@ Example questions, on the files of the quick start above. Without the package in
   labels, or errors among the most confident windows, it certifies no zone and says why.
 - "Which is better, scores.tif or other.tif, and where do they differ?" Uses `compare`. The
   answer says where the two maps differ, window by window. Without labels it cannot say which
-  map is better; with truth.tif as labels it says which is right where they differ.
+  map is better; with truth.tif as labels it says which is right where they differ. With labels
+  on a few of the differing windows instead, sample with other.tif as the second map and then
+  estimate say which map is more accurate.
 
 
 Results and limits

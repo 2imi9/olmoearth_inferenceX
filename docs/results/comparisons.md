@@ -3128,6 +3128,47 @@ confident points are right on 94.5% and 85.1%.
 models, read report-only, confidence ranks the errors well above random and ahead of a no-encoder control in AURC,
 with a 10% review lead whose interval includes zero. The graded test is arm M, once Ai2 shares Mangrove's split.
 
+## Which of two maps is more accurate, from labels where they differ (exp90)
+
+Not preregistered: a check of the design `sample --other` and `estimate` use, run on the record's own maps before
+the route was documented. `exp/exp90_which_map.py` (about ten minutes on a laptop CPU) reads exp79's per-unit
+decisions (not committed; the artifact records each file's sha256) and writes `exp/out/exp90_which_map.json`.
+
+**The design.** Where two maps give the same class, both are right or both are wrong, so the accuracy difference is
+(K_a - K_b) / N, with K_a and K_b the differing windows where a, and where b, is right. A simple random sample of the
+D differing windows gives each map's share of them its exact interval at 97.5%; the difference, times D / N, covers
+at least 95% by the union bound. The comparison draws the same number of windows from the whole map at random and
+applies the same interval to the differing windows the draw happens to hold (given their number they are a random
+sample of the D), which is what those labels can support. A first version of this check analysed the random draw
+with each map's count over all N windows; a review on 3 October 2026 found that it understated the random draw by
+about half, and it is kept in the artifact as `random_naive`.
+
+**The data.** Every pair of encoders run on the same units of each of the 24 tasks of Ai2's suite: 2,514 pairs from
+16 encoders (some tasks have 15 or 8 on common units), each with the full truth, so the true accuracy difference is
+known. The maps differed on a median 21% of the windows; the true differences had a median of 3.4 points in absolute
+value. 400 draws per pair and budget.
+
+| Labels | Named the right map: differing windows | Whole map | Median width (points) | Lowest coverage | Most draws naming the wrong map |
+|---|---|---|---|---|---|
+| 50 | 42.5% | 4.0% | 9.2 against 24.5 | 95.5% | 3.75% |
+| 100 | 60.3% | 12.7% | 5.5 against 17.0 | 95.5% | 4.0% |
+| 200 | 70.9% | 33.9% | 3.3 against 11.0 | 95.5% | 1.75% |
+
+The shares are means over pairs. Pairs whose maps differ on no more windows than the budget are labelled in full and
+get the exact answer: 250, 805 and 872 pairs at 50, 100 and 200 labels. On the other pairs the right map was named on
+36.5%, 42.8% and 56.7% of draws, against 4.2%, 11.3% and 23.1% from the whole map, with median widths of 10.3, 8.5 and
+5.7 points against 25.4, 18.9 and 13.6. Where the true difference was 5 to 10 points, 100 labels named the right map
+on 80.7% of draws (21.2% from the whole map); above 10 points, on 96.4% (59.6%). The lowest coverages sit at 95% up to
+the draws' noise (a standard error of about one point at 400 draws); the medians were 99.25 to 99.5%, so the interval
+is conservative, and a narrower interval with the same guarantee is possible. A wrong map named on up to 4% of a
+pair's draws is inside the 5% the interval allows. <!-- claim:exp90-which-map-few-labels -->
+
+**What it does not show.** The maps are the record's linear probes on frozen embeddings, not map products, and the
+benchmarks' test splits are not probability samples of any map; the design's coverage rests on its own random draw,
+not on them. It does not test labels that are wrong; a `?` row is bounded both ways (tests/test_which_map.py checks
+that by exact enumeration). A real product pair with an independent reference (LCMAP and NLCD at LCMAP's random
+plots, or the eleven cropland maps of Kerner et al.) is the next test.
+
 ## The ceiling belongs to the task, not to the model (from exp74 and exp70)
 
 The margin takes a median 0.68 of the gap between a random ranking and a perfect one on the 24 tasks. A fair
