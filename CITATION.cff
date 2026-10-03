@@ -5,8 +5,8 @@ type: software
 authors:
   - family-names: Qi
     given-names: Ziming
-version: 1.5.0
-date-released: 2026-10-02
+version: 1.6.0
+date-released: 2026-10-03
 license: Apache-2.0
 repository-code: "https://github.com/2imi9/olmoearth_inferenceX"
 url: "https://olmoearth-inferencex.readthedocs.io"

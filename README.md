@@ -40,7 +40,7 @@ Quick start
 The package needs Python 3.11 to 3.13.
 
 ```bash
-pip install "olmoearth-inferencex[geo]"    # 1.5.0; without [geo] it reads .npy only, no GeoTIFF
+pip install "olmoearth-inferencex[geo]"    # 1.6.0; without [geo] it reads .npy only, no GeoTIFF
 oe-inferencex demo
 ```
 

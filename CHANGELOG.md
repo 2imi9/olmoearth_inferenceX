@@ -1,6 +1,14 @@
 # Changelog
 
-## Unreleased
+## 1.6.0 (2026-10-03)
+
+**Release checks (3 October 2026).** A three-lens review of the comparison route (statistics, code edge cases, docs
+and tests) found the understated whole-map baseline in exp90, the refusal of negative class codes, the population's
+wording, the MCP server's threshold and texts, and seventeen untested behaviours; all are fixed, and twelve mutations it
+named are caught by the tests. The suite ran against the built wheel with the source tree removed on Python 3.11, 3.12
+and 3.13 with the geo and mcp extras (1,274 passed each; exp90's second-route check skips where exp79's uncommitted
+per-unit files are absent), on the lowest declared core dependencies (1,167 passed, the geo tests skipped) and, for
+the MCP server's and the new tests, on mcp 1.26.0 (79 passed). The source archive carries the package alone.
 
 **Which of two maps is more accurate, with few labels.** `compare` says where two maps differ but, without a label
 raster, not which is better. Where two maps give the same class, both are right or both are wrong, so their
