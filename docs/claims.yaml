@@ -2328,7 +2328,6 @@
     - {file: docs/Findings.md, marker: suite-margin-wins-every-task}
     - {file: docs/TECHNIQUES.md, marker: suite-margin-wins-every-task}
     - {file: docs/results/comparisons.md, marker: suite-margin-wins-every-task}
-    - {file: README.md, marker: suite-margin-wins-every-task}
     - {file: docs/Summary.md, marker: suite-margin-wins-every-task}
   note: >-
     The embeddings are Ai2's, extracted with their settings, so this inherits their extraction and is not an independent
@@ -2859,7 +2858,6 @@
     - {file: docs/results/comparisons.md, marker: margin-takes-two-thirds-of-the-ranking-headroom}
     - {file: docs/Findings.md, marker: margin-takes-two-thirds-of-the-ranking-headroom}
     - {file: docs/Summary.md, marker: margin-takes-two-thirds-of-the-ranking-headroom}
-    - {file: README.md, marker: margin-takes-two-thirds-of-the-ranking-headroom}
     - {file: docs/method/protocol.md, marker: margin-takes-two-thirds-of-the-ranking-headroom}
 
 - id: augrc-leaves-the-suite-result-standing
@@ -3019,7 +3017,6 @@
       and caps[0] < 0.10 and caps[-1] > 0.50
     )(sorted(c['capture_05'] for c in d['candidates'])))(A['exp/out/demo_sample_selection.json'])
   cited_in:
-    - {file: README.md, marker: demo-sample-is-the-median-tile}
     - {file: docs/index.md, marker: demo-sample-is-the-median-tile}
   note: >-
     Not an experiment of its own: scripts/make_demo_sample.py over the archive exp67 audited (cluster job 995922, cpu,
@@ -3041,7 +3038,6 @@
       and round(0.05 / a['error_rate'], 2) == 0.26 and round(a['review_sets']['0.2']['errors_captured_fraction'], 2) == 0.55
     )(A['exp/out/demo_sample_audit.json'], A['exp/out/demo_sample_selection.json'])
   cited_in:
-    - {file: README.md, marker: demo-sample-hit-rate}
     - {file: docs/index.md, marker: demo-sample-hit-rate}
   note: >-
     demo_sample_audit.json is `python scripts/make_demo_sample.py --audit`: the package's own assess_prediction on the
@@ -3990,7 +3986,6 @@
   cited_in:
     - {file: docs/results/comparisons.md, marker: exp79-headline-holds-under-every-seed-on-every-encoder}
     - {file: docs/Findings.md, marker: exp79-headline-holds-under-every-seed-on-every-encoder}
-    - {file: README.md, marker: exp79-headline-holds-under-every-seed-on-every-encoder}
     - {file: docs/Summary.md, marker: exp79-headline-holds-under-every-seed-on-every-encoder}
   note: >-
     The bar is exp74's: share at least 0.75 and a one-sided sign test below 0.05. With at least 20 tasks a 0.75 share
@@ -4300,7 +4295,6 @@
     - {file: docs/results/comparisons.md, marker: exp88-matched-head-ranks-normally}
     - {file: docs/Findings.md, marker: exp88-matched-head-ranks-normally}
     - {file: docs/Summary.md, marker: exp88-matched-head-ranks-normally}
-    - {file: README.md, marker: exp88-matched-head-ranks-normally}
     - {file: docs/TECHNIQUES.md, marker: exp88-matched-head-ranks-normally}
     - {file: docs/method/protocol.md, marker: exp88-matched-head-ranks-normally}
   note: >-
@@ -4335,7 +4329,6 @@
     - {file: docs/results/comparisons.md, marker: suite-controls-are-near-chance}
     - {file: docs/Findings.md, marker: suite-controls-are-near-chance}
     - {file: docs/Summary.md, marker: suite-controls-are-near-chance}
-    - {file: README.md, marker: suite-controls-are-near-chance}
     - {file: docs/TECHNIQUES.md, marker: suite-controls-are-near-chance}
   note: >-
     The gap uses the exact finite-n perfect order (oracle_aurc), so it is not mixed with the asymptotic form the
@@ -4517,6 +4510,7 @@
     - {file: docs/Usage.md, marker: exp90-which-map-few-labels}
     - {file: docs/Findings.md, marker: exp90-which-map-few-labels}
     - {file: docs/Summary.md, marker: exp90-which-map-few-labels}
+    - {file: README.md, marker: exp90-which-map-few-labels}
   note: >-
     Not preregistered: a check of the design before it was documented. Coverage is a Monte Carlo share over 400
     draws (standard error about one point near 95%); the guarantee itself is the union bound, and the test file

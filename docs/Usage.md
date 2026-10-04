@@ -32,9 +32,98 @@ oe-inferencex certify to_label.csv --alpha 0.10      # the certified zone
 
 `--design random` lets one set of labels serve both `estimate` and `certify`. Without it `sample` stratifies by
 confidence, which `estimate` reads and `certify` refuses. `certify` can return nothing, and says so;
-[certify](#certify) gives the labels a level needs. The [README](https://github.com/2imi9/olmoearth_inferenceX#quick-start) shows the
-lines these commands print on a test map, and `examples/quickstart_map.py` writes that map and fills in its labels.
-Each command is described under [Command line](#command-line).
+[certify](#certify) gives the labels a level needs. The worked example below shows the lines these commands print on
+a test map, and `examples/quickstart_map.py` writes that map and fills in its labels. Each command is described under
+[Command line](#command-line).
+
+### A worked example
+
+The steps below run on a test map. Download the script that writes it:
+
+```bash
+curl -O https://raw.githubusercontent.com/2imi9/olmoearth_inferenceX/main/examples/quickstart_map.py
+python quickstart_map.py
+```
+
+It writes three files. `scores.tif` is a synthetic four-class probability map of 256 x 256
+pixels. Of its windows, 7.3% are wrong. `other.tif` is a second map of the same scene.
+`truth.tif` holds the class that is really there. The lines below were printed on these files,
+so you can run each command and compare. Without the package installed,
+`uv run --with "olmoearth-inferencex[geo]" python quickstart_map.py` writes the same files.
+
+**1. Which parts to check first.** No labels are needed. Add `--logits` if the scores are
+logits.
+
+```console
+$ oe-inferencex assess scores.tif --out audit
+4096 windows of 4 px; review sets 1%: 41, 5%: 205, 10%: 410; boundary windows 40.0%
+wrote audit/assessment.json, explanation.json, review_set_*.csv, suspicion, boundary
+```
+
+`audit/review_set_05pct.csv` lists the 5% review set, least confident first, with each
+window's pixel and map coordinates. There is one such file for 1% and for 10%.
+`explanation.json` gives the cues of each of those windows: whether it sits on a boundary
+between two classes of the map, and whether it is among the least confident 20%.
+`suspicion.tif` is the ranking as a raster.
+
+**2. How wrong the map is.** This needs labels, and `sample` picks the windows. The recorded
+experiments used 300.
+
+```console
+$ oe-inferencex sample scores.tif --budget 300 --design random --out to_label.csv
+300 windows to label of 4096 valid (random design); wrote to_label.csv and its .json. Fill the `wrong` column with 1 or 0 per window, or ? where a window cannot be judged (keep its row), then run: oe-inferencex estimate to_label.csv
+warning: probability input: confidence ties where probabilities saturate. For two classes, logits avoid the ties; for more than two, keep the probabilities (exp76)
+```
+
+The warning is printed for every probability map. This one has four classes, so keep the
+probabilities (see [Inputs](#inputs)).
+
+Open `to_label.csv`. For each row, look at the window in imagery or on the ground. Set `wrong`
+to 1 if `map_class` is not what is there, otherwise to 0, or `?` where it cannot be judged. To label
+blind, hide the `map_class` column, write the class you see in `reference_class`, and set `wrong`
+where the two differ. Fill every row, keep the row order,
+and keep `to_label.json` beside the CSV. On the test map,
+`python quickstart_map.py --label to_label.csv` does this from `truth.tif`.
+
+```console
+$ oe-inferencex estimate to_label.csv
+error rate 7.0%, 95% interval 4.5% to 10.4% (half-width 2.9 points), from 300 labelled windows of 4096; exact hypergeometric interval (simple random sample of a finite map)
+wrote to_label_estimate.json
+```
+
+`sample` does not write a `reference_class` column. Add one holding the class that is really
+in each window, and `--per-class` gives each class's accuracy. The script adds it on the test
+map.
+
+**3. Which part can be trusted.** The same labels give a **certified zone**: the most confident
+share of the map whose error rate is at most the level `--alpha`. The statement may be wrong for
+at most 10% of the samples that could have been drawn (`--delta`).
+
+```console
+$ oe-inferencex certify to_label.csv --alpha 0.05
+the 90% most confident windows (3686 of 4096, confidence margin >= 0.6662) are wrong at most 5% of the time; this statement fails on at most 10% of samples like this one (prefix rule; the exact upper bound on the zone's error rate at that level is 2.4%). Outside the zone nothing is certified.
+prefix rule: fixed-sequence testing, valid on any map whatever the shape of its error rate; it stops at the first zone it cannot certify, so it certifies little when the most confident windows hold many errors, where the bonferroni rule can certify more
+wrote to_label_zone.json and the window mask to_label_zone.npy
+```
+
+In these lines `confidence margin` is the window's confidence (for this probability map, the
+window mean of the top class probability), and `prefix rule` is the default test. `certify` can return nothing: with `--alpha 0.01` the same labels gave `no zone certified`.
+It needs a sample drawn with `--design random`. Without that option `sample` stratifies by
+confidence, which `estimate` reads and `certify` refuses.
+
+**Two maps of one area**, on the same grid:
+
+```console
+$ oe-inferencex compare scores.tif other.tif --out diff
+507 of 4096 windows differ (12.38%); on a boundary of a 2.6x as often as the agreeing windows
+wrote diff/comparison.json, differing_windows.csv, disagreement
+```
+
+The second figure says that the differing windows sit on a class boundary of the first map
+2.6 times as often as the agreeing windows. `compare` does not say which map is right there.
+With a raster of labels it does: add `--labels truth.tif`. With labels on a few of the differing windows
+instead, `sample scores.tif --other other.tif` and then `estimate` say which map is more accurate
+([Which map is more accurate](#sample-and-estimate)).
 
 ## Inputs
 

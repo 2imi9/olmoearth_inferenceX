@@ -1,8 +1,9 @@
-"""The README's quick start, run as written on the test map examples/quickstart_map.py writes.
+"""The worked quick start of docs/Usage.md, run as written on the test map examples/quickstart_map.py writes.
 
-Every ```console block of the README is a command and the lines it printed. The README says those lines were
+Every ```console block of that section is a command and the lines it printed. The page says those lines were
 printed by the release; this test says the repository still prints them, so a change to a printed line or to the
-test map shows up here before a reader finds it."""
+test map shows up here before a reader finds it. (The quick start lived in the README until the README was cut
+down on 4 October 2026.)"""
 import importlib.util
 import os
 import re
@@ -19,14 +20,16 @@ _spec = importlib.util.spec_from_file_location("quickstart_map", os.path.join(RO
 quickstart_map = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(quickstart_map)
 
-with open(os.path.join(ROOT, "README.md"), encoding="utf-8") as _f:
-    README = _f.read()
+with open(os.path.join(ROOT, "docs", "Usage.md"), encoding="utf-8") as _f:
+    _USAGE = _f.read()
+# the worked example: from its heading to the next section of the page
+QUICKSTART = _USAGE[_USAGE.index("### A worked example"):_USAGE.index("\n## Inputs")]
 
 
 def _console_blocks():
-    """(command, printed lines) per ```console block of the README, in order."""
+    """(command, printed lines) per ```console block of the worked example, in order."""
     blocks = []
-    for body in re.findall(r"```console\n(.*?)\n```", README, flags=re.S):
+    for body in re.findall(r"```console\n(.*?)\n```", QUICKSTART, flags=re.S):
         lines = body.split("\n")
         assert lines[0].startswith("$ oe-inferencex "), lines[0]
         blocks.append((lines[0][2:], lines[1:]))
@@ -45,9 +48,9 @@ def test_the_console_blocks_are_what_the_commands_print(tmp_path, monkeypatch, c
     monkeypatch.chdir(tmp_path)
     quickstart_map.write_maps()
     written = capsys.readouterr().out
-    # the README's "Of its windows, 7.3% are wrong"
+    # the page's "Of its windows, 7.3% are wrong"
     assert "wrote scores.tif: 4 classes, 256 x 256 pixels; 301 of its 4096 windows are wrong (7.3%)" in written
-    assert "Of its windows, 7.3% are wrong" in README
+    assert "Of its windows, 7.3% are wrong" in QUICKSTART
 
     blocks = _console_blocks()
     assert [c.split()[1] for c, _ in blocks] == ["assess", "sample", "estimate", "certify", "compare"]
@@ -62,14 +65,14 @@ def test_the_console_blocks_are_what_the_commands_print(tmp_path, monkeypatch, c
     assert any(line.startswith("  class 3: user's accuracy") for line in _run("oe-inferencex estimate to_label.csv --per-class", capsys))
     nothing = _run("oe-inferencex certify to_label.csv --alpha 0.01", capsys)[0]
     assert nothing.startswith("no zone certified") and "(80% of the map) held 243 labels with 1 wrong" in nothing
-    assert "with `--alpha 0.01` the same labels gave `no zone certified`" in README
+    assert "with `--alpha 0.01` the same labels gave `no zone certified`" in QUICKSTART
 
     _run("oe-inferencex sample scores.tif --budget 300 --out default.csv", capsys)
     quickstart_map.label("default.csv")
     capsys.readouterr()
     assert _run("oe-inferencex estimate default.csv", capsys)[0].startswith("error rate ")
     assert _run("oe-inferencex certify default.csv --alpha 0.05", capsys)[0].startswith("certify needs a random sample")
-    assert "--labels truth.tif" in README
+    assert "--labels truth.tif" in QUICKSTART
     assert "with labels: a right on" in _run("oe-inferencex compare scores.tif other.tif --labels truth.tif --out diff_l", capsys)[0]
 
 

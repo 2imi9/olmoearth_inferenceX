@@ -1,7 +1,7 @@
 """The MCP server (oe_inferencex.mcp_server) as an agent meets it, through the MCP SDK's own client.
 
 The server runs in this process, on the SDK's in-memory streams, and once as `oe-inferencex mcp` over stdio. Each tool
-runs on the README's quick-start map (examples/quickstart_map.py) and must give the numbers the README's commands
+runs on the quick start's map (examples/quickstart_map.py, docs/Usage.md) and must give the numbers its commands
 print, a conclusion and limits in plain words, and the package's own message when the package refuses. The texts
 (instructions, capability cards, SKILL.md) are checked without the extra; everything else is skipped cleanly when
 the mcp extra is not installed.
@@ -102,7 +102,7 @@ def _refused(name, **arguments):
 
 @pytest.fixture(scope="module")
 def qs(tmp_path_factory):
-    """The quick-start map: scores.tif, other.tif and truth.tif, as the README writes them."""
+    """The quick-start map: scores.tif, other.tif and truth.tif, as the quick start writes them."""
     d = tmp_path_factory.mktemp("quickstart")
     cwd = os.getcwd()
     os.chdir(d)
@@ -115,7 +115,7 @@ def qs(tmp_path_factory):
 
 
 def _label(path, qs):
-    """The reviewer's step of the README, from truth.tif."""
+    """The reviewer's step of the quick start, from truth.tif."""
     with contextlib.redirect_stdout(io.StringIO()):
         quickstart_map.label(str(path), truth_path=str(qs / "truth.tif"))
 
@@ -234,7 +234,7 @@ def test_the_texts_say_what_exp86_shows_and_what_the_server_reads():
 
 def test_the_rules_do_not_claim_a_refusal_the_package_does_not_make():
     """assess refuses a class map of several classes read as probabilities, not a 0/1 map nor a class map passed
-    as logits (README, Before you trust it, item 1)."""
+    as logits (docs/Usage.md, Inputs)."""
     text = _flat(mcp_server.INSTRUCTIONS)
     assert "The package enforces them" not in text
     assert "The package refuses only what a rule says it refuses" in text
@@ -398,11 +398,11 @@ def test_every_claude_code_line_adds_the_server_for_every_folder():
 
 def test_the_quick_start_map_can_be_written_with_nothing_installed():
     """The example questions run on the files examples/quickstart_map.py writes. A reader who connected the server
-    with uvx has installed nothing, so the README and Usage give uv's form of the script, which brings the package's
+    with uvx has installed nothing, so Usage gives uv's form of the script, which brings the package's
     geo extra: the script needs numpy and rasterio."""
     project = _project()
     assert "rasterio" in quickstart_map.__doc__
-    for path in ("README.md", "docs/Usage.md"):
+    for path in ("docs/Usage.md",):
         reqs = QUICKSTART_UV.findall(_flat(_doc(path)))
         assert reqs, path
         for req in reqs:
@@ -436,7 +436,7 @@ def test_the_first_question_runs_on_the_demo_tile(tmp_path, monkeypatch, capsys)
 
 
 # ----------------------------------------------------------------------------- the example questions in the docs
-EXAMPLE_DOCS = ("README.md", "docs/Usage.md", "skills/oe-inferencex/SKILL.md")
+EXAMPLE_DOCS = ("docs/Usage.md", "skills/oe-inferencex/SKILL.md")
 # what each tool's example must say the answer cannot be, or can be: nothing, no ranking, no verdict without labels
 EXAMPLE_LIMITS = {
     # a class map of several classes is refused; a 0/1 map, or a class map passed as logits, is ranked by raster
@@ -460,7 +460,7 @@ def _examples(path):
 
 
 def test_each_example_question_names_only_tools_that_exist():
-    """Three to five example questions, the same in the README, Usage and SKILL.md; each names the tools it uses, all
+    """Three to five example questions, the same in Usage and SKILL.md; each names the tools it uses, all
     of them tools of the server and commands of the command line, and says what the answer can and cannot be."""
     per_doc = {path: _examples(path) for path in EXAMPLE_DOCS}
     first = per_doc[EXAMPLE_DOCS[0]]
@@ -483,11 +483,11 @@ def test_each_example_question_names_only_tools_that_exist():
 @pytest.mark.skipif(not HAVE_GEO, reason="the quick-start map is a GeoTIFF")
 def test_the_example_questions_name_the_quick_start_files(qs):
     """The files the questions name are the ones examples/quickstart_map.py writes."""
-    named = {f for question, _, _ in _examples("README.md") for f in re.findall(r"\w+\.tif", question)}
+    named = {f for question, _, _ in _examples("docs/Usage.md") for f in re.findall(r"\w+\.tif", question)}
     assert named == {"scores.tif", "other.tif"}
     for name in named | {"truth.tif"}:
         assert (qs / name).is_file(), name
-    assert "truth.tif" in _examples("README.md")[-1][2]
+    assert "truth.tif" in _examples("docs/Usage.md")[-1][2]
 
 
 # ----------------------------------------------------------------------------- the server, in process
@@ -533,7 +533,7 @@ def test_assess_says_where_to_look_and_that_it_is_not_an_error_rate(qs, capsys):
     out = _ok("assess", scores=str(qs / "scores.tif"), out_dir=str(qs / "audit"))
     assert capsys.readouterr().out == ""                       # stdout is the protocol's channel on stdio
     s = out["summary"]
-    # the README's line: 4096 windows of 4 px; review sets 1%: 41, 5%: 205, 10%: 410; boundary windows 40.0%
+    # the quick start's line: 4096 windows of 4 px; review sets 1%: 41, 5%: 205, 10%: 410; boundary windows 40.0%
     assert s["n_windows"] == 4096 and s["review_sets"] == {"0.01": 41, "0.05": 205, "0.1": 410}
     assert s["boundary_window_fraction"] == pytest.approx(0.400390625)
     five = str(qs / "audit" / "review_set_05pct.csv")
@@ -564,7 +564,7 @@ def test_sample_estimate_certify_give_the_readme_numbers(qs):
 
     _label(csv_path, qs)
     out = _ok("estimate", sample_csv=csv_path)
-    # the README: error rate 7.0%, 95% interval 4.5% to 10.4% ... exact hypergeometric interval
+    # the quick start: error rate 7.0%, 95% interval 4.5% to 10.4% ... exact hypergeometric interval
     s = out["summary"]
     assert (s["estimate"], s["low"], s["high"]) == (0.07, 0.044921875, 0.103515625)
     assert out["conclusion"].startswith("The map's error rate is 7.0%, 95% interval 4.5% to 10.4%, from 300 labelled "
@@ -589,7 +589,7 @@ def test_sample_estimate_certify_give_the_readme_numbers(qs):
 
     out = _ok("certify", sample_csv=csv_path, alpha=0.01, out_dir=str(qs / "strict"))
     assert out["summary"]["coverage"] is None and out["conclusion"].startswith("No zone was certified at alpha 1%")
-    assert "(80% of the map) held 243 labels with 1 wrong" in out["conclusion"]   # as the README's test finds
+    assert "(80% of the map) held 243 labels with 1 wrong" in out["conclusion"]   # as the quick start's test finds
     assert "zone_mask" not in out["files"] and "labels at this alpha" in out["next"]
 
 
@@ -610,7 +610,7 @@ def test_compare_does_not_say_which_map_is_right_without_labels(qs):
               labels=str(qs / "truth.tif"))
     ws = out["summary"]["which_side"]
     assert (ws["a_right"], ws["b_right"], ws["neither"]) == (228, 239, 40)
-    assert "a is right on 45% and b on 47% of the 507 windows" in out["conclusion"]   # the README: a 45%, b 47%
+    assert "a is right on 45% and b on 47% of the 507 windows" in out["conclusion"]   # the quick start: a 45%, b 47%
     assert "The labels are assumed right" in out["limits"]
 
 

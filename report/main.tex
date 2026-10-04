@@ -68,8 +68,21 @@ compares two maps with regard to their dates (Section~\ref{sec:compare}), estima
 accuracies from a labelled sample (Section~\ref{sec:estimate}), certifies a zone of the most confident windows
 (Section~\ref{sec:zone}), and estimates the accuracy difference of two maps from labels where they differ
 (Section~\ref{sec:whichmap}). It reads arrays and rasters and loads no model, and it serves the same commands to a
-language-model agent (Section~\ref{sec:interfaces}). In the evaluation the label-free readings are graded against
-labels and never fitted to them \claim{labels-grade-never-train}.
+language-model agent (Section~\ref{sec:interfaces}); Figure~\ref{fig:overview} shows the four answers. In the
+evaluation the label-free readings are graded against labels and never fitted to them \claim{labels-grade-never-train}.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{../docs/figures/architecture.png}
+\caption{The structure of the package. It reads a model's class scores (and optionally a second map and a raster of
+input conditions), pools them to windows that each carry a class and the model's confidence, and answers two kinds of
+question. Without labels, it ranks the windows by confidence into a review set (Section~\ref{sec:ranking}) and
+compares two maps (Section~\ref{sec:compare}). With a labelled sample, windows drawn at random give the error rate
+with an exact interval (Section~\ref{sec:estimate}) and, by exact tests on the most confident zones, a certified zone
+(Section~\ref{sec:zone}); windows drawn where two maps differ give the accuracy difference
+(Section~\ref{sec:whichmap}). Each step runs per input condition when a condition raster is given.}
+\label{fig:overview}
+\end{figure}
 
 \paragraph{Relation to prior work.} No component is new in isolation. Risk-coverage evaluation comes from selective
 classification \citep{chow1970,geifman2017,geifman2019}, softmax confidence as the error-detection baseline from

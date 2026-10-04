@@ -12,6 +12,17 @@ named. Its first limitation is that no labelled-sample route has been graded on 
 probability reference sample. Ten references were added, each checked against Crossref or arXiv. A three-lens review
 of the report found 48 points, all addressed.
 
+**A shorter README and a structure figure.** The README opens with what the package is, a post-inference check for
+Earth-observation maps, and holds what a first reader needs: one paragraph, the
+figure, install, a table of the four questions with their commands, four warnings, the agent one-liner and four
+measured results; it went from 296 lines to about 120. The worked quick start with every printed line moved to Usage
+(Quick start, A worked example), and `tests/test_quickstart.py` (formerly `test_readme_quickstart.py`) runs it there;
+the example questions are checked in Usage and SKILL.md. `docs/figures/architecture.png`
+(`docs/figures/tikz/architecture.tex`) draws the package's structure, laid out like the OlmoEarth architecture
+figure: real Sentinel-2 imagery through a model to its outputs on the left; the window layer, the no-label lane and the
+labelled-sample lane with its three estimators on the right. It is in the README, the docs index
+and the report. Earlier drafts (raster result panels, pictograms, a plain block diagram) were dropped as unclear.
+
 - `scripts/claims.py`: `report_tags()` reads the report's `\claim{}` tags, and `stale` lists the report's lines beside
   each claim's citations; `tests/test_claims.py` requires every tag to name a registered claim that is not superseded.
 - Docs: the comparison of two maps is over the windows compared, not the whole map (Usage, and this changelog's 1.6.0
