@@ -3,7 +3,9 @@
 olmoearth_inferenceX is a Python package for assessing classification maps from Earth-observation models. Without
 reference labels, it ranks a map's windows by the model's confidence for manual review, lists the cues behind each
 flagged window, and compares two maps of the same area. With a labelled sample, it estimates the error rate and
-per-class accuracy with confidence intervals.
+per-class accuracy with confidence intervals, certifies the most confident part of the map whose error rate is at most a
+stated level, and, from labels drawn where two maps differ, gives an interval on their accuracy difference that names the
+more accurate map when it excludes zero.
 
 The package reads the per-pixel probabilities, logits or class scores that a model exports, as GeoTIFF or `.npy`
 arrays, and needs no access to the model itself. It was developed on OlmoEarth and does not require torch.
@@ -15,9 +17,10 @@ arrays, and needs no access to the model itself. It was developed on OlmoEarth a
 | `demo` | Assesses a real land-cover map shipped with the package and draws the result |
 | `assess` | Ranks a map's windows by confidence into review sets, with the cues behind each window |
 | `compare` | Measures where two maps of the same area differ and, with labels, which one is right there |
-| `sample` | Selects the windows to label |
-| `estimate` | Estimates the error rate from the labelled sample, with a 95% interval; with `--per-class`, per-class accuracy |
+| `sample` | Selects the windows to label; with `--other`, the windows where two maps differ |
+| `estimate` | Estimates the error rate from the labelled sample, with a 95% interval; with `--per-class`, per-class accuracy; for a `--other` sample, which map is more accurate |
 | `certify` | Certifies, from a random labelled sample, the largest most-confident share of the map whose error rate is at most a stated level |
+| `mcp` | Serves these commands as tools to an agent on the same machine (a local MCP server; needs the `mcp` extra) |
 
 Each command is described in [Usage](Usage.md#command-line).
 

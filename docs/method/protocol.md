@@ -203,7 +203,7 @@ squares as between plus within, `(N−1)S² = (T−1) m S_b² + (N−T) S_w²`, 
 ANOVA intra-cluster correlation up to a term of order `1/T`. Checked by enumerating all 56 draws of 3 tiles from
 8 (the ratio to 1e-10) and at `T = 40` (the design effect within 3%). This is why the ordinary formula on
 tile-sampled labels claims 95% and delivers 51 to 78%: it uses `S²/n` where the truth is `m S_b²/S²` times
-that, and on exp78's tasks that factor ran 2.7 to 9.8.
+that, and on the six exp78 tasks where it failed that factor ran 2.7 to 9.8 (1.17 on m-cashew-plant, where it held).
 
 All of that assumes tiles of equal size. When tile `i` holds `n_i` windows the quantity of interest is still the
 window rate `θ = Σ n_i Ȳ_i / Σ n_i`, and the unweighted mean of tile means estimates `mean_i Ȳ_i`, the rate of the

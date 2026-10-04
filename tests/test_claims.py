@@ -71,6 +71,18 @@ def test_every_marker_is_a_declared_citation():
     assert not undeclared, undeclared
 
 
+def test_every_report_tag_names_a_live_claim():
+    """The technical report (report/*.tex) tags numbers with \\claim{id}: each tag must name a registered claim that is
+    not superseded, so a report sentence cannot rest on a withdrawn or unknown result."""
+    tags = claims_cli.report_tags()
+    assert tags, "the report carries no claim tags"
+    unknown = [(f, ln, cid) for f, v in tags.items() for ln, cid in v if cid not in BY_ID]
+    superseded = [(f, ln, cid) for f, v in tags.items() for ln, cid in v
+                  if cid in BY_ID and BY_ID[cid]["status"] == "superseded"]
+    assert not unknown, unknown
+    assert not superseded, superseded
+
+
 def test_every_claim_is_cited_somewhere():
     assert all(c["cited_in"] for c in CLAIMS), [c["id"] for c in CLAIMS if not c["cited_in"]]
 

@@ -2888,12 +2888,12 @@ label. This measures what the second use adds.
 **Honest, and never worse than the classical interval under a random sample (P1, P2 hold).** The tuned arm
 covers on 0.94–0.95 of draws with bias within 0.6% and is 7–16% narrower than the classical Wald interval on
 every task, the width fully predicted by the population correlation of `g` with error. The stratified arm covers
-0.930–0.950, at the 0.93 bar on MADOS and half a point below the classical stratified arm everywhere.
+0.930–0.950, at the 0.93 bar on MADOS and 0.4 to 1.0 points below the classical stratified arm.
 <!-- claim:model-assisted-arm-is-honest-and-never-wider -->
 
 **The gain is small because the design already took it (P3 fails, as the page allowed).** On top of the
 confidence design the model-assisted arm narrows the interval by 1.7–2.6% (median 0.978 against a bar of 0.95),
-a 3.5–5.4% saving in labels, bought with half a point of coverage. By the preregistration's rule the arm does not
+a 3.5–5.4% saving in labels, bought with 0.4 to 1.0 points of coverage. By the preregistration's rule the arm does not
 ship; the tool's estimator stays as it is. <!-- claim:model-assisted-gain-beyond-the-design-is-two-percent -->
 
 **Two predictions failed for reasons worth keeping.** The coefficient needs no tuning here: it lands at 0.93–1.05

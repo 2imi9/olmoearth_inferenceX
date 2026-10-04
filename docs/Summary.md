@@ -39,6 +39,11 @@ all, with the evidence.
   construction.
 - **Certified zone.** On OlmoEarth Base's 24 tasks, a certified zone was worse than its level
   in at most 8% of 2,000 draws, where 10% is allowed. <!-- claim:trust-zone-guarantee-holds -->
+- **Which map is more accurate.** On 2,514 pairs of the record's probe maps, 100 labels drawn
+  where two maps differ named the more accurate map on 60.3% of draws, against 12.7% for 100
+  labels from the whole map; on the 1,709 pairs differing on more than 100 windows, where the
+  labels are a sample, 42.8% against 11.3%. The interval held its coverage on every pair up to
+  the draws' noise (exp90, not preregistered). <!-- claim:exp90-which-map-few-labels -->
 
 ## Known limits
 
@@ -61,12 +66,17 @@ detail.
   which the package treats as right. If the reviewer makes mistakes, the true rate can fall
   outside them; how often reviewers err was not measured. Label blind: hide the `map_class`
   column, record the class seen in `reference_class`, then set `wrong` where the two differ.
+  A window that cannot be judged can be marked `?`; `estimate` bounds it both ways and `certify`
+  counts it as wrong. `estimate --reviewer-false-alarm` and `--reviewer-miss` widen the interval
+  for error rates the user states; they are not measured, and `certify` takes none.
 - **Kind of model.** Most of the evidence is linear probes on frozen embeddings. Of Ai2's
   fine-tuned models, one was tested: FT-AWF, on 344 validation points. <!-- claim:fine-tuned-model-audit -->
   A second, Forest Loss Driver (109 windows), was run with FT-AWF report-only, its validation set
   too small to grade: a 10% review held 41.5% and 32.0% of the errors, against 19.5% and 18.3%
   for the best no-encoder control, a lead whose 95% interval includes zero on both. <!-- claim:exp89-finetuned-report-only -->
-- **Two maps.** Without labels, `compare` cannot say which map is right where they differ. On
+- **Two maps.** Without labels, `compare` cannot say which map is right where they differ;
+  labels drawn where they differ (`sample --other`) give an interval on the accuracy difference,
+  which names a map only when it excludes zero, and not either map's accuracy. On
   15 pairs of flood maps, trusting the more confident map was right on 51% to 70% of the
   differing windows. <!-- claim:tool-vs-diff-resolution -->
 - **Floods.** A plain water index (NDWI) ranked the errors as well as or better than confidence
@@ -103,7 +113,10 @@ detail.
    that design. The interval is exact hypergeometric for a simple random sample, a Wilson
    interval at the effective sample size for a stratified one, and cluster-corrected for
    labels collected by tile. The last one under-covers where a few tiles hold most of the errors
-   (see [Known limits](#known-limits)).
+   (see [Known limits](#known-limits)). With input conditions, each condition gets its exact
+   interval and the whole map a union bound of them; a `?` window is counted both ways.
+   For two maps, the labels drawn where they differ give an interval on the accuracy
+   difference from each map's exact interval (union bound).
 4. **Certified zone.** Exact hypergeometric tests run on zones of growing size, most confident
    windows first. They give the largest zone with error rate at most `α`, at error probability
    `δ`. With no error among its labels, a zone needs about `ln δ / ln(1 − α)` labels: 45 at

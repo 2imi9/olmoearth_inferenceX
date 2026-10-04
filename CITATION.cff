@@ -15,6 +15,7 @@ abstract: >-
   labels, it ranks a map's windows by the model's confidence for manual review, lists the cues behind each
   flagged window, and compares two maps of the same area. With a labelled sample, it estimates the error rate
   and per-class accuracy with confidence intervals, and identifies the largest high-confidence part of the map
-  whose error rate does not exceed a specified level at a stated confidence. The methods are evaluated on the
+  whose error rate does not exceed a specified level at a stated confidence; from labels drawn where two maps
+  differ, it gives an interval on their accuracy difference. The methods are evaluated on the
   24 tasks of Ai2's published embedding suite across 16 encoders; each recorded result is linked to a
   committed artifact and re-checked against it by the test suite.

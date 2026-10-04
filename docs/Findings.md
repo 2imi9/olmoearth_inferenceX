@@ -22,7 +22,9 @@ artifact under `exp/out/`, with its evidence in the [results record](results/com
 - Errors concentrate on prediction boundaries. Whether reviewing boundary windows first beats confidence alone depends
   on the event, the unit and the metric.
 - Two inferences of one area differ mostly on prediction boundaries, the sensor moves shared errors more than the
-  backbone, and which side is right needs labels.
+  backbone, and which side is right needs labels, though few: drawn where two maps differ, 100 labels named the more
+  accurate map on 60% of draws over 2,514 pairs of the record's probe maps, against 13% for 100 labels from the whole
+  map, and 43% against 11% on the pairs where the 100 labels are a sample (exp90, not preregistered).
 - A few hundred random labels give an error rate with an interval that holds its coverage, per-class accuracies and a
   certified zone, provided the labels are right.
 - No signal from inside the encoder beats confidence, and a consensus of encoders does not estimate accuracy.
@@ -162,6 +164,13 @@ A side rule fitted to labels on frozen pairs and forced onto the frozen-against-
 49.2% of differing windows, below the raw margin's 61.1% and 55.4% and the pair's own fit's 74.9% and 72.8%, so the
 module refuses another model family unless forced (exp65). <!-- claim:calibrate-family-lock -->
 
+With labels drawn among the windows where two maps differ, the package says which is more accurate (`sample --other`,
+then `estimate`). On every pair of encoders run on the same units of the suite's 24 tasks (2,514 pairs with the full
+truth; not preregistered; linear probes, not map products), 100 such labels named the right map on 60.3% of draws,
+against 12.7% for 100 windows of the whole map analysed on the differing windows they held, and 42.8% against 11.3% on
+the 1,709 pairs that differ on more than 100 windows. The lowest coverage over the pairs was 95.5%, and the wrong map
+was named on at most 4.0% of a pair's draws (exp90). <!-- claim:exp90-which-map-few-labels -->
+
 Two Sentinel-2 acquisitions a median 118 days apart change decision on 31.2% of 7,109 LUCAS polygons against a 0.30%
 reseed floor, a rate that follows phenology, 44.5% on cropland against 20.8% on woodland (exp68).
 <!-- claim:lucas-two-dates-are-phenology -->
@@ -216,6 +225,13 @@ of its numbers against 0.1% and captures 0.997 of the package's errors against 0
 At that size the agent as shipped calls the review-set tool on 17 of 40 runs, rejecting the prediction that it
 reproduces the package. <!-- claim:agent-benchmark-7b-agent-does-not-find-the-tool -->
 
+Since 1.4.0 the package serves its commands to an agent as a local MCP server. In a pilot on 2 October 2026 (five
+questions on the outputs of Ai2's FT-AWF and Forest Loss Driver models; not preregistered, no committed artifact), the
+tools' numbers were right and a strong model's replies kept them with their limits, while a small model's replies
+failed on all five, mostly by dropping limits; after the texts put each tool's main limit inside its conclusion, two of
+its five passed. `estimate` and `certify` refuse a review set, so advice to label one cannot become a wrong number,
+though a reply can still mislead.
+
 ## What was tried and rejected
 
 The [technique ledger](TECHNIQUES.md) lists each rejected technique with its reason. No signal from the encoder's
@@ -240,12 +256,15 @@ inputs; 3.9% of its errors reached the same threshold, which is set by the probe
 A whole-map error rate can still misstate a part read from other inputs. On a map with half its tiles read by the
 first probe without the optical input, random samples estimate 46.9% on average, while the cloudy half's rate is
 74.1%. Even with the radar-only probe on the cloudy half, the two halves err on 28.3% and 19.7%. Where a map records
-each pixel's input condition, the package ranks, samples and certifies each condition on its own (`--condition`, not
-yet released; exp88). <!-- claim:pooled-error-rate-misstates-the-cloudy-part -->
+each pixel's input condition, the package ranks, samples and certifies each condition on its own (`--condition`, since
+1.4.0; exp88). <!-- claim:pooled-error-rate-misstates-the-cloudy-part -->
 Every interval and certified zone describes agreement with the reviewer's labels, which the package treats as right.
 If the reviewer makes mistakes, the true rate can fall outside them, and no experiment here measured how often
 reviewers err. Labelling blind, with the map's class hidden, keeps the reviewer from anchoring on the map's class;
-how much that changes the labels was not measured.
+how much that changes the labels was not measured. Since 1.5.0 a reviewer can write `?` for a window that cannot be
+judged; `estimate` bounds it both ways and `certify` counts it as wrong. `estimate --reviewer-false-alarm E0
+--reviewer-miss E1` widens the interval to the sharp bounds for a reviewer whose error rates the user states (proved in
+`lean/`); the rates are the user's, not measured, and `certify` takes none.
 On Sen1Floods11, where eight encoders share 82% to 87% of their errors, a Dawid-Skene consensus, which estimates each
 encoder's accuracy from agreement alone, returns 0.975 to 0.983 for maps 0.883 to 0.914 accurate, and its rank
 correlation with the true accuracies misses the preregistered 0.8 on MADOS (0.71) (exp83).

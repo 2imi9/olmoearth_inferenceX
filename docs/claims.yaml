@@ -3320,8 +3320,9 @@
   note: >-
     The bound and the maxima are recomputed from every cell's violation rate, not read from the verdict block. Two
     cells (EuroSAT at B = 100 for both alphas) have no testable level and count as trivially valid; the 110 cells
-    with levels are the ones graded. The prefix rule is covered by its theorem only where the zone risk is
-    nondecreasing across the tested levels; the last clause records that it stayed under delta on the other cells too.
+    with levels are the ones graded. The prefix rule is fixed-sequence testing, valid whatever the shape of the zone
+    risk across the tested levels; the note said until 3 October 2026 that its theorem covered only a nondecreasing
+    risk, a condition tests/test_trust_zone.py shows is not needed by enumerating every error pattern of small maps.
 
 - id: trust-zone-arithmetic-agrees-outside-census
   statement: "At 300 labels and alpha = half the map's error rate, running each rule once on the expected counts predicts the run's modal outcome (zone or no zone) and its median certified coverage to within two grid steps on 19 of the 21 tasks large enough for that budget; the two exceptions are the CropHarvest Togo tasks, where 300 labels are 98% of the population and the expected-count arithmetic rounds to the wrong side of delta at the first tested level."
@@ -4514,6 +4515,8 @@
   cited_in:
     - {file: docs/results/comparisons.md, marker: exp90-which-map-few-labels}
     - {file: docs/Usage.md, marker: exp90-which-map-few-labels}
+    - {file: docs/Findings.md, marker: exp90-which-map-few-labels}
+    - {file: docs/Summary.md, marker: exp90-which-map-few-labels}
   note: >-
     Not preregistered: a check of the design before it was documented. Coverage is a Monte Carlo share over 400
     draws (standard error about one point near 95%); the guarantee itself is the union bound, and the test file

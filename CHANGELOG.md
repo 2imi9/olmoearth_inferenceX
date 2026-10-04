@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased
+
+**Technical report brought to 1.6.0** (`report/main.tex`, `report/main.pdf`; it had stood at 1.3.0). New sections on
+input conditions (exp88), windows a reviewer cannot judge and a reviewer who errs (with the Lean proofs), which of two
+maps is more accurate (exp90), the MCP server and the agent pilot, and Ai2's fine-tuned models (exp89). Corrections it
+carries: the prefix rule is fixed-sequence testing, valid on any map (the 1.3.0 report and the ledger's note on
+`trust-zone-guarantee-holds` still said it needed a nondecreasing risk); the suite result leads with the ranking
+headroom, its controls being near chance; EuroCrops has 147 grid cells, not 146; the claims without an artifact are
+named. Its first limitation is that no labelled-sample route has been graded on a published map product with its own
+probability reference sample. Ten references were added, each checked against Crossref or arXiv. A three-lens review
+of the report found 48 points, all addressed.
+
+- `scripts/claims.py`: `report_tags()` reads the report's `\claim{}` tags, and `stale` lists the report's lines beside
+  each claim's citations; `tests/test_claims.py` requires every tag to name a registered claim that is not superseded.
+- Docs: the comparison of two maps is over the windows compared, not the whole map (Usage, and this changelog's 1.6.0
+  entry); `--condition` is released (Findings); Summary and Findings gain the 1.5.0 `?` and reviewer bounds and exp90;
+  Findings gains the MCP pilot; the index lists `mcp` and the comparison; the protocol's design-effect range names
+  m-cashew-plant's 1.17; the exp85 record's coverage cost is 0.4 to 1.0 points, as its claim says.
+
 ## 1.6.0 (2026-10-03)
 
 **Release checks (3 October 2026).** A three-lens review of the comparison route (statistics, code edge cases, docs
@@ -17,8 +36,8 @@ accuracies differ only through the windows where they differ.
 - `sample a.tif --other b.tif --budget 100 --out pairs.csv` draws windows at random among those where the two maps'
   classes differ, read as `compare` reads them (`_two_map_windows`, now shared by both commands), and writes
   `class_a`, `class_b` and an empty `reference_class` for the reviewer to fill with the class seen, or `?`.
-- `estimate pairs.csv` says which map is more accurate and by how much: a 95% interval on the whole map's accuracy
-  difference, a minus b, from each map's exact interval over the differing windows at 97.5% (union bound; it is
+- `estimate pairs.csv` says which map is more accurate and by how much: a 95% interval on the accuracy difference
+  over the windows compared, a minus b, from each map's exact interval over the differing windows at 97.5% (union bound; it is
   conservative), with `?` counted both ways. It names a map only when the interval excludes 0, and it does not give
   either map's accuracy. `certify` refuses this sample.
 - Python: `estimate.sample_disagreement`, `estimate.compare_from_disagreement`. MCP: `sample` takes `other` and

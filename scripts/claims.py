@@ -22,6 +22,9 @@ REGISTRY = os.path.join(ROOT, "docs", "claims.yaml")
 STATUSES = ("supported", "mixed", "rejected", "measured", "superseded")
 DOC_GLOBS = ("docs/**/*.md", "README.md")
 MARKER = re.compile(r"<!--\s*claim:([A-Za-z0-9_.-]+)\s*-->")
+# The technical report tags a number with \claim{<id>}; tests/test_claims.py requires each tag to name a live claim.
+REPORT_GLOBS = ("report/*.tex",)
+REPORT_TAG = re.compile(r"\\claim\{([A-Za-z0-9_.-]+)\}")
 REQUIRED = ("id", "statement", "status", "experiments", "artifacts", "check", "cited_in")
 
 # The names a check may use besides A. Checks are expressions written by hand into the registry, not user input;
@@ -106,6 +109,21 @@ def markers(root=ROOT):
     return found
 
 
+def report_tags(root=ROOT):
+    """{relative file: [(1-based line number, claim id)]} over every \\claim{} tag in the technical report."""
+    found = {}
+    for pattern in REPORT_GLOBS:
+        for path in sorted(glob.glob(os.path.join(root, pattern))):
+            rel = os.path.relpath(path, root)
+            with open(path, encoding="utf-8") as f:
+                for i, line in enumerate(f, 1):
+                    if line.lstrip().startswith("%"):
+                        continue
+                    for m in REPORT_TAG.finditer(line):
+                        found.setdefault(rel, []).append((i, m.group(1)))
+    return found
+
+
 def paragraph(lines, i):
     """The paragraph (blank-line delimited; a table row is its own line) around 0-based line i, as one string."""
     if lines[i].lstrip().startswith("|"):
@@ -136,11 +154,15 @@ def stale(claims, A, root=ROOT):
     return out
 
 
-def _cite_lines(claim, found):
+def _cite_lines(claim, found, tags=None):
     locs = []
     for cite in claim["cited_in"]:
         lines = [ln for ln, cid in found.get(cite["file"], []) if cid == claim["id"]]
         locs.append(f"{cite['file']}:{','.join(map(str, lines)) or '?'}")
+    for rel, v in (tags or {}).items():
+        lines = [ln for ln, cid in v if cid == claim["id"]]
+        if lines:
+            locs.append(f"{rel}:{','.join(map(str, lines))}")
     return locs
 
 
@@ -176,6 +198,7 @@ def main(argv=None):
     if a.cmd == "stale":
         A = load_artifacts(claims)
         found = markers()
+        tags = report_tags()
         bad = stale(claims, A)
         if not bad:
             print(f"all {len(claims)} claims hold against the committed artifacts")
@@ -184,7 +207,7 @@ def main(argv=None):
         for c, reason in bad:
             print(f"- {c['id']} [{c['status']}]: {reason}")
             print(f"    {c['statement']}")
-            for loc in _cite_lines(c, found):
+            for loc in _cite_lines(c, found, tags):
                 print(f"    cited in {loc}")
         return 1
     return 0

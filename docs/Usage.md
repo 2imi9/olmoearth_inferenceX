@@ -184,8 +184,9 @@ oe-inferencex sample a.tif --other b.tif --budget 100 --out pairs.csv
 oe-inferencex estimate pairs.csv
 ```
 
-`estimate` then says which map is more accurate and by how much, as a 95% interval on the difference in accuracy over
-the whole map, a minus b. Each map's share of the differing windows that is right gets its exact interval at 97.5%,
+`estimate` then says which map is more accurate and by how much, as a 95% interval on the difference in accuracy, a
+minus b, over the windows compared: both maps predict them, and where either map is a class map, windows split evenly
+between two classes are left out (with scores on both sides a tie goes to the more confident pixels). Each map's share of the differing windows that is right gets its exact interval at 97.5%,
 and the difference of the two, scaled by the differing windows' share of the map, covers at least 95% by the union
 bound; it is conservative. A window marked `?` is counted for each map both ways. The maps are read as `compare`
 reads them (class maps, probability maps cut at `--threshold`, or per-class scores argmaxed), and the windows are the

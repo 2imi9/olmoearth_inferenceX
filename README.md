@@ -185,7 +185,8 @@ Before you trust it
 4. **The interval and the zone assume the labels are right.** They describe agreement with
    the reviewer's labels. If the reviewer makes mistakes, the true rate can fall outside them.
    Label blind: hide the `map_class` column, write the class you see in `reference_class`, and
-   set `wrong` where the two differ.
+   set `wrong` where the two differ. Mark `?` where a window cannot be judged; for error rates
+   you can state, `estimate --reviewer-false-alarm` and `--reviewer-miss` widen the interval.
 
 
 Input conditions

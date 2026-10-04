@@ -26,11 +26,14 @@ Optional: `note` (a caveat) and `superseded_by: expNN` (status `superseded`).
 **The marker.** The sentence or table row that carries a claim ends with the
 HTML comment `<!-- claim:<id> -->`, after the final pipe for a table row; it is
 invisible on the rendered site and on GitHub. A line may carry several markers.
+The technical report (`report/main.tex`) tags a number with `\claim{<id>}` instead, printed in grey.
 
 **The tests.** Every `check` is `True` on the artifacts (a failure names the
 claim); every `cited_in` has its marker and every marker names a registered
 claim; a superseded claim's citing paragraph or row names the superseding run;
-every bold-verdict row of the technique ledger carries a marker; ids are unique.
+every bold-verdict row of the technique ledger carries a marker; ids are unique;
+every `\claim{}` tag in the report names a registered claim that is not superseded,
+and `claims.py stale` lists the report's lines beside each claim's citations.
 
 **After a run lands.** Commit the artifact, then `python scripts/claims.py
 stale`: it re-evaluates every check and prints the failing or superseded claims
