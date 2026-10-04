@@ -5,7 +5,7 @@ olmoearth_inferenceX is a post-inference check for Earth-observation maps: where
 is likely wrong, how wrong it is, which part you can trust, and which of two maps is better. It
 reads the scores the model wrote out; it never runs the model and needs no torch.
 
-<img src="https://raw.githubusercontent.com/2imi9/olmoearth_inferenceX/main/docs/figures/architecture.png" alt="Structure of olmoearth-inferenceX. Inputs: your model's class scores, optionally a second map and an input-condition raster. Window layer: pixels pooled to windows, each with a class and the model's confidence. Without reference labels: ranking by confidence gives the review set; comparing A and B gives the disagreement map. With a labelled sample: a simple random sample with reference labels gives the error rate with an exact 95% interval and, by exact tests on the most confident zones, the certified zone; a sample of the windows where A and B differ gives their accuracy difference." width="900">
+<img src="https://raw.githubusercontent.com/2imi9/olmoearth_inferenceX/main/docs/figures/architecture.png" alt="Structure of olmoearth-inferenceX. Left: Sentinel-2 imagery goes through a model's encoder and decoder to its outputs, a class map and a confidence map. Right: the outputs are pooled to windows. Without reference labels, ranking the windows by confidence gives the review set, and comparing two maps A and B gives the disagreement map. With a labelled sample, a sample of the windows where A and B differ gives their accuracy difference with a 95% interval; a random sample with reference labels gives the error rate with an exact 95% interval and, by exact zone tests, the certified zone" width="900">
 
 Documentation: https://olmoearth-inferencex.readthedocs.io/
 

@@ -39,7 +39,7 @@
 \begin{document}
 \begin{tikzpicture}
   % column positions (cm); a chevron is 2.55 wide and 0.9 high, a window square 0.39
-  \def\bus{14.85}\def\laneL{15.05}\def\laneR{27.9}\def\colA{16.55}\def\tokx{18.3}\def\colB{22.5}\def\outx{24.1}
+  \def\bus{14.05}\def\laneL{14.25}\def\laneR{27.1}\def\colA{15.75}\def\tokx{17.5}\def\colB{21.7}\def\outx{23.3}
 
   % ======================================================================= your data and model
   \node[ptitle] at (2.25,8.55) {Satellite observations};
@@ -61,36 +61,24 @@
   \node[note] at (5.63,3.35) {any EO model};
   \draw[flow] (6.55,5.19) -- (6.85,5.19);
 
-  % model outputs: real maps in orange frames
-  \node[ptitle] at (8.9,8.55) {Model outputs};
-  \begin{scope}[on background layer] \draw[panel] (6.95,2.45) rectangle (10.85,8.15); \end{scope}
-  \node[tlabel] at (8.05,7.49) {Class map};
-  \node[thumb] (pred) at (8.05,6.59) {\includegraphics[width=1.4cm]{rasters/scene_pred.png}};
-  \node[tlabel] at (9.80,7.49) {Confidence};
-  \node[thumb] (conf) at (9.80,6.59) {\includegraphics[width=1.4cm]{rasters/scene_conf.png}};
-  \node[tlabel] at (8.05,5.24) {Second map};
-  \node[thumb] (map2) at (8.05,4.34) {\includegraphics[width=1.4cm]{rasters/scene_label.png}};
-  \node[note] at (8.05,3.24) {e.g.\ WorldCover\\ \textit{(optional)}};
-  \node[tlabel] at (9.80,5.24) {Condition};
-  \node[draw=mapo, dashed, line width=1.2pt, minimum size=1.4cm, inner sep=0pt, fill=white] (cnd) at (9.80,4.34) {};
-  \node[note] at (cnd) {e.g.\ cloud\\ flag};
-  \node[note] at (9.80,3.24) {per pixel\\ \textit{(optional)}};
-  \node[caption] at (5.4,1.15) {Your data and model};
+  % model outputs: what the package reads, the class map and the confidence
+  \node[ptitle] at (8.4,8.55) {Model outputs};
+  \begin{scope}[on background layer] \draw[panel] (6.95,2.45) rectangle (9.85,8.15); \end{scope}
+  \node[tlabel] at (8.35,7.56) {Class map};
+  \node[thumb] (pred) at (8.35,6.49) {\includegraphics[width=1.75cm]{rasters/scene_pred.png}};
+  \node[tlabel] at (8.35,4.96) {Confidence};
+  \node[thumb] (conf) at (8.35,3.89) {\includegraphics[width=1.75cm]{rasters/scene_conf.png}};
+  \node[caption] at (5.0,1.15) {Your data and model};
 
   % ======================================================================= olmoearth-inferenceX
-  \node[op=sky] (pool) at (12.45,5.19) {Pool to\\ windows};
-  \draw[flow] (10.92,5.19) -- (pool.west);
-  \begin{scope}[shift={(12.11,3.62)}]
-    \foreach \i in {0,...,3} \foreach \j in {0,...,3} \draw[ink!50, fill=sky!60, line width=0.3pt] (0.17*\i,0.17*\j) rectangle ++(0.17,0.17);
-    \draw[ink, line width=0.8pt] (0,0) rectangle (0.68,0.68);
-  \end{scope}
-  \node[note, anchor=north] at (12.45,3.55) {4\,$\times$\,4 pixels};
+  \node[op=sky] (pool) at (11.6,5.19) {Pool to\\ windows};
+  \draw[flow] (9.92,5.19) -- (pool.west);
   % window squares, centred on the flow line
-  \foreach \s [count=\i] in {90,35,80,20,95,60} {\node[tok, fill=teal!\s!white] (w\i) at (14.2,{5.19+0.42*(3.5-\i)}) {};}
-  \draw[flow] (pool.east) -- (13.98,5.19);
-  \node[note, anchor=north] at (14.15,4.0) {class +\\ confidence};
-  \draw[line width=0.9pt, draw=ink] (14.42,5.19) -- (\bus,5.19);
-  \draw[line width=0.9pt, draw=ink] (\bus,8.0) -- (\bus,2.35);
+  \foreach \s [count=\i] in {90,35,80,20,95,60} {\node[tok, fill=teal!\s!white] (w\i) at (13.35,{5.19+0.42*(3.5-\i)}) {};}
+  \draw[flow] (pool.east) -- (13.13,5.19);
+  \node[note, anchor=north] at (13.22,4.0) {class +\\ confidence};
+  \draw[line width=0.9pt, draw=ink] (13.57,5.19) -- (\bus,5.19);
+  \draw[line width=0.9pt, draw=ink] (\bus,8.0) -- (\bus,3.55);
 
   % ---- without reference labels
   \draw[lane] (\laneL,6.15) rectangle (\laneR,9.1);
@@ -111,36 +99,37 @@
   \draw[flow] (c7.east) -- (o2.west);
 
   % ---- with a labelled sample
-  \draw[lane] (\laneL,1.7) rectangle (\laneR,5.95);
+  \draw[lane] (\laneL,1.6) rectangle (\laneR,5.95);
   \node[lanetitle] at (\laneL+0.1,5.9) {With a labelled sample};
-  \node[op] (samp) at (\colA,4.85) {Random\\ sample};
-  \draw[flow] (\bus,4.85) -- (samp.west);
+  % the differing windows, sampled and labelled: which map is right
+  \foreach \m [count=\i] in {1,1,0,1,1} {
+     \node[tok, fill=red!15, draw=violet, line width=0.8pt] (p\i) at ({\tokx+0.42*(\i-1)},4.85) {};
+     \node[font=\scriptsize\bfseries, inner sep=0pt] at (p\i) {\ifcase\m B\or A\fi};}
+  \draw[flow] (c4.south) -- (p4.north);
+  \node[note, anchor=west] at ($(c4.south)!0.5!(p4.north)+(0.15,0)$) {sample of the differing windows};
+  \node[note, anchor=north west, text=violet] at ($(p1.south west)+(-0.05,-0.1)$) {correct map: A or B};
+  \node[op] (diff) at (\colB,4.85) {Interval on\\ the difference};
+  \draw[flow] (p5.east) -- (diff.west);
+  \node[result, anchor=west] (o5) at (\outx,4.85) {\textbf{Accuracy difference}\\ A $-$ B, 95\% interval};
+  \draw[flow] (diff.east) -- (o5.west);
+  % a random sample of all windows, labelled: the error rate and the certified zone
+  \node[op] (samp) at (\colA,3.55) {Random\\ sample};
+  \draw[flow] (\bus,3.55) -- (samp.west);
   \foreach \m [count=\i] in {1,1,0,1,2,1} {
-     \node[tok, fill=white, draw=violet, line width=0.8pt] (q\i) at ({\tokx+0.42*(\i-1)},4.85) {};
+     \node[tok, fill=white, draw=violet, line width=0.8pt] (q\i) at ({\tokx+0.42*(\i-1)},3.55) {};
      \ifcase\m \node[text=red, font=\scriptsize\bfseries, inner sep=0pt] at (q\i) {$\times$}; \or
        \node[text=green, font=\scriptsize\bfseries, inner sep=0pt] at (q\i) {$\checkmark$}; \or
        \node[font=\scriptsize\bfseries, inner sep=0pt] at (q\i) {?}; \fi}
-  \node[note, anchor=south west, text=violet] at ($(q1.north west)+(-0.05,0.1)$) {reference labels: 1, 0 or ?};
+  \node[note, anchor=north west, text=violet] at ($(q1.south west)+(-0.05,-0.1)$) {labels: 1, 0 or ?};
   \draw[flow] (samp.east) -- (q1.west);
-  \node[op] (est) at (\colB,4.85) {Exact\\ interval};
-  \node[op] (cert) at (\colB,3.55) {Exact zone\\ tests};
+  \node[op] (est) at (\colB,3.55) {Exact\\ interval};
+  \node[op] (cert) at (\colB,2.3) {Exact zone\\ tests};
   \draw[flow] (q6.east) -- (est.west);
   \draw[flow] ($(q6.east)+(0.22,0)$) |- (cert.west);
-  \node[result, anchor=west] (o3) at (\outx,4.85) {\textbf{Error rate}\\ with exact 95\% interval};
-  \node[result, anchor=west] (o4) at (\outx,3.55) {\textbf{Certified zone}\\ error $\leq\alpha$ (prob.\ $\geq 1-\delta$)};
+  \node[result, anchor=west] (o3) at (\outx,3.55) {\textbf{Error rate}\\ with exact 95\% interval};
+  \node[result, anchor=west] (o4) at (\outx,2.3) {\textbf{Certified zone}\\ error $\leq\alpha$ (prob.\ $\geq 1-\delta$)};
   \draw[flow] (est.east) -- (o3.west);
   \draw[flow] (cert.east) -- (o4.west);
-  \node[op] (dsamp) at (\colA,2.35) {Sample\\ A $\neq$ B};
-  \draw[flow] (\bus,2.35) -- (dsamp.west);
-  \foreach \m [count=\i] in {1,1,0,1,1} {
-     \node[tok, fill=red!15, draw=violet, line width=0.8pt] (p\i) at ({\tokx+0.42*(\i-1)},2.35) {};
-     \node[font=\scriptsize\bfseries, inner sep=0pt] at (p\i) {\ifcase\m B\or A\fi};}
-  \node[note, anchor=south west, text=violet] at ($(p1.north west)+(-0.05,0.1)$) {correct map: A or B};
-  \draw[flow] (dsamp.east) -- (p1.west);
-  \node[op] (diff) at (\colB,2.35) {Interval on\\ the difference};
-  \draw[flow] (p5.east) -- (diff.west);
-  \node[result, anchor=west] (o5) at (\outx,2.35) {\textbf{Accuracy difference}\\ A $-$ B, 95\% interval};
-  \draw[flow] (diff.east) -- (o5.west);
 
   \node[caption] at ({(\laneL+\laneR)/2},1.15) {olmoearth-inferenceX};
 \end{tikzpicture}

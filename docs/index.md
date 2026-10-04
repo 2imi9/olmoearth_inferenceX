@@ -10,7 +10,7 @@ more accurate map when it excludes zero.
 The package reads the per-pixel probabilities, logits or class scores that a model exports, as GeoTIFF or `.npy`
 arrays, and needs no access to the model itself. It was developed on OlmoEarth and does not require torch.
 
-![Structure: inputs (class scores, optionally a second map and an input condition); window layer (class and how sure, per window); without labels, the review set and where two maps differ; with a labelled sample, the error rate, the certified zone and which map is better](figures/architecture.png)
+![Structure of olmoearth-inferenceX. Left: Sentinel-2 imagery goes through a model's encoder and decoder to its outputs, a class map and a confidence map. Right: the outputs are pooled to windows. Without reference labels, ranking the windows by confidence gives the review set, and comparing two maps A and B gives the disagreement map. With a labelled sample, a sample of the windows where A and B differ gives their accuracy difference with a 95% interval; a random sample with reference labels gives the error rate with an exact 95% interval and, by exact zone tests, the certified zone](figures/architecture.png)
 
 ## Demo
 
