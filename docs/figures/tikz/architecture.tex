@@ -44,14 +44,13 @@
   % ======================================================================= your data and model
   \node[ptitle] at (2.25,8.55) {Satellite observations};
   \begin{scope}[on background layer] \draw[panel] (0.15,2.45) rectangle (4.35,8.15); \end{scope}
-  \node[img, draw=s2!55] (bs) at (2.75,5.75) {\includegraphics[width=2.55cm]{rasters/scene_b11.png}};
-  \node[img, draw=s2!75] (bn) at (2.47,5.47) {\includegraphics[width=2.55cm]{rasters/scene_b08.png}};
-  \node[img, draw=s2] (br) at (2.19,5.19) {\includegraphics[width=2.55cm]{rasters/scene_rgb.png}};
-  \node[font=\scriptsize\bfseries, text=white, anchor=north east, inner sep=2pt] at (br.north east) {10\,m/px};
-  \node[font=\normalsize\bfseries, rotate=90, text=ink] at (0.5,5.19) {Sentinel-2};
+  \node[img, draw=s2!55] (bs) at (2.75,5.84) {\includegraphics[width=2.55cm]{rasters/scene_b11.png}};
+  \node[img, draw=s2!75] (bn) at (2.47,5.56) {\includegraphics[width=2.55cm]{rasters/scene_b08.png}};
+  \node[img, draw=s2] (br) at (2.19,5.28) {\includegraphics[width=2.55cm]{rasters/scene_rgb.png}};
+  \foreach \n/\t in {bs/SWIR, bn/NIR, br/{RGB, 10\,m/px}} {\node[font=\scriptsize\bfseries, text=white, fill=ink, fill opacity=0.55, text opacity=1, inner sep=1.5pt, anchor=north east] at ($(\n.north east)+(-0.04,-0.04)$) {\t};}
+  \node[font=\normalsize\bfseries, rotate=90, text=ink] at (0.5,5.28) {Sentinel-2};
   \draw[ink!60, |-|, line width=0.5pt] ($(br.south west)+(0,-0.2)$) -- ($(br.south east)+(0,-0.2)$)
         node[midway, below, font=\scriptsize, text=muted] {1.28\,km};
-  \node[note, anchor=north] at (2.25,3.15) {RGB $\cdot$ near-infrared $\cdot$\\ short-wave infrared};
 
   % the model: encoder narrows, decoder widens, names inside
   \draw[flow] (4.42,5.19) -- (4.7,5.19);
@@ -63,24 +62,24 @@
   \draw[flow] (6.55,5.19) -- (6.85,5.19);
 
   % model outputs: real maps in orange frames
-  \node[ptitle] at (8.8,8.55) {Model outputs};
-  \begin{scope}[on background layer] \draw[panel] (6.95,2.45) rectangle (10.65,8.15); \end{scope}
-  \node[tlabel] at (7.95,7.85) {Class map};
-  \node[thumb] (pred) at (7.95,6.95) {\includegraphics[width=1.4cm]{rasters/scene_pred.png}};
-  \node[tlabel] at (9.7,7.85) {Confidence};
-  \node[thumb] (conf) at (9.7,6.95) {\includegraphics[width=1.4cm]{rasters/scene_conf.png}};
-  \node[tlabel] at (7.95,5.6) {Second map};
-  \node[thumb] (map2) at (7.95,4.7) {\includegraphics[width=1.4cm]{rasters/scene_label.png}};
-  \node[note] at (7.95,3.6) {e.g.\ WorldCover\\ \textit{(optional)}};
-  \node[tlabel] at (9.7,5.6) {Condition};
-  \node[draw=mapo, dashed, line width=1.2pt, minimum size=1.4cm, inner sep=0pt, fill=white] (cnd) at (9.7,4.7) {};
+  \node[ptitle] at (8.9,8.55) {Model outputs};
+  \begin{scope}[on background layer] \draw[panel] (6.95,2.45) rectangle (10.85,8.15); \end{scope}
+  \node[tlabel] at (8.05,7.49) {Class map};
+  \node[thumb] (pred) at (8.05,6.59) {\includegraphics[width=1.4cm]{rasters/scene_pred.png}};
+  \node[tlabel] at (9.80,7.49) {Confidence};
+  \node[thumb] (conf) at (9.80,6.59) {\includegraphics[width=1.4cm]{rasters/scene_conf.png}};
+  \node[tlabel] at (8.05,5.24) {Second map};
+  \node[thumb] (map2) at (8.05,4.34) {\includegraphics[width=1.4cm]{rasters/scene_label.png}};
+  \node[note] at (8.05,3.24) {e.g.\ WorldCover\\ \textit{(optional)}};
+  \node[tlabel] at (9.80,5.24) {Condition};
+  \node[draw=mapo, dashed, line width=1.2pt, minimum size=1.4cm, inner sep=0pt, fill=white] (cnd) at (9.80,4.34) {};
   \node[note] at (cnd) {e.g.\ cloud\\ flag};
-  \node[note] at (9.7,3.6) {per pixel\\ \textit{(optional)}};
+  \node[note] at (9.80,3.24) {per pixel\\ \textit{(optional)}};
   \node[caption] at (5.4,1.15) {Your data and model};
 
   % ======================================================================= olmoearth-inferenceX
   \node[op=sky] (pool) at (12.45,5.19) {Pool to\\ windows};
-  \draw[flow] (10.72,5.19) -- (pool.west);
+  \draw[flow] (10.92,5.19) -- (pool.west);
   \begin{scope}[shift={(12.11,3.62)}]
     \foreach \i in {0,...,3} \foreach \j in {0,...,3} \draw[ink!50, fill=sky!60, line width=0.3pt] (0.17*\i,0.17*\j) rectangle ++(0.17,0.17);
     \draw[ink, line width=0.8pt] (0,0) rectangle (0.68,0.68);
