@@ -4473,6 +4473,56 @@
     informative control. FT-AWF's estimate and certify cells use 300 of 344 points, close to a census. Mangrove (the
     graded arm) waits for Ai2's validation split; Nandi is not public.
 
+- id: exp92-products-labelled-routes-hold
+  statement: "On published products graded against an independent probability sample (LCMAP Collection 1.3 and Esri 10 m Annual LULC v2, 2018, read at 24,968 of LCMAP's 25,000 simple-random reference plots, Esri crosswalked to LCMAP's classes; preregistered), LCMAP is 82.3% and Esri 79.6% accurate against the reference, and labels drawn among the 5,387 plots where they differ covered the 2.7-point difference on 99.0%, 98.6% and 98.5% of 2,000 draws at 50, 100 and 200 labels (P1), with a median width of 9.7 points at 100 labels against 20.4 for labels drawn from all plots (P2); they named LCMAP on 5.9%, 12.0% and 29.0% of draws and never named Esri, where labels drawn from all plots named LCMAP on 1.2%, 2.5% and 4.8% and Esri on 0.1%, 0.15% and 0.05%. Three hundred random plots gave an exact error-rate interval that covered on 95.0% (LCMAP) and 95.65% (Esri) of draws (P3)."
+  crosscheck: tests/test_exp92.py::test_exp92_by_a_second_route
+  status: supported
+  experiments: [exp92, exp90]
+  artifacts: [exp/out/exp92_summary.json]
+  check: |-
+    (lambda d: (lambda q, c: d["preregistered"] is True and (q["N"], q["D"], q["K_A"], q["K_B"]) == (24968, 5387, 2728, 2062)
+      and [round(100 * q[k], 1) for k in ("acc_lcmap", "acc_esri", "delta")] == [82.3, 79.6, 2.7]
+      and [round(100 * c[f"disagree_{n}"]["coverage"], 2) for n in (50, 100, 200)] == [98.95, 98.55, 98.5]
+      and round(c["disagree_100"]["median_width_points"], 1) == 9.7 and round(c["random_100"]["median_width_points"], 1) == 20.4
+      and [round(100 * c[f"{g}_{n}"]["decides_right"], 2) for g in ("disagree", "random") for n in (50, 100, 200)] == [5.9, 11.95, 29.0, 1.2, 2.5, 4.75]
+      and [round(100 * c[f"random_{n}"]["decides_wrong"], 2) for n in (50, 100, 200)] == [0.1, 0.15, 0.05]
+      and all(c[f"disagree_{n}"]["decides_wrong"] == 0 for n in (50, 100, 200))
+      and [round(100 * d["Q2"][m]["coverage"], 2) for m in ("lcmap", "esri")] == [95.0, 95.65]
+      and all(d["prereg"][p]["holds"] for p in ("P1", "P2", "P3"))
+    )(d["Q1"], d["Q1"]["cells"]))(A["exp/out/exp92_summary.json"])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp92-products-labelled-routes-hold}
+    - {file: docs/Findings.md, marker: exp92-products-labelled-routes-hold}
+    - {file: docs/Summary.md, marker: exp92-products-labelled-routes-hold}
+    - {file: README.md, marker: exp92-products-labelled-routes-hold}
+  note: >-
+    Preregistered on 4 October 2026 (08d5985), amended before any value was analysed (5e365be). Corrected before
+    recording: the first extraction left out 734 plots with Esri data by taking an empty window from an overlapping
+    UTM tile (first analysis: 24,235 plots, 82.3% and 79.7%, the same verdicts). The plots stand in for the map
+    population, so the gradings are exact against their truth. The reference uses LCMAP's legend, so Esri is graded
+    through a crosswalk; whether reference plots trained LCMAP Collection 1.3 was not checked; one year; the certified
+    zone was not graded. Found after the result: at 400, 800 and 1,600 labels the disagree design named LCMAP on 62%,
+    95.5% and 100% of draws, the whole-map design on 10%, 22% and 55% (91% at 3,200).
+
+- id: exp92-lcmap-confidence-ranks-its-errors
+  statement: "LCMAP Collection 1.3's own confidence (lcpconf 1-100, its measure that the label matches the training data) ranks its 2018 errors against LCMAP's random reference sample: on 4,796 plots of a random 5,000 (850 errors, 17.7%), the AUROC is 0.753 (bootstrap 95% interval 0.734 to 0.771) and the 10% least confident plots hold 28.7% of the errors, 2.9 times a random 10%, where no order could hold more than 56.5% (P4, preregistered)."
+  crosscheck: tests/test_exp92.py::test_exp92_confidence_ranking_by_pair_counting
+  status: supported
+  experiments: [exp92]
+  artifacts: [exp/out/exp92_summary.json]
+  check: |-
+    ((lambda r: (r["n"], r["errors"]) == (4796, 850) and round(r["auroc"], 3) == 0.753
+      and [round(x, 3) for x in r["auroc_ci95"]] == [0.734, 0.771] and round(100 * r["capture_10pct"], 1) == 28.7
+      and round(100 * r["ceiling_10pct"], 1) == 56.5)(A["exp/out/exp92_summary.json"]["Q3"]["lcpconf"])
+     and A["exp/out/exp92_summary.json"]["prereg"]["P4"]["holds"] is True)
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp92-lcmap-confidence-ranks-its-errors}
+    - {file: docs/Findings.md, marker: exp92-lcmap-confidence-ranks-its-errors}
+  note: >-
+    199 plots of the subset carry provenance codes instead of a confidence and are reported apart (transition codes,
+    140 plots, 32.9% wrong). Preregistered descriptive comparator: disagreement with Esri ranks LCMAP's errors with an
+    AUROC of 0.725 and holds 27.5% of them in its top 10%.
+
 - id: exp91-vlm-reviewer-shares-the-maps-errors
   statement: "As a blind reviewer of Sen1Floods11 Bolivia windows (exp18's map on frozen OlmoEarth v1-Base, 8.84% of 81,984 windows wrong), Claude (claude-opus-5-5) given VISTA-style views answered ? on 31% of a simple random sample of 150 windows and, on the 104 it judged, agreed with the hand labels on 85.6%, below the preregistered 90% (P1 fails; the map, on the same windows, 95.2%, found after the result). On a calibration set of 30 wrong and 30 correct windows it raised no false alarm on the 22 correct windows it judged (one-sided 95% upper bound 12.7%) and missed 14 of the 19 wrong windows it judged (74%, upper bound 89%; P3, misses above false alarms, holds). The sample's interval was 5.2 to 15.2% with the hand labels, 4.2 to 46.9% with the reviewer's labels (its 46 ? counted both ways) and 0 to 100% widened by the calibrated bounds, which holds the true rate only vacuously (P2 holds as written)."
   crosscheck: tests/test_exp91.py::test_exp91_by_a_second_route

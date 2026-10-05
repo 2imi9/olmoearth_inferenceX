@@ -56,6 +56,12 @@ returned Esri's 2017 items (their ranges end on 1 January 2018), so some plots c
 kept only where their range starts in 2018 (both collections), requests time out after 30 s, and each finished tile is
 appended to a resumable checkpoint. The design, samples and predictions are unchanged.
 
+Correction, 5 October 2026, after the result. The pre-record audit found that where a plot lies in two overlapping
+Esri tiles (1,453 plots, along UTM zone edges), the rule "smallest tile id wins" took an empty window from the tile
+outside its zone, so 734 plots with Esri data were recorded as having none and left V. The plot now takes the first
+tile, by id, whose 3 x 3 majority is a class; the values come from the same reads (the checkpoint), and the analysis
+was rerun unchanged. The record states what the first analysis gave.
+
 Usage.
     uv run --no-sync python exp/exp92_lcmap_products.py extract     # reads the maps at the plots; about ten minutes
     uv run --no-sync python exp/exp92_lcmap_products.py analyze     # writes exp/out/exp92_summary.json
@@ -195,10 +201,10 @@ def extract():
     vals = {"lcpri": {}, "lcpconf": {}, "esri": {}}
 
     def keep(layer, item, pid, v):
-        """Esri tiles overlap at zone edges: the tile with the smallest id wins, whatever order the reads finish in."""
+        """Esri tiles overlap along UTM zone edges, where one tile's window can be empty: every window is kept, and the
+        plot takes the first, by tile id, whose 3 x 3 majority is a class (see esri_majority)."""
         if layer == "esri":
-            if pid not in vals["esri"] or item < vals["esri"][pid][0]:
-                vals["esri"][pid] = (item, v)
+            vals["esri"].setdefault(pid, {})[item] = v
         else:
             vals[layer][pid] = v
 
@@ -240,9 +246,15 @@ def extract():
             if k % 25 == 0 or secs > 60:
                 print(f"{k}/{len(todo)} tiles, {time.time() - t0:.0f}s (last {layer} {item}: {len(got)} plots in {secs:.0f}s)", flush=True)
 
-    def esri_majority(win):
-        if win is None:
-            return 0, 0
+    def esri_majority(wins):
+        """The class of the first tile, by id, whose window's majority is a class; 0 where no tile has one."""
+        for item in sorted(wins or {}):
+            raw, mapped = _majority(wins[item])
+            if raw != 0:
+                return raw, mapped
+        return 0, 0
+
+    def _majority(win):
         flat = win.ravel()
         centre = int(flat[len(flat) // 2])
         counts = np.bincount(flat, minlength=12)
@@ -254,7 +266,7 @@ def extract():
         w = csv.writer(f)
         w.writerow(["plotid", "ref", "lcmap", "esri_raw", "esri", "in_conf_subset", "lcpconf"])
         for pid, _, _, ref_c in ref:
-            raw, mapped = esri_majority(vals["esri"][pid][1] if pid in vals["esri"] else None)
+            raw, mapped = esri_majority(vals["esri"].get(pid))
             w.writerow([pid, ref_c, vals["lcpri"].get(pid, 0), raw, mapped, int(pid in conf_ids),
                         vals["lcpconf"].get(pid, "") if pid in conf_ids else ""])
     print(f"wrote {PLOTS} in {time.time() - t0:.0f}s: lcpri {len(vals['lcpri'])}, esri {len(vals['esri'])}, "
@@ -332,6 +344,13 @@ def analyze():
            "Q1": {"N": N, "D": D, "K_A": KA, "K_B": KB, "acc_lcmap": float(ra.sum() / N), "acc_esri": float(rb.sum() / N),
                   "delta": delta, "cells": q1},
            "Q2": q2, "Q3": q3}
+    # found after the result: how many labels the comparison needs at this small a difference
+    rng2 = np.random.default_rng(SEED + 1)
+    out["descriptive_added_after_the_result"] = {
+        "Q1_larger_budgets": {f"{d}_{n}": e90.cell(rng2, delta, N, D, KA, KB, n, d)
+                              for n in (400, 800, 1600, 3200) for d in ("disagree", "random")},
+        "esri_unmapped_plots": int((b == 0).sum()), "lcmap_unmapped_plots": int((a == 0).sum()),
+        "esri_raw_counts_unmapped": {str(k): int(v) for k, v in zip(*np.unique(np.array([int(r["esri_raw"]) for r in rows])[b == 0], return_counts=True))}}
     out["prereg"] = {
         "P1": {"holds": all(q1[f"disagree_{n}"]["coverage"] >= 0.94 for n in NS)},
         "P2": {"holds": q1["disagree_100"]["median_width_points"] < 0.5 * q1["random_100"]["median_width_points"]},

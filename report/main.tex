@@ -49,9 +49,11 @@ widens to sharp bounds, proved in Lean, for a reviewer whose error rates the use
 guarantee on all 110 graded cells. Over 2,514 pairs of encoder maps, 100 labels drawn among the windows where two maps
 differ named the more accurate map on 60.3\% of draws, against 12.7\% for 100 labels drawn from the whole map; on the
 1,709 pairs that differ on more than 100 windows, where the labels are a sample rather than all of them, 42.8\%
-against 11.3\%. None of
-the labelled-sample routes has yet been graded on a published map product with its own independent reference sample.
-The record comprises 96 experiment scripts and 218 ledger claims, 216 of them checked against a committed artifact,
+against 11.3\%. On two published land-cover products graded against an independent probability sample of 25,000
+plots, the error-rate interval held its coverage, labels drawn where the products differ never named the one less in
+agreement with the reference (they named either on 6\% to 29\% of draws at 50 to 200 labels), and LCMAP's own
+confidence ranked its errors with an AUROC of 0.75.
+The record comprises 98 experiment scripts and 221 ledger claims, 219 of them checked against a committed artifact,
 and reports failed predictions as failed.
 \end{abstract}
 
@@ -368,12 +370,12 @@ the model authors' validation sets & Ai2's fine-tuned FT-AWF and Forest Loss Dri
 \label{sec:protocol-ledger}
 
 Each experiment states its predictions and falsification conditions before it runs, with dated amendments; results
-read afterwards are marked as not preregistered here and in the ledger. The repository holds 96 experiment scripts named \code{expNN\_*.py},
-covering 87 experiment numbers from exp01 to exp90. The ledger \code{docs/claims.yaml} holds 218 claims, each with a
-statement, status, artifacts and an executable check (two rest on no committed artifact and say so); 64 are supported, 78 measured, 30 mixed, 44 rejected and 2
+read afterwards are marked as not preregistered here and in the ledger. The repository holds 98 experiment scripts named \code{expNN\_*.py},
+covering 89 experiment numbers from exp01 to exp92. The ledger \code{docs/claims.yaml} holds 221 claims, each with a
+statement, status, artifacts and an executable check (two rest on no committed artifact and say so); 66 are supported, 78 measured, 31 mixed, 44 rejected and 2
 superseded, and \code{scripts/claims.py stale} flags only the two superseded ones. After an audit on 23 September 2026
-found that 138 of the then 167 checks read a result back from its own artifact, second routes were added: 72 of the
-218 claims name a \code{crosscheck} test that reaches the number by another route, and every claim from exp79 on must
+found that 138 of the then 167 checks read a result back from its own artifact, second routes were added: 75 of the
+221 claims name a \code{crosscheck} test that reaches the number by another route, and every claim from exp79 on must
 name one.
 
 Corrected results appear in their current form. exp78's cluster-corrected arm is now the ratio estimator, which
@@ -577,6 +579,29 @@ they hold. At 200 labels the whole-map draw labels the entire map on the 268 pai
 \label{fig:whichmap}
 \end{figure}
 
+\subsection{Published products against an independent probability sample}
+\label{sec:res-products}
+
+exp92 graded two labelled routes, the error-rate interval and the comparison of two maps, and the ranking on published
+products; the certified zone was not graded. The reference is LCMAP's Reference Data Product v1.2
+\citep{pengra2020}: 25,000 plots, a simple random sample of the 30\,m pixels of the conterminous United States,
+interpreted into LCMAP's eight classes; for 2018 the maps are LCMAP Collection 1.3 primary land cover with its
+confidence, and Esri's 10\,m Annual Land Use Land Cover v2 crosswalked to LCMAP's classes. The 24,968 plots where the
+reference and both maps have a class stand in for the map population, so every design is graded exactly against
+their truth. All four preregistered predictions held. LCMAP is 82.3\% and Esri 79.6\% accurate against this reference,
+and the maps differ on 21.6\% of plots. Labels drawn among the differing plots covered the 2.7-point difference on
+98.5\% to 99.0\% of 2,000 draws at 50, 100 and 200 labels, at about half the width of labels drawn from all plots, and
+never named Esri; at so small a difference they named LCMAP on 12.0\% of draws at 100 labels (2.5\% from all plots).
+Three hundred random plots gave an exact error-rate interval that covered on 95.0\% and 95.65\% of draws
+\claim{exp92-products-labelled-routes-hold}. LCMAP's own confidence ranked its errors with an AUROC of 0.753 (bootstrap
+interval 0.734 to 0.771), and its 10\% least confident plots held 28.7\% of the errors
+\claim{exp92-lcmap-confidence-ranks-its-errors}. After the result, the comparison was found to need about 800 labels to
+name LCMAP on 95\% of draws, against more than 3,200 for labels drawn from all plots. A pre-record audit found that
+the first extraction had left out 734 plots with Esri data; the numbers here are corrected, with the same verdicts.
+The reference uses LCMAP's legend, so Esri is graded through a crosswalk at a finer resolution, and the difference
+measures agreement with this reference rather than which product is better in general. Whether any reference plot
+was used to train LCMAP Collection 1.3 was not checked; the evidence is one year in one country.
+
 \subsection{Estimation from a labelled sample}
 \label{sec:res-estimate}
 
@@ -701,7 +726,7 @@ their errors, it estimates 0.975 to 0.983 for maps 0.883 to 0.914 accurate, and 
 is 0.83, 0.71 and 0.62 on PASTIS Sentinel-2, MADOS and Sen1Floods11 \claim{consensus-order-recovered-only-where-true-gaps-are-large}.
 Within one family it estimates 0.996 to 0.999 for maps 0.81 to 0.93 accurate
 \claim{within-family-consensus-is-the-unanimous-limit}. An error rate therefore requires a reference.
-Table~\ref{tab:failed} lists the failed predictions of exp77 to exp88.
+Table~\ref{tab:failed} lists the failed predictions of exp77 to exp91.
 
 \begin{table}[h]
 \centering\footnotesize
@@ -723,20 +748,23 @@ exp84 P3 & sensor-group range of the lead $\le 0.06$ & exceeded on 48 of 150; ev
 exp85 P3; P4 & ratio $\le 0.95$; plain coefficient wider on two tasks & 0.978; never wider \claim{model-assisted-coefficient-is-one}; P5 withdrawn \\
 exp86 & answers pass under the preregistered instrument & pass only after fourteen amendments made after results were seen \\
 exp88 P2 (China 6) & confident errors rise on CropHarvest China 6 without the optical input & confident share falls, 13.3\% to 6.5\% \claim{missing-modality-confident-errors-follow-the-shift-not-the-sensor} \\
+exp91 P1 & a vision-language reviewer agrees with the hand labels on $\geq 90\%$ of judged windows & 85.6\% \claim{exp91-vlm-reviewer-shares-the-maps-errors} \\
 \bottomrule
 \end{tabularx}
-\caption{Preregistered predictions of exp77 to exp88 recorded as failed or failed as written. exp89 was report-only by
-an amendment made before any result, and exp90 was not preregistered.}
+\caption{Preregistered predictions of exp77 to exp91 recorded as failed or failed as written. exp89 was report-only by
+an amendment made before any result, exp90 was not preregistered, and exp92's four predictions held.}
 \label{tab:failed}
 \end{table}
 
 \section{Limitations}
 \label{sec:limits}
 
-None of the labelled-sample routes (\code{estimate}, \code{certify} and the comparison of two maps) has been graded on a
-published map product with its own independent probability reference sample; their evidence is linear probes on
-frozen embeddings, graded against benchmark splits that are not probability samples, and one fine-tuned model. The
-ranking has been graded on one served product, Dynamic World. The hand-labelled testbeds are mostly binary water
+On published products with an independent probability reference sample, one pair (LCMAP and Esri land cover) in one
+year has been graded, against a reference in one product's legend whose overlap with that product's training data was
+not checked, and the certified zone not at all; the rest of the
+labelled-route evidence is linear probes on frozen embeddings, graded against benchmark splits that are not probability
+samples, and one fine-tuned model. The ranking has been graded on two products' own confidence, Dynamic World's and
+LCMAP's. The hand-labelled testbeds are mostly binary water
 tasks, on which the margin, one minus the top probability and entropy coincide, and the fine-tuned evidence is FT-AWF's
 41 errors on 344 points with Forest Loss Driver report-only \claim{fine-tuned-model-audit}. The suite's 24 tasks come
 from 14 sources, its splits are the model authors' and not a landscape sample, and its controls are near chance. The

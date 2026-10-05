@@ -44,6 +44,11 @@ all, with the evidence.
   labels from the whole map; on the 1,709 pairs differing on more than 100 windows, where the
   labels are a sample, 42.8% against 11.3%. The interval held its coverage on every pair up to
   the draws' noise (exp90, not preregistered). <!-- claim:exp90-which-map-few-labels -->
+- **Published products.** On LCMAP and Esri land cover for 2018, graded against LCMAP's 25,000
+  random reference plots, the error-rate interval covered on 95.0% and 95.65% of draws, and labels
+  drawn where the maps differ covered their 2.7-point difference on at least 98.5% of draws and
+  never named the wrong map; at 50 to 200 labels they named LCMAP on 6% to 29% of draws (exp92,
+  preregistered). <!-- claim:exp92-products-labelled-routes-hold -->
 
 ## Known limits
 

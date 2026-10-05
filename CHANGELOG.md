@@ -30,6 +30,17 @@ and the report. Earlier drafts (raster result panels, pictograms, a plain block 
   Findings gains the MCP pilot; the index lists `mcp` and the comparison; the protocol's design-effect range names
   m-cashew-plant's 1.17; the exp85 record's coverage cost is 0.4 to 1.0 points, as its claim says.
 
+**exp92: the package on published products (preregistered, 08d5985; amended before analysis, 5e365be).** LCMAP
+Collection 1.3 and Esri 10 m Annual LULC v2 for 2018, read at LCMAP's 25,000 simple-random reference plots from
+Planetary Computer. All four predictions hold: labels drawn where the maps differ covered their 2.7-point accuracy
+difference on 98.5% to 99.0% of draws at 50 to 200 labels, at about half the width of whole-map labels, and never named
+the wrong map (they named LCMAP on 6% to 29% of draws); the exact error-rate interval covered on 95.0% and 95.65%; LCMAP's own confidence ranks its errors with an
+AUROC of 0.753, its 10% least confident plots holding 28.7% of them. At this small a difference the comparison needed
+about 800 labels to name the map on 95% of draws, a whole-map sample more than 3,200 (found after the result). A
+pre-record audit found that the first extraction had left out 734 plots with Esri data (an empty window taken from an
+overlapping UTM tile); corrected from the same reads, with the same verdicts.
+`tests/test_exp92.py` recomputes the comparison's coverage by exact enumeration and the ranking by pair counting.
+
 **exp91: a vision-language model as the reviewer (preregistered, fb311fc).** On Sen1Floods11 Bolivia, Claude
 labelled 210 blinded windows from views built after VISTA (Han et al. 2026). On the 104 of 150 random windows it
 judged it agreed with the hand labels on 85.6% (the map, on the same windows, 95.2%, found after the result); it

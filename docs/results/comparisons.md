@@ -3169,6 +3169,59 @@ not on them. It does not test labels that are wrong; a `?` row is bounded both w
 that by exact enumeration). A real product pair with an independent reference (LCMAP and NLCD at LCMAP's random
 plots, or the eleven cropland maps of Kerner et al.) is the next test.
 
+## Published products against an independent probability sample (exp92)
+
+**Question.** Before this, the labelled routes were graded on the record's probe maps and one fine-tuned model,
+against references that are not probability samples. Do the error-rate
+interval, the comparison of two maps and the confidence ranking hold on published products, graded against an
+independent probability sample? Preregistered on 4 October 2026 (08d5985) and amended on 5 October before any value was
+analysed (5e365be: request timeouts, and the year filter, which had also returned Esri's 2017 items).
+`exp/exp92_lcmap_products.py` reads the maps at the plots and writes `exp/out/exp92_plots.csv` (values only, no
+coordinates) and `exp/out/exp92_summary.json`.
+
+**Design.** The reference is LCMAP's Reference Data Product v1.2 (Pengra et al. 2020): 25,000 plots, a simple random
+sample of the 30 m pixels of the conterminous United States, interpreted into LCMAP's eight classes for 2018. The maps,
+read at the plots from Planetary Computer: LCMAP Collection 1.3 primary land cover (30 m) and its confidence layer, and
+Esri's 10 m Annual Land Use Land Cover v2 (the majority of the 3 x 3 pixels around the plot centre), crosswalked to
+LCMAP's classes. The 24,968 plots where the reference and both maps have a class stand in for the map population, so
+each design is graded exactly against their truth: 2,000 draws per setting. The confidence was read at a random 5,000
+plots, 4,796 of them with a confidence of 1 to 100, its measure that the label matches LCMAP's training data.
+
+**Correction before recording.** The pre-record audit found that the first extraction took, for plots lying in two
+overlapping Esri tiles along UTM zone edges, the empty window of the tile outside the plot's zone, so 734 plots with
+Esri data were left out (the first analysis had 24,235 plots, accuracies of 82.3% and 79.7%, a 2.6-point difference
+and the same verdict on every prediction). The plot now takes the first tile, by id, whose 3 x 3 majority is a class;
+the values come from the same reads, the analysis is unchanged, and the numbers below are the corrected ones.
+
+**Result.** All four predictions hold. Against this reference LCMAP is 82.3% accurate and Esri 79.6%, a difference of
+2.7 points; the maps differ on 5,387 plots (21.6%). Labels drawn among the differing plots covered the difference on
+99.0%, 98.6% and 98.5% of draws at 50, 100 and 200 labels (P1), with a median width of 9.7 points at 100 labels against
+20.4 for labels drawn from all plots (P2). They named LCMAP on 5.9%, 12.0% and 29.0% of draws and never named Esri;
+labels drawn from all plots named LCMAP on 1.2%, 2.5% and 4.8% and Esri on 0.1%, 0.15% and 0.05%. Three hundred random
+plots gave an exact interval that covered each map's error rate on 95.0% (LCMAP, 17.7%) and 95.65% (Esri, 20.4%) of
+draws, about 9 points wide (P3). LCMAP's own confidence ranks its errors with an AUROC of 0.753 (bootstrap 95% interval
+0.734 to 0.771), and its 10% least confident plots hold 28.7% of the errors, 2.9 times a random 10%, where no order
+could hold more than 56.5% (P4). <!-- claim:exp92-products-labelled-routes-hold --> <!-- claim:exp92-lcmap-confidence-ranks-its-errors -->
+
+Preregistered descriptives: disagreement with Esri, as a label-free ranking of LCMAP's errors, reached an AUROC of
+0.725 and held 27.5% of them in its top 10%; LCMAP's provenance codes for a transition between grass/shrub and tree
+cover (140 plots) carry a 32.9% error rate. Found after the result: at a difference this small the comparison needs
+more labels. Labels drawn among the differing plots named LCMAP on 62%, 95.5% and 100% of draws at 400, 800 and 1,600
+labels, against 10%, 22%, 55% and 91% for labels drawn from all plots at 400, 800, 1,600 and 3,200. Esri has no data at
+3 plots.
+
+**Reading.** On two published products and an independent probability sample, the exact intervals held their coverage,
+and labels drawn where the products differ never named the product less in agreement with the reference; they named
+the better-agreeing one on 95% of draws with about 800 labels, where a whole-map sample needed more than 3,200 (found
+after the result). LCMAP's own confidence ranked its errors.
+
+**What it does not show.** The reference uses LCMAP's legend and comes from LCMAP's programme, so Esri is graded
+through a crosswalk (rangeland against grass/shrub, flooded vegetation against wetland) at a finer resolution, and the
+2.7 points measure agreement with this reference, not which map is better in general. Whether any reference plot was
+used to train LCMAP Collection 1.3 was not checked. One year, one country; the certified zone was not graded. The
+plots stand in for the map population, so these are exact gradings of the designs on real maps, not new estimates for
+the conterminous United States beyond the sample.
+
 ## A vision-language model as the reviewer (exp91)
 
 **Question.** The labelled routes need a reviewer. Can a general-purpose vision-language model supply the labels from

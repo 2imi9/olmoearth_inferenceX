@@ -96,8 +96,13 @@ What has been measured
   accurate one on 60% of draws, against 13% for 100 labels from the whole map (exp90, not
   preregistered). <!-- claim:exp90-which-map-few-labels -->
 
-Most of this evidence is linear probes on frozen embeddings, and none of the labelled routes
-has yet been graded on a published map product with its own reference sample. The
+- On two published land-cover products (LCMAP and Esri, 2018) graded against LCMAP's 25,000
+  random reference plots, the error-rate interval held its coverage, and labels drawn where the
+  maps differ never named the wrong one; at 50 to 200 labels they named LCMAP on 6% to 29% of
+  draws (exp92, preregistered). <!-- claim:exp92-products-labelled-routes-hold -->
+
+Most of this evidence is linear probes on frozen embeddings; on published products, one pair
+and one year have been graded, and the certified zone not yet. The
 [technical report](https://github.com/2imi9/olmoearth_inferenceX/blob/main/report/main.pdf) and
 the [documentation](https://olmoearth-inferencex.readthedocs.io/en/latest/Summary/) give the
 full record and its limits.

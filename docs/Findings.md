@@ -26,7 +26,10 @@ artifact under `exp/out/`, with its evidence in the [results record](results/com
   accurate map on 60% of draws over 2,514 pairs of the record's probe maps, against 13% for 100 labels from the whole
   map, and 43% against 11% on the pairs where the 100 labels are a sample (exp90, not preregistered).
 - A few hundred random labels give an error rate with an interval that holds its coverage, per-class accuracies and a
-  certified zone, provided the labels are right.
+  certified zone, provided the labels are right. On two published products (LCMAP and Esri land cover) against
+  LCMAP's random reference sample, the error-rate interval held and labels drawn where the maps differ found the
+  better-agreeing map on 95% of draws with about 800 labels, where a whole-map sample needed more than 3,200 (exp92;
+  found after the result).
 - No signal from inside the encoder beats confidence, and a consensus of encoders does not estimate accuracy.
 - For a language-model agent at 7B the package is decisive when its tools are given directly; the agent as shipped
   found them on 17 of 40 runs. At 27B a model with a numpy sandbox nearly matches the package's ranking, and every arm
@@ -204,6 +207,14 @@ leaves 107 of 522, the worst at 0.019 (exp81). <!-- claim:per-class-intervals-wa
 Choosing fine-tuning tiles by the audit's suspicion is worse than random on the multi-region test split at every
 budget from 100 to 1,000 labels, and the preregistered predictions of a saving fail (exp56).
 <!-- claim:audit-does-not-save-labels -->
+
+On published products against an independent probability sample (LCMAP Collection 1.3 and Esri 10 m land cover for
+2018, read at LCMAP's 25,000 simple-random reference plots; preregistered), 300 random plots gave an error-rate interval
+that covered on 95.0% and 95.65% of draws; labels drawn among the 21.6% of plots where the maps differ covered their
+2.7-point accuracy difference on at least 98.5% of draws at 50 to 200 labels and never named the wrong map (they named
+LCMAP on 6% to 29% of draws), at about half the width of labels drawn from all plots (exp92). <!-- claim:exp92-products-labelled-routes-hold -->
+LCMAP's own confidence ranks its errors there with an AUROC of 0.753, and its 10% least confident plots hold 28.7% of
+the errors (exp92). <!-- claim:exp92-lcmap-confidence-ranks-its-errors -->
 
 ## The package as an agent tool
 
