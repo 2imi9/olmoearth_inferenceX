@@ -39,6 +39,11 @@ all, with the evidence.
   construction.
 - **Certified zone.** On OlmoEarth Base's 24 tasks, a certified zone was worse than its level
   in at most 8% of 2,000 draws, where 10% is allowed. <!-- claim:trust-zone-guarantee-holds -->
+  On LCMAP's own confidence layer, graded against LCMAP's random reference plots, it was worse
+  in at most 6.1% of draws in every cell. At 300 labels and α 8.86% (half the error rate) the
+  default rule returned no zone on 87% of draws: the first zone it tests, a tenth of the plots,
+  is 6% wrong and holds about 30 labels (exp93, preregistered).
+  <!-- claim:exp93-zone-guarantee-holds-on-a-product -->
 - **Which map is more accurate.** On 2,514 pairs of the record's probe maps, 100 labels drawn
   where two maps differ named the more accurate map on 60.3% of draws, against 12.7% for 100
   labels from the whole map; on the 1,709 pairs differing on more than 100 windows, where the

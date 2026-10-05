@@ -4523,6 +4523,52 @@
     140 plots, 32.9% wrong). Preregistered descriptive comparator: disagreement with Esri ranks LCMAP's errors with an
     AUROC of 0.725 and holds 27.5% of them in its top 10%.
 
+- id: exp93-zone-guarantee-holds-on-a-product
+  statement: "The certified zone's guarantee holds on a published product's own confidence (LCMAP Collection 1.3, 2018, ordered by lcpconf, graded against 4,796 of LCMAP's random reference plots, 17.7% wrong; preregistered): over 2,000 draws of 100, 300 or 1,000 random labels, delta 0.1, alpha 8.86% (half the error rate) and 5%, on the package's grid and on the product's own thresholds, the prefix zone was wrong more than alpha on at most 6.1% of draws and the Bonferroni zone on at most 0.2%, against a bound of 12.0% (P1); the plug-in zone on 46.6% at 300 labels and alpha 8.86% (P3); there the prefix rule returned no zone on 87.45% of draws, against 0.867 preregistered (exactly 0.8675) (P4), and the modal outcome of both guaranteed rules, no zone, matched the arithmetic (P2, outcome only: with no zone the coverage clause was not tested)."
+  crosscheck: tests/test_exp93.py::test_exp93_violation_is_bounded_exactly_by_delta
+  status: supported
+  experiments: [exp93, exp80]
+  artifacts: [exp/out/exp93_summary.json]
+  check: |-
+    (lambda d: (lambda p: d["preregistered"] is True and (d["population"]["plots"], d["population"]["errors"]) == (4796, 850)
+      and all(p[k]["holds"] for k in ("P1", "P2", "P3", "P4")) and p["P1"]["n_checked"] == 24 and not p["P1"]["failing"]
+      and round(100 * p["P1"]["max_violation"]["prefix"], 1) == 6.1 and round(100 * p["P1"]["max_violation"]["bonferroni"], 1) == 0.2
+      and round(100 * p["P1"]["bound"], 1) == 12.0 and round(100 * p["P3"]["plugin_violation_rate"], 1) == 46.6
+      and round(100 * p["P4"]["prefix_no_zone_rate"], 2) == 87.45
+      and p["P2"]["per_rule"]["prefix"]["modal"] == p["P2"]["per_rule"]["prefix"]["arithmetic"] == "no zone"
+    )(d["prereg"]))(A["exp/out/exp93_summary.json"])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp93-zone-guarantee-holds-on-a-product}
+    - {file: docs/Findings.md, marker: exp93-zone-guarantee-holds-on-a-product}
+    - {file: docs/Summary.md, marker: exp93-zone-guarantee-holds-on-a-product}
+    - {file: README.md, marker: exp93-zone-guarantee-holds-on-a-product}
+  note: >-
+    Preregistered on 5 October 2026 (39312a3), after exp92 had read the values and before any draw. The plots stand
+    in for the map, so these are exact gradings of the procedure on LCMAP's values, not a certified zone of the map.
+    The preregistration wrote P4's expected share as 0.867 for an exact 0.86753 (truncated), inside its tolerance.
+    Coverages are shares of the 96% of plots whose lcpconf is a confidence; the 199 with provenance codes (151 and
+    above, 29.1% wrong) must be marked invalid before certify, or they rank at the top of the zone. Ties at 99 were
+    broken at random; on a raster the package breaks them by pixel index. The independent audit (own Monte Carlo,
+    seed 12345, and exact bounds) reproduced every rate within 3 standard errors.
+
+- id: exp93-grid-choice-changes-what-is-certified
+  statement: "On LCMAP's coarse confidence (55.2% of plots at lcpconf 99), which grid of levels certifies more depends on the rule and the level: at alpha 8.86% the prefix rule returned a zone on the product's own thresholds (first level lcpconf >= 99, 57.6% of the plots, 7.2% wrong) on 25.25% of draws at 300 labels and 60.25% at 1,000, against 12.55% and 38.65% on the package's 5% grid; Bonferroni returned one on 0.8% and 6.05% on the thresholds against 7.4% and 38.9% on the package's grid. At alpha 5% the guaranteed rules returned no zone on at least 92.7% of draws in every cell (exp93, preregistered descriptives)."
+  crosscheck: tests/test_exp93.py::test_exp93_the_public_certify_zone_certifies_what_the_run_recorded
+  status: measured
+  experiments: [exp93]
+  artifacts: [exp/out/exp93_summary.json]
+  check: |-
+    (lambda cells: (lambda c3, c10: [round(100 * (1 - c[g]["rules"][r]["no_zone_rate"]), 2) for r in ("prefix", "bonferroni") for g in ("thresholds", "package") for c in (c3, c10)] == [25.25, 60.25, 12.55, 38.65, 0.8, 6.05, 7.4, 38.9]
+      and round(c3["thresholds"]["levels"][0], 4) == 0.5763
+      and min(c["grids"][g]["rules"][r]["no_zone_rate"] for c in cells if c["alpha_kind"] == "absolute" for g in c["grids"] for r in ("prefix", "bonferroni")) == 0.927
+    )(*[[c for c in cells if c["alpha_kind"] == "half_theta" and c["budget"] == B][0]["grids"] for B in (300, 1000)]))(A["exp/out/exp93_summary.json"]["cells"])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp93-grid-choice-changes-what-is-certified}
+  note: >-
+    The threshold grid is an arm of this experiment, not the package's default; both grids are fixed before any label.
+    Descriptive, preregistered as such; no prediction was made on which grid certifies more. Shares are of the 96% of
+    plots whose lcpconf is a confidence. Package-grid shares rest on a random tie-break within the block at 99.
+
 - id: exp91-vlm-reviewer-shares-the-maps-errors
   statement: "As a blind reviewer of Sen1Floods11 Bolivia windows (exp18's map on frozen OlmoEarth v1-Base, 8.84% of 81,984 windows wrong), Claude (claude-opus-5-5) given VISTA-style views answered ? on 31% of a simple random sample of 150 windows and, on the 104 it judged, agreed with the hand labels on 85.6%, below the preregistered 90% (P1 fails; the map, on the same windows, 95.2%, found after the result). On a calibration set of 30 wrong and 30 correct windows it raised no false alarm on the 22 correct windows it judged (one-sided 95% upper bound 12.7%) and missed 14 of the 19 wrong windows it judged (74%, upper bound 89%; P3, misses above false alarms, holds). The sample's interval was 5.2 to 15.2% with the hand labels, 4.2 to 46.9% with the reviewer's labels (its 46 ? counted both ways) and 0 to 100% widened by the calibrated bounds, which holds the true rate only vacuously (P2 holds as written)."
   crosscheck: tests/test_exp91.py::test_exp91_by_a_second_route

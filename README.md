@@ -101,8 +101,13 @@ What has been measured
   maps differ never named the wrong one; at 50 to 200 labels they named LCMAP on 6% to 29% of
   draws (exp92, preregistered). <!-- claim:exp92-products-labelled-routes-hold -->
 
+- On LCMAP's own confidence layer, certified zones met their guarantee in every graded cell. At
+  300 labels and an allowed error of 8.9%, the default rule returned no zone on 87% of draws: the
+  first zone it tests, a tenth of the plots, is 6% wrong and holds about 30 labels (exp93,
+  preregistered). <!-- claim:exp93-zone-guarantee-holds-on-a-product -->
+
 Most of this evidence is linear probes on frozen embeddings; on published products, one pair
-and one year have been graded, and the certified zone not yet. The
+and one year have been graded. The
 [technical report](https://github.com/2imi9/olmoearth_inferenceX/blob/main/report/main.pdf) and
 the [documentation](https://olmoearth-inferencex.readthedocs.io/en/latest/Summary/) give the
 full record and its limits.

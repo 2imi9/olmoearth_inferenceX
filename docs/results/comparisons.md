@@ -3222,6 +3222,60 @@ used to train LCMAP Collection 1.3 was not checked. One year, one country; the c
 plots stand in for the map population, so these are exact gradings of the designs on real maps, not new estimates for
 the conterminous United States beyond the sample.
 
+## The certified zone on a published product (exp93)
+
+**Question.** exp80 graded the certified zone on the record's probe maps, and exp92 left it ungraded on the
+published products. On LCMAP Collection 1.3's 2018 values, ordered by the product's own confidence layer, does the
+package's certified zone keep its guarantee, and how much does a budget of labels certify? Preregistered on 5
+October 2026 (39312a3) after exp92 had read the values and before any draw. `exp/exp93_product_zone.py` writes
+`exp/out/exp93_summary.json`; it reads exp92's per-plot values and downloads nothing.
+
+**Design.** exp92's confidence subset stands in for the map: 4,796 of LCMAP's simple-random reference plots whose
+`lcpconf` is a confidence (1 to 100), 850 of them wrong (17.7%). Plots are ordered by `lcpconf`, ties broken by a
+random permutation fixed before any draw. exp80's design: a simple random sample of 100, 300 or 1,000 plots, 2,000
+draws per cell, delta = 0.1, alpha half the error rate (8.86%) and 0.05, the prefix rule (the default), Bonferroni,
+and the plug-in (no guarantee), each draw run through the package's own zone functions. Two grids: the package's
+(5% steps of the plots) and the product's own thresholds (`lcpconf >= t` for every value t). LCMAP's confidence is
+coarse: 55.2% of the plots sit at 99, so the package's levels up to 55% lie inside the blocks at 100 and 99, and
+within the block at 99 the order is the random tie-break.
+
+**Result.** All four predictions hold. The guaranteed rules held delta on all 24 rule-grid-cells: the prefix zone
+was wrong more than alpha on at most 6.1% of draws and the Bonferroni zone on at most 0.2%, against a bound of 12.0%
+(P1). At 300 labels and alpha 8.86%, the plug-in zone was wrong more than alpha on 46.6% of draws (P3), and the
+prefix rule returned no zone on 87.45% of draws, against 0.867 preregistered (exactly 0.8675) (P4): the first level
+tested, a tenth of the plots (the 118 at 100 and a random part of the tie at 99), is 6.0% wrong and holds about 30
+labels, and passes almost only when none of them is wrong (with one wrong it needs 41 labels). The modal outcome of
+both guaranteed rules there, no zone, matched the arithmetic (P2); since neither gave a zone, P2's clause on the
+certified coverage was not tested. A zone of 65% of the plots is wrong at most 8.86% (8.4%), so the refusals are
+lost power, not a zone that does not exist. <!-- claim:exp93-zone-guarantee-holds-on-a-product -->
+
+Preregistered descriptives. Which grid certifies more depends on the rule and the level. At alpha 8.86% the prefix
+rule returned a zone more often on the product's thresholds, whose first level is the whole `lcpconf >= 99` block
+(57.6% of the plots, 7.2% wrong): on 25.25% of draws at 300 labels and 60.25% at 1,000, against 12.55% and 38.65% on
+the package's grid, whose median certified zone was 20% of the plots. Bonferroni went the other way (7.4% and 38.9%
+on the package's grid, 0.8% and 6.05% on the thresholds, whose 67 levels each get delta / 67), and so did the prefix
+rule at alpha 5%. At alpha 5% the guaranteed rules returned no zone on at least 92.7% of draws in every cell: on the
+product's thresholds only `lcpconf` 100 (2.5%, 1.7% wrong) is within 5%, and it falls below every budget's smallest
+testable level; on the package's grid the 5% level (4.6% wrong) is testable only at 1,000 labels, where the prefix
+rule certified it on 6% of draws. The plug-in returned a zone wrong more than 5% on up to 60.85% of draws. The
+summary's `oracle_coverage` is the largest tested level wrong at most alpha; over the whole grid it is 0.65 at 8.86%
+and 0.05 at 5%. <!-- claim:exp93-grid-choice-changes-what-is-certified -->
+
+**Reading.** On a published product's own confidence layer the certified zone kept its guarantee, as the theorem
+says it must, and the rule without one was wrong more than alpha on 39% to 54% of draws at alpha 8.86%. With these
+budgets it certified little: LCMAP's confident plots are wrong 6% to 7% of the time, close to 8.86%, and at 300
+labels the package's first level holds about 30 of them. How the levels are laid over a coarse confidence changes
+what is certified, in a direction that depends on the rule.
+
+**What it does not show.** One product, one year, one country, one reference. The plots stand in for the map, so
+these are exact gradings of the procedure on LCMAP's values, not a certified zone of the LCMAP map itself, and every
+share is a share of the 96% of plots whose `lcpconf` is a confidence: 199 plots of the subset carry provenance codes
+(151 and above) and are wrong 29.1% of the time. Read raw, those codes rank above every confidence and would sit at
+the top of the zone, so a user of `certify` on LCMAP must mark them invalid (`valid=`). The package-grid coverages
+describe a random order within the tie at 99; on a raster the package breaks ties by pixel index, which is spatial,
+so the guarantee carries over and those coverages may not. The threshold grid is an arm of this experiment, not the
+package's default.
+
 ## A vision-language model as the reviewer (exp91)
 
 **Question.** The labelled routes need a reviewer. Can a general-purpose vision-language model supply the labels from

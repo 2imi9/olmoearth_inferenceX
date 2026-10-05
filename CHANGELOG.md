@@ -30,6 +30,20 @@ and the report. Earlier drafts (raster result panels, pictograms, a plain block 
   Findings gains the MCP pilot; the index lists `mcp` and the comparison; the protocol's design-effect range names
   m-cashew-plant's 1.17; the exp85 record's coverage cost is 0.4 to 1.0 points, as its claim says.
 
+**exp93: the certified zone on a published product (preregistered, 39312a3).** LCMAP Collection 1.3's own
+confidence (`lcpconf`) against the 4,796 plots of exp92's confidence subset, exp80's design on the package's grid and
+on the product's own thresholds. All four predictions hold: the prefix zone exceeded alpha on at most 6.1% of draws
+and the Bonferroni zone on at most 0.2% in all 24 rule-grid-cells (bound 12.0%); at 300 labels and alpha 8.86% (half
+the error rate) the plug-in exceeded it on 46.6%, and the prefix rule returned no zone on 87.45% of draws, against 0.867
+preregistered (exactly 0.8675); P2 held on outcome only (no zone), its coverage clause untested. Descriptive: LCMAP's
+confidence is coarse (55% of plots at 99); at alpha 8.86% the prefix rule returned a zone more often on the product's
+own thresholds (25% of draws at 300 labels, 60% at 1,000) than on the package's grid (13%, 39%), while Bonferroni and
+the prefix rule at alpha 5% went the other way. Plots whose `lcpconf` is a provenance code must be masked before
+certifying, or they rank at the top of the zone. Two independent audits (code and numbers, then wording): every rate
+reproduced; the wording was corrected before recording.
+
+**Upstream-repository scan:** a literal used as a dict key is not a repo id (exp92's class names had failed CI).
+
 **exp92: the package on published products (preregistered, 08d5985; amended before analysis, 5e365be).** LCMAP
 Collection 1.3 and Esri 10 m Annual LULC v2 for 2018, read at LCMAP's 25,000 simple-random reference plots from
 Planetary Computer. All four predictions hold: labels drawn where the maps differ covered their 2.7-point accuracy

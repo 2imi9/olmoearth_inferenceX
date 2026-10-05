@@ -29,7 +29,8 @@ artifact under `exp/out/`, with its evidence in the [results record](results/com
   certified zone, provided the labels are right. On two published products (LCMAP and Esri land cover) against
   LCMAP's random reference sample, the error-rate interval held and labels drawn where the maps differ found the
   better-agreeing map on 95% of draws with about 800 labels, where a whole-map sample needed more than 3,200 (exp92;
-  found after the result).
+  found after the result); on LCMAP's own confidence the certified zone kept its guarantee and, at 300 labels and α
+  half the error rate, returned no zone on most draws (exp93).
 - No signal from inside the encoder beats confidence, and a consensus of encoders does not estimate accuracy.
 - For a language-model agent at 7B the package is decisive when its tools are given directly; the agent as shipped
   found them on 17 of 40 runs. At 27B a model with a numpy sandbox nearly matches the package's ranking, and every arm
@@ -201,6 +202,10 @@ certificate may fail with probability at most δ. At δ = 0.1 the zone certified
 at most 0.080 of 2,000 draws in all 112 cells of the suite, and the plug-in rule's on up to 0.557 (exp80). <!-- claim:trust-zone-guarantee-holds -->
 With 300 labels and α at half the error rate, the prefix rule certifies a zone on most draws on 14 of 21 tasks,
 covering a median 0.50 of the map (exp80). <!-- claim:trust-zone-coverage-at-300-labels -->
+On a published product's own confidence (LCMAP Collection 1.3's `lcpconf`, graded against LCMAP's random reference
+plots; preregistered) the guaranteed rules held δ in all 24 cells, the prefix zone exceeding α on at most 6.1% of
+draws; at 300 labels and α 8.86%, half the error rate, the plug-in's exceeded it on 46.6%, and the prefix rule
+returned no zone on 87% of draws, its first zone, a tenth of the plots, being 6% wrong with about 30 labels (exp93). <!-- claim:exp93-zone-guarantee-holds-on-a-product -->
 The package's intervals for user's accuracy (how often a class call is right), producer's accuracy (how much of a class is found)
 and class share leave 14 of 628 cells below 0.93 coverage and none below 0.879; the Wald form common in the literature
 leaves 107 of 522, the worst at 0.019 (exp81). <!-- claim:per-class-intervals-wald-fails-wilson-nearly-holds -->

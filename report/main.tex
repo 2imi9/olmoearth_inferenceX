@@ -51,9 +51,11 @@ differ named the more accurate map on 60.3\% of draws, against 12.7\% for 100 la
 1,709 pairs that differ on more than 100 windows, where the labels are a sample rather than all of them, 42.8\%
 against 11.3\%. On two published land-cover products graded against an independent probability sample of 25,000
 plots, the error-rate interval held its coverage, labels drawn where the products differ never named the one less in
-agreement with the reference (they named either on 6\% to 29\% of draws at 50 to 200 labels), and LCMAP's own
-confidence ranked its errors with an AUROC of 0.75.
-The record comprises 98 experiment scripts and 221 ledger claims, 219 of them checked against a committed artifact,
+agreement with the reference (they named one on 6\% to 29\% of draws at 50 to 200 labels), and LCMAP's own
+confidence ranked its errors with an AUROC of 0.75; certified zones on that confidence met their guarantee in every
+cell, and at 300 labels the default rule returned no zone on 87\% of draws at $\alpha$ half the error rate, though 65\%
+of the plots lie in a zone within it.
+The record comprises 99 experiment scripts and 223 ledger claims, 221 of them checked against a committed artifact,
 and reports failed predictions as failed.
 \end{abstract}
 
@@ -370,12 +372,12 @@ the model authors' validation sets & Ai2's fine-tuned FT-AWF and Forest Loss Dri
 \label{sec:protocol-ledger}
 
 Each experiment states its predictions and falsification conditions before it runs, with dated amendments; results
-read afterwards are marked as not preregistered here and in the ledger. The repository holds 98 experiment scripts named \code{expNN\_*.py},
-covering 89 experiment numbers from exp01 to exp92. The ledger \code{docs/claims.yaml} holds 221 claims, each with a
-statement, status, artifacts and an executable check (two rest on no committed artifact and say so); 66 are supported, 78 measured, 31 mixed, 44 rejected and 2
+read afterwards are marked as not preregistered here and in the ledger. The repository holds 99 experiment scripts named \code{expNN\_*.py},
+covering 90 experiment numbers from exp01 to exp93. The ledger \code{docs/claims.yaml} holds 223 claims, each with a
+statement, status, artifacts and an executable check (two rest on no committed artifact and say so); 67 are supported, 79 measured, 31 mixed, 44 rejected and 2
 superseded, and \code{scripts/claims.py stale} flags only the two superseded ones. After an audit on 23 September 2026
-found that 138 of the then 167 checks read a result back from its own artifact, second routes were added: 75 of the
-221 claims name a \code{crosscheck} test that reaches the number by another route, and every claim from exp79 on must
+found that 138 of the then 167 checks read a result back from its own artifact, second routes were added: 77 of the
+223 claims name a \code{crosscheck} test that reaches the number by another route, and every claim from exp79 on must
 name one.
 
 Corrected results appear in their current form. exp78's cluster-corrected arm is now the ratio estimator, which
@@ -651,7 +653,18 @@ testable level), against a bound of 0.120; the plug-in zone, the largest with a 
 than $\delta$ of draws on 16 of 21 tasks \claim{plugin-zone-violates-on-most-tasks}, and the prefix rule certifies a
 zone on most draws on 14 of the 21 tasks, its median certified coverage 0.50 against an oracle median of 0.60
 \claim{trust-zone-coverage-at-300-labels}. The guarantee held on four other encoders too
-\claim{trust-zone-guarantee-holds-on-other-encoders}. The mean top-1 probability exceeds accuracy by a median 0.061
+\claim{trust-zone-guarantee-holds-on-other-encoders}. On a published product's own confidence (exp93: LCMAP Collection
+1.3's \code{lcpconf}, against the 4,796 plots of exp92's confidence subset standing in for the map, 17.7\% wrong), the
+prefix zone exceeded $\alpha$ on at most 6.1\% of draws and the Bonferroni zone on at most 0.2\% in all 24
+rule-grid-cells, and the plug-in on 46.6\% at 300 labels and $\alpha$ half the error rate; there the prefix rule
+returned no zone on 87.45\% of draws, as summed exactly before the run: the first level tested, a tenth of the plots
+(those at 100 and a random part of the tie at 99), is 6.0\% wrong against $\alpha = 8.86\%$ and holds about 30
+labels \claim{exp93-zone-guarantee-holds-on-a-product}. LCMAP's confidence is coarse, 55\% of the plots at 99. At
+$\alpha = 8.86\%$ the prefix rule returned a zone more often on the product's own thresholds, \code{lcpconf} $\geq 99$
+(57.6\% of those plots, 7.2\% wrong) or more on 25\% of draws at 300 labels and 60\% at 1,000, than on the package's
+grid (13\% and 39\%); Bonferroni, and the prefix rule at $\alpha = 5\%$, went the other way (descriptive)
+\claim{exp93-grid-choice-changes-what-is-certified}. Plots whose \code{lcpconf} is a provenance code (4\%, 29\% wrong) are
+outside the zone's population and must be masked before certifying. The mean top-1 probability exceeds accuracy by a median 0.061
 \claim{mean-confidence-overstates-accuracy}, which is why the zone is calibrated on labels.
 
 \subsection{Use by a language-model agent}
@@ -761,7 +774,7 @@ an amendment made before any result, exp90 was not preregistered, and exp92's fo
 
 On published products with an independent probability reference sample, one pair (LCMAP and Esri land cover) in one
 year has been graded, against a reference in one product's legend whose overlap with that product's training data was
-not checked, and the certified zone not at all; the rest of the
+not checked, and the certified zone on that product's confidence alone; the rest of the
 labelled-route evidence is linear probes on frozen embeddings, graded against benchmark splits that are not probability
 samples, and one fine-tuned model. The ranking has been graded on two products' own confidence, Dynamic World's and
 LCMAP's. The hand-labelled testbeds are mostly binary water
