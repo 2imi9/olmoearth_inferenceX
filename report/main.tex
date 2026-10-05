@@ -362,6 +362,7 @@ experts annotating a product & Dynamic World \citep{brown2022}, 409 tiles \\
 surveyors in the field & LUCAS Copernicus 2022, the module described for 2018 by \citet{dandrimont2021} \\
 farmers' declarations & EuroCrops \citep{schneider2023}, labelled in both years \\
 the model authors' validation sets & Ai2's fine-tuned FT-AWF and Forest Loss Driver models \\
+analysts interpreting a simple random sample & LCMAP Reference Data Product v1.2 \citep{pengra2020}, 25,000 plots \\
 \bottomrule
 \end{tabularx}
 \caption{Labelled testbeds by origin of the reference.}
@@ -828,9 +829,13 @@ Code, experiments, outputs (\code{exp/out/}), the claim ledger, the Lean proofs 
 \url{https://github.com/2imi9/olmoearth_inferenceX}: the package as released is at tag \code{v1.6.0}, and this report,
 with the documentation corrections made alongside it, is on the main branch after that tag. Documentation is at
 \url{https://olmoearth-inferencex.readthedocs.io}; the per-experiment record is \code{docs/results/comparisons.md}. The
-data used are public: Sen1Floods11, GEOID-Flood, WorldFloods~v2, DFC2020, Dynamic World, LUCAS Copernicus 2022,
-EuroCrops, the OlmoEarth paper embeddings on Hugging Face (\nolinkurl{allenai/olmoearth-paper-embeddings}) and Ai2's
-published fine-tuned checkpoints, with upstream revisions pinned in \code{exp/out/upstream\_revisions.json}.
+data used are published by their providers: Sen1Floods11, GEOID-Flood, WorldFloods~v2, DFC2020, Dynamic World, LUCAS
+Copernicus 2022, EuroCrops, LCMAP's Reference Data Product v1.2 and Collection 1.3 (USGS), Esri's 10\,m Annual Land Use
+Land Cover v2, the OlmoEarth paper embeddings on Hugging Face (\nolinkurl{allenai/olmoearth-paper-embeddings}) and
+Ai2's published fine-tuned checkpoints, with upstream revisions pinned in \code{exp/out/upstream\_revisions.json}.
+Their licences differ (\code{docs/testbeds.md}): WorldFloods~v2 is non-commercial, Sen1Floods11's labels carry no
+stated licence, and DFC2020 is released by the IEEE GRSS to approved contest participants, while the record read an
+unofficial mirror of it.
 \end{sloppypar}
 
 \bibliographystyle{plainnat}

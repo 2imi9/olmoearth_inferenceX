@@ -71,6 +71,7 @@ nav:
       - Explanation: results/explanation.md
       - Signals: results/signals.md
       - Comparisons: results/comparisons.md
+      - Test sets: testbeds.md
       - Lab log: LabLog.md
   - Protocol:
       - method/protocol.md

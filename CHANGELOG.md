@@ -30,6 +30,14 @@ and the report. Earlier drafts (raster result panels, pictograms, a plain block 
   Findings gains the MCP pilot; the index lists `mcp` and the comparison; the protocol's design-effect range names
   m-cashew-plant's 1.17; the exp85 record's coverage cost is 0.4 to 1.0 points, as its claim says.
 
+**Test sets page** (`docs/testbeds.md`, under Evidence): which test sets graded each function of the package, and for
+each test set who produced the reference, whether it is a probability sample of the map, what the record used, where
+it is hosted and its licence as the publisher states it (verified on the publishers' pages). The data are not
+re-hosted: the checks rerun from the per-unit values in `exp/out/`, and the licences differ (WorldFloods v2
+non-commercial; Sen1Floods11's labels no stated licence; DFC2020 released to approved contest participants, read here
+from an unofficial mirror). The report's data statement no longer calls every source public, and its testbed table and
+data list now include LCMAP and Esri.
+
 **exp93: the certified zone on a published product (preregistered, 39312a3).** LCMAP Collection 1.3's own
 confidence (`lcpconf`) against the 4,796 plots of exp92's confidence subset, exp80's design on the package's grid and
 on the product's own thresholds. All four predictions hold: the prefix zone exceeded alpha on at most 6.1% of draws
