@@ -3169,6 +3169,54 @@ not on them. It does not test labels that are wrong; a `?` row is bounded both w
 that by exact enumeration). A real product pair with an independent reference (LCMAP and NLCD at LCMAP's random
 plots, or the eleven cropland maps of Kerner et al.) is the next test.
 
+## A vision-language model as the reviewer (exp91)
+
+**Question.** The labelled routes need a reviewer. Can a general-purpose vision-language model supply the labels from
+the imagery alone, and do the package's reviewer-error bounds keep the interval honest when the reviewer's error rates
+are measured on a small calibration set? Preregistered on 4 October 2026 (fb311fc) before any label was read.
+`exp/exp91_vlm_reviewer.py` draws the samples, renders the views and grades the labels; it reads the `.pt` data without
+torch.
+
+**Design.** The 81,984 windows of exp37's Bolivia table (Sen1Floods11, a region held out from training; exp18's water
+map on frozen OlmoEarth v1-Base, 8.84% of windows wrong against the hand labels). S, a simple random sample of 150
+windows; C, a disjoint calibration set of 30 windows the map gets wrong and 30 it gets right; all 210 shuffled and
+renamed so the reviewer cannot tell them apart. The reviewer was Claude (claude-opus-5-5) as ten workflow agents of 21
+windows each, blind to the map and the hand labels, after the visual harness of VISTA (Han et al. 2026,
+arXiv:2610.02200): one image per window (the 64 x 64 chip and a 16 x 16 zoom, true colour and a short-wave-infrared
+composite, the window outlined), and a command for further views of any window, with which the agents requested 232
+further views. Each window was labelled water, land or ?. The prompt is `exp/out/exp91_prompt.md` and the run's record
+`exp/out/exp91_run.json`; an audit of the agents' tool calls found every read in the views folder and every command the
+view command. About 1.06 million tokens and nine minutes.
+
+**Result.** P1 fails, P2 holds only vacuously, P3 holds. On S the reviewer answered ? on 46 of 150 windows (31%); on the
+104 it judged, its class agreed with the hand labels on 85.6%, below the 90% predicted. On C it raised no false alarm on
+the 22 correct windows it judged (E0 = 0, one-sided 95% upper bound 12.7%) and missed 14 of the 19 wrong windows it
+judged (E1 = 74%, upper bound 89%). From the hand labels, S gives 9.3% (95% interval 5.2 to 15.2%); from the reviewer's
+labels, with its 46 ? counted both ways, an estimate between 8.0 and 38.7% and an interval of 4.2 to 46.9%; widened by
+the calibrated bounds, 0 to 100%. All three hold the true 8.84%, the last because it holds everything.
+<!-- claim:exp91-vlm-reviewer-shares-the-maps-errors -->
+
+Found after the result (descriptive): on the 104 windows the reviewer judged, the map agrees with the hand labels on
+95.2% (on all 150, 90.7%); even counting every ? as right, the reviewer gets 135 of 150 against the map's 136, and on
+the judged windows the two disagree with the hand labels in 11 windows where only the reviewer is wrong and 1 where only
+the map is. 13 of the reviewer's 15 errors on S call water what the hand labels call land. It answered ? more often on
+the windows the map gets wrong: 20 of the 44 in S and C (45%; 9 of 14 in S, 11 of 30 in C) against 45 of the 166
+correct ones (27%). On S's 14 wrong windows it answered ? on 9, flagged 1 and passed 4, and it flagged 11 windows the
+map gets right.
+
+**Reading.** Claude, shown these views, was not an independent reviewer of this map: where the map errs, it mostly
+answered ? or agreed with the map, and on the windows it judged it was less often right than the map. In this draw
+neither of the reviewer-label intervals excluded the true rate; the widened one could not, being 0 to 100% once C gave
+an upper miss bound of 89%. A reviewer that sees something the map did not (the ground, a finer image, a later date) is
+the alternative this run did not test.
+
+**What it does not show.** One draw of S and 30 calibration windows a side; one model, one prompt, one flood event, one
+map, at the 40 m window; no claim about other models, regions or classes. The hand labels are the reference, and the
+map's head was trained on Sen1Floods11 hand labels with the same window rule, while the reviewer was shown no labelled
+example; the one-sided direction of its errors (water where the hand labels say land) may be partly a difference of
+labelling convention, or reference error, rather than a misreading of the ground. A reviewer with another source
+(very-high-resolution imagery, the post-event radar, field photographs) or prompted with the map's class was not tested.
+
 ## The ceiling belongs to the task, not to the model (from exp74 and exp70)
 
 The margin takes a median 0.68 of the gap between a random ranking and a perfect one on the 24 tasks. A fair

@@ -259,12 +259,17 @@ first probe without the optical input, random samples estimate 46.9% on average,
 each pixel's input condition, the package ranks, samples and certifies each condition on its own (`--condition`, since
 1.4.0; exp88). <!-- claim:pooled-error-rate-misstates-the-cloudy-part -->
 Every interval and certified zone describes agreement with the reviewer's labels, which the package treats as right.
-If the reviewer makes mistakes, the true rate can fall outside them, and no experiment here measured how often
-reviewers err. Labelling blind, with the map's class hidden, keeps the reviewer from anchoring on the map's class;
+If the reviewer makes mistakes, the true rate can fall outside them; no experiment here measured how often human
+reviewers err (exp91 measured it for a vision-language model). Labelling blind, with the map's class hidden, keeps the reviewer from anchoring on the map's class;
 how much that changes the labels was not measured. Since 1.5.0 a reviewer can write `?` for a window that cannot be
 judged; `estimate` bounds it both ways and `certify` counts it as wrong. `estimate --reviewer-false-alarm E0
 --reviewer-miss E1` widens the interval to the sharp bounds for a reviewer whose error rates the user states (proved in
 `lean/`); the rates are the user's, not measured, and `certify` takes none.
+Claude (claude-opus-5-5), shown Sentinel-2 views of Sen1Floods11 Bolivia blind, was not a substitute for the reviewer:
+it judged 104 of 150 random windows and agreed with the hand labels on 85.6% of those (the map, on the same windows,
+95.2%, found after the result); with its 46 ? counted both ways its labels gave an interval of 4.2 to 46.9% where the
+hand labels gave 5.2 to 15.2%, and on 30 wrong calibration windows it missed 14 of the 19 it judged, which widens the
+interval to 0 to 100% (exp91, preregistered). <!-- claim:exp91-vlm-reviewer-shares-the-maps-errors -->
 On Sen1Floods11, where eight encoders share 82% to 87% of their errors, a Dawid-Skene consensus, which estimates each
 encoder's accuracy from agreement alone, returns 0.975 to 0.983 for maps 0.883 to 0.914 accurate, and its rank
 correlation with the true accuracies misses the preregistered 0.8 on MADOS (0.71) (exp83).

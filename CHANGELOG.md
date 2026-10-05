@@ -30,6 +30,13 @@ and the report. Earlier drafts (raster result panels, pictograms, a plain block 
   Findings gains the MCP pilot; the index lists `mcp` and the comparison; the protocol's design-effect range names
   m-cashew-plant's 1.17; the exp85 record's coverage cost is 0.4 to 1.0 points, as its claim says.
 
+**exp91: a vision-language model as the reviewer (preregistered, fb311fc).** On Sen1Floods11 Bolivia, Claude
+labelled 210 blinded windows from views built after VISTA (Han et al. 2026). On the 104 of 150 random windows it
+judged it agreed with the hand labels on 85.6% (the map, on the same windows, 95.2%, found after the result); it
+answered ? on 31% of the sample, and on a calibration set it missed 14 of the 19 wrong windows it judged. P1 fails, P2
+holds only vacuously (the widened interval is 0 to 100%), P3 holds. The prompt and the run's record are committed. `exp/exp91_vlm_reviewer.py` reads the
+Sen1Floods11 `.pt` file without torch; `tests/test_exp91.py` recomputes the result by a second route.
+
 ## 1.6.0 (2026-10-03)
 
 **Release checks (3 October 2026).** A three-lens review of the comparison route (statistics, code edge cases, docs

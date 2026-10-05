@@ -4473,6 +4473,38 @@
     informative control. FT-AWF's estimate and certify cells use 300 of 344 points, close to a census. Mangrove (the
     graded arm) waits for Ai2's validation split; Nandi is not public.
 
+- id: exp91-vlm-reviewer-shares-the-maps-errors
+  statement: "As a blind reviewer of Sen1Floods11 Bolivia windows (exp18's map on frozen OlmoEarth v1-Base, 8.84% of 81,984 windows wrong), Claude (claude-opus-5-5) given VISTA-style views answered ? on 31% of a simple random sample of 150 windows and, on the 104 it judged, agreed with the hand labels on 85.6%, below the preregistered 90% (P1 fails; the map, on the same windows, 95.2%, found after the result). On a calibration set of 30 wrong and 30 correct windows it raised no false alarm on the 22 correct windows it judged (one-sided 95% upper bound 12.7%) and missed 14 of the 19 wrong windows it judged (74%, upper bound 89%; P3, misses above false alarms, holds). The sample's interval was 5.2 to 15.2% with the hand labels, 4.2 to 46.9% with the reviewer's labels (its 46 ? counted both ways) and 0 to 100% widened by the calibrated bounds, which holds the true rate only vacuously (P2 holds as written)."
+  crosscheck: tests/test_exp91.py::test_exp91_by_a_second_route
+  status: mixed
+  experiments: [exp91, exp37, exp18]
+  artifacts: [exp/out/exp91_summary.json]
+  check: |-
+    (lambda d: d["preregistered"] is True and d["prereg"] == {"P1": {"holds": False}, "P2": {"holds": True}, "P3": {"holds": True}}
+      and d["population"]["windows"] == 81984 and round(100 * d["population"]["error_rate"], 2) == 8.84
+      and d["S"]["n"] == 150 and d["S"]["judged"] == 104 and round(100 * d["S"]["unjudged_share"]) == 31
+      and round(100 * d["S"]["class_agreement"], 1) == 85.6
+      and round(100 * d["descriptive_added_after_the_result"]["S_map_agreement_on_vlm_judged"], 1) == 95.2
+      and (d["C"]["n0_judged"], d["C"]["false_alarms"], d["C"]["n1_judged"], d["C"]["misses"]) == (22, 0, 19, 14)
+      and round(100 * d["C"]["U0"], 1) == 12.7 and round(100 * d["C"]["E1"]) == 74 and round(100 * d["C"]["U1"]) == 89
+      and [round(100 * d["intervals"]["hand_labels"][k], 1) for k in ("low", "high")] == [5.2, 15.2]
+      and [round(100 * d["intervals"]["vlm_labels"][k], 1) for k in ("low", "high")] == [4.2, 46.9]
+      and (d["intervals"]["vlm_widened"]["low"], d["intervals"]["vlm_widened"]["high"]) == (0.0, 1.0)
+      and [round(100 * x, 1) for x in d["intervals"]["vlm_labels"]["estimate_range"]] == [8.0, 38.7]
+      and all(d["intervals"][k]["holds_truth"] for k in ("hand_labels", "vlm_labels", "vlm_widened"))
+    )(A["exp/out/exp91_summary.json"])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp91-vlm-reviewer-shares-the-maps-errors}
+    - {file: docs/Findings.md, marker: exp91-vlm-reviewer-shares-the-maps-errors}
+  note: >-
+    Preregistered on 4 October 2026 (fb311fc) before any label was read. One draw of S and 30 calibration windows a
+    side; one model, one prompt, one event, one map. Computed after the result and descriptive: the map's agreement on
+    the judged windows (95.2%; 90.7% on all 150), the reviewer's ? on wrong windows (20 of 44 over S and C, 45%; 9 of
+    14 in S, 11 of 30 in C) against correct ones (45 of 166, 27%), and S's flag counts. The map's head was trained on
+    the hand-label convention and the reviewer was shown no labelled example, so part of the gap may be convention or
+    reference error. The prompt is exp/out/exp91_prompt.md and the run's record exp/out/exp91_run.json. The labels (exp/out/exp91_labels.json) and the key (exp/out/exp91_key.csv) are committed; the views
+    are rebuilt by the script from the local Sen1Floods11 data.
+
 - id: exp90-which-map-few-labels
   statement: "On every pair of encoders run on the same units of each of the 24 tasks of Ai2's suite (2,514 pairs from 16 encoders, full truth, 400 draws per pair and budget; not preregistered; the maps are the record's linear probes), labelling a random sample of the windows where the two maps differ and taking the union-bound interval on the accuracy difference named the right map on 42.5%, 60.3% and 70.9% of draws at 50, 100 and 200 labels, against 4.0%, 12.7% and 33.9% for that many windows of the whole map analysed on the differing windows they held, with median widths of 9.2, 5.5 and 3.3 points against 24.5, 17.0 and 11.0. Pairs differing on no more windows than the budget (250, 805 and 872) are labelled in full; on the others the rates were 36.5%, 42.8% and 56.7% against 4.2%, 11.3% and 23.1%, with median widths of 10.3, 8.5 and 5.7 points against 25.4, 18.9 and 13.6. The lowest coverage over the pairs was 95.5% at each budget, with medians of 99.25 to 99.5%; the most draws of a pair naming the wrong map were 3.75%, 4.0% and 1.75%. The maps differed on a median 20.7% of the windows; the median absolute true difference was 3.4 points. Where it was 5 to 10 points, 100 labels named the right map on 80.7% of draws (21.2% from the whole map); above 10 points on 96.4% (59.6%). The earlier analysis of the whole-map draw, each count over all N windows, gave 1.2%, 6.3% and 25.2%."
   crosscheck: tests/test_which_map.py::test_exp90_by_a_second_route

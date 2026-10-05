@@ -248,8 +248,8 @@ def grade(labels_path, key_path, out_path):
     v_unj = np.array([x is None for x in v])
 
     def iv(r):
-        return {"estimate": r.get("estimate"), "low": r["low"], "high": r["high"], "width": r["high"] - r["low"],
-                "holds_truth": bool(r["low"] <= true_rate <= r["high"])}
+        return {"estimate": r.get("estimate"), "estimate_range": r.get("estimate_range"), "low": r["low"], "high": r["high"],
+                "width": r["high"] - r["low"], "holds_truth": bool(r["low"] <= true_rate <= r["high"])}
     ref = iv(est.estimate_error_rate(sample, hand_wrong))
     vlm = iv(est.estimate_error_rate(sample, v_wrong, unjudged=v_unj))
     wid = iv(est.estimate_error_rate(sample, v_wrong, unjudged=v_unj, reviewer_false_alarm=U0, reviewer_miss=U1))
@@ -259,10 +259,31 @@ def grade(labels_path, key_path, out_path):
            "C": {"n0_judged": len(c0), "false_alarms": fa, "E0": fa / max(len(c0), 1), "U0": U0,
                  "n1_judged": len(c1), "misses": miss, "E1": miss / max(len(c1), 1), "U1": U1},
            "intervals": {"hand_labels": ref, "vlm_labels": vlm, "vlm_widened": wid},
+           "descriptive_added_after_the_result": {
+               "S_map_agreement_on_vlm_judged": sum(int(k["hand"]) == int(k["map"]) for k in judged_s) / max(len(judged_s), 1),
+               "S_vlm_agrees_with_map_on_judged": sum(cls[lab[k["id"]]] == int(k["map"]) for k in judged_s) / max(len(judged_s), 1),
+               "S_true_errors": sum(k["err"] == "1" for k in S),
+               "S_true_errors_judged": sum(k["err"] == "1" and lab[k["id"]] != "?" for k in S),
+               "S_true_errors_flagged": sum(k["err"] == "1" and vlm_wrong(k) == 1 for k in S),
+               "S_false_flags": sum(k["err"] == "0" and vlm_wrong(k) == 1 for k in S),
+               "C_unjudged_share_wrong": sum(k["err"] == "1" and lab[k["id"]] == "?" for k in C) / max(sum(k["err"] == "1" for k in C), 1),
+               "C_unjudged_share_correct": sum(k["err"] == "0" and lab[k["id"]] == "?" for k in C) / max(sum(k["err"] == "0" for k in C), 1),
+               "S_unjudged_share_wrong": sum(k["err"] == "1" and lab[k["id"]] == "?" for k in S) / max(sum(k["err"] == "1" for k in S), 1),
+               "S_unjudged_share_correct": sum(k["err"] == "0" and lab[k["id"]] == "?" for k in S) / max(sum(k["err"] == "0" for k in S), 1),
+               "pooled_unjudged_wrong": [sum(k["err"] == "1" and lab[k["id"]] == "?" for k in key), sum(k["err"] == "1" for k in key)],
+               "pooled_unjudged_correct": [sum(k["err"] == "0" and lab[k["id"]] == "?" for k in key), sum(k["err"] == "0" for k in key)],
+               "S_map_agreement_all": sum(int(k["hand"]) == int(k["map"]) for k in S) / len(S),
+               "S_reviewer_right_counting_unjudged_right": sum(lab[k["id"]] == "?" or cls[lab[k["id"]]] == int(k["hand"]) for k in S),
+               "S_judged_discordant_reviewer_wrong_map_right": sum(cls[lab[k["id"]]] != int(k["hand"]) and int(k["map"]) == int(k["hand"]) for k in judged_s),
+               "S_judged_discordant_reviewer_right_map_wrong": sum(cls[lab[k["id"]]] == int(k["hand"]) and int(k["map"]) != int(k["hand"]) for k in judged_s),
+               "S_reviewer_errors_water_where_hand_land": sum(lab[k["id"]] == "water" and k["hand"] == "0" for k in judged_s),
+               "S_reviewer_errors": sum(cls[lab[k["id"]]] != int(k["hand"]) for k in judged_s),
+               "reviewer": json.load(open(os.path.join(os.path.dirname(labels_path), "exp91_run.json")))},
            "prereg": {"P1": {"holds": agree / max(len(judged_s), 1) >= 0.90},
                       "P2": {"holds": wid["holds_truth"]},
                       "P3": {"holds": miss / max(len(c1), 1) > fa / max(len(c0), 1)}},
-           "inputs_sha256": {os.path.basename(p): hashlib.sha256(open(p, "rb").read()).hexdigest() for p in (labels_path, key_path)}}
+           "inputs_sha256": {os.path.basename(p): hashlib.sha256(open(p, "rb").read()).hexdigest()
+                             for p in (labels_path, key_path, os.path.join(os.path.dirname(labels_path), "exp91_run.json"))}}
     json.dump(out, open(out_path, "w"), indent=1)
     print(json.dumps(out, indent=1))
 
