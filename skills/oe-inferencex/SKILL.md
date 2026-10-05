@@ -50,6 +50,11 @@ Match the user's question to a step. The tool and the command of each step have 
    sensor id), pass `--condition layer.tif` to `assess` and `sample`. `estimate` and `certify` then give each
    condition its own rate and zone.
 
+For a yes or no, read it from a result rather than from prose: `oe-inferencex decide to_label_estimate.json --ask
+error_rate_below=0.1` prints yes, no or undetermined with the interval behind it; `decide` also answers
+`more_accurate`, `trusted_share`, `trusted_share_at_least=S`, `share_differs` and the per-class questions.
+undetermined means the result does not settle the question; it is not a no.
+
 ## Example questions
 
 Questions a user may ask, here on the README's test map (`scores.tif`, `other.tif` and `truth.tif`),

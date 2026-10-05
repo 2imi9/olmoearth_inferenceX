@@ -486,6 +486,40 @@ confident share of the map. It adds `by_condition`, `delta_per_condition`, `n_co
 not written, and a stale one is removed, when nothing is certified. `--delta` keeps its meaning: the probability that
 any of the statements is wrong.
 
+### decide
+
+`decide` reads a result that `estimate`, `certify` or `compare` wrote and answers set questions, each with one answer
+from a fixed set, so a script or an agent gets a yes, a no or an undetermined instead of a paragraph to read. Nothing
+is learned or recomputed: each answer is a rule applied to the interval or the certificate in the file. On the worked
+example's results:
+
+```console
+$ oe-inferencex decide to_label_estimate.json --ask error_rate_below=0.12 --ask error_rate_below=0.05
+error_rate_below=0.12: yes. At 95% confidence, the error rate of the map is below 12.0%: its interval is 4.5% to 10.4%. The rate is agreement with the reviewer's labels, which are assumed right.
+error_rate_below=0.05: undetermined. The labels cannot tell whether the error rate of the map is below 5.0%: its 95% interval, 4.5% to 10.4%, lies across it. More labels narrow the interval. The rate is agreement with the reviewer's labels, which are assumed right.
+wrote to_label_estimate_decisions.json
+```
+
+| Question | Answers | Read from | Rule |
+|---|---|---|---|
+| `error_rate_below=T` | yes, no, undetermined | `estimate` | the 95% interval lies below T, at or above T, or across it |
+| `user_accuracy_above=T`, `producer_accuracy_above=T` | the same, per class | `estimate --per-class` | each class's interval; per-class intervals are nominal |
+| `more_accurate` | a, b, undetermined | `estimate` on a sample drawn with `--other` | the interval on the difference excludes 0 |
+| `more_accurate` | a, b, tie, undetermined | `compare --labels` | a count against the labels raster, taken as truth; undetermined unless every differing window carries a label |
+| `trusted_share` | a share of the map | `certify` | the certified share; 0 when nothing is certified |
+| `trusted_share_at_least=S` | yes, undetermined | `certify` | never no: more labels can certify more where the map's error rate is at most alpha |
+| `share_differs` | a share of the windows | `compare`, or `estimate` on a sample drawn with `--other` | no labels needed; says nothing about which map is right |
+
+T and S are shares between 0 and 1. "undetermined" means the result does not settle the question; it is not a no. A
+question a kind of result holds no evidence for is refused: `more_accurate` on a comparison made without labels, since
+two maps that agree can both be wrong. A result with input conditions or classes gives each its own answer, each from
+its own interval; the intervals do not hold jointly. Each answer's `because` sentence carries the limit that matters
+most and the result's own warnings, and `<result>_decisions.json` holds the answer, the level, the evidence and the
+sentence. The `level` is the coverage of the interval behind the answer (0.95; nominal where `exact` is false, as for
+the default confidence design, tiles and per-class intervals), 1 - delta for a certified zone, and none for a count
+against a labels raster, which has no sampling error but is only as right as those labels. `trusted_share` is the
+zone's own size over the map, not the grid's rounded coverage.
+
 ## Use from an agent (MCP)
 
 New in 1.4.0. `oe-inferencex mcp` starts a local MCP server on stdio, so that an agent can run
@@ -570,7 +604,8 @@ numbers and the same refusals. The tool names are unchanged; each tool's title s
 | Which of two maps is better, and where do they differ? | `compare` | Say which map is better without labels. With labels on some of the windows where they differ (`sample` with `other`, then `estimate`), it says which map is more accurate and by how much, not either map's accuracy |
 
 - **The tools.** They take file paths and an output directory; pass absolute paths. `guide` returns the instructions
-  below and every tool's description, under the question the tool answers.
+  below and every tool's description, under the question the tool answers. `decide` reads a result another tool
+  wrote and gives typed answers, as the command does (above).
 - **What a tool returns.** JSON with the files written and the summary numbers, and three texts to quote:
   `conclusion` (what it found), `limits` (what it does not show, with the package's own warnings and notes) and
   `next` (what can be done next, with its preconditions).
@@ -788,6 +823,7 @@ On this pair most of the accuracy comes from the post-event side being usually r
 | `metrics`, `stats` | AURC, capture, calibration error and their design-weighted forms; sign tests and bootstraps |
 | `reliability`, `evidence` | SHRUG-FM's reliability signals, torch-free; the heads a candidate rule is scored with |
 | `taskcard`, `lcc` | The [task cards](method/taskcards.md) of OlmoEarth's fine-tuned models; a reader for the served change rasters |
+| `decide` | Typed answers to set questions, read from a result that `estimate`, `certify` or `compare` wrote |
 | `cli`, `demo` | The `oe-inferencex` commands |
 | `mcp_server` | The commands as tools of a local MCP server, `oe-inferencex mcp` (the `mcp` extra) |
 

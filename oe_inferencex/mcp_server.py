@@ -76,6 +76,7 @@ TITLES = {
     "certify": TRUST,
     "compare": TWO_MAPS,
     "guide": "How do I use these tools?",
+    "decide": "Turn a result into a typed answer: yes, no or undetermined; a, b or tie; a share",
 }
 
 HARD_RULES = (
@@ -128,6 +129,13 @@ INSTRUCTIONS = "\n".join([
     "- Propose only what these tools can do, with their preconditions.",
     "- A refusal is a tool error carrying the package's reason. Change the input it names; do not retry the same "
     "call.",
+    "",
+    "Typed answers: decide reads a result that estimate, certify or compare wrote and answers set questions, each "
+    "from a fixed set: error_rate_below=T (yes, no or undetermined), user_accuracy_above=T and "
+    "producer_accuracy_above=T (per class), more_accurate (a, b or undetermined; a, b or tie from compare with "
+    "labels), trusted_share (a share), trusted_share_at_least=S (yes or undetermined) and share_differs (a share). "
+    "undetermined means the result does not settle the question; it is not a no. Quote each answer's because, which "
+    "carries its limit.",
 ])
 
 CARDS = {
@@ -137,6 +145,23 @@ CARDS = {
         "the directory relative paths are read from.",
         "Needs: nothing.",
         "Cannot: run anything or read any file.",
+    ]),
+    "decide": "\n".join([
+        "Turns a result into typed answers, so a yes or no question gets a yes, a no or an undetermined, never a "
+        "paragraph to read.",
+        "Does: reads a JSON that estimate, certify or compare wrote and answers each question asked with one answer "
+        "from a fixed set, the level behind it, the evidence and a because sentence that holds the limit. "
+        "error_rate_below=T: yes when the 95% interval lies below T, no when it lies at or above T, undetermined when "
+        "it lies across T. user_accuracy_above=T and producer_accuracy_above=T: the same per class, from estimate with "
+        "per_class. more_accurate: a, b or undetermined from estimate on a sample drawn with other; a, b or tie from "
+        "compare with labels when every differing window carries a label. trusted_share: the share certify "
+        "certified, 0 when none. trusted_share_at_least=S: yes or undetermined, never no. share_differs: the share of "
+        "windows where two maps differ. A result with input conditions gets each condition's answer too.",
+        "Needs: the result JSON (estimate's, certify's or compare's comparison.json) and the questions, as names or "
+        "name=value with a value between 0 and 1.",
+        "Cannot: add evidence the result does not hold. It refuses more_accurate on a comparison made without labels, "
+        "since compare cannot say which map is right without them, and answers undetermined when labels cover only "
+        "part of the differing windows. undetermined means the result does not settle the question; it is not a no.",
     ]),
     "assess": "\n".join([
         f"Answers \"{LOOK}\": which windows of one map to check first. No labels.",
@@ -439,7 +464,7 @@ P = Field  # a parameter's description, read by FastMCP
 
 def guide() -> str:
     """The server's instructions and every tool's capability card, under the question the tool answers."""
-    groups = [*QUESTIONS.items(), (TITLES["guide"], ("guide",))]
+    groups = [*QUESTIONS.items(), (TITLES["decide"], ("decide",)), (TITLES["guide"], ("guide",))]
     cards = "\n\n".join(f"## {question}\n\n" + "\n\n".join(f"### {name}\n{CARDS[name]}" for name in names)
                         for question, names in groups)
     return (f"{INSTRUCTIONS}\n\nRelative paths are read from {os.getcwd()}.\n\n# Capability cards, by question\n\n"
@@ -1018,8 +1043,54 @@ def _condition_need(r, alpha, delta):
             "labelled in full) can certify more.")
 
 
+def decide(
+    result_json: Annotated[str, P(description="A JSON that estimate, certify or compare wrote")],
+    questions: Annotated[list[str], P(description="The questions, each a name or name=value: error_rate_below=0.1, "
+                                                  "user_accuracy_above=0.85, producer_accuracy_above=0.85, "
+                                                  "more_accurate, trusted_share, trusted_share_at_least=0.5, "
+                                                  "share_differs")],
+    out_dir: Annotated[str | None, P(description="Directory for the decisions JSON (default: beside the result)")]
+    = None,
+) -> dict[str, Any]:
+    path = _input(result_json, "result_json")
+    out = None
+    if out_dir is not None:
+        os.makedirs(_abs(out_dir), exist_ok=True)
+        stem = os.path.basename(path)
+        stem = stem[:-5] if stem.endswith(".json") else stem
+        if stem == "comparison":                 # every compare writes comparison.json: name it by its directory
+            stem = os.path.basename(os.path.dirname(path)) + "_comparison"
+        out = os.path.join(_abs(out_dir), stem + "_decisions.json")
+    argv = ["decide", path, *[f"--ask={q}" for q in questions]]
+    if out is not None:
+        argv.append(f"--out={out}")
+    _run(argv)
+    out = out or (path[:-5] + "_decisions.json" if path.endswith(".json") else path + "_decisions.json")
+    r = _read_json(out)
+    said = []
+    for q, a in r["answers"].items():
+        shown = _pc(a["answer"]) if a["type"] == "score" else a["answer"]
+        said.append(f"{q}: {shown}. {a['because']}")
+    limits = ("Each answer is read from the result file and adds no evidence of its own. undetermined means the result "
+              "does not settle the question; it is not a no. Answers per class or per condition each rest on their own "
+              "interval, and the intervals do not hold jointly.")
+    pending = [q for q, a in r["answers"].items()
+               if a["answer"] == "undetermined"
+               or any(x.get("answer") == "undetermined" for x in (a.get("per_class") or {}).values())
+               or any(x.get("answer") == "undetermined" for x in (a.get("per_condition") or {}).values())]
+    nxt = (("For " + ", ".join(pending) + ": a larger sample drawn the same way, labelled in full, narrows the "
+            "interval or certifies more.") if pending else
+           "The result can also answer: " + ", ".join(r["available"]) + ".")
+    summ = {"result_kind": r["result_kind"], "answers": {q: a["answer"] for q, a in r["answers"].items()},
+            "per_condition": {q: a["per_condition"] for q, a in r["answers"].items() if a.get("per_condition")} or None,
+            "per_class": {q: {c: {k: row.get(k) for k in ("answer", "low", "high", "warning")}
+                              for c, row in a["per_class"].items()}
+                          for q, a in r["answers"].items() if a.get("per_class")} or None}
+    return _reply(" ".join(said), limits, nxt, {"decisions": out}, summ)
+
+
 TOOLS = {"guide": guide, "assess": assess, "compare": compare, "sample": sample, "estimate": estimate,
-         "certify": certify}
+         "certify": certify, "decide": decide}
 
 
 # ----------------------------------------------------------------------------- the server

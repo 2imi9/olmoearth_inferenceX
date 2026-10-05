@@ -30,7 +30,8 @@ Four questions
 | Which of two maps is more accurate? | `sample a.tif --other b.tif --budget 100 --out pairs.csv`, fill in `reference_class`, then `estimate pairs.csv` | about 100, where the maps differ |
 | Where do two maps differ? | `compare a.tif b.tif --out diff` | none |
 
-Every command starts with `oe-inferencex`, and `--help` lists its options.
+Every command starts with `oe-inferencex`, and `--help` lists its options. `decide` turns a result into
+a typed answer: `decide to_label_estimate.json --ask error_rate_below=0.1` prints yes, no or undetermined.
 [Quick start](https://olmoearth-inferencex.readthedocs.io/en/latest/Usage/#quick-start) runs
 each one on a test map and shows what it prints.
 

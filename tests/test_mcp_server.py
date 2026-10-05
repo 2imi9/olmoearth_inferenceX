@@ -45,7 +45,9 @@ _spec = importlib.util.spec_from_file_location("quickstart_map", os.path.join(RO
 quickstart_map = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(quickstart_map)
 
-TOOLS = {"guide", "assess", "compare", "sample", "estimate", "certify"}
+TOOLS = {"guide", "assess", "compare", "sample", "estimate", "certify", "decide"}
+# guide teaches and decide reads a result the others wrote; neither answers one of the four questions
+HELPERS = {"guide", "decide"}
 
 
 def _flat(text):
@@ -169,13 +171,13 @@ def test_the_instructions_give_the_order_and_the_hard_rules():
 
 
 def test_the_tools_are_presented_by_the_question_each_answers():
-    """Four questions in the standard order; every tool but guide answers one, under its own name, with the question
+    """Four questions in the standard order; every tool but the helpers answers one, under its own name, with the question
     in its title and on the first line of its card."""
     assert list(mcp_server.QUESTIONS) == ["Where should I look first?", "How wrong is the map?",
                                           "Which part can I trust?",
                                           "Which of two maps is better, and where do they differ?"]
     answered = [name for names in mcp_server.QUESTIONS.values() for name in names]
-    assert sorted(answered) == sorted(TOOLS - {"guide"})
+    assert sorted(answered) == sorted(TOOLS - HELPERS)
     assert set(mcp_server.TITLES) == TOOLS and len(set(mcp_server.TITLES.values())) == len(TOOLS)
     for question, names in mcp_server.QUESTIONS.items():
         for name in names:
@@ -476,8 +478,8 @@ def test_each_example_question_names_only_tools_that_exist():
             for limit in EXAMPLE_LIMITS.get(tool, ()):
                 assert limit in said, (question, limit)
         assert "\u2014" not in said
-    # together they ask the four questions: every tool but guide is used
-    assert set().union(*(set(tools) for _, tools, _ in first)) == set(mcp_server.TOOLS) - {"guide"}
+    # together they ask the four questions: every tool but the helpers is used
+    assert set().union(*(set(tools) for _, tools, _ in first)) == set(mcp_server.TOOLS) - HELPERS
 
 
 @pytest.mark.skipif(not HAVE_GEO, reason="the quick-start map is a GeoTIFF")
@@ -521,10 +523,11 @@ def test_guide_returns_the_instructions_and_every_card():
     assert not err
     assert text.startswith(mcp_server.INSTRUCTIONS)
     assert all(card in text for card in mcp_server.CARDS.values())
-    # the cards come under the question each tool answers, in the standard order, guide last
+    # the cards come under the question each tool answers, in the standard order, then decide, guide last
     heads = re.findall(r"^## (.+)$", text, re.M)
-    assert heads == [*mcp_server.QUESTIONS, mcp_server.TITLES["guide"]]
-    assert re.findall(r"^### (\w+)$", text, re.M) == ["assess", "sample", "estimate", "certify", "compare", "guide"]
+    assert heads == [*mcp_server.QUESTIONS, mcp_server.TITLES["decide"], mcp_server.TITLES["guide"]]
+    assert re.findall(r"^### (\w+)$", text, re.M) == ["assess", "sample", "estimate", "certify", "compare", "decide",
+                                                      "guide"]
     assert f"Relative paths are read from {os.getcwd()}." in text
 
 
@@ -591,6 +594,26 @@ def test_sample_estimate_certify_give_the_readme_numbers(qs):
     assert out["summary"]["coverage"] is None and out["conclusion"].startswith("No zone was certified at alpha 1%")
     assert "(80% of the map) held 243 labels with 1 wrong" in out["conclusion"]   # as the quick start's test finds
     assert "zone_mask" not in out["files"] and "labels at this alpha" in out["next"]
+
+
+@needs_map
+def test_decide_answers_from_the_results_and_refuses_what_they_cannot_say(qs):
+    """decide on the quick start's estimate and zone gives the answers their numbers imply; on a comparison made
+    without labels it refuses to name a map, as compare does."""
+    out = _ok("sample", scores=str(qs / "scores.tif"), out_dir=str(qs / "dec"), budget=300, design="random")
+    csv_path = out["files"]["sample_csv"]
+    _label(csv_path, qs)
+    est_json = _ok("estimate", sample_csv=csv_path)["files"]["estimate"]
+    res = _ok("decide", result_json=est_json, questions=["error_rate_below=0.12", "error_rate_below=0.05"])
+    assert res["summary"]["answers"] == {"error_rate_below=0.12": "yes", "error_rate_below=0.05": "undetermined"}
+    assert "its interval is 4.5% to 10.4%" in res["conclusion"] and "which are assumed right" in res["conclusion"]
+    assert "it is not a no" in res["limits"] and "error_rate_below=0.05" in res["next"]
+    zone_json = _ok("certify", sample_csv=csv_path, alpha=0.05)["files"]["zone"]
+    res = _ok("decide", result_json=zone_json, questions=["trusted_share", "trusted_share_at_least=0.95"])
+    assert res["summary"]["answers"] == {"trusted_share": 3686 / 4096, "trusted_share_at_least=0.95": "undetermined"}
+    _ok("compare", a=str(qs / "scores.tif"), b=str(qs / "other.tif"), out_dir=str(qs / "dec_diff"))
+    text = _refused("decide", result_json=str(qs / "dec_diff" / "comparison.json"), questions=["more_accurate"])
+    assert "compare cannot say which map is right without labels" in text and "--" not in text
 
 
 @needs_map

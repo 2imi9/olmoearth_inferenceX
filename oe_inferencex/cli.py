@@ -1197,6 +1197,35 @@ def _certify_by_condition(args, sample, wrong, margin, valid_w, out, mask_path, 
     return 0
 
 
+def cmd_decide(args):
+    """Typed answers to set questions, read from a result JSON that estimate, certify or compare wrote."""
+    from oe_inferencex.decide import decide
+    try:
+        res = decide(args.result, args.ask or [])
+    except ValueError as exc:                       # decide's refusals, unreadable files and non-results alike
+        raise SystemExit(str(exc)) from None
+    for q, a in res["answers"].items():
+        shown = f"{100 * a['answer']:.1f}%" if a["type"] == "score" else a["answer"]
+        print(f"{q}: {shown}. {a['because']}")
+        for name, c in (a.get("per_condition") or {}).items():
+            if "answer" in c:
+                print(f"  {name}: {c['answer']}")
+            else:
+                share = c.get("certified_share_of_condition")
+                print(f"  {name}: " + (f"{100 * share:.1f}% of this condition certified" if share else
+                                       f"nothing certified ({c.get('reason') or 'no zone passed its test'})"))
+        for c, row in (a.get("per_class") or {}).items():
+            iv = (f" (95% interval {100 * row['low']:.1f}% to {100 * row['high']:.1f}%)" if row.get("low") is not None
+                  else f" ({row.get('because', 'no interval')})")
+            print(f"  class {c}: {row['answer']}{iv}" + ("  [warning]" if row.get("warning") else ""))
+    r = args.result
+    out = args.out or (r[:-5] + "_decisions.json" if r.endswith(".json") else r + "_decisions.json")
+    with open(out, "w") as f:
+        json.dump(res, f, indent=1, default=float)
+    print(f"wrote {out}")
+    return 0
+
+
 def cmd_mcp(args):
     """Serve the commands above as MCP tools on stdio, for an agent on the user's machine (oe_inferencex.mcp_server).
     The agent starts this; nobody types into it. Without the mcp extra it says how to install it."""
@@ -1316,6 +1345,15 @@ def build_parser():
                         "is refused); only needed for a sample written by 1.2.0")
     z.add_argument("--out", default=None, help="JSON to write (default: <sample>_zone.json; the window mask goes beside it as .npy)")
     z.set_defaults(func=cmd_certify)
+    dc = sub.add_parser("decide", help="typed answers (yes / no / undetermined, a / b, a share) to set questions, read "
+                                        "from a result JSON that estimate, certify or compare wrote")
+    dc.add_argument("result", help="the JSON estimate, certify or compare wrote")
+    dc.add_argument("--ask", action="append", metavar="QUESTION[=VALUE]",
+                    help="a question, repeatable: error_rate_below=0.1, user_accuracy_above=0.85, "
+                         "producer_accuracy_above=0.85, more_accurate, trusted_share, trusted_share_at_least=0.5, "
+                         "share_differs. Without --ask, it stops and names the questions the result can answer")
+    dc.add_argument("--out", default=None, help="JSON to write (default: <result>_decisions.json)")
+    dc.set_defaults(func=cmd_decide)
     m = sub.add_parser("mcp", help="serve these commands as tools to an agent on this machine (a local MCP server on "
                                     "stdio; needs the mcp extra)")
     m.set_defaults(func=cmd_mcp)

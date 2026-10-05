@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+**`decide`: typed answers read from a result** (`oe_inferencex.decide`, `oe-inferencex decide`, and a `decide` tool in
+the MCP server). It reads a JSON that `estimate`, `certify` or `compare` wrote and answers set questions, each with one
+answer from a fixed set, the level, the evidence and a `because` sentence that carries the limit:
+`error_rate_below=T` (yes, no or undetermined from the 95% interval), `user_accuracy_above=T` and
+`producer_accuracy_above=T` per class, `more_accurate` (a, b or undetermined from a sample drawn with `--other`; a, b
+or tie from `compare --labels` only when every differing window carries a label, otherwise undetermined),
+`trusted_share` (the zone's own size over the map), `trusted_share_at_least=S` (yes or undetermined, never no) and
+`share_differs`. Nothing is learned or recomputed; the result's own warnings and bounds note are carried into each
+answer. A two-lens review before release found a crash on classes with no interval, a definite answer from labels
+covering part of the differing windows, dropped warnings and the zone's rounded share, all fixed. "undetermined" is kept apart from "no", and a question a result
+holds no evidence for is refused: `more_accurate` on a comparison without labels. The pattern is a decision model's
+(typed questions in, one answer each out, nothing to parse); its purpose is to keep an agent from turning an interval
+that spans a threshold into a yes, or a zone not certified into a no. Documented in Usage (decide) and SKILL.md;
+`tests/test_decide.py` checks each rule at its edges and on the quick start's results.
+
 **Technical report brought to 1.6.0** (`report/main.tex`, `report/main.pdf`; it had stood at 1.3.0). New sections on
 input conditions (exp88), windows a reviewer cannot judge and a reviewer who errs (with the Lean proofs), which of two
 maps is more accurate (exp90), the MCP server and the agent pilot, and Ai2's fine-tuned models (exp89). Corrections it
