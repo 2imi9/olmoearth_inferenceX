@@ -60,3 +60,6 @@ exp/out/exp05_hard_scenes.png
 
 # exp79: the per-encoder per-unit export, ~45 MB per encoder; lives on the cluster home dir, sha256 in exp79_seeds/*.json
 exp/out/exp79_units/
+
+# exp91: rendered views for the VLM reviewer, rebuilt by `exp91_vlm_reviewer.py prepare`
+exp/out/exp91_views/
