@@ -596,6 +596,7 @@ def test_sample_estimate_certify_give_the_readme_numbers(qs):
     assert "zone_mask" not in out["files"] and "labels at this alpha" in out["next"]
 
 
+@needs_mcp
 def test_a_product_class_map_with_its_confidence_band(tmp_path):
     """assess and sample take a published product's class map with confidence and confidence_range; certify then
     reads both layers back from the sidecar."""
