@@ -136,10 +136,29 @@ in Python, `form="top1"` reads logits that way. Other maps are accepted with res
 
 | Map | Accepted by |
 |---|---|
-| Hard class map with an exported confidence band | `assess_classmap` (Python); the band ranks only the pixels it separates |
+| Hard class map with an exported confidence band, as published products ship them (LCMAP's `lcpri` with `lcpconf`) | `assess`, `sample`, `estimate` and `certify` with `--confidence BAND` (`assess_classmap` in Python). The band must rise with confidence; negate an uncertainty band first. `--confidence-range LOW HIGH` leaves out band values outside it, such as codes; without it the package cannot tell codes from confidences. The band ranks only the pixels it separates. `sample` then defaults to the random design, since the confidence design needs a top-1 probability |
 | Hard class map alone | `compare` only; without a confidence there is no ranking |
 | Binary score in [0, 1] decided at 0.5, such as an OlmoEarth Studio `per_pixel_regression` output of a two-class task | Everything a binary probability map is, passed as one: windows are ranked by distance from 0.5, which needs no calibration, and a design-based estimate stays valid, since the score only allocates the labels. The score is not a probability of error, and no recorded experiment grades this case |
 | Continuous map, such as a regression output | `compare` only, at a cut-off named with `--threshold`; no recorded experiment grades this case |
+
+For a published product, pass the class map as the map and its confidence band with `--confidence`:
+
+```bash
+oe-inferencex assess lcpri_2018.tif --confidence lcpconf_2018.tif --confidence-range 1 100 --out audit
+oe-inferencex sample lcpri_2018.tif --confidence lcpconf_2018.tif --confidence-range 1 100 --budget 300 --out to_label.csv
+oe-inferencex certify to_label.csv --alpha 0.10      # after the reviewer has filled `wrong`
+```
+
+The range matters. LCMAP writes provenance codes from 151 into `lcpconf`; read as confidences they would rank above
+every real one and sit at the top of any certified zone, where they are wrong more often than the rest
+([exp93](results/comparisons.md#the-certified-zone-on-a-published-product-exp93): 29.1% against 17.7%). Without
+`--confidence-range` the whole band is read and a note says so. With it, the pixels outside are left out of the
+population, so every rate and zone is about the rest: `estimate` and `certify` say how many were left out. The window's
+class is the majority of its pixels' classes and its confidence the mean of the band over them, as for scores;
+`estimate` and `certify` read both layers again from the paths the sample's sidecar records (`--confidence` there
+points to a band that has moved). `--nodata` applies to the class map; the band's no-data is its own file's. On LCMAP,
+300 random labels rarely certify a zone at a useful alpha (exp93: none on 87% of draws at half the error rate); a
+larger sample, or `estimate` alone, may be the useful step.
 
 The package works on square windows of `--patch` pixels (default 4). A window's confidence is the mean over its valid
 pixels of each pixel's confidence, and its class the majority class of its pixels; a window less than half valid is

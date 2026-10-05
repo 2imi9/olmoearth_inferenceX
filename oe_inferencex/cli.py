@@ -39,8 +39,8 @@ import sys
 
 import numpy as np
 
-from oe_inferencex.assess import (RULE_TEXT, _boundary_valid, _pool, _pool_valid, _pooled_argmax, assess_prediction,
-                                  pool_condition, summary)
+from oe_inferencex.assess import (RULE_TEXT, _boundary_valid, _pool, _pool_valid, _pooled_argmax, assess_classmap,
+                                  assess_prediction, pool_condition, summary)
 from oe_inferencex import estimate as est
 from oe_inferencex.compare import compare_inferences
 from oe_inferencex.explain import explain_review_set
@@ -209,26 +209,43 @@ def _certify_need_note(names, n_labelled, alpha=0.05, delta=est.ZONE_DELTA):
 
 
 def cmd_assess(args):
-    scores, valid, geo = read_raster(args.scores, args.nodata)
-    _check_scores(scores, valid, args.logits, args.scores)
+    conf_path, conf_range = _product_args(args, "assess")
+    prod_notes = []
+    if conf_path:
+        hard, conf_px, valid, geo, n_classes, prod_notes, _ = _read_product(args.scores, conf_path, args.nodata,
+                                                                             conf_range, "assess")
+        shape = hard.shape
+    else:
+        scores, valid, geo = read_raster(args.scores, args.nodata)
+        _check_scores(scores, valid, args.logits, args.scores)
+        shape = scores.shape[-2:]
     reference = None
     if args.reference:
         ref, rvalid, geo_r = read_raster(args.reference, None)
-        if ref.shape != scores.shape[-2:]:
-            raise SystemExit(f"{args.reference} has shape {ref.shape}; the map is {scores.shape[-2:]}")
+        if ref.shape != shape:
+            raise SystemExit(f"{args.reference} has shape {ref.shape}; the map is {shape}")
         _same_grid(geo, geo_r, args.reference)                  # compare --labels had this check; assess did not
         reference = np.where(rvalid, np.rint(ref).astype(int), -1)
     cond_path, cond_names = _condition_args(args, "assess")
-    layer = None if cond_path is None else _read_condition(cond_path, scores.shape[-2:], geo, "assess")
+    layer = None if cond_path is None else _read_condition(cond_path, shape, geo, "assess")
     try:
-        out = assess_prediction(scores, is_logit=args.logits, patch=args.patch, nodata_mask=~valid, reference=reference,
-                                budgets=tuple(args.budgets), order=args.order, condition=layer,
-                                condition_names=cond_names)
+        if conf_path:
+            out = assess_classmap(hard, conf_px, n_classes, patch=args.patch, nodata_mask=~valid, reference=reference,
+                                  budgets=tuple(args.budgets), signal=PRODUCT_SIGNAL, order=args.order, condition=layer,
+                                  condition_names=cond_names)
+        else:
+            out = assess_prediction(scores, is_logit=args.logits, patch=args.patch, nodata_mask=~valid,
+                                    reference=reference, budgets=tuple(args.budgets), order=args.order, condition=layer,
+                                    condition_names=cond_names)
     except ValueError as exc:                                     # a named refusal, not a traceback
         raise SystemExit(f"assess: {exc}") from None
     os.makedirs(args.out, exist_ok=True)
     s = summary(out)
     s["inputs"] = {"scores": os.path.abspath(args.scores), "logits": args.logits, "reference": os.path.abspath(args.reference) if args.reference else None}
+    if conf_path:   # "scores" keeps naming the first argument, here the class map
+        s["inputs"].update({"classes": os.path.abspath(args.scores), "confidence": os.path.abspath(conf_path),
+                            "confidence_range": None if conf_range is None else [float(v) for v in conf_range]})
+        s["notes"] = list(s.get("notes", [])) + prod_notes
     arr = out["arrays"]
     conf, bnd = arr["confidence"], arr["boundary"]
     per_cond = name_at = None
@@ -312,6 +329,7 @@ def cmd_assess(args):
             + "".join(f"\nnote: {n}" for n in blk.get("notes", [])))
     print(f"{s['n_windows']} windows of {args.patch} px; review sets " + ", ".join(f"{int(round(b * 100))}%: {rs['n_windows']}" for b, rs in out["review_sets"].items()) +
           f"; boundary windows {100 * s['boundary_window_fraction']:.1f}%" + ref_text + cond_text +
+          "".join(f"\nnote: {n}" for n in prod_notes) +
           f"\nwrote {args.out}/assessment.json, explanation.json, review_set_*.csv, suspicion, boundary")
     return 0
 
@@ -366,6 +384,86 @@ def _same_grid(geo_a, geo_b, what):
     if str(geo_a["crs"]) != str(geo_b["crs"]) or not np.allclose(ta, tb, rtol=0.0, atol=atol):
         raise SystemExit(f"{what} is not on the first map's grid (CRS {geo_b['crs']} vs {geo_a['crs']}, transform "
                          f"{tuple(geo_b['transform'])[:6]} vs {tuple(geo_a['transform'])[:6]}); resample it onto the same grid first")
+
+
+PRODUCT_SIGNAL = "exported confidence band"
+MAX_CLASS_ID = 255
+NO_RANGE_NOTE = ("the whole confidence band is read as confidence; if it also holds codes (LCMAP's lcpconf writes "
+                 "provenance codes from 151), pass --confidence-range so they are left out, or they rank above every "
+                 "confidence")
+
+
+def _read_product(classes_path, conf_path, nodata, conf_range, command):
+    """A published product's two layers: a class map of integer ids and a per-pixel confidence band on its grid,
+    higher = more confident, as products such as LCMAP ship them (lcpri with lcpconf). Band values outside conf_range
+    are not confidences and are left out as no-data: LCMAP writes provenance codes from 151 into lcpconf, and read raw
+    they would rank above every confidence and head the certified zone (exp93). Without a range the package cannot tell
+    codes from confidences. `nodata` applies to the class map; the band's no-data is its file's own tag (or NaN).
+    Returns (classes with -1 outside the valid pixels, confidence with NaN there, valid, geo, n_classes, notes, info),
+    info holding how many classified pixels the range left out, since the population is then the rest."""
+    hard, valid_h, geo = read_raster(classes_path, nodata)
+    if not os.path.exists(conf_path):
+        raise SystemExit(f"{command}: the confidence band {conf_path} is not a file")
+    conf, valid_c, geo_c = read_raster(conf_path, None)
+    if hard.ndim != 2 or conf.ndim != 2:
+        raise SystemExit(f"{command}: with --confidence, the map is one band of class ids and the confidence one band; "
+                         f"got shapes {hard.shape} and {conf.shape}")
+    if conf.shape != hard.shape:
+        raise SystemExit(f"{command}: the confidence band has shape {conf.shape}; the class map is {hard.shape}")
+    _same_grid(geo, geo_c, conf_path)
+    valid = valid_h & valid_c
+    h = hard[valid]
+    if h.size and not np.array_equal(h, np.rint(h)):
+        raise SystemExit(f"{command}: {classes_path} holds values that are not whole numbers; with --confidence it must "
+                         "be the class map of integer class ids (per-class scores go without --confidence)")
+    if h.size and h.min() < 0:
+        raise SystemExit(f"{command}: {classes_path} holds negative class ids at valid pixels; mark no-data with --nodata")
+    if h.size and h.max() > MAX_CLASS_ID:
+        raise SystemExit(f"{command}: {classes_path} holds class id {int(h.max())}; ids above {MAX_CLASS_ID} are refused, "
+                         "since the window's majority class is counted per id. Mark a fill value with --nodata, or "
+                         "renumber the classes")
+    notes = []
+    info = {"classified_pixels": int(valid.sum()), "outside_range": 0}
+    if conf_range is None:
+        notes.append(NO_RANGE_NOTE)
+    else:
+        lo, hi = (float(v) for v in conf_range)
+        if not lo < hi:
+            raise SystemExit(f"{command}: --confidence-range needs LOW below HIGH, got {lo:g} {hi:g}")
+        outside = valid & ~((conf >= lo) & (conf <= hi))
+        if outside.any():
+            n_out, n_val = int(outside.sum()), int(valid.sum())
+            notes.append(f"{n_out} of {n_val} pixels ({100 * n_out / n_val:.1f}%) have a confidence outside "
+                         f"[{lo:g}, {hi:g}] and are left out as no-data: every statement is then about the rest")
+            info["outside_range"] = n_out
+        valid = valid & ~outside
+    if not valid.any():
+        raise SystemExit(f"{command}: no pixel has both a class and a confidence"
+                         + ("" if conf_range is None else " inside --confidence-range"))
+    classes = np.where(valid, np.rint(np.where(valid, hard, 0)), -1).astype(np.int64)
+    return classes, np.where(valid, conf.astype(np.float64), np.nan), valid, geo, int(classes.max()) + 1, notes, info
+
+
+def _population_note(side):
+    """What a product sample's population leaves out, said with every number drawn from it."""
+    rng, pop = side.get("confidence_range"), side.get("product_population") or {}
+    n_out, n_all = int(pop.get("outside_range") or 0), int(pop.get("classified_pixels") or 0)
+    if not rng or not n_out or not n_all:
+        return None
+    return (f"The population is the pixels whose confidence lies in [{rng[0]:g}, {rng[1]:g}]: {n_out} of {n_all} "
+            f"classified pixels ({100 * n_out / n_all:.1f}%) were left out, and nothing here describes them. Left-out "
+            "pixels can be wrong more often (exp93: LCMAP's provenance-coded plots, 29.1% against 17.7%).")
+
+
+def _product_args(args, command):
+    """--confidence and --confidence-range, checked together; --logits reads per-class scores and does not apply."""
+    conf, rng = getattr(args, "confidence", None), getattr(args, "confidence_range", None)
+    if rng is not None and conf is None:
+        raise SystemExit(f"{command}: --confidence-range needs --confidence")
+    if conf is not None and getattr(args, "logits", False):
+        raise SystemExit(f"{command}: --logits reads per-class scores; with --confidence the map is a class map and the "
+                         "band is its confidence")
+    return conf, rng
 
 
 def _two_map_windows(path_a, path_b, nodata, threshold, patch, labels_path=None):
@@ -571,12 +669,25 @@ def cmd_sample(args):
     JSON carrying the design so `estimate` can give the rate the design earns. With --condition, the input condition
     of every window is fixed here and recorded in the sidecar; `estimate` and `certify` read it from there."""
     if getattr(args, "other", None):
+        if getattr(args, "confidence", None) or getattr(args, "confidence_range", None):
+            raise SystemExit("sample: --other draws among the windows where two class maps differ, which needs no "
+                             "confidence; leave out --confidence")
         return _sample_disagreement(args)
+    conf_path, conf_range = _product_args(args, "sample")
     if getattr(args, "threshold", None) is not None:
         raise SystemExit("sample: --threshold reads a second map's cut-off and is used only with --other")
     cond_path, cond_names = _condition_args(args, "sample")
-    # None resolves to the condition design when a layer is given, to the confidence design otherwise
-    design = getattr(args, "design", None) or ("condition" if cond_path else "confidence")
+    # None resolves to the condition design when a layer is given, to the confidence design otherwise; a product's
+    # confidence band is no top-1 probability, which the confidence design allocates from, so it resolves to random
+    prod_notes = []
+    if conf_path and getattr(args, "design", None) == "confidence":
+        raise SystemExit("sample: the confidence design allocates labels from the model's top-1 probability, and a "
+                         "confidence band is not one; use --design random (estimate and certify read it), --design "
+                         "proportional or, with --condition, --design condition")
+    design = getattr(args, "design", None) or ("condition" if cond_path else "random" if conf_path else "confidence")
+    if conf_path and not getattr(args, "design", None) and not cond_path:
+        prod_notes.append("random design: with --confidence the default confidence design does not apply, since the "
+                          "band is not a top-1 probability; estimate and certify both read a random sample")
     if cond_path and design in ("confidence", "proportional"):
         raise SystemExit(f"sample: --design {design} does not take --condition: {est.CONFIDENCE_REFUSAL}")
     if cond_path and design == "tiles":
@@ -585,20 +696,34 @@ def cmd_sample(args):
     if design == "condition" and not cond_path:
         raise SystemExit("sample: --design condition needs --condition, a raster of each pixel's input condition (a "
                          "cloud flag, the modalities present, a sensor id)")
-    scores, valid, geo = read_raster(args.scores, args.nodata)
-    _check_scores(scores, valid, args.logits, args.scores)
+    if conf_path:
+        hard, conf_px, valid, geo, n_classes, more, prod_info = _read_product(args.scores, conf_path, args.nodata,
+                                                                               conf_range, "sample")
+        prod_notes += more
+        shape = hard.shape
+    else:
+        scores, valid, geo = read_raster(args.scores, args.nodata)
+        _check_scores(scores, valid, args.logits, args.scores)
+        shape = scores.shape[-2:]
     pooled = None
     if cond_path:
-        layer = _read_condition(cond_path, scores.shape[-2:], geo, "sample")
+        layer = _read_condition(cond_path, shape, geo, "sample")
         try:
             pooled = pool_condition(layer, args.patch, predicted=valid)     # the window grid assess gives
         except ValueError as exc:
             raise SystemExit(f"sample: {exc}") from None
-    out = assess_prediction(scores, is_logit=args.logits, patch=args.patch, nodata_mask=~valid)
+    if conf_path:
+        try:
+            out = assess_classmap(hard, conf_px, n_classes, patch=args.patch, nodata_mask=~valid, signal=PRODUCT_SIGNAL)
+        except ValueError as exc:                                 # a named refusal, not a traceback
+            raise SystemExit(f"sample: {exc}") from None
+        p1_w = None
+    else:
+        out = assess_prediction(scores, is_logit=args.logits, patch=args.patch, nodata_mask=~valid)
+        p1 = np.where(valid, _top1(scores, args.logits), np.nan)
+        p1_w = _pool_valid(p1, args.patch) if not valid.all() else _pool(p1, args.patch)
     arr = out["arrays"]
     margin, valid_w, klass = arr["confidence"], arr["valid"], arr["pooled_argmax"]
-    p1 = np.where(valid, _top1(scores, args.logits), np.nan)
-    p1_w = _pool_valid(p1, args.patch) if not valid.all() else _pool(p1, args.patch)
     hw, ww = margin.shape
     tiles = None
     if design == "tiles":
@@ -641,6 +766,10 @@ def cmd_sample(args):
                              "names": cond["names"], "sizes": cond["sizes"], "n_labelled": cond["n_labelled"],
                              "allocation_rule": cond["allocation_rule"], "n_windows_split": pooled["n_split"],
                              "n_windows_no_code": pooled["n_no_code"]}
+    if conf_path:   # estimate --per-class and certify rebuild the map from both layers, with the same range
+        side.update({"classes": os.path.abspath(args.scores), "confidence": os.path.abspath(conf_path),
+                     "confidence_range": None if conf_range is None else [float(v) for v in conf_range],
+                     "product_population": prod_info})
     side.update({"scores": os.path.abspath(args.scores), "logits": args.logits, "patch": args.patch,
                  "nodata": args.nodata,                   # estimate --per-class and certify recompute the map with it
                  "grid": [int(hw), int(ww)], "csv": os.path.abspath(args.out),
@@ -672,7 +801,7 @@ def cmd_sample(args):
           f"{FILL_INSTRUCTION} oe-inferencex estimate {args.out}"
           + "".join(f"\nwarning: {w}" for w in out.get("warnings", []))
           + (f"\nnote: {sample['note']}" if "note" in sample else "")
-          + "".join(f"\nnote: {n}" for n in notes if n))
+          + "".join(f"\nnote: {n}" for n in prod_notes + notes if n))
     return 0
 
 
@@ -885,11 +1014,14 @@ def _rounding_tolerance(text):
     return max(0.5 * 10.0 ** (-decimals + (int(exp) if exp else 0)), 1e-6)
 
 
-def _map_windows(side, scores_override, nodata, command, rows=None, idx=None):
+def _map_windows(side, scores_override, nodata, command, rows=None, idx=None, confidence_override=None):
     """The map's per-window confidence, class and validity, recomputed from the scores the sample was drawn on, and
     checked to be that map: its population must be the sample's, and its confidence at the sampled windows the
     CSV's (review of 2026-09-23: another map on the same grid was certified from this map's labels, and a sample
     drawn with --nodata was recomputed without it, with no message). Returns (confidence, class, valid, n_classes)."""
+    if confidence_override and not side.get("confidence"):
+        raise SystemExit(f"{command}: --confidence names a product's band, and this sample was drawn on scores, not "
+                         "with --confidence")
     path = scores_override or side.get("scores")
     if not path or not os.path.exists(path):
         raise SystemExit(f"{command}: the map's scores are needed again ({path or 'no path in the sidecar'} not found); "
@@ -898,9 +1030,23 @@ def _map_windows(side, scores_override, nodata, command, rows=None, idx=None):
         nodata = side.get("nodata")                           # the value the sample was drawn with
     elif side.get("nodata") is not None and float(side["nodata"]) != float(nodata):
         raise SystemExit(f"{command}: --nodata {nodata:g} differs from the {side['nodata']:g} the sample was drawn with")
-    scores, valid, _ = read_raster(path, nodata)
-    _check_scores(scores, valid, bool(side.get("logits", False)), path)
-    out = assess_prediction(scores, is_logit=bool(side.get("logits", False)), patch=int(side.get("patch", 4)), nodata_mask=~valid)
+    if side.get("confidence"):                                  # a class map with its confidence band
+        conf_path = confidence_override or side["confidence"]
+        if not os.path.exists(conf_path):
+            raise SystemExit(f"{command}: the map's confidence band is needed again ({conf_path} not found); pass "
+                             "--confidence with the band `sample` was run on")
+        hard, conf_px, valid, _, n_classes, _, _ = _read_product(path, conf_path, nodata, side.get("confidence_range"),
+                                                                 command)
+        try:
+            out = assess_classmap(hard, conf_px, n_classes, patch=int(side.get("patch", 4)), nodata_mask=~valid,
+                                  signal=PRODUCT_SIGNAL)
+        except ValueError as exc:
+            raise SystemExit(f"{command}: {exc}") from None
+    else:
+        scores, valid, _ = read_raster(path, nodata)
+        _check_scores(scores, valid, bool(side.get("logits", False)), path)
+        out = assess_prediction(scores, is_logit=bool(side.get("logits", False)), patch=int(side.get("patch", 4)), nodata_mask=~valid)
+        n_classes = int(scores.shape[0]) if scores.ndim == 3 else 2
     arr = out["arrays"]
     if list(arr["confidence"].shape) != list(side.get("grid", arr["confidence"].shape)):
         raise SystemExit(f"{command}: {path} pools to a {arr['confidence'].shape} window grid, but the sample was drawn on "
@@ -920,12 +1066,11 @@ def _map_windows(side, scores_override, nodata, command, rows=None, idx=None):
             written = None
         if written is not None:
             off = np.abs(conf.ravel()[idx] - written)
-            if not (off <= tol).all():
+            if not (off <= tol * (1 + 1e-9) + 1e-12).all():      # a value written exactly half a unit off
                 k = int(np.argmax(off))
                 raise SystemExit(f"{command}: the map's confidence at the sampled windows is not the one the CSV records "
                                  f"(row {k + 2}: {written[k]:.6g} in the CSV, {conf.ravel()[idx][k]:.6g} now); this is not the "
                                  "map the sample was drawn on")
-    n_classes = int(scores.shape[0]) if scores.ndim == 3 else 2
     return conf, arr["pooled_argmax"], valid_w, n_classes
 
 
@@ -1007,7 +1152,11 @@ def cmd_estimate(args):
     per_class_text = ""
     if args.per_class:
         ref = _reference_classes(rows, args.sample)
-        _, hard, valid_w, n_classes = _map_windows(side, args.scores, args.nodata, "estimate --per-class", rows, idx)
+        _, hard, valid_w, n_classes = _map_windows(side, args.scores, args.nodata, "estimate --per-class", rows, idx,
+                                                   getattr(args, "confidence", None))
+        if side.get("confidence") and ref.size and ref.max() < MAX_CLASS_ID + 1:
+            # a product's ids are its own: a reviewer can see a class the map never predicts, which has no score band
+            n_classes = max(n_classes, int(ref.max()) + 1)
         if (ref >= n_classes).any():
             k = int(np.argmax(ref >= n_classes))
             raise SystemExit(f"estimate --per-class: row {k + 2} gives reference_class {int(ref[k])}, but the map has "
@@ -1033,6 +1182,8 @@ def cmd_estimate(args):
                                      "per-class table uses `reference_class`")
         lines = []
         for c, row in pc["per_class"].items():
+            if side.get("confidence") and row["map_share"] == 0 and not row.get("n_labelled_reference_class"):
+                continue        # a product's id neither the map nor the labels use (LCMAP's classes start at 1)
             ua, pa, sh = row["user_accuracy"], row["producer_accuracy"], row["reference_share"]
             f = lambda v: "n/a" if v is None else f"{100 * v['estimate']:.0f}% ({100 * v['low']:.0f}-{100 * v['high']:.0f})"
             # the tag names the warning's reason; it used to say "few labels" for a near-census class of 500 labels
@@ -1045,6 +1196,8 @@ def cmd_estimate(args):
             lines.append(f"note: {est.PER_CLASS_NOT_GRADED}")
         per_class_text = "\n" + "\n".join(lines) + (f"\nnote: {res['per_class_note']}" if "per_class_note" in res else "")
     res["sample"] = os.path.abspath(args.sample)
+    if _population_note(side):                       # a product's range left pixels out: the rate is of the rest
+        res["population_note"] = _population_note(side)
     out = args.out or (args.sample[:-4] + "_estimate.json" if args.sample.endswith(".csv") else args.sample + "_estimate.json")
     with open(out, "w") as f:
         json.dump(res, f, indent=1, default=float)
@@ -1072,7 +1225,8 @@ def cmd_estimate(args):
           f"(half-width {100 * res['half_width']:.1f} points), from {res['n_labelled']} labelled windows of {res['n_population']}; "
           f"{res['method']}" + (f"\nnote: {res['bounds_note']}" if res.get("bounds_note") else "")
           + (f"\nwarning: {res['warning']}" if "warning" in res else "") + cond_text + per_class_text
-          + (f"\nwarning: {res['per_class_warning']}" if "per_class_warning" in res else "") + f"\nwrote {out}")
+          + (f"\nwarning: {res['per_class_warning']}" if "per_class_warning" in res else "")
+          + (f"\nnote: {res['population_note']}" if "population_note" in res else "") + f"\nwrote {out}")
     return 0
 
 
@@ -1100,7 +1254,8 @@ def cmd_certify(args):
         raise SystemExit(f"certify needs a random sample: this CSV was drawn with the {side.get('design')!r} design. The "
                          "guarantee rests on the labelled windows inside each zone being a random sample of that zone, "
                          "which a stratified or tile draw is not. Draw one with `sample --design random`")
-    margin, hard, valid_w, _ = _map_windows(side, args.scores, args.nodata, "certify", rows, idx)
+    margin, hard, valid_w, _ = _map_windows(side, args.scores, args.nodata, "certify", rows, idx,
+                                            getattr(args, "confidence", None))
     out = args.out or (args.sample[:-4] + "_zone.json" if args.sample.endswith(".csv") else args.sample + "_zone.json")
     mask_path = out[:-5] + ".npy" if out.endswith(".json") else out + ".npy"
     if by_condition:
@@ -1120,14 +1275,17 @@ def cmd_certify(args):
     res["sample"] = os.path.abspath(args.sample)
     if bounds:
         res.update({"n_unjudged": int(unjudged.sum()), "bounds_note": "; ".join(bounds)})
+    if _population_note(side):                       # a product's range left pixels out: the zone is of the rest
+        res["population_note"] = _population_note(side)
     with open(out, "w") as f:
         json.dump(res, f, indent=1, default=float)
-    tail = "".join(f"\nnote: {b}" for b in bounds)
+    tail = "".join(f"\nnote: {b}" for b in bounds) + (f"\nnote: {res['population_note']}" if "population_note" in res else "")
     if res["coverage"] is None:
         print(f"no zone certified at alpha={args.alpha:g}, delta={args.delta:g} from {res['n_labelled']} labels. {res['note']}"
               f"{tail}\nwrote {out}")
     else:
-        print(f"the {100 * res['coverage']:.0f}% most confident windows ({res['n_zone']} of {res['n_population']}, confidence margin >= "
+        what = "confidence" if side.get("confidence") else "confidence margin"     # a product's band is no margin
+        print(f"the {100 * res['coverage']:.0f}% most confident windows ({res['n_zone']} of {res['n_population']}, {what} >= "
               f"{res['threshold']:.4f}) are wrong at most {100 * args.alpha:g}% of the time; this statement fails on at most "
               f"{100 * args.delta:g}% of samples like this one ({args.rule} rule; the exact upper bound on the zone's error "
               f"rate at that level is {100 * res['upper_bound']:.1f}%). Outside the zone nothing is certified.\n"
@@ -1158,6 +1316,8 @@ def _certify_by_condition(args, sample, wrong, margin, valid_w, out, mask_path, 
     res["sample"] = os.path.abspath(args.sample)
     if bounds:
         res.update({"n_unjudged": n_unjudged, "bounds_note": "; ".join(bounds)})
+    if _population_note(sample):                     # a product's range left pixels out: the zones are of the rest
+        res["population_note"] = _population_note(sample)
     with open(out, "w") as f:
         json.dump(res, f, indent=1, default=float)
     a, d, b1 = args.alpha, args.delta, res["min_labels_to_certify"]
@@ -1178,7 +1338,7 @@ def _certify_by_condition(args, sample, wrong, margin, valid_w, out, mask_path, 
                          f"at least {b1}")
         elif e["coverage"] is not None:
             lines.append(f"  {name}: the {100 * e['coverage']:.0f}% most confident windows of this condition ({e['n_zone']} "
-                         f"of {e['n_population']}, margin >= {e['threshold']:.4f}) are wrong at most {100 * a:g}% of "
+                         f"of {e['n_population']}, {'confidence' if sample.get('confidence') else 'margin'} >= {e['threshold']:.4f}) are wrong at most {100 * a:g}% of "
                          "the time")
         elif e["levels"]:
             lv = e["levels"][0]
@@ -1192,7 +1352,7 @@ def _certify_by_condition(args, sample, wrong, margin, valid_w, out, mask_path, 
                      f"{mask_path}); outside them nothing is certified")
     else:
         lines.append("no zone is certified in any condition, so nothing is certified")
-    lines += [f"note: {b}" for b in bounds]
+    lines += [f"note: {b}" for b in bounds] + ([f"note: {res['population_note']}"] if "population_note" in res else [])
     print("\n".join(lines) + f"\nwrote {out}")
     return 0
 
@@ -1238,6 +1398,18 @@ def cmd_mcp(args):
     return 0
 
 
+def _product_parser_args(p):
+    p.add_argument("--confidence", default=None, metavar="BAND",
+                   help="a per-pixel confidence band on the map's grid that rises with confidence, as published "
+                        "products ship it (LCMAP's lcpconf beside lcpri); negate an uncertainty band first. The map "
+                        "argument is then the class map of integer ids, and --nodata applies to it; the band's no-data "
+                        "is its own file's")
+    p.add_argument("--confidence-range", type=float, nargs=2, default=None, metavar=("LOW", "HIGH"),
+                   help="the band's values that are confidences; values outside are left out as no-data, and every "
+                        "statement is about the rest. Without it the package cannot tell codes from confidences "
+                        "(LCMAP: 1 100, since lcpconf holds provenance codes from 151)")
+
+
 def build_parser():
     p = argparse.ArgumentParser(prog="oe-inferencex", description=__doc__.split("\n\n")[0])
     sub = p.add_subparsers(dest="command", required=True)
@@ -1259,6 +1431,7 @@ def build_parser():
                         "condition is then described and ranked on its own")
     a.add_argument("--condition-names", nargs="+", default=None, metavar="VALUE=NAME",
                    help="names for the condition values, e.g. 0=clear 1=cloudy (default: the value itself)")
+    _product_parser_args(a)
     a.set_defaults(func=cmd_assess)
     d = sub.add_parser("demo", help="first run: audit the real sample map shipped with the package (or a made-up one) and draw the result")
     d.add_argument("--out", default="oe_inferencex_demo", help="output directory (default oe_inferencex_demo)")
@@ -1307,6 +1480,7 @@ def build_parser():
                          "classes differ, to learn which map is more accurate (estimate then compares them)")
     sm.add_argument("--threshold", type=float, default=None,
                     help="with --other: cut-off of a 2-D continuous map (0.5 for a probability map when omitted)")
+    _product_parser_args(sm)
     sm.set_defaults(func=cmd_sample)
     e = sub.add_parser("estimate", help="the map's error rate with an interval, from the labelled sample CSV, and each "
                                         "input condition's when the sample was drawn with --condition")
@@ -1316,6 +1490,8 @@ def build_parser():
                    help="also user's accuracy, producer's accuracy and error-adjusted share per class; needs a "
                         "`reference_class` column in the CSV and the map's scores (from the sidecar, or --scores)")
     e.add_argument("--scores", default=None, help="with --per-class: the raster `sample` was run on, if it has moved")
+    e.add_argument("--confidence", default=None, help="with --per-class: the confidence band `sample` was run on, if it "
+                                                      "has moved")
     e.add_argument("--reviewer-false-alarm", type=float, default=None, metavar="E0",
                    help="at most this share of the truly correct windows does the reviewer mark wrong (0 to below 1); "
                         "widens the interval's lower end")
@@ -1340,6 +1516,7 @@ def build_parser():
                    help="prefix (default): fixed-sequence testing, valid on any map; it certifies little when the most "
                         "confident windows hold many errors. bonferroni: valid on any map; it can certify more in that case")
     z.add_argument("--scores", default=None, help="the raster `sample` was run on, if it has moved")
+    z.add_argument("--confidence", default=None, help="the confidence band `sample` was run on, if it has moved")
     z.add_argument("--nodata", type=float, default=None,
                    help="the no-data value `sample` was run with (default: the one its sidecar records; a different value "
                         "is refused); only needed for a sample written by 1.2.0")

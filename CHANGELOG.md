@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+**Published products as input: a class map with its confidence band** (`--confidence BAND`, `--confidence-range LOW
+HIGH` on `assess` and `sample`; `estimate` and `certify` read both layers from the sample's sidecar; the same parameters
+in the MCP server). Products such as LCMAP ship a class map and a per-pixel confidence layer, not per-class scores,
+and the command line took only scores; exp92 and exp93 ran the package from Python. The class map must hold
+whole-number ids from 0 to 255 on the band's grid, and the band must rise with confidence. Band values outside the
+range are left out as no-data, with a note counting them: LCMAP writes provenance codes from 151 into `lcpconf`, which
+read raw would rank above every confidence and head the certified zone (exp93). The population is then the rest, and
+`estimate`, `certify` and `decide` say how many pixels were left out. `sample` defaults to the random design for such a
+map and refuses the confidence design, which allocates from a top-1 probability the band is not. On the quick-start
+map, a class map with its top probability as the band gives the same review sets as the scores; on a 512 x 512 window
+of LCMAP Collection 1.3 (13.2% of pixels coded) the whole route runs. For a product, `estimate --per-class` accepts a
+reviewer's class the map never predicts and leaves out of its printed table the ids neither the map nor the labels use
+(LCMAP's ids start at 1); `decide` leaves such classes out of its per-class answers for any map; the JSON keeps them.
+A CSV confidence written exactly half a unit off in its last digit is no longer refused as another map. A two-lens
+review before commit found the population scope, the id range, the tolerance and wording issues, all fixed.
+
 **`decide`: typed answers read from a result** (`oe_inferencex.decide`, `oe-inferencex decide`, and a `decide` tool in
 the MCP server). It reads a JSON that `estimate`, `certify` or `compare` wrote and answers set questions, each with one
 answer from a fixed set, the level, the evidence and a `because` sentence that carries the limit:

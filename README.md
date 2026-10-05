@@ -36,8 +36,8 @@ a typed answer: `decide to_label_estimate.json --ask error_rate_below=0.1` print
 each one on a test map and shows what it prints.
 
 **Input:** the model's per-class scores, taken before the argmax, as a GeoTIFF or `.npy` array of
-shape `(C, H, W)`: probabilities between 0 and 1, or logits with `--logits`. A class map alone
-cannot be ranked. The package works on windows of 4 x 4 pixels (`--patch`).
+shape `(C, H, W)`: probabilities between 0 and 1, or logits with `--logits`. A published product's
+class map with its confidence band works with `--confidence`. A class map alone cannot be ranked. The package works on windows of 4 x 4 pixels (`--patch`).
 
 **Labels:** for each window `sample` drew, write 1 or 0 in `wrong` (or the class you see in
 `reference_class`), and `?` where a window cannot be judged.

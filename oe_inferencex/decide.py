@@ -129,6 +129,8 @@ def _warned(r):
         said.append(f"Warning: {str(r['warning']).strip().rstrip('.')}.")
     if r.get("bounds_note"):
         said.append(str(r["bounds_note"]).strip())
+    if r.get("population_note"):                    # a product's confidence range left pixels out
+        said.append(str(r["population_note"]).strip())
     return said
 
 
@@ -155,7 +157,7 @@ def _answer_error_rate_below(r, t):
     why = " ".join([why, _labels_clause(r), *_warned(r)])
     ev = {k: r.get(k) for k in ("estimate", "estimate_range", "low", "high", "n_labelled", "n_population",
                                 "n_unjudged", "design", "method", "reviewer_false_alarm", "reviewer_miss",
-                                "warning", "bounds_note") if r.get(k) is not None}
+                                "warning", "bounds_note", "population_note") if r.get(k) is not None}
     out = {"type": "yes_no", "answer": a, "level": r.get("nominal_coverage", 0.95), "exact": exact, "because": why,
            "evidence": ev}
     if r.get("per_condition"):
@@ -174,6 +176,8 @@ def _answer_error_rate_below(r, t):
 def _answer_class(r, t, which):
     per = {}
     for c, row in r["per_class"].items():
+        if row.get("map_share") == 0 and not row.get("n_labelled_reference_class"):
+            continue                # an id neither the map nor the labels use (a product's classes can start at 1)
         acc = row.get(f"{which}_accuracy")
         if not acc or acc.get("low") is None or acc.get("high") is None:
             per[c] = {"answer": "undetermined", "low": None, "high": None,
@@ -279,9 +283,11 @@ def _answer_trusted(r, share=None):
     why += " The zone describes agreement with the reviewer's labels, which are assumed right."
     if r.get("bounds_note"):
         why += " " + str(r["bounds_note"]).strip()
+    if r.get("population_note"):
+        why += " " + str(r["population_note"]).strip()
     ev = {k: r.get(k) for k in ("alpha", "delta", "rule", "n_labelled", "n_population", "n_zone", "coverage",
                                 "threshold", "upper_bound", "min_labels_to_certify", "n_unjudged", "bounds_note",
-                                "note") if r.get(k) is not None}
+                                "population_note", "note") if r.get(k) is not None}
     if share is None:
         out = {"type": "score", "answer": cov, "level": 1 - delta, "exact": True, "because": why, "evidence": ev}
     else:

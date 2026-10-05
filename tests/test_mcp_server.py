@@ -596,6 +596,26 @@ def test_sample_estimate_certify_give_the_readme_numbers(qs):
     assert "zone_mask" not in out["files"] and "labels at this alpha" in out["next"]
 
 
+def test_a_product_class_map_with_its_confidence_band(tmp_path):
+    """assess and sample take a published product's class map with confidence and confidence_range; certify then
+    reads both layers back from the sidecar."""
+    rng = np.random.default_rng(0)
+    classes = rng.integers(1, 5, (32, 32)).astype(np.int16)
+    band = rng.uniform(1, 100, (32, 32))
+    band[:4, :4] = 160.0                                             # a provenance code, as LCMAP writes
+    np.save(tmp_path / "classes.npy", classes)
+    np.save(tmp_path / "band.npy", band)
+    out = _ok("assess", scores=str(tmp_path / "classes.npy"), out_dir=str(tmp_path / "a"),
+              confidence=str(tmp_path / "band.npy"), confidence_range=[1, 100])
+    assert out["summary"]["n_windows"] == 64 - 1
+    text = _refused("assess", scores=str(tmp_path / "classes.npy"), out_dir=str(tmp_path / "b"), confidence_range=[1, 100])
+    assert "confidence_range needs confidence" in text and "--" not in text
+    assert "the product's confidence band, as given" in out["limits"] and "class probabilities" not in out["limits"]
+    out = _ok("sample", scores=str(tmp_path / "classes.npy"), out_dir=str(tmp_path / "s"), budget=30,
+              confidence=str(tmp_path / "band.npy"), confidence_range=[1, 100])
+    assert "(random design)" in out["conclusion"]
+
+
 @needs_map
 def test_decide_answers_from_the_results_and_refuses_what_they_cannot_say(qs):
     """decide on the quick start's estimate and zone gives the answers their numbers imply; on a comparison made

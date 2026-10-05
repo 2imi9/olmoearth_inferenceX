@@ -171,8 +171,11 @@ CARDS = {
         "and assessment.json. With condition, it also ranks each input condition on its own. With reference, it "
         "grades the order against that raster, taken as truth.",
         "Needs: the model's scores before the argmax: (C, H, W) per-class probabilities, or (H, W) for two classes, "
-        "as GeoTIFF or .npy; logits=true for logits. A GeoTIFF needs rasterio (the geo extra). An output directory.",
-        "Cannot: say how wrong the map is (that needs labels: sample, then estimate); rank a class map. One of more "
+        "as GeoTIFF or .npy; logits=true for logits. Or, as published products ship them, a class map of integer ids "
+        "with confidence set to its per-pixel confidence band (higher = more confident) and confidence_range to the "
+        "band's values that are confidences, so codes are left out. A GeoTIFF needs rasterio (the geo extra). An "
+        "output directory.",
+        "Cannot: say how wrong the map is (that needs labels: sample, then estimate); rank a class map alone. One of more "
         "than two classes read as probabilities is refused, but a 0/1 map, or any class map passed with logits=true, "
         "is read as scores: its windows tie and the order is not evidence. It cannot find the errors the model is "
         "sure of, which come last, or label windows.",
@@ -196,9 +199,11 @@ CARDS = {
         "grid) it draws only windows where the two maps differ, with an empty `reference_class` column, for estimate "
         "to say which map is more accurate. Designs: confidence (the default without "
         "condition: stratified by confidence; estimate reads it, certify refuses it), random (serves estimate and "
-        "certify), proportional, tiles (a cluster design for labelling tile by tile) and condition (the default with "
-        "condition: labels split equally across the input conditions).",
-        "Needs: the score raster assess takes; a budget (the recorded experiments used 300); an output directory.",
+        "certify; the default for a product's class map with confidence), proportional, tiles (a cluster design for "
+        "labelling tile by tile) and condition (the default with condition: labels split equally across the input "
+        "conditions).",
+        "Needs: the score raster assess takes, or a product's class map with confidence; a budget (the recorded "
+        "experiments used 300); an output directory.",
         "Cannot: label the windows, fetch labels or say whether labels exist (the user or a reviewer fills "
         "`wrong`); turn a review set into a sample.",
     ]),
@@ -338,7 +343,7 @@ def _join(texts):
 # The package's texts are written for the command line and name its options. Through this server the agent sets
 # parameters instead, so each text returned here names the parameter (the agent test of 2 October 2026: outputs that
 # said "--design random" or "--condition" sent a small model looking for options it does not have).
-_FLAGS = {"design", "condition", "condition-names", "per-class", "labels-date", "patch", "nodata", "scores", "alpha",
+_FLAGS = {"design", "condition", "condition-names", "confidence", "confidence-range", "per-class", "labels-date", "patch", "nodata", "scores", "alpha",
           "delta", "rule", "budget", "seed", "labels", "reference", "threshold", "date-a", "date-b", "groups", "order",
           "budgets", "tile", "per-tile", "reviewer-false-alarm", "reviewer-miss", "other", "threshold"}
 
@@ -460,6 +465,24 @@ def _condition_argv(names):
 
 # ----------------------------------------------------------------------------- the tools
 P = Field  # a parameter's description, read by FastMCP
+CONFIDENCE_PARAM = ("For a published product: its per-pixel confidence band on the map's grid, rising with confidence "
+                    "(LCMAP's lcpconf); negate an uncertainty band first. scores is then the product's class map of "
+                    "integer ids, and nodata applies to it")
+CONFIDENCE_RANGE_PARAM = ("With confidence: [low, high], the band's values that are confidences; values outside are left "
+                          "out as no-data and every statement is about the rest. Without it codes cannot be told from "
+                          "confidences (LCMAP: [1, 100], since lcpconf holds provenance codes from 151)")
+
+
+def _product_argv(confidence, confidence_range):
+    """The command-line options for a class map with its confidence band; the range is refused without the band."""
+    argv = []
+    if confidence is not None:
+        argv.append(f"--confidence={_input(confidence, 'confidence')}")
+    if confidence_range is not None:
+        if len(confidence_range) != 2:
+            raise Refused(f"confidence_range needs two numbers, [low, high]; got {confidence_range}")
+        argv += ["--confidence-range", *[_num(float(v)) for v in confidence_range]]
+    return argv
 
 
 def guide() -> str:
@@ -473,7 +496,7 @@ def guide() -> str:
 
 def assess(
     scores: Annotated[str, P(description="The score raster: GeoTIFF or .npy, (C, H, W) per class or (H, W) for two "
-                                         "classes, taken before the argmax")],
+                                         "classes, taken before the argmax; with confidence, the product's class map")],
     out_dir: Annotated[str, P(description="Directory to write the review sets, rasters and JSON into; created if "
                                           "needed. Files of the same name are overwritten")],
     logits: Annotated[bool, P(description="True if the scores are logits rather than probabilities")] = False,
@@ -488,10 +511,13 @@ def assess(
                                                    "condition (a cloud flag, the modalities present, a sensor id)")] = None,
     condition_names: Annotated[list[str] | None, P(description="Names of the condition values, as value=name, "
                                                                "e.g. [\"0=clear\", \"1=cloudy\"]")] = None,
+    confidence: Annotated[str | None, P(description=CONFIDENCE_PARAM)] = None,
+    confidence_range: Annotated[list[float] | None, P(description=CONFIDENCE_RANGE_PARAM)] = None,
 ) -> dict[str, Any]:
     scores = _input(scores, "scores")
     out = _abs(out_dir)
     argv = ["assess", scores, f"--out={out}", f"--patch={int(patch)}", f"--order={order}"]
+    argv += _product_argv(confidence, confidence_range)
     if logits:
         argv.append("--logits")
     _opt(argv, "--nodata", None if nodata is None else float(nodata))
@@ -518,8 +544,11 @@ def assess(
         bt = b5 if b5 in loose else loose[0]
         opener = (f"The order is not evidence here: {tied[bt]['inside']} of the {rs[bt]['n_windows']} windows of the "
                   f"{_budget(bt)} review set share the cut-off score with {tied[bt]['outside']} windows left outside, "
-                  "so among them the order is raster position. A class map passed with logits=true, or a 0/1 map, is "
-                  "read as scores and ties like this; if the file is one, pass the model's per-class scores instead.")
+                  "so among them the order is raster position. "
+                  + ("A product's confidence band this coarse ranks only the windows it separates."
+                     if confidence else
+                     "A class map passed with logits=true, or a 0/1 map, is read as scores and ties like this; if the "
+                     "file is one, pass the model's per-class scores instead."))
     else:
         opener = ("Check the least confident windows first. This ranks the windows; it does not say how wrong the map "
                   "is, and labels on the review set do not give the error rate, because the review set is not a "
@@ -547,7 +576,8 @@ def assess(
               "A window's confidence ranks windows; it is not the probability that the window is wrong.",
               "Errors the model is sure of come last in this order, so a review of the review set does not find them.",
               "In the review-set CSVs, confidence is the score the order ranks by, higher meaning more confident: "
-              + ("the gap between the two highest logits, which has no upper bound." if logits else
+              + ("the product's confidence band, as given, averaged over the window." if confidence else
+                 "the gap between the two highest logits, which has no upper bound." if logits else
                  "read from the class probabilities.") + " The suspicion raster holds minus that score, so higher is "
               "more suspect; it ranks the windows as summary.signal does."]
     if line:
@@ -684,12 +714,13 @@ def compare(
 
 
 def sample(
-    scores: Annotated[str, P(description="The score raster assess takes")],
+    scores: Annotated[str, P(description="The score raster assess takes; with confidence, the product's class map")],
     out_dir: Annotated[str, P(description="Directory to write the CSV and its .json sidecar into; created if needed")],
     budget: Annotated[int, P(description="Number of windows to label (the recorded experiments used 300)")],
     design: Annotated[Literal["confidence", "proportional", "random", "tiles", "condition"] | None,
-                      P(description="Sampling design. Default: condition with a condition layer, confidence without. "
-                                    "Use random to certify from the same labels")] = None,
+                      P(description="Sampling design. Default: condition with a condition layer, random with "
+                                    "confidence (a product's band), confidence otherwise. Use random to certify from "
+                                    "the same labels")] = None,
     name: Annotated[str, P(description="File name of the CSV in out_dir")] = "to_label.csv",
     condition: Annotated[str | None, P(description="Optional integer raster on the map's grid: each pixel's input "
                                                    "condition")] = None,
@@ -704,6 +735,8 @@ def sample(
                                                "maps differ, to learn which is more accurate")] = None,
     threshold: Annotated[float | None, P(description="With other: cut-off of a 2-D continuous map (0.5 for a "
                                                      "probability map when omitted)")] = None,
+    confidence: Annotated[str | None, P(description=CONFIDENCE_PARAM)] = None,
+    confidence_range: Annotated[list[float] | None, P(description=CONFIDENCE_RANGE_PARAM)] = None,
 ) -> dict[str, Any]:
     scores = _input(scores, "scores")
     out = _abs(out_dir)
@@ -714,6 +747,7 @@ def sample(
             f"--seed={int(seed)}", f"--tile={int(tile)}", f"--per-tile={int(per_tile)}"]
     if design is not None:
         argv.append(f"--design={design}")
+    argv += _product_argv(confidence, confidence_range)
     if logits:
         argv.append("--logits")
     _opt(argv, "--nodata", None if nodata is None else float(nodata))
@@ -789,6 +823,8 @@ def estimate(
                                              "reference_class column")] = False,
     scores: Annotated[str | None, P(description="With per_class: the score raster sample was run on, if it has "
                                                 "moved")] = None,
+    confidence: Annotated[str | None, P(description="With per_class, for a product's class map: the confidence "
+                                                    "band sample was run on, if it has moved")] = None,
     nodata: Annotated[float | None, P(description="With per_class: the no-data value sample was run with, only for "
                                                   "a sample written by 1.2.0")] = None,
     out_dir: Annotated[str | None, P(description="Directory for the result JSON (default: beside the CSV)")] = None,
@@ -806,6 +842,8 @@ def estimate(
         argv.append("--per-class")
     if scores is not None:
         argv.append(f"--scores={_input(scores, 'scores')}")
+    if confidence is not None:
+        argv.append(f"--confidence={_input(confidence, 'confidence')}")
     _opt(argv, "--nodata", None if nodata is None else float(nodata))
     if out is not None:
         argv.append(f"--out={out}")
@@ -938,6 +976,8 @@ def certify(
                                                                    "bonferroni can certify more when the most "
                                                                    "confident windows hold many errors")] = "prefix",
     scores: Annotated[str | None, P(description="The score raster sample was run on, if it has moved")] = None,
+    confidence: Annotated[str | None, P(description="For a product's class map: the confidence band sample was run "
+                                                    "on, if it has moved")] = None,
     nodata: Annotated[float | None, P(description="The no-data value sample was run with, only for a sample written "
                                                   "by 1.2.0")] = None,
     out_dir: Annotated[str | None, P(description="Directory for the result JSON and the mask (default: beside the "
@@ -948,6 +988,8 @@ def certify(
     argv = ["certify", path, f"--alpha={_num(float(alpha))}", f"--delta={_num(float(delta))}", f"--rule={rule}"]
     if scores is not None:
         argv.append(f"--scores={_input(scores, 'scores')}")
+    if confidence is not None:
+        argv.append(f"--confidence={_input(confidence, 'confidence')}")
     _opt(argv, "--nodata", None if nodata is None else float(nodata))
     if out is not None:
         argv.append(f"--out={out}")
