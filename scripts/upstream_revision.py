@@ -92,7 +92,8 @@ def repos_named_in_the_code(root=ROOT):
 
     A repo id reaches a hub one of two ways here: inline in the call, or as a module constant the call is given
     a few lines later. Both are literals, so one pass over fetcher lines and top-level constant assignments
-    finds both.
+    finds both. A literal used as a dict key is a name, not an argument a fetcher is given: exp92's class table
+    (`CLASSES = {"Grass/Shrub": 3, ...}`) is shaped like repo ids and reaches no hub.
     """
     import glob
     found = {}
@@ -103,7 +104,7 @@ def repos_named_in_the_code(root=ROOT):
                     if not (any(fn in line for fn in FETCHERS) or CONSTANT.match(line)):
                         continue
                     for m in LITERAL.finditer(line):
-                        if _is_repo_id(m.group(1)):
+                        if _is_repo_id(m.group(1)) and not line[m.end():].lstrip().startswith(":"):
                             found.setdefault(m.group(1), []).append(f"{os.path.relpath(path, root)}:{i}")
     return found
 

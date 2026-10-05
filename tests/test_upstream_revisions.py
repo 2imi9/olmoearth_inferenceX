@@ -66,6 +66,16 @@ def test_every_repository_the_code_fetches_is_in_the_record():
     assert not missing, "fetched and unpinned: " + "; ".join(f"{r} ({', '.join(named[r])})" for r in missing)
 
 
+def test_a_dict_key_is_not_a_repository(tmp_path):
+    """exp92's class names are shaped like repo ids and sit in a module constant as dict keys; they are not
+    repositories. A repo id as a constant's value, or as a dict value, is still found."""
+    (tmp_path / "exp").mkdir()
+    (tmp_path / "exp" / "a.py").write_text('CLASSES = {"Grass/Shrub": 3, "Snow/Ice" : 7}\n'
+                                           'HUB = "owner/model"\nMODELS = {"base": "owner/other"}\n')
+    assert upstream.repos_named_in_the_code(str(tmp_path)) == {"owner/model": ["exp/a.py:2"],
+                                                               "owner/other": ["exp/a.py:3"]}
+
+
 def test_the_scan_reads_a_cache_the_way_the_record_was_built(tmp_path):
     """The reading path itself, on a cache laid out by hand: the record is only as good as this function."""
     ref = tmp_path / "hub" / "datasets--allenai--olmoearth-paper-embeddings" / "refs"
