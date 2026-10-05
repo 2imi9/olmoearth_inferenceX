@@ -63,3 +63,6 @@ exp/out/exp79_units/
 
 # exp91: rendered views for the VLM reviewer, rebuilt by `exp91_vlm_reviewer.py prepare`
 exp/out/exp91_views/
+
+# exp92: resumable checkpoint of the map reads
+exp/out/exp92_extract_partial.jsonl

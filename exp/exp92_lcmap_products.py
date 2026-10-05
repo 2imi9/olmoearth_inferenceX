@@ -50,6 +50,12 @@ resolution: Delta measures agreement with this reference, not which map is bette
 plot was used to train LCMAP Collection 1.3 is not checked here. One year, one country. The plots as a finite
 population make Q1 and Q2 exact gradings of the designs on real maps, not new evidence about CONUS beyond the sample.
 
+Amendment, 5 October 2026, before any value was analysed. The first full read stalled on an HTTP request with no
+timeout and was stopped at an hour with nothing written. A smoke run then showed that the year's date filter also
+returned Esri's 2017 items (their ranges end on 1 January 2018), so some plots could take 2017's class. Items are now
+kept only where their range starts in 2018 (both collections), requests time out after 30 s, and each finished tile is
+appended to a resumable checkpoint. The design, samples and predictions are unchanged.
+
 Usage.
     uv run --no-sync python exp/exp92_lcmap_products.py extract     # reads the maps at the plots; about ten minutes
     uv run --no-sync python exp/exp92_lcmap_products.py analyze     # writes exp/out/exp92_summary.json
@@ -80,7 +86,9 @@ YEAR, N_CONF, SEED, R, NS, N_RATE = 2018, 5000, 92, 2000, (50, 100, 200), 300
 CLASSES = {"Developed": 1, "Cropland": 2, "Grass/Shrub": 3, "Tree Cover": 4, "Water": 5, "Wetland": 6, "Snow/Ice": 7, "Barren": 8}
 ESRI = {1: 5, 2: 4, 4: 6, 5: 2, 7: 1, 8: 8, 9: 7, 11: 3}          # Esri class -> LCMAP class; 0 and 10 (clouds) -> none
 GDAL = dict(GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR", CPL_VSIL_CURL_ALLOWED_EXTENSIONS=".tif", GDAL_HTTP_MULTIRANGE="YES",
-            VSI_CACHE="TRUE", GDAL_HTTP_MAX_RETRY="4", GDAL_HTTP_RETRY_DELAY="2")
+            VSI_CACHE="TRUE", GDAL_HTTP_MAX_RETRY="4", GDAL_HTTP_RETRY_DELAY="2", GDAL_HTTP_TIMEOUT="30",
+            GDAL_HTTP_CONNECTTIMEOUT="10")
+PARTIAL = os.path.join(ROOT, "exp", "out", "exp92_extract_partial.jsonl")       # one line per finished tile; resumable
 
 
 def _json(url, body=None):
@@ -101,7 +109,8 @@ def items(collection):
         out += page["features"]
         nxt = [link for link in page.get("links", []) if link["rel"] == "next"]
         if not nxt:
-            return out
+            # the date filter also returns the previous year's items, whose ranges end on 1 January: keep the year's own
+            return [f for f in out if (f["properties"].get("start_datetime") or f["properties"]["datetime"]).startswith(str(YEAR))]
         page = _json(nxt[0]["href"], nxt[0].get("body")) if nxt[0].get("method") == "POST" else _json(nxt[0]["href"])
 
 
@@ -165,10 +174,10 @@ def extract():
         x0, y0 = tr[2], tr[5]
         mine = [p for p in ref if x0 <= p[1] < x0 + w * tr[0] and y0 + h * tr[4] < p[2] <= y0]
         if mine:
-            jobs.append(("lcpri", signer("usgs-lcmap-conus-v13", it["assets"]["lcpri"]["href"]), mine, 1))
+            jobs.append((it["id"], "lcpri", signer("usgs-lcmap-conus-v13", it["assets"]["lcpri"]["href"]), mine, 1))
             sub = [p for p in mine if p[0] in conf_ids]
             if sub:
-                jobs.append(("lcpconf", signer("usgs-lcmap-conus-v13", it["assets"]["lcpconf"]["href"]), sub, 1))
+                jobs.append((it["id"], "lcpconf", signer("usgs-lcmap-conus-v13", it["assets"]["lcpconf"]["href"]), sub, 1))
     es = items("io-lulc-annual-v02")
     LON, LAT = np.asarray(lon), np.asarray(lat)
     for it in es:                                   # Esri tiles: bounding box first, then the item's footprint
@@ -180,32 +189,56 @@ def extract():
         polys = [g["coordinates"][0]] if g["type"] == "Polygon" else [pg[0] for pg in g["coordinates"]]
         mine = [ref[i] for i in near if any(_inside(LON[i], LAT[i], pg) for pg in polys)]
         if mine:
-            jobs.append(("esri", signer("io-lulc-annual-v02", it["assets"]["data"]["href"]), mine, 3))
+            jobs.append((it["id"], "esri", signer("io-lulc-annual-v02", it["assets"]["data"]["href"]), mine, 3))
     print(f"{len(ref)} plots; {len(lc)} LCMAP tiles, {len(es)} Esri tiles; {len(jobs)} reads; conf subset {len(conf_ids)}", flush=True)
 
     vals = {"lcpri": {}, "lcpconf": {}, "esri": {}}
+
+    def keep(layer, item, pid, v):
+        """Esri tiles overlap at zone edges: the tile with the smallest id wins, whatever order the reads finish in."""
+        if layer == "esri":
+            if pid not in vals["esri"] or item < vals["esri"][pid][0]:
+                vals["esri"][pid] = (item, v)
+        else:
+            vals[layer][pid] = v
+
+    done = set()
+    if os.path.exists(PARTIAL):                      # resume: tiles already read are not read again
+        for line in open(PARTIAL):
+            rec = json.loads(line)
+            done.add((rec["item"], rec["layer"]))
+            for pid, v in rec["values"].items():
+                keep(rec["layer"], rec["item"], int(pid), np.array(v, dtype=np.uint8) if rec["layer"] == "esri" else v)
+    todo = [j for j in jobs if (j[0], j[1]) not in done]
+    print(f"resuming: {len(done)} tiles done, {len(todo)} to read", flush=True)
     t0 = time.time()
 
     def run(job):
-        layer, href, plots, size = job
+        item, layer, href, plots, size = job
+        t = time.time()
         for attempt in range(3):
             try:
-                return layer, _read(href, plots, crs_src, size)
+                return item, layer, _read(href, plots, crs_src, size), time.time() - t
             except Exception as e:                  # a transient HTTP failure: retry the tile
                 err = e
                 time.sleep(3 * (attempt + 1))
-        print(f"failed {layer} after 3 tries: {err}", flush=True)
-        return layer, {}
+        print(f"failed {item} {layer} after 3 tries: {err}", flush=True)
+        return item, layer, None, time.time() - t
 
-    with ThreadPoolExecutor(12) as pool:
-        for k, (layer, got) in enumerate(pool.map(run, jobs), 1):
+    from concurrent.futures import as_completed
+    with ThreadPoolExecutor(12) as pool, open(PARTIAL, "a") as part:
+        futures = [pool.submit(run, j) for j in todo]
+        for k, fut in enumerate(as_completed(futures), 1):
+            item, layer, got, secs = fut.result()
+            if got is None:
+                continue
+            part.write(json.dumps({"item": item, "layer": layer, "values": {str(pid): (v.tolist() if layer == "esri" else int(v.ravel()[0]))
+                                                                             for pid, v in got.items()}}) + "\n")
+            part.flush()
             for pid, v in got.items():
-                if layer == "esri":
-                    vals["esri"].setdefault(pid, v)          # the first tile that holds the plot wins (UTM zones overlap)
-                else:
-                    vals[layer][pid] = int(v.ravel()[0])
-            if k % 50 == 0:
-                print(f"{k}/{len(jobs)} reads, {time.time() - t0:.0f}s", flush=True)
+                keep(layer, item, pid, v if layer == "esri" else int(v.ravel()[0]))
+            if k % 25 == 0 or secs > 60:
+                print(f"{k}/{len(todo)} tiles, {time.time() - t0:.0f}s (last {layer} {item}: {len(got)} plots in {secs:.0f}s)", flush=True)
 
     def esri_majority(win):
         if win is None:
@@ -221,7 +254,7 @@ def extract():
         w = csv.writer(f)
         w.writerow(["plotid", "ref", "lcmap", "esri_raw", "esri", "in_conf_subset", "lcpconf"])
         for pid, _, _, ref_c in ref:
-            raw, mapped = esri_majority(vals["esri"].get(pid))
+            raw, mapped = esri_majority(vals["esri"][pid][1] if pid in vals["esri"] else None)
             w.writerow([pid, ref_c, vals["lcpri"].get(pid, 0), raw, mapped, int(pid in conf_ids),
                         vals["lcpconf"].get(pid, "") if pid in conf_ids else ""])
     print(f"wrote {PLOTS} in {time.time() - t0:.0f}s: lcpri {len(vals['lcpri'])}, esri {len(vals['esri'])}, "
