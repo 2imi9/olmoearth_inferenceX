@@ -729,15 +729,17 @@ def test_exp65_calibrate_refits_the_recorded_held_out_numbers_from_the_readings(
     assert round(100 * gain["finetune", "bolivia"]) == 14 and round(100 * gain["finetune", "test"]) == 17
 
 
-def test_exp66_dfc2020_sensor_axis_and_the_coarse_reference_recompute_from_the_masks():
+def test_exp66_dfc2020_sensor_axis_recomputes_from_the_masks():
     """exp66 (job 804312): P1 and P2 hold, P3 fails on all three arms; the sensor difference, the seed floor and the
-    boundary enrichment recompute from the committed decisions of the first 200 test patches."""
-    from oe_inferencex.compare import compare_inferences
+    boundary enrichment recompute from the committed decisions of the first 200 test patches. The committed file holds
+    no DFC2020 reference classes (removed 5 October 2026: the data are released to approved contest participants), so
+    the which-side shares and the reference gap are checked against the summary only, not recomputed."""
     from oe_inferencex.explain import cue_enrichment
     s = json.load(open(_need("exp66_summary.json")))
     assert s["prereg"]["P1"] is True and s["prereg"]["P2"] is True and s["prereg"]["P3"] is False and s["prereg"]["complete"] is True and s["n_failures"] == 0
     assert s["prereg"]["P3_detail"]["arms_negative"] == 3 and s["prereg"]["P3_detail"]["arms_positive"] == 0
     z = np.load(_need("exp66_masks.npz"))
+    assert "y_dfc" not in z.files and "y_lc" not in z.files                 # no DFC2020 labels in the repository
     ok = z["ok_dfc"]
     assert len(np.unique(z["patch"])) == 200 and ok.shape[0] == 3200        # 200 patches x 16 chips
     sens = (z["s2/dec"] != z["s1/dec"]) & ok
@@ -746,28 +748,9 @@ def test_exp66_dfc2020_sensor_axis_and_the_coarse_reference_recompute_from_the_m
     bnd = boundary_indicator(z["s2/dec"]) > 0        # the package's own cue; exp54.boundary_share is the same quantity
     enr = cue_enrichment(bnd[ok], sens[ok], n_boot=0)["enrichment"]
     assert 2.5 < enr < 4.5, enr                                            # the full run records 3.30x over all 1,200 patches
-    out = compare_inferences(z["s2/dec"], z["s1/dec"], ok, labels=z["y_dfc"])
-    ws = out["graded"]["which_side"]
-    assert ws["share_a_right"] > ws["share_b_right"] and 0.2 < 1 - ws["share_a_right"] - ws["share_b_right"] < 0.45
-    assert float((z["y_dfc"] == z["y_lc"])[ok & z["ok_lc"]].mean()) == pytest.approx(
-        s["results"]["reference_gap"]["agreement_of_the_two_references"], abs=0.05)
-    # the reference gap (dfc2020-coarse-reference-penalises-the-boundary-order): the boundary-first order's lead over
-    # the margin against each reference on the same 200 patches, the score built per chip as exp66 built it; graded
-    # against the 500 m reference the order trails further on every arm, the direction the full run recorded
-    # (gaps -0.0313, -0.0153, -0.0413), and the subsample's gap sits within 0.02 of each
-    from oe_inferencex.assess import boundary_first_score
     g = s["results"]["reference_gap"]["boundary_first_lead_over_margin"]
     for arm in ("s2", "s1", "s1s2"):
-        dec, conf = z[f"{arm}/dec"], -z[f"{arm}/margin"].astype(np.float64)
-        bnd = boundary_indicator(dec)                                     # > 0 exactly where exp54.boundary_share is
-        lex = np.stack([boundary_first_score(conf[t], bnd[t]) for t in range(len(dec))])
-        lead = {}
-        for ref, y, okr in (("dfc", z["y_dfc"], ok), ("lc", z["y_lc"], ok & z["ok_lc"])):
-            e = ((dec != y) & okr).astype(np.float64)[okr]
-            lead[ref] = excess_aurc(conf[okr], e) - excess_aurc(lex[okr], e)      # positive: boundary-first better
-        assert lead["dfc"] < 0 and lead["lc"] < lead["dfc"], (arm, lead)
         assert g[arm]["dfc"] < 0 and g[arm]["lc"] < g[arm]["dfc"], arm
-        assert abs((lead["lc"] - lead["dfc"]) - g[arm]["gap_lc_minus_dfc"]) < 0.02, (arm, lead, g[arm])
 
 
 def test_exp67_dynamic_world_recomputes_from_the_committed_windows():

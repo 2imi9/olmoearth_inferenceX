@@ -33,7 +33,7 @@ probabilities, the condition for an estimate of the map's accuracy. Licences are
 | GEOID-Flood (`links-ads/geoid-flood`) | Copernicus EMS flood delineations, manually validated | No: a shard subset of the test split | 55 test areas; the 45 scored come from 9 activations | Hugging Face | CC BY 4.0 | exp55 to exp61, exp64, exp86 |
 | WorldFloods v2 (`isp-uv-es/WorldFloodsv2`) | Water and cloud masks shipped with the scenes | No | 544 chips in 6 events with a clear post-event optical scene | Hugging Face | CC BY-NC 4.0 | exp62 |
 | JRC Global Surface Water | A water-history product, used as an arbiter and a control | No | seasonality, occurrence and monthly history | Planetary Computer, JRC | CC BY 4.0 | exp25, exp61 |
-| DFC2020 (IEEE GRSS Data Fusion Contest 2020) | An iterated random forest over Sentinel-1/2 and other maps (10 m), and MODIS labels (500 m) | No | probe fitted on 400 validation patches, graded on 1,200 test patches | An unofficial Hugging Face mirror (`125oii/dfc2020`) | IEEE GRSS contest terms: files for approved participants; publication subject to approval by the IEEE GRSS IADF committee and TU Munich | exp66 |
+| DFC2020 (IEEE GRSS Data Fusion Contest 2020) | An iterated random forest over Sentinel-1/2 and other maps (10 m), and MODIS labels (500 m) | No | probe fitted on 400 validation patches, graded on 1,200 test patches; no reference classes are committed | An unofficial Hugging Face mirror (`125oii/dfc2020`) | IEEE GRSS contest terms: files for approved participants; publication subject to approval by the IEEE GRSS IADF committee and TU Munich | exp66 |
 | Dynamic World expert test tiles (Zenodo 4766508) | Expert consensus annotation, beside Dynamic World's own probabilities | No | 409 tiles, 4,348,526 windows | Zenodo | CC BY 4.0 | exp67; a sample tile ships with the package |
 | LUCAS Copernicus 2022 (JRC) | Surveyors in the field | Of the LUCAS Copernicus polygons, by our stratified draw with known inclusion probabilities; not of EU area | 12,073 polygons drawn, 4,778 field-surveyed in held-out regions | JRC open data | CC BY 4.0 | exp68 |
 | EuroCrops V2 (JRC) | Farmers' parcel declarations to paying agencies | No | Austria 2020 and 2021, Denmark 2018 and 2019, Slovenia 2020 and 2021 | JRC open data; class mappings on GitHub | CC BY 4.0 (data), CC BY-SA 4.0 (mappings) | exp69 |
@@ -58,5 +58,6 @@ probabilities, the condition for an estimate of the map's accuracy. Licences are
 The checks rerun from the per-unit values committed in `exp/out/` (for example `exp92_plots.csv`, `exp78_units/`),
 which hold no coordinates. The raw data stay with their publishers, at the revisions pinned in
 `exp/out/upstream_revisions.json`, and their licences differ: WorldFloods v2 is non-commercial, DFC2020 is released
-to approved contest participants, and Sen1Floods11's labels carry no stated licence. A copy on Hugging Face would add
+to approved contest participants, and Sen1Floods11's labels carry no stated licence. The DFC2020 reference classes
+once committed in `exp/out/exp66_masks.npz` were removed on 5 October 2026; exp66's results stand as an internal record. A copy on Hugging Face would add
 nothing the record needs and could breach those terms.

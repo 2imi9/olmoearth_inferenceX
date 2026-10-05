@@ -1906,7 +1906,7 @@
 
 - id: dfc2020-sensor-difference-dominates-land-cover
   statement: "On DFC2020 the Sentinel-2 and Sentinel-1 inferences of the same scenes differ on 44.27% of the windows, 33 times the 1.34% that a second probe seed moves, and the differing windows carry the boundary cue 3.30 times as often as the agreeing ones; the optical side is right on 50.4% of them, the radar side on 17.2%, and 32.4% are wrong on both; on binary flood water the same axis moved 4.9% of windows (exp60); preregistered P2 holds."
-  crosscheck: tests/test_recorded.py::test_exp66_dfc2020_sensor_axis_and_the_coarse_reference_recompute_from_the_masks
+  crosscheck: tests/test_recorded.py::test_exp66_dfc2020_sensor_axis_recomputes_from_the_masks
   status: supported
   experiments: [exp66]
   artifacts: [exp/out/exp66_summary.json]
@@ -1921,10 +1921,13 @@
   cited_in:
     - {file: docs/TECHNIQUES.md, marker: dfc2020-sensor-difference-dominates-land-cover}
     - {file: docs/results/comparisons.md, marker: dfc2020-sensor-difference-dominates-land-cover}
+  note: >-
+    The crosscheck recomputes the sensor rate, the seed floor and the boundary enrichment from the committed decisions;
+    the which-side share (50.4%) needs the reference classes, removed from the repository on 5 October 2026 (DFC2020 is
+    released to approved contest participants), and is checked against the summary only.
 
 - id: dfc2020-coarse-reference-penalises-the-boundary-order
   statement: "Graded against DFC2020's 500 m MODIS reference instead of its 10 m one, the boundary-first order falls further behind the model's margin, not closer: it trails by 0.0453, 0.1198 and 0.0409 against the 10 m reference and by 0.0766, 0.1351 and 0.0822 against the 500 m one, so the gap is negative on all three arms (-0.0313, -0.0153, -0.0413); preregistered P3, which predicted the weaker reference would flatter the boundary order as WorldCover did in exp18, fails. The reading: a reference flatters a boundary-shaped signal only when it resolves boundaries at a scale comparable to the prediction's, and a reference twenty times coarser penalises it."
-  crosscheck: tests/test_recorded.py::test_exp66_dfc2020_sensor_axis_and_the_coarse_reference_recompute_from_the_masks
   status: rejected
   experiments: [exp66]
   artifacts: [exp/out/exp66_summary.json]
@@ -1938,6 +1941,10 @@
   cited_in:
     - {file: docs/TECHNIQUES.md, marker: dfc2020-coarse-reference-penalises-the-boundary-order}
     - {file: docs/results/comparisons.md, marker: dfc2020-coarse-reference-penalises-the-boundary-order}
+  note: >-
+    Until 5 October 2026 tests/test_recorded.py recomputed the reference gap from the committed reference classes. They
+    were removed then (DFC2020 is released to approved contest participants), so this claim has no second route and
+    rests on its check of the summary.
 
 - id: dfc2020-atlas-holds-with-our-own-encoder
   statement: "On DFC2020's 4,320,000 windows per arm the atlas findings hold under our own encoder on eight-class land cover: every one of the five compared pairs has differing windows that are boundary-enriched 2.32 to 3.30 times and low-margin-enriched 4.65 to 5.37 times, and the five difference sets are close to independent, median pairwise phi 0.078; the two references agree on 71.3% of the windows both label, and the three arms reach pixel mean intersection over union 0.431, 0.322 and 0.435, the joint arm above both single sensors."

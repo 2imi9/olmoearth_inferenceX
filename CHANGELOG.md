@@ -30,6 +30,13 @@ and the report. Earlier drafts (raster result panels, pictograms, a plain block 
   Findings gains the MCP pilot; the index lists `mcp` and the comparison; the protocol's design-effect range names
   m-cashew-plant's 1.17; the exp85 record's coverage cost is 0.4 to 1.0 points, as its claim says.
 
+**DFC2020 reference classes removed from the repository.** `exp/out/exp66_masks.npz` and its smoke copy no longer hold
+`y_dfc` and `y_lc`: DFC2020 is released by the IEEE GRSS to approved contest participants, and the record had read it
+from an unofficial mirror. `exp/exp66_dfc2020.py` no longer stores them. exp66's results are unchanged; the second-route
+test now recomputes the sensor rate, seed floor and boundary enrichment from the decisions and checks the which-side
+share and the reference gap against the summary only, so `dfc2020-coarse-reference-penalises-the-boundary-order` has no
+crosscheck any more (76 of 223 claims have one). Earlier commits still hold the classes.
+
 **Test sets page** (`docs/testbeds.md`, under Evidence): which test sets graded each function of the package, and for
 each test set who produced the reference, whether it is a probability sample of the map, what the record used, where
 it is hosted and its licence as the publisher states it (verified on the publishers' pages). The data are not

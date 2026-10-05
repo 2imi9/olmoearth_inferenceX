@@ -66,7 +66,8 @@ running and recording internally is fine, and any paper use needs that approval 
 
 Inputs: the mirror (about 10.4 GB, cached under $HF_HOME/dfc2020). Run with ~/oe12/.venv (rasterio and the encoder).
 Outputs: exp/out/exp66_summary.json, exp/out/exp66_dfc2020.csv (one row per arm and reference, one per compared pair),
-exp/out/exp66_masks.npz (window decisions, margins, entropy and both references for a capped sample of patches).
+exp/out/exp66_masks.npz (window decisions, margins, entropy and where each reference is valid, for a capped sample of
+patches; no reference classes, which are DFC2020 data and stay out of the repository).
 --smoke: synthetic patches on CPU, no download, _smoke outputs.
 """
 import csv
@@ -409,7 +410,9 @@ def main():
             q = held[(arm, 0)]
             store[f"{arm}/dec"] = q["dec"].astype(np.int8); store[f"{arm}/margin"] = q["margin"].astype(np.float16); store[f"{arm}/entropy"] = q["entropy"].astype(np.float16)
             store[f"{arm}/dec_seed1"] = held[(arm, 1)]["dec"].astype(np.int8)
-        store["y_dfc"], store["ok_dfc"], store["y_lc"], store["ok_lc"], store["patch"] = ref0["y"].astype(np.int8), ref0["ok"], yl.astype(np.int8), okl, pid_t
+        # no DFC2020 labels are committed: the files are released to approved contest participants, so the store keeps
+        # the model outputs and the references' validity masks, never the reference classes (removed 5 October 2026)
+        store["ok_dfc"], store["ok_lc"], store["patch"] = ref0["ok"], okl, pid_t
     except Exception as ex:  # noqa: BLE001
         e57.fail(summary, "pipeline", ex)
     # ---- prereg

@@ -1443,7 +1443,9 @@ Publishing a DFC2020 number needs case-by-case approval from the IEEE GRSS IADF
 technical committee and TUM under the contest terms, so this section is an
 internal record until that is settled. Runtime 1:06:02 including the 10.4 GB
 fetch (job 804312). Source `exp/out/exp66_summary.json`; `exp/out/exp66_masks.npz`
-carries the decisions, margins and both references for the first 200 patches.
+carries the decisions, margins and where each reference is valid for the first 200 patches. It held both
+references' classes until 5 October 2026, when they were removed: they are DFC2020 data, released to approved
+contest participants, and the record had read them from an unofficial mirror.
 
 ## Auditing a production model with its own probabilities: Dynamic World (exp67)
 
