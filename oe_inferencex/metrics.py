@@ -8,14 +8,15 @@ expectation under random tie-breaking, so no result depends on raster order.
 """
 import numpy as np
 
+# An empty population (a tile or stratum with no valid window) has no ranking to measure. Until 2026-10-06 half of
+# this module raised an internal IndexError from np.add.reduceat on it while the other half returned NaN or 0.0, so a
+# per-tile loop crashed or silently scored an empty tile; every function now returns NaN (per budget or coverage).
+_NAN = float("nan")
 
-def aurc_expected(uncertainty, errors):
-    """AURC under uniform random tie-breaking, in closed form.
 
-    Within each group of tied scores the errors are spread uniformly over the
-    group's rank span, so the result does not depend on the raster order of
-    the input. Equal to the plain AURC when no scores tie.
-    """
+def _expected_cum_errors(uncertainty, errors):
+    """Expected cumulative error count at each rank 1..n in ascending uncertainty, under uniform random
+    tie-breaking: within a group of tied scores the group's errors are spread uniformly over its rank span."""
     u = np.asarray(uncertainty).flatten()
     e = np.asarray(errors).flatten().astype(np.float64)
     order = np.argsort(u, kind="stable")
@@ -29,8 +30,21 @@ def aurc_expected(uncertainty, errors):
     e_group = np.add.reduceat(e, starts)
     e_before = np.r_[0.0, cum][starts]
     pos = np.arange(n) - starts[grp] + 1
-    cum_exp = e_before[grp] + e_group[grp] * pos / sizes[grp]
-    risk = cum_exp / np.arange(1, n + 1)
+    return e_before[grp] + e_group[grp] * pos / sizes[grp]
+
+
+def aurc_expected(uncertainty, errors):
+    """AURC under uniform random tie-breaking, in closed form.
+
+    Within each group of tied scores the errors are spread uniformly over the
+    group's rank span, so the result does not depend on the raster order of
+    the input. Equal to the plain AURC when no scores tie. NaN on an empty population.
+    """
+    e = np.asarray(errors).flatten()
+    n = len(e)
+    if n == 0:
+        return _NAN
+    risk = _expected_cum_errors(uncertainty, e) / np.arange(1, n + 1)
     return float(risk.mean())
 
 
@@ -40,8 +54,10 @@ def risk_coverage(uncertainty, errors):
     Returns (coverage, risk, aurc). The curve uses a stable sort for display;
     the returned AURC is tie-aware (aurc_expected). Lower = ranks errors better.
     """
-    u = uncertainty.flatten()
-    e = errors.flatten().astype(np.float64)
+    # np.asarray: a list or a pandas Series raised AttributeError on .flatten() until 2026-10-06, where every other
+    # metric here accepts any array-like
+    u = np.asarray(uncertainty).flatten()
+    e = np.asarray(errors).flatten().astype(np.float64)
     order = np.argsort(u, kind="stable")
     cum_err = np.cumsum(e[order])
     n = len(u)
@@ -54,6 +70,8 @@ def oracle_aurc(n, k):
     """AURC of the perfect ranker on n units with k errors: every error rejected first.
 
     Closed form used since exp13; equal to aurc_expected(errors, errors)."""
+    if int(n) == 0:
+        return _NAN
     i = np.arange(1, n + 1)
     return float((np.maximum(0, i - (n - k)) / i).mean())
 
@@ -73,6 +91,8 @@ def capture_at_budget(uncertainty, errors, budgets=(0.01, 0.05, 0.10)):
     first, ties broken by position (stable sort), as exp21 and assess report it."""
     u = np.asarray(uncertainty).flatten()
     e = np.asarray(errors).flatten().astype(np.float64)
+    if len(e) == 0:
+        return {b: _NAN for b in budgets}                 # an empty population, not "none of its errors caught"
     order = np.argsort(u, kind="stable")[::-1]
     out = {}
     for b in budgets:
@@ -94,12 +114,18 @@ def augrc(uncertainty, errors):
     derived in docs/method/protocol.md and checked to machine precision in tests/test_formulas.py. The coefficient
     e(1 - e) is positive for any map that is neither perfect nor wholly wrong, so AUGRC cannot reorder two readings
     that the failure AUROC already orders, and the last two terms do not depend on the reading at all. That is why
-    exp76 could answer the AUGRC challenge from exp70's recorded AUROC without recomputing anything."""
-    u = np.asarray(uncertainty).flatten()
-    e = np.asarray(errors).flatten().astype(np.float64)
+    exp76 could answer the AUGRC challenge from exp70's recorded AUROC without recomputing anything.
+
+    Ties are handled as aurc_expected handles them, by expectation under random tie-breaking, so the identity holds
+    with the AUROC counting ties as half. NaN on an empty population."""
+    e = np.asarray(errors).flatten()
     n = len(e)
-    kept = np.argsort(u, kind="stable")          # least suspect first: coverage grows by keeping these
-    return float((np.cumsum(e[kept]) / n).mean())
+    if n == 0:
+        return _NAN
+    # Until 2026-10-06 the kept errors were counted in raster order inside a group of tied scores, so a constant score
+    # gave 0.25 with its one error first and 0.0625 with it last, and a nine-level score could reverse the ranking of
+    # two readings by flipping the map; the identity above (0.15625 there) held only when no scores tied.
+    return float((_expected_cum_errors(uncertainty, e) / n).mean())
 
 
 def augrc_from_auroc(auroc_failure, error_rate, n):
@@ -136,11 +162,37 @@ def attainable_ceiling(budget, error_rate, n=None):
 
 
 def selective_accuracy(uncertainty, correct, coverages=(0.5, 0.8, 0.9, 1.0)):
-    """Accuracy among the fraction c of units kept in ascending uncertainty (recipe item 7, exp21)."""
+    """Accuracy among the fraction c of units kept in ascending uncertainty (recipe item 7, exp21).
+
+    The kept set is the max(1, round(c * n)) least suspect units. Tie-aware in the sense of capture_at_budget_expected:
+    a group of tied scores straddling the cut contributes its correct units in proportion to the share of the group
+    kept, the expectation under random tie-breaking. Equal to the plain kept-set accuracy when no scores tie at the
+    cut. NaN on an empty population."""
     u = np.asarray(uncertainty).flatten()
     c_ = np.asarray(correct).flatten().astype(np.float64)
+    n = len(c_)
+    if n == 0:
+        return {c: _NAN for c in coverages}
+    # Until 2026-10-06 the cut took the tied units in raster order, so u = zeros(4) at coverage 0.5 gave 1.0 for
+    # correct = [1,1,0,0] and 0.0 for [0,0,1,1], the same map read in another order; a top-1 probability that
+    # saturates at 1.0 (exp89's input) ties on half its units and moved the result with the row order.
     order = np.argsort(u, kind="stable")
-    return {c: float(c_[order[:max(1, int(round(c * len(c_))))]].mean()) for c in coverages}
+    s, c_ = u[order], c_[order]
+    newgrp = np.r_[True, s[1:] != s[:-1]]
+    starts = np.flatnonzero(newgrp)
+    sizes = np.diff(np.r_[starts, n])
+    c_group = np.add.reduceat(c_, starts)
+    out = {}
+    for c in coverages:
+        k = min(max(1, int(round(c * n))), n)
+        full = starts + sizes <= k                        # groups entirely inside the kept set
+        kept = c_group[full].sum()
+        part = np.flatnonzero((starts < k) & ~full)       # the group straddling the cut, if any
+        if len(part):
+            g = part[0]
+            kept += c_group[g] * (k - starts[g]) / sizes[g]
+        out[c] = float(kept / k)
+    return out
 
 
 def expected_calibration_error(confidence, correct, bins=10):
@@ -176,6 +228,8 @@ def capture_at_budget_expected(uncertainty, errors, budgets=(0.05, 0.10, 0.20)):
     capture_at_budget, at least one unit is always reviewed, so the realised budget is max(1, round(b * n)) / n."""
     u = np.asarray(uncertainty, dtype=np.float64).flatten()
     e = np.asarray(errors).flatten().astype(np.float64)
+    if len(e) == 0:
+        return {b: _NAN for b in budgets}
     order = np.argsort(-u, kind="stable")                 # most suspect first (float cast: unsigned or boolean scores negate safely)
     s, e = u[order], e[order]
     n, total = len(e), max(e.sum(), 1)
@@ -202,14 +256,29 @@ def capture_at_budget_expected(uncertainty, errors, budgets=(0.05, 0.10, 0.20)):
 # units rather than in unit counts, or the answer is about the sample instead of the population: on a stratified sample
 # that deliberately oversamples rare classes, the unweighted and the weighted lead can differ by half the lead's size
 # (exp68). Each function here reduces exactly to its unweighted counterpart when every weight is one.
+#
+# A design weight is an inverse inclusion probability, never negative, and a population with no weight has nothing to
+# measure. Until 2026-10-06 only weighted_aurc refused a negative weight, and a 1e-300 guard turned 0/0 into a number:
+# with every weight zero the weighted mean and AURC read 0.0, and with the errors' weights zero (one stratum scored by
+# zeroing the others) weighted_auroc read 0.0, a perfectly inverted ranker, where the same units selected by a mask
+# give NaN. A negative weight is refused everywhere now, and no weight (or no weighted error or non-error, for the
+# AUROC) is NaN.
+
+def _check_weights(w):
+    if (w < 0).any():
+        raise ValueError("weights must be non-negative")
+
 
 def weighted_mean(x, weights):
-    """Design-weighted mean of `x`. Reduces to x.mean() under equal weights."""
+    """Design-weighted mean of `x`. Reduces to x.mean() under equal weights. NaN when no unit carries weight."""
     x = np.asarray(x, dtype=np.float64).ravel()
     w = np.asarray(weights, dtype=np.float64).ravel()
     if x.shape != w.shape:
         raise ValueError(f"x has shape {x.shape}, weights {w.shape}")
-    return float((x * w).sum() / max(w.sum(), 1e-300))
+    _check_weights(w)
+    if not w.sum() > 0:
+        return _NAN
+    return float((x * w).sum() / w.sum())
 
 
 def weighted_aurc(uncertainty, errors, weights):
@@ -221,14 +290,15 @@ def weighted_aurc(uncertainty, errors, weights):
 
     Note that AURC is a right-endpoint average over units, so it is not exactly invariant to replicating a unit; nor is
     `aurc_expected`, which moves by about 2e-5 on a 2,000-unit sample when every unit is duplicated. Splitting a weight
-    into equal parts therefore agrees with weighting to about that order, not exactly."""
+    into equal parts therefore agrees with weighting to about that order, not exactly. NaN when no unit carries weight."""
     u = np.asarray(uncertainty, dtype=np.float64).ravel()
     e = np.asarray(errors, dtype=np.float64).ravel()
     w = np.asarray(weights, dtype=np.float64).ravel()
     if not (u.shape == e.shape == w.shape):
         raise ValueError(f"shapes differ: uncertainty {u.shape}, errors {e.shape}, weights {w.shape}")
-    if (w < 0).any():
-        raise ValueError("weights must be non-negative")
+    _check_weights(w)
+    if not w.sum() > 0:
+        return _NAN
     order = np.argsort(u, kind="stable")
     s, e, w = u[order], e[order], w[order]
     cum_w, cum_e = np.cumsum(w), np.cumsum(e * w)
@@ -257,12 +327,16 @@ def weighted_capture_at_budget(uncertainty, errors, weights, budgets=(0.05, 0.10
     errors in proportion to the share of the group's weight that falls inside the budget.
 
     Capture at a fixed budget is bounded above by budget / error rate, so it is NOT comparable between two populations
-    with different error rates; `weighted_auroc` is the base-rate-free statistic for that comparison."""
+    with different error rates; `weighted_auroc` is the base-rate-free statistic for that comparison. NaN at every
+    budget when no unit carries weight."""
     u = np.asarray(uncertainty, dtype=np.float64).ravel()
     e = np.asarray(errors, dtype=np.float64).ravel()
     w = np.asarray(weights, dtype=np.float64).ravel()
     if not (u.shape == e.shape == w.shape):
         raise ValueError(f"shapes differ: uncertainty {u.shape}, errors {e.shape}, weights {w.shape}")
+    _check_weights(w)
+    if not w.sum() > 0:
+        return {b: _NAN for b in budgets}
     order = np.argsort(-u, kind="stable")
     s, e, w = u[order], e[order], w[order]
     cum_w = np.cumsum(w)
@@ -289,14 +363,16 @@ def weighted_auroc(uncertainty, errors, weights):
     """Design-weighted AUROC of a suspicion score against the error indicator, ties counted half.
 
     Unlike capture at a budget this has no base-rate ceiling, so it is the statistic to use when comparing how well a
-    score ranks errors across two populations whose error rates differ. NaN when every unit is an error or none is."""
+    score ranks errors across two populations whose error rates differ. NaN when every unit is an error or none is,
+    counted in weight: units of weight zero are not in the population."""
     u = np.asarray(uncertainty, dtype=np.float64).ravel()
     e = np.asarray(errors, dtype=np.float64).ravel().astype(bool)
     w = np.asarray(weights, dtype=np.float64).ravel()
     if not (u.shape == e.shape == w.shape):
         raise ValueError(f"shapes differ: uncertainty {u.shape}, errors {e.shape}, weights {w.shape}")
-    if e.all() or not e.any():
-        return float("nan")
+    _check_weights(w)
+    if not (w[e].sum() > 0 and w[~e].sum() > 0):
+        return _NAN
     order = np.argsort(u, kind="stable")
     s, e, w = u[order], e[order], w[order]
     cum_w = np.cumsum(w)
@@ -307,4 +383,4 @@ def weighted_auroc(uncertainty, errors, weights):
     w_group = np.add.reduceat(w, starts)
     midrank = w_before[grp] + 0.5 * w_group[grp]
     w_pos, w_neg = w[e].sum(), w[~e].sum()
-    return float(((w[e] * midrank[e]).sum() - w_pos * w_pos / 2.0) / max(w_pos * w_neg, 1e-300))
+    return float(((w[e] * midrank[e]).sum() - w_pos * w_pos / 2.0) / (w_pos * w_neg))

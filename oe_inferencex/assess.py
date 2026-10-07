@@ -95,6 +95,46 @@ MARGIN_FORM_WARNING = ("multi-class logit margin: on Ai2's suite one minus the t
                        "saturate")
 CLASS_SHARE_TEXT = ("Descriptive only: the share of windows the map calls each class, within each condition. No "
                     "experiment has tested whether a difference between conditions signals errors.")
+NO_VALID_WINDOW = ("the map has no valid window: every window is at least half no-data (a fully clouded or fully masked "
+                   "scene); there is nothing to rank")
+
+
+def _check_patch(patch):
+    """Refuse a window that is not a whole number of pixels, at least 1. Until 2026-10-06 only a window larger than the
+    map was refused: --patch 0 ended in a ZeroDivisionError traceback and --patch -4 in numpy's "can only specify one
+    unknown dimension", where compare and sample --other already refused both by name."""
+    if not isinstance(patch, (int, np.integer)) or patch < 1:
+        raise ValueError(f"the window must be a whole number of pixels, at least 1; got --patch {patch}")
+
+
+def _as_mask(nodata_mask):
+    """nodata_mask read by truth value. A 0/1 integer mask, as a mask raster stores it, used to be inverted bitwise
+    (~1 is 254 in uint8, ~0 is 255), so every masked window counted as valid and, in assess_prediction, filled the
+    review set with NaN-confidence windows; an int64 mask was refused as having no valid window, and in assess_classmap
+    ~mask indexed rows instead of selecting pixels (2026-10-06). Other uses of the mask already read it as boolean."""
+    return None if nodata_mask is None else np.asarray(nodata_mask, dtype=bool)
+
+
+def _nonfinite_as_nodata(implied, nodata_mask, warnings):
+    """`nodata_mask` with the pixels of `implied` (a non-finite score or confidence) added, said in `warnings`.
+
+    Non-finite pixels carry no prediction. Until 2026-09-21, with no explicit nodata_mask they were ranked like any
+    other window and NaN sorts to the front of the review order, so a scene with a NaN strip returned a review set that
+    was entirely empty pixels, with healthy-looking confidence quantiles and no warning. That fix covered
+    assess_prediction only: until 2026-10-06 assess_classmap ranked an exported band's NaN windows first, counted them
+    as valid (64 windows for 48) and reported NaN as the band's modal value. The count of pixels added to a given mask
+    is taken before the mask is extended; it used to be taken after, so it always read 0."""
+    n_nf = int(implied.sum())
+    if not n_nf:
+        return nodata_mask
+    if nodata_mask is None:
+        warnings.append(f"{n_nf} pixels are not finite and were treated as no-data; pass nodata_mask to say so explicitly")
+        return implied
+    n_added = int((implied & ~nodata_mask).sum())
+    if not n_added:
+        return nodata_mask
+    warnings.append(f"{n_added} non-finite pixels outside the given nodata_mask were added to it")
+    return nodata_mask | implied
 
 
 def _pool(a, patch):
@@ -178,6 +218,7 @@ def pool_condition(condition, patch, predicted=None):
         raise ValueError(f"the condition layer is {a.shape[0]} x {a.shape[1]} px and the map is {predicted.shape[0]} x "
                          f"{predicted.shape[1]} px; give one condition value per pixel of the map")
     H, W = a.shape
+    _check_patch(patch)
     if patch > H or patch > W:
         raise ValueError(f"the window of {patch} px is larger than the map, {H} x {W} px; pass a smaller --patch")
     unmasked = ~mask if mask is not None else np.ones(a.shape, dtype=bool)
@@ -265,9 +306,14 @@ def assess_classmap(hard, confidence, n_classes, patch=4, nodata_mask=None, refe
     `condition_names` are as in assess_prediction."""
     hard = np.asarray(hard).astype(int)
     conf = np.asarray(confidence, dtype=np.float64)
+    nonfinite = []
+    nodata_mask = _nonfinite_as_nodata(~np.isfinite(conf), _as_mask(nodata_mask), nonfinite)   # a band's NaN no-data
     valid = ~nodata_mask if nodata_mask is not None else np.ones(conf.shape, dtype=bool)
     vals, counts = np.unique(conf[valid], return_counts=True)
-    warnings = [f"confidence band has {len(vals)} distinct values; {counts.max() / counts.sum():.3f} of pixels share the modal value {vals[counts.argmax()]:.4g}"]
+    # A fully masked scene has no value to describe; _assess refuses it with assess_prediction's message, where
+    # counts.max() used to raise numpy's "zero-size array to reduction operation" (2026-10-06).
+    warnings = nonfinite + ([f"confidence band has {len(vals)} distinct values; {counts.max() / counts.sum():.3f} of pixels share the modal value {vals[counts.argmax()]:.4g}"]
+                            if counts.size else [])
     out = _assess(conf, hard, n_classes, patch, nodata_mask, reference, budgets, signal, warnings, order,
                   condition, condition_names)
     out["confidence_distinct_values"] = int(len(vals))
@@ -302,23 +348,14 @@ def assess_prediction(scores, is_logit, patch=4, nodata_mask=None, reference=Non
     if form not in ("margin", "top1"):
         raise ValueError(f"form must be 'margin' or 'top1', got {form!r}")
     scores = np.asarray(scores, dtype=np.float64)
+    nodata_mask = _as_mask(nodata_mask)
     if not is_logit:
         _check_probabilities(scores, nodata_mask)
     warnings = []
-    # Non-finite pixels carry no prediction. Until 2026-09-21, with no explicit nodata_mask they were ranked like
-    # any other window and NaN sorts to the front of the review order, so a scene with a NaN strip returned a review
-    # set that was entirely empty pixels, with healthy-looking confidence quantiles and no warning.
+    # Non-finite pixels carry no prediction (_nonfinite_as_nodata says why and what went wrong before).
     nonfinite = ~np.isfinite(scores)
     if nonfinite.any():
-        implied = nonfinite.any(0) if scores.ndim == 3 else nonfinite
-        n_nf = int(implied.sum())
-        if nodata_mask is None:
-            nodata_mask = implied
-            warnings.append(f"{n_nf} pixels are not finite and were treated as no-data; pass nodata_mask to say so explicitly")
-        elif (implied & ~np.asarray(nodata_mask, bool)).any():
-            nodata_mask = np.asarray(nodata_mask, bool) | implied
-            warnings.append(f"{int((implied & ~np.asarray(nodata_mask, bool)).sum())} non-finite pixels outside the given "
-                            f"nodata_mask were added to it")
+        nodata_mask = _nonfinite_as_nodata(nonfinite.any(0) if scores.ndim == 3 else nonfinite, nodata_mask, warnings)
         scores = np.where(nonfinite, 0.0, scores)
     if scores.ndim == 2:  # binary probability map
         p1 = scores
@@ -389,7 +426,9 @@ def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, sig
         raise ValueError(f"order must be one of {ORDERS}, got {order!r}")
     margin = np.asarray(margin, dtype=np.float64)
     hard = np.asarray(hard).astype(int)
+    nodata_mask = _as_mask(nodata_mask)
     H, W = hard.shape[-2:]
+    _check_patch(patch)
     if patch > H or patch > W:
         raise ValueError(f"the window of {patch} px is larger than the map, {H} x {W} px; pass a smaller --patch")
     if condition is None and condition_names:
@@ -407,6 +446,9 @@ def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, sig
     bnd_w = _boundary_valid(pooled_hard, valid_w)
     suspicion = -conf_w  # ranking signal: low margin first
     review_score = boundary_first_score(suspicion, bnd_w) if order == "boundary_first" else suspicion
+    n_valid = int(valid_w.sum())
+    if n_valid == 0:                      # refused before any statistic of no window is taken
+        raise ValueError(NO_VALID_WINDOW)
 
     out = {
         "n_windows": int(valid_w.sum()), "patch_px": patch, "n_classes": n_classes,
@@ -418,12 +460,8 @@ def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, sig
         "warnings": warnings,
         "arrays": {"confidence": conf_w, "boundary": bnd_w, "pooled_argmax": pooled_hard, "valid": valid_w},
         "review_sets": {},
-        "confidence_distinct_pooled": int(len(np.unique(conf_w[valid_w]))),
+        "confidence_distinct_pooled": _n_distinct(conf_w[valid_w], patch),
     }
-    n_valid = int(valid_w.sum())
-    if n_valid == 0:
-        raise ValueError("the map has no valid window: every window is at least half no-data (a fully clouded or "
-                         "fully masked scene); there is nothing to rank")
     # The window grid covers whole windows only; a ragged right or bottom edge is never a candidate. Said, not silent.
     dropped = int(H * W - (H // patch * patch) * (W // patch * patch))
     out["pixels_outside_window_grid"] = dropped
@@ -441,8 +479,7 @@ def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, sig
                                  "boundary_share_in_set": float((bnd_w.flatten()[idx] > 0).mean())}
         # A set whose cut-off falls inside a run of equal scores is decided there by raster position, not by evidence:
         # a hard mask, a quantized band or a constant map all end here. Said only when it happens.
-        flat = review_score.ravel()
-        tied = valid_w.ravel() & (flat == flat[idx[-1]])
+        tied = valid_w.ravel() & _tied_with(suspicion, bnd_w, order, patch, idx[-1])
         inside = int(tied[idx].sum())
         if int(tied.sum()) > inside:
             out["review_sets"][b]["tied_at_cutoff"] = {"inside": inside, "outside": int(tied.sum()) - inside}
@@ -464,7 +501,14 @@ def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, sig
             out["scope"] = SCOPE_ASSESS_K.format(K=K)
 
     if reference is not None:
-        ref = np.asarray(reference).astype(int)  # values < 0 mean no reference
+        ref = np.asarray(reference)
+        if ref.dtype.kind == "f":
+            # A float reference is read as the command line reads a reference raster: NaN (or inf) is no label and a
+            # value is rounded to the nearest class id. Until 2026-10-06 astype(int) cast NaN to class 0 on arm64 and
+            # to INT_MIN (no label) on x86, so a reference that was NaN but for one correct window scored 16 windows at
+            # an error rate of 0.9375 on one machine and 1 window at 0 on the other, and 0.9999 was truncated to 0.
+            ref = np.where(np.isfinite(ref), np.rint(np.where(np.isfinite(ref), ref, 0.0)), -1.0)
+        ref = ref.astype(int)  # values < 0 mean no reference
         ref_valid_w = _pool((ref >= 0).astype(float), patch) >= 0.5
         scored = valid_w & ref_valid_w
         # The reference is pooled over ITS OWN class range, never the prediction's. _pooled_argmax counts votes only
@@ -553,6 +597,40 @@ def _condition_block(pooled, condition_names, valid_w, conf_w, pooled_hard, n_cl
     if notes:
         block["notes"] = notes                             # a name given to a value that holds no window
     return block
+
+
+def _same_mean(a, b, patch):
+    """Whether window means `a` and `b` are equal up to the rounding of a mean over patch x patch float64 pixels.
+
+    A window's confidence is a float mean of its pixels, so two windows holding the same values in another pixel order
+    can differ in the last bit: 0.7875 against 0.7874999999999999 on a band quantized to 0.1. They are equal here when
+    they differ by no more than patch x patch epsilons of the larger, the bound on the rounding of two means of that
+    many values of one sign. Every exact equality is still one; NaN equals nothing, and an infinite value only itself."""
+    a, b = np.asarray(a, dtype=np.float64), np.asarray(b, dtype=np.float64)
+    with np.errstate(invalid="ignore"):
+        close = np.abs(a - b) <= patch * patch * np.finfo(np.float64).eps * np.maximum(np.abs(a), np.abs(b))
+    return (a == b) | (np.isfinite(a) & np.isfinite(b) & close)
+
+
+def _tied_with(suspicion, boundary, order, patch, cut):
+    """Windows whose review score equals that of window `cut` (a flat index), up to the float error of a window mean
+    (_same_mean). Until 2026-10-06 the cut-off tie was found by exact ==, which missed ties between windows whose means
+    differ in the last bit, and with them tied_at_cutoff and its warning, in 119 of 462 review sets cut inside a run of
+    equal scores on bands quantized to 0.1, and miscounted others. Under boundary_first two windows must also sit on
+    the same side of the boundary, as equal review scores do. The review order itself is unchanged."""
+    s = np.asarray(suspicion, dtype=np.float64).ravel()
+    tied = _same_mean(s, s[cut], patch)              # a window with no prediction is NaN and never tied
+    if order == "boundary_first":
+        side = np.asarray(boundary).ravel() > 0
+        tied &= side == side[cut]
+    return tied
+
+
+def _n_distinct(v, patch):
+    """The number of distinct window means in `v`, counting means equal up to float error (_same_mean) once: until
+    2026-10-06 np.unique counted 15 values where a band quantized to 0.1 gave 11."""
+    v = np.sort(np.asarray(v, dtype=np.float64).ravel())
+    return int(v.size and 1 + (~_same_mean(v[1:], v[:-1], patch)).sum())
 
 
 def review_order(suspicion, valid=None):

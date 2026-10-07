@@ -166,8 +166,9 @@ CARDS = {
     "assess": "\n".join([
         f"Answers \"{LOOK}\": which windows of one map to check first. No labels.",
         "Does: reads a score raster, splits it into windows of patch x patch pixels and ranks them from least to "
-        "most confident. Writes the review sets (the least confident 1%, 5% and 10% by default) as CSVs with pixel "
-        "and map coordinates, suspicion and boundary rasters, explanation.json (the cues behind each flagged window) "
+        "most confident (with order boundary_first, the windows on a class boundary first, then the interior, each "
+        "from least to most confident). Writes the review sets (the first 1%, 5% and 10% of the order by default) as "
+        "CSVs with pixel and map coordinates, suspicion and boundary rasters, explanation.json (the cues behind each flagged window) "
         "and assessment.json. With condition, it also ranks each input condition on its own. With reference, it "
         "grades the order against that raster, taken as truth.",
         "Needs: the model's scores before the argmax: (C, H, W) per-class probabilities, or (H, W) for two classes, "
@@ -217,8 +218,8 @@ CARDS = {
         "Needs: the CSV sample wrote, filled on every row (1, 0, or ? where a window cannot be judged) and kept in "
         "its order, with its .json beside it. Windows marked ? are bounded both ways, so the estimate is a range. "
         "reviewer_false_alarm and reviewer_miss, when the user knows how often the reviewer errs, widen the interval "
-        "for it. per_class needs a `reference_class` column (the class seen in each window), every row judged, and "
-        "the map's scores (from the sidecar, or scores).",
+        "for it. per_class needs a `reference_class` column (the class seen in each window), every row judged, no "
+        "reviewer rate, a sample of any design but tiles, and the map's scores (from the sidecar, or scores).",
         "Cannot: estimate from a review set or from any CSV that sample did not write (refused); check that the "
         "labels are right (they are assumed right); say which windows are wrong.",
     ]),
@@ -448,7 +449,7 @@ def _scored(argv):
         if "which is not a probability map. Pass --logits" in msg:
             msg = (_sentence(msg) + " If the file holds class ids (a class map), logits=true does not help: it reads "
                    "the ids as scores, the windows tie and the order is not evidence. Pass the model's per-class "
-                   "scores.")
+                   "scores, or the class map with its confidence band (confidence).")
         raise Refused(msg) from None
 
 
@@ -535,6 +536,10 @@ def assess(
     files["assessment"] = os.path.join(out, "assessment.json")
     rs = s["review_sets"]
     b5 = min(rs, key=lambda b: abs(float(b) - 0.05))
+    # boundary_first lists the boundary windows first, then the interior, each by confidence; the texts below said
+    # "least confident first" for it too (2026-10-06), and on a map whose least confident windows are interior the
+    # 5% set held none of them while the reply said to check the least confident windows first
+    boundary_first = s.get("review_order") == "boundary_first"
     sets = ", ".join(f"{rs[b]['n_windows']} ({_budget(b)})" for b in rs)
     # a review set most of whose windows tie at its cut-off is ordered by raster position: a class map read as
     # scores (a 0/1 map, or class ids passed as logits) does this, and the package does not refuse it
@@ -550,15 +555,18 @@ def assess(
                      "A class map passed with logits=true, or a 0/1 map, is read as scores and ties like this; if the "
                      "file is one, pass the model's per-class scores instead."))
     else:
-        opener = ("Check the least confident windows first. This ranks the windows; it does not say how wrong the map "
-                  "is, and labels on the review set do not give the error rate, because the review set is not a "
-                  "sample.")
+        opener = (("Check the windows on a class boundary first, then the interior, each least confident first."
+                   if boundary_first else "Check the least confident windows first.")
+                  + " This ranks the windows; it does not say how wrong the map is, and labels on the review set do "
+                  "not give the error rate, because the review set is not a sample.")
     # a .npy carries no georeferencing, so the CSVs' x and y are empty (the agent test of 2 October 2026)
     where = "pixel and map coordinates" if not scores.lower().endswith(".npy") else (
         "pixel coordinates (a .npy has no georeferencing, so x and y are empty)")
+    listed = (f"with {where}, the windows on a class boundary first and then the interior, each part least confident "
+              "first" if boundary_first else f"least confident first with {where}")
     said = [f"{opener} Of {s['n_windows']} windows of {s['patch_px']} x "
-            f"{s['patch_px']} pixels, the review sets hold {sets} windows, each listed least confident first with "
-            f"{where}. The {_budget(b5)} review set is in {files.get(f'review_set_{b5}')}; files names the others."]
+            f"{s['patch_px']} pixels, the review sets hold {sets} windows, each listed {listed}. The {_budget(b5)} "
+            f"review set is in {files.get(f'review_set_{b5}')}; files names the others."]
     boundary = f"{_pc(s['boundary_window_fraction'])} of all windows sit on a class boundary of the map."
     grid = _grid_shape(files.get("boundary", ""))
     line = grid is not None and min(grid) == 1 and max(grid) > 1
@@ -574,22 +582,40 @@ def assess(
               "The order says where to look. Its grade against the reference holds for this map and this reference only.",
               "The review set is not a sample. It is chosen to hold errors, so its error rate overstates the map's.",
               "A window's confidence ranks windows; it is not the probability that the window is wrong.",
-              "Errors the model is sure of come last in this order, so a review of the review set does not find them.",
-              "In the review-set CSVs, confidence is the score the order ranks by, higher meaning more confident: "
+              ("Errors the model is sure of away from a class boundary come last in this order, so a review of the "
+               "review set does not find them." if boundary_first else
+               "Errors the model is sure of come last in this order, so a review of the review set does not find them."),
+              ("In the review-set CSVs, the boundary column (above 0 on a class boundary) says which part a window is "
+               "in, and confidence orders the windows within each part, higher meaning more confident: "
+               if boundary_first else
+               "In the review-set CSVs, confidence is the score the order ranks by, higher meaning more confident: ")
               + ("the product's confidence band, as given, averaged over the window." if confidence else
                  "the gap between the two highest logits, which has no upper bound." if logits else
                  "read from the class probabilities.") + " The suspicion raster holds minus that score, so higher is "
-              "more suspect; it ranks the windows as summary.signal does."]
+              "more suspect; it ranks the windows as summary.signal does"
+              + (", by confidence alone, not in this order: the boundary raster marks the windows put first."
+                 if boundary_first else ".")]
     if line:
         limits.append(boundary[:-1] + f", but the window grid is one window {'high' if grid[0] == 1 else 'wide'}, so "
                       "this share counts neighbours along one line only and says little about the map.")
     ref = s.get("against_reference") or {}
     if reference is not None:
         cap = ref.get("error_capture_at_budget") or {}
-        if cap:
+        if cap and int(ref.get("n_windows_scored") or 0) < int(s["n_windows"]):
+            # The capture ranks only the windows the reference grades (assess.py), so it is not the review set's: with
+            # a reference on a quarter of the quick-start map "the 5% review set holds 67%" was said of a set that
+            # holds 35% of them (2026-10-06). Said of the set it is measured on.
+            n_ref, k = int(ref["n_windows_scored"]), int(cap[b5]["n_reviewed"])
+            said.append(f"Against the reference, which grades {n_ref} of the {s['n_windows']} windows, "
+                        f"{_pc(ref.get('error_rate'))} of those {n_ref} disagree with it; the first {k} of them in the "
+                        f"review order ({_budget(b5)} of them) hold {_pc(cap[b5]['errors_captured_fraction'], 0)} of "
+                        f"those disagreements. That is not the {_budget(b5)} review set, which is drawn from every "
+                        "window.")
+        elif cap:
             said.append(f"Against the reference, {_pc(ref.get('error_rate'))} of the scored windows disagree with it; "
                         f"the {_budget(b5)} review set holds {_pc(cap[b5]['errors_captured_fraction'], 0)} of those "
                         "disagreements.")
+        if cap:     # the capture is measured on the graded windows, which with a partial reference are not all of them
             summ["against_reference"] = {"error_rate": ref.get("error_rate"), "n_windows_scored": ref.get("n_windows_scored"),
                                          "errors_captured_fraction": {b: v["errors_captured_fraction"] for b, v in cap.items()}}
         else:
@@ -698,6 +724,10 @@ def compare(
         summ["which_side"] = ws
         summ["crosstab"] = graded.get("crosstab")
         limits = ["The labels are assumed right: the grading describes agreement with them."]
+        # Across dates the labels' date favours one map: the other is counted wrong wherever the ground changed. The
+        # shares above were quoted without it, though decide on the same file says it (2026-10-06).
+        if s["dates"]["status"] in ("different_time", "overlapping_time") and graded.get("graded_against"):
+            limits.append(_cap(graded["graded_against"]))
     else:
         limits = [HARD_RULES[2]]
         # the limit a small model dropped when it named the better map anyway (the agent test of 2 October 2026)
@@ -705,11 +735,18 @@ def compare(
     if s["dates"]["status"] in ("different_time", "overlapping_time", "partly_stated"):
         said.append(s["dates"]["reading"][0].upper() + s["dates"]["reading"][1:] + ".")
     limits += ["A difference between the maps says neither map's error rate."] + caveats + _notes(s.get("notes", []))
-    nxt = ("To learn which map is more accurate with few labels: sample on map a with other set to map b draws windows "
-           "only where they differ; a reviewer writes the class seen in each, and estimate says which map is more "
-           "accurate and by how much. With a label raster on the same grid, compare again with labels. For either "
-           "map's own error rate: sample on that map's scores, label, estimate." if not graded else
-           "For either map's error rate: sample on that map's scores, label, estimate.")
+    if not s["n_disagree"]:
+        # sample with other refuses two maps that differ nowhere, and labels grade them alike: proposing either sent
+        # the agent into a refusal (2026-10-06)
+        nxt = ("The maps differ in no window, so neither is more accurate on the windows compared and there is nothing "
+               "to label between them. For either map's own error rate: sample on that map's scores, label, estimate.")
+    elif not graded:
+        nxt = ("To learn which map is more accurate with few labels: sample on map a with other set to map b draws "
+               "windows only where they differ; a reviewer writes the class seen in each, and estimate says which map "
+               "is more accurate and by how much. With a label raster on the same grid, compare again with labels. For "
+               "either map's own error rate: sample on that map's scores, label, estimate.")
+    else:
+        nxt = "For either map's error rate: sample on that map's scores, label, estimate."
     return _reply(" ".join(said), _join(limits), nxt, files, summ)
 
 
@@ -935,7 +972,16 @@ def estimate(
         nxt = (f"certify refuses a {r['design']} sample. To certify a zone, draw a new sample with design \"random\" "
                "and have it labelled.")
     if not per_class:
-        nxt += " With a reference_class column (the class seen in each window), per_class=true gives each class's accuracy."
+        # per_class refuses a tiles sample, ? rows and a stated reviewer rate; proposing it on such a sample with only
+        # the reference_class column as its precondition led straight to a refusal (2026-10-06)
+        if r["design"] == "tiles":
+            nxt += (" Each class's accuracy (per_class) needs a sample of another design (random, confidence, "
+                    "proportional or condition): it is not graded on a tiles sample.")
+        else:
+            need = [said for said, applies in (("every row judged (no ?)", unjudged),
+                                               ("no reviewer rate, the labels taken as right", stated)) if applies]
+            nxt += (" With a reference_class column (the class seen in each window)"
+                    + "".join(f", {said}" for said in need) + ", per_class=true gives each class's accuracy.")
     return _reply(" ".join(said), _join(limits), nxt, {"estimate": out}, summ)
 
 
@@ -1013,7 +1059,8 @@ def certify(
         summ.update({k: r.get(k) for k in ("by_condition", "delta_per_condition", "n_conditions_tested",
                                            "certified_share_of_map", "n_certified")})
         summ["per_condition"] = {name: {k: e.get(k) for k in ("tested", "coverage", "n_zone", "n_population",
-                                                               "n_labelled", "threshold", "upper_bound", "reason")}
+                                                               "n_labelled", "threshold", "upper_bound", "reason",
+                                                               "n_tied_at_threshold", "n_tied_inside_zone")}
                                  for name, e in r["per_condition"].items()}
         certified = r.get("certified_share_of_map") is not None
     elif r["coverage"] is not None:
@@ -1047,8 +1094,22 @@ def certify(
               "needs the labelled windows to be a random sample."]
     # with no zone and no condition, the note is the conclusion's reason, said there once
     scope = r.get("scope")
+    # A product's range leaves pixels out, and "N of M windows" counts only the rest: the whole-map reply dropped
+    # the note that says so (2026-10-06). Per condition it comes in the printed lines of the conclusion.
     limits += _notes([r.get("note") if certified or r.get("by_condition") else None,
+                      None if r.get("by_condition") else r.get("population_note"),
                       MCP_SCOPE["certify"] if scope == est.SCOPE_CERTIFY else scope])
+    if r.get("by_condition"):
+        # A condition's zone can end inside a block of windows tied at its threshold (a saturated or integer band),
+        # and "margin >= threshold" then takes in windows the zone leaves out. The whole map's note says so; the
+        # per-condition reply did not (2026-10-06), and read as a rule the threshold took in 819 uncertified
+        # windows, all wrong.
+        for name, e in r["per_condition"].items():
+            tied, inside = int(e.get("n_tied_at_threshold") or 0), int(e.get("n_tied_inside_zone") or 0)
+            if e.get("coverage") is not None and tied > inside:
+                limits.append(f"Note: in condition {name}, {tied} windows share the threshold score and only {inside} "
+                              "of them are inside its zone, so the zone is the set in the window mask, not every "
+                              "window of the condition at or above the threshold.")
     if r.get("by_condition"):
         nxt = _condition_need(r, float(alpha), float(delta))
         if certified:
@@ -1113,15 +1174,32 @@ def decide(
     for q, a in r["answers"].items():
         shown = _pc(a["answer"]) if a["type"] == "score" else a["answer"]
         said.append(f"{q}: {shown}. {a['because']}")
+    rkind = r["result_kind"]
     limits = ("Each answer is read from the result file and adds no evidence of its own. undetermined means the result "
-              "does not settle the question; it is not a no. Answers per class or per condition each rest on their own "
-              "interval, and the intervals do not hold jointly.")
+              "does not settle the question; it is not a no.")
+    # A zone certified per condition splits delta over the conditions tested, so its statements hold together; an
+    # estimate's per-condition and per-class intervals are each 95% on their own. One sentence said the latter of
+    # both (2026-10-06), against the zone's own note and the certify reply.
+    if rkind == "estimate":
+        limits += (" Answers per class or per condition each rest on their own interval, and the intervals do not "
+                   "hold jointly.")
+    elif rkind == "zone" and any(a.get("per_condition") for a in r["answers"].values()):
+        delta = next(a["evidence"].get("delta") for a in r["answers"].values() if a.get("per_condition"))
+        limits += (" The conditions' certificates hold together: delta is split over the conditions tested, so all "
+                   f"their statements hold except on at most {_pc(delta)} of samples.")
     pending = [q for q, a in r["answers"].items()
                if a["answer"] == "undetermined"
                or any(x.get("answer") == "undetermined" for x in (a.get("per_class") or {}).values())
                or any(x.get("answer") == "undetermined" for x in (a.get("per_condition") or {}).values())]
-    nxt = (("For " + ", ".join(pending) + ": a larger sample drawn the same way, labelled in full, narrows the "
-            "interval or certifies more.") if pending else
+    # what can settle an undetermined answer depends on the result: a comparison has no sample to enlarge and no
+    # interval to narrow, and "a larger sample drawn the same way" sent the agent looking for one (2026-10-06)
+    more = {"comparison": ("the labels raster does not cover every differing window; sample on map a with other set "
+                           "to map b, have a reviewer write reference_class on every row, then estimate, and ask "
+                           "more_accurate of that estimate."),
+            "zone": ("a larger random sample (sample with design \"random\", or with the same condition layer, and a "
+                     "larger budget), labelled in full, can certify more.")}
+    nxt = (("For " + ", ".join(pending) + ": " + more.get(rkind, "a larger sample drawn the same way, labelled in "
+                                                                "full, narrows the interval.")) if pending else
            "The result can also answer: " + ", ".join(r["available"]) + ".")
     summ = {"result_kind": r["result_kind"], "answers": {q: a["answer"] for q, a in r["answers"].items()},
             "per_condition": {q: a["per_condition"] for q, a in r["answers"].items() if a.get("per_condition")} or None,

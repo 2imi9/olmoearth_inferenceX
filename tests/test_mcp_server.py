@@ -434,7 +434,13 @@ def test_the_first_question_runs_on_the_demo_tile(tmp_path, monkeypatch, capsys)
     pinned = json.load(open(os.path.join(ROOT, "exp", "out", "demo_sample_audit.json")))["review_sets"]["0.05"]
     assert out["summary"]["against_reference"]["errors_captured_fraction"]["0.05"] == pinned["errors_captured_fraction"]
     assert out["summary"]["review_sets"]["0.05"] == pinned["n_windows"]
-    assert f"the 5% review set holds {100 * pinned['errors_captured_fraction']:.0f}% of those" in out["conclusion"]
+    # the expert labels cover part of the tile, so the capture is said of the graded windows, not of the review set
+    # (the 2026-10-06 fix): the sentence names how many windows the reference grades and that this is not the set
+    n_ref = out["summary"]["against_reference"]["n_windows_scored"]
+    assert n_ref < out["summary"]["n_windows"]
+    assert f"which grades {n_ref} of the {out['summary']['n_windows']} windows" in out["conclusion"]
+    assert f"hold {100 * pinned['errors_captured_fraction']:.0f}% of those disagreements" in out["conclusion"]
+    assert "That is not the 5% review set" in out["conclusion"]
 
 
 # ----------------------------------------------------------------------------- the example questions in the docs

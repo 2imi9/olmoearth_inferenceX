@@ -138,7 +138,10 @@ def main():
                 w, l, tt = wins_losses_ties(np.array(list(gains.values())))
                 r = {"n_windows": rep["n_windows"], "n_errors": rep["n_errors"], "weights": rep["weights"], "held_out_excess_aurc": held, "confidence_excess_aurc": conf_e, "lead_over_confidence": conf_e - held,
                      "best_single": rep["best_single"], "best_single_excess_aurc": rep["best_single_excess_aurc"], "singles": rep["singles_excess_aurc"],
-                     "held_out_capture": rep["held_out"]["capture"], "ece": rep["held_out"]["ece_of_p_error"],
+                     "held_out_capture": rep["held_out"]["capture"],
+                     # the recorded ECE is of the balanced fit's output; since 2026-10-06 ece_of_p_error adds the prior
+                     # back, so the recorded quantity is read under its own name
+                     "ece": rep["held_out"].get("ece_without_prior_correction", rep["held_out"]["ece_of_p_error"]),
                      "tiles_vs_confidence": {"w": w, "l": l, "t": tt, "sign_p": sign_test(w, l, "greater")}, "fusion": fusion.to_dict()}
                 summary["results"]["ranker"][name] = r
                 rows.append({"fit": "ranker", "pair": "v1 S2 head", "testbed": name, "held_out": held, "baseline": conf_e, "gain": conf_e - held, "tiles_w": w, "tiles_l": l, "sign_p": r["tiles_vs_confidence"]["sign_p"]})

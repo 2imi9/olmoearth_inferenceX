@@ -2,6 +2,7 @@
 
     python quickstart_map.py                      # writes scores.tif, other.tif and truth.tif
     python quickstart_map.py --label to_label.csv # fills `wrong` and `reference_class` from truth.tif
+                                                  # (`reference_class` alone on a sample drawn with --other)
 
 scores.tif and other.tif are two four-class probability maps of one synthetic scene of 256 x 256 pixels,
 shape (4, 256, 256), float32. truth.tif holds the class that is really there. Most errors sit on the class
@@ -105,8 +106,9 @@ def write_maps():
 
 
 def label(path, truth_path="truth.tif"):
-    """What a reviewer does by eye: for each sampled window, write the class that is really there and whether
-    the map's class differs from it."""
+    """What a reviewer does by eye: for each sampled window, write the class that is really there and, on a sample
+    of one map, whether the map's class differs from it. A sample drawn with --other (two maps) has no map_class and
+    no `wrong`; it takes the class seen alone, and estimate says which map is more accurate."""
     import rasterio
 
     with rasterio.open(truth_path) as src:
@@ -116,16 +118,19 @@ def label(path, truth_path="truth.tif"):
     fields = list(rows[0])
     if "reference_class" not in fields:
         fields.append("reference_class")
+    one_map = "map_class" in fields          # a pairs CSV crashed here on a KeyError until 2026-10-06
     for row in rows:
         r, c = int(row["pixel_row"]), int(row["pixel_col"])
         seen = int(np.bincount(truth[r:r + PATCH, c:c + PATCH].ravel()).argmax())
         row["reference_class"] = seen
-        row["wrong"] = int(seen != int(row["map_class"]))
+        if one_map:
+            row["wrong"] = int(seen != int(row["map_class"]))
     with open(path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fields)
         writer.writeheader()
         writer.writerows(rows)
-    print(f"labelled {len(rows)} windows in {path}: {sum(row['wrong'] for row in rows)} wrong")
+    print(f"labelled {len(rows)} windows in {path}"
+          + (f": {sum(row['wrong'] for row in rows)} wrong" if one_map else ": the class seen in each"))
 
 
 if __name__ == "__main__":

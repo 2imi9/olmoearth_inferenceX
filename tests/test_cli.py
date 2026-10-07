@@ -991,7 +991,8 @@ def test_certify_prints_a_condition_whose_labels_look_chosen_as_not_tested(tmp_p
     side_path = tmp_path / "r.json"
     side = json.load(open(side_path))
     grid, idx = np.asarray(side["condition_grid"]), np.asarray(side["indices"])
-    conf = assess_prediction(probs, is_logit=False, patch=4, nodata_mask=~np.isfinite(probs).all(0))["arrays"]["confidence"]
+    arrays = assess_prediction(probs, is_logit=False, patch=4, nodata_mask=~np.isfinite(probs).all(0))["arrays"]
+    conf, klass = arrays["confidence"], arrays["pooled_argmax"]
     cloudy = np.flatnonzero(grid == 1)
     n1 = int((grid[idx] == 1).sum())
     chosen = cloudy[np.lexsort((cloudy, conf.ravel()[cloudy]))[:n1]]        # cloudy's least confident windows
@@ -1005,6 +1006,7 @@ def test_certify_prints_a_condition_whose_labels_look_chosen_as_not_tested(tmp_p
         r = dict(by.get(int(i), rows[0]))
         r.update({"index": str(int(i)), "window_row": str(int(i) // 32), "window_col": str(int(i) % 32),
                   "condition": side["condition"]["names"][int(grid[i])], "confidence": repr(float(conf.ravel()[i])),
+                  "map_class": str(int(klass.ravel()[i])),        # certify checks the CSV's class against the map's
                   "wrong": r["wrong"] if int(i) in by else "0"})
         fresh.append(r)
     _write_rows(out, fresh)

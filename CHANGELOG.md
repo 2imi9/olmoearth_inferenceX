@@ -2,6 +2,37 @@
 
 ## Unreleased
 
+**A bug hunt over the whole package (2026-10-06): 64 reported, 60 confirmed by an independent reproduction, all fixed.**
+Seven finders, one per module group, had to show each bug with a script; a second agent reran it and tried to refute
+it. The ones a user would have trusted:
+- a single-band `.npy` map of shape `(1, H, W)` was read as one class, so `compare` reported that two different maps
+  never differed and `sample --other` refused them for the same false reason;
+- a multi-band raster with a no-data value dropped every pixel where any band held it, so the surest pixels of a
+  probability map (one class at exactly 0) vanished and the error rate came out about twice the truth; a pixel is now
+  no-data only when every band holds the value, as in GDAL's mask (a sample drawn before on such a raster names a
+  population that no longer exists: `estimate --per-class` and `certify` say so, and it must be drawn again);
+- `assess --condition` wrote over the user's own layer when `--out` was its directory and the file was named
+  `condition.npy` or `condition.tif`; any output that would overwrite an input is now refused;
+- `estimate --per-class` under the condition design gave overall accuracy from the retired stratified Wilson
+  interval (coverage 0.545 on a test map); it is now the complement of the whole-map interval;
+- `assess_classmap` ranked windows with no confidence (NaN) first; `--threshold` also cut an integer 0/1 class map
+  (a float map that happens to hold 0 and 1 is still cut); the MCP
+  `assess` said a review set held a share of the reference's disagreements that was measured only on the windows a
+  partial reference grades; `calibrate.fit_side` counted a window right when neither side matched; `metrics.augrc`
+  and `selective_accuracy` ignored ties, so their value depended on raster order.
+The others: crashes on reasonable inputs (`--patch 0`, a fully clouded scene, `--out` naming a file or a missing
+directory, a mistyped path, a sidecar written over by `--out`), memory that grew with the largest class id or group
+count, a grid check that skipped labels when the first map was a `.npy`, interval ends computed in floats one float
+inside a truth on the end (the two-map difference, the reviewer bounds), an exact-test fallback window too small for
+large zones (now exact up to 5 million windows; above that the floats decide, as before, since the exact sums took
+seconds per interval on a full Sentinel-2 tile), options accepted and silently ignored (`--confidence` without `--per-class`), a strict-JSON-breaking
+`NaN` in sidecars, and texts in the MCP server and `decide` that dropped notes or proposed a step the tools then
+refuse. `tests/test_bugfix_*.py` pins each by its consequence; two existing tests that fed inconsistent inputs or
+quoted the old capture sentence were updated. Two regression reviews of the fixes found no recorded number changed
+(exp88, exp90, exp91, exp92 and exp93 rerun or recomputed identically) and four issues the fixes had introduced, fixed
+before commit: the 0/1 mask rule caught float maps holding 0 and 1, a refusal gave advice no option could follow, the
+exact fallback slowed very large maps, and exp65 read a renamed ECE.
+
 **Published products as input: a class map with its confidence band** (`--confidence BAND`, `--confidence-range LOW
 HIGH` on `assess` and `sample`; `estimate` and `certify` read both layers from the sample's sidecar; the same parameters
 in the MCP server). Products such as LCMAP ship a class map and a per-pixel confidence layer, not per-class scores,

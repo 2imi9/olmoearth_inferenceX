@@ -105,7 +105,9 @@ class LCCTile:
 
     def index(self, x, y):
         """Projection coordinates -> (row, col); raises if outside the raster."""
-        row, col = int((self.y0 - y) / self.res_y), int((x - self.x0) / self.res_x)
+        # floor, not int(): int() rounds toward zero, so until 2026-10-06 a point up to one pixel above or left of the
+        # raster came back as row 0 or column 0 instead of being refused
+        row, col = math.floor((self.y0 - y) / self.res_y), math.floor((x - self.x0) / self.res_x)
         if not (0 <= row < self.height and 0 <= col < self.width):
             raise ValueError(f"point ({x:.0f}, {y:.0f}) outside {self.name} bounds {self.bounds} (EPSG:{self.epsg})")
         return row, col
@@ -119,16 +121,27 @@ class LCCTile:
         return np.frombuffer(raw, dtype=np.uint8).reshape(self.tile_h, self.tile_w, self.bands)
 
     def read(self, row, col, size):
-        """Read a (bands, size, size) window whose top-left pixel is (row, col)."""
+        """Read a (bands, size, size) window whose top-left pixel is (row, col). Pixels outside the raster are 0,
+        no prediction, as everywhere in the product."""
         out = np.zeros((size, size, self.bands), dtype=np.uint8)
-        t0, t1 = row // self.tile_h, (row + size - 1) // self.tile_h
-        s0, s1 = col // self.tile_w, (col + size - 1) // self.tile_w
+        # Only the pixels inside the raster are read. Until 2026-10-06 the tile loop ran over every tile index the
+        # window touched: a negative index wrapped through numpy to the opposite end of the tile table, one past the
+        # last column rolled into the next tile row, and one past the last row raised IndexError, so read_window on a
+        # point within size/2 px of the top, left or right edge filled the outside with real predictions from the far
+        # side of the raster, which nodata_mask then counted as data, and near the bottom edge crashed. The clip to
+        # width and height also keeps the padding of the last internal tiles at 0.
+        r_lo, r_hi = max(row, 0), min(row + size, self.height)
+        c_lo, c_hi = max(col, 0), min(col + size, self.width)
+        if r_lo >= r_hi or c_lo >= c_hi:
+            return out.transpose(2, 0, 1)
+        t0, t1 = r_lo // self.tile_h, (r_hi - 1) // self.tile_h
+        s0, s1 = c_lo // self.tile_w, (c_hi - 1) // self.tile_w
         for ti in range(t0, t1 + 1):
             for tj in range(s0, s1 + 1):
                 tile = self._tile(ti, tj)
                 r_a, c_a = ti * self.tile_h, tj * self.tile_w
-                rr0, rr1 = max(row, r_a), min(row + size, r_a + self.tile_h)
-                cc0, cc1 = max(col, c_a), min(col + size, c_a + self.tile_w)
+                rr0, rr1 = max(r_lo, r_a), min(r_hi, r_a + self.tile_h)
+                cc0, cc1 = max(c_lo, c_a), min(c_hi, c_a + self.tile_w)
                 out[rr0 - row:rr1 - row, cc0 - col:cc1 - col] = tile[rr0 - r_a:rr1 - r_a, cc0 - c_a:cc1 - c_a]
         return out.transpose(2, 0, 1)
 

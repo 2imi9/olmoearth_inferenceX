@@ -50,11 +50,15 @@ def _logistic(X, y, balanced=False, ridge=1e-3, iters=40):
 
 
 class Fusion:
-    """A fitted combination of named readings: standardisation, weights, bias, the family it was fitted on."""
+    """A fitted combination of named readings: standardisation, weights, bias, the family it was fitted on.
 
-    def __init__(self, kind, names, mu, sd, w, b, family=None, n_fit=0, baseline=None):
+    `prior_logit` is the log prior odds a class-balanced fit took out of its intercept, log(n_positive / n_negative)
+    of the fitting set; `prob` adds it back, `score` does not (a constant does not change the order)."""
+
+    def __init__(self, kind, names, mu, sd, w, b, family=None, n_fit=0, baseline=None, prior_logit=0.0):
         self.kind, self.names, self.family, self.n_fit, self.baseline = kind, list(names), family, int(n_fit), baseline
         self.mu, self.sd, self.w, self.b = np.asarray(mu, float), np.asarray(sd, float), np.asarray(w, float), float(b)
+        self.prior_logit = float(prior_logit)
 
     def _design(self, features):
         missing = [k for k in self.names if k not in features]
@@ -70,14 +74,21 @@ class Fusion:
                          f"transfer (exp59 lost 26 points on the fine-tuned pair); refit, or pass force=True")
 
     def score(self, features, family=None, force=False):
-        """The logit: for a ranker higher means more suspect; for a side rule higher means side b more likely right.
-        Shape of the first feature."""
+        """The fitted logit: for a ranker higher means more suspect; for a side rule higher means side b more likely
+        right. For a ranker fitted with balanced=True (the default) it is the logit under equal class weights, which
+        orders the windows; `prob` is the probability. Shape of the first feature."""
         self.check_family(family, force)
         shape = np.shape(features[self.names[0]])
         return (self._design(features) @ self.w + self.b).reshape(shape)
 
     def prob(self, features, family=None, force=False):
-        return 1.0 / (1.0 + np.exp(-self.score(features, family, force)))
+        """P(error) for a ranker, P(b right) for a side rule, with the fitting set's prior odds restored.
+
+        Until 2026-10-06 a balanced ranker returned the probability under a 50/50 prior: on a map with 5% of its
+        windows wrong the mean was 0.41 and its ECE 0.36, while the order was the one an unweighted fit gives. The
+        log prior odds are added back now (mean 0.05, ECE 0.002 there). A Fusion saved before then has no
+        prior_logit and still returns the 50/50 probability."""
+        return 1.0 / (1.0 + np.exp(-(self.score(features, family, force) + self.prior_logit)))
 
     def weights(self):
         """Per reading: the weight on the standardised reading, and its sign as the direction the fit learned."""
@@ -86,11 +97,12 @@ class Fusion:
 
     def to_dict(self):
         return {"kind": self.kind, "names": self.names, "mu": self.mu.tolist(), "sd": self.sd.tolist(), "w": self.w.tolist(), "b": self.b,
-                "family": self.family, "n_fit": self.n_fit, "baseline": self.baseline}
+                "family": self.family, "n_fit": self.n_fit, "baseline": self.baseline, "prior_logit": self.prior_logit}
 
     @classmethod
     def from_dict(cls, d):
-        return cls(d["kind"], d["names"], d["mu"], d["sd"], d["w"], d["b"], d.get("family"), d.get("n_fit", 0), d.get("baseline"))
+        return cls(d["kind"], d["names"], d["mu"], d["sd"], d["w"], d["b"], d.get("family"), d.get("n_fit", 0), d.get("baseline"),
+                   d.get("prior_logit", 0.0))
 
 
 # ----------------------------------------------------------------------------- shared machinery
@@ -137,6 +149,24 @@ def _crossfit(X, y, fold, balanced, n_folds):
     return out
 
 
+def _prior_logit(y):
+    """log(n_positive / n_negative): the log prior odds a class-balanced fit removes from its intercept, which a
+    probability must add back (the prior correction for a reweighted logistic fit). 0 when a class is absent."""
+    pos = float(np.sum(np.asarray(y) > 0.5))
+    neg = float(np.size(y)) - pos
+    return float(np.log(pos / neg)) if pos > 0 and neg > 0 else 0.0
+
+
+def _crossfit_prior_logit(y, fold, n_folds):
+    """Per row, the prior log odds of the training side of its fold: the correction for `_crossfit`'s balanced logits.
+    Kept apart from `_crossfit` so the held-out logits, and the held-out order every recorded number uses, stay as
+    they were; a per-fold constant would reorder rows across folds."""
+    out = np.zeros(len(y))
+    for k in range(n_folds):
+        out[fold == k] = _prior_logit(y[fold != k])
+    return out
+
+
 def _scoreable(err):
     return MIN_GROUP_ERRORS <= err.sum() <= len(err) - MIN_GROUP_ERRORS
 
@@ -149,7 +179,13 @@ def fit_ranker(signals, errors, ok, groups=None, family=None, folds=5, budgets=(
     window; ok: validity; groups: tile or event id per window, the unit of cross-fitting and of the sign test.
     Returns (Fusion, report). The report: the weights with their learned directions; the fusion's held-out excess
     AURC, capture at the budgets and calibration (ECE of P(error)); every single signal's excess AURC as given and
-    flipped; the best single; and a one-sided sign test over groups that the held-out fusion beats the best single."""
+    flipped; the best single; and a one-sided sign test over groups that the held-out fusion beats the best single.
+
+    balanced=True (the default) fits with the errors reweighted to half the total weight, so a rare error class is not
+    ignored; the fitting set's log prior odds are then added back for the probability (Fusion.prior_logit, and each
+    fold's own for the held-out ECE), so `prob` and `ece_of_p_error` describe P(error) at the fitting set's error rate.
+    The order, and with it every excess AURC and capture, is that of the balanced logit. `ece_without_prior_correction`
+    is the ECE of the balanced probability, the number exp65 recorded as its "ece"."""
     names = list(signals)
     okm = np.asarray(ok) > 0.5
     err = (np.asarray(errors, dtype=np.float64) > 0.5).astype(np.float64)[okm]
@@ -157,10 +193,16 @@ def fit_ranker(signals, errors, ok, groups=None, family=None, folds=5, budgets=(
     Xraw = np.nan_to_num(Xraw)
     X, mu, sd = _standardise(Xraw)
     w, b = _logistic(X, err, balanced)
-    fusion = Fusion("ranker", names, mu, sd, w, b, family, int(okm.sum()))
+    # A balanced fit's intercept is the one under a 50/50 prior. Until 2026-10-06 Fusion.prob and the held-out
+    # ece_of_p_error used it as P(error): mean 0.41 and ECE 0.36 on a map with 5% of its windows wrong, a calibration
+    # number that measured the reweighting, not the readings. The prior goes back in for the probability only; the
+    # logit, the order and every recorded excess AURC are unchanged.
+    prior = _prior_logit(err) if balanced else 0.0
+    fusion = Fusion("ranker", names, mu, sd, w, b, family, int(okm.sum()), prior_logit=prior)
     g = None if groups is None else np.broadcast_to(np.asarray(groups).reshape(np.asarray(groups).shape + (1,) * (np.asarray(ok).ndim - np.asarray(groups).ndim)), np.shape(ok))[okm]
     fold = _folds(g, len(err), folds)
     held = _crossfit(X, err, fold, balanced, folds)
+    held_prior = _crossfit_prior_logit(err, fold, folds) if balanced else np.zeros(len(err))
     singles = {k: {"as_given": excess_aurc(Xraw[:, i], err), "flipped": excess_aurc(-Xraw[:, i], err)} for i, k in enumerate(names)}
     # The fusion learns each reading's sign, so scoring the baseline only "as given" grades a sign-free model
     # against a sign-locked one. A user who passes readings oriented "higher is safer", which the docstring invites,
@@ -175,11 +217,13 @@ def fit_ranker(signals, errors, ok, groups=None, family=None, folds=5, budgets=(
     n_unscored = int((~scored).sum())
     hs, es, bs = held[scored], err[scored], best[scored]
     best_e = min(singles[best_name]["as_given"], singles[best_name]["flipped"])
-    ho = ({"excess_aurc": float("nan"), "capture": {}, "ece_of_p_error": float("nan")} if not _scoreable(es) else
+    ho = ({"excess_aurc": float("nan"), "capture": {}, "ece_of_p_error": float("nan"), "ece_without_prior_correction": float("nan")}
+          if not _scoreable(es) else
           {"excess_aurc": excess_aurc(hs, es), "capture": {str(k): v for k, v in capture_at_budget_expected(hs, es, budgets).items()},
-           "ece_of_p_error": expected_calibration_error(1 / (1 + np.exp(-hs)), es)[0]})
+           "ece_of_p_error": expected_calibration_error(1 / (1 + np.exp(-(hs + held_prior[scored]))), es)[0],
+           "ece_without_prior_correction": expected_calibration_error(1 / (1 + np.exp(-hs)), es)[0]})
     report = {"n_windows": int(okm.sum()), "n_errors": int(err.sum()), "n_groups": int(len(np.unique(g))) if g is not None else None, "folds": folds,
-              "weights": fusion.weights(), "bias": b,
+              "weights": fusion.weights(), "bias": b, "prior_logit": prior,
               "held_out": ho, "n_unscored_rows": n_unscored,
               "n_scored_rows": int(scored.sum()),
               "unscored_note": ("no fold could be fitted; every held-out number is undefined" if n_unscored == len(held)
@@ -246,9 +290,16 @@ def fit_side(features_a, features_b, a, b, ok, labels, groups=None, family=None,
     # inside the held-out share; they are excluded and counted, as fit_ranker has done since 2026-09-21.
     scored = np.isfinite(held)
     n_unscored = int((~scored).sum())
-    fitted_right = (held > 0) == (y > 0.5)
-    base_right = ((feats[f"{baseline}:a-b"][d] < 0) == (y > 0.5))
     a_right, b_right = (a_ == lab)[d], (b_ == lab)[d]
+    # A rule is right on a window when the side it believes equals the label, as always_a and always_b are counted.
+    # Until 2026-10-06 it was scored as (believes b) == (b is right), which counts "believe a" as right wherever b is
+    # wrong, even where a is wrong too: on a three-class pair with 47% of windows where neither side is right the
+    # fitted rule read 0.921 and the margin rule 0.650, above the 0.526 any rule can reach. A binary pair has no such
+    # window, so exp60's and exp65's shares are unchanged.
+    fitted_right = np.where(held > 0, b_right, a_right)
+    base_believes_b = feats[f"{baseline}:a-b"][d] < 0
+    base_right = np.where(base_believes_b, b_right, a_right)
+    base_all = base_right
     # every comparator on the rows the fitted rule was scored on: with an unscored fold the rule's share covered half
     # the rows and "always b" all of them, which read as a 22-point win on rows where the two tied (review, 2026-09-23)
     sc = scored if scored.any() else np.zeros_like(scored)
@@ -268,7 +319,6 @@ def fit_side(features_a, features_b, a, b, ok, labels, groups=None, family=None,
         for gid in np.unique(g):
             m = (g == gid) & scored
             if m.sum() >= min_group_windows:
-                base_all = (feats[f"{baseline}:a-b"][d] < 0) == (y > 0.5)
                 gains[gid.item() if hasattr(gid, "item") else gid] = float(fitted_right[m].mean() - base_all[m].mean())
         report["over_groups_vs_baseline"] = over_groups(gains)
     return fusion, report

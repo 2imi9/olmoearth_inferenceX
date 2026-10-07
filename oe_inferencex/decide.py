@@ -195,9 +195,17 @@ def _answer_class(r, t, which):
            "a few sampled errors can be missed by its interval"
            + (f", and {warned} class{'' if warned == 1 else 'es'} carry the package's warning" if warned else "")
            + ". " + _labels_clause(r))
+    # The table's own warning and notes (2026-10-06): a map class with no labelled window leaves its share out of
+    # every class's producer's accuracy, `wrong` can disagree with reference_class row by row, and a product's range
+    # can leave pixels out. The because sentence dropped all three, so an agent quoting it presented the accuracies
+    # as covering the whole product with no bias to declare.
+    tail = ([f"Warning: {str(r['per_class_warning']).strip().rstrip('.')}."] if r.get("per_class_warning") else []) + [
+        _as_sentence(r[k]) for k in ("per_class_note", "population_note") if r.get(k)]
+    why = " ".join([why, *tail])
+    ev = {"per_class_method": r.get("per_class_method"), "n_labelled": r.get("n_labelled")}
+    ev.update({k: r[k] for k in ("per_class_warning", "per_class_note", "population_note") if r.get(k)})
     return {"type": "yes_no", "answer": "per class", "level": r.get("nominal_coverage", 0.95), "exact": False,
-            "because": why, "per_class": per,
-            "evidence": {"per_class_method": r.get("per_class_method"), "n_labelled": r.get("n_labelled")}}
+            "because": why, "per_class": per, "evidence": ev}
 
 
 def _as_sentence(text):
@@ -244,7 +252,14 @@ def _answer_more_accurate(r, k):
     a, b, n, total = ws["a_right"], ws["b_right"], ws["n_disagree"], r["n_disagree"]
     counted = f"a matches the labels on {a} and b on {b}" + (f", neither on {ws['neither']}" if ws.get("neither")
                                                                is not None else "")
-    if n == 0:
+    if total == 0:
+        # No window differs, so every label grades both maps alike and "every differing window carries a label" holds
+        # trivially (2026-10-06): this was answered undetermined, and decide's next then asked for labels that could
+        # not change anything.
+        ans, why = "tie", ("The two maps give the same class in every window compared, so no window separates them: "
+                           "against any labels they are equally accurate. This says nothing about either map's own "
+                           "accuracy.")
+    elif n == 0:
         ans, why = "undetermined", (f"The labels cover none of the {total} windows where the maps differ, so they "
                                     "cannot tell which map is right there.")
     elif n < total:
@@ -258,7 +273,8 @@ def _answer_more_accurate(r, k):
         why = (f"Every one of the {total} windows where the maps differ carries a label: {counted}. This is a count "
                "against the labels raster, taken as truth: it has no interval, is only as right as those labels, and "
                "says nothing about the windows where the maps agree.")
-    why = " ".join([why, *_dates_clause(r, graded=True)])
+    # with no window differing there is nothing the labels' date can favour (the review of 2026-10-06)
+    why = " ".join([why, *_dates_clause(r, graded=bool(total))])
     return {"type": "choice", "answer": ans, "level": None, "exact": None, "because": why,
             "evidence": {"which_side": ws, "n_disagree": total,
                          "graded_against": (r.get("graded") or {}).get("graded_against")}}
@@ -280,22 +296,26 @@ def _answer_trusted(r, share=None):
     else:
         why = (f"Nothing is certified at {_pc(alpha)} from {r.get('n_labelled')} labels. That is not evidence that "
                f"the map is worse than {_pc(alpha)}: more labels can certify a zone wherever the map is good enough.")
-    why += " The zone describes agreement with the reviewer's labels, which are assumed right."
+    # The labels limit and the result's notes follow whichever sentence answers. Until 2026-10-06 an undetermined
+    # trusted_share_at_least replaced them, and so dropped the ? windows counted as wrong (one reason less is
+    # certified) and the pixels a product's range left out.
+    tail = " The zone describes agreement with the reviewer's labels, which are assumed right."
     if r.get("bounds_note"):
-        why += " " + str(r["bounds_note"]).strip()
+        tail += " " + str(r["bounds_note"]).strip()
     if r.get("population_note"):
-        why += " " + str(r["population_note"]).strip()
+        tail += " " + str(r["population_note"]).strip()
     ev = {k: r.get(k) for k in ("alpha", "delta", "rule", "n_labelled", "n_population", "n_zone", "coverage",
                                 "threshold", "upper_bound", "min_labels_to_certify", "n_unjudged", "bounds_note",
                                 "population_note", "note") if r.get(k) is not None}
     if share is None:
-        out = {"type": "score", "answer": cov, "level": 1 - delta, "exact": True, "because": why, "evidence": ev}
+        out = {"type": "score", "answer": cov, "level": 1 - delta, "exact": True, "because": why + tail, "evidence": ev}
     else:
         a = "yes" if cov >= share else "undetermined"
         if a == "undetermined":
             why = (f"No zone covering at least {_pc(share)} of the map is certified at {_pc(alpha)} from these labels "
                    f"(certified: {_pc(cov)}). That is not a no: more labels can certify more, but only where the map's "
                    f"error rate is at most {_pc(alpha)}.")
+        why += tail
         out = {"type": "yes_no", "answer": a, "level": 1 - delta, "exact": True, "because": why,
                "evidence": {**ev, "certified": cov}}
     if by_cond:

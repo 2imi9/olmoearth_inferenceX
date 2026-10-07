@@ -212,13 +212,50 @@ def _hyper_tail(k, n, N, K, upper):
 # so at delta 0.3 the same labels certified a zone on one system and not on the other. Where a tail lies within _TIE
 # of its level, the comparison is redone in integer arithmetic against the level as written (0.3 is 3/10), so every
 # system decides alike. Away from the level the float decides, as before.
+# Until 2026-10-06 the window was _TIE whatever the population, but a tail's float error grows with it: lgamma(N + 1)
+# is about N ln N, a unit in its last place is worth up to eps N ln N, and nine such terms make up a tail. On a zone of
+# 1,293,697 windows (b = 233, k = 7, alpha 0.05) the p-value was 3.4e-9 off, past the window: the float gave
+# 0.0999999997, integer arithmetic 0.1000000001, and certify_zone certified the whole map at delta 0.1 where the exact
+# test refuses it. The window is now relative to the size of the numbers (`_tie`), 64 eps N ln N with _TIE its floor,
+# so the integer arithmetic decides wherever the float could err; it costs a few hundred big-integer terms at most.
 _TIE = 1e-9
+
+
+EXACT_N_MAX = 5_000_000
+
+
+def _tie(N):
+    """The relative window around a level inside which a tail over a population of N is decided exactly. Above
+    EXACT_N_MAX windows the floats decide, as before 2026-10-06: the window grows as N ln N, and on a full Sentinel-2
+    tile at patch 1 (about 1e8 windows) the exact sums it calls took seconds per interval, where the float error they
+    guard against is of order 1e-8 relative (the review of 2026-10-06). Every recorded experiment is below the cap."""
+    import math
+    N = max(int(N), 1)
+    if N > EXACT_N_MAX:
+        return _TIE
+    return max(_TIE, 64 * float(np.finfo(np.float64).eps) * N * math.log(N + 1))
 
 
 def _level(x):
     """A level as written: 0.1 is 1/10, not the binary float nearest to it."""
     from fractions import Fraction
     return x if isinstance(x, Fraction) else Fraction(repr(float(x)))
+
+
+def _float_below(q):
+    """The largest float at most the fraction q."""
+    import math
+    from fractions import Fraction
+    f = float(q)
+    return f if Fraction(f) <= q else math.nextafter(f, -math.inf)
+
+
+def _float_above(q):
+    """The smallest float at least the fraction q."""
+    import math
+    from fractions import Fraction
+    f = float(q)
+    return f if Fraction(f) >= q else math.nextafter(f, math.inf)
 
 
 def _hyper_tail_exact(k, n, N, K, upper):
@@ -230,10 +267,11 @@ def _hyper_tail_exact(k, n, N, K, upper):
     return Fraction(sum(math.comb(K, x) * math.comb(N - K, n - x) for x in xs), math.comb(N, n))
 
 
-def _at_most(value, level, exact):
-    """value <= level for a tail computed in floating point; within _TIE of the level, exact() decides."""
+def _at_most(value, level, exact, N=None):
+    """value <= level for a tail computed in floating point over a population of N; within _tie(N) of the level
+    (_TIE without N), exact() decides."""
     level = _level(level)
-    if abs(value - float(level)) > _TIE * float(level):
+    if abs(value - float(level)) > (_TIE if N is None else _tie(N)) * float(level):
         return value <= float(level)
     return exact() <= level
 
@@ -278,7 +316,7 @@ def _hypergeom_interval(k, n, N, conf):
     left, right = lo_K, hi_K                                     # smallest K with P(X >= k | K) > a (nondecreasing in K)
     while left < right:
         mid = (left + right) // 2
-        if not _at_most(_hyper_tail(k, n, N, mid, upper=True), a, lambda: _hyper_tail_exact(k, n, N, mid, upper=True)):
+        if not _at_most(_hyper_tail(k, n, N, mid, upper=True), a, lambda: _hyper_tail_exact(k, n, N, mid, upper=True), N):
             right = mid
         else:
             left = mid + 1
@@ -286,7 +324,7 @@ def _hypergeom_interval(k, n, N, conf):
     left, right = lo_K, hi_K                                     # largest K with P(X <= k | K) > a (nonincreasing in K)
     while left < right:
         mid = (left + right + 1) // 2
-        if not _at_most(_hyper_tail(k, n, N, mid, upper=False), a, lambda: _hyper_tail_exact(k, n, N, mid, upper=False)):
+        if not _at_most(_hyper_tail(k, n, N, mid, upper=False), a, lambda: _hyper_tail_exact(k, n, N, mid, upper=False), N):
             left = mid
         else:
             right = mid - 1
@@ -807,17 +845,24 @@ def _union_interval(k, n, sizes, alpha=0.05):
     for kc, nc, Nc in zip(k, n, sizes):
         if Nc == 0:
             continue
-        # hypergeom_interval's ends, exactly: population counts over N_c (the exact rate when n_c == N_c, 0 to 1
-        # with no label), widened to hold k_c / n_c. The float K / N_c times N_c is within far less than 1/2 of K.
-        a, b = _hypergeom_interval(kc, nc, Nc, conf)
-        a, b = Fraction(round(a * Nc), Nc), Fraction(round(b * Nc), Nc)
+        a, b = _hypergeom_fractions(kc, nc, Nc, conf)
         W = Fraction(Nc, N)
         if nc:                                                   # a condition with no label adds 0 to the estimate
             theta += W * Fraction(kc, nc)
-            a, b = min(a, Fraction(kc, nc)), max(b, Fraction(kc, nc))
         lo += W * a
         hi += W * b
     return float(theta), float(lo), float(hi), L
+
+
+def _hypergeom_fractions(k, n, N, conf):
+    """hypergeom_interval's ends, exactly: population counts over N (the exact rate when n == N, 0 to 1 with no
+    label), widened to hold k / n. The float K / N times N is within far less than 1/2 of K."""
+    from fractions import Fraction
+    a, b = _hypergeom_interval(k, n, N, conf)
+    a, b = Fraction(round(a * N), N), Fraction(round(b * N), N)
+    if n:
+        a, b = min(a, Fraction(k, n)), max(b, Fraction(k, n))
+    return a, b
 
 
 # Windows the reviewer could not judge, and a reviewer who errs (the CLI defect of 1 October 2026: the command told a
@@ -894,21 +939,41 @@ def estimate_error_rate(sample, wrong, unjudged=None, reviewer_false_alarm=0.0, 
     hi_res = _estimate_core(sample, w_hi) if u else lo_res
     out = dict(lo_res)
 
+    # The maps run in exact fractions, with the bounds as written, and round outward. Until 2026-10-06 they ran in
+    # floats, and an end equal to the true rate, the sharp case of a reviewer erring exactly at the bound, landed one
+    # float past it: five windows, all labelled, four truly wrong and one of them missed at reviewer_miss 0.25 gave
+    # (0.6, 0.7999999999999999) against a true rate of 0.8. An end x is the nearest float to an exact end that can lie
+    # half a unit in its last place on either side, so the map starts from the float beyond x; 0 and 1 are exact.
+    from fractions import Fraction
+    import math
+    E0, E1 = _level(fa), _level(miss)
+
     def down(x):                               # the lower end for a reviewer with false alarms
-        return x if not fa else max(0.0, (x - fa) / (1 - fa))
+        if not fa:
+            return x
+        q = Fraction(x if x in (0.0, 1.0) else math.nextafter(x, -math.inf))
+        return max(0.0, _float_below((q - E0) / (1 - E0)))
 
     def up(x):                                 # the upper end for a reviewer who misses errors
-        return x if not miss else min(1.0, x / (1 - miss))
+        if not miss:
+            return x
+        q = Fraction(x if x in (0.0, 1.0) else math.nextafter(x, math.inf))
+        return min(1.0, _float_above(q / (1 - E1)))
 
     if u and design in ("confidence", "proportional"):
         e_lo, low, _, L = _stratum_union(sample, w_lo)
         e_hi, _, high, _ = _stratum_union(sample, w_hi)
         for k in ("effective_n", "starved_strata", "warning"):     # they describe the Wilson interval, not this one
             out.pop(k, None)
+        # L = 0 when every stratum is labelled in full: the interval is then the exact range of the rate, and until
+        # 2026-10-06 the method printed "1 - 0.05/0" and the note blamed the width on a switch that adds none
         out.update({"strata_in_interval": L,
                     "method": (f"stratified by confidence margin; with windows that could not be judged, the sum of each "
                                f"stratum's exact interval at 1 - 0.05/{L}, weighted by its share of the map (union "
-                               "bound), which covers at least 95% by construction")})
+                               "bound), which covers at least 95% by construction") if L else
+                              ("stratified by confidence margin; every window is labelled, so with windows that could not "
+                               "be judged the interval is the exact range of the rate, counting them all right at its "
+                               "lower end and all wrong at its upper end")})
     else:
         e_lo, e_hi, low, high = lo_res["estimate"], hi_res["estimate"], lo_res["low"], hi_res["high"]
     if fa or miss:
@@ -919,7 +984,7 @@ def estimate_error_rate(sample, wrong, unjudged=None, reviewer_false_alarm=0.0, 
         out["estimate"] = out["estimate_range"][0]
     out["half_width"] = (out["high"] - out["low"]) / 2
     notes = ([UNJUDGED_NOTE.format(u=u, n=int(wrong.size))] if u else []) + (
-        [UNJUDGED_STRATIFIED_NOTE] if u and design in ("confidence", "proportional") else []) + (
+        [UNJUDGED_STRATIFIED_NOTE] if u and design in ("confidence", "proportional") and out["strata_in_interval"] else []) + (
         [REVIEWER_NOTE.format(fa=fa, miss=miss)] if fa or miss else [])
     out["bounds_note"] = " ".join(notes)
     if lo_res.get("by_condition"):
@@ -1037,11 +1102,17 @@ def _estimate_core(sample, wrong):
         out.update({"estimate": est, "low": lo, "high": hi, "starved_strata": int(starved), "effective_n": n_eff,
                     "method": "stratified by confidence margin; Wilson interval on the design's effective sample size"})
         notes = []
-        if est in (0.0, 1.0):
+        # every window labelled (the indices are distinct and all in the population): the rate is exact and the
+        # interval the point stratified_interval_wilson returns. Until 2026-10-06 the notes below still called it
+        # the simple-random Wilson bound, or narrower than it should be, beside an interval of zero width
+        census = local.size >= pop.size
+        if census:
+            out["method"] += "; every window is labelled, so the rate is exact, with no sampling error"
+        elif est in (0.0, 1.0):
             notes.append(f"{'no' if est == 0 else 'every'} labelled window was wrong, so the design's variance is zero and "
                          f"the interval is the simple-random Wilson bound at {idx.size} labels; the stratification "
                          "cannot narrow it without an observed error")
-        if starved:
+        if starved and not census:
             notes.append(f"{starved} of {sample['n_strata']} strata had fewer than {MIN_PER_STRATUM} labelled windows "
                          "and contribute no variance; the interval is narrower than it should be")
         if notes:
@@ -1311,7 +1382,8 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
     map class (Olofsson et al. 2014, eq. 4 and 5) and the producer's accuracy follows their eq. 7. Under the
     confidence design every quantity is a ratio of Horvitz-Thompson totals over the margin strata with a
     linearised variance, because a class cuts across strata; the condition design runs the same estimators with the
-    input conditions as strata, which no experiment has graded, and the method says so. With one condition the
+    input conditions as strata, which no experiment has graded, and the method says so, while its overall accuracy is
+    one minus `estimate`'s whole-map interval, the union bound over the conditions. With one condition the
     condition design is the random design, and gets the random design's estimators and method. Intervals are Wilson
     on the effective sample size (interval="wilson", the default; "wald" is the field's convention and is kept for the record, where exp81
     shows it collapsing to a point on classes with no sampled error). Tile samples are refused: the per-class
@@ -1331,8 +1403,16 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
     if np.unique(idx).size != idx.size:
         raise ValueError(f"{idx.size - np.unique(idx).size} window(s) appear more than once in the sample; each window "
                          "is labelled once")
-    if ref.dtype.kind not in "iu" and not np.all(np.equal(np.mod(ref, 1), 0)):
-        raise ValueError("reference classes must be integers")
+    if ref.dtype.kind not in "iu":
+        # read as numbers first, as estimate_error_rate reads `wrong`: until 2026-10-06 np.mod ran on whatever came
+        # in, so a column read with the csv module (strings) or a '?' raised numpy's TypeError, or a string-formatting
+        # one from an object array, instead of this refusal
+        try:
+            ref = ref.astype(np.float64)
+        except (TypeError, ValueError):
+            raise ValueError("reference classes must be integers") from None
+        if not np.isfinite(ref).all() or not np.all(np.mod(ref, 1) == 0):
+            raise ValueError("reference classes must be integers")
     ref = ref.astype(int)
     if (ref < 0).any():
         raise ValueError("reference classes must be >= 0; a window the reviewer could not label should not be in the sample")
@@ -1434,7 +1514,17 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
         r_pop[local] = r_s
         right = np.zeros(N)
         right[local] = (m_s == r_s).astype(float)
-        if interval == "wilson":                                   # `estimate`'s graded form, census included
+        if design == "condition":
+            # `estimate`'s interval under this design, the union bound over the conditions, whatever `interval` says
+            # (as the random design's is exact). Until 2026-10-06 this took the stratified Wilson interval that
+            # `estimate` retired for the design on 2026-09-29: on 4,000 windows 0.5% wrong beside 200 windows 50%
+            # wrong, 150 labels each, it covered the true accuracy on 53% of draws, and it contradicted the error
+            # rate printed beside it ([95.6%, 98.1%] against an error rate of [2.0%, 6.4%] from the same labels).
+            # By the symmetry of the exact interval this is one minus the error rate's interval.
+            n_h = np.bincount(strata[local], minlength=len(sizes))
+            k_h = np.bincount(strata[local], weights=(m_s == r_s).astype(float), minlength=len(sizes)).round().astype(int)
+            o_est, o_lo, o_hi, _ = _union_interval(k_h, n_h, sizes)
+        elif interval == "wilson":                                 # `estimate`'s graded form, census included
             o_est, o_lo, o_hi, _, _ = stratified_interval_wilson(right, strata, local, sizes, N)
         else:
             o_est, o_lo, o_hi = _wald(*stratified_mean_and_variance(right, strata, local, sizes, N)[:2])
@@ -1454,7 +1544,9 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
             row["reference_share"] = dict(zip(("estimate", "low", "high"), _interval(tot / N, v / N ** 2, idx.size, interval)))
             per[int(c)] = row
         method = ("stratified by input condition: ratios of Horvitz-Thompson totals with linearised variance; shares as "
-                  "Horvitz-Thompson totals; with input conditions as strata these per-class intervals have not been graded"
+                  "Horvitz-Thompson totals; with input conditions as strata these per-class intervals have not been graded; "
+                  "the overall accuracy takes the error rate's interval (union bound over the conditions), which covers "
+                  "at least 95% by construction"
                   if design == "condition" else
                   "stratified by confidence margin: ratios of Horvitz-Thompson totals with linearised variance; shares as Horvitz-Thompson totals")
     for c, row in per.items():
@@ -1582,7 +1674,7 @@ def zone_pvalue(k, b, n, alpha):
 
 
 def zone_pvalue_exact(k, b, n, alpha):
-    """zone_pvalue in integer arithmetic, as a Fraction; used where a p-value lies within _TIE of its level."""
+    """zone_pvalue in integer arithmetic, as a Fraction; used where a p-value lies within `_tie(n)` of its level."""
     import math
     from fractions import Fraction
     n, b, k = int(n), int(b), int(k)
@@ -1602,7 +1694,7 @@ def zone_upper_bound(k, b, n, delta=ZONE_DELTA):
         return 1.0
     lo, hi = k, n - (b - k)                     # K must allow k wrong and b - k right among the sample
     def keeps(K):                               # P(X <= k | K) > delta: K is not rejected
-        return not _at_most(hypergeom_cdf(k, n, K, b), delta, lambda: _hyper_tail_exact(k, b, n, K, upper=False))
+        return not _at_most(hypergeom_cdf(k, n, K, b), delta, lambda: _hyper_tail_exact(k, b, n, K, upper=False), n)
     if keeps(hi):
         return hi / n
     while hi - lo > 1:                          # P(X <= k | K) is nonincreasing in K: bisect
@@ -1671,14 +1763,14 @@ def apply_zone_rule(p, b, k, alpha, delta=ZONE_DELTA, rule="prefix", n=None):
                 then Test; valid on any map); it can pass a level the prefix rule stops at, and needs a smaller
                 p-value at every level
     plugin      accept every level whose sample rate k / b is at most alpha; no guarantee, the comparator
-    `n`, the zone sizes, lets a p-value within _TIE of its level be decided in integer arithmetic, so that every
+    `n`, the zone sizes, lets a p-value within `_tie(n)` of its level be decided in integer arithmetic, so that every
     system certifies the same zone from the same labels; `certify_zone` passes it. Without it the float decides."""
     p, b, k = np.asarray(p, float), np.asarray(b, int), np.asarray(k, int)
 
     def passes(j, level):
         if n is None:
             return p[j] <= float(level)
-        return _at_most(p[j], level, lambda: zone_pvalue_exact(k[j], b[j], n[j], alpha))
+        return _at_most(p[j], level, lambda: zone_pvalue_exact(k[j], b[j], n[j], alpha), n[j])
     if rule == "prefix":
         acc = np.zeros(p.size, bool)
         for j in range(p.size):
@@ -1983,9 +2075,23 @@ def compare_from_disagreement(sample, class_a, class_b, reference, unjudged=None
     _, hi_a = hypergeom_interval(a + u, n, D, side)
     lo_b, _ = hypergeom_interval(b, n, D, side)
     _, hi_b = hypergeom_interval(b + u, n, D, side)
-    w = D / N
-    low, high = (lo_a - hi_b) * w, (hi_a - lo_b) * w
-    est_lo, est_hi = (a - (b + u)) / n * w, ((a + u) - b) / n * w
+    # The ends are rationals (K/D, or k/n where the interval was widened to hold the sample share): computed in
+    # Fractions and rounded once, an end equal to the true difference is never one float inside it, as it was in
+    # floats (a census of the differing windows printed an interval that missed the truth by 3e-17, 2026-10-06).
+    from fractions import Fraction
+
+    def ex(x):
+        # an end is K/D, or k/n where the interval was widened to hold the sample share; limit_denominator stopped
+        # recovering K/D above about 1e8 differing windows (the review of 2026-10-06), so try both grids directly
+        for den in (D, n):
+            if den > 0:
+                f = Fraction(round(x * den), den)
+                if float(f) == x:
+                    return f
+        return Fraction(x)
+    wf = Fraction(D, N)
+    low, high = float((ex(lo_a) - ex(hi_b)) * wf), float((ex(hi_a) - ex(lo_b)) * wf)
+    est_lo, est_hi = float(Fraction(a - (b + u), n) * wf), float(Fraction((a + u) - b, n) * wf)
     verdict = "a" if low > 0 else "b" if high < 0 else None
     return {"design": "disagreement", "n_population": N, "n_disagree": D, "disagree_share": D / N, "n_labelled": n,
             "n_unjudged": u, "n_a_right": a, "n_b_right": b, "n_neither": c,
