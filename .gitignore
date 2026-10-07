@@ -66,3 +66,4 @@ exp/out/exp91_views/
 
 # exp92: resumable checkpoint of the map reads
 exp/out/exp92_extract_partial.jsonl
+exp/out/exp94_*_partial*.jsonl
