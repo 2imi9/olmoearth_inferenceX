@@ -4576,6 +4576,84 @@
     Descriptive, preregistered as such; no prediction was made on which grid certifies more. Shares are of the 96% of
     plots whose lcpconf is a confidence. Package-grid shares rest on a random tie-break within the block at 99.
 
+- id: exp94-labelled-routes-hold-on-four-references
+  statement: "On five reference samples from four sources (NLCD's 2011 and 2016 accuracy-assessment points, JRC's GFC2020 validation set v2, the East Africa TimeSync sample and the S2GLC 2017 validation set) and seven published products (NLCD, LCMAP Collection 1.3, GFC2020 V2, ESA WorldCover 2020, CGLS-LC100, Esri 10 m Annual LULC 2017, ODSE-LULC 2017; preregistered), with the points standing in for the map, labels drawn among the points where two products differ covered their accuracy difference on 98.05% to 99.25% of 2,000 draws in all eight pairs at 50, 100 and 200 labels (P1), at 0.32 to 0.63 times the median width of labels drawn from all points at 100 labels (P2), and named the worse-agreeing product on at most 0.35% of draws; on the four pairs differing by 4 to 6 points, 200 such labels named the better-agreeing product on 83% to 95% of draws, against 13% to 25% for 200 labels from all points. The exact error-rate interval at 300 labels covered on 95.05% to 96.25% of draws in all 18 product-year cells (P3)."
+  crosscheck: tests/test_exp94.py::test_exp94_which_map_by_exact_enumeration
+  status: supported
+  experiments: [exp94, exp92, exp90]
+  artifacts: [exp/out/exp94_summary.json]
+  check: |-
+    (lambda d: (lambda Q1, Q2, S: d["preregistered"] is True and len(Q1) == 8 and len(Q2) == 18
+      and [round(100 * f(q["cells"][f"disagree_{n}"]["coverage"] for q in Q1.values() for n in S), 2) for f in (min, max)] == [98.05, 99.25]
+      and [round(f(q["cells"]["disagree_100"]["median_width_points"] / q["cells"]["random_100"]["median_width_points"] for q in Q1.values()), 2) for f in (min, max)] == [0.32, 0.63]
+      and round(100 * max(q["cells"][f"disagree_{n}"]["decides_wrong"] for q in Q1.values() for n in S), 2) == 0.35
+      and sorted(k for k, q in Q1.items() if abs(q["delta"]) >= 0.04) == ["europe_2017:odse_vs_esri", "nlcd_A2001:nlcd_vs_lcmap", "nlcd_A2006:nlcd_vs_lcmap", "nlcd_B2016:nlcd_vs_lcmap"]
+      and all(0.04 <= abs(q["delta"]) < 0.06 for q in Q1.values() if abs(q["delta"]) >= 0.04)
+      and [round(100 * f(q["cells"][f"{g}_200"]["decides_right"] for q in Q1.values() if abs(q["delta"]) >= 0.04)) for g in ("disagree", "random") for f in (min, max)] == [83, 95, 13, 25]
+      and [round(100 * f(q["coverage"] for q in Q2.values()), 2) for f in (min, max)] == [95.05, 96.25]
+      and all(q["labels"] == 300 for q in Q2.values())
+      and all(d["prereg"][p]["holds"] for p in ("P1", "P2", "P3"))
+    )(d["Q1"], d["Q2"], (50, 100, 200)))(A["exp/out/exp94_summary.json"])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp94-labelled-routes-hold-on-four-references}
+    - {file: docs/Findings.md, marker: exp94-labelled-routes-hold-on-four-references}
+    - {file: docs/Summary.md, marker: exp94-labelled-routes-hold-on-four-references}
+    - {file: README.md, marker: exp94-labelled-routes-hold-on-four-references}
+  note: >-
+    Preregistered on 7 October 2026 (b27443e); reading changed before analysis (a GDAL option, CGLS read by rows of
+    blocks). A pre-record audit recomputed 346 quantities with independent code (all equal), reviewed the code and
+    checked every class code and crosswalk against its source; it changed no graded number and corrected one
+    citation. The points stand in for the map: exact gradings on these points, not regional estimates; NLCD and
+    GFC2020 are stratified samples, S2GLC is not a probability sample of Europe, East Africa is random within each
+    country. Three pairs are related (NLCD and LCMAP through LCMAP's training, GFC2020 and WorldCover by construction,
+    error correlation 0.51). ODSE has no class at 2,127 points, 2,107 of them water. East Africa's three years are
+    nearly the same evidence.
+
+- id: exp94-product-confidences-rank-their-errors
+  statement: "Three published products' own confidences rank their errors against independent references (preregistered P4): LCMAP Collection 1.3's lcpconf (1-100) on the NLCD accuracy-assessment points in five set-years, AUROC 0.723 to 0.742; CGLS-LC100's discrete-classification probability on the East Africa TimeSync plots in 2015, 2016 and 2017, AUROC 0.720 to 0.723; ODSE-LULC's probability of its own class on a random 5,000 of the S2GLC points, AUROC 0.787; every 2,000-resample bootstrap interval's lower end is at least 0.704, and the 10% least confident points hold 1.6 to 3.4 times their share of the errors."
+  crosscheck: tests/test_exp94.py::test_exp94_confidence_rankings_by_pair_counting
+  status: supported
+  experiments: [exp94, exp92]
+  artifacts: [exp/out/exp94_summary.json]
+  check: |-
+    (lambda Q: len(Q) == 9
+      and [round(f(q["auroc"] for k, q in Q.items() if k.startswith(s)), 3) for s in ("nlcd", "eastafrica") for f in (min, max)] == [0.723, 0.742, 0.720, 0.723]
+      and round(Q["europe_2017:odse_prob"]["auroc"], 3) == 0.787
+      and round(min(q["auroc_ci95"][0] for q in Q.values()), 3) == 0.704
+      and [round(f(q["capture_10pct"] / 0.1 for q in Q.values()), 1) for f in (min, max)] == [1.6, 3.4]
+      and A["exp/out/exp94_summary.json"]["prereg"]["P4"]["holds"] is True)(A["exp/out/exp94_summary.json"]["Q3"])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp94-product-confidences-rank-their-errors}
+    - {file: docs/Findings.md, marker: exp94-product-confidences-rank-their-errors}
+    - {file: README.md, marker: exp94-product-confidences-rank-their-errors}
+  note: >-
+    Points with a confidence code (LCMAP lcpconf above 100: 389 to 807 per cell) or no probability (CGLS 255: every
+    water and built-up point and a tenth of the cropland points; ODSE: no class or no probability layer, 193 of the
+    5,000) are left out and counted. CGLS's and ODSE's published classes are post-processed after the classifier that
+    gave the probability; the ranking held regardless.
+
+- id: exp94-zone-guarantee-holds-on-three-products
+  statement: "The certified zone's guarantee holds on three published products' own confidences (LCMAP on the NLCD points in five set-years, CGLS-LC100 in East Africa in three years, ODSE-LULC in Europe; preregistered P5): with 300 random labels, delta 0.1 and alpha half the error rate (5.2% to 20.9%), over 2,000 draws, the prefix zone was wrong more than alpha on at most 2.8% of draws and the Bonferroni zone on at most 0.4%, against a bound of 12.0%, and the plug-in zone on 39% to 53%; the prefix rule returned no zone on 73% to 97% of draws."
+  crosscheck: tests/test_exp94.py::test_exp94_predictions_as_recorded
+  status: supported
+  experiments: [exp94, exp93, exp80]
+  artifacts: [exp/out/exp94_summary.json]
+  check: |-
+    (lambda Q: len(Q) == 9 and all(q["labels"] == 300 for q in Q.values())
+      and [round(100 * f(q["alpha"] for q in Q.values()), 1) for f in (min, max)] == [5.2, 20.9]
+      and round(100 * max(q["prefix"]["violation_rate"] for q in Q.values()), 1) == 2.8
+      and round(100 * max(q["bonferroni"]["violation_rate"] for q in Q.values()), 1) == 0.4
+      and [round(100 * f(q["plugin"]["violation_rate"] for q in Q.values())) for f in (min, max)] == [39, 53]
+      and [round(100 * f(q["prefix"]["no_zone_rate"] for q in Q.values())) for f in (min, max)] == [73, 97]
+      and A["exp/out/exp94_summary.json"]["prereg"]["P5"]["holds"] is True)(A["exp/out/exp94_summary.json"]["Q4"])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp94-zone-guarantee-holds-on-three-products}
+    - {file: docs/Findings.md, marker: exp94-zone-guarantee-holds-on-three-products}
+  note: >-
+    Ties broken by a random permutation fixed before any draw; the package's grid; the bound is delta plus three
+    standard errors of a 2,000-draw share. When the prefix rule returned a zone, its median size was 10% to 20% of the
+    points for LCMAP and CGLS and 50% for ODSE.
+
 - id: exp91-vlm-reviewer-shares-the-maps-errors
   statement: "As a blind reviewer of Sen1Floods11 Bolivia windows (exp18's map on frozen OlmoEarth v1-Base, 8.84% of 81,984 windows wrong), Claude (claude-opus-5-5) given VISTA-style views answered ? on 31% of a simple random sample of 150 windows and, on the 104 it judged, agreed with the hand labels on 85.6%, below the preregistered 90% (P1 fails; the map, on the same windows, 95.2%, found after the result). On a calibration set of 30 wrong and 30 correct windows it raised no false alarm on the 22 correct windows it judged (one-sided 95% upper bound 12.7%) and missed 14 of the 19 wrong windows it judged (74%, upper bound 89%; P3, misses above false alarms, holds). The sample's interval was 5.2 to 15.2% with the hand labels, 4.2 to 46.9% with the reviewer's labels (its 46 ? counted both ways) and 0 to 100% widened by the calibrated bounds, which holds the true rate only vacuously (P2 holds as written)."
   crosscheck: tests/test_exp91.py::test_exp91_by_a_second_route

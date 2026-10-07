@@ -107,6 +107,21 @@ non-commercial; Sen1Floods11's labels no stated licence; DFC2020 released to app
 from an unofficial mirror). The report's data statement no longer calls every source public, and its testbed table and
 data list now include LCMAP and Esri.
 
+**exp94: five more reference samples, seven products, 2001 to 2020 (preregistered, b27443e).** NLCD's 2011 and 2016
+accuracy-assessment points (NLCD against LCMAP Collection 1.3), JRC's GFC2020 validation set (GFC2020 against ESA
+WorldCover), the East Africa TimeSync sample (CGLS-LC100 against Esri 2017) and the S2GLC validation set in Europe
+(ODSE-LULC against Esri 2017), each product read at the points without a download. All five predictions hold: labels
+drawn where two products differ covered the difference on 98.05% to 99.25% of draws in all eight pairs, at a third to
+two thirds of the width of labels from all points, and named the worse-agreeing product on at most 0.35%; the exact
+error-rate interval covered on 95.05% to 96.25% in all 18 cells; LCMAP's, CGLS-LC100's and ODSE-LULC's own
+confidences rank their errors (AUROC 0.720 to 0.787, every lower end at least 0.704); the certified zone's guaranteed
+rules exceeded alpha on at most 2.8% of draws, the plug-in on 39% to 53%. A pre-record audit recomputed 346 quantities
+with independent code, reviewed the code and checked every class code against its source: no graded number changed;
+one citation was completed, the design-weighted GFC2020 accuracies (preregistered, first missing) were added, and the
+scope it found is in the record (S2GLC is not a probability sample; ODSE has no class over the sea; CGLS has no
+probability for water and built-up; NLCD and LCMAP, GFC2020 and WorldCover are related). The published NLCD
+accuracies are reproduced from the files. `tests/test_exp94.py` grades every pair by exact enumeration.
+
 **exp93: the certified zone on a published product (preregistered, 39312a3).** LCMAP Collection 1.3's own
 confidence (`lcpconf`) against the 4,796 plots of exp92's confidence subset, exp80's design on the package's grid and
 on the product's own thresholds. All four predictions hold: the prefix zone exceeded alpha on at most 6.1% of draws

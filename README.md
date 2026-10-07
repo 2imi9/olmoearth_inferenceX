@@ -107,8 +107,15 @@ What has been measured
   first zone it tests, a tenth of the plots, is 6% wrong and holds about 30 labels (exp93,
   preregistered). <!-- claim:exp93-zone-guarantee-holds-on-a-product -->
 
-Most of this evidence is linear probes on frozen embeddings; on published products, one pair
-and one year have been graded. The
+- On five more reference samples, in the United States, East Africa, Europe and worldwide, and
+  seven published products from 2001 to 2020, the intervals held their coverage, labels drawn
+  where two products differ named the worse-agreeing one on at most 0.35% of draws, and three
+  products' own confidences ranked their errors (exp94, preregistered).
+  <!-- claim:exp94-labelled-routes-hold-on-four-references --> <!-- claim:exp94-product-confidences-rank-their-errors -->
+
+Most of this evidence is linear probes on frozen embeddings; on published products, seven
+products against six reference samples have been graded, with the points standing in for the
+map. The
 [technical report](https://github.com/2imi9/olmoearth_inferenceX/blob/main/report/main.pdf) and
 the [documentation](https://olmoearth-inferencex.readthedocs.io/en/latest/Summary/) give the
 full record and its limits.

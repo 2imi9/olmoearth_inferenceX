@@ -81,6 +81,24 @@ the NLCD maps' accuracy in their own sixteen classes.
 
 **What would invalidate a grading.** A crosswalk changed after the values were read; a point written with its
 coordinates; a confidence code read as a confidence; a product year other than the label's.
+
+**After the preregistration (7 October 2026).** Changes to reading only, made before any value was analysed: the GDAL
+option GDAL_CACHEMAX was removed (rasterio refused it, so the first run read nothing); CGLS is read from Zenodo by
+rows of blocks, one job per country (the same pixels, checked against point reads; Zenodo answered about one request
+a second and then HTTP 429); the Europe point lists are built from arrays. Corrections from the pre-record audit,
+none of which changes a graded number: the years are seven (2001, 2006, 2011, 2015, 2016, 2017, 2020), not eight
+more; the NLCD to LCMAP crosswalk is Table 1-2 of LCMAP's Collection 1.3 Science
+Product Guide; the S2GLC validation set (Jenerowicz et al., PANGAEA 934197) is described in Malinowski et al. (2020),
+and it leaves out classes under 0.95% of a tile,
+so it is not a probability sample of Europe; ODSE's value where it has no class is 0, its sea mask (2,107 of the
+2,127 such points are S2GLC water), and none of 49, 50 or 255 occurs (255 is unclassified water in its legend); CGLS
+gives no probability (255) at every water and built-up point and at a tenth of the cropland points, so its
+confidence cells leave those out; pooled over countries, the East Africa plots are stratified by country and stand
+for the plots, not the region; LCMAP Collection 1.3 was trained on the 2011 edition's NLCD 2001 (LC2001v3 here)
+through the same crosswalk, so the two products' errors are linked; CGLS's and ODSE's published classes are
+post-processed after the classifier that gave the probability. The design-weighted GFC2020 accuracies, listed above
+and first missing, were added after the audit, with the other post-audit descriptives under `found_after_result`;
+none of them draws a random number, and every graded number is byte-identical.
 """
 import argparse
 import csv
@@ -106,7 +124,7 @@ STAC = "https://planetarycomputer.microsoft.com/api/stac/v1"
 SEED, R, NS, N_RATE, N_SUB, B_ZONE = 94, 2000, (50, 100, 200), 300, 5000, 300
 GDAL = dict(GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR", CPL_VSIL_CURL_ALLOWED_EXTENSIONS=".tif", GDAL_HTTP_MULTIRANGE="YES",
             VSI_CACHE="TRUE", GDAL_HTTP_MAX_RETRY="4", GDAL_HTTP_RETRY_DELAY="2", GDAL_HTTP_TIMEOUT="30",
-            GDAL_HTTP_CONNECTTIMEOUT="10", GDAL_CACHEMAX="512")
+            GDAL_HTTP_CONNECTTIMEOUT="10")
 
 # ----------------------------------------------------------------------------- crosswalks, fixed before any value
 LCMAP_NAMES = {1: "Developed", 2: "Cropland", 3: "Grass and shrub", 4: "Tree Cover", 5: "Water", 6: "Wetland", 7: "Ice and snow",
@@ -172,20 +190,34 @@ def pc_items(collection, year):
         page = _json(nxt[0]["href"], nxt[0].get("body")) if nxt[0].get("method") == "POST" else _json(nxt[0]["href"])
 
 
-def read_points(href, points, crs_src, size=1):
-    """Values at points from one raster: a size x size window centred on each (id, x, y) point in crs_src."""
+def read_points(href, points, crs_src, size=1, strips=False):
+    """Values at points from one raster: a size x size window centred on each (id, x, y) point in crs_src. With strips
+    (size 1 only), the points of one row of blocks are read in a single window spanning them: the same pixels, but one
+    request per row of blocks instead of one per point (Zenodo answers about one request a second and then HTTP 429)."""
     import rasterio
     from rasterio.warp import transform as wtransform
     from rasterio.windows import Window
     out = {}
     with rasterio.Env(**GDAL), rasterio.open(href() if callable(href) else href) as ds:
         xs, ys = wtransform(crs_src, ds.crs, [p[1] for p in points], [p[2] for p in points])
-        for p, x, y in zip(points, xs, ys):
-            r, c = ds.index(x, y)
-            h = size // 2
-            if not (h <= r < ds.height - h and h <= c < ds.width - h):
-                continue
-            out[p[0]] = ds.read(1, window=Window(c - h, r - h, size, size)).ravel().tolist()
+        rc = [ds.index(x, y) for x, y in zip(xs, ys)]
+        h = size // 2
+        keep = [(p, int(r), int(c)) for p, (r, c) in zip(points, rc) if h <= r < ds.height - h and h <= c < ds.width - h]
+        if not strips:
+            for p, r, c in keep:
+                out[p[0]] = ds.read(1, window=Window(c - h, r - h, size, size)).ravel().tolist()
+            return out
+        assert size == 1
+        bh = ds.block_shapes[0][0]
+        rows = {}
+        for p, r, c in keep:
+            rows.setdefault(r // bh, []).append((p, r, c))
+        for grp in rows.values():
+            r0, r1 = min(g[1] for g in grp), max(g[1] for g in grp)
+            c0, c1 = min(g[2] for g in grp), max(g[2] for g in grp)
+            a = ds.read(1, window=Window(c0, r0, c1 - c0 + 1, r1 - r0 + 1))
+            for p, r, c in grp:
+                out[p[0]] = [int(a[r - r0, c - c0])]
     return out
 
 
@@ -203,11 +235,11 @@ def run_jobs(jobs, partial, threads=12):
     t0 = time.time()
 
     def go(job):
-        key, layer, href, pts, crs, size = job
+        key, layer, href, pts, crs, size = job[:6]
         err = None
         for attempt in range(3):
             try:
-                return key, layer, read_points(href, pts, crs, size)
+                return key, layer, read_points(href, pts, crs, size, strips=len(job) > 6 and job[6])
             except Exception as e:                          # a transient HTTP failure: retry the job
                 err = e
                 time.sleep(3 * (attempt + 1))
@@ -263,6 +295,7 @@ def extract_nlcd():
                   {2001: "Lpri01", 2006: "Lpri06", 2011: "Lpri11"}),
             "B": (os.path.join(DATA, "nlcd2016_AA", "NLCD2016_Accuracy_ReferenceData_CONUS.shp"), {2011: "LC2011", 2016: "LC2016"},
                   {2011: "Lpri11L2", 2016: "Lpri16L2"})}
+    alternate = {"Lpri01": "Lalt01", "Lpri06": "Lalt06", "Lpri11": "Lalt11", "Lpri11L2": "Lalt11L2", "Lpri16L2": "Lalt16L2"}
     from pyproj import CRS, Transformer
     frames, jobs = {}, []
     tiles = {year: pc_items("usgs-lcmap-conus-v13", year) for year in (2001, 2006, 2011, 2016)}
@@ -294,9 +327,10 @@ def extract_nlcd():
                 p = first_valid(pri.get(pid), lambda v: 1 <= v[0] <= 8)
                 c = first_valid(conf.get(pid), lambda v: v[0] > 0)
                 rows.append([pid, s, year, int(g["Strata"].iat[i]), float(g["Weight"].iat[i]), int(g[refs[year]].iat[i]),
-                             int(g[maps[year]].iat[i]), 0 if p is None else int(p[0]), "" if c is None else int(c[0])])
+                             int(g[maps[year]].iat[i]), 0 if p is None else int(p[0]), "" if c is None else int(c[0]),
+                             int(g[alternate[refs[year]]].iat[i])])
     write_points(os.path.join(OUTDIR, "exp94_nlcd_points.csv"),
-                 ["pid", "set", "year", "stratum", "weight", "ref_nlcd", "nlcd", "lcmap", "lcpconf"], rows)
+                 ["pid", "set", "year", "stratum", "weight", "ref_nlcd", "nlcd", "lcmap", "lcpconf", "ref_nlcd_alternate"], rows)
 
 
 def extract_gfc():
@@ -331,16 +365,18 @@ def extract_eastafrica():
     plots = e.drop_duplicates("pid")[["pid", "longitude", "latitude"]]
     pts = [(r.pid, float(r.longitude), float(r.latitude)) for r in plots.itertuples()]
     jobs = []
-    # one CGLS read per year and layer: the global file, in chunks of 500 points so that a failure costs a chunk
+    # CGLS from Zenodo: one job per year, layer and country, its points read by rows of blocks (strips)
+    country = dict(zip(plots["pid"], e.drop_duplicates("pid")["country"]))
     for year, (rec, tag) in CGLS_RECORDS.items():
         for layer in ("map", "proba"):
             name = "Discrete-Classification-" + layer
             href = f"/vsicurl/https://zenodo.org/records/{rec}/files/PROBAV_LC100_global_v3.0.1_{tag}_{name}_EPSG-4326.tif"
-            for k in range(0, len(pts), 500):
-                jobs.append((f"{year}:{k}", f"cgls{year}:{layer}", href, pts[k:k + 500], "EPSG:4326", 1))
+            for ctry in sorted(set(country.values())):
+                mine = [p for p in pts if country[p[0]] == ctry]
+                jobs.append((f"{year}:{ctry}", f"cgls{year}:{layer}", href, mine, "EPSG:4326", 1, True))
     signer = Signer()
     jobs += _esri_jobs(pts, 2017, signer, size=3)
-    vals = run_jobs(jobs, os.path.join(OUTDIR, "exp94_eastafrica_partial.jsonl"), threads=8)
+    vals = run_jobs(jobs, os.path.join(OUTDIR, "exp94_eastafrica_partial.jsonl"), threads=2)
     rows = []
     for r in e.itertuples():
         y = int(r.year)
@@ -389,9 +425,11 @@ def extract_europe():
     import geopandas as gpd
     g = gpd.read_file(os.path.join(DATA, "S2GLC_validation_data", "S2GLC_validation_data_LAEA.shp"))
     g["pid"] = [str(i) for i in range(len(g))]
-    pts3035 = [(g["pid"].iat[i], g.geometry.x.iat[i], g.geometry.y.iat[i]) for i in range(len(g))]
+    x, y = g.geometry.x.to_numpy(), g.geometry.y.to_numpy()
+    pts3035 = [(pid, float(a), float(b)) for pid, a, b in zip(g["pid"], x, y)]
     ll = g.to_crs(4326)
-    pts4326 = [(g["pid"].iat[i], ll.geometry.x.iat[i], ll.geometry.y.iat[i]) for i in range(len(g))]
+    lon, lat = ll.geometry.x.to_numpy(), ll.geometry.y.to_numpy()
+    pts4326 = [(pid, float(a), float(b)) for pid, a, b in zip(g["pid"], lon, lat)]
     sub = set(np.random.default_rng(SEED).choice(len(g), N_SUB, replace=False).astype(str))
     hcl = "/vsicurl/" + ODSE.format("hcl", "f")
     jobs = [(f"hcl:{k}", "odse_hcl", hcl, pts3035[k:k + 1000], "EPSG:3035", 1) for k in range(0, len(pts3035), 1000)]
@@ -468,7 +506,8 @@ def confidence_cells(conf, wrong, rng):
 
 def analyze():
     rng = np.random.default_rng(SEED)
-    out = {"experiment": "exp94", "preregistered": True, "Q1": {}, "Q2": {}, "Q3": {}, "Q4": {}, "descriptive": {}}
+    out = {"experiment": "exp94", "preregistered": True, "Q1": {}, "Q2": {}, "Q3": {}, "Q4": {}, "descriptive": {},
+           "found_after_result": {}}            # descriptives added after the audit; none of them draws from rng
     # NLCD
     rows = list(csv.DictReader(open(os.path.join(OUTDIR, "exp94_nlcd_points.csv"))))
     for s, year in (("A", 2001), ("A", 2006), ("A", 2011), ("B", 2011), ("B", 2016)):
@@ -488,6 +527,13 @@ def analyze():
             "points": len(rs), "lcmap_missing": int((lc == 0).sum()), "lcpconf_codes": int((v8 & (conf > 100)).sum()),
             "weighted_accuracy_nlcd_level2": float((wts * (nl2 == ref2))[v2].sum() / wts[v2].sum()),
             "weighted_accuracy_lcmap": float((wts * (lc == ref8))[v8].sum() / wts[v8].sum())}
+        alt = _ints(rs, "ref_nlcd_alternate")
+        v = v8 & (nl8 > 0)
+        out["found_after_result"][tag] = {
+            "weighted_accuracy_nlcd_8class": float((wts * (nl8 == ref8))[v].sum() / wts[v].sum()),
+            # NLCD's published accuracies count a match with the primary OR the alternate label: this reproduces them
+            "weighted_accuracy_nlcd_level2_primary_or_alternate": float((wts * ((nl2 == ref2) | (nl2 == alt)))[v2].sum()
+                                                                        / wts[v2].sum())}
     # GFC2020
     rows = list(csv.DictReader(open(os.path.join(OUTDIR, "exp94_gfc_points.csv"))))
     ref = _ints(rows, "ref_forest") + 1; gfc = _ints(rows, "gfc_v2") + 1
@@ -495,7 +541,19 @@ def analyze():
     out["Q1"]["gfc2020:gfc_vs_worldcover"] = which_map(ref, gfc, wc, rng)
     out["Q2"]["gfc2020:gfc_v2"] = error_rate(gfc != ref, rng)
     out["Q2"]["gfc2020:worldcover"] = error_rate((wc != ref)[wc > 0], rng)
-    out["descriptive"]["gfc2020"] = {"points": len(rows), "worldcover_missing": int((wc == 0).sum())}
+    strata = _ints(rows, "stratum")
+    area = {int(r["Strata"]): float(r["strata_ha"]) for r in csv.DictReader(open(os.path.join(DATA, "gfc2020", "strata_size.csv")))}
+
+    def stratified(correct):
+        """Stehman's estimator for a stratified sample: the strata's accuracies weighted by their areas."""
+        hs = np.unique(strata)
+        return float(sum(area[h] * correct[strata == h].mean() for h in hs) / sum(area[h] for h in hs))
+    ea, eb = gfc != ref, wc != ref
+    out["descriptive"]["gfc2020"] = {
+        "points": len(rows), "worldcover_missing": int((wc == 0).sum()),
+        "weighted_accuracy_gfc_v2": stratified(~ea), "weighted_accuracy_worldcover": stratified(~eb),
+        "both_wrong": int((ea & eb).sum()), "only_gfc_wrong": int((ea & ~eb).sum()), "only_worldcover_wrong": int((~ea & eb).sum()),
+        "error_correlation_phi": float(np.corrcoef(ea, eb)[0, 1])}
     # East Africa
     rows = list(csv.DictReader(open(os.path.join(OUTDIR, "exp94_eastafrica_points.csv"))))
     for year in (2015, 2016, 2017):
@@ -508,6 +566,8 @@ def analyze():
         g = v & (pb <= 100)
         out["Q3"][f"{tag}:cgls_proba"], out["Q4"][f"{tag}:cgls_proba"] = confidence_cells(pb[g], (cg != ref)[g], rng)
         out["descriptive"][tag] = {"points": len(rs), "cgls_missing": int((cg == 0).sum()), "proba_missing": int((v & (pb > 100)).sum())}
+        out["found_after_result"][tag] = {"proba_missing_by_cgls_class": {
+            EA_NAMES[c]: [int((v & (pb > 100) & (cg == c)).sum()), int((v & (cg == c)).sum())] for c in EA_NAMES}}
         if year == 2017:
             es = _ints(rs, "esri")
             out["Q1"][f"{tag}:cgls_vs_esri"] = which_map(ref, cg, es, rng)
@@ -526,6 +586,11 @@ def analyze():
     out["descriptive"]["europe_2017"] = {"points": len(rows), "odse_missing": int((od == 0).sum()),
                                          "esri_missing": int((es == 0).sum()), "subset_graded": int(g.sum()),
                                          "subset_no_probability_layer": int((sub & np.isin(_ints(rows, "odse_corine"), (141, 523))).sum())}
+    out["found_after_result"]["europe_2017"] = {
+        "subset_no_odse_class": int((sub & (od == 0)).sum()),
+        # ODSE's no-data value at the points is 0 (the preregistration named 49, 50, 255, none of which occurs)
+        "odse_no_class_by_reference_class": {EU_NAMES[c]: [int(((od == 0) & (ref == c)).sum()), int((ref == c).sum())]
+                                             for c in EU_NAMES}}
     bound = 0.1 + 3 * np.sqrt(0.1 * 0.9 / R)
     out["prereg"] = {
         "P1": {"holds": all(q["cells"][f"disagree_{n}"]["coverage"] >= 0.94 for q in out["Q1"].values() for n in NS)},

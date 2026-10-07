@@ -30,7 +30,9 @@ artifact under `exp/out/`, with its evidence in the [results record](results/com
   LCMAP's random reference sample, the error-rate interval held and labels drawn where the maps differ found the
   better-agreeing map on 95% of draws with about 800 labels, where a whole-map sample needed more than 3,200 (exp92;
   found after the result); on LCMAP's own confidence the certified zone kept its guarantee and, at 300 labels and α
-  half the error rate, returned no zone on most draws (exp93).
+  half the error rate, returned no zone on most draws (exp93). On five more reference samples and seven products, in
+  the United States, East Africa, Europe and worldwide from 2001 to 2020, the same gradings held, and three products'
+  own confidences ranked their errors (exp94).
 - No signal from inside the encoder beats confidence, and a consensus of encoders does not estimate accuracy.
 - For a language-model agent at 7B the package is decisive when its tools are given directly; the agent as shipped
   found them on 17 of 40 runs. At 27B a model with a numpy sandbox nearly matches the package's ranking, and every arm
@@ -220,6 +222,18 @@ that covered on 95.0% and 95.65% of draws; labels drawn among the 21.6% of plots
 LCMAP on 6% to 29% of draws), at about half the width of labels drawn from all plots (exp92). <!-- claim:exp92-products-labelled-routes-hold -->
 LCMAP's own confidence ranks its errors there with an AUROC of 0.753, and its 10% least confident plots hold 28.7% of
 the errors (exp92). <!-- claim:exp92-lcmap-confidence-ranks-its-errors -->
+
+On five more reference samples from four sources (NLCD's 2011 and 2016 accuracy-assessment points, JRC's GFC2020
+validation set, the East Africa TimeSync sample, the S2GLC validation set in Europe) and seven products (NLCD, LCMAP,
+GFC2020, WorldCover, CGLS-LC100, Esri 10 m, ODSE-LULC) from 2001 to 2020, with the points standing in for the map
+(preregistered), labels drawn where two products differ covered their difference on 98.05% to 99.25% of draws in all
+eight pairs, at a third to two thirds of the width of labels drawn from all points, and named the worse-agreeing
+product on at most 0.35% of draws; where the products differ by 4 to 6 points, 200 such labels named the
+better-agreeing one on 83% to 95% of draws, against 13% to 25% for labels from all points. The exact error-rate
+interval covered on 95.05% to 96.25% of draws in all 18 cells (exp94). <!-- claim:exp94-labelled-routes-hold-on-four-references -->
+LCMAP's, CGLS-LC100's and ODSE-LULC's own confidences rank their errors there, AUROC 0.720 to 0.787 in nine cells, and
+on them the certified zone's guaranteed rules were wrong more than α on at most 2.8% of draws, the plug-in's on 39% to
+53% (exp94). <!-- claim:exp94-product-confidences-rank-their-errors --> <!-- claim:exp94-zone-guarantee-holds-on-three-products -->
 
 ## The package as an agent tool
 

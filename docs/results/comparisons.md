@@ -3278,6 +3278,83 @@ describe a random order within the tie at 99; on a raster the package breaks tie
 so the guarantee carries over and those coverages may not. The threshold grid is an arm of this experiment, not the
 package's default.
 
+## Five more reference samples, three continents, seven years (exp94)
+
+**Question.** exp92 and exp93 graded the labelled routes and a product's own confidence on one pair of products, one
+year and one country, against one reference. Do the same gradings hold on other references, products, regions, years
+and themes? Preregistered on 7 October 2026 (b27443e) before any product value was read. `exp/exp94_breadth.py`
+reads the products at the reference points and writes `exp/out/exp94_<source>_points.csv` (values only, no
+coordinates) and `exp/out/exp94_summary.json`.
+
+**Design.** Four reference samples made by their producers to assess a map, each read against published products, no
+login needed:
+
+| Reference | Where, when | Points | Products |
+|---|---|---|---|
+| NLCD accuracy-assessment points, 2011 and 2016 editions (Wickham et al. 2017, 2021) | United States; 2001, 2006, 2011 and 2011, 2016 | 8,000 and 4,629, stratified | NLCD (in the file) against LCMAP Collection 1.3 and its confidence |
+| JRC GFC2020 validation set v2 (Colditz et al.) | global, forest or not, 2020 | 21,612, stratified | GFC2020 V2 (in the file) against ESA WorldCover 2020 |
+| East Africa TimeSync sample (Bullock et al. 2021) | seven countries; 2015, 2016, 2017 | 14,000, random within each country | Copernicus CGLS-LC100 and its probability; Esri 10 m 2017 |
+| S2GLC validation set (Jenerowicz et al.; Malinowski et al. 2020) | Europe, 2017 | 52,024 in 55 tiles | ODSE-LULC and its class probability; Esri 10 m 2017 |
+
+Legends are crosswalked to a common one fixed before any value was read: LCMAP's eight classes for NLCD (USGS's
+table), forest or not for GFC2020, seven classes for East Africa and eight for Europe. As in exp92, the points with a
+reference class and both products' classes stand in for the map population, so every design is graded exactly against
+their truth, with 2,000 draws per setting: the which-map designs at 50, 100 and 200 labels on eight pairs (P1, P2),
+the exact error-rate interval at 300 labels for 18 product-years (P3), the product's own confidence as a ranking of
+its errors in nine cells (P4), and the certified zone on that confidence at 300 labels, alpha half the error rate
+(P5).
+
+**Changes and corrections before recording.** Reading only, before any value was analysed: a GDAL option rasterio
+refused was removed (the first run read nothing), and CGLS is read from Zenodo by rows of blocks rather than point by
+point (the same pixels; Zenodo allowed about one request a second). The pre-record audit (346 quantities recomputed by
+independent code, all equal; the code reviewed; every class code and crosswalk checked against its source) changed no
+graded number. It corrected one citation in the preregistration and found what the text below states as scope:
+S2GLC leaves out small classes within each tile, so it is not a probability sample of Europe; ODSE has no class at
+2,127 points, 2,107 of them water (its sea mask); CGLS gives no probability at any water or built-up point; LCMAP was
+trained on NLCD's 2001 map; CGLS's and ODSE's published classes are post-processed after the classifier that gave the
+probability. The design-weighted GFC2020 accuracies, preregistered as descriptives, were missing and were added.
+
+**Result.** All five predictions hold. On every pair and at every size, labels drawn among the points where the two
+products differ covered the true difference on 98.05% to 99.25% of draws (P1), at 0.32 to 0.63 times the median width
+of labels drawn from all points at 100 labels (P2). Where the products differ by 4 to 6 points (NLCD against LCMAP in
+2001, 2006 and 2016; ODSE against Esri), 200 labels drawn where they differ named the better-agreeing product on 83% to
+95% of draws, against 13% to 25% for 200 labels from all points; where they differ by about a point (NLCD against
+LCMAP in 2011, GFC2020 against WorldCover, CGLS against Esri) they rarely named one (1% to 15%), and in all eight pairs
+they named the worse-agreeing one on at most 0.35% of draws. The exact error-rate interval covered on 95.05% to 96.25%
+of draws in all 18 cells (P3). Each product's own confidence ranks its errors (P4): the AUROC is 0.723 to 0.742 for
+LCMAP in five cells, 0.720 to 0.723 for CGLS in three and 0.787 for ODSE, every bootstrap interval's lower end at
+least 0.704; the 10% least confident points hold 1.6 to 3.4 times their share of the errors. The certified zone's
+guaranteed rules held delta in all nine cells, the prefix zone wrong more than alpha on at most 2.8% of draws and the
+Bonferroni zone on at most 0.4%, against a bound of 12.0%; the plug-in's on 39% to 53% (P5).
+<!-- claim:exp94-labelled-routes-hold-on-four-references --> <!-- claim:exp94-product-confidences-rank-their-errors --> <!-- claim:exp94-zone-guarantee-holds-on-three-products -->
+
+Preregistered descriptives. Against these references, unweighted: NLCD (in LCMAP's classes) and LCMAP 73.7% and 77.8%
+in 2001, 71.6% and 76.3% in 2006, 75.7% and 76.8% in 2011 (set A), 76.6% and 75.8% in 2011 and 81.7% and 75.8% in 2016
+(set B); GFC2020 91.2% and WorldCover 90.5%; CGLS 60.8% and Esri 60.2% in East Africa; ODSE 89.3% and Esri 84.6% in
+Europe. Design-weighted, LCMAP is 83.0% to 84.5% accurate on the NLCD points and GFC2020 91.5% and WorldCover 91.4% (the
+published GFC2020 V2 figure is 91%). GFC2020 and WorldCover are wrong together at 1,094 points (error correlation
+0.51), as expected of a product built partly from the other. At 300 labels the prefix rule returned no zone on 73% to
+97% of draws; when it returned one, its median size was 10% to 20% of the points for LCMAP and CGLS and 50% for ODSE,
+whose most confident three quarters are wrong at most alpha (5.2%). Found after the result: the published NLCD accuracies, which count a match
+with the primary or the alternate reference label, are reproduced from the files (83.2%, 82.8%, 82.1%; 86.5%, 86.4%);
+CGLS's three years are nearly the same evidence, its class changing at 0.3% and 0.5% of plots from one year to the
+next and the reference at 0.5% and 0.6%.
+
+**Reading.** On five reference samples from four sources (two in the United States, one global, one in East Africa,
+one in Europe), the labelled routes kept their guarantees on seven products in 18 product-year cells: the intervals
+covered, the comparison drawn where products differ was a third to two thirds as wide and named the worse-agreeing
+product on at most 0.35% of draws, and the certified zone held delta. Each of three products' published confidences ranks its own errors. A certified zone of a
+useful size still needs more than 300 labels unless the product's confident part is rarely wrong.
+
+**What it does not show.** The points stand in for the map: the gradings are exact on these points, not estimates for
+the regions, and the NLCD and GFC2020 points over-represent rare strata. S2GLC is not a probability sample of Europe;
+the East Africa points are random within each country; ODSE's grading leaves out most water points and CGLS's
+confidence cells all water and built-up points. The products are graded through crosswalks, and three pairs are
+related (NLCD and LCMAP through training, GFC2020 and WorldCover by construction, the Esri maps of one year); the
+comparisons measure agreement with each reference, not which product is better. The NLCD interpreters worked for
+NLCD's own assessment. Whether reference points trained a product was not checked. East Africa's three years are close
+to one test.
+
 ## A vision-language model as the reviewer (exp91)
 
 **Question.** The labelled routes need a reviewer. Can a general-purpose vision-language model supply the labels from

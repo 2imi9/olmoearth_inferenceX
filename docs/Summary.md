@@ -54,6 +54,12 @@ all, with the evidence.
   drawn where the maps differ covered their 2.7-point difference on at least 98.5% of draws and
   never named the wrong map; at 50 to 200 labels they named LCMAP on 6% to 29% of draws (exp92,
   preregistered). <!-- claim:exp92-products-labelled-routes-hold -->
+  On five more reference samples (NLCD's accuracy-assessment points, JRC's GFC2020 validation
+  set, an East Africa random sample, S2GLC in Europe) and seven products from 2001 to 2020, the
+  error-rate interval covered on at least 95.05% of draws in all 18 cells, and labels drawn where
+  two products differ covered the difference on at least 98.05% and named the worse-agreeing one
+  on at most 0.35% of draws (exp94, preregistered).
+  <!-- claim:exp94-labelled-routes-hold-on-four-references -->
 
 ## Known limits
 
