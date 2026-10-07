@@ -23,10 +23,10 @@
 \newcommand{\code}[1]{\texttt{#1}}
 
 \title{\pkg: confidence-based review, comparison and accuracy estimation for Earth-observation classification maps\\[6pt]
-\large Technical report, version 1.6.0}
+\large Technical report, version 1.7.0}
 \author{Ziming Qi\\[2pt] \small \url{https://github.com/2imi9/olmoearth_inferenceX}\\[-1pt]
 \small \url{https://olmoearth-inferencex.readthedocs.io}}
-\date{3 October 2026}
+\date{7 October 2026}
 
 \begin{document}
 \maketitle
@@ -307,19 +307,27 @@ difference could be narrower.
 \subsection{Interfaces}
 \label{sec:interfaces}
 
-The command \code{oe-inferencex} has seven subcommands: \code{demo} (a shipped Dynamic World tile), \code{assess}
+The command \code{oe-inferencex} has eight subcommands: \code{demo} (a shipped Dynamic World tile), \code{assess}
 (review sets, rasters and cues), \code{compare} (disagreement and, with labels and dates, the graded block),
 \code{sample} (the windows to label), \code{estimate} (the error rate, per-class accuracy with \code{-{}-per-class}, or
-the accuracy difference of two maps), \code{certify} (the certified zone and its mask) and \code{mcp}. Since version
-1.4.0, \code{oe-inferencex mcp} serves six tools (\code{guide}, \code{assess}, \code{compare}, \code{sample},
-\code{estimate}, \code{certify}) to an agent over the Model Context Protocol on local standard input and output, with
+the accuracy difference of two maps), \code{certify} (the certified zone and its mask), \code{decide} and \code{mcp}.
+\code{decide} (new in 1.7.0) reads a result that \code{estimate}, \code{certify} or \code{compare} wrote and answers set questions
+with one answer from a fixed set (whether the error rate is below a threshold, a class's user's or producer's accuracy
+above one, which map is more accurate, the certified share), each with its level, its evidence and a sentence that
+holds the limit; it computes nothing new, and an interval across the threshold gives \emph{undetermined}, not a no.
+Since version 1.7.0, \code{assess} and \code{sample} also take a published product as it ships, a class map with
+its per-pixel confidence band (\code{-{}-confidence}, with \code{-{}-confidence-range} for the band values that are
+confidences), and \code{estimate}, \code{certify} and \code{decide} report how many classified pixels a band's codes
+leave out of the population. Since version 1.4.0, \code{oe-inferencex mcp} serves the commands as tools (\code{guide},
+\code{assess}, \code{compare}, \code{sample}, \code{estimate}, \code{certify} and, from 1.7.0, \code{decide}) to an
+agent over the Model Context Protocol on local standard input and output, with
 nothing hosted. Each tool runs the command line's own code in process, so a tool and its command give the same numbers
 and refuse the same inputs, and returns compact JSON with the files written, the summary numbers, and three plain
 texts: the conclusion with its main limit, the limits, and the next step. The server's instructions state five hard
 rules: a review set is not a sample, and \code{estimate} and \code{certify} refuse it; \code{certify} needs a random or
 condition sample; \code{compare} cannot say which map is right without labels; labels are assumed right, and only
 \code{estimate} widens its interval for a reviewer who errs, at rates the user states; and ranking needs the scores,
-not only a class map.
+not only a class map, or a product's class map with its confidence band.
 
 \section{Evaluation protocol}
 \label{sec:protocol}
@@ -824,18 +832,21 @@ GPU types, and the work has a single author.
 \section{Software}
 \label{sec:software}
 
-\pkg{} is on PyPI as \code{olmoearth-inferencex} (Apache License 2.0); version 1.6.0 was released on 3 October 2026.
+\pkg{} is on PyPI as \code{olmoearth-inferencex} (Apache License 2.0); version 1.7.0 was released on 7 October 2026.
 Version 1.0.0 (17 September 2026) carried ranking, explanation, comparison and label-fitted fusion; 1.2.0 (22 September)
 added \code{sample} and \code{estimate}; 1.3.0 (24 September) added \code{certify}, per-class accuracy, dates in
 \code{compare} and the exact random-sample interval, and fixed the 33 findings of a second line-by-line review, each
 with a test that failed first. 1.4.0 (2 October) added input conditions, the MCP server, fixed-sequence wording for the
 prefix rule and the exact tie decision at a level; 1.4.1 rewrote the server's texts after the agent pilot; 1.5.0 added
 \code{?} windows, the reviewer-error bounds and the Lean proofs; 1.6.0 added the comparison of two maps from labels
-where they differ. Since 1.4.1 each release has been preceded by a three-lens review (from 1.5.0: statistics, code,
-and documents with tests), whose findings were fixed with tests. For 1.6.0 the suite ran against the built wheel
-without the source tree on Python 3.11, 3.12 and 3.13 with the optional extras (1,274 passed each), on the lowest
-declared core dependencies (the geo tests skipped), and, for the MCP server's and the new tests, on the lowest supported
-\code{mcp}. It includes enumeration checks of every interval and rule above, golden outputs of version 1.3.1 that later
+where they differ; 1.7.0 added \code{decide}, published products as input (a class map with its confidence band) and
+the fixes of a bug hunt in which seven finders, one per module group, reported 64 bugs, each shown by a script, and a
+second agent reproduced 60; each fix has a test, and two reviews of the fixes found that no recorded number changed.
+Since 1.4.1 each release has been preceded by a review in several lenses (from 1.5.0: statistics, code, and documents
+with tests), whose findings were fixed with tests. For 1.7.0 the suite ran against the built wheel without the source
+tree on Python 3.11, 3.12 and 3.13 with the optional extras (1,392 passed each), on the declared minimum core
+dependencies (1,262 passed, the geo and MCP tests skipped), and, for the MCP server's and the new tests, on the lowest
+supported \code{mcp}. It includes enumeration checks of every interval and rule above, golden outputs of version 1.3.1 that later
 versions must reproduce byte for byte on maps without input conditions, apart from five listed changes, an added
 \code{scope} key and certify p-values within $10^{-12}$, every command under every option, property tests on random maps, and every claim
 check. An OlmoEarth Agent skill ports the review set and agrees
@@ -846,7 +857,7 @@ bit-exactly with the package's decisions on the suite's 17 single-label tasks \c
 
 \begin{sloppypar}
 Code, experiments, outputs (\code{exp/out/}), the claim ledger, the Lean proofs and this report are at
-\url{https://github.com/2imi9/olmoearth_inferenceX}: the package as released is at tag \code{v1.6.0}, and this report,
+\url{https://github.com/2imi9/olmoearth_inferenceX}: the package as released is at tag \code{v1.7.0}, and this report,
 with the documentation corrections made alongside it, is on the main branch after that tag. Documentation is at
 \url{https://olmoearth-inferencex.readthedocs.io}; the per-experiment record is \code{docs/results/comparisons.md}. The
 data used are published by their providers: Sen1Floods11, GEOID-Flood, WorldFloods~v2, DFC2020, Dynamic World, LUCAS

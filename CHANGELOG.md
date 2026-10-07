@@ -1,6 +1,16 @@
 # Changelog
 
-## Unreleased
+## 1.7.0 (2026-10-07)
+
+**What 1.7.0 adds.** `decide`, typed answers read from a result; published products as input, a class map with its
+confidence band; the fixes of a 60-bug hunt; and, in the record, exp91 to exp94 and the test sets page. Each is below.
+
+**Release checks (7 October 2026).** The suite ran against the built wheel with the package source removed on Python
+3.11, 3.12 and 3.13 with the geo and mcp extras (1,392 passed each), on the declared minimum core dependencies, numpy
+1.26.4, PyYAML 6.0 and huggingface_hub 0.20.0 (1,262 passed, the geo and MCP tests skipped; `demo` runs), and, for
+the MCP server's, `decide`'s, the product input's and the bug fixes' tests, on mcp 1.26.0 (89 passed). The minimum-
+dependency run found that exp93's second-route test imported scipy without the geo extra; it now skips there. The
+source archive carries the package alone.
 
 **A bug hunt over the whole package (2026-10-06): 64 reported, 60 confirmed by an independent reproduction, all fixed.**
 Seven finders, one per module group, had to show each bug with a script; a second agent reran it and tried to refute

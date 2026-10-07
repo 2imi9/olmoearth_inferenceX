@@ -13,7 +13,9 @@ import math
 import os
 
 import numpy as np
-from scipy.stats import hypergeom
+import pytest
+
+hypergeom = pytest.importorskip("scipy.stats", reason="the second route counts with scipy's hypergeometric (the geo extra)").hypergeom
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "exp", "out")
