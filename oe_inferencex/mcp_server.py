@@ -1445,9 +1445,11 @@ def plan(
             summ[q] = {"labels": p.get("labels"), "probability_at_labels": p.get("probability_at_labels")}
     limits = _join([*r.get("notes", []), next(iter(plans.values()))["note"] if plans else None])
     nxt = ("Draw the labels with sample at the budget planned: design \"random\" for an error rate or a zone, or other "
-           "set to the second map for which map is more accurate. Every guarantee holds at any budget; what the plan "
-           "gives is the chance of a useful answer, which for certify can fall at the budgets at which a smaller zone "
-           "becomes testable, until more labels restore it.")
+           "set to the second map for which map is more accurate. Every guarantee holds at whatever budget is fixed "
+           "before labelling, for one reading of those labels (reading again at a larger budget is a second test, "
+           "except for certify on a sequential sample); what the plan gives is the chance of a useful answer, which "
+           "for certify can fall at the budgets at which a smaller zone becomes testable, until more labels restore "
+           "it.")
     return _reply(" ".join(said), limits, nxt, {"plan": out} if out_dir is not None else {}, summ)
 
 

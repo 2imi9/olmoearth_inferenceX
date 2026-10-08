@@ -2423,7 +2423,6 @@
     - {file: docs/results/comparisons.md, marker: external-references-carry-informative-controls}
     - {file: docs/Findings.md, marker: external-references-carry-informative-controls}
     - {file: docs/Summary.md, marker: external-references-carry-informative-controls}
-    - {file: README.md, marker: external-references-carry-informative-controls}
   note: >-
     Read from the three experiments' committed summaries after the red team of 30 September 2026 found the suite's
     controls near chance (suite-controls-are-near-chance). A random review of 10% finds 0.10 of the errors in
@@ -4178,7 +4177,6 @@
     - {file: docs/TECHNIQUES.md, marker: missing-optical-errors-are-confident}
     - {file: docs/Findings.md, marker: missing-optical-errors-are-confident}
     - {file: docs/Summary.md, marker: missing-optical-errors-are-confident}
-    - {file: README.md, marker: missing-optical-errors-are-confident}
   note: >-
     Ai2's S1-only embeddings are the encoder's reading of radar alone over the whole tile, the extreme of a cloud;
     real clouds are partial. Graded on Base at seed 0; the other seeds and Large are replication.
@@ -4360,7 +4358,6 @@
     - {file: docs/results/comparisons.md, marker: exp79-margin-beats-random-everywhere}
     - {file: docs/Findings.md, marker: exp79-margin-beats-random-everywhere}
     - {file: docs/Summary.md, marker: exp79-margin-beats-random-everywhere}
-    - {file: README.md, marker: exp79-margin-beats-random-everywhere}
     - {file: docs/method/protocol.md, marker: exp79-margin-beats-random-everywhere}
   note: >-
     A cell is one encoder, one task and one probe seed; the 3,560 are 24 tasks on seven encoders, 21 on eight and 20
@@ -4387,7 +4384,6 @@
     - {file: docs/results/comparisons.md, marker: suite-review-at-ten-percent}
     - {file: docs/Findings.md, marker: suite-review-at-ten-percent}
     - {file: docs/Summary.md, marker: suite-review-at-ten-percent}
-    - {file: README.md, marker: suite-review-at-ten-percent}
     - {file: docs/TECHNIQUES.md, marker: suite-review-at-ten-percent}
   note: >-
     The capture is exp70's tie-aware share of all errors inside the round(0.1 n) least confident units; the perfect
@@ -4501,7 +4497,6 @@
     - {file: docs/results/comparisons.md, marker: exp92-products-labelled-routes-hold}
     - {file: docs/Findings.md, marker: exp92-products-labelled-routes-hold}
     - {file: docs/Summary.md, marker: exp92-products-labelled-routes-hold}
-    - {file: README.md, marker: exp92-products-labelled-routes-hold}
   note: >-
     Preregistered on 4 October 2026 (08d5985), amended before any value was analysed (5e365be). Corrected before
     recording: the first extraction left out 734 plots with Esri data by taking an empty window from an overlapping
@@ -4548,7 +4543,6 @@
     - {file: docs/results/comparisons.md, marker: exp93-zone-guarantee-holds-on-a-product}
     - {file: docs/Findings.md, marker: exp93-zone-guarantee-holds-on-a-product}
     - {file: docs/Summary.md, marker: exp93-zone-guarantee-holds-on-a-product}
-    - {file: README.md, marker: exp93-zone-guarantee-holds-on-a-product}
   note: >-
     Preregistered on 5 October 2026 (39312a3), after exp92 had read the values and before any draw. The plots stand
     in for the map, so these are exact gradings of the procedure on LCMAP's values, not a certified zone of the map.
@@ -4598,7 +4592,6 @@
     - {file: docs/results/comparisons.md, marker: exp94-labelled-routes-hold-on-four-references}
     - {file: docs/Findings.md, marker: exp94-labelled-routes-hold-on-four-references}
     - {file: docs/Summary.md, marker: exp94-labelled-routes-hold-on-four-references}
-    - {file: README.md, marker: exp94-labelled-routes-hold-on-four-references}
   note: >-
     Preregistered on 7 October 2026 (b27443e); reading changed before analysis (a GDAL option, CGLS read by rows of
     blocks). A pre-record audit recomputed 346 quantities with independent code (all equal), reviewed the code and
@@ -4625,7 +4618,6 @@
   cited_in:
     - {file: docs/results/comparisons.md, marker: exp94-product-confidences-rank-their-errors}
     - {file: docs/Findings.md, marker: exp94-product-confidences-rank-their-errors}
-    - {file: README.md, marker: exp94-product-confidences-rank-their-errors}
   note: >-
     Points with a confidence code (LCMAP lcpconf above 100: 389 to 807 per cell) or no probability (CGLS 255: every
     water and built-up point and a tenth of the cropland points; ODSE: no class or no probability layer, 193 of the
@@ -4791,7 +4783,6 @@
     - {file: docs/Usage.md, marker: exp90-which-map-few-labels}
     - {file: docs/Findings.md, marker: exp90-which-map-few-labels}
     - {file: docs/Summary.md, marker: exp90-which-map-few-labels}
-    - {file: README.md, marker: exp90-which-map-few-labels}
   note: >-
     Not preregistered: a check of the design before it was documented. Coverage is a Monte Carlo share over 400
     draws (standard error about one point near 95%); the guarantee itself is the union bound, and the test file

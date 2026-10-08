@@ -71,6 +71,15 @@ as many (213 maps; five seeds agree); with the default anchor it certified nothi
 the one-look rule certified up to half the map. Reviewed in three lenses before the preregistration and audited before
 the record (two numbers in the draft record were wrong and were corrected). certify's default is unchanged.
 
+**plan's MCP reply said that every guarantee holds at any budget** (since 5607a55, unreleased). It now says at the
+budget fixed before labelling, for one reading of those labels, and that reading again at a larger budget is a second
+test except for certify on a sequential sample.
+
+**The README is shorter.** It says what the package is (built to check OlmoEarth's inference outputs; it reads only
+the scores a model writes, so it works on other models' maps and on published products with a confidence layer), how
+to install it, the basic commands and its limits; the measured results it listed are in the documentation and the
+report, where every claim it cited is still cited.
+
 ## 1.7.1 (2026-10-08)
 
 **Texts only: an interval or a certificate holds for one sample whose size was fixed before labelling, read once.** In
