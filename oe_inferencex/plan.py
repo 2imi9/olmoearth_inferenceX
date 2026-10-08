@@ -24,7 +24,8 @@ such a fall, no budget is recommended and the runs of budgets that reach the pro
 
 What is not known before labelling is asked for, not guessed: the error rate a map will turn out to have is what the
 labels measure, and a map's own confidence overstates its accuracy (the record: a median 0.061). The only inputs read
-from maps are counts: the windows in the population and, for two maps, the windows where they differ.
+from maps are counts: the windows in the population and, for two maps, the windows where they differ. Whether two
+maps have two classes, so that no differing window is wrong in both, is the user's statement, not read from codes.
 """
 import functools
 import math
@@ -489,24 +490,46 @@ def zone_level_probability(N, n, coverage, alpha, zone_error, delta=est.ZONE_DEL
     nz = sizes[j]
     level = delta if level is None else level
     Kz = int(round(zone_error * nz))
+    K0 = math.floor(alpha * nz) + 1                            # zone_pvalue's null count
+    if K0 > nz:
+        return 1.0                                             # no count of the zone exceeds alpha: every test passes
+    lv = float(est._level(level))
     bs, pb = _hyper_pmf(N, nz, n)
     total = 0.0
     for b, pbb in zip(bs, pb):
         b = int(b)
         if b == 0:
             continue
-
-        def passes(k):
-            return est._at_most(est.zone_pvalue(k, b, nz, alpha), level,
-                                lambda: est.zone_pvalue_exact(k, b, nz, alpha), nz)
-        if not passes(0):
+        top = min(b, int(math.ceil(alpha * b)) + 5)            # past alpha b the p-value is near 1/2, never below delta
+        p = _cdf(nz, K0, b, top)                               # zone_pvalue(k, b, nz, alpha) for k = 0..top
+        kstar = int(np.searchsorted(p, lv, side="right")) - 1  # the largest k with p(k) <= level, in floating point
+        for k in (kstar, kstar + 1):                           # certify decides a p-value near its level exactly
+            if 0 <= k <= top and abs(p[k] - lv) <= 1e-6 * lv:
+                ok = est._at_most(est.zone_pvalue(k, b, nz, alpha), level,
+                                  lambda: est.zone_pvalue_exact(k, b, nz, alpha), nz)
+                kstar = k if ok else min(kstar, k - 1)
+        if kstar < 0:
             continue
-        lo, hi = 0, b + 1                                      # the p-value rises with k: passes(lo), not past hi
-        while hi - lo > 1:
-            m = (lo + hi) // 2
-            lo, hi = (m, hi) if passes(m) else (lo, m)
-        total += pbb * est.hypergeom_cdf(lo, nz, Kz, b)
+        total += pbb * float(_cdf(nz, Kz, b, kstar)[kstar])
     return float(total)
+
+
+def _cdf(n, K, b, kmax):
+    """P(X <= k) for k = 0..kmax, X ~ Hypergeom(b drawn from n of which K are marked), from the ratio of successive
+    terms: zone_pvalue's values up to rounding; zone_level_probability redoes those near a level exactly."""
+    lo, hi = max(0, b - (n - K)), min(b, K)
+    out = np.zeros(kmax + 1)
+    if kmax < lo:
+        return out
+    lead = (math.lgamma(K + 1) - math.lgamma(lo + 1) - math.lgamma(K - lo + 1) + math.lgamma(n - K + 1)
+            - math.lgamma(b - lo + 1) - math.lgamma(n - K - b + lo + 1)
+            - (math.lgamma(n + 1) - math.lgamma(b + 1) - math.lgamma(n - b + 1)))
+    top = min(kmax, hi)
+    x = np.arange(lo, top, dtype=np.float64)
+    r = np.log(K - x) + np.log(b - x) - np.log(x + 1) - np.log(n - K - b + x + 1)
+    out[lo:top + 1] = np.minimum(1.0, np.cumsum(np.exp(lead + np.concatenate([[0.0], np.cumsum(r)]))))
+    out[top + 1:] = 1.0
+    return out
 
 
 def bonferroni_probability(N, n, coverage, alpha, zone_error, delta=est.ZONE_DELTA, grid=est.ZONE_GRID):
@@ -528,8 +551,10 @@ def zone_prefix_probability(N, n, coverage, alpha, zone_error, delta=est.ZONE_DE
     from the even spread by moving errors to less confident rings. Moving one error from a window x to a less
     confident window y never raises any zone's p-value, in distribution: pair each labelled set L with the set that
     swaps x and y in it, which is as likely. A zone that holds both windows or neither keeps its labels and its
-    errors; a zone that holds x but not y gets, on the paired set, either one error fewer among the same number of
-    labels or the same errors among one label more, and both lower its p-value. The labels in each ring, and the
+    errors. A zone that holds x but not y changes its (labels, errors) from the map with the error at x to the map
+    with it at y by (-1, -1), (0, -1), (0, 0) or (+1, 0), and none raises its p-value: P(X <= k) falls as k falls
+    and as labels are added with the same errors, and P(X_(b-1) <= k - 1) <= P(X_b <= k) since a draw adds at most
+    one error. The labels in each ring, and the
     errors among them, are drawn exactly: ring counts are multivariate hypergeometric, and the errors among a ring's
     labels hypergeometric, because positions inside a ring do not matter to any zone."""
     N, n = int(N), int(n)
@@ -540,10 +565,8 @@ def zone_prefix_probability(N, n, coverage, alpha, zone_error, delta=est.ZONE_DE
     nz = sizes[-1]
     Kz = int(round(zone_error * nz))
     edges = [0] + sizes
-    ring = np.diff(edges)
-    ring_err = np.diff([m * Kz // nz for m in edges])
-    if (ring <= 0).any():
-        raise ValueError(f"two levels of the grid give the same zone on a map of {N} windows")
+    ring = np.diff(edges)                                      # a ring can be empty: two levels give one zone on
+    ring_err = np.diff([m * Kz // nz for m in edges])          # a small map, and it then adds no label
     rng = np.random.default_rng(seed)
     labels = rng.multivariate_hypergeometric(np.append(ring, N - nz), n, size=int(draws))[:, :-1]
     errs = np.column_stack([rng.hypergeometric(int(e), int(r - e), labels[:, t]) if e else np.zeros(int(draws), int)
@@ -562,6 +585,8 @@ def zone_prefix_probability(N, n, coverage, alpha, zone_error, delta=est.ZONE_DE
 
 def plan_zone(N, coverage, alpha, zone_error=None, power=POWER, delta=est.ZONE_DELTA, grid=est.ZONE_GRID,
               max_labels=MAX_LABELS, draws=ZONE_DRAWS, seed=0):
+    # a simulated budget counts as reaching power only when its estimate less two standard errors does: the review
+    # of 2026-10-08 found a recommendation whose estimate, 0.903, stood above an exact 0.896
     """How many random labels `certify` needs for a zone of this coverage at (alpha, delta), budget by budget.
 
     Always: the floor, the budget from which the coverage is tested at all, and the entry budgets of the smaller
@@ -583,8 +608,10 @@ def plan_zone(N, coverage, alpha, zone_error=None, power=POWER, delta=est.ZONE_D
            "entry_budgets": {f"{g:g}": e for g, e in entries.items()},
            "zone_error": None if zone_error is None else float(zone_error), "checked_up_to": top, "note": PLAN_NOTE}
     if _zone_index(N, N, c, alpha, delta, grid)[0] is None:
-        out["refusal"] = (f"on a map of {N} windows certify never tests this zone at alpha {alpha:g}: even labelling "
-                          f"every window puts fewer than {out['min_labels_inside']} labels inside it")
+        out["refusal"] = (f"on a map of {N} windows certify never tests this zone at alpha {alpha:g}: even with every "
+                          f"window labelled, it tests only coverages of at least {est.zone_levels(N, N, alpha, delta, grid)[2]:.3g}, "
+                          f"where a zone holds {out['min_labels_inside']} labels")
+        out["labels_to_test"] = None
         return out
     if zone_error is None:
         out["unplanned"] = ("the labels needed beyond the floor depend on how often the zone is wrong, which only "
@@ -604,12 +631,16 @@ def plan_zone(N, coverage, alpha, zone_error=None, power=POWER, delta=est.ZONE_D
     upper, flat_se = {}, {}
     up = lambda b: upper.setdefault(b, zone_level_probability(N, b, c, alpha, zone_error, delta, grid=grid))
 
+    flat_q = {}
+
     def even(b):
+        """The simulated figure's lower end, estimate minus two standard errors, which is what has to reach power."""
         if up(b) < power:
-            flat_se[b] = None
+            flat_se[b] = flat_q[b] = None
             return None                                        # at most up(b), below power: not simulated
-        q, flat_se[b] = zone_prefix_probability(N, b, c, alpha, zone_error, delta, grid, draws, seed)
-        return q
+        q, flat_se[b] = zone_prefix_probability(N, b, c, alpha, zone_error, delta, grid, draws, seed + b)
+        flat_q[b] = q
+        return q - 2 * flat_se[b]
     bf = lambda b: bonferroni_probability(N, b, c, alpha, zone_error, delta, grid)
     bonf, bonf_span = refine(bf, {b: bf(b) for b in budgets}, power, every=True)
     flat, _ = refine(even, {b: even(b) for b in budgets}, power)
@@ -631,7 +662,9 @@ def plan_zone(N, coverage, alpha, zone_error=None, power=POWER, delta=est.ZONE_D
                         "below_power_at": [b for b in budgets if upper[b] < power],
                         "holds_for": "any spread of the errors: the prefix rule certifies the zone only if the zone's "
                                      "own test passes"},
-        "prefix_even": {"labels": recommend(flat, power), "probability_by_budget": {str(b): flat[b] for b in sorted(flat)},
+        "prefix_even": {"labels": recommend(flat, power), "probability_by_budget": {str(b): flat_q[b] for b in sorted(flat)},
+                        "lower_end_by_budget": {str(b): flat[b] for b in sorted(flat)},
+                        "counts_when": "the estimate less two standard errors reaches the probability asked for",
                         "runs_reaching_power": runs(flat, power),
                         "standard_error_by_budget": {str(b): flat_se[b] for b in sorted(flat)}, "draws": int(draws),
                         "exact": False, "holds_for": "maps whose more confident zones of the grid are wrong no more "

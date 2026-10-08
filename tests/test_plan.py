@@ -340,17 +340,23 @@ def test_plan_command_on_two_class_maps_uses_their_one_split(tmp_path, monkeypat
     np.save(tmp_path / "a.npy", a)
     np.save(tmp_path / "b.npy", b)
     monkeypatch.chdir(tmp_path)
-    printed = _run("plan a.npy --other b.npy --difference 0.05 --out p.json", capsys)
-    assert printed.startswith("Which map:") and "two-class maps" in printed
+    printed = _run("plan a.npy --other b.npy --difference 0.05 --two-class --out p.json", capsys)
+    assert printed.startswith("Which map:") and "--two-class: where two-class maps differ" in printed
     r = json.load(open("p.json"))["plans"]["which_map"]
     assert r["two_class"] and r["probability_at_labels"] >= 0.9 and r["worst_split_at_labels"]["right_in_neither"] == 0
+    # without the statement, the worst split checked, and a note saying what --two-class would do
+    printed = _run("plan a.npy --other b.npy --difference 0.05 --out q.json", capsys)
+    assert not json.load(open("q.json"))["plans"]["which_map"]["two_class"] and "--two-class plans their one split" in printed
+    got = _run("plan a.npy --other b.npy --difference 0.05 --two-class --both-wrong 0.3", capsys)
+    assert got.startswith("EXIT") and "no window wrong in both" in got
     ok_d = int((a != b).reshape(32, 4, 32, 4).any(axis=(1, 3)).sum())
     assert r["n_disagree"] == ok_d and r["n_population"] == 32 * 32
     assert f"run: oe-inferencex sample a.npy --other b.npy --budget {r['labels']} --out to_label.csv" in printed
 
 
-def test_three_class_scores_are_not_two_class_when_two_classes_win(tmp_path, monkeypatch, capsys):
-    """A (3, H, W) score map whose argmax holds only two classes: a third class can still be what is on the ground."""
+def test_two_class_is_never_inferred_from_the_codes(tmp_path, monkeypatch, capsys):
+    """A (3, H, W) score map whose argmax holds only two classes: a third class can still be what is on the ground,
+    so the plan is the worst split unless the user states --two-class."""
     rng = np.random.default_rng(2)
     p = rng.dirichlet(np.ones(3), size=(64, 64)).transpose(2, 0, 1)
     p[2] = 0.0
@@ -394,6 +400,7 @@ def test_plan_refuses_to_write_over_its_inputs(tmp_path, monkeypatch, capsys):
     ("plan --windows 100 --width 0.1 --both-wrong 0.2", "does not apply"),
     ("plan --windows 100 --width 0.1 --threshold 0.3", "does not apply"),
     ("plan --windows 100 --width 0.1 --delta 0.2", "does not apply"),
+    ("plan --windows 100 --width 0.1 --two-class", "does not apply"),
     ("plan --windows 100 --differing 10 --difference 0.05 --width 0.1", "separate call"),
     ("plan --windows 100 --width 0.1 --patch 8", "describe a map"),
     ("plan --windows 100 --width 0.1 --max-labels 0", "at least 1"),
@@ -480,3 +487,31 @@ def test_the_even_spread_argument_on_a_pointwise_counterexample():
         moved = base.copy()
         moved[x], moved[y] = 0, 1
         assert chance(moved) >= before - 1e-12, (x, y)
+
+
+# ----------------------------------------------------------------------------- the fresh review (2026-10-08)
+def test_a_simulated_budget_counts_only_when_its_lower_end_reaches_power():
+    """At 8,000 windows, 40% at alpha 0.1, wrong 5%: the estimate 0.903 at 2,576 labels stood above an exact 0.8958.
+    The recommendation now needs the estimate less two standard errors to reach 0.9 at every budget from it."""
+    r = plan.plan_zone(8_000, 0.4, 0.1, 0.05, draws=800)
+    ev = r["prefix_even"]
+    low = {int(b): v for b, v in ev["lower_end_by_budget"].items()}
+    assert ev["labels"] is not None and all(v is not None and v >= 0.9 for b, v in low.items() if b >= ev["labels"])
+    assert all(ev["probability_by_budget"][str(b)] - 2 * ev["standard_error_by_budget"][str(b)] == pytest.approx(v)
+               for b, v in low.items() if v is not None)
+
+
+def test_a_small_map_whose_grid_levels_share_a_zone_is_planned():
+    r = plan.plan_zone(15, 1.0, 0.3, 0.05, draws=400)
+    assert "refusal" not in r and r["bonferroni"]["probability_by_budget"]["15"] == 1.0
+
+
+def test_the_never_tested_refusal_gives_certifys_real_cut():
+    r = plan.plan_zone(892, 0.05, 0.05, 0.01)
+    assert "tests only coverages of at least" in r["refusal"] and r["labels_to_test"] is None
+
+
+def test_the_entry_note_says_the_fall_is_at_the_budget(tmp_path, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+    got = _run("plan --windows 20000 --coverage 0.5 --alpha 0.05 --zone-error 0 --max-labels 450", capsys)
+    assert "from each of these budgets both rules can lose power" in got and "just past" not in got

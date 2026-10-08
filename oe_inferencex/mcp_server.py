@@ -154,7 +154,8 @@ CARDS = {
         "which every larger one checked reaches power (default 0.9). With width, an error-rate interval no wider than "
         "width (high minus low), for a map wrong at error_rate (default 0.5). With other (or windows and differing) and "
         "difference, labels drawn where two maps differ that name the more accurate map when their accuracies differ "
-        "by at least difference, at the worst split checked of the differing windows (two-class maps have one). With "
+        "by at least difference, at the worst split checked of the differing windows (two_class plans the one split of "
+        "two-class maps). With "
         "coverage and alpha, the budget from which certify tests that zone at all and the budgets at which smaller "
         "zones enter; with zone_error, the rate the user expects that zone to be wrong, the Bonferroni rule's chance "
         "of certifying it (exact, however the errors spread), the most the prefix rule can reach (exact), and the "
@@ -1253,7 +1254,9 @@ def plan(
     difference: Annotated[float | None, P(description="Two maps: the smallest whole-map accuracy difference worth "
                                                       "detecting, as a fraction (0.02 is 2 points)")] = None,
     both_wrong: Annotated[float | None, P(description="Two maps: the share of the differing windows wrong in both "
-                                                      "(default: the worst split)")] = None,
+                                                      "(default: the worst split checked)")] = None,
+    two_class: Annotated[bool, P(description="Two maps: both have only two classes, so where they differ one is right")]
+    = False,
     coverage: Annotated[float | None, P(description="Zone: the share of the map to certify, a grid level from 0.05 to "
                                                     "1 in steps of 0.05")] = None,
     alpha: Annotated[float | None, P(description="Zone: the error rate the zone must not exceed")] = None,
@@ -1284,6 +1287,8 @@ def plan(
         _opt(argv, flag, value)
     if patch is not None:
         argv.append(f"--patch={int(patch)}")
+    if two_class:
+        argv.append("--two-class")
     if logits:
         argv.append("--logits")
     argv += _product_argv(confidence, confidence_range)
@@ -1306,8 +1311,8 @@ def plan(
     limits = _join([*r.get("notes", []), next(iter(plans.values()))["note"] if plans else None])
     nxt = ("Draw the labels with sample at the budget planned: design \"random\" for an error rate or a zone, or other "
            "set to the second map for which map is more accurate. Every guarantee holds at any budget; what the plan "
-           "gives is the chance of a useful answer, which for certify's prefix rule can fall just past the budgets at "
-           "which a smaller zone becomes testable.")
+           "gives is the chance of a useful answer, which for certify can fall at the budgets at which a smaller zone "
+           "becomes testable, until more labels restore it.")
     return _reply(" ".join(said), limits, nxt, {"plan": out} if out_dir is not None else {}, summ)
 
 

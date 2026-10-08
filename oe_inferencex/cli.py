@@ -1698,7 +1698,8 @@ def cmd_plan(args):
     unused = [flag for flag, value, needs in (
         ("--error-rate", args.error_rate, want_rate), ("--both-wrong", args.both_wrong, want_which),
         ("--zone-error", args.zone_error, want_zone), ("--delta", args.delta, want_zone),
-        ("--threshold", args.threshold, args.other is not None)) if value is not None and not needs]
+        ("--threshold", args.threshold, args.other is not None),
+        ("--two-class", args.two_class or None, want_which)) if value is not None and not needs]
     if unused:
         one = len(unused) == 1
         raise SystemExit(f"plan: {', '.join(unused)} {'does' if one else 'do'} not apply to what is planned here; leave "
@@ -1733,14 +1734,12 @@ def cmd_plan(args):
     power = 0.9 if args.power is None else args.power
     try:
         if want_which:
-            two_class = False
+            two_class = bool(args.two_class)
             if args.scores is not None:
                 _check_patch(args.patch, "plan")
                 t = _two_map_windows(args.scores, args.other, args.nodata, args.threshold, args.patch)
                 ok = np.asarray(t.ok, bool)
                 N2, D = int(ok.sum()), int((ok & (t.a_w != t.b_w)).sum())
-                codes = np.union1d(np.unique(t.ha[t.va]), np.unique(t.hb[t.vb]))
-                two_class = max(t.n_classes) <= 2 and codes.size <= 2 and args.both_wrong is None
                 notes += list(t.notes)
                 if D == 0:
                     raise SystemExit("plan: the two maps give the same class in every window both predict; there is "
@@ -1766,8 +1765,11 @@ def cmd_plan(args):
                 if r["labels"] is not None:
                     runs.append(_sample_command(args, r["labels"], other=True))
             if two_class:
-                notes.append("two-class maps: where they differ one of them is right, so no differing window is wrong in "
-                             "both, and the difference planned has the parity of the windows that differ")
+                notes.append("--two-class: where two-class maps differ one of them is right, so no differing window is "
+                             "wrong in both, and the difference planned has the parity of the windows that differ")
+            else:
+                notes.append("planned at the worst split checked of the differing windows; if both maps have only two "
+                             "classes, --two-class plans their one split, which needs fewer labels")
         if want_rate or want_zone:
             N = int(args.windows) if args.scores is None else None
             if N is None:
@@ -1791,8 +1793,9 @@ def cmd_plan(args):
             r = plan.plan_zone(N, args.coverage, args.alpha, args.zone_error, power, delta, max_labels=top_asked)
             results["zone"] = r
             head = (f"Zone: {100 * r['coverage']:.3g}% of the map ({r['zone_windows']} of {N} windows) at alpha "
-                    f"{args.alpha:g} is tested from {_labels(r['labels_to_test'])} drawn at random; fewer cannot "
-                    f"certify it even with no error among them.")
+                    f"{args.alpha:g}" + (f" is tested from {_labels(r['labels_to_test'])} drawn at random; fewer cannot "
+                                         f"certify it even with no error among them." if r.get("labels_to_test")
+                                         else ":"))
             if "refusal" in r:
                 print(f"{head} {r['refusal'][0].upper() + r['refusal'][1:]}.")
             elif "unplanned" in r:
@@ -1805,7 +1808,8 @@ def cmd_plan(args):
                       f"more: under the Bonferroni rule, " + _reach(b, r["checked_up_to"], "certifies it", "certify it")
                       + ", however its errors spread (exact); under the prefix rule (the default), "
                       + _reach(ev, r["checked_up_to"], "certifies it", "certify it")
-                      + f" when its more confident zones are wrong no more often (simulated, {ev['draws']} draws), and "
+                      + f" when its more confident zones are wrong no more often (simulated, {ev['draws']} draws; a "
+                      f"budget counts when its estimate less two standard errors reaches the probability), and "
                       f"no spread of the errors reaches the probability at {len(low)} of the "
                       f"{len(r['budgets_checked'])} budgets checked (exact).")
                 print(f"  Bonferroni by budget: {_ladder_text(b['probability_by_budget'], b['labels'], power)}")
@@ -1816,9 +1820,10 @@ def cmd_plan(args):
                                                 other=False))
             if r.get("entry_budgets"):
                 notes.append("At " + ", ".join(f"{e} labels the {float(g):.0%} zone" for g, e in r["entry_budgets"].items())
-                             + " becomes testable; just past each of these budgets both rules can lose power: the "
-                             "prefix rule tests the smallest testable zone first, with few labels, and the Bonferroni "
-                             "rule splits delta over one more zone")
+                             + " becomes testable; from each of these budgets both rules can lose power until more "
+                             "labels restore it: the prefix rule tests the smallest testable zone first, with few "
+                             "labels, and the Bonferroni rule splits delta over one more zone. The budget one below "
+                             "each is the last before the fall")
     except ValueError as exc:
         raise SystemExit(f"plan: {exc}") from None
     for cmd in runs:
@@ -1995,8 +2000,9 @@ def build_parser():
     pl.add_argument("--difference", type=float, default=None,
                     help="two maps: the smallest whole-map accuracy difference worth detecting, e.g. 0.02")
     pl.add_argument("--both-wrong", type=float, default=None,
-                    help="two maps: the share of the differing windows wrong in both (default: the worst split; two-"
-                         "class maps have none)")
+                    help="two maps: the share of the differing windows wrong in both (default: the worst split checked)")
+    pl.add_argument("--two-class", action="store_true",
+                    help="two maps: both have only two classes, so where they differ one is right; plans their one split")
     pl.add_argument("--coverage", type=float, default=None,
                     help="zone: the share of the map to certify, a level of the grid (0.05 to 1 in steps of 0.05)")
     pl.add_argument("--alpha", type=float, default=None, help="zone: the error rate the zone must not exceed")

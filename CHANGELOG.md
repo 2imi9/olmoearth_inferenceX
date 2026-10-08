@@ -7,7 +7,7 @@ tool in the MCP server). For each budget on a ladder (10, 12, 15, 20, ... up to 
 probability, over the reviewer's random draw, that the package's own procedure gives what is asked: an error-rate
 interval no wider than `--width` at a stated rate (50% when none is given); labels drawn where two maps differ that
 name the more accurate map when the accuracies differ by `--difference` or more, at the worst split checked of the
-differing windows (two-class maps have one); for a zone of `--coverage` at `--alpha`, the budget from which `certify`
+differing windows (with `--two-class`, the one split of two-class maps); for a zone of `--coverage` at `--alpha`, the budget from which `certify`
 tests it at all and, with `--zone-error`, the Bonferroni rule's probability of certifying it (exact, however the
 errors spread), the most the prefix rule can reach (exact) and the prefix rule's probability when its more confident
 zones are wrong no more often (simulated with the errors spread evenly, the worst such map, by a coupling argument in

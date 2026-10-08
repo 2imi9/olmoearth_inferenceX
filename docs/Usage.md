@@ -525,12 +525,13 @@ run: oe-inferencex sample MAP --design random --budget 244 --out to_label.csv
 | Plan for | Options | What is computed |
 |---|---|---|
 | An error rate, to within a width | `MAP --width W` (or `--windows N`) | the probability that `estimate`'s exact 95% interval is no wider than W (high minus low) |
-| Which of two maps is more accurate | `MAP_A --other MAP_B --difference D` (or `--windows N --differing D`) | the probability that labels drawn where the maps differ name the more accurate map when their accuracies differ by D or more, at the worst split checked of the differing windows into right in one map, in the other or in neither; two-class maps have one split |
+| Which of two maps is more accurate | `MAP_A --other MAP_B --difference D` (or `--windows N --differing D`) | the probability that labels drawn where the maps differ name the more accurate map when their accuracies differ by D or more, at the worst split checked of the differing windows into right in one map, in the other or in neither; with `--two-class`, the one split of two-class maps |
 | A certified zone | `MAP --coverage C --alpha A [--zone-error R]` | the budget from which `certify` tests that zone at all; with R, the Bonferroni rule's probability of certifying it (exact, however the errors spread), the most the prefix rule can reach (exact) and the prefix rule's probability when its more confident zones are wrong no more often (simulated, the worst such map) |
 
 Between the budgets of the ladder the probability does not rise smoothly: the counts are discrete, so it steps, and
 for `certify` it falls at each budget where a smaller zone becomes testable, because the prefix rule then tests that
-zone first, with few labels, and the Bonferroni rule splits delta over one more zone. `plan` therefore checks nine
+zone first, with few labels, and the Bonferroni rule splits delta over one more zone; the simulated prefix figure counts
+only where its estimate less two standard errors reaches the probability. `plan` therefore checks nine
 budgets below the recommendation and, where a budget is cheap to compute exactly, every budget from it up to 5% above
 it, lists the budgets where a smaller zone enters, and, when the largest budget checked falls in such a fall, gives the
 runs of budgets that reach the probability instead of a recommendation. For the error rate and two maps the interval
