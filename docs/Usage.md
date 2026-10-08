@@ -18,7 +18,7 @@ extra) are new in 1.4.0.
 
 ## Quick start
 
-Every command below runs on 1.7.0. `scores.tif` is a map of per-class probabilities; add `--logits` for logits.
+Every command below runs on 1.7.1. `scores.tif` is a map of per-class probabilities; add `--logits` for logits.
 
 ```bash
 pip install "olmoearth-inferencex[geo]"
@@ -475,6 +475,11 @@ It writes `random_zone.json` (`coverage`, the certified share; `threshold`, the 
   labels.
 - When the budget cannot certify the level asked for, `certify` says so. With no error among its labels a zone needs
   about `ln(δ) / ln(1 − α)` labels (`min_labels_to_certify`): 45 at α = 5% and 255 at α = 0.9%, for δ = 0.1.
+- The guarantee is for one budget fixed before the labels are read, and one run of `certify`. Labelling, certifying,
+  adding labels and certifying again runs a new test at every run, and the chance that some run certifies a zone
+  wrong more than α grows with the runs. Choose the budget first, then certify once; to certify more, draw a new
+  sample with its budget fixed before labelling. The same holds for `estimate`'s interval and for the comparison of
+  two maps: choose the total before labelling and read the result once.
 - The confidence is recomputed from the scores the sidecar names (`--scores` if the raster has moved) and checked
   against the CSV; another raster, or another `--nodata`, is refused.
 - Without a condition, the zone JSON gains `scope`: the zone's rate is certified over all its windows together, and
@@ -515,7 +520,7 @@ example's results:
 ```console
 $ oe-inferencex decide to_label_estimate.json --ask error_rate_below=0.12 --ask error_rate_below=0.05
 error_rate_below=0.12: yes. At 95% confidence, the error rate of the map is below 12.0%: its interval is 4.5% to 10.4%. The rate is agreement with the reviewer's labels, which are assumed right.
-error_rate_below=0.05: undetermined. The labels cannot tell whether the error rate of the map is below 5.0%: its 95% interval, 4.5% to 10.4%, lies across it. More labels narrow the interval. The rate is agreement with the reviewer's labels, which are assumed right.
+error_rate_below=0.05: undetermined. The labels cannot tell whether the error rate of the map is below 5.0%: its 95% interval, 4.5% to 10.4%, lies across it. More labels narrow the interval: choose the new total before labelling and read the interval once at that total, since an interval read again as labels are added, stopping when it looks decisive, holds less often than 95%. The rate is agreement with the reviewer's labels, which are assumed right.
 wrote to_label_estimate_decisions.json
 ```
 
@@ -526,7 +531,7 @@ wrote to_label_estimate_decisions.json
 | `more_accurate` | a, b, undetermined | `estimate` on a sample drawn with `--other` | the interval on the difference excludes 0 |
 | `more_accurate` | a, b, tie, undetermined | `compare --labels` | a count against the labels raster, taken as truth; undetermined unless every differing window carries a label |
 | `trusted_share` | a share of the map | `certify` | the certified share; 0 when nothing is certified |
-| `trusted_share_at_least=S` | yes, undetermined | `certify` | never no: more labels can certify more where the map's error rate is at most alpha |
+| `trusted_share_at_least=S` | yes, undetermined | `certify` | never no: a new sample with more labels can certify more where the map's error rate is at most alpha |
 | `share_differs` | a share of the windows | `compare`, or `estimate` on a sample drawn with `--other` | no labels needed; says nothing about which map is right |
 
 T and S are shares between 0 and 1. "undetermined" means the result does not settle the question; it is not a no. A

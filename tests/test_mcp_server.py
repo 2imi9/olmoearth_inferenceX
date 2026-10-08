@@ -598,6 +598,7 @@ def test_sample_estimate_certify_give_the_readme_numbers(qs):
 
     out = _ok("certify", sample_csv=csv_path, alpha=0.01, out_dir=str(qs / "strict"))
     assert out["summary"]["coverage"] is None and out["conclusion"].startswith("No zone was certified at alpha 1%")
+    assert out["next"].endswith(mcp_server.CERTIFY_ONCE.strip())         # 1.7.1: a larger sample, its budget fixed first
     assert "(80% of the map) held 243 labels with 1 wrong" in out["conclusion"]   # as the quick start's test finds
     assert "zone_mask" not in out["files"] and "labels at this alpha" in out["next"]
 

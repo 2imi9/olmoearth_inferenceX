@@ -239,6 +239,14 @@ CARDS = {
 }
 
 
+# What every "label more" pointer adds (1.7.1). The package's intervals and certificates hold for a sample whose size was
+# fixed before its labels were read, read once: labelling, reading, adding labels and reading again, stopping when the
+# answer looks decisive, is several tests, and the chance that one of them is wrong grows with the looks.
+CERTIFY_ONCE = " Fix the new budget before labelling and certify once: every run of certify is a new test."
+READ_ONCE = (" Choose the new total before labelling and read the result once at that total: read again as labels are "
+             "added, stopping when it looks decisive, it holds less often than stated.")
+
+
 # ----------------------------------------------------------------------------- running the command line
 class Refused(Exception):
     """The package refused the input; the message is the package's own."""
@@ -961,7 +969,7 @@ def estimate(
         if most < b1:
             nxt += (f" At alpha 0.05 and delta {est.ZONE_DELTA:g} a condition needs at least {b1} labels and the most "
                     f"any holds is {most}, so it would certify nothing there; a looser alpha needs fewer labels, and a "
-                    "larger sample drawn with the same condition layer can certify more.")
+                    "larger sample drawn with the same condition layer can certify more." + CERTIFY_ONCE)
     elif r["design"] in ("random", "condition"):
         nxt = (f"certify with sample_csv={path} and an alpha, such as 0.05, gives the most confident share of the map "
                "whose error rate is at most alpha.")
@@ -1007,7 +1015,7 @@ def _which_map(r, out):
     nxt = ("For either map's own accuracy: sample with design \"random\" on that map's scores, have a reviewer label "
            "every row, then estimate." if v else
            "More labels on the same differing windows narrow the interval: draw a larger sample with other (a new seed "
-           "gives a new draw; label all of it).")
+           "gives a new draw; label all of it)." + READ_ONCE)
     summ = {k: r.get(k) for k in ("verdict", "difference", "n_labelled", "n_disagree", "n_population", "n_a_right",
                                   "n_b_right", "n_neither", "n_unjudged", "share_a_right", "share_b_right")}
     return _reply(" ".join(said), _join(limits), nxt, {"estimate": out}, summ)
@@ -1121,7 +1129,8 @@ def certify(
                "windows to check first.")
     else:
         nxt = (f"Any zone needs at least {r['min_labels_to_certify']} labels at this alpha and delta. A larger random "
-               "sample (sample with design \"random\" and a larger budget, labelled in full) can certify more.")
+               "sample (sample with design \"random\" and a larger budget, labelled in full) can certify more."
+               + CERTIFY_ONCE)
     return _reply(" ".join(said), _join(limits), nxt, files, summ)
 
 
@@ -1143,7 +1152,7 @@ def _condition_need(r, alpha, delta):
             need += (f"; once {'both' if k == 2 else f'all {k}'} are tested, delta is split over them "
                      f"({delta / k:.3g} each) and a zone in one needs at least {bk}")
     return (need + ". A larger sample drawn with the same condition layer (sample with condition and a larger budget, "
-            "labelled in full) can certify more.")
+            "labelled in full) can certify more." + CERTIFY_ONCE)
 
 
 def decide(
@@ -1197,9 +1206,9 @@ def decide(
                            "to map b, have a reviewer write reference_class on every row, then estimate, and ask "
                            "more_accurate of that estimate."),
             "zone": ("a larger random sample (sample with design \"random\", or with the same condition layer, and a "
-                     "larger budget), labelled in full, can certify more.")}
+                     "larger budget), labelled in full, can certify more." + CERTIFY_ONCE)}
     nxt = (("For " + ", ".join(pending) + ": " + more.get(rkind, "a larger sample drawn the same way, labelled in "
-                                                                "full, narrows the interval.")) if pending else
+                                                                "full, narrows the interval." + READ_ONCE)) if pending else
            "The result can also answer: " + ", ".join(r["available"]) + ".")
     summ = {"result_kind": r["result_kind"], "answers": {q: a["answer"] for q, a in r["answers"].items()},
             "per_condition": {q: a["per_condition"] for q, a in r["answers"].items() if a.get("per_condition")} or None,

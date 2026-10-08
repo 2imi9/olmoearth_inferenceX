@@ -146,7 +146,9 @@ def _rate_below(r, t, where="the map"):
         why = f"At {level} confidence, the error rate of {where} is at least {_pc(t)}: its interval is {iv}."
     else:
         why = (f"The labels cannot tell whether the error rate of {where} is below {_pc(t)}: its "
-               f"{'95%' if exact else 'nominal 95%'} interval, {iv}, lies across it. More labels narrow the interval.")
+               f"{'95%' if exact else 'nominal 95%'} interval, {iv}, lies across it. More labels narrow the interval: "
+               "choose the new total before labelling and read the interval once at that total, since an interval "
+               "read again as labels are added, stopping when it looks decisive, holds less often than 95%.")
     if not exact:
         why += " The interval is approximate for this design, not exact."
     return a, why, exact
@@ -238,7 +240,9 @@ def _answer_more_accurate(r, k):
                    "windows compared.")
         else:
             why = (f"The labels cannot tell which map is more accurate: the difference, a minus b, lies between "
-                   f"{lo:+.1f} and {hi:+.1f} points (95% interval). More labels on the differing windows narrow it.")
+                   f"{lo:+.1f} and {hi:+.1f} points (95% interval). More labels on the differing windows narrow it: "
+                   "choose the new total before labelling and compare once at that total, since a comparison read "
+                   "again as labels are added, stopping when it looks decisive, holds less often than 95%.")
         why += " This says which map is better, not either map's accuracy. " + _labels_clause(r)
         if r.get("n_unjudged"):
             why += f" {r['n_unjudged']} windows could not be judged and are counted for each map both ways."
@@ -295,7 +299,9 @@ def _answer_trusted(r, share=None):
                "them as a group, not for each window, and outside them nothing is certified.")
     else:
         why = (f"Nothing is certified at {_pc(alpha)} from {r.get('n_labelled')} labels. That is not evidence that "
-               f"the map is worse than {_pc(alpha)}: more labels can certify a zone wherever the map is good enough.")
+               f"the map is worse than {_pc(alpha)}: a new random sample with more labels can certify a zone wherever "
+               "the map is good enough. Fix its budget before labelling and certify once: every run of certify is a "
+               "new test, and retrying raises the chance that a certificate is wrong.")
     # The labels limit and the result's notes follow whichever sentence answers. Until 2026-10-06 an undetermined
     # trusted_share_at_least replaced them, and so dropped the ? windows counted as wrong (one reason less is
     # certified) and the pixels a product's range left out.
@@ -313,8 +319,9 @@ def _answer_trusted(r, share=None):
         a = "yes" if cov >= share else "undetermined"
         if a == "undetermined":
             why = (f"No zone covering at least {_pc(share)} of the map is certified at {_pc(alpha)} from these labels "
-                   f"(certified: {_pc(cov)}). That is not a no: more labels can certify more, but only where the map's "
-                   f"error rate is at most {_pc(alpha)}.")
+                   f"(certified: {_pc(cov)}). That is not a no: a new random sample with more labels can certify more, but "
+                   f"only where the map's error rate is at most {_pc(alpha)}. Fix its budget before labelling and certify "
+                   "once: every run of certify is a new test, and retrying raises the chance that a certificate is wrong.")
         why += tail
         out = {"type": "yes_no", "answer": a, "level": 1 - delta, "exact": True, "because": why,
                "evidence": {**ev, "certified": cov}}

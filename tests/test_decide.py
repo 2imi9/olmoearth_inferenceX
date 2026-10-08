@@ -211,3 +211,19 @@ def test_decide_reads_what_the_quick_start_wrote(tmp_path, monkeypatch, capsys):
 
     with pytest.raises(SystemExit, match="compare cannot say which map is right without labels"):
         cli.main(shlex.split("decide diff/comparison.json --ask more_accurate"))
+
+
+def test_every_pointer_to_more_labels_says_to_fix_the_budget_first():
+    """1.7.1: an interval or a certificate holds for a sample whose size was fixed before its labels were read, read
+    once. Every answer that points to more labels says so, since labelling, reading, adding labels and reading again
+    is several tests."""
+    zone = {"rule": "prefix", "alpha": 0.05, "delta": 0.1, "n_population": 4096, "n_labelled": 300, "coverage": 0.9,
+            "n_zone": 3686}
+    short = _one(zone, "trusted_share_at_least=0.95")["trusted_share_at_least=0.95"]["because"]
+    empty = _one(dict(zone, coverage=None, n_zone=None), "trusted_share")["trusted_share"]["because"]
+    for text in (short, empty):
+        assert "Fix its budget before labelling and certify once" in text and "new random sample" in text
+        assert "more labels can certify more, but" not in text.replace("a new random sample with more labels", "")
+    rate = list(_one(_estimate(0.08, 0.12), "error_rate_below=0.1").values())[0]["because"]
+    assert "choose the new total before labelling and read the interval once" in rate
+    assert "holds less often than 95%" in rate

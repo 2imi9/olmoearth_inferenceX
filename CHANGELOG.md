@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.7.1 (2026-10-08)
+
+**Texts only: certify's guarantee is for one budget fixed in advance and one run.** In 1.7.0, `decide` and the MCP
+server answered an undetermined or empty result with "more labels can certify more" or "a larger sample ... narrows
+the interval", which invites labelling, certifying, adding labels and certifying again. Each run is a new test, and
+the chance that some run certifies a zone wrong more than alpha grows with the runs. The texts now say to fix the
+new budget before labelling and to certify once; for `estimate`'s interval and the comparison of two maps, to choose
+the total before labelling and read the result once. `docs/Usage.md` and `certify_zone`'s docstring say the same. No
+computation, option or output field changed.
+
 ## 1.7.0 (2026-10-07)
 
 **What 1.7.0 adds.** `decide`, typed answers read from a result; published products as input, a class map with its

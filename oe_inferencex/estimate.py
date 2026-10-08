@@ -1801,6 +1801,9 @@ def certify_zone(margin, indices, wrong, alpha, delta=ZONE_DELTA, rule="prefix",
               hold many errors), "bonferroni" (valid on any map; can certify more in that case and less in others),
               "plugin" (no guarantee; what a reviewer would do unaided)
 
+    The guarantee is for one sample whose size was fixed before its labels were read, certified once: certifying
+    again after adding labels runs a new test each time, and the chance that some run is wrong grows with the runs.
+
     Returns coverage None when nothing can be certified, with the reason; a labelled set that looks like the
     tool's own review set is refused, because the hypergeometric argument needs a random draw. `scope` says that the
     rate is certified over all the zone's windows together; for a map read from different inputs in different
