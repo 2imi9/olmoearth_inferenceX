@@ -17,12 +17,15 @@ import math
 CHANGES = (
     {"why": "certify's note on the prefix rule. 1.3.1 said the rule is valid only if the zone's error rate does not "
             "fall as the zone grows. The rule is fixed-sequence testing and valid on any map "
-            "(tests/test_trust_zone.py enumerates it); the note now says so, and when bonferroni can certify more",
+            "(tests/test_trust_zone.py enumerates it); the note now says so, and when bonferroni can certify more; "
+            "since 1.7.1 it adds that the rule is chosen before the labels are read, since running the other rule "
+            "after seeing the zone is a second test",
      "old": ("valid if the zone's error rate does not fall as the zone grows; on the suite tasks exp80 graded, the "
              "guarantee held whether or not that was exactly true (docs/results/comparisons.md, exp80)"),
      "new": ("prefix rule: fixed-sequence testing, valid on any map whatever the shape of its error rate; it stops at "
              "the first zone it cannot certify, so it certifies little when the most confident windows hold many "
-             "errors, where the bonferroni rule can certify more"),
+             "errors, where the bonferroni rule can certify more; choose the rule before reading the labels, since "
+             "running the other rule after seeing this zone is a second test"),
      "constant": ("oe_inferencex.estimate", "PREFIX_NOTE"),
      "files": ("sample_random.certify_delta.json", "sample_random.certify_delta.stdout.txt",
                "sample_random.certify_prefix.json", "sample_random.certify_prefix.stdout.txt",

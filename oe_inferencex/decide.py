@@ -22,7 +22,9 @@ made without labels, has no answer to give, not an undetermined one.
                                                           window carries a label
     trusted_share              a share of the map         certify: the certified share, 0 when nothing is certified
     trusted_share_at_least=S   yes / undetermined         certify: never "no", since a share not certified from these
-                                                          labels can be certified from more where the map is good enough
+                                                          labels can be certified from a larger sample where the map is
+                                                          good enough (a second test when this run could certify
+                                                          something: up to twice delta for the two together)
     share_differs              a share of the windows     compare, or estimate on a sample drawn with other; no labels
 
 T and S are shares from 0 to 1. A result with input conditions gives the whole map's answer and each condition's.
@@ -58,6 +60,44 @@ DATES_APART = ("different_time", "overlapping_time")
 
 def _pc(x):
     return f"{100 * float(x):.1f}%"
+
+
+# What a second look costs (1.7.1). An interval or a certificate holds for one sample whose size was fixed before its
+# labels were read. A second sample read after the first, or a second run on the same labels with another rule, alpha
+# or delta, is a second test, and the chance that one of the answers is wrong can reach the sum of their error levels
+# (a union bound). The MCP server uses the same sentences.
+def interval_second_look(exact=True, lead=True):
+    """After an undetermined interval: what a larger sample, read after this one, costs. `lead` opens with "a larger
+    sample narrows it"; without it, the sentence is the cost alone, for a reply that has just pointed to the sample."""
+    head = "A larger sample narrows it, but read after this one it is" if lead else "Read after this one, a larger sample is"
+    if exact:
+        return (f"{head} a second test: the chance that one of the two intervals misses can reach 10%, so the one read "
+                "last is no longer guaranteed at 95%. To keep 95%, choose the sample size before any labelling.")
+    return (f"{head} a second test, and the chances that either interval misses add up; each is nominal here. Choose "
+            "the sample size before any labelling.")
+
+
+def comparison_second_look(lead=True):
+    """After an undetermined comparison of two maps from a sample of their differing windows; `lead` as above."""
+    head = ("More labels on the differing windows narrow it, but a second sample read after this one is" if lead else
+            "Read after this one, a second sample is")
+    return (f"{head} a second test: the chance that one of the two comparisons is wrong can reach 10%. To keep 95%, "
+            "choose the sample size before any labelling.")
+
+
+def certificate_second_look(delta, tested=True):
+    """After a certify result that certified less than asked: what a new sample costs. `tested`: whether that run could
+    have certified anything (enough labels for some zone); if not, it was no test, and a new sample is the first."""
+    if not tested:
+        return ("A new sample is then the first test that can certify anything: choose its budget before labelling "
+                "and certify it once, or draw it as a sequential sample (sample --design sequential), which can be "
+                "added to and certified at every look.")
+    twice = 2 * float(delta)
+    reach = f"{_pc(twice)}, twice delta" if twice < 1 else "100%"
+    return (f"A new sample is a second test: with this one, the chance that a certificate is wrong can reach {reach} "
+            "(with another delta, the sum of the two). To keep delta, choose the budget before any labelling and "
+            "certify once, or draw the new sample as a sequential one (sample --design sequential), which can be "
+            "added to and certified at every look.")
 
 
 def kind(result):
@@ -146,7 +186,8 @@ def _rate_below(r, t, where="the map"):
         why = f"At {level} confidence, the error rate of {where} is at least {_pc(t)}: its interval is {iv}."
     else:
         why = (f"The labels cannot tell whether the error rate of {where} is below {_pc(t)}: its "
-               f"{'95%' if exact else 'nominal 95%'} interval, {iv}, lies across it. More labels narrow the interval.")
+               f"{'95%' if exact else 'nominal 95%'} interval, {iv}, lies across it. "
+               + interval_second_look(exact))
     if not exact:
         why += " The interval is approximate for this design, not exact."
     return a, why, exact
@@ -165,6 +206,13 @@ def _answer_error_rate_below(r, t):
         for name, row in r["per_condition"].items():
             if row.get("low") is None or row.get("high") is None:
                 out["per_condition"][name] = {"answer": "undetermined", "because": "no interval for this condition"}
+                continue
+            if row.get("n_labelled") == 0:
+                # 0% to 100%, which cannot miss: a sample that puts labels here is the condition's first test
+                out["per_condition"][name] = {"answer": "undetermined", "low": row["low"], "high": row["high"],
+                                              "because": (f"No labelled window fell in condition {name}, so nothing "
+                                                          "can be said about it; a sample that puts labels in it is "
+                                                          "its first test.")}
                 continue
             ca, cwhy, _ = _rate_below(row, t, f"condition {name}")
             out["per_condition"][name] = {"answer": ca, "because": cwhy, "low": row["low"], "high": row["high"]}
@@ -238,7 +286,7 @@ def _answer_more_accurate(r, k):
                    "windows compared.")
         else:
             why = (f"The labels cannot tell which map is more accurate: the difference, a minus b, lies between "
-                   f"{lo:+.1f} and {hi:+.1f} points (95% interval). More labels on the differing windows narrow it.")
+                   f"{lo:+.1f} and {hi:+.1f} points (95% interval). " + comparison_second_look())
         why += " This says which map is better, not either map's accuracy. " + _labels_clause(r)
         if r.get("n_unjudged"):
             why += f" {r['n_unjudged']} windows could not be judged and are counted for each map both ways."
@@ -284,6 +332,11 @@ def _answer_trusted(r, share=None):
     if r.get("rule") == "plugin":
         raise ValueError(PLUGIN_REFUSED)
     alpha, delta = float(r["alpha"]), float(r["delta"])
+    # could this run have certified anything? Not below the labels a clean zone needs, nor with no condition tested
+    if r.get("by_condition"):
+        tested = bool(r.get("n_conditions_tested"))
+    else:
+        tested = r.get("min_labels_to_certify") is None or int(r.get("n_labelled") or 0) >= int(r["min_labels_to_certify"])
     by_cond = bool(r.get("by_condition"))
     if by_cond:
         cov = float(r.get("certified_share_of_map") or 0.0)
@@ -295,9 +348,15 @@ def _answer_trusted(r, share=None):
                f"the time, a statement that fails on at most {_pc(delta)} of samples like this one"
                + (", however often certify is run on it as labels are added" if seq else "")
                + ". The rate holds for them as a group, not for each window, and outside them nothing is certified.")
+    elif seq:
+        why = (f"Nothing is certified at {_pc(alpha)} from {r.get('n_labelled')} labels yet. That is not evidence that "
+               f"the map is worse than {_pc(alpha)}: this is a sequential sample, so more of its windows, labelled from "
+               "the top (or after sample --extend), can certify a zone from the anchor outward wherever the map is good "
+               "enough, and certify may be run again at every look under the same guarantee.")
     else:
         why = (f"Nothing is certified at {_pc(alpha)} from {r.get('n_labelled')} labels. That is not evidence that "
-               f"the map is worse than {_pc(alpha)}: more labels can certify a zone wherever the map is good enough.")
+               f"the map is worse than {_pc(alpha)}: a new random sample with more labels can certify a zone wherever "
+               "the map is good enough. " + certificate_second_look(delta, tested))
     # The labels limit and the result's notes follow whichever sentence answers. Until 2026-10-06 an undetermined
     # trusted_share_at_least replaced them, and so dropped the ? windows counted as wrong (one reason less is
     # certified) and the pixels a product's range left out.
@@ -322,9 +381,7 @@ def _answer_trusted(r, share=None):
         elif a == "undetermined":
             why = (f"No zone covering at least {_pc(share)} of the map is certified at {_pc(alpha)} from these labels "
                    f"(certified: {_pc(cov)}). That is not a no: a new random sample with more labels can certify more, but "
-                   f"only where the map's error rate is at most {_pc(alpha)}. Fix its budget before labelling and certify "
-                   "once: every run of certify is a new test, and retrying raises the chance that a certificate is wrong. "
-                   "A sequential sample (sample --design sequential) is the one that can be added to.")
+                   f"only where the map's error rate is at most {_pc(alpha)}. " + certificate_second_look(delta, tested))
         why += tail
         out = {"type": "yes_no", "answer": a, "level": 1 - delta, "exact": True, "because": why,
                "evidence": {**ev, "certified": cov}}

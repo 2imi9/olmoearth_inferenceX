@@ -1640,7 +1640,8 @@ ZONE_CUT = "standard"             # the level cut; "ramp" is an option (exp95, e
 # small maps, monotone or not, and every draw, for both rules.
 PREFIX_NOTE = ("prefix rule: fixed-sequence testing, valid on any map whatever the shape of its error rate; it stops at "
                "the first zone it cannot certify, so it certifies little when the most confident windows hold many "
-               "errors, where the bonferroni rule can certify more")
+               "errors, where the bonferroni rule can certify more; choose the rule before reading the labels, since "
+               "running the other rule after seeing this zone is a second test")
 
 
 def _log_choose(n, r):
@@ -1840,6 +1841,9 @@ def certify_zone(margin, indices, wrong, alpha, delta=ZONE_DELTA, rule="prefix",
     rule    : "prefix" (fixed-sequence testing, valid on any map; certifies little when the most confident windows
               hold many errors), "bonferroni" (valid on any map; can certify more in that case and less in others),
               "plugin" (no guarantee; what a reviewer would do unaided)
+
+    The guarantee is for one sample whose size was fixed before its labels were read, certified once: certifying
+    again after adding labels runs a new test each time, and the chance that some run is wrong grows with the runs.
 
     Returns coverage None when nothing can be certified, with the reason; a labelled set that looks like the
     tool's own review set is refused, because the hypergeometric argument needs a random draw. `scope` says that the

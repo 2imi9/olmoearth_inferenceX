@@ -51,7 +51,10 @@ is for one budget fixed before the labels and one run. A reviewer who certifies,
 runs several tests: on six of exp96's maps, where one budget's certificate is wrong at most 12.25% of the time, some
 budget of a doubling ladder certified a wrong zone on 21% to 30% of nested draws under the standard cut, and 24% to
 32% under the ramp (`exp/exp96_audit.py pathwise`). The
-docs, `decide`'s answer and the MCP texts now say to fix the budget before labelling and to certify once.
+docs, `decide`'s answer and the MCP texts then said to fix the budget before labelling and to certify once; 1.7.1
+(below) rewrote those texts after review, since that wording named a safeguard already enforced while still
+recommending a second sample, and they now say what a second sample costs. On main they also point to a sequential
+sample (below) as the way to add labels.
 
 **Sequential certify: a zone certificate that holds at every look (exp97, preregistered 8fb5ed5).** `sample --design
 sequential` draws a fixed random order; `--alpha` (or `--anchor`) fixes, before any label, the anchor, the smallest
@@ -67,6 +70,21 @@ maps. It costs labels: to reach half the largest mean certified share the one-lo
 as many (213 maps; five seeds agree); with the default anchor it certified nothing on 2 small maps at a low alpha where
 the one-look rule certified up to half the map. Reviewed in three lenses before the preregistration and audited before
 the record (two numbers in the draft record were wrong and were corrected). certify's default is unchanged.
+
+## 1.7.1 (2026-10-08)
+
+**Texts only: an interval or a certificate holds for one sample whose size was fixed before labelling, read once.** In
+1.7.0, `decide` and the MCP server answered an undetermined or empty result with "more labels can certify more" or "a
+larger sample ... narrows the interval", which invites labelling, reading, adding labels and reading again. A second
+sample read after the first is a second test: with both, the chance that a certificate is wrong can reach twice delta,
+and that one of two 95% intervals misses, 10%. Every such pointer now says so, and that to keep the stated level the
+sample size is chosen before any labelling; where the first run could not certify anything, it says the new sample is
+the first test that can certify anything (and a condition with no labelled window, that a sample which reaches it is
+its first test), and for an approximate (nominal) interval it says the chances add up without claiming a bound. A
+second run on the same labels with another rule, alpha or delta is a second test too: the prefix rule's note no longer
+points to the bonferroni rule without saying so, the MCP replies say delta is chosen before the labels are read, and
+the MCP hard rules and the skill gain the rule. `docs/Usage.md`, `certify_zone`'s docstring and the decide module's
+docstring say the same. No computation, option or output field changed.
 
 ## 1.7.0 (2026-10-07)
 

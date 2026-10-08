@@ -20,6 +20,7 @@ import numpy as np
 import pytest
 import yaml
 
+import oe_inferencex.decide as _decide_mod
 from oe_inferencex import cli, mcp_server
 from oe_inferencex import assess as assess_mod
 from oe_inferencex import estimate as est
@@ -625,7 +626,7 @@ def test_sample_estimate_certify_give_the_readme_numbers(qs):
     assert out["conclusion"].startswith("Taken together, the 90% most confident windows (3686 of 4096, confidence >= "
                                         "0.6662) are wrong at most 5% of the time. The rate holds for them as a group, "
                                         "not for each window, and outside them nothing is certified.")
-    assert "delta, which can be set lower" in out["conclusion"]
+    assert "delta, chosen before the labels were read" in out["conclusion"]
     assert np.load(out["files"]["zone_mask"]).sum() == 3686
     assert "Outside the certified windows nothing is certified" in out["limits"] and f"Note: {est.PREFIX_NOTE}" in out["limits"]
     assert f"Note: {mcp_server.MCP_SCOPE['certify']}" in out["limits"] and est.SCOPE_CERTIFY not in out["limits"]
@@ -633,6 +634,7 @@ def test_sample_estimate_certify_give_the_readme_numbers(qs):
 
     out = _ok("certify", sample_csv=csv_path, alpha=0.01, out_dir=str(qs / "strict"))
     assert out["summary"]["coverage"] is None and out["conclusion"].startswith("No zone was certified at alpha 1%")
+    assert out["next"].endswith(mcp_server._mcp_words(_decide_mod.certificate_second_look(0.1, True)))     # 1.7.1: what a new sample costs
     assert "(80% of the map) held 243 labels with 1 wrong" in out["conclusion"]   # as the quick start's test finds
     assert "zone_mask" not in out["files"] and "labels at this alpha" in out["next"]
 
@@ -882,12 +884,12 @@ def test_a_condition_sample_reads_as_one(qs, cond):
     assert f"at least {need_full} labels to be tested" in res["next"] and f"at least {need_split}" in res["next"]
     assert "the same condition layer" in res["next"]
     assert "Any zone needs" not in res["next"]
-    # nothing certified: no rate to hold as a group, and lowering delta would only need more labels
+    # nothing certified: no rate to hold as a group, and no delta sentence
     assert res["summary"]["certified_share_of_map"] is None
-    assert "not for each window" not in res["conclusion"] and "can be set lower" not in res["conclusion"]
+    assert "not for each window" not in res["conclusion"] and "chosen before the labels are read" not in res["conclusion"]
     res = _ok("certify", sample_csv=out["files"]["sample_csv"], alpha=0.05, out_dir=str(qs / "by_cond_05"))
     assert res["summary"]["certified_share_of_map"] is not None
-    assert "not for each window" in res["conclusion"] and "can be set lower" in res["conclusion"]
+    assert "not for each window" in res["conclusion"] and "chosen before the labels are read" in res["conclusion"]
 
 
 @needs_map
@@ -1029,7 +1031,7 @@ def test_a_one_row_logit_map_through_the_whole_flow(tmp_path):
     out = _ok("certify", sample_csv=csv_path, alpha=0.05)
     texts.append(out)
     assert out["conclusion"].startswith("Taken together, the ") and "not for each window" in out["conclusion"]
-    assert "delta, which can be set lower" in out["conclusion"]
+    assert "delta, chosen before the labels were read" in out["conclusion"]
     assert "the exact upper bound on this zone's error rate is" in out["conclusion"]
 
     for t in texts:
@@ -1111,3 +1113,108 @@ def test_unjudged_windows_and_reviewer_error_through_the_server(qs):
     assert "10 window(s) that could not be judged (?) are counted as wrong" in res["limits"]
     assert "Labels are assumed right" in res["limits"]
     assert "reviewer_miss" not in json.dumps(res)
+
+
+@needs_mcp
+def test_decide_says_the_cost_of_a_second_look_once_and_never_dangles(tmp_path):
+    """1.7.1: in one decide reply the caveat on a second sample is said once; when only per-class answers are
+    undetermined, whose texts are not in the conclusion, `next` says the cost itself rather than pointing above."""
+    base = {"design": "random", "n_labelled": 300, "n_population": 4096, "nominal_coverage": 0.95,
+            "method": "exact hypergeometric interval (simple random sample of a finite map)"}
+    path = tmp_path / "two_thresholds_estimate.json"
+    path.write_text(json.dumps(dict(base, estimate=0.1, low=0.08, high=0.12)))
+    out = _ok("decide", result_json=str(path), questions=["error_rate_below=0.1", "error_rate_below=0.11"])
+    caveat = _decide_mod.interval_second_look(True)
+    assert out["conclusion"].count(caveat) == 1
+    assert out["next"].endswith("That is a second test, at the cost said above.")
+    row = lambda lo, hi: {"user_accuracy": {"estimate": (lo + hi) / 2, "low": lo, "high": hi},
+                          "producer_accuracy": {"estimate": 0.9, "low": 0.85, "high": 0.95}}
+    path = tmp_path / "per_class_estimate.json"
+    path.write_text(json.dumps(dict(base, estimate=0.05, low=0.03, high=0.07,
+                                    per_class={"0": row(0.91, 0.97), "1": row(0.80, 0.95)})))
+    out = _ok("decide", result_json=str(path), questions=["user_accuracy_above=0.9"])
+    assert "said above" not in out["next"] and out["next"].endswith(_decide_mod.interval_second_look(False, lead=False))
+
+
+@needs_mcp
+def test_decide_on_a_zone_that_could_not_certify_says_the_next_sample_is_the_first_test(tmp_path):
+    """A run with fewer labels than any zone needs was no test, so decide's reply must not call a new sample a second
+    one; and a pending per-class answer beside a whole-map one gets its own (nominal) cost."""
+    zone = {"rule": "prefix", "alpha": 0.05, "delta": 0.1, "n_population": 4096, "n_labelled": 30,
+            "min_labels_to_certify": 45, "coverage": None, "n_zone": None, "note": "no zone certified"}
+    path = tmp_path / "few_zone.json"
+    path.write_text(json.dumps(zone))
+    out = _ok("decide", result_json=str(path), questions=["trusted_share", "trusted_share_at_least=0.5"])
+    assert "second test" not in out["conclusion"] + out["next"]
+    assert out["conclusion"].count(mcp_server._mcp_words(_decide_mod.certificate_second_look(0.1, False))) == 1
+    path = tmp_path / "loose_zone.json"
+    path.write_text(json.dumps(dict(zone, n_labelled=300, delta=0.6)))
+    out = _ok("decide", result_json=str(path), questions=["trusted_share"])
+    assert "can reach 100%" in out["conclusion"] and "twice delta" not in out["conclusion"]
+    base = {"design": "random", "n_labelled": 300, "n_population": 4096, "nominal_coverage": 0.95,
+            "method": "exact hypergeometric interval (simple random sample of a finite map)"}
+    row = {"user_accuracy": {"estimate": 0.9, "low": 0.85, "high": 0.95},
+           "producer_accuracy": {"estimate": 0.9, "low": 0.85, "high": 0.95}}
+    path = tmp_path / "mixed_estimate.json"
+    path.write_text(json.dumps(dict(base, estimate=0.1, low=0.08, high=0.12, per_class={"0": row})))
+    out = _ok("decide", result_json=str(path), questions=["error_rate_below=0.1", "user_accuracy_above=0.9"])
+    # the exact whole-map answer points above; the nominal per-class one is named with its own cost
+    assert "For error_rate_below=0.1, that is a second test, at the cost said above." in out["next"]
+    nominal = _decide_mod.interval_second_look(False, lead=False)
+    assert out["next"].endswith("For user_accuracy_above=0.9, " + nominal[0].lower() + nominal[1:])
+    assert out["next"].count("nominal here") == 1 and "error_rate_below=0.1, read after" not in out["next"]
+    # a nominal whole-map answer already says the nominal cost: the per-class one points above, said once per reply
+    path = tmp_path / "nominal_estimate.json"
+    path.write_text(json.dumps(dict(base, estimate=0.1, low=0.08, high=0.12, per_class={"0": row},
+                                    design="confidence",
+                                    method="stratified by confidence margin; Wilson interval on the design's effective "
+                                           "sample size")))
+    out = _ok("decide", result_json=str(path), questions=["error_rate_below=0.1", "user_accuracy_above=0.9"])
+    assert (out["conclusion"] + out["next"]).count("nominal here") == 1
+    assert out["next"].endswith("That is a second test, at the cost said above.")
+
+
+@needs_mcp
+def test_decide_costs_each_pending_question_by_its_own_intervals(tmp_path):
+    """An exact per-condition answer is not called nominal beside a per-class one, and a condition with no label,
+    whose interval is 0 to 100%, gets no second-test cost: a sample that reaches it is its first test."""
+    exact = "exact hypergeometric interval (the labels in the condition are a simple random sample of it)"
+    base = {"design": "condition", "n_labelled": 300, "n_population": 4096, "nominal_coverage": 0.95,
+            "method": "exact hypergeometric interval (simple random sample of a finite map)",
+            "estimate": 0.03, "low": 0.02, "high": 0.04}
+    row = {"user_accuracy": {"estimate": 0.9, "low": 0.85, "high": 0.95},
+           "producer_accuracy": {"estimate": 0.9, "low": 0.85, "high": 0.95}}
+    cond = {"clear": {"n_labelled": 150, "estimate": 0.09, "low": 0.048, "high": 0.141, "method": exact},
+            "cloudy": {"n_labelled": 150, "estimate": 0.01, "low": 0.0, "high": 0.03, "method": exact}}
+    path = tmp_path / "cond_class_estimate.json"
+    path.write_text(json.dumps(dict(base, per_condition=cond, per_class={"0": row})))
+    out = _ok("decide", result_json=str(path), questions=["error_rate_below=0.1", "user_accuracy_above=0.9"])
+    exact_cost = _decide_mod.interval_second_look(True, lead=False)
+    nominal_cost = _decide_mod.interval_second_look(False, lead=False)
+    assert ("For error_rate_below=0.1, " + exact_cost[0].lower() + exact_cost[1:]) in out["next"]
+    assert ("For user_accuracy_above=0.9, " + nominal_cost[0].lower() + nominal_cost[1:]) in out["next"]
+    assert "error_rate_below=0.1, user_accuracy_above=0.9, read after" not in out["next"]
+    empty = {"tiny": {"n_labelled": 0, "estimate": None, "low": 0.0, "high": 1.0, "method": exact}}
+    path = tmp_path / "empty_condition_estimate.json"
+    path.write_text(json.dumps(dict(base, per_condition=empty)))
+    out = _ok("decide", result_json=str(path), questions=["error_rate_below=0.2"])
+    assert "second test" not in out["next"]
+    written = json.load(open(out["files"]["decisions"]))
+    assert "its first test" in written["answers"]["error_rate_below=0.2"]["per_condition"]["tiny"]["because"]
+
+
+@needs_mcp
+def test_a_question_with_nothing_to_cost_is_not_folded_into_another_s_cost(tmp_path):
+    """Two thresholds on an estimate whose only labelless condition is the one undetermined part at the looser one:
+    the cost sentence names the question it is about, so it does not read as covering the other."""
+    exact = "exact hypergeometric interval (the labels in the condition are a simple random sample of it)"
+    base = {"design": "random", "n_labelled": 300, "n_population": 4096, "nominal_coverage": 0.95,
+            "method": "exact hypergeometric interval (simple random sample of a finite map)",
+            "estimate": 0.05, "low": 0.032, "high": 0.084,
+            "per_condition": {"tiny": {"n_labelled": 0, "estimate": None, "low": 0.0, "high": 1.0, "method": exact}}}
+    path = tmp_path / "tiny_estimate.json"
+    path.write_text(json.dumps(base))
+    out = _ok("decide", result_json=str(path), questions=["error_rate_below=0.2", "error_rate_below=0.05"])
+    assert "For error_rate_below=0.05, that is a second test, at the cost said above." in out["next"]
+    assert "error_rate_below=0.2, that is" not in out["next"] and "\nThat is" not in out["next"]
+    assert ". That is a second test" not in out["next"]

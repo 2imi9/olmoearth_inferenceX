@@ -18,7 +18,7 @@ extra) are new in 1.4.0.
 
 ## Quick start
 
-Every command below runs on 1.7.0. `scores.tif` is a map of per-class probabilities; add `--logits` for logits.
+Every command below runs on 1.7.1. `scores.tif` is a map of per-class probabilities; add `--logits` for logits.
 
 ```bash
 pip install "olmoearth-inferencex[geo]"
@@ -102,7 +102,7 @@ at most 10% of the samples that could have been drawn (`--delta`).
 ```console
 $ oe-inferencex certify to_label.csv --alpha 0.05
 the 90% most confident windows (3686 of 4096, confidence margin >= 0.6662) are wrong at most 5% of the time; this statement fails on at most 10% of samples like this one (prefix rule; the exact upper bound on the zone's error rate at that level is 2.4%). Outside the zone nothing is certified.
-prefix rule: fixed-sequence testing, valid on any map whatever the shape of its error rate; it stops at the first zone it cannot certify, so it certifies little when the most confident windows hold many errors, where the bonferroni rule can certify more
+prefix rule: fixed-sequence testing, valid on any map whatever the shape of its error rate; it stops at the first zone it cannot certify, so it certifies little when the most confident windows hold many errors, where the bonferroni rule can certify more; choose the rule before reading the labels, since running the other rule after seeing this zone is a second test
 wrote to_label_zone.json and the window mask to_label_zone.npy
 ```
 
@@ -158,7 +158,7 @@ class is the majority of its pixels' classes and its confidence the mean of the 
 `estimate` and `certify` read both layers again from the paths the sample's sidecar records (`--confidence` there
 points to a band that has moved). `--nodata` applies to the class map; the band's no-data is its own file's. On LCMAP,
 300 random labels rarely certify a zone at a useful alpha (exp93: none on 87% of draws at half the error rate); a
-larger sample, or `estimate` alone, may be the useful step.
+larger sample, its budget chosen before any labelling, or `estimate` alone, may be the useful step.
 
 The package works on square windows of `--patch` pixels (default 4). A window's confidence is the mean over its valid
 pixels of each pixel's confidence, and its class the majority class of its pixels; a window less than half valid is
@@ -484,12 +484,15 @@ It writes `random_zone.json` (`coverage`, the certified share; `threshold`, the 
   0.05 (exp96), but an audit found that share at the bar it had to pass (0.744 to 0.776 over 9 seeds), some falls
   moved past the 3,000 labels graded rather than gone, and small maps with a high error rate certify less. The zone
   JSON records the cut as `level_cut`.
-- The guarantee is for one budget fixed before the labels are read, and one run of `certify`. Labelling, certifying,
-  adding labels and certifying again is several tests: on six of exp96's maps where one budget's certificate is wrong
-  at most 12.25% of the time, some budget of a doubling ladder certified a wrong zone on 21% to 30% of nested draws
-  (exp96's audit); choose the budget first (`plan` helps), then certify once.
+- The guarantee is for one sample whose budget was fixed before its labels were read, certified once with the rule,
+  α and δ chosen before the labels are read. A second sample drawn after reading the first, or a second run on the
+  same labels with another rule, is a second test: with both, the chance that a certificate is wrong can reach 2δ;
+  with another δ′, δ + δ′. Certifying again at every budget of a doubling ladder, on nested samples, gave a wrong zone
+  on 21% to 30% of draws on six of exp96's maps where one budget's certificate is wrong at most 12.25% of the time
+  (exp96's audit). To keep δ, choose the budget first (`plan` helps) and certify once, or draw a sequential sample
+  (below), whose certificate holds at every look. The same holds for `estimate`'s interval and the comparison of two
+  maps: with a second sample read after the first, the chance that one of two 95% intervals misses can reach 10%.
   <!-- claim:certify-guarantee-is-per-budget-not-per-look -->
-- To add labels and certify again, draw a sequential sample (below).
 - The confidence is recomputed from the scores the sidecar names (`--scores` if the raster has moved) and checked
   against the CSV; another raster, or another `--nodata`, is refused.
 - Without a condition, the zone JSON gains `scope`: the zone's rate is certified over all its windows together, and
@@ -598,7 +601,7 @@ example's results:
 ```console
 $ oe-inferencex decide to_label_estimate.json --ask error_rate_below=0.12 --ask error_rate_below=0.05
 error_rate_below=0.12: yes. At 95% confidence, the error rate of the map is below 12.0%: its interval is 4.5% to 10.4%. The rate is agreement with the reviewer's labels, which are assumed right.
-error_rate_below=0.05: undetermined. The labels cannot tell whether the error rate of the map is below 5.0%: its 95% interval, 4.5% to 10.4%, lies across it. More labels narrow the interval. The rate is agreement with the reviewer's labels, which are assumed right.
+error_rate_below=0.05: undetermined. The labels cannot tell whether the error rate of the map is below 5.0%: its 95% interval, 4.5% to 10.4%, lies across it. A larger sample narrows it, but read after this one it is a second test: the chance that one of the two intervals misses can reach 10%, so the one read last is no longer guaranteed at 95%. To keep 95%, choose the sample size before any labelling. The rate is agreement with the reviewer's labels, which are assumed right.
 wrote to_label_estimate_decisions.json
 ```
 
@@ -609,7 +612,7 @@ wrote to_label_estimate_decisions.json
 | `more_accurate` | a, b, undetermined | `estimate` on a sample drawn with `--other` | the interval on the difference excludes 0 |
 | `more_accurate` | a, b, tie, undetermined | `compare --labels` | a count against the labels raster, taken as truth; undetermined unless every differing window carries a label |
 | `trusted_share` | a share of the map | `certify` | the certified share; 0 when nothing is certified |
-| `trusted_share_at_least=S` | yes, undetermined | `certify` | never no: more labels can certify more where the map's error rate is at most alpha |
+| `trusted_share_at_least=S` | yes, undetermined | `certify` | never no: a larger sample can certify more where the map's error rate is at most alpha (a second test when this run could certify something: up to twice delta for the two together) |
 | `share_differs` | a share of the windows | `compare`, or `estimate` on a sample drawn with `--other` | no labels needed; says nothing about which map is right |
 
 T and S are shares between 0 and 1. "undetermined" means the result does not settle the question; it is not a no. A

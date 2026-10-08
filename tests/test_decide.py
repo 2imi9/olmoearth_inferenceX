@@ -7,6 +7,7 @@ import shlex
 
 import pytest
 
+import oe_inferencex.decide as decide_mod
 from oe_inferencex import cli
 from oe_inferencex.decide import decide, kind, parse
 
@@ -34,7 +35,7 @@ def test_error_rate_below_is_three_way(low, high, t, answer):
     if answer == "yes":
         assert a["because"].startswith("At 95% confidence, the error rate of the map is below 10.0%")
     if answer == "undetermined":
-        assert "More labels narrow the interval" in a["because"]
+        assert decide_mod.interval_second_look(True) in a["because"]
 
 
 def test_an_approximate_interval_says_so_and_carries_its_warning():
@@ -211,3 +212,35 @@ def test_decide_reads_what_the_quick_start_wrote(tmp_path, monkeypatch, capsys):
 
     with pytest.raises(SystemExit, match="compare cannot say which map is right without labels"):
         cli.main(shlex.split("decide diff/comparison.json --ask more_accurate"))
+
+
+def test_every_pointer_to_more_labels_says_what_a_second_look_costs():
+    """1.7.1: an interval or a certificate holds for one sample whose size was fixed before its labels were read.
+    Every answer that points to more labels says that a second sample read after this one is a second test, what that
+    costs, and how to keep the stated level."""
+    zone = {"rule": "prefix", "alpha": 0.05, "delta": 0.1, "n_population": 4096, "n_labelled": 300, "coverage": 0.9,
+            "n_zone": 3686, "min_labels_to_certify": 45}
+    short = _one(zone, "trusted_share_at_least=0.95")["trusted_share_at_least=0.95"]["because"]
+    empty = _one(dict(zone, coverage=None, n_zone=None), "trusted_share")["trusted_share"]["because"]
+    for text in (short, empty):
+        assert decide_mod.certificate_second_look(0.1, True) in text
+        assert "can reach 20.0%, twice delta" in text and "choose the budget before any labelling and certify once" in text
+    # a run that could not certify anything was no test: the new sample is the first
+    few = _one(dict(zone, coverage=None, n_zone=None, n_labelled=30), "trusted_share")["trusted_share"]["because"]
+    assert decide_mod.certificate_second_look(0.1, False) in few and "second test" not in few
+    # never above 100%
+    big = _one(dict(zone, coverage=None, n_zone=None, delta=0.6), "trusted_share")["trusted_share"]["because"]
+    assert "can reach 100%" in big and "120" not in big and "twice delta" not in big
+    rate = list(_one(_estimate(0.08, 0.12), "error_rate_below=0.1").values())[0]["because"]
+    assert decide_mod.interval_second_look(True) in rate and "can reach 10%" in rate
+    assert "To keep 95%, choose the sample size before any labelling." in rate and "report both" not in rate
+    # a nominal interval was never guaranteed at 95%: no bound is claimed for it
+    tiles = _estimate(0.05, 0.12, method="tile design: ratio estimator with a t interval", design="tiles")
+    nominal = list(_one(tiles, "error_rate_below=0.1").values())[0]["because"]
+    assert decide_mod.interval_second_look(False) in nominal and "10%" not in nominal and "keep 95%" not in nominal
+    two = {"design": "disagreement", "n_population": 4096, "n_disagree": 507, "disagree_share": 507 / 4096,
+           "n_labelled": 100, "n_unjudged": 0, "n_a_right": 50, "n_b_right": 45, "n_neither": 5,
+           "difference": {"estimate": 0.0, "estimate_range": [0, 0], "low": -0.02, "high": 0.03}, "verdict": None,
+           "conf": 0.95}
+    cmp_ = _one(two, "more_accurate")["more_accurate"]
+    assert cmp_["answer"] == "undetermined" and decide_mod.comparison_second_look() in cmp_["because"]
