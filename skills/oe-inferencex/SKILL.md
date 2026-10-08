@@ -89,9 +89,10 @@ Do not work around them. The package refuses only what a rule says it refuses; t
 - Ranking needs the scores, not only the class map. A class map alone works only in compare. assess refuses a
   class map of more than two classes read as probabilities, but not a 0/1 map, nor any class map passed with
   logits=true: it reads the class ids as scores, and the order it gives is not evidence.
-- An interval or a certificate holds for one sample whose size was fixed before labelling, read once, with the
-  rule, alpha and delta chosen before. A second sample, or a second run with another rule or level, is a second
-  test: the chance that one of the answers is wrong grows to the sum of their levels.
+- An interval or a certificate holds for one sample whose size was fixed before labelling, with the rule, alpha
+  and delta chosen before its labels are read. A second sample read after it, or a second run on the same labels
+  with another rule, alpha or delta, is a second test: the chance that one of the answers is wrong can reach the
+  sum of their error levels (10% for two 95% intervals, the sum of the deltas for two certificates).
 
 On the command line, logits=true is `--logits`.
 

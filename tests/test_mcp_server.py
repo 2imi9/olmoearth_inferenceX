@@ -20,6 +20,7 @@ import numpy as np
 import pytest
 import yaml
 
+import oe_inferencex.decide as _decide_mod
 from oe_inferencex import cli, mcp_server
 from oe_inferencex import assess as assess_mod
 from oe_inferencex import estimate as est
@@ -590,7 +591,7 @@ def test_sample_estimate_certify_give_the_readme_numbers(qs):
     assert out["conclusion"].startswith("Taken together, the 90% most confident windows (3686 of 4096, confidence >= "
                                         "0.6662) are wrong at most 5% of the time. The rate holds for them as a group, "
                                         "not for each window, and outside them nothing is certified.")
-    assert "delta, chosen before the run" in out["conclusion"]
+    assert "delta, chosen before the labels were read" in out["conclusion"]
     assert np.load(out["files"]["zone_mask"]).sum() == 3686
     assert "Outside the certified windows nothing is certified" in out["limits"] and f"Note: {est.PREFIX_NOTE}" in out["limits"]
     assert f"Note: {mcp_server.MCP_SCOPE['certify']}" in out["limits"] and est.SCOPE_CERTIFY not in out["limits"]
@@ -598,7 +599,7 @@ def test_sample_estimate_certify_give_the_readme_numbers(qs):
 
     out = _ok("certify", sample_csv=csv_path, alpha=0.01, out_dir=str(qs / "strict"))
     assert out["summary"]["coverage"] is None and out["conclusion"].startswith("No zone was certified at alpha 1%")
-    assert out["next"].endswith(mcp_server.CERTIFY_ONCE.strip())         # 1.7.1: a larger sample, its budget fixed first
+    assert out["next"].endswith(_decide_mod.certificate_second_look(0.1, True))     # 1.7.1: what a new sample costs
     assert "(80% of the map) held 243 labels with 1 wrong" in out["conclusion"]   # as the quick start's test finds
     assert "zone_mask" not in out["files"] and "labels at this alpha" in out["next"]
 
@@ -850,10 +851,10 @@ def test_a_condition_sample_reads_as_one(qs, cond):
     assert "Any zone needs" not in res["next"]
     # nothing certified: no rate to hold as a group, and no delta sentence
     assert res["summary"]["certified_share_of_map"] is None
-    assert "not for each window" not in res["conclusion"] and "chosen before the run" not in res["conclusion"]
+    assert "not for each window" not in res["conclusion"] and "chosen before the labels are read" not in res["conclusion"]
     res = _ok("certify", sample_csv=out["files"]["sample_csv"], alpha=0.05, out_dir=str(qs / "by_cond_05"))
     assert res["summary"]["certified_share_of_map"] is not None
-    assert "not for each window" in res["conclusion"] and "chosen before the run" in res["conclusion"]
+    assert "not for each window" in res["conclusion"] and "chosen before the labels are read" in res["conclusion"]
 
 
 @needs_map
@@ -995,7 +996,7 @@ def test_a_one_row_logit_map_through_the_whole_flow(tmp_path):
     out = _ok("certify", sample_csv=csv_path, alpha=0.05)
     texts.append(out)
     assert out["conclusion"].startswith("Taken together, the ") and "not for each window" in out["conclusion"]
-    assert "delta, chosen before the run" in out["conclusion"]
+    assert "delta, chosen before the labels were read" in out["conclusion"]
     assert "the exact upper bound on this zone's error rate is" in out["conclusion"]
 
     for t in texts:
@@ -1077,3 +1078,24 @@ def test_unjudged_windows_and_reviewer_error_through_the_server(qs):
     assert "10 window(s) that could not be judged (?) are counted as wrong" in res["limits"]
     assert "Labels are assumed right" in res["limits"]
     assert "reviewer_miss" not in json.dumps(res)
+
+
+@needs_mcp
+def test_decide_says_the_cost_of_a_second_look_once_and_never_dangles(tmp_path):
+    """1.7.1: in one decide reply the caveat on a second sample is said once; when only per-class answers are
+    undetermined, whose texts are not in the conclusion, `next` says the cost itself rather than pointing above."""
+    base = {"design": "random", "n_labelled": 300, "n_population": 4096, "nominal_coverage": 0.95,
+            "method": "exact hypergeometric interval (simple random sample of a finite map)"}
+    path = tmp_path / "two_thresholds_estimate.json"
+    path.write_text(json.dumps(dict(base, estimate=0.1, low=0.08, high=0.12)))
+    out = _ok("decide", result_json=str(path), questions=["error_rate_below=0.1", "error_rate_below=0.11"])
+    caveat = _decide_mod.interval_second_look(True)
+    assert out["conclusion"].count(caveat) == 1
+    assert out["next"].endswith("That is a second test, at the cost said above.")
+    row = lambda lo, hi: {"user_accuracy": {"estimate": (lo + hi) / 2, "low": lo, "high": hi},
+                          "producer_accuracy": {"estimate": 0.9, "low": 0.85, "high": 0.95}}
+    path = tmp_path / "per_class_estimate.json"
+    path.write_text(json.dumps(dict(base, estimate=0.05, low=0.03, high=0.07,
+                                    per_class={"0": row(0.91, 0.97), "1": row(0.80, 0.95)})))
+    out = _ok("decide", result_json=str(path), questions=["user_accuracy_above=0.9"])
+    assert "said above" not in out["next"] and out["next"].endswith(_decide_mod.interval_second_look(False))

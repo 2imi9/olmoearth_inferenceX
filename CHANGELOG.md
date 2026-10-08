@@ -2,15 +2,17 @@
 
 ## 1.7.1 (2026-10-08)
 
-**Texts only: certify's guarantee is for one budget fixed in advance and one run.** In 1.7.0, `decide` and the MCP
-server answered an undetermined or empty result with "more labels can certify more" or "a larger sample ... narrows
-the interval", which invites labelling, certifying, adding labels and certifying again. A second sample drawn after
-reading the first is a second test: with both, the chance that a certificate is wrong is up to twice delta, and that
-one of two 95% intervals misses up to 10%. Every such pointer now says so, and how to keep the stated level: choose
-the sample size before any labelling and read the result once, or report both results. The same holds for a second run
-with another rule or delta on the same labels: the prefix rule's note no longer points to the bonferroni rule without
-saying so, the MCP replies say delta is chosen before the run, and the MCP hard rules and the skill gain the rule.
-`docs/Usage.md` and `certify_zone`'s docstring say the same. No computation, option or output field changed.
+**Texts only: an interval or a certificate holds for one sample whose size was fixed before labelling, read once.**
+In 1.7.0, `decide` and the MCP server answered an undetermined or empty result with "more labels can certify more" or
+"a larger sample ... narrows the interval", which invites labelling, reading, adding labels and reading again. A
+second sample read after the first is a second test: with both, the chance that a certificate is wrong can reach twice
+delta, and that one of two 95% intervals misses, 10%. Every such pointer now says so, and that to keep the stated
+level the sample size is chosen before any labelling; where the first run could not certify anything, it says the new
+sample is the first test, and for an approximate (nominal) interval it says the chances add up without claiming a
+bound. A second run on the same labels with another rule, alpha or delta is a second test too: the prefix rule's note
+no longer points to the bonferroni rule without saying so, the MCP replies say delta is chosen before the labels are
+read, and the MCP hard rules and the skill gain the rule. `docs/Usage.md`, `certify_zone`'s docstring and the decide
+module's docstring say the same. No computation, option or output field changed.
 
 ## 1.7.0 (2026-10-07)
 

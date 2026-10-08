@@ -56,6 +56,7 @@ except ImportError:                        # pragma: no cover - pydantic comes w
 from oe_inferencex import __version__, cli
 from oe_inferencex import assess as _assess
 from oe_inferencex import estimate as est
+from oe_inferencex import decide as _decide
 
 NEEDS_EXTRA = ("the MCP server needs the mcp extra: pip install \"olmoearth-inferencex[geo,mcp]\". The extra pins the "
                "MCP Python SDK below 2, because mcp 2 renamed FastMCP to MCPServer; an environment that holds mcp 2 "
@@ -90,9 +91,10 @@ HARD_RULES = (
     "Ranking needs the scores, not only the class map. A class map alone works only in compare. assess refuses a "
     "class map of more than two classes read as probabilities, but not a 0/1 map, nor any class map passed with "
     "logits=true: it reads the class ids as scores, and the order it gives is not evidence.",
-    "An interval or a certificate holds for one sample whose size was fixed before labelling, read once, with the "
-    "rule, alpha and delta chosen before. A second sample, or a second run with another rule or level, is a second "
-    "test: the chance that one of the answers is wrong grows to the sum of their levels.",
+    "An interval or a certificate holds for one sample whose size was fixed before labelling, with the rule, alpha "
+    "and delta chosen before its labels are read. A second sample read after it, or a second run on the same labels "
+    "with another rule, alpha or delta, is a second test: the chance that one of the answers is wrong can reach the "
+    "sum of their error levels (10% for two 95% intervals, the sum of the deltas for two certificates).",
 )
 
 INSTRUCTIONS = "\n".join([
@@ -240,16 +242,6 @@ CARDS = {
         "misses errors (that would need the miss rate inside every zone it can certify).",
     ]),
 }
-
-
-# What every "label more" pointer adds (1.7.1). The package's intervals and certificates hold for a sample whose size was
-# fixed before its labels were read, read once: labelling, reading, adding labels and reading again, stopping when the
-# answer looks decisive, is several tests, and the chance that one of them is wrong grows with the looks.
-CERTIFY_ONCE = (" A new sample is a second test: with this one, the chance that a certificate is wrong is up to twice "
-                "delta. To keep delta, choose the budget before any labelling and certify once.")
-READ_ONCE = (" A second sample read after this one is a second test: the chance that one of the two answers is wrong is "
-             "up to the sum of their levels (10% for two 95% intervals). To keep the stated level, choose the sample "
-             "size before any labelling, or report both results.")
 
 
 # ----------------------------------------------------------------------------- running the command line
@@ -973,14 +965,16 @@ def estimate(
                "enough labels, the most confident share of that condition whose error rate is at most alpha.")
         if most < b1:
             nxt += (f" At alpha 0.05 and delta {est.ZONE_DELTA:g} a condition needs at least {b1} labels and the most "
-                    f"any holds is {most}, so it would certify nothing there; a looser alpha needs fewer labels, and a "
-                    "larger sample drawn with the same condition layer can certify more." + CERTIFY_ONCE)
+                    f"any holds is {most}, so it would certify nothing there; a looser alpha (for a new sample, chosen before its "
+                    "labels are read) needs fewer labels, and a larger sample drawn with the same condition layer can "
+                    "certify more. " + _decide.certificate_second_look(est.ZONE_DELTA, tested=False))
     elif r["design"] in ("random", "condition"):
         nxt = (f"certify with sample_csv={path} and an alpha, such as 0.05, gives the most confident share of the map "
                "whose error rate is at most alpha.")
         if int(r["n_labelled"]) < b1:
             nxt += (f" At alpha 0.05 and delta {est.ZONE_DELTA:g} a zone needs at least {b1} labels and this sample "
-                    f"has {r['n_labelled']}, so it would certify nothing; a looser alpha needs fewer labels.")
+                    f"has {r['n_labelled']}, so it would certify nothing; a looser alpha (for a new sample, chosen "
+                    "before its labels are read) needs fewer labels.")
     else:
         nxt = (f"certify refuses a {r['design']} sample. To certify a zone, draw a new sample with design \"random\" "
                "and have it labelled.")
@@ -1019,8 +1013,8 @@ def _which_map(r, out):
         _notes(r.get("notes", []))
     nxt = ("For either map's own accuracy: sample with design \"random\" on that map's scores, have a reviewer label "
            "every row, then estimate." if v else
-           "More labels on the same differing windows narrow the interval: draw a larger sample with other (a new seed "
-           "gives a new draw; label all of it)." + READ_ONCE)
+           "To settle it, draw a larger sample with other (a new seed gives a new draw; label all of it). "
+           + _decide.comparison_second_look())
     summ = {k: r.get(k) for k in ("verdict", "difference", "n_labelled", "n_disagree", "n_population", "n_a_right",
                                   "n_b_right", "n_neither", "n_unjudged", "share_a_right", "share_b_right")}
     return _reply(" ".join(said), _join(limits), nxt, {"estimate": out}, summ)
@@ -1068,8 +1062,8 @@ def certify(
         said = [_cap(lines[0])[:-1] + " " + "; ".join(per_line) + "."] + [_cap(ln) for ln in rest]
         if r.get("certified_share_of_map") is not None:
             said.append("Each rate holds for a condition's certified windows as a group, not for each window; outside "
-                        f"them nothing is certified. delta ({d:g}% here) is chosen before the run; a lower one gives a stronger "
-                        "statement.")
+                        f"them nothing is certified. delta ({d:g}% here) is chosen before the labels are read; a lower one gives a "
+                        "stronger statement.")
         summ.update({k: r.get(k) for k in ("by_condition", "delta_per_condition", "n_conditions_tested",
                                            "certified_share_of_map", "n_certified")})
         summ["per_condition"] = {name: {k: e.get(k) for k in ("tested", "coverage", "n_zone", "n_population",
@@ -1083,7 +1077,7 @@ def certify(
         said = [f"Taken together, the {100 * r['coverage']:.0f}% most confident windows ({r['n_zone']} of "
                 f"{r['n_population']}, confidence >= {r['threshold']:.4f}) are wrong at most {a:g}% of the time. The "
                 "rate holds for them as a group, not for each window, and outside them nothing is certified. This "
-                f"statement fails on at most {d:g}% of samples like this one (delta, chosen before the run; "
+                f"statement fails on at most {d:g}% of samples like this one (delta, chosen before the labels were read; "
                 f"{r['rule']} rule; the exact upper bound on this zone's error rate is "
                 f"{_pc(r['upper_bound'])})."]
         certified = True
@@ -1135,8 +1129,8 @@ def certify(
                "windows to check first.")
     else:
         nxt = (f"Any zone needs at least {r['min_labels_to_certify']} labels at this alpha and delta. A larger random "
-               "sample (sample with design \"random\" and a larger budget, labelled in full) can certify more."
-               + CERTIFY_ONCE)
+               "sample (sample with design \"random\" and a larger budget, labelled in full) can certify more. "
+               + _decide.certificate_second_look(delta, int(r["n_labelled"]) >= int(r["min_labels_to_certify"])))
     return _reply(" ".join(said), _join(limits), nxt, files, summ)
 
 
@@ -1158,7 +1152,7 @@ def _condition_need(r, alpha, delta):
             need += (f"; once {'both' if k == 2 else f'all {k}'} are tested, delta is split over them "
                      f"({delta / k:.3g} each) and a zone in one needs at least {bk}")
     return (need + ". A larger sample drawn with the same condition layer (sample with condition and a larger budget, "
-            "labelled in full) can certify more." + CERTIFY_ONCE)
+            "labelled in full) can certify more. " + _decide.certificate_second_look(delta, bool(r.get("n_conditions_tested"))))
 
 
 def decide(
@@ -1185,10 +1179,23 @@ def decide(
     _run(argv)
     out = out or (path[:-5] + "_decisions.json" if path.endswith(".json") else path + "_decisions.json")
     r = _read_json(out)
-    said = []
+    said, told = [], set()
+    # each answer's `because` carries its own caveat on a second look (1.7.1); in one reply it is said once
+    delta_r = next((a["evidence"].get("delta") for a in r["answers"].values()
+                    if isinstance(a.get("evidence"), dict) and a["evidence"].get("delta") is not None), None)
+    caveats = [_decide.interval_second_look(True), _decide.interval_second_look(False),
+               _decide.comparison_second_look()]
+    if delta_r is not None:
+        caveats += [_decide.certificate_second_look(delta_r, True), _decide.certificate_second_look(delta_r, False)]
     for q, a in r["answers"].items():
         shown = _pc(a["answer"]) if a["type"] == "score" else a["answer"]
-        said.append(f"{q}: {shown}. {a['because']}")
+        because = a["because"]
+        for c in caveats:
+            if c in because:
+                if c in told:
+                    because = because.replace(" " + c, "").replace(c, "")
+                told.add(c)
+        said.append(f"{q}: {shown}. {because}")
     rkind = r["result_kind"]
     limits = ("Each answer is read from the result file and adds no evidence of its own. undetermined means the result "
               "does not settle the question; it is not a no.")
@@ -1212,9 +1219,20 @@ def decide(
                            "to map b, have a reviewer write reference_class on every row, then estimate, and ask "
                            "more_accurate of that estimate."),
             "zone": ("a larger random sample (sample with design \"random\", or with the same condition layer, and a "
-                     "larger budget), labelled in full, can certify more, at the cost said above.")}
+                     "larger budget), labelled in full, can certify more.")}
+    if pending and rkind != "comparison":
+        # the cost of that second sample: "said above" only if the conclusion says it; per-class or per-condition
+        # answers carry theirs in the JSON alone
+        if told:
+            cost = " That is a second test, at the cost said above."
+        elif rkind == "zone":
+            cost = " " + _decide.certificate_second_look(delta_r if delta_r is not None else est.ZONE_DELTA, True)
+        else:
+            cost = " " + _decide.interval_second_look(all(r["answers"][q].get("exact") for q in pending))
+    else:
+        cost = ""
     nxt = (("For " + ", ".join(pending) + ": " + more.get(rkind, "a larger sample drawn the same way, labelled in "
-                                                                "full, narrows the interval, at the cost said above.")) if pending else
+                                                                "full, narrows the interval.") + cost) if pending else
            "The result can also answer: " + ", ".join(r["available"]) + ".")
     summ = {"result_kind": r["result_kind"], "answers": {q: a["answer"] for q, a in r["answers"].items()},
             "per_condition": {q: a["per_condition"] for q, a in r["answers"].items() if a.get("per_condition")} or None,

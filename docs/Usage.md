@@ -476,11 +476,11 @@ It writes `random_zone.json` (`coverage`, the certified share; `threshold`, the 
 - When the budget cannot certify the level asked for, `certify` says so. With no error among its labels a zone needs
   about `ln(δ) / ln(1 − α)` labels (`min_labels_to_certify`): 45 at α = 5% and 255 at α = 0.9%, for δ = 0.1.
 - The guarantee is for one sample whose budget was fixed before its labels were read, certified once with the rule,
-  α and δ chosen before. A second sample drawn after reading the first, or a second run with another rule or δ, is
-  a second test: with both, the chance that a certificate is wrong is up to 2δ. To keep δ, choose the budget before
-  any labelling and certify once, or state both results. The same holds for `estimate`'s interval and the
-  comparison of two maps: a second sample read after the first makes the chance that one of the two answers is
-  wrong up to 10% for two 95% intervals.
+  α and δ chosen before the labels are read. A second sample drawn after reading the first, or a second run on the
+  same labels with another rule, is a second test: with both, the chance that a certificate is wrong can reach 2δ;
+  with another δ′, δ + δ′. To keep δ, choose the budget before any labelling and certify once. The same holds for
+  `estimate`'s interval and the comparison of two maps: with a second sample read after the first, the chance that
+  one of two 95% intervals misses can reach 10%.
 - The confidence is recomputed from the scores the sidecar names (`--scores` if the raster has moved) and checked
   against the CSV; another raster, or another `--nodata`, is refused.
 - Without a condition, the zone JSON gains `scope`: the zone's rate is certified over all its windows together, and
@@ -521,7 +521,7 @@ example's results:
 ```console
 $ oe-inferencex decide to_label_estimate.json --ask error_rate_below=0.12 --ask error_rate_below=0.05
 error_rate_below=0.12: yes. At 95% confidence, the error rate of the map is below 12.0%: its interval is 4.5% to 10.4%. The rate is agreement with the reviewer's labels, which are assumed right.
-error_rate_below=0.05: undetermined. The labels cannot tell whether the error rate of the map is below 5.0%: its 95% interval, 4.5% to 10.4%, lies across it. A larger sample narrows the interval, but read after this one it is a second test: the chance that one of the two intervals misses is up to 10%, so the one read last is no longer guaranteed at 95%. To keep 95%, choose the sample size before any labelling, or report both intervals. The rate is agreement with the reviewer's labels, which are assumed right.
+error_rate_below=0.05: undetermined. The labels cannot tell whether the error rate of the map is below 5.0%: its 95% interval, 4.5% to 10.4%, lies across it. A larger sample narrows it, but read after this one it is a second test: the chance that one of the two intervals misses can reach 10%, so the one read last is no longer guaranteed at 95%. To keep 95%, choose the sample size before any labelling. The rate is agreement with the reviewer's labels, which are assumed right.
 wrote to_label_estimate_decisions.json
 ```
 
@@ -532,7 +532,7 @@ wrote to_label_estimate_decisions.json
 | `more_accurate` | a, b, undetermined | `estimate` on a sample drawn with `--other` | the interval on the difference excludes 0 |
 | `more_accurate` | a, b, tie, undetermined | `compare --labels` | a count against the labels raster, taken as truth; undetermined unless every differing window carries a label |
 | `trusted_share` | a share of the map | `certify` | the certified share; 0 when nothing is certified |
-| `trusted_share_at_least=S` | yes, undetermined | `certify` | never no: a larger sample can certify more where the map's error rate is at most alpha (a second test: up to twice delta for the two) |
+| `trusted_share_at_least=S` | yes, undetermined | `certify` | never no: a larger sample can certify more where the map's error rate is at most alpha (a second test: up to twice delta for the two together) |
 | `share_differs` | a share of the windows | `compare`, or `estimate` on a sample drawn with `--other` | no labels needed; says nothing about which map is right |
 
 T and S are shares between 0 and 1. "undetermined" means the result does not settle the question; it is not a no. A
