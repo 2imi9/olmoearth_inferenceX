@@ -590,7 +590,7 @@ def test_sample_estimate_certify_give_the_readme_numbers(qs):
     assert out["conclusion"].startswith("Taken together, the 90% most confident windows (3686 of 4096, confidence >= "
                                         "0.6662) are wrong at most 5% of the time. The rate holds for them as a group, "
                                         "not for each window, and outside them nothing is certified.")
-    assert "delta, which can be set lower" in out["conclusion"]
+    assert "delta, chosen before the run" in out["conclusion"]
     assert np.load(out["files"]["zone_mask"]).sum() == 3686
     assert "Outside the certified windows nothing is certified" in out["limits"] and f"Note: {est.PREFIX_NOTE}" in out["limits"]
     assert f"Note: {mcp_server.MCP_SCOPE['certify']}" in out["limits"] and est.SCOPE_CERTIFY not in out["limits"]
@@ -848,12 +848,12 @@ def test_a_condition_sample_reads_as_one(qs, cond):
     assert f"at least {need_full} labels to be tested" in res["next"] and f"at least {need_split}" in res["next"]
     assert "the same condition layer" in res["next"]
     assert "Any zone needs" not in res["next"]
-    # nothing certified: no rate to hold as a group, and lowering delta would only need more labels
+    # nothing certified: no rate to hold as a group, and no delta sentence
     assert res["summary"]["certified_share_of_map"] is None
-    assert "not for each window" not in res["conclusion"] and "can be set lower" not in res["conclusion"]
+    assert "not for each window" not in res["conclusion"] and "chosen before the run" not in res["conclusion"]
     res = _ok("certify", sample_csv=out["files"]["sample_csv"], alpha=0.05, out_dir=str(qs / "by_cond_05"))
     assert res["summary"]["certified_share_of_map"] is not None
-    assert "not for each window" in res["conclusion"] and "can be set lower" in res["conclusion"]
+    assert "not for each window" in res["conclusion"] and "chosen before the run" in res["conclusion"]
 
 
 @needs_map
@@ -995,7 +995,7 @@ def test_a_one_row_logit_map_through_the_whole_flow(tmp_path):
     out = _ok("certify", sample_csv=csv_path, alpha=0.05)
     texts.append(out)
     assert out["conclusion"].startswith("Taken together, the ") and "not for each window" in out["conclusion"]
-    assert "delta, which can be set lower" in out["conclusion"]
+    assert "delta, chosen before the run" in out["conclusion"]
     assert "the exact upper bound on this zone's error rate is" in out["conclusion"]
 
     for t in texts:

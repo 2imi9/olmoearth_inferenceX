@@ -34,7 +34,7 @@ def test_error_rate_below_is_three_way(low, high, t, answer):
     if answer == "yes":
         assert a["because"].startswith("At 95% confidence, the error rate of the map is below 10.0%")
     if answer == "undetermined":
-        assert "More labels narrow the interval" in a["because"]
+        assert "A larger sample narrows the interval, but read after this one it is a second test" in a["because"]
 
 
 def test_an_approximate_interval_says_so_and_carries_its_warning():
@@ -222,8 +222,16 @@ def test_every_pointer_to_more_labels_says_to_fix_the_budget_first():
     short = _one(zone, "trusted_share_at_least=0.95")["trusted_share_at_least=0.95"]["because"]
     empty = _one(dict(zone, coverage=None, n_zone=None), "trusted_share")["trusted_share"]["because"]
     for text in (short, empty):
-        assert "Fix its budget before labelling and certify once" in text and "new random sample" in text
-        assert "more labels can certify more, but" not in text.replace("a new random sample with more labels", "")
+        assert "it is a second test" in text and "up to 20.0%, twice delta" in text
+        assert "To keep delta, choose the budget before any labelling and certify once." in text
     rate = list(_one(_estimate(0.08, 0.12), "error_rate_below=0.1").values())[0]["because"]
-    assert "choose the new total before labelling and read the interval once" in rate
-    assert "holds less often than 95%" in rate
+    assert "the chance that one of the two intervals misses is up to 10%" in rate
+    assert "To keep 95%, choose the sample size before any labelling, or report both intervals." in rate
+    two = {"design": "disagreement", "n_population": 4096, "n_disagree": 507, "disagree_share": 507 / 4096,
+           "n_labelled": 100, "n_unjudged": 0, "n_a_right": 50, "n_b_right": 45, "n_neither": 5,
+           "difference": {"estimate": 0.0, "estimate_range": [0, 0], "low": -0.02, "high": 0.03}, "verdict": None,
+           "conf": 0.95}
+    cmp_ = _one(two, "more_accurate")["more_accurate"]
+    assert cmp_["answer"] == "undetermined"
+    assert "the chance that one of the two comparisons is wrong is up to 10%" in cmp_["because"]
+    assert "To keep 95%, choose the sample size before any labelling, or report both." in cmp_["because"]

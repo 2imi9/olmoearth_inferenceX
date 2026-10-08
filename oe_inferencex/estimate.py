@@ -1626,7 +1626,8 @@ ZONE_RULES = ("prefix", "bonferroni", "plugin")
 # small maps, monotone or not, and every draw, for both rules.
 PREFIX_NOTE = ("prefix rule: fixed-sequence testing, valid on any map whatever the shape of its error rate; it stops at "
                "the first zone it cannot certify, so it certifies little when the most confident windows hold many "
-               "errors, where the bonferroni rule can certify more")
+               "errors, where the bonferroni rule can certify more; choose the rule before reading the labels, since "
+               "running the other rule after seeing this zone is a second test")
 
 
 def _log_choose(n, r):

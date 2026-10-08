@@ -90,6 +90,9 @@ HARD_RULES = (
     "Ranking needs the scores, not only the class map. A class map alone works only in compare. assess refuses a "
     "class map of more than two classes read as probabilities, but not a 0/1 map, nor any class map passed with "
     "logits=true: it reads the class ids as scores, and the order it gives is not evidence.",
+    "An interval or a certificate holds for one sample whose size was fixed before labelling, read once, with the "
+    "rule, alpha and delta chosen before. A second sample, or a second run with another rule or level, is a second "
+    "test: the chance that one of the answers is wrong grows to the sum of their levels.",
 )
 
 INSTRUCTIONS = "\n".join([
@@ -242,9 +245,11 @@ CARDS = {
 # What every "label more" pointer adds (1.7.1). The package's intervals and certificates hold for a sample whose size was
 # fixed before its labels were read, read once: labelling, reading, adding labels and reading again, stopping when the
 # answer looks decisive, is several tests, and the chance that one of them is wrong grows with the looks.
-CERTIFY_ONCE = " Fix the new budget before labelling and certify once: every run of certify is a new test."
-READ_ONCE = (" Choose the new total before labelling and read the result once at that total: read again as labels are "
-             "added, stopping when it looks decisive, it holds less often than stated.")
+CERTIFY_ONCE = (" A new sample is a second test: with this one, the chance that a certificate is wrong is up to twice "
+                "delta. To keep delta, choose the budget before any labelling and certify once.")
+READ_ONCE = (" A second sample read after this one is a second test: the chance that one of the two answers is wrong is "
+             "up to the sum of their levels (10% for two 95% intervals). To keep the stated level, choose the sample "
+             "size before any labelling, or report both results.")
 
 
 # ----------------------------------------------------------------------------- running the command line
@@ -1063,7 +1068,8 @@ def certify(
         said = [_cap(lines[0])[:-1] + " " + "; ".join(per_line) + "."] + [_cap(ln) for ln in rest]
         if r.get("certified_share_of_map") is not None:
             said.append("Each rate holds for a condition's certified windows as a group, not for each window; outside "
-                        f"them nothing is certified. delta ({d:g}% here) can be set lower for a stronger statement.")
+                        f"them nothing is certified. delta ({d:g}% here) is chosen before the run; a lower one gives a stronger "
+                        "statement.")
         summ.update({k: r.get(k) for k in ("by_condition", "delta_per_condition", "n_conditions_tested",
                                            "certified_share_of_map", "n_certified")})
         summ["per_condition"] = {name: {k: e.get(k) for k in ("tested", "coverage", "n_zone", "n_population",
@@ -1077,7 +1083,7 @@ def certify(
         said = [f"Taken together, the {100 * r['coverage']:.0f}% most confident windows ({r['n_zone']} of "
                 f"{r['n_population']}, confidence >= {r['threshold']:.4f}) are wrong at most {a:g}% of the time. The "
                 "rate holds for them as a group, not for each window, and outside them nothing is certified. This "
-                f"statement fails on at most {d:g}% of samples like this one (delta, which can be set lower; "
+                f"statement fails on at most {d:g}% of samples like this one (delta, chosen before the run; "
                 f"{r['rule']} rule; the exact upper bound on this zone's error rate is "
                 f"{_pc(r['upper_bound'])})."]
         certified = True
@@ -1206,9 +1212,9 @@ def decide(
                            "to map b, have a reviewer write reference_class on every row, then estimate, and ask "
                            "more_accurate of that estimate."),
             "zone": ("a larger random sample (sample with design \"random\", or with the same condition layer, and a "
-                     "larger budget), labelled in full, can certify more." + CERTIFY_ONCE)}
+                     "larger budget), labelled in full, can certify more, at the cost said above.")}
     nxt = (("For " + ", ".join(pending) + ": " + more.get(rkind, "a larger sample drawn the same way, labelled in "
-                                                                "full, narrows the interval." + READ_ONCE)) if pending else
+                                                                "full, narrows the interval, at the cost said above.")) if pending else
            "The result can also answer: " + ", ".join(r["available"]) + ".")
     summ = {"result_kind": r["result_kind"], "answers": {q: a["answer"] for q, a in r["answers"].items()},
             "per_condition": {q: a["per_condition"] for q, a in r["answers"].items() if a.get("per_condition")} or None,

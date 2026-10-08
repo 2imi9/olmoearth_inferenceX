@@ -4,11 +4,13 @@
 
 **Texts only: certify's guarantee is for one budget fixed in advance and one run.** In 1.7.0, `decide` and the MCP
 server answered an undetermined or empty result with "more labels can certify more" or "a larger sample ... narrows
-the interval", which invites labelling, certifying, adding labels and certifying again. Each run is a new test, and
-the chance that some run certifies a zone wrong more than alpha grows with the runs. The texts now say to fix the
-new budget before labelling and to certify once; for `estimate`'s interval and the comparison of two maps, to choose
-the total before labelling and read the result once. `docs/Usage.md` and `certify_zone`'s docstring say the same. No
-computation, option or output field changed.
+the interval", which invites labelling, certifying, adding labels and certifying again. A second sample drawn after
+reading the first is a second test: with both, the chance that a certificate is wrong is up to twice delta, and that
+one of two 95% intervals misses up to 10%. Every such pointer now says so, and how to keep the stated level: choose
+the sample size before any labelling and read the result once, or report both results. The same holds for a second run
+with another rule or delta on the same labels: the prefix rule's note no longer points to the bonferroni rule without
+saying so, the MCP replies say delta is chosen before the run, and the MCP hard rules and the skill gain the rule.
+`docs/Usage.md` and `certify_zone`'s docstring say the same. No computation, option or output field changed.
 
 ## 1.7.0 (2026-10-07)
 
