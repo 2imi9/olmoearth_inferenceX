@@ -29,6 +29,9 @@
 # well under 1 GB of SCL, for ~224 windows. The job refuses before copying if the home directory's use plus this
 # would exceed 95 GiB.
 set -euo pipefail
+# The soft limit on open files is 1,024 on the cpu nodes (hard 131,072); olmoearth_run's worker pools exhaust it
+# (job 1243542 failed in 26 s on "Too many open files" while starting its dataset-build pool).
+ulimit -n 65536
 REPO=/home/qi_zim_neu/olmoearth_inferenceX
 cd "$REPO" || exit 1
 git fetch -q origin main

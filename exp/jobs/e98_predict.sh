@@ -22,6 +22,9 @@
 # tokens per timestep. Data loading dominates: 1 to 6 hours. The output is 10 float32 bands x 1024 x 1024 per window,
 # 40 MiB raw (LZW, rslearn/utils/raster_format.py:505), about 9 GB for 224 windows.
 set -euo pipefail
+# The soft limit on open files is 1,024 on the cpu nodes (hard 131,072); olmoearth_run's worker pools exhaust it
+# (job 1243542 failed in 26 s on "Too many open files" while starting its dataset-build pool).
+ulimit -n 65536
 REPO=/home/qi_zim_neu/olmoearth_inferenceX
 cd "$REPO" || exit 1
 git fetch -q origin main

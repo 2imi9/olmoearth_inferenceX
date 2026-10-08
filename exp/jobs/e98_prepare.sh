@@ -28,6 +28,9 @@
 # 12 x 1024 x 1024 uint8 per window, about 1 GB raw, far less compressed. Expected 1 to 6 hours; the 12-hour limit
 # leaves room for Planetary Computer throttling (no subscription key is set).
 set -euo pipefail
+# The soft limit on open files is 1,024 on the cpu nodes (hard 131,072); olmoearth_run's worker pools exhaust it
+# (job 1243542 failed in 26 s on "Too many open files" while starting its dataset-build pool).
+ulimit -n 65536
 REPO=/home/qi_zim_neu/olmoearth_inferenceX
 cd "$REPO" || exit 1
 git fetch -q origin main
@@ -56,6 +59,10 @@ NCPU=${SLURM_CPUS_PER_TASK:-8}
 # model.yaml's ${VAR}s; rslearn substitutes an unset one with "" (rslearn/template_params.py:19-24 @ v0.0.27).
 # olmoearth_run is expected to set DATASET_PATH itself; the rest are set here so that none is empty.
 export NUM_WORKERS=$NCPU
+# olmoearth_run's dataset build starts os.cpu_count() * DATASET_BUILD_WORKERS_PER_CPU processes
+# (olmoearth_run/runner/steps/dataset_build_step_definition.py:40, default 4 in olmoearth_run/config.py:36), and
+# os.cpu_count() is the node's 128, not the job's CPUs: 512 processes. One per node CPU is enough for a fetch-bound build.
+export DATASET_BUILD_WORKERS_PER_CPU=1
 export PREDICTION_OUTPUT_LAYER=output
 export TRAINER_DATA_PATH=$DEPLOY/trainer_data
 export EXTRA_FILES_PATH=$DEPLOY/extra_files
