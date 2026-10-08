@@ -142,7 +142,7 @@ def threshold_grid(conf):
 
 
 def _grid_setup(err_o, N, B, alpha, grid, values=None):
-    cov, sizes, c_min = est.zone_levels(N, B, alpha, DELTA, grid)
+    cov, sizes, c_min = est.zone_levels(N, B, alpha, DELTA, grid, cut="standard")   # recorded with the standard cut
     risk = e80.zone_risk(err_o, sizes) if cov else np.array([])
     thr = None
     if values is not None:                       # G2: the level's threshold, and a check that its size is exact

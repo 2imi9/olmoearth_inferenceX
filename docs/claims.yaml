@@ -4654,6 +4654,73 @@
     standard errors of a 2,000-draw share. When the prefix rule returned a zone, its median size was 10% to 20% of the
     points for LCMAP and CGLS and 50% for ODSE.
 
+- id: exp95-standard-cut-falls-when-labels-are-added
+  statement: "On 34 committed maps (the embedding suite's 24 tasks under OlmoEarth Base and 10 product confidence cells), with 1,000 nested draws per map (a larger budget adds labels to a smaller one), budgets 50 to 3,000 and alpha half the error rate, certify kept its guarantee under every level cut and rule (largest violation 0.093, bound 0.128; P1); under the standard cut the prefix rule's mean certified coverage fell by more than 0.05 of the map when labels were added on 14 of the 34 maps, where at least 17 were predicted (P2 rejected); a cut at three times b_min halved those falls on 12 of the 14 at a median area gain of 0.007 (P3), but certified less at the budget nearest 100 on 24 of the 34 maps (by more than 0.02 on 17), and was not adopted (preregistered)."
+  crosscheck: tests/test_exp96.py::test_exp95_verdicts_from_the_curves
+  status: mixed
+  experiments: [exp95]
+  artifacts: [exp/out/exp95_summary.json]
+  check: |-
+    (lambda d: (lambda C, f: d["preregistered"] is True and len(C) == 34
+      and round(d["prereg"]["P1"]["max_violation"], 3) == 0.093 and d["prereg"]["P1"]["holds"]
+      and d["prereg"]["P2"]["cells_with_fall_above_0.05"] == 14 and d["prereg"]["P2"]["holds"] is False
+      and (d["prereg"]["P3"]["candidates"]["3"]["halved"], d["prereg"]["P3"]["candidates"]["3"]["of"]) == (12, 14)
+      and round(-d["prereg"]["P3"]["candidates"]["3"]["median_area_loss"], 3) == 0.007
+      and [sum((v["kappa"]["3"]["prefix"]["mean_coverage"][v["budgets"].index(99)] - v["kappa"]["1"]["prefix"]["mean_coverage"][v["budgets"].index(99)]) < t for v in C.values()) for t in (0, -0.02)] == [24, 17]
+    )(d["cells"], None))(A["exp/out/exp95_summary.json"])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp95-standard-cut-falls-when-labels-are-added}
+    - {file: docs/Findings.md, marker: exp95-standard-cut-falls-when-labels-are-added}
+  note: >-
+    Preregistered on 8 October 2026 (8baf436), result ad7b858. The per-unit files are committed (exp78_units and
+    the exp92/exp94 points); the harness's decisions equal certify_zone's draw by draw. The cut at 3 b_min was named
+    by the preregistered rule and not adopted, for its cost at small budgets, found after the result.
+
+- id: exp96-ramp-passed-at-its-seed-and-not-across-seeds
+  statement: "A budget-aware level cut, the ramp (the standard cut up to 3 b_min labels, no new level until 9 b_min, then 3 b_min / n), designed after exp95 and graded on 332 maps exp95 did not use (the 15 other encoders of exp79; preregistered), kept the guarantee (largest violation 0.1225, bound 0.175), decided as the standard cut up to 3 b_min on every map, halved the standard cut's largest prefix fall on 131 of the 170 maps where it exceeded 0.05 (77%, bar 75%) and lost more than 0.02 of area on 22 of 332 (bar 10%); the median largest fall went from 0.053 to 0.010. Rerun at 8 more seeds by the pre-record audit, P3 held on 5 of the 9 seeds (halved share 0.744 to 0.776), so certify kept the standard cut."
+  crosscheck: tests/test_exp96.py::test_exp96_verdicts_from_the_curves
+  status: mixed
+  experiments: [exp96, exp95]
+  artifacts: [exp/out/exp96_summary.json, exp/out/exp96_audit.json]
+  check: |-
+    (lambda d, a: (lambda H, f: d["preregistered"] is True and len(H) == 332
+      and all(d["prereg"][p]["holds"] for p in ("P1", "P2", "P3", "P4")) and round(d["prereg"]["P1"]["max_violation"], 4) == 0.1225
+      and (d["prereg"]["P3"]["cells_with_k1_fall_above_0.05"], d["prereg"]["P3"]["halved"], d["prereg"]["P3"]["cells_losing_area_above_0.02"]) == (170, 131, 22)
+      and [round(sorted(f(v["cut"][c]["prefix"]["mean_coverage"]) for v in H.values())[166] / 2 + sorted(f(v["cut"][c]["prefix"]["mean_coverage"]) for v in H.values())[165] / 2, 3) for c in ("k1", "ramp")] == [0.053, 0.010]
+      and sum(v["holds"] for v in a["p3_by_seed"].values()) == 5 and len(a["p3_by_seed"]) == 9
+      and [round(g(v["share"] for v in a["p3_by_seed"].values()), 3) for g in (min, max)] == [0.744, 0.776]
+    )({k: v for k, v in d["heldout"].items() if v["budgets"]},
+      lambda c: max(c[i] - min(c[i + 1:]) for i in range(len(c) - 1)) if len(c) > 1 else 0.0))(A["exp/out/exp96_summary.json"], A["exp/out/exp96_audit.json"])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp96-ramp-passed-at-its-seed-and-not-across-seeds}
+    - {file: docs/Findings.md, marker: exp96-ramp-passed-at-its-seed-and-not-across-seeds}
+  note: >-
+    Preregistered on 8 October 2026 (b914b52), result 89ef546. The held-out per-unit files (exp79_units) are local;
+    their sha256 is in the summary, and the audit's reseeded runs are hashed in exp96_audit.json. The preregistered
+    rule made the ramp the default; the default was kept, a departure stated in the record, because the pass sat at
+    the bar across seeds, about a quarter of the halvings were levels tested only past the budgets graded, and small
+    maps with a high error rate lose clean small zones. The ramp is an option (--level-cut ramp).
+
+- id: certify-guarantee-is-per-budget-not-per-look
+  statement: "certify's guarantee holds for one budget fixed before the labels: on the six held-out maps of exp96 with the largest per-budget violation (at most 0.1225 at any budget), a reviewer who certifies at every budget of a doubling ladder (50 to 3,200) on nested samples obtained some zone wrong more than alpha on 21% to 30% of 400 draws under the standard cut and 24% to 32% under the ramp, and at some budget of exp96's whole ladder on 36% to 42% and 39% to 44% (found by the pre-record audit, not preregistered)."
+  crosscheck: tests/test_exp96.py::test_the_pathwise_per_budget_rates_equal_exp96s
+  status: measured
+  experiments: [exp96]
+  artifacts: [exp/out/exp96_audit.json]
+  check: |-
+    (lambda P: len(P) == 6 and max(r[c]["per_budget_max"] for r in P.values() for c in ("k1", "ramp")) == 0.1225
+      and [round(100 * g(r[c][m] for r in P.values())) for c in ("k1", "ramp") for m in ("some_doubling_budget", "some_budget") for g in (min, max)] == [21, 30, 36, 42, 24, 32, 39, 44]
+    )(A["exp/out/exp96_audit.json"]["pathwise"])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: certify-guarantee-is-per-budget-not-per-look}
+    - {file: docs/Usage.md, marker: certify-guarantee-is-per-budget-not-per-look}
+    - {file: docs/Findings.md, marker: certify-guarantee-is-per-budget-not-per-look}
+  note: >-
+    exp/exp96_audit.py pathwise, on exp96's own draws (seed 96, 400 per map) through certify's functions; the six
+    maps were chosen as those with the largest per-budget violation, so the figures are for maps near the bound. Its
+    per-budget figures equal exp96's recorded violations exactly. Repeated looks inflate the error of any fixed-level
+    test; an anytime-valid certificate was not built.
+
 - id: exp91-vlm-reviewer-shares-the-maps-errors
   statement: "As a blind reviewer of Sen1Floods11 Bolivia windows (exp18's map on frozen OlmoEarth v1-Base, 8.84% of 81,984 windows wrong), Claude (claude-opus-5-5) given VISTA-style views answered ? on 31% of a simple random sample of 150 windows and, on the 104 it judged, agreed with the hand labels on 85.6%, below the preregistered 90% (P1 fails; the map, on the same windows, 95.2%, found after the result). On a calibration set of 30 wrong and 30 correct windows it raised no false alarm on the 22 correct windows it judged (one-sided 95% upper bound 12.7%) and missed 14 of the 19 wrong windows it judged (74%, upper bound 89%; P3, misses above false alarms, holds). The sample's interval was 5.2 to 15.2% with the hand labels, 4.2 to 46.9% with the reviewer's labels (its 46 ? counted both ways) and 0 to 100% widened by the calibrated bounds, which holds the true rate only vacuously (P2 holds as written)."
   crosscheck: tests/test_exp91.py::test_exp91_by_a_second_route

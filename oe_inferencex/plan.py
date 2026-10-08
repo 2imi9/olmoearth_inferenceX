@@ -458,17 +458,24 @@ def _grid_level(coverage, grid):
                      "levels")
 
 
-def zone_floor(coverage, alpha, delta=est.ZONE_DELTA):
-    """The fewest random labels at which `certify` tests a zone of this coverage at all: below it the level is cut
-    before any label is seen, since even a zone with no error among its labels could not be certified."""
-    return int(math.ceil(est.min_labels_to_certify(alpha, delta) / coverage - 1e-12))
+def zone_floor(coverage, alpha, delta=est.ZONE_DELTA, cut=None):
+    """The fewest random labels at which `certify` tests a zone of this coverage at all, under its level cut
+    (`estimate.zone_cut`): b_min / coverage while that is at most 3 b_min, else 3 b_min / coverage under the ramp."""
+    b = est.min_labels_to_certify(alpha, delta)
+    cut = est.ZONE_CUT if cut is None else cut
+    n = int(math.ceil(b / coverage - 1e-12))
+    if cut == "ramp" and n > 3 * b:
+        n = int(math.ceil(3 * b / coverage - 1e-12))
+    while est.zone_cut(n, b, cut) > coverage + 1e-12:         # the float edge: the smallest n the cut admits it at
+        n += 1
+    return n
 
 
-def entry_budgets(coverage, alpha, delta=est.ZONE_DELTA, grid=est.ZONE_GRID):
+def entry_budgets(coverage, alpha, delta=est.ZONE_DELTA, grid=est.ZONE_GRID, cut=None):
     """{level: budget} for the grid levels below `coverage`: the budget at which each becomes testable. At each of
     these budgets both rules can lose power: the prefix rule tests the smallest testable level first, with few labels,
     and the Bonferroni rule splits delta over one more level."""
-    return {g: zone_floor(g, alpha, delta) for g in grid if g < coverage - 1e-9}
+    return {g: zone_floor(g, alpha, delta, cut) for g in grid if g < coverage - 1e-9}
 
 
 def _zone_index(N, n, coverage, alpha, delta, grid):

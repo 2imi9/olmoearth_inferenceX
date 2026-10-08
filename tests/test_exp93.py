@@ -124,7 +124,7 @@ def test_exp93_the_public_certify_zone_certifies_what_the_run_recorded():
             idx = order[rng.choice(N, B, replace=False)]
             for g, (grid, _) in grids.items():
                 for rule in est.ZONE_RULES:
-                    z = est.certify_zone(conf, idx, err[idx], alpha, rule=rule, grid=grid)
+                    z = est.certify_zone(conf, idx, err[idx], alpha, rule=rule, grid=grid, cut="standard")
                     key = "none" if z["coverage"] is None else str(cell["grids"][g]["levels"].index(z["coverage"]))
                     got[(g, rule)][key] = got[(g, rule)].get(key, 0) + 1
         for (g, rule), counts in got.items():

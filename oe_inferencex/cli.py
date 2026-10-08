@@ -1458,7 +1458,8 @@ def cmd_certify(args):
     if by_condition:
         return _certify_by_condition(args, sample, wrong, margin, valid_w, out, mask_path, bounds, int(unjudged.sum()))
     try:
-        res = est.certify_zone(margin.ravel(), idx, wrong, alpha, delta=args.delta, rule=args.rule, valid=valid_w.ravel())
+        res = est.certify_zone(margin.ravel(), idx, wrong, alpha, delta=args.delta, rule=args.rule, valid=valid_w.ravel(),
+                               cut=args.level_cut)
     except ValueError as exc:
         raise SystemExit(f"certify: {exc}")
     hw, ww = margin.shape
@@ -1496,7 +1497,7 @@ def _certify_by_condition(args, sample, wrong, margin, valid_w, out, mask_path, 
     most confident share of the map" that readers of those fields take them to be."""
     try:
         res = est.certify_by_condition(sample, wrong, margin.ravel(), args.alpha, delta=args.delta, rule=args.rule,
-                                       valid=valid_w.ravel())
+                                       valid=valid_w.ravel(), cut=args.level_cut)
     except ValueError as exc:
         raise SystemExit(f"certify: {exc}")
     hw, ww = margin.shape
@@ -1968,6 +1969,11 @@ def build_parser():
     z.add_argument("--rule", choices=("prefix", "bonferroni"), default="prefix",
                    help="prefix (default): fixed-sequence testing, valid on any map; it certifies little when the most "
                         "confident windows hold many errors. bonferroni: valid on any map; it can certify more in that case")
+    z.add_argument("--level-cut", choices=("standard", "ramp"), default=None,
+                   help="which levels a budget tests. standard (default): a level once its zone expects "
+                        "min_labels_to_certify labels. ramp: the same up to 3 times that budget, then a level only once "
+                        "it expects 3 times as many, which halved the fall in certifying when labels are added on about "
+                        "three maps in four but moved some falls to larger budgets (exp96 and its audit)")
     z.add_argument("--scores", default=None, help="the raster `sample` was run on, if it has moved")
     z.add_argument("--confidence", default=None, help="the confidence band `sample` was run on, if it has moved")
     z.add_argument("--nodata", type=float, default=None,

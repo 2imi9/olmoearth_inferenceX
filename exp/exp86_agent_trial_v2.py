@@ -2126,7 +2126,8 @@ def parity_certify(call, resolve):
         return UNGRADEABLE, ["the labels the zone used are not in the run directory"]
     pkg = oe_estimate.certify_zone(_design_margin(design), indices, wrong, float(args["alpha"]),
                                    delta=float(out.get("delta", args.get("delta", 0.1))),
-                                   rule=str(out.get("rule", args.get("rule", "prefix"))))
+                                   rule=str(out.get("rule", args.get("rule", "prefix"))),
+                                   cut="standard")                  # the trial's agent ran 1.x, before the ramp cut
     pkg.pop("zone_indices_in_order", None)
     reasons = []
     _compare_keys(out, pkg, ("rule", "alpha", "delta", "n_population", "n_labelled", "coverage", "n_zone", "threshold",

@@ -65,7 +65,7 @@ def arithmetic(risk, sizes, N, B, alpha, delta, rule):
 
 def run_cell(err_ordered, N, B, alpha, delta, draws, rng):
     """One (task, alpha, B): the Monte Carlo over draws, all three rules on the same draw."""
-    cov, sizes, c_min = est.zone_levels(N, B, alpha, delta)
+    cov, sizes, c_min = est.zone_levels(N, B, alpha, delta, cut="standard")      # recorded with the standard cut
     risk = zone_risk(err_ordered, sizes) if cov else np.array([])
     out = {"budget": B, "alpha": float(alpha), "c_min": float(c_min), "levels": cov, "zone_sizes": sizes,
            "zone_risk": [float(r) for r in risk], "monotone": monotone(risk) if cov else None,

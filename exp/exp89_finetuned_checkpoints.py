@@ -898,7 +898,8 @@ def certify_study(err, orders, random_draws, alphas):
                     cov, viol, nothing, refused, rates = [], 0, 0, 0, []
                     for idx in idx_all:
                         try:
-                            res = est.certify_zone(score, idx, err[idx], alpha, delta=DELTA, rule=rule)
+                            res = est.certify_zone(score, idx, err[idx], alpha, delta=DELTA, rule=rule,
+                                                   cut="standard")             # recorded with the standard cut
                         except ValueError as ex:
                             if "random sample" not in str(ex) and "enriched" not in str(ex):
                                 raise

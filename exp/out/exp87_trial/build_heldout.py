@@ -121,7 +121,8 @@ def estimation_facts(dp, sp, alphas=(0.05, 0.1, 0.15, 0.2, 0.25, 0.3)):
            "per_class_warnings": {c: r.get("warning_codes") for c, r in per["per_class"].items() if r.get("warning_codes")}}
     if d["design"] == "random":
         margin = np.asarray(d["population"]["margin"], float)
-        out["certify_coverage_by_alpha"] = {a: estimate.certify_zone(margin, idx, wrong, a).get("coverage") for a in alphas}
+        out["certify_coverage_by_alpha"] = {a: estimate.certify_zone(margin, idx, wrong, a, cut="standard").get("coverage")
+                                            for a in alphas}                 # built with 1.x
     return out
 
 

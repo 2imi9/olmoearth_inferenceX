@@ -794,7 +794,9 @@ def test_existing_outputs_are_byte_identical_to_1_3_1(tmp_path):
     - the warning on a tiles sample, which quoted exp78's design for the shipped one: a line of
       sample_tiles.estimate's stdout and the `warning` of its JSON;
     - the instruction sample prints for the reviewer, which now offers ? for a window that cannot be judged: a stretch
-      of the first line of the seven sample outputs."""
+      of the first line of the seven sample outputs;
+    - the zone JSONs' `level_cut` key, added with the ramp option (exp96): it is "standard", the cut every 1.3.1 output
+      was made with, and is taken out with `scope`."""
     from oe_inferencex.assess import SCOPE_ASSESS
     from oe_inferencex.estimate import SCOPE_CERTIFY, SCOPE_ESTIMATE
     gen = _golden_module()
@@ -834,6 +836,8 @@ def test_existing_outputs_are_byte_identical_to_1_3_1(tmp_path):
             continue
         got = json.loads(data)
         assert got.pop("scope") == scope, name
+        if scope == SCOPE_CERTIFY:
+            assert got.pop("level_cut") == "standard", name
         # the golden JSON reads back to itself, so equal bytes after the dump mean equal bytes but for `scope`
         assert (json.dumps(json.loads(want), indent=1) + ("\n" if name.startswith("api_") else "")).encode() == want, name
         if (json.dumps(got, indent=1) + ("\n" if name.startswith("api_") else "")).encode() != want:

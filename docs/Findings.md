@@ -208,6 +208,19 @@ On a published product's own confidence (LCMAP Collection 1.3's `lcpconf`, grade
 plots; preregistered) the guaranteed rules held δ in all 24 cells, the prefix zone exceeding α on at most 6.1% of
 draws; at 300 labels and α 8.86%, half the error rate, the plug-in's exceeded it on 46.6%, and the prefix rule
 returned no zone on 87% of draws, its first zone, a tenth of the plots, being 6% wrong with about 30 labels (exp93). <!-- claim:exp93-zone-guarantee-holds-on-a-product -->
+Adding labels can make certify certify less: a level is tested once its zone expects the b_min labels a clean zone
+needs, then holds fewer than b_min about half the time, and the prefix rule must pass it first. On 34 committed maps
+the mean certified coverage fell by more than 0.05 of the map when labels were added on 14 (exp95, preregistered); a
+cut at three times b_min halved those falls but certified less at about 100 labels on 24 of the 34.
+<!-- claim:exp95-standard-cut-falls-when-labels-are-added -->
+A budget-aware cut designed after that, the ramp, met its
+preregistered bar on 332 held-out maps at its seed (it halved the fall on 77% of the maps where it exceeded 0.05), but
+across 9 seeds the bar held on 5, so certify keeps the standard cut and offers the ramp as an option (exp96).
+<!-- claim:exp96-ramp-passed-at-its-seed-and-not-across-seeds -->
+The guarantee holds for one budget fixed before the
+labels: certifying again after adding labels, at every budget of a doubling ladder, gave a zone wrong more than alpha
+on 21% to 30% of draws on six maps where one budget's certificate is wrong at most 12.25% of the time (exp96's audit).
+<!-- claim:certify-guarantee-is-per-budget-not-per-look -->
 The package's intervals for user's accuracy (how often a class call is right), producer's accuracy (how much of a class is found)
 and class share leave 14 of 628 cells below 0.93 coverage and none below 0.879; the Wald form common in the literature
 leaves 107 of 522, the worst at 0.019 (exp81). <!-- claim:per-class-intervals-wald-fails-wilson-nearly-holds -->

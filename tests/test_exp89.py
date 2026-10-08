@@ -303,7 +303,7 @@ def test_the_certificate_counts_violations_from_the_true_zone_rate(monkeypatch):
     z_bad = np.r_[np.arange(0, 50), np.arange(100, 150)]                 # 50 of 100
     script = {0: (0.30, z_clean), 1: (0.30, z_at), 2: (0.31, z_slight), 3: (0.10, z_bad), 4: None, 5: "refuse"}
 
-    def fake_certify(score, idx, wrong, a, delta, rule):
+    def fake_certify(score, idx, wrong, a, delta, rule, cut=None):
         assert a == alpha and delta == e89.DELTA
         out = script[int(idx[0])]
         if out == "refuse":

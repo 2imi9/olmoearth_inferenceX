@@ -992,7 +992,7 @@ def estimate(
         if most < b1:
             nxt += (f" At alpha 0.05 and delta {est.ZONE_DELTA:g} a condition needs at least {b1} labels and the most "
                     f"any holds is {most}, so it would certify nothing there; a looser alpha needs fewer labels, and a "
-                    "larger sample drawn with the same condition layer can certify more.")
+                    "larger sample drawn with the same condition layer can certify more. Fix the new budget before labelling and certify once: every run of certify is a new test.")
     elif r["design"] in ("random", "condition"):
         nxt = (f"certify with sample_csv={path} and an alpha, such as 0.05, gives the most confident share of the map "
                "whose error rate is at most alpha.")
@@ -1152,7 +1152,7 @@ def certify(
                "windows to check first.")
     else:
         nxt = (f"Any zone needs at least {r['min_labels_to_certify']} labels at this alpha and delta. A larger random "
-               "sample (sample with design \"random\" and a larger budget, labelled in full) can certify more.")
+               "sample (sample with design \"random\" and a larger budget, labelled in full) can certify more. Fix the new budget before labelling and certify once: every run of certify is a new test.")
     return _reply(" ".join(said), _join(limits), nxt, files, summ)
 
 
@@ -1174,7 +1174,7 @@ def _condition_need(r, alpha, delta):
             need += (f"; once {'both' if k == 2 else f'all {k}'} are tested, delta is split over them "
                      f"({delta / k:.3g} each) and a zone in one needs at least {bk}")
     return (need + ". A larger sample drawn with the same condition layer (sample with condition and a larger budget, "
-            "labelled in full) can certify more.")
+            "labelled in full) can certify more. Fix the new budget before labelling and certify once: every run of certify is a new test.")
 
 
 def decide(
@@ -1228,7 +1228,7 @@ def decide(
                            "to map b, have a reviewer write reference_class on every row, then estimate, and ask "
                            "more_accurate of that estimate."),
             "zone": ("a larger random sample (sample with design \"random\", or with the same condition layer, and a "
-                     "larger budget), labelled in full, can certify more.")}
+                     "larger budget), labelled in full, can certify more. Fix the new budget before labelling and certify once: every run of certify is a new test.")}
     nxt = (("For " + ", ".join(pending) + ": " + more.get(rkind, "a larger sample drawn the same way, labelled in "
                                                                 "full, narrows the interval.")) if pending else
            "The result can also answer: " + ", ".join(r["available"]) + ".")

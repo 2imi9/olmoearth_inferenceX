@@ -474,7 +474,21 @@ It writes `random_zone.json` (`coverage`, the certified share; `threshold`, the 
 - Like `estimate`, `certify` treats the labels as right: the zone's guarantee is about agreement with the reviewer's
   labels.
 - When the budget cannot certify the level asked for, `certify` says so. With no error among its labels a zone needs
-  about `ln(δ) / ln(1 − α)` labels (`min_labels_to_certify`): 45 at α = 5% and 255 at α = 0.9%, for δ = 0.1.
+  about `ln(δ) / ln(1 − α)` labels (`min_labels_to_certify`, b_min): 45 at α = 5% and 255 at α = 0.9%, for δ = 0.1.
+- Which levels a budget n tests (`--level-cut`). By default, `standard`: a level once its zone expects b_min labels.
+  At the budget where a level enters it holds fewer than b_min labels about half the time, and the prefix rule must
+  pass it first, so the chance of certifying can fall when labels are added (exp95: by more than 0.05 of the map on
+  14 of 34 maps). `plan --coverage C --alpha A` lists those budgets; the one below each is the last before the fall.
+  `ramp` is an option: the same levels up to 3 b_min labels, then none new until 9 b_min, then a level only once it
+  expects 3 b_min labels. On 332 maps it was not designed on it halved the fall on 77% of the maps where it exceeded
+  0.05 (exp96), but an audit found that share at the bar it had to pass (0.744 to 0.776 over 9 seeds), some falls
+  moved past the 3,000 labels graded rather than gone, and small maps with a high error rate certify less. The zone
+  JSON records the cut as `level_cut`.
+- The guarantee is for one budget fixed before the labels are read, and one run of `certify`. Labelling, certifying,
+  adding labels and certifying again is several tests: on six of exp96's maps where one budget's certificate is wrong
+  at most 12.25% of the time, some budget of a doubling ladder certified a wrong zone on 21% to 30% of nested draws
+  (exp96's audit); choose the budget first (`plan` helps), then certify once.
+  <!-- claim:certify-guarantee-is-per-budget-not-per-look -->
 - The confidence is recomputed from the scores the sidecar names (`--scores` if the raster has moved) and checked
   against the CSV; another raster, or another `--nodata`, is refused.
 - Without a condition, the zone JSON gains `scope`: the zone's rate is certified over all its windows together, and

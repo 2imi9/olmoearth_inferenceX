@@ -270,9 +270,10 @@ def test_even_spread_is_no_better_than_a_map_whose_errors_sit_late():
     assert hits / 1_500 >= q_even - 4 * se - 2e-3
 
 
-def test_the_prefix_chance_falls_where_a_smaller_zone_enters():
-    """The review's case: on 20,000 windows, alpha 0.05, a 50% zone with no error; at 450 labels the 10% zone becomes
-    testable and must pass first. The plan lists that budget and its probability there drops."""
+def test_the_prefix_chance_falls_where_a_smaller_zone_enters(monkeypatch):
+    """The review's case under 1.7.0's level cut: on 20,000 windows, alpha 0.05, a 50% zone with no error; at 450
+    labels the 10% zone becomes testable and must pass first. The plan lists that budget and its probability there
+    drops."""
     r = plan.plan_zone(20_000, 0.5, 0.05, 0.0, draws=600)
     assert r["entry_budgets"]["0.1"] == 450
     probs = {int(b): p for b, p in r["prefix_even"]["probability_by_budget"].items() if p is not None}
@@ -509,6 +510,15 @@ def test_a_small_map_whose_grid_levels_share_a_zone_is_planned():
 def test_the_never_tested_refusal_gives_certifys_real_cut():
     r = plan.plan_zone(892, 0.05, 0.05, 0.01)
     assert "tests only coverages of at least" in r["refusal"] and r["labels_to_test"] is None
+
+
+def test_the_ramp_cut_moves_the_entries_past_three_b_min():
+    """Under certify's ramp option the 10% zone enters only once it expects 3 b_min labels (1,350 at alpha 0.05), and
+    no level enters between 3 b_min and 9 b_min labels (135 to 405)."""
+    e = plan.entry_budgets(0.5, 0.05, cut="ramp")
+    assert e[0.1] == 1350 and e[0.45] == 100 and not any(135 < v < 405 for v in e.values())
+    b = est.min_labels_to_certify(0.05)
+    assert plan.zone_floor(0.1, 0.05, cut="ramp") == 1350 and plan.zone_floor(0.1, 0.05) == math.ceil(b / 0.1)
 
 
 def test_the_entry_note_says_the_fall_is_at_the_budget(tmp_path, monkeypatch, capsys):

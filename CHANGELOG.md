@@ -27,7 +27,31 @@ budget can put `min_labels_to_certify` labels into it on average. At the budget 
 prefix rule must pass it first with about that many labels, and the Bonferroni rule splits delta over one more level,
 so the chance of certifying a given zone falls. On 25,000 windows, a 50% zone wrong 1% of the time at alpha 0.05
 (errors spread evenly): the prefix rule certifies it with probability 0.49 at 400 labels and 0.40 at 500, past the
-10% level's entry at 450. The guarantee is unaffected; the power is not monotone in the budget. Not yet changed.
+10% level's entry at 450. The guarantee is unaffected; the power is not monotone in the budget.
+
+**exp95 and exp96: certify's level cut (preregistered, 8baf436 and b914b52), and a `--level-cut ramp` option; the
+default is unchanged.** exp95 graded the cut on 34 committed maps (the suite's 24 tasks for OlmoEarth Base and 10
+product confidence cells) with 1,000 nested draws each: the guarantee held under every cut (largest violation 0.093,
+bound 0.128); the standard cut's prefix coverage fell by more than 0.05 of the map on 14 maps, not the half predicted
+(P2 rejected); a cut at three times b_min halved those falls on 12 of 14 (P3), and the preregistered rule named it,
+but it certified less at about 100 labels on 24 of 34 maps, so it was not adopted. exp96 graded a cut designed after
+exp95, `ramp` (the standard cut up to 3 b_min labels, no new level until 9 b_min, then a level only once it expects
+3 b_min labels), on 332 maps exp95 did not use (the 15 other encoders of exp79): at the preregistered seed every
+prediction held (largest violation 0.1225; it halved the fall on 131 of the 170 maps where it exceeded 0.05, against a
+bar of 75%; 22 maps lost more than 0.02 of coverage, against a bar of 10%), and the preregistered rule made it the
+default. The pre-record audit found that pass at the bar: reruns at 8 more seeds held on 4, failing on 4 (0.744 to
+0.776 against 0.75); about a quarter of the halvings were levels the ramp tests only past the 3,000 labels graded, and
+on Sen1Floods11-like maps its 5% level enters near 60 b_min with a fall as large; small maps with a high error rate
+certify less. The default therefore stays the standard cut, a departure from the preregistered rule stated as such;
+`certify --level-cut ramp` (and `cut="ramp"` in `certify_zone`) offers the ramp, the zone JSON records `level_cut`, and
+`plan` follows the cut. exp80, exp86, exp87, exp89 and exp93 pass the standard cut explicitly.
+
+**The audit also found that certify's guarantee does not survive repeated looks, under either cut.** The guarantee
+is for one budget fixed before the labels and one run. A reviewer who certifies, adds labels and certifies again
+runs several tests: on six of exp96's maps, where one budget's certificate is wrong at most 12.25% of the time, some
+budget of a doubling ladder certified a wrong zone on 21% to 30% of nested draws under the standard cut, and 24% to
+32% under the ramp (`exp/exp96_audit.py pathwise`). The
+docs, `decide`'s answer and the MCP texts now say to fix the budget before labelling and to certify once.
 
 ## 1.7.0 (2026-10-07)
 

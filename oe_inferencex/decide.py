@@ -313,8 +313,9 @@ def _answer_trusted(r, share=None):
         a = "yes" if cov >= share else "undetermined"
         if a == "undetermined":
             why = (f"No zone covering at least {_pc(share)} of the map is certified at {_pc(alpha)} from these labels "
-                   f"(certified: {_pc(cov)}). That is not a no: more labels can certify more, but only where the map's "
-                   f"error rate is at most {_pc(alpha)}.")
+                   f"(certified: {_pc(cov)}). That is not a no: a new random sample with more labels can certify more, but "
+                   f"only where the map's error rate is at most {_pc(alpha)}. Fix its budget before labelling and certify "
+                   "once: every run of certify is a new test, and retrying raises the chance that a certificate is wrong.")
         why += tail
         out = {"type": "yes_no", "answer": a, "level": 1 - delta, "exact": True, "because": why,
                "evidence": {**ev, "certified": cov}}

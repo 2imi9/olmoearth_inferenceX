@@ -262,7 +262,7 @@ def f3_zone_facts(fixtures, design_rel, labels_rel):
     margin = np.array([np.nan if v is None else float(v) for v in d["population"]["margin"]])
     facts = {}
     for alpha in (0.05, 0.25):
-        z = estimate.certify_zone(margin, idx, [wrong_of[i] for i in idx], alpha)
+        z = estimate.certify_zone(margin, idx, [wrong_of[i] for i in idx], alpha, cut="standard")   # fixed with 1.x
         facts[f"coverage_at_{alpha}"] = z["coverage"]
     if facts != PLAN_F3:
         raise SystemExit(f"F3 is not the fixture the plan describes: {facts}, planned {PLAN_F3}")

@@ -3355,6 +3355,71 @@ comparisons measure agreement with each reference, not which product is better. 
 NLCD's own assessment. Whether reference points trained a product was not checked. East Africa's three years are close
 to one test.
 
+## Certify's level cut: more labels should not certify less (exp95, exp96)
+
+**Question.** `plan` found that the chance that `certify` certifies a zone can fall when labels are added. A level of
+the grid is tested once the budget n puts b_min labels into it on average (b_min, `min_labels_to_certify`, the labels a
+zone needs with no error among them). At that budget it holds fewer than b_min labels about half the time, and the
+prefix rule must pass it before any larger zone. How often does this happen on real maps, and does a different cut,
+one that still depends on the budget alone and so keeps the guarantee, remove it? exp95 (preregistered on 8 October
+2026, 8baf436) and exp96 (preregistered after exp95's result, b914b52) read committed or local per-unit files only:
+`exp/exp95_level_cut.py`, `exp/exp96_level_cut_heldout.py`, `exp/out/exp95_summary.json`, `exp/out/exp96_summary.json`.
+
+**Design.** A cell is one map's units in zone order with their errors: in exp95, the 24 tasks of the embedding suite
+under OlmoEarth Base (`exp/out/exp78_units`) and 10 product confidence cells (LCMAP, CGLS-LC100 and ODSE-LULC against
+exp92's and exp94's references); in exp96, the same 24 tasks under the 15 other encoders of exp79 (332 cells, local
+files, sha256 recorded), with exp95's cells reported apart. alpha is half the cell's error rate, delta 0.1. A draw is
+one random order of the units, and the sample at budget n is its first n, so a larger budget adds labels to a smaller
+one; budgets run from 50 to 3,000 in steps of 5%, below half the units; 1,000 draws in exp95, 400 in exp96. Each rule
+is certify's own, with its exact tie rule (checked equal to `certify_zone` draw by draw). Measured per cell: C(n), the
+mean certified coverage; its largest fall when labels are added, the largest C(n) - C(n') over n < n'; and its area,
+the mean of C over the budgets. exp95 compared the standard cut (b_min / n, the cut until now) with cuts at 1.5, 2 and
+3 times b_min / n. exp96 graded `ramp`, designed after exp95: the standard cut up to 3 b_min labels, then the levels of
+at least a third of the map until 9 b_min, then 3 b_min / n.
+
+**Result.** exp95: the guarantee held under every cut and rule (largest violation 0.093, bound 0.128; P1); the
+standard cut's prefix coverage fell by more than 0.05 of the map on 14 of 34 maps, where at least half were predicted
+(P2 rejected); the cut at 3 b_min halved those falls on 12 of the 14 at a median area gain of 0.007 (P3), and the
+preregistered rule named it. Found after the result, it certified less at the budget nearest 100 on 24 of the 34
+maps (by more than 0.02 on 17), since no level then expects 3 b_min labels, so it was not adopted.
+<!-- claim:exp95-standard-cut-falls-when-labels-are-added -->
+exp96, at the preregistered seed: every prediction held.
+The ramp kept the guarantee (largest violation 0.1225, bound 0.175; none above three standard errors), decided as the
+standard cut up to 3 b_min labels on every map, halved the standard cut's largest fall on 131 of the 170 maps where it
+exceeded 0.05 (77%, bar 75%), lost more than 0.02 of area on 22 of 332 maps (bar 10%), and at the budget nearest 100
+was within 0.02 of the cut at 3 b_min on all 332 (on 208 of them the comparison could go either way). Across the 332
+maps the median largest fall went from 0.053 to 0.010. The preregistered rule made the ramp the default.
+<!-- claim:exp96-ramp-passed-at-its-seed-and-not-across-seeds -->
+
+**The pre-record audit, and why the default is unchanged.** An independent audit (`exp/exp96_audit.py`,
+`exp/out/exp96_audit.json`) reran exp96's grading with its own code at 8 more seeds: P3 held on 4 and failed on 4, the
+halved share running from 0.744 to 0.776 against the bar of 0.75. It also found that about a quarter of the halvings
+were levels the ramp tests only past the 3,000 labels graded or past half of a small map, and that on maps like
+Sen1Floods11 the ramp's 5% level enters near 60 b_min, just past the grading, so its fall there was not graded (the
+audit's own extension past 3,000 labels, not committed, found one of 0.37 where the standard cut's was 0.29); that
+every one of the 22 maps losing area is a map of 200 to 1,000 units wrong 18% to 43% of the time, where the
+ramp no longer tests the clean small zones the standard cut certifies; and that the Bonferroni rule had no fall to
+remove (at most 0.029 under the standard cut). The evidence does not establish the improvement P3 asked for, so
+`certify` keeps the standard cut, a departure from the preregistered decision, stated as such. The ramp is an option,
+`--level-cut ramp`.
+
+**Found by the audit: the guarantee is per budget, not per look.** A reviewer who certifies, adds labels and certifies
+again runs several tests on nested samples. On the six held-out maps with the largest per-budget violation (at most
+0.1225 at any budget), some budget of a doubling ladder (50 to 3,200) certified a zone wrong more than alpha on 21% to
+30% of 400 nested draws under the standard cut, and on 24% to 32% under the ramp; some budget of the whole ladder, on
+36% to 42% and 39% to 44%. Two computations agree exactly on the per-budget figures. The budget must be fixed before
+the labels are read, and certify run once. <!-- claim:certify-guarantee-is-per-budget-not-per-look -->
+
+**Reading.** On real maps the standard cut's fall is common but not universal, and a cut that removes it at moderate
+budgets costs small budgets; within the budgets graded, the ramp removed most large falls above 3 b_min, but not
+robustly enough across seeds to replace the default, and part of its gain was falls moved past the grading. What a
+user can rely on now is `plan`, which gives the budgets where a level enters and the one below each, and the rule
+that the guarantee holds for one budget fixed in advance.
+
+**What it does not show.** Budgets above 3,000, alpha other than half the error rate, the threshold grid of exp93; the
+held-out maps share the suite's tasks; a cut that is monotone in power at every budget. An anytime-valid certificate,
+one that may be checked after every label, would answer the question of adding labels directly; it was not built.
+
 ## A vision-language model as the reviewer (exp91)
 
 **Question.** The labelled routes need a reviewer. Can a general-purpose vision-language model supply the labels from

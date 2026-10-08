@@ -1618,6 +1618,8 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
 ZONE_GRID = tuple(round(j / 20, 2) for j in range(1, 21))
 ZONE_DELTA = 0.10
 ZONE_RULES = ("prefix", "bonferroni", "plugin")
+ZONE_CUTS = ("standard", "ramp")
+ZONE_CUT = "standard"             # the level cut; "ramp" is an option (exp95, exp96 and their audit: zone_cut)
 # The note a prefix certification carries. The prefix rule is fixed-sequence testing (Angelopoulos et al. 2021, Learn
 # then Test): the levels are ordered before any label is read and each p-value is exact, so a zone wrong more than
 # alpha of the time is certified only if the first such level in the order passes its test, which happens on at
@@ -1732,12 +1734,37 @@ def zone_order(margin, valid=None):
     return order, pos
 
 
-def zone_levels(n_population, budget, alpha, delta=ZONE_DELTA, grid=ZONE_GRID):
-    """The grid coverages a budget can certify at (alpha, delta), and the zone size at each: levels below
-    min_labels_to_certify / budget are cut before any label is seen, since they cannot be certified whatever
-    their quality. Returns (coverages, zone sizes, c_min)."""
+def zone_cut(budget, b_min, cut=None):
+    """The smallest coverage certify tests with `budget` random labels; b_min is min_labels_to_certify.
+
+    "standard" (the default): b_min / n, the coverage whose zone expects b_min labels. A level enters at the budget
+    where it expects b_min labels; it then holds fewer than b_min about half the time and passes only with almost no
+    error among them, and the prefix rule must pass it before any larger zone, so the chance of certifying can fall
+    when labels are added (exp95: by more than 0.05 of the map on 14 of 34 maps). `plan` lists those budgets.
+    "ramp" (an option, exp96): b_min / n up to 3 b_min labels, as standard; then 1/3, so that no level enters while
+    labels accrue, up to 9 b_min; then 3 b_min / n, so that a level enters once it expects 3 b_min labels. It never
+    rises with n and depends on the budget alone, so the rules keep their guarantee. On 332 maps it was not designed
+    on it halved the largest fall on 77% of the maps where standard's exceeded 0.05, which met the preregistered bar of
+    75%, but the pre-record audit found that share at the bar: P3 held on 5 of 9 seeds (0.744 to 0.776), about a
+    quarter of the halvings were levels the ramp tests only past the 3,000 labels graded (on Sen1Floods11-like maps its
+    5% level enters near 60 b_min with a fall as large as standard's), and small maps with high error lose the clean
+    small zones standard certifies. So it is not the default."""
+    n = max(int(budget), 1)
+    cut = ZONE_CUT if cut is None else cut                    # the default is read at the call, not at import
+    if cut not in ZONE_CUTS:
+        raise ValueError(f"cut must be one of {ZONE_CUTS}, got {cut!r}")
+    if cut == "standard" or n <= 3 * b_min:
+        return b_min / n
+    if n <= 9 * b_min:
+        return 1 / 3
+    return 3 * b_min / n
+
+
+def zone_levels(n_population, budget, alpha, delta=ZONE_DELTA, grid=ZONE_GRID, cut=None):
+    """The grid coverages a budget can certify at (alpha, delta), and the zone size at each: levels below the cut
+    (`zone_cut`) are dropped before any label is seen. Returns (coverages, zone sizes, c_min)."""
     b_min = min_labels_to_certify(alpha, delta)
-    c_min = b_min / max(int(budget), 1)
+    c_min = zone_cut(budget, b_min, cut)
     cov = [c for c in grid if c >= c_min - 1e-12]
     sizes = [max(1, int(round(c * n_population))) for c in cov]
     return cov, sizes, c_min
@@ -1790,7 +1817,8 @@ def apply_zone_rule(p, b, k, alpha, delta=ZONE_DELTA, rule="prefix", n=None):
     return acc, best
 
 
-def certify_zone(margin, indices, wrong, alpha, delta=ZONE_DELTA, rule="prefix", grid=ZONE_GRID, valid=None):
+def certify_zone(margin, indices, wrong, alpha, delta=ZONE_DELTA, rule="prefix", grid=ZONE_GRID, valid=None,
+                 cut=None):
     """The largest share of the map, taken from the most confident window down, that is wrong at most `alpha` of
     the time, certified so that the statement fails with probability at most `delta` over the reviewer's draw.
 
@@ -1827,8 +1855,10 @@ def certify_zone(margin, indices, wrong, alpha, delta=ZONE_DELTA, rule="prefix",
                          "random sample, and a zone certified on it would be wrong. Draw the sample at random.")
     order, pos = zone_order(margin, valid)
     N = int(order.size)
-    cov, sizes, c_min = zone_levels(N, idx.size, alpha, delta, grid)
+    cut = ZONE_CUT if cut is None else cut
+    cov, sizes, c_min = zone_levels(N, idx.size, alpha, delta, grid, cut)
     out = {"rule": rule, "alpha": float(alpha), "delta": float(delta), "n_population": N, "n_labelled": int(idx.size),
+           "level_cut": cut,
            "min_labels_to_certify": min_labels_to_certify(alpha, delta), "c_min": float(c_min), "levels": [],
            "coverage": None, "n_zone": None, "threshold": None, "upper_bound": None,
            "scope": SCOPE_CERTIFY}             # what a zone over the whole map does not say (exp88)
@@ -1894,7 +1924,8 @@ def _family_note(L, refused, b1, d, delta, alpha):
             "nothing is certified.")
 
 
-def certify_by_condition(sample, wrong, margin, alpha, delta=ZONE_DELTA, rule="prefix", grid=ZONE_GRID, valid=None):
+def certify_by_condition(sample, wrong, margin, alpha, delta=ZONE_DELTA, rule="prefix", grid=ZONE_GRID, valid=None,
+                         cut=None):
     """A certified zone inside each input condition, with delta split so that all the statements hold together.
 
     sample  : a sample of the "random" or "condition" design that records a condition (`condition_grid`)
@@ -1979,7 +2010,8 @@ def certify_by_condition(sample, wrong, margin, alpha, delta=ZONE_DELTA, rule="p
                             "be wrong. If these are the labels `sample` drew, unedited, this is a rare chance draw")}
             refused.append(names[c])
         elif c in tested:
-            r = certify_zone(margin, idx[m], wrong[m], alpha, delta=d, rule=rule, grid=grid, valid=valid & (cgrid == c))
+            r = certify_zone(margin, idx[m], wrong[m], alpha, delta=d, rule=rule, grid=grid, valid=valid & (cgrid == c),
+                             cut=cut)
             r.pop("scope", None)
             if r["coverage"] is None and r["levels"] and K > 1:
                 # certify_zone gives the smallest testable zone as a share of the population it was handed, which
