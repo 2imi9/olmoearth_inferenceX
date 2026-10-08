@@ -4719,7 +4719,8 @@
     exp/exp96_audit.py pathwise, on exp96's own draws (seed 96, 400 per map) through certify's functions; the six
     maps were chosen as those with the largest per-budget violation, so the figures are for maps near the bound. Its
     per-budget figures equal exp96's recorded violations exactly. Repeated looks inflate the error of any fixed-level
-    test; an anytime-valid certificate was not built.
+    test; exp97 built a certificate that holds at every look (exp97-sequential-certificate-holds-at-every-look)
+    and reproduced this failure on 132 of 366 maps (exp97-rerunning-certify-breaks-its-guarantee).
 
 - id: exp91-vlm-reviewer-shares-the-maps-errors
   statement: "As a blind reviewer of Sen1Floods11 Bolivia windows (exp18's map on frozen OlmoEarth v1-Base, 8.84% of 81,984 windows wrong), Claude (claude-opus-5-5) given VISTA-style views answered ? on 31% of a simple random sample of 150 windows and, on the 104 it judged, agreed with the hand labels on 85.6%, below the preregistered 90% (P1 fails; the map, on the same windows, 95.2%, found after the result). On a calibration set of 30 wrong and 30 correct windows it raised no false alarm on the 22 correct windows it judged (one-sided 95% upper bound 12.7%) and missed 14 of the 19 wrong windows it judged (74%, upper bound 89%; P3, misses above false alarms, holds). The sample's interval was 5.2 to 15.2% with the hand labels, 4.2 to 46.9% with the reviewer's labels (its 46 ? counted both ways) and 0 to 100% widened by the calibrated bounds, which holds the true rate only vacuously (P2 holds as written)."
@@ -4797,3 +4798,99 @@
     checks it by exact enumeration on small populations. The whole-map comparison was first analysed with each count
     over all N windows (kept as random_naive); the review of 3 October 2026 replaced it with the analysis on the
     differing windows the draw holds. exp79_units is not committed; the artifact records each input file's sha256.
+
+- id: exp97-sequential-certificate-holds-at-every-look
+  statement: "A sequential certificate (each grid zone tested by a uniform-weight mixture of likelihood ratios for sampling without replacement, in a fixed sequence from an anchor fixed before the labels, passes kept) held its guarantee at every look on 366 maps (exp95's 34 and exp96's 332; preregistered): over 3,122 violation rates, the largest was 0.1175 at delta 0.1 (bound 0.175, none above three standard errors), the default anchors' at most 0.0975, and the median full-claim violation 0.03; its certified zone never shrank, and the harness equalled the package on 37,764 comparisons."
+  crosscheck: tests/test_exp97.py::test_exp97_verdicts_from_the_summary
+  status: supported
+  experiments: [exp97]
+  artifacts: [exp/out/exp97_summary.json, exp/out/exp96_summary.json]
+  check: |-
+    (lambda d, h: (lambda C, S: d["preregistered"] is True and len(C) == 366
+      and d["input_sha256"] == h["input_sha256"]
+      and set(C) == {"exp96:" + k[:-4] for k in h["input_sha256"]} | {k for k in C if k.startswith("exp95:")}
+      and sum(k.startswith("exp95:") for k in C) == 34
+      and len([r for k, a in S for r in (C[k]["arm"][a]["pathwise_violation"], C[k]["arm"][a]["full_claim_violation"])]) == 3122
+      and max(max(C[k]["arm"][a]["pathwise_violation"], C[k]["arm"][a]["full_claim_violation"]) for k, a in S) == 0.1175
+      and not any(max(C[k]["arm"][a]["pathwise_violation"], C[k]["arm"][a]["full_claim_violation"]) > 0.1 + 3 * (0.09 / 400) ** 0.5 for k, a in S)
+      and max(C[k]["arm"][a]["full_claim_violation"] for k, a in S if a.startswith("S(n0=")) == 0.0975
+      and median(C[k]["arm"][a]["full_claim_violation"] for k, a in S) == 0.03
+      and all(C[k]["arm"][a]["full_claim_violation"] >= C[k]["arm"][a]["pathwise_violation"] and C[k]["arm"][a]["never_falls"] for k, a in S)
+      and sum(v["check"]["comparisons"] for v in C.values()) == 37764
+      and all(v["check"]["mismatches"] == [] and v["check"]["refused"] == 0 for v in C.values())
+      and d["prereg"]["P1"]["holds"] is True and d["prereg"]["P2"]["holds"] is True and d["prereg"]["decision"]["ships_as_option"] is True
+    )(d["cells"], [(k, a) for k, v in d["cells"].items() for a in v["arm"] if a != "F"]))(A["exp/out/exp97_summary.json"], A["exp/out/exp96_summary.json"])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp97-sequential-certificate-holds-at-every-look}
+    - {file: docs/Findings.md, marker: exp97-sequential-certificate-holds-at-every-look}
+  note: >-
+    Preregistered on 8 October 2026 (8fb5ed5, run guard 7d2bc34), run on the aicr cluster (job 1237834); the held-out
+    per-unit files (exp79_units) are not committed and their sha256 equals exp96's record. The guarantee is a theorem
+    (Ville's inequality on a supermartingale), checked in exact arithmetic and by enumeration of the whole procedure
+    on 6-window maps in tests/test_sequential.py; exp97 checks the implementation on real maps. Five seeds agree
+    (exp97_audit.json).
+
+- id: exp97-rerunning-certify-breaks-its-guarantee
+  statement: "certify as shipped (prefix rule, standard cut), rerun at every budget of a ladder (50 to 3,000 in steps of 5%, a median 77 budgets) on nested samples of 366 maps, certified a zone wrong more than alpha at some look on a median 14% of draws, above delta on 270 maps and above 0.175 on 132 (at most 0.435; 132 to 138 across five seeds), while at any single budget it never exceeded 0.1225; on the six maps exp96's audit followed, 0.33 to 0.38. The rate grows with the number of looks."
+  crosscheck: tests/test_exp97.py::test_exp97_verdicts_from_the_summary
+  status: supported
+  experiments: [exp97]
+  artifacts: [exp/out/exp97_summary.json, exp/out/exp97_audit.json, exp/out/exp96_audit.json]
+  check: |-
+    (lambda d, au, six: (lambda F: len(F) == 366
+      and round(median(F.values()), 2) == 0.14
+      and sum(f > 0.1 for f in F.values()) == 270
+      and sum(f > 0.175 for f in F.values()) == 132 and max(F.values()) == 0.435
+      and max(v["arm"]["F"]["per_budget_max_violation"] for v in d["cells"].values()) == 0.1225
+      and len(six) == 6 and all(F["exp96:" + k] > 0.175 for k in six)
+      and [round(g(F["exp96:" + k] for k in six), 2) for g in (min, max)] == [0.33, 0.38]
+      and d["prereg"]["P3"]["holds"] is True
+      and [g(v["P3"]["cells_F_pathwise_above_bound"] for v in au["by_seed"].values()) for g in (min, max)] == [132, 138]
+      and len(au["by_seed"]) == 5
+    )({k: v["arm"]["F"]["pathwise_violation"] for k, v in d["cells"].items()}))(A["exp/out/exp97_summary.json"], A["exp/out/exp97_audit.json"], A["exp/out/exp96_audit.json"]["pathwise"])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp97-rerunning-certify-breaks-its-guarantee}
+    - {file: docs/Findings.md, marker: exp97-rerunning-certify-breaks-its-guarantee}
+  note: >-
+    P3 of exp97, preregistered as a replication of exp96's audit, not a new prediction. The figures are for a reviewer
+    who certifies again after every 5% more labels; exp96's audit gave 0.21 to 0.30 on the same six maps at the 7
+    budgets of a doubling ladder.
+
+- id: exp97-sequential-certificate-costs-labels
+  statement: "With the anchor of a first budget of 300, the sequential certificate needed a median 1.71 times the one-look rule's labels (quartiles 1.55 and 2.19; 1.709 to 1.710 across five seeds) to reach half the largest mean certified share that rule reaches, on the 213 maps eligible under exp97's preregistered rule (bar 2; 2 never reached). Over budgets 50 to 3,000 its mean certified share was a median 0.146 against the one-look rule's 0.222 on the same 279 maps (a median 0.70 of it per map); it certified more on 17, 14 of them Sen1Floods11 (of 16), where its default anchor sits at the 0.25 cap above the small zones whose entry lowers the one-look rule's share."
+  crosscheck: tests/test_exp97.py::test_exp97_verdicts_from_the_summary
+  status: supported
+  experiments: [exp97]
+  artifacts: [exp/out/exp97_summary.json, exp/out/exp97_audit.json]
+  check: |-
+    (lambda d, au: (lambda C, M: (lambda R: len(R) == 213 and sum(r == float("inf") for r in R) == 2
+      and round(sorted(R)[106], 2) == 1.71 and [round(sorted(R)[i], 2) for i in (53, 159)] == [1.55, 2.19]
+      and d["prereg"]["P4"]["holds"] is True and d["prereg"]["P4"]["cells"] == 213
+      and len(M) == 279
+      and round(median(C[k]["arm"]["S(n0=300)"]["area"] for k in M), 3) == 0.146
+      and round(median(C[k]["arm"]["F"]["area"] for k in M), 3) == 0.222
+      and round(median(C[k]["arm"]["S(n0=300)"]["area"] / C[k]["arm"]["F"]["area"] for k in M if C[k]["arm"]["F"]["area"] > 0), 2) == 0.70
+      and sum(C[k]["arm"]["S(n0=300)"]["area"] > C[k]["arm"]["F"]["area"] for k in M) == 17
+      and sum(C[k]["arm"]["S(n0=300)"]["area"] > C[k]["arm"]["F"]["area"] for k in M if k.endswith("sen1floods11")) == 14
+      and sum(k.endswith("sen1floods11") for k in M) == 16
+      and all(v["P1"]["holds"] and v["P4"]["holds"] for v in au["by_seed"].values()) and len(au["by_seed"]) == 5
+      and [round(g(v["P4"]["median_rho"] for v in au["by_seed"].values()), 3) for g in (min, max)] == [1.709, 1.710]
+      and [round(g(v["P4"]["rho_quartiles_inverted_cdf"][2] for v in au["by_seed"].values()), 2) for g in (min, max)] == [2.19, 2.40]
+      and [round(g(v["P1"]["max_violation"] for v in au["by_seed"].values()), 4) for g in (min, max)] == [0.095, 0.1175]
+    )([
+      (min((b for b, c in zip(C[k]["budgets"], C[k]["arm"]["S(n0=300)"]["mean_coverage"]) if c >= max(C[k]["arm"]["F"]["mean_coverage"]) / 2), default=float("inf"))
+       / min(b for b, c in zip(C[k]["budgets"], C[k]["arm"]["F"]["mean_coverage"]) if c >= max(C[k]["arm"]["F"]["mean_coverage"]) / 2))
+      for k in M if max(C[k]["arm"]["F"]["mean_coverage"]) >= 0.1
+      and max(C[k]["budgets"]) >= 2 * min(b for b, c in zip(C[k]["budgets"], C[k]["arm"]["F"]["mean_coverage"]) if c >= max(C[k]["arm"]["F"]["mean_coverage"]) / 2)]))(
+      d["cells"], [k for k, v in d["cells"].items() if "S(n0=300)" in v["arm"]]))(A["exp/out/exp97_summary.json"], A["exp/out/exp97_audit.json"])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp97-sequential-certificate-costs-labels}
+    - {file: docs/Findings.md, marker: exp97-sequential-certificate-costs-labels}
+    - {file: docs/Usage.md, marker: exp97-sequential-certificate-costs-labels}
+  note: >-
+    The cost is this rule's, with this anchor: with the anchor fixed at 0.25, 0.1 and 0.5 the median label ratio was
+    1.48, 1.79 and 3.23, and exp97 did not vary the mixture weights (a clean zone needs a median 1.55 times the
+    one-look labels from the weights alone). About half of each ladder lies below the first budget of 300; over
+    budgets from 300 (not preregistered) the median area ratio was 0.90. The pre-record audit found two numbers wrong
+    in the draft record (the one-look median share over all maps, 0.178, given as the same maps'; 15 Sen1Floods11 maps
+    for 14), corrected before recording.

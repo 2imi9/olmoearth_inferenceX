@@ -353,3 +353,57 @@ def test_the_exact_e_value_sums_the_shorter_side():
     e = sq.evalue_exact(10_000, 420, 1_000_000, 0.05)
     assert time.time() - t0 < 30
     assert abs(math.log(e.numerator) - math.log(e.denominator) - sq.log_evalue(10_000, 420, 1_000_000, 0.05)) < 1e-8
+
+
+def test_the_whole_procedure_holds_delta_exactly_on_every_order_of_small_maps():
+    """The anchored fixed sequence with sticky passes, enumerated: on maps of 6 windows with a grid of thirds, for
+    every error pattern, every anchor and every order of the windows, the share of orders on which some look
+    certifies a zone sequence holding a zone wrong more than alpha is at most delta, and reaches it on some pattern
+    (so the enumeration is tight, not vacuous). Each zone's pass time comes from level_path, the package's own; a
+    spot check against certify_zone_sequential at every look ties the enumeration to the public function."""
+    import itertools
+    from functools import lru_cache
+    N = 6
+    grid = (round(1 / 3, 4), round(2 / 3, 4), 1.0)
+    sizes = [max(1, int(round(c * N))) for c in grid]
+    perms = list(itertools.permutations(range(N)))
+    margin = np.linspace(1, 0, N)
+    rng = np.random.default_rng(0)
+    for alpha, delta in ((0.1, 0.5), (0.2, 0.25)):
+        @lru_cache(maxsize=None)
+        def passed_t(size, w):                               # in-zone label count at which the zone passes, or None
+            r = sq.level_path(np.arange(1, len(w) + 1), np.array(w, int), size, alpha, delta)
+            return r["passed_at"]
+        tight = False
+        for bits in range(2 ** N):
+            err = np.array([(bits >> i) & 1 for i in range(N)])
+            bad = [err[:s].sum() / s > alpha for s in sizes]
+            for j0 in range(len(grid)):
+                wrong_orders = 0
+                for p in perms:
+                    p = np.array(p)
+                    cross = []
+                    for s in sizes:
+                        inz = np.flatnonzero(p < s)
+                        t = passed_t(s, tuple(int(x) for x in err[p[inz]]))
+                        cross.append(inz[t - 1] + 1 if t else math.inf)    # the look at which it passed
+                    best, ok = None, True
+                    for j in range(j0, len(grid)):
+                        ok = ok and cross[j] <= N
+                        if ok:
+                            best = j
+                    wrong_orders += best is not None and any(bad[j0:best + 1])
+                    if rng.random() < 0.002:                      # the public function agrees at every look
+                        for L in range(1, N + 1):
+                            z = sq.certify_zone_sequential(margin, p[:L], err[p[:L]], alpha, delta, anchor=grid[j0],
+                                                           grid=grid)
+                            pref, want = True, None
+                            for j in range(j0, len(grid)):
+                                pref = pref and cross[j] <= L
+                                if pref:
+                                    want = grid[j]
+                            assert z["coverage"] == want
+                share = Fraction(wrong_orders, len(perms))
+                assert share <= Fraction(repr(delta)), (alpha, delta, bits, j0, share)
+                tight = tight or share == Fraction(repr(delta))
+        assert tight, (alpha, delta)

@@ -90,3 +90,67 @@ def test_the_default_anchor_is_capped_at_a_quarter():
     assert sq.anchor_coverage(10_000, 0.05) == 0.05              # the smallest grid level
     assert e97.cell_seed("a").entropy == e97.cell_seed("a").entropy and \
         e97.cell_seed("a").generate_state(1)[0] != e97.cell_seed("b").generate_state(1)[0]
+
+
+def test_exp97_verdicts_from_the_summary():
+    """P1 to P4 recomputed from the committed per-cell curves with code written here, not exp97's analyze."""
+    import json
+    s = json.load(open(os.path.join(ROOT, "exp", "out", "exp97_summary.json")))
+    cells = {k: v for k, v in s["cells"].items() if v["budgets"]}
+    assert len(cells) == 366 and sum(k.startswith("exp96:") for k in cells) == 332
+    se = math.sqrt(0.09 / 400)
+    S = [(k, a) for k, v in cells.items() for a in v["arm"] if a != "F"]
+    rates = [cells[k]["arm"][a][m] for k, a in S for m in ("pathwise_violation", "full_claim_violation")]
+    assert len(rates) == 3122 and max(rates) == 0.1175 and max(rates) <= 0.1 + 5 * se
+    assert not any(r > 0.1 + 3 * se for r in rates)
+    assert all(cells[k]["arm"][a]["full_claim_violation"] >= cells[k]["arm"][a]["pathwise_violation"] for k, a in S)
+    assert sum(v["check"]["comparisons"] for v in cells.values()) == 37764
+    assert all(v["check"]["mismatches"] == [] and v["check"]["refused"] == 0 for v in cells.values())
+    F = [v["arm"]["F"]["pathwise_violation"] for v in cells.values()]
+    assert sum(f > 0.1 + 5 * se for f in F) == 132 and max(F) == 0.435
+    assert max(v["arm"]["F"]["per_budget_max_violation"] for v in cells.values()) == 0.1225
+    rho = []
+    for v in cells.values():
+        if "S(n0=300)" not in v["arm"]:
+            continue
+        cf, cs, bs = v["arm"]["F"]["mean_coverage"], v["arm"]["S(n0=300)"]["mean_coverage"], v["budgets"]
+        if max(cf) < 0.1:
+            continue
+        target = max(cf) / 2
+        nf = next(b for b, c in zip(bs, cf) if c >= target)
+        if bs[-1] < 2 * nf:
+            continue
+        ns = next((b for b, c in zip(bs, cs) if c >= target), None)
+        rho.append(ns / nf if ns else math.inf)
+    rho.sort()
+    assert len(rho) == 213 and sum(math.isinf(r) for r in rho) == 2
+    assert round(float(np.median(rho)), 2) == 1.71 and np.median(rho) <= 2
+    assert [round(rho[53], 2), round(rho[159], 2)] == [1.55, 2.19]
+    assert s["prereg"]["decision"]["ships_as_option"] is True
+    # the inputs are exp96's recorded files and exp95's cells
+    rec = json.load(open(os.path.join(ROOT, "exp", "out", "exp96_summary.json")))["input_sha256"]
+    assert s["input_sha256"] == rec
+    assert {k for k in cells if k.startswith("exp96:")} == {"exp96:" + k[:-4] for k in rec}
+    # every sequential arm's mean curve never falls (a second route on never_falls)
+    assert all(all(b >= a - 1e-12 for a, b in zip(c, c[1:])) for k, a_ in S
+               for c in [cells[k]["arm"][a_]["mean_coverage"]])
+    # P3: the six maps exp96's audit followed
+    six = json.load(open(os.path.join(ROOT, "exp", "out", "exp96_audit.json")))["pathwise"]
+    f6 = [cells["exp96:" + k]["arm"]["F"]["pathwise_violation"] for k in six]
+    assert len(f6) == 6 and min(f6) > 0.1 + 5 * se and [round(min(f6), 2), round(max(f6), 2)] == [0.33, 0.38]
+    # the area sentence of the record
+    M = [k for k, v in cells.items() if "S(n0=300)" in v["arm"]]
+    area = lambda k, a: cells[k]["arm"][a]["area"]
+    assert len(M) == 279
+    assert [round(float(np.median([area(k, a) for k in M])), 3) for a in ("S(n0=300)", "F")] == [0.146, 0.222]
+    ratio = [area(k, "S(n0=300)") / area(k, "F") for k in M if area(k, "F") > 0]
+    assert len(ratio) == 275 and round(float(np.median(ratio)), 2) == 0.70
+    more = [k for k in M if area(k, "S(n0=300)") > area(k, "F")]
+    flood = [k for k in M if k.endswith("sen1floods11")]
+    assert len(more) == 17 and len(flood) == 16 and sum(k in more for k in flood) == 14
+    assert all(area(k, "S(c=0.1)") < area(k, "F") for k in flood)
+    # the audit: five seeds, each with P1 and P4 holding, the main one equal to this recomputation
+    au = json.load(open(os.path.join(ROOT, "exp", "out", "exp97_audit.json")))["by_seed"]
+    assert set(au) == {"97", "971", "972", "973", "974"}
+    assert all(v["P1"]["holds"] and v["P4"]["holds"] for v in au.values())
+    assert au["97"]["P4"]["cells"] == 213 and au["97"]["P4"]["median_rho"] == float(np.median(rho))

@@ -221,6 +221,14 @@ The guarantee holds for one budget fixed before the
 labels: certifying again after adding labels, at every budget of a doubling ladder, gave a zone wrong more than alpha
 on 21% to 30% of draws on six maps where one budget's certificate is wrong at most 12.25% of the time (exp96's audit).
 <!-- claim:certify-guarantee-is-per-budget-not-per-look -->
+A certificate that holds at every look exists and was graded: zones tested by e-processes in a fixed sequence from an
+anchor fixed before the labels kept the guarantee on 366 maps, the largest violation 0.1175 at δ 0.1 over 3,122 rates
+(exp97, preregistered). <!-- claim:exp97-sequential-certificate-holds-at-every-look -->
+certify as shipped, rerun after every 5% more labels (a median 77 looks), certified a zone wrong at some look more than
+17.5% of the time on 132 of the same maps. <!-- claim:exp97-rerunning-certify-breaks-its-guarantee -->
+The price is labels and an anchor: to reach half the largest mean certified share the one-look rule reaches, a median
+1.71 times as many labels, and no zone smaller than the anchor is ever certified.
+<!-- claim:exp97-sequential-certificate-costs-labels -->
 The package's intervals for user's accuracy (how often a class call is right), producer's accuracy (how much of a class is found)
 and class share leave 14 of 628 cells below 0.93 coverage and none below 0.879; the Wald form common in the literature
 leaves 107 of 522, the worst at 0.019 (exp81). <!-- claim:per-class-intervals-wald-fails-wilson-nearly-holds -->

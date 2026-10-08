@@ -489,10 +489,45 @@ It writes `random_zone.json` (`coverage`, the certified share; `threshold`, the 
   at most 12.25% of the time, some budget of a doubling ladder certified a wrong zone on 21% to 30% of nested draws
   (exp96's audit); choose the budget first (`plan` helps), then certify once.
   <!-- claim:certify-guarantee-is-per-budget-not-per-look -->
+- To add labels and certify again, draw a sequential sample (below).
 - The confidence is recomputed from the scores the sidecar names (`--scores` if the raster has moved) and checked
   against the CSV; another raster, or another `--nodata`, is refused.
 - Without a condition, the zone JSON gains `scope`: the zone's rate is certified over all its windows together, and
   the part of it read with an input missing can be wrong more often than the rest (exp88).
+
+**Adding labels: a sequential sample.** `sample --design sequential` writes the first `--budget` windows of a fixed
+random order. The reviewer labels from the top row down and may stop anywhere; `certify` reads the rows labelled so
+far and may be run after every one of them. To go further, `sample --extend` appends the next windows of the same
+order and keeps the labels already given:
+
+```bash
+oe-inferencex sample water_prob.tif --budget 300 --design sequential --alpha 0.05 --seed 1 --out seq.csv
+oe-inferencex certify seq.csv --alpha 0.05            # after any number of rows, from the top
+oe-inferencex sample water_prob.tif --budget 600 --design sequential --seed 1 --extend seq.csv --out seq.csv
+oe-inferencex certify seq.csv --alpha 0.05            # again: the same guarantee covers every look
+```
+
+Each zone from the anchor outward is tested by an e-process: a number computed from the zone's labels, in the order
+they were drawn, whose expected value never rises while the zone is wrong more than α. By Ville's inequality it ever
+reaches 1/δ with probability at most δ. Here it is the likelihood ratio of the labels under a zone with fewer than
+⌊αn⌋ + 1 wrong windows against one with exactly that many, averaged with equal weights over the smaller counts
+(Robbins's method of mixtures), in closed form through one hypergeometric tail. A zone passes once its e-process
+reaches 1/δ, and stays passed. The zones are tested in a fixed sequence from the anchor outward, so the statement fails
+on at most δ of samples however often `certify` is run and whenever labelling stops, and more labels never certify
+less. The anchor is the smallest zone tested. `sample` fixes it before any label and writes it to the sidecar:
+`--anchor` (a share of the map), or `--alpha` (with `--delta`), which takes the zone the first budget can certify if
+none of its labels is wrong, at most a quarter of the map. No zone smaller than the anchor is ever certified from that
+sample. The equal weights cost labels on a clean zone: with no wrong label a zone needs `min_labels_sequential`
+labels, 71 at α = 5% and δ = 0.1, where the one-look test needs 45; in exchange a zone stays certifiable after wrong
+labels. On exp95's and exp96's 366 maps (exp97, preregistered) it kept the guarantee at every look (largest violation
+0.1175 at δ = 0.1), where `certify` rerun after every 5% more labels exceeded 0.175 on 132 maps; with the default
+anchor it needed a median 1.71 times the labels to reach half the largest mean certified share the one-look rule
+reaches, and on small maps at a low α it can certify nothing where the one-look rule certifies half the map.
+<!-- claim:exp97-sequential-certificate-costs-labels -->
+`estimate` reads the labelled rows as a random sample of their number; its interval assumes that number was fixed
+before labelling. `--rule` and `--level-cut` belong to the one-look rule and are refused
+here. The zone JSON has `rule: "sequential"`, the `anchor` and how it was fixed (`anchor_rule`), `n_drawn`, and per
+level the e-value now (`log_e_value`), the largest it has reached (`log_e_value_max`), `passed` and `passed_at_label`.
 
 **Per input condition.** A sample drawn with `--condition`, under the `condition` design or
 `random`, is certified per condition, and no whole-map zone is issued for it. `L`, the number of conditions holding at

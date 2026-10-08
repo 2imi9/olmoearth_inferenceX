@@ -53,6 +53,21 @@ budget of a doubling ladder certified a wrong zone on 21% to 30% of nested draws
 32% under the ramp (`exp/exp96_audit.py pathwise`). The
 docs, `decide`'s answer and the MCP texts now say to fix the budget before labelling and to certify once.
 
+**Sequential certify: a zone certificate that holds at every look (exp97, preregistered 8fb5ed5).** `sample --design
+sequential` draws a fixed random order; `--alpha` (or `--anchor`) fixes, before any label, the anchor, the smallest
+zone certify will test, and `--extend` appends the next windows of the same order, keeping the labels. `certify` reads
+the rows labelled from the top and may be run after every one of them; `estimate` reads them as a random sample of
+their number (its interval assumes that number was fixed); `decide` and the MCP tools follow
+(`oe_inferencex.sequential`). Each zone from the anchor outward is tested by a uniform-weight mixture of likelihood
+ratios against the boundary null count, in closed form, a supermartingale on the whole null, so valid at every look
+by Ville's inequality; a passed zone stays passed, so more labels never certify less. On exp95's and exp96's 366 maps
+it kept the guarantee (largest violation 0.1175 at delta 0.1; the harness equal to the package on 37,764 comparisons),
+where certify rerun after every 5% more labels certified a wrong zone at some look more than 17.5% of the time on 132
+maps. It costs labels: to reach half the largest mean certified share the one-look rule reaches, a median 1.71 times
+as many (213 maps; five seeds agree); with the default anchor it certified nothing on 2 small maps at a low alpha where
+the one-look rule certified up to half the map. Reviewed in three lenses before the preregistration and audited before
+the record (two numbers in the draft record were wrong and were corrected). certify's default is unchanged.
+
 ## 1.7.0 (2026-10-07)
 
 **What 1.7.0 adds.** `decide`, typed answers read from a result; published products as input, a class map with its

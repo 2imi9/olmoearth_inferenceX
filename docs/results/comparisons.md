@@ -3418,7 +3418,83 @@ that the guarantee holds for one budget fixed in advance.
 
 **What it does not show.** Budgets above 3,000, alpha other than half the error rate, the threshold grid of exp93; the
 held-out maps share the suite's tasks; a cut that is monotone in power at every budget. An anytime-valid certificate,
-one that may be checked after every label, would answer the question of adding labels directly; it was not built.
+one that may be checked after every label, would answer the question of adding labels directly; exp97 built and
+graded one (below).
+
+## Certify at every look: a sequential certificate (exp97)
+
+**Question.** certify's guarantee holds for one budget fixed before the labels and one run (exp96's audit). A reviewer
+who labels, certifies, adds labels and certifies again needs a certificate that holds at every look. Does one exist
+that keeps its guarantee on real maps, and what does it cost? exp97, preregistered on 8 October 2026 (8fb5ed5, after
+an independent review in three lenses; a run guard in 7d2bc34), read committed or recorded per-unit files only and ran
+on the aicr cluster: `exp/exp97_sequential.py`, `exp/out/exp97_summary.json`, `oe_inferencex/sequential.py`.
+
+**The rule.** Each grid zone is tested by an e-process on the labels inside it, read in the order they were drawn: the
+likelihood ratio of a zone with M wrong windows against one with ⌊αn⌋ + 1, averaged with equal weights over the smaller
+counts (Robbins's method of mixtures), in closed form through one hypergeometric tail. It is a supermartingale under
+every count at or above the boundary, so by Ville's inequality it ever reaches 1/δ with probability at most δ. A zone
+passes once its e-process reaches 1/δ and stays passed; zones are tested in a fixed sequence from an anchor, fixed when
+the sample is drawn, outward. `tests/test_sequential.py` checks the closed form, the supermartingale property and
+Ville's bound in exact arithmetic on small zones, and enumerates the whole procedure on maps of 6 windows (every error
+pattern, anchor and order: at most δ, and exactly δ on some). The closest published method is the anytime-valid risk
+control of Xu, Karampatziakis and Mineiro (2024), which assumes the risk monotone in the threshold, samples with
+replacement and reads the e-process now rather than its largest value. With no wrong label a zone needs 71 labels at
+α = 5%, δ = 0.1, against 45 for the one-look test: the equal weights pay that to stay certifiable after wrong labels.
+
+**Design.** exp95's 34 cells and exp96's 332 held-out cells (366 maps; α half the error rate, δ 0.1, the package's
+grid), each in zone order; 400 nested draws per cell from a seed per cell; budgets from 50 to 3,000 in steps of 5%
+(a median of 77 per cell). Arms: F, certify as shipped (prefix rule, standard cut) rerun at every budget on the same
+draws, as a reviewer who certifies again after every 5% more labels; S(n0), the sequential rule with the default
+anchor at a first budget of 300 or 1,000 (the zone that budget can certify if none of its labels is wrong, at most a
+quarter of the map); S(c), anchors at 0.1, 0.25, 0.5. The sequential rule's passes are counted at every label, so its
+figures do not depend on the looks. The harness was checked against the package's own functions on two draws of every
+cell (P2).
+
+**Result.** Every prediction held. The sequential rule kept the guarantee at every look: on 3,122 rates the largest
+violation was 0.1175 (bound 0.175, none above three standard errors; P1), the default arms' at most 0.0975, and the
+median full-claim violation over every sequential arm 0.03 (0.0325 and 0.035 for the default arms); the harness
+equalled the package on 37,764 comparisons (P2); its certified zone never shrank.
+<!-- claim:exp97-sequential-certificate-holds-at-every-look -->
+Rerun at every budget of the ladder, certify as shipped certified a zone wrong more than α at some look on a median
+14% of draws, above δ on 270 of the 366 maps (above δ plus three standard errors on 176) and above 0.175 on 132 (36%,
+at most 0.435), while at any single budget it never exceeded 0.1225. On the six maps exp96's audit followed it gave
+0.33 to 0.38, against 0.355 to 0.415 there on the same ladder and 0.21 to 0.30 at the 7 budgets of a doubling ladder
+(P3, a replication): the rate grows with the number of looks. <!-- claim:exp97-rerunning-certify-breaks-its-guarantee -->
+The cost: with the anchor of a first budget of 300, the sequential rule needed a median 1.71 times the one-look rule's
+labels to reach half the largest mean certified share that rule reaches (quartiles 1.55 and 2.19), on the 213 maps
+eligible under the preregistered rule (the one-look rule reaching at least 0.1, and the ladder reaching twice its
+budget), and never reached it on 2 (P4, bar 2). Over the ladder its mean certified share was a median 0.146 against
+the one-look rule's 0.222 on the same 279 maps, a median 0.70 of it on the 275 where either certified anything; about
+half of each ladder lies below the first budget of 300 the anchor was set for, and over budgets from 300 (not
+preregistered) the median ratio was 0.90. It certified nothing on 15 of the 279 maps, 13 of them maps where the
+one-look rule certifies about nothing; on the other 2, m_eurosat under OlmoEarth Base and Large (1,000 units, α about
+1%), the one-look rule's largest mean share was 0.35 and 0.54. It certified more on 17 maps (37 counting budgets from
+300 only), 14 of them Sen1Floods11 (under 14 of its 16 encoders; not AnySat or CopernicusFM). There the one-look rule's
+mean share falls by 0.08 to 0.30 when its cut admits the smallest zones (exp95's fall), and the default anchor is the
+cap, 0.25, above those zones; with the anchor at 0.1 the sequential rule certified less than the one-look rule on all
+16 Sen1Floods11 maps. With the anchor fixed at 0.25, 0.1 and 0.5, the median label ratio on the same 213 maps was
+1.48, 1.79 and 3.23 (20, 21 and 81 never reaching): the cost depends on the anchor as well as on the weights, and
+exp97 did not vary the weights (a clean zone needs a median 1.55 times the labels on these maps, from the weights
+alone). <!-- claim:exp97-sequential-certificate-costs-labels -->
+
+**The pre-record audit.** Rerun on the cluster at four more master seeds (`exp/exp97_audit.py`,
+`exp/out/exp97_audit.json`; every file hashed there), P1 and P4 held at every seed: across the five seeds the largest
+violation was 0.095 to 0.1175, the median label ratio 1.709 to 1.710 (upper quartile 2.19 to 2.40), the one-look rule
+rerun at every budget exceeded 0.175 on 132 to 138 maps, and the median areas moved by at most 0.006. An independent
+audit recomputed every figure above by a second route; it found two wrong in the draft of this section (the one-look
+rule's median share on the same maps, first written as its median over all 366, 0.178; and 15 Sen1Floods11 maps
+under every encoder, where it is 14 of 16), both corrected before recording, and wording that said more than exp97
+measured (that the cost was mostly the weights', and that ρ is the cost of certifying the same zone).
+
+**Reading.** A reviewer who will add labels and look again can draw a sequential sample (`sample --design
+sequential`, on main, not yet released), label it from the top and run `certify` after any label: its zone holds at
+every look, with α, δ and the anchor fixed before the first label. estimate's interval on such a sample does not; it
+assumes the number of labels was fixed. The price is labels, about 1.7 times as many to reach the same mean certified
+share on these maps, and the anchor, the smallest zone it can ever certify: on small maps at a low α the default can
+certify nothing where the one-look rule certifies half the map. Rerunning the one-look certify as labels are added is
+not safe: rerun after every 5% more labels, it certified a wrong zone at some look more than 17.5% of the time on 132
+of the 366 maps; fewer looks give less (exp96's audit). The one-look certify, with the budget fixed in advance
+(`plan`), stays the default; the sequential sample is the option when the stopping point is not known in advance.
 
 ## A vision-language model as the reviewer (exp91)
 

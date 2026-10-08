@@ -65,8 +65,9 @@ def _digest_rows(rows):
 
 def digest(directory):
     out = json.load(open(AUDIT)) if os.path.exists(AUDIT) else {}
-    seeds = {"97": {**_digest_rows(json.load(open(os.path.join(OUT, "exp97_summary.json")))["cells"]),
-                    "file": "exp97_summary.json"}}
+    main_path = os.path.join(OUT, "exp97_summary.json")
+    seeds = {"97": {**_digest_rows(json.load(open(main_path))["cells"]), "file": "exp97_summary.json",
+                    "sha256": hashlib.sha256(open(main_path, "rb").read()).hexdigest()}}
     for f in sorted(glob.glob(os.path.join(directory, "seed*.json"))):
         s = os.path.basename(f)[4:-5]
         seeds[s] = {**_digest_rows(json.load(open(f))["cells"]), "sha256": hashlib.sha256(open(f, "rb").read()).hexdigest()}
