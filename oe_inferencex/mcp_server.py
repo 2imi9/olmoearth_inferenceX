@@ -77,6 +77,7 @@ TITLES = {
     "compare": TWO_MAPS,
     "guide": "How do I use these tools?",
     "decide": "Turn a result into a typed answer: yes, no or undetermined; a, b or tie; a share",
+    "plan": "How many labels do I need? Plan the budget before labelling",
 }
 
 HARD_RULES = (
@@ -130,6 +131,13 @@ INSTRUCTIONS = "\n".join([
     "- A refusal is a tool error carrying the package's reason. Change the input it names; do not retry the same "
     "call.",
     "",
+    "Planning: before labelling, plan says how many labels a step needs, budget by budget: an error-rate interval no "
+    "wider than a stated width (step 2), labels that name the more accurate of two maps when their accuracies differ "
+    "by at least a stated amount (step 4), and for a zone the budget from which certify tests it, with, at a zone "
+    "error rate the user states, the chance it is certified (step 3). It computes with the package's own procedures; "
+    "the error rate a map will turn out to have is not known before the labels, so a plan made at a stated rate holds "
+    "for that rate.",
+    "",
     "Typed answers: decide reads a result that estimate, certify or compare wrote and answers set questions, each "
     "from a fixed set: error_rate_below=T (yes, no or undetermined), user_accuracy_above=T and "
     "producer_accuracy_above=T (per class), more_accurate (a, b or undetermined; a, b or tie from compare with "
@@ -139,6 +147,25 @@ INSTRUCTIONS = "\n".join([
 ])
 
 CARDS = {
+    "plan": "\n".join([
+        "Answers \"How many labels do I need?\" before any label, for the labelled steps.",
+        "Does: for each budget on a ladder (10, 12, 15, 20, 25, ... up to 10000 or the census), the probability over "
+        "the reviewer's random draw that the package's own procedure gives what is asked, and the smallest budget from "
+        "which every larger one checked reaches power (default 0.9). With width, an error-rate interval no wider than "
+        "width (high minus low), for a map wrong at error_rate (default 0.5). With other (or windows and differing) and "
+        "difference, labels drawn where two maps differ that name the more accurate map when their accuracies differ "
+        "by at least difference, at the worst split checked of the differing windows (two-class maps have one). With "
+        "coverage and alpha, the budget from which certify tests that zone at all and the budgets at which smaller "
+        "zones enter; with zone_error, the rate the user expects that zone to be wrong, the Bonferroni rule's chance "
+        "of certifying it (exact, however the errors spread), the most the prefix rule can reach (exact), and the "
+        "prefix rule's chance when the more confident zones are wrong no more often (simulated).",
+        "Needs: the map (as sample takes it) or windows, its number of valid windows; for two maps, the second map or "
+        "differing. Fractions between 0 and 1 for width, difference, error_rate, coverage, alpha and zone_error.",
+        "Cannot: know the error rate a map will turn out to have, which only labels measure, so a plan at a stated "
+        "rate holds for that rate only; plan a zone or an error rate in the same call as two maps; draw the sample "
+        "(sample does) or label windows. The recommended budget is not the fewest that can reach the probability: the "
+        "probability does not rise smoothly with the budget.",
+    ]),
     "guide": "\n".join([
         "How to use these tools: the questions they answer, the standard order, the hard rules and how to report.",
         "Does: returns the server's instructions, every tool's capability card under the question it answers, and "
@@ -346,7 +373,9 @@ def _join(texts):
 # said "--design random" or "--condition" sent a small model looking for options it does not have).
 _FLAGS = {"design", "condition", "condition-names", "confidence", "confidence-range", "per-class", "labels-date", "patch", "nodata", "scores", "alpha",
           "delta", "rule", "budget", "seed", "labels", "reference", "threshold", "date-a", "date-b", "groups", "order",
-          "budgets", "tile", "per-tile", "reviewer-false-alarm", "reviewer-miss", "other", "threshold"}
+          "budgets", "tile", "per-tile", "reviewer-false-alarm", "reviewer-miss", "other", "threshold", "windows",
+          "differing", "width", "error-rate", "difference", "both-wrong", "coverage", "zone-error", "power",
+          "max-labels"}
 
 
 def _mcp_words(text):
@@ -488,7 +517,8 @@ def _product_argv(confidence, confidence_range):
 
 def guide() -> str:
     """The server's instructions and every tool's capability card, under the question the tool answers."""
-    groups = [*QUESTIONS.items(), (TITLES["decide"], ("decide",)), (TITLES["guide"], ("guide",))]
+    groups = [*QUESTIONS.items(), (TITLES["plan"], ("plan",)), (TITLES["decide"], ("decide",)),
+              (TITLES["guide"], ("guide",))]
     cards = "\n\n".join(f"## {question}\n\n" + "\n\n".join(f"### {name}\n{CARDS[name]}" for name in names)
                         for question, names in groups)
     return (f"{INSTRUCTIONS}\n\nRelative paths are read from {os.getcwd()}.\n\n# Capability cards, by question\n\n"
@@ -1209,13 +1239,85 @@ def decide(
     return _reply(" ".join(said), limits, nxt, {"decisions": out}, summ)
 
 
+def plan(
+    scores: Annotated[str | None, P(description="The map, as sample takes it; leave out when windows is given")] = None,
+    other: Annotated[str | None, P(description="A second map of the same grid: plan the labels that say which map is "
+                                               "more accurate")] = None,
+    windows: Annotated[int | None, P(description="The map's number of valid windows, instead of the map")] = None,
+    differing: Annotated[int | None, P(description="With windows: the windows where two maps differ, instead of the "
+                                                   "two maps")] = None,
+    width: Annotated[float | None, P(description="Error rate: the widest 95% interval acceptable, high minus low, as a "
+                                                 "fraction (0.1 is 10 points)")] = None,
+    error_rate: Annotated[float | None, P(description="Error rate: the rate the user expects the map to have "
+                                                      "(default 0.5, where intervals are widest)")] = None,
+    difference: Annotated[float | None, P(description="Two maps: the smallest whole-map accuracy difference worth "
+                                                      "detecting, as a fraction (0.02 is 2 points)")] = None,
+    both_wrong: Annotated[float | None, P(description="Two maps: the share of the differing windows wrong in both "
+                                                      "(default: the worst split)")] = None,
+    coverage: Annotated[float | None, P(description="Zone: the share of the map to certify, a grid level from 0.05 to "
+                                                    "1 in steps of 0.05")] = None,
+    alpha: Annotated[float | None, P(description="Zone: the error rate the zone must not exceed")] = None,
+    zone_error: Annotated[float | None, P(description="Zone: the rate the user expects that zone to be wrong")] = None,
+    power: Annotated[float, P(description="The probability of the outcome planned for")] = 0.9,
+    max_labels: Annotated[int | None, P(description="The largest budget checked (default 10000, or the census when "
+                                                    "smaller)")] = None,
+    patch: Annotated[int | None, P(description="Window side in pixels, as sample will use (default 4; only with a "
+                                               "map)")] = None,
+    logits: Annotated[bool, P(description="True if the scores are logits rather than probabilities")] = False,
+    nodata: Annotated[float | None, P(description="No-data value (default: the raster's own, plus NaN)")] = None,
+    threshold: Annotated[float | None, P(description="With other: cut-off of a 2-D continuous map")] = None,
+    confidence: Annotated[str | None, P(description=CONFIDENCE_PARAM)] = None,
+    confidence_range: Annotated[list[float] | None, P(description=CONFIDENCE_RANGE_PARAM)] = None,
+    out_dir: Annotated[str | None, P(description="Directory to write plan.json into (default: none written)")] = None,
+) -> dict[str, Any]:
+    import tempfile
+    argv = ["plan"]
+    if scores is not None:
+        argv.append(_input(scores, "scores"))
+    if other is not None:
+        argv.append(f"--other={_input(other, 'other')}")
+    for flag, value in (("--windows", windows), ("--differing", differing), ("--width", width),
+                        ("--error-rate", error_rate), ("--difference", difference), ("--both-wrong", both_wrong),
+                        ("--coverage", coverage), ("--alpha", alpha), ("--zone-error", zone_error),
+                        ("--power", power), ("--max-labels", max_labels), ("--nodata", nodata),
+                        ("--threshold", threshold)):
+        _opt(argv, flag, value)
+    if patch is not None:
+        argv.append(f"--patch={int(patch)}")
+    if logits:
+        argv.append("--logits")
+    argv += _product_argv(confidence, confidence_range)
+    with tempfile.TemporaryDirectory() as tmp:
+        out = os.path.join(_abs(out_dir), "plan.json") if out_dir is not None else os.path.join(tmp, "plan.json")
+        if out_dir is not None:
+            os.makedirs(_abs(out_dir), exist_ok=True)
+        printed = _run([*argv, f"--out={out}"])
+        r = _read_json(out)
+    said = [line for line in printed.splitlines() if line.split(":", 1)[0] in ("Error rate", "Which map", "Zone")]
+    plans = r["plans"]
+    summ = {}
+    for q, p in plans.items():
+        if q == "zone":
+            summ[q] = {"labels_to_test": p.get("labels_to_test"), "entry_budgets": p.get("entry_budgets"),
+                       **{k: (p[k].get("labels") if isinstance(p.get(k), dict) else None)
+                          for k in ("bonferroni", "prefix_even")}}
+        else:
+            summ[q] = {"labels": p.get("labels"), "probability_at_labels": p.get("probability_at_labels")}
+    limits = _join([*r.get("notes", []), next(iter(plans.values()))["note"] if plans else None])
+    nxt = ("Draw the labels with sample at the budget planned: design \"random\" for an error rate or a zone, or other "
+           "set to the second map for which map is more accurate. Every guarantee holds at any budget; what the plan "
+           "gives is the chance of a useful answer, which for certify's prefix rule can fall just past the budgets at "
+           "which a smaller zone becomes testable.")
+    return _reply(" ".join(said), limits, nxt, {"plan": out} if out_dir is not None else {}, summ)
+
+
 TOOLS = {"guide": guide, "assess": assess, "compare": compare, "sample": sample, "estimate": estimate,
-         "certify": certify, "decide": decide}
+         "certify": certify, "decide": decide, "plan": plan}
 
 
 # ----------------------------------------------------------------------------- the server
 def build_server():
-    """The FastMCP server with the six tools, each described by its capability card and titled by the question it
+    """The FastMCP server with its tools, each described by its capability card and titled by the question it
     answers. The title is set twice: the tool's own (protocol 2025-06-18) and its annotations' (read by clients of
     the earlier protocol). Needs the mcp extra."""
     try:

@@ -1,5 +1,34 @@
 # Changelog
 
+## Unreleased
+
+**`plan`: how many labels to draw, before any is drawn** (`oe_inferencex.plan`, `oe-inferencex plan`, and a `plan`
+tool in the MCP server). For each budget on a ladder (10, 12, 15, 20, ... up to 10,000 or the census) it gives the
+probability, over the reviewer's random draw, that the package's own procedure gives what is asked: an error-rate
+interval no wider than `--width` at a stated rate (50% when none is given); labels drawn where two maps differ that
+name the more accurate map when the accuracies differ by `--difference` or more, at the worst split checked of the
+differing windows (two-class maps have one); for a zone of `--coverage` at `--alpha`, the budget from which `certify`
+tests it at all and, with `--zone-error`, the Bonferroni rule's probability of certifying it (exact, however the
+errors spread), the most the prefix rule can reach (exact) and the prefix rule's probability when its more confident
+zones are wrong no more often (simulated with the errors spread evenly, the worst such map, by a coupling argument in
+the code). It recommends the smallest budget from which every larger budget checked reaches the probability, checks
+nine budgets below it and, where a budget is cheap, every budget up to 5% above it, and gives the runs that reach it
+when the largest budget checked does not. It reads only counts from the maps and asks for the rates the labels will
+measure. A review in three lenses, each with an adversarial verifier, found 34 defects, all real (claims of "the
+fewest" and "suffices" that the steps of the probability falsify, scans that missed the worst split or rate, tens of
+minutes on large maps, an output that could overwrite the confidence band, three-class maps read as two-class, a false
+step in the worst-case argument); a second review checked each fix and found 11 still open or newly introduced (among
+them a split scan that grew with the map and took hours on 100,000 differing windows), all fixed. Each is pinned in
+`tests/test_plan.py`, where every probability is reached again by explicit enumeration or by simulating
+`compare_from_disagreement` and `certify_zone`.
+
+**Found by the planner: in 1.7.0 more labels can make `certify` certify less often.** A grid level is tested once a
+budget can put `min_labels_to_certify` labels into it on average. At the budget where a smaller level enters, the
+prefix rule must pass it first with about that many labels, and the Bonferroni rule splits delta over one more level,
+so the chance of certifying a given zone falls. On 25,000 windows, a 50% zone wrong 1% of the time at alpha 0.05
+(errors spread evenly): the prefix rule certifies it with probability 0.49 at 400 labels and 0.40 at 500, past the
+10% level's entry at 450. The guarantee is unaffected; the power is not monotone in the budget. Not yet changed.
+
 ## 1.7.0 (2026-10-07)
 
 **What 1.7.0 adds.** `decide`, typed answers read from a result; published products as input, a class map with its

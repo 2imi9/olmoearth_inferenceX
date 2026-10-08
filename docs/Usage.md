@@ -505,6 +505,39 @@ confident share of the map. It adds `by_condition`, `delta_per_condition`, `n_co
 not written, and a stale one is removed, when nothing is certified. `--delta` keeps its meaning: the probability that
 any of the statements is wrong.
 
+### plan
+
+`plan` says, before any label is drawn, how many labels a question needs. For each budget on a ladder (10, 12, 15,
+20, 25, ... up to 10,000 or the census) it gives the probability, over the reviewer's random draw, that the
+package's own procedure gives what is asked, and it recommends the smallest budget from which every larger budget
+checked reaches that probability (0.9 by default, `--power`). It reads only counts from the maps: the valid windows,
+and for two maps the windows where they differ. What the labels will measure, it asks for: an error rate you expect
+(`--error-rate`, 50% if not given, where an interval is widest on a large map) or the rate you expect a zone to be
+wrong (`--zone-error`).
+
+```console
+$ oe-inferencex plan --windows 25000 --width 0.1 --error-rate 0.15
+Error rate: on a map of 25000 valid windows wrong 15% of the time, drawn at random, from 244 labels every budget checked gives a 95% interval no wider than 10 points with probability 0.9 or more (0.920 at 244; budgets checked: each one from 244 to 257, then the ladder up to 10000).
+  by budget: 10: 0.00, 12: 0.00, 15: 0.00, 20: 0.00, 25: 0.00, 30: 0.00, 40: 0.00, 50: 0.00, 60: 0.00, 75: 0.00, 100: 0.00, 120: 0.00, 150: 0.03, 200: 0.32, 244: 0.92, 250: 0.96, 300: 1.00, 400: 1.00
+run: oe-inferencex sample MAP --design random --budget 244 --out to_label.csv
+```
+
+| Plan for | Options | What is computed |
+|---|---|---|
+| An error rate, to within a width | `MAP --width W` (or `--windows N`) | the probability that `estimate`'s exact 95% interval is no wider than W (high minus low) |
+| Which of two maps is more accurate | `MAP_A --other MAP_B --difference D` (or `--windows N --differing D`) | the probability that labels drawn where the maps differ name the more accurate map when their accuracies differ by D or more, at the worst split checked of the differing windows into right in one map, in the other or in neither; two-class maps have one split |
+| A certified zone | `MAP --coverage C --alpha A [--zone-error R]` | the budget from which `certify` tests that zone at all; with R, the Bonferroni rule's probability of certifying it (exact, however the errors spread), the most the prefix rule can reach (exact) and the prefix rule's probability when its more confident zones are wrong no more often (simulated, the worst such map) |
+
+Between the budgets of the ladder the probability does not rise smoothly: the counts are discrete, so it steps, and
+for `certify` it falls at each budget where a smaller zone becomes testable, because the prefix rule then tests that
+zone first, with few labels, and the Bonferroni rule splits delta over one more zone. `plan` therefore checks nine
+budgets below the recommendation and, where a budget is cheap to compute exactly, every budget from it up to 5% above
+it, lists the budgets where a smaller zone enters, and, when the largest budget checked falls in such a fall, gives the
+runs of budgets that reach the probability instead of a recommendation. For the error rate and two maps the interval
+ends are `estimate`'s tail inversion decided in floating point, which can move an end by one window where a tail lies
+within about 1e-6 of its level. The plan holds for the rate or difference stated; the labels then measure the map's
+own. `--out plan.json` writes every budget checked. `oe_inferencex.plan` holds the functions.
+
 ### decide
 
 `decide` reads a result that `estimate`, `certify` or `compare` wrote and answers set questions, each with one answer
@@ -624,7 +657,8 @@ numbers and the same refusals. The tool names are unchanged; each tool's title s
 
 - **The tools.** They take file paths and an output directory; pass absolute paths. `guide` returns the instructions
   below and every tool's description, under the question the tool answers. `decide` reads a result another tool
-  wrote and gives typed answers, as the command does (above).
+  wrote and gives typed answers, as the command does (above). `plan` says before labelling how many labels a step
+  needs, from the map or from counts alone (`windows`, `differing`), as the command does (above).
 - **What a tool returns.** JSON with the files written and the summary numbers, and three texts to quote:
   `conclusion` (what it found), `limits` (what it does not show, with the package's own warnings and notes) and
   `next` (what can be done next, with its preconditions).
@@ -843,6 +877,7 @@ On this pair most of the accuracy comes from the post-event side being usually r
 | `reliability`, `evidence` | SHRUG-FM's reliability signals, torch-free; the heads a candidate rule is scored with |
 | `taskcard`, `lcc` | The [task cards](method/taskcards.md) of OlmoEarth's fine-tuned models; a reader for the served change rasters |
 | `decide` | Typed answers to set questions, read from a result that `estimate`, `certify` or `compare` wrote |
+| `plan` | How many labels each labelled route needs, budget by budget, before any label is drawn |
 | `cli`, `demo` | The `oe-inferencex` commands |
 | `mcp_server` | The commands as tools of a local MCP server, `oe-inferencex mcp` (the `mcp` extra) |
 

@@ -664,7 +664,7 @@ def _two_map_windows(path_a, path_b, nodata, threshold, patch, labels_path=None)
         if n_tied:
             notes.append(f"{n_tied} windows have an evenly split label and no majority; they are left out of the grading")
     return SimpleNamespace(notes=notes, ha=ha, hb=hb, va=va, vb=vb, geo=geo, code_of=code_of, a_w=a_w, b_w=b_w, ok=ok,
-                           labels=labels, ok_graded=ok_graded, lab_i=lab_i)
+                           labels=labels, ok_graded=ok_graded, lab_i=lab_i, n_classes=(na, nb))
 
 
 def _window_majority(codes, n_codes, patch):
@@ -1592,6 +1592,248 @@ def cmd_decide(args):
     return 0
 
 
+def _plan_windows(args):
+    """The valid windows of one map, counted as `sample` counts them (the same reader, patch and no-data rule)."""
+    _check_patch(args.patch, "plan")
+    conf_path, conf_range = _product_args(args, "plan")
+    if conf_path:
+        hard, conf_px, valid, _, n_classes, notes, _ = _read_product(args.scores, conf_path, args.nodata, conf_range, "plan")
+        try:
+            out = assess_classmap(hard, conf_px, n_classes, patch=args.patch, nodata_mask=~valid, signal=PRODUCT_SIGNAL)
+        except ValueError as exc:
+            raise SystemExit(f"plan: {exc}") from None
+    else:
+        notes = []
+        scores, valid, _ = read_raster(args.scores, args.nodata)
+        _check_scores(scores, valid, args.logits, args.scores)
+        try:
+            out = assess_prediction(scores, is_logit=args.logits, patch=args.patch, nodata_mask=~valid)
+        except ValueError as exc:
+            raise SystemExit(f"plan: {exc}") from None
+    return int(np.asarray(out["arrays"]["valid"]).sum()), list(notes)
+
+
+def _points(x):
+    return f"{100 * x:.3g} point" + ("" if abs(100 * x - 1) < 1e-9 else "s")
+
+
+def _labels(n):
+    return f"{n} label" + ("" if n == 1 else "s")
+
+
+def _ladder_text(probs, rec, power):
+    """The ladder's budgets up to twice the recommendation (or all of them), and the recommendation, as budget:
+    probability; the JSON holds every budget checked."""
+    from oe_inferencex.plan import ladder
+    keys = sorted(int(b) for b in probs)
+    cut = 2 * rec if rec else keys[-1]
+    rungs = set(ladder(keys[-1])) | {keys[0], keys[-1]} | ({rec} if rec else set())
+    shown = [b for b in keys if b <= cut and b in rungs] or keys[:1]
+    return ", ".join(f"{b}: {'-' if probs[str(b)] is None else f'{probs[str(b)]:.2f}'}" for b in shown)
+
+
+def _sample_command(args, budget, other):
+    """The sample command that draws the planned labels, with the options plan was given."""
+    import shlex
+    if args.scores is None:
+        cmd = ["oe-inferencex", "sample", "MAP"] + (["--other", "MAP_B"] if other else [])
+    else:
+        cmd = ["oe-inferencex", "sample", args.scores] + (["--other", args.other] if other else [])
+    cmd += [] if other else ["--design", "random"]
+    cmd += ["--budget", str(budget), "--out", "to_label.csv"]
+    if args.patch is not None and args.patch != 4:
+        cmd += ["--patch", str(args.patch)]
+    if args.nodata is not None:
+        cmd += ["--nodata", repr(args.nodata)]
+    if args.logits:
+        cmd += ["--logits"]
+    if other and args.threshold is not None:
+        cmd += ["--threshold", repr(args.threshold)]
+    if getattr(args, "confidence", None):
+        cmd += ["--confidence", args.confidence]
+    if getattr(args, "confidence_range", None):
+        cmd += ["--confidence-range", *[repr(v) for v in args.confidence_range]]
+    return " ".join(shlex.quote(c) for c in cmd)
+
+
+def _reach(part, top, does, do):
+    """What a plan's budgets reach, said only of the budgets checked: the recommendation and how it was checked, the
+    runs of budgets that reach the probability when the largest one checked falls short, or that none does. `does`
+    and `do` are the outcome with a singular and a plural subject."""
+    rec, span, runs = part.get("labels"), part.get("every_budget_checked"), part.get("runs_reaching_power") or []
+    if rec is not None:
+        p = part["probability_at_labels"]
+        how = (f"each one from {span[0]} to {span[1]}, then the ladder up to {top}" if span and span[1] > span[0]
+               else f"the ladder up to {top}")
+        return f"from {_labels(rec)} every budget checked {does} ({p:.3f} at {rec}; budgets checked: {how})"
+    if runs:
+        said = ", ".join(f"{a} to {b}" if a != b else f"{a}" for a, b in runs)
+        return (f"only the budgets checked from {said} {do}; larger ones fall short again, up to the largest checked, "
+                f"{top}")
+    return f"no budget checked up to {top} {does}"
+
+
+def cmd_plan(args):
+    """How many labels to draw before drawing any, for each labelled route: an error rate no wider than a stated
+    width, which of two maps is more accurate, a certified zone. Per budget, the probability that the package's own
+    procedure reaches the outcome, and the smallest budget from which every larger one checked reaches it."""
+    from oe_inferencex import plan
+    want_rate, want_which = args.width is not None, args.difference is not None
+    want_zone = args.coverage is not None or args.alpha is not None or args.zone_error is not None
+    if not (want_rate or want_which or want_zone):
+        raise SystemExit("plan: say what to plan: --width (an error rate, its interval no wider than this), "
+                         "--difference with --other (which of two maps), or --coverage with --alpha (a certified zone)")
+    if want_zone and (args.coverage is None or args.alpha is None):
+        raise SystemExit("plan: a certified zone needs both --coverage (a level of the grid, 0.05 to 1 in steps of 0.05) "
+                         "and --alpha (the error rate the zone must not exceed)")
+    if want_which and args.other is None and args.differing is None:
+        raise SystemExit("plan: --difference compares two maps: give the second with --other, or the windows where they "
+                         "differ with --differing and --windows")
+    two = args.other is not None or args.differing is not None
+    if two and (want_rate or want_zone):
+        raise SystemExit("plan: --other and --differing plan which of two maps is more accurate; plan an error rate or a "
+                         "zone of one map in a separate call")
+    if two and not want_which:
+        raise SystemExit("plan: --other and --differing go with --difference")
+    unused = [flag for flag, value, needs in (
+        ("--error-rate", args.error_rate, want_rate), ("--both-wrong", args.both_wrong, want_which),
+        ("--zone-error", args.zone_error, want_zone), ("--delta", args.delta, want_zone),
+        ("--threshold", args.threshold, args.other is not None)) if value is not None and not needs]
+    if unused:
+        one = len(unused) == 1
+        raise SystemExit(f"plan: {', '.join(unused)} {'does' if one else 'do'} not apply to what is planned here; leave "
+                         f"{'it' if one else 'them'} out")
+    if args.scores is None and args.windows is None:
+        raise SystemExit("plan: give the map, or the number of its valid windows with --windows")
+    if args.scores is not None and (args.windows is not None or args.differing is not None):
+        raise SystemExit("plan: give the map or --windows (and --differing), not both: the counts are read from the map")
+    if args.differing is not None and args.windows is None:
+        raise SystemExit("plan: --differing needs --windows, the windows both maps predict")
+    if args.other is not None and args.scores is None:
+        raise SystemExit("plan: --other is the second map; give the first map too")
+    if args.scores is None and (args.patch is not None or args.nodata is not None or args.logits
+                                or getattr(args, "confidence", None) or getattr(args, "confidence_range", None)):
+        raise SystemExit("plan: --patch, --nodata, --logits and --confidence describe a map; with --windows there is none")
+    if args.other is not None and (getattr(args, "confidence", None) or getattr(args, "confidence_range", None)):
+        raise SystemExit("plan: --other plans the labels among the windows where two class maps differ, which needs no "
+                         "confidence; leave out --confidence")
+    if args.max_labels is not None and args.max_labels < 1:
+        raise SystemExit(f"plan: --max-labels must be at least 1, got {args.max_labels}")
+    if args.scores is not None and args.patch is None:
+        args.patch = 4
+    out_path = args.out
+    if out_path:
+        # checked here, written at the end: a refused plan leaves no directory behind
+        if os.path.isdir(out_path):
+            raise SystemExit(f"plan: --out {out_path} is a directory; name the JSON to write, for example "
+                             f"{os.path.join(out_path, 'plan.json')}")
+        _refuse_overwriting_inputs("plan", [out_path], [x for x in (args.scores, args.other, getattr(args, "confidence", None)) if x])
+    notes, results, runs = [], {}, []
+    top_asked = plan.MAX_LABELS if args.max_labels is None else args.max_labels
+    power = 0.9 if args.power is None else args.power
+    try:
+        if want_which:
+            two_class = False
+            if args.scores is not None:
+                _check_patch(args.patch, "plan")
+                t = _two_map_windows(args.scores, args.other, args.nodata, args.threshold, args.patch)
+                ok = np.asarray(t.ok, bool)
+                N2, D = int(ok.sum()), int((ok & (t.a_w != t.b_w)).sum())
+                codes = np.union1d(np.unique(t.ha[t.va]), np.unique(t.hb[t.vb]))
+                two_class = max(t.n_classes) <= 2 and codes.size <= 2 and args.both_wrong is None
+                notes += list(t.notes)
+                if D == 0:
+                    raise SystemExit("plan: the two maps give the same class in every window both predict; there is "
+                                     "nothing to label")
+            else:
+                N2, D = int(args.windows), int(args.differing)
+            r = plan.plan_which_map(N2, D, args.difference, power, both_wrong=args.both_wrong, two_class=two_class,
+                                    max_labels=top_asked)
+            results["which_map"] = r
+            if "refusal" in r and r.get("probability_by_budget") is None:
+                print(f"Which map: {r['refusal']}.")
+            else:
+                w = r["wrong_verdict_probability_at_labels"]
+                print(f"Which map: drawn at random among the {D} windows where the maps differ "
+                      f"({100 * D / N2:.3g}% of the {N2} compared), "
+                      + _reach(r, r["checked_up_to"],
+                               *(f"{v} the more accurate map with probability {power:g} or more when the accuracies "
+                                 f"differ by {_points(args.difference)} or more" for v in ("names", "name")))
+                      + f", for {r['planned_for']}"
+                      + ("" if w is None else "; the chance of naming the less accurate one there is "
+                         + (f"at most {w:.2g}" if w >= 1e-12 else "below 1e-12")) + ".")
+                print(f"  by budget: {_ladder_text(r['probability_by_budget'], r['labels'], power)}")
+                if r["labels"] is not None:
+                    runs.append(_sample_command(args, r["labels"], other=True))
+            if two_class:
+                notes.append("two-class maps: where they differ one of them is right, so no differing window is wrong in "
+                             "both, and the difference planned has the parity of the windows that differ")
+        if want_rate or want_zone:
+            N = int(args.windows) if args.scores is None else None
+            if N is None:
+                N, more = _plan_windows(args)
+                notes += more
+        if want_rate:
+            r = plan.plan_error_rate(N, args.width, args.error_rate, power, max_labels=top_asked)
+            results["error_rate"] = r
+            print(f"Error rate: on a map of {N} valid window{'' if N == 1 else 's'} wrong {100 * r['error_rate']:.3g}% "
+                  "of the time, drawn at random, "
+                  + _reach(r, r["checked_up_to"],
+                           *(f"{v} a 95% interval no wider than {_points(args.width)} with probability {power:g} or more"
+                             for v in ("gives", "give"))) + ".")
+            print(f"  by budget: {_ladder_text(r['probability_by_budget'], r['labels'], power)}")
+            if r["labels"] is not None:
+                runs.append(_sample_command(args, r["labels"], other=False))
+            if "rate_note" in r:
+                notes.append(r["rate_note"][0].upper() + r["rate_note"][1:])
+        if want_zone:
+            delta = 0.1 if args.delta is None else args.delta
+            r = plan.plan_zone(N, args.coverage, args.alpha, args.zone_error, power, delta, max_labels=top_asked)
+            results["zone"] = r
+            head = (f"Zone: {100 * r['coverage']:.3g}% of the map ({r['zone_windows']} of {N} windows) at alpha "
+                    f"{args.alpha:g} is tested from {_labels(r['labels_to_test'])} drawn at random; fewer cannot "
+                    f"certify it even with no error among them.")
+            if "refusal" in r:
+                print(f"{head} {r['refusal'][0].upper() + r['refusal'][1:]}.")
+            elif "unplanned" in r:
+                print(f"{head} How many more it needs depends on how often the zone is wrong, which only the labels "
+                      "measure; give --zone-error, the rate you expect, to plan them.")
+            else:
+                b, ev = r["bonferroni"], r["prefix_even"]
+                low = r["prefix_most"]["below_power_at"]
+                print(f"{head} For a zone wrong {100 * args.zone_error:.3g}% of the time, with probability {power:g} or "
+                      f"more: under the Bonferroni rule, " + _reach(b, r["checked_up_to"], "certifies it", "certify it")
+                      + ", however its errors spread (exact); under the prefix rule (the default), "
+                      + _reach(ev, r["checked_up_to"], "certifies it", "certify it")
+                      + f" when its more confident zones are wrong no more often (simulated, {ev['draws']} draws), and "
+                      f"no spread of the errors reaches the probability at {len(low)} of the "
+                      f"{len(r['budgets_checked'])} budgets checked (exact).")
+                print(f"  Bonferroni by budget: {_ladder_text(b['probability_by_budget'], b['labels'], power)}")
+                print(f"  prefix by budget (-: below {power:g} however the errors spread): "
+                      f"{_ladder_text(ev['probability_by_budget'], ev['labels'], power)}")
+                if b["labels"] is not None or ev["labels"] is not None:
+                    runs.append(_sample_command(args, max(v for v in (b["labels"], ev["labels"]) if v is not None),
+                                                other=False))
+            if r.get("entry_budgets"):
+                notes.append("At " + ", ".join(f"{e} labels the {float(g):.0%} zone" for g, e in r["entry_budgets"].items())
+                             + " becomes testable; just past each of these budgets both rules can lose power: the "
+                             "prefix rule tests the smallest testable zone first, with few labels, and the Bonferroni "
+                             "rule splits delta over one more zone")
+    except ValueError as exc:
+        raise SystemExit(f"plan: {exc}") from None
+    for cmd in runs:
+        print(f"run: {cmd}")
+    for n in notes:
+        print(f"note: {n}")
+    print(f"note: {plan.PLAN_NOTE}")
+    if out_path:
+        _check_out_file(out_path, "plan")
+        with open(out_path, "w") as f:
+            json.dump({"plans": results, "notes": notes, "run": runs}, f, indent=1, default=float)
+        print(f"wrote {out_path}")
+    return 0
+
+
 def cmd_mcp(args):
     """Serve the commands above as MCP tools on stdio, for an agent on the user's machine (oe_inferencex.mcp_server).
     The agent starts this; nobody types into it. Without the mcp extra it says how to install it."""
@@ -1737,6 +1979,41 @@ def build_parser():
                          "share_differs. Without --ask, it stops and names the questions the result can answer")
     dc.add_argument("--out", default=None, help="JSON to write (default: <result>_decisions.json)")
     dc.set_defaults(func=cmd_decide)
+    pl = sub.add_parser("plan", help="how many labels to draw before drawing any: an error-rate interval no wider than a "
+                                     "stated width, which of two maps is more accurate, or a certified zone")
+    pl.add_argument("scores", nargs="?", default=None,
+                    help="the map, as sample takes it (not needed with --windows)")
+    pl.add_argument("--other", default=None, metavar="MAP_B",
+                    help="a second map of the same grid: plan the labels that say which map is more accurate")
+    pl.add_argument("--windows", type=int, default=None, help="the number of valid windows, instead of a map")
+    pl.add_argument("--differing", type=int, default=None,
+                    help="with --windows: the windows where two maps differ, instead of the two maps")
+    pl.add_argument("--width", type=float, default=None,
+                    help="error rate: the widest 95%% interval acceptable, high minus low, e.g. 0.1 for 10 points")
+    pl.add_argument("--error-rate", type=float, default=None,
+                    help="error rate: the rate you expect the map to have (default 0.5, where intervals are widest)")
+    pl.add_argument("--difference", type=float, default=None,
+                    help="two maps: the smallest whole-map accuracy difference worth detecting, e.g. 0.02")
+    pl.add_argument("--both-wrong", type=float, default=None,
+                    help="two maps: the share of the differing windows wrong in both (default: the worst split; two-"
+                         "class maps have none)")
+    pl.add_argument("--coverage", type=float, default=None,
+                    help="zone: the share of the map to certify, a level of the grid (0.05 to 1 in steps of 0.05)")
+    pl.add_argument("--alpha", type=float, default=None, help="zone: the error rate the zone must not exceed")
+    pl.add_argument("--zone-error", type=float, default=None,
+                    help="zone: the rate you expect that zone to be wrong; without it only the floor is planned")
+    pl.add_argument("--delta", type=float, default=None, help="zone: the chance the certificate may fail (default 0.1)")
+    pl.add_argument("--power", type=float, default=None, help="the probability of the outcome planned for (default 0.9)")
+    pl.add_argument("--max-labels", type=int, default=None,
+                    help="the largest budget checked (default 10000, or the census when smaller)")
+    pl.add_argument("--logits", action="store_true")
+    pl.add_argument("--patch", type=int, default=None, help="window side in pixels, as sample will use (default 4)")
+    pl.add_argument("--nodata", type=float, default=None)
+    pl.add_argument("--threshold", type=float, default=None,
+                    help="with --other: cut-off of a 2-D continuous map (0.5 for a probability map when omitted)")
+    pl.add_argument("--out", default=None, help="JSON to write the plan to (optional)")
+    _product_parser_args(pl)
+    pl.set_defaults(func=cmd_plan)
     m = sub.add_parser("mcp", help="serve these commands as tools to an agent on this machine (a local MCP server on "
                                     "stdio; needs the mcp extra)")
     m.set_defaults(func=cmd_mcp)
