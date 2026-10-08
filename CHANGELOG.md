@@ -8,11 +8,12 @@ larger sample ... narrows the interval", which invites labelling, reading, addin
 sample read after the first is a second test: with both, the chance that a certificate is wrong can reach twice delta,
 and that one of two 95% intervals misses, 10%. Every such pointer now says so, and that to keep the stated level the
 sample size is chosen before any labelling; where the first run could not certify anything, it says the new sample is
-the first test that can certify anything, and for an approximate (nominal) interval it says the chances add up without
-claiming a bound. A second run on the same labels with another rule, alpha or delta is a second test too: the prefix
-rule's note no longer points to the bonferroni rule without saying so, the MCP replies say delta is chosen before the
-labels are read, and the MCP hard rules and the skill gain the rule. `docs/Usage.md`, `certify_zone`'s docstring and
-the decide module's docstring say the same. No computation, option or output field changed.
+the first test that can certify anything (and a condition with no labelled window, that a sample which reaches it is
+its first test), and for an approximate (nominal) interval it says the chances add up without claiming a bound. A
+second run on the same labels with another rule, alpha or delta is a second test too: the prefix rule's note no longer
+points to the bonferroni rule without saying so, the MCP replies say delta is chosen before the labels are read, and
+the MCP hard rules and the skill gain the rule. `docs/Usage.md`, `certify_zone`'s docstring and the decide module's
+docstring say the same. No computation, option or output field changed.
 
 ## 1.7.0 (2026-10-07)
 

@@ -1253,14 +1253,18 @@ def decide(
             for k in kinds:
                 (covered if _decide.interval_second_look(k) in told else bare[k]).append(q)
         covered = list(dict.fromkeys(covered))
+        # every cost sentence names its questions unless it covers all the pending ones; a question whose undetermined
+        # parts cost nothing (no label, no interval) is never folded into another's cost
+        costed = set(covered) | set(bare[True]) | set(bare[False])
+        groups = sum(bool(g) for g in (covered and told, bare[True], bare[False]))
+        named = groups > 1 or costed != set(pending)
         parts = []
         if covered and told:
-            parts.append(("For " + ", ".join(covered) + ", that is" if bare[True] or bare[False] else "That is")
+            parts.append(("For " + ", ".join(covered) + ", that is" if named else "That is")
                          + " a second test, at the cost said above.")
         for k in (True, False):
             if bare[k]:
                 c = _decide.interval_second_look(k, lead=False)
-                named = len(parts) > 0 or (bare[True] and bare[False])
                 parts.append(("For " + ", ".join(dict.fromkeys(bare[k])) + ", " + c[0].lower() + c[1:]) if named else c)
         cost = (" " + " ".join(parts)) if parts else ""
     nxt = (("For " + ", ".join(pending) + ": " + more.get(rkind, "a larger sample drawn the same way, labelled in "

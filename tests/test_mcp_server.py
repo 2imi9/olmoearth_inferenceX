@@ -1166,3 +1166,20 @@ def test_decide_costs_each_pending_question_by_its_own_intervals(tmp_path):
     assert "second test" not in out["next"]
     written = json.load(open(out["files"]["decisions"]))
     assert "its first test" in written["answers"]["error_rate_below=0.2"]["per_condition"]["tiny"]["because"]
+
+
+@needs_mcp
+def test_a_question_with_nothing_to_cost_is_not_folded_into_another_s_cost(tmp_path):
+    """Two thresholds on an estimate whose only labelless condition is the one undetermined part at the looser one:
+    the cost sentence names the question it is about, so it does not read as covering the other."""
+    exact = "exact hypergeometric interval (the labels in the condition are a simple random sample of it)"
+    base = {"design": "random", "n_labelled": 300, "n_population": 4096, "nominal_coverage": 0.95,
+            "method": "exact hypergeometric interval (simple random sample of a finite map)",
+            "estimate": 0.05, "low": 0.032, "high": 0.084,
+            "per_condition": {"tiny": {"n_labelled": 0, "estimate": None, "low": 0.0, "high": 1.0, "method": exact}}}
+    path = tmp_path / "tiny_estimate.json"
+    path.write_text(json.dumps(base))
+    out = _ok("decide", result_json=str(path), questions=["error_rate_below=0.2", "error_rate_below=0.05"])
+    assert "For error_rate_below=0.05, that is a second test, at the cost said above." in out["next"]
+    assert "error_rate_below=0.2, that is" not in out["next"] and "\nThat is" not in out["next"]
+    assert ". That is a second test" not in out["next"]
