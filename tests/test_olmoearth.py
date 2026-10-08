@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import shlex
+import shutil
 
 import numpy as np
 import pytest
@@ -433,3 +434,319 @@ def test_from_olmoearth_prints_a_command_that_runs(tmp_path, capsys):
         main(["from-olmoearth", ds, "--out", out, "--inputs", "sentinel2"])
     with pytest.raises(SystemExit, match="--prob-property reads a per-window classification"):
         main(["from-olmoearth", ds, "--out", out, "--prob-property", "probs"])
+
+
+# ----------------------------------------------------------------------------- after review
+def test_a_written_class_that_is_not_the_argmax_is_refused(tmp_path):
+    """A binary ClassificationTask with positive_class_threshold 0.3 writes "pos" where p_pos >= 0.3
+    (classification.py:207-215), so the class it publishes is not the argmax assess grades."""
+    ds = str(tmp_path / "ds")
+    rows = [("pos", [0.65, 0.35]), ("pos", [0.55, 0.45]), ("neg", [0.8, 0.2]), ("pos", [0.2, 0.8])]
+    for i, (label, p) in enumerate(rows):
+        ldir = os.path.join(_window(ds, f"pred/w{i}", A), "layers", "output")
+        os.makedirs(ldir, exist_ok=True)
+        json.dump({"type": "FeatureCollection", "features": [{"type": "Feature", "properties": {
+            "label": label, "probs": p}, "geometry": {"type": "Point", "coordinates": [0, 0]}}]},
+            open(os.path.join(ldir, "data.geojson"), "w"))
+        open(os.path.join(ldir, "completed"), "w").close()
+    with pytest.raises(ValueError, match=r"argmax 0 goes with the written classes \"neg\", \"pos\".*"
+                                         "positive_class_threshold"):
+        oe.read_window_probs(ds, str(tmp_path / "out"))
+    with pytest.raises(SystemExit, match="positive_class_threshold"):
+        main(["from-olmoearth", ds, "--out", str(tmp_path / "out")])
+    with pytest.raises(ValueError, match="carries the class property 'name'"):
+        oe.read_window_probs(ds, str(tmp_path / "out"), class_property="name")
+
+
+def test_the_written_class_is_recorded_beside_the_argmax(tmp_path):
+    ds = str(tmp_path / "ds")
+    probs = _classification(ds, np.random.default_rng(16), n=4)
+    r = oe.read_window_probs(ds, str(tmp_path / "out"))
+    assert r["class_property"] == "new_label"
+    index = list(csv.DictReader(open(r["index"])))
+    assert [x["class"] for x in index] == [["human", "natural", "unknown"][int(np.argmax(p))] for p in probs]
+    assert [x["argmax"] for x in index] == [str(int(np.argmax(p))) for p in probs]
+
+
+def test_rerun_band_set_beside_the_old_one_is_named(tmp_path):
+    """A rerun that writes p0..p9 puts its band set beside the default output/ one; the refusal says so, not
+    'run the inference stage'. The probability fix says a float layer needs only output_probs."""
+    ds = str(tmp_path / "ds")
+    w = _window(ds, "g/a", A)
+    _layer(w, "output", ["output"], np.ones((16, 16), np.float32), A)
+    _layer(w, "output", [f"p{i}" for i in range(3)], _softmax(np.random.default_rng(17), 3), A)
+    with pytest.raises(ValueError) as exc:
+        oe.read_output(ds, str(tmp_path / "out"))
+    msg = str(exc.value)
+    assert "2 band sets in layers/output/ (output, p0_p1_p2)" in msg and "beside the old" in msg
+    assert "Run the inference stage first" not in msg
+    assert "A float32 output layer, as AWF's dataset declares, needs nothing more" in oe.FIX_PROBABILITIES
+    assert "remove each window's old band-set directory" in oe.FIX_PROBABILITIES
+
+
+@pytest.mark.parametrize("fill", [1.0, 0.0])
+def test_a_saturated_or_empty_window_of_one_band_is_read(tmp_path, fill):
+    """One band: a window all 1.0 (saturated softmax) or all 0.0 (nothing of that class) in a run whose other windows
+    hold fractional probabilities is read; only a run that is 0/1 in every window is called class ids."""
+    ds = str(tmp_path / "ds")
+    p = _softmax(np.random.default_rng(18), 2)[1]
+    _layer(_window(ds, "g/a", A), "output", ["p1"], p, A)
+    _layer(_window(ds, "g/b", B), "output", ["p1"], np.full((16, 16), fill, np.float32), B)
+    s = oe.read_output(ds, str(tmp_path / "out"))
+    with rasterio.open(s["grids"][0]["scores"]) as src:
+        sc = src.read(1)
+    np.testing.assert_array_equal(sc[:, :16], p)
+    assert (sc[:, 16:] == fill).all()
+    ds2 = str(tmp_path / "ds2")
+    _layer(_window(ds2, "g/b", B), "output", ["p1"], np.full((16, 16), fill, np.float32), B)
+    with pytest.raises(ValueError, match=f"every window: layers/output is one band of class ids \\(1 distinct values: "
+                                         f"{fill:g}\\)"):
+        oe.read_output(ds2, str(tmp_path / "out2"))
+
+
+def _grid_cap(monkeypatch, n_bytes):
+    monkeypatch.setattr(oe, "MAX_GRID_BYTES", n_bytes)
+
+
+def test_a_large_contiguous_area_is_told_to_read_in_parts(tmp_path, monkeypatch):
+    ds = str(tmp_path / "ds")
+    rng = np.random.default_rng(19)
+    for k in range(4):                                          # four adjacent windows in one group
+        b = (50000 + 16 * k, -500000, 50016 + 16 * k, -499984)
+        _layer(_window(ds, f"default/w_0_{k}", b), "output", ["p0", "p1"], _softmax(rng, 2), b)
+    _grid_cap(monkeypatch, (4 * 2 + 4) * 16 * 64 - 1)           # two float32 bands and the int32 owner, one byte short
+    with pytest.raises(ValueError) as exc:
+        oe.read_output(ds, str(tmp_path / "out"))
+    msg = str(exc.value)
+    assert "cover 100% of that grid" in msg and "the area itself is larger" in msg and "--window" in msg
+    assert "far apart" not in msg and "2 float32 band(s) and an int32 owner" in msg
+    _grid_cap(monkeypatch, (4 * 2 + 4) * 16 * 64)
+    assert oe.read_output(ds, str(tmp_path / "out"))["grids"][0]["shape"] == [16, 64]
+    _grid_cap(monkeypatch, (4 * 2 + 4) * 16 * 32)               # half the windows fit
+    s = oe.read_output(ds, str(tmp_path / "part"), windows=["default/w_0_[01]"])
+    assert s["grids"][0]["windows"] == ["default/w_0_0", "default/w_0_1"] and s["window_patterns"]
+    assert main(["from-olmoearth", ds, "--out", str(tmp_path / "part2"), "--window", "default/w_0_[23]"]) == 0
+    with pytest.raises(ValueError, match="no window of .* matches nothing/\\*"):
+        oe.read_output(ds, str(tmp_path / "none"), windows=["nothing/*"])
+
+
+def test_windows_far_apart_are_told_to_read_a_group(tmp_path, monkeypatch):
+    ds = str(tmp_path / "ds")
+    rng = np.random.default_rng(20)
+    far = (50000 + 16 * 9, -500000, 50016 + 16 * 9, -499984)
+    _layer(_window(ds, "g/a", A), "output", ["p0", "p1"], _softmax(rng, 2), A)
+    _layer(_window(ds, "h/z", far), "output", ["p0", "p1"], _softmax(rng, 2), far)
+    _grid_cap(monkeypatch, 1000)
+    with pytest.raises(ValueError, match="cover 20% of that grid, so they lie far apart. Read one window group"):
+        oe.read_output(ds, str(tmp_path / "out"))
+
+
+def _one_window(ds, config=True):
+    if config:
+        os.makedirs(ds, exist_ok=True)
+        json.dump(CONFIG, open(os.path.join(ds, "config.json"), "w"))
+    w = _window(ds, "g/a", A)
+    _layer(w, "output", ["p0", "p1", "p2"], _softmax(np.random.default_rng(21), 3), A)
+    return w
+
+
+def test_few_coverage_bin_with_and_without_cloud(tmp_path):
+    """A block covered in 1 of 4 timesteps is 'few'; clear in one block, cloudy in another."""
+    ds = str(tmp_path / "ds")
+    w = _one_window(ds)
+    rows, cols = np.mgrid[:16, :16]
+    few = cols < 8
+    _s2_group(w, 0, A, cloud=(rows < 4) & few)
+    for i in (1, 2, 3):
+        _s2_group(w, i, A, gap=few)
+    c = oe.condition_from_inputs(ds, str(tmp_path / "out"), inputs=["sentinel2"])
+    with rasterio.open(c["grids"][0]["condition"]) as src:
+        cond = src.read(1)
+    want = np.zeros((16, 16), int)
+    want[:, :8] = 6
+    want[:4, :8] = 8
+    np.testing.assert_array_equal(cond, want)
+    assert c["codes"] == {"0": "sentinel2:all:clear", "6": "sentinel2:few:clear", "8": "sentinel2:few:cloudy"}
+
+
+def test_every_scl_cloud_class_counts(tmp_path):
+    """SCL 3 (shadow), 8, 9 (high probability cloud) and 10 (cirrus) are cloud; 7 is not."""
+    ds = str(tmp_path / "ds")
+    w = _one_window(ds)
+    _layer(w, "sentinel2", ["B02", "B03", "B04", "B08"], np.full((4, 16, 16), 1200, np.uint16), A)
+    scl = np.full((1, 16, 16), 7, np.uint8)
+    for k, v in enumerate((3, 8, 9, 10)):
+        scl[0, 3 * k:3 * k + 3] = v
+    _layer(w, "sentinel2", ["SCL"], scl, A)
+    c = oe.condition_from_inputs(ds, str(tmp_path / "out"), inputs=["sentinel2"])
+    with rasterio.open(c["grids"][0]["condition"]) as src:
+        cond = src.read(1)
+    assert [int(cond[r, 0]) for r in (0, 3, 6, 9, 12)] == [2, 2, 2, 2, 0]
+    assert (cond[:12] == 2).all() and (cond[12:] == 0).all()
+
+
+def test_scl_in_some_groups_only_records_coverage(tmp_path):
+    ds = str(tmp_path / "ds")
+    _with_inputs(ds, np.random.default_rng(22))
+    shutil.rmtree(os.path.join(ds, "windows", "g", "b", "layers", "sentinel2.2", "SCL"))
+    c = oe.condition_from_inputs(ds, str(tmp_path / "out"))
+    assert c["inputs"]["sentinel2"] == {"timesteps": 4, "clouds": False}
+    assert any("sentinel2: an SCL band is in some item groups and not in others" in n for n in c["notes"])
+    with rasterio.open(c["grids"][0]["condition"]) as src:
+        cond = src.read(1)
+    want = np.zeros((16, 32), int)                              # sentinel1 digit + 4 x sentinel2 coverage digit
+    want[:, :8], want[8:, :8], want[8:12, 8:16], want[12:, 8:16] = 4, 5, 1, 5
+    want[:, 16:], want[:4, 16:20] = 4, 12
+    np.testing.assert_array_equal(cond, want)
+    assert all(":clear" not in v and ":cloud" not in v for v in c["codes"].values())
+
+
+@pytest.mark.parametrize("agree", [False, True])
+def test_overlapping_windows_with_different_inputs_are_unrecorded(tmp_path, agree):
+    ds = str(tmp_path / "ds")
+    rng = np.random.default_rng(23)
+    over = (50008, -500000, 50024, -499984)                     # shares 8 columns with A
+    pa, po = _softmax(rng, 2), _softmax(rng, 2)
+    po[:, :, :8] = pa[:, :, 8:]
+    wa, wo = _window(ds, "g/a", A), _window(ds, "g/o", over)
+    _layer(wa, "output", ["p0", "p1"], pa, A)
+    _layer(wo, "output", ["p0", "p1"], po, over)
+    _s2_group(wa, 0, A)
+    _s2_group(wo, 0, over, cloud=None if agree else np.ones((16, 16), bool))
+    c = oe.condition_from_inputs(ds, str(tmp_path / "out"), inputs=["sentinel2"])
+    g = c["grids"][0]
+    with rasterio.open(g["condition"]) as src:
+        cond = src.read(1)
+    assert (cond[:, :8] == 0).all()
+    if agree:
+        assert (cond[:, 8:] == 0).all() and g["conflicting_pixels"] == 0
+        assert not any("overlapping" in n for n in c["notes"])
+    else:
+        assert (cond[:, 8:16] == -1).all() and (cond[:, 16:] == 2).all() and g["conflicting_pixels"] == 128
+        notes = " ".join(c["notes"])
+        assert "128 pixels of 32610 lie in overlapping windows whose inputs give different codes" in notes
+
+
+def test_an_input_group_not_completed_is_a_missing_timestep(tmp_path):
+    ds = str(tmp_path / "ds")
+    _with_inputs(ds, np.random.default_rng(24))
+    os.remove(os.path.join(ds, "windows", "g", "a", "layers", "sentinel2.3", "completed"))     # per group
+    os.remove(os.path.join(ds, "windows", "g", "a", "layers", "sentinel1.1", "completed"))     # packed
+    c = oe.condition_from_inputs(ds, str(tmp_path / "out"))
+    assert c["inputs"]["sentinel2"]["timesteps"] == 3 and c["inputs"]["sentinel1"]["timesteps"] == 2
+    with rasterio.open(c["grids"][0]["condition"]) as src:
+        cond = src.read(1)
+    name = {int(k): v for k, v in c["codes"].items()}
+    assert name[int(cond[5, 12])] == "sentinel1:most,sentinel2:all:clear"       # A: sentinel1 1 of 2, sentinel2 3 of 3
+    assert name[int(cond[8, 24])] == "sentinel1:all,sentinel2:all:clear"        # B: 3 of 3 now that T is 3
+
+
+def test_timesteps_do_not_depend_on_the_window_order(tmp_path):
+    """The window listed first holds the fewer item groups; T is still the most any window holds."""
+    ds = str(tmp_path / "ds")
+    _with_inputs(ds, np.random.default_rng(25))
+    shutil.rmtree(os.path.join(ds, "windows", "g", "a", "layers", "sentinel2.3"))
+    _s2_group(os.path.join(ds, "windows", "g", "b"), 3, B)
+    c = oe.condition_from_inputs(ds, str(tmp_path / "out"))
+    assert c["inputs"]["sentinel2"]["timesteps"] == 4
+    with rasterio.open(c["grids"][0]["condition"]) as src:
+        cond = src.read(1)
+    name = {int(k): v for k, v in c["codes"].items()}
+    assert name[int(cond[5, 12])] == "sentinel1:all,sentinel2:most:clear"       # A: 3 of 4
+    assert name[int(cond[8, 24])] == "sentinel1:all,sentinel2:all:clear"        # B: 4 of 4
+    assert name[int(cond[0, 16])] == "sentinel1:all,sentinel2:few:clear"        # B's corner: 1 of 4
+
+
+def test_no_data_values_are_uncovered(tmp_path):
+    ds = str(tmp_path / "ds")
+    p = _softmax(np.random.default_rng(26), 3)
+    p[:, :2, :3] = -1
+    w = _window(ds, "g/a", A)
+    _layer(w, "output", ["p0", "p1", "p2"], p, A, nodata=-1)
+    sar = np.full((1, 16, 16), 7, np.uint8)
+    sar[0, :4] = 255
+    _layer(w, "sar", ["vv"], sar, A, nodata=255)
+    s = oe.read_output(ds, str(tmp_path / "out"))
+    assert s["uncovered_pixels"] == 6 and s["grids"][0]["covered_pixels"] == 250
+    with rasterio.open(s["grids"][0]["scores"]) as src:
+        sc = src.read()
+    assert np.isnan(sc[:, :2, :3]).all() and not np.isnan(sc[:, 2:]).any()
+    c = oe.condition_from_inputs(ds, str(tmp_path / "out"), inputs=["sar"])
+    with rasterio.open(c["grids"][0]["condition"]) as src:
+        cond = src.read(1)
+    assert (cond[:4] == 3).all() and (cond[4:] == 0).all() and c["codes"] == {"0": "sar:all", "3": "sar:none"}
+
+
+def _write_raw(dirpath, arr, transform, crs="EPSG:32610"):
+    os.makedirs(dirpath, exist_ok=True)
+    with rasterio.open(os.path.join(dirpath, "geotiff.tif"), "w", driver="GTiff", height=arr.shape[1],
+                       width=arr.shape[2], count=arr.shape[0], dtype=arr.dtype, crs=crs, transform=transform) as dst:
+        dst.write(arr)
+    open(os.path.join(os.path.dirname(dirpath), "completed"), "w").close()
+
+
+def _refusal_case(ds, case):
+    rng = np.random.default_rng(27)
+    if case == "one band beyond 1":
+        _layer(_window(ds, "g/a", A), "output", ["p"], rng.uniform(0, 5, (16, 16)).astype(np.float32), A)
+    elif case == "logits":
+        _layer(_window(ds, "g/a", A), "output", ["p0", "p1", "p2"], rng.normal(0, 2, (3, 16, 16)).astype(np.float32), A)
+    elif case == "band counts":
+        _layer(_window(ds, "g/a", A), "output", ["p0", "p1"], _softmax(rng, 2), A)
+        _layer(_window(ds, "g/b", B), "output", ["p0", "p1", "p2"], _softmax(rng, 3), B)
+    elif case == "off grid":
+        _window(ds, "g/a", A)
+        _write_raw(os.path.join(ds, "windows", "g", "a", "layers", "output", "p0_p1"), _softmax(rng, 2),
+                   Affine(RES, 0, A[0] * RES + 5, 0, -RES, A[1] * -RES))
+    elif case == "rotated":
+        _window(ds, "g/a", A)
+        _write_raw(os.path.join(ds, "windows", "g", "a", "layers", "output", "p0_p1"), _softmax(rng, 2),
+                   Affine(RES, 0.5, A[0] * RES, 0.5, -RES, A[1] * -RES))
+
+
+@pytest.mark.parametrize("case,phrase", [
+    ("one band beyond 1", "which is not a probability"),
+    ("logits", "runs from -.* which is not a probability"),
+    ("band counts", "hold different numbers of bands: 2 in g/a, 3 in g/b"),
+    ("off grid", r"starts at pixel \(50000.5, -500000\).*off the pixel grid"),
+    ("rotated", "is rotated; rslearn writes north-up rasters"),
+])
+def test_output_refusals(tmp_path, case, phrase):
+    ds = str(tmp_path / "ds")
+    _refusal_case(ds, case)
+    with pytest.raises(ValueError, match=phrase):
+        oe.read_output(ds, str(tmp_path / "out"))
+
+
+@pytest.mark.parametrize("lists,phrase", [
+    ([[0.5, 0.5], [0.2, 0.3, 0.5]], "lists have 2 and 3 entries; one class"),
+    ([[0.5, 0.3]], "sum to 0.8 to 0.8, so they are not the softmax"),
+    ([[-0.1, 0.6, 0.5]], "run from -0.1 to 0.6 .* not the softmax"),
+    ([["a", "b"]], "is not a list of finite numbers"),
+])
+def test_window_prob_refusals(tmp_path, lists, phrase):
+    ds = str(tmp_path / "ds")
+    for i, p in enumerate(lists):
+        ldir = os.path.join(_window(ds, f"pred/w{i}", A), "layers", "output")
+        os.makedirs(ldir, exist_ok=True)
+        json.dump({"type": "FeatureCollection", "features": [{"type": "Feature", "properties": {"probs": p},
+                                                              "geometry": None}]},
+                  open(os.path.join(ldir, "data.geojson"), "w"))
+        open(os.path.join(ldir, "completed"), "w").close()
+    with pytest.raises(ValueError, match=phrase):
+        oe.read_window_probs(ds, str(tmp_path / "out"))
+
+
+@pytest.mark.parametrize("meta,counts,phrase", [
+    (2, [1, 2], "packs 2 item groups of 3 timesteps in all, and its metadata.json does not record that many"),
+    (3, [1, 1], "4 bands cannot hold the 3 timesteps its metadata.json records"),
+])
+def test_packed_input_refusals(tmp_path, meta, counts, phrase):
+    ds = str(tmp_path / "ds")
+    _with_inputs(ds, np.random.default_rng(28))
+    bs = os.path.join(ds, "windows", "g", "a", "layers", "sentinel1", "vv_vh")
+    json.dump({"num_channels": 2, "num_timesteps": meta, "timestamps": None},
+              open(os.path.join(bs, "metadata.json"), "w"))
+    json.dump({"group_timestep_counts": counts}, open(os.path.join(bs, "window_storage_meta.json"), "w"))
+    with pytest.raises(ValueError, match=phrase):
+        oe.condition_from_inputs(ds, str(tmp_path / "out"))

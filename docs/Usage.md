@@ -210,7 +210,8 @@ oe-inferencex from-olmoearth path/to/dataset --out run --conditions
 It reads every window in `windows/<group>/<name>/` whose output layer (`--layer`, default `output`) is marked
 `completed`, and lists every other window in `run/olmoearth_output.json` with the reason. A segmentation output
 becomes `scores_<EPSG>.tif`, one per CRS: the windows' probability bands pasted onto one grid, NaN where no window
-predicted. A pixel whose bands are all 0, the fill rslearn leaves where no crop predicted, is NaN too. Two windows
+predicted. A pixel whose bands are all 0, the fill rslearn leaves where no crop predicted, or all the raster's
+no-data value, is NaN too. Two windows
 that cover one pixel must agree there, or the read is refused. A per-window classification
 (`layers/output/data.geojson`) becomes `window_probs.npy`, one column per window, with `window_probs.csv` naming each
 column; `assess --patch 1` reads it, and its boundary column means nothing there. The command prints the `assess`
@@ -220,25 +221,31 @@ command that reads what it wrote. NaN is always read as no-data, so the command 
 OlmoEarth project changes that. A class map has no confidence to rank, so `from-olmoearth` refuses it and says how to
 get probabilities. In `model.yaml`, set `output_probs: true` in the segmentation task's `init_args` and leave
 `prob_scales` unset, since it rescales the probabilities so that they no longer sum to 1 (such a layer is refused too).
-Give the `RslearnWriter` a `layer_config` with one float32 band per decoder channel, named without underscores:
-an integer layer truncates the probabilities to 0 and 1. Then rerun the inference stage.
+Then rerun the inference stage.
 
 ```yaml
           segment:                                    # data.init_args.task.init_args.tasks
             class_path: rslearn.train.tasks.segmentation.SegmentationTask
             init_args:
               output_probs: true                      # no prob_scales
-    - class_path: rslearn.train.prediction_writer.RslearnWriter     # trainer.callbacks
-      init_args:
-        layer_config:
-          type: raster
-          band_sets:
-            - bands: [p0, p1, p2, p3, p4, p5, p6, p7, p8, p9]       # AWF's decoder emits 10 channels
-              dtype: float32
 ```
 
-AWF's tenth channel is the label fill value, never a training target. A per-window classification needs
-`prob_property: "probs"` in its task, as Forest Loss Driver sets; `--prob-property` names another property.
+A float32 output layer, as AWF's `dataset.json` declares, needs nothing more: the writer writes as many bands as the
+model outputs into the same `layers/output/output/geotiff.tif`, whatever the layer's band list says. AWF's decoder
+emits 10 channels; the tenth is the label fill value, never a training target. Only an integer output layer (uint8,
+for instance) truncates the probabilities to 0 and 1: make its `dtype` float32 in the dataset's config, or give the
+`RslearnWriter` a `layer_config` with one float32 band set of one band per channel, named without underscores, under
+a new layer name read with `--layer`. A rerun whose band names differ writes its band set beside the old one in
+`layers/<layer>/`, not over it; such a window is skipped, so remove the old band-set directory first.
+
+A per-window classification needs `prob_property: "probs"` in its task, as Forest Loss Driver sets;
+`--prob-property` names another property. The class the task wrote is read too (`--class-property`, or the one other
+property) and recorded beside the argmax in `window_probs.csv`; `assess` grades the argmax, so a run whose written
+class is not the argmax (a two-class task with `positive_class_threshold` other than 0.5) is refused.
+
+**Large areas.** The scores of one CRS are held in memory as one grid, up to 4 GiB. A run larger than that is read in
+parts: `--window` takes shell patterns of window ids (`group/name`, e.g. `'default/*_12_*'`), and each part goes to
+its own `--out`. `--group` reads whole window groups.
 
 **The condition layer.** With `--conditions`, `condition_<EPSG>.tif` lies on the scores' grid. Each pixel's code says,
 for each input layer, in how many of the run's timesteps a scene covered the pixel: all, at least half, fewer, or

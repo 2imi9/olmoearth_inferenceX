@@ -2023,20 +2023,21 @@ def cmd_from_olmoearth(args):
     if args.inputs and not args.conditions:
         raise SystemExit("from-olmoearth: --inputs names the input layers of the condition layer; add --conditions")
     try:
-        kind = oe.output_kind(args.ds, args.layer, args.group)
+        kind = oe.output_kind(args.ds, args.layer, args.group, args.window)
         if kind == "vector":
             if args.conditions:
                 raise SystemExit(f"from-olmoearth: layers/{args.layer} is a per-window classification (data.geojson); "
                                  "the condition layer is pasted onto a raster's grid, and this output has none")
             s = oe.read_window_probs(args.ds, args.out, layer=args.layer, prob_property=args.prob_property or "probs",
-                                     group=args.group)
+                                     group=args.group, windows=args.window, class_property=args.class_property)
         else:
-            if args.prob_property:
-                raise SystemExit(f"from-olmoearth: --prob-property reads a per-window classification (data.geojson); "
+            if args.prob_property or args.class_property:
+                flag = "--prob-property" if args.prob_property else "--class-property"
+                raise SystemExit(f"from-olmoearth: {flag} reads a per-window classification (data.geojson); "
                                  f"layers/{args.layer} holds GeoTIFFs")
-            s = oe.read_output(args.ds, args.out, layer=args.layer, group=args.group)
+            s = oe.read_output(args.ds, args.out, layer=args.layer, group=args.group, windows=args.window)
             c = oe.condition_from_inputs(args.ds, args.out, inputs=args.inputs, layer=args.layer,
-                                         group=args.group) if args.conditions else None
+                                         group=args.group, windows=args.window) if args.conditions else None
     except (ValueError, ImportError) as exc:
         raise SystemExit(f"from-olmoearth: {exc}") from None
     what = (f"probabilities over {s['bands']} classes, {s['features']} predictions" if kind == "vector" else
@@ -2275,6 +2276,9 @@ def build_parser():
     fo.add_argument("--out", required=True, help="output directory")
     fo.add_argument("--layer", default="output", help="the output layer (default output)")
     fo.add_argument("--group", nargs="+", default=None, help="read only these window groups (default: every one)")
+    fo.add_argument("--window", nargs="+", default=None, metavar="PATTERN",
+                    help="read only the windows whose id group/name matches one of these shell patterns (quote them), "
+                         "to read a large area in parts")
     fo.add_argument("--conditions", action="store_true",
                     help="also write the input-condition layer on the scores' grid: per pixel, how many of the run's "
                          "timesteps a scene covered and, with an SCL band, how many were cloudy")
@@ -2283,6 +2287,9 @@ def build_parser():
                          "data_source)")
     fo.add_argument("--prob-property", default=None,
                     help="a per-window classification: the feature property holding the probabilities (default probs)")
+    fo.add_argument("--class-property", default=None,
+                    help="a per-window classification: the feature property holding the class the task wrote, checked "
+                         "against the argmax (default: the one other property, if there is one)")
     fo.set_defaults(func=cmd_from_olmoearth)
     return p
 

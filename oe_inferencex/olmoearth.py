@@ -37,6 +37,7 @@ haze, smoke or snow that SCL does not flag as cloud, shadow or cirrus, a scene f
 or anything about the model; without an SCL band it records coverage alone. No published project materializes SCL.
 """
 import csv
+import fnmatch
 import glob
 import hashlib
 import json
@@ -60,10 +61,14 @@ CONDITIONS_JSON = "olmoearth_conditions.json"
 
 FIX_PROBABILITIES = (
     "To write probabilities: in model.yaml set output_probs: true in the segmentation task's init_args "
-    "(tasks.segment.init_args in OlmoEarth's configs) and leave prob_scales unset; give the RslearnWriter a "
-    "layer_config with one band set of C bands (one per decoder channel), dtype float32 and named without "
-    "underscores (p0 ... p{C-1}), since an integer layer truncates the probabilities to 0 and 1; then rerun the "
-    "inference stage (olmoearth_run's RUN_INFERENCE)")
+    "(tasks.segment.init_args in OlmoEarth's configs) and leave prob_scales unset. A float32 output layer, as AWF's "
+    "dataset declares, needs nothing more: the writer writes as many bands as the model outputs, whatever the "
+    "layer's band list says (rslearn/utils/raster_format.py:574-603). Only an integer output layer truncates the "
+    "probabilities to 0 and 1; then make its dtype float32 in the dataset's config.json, or give the RslearnWriter "
+    "a layer_config with one float32 band set of C bands named without underscores (p0 ... p{C-1}) and a new layer "
+    "name, read with --layer. Then rerun the inference stage (olmoearth_run's RUN_INFERENCE); a band set of other "
+    "band names is written beside the old one in layers/<layer>/, not over it, so remove each window's old band-set "
+    "directory first or write to a new layer")
 
 
 def _rasterio():
@@ -99,8 +104,9 @@ def assess_command(scores, out_dir, condition=None, names=None, patch=None):
 
 
 # ----------------------------------------------------------------------------- windows
-def _windows(ds, group=None):
-    """[(window id "group/name", path)], sorted by group then name: rslearn's windows/<group>/<name>/."""
+def _windows(ds, group=None, windows=None):
+    """[(window id "group/name", path)], sorted by group then name: rslearn's windows/<group>/<name>/; with
+    `windows`, only the ids matching one of those shell patterns (fnmatch, case-sensitive)."""
     root = os.path.join(ds, "windows")
     if not os.path.isdir(root):
         raise ValueError(f"{ds} has no windows/ directory, so it is not an rslearn dataset; olmoearth_run writes one "
@@ -116,6 +122,12 @@ def _windows(ds, group=None):
              if not n.startswith(".") and os.path.isdir(os.path.join(root, g, n))]
     if not found:
         raise ValueError(f"{ds}/windows holds no window" + (f" in group {group!r}" if group is not None else ""))
+    if windows:
+        pats = [windows] if isinstance(windows, str) else list(windows)
+        found = [(w, p) for w, p in found if any(fnmatch.fnmatchcase(w, q) for q in pats)]
+        if not found:
+            raise ValueError(f"no window of {ds} matches {', '.join(pats)}; a pattern matches the window id "
+                             "group/name, e.g. 'default/*_12_*'")
     return found
 
 
@@ -128,11 +140,11 @@ def _metadata(path):
         return None
 
 
-def _completed_outputs(ds, layer, group):
+def _completed_outputs(ds, layer, group, windows=None):
     """(raster windows, vector windows, skipped): the windows whose `layers/<layer>/` holds a `completed` marker and
     one GeoTIFF (a raster output) or a data.geojson (a vector output); every other window with the reason."""
     rasters, vectors, skipped = [], [], []
-    for wid, path in _windows(ds, group):
+    for wid, path in _windows(ds, group, windows):
         ldir = os.path.join(path, "layers", layer)
         if not os.path.isdir(ldir):
             skipped.append({"window": wid, "reason": f"with no layers/{layer}/"})
@@ -143,8 +155,9 @@ def _completed_outputs(ds, layer, group):
             continue
         tifs = sorted(glob.glob(os.path.join(glob.escape(ldir), "*", "geotiff.tif")))
         if len(tifs) > 1:
-            skipped.append({"window": wid, "reason": f"with {len(tifs)} band sets in layers/{layer}/, where the "
-                                                     "writer writes one"})
+            skipped.append({"window": wid, "reason": f"with {len(tifs)} band sets in layers/{layer}/ ("
+                                                     + ", ".join(os.path.basename(os.path.dirname(t)) for t in tifs)
+                                                     + "), where the writer writes one", "several_band_sets": True})
         elif tifs:
             rasters.append({"window": wid, "path": path, "tif": tifs[0]})
         elif os.path.exists(os.path.join(ldir, "data.geojson")):
@@ -166,15 +179,21 @@ def _no_output(ds, layer, skipped):
     for s in skipped:
         why[s["reason"]] = why.get(s["reason"], 0) + 1
     why = "; ".join(f"{n} window{'s' if n > 1 else ''} {r}" for r, n in why.items())
+    if skipped and all(s.get("several_band_sets") for s in skipped):
+        return ValueError(f"no window of {ds} has one band set in its completed {layer!r} layer ({why}). A rerun "
+                          f"of the inference stage that writes other band names puts its band set beside the old "
+                          f"one in layers/{layer}/ rather than over it, so which is the run's output is not "
+                          f"recorded. Remove the old band-set directory from each window, or write the rerun to a "
+                          f"new layer and name it with --layer")
     return ValueError(f"no window of {ds} has a completed {layer!r} layer ({why}). Run the inference stage "
                       f"first, or name the output layer with --layer; the windows hold the layers "
                       f"{', '.join(sorted(seen)) or 'none'}")
 
 
-def output_kind(ds, layer="output", group=None):
+def output_kind(ds, layer="output", group=None, windows=None):
     """"raster" when a window's completed output layer holds a GeoTIFF (a SegmentationTask), "vector" when it holds
     data.geojson (a ClassificationTask); refused when no window has a completed output layer."""
-    rasters, vectors, skipped = _completed_outputs(ds, layer, group)
+    rasters, vectors, skipped = _completed_outputs(ds, layer, group, windows)
     if rasters:
         return "raster"
     if vectors:
@@ -231,14 +250,28 @@ def _plan_grids(rasters):
     return grids
 
 
-def _check_size(grids, bands, itemsize=4):
+SPARSE_GRID = 0.5   # below this share of a grid covered by windows, a grid too large to hold is called sparse
+
+
+def _check_size(grids, bytes_per_px, what):
+    """Refuse a grid whose arrays (`bytes_per_px` bytes per pixel in all, `what` naming them) exceed MAX_GRID_BYTES,
+    saying whether the windows lie far apart (they cover less than SPARSE_GRID of it) or the area itself is too
+    large, and how to read it in parts."""
     for g in grids:
         H, W = g["shape"]
-        if bands * H * W * itemsize > MAX_GRID_BYTES:
-            raise ValueError(f"the windows in {g['crs']} span {H} x {W} px, {bands * H * W * itemsize / 2 ** 30:.1f} GiB "
-                             f"as {bands} band(s) of {itemsize}-byte values, above the {MAX_GRID_BYTES / 2 ** 30:g} GiB "
-                             "this reader holds in memory; the windows lie far apart. Read one window group at a time "
-                             "(--group)")
+        if bytes_per_px * H * W <= MAX_GRID_BYTES:
+            continue
+        area = min(sum(e["shape"][0] * e["shape"][1] for e in g["windows"]), H * W)
+        share = area / (H * W)
+        head = (f"the windows in {g['crs']} span {H} x {W} px, {bytes_per_px * H * W / 2 ** 30:.1f} GiB as {what}, "
+                f"above the {MAX_GRID_BYTES / 2 ** 30:g} GiB this reader holds in memory; the windows cover "
+                f"{100 * share:.0f}% of that grid")
+        if share < SPARSE_GRID:
+            raise ValueError(head + ", so they lie far apart. Read one window group at a time (--group), or the "
+                                    "windows of one area at a time (--window with patterns of group/name)")
+        raise ValueError(head + ", so the area itself is larger than this reader holds. Read it in parts: the "
+                                "windows of one part at a time (--window with patterns of group/name, e.g. by the "
+                                "row or column in the window names), each part to its own --out")
 
 
 def _write_tif(path, arr, grid, dtype, nodata, descriptions=None):
@@ -254,13 +287,22 @@ def _write_tif(path, arr, grid, dtype, nodata, descriptions=None):
 
 
 # ----------------------------------------------------------------------------- the output layer
+def _class_ids(where, layer, vals):
+    return ValueError(f"{where}: layers/{layer} is one band of class ids ({vals.size} distinct values: "
+                      f"{', '.join(f'{x:g}' for x in vals[:6])}{' ...' if vals.size > 6 else ''}), the argmax a "
+                      "SegmentationTask writes by default (rslearn/train/tasks/segmentation.py:198-232), with no "
+                      "confidence to rank. " + FIX_PROBABILITIES)
+
+
 def _probabilities(a, nodata, wid, layer):
     """(covered pixels, kind, largest |sum - 1|, every value 0 or 1) of one window's output (C, H, W), or a ValueError
     saying what the layer holds instead of probabilities. kind is "softmax" (C > 1), "one" (one band of probabilities
     of one class, output_class_idx) or None (no covered pixel). A pixel is uncovered where a band is not finite, where
     every band holds the raster's no-data value, or, for C > 1, where every band is 0, the fill RasterMerger leaves
     (a softmax never sums to 0). One band cannot tell that fill from a probability of exactly 0; there 0 is read as
-    a probability, so that the most confident pixels are not dropped."""
+    a probability, so that the most confident pixels are not dropped. One float band holding only 0 and 1 is not
+    refused here: a saturated or empty window of a probability run holds that too, so the caller decides over every
+    window (all01), as for C bands; one band of an integer type, or of whole numbers beyond 1, is class ids."""
     C = a.shape[0]
     covered = np.isfinite(a).all(axis=0) if a.dtype.kind == "f" else np.ones(a.shape[1:], bool)
     if nodata is not None and not np.isnan(nodata):
@@ -270,12 +312,9 @@ def _probabilities(a, nodata, wid, layer):
     v = a[:, covered].astype(np.float64)
     if v.size == 0:
         return covered, None, 0.0, True
-    if C == 1 and (a.dtype.kind in "biu" or np.array_equal(v, np.rint(v))):
-        vals = np.unique(v)
-        raise ValueError(f"window {wid}: layers/{layer} is one band of class ids ({vals.size} distinct values: "
-                         f"{', '.join(f'{x:g}' for x in vals[:6])}{' ...' if vals.size > 6 else ''}), the argmax a "
-                         "SegmentationTask writes by default (rslearn/train/tasks/segmentation.py:198-232), with no "
-                         "confidence to rank. " + FIX_PROBABILITIES)
+    all01 = bool(np.isin(v, (0.0, 1.0)).all())
+    if C == 1 and (a.dtype.kind in "biu" or (not all01 and np.array_equal(v, np.rint(v)))):
+        raise _class_ids(f"window {wid}", layer, np.unique(v))
     if a.dtype.kind in "biu":
         raise ValueError(f"window {wid}: layers/{layer} holds {C} bands of {a.dtype}: an integer layer truncates "
                          "probabilities to 0 and 1, so no confidence survives. " + FIX_PROBABILITIES)
@@ -286,7 +325,6 @@ def _probabilities(a, nodata, wid, layer):
         raise ValueError(f"window {wid}: layers/{layer} runs from {lo:.7g} to {hi:.7g}, which is not a probability; "
                          "a SegmentationTask with output_probs writes the softmax, and logits or a regression output "
                          "are not read here. " + FIX_PROBABILITIES)
-    all01 = bool(np.isin(v, (0.0, 1.0)).all())
     if C == 1:
         return covered, "one", 0.0, all01
     s = v.sum(axis=0)
@@ -301,7 +339,7 @@ def _probabilities(a, nodata, wid, layer):
     return covered, "softmax", dev, all01
 
 
-def read_output(ds, out, layer="output", group=None):
+def read_output(ds, out, layer="output", group=None, windows=None):
     """Read a raster output layer of an rslearn dataset into scores_<label>.tif, one per CRS, in `out`; the label is
     the EPSG code (crs<k> for a CRS without one). Returns the summary written to olmoearth_output.json.
 
@@ -313,8 +351,9 @@ def read_output(ds, out, layer="output", group=None):
     Refused, with what to do: a layer of class ids (the default output), C bands of an integer type, values outside
     [0, 1], probabilities that do not sum to 1 within SUM_TOLERANCE (prob_scales), probabilities that are all 0 or
     1, windows with different band counts, a CRS at two resolutions, a grid above MAX_GRID_BYTES.
-    Not checked: that the bands are in the order of the model's classes, or which class a band is."""
-    rasters, vectors, skipped = _completed_outputs(ds, layer, group)
+    Not checked: that the bands are in the order of the model's classes, or which class a band is.
+    `windows`, shell patterns of window ids (group/name), reads only the matching windows."""
+    rasters, vectors, skipped = _completed_outputs(ds, layer, group, windows)
     if not rasters:
         if vectors:
             raise ValueError(f"layers/{layer} holds data.geojson, a per-window classification; read it with "
@@ -329,9 +368,9 @@ def read_output(ds, out, layer="output", group=None):
         raise ValueError(f"the windows' {layer} layers hold different numbers of bands: "
                          + ", ".join(f"{c} in {w}" for c, w in by.items()) + "; read the windows of one run")
     C = counts[0]
-    _check_size(grids, C)
+    _check_size(grids, 4 * C + 4, f"{C} float32 band(s) and an int32 owner")
     rio = _rasterio()
-    kinds, devs, all01, n_uncovered, empty = set(), [0.0], True, 0, []
+    kinds, devs, all01, n_uncovered, empty, seen01 = set(), [0.0], True, 0, [], set()
     arrays = []
     for g in grids:
         H, W = g["shape"]
@@ -348,6 +387,8 @@ def read_output(ds, out, layer="output", group=None):
             kinds.add(kind)
             devs.append(dev)
             all01 &= z
+            if kind == "one" and z:
+                seen01 |= set(np.unique(a[0][cov]).tolist())
             r, c = e["slot"]
             h, w = e["shape"]
             region = scores[:, r:r + h, c:c + w]            # a view: assigning into it writes the grid
@@ -368,6 +409,8 @@ def read_output(ds, out, layer="output", group=None):
         arrays.append((scores, owner))
     if not kinds:
         raise ValueError(f"no window has a covered pixel in layers/{layer}: every band is 0 or no-data everywhere")
+    if all01 and C == 1:
+        raise _class_ids("every window", layer, np.array(sorted(seen01)))
     if all01:
         raise ValueError(f"every probability in layers/{layer} is exactly 0 or 1, as one-hot vectors or a truncated "
                          "layer give, so there is no confidence to rank. " + FIX_PROBABILITIES)
@@ -396,7 +439,8 @@ def read_output(ds, out, layer="output", group=None):
                         "shape": list(g["shape"]), "transform": list(g["transform"])[:6],
                         "windows": [e["window"] for e in g["windows"]], "covered_pixels": int((owner >= 0).sum()),
                         "assess": assess_command(path, os.path.join(out, f"assess_{g['label']}"))})
-    summary = {"dataset": os.path.abspath(ds), "layer": layer, "group": group, "source": SOURCE,
+    summary = {"dataset": os.path.abspath(ds), "layer": layer, "group": group, "window_patterns": windows,
+               "source": SOURCE,
                "kind": "softmax over C bands" if kind == "softmax" else "one band: the probability of one class",
                "bands": C, "windows_read": len(rasters), "windows_skipped": skipped,
                "largest_sum_deviation": max(devs), "sum_tolerance": SUM_TOLERANCE, "uncovered_pixels": n_uncovered,
@@ -407,7 +451,8 @@ def read_output(ds, out, layer="output", group=None):
 
 
 # ----------------------------------------------------------------------------- per-window classification
-def read_window_probs(ds, out, layer="output", prob_property="probs", group=None):
+def read_window_probs(ds, out, layer="output", prob_property="probs", group=None, windows=None,
+                      class_property=None):
     """Read a per-window ClassificationTask layer, one data.geojson per window whose features carry the probability
     list under `prob_property` (rslearn/train/tasks/classification.py:44, 71-72, 186-235), into window_probs.npy,
     a (C, 1, N) float32 array with one column per feature, and window_probs.csv, whose `window_col` is that column
@@ -415,18 +460,25 @@ def read_window_probs(ds, out, layer="output", prob_property="probs", group=None
     olmoearth_output.json, plus `probs`, the (C, 1, N) array, and `names`, the window of each column ("group/name",
     with "#k" for the k-th feature when a window holds several).
 
+    The class the task wrote (its property_name) is read beside the probabilities: `class_property`, or else the
+    one property a feature carries besides `prob_property`. `assess` grades the argmax of the probabilities as the
+    map's class, and the written class is not the argmax when a two-class task moves positive_class_threshold from
+    0.5 (classification.py:207-215); so where one argmax index goes with two written classes, or two indices with
+    one class, the read is refused. window_probs.csv records the written class beside the argmax.
+
     Refused: no feature carrying `prob_property` (the task writes the class alone unless prob_property is set),
-    lists of different lengths, values outside [0, 1] or not summing to 1 within SUM_TOLERANCE. Features without
-    the property are left out and counted. The columns of the array are not neighbours on the ground, so the
-    boundary cue `assess` computes between them means nothing here."""
-    rasters, vectors, skipped = _completed_outputs(ds, layer, group)
+    lists of different lengths, values outside [0, 1] or not summing to 1 within SUM_TOLERANCE, written classes
+    that are not one-to-one with the argmax. Features without the property are left out and counted. The columns
+    of the array are not neighbours on the ground, so the boundary cue `assess` computes between them means nothing
+    here."""
+    rasters, vectors, skipped = _completed_outputs(ds, layer, group, windows)
     if not vectors:
         if rasters:
             raise ValueError(f"layers/{layer} holds GeoTIFFs, a raster output; read it with read_output")
         raise _no_output(ds, layer, skipped)
     skipped += [{"window": e["window"], "reason": f"with a GeoTIFF in layers/{layer}/ where other windows hold "
                                                   "data.geojson"} for e in rasters]
-    probs, rows, seen, n_missing, n_read = [], [], set(), 0, 0
+    probs, rows, seen, n_missing, n_read, others = [], [], set(), 0, 0, set()
     for e in vectors:
         try:
             with open(e["geojson"]) as f:
@@ -456,7 +508,9 @@ def read_window_probs(ds, out, layer="output", prob_property="probs", group=None
             if v.ndim != 1 or not np.isfinite(v).all():
                 raise ValueError(f"window {e['window']}: {prob_property!r} is not a list of finite numbers")
             probs.append(v)
-            rows.append({"window": e["window"], "feature": k, "crs": proj.get("crs"), "x": x, "y": y})
+            rows.append({"window": e["window"], "feature": k, "crs": proj.get("crs"), "x": x, "y": y,
+                         "props": props})
+            others |= set(props) - {prob_property}
     if not probs:
         raise ValueError(f"no feature in layers/{layer}/data.geojson carries {prob_property!r} (they carry "
                          f"{', '.join(sorted(seen)) or 'no property'}). A ClassificationTask writes the probabilities "
@@ -473,22 +527,56 @@ def read_window_probs(ds, out, layer="output", prob_property="probs", group=None
     if lo < -PROB_TOLERANCE or hi > 1 + PROB_TOLERANCE or float(np.abs(s - 1).max()) > SUM_TOLERANCE:
         raise ValueError(f"the {prob_property!r} lists run from {lo:.4g} to {hi:.4g} and sum to {s.min():.4g} to "
                          f"{s.max():.4g}, so they are not the softmax a ClassificationTask writes")
+    argmax = [int(np.argmax(v)) for v in probs]
+    notes = []
+    cls = class_property or (next(iter(others)) if len(others) == 1 else None)
+    written = [r["props"].get(cls) if cls else None for r in rows]
+    if cls and all(c is None for c in written):
+        raise ValueError(f"no feature carrying {prob_property!r} carries the class property {cls!r} (they carry "
+                         f"{', '.join(sorted(others)) or 'nothing else'})")
+    if cls:
+        by_idx, by_cls = {}, {}
+        for i, c in zip(argmax, written):
+            if c is not None:
+                key = json.dumps(c, sort_keys=True)
+                by_idx.setdefault(i, set()).add(key)
+                by_cls.setdefault(key, set()).add(i)
+        split = sorted(i for i, cs in by_idx.items() if len(cs) > 1)
+        merged = sorted(c for c, ix in by_cls.items() if len(ix) > 1)
+        if split or merged:
+            if split:
+                what = f"argmax {split[0]} goes with the written classes {', '.join(sorted(by_idx[split[0]]))}"
+            else:
+                what = (f"the written class {merged[0]} goes with argmax "
+                        + ", ".join(map(str, sorted(by_cls[merged[0]]))))
+            raise ValueError(f"the class each feature carries under {cls!r} is not the argmax of its {prob_property!r} "
+                             f"list: {what}. A two-class ClassificationTask with positive_class_threshold other than "
+                             "0.5 writes the positive class wherever its probability reaches the threshold "
+                             "(rslearn/train/tasks/classification.py:207-215), so the map the run published is not "
+                             "the argmax assess grades. Leave positive_class_threshold at 0.5 and rerun the inference "
+                             "stage, or name the class property with --class-property if it is another one")
+    elif len(others) > 1:
+        notes.append(f"the features carry {', '.join(sorted(others))} besides {prob_property!r}; which holds the "
+                     "class is not known, so the written class is not checked against the argmax (--class-property "
+                     "names it)")
     os.makedirs(out, exist_ok=True)
     npy = os.path.join(out, "window_probs.npy")
     np.save(npy, P[:, None, :].astype(np.float32))
     index = os.path.join(out, "window_probs.csv")
     with open(index, "w", newline="") as f:
         w = csv.writer(f)
-        w.writerow(["window_col", "window", "feature", "crs", "x", "y", "argmax"])
-        for i, (r, v) in enumerate(zip(rows, probs)):
-            w.writerow([i, r["window"], r["feature"], r["crs"], r["x"], r["y"], int(np.argmax(v))])
-    notes = ["each column of window_probs.npy is one window's prediction; columns side by side are not neighbours on "
-             "the ground, so the boundary cue assess writes means nothing here; window_probs.csv names each column, "
-             "with the window's centre (x, y) in its CRS"]
+        w.writerow(["window_col", "window", "feature", "crs", "x", "y", "argmax", "class"])
+        for i, (r, a, c) in enumerate(zip(rows, argmax, written)):
+            w.writerow([i, r["window"], r["feature"], r["crs"], r["x"], r["y"], a,
+                        "" if c is None else c if isinstance(c, (str, int, float)) else json.dumps(c)])
+    notes.insert(0, "each column of window_probs.npy is one window's prediction; columns side by side are not "
+                    "neighbours on the ground, so the boundary cue assess writes means nothing here; "
+                    "window_probs.csv names each column, with the window's centre (x, y) in its CRS")
     if n_missing:
         notes.append(f"{n_missing} feature(s) carry no {prob_property!r} and are left out")
-    summary = {"dataset": os.path.abspath(ds), "layer": layer, "group": group, "source": SOURCE,
-               "kind": "per-window probabilities", "bands": int(P.shape[0]), "windows_read": n_read,
+    summary = {"dataset": os.path.abspath(ds), "layer": layer, "group": group, "window_patterns": windows,
+               "source": SOURCE, "kind": "per-window probabilities", "class_property": cls, "bands": int(P.shape[0]),
+               "windows_read": n_read,
                "windows_skipped": skipped, "features": len(probs), "scores": npy, "index": index,
                "largest_sum_deviation": float(np.abs(s - 1).max()), "sum_tolerance": SUM_TOLERANCE,
                "assess": assess_command(npy, os.path.join(out, "assess"), patch=1), "notes": notes}
@@ -668,7 +756,7 @@ def condition_rule(layers, timesteps, clouds):
             "the pixel, or two overlapping windows give it different codes.")
 
 
-def condition_from_inputs(ds, out, inputs=None, layer="output", group=None):
+def condition_from_inputs(ds, out, inputs=None, layer="output", group=None, windows=None):
     """The input-condition layer of an rslearn dataset, on the grid read_output writes the scores on: per pixel and
     input layer, the share of the run's timesteps a scene covered, binned, and with an SCL band the share of those
     under cloud; combined into one integer code (condition_rule). Written as condition_<label>.tif (int32, -1 where
@@ -681,14 +769,14 @@ def condition_from_inputs(ds, out, inputs=None, layer="output", group=None):
     window's extent, more than MAX_CONDITIONS codes on one grid (pass fewer input layers). Not captured: anything
     that is not a gap or an SCL cloud class (condition_rule says what is), and the order of the timesteps."""
     rio = _rasterio()
-    rasters, vectors, skipped = _completed_outputs(ds, layer, group)
+    rasters, vectors, skipped = _completed_outputs(ds, layer, group, windows)
     if not rasters:
         if vectors:
             raise ValueError(f"layers/{layer} holds a per-window classification (data.geojson); the condition layer "
                              "is pasted onto the scores' grid, and that output has none")
         raise _no_output(ds, layer, skipped)
     grids = _plan_grids(rasters)
-    _check_size(grids, 1, itemsize=8)
+    _check_size(grids, 8 + 1 + 4, "an int64 code, a conflict mask and the int32 copy written")
     names, known, notes = _input_layers(ds, rasters, layer, inputs)
     groups = {(e["window"], n): _item_groups(e, n, known[n]) for e in rasters for n in names}
     timesteps = {n: max(len(groups[(e["window"], n)]) for e in rasters) for n in names}
@@ -749,8 +837,8 @@ def condition_from_inputs(ds, out, inputs=None, layer="output", group=None):
         if conflict.any():
             notes.append(f"{int(conflict.sum())} pixels of {g['label']} lie in overlapping windows whose inputs give "
                          "different codes; they are -1, unrecorded")
-    res = {"dataset": os.path.abspath(ds), "layer": layer, "group": group, "source": SOURCE,
-           "inputs": {n: {"timesteps": timesteps[n], "clouds": clouds[n]} for n in names},
+    res = {"dataset": os.path.abspath(ds), "layer": layer, "group": group, "window_patterns": windows,
+           "source": SOURCE, "inputs": {n: {"timesteps": timesteps[n], "clouds": clouds[n]} for n in names},
            "rule": condition_rule(names, timesteps, clouds),
            "codes": {str(v): _code_name(v, names, clouds) for v in sorted(codes_all)},
            "windows_read": len(rasters), "windows_skipped": skipped, "grids": entries, "notes": notes}
