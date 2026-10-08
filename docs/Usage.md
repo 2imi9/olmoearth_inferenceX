@@ -532,7 +532,7 @@ wrote to_label_estimate_decisions.json
 | `more_accurate` | a, b, undetermined | `estimate` on a sample drawn with `--other` | the interval on the difference excludes 0 |
 | `more_accurate` | a, b, tie, undetermined | `compare --labels` | a count against the labels raster, taken as truth; undetermined unless every differing window carries a label |
 | `trusted_share` | a share of the map | `certify` | the certified share; 0 when nothing is certified |
-| `trusted_share_at_least=S` | yes, undetermined | `certify` | never no: a larger sample can certify more where the map's error rate is at most alpha (a second test: up to twice delta for the two together) |
+| `trusted_share_at_least=S` | yes, undetermined | `certify` | never no: a larger sample can certify more where the map's error rate is at most alpha (a second test when this run could certify something: up to twice delta for the two together) |
 | `share_differs` | a share of the windows | `compare`, or `estimate` on a sample drawn with `--other` | no labels needed; says nothing about which map is right |
 
 T and S are shares between 0 and 1. "undetermined" means the result does not settle the question; it is not a no. A

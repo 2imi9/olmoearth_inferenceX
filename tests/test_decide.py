@@ -230,7 +230,7 @@ def test_every_pointer_to_more_labels_says_what_a_second_look_costs():
     assert decide_mod.certificate_second_look(0.1, False) in few and "second test" not in few
     # never above 100%
     big = _one(dict(zone, coverage=None, n_zone=None, delta=0.6), "trusted_share")["trusted_share"]["because"]
-    assert "can reach 100.0%" in big and "120.0%" not in big
+    assert "can reach 100%" in big and "120" not in big and "twice delta" not in big
     rate = list(_one(_estimate(0.08, 0.12), "error_rate_below=0.1").values())[0]["because"]
     assert decide_mod.interval_second_look(True) in rate and "can reach 10%" in rate
     assert "To keep 95%, choose the sample size before any labelling." in rate and "report both" not in rate

@@ -1098,4 +1098,30 @@ def test_decide_says_the_cost_of_a_second_look_once_and_never_dangles(tmp_path):
     path.write_text(json.dumps(dict(base, estimate=0.05, low=0.03, high=0.07,
                                     per_class={"0": row(0.91, 0.97), "1": row(0.80, 0.95)})))
     out = _ok("decide", result_json=str(path), questions=["user_accuracy_above=0.9"])
-    assert "said above" not in out["next"] and out["next"].endswith(_decide_mod.interval_second_look(False))
+    assert "said above" not in out["next"] and out["next"].endswith(_decide_mod.interval_second_look(False, lead=False))
+
+
+@needs_mcp
+def test_decide_on_a_zone_that_could_not_certify_says_the_next_sample_is_the_first_test(tmp_path):
+    """A run with fewer labels than any zone needs was no test, so decide's reply must not call a new sample a second
+    one; and a pending per-class answer beside a whole-map one gets its own (nominal) cost."""
+    zone = {"rule": "prefix", "alpha": 0.05, "delta": 0.1, "n_population": 4096, "n_labelled": 30,
+            "min_labels_to_certify": 45, "coverage": None, "n_zone": None, "note": "no zone certified"}
+    path = tmp_path / "few_zone.json"
+    path.write_text(json.dumps(zone))
+    out = _ok("decide", result_json=str(path), questions=["trusted_share", "trusted_share_at_least=0.5"])
+    assert "second test" not in out["conclusion"] + out["next"]
+    assert out["conclusion"].count(_decide_mod.certificate_second_look(0.1, False)) == 1
+    path = tmp_path / "loose_zone.json"
+    path.write_text(json.dumps(dict(zone, n_labelled=300, delta=0.6)))
+    out = _ok("decide", result_json=str(path), questions=["trusted_share"])
+    assert "can reach 100%" in out["conclusion"] and "twice delta" not in out["conclusion"]
+    base = {"design": "random", "n_labelled": 300, "n_population": 4096, "nominal_coverage": 0.95,
+            "method": "exact hypergeometric interval (simple random sample of a finite map)"}
+    row = {"user_accuracy": {"estimate": 0.9, "low": 0.85, "high": 0.95},
+           "producer_accuracy": {"estimate": 0.9, "low": 0.85, "high": 0.95}}
+    path = tmp_path / "mixed_estimate.json"
+    path.write_text(json.dumps(dict(base, estimate=0.1, low=0.08, high=0.12, per_class={"0": row})))
+    out = _ok("decide", result_json=str(path), questions=["error_rate_below=0.1", "user_accuracy_above=0.9"])
+    assert out["next"].endswith(_decide_mod.interval_second_look(False, lead=False))
+    assert "said above" not in out["next"]

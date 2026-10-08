@@ -23,8 +23,8 @@ made without labels, has no answer to give, not an undetermined one.
     trusted_share              a share of the map         certify: the certified share, 0 when nothing is certified
     trusted_share_at_least=S   yes / undetermined         certify: never "no", since a share not certified from these
                                                           labels can be certified from a larger sample where the map is
-                                                          good enough (a second test: up to twice delta for the two
-                                                          together)
+                                                          good enough (a second test when this run could certify
+                                                          something: up to twice delta for the two together)
     share_differs              a share of the windows     compare, or estimate on a sample drawn with other; no labels
 
 T and S are shares from 0 to 1. A result with input conditions gives the whole map's answer and each condition's.
@@ -66,31 +66,36 @@ def _pc(x):
 # labels were read. A second sample read after the first, or a second run on the same labels with another rule, alpha
 # or delta, is a second test, and the chance that one of the answers is wrong can reach the sum of their error levels
 # (a union bound). The MCP server uses the same sentences.
-def interval_second_look(exact=True):
-    """After an undetermined interval: what a larger sample, read after this one, costs."""
+def interval_second_look(exact=True, lead=True):
+    """After an undetermined interval: what a larger sample, read after this one, costs. `lead` opens with "a larger
+    sample narrows it"; without it, the sentence is the cost alone, for a reply that has just pointed to the sample."""
+    head = "A larger sample narrows it, but read after this one it is" if lead else "Read after this one, a larger sample is"
     if exact:
-        return ("A larger sample narrows it, but read after this one it is a second test: the chance that one of the "
-                "two intervals misses can reach 10%, so the one read last is no longer guaranteed at 95%. To keep 95%, "
-                "choose the sample size before any labelling.")
-    return ("A larger sample narrows it, but read after this one it is a second test, and the chances that either "
-            "interval misses add up; each is nominal here. Choose the sample size before any labelling.")
+        return (f"{head} a second test: the chance that one of the two intervals misses can reach 10%, so the one read "
+                "last is no longer guaranteed at 95%. To keep 95%, choose the sample size before any labelling.")
+    return (f"{head} a second test, and the chances that either interval misses add up; each is nominal here. Choose "
+            "the sample size before any labelling.")
 
 
-def comparison_second_look():
-    """After an undetermined comparison of two maps from a sample of their differing windows."""
-    return ("More labels on the differing windows narrow it, but a second sample read after this one is a second "
-            "test: the chance that one of the two comparisons is wrong can reach 10%. To keep 95%, choose the sample "
-            "size before any labelling.")
+def comparison_second_look(lead=True):
+    """After an undetermined comparison of two maps from a sample of their differing windows; `lead` as above."""
+    head = ("More labels on the differing windows narrow it, but a second sample read after this one is" if lead else
+            "Read after this one, a second sample is")
+    return (f"{head} a second test: the chance that one of the two comparisons is wrong can reach 10%. To keep 95%, "
+            "choose the sample size before any labelling.")
 
 
 def certificate_second_look(delta, tested=True):
-    """After a certify run that certified less than asked: what a new sample costs. `tested`: whether this run could
+    """After a certify result that certified less than asked: what a new sample costs. `tested`: whether that run could
     have certified anything (enough labels for some zone); if not, it was no test, and a new sample is the first."""
     if not tested:
-        return "Choose the new sample's budget before labelling and certify it once."
-    return (f"A new sample is a second test: with this one, the chance that a certificate is wrong can reach "
-            f"{_pc(min(1.0, 2 * float(delta)))}, twice delta (with another delta, the sum of the two). To keep delta, "
-            "choose the budget before any labelling and certify once.")
+        return ("A new sample is then the first test that can certify anything: choose its budget before labelling "
+                "and certify it once.")
+    twice = 2 * float(delta)
+    reach = f"{_pc(twice)}, twice delta" if twice < 1 else "100%"
+    return (f"A new sample is a second test: with this one, the chance that a certificate is wrong can reach {reach} "
+            "(with another delta, the sum of the two). To keep delta, choose the budget before any labelling and "
+            "certify once.")
 
 
 def kind(result):

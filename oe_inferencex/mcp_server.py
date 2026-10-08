@@ -961,7 +961,8 @@ def estimate(
     b1 = est.min_labels_to_certify(0.05, est.ZONE_DELTA)
     if r.get("by_condition"):
         most = max(int(row["n_labelled"]) for row in r["per_condition"].values())
-        nxt = (f"certify with sample_csv={path} and an alpha, such as 0.05, gives, for each input condition with "
+        nxt = (f"certify with sample_csv={path} and the alpha chosen before the labels were read (such as 0.05) "
+               "gives, for each input condition with "
                "enough labels, the most confident share of that condition whose error rate is at most alpha.")
         if most < b1:
             nxt += (f" At alpha 0.05 and delta {est.ZONE_DELTA:g} a condition needs at least {b1} labels and the most "
@@ -969,7 +970,8 @@ def estimate(
                     "labels are read) needs fewer labels, and a larger sample drawn with the same condition layer can "
                     "certify more. " + _decide.certificate_second_look(est.ZONE_DELTA, tested=False))
     elif r["design"] in ("random", "condition"):
-        nxt = (f"certify with sample_csv={path} and an alpha, such as 0.05, gives the most confident share of the map "
+        nxt = (f"certify with sample_csv={path} and the alpha chosen before the labels were read (such as 0.05) "
+               "gives the most confident share of the map "
                "whose error rate is at most alpha.")
         if int(r["n_labelled"]) < b1:
             nxt += (f" At alpha 0.05 and delta {est.ZONE_DELTA:g} a zone needs at least {b1} labels and this sample "
@@ -1013,8 +1015,8 @@ def _which_map(r, out):
         _notes(r.get("notes", []))
     nxt = ("For either map's own accuracy: sample with design \"random\" on that map's scores, have a reviewer label "
            "every row, then estimate." if v else
-           "To settle it, draw a larger sample with other (a new seed gives a new draw; label all of it). "
-           + _decide.comparison_second_look())
+           "A larger sample drawn with other (a new seed gives a new draw; label all of it) narrows the interval. "
+           + _decide.comparison_second_look(lead=False))
     summ = {k: r.get(k) for k in ("verdict", "difference", "n_labelled", "n_disagree", "n_population", "n_a_right",
                                   "n_b_right", "n_neither", "n_unjudged", "share_a_right", "share_b_right")}
     return _reply(" ".join(said), _join(limits), nxt, {"estimate": out}, summ)
@@ -1220,17 +1222,24 @@ def decide(
                            "more_accurate of that estimate."),
             "zone": ("a larger random sample (sample with design \"random\", or with the same condition layer, and a "
                      "larger budget), labelled in full, can certify more.")}
-    if pending and rkind != "comparison":
-        # the cost of that second sample: "said above" only if the conclusion says it; per-class or per-condition
-        # answers carry theirs in the JSON alone
-        if told:
+    cost = ""
+    if pending and rkind == "zone":
+        # the zone's own answer says what a new sample costs, or that it is the first test that can certify anything;
+        # per-condition answers carry theirs in the JSON alone
+        said_cost = [c for c in told if "second test" in c]
+        said_first = [c for c in told if "first test" in c]
+        if said_cost:
             cost = " That is a second test, at the cost said above."
-        elif rkind == "zone":
+        elif not said_first:
             cost = " " + _decide.certificate_second_look(delta_r if delta_r is not None else est.ZONE_DELTA, True)
-        else:
-            cost = " " + _decide.interval_second_look(all(r["answers"][q].get("exact") for q in pending))
-    else:
-        cost = ""
+    elif pending and rkind != "comparison":
+        # a pending answer whose own sentence holds no caveat (a per-class or per-condition one) gets its cost here;
+        # "said above" only when every pending answer's sentence carries one
+        bare = [q for q in pending if not any(c in r["answers"][q]["because"] for c in caveats)]
+        if bare:
+            cost = " " + _decide.interval_second_look(all(r["answers"][q].get("exact") for q in bare), lead=False)
+        elif told:
+            cost = " That is a second test, at the cost said above."
     nxt = (("For " + ", ".join(pending) + ": " + more.get(rkind, "a larger sample drawn the same way, labelled in "
                                                                 "full, narrows the interval.") + cost) if pending else
            "The result can also answer: " + ", ".join(r["available"]) + ".")
