@@ -1,5 +1,29 @@
 # Changelog
 
+## Unreleased
+
+**`from-olmoearth`: read an OlmoEarth run directly** (`oe_inferencex.olmoearth`, `oe-inferencex from-olmoearth DS
+--out DIR`). It reads the rslearn dataset that olmoearth_run writes (windows, completed output layers, any band-set
+directory) into `scores_<EPSG>.tif`, the class probabilities on one grid per CRS with NaN where no window wrote, and
+prints the `assess` command to run next. Ai2's published project configs keep only the argmax class, so a map from
+them cannot be ranked: the reader refuses a one-band class map and says what to change (`output_probs: true` in the
+model's task; for an integer output layer also a float32 writer layer), and refuses probabilities that do not sum to
+1 (`prob_scales`, a temperature). Per-window classification output (Forest Loss Driver's `prob_property`) is read
+into a `(C, 1, N)` array, checked against the class the task wrote. `--conditions` builds the input-condition layer
+from the window's own inputs: per pixel, the share of timesteps each input layer covers and, where every timestep
+holds Sentinel-2's SCL band, the cloudy share; OlmoEarth masks a missing timestep for a whole window but reads gaps
+and clouds inside a present one as valid, and this is the layer that shows them. A review in three lenses with a
+skeptic per finding confirmed 11 defects, all fixed with tests that fail before the fix (among them: a class written
+under a binary threshold read as the argmax, advice that led a rerun to write a second band set the reader then
+refused, one saturated window refusing a whole one-band run). Tested on synthetic rslearn datasets built to rslearn's
+source; exp98 is its first real run.
+
+**exp98 (draft preregistration, not frozen): Ai2's FT-AWF deployment configuration re-run on the cluster with
+probabilities kept, graded at Ai2's own AWF validation labels.** `docs/plan/awf_deployment.md`,
+`exp/exp98_awf_deployment.py`, and the jobs `exp/jobs/e98_*.sh` with the changed configs in `exp/jobs/e98_config/`.
+The labels were placed by experts, not drawn at random over the map, so exp98 grades accuracy and the confidence
+ranking at those points and gives no whole-map rate and no certified zone.
+
 ## 1.8.0 (2026-10-08)
 
 **`plan`: how many labels to draw, before any is drawn** (`oe_inferencex.plan`, `oe-inferencex plan`, and a `plan`
