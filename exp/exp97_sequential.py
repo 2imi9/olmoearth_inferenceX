@@ -333,6 +333,21 @@ def analyze(rows, audit_cells=None):
             "descriptive": desc}
 
 
+def heldout_as_recorded():
+    """exp96's held-out cells, exactly the files exp96 recorded: a units directory may hold more (the cluster's also
+    holds exp79's olmoearth_base_rtx run, which heldout_cells would read as a 16th encoder), so only the recorded
+    files are kept, and each must have the sha256 exp96 recorded."""
+    held, shas = e96.heldout_cells()
+    recorded = json.load(open(os.path.join(OUT, "exp96_summary.json")))["input_sha256"]
+    missing = sorted(set(recorded) - set(shas))
+    changed = sorted(k for k in recorded if k in shas and shas[k] != recorded[k])
+    if missing or changed:
+        raise SystemExit(f"exp96's held-out files differ here: {len(missing)} missing, {len(changed)} changed "
+                         f"(first: {(missing + changed)[:3]})")
+    keep = {k[:-4] for k in recorded}
+    return {k: v for k, v in held.items() if k in keep}, dict(recorded)
+
+
 def _job(item):
     name, err_o = item
     return name, run_cell(err_o, seed=cell_seed(name))
@@ -348,7 +363,7 @@ def main(argv):
               r["check"]["refused"], "refused")
         print("smoke ok")
         return
-    held, shas = e96.heldout_cells()
+    held, shas = heldout_as_recorded()
     seen = e95.cells()
     items = [(f"exp95:{k}", v) for k, v in seen.items()] + [(f"exp96:{k}", v) for k, v in held.items()]
     rows = {}
