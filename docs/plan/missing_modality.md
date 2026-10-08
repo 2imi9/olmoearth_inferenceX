@@ -136,7 +136,7 @@ numbers, the mechanism and the limits are in
 The follow-up this page fixed for P2 holding, a review output and a design stratified by input condition, is not
 built yet.
 
-Built (appended 29 September 2026; nothing above changed): the follow-up is in the package, not yet released: `scope` in the outputs of `assess`, `estimate` and `certify`, and a condition layer (`--condition`) that ranks each condition on its own, splits the labels equally across the conditions, gives each its exact interval, and certifies each condition that holds enough labels with delta split over them.
+Built (appended 29 September 2026; nothing above changed): the follow-up is in the package, not yet released (released in 1.4.0): `scope` in the outputs of `assess`, `estimate` and `certify`, and a condition layer (`--condition`) that ranks each condition on its own, splits the labels equally across the conditions, gives each its exact interval, and certifies each condition that holds enough labels with delta split over them.
 
 ## Addendum, 30 September 2026: a probe trained on the input it reads (nothing above changed)
 

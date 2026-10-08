@@ -23,7 +23,7 @@
 \newcommand{\code}[1]{\texttt{#1}}
 
 \title{\pkg: confidence-based review, comparison and accuracy estimation for Earth-observation classification maps\\[6pt]
-\large Technical report, version 1.7.0}
+\large Technical report, version 1.8.0}
 \author{Ziming Qi\\[2pt] \small \url{https://github.com/2imi9/olmoearth_inferenceX}\\[-1pt]
 \small \url{https://olmoearth-inferencex.readthedocs.io}}
 \date{7 October 2026}
@@ -281,6 +281,23 @@ model's confident errors sit. In a construction from a review of 2 October 2026,
 of a map, with a whole-map miss rate of exactly $E_1$, certified on every draw a zone that was wrong 10\% of the time
 at $\alpha = 5\%$.
 
+This guarantee is for one sample whose size is fixed before labelling, read once. Rerunning \code{certify} as labels
+are added runs a new test at each look, and the chance that some look certifies a wrong zone grows with the looks
+(Section~\ref{sec:zone-results}). Since version 1.8.0 a sequential sample keeps the guarantee at every look.
+\code{sample -{}-design sequential} draws a fixed random order of the windows, any prefix of which is a simple random
+sample, and fixes before any label the anchor, the smallest zone tested: by default the smallest grid level whose zone
+expects enough labels at a stated first budget to be certified with no error among them, at most 0.25. Each level is
+tested by an e-process, the mixture with equal weights over the counts $M < M_0 = \lfloor \alpha n_c \rfloor + 1$ of
+the likelihood ratios of sampling without replacement against $M_0$ \citep{robbins1970}, in closed form one
+hypergeometric tail; it is a supermartingale under every count $M \geq M_0$, so by Ville's inequality \citep{ville1939}
+it ever reaches $1/\delta$ with probability at most $\delta$, whatever decides when labelling stops. Levels are tested
+in a fixed sequence from the anchor outward \citep{bauer1991}, valid at every look because every test in it is
+\citep{tamhane2010}; a passed level stays passed, so more labels never certify less. The closest published method,
+\citet{xu2024}, assumes the risk monotone in the threshold and samples with replacement; here the zones' error rates
+need not be monotone, which is why the sequence starts from a fixed anchor. A zone with no errors needs 71 labels at
+$\alpha = 0.05$ and $\delta = 0.1$, against 45 for the one-look test: the equal weights tolerate errors and pay for it on
+a clean zone \citep{waudbysmith2020,stark2023alpha}.
+
 \subsection{Which of two maps is more accurate}
 \label{sec:whichmap}
 
@@ -307,9 +324,9 @@ difference could be narrower.
 \subsection{Interfaces}
 \label{sec:interfaces}
 
-The command \code{oe-inferencex} has eight subcommands: \code{demo} (a shipped Dynamic World tile), \code{assess}
+The command \code{oe-inferencex} has nine subcommands: \code{demo} (a shipped Dynamic World tile), \code{assess}
 (review sets, rasters and cues), \code{compare} (disagreement and, with labels and dates, the graded block),
-\code{sample} (the windows to label), \code{estimate} (the error rate, per-class accuracy with \code{-{}-per-class}, or
+\code{plan} (how many labels a question needs, new in 1.8.0), \code{sample} (the windows to label), \code{estimate} (the error rate, per-class accuracy with \code{-{}-per-class}, or
 the accuracy difference of two maps), \code{certify} (the certified zone and its mask), \code{decide} and \code{mcp}.
 \code{decide} (new in 1.7.0) reads a result that \code{estimate}, \code{certify} or \code{compare} wrote and answers set questions
 with one answer from a fixed set (whether the error rate is below a threshold, a class's user's or producer's accuracy
@@ -318,16 +335,25 @@ holds the limit; it computes nothing new, and an interval across the threshold g
 Since version 1.7.0, \code{assess} and \code{sample} also take a published product as it ships, a class map with
 its per-pixel confidence band (\code{-{}-confidence}, with \code{-{}-confidence-range} for the band values that are
 confidences), and \code{estimate}, \code{certify} and \code{decide} report how many classified pixels a band's codes
-leave out of the population. Since version 1.4.0, \code{oe-inferencex mcp} serves the commands as tools (\code{guide},
-\code{assess}, \code{compare}, \code{sample}, \code{estimate}, \code{certify} and, from 1.7.0, \code{decide}) to an
+leave out of the population. \code{plan} reads only counts from the maps and gives, for each budget on a ladder,
+the probability over the reviewer's random draw that the package's own procedure answers: an error-rate interval no
+wider than a stated width at a stated rate, labels drawn where two maps differ that name the more accurate one at a
+stated difference, or a zone of a stated coverage certified at $\alpha$ (exact for the Bonferroni rule, simulated for
+the prefix rule on the worst map whose more confident zones are no worse); every probability is reached again in its
+tests by enumeration or by simulating the estimators. Since version 1.4.0, \code{oe-inferencex mcp} serves the commands as tools (\code{guide},
+\code{assess}, \code{compare}, \code{sample}, \code{estimate}, \code{certify}, from 1.7.0 \code{decide} and from
+1.8.0 \code{plan}) to an
 agent over the Model Context Protocol on local standard input and output, with
 nothing hosted. Each tool runs the command line's own code in process, so a tool and its command give the same numbers
 and refuse the same inputs, and returns compact JSON with the files written, the summary numbers, and three plain
-texts: the conclusion with its main limit, the limits, and the next step. The server's instructions state five hard
-rules: a review set is not a sample, and \code{estimate} and \code{certify} refuse it; \code{certify} needs a random or
-condition sample; \code{compare} cannot say which map is right without labels; labels are assumed right, and only
-\code{estimate} widens its interval for a reviewer who errs, at rates the user states; and ranking needs the scores,
-not only a class map, or a product's class map with its confidence band.
+texts: the conclusion with its main limit, the limits, and the next step. The server's instructions state six hard
+rules: a review set is not a sample, and \code{estimate} and \code{certify} refuse it; \code{certify} needs a random,
+sequential or condition sample; \code{compare} cannot say which map is right without labels; labels are assumed right,
+and only \code{estimate} widens its interval for a reviewer who errs, at rates the user states; ranking needs the
+scores, not only a class map, or a product's class map with its confidence band; and an interval or a certificate holds
+for one sample whose size was fixed before labelling, read once with the rule, $\alpha$ and $\delta$ chosen before the
+labels (from 1.7.1; a sequential sample's certificate holds at every look), so that a second sample, or a second run
+with another rule, $\alpha$ or $\delta$, is a second test whose error levels add.
 
 \section{Evaluation protocol}
 \label{sec:protocol}
@@ -670,6 +696,7 @@ exp85 measured a model-assisted difference estimator with a tuned coefficient (P
 \claim{model-assisted-gain-beyond-the-design-is-two-percent}.
 
 \subsection{The certified zone}
+\label{sec:zone-results}
 
 On OlmoEarth Base's 24 tasks at 100, 300 and 1,000 random labels with $\delta = 0.1$ (exp80), the prefix zone exceeded
 $\alpha$ on at most 0.080 of 2,000 draws and the Bonferroni zone on at most 0.0045, on all 112 cells (110 with a
@@ -694,6 +721,25 @@ exp94's references, at 300 labels and $\alpha$ half the error rate (5.2\% to 20.
 on at most 2.8\% of draws and the Bonferroni zone on at most 0.4\%, the plug-in on 39\% to 53\%, and the prefix rule
 returned no zone on 73\% to 97\% of draws \claim{exp94-zone-guarantee-holds-on-three-products}. The mean top-1 probability exceeds accuracy by a median 0.061
 \claim{mean-confidence-overstates-accuracy}, which is why the zone is calibrated on labels.
+
+The guarantee is per budget, not per look. On nested samples, a larger budget adding labels to a smaller one, the
+prefix rule's mean certified coverage fell by more than 0.05 of the map when labels were added on 14 of 34 maps
+(exp95, preregistered; a level enters at the budget where it expects the minimum number of labels and must then be
+passed with about that many), and a cut that tests a level later halved those falls but certified less at about 100
+labels on 24 of the 34, so the standard cut stayed \claim{exp95-standard-cut-falls-when-labels-are-added}; a second
+cut designed after exp95 passed at its preregistered seed on 332 other maps and not across seeds, and is an option,
+not the default \claim{exp96-ramp-passed-at-its-seed-and-not-across-seeds}. Certifying at every budget of a doubling
+ladder on six of those maps, where one budget's zone was wrong more than $\alpha$ on at most 12.25\% of draws, gave a
+wrong zone at some look on 21\% to 30\% \claim{certify-guarantee-is-per-budget-not-per-look}. exp97 (preregistered)
+graded the sequential certificate on the 366 maps: over 3,122 violation rates the largest was 0.1175 at $\delta = 0.1$
+(bound 0.175, none above three standard errors), and its zone never shrank
+\claim{exp97-sequential-certificate-holds-at-every-look}, where \code{certify} rerun after every 5\% more labels, a
+median 77 looks, certified a wrong zone at some look more than 17.5\% of the time on 132 maps, at most 0.435
+\claim{exp97-rerunning-certify-breaks-its-guarantee}. It costs labels: with the anchor of a first budget of 300, a
+median 1.71 times the one-look rule's labels to reach half the largest mean certified share that rule reaches (213
+maps), and over budgets 50 to 3,000 a median mean certified share of 0.146 against 0.222 on the same 279 maps
+\claim{exp97-sequential-certificate-costs-labels}. The default stays the one-look certificate; the sequential one is
+for a reviewer who will look more than once.
 
 \subsection{Use by a language-model agent}
 

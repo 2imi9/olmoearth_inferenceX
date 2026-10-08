@@ -96,7 +96,9 @@ HARD_RULES = (
     "An interval or a certificate holds for one sample whose size was fixed before labelling, with the rule, alpha "
     "and delta chosen before its labels are read. A second sample read after it, or a second run on the same labels "
     "with another rule, alpha or delta, is a second test: the chance that one of the answers is wrong can reach the "
-    "sum of their error levels (10% for two 95% intervals, the sum of the deltas for two certificates).",
+    "sum of their error levels (10% for two 95% intervals, the sum of the deltas for two certificates). The "
+    "exception is certify on a sequential sample: its certificate holds at every look as labels are added from the "
+    "top.",
 )
 
 INSTRUCTIONS = "\n".join([

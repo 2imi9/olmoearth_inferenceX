@@ -193,4 +193,4 @@ powerful in general. Bonferroni can certify more where the most confident window
 `tests/test_trust_zone.py` shows. In exp80 it certified a zone on more draws than the prefix rule on 25 of the 112
 cells, and on fewer on 72. Brick Kiln is not such a case: there Bonferroni certified nothing on 74.8% of draws, and
 the 0.75 the results record gives is its median over the rest, while the prefix rule certified 0.50 on every draw.
-The package's printed note was corrected to say that Bonferroni can certify more, in changes not yet released.
+The package's printed note was corrected to say that Bonferroni can certify more, in changes not yet released (released in 1.4.0).
