@@ -10,6 +10,8 @@
     oe-inferencex estimate to_label.csv [--per-class]       once the reviewer has filled the `wrong` column
     oe-inferencex certify  to_label.csv --alpha 0.05        from a random sample, or one drawn with --condition
     oe-inferencex mcp                                       a local MCP server on stdio, for an agent (the mcp extra)
+    oe-inferencex from-olmoearth DS --out DIR [--conditions]  an OlmoEarth run's rslearn dataset -> the rasters
+                                                            assess reads, and the command that reads them
 
 Inputs are GeoTIFFs (any rasterio-readable raster) or .npy arrays: (H, W) for a binary map, (C, H, W) for per-class
 scores or, for `compare`, an integer class map. `compare` also takes two continuous maps (a regression output) when the
@@ -2002,6 +2004,68 @@ def cmd_plan(args):
     return 0
 
 
+def _skipped_text(skipped):
+    """The windows a reader left out, counted by reason; the JSON lists each."""
+    if not skipped:
+        return ""
+    by = {}
+    for s in skipped:
+        by[s["reason"]] = by.get(s["reason"], 0) + 1
+    return f"; {len(skipped)} skipped: " + "; ".join(f"{n} {why}" for why, n in by.items())
+
+
+def cmd_from_olmoearth(args):
+    """An OlmoEarth run's rslearn dataset in, the rasters `assess` reads out (oe_inferencex.olmoearth): the output
+    layer's probabilities pasted onto one grid per CRS, and with --conditions the input-condition layer on the same
+    grid; then the assess command that reads them."""
+    from oe_inferencex import olmoearth as oe
+    _check_out_dir(args.out, "from-olmoearth")
+    if args.inputs and not args.conditions:
+        raise SystemExit("from-olmoearth: --inputs names the input layers of the condition layer; add --conditions")
+    try:
+        kind = oe.output_kind(args.ds, args.layer, args.group, args.window)
+        if kind == "vector":
+            if args.conditions:
+                raise SystemExit(f"from-olmoearth: layers/{args.layer} is a per-window classification (data.geojson); "
+                                 "the condition layer is pasted onto a raster's grid, and this output has none")
+            s = oe.read_window_probs(args.ds, args.out, layer=args.layer, prob_property=args.prob_property or "probs",
+                                     group=args.group, windows=args.window, class_property=args.class_property)
+        else:
+            if args.prob_property or args.class_property:
+                flag = "--prob-property" if args.prob_property else "--class-property"
+                raise SystemExit(f"from-olmoearth: {flag} reads a per-window classification (data.geojson); "
+                                 f"layers/{args.layer} holds GeoTIFFs")
+            s = oe.read_output(args.ds, args.out, layer=args.layer, group=args.group, windows=args.window)
+            c = oe.condition_from_inputs(args.ds, args.out, inputs=args.inputs, layer=args.layer,
+                                         group=args.group, windows=args.window) if args.conditions else None
+    except (ValueError, ImportError) as exc:
+        raise SystemExit(f"from-olmoearth: {exc}") from None
+    what = (f"probabilities over {s['bands']} classes, {s['features']} predictions" if kind == "vector" else
+            f"probabilities over {s['bands']} classes" if s["bands"] > 1 else "one band, the probability of one class")
+    lines = [f"read {s['windows_read']} windows of {os.path.join(args.ds, 'windows')} (layer {args.layer}): {what}"
+             + _skipped_text(s["windows_skipped"])]
+    notes = list(s["notes"])
+    if kind == "vector":
+        lines += [f"wrote {s['scores']}, ({s['bands']}, 1, {s['features']}), and {s['index']}, which names each column",
+                  f"next: {s['assess']}"]
+        written = [oe.SCORES_JSON]
+    else:
+        conds = {g["label"]: g for g in c["grids"]} if c else {}
+        for g in s["grids"]:
+            lines.append(f"wrote {g['scores']}: {g['shape'][0]} x {g['shape'][1]} px in {g['crs']}, "
+                         f"{len(g['windows'])} windows, {g['covered_pixels']} pixels predicted")
+            if g["label"] in conds:
+                k = len(conds[g["label"]]["codes"])
+                lines.append(f"wrote {conds[g['label']]['condition']}: {k} input condition{'s' if k != 1 else ''} "
+                             "(the codes and their rule are in " + oe.CONDITIONS_JSON + ")")
+        lines += [f"next: {conds[g['label']]['assess'] if g['label'] in conds else g['assess']}" for g in s["grids"]]
+        written = [oe.SCORES_JSON] + ([oe.CONDITIONS_JSON] if c else [])
+        notes += c["notes"] if c else []
+    print("\n".join(lines + [f"note: {n}" for n in notes] + [f"wrote {os.path.join(args.out, written[0])}"
+                                                               + "".join(f", {w}" for w in written[1:])]))
+    return 0
+
+
 def cmd_mcp(args):
     """Serve the commands above as MCP tools on stdio, for an agent on the user's machine (oe_inferencex.mcp_server).
     The agent starts this; nobody types into it. Without the mcp extra it says how to install it."""
@@ -2206,6 +2270,27 @@ def build_parser():
     m = sub.add_parser("mcp", help="serve these commands as tools to an agent on this machine (a local MCP server on "
                                     "stdio; needs the mcp extra)")
     m.set_defaults(func=cmd_mcp)
+    fo = sub.add_parser("from-olmoearth", help="read an OlmoEarth run (the rslearn dataset olmoearth_run writes) into "
+                                               "the rasters assess reads, and print the assess command")
+    fo.add_argument("ds", help="the rslearn dataset directory, which holds windows/<group>/<name>/")
+    fo.add_argument("--out", required=True, help="output directory")
+    fo.add_argument("--layer", default="output", help="the output layer (default output)")
+    fo.add_argument("--group", nargs="+", default=None, help="read only these window groups (default: every one)")
+    fo.add_argument("--window", nargs="+", default=None, metavar="PATTERN",
+                    help="read only the windows whose id group/name matches one of these shell patterns (quote them), "
+                         "to read a large area in parts")
+    fo.add_argument("--conditions", action="store_true",
+                    help="also write the input-condition layer on the scores' grid: per pixel, how many of the run's "
+                         "timesteps a scene covered and, with an SCL band, how many were cloudy")
+    fo.add_argument("--inputs", nargs="+", default=None, metavar="LAYER",
+                    help="with --conditions: the input layers to read (default: the layers config.json gives a "
+                         "data_source)")
+    fo.add_argument("--prob-property", default=None,
+                    help="a per-window classification: the feature property holding the probabilities (default probs)")
+    fo.add_argument("--class-property", default=None,
+                    help="a per-window classification: the feature property holding the class the task wrote, checked "
+                         "against the argmax (default: the one other property, if there is one)")
+    fo.set_defaults(func=cmd_from_olmoearth)
     return p
 
 
