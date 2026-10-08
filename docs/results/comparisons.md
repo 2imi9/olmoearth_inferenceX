@@ -3487,7 +3487,7 @@ under every encoder, where it is 14 of 16), both corrected before recording, and
 measured (that the cost was mostly the weights', and that ρ is the cost of certifying the same zone).
 
 **Reading.** A reviewer who will add labels and look again can draw a sequential sample (`sample --design
-sequential`, on main, not yet released), label it from the top and run `certify` after any label: its zone holds at
+sequential`, released in 1.8.0), label it from the top and run `certify` after any label: its zone holds at
 every look, with α, δ and the anchor fixed before the first label. estimate's interval on such a sample does not; it
 assumes the number of labels was fixed. The price is labels, about 1.7 times as many to reach the same mean certified
 share on these maps, and the anchor, the smallest zone it can ever certify: on small maps at a low α the default can

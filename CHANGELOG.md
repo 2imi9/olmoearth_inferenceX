@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.8.0 (2026-10-08)
 
 **`plan`: how many labels to draw, before any is drawn** (`oe_inferencex.plan`, `oe-inferencex plan`, and a `plan`
 tool in the MCP server). For each budget on a ladder (10, 12, 15, 20, ... up to 10,000 or the census) it gives the
@@ -79,6 +79,12 @@ test except for certify on a sequential sample.
 the scores a model writes, so it works on other models' maps and on published products with a confidence layer), how
 to install it, the basic commands and its limits; the measured results it listed are in the documentation and the
 report, where every claim it cited is still cited.
+
+**The sixth hard rule** (1.7.1: an interval or a certificate holds for one sample read once) now names its exception
+on main, certify on a sequential sample, in the MCP instructions and SKILL.md; the merge of 1.7.1 had kept the rule
+without it. **The technical report** is at 1.8.0: the sequential certificate in Methods, exp95 to exp97 under the
+certified zone, `plan` among the interfaces, and six hard rules where it still said five after 1.7.1. Two plan pages
+that still called a change unreleased now say it was released in 1.4.0.
 
 ## 1.7.1 (2026-10-08)
 
