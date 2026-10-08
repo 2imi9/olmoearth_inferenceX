@@ -394,7 +394,8 @@ def test_without_a_condition_only_scope_is_added():
     """Against the summaries generated at 725dffa, before the layer was built: byte for byte once `scope` is taken
     out, and `scope` is SCOPE_ASSESS, outside the warnings. The deliberate changes are the multi-class logit
     warning of api_prediction_logits3_margin and the probability warning of the two probability summaries, listed
-    with their old and new texts in golden/condition_1_3_1/changes.py; every other byte is 1.3.1's."""
+    with their old and new texts in golden/condition_1_3_1/changes.py; every other byte is 1.3.1's, but for the last
+    digits of a float where numpy builds differ."""
     calls = _golden_calls()
     changes = _golden_changes()
     assert sorted(calls) == json.load(open(os.path.join(GOLDEN, "manifest.json")))["api"]
@@ -404,7 +405,16 @@ def test_without_a_condition_only_scope_is_added():
         assert s.pop("scope") == SCOPE_ASSESS, name
         assert SCOPE_ASSESS not in s["warnings"] and "conditions" not in s and "condition" not in out["arrays"], name
         with open(os.path.join(GOLDEN, f"{name}.json"), "rb") as f:
-            assert (json.dumps(s, indent=1) + "\n").encode() == changes.expected(f"{name}.json", f.read()), name
+            want = changes.expected(f"{name}.json", f.read())
+        got = (json.dumps(s, indent=1) + "\n").encode()
+        if got != want:
+            # Numpy builds differ in the last digit of a float. With the declared minimum numpy, 1.26.4, on x86_64
+            # Linux, api_prediction_logits3_top1's 5% confidence quantile ends in 2 where the golden file, written on
+            # macOS, ends in 1 (1.7.0 too, aicr job 1240449); current numpy on Linux and 1.26.4 on macOS arm64 write
+            # the golden bytes. The golden JSON reads back to itself, so equal values but for floats within 1e-12
+            # are equal bytes but for those floats' last digits; keys, order, integers, strings and warnings exact.
+            assert (json.dumps(json.loads(want), indent=1) + "\n").encode() == want, name
+            assert changes.same_but_last_digits(json.loads(got), json.loads(want)), name
 
 
 def _two_condition_map(seed=3, size=48):

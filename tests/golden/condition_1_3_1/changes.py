@@ -6,11 +6,13 @@ whole string value; in a stdout file it is a whole line, alone or after "warning
 golden file as the package must now write it: the listed changes applied, every other byte as 1.3.1 wrote it. A
 listed text that is not where the list says, or that sits in a file the list does not name, fails the test, so the
 list is exact. The new texts are written out here, not imported, so a later edit of the package's text fails the
-test until it is listed too; `constant` names where the package keeps each one. Two tests use this file:
-tests/test_cli.py::test_existing_outputs_are_byte_identical_to_1_3_1 and
+test until it is listed too; `constant` names where the package keeps each one. `same_but_last_digits` is the one
+tolerance the comparison allows, the last digits of a float, which differ between numpy builds and C libraries. Two
+tests use this file: tests/test_cli.py::test_existing_outputs_are_byte_identical_to_1_3_1 and
 tests/test_assess.py::test_without_a_condition_only_scope_is_added.
 """
 import json
+import math
 
 CHANGES = (
     {"why": "certify's note on the prefix rule. 1.3.1 said the rule is valid only if the zone's error rate does not "
@@ -111,3 +113,16 @@ def expected(name, data):
         assert count == want, f"{name}: {count} whole occurrences of a listed 1.3.1 text, expected {want}: {c['why']}"
         assert c["old"].encode() not in data, f"{name}: a listed 1.3.1 text is left inside other text: {c['why']}"
     return data
+
+
+def same_but_last_digits(a, b):
+    """Equal JSON values but for the last digits of floats: the same keys in the same order, the same integers,
+    strings, booleans and nulls, and every float within a relative 1e-12 of the other. A float never equals an
+    integer. For a golden JSON that reads back to itself, this is equal bytes but for the digits of some floats."""
+    if type(a) is float or type(b) is float:
+        return type(a) is type(b) and math.isclose(a, b, rel_tol=1e-12, abs_tol=1e-15)
+    if isinstance(a, dict):
+        return isinstance(b, dict) and list(a) == list(b) and all(same_but_last_digits(a[k], b[k]) for k in a)
+    if isinstance(a, list):
+        return isinstance(b, list) and len(a) == len(b) and all(same_but_last_digits(x, y) for x, y in zip(a, b))
+    return type(a) is type(b) and a == b
