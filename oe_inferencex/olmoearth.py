@@ -162,8 +162,11 @@ def _no_output(ds, layer, skipped):
         ldir = os.path.join(path, "layers")
         if os.path.isdir(ldir):
             seen |= {n.split(".")[0] for n in os.listdir(ldir) if not n.startswith(".")}
-    why = sorted({s["reason"] for s in skipped})
-    return ValueError(f"no window of {ds} has a completed {layer!r} layer ({'; '.join(why)}). Run the inference stage "
+    why = {}
+    for s in skipped:
+        why[s["reason"]] = why.get(s["reason"], 0) + 1
+    why = "; ".join(f"{n} window{'s' if n > 1 else ''} {r}" for r, n in why.items())
+    return ValueError(f"no window of {ds} has a completed {layer!r} layer ({why}). Run the inference stage "
                       f"first, or name the output layer with --layer; the windows hold the layers "
                       f"{', '.join(sorted(seen)) or 'none'}")
 
