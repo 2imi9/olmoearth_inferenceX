@@ -1233,20 +1233,35 @@ def decide(
         elif not said_first:
             cost = " " + _decide.certificate_second_look(delta_r if delta_r is not None else est.ZONE_DELTA, True)
     elif pending and rkind != "comparison":
-        # a pending answer whose own sentence holds no caveat (a per-class or per-condition one) gets its cost here,
-        # named, unless the same cost was already said above; the others point above
-        bare = [q for q in pending if not any(c in r["answers"][q]["because"] for c in caveats)]
-        exact_bare = all(r["answers"][q].get("exact") for q in bare)
-        if bare and _decide.interval_second_look(exact_bare) in told:
-            bare = []
-        covered = [q for q in pending if q not in bare]
+        # Each pending question costs what its own undetermined intervals cost: its own sentence says it (pointed to
+        # above), or its per-condition rows say it (exact or nominal, as each row's sentence does), or its per-class
+        # rows are nominal. A row with no labels or no interval costs nothing: a sample that reaches it is its first
+        # test. A cost already said above is pointed to, not said again.
+        covered, bare = [], {True: [], False: []}
+        for q in pending:
+            a = r["answers"][q]
+            if any(c in a["because"] for c in caveats):
+                covered.append(q)
+                continue
+            kinds = set()
+            for x in (a.get("per_condition") or {}).values():
+                if x.get("answer") == "undetermined":
+                    kinds |= {k for k in (True, False) if _decide.interval_second_look(k) in x.get("because", "")}
+            for x in (a.get("per_class") or {}).values():
+                if x.get("answer") == "undetermined" and x.get("low") is not None:
+                    kinds.add(False)
+            for k in kinds:
+                (covered if _decide.interval_second_look(k) in told else bare[k]).append(q)
+        covered = list(dict.fromkeys(covered))
         parts = []
         if covered and told:
-            parts.append(("For " + ", ".join(covered) + ", that is" if bare else "That is")
+            parts.append(("For " + ", ".join(covered) + ", that is" if bare[True] or bare[False] else "That is")
                          + " a second test, at the cost said above.")
-        if bare:
-            c = _decide.interval_second_look(exact_bare, lead=False)
-            parts.append(("For " + ", ".join(bare) + ", " + c[0].lower() + c[1:]) if covered else c)
+        for k in (True, False):
+            if bare[k]:
+                c = _decide.interval_second_look(k, lead=False)
+                named = len(parts) > 0 or (bare[True] and bare[False])
+                parts.append(("For " + ", ".join(dict.fromkeys(bare[k])) + ", " + c[0].lower() + c[1:]) if named else c)
         cost = (" " + " ".join(parts)) if parts else ""
     nxt = (("For " + ", ".join(pending) + ": " + more.get(rkind, "a larger sample drawn the same way, labelled in "
                                                                 "full, narrows the interval.") + cost) if pending else

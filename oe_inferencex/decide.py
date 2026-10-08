@@ -205,6 +205,13 @@ def _answer_error_rate_below(r, t):
             if row.get("low") is None or row.get("high") is None:
                 out["per_condition"][name] = {"answer": "undetermined", "because": "no interval for this condition"}
                 continue
+            if row.get("n_labelled") == 0:
+                # 0% to 100%, which cannot miss: a sample that puts labels here is the condition's first test
+                out["per_condition"][name] = {"answer": "undetermined", "low": row["low"], "high": row["high"],
+                                              "because": (f"No labelled window fell in condition {name}, so nothing "
+                                                          "can be said about it; a sample that puts labels in it is "
+                                                          "its first test.")}
+                continue
             ca, cwhy, _ = _rate_below(row, t, f"condition {name}")
             out["per_condition"][name] = {"answer": ca, "because": cwhy, "low": row["low"], "high": row["high"]}
         out["because"] += (" Each input condition has its own answer, which can differ from the whole map's. "

@@ -1137,3 +1137,32 @@ def test_decide_on_a_zone_that_could_not_certify_says_the_next_sample_is_the_fir
     out = _ok("decide", result_json=str(path), questions=["error_rate_below=0.1", "user_accuracy_above=0.9"])
     assert (out["conclusion"] + out["next"]).count("nominal here") == 1
     assert out["next"].endswith("That is a second test, at the cost said above.")
+
+
+@needs_mcp
+def test_decide_costs_each_pending_question_by_its_own_intervals(tmp_path):
+    """An exact per-condition answer is not called nominal beside a per-class one, and a condition with no label,
+    whose interval is 0 to 100%, gets no second-test cost: a sample that reaches it is its first test."""
+    exact = "exact hypergeometric interval (the labels in the condition are a simple random sample of it)"
+    base = {"design": "condition", "n_labelled": 300, "n_population": 4096, "nominal_coverage": 0.95,
+            "method": "exact hypergeometric interval (simple random sample of a finite map)",
+            "estimate": 0.03, "low": 0.02, "high": 0.04}
+    row = {"user_accuracy": {"estimate": 0.9, "low": 0.85, "high": 0.95},
+           "producer_accuracy": {"estimate": 0.9, "low": 0.85, "high": 0.95}}
+    cond = {"clear": {"n_labelled": 150, "estimate": 0.09, "low": 0.048, "high": 0.141, "method": exact},
+            "cloudy": {"n_labelled": 150, "estimate": 0.01, "low": 0.0, "high": 0.03, "method": exact}}
+    path = tmp_path / "cond_class_estimate.json"
+    path.write_text(json.dumps(dict(base, per_condition=cond, per_class={"0": row})))
+    out = _ok("decide", result_json=str(path), questions=["error_rate_below=0.1", "user_accuracy_above=0.9"])
+    exact_cost = _decide_mod.interval_second_look(True, lead=False)
+    nominal_cost = _decide_mod.interval_second_look(False, lead=False)
+    assert ("For error_rate_below=0.1, " + exact_cost[0].lower() + exact_cost[1:]) in out["next"]
+    assert ("For user_accuracy_above=0.9, " + nominal_cost[0].lower() + nominal_cost[1:]) in out["next"]
+    assert "error_rate_below=0.1, user_accuracy_above=0.9, read after" not in out["next"]
+    empty = {"tiny": {"n_labelled": 0, "estimate": None, "low": 0.0, "high": 1.0, "method": exact}}
+    path = tmp_path / "empty_condition_estimate.json"
+    path.write_text(json.dumps(dict(base, per_condition=empty)))
+    out = _ok("decide", result_json=str(path), questions=["error_rate_below=0.2"])
+    assert "second test" not in out["next"]
+    written = json.load(open(out["files"]["decisions"]))
+    assert "its first test" in written["answers"]["error_rate_below=0.2"]["per_condition"]["tiny"]["because"]
