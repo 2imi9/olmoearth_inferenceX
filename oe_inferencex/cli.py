@@ -836,6 +836,45 @@ def cmd_sample(args):
     if design == "condition" and not cond_path:
         raise SystemExit("sample: --design condition needs --condition, a raster of each pixel's input condition (a "
                          "cloud flag, the modalities present, a sensor id)")
+    anchor, extend = getattr(args, "anchor", None), getattr(args, "extend", None)
+    a_alpha, a_delta = getattr(args, "alpha", None), getattr(args, "delta", None)
+    if design != "sequential" and any(v is not None for v in (anchor, extend, a_alpha, a_delta)):
+        raise SystemExit("sample: --anchor, --alpha, --delta and --extend belong to --design sequential")
+    if design == "sequential" and cond_path:
+        raise SystemExit("sample: --design sequential does not take --condition: certify reads it as one random order "
+                         "of the whole map")
+    old_side = old_wrong = anchor_rule = None
+    if extend is not None:
+        if any(v is not None for v in (anchor, a_alpha, a_delta)):
+            raise SystemExit(f"sample --extend: the anchor was fixed when {extend} was drawn and cannot change after "
+                             "labelling began; drop --anchor, --alpha and --delta")
+        old_side, old_wrong = _sequential_to_extend(extend, args)
+        anchor, anchor_rule = old_side["anchor"], old_side.get("anchor_rule")
+    elif design == "sequential":
+        # The anchor, the smallest zone certify will test, is fixed here, before any label: certify reads it from the
+        # sidecar. Computed from the alpha certify will be asked about when it is not given; certify at another alpha
+        # keeps this anchor (review of 8 October 2026: an anchor recomputed from each certify run's alpha was not
+        # fixed before the labels, as its guarantee needs).
+        if (anchor is None) == (a_alpha is None):
+            raise SystemExit("sample: a sequential sample fixes now, before any label, the smallest zone certify will "
+                             "test: give --alpha (the error rate certify will be asked about; the anchor is then the "
+                             "zone this budget can certify if none of its labels is wrong, at most a quarter of the "
+                             "map) or --anchor (a share of the map), not both")
+        if anchor is not None and a_delta is not None:
+            raise SystemExit("sample: --delta goes with --alpha, to compute the anchor; with --anchor it is not used")
+        if a_alpha is not None:
+            d = est.ZONE_DELTA if a_delta is None else a_delta
+            if not (0 < a_alpha < 1 and 0 < d < 1):
+                raise SystemExit(f"sample: --alpha and --delta must be in (0, 1), got {a_alpha:g} and {d:g}")
+            from oe_inferencex import sequential as sq
+            anchor = sq.anchor_coverage(args.budget, a_alpha, d)
+            anchor_rule = {"alpha": a_alpha, "delta": d, "first_budget": int(args.budget),
+                           "rule": "the smallest grid zone expecting min_labels_sequential labels at the first budget, "
+                                   f"at most {sq.ANCHOR_CAP:g}"}
+        else:
+            anchor_rule = "declared"
+    if anchor is not None and not est.ZONE_GRID[0] <= anchor <= 1:
+        raise SystemExit(f"sample: --anchor is a share of the map between {est.ZONE_GRID[0]:g} and 1, got {anchor:g}")
     if conf_path:
         hard, conf_px, valid, geo, n_classes, more, prod_info = _read_product(args.scores, conf_path, args.nodata,
                                                                                conf_range, "sample")
@@ -882,6 +921,13 @@ def cmd_sample(args):
     except ValueError as exc:
         raise SystemExit(f"sample: {exc}")
     idx = sample["indices"]
+    if old_side is not None:
+        prev = np.asarray(old_side["indices"], int)
+        if sample["n_population"] != old_side.get("n_population") or not np.array_equal(idx[:prev.size], prev):
+            raise SystemExit(f"sample --extend: {extend} was not drawn from this map with this seed: its windows are not "
+                             "the start of the order this map and seed give. Pass the same scores, --patch, --nodata "
+                             "and --seed it was drawn with")
+        sample["first_budget"] = old_side["first_budget"]
     cond = sample.get("condition")
     rows, cols = np.divmod(idx, ww)
     pr, pc, x, y = window_coords(rows, cols, geo, args.patch)
@@ -903,8 +949,11 @@ def cmd_sample(args):
             w.writerow([int(i), int(r), int(c), int(pr[k]), int(pc[k]), None if x is None else float(x[k]),
                         None if y is None else float(y[k]), None if strata is None else int(strata[pos[int(i)]])]
                        + ([] if cond is None else [cond["names"][int(sample["condition_grid"][int(i)])]])
-                       + [float(margin[r, c]), int(klass[r, c]), ""])
+                       + [float(margin[r, c]), int(klass[r, c]),
+                          old_wrong[k] if old_wrong is not None and k < len(old_wrong) else ""])
     side = {k: (v.tolist() if isinstance(v, np.ndarray) else v) for k, v in sample.items()}
+    if design == "sequential":
+        side["anchor"], side["anchor_rule"] = float(anchor), anchor_rule     # fixed now; certify reads them
     if cond is not None:
         # the design's source of truth for `estimate` and `certify`, which never read the raster again
         side["condition"] = {"source": os.path.abspath(cond_path), "rule": RULE_TEXT, "values": cond["values"],
@@ -942,12 +991,51 @@ def cmd_sample(args):
         notes.append(_unrecorded_note(pooled["n_split"], pooled["n_no_code"]))
         if K >= 2:
             notes.append(_certify_need_note(cond["names"], cond["n_labelled"]))
+    if design == "sequential":
+        kept = 0 if old_wrong is None else sum(str(v).strip() != "" for v in old_wrong)
+        notes.insert(0, ("label from the top row down, in order; certify may be run after any number of labels and "
+                         "holds at every look. To add windows later: oe-inferencex sample " + args.scores
+                         + f" --design sequential --seed {args.seed} --budget <more> --extend {args.out}")
+                     + (f"; the {kept} labels already given are kept" if kept else ""))
     print(f"{len(idx)} windows to label of {sample['n_population']} valid ({what}); wrote {args.out} and its .json. "
           f"{FILL_INSTRUCTION} oe-inferencex estimate {args.out}"
           + "".join(f"\nwarning: {w}" for w in out.get("warnings", []))
           + (f"\nnote: {sample['note']}" if "note" in sample else "")
           + "".join(f"\nnote: {n}" for n in prod_notes + notes if n))
     return 0
+
+
+def _sequential_to_extend(path, args):
+    """The sidecar and the `wrong` column of a sequential sample that `sample --extend` lengthens, checked: it must be a
+    sequential sample of this map drawn with this seed, shorter than the new budget; its anchor, fixed when it was
+    drawn, is kept. Returns (sidecar, wrong values as written, one per row)."""
+    side_path = path[:-4] + ".json" if path.endswith(".csv") else path + ".json"
+    if not os.path.exists(path) or not os.path.exists(side_path):
+        raise SystemExit(f"sample --extend: {path} and its .json sidecar are needed")
+    with open(side_path) as f:
+        side = json.load(f)
+    _check_sidecar(side, side_path)
+    if side.get("design") != "sequential" or side.get("anchor") is None:
+        raise SystemExit(f"sample --extend: {path} was drawn with the {side.get('design')!r} design; only a sequential "
+                         "sample can be extended, since only its order and anchor were fixed before labelling")
+    if int(side.get("seed", -1)) != int(args.seed):
+        raise SystemExit(f"sample --extend: {path} was drawn with --seed {side.get('seed')}; pass the same seed")
+    if os.path.abspath(args.scores) != side.get("scores") or int(args.patch) != int(side.get("patch", -1)):
+        raise SystemExit(f"sample --extend: {path} was drawn from {side.get('scores')} at --patch {side.get('patch')}; "
+                         "extend it from the same map and patch")
+    n_old = len(side["indices"])
+    if args.budget <= n_old:
+        raise SystemExit(f"sample --extend: {path} already holds {n_old} windows; --budget is the new total, larger "
+                         "than that")
+    with open(path, newline="", encoding="utf-8-sig") as f:
+        rows = list(csv.DictReader(f))
+    try:
+        idx = [int(float(r["index"])) for r in rows]
+    except (KeyError, ValueError, OverflowError):
+        raise SystemExit(f"sample --extend: {path} lacks the `index` column `sample` wrote") from None
+    if idx != [int(i) for i in side["indices"]]:
+        raise SystemExit(f"sample --extend: the rows of {path} do not match its sidecar; extend the file `sample` wrote")
+    return side, [r.get("wrong", "") for r in rows]
 
 
 def _sample_disagreement(args):
@@ -1129,6 +1217,20 @@ def _labelled_sample(path, command):
     if not np.array_equal(idx, np.asarray(side["indices"], int)):
         raise SystemExit("the CSV's rows do not match the design in its sidecar; label the file `sample` wrote, in order")
     blank = [i for i, r in enumerate(rows) if str(r.get("wrong", "")).strip() == ""]
+    if blank and side.get("design") == "sequential":
+        # a sequential sample is labelled from the top: the labelled rows are a prefix of its random order, and the
+        # rows below them are windows not labelled yet. A label below a blank would make the labelled set depend on
+        # which windows the reviewer chose to leave, so it is refused.
+        first = blank[0]
+        later = [i for i in range(first, len(rows)) if str(rows[i].get("wrong", "")).strip() != ""]
+        if later:
+            raise SystemExit(f"row {later[0] + 2} is labelled below row {first + 2}, which is not: a sequential sample is "
+                             "labelled from the top row down, in order. Write ? in a window that cannot be judged rather "
+                             "than leaving it blank")
+        if first == 0:
+            raise SystemExit(f"{path}: no window is labelled yet; fill the `wrong` column from the top row down")
+        side = dict(side, indices=list(side["indices"])[:first], n_drawn=len(rows))
+        rows, idx, blank = rows[:first], idx[:first], []
     if blank:
         raise SystemExit(f"{len(blank)} of {len(rows)} windows have no `wrong` value (first at row {blank[0] + 2}); "
                          "every sampled window needs a 1 or a 0, or a ? where it cannot be judged, or the design's "
@@ -1339,10 +1441,18 @@ def cmd_estimate(args):
                          + (f"{int(unjudged.sum())} window(s) are ? (could not be judged)" if unjudged.any() else
                             "--reviewer-false-alarm and --reviewer-miss do not apply to the per-class table")
                          + ". Run estimate without --per-class for the error rate with its bounds")
+    if side.get("design") == "sequential":
+        # the labelled rows are the first windows of a random order: a simple random sample of their number
+        sample = dict(sample, design="random", budget=int(idx.size))
     try:
         res = est.estimate_error_rate(sample, wrong, unjudged=unjudged, reviewer_false_alarm=fa, reviewer_miss=miss)
     except ValueError as exc:
         raise SystemExit(f"estimate: {exc}")
+    if side.get("design") == "sequential":
+        res["sequential_note"] = (f"the first {int(idx.size)} windows of a sequential sample, read as a random sample of "
+                                  "that size. The interval holds when that number was fixed before labelling; one read "
+                                  "at a stop chosen because the labels looked good can be too narrow. certify on this "
+                                  "sample holds at every look")
     per_class_text = ""
     if args.per_class:
         ref = _reference_classes(rows, args.sample)
@@ -1420,7 +1530,8 @@ def cmd_estimate(args):
           f"{res['method']}" + (f"\nnote: {res['bounds_note']}" if res.get("bounds_note") else "")
           + (f"\nwarning: {res['warning']}" if "warning" in res else "") + cond_text + per_class_text
           + (f"\nwarning: {res['per_class_warning']}" if "per_class_warning" in res else "")
-          + (f"\nnote: {res['population_note']}" if "population_note" in res else "") + f"\nwrote {out}")
+          + (f"\nnote: {res['population_note']}" if "population_note" in res else "")
+          + (f"\nnote: {res['sequential_note']}" if "sequential_note" in res else "") + f"\nwrote {out}")
     return 0
 
 
@@ -1448,7 +1559,11 @@ def cmd_certify(args):
     bounds = ([f"{int(unjudged.sum())} window(s) that could not be judged (?) are counted as wrong, which keeps the "
                "guarantee whatever made them hard to judge and certifies less"] if unjudged.any() else [])
     by_condition = side.get("condition_grid") is not None and side.get("design") in ("random", "condition")
-    if side.get("design") != "random" and not by_condition:
+    sequential = side.get("design") == "sequential"
+    if sequential and (args.rule != "prefix" or args.level_cut is not None):
+        raise SystemExit("certify: a sequential sample is certified by the sequential rule, which tests each zone from "
+                         "the anchor outward at every look; --rule and --level-cut belong to the one-look rule")
+    if side.get("design") != "random" and not by_condition and not sequential:
         raise SystemExit(f"certify needs a random sample: this CSV was drawn with the {side.get('design')!r} design. The "
                          "guarantee rests on the labelled windows inside each zone being a random sample of that zone, "
                          "which a stratified or tile draw is not. Draw one with `sample --design random`")
@@ -1457,6 +1572,8 @@ def cmd_certify(args):
     _check_out_file(out, "certify")                   # before the mask, which a refusal used to leave behind
     if by_condition:
         return _certify_by_condition(args, sample, wrong, margin, valid_w, out, mask_path, bounds, int(unjudged.sum()))
+    if sequential:
+        return _certify_sequential(args, side, idx, wrong, margin, valid_w, out, mask_path, bounds, int(unjudged.sum()))
     try:
         res = est.certify_zone(margin.ravel(), idx, wrong, alpha, delta=args.delta, rule=args.rule, valid=valid_w.ravel(),
                                cut=args.level_cut)
@@ -1488,6 +1605,51 @@ def cmd_certify(args):
               f"{100 * args.delta:g}% of samples like this one ({args.rule} rule; the exact upper bound on the zone's error "
               f"rate at that level is {100 * res['upper_bound']:.1f}%). Outside the zone nothing is certified.\n"
               f"{res['note']}{tail}\nwrote {out} and the window mask {mask_path}")
+    return 0
+
+
+def _certify_sequential(args, side, idx, wrong, margin, valid_w, out, mask_path, bounds=(), n_unjudged=0):
+    """certify for a sequential sample: the labelled rows, read from the top, in the order they were drawn; the anchor
+    the sample fixed, or the default from its first budget (sequential.anchor_coverage)."""
+    from oe_inferencex import sequential as sq
+    try:
+        if side.get("anchor") is None:
+            raise ValueError("this sequential sample records no anchor; draw it with this version's sample, which fixes "
+                             "the anchor before any label")
+        res = sq.certify_zone_sequential(margin.ravel(), idx, wrong, args.alpha, delta=args.delta,
+                                         anchor=float(side["anchor"]), valid=valid_w.ravel(), seed=int(side["seed"]))
+        res["anchor_rule"] = side.get("anchor_rule")
+    except ValueError as exc:
+        raise SystemExit(f"certify: {exc}")
+    hw, ww = margin.shape
+    if res["coverage"] is not None:
+        zone = np.zeros(hw * ww, bool)
+        zone[np.asarray(res.pop("zone_indices_in_order"), int)] = True
+        np.save(mask_path, zone.reshape(hw, ww))
+        res["zone_mask"] = os.path.abspath(mask_path)
+    elif os.path.exists(mask_path):
+        os.remove(mask_path)
+    res["sample"] = os.path.abspath(args.sample)
+    res["n_drawn"] = int(side.get("n_drawn", len(idx)))
+    if bounds:
+        res.update({"n_unjudged": n_unjudged, "bounds_note": "; ".join(bounds)})
+    if _population_note(side):
+        res["population_note"] = _population_note(side)
+    with open(out, "w") as f:
+        json.dump(res, f, indent=1, default=float)
+    tail = "".join(f"\nnote: {b}" for b in bounds) + (f"\nnote: {res['population_note']}" if "population_note" in res else "")
+    more = (f"\n{res['n_labelled']} of the {res['n_drawn']} windows drawn are labelled; label more from the top, or extend "
+            "the sample (sample --extend), and run certify again: every look is covered by the same guarantee")
+    if res["coverage"] is None:
+        print(f"no zone certified yet at alpha={args.alpha:g}, delta={args.delta:g} from {res['n_labelled']} labels (sequential "
+              f"rule, anchor {100 * res['anchor']:.0f}% of the map). {res['note']}{tail}{more}\nwrote {out}")
+    else:
+        what = "confidence" if side.get("confidence") else "confidence margin"
+        print(f"the {100 * res['coverage']:.0f}% most confident windows ({res['n_zone']} of {res['n_population']}, {what} >= "
+              f"{res['threshold']:.4f}) are wrong at most {100 * args.alpha:g}% of the time; this statement fails on at most "
+              f"{100 * args.delta:g}% of samples like this one, however often certify is run on it as labels are added "
+              f"(sequential rule, anchor {100 * res['anchor']:.0f}% of the map). Outside the zone nothing is certified.\n"
+              f"{res['note']}{tail}{more}\nwrote {out} and the window mask {mask_path}")
     return 0
 
 
@@ -1912,11 +2074,26 @@ def build_parser():
     sm.add_argument("scores", help="the same map `assess` takes: (H, W) probability or logit map, or (C, H, W) scores")
     sm.add_argument("--budget", type=int, required=True, help="number of windows to label (exp78 measured 300)")
     sm.add_argument("--out", required=True, help="CSV to write; a .json sidecar with the design goes beside it")
-    sm.add_argument("--design", choices=("confidence", "proportional", "random", "tiles", "condition"), default=None,
+    sm.add_argument("--design", choices=("confidence", "proportional", "random", "sequential", "tiles", "condition"),
+                    default=None,
                     help="confidence (default without --condition): stratified by margin, allocated from the model's "
                          "own confidence; tiles: how people actually label, with the cluster interval that requires; "
                          "condition (default with --condition): stratified by input condition, labels split equally, "
-                         "never from the model's confidence; random takes --condition too and only records it")
+                         "never from the model's confidence; random takes --condition too and only records it; "
+                         "sequential: a random order labelled from the top, to which labels can be added (--extend), "
+                         "and certify then holds at every look")
+    sm.add_argument("--anchor", type=float, default=None,
+                    help="sequential design: the smallest zone certify will test, as a share of the map, fixed now "
+                         "before any label; or give --alpha instead")
+    sm.add_argument("--alpha", type=float, default=None,
+                    help="sequential design, without --anchor: the error rate certify will be asked about; the anchor "
+                         "is then the zone this budget can certify if none of its labels is wrong, at most a quarter "
+                         "of the map, fixed now and written to the sidecar")
+    sm.add_argument("--delta", type=float, default=None,
+                    help=f"sequential design, with --alpha: the delta the anchor is computed for (default {est.ZONE_DELTA})")
+    sm.add_argument("--extend", default=None, metavar="CSV",
+                    help="sequential design: a sample CSV to extend to --budget windows, keeping its labels; the new "
+                         "windows are the next ones of the same random order")
     sm.add_argument("--condition", default=None,
                     help="optional integer raster on the map's grid: each pixel's input condition (a cloud flag, the "
                          "modalities present); each condition then gets its own error rate from `estimate` and its "

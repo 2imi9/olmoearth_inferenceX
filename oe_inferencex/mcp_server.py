@@ -83,8 +83,9 @@ TITLES = {
 HARD_RULES = (
     "A review set is not a sample. It is chosen to hold errors, so its error rate overstates the map's. estimate and "
     "certify refuse it.",
-    "certify needs a random sample: draw it with design \"random\", or with a condition layer. The default design "
-    "serves estimate only; certify refuses it.",
+    "certify needs a random sample: draw it with design \"random\" (certify once), \"sequential\" (labels can be "
+    "added and certify run at every look) or with a condition layer. The default design serves estimate only; "
+    "certify refuses it.",
     "Without labels, compare cannot say which map is right. Two maps that agree can both be wrong.",
     "Labels are assumed right. The interval and the zone describe agreement with the reviewer's labels; only estimate "
     "can widen its interval for a reviewer who errs, at rates the user states.",
@@ -228,9 +229,10 @@ CARDS = {
         "grid) it draws only windows where the two maps differ, with an empty `reference_class` column, for estimate "
         "to say which map is more accurate. Designs: confidence (the default without "
         "condition: stratified by confidence; estimate reads it, certify refuses it), random (serves estimate and "
-        "certify; the default for a product's class map with confidence), proportional, tiles (a cluster design for "
-        "labelling tile by tile) and condition (the default with condition: labels split equally across the input "
-        "conditions).",
+        "certify; the default for a product's class map with confidence), sequential (a random order labelled from "
+        "the top; extend adds windows later, keeping the labels, and certify holds at every look), proportional, "
+        "tiles (a cluster design for labelling tile by tile) and condition (the default with condition: labels split "
+        "equally across the input conditions).",
         "Needs: the score raster assess takes, or a product's class map with confidence; a budget (the recorded "
         "experiments used 300); an output directory.",
         "Cannot: label the windows, fetch labels or say whether labels exist (the user or a reviewer fills "
@@ -259,7 +261,10 @@ CARDS = {
         "result JSON and a window mask (.npy, True inside the zone). A sample drawn with condition is certified per "
         "condition. It may certify nothing, and then says why.",
         "Needs: a sample drawn with design \"random\" (or with condition), labelled on every row (? counts as wrong, "
-        "which keeps the guarantee); alpha, such as 0.05; the map's scores (from the sidecar, or scores).",
+        "which keeps the guarantee), or with design \"sequential\", labelled from the top row down as far as the "
+        "reviewer has gone; alpha, such as 0.05; the map's scores (from the sidecar, or scores). On a random sample "
+        "the guarantee is for one run; on a sequential sample it holds at every look, from a smaller zone outward "
+        "(the anchor, fixed when the sample was drawn), at the cost of more labels.",
         "Cannot: certify from the default confidence design, a review set or windows chosen by hand (refused); say "
         "anything about the windows outside the zone; check that the labels are right, or allow for a reviewer who "
         "misses errors (that would need the miss rate inside every zone it can certify).",
@@ -376,7 +381,7 @@ _FLAGS = {"design", "condition", "condition-names", "confidence", "confidence-ra
           "delta", "rule", "budget", "seed", "labels", "reference", "threshold", "date-a", "date-b", "groups", "order",
           "budgets", "tile", "per-tile", "reviewer-false-alarm", "reviewer-miss", "other", "threshold", "windows",
           "differing", "width", "error-rate", "difference", "both-wrong", "coverage", "zone-error", "power",
-          "max-labels"}
+          "max-labels", "anchor", "extend"}
 
 
 def _mcp_words(text):
@@ -785,10 +790,21 @@ def sample(
     scores: Annotated[str, P(description="The score raster assess takes; with confidence, the product's class map")],
     out_dir: Annotated[str, P(description="Directory to write the CSV and its .json sidecar into; created if needed")],
     budget: Annotated[int, P(description="Number of windows to label (the recorded experiments used 300)")],
-    design: Annotated[Literal["confidence", "proportional", "random", "tiles", "condition"] | None,
+    design: Annotated[Literal["confidence", "proportional", "random", "sequential", "tiles", "condition"] | None,
                       P(description="Sampling design. Default: condition with a condition layer, random with "
                                     "confidence (a product's band), confidence otherwise. Use random to certify from "
-                                    "the same labels")] = None,
+                                    "the same labels once; sequential to label from the top, add windows later "
+                                    "(extend) and certify at every look")] = None,
+    anchor: Annotated[float | None, P(description="sequential design: the smallest zone certify will test, as a "
+                                                  "share of the map, fixed now before any label; or give alpha")]
+    = None,
+    alpha: Annotated[float | None, P(description="sequential design, without anchor: the error rate certify will be "
+                                                 "asked about; the anchor is then the zone this budget can certify if "
+                                                 "none of its labels is wrong, at most 0.25 of the map")] = None,
+    delta: Annotated[float | None, P(description="sequential design, with alpha: the delta the anchor is computed "
+                                                 "for (default 0.1)")] = None,
+    extend: Annotated[str | None, P(description="sequential design: a sample CSV to extend to budget windows, keeping "
+                                                "its labels (the same scores, patch and seed)")] = None,
     name: Annotated[str, P(description="File name of the CSV in out_dir")] = "to_label.csv",
     condition: Annotated[str | None, P(description="Optional integer raster on the map's grid: each pixel's input "
                                                    "condition")] = None,
@@ -815,6 +831,11 @@ def sample(
             f"--seed={int(seed)}", f"--tile={int(tile)}", f"--per-tile={int(per_tile)}"]
     if design is not None:
         argv.append(f"--design={design}")
+    _opt(argv, "--anchor", None if anchor is None else float(anchor))
+    _opt(argv, "--alpha", None if alpha is None else float(alpha))
+    _opt(argv, "--delta", None if delta is None else float(delta))
+    if extend is not None:
+        argv.append(f"--extend={_input(extend, 'extend')}")
     argv += _product_argv(confidence, confidence_range)
     if logits:
         argv.append("--logits")
@@ -852,12 +873,24 @@ def sample(
             f"the design is in {side_path}."]
     if per:
         said.append("Labels per condition: " + ", ".join(f"{k} {int(v)}" for k, v in per.items()) + ".")
-    said.append("No window is labelled yet, so nothing is known about the error rate until the user or a reviewer "
-                "fills `wrong` on every row.")
-    limits = ["No window is labelled yet: no tool labels windows, fetches labels or knows whether labels exist.",
+    if d == "sequential":
+        with open(path, newline="", encoding="utf-8-sig") as f:
+            kept = sum(1 for r in csv.DictReader(f) if str(r.get("wrong", "")).strip() != "")
+        said.append(f"{kept} of them are labelled (kept from the sample extended)." if kept else
+                    "No window is labelled yet, so nothing is known about the error rate until the user or a reviewer "
+                    "fills `wrong` from the top row down.")
+    else:
+        said.append("No window is labelled yet, so nothing is known about the error rate until the user or a reviewer "
+                    "fills `wrong` on every row.")
+    limits = ["No window is labelled yet: no tool labels windows, fetches labels or knows whether labels exist."
+              if d != "sequential" else "No tool labels windows, fetches labels or knows whether labels exist.",
               HARD_RULES[3] + " To label blind, hide map_class, write the class seen in a reference_class column and "
               "set wrong where the two differ."]
-    if d in ("random", "condition"):
+    if d == "sequential":
+        limits.append("Both estimate and certify read the rows labelled from the top. certify's statement holds at "
+                      "every look, however often it is run as labels are added; estimate's interval assumes the number "
+                      "of labels was fixed before labelling.")
+    elif d in ("random", "condition"):
         limits.append("Both estimate and certify read this sample.")
     else:
         limits.append(f"This sample serves estimate, and certify refuses the {d} design. To certify a zone, sample "
@@ -868,9 +901,17 @@ def sample(
            f"{os.path.basename(side_path)} beside it. Then call estimate with sample_csv={path}.")
     if d in ("random", "condition"):
         nxt += " The same labels then serve certify."
+    if d == "sequential":
+        nxt = (f"Ask the user or a reviewer to open the windows of {path} from the top row down and set `wrong` to 1 if "
+               "map_class is not what is there, else 0, or ? where the window cannot be judged, keeping the row order "
+               f"and {os.path.basename(side_path)} beside it. Call certify with sample_csv={path} after any number of "
+               "rows; to add windows, call sample again with design \"sequential\", the same seed, a larger budget and "
+               f"extend={path}.")
     return _reply(" ".join(said), _join(limits), nxt, {"sample_csv": path, "sidecar": side_path},
                   {"design": d, "n_labelled": len(side["indices"]), "n_population": side["n_population"],
-                   "per_condition": per, "seed": side.get("seed")})
+                   "per_condition": per, "seed": side.get("seed"),
+                   **({"anchor": side.get("anchor"), "first_budget": side.get("first_budget")} if d == "sequential"
+                      else {})})
 
 
 def _out_json(sample_csv, out_dir, suffix):
@@ -1046,7 +1087,8 @@ def _which_map(r, out):
 
 def certify(
     sample_csv: Annotated[str, P(description="The CSV that sample wrote with design \"random\" (or with condition), "
-                                             "with `wrong` filled on every row")],
+                                             "with `wrong` filled on every row, or with design \"sequential\", "
+                                             "filled from the top row down")],
     alpha: Annotated[float, P(description="The error rate the certified zone may not exceed, such as 0.05")],
     delta: Annotated[float, P(description="The probability that the statement is wrong")] = est.ZONE_DELTA,
     rule: Annotated[Literal["prefix", "bonferroni"], P(description="prefix (default): fixed-sequence testing; "
@@ -1078,6 +1120,8 @@ def certify(
         files["zone_mask"] = r["zone_mask"]
     summ = {k: r.get(k) for k in ("alpha", "delta", "rule", "n_labelled", "n_population", "min_labels_to_certify",
                                   "coverage", "n_zone", "threshold", "upper_bound")}
+    if r.get("rule") == "sequential":
+        summ.update({"anchor": r.get("anchor"), "n_drawn": r.get("n_drawn")})
     a, d = 100 * float(alpha), 100 * float(delta)
     if r.get("by_condition"):
         lines = [ln for ln in printed.splitlines() if ln and not ln.startswith("wrote ")]
@@ -1094,6 +1138,14 @@ def certify(
                                                                "n_tied_at_threshold", "n_tied_inside_zone")}
                                  for name, e in r["per_condition"].items()}
         certified = r.get("certified_share_of_map") is not None
+    elif r["coverage"] is not None and r.get("rule") == "sequential":
+        said = [f"Taken together, the {100 * r['coverage']:.0f}% most confident windows ({r['n_zone']} of "
+                f"{r['n_population']}, confidence >= {r['threshold']:.4f}) are wrong at most {a:g}% of the time. The "
+                "rate holds for them as a group, not for each window, and outside them nothing is certified. This "
+                f"statement fails on at most {d:g}% of samples like this one however often certify is run on it as "
+                f"labels are added (delta, which can be set lower; sequential rule, from the anchor zone, "
+                f"{_pc(r['anchor'])} of the map, outward)."]
+        certified = True
     elif r["coverage"] is not None:
         # "are wrong at most 5% of the time" was read as a promise for each window, and delta as fixed (the agent
         # test of 2 October 2026)
@@ -1147,6 +1199,16 @@ def certify(
             nxt = ("The mask is a boolean array on the window grid. Outside it, each condition's own review set, from "
                    "assess with the condition layer, says which windows to check first."
                    + (" " + nxt if any(e.get("coverage") is None for e in r["per_condition"].values()) else ""))
+    elif r.get("rule") == "sequential":
+        nxt = (f"{r['n_labelled']} of the {r.get('n_drawn', r['n_labelled'])} windows drawn are labelled. Label more "
+               "from the top, or extend the sample (sample with design \"sequential\", the same seed, a larger budget "
+               "and extend), and call certify again: every look is covered by the same guarantee. A zone with no "
+               f"error among its labels needs at least {r['min_labels_to_certify']} of them, and the anchor zone "
+               f"({_pc(r['anchor'])} of the map) must be certified first.")
+        if certified:
+            nxt = ("The mask is a boolean array on the window grid. More labels, from the top of the same sample, can "
+                   "only extend the zone outward; outside it, the review sets of assess say which windows to check "
+                   "first.")
     elif certified:
         nxt = ("The mask is a boolean array on the window grid. Outside it, the review sets of assess say which "
                "windows to check first.")

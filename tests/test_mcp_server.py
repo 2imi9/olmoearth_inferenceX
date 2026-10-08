@@ -519,7 +519,7 @@ def test_the_server_lists_six_tools_each_described_by_its_card():
     assert schema["assess"]["required"] == ["scores", "out_dir"]
     assert set(schema["certify"]["required"]) == {"sample_csv", "alpha"}
     assert schema["sample"]["properties"]["design"]["anyOf"][0]["enum"] == ["confidence", "proportional", "random",
-                                                                            "tiles", "condition"]
+                                                                            "sequential", "tiles", "condition"]
     assert all(p.get("description") for t in tools for p in t.inputSchema.get("properties", {}).values())
 
 
@@ -563,6 +563,40 @@ def test_assess_says_where_to_look_and_that_it_is_not_an_error_rate(qs, capsys):
 
 
 @needs_map
+def test_a_sequential_sample_is_certified_at_every_look_and_extended(qs):
+    """design="sequential": the rows labelled from the top are certified under the sequential rule, the reply says
+    the statement holds at every look and how to add windows, and extend keeps the labels already given."""
+    import csv as _csv
+    out = _ok("sample", scores=str(qs / "scores.tif"), out_dir=str(qs / "seq"), budget=600, design="sequential",
+              seed=2, alpha=0.05)
+    path = str(qs / "seq" / "to_label.csv")
+    assert out["summary"]["design"] == "sequential" and out["summary"]["first_budget"] == 600
+    assert out["summary"]["anchor"] == 0.15                    # 71 labels / 600 = 0.118: the next grid level
+    _refused("sample", scores=str(qs / "scores.tif"), out_dir=str(qs / "seq2"), budget=600, design="sequential")
+    assert "from the top row down" in out["next"] and f"extend={path}" in out["next"]
+    assert "holds at every look" in out["limits"]
+    _label(path, qs)
+    rows = list(_csv.DictReader(open(path)))
+    for r in rows[400:]:
+        r["wrong"] = ""                                        # the reviewer has gone 400 rows down
+    with open(path, "w", newline="") as f:
+        w = _csv.DictWriter(f, fieldnames=list(rows[0]))
+        w.writeheader()
+        w.writerows(rows)
+    out = _ok("certify", sample_csv=path, alpha=0.05)
+    s = out["summary"]
+    assert s["rule"] == "sequential" and s["n_labelled"] == 400 and s["n_drawn"] == 600 and s["anchor"] is not None
+    if s["coverage"] is not None:
+        assert "however often certify is run on it as labels are added" in out["conclusion"]
+        assert "can only extend the zone outward" in out["next"]
+    else:
+        assert "every look is covered by the same guarantee" in out["next"]
+    out = _ok("sample", scores=str(qs / "scores.tif"), out_dir=str(qs / "seq"), budget=900, design="sequential",
+              seed=2, extend=path)
+    assert out["conclusion"].startswith("900 windows to label") and "400 of them are labelled" in out["conclusion"]
+    _refused("certify", sample_csv=path, alpha=0.05, rule="bonferroni")
+
+
 def test_sample_estimate_certify_give_the_readme_numbers(qs):
     out = _ok("sample", scores=str(qs / "scores.tif"), out_dir=str(qs / "random"), budget=300, design="random")
     csv_path = str(qs / "random" / "to_label.csv")

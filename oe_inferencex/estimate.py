@@ -600,7 +600,9 @@ def sample_for_estimation(margin, budget, design="confidence", p1=None, tiles=No
     budget  : number of windows to label
     design  : "confidence" (default) stratifies by margin quintile and allocates by Neyman's rule from the model's
               own top-1 probability `p1`, which it needs; "proportional" stratifies and allocates by size;
-              "random" is a simple random sample; "tiles" takes tiles in a random order and labels up to
+              "random" is a simple random sample; "sequential" is the first `budget` windows of a fixed random order
+              (`sequential.sequential_order`), so that labels can be added and certified at every look; "tiles"
+              takes tiles in a random order and labels up to
               `per_tile` windows of each until the budget is met, which needs `tiles`, the tile id of every window;
               "condition" stratifies by input condition and splits the labels equally (`equal_allocation`), which
               needs `condition`
@@ -624,6 +626,9 @@ def sample_for_estimation(margin, budget, design="confidence", p1=None, tiles=No
     if condition is not None and design == "tiles":
         raise ValueError("the tiles design does not take a condition: a tile can span conditions, and the tile interval "
                          "is not graded per condition.")
+    if condition is not None and design == "sequential":
+        raise ValueError("the sequential design does not take a condition: certify reads it as one random order of the "
+                         "whole map")
     if condition is None and design == "condition":
         raise ValueError('design "condition" needs `condition`, the input condition of every window (--condition)')
     # a window with no finite margin is not in the population: assess's confidence is NaN at no-data, and until
@@ -643,6 +648,12 @@ def sample_for_estimation(margin, budget, design="confidence", p1=None, tiles=No
         c_pop, c_values, c_names, c_sizes, c_notes = _condition_index(condition, pop, margin.size, condition_names)
     if design == "random":
         out["indices"] = pop[rng.choice(N, budget, replace=False)]      # the same draw with or without a condition
+    elif design == "sequential":
+        # the first `budget` windows of a fixed random order (sequential.sequential_order), read in that order; a
+        # reviewer who adds labels takes the next ones, and certify then uses the sequential rule, valid at every look
+        from .sequential import sequential_order
+        out["indices"] = pop[sequential_order(N, seed)[:budget]]
+        out["first_budget"] = budget
     elif design == "condition":
         # a simple random sample within each condition; with one condition this is the random design's own draw
         # (draw_stratified with one stratum returns the indices of rng.choice(N, budget))
@@ -718,7 +729,8 @@ def sample_for_estimation(margin, budget, design="confidence", p1=None, tiles=No
                     # the population size of every tile, over valid windows: the ratio estimator weights by it
                     "tile_ids": [int(t) for t in by], "tile_valid_sizes": [int(v.size) for v in by.values()]})
     else:
-        raise ValueError(f'design must be "confidence", "proportional", "random", "tiles" or "condition", got {design!r}')
+        raise ValueError(f'design must be "confidence", "proportional", "random", "sequential", "tiles" or "condition", '
+                         f'got {design!r}')
     out["indices"] = np.asarray(out["indices"], int)
     if condition is not None:
         grid = np.full(margin.size, -1, dtype=np.int64)          # condition index per window, -1 outside the population
@@ -1620,7 +1632,7 @@ ZONE_DELTA = 0.10
 ZONE_RULES = ("prefix", "bonferroni", "plugin")
 ZONE_CUTS = ("standard", "ramp")
 ZONE_CUT = "standard"             # the level cut; "ramp" is an option (exp95, exp96 and their audit: zone_cut)
-# The note a prefix certification carries. The prefix rule is fixed-sequence testing (Angelopoulos et al. 2021, Learn
+# The note a prefix certification carries. The prefix rule is fixed-sequence testing (Angelopoulos et al. 2025, Learn
 # then Test): the levels are ordered before any label is read and each p-value is exact, so a zone wrong more than
 # alpha of the time is certified only if the first such level in the order passes its test, which happens on at
 # most delta of samples, on any map. Until 1.3.1 the note said the rule was valid only if the zone's error rate does
@@ -1784,9 +1796,9 @@ def zone_counts(positions, wrong, sizes):
 def apply_zone_rule(p, b, k, alpha, delta=ZONE_DELTA, rule="prefix", n=None):
     """Which grid levels a rule accepts, and the largest one; levels are in increasing coverage.
     prefix      accept while p <= delta from the smallest zone up, stop at the first failure: fixed-sequence
-                testing (Angelopoulos et al. 2021, Learn then Test), valid on any map whatever the shape of the
+                testing (Angelopoulos et al. 2025, Learn then Test), valid on any map whatever the shape of the
                 zone's error rate; weak when the most confident windows hold many errors, since it stops early
-    bonferroni  accept every level with p <= delta / J, J the number of levels (Angelopoulos et al. 2021, Learn
+    bonferroni  accept every level with p <= delta / J, J the number of levels (Angelopoulos et al. 2025, Learn
                 then Test; valid on any map); it can pass a level the prefix rule stops at, and needs a smaller
                 p-value at every level
     plugin      accept every level whose sample rate k / b is at most alpha; no guarantee, the comparator

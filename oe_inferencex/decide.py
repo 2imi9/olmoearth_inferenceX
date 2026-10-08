@@ -289,10 +289,12 @@ def _answer_trusted(r, share=None):
         cov = float(r.get("certified_share_of_map") or 0.0)
     else:   # the zone's own size over the map, not the grid's rounded label (3686 of 4096 is not 90%)
         cov = r["n_zone"] / r["n_population"] if r.get("n_zone") else 0.0
+    seq = r.get("rule") == "sequential"
     if cov > 0:
         why = (f"{_pc(cov)} of the map is certified: taken together, those windows are wrong at most {_pc(alpha)} of "
-               f"the time, a statement that fails on at most {_pc(delta)} of samples like this one. The rate holds for "
-               "them as a group, not for each window, and outside them nothing is certified.")
+               f"the time, a statement that fails on at most {_pc(delta)} of samples like this one"
+               + (", however often certify is run on it as labels are added" if seq else "")
+               + ". The rate holds for them as a group, not for each window, and outside them nothing is certified.")
     else:
         why = (f"Nothing is certified at {_pc(alpha)} from {r.get('n_labelled')} labels. That is not evidence that "
                f"the map is worse than {_pc(alpha)}: more labels can certify a zone wherever the map is good enough.")
@@ -306,16 +308,23 @@ def _answer_trusted(r, share=None):
         tail += " " + str(r["population_note"]).strip()
     ev = {k: r.get(k) for k in ("alpha", "delta", "rule", "n_labelled", "n_population", "n_zone", "coverage",
                                 "threshold", "upper_bound", "min_labels_to_certify", "n_unjudged", "bounds_note",
-                                "population_note", "note") if r.get(k) is not None}
+                                "population_note", "note", "anchor", "n_drawn") if r.get(k) is not None}
     if share is None:
         out = {"type": "score", "answer": cov, "level": 1 - delta, "exact": True, "because": why + tail, "evidence": ev}
     else:
         a = "yes" if cov >= share else "undetermined"
-        if a == "undetermined":
+        if a == "undetermined" and seq:
+            why = (f"No zone covering at least {_pc(share)} of the map is certified at {_pc(alpha)} from these labels "
+                   f"(certified: {_pc(cov)}). That is not a no: this is a sequential sample, so more of its windows, "
+                   "labelled from the top (or after sample --extend), can certify more, but only from the anchor "
+                   f"outward and only where the map's error rate is at most {_pc(alpha)}; certify may be run again at "
+                   "every look under the same guarantee.")
+        elif a == "undetermined":
             why = (f"No zone covering at least {_pc(share)} of the map is certified at {_pc(alpha)} from these labels "
                    f"(certified: {_pc(cov)}). That is not a no: a new random sample with more labels can certify more, but "
                    f"only where the map's error rate is at most {_pc(alpha)}. Fix its budget before labelling and certify "
-                   "once: every run of certify is a new test, and retrying raises the chance that a certificate is wrong.")
+                   "once: every run of certify is a new test, and retrying raises the chance that a certificate is wrong. "
+                   "A sequential sample (sample --design sequential) is the one that can be added to.")
         why += tail
         out = {"type": "yes_no", "answer": a, "level": 1 - delta, "exact": True, "because": why,
                "evidence": {**ev, "certified": cov}}

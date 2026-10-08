@@ -86,8 +86,9 @@ Do not work around them. The package refuses only what a rule says it refuses; t
 
 - A review set is not a sample. It is chosen to hold errors, so its error rate overstates the map's. estimate and
   certify refuse it.
-- certify needs a random sample: draw it with design "random", or with a condition layer. The default design
-  serves estimate only; certify refuses it.
+- certify needs a random sample: draw it with design "random" (certify once), "sequential" (labels can be added
+  and certify run at every look) or with a condition layer. The default design serves estimate only; certify
+  refuses it.
 - Without labels, compare cannot say which map is right. Two maps that agree can both be wrong.
 - Labels are assumed right. The interval and the zone describe agreement with the reviewer's labels; only estimate
   can widen its interval for a reviewer who errs, at rates the user states.
