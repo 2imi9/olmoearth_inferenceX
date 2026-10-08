@@ -597,6 +597,7 @@ def test_a_sequential_sample_is_certified_at_every_look_and_extended(qs):
     _refused("certify", sample_csv=path, alpha=0.05, rule="bonferroni")
 
 
+@needs_map
 def test_sample_estimate_certify_give_the_readme_numbers(qs):
     out = _ok("sample", scores=str(qs / "scores.tif"), out_dir=str(qs / "random"), budget=300, design="random")
     csv_path = str(qs / "random" / "to_label.csv")
