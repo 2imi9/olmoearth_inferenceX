@@ -198,6 +198,61 @@ hard mask, a quantized band, a constant map) carries `tied_at_cutoff` and a warn
 windows is raster position. Without labels, the package does not report how wrong a map is; that requires a labelled
 sample (`sample`, then `estimate` or `certify`).
 
+## From an OlmoEarth run
+
+`from-olmoearth` reads the rslearn dataset an OlmoEarth run writes (`olmoearth_run` runs rslearn) and writes the
+files `assess` reads. It needs the `geo` extra (rasterio), and neither torch nor rslearn.
+
+```bash
+oe-inferencex from-olmoearth path/to/dataset --out run --conditions
+```
+
+It reads every window in `windows/<group>/<name>/` whose output layer (`--layer`, default `output`) is marked
+`completed`, and lists every other window in `run/olmoearth_output.json` with the reason. A segmentation output
+becomes `scores_<EPSG>.tif`, one per CRS: the windows' probability bands pasted onto one grid, NaN where no window
+predicted. A pixel whose bands are all 0, the fill rslearn leaves where no crop predicted, is NaN too. Two windows
+that cover one pixel must agree there, or the read is refused. A per-window classification
+(`layers/output/data.geojson`) becomes `window_probs.npy`, one column per window, with `window_probs.csv` naming each
+column; `assess --patch 1` reads it, and its boundary column means nothing there. The command prints the `assess`
+command that reads what it wrote. NaN is always read as no-data, so the command needs no `--nodata`.
+
+**Probabilities.** By default rslearn's SegmentationTask writes one band of argmax class ids, and no published
+OlmoEarth project changes that. A class map has no confidence to rank, so `from-olmoearth` refuses it and says how to
+get probabilities. In `model.yaml`, set `output_probs: true` in the segmentation task's `init_args` and leave
+`prob_scales` unset, since it rescales the probabilities so that they no longer sum to 1 (such a layer is refused too).
+Give the `RslearnWriter` a `layer_config` with one float32 band per decoder channel, named without underscores:
+an integer layer truncates the probabilities to 0 and 1. Then rerun the inference stage.
+
+```yaml
+          segment:                                    # data.init_args.task.init_args.tasks
+            class_path: rslearn.train.tasks.segmentation.SegmentationTask
+            init_args:
+              output_probs: true                      # no prob_scales
+    - class_path: rslearn.train.prediction_writer.RslearnWriter     # trainer.callbacks
+      init_args:
+        layer_config:
+          type: raster
+          band_sets:
+            - bands: [p0, p1, p2, p3, p4, p5, p6, p7, p8, p9]       # AWF's decoder emits 10 channels
+              dtype: float32
+```
+
+AWF's tenth channel is the label fill value, never a training target. A per-window classification needs
+`prob_property: "probs"` in its task, as Forest Loss Driver sets; `--prob-property` names another property.
+
+**The condition layer.** With `--conditions`, `condition_<EPSG>.tif` lies on the scores' grid. Each pixel's code says,
+for each input layer, in how many of the run's timesteps a scene covered the pixel: all, at least half, fewer, or
+none. A timestep missing from a window counts as not covering it. Where every item group of a layer holds an SCL band,
+the code also says in how many of the covered timesteps SCL marks cloud, shadow or cirrus: none, fewer than half, or
+at least half. The input layers are those `config.json` gives a data source, or `--inputs`.
+`run/olmoearth_conditions.json` holds each code's name, the rule, and the `--condition-names` argument the printed
+command passes. OlmoEarth masks a
+timestep missing from a whole window, but reads an uncovered or clouded pixel of a present timestep as valid input;
+those are the conditions the layer records, so that `assess` ranks each of them on its own
+([The input condition](#inputs)). The layer does not see what SCL does not flag (haze, smoke, snow), a scene from
+another season than its period, or anything about the model. No published project stores SCL, so without it the
+layer records coverage alone.
+
 ## Command line
 
 `oe-inferencex <command> --help` lists each command's options. Outputs are JSON summaries, CSV tables of windows with
@@ -929,6 +984,7 @@ On this pair most of the accuracy comes from the post-event side being usually r
 | `metrics`, `stats` | AURC, capture, calibration error and their design-weighted forms; sign tests and bootstraps |
 | `reliability`, `evidence` | SHRUG-FM's reliability signals, torch-free; the heads a candidate rule is scored with |
 | `taskcard`, `lcc` | The [task cards](method/taskcards.md) of OlmoEarth's fine-tuned models; a reader for the served change rasters |
+| `olmoearth` | An OlmoEarth run's rslearn dataset read into scores and an input-condition layer (`from-olmoearth`; rasterio) |
 | `decide` | Typed answers to set questions, read from a result that `estimate`, `certify` or `compare` wrote |
 | `plan` | How many labels each labelled route needs, budget by budget, before any label is drawn |
 | `cli`, `demo` | The `oe-inferencex` commands |
