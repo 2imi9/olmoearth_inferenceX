@@ -1233,13 +1233,21 @@ def decide(
         elif not said_first:
             cost = " " + _decide.certificate_second_look(delta_r if delta_r is not None else est.ZONE_DELTA, True)
     elif pending and rkind != "comparison":
-        # a pending answer whose own sentence holds no caveat (a per-class or per-condition one) gets its cost here;
-        # "said above" only when every pending answer's sentence carries one
+        # a pending answer whose own sentence holds no caveat (a per-class or per-condition one) gets its cost here,
+        # named, unless the same cost was already said above; the others point above
         bare = [q for q in pending if not any(c in r["answers"][q]["because"] for c in caveats)]
+        exact_bare = all(r["answers"][q].get("exact") for q in bare)
+        if bare and _decide.interval_second_look(exact_bare) in told:
+            bare = []
+        covered = [q for q in pending if q not in bare]
+        parts = []
+        if covered and told:
+            parts.append(("For " + ", ".join(covered) + ", that is" if bare else "That is")
+                         + " a second test, at the cost said above.")
         if bare:
-            cost = " " + _decide.interval_second_look(all(r["answers"][q].get("exact") for q in bare), lead=False)
-        elif told:
-            cost = " That is a second test, at the cost said above."
+            c = _decide.interval_second_look(exact_bare, lead=False)
+            parts.append(("For " + ", ".join(bare) + ", " + c[0].lower() + c[1:]) if covered else c)
+        cost = (" " + " ".join(parts)) if parts else ""
     nxt = (("For " + ", ".join(pending) + ": " + more.get(rkind, "a larger sample drawn the same way, labelled in "
                                                                 "full, narrows the interval.") + cost) if pending else
            "The result can also answer: " + ", ".join(r["available"]) + ".")

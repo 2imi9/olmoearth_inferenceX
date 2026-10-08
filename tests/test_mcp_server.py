@@ -1123,5 +1123,17 @@ def test_decide_on_a_zone_that_could_not_certify_says_the_next_sample_is_the_fir
     path = tmp_path / "mixed_estimate.json"
     path.write_text(json.dumps(dict(base, estimate=0.1, low=0.08, high=0.12, per_class={"0": row})))
     out = _ok("decide", result_json=str(path), questions=["error_rate_below=0.1", "user_accuracy_above=0.9"])
-    assert out["next"].endswith(_decide_mod.interval_second_look(False, lead=False))
-    assert "said above" not in out["next"]
+    # the exact whole-map answer points above; the nominal per-class one is named with its own cost
+    assert "For error_rate_below=0.1, that is a second test, at the cost said above." in out["next"]
+    nominal = _decide_mod.interval_second_look(False, lead=False)
+    assert out["next"].endswith("For user_accuracy_above=0.9, " + nominal[0].lower() + nominal[1:])
+    assert out["next"].count("nominal here") == 1 and "error_rate_below=0.1, read after" not in out["next"]
+    # a nominal whole-map answer already says the nominal cost: the per-class one points above, said once per reply
+    path = tmp_path / "nominal_estimate.json"
+    path.write_text(json.dumps(dict(base, estimate=0.1, low=0.08, high=0.12, per_class={"0": row},
+                                    design="confidence",
+                                    method="stratified by confidence margin; Wilson interval on the design's effective "
+                                           "sample size")))
+    out = _ok("decide", result_json=str(path), questions=["error_rate_below=0.1", "user_accuracy_above=0.9"])
+    assert (out["conclusion"] + out["next"]).count("nominal here") == 1
+    assert out["next"].endswith("That is a second test, at the cost said above.")
