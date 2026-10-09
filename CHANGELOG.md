@@ -22,7 +22,10 @@ source; exp98 is its first real run.
 probabilities kept, graded at Ai2's own AWF validation labels.** `docs/plan/awf_deployment.md`,
 `exp/exp98_awf_deployment.py`, and the jobs `exp/jobs/e98_*.sh` with the changed configs in `exp/jobs/e98_config/`.
 The labels were placed by experts, not drawn at random over the map, so exp98 grades accuracy and the confidence
-ranking at those points and gives no whole-map rate and no certified zone.
+ranking at those points and gives no whole-map rate and no certified zone. A report-only Part H describes the map and
+the points by MODIS burned area (MCD64A1 v061, 2023, from Planetary Computer; `exp/exp98_burned.py`, job
+`exp/jobs/e98_burned.sh`), a condition layer `assess --condition` reads; Planetary Computer lacks September 2023, which
+the layer's names and records state.
 
 ## 1.8.0 (2026-10-08)
 

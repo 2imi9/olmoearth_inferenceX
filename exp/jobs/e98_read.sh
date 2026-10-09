@@ -34,9 +34,15 @@ ulimit -n 65536
 REPO=/home/qi_zim_neu/olmoearth_inferenceX
 cd "$REPO" || exit 1
 git fetch -q origin main
-git reset -q --hard origin/main
-if [ -n "${E98_SHA:-}" ] && [ "$(git rev-parse HEAD)" != "$E98_SHA" ]; then
-  echo "checkout is $(git rev-parse HEAD), not E98_SHA=$E98_SHA"; exit 2
+if [ -n "${E98_SHA:-}" ]; then
+  # A pinned stage checks out its own commit, whatever main has become since the chain was submitted, as the other
+  # e98 stages do (this stage used to reset to main and then refuse whenever main had moved).
+  git cat-file -e "$E98_SHA^{commit}" 2>/dev/null || git fetch -q origin "$E98_SHA" \
+    || { echo "E98_SHA=$E98_SHA is not a commit on origin"; exit 2; }
+  git checkout -q --force --detach "$E98_SHA"
+  [ "$(git rev-parse HEAD)" = "$E98_SHA" ] || { echo "checkout is $(git rev-parse HEAD), not E98_SHA=$E98_SHA (give the full sha)"; exit 2; }
+else
+  git reset -q --hard origin/main
 fi
 test -f oe_inferencex/olmoearth.py \
   || { echo "oe_inferencex/olmoearth.py is not on origin/main: merge the from-olmoearth branch first"; exit 2; }

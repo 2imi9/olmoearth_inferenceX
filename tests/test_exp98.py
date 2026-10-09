@@ -48,7 +48,7 @@ def test_the_summary_holds_every_part(smoke, out_dir):
         assert json.load(f)["prereg"]["P3"]["value"] == pytest.approx(X["auroc"])
     z = np.load(os.path.join(out_dir, "exp98_units_smoke.npz"))
     assert set(z.files) == {"names", "split", "label", "covered", "pred_deployed", "suspicion", "p1", "condition",
-                            "boundary", "input_identical"}
+                            "burned", "boundary", "input_identical"}
     assert int(z["covered"].sum()) == 50
 
 
@@ -209,6 +209,89 @@ def test_part_g_inputs(smoke):
     inv = smoke["inventory"]["inputs_reported"]
     assert "validation_points_by_input" not in inv, "the inventory reads no outcome"
     assert inv["n_identical_all_groups"] == X["inputs"]["identical"]
+
+
+def test_part_h_burned_area(smoke, out_dir):
+    h = smoke["burned_area_reported"]
+    assert h["status"].startswith("report-only") and "holds" not in json.dumps(h)
+    names = {c: e98.burn_name(c, e98.SMOKE_BURN_NAMES) for c in (-1, 0, 1)}
+    assert names[0] == "mcd64a1:no-burn-2023:sep-not-read" and h["months_missing"] == ["2023-09"]
+    pts = h["validation_points"]
+    assert {c: (pts[names[c]]["n_points"], pts[names[c]]["n_errors"]) for c in names} == X["burned"]["points"]
+    w = h["windows"]
+    assert {c: w["per_code"][names[c]]["n_windows"] for c in names} == X["burned"]["windows"]
+    assert w["n_windows"] == 1000
+    assert w["n_windows_dropped_overlapping_an_earlier_grid"] == X["burned"]["dropped_overlap"]
+    assert {c: h["pixels"][names[c]]["n"] for c in names} == X["burned"]["pixels"]
+    # 17 windows hold a point less confident than the background's 0.6 (ranks 0-16: four burned, ten unrecorded,
+    # three not burned); the other 83 of the least confident 100 come from the 960 windows tied at the background
+    tied = {-1: 70, 0: 420, 1: 470}
+    above = {-1: 10, 0: 3, 1: 4}
+    assert w["n_tied_at_cutoff"] == 960 and w["n_tied_taken"] == 83
+    for c in names:
+        share = (above[c] + 83 * tied[c] / 960) / 100
+        assert w["per_code"][names[c]]["share_of_least_confident"] == pytest.approx(share)
+        assert w["per_code"][names[c]]["confidence_quartiles"]["0.5"] == pytest.approx(0.6)
+    z = np.load(os.path.join(out_dir, "exp98_units_smoke.npz"))
+    v = (z["split"] == "val") & z["covered"]
+    assert sorted(np.unique(z["burned"][v]).tolist()) == [-1, 0, 1]
+
+
+def _analyse_smoke(tmp_path):
+    paths = e98.make_smoke_inputs(str(tmp_path))
+    rec, units = e98.analyse(paths["scores"], paths["labels"], replica_path=paths["replica"],
+                             n_boot=e98.SMOKE_BOOT, zone_draws=e98.SMOKE_ZONE_DRAWS,
+                             max_labels=e98.SMOKE_MAX_LABELS, log=lambda *a: None, **e98.SMOKE_FLOORS)
+    return paths, rec, units
+
+
+def _graded_as_designed(rec, units):
+    assert {p: rec["prereg"][p]["holds"] for p in e98.PREDICTIONS} == X["holds"]
+    assert all(rec["prereg"][p]["graded"] for p in e98.PREDICTIONS)
+    assert (units["burned"] == -2).all(), "Part H left out: no point carries a burn code"
+    e98.check_no_coordinates(rec)
+
+
+@pytest.mark.parametrize("fault", ["unreadable_file", "names_json", "window_refusal", "point_read"])
+def test_a_failing_burned_layer_never_stops_the_graded_run(tmp_path, monkeypatch, fault):
+    """Part H is report-only (docs/plan/awf_deployment.md, step 10): an unreadable burned_<EPSG>.tif, an unreadable
+    names file, a refusal from the window pooling or a failed point read leaves Part H out and P1-P5 are graded."""
+    if fault == "unreadable_file":
+        orig = e98.make_smoke_inputs
+
+        def broken(root):
+            paths = orig(root)
+            f = os.path.join(paths["scores"][1], f"burned_{e98.SMOKE_GRID['epsg']}.tif")
+            with open(f, "wb") as fh:
+                fh.write(b"not a tiff")
+            return paths
+        monkeypatch.setattr(e98, "make_smoke_inputs", broken)
+    elif fault == "names_json":
+        orig = e98.make_smoke_inputs
+
+        def broken(root):
+            paths = orig(root)
+            with open(os.path.join(paths["scores"][0], e98.eb.NAMES_JSON), "w") as fh:
+                fh.write("{not json")
+            return paths
+        monkeypatch.setattr(e98, "make_smoke_inputs", broken)
+    elif fault == "window_refusal":
+        def refuse(*a, **k):
+            raise ValueError("planted refusal")
+        monkeypatch.setattr(e98, "burn_windows", refuse)      # as burn_windows re-raises pool_condition's
+    else:
+        def fail(*a, **k):
+            raise OSError("planted read failure")
+        monkeypatch.setattr(e98, "codes_at", fail)
+    _, rec, units = _analyse_smoke(tmp_path)
+    _graded_as_designed(rec, units)
+    h = rec["burned_area_reported"]
+    if fault == "point_read":
+        assert "planted read failure" in h["error"]
+    else:
+        assert "windows" not in h and "validation_points" not in h, h
+        assert {"unreadable_file": "could not be opened", "names_json": "names the codes differently",
+                "window_refusal": "planted refusal"}[fault] in h["note"]
 
 
 # ----------------------------------------------------------------------------- the grades

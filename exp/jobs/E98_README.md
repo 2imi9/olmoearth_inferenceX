@@ -28,6 +28,7 @@ what the jobs echo from them is masked. The home data directory holds what the r
 | `e98_predict.sh` | rtx-batch, 1 GPU, 16 CPUs, 128 GB, 24 h | `run_inference`, then a check of every output layer; `E98_STAGE=post` runs `postprocess` and `combine` on cpu |
 | `e98_collect.sh` | cpu, 8 CPUs, 32 GB, 3 h | output and SCL layers to `~/olmoearth_inferenceX/data/exp98/awf_run/`, with a sha256 manifest |
 | `e98_read.sh` | cpu, 8 CPUs, 64 GB, 4 h | `oe-inferencex from-olmoearth` on every root, in parts of at most 3 GiB of grid whose windows do not overlap, each part to `data/exp98/scores/r<root>_p<part>/`; needs the reader merged into main |
+| `e98_burned.sh` | cpu, 8 CPUs, 64 GB, 3 h | MODIS burned area (MCD64A1 v061, 2023) on each part's grid, `burned_<EPSG>.tif` beside its scores, for Part H and `assess --condition` |
 | `e98.sh` | cpu, 8 CPUs, 32 GB, 2 h | exp98 itself (inventory, or the run once the page is frozen), reading every part directory as one map |
 
 Scratch layout, all under `/scratch/qi_zim_neu/olmoearth_inferenceX/deploy/`: `python/`, `venv/`,
@@ -59,6 +60,7 @@ PREP=$(ssh aicr "E98_PILOT=1 E98_SHA=$SHA sbatch --parsable -t 02:00:00 --depend
 PRED=$(ssh aicr "E98_PILOT=1 E98_SHA=$SHA sbatch --parsable -p rtx-batch --gpus=1 -t 02:00:00 --dependency=afterok:$PREP" < exp/jobs/e98_predict.sh)
 COLL=$(ssh aicr "E98_PILOT=1 E98_SHA=$SHA sbatch --parsable -t 01:00:00 --dependency=afterok:$PRED" < exp/jobs/e98_collect.sh)
 READ=$(ssh aicr "E98_PILOT=1 E98_SHA=$SHA sbatch --parsable -t 01:00:00 --dependency=afterok:$COLL" < exp/jobs/e98_read.sh)
+BURN=$(ssh aicr "E98_PILOT=1 E98_SHA=$SHA sbatch --parsable -t 01:00:00 --dependency=afterok:$READ" < exp/jobs/e98_burned.sh)
 ```
 
 What to check (`slurm/e98prep-<job>.out` and so on):
@@ -73,6 +75,9 @@ What to check (`slurm/e98prep-<job>.out` and so on):
 - **read**: one line per part and grid with `bands` 10, `max_abs_sum_minus_1` at most 1e-3, `covered_share` (near 1
   inside the windows' grid), `condition_codes` (pixel counts per code; -1 where no window reads), `assess_exit` 0 and
   `assess_windows_ranked`; then `windows read <n>; ok True`. The same is in `exp/out/exp98/pilot/e98_pilot_checks.json`.
+- **burned**: the names line (`--condition-names 0=mcd64a1:no-burn-2023:sep-not-read 1=mcd64a1:burned-2023`), months
+  missing `['2023-09']` only, one line per part with the share of covered pixels per code and `QA agrees True`, then
+  `assess_exit` 0 with windows ranked and windows per condition (`exp/out/exp98/pilot/e98_burned_assess.json`).
 
 If all four hold, run the full chain below (without `E98_PILOT`); it shares nothing with the pilot but the env, so the
 pilot's `deploy/awf_pilot_*` and `data/exp98/pilot/` can stay or be removed.
@@ -99,7 +104,8 @@ PRED=$(ssh aicr "E98_SHA=$SHA sbatch --parsable -p rtx-batch --gpus=1 -t 24:00:0
 COLL=$(ssh aicr "E98_SHA=$SHA sbatch --parsable --dependency=afterok:$PRED" < exp/jobs/e98_collect.sh)
 # after the from-olmoearth branch is merged into main (e98_read.sh refuses otherwise):
 READ=$(ssh aicr "sbatch --parsable --dependency=afterok:$COLL" < exp/jobs/e98_read.sh)
-INV=$(ssh aicr "E98_MODE=inv E98_DEPLOY=auto sbatch --parsable --dependency=afterok:$READ" < exp/jobs/e98.sh)
+BURN=$(ssh aicr "E98_SHA=$SHA sbatch --parsable --dependency=afterok:$READ" < exp/jobs/e98_burned.sh)
+INV=$(ssh aicr "E98_MODE=inv E98_DEPLOY=auto sbatch --parsable --dependency=afterok:$BURN" < exp/jobs/e98.sh)
 # optional, olmoearth_run's own mosaics (exp98 does not read them), after collect and never beside it:
 POST=$(ssh aicr "E98_SHA=$SHA E98_STAGE=post sbatch --parsable -p cpu -t 04:00:00 --dependency=afterok:$COLL" < exp/jobs/e98_predict.sh)
 ```
@@ -115,6 +121,26 @@ with `E98_SKIP_BUILD=1`; its completeness check still runs, so a `build_dataset`
 refused there and needs a resubmission without `E98_SKIP_BUILD` (whether olmoearth_run resumes is unknown, below).
 `E98_ALLOW_INCOMPLETE=1` at prepare lets a partial area go on; every later record then says `area_complete: false`.
 Collect refuses to overwrite an earlier collection unless `E98_RECOLLECT=1`.
+
+## Burned area (after read)
+
+`e98_burned.sh` runs `exp/exp98_burned.py` on every part directory `e98_read.sh` wrote: for each grid it searches
+Planetary Computer's STAC API for MODIS MCD64A1 v061 (`modis-64A1-061`, monthly burned area, 500 m) in 2023, mosaics
+the tiles over the part, and writes `burned_<EPSG>.tif` beside `scores_<EPSG>.tif` (int32, nearest neighbour onto the
+same grid: 1 burned in a month read, 0 not, -1 unrecorded) with `burned_conditions.json` (the exact
+`--condition-names`). Counts only go to `exp/out/exp98[/pilot]/e98_burned.json`; then `assess --condition` runs on the
+smallest grid as a check that the layer plugs in (`e98_burned_assess.json`). Planetary Computer holds no September 2023
+item of the collection (checked 8 October 2026; NASA's CMR lists the granules), so the job allows that month missing
+(`E98_BURN_ALLOW_MISSING`, default `2023-09`) and refuses any other; code 0's name records it. `E98_REBURN=1` replaces
+an earlier layer; a reread (`E98_REREAD=1`) removes it with the scores, so rerun this stage after one. It resets the
+home checkout like every stage, so chain it between read and `e98.sh`, never beside another job:
+
+```bash
+BURN=$(ssh aicr "E98_SHA=$SHA sbatch --parsable --dependency=afterok:$READ" < exp/jobs/e98_burned.sh)
+```
+
+Expected minutes: twelve months of one or two tiles, read only where they meet a part, and an exact warp of each part.
+Part H (`docs/plan/awf_deployment.md`) reads the layer in the run; without it Part H is skipped with a note.
 
 ## Durations and volume (estimates, not measured)
 

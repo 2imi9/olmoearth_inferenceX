@@ -8,6 +8,8 @@ writing its softmax), read by `oe-inferencex from-olmoearth` in parts (exp/jobs/
     scores_<EPSG>.tif           10 float32 bands, the softmax over the decoder's 10 channels, NaN where no window predicted
     condition_<EPSG>.tif        int32 on the same grid, the input condition of each pixel, -1 unrecorded
     olmoearth_conditions.json   names the condition codes ("codes": {code: name})
+    burned_<EPSG>.tif           optional (exp/exp98_burned.py, Part H): int32, 1 burned in 2023, 0 not, -1 unrecorded
+    burned_conditions.json      its codes' names
 
 This file reads those files; it does not import oe_inferencex.olmoearth. Several directories are read as one map:
 condition names are merged (a conflict is refused), a point in two grids takes the first that covers its pixel, and a
@@ -29,7 +31,11 @@ The parts (the page's names):
   F  what a whole-map answer needs (report-only): `plan` for an error rate within +-5 points and for certify at
      alpha 0.10, and the sequential sample that would be labelled;
   G  inputs (report-only, with --deployment-dataset): the 10 m bands at each label pixel in the deployed dataset
-     against the label window's own, and the two datasets' Sentinel-2 configuration.
+     against the label window's own, and the two datasets' Sentinel-2 configuration;
+  H  burned area (report-only, when every part directory holds exp/exp98_burned.py's burned_<EPSG>.tif): the map's
+     40 m windows by MODIS burn code (the package's pool_condition), the deployed confidence's quartiles per code and
+     each code's share of the least confident 10% of windows; Ai2's validation points by the burn code of their pixel,
+     with errors per code. Descriptive, no verdict; absent layers are skipped with a note.
 
 Readings fixed here (the page states each one):
   - A label is read as oe_inferencex.awf reads it: a window of group spatial_split whose label raster holds exactly one
@@ -54,8 +60,9 @@ Readings fixed here (the page states each one):
   - Clusters: the annotation task, the window name before "_point_" (exp21's and exp89's 30 validation tasks).
 
 Outputs (exp/out, --out-dir moves them): exp98_summary.json (the run), exp98_units.npz (per point: name, split,
-label, the deployed class and confidence, the condition code, the boundary cue; no position), exp98_inventory.json
-(--inventory), exp98_summary_smoke.json (--smoke). Nothing written holds a coordinate, a transform or a bound.
+label, the deployed class and confidence, the condition code, the burn code (-2 without the layer), the boundary
+cue; no position), exp98_inventory.json (--inventory), exp98_summary_smoke.json (--smoke). Nothing written holds a
+coordinate, a transform or a bound.
 """
 import argparse
 import glob
@@ -77,6 +84,7 @@ for _p in (ROOT, EXP_DIR):
         sys.path.insert(0, _p)
 from oe_inferencex import assess, estimate as est, metrics, plan, sequential as sq, signals, stats   # noqa: E402
 import exp89_finetuned_checkpoints as e89                                                          # noqa: E402
+import exp98_burned as eb                                                                          # noqa: E402
 
 OUT = os.path.join(EXP_DIR, "out")
 PLAN = os.path.join(ROOT, "docs", "plan", "awf_deployment.md")
@@ -207,7 +215,9 @@ def _find_outputs_one(scores):
     for f in files:
         label = re.sub(r"^scores_|\.tif$", "", os.path.basename(f))
         cond = os.path.join(d, f"condition_{label}.tif")
-        out.append({"label": label, "scores": f, "condition": cond if os.path.exists(cond) else None})
+        burned = os.path.join(d, f"burned_{label}.tif")              # exp/exp98_burned.py, for Part H
+        out.append({"label": label, "scores": f, "condition": cond if os.path.exists(cond) else None,
+                    "burned": burned if os.path.exists(burned) else None})
     names = None
     cj = os.path.join(d, "olmoearth_conditions.json")
     if os.path.exists(cj):
@@ -222,6 +232,16 @@ def _find_outputs_one(scores):
         meta = {k: s.get(k) for k in ("kind", "bands", "windows_read", "largest_sum_deviation", "uncovered_pixels",
                                       "source")}
         meta["windows_skipped"] = len(s.get("windows_skipped") or [])
+    bj = os.path.join(d, eb.NAMES_JSON)
+    meta["burned_conditions"] = None
+    if os.path.exists(bj):
+        try:              # Part H is report-only: an unreadable names file leaves it out (burned_inputs), no refusal
+            with open(bj) as f:
+                b = json.load(f) or {}
+            meta["burned_conditions"] = {"codes": b.get("codes"), "condition_names": b.get("condition_names"),
+                                         "months_missing": (b.get("source") or {}).get("months_missing")}
+        except (OSError, ValueError, AttributeError):
+            meta["burned_conditions"] = None
     return out, names, meta
 
 
@@ -239,6 +259,20 @@ def open_grid(entry):
         with rasterio.open(g["condition"]) as src:
             if (src.height, src.width) != g["shape"] or src.transform != g["transform"] or src.crs != g["crs"]:
                 raise ValueError(f"{g['condition']} is not on the grid of {g['scores']}")
+    if g.get("burned"):
+        # Part H is report-only: a burned layer off the grid or unreadable is left out with a note, never a refusal
+        name = os.path.basename(g["burned"])
+        try:
+            with rasterio.open(g["burned"]) as src:
+                off = (src.height, src.width) != g["shape"] or src.transform != g["transform"] \
+                    or src.crs != g["crs"] or src.count != 1
+        except Exception as ex:  # noqa: BLE001
+            g["burned"] = None
+            g["burned_note"] = f"{name} could not be opened ({type(ex).__name__})"
+        else:
+            if off:
+                g["burned"] = None
+                g["burned_note"] = f"{name} is not one band on the scores' grid"
     return g
 
 
@@ -430,6 +464,21 @@ def read_points(grids, cands):
     return gi, rows, cols, how, off, P, B, C, overlap
 
 
+def codes_at(grids, gi, rows, cols, key):
+    """Per point, the value of a one-band int layer (`key`, e.g. "burned") at its pixel in the grid read_points chose;
+    -2 outside every grid or where that grid has no such layer."""
+    import rasterio
+    from rasterio.windows import Window
+    out = np.full(len(gi), -2, np.int64)
+    for g, G in enumerate(grids):
+        idx = np.flatnonzero(np.asarray(gi) == g)
+        if idx.size and G.get(key):
+            with rasterio.open(G[key]) as s_:
+                for k in idx:
+                    out[k] = int(s_.read(1, window=Window(int(cols[k]), int(rows[k]), 1, 1))[0, 0])
+    return out
+
+
 def covered(P):
     """A pixel holds a prediction: every band finite and not all zero (the fill RasterMerger leaves)."""
     P = np.asarray(P, dtype=np.float64)
@@ -513,24 +562,46 @@ def grid_overlaps(grids):
     return same, unmatched
 
 
-def map_pass(grid, q, rng, earlier=()):
+def map_pass(grid, q, rng, earlier=(), burn_patch=None):
     """One pass over a grid: covered pixels, the deployed class counts, the condition counts, a Bernoulli sample of
     the suspicion (probability q; q >= 1 keeps every pixel), the largest |sum - 1|. A pixel covered in an earlier grid
     it overlaps (`earlier`: [(grid, row shift, col shift)], grid_overlaps) was counted there and is skipped here, so
-    each map pixel counts once."""
+    each map pixel counts once. With `burn_patch` and the grid's burned layer, also Part H's windows (burn_windows)
+    and the burned codes' pixel counts. Part H is report-only: a failure opening or reading the burned layer, or a
+    refusal from burn_windows, stops only Part H's collection for this grid ("burn": {"error": ...}); the pass goes on."""
     import rasterio
     from rasterio.windows import Window
     H, W = grid["shape"]
     n_cov, cls, n_dup = 0, np.zeros(N_OUT, np.int64), 0
     cond_counts, keep, dev, n_sat = {}, [], 0.0, 0
+    burn = bool(burn_patch and grid.get("burned"))
+    burn_counts, burn_s, burn_c, burn_dropped, burn_error = {}, [], [], 0, None
+
+    def burn_failed(ex):
+        nonlocal bsrc, burn_error
+        burn_error = f"{os.path.basename(grid['burned'])}: {ex!r}"
+        if bsrc is not None:
+            try:
+                bsrc.close()
+            except Exception:  # noqa: BLE001
+                pass
+        bsrc = None
+
     with rasterio.open(grid["scores"]) as src:
         csrc = rasterio.open(grid["condition"]) if grid["condition"] else None
+        bsrc = None
+        if burn:
+            try:
+                bsrc = rasterio.open(grid["burned"])
+            except Exception as ex:  # noqa: BLE001
+                burn_failed(ex)
         esrc = [(rasterio.open(Gh["scores"]), Gh["shape"], dr, dc) for Gh, dr, dc in earlier]
         try:
             for r0 in range(0, H, STRIP_ROWS):
                 h = min(STRIP_ROWS, H - r0)
                 a = src.read(window=Window(0, r0, W, h)).astype(np.float32)
                 cov = np.isfinite(a).all(0) & (np.nan_to_num(a) != 0).any(0)
+                dup = np.zeros_like(cov)
                 for es, (He, We), dr, dc in esrc:
                     ra, rb = max(r0 + dr, 0), min(r0 + h + dr, He)
                     ca, cb = max(dc, 0), min(W + dc, We)
@@ -540,9 +611,16 @@ def map_pass(grid, q, rng, earlier=()):
                     ecov = np.isfinite(e).all(0) & (np.nan_to_num(e) != 0).any(0)
                     sub = cov[ra - r0 - dr:rb - r0 - dr, ca - dc:cb - dc]
                     n_dup += int((sub & ecov).sum())
+                    dup[ra - r0 - dr:rb - r0 - dr, ca - dc:cb - dc] |= sub & ecov
                     sub &= ~ecov                                 # a view: clears those pixels in cov
                 m = int(cov.sum())
                 if not m:
+                    if bsrc is not None and dup.any():           # windows wholly in an earlier grid, counted
+                        try:
+                            burn_dropped += burn_windows(np.full((h, W), np.nan), cov, dup,
+                                                         bsrc.read(1, window=Window(0, r0, W, h)), burn_patch)[2]
+                        except Exception as ex:  # noqa: BLE001
+                            burn_failed(ex)
                     continue
                 n_cov += m
                 v = a[:, cov]
@@ -558,14 +636,35 @@ def map_pass(grid, q, rng, earlier=()):
                     vals, cnt = np.unique(c, return_counts=True)
                     for vv, cc in zip(vals, cnt):
                         cond_counts[int(vv)] = cond_counts.get(int(vv), 0) + int(cc)
+                if bsrc is not None:
+                    try:
+                        b = bsrc.read(1, window=Window(0, r0, W, h))
+                        U = np.full((h, W), np.nan)
+                        U[cov] = u
+                        s_w, c_w, nd = burn_windows(U, cov, dup, b, burn_patch)
+                    except Exception as ex:  # noqa: BLE001
+                        burn_failed(ex)
+                    else:
+                        vals, cnt = np.unique(b[cov], return_counts=True)
+                        for vv, cc in zip(vals, cnt):
+                            burn_counts[int(vv)] = burn_counts.get(int(vv), 0) + int(cc)
+                        burn_s.append(s_w)
+                        burn_c.append(c_w)
+                        burn_dropped += nd
         finally:
-            if csrc is not None:
-                csrc.close()
-            for es, _, _, _ in esrc:
-                es.close()
+            for s_ in [csrc, bsrc] + [x[0] for x in esrc]:
+                if s_ is not None:
+                    s_.close()
     sample = np.sort(np.concatenate(keep)) if keep else np.zeros(0)
-    return {"n_covered": n_cov, "class_counts": cls, "condition_counts": cond_counts, "sample": sample,
-            "largest_sum_deviation": dev, "n_saturated_float32": n_sat, "n_counted_in_an_earlier_grid": n_dup}
+    out = {"n_covered": n_cov, "class_counts": cls, "condition_counts": cond_counts, "sample": sample,
+           "largest_sum_deviation": dev, "n_saturated_float32": n_sat, "n_counted_in_an_earlier_grid": n_dup}
+    if burn and burn_error is not None:
+        out["burn"] = {"error": burn_error}
+    elif burn:
+        out["burn"] = {"pixel_counts": burn_counts, "suspicion": np.concatenate(burn_s) if burn_s else np.zeros(0),
+                       "codes": np.concatenate(burn_c) if burn_c else np.zeros(0, np.int64),
+                       "n_windows_dropped_overlap": burn_dropped}
+    return out
 
 
 def percentile_in_map(sample, u):
@@ -749,6 +848,151 @@ def plan_block(n_windows, rate_points, zone_errors, draws=PLAN_ZONE_DRAWS, max_l
                          "note": "a random order of the map's pixels, labelled from the top; certify then holds at every "
                                  "look, and estimate reads any labelled prefix as a random sample. The sheet lists "
                                  "window positions and stays with the labellers, never in the repository"}
+    return out
+
+
+# ----------------------------------------------------------------------------- part H: burned area (report-only)
+BURN_PATCH = 4                     # assess's default window (40 m); a window takes the majority code of its pixels
+BURN_BUDGET = 0.10                 # the least confident 10% of windows, as P4 reads the points
+BURN_QUANTILES = (0.25, 0.5, 0.75)
+assert STRIP_ROWS % BURN_PATCH == 0, "a window row must not straddle two strips"
+
+
+def burned_inputs(grids, metas):
+    """(names {code: name} or None, note or None): Part H runs only when every grid has its burned layer on its grid
+    and every part directory names the codes alike (one exp/exp98_burned.py run)."""
+    missing = [G["label"] for G in grids if not G.get("burned")]
+    if missing:
+        notes = sorted({G["burned_note"] for G in grids if G.get("burned_note")})
+        return None, (f"burned_<EPSG>.tif is absent or off the grid in {len(missing)} of {len(grids)} grids"
+                      + (f" ({'; '.join(notes)})" if notes else "") + "; run exp/jobs/e98_burned.sh after e98_read.sh")
+    codes = [json.dumps((m.get("burned_conditions") or {}).get("codes"), sort_keys=True) for m in metas]
+    if len(set(codes)) != 1 or codes[0] == "null":
+        return None, (f"{eb.NAMES_JSON} is missing or names the codes differently across the part directories; the "
+                      "burned layers were not written by one run")
+    return {int(k): str(v) for k, v in json.loads(codes[0]).items()}, None
+
+
+def burn_windows(u, cov, dup, burned, patch=BURN_PATCH):
+    """Part H's windows of one strip that starts on a window row: (suspicion of each kept window, its code, the windows
+    dropped because they hold a pixel covered in an earlier grid). `cov` is the strip's coverage with the pixels
+    covered in an earlier grid cleared, `dup` those pixels (map_pass). A window is patch x patch pixels; it is valid
+    when at least half its pixels are covered in this grid (assess's rule) and kept when none of them was covered in
+    an earlier grid, so no map area is in two windows. Its suspicion is the mean over its covered pixels of `u` (minus
+    the log of the top-1 trained probability, assess's form='top1' window reading); its code is the package's
+    pooling, assess.pool_condition: the code held by most of its covered pixels with a code of 0 or more, -1 on a tie
+    or with none."""
+    h, w = cov.shape
+    if h < patch or w < patch:
+        return np.zeros(0), np.zeros(0, np.int64), 0
+    hh, ww = h // patch * patch, w // patch * patch
+
+    def blocks(a):
+        return a[:hh, :ww].reshape(hh // patch, patch, ww // patch, patch)
+    n_cov = blocks(cov).sum(axis=(1, 3))
+    s_sum = blocks(np.where(cov, u, 0.0)).sum(axis=(1, 3))
+    dupw = blocks(dup).any(axis=(1, 3))
+    valid = 2 * blocks(cov | dup).sum(axis=(1, 3)) >= patch * patch     # on this grid's own coverage
+    try:
+        code = assess.pool_condition(np.asarray(burned), patch, predicted=cov)["grid"]
+    except ValueError as ex:          # a strip where no valid window has a code: every window is unrecorded
+        if not str(ex).startswith("no window takes a condition"):
+            raise
+        code = np.full(valid.shape, -1, np.int64)
+    keep = valid & ~dupw              # here cov | dup is cov, so pool_condition saw the window whole
+    return s_sum[keep] / n_cov[keep], code[keep].astype(np.int64), int((valid & dupw).sum())
+
+
+def burn_name(code, names):
+    return "unrecorded" if code < 0 else (names or {}).get(int(code), str(int(code)))
+
+
+def burned_map_block(susp, codes, names, budget=BURN_BUDGET):
+    """Part H, label-free: per burn code, its windows, their share, the quartiles of the deployed confidence (the
+    window's top-1 trained probability, exp(-suspicion), a geometric mean over its pixels) and its share of the least
+    confident `budget` of all windows beside its share of all of them. The least confident set is the k = round(budget
+    x n) windows of highest suspicion; windows tied at the cut-off are split in proportion, so the shares do not depend
+    on raster order."""
+    s = np.asarray(susp, dtype=np.float64)
+    c = np.asarray(codes, dtype=np.int64)
+    n = int(s.size)
+    if n == 0:
+        return {"n_windows": 0, "note": "no valid window"}
+    k = min(n, max(1, int(round(budget * n))))
+    cut = float(np.sort(s)[::-1][k - 1])
+    above, tied = s > cut, s == cut
+    n_above, n_tied = int(above.sum()), int(tied.sum())
+    take = k - n_above
+    per = {}
+    for code in sorted(set(c.tolist())):
+        m = c == code
+        p = np.exp(-s[m])
+        low = (int((above & m).sum()) + take * int((tied & m).sum()) / n_tied) / k
+        share = float(m.mean())
+        per[burn_name(code, names)] = {
+            "code": int(code), "n_windows": int(m.sum()), "share_of_windows": share,
+            "confidence_quartiles": {f"{q:g}": float(np.quantile(p, q)) for q in BURN_QUANTILES},
+            "share_of_least_confident": float(low), "least_confident_over_all_windows": float(low / share)}
+    return {"n_windows": n, "budget": budget, "n_least_confident": k, "n_tied_at_cutoff": n_tied,
+            "n_tied_taken": take, "per_code": per}
+
+
+def burned_points_block(codes, err, tasks, names, map_counts):
+    """Part H at the validation points: per burn code of the point's pixel, the points, errors, error rate and
+    annotation tasks, with the code's share of the map's covered pixels (condition_block's table). Descriptive: no
+    verdict."""
+    codes = np.asarray(codes, dtype=np.int64)
+    out = condition_block(codes, err, names, map_counts)
+    for row in out.values():
+        m = codes == row["code"]
+        row["n_tasks"] = int(np.unique(np.asarray(tasks)[m]).size) if m.any() else 0
+    return out
+
+
+BURN_LIMITS = ("A MODIS cell is about 463 m on a side, about 2,150 pixels and 134 windows of 40 m: a code says whether "
+               "the cell around a window burned, not whether the window did; a scar's edge mixes both codes.",
+               "MCD64A1 misses small and short-lived burns (global omission 72.6% against Landsat 8 pairs, MCD64 C6.1 "
+               "user guide section 7) and burns under persistent cloud; code 0 is 'no burn detected', not 'unburned'.",
+               "A month the stage could not read is a month whose burns read as code 0; its name and months_missing "
+               "say which (September 2023 was absent from Planetary Computer on 2026-10-08).",
+               "A burn date is a day; the model reads 12 mosaics of 30-day periods. A burned code does not say whether "
+               "a scar was fresh in the scenes the model read, or had greened again by the later periods.",
+               "Ai2's validation points were placed by experts; few may fall in burned cells, so their error rate per "
+               "code is descriptive, with its count, and carries no verdict.")
+
+
+def burned_block(names, note, parts, codes_pts, V, err, tasks, metas):
+    """Part H, report-only: the map's windows and pixels by burn code (label-free) and Ai2's validation points by the
+    burn code of their pixel. `parts` are map_pass's "burn" entries, one per grid."""
+    out = {"status": "report-only: no threshold and no verdict (docs/plan/awf_deployment.md, Part H)",
+           "source": "exp/exp98_burned.py: MODIS MCD64A1 v061 from Planetary Computer, 2023, nearest neighbour onto "
+                     "each part's grid", "patch_px": BURN_PATCH, "window_code_rule": assess.RULE_TEXT,
+           "cannot_show": list(BURN_LIMITS)}
+    if names is None:
+        out["note"] = note
+        return out
+    bc = (metas[0].get("burned_conditions") or {}) if metas else {}
+    out.update(names={str(k): v for k, v in sorted(names.items())}, condition_names=bc.get("condition_names"),
+               months_missing=bc.get("months_missing"))
+    susp = np.concatenate([p["suspicion"] for p in parts]) if parts else np.zeros(0)
+    codes = np.concatenate([p["codes"] for p in parts]) if parts else np.zeros(0, np.int64)
+    win = burned_map_block(susp, codes, names)
+    win["n_windows_dropped_overlapping_an_earlier_grid"] = int(sum(p["n_windows_dropped_overlap"] for p in parts))
+    out["windows"] = win
+    counts = {}
+    for p in parts:
+        for c, n in p["pixel_counts"].items():
+            counts[c] = counts.get(c, 0) + n
+    total = sum(counts.values())
+    out["pixels"] = {burn_name(c, names): {"code": int(c), "n": int(n),
+                                           "share_of_covered": n / total if total else None}
+                     for c, n in sorted(counts.items())}
+    V = np.asarray(V)
+    if V.size:
+        out["validation_points"] = burned_points_block(np.asarray(codes_pts)[V], np.asarray(err)[V],
+                                                       np.asarray(tasks)[V], names, counts)
+    else:
+        out["validation_points"] = {"note": "no validation point on a covered pixel"}
     return out
 
 
@@ -962,6 +1206,7 @@ def analyse(scores, labels, replica_path=None, deployment_dataset=None, inventor
     t0 = time.time()
     entries, names, out_meta = find_outputs(scores)
     grids = [open_grid(e) for e in entries]
+    burn_names, burn_note = burned_inputs(grids, out_meta)
     points, lab_summary = read_label_windows(labels)
     log(f"{len(points)} labelled windows kept ({lab_summary['by_split']}); {len(grids)} score grid(s)")
     cands = locate_all(points, grids)
@@ -1084,8 +1329,15 @@ def analyse(scores, labels, replica_path=None, deployment_dataset=None, inventor
     maps, sample_all, n_map, cls_map, cond_map, n_sat_map, dev_map = [], [], 0, np.zeros(N_OUT, np.int64), {}, 0, 0.0
     earlier, unmatched = grid_overlaps(grids)
     q = min(1.0, map_sample / max(sum(G["shape"][0] * G["shape"][1] for G in grids), 1))
+    burn_parts = []
     for G, ear in zip(grids, earlier):
-        mp = map_pass(G, q, rng, ear)
+        mp = map_pass(G, q, rng, ear, burn_patch=BURN_PATCH if burn_names else None)
+        if "burn" in mp:
+            burn_parts.append(mp["burn"])
+            if "error" in mp["burn"] and burn_names is not None:   # Part H is report-only: left out with a note
+                burn_names = None
+                burn_note = (f"the burned layer of grid {G['label']} could not be read in the map pass "
+                             f"({mp['burn']['error']}); Part H is left out, the run goes on")
         maps.append({"label": G["label"], "n_covered": mp["n_covered"], "sample_probability": q,
                      "n_sampled": int(mp["sample"].size), "largest_sum_deviation": mp["largest_sum_deviation"],
                      "n_saturated_float32": mp["n_saturated_float32"],
@@ -1139,6 +1391,17 @@ def analyse(scores, labels, replica_path=None, deployment_dataset=None, inventor
         record["inputs_reported"], ident = compare_inputs(points, cov, {k: err[k] for k in np.flatnonzero(cov)},
                                                           agree, labels, deployment_dataset)
 
+    # part H (report-only): it never stops the run; a failure is recorded with its traceback and the grades go on
+    burn_pts = np.full(len(gi), -2, np.int64)
+    try:
+        if burn_names is not None:          # Part H skipped: no burn code is read, every point keeps -2
+            burn_pts = codes_at(grids, gi, rows, cols, "burned")
+        record["burned_area_reported"] = burned_block(burn_names, burn_note, burn_parts, burn_pts, V, err, tasks,
+                                                      out_meta)
+    except Exception as ex:  # noqa: BLE001
+        record["burned_area_reported"] = {"error": repr(ex), "traceback": traceback.format_exc()}
+        log(f"part H failed (report-only, the run goes on): {ex!r}")
+
     # the grades
     rep_blk = graded.get("replica") or {}
     rk = graded.get("ranking") or {}
@@ -1156,7 +1419,8 @@ def analyse(scores, labels, replica_path=None, deployment_dataset=None, inventor
     record["prereg"] = grade(m, min_val, min_errors)
     record["seconds"] = round(time.time() - t0, 1)
     units = {"names": np.array(names_arr), "split": split.astype(str), "label": labels_arr,
-             "covered": cov, "pred_deployed": pred, "suspicion": u, "p1": p1, "condition": C, "boundary": bnd,
+             "covered": cov, "pred_deployed": pred, "suspicion": u, "p1": p1, "condition": C, "burned": burn_pts,
+             "boundary": bnd,
              "input_identical": np.array([ident.get(nm, -1) if nm in ident else -1 for nm in names_arr], dtype=np.int64)}
     return record, units
 
@@ -1189,8 +1453,17 @@ SMOKE_EXPECTED = {"n_val": 40, "n_errors": 8, "accuracy": 32 / 40, "replica_accu
                              "in_two_windows": 10},
                   "overlap": {"in_two_or_more_grids": 11, "covered_in_two_or_more": 5, "covered_in_two_differing": 0,
                               "covered_only_in_a_later_grid": 5, "pixels_counted_once": 10 * 100},
-                  "holds": {"P1": False, "P2": True, "P3": True, "P4": True, "P5": True}}
+                  "holds": {"P1": False, "P2": True, "P3": True, "P4": True, "P5": True},
+                  # Part H: points on row 25 (ranks 4-13, errors 4-6) are unrecorded, rows 40 and 55 (ranks 14-29 and
+                  # 35-38, no error) not burned, row 85 (ranks 0-3, 30-34 and 39; errors 0-3 and 39) burned. The
+                  # windows of 4 px: window rows 5-6 unrecorded, 7-17 not burned, 18-29 burned, 40 window columns
+                  # (23 in part 0, the last one half covered; 17 in part 1, whose first three touch part 0's pixels)
+                  "burned": {"points": {-1: (10, 3), 0: (20, 0), 1: (10, 5)},
+                             "windows": {-1: 2 * 40, 0: 11 * 40, 1: 12 * 40}, "dropped_overlap": 3 * 25,
+                             "pixels": {-1: 8 * 160, 0: 44 * 160, 1: 48 * 160}}}
 SMOKE_FLOORS = {"min_val": 20, "min_errors": 5}
+SMOKE_BURN_ROWS = {-1: (0, 28), 0: (28, 72), 1: (72, 120)}     # aligned to the 4-px windows
+SMOKE_BURN_NAMES = eb.code_names(2023, ["2023-09"])
 
 
 def _smoke_point_vectors():
@@ -1267,6 +1540,9 @@ def make_smoke_inputs(root):
         scores[:, i, j] = p.astype(np.float32)
     for r in SMOKE_UNRECORDED:
         cond[pix[r]] = -1
+    burned = np.full((H, W), -1, np.int32)                  # Part H's layer, by rows (SMOKE_BURN_ROWS)
+    for code, (a, b) in SMOKE_BURN_ROWS.items():
+        burned[a:b] = code
     out_dirs = []
     for k, (c0, c1) in enumerate(SMOKE_GRID["parts"]):
         out_dir = os.path.join(root, f"oeix_part{k}")
@@ -1284,6 +1560,10 @@ def make_smoke_inputs(root):
             dst.write(cond[None, :, c0:c1])
         with open(os.path.join(out_dir, "olmoearth_conditions.json"), "w") as f:
             json.dump({"codes": {"0": "sentinel2:all:clear", "1": "sentinel2:most:some-cloud"}}, f)
+        spath = os.path.join(out_dir, f"scores_{SMOKE_GRID['epsg']}.tif")
+        eb.write_burned(os.path.join(out_dir, f"burned_{SMOKE_GRID['epsg']}.tif"), burned[:, c0:c1], spath)
+        eb.dump(eb.names_record(SMOKE_BURN_NAMES, {"collection": eb.COLLECTION, "months_missing": ["2023-09"]},
+                                [str(SMOKE_GRID["epsg"])]), os.path.join(out_dir, eb.NAMES_JSON))
         out_dirs.append(out_dir)
 
     # label windows: 63 x 63, the label at (31, 31) unless stated

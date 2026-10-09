@@ -16,7 +16,10 @@ region), and nothing here measures that map. "The deployed map" below is short f
     each was mapped to a pixel. It also reads the label windows' time ranges. Given the deployed rslearn dataset, it
     also checks whether the deployment read the same 10 m band values at the label pixels, and how the two
     datasets' Sentinel-2 settings differ. It reads whether a label pixel holds a prediction. It never reads which
-    class the map gives there, or how confident it is.
+    class the map gives there, or how confident it is;
+  - the burned-area layer (`exp/exp98_burned.py`, job `exp/jobs/e98_burned.sh`) and its `assess --condition` check
+    on one part. They read MODIS and the map, never a label pixel. Part H itself, which reads the burn code and the
+    outcome at the points, runs only in the run.
 - **Not allowed before freezing:** any class, probability or condition code read at a label pixel, and anything
   computed from them. The script refuses the run until this page says frozen.
 - **Open before freezing:**
@@ -53,7 +56,7 @@ A deployment, and so this re-run, is a different pipeline from the evaluation:
 The same model can therefore give a different class at the same point. The crop around the point differs, the point
 sits elsewhere in the crop, and the scenes were fetched again.
 
-Six questions:
+Seven questions:
 
 1. **Part A.** Does the re-run of the deployment reproduce the evaluation at Ai2's validation points?
 2. **Part B.** Does the deployed map's own confidence rank its errors there?
@@ -62,6 +65,8 @@ Six questions:
 4. **Part D.** How many of Ai2's points fall inside the deployed area? Counts only.
 5. **Part E.** Do the points sit where the map is typical, or in its confident part?
 6. **Part F.** What would an answer for the whole map cost? Report-only.
+7. **Part H.** Where MODIS mapped a burn in 2023, is the map less confident, and are Ai2's points wrong more often?
+   Report-only, no verdict. (Part G, the inputs at the label pixels, is a check, not a question.)
 
 **Why this matters to the OlmoEarth team.** Ai2 publishes 89.5% beside the model, and its deployment pipeline is what
 makes the maps users see. exp98 answers three things, about that pipeline as the record re-runs it:
@@ -320,6 +325,63 @@ exp98 reads these files. It does not import `oe_inferencex.olmoearth`, which ano
     not.
   - The two datasets' Sentinel-2 settings, as a diff of their `config.json`.
 
+- **Part H, burned area (report-only: no threshold, no verdict).**
+  - **Why.** East African savanna burns every year, much of it in the dry seasons. A fresh burn scar is dark and
+    bare for weeks, and the hypothesis is that the map reads it confidently wrong. In the AWF legend grassland and
+    barren are one class, so burnt grass read as bare ground is no error; the errors to look for are burnt shrubland
+    or savanna read as grassland/barren, and a dark scar read as one of the dark classes (open water, herbaceous
+    wetland, lava forest). Where a model reads an input unlike its training it can be confidently wrong (exp88), and
+    those errors come late in a review by confidence. A burn layer lets `assess` rank burned and unburned windows
+    apart, and Part H says what the map and the points show by burn.
+  - **The layer.** `exp/exp98_burned.py` (job `exp/jobs/e98_burned.sh`, after `e98_read.sh`) writes
+    `burned_<EPSG>.tif` beside each part's scores, on the same grid, with `burned_conditions.json` naming the codes.
+    Per 500 m MODIS cell, over the 2023 months read: **1** a burn date in any month; **0** unburned land in every
+    month; **-1** unrecorded (no burn date, and water, unmapped or no tile in some month). Each 10 m pixel takes the
+    code of the cell that holds its centre (nearest neighbour, every pixel transformed exactly). A code 2, "burned
+    before a timestep the model read", is not written: each timestep is a 30-day mosaic built per pixel from several
+    scenes by cloud cover, so the scene date at a pixel is not in the item groups' time ranges, and every burn
+    before the last period is followed by later periods, so the code would hold nearly every burned pixel.
+  - **The map (label-free).** Windows of 4 px (40 m, `assess`'s default), each with the code most of its covered
+    pixels hold (`assess.pool_condition`; a tie or no code is unrecorded). Per code: the windows and their share;
+    the quartiles of the deployed confidence (the top-1 trained probability, as a window's geometric mean, which is
+    how `assess` reads a window with form `top1`); the code's share of the least confident 10% of all windows,
+    beside its share of all windows (windows tied at the cut-off are split in proportion, so raster order does not
+    decide). The codes' shares of the covered pixels. A window holding a pixel already covered in an earlier part is
+    dropped and counted, so no area counts twice.
+  - **Ai2's validation points (V).** Per code of the point's own pixel: the points, the errors, the error rate, the
+    annotation tasks, and the code's share of the map's pixels beside its share of the points. Descriptive, with
+    counts; no interval and no verdict.
+  - **What it can show.** Whether burned windows are over-represented among the least confident (a review by
+    confidence would reach them) or sit as confident as the rest (which a confidently mis-mapped scar would also
+    give; labels are needed to tell), and, at the points, the error rate by burn with its count.
+  - **What it cannot show.**
+    - **Resolution.** A MODIS cell is about 463 m on a side: about 2,150 pixels of 10 m and 134 windows of 40 m. The
+      code says whether the cell around a pixel burned, not whether the pixel did; a scar's edge mixes both codes.
+    - **Detection.** MCD64A1 misses small burns: against Landsat 8 pairs its global omission error is 72.6% and its
+      commission 40.2%, the omission mostly small burns (MCD64 Collection 6.1 user guide, section 7). Burns under
+      persistent cloud go unmapped or late. Code 0 means no burn detected, not unburned.
+    - **A missing month.** Planetary Computer holds no September 2023 item of the collection (checked 8 October 2026:
+      268 items each for August and October 2023, none for September anywhere), though NASA's CMR lists the September
+      granules. September lies in this region's long dry season (June to October), so burns that month read as code 0. The job
+      allows that month missing and refuses any other; code 0's name says so
+      (`mcd64a1:no-burn-2023:sep-not-read`), and every record lists the months not read. A local GeoTIFF of the
+      month (`--item`, for instance converted from LP DAAC's granule, which needs an Earthdata login) closes the gap.
+    - **Timing.** A burn date is a day; the model reads 12 mosaics of 30-day periods. A burned code does not say
+      whether the scar was fresh in the scenes the model read, or green again by the later periods.
+    - **The points.** They were placed by experts, presumably where a class was clear; few may fall in burned cells.
+      A point labelled from Planet imagery of an unknown date can disagree with a 2023 scar for reasons that are not
+      the model's.
+  - **Source and licence.** NASA's MCD64A1 Collection 6.1 (Terra and Aqua MODIS, monthly, 500 m), from Microsoft
+    Planetary Computer's STAC API, collection `modis-64A1-061`, assets `Burn_Date` (int16: day of the year of the
+    burn, 1 to 366; 0 unburned land; -1 unmapped for lack of data; -2 water) and `QA` (uint8 bit field: bit 0 land,
+    bit 1 valid data, bit 2 shortened mapping period, bits 5 to 7 why an unburned cell was classified so), signed
+    with `planetary_computer` as `oe_inferencex/data.py` signs its reads. The stage checks Burn_Date's -1 and -2
+    against QA's bits 0 and 1 on every cell read and refuses a disagreement on more than 0.1% of them. The
+    collection's licence field says "proprietary" and links LP DAAC's data policies, which now lead to NASA
+    Earthdata's data use guidance: data from a NASA-led mission are CC0 unless marked otherwise, a citation is
+    requested, and no NASA endorsement may be implied. Cite Giglio, Justice, Boschetti and Roy (2021),
+    doi:10.5067/MODIS/MCD64A1.061.
+
 ## Predictions
 
 Thresholds are proposed, and the owner confirms them before freezing. P1 is two-sided; the others are one-sided.
@@ -395,12 +457,16 @@ No correction for multiple predictions. Each prediction is graded on its own, as
 7. The map pass, each pixel counted once across overlapping parts, then Part E.
 8. Part F (`plan`).
 9. Part G, if the deployed dataset is given.
-10. Grade P1 to P5 at the floors. Write `exp/out/exp98_summary.json` and `exp98_units.npz`. The units file holds no
-    position: name, split, label, deployed class, confidence, condition code, boundary cue and input match.
+10. Part H, if every part directory holds its burned layer (read in the map pass of step 7); otherwise a note. It is
+    report-only and never stops the run: a burned layer that cannot be opened or read, at any step, leaves Part H
+    out with a note, and any other failure is recorded in the summary with its traceback.
+11. Grade P1 to P5 at the floors. Write `exp/out/exp98_summary.json` and `exp98_units.npz`. The units file holds no
+    position: name, split, label, deployed class, confidence, condition code, burn code, boundary cue and input
+    match.
 
 The cluster job is `exp/jobs/e98.sh`. It runs on the CPU partition, chained with `--dependency=afterok` on
-`exp/jobs/e98_read.sh`, which writes the from-olmoearth part directories (after `e98_collect.sh`, and once the
-from-olmoearth reader is on main).
+`exp/jobs/e98_burned.sh` (Part H's layer), which is chained on `exp/jobs/e98_read.sh`, which writes the
+from-olmoearth part directories (after `e98_collect.sh`, and once the from-olmoearth reader is on main).
 
 ## What follows, whatever the outcome
 
@@ -461,6 +527,9 @@ from-olmoearth reader is on main).
   figure is optimistic too, as a selected statistic.
 - **Conditions.** The layer records gaps and SCL cloud only, not haze, smoke or season. With few points per code it is
   descriptive.
+- **Burned area.** Part H's layer is MODIS at 500 m, misses small burns and, from Planetary Computer, September 2023;
+  it says where a cell burned in 2023, not whether a pixel was a fresh scar in the scenes the model read. Part H
+  describes; it grades nothing.
 
 ## Deviations
 

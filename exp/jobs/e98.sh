@@ -17,9 +17,10 @@
 #                  roots' real names are never echoed
 #   E98_LABELS     the AWF windows root; default exp89's extraction of the pinned tar (exp/jobs/e89.sh, E89_ARM=awf)
 #
-# Submit from the Mac after commit and push (the job resets the checkout to origin/main), chained on e98_read.sh, the
-# job that wrote E98_SCORES; the login node runs one sbatch and nothing else:
-#   ssh aicr "E98_MODE=inv E98_DEPLOY=auto sbatch --parsable --dependency=afterok:$READ_JOB" < exp/jobs/e98.sh
+# Submit from the Mac after commit and push (the job resets the checkout to origin/main), chained on e98_burned.sh
+# (Part H's layer, itself chained on e98_read.sh, the job that wrote E98_SCORES; without the layer Part H is skipped
+# with a note); the login node runs one sbatch and nothing else:
+#   ssh aicr "E98_MODE=inv E98_DEPLOY=auto sbatch --parsable --dependency=afterok:$BURN_JOB" < exp/jobs/e98.sh
 #   ssh aicr 'E98_MODE=run E98_DEPLOY=auto sbatch --parsable' < exp/jobs/e98.sh
 # Both modes write files in exp/out; never let this job overlap another that writes there (chain with --dependency).
 #SBATCH -A p2026_0089_neu
