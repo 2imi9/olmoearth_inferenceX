@@ -1,8 +1,6 @@
 # A transfer test: Ai2's FT-AWF deployment configuration on 2017 imagery, graded at an independent random sample around the AWF area (exp99 preregistration)
 
-**Status: DRAFT, not frozen.** Written 9 October 2026, before any 2017 map existed. The area rule, the crosswalk and
-the design are fixed here. The predictions' thresholds and floors are **proposed**; the owner confirms them before
-freezing. Nothing is graded before this line says frozen.
+**Status: frozen on 9 October 2026, before any class or probability was read at a plot.** Written 9 October 2026, before any 2017 map existed. The area rule, the crosswalk and the design are fixed here. The owner confirmed the thresholds and floors below on 9 October 2026, as proposed. At freezing, the pilot's inventory had counted plots in windows only, and the full run's first prepare (job 1247349) had been cancelled for making 9,298 windows (see The request geometry, below); its rerun on one MultiPolygon request was in progress.
 
 - **Allowed before freezing:**
   - the smoke on synthetic inputs (`python exp/exp99_transfer.py --smoke`, `tests/test_exp99.py`);
@@ -125,9 +123,13 @@ deployment environment (olmoearth-runner 0.1.14, rslearn 0.0.27 with the `get_it
 Two things differ:
 
 - **The request geometry:** one square of about 11 m (0.0001 degree) around each of the 309 plots, in the structure of
-  Ai2's file (a FeatureCollection of Polygon features) with Ai2's property names, `oe_start_time` 2017-01-01 and
-  `oe_end_time` 2017-12-31. olmoearth_run then predicts the 1,024-px windows that hold a plot. The file holds positions:
-  it is written on the cluster's scratch only, and only its sha256 is recorded.
+  Ai2's file (a FeatureCollection holding one feature: here one MultiPolygon of the 309 squares, where Ai2's is one
+  Polygon) with Ai2's property names, `oe_start_time` 2017-01-01 and `oe_end_time` 2017-12-31. olmoearth_run then
+  predicts the 1,024-px windows that hold a plot. One feature per square, as first written, made olmoearth_run window
+  each 1-degree cell once per plot in it (its GridPartitioner turns each feature into the whole cell, unclipped): the
+  first prepare (job 1247349) made 9,298 windows for 309 plots and was cancelled before freezing; the prepare stops
+  itself above 3 windows per square. The file holds positions: it is written on the cluster's scratch only, and only
+  its sha256 is recorded.
 - **The year:** 12 periods of 30 days from 1 January 2017, from Planetary Computer's Sentinel-2 L2A. The model was
   fine-tuned on 2023 imagery.
 
@@ -200,7 +202,7 @@ and defines only woodland forest (">40% canopy").
   not apportion a gap; with 47 plots the paired counts are small. exp98's Part I reads the same plots against the 2023
   map in exp98's run.
 
-## Predictions (PROPOSED: the owner confirms the thresholds and floors before freezing)
+## Predictions (thresholds and floors confirmed by the owner on 9 October 2026)
 
 **Floors.** P1 and P2 are graded only if at least **250** of the 309 plots have input, and there are at least **20**
 errors and **20** correct plots under STRICT. Below a floor the value is reported without a verdict.
