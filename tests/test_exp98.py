@@ -5,8 +5,11 @@ directories, two deployment dataset roots, as the real run is read), its conditi
 parts), exp89's replica units, and runs every part on them; the values below are computed by hand from that design
 (exp98_awf_deployment.py, the comment above SMOKE_GRID). The grades are also checked on planted numbers at their
 thresholds and floors, the readers on small cases, the guard that refuses the run while the page is a draft, and that
-nothing written carries a position. Needs rasterio (the geo extra); skipped without it."""
+nothing written carries a position. The last three tests recompute the recorded run's graded numbers from its committed
+per-unit files by a second route, with plain numpy and no exp98 helper (the claim ledger's crosschecks for exp98).
+Needs rasterio (the geo extra); skipped without it."""
 import json
+import math
 import os
 import sys
 
@@ -456,3 +459,131 @@ def test_a_label_pixel_maps_to_the_score_pixel_holding_its_centre():
     assert (rows[0], cols[0]) == (3, 7) and (rows[2], cols[2]) == (9, 2)
     assert how.tolist() == ["same_crs", "outside", "reprojected"]
     assert off[0] == 0.0 and off[2] < 1e-6
+
+
+# ----------------------------------------------------------------------------- the recorded run, by a second route
+OUT = os.path.join(ROOT, "exp", "out")
+
+
+def _recorded():
+    """The recorded run (exp/out/exp98_*), read with plain numpy: V is the covered validation rows of the units file;
+    the deployed class is the units file's; the replica's class is the argmax of its ten logits in exp89's units file,
+    matched by window name, and its confidence the top-1 softmax over the nine trained channels; the task is the
+    window name before `_point_`. Only names, labels, clusters and logits are read from exp89's file."""
+    with open(os.path.join(OUT, "exp98_summary.json")) as f:
+        S = json.load(f)
+    z = np.load(os.path.join(OUT, "exp98_units.npz"))
+    r = np.load(os.path.join(OUT, "exp89_units_awf.npz"))
+    V = z["covered"] & (z["split"] == "val")
+    names, y = z["names"][V].tolist(), z["label"][V]
+    task = np.array([n.split("_point_")[0] for n in names])
+    row = {n: i for i, n in enumerate(r["names"].tolist())}
+    k = np.array([row[n] for n in names])
+    assert (r["label"][k] == y).all() and (r["clusters"][k] == task).all()
+    logits = r["logits"][k].astype(np.float64)
+    t = logits[:, :9]
+    p = np.exp(t - t.max(axis=1, keepdims=True))
+    p /= p.sum(axis=1, keepdims=True)
+    return {"S": S, "z": z, "V": V, "y": y, "task": task, "pred": z["pred_deployed"][V], "u": z["suspicion"][V],
+            "p1": z["p1"][V], "rpred": logits.argmax(axis=1), "ru": -np.log(p.max(axis=1))}
+
+
+def _pairs_auroc(score, err):
+    """The AUROC for errors by counting every (error, correct) pair, a tie counting one half."""
+    d = score[err][:, None] - score[~err][None, :]
+    return float(((d > 0).sum() + 0.5 * (d == 0).sum()) / d.size)
+
+
+def test_exp98_p1_by_a_second_route():
+    """P1 recomputed: the errors and accuracies by counting; the discordant points and the exact two-sided sign test
+    from binomial coefficients; the 90% task-cluster interval through a weight matrix (each resample's task counts
+    times the per-task error sums), drawn as the script draws (seed 98, 20 task indices per resample, 2,000
+    resamples). Equivalence within 5 points is not shown, and the interval contains 0."""
+    R = _recorded()
+    rec, P = R["S"]["graded_validation"]["replica"], R["S"]["prereg"]["P1"]
+    e_d, e_r = R["pred"] != R["y"], R["rpred"] != R["y"]
+    assert (e_d.size, int(e_d.sum()), int(e_r.sum())) == (259, 33, 27)
+    assert (1 - e_d.mean()) - (1 - e_r.mean()) == pytest.approx(rec["difference"], abs=1e-12)
+    a, b = int((~e_d & e_r).sum()), int((e_d & ~e_r).sum())
+    assert (a, b) == (7, 13)
+    p = min(1.0, 2 * sum(math.comb(a + b, i) for i in range(min(a, b) + 1)) / 2 ** (a + b))
+    assert p == pytest.approx(rec["discordant"]["sign_test_two_sided_p"], abs=1e-15)
+    ids = np.unique(R["task"])
+    T = (R["task"][None, :] == ids[:, None]).astype(np.float64)          # tasks x points
+    pick = np.random.default_rng(98).integers(0, ids.size, (2000, ids.size))
+    W = np.zeros((2000, ids.size))
+    np.add.at(W, (np.repeat(np.arange(2000), ids.size), pick.ravel()), 1)
+    d = (W @ (T @ e_r) - W @ (T @ e_d)) / (W @ T.sum(axis=1))           # deployed accuracy minus the replica's
+    lo, hi = float(np.quantile(d, 0.05)), float(np.quantile(d, 0.95))
+    I = rec["p1_equivalence_interval"]
+    assert lo == pytest.approx(I["lo"], abs=1e-12) and hi == pytest.approx(I["hi"], abs=1e-12)
+    assert max(abs(lo), abs(hi)) == pytest.approx(P["value"], abs=1e-12)
+    assert max(abs(lo), abs(hi)) > 0.05 and P["holds"] is False          # equivalence within 5 points not shown
+    assert lo < 0 < hi                                                   # and no difference shown either
+
+    def larger_end(seed, n):                                             # the same draw, any seed and size
+        pk = np.random.default_rng(seed).integers(0, ids.size, (n, ids.size))
+        Wn = np.zeros((n, ids.size))
+        np.add.at(Wn, (np.repeat(np.arange(n), ids.size), pk.ravel()), 1)
+        dn = (Wn @ (T @ e_r) - Wn @ (T @ e_d)) / (Wn @ T.sum(axis=1))
+        return float(np.quantile(dn, 0.05)), float(np.quantile(dn, 0.95))
+
+    # the record's seed sensitivity: the 200 seeds 0 to 200 other than 98, and 400,000 resamples at seed 98
+    ends = np.array([max(-a_, b_) for a_, b_ in (larger_end(s, 2000) for s in range(201) if s != 98)])
+    assert ends.size == 200 and (round(100 * ends.min(), 1), round(100 * ends.max(), 1)) == (4.8, 5.3)
+    assert round(100 * float(np.median(ends)), 2) == 5.07 and int((ends <= 0.05).sum()) == 40
+    lo4, hi4 = larger_end(98, 400_000)
+    assert (round(100 * lo4, 2), round(100 * hi4, 2)) == (-5.07, 0.77) and -lo4 > 0.05
+
+
+def test_exp98_classes_and_ranking_by_a_second_route():
+    """P2 to P4 recomputed: the agreement with the replica by counting; the AUROC of the deployed confidence, and of
+    the replica's, by counting every (error, correct) pair; the 10% review as the round(0.1 n) least confident points
+    by a stable sort (no ties, so the order is unique); the confidence written is exp(-suspicion). Also the counts the
+    record cites beside them: the train points, the condition codes, the burn codes and the identical 10 m inputs."""
+    R = _recorded()
+    S, y, pred = R["S"], R["y"], R["pred"]
+    g = S["graded_validation"]
+    err = pred != y
+    assert int((pred == R["rpred"]).sum()) == 238
+    assert (pred == R["rpred"]).mean() == pytest.approx(S["prereg"]["P2"]["value"], abs=1e-12)
+    assert np.abs(R["p1"] - np.exp(-R["u"])).max() < 1e-12 and np.unique(R["u"]).size == R["u"].size
+    assert _pairs_auroc(R["u"], err) == pytest.approx(S["prereg"]["P3"]["value"], abs=1e-12)
+    assert _pairs_auroc(R["ru"], R["rpred"] != y) == pytest.approx(g["replica"]["auroc_replica"], abs=1e-9)
+    order = np.argsort(-R["u"], kind="stable")                           # least confident first
+    for b, n_err in ((0.05, 7), (0.1, 14), (0.2, 19)):
+        k = int(round(b * err.size))
+        assert int(err[order][:k].sum()) == n_err
+        assert err[order][:k].sum() / err.sum() == pytest.approx(g["ranking"]["capture"][str(b)], abs=1e-12)
+    assert (int(round(0.1 * err.size)), int(err[order][:25].sum())) == (26, 14)   # 25 points give the same 14
+    assert S["prereg"]["P4"]["value"] == pytest.approx(14 / 33, abs=1e-12)
+    assert all(S["prereg"][q]["holds"] is True for q in ("P2", "P3", "P4")) and int((pred == 9).sum()) == 0
+    z, V = R["z"], R["V"]
+    T = z["covered"] & (z["split"] == "train")
+    assert (int(T.sum()), int((z["pred_deployed"][T] != z["label"][T]).sum())) == (783, 16)
+    cond, burn, same = z["condition"][V], z["burned"][V], z["input_identical"][V]
+    assert [(int((cond == c).sum()), int(err[cond == c].sum())) for c in (0, 1)] == [(20, 2), (239, 31)]
+    assert (burn == 0).all() and int((same == 1).sum()) == 258 and int((same == 0).sum()) == 1
+
+
+def test_exp98_p5_bracket_from_the_map_quantiles():
+    """P5 cannot be recomputed exactly: the map's confidence sample is not saved. The summary's five map quantiles
+    bracket each point's percentile (the share of the map less confident than the point lies between the quantile
+    levels on either side of its confidence), so the recorded mean must lie inside the bracket's mean, and the
+    bracket's lower edge, bootstrapped over the tasks as P5's bound is (2,000 resamples, seed 98), must keep the bound
+    above 0.5. P5's first condition (mean at least 0.55) is checked only from the summary: the bracket starts at 0.547."""
+    R = _recorded()
+    w = R["S"]["where_the_points_sit"]
+    q = w["map_confidence_quantiles"]
+    levels = np.array([0.0] + [float(x) for x in q] + [1.0])
+    j = np.searchsorted(np.array([q[x] for x in q]), R["p1"], side="right")
+    lo_edge, hi_edge = levels[j], levels[j + 1]
+    assert (round(float(lo_edge.mean()), 3), round(float(hi_edge.mean()), 3)) == (0.547, 0.741)
+    assert lo_edge.mean() <= w["points_mean_percentile"] <= hi_edge.mean()
+    ids = np.unique(R["task"])
+    rows = {c: np.flatnonzero(R["task"] == c) for c in ids}
+    rng = np.random.default_rng(98)
+    v = [lo_edge[np.concatenate([rows[c] for c in ids[rng.integers(0, ids.size, ids.size)]])].mean()
+         for _ in range(2000)]
+    assert np.quantile(v, 0.05) > 0.5
+    assert w["points_mean_percentile_bootstrap"]["lower_one_sided_95"] > 0.5 and R["S"]["prereg"]["P5"]["holds"] is True

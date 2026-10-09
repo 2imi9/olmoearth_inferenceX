@@ -2,6 +2,8 @@
 
 **Status: frozen on 9 October 2026, before any prediction was read at a label point.** Written 8 October 2026; floors, P1 and P5 revised the same day after a review, before any run. The owner confirmed the thresholds and the floors on 8 October 2026. Parts H (burned area) and I (East Africa TimeSync) were added before freezing and are report-only. At freezing, the full-area map was not yet written (inference queued); the pilot read 4 windows and counted pixels only, reading no label.
 
+**Result, 9 October 2026 (added at recording; the frozen text is unchanged).** Run once at the label points at 7417425, recorded after an independent audit ([comparisons](../results/comparisons.md#a-re-run-of-ai2s-ft-awf-deployment-graded-at-ai2s-own-points-exp98)). V holds 259 validation points in 20 tasks, with 33 errors; the floors are met. P1 does not hold: the 90% interval of the difference, −5.1 to +0.8 points, reaches 0.15 points past the ±5-point margin (point difference −2.3 points, sign test p = 0.26). So reproduction within 5 points was not shown, and no difference was shown either. P2 (91.9%), P3 (AUROC 0.849), P4 (42.4%) and P5 (mean percentile 64.7%, lower bound 61.4%) hold. Changes after freezing are listed under Deviations.
+
 **What is graded.** The map here is the record's own re-run of Ai2's AWF deployment configuration (Ai2's checkpoint,
 `olmoearth_run.yaml`, request geometry and 2023 period, at 10 m), with two changes so that it can be graded: the model
 writes its softmax (`output_probs`, ten float32 bands p0 to p9) instead of the argmax id, and a sidecar reads the
@@ -581,3 +583,26 @@ from-olmoearth part directories (after `e98_collect.sh`, and once the from-olmoe
 ## Deviations
 
 None yet. Any change after freezing is listed here with its date, its reason, and whether any number had been read.
+
+*Added at recording, 9 October 2026. The line above is the frozen text.*
+
+- **9 October 2026, after freezing and before any label point was read: the burned layer's code.**
+  `exp/exp98_burned.py` (Part H's layer only) now maps each 10 m pixel to the MODIS cell that holds its centre by
+  transforming every centre with pyproj and flooring (7417425). It replaces GDAL's tolerance-0 nearest-neighbour warp,
+  whose answer depended on the installed GDAL version: one test pixel in 43,200 moved a cell under GDAL 3.10.3, and CI
+  failed on e928049. The rule on this page is unchanged ("each pixel takes the code of the cell that holds its centre,
+  every pixel transformed exactly"); the code now follows it on every version. The burned rasters built at f934f73
+  were rebuilt with it (06:18 to 06:27 UTC) before the inventory (06:30 UTC) and the graded run (06:38 UTC), both at
+  7417425. P1 to P5 do not read the burned layer.
+- **P5's map sample.** It holds 911,933 pixels, not 2,000,000 in expectation as Part E states: the sampling
+  probability was set on the eleven grids' full area (515,899,392 pixels, with overlaps and uncovered pixels) rather
+  than on the covered pixels counted once. The effect on P5's mean is negligible (Monte Carlo error about 0.0005 at
+  most). Found by the pre-record audit; the grade is unchanged.
+- **Interpretation (says less than this page).** The "P1 does not hold" paragraph's attribution through Part G is not
+  applied: no difference was shown, Part G's split is 258 points against 1, and Part G compares only the 10 m bands.
+- **Run history (no deviation).** The first inventory job (1247543) refused before reading any label, because the
+  scratch purge had removed files of exp89's extraction of the pinned AWF tar. The tar was extracted again (job
+  1247661) and checked against exp89's manifest. The analysis ran once at the label points. At freezing the inference
+  had started and not finished, rather than being queued: the predict job (1245574) wrote its check at 05:29 UTC, eight
+  minutes after the freeze (05:21, 7b12dc4's commit time; the predict time is from the session's job log, not in the
+  committed records); no label was read before the inventory at 06:30 UTC.

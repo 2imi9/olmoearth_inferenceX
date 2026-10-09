@@ -33,6 +33,11 @@ artifact under `exp/out/`, with its evidence in the [results record](results/com
   half the error rate, returned no zone on most draws (exp93). On five more reference samples and seven products, in
   the United States, East Africa, Europe and worldwide from 2001 to 2020, the same gradings held, and three products'
   own confidences ranked their errors (exp94).
+- A map made by Ai2's own deployment configuration for its fine-tuned AWF model, re-run with probabilities kept, gives
+  the evaluation's class at 92% of Ai2's validation points that fall on it, and its confidence ranks its errors there
+  (AUROC 0.85). Its accuracy there was not shown to be within 5 points of the evaluation replica's, and no difference
+  was shown. The points, placed by experts, sit in the confident part of the map and give no whole-map accuracy
+  (exp98).
 - No signal from inside the encoder beats confidence, and a consensus of encoders does not estimate accuracy.
 - For a language-model agent at 7B the package is decisive when its tools are given directly; the agent as shipped
   found them on 17 of 40 runs. At 27B a model with a numpy sandbox nearly matches the package's ranking, and every arm
@@ -255,6 +260,25 @@ interval covered on 95.05% to 96.25% of draws in all 18 cells (exp94). <!-- clai
 LCMAP's, CGLS-LC100's and ODSE-LULC's own confidences rank their errors there, AUROC 0.720 to 0.787 in nine cells, and
 on them the certified zone's guaranteed rules were wrong more than α on at most 2.8% of draws, the plug-in's on 39% to
 53% (exp94). <!-- claim:exp94-product-confidences-rank-their-errors --> <!-- claim:exp94-zone-guarantee-holds-on-three-products -->
+
+## A deployed OlmoEarth map at Ai2's own points
+
+The record re-ran Ai2's FT-AWF deployment configuration with olmoearth_run over the AWF project's request geometry
+(2023, 10 m, probabilities written). This is the record's re-run, not the map Ai2 published. It was graded at the
+259 of Ai2's 344 validation points that fall on the map (exp98, preregistered). The re-run is 87.3% accurate there,
+against 89.6% for the evaluated replica on the same points. Reproduction within 5 points was not shown: the 90%
+interval of the difference, −5.1 to +0.8 points, reaches 0.15 points past the margin. No difference was shown either:
+the interval contains 0, and the sign test gives p = 0.26. <!-- claim:exp98-equivalence-within-5-points-not-shown -->
+The re-run gives the replica's class at 92% of the points. Its own confidence ranks its errors there with AUROC 0.849,
+and the least confident 10% of the points hold 42% of its errors. <!-- claim:exp98-deployment-gives-the-evaluations-classes-and-ranking -->
+Ai2's points sit in the confident part of the map: on average a point is more confident than 65% of the map's pixels.
+The points were placed by experts, so they give no whole-map accuracy. If points and pixels of equal confidence were
+equally accurate, which the design cannot check, the map would be less accurate than the points, since at the points
+the error rate rises as the confidence falls.
+<!-- claim:exp98-validation-points-sit-in-the-confident-part -->
+At the 47 plots of an independent random sample inside the area (East Africa TimeSync, 2017 labels), the 2023 map
+disagrees at 25 under a strict crosswalk and at 3 under a lenient one. So the crosswalk between the two legends, not
+the map, decides most of that figure, and neither is the 2023 map's error rate (report-only).
 
 ## The package as an agent tool
 

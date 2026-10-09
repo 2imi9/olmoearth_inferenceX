@@ -3496,6 +3496,153 @@ not safe: rerun after every 5% more labels, it certified a wrong zone at some lo
 of the 366 maps; fewer looks give less (exp96's audit). The one-look certify, with the budget fixed in advance
 (`plan`), stays the default; the sequential sample is the option when the stopping point is not known in advance.
 
+## A re-run of Ai2's FT-AWF deployment, graded at Ai2's own points (exp98)
+
+**Question.** Ai2 publishes 89.5% accuracy beside its fine-tuned AWF land-cover model (FT-AWF), an evaluation on 344
+validation points, each read from its own label window. Ai2's deployment pipeline, olmoearth_run, makes a map
+differently: it cuts a request geometry into 1,024-px windows, fetches 12 mosaics of 30-day periods per window and
+stitches overlapping 16-px patches. Does a map made by that configuration keep the evaluation's accuracy and its
+confidence ranking at Ai2's own validation points, and where do those points sit in the map? exp98 was preregistered
+on 8 October 2026 and frozen on 9 October (7b12dc4), before any prediction was read at a label point
+(`docs/plan/awf_deployment.md`). It ran once at the label points, on the aicr cluster at 7417425:
+`exp/exp98_awf_deployment.py`, `exp/out/exp98_summary.json`, `exp/out/exp98_inventory.json`,
+`exp/out/exp98_units.npz` (per label window: name, split, label, deployed class, confidence, condition and burn codes,
+boundary cue, input match; no position) and the job records in `exp/out/exp98/`.
+
+**What ran.** The record's own re-run of Ai2's AWF deployment configuration: Ai2's checkpoint
+(`allenai/OlmoEarth-v1-FT-AWF-Base` at a347b154), `olmoearth_run.yaml`, the request geometry (one polygon of about
+19,800 km²) and the 2023 period, at 10 m. Two changes let it be graded: the model writes its softmax (ten float32 bands)
+instead of the argmax, and a sidecar reads Sentinel-2's scene classification for the condition layer
+(`exp/jobs/e98_config/CHANGES.md`). Versions (`exp/out/exp98/e98_versions.json`): olmoearth-runner 0.1.14, rslearn
+0.0.27 with 0.0.29's fix of `PlanetaryComputer.get_item_by_name` (asserted by `e98_prepare.sh`), torch 2.7.1+cu128,
+olmoearth_projects f3c9b0c8. The summary's string "rslearn @ 5780896a" names the source the reader's format was taken
+from, not the run's version. The scenes were fetched from Planetary Computer in October 2026. The run made 270 windows
+(224 cells, each window with all 12 item groups, the request geometry wholly inside them), 234,881,024 covered
+pixels counted once, read in 11 parts. It is not the map Ai2 published, and nothing here measures that map.
+
+The graded set V is the 259 of the 344 validation points that fall on covered pixels, in 20 annotation tasks; 85 lie
+outside every window and none on an uncovered pixel. Every point is in the map's CRS, at the middle of its score pixel.
+exp89's replica of Ai2's evaluation, which reads each point centred in a 16-px crop, matched all 259 by name with no
+label or task mismatch. The floors (200 points; 15 errors for P3 and P4) are met, with 33 errors.
+
+**Result.** At the 259 points the re-run is 87.3% accurate (33 errors), against 89.6% (27 errors) for exp89's replica
+on the same points, a point difference of −2.3 points. P1 does not hold: the 90% task-cluster bootstrap interval of the
+difference (2,000 resamples of the 20 tasks, seed 98), −5.1 to +0.8 points, reaches 0.15 points past the ±5-point
+margin, so reproduction within 5 points was not shown. No difference was shown either: the interval contains 0, and of
+the 20 points where exactly one of the two is right, 13 favour the replica and 7 the re-run (exact sign test p = 0.26).
+At these points the data cannot tell a difference of a few points from none. The verdict sits at the margin. Over
+the 200 seeds 0 to 200 other than 98 the interval's larger end ran from 4.8 to 5.3 points (median 5.07), and P1 would
+have held at 40 of them, one seed in five. With 400,000 resamples (seed 98) the interval is −5.07 to +0.77 points, so
+the larger end stays past the margin when the resampling noise is made small. The grade stays at the frozen seed. <!-- claim:exp98-equivalence-within-5-points-not-shown -->
+The two give the same class at 238 of the 259 points (91.9%; P2, at least 90%, holds). At the same points the re-run's
+own confidence (the top-1 softmax over the nine trained classes) ranks its errors with AUROC 0.849 (P3, at least 0.75,
+holds). The replica's AUROC on the same points is 0.887, and the 95% task-cluster interval of the difference is −0.090
+to +0.026. The least confident 10% of the points (26 of 259) hold 14 of the 33 errors, 42.4% (P4, at least 25%,
+holds). A random 10% holds 10.0% and a perfect order 78.8%. This describes Ai2's expert-placed points, not the map's
+errors elsewhere. <!-- claim:exp98-deployment-gives-the-evaluations-classes-and-ranking -->
+Ai2's validation points sit in the more confident part of the re-run map. On average a point is more confident than
+64.7% of the map's pixels (one-sided 95% task-cluster lower bound 61.4%; P5 holds). The figure would be 50% if the
+points' confidence were distributed as the map's. The design does not say why: experts may label where a class is
+clear (the page's prior), and the validation cells also border training cells. Nor does it give the map's accuracy.
+If points and map pixels of equal confidence were equally accurate, an assumption expert placement does not let the
+record check, the map would be less accurate than the points, since at the points the error rate rises as the
+confidence falls. Under that assumption the points' error rate reweighted to the map's confidence fifths reads 21%.
+That is a model-based reading with no interval, resting on 22 points in the least confident fifth (12 errors), not an
+estimate. <!-- claim:exp98-validation-points-sit-in-the-confident-part -->
+
+**Reported, not graded.**
+
+- **Ai2's figure.** Ai2's 89.5% is over all 344 points, each read at a random crop position, and 85 of them lie
+  outside the map. It is not matched here, and 87.3% is not compared with it. The replica's 88.1% is also over all 344.
+- **The 2.0-point check.** exp89's alignment check is reported only. The point difference, 2.3 points, exceeds it;
+  the page expected that about one time in five with no real effect.
+- **At the points.** Per-class recall ranges from 0.63 (woodland forest, 17 of 27) to 0.95 (urban, 19 of 20) on the
+  classes with at least 20 points. No point is predicted as the untrained channel. Expected calibration error is
+  0.090. The training points are in-sample, and 98.0% of them are right (16 errors in 783).
+- **The boundary cue.** It marks 30% of the errors and 6% of the correct points (the point on a class boundary of the
+  deployed 3 × 3 argmax). exp21's 63% and 34% used the replica's crop, so the two are not comparable.
+- **Part C.** All 259 points have a scene in every timestep. At 239 of them at least one but fewer than half of the
+  timesteps are cloudy (31 errors), and at 20 none is (2 errors). None lies on the 7.1% of the map coded cloudy.
+- **Part G.** The re-run read the same 10 m band values as the label windows at 258 of the 259 points (B02, B03, B04,
+  B08, all 12 item groups in the same order). So refetched scenes do not explain the class changes at the 10 m bands.
+  The 20 m and 60 m bands reach the model by different paths in the two pipelines and were not compared, and the crop
+  around each point differs. The record cannot separate the two, and with no difference shown, no cause is attributed.
+- **Part F.** This is a plan at error rates guessed from Ai2's points, which are not a sample of the map. About 223
+  random labels would give a 95% interval no wider than ±5 points if the map were wrong 12.7% of the time (402 at
+  50%). A map wrong 12.7% of the time cannot be certified whole at α 0.10. No label of the map has been drawn.
+
+**Part H, burned area (report-only).** MODIS MCD64A1 (2023, with September absent from Planetary Computer) mapped a
+burn on 0.03% of the map's covered pixels: 70,730 pixels, about 7 km², all in January and March. It mapped none at the
+259 points, so Part H says nothing about burned ground at Ai2's points. The 4,400 burned 40 m windows are 0.10% of the
+least confident tenth of windows, against 0.03% of all windows. But they come from a few dozen 500 m cells (a cell
+holds about 2,150 pixels), and are not independent. Code 0 means only that no burn was detected: MCD64A1 misses
+most small burns, September was not read, and in some parts up to 44% of code-0 pixels were classified unburned under a MODIS special condition in at least one
+month. The stage's `assess --condition` check ran on a part that holds code 0 only.
+
+**Part I, the East Africa TimeSync plots (report-only).** 47 plots of the East Africa TimeSync sample lie inside the
+request geometry (Bullock et al. 2021; a simple random sample within each country). The 2023 map disagrees with their
+2017 labels at 25 plots under the STRICT crosswalk and 3 under the LENIENT one. With the two countries as strata,
+weighted by their share of the geometry (Kenya 0.55, Tanzania 0.45), these are 51% (the package's exact interval, at
+least 95%: 27% to 75%) and 6.5% (0.3% to 29%) of the geometry's 19,838 km².
+The two rules differ almost entirely at Open Grassland plots the map calls shrubland/savanna (18 of the 22 plots
+where only STRICT disagrees), a boundary AWF does not publish. So the crosswalk decides most of the STRICT figure. These are disagreements with 2017 Landsat-plot labels, not the 2023 map's
+error rate. The map's confidence did not rank the STRICT disagreements (AUROC 0.45), most of which are that legend
+boundary. In the summary, each country's low and high are its unadjusted 95% interval; the combined interval uses each
+country's at 97.5%, as its method states.
+
+**Changes after freezing, and the run's history.**
+
+- **The burned layer.** On 9 October, after freezing and before any label point was read, `exp/exp98_burned.py`
+  (Part H's layer only) changed at 7417425. It replaced GDAL's tolerance-0 nearest-neighbour warp, whose answer
+  depended on the installed GDAL version, with a per-centre pyproj transform. One test pixel in 43,200 moved a cell
+  under GDAL 3.10.3, and CI failed on e928049. The page's rule is unchanged: each pixel takes the cell holding its
+  centre, every pixel transformed exactly. The burned rasters built at f934f73 were rebuilt with the new code from
+  06:18 to 06:27 UTC. The inventory followed at 06:30 and the graded run at 06:38, both at 7417425 with a clean tree.
+  P1 to P5 do not read the burned layer.
+- **The refused inventory (no deviation).** The first inventory job (1247543), which reads no outcome, refused
+  because the 30-day scratch purge had removed files of exp89's extraction of the pinned AWF tar. The tar was extracted
+  again (job 1247661) and checked against exp89's manifest. The analysis then ran once at the label points. The graded
+  run's job id is not carried in the summary.
+- **The timeline (UTC, 9 October).** The page was frozen at 05:21 (7b12dc4's commit time). The burned stage started
+  at 06:18:52 and ran 467 s, the inventory at 06:30:15 and the graded run at 06:38:10 (the `utc` of `e98_burned.json`,
+  `exp98_inventory.json` and `exp98_summary.json`). The earlier stages' times come from the session's job log and are
+  not in the committed records: prepare (job 1245573) finished at 04:36, predict (1245574) wrote its check at 05:29,
+  collect (1245577) at 05:32 and the read at 05:39. So the page's status line, which says inference was queued at
+  freezing, is better read as "not finished". No label was read before 06:30. The pilot (4 windows, 03:10) counted
+  pixels and ran `assess` only.
+- **P5's map sample.** The map's confidence sample holds 911,933 pixels, not the page's 2,000,000 in expectation. The
+  sampling probability was set on the eleven grids' full area (515,899,392 pixels, overlaps and uncovered pixels
+  included) rather than on the covered pixels counted once. The effect on P5's mean is negligible (Monte Carlo standard
+  error about 0.0005 at most).
+- **What the record does not apply.** The page's "P1 does not hold" paragraph attributes a cause through Part G. That
+  is not applied: no difference was shown, Part G's split is 258 points against 1, and Part G compares only the 10 m
+  bands.
+
+**The pre-record audit.** Three independent lenses (numbers; honesty and design; provenance and leakage) recomputed
+the graded numbers from the units files with their own code, and every one they could recompute equals the summary
+to every digit. P5's percentile could not be recomputed, since the map's confidence sample is not saved. From the
+summary's five map quantiles, the points' mean percentile lies between 0.547 and 0.741, and its lower edge's
+task-cluster bootstrap 5th percentile is 0.510. So P5's second condition (the bound above 0.5) is confirmed
+independently, and its first (the mean at least 0.55) only from the summary. The audit changed no number. It asked for
+the wording above: "no difference shown" beside "equivalence not shown", no cause attributed through Part G, P5 read
+conditionally, and Parts H and I described rather than read as signals. It also asked for the deviations above and for
+the job records to be committed. No file exp98 adds holds a coordinate.
+
+**Reading.** At Ai2's own validation points, a map made by the deployment configuration, as re-run here, keeps the
+evaluation's class at 92% of the points, and its confidence ranks its errors (AUROC 0.849, the replica's 0.887 on the
+same points, a difference not tested for equivalence): a review of the least confident 10% of these points finds 42%
+of their errors. Whether its accuracy there is within 5 points of the
+evaluation's is not settled: the interval reaches 0.15 points past the margin, and no difference was shown. Ai2's
+points sit in the confident part of the map, which limits what 89.5% says about the map as a whole. The map's error
+rate needs random labels (Part F: about 223 for ±5 points). The 47 independent TimeSync plots inside the area are too
+few to stand in for them, and too dependent on the crosswalk and on the six years between their labels and the map.
+
+**What it does not show.** Anything about the map Ai2 published. A whole-map error rate, per-class user's or
+producer's accuracy, or a certified zone: the points were placed by experts, not drawn at random, and every per-class
+figure is a recall at the points. Accuracy at pixels unlike the points. Whether the labels are right: they were
+annotated on Planet imagery of unknown date. Independence beyond the 20 tasks. Whether the 20 m and 60 m bands, or the
+crop, changed any class. Whether the map is wrong on burned ground: MCD64A1 found almost no burn in the area.
+
 ## A vision-language model as the reviewer (exp91)
 
 **Question.** The labelled routes need a reviewer. Can a general-purpose vision-language model supply the labels from

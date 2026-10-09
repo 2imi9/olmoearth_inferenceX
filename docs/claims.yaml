@@ -4885,3 +4885,97 @@
     budgets from 300 (not preregistered) the median area ratio was 0.90. The pre-record audit found two numbers wrong
     in the draft record (the one-look median share over all maps, 0.178, given as the same maps'; 15 Sen1Floods11 maps
     for 14), corrected before recording.
+
+- id: exp98-equivalence-within-5-points-not-shown
+  statement: "At the 259 of Ai2's 344 AWF validation points that fall on the record's re-run of Ai2's FT-AWF deployment configuration (2023, 10 m, scenes fetched in October 2026; not the map Ai2 published; 20 annotation tasks), the re-run is 87.3% accurate (33 errors) against 89.6% (27 errors) for exp89's replica on the same points, a point difference of -2.3 points. P1 (preregistered: the 90% task-cluster bootstrap interval of the difference within 5 points) does not hold: the interval, -5.1 to +0.8 points, reaches 0.15 points past the margin, so reproduction within 5 points was not shown. No difference was shown either: the interval contains 0, and of the 20 points where exactly one is right, 13 favour the replica and 7 the re-run (exact sign test p = 0.26)."
+  crosscheck: tests/test_exp98.py::test_exp98_p1_by_a_second_route
+  status: rejected
+  experiments: [exp98, exp89]
+  artifacts: [exp/out/exp98_summary.json, exp/out/exp98/e98_burned.json, exp/out/exp98/e98_versions.json]
+  check: |-
+    (lambda S: (lambda g, r, I, P: S['prereg_status'] == 'frozen' and S['dirty'] is False and S['commit'].startswith('7417425')
+      # the job records: the burned layer rebuilt at the graded commit before the run; Ai2's checkpoint revision
+      and A['exp/out/exp98/e98_burned.json']['commit'] == S['commit'] and A['exp/out/exp98/e98_burned.json']['pilot'] is False
+      and A['exp/out/exp98/e98_burned.json']['utc'] < S['utc']
+      and A['exp/out/exp98/e98_versions.json']['checkpoint']['revision'].startswith('a347b154')
+      and (g['n'], g['n_clusters'], g['accuracy']['n_errors'], r['n_errors_deployed'], r['n_errors_replica']) == (259, 20, 33, 33, 27)
+      and S['labels']['by_split']['val'] == 344 and S['mapping']['by_split']['val']['covered'] == 259
+      and (r['n_matched'], r['n_missing'], r['label_mismatches'], r['cluster_mismatches']) == (259, 0, 0, 0)
+      and abs(r['accuracy_deployed'] - 226 / 259) < 1e-12 and abs(r['accuracy_replica'] - 232 / 259) < 1e-12
+      and abs(r['difference'] + 6 / 259) < 1e-12
+      and [round(100 * v, 1) for v in (r['accuracy_deployed'], r['accuracy_replica'], r['difference'])] == [87.3, 89.6, -2.3]
+      and (I['level'], I['n_resamples'], I['n_clusters']) == (0.9, 2000, 20)
+      and [round(100 * I[k], 1) for k in ('lo', 'hi')] == [-5.1, 0.8] and I['lo'] < 0 < I['hi']
+      and P['graded'] is True and P['holds'] is False and P['threshold'] == 0.05
+      and P['value'] == I['max_abs_end'] == -I['lo'] and round(100 * (P['value'] - P['threshold']), 2) == 0.15
+      and (r['discordant']['replica_right_deployed_wrong'], r['discordant']['deployed_right_replica_wrong']) == (13, 7)
+      and round(r['discordant']['sign_test_two_sided_p'], 2) == 0.26
+      and r['within_2_points_reported'] is False
+    )(S['graded_validation'], S['graded_validation']['replica'], S['graded_validation']['replica']['p1_equivalence_interval'], S['prereg']['P1']))(A['exp/out/exp98_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp98-equivalence-within-5-points-not-shown}
+    - {file: docs/Findings.md, marker: exp98-equivalence-within-5-points-not-shown}
+  note: >-
+    Preregistered and frozen on 9 October 2026 (7b12dc4) before any prediction was read at a label point; run once at
+    the label points at 7417425 (job records in exp/out/exp98/). The verdict sits at the margin: over the 200 seeds 0 to
+    200 other than 98 the interval's larger end ran from 4.8 to 5.3 points (median 5.07) and P1 would have held at 40
+    of them, one in five; with 400,000 resamples (seed 98) the interval is -5.07 to +0.77 points, the larger end still
+    past the margin (both recomputed in the crosscheck). The grade stays at the frozen seed. Ai2's 89.5% (all 344
+    points, each read at a random crop position) is not matched and not compared. No cause is attributed: Part G found
+    identical 10 m inputs at 258 of the 259 points but did not compare the 20 m and 60 m bands or the crop.
+
+- id: exp98-deployment-gives-the-evaluations-classes-and-ranking
+  statement: "At the same 259 points (preregistered), the re-run of Ai2's FT-AWF deployment configuration gives the class of exp89's replica at 238 (91.9%; P2, at least 90%, holds); its own top-1 confidence over the nine trained classes ranks its errors with AUROC 0.849 (P3, at least 0.75, holds; the replica's on the same points 0.887, the difference's 95% task-cluster interval -0.090 to +0.026); and the least confident 10% of the points (26 of 259) hold 14 of its 33 errors, 42.4% (P4, at least 25%, holds; a random 10% holds 10.0%, a perfect order 78.8%). This describes Ai2's expert-placed points, not the map's errors elsewhere."
+  crosscheck: tests/test_exp98.py::test_exp98_classes_and_ranking_by_a_second_route
+  status: supported
+  experiments: [exp98, exp89]
+  artifacts: [exp/out/exp98_summary.json]
+  check: |-
+    (lambda S: (lambda g, r, k, P: S['prereg_status'] == 'frozen' and S['dirty'] is False
+      and (r['n_same_class'], g['n']) == (238, 259) and abs(r['agreement'] - 238 / 259) < 1e-12 and round(100 * r['agreement'], 1) == 91.9
+      and P['P2']['graded'] is True and P['P2']['holds'] is True and P['P2']['value'] == r['agreement'] and P['P2']['threshold'] == 0.9
+      and P['P3']['graded'] is True and P['P3']['holds'] is True and P['P3']['value'] == k['auroc'] == r['auroc_deployed'] and P['P3']['threshold'] == 0.75
+      and round(k['auroc'], 3) == 0.849 and round(r['auroc_replica'], 3) == 0.887
+      and [round(r['auroc_difference_bootstrap'][x], 3) for x in ('difference_lo', 'difference_hi')] == [-0.09, 0.026]
+      and P['P4']['graded'] is True and P['P4']['holds'] is True and P['P4']['value'] == k['capture']['0.1'] and P['P4']['threshold'] == 0.25
+      and abs(k['capture']['0.1'] - 14 / 33) < 1e-12 and abs(k['capture_random']['0.1'] - 26 / 259) < 1e-12 and abs(k['ceiling']['0.1'] - 26 / 33) < 1e-12
+      and (k['n'], k['n_errors']) == (259, 33) and g['readings']['n_pred_untrained'] == 0
+      and (P['floors']['min_validation_points'], P['floors']['min_errors'], P['floors']['n_validation_points'], P['floors']['n_errors']) == (200, 15, 259, 33)
+    )(S['graded_validation'], S['graded_validation']['replica'], S['graded_validation']['ranking'], S['prereg']))(A['exp/out/exp98_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp98-deployment-gives-the-evaluations-classes-and-ranking}
+    - {file: docs/Findings.md, marker: exp98-deployment-gives-the-evaluations-classes-and-ranking}
+  note: >-
+    The points were placed by AWF's experts in 20 annotation tasks, not drawn at random over the map, so the ranking
+    describes these points only; there is no whole-map rate and no certified zone. The 10% review is k = round(0.1 n) =
+    26 points; the 259 confidences have no ties, and 25 points give the same 14 errors. The re-run is the record's,
+    with probabilities written, not the map Ai2 published.
+
+- id: exp98-validation-points-sit-in-the-confident-part
+  statement: "Ai2's AWF validation points sit in the more confident part of the record's re-run map (preregistered; P5 holds): on average a point is more confident than 64.7% of the map's pixels (one-sided 95% task-cluster lower bound 61.4%; 50% if the points' confidence were distributed as the map's). The design does not say why (experts may label where a class is clear; the validation cells border training cells) and gives no map accuracy. If points and map pixels of equal confidence were equally accurate, an assumption expert placement does not let the record check, the map would be less accurate than the points, since at the points the error rate rises as the confidence falls; under that assumption the points' error rate reweighted to the map's confidence fifths reads 21%, a model-based reading with no interval resting on 22 points (12 errors) in the least confident fifth, not an estimate."
+  crosscheck: tests/test_exp98.py::test_exp98_p5_bracket_from_the_map_quantiles
+  status: supported
+  experiments: [exp98]
+  artifacts: [exp/out/exp98_summary.json]
+  check: |-
+    (lambda S: (lambda w, b, P, rw: S['prereg_status'] == 'frozen'
+      and P['graded'] is True and P['holds'] is True and P['threshold'] == 0.55
+      and P['value'] == w['points_mean_percentile'] and P['lower_one_sided_95'] == b['lower_one_sided_95']
+      and round(P['value'], 3) == 0.647 and round(P['lower_one_sided_95'], 3) == 0.614 and P['lower_one_sided_95'] > 0.5
+      and (b['n_resamples'], b['n_clusters']) == (2000, 20)
+      and w['points_confidence_quantiles']['0.5'] > w['map_confidence_quantiles']['0.5']
+      and rw['points_per_stratum'] == [96, 62, 44, 35, 22] and sum(rw['points_per_stratum']) == 259
+      and [round(n * e) for n, e in zip(rw['points_per_stratum'], rw['points_error_rate_per_stratum'])] == [1, 2, 10, 8, 12]
+      and abs(rw['estimate'] - sum(s * e for s, e in zip(rw['map_share'], rw['points_error_rate_per_stratum']))) < 1e-6
+      and round(rw['estimate'], 2) == 0.21 and 'not an estimate' in rw['assumption']
+    )(S['where_the_points_sit'], S['where_the_points_sit']['points_mean_percentile_bootstrap'], S['prereg']['P5'], S['where_the_points_sit']['reweighted_reported']))(A['exp/out/exp98_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp98-validation-points-sit-in-the-confident-part}
+    - {file: docs/Findings.md, marker: exp98-validation-points-sit-in-the-confident-part}
+  note: >-
+    The map's confidence sample is not saved, so the percentile cannot be recomputed from the artifacts. The crosscheck
+    brackets it from the summary's five map quantiles and the points' confidences in exp98_units.npz: the mean lies in
+    [0.547, 0.741] and the bracket's lower edge has a task-cluster bootstrap 5th percentile of 0.510, so the second
+    condition (lower bound above 0.5) is confirmed by a second route and the first (mean at least 0.55) only from the
+    summary. The sample holds 911,933 pixels, not the page's 2,000,000 in expectation (its probability was set on the
+    grids' full area); the Monte Carlo error on the mean is about 0.0005 at most.

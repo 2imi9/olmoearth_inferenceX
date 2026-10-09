@@ -18,16 +18,24 @@ under a binary threshold read as the argmax, advice that led a rerun to write a 
 refused, one saturated window refusing a whole one-band run). Tested on synthetic rslearn datasets built to rslearn's
 source; exp98 is its first real run.
 
-**exp98 (draft preregistration, not frozen): Ai2's FT-AWF deployment configuration re-run on the cluster with
-probabilities kept, graded at Ai2's own AWF validation labels.** `docs/plan/awf_deployment.md`,
-`exp/exp98_awf_deployment.py`, and the jobs `exp/jobs/e98_*.sh` with the changed configs in `exp/jobs/e98_config/`.
-The labels were placed by experts, not drawn at random over the map, so exp98 grades accuracy and the confidence
-ranking at those points and gives no whole-map rate and no certified zone. A report-only Part H describes the map and
-the points by MODIS burned area (MCD64A1 v061, 2023, from Planetary Computer; `exp/exp98_burned.py`, job
-`exp/jobs/e98_burned.sh`), a condition layer `assess --condition` reads; Planetary Computer lacks September 2023, which
-the layer's names and records state. A report-only Part I reads the 47 plots of the East Africa TimeSync sample (Bullock
-et al. 2021, a simple random sample per country, CC0) inside the request geometry, their 2017 labels against the 2023
-map, with the countries as strata and the package's exact interval.
+**exp98 (preregistered, frozen 9 October 2026 at 7b12dc4, run once at the label points at 7417425, recorded after an
+independent audit): Ai2's FT-AWF deployment configuration re-run on the cluster with probabilities kept, graded at
+Ai2's own AWF validation labels.** `docs/plan/awf_deployment.md`, `exp/exp98_awf_deployment.py`, the jobs
+`exp/jobs/e98_*.sh` with the changed configs in `exp/jobs/e98_config/`, and the outputs `exp/out/exp98_summary.json`,
+`exp98_units.npz`, `exp98_inventory.json` and the job records in `exp/out/exp98/`. The labels were placed by experts,
+not drawn at random over the map, so exp98 grades accuracy and the confidence ranking at those points and gives no
+whole-map rate and no certified zone. At the 259 of the 344 validation points that fall on the re-run map (20 tasks,
+33 errors) the re-run is 87.3% accurate, against 89.6% for exp89's replica on the same points. P1 does not hold: the
+90% task-cluster interval of the difference, -5.1 to +0.8 points, reaches 0.15 points past the 5-point margin. So
+equivalence was not shown, and no difference was shown either (the interval contains 0; sign test p = 0.26). P2 (the
+replica's class at 91.9% of the points), P3 (AUROC 0.849), P4 (the least confident 10% hold 42.4% of the errors) and P5
+(the points sit in the confident part of the map, mean percentile 64.7%) hold. Report-only: Part H (MODIS MCD64A1 v061
+burned area, 2023, from Planetary Computer, which lacks September; `exp/exp98_burned.py`) found a burn on 0.03% of the
+map and at none of the points. In Part I the 2023 map disagrees with the 2017 labels of the 47 East Africa TimeSync
+plots inside the area (Bullock et al. 2021) at 25 under the STRICT crosswalk and at 3 under the LENIENT one, so the
+crosswalk decides most of that figure, which is not the map's error rate. After freezing and
+before any label was read, the burned layer's warp was replaced by an exact per-centre transform (7417425), and its
+rasters were rebuilt; the first inventory refused on purged label files and ran again after a re-extraction.
 
 **exp99 (draft preregistration, predictions proposed): a transfer test.** `docs/plan/awf_transfer.md`,
 `exp/exp99_transfer.py`, jobs `exp/jobs/e99_*.sh` (`exp/jobs/E99_README.md`). The same deployment configuration on 2017
