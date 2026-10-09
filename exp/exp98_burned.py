@@ -392,16 +392,32 @@ def combine(burns, qas, doy_ranges):
     return code, bits, flags, ck
 
 
-def to_grid(bands, src_transform, src_crs, dst_transform, dst_crs, shape, threads=4):
-    """(k, h, w) int16 cells onto a (k, H, W) grid by nearest neighbour, each destination pixel taking the cell that
-    holds its centre. Every pixel is transformed exactly (tolerance 0). FILL in and out: no cell there."""
-    from rasterio.enums import Resampling
-    from rasterio.warp import reproject
+def to_grid(bands, src_transform, src_crs, dst_transform, dst_crs, shape, threads=4, rows_per_strip=512):
+    """(k, h, w) int16 cells onto a (k, H, W) grid, each destination pixel taking the cell that holds its centre.
+    Every pixel centre is transformed on its own with pyproj and the cell found by flooring, strip by strip. GDAL's
+    warper is not used: with tolerance 0 it still put one pixel of the 43,200 in tests/test_exp98_burned.py in the
+    next cell under rasterio 1.4.4 (GDAL 3.10.3) and none under rasterio 1.5.1 (GDAL 3.12.4), so its answer depended
+    on the installed version (CI, Python 3.11, after f934f73). FILL in and out: no cell there. `threads` is kept for
+    the callers and unused."""
+    from pyproj import CRS, Transformer
     src = np.ascontiguousarray(bands, dtype=np.int16)
-    dst = np.full((src.shape[0],) + tuple(shape), FILL, np.int16)
-    reproject(source=src, destination=dst, src_transform=src_transform, src_crs=src_crs, src_nodata=FILL,
-              dst_transform=dst_transform, dst_crs=dst_crs, dst_nodata=FILL, resampling=Resampling.nearest,
-              tolerance=0, num_threads=threads)
+    k, h, w = src.shape
+    H, W = (int(shape[0]), int(shape[1]))
+    dst = np.full((k, H, W), FILL, np.int16)
+    to_src = Transformer.from_crs(CRS.from_user_input(dst_crs), CRS.from_user_input(src_crs), always_xy=True)
+    inv = ~src_transform
+    cols = np.arange(W) + 0.5
+    for r0 in range(0, H, rows_per_strip):
+        rows = np.arange(r0, min(H, r0 + rows_per_strip)) + 0.5
+        cc, rr = np.meshgrid(cols, rows)
+        xs, ys = dst_transform * (cc, rr)
+        sx, sy = to_src.transform(xs, ys)
+        fc, fr = inv * (np.asarray(sx), np.asarray(sy))
+        ci, ri = np.floor(fc).astype(np.int64), np.floor(fr).astype(np.int64)
+        ok = np.isfinite(fc) & np.isfinite(fr) & (ci >= 0) & (ci < w) & (ri >= 0) & (ri < h)
+        block = np.full((k,) + ci.shape, FILL, np.int16)
+        block[:, ok] = src[:, ri[ok], ci[ok]]
+        dst[:, r0:r0 + ci.shape[0]] = block
     return dst
 
 
