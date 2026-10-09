@@ -24,6 +24,8 @@
 # chain them on it.
 # E98_KEEP_IMAGERY=1 also copies the 12-band sentinel2 layers (about 40 to 65 GB, see e98_prepare.sh); exp98 does not
 # read them, and the quota check below will usually refuse it. E98_RECOLLECT=1 replaces an earlier collection.
+# E98_PILOT=1 collects the pilot run (awf_pilot_run, awf_pilot_scl, *_pilot.json) to data/exp98/pilot/awf_run/ and its
+# summary to exp/out/exp98/pilot/; it refuses a full run's inventory, and without it a pilot's.
 #
 # Home quota: 100 GiB. Expected: about 9 GB of probabilities (10 float32 bands of 1024 x 1024 per window, LZW) and
 # well under 1 GB of SCL, for ~224 windows. The job refuses before copying if the home directory's use plus this
@@ -47,17 +49,23 @@ else
 fi
 SCRATCH=/scratch/qi_zim_neu/olmoearth_inferenceX
 DEPLOY=$SCRATCH/deploy
-DEST=$REPO/data/exp98/awf_run
-OUT=$REPO/exp/out/exp98
+export E98_PILOT=${E98_PILOT:-0}
+case "$E98_PILOT" in 0|1) ;; *) echo "E98_PILOT must be 0 or 1, got '$E98_PILOT'"; exit 2;; esac
+if [ "$E98_PILOT" = 1 ]; then TAG=awf_pilot SFX=_pilot DEST=$REPO/data/exp98/pilot/awf_run OUT=$REPO/exp/out/exp98/pilot
+else TAG=awf SFX= DEST=$REPO/data/exp98/awf_run OUT=$REPO/exp/out/exp98; fi
 PY=$DEPLOY/venv/bin/python
-export E98_RUN=$DEPLOY/awf_run E98_SCL=$DEPLOY/awf_scl E98_DEPLOY=$DEPLOY E98_DEST=$DEST E98_OUT=$OUT
+export E98_RUN=$DEPLOY/${TAG}_run E98_SCL=$DEPLOY/${TAG}_scl E98_DEPLOY=$DEPLOY E98_DEST=$DEST E98_OUT=$OUT
+export E98_CFG=$DEPLOY/${TAG}_config E98_INV=$DEPLOY/prepare_inventory$SFX.json E98_SFX=$SFX
 export E98_KEEP_IMAGERY=${E98_KEEP_IMAGERY:-0} E98_HOME_LIMIT=$((95 * 2**30))
 export PYTHONUNBUFFERED=1
 
-echo "== $(date -Is) job ${SLURM_JOB_ID:-none} on $(hostname): exp98 collect, commit $(git rev-parse HEAD) =="
-"$PY" - "$DEPLOY/predict_check.json" "$DEPLOY/prepare_inventory.json" <<'EOF'
-import json, sys
+echo "== $(date -Is) job ${SLURM_JOB_ID:-none} on $(hostname): exp98 collect, commit $(git rev-parse HEAD), pilot $E98_PILOT =="
+"$PY" - "$DEPLOY/predict_check$SFX.json" "$E98_INV" <<'EOF'
+import json, os, sys
 c, inv = json.load(open(sys.argv[1])), json.load(open(sys.argv[2]))
+pilot = os.environ["E98_PILOT"] == "1"
+assert inv.get("pilot", False) == pilot and c.get("pilot", False) == pilot, \
+    f"inventory pilot {inv.get('pilot', False)}, predict check pilot {c.get('pilot', False)}, this job {pilot}: no mixing"
 assert c["ok"], "predict check not ok"
 assert "area_complete" in c and "complete" in inv, "records predate the completeness check: rerun prepare and predict"
 assert inv["complete"] or inv.get("allow_incomplete"), "prepare found the area incomplete"
@@ -77,11 +85,12 @@ import glob, hashlib, json, os, re, shutil
 run, scl, deploy = os.environ["E98_RUN"], os.environ["E98_SCL"], os.environ["E98_DEPLOY"]
 dest = os.environ["E98_DEST"] + ".partial"
 keep_img = os.environ["E98_KEEP_IMAGERY"] == "1"
-inv = json.load(open(os.path.join(deploy, "prepare_inventory.json")))
+inv = json.load(open(os.environ["E98_INV"]))
+sfx = os.environ["E98_SFX"]
 
 plan = []                                   # (source, path relative to dest)
 configs = {}
-summary = {"job": os.environ.get("SLURM_JOB_ID"), "roots": [], "keep_imagery": keep_img,
+summary = {"job": os.environ.get("SLURM_JOB_ID"), "pilot": bool(inv.get("pilot")), "roots": [], "keep_imagery": keep_img,
            "area_complete": inv["complete"], "allow_incomplete": bool(inv.get("allow_incomplete"))}
 for r in inv["roots"]:
     root, side = os.path.join(run, r["root"]), os.path.join(scl, r["root"])
@@ -153,15 +162,16 @@ for rel, cfg in configs.items():
 for src, rel in plan:
     put(src, rel)
 # records: everything small that says how the run was made; the request geometry stays in the pinned clone (its
-# sha256 is in awf_config.sha256), so no coordinates are copied here
-for f in ("versions.json", "scl_check.json", "predict_check.json", "awf_config.sha256",
+# sha256 is in awf_config.sha256; a pilot's clipped geometry, in awf_pilot_config.sha256), so no coordinates are copied
+for f in ("versions.json", f"scl_check{sfx}.json", f"predict_check{sfx}.json",
+          os.path.basename(os.environ["E98_CFG"]) + ".sha256",
           "freeze.txt", "pip_check.txt", "overrides.txt", "stage_spelling.txt"):
     if os.path.exists(os.path.join(deploy, f)):
         put(os.path.join(deploy, f), os.path.join("records", f))
 # the inventory as tracked in exp/out (prepare wrote it without the real root and group names), not scratch's
 put(os.path.join(os.environ["E98_OUT"], "e98_prepare_inventory.json"), os.path.join("records", "prepare_inventory.json"))
 for f in ("model.yaml", "dataset.json", "olmoearth_run.yaml"):
-    put(os.path.join(deploy, "awf_config", f), os.path.join("records", "awf_config", f))
+    put(os.path.join(os.environ["E98_CFG"], f), os.path.join("records", os.path.basename(os.environ["E98_CFG"]), f))
 put(os.path.join(deploy, "introspect", "olmoearth_run_grep.txt"), os.path.join("records", "olmoearth_run_grep.txt"))
 with open(os.path.join(dest, "MANIFEST.sha256"), "w") as f:
     f.write("\n".join(sorted(lines, key=lambda l: l[66:])) + "\n")

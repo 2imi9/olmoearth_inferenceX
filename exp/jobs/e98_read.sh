@@ -23,6 +23,10 @@
 # oe_inferencex/olmoearth.py is not there (it is on the from-olmoearth branch until that branch is merged).
 #   ssh aicr "sbatch --parsable --dependency=afterok:$COLL_JOB" < exp/jobs/e98_read.sh
 # E98_REREAD=1 replaces an earlier read.
+# E98_PILOT=1 reads the pilot collection (data/exp98/pilot/awf_run) to data/exp98/pilot/scores, records to
+# exp/out/exp98/pilot/, refuses a full run's records (and without it, a pilot's), and then checks what was read, counts
+# only: windows read, bands, the band sums of every covered pixel, the covered share, the condition codes, and
+# `oe-inferencex assess --condition` on each scores raster (to data/exp98/pilot/assess/), exit status and windows ranked.
 set -euo pipefail
 # The soft limit on open files is 1,024 on the cpu nodes (hard 131,072); olmoearth_run's worker pools exhaust it
 # (job 1243542 failed in 26 s on "Too many open files" while starting its dataset-build pool).
@@ -37,12 +41,19 @@ fi
 test -f oe_inferencex/olmoearth.py \
   || { echo "oe_inferencex/olmoearth.py is not on origin/main: merge the from-olmoearth branch first"; exit 2; }
 SCRATCH=/scratch/qi_zim_neu/olmoearth_inferenceX
-export DEST=$REPO/data/exp98/awf_run SCORES=$REPO/data/exp98/scores OUT=$REPO/exp/out/exp98
+export E98_PILOT=${E98_PILOT:-0}
+case "$E98_PILOT" in 0|1) ;; *) echo "E98_PILOT must be 0 or 1, got '$E98_PILOT'"; exit 2;; esac
+if [ "$E98_PILOT" = 1 ]; then
+  export DEST=$REPO/data/exp98/pilot/awf_run SCORES=$REPO/data/exp98/pilot/scores OUT=$REPO/exp/out/exp98/pilot
+  export ASSESS=$REPO/data/exp98/pilot/assess
+else
+  export DEST=$REPO/data/exp98/awf_run SCORES=$REPO/data/exp98/scores OUT=$REPO/exp/out/exp98
+fi
 export E98_PART_BYTES=$(( ${E98_PART_GIB:-3} * 2**30 ))
 export PYTHONUNBUFFERED=1 UV_CACHE_DIR=$SCRATCH/uv-cache OMP_NUM_THREADS=8
 export PATH="$HOME/.local/bin:$PATH"
 
-echo "== $(date -Is) job ${SLURM_JOB_ID:-none} on $(hostname): exp98 read, commit $(git rev-parse HEAD) =="
+echo "== $(date -Is) job ${SLURM_JOB_ID:-none} on $(hostname): exp98 read, commit $(git rev-parse HEAD), pilot $E98_PILOT =="
 test -f "$DEST/records/prepare_inventory.json" || { echo "no collected run at $DEST: run e98_collect.sh first"; exit 1; }
 test -f "$OUT/e98_collect.json" || { echo "no $OUT/e98_collect.json: run e98_collect.sh first"; exit 1; }
 if [ -e "$SCORES" ]; then
@@ -58,7 +69,11 @@ dest, scores, out = os.environ["DEST"], os.environ["SCORES"] + ".partial", os.en
 limit = int(os.environ["E98_PART_BYTES"])
 BYTES_PER_PX = 4 * 10 + 4            # the reader's own count for 10 float32 bands and an int32 owner
 inv = json.load(open(os.path.join(dest, "records", "prepare_inventory.json")))
-assert json.load(open(os.path.join(out, "e98_collect.json"))).get("manifest_verified"), "collect is not verified"
+coll = json.load(open(os.path.join(out, "e98_collect.json")))
+assert coll.get("manifest_verified"), "collect is not verified"
+pilot = os.environ["E98_PILOT"] == "1"
+assert inv.get("pilot", False) == pilot and coll.get("pilot", False) == pilot, \
+    f"inventory pilot {inv.get('pilot', False)}, collect pilot {coll.get('pilot', False)}, this job {pilot}: no mixing"
 
 
 def esc(s):                          # a window id as a literal fnmatch pattern
@@ -120,8 +135,60 @@ for p in plan:
     n = len([f for f in os.listdir(os.path.join(scores, p["dir"])) if f.startswith("scores_")])
     assert n >= 1, f"{p['dir']}: no scores raster written"
 counts["parts_read"] = len(plan)
+counts["pilot"] = pilot
 json.dump(counts, open(os.path.join(out, "e98_read.json"), "w"), indent=1)
 EOF
 mv "$SCORES.partial" "$SCORES"
+if [ "$E98_PILOT" = 1 ]; then
+  echo "== $(date -Is) pilot checks on what was read (counts only) =="
+  rm -rf "$ASSESS"
+  uv run --extra geo python - <<'EOF'
+import glob, json, os, re, shlex, subprocess
+import numpy as np, rasterio
+scores, out, assess = os.environ["SCORES"], os.environ["OUT"], os.environ["ASSESS"]
+chk = {"windows_read": 0, "parts": [], "ok": True}
+for d in sorted(glob.glob(os.path.join(scores, "r*_p*"))):
+    so = json.load(open(os.path.join(d, "olmoearth_output.json")))
+    co = json.load(open(os.path.join(d, "olmoearth_conditions.json")))
+    cond_of = {g["label"]: g for g in co["grids"]}
+    chk["windows_read"] += so["windows_read"]
+    for g in so["grids"]:
+        # the JSON's paths name SCORES.partial, moved since; the files are in d under the same names
+        spath = os.path.join(d, os.path.basename(g["scores"]))
+        cpath = os.path.join(d, os.path.basename(cond_of[g["label"]]["condition"]))
+        with rasterio.open(spath) as src:
+            a = src.read()
+        covered = np.isfinite(a).all(axis=0)
+        dev = float(np.abs(a[:, covered].sum(axis=0, dtype=np.float64) - 1).max()) if covered.any() else None
+        cg = cond_of[g["label"]]
+        with rasterio.open(cpath) as src:
+            c = src.read(1)
+        vals, ns = np.unique(c, return_counts=True)
+        e = {"part": os.path.basename(d), "grid": g["label"], "windows": len(g["windows"]), "bands": int(a.shape[0]),
+             "summary_bands": so["bands"], "pixels": int(covered.size), "covered_share": float(covered.mean()),
+             "max_abs_sum_minus_1": dev, "condition_codes": {str(int(v)): int(n) for v, n in zip(vals, ns)}}
+        aout = os.path.join(assess, f"{os.path.basename(d)}_{g['label']}")
+        names = shlex.split(cg["condition_names"])[1:]           # "--condition-names a=b ..." without the flag
+        cmd = ["oe-inferencex", "assess", spath, "--out", aout, "--condition", cpath]
+        cmd += (["--condition-names", *names] if names else [])
+        rc = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+        e["assess_exit"] = rc.returncode
+        if rc.returncode == 0:
+            e["assess_windows_ranked"] = json.load(open(os.path.join(aout, "assessment.json")))["n_windows"]
+        else:
+            last = (rc.stderr.strip().splitlines() or [""])[-1][:300]     # masked as the jobs' redact() does
+            last = re.sub(r"-?[0-9]{4,}", "<n>", re.sub(r"-?[0-9]+\.[0-9]{2,}", "<n>", last))
+            print(f"assess failed on {e['part']} {e['grid']}; the last line of its error, masked: {last}")
+        e["ok"] = bool(e["bands"] == 10 and e["summary_bands"] == 10 and dev is not None and dev <= 1e-3
+                       and e["covered_share"] > 0 and rc.returncode == 0)
+        chk["ok"] &= e["ok"]
+        chk["parts"].append(e)
+        print(json.dumps(e))
+chk["ok"] = bool(chk["ok"] and chk["parts"])
+json.dump(chk, open(os.path.join(out, "e98_pilot_checks.json"), "w"), indent=1)
+print(f"windows read {chk['windows_read']}; ok {chk['ok']}")
+assert chk["ok"], "a pilot check failed (above; exp/out/exp98/pilot/e98_pilot_checks.json)"
+EOF
+fi
 echo "== $(date -Is) done: $(ls -d "$SCORES"/r*_p* | wc -l) part directories in $SCORES, $OUT/e98_read.json =="
-echo "next: E98_MODE=inv sbatch --dependency=afterok:${SLURM_JOB_ID:-<this job>} exp/jobs/e98.sh (E98_SCORES defaults to $SCORES)"
+[ "$E98_PILOT" = 1 ] || echo "next: E98_MODE=inv sbatch --dependency=afterok:${SLURM_JOB_ID:-<this job>} exp/jobs/e98.sh (E98_SCORES defaults to $SCORES)"

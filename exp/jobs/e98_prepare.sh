@@ -12,6 +12,10 @@
 # E98_SHA=<full sha> checks out that commit instead of origin/main. E98_SKIP_BUILD=1 skips build_dataset (a built run
 # whose inventory or SCL step failed); the config snapshot, inventory (with its completeness check) and SCL steps always
 # run, so a partial build is still refused. E98_ALLOW_INCOMPLETE=1 lets a partial area go on, recorded as such.
+# E98_PILOT=1 runs the same chain over a small sub-area of Ai2's request geometry (README "Pilot first"): the snapshot's
+# prediction_request_geometry.geojson becomes Ai2's geometry clipped to a square of 0.05 degrees around its
+# representative_point() (about 1 to 4 cells of 1024 px), and every path is a pilot one (awf_pilot_config, awf_pilot_run,
+# awf_pilot_scl, logs/pilot_*, *_pilot.json, exp/out/exp98/pilot/), so nothing mixes with a full run.
 #
 # What build_dataset runs is olmoearth_run's (olmoearth_projects/olmoearth_run/olmoearth_run.py:128-158 at f3c9b0c8:
 # one_stage always partitions, then BUILD_DATASET calls runner.build_dataset over every partition). Ai2's AWF doc
@@ -46,10 +50,15 @@ else
 fi
 SCRATCH=/scratch/qi_zim_neu/olmoearth_inferenceX
 DEPLOY=$SCRATCH/deploy
-RUN=$DEPLOY/awf_run            # olmoearth_run's --scratch_path
-CFG=$DEPLOY/awf_config         # the config directory every stage reads (--config_path), a snapshot taken here
-SCL=$DEPLOY/awf_scl            # the SCL sidecar datasets
-OUT=$REPO/exp/out/exp98
+export E98_PILOT=${E98_PILOT:-0}
+case "$E98_PILOT" in 0|1) ;; *) echo "E98_PILOT must be 0 or 1, got '$E98_PILOT'"; exit 2;; esac
+if [ "$E98_PILOT" = 1 ]; then TAG=awf_pilot SFX=_pilot LP=pilot_ OUT=$REPO/exp/out/exp98/pilot
+else TAG=awf SFX= LP= OUT=$REPO/exp/out/exp98; fi
+RUN=$DEPLOY/${TAG}_run         # olmoearth_run's --scratch_path
+CFG=$DEPLOY/${TAG}_config      # the config directory every stage reads (--config_path), a snapshot taken here
+SCL=$DEPLOY/${TAG}_scl         # the SCL sidecar datasets
+INV=$DEPLOY/prepare_inventory$SFX.json
+CFGSHA=$DEPLOY/${TAG}_config.sha256
 PY=$DEPLOY/venv/bin/python
 CLONE=$DEPLOY/olmoearth_projects
 export HF_HOME=$SCRATCH/hf
@@ -64,18 +73,23 @@ export NUM_WORKERS=$NCPU
 # os.cpu_count() is the node's 128, not the job's CPUs: 512 processes. One per node CPU is enough for a fetch-bound build.
 export DATASET_BUILD_WORKERS_PER_CPU=1
 export PREDICTION_OUTPUT_LAYER=output
-export TRAINER_DATA_PATH=$DEPLOY/trainer_data
-export EXTRA_FILES_PATH=$DEPLOY/extra_files
+export TRAINER_DATA_PATH=$DEPLOY/${LP}trainer_data
+export EXTRA_FILES_PATH=$DEPLOY/${LP}extra_files
 export WANDB_MODE=disabled WANDB_PROJECT=e98 WANDB_NAME=e98_awf WANDB_ENTITY=e98-local
 export E98_RUN=$RUN E98_CFG=$CFG E98_SCL=$SCL E98_DEPLOY=$DEPLOY E98_REPO=$REPO E98_NCPU=$NCPU
+export E98_INV=$INV E98_SCLCHK=$DEPLOY/scl_check$SFX.json E98_CFGSHA=$CFGSHA
 
 # Upstream logs may print geometry or window bounds. They stay in $DEPLOY/logs; what this job echoes from them is
 # masked: decimals with 2+ places and integers of 4+ digits become <n>.
 redact() { sed -E 's/-?[0-9]+\.[0-9]{2,}/<n>/g; s/-?[0-9]{4,}/<n>/g'; }
 
-echo "== $(date -Is) job ${SLURM_JOB_ID:-none} on $(hostname): exp98 prepare, commit $(git rev-parse HEAD), $NCPU CPUs =="
+echo "== $(date -Is) job ${SLURM_JOB_ID:-none} on $(hostname): exp98 prepare, commit $(git rev-parse HEAD), $NCPU CPUs, pilot $E98_PILOT =="
 [ -s "$DEPLOY/versions.json" ] && [ -x "$PY" ] || { echo "no deployment environment: run e98_env.sh first"; exit 1; }
 [ "$(git -C "$CLONE" rev-parse HEAD)" = "f3c9b0c89c7670b3525647dda4c14b76245d682d" ] || { echo "clone moved"; exit 1; }
+# The venv must carry e98_env.sh's rslearn get_item_by_name fix (its .pth); without it the first direct materialize
+# fails after about 34 minutes (job 1243637). A venv built before the fix fails here in seconds instead.
+"$PY" -c 'from rslearn.data_sources.direct_materialize_data_source import DirectMaterializeDataSource as D; assert "get_item_by_name" not in vars(D), "rerun e98_env.sh (rslearn fix)"' \
+  || { echo "the venv lacks the rslearn get_item_by_name fix: rerun e98_env.sh"; exit 1; }
 CKPT=$(cat "$DEPLOY/checkpoint_path.txt")
 [ -s "$CKPT" ] || { echo "checkpoint missing at the path e98_env.sh recorded; rerun e98_env.sh"; exit 1; }
 read -r ST_BUILD _ _ _ < "$DEPLOY/stage_spelling.txt"
@@ -88,7 +102,7 @@ done
 mkdir -p "$DEPLOY/logs" "$OUT" "$TRAINER_DATA_PATH" "$EXTRA_FILES_PATH"
 
 echo "== the config snapshot: e98's model.yaml and dataset.json, Ai2's olmoearth_run.yaml and request geometry =="
-NEW=$(mktemp -d "$DEPLOY/awf_config.new.XXXXXX")
+NEW=$(mktemp -d "$DEPLOY/${TAG}_config.new.XXXXXX")
 cp exp/jobs/e98_config/model.yaml exp/jobs/e98_config/dataset.json "$NEW/"
 cp "$CLONE/olmoearth_run_data/awf/olmoearth_run.yaml" "$CLONE/olmoearth_run_data/awf/prediction_request_geometry.geojson" "$NEW/"
 E98_NEW=$NEW "$PY" - <<'EOF'
@@ -126,6 +140,34 @@ got = diff(json.load(open(os.path.join(awf, "dataset.json"))), json.load(open(os
 assert got == [("changed", "/layers/output/band_sets[0]/bands", (["output"], P))], f"dataset.json differs by {got}"
 DatasetConfig.model_validate(json.load(open(os.path.join(new, "dataset.json"))))
 print("snapshot = Ai2's AWF config + output_probs + the p0..p9 float32 output layer; nothing else differs")
+if os.environ["E98_PILOT"] == "1":
+    # Ai2's geometry (its sha256 checked above) clipped to a 0.05-degree square around representative_point(), a point
+    # inside it, so the square's part inside the geometry is never empty. Same FeatureCollection, same properties
+    # (oe_start_time, oe_end_time); one Polygon per feature as in Ai2's file (the largest part if a clip splits one).
+    # Only its sha256 and an area share are printed, never a coordinate.
+    import shapely
+    from shapely.geometry import mapping, shape
+    gp = os.path.join(new, "prediction_request_geometry.geojson")
+    gj = json.load(open(gp))
+    req = shapely.union_all([shape(f["geometry"]) for f in gj["features"]])
+    c = req.representative_point()
+    square = shapely.box(c.x - 0.025, c.y - 0.025, c.x + 0.025, c.y + 0.025)
+    feats = []
+    for f in gj["features"]:
+        g = shape(f["geometry"]).intersection(square)
+        if g.is_empty:
+            continue
+        if g.geom_type == "MultiPolygon" and f["geometry"]["type"] == "Polygon":
+            g = max(g.geoms, key=lambda p: p.area)
+        assert g.geom_type == f["geometry"]["type"], (g.geom_type, f["geometry"]["type"])
+        feats.append({**f, "geometry": mapping(g)})
+    assert feats, "the pilot square meets no feature of Ai2's geometry"
+    pilot = {**gj, "features": feats}
+    with open(gp, "w") as fo:
+        json.dump(pilot, fo)
+    share = shapely.union_all([shape(f["geometry"]) for f in feats]).area / req.area
+    print(f"pilot geometry: {len(feats)} of {len(gj['features'])} feature(s), {share:.2e} of Ai2's area (in degrees^2), "
+          f"sha256 {sha(gp)}")
 EOF
 if [ -d "$CFG" ]; then
   if diff -rq "$CFG" "$NEW" >/dev/null; then rm -rf "$NEW"
@@ -135,11 +177,11 @@ if [ -d "$CFG" ]; then
     rm -rf "$NEW"; exit 2
   else rm -rf "$CFG"; mv "$NEW" "$CFG"; fi
 else mv "$NEW" "$CFG"; fi
-( cd "$CFG" && sha256sum model.yaml dataset.json olmoearth_run.yaml prediction_request_geometry.geojson ) > "$DEPLOY/awf_config.sha256"
+( cd "$CFG" && sha256sum model.yaml dataset.json olmoearth_run.yaml prediction_request_geometry.geojson ) > "$CFGSHA"
 
 if [ "${E98_SKIP_BUILD:-0}" != 1 ]; then
   echo "== $(date -Is) build_dataset (olmoearth_run one_stage --stage $ST_BUILD) =="
-  LOG=$DEPLOY/logs/build_dataset-${SLURM_JOB_ID:-none}.log
+  LOG=$DEPLOY/logs/${LP}build_dataset-${SLURM_JOB_ID:-none}.log
   mkdir -p "$RUN"
   cd "$DEPLOY" || exit 1
   if ! "$PY" -m olmoearth_projects.main olmoearth_run one_stage --config_path "$CFG" --scratch_path "$RUN" \
@@ -172,7 +214,7 @@ assert roots, "no rslearn dataset (config.json beside windows/) under the run di
 # compared as parsed rslearn layer configs (LayerConfig.__eq__ compares model_dump, rslearn/config/dataset.py:529-537),
 # so defaults written out by olmoearth_run do not count as a difference
 ours = DatasetConfig.model_validate(json.load(open(os.path.join(os.environ["E98_CFG"], "dataset.json")))).layers
-inv = {"run": run, "roots": []}
+inv = {"run": run, "pilot": os.environ["E98_PILOT"] == "1", "roots": []}
 boxes = []                                  # (projection as sorted JSON, pixel bounds) of every window, for coverage only
 for i, root in enumerate(roots):
     layers = DatasetConfig.model_validate(json.load(open(os.path.join(root, "config.json")))).layers
@@ -247,7 +289,7 @@ inv["allow_incomplete"] = allow
 print(f"{n} windows ({len(set(boxes))} distinct cells; {expected} cells of the main window grid overlap the request "
       f"geometry), {n12} with all 12 sentinel2 item groups, {ns2} with sentinel2 items; share of the request geometry "
       f"outside every window {uncovered:.2e}; complete: {inv['complete']}")
-json.dump(inv, open(os.path.join(deploy, "prepare_inventory.json"), "w"), indent=1)
+json.dump(inv, open(os.environ["E98_INV"], "w"), indent=1)
 assert n12 > 0, "no window has all 12 sentinel2 item groups completed"
 bad = [r["root_id"] for r in inv["roots"] if not r["config_layers_equal_e98"].get("sentinel2")]
 assert not bad, f"config.json's sentinel2 layer is not the e98 (= Ai2's) one in {bad}"
@@ -264,7 +306,7 @@ echo "== $(date -Is) the SCL sidecar: the run's sentinel2 item groups, re-read f
 import glob, json, os, shutil
 run, scl = os.environ["E98_RUN"], os.environ["E98_SCL"]
 scl_cfg = json.load(open(os.path.join(os.environ["E98_REPO"], "exp", "jobs", "e98_config", "scl_dataset.json")))
-inv = json.load(open(os.path.join(os.environ["E98_DEPLOY"], "prepare_inventory.json")))
+inv = json.load(open(os.environ["E98_INV"]))
 made = 0
 for r in inv["roots"]:
     root, side = os.path.join(run, r["root"]), os.path.join(scl, r["root"])
@@ -295,9 +337,9 @@ for r in inv["roots"]:
 print(f"sidecar windows written this time: {made}")
 EOF
 k=0
-for side in $("$PY" -c 'import json,os; inv=json.load(open(os.environ["E98_DEPLOY"]+"/prepare_inventory.json")); print(" ".join(os.path.join(os.environ["E98_SCL"], r["root"]) for r in inv["roots"]))'); do
+for side in $("$PY" -c 'import json,os; inv=json.load(open(os.environ["E98_INV"])); print(" ".join(os.path.join(os.environ["E98_SCL"], r["root"]) for r in inv["roots"]))'); do
   k=$((k + 1))
-  LOG=$DEPLOY/logs/scl_materialize-$k-${SLURM_JOB_ID:-none}.log
+  LOG=$DEPLOY/logs/${LP}scl_materialize-$k-${SLURM_JOB_ID:-none}.log
   if ! "$DEPLOY/venv/bin/rslearn" dataset materialize --root "$side" --workers "$NCPU" \
        --retry-max-attempts 5 --retry-backoff-seconds 60 > "$LOG" 2>&1; then
     echo "SCL materialize failed for root_$((k - 1)); the last lines of $LOG, masked:"; tail -n 40 "$LOG" | redact; exit 1
@@ -309,7 +351,7 @@ echo "== the sidecar checked against the run: group counts, SCL codes, coverage 
 import glob, json, os, re
 import numpy as np, rasterio
 run, scl, deploy = os.environ["E98_RUN"], os.environ["E98_SCL"], os.environ["E98_DEPLOY"]
-inv = json.load(open(os.path.join(deploy, "prepare_inventory.json")))
+inv = json.load(open(os.environ["E98_INV"]))
 def groups(wdir, name):
     ldir = os.path.join(wdir, "layers")
     if not os.path.isdir(ldir):
@@ -355,7 +397,7 @@ for r in inv["roots"]:
                                      "b02_cloud_over_clear": (float(b02[cloud].mean() / b02[clear].mean())
                                                               if cloud.sum() > 100 and clear.sum() > 100 else None)})
 check["codes"] = {str(k): int(v) for k, v in enumerate(codes) if v}
-json.dump(check, open(os.path.join(deploy, "scl_check.json"), "w"), indent=1)
+json.dump(check, open(os.environ["E98_SCLCHK"], "w"), indent=1)
 agrees = [s["coverage_agreement"] for s in check["sampled"]]
 print(f"{check['windows']} sidecar windows; {check['mismatched_group_counts']} with another group count than the run; "
       f"{len(agrees)} sampled groups, coverage agreement min {min(agrees) if agrees else None}; SCL codes {check['codes']}")
@@ -365,15 +407,14 @@ assert agrees and min(agrees) >= 0.98, "SCL coverage does not match the reflecta
 EOF
 "$PY" - <<'EOF'
 import json, os
-d = os.environ["E98_DEPLOY"]
-inv = json.load(open(os.path.join(d, "prepare_inventory.json")))
-inv["scl_check"] = json.load(open(os.path.join(d, "scl_check.json")))
-inv["config_sha256"] = dict(reversed(l.split()) for l in open(os.path.join(d, "awf_config.sha256")))
+inv = json.load(open(os.environ["E98_INV"]))
+inv["scl_check"] = json.load(open(os.environ["E98_SCLCHK"]))
+inv["config_sha256"] = dict(reversed(l.split()) for l in open(os.environ["E98_CFGSHA"]))
 inv["job"] = os.environ.get("SLURM_JOB_ID")
-json.dump(inv, open(os.path.join(d, "prepare_inventory.json"), "w"), indent=1)
+json.dump(inv, open(os.environ["E98_INV"], "w"), indent=1)
 EOF
 # the tracked copy: without the real root and group names (scratch keeps them; see the inventory step)
-"$PY" - "$DEPLOY/prepare_inventory.json" "$OUT/e98_prepare_inventory.json" <<'EOF'
+"$PY" - "$INV" "$OUT/e98_prepare_inventory.json" <<'EOF'
 import json, sys
 inv = json.load(open(sys.argv[1]))
 inv.pop("run", None)
@@ -382,4 +423,4 @@ for r in inv["roots"]:
     r.pop("group_names", None)
 json.dump(inv, open(sys.argv[2], "w"), indent=1)
 EOF
-echo "== $(date -Is) done: $DEPLOY/prepare_inventory.json, $OUT/e98_prepare_inventory.json; $(du -sh "$RUN" | cut -f1) in $RUN =="
+echo "== $(date -Is) done: $INV, $OUT/e98_prepare_inventory.json; $(du -sh "$RUN" | cut -f1) in $RUN =="

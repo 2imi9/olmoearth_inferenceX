@@ -34,6 +34,49 @@ Scratch layout, all under `/scratch/qi_zim_neu/olmoearth_inferenceX/deploy/`: `p
 `olmoearth_projects/`, `awf_config/` (the config directory every stage reads, snapshotted by prepare), `awf_run/`
 (olmoearth_run's `--scratch_path`), `awf_scl/` (the sidecar), `logs/`, `introspect/`, and the JSON records.
 
+## Pilot first
+
+Before the long fetch, the same four stages run end to end on a small sub-area with `E98_PILOT=1`. prepare checks Ai2's
+geometry's sha256 as always, then replaces the snapshot's `prediction_request_geometry.geojson` with Ai2's geometry
+clipped to a square of 0.05 degrees around its `representative_point()` (a point inside it): the same FeatureCollection,
+feature properties and dates, about 30 km², 1 to 4 windows. Only the clipped file's sha256 is printed and recorded
+(`awf_pilot_config.sha256`). Every path is separate from a full run's: `deploy/awf_pilot_config/`, `awf_pilot_run/`,
+`awf_pilot_scl/`, `pilot_trainer_data/`, `logs/pilot_*`, `prepare_inventory_pilot.json`, `scl_check_pilot.json`,
+`predict_check_pilot.json`; `data/exp98/pilot/{awf_run,scores,assess}/`; records in `exp/out/exp98/pilot/`. The
+inventory says `"pilot": true`, and each later stage refuses records whose `pilot` differs from its own `E98_PILOT`.
+`E98_PILOT` must be 0 or 1; any other value is refused, so a mistyped pilot never starts the full fetch.
+
+The env built before the rslearn `get_item_by_name` fix (in `e98_env.sh`) lacks it, so the pilot starts with an env
+rerun (it reuses the venv and adds the fix); prepare also refuses a venv without the fix in seconds. Commit and push
+the `e98_env.sh` change first. The pilot prepare keeps the header's 64 CPUs and 256 GB (olmoearth_run starts one
+build worker per node CPU, 128, whatever the job asks for), so a pass also tests the full run's resources; only the
+time limit is shorter.
+
+```bash
+SHA=$(git rev-parse HEAD)
+ENV=$(ssh aicr "E98_SHA=$SHA sbatch --parsable" < exp/jobs/e98_env.sh)
+PREP=$(ssh aicr "E98_PILOT=1 E98_SHA=$SHA sbatch --parsable -t 02:00:00 --dependency=afterok:$ENV" < exp/jobs/e98_prepare.sh)
+PRED=$(ssh aicr "E98_PILOT=1 E98_SHA=$SHA sbatch --parsable -p rtx-batch --gpus=1 -t 02:00:00 --dependency=afterok:$PREP" < exp/jobs/e98_predict.sh)
+COLL=$(ssh aicr "E98_PILOT=1 E98_SHA=$SHA sbatch --parsable -t 01:00:00 --dependency=afterok:$PRED" < exp/jobs/e98_collect.sh)
+READ=$(ssh aicr "E98_PILOT=1 E98_SHA=$SHA sbatch --parsable -t 01:00:00 --dependency=afterok:$COLL" < exp/jobs/e98_read.sh)
+```
+
+What to check (`slurm/e98prep-<job>.out` and so on):
+
+- **prepare**: `pilot geometry: 1 of 1 feature(s)`, a share of Ai2's area near 1.5e-03, and its sha256; then 1 to 4
+  windows, all with 12 item groups and sentinel2 items, share outside every window at most 1e-4, `complete: True`; the
+  SCL line with 0 mismatched group counts, coverage agreement at least 0.98, codes within 0 to 11; `done`. The
+  build_dataset time per window, times about 224 windows, is the first measured estimate of the full prepare.
+- **predict**: `"ok": true`, `"pilot": true`, `missing_output` 0; each sampled window 10 float32 bands summing to 1
+  within 1e-3, `argmax_is_9_share` near 0. Its run_inference time per window, likewise, estimates the full predict.
+- **collect**: `manifest_verified` true in `exp/out/exp98/pilot/e98_collect.json`, `reader_reads_whole_root` true.
+- **read**: one line per part and grid with `bands` 10, `max_abs_sum_minus_1` at most 1e-3, `covered_share` (near 1
+  inside the windows' grid), `condition_codes` (pixel counts per code; -1 where no window reads), `assess_exit` 0 and
+  `assess_windows_ranked`; then `windows read <n>; ok True`. The same is in `exp/out/exp98/pilot/e98_pilot_checks.json`.
+
+If all four hold, run the full chain below (without `E98_PILOT`); it shares nothing with the pilot but the env, so the
+pilot's `deploy/awf_pilot_*` and `data/exp98/pilot/` can stay or be removed.
+
 ## Submit
 
 Commit and push first: every job sets the home checkout to `origin/main`, or to `E98_SHA` when it is given, and

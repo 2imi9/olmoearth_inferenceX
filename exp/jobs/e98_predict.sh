@@ -13,7 +13,9 @@
 #   E98_STAGE=post, olmoearth_run's postprocess and combine (CPU; optional, exp98 does not read their output), chained on
 #   collect, never beside it: both would reset the same checkout, and postprocess may touch the windows collect copies:
 #     ssh aicr "E98_STAGE=post sbatch --parsable -p cpu -t 04:00:00 --dependency=afterok:$COLL_JOB" < exp/jobs/e98_predict.sh
-# E98_SHA=<full sha> checks out that commit instead of origin/main.
+# E98_SHA=<full sha> checks out that commit instead of origin/main. E98_PILOT=1 reads and writes the pilot paths that
+# e98_prepare.sh's E98_PILOT=1 made (awf_pilot_*, *_pilot.json, exp/out/exp98/pilot/) and refuses a full run's inventory;
+# without it, it refuses a pilot's.
 #
 # Expected duration of infer, estimated: predict_config tiles each 1024 px window into 16 px crops with 4 px overlap
 # (Ai2's model.yaml:274-283; overlap_ratio 0.25 -> overlap_pixels round(16 * 0.25) = 4, rslearn/train/dataset.py:530-541
@@ -41,9 +43,14 @@ fi
 STAGE=${E98_STAGE:-infer}
 SCRATCH=/scratch/qi_zim_neu/olmoearth_inferenceX
 DEPLOY=$SCRATCH/deploy
-RUN=$DEPLOY/awf_run
-CFG=$DEPLOY/awf_config
-OUT=$REPO/exp/out/exp98
+export E98_PILOT=${E98_PILOT:-0}
+case "$E98_PILOT" in 0|1) ;; *) echo "E98_PILOT must be 0 or 1, got '$E98_PILOT'"; exit 2;; esac
+if [ "$E98_PILOT" = 1 ]; then TAG=awf_pilot SFX=_pilot LP=pilot_ OUT=$REPO/exp/out/exp98/pilot
+else TAG=awf SFX= LP= OUT=$REPO/exp/out/exp98; fi
+RUN=$DEPLOY/${TAG}_run
+CFG=$DEPLOY/${TAG}_config
+INV=$DEPLOY/prepare_inventory$SFX.json
+CHECK=$DEPLOY/predict_check$SFX.json
 PY=$DEPLOY/venv/bin/python
 CLONE=$DEPLOY/olmoearth_projects
 export HF_HOME=$SCRATCH/hf
@@ -52,24 +59,26 @@ NCPU=${SLURM_CPUS_PER_TASK:-8}
 export OMP_NUM_THREADS=4
 export NUM_WORKERS=$NCPU                       # model.yaml's data.init_args.num_workers
 export PREDICTION_OUTPUT_LAYER=output
-export TRAINER_DATA_PATH=$DEPLOY/trainer_data
-export EXTRA_FILES_PATH=$DEPLOY/extra_files
+export TRAINER_DATA_PATH=$DEPLOY/${LP}trainer_data
+export EXTRA_FILES_PATH=$DEPLOY/${LP}extra_files
 export WANDB_MODE=disabled WANDB_PROJECT=e98 WANDB_NAME=e98_awf WANDB_ENTITY=e98-local
-export E98_RUN=$RUN E98_DEPLOY=$DEPLOY
+export E98_RUN=$RUN E98_DEPLOY=$DEPLOY E98_INV=$INV E98_CHECK=$CHECK
 redact() { sed -E 's/-?[0-9]+\.[0-9]{2,}/<n>/g; s/-?[0-9]{4,}/<n>/g'; }
 
-echo "== $(date -Is) job ${SLURM_JOB_ID:-none} on $(hostname): exp98 predict, stage $STAGE, commit $(git rev-parse HEAD) =="
-[ -s "$DEPLOY/prepare_inventory.json" ] || { echo "no prepare inventory: e98_prepare.sh has not finished"; exit 1; }
-"$PY" - "$DEPLOY/prepare_inventory.json" <<'EOF'
-import json, sys
+echo "== $(date -Is) job ${SLURM_JOB_ID:-none} on $(hostname): exp98 predict, stage $STAGE, commit $(git rev-parse HEAD), pilot $E98_PILOT =="
+[ -s "$INV" ] || { echo "no prepare inventory at $INV: e98_prepare.sh (with the same E98_PILOT) has not finished"; exit 1; }
+"$PY" - "$INV" <<'EOF'
+import json, os, sys
 inv = json.load(open(sys.argv[1]))
+assert inv.get("pilot", False) == (os.environ["E98_PILOT"] == "1"), \
+    f"the inventory says pilot {inv.get('pilot', False)}, this job E98_PILOT={os.environ['E98_PILOT']}: a run must not mix"
 assert "complete" in inv, "the inventory predates the completeness check: rerun e98_prepare.sh"
 assert inv["complete"] or inv.get("allow_incomplete"), "prepare found the area incomplete (inventory complete: false)"
 assert inv.get("scl_check"), "prepare did not reach its SCL check"
 if not inv["complete"]:
     print("WARNING: a partial area (E98_ALLOW_INCOMPLETE=1 at prepare); predict_check.json records area_complete false")
 EOF
-( cd "$CFG" && sha256sum -c --quiet "$DEPLOY/awf_config.sha256" ) || { echo "$CFG changed since prepare"; exit 1; }
+( cd "$CFG" && sha256sum -c --quiet "$DEPLOY/${TAG}_config.sha256" ) || { echo "$CFG changed since prepare"; exit 1; }
 CKPT=$(cat "$DEPLOY/checkpoint_path.txt")
 [ -s "$CKPT" ] || { echo "checkpoint missing; rerun e98_env.sh"; exit 1; }
 read -r _ ST_INFER ST_POST ST_COMBINE < "$DEPLOY/stage_spelling.txt"
@@ -82,7 +91,7 @@ done
 mkdir -p "$DEPLOY/logs" "$OUT" "$TRAINER_DATA_PATH" "$EXTRA_FILES_PATH"
 
 run_stage() {   # run_stage <stage value> <log name>
-  local log=$DEPLOY/logs/$2-${SLURM_JOB_ID:-none}.log
+  local log=$DEPLOY/logs/$LP$2-${SLURM_JOB_ID:-none}.log
   echo "== $(date -Is) olmoearth_run one_stage --stage $1 (log $log) =="
   cd "$DEPLOY" || exit 1
   if ! "$PY" -m olmoearth_projects.main olmoearth_run one_stage --config_path "$CFG" --scratch_path "$RUN" \
@@ -115,9 +124,9 @@ EOF
 import glob, json, os, re
 import numpy as np, rasterio
 run, deploy = os.environ["E98_RUN"], os.environ["E98_DEPLOY"]
-inv = json.load(open(os.path.join(deploy, "prepare_inventory.json")))
+inv = json.load(open(os.environ["E98_INV"]))
 P = "_".join(f"p{i}" for i in range(10))
-res = {"job": os.environ.get("SLURM_JOB_ID"), "area_complete": inv["complete"],
+res = {"job": os.environ.get("SLURM_JOB_ID"), "pilot": bool(inv.get("pilot")), "area_complete": inv["complete"],
        "allow_incomplete": bool(inv.get("allow_incomplete")), "windows": 0, "windows_without_input": 0,
        "windows_with_input": 0, "windows_with_output": 0, "missing_output": 0, "output_without_input": 0,
        "bad_bandset": 0, "sampled": []}
@@ -162,17 +171,17 @@ for i in picks:
 # area was allowed at prepare
 res["ok"] = bool(ok and picks and res["missing_output"] == 0 and res["bad_bandset"] == 0
                  and (res["windows_without_input"] == 0 or res["allow_incomplete"]))
-json.dump(res, open(os.path.join(deploy, "predict_check.json"), "w"), indent=1)
+json.dump(res, open(os.environ["E98_CHECK"], "w"), indent=1)
 print(json.dumps({k: v for k, v in res.items() if k != "sampled"}))
 for e in res["sampled"]:
     print(e)
 assert res["ok"], "the output check failed; see predict_check.json"
 EOF
-    cp "$DEPLOY/predict_check.json" "$OUT/e98_predict_check.json"
-    echo "== $(date -Is) done: $DEPLOY/predict_check.json, $OUT/e98_predict_check.json =="
+    cp "$CHECK" "$OUT/e98_predict_check.json"
+    echo "== $(date -Is) done: $CHECK, $OUT/e98_predict_check.json =="
     ;;
   post)
-    [ -s "$DEPLOY/predict_check.json" ] || { echo "no predict check: stage infer has not finished"; exit 1; }
+    [ -s "$CHECK" ] || { echo "no predict check: stage infer has not finished"; exit 1; }
     # post runs after collect has copied and verified the windows (README: chain it on collect), never beside it
     "$PY" -c 'import json,sys; assert json.load(open(sys.argv[1])).get("manifest_verified"), "collect has not verified its copy"' \
       "$OUT/e98_collect.json" || { echo "run e98_collect.sh first and chain post on it (--dependency=afterok:<collect job>)"; exit 1; }

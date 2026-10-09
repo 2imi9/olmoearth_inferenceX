@@ -155,6 +155,53 @@ print("versions as pinned; torch", torch.__version__, "CUDA", torch.version.cuda
 import olmoearth_run.runner.local.predict_runner, olmoearth_projects.olmoearth_run.olmoearth_run  # noqa: F401
 EOF
 
+echo "== rslearn 0.0.27's PlanetaryComputer.get_item_by_name, fixed as rslearn 0.0.29 fixes it =="
+# In rslearn 0.0.27 and 0.0.28, PlanetaryComputer(DirectMaterializeDataSource, StacDataSource) finds
+# DirectMaterializeDataSource.get_item_by_name, which raises NotImplementedError, before StacDataSource's, so the first
+# direct materialize fails (prepare job 1243637, after 34 min of prepare). rslearn 0.0.29 removed that method from
+# DirectMaterializeDataSource (GitHub compare v0.0.28...v0.0.29, rslearn/data_sources/direct_materialize_data_source.py).
+# olmoearth-runner 0.1.14 pins 0.0.27, and Ai2's own lock (runner 0.1.12, rslearn 0.0.23) predates both the bug and
+# output_probs, so the one removal is applied here, in this venv only, at interpreter start through a .pth file, which
+# also runs in every worker process olmoearth_run spawns.
+SITE=$("$PY" -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')
+cat > "$SITE/e98_rslearn_fix.py" <<'EOF'
+"""exp98: rslearn 0.0.29's fix of PlanetaryComputer.get_item_by_name, applied to rslearn 0.0.27 (see e98_env.sh)."""
+import importlib.metadata
+
+if importlib.metadata.version("rslearn") in ("0.0.27", "0.0.28"):
+    from rslearn.data_sources import direct_materialize_data_source as _dm
+
+    if "get_item_by_name" in vars(_dm.DirectMaterializeDataSource):
+        del _dm.DirectMaterializeDataSource.get_item_by_name
+EOF
+echo "import e98_rslearn_fix" > "$SITE/e98_rslearn_fix.pth"
+"$PY" - <<'EOF'
+from rslearn.data_sources.direct_materialize_data_source import DirectMaterializeDataSource
+from rslearn.data_sources.planetary_computer import PlanetaryComputer, Sentinel2
+from rslearn.data_sources.stac import StacDataSource
+assert "get_item_by_name" not in vars(DirectMaterializeDataSource), "the .pth fix did not run"
+assert Sentinel2.get_item_by_name is StacDataSource.get_item_by_name, Sentinel2.__mro__
+assert PlanetaryComputer.get_item_by_name is StacDataSource.get_item_by_name
+print("fix applied: PlanetaryComputer and Sentinel2 use StacDataSource.get_item_by_name")
+EOF
+cat > "$DEPLOY/e98_fix_workers.py" <<'EOF'
+import multiprocessing as m
+
+
+def f(_):
+    from rslearn.data_sources.planetary_computer import Sentinel2
+    from rslearn.data_sources.stac import StacDataSource
+    return Sentinel2.get_item_by_name is StacDataSource.get_item_by_name
+
+
+if __name__ == "__main__":
+    for method in ("spawn", "forkserver"):
+        with m.get_context(method).Pool(2) as p:
+            assert all(p.map(f, range(2))), method
+    print("fix holds in spawn and forkserver workers")
+EOF
+"$PY" "$DEPLOY/e98_fix_workers.py"
+
 echo "== the FT-AWF checkpoint =="
 "$PY" - <<'EOF'
 import hashlib, os
