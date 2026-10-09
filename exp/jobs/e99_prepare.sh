@@ -71,7 +71,7 @@ export PREDICTION_OUTPUT_LAYER=output
 export TRAINER_DATA_PATH=$DEPLOY/${LP}trainer_data
 export EXTRA_FILES_PATH=$DEPLOY/${LP}extra_files
 export WANDB_MODE=disabled WANDB_PROJECT=e99 WANDB_NAME=e99_awf2017 WANDB_ENTITY=e99-local
-export E99_RUN=$RUN E99_CFG=$CFG E99_SCL=$SCL E99_DEPLOY=$DEPLOY E99_CODE=$CODE E99_NCPU=$NCPU E99_GEOM=$GEOM
+export E99_TAG=$TAG E99_RUN=$RUN E99_CFG=$CFG E99_SCL=$SCL E99_DEPLOY=$DEPLOY E99_CODE=$CODE E99_NCPU=$NCPU E99_GEOM=$GEOM
 export E99_INV=$INV E99_SCLCHK=$DEPLOY/scl_check$SFX.json E99_CFGSHA=$CFGSHA E99_SEL=$SEL
 
 # Upstream logs may print geometry or window bounds. They stay in $DEPLOY/logs; what this job echoes from them is
@@ -136,19 +136,30 @@ assert got == want, f"model.yaml differs from Ai2's by {got}"
 got = diff(json.load(open(os.path.join(awf, "dataset.json"))), json.load(open(os.path.join(new, "dataset.json"))))
 assert got == [("changed", "/layers/output/band_sets[0]/bands", (["output"], P))], f"dataset.json differs by {got}"
 DatasetConfig.model_validate(json.load(open(os.path.join(new, "dataset.json"))))
+POLY = {"Polygon": "polygonal", "MultiPolygon": "polygonal"}    # Ai2's one Polygon; exp99's one MultiPolygon of squares
 def structure(gj):
     return (sorted(gj), sorted({tuple(sorted(f)) for f in gj["features"]}),
-            sorted({(f["geometry"]["type"], tuple(sorted(f["geometry"]))) for f in gj["features"]}),
+            sorted({(POLY.get(f["geometry"]["type"], f["geometry"]["type"]), tuple(sorted(f["geometry"])))
+                    for f in gj["features"]}),
             sorted({tuple(sorted(f["properties"])) for f in gj["features"]}))
 ai2 = json.load(open(os.path.join(awf, "prediction_request_geometry.geojson")))
 req = json.load(open(os.path.join(new, "prediction_request_geometry.geojson")))
 assert structure(req) == structure(ai2), "the request geometry's structure is not Ai2's"
 periods = {(f["properties"]["oe_start_time"], f["properties"]["oe_end_time"]) for f in req["features"]}
 assert periods == {("2017-01-01T00:00:00Z", "2017-12-31T00:00:00Z")}, periods
-print(f"snapshot = Ai2's AWF config + output_probs + the p0..p9 float32 output layer; request geometry: "
-      f"{len(req['features'])} square(s) dated 2017 in Ai2's structure, sha256 "
+# one feature, as Ai2's file: per-square features multiplied the windows (job 1247349, see exp99_transfer.request_squares)
+assert len(req["features"]) == 1 and req["features"][0]["geometry"]["type"] == "MultiPolygon", "one MultiPolygon feature"
+nsq = len(req["features"][0]["geometry"]["coordinates"])
+open(os.path.join(os.environ["E99_DEPLOY"], f"{os.environ['E99_TAG']}_n_squares.txt"), "w").write(f"{nsq}\n")
+print(f"snapshot = Ai2's AWF config + output_probs + the p0..p9 float32 output layer; request geometry: one feature, "
+      f"{nsq} square(s) dated 2017 in Ai2's structure, sha256 "
       f"{sha(os.path.join(new, 'prediction_request_geometry.geojson'))}")
 EOF
+if [ "${E99_FRESH:-0}" = 1 ] && [ -d "$RUN" ]; then
+  # E99_FRESH=1: start over, removing an earlier run, its config snapshot and its SCL sidecar (scratch only)
+  echo "$(date -Is) E99_FRESH=1: removing the earlier run ($(du -sh "$RUN" | cut -f1)), its config and SCL sidecar"
+  rm -rf "$RUN" "$CFG" "$SCL"
+fi
 if [ -d "$CFG" ]; then
   if diff -rq "$CFG" "$NEW" >/dev/null; then rm -rf "$NEW"
   elif [ -d "$RUN" ]; then
@@ -162,10 +173,29 @@ else mv "$NEW" "$CFG"; fi
 if [ "${E99_SKIP_BUILD:-0}" != 1 ]; then
   echo "== $(date -Is) build_dataset (olmoearth_run one_stage --stage $ST_BUILD) =="
   LOG=$DEPLOY/logs/${LP}build_dataset-${SLURM_JOB_ID:-none}.log
+  if [ -d "$RUN" ] && [ -n "$(ls -A "$RUN" 2>/dev/null)" ]; then
+    # olmoearth_run would reuse partitions and windows left by another request geometry
+    [ "${E99_FRESH:-0}" = 1 ] || { echo "$RUN holds an earlier run; E99_FRESH=1 removes it first"; exit 2; }
+    echo "$(date -Is) removing the earlier run in $RUN ($(du -sh "$RUN" | cut -f1)), E99_FRESH=1"; rm -rf "$RUN"
+  fi
   mkdir -p "$RUN"
   cd "$DEPLOY" || exit 1
-  if ! "$PY" -m olmoearth_projects.main olmoearth_run one_stage --config_path "$CFG" --scratch_path "$RUN" \
-       --checkpoint_path "$CKPT" --stage "$ST_BUILD" > "$LOG" 2>&1; then
+  NSQ=$(cat "$DEPLOY/${TAG}_n_squares.txt")
+  "$PY" -m olmoearth_projects.main olmoearth_run one_stage --config_path "$CFG" --scratch_path "$RUN" \
+       --checkpoint_path "$CKPT" --stage "$ST_BUILD" > "$LOG" 2>&1 &
+  BPID=$!
+  # Watchdog: a plot-window run needs about one window per square (two where a square straddles a cell edge, plus
+  # partition-edge duplicates). More than 3 per square means the windowing went wrong (job 1247349 made 30 per square
+  # and ran 7 h): stop at once rather than fetch the imagery for them.
+  while kill -0 "$BPID" 2>/dev/null; do
+    sleep 60
+    NW=$(ls -d "$RUN"/dataset_*/windows/*/* 2>/dev/null | wc -l)
+    if [ "$NW" -gt $((3 * NSQ)) ]; then
+      echo "$(date -Is) $NW windows for $NSQ squares (more than 3 per square): stopping build_dataset"
+      kill "$BPID"; sleep 5; kill -9 "$BPID" 2>/dev/null || true; exit 3
+    fi
+  done
+  if ! wait "$BPID"; then
     echo "build_dataset failed; the last lines of $LOG, masked:"; tail -n 60 "$LOG" | redact; exit 1
   fi
   cd "$CODE" || exit 1
@@ -233,7 +263,8 @@ for i, root in enumerate(roots):
 
 # every plot (each square's centre) against the windows, in each window's own projection
 gj = json.load(open(os.path.join(os.environ["E99_CFG"], "prediction_request_geometry.geojson")))
-centres = [shapely.geometry.shape(f["geometry"]).centroid for f in gj["features"]]
+centres = [g.centroid for f in gj["features"] for g in getattr(shapely.geometry.shape(f["geometry"]), "geoms",
+                                                                  [shapely.geometry.shape(f["geometry"])])]
 by_proj = collections.defaultdict(list)
 for k, (p, b) in enumerate(boxes):
     by_proj[p].append(k)

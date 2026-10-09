@@ -175,21 +175,35 @@ def select(timesync, request_geometry, boundaries=None, geometry_sha256=tsx.AWF_
 
 
 def request_squares(P, half=SQUARE_HALF_DEG, period=REQUEST_PERIOD):
-    """The request geometry olmoearth_run reads, in Ai2's structure: a FeatureCollection of Polygon features, one small
-    square around each plot, with Ai2's property names for the period. Coordinates: written only to scratch."""
-    feats = []
+    """The request geometry olmoearth_run reads: a FeatureCollection with ONE feature, a MultiPolygon of one small
+    square around each plot, with Ai2's property names for the period, as Ai2's own file holds one feature.
+    One feature per square multiplied the windows: olmoearth_run's GridPartitioner (partition_request_geometry, 1-degree
+    grid, clip off) turns each feature into the whole 1-degree cell holding it, and each of those partitions then gets
+    a window for every square in its cell, so k plots in a cell gave k squared windows (prepare job 1247349: 9,298
+    windows for 309 plots, cancelled after 7 h). Coordinates: written only to scratch."""
+    polys = []
     for lon, lat in zip(P["lon"], P["lat"]):
         ring = [[lon - half, lat - half], [lon + half, lat - half], [lon + half, lat + half], [lon - half, lat + half],
                 [lon - half, lat - half]]
-        feats.append({"geometry": {"coordinates": [ring], "type": "Polygon"},
-                      "properties": dict(zip(PROPERTY_NAMES, period)), "type": "Feature"})
-    return {"features": feats, "type": "FeatureCollection"}
+        polys.append([ring])
+    feat = {"geometry": {"coordinates": polys, "type": "MultiPolygon"},
+            "properties": dict(zip(PROPERTY_NAMES, period)), "type": "Feature"}
+    return {"features": [feat], "type": "FeatureCollection"}
+
+
+def n_squares(gj):
+    """How many plot squares a request geometry holds (a MultiPolygon's parts, or one per Polygon feature)."""
+    return sum(len(f["geometry"]["coordinates"]) if f["geometry"]["type"] == "MultiPolygon" else 1
+               for f in gj["features"])
 
 
 def structure(gj):
-    """What must match Ai2's file: the keys at each level, the geometry type, the property names."""
+    """What must match Ai2's file: the keys at each level, a polygonal geometry, the property names. Polygon and
+    MultiPolygon count as the same here: Ai2's file holds one Polygon, exp99's one MultiPolygon of the squares."""
+    poly = {"Polygon": "polygonal", "MultiPolygon": "polygonal"}
     return {"top": sorted(gj), "feature": sorted({tuple(sorted(f)) for f in gj["features"]}),
-            "geometry": sorted({(f["geometry"]["type"], tuple(sorted(f["geometry"]))) for f in gj["features"]}),
+            "geometry": sorted({(poly.get(f["geometry"]["type"], f["geometry"]["type"]), tuple(sorted(f["geometry"])))
+                                for f in gj["features"]}),
             "properties": sorted({tuple(sorted(f["properties"])) for f in gj["features"]})}
 
 
@@ -224,7 +238,7 @@ def write_request(dest, P, ai2_geometry, pilot_n=PILOT_N, seed=SEED):
         with open(path + ".partial", "w") as f:
             json.dump(gj, f)
         os.replace(path + ".partial", path)
-        out[name] = {"features": len(gj["features"]), "sha256": tsx.sha256_file(path)}
+        out[name] = {"features": len(gj["features"]), "squares": n_squares(gj), "sha256": tsx.sha256_file(path)}
     out["period"] = dict(zip(PROPERTY_NAMES, REQUEST_PERIOD))
     out["square_half_deg"] = SQUARE_HALF_DEG
     out["pilot"] = {"n": pilot_n, "seed": seed, "rule": "numpy default_rng(seed).choice over the selected plots"}

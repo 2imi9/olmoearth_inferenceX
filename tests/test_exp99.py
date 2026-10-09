@@ -278,13 +278,20 @@ def test_the_request_geometry_has_ais_structure(tmp_path):
     paths = e99.make_smoke_inputs(str(tmp_path))
     P, _, _ = e99.select(paths["timesync"], paths["request_geometry"], None, None, e99.SMOKE_MIN_PLOTS, None)
     out = e99.write_request(str(tmp_path / "req"), P, paths["request_geometry"])
-    assert out["prediction_request_geometry.geojson"]["features"] == 24
-    assert out["prediction_request_geometry_pilot.geojson"]["features"] == e99.PILOT_N
+    # one feature holding every square, as Ai2's file holds one feature: one feature per square made olmoearth_run
+    # window each 1-degree cell once per plot in it (job 1247349: 9,298 windows for 309 plots)
+    assert out["prediction_request_geometry.geojson"]["features"] == 1
+    assert out["prediction_request_geometry.geojson"]["squares"] == 24
+    assert out["prediction_request_geometry_pilot.geojson"]["features"] == 1
+    assert out["prediction_request_geometry_pilot.geojson"]["squares"] == e99.PILOT_N
     with open(tmp_path / "req" / "prediction_request_geometry.geojson") as f:
         gj = json.load(f)
     assert {f["properties"]["oe_start_time"] for f in gj["features"]} == {"2017-01-01T00:00:00Z"}
     assert {f["properties"]["oe_end_time"] for f in gj["features"]} == {"2017-12-31T00:00:00Z"}
-    assert {f["geometry"]["type"] for f in gj["features"]} == {"Polygon"}
+    assert [f["geometry"]["type"] for f in gj["features"]] == ["MultiPolygon"]
+    assert e99.n_squares(gj) == 24 and len(gj["features"][0]["geometry"]["coordinates"]) == 24
+    with open(paths["request_geometry"]) as f:
+        assert e99.structure(gj) == e99.structure(json.load(f)), "Ai2's structure, Polygon or MultiPolygon"
     with pytest.raises(ValueError, match="git checkout"):
         e99.write_request(os.path.join(ROOT, "exp", "out", "e99_never"), P, paths["request_geometry"])
     assert not os.path.exists(os.path.join(ROOT, "exp", "out", "e99_never"))
