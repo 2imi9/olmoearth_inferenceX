@@ -14,6 +14,8 @@ import numpy as np
 import pytest
 
 pytest.importorskip("rasterio")
+pytest.importorskip("shapely")      # Part I (exp/timesync_awf_crosswalk.py)
+pytest.importorskip("pyproj")
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "exp"))
@@ -235,6 +237,69 @@ def test_part_h_burned_area(smoke, out_dir):
     z = np.load(os.path.join(out_dir, "exp98_units_smoke.npz"))
     v = (z["split"] == "val") & z["covered"]
     assert sorted(np.unique(z["burned"][v]).tolist()) == [-1, 0, 1]
+
+
+def _keys(o):
+    if isinstance(o, dict):
+        for k, v in o.items():
+            yield k
+            yield from _keys(v)
+    elif isinstance(o, list):
+        for v in o:
+            yield from _keys(v)
+
+
+def test_part_i_timesync_plots(smoke, tmp_path):
+    """Part I on the smoke's TimeSync plots (SMOKE_TS_PLOTS): counts, disagreements by rule and country, the
+    stratified rate from the countries' shares, and no verdict; the inventory reads no class."""
+    t = smoke["timesync_reported"]
+    XT = e98.SMOKE_TS_EXPECTED
+    assert t["status"].startswith("report-only") and "holds" not in set(_keys(t))
+    assert {c: t["plots"][c]["inside_geometry"] for c in XT["inside"]} == XT["inside"]
+    assert {c: t["plots"][c]["covered"] for c in XT["covered"]} == XT["covered"]
+    assert t["label_changes"]["plots_with_two_or_more_labels_2015_2017"] == XT["changed_2015_2017"]
+    assert t["overlapping_grids"]["covered_only_in_a_later_grid"] == 1, "a plot on a pixel NaN in part 0"
+    share = t["areas"]["share_by_country"]
+    assert sum(share.values()) == pytest.approx(1.0) and t["areas"]["share_outside_both_countries"] < 1e-9
+    for rule in ("strict", "lenient"):
+        r = t["rules"][rule]
+        assert {c: r["by_country"][c]["disagreements"] for c in XT[rule]} == XT[rule]
+        assert r["stratified"]["weights"] == pytest.approx(share, rel=1e-4), "10 m pixels of each country's part"
+        theta = sum(r["stratified"]["weights"][c] * XT[rule][c] / XT["covered"][c] for c in share)
+        assert r["stratified"]["estimate"] == pytest.approx(theta)
+        assert r["stratified"]["low"] <= theta <= r["stratified"]["high"]
+        assert r["auroc_unweighted"] == pytest.approx(0.5), "every plot sits on a background pixel at 0.6"
+        assert r["three_by_three_majority_disagreements"] == r["disagreements"]
+    assert t["crosswalk"]["sha256"] == e98.tsx.crosswalk_record()["sha256"]
+    inv = smoke["inventory"]["timesync_inventory"]
+    assert inv["mode"].startswith("inventory") and "rules" not in inv and inv["plots"] == t["plots"]
+    # no plot's position is written
+    paths = e98.make_smoke_timesync(str(tmp_path))
+    plots = e98.tsx.read_plots(paths["timesync"], 2017)
+    coords = set(np.round(plots["lon"], 6)) | set(np.round(plots["lat"], 6))
+
+    def numbers(o):
+        if isinstance(o, dict):
+            for v in o.values():
+                yield from numbers(v)
+        elif isinstance(o, list):
+            for v in o:
+                yield from numbers(v)
+        elif isinstance(o, (int, float)) and not isinstance(o, bool):
+            yield round(float(o), 6)
+    assert not coords & set(numbers(smoke))
+
+
+def test_part_i_never_stops_the_graded_run(tmp_path):
+    paths = e98.make_smoke_inputs(str(tmp_path))
+    with open(paths["timesync"]["timesync"], "w") as f:
+        f.write("not,a,timesync,file\n1,2,3,4\n")
+    rec, units = e98.analyse(paths["scores"], paths["labels"], replica_path=paths["replica"],
+                             n_boot=e98.SMOKE_BOOT, zone_draws=e98.SMOKE_ZONE_DRAWS,
+                             max_labels=e98.SMOKE_MAX_LABELS, log=lambda *a: None, geometry_sha256=None,
+                             **paths["timesync"], **e98.SMOKE_FLOORS)
+    assert "error" in rec["timesync_reported"]
+    assert {p: rec["prereg"][p]["holds"] for p in e98.PREDICTIONS} == X["holds"]
 
 
 def _analyse_smoke(tmp_path):

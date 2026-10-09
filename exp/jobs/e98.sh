@@ -16,6 +16,10 @@
 #                  every root in prepare's scratch inventory, under scratch deploy/awf_run (purged after 30 days); the
 #                  roots' real names are never echoed
 #   E98_LABELS     the AWF windows root; default exp89's extraction of the pinned tar (exp/jobs/e89.sh, E89_ARM=awf)
+#   Part I (report-only) needs the East Africa TimeSync sample and Natural Earth's countries: the job fetches both
+#                  from their public sources into data/breadth/ and checks them against their pins
+#                  (exp/timesync_awf_crosswalk.py), and reads Ai2's request geometry from the pinned olmoearth_projects
+#                  clone on scratch. If either cannot be had, Part I is skipped with a note; nothing else changes.
 #
 # Submit from the Mac after commit and push (the job resets the checkout to origin/main), chained on e98_burned.sh
 # (Part H's layer, itself chained on e98_read.sh, the job that wrote E98_SCORES; without the layer Part H is skipped
@@ -78,16 +82,28 @@ echo "${#SCORE_DIRS[@]} from-olmoearth part(s); ${#DEPLOY_ARGS[@]} deployment ar
 PY="uv run --extra encoder --extra geo python exp/exp98_awf_deployment.py"
 
 echo "== $(date -Is) job ${SLURM_JOB_ID:-none} on $(hostname): mode $MODE, commit $(git rev-parse --short HEAD) =="
+echo "== Part I's inputs: the TimeSync sample and the boundaries, fetched and checked against their pins =="
+TS_ARGS=()
+AI2_GEOMETRY=$SCRATCH/deploy/olmoearth_projects/olmoearth_run_data/awf/prediction_request_geometry.geojson
+if uv run --extra encoder --extra geo python exp/timesync_awf_crosswalk.py fetch --dest data/breadth \
+   && test -f "$AI2_GEOMETRY"; then
+  TS_ARGS=(--timesync data/breadth/eastafrica_yearly_point_data.csv
+           --boundaries data/breadth/ne_10m_admin_0_countries.geojson --request-geometry "$AI2_GEOMETRY")
+else
+  echo "Part I's inputs are not available (above); Part I is skipped with a note, nothing else changes"
+fi
 echo "== smoke =="
 $PY --smoke --out-dir "$SCRATCH/exp98_smoke"
 case "$MODE" in
   inv)
     echo "== inventory (counts only) =="
-    $PY --inventory --scores "${SCORE_DIRS[@]}" --labels "$LABELS" ${DEPLOY_ARGS[@]+"${DEPLOY_ARGS[@]}"}
+    $PY --inventory --scores "${SCORE_DIRS[@]}" --labels "$LABELS" ${DEPLOY_ARGS[@]+"${DEPLOY_ARGS[@]}"} \
+      ${TS_ARGS[@]+"${TS_ARGS[@]}"}
     ls -la exp/out/exp98_inventory.json ;;
   run)
     echo "== the run =="
-    $PY --scores "${SCORE_DIRS[@]}" --labels "$LABELS" ${DEPLOY_ARGS[@]+"${DEPLOY_ARGS[@]}"}
+    $PY --scores "${SCORE_DIRS[@]}" --labels "$LABELS" ${DEPLOY_ARGS[@]+"${DEPLOY_ARGS[@]}"} \
+      ${TS_ARGS[@]+"${TS_ARGS[@]}"}
     ls -la exp/out/exp98_summary.json exp/out/exp98_units.npz ;;
   *)
     echo "unknown E98_MODE '$MODE': inv or run"; exit 2 ;;

@@ -1,7 +1,6 @@
 # A re-run of Ai2's FT-AWF deployment configuration, graded at Ai2's own AWF labels (exp98 preregistration)
 
-**Status: DRAFT, not frozen.** Written 8 October 2026; floors, P1 and P5 revised the same day after a review, before
-any run. The owner confirms the thresholds and the floors. Nothing is graded before this line says frozen.
+**Status: frozen on 9 October 2026, before any prediction was read at a label point.** Written 8 October 2026; floors, P1 and P5 revised the same day after a review, before any run. The owner confirmed the thresholds and the floors on 8 October 2026. Parts H (burned area) and I (East Africa TimeSync) were added before freezing and are report-only. At freezing, the full-area map was not yet written (inference queued); the pilot read 4 windows and counted pixels only, reading no label.
 
 **What is graded.** The map here is the record's own re-run of Ai2's AWF deployment configuration (Ai2's checkpoint,
 `olmoearth_run.yaml`, request geometry and 2023 period, at 10 m), with two changes so that it can be graded: the model
@@ -19,7 +18,9 @@ region), and nothing here measures that map. "The deployed map" below is short f
     class the map gives there, or how confident it is;
   - the burned-area layer (`exp/exp98_burned.py`, job `exp/jobs/e98_burned.sh`) and its `assess --condition` check
     on one part. They read MODIS and the map, never a label pixel. Part H itself, which reads the burn code and the
-    outcome at the points, runs only in the run.
+    outcome at the points, runs only in the run;
+  - Part I's counts in the inventory: how many East Africa TimeSync plots lie inside the request geometry, in a grid
+    and on a covered pixel, by country. The map's class at a plot is read only in the run.
 - **Not allowed before freezing:** any class, probability or condition code read at a label pixel, and anything
   computed from them. The script refuses the run until this page says frozen.
 - **Open before freezing:**
@@ -56,7 +57,7 @@ A deployment, and so this re-run, is a different pipeline from the evaluation:
 The same model can therefore give a different class at the same point. The crop around the point differs, the point
 sits elsewhere in the crop, and the scenes were fetched again.
 
-Seven questions:
+Eight questions:
 
 1. **Part A.** Does the re-run of the deployment reproduce the evaluation at Ai2's validation points?
 2. **Part B.** Does the deployed map's own confidence rank its errors there?
@@ -67,6 +68,9 @@ Seven questions:
 6. **Part F.** What would an answer for the whole map cost? Report-only.
 7. **Part H.** Where MODIS mapped a burn in 2023, is the map less confident, and are Ai2's points wrong more often?
    Report-only, no verdict. (Part G, the inputs at the label pixels, is a check, not a question.)
+8. **Part I.** At the plots of an independent random sample inside the request geometry (the East Africa TimeSync
+   sample, 47 plots), how often does the deployed 2023 map disagree with their 2017 labels? Report-only, no verdict.
+   Added 9 October 2026, before freezing and before any map was read.
 
 **Why this matters to the OlmoEarth team.** Ai2 publishes 89.5% beside the model, and its deployment pipeline is what
 makes the maps users see. exp98 answers three things, about that pipeline as the record re-runs it:
@@ -174,6 +178,15 @@ axis-aligned rectangle in one UTM zone:
   `annotation_task_features.geojson` may, and it is not read here.
 - A point whose ground changed within 2023, or whose annotation was made from imagery of another year, cannot be told
   from a model error.
+
+**The TimeSync plots inside the request geometry (Part I)** (counted 9 October 2026 from the sample's 2017 rows;
+`docs/plan/awf_transfer.md` describes the sample and the crosswalk):
+
+- **47 plots: 33 in Kenya, 14 in Tanzania.** Within each country the sample is a simple random sample of 2,000 locations
+  (Bullock et al. 2021), so the plots of a country inside the geometry are a simple random sample of its part of the
+  geometry, given their number.
+- Their 2017 labels: Open Grassland 26, Wooded Grassland 11, Cropland 6, Dense Forest 2, Otherland 1, Open Forest 1. One
+  plot carries two labels over 1985 to 2017, none within 2015 to 2017.
 
 ## The labels' design, and what follows
 
@@ -382,6 +395,35 @@ exp98 reads these files. It does not import `oe_inferencex.olmoearth`, which ano
     requested, and no NASA endorsement may be implied. Cite Giglio, Justice, Boschetti and Roy (2021),
     doi:10.5067/MODIS/MCD64A1.061.
 
+- **Part I, the East Africa TimeSync plots (report-only: no threshold, no verdict).**
+  - **Why.** Ai2's validation points cannot give an area-wide rate (above). The East Africa TimeSync sample (Bullock et
+    al. 2021, RCMRD and SERVIR; `github.com/bullocke/eastafrica` at fc2014fc, CC0) is the one probability sample with
+    plots inside the geometry: a simple random sample of 2,000 locations per country, each labelled every year by local
+    analysts from Landsat and Google Earth. Its labels end in 2017.
+  - **The plots.** The 2017 rows of Kenya and Tanzania whose point lies inside Ai2's request geometry (47, above),
+    each read at the score pixel that holds its point (reprojected from WGS84, as `locate_all` does), as exp98 reads a
+    label point: the argmax over all ten channels, the top-1 trained confidence.
+  - **The crosswalk.** TimeSync's nine classes against AWF's through `exp/timesync_awf_crosswalk.py`, fixed before any
+    map was read and shared with exp99 (its table and reasons are in `docs/plan/awf_transfer.md`): STRICT maps each
+    TimeSync class to one AWF class; LENIENT lets a class accept every AWF class whose definition overlaps its own, so
+    its disagreements are a subset of STRICT's. montane_forest and lava_forest are accepted only by LENIENT (for the two
+    forest classes); channel 9 never.
+  - **Measures, under each rule.** Disagreements by country; the disagreement rate with the countries as strata, each
+    weighted by its share of the request geometry's area (Natural Earth's admin-0 countries, v5.1.2, in EPSG:6933), and
+    the package's exact interval (each country's exact hypergeometric interval at 1 - 0.05/2, weighted: at least 95%
+    given the counts); Bullock et al.'s ratio estimator beside it; disagreements by TimeSync class and at the 3 x 3
+    majority; the confusion counts; the confidence's AUROC for the disagreements, unweighted and weighted.
+  - **What it cannot show.** These are 2017 labels against a 2023 map: a plot whose land cover changed between the two
+    years counts as a disagreement (none of the 47 changed label from 2015 to 2017, which says nothing of 2018 to
+    2023). A TimeSync label describes a Landsat-scale plot; the map is 10 m. Labels and map meet through a crosswalk,
+    whose two rules bound its effect. With 47 plots the interval is wide: 7 of 33 and 3 of 14 disagreements would
+    give about 6% to 45% at weights of 0.7 and 0.3 (the union over two strata costs width). Part I
+    grades nothing and changes no grade; exp99 (`docs/plan/awf_transfer.md`) asks the same of a 2017 map over 309 plots.
+  - **Inputs.** `exp/jobs/e98.sh` fetches the sample and the boundaries from their public sources, checks them against
+    their pins (the sample's sha256, computed from the Mac's copy), and reads Ai2's geometry from the pinned
+    `olmoearth_projects` clone; without them Part I is skipped with a note. It never stops the graded run: a failure is
+    recorded with its traceback.
+
 ## Predictions
 
 Thresholds are proposed, and the owner confirms them before freezing. P1 is two-sided; the others are one-sided.
@@ -460,7 +502,10 @@ No correction for multiple predictions. Each prediction is graded on its own, as
 10. Part H, if every part directory holds its burned layer (read in the map pass of step 7); otherwise a note. It is
     report-only and never stops the run: a burned layer that cannot be opened or read, at any step, leaves Part H
     out with a note, and any other failure is recorded in the summary with its traceback.
-11. Grade P1 to P5 at the floors. Write `exp/out/exp98_summary.json` and `exp98_units.npz`. The units file holds no
+11. Part I, given the TimeSync sample, the boundaries and Ai2's geometry; otherwise a note. Report-only, and like Part H
+    it never stops the run. The summary holds it as `timesync_reported` (the inventory's counts as
+    `timesync_inventory`); no plot's identifier or position is written.
+12. Grade P1 to P5 at the floors. Write `exp/out/exp98_summary.json` and `exp98_units.npz`. The units file holds no
     position: name, split, label, deployed class, confidence, condition code, burn code, boundary cue and input
     match.
 
@@ -530,6 +575,8 @@ from-olmoearth part directories (after `e98_collect.sh`, and once the from-olmoe
 - **Burned area.** Part H's layer is MODIS at 500 m, misses small burns and, from Planetary Computer, September 2023;
   it says where a cell burned in 2023, not whether a pixel was a fresh scar in the scenes the model read. Part H
   describes; it grades nothing.
+- **The TimeSync plots.** Part I compares 2017 labels with a 2023 map through a crosswalk at 47 plots: it describes;
+  it grades nothing.
 
 ## Deviations
 

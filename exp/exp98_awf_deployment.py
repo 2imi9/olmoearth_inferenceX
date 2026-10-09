@@ -18,6 +18,7 @@ map pixel covered in two grids counts once.
     python exp/exp98_awf_deployment.py --smoke                     # synthetic inputs end to end; no real file is read
     python exp/exp98_awf_deployment.py --inventory --scores DIR [DIR ...] --labels WINDOWS   # counts only
     python exp/exp98_awf_deployment.py --scores DIR [DIR ...] --labels WINDOWS [--replica NPZ] [--deployment-dataset DS ...]
+        [--timesync CSV --boundaries GEOJSON --request-geometry GEOJSON]                      # Part I
 
 The parts (the page's names):
   A  reproduction (graded: P1, P2): the re-run map's accuracy at Ai2's validation points against exp89's replica on
@@ -36,6 +37,13 @@ The parts (the page's names):
      40 m windows by MODIS burn code (the package's pool_condition), the deployed confidence's quartiles per code and
      each code's share of the least confident 10% of windows; Ai2's validation points by the burn code of their pixel,
      with errors per code. Descriptive, no verdict; absent layers are skipped with a note.
+  I  the East Africa TimeSync plots (report-only, with --timesync, --boundaries and --request-geometry): the plots of
+     Bullock et al.'s simple random samples of Kenya and Tanzania inside Ai2's request geometry (47, counted before the
+     run), their 2017 labels against the deployed 2023 map through the crosswalk of exp/timesync_awf_crosswalk.py
+     (STRICT and LENIENT), the disagreement rate with the countries as strata weighted by each one's share of the
+     request geometry and the package's exact interval, the source's own ratio estimate beside it, and counts by class.
+     2017 labels against a 2023 map: a change of land cover counts as a disagreement. The inventory counts the plots
+     on covered pixels only; the run reads their classes. It never stops the graded run.
 
 Readings fixed here (the page states each one):
   - A label is read as oe_inferencex.awf reads it: a window of group spatial_split whose label raster holds exactly one
@@ -85,6 +93,7 @@ for _p in (ROOT, EXP_DIR):
 from oe_inferencex import assess, estimate as est, metrics, plan, sequential as sq, signals, stats   # noqa: E402
 import exp89_finetuned_checkpoints as e89                                                          # noqa: E402
 import exp98_burned as eb                                                                          # noqa: E402
+import timesync_awf_crosswalk as tsx                                                               # noqa: E402
 
 OUT = os.path.join(EXP_DIR, "out")
 PLAN = os.path.join(ROOT, "docs", "plan", "awf_deployment.md")
@@ -996,6 +1005,120 @@ def burned_block(names, note, parts, codes_pts, V, err, tasks, metas):
     return out
 
 
+# ----------------------------------------------------------------------------- part I: TimeSync plots (report-only)
+TS_YEAR = 2017                     # the sample's last labelled year (Bullock et al. 2021)
+TS_INSIDE = {"kenya": 33, "tanzania": 14}   # plots inside Ai2's request geometry, counted 9 October 2026 (the page)
+TS_NOTE = ("2017 labels against a 2023 map: a plot whose land cover changed between the two years counts as a "
+           "disagreement. The labels were interpreted from Landsat (30 m) and Google Earth by RCMRD's analysts for "
+           "TimeSync's legend, the map is 10 m in AWF's legend, and the two meet through the crosswalk "
+           "(exp/timesync_awf_crosswalk.py), STRICT and LENIENT. Within each country the plots are a simple random "
+           "sample, so those inside the request geometry are a simple random sample of its part in that country; the "
+           "countries are strata weighted by their share of the geometry's area.")
+
+
+def timesync_points(plots):
+    """exp98's point records for TimeSync plots: WGS84 points (in memory only), reprojected onto each score grid by
+    locate_all."""
+    from rasterio.crs import CRS
+    wgs = CRS.from_epsg(4326)
+    return [{"crs": wgs, "X": float(x), "Y": float(y)} for x, y in zip(plots["lon"], plots["lat"])]
+
+
+def timesync_inside(timesync, request_geometry, boundaries=None, geometry_sha256=tsx.AWF_GEOMETRY_SHA256):
+    """(the 2017 plots of Kenya and Tanzania inside the request geometry, the geometry's area by country or None). The
+    geometry's sha256 is checked (None skips it, for synthetic inputs); nothing positional leaves this function but the
+    plots' arrays, which stay in memory."""
+    plots = tsx.read_plots(timesync, TS_YEAR)
+    geom = tsx.load_request_geometry(request_geometry, geometry_sha256)
+    inside = tsx.distance_km(geom, plots["lon"], plots["lat"]) == 0
+    areas = tsx.region_areas(geom, boundaries) if boundaries else None
+    return tsx.subset(plots, inside), areas
+
+
+def majority_3x3(B):
+    """Per 3 x 3 block (N, 10, 3, 3) around a point: the class most of its covered pixels take (the argmax over all ten
+    channels), the lower index on a tie, -1 with no covered pixel. Reported beside the point's own pixel, since a
+    TimeSync plot describes a Landsat pixel (30 m) and the map is 10 m (exp94 read Esri's 10 m map so)."""
+    out = np.full(len(B), -1, np.int64)
+    for k, b in enumerate(B):
+        px = np.moveaxis(np.asarray(b, dtype=np.float64), 0, -1).reshape(-1, N_OUT)
+        ok = covered(px)
+        if ok.any():
+            out[k] = int(np.bincount(px[ok].argmax(1), minlength=N_OUT).argmax())
+    return out
+
+
+def timesync_block(grids, plots, areas, outcome):
+    """Part I. Counts by country (inside the geometry, in a grid, on a covered pixel) always; with `outcome` (the run
+    only) the deployed class and confidence at each covered plot, the disagreement under each crosswalk rule by country
+    and by TimeSync class, the stratified rate with the package's exact interval, the ratio estimate beside it, the
+    confusion counts and the confidence's AUROC for the disagreements. Report-only."""
+    countries = tuple(tsx.COUNTRIES)
+    ctry = np.asarray(plots["country"])
+    labels = np.asarray(plots["label"])
+    cands = locate_all(timesync_points(plots), grids)
+    gi, rows, cols, how, off, P, B, C, overlap = read_points(grids, cands)
+    cov = covered(P)
+    out = {"status": "report-only: no threshold and no verdict (docs/plan/awf_deployment.md, Part I)",
+           "year": TS_YEAR, "note": TS_NOTE, "source": {k: tsx.TIMESYNC[k] for k in ("repository", "sha256", "licence",
+                                                                                   "citation")},
+           "crosswalk": tsx.crosswalk_record(),
+           "plots": {c: {"inside_geometry": int((ctry == c).sum()), "in_a_grid": int(((ctry == c) & (gi >= 0)).sum()),
+                         "covered": int(((ctry == c) & cov).sum())} for c in countries},
+           "expected_inside_geometry": dict(TS_INSIDE),
+           "overlapping_grids": overlap,
+           "labels_inside": {t: int((labels == t).sum()) for t in tsx.TIMESYNC_CLASSES if (labels == t).any()},
+           "label_changes": {"plots_with_two_or_more_labels_2015_2017": int((plots["n_labels_recent"] > 1).sum()),
+                             "plots_with_two_or_more_labels_any_year": int((plots["n_labels_all_years"] > 1).sum())}}
+    if areas is not None:
+        tot = sum(areas["by_country_km2"].values())
+        out["areas"] = {"geometry_km2": areas["region_km2"], "by_country_km2": areas["by_country_km2"],
+                        "share_by_country": {c: areas["by_country_km2"][c] / tot for c in countries} if tot else None,
+                        "share_outside_both_countries": areas["share_outside_countries"],
+                        "source": tsx.BOUNDARIES["repository"]}
+    if not outcome:
+        out["mode"] = "inventory: counts only; no class or probability at a plot is read out"
+        return out
+    K = np.flatnonzero(cov)
+    if not K.size:
+        out["note_run"] = "no plot on a covered pixel"
+        return out
+    rd = readings(P[K])
+    pred, u, p1 = rd["pred"], rd["u"], rd["p1"]
+    lab, cc = labels[K], ctry[K]
+    n_by = {c: int((cc == c).sum()) for c in countries}
+    _, w_plot = tsx.weights_from_areas(areas["by_country_km2"], n_by) if areas is not None else (None, None)
+    weights = np.array([w_plot[c] for c in cc]) if w_plot else None
+    maj = majority_3x3(B[K])
+    out["readings"] = {k: v for k, v in rd.items() if k not in ("pred", "u", "p1")}
+    rules = {}
+    for rule in ("strict", "lenient"):
+        w = tsx.wrong(lab, pred, rule)
+        k_by = {c: int(w[cc == c].sum()) for c in countries}
+        r = {"n": int(K.size), "disagreements": int(w.sum()), "unweighted_rate": float(w.mean()),
+             "by_country": {c: {"n": n_by[c], "disagreements": k_by[c]} for c in countries},
+             "by_class": {t: {"n": int((lab == t).sum()), "disagreements": int(w[lab == t].sum())}
+                          for t in tsx.TIMESYNC_CLASSES if (lab == t).any()},
+             "three_by_three_majority_disagreements": int(tsx.wrong(lab, np.where(maj < 0, UNTRAINED[0], maj),
+                                                                    rule).sum())}
+        if areas is not None:
+            r["stratified"] = tsx.stratified_exact(k_by, n_by, areas["by_country_km2"])
+            r["ratio_estimate_reported"] = tsx.ratio_estimate(k_by, n_by, areas["country_km2"])
+        if 0 < w.sum() < w.size:
+            r["auroc_unweighted"] = metrics.weighted_auroc(u, w, np.ones(w.size))
+            if weights is not None:
+                r["auroc_weighted"] = metrics.weighted_auroc(u, w, weights)
+        rules[rule] = r
+    out["rules"] = rules
+    pairs = {}
+    for t, p in zip(lab, pred):
+        key = f"{t} -> {CLASS_NAMES.get(int(p), f'channel {int(p)}')}"
+        pairs[key] = pairs.get(key, 0) + 1
+    out["confusion_counts"] = dict(sorted(pairs.items(), key=lambda kv: (-kv[1], kv[0])))
+    out["confidence_quartiles"] = {f"{q:g}": float(np.quantile(p1, q)) for q in (0.25, 0.5, 0.75)}
+    return out
+
+
 # ----------------------------------------------------------------------------- part G: inputs and configuration
 def _bandset_names(dirname, layer_cfg):
     """Band names of a band-set directory: its own spelling, or the band set of the layer's config whose rslearn
@@ -1200,9 +1323,27 @@ def grade(m, min_val=MIN_VAL, min_errors=MIN_ERRORS):
 
 
 # ----------------------------------------------------------------------------- the analysis
+def timesync_part(grids, timesync, boundaries, request_geometry, geometry_sha256, outcome, log=print):
+    """Part I, wrapped so that it never stops the graded run: absent inputs give a note, a failure its traceback."""
+    if not (timesync and request_geometry):
+        return {"note": "Part I skipped: --timesync and --request-geometry were not given (exp/jobs/e98.sh fetches the "
+                        "TimeSync sample and Natural Earth's boundaries and passes them)"}
+    try:
+        plots, areas = timesync_inside(timesync, request_geometry, boundaries, geometry_sha256)
+        out = timesync_block(grids, plots, areas, outcome)
+        if areas is None:
+            out["note_weights"] = "no --boundaries: the countries' shares of the geometry, and so the stratified " \
+                                  "estimate, are not computed"
+        return out
+    except Exception as ex:  # noqa: BLE001
+        log(f"part I failed (report-only, the run goes on): {ex!r}")
+        return {"error": repr(ex), "traceback": traceback.format_exc()}
+
+
 def analyse(scores, labels, replica_path=None, deployment_dataset=None, inventory=False, n_boot=BOOT,
             min_val=MIN_VAL, min_errors=MIN_ERRORS, zone_draws=PLAN_ZONE_DRAWS, max_labels=plan.MAX_LABELS,
-            map_sample=MAP_SAMPLE, log=print):
+            map_sample=MAP_SAMPLE, log=print, timesync=None, boundaries=None, request_geometry=None,
+            geometry_sha256=tsx.AWF_GEOMETRY_SHA256):
     t0 = time.time()
     entries, names, out_meta = find_outputs(scores)
     grids = [open_grid(e) for e in entries]
@@ -1240,6 +1381,8 @@ def analyse(scores, labels, replica_path=None, deployment_dataset=None, inventor
         record["mode"] = "inventory: counts only; no class, probability or condition at a label pixel is read out"
         if deployment_dataset:
             record["inputs_reported"], _ = compare_inputs(points, cov, {}, {}, labels, deployment_dataset)
+        record["timesync_inventory"] = timesync_part(grids, timesync, boundaries, request_geometry, geometry_sha256,
+                                                     outcome=False, log=log)
         record["seconds"] = round(time.time() - t0, 1)
         return record, None
 
@@ -1402,6 +1545,10 @@ def analyse(scores, labels, replica_path=None, deployment_dataset=None, inventor
         record["burned_area_reported"] = {"error": repr(ex), "traceback": traceback.format_exc()}
         log(f"part H failed (report-only, the run goes on): {ex!r}")
 
+    # part I (report-only): the TimeSync plots inside the request geometry; never stops the run
+    record["timesync_reported"] = timesync_part(grids, timesync, boundaries, request_geometry, geometry_sha256,
+                                                outcome=True, log=log)
+
     # the grades
     rep_blk = graded.get("replica") or {}
     rk = graded.get("ranking") or {}
@@ -1464,6 +1611,60 @@ SMOKE_EXPECTED = {"n_val": 40, "n_errors": 8, "accuracy": 32 / 40, "replica_accu
 SMOKE_FLOORS = {"min_val": 20, "min_errors": 5}
 SMOKE_BURN_ROWS = {-1: (0, 28), 0: (28, 72), 1: (72, 120)}     # aligned to the 4-px windows
 SMOKE_BURN_NAMES = eb.code_names(2023, ["2023-09"])
+# Part I: TimeSync plots at pixel centres of the smoke grid, on background pixels (class 2 in columns 0-79, class 4 in
+# 80-159, all at 0.6, so the confidence ties), with "Kenya" north of row 65 and "Tanzania" south of it. One Kenya plot
+# sits on the uncovered rows, one in columns 90-99 (NaN in part 0, read from part 1); one Kenya plot changed label
+# between 2015 and 2017. Two plots lie 5 km outside the request geometry and one, of another country, inside it.
+SMOKE_TS_PLOTS = (("kenya", 30, 10, "Wooded Grassland"), ("kenya", 30, 30, "Open Grassland"),
+                  ("kenya", 30, 50, "Cropland"), ("kenya", 30, 95, "Open Grassland"), ("kenya", 30, 130, "Otherland"),
+                  ("kenya", 10, 40, "Open Grassland"),
+                  ("tanzania", 100, 20, "Open Forest"), ("tanzania", 100, 60, "Dense Forest"),
+                  ("tanzania", 100, 100, "Wooded Grassland"), ("tanzania", 100, 120, "Open Grassland"),
+                  ("tanzania", 100, 150, "Cropland"))
+SMOKE_TS_OTHERS = (("kenya", 30, 600, "Cropland"), ("tanzania", 100, 600, "Open Grassland"),
+                   ("ethiopia", 30, 70, "Cropland"))
+SMOKE_TS_CHANGED = ("kenya", 30, 50, "Open Grassland")         # its 2015 label
+SMOKE_TS_BORDER_ROW = 65
+SMOKE_TS_EXPECTED = {"inside": {"kenya": 6, "tanzania": 5}, "covered": {"kenya": 5, "tanzania": 5},
+                     "strict": {"kenya": 2, "tanzania": 3}, "lenient": {"kenya": 1, "tanzania": 2},
+                     "changed_2015_2017": 1}
+
+
+def make_smoke_timesync(root):
+    """Part I's synthetic inputs under root: a TimeSync-style yearly CSV (2015-2017), a request geometry (a longitude
+    and latitude box around the smoke grid) and Natural Earth-style boundaries splitting it at SMOKE_TS_BORDER_ROW."""
+    import pyproj
+    X0, Y0 = 500000.0, 9000000.0
+    H, W = SMOKE_GRID["H"], SMOKE_GRID["W"]
+    to_ll = pyproj.Transformer.from_crs(f"EPSG:{SMOKE_GRID['epsg']}", "EPSG:4326", always_xy=True)
+
+    def ll(i, j):
+        return to_ll.transform(X0 + 10 * j + 5, Y0 - 10 * i - 5)
+    lon_c, lat_c = to_ll.transform([X0, X0 + 10 * W, X0, X0 + 10 * W], [Y0, Y0, Y0 - 10 * H, Y0 - 10 * H])
+    box = [min(lon_c), min(lat_c), max(lon_c), max(lat_c)]
+    _, lat_b = to_ll.transform(X0 + 5 * W, Y0 - 10 * SMOKE_TS_BORDER_ROW)
+    paths = {"timesync": os.path.join(root, "timesync.csv"), "boundaries": os.path.join(root, "countries.geojson"),
+             "request_geometry": os.path.join(root, "request.geojson")}
+    rows = []
+    for pid, (ctry, i, j, lab) in enumerate(SMOKE_TS_PLOTS + SMOKE_TS_OTHERS, start=1):
+        lon, lat = ll(i, j)
+        for y in (2015, 2016, 2017):
+            lab_y = SMOKE_TS_CHANGED[3] if (ctry, i, j) == SMOKE_TS_CHANGED[:3] and y == 2015 else lab
+            rows.append(f"{pid},{y},{ctry},0,{lat:.10f},{lon:.10f},{lab_y}")
+    with open(paths["timesync"], "w") as f:
+        f.write("plotid,year,country,country_id,latitude,longitude,landcover\n" + "\n".join(rows) + "\n")
+
+    def poly(x0, y0, x1, y1):
+        return {"type": "Polygon", "coordinates": [[[x0, y0], [x1, y0], [x1, y1], [x0, y1], [x0, y0]]]}
+    with open(paths["request_geometry"], "w") as f:
+        json.dump({"type": "FeatureCollection", "features": [{"type": "Feature", "geometry": poly(*box), "properties": {
+            "oe_start_time": "2023-01-01T00:00:00Z", "oe_end_time": "2023-12-31T00:00:00Z"}}]}, f)
+    feats = [{"type": "Feature", "properties": {"ADM0_A3": "KEN"}, "geometry": poly(box[0] - 1, lat_b, box[2] + 1, lat_b + 1)},
+             {"type": "Feature", "properties": {"ADM0_A3": "TZA"}, "geometry": poly(box[0] - 1, lat_b - 1, box[2] + 1, lat_b)},
+             {"type": "Feature", "properties": {"ADM0_A3": "ETH"}, "geometry": poly(box[0] + 5, lat_b + 5, box[2] + 6, lat_b + 6)}]
+    with open(paths["boundaries"], "w") as f:
+        json.dump({"type": "FeatureCollection", "features": feats}, f)
+    return paths
 
 
 def _smoke_point_vectors():
@@ -1664,20 +1865,21 @@ def make_smoke_inputs(root):
     rpath = os.path.join(root, "exp89_units_awf.npz")
     np.savez(rpath, names=np.array(rn), label=np.array(rl), logits=np.array(rlog), clusters=np.array(rc))
     return {"scores": out_dirs, "labels": os.path.join(root, "awf", "dataset", "windows"), "replica": rpath,
-            "deployment": dep_roots}
+            "deployment": dep_roots, "timesync": make_smoke_timesync(root)}
 
 
 def smoke(out_dir=None, n_boot=SMOKE_BOOT, log=print):
     import tempfile
     with tempfile.TemporaryDirectory() as tmp:
         paths = make_smoke_inputs(tmp)
+        ts = dict(paths["timesync"], geometry_sha256=None)
         inv, _ = analyse(paths["scores"], paths["labels"], deployment_dataset=paths["deployment"], inventory=True,
-                         log=log)
+                         log=log, **ts)
         rec, units = analyse(paths["scores"], paths["labels"], replica_path=paths["replica"],
                              deployment_dataset=paths["deployment"], n_boot=n_boot, zone_draws=SMOKE_ZONE_DRAWS,
-                             max_labels=SMOKE_MAX_LABELS, log=log, **SMOKE_FLOORS)
+                             max_labels=SMOKE_MAX_LABELS, log=log, **SMOKE_FLOORS, **ts)
     rec["mode"] = "smoke: synthetic inputs, floors lowered to " + json.dumps(SMOKE_FLOORS)
-    rec["inventory"] = {k: inv[k] for k in ("labels", "mapping", "mode", "inputs_reported")}
+    rec["inventory"] = {k: inv[k] for k in ("labels", "mapping", "mode", "inputs_reported", "timesync_inventory")}
     out_dir = out_dir or OUT
     os.makedirs(out_dir, exist_ok=True)
     dump(rec, os.path.join(out_dir, "exp98_summary_smoke.json"))
@@ -1696,6 +1898,12 @@ def main(argv=None):
     ap.add_argument("--replica", default=REPLICA, help="exp89's per-point units for arm A (default %(default)s)")
     ap.add_argument("--deployment-dataset", nargs="+", default=None,
                     help="the rslearn dataset roots olmoearth_run wrote (one per partition), for part G")
+    ap.add_argument("--timesync", default=None, help="Part I: the East Africa TimeSync sample's yearly CSV (Bullock et "
+                    "al. 2021; exp/timesync_awf_crosswalk.py fetch checks it against its pinned sha256)")
+    ap.add_argument("--boundaries", default=None, help="Part I: Natural Earth's admin-0 countries (GeoJSON), for each "
+                    "country's share of the request geometry")
+    ap.add_argument("--request-geometry", default=None, help="Part I: Ai2's AWF prediction_request_geometry.geojson "
+                    "from the pinned olmoearth_projects clone (its sha256 is checked)")
     ap.add_argument("--out-dir", default=OUT)
     a = ap.parse_args(argv)
     if a.smoke:
@@ -1710,7 +1918,8 @@ def main(argv=None):
               "before it is frozen")
         return 3
     rec, units = analyse(a.scores, a.labels, replica_path=a.replica, deployment_dataset=a.deployment_dataset,
-                         inventory=a.inventory)
+                         inventory=a.inventory, timesync=a.timesync, boundaries=a.boundaries,
+                         request_geometry=a.request_geometry)
     rec["prereg_status"] = status
     os.makedirs(a.out_dir, exist_ok=True)
     if a.inventory:

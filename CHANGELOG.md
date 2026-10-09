@@ -25,7 +25,18 @@ The labels were placed by experts, not drawn at random over the map, so exp98 gr
 ranking at those points and gives no whole-map rate and no certified zone. A report-only Part H describes the map and
 the points by MODIS burned area (MCD64A1 v061, 2023, from Planetary Computer; `exp/exp98_burned.py`, job
 `exp/jobs/e98_burned.sh`), a condition layer `assess --condition` reads; Planetary Computer lacks September 2023, which
-the layer's names and records state.
+the layer's names and records state. A report-only Part I reads the 47 plots of the East Africa TimeSync sample (Bullock
+et al. 2021, a simple random sample per country, CC0) inside the request geometry, their 2017 labels against the 2023
+map, with the countries as strata and the package's exact interval.
+
+**exp99 (draft preregistration, predictions proposed): a transfer test.** `docs/plan/awf_transfer.md`,
+`exp/exp99_transfer.py`, jobs `exp/jobs/e99_*.sh` (`exp/jobs/E99_README.md`). The same deployment configuration on 2017
+imagery over the windows that hold the 309 TimeSync plots within 100 km of the AWF request geometry (the area rule fixed
+before any map: D the smallest multiple of 10 km giving 300 plots), graded at those plots: the region's error rate with
+the countries as strata and an exact interval, beside Ai2's 89.5%, and whether the map's confidence ranks its errors
+there. The crosswalk from TimeSync's legend to AWF's, STRICT and LENIENT, is fixed in `exp/timesync_awf_crosswalk.py`
+and shared with exp98's Part I. Found while planning: `plan`'s zone simulation fails on maps of 10^9 windows or more
+(numpy's multivariate hypergeometric sampler); exp99 plans its zones on 999,999,999.
 
 ## 1.8.0 (2026-10-08)
 

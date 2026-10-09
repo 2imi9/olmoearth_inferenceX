@@ -29,7 +29,7 @@ what the jobs echo from them is masked. The home data directory holds what the r
 | `e98_collect.sh` | cpu, 8 CPUs, 32 GB, 3 h | output and SCL layers to `~/olmoearth_inferenceX/data/exp98/awf_run/`, with a sha256 manifest |
 | `e98_read.sh` | cpu, 8 CPUs, 64 GB, 4 h | `oe-inferencex from-olmoearth` on every root, in parts of at most 3 GiB of grid whose windows do not overlap, each part to `data/exp98/scores/r<root>_p<part>/`; needs the reader merged into main |
 | `e98_burned.sh` | cpu, 8 CPUs, 64 GB, 3 h | MODIS burned area (MCD64A1 v061, 2023) on each part's grid, `burned_<EPSG>.tif` beside its scores, for Part H and `assess --condition` |
-| `e98.sh` | cpu, 8 CPUs, 32 GB, 2 h | exp98 itself (inventory, or the run once the page is frozen), reading every part directory as one map |
+| `e98.sh` | cpu, 8 CPUs, 32 GB, 2 h | exp98 itself (inventory, or the run once the page is frozen), reading every part directory as one map; for Part I it fetches the East Africa TimeSync sample and Natural Earth's countries into `data/breadth/` (checked against their pins in `exp/timesync_awf_crosswalk.py`) and reads Ai2's request geometry from the pinned clone; without them Part I is skipped with a note |
 
 Scratch layout, all under `/scratch/qi_zim_neu/olmoearth_inferenceX/deploy/`: `python/`, `venv/`,
 `olmoearth_projects/`, `awf_config/` (the config directory every stage reads, snapshotted by prepare), `awf_run/`
