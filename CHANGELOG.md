@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.9.0 (2026-10-10)
 
 **`from-olmoearth`: read an OlmoEarth run directly** (`oe_inferencex.olmoearth`, `oe-inferencex from-olmoearth DS
 --out DIR`). It reads the rslearn dataset that olmoearth_run writes (windows, completed output layers, any band-set
