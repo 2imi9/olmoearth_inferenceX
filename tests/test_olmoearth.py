@@ -1,6 +1,6 @@
-"""The OlmoEarth reader on synthetic rslearn datasets: the layout olmoearth_run writes (rslearn @ 5780896a), read into
-the rasters `assess` reads, refused where the output holds no probabilities, and the input-condition layer on the
-scores' grid."""
+"""The OlmoEarth reader on synthetic rslearn datasets: the layout rslearn model predict writes (rslearn v0.1.17 =
+5780896a), read into the rasters `assess` reads, refused where the output holds no probabilities, and the
+input-condition layer on the scores' grid."""
 import csv
 import hashlib
 import json
@@ -147,7 +147,7 @@ def test_an_argmax_layer_is_refused_with_the_fix(tmp_path, dtype):
         oe.read_output(ds, out)
     msg = str(exc.value)
     for part in ("one band of class ids", "output_probs: true", "prob_scales unset", "float32",
-                 "named without underscores", "RUN_INFERENCE"):
+                 "named without underscores", "rslearn model predict --config model.yaml"):
         assert part in msg, part
     with pytest.raises(SystemExit) as exc:
         main(["from-olmoearth", ds, "--out", out])
@@ -470,7 +470,7 @@ def test_the_written_class_is_recorded_beside_the_argmax(tmp_path):
 
 def test_rerun_band_set_beside_the_old_one_is_named(tmp_path):
     """A rerun that writes p0..p9 puts its band set beside the default output/ one; the refusal says so, not
-    'run the inference stage'. The probability fix says a float layer needs only output_probs."""
+    'run prediction first'. The probability fix says a float layer needs only output_probs."""
     ds = str(tmp_path / "ds")
     w = _window(ds, "g/a", A)
     _layer(w, "output", ["output"], np.ones((16, 16), np.float32), A)
@@ -479,7 +479,7 @@ def test_rerun_band_set_beside_the_old_one_is_named(tmp_path):
         oe.read_output(ds, str(tmp_path / "out"))
     msg = str(exc.value)
     assert "2 band sets in layers/output/ (output, p0_p1_p2)" in msg and "beside the old" in msg
-    assert "Run the inference stage first" not in msg
+    assert "Run prediction first" not in msg
     assert "A float32 output layer, as AWF's dataset declares, needs nothing more" in oe.FIX_PROBABILITIES
     assert "remove each window's old band-set directory" in oe.FIX_PROBABILITIES
 

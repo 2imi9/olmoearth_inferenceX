@@ -198,10 +198,19 @@ hard mask, a quantized band, a constant map) carries `tied_at_cutoff` and a warn
 windows is raster position. Without labels, the package does not report how wrong a map is; that requires a labelled
 sample (`sample`, then `estimate` or `certify`).
 
-## From an OlmoEarth run
+## From an OlmoEarth model run with rslearn
 
-`from-olmoearth` reads the rslearn dataset an OlmoEarth run writes (`olmoearth_run` runs rslearn) and writes the
-files `assess` reads. It needs the `geo` extra (rasterio), and neither torch nor rslearn.
+An OlmoEarth model is run with rslearn: materialize the dataset's windows, then
+
+```bash
+rslearn model predict --config model.yaml       # the model config, with an RslearnWriter callback
+```
+
+run with the fine-tuned weights (pass `--ckpt_path`, or let the config's `management_dir` restore the best
+checkpoint; otherwise the model predicts with its initial weights and its probabilities look plausible with no error),
+writes each window's prediction into the dataset's output layer and marks it `completed`. `from-olmoearth` reads
+that dataset and writes the files `assess` reads. It needs the `geo` extra (rasterio), and neither torch nor
+rslearn. `olmoearth_run` runs rslearn and writes the same layout, so a dataset it left is read the same way.
 
 ```bash
 oe-inferencex from-olmoearth path/to/dataset --out run --conditions
@@ -221,7 +230,10 @@ command that reads what it wrote. NaN is always read as no-data, so the command 
 OlmoEarth project changes that. A class map has no confidence to rank, so `from-olmoearth` refuses it and says how to
 get probabilities. In `model.yaml`, set `output_probs: true` in the segmentation task's `init_args` and leave
 `prob_scales` unset, since it rescales the probabilities so that they no longer sum to 1 (such a layer is refused too).
-Then rerun the inference stage.
+Then rerun `rslearn model predict --config model.yaml`. A config that sets
+`output_layer_name_skip_inference_if_exists` (OlmoEarth's project configs do) skips every window whose layer of that
+name is completed, so the rerun writes nothing: before it, remove the old output layer from each window, or write to
+a new layer (the `RslearnWriter`'s `output_layer`, read with `--layer`) and unset the option or point it at that layer.
 
 ```yaml
           segment:                                    # data.init_args.task.init_args.tasks
@@ -230,13 +242,27 @@ Then rerun the inference stage.
               output_probs: true                      # no prob_scales
 ```
 
-A float32 output layer, as AWF's `dataset.json` declares, needs nothing more: the writer writes as many bands as the
-model outputs into the same `layers/output/output/geotiff.tif`, whatever the layer's band list says. AWF's decoder
+The writer gives the output the dtype of the output layer's first band set. A float32 output layer, as AWF's
+`dataset.json` declares, needs nothing more: the writer writes as many bands as the model outputs into the same
+`layers/output/output/geotiff.tif`, whatever the layer's band list says. AWF's decoder
 emits 10 channels; the tenth is the label fill value, never a training target. Only an integer output layer (uint8,
 for instance) truncates the probabilities to 0 and 1: make its `dtype` float32 in the dataset's config, or give the
 `RslearnWriter` a `layer_config` with one float32 band set of one band per channel, named without underscores, under
-a new layer name read with `--layer`. A rerun whose band names differ writes its band set beside the old one in
-`layers/<layer>/`, not over it; such a window is skipped, so remove the old band-set directory first.
+a new layer name read with `--layer`:
+
+```yaml
+    - class_path: rslearn.train.prediction_writer.RslearnWriter   # trainer.callbacks
+      init_args:
+        output_layer: probs
+        layer_config:
+          type: raster
+          band_sets:
+            - dtype: float32
+              bands: [p0, p1, p2]                     # one per class
+```
+
+A rerun whose band names differ writes its band set beside the old one in `layers/<layer>/`, not over it; such a
+window is skipped, so remove the old band-set directory first.
 
 A per-window classification needs `prob_property: "probs"` in its task, as Forest Loss Driver sets;
 `--prob-property` names another property. The class the task wrote is read too (`--class-property`, or the one other

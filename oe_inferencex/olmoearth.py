@@ -1,7 +1,10 @@
-"""Read an OlmoEarth run: the rslearn dataset olmoearth_run leaves behind, into the files `assess` reads.
+"""Read an OlmoEarth model run: the rslearn dataset `rslearn model predict` writes, into the files `assess` reads.
 
-olmoearth_run runs rslearn, which keeps a dataset as one directory per window (rslearn @ 5780896a:
-rslearn/dataset/window.py:361-371, rslearn/dataset/storage/file.py:29-83 and 171-187):
+An OlmoEarth model is run with rslearn: `rslearn model predict --config model.yaml` on a materialized dataset, the
+RslearnWriter callback in model.yaml writing each window's output layer (rslearn v0.1.17 = 5780896a:
+rslearn/main.py:1090-1095, rslearn/lightning_cli.py:535-564, rslearn/train/prediction_writer.py:188-237 and
+505-537). olmoearth_run runs rslearn and leaves the same layout. rslearn keeps a dataset as one directory per
+window (rslearn/dataset/window.py:361-371, rslearn/dataset/storage/file.py:29-83 and 171-187):
 
     <ds>/config.json                                 the dataset's layers; an input layer has a data_source
     <ds>/windows/<group>/<name>/metadata.json        the window's projection (CRS, x and y resolution) and its bounds
@@ -24,7 +27,9 @@ Three readers, on json, numpy and rasterio (the geo extra); no torch, no rslearn
 
 The output must hold probabilities. A SegmentationTask writes ONE band of argmax class ids by default, and the
 softmax over C bands only with output_probs (rslearn/train/tasks/segmentation.py:52-55, 102-110, 198-232). No
-published OlmoEarth project sets it, so read_output refuses a class-id layer and says how to get probabilities.
+published OlmoEarth project sets it, so read_output refuses a class-id layer and says how to get probabilities. The
+merged output takes the output layer's dtype (rslearn/train/prediction_writer.py:136-145), so an integer layer
+truncates probabilities to 0 and 1.
 prob_scales multiplies the probabilities before they are written, so they no longer sum to 1: refused too, since
 the largest of a rescaled vector is not the model's confidence. RasterMerger fills the pixels no crop covered with the
 layer's nodata value or 0 (rslearn/train/prediction_writer.py:128-185), and no project sets one, so an all-zero vector
@@ -66,9 +71,12 @@ FIX_PROBABILITIES = (
     "layer's band list says (rslearn/utils/raster_format.py:574-603). Only an integer output layer truncates the "
     "probabilities to 0 and 1; then make its dtype float32 in the dataset's config.json, or give the RslearnWriter "
     "a layer_config with one float32 band set of C bands named without underscores (p0 ... p{C-1}) and a new layer "
-    "name, read with --layer. Then rerun the inference stage (olmoearth_run's RUN_INFERENCE); a band set of other "
-    "band names is written beside the old one in layers/<layer>/, not over it, so remove each window's old band-set "
-    "directory first or write to a new layer")
+    "name, read with --layer. Then rerun prediction: rslearn model predict --config model.yaml (olmoearth_run's "
+    "inference stage writes the same layout). A band set of other band names is written beside the old one in "
+    "layers/<layer>/, not over it, so remove each window's old band-set directory first or write to a new layer. "
+    "A config that sets output_layer_name_skip_inference_if_exists (OlmoEarth's project configs do) skips every "
+    "window whose layer of that name is completed, so the rerun writes nothing: before it, remove the old output "
+    "layer from each window, or write to a new layer and unset the option or point it at the new layer")
 
 
 def _rasterio():
@@ -109,8 +117,8 @@ def _windows(ds, group=None, windows=None):
     `windows`, only the ids matching one of those shell patterns (fnmatch, case-sensitive)."""
     root = os.path.join(ds, "windows")
     if not os.path.isdir(root):
-        raise ValueError(f"{ds} has no windows/ directory, so it is not an rslearn dataset; olmoearth_run writes one "
-                         "per run, its windows in windows/<group>/<name>/")
+        raise ValueError(f"{ds} has no windows/ directory, so it is not an rslearn dataset; rslearn keeps "
+                         "each window in windows/<group>/<name>/")
     groups = sorted(d for d in os.listdir(root) if not d.startswith(".") and os.path.isdir(os.path.join(root, d)))
     if group is not None:
         want = [group] if isinstance(group, str) else list(group)
@@ -181,12 +189,13 @@ def _no_output(ds, layer, skipped):
     why = "; ".join(f"{n} window{'s' if n > 1 else ''} {r}" for r, n in why.items())
     if skipped and all(s.get("several_band_sets") for s in skipped):
         return ValueError(f"no window of {ds} has one band set in its completed {layer!r} layer ({why}). A rerun "
-                          f"of the inference stage that writes other band names puts its band set beside the old "
+                          f"of prediction that writes other band names puts its band set beside the old "
                           f"one in layers/{layer}/ rather than over it, so which is the run's output is not "
                           f"recorded. Remove the old band-set directory from each window, or write the rerun to a "
                           f"new layer and name it with --layer")
-    return ValueError(f"no window of {ds} has a completed {layer!r} layer ({why}). Run the inference stage "
-                      f"first, or name the output layer with --layer; the windows hold the layers "
+    return ValueError(f"no window of {ds} has a completed {layer!r} layer ({why}). Run prediction "
+                      f"first (rslearn model predict --config model.yaml), or name the output layer with "
+                      f"--layer; the windows hold the layers "
                       f"{', '.join(sorted(seen)) or 'none'}")
 
 
@@ -334,8 +343,10 @@ def _probabilities(a, nodata, wid, layer):
                          f"covered pixels (values {lo:.4g} to {hi:.4g}), not 1, so they are not the softmax. prob_scales "
                          "multiplies the probabilities before they are written (rslearn/train/tasks/segmentation.py:"
                          "215-221), and a temperature or a rescaled head does the same; the largest of a "
-                         "rescaled vector is not the model's confidence. Leave prob_scales unset and rerun the "
-                         "inference stage")
+                         "rescaled vector is not the model's confidence. Leave prob_scales unset and rerun "
+                         "rslearn model predict --config model.yaml, after removing the old output layer from "
+                         "each window (or writing to a new layer) if the config sets "
+                         "output_layer_name_skip_inference_if_exists, which skips completed windows")
     return covered, "softmax", dev, all01
 
 
@@ -515,8 +526,11 @@ def read_window_probs(ds, out, layer="output", prob_property="probs", group=None
         raise ValueError(f"no feature in layers/{layer}/data.geojson carries {prob_property!r} (they carry "
                          f"{', '.join(sorted(seen)) or 'no property'}). A ClassificationTask writes the probabilities "
                          "only with prob_property set (rslearn/train/tasks/classification.py:233-234): set "
-                         "prob_property: \"probs\" in the task's init_args, as Forest Loss Driver does, and rerun the "
-                         "inference stage; or name the property with --prob-property")
+                         "prob_property: \"probs\" in the task's init_args, as Forest Loss Driver does, and rerun "
+                         "rslearn model predict --config model.yaml, after removing the old output layer from "
+                         "each window (or writing to a new layer) if the config sets "
+                         "output_layer_name_skip_inference_if_exists, which skips completed windows; or name the "
+                         "property with --prob-property")
     sizes = sorted({v.size for v in probs})
     if len(sizes) > 1 or sizes[0] < 2:
         raise ValueError(f"the {prob_property!r} lists have {' and '.join(map(str, sizes))} entries; one class "
@@ -553,8 +567,9 @@ def read_window_probs(ds, out, layer="output", prob_property="probs", group=None
                              f"list: {what}. A two-class ClassificationTask with positive_class_threshold other than "
                              "0.5 writes the positive class wherever its probability reaches the threshold "
                              "(rslearn/train/tasks/classification.py:207-215), so the map the run published is not "
-                             "the argmax assess grades. Leave positive_class_threshold at 0.5 and rerun the inference "
-                             "stage, or name the class property with --class-property if it is another one")
+                             "the argmax assess grades. Leave positive_class_threshold at 0.5 and rerun "
+                             "rslearn model predict, or name the class property with --class-property if it is "
+                             "another one")
     elif len(others) > 1:
         notes.append(f"the features carry {', '.join(sorted(others))} besides {prob_property!r}; which holds the "
                      "class is not known, so the written class is not checked against the argmax (--class-property "
