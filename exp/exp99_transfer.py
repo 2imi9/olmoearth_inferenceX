@@ -78,7 +78,7 @@ PILOT_N = 4
 SEED = 99
 
 PRIMARY = "strict"
-THRESHOLDS = {"P1": 0.70, "P2": 0.25}          # PROPOSED; the owner confirms them before the page is frozen
+THRESHOLDS = {"P1": 0.70, "P2": 0.25}          # confirmed by the owner on 9 October 2026, before the page was frozen
 FLOORS = {"min_with_input": 250, "min_errors": 20, "min_correct": 20}
 PREDICTIONS = tuple(THRESHOLDS)
 AI2_ACCURACY = 0.895

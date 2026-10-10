@@ -3643,6 +3643,176 @@ figure is a recall at the points. Accuracy at pixels unlike the points. Whether 
 annotated on Planet imagery of unknown date. Independence beyond the 20 tasks. Whether the 20 m and 60 m bands, or the
 crop, changed any class. Whether the map is wrong on burned ground: MCD64A1 found almost no burn in the area.
 
+*Added 10 October 2026.* The pipeline re-run here is olmoearth_run with the configs published with the v1 models in
+olmoearth_projects at f3c9b0c8. Ai2's lock at that commit installs olmoearth-runner 0.1.12 with rslearn 0.0.23. This
+record chose olmoearth-runner 0.1.14 (rslearn 0.0.27) to get `output_probs`, which rslearn 0.0.23 lacks (departure 1 in
+`exp/jobs/E98_README.md`). The current way to run these models is rslearn's own prediction (its command line or
+library), with the same model and dataset configs. So "Ai2's deployment configuration" above means that published v1
+pipeline as re-run here, not a current deployment. Three problems met while running it. (1) The published configs
+write only the class map (`output_probs` is off), so a deployed map cannot be ranked or checked. (2) rslearn 0.0.27,
+which runner 0.1.14 pins, raises NotImplementedError from `PlanetaryComputer.get_item_by_name` (fixed in rslearn
+0.0.29; patched here as above). (3) olmoearth_run's dataset build starts four processes per CPU of the whole node (512
+on a 128-core node), which exhausted the 1,024 soft open-file limit (job 1243542); `e98_prepare.sh` raises the limit
+and starts one per CPU. The first and third are facts of the published configs and runner. The second belongs to this
+record's choice of runner version, not to Ai2's published pipeline, whose lock predates the bug.
+
+## A transfer test: Ai2's FT-AWF deployment configuration on 2017 imagery, graded at an independent random sample (exp99)
+
+**Question.** exp98 graded the re-run of Ai2's FT-AWF deployment configuration at Ai2's own validation points. Experts
+placed them, so no area-wide error rate could follow. The one probability sample with plots near the AWF area is the
+East Africa TimeSync sample (Bullock et al. 2021; a simple random sample of 2,000 locations per country, CC0), whose
+labels end in 2017. With the model and the configuration held fixed and the year moved to 2017, what is the map's error
+rate at the TimeSync plots around the AWF area, and does its confidence rank its errors there? exp99 was preregistered
+on 9 October 2026 and frozen the same day (52489b1), before any class or probability was read at a plot
+(`docs/plan/awf_transfer.md`). It ran once at the plots on the aicr cluster, graded at 52489b1 on 10 October:
+`exp/exp99_transfer.py`, `exp/out/exp99_summary.json`, `exp/out/exp99_inventory.json`, `exp/out/exp99_units.npz` and the
+job records in `exp/out/exp99/`. The units file holds, per plot, the country, label, input, whether the plot is inside
+Ai2's geometry, class, confidence and its negative log, condition code, 3 × 3 majority, weight and the errors under both
+rules. It holds no position and no identifier, but its rows follow the public sample's sorted plot ids.
+
+**What ran.** The area rule, fixed before any map, takes the plots of Kenya and Tanzania with a 2017 label within D of
+Ai2's request geometry, D the smallest multiple of 10 km holding at least 300 plots. It gave D = 100 km and 309 plots
+(219 in Kenya, 90 in Tanzania), 47 of them inside the geometry. The rule reads no label and no map, but D was set from
+the sample's own counts, so the region is chosen by a label-free, data-dependent rule; the effect of that stopping rule
+on the within-country design argument is not corrected. The region is the geometry's 100 km buffer, 107,679 km² by
+Natural Earth's boundaries: 60,574 km² in Kenya and 47,105 km² in Tanzania, weights 0.563 and 0.437 (the page's
+estimate from the plots was about 0.60 and 0.40). The map reuses exp98's configuration and environment: Ai2's
+checkpoint (`allenai/OlmoEarth-v1-FT-AWF-Base` at a347b154), exp98's `model.yaml` and `dataset.json` (equal by sha256),
+olmoearth-runner 0.1.14 and rslearn 0.0.27 with the `get_item_by_name` fix (`exp/out/exp98/e98_versions.json`). It
+read 12 periods of 30 days of 2017 Sentinel-2 L2A from Planetary Computer, requested as one MultiPolygon of an 11 m
+square around each plot. The model was fine-tuned on 2023 imagery. olmoearth_run made 313 windows on 264 distinct
+1,024-px cells, all on the CRS-origin lattice. 271 windows received all 12 item groups. The other 42 received no 2017
+Sentinel-2 item group at all (0 of 12); the configuration requires 12, and the records do not establish why none
+matched. The 271 windows with input sit on 234 distinct cells (245,366,784 covered pixels, counted once). That 271
+windows and 271 plots have input is a coincidence. 36 plots lie in two or more windows with input, and at 1 of them the
+windows differ; each plot takes the first grid read. This is the record's map, not one Ai2 published. The pipeline is
+exp98's, with the note dated 10 October 2026 above: the v1 configs, run with the runner version this record chose.
+
+**The graded set.** 271 of the 309 plots have input (192 in Kenya, 79 in Tanzania). The 38 without input (27 and 11)
+lie only in the 42 windows without imagery. The page treated them as missing at random within their country, and they
+are not. 20 of the 47 plots inside Ai2's geometry lack input, against 18 of the 262 outside it (Fisher's exact test
+p = 4 × 10⁻⁹; in Kenya 17 of 33 against 10 of 186). Cropland (11 of 44) and Open Grassland (15 of 112) lack input more
+often than Wooded Grassland (9 of 138). So the graded set is a sample of the plots with 2017 input, which
+under-represents Ai2's own area and cropland. The design-weighted rates and AUROC below use the frozen whole-region
+weights and describe that set, not the 100 km region; they would describe the region only under the assumption the data
+contradict. The floors (250 plots with input; 20 errors and 20 correct under STRICT) are met: 271, 91 and 180.
+
+**Result.** P1 does not hold. Under the STRICT crosswalk the map is wrong at 91 of the 271 plots. The design-weighted
+AUROC of its confidence (the top-1 softmax over the nine trained classes) for those errors is 0.638, below 0.70; the 90%
+bootstrap interval, resampling plots within each country (2,000 resamples, seed 99), is 0.579 to 0.696. Its upper end
+lies 0.004 below the bar, and 4% of the resamples reach 0.70. Under LENIENT (37 errors) the AUROC is 0.678, with an
+interval of 0.599 to 0.756. It misses 0.70 on the point value, but its interval contains 0.70, so that miss is within
+the noise. By country, STRICT's AUROC is 0.697 in Kenya and 0.618 in Tanzania. With both rules below 0.70, the page's
+rule reads "transfer is the likelier reading". That is the frozen rule's label, not a finding. Transfer here bundles
+the year (2017 imagery for a model fine-tuned on 2023), places outside the fine-tuning area, the grass/shrub legend
+boundary, and the move from Ai2's expert-placed points to a random sample, and the run does not separate them. The
+plots sit in their windows as random pixels do (Part D: mean percentile 0.48). Ai2's points sat in the confident part
+of exp98's map (P5: 0.647), so exp89's 0.867 and exp98's 0.849 were measured at a different kind of point. <!-- claim:exp99-confidence-misses-the-ranking-bar-under-both-rules -->
+P2 holds on the point value, as frozen. The least confident 10% of the plots by design weight hold 17.9% of the STRICT
+error weight, against 10% for a random 10% and a ceiling of 28.1%, so they close 0.434 of the gap (the bar is 0.25).
+The 90% bootstrap interval, 0.10 to 0.65, includes 0.25, and 78% of the resamples reach it. The 10% is 31 whole plots
+(28 in Kenya, 3 in Tanzania; 19 errors), and the figure is specific to the budget: 0.520 at 5%, 0.169 at 20%. The lift
+at 10% is 1.79, short of twice random. LENIENT's 0.213 (interval 0.05 to 0.40) is below the bar. With P1 failing and
+P2 holding, what ranking there is lies in the least confident tail. <!-- claim:exp99-least-confident-tenth-closes-the-gap-at-the-point-value -->
+P3 is descriptive. Over the plots with 2017 input, with the countries as strata, the error rate is 35.5% under STRICT
+(the package's exact interval, at least 95%: 26.0% to 45.8%; Kenya 57 of 192, Tanzania 34 of 79) and 13.4% under
+LENIENT (7.5% to 21.9%; 27 of 192, 10 of 79). Stehman's ratio estimator gives 35.0% and 13.5%, the unweighted rates are
+33.6% and 13.7%. Beside Ai2's 10.5% error plus 5 points (15.5%), the call fixed in advance is "not determined": a gap
+needs LENIENT's interval wholly above 15.5%, and its low end is 7.5%. STRICT's interval lies wholly above 15.5%, but
+under the frozen rule that alone makes no gap call. The two rules differ mostly at the grass/shrub boundary, where AWF
+publishes no threshold: 48 of the 54 plots wrong under STRICT only (39 Open Grassland read as shrubland/savanna, 9
+Wooded Grassland read as grassland/barren; the others are 3 Dense Forest read as montane forest, 2 Otherland read as
+open water and 1 Open Water read as herbaceous wetland). With the 38 plots without input filled as all correct or all
+wrong, the stratified rate over all 309 plots would lie between 31.2% and 43.4% under STRICT (interval envelope 22.6%
+to 53.1%) and between 11.8% and 24.1% under LENIENT (6.5% to 33.2%). Filled all wrong, LENIENT's low end would be
+16.5%, a gap; no filling gives "no gap shown". This is the record's first design-based error rate for an OlmoEarth
+deployment, for the plots with 2017 input. <!-- claim:exp99-error-rate-of-plots-with-2017-input -->
+
+**Reported, not graded.**
+
+- **Part C.** STRICT errors by label: Wooded Grassland 29 of 129, Open Grassland 44 of 97, Cropland 9 of 33,
+  Otherland 5 of 8, Dense Forest 3 of 3, Open Water 1 of 1. LENIENT's are 20, 5, 9, 3, 0 and 0. The commonest
+  confusions wrong under both rules are Wooded Grassland read as woodland forest (18 plots) and Cropland read as
+  shrubland/savanna (8). Every period has a scene at 260 plots and at least half do at 11. Of the 260, 34 are clear in
+  every period (9 STRICT errors), 223 are cloudy in some but fewer than half (76) and 3 in at least half (2). The
+  3 × 3 majority gives the same errors (91 and 37; it equals the plot's own pixel at 269 of the 271). No plot is
+  predicted as the untrained channel, and the probabilities sum to 1 within 3 × 10⁻⁷.
+- **Part D, where the plots sit.** On average a plot is more confident than 48.2% of its windows' covered pixels
+  (49.7% by design weight), near the 50% that random pixels give. The median confidence is 0.993 over the windows and
+  0.992 at the plots. The sample holds 1,725,553 of the 245,366,784 pixels, not the page's 2,000,000 in expectation:
+  as in exp98, its probability was set on the grids' full area.
+- **Part E, what certify would need.** `plan` on the region's 1,076,790,342 pixels: an error-rate interval no wider than
+  10 points, with probability 0.9, needs 383 random labels at STRICT's 35.5%, 228 at LENIENT's 13.4% and 402 at 50%.
+  These are plans at guessed rates. No zone is certified, and none could be from a run over the windows that hold a
+  plot. At the zone error rates guessed from the plots' own ranking, every STRICT zone (50%, 80%, 100%) and LENIENT's
+  80% and 100% zones are wrong more often than α = 0.10, so no budget certifies them. For LENIENT's 50% zone (8.5%
+  guessed), no budget up to 10,000 labels reaches 90% power. certify needs 22 labels in a zone to test it at all, the
+  sequential certificate 34.
+- **Part F, the 47 plots inside Ai2's geometry.** 27 of the 47 have 2017 input; the other 20 are among the plots
+  without input. On the 27 the 2017 map makes 11 STRICT errors (8 Open Grassland, 2 Wooded Grassland, 1 Dense Forest)
+  and none under LENIENT. Paired with exp98's 2023 map at the same 27, under STRICT 13 are right in both years, 3 right
+  only in 2017, 2 right only in 2023 and 9 wrong in both (exact sign test p = 1.0); under LENIENT all 27 are right in
+  both. The two maps give the same class at 22. The 2023 classes at the plots are not saved, so these cells are
+  crosschecked only at their margins. By subtraction from exp98's Part I (25 STRICT and 3 LENIENT disagreements at all
+  47), the 20 inside plots without 2017 input hold 13 and 3 of the 2023 map's disagreements, against 12 and 0 at the
+  27 with input, provided exp99's read of exp98's map agrees with exp98's own at each plot. Part F is descriptive, on
+  27 plots, with a missing 20 that are not a random part of the 47.
+
+**Changes after freezing, and the run's history.**
+
+- **The plots without input (a deviation from the page's assumption; the grades are kept).** The page's limits said
+  the plots without input would be treated as missing at random within their country, which could not be checked. The
+  units file partly checks it, and it fails (above). Found after the numbers were read. The record states the graded
+  set as the plots with 2017 input and gives the envelope beside it; P1 to P3 are graded as frozen.
+- **An incomplete area allowed.** After freezing, and before any class or probability was read, the rerun prepare's
+  dataset build ended with `complete: false` (the 42 windows without imagery), and the prepare refused as designed.
+  It was resubmitted as job 1252876 with `E99_SKIP_BUILD=1 E99_ALLOW_INCOMPLETE=1`. That route was in
+  `exp/jobs/E99_README.md` and `e99_prepare.sh` from 7b12dc4 on; the page itself names only the floor of 250 plots,
+  and that floor decided whether the run was graded. The refused build's record was overwritten by 1252876's.
+- **The job chain.** The pilot on 4 plots (seed 99; prepare 1247344, predict 1247345, collect 1247346, records in
+  `exp/out/exp99/pilot/`) ran on the first request geometry, one feature per square (sha256 3cf53d16). The first full
+  prepare, 1247349, used the same one-feature-per-plot geometry, made 9,298 windows and was cancelled before freezing
+  after 7 h 16 min (530 GB fetched); the request became one MultiPolygon at 7af2bd5. The select stage wrote it at
+  13:44:53 UTC on 9 October (sha256 a9dd3841, the prepare's), two minutes before the freeze (52489b1, 13:46:59 UTC).
+  Then prepare 1252876, predict 1252877 (313 windows, 271 with output, none missing) and collect 1252878 (271 windows,
+  7,330 files, 14.3 GB to the cluster's /home, manifest sha256 8f77213e, verified). The first read job, 1252879,
+  failed on the /home quota and produced no numbers. The collected run was moved to the cluster's scratch with a
+  symlink from its /home path, its manifest was verified again on 10 October (7,330 files, manifest sha256 8f77213e),
+  and the read ran again (job 1267771, 271 parts). The inventory (job 1267772, 16:43:34 UTC) and the graded run (job
+  1267773, 16:44:04 UTC) followed on 10 October, both at 52489b1 with a clean tree. The job ids from 1252879 on and the
+  second verification come from the session's job log, not the committed records. Scratch is purged after 30 days, so
+  the collected run there lasts about 30 days from the move unless it is copied back.
+- **What did not change.** The code is identical from 7af2bd5 to 52489b1 (only the page and the index changed), and no
+  exp99 threshold, floor, crosswalk or analysis rule changed after the draft at 7b12dc4, written before exp98 ran,
+  except the request geometry. exp98's Part I had read the 2023 map at the 47 inside plots (c5092b4, 07:30 UTC on
+  9 October) before exp99 was frozen; the freeze line ("before any class or probability was read at a plot") holds for
+  the 2017 map.
+- **The weights and Part D's sample (no deviation).** The weights are Natural Earth's, as the page's rule fixes; its
+  0.60 and 0.40 were an estimate from the plots. Part D's smaller sample is report-only.
+
+**The pre-record audit.** Three independent lenses (numbers; honesty and design; provenance and leakage) recomputed
+every graded and reported number from the units file with their own code, and every one agrees with the summary.
+Part D's window percentiles and Part F's 2023 cells could not be recomputed (the map sample and the 2023 classes are
+not saved); their margins agree. The audit changed no number. It found that the page's missing-at-random assumption
+fails, and asked for the graded set to be stated as the plots with 2017 input with the envelope beside it, for P2 and
+LENIENT's P1 to be read with their intervals, for "transfer is the likelier reading" to be kept as the rule's label
+only, for the 42 windows to be described as recorded (no imagery at all), and for the job history above. No file
+exp99 adds holds a coordinate.
+
+**Reading.** On 2017 imagery around the AWF area, the map is wrong at about a third of the plots with input under the
+one-to-one crosswalk, and at about one in seven under the lenient one; most of the difference is a legend boundary AWF
+does not define. Its confidence ranks those errors less well than at Ai2's points (AUROC 0.638 against exp98's 0.849),
+below 0.70, a bar set under every value the record has measured on a probability sample (0.720 to 0.787). A review of
+the least confident tenth still finds errors beyond chance, by an amount the interval leaves uncertain. Whether the map
+is worse than Ai2's figure by more than 5 points is not determined, and the rates describe the plots with imagery,
+which under-represent Ai2's own area and cropland.
+
+**What it does not show.** Why the ranking is weaker than at Ai2's points: the year, the place, the legend boundary and
+the placement of the points are not separated. An error rate for the whole 100 km region: the plots without input are
+not missing at random. Anything about Ai2's 2023 map or exp98's re-run beyond the 27 plots of Part F. A certified zone,
+or per-class user's or producer's accuracy. Whether the labels are right: they are TimeSync interpretations of 30 m
+plots, read against a 10 m map and taken as right.
+
 ## A vision-language model as the reviewer (exp91)
 
 **Question.** The labelled routes need a reviewer. Can a general-purpose vision-language model supply the labels from

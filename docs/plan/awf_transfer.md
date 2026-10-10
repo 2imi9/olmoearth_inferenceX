@@ -2,6 +2,15 @@
 
 **Status: frozen on 9 October 2026, before any class or probability was read at a plot.** Written 9 October 2026, before any 2017 map existed. The area rule, the crosswalk and the design are fixed here. The owner confirmed the thresholds and floors below on 9 October 2026, as proposed. At freezing, the pilot's inventory had counted plots in windows only, and the full run's first prepare (job 1247349) had been cancelled for making 9,298 windows (see The request geometry, below); its rerun on one MultiPolygon request was in progress.
 
+**Result, 10 October 2026 (added at recording; the frozen text is unchanged).** Run once at the plots, graded at
+52489b1, and recorded after an independent audit ([comparisons](../results/comparisons.md#a-transfer-test-ai2s-ft-awf-deployment-configuration-on-2017-imagery-graded-at-an-independent-random-sample-exp99)).
+271 of the 309 plots have input (42 of 313 windows got no 2017 imagery), with 91 STRICT errors; the floors are met.
+P1 does not hold: the design-weighted AUROC is 0.638 (90% bootstrap 0.579 to 0.696); LENIENT's 0.678 also misses 0.70,
+but its interval (0.599 to 0.756) contains it. P2 holds on the point value: 0.434 of the gap closed (interval 0.10 to
+0.65, which includes 0.25). P3: 35.5% under STRICT (26.0% to 45.8%) and 13.4% under LENIENT (7.5% to 21.9%), call
+"not determined". The 38 plots without input are not missing at random, so these figures describe the plots with 2017
+input, not the 100 km region. Changes after freezing are listed under Deviations.
+
 - **Allowed before freezing:**
   - the smoke on synthetic inputs (`python exp/exp99_transfer.py --smoke`, `tests/test_exp99.py`);
   - the area rule (`--select`, job `exp/jobs/e99_select.sh`): counts by country and by distance, the region's area by
@@ -308,3 +317,48 @@ The cluster job is `exp/jobs/e99.sh`, chained on `exp/jobs/e99_read.sh`.
 ## Deviations
 
 None yet. Any change after freezing is listed here with its date, its reason, and whether any number had been read.
+
+*Added at recording, 10 October 2026. The line above is the frozen text.*
+
+- **10 October 2026, after the numbers were read: the plots without input are not missing at random (an assumption of
+  this page; the grades are kept).** The limits above treat them as missing at random within their country, "which
+  cannot be checked". The per-plot file partly checks it, and it fails: 20 of the 47 plots inside Ai2's geometry lack
+  input, against 18 of the 262 outside it (Fisher's exact test p = 4 × 10⁻⁹), and Cropland (11 of 44) and Open
+  Grassland (15 of 112) lack it more often than Wooded Grassland (9 of 138). The record states the graded set as the
+  271 plots with 2017 input and says that the design-weighted rates and AUROC describe that set, not the 100 km region.
+  It gives the envelope with the 38 filled as all correct or all wrong: STRICT 31.2% to 43.4% (interval envelope 22.6%
+  to 53.1%), LENIENT 11.8% to 24.1% (6.5% to 33.2%). P1 to P3 are graded as frozen. P3's call would become "transfer
+  gap" if most of the 38 were errors, and no filling makes it "no gap shown".
+- **After freezing, before any class or probability was read: an incomplete area allowed.** 42 of the 313 windows
+  received no 2017 Sentinel-2 item group at all (0 of 12, not fewer than 12; the records do not establish why). The
+  rerun prepare's build refused with `complete: false`, and the prepare was resubmitted (job 1252876) with
+  `E99_SKIP_BUILD=1 E99_ALLOW_INCOMPLETE=1`, a route `exp/jobs/E99_README.md` and `e99_prepare.sh` had provided since
+  7b12dc4. This page names only the floor of 250 plots with input, and that floor decided (271).
+- **Interpretation (says less than this page).** "If both rules fail, transfer is the likelier reading" is kept as the
+  rule's label, not a finding: LENIENT's AUROC, 0.678, has a 90% interval of 0.599 to 0.756, which contains 0.70, and
+  the run does not separate the year, the place, the legend boundary and the placement of the points (Part D's mean
+  percentile 0.48 against exp98's P5, 0.647). "The record's first design-based error rate for an OlmoEarth deployment"
+  holds for the plots with 2017 input only. "The region ... is a fixed subset" (the design, first bullet): D was set
+  from the sample's own counts by a rule that reads no label and no map; the stopping rule's effect on the
+  within-country argument is not corrected.
+- **Part F.** It is reported on the 27 of the 47 inside plots that have 2017 input (the other 20 lack it), and its
+  paired cells are crosschecked only at their margins: the 2023 classes at the plots are not saved.
+- **Part D's sample.** It holds 1,725,553 pixels, not 2,000,000 in expectation: as in exp98, the sampling probability was
+  set on the grids' full area rather than on the covered pixels counted once. Report-only.
+- **The per-plot file.** Besides the fields step 7 lists it carries `inside_awf`, and its rows follow the public
+  sample's sorted plot ids, so with the public file and the area rule a row can be tied to a public plot. It holds no
+  position and no identifier.
+- **The weights (no deviation).** Natural Earth's areas give 0.563 for Kenya and 0.437 for Tanzania (60,574 and
+  47,105 km²), as the rule fixes; the 0.60 and 0.40 above were an estimate from the plots.
+- **Before freezing (no deviation).** exp98's Part I had read the 2023 map at the 47 inside plots (c5092b4, 07:30 UTC
+  on 9 October) before this page was frozen (52489b1, 13:46:59 UTC); the status line holds for the 2017 map. No
+  threshold, floor, crosswalk or analysis rule changed after the draft at 7b12dc4, except the request geometry
+  (7af2bd5, before freezing). The pilot (jobs 1247344 to 1247346) ran on the first request geometry, one feature per
+  square (sha256 3cf53d16).
+- **Run history (no deviation).** Prepare 1247349 (one feature per plot, 9,298 windows) was cancelled before
+  freezing. After it: select at 13:44:53 UTC on 9 October (request sha256 a9dd3841), prepare 1252876, predict 1252877,
+  collect 1252878 (7,330 files, 14.3 GB to the cluster's /home, manifest sha256 8f77213e). The read job 1252879 failed
+  on the /home quota and produced no numbers; the collected run was moved to the cluster's scratch with a symlink, its
+  manifest verified again on 10 October (7,330 files, 8f77213e), and read again (job 1267771). Inventory 1267772 and
+  the graded run 1267773 followed on 10 October at 52489b1 with a clean tree. Scratch is purged after 30 days. The job
+  ids from 1252879 on and the second verification come from the session's job log, not the committed records.

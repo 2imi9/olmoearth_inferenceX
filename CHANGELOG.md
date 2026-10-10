@@ -35,16 +35,29 @@ map and at none of the points. In Part I the 2023 map disagrees with the 2017 la
 plots inside the area (Bullock et al. 2021) at 25 under the STRICT crosswalk and at 3 under the LENIENT one, so the
 crosswalk decides most of that figure, which is not the map's error rate. After freezing and
 before any label was read, the burned layer's warp was replaced by an exact per-centre transform (7417425), and its
-rasters were rebuilt; the first inventory refused on purged label files and ran again after a re-extraction.
+rasters were rebuilt; the first inventory refused on purged label files and ran again after a re-extraction. A note
+dated 10 October 2026 in exp98's record now says that Ai2's lock at f3c9b0c8 installs olmoearth-runner 0.1.12 with
+rslearn 0.0.23, that the record chose 0.1.14 (rslearn 0.0.27) to get `output_probs`, so the `get_item_by_name` bug
+belongs to that choice and not to Ai2's published pipeline, and that the current way to run these models is rslearn's
+own prediction.
 
-**exp99 (draft preregistration, predictions proposed): a transfer test.** `docs/plan/awf_transfer.md`,
-`exp/exp99_transfer.py`, jobs `exp/jobs/e99_*.sh` (`exp/jobs/E99_README.md`). The same deployment configuration on 2017
-imagery over the windows that hold the 309 TimeSync plots within 100 km of the AWF request geometry (the area rule fixed
-before any map: D the smallest multiple of 10 km giving 300 plots), graded at those plots: the region's error rate with
-the countries as strata and an exact interval, beside Ai2's 89.5%, and whether the map's confidence ranks its errors
-there. The crosswalk from TimeSync's legend to AWF's, STRICT and LENIENT, is fixed in `exp/timesync_awf_crosswalk.py`
-and shared with exp98's Part I. Found while planning: `plan`'s zone simulation fails on maps of 10^9 windows or more
-(numpy's multivariate hypergeometric sampler); exp99 plans its zones on 999,999,999.
+**exp99 (preregistered, frozen 9 October 2026 at 52489b1, graded once at the plots on 10 October, recorded after an
+independent audit): a transfer test.** `docs/plan/awf_transfer.md`, `exp/exp99_transfer.py`, jobs `exp/jobs/e99_*.sh`
+(`exp/jobs/E99_README.md`), and the outputs `exp/out/exp99_summary.json`, `exp99_units.npz`, `exp99_inventory.json`
+and the job records in `exp/out/exp99/`. The same deployment configuration on 2017 imagery over the windows that hold
+the 309 TimeSync plots within 100 km of the AWF request geometry (the area rule fixed before any map: D the smallest
+multiple of 10 km giving 300 plots), graded at those plots through a crosswalk from TimeSync's legend to AWF's, STRICT
+and LENIENT, fixed in `exp/timesync_awf_crosswalk.py` and shared with exp98's Part I. 42 of the 313 windows got no 2017
+Sentinel-2 imagery, so 271 plots were graded. The 38 without input are not missing at random (20 of the 47 inside Ai2's
+geometry, against 18 of the 262 outside), so the figures describe the plots with 2017 input, not the whole region. P1
+does not hold: the design-weighted AUROC of the confidence for the STRICT errors is 0.638 (90% interval 0.579 to
+0.696), below 0.70; LENIENT's 0.678 also misses, with an interval that contains 0.70. P2 holds on the point value: the
+least confident 10% close 0.434 of the gap from random to the ceiling (interval 0.10 to 0.65, which includes the bar of
+0.25). P3, descriptive: 35.5% under STRICT (exact interval 26.0% to 45.8%) and 13.4% under LENIENT (7.5% to 21.9%),
+so a gap beyond Ai2's figure plus 5 points is not determined; with the 38 filled all right or all wrong, 31.2% to
+43.4% and 11.8% to 24.1%. The run does not separate the year, the place, the legend boundary and the placement of
+Ai2's points. Found while planning: `plan`'s zone simulation fails on maps of 10^9 windows or more (numpy's
+multivariate hypergeometric sampler); exp99 plans its zones on 999,999,999.
 
 ## 1.8.0 (2026-10-08)
 

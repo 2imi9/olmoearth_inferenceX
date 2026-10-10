@@ -4979,3 +4979,109 @@
     condition (lower bound above 0.5) is confirmed by a second route and the first (mean at least 0.55) only from the
     summary. The sample holds 911,933 pixels, not the page's 2,000,000 in expectation (its probability was set on the
     grids' full area); the Monte Carlo error on the mean is about 0.0005 at most.
+
+- id: exp99-confidence-misses-the-ranking-bar-under-both-rules
+  statement: "At the 271 of 309 East Africa TimeSync plots within 100 km of Ai2's AWF request geometry that have 2017 input (a sample of the plots with input, not of the whole region: the 38 without input are not missing at random), the record's 2017 map from Ai2's FT-AWF deployment configuration ranks its errors with a design-weighted AUROC of 0.638 under the STRICT crosswalk (90% bootstrap within countries 0.579 to 0.696), so P1 (at least 0.70, preregistered) does not hold; LENIENT's 0.678 also misses 0.70, but its interval (0.599 to 0.756) contains it. 'Transfer is the likelier reading' is the frozen rule's label for both rules missing, not a finding: the run does not separate the year, the place, the legend boundary and the move from Ai2's expert-placed points to a random sample (the plots sit at the 48th percentile of their windows' confidence, Ai2's points at the 65th of exp98's map)."
+  crosscheck: tests/test_exp99.py::test_exp99_p1_by_a_second_route
+  status: rejected
+  experiments: [exp99, exp98]
+  artifacts: [exp/out/exp99_summary.json, exp/out/exp99/e99_prepare_inventory.json, exp/out/exp99/e99_predict_check.json, exp/out/exp99/e99_collect.json, exp/out/exp99/e99_read.json, exp/out/exp98/e98_versions.json, exp/out/exp98_summary.json]
+  check: |-
+    (lambda S, Pi, Pc, Co, Rd, V, S98: (lambda P, rS, rL: S['prereg_status'] == 'frozen' and S['dirty'] is False and S['commit'].startswith('52489b1')
+      # the job records: 313 windows on 264 cells, 42 with no item group; predict, collect and read; exp98's environment and configs
+      and (Pi['job'], Pi['windows'], Pi['distinct_window_cells'], Pi['windows_on_crs_origin_lattice']) == ('1252876', 313, 264, 313)
+      and Pi['roots'][0]['groups_completed'] == {'0': 42, '12': 271} and Pi['complete'] is False and Pi['allow_incomplete'] is True
+      and (Pc['job'], Pc['windows'], Pc['windows_with_output'], Pc['missing_output'], Pc['windows_without_input']) == ('1252877', 313, 271, 0, 42)
+      and (Co['job'], Co['files'], Co['manifest_verified']) == ('1252878', 7330, True) and Co['manifest_sha256'].startswith('8f77213e')
+      and Rd['parts_read'] == S['inputs']['from_olmoearth']['parts'] == S['inputs']['n_grids'] == 271
+      and V['checkpoint']['revision'].startswith('a347b154') and (V['packages']['olmoearth-runner'], V['packages']['rslearn']) == ('0.1.14', '0.0.27')
+      and all(V['e98_config_sha256'][f] == Pi['config_sha256'][f] for f in ('model.yaml', 'dataset.json'))
+      and (S['plots']['total']['selected'], S['plots']['total']['covered'], rS['n'], rS['errors'], rL['errors']) == (309, 271, 271, 91, 37)
+      and (S['prereg']['floors']['n_with_input'], S['prereg']['floors']['n_errors'], S['prereg']['floors']['n_correct']) == (271, 91, 180)
+      and P['graded'] is True and P['holds'] is False and P['threshold'] == 0.7
+      and P['value'] == rS['ranking']['weighted']['auroc'] and round(P['value'], 3) == 0.638
+      and [round(rS['ranking']['auroc_weighted_bootstrap'][k], 3) for k in ('lo90', 'hi90')] == [0.579, 0.696]
+      and rS['ranking']['auroc_weighted_bootstrap']['hi90'] < 0.7 and rS['ranking']['auroc_weighted_bootstrap']['n_resamples'] == 2000
+      and P['lenient_check']['value'] == rL['ranking']['weighted']['auroc'] and round(P['lenient_check']['value'], 3) == 0.678
+      and P['lenient_check']['meets_threshold'] is False
+      and [round(rL['ranking']['auroc_weighted_bootstrap'][k], 3) for k in ('lo90', 'hi90')] == [0.599, 0.756]
+      and rL['ranking']['auroc_weighted_bootstrap']['lo90'] < 0.7 < rL['ranking']['auroc_weighted_bootstrap']['hi90']
+      and P['reading'] == 'both rules fail: transfer is the likelier reading'
+      and round(S['where_the_plots_sit_reported']['mean_percentile'], 2) == 0.48 and round(S98['prereg']['P5']['value'], 3) == 0.647
+    )(S['prereg']['P1'], S['rules']['strict'], S['rules']['lenient']))(A['exp/out/exp99_summary.json'], A['exp/out/exp99/e99_prepare_inventory.json'], A['exp/out/exp99/e99_predict_check.json'], A['exp/out/exp99/e99_collect.json'], A['exp/out/exp99/e99_read.json'], A['exp/out/exp98/e98_versions.json'], A['exp/out/exp98_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp99-confidence-misses-the-ranking-bar-under-both-rules}
+    - {file: docs/Findings.md, marker: exp99-confidence-misses-the-ranking-bar-under-both-rules}
+  note: >-
+    Preregistered and frozen on 9 October 2026 (52489b1) before any class or probability was read at a plot; graded once
+    at 52489b1 on 10 October (job records in exp/out/exp99/; the environment and checkpoint are exp98's). STRICT's
+    failure is close (the interval's upper end 0.004 below 0.70; 4% of resamples reach it); by country 0.697 in Kenya and
+    0.618 in Tanzania. 42 of the 313 windows got no 2017 Sentinel-2 item group, so 38 plots have no input; they
+    concentrate inside Ai2's geometry (20 of 47 against 18 of 262, Fisher p 4e-9) and in Cropland and Open Grassland,
+    which the page's missing-at-random assumption did not foresee (a deviation listed on the page; the grade is kept).
+
+- id: exp99-least-confident-tenth-closes-the-gap-at-the-point-value
+  statement: "On the same 271 plots (preregistered P2), the least confident 10% of the plots by design weight hold 17.9% of the STRICT error weight, against 10% for a random 10% and a ceiling of 28.1%, closing 0.434 of the gap (at least 0.25): P2 holds on the point value, as frozen. Its 90% bootstrap interval within countries, 0.10 to 0.65, includes 0.25; the result rests on the 31 plots wholly inside the 10% (19 of them errors) and is specific to the budget (0.169 at 20%); LENIENT's 0.213 is below the bar."
+  crosscheck: tests/test_exp99.py::test_exp99_p2_by_a_second_route
+  status: supported
+  experiments: [exp99]
+  artifacts: [exp/out/exp99_summary.json]
+  check: |-
+    (lambda S: (lambda P, k, b, L: S['prereg_status'] == 'frozen' and S['dirty'] is False and S['commit'].startswith('52489b1')
+      and P['graded'] is True and P['holds'] is True and P['threshold'] == 0.25
+      and P['value'] == k['gap_closed']['0.1'] and round(P['value'], 3) == 0.434
+      and abs(P['value'] - (k['capture']['0.1'] - 0.1) / (k['ceiling']['0.1'] - 0.1)) < 1e-12
+      and abs(k['ceiling']['0.1'] - 0.1 / k['error_rate']) < 1e-12 and k['random']['0.1'] == 0.1
+      and [round(k['capture']['0.1'], 3), round(k['ceiling']['0.1'], 3), round(k['lift']['0.1'], 2)] == [0.179, 0.281, 1.79]
+      and [round(k['gap_closed'][x], 3) for x in ('0.05', '0.2')] == [0.52, 0.169]
+      and [round(b[x], 2) for x in ('lo90', 'hi90')] == [0.1, 0.65] and b['lo90'] < 0.25 < b['hi90'] and b['n_resamples'] == 2000
+      and P['lenient_check']['value'] == L['gap_closed']['0.1'] and round(P['lenient_check']['value'], 3) == 0.213
+      and P['lenient_check']['meets_threshold'] is False
+    )(S['prereg']['P2'], S['rules']['strict']['ranking']['weighted'], S['rules']['strict']['ranking']['gap_closed_0.1_weighted_bootstrap'], S['rules']['lenient']['ranking']['weighted']))(A['exp/out/exp99_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp99-least-confident-tenth-closes-the-gap-at-the-point-value}
+    - {file: docs/Findings.md, marker: exp99-least-confident-tenth-closes-the-gap-at-the-point-value}
+  note: >-
+    Graded on the point value as the page fixes it; 78% of the bootstrap resamples reach 0.25. The 10% cut falls inside
+    a correct Kenyan plot and the 271 confidences have no ties, so the value does not depend on how the cut is taken.
+    The lift at 10% is 1.79, short of the owner's first suggestion of twice random, which the page replaced with the gap
+    closed. Like P1, it describes the plots with 2017 input only.
+
+- id: exp99-error-rate-of-plots-with-2017-input
+  statement: "Report-only (P3): over the 271 plots with 2017 input, design-weighted with Kenya and Tanzania as strata (0.563 and 0.437 of the region's 107,679 km²), the 2017 map's error rate is 35.5% under STRICT (exact interval, at least 95%: 26.0% to 45.8%; 91 errors) and 13.4% under LENIENT (7.5% to 21.9%; 37 errors); beside Ai2's 10.5% error plus 5 points the frozen call is 'not determined'. The rates describe the plots with 2017 input, not the 100 km region: the 38 plots without input are not missing at random. Filled as all correct or all wrong, the stratified rate over all 309 plots lies between 31.2% and 43.4% under STRICT (interval envelope 22.6% to 53.1%) and between 11.8% and 24.1% under LENIENT (6.5% to 33.2%)."
+  crosscheck: tests/test_exp99.py::test_exp99_error_rates_and_missing_plots_by_a_second_route
+  status: measured
+  experiments: [exp99]
+  artifacts: [exp/out/exp99_summary.json]
+  check: |-
+    (lambda S: (lambda st, le, W, M, F, G: S['prereg_status'] == 'frozen' and S['dirty'] is False and S['commit'].startswith('52489b1')
+      and [round(100 * st[k], 1) for k in ('estimate', 'low', 'high')] == [35.5, 26.0, 45.8]
+      and [round(100 * le[k], 1) for k in ('estimate', 'low', 'high')] == [13.4, 7.5, 21.9]
+      and st['nominal_coverage'] == le['nominal_coverage'] == 0.95
+      and [(st['by_country'][c]['errors'], st['by_country'][c]['n']) for c in ('kenya', 'tanzania')] == [(57, 192), (34, 79)]
+      and [(le['by_country'][c]['errors'], le['by_country'][c]['n']) for c in ('kenya', 'tanzania')] == [(27, 192), (10, 79)]
+      and abs(st['estimate'] - (W['kenya'] * 57 / 192 + W['tanzania'] * 34 / 79)) < 1e-9
+      and abs(le['estimate'] - (W['kenya'] * 27 / 192 + W['tanzania'] * 10 / 79)) < 1e-9
+      and [round(W[c], 3) for c in ('kenya', 'tanzania')] == [0.563, 0.437] and round(S['selection']['areas']['region_km2']) == 107679
+      and G['call'] == S['prereg']['P3']['call'] == 'not determined' and round(G['bar_error_rate'], 3) == 0.155
+      and le['low'] < G['bar_error_rate'] < st['low']
+      # the 38 plots without input, and the envelope with them filled all correct (0) or all wrong (1)
+      and (M['n'], M['by_country']['kenya'], M['by_country']['tanzania'], M['outside_every_grid']) == (38, 27, 11, 38)
+      and (S['plots']['kenya']['selected'], S['plots']['tanzania']['selected']) == (219, 90)
+      and [round(100 * (W['kenya'] * (k + f * 27) / 219 + W['tanzania'] * (t + f * 11) / 90), 1)
+           for k, t in ((57, 34), (27, 10)) for f in (0, 1)] == [31.2, 43.4, 11.8, 24.1]
+      and [round(100 * S['rules'][r]['ratio_estimate_reported']['estimate'], 1) for r in ('strict', 'lenient')] == [35.0, 13.5]
+      and (F['n_inside'], F['n_inside_covered'], F['rules_2017']['strict'], F['rules_2017']['lenient']) == (47, 27, 11, 0)
+    )(S['rules']['strict']['stratified'], S['rules']['lenient']['stratified'], S['selection']['areas']['weights'], S['plots_without_input'], S['inside_awf_reported'], S['p3_transfer_gap']))(A['exp/out/exp99_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp99-error-rate-of-plots-with-2017-input}
+    - {file: docs/Findings.md, marker: exp99-error-rate-of-plots-with-2017-input}
+  note: >-
+    The interval is the package's condition-design interval (each country's exact hypergeometric interval at 97.5%,
+    weighted by its share of the area); the crosscheck reaches it by Clopper-Pearson through bisection and also
+    recomputes the envelope's intervals, which the summary does not carry. The summary's own sentence that the plots
+    without input are missing at random is the frozen assumption, contradicted by the units (20 of the 47 inside Ai2's
+    geometry lack input against 18 of the 262 outside; Cropland 11 of 44, Open Grassland 15 of 112, Wooded Grassland
+    9 of 138). STRICT's interval lies wholly above 15.5% but the frozen call needs LENIENT's to; 48 of the 54 plots
+    wrong under STRICT only are the grass/shrub boundary. Filled all wrong, LENIENT's low end would be 16.5% (a gap);
+    no filling gives 'no gap shown'.

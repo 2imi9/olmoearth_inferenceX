@@ -1,10 +1,13 @@
-"""exp99 (docs/plan/awf_transfer.md) and the crosswalk it shares with exp98's Part I, before the preregistration is
-frozen and before any 2017 map exists. The crosswalk is pinned by its sha256, so a change after it was fixed fails
+"""exp99 (docs/plan/awf_transfer.md) and the crosswalk it shares with exp98's Part I. Written before the preregistration
+was frozen and before any 2017 map existed: the crosswalk is pinned by its sha256, so a change after it was fixed fails
 here; the pinned sources by their hashes; the estimators against independent computations; the smoke (synthetic
 sample, boundaries, request geometry and one window per plot, exp/exp99_transfer.py's comment above SMOKE_RECT)
 against values from its design; the request geometry against Ai2's file structure; and nothing written carries a
-position. No network. Needs rasterio, shapely and pyproj (the geo extra); skipped without them."""
+position. The last three tests recompute the recorded run's numbers from its committed per-plot file by a second route,
+with plain numpy and the standard library (the claim ledger's crosschecks for exp99). No network. Needs rasterio,
+shapely and pyproj (the geo extra); skipped without them."""
 import json
+import math
 import os
 import sys
 
@@ -329,3 +332,264 @@ def test_the_run_is_refused_while_the_page_is_a_draft(tmp_path, capsys):
                        "--out-dir", str(tmp_path)])
         assert rc == 3 and "refused" in capsys.readouterr().out
         assert not os.listdir(tmp_path)
+
+
+# ----------------------------------------------------------------------------- the recorded run, by a second route
+# The recorded run (exp/out/exp99_*, graded at 52489b1) recomputed from its per-plot file with plain numpy and the
+# standard library: the errors from a crosswalk typed here from the page's table (not from timesync_awf_crosswalk), the
+# weights from the summary's areas, the AUROC by counting every weighted (error, correct) pair, the capture by taking
+# each plot's weight up to the cut, the bootstraps by drawing the same plots with integers() (Generator.choice with
+# replacement draws exactly these), the exact intervals by Clopper-Pearson through bisection on binomial tails, and the
+# missing-plot envelope by filling the 38 plots without input. The claim ledger's crosschecks for exp99.
+OUT = os.path.join(ROOT, "exp", "out")
+AWF9 = ("woodland_forest", "open_water", "shrubland_savanna", "herbaceous_wetland", "grassland_barren",
+        "agriculture_settlement", "montane_forest", "lava_forest", "urban_dense_development")
+PAGE_STRICT = {"Dense Forest": "woodland_forest", "Open Forest": "shrubland_savanna",
+               "Wooded Grassland": "shrubland_savanna", "Open Grassland": "grassland_barren",
+               "Cropland": "agriculture_settlement", "Settlements": "urban_dense_development",
+               "Open Water": "open_water", "Vegetated Wetland": "herbaceous_wetland", "Otherland": "grassland_barren"}
+PAGE_LENIENT_ALSO = {"Dense Forest": ("montane_forest", "lava_forest"),
+                     "Open Forest": ("woodland_forest", "montane_forest", "lava_forest"),
+                     "Wooded Grassland": ("grassland_barren",), "Open Grassland": ("shrubland_savanna",),
+                     "Cropland": (), "Settlements": ("agriculture_settlement",), "Open Water": ("herbaceous_wetland",),
+                     "Vegetated Wetland": ("open_water",), "Otherland": ("open_water",)}
+
+
+def _recorded99():
+    with open(os.path.join(OUT, "exp99_summary.json")) as f:
+        S = json.load(f)
+    z = np.load(os.path.join(OUT, "exp99_units.npz"))
+    names, cn = z["label_names"].tolist(), z["country_names"].tolist()
+    assert cn == ["kenya", "tanzania"]
+    lab = np.array([names[i] for i in z["label"]], dtype=object)
+    cov, pred, ctry = z["covered"], z["pred"], z["country"]
+    K = np.flatnonzero(cov)
+
+    def wrong(rule):
+        ok = [p in range(9) and (AWF9[p] == PAGE_STRICT[t] or (rule == "lenient" and AWF9[p] in PAGE_LENIENT_ALSO[t]))
+              for t, p in zip(lab[K], pred[K])]
+        return 1.0 - np.array(ok, dtype=np.float64)
+    A = S["selection"]["areas"]["by_country_km2"]
+    Wk = A["kenya"] / (A["kenya"] + A["tanzania"])
+    c = ctry[K]
+    n = {0: int((c == 0).sum()), 1: int((c == 1).sum())}
+    w = np.where(c == 0, Wk / n[0], (1 - Wk) / n[1])
+    return {"S": S, "z": z, "lab": lab, "cov": cov, "K": K, "c": c, "ctry": ctry, "n": n, "Wk": Wk, "w": w,
+            "u": z["suspicion"][K], "e": {"strict": wrong("strict"), "lenient": wrong("lenient")}}
+
+
+def _pairs_auroc_w(s, e, w):
+    """The weighted AUROC for errors by counting every (error, correct) pair, weight w_i w_j, a tie one half."""
+    e = e.astype(bool)
+    d = s[e][:, None] - s[~e][None, :]
+    ww = w[e][:, None] * w[~e][None, :]
+    return float((ww * ((d > 0) + 0.5 * (d == 0))).sum() / ww.sum())
+
+
+def _capture_w(s, e, w, b):
+    """The share of the error weight in the least confident share b of the weight: each plot, most suspect first,
+    contributes the part of its weight that lies below the cut."""
+    o = np.argsort(-s, kind="stable")
+    s, e, w = s[o], e[o], w[o]
+    before = np.r_[0.0, np.cumsum(w)[:-1]]
+    take = np.clip(b * w.sum() - before, 0.0, w)
+    return float((e * take).sum() / (e * w).sum())
+
+
+def _gap(s, e, w, b):
+    th = float((e * w).sum() / w.sum())
+    ceil = min(1.0, b / th)
+    return (_capture_w(s, e, w, b) - b) / (ceil - b)
+
+
+_BOOT99 = {}
+
+
+def _boot99(R, rule):
+    """2,000 resamples of the plots within each country (seed 99, Kenya then Tanzania), the weighted AUROC and the gap
+    closed at 10% of each."""
+    if rule not in _BOOT99:
+        e, u, w, c = R["e"][rule], R["u"], R["w"], R["c"]
+        idx = [np.flatnonzero(c == 0), np.flatnonzero(c == 1)]
+        rng = np.random.default_rng(99)
+        au, gc = [], []
+        for _ in range(2000):
+            pick = np.concatenate([ix[rng.integers(0, ix.size, ix.size)] for ix in idx])
+            au.append(_pairs_auroc_w(u[pick], e[pick], w[pick]))
+            gc.append(_gap(u[pick], e[pick], w[pick], 0.10))
+        _BOOT99[rule] = (np.array(au), np.array(gc))
+    return _BOOT99[rule]
+
+
+def _binom_tail_ge(k, n, p):
+    return sum(math.comb(n, i) * p ** i * (1 - p) ** (n - i) for i in range(k, n + 1))
+
+
+def _clopper_pearson(k, n, conf):
+    """The exact binomial interval by bisection on the two tails (each tail (1 - conf) / 2)."""
+    a = (1 - conf) / 2
+
+    def solve(f):
+        lo, hi = 0.0, 1.0
+        for _ in range(80):
+            mid = (lo + hi) / 2
+            lo, hi = (mid, hi) if f(mid) else (lo, mid)
+        return (lo + hi) / 2
+    low = 0.0 if k == 0 else solve(lambda p: _binom_tail_ge(k, n, p) < a)
+    high = 1.0 if k == n else solve(lambda p: 1 - _binom_tail_ge(k + 1, n, p) > a)
+    return low, high
+
+
+def _fisher_two_sided(a, b, c, d):
+    """Fisher's exact test on [[a, b], [c, d]]: the probability of every table with the same margins that is no more
+    likely than the one observed."""
+    r1, c1, N = a + b, a + c, a + b + c + d
+
+    def prob(x):
+        return math.comb(c1, x) * math.comb(N - c1, r1 - x) / math.comb(N, r1)
+    p0 = prob(a)
+    return sum(prob(x) for x in range(max(0, r1 + c1 - N), min(r1, c1) + 1) if prob(x) <= p0 * (1 + 1e-9))
+
+
+def test_exp99_p1_by_a_second_route():
+    """P1 recomputed: the errors under both rules from the page's table, the design weights from the region's areas, the
+    weighted AUROC by counting pairs and its bootstrap within countries. STRICT misses 0.70 and so does its 90%
+    interval's upper end; LENIENT misses 0.70 on the point value, and its interval contains 0.70."""
+    R = _recorded99()
+    S, z, K, u, w = R["S"], R["z"], R["K"], R["u"], R["w"]
+    assert (K.size, int(R["cov"].size), R["n"]) == (271, 309, {0: 192, 1: 79})
+    for rule in ("strict", "lenient"):
+        assert (R["e"][rule] == z[f"wrong_{rule}"][K]).all(), "the recorded errors are the page's crosswalk"
+    assert (int(R["e"]["strict"].sum()), int(R["e"]["lenient"].sum())) == (91, 37)
+    assert np.abs(w - z["weight"][K]).max() < 1e-15 and abs(w.sum() - 1) < 1e-12
+    assert round(R["Wk"], 3) == 0.563 and np.unique(u).size == u.size, "no ties among the 271 confidences"
+    assert np.abs(z["p1"][K] - np.exp(-u)).max() < 1e-12
+    P = S["prereg"]["P1"]
+    for rule, value, (lo, hi), p_at in (("strict", 0.638, (0.579, 0.696), 0.04), ("lenient", 0.678, (0.599, 0.756), 0.32)):
+        e = R["e"][rule]
+        rk = S["rules"][rule]["ranking"]
+        a = _pairs_auroc_w(u, e, w)
+        assert a == pytest.approx(rk["weighted"]["auroc"], abs=1e-12) and round(a, 3) == value
+        assert _pairs_auroc_w(u, e, np.ones_like(w)) == pytest.approx(rk["unweighted"]["auroc"], abs=1e-12)
+        au, _ = _boot99(R, rule)
+        b = rk["auroc_weighted_bootstrap"]
+        assert (float(np.quantile(au, 0.05)), float(np.quantile(au, 0.95))) == (
+            pytest.approx(b["lo90"], abs=1e-12), pytest.approx(b["hi90"], abs=1e-12))
+        assert (round(b["lo90"], 3), round(b["hi90"], 3)) == (lo, hi) and round(float((au >= 0.70).mean()), 2) == p_at
+    assert P["graded"] is True and P["holds"] is False and P["value"] < 0.70 and P["threshold"] == 0.70
+    assert S["rules"]["strict"]["ranking"]["auroc_weighted_bootstrap"]["hi90"] < 0.70
+    lb = S["rules"]["lenient"]["ranking"]["auroc_weighted_bootstrap"]
+    assert P["lenient_check"]["meets_threshold"] is False and lb["lo90"] < 0.70 < lb["hi90"]
+    c, e = R["c"], R["e"]["strict"]
+    assert [round(_pairs_auroc_w(u[c == k], e[c == k], w[c == k]), 3) for k in (0, 1)] == [0.697, 0.618]
+
+
+def test_exp99_p2_by_a_second_route():
+    """P2 recomputed: the capture of the least confident 10% of the weight, the ceiling and the share of the gap closed,
+    at 5%, 10% and 20%; the plots wholly inside the 10%; the bootstrap of the gap closed at 10%. STRICT holds on the
+    point value, its interval includes 0.25, and LENIENT is below the bar."""
+    R = _recorded99()
+    S, u, w, c = R["S"], R["u"], R["w"], R["c"]
+    for rule in ("strict", "lenient"):
+        e, rk = R["e"][rule], S["rules"][rule]["ranking"]["weighted"]
+        th = float((e * w).sum())
+        assert th == pytest.approx(rk["error_rate"], abs=1e-12)
+        for b in (0.05, 0.1, 0.2):
+            assert _capture_w(u, e, w, b) == pytest.approx(rk["capture"][str(b)], abs=1e-12)
+            assert min(1.0, b / th) == pytest.approx(rk["ceiling"][str(b)], abs=1e-12)
+            assert _gap(u, e, w, b) == pytest.approx(rk["gap_closed"][str(b)], abs=1e-12)
+        _, gc = _boot99(R, rule)
+        bb = S["rules"][rule]["ranking"]["gap_closed_0.1_weighted_bootstrap"]
+        assert (float(np.quantile(gc, 0.05)), float(np.quantile(gc, 0.95))) == (
+            pytest.approx(bb["lo90"], abs=1e-12), pytest.approx(bb["hi90"], abs=1e-12))
+    e = R["e"]["strict"]
+    assert [round(_gap(u, e, w, b), 3) for b in (0.05, 0.1, 0.2)] == [0.52, 0.434, 0.169]
+    assert (round(_capture_w(u, e, w, 0.1), 3), round(0.1 / float((e * w).sum()), 3)) == (0.179, 0.281)
+    o = np.argsort(-u, kind="stable")
+    whole = np.cumsum(w[o]) <= 0.1 + 1e-12
+    assert (int(whole.sum()), int((c[o][whole] == 0).sum()), int((c[o][whole] == 1).sum()), int(e[o][whole].sum())) == (
+        31, 28, 3, 19)
+    _, gc = _boot99(R, "strict")
+    assert (round(float(np.quantile(gc, 0.05)), 2), round(float(np.quantile(gc, 0.95)), 2)) == (0.1, 0.65)
+    assert np.quantile(gc, 0.05) < 0.25 < np.quantile(gc, 0.95) and round(float((gc >= 0.25).mean()), 2) == 0.78
+    P = S["prereg"]["P2"]
+    assert P["graded"] is True and P["holds"] is True and P["value"] >= P["threshold"] == 0.25
+    assert round(_gap(u, R["e"]["lenient"], w, 0.1), 3) == 0.213 and P["lenient_check"]["meets_threshold"] is False
+
+
+def test_exp99_error_rates_and_missing_plots_by_a_second_route():
+    """The design-weighted error rates of the plots with 2017 input with Clopper-Pearson intervals at 97.5% per country
+    (the hypergeometric of 6 x 10^8 pixels is binomial to 1e-7); the envelope with the 38 plots without input filled
+    all correct or all wrong; P3's call and why it cannot be 'no gap shown'; the missingness by place and label; the
+    two rules' difference; Part F's margins, and by subtraction from exp98's Part I the 2023 map at the 20 inside plots
+    without 2017 input."""
+    R = _recorded99()
+    S, z, ctry, cov, lab, Wk = R["S"], R["z"], R["ctry"], R["cov"], R["lab"], R["Wk"]
+    W = (Wk, 1 - Wk)
+    sel = [int((ctry == k).sum()) for k in (0, 1)]
+    miss = [int(((ctry == k) & ~cov).sum()) for k in (0, 1)]
+    assert (sel, miss) == ([219, 90], [27, 11])
+    bar = 1 - 0.895 + 0.05
+    env = {}
+    for rule, ks, (est_, lo_, hi_) in (("strict", [57, 34], (35.5, 26.0, 45.8)), ("lenient", [27, 10], (13.4, 7.5, 21.9))):
+        e = R["e"][rule]
+        assert [int(e[R["c"] == k].sum()) for k in (0, 1)] == ks
+        n = [R["n"][0], R["n"][1]]
+        theta = sum(W[k] * ks[k] / n[k] for k in (0, 1))
+        cp = [_clopper_pearson(ks[k], n[k], 0.975) for k in (0, 1)]
+        lo, hi = sum(W[k] * cp[k][0] for k in (0, 1)), sum(W[k] * cp[k][1] for k in (0, 1))
+        st = S["rules"][rule]["stratified"]
+        assert theta == pytest.approx(st["estimate"], abs=1e-9)
+        assert lo == pytest.approx(st["low"], abs=1e-6) and hi == pytest.approx(st["high"], abs=1e-6)
+        assert [round(100 * v, 1) for v in (theta, lo, hi)] == [est_, lo_, hi_]
+        for fill in (0, 1):
+            kk = [ks[k] + fill * miss[k] for k in (0, 1)]
+            cpf = [_clopper_pearson(kk[k], sel[k], 0.975) for k in (0, 1)]
+            env[(rule, fill)] = [round(100 * v, 1) for v in (sum(W[k] * kk[k] / sel[k] for k in (0, 1)),
+                                                             sum(W[k] * cpf[k][0] for k in (0, 1)),
+                                                             sum(W[k] * cpf[k][1] for k in (0, 1)))]
+    # filled all correct (0) or all wrong (1): [rate, low, high]
+    assert env == {("strict", 0): [31.2, 22.6, 40.6], ("strict", 1): [43.4, 34.0, 53.1],
+                   ("lenient", 0): [11.8, 6.5, 19.3], ("lenient", 1): [24.1, 16.5, 33.2]}
+    assert S["p3_transfer_gap"]["call"] == "not determined" and S["rules"]["lenient"]["stratified"]["low"] < bar
+    assert S["rules"]["strict"]["stratified"]["high"] > bar and env[("lenient", 1)][1] > 100 * bar
+    assert min(env[("strict", 0)][2], env[("strict", 1)][2]) > 100 * bar, "'no gap shown' under no filling"
+    # where the 38 lie: inside Ai2's geometry, and by label
+    ins = z["inside_awf"]
+    a, b = int((ins & ~cov).sum()), int((ins & cov).sum())
+    c_, d = int((~ins & ~cov).sum()), int((~ins & cov).sum())
+    assert (a, a + b, c_, c_ + d) == (20, 47, 18, 262) and _fisher_two_sided(a, b, c_, d) < 1e-8
+    k_in = ins & (ctry == 0)
+    assert (int((k_in & ~cov).sum()), int(k_in.sum())) == (17, 33)
+    by_label = {t: (int(((lab == t) & ~cov).sum()), int((lab == t).sum())) for t in PAGE_STRICT if (lab == t).any()}
+    assert by_label == {"Dense Forest": (1, 4), "Open Forest": (2, 2), "Wooded Grassland": (9, 138),
+                        "Open Grassland": (15, 112), "Cropland": (11, 44), "Open Water": (0, 1), "Otherland": (0, 8)}
+    assert {t: v[0] for t, v in by_label.items() if v[0]} == S["plots_without_input"]["by_label"]
+    # what separates the two rules: 54 plots, 48 of them the grass/shrub boundary
+    K = R["K"]
+    only = (R["e"]["strict"] == 1) & (R["e"]["lenient"] == 0)
+    pairs = {}
+    for t, p in zip(lab[K][only], z["pred"][K][only]):
+        pairs[(t, AWF9[p])] = pairs.get((t, AWF9[p]), 0) + 1
+    assert int(only.sum()) == 54 and pairs == {("Open Grassland", "shrubland_savanna"): 39,
+                                               ("Wooded Grassland", "grassland_barren"): 9,
+                                               ("Dense Forest", "montane_forest"): 3, ("Otherland", "open_water"): 2,
+                                               ("Open Water", "herbaceous_wetland"): 1}
+    # Part F at its margins (the 2023 classes at the plots are not saved)
+    insK = ins[K]
+    f = S["inside_awf_reported"]
+    assert (int(ins.sum()), int(insK.sum())) == (f["n_inside"], f["n_inside_covered"]) == (47, 27)
+    s17, l17 = int(R["e"]["strict"][insK].sum()), int(R["e"]["lenient"][insK].sum())
+    ps, pl = f["paired"]["strict"], f["paired"]["lenient"]
+    assert (s17, l17) == (f["rules_2017"]["strict"], f["rules_2017"]["lenient"]) == (11, 0)
+    assert ps["right_2023_only"] + ps["both_wrong"] == s17 and sum(v for k, v in ps.items() if k != "sign_test_two_sided_p") == 27
+    assert pl["right_2023_only"] + pl["both_wrong"] == l17 and pl["both_right"] == 27
+    m = ps["right_2017_only"] + ps["right_2023_only"]
+    assert min(1.0, 2 * sum(math.comb(m, i) for i in range(min(ps["right_2017_only"], ps["right_2023_only"]) + 1)) / 2 ** m
+               ) == ps["sign_test_two_sided_p"] == 1.0
+    with open(os.path.join(OUT, "exp98_summary.json")) as fh:
+        t98 = json.load(fh)["timesync_reported"]
+    assert t98["labels_inside"] == {t: int(((lab == t) & ins).sum()) for t in PAGE_STRICT if ((lab == t) & ins).any()}
+    w23 = {"strict": ps["right_2017_only"] + ps["both_wrong"], "lenient": pl["right_2017_only"] + pl["both_wrong"]}
+    assert (w23["strict"], w23["lenient"]) == (12, 0)
+    assert (t98["rules"]["strict"]["disagreements"] - w23["strict"], t98["rules"]["lenient"]["disagreements"] - w23["lenient"]) == (13, 3)

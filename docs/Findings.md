@@ -38,6 +38,11 @@ artifact under `exp/out/`, with its evidence in the [results record](results/com
   (AUROC 0.85). Its accuracy there was not shown to be within 5 points of the evaluation replica's, and no difference
   was shown. The points, placed by experts, sit in the confident part of the map and give no whole-map accuracy
   (exp98).
+- The same configuration on 2017 imagery, graded at an independent random sample around the AWF area, is wrong at 35%
+  of the plots with imagery under a one-to-one crosswalk and 13% under a lenient one. Its confidence ranks those errors
+  with AUROC 0.64 (90% interval 0.58 to 0.696), below the preregistered 0.70, though the least confident 10% still hold
+  errors beyond chance (0.43 of the gap closed against a bar of 0.25, interval 0.10 to 0.65). The plots without imagery
+  are not missing at random, so these figures describe the plots with imagery, not the whole region (exp99).
 - No signal from inside the encoder beats confidence, and a consensus of encoders does not estimate accuracy.
 - For a language-model agent at 7B the package is decisive when its tools are given directly; the agent as shipped
   found them on 17 of 40 runs. At 27B a model with a numpy sandbox nearly matches the package's ranking, and every arm
@@ -279,6 +284,24 @@ the error rate rises as the confidence falls.
 At the 47 plots of an independent random sample inside the area (East Africa TimeSync, 2017 labels), the 2023 map
 disagrees at 25 under a strict crosswalk and at 3 under a lenient one. So the crosswalk between the two legends, not
 the map, decides most of that figure, and neither is the 2023 map's error rate (report-only).
+
+## The same deployment on 2017 imagery, at an independent random sample
+
+The record ran the same configuration on 2017 imagery over the windows holding the 309 East Africa TimeSync plots
+within 100 km of the AWF area (a simple random sample per country; exp99, preregistered). 42 of the 313 windows got no
+2017 imagery, so 271 plots were graded. The 38 without imagery are not missing at random: 20 of the 47 plots inside
+Ai2's geometry lack it, against 18 of the 262 outside. So every figure below describes the plots with 2017 imagery, not
+the whole region. The map's confidence ranks its errors with a design-weighted AUROC of 0.638 under a strict crosswalk
+(90% interval 0.579 to 0.696), below the preregistered 0.70, and 0.678 under a lenient one, whose interval contains
+0.70. The frozen rule calls this "transfer is the likelier reading". The run does not separate the year, the place, the
+legend boundary and the move from Ai2's expert-placed points to a random sample. <!-- claim:exp99-confidence-misses-the-ranking-bar-under-both-rules -->
+The least confident 10% of the plots close 0.434 of the gap from a random review to the best one, so the second
+prediction holds on its point value. Its interval, 0.10 to 0.65, includes the bar of 0.25. <!-- claim:exp99-least-confident-tenth-closes-the-gap-at-the-point-value -->
+The error rate is 35.5% under the strict crosswalk (exact interval 26.0% to 45.8%) and 13.4% under the lenient one
+(7.5% to 21.9%), so whether it is more than 5 points worse than Ai2's 10.5% is not determined. Most of the difference
+between the two rules is the grass/shrub boundary, which AWF does not define. Filling the 38 plots without imagery as
+all right or all wrong moves the strict rate between 31.2% and 43.4%, and the lenient one between 11.8% and 24.1%
+(report-only). <!-- claim:exp99-error-rate-of-plots-with-2017-input -->
 
 ## The package as an agent tool
 
