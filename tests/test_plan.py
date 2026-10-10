@@ -525,3 +525,66 @@ def test_the_entry_note_says_the_fall_is_at_the_budget(tmp_path, monkeypatch, ca
     monkeypatch.chdir(tmp_path)
     got = _run("plan --windows 20000 --coverage 0.5 --alpha 0.05 --zone-error 0 --max-labels 450", capsys)
     assert "from each of these budgets both rules can lose power" in got and "just past" not in got
+
+
+# ----------------------------------------------------------------------------- maps of 1e9 windows or more
+@pytest.mark.parametrize("N, cells, n", [(40, [3, 7, 5, 10, 15], 6), (30, [1, 2, 27], 9), (25, [4, 4, 4, 4, 9], 12)])
+def test_drawing_with_replacement_moves_the_draw_by_at_most_the_bound(N, cells, n):
+    """The bound zone_prefix_probability's with-replacement draw relies on: the multinomial is within (C - 1) n / N of
+    the multivariate hypergeometric in total variation, C the cells; by every outcome of the draw on small urns."""
+    assert sum(cells) == N
+
+    def outcomes(left, k):
+        if k == 1:
+            yield (left,)
+            return
+        for x in range(left + 1):
+            for rest in outcomes(left - x, k - 1):
+                yield (x, *rest)
+    tv = 0.0
+    for x in outcomes(n, len(cells)):
+        hyper = math.exp(sum(_lc(c, k) if k <= c else -math.inf for c, k in zip(cells, x)) - _lc(N, n))
+        multi = math.exp(math.lgamma(n + 1) + sum(k * math.log(c / N) - math.lgamma(k + 1) for c, k in zip(cells, x)))
+        tv += abs(hyper - multi) / 2
+    assert tv <= (len(cells) - 1) * n / N
+
+
+def test_a_map_of_a_billion_windows_or_more_is_planned():
+    """numpy's samplers refuse a population of 1e9 or more ('sum(colors) must be less than 1000000000'), which stopped
+    plan_zone on 1.08e9 windows. On 1.5e9 windows the simulation draws with replacement and agrees with the exact
+    draw on 999,999,999 windows within simulation error; the exact figures agree to the finite-population term."""
+    kw = dict(coverage=0.5, alpha=0.10, zone_error=0.05, draws=800, max_labels=2000, seed=99)
+    small, big = plan.plan_zone(999_999_999, **kw), plan.plan_zone(1_500_000_000, **kw)
+    assert small["prefix_even"]["drawn"] == "without replacement"
+    assert big["prefix_even"]["drawn"].startswith("with replacement")
+    for k in ("bonferroni", "prefix_most"):
+        assert big[k]["probability_by_budget"] == pytest.approx(small[k]["probability_by_budget"], abs=1e-4)
+    se_s, se_b = small["prefix_even"]["standard_error_by_budget"], big["prefix_even"]["standard_error_by_budget"]
+    both = [b for b, q in big["prefix_even"]["probability_by_budget"].items()
+            if q is not None and small["prefix_even"]["probability_by_budget"].get(b) is not None]
+    assert len(both) >= 5
+    for b in both:
+        q_s, q_b = small["prefix_even"]["probability_by_budget"][b], big["prefix_even"]["probability_by_budget"][b]
+        assert abs(q_b - q_s) <= 4 * math.hypot(se_s[b], se_b[b]) + plan.replacement_bound(1_500_000_000, int(b)) + 1e-3
+        # the subtracted bound checked by value, not through plan.replacement_bound: 2 J n / N on 1.5e9 windows, 0 below 1e9
+        assert big["prefix_even"]["lower_end_by_budget"][b] == pytest.approx(
+            q_b - 2 * se_b[b] - 2 * len(est.ZONE_GRID) * int(b) / 1.5e9, rel=0, abs=1e-12)
+        assert small["prefix_even"]["lower_end_by_budget"][b] == pytest.approx(q_s - 2 * se_s[b], rel=0, abs=1e-12)
+
+
+def test_the_with_replacement_bound_is_zero_below_a_billion_windows_and_2jn_over_n_from_it():
+    """plan_zone subtracts this from the simulated figure on a map numpy cannot draw from without replacement."""
+    J = len(est.ZONE_GRID)
+    assert plan.replacement_bound(999_999_999, 2000) == 0
+    assert plan.replacement_bound(1_000_000_000, 2000) == pytest.approx(2 * J * 2000 / 1e9)
+    assert plan.replacement_bound(1_500_000_000, 2000) == pytest.approx(2 * J * 2000 / 1.5e9)
+    assert plan.replacement_bound(1_500_000_000, 2000, grid=(0.5,)) == pytest.approx(2 * 2000 / 1.5e9)
+
+
+def test_a_map_of_exactly_a_billion_windows_takes_the_with_replacement_draw():
+    """numpy's multivariate_hypergeometric refuses colors summing to 10**9, so the cut-over must include 10**9 itself:
+    a map of exactly that many windows is simulated with replacement instead of crashing."""
+    q, se = plan.zone_prefix_probability(10 ** 9, 400, 0.5, 0.10, 0.05, draws=50)
+    assert 0.0 <= q <= 1.0 and se >= 0.0
+    with pytest.raises(ValueError):
+        np.random.default_rng(0).multivariate_hypergeometric([10 ** 9 - 5, 5], 3)

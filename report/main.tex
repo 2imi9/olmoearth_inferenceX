@@ -324,8 +324,9 @@ difference could be narrower.
 \subsection{Interfaces}
 \label{sec:interfaces}
 
-The command \code{oe-inferencex} has nine subcommands: \code{demo} (a shipped Dynamic World tile), \code{assess}
-(review sets, rasters and cues), \code{compare} (disagreement and, with labels and dates, the graded block),
+The command \code{oe-inferencex} has ten subcommands: \code{demo} (a shipped Dynamic World tile), \code{assess}
+(review sets, rasters and cues), \code{from-olmoearth} (an OlmoEarth model's output read into the rasters
+\code{assess} takes), \code{compare} (disagreement and, with labels and dates, the graded block),
 \code{plan} (how many labels a question needs, new in 1.8.0), \code{sample} (the windows to label), \code{estimate} (the error rate, per-class accuracy with \code{-{}-per-class}, or
 the accuracy difference of two maps), \code{certify} (the certified zone and its mask), \code{decide} and \code{mcp}.
 \code{decide} (new in 1.7.0) reads a result that \code{estimate}, \code{certify} or \code{compare} wrote and answers set questions
@@ -340,7 +341,28 @@ the probability over the reviewer's random draw that the package's own procedure
 wider than a stated width at a stated rate, labels drawn where two maps differ that name the more accurate one at a
 stated difference, or a zone of a stated coverage certified at $\alpha$ (exact for the Bonferroni rule, simulated for
 the prefix rule on the worst map whose more confident zones are no worse); every probability is reached again in its
-tests by enumeration or by simulating the estimators. Since version 1.4.0, \code{oe-inferencex mcp} serves the commands as tools (\code{guide},
+tests by enumeration or by simulating the estimators. On a map of $10^9$ windows or more, from which numpy's samplers
+do not draw without replacement, the prefix rule's simulation draws its labels with replacement; that moves each
+probability by at most $2Jn/N$ for $n$ labels, $N$ windows and the grid's $J$ levels, a bound subtracted from each
+budget's lower end and stated in the result, and below $10^9$ windows the draws are unchanged.
+
+\code{from-olmoearth} reads the rslearn dataset that an OlmoEarth model's prediction writes, whether by
+\code{rslearn model predict} or by olmoearth\_run, which leaves the same layout: one directory per window with its
+projection, bounds and completed output layers. A segmentation output becomes \code{scores\_<EPSG>.tif}, the class
+probabilities of every window on one grid per CRS with NaN where no window wrote, and the command prints the
+\code{assess} command to run next. Ranking needs probabilities, which rslearn's segmentation task writes only with
+\code{output\_probs} on (and, for an integer output layer, a float32 writer layer); a one-band class map is refused
+with that fix, as are probabilities that do not sum to 1 (a scaling or temperature applied before writing). A
+per-window classification output is read into one probability vector per window, checked against the class the task
+wrote. With \code{-{}-conditions} it builds the input-condition layer of Section~\ref{sec:ranking} from the window's
+own inputs: per pixel, the share of the run's timesteps a scene covered and, where every timestep holds Sentinel-2's
+scene classification band, the share under cloud. OlmoEarth masks a timestep missing for a whole window but reads an
+uncovered or cloudy pixel inside a present one as valid input, and the layer records those conditions; it does not see
+haze, smoke or snow the scene classification does not flag. The reader needs no torch and no rslearn; it was tested on
+synthetic rslearn datasets built to rslearn's source, and exp98 and exp99 are its runs on real outputs
+(Section~\ref{sec:res-deployed}).
+
+Since version 1.4.0, \code{oe-inferencex mcp} serves the commands as tools (\code{guide},
 \code{assess}, \code{compare}, \code{sample}, \code{estimate}, \code{certify}, from 1.7.0 \code{decide} and from
 1.8.0 \code{plan}) to an
 agent over the Model Context Protocol on local standard input and output, with
@@ -509,6 +531,63 @@ report-only arm, its validation set being too small to grade: the top-1 confiden
 with AUROC 0.867 and 0.808, and a 10\% review holds 41.5\% and 32.0\% of the errors against 19.5\% and 18.3\% for the
 best no-encoder control, a lead whose cluster-bootstrap 95\% interval includes zero on both
 \claim{exp89-finetuned-report-only}.
+
+\subsection{A deployed OlmoEarth model}
+\label{sec:res-deployed}
+
+exp98 and exp99 ran FT-AWF through Ai2's deployment pipeline instead of the evaluation's crops: Ai2's checkpoint, the
+olmoearth\_run configuration published with the v1 models (olmoearth\_projects at f3c9b0c8) and Planetary Computer's
+Sentinel-2 scenes, at 10\,m, with two changes so the map could be graded, the softmax written instead of the argmax
+and a sidecar reading the scene classification band. Ai2's lock at that commit installs olmoearth-runner 0.1.12 with
+rslearn 0.0.23; the record chose 0.1.14 with rslearn 0.0.27, which has \code{output\_probs}, and patched rslearn's
+\code{get\_item\_by\_name}, a bug that belongs to that choice. The current way to run these models is rslearn's own
+prediction, so ``deployment'' here means that v1-era pipeline as re-run, and neither map is one Ai2 published. Both
+were preregistered and frozen before any prediction was read at a label, read with \code{from-olmoearth}, and audited
+in three lenses before recording, which recomputed every number it could and changed none.
+
+exp98 re-ran the configuration over its own 2023 request geometry (270 windows, all 12 timesteps) and graded the map
+at the 259 of Ai2's 344 validation points that fall on it (20 annotation tasks, 33 errors). It is 87.3\% accurate
+there, against 89.6\% for exp89's replica of the evaluation on the same points; the 90\% task-cluster interval of the
+difference, $-5.1$ to $+0.8$ points, reaches 0.15 points past the preregistered $\pm5$-point margin, so reproduction
+within 5 points was not shown, and with the interval containing 0 (sign test $p = 0.26$) no difference was shown
+either \claim{exp98-equivalence-within-5-points-not-shown}. The verdict sits at the margin: over 200 other bootstrap
+seeds the larger end ran from 4.8 to 5.3 points, and the prediction would have held at 40 of them. The re-run gives the
+replica's class at 91.9\% of the points, its own top-1 confidence ranks its errors with AUROC 0.849 (the replica's
+0.887; the 95\% interval of the difference $-0.090$ to $+0.026$), and the least confident 10\% of the points hold
+42.4\% of its errors \claim{exp98-deployment-gives-the-evaluations-classes-and-ranking}. The points sit in the
+confident part of the map: on average a point is more confident than 64.7\% of the map's pixels (one-sided 95\% lower
+bound 61.4\%, against 50\% if they were placed as the map's pixels are). The design does not say why, and it gives no
+map accuracy; only under the unchecked assumption that points and pixels of equal confidence are equally accurate
+would the points' error rate, reweighted to the map's confidence fifths, read 21\%, a model-based reading with no
+interval resting on 22 points in the least confident fifth (12 errors)
+\claim{exp98-validation-points-sit-in-the-confident-part}. Ai2's points were placed by
+experts, not drawn at random, so exp98 gives no whole-map error rate, per-class user's or producer's accuracy or
+certified zone; every figure describes those points.
+
+exp99 held the model and configuration fixed and moved the year to 2017, to grade the map at the one probability
+sample near the AWF area, the East Africa TimeSync plots (a simple random sample within each country), through a
+crosswalk from their legend to AWF's, STRICT or LENIENT. A rule fixed before any map took the 309 plots within 100\,km
+of Ai2's request geometry; 42 of the 313 windows received no 2017 Sentinel-2 item group at all, and the 38 plots that
+lie only in them have no input, so 271 plots were graded. The 38 are not missing at random, as the preregistration had assumed: 20 of the 47 plots inside Ai2's geometry
+lack input against 18 of the 262 outside (Fisher $p = 4\times10^{-9}$), and cropland and open grassland lack it more
+often than wooded grassland. Every rate and AUROC below therefore describes the plots with 2017 input, which under-represent Ai2's own area
+and cropland, not the 100\,km region. The design-weighted AUROC of the confidence for the STRICT errors is 0.638 (90\%
+bootstrap within countries 0.579 to 0.696), below the preregistered 0.70; LENIENT's 0.678 also misses on the point
+value, but its interval, 0.599 to 0.756, contains 0.70 \claim{exp99-confidence-misses-the-ranking-bar-under-both-rules}.
+The frozen rule labels both misses ``transfer is the likelier reading''; that is the rule's label, not a finding, since
+the run does not separate the year (the model was fine-tuned on 2023 imagery), the place, the grass/shrub legend
+boundary and the move from expert-placed points to a random sample, and the plots sit in their windows as random
+pixels do (mean percentile 0.48, against 0.647 for Ai2's points in exp98). The least confident 10\% of the plots by
+design weight close 0.434 of the gap between a random and a perfect review (bar 0.25), so that prediction holds on the
+point value, but its interval, 0.10 to 0.65, includes the bar, the 10\% is 31 plots, and the figure is specific to
+the budget (0.169 at 20\%) \claim{exp99-least-confident-tenth-closes-the-gap-at-the-point-value}. Report-only, with
+Kenya and Tanzania as strata, the error rate of the plots with 2017 input is 35.5\% under STRICT (the package's exact
+interval, at least 95\%: 26.0\% to 45.8\%) and 13.4\% under LENIENT (7.5\% to 21.9\%), so whether the map is worse than Ai2's 10.5\% error
+by more than 5 points is not determined; the rules differ mostly at the grass/shrub boundary, for which AWF publishes
+no threshold. With the 38 plots without input filled all right or all wrong, the rate over all 309 lies between
+31.2\% and 43.4\% under STRICT and between 11.8\% and 24.1\% under LENIENT
+\claim{exp99-error-rate-of-plots-with-2017-input}. These are the record's first design-based error rates for an
+OlmoEarth deployment, at the plots with 2017 input, for one model and one year, with labels taken as right.
 
 \subsection{Input conditions}
 \label{sec:res-conditions}
@@ -813,7 +892,7 @@ their errors, it estimates 0.975 to 0.983 for maps 0.883 to 0.914 accurate, and 
 is 0.83, 0.71 and 0.62 on PASTIS Sentinel-2, MADOS and Sen1Floods11 \claim{consensus-order-recovered-only-where-true-gaps-are-large}.
 Within one family it estimates 0.996 to 0.999 for maps 0.81 to 0.93 accurate
 \claim{within-family-consensus-is-the-unanimous-limit}. An error rate therefore requires a reference.
-Table~\ref{tab:failed} lists the failed predictions of exp77 to exp91.
+Table~\ref{tab:failed} lists the failed predictions of exp77 to exp99.
 
 \begin{table}[h]
 \centering\footnotesize
@@ -836,10 +915,14 @@ exp85 P3; P4 & ratio $\le 0.95$; plain coefficient wider on two tasks & 0.978; n
 exp86 & answers pass under the preregistered instrument & pass only after fourteen amendments made after results were seen \\
 exp88 P2 (China 6) & confident errors rise on CropHarvest China 6 without the optical input & confident share falls, 13.3\% to 6.5\% \claim{missing-modality-confident-errors-follow-the-shift-not-the-sensor} \\
 exp91 P1 & a vision-language reviewer agrees with the hand labels on $\geq 90\%$ of judged windows & 85.6\% \claim{exp91-vlm-reviewer-shares-the-maps-errors} \\
+exp95 P2 & the standard level cut's coverage falls by more than 0.05 when labels are added on at least 17 of 34 maps & 14 of 34 \claim{exp95-standard-cut-falls-when-labels-are-added} \\
+exp98 P1 & re-run within 5 points of the replica at Ai2's points & interval $-5.1$ to $+0.8$, 0.15 past the margin \claim{exp98-equivalence-within-5-points-not-shown} \\
+exp99 P1 & design-weighted AUROC $\ge 0.70$ on the TimeSync plots & 0.638 STRICT, 0.678 LENIENT \claim{exp99-confidence-misses-the-ranking-bar-under-both-rules} \\
 \bottomrule
 \end{tabularx}
-\caption{Preregistered predictions of exp77 to exp91 recorded as failed or failed as written. exp89 was report-only by
-an amendment made before any result, exp90 was not preregistered, and exp92's four predictions held.}
+\caption{Preregistered predictions of exp77 to exp99 recorded as failed or failed as written. exp89 was report-only by
+an amendment made before any result, exp90 was not preregistered, and the predictions of exp92, exp93, exp94, exp96
+(at its preregistered seed) and exp97 held.}
 \label{tab:failed}
 \end{table}
 
@@ -851,10 +934,17 @@ samples probability samples, with the points standing in for each map and the pr
 whether a reference point trained a product was not checked, and several pairs are related by construction or
 training; the rest of the
 labelled-route evidence is linear probes on frozen embeddings, graded against benchmark splits that are not probability
-samples, and one fine-tuned model. The ranking has been graded on four products' own confidence: Dynamic World's, LCMAP's, CGLS-LC100's and
+samples, and one fine-tuned model, FT-AWF, which is also the only model run through a deployment pipeline: one
+re-run graded at Ai2's expert-placed points (exp98) and one transfer test graded at the plots of a random sample that
+had input (exp99), both through the v1-era olmoearth\_run configuration with runner and rslearn versions the record
+chose, not Ai2's lock or the current rslearn prediction. The ranking has been graded on four products' own confidence: Dynamic World's, LCMAP's, CGLS-LC100's and
 ODSE-LULC's. The hand-labelled testbeds are mostly binary water
 tasks, on which the margin, one minus the top probability and entropy coincide, and the fine-tuned evidence is FT-AWF's
-41 errors on 344 points with Forest Loss Driver report-only \claim{fine-tuned-model-audit}. The suite's 24 tasks come
+41 errors on 344 points with Forest Loss Driver report-only \claim{fine-tuned-model-audit}, FT-AWF's re-run at 259 of
+those points, and its 2017 map at 271 TimeSync plots, whose missing plots are not missing at random and whose two
+crosswalks differ mostly at a legend boundary AWF does not define. exp98's equivalence interval and exp99's LENIENT AUROC
+and least-confident-tenth interval lie at or across their bars, and exp99 does not separate year, place, legend and
+point placement. The suite's 24 tasks come
 from 14 sources, its splits are the model authors' and not a landscape sample, and its controls are near chance. The
 estimation studies rest on seven segmentation tasks from five datasets, whose $64\times64$-pixel chip is smaller than a
 reviewer's unit, so the tile design effect is a lower bound. The shipped tile design under-covers where a few tiles hold

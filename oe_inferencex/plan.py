@@ -41,6 +41,7 @@ SPLITS = 21                           # both-wrong counts on the coarse scan of 
 DENSE_SPLITS = 60                     # and every count up to this many, where the worst splits were found
 WORST_KEPT = 6                        # splits carried from the nearest full scan to the budgets refine adds
 ZONE_DRAWS = 2000
+NUMPY_URN = 10 ** 9                   # numpy's samplers draw without replacement only from fewer windows than this
 DEFAULT_RATE = 0.5
 PLAN_NOTE = ("Planned before any label. Each probability is over the reviewer's random draw, for a map with the "
              "stated error rate or difference; the map's own error rate is what the labels will measure, so a plan "
@@ -547,6 +548,12 @@ def bonferroni_probability(N, n, coverage, alpha, zone_error, delta=est.ZONE_DEL
                                   grid=grid)
 
 
+def replacement_bound(N, n, grid=est.ZONE_GRID):
+    """How far drawing n labels with replacement can move zone_prefix_probability on a map of N windows: 0 below
+    NUMPY_URN, where it draws without replacement, else 2 J n / N for the grid's J levels (its docstring)."""
+    return 0.0 if int(N) < NUMPY_URN else 2 * len(grid) * int(n) / int(N)
+
+
 def zone_prefix_probability(N, n, coverage, alpha, zone_error, delta=est.ZONE_DELTA, grid=est.ZONE_GRID,
                             draws=ZONE_DRAWS, seed=0):
     """(probability, standard error) that the prefix rule certifies at least this coverage with n random labels when
@@ -563,7 +570,14 @@ def zone_prefix_probability(N, n, coverage, alpha, zone_error, delta=est.ZONE_DE
     and as labels are added with the same errors, and P(X_(b-1) <= k - 1) <= P(X_b <= k) since a draw adds at most
     one error. The labels in each ring, and the
     errors among them, are drawn exactly: ring counts are multivariate hypergeometric, and the errors among a ring's
-    labels hypergeometric, because positions inside a ring do not matter to any zone."""
+    labels hypergeometric, because positions inside a ring do not matter to any zone.
+
+    On a map of NUMPY_URN (1e9) windows or more, which numpy's samplers refuse, the labels are drawn with
+    replacement instead: multinomial over each ring's wrong and right windows and the rest of the map. That moves
+    the probability by at most replacement_bound(N, n, grid): drawn cell by cell, each conditional hypergeometric of
+    m labels from R windows is within (m - 1) / (R - 1) of its binomial in total variation (Ehm 1991), m / R in
+    mean is n / N under the exact draw (where m <= R), and a zone of J levels has at most 2 J + 1 cells, the last
+    one fixed by the others; J is the grid's levels, at least the rings drawn, so the bound is conservative."""
     N, n = int(N), int(n)
     j, cov, sizes = _zone_index(N, n, coverage, alpha, delta, grid)
     if j is None:
@@ -575,9 +589,15 @@ def zone_prefix_probability(N, n, coverage, alpha, zone_error, delta=est.ZONE_DE
     ring = np.diff(edges)                                      # a ring can be empty: two levels give one zone on
     ring_err = np.diff([m * Kz // nz for m in edges])          # a small map, and it then adds no label
     rng = np.random.default_rng(seed)
-    labels = rng.multivariate_hypergeometric(np.append(ring, N - nz), n, size=int(draws))[:, :-1]
-    errs = np.column_stack([rng.hypergeometric(int(e), int(r - e), labels[:, t]) if e else np.zeros(int(draws), int)
-                            for t, (r, e) in enumerate(zip(ring, ring_err))])
+    if N < NUMPY_URN:
+        labels = rng.multivariate_hypergeometric(np.append(ring, N - nz), n, size=int(draws))[:, :-1]
+        errs = np.column_stack([rng.hypergeometric(int(e), int(r - e), labels[:, t]) if e
+                                else np.zeros(int(draws), int) for t, (r, e) in enumerate(zip(ring, ring_err))])
+    else:
+        cells = np.append(np.column_stack([ring_err, ring - ring_err]).ravel(), N - nz)   # wrong, right per ring
+        x = rng.multinomial(n, cells / N, size=int(draws))
+        errs = x[:, 0:-1:2]
+        labels = errs + x[:, 1:-1:2]
     b, k = np.cumsum(labels, axis=1), np.cumsum(errs, axis=1)
     ok = np.ones(int(draws), bool)
     for t, size in enumerate(sizes):
@@ -641,13 +661,14 @@ def plan_zone(N, coverage, alpha, zone_error=None, power=POWER, delta=est.ZONE_D
     flat_q = {}
 
     def even(b):
-        """The simulated figure's lower end, estimate minus two standard errors, which is what has to reach power."""
+        """The simulated figure's lower end, estimate minus two standard errors (and minus replacement_bound on a map
+        of NUMPY_URN windows or more), which is what has to reach power."""
         if up(b) < power:
             flat_se[b] = flat_q[b] = None
             return None                                        # at most up(b), below power: not simulated
         q, flat_se[b] = zone_prefix_probability(N, b, c, alpha, zone_error, delta, grid, draws, seed + b)
         flat_q[b] = q
-        return q - 2 * flat_se[b]
+        return q - 2 * flat_se[b] - replacement_bound(N, b, grid)
     bf = lambda b: bonferroni_probability(N, b, c, alpha, zone_error, delta, grid)
     bonf, bonf_span = refine(bf, {b: bf(b) for b in budgets}, power, every=True)
     flat, _ = refine(even, {b: even(b) for b in budgets}, power)
@@ -671,9 +692,14 @@ def plan_zone(N, coverage, alpha, zone_error=None, power=POWER, delta=est.ZONE_D
                                      "own test passes"},
         "prefix_even": {"labels": recommend(flat, power), "probability_by_budget": {str(b): flat_q[b] for b in sorted(flat)},
                         "lower_end_by_budget": {str(b): flat[b] for b in sorted(flat)},
-                        "counts_when": "the estimate less two standard errors reaches the probability asked for",
+                        "counts_when": "the estimate less two standard errors reaches the probability asked for"
+                                       + ("" if N < NUMPY_URN else ", less also the with-replacement bound"),
                         "runs_reaching_power": runs(flat, power),
                         "standard_error_by_budget": {str(b): flat_se[b] for b in sorted(flat)}, "draws": int(draws),
+                        "drawn": "without replacement" if N < NUMPY_URN else
+                                 (f"with replacement: numpy draws without replacement only from fewer than "
+                                  f"{NUMPY_URN:,} windows; each probability is within {2 * len(grid)} n / N of the "
+                                  f"exact draw's ({replacement_bound(N, max(flat), grid):.2g} at {max(flat)} labels)"),
                         "exact": False, "holds_for": "maps whose more confident zones of the grid are wrong no more "
                                                      "often than this zone"}})
     for k in ("bonferroni", "prefix_even"):

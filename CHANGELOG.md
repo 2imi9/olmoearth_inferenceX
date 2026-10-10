@@ -56,8 +56,13 @@ least confident 10% close 0.434 of the gap from random to the ceiling (interval 
 0.25). P3, descriptive: 35.5% under STRICT (exact interval 26.0% to 45.8%) and 13.4% under LENIENT (7.5% to 21.9%),
 so a gap beyond Ai2's figure plus 5 points is not determined; with the 38 filled all right or all wrong, 31.2% to
 43.4% and 11.8% to 24.1%. The run does not separate the year, the place, the legend boundary and the placement of
-Ai2's points. Found while planning: `plan`'s zone simulation fails on maps of 10^9 windows or more (numpy's
+Ai2's points. Found while planning: `plan`'s zone simulation failed on maps of 10^9 windows or more (numpy's
 multivariate hypergeometric sampler); exp99 plans its zones on 999,999,999.
+
+**`plan` on maps of 10^9 windows or more.** The prefix rule's zone simulation now draws its labels with replacement on
+such maps (numpy's samplers draw without replacement only from fewer windows), which moves each probability by at most
+2 J n / N (J the grid's levels; Ehm's bound for each cell), subtracts that bound from each budget's lower end and says
+so in the result and the command's notes; below 10^9 windows the draws are unchanged, bit for bit.
 
 ## 1.8.0 (2026-10-08)
 

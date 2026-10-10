@@ -1980,6 +1980,9 @@ def cmd_plan(args):
                 print(f"  Bonferroni by budget: {_ladder_text(b['probability_by_budget'], b['labels'], power)}")
                 print(f"  prefix by budget (-: below {power:g} however the errors spread): "
                       f"{_ladder_text(ev['probability_by_budget'], ev['labels'], power)}")
+                if ev["drawn"] != "without replacement":
+                    notes.append(f"The prefix rule's simulation drew its labels {ev['drawn']}; the bound is "
+                                 "subtracted from each budget's lower end")
                 if b["labels"] is not None or ev["labels"] is not None:
                     runs.append(_sample_command(args, max(v for v in (b["labels"], ev["labels"]) if v is not None),
                                                 other=False))
