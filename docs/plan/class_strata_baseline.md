@@ -1,8 +1,9 @@
 # The practitioner's design: confidence strata against map-class strata for a map's error rate (exp105 preregistration)
 
-**Status: draft, written 11 October 2026.** The owner chose the predictions' form on 11 October 2026 (P1: both a
-count of wins and a median width ratio; P2: two thirds of the tasks) and confirmed the count of gradable tasks (18 at
-300 labels). Changed after two independent reviews and before freezing: B's allocation now carries the package's
+**Status: frozen on 11 October 2026, before any arm's interval was computed on the suite's units.** Written 11
+October 2026. The owner chose the predictions' form on 11 October 2026 (P1: both a count of wins and a median width
+ratio; P2: two thirds of the tasks), confirmed the count of gradable tasks (18 at 300 labels) and the branches'
+reverse-win threshold (10 of the 18). Changed after two independent reviews and before freezing: B's allocation now carries the package's
 floor (it is the shipped design), the median ratio is coverage-first like the win count, the branches read the
 reverse win counts, and the disclosure of what is already known is corrected. The page is frozen before any arm's
 interval is computed on the suite's units.
