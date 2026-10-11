@@ -63,7 +63,13 @@ analyst who records its probable driver (CC BY). The record reads the published 
   invalid (MapBiomas's multi-part alerts). The letter of Ai2's code, shapely's centroid of the unrepaired polygon,
   agrees on valid polygons but lies 2 to about 1,870 px from the area centroid on 24 invalid multi-part ones (job
   1286487); the windows keep the area centroid, Ai2's stated intent ("the
-  centroid"), and those 24 are counted as a deviation from the letter of its code.
+  centroid"), and those 24 are counted as a deviation from the letter of its code. OlmoEarth Studio's own window
+  partitioner (`FixedWindowPartitioner`, olmoearth-runner 0.1.14, read on PyPI) takes a polygon through rslearn's
+  `to_projection` and centres the 128-px window on the projected polygon's centroid: the rslearn route. rslearn
+  0.1.17's `to_projection` repairs with make_valid, which fails on 2 of the sampled polygons, the kind of failure Ai2's
+  deploy code avoids by sending centroid points (its docstring cites Studio job failures on complex polygons); the
+  rslearn version Studio runs was not checked. The windows agree with that route within 2 px on every valid polygon
+  and on 338 of the 343 invalid ones (job 1286487).
 
 ## Predictions (on the graded strata, agriculture and mining, design-weighted; confirmed by the owner)
 
