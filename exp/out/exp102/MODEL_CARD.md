@@ -1,7 +1,7 @@
 ---
 license: other
 license_name: olmoearth-artifact-license
-license_link: LICENSE.txt
+license_link: https://huggingface.co/2imi9/OlmoEarth-v1_2-FT-AWF-Base/blob/main/LICENSE.txt
 base_model: allenai/OlmoEarth-v1_2-Base
 datasets:
 - allenai/olmoearth_projects_awf

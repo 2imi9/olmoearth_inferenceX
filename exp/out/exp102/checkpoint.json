@@ -13,5 +13,12 @@
  "rslearn": "0.1.17",
  "olmoearth_pretrain_minimal": "0.1.2",
  "gpu": "NVIDIA B200",
- "seconds_wall": "about 26 minutes for 100 epochs"
+ "seconds_wall": "about 26 minutes for 100 epochs",
+ "published": {
+  "repo": "https://huggingface.co/2imi9/OlmoEarth-v1_2-FT-AWF-Base",
+  "commit": "7a1db147cc68d4bde8dff3739d85dc793723619e",
+  "date": "2026-10-11",
+  "visibility": "public",
+  "sha256_on_hub_matches": true
+ }
 }
