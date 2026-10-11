@@ -1,8 +1,15 @@
 # Filter, then shake: a two-step error ranking fitted on exp98 and tested on exp99 (exp101 preregistration)
 
-**Status: draft, written 10 October 2026.** The owner confirmed the thresholds, the floors and the q grid below on 10
-October 2026, as proposed (P1's bar of 5 points chosen over 3 points and over no minimum). Nothing perturbed has been
-computed at exp99's plots.
+**Status: frozen on 10 October 2026, after the inventory and the GPU smoke and before any perturbed reading at a unit
+of F or E outside the smoke's first 32 units of F.** Written 10 October 2026. The owner confirmed the thresholds, the
+floors and the q grid below on 10 October 2026, as proposed (P1's bar of 5 points chosen over 3 points and over no
+minimum), and asked for the views to be scaled up on GPUs. Before freezing: the inventory (job 1274633, at 2a07349)
+read all 259 units of F and all 271 of E with twelve item groups, 18 and 22 of them clamped at a window edge; its count
+of units that took a later window was wrong (an identity test on a fresh tuple counted every unclamped pick), fixed
+before freezing, and the choice itself was right. The GPU smoke (job 1274634, NVIDIA B200) passed: at F's first 32
+units, four view shapes gave the same class on the GPU and the CPU (128 of 128; logits within 2.1e-5), the script's
+sample builder matched exp21's forward pass exactly, the replica's reference view agreed with the deployed map at 30 of
+the 32, and the GPU ran 196 views per second (the fit about 7 minutes, the test about 14).
 
 - **Allowed before freezing:** the smoke on synthetic inputs (`python exp/exp101_two_step.py --smoke`,
   `tests/test_exp101.py`); an inventory that counts, at exp98's validation points and exp99's plots, the units whose

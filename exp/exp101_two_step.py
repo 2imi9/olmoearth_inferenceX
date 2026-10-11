@@ -830,7 +830,7 @@ def attach_blocks(S, roots=None, label_fallback=False, log=print):
                 H, W = win["b"][3] - win["b"][1], win["b"][2] - win["b"][0]
                 plans.append((j, crop_plan(H, W, r, cc)))
             pick = next(((j, pl) for j, pl in plans if not pl[2]), plans[0])
-            n_switched += pick is not plans[0]
+            n_switched += pick[0] != plans[0][0]          # a later window than the first complete one was taken
             j, (plan, box, clamped) = pick
             win = windows[j]
             try:

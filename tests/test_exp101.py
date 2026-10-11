@@ -427,10 +427,13 @@ def _fake_windows(monkeypatch, cands):
 def test_a_unit_takes_a_later_window_rather_than_a_clamped_crop(monkeypatch):
     """Choice c: a unit at (2, 2) of one window and at (32, 32) of another reads the second, where no crop is clamped;
     a unit clamped in every complete window keeps the first and is counted."""
-    _fake_windows(monkeypatch, [[(0, 2, 2), (1, 32, 32)], [(0, 2, 2), (1, 61, 61)]])
-    S = {"name": "E", "positions": [{}, {}]}
+    _fake_windows(monkeypatch, [[(0, 2, 2), (1, 32, 32)], [(0, 2, 2), (1, 61, 61)], [(0, 32, 32), (1, 2, 2)],
+                                [(0, 30, 30)]])
+    S = {"name": "E", "positions": [{}, {}, {}, {}]}
     rec = e101.attach_blocks(S, roots=["root"], log=lambda *a: None)
-    assert S["units"][0]["clamped"] is False and S["units"][1]["clamped"] is True
+    assert [u["clamped"] for u in S["units"]] == [False, True, False, False]
+    # only the first unit moved to a later window; the third's first window was already unclamped (an inventory on
+    # the cluster once counted every unclamped pick as a move, through an identity test on a fresh tuple)
     assert rec["took_a_later_window_to_avoid_clamping"] == 1 and rec["clamped_at_a_window_edge"] == 1
 
 
