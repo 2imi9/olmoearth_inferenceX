@@ -4925,3 +4925,53 @@
     9 of 138). STRICT's interval lies wholly above 15.5% but the frozen call needs LENIENT's to; 48 of the 54 plots
     wrong under STRICT only are the grass/shrub boundary. Filled all wrong, LENIENT's low end would be 16.5% (a gap);
     no filling gives 'no gap shown'.
+
+- id: exp100-validation-points-agree-best-two-pixels-east
+  statement: "Read at Ai2's 259 validation points moved by whole pixels, exp98's re-run map gives the labelled classes the most probability about 1.9 px east of the labelled pixel (90% task-bootstrap interval 0.7 to 2.4 px; north-south not resolved, -2.1 to 3.0), so the frozen rule calls V an offset; agreement there is 89.2% (231 points) against 87.3% (226) at the labelled pixel, a position chosen on these points, so not a corrected accuracy. Descriptive, written after the run: the position of highest probability is east of the pixel in 13 of the 20 annotation tasks and west in 3, and leaving any one task out keeps the estimate between 1.3 and 2.1 px east. The record's code can account for at most about a pixel of it (the training points' interval); the cause is not determined, and exp98's verdicts stand, graded at the labelled pixel as frozen."
+  crosscheck: tests/test_exp100.py::test_exp100_estimates_and_calls_by_a_second_route
+  status: measured
+  experiments: [exp100]
+  artifacts: [exp/out/exp100_summary.json, exp/out/exp100_by_task.json]
+  check: |-
+    (lambda S, B: (lambda V: S['prereg_status'] == 'frozen' and S['dirty'] is False and S['commit'].startswith('70b2c01')
+      and V['call'] == 'offset' and (V['n'], V['errors_at_labelled_pixel'], V['n_full_block']) == (259, 33, 259)
+      and round(V['estimate']['east_px'], 1) == 1.9 and (V['estimate']['best_south_px'], V['estimate']['best_east_px']) == (0, 2)
+      and [round(x, 1) for x in V['interval']['east_px']] == [0.7, 2.4] and [round(x, 1) for x in V['interval']['south_px']] == [-2.1, 3.0]
+      and round(V['agreement_at_labelled_pixel'] * 259) == 226 and round(V['agreement_at_best_position'] * 259) == 231
+      and V['bootstrap']['share_maximum_at_labelled_pixel'] == 0.0
+      and B['not_preregistered'] is True and (B['V']['n_tasks'], B['V']['tasks_best_east_of_pixel'], B['V']['tasks_best_west_of_pixel']) == (20, 13, 3)
+      and [round(x, 1) for x in B['V']['leave_one_task_out_east_px_range']] == [1.3, 2.1]
+    )(S['sets']['V']))(A['exp/out/exp100_summary.json'], A['exp/out/exp100_by_task.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp100-validation-points-agree-best-two-pixels-east}
+  note: >-
+    The score is the probability the map gives the labelled class, averaged over the points at each of 49 positions
+    (shifts of -3 to +3 px each way); the estimate is the surface's maximum refined by a parabola on each axis, and
+    the interval resamples the annotation tasks. The training points go through the same code and their own east
+    interval reaches 1.0 px (next claim), so the code can explain at most about a pixel; a constant label-imagery offset
+    present in training could be learned by the model and is not what this shows. The five points gained at two pixels
+    east come from 3 tasks. Run at 70b2c01, whose only change from the frozen 5c4a0ca is exp89's extraction dating its
+    files; the follow-up ran at 02a1c34.
+
+- id: exp100-training-points-and-plots-not-determined
+  statement: "The same check calls exp98's 783 training points (in-sample) and exp99's 271 plots not determined. The training points' surface is flat within about a pixel of the labelled pixel (estimate 0.6 px north and 0.5 px east; intervals -1.1 to 0.0 and -0.8 to 1.0), their agreement is flat there too (764 of 780 at the labelled pixel, 763 at three neighbours), and their tasks split 8 east and 8 west and lean north (15 north, 3 south), so the record's pixel-finding code is not off by more than about a pixel; the plots' surfaces are flat (30 m plots on a smooth map), as expected before the run. At every set the classes at the labelled pixels give the errors exp98 and exp99 recorded (16, 33, 91, 37)."
+  crosscheck: tests/test_exp100.py::test_exp100_follow_up_counts_by_a_second_route
+  status: measured
+  experiments: [exp100]
+  artifacts: [exp/out/exp100_summary.json, exp/out/exp100_by_task.json]
+  check: |-
+    (lambda S, B: (lambda T, X, L: T['call'] == X['call'] == L['call'] == 'not determined'
+      and [(s['n'], s['errors_at_labelled_pixel'], s['reproduces_record']) for s in (T, S['sets']['V'], X, L)] == [(783, 16, True), (259, 33, True), (271, 91, True), (271, 37, True)]
+      and [round(T['estimate'][k], 1) for k in ('south_px', 'east_px')] == [-0.6, 0.5]
+      and [round(x, 1) for x in T['interval']['south_px']] == [-1.1, 0.0] and [round(x, 1) for x in T['interval']['east_px']] == [-0.8, 1.0]
+      and round(T['agreement_at_labelled_pixel'], 3) == 0.979 and round(T['mean_agreement_surface'][3][3] * 780) == 764
+      and sorted(round(v * 780) for r in T['mean_agreement_surface'] for v in r)[-4:] == [763, 763, 763, 764]
+      and (B['T']['tasks_best_east_of_pixel'], B['T']['tasks_best_west_of_pixel']) == (8, 8)
+      and (sum(t['best_south_px'] < 0 for t in B['T']['tasks']), sum(t['best_south_px'] > 0 for t in B['T']['tasks'])) == (15, 3)
+    )(S['sets']['T'], S['sets']['S_strict'], S['sets']['S_lenient']))(A['exp/out/exp100_summary.json'], A['exp/out/exp100_by_task.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp100-training-points-and-plots-not-determined}
+  note: >-
+    Not determined is the frozen rule's call when neither axis's 90% interval lies within half a pixel of the labelled
+    pixel nor wholly beyond it. The map is the AWF decoder's output upsampled from 4-px patches, so it is smooth over a
+    few pixels and a one-pixel offset is near the check's resolution.

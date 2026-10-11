@@ -168,3 +168,74 @@ def test_the_by_task_smoke_runs_on_exp98s_inputs(tmp_path):
     rec = bt.smoke(out_dir=str(tmp_path), log=lambda *a: None)
     assert rec["V"]["n"] <= 40 and rec["T"]["n"] <= 10 and rec["not_preregistered"] is True
     e98.check_no_coordinates(rec)
+
+
+# ----------------------------------------------------------------------------- the recorded run, by a second route
+# The claim ledger's crosschecks for exp100: the committed summary's estimates and calls recomputed from its own
+# surfaces and intervals with plain numpy, and the follow-up's counts from its per-task rows.
+SUMMARY = os.path.join(ROOT, "exp", "out", "exp100_summary.json")
+BY_TASK = os.path.join(ROOT, "exp", "out", "exp100_by_task.json")
+
+
+def _vertex(a, b, c):
+    """The parabola through (-1, a), (0, b), (1, c): its vertex, 0 when the three make no peak."""
+    curvature = (a + c) / 2 - b
+    return 0.0 if curvature >= 0 else (a - c) / (4 * curvature)
+
+
+def _rule(iv, at_edge):
+    lo_s, hi_s = iv["south_px"]
+    lo_e, hi_e = iv["east_px"]
+    if at_edge:
+        return "offset"
+    if -0.5 <= lo_s and hi_s <= 0.5 and -0.5 <= lo_e and hi_e <= 0.5:
+        return "aligned"
+    if lo_s > 0.5 or hi_s < -0.5 or lo_e > 0.5 or hi_e < -0.5:
+        return "offset"
+    return "not determined"
+
+
+@pytest.mark.skipif(not os.path.exists(SUMMARY), reason="exp100 not recorded")
+def test_exp100_estimates_and_calls_by_a_second_route():
+    import json
+    rec = json.load(open(SUMMARY))
+    assert rec["prereg_status"] == "frozen" and rec["dirty"] is False
+    want = {"T": (783, 16), "V": (259, 33), "S_strict": (271, 91), "S_lenient": (271, 37)}
+    for name, r in rec["sets"].items():
+        assert (r["n"], r["errors_at_labelled_pixel"]) == want[name] and r["reproduces_record"] is True
+        M = np.array(r["mean_score_surface"])
+        A = np.array(r["mean_agreement_surface"])
+        top = np.argwhere(M >= M.max() - 1e-12)
+        i, j = top[np.argmin(((top - S) ** 2).sum(1))]
+        assert (i - S, j - S) == (r["estimate"]["best_south_px"], r["estimate"]["best_east_px"])
+        south = i - S + (_vertex(M[i - 1, j], M[i, j], M[i + 1, j]) if 0 < i < 2 * S else 0.0)
+        east = j - S + (_vertex(M[i, j - 1], M[i, j], M[i, j + 1]) if 0 < j < 2 * S else 0.0)
+        # the summary keeps the surfaces to 6 decimals; near a flat top that moves the vertex by up to about 1e-4 px
+        assert south == pytest.approx(r["estimate"]["south_px"], abs=2e-3)
+        assert east == pytest.approx(r["estimate"]["east_px"], abs=2e-3)
+        assert _rule(r["interval"], i in (0, 2 * S) or j in (0, 2 * S)) == r["call"]
+        assert A[S, S] == pytest.approx(r["agreement_at_labelled_pixel"]) and A[i, j] == pytest.approx(
+            r["agreement_at_best_position"])
+    V = rec["sets"]["V"]
+    assert V["call"] == "offset" and round(V["agreement_at_labelled_pixel"] * 259) == 226
+    assert round(V["agreement_at_best_position"] * 259) == 231
+    assert [rec["sets"][k]["call"] for k in ("T", "S_strict", "S_lenient")] == ["not determined"] * 3
+    T = np.array(rec["sets"]["T"]["mean_agreement_surface"])
+    assert T[S, S] == T.max()                               # T's agreement peaks at the labelled pixel
+
+
+@pytest.mark.skipif(not os.path.exists(BY_TASK), reason="exp100's follow-up not recorded")
+def test_exp100_follow_up_counts_by_a_second_route():
+    import json
+    rec = json.load(open(BY_TASK))
+    assert rec["not_preregistered"] is True and rec["dirty"] is False
+    for name, n, tasks, east, west in (("V", 259, 20, 13, 3), ("T", 780, 21, 8, 8)):
+        r = rec[name]
+        rows = r["tasks"]
+        assert (r["n"], r["n_tasks"], len(rows)) == (n, tasks, tasks) and sum(t["n"] for t in rows) == n
+        assert sum(t["best_east_px"] > 0 for t in rows) == east == r["tasks_best_east_of_pixel"]
+        assert sum(t["best_east_px"] < 0 for t in rows) == west == r["tasks_best_west_of_pixel"]
+        loo = [x["east_px"] for x in r["leave_one_task_out"]]
+        assert [min(loo), max(loo)] == r["leave_one_task_out_east_px_range"]
+    assert [round(x, 2) for x in rec["V"]["leave_one_task_out_east_px_range"]] == [1.28, 2.09]
+    assert [round(x, 2) for x in rec["T"]["leave_one_task_out_east_px_range"]] == [-0.25, 0.72]

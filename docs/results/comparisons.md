@@ -3764,6 +3764,60 @@ not missing at random. Anything about Ai2's 2023 map or exp98's re-run beyond th
 or per-class user's or producer's accuracy. Whether the labels are right: they are TimeSync interpretations of 30 m
 plots, read against a 10 m map and taken as right.
 
+
+## Does the map line up with its labels? A shift check on exp98 and exp99 (exp100)
+
+**Question.** If the deployed map and the label points were offset from each other, exp98's and exp99's accuracies and
+rankings would have been measured on the wrong pixels. Two things could be offset: the record's code that finds a
+label's pixel on the map, and the data (Sentinel-2's geolocation against the imagery the labels were drawn on). exp100
+reads each map at its label points moved by whole pixels, up to 3 each way (49 positions), and asks where the map gives
+the labelled classes the most probability. It was preregistered and frozen on 10 October 2026 (5c4a0ca), after exp98
+and exp99 were recorded and before any shifted reading (`docs/plan/alignment.md`), and run on the aicr cluster at
+70b2c01 (job 1272189), whose only change is exp89's extraction dating its files: `exp/exp100_alignment.py`,
+`exp/out/exp100_summary.json`. The rule: both axes' 90% bootstrap intervals within half a pixel is aligned, one wholly
+beyond half a pixel (or the maximum on the search's edge) is an offset, anything else not determined. Before any
+estimate, the classes at the labelled pixels gave exactly the errors exp98 and exp99 recorded (16, 33, 91, 37), so the
+check reads the pixels that were graded. A first job (1271993) stopped before reading anything: the scratch purge had
+removed exp89's label extraction, whose files kept the tar's old dates (fixed in 70b2c01).
+
+| Set | Points (with a full 7 × 7 block) | Estimate (px) | 90% interval, south | 90% interval, east | Call | Agreement at the pixel, at the best position |
+|---|---|---|---|---|---|---|
+| exp98's training points (in-sample) | 783 (780) | 0.6 north, 0.5 east | -1.1 to 0.0 | -0.8 to 1.0 | not determined | 97.9%, 97.8% |
+| exp98's validation points (Ai2's) | 259 (259) | 0.2 south, 1.9 east | -2.1 to 3.0 | 0.7 to 2.4 | **offset** | 87.3%, 89.2% |
+| exp99's plots, STRICT | 271 (266) | 0.7 south, 0.7 west | -3.0 to 1.5 | -2.2 to 3.0 | not determined | 65.8%, 66.9% |
+| exp99's plots, LENIENT | 271 (266) | 1.2 south, 0.4 east | -3.0 to 3.0 | -3.0 to 2.4 | not determined | 86.1%, 88.7% |
+
+A point enters the surfaces only when its whole 7 × 7 block is covered, so every position averages the same points: 3
+training points and 5 plots were left out; the errors at the labelled pixels are counted over all of them.
+
+**The record's code is not off by more than about a pixel.** The training points are the code's test: the model was
+fitted to them, so the map agrees with them best where the code puts them, give or take the map's own smoothness.
+Their probability surface is flat within about a pixel of the labelled pixel, and its 90% intervals reach at most about
+1.1 px (-1.1 to 0.0 south, -0.8 to 1.0 east); their agreement is flat there too (764 of 780 at the labelled pixel, 763
+at three neighbours). Their 21 annotation tasks split 8 east and 8 west of the pixel and lean north (15 best north, 3
+south). The frozen rule calls them not determined because the map, the AWF decoder's output upsampled from 4-px
+patches, is smooth over a few pixels, so a one-pixel offset is near the check's resolution.
+<!-- claim:exp100-training-points-and-plots-not-determined -->
+
+**Ai2's validation points agree best about two pixels east.** The map gives their labelled classes the most probability
+1.9 px (about 19 m) east of the labelled pixel, with a 90% interval of 0.7 to 2.4 px; north-south is not resolved. At
+two pixels east, 231 of the 259 points agree with the map's class, against 226 at the labelled pixel (89.2% against
+87.3%); that position was chosen on these same points, so 89.2% is optimistic and is not a corrected accuracy. A
+follow-up written after the run (descriptive, not preregistered; `exp/exp100_by_task.py` at 02a1c34,
+`exp/out/exp100_by_task.json`) finds the position of highest probability east of the pixel in 13 of the 20 tasks and
+west in 3, and leaving any one task out keeps the estimate between 1.3 and 2.1 px east. The five points gained at two
+pixels east come from 3 tasks.
+<!-- claim:exp100-validation-points-agree-best-two-pixels-east -->
+
+**What it does not show.** Why the validation points agree best further east than the training points. Both go
+through the same code, and the training points' own interval reaches about a pixel east, so the code can account for at
+most about a pixel of the validation points' offset; the rest is not explained. The check sees systematic offsets only,
+and a constant offset between Sentinel-2 and AWF's labels present in training could be learned by the model rather than
+shown here. exp98's verdicts are unchanged: they were graded at the labelled pixel, as frozen, and the frozen
+consequence of an offset in V (written for the case of aligned training points, applied here with them not determined)
+is to report the agreement at the best position beside them. exp99's plots did not resolve an offset here: a TimeSync
+plot spans three pixels.
+
 ## A vision-language model as the reviewer (exp91)
 
 **Question.** The labelled routes need a reviewer. Can a general-purpose vision-language model supply the labels from

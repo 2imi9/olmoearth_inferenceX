@@ -5,6 +5,14 @@
 record's choice. The labels of exp98 and exp99 have been read: both experiments are recorded. This check reads the
 same maps at the same points, moved by whole pixels, and asks only where the map and the labels agree best.
 
+**Result, 10 October 2026 (added at recording; the frozen text is unchanged).** Run once at 70b2c01 (job 1272189) and
+recorded after an independent audit ([comparisons](../results/comparisons.md#does-the-map-line-up-with-its-labels-a-shift-check-on-exp98-and-exp99-exp100)).
+The classes at the labelled pixels gave the recorded errors in every set. T: not determined (flat within about a pixel;
+intervals reach about 1.1 px). V: offset, 1.9 px east (90% interval 0.7 to 2.4), agreement 89.2% there against 87.3% at
+the pixel, a position chosen on these points; exp98's verdicts stand, as this page says. S (STRICT and LENIENT): not
+determined. Changes after
+freezing are listed under Deviations.
+
 - **Allowed before freezing:** the smoke on synthetic inputs (`python exp/exp100_alignment.py --smoke`,
   `tests/test_exp100.py`).
 - **Not allowed before freezing:** any reading of exp98's or exp99's maps at a shifted position. The script refuses
@@ -89,3 +97,19 @@ in pixels; nothing written holds a coordinate, a transform, a bound or a point's
 The job, `exp/jobs/e100.sh`, runs on the aicr cluster's `cpu` partition (2 CPUs, 16 GB, 1 hour limit) from a
 checkout pinned to a full commit, reads exp98's and exp99's maps and labels where their jobs left them, and writes
 only the summary.
+
+## Deviations
+
+- **The commit run.** The page was frozen at 5c4a0ca; the run used 70b2c01, whose only change is exp89's extraction
+  dating every extracted file now. The first job (1271993, at 5c4a0ca) stopped before reading any point: the scratch
+  purge had removed exp89's AWF label extraction, whose files kept the tar members' old dates. The labels were
+  extracted again from the pinned tar (job 1272188) and the check ran on them unchanged.
+- **The consequences when T is not determined.** The page states what follows when T is aligned or an offset, and
+  writes V's consequence for the case of an aligned T; T came out not determined. The record reads T's intervals (at
+  most about 1.1 px) as no sign of a code offset of more than about a pixel, and applies V's frozen consequence (report
+  the agreement at the best position beside exp98's verdicts) with T not determined. T's agreement surface is flat
+  around the labelled pixel, and its tasks split 8 east and 8 west and lean north (15 north, 3 south).
+- **A follow-up after the run.** `exp/exp100_by_task.py` (descriptive, not preregistered, run at 02a1c34, job 1273262) reports each annotation
+  task's own best position and V's estimate with each task left out: 13 of V's 20 tasks are best east, 3 west, and the
+  estimate stays between 1.3 and 2.1 px east without any one task.
+

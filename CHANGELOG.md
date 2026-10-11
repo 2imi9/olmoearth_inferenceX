@@ -22,7 +22,12 @@ than the scratch purge's 30 days, so the AWF labels were removed a day after bei
 `exp/exp100_alignment.py`, `exp/jobs/e100.sh`, `tests/test_exp100.py`. exp98's and exp99's maps are read at their
 label points moved by whole pixels, up to 3 each way, to find where the map and the labels agree best: exp98's
 training points test the record's pixel-finding code, its validation points and exp99's plots the data's
-registration.
+registration. Run at 70b2c01 and recorded after an independent audit: the training points and exp99's plots are not
+determined (the training points' intervals reach about 1.1 px, so the code is not off by more than about a pixel);
+Ai2's validation points are an offset, best about 1.9 px east (90% interval 0.7 to 2.4), where 89.2% agree against
+87.3% at the pixel (a position chosen on the same points), with the highest probability east of the pixel in 13 of 20
+annotation tasks (a descriptive follow-up, `exp/exp100_by_task.py`); the cause is not determined, and exp98's
+verdicts stand.
 
 ## 1.9.0 (2026-10-10)
 

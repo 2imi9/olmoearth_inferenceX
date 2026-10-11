@@ -31,7 +31,8 @@ def test_ids_are_unique_and_statuses_allowed():
     assert all(re.fullmatch(r"[a-z0-9][a-z0-9-]*", i) for i in ids), [i for i in ids if not re.fullmatch(r"[a-z0-9][a-z0-9-]*", i)]
     assert all(c["status"] in claims_cli.STATUSES for c in CLAIMS)
     assert all((c["status"] == "superseded") == bool(c.get("superseded_by")) for c in CLAIMS)
-    assert all(re.fullmatch(r"exp\d\d", e) for c in CLAIMS for e in c["experiments"]), "experiments are expNN ids"
+    # two digits up to exp99, three from exp100 on
+    assert all(re.fullmatch(r"exp(\d\d|[1-9]\d\d)", e) for c in CLAIMS for e in c["experiments"]), "experiments are expNN ids"
     assert all(c["artifacts"] or c["check"].strip() == "True" for c in CLAIMS), "a claim without artifacts has a trivial check"
     assert all(c.get("note") for c in CLAIMS if not c["artifacts"]), "a claim without artifacts says so in its note"
 
