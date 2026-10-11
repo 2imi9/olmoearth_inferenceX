@@ -45,7 +45,9 @@ analyst who records its probable driver (CC BY). The record reads the published 
   the alert's `detected_at`, the before and after periods as Ai2's configuration sets them relative to that date (four
   scenes from 300 to 120 days before, four from 7 to 187 days after, the least cloudy first). For alerts detected
   after early April 2026 the after period was still open when the imagery was fetched, so the date it was fetched is
-  recorded.
+  recorded. At the build (11 October 2026), 221 of the 696 sampled alerts' centroids lie outside their own polygon
+  (irregular or multi-part alerts), so the window's centre shows something other than the loss there; Ai2's deployment
+  centres its windows the same way.
 - **Readings fixed with the script (before freezing):** "biome Amazônia" means Amazônia is in the alert's biomes list
   (10 frame alerts list Amazônia and Cerrado), and "published" is the status; the frame's 4,113 include the 151 others
   and the alert without a driver, which are never sampled (the graded population is agriculture and mining, 3,954).
@@ -54,7 +56,12 @@ analyst who records its probable driver (CC BY). The record reads the published 
   counted. The bootstraps resample every graded stratum, the mining census too (as exp99 resamples each country). Ai2's
   random Flip, which rslearn also applies at prediction, is left in place with the seed fixed (104). The per-alert
   rows of the units file are written in a random order whose permutation stays on scratch, so that they cannot be
-  matched to MapBiomas's public alerts by their order.
+  matched to MapBiomas's public alerts by their order. Each window's centre is checked against Ai2's own route
+  (shapely's centroid of the polygon as published, in WGS84 and unrepaired, as `simplify_features_to_centroids` takes
+  it) for every alert, and against rslearn's projection for every valid polygon. rslearn repairs an invalid polygon
+  with make_valid before taking its centroid, which can move it by many pixels: the first check (job 1284193) found 3
+  of the 696 windows off centre by rslearn's route and 2 polygons rslearn could not repair, so on invalid polygons that
+  route is counted, not gated.
 
 ## Predictions (on the graded strata, agriculture and mining, design-weighted; confirmed by the owner)
 
@@ -62,7 +69,8 @@ analyst who records its probable driver (CC BY). The record reads the published 
 - **P2 (review):** the least confident 10% of the design weight close at least 0.25 of the gap from random to the
   ceiling (exp99's bar).
 - **P3 (descriptive):** the design-weighted error rate with the package's stratified exact interval, each stratum's
-  rate with its exact interval, and Ai2's 76.1% beside them; the confusion counts.
+  rate with its exact interval, and Ai2's 76.1% beside them; the confusion counts; the errors and the design-weighted
+  error rate at the alerts whose centroid lies inside their polygon and at those whose centroid lies outside.
 
 **Floors:** at least 500 alerts with imagery and a prediction, and at least 20 errors and 20 correct among them;
 otherwise the predictions are reported without verdicts.

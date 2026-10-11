@@ -13,6 +13,8 @@
 #                      Builds $PRIV/dataset (one 128-px EPSG:3857 window per alert) and the GPU smoke's two synthetic
 #                      windows ($OUT/smoke_ds); checks the configs against Ai2's pins and lets rslearn 0.1.17 parse both
 #                      datasets (projection, size, time range, each layer's request range, the centres).
+#   E104_MODE=recheck  CPU, minutes. The windows step's checks again on the dataset it built, nothing rebuilt or
+#                      fetched (after a change to the checks; prepare gates on the dataset check's record).
 #   E104_MODE=prepare  CPU, hours; downloads Sentinel-2 L2A from Microsoft Planetary Computer (no key), about 2 GB.
 #                      rslearn dataset prepare, ingest (a no-op: ingest false) and materialize on both datasets, each
 #                      run twice (the second pass retries windows whose requests failed); then the windows with all
@@ -75,8 +77,8 @@ umask 077
 # The soft limit on open files is 1,024 on the cpu nodes (hard 131,072); worker pools exhaust it (job 1243542).
 ulimit -n 65536
 MODE=${E104_MODE:-}
-case "$MODE" in frame|windows|prepare|smoke|predict|read|grade) ;;
-  *) echo "E104_MODE must be frame, windows, prepare, smoke, predict, read or grade (got '$MODE')"; exit 2 ;; esac
+case "$MODE" in frame|windows|recheck|prepare|smoke|predict|read|grade) ;;
+  *) echo "E104_MODE must be frame, windows, recheck, prepare, smoke, predict, read or grade (got '$MODE')"; exit 2 ;; esac
 [[ "${E104_SHA:-}" =~ ^[0-9a-f]{40}$ ]] || { echo "E104_SHA must be the full 40-character commit (got '${E104_SHA:-}')"; exit 2; }
 for v in E104_REDO E104_REREAD E104_REGRADE E104_FETCH E104_HF_OFFLINE; do
   case "${!v:-}" in ""|0|1) ;; *) echo "$v must be 0 or 1 (got '${!v}')"; exit 2 ;; esac
@@ -208,6 +210,14 @@ run_predict() {   # run_predict <dataset> <tag>: rslearn model predict, layer ou
       || echo "(no count line found)"; } | masked | sed 's/^/  /'
 }
 
+check_datasets() {   # the dataset checks of the windows step; exits 1 unless the sampled alerts' dataset passes
+  echo "== rslearn 0.1.17 reads the dataset (config, windows, request ranges, centres by Ai2's route and rslearn's) =="
+  "${VPY[@]}" --check-dataset "$DS" --private-dir "$PRIV" --workers "$NCPU" --record "$REC/e104_dataset_check.json" \
+    | python3 -c 'import json, sys; r = json.loads(sys.stdin.read().strip().splitlines()[-1]); print(json.dumps({k: r.get(k) for k in ("rslearn", "windows", "bad", "invalid_polygons", "rslearn_route_off_centre_invalid_polygons", "centre_misses", "ok")})); sys.exit(0 if r["ok"] else 1)'
+  if [ ! -d "$SMOKE_DS/windows" ]; then "${PY[@]}" --smoke-dataset "$SMOKE_DS"; fi
+  "${VPY[@]}" --check-dataset "$SMOKE_DS" --record "$REC/e104_smoke_dataset_check.json" > /dev/null
+}
+
 case "$MODE" in
   frame)
     "${PY[@]}" --smoke --out-dir "$OUT/smoke"
@@ -228,12 +238,15 @@ case "$MODE" in
     W_ARGS=(--windows --private-dir "$PRIV" --record "$REC/e104_windows.json")
     [ "${E104_REDO:-0}" = 1 ] && W_ARGS+=(--redo)
     "${PY[@]}" "${W_ARGS[@]}" 2>&1 | masked
-    echo "== rslearn 0.1.17 reads the dataset (config, windows, request ranges, centres against shapely and pyproj) =="
-    "${VPY[@]}" --check-dataset "$DS" --private-dir "$PRIV" --workers "$NCPU" --record "$REC/e104_dataset_check.json" \
-      | python3 -c 'import json, sys; r = json.loads(sys.stdin.read().strip().splitlines()[-1]); print(json.dumps({k: r[k] for k in ("rslearn", "windows", "bad", "ok")})); sys.exit(0 if r["ok"] else 1)'
-    if [ ! -d "$SMOKE_DS/windows" ]; then "${PY[@]}" --smoke-dataset "$SMOKE_DS"; fi
-    "${VPY[@]}" --check-dataset "$SMOKE_DS" --record "$REC/e104_smoke_dataset_check.json" > /dev/null
+    check_datasets
     echo "== $(date -Is) done: records/e104_windows.json, e104_dataset_check.json ==" ;;
+
+  recheck)
+    test -d "$DS/windows" && test -s "$PRIV/e104_polygons.json" || { echo "no dataset or polygons: run E104_MODE=windows first"; exit 1; }
+    need_venv
+    "${PY[@]}" --check-configs --record "$REC/e104_configs.json"
+    check_datasets
+    echo "== $(date -Is) done: records/e104_dataset_check.json ==" ;;
 
   prepare)
     rec_ok "$REC/e104_dataset_check.json" || { echo "no passing dataset check: run E104_MODE=windows first"; exit 1; }

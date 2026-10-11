@@ -602,6 +602,23 @@ def polygon_facts(geom, swap=False):
             "lon_mean": float(np.concatenate(lon_all).mean()), "lat_mean": float(np.concatenate(lat_all).mean())}
 
 
+def ai2_centre_px(geom, swap=False, res=PIXEL_SIZE):
+    """A window centre by Ai2's own route (olmoearth_projects deploy/__init__.py:140-145 at f3c9b0c8,
+    simplify_features_to_centroids): shapely's centroid of the polygon as published, in WGS84 and unrepaired, here
+    projected to EPSG:3857 with pyproj, in pixels (column, row). It equals polygon_facts' centroid up to the projection's
+    curvature over one polygon, valid or not; rslearn's STGeometry.to_projection repairs an invalid polygon with
+    shapely.make_valid first, which can move its centroid by tens of pixels."""
+    import pyproj
+    import shapely.geometry
+    shp = shapely.geometry.shape(geom)
+    if swap:
+        from shapely.ops import transform
+        shp = transform(lambda x, y, z=None: (y, x), shp)
+    c = shp.centroid
+    x, y = pyproj.Transformer.from_crs(4326, 3857, always_xy=True).transform(c.x, c.y)
+    return x / res, -y / res
+
+
 def ground_area_m2(f):
     """Projected area times cos^2 of the centroid's latitude: Web Mercator's scale squared, for the area check."""
     lat = math.degrees(2 * math.atan(math.exp(f["cy"] / EARTH_R)) - math.pi / 2)
@@ -838,7 +855,8 @@ def dataset_periods(config_path=None):
 def check_dataset(ds, priv=None, workers=8):
     """rslearn 0.1.17 parses the dataset and its windows; every window's projection, size and time range, and each
     Sentinel-2 layer's request range by rslearn's own get_request_time_range; with priv, every window's centre pixel
-    against shapely's centroid projected by rslearn (pyproj). Counts only."""
+    against Ai2's route (ai2_centre_px) for every polygon, and against rslearn's own projection for every valid one;
+    rslearn's route on an invalid polygon (repaired by make_valid first) is counted, not gated. Counts only."""
     import importlib.metadata as md
     from upath import UPath
     from rslearn.dataset.dataset import Dataset
@@ -874,32 +892,54 @@ def check_dataset(ds, priv=None, workers=8):
             polys = json.load(f)
         order, _ = axis_order({int(k): v for k, v in polys.items()})
         proj = Projection(RCRS.from_epsg(3857), PIXEL_SIZE, -PIXEL_SIZE)
-        bad_geometry = 0
+        half = WINDOW_PX // 2
+
+        def at_centre(c, w):
+            return (w.bounds[0] + half - 1 <= c[0] <= w.bounds[0] + half + 2 and
+                    w.bounds[1] + half - 1 <= c[1] <= w.bounds[1] + half + 2)
+
+        bad["rslearn_centre_valid_polygon"] = 0
+        invalid, bad_geometry, rs_off, misses = 0, 0, [], []
         for w in wins:
             u = sample.get(w.name)
             v = polys.get(str(u["alert_code"])) if u else None
             if v is None:
                 bad["centre_pixel"] += 1
+                misses.append({"reason": "no sample unit or no polygon"})
                 continue
             shp = shapely.geometry.shape(v["geometry"])
             if order == "latlon":
                 from shapely.ops import transform
                 shp = transform(lambda x, y, z=None: (y, x), shp)
+            valid = bool(shp.is_valid)
+            invalid += not valid
+            c = ai2_centre_px(v["geometry"], swap=order == "latlon")
+            if not at_centre(c, w):
+                bad["centre_pixel"] += 1
+                misses.append({"reason": "Ai2's route off the window centre", "valid": valid,
+                               "parts": len(parts_of(v["geometry"])),
+                               "dx_px": round(c[0] - (w.bounds[0] + half), 1),
+                               "dy_px": round(c[1] - (w.bounds[1] + half), 1)})
             try:
-                c = STGeometry(WGS84_PROJECTION, shp, None).to_projection(proj).shp.centroid
+                r = STGeometry(WGS84_PROJECTION, shp, None).to_projection(proj).shp.centroid
+                r = (r.x, r.y)
             except shapely.errors.GEOSException:
-                # rslearn's to_projection calls shapely.make_valid, which fails on some of MapBiomas's self-touching
-                # polygons ("Overlay input is mixed-dimension"); project the rings with pyproj alone instead, and count
+                # make_valid fails on some of MapBiomas's self-touching polygons ("Overlay input is mixed-dimension")
                 bad_geometry += 1
-                import pyproj
-                from shapely.ops import transform as _tf
-                t = pyproj.Transformer.from_crs(4326, 3857, always_xy=True)
-                shp3857 = _tf(lambda x, y, z=None: t.transform(x, y), shp)
-                shp3857 = shp3857 if shp3857.is_valid else shp3857.buffer(0)
-                c = shapely.geometry.Point(shp3857.centroid.x / PIXEL_SIZE, -shp3857.centroid.y / PIXEL_SIZE)
-            bad["centre_pixel"] += not (w.bounds[0] + WINDOW_PX // 2 - 1 <= c.x <= w.bounds[0] + WINDOW_PX // 2 + 2 and
-                                  w.bounds[1] + WINDOW_PX // 2 - 1 <= c.y <= w.bounds[1] + WINDOW_PX // 2 + 2)
-        rec["polygons_rslearn_could_not_make_valid"] = bad_geometry     # a count, not a failure
+                r = None
+            if r is None or not at_centre(r, w):
+                if valid:
+                    bad["rslearn_centre_valid_polygon"] += 1
+                rs_off.append(None if r is None else round(math.hypot(r[0] - c[0], r[1] - c[1]), 1))
+        rec["centre_route"] = ("Ai2's: shapely's centroid of the polygon as published (WGS84, unrepaired), pyproj to "
+                               "EPSG:3857 (deploy/__init__.py:140-145); rslearn's own projection gated on valid "
+                               "polygons only")
+        rec["invalid_polygons"] = invalid
+        rec["rslearn_route_off_centre_invalid_polygons"] = {
+            "n": len(rs_off), "could_not_make_valid": bad_geometry,
+            "distance_to_ai2s_route_px": sorted(x for x in rs_off if x is not None),
+            "note": "make_valid repairs an invalid polygon before its centroid is taken: a different polygon, counted"}
+        rec["centre_misses"] = misses
     else:
         del bad["centre_pixel"]
     rec["bad"] = bad
@@ -1106,7 +1146,7 @@ def confusion(labels, preds):
     return dict(sorted(pairs.items(), key=lambda kv: (-kv[1], kv[0])))
 
 
-def analyse(sample, P, names, n_boot=BOOT, floors=FLOORS, thresholds=THRESHOLDS, log=print):
+def analyse(sample, P, names, n_boot=BOOT, floors=FLOORS, thresholds=THRESHOLDS, inside=None, log=print):
     units = sample["units"]
     want = {f"{GROUP}/{u['window']}": k for k, u in enumerate(units)}
     extra = [n for n in names if n not in want]
@@ -1158,6 +1198,15 @@ def analyse(sample, P, names, n_boot=BOOT, floors=FLOORS, thresholds=THRESHOLDS,
             "weighted_mean_top1": metrics.weighted_mean(p1[G], weight[G]),
             "weighted_accuracy": 1 - metrics.weighted_mean(err[G], weight[G]),
             "reading": "report-only: the mean confidence beside the accuracy on the graded strata"}
+    if G.size and inside is not None:
+        ins = np.array([inside.get(int(u["alert_code"])) for u in units], dtype=object)
+        rec["centroid_inside_polygon"] = {
+            "reading": "report-only: the window is centred on the polygon's centroid, as Ai2's deployment centres it; "
+                       "where the centroid lies outside the polygon the window's centre shows something else",
+            **{name: {"n": int(m.sum()), "errors": int(np.nansum(err[m])),
+                      "weighted_error_rate": metrics.weighted_mean(err[m], weight[m]) if m.any() else None}
+               for name, m in (("inside", has & np.isin(strat, GRADED) & (ins == True)),     # noqa: E712
+                               ("outside", has & np.isin(strat, GRADED) & (ins == False)))}}  # noqa: E712
     R = np.flatnonzero(has & (strat == "roads"))
     rec["roads_reported"] = {"n": int(R.size), "errors": int(np.nansum(err[R])) if R.size else 0,
                              "confusion": confusion(label[R], pred[R]) if R.size else {},
@@ -1184,7 +1233,14 @@ def run_grade(priv, probs_dir, out_dir, status=None, n_boot=BOOT, floors=FLOORS,
                               "alert is read before the page is frozen")
     sample = read_sample(priv)
     P, names = read_probs(probs_dir)
-    rec, units = analyse(sample, P, names, n_boot=n_boot, floors=floors, log=log)
+    inside = None
+    path = os.path.join(priv, "e104_polygons.json")
+    if os.path.isfile(path):
+        with open(path, encoding="utf-8") as f:
+            polys = {int(k): v for k, v in json.load(f).items()}
+        swap = axis_order(polys)[0] == "latlon"
+        inside = {k: polygon_facts(v["geometry"], swap=swap)["inside"] for k, v in polys.items()}
+    rec, units = analyse(sample, P, names, n_boot=n_boot, floors=floors, inside=inside, log=log)
     import exp89_finetuned_checkpoints as e89
     commit, dirty = e89.git_state()
     rec = {"experiment": "exp104: Ai2's Forest Loss Driver model graded at 2026 MapBiomas Alerta alerts (Amazon)",
