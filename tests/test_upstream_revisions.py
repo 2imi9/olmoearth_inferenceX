@@ -24,7 +24,7 @@ SHA = re.compile(r"[0-9a-f]{40}")
 def test_every_entry_is_shaped_right(rid):
     e = REPOS[rid]
     assert e["host"] in ("huggingface", "github"), e["host"]
-    assert e["repo_type"] in ("model", "dataset", "torch.hub"), e["repo_type"]
+    assert e["repo_type"] in ("model", "dataset", "torch.hub", "git"), e["repo_type"]   # git: a code or config repository
     assert e["carries"] and e["carries"][0].isalpha(), "an entry says what the repository carries"
     assert isinstance(e["named_at"], list) and isinstance(e["read_from"], list)
 

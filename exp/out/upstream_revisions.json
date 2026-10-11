@@ -157,6 +157,19 @@
     "oe_inferencex/taskcard.py:323"
    ]
   },
+  "allenai/olmoearth_projects": {
+   "host": "github",
+   "repo_type": "git",
+   "revision": "f3c9b0c89c7670b3525647dda4c14b76245d682d",
+   "read_from": [
+    "aicr:$SCRATCH/deploy/olmoearth_projects (the clone exp/jobs/e98_env.sh checks out at this commit)",
+    "github.com raw files at this commit (exp104's three configuration files, their sha256 in exp/exp104_forest_loss.py AI2)"
+   ],
+   "carries": "Ai2's project configurations: the AWF deployment (exp98, exp99, and the recipe of exp102 and exp103) and the Forest Loss Driver configuration (exp104)",
+   "named_at": [
+    "exp/exp104_forest_loss.py:136"
+   ]
+  },
   "allenai/olmoearth_projects_awf": {
    "host": "huggingface",
    "repo_type": "dataset",
