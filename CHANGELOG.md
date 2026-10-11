@@ -15,6 +15,14 @@ whose numbers are exp37's, and exp06 in a `signals.py` docstring, as provenance.
 tree on GitHub, and the docs link there; the git history and every release tag are unchanged. The white paper's record
 counts, already stale, are recomputed.
 
+**exp102: a fine-tune of OlmoEarth v1.2 Base with Ai2's FT-AWF recipe.** At the owner's request (11 October 2026),
+Ai2's AWF model.yaml (`exp/jobs/e102_config/model.yaml`: the encoder set to `OLMOEARTH_V1_2_BASE`, a CSV logger in
+place of Weights & Biases, nothing else) trained on Ai2's AWF labels with rslearn 0.1.17 on one B200 (job 1277383, 100
+epochs in about 26 minutes, seed 0). The checkpoint kept (epoch 60, chosen on the 344 validation points as Ai2's
+recipe does) reaches 90.1% on those points, 89.0% at the last epoch; the figure is optimistic for the same reason as
+Ai2's 89.5% for v1. No comparison with v1 is made. `exp/out/exp102/`: the model card prepared for Hugging Face, the
+training metrics, the job logs and the checkpoint's size and sha256 (the checkpoint itself is not in the repository).
+
 **exp101 (preregistered, thresholds confirmed by the owner, frozen 10 October 2026 at a1b878e; fitted on an RTX PRO
 6000 and tested once on a B200, recorded after an independent audit): filter, then shake.** The owner's two-step idea:
 set aside the most confident share of the units, then rank the rest by how often FT-AWF's class changes over 320
