@@ -287,8 +287,9 @@ outside the 10 m Sentinel setup this project is built on, so not pursued.
 
 ## Closed
 
-exp22, exp39, exp40, exp44, exp53 and exp61 were archived on 10 October 2026; their rows below stand, and their records
-are in the [v1.9.0 copy of Comparisons](https://github.com/2imi9/olmoearth_inferenceX/blob/v1.9.0/docs/results/comparisons.md).
+exp22, exp39, exp40, exp44, exp53 and exp61 were archived on 10 October 2026; their rows below are kept as recorded,
+and their records are in the v1.9.0 copies of [Comparisons](https://github.com/2imi9/olmoearth_inferenceX/blob/v1.9.0/docs/results/comparisons.md)
+and, for exp39 and exp40, [Signals](https://github.com/2imi9/olmoearth_inferenceX/blob/v1.9.0/docs/results/signals.md#neighbourhood-contradiction).
 
 | Item | Closed by |
 |---|---|

@@ -196,9 +196,9 @@
    "host": "github",
    "repo_type": "torch.hub",
    "revision": null,
-   "why": "Fetched by torch.hub.load from GitHub, not from the Hub. torch.hub caches by branch rather than by commit, so the cache cannot be read back for a sha, and exp39's AnySat comparison is therefore the one upstream dependency in the record that is genuinely unpinnable as run.",
+   "why": "Fetched by torch.hub.load from GitHub, not from the Hub. torch.hub caches by branch rather than by commit, so the cache cannot be read back for a sha, and exp39's AnySat comparison (archived on 10 October 2026; in the v1.9.0 tree) is therefore the one upstream dependency in the record that is genuinely unpinnable as run.",
    "read_from": [],
-   "carries": "AnySat, the outside representation of exp39 and exp41",
+   "carries": "AnySat, the outside representation of exp39 (archived) and exp41",
    "named_at": []
   },
   "isp-uv-es/WorldFloodsv2": {

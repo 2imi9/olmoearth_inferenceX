@@ -13,12 +13,13 @@ They are in the lab log, [../../exp/NOTES.md](../../exp/NOTES.md).
 moved out of the repository's current tree: exp06, exp09, exp10, exp12,
 exp22, exp26, exp27, exp39, exp40, exp44, exp53, exp61, exp86 and exp87. No
 remaining claim's check, no claim tag of the white paper, no kept script and
-no package test reads them. The white paper reports exp86's and exp87's
-results and links their archived files, and two remaining claims list exp10
-or exp12 among their experiments as provenance. Their scripts and outputs are
-in the [v1.9.0 tree](https://github.com/2imi9/olmoearth_inferenceX/tree/v1.9.0),
-and the sections this page gave them are in its
-[v1.9.0 copy](https://github.com/2imi9/olmoearth_inferenceX/blob/v1.9.0/docs/results/comparisons.md).
+no package test reads them (exp11 names exp09's cache only as a fallback).
+The white paper reports exp86's and exp87's results and links their archived
+files, and two remaining claims list exp10 or exp12 among their experiments
+as provenance. Their scripts and outputs are in the [v1.9.0
+tree](https://github.com/2imi9/olmoearth_inferenceX/tree/v1.9.0), and the
+sections this page gave them are in its [v1.9.0
+copy](https://github.com/2imi9/olmoearth_inferenceX/blob/v1.9.0/docs/results/comparisons.md).
 
 ---
 

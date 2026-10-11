@@ -8,11 +8,12 @@ exp61), the OlmoEarth Agent trials exp86 and exp87 (about 465 MB of trial files)
 moved out of the working tree, 3,500 files in all, with the 10 claims that rested only on them. No remaining claim's
 check, no claim tag of the white paper, no package test and no kept script reads them (exp11 names exp09's cache only
 as a fallback); the white paper reports exp86's and exp87's results and links their archived files, and two remaining
-claims list exp10 or exp12 among their experiments as provenance. Experiments behind the package's defaults and its
-shipped texts stayed: exp19, exp20, exp24 and exp25 were first moved and then restored when an audit found that
-`taskcard.py` and `explain.py` quote them. Everything moved is in the v1.9.0 tree on GitHub, and the docs link there;
-the git history is unchanged, so every release tag still holds it. The white paper's record counts, already stale, are
-recomputed.
+claims list exp10 or exp12 among their experiments as provenance. Experiments whose numbers the package ships stayed:
+exp19, exp20 and exp25, which `taskcard.py` and `explain.py` quote, were first moved and then restored, with exp24,
+which exp25 imports. The package still names exp06 and exp09 beside exp37 as the sources of `explain.py`'s NDWI cue,
+whose numbers are exp37's, and exp06 in a `signals.py` docstring, as provenance. Everything moved is in the v1.9.0
+tree on GitHub, and the docs link there; the git history and every release tag are unchanged. The white paper's record
+counts, already stale, are recomputed.
 
 **exp89's extraction dates every extracted file now** (70b2c01). tarfile gave each file its member's own time, older
 than the scratch purge's 30 days, so the AWF labels were removed a day after being extracted again.
