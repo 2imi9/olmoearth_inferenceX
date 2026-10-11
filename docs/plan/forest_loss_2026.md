@@ -56,12 +56,14 @@ analyst who records its probable driver (CC BY). The record reads the published 
   counted. The bootstraps resample every graded stratum, the mining census too (as exp99 resamples each country). Ai2's
   random Flip, which rslearn also applies at prediction, is left in place with the seed fixed (104). The per-alert
   rows of the units file are written in a random order whose permutation stays on scratch, so that they cannot be
-  matched to MapBiomas's public alerts by their order. Each window's centre is checked against Ai2's own route
-  (shapely's centroid of the polygon as published, in WGS84 and unrepaired, as `simplify_features_to_centroids` takes
-  it) for every alert, and against rslearn's projection for every valid polygon. rslearn repairs an invalid polygon
-  with make_valid before taking its centroid, which can move it by many pixels: the first check (job 1284193) found 3
-  of the 696 windows off centre by rslearn's route and 2 polygons rslearn could not repair, so on invalid polygons that
-  route is counted, not gated.
+  matched to MapBiomas's public alerts by their order. Each window's centre (the rings' area-weighted centroid, holes
+  subtracted) is checked by a second route to that definition (pyproj, and shapely per ring) for every alert, by
+  rslearn's projection for every valid polygon, and, for an invalid polygon, by the repaired polygon's centroid
+  (make_valid, as rslearn repairs it, or buffer(0)) lying in the model's central 64-px crop. 343 of the 696 polygons are
+  invalid (MapBiomas's multi-part alerts). The letter of Ai2's code, shapely's centroid of the unrepaired polygon,
+  agrees on valid polygons but lies 2 to about 1,870 px from the area centroid on 24 invalid multi-part ones (job
+  1286487); the windows keep the area centroid, Ai2's stated intent ("the
+  centroid"), and those 24 are counted as a deviation from the letter of its code.
 
 ## Predictions (on the graded strata, agriculture and mining, design-weighted; confirmed by the owner)
 

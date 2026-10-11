@@ -211,9 +211,9 @@ run_predict() {   # run_predict <dataset> <tag>: rslearn model predict, layer ou
 }
 
 check_datasets() {   # the dataset checks of the windows step; exits 1 unless the sampled alerts' dataset passes
-  echo "== rslearn 0.1.17 reads the dataset (config, windows, request ranges, centres by Ai2's route and rslearn's) =="
+  echo "== rslearn 0.1.17 reads the dataset (config, windows, request ranges, centres: a second route, rslearn, the repaired polygons) =="
   "${VPY[@]}" --check-dataset "$DS" --private-dir "$PRIV" --workers "$NCPU" --record "$REC/e104_dataset_check.json" \
-    | python3 -c 'import json, sys; r = json.loads(sys.stdin.read().strip().splitlines()[-1]); print(json.dumps({k: r.get(k) for k in ("rslearn", "windows", "bad", "invalid_polygons", "rslearn_route_off_centre_invalid_polygons", "centre_misses", "ok")})); sys.exit(0 if r["ok"] else 1)'
+    | python3 -c 'import json, sys; r = json.loads(sys.stdin.read().strip().splitlines()[-1]); print(json.dumps({k: r.get(k) for k in ("rslearn", "windows", "bad", "invalid_polygons", "repaired_centre_off_window_centre", "ai2_code_letter_off_window_centre", "centre_misses", "ok")})); sys.exit(0 if r["ok"] else 1)'
   if [ ! -d "$SMOKE_DS/windows" ]; then "${PY[@]}" --smoke-dataset "$SMOKE_DS"; fi
   "${VPY[@]}" --check-dataset "$SMOKE_DS" --record "$REC/e104_smoke_dataset_check.json" > /dev/null
 }

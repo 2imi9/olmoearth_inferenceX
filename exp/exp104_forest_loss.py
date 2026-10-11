@@ -603,11 +603,12 @@ def polygon_facts(geom, swap=False):
 
 
 def ai2_centre_px(geom, swap=False, res=PIXEL_SIZE):
-    """A window centre by Ai2's own route (olmoearth_projects deploy/__init__.py:140-145 at f3c9b0c8,
+    """The centre by the letter of Ai2's code (olmoearth_projects deploy/__init__.py:140-145 at f3c9b0c8,
     simplify_features_to_centroids): shapely's centroid of the polygon as published, in WGS84 and unrepaired, here
-    projected to EPSG:3857 with pyproj, in pixels (column, row). It equals polygon_facts' centroid up to the projection's
-    curvature over one polygon, valid or not; rslearn's STGeometry.to_projection repairs an invalid polygon with
-    shapely.make_valid first, which can move its centroid by tens of pixels."""
+    projected to EPSG:3857 with pyproj, in pixels (column, row). On a valid polygon it is polygon_facts' centroid up to
+    the projection's curvature; on an invalid multi-part polygon it can lie far from it (job 1286487: 24 of the 343
+    invalid sampled polygons, up to about 1,870 px, with the cluster's shapely; not reproduced with synthetic polygons
+    on shapely 2.1.2, so the mechanism is not established). Reported by the dataset check, not gated."""
     import pyproj
     import shapely.geometry
     shp = shapely.geometry.shape(geom)
@@ -617,6 +618,27 @@ def ai2_centre_px(geom, swap=False, res=PIXEL_SIZE):
     c = shp.centroid
     x, y = pyproj.Transformer.from_crs(4326, 3857, always_xy=True).transform(c.x, c.y)
     return x / res, -y / res
+
+
+def ring_centre_px(geom, swap=False, res=PIXEL_SIZE):
+    """The windows' own centre (polygon_facts: the rings' area-weighted centroid in EPSG:3857, holes subtracted) by a
+    second route: each ring projected with pyproj and measured by shapely as a polygon of its own (one ring, so a
+    self-intersecting ring's orientation cancels), in pixels (column, row)."""
+    import pyproj
+    import shapely.geometry
+    t = pyproj.Transformer.from_crs(4326, 3857, always_xy=True)
+    tot = sx = sy = 0.0
+    for part in parts_of(geom):
+        for i, ring in enumerate(part):
+            a = np.asarray(ring, np.float64)[:, :2]
+            lon, lat = (a[:, 1], a[:, 0]) if swap else (a[:, 0], a[:, 1])
+            x, y = t.transform(lon, lat)
+            poly = shapely.geometry.Polygon(np.column_stack([x, y]))
+            sign = 1.0 if i == 0 else -1.0
+            tot += sign * poly.area
+            sx += sign * poly.area * poly.centroid.x
+            sy += sign * poly.area * poly.centroid.y
+    return sx / tot / res, -sy / tot / res
 
 
 def ground_area_m2(f):
@@ -855,8 +877,10 @@ def dataset_periods(config_path=None):
 def check_dataset(ds, priv=None, workers=8):
     """rslearn 0.1.17 parses the dataset and its windows; every window's projection, size and time range, and each
     Sentinel-2 layer's request range by rslearn's own get_request_time_range; with priv, every window's centre pixel
-    against Ai2's route (ai2_centre_px) for every polygon, and against rslearn's own projection for every valid one;
-    rslearn's route on an invalid polygon (repaired by make_valid first) is counted, not gated. Counts only."""
+    against a second route to the windows' own definition (ring_centre_px) for every polygon, against rslearn's own
+    projection for every valid one, and, for an invalid polygon, the repaired polygon's centroid (make_valid, as rslearn
+    repairs it, or buffer(0) where make_valid fails) inside the window's central crop; the letter of Ai2's code
+    (ai2_centre_px) is reported, not gated. Counts and offsets only."""
     import importlib.metadata as md
     from upath import UPath
     from rslearn.dataset.dataset import Dataset
@@ -899,7 +923,13 @@ def check_dataset(ds, priv=None, workers=8):
                     w.bounds[1] + half - 1 <= c[1] <= w.bounds[1] + half + 2)
 
         bad["rslearn_centre_valid_polygon"] = 0
-        invalid, bad_geometry, rs_off, misses = 0, 0, [], []
+        bad["repaired_centre_outside_crop"] = 0
+        crop = CROP_PX // 2 - 1
+        invalid, bad_geometry, misses, rep_d, ai2_d = 0, 0, [], [], []
+
+        def off(c, w):
+            return c[0] - (w.bounds[0] + half), c[1] - (w.bounds[1] + half)
+
         for w in wins:
             u = sample.get(w.name)
             v = polys.get(str(u["alert_code"])) if u else None
@@ -907,38 +937,52 @@ def check_dataset(ds, priv=None, workers=8):
                 bad["centre_pixel"] += 1
                 misses.append({"reason": "no sample unit or no polygon"})
                 continue
+            swap = order == "latlon"
             shp = shapely.geometry.shape(v["geometry"])
-            if order == "latlon":
+            if swap:
                 from shapely.ops import transform
                 shp = transform(lambda x, y, z=None: (y, x), shp)
             valid = bool(shp.is_valid)
-            invalid += not valid
-            c = ai2_centre_px(v["geometry"], swap=order == "latlon")
+            c = ring_centre_px(v["geometry"], swap=swap)
             if not at_centre(c, w):
                 bad["centre_pixel"] += 1
-                misses.append({"reason": "Ai2's route off the window centre", "valid": valid,
-                               "parts": len(parts_of(v["geometry"])),
-                               "dx_px": round(c[0] - (w.bounds[0] + half), 1),
-                               "dy_px": round(c[1] - (w.bounds[1] + half), 1)})
+                d = off(c, w)
+                misses.append({"reason": "second route to the windows' centroid off the window centre",
+                               "valid": valid, "parts": len(parts_of(v["geometry"])),
+                               "dx_px": round(d[0], 1), "dy_px": round(d[1], 1)})
+            a = ai2_centre_px(v["geometry"], swap=swap)
+            if not at_centre(a, w):
+                ai2_d.append(round(math.hypot(*off(a, w)), 1))
             try:
                 r = STGeometry(WGS84_PROJECTION, shp, None).to_projection(proj).shp.centroid
                 r = (r.x, r.y)
             except shapely.errors.GEOSException:
                 # make_valid fails on some of MapBiomas's self-touching polygons ("Overlay input is mixed-dimension")
                 bad_geometry += 1
-                r = None
-            if r is None or not at_centre(r, w):
-                if valid:
-                    bad["rslearn_centre_valid_polygon"] += 1
-                rs_off.append(None if r is None else round(math.hypot(r[0] - c[0], r[1] - c[1]), 1))
-        rec["centre_route"] = ("Ai2's: shapely's centroid of the polygon as published (WGS84, unrepaired), pyproj to "
-                               "EPSG:3857 (deploy/__init__.py:140-145); rslearn's own projection gated on valid "
-                               "polygons only")
+                import pyproj
+                from shapely.ops import transform as _tf
+                t = pyproj.Transformer.from_crs(4326, 3857, always_xy=True)
+                rp = _tf(lambda x, y, z=None: t.transform(x, y), shp).buffer(0).centroid
+                r = (rp.x / PIXEL_SIZE, -rp.y / PIXEL_SIZE)
+            if valid:
+                bad["rslearn_centre_valid_polygon"] += not at_centre(r, w)
+                continue
+            invalid += 1
+            d = off(r, w)
+            if not at_centre(r, w):
+                rep_d.append(round(math.hypot(*d), 1))
+            if max(abs(d[0]), abs(d[1])) > crop:
+                bad["repaired_centre_outside_crop"] += 1
+        rec["centre_route"] = ("gated: a second route to the windows' own centroid (pyproj, shapely per ring) for "
+                               "every polygon; rslearn's projection for every valid polygon; for an invalid polygon "
+                               f"the repaired polygon's centroid within the central {CROP_PX}-px crop")
         rec["invalid_polygons"] = invalid
-        rec["rslearn_route_off_centre_invalid_polygons"] = {
-            "n": len(rs_off), "could_not_make_valid": bad_geometry,
-            "distance_to_ai2s_route_px": sorted(x for x in rs_off if x is not None),
-            "note": "make_valid repairs an invalid polygon before its centroid is taken: a different polygon, counted"}
+        rec["repaired_centre_off_window_centre"] = {
+            "n": len(rep_d), "distance_px": sorted(rep_d), "could_not_make_valid_buffer0_used": bad_geometry,
+            "note": "invalid polygons: make_valid's (or buffer(0)'s) repaired polygon is not the rings' polygon"}
+        rec["ai2_code_letter_off_window_centre"] = {
+            "n": len(ai2_d), "distance_px": sorted(ai2_d),
+            "note": "shapely's centroid of the unrepaired polygon, as Ai2's deploy code takes it; reported, not gated"}
         rec["centre_misses"] = misses
     else:
         del bad["centre_pixel"]

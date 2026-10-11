@@ -163,11 +163,12 @@ def test_centroid_inside_and_holes():
         e104.polygon_facts({"type": "Point", "coordinates": [0, 0]})
 
 
-def test_ai2s_centre_route_is_the_windows_centroid_where_make_valid_is_not():
-    """The dataset check's route (Ai2's: shapely's centroid of the polygon as published, in WGS84, projected) against
-    the windows' own centroid (polygon_facts, in EPSG:3857), by a second route; on a self-intersecting polygon rslearn's
-    make_valid repair moves the centroid, which is why that route is gated on valid polygons only (job 1284193: 3 of
-    696 windows off centre by rslearn's route)."""
+def test_the_second_route_to_the_windows_centroid_and_the_letter_of_ai2s_code():
+    """The dataset check's gated route (ring_centre_px: pyproj, and shapely per ring) against the windows' own centroid
+    (polygon_facts, numpy in EPSG:3857) on squares, holes, multi-part and self-intersecting polygons in either axis
+    order; Ai2's code's route (shapely's centroid of the unrepaired polygon) on the valid ones; and make_valid moving a
+    self-intersecting polygon's centroid, which is why rslearn's route is gated on valid polygons only. Job 1286487
+    found the letter of Ai2's code 2 to about 1,870 px off on 24 of 343 invalid multi-part MapBiomas polygons."""
     import shapely
     import shapely.geometry
     R = e104.PIXEL_SIZE
@@ -184,18 +185,26 @@ def test_ai2s_centre_route_is_the_windows_centroid_where_make_valid_is_not():
                                                        [lon0 + 2 * d, lat0]]]]}
     bowtie = {"type": "Polygon", "coordinates": [[[lon0, lat0], [lon0 + 3 * d, lat0 + 3 * d], [lon0 + 3 * d, lat0],
                                                   [lon0, lat0 + d], [lon0, lat0]]]}
-    for g in (sq, holed, multi, bowtie):
+    eight = [[lon0 + d * x, lat0 + d * y] for x, y in ((0, 0), (2, 1), (2.5, 2), (3, 1), (2, 0), (0, 1.5), (0, 0))]
+    multi_bad = {"type": "MultiPolygon", "coordinates": [[eight], [[[lon0 + 5 * d, lat0], [lon0 + 6 * d, lat0],
+                                                                   [lon0 + 6 * d, lat0 + d], [lon0 + 5 * d, lat0 + d],
+                                                                   [lon0 + 5 * d, lat0]]]]}
+    swap = lambda c: [c[1], c[0]] if isinstance(c[0], float) else [swap(x) for x in c]   # noqa: E731
+    for g in (sq, holed, multi, bowtie, multi_bad):
         f = e104.polygon_facts(g)
-        c = e104.ai2_centre_px(g)
-        assert abs(c[0] - f["cx"] / R) < 0.05 and abs(c[1] + f["cy"] / R) < 0.05
-        swap = lambda c: [c[1], c[0]] if isinstance(c[0], float) else [swap(x) for x in c]   # noqa: E731
-        swapped = {"type": g["type"], "coordinates": swap(g["coordinates"])}
-        assert max(abs(a - b) for a, b in zip(e104.ai2_centre_px(swapped, swap=True), c)) < 0.05
-    assert not shapely.geometry.shape(bowtie).is_valid
-    m = shapely.make_valid(shapely.geometry.shape(bowtie)).centroid
-    mx, my = (v / R for v in e104.mercator(m.x, m.y))
-    f = e104.polygon_facts(bowtie)
-    assert math.hypot(mx - f["cx"] / R, my - f["cy"] / R) > 5, "make_valid moves this centroid by many pixels"
+        ours = (f["cx"] / R, -f["cy"] / R)
+        for got in (e104.ring_centre_px(g),
+                    e104.ring_centre_px({"type": g["type"], "coordinates": swap(g["coordinates"])}, swap=True)):
+            assert abs(got[0] - ours[0]) < 0.05 and abs(got[1] - ours[1]) < 0.05
+        if shapely.geometry.shape(g).is_valid:
+            a = e104.ai2_centre_px(g)
+            assert abs(a[0] - ours[0]) < 0.05 and abs(a[1] - ours[1]) < 0.05
+    for g in (bowtie, multi_bad):
+        assert not shapely.geometry.shape(g).is_valid
+        m = shapely.make_valid(shapely.geometry.shape(g)).centroid
+        mx, my = (v / R for v in e104.mercator(m.x, m.y))
+        f = e104.polygon_facts(g)
+        assert math.hypot(mx - f["cx"] / R, my - f["cy"] / R) > 5, "make_valid moves this centroid by many pixels"
 
 
 def test_the_window_centre_size_crs_and_time_ranges():
