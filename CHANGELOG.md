@@ -15,6 +15,17 @@ whose numbers are exp37's, and exp06 in a `signals.py` docstring, as provenance.
 tree on GitHub, and the docs link there; the git history and every release tag are unchanged. The white paper's record
 counts, already stale, are recomputed.
 
+**exp103 (preregistered, frozen 11 October 2026 at d0c8977 before any prediction; run at b83a5b9; recorded after an
+independent audit): exp98's and exp99's rules on the v1.2 fine-tune.** The v1.2 fine-tune predicted over exp98's and
+exp99's deployment datasets with rslearn 0.1.17 (a new output layer), read with from-olmoearth and graded by exp98's and
+exp99's own scripts, with their frozen thresholds. The verdicts repeat: at Ai2's points the confidence ranks the errors
+(AUROC 0.814), the least confident tenth holds 37.5% of them and the points sit in the confident part of the map
+(0.653), so exp98's P3 to P5 hold; at the 2017 TimeSync plots the STRICT AUROC is 0.642, below 0.70, and the least
+confident tenth closes 0.267 of the gap, so exp99's P1 does not hold and P2 holds on the point value, as for v1. Under
+LENIENT the AUROC is 0.730, which meets the bar on the point value only (its interval contains 0.70, as v1's did), so
+the rule's different label is not a difference between the models. `exp/jobs/e103.sh`,
+`exp/exp103_jobs.py`, `exp/out/exp103/`, `tests/test_exp103.py`.
+
 **exp102: a fine-tune of OlmoEarth v1.2 Base with Ai2's FT-AWF recipe.** At the owner's request (11 October 2026),
 Ai2's AWF model.yaml (`exp/jobs/e102_config/model.yaml`: the encoder set to `OLMOEARTH_V1_2_BASE`, a CSV logger in
 place of Weights & Biases, nothing else) trained on Ai2's AWF labels with rslearn 0.1.17 on one B200 (job 1277383, 100

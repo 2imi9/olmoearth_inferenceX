@@ -3871,6 +3871,47 @@ views are the replica's, not the deployed map's (its reference view gives the de
 exp98's 91.9% for the label-window replica, and 88.9% of E); 22 of E's plots (8 errors, 14 correct) have crops clamped
 at a window edge, which makes some of their views coincide.
 
+
+## A second model of the same task: exp98's and exp99's rules on a v1.2 fine-tune (exp103)
+
+**Question.** Every result about a deployed OlmoEarth map came from one model, Ai2's FT-AWF on OlmoEarth v1 Base. Do
+the verification layer's findings hold for a second model of the same task? exp102 fine-tuned OlmoEarth v1.2 Base with
+Ai2's recipe and labels (published at https://huggingface.co/2imi9/OlmoEarth-v1_2-FT-AWF-Base); exp103 had it predict
+over exp98's and exp99's own deployment datasets with `rslearn model predict` (rslearn 0.1.17, a new output layer),
+read the maps with `from-olmoearth`, and graded them with exp98's and exp99's scripts. The page
+(`docs/plan/v12_regrade.md`) was frozen on 11 October 2026 (d0c8977) before the model predicted any window, with every
+threshold copied from exp98's and exp99's frozen pages; the run is at b83a5b9 (jobs 1281898 to 1281904):
+`exp/out/exp103/`. No comparison of the two models is made: one fine-tune, one seed, its checkpoint chosen on Ai2's
+validation points as Ai2's v1 checkpoint was.
+
+| | Bar | v1.2 (exp103) | v1 (exp98, exp99) |
+|---|---|---|---|
+| Ai2's points: AUROC of the confidence | 0.75 | **0.814** | 0.849 |
+| Ai2's points: errors in the least confident 10% | 25% | **37.5%** | 42.4% |
+| Ai2's points: mean percentile in the map's confidence | 0.55 (lower bound above 0.5) | **0.653** (0.617) | 0.647 (0.614) |
+| TimeSync plots, STRICT: weighted AUROC | 0.70 | 0.642 (0.582 to 0.703) | 0.638 (0.579 to 0.696) |
+| TimeSync plots, STRICT: gap closed at 10% | 0.25 | **0.267** (0.017 to 0.497) | 0.434 (0.10 to 0.65) |
+
+**The verdicts repeat.** At Ai2's 259 points the v1.2 map is 87.6% accurate (32 errors), its confidence ranks the
+errors (AUROC 0.814) and its least confident tenth holds 37.5% of them, and the points sit in the confident part of the
+map (mean percentile 0.653): exp98's P3, P4 and P5 hold, as they did for v1. exp98's P1 and P2 compare the map with
+exp89's replica of the v1 model and do not apply: exp98's script still writes them into the summary (as graded and not
+holding, 0.054 and 0.884) with its replica block, and they are not counted.
+<!-- claim:exp103-v12-ranking-holds-at-ai2s-points -->
+
+**Under transfer the ranking misses the bar under STRICT again.** At the 271 TimeSync plots with 2017 input the
+weighted AUROC is 0.642, below 0.70 (P1 does not hold), and the least confident tenth closes 0.267 of the gap (P2 holds
+on the point value, its interval reaching down to 0.017). The error rate is 37.0% under STRICT (27.3% to 47.3%) and
+16.6% under LENIENT (9.8% to 25.5%); the transfer-gap call is not determined. Under LENIENT, which accepts the
+grass/shrub boundary, the AUROC is 0.730 (0.670 to 0.791), which meets the bar on the point value, so exp99's frozen rule
+labels the failure STRICT's only, where for v1 (0.678) it labelled both rules failing; like v1's, this interval contains
+0.70, so the different label is the rule's, not a difference between the models (as exp99's record says of its own).
+<!-- claim:exp103-v12-transfer-ranking-misses-under-strict -->
+
+**What it shows and does not show.** The layer's findings at Ai2's points and under transfer are not specific to Ai2's
+v1 model: a second fine-tune of the same task, on a newer encoder, gives the same verdicts. It is the same task, region
+and labels; a different task is exp104's question. Which model is better is not asked and cannot be read from one seed.
+
 ## A vision-language model as the reviewer (exp91)
 
 **Question.** The labelled routes need a reviewer. Can a general-purpose vision-language model supply the labels from

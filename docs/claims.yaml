@@ -5028,3 +5028,50 @@
     and the dose curve's end are optimistic; the share of views that change is not fitted. The dose curve dips from 8
     to 16 views (5.4 to 4.2 points). The replica's reference view gives the deployed map's class at
     91.5% of F.
+
+- id: exp103-v12-ranking-holds-at-ai2s-points
+  statement: "exp98's frozen rules hold for a second model of the same task: on the record's fine-tune of OlmoEarth v1.2 Base (exp102), re-run over exp98's 2023 deployment dataset and graded at the 259 of Ai2's validation points inside the area (32 errors, 87.6% accurate), the confidence ranks the errors at AUROC 0.814 (bar 0.75), the least confident 10% hold 37.5% of them (bar 25%; random 10%, ceiling 81%), and the points' mean percentile in the map's confidence is 0.653 (bar 0.55, one-sided lower bound 0.617), as for v1 (0.849, 42.4%, 0.647). exp98's P1 and P2, comparisons with the v1 replica, are not applicable to a v1.2 model."
+  crosscheck: tests/test_exp103.py::test_exp103_ai2_points_by_a_second_route
+  status: supported
+  experiments: [exp103]
+  artifacts: [exp/out/exp103/awf2023/exp98_summary.json]
+  check: |-
+    (lambda S: (lambda P, G: S['prereg_status'] == 'frozen' and S['dirty'] is False and S['commit'].startswith('b83a5b9')
+      and [P[k]['holds'] for k in ('P3', 'P4', 'P5')] == [True, True, True]
+      and [round(P['P3']['value'], 3), round(P['P4']['value'], 3), round(P['P5']['value'], 3)] == [0.814, 0.375, 0.653]
+      and round(S['where_the_points_sit']['points_mean_percentile_bootstrap']['lower_one_sided_95'], 3) == 0.617
+      and (G['n'], G['accuracy']['n_errors'], round(G['accuracy']['accuracy_window'], 3)) == (259, 32, 0.876)
+      and round(G['ranking']['ceiling']['0.1'], 3) == 0.812
+    )(S['prereg'], S['graded_validation']))(A['exp/out/exp103/awf2023/exp98_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp103-v12-ranking-holds-at-ai2s-points}
+  note: >-
+    Run by exp98's own script at b83a5b9 over the v1.2 fine-tune's output layer (rslearn 0.1.17 predict, read in 11
+    parts). The checkpoint was chosen on Ai2's 344 validation points (exp102), as Ai2's v1 checkpoint was, so the
+    accuracy here is optimistic for both; the ranking and placement predictions are not fitted.
+
+- id: exp103-v12-transfer-ranking-misses-under-strict
+  statement: "exp99's frozen rules give the same verdicts for the v1.2 fine-tune: at the 271 TimeSync plots with 2017 input the design-weighted AUROC for the STRICT errors is 0.642 (90% bootstrap 0.582 to 0.703; bar 0.70), so P1 does not hold, and the least confident 10% close 0.267 of the gap (0.017 to 0.497; bar 0.25), so P2 holds on the point value, as for v1 (0.638, 0.434). Under LENIENT the AUROC is 0.730 (0.670 to 0.791), which meets the bar on the point value, so the frozen rule labels the failure STRICT's only, where v1's (0.678) was labelled both rules failing; like v1's, the interval contains 0.70, so the different label is the rule's, not a difference between the models. The error rate is 37.0% under STRICT (exact interval 27.3% to 47.3%) and 16.6% under LENIENT (9.8% to 25.5%); P3's call is not determined."
+  crosscheck: tests/test_exp103.py::test_exp103_transfer_plots_by_a_second_route
+  status: mixed
+  experiments: [exp103]
+  artifacts: [exp/out/exp103/transfer2017/exp99_summary.json]
+  check: |-
+    (lambda S: (lambda P, st, le, rk, rl: S['prereg_status'] == 'frozen' and S['dirty'] is False and S['commit'].startswith('b83a5b9')
+      and (P['P1']['holds'], P['P2']['holds'], P['P3']['call']) == (False, True, 'not determined')
+      and [round(P['P1']['value'], 3), round(P['P2']['value'], 3)] == [0.642, 0.267]
+      and [round(rk['auroc_weighted_bootstrap'][k], 3) for k in ('lo90', 'hi90')] == [0.582, 0.703]
+      and [round(rk['gap_closed_0.1_weighted_bootstrap'][k], 3) for k in ('lo90', 'hi90')] == [0.017, 0.497]
+      and round(P['P1']['lenient_check']['value'], 3) == 0.73 and P['P1']['lenient_check']['meets_threshold'] is True
+      and [round(rl['auroc_weighted_bootstrap'][k], 3) for k in ('lo90', 'hi90')] == [0.67, 0.791]
+      and P['P1']['reading'].startswith('only STRICT fails')
+      and (st['n'], st['errors'], le['errors']) == (271, 95, 45)
+      and [round(100 * st['stratified'][k], 1) for k in ('estimate', 'low', 'high')] == [37.0, 27.3, 47.3]
+      and [round(100 * le['stratified'][k], 1) for k in ('estimate', 'low', 'high')] == [16.6, 9.8, 25.5]
+    )(S['prereg'], S['rules']['strict'], S['rules']['lenient'], S['rules']['strict']['ranking'], S['rules']['lenient']['ranking']))(A['exp/out/exp103/transfer2017/exp99_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp103-v12-transfer-ranking-misses-under-strict}
+  note: >-
+    Run by exp99's own script at b83a5b9 over the v1.2 fine-tune's 2017 output layer (271 windows read one per part).
+    The same 271 plots have input as in exp99, and the 38 without input are the same (not missing at random), so the
+    figures describe the plots with 2017 input. No comparison of the two models is made: one fine-tune, one seed.

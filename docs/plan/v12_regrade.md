@@ -6,6 +6,13 @@ threshold and floor below is copied from a page the owner already confirmed and 
 frozen 7b12dc4; docs/plan/awf_transfer.md, frozen 52489b1); nothing new is set here, so the owner's go ("ok", 11
 October 2026) to run the regrade freezes it.
 
+**Result, 11 October 2026 (added at recording; the frozen text is unchanged).** Run at b83a5b9 (jobs 1281898 to
+1281904; rslearn 0.1.17 predicted all 270 windows of 2023 and all 271 of 2017 with input), recorded after an
+independent audit ([comparisons](../results/comparisons.md#a-second-model-of-the-same-task-exp98s-and-exp99s-rules-on-a-v12-fine-tune-exp103)).
+A-P3 holds (AUROC 0.814), A-P4 holds (37.5%), A-P5 holds (0.653, lower bound 0.617). T-P1 does not hold (0.642; under
+LENIENT 0.730, so the frozen reading is that only STRICT fails), T-P2 holds on the point value (0.267), T-P3 not
+determined (STRICT 37.0%, LENIENT 16.6%). The same verdicts as for v1.
+
 ## The question
 
 Every result in the record about a deployed OlmoEarth map comes from one model, Ai2's FT-AWF on OlmoEarth v1 Base. Do
