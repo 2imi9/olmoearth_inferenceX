@@ -67,10 +67,22 @@ ok, got = tsx.verify(sys.argv[1], tsx.TIMESYNC)
 print("the TimeSync sample against its pin:", "ok" if ok else got)
 sys.exit(0 if ok else 1)
 EOF
-echo "== smoke =="
-uv run --extra geo python exp/exp100_alignment.py --smoke --out-dir "$OUTDIR/smoke"
-echo "== the run =="
-uv run --extra geo python exp/exp100_alignment.py --exp98-scores "${D98[@]}" --labels "$LABELS" \
-  --exp99-scores "${D99[@]}" --timesync "$TS" --request-geometry "$AI2" --out-dir "$OUTDIR"
-ls -la "$OUTDIR/exp100_summary.json"
+# E100_MODE=run (the default): the preregistered check. E100_MODE=bytask: the descriptive follow-up written after the
+# run (exp/exp100_by_task.py: V's and T's best positions per annotation task, V with each task left out).
+case "${E100_MODE:-run}" in
+  run)
+    echo "== smoke =="
+    uv run --extra geo python exp/exp100_alignment.py --smoke --out-dir "$OUTDIR/smoke"
+    echo "== the run =="
+    uv run --extra geo python exp/exp100_alignment.py --exp98-scores "${D98[@]}" --labels "$LABELS" \
+      --exp99-scores "${D99[@]}" --timesync "$TS" --request-geometry "$AI2" --out-dir "$OUTDIR"
+    ls -la "$OUTDIR/exp100_summary.json" ;;
+  bytask)
+    echo "== smoke (by task) =="
+    uv run --extra geo python exp/exp100_by_task.py --smoke --out-dir "$OUTDIR/smoke"
+    echo "== by task =="
+    uv run --extra geo python exp/exp100_by_task.py --exp98-scores "${D98[@]}" --labels "$LABELS" --out-dir "$OUTDIR"
+    ls -la "$OUTDIR/exp100_by_task.json" ;;
+  *) echo "E100_MODE must be run or bytask"; exit 2 ;;
+esac
 echo "== $(date -Is) done =="

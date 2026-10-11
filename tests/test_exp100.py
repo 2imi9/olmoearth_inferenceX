@@ -142,3 +142,29 @@ def test_smoke_reads_exp98s_and_exp99s_points_as_they_did(smoke):
     assert smoke["mapping"]["exp98"]["reprojected"] == 1       # exp98's smoke puts one point in another CRS
     assert smoke["mapping"]["exp99"]["reprojected"] == 22      # every TimeSync plot is reprojected from WGS84
     e98.check_no_coordinates(smoke)
+
+
+def test_the_by_task_follow_up_finds_a_planted_offset_in_every_task(tmp_path):
+    """exp100_by_task (descriptive, after the run): on a map with a planted (2, -1) offset most tasks' own best
+    position is the planted one (ten points per task, on a map of 4-px blocks, can tie between neighbours), every one
+    lies west of the labelled pixel, and leaving any task out keeps the estimate at the planted offset."""
+    import exp100_by_task as bt
+    path, points, labels, clusters = e100.make_planted(str(tmp_path), 2, -1)
+    entries, _, _ = e98.find_outputs(path)
+    grids = [e98.open_grid(e) for e in entries]
+    gi, rows, cols, *_ = e98.read_points(grids, e98.locate_all(points, grids))
+    blocks = e100.read_blocks(grids, gi, rows, cols)
+    r = bt.by_task(blocks, [(int(c),) for c in labels], [f"t{c:02d}" for c in clusters])
+    assert r["n_tasks"] == e100.SMOKE_PLANTED_CLUSTERS and r["n"] == e100.SMOKE_PLANTED_N
+    assert sum((t["best_south_px"], t["best_east_px"]) == (2, -1) for t in r["tasks"]) >= 15
+    assert r["tasks_best_east_of_pixel"] == 0
+    lo, hi = r["leave_one_task_out_east_px_range"]
+    assert -1.25 < lo <= hi < -0.75
+    e98.check_no_coordinates(r)
+
+
+def test_the_by_task_smoke_runs_on_exp98s_inputs(tmp_path):
+    import exp100_by_task as bt
+    rec = bt.smoke(out_dir=str(tmp_path), log=lambda *a: None)
+    assert rec["V"]["n"] <= 40 and rec["T"]["n"] <= 10 and rec["not_preregistered"] is True
+    e98.check_no_coordinates(rec)
