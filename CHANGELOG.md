@@ -1,5 +1,28 @@
 # Changelog
 
+## Unreleased
+
+**The repository keeps what the package, its tests and the white paper rest on.** On 10 October 2026 the owner had the
+record trimmed: 12 earlier experiments (exp06, exp09, exp10, exp12, exp22, exp26, exp27, exp39, exp40, exp44, exp53,
+exp61), the OlmoEarth Agent trials exp86 and exp87 (about 465 MB of trial files) and the Lean proofs (`lean/`) were
+moved out of the working tree, 3,500 files in all, with the 10 claims that rested only on them. No remaining claim's
+check, no claim tag of the white paper, no package test and no kept script reads them (exp11 names exp09's cache only
+as a fallback); the white paper reports exp86's and exp87's results and links their archived files, and two remaining
+claims list exp10 or exp12 among their experiments as provenance. Experiments behind the package's defaults and its
+shipped texts stayed: exp19, exp20, exp24 and exp25 were first moved and then restored when an audit found that
+`taskcard.py` and `explain.py` quote them. Everything moved is in the v1.9.0 tree on GitHub, and the docs link there;
+the git history is unchanged, so every release tag still holds it. The white paper's record counts, already stale, are
+recomputed.
+
+**exp89's extraction dates every extracted file now** (70b2c01). tarfile gave each file its member's own time, older
+than the scratch purge's 30 days, so the AWF labels were removed a day after being extracted again.
+
+**exp100 (preregistered, frozen 10 October 2026 at 5c4a0ca): a shift check.** `docs/plan/alignment.md`,
+`exp/exp100_alignment.py`, `exp/jobs/e100.sh`, `tests/test_exp100.py`. exp98's and exp99's maps are read at their
+label points moved by whole pixels, up to 3 each way, to find where the map and the labels agree best: exp98's
+training points test the record's pixel-finding code, its validation points and exp99's plots the data's
+registration.
+
 ## 1.9.0 (2026-10-10)
 
 **`from-olmoearth`: read an OlmoEarth run directly** (`oe_inferencex.olmoearth`, `oe-inferencex from-olmoearth DS

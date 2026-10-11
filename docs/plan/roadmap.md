@@ -56,7 +56,9 @@ G(s, human labels); average within river, one-sided exact sign test over the
 eight river clusters (7/8 positive gives p = 0.035). Run it for tiling
 instability first, since it is the signal whose transfer failure is the
 question. Anything read off the shipped decoder must first pass the oracle
-gate in `exp/exp27_oracle_gate.py` (`exp/out/exp27_oracle_gate.json`): in the
+gate of exp27, archived and in the v1.9.0 tree
+([`exp/exp27_oracle_gate.py`](https://github.com/2imi9/olmoearth_inferenceX/blob/v1.9.0/exp/exp27_oracle_gate.py),
+[`exp/out/exp27_oracle_gate.json`](https://github.com/2imi9/olmoearth_inferenceX/blob/v1.9.0/exp/out/exp27_oracle_gate.json)): in the
 target space, pure-class prototypes have pairwise cosine of median 0.996,
 class identity sits in token norm which the loss discards, layout moves a
 token more than water fraction does, and a ridge readout of water fraction
@@ -79,21 +81,22 @@ carrying the paper links and the concrete test:
 
 ## Priority items
 
-1. **Hand-adjudicate the disagreements** (issue #2). exp26 prepared the kit: the top-12
+1. **Hand-adjudicate the disagreements** (issue #2). exp26 (archived) prepared the kit: the top-12
    disagreements ranked by tiling instability and by confidence on shire_80,
    barotse and okavango_80. For each patch the kit carries a 48-px
    true-colour crop with the 4-px patch outlined, the NDWI crop, the
    WorldCover pixels and the head's water probability — the sheets are
-   `exp/out/exp26_handcheck_<scene>_{tile,confidence}.png` — alongside a row
-   in `exp/out/exp26_handcheck_<scene>.csv` holding the model probability,
+   `exp26_handcheck_<scene>_{tile,confidence}.png` — alongside a row in
+   `exp26_handcheck_<scene>.csv` holding the model probability,
    the reference label, NDWI statistics, JRC seasonality, both ranks, and
-   empty `verdict` / `note` columns. Verdict vocabulary: model error /
-   reference error / seasonal or date difference / ambiguous. **A reviewer's
-   verdicts are the input to the next analysis.** The paired-reference test
-   above needs far more than this seed: on the order of a few hundred
-   disputed cells across the eight rivers, blinded, with matched dates and
-   water definition, mixed with a sample of undisputed cells. Expert hours,
-   not GPU hours, are the binding cost.
+   empty `verdict` / `note` columns; both are under `exp/out/` in the
+   [v1.9.0 tree](https://github.com/2imi9/olmoearth_inferenceX/tree/v1.9.0/exp/out).
+   Verdict vocabulary: model error / reference error / seasonal or date
+   difference / ambiguous. **A reviewer's verdicts are the input to the next
+   analysis.** The paired-reference test above needs far more than this seed:
+   on the order of a few hundred disputed cells across the eight rivers,
+   blinded, with matched dates and water definition, mixed with a sample of
+   undisputed cells. Expert hours, not GPU hours, are the binding cost.
 
 2. **A dense expert-labelled map with few classes** (issue #7): closed by
    exp54 on Ai2's published embeddings (MADOS, PASTIS, cashew, SA crop
@@ -103,12 +106,13 @@ carrying the paper links and the concrete test:
 3. **Operating-point analysis instead of AURC** (issue #9): closed by exp35,
    see the Closed table.
 
-4. **An out-of-family rater** (issue #6): closed by exp39 and exp41, see
+4. **An out-of-family rater** (issue #6): closed by exp39 (archived) and exp41, see
    the Closed table. Every encoder errs on the same windows.
 
 5. **A domain-shift testbed with non-trivial errors and expert labels**
    (candidate design: geographic-corner holdout within AWF). The delta scene
-   is disqualified as evidence by the exp06 controls, so E_dist's
+   is disqualified as evidence by the exp06 controls (archived;
+   [v1.9.0](https://github.com/2imi9/olmoearth_inferenceX/blob/v1.9.0/docs/results/comparisons.md#no-model-image-statistic-controls-exp06)), so E_dist's
    out-of-distribution role is untested until this exists.
    Candidate multi-event testbed: GEOID-Flood (arXiv 2608.02315; 219 events,
    CEMS-derived manually corrected pixel labels, a permanent-water class,
@@ -162,7 +166,7 @@ rather than a score to order by:
 | on a prediction boundary | 0.750 / 0.214, 3.5x | exp14, exp16, exp18, exp37 |
 | among the least confident 20% (the ranker itself) | 0.589 / 0.163, 3.6x | exp37 |
 | unstable under a sub-patch shift (tiling instability) | 0.583 / 0.164, 3.6x; wins against WorldCover 26/27 as a ranker, ties confidence on hand labels | exp13, exp18, exp37 |
-| spectrally ambiguous (\|NDWI\| < 0.1) | 0.483 / 0.067, 7.2x; error rate 0.41 among its windows | exp06, exp09, exp37 |
+| spectrally ambiguous (\|NDWI\| < 0.1) | 0.483 / 0.067, 7.2x; error rate 0.41 among its windows | exp06 and exp09 (archived; [v1.9.0](https://github.com/2imi9/olmoearth_inferenceX/blob/v1.9.0/docs/results/comparisons.md#no-model-image-statistic-controls-exp06)), exp37 |
 | disagrees under flips and rotations | 0.579 / 0.164, 3.5x | exp36, exp37 |
 | seasonal water (JRC seasonality) | 39% of WorldCover disagreements vs 8% of agreements | exp25 |
 | reference unstable between WorldCover versions | 14x enriched among disagreements, about 10% of them | exp23 |
@@ -222,7 +226,8 @@ tool returns the structured evidence.
   true pretraining sample that issue #4 needed for typicality is public.
 - Third-party: `Major-TOM/Core-S2L2A-249k-OlmoEarth-Base`, mean-pooled
   OlmoEarth-Base embeddings of 249k global Sentinel-2 chips (384 px) with
-  footprints, a global chip-level bank for the coverage question exp40 left.
+  footprints, a global chip-level bank for the coverage question exp40 left
+  (exp40 is archived; [v1.9.0](https://github.com/2imi9/olmoearth_inferenceX/blob/v1.9.0/docs/results/signals.md#neighbourhood-contradiction)).
 
 ## Asks of upstream
 
@@ -271,7 +276,7 @@ recipe restated (exp52).
 
 | Dataset he suggested | What it is | Our position |
 |---|---|---|
-| Copernicus EMS | expert-digitised flood extents | **Done.** Used throughout, via the GEOID-Flood release: 219 activations, 55 events scored (exp55, exp57, exp60, exp61, exp62). The one source that carries both a flood class and a permanent-water class per pixel. Not yet fetched: the per-activation *reference* (pre-event) water layers, which would date-match the pre-event grading that exp61 left open. |
+| Copernicus EMS | expert-digitised flood extents | **Done.** Used throughout, via the GEOID-Flood release: 219 activations, 55 events scored (exp55, exp57, exp60, exp61, exp62; exp61 is archived). The one source that carries both a flood class and a permanent-water class per pixel. Not yet fetched: the per-activation *reference* (pre-event) water layers, which would date-match the pre-event grading that exp61 left open ([v1.9.0 record](https://github.com/2imi9/olmoearth_inferenceX/blob/v1.9.0/docs/results/comparisons.md#is-the-pre-event-radars-departure-the-seasonal-water-of-its-date-exp61)). |
 | DFC2020 | S1 + S2 at 10 m, described as a hand-labelled test set | **Done (exp66).** The only suggestion that gives multi-class land cover with both sensors over the same scenes. One correction we owe upstream: the 10 m reference is not hand-drawn but an iterated random forest over Sentinel-1, Sentinel-2, indices, the 500 m MODIS map and FROM-GLC10, with a published overall accuracy of 0.824. That makes it more useful here, not less: the same patches also carry the 500 m MODIS labels, so one dataset gives two references of known and different quality over identical pixels, the clean instrument for this repository's oldest caveat, that reference-product labels flatter boundary-type signals (exp18). Not in Ai2's published embeddings, so it needs a fetch (an ungated mirror; IEEE DataPort itself is not scriptable) and our own encoder pass. It delivered: the margin beats a pixel index on all three arms, the sensor difference moves 44% of windows against a 1.3% probe-seed floor, and the coarse reference **penalises** the boundary order rather than flattering it, which qualifies exp18's caveat. Publishing a DFC2020 number needs IEEE GRSS and TUM approval under the contest terms, which is an open question for Ai2. |
 | LUCAS | in-situ field survey points, Europe | **Done (exp68).** Our first judgement was wrong on both counts. The Copernicus module ships surveyor-delineated polygons, not bare points, and the polygon is a usable graded unit; and two acquisitions of the same polygon give a window-level difference with the surveyor as arbiter, which is the comparison half. What makes it the most valuable suggestion on the list is provenance: a surveyor stood at the point and never saw a pixel, so this is the only reference here whose errors cannot be correlated with the model's through shared inputs, which is the confound exp18 raised and no photointerpreted testbed can separate. It delivered: the margin still beats the best deployable no-model control by 0.0953 design-weighted excess AURC on 94 European regions against 32, so what this repository measures is not annotator agreement; two dates of one place move 31% of decisions against a 0.30% head-reseed floor and the near date is the right side 917 times to 591; the change rate is phenology, cropland twice woodland. Two preregistrations were wrong and are recorded as such: the published homogeneity filter flatters the audit rather than understating it, and the photo-versus-field gap is not boundary-specific once a rate-matched null is subtracted. Geometry note for anyone repeating it: the layer is plain MultiPolygon, so no curve conversion is needed. |
 | EuroCrops | farmer-declared crop parcels, Europe | **Done (exp69).** The parcel objection was withdrawn for the same reason it was withdrawn for LUCAS, and it delivered more than another testbed. Rasterised at 10 m the declared parcels are a dense per-pixel crop map, and because EuroCrops ships one file per region per year, a parcel present in two years carries a declared crop in each: this is the first testbed here with both sides of a time axis labelled, which makes the comparison module's graded block decidable and measures the floor for a two-date change rate that exp68 could only bound. Austria, Denmark and Slovenia; Spain dropped after a live check found its codes join the harmonisation at 0.000 and its single file is 11 GB over 17 million parcels. Correction owed to anyone repeating this: the JRC parquets carry no harmonised crop code in any of their four versions and the `data/cropcodemapping/` path is a 404; HCAT comes from the EuroCrops project's own GitHub repository. Licence caveat unchanged, Slovakia shipping none and Spain's SIGPAC forbidding redistribution without added value, neither of which is among the three regions used. |
@@ -281,6 +286,9 @@ He also passed on the HOTOSM open call for EO GeoAI models: sub-metre imagery,
 outside the 10 m Sentinel setup this project is built on, so not pursued.
 
 ## Closed
+
+exp22, exp39, exp40, exp44, exp53 and exp61 were archived on 10 October 2026; their rows below stand, and their records
+are in the [v1.9.0 copy of Comparisons](https://github.com/2imi9/olmoearth_inferenceX/blob/v1.9.0/docs/results/comparisons.md).
 
 | Item | Closed by |
 |---|---|
@@ -353,7 +361,8 @@ Ai2's embeddings, the two sensors per GEOID-Flood event): the disagreement
 sits on prediction boundaries everywhere, the sensor and backbone
 differences are different sets of windows, and the label says which side is
 right only for the differences that changed the model. Earlier pairs
-(Nano/Tiny/Base, exp07; Large vs Nano as partner, exp10; band-set probes,
+(Nano/Tiny/Base, exp07; Large vs Nano as partner, exp10, archived in
+[v1.9.0](https://github.com/2imi9/olmoearth_inferenceX/blob/v1.9.0/docs/results/comparisons.md#rater-strength-vs-diversity-exp10); band-set probes,
 exp17; v1 vs v1.2, exp19; fine-tuned vs frozen, exp21; 2021 vs 2024 imagery,
 exp24) predate the module. The index is in
 [../TECHNIQUES.md](../TECHNIQUES.md#cross-inference-comparisons); the

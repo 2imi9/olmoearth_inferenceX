@@ -17,7 +17,8 @@ the tool found), `limits` (what it does not show, with the package's own warning
 done next, with its preconditions). A refusal of the package comes back as a tool error carrying the package's own
 message.
 
-The teaching follows the OlmoEarth Agent trial (exp86, exp/out/exp86_development_rounds_summary.md). There, material
+The teaching follows the OlmoEarth Agent trial (exp86, archived on 10 October 2026; its summary is at
+https://github.com/2imi9/olmoearth_inferenceX/blob/v1.9.0/exp/out/exp86_development_rounds_summary.md). There, material
 false statements per sentence fell from 7.5% to 2.2% on the eight development briefs the fixes were built against,
 mostly in round 8, which bundled tool outputs that state conclusions and limits, statistical rules in code and answer
 checks. No single change is shown to have caused the fall; the differences between rounds 8, 9 and 10 are within

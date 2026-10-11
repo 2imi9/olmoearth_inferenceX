@@ -4,7 +4,10 @@ One section per signal, ordered strongest first. Each gives the definition
 as implemented, the evidence, and the verdict. Per-experiment detail is in
 [comparisons.md](comparisons.md); scoring rules in
 [../method/protocol.md](../method/protocol.md). Index at
-[../TECHNIQUES.md](../TECHNIQUES.md).
+[../TECHNIQUES.md](../TECHNIQUES.md). Neighbourhood contradiction (exp39,
+exp40) and the periodic-artifact check on the served land-cover-change
+rasters (exp22) were archived on 10 October 2026 and are in the
+[v1.9.0 copy of this page](https://github.com/2imi9/olmoearth_inferenceX/blob/v1.9.0/docs/results/signals.md).
 
 Notation: "26/27" = better on 26 of the 27 rule-selected scenes.
 "163/187" = better on 163 tiles, worse on 187.
@@ -149,17 +152,18 @@ deviation over the last six blocks.
 
 **Definition as implemented.** Mean cosine distance from a window's Base
 embedding to its k=5 nearest patches of the head's training window (one
-128x128 scene at Katima Mulilo, or the AWF training split in exp12). **This
-is distance to the head's training region, not to the encoder's pretraining
-distribution** — an AOA-style reference sample over the pretraining domain
-has not been built.
+128x128 scene at Katima Mulilo, or the AWF training split in the archived
+exp12). **This is distance to the head's training region, not to the
+encoder's pretraining distribution** — an AOA-style reference sample over
+the pretraining domain has not been built.
 
 - In-domain it does not rank errors (0.00365 vs baseline 0.00089; exp03).
 - On the 27 rule-selected scenes: 13/27 vs baseline, sign p=1.00. The
   mean-difference permutation p=0.01 is carried by a few high-error scenes;
   the scale-free sign test shows no advantage (exp13).
 - On hand labels it is the worst signal tested (22/329; exp18).
-- On AWF: 0.1338 against a 0.0363 baseline (exp12).
+- On AWF: 0.1338 against a 0.0363 baseline (exp12, archived;
+  [v1.9.0 copy](https://github.com/2imi9/olmoearth_inferenceX/blob/v1.9.0/docs/results/comparisons.md#awf-expert-label-validation-exp04-exp12)).
 
 **Verdict: not supported as an error ranker.** exp31 separated the
 reference set from the density estimator (see "Feature-space typicality"
@@ -212,9 +216,10 @@ normalization. Agreement values must be read against this floor
 - Equal-weight aggregation over three models performs worse than the best
   pairwise signal whenever one member is substantially weaker — three
   independent confirmations (exp03, exp04, exp07).
-- **Rater strength does not help** (exp10): v1-Large as Base's partner is
-  worse than Nano (0.0197 vs 0.0129 mean AURC, better on 3/7) although Large
-  is more accurate on every scene.
+- **Rater strength does not help** (exp10, archived;
+  [v1.9.0 copy](https://github.com/2imi9/olmoearth_inferenceX/blob/v1.9.0/docs/results/comparisons.md#rater-strength-vs-diversity-exp10)):
+  v1-Large as Base's partner is worse than Nano (0.0197 vs 0.0129 mean AURC,
+  better on 3/7) although Large is more accurate on every scene.
 
 **Verdict: not supported.** Within one family, strong models agree on
 errors. The informative property of a partner is a different view of the
@@ -292,64 +297,6 @@ instead.*
 
 ---
 
-## Neighbourhood contradiction
-
-**Definition.** For a window with prediction y, take its 32 nearest
-neighbours by cosine in an embedding space, from a bank of windows that
-share no tile or river with the window, and score the share of neighbours
-the same head predicts differently. No label enters; the bank carries the
-model's own predictions. Three spaces: the frozen OlmoEarth features, per-
-window pixel statistics (means of the twelve log bands, NDWI mean and std),
-and AnySat's local embedding (exp39, one B200 job, 139 s). Banks: the
-Sen1Floods11 test split, 800 tiles never used to train the head, for
-Bolivia; the rule scenes on other rivers for the scenes.
-
-**In OlmoEarth's own space: supported at tight budgets, preregistered.**
-It beats confidence at the 10% budget on Bolivia hand labels, 169 tiles
-better, 126 worse, 56 tied (one-sided p = 0.007), pooled 0.530 against
-0.465 (CI [+0.027, +0.095]), and at 5% (0.324 against 0.259); at 20% it is
-null, and on E-AURC it does not beat confidence (177/173), so the gain is
-an operating-point gain like the boundary rule's. Against WorldCover it is
-7/1 rivers on capture at every budget and 21/6 scenes on E-AURC.
-
-**In pixel-statistics space: the ablation that won on Bolivia and failed
-to replicate.** Fourteen spectral statistics per window make a better
-neighbourhood than either representation on Bolivia: at 10% it captures
-0.682 of the errors against 0.465 for confidence (214/89/48 tiles,
-p = 5e-13), and on E-AURC it beats confidence per tile 219/131 and pooled
-0.0093 against 0.0105, adding information inside every confidence quintile.
-It is null against WorldCover (4/4 rivers). The preregistered replication
-(exp40) put the same score on the Sen1Floods11 test split, 800 tiles from
-other regions the head never saw, with Bolivia as the bank, and it failed
-every primary test: at 10% 183 tiles better, 195 worse, 105 tied (p = 0.75),
-pooled 0.530 against 0.643 with the interval below zero; at 20% 108/200;
-on E-AURC 215/267 per tile and 0.0149 against 0.0096 pooled. The pixel
-space still beats the OlmoEarth space there (280/121), so the ordering of
-spaces holds while the win over confidence does not. The two runs differ
-in what the bank covers: one event as queries against a many-region bank
-wins, many-region queries against a one-event bank loses, which points at
-bank coverage rather than at the model. That is a third preregistration,
-not a re-reading of these two.
-
-**AnySat as an outside witness: rejected.** Its local embedding beats
-confidence (172/127/52 at 10%) but not the OlmoEarth space (159/143,
-p = 0.19). Its contextual patch output at 40 m on a single date is
-dominated by position within the tile, moving little when the content
-shifts, and scores far below confidence (0.137 against 0.259 at 5%). An
-out-of-family representation added nothing over the model's own.
-
-**Verdict: not supported.** Both contradiction scores are Bolivia-only:
-a preregistered pass on one event and a preregistered failure on the
-multi-region split. What the runs did establish: the mechanism is
-inconsistency, the model predicting look-alike windows differently; for
-the water task look-alike is spectral, and fourteen numbers say it better
-than a 768-dimensional embedding; the representation was not what made it
-work on Bolivia, and no outside representation helped. Sources
-`exp/out/exp39_summary.json`, `exp/out/exp40_summary.json`.
-
----
-
-
 ## Dihedral consistency
 
 **Definition.** OlmoEarth v1 was pretrained with flip-and-rotate
@@ -392,7 +339,8 @@ control, so it measures how crowded a target's neighbourhood is rather than
 decoding. The cause is the target space: decoded-to-true cosine 0.469
 against 0.440 for a shuffled target (medians over the 27 scenes), with the
 frozen targets of a scene at pairwise cosine 0.994, the same kind of aliasing
-the exp27 oracle gate measured (exp/out/exp28_summary.json).
+the exp27 oracle gate measured (exp/out/exp28_summary.json; exp27 is
+archived, [v1.9.0 copy](https://github.com/2imi9/olmoearth_inferenceX/blob/v1.9.0/exp/out/exp27_oracle_gate.json)).
 
 ---
 
@@ -531,10 +479,5 @@ Summarized here; full detail in [comparisons.md](comparisons.md) section 4.
   disagreement and the control are significantly worse. The model is
   overconfident (ECE 0.080), so a stated accuracy needs a coverage: 0.945 at
   80%, 0.919 at 90%.
-- **Periodic artifacts (exp22).** Class boundaries and change-probability
-  gradients are quantized to the encoder's 4-px patch lattice (19 of 20
-  profiles, the weakest at p=3.9e-12; the control's best top peak reaches
-  only p=0.006). No inference-window seams at 64-512 px; seams affecting
-  5-10% of rows at 128 px would have been detected.
 
 ![Signal maps at Kazungula](../../exp/out/exp03_more_channels.png)

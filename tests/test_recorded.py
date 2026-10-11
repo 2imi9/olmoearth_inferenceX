@@ -252,43 +252,6 @@ def test_exp38_prereg_tests_and_exp36_consistency_from_the_summary():
     assert s["part_b"]["tests"]["NDWI-ambiguous, then boundary, then confidence vs boundary, then confidence"]["pooled"]["0.2"]["boot_lo"] > 0
 
 
-def test_exp39_preregistered_tests_and_ablation_from_the_summary():
-    """exp39 (job 725563): P1 (OlmoEarth-space contradiction vs confidence at 10%) passes per tile and pooled; P2 does
-    not beat the OlmoEarth space; the pixel-statistics ablation exceeds both, per tile, pooled and on E-AURC."""
-    s = json.load(open(os.path.join(OUT, "exp39_summary.json")))
-    b = s["part_b"]
-    p1, p2, p2oe = b["prereg"]["P1"], b["prereg"]["P2"], b["prereg"]["P2_vs_oe"]
-    for r in (p1, p2, p2oe):
-        assert r["one_sided"] and r["w"] + r["l"] + r["t"] == b["n_tiles_scored"] == 351
-        assert r["sign_p"] == pytest.approx(sign_test(r["w"], r["l"], "greater"), rel=1e-9)
-    assert (p1["w"], p1["l"], p1["t"]) == (169, 126, 56) and p1["sign_p"] < 0.01
-    assert p2oe["sign_p"] > 0.05                                             # AnySat does not beat the OlmoEarth space
-    C, OE, PIX = "confidence (baseline)", "contradiction (OlmoEarth neighbours)", "contradiction (pixel-statistics neighbours)"
-    g = b["pooled_capture_gain"]
-    assert g[f"{OE} vs {C}"]["0.1"]["boot_lo"] > 0 and g[f"{PIX} vs {C}"]["0.1"]["boot_lo"] > 0.1
-    assert b["pooled_capture"][PIX]["0.1"] == pytest.approx(0.682, abs=5e-4) and b["pooled_capture"][C]["0.1"] == pytest.approx(0.465, abs=5e-4)
-    assert b["pooled_eaurc"][PIX] < b["pooled_eaurc"][C] < b["pooled_eaurc"][OE]
-    t = b["tests"][PIX][f"vs {C}"]
-    assert (t["w"], t["l"]) == (219, 131)
-    a = s["part_a"]
-    assert a["capture_river_tests_vs_confidence"][OE]["0.1"]["w"] == 7 and a["capture_river_tests_vs_confidence"][PIX]["0.1"]["w"] == 4
-
-
-def test_exp40_replication_is_a_recorded_negative():
-    """exp40 (job 725652): the pixel-statistics contradiction fails every primary test on the test split."""
-    s = json.load(open(os.path.join(OUT, "exp40_summary.json")))
-    b = s["part_b"]
-    assert b["prereg"]["supported"] is False and b["n_tiles_scored"] == 483
-    ea = b["prereg"]["eaurc_per_tile"]
-    assert (ea["w"], ea["l"]) == (215, 267) and ea["sign_p"] == pytest.approx(sign_test(215, 267, "greater"), rel=1e-9)
-    assert ea["pooled_eaurc"] > ea["pooled_eaurc_confidence"]
-    c10 = b["prereg"]["capture_10_per_tile"]
-    assert c10["one_sided"] and (c10["w"], c10["l"], c10["t"]) == (183, 195, 105)
-    assert b["prereg"]["capture_10_pooled"]["boot_hi"] < 0
-    PIX, OE = "contradiction (pixel-statistics neighbours)", "contradiction (OlmoEarth neighbours)"
-    assert b["pooled_capture"][PIX]["0.1"] > b["pooled_capture"][OE]["0.1"]      # the ordering of the spaces replicates
-
-
 def test_exp41_two_view_disagreement_is_a_recorded_negative():
     """exp41 (job 726248): outside partners' errors are as correlated with OlmoEarth's as the family's; the primary
     fails on both tasks."""
@@ -345,21 +308,6 @@ def test_exp43_mechanism_accounting_matches_the_theorem():
         assert r["secondary_k8_hard_twelve_bands_only"]["mean_gain"] < 0          # dropping NDWI does not rescue it
         assert 0.02 < r["block_constant_oracle_limit"]["rate"] < 0.04             # far below the grid's error rate
     assert s["results"]["bolivia"]["tiles_excluded_no_labelled_pixel_in_common_region"] == [47]
-
-
-def test_exp44_sixteen_offsets_are_better_but_not_worthwhile():
-    """exp44 (job 727364): W16 beats the four diagonals on both testbeds, below the preregistered minimum effect;
-    an unbalanced offset subset is worse than the diagonals."""
-    s = json.load(open(os.path.join(OUT, "exp44_summary.json")))
-    assert s["prereg"]["supported"] is False and s["prereg"]["complete"] is True
-    for name in ("bolivia", "test"):
-        r = s["results"][name]
-        w16 = r["tests"]["W16 (all offsets)"]
-        assert w16["one_sided"] and w16["sign_p"] < 0.05 and w16["C_total"] > w16["B_total"]
-        assert 0 < w16["mean_gain"] < 0.002 and r["prereg"]["passes"] is False
-        assert r["pixel_accuracy_mean"]["W16 (all offsets)"] > r["pixel_accuracy_mean"]["W1 (4 diagonals)"]
-        assert r["tests"]["W7 (diagonals + horizontal phases)"]["mean_gain"] < 0        # an unbalanced set hurts
-        assert s["testbeds"][name]["diagonal_consistency_max_abs_diff"] == 0.0
 
 
 def test_exp45_v12_replication_and_cross_version_overlap():
@@ -524,18 +472,6 @@ def test_exp52_fine_tuning_corrects_the_frozen_errors_and_dissolves_the_bolivia_
     assert R["FT-S1 v1"]["test"]["pooled_eaurc"]["control NDWI level"] < R["FT-S1 v1"]["test"]["pooled_eaurc"]["averaged confidence"]
 
 
-def test_exp53_shift_consistency_adaptation_is_rejected():
-    """exp53 (job 762709): held-out agreement improves on nearly every tile while hand-label accuracy falls."""
-    s = json.load(open(os.path.join(OUT, "exp53_summary.json")))
-    assert s["prereg"]["P1"] is False and s["prereg"]["complete"] is True and s["n_failures"] == 0
-    for n in ("bolivia", "test"):
-        for v in ("memo", "consistency"):
-            r = s["results"][n][v]
-            assert r["mean_gain"] < 0 and r["sign_p"] > 0.05 and r["share_tiles_held_out_improved"] >= 0.95
-    assert round(s["results"]["bolivia"]["baseline_pixel_accuracy_mean"], 4) == 0.9071      # reproduces exp42's W1
-    assert round(s["results"]["test"]["baseline_pixel_accuracy_mean"], 4) == 0.9503
-
-
 def test_exp56_audit_guided_label_selection_is_rejected():
     """exp56 (job 775302): the audit's tile selection is worse than random on the multi-region split at every budget."""
     s = json.load(open(os.path.join(OUT, "exp56_summary.json")))
@@ -643,22 +579,6 @@ def test_exp60_sensor_axis_isolates_and_time_axis_does_not_concentrate_the_flood
     d = (z["A_s2pre"] != z["A_s1pre"]) & z["ok"]
     flooded = z["y_after"] & ~z["y_permanent"]
     assert d.sum() == R["sensor_only"]["n_disagree"] and abs(flooded[d].mean() - R["sensor_only"]["flooded_share"]) < 1e-9
-
-
-def test_exp61_residue_is_not_the_seasonal_water_of_the_date():
-    """exp61 (job 799222): the JRC monthly water of the pre-event month calls 0.1% of the radar-water residue water; the
-    layers recompute the label agreement on the committed masks."""
-    s = json.load(open(_need("exp61_summary.json")))
-    assert s["prereg"]["P1"] is False and s["prereg"]["complete"] is True and s["n_failures"] == 0
-    r, t = s["results"]["residue"], s["results"]["P1_test"]
-    assert r["gsw_water_share_radar_water"] < 0.002 and round(r["gsw_water_share_among_observed"], 3) == 0.032 and (t["w"], t["l"]) == (3, 14)
-    L = np.load(_need("exp61_layers.npz"))
-    z = np.load(_need("exp60_masks.npz"))
-    obs = np.nan_to_num(L["gsw_observed"], nan=0.0) >= 0.5
-    m = z["ok"] & obs
-    assert m.sum() == s["results"]["agreement_with_gsw_all_observed"]["n"]
-    assert abs(((L["gsw_water"] > 0.5) == z["y_permanent"])[m].mean() - s["results"]["agreement_with_gsw_all_observed"]["label_permanent"]) < 1e-9
-    assert abs(((L["permwater"] > 0.5) == z["y_permanent"])[z["ok"] & ~np.isnan(L["permwater"])].mean() - s["results"]["sanity"]["permwater_equals_label_all_windows"]) < 1e-9
 
 
 def test_exp62_fourth_cell_completed_and_the_pre_event_optical_head_fails_on_one_event():
@@ -1126,72 +1046,6 @@ def test_exp64_declines_recount_from_the_recorded_answers():
         tally[run["arm"]][kind] += 1
     assert tally["A"] == {"decline": 30} and tally["D"] == {"decline": 30}
     assert tally["B"] == {"pick": 18, "decline": 3, "unanswered": 9}
-
-
-def test_exp86_claim_rates_brief_level_fall_recomputes_from_the_per_brief_counts():
-    """exp86_claim_rates.json: the eight briefs pool the ten brief-by-backend configurations, the totals match, and
-    the exact brief-level test of the round 7 to round 10 fall is recomputed here by enumerating the 256 swaps of the
-    two rounds within briefs (and the 128 without brief B3); the sign test over the briefs' own rates likewise."""
-    import itertools
-    import math
-    d = json.load(open(_need("exp86_claim_rates.json")))
-    R = {r["round"]: r for r in d["rounds"]}
-    for r in R.values():
-        assert r["n_configurations"] == 10 and r["n_briefs"] == 8
-        pooled = collections.defaultdict(lambda: [0, 0])
-        for cfg, (k, s) in r["per_configuration"].items():
-            pooled[cfg.split("/")[0]][0] += k
-            pooled[cfg.split("/")[0]][1] += s
-        assert dict(pooled) == r["per_brief"]
-        assert sum(v[0] for v in r["per_brief"].values()) == r["material"]
-        assert sum(v[1] for v in r["per_brief"].values()) == r["sentences"]
-
-    def exact(a, b):
-        keys = sorted(a)
-        rate = lambda u: sum(u[k][0] for k in keys) / sum(u[k][1] for k in keys)          # noqa: E731
-        obs = rate(a) - rate(b)
-        hits = sum(rate({k: b[k] if f else a[k] for k, f in zip(keys, fl)})
-                   - rate({k: a[k] if f else b[k] for k, f in zip(keys, fl)}) >= obs - 1e-12
-                   for fl in itertools.product((0, 1), repeat=len(keys)))
-        return hits, 2 ** len(keys), obs
-
-    a, b = R[7]["per_brief"], R[10]["per_brief"]
-    F = d["fall_7_to_10"]
-    hits, n, obs = exact(a, b)
-    assert (hits, n) == (4, 256) and F["exact_brief_permutation"]["n_at_least_observed"] == 4
-    assert abs(obs - F["exact_brief_permutation"]["observed_fall"]) < 1e-12
-    down = sum(a[k][0] / a[k][1] > b[k][0] / b[k][1] for k in a)
-    up = sum(a[k][0] / a[k][1] < b[k][0] / b[k][1] for k in a)
-    assert (down, up) == (6, 1)
-    assert abs(sum(math.comb(7, j) for j in range(6, 8)) / 2 ** 7 - F["brief_sign_test"]["p_one_sided"]) < 1e-12
-    rest = {k: v for k, v in a.items() if k != "B3"}, {k: v for k, v in b.items() if k != "B3"}
-    hits, n, obs = exact(*rest)
-    assert (hits, n) == (4, 128) and abs(obs - F["without_B3"]["fall"]) < 1e-12
-    assert a["B3"][0] * 2 == R[7]["material"], "brief B3 carries half of round 7's material findings"
-    # the configuration-level numbers are the 27 September ones, unchanged by the brief-level additions
-    assert [round(v, 4) for v in R[7]["material_per_sentence_bootstrap_by_configuration_95"]] == [0.0376, 0.1116]
-    assert [round(v, 4) for v in F["by_configuration"]["round_7_minus_round_10_95"]] == [0.0181, 0.0919]
-
-
-def test_exp86_audit_variation_and_the_answers_no_rule_touched_recount_from_the_audits():
-    """exp86_development_rounds_summary.md quotes two counts read from the committed audits, recounted here with the
-    rule exp86_claim_rates.py uses (a finding counts when its verdict is confirmed or reclassified). Two audits of the
-    same round-7 answers confirmed 48 and 63 findings. In round 8 the answer checks rewrote three answers (B3/studio
-    run 3, B7/files run 1, B8/cluster run 1, exp86_round8_diagnosis.md); in the other 27 configuration-run positions,
-    material findings fell from 26 in round 7 to 14 in round 8."""
-    def counted(name, rnd):
-        audit = json.load(open(_need(name)))
-        label = audit["key"]["label_of_round"][rnd]
-        return [v for g in audit["groups"] for v in g["verify"]["verdicts"]
-                if v["label"] == label and v["verdict"] in ("confirmed", "reclassified")]
-    first, second = counted("exp86_audit_rounds_6_7.json", "7"), counted("exp86_audit_rounds_7_8.json", "7")
-    assert (len(first), len(second)) == (48, 63)
-    assert len(second) == json.load(open(_need("exp86_claim_rates.json")))["rounds"][0]["confirmed"]
-    assert not any("materiality" in v for v in first), "the first audit judged no materiality"
-    touched = {("B3/studio", "3"), ("B7/files", "1"), ("B8/cluster", "1")}
-    untouched = {rnd: sum(v.get("materiality") == "material" and (v["configuration"], v["run"]) not in touched
-                          for v in counted("exp86_audit_rounds_7_8.json", rnd)) for rnd in ("7", "8")}
-    assert untouched == {"7": 26, "8": 14}
 
 
 def test_exp78_shipped_tile_design_coverage_by_an_independent_implementation():

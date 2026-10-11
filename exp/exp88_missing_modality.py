@@ -69,7 +69,7 @@ Interpretations of the plan page, each flagged in the commit that added this fil
      exp54's windows reproduced, then the alignment check and the full run (run_all, past the freeze guard only)
      end to end on a synthetic Hub cache read offline, for both encoders.
   h. The full run refuses to start unless the plan page's status line says frozen ("**Status: frozen ...", the
-     form agent_trial_v3.md took), so no run on real embeddings can precede the freeze by accident.
+     form the archived agent_trial_v3.md took), so no run on real embeddings can precede the freeze by accident.
      --check-alignment is allowed before it and reads only identifiers (the labels and any other per-unit key a
      file carries, compared in order and reported by digest, never tabulated), shapes, dtypes and split sizes; the
      embeddings are opened memory-mapped where torch allows and no value of theirs enters any computation.
@@ -163,8 +163,8 @@ def prereg_status(text=None):
     for line in text.splitlines():
         if line.startswith("**Status"):
             low = line.lower()
-            # "frozen" must come first after the label ("**Status: frozen on ...", as agent_trial_v3.md reads), so
-            # a frozen line that mentions the earlier draft is still frozen and "not frozen" never matches
+            # "frozen" must come first after the label ("**Status: frozen on ...", as the archived agent_trial_v3.md
+            # read), so a frozen line that mentions the earlier draft is still frozen and "not frozen" never matches
             if re.match(r"\*\*status:?\*?\*?\s*frozen", low):
                 return "frozen"
             if "draft" in low or "not frozen" in low:

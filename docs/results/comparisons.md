@@ -9,6 +9,17 @@ harness. Scoring rules, evidence tiers and status terms are defined in
 Superseded runs (exp05, exp09, exp11's statistics) are not reproduced here.
 They are in the lab log, [../../exp/NOTES.md](../../exp/NOTES.md).
 
+**Archived experiments.** On 10 October 2026, fourteen experiments were
+moved out of the repository's current tree: exp06, exp09, exp10, exp12,
+exp22, exp26, exp27, exp39, exp40, exp44, exp53, exp61, exp86 and exp87. No
+remaining claim's check, no claim tag of the white paper, no kept script and
+no package test reads them. The white paper reports exp86's and exp87's
+results and links their archived files, and two remaining claims list exp10
+or exp12 among their experiments as provenance. Their scripts and outputs are
+in the [v1.9.0 tree](https://github.com/2imi9/olmoearth_inferenceX/tree/v1.9.0),
+and the sections this page gave them are in its
+[v1.9.0 copy](https://github.com/2imi9/olmoearth_inferenceX/blob/v1.9.0/docs/results/comparisons.md).
+
 ---
 
 # 1. Expert labels (authoritative)
@@ -149,8 +160,9 @@ errors for signal evaluation.
 
 On this in-domain multiclass task **confidence achieves the lowest AURC**
 (0.0363), against tile-phase 0.0489, Nano-Base total variation 0.0670, and —
-completing the comparison on the same 63 errors (exp12) — E_dist 0.1338 and a
-no-model spectral-variability control 0.1658. In-domain AWF errors are <!-- claim:awf-confidence-lowest-aurc -->
+completing the comparison on the same 63 errors (exp12, archived;
+[v1.9.0 copy](https://github.com/2imi9/olmoearth_inferenceX/blob/v1.9.0/exp/exp12_awf_missing_cells.py)) — E_dist
+0.1338 and a no-model spectral-variability control 0.1658. In-domain AWF errors are <!-- claim:awf-confidence-lowest-aurc -->
 neither out-of-distribution nor pixel-trivial.
 
 Lowest per-class recall: herbaceous wetland (0.50, n=6, indicative only).
@@ -344,7 +356,8 @@ removed one at a time and the advantage survives each. **What remains is
 either reference error shared by both WorldCover versions and unrelated to
 seasonality, or a genuine property of the WorldCover-defined task that
 date-matched hand labels do not share.** The next step is a human
-adjudication of individual disagreements; exp26 prepared the kit.
+adjudication of individual disagreements; exp26 prepared the kit (archived;
+[v1.9.0 copy](https://github.com/2imi9/olmoearth_inferenceX/blob/v1.9.0/exp/exp26_handcheck_kit.py)).
 
 ---
 
@@ -424,9 +437,6 @@ labels over the region every tiling covers:
 | W3 spectral split inside the window | 0.9084 | 0.9483 | vs W1: 217/158 better on Bolivia, 226/404 worse on test | <!-- claim:window-design-alternatives-mixed -->
 | W2 scale-adaptive (window accuracy) | 0.9045 vs 0.9020 | 0.9515 vs 0.9518 | 175/121; 253/241 |
 | segment majority of W1 over a spectral partition (exp43, preregistered) | 0.9042 | 0.9478 | vs W1: 168/209 (C 15,093, B 16,273); 244/387 (C 24,525, B 30,951) | <!-- claim:segment-majority-rejected -->
-| sixteen crop offsets (exp44, preregistered) | 0.9074 | 0.9507 | vs W1: 201/149/90, p = 0.003 (C 4,566, B 4,237); 369/202/229, p = 1.3e-12 (C 7,100, B 6,060); +0.04 points, below the +0.2 minimum effect | <!-- claim:sixteen-offsets-not-worthwhile -->
-| eight offsets, diagonals and anti-diagonals (exp44) | 0.9073 | 0.9505 | half of W16's gain |
-| seven offsets, diagonals and horizontal phases (exp44) | 0.9060 | 0.9487 | worse than the four diagonals on both |
 
 Mixed-label windows are 10% of the windows and carry 45% and 58% of the
 grid window's errors (error rate 0.39 and 0.28 against 0.054 and 0.022 on
@@ -693,32 +703,6 @@ than its own confidence (0.0158 against 0.0347), exp51's flip with a trained mod
 modality lever exp46 measured on frozen probes is a frozen-feature property:
 once the S2 model is trained, the radar has little left to add on this task.
 Source `exp/out/exp52_summary.json`, job 762708.
-
-## Test-time adaptation of the head by shift consistency (exp53)
-
-Per tile, a copy of the exp18 head is adapted on that tile's four cached
-feature maps to make the tilings agree, memo (entropy of the shift-averaged
-probability) or consistency (variance across tilings), each with an anchor to
-the original weights, fitted on tilings 0 and 2 and stopped when tilings 1 and
-3 stop agreeing more; the adapted decision is the shift-averaged one. Labels
-grade, never adapt.
-
-| Adapted head, hand-label pixel accuracy | Bolivia (baseline 0.9071) | test split (baseline 0.9503) |
-|---|---|---|
-| memo: mean gain, tiles better/worse/tied, one-sided p | -0.0032, 191/186/63, p = 0.42 | -0.0079, 230/381/189, p = 1 |
-| memo: held-out disagreement before -> at the kept step; tiles improved | 0.0675 -> 0.0366; 0.99 | 0.0541 -> 0.0303; 0.98 |
-| memo: E-AURC of the adapted confidence (baseline) | 0.0108 (0.0094) | 0.0145 (0.0109) |
-| consistency: mean gain, tiles better/worse/tied, one-sided p | -0.0079, 171/202/67, p = 0.95 | -0.0140, 196/417/187, p = 1 |
-| consistency: held-out disagreement before -> at the kept step; tiles improved | 0.0675 -> 0.0338; 0.99 | 0.0541 -> 0.0281; 0.96 |
-| consistency: E-AURC of the adapted confidence (baseline) | 0.0103 (0.0094) | 0.0099 (0.0109) |
-
-Rejected, and instructively. The held-out disagreement falls on 99% of the tiles <!-- claim:shift-tta-rejected -->
-and the adaptation runs to the cap on the median tile, while hand-label
-accuracy falls on both testbeds under both objectives. Agreement across views
-is not correctness: the head can be moved so that every tiling is wrong
-together, and a label-free validation on held-out views does not guard
-against it. The consistency variant ranks its own errors slightly better on
-the test split and decides worse. Source `exp/out/exp53_summary.json`, job 762709.
 
 ## Does the audit save labels? (exp56)
 
@@ -1176,7 +1160,9 @@ short of the preregistered 2, and higher on 13 events against 13 (p = 0.58);
 P1 fails. More than half of that difference, 54.5%, is where the pre-event radar
 pass departs from the permanent-water label. The reading that this is the water
 regime of the pre-event date, seasonal water the permanent class does not carry,
-was tested by exp61 with a date-matched arbiter and rejected (next section). Where both sides are confident the time-only difference is
+was tested by exp61 with a date-matched arbiter and rejected (archived;
+[v1.9.0 copy](https://github.com/2imi9/olmoearth_inferenceX/blob/v1.9.0/docs/results/comparisons.md#is-the-pre-event-radars-departure-the-seasonal-water-of-its-date-exp61)).
+Where both sides are confident the time-only difference is
 flooded 41% of the time against 26% on the mixed pair, on 12 events against 9
 (p = 0.33, a stated prediction, not supported). The sensor-only pair has fewer
 differing windows than the mixed pair on 21 events against 17 (p = 0.31, the
@@ -1185,42 +1171,6 @@ Caveat: the two radar passes may differ in orbit and incidence angle, so the tim
 axis includes acquisition geometry. Runtime 5:24 (job 794821), the pre-event pass
 extracted in about a minute. Source `exp/out/exp60_summary.json`,
 `exp/out/exp60_masks.npz` (the three decision maps, margins and labels).
-
-## Is the pre-event radar's departure the seasonal water of its date? (exp61)
-
-exp60 left a reading untested: that the 54.5% of the same-sensor difference where
-the pre-event radar departs from the permanent-water label is water that was
-there on that date and the permanent class does not carry. Two things test it
-without new imagery. GEOID ships three layers exp55 never extracted, permwater,
-floodmask and validity (about 10 MB per shard); and the JRC Global Surface Water
-monthly history (v1.4, 30 m, 1984 to 2021) gives water, not water or no
-observation for the month of each tile's pre-event Sentinel-1 pass, read by HTTP
-range requests and reprojected onto the chip grid. exp60's chips and decisions were
-reproduced and asserted equal to the committed masks, so every window is exp60's.
-
-The residue is 16,199 of the 29,700 time-only differing windows: 14,447 where the
-radar said water and the label not permanent, 1,752 where the radar said dry and
-the label permanent. The JRC product observed 85% of them in that month and calls
-3.2% of the observed ones water: 0.1% of the radar-water part, 32% of the radar-dry
-part. The raw CEMS floodmask marks 1.9% of the residue. Per event, the JRC water
-share on the residue is at or near zero on 14 of the 17 events with at least 20
-observed residue windows and above one half on 3 small ones (one-sided sign test
-against one half, p = 0.999). Preregistered P1 fails: by a date-matched optical
-arbiter, the pre-event radar's departures from the permanent label are not the
-seasonal water of the date; they are windows the radar head calls water that
-neither the label nor the month's Landsat product holds. What they are physically,
-radar-dark dry surfaces or water too narrow for 30 m optics, the two optical
-references cannot decide. <!-- claim:residue-not-seasonal-water -->
-Three sanity facts came with it. GEOID's permanent class is its permwater layer
-(equal on 99.3% of windows) and its flooded class is its floodmask (99.9%), so
-grading against those layers adds nothing. The JRC monthly water agrees with the
-label on 99.2% of the 649,877 observed windows, more than with the radar head
-(97.5%) or the optical head (96.4%). On the 42,696 sensor-only differing windows it
-sides with the radar head 61% to 39%. <!-- claim:geoid-label-is-permwater -->
-Runtime 1:05 on the cpu partition (job 799222; a first run, job 799100, was discarded:
-its reader had rewritten the product's no-observation value as not-water). Source
-`exp/out/exp61_summary.json`, `exp/out/exp61_layers.npz` (the pooled layers on
-exp60's windows).
 
 ## The fourth cell: post-event optical from WorldFloods completes the square (exp62)
 
@@ -4117,66 +4067,9 @@ and Barotse sites, read with the pure-HTTP tile reader in
 Values in `exp/out/exp20_lcc_production.csv`; figure
 `exp20_lcc_kazungula.png`.
 
-## Periodic artifacts in the served product (exp22)
-
-**Question.** Does the served v1.2 product carry striping or seams at the
-scales its pipeline imposes?
-
-5 windows of 4096 served px (about 37 km) from 3 tiles. Column and row
-profiles of the class-map boundary indicator (band 4), the change-probability
-gradient (band 1), and ESA WorldCover 2021 warped to the same grid (a control
-sharing no model grid), tested for periodicity with a whitened periodogram.
-Every pipeline period is predicted from each window's own geometry.
-
-- **Patch lattice: found.** The largest peak of 19 of 20 product profiles
-  lies on the encoder's patch lattice (8 at 1 patch, 5 at 2, 3 at 4, and 3 on
-  the third harmonic of the 4-patch period), and the observed periods track
-  each window's UTM-to-Mercator ratio. The weakest of the 19 still reaches
-  Bonferroni p=3.9e-12; the WorldCover control's *best* top peak reaches only
-  p=0.006. **Class boundaries and
-  change-probability gradients are quantized to the 40 m patch grid.** <!-- claim:lcc-lattice-found-seams-absent -->
-- **Inference-window seams: absent.** At 64, 128, 256 and 512 UTM px,
-  profiles with p<0.01 are 0/10 in every class-map band and 1/10 in one
-  gradient band — the rate expected under the null. Injected seams set the
-  detection limit: at 128 px, seams affecting 5% of rows would have been
-  detected in 3 windows and 10% in 2; at 256 px, 10% in 2 and 20% in 3. The
-  single off-lattice top peak is kwando's change-gradient row profile, at
-  7.55 px (1.72 patches).
-- **Warp duplication beat** (nearest-neighbour warping repeats a source
-  column every ratio/(ratio-1) served px): fundamental p<0.001 in 2/10
-  class-map and 2/10 gradient profiles, 0/10 in the control.
-- **Method validated before use** on lattice-free synthetic maps: scan false
-  positives 0/10, confirmatory 1/10; seams on 5% of rows detected at sparse
-  boundaries (p=9e-7), 10% at dense ones (p=5e-9); shear correction about
-  triples power.
-
-Values in `exp/out/exp22_lcc_striping.csv`, `exp22_confirmatory.csv`,
-`exp22_power.csv`.
-
 ---
 
 # 5. Supporting comparisons
-
-## No-model image-statistic controls (exp06)
-
-Control signals computed directly from pixel values (within-patch spectral
-variance, patch-mean |NDWI| proximity to the water/land boundary, NDWI
-gradient magnitude), scored on identical errors with the same harness.
-
-- **Kazungula:** every model signal retains a margin over the best control
-  (tile-phase 0.00058, |Nano-Base| 0.00086 vs spectral variance 0.0012).
-- **Barotse floodplain:** E_case retains a margin (0.0235 vs NDWI gradient
-  0.0384), so the wetland-margin result does not reduce to edge detection.
-- **Zambezi delta:** all three no-model statistics rank the disagreements as
-  well as or better than every model signal (NDWI gradient 0.0005 vs E_dist
-  0.0014). This scene's disagreements are the river the reference misses —
-  spectrally trivial — so **it supports no claim of model-signal
-  superiority**, and the E_dist shift claim was withdrawn on this basis. <!-- claim:no-model-controls -->
-
-On both difficult scenes, even no-model statistics rank errors better than
-confidence.
-
-![No-model controls vs model signals](../../exp/out/exp06_controls.png)
 
 ## Evidence from inside the encoder (exp17)
 
@@ -4202,19 +4095,12 @@ Nano 0.61, depth probe 0.64, logit-lens 0.61, 20 m band-set probe 0.75. The
 band-set probe is the *most* correlated rater yet yields the *best*
 disagreement signal — so error decorrelation alone does not predict a
 partner's value; a partner that sees a different view of the input does. <!-- claim:band-set-most-correlated-best-partner -->
-This refines exp10.
+This refines exp10 (archived;
+[v1.9.0 copy](https://github.com/2imi9/olmoearth_inferenceX/blob/v1.9.0/docs/results/comparisons.md#rater-strength-vs-diversity-exp10)).
 
 Best-signal tally: tile-phase 13, control 9, depth-probe 2, band-set 1,
 attention entropy 1, E_case 1, baseline 0. Values in
 `exp/out/exp17_internal_evidence.csv`.
-
-## Rater strength vs diversity (exp10)
-
-Replacing Nano with v1-Large as Base's partner makes the disagreement signal
-**worse** (|Large-Base| mean AURC 0.0197 vs |Nano-Base| 0.0129 over seven
-scenes, better on only 3/7) although Large is the more accurate model on
-every scene. Within one family, strong models agree on errors. Refined by <!-- claim:stronger-partner-worse-disagreement -->
-exp17 above.
 
 ## E_geo combined with boundary proximity (exp15)
 

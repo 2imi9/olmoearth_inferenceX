@@ -441,10 +441,11 @@ oe-inferencex estimate to_label.csv --reviewer-false-alarm 0.05 --reviewer-miss 
 `--reviewer-false-alarm E0` is the most the reviewer marks wrong of the windows that are truly right, and
 `--reviewer-miss E1` the most the reviewer marks right of the windows that are truly wrong. The labels then show the
 rate p = θ(1 - e1) + (1 - θ)e0, so the true rate θ lies between (p - E0)/(1 - E0) and p/(1 - E1), and `estimate`
-applies those two maps to its interval's ends. The bounds are sharp, proved in Lean in the repository's `lean/`
-folder; tests/test_unjudged.py checks the interval's coverage by exact enumeration against reviewers who err as much
-as the bounds allow. The bounds are yours: they are not measured here, and if the reviewer errs more often the result
-does not hold. Per input condition they must hold within each condition.
+applies those two maps to its interval's ends. The bounds are sharp, proved in Lean in `lean/` of the
+[v1.9.0 tree](https://github.com/2imi9/olmoearth_inferenceX/tree/v1.9.0/lean); tests/test_unjudged.py checks the
+interval's coverage by exact enumeration against reviewers who err as much as the bounds allow. The bounds are yours:
+they are not measured here, and if the reviewer errs more often the result does not hold. Per input condition they
+must hold within each condition.
 
 `certify` takes no reviewer error rate. Allowing for misses would mean testing at α(1 - E1), which holds only if the
 reviewer misses at most E1 of the wrong windows inside every zone the test can certify. Those are the most confident
@@ -1033,11 +1034,12 @@ uv run python scripts/audit_one_scene.py   # one scene end to end
 ```
 
 The experiments are the numbered scripts in [`exp/`](../exp/), with outputs under `exp/out/` and the chronology in the
-[lab log](../exp/NOTES.md); [`scripts/`](../scripts/) holds named entry points, and cluster jobs follow
-[Infrastructure](method/infrastructure.md). A new rule is scored with `metrics` and `stats` under the
-[protocol](method/protocol.md). `suite_regression.py` screens a per-unit reading, `f(probs, emb_test, emb_train,
-decisions)` with higher meaning more suspect, on Ai2's published suite against exp74's bar; `--model <its directory>`
-grades a new encoder the same way.
+[lab log](../exp/NOTES.md); the experiments archived on 10 October 2026 are in the
+[v1.9.0 tree](https://github.com/2imi9/olmoearth_inferenceX/tree/v1.9.0/exp). [`scripts/`](../scripts/) holds named
+entry points, and cluster jobs follow [Infrastructure](method/infrastructure.md). A new rule is scored with `metrics`
+and `stats` under the [protocol](method/protocol.md). `suite_regression.py` screens a per-unit reading,
+`f(probs, emb_test, emb_train, decisions)` with higher meaning more suspect, on Ai2's published suite against exp74's
+bar; `--model <its directory>` grades a new encoder the same way.
 
 ```bash
 HF_HOME=<cache> python scripts/suite_regression.py --model olmoearth_base --signal mypkg.readings:my_reading

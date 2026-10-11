@@ -42,7 +42,8 @@ README that maps each script to its job ids and artifacts.
   einops, huggingface_hub, numpy); CPU handles 128x128-pixel windows at
   patch size 4, and a single consumer GPU (tested: RTX 5090 laptop, torch
   2.7.1+cu128) makes perturbation ensembles and multi-scene sweeps
-  interactive. (exp/smoke_test.py, exp/exp08, exp/exp09)
+  interactive. (exp/smoke_test.py, exp/exp08, and the archived exp09 in the
+  [v1.9.0 tree](https://github.com/2imi9/olmoearth_inferenceX/blob/v1.9.0/exp/exp09_multiscene.py))
 - All encoder checkpoints are public: v1 Nano/Tiny/Base/Large, v1_1
   Nano/Tiny/Base, v1_2 Nano/Tiny/Small/Base, plus fine-tuned variants (AWF,
   LFMC, Mangrove, ForestLossDriver, EcosystemTypeMapping). Multi-model and

@@ -1,7 +1,0 @@
-# workspace copies of the sealed fixtures (the fixtures themselves are committed under fixtures/)
-rounds/**/workspace/C3/
-rounds/**/workspace/C4/
-rounds/**/workspace/C5/
-rounds/**/workspace/H1/
-rounds/**/workspace/H4/
-rounds/**/workspace/H5/

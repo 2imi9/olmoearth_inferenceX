@@ -481,56 +481,6 @@
     - {file: docs/TECHNIQUES.md, marker: ndwi-first-order-mixed}
     - {file: docs/results/comparisons.md, marker: ndwi-first-order-mixed}
 
-- id: neighbourhood-contradiction-olmoearth-mixed
-  statement: Neighbourhood contradiction in OlmoEarth feature space passed its preregistered test on Bolivia (beats confidence at the 10% budget, 169/126/56 tiles, pooled 0.530 vs 0.465) and 7/1 rivers against WorldCover, but on the multi-region test split with Bolivia as the bank it is far worse than confidence (pooled 0.334 vs 0.643) and never gains on E-AURC.
-  status: mixed
-  experiments: [exp39, exp40]
-  artifacts: [exp/out/exp39_summary.json, exp/out/exp40_summary.json]
-  check: |-
-    (lambda s39, s40:
-      (s39['part_b']['prereg']['P1']['w'], s39['part_b']['prereg']['P1']['l'], s39['part_b']['prereg']['P1']['t']) == (169, 126, 56) and s39['part_b']['prereg']['P1']['sign_p'] < 0.01
-      and round(s39['part_b']['pooled_capture']['contradiction (OlmoEarth neighbours)']['0.1'], 3) == 0.530 and round(s39['part_b']['pooled_capture']['confidence (baseline)']['0.1'], 3) == 0.465
-      and (s39['part_a']['capture_river_tests_vs_confidence']['contradiction (OlmoEarth neighbours)']['0.1']['w'], s39['part_a']['capture_river_tests_vs_confidence']['contradiction (OlmoEarth neighbours)']['0.1']['l']) == (7, 1)
-      and round(s40['part_b']['pooled_capture']['contradiction (OlmoEarth neighbours)']['0.1'], 3) == 0.334 and round(s40['part_b']['pooled_capture']['confidence (baseline)']['0.1'], 3) == 0.643
-      and (s40['part_b']['capture_tests']['contradiction (OlmoEarth neighbours) vs confidence (baseline)']['0.1']['w'], s40['part_b']['capture_tests']['contradiction (OlmoEarth neighbours) vs confidence (baseline)']['0.1']['l']) == (97, 301)
-      and s39['part_b']['pooled_eaurc']['contradiction (OlmoEarth neighbours)'] > s39['part_b']['pooled_eaurc']['confidence (baseline)']
-      and s40['part_b']['pooled_eaurc']['contradiction (OlmoEarth neighbours)'] > s40['part_b']['pooled_eaurc']['confidence (baseline)']
-    )(A['exp/out/exp39_summary.json'], A['exp/out/exp40_summary.json'])
-  cited_in:
-    - {file: docs/TECHNIQUES.md, marker: neighbourhood-contradiction-olmoearth-mixed}
-
-- id: pixel-stat-contradiction-rejected
-  statement: Neighbourhood contradiction in pixel-statistics space beat confidence at every budget and on E-AURC on Bolivia, but the preregistered replication on the test split with Bolivia as the bank failed every primary test.
-  status: rejected
-  experiments: [exp39, exp40]
-  artifacts: [exp/out/exp39_summary.json, exp/out/exp40_summary.json]
-  check: |-
-    (lambda s39, s40:
-      round(s39['part_b']['pooled_capture']['contradiction (pixel-statistics neighbours)']['0.1'], 3) == 0.682
-      and (s39['part_b']['tests']['contradiction (pixel-statistics neighbours)']['vs confidence (baseline)']['w'], s39['part_b']['tests']['contradiction (pixel-statistics neighbours)']['vs confidence (baseline)']['l']) == (219, 131)
-      and s39['part_b']['pooled_eaurc']['contradiction (pixel-statistics neighbours)'] < s39['part_b']['pooled_eaurc']['confidence (baseline)']
-      and s40['part_b']['prereg']['supported'] is False and s40['part_b']['n_tiles_scored'] == 483
-      and (s40['part_b']['prereg']['capture_10_per_tile']['w'], s40['part_b']['prereg']['capture_10_per_tile']['l'], s40['part_b']['prereg']['capture_10_per_tile']['t']) == (183, 195, 105)
-      and (s40['part_b']['prereg']['eaurc_per_tile']['w'], s40['part_b']['prereg']['eaurc_per_tile']['l']) == (215, 267)
-      and s40['part_b']['prereg']['capture_10_pooled']['boot_hi'] < 0
-      and round(s40['part_b']['pooled_capture']['contradiction (pixel-statistics neighbours)']['0.1'], 3) == 0.530
-    )(A['exp/out/exp39_summary.json'], A['exp/out/exp40_summary.json'])
-  cited_in:
-    - {file: docs/TECHNIQUES.md, marker: pixel-stat-contradiction-rejected}
-
-- id: anysat-witness-rejected
-  statement: AnySat embeddings as the neighbourhood space beat confidence at the 10% budget on Bolivia (172/127/52) but not the OlmoEarth space (159/143, p=0.19); an outside representation adds nothing over the model's own.
-  status: rejected
-  experiments: [exp39]
-  artifacts: [exp/out/exp39_summary.json]
-  check: |-
-    (lambda p:
-      (p['P2']['w'], p['P2']['l'], p['P2']['t']) == (172, 127, 52) and p['P2']['sign_p'] < 0.05
-      and (p['P2_vs_oe']['w'], p['P2_vs_oe']['l']) == (159, 143) and p['P2_vs_oe']['sign_p'] > 0.05 and round(p['P2_vs_oe']['sign_p'], 2) == 0.19
-    )(A['exp/out/exp39_summary.json']['part_b']['prereg'])
-  cited_in:
-    - {file: docs/TECHNIQUES.md, marker: anysat-witness-rejected}
-
 - id: two-view-disagreement-rejected
   statement: A head on an outside representation of the same windows errs where OlmoEarth errs (phi 0.77-0.81 on Sen1Floods11, as its own family does), so two-view disagreement captures 0.242 of the errors at 10% against 0.454 for confidence on Sen1Floods11 and 0.180 against 0.246 on AWF.
   status: rejected
@@ -808,36 +758,6 @@
   cited_in:
     - {file: docs/results/comparisons.md, marker: fine-tuned-capture-at-budgets}
 
-- id: lcc-lattice-found-seams-absent
-  statement: The served product's class boundaries and change-probability gradients are quantized to the encoder's 4-px patch lattice (19 of 20 profiles, Bonferroni p at most 6e-08), while inference-window seams at 64-512 px are absent at the null rate.
-  status: measured
-  experiments: [exp22]
-  artifacts: [exp/out/exp22_summary.json]
-  check: |-
-    (lambda s:
-      s['top_peaks_on_lattice'] == '19/20' and s['top_peaks_max_p_bonferroni'] <= 6e-08 and s['worldcover_top_peaks_min_p_bonferroni'] > 0.005
-      and all(s['fundamental_tally']['class_boundary'][f'window {n} px']['p_fund<0.01'] == 0 for n in (64, 128, 256, 512))
-      and sum(s['fundamental_tally']['change_gradient'][f'window {n} px']['p_fund<0.01'] for n in (64, 128, 256, 512)) == 1
-      and all(w['detection_limit_row_fraction[window 128 px]'] <= 0.1 for w in s['windows'].values())
-    )(A['exp/out/exp22_summary.json'])
-  cited_in:
-    - {file: docs/TECHNIQUES.md, marker: lcc-lattice-found-seams-absent}
-    - {file: docs/results/comparisons.md, marker: lcc-lattice-found-seams-absent}
-
-- id: stronger-partner-worse-disagreement
-  statement: Replacing Nano with v1-Large as Base's partner makes the disagreement signal worse (mean AURC 0.0197 vs 0.0129 over seven scenes, better on only 3 of 7) although Large is the more accurate model.
-  status: measured
-  experiments: [exp10]
-  artifacts: [exp/out/exp10_large_pair.csv]
-  check: |-
-    (lambda c: len(c) == 7 and round(sum(float(r['large_base']) for r in c) / 7, 4) == 0.0197 and round(sum(float(r['nano_base']) for r in c) / 7, 4) == 0.0129
-      and sum(float(r['large_base']) < float(r['nano_base']) for r in c) == 3 and all(float(r['large_acc']) > 0.8 for r in c)
-    )(A['exp/out/exp10_large_pair.csv'])
-  cited_in:
-    - {file: docs/TECHNIQUES.md, marker: stronger-partner-worse-disagreement}
-    - {file: docs/results/comparisons.md, marker: stronger-partner-worse-disagreement}
-  note: The CSV holds Large's accuracy per scene but not Base's, so 'more accurate on every scene' is not recomputed.
-
 - id: band-set-most-correlated-best-partner
   statement: The band-set probe is the rater most error-correlated with the final head yet yields the best disagreement signal (21 of 27 scenes against 10 of 27 for the two-model E_case), so a different view of the input beats decorrelation.
   status: measured
@@ -924,21 +844,6 @@
     )(A['exp/out/exp13_summary.json'], A['exp/out/exp13_corrected_stats.csv'])
   cited_in:
     - {file: docs/TECHNIQUES.md, marker: aurc-harness}
-
-- id: no-model-controls
-  statement: No-model pixel-statistic controls run on every comparison scene; on the Zambezi delta every no-model statistic ranks the disagreements at least as well as every model signal (which withdrew the E_dist shift claim), while on Kazungula and the Barotse floodplain the model signals keep a margin.
-  status: supported
-  experiments: [exp06]
-  artifacts: [exp/out/exp06_controls.csv]
-  check: |-
-    (lambda c, m, n:
-      max(float(r['aurc']) for r in c if r['scene'] == 'ood_delta' and r['signal'] in n) < min(float(r['aurc']) for r in c if r['scene'] == 'ood_delta' and r['signal'] in m)
-      and all(min(float(r['aurc']) for r in c if r['scene'] == s and r['signal'] in m) < min(float(r['aurc']) for r in c if r['scene'] == s and r['signal'] in n) for s in ('kazungula', 'hard_barotse'))
-      and {r['scene'] for r in c} == {'kazungula', 'hard_barotse', 'ood_delta'}
-    )(A['exp/out/exp06_controls.csv'], ('baseline max-softmax', 'E_case |Nano-Base|'), ('spectral variance (no model)', 'NDWI ambiguity (no model)', 'NDWI gradient (no model)'))
-  cited_in:
-    - {file: docs/TECHNIQUES.md, marker: no-model-controls}
-    - {file: docs/results/comparisons.md, marker: no-model-controls}
 
 - id: labels-grade-never-train
   statement: Expert labels grade signals and never train them; the AWF signal comparison runs on the 344 validation points (63 probe errors, 30 annotation tasks) of the project's own spatial split.
@@ -1116,24 +1021,6 @@
     - {file: docs/TECHNIQUES.md, marker: segment-majority-rejected}
     - {file: docs/results/comparisons.md, marker: segment-majority-rejected}
 
-- id: sixteen-offsets-not-worthwhile
-  statement: Sixteen crop offsets beat the four diagonals on both testbeds (201/149/90, 369/202/229) but by +0.04 accuracy points, five times below the preregistered minimum worthwhile effect, for twelve extra forward passes; an unbalanced seven-offset subset is worse than the diagonals.
-  status: rejected
-  experiments: [exp44]
-  artifacts: [exp/out/exp44_summary.json]
-  check: |-
-    (lambda s:
-      s['prereg']['supported'] is False and s['prereg']['complete'] is True
-      and (s['results']['bolivia']['tests']['W16 (all offsets)']['w'], s['results']['bolivia']['tests']['W16 (all offsets)']['l'], s['results']['bolivia']['tests']['W16 (all offsets)']['t']) == (201, 149, 90)
-      and (s['results']['test']['tests']['W16 (all offsets)']['w'], s['results']['test']['tests']['W16 (all offsets)']['l'], s['results']['test']['tests']['W16 (all offsets)']['t']) == (369, 202, 229)
-      and all(round(100 * s['results'][n]['tests']['W16 (all offsets)']['mean_gain'], 2) == 0.04 and s['results'][n]['tests']['W16 (all offsets)']['mean_gain'] < s['results'][n]['prereg']['min_effect'] / 4 for n in ('bolivia', 'test'))
-      and all(s['results'][n]['tests']['W7 (diagonals + horizontal phases)']['mean_gain'] < 0 for n in ('bolivia', 'test'))
-      and round(s['results']['bolivia']['pixel_accuracy_mean']['W16 (all offsets)'], 4) == 0.9074 and round(s['results']['test']['pixel_accuracy_mean']['W16 (all offsets)'], 4) == 0.9507
-    )(A['exp/out/exp44_summary.json'])
-  cited_in:
-    - {file: docs/TECHNIQUES.md, marker: sixteen-offsets-not-worthwhile}
-    - {file: docs/results/comparisons.md, marker: sixteen-offsets-not-worthwhile}
-
 - id: s1-probe-p1-confidence-beats-sensor-control
   statement: Under Ai2's own Sentinel-1 probe recipe on our v1 encode, the probe's confidence beats the no-model sensor-level control on the multi-region test split (preregistered P1).
   status: supported
@@ -1262,20 +1149,6 @@
   cited_in:
     - {file: docs/TECHNIQUES.md, marker: s1-adds-little-after-finetune}
     - {file: docs/results/comparisons.md, marker: s1-adds-little-after-finetune}
-
-- id: shift-tta-rejected
-  statement: Adapting the head per tile so the four tilings agree (memo or consistency objective, anchored, stopped on held-out tilings) lowers hand-label pixel accuracy on both testbeds while held-out agreement improves on 96-99% of tiles; preregistered P1 fails.
-  status: rejected
-  experiments: [exp53]
-  artifacts: [exp/out/exp53_summary.json]
-  check: |-
-    (lambda s, R:
-      s['prereg']['P1'] is False and s['prereg']['complete'] is True
-      and all(R[n][v]['mean_gain'] < 0 and R[n][v]['sign_p'] > 0.05 and R[n][v]['share_tiles_held_out_improved'] >= 0.95 for n in ('bolivia', 'test') for v in ('memo', 'consistency'))
-    )(A['exp/out/exp53_summary.json'], A['exp/out/exp53_summary.json']['results'])
-  cited_in:
-    - {file: docs/TECHNIQUES.md, marker: shift-tta-rejected}
-    - {file: docs/results/comparisons.md, marker: shift-tta-rejected}
 
 - id: audit-does-not-save-labels
   statement: Choosing fine-tuning tiles by the audit's suspicion (low-confidence or boundary windows under the frozen head) is worse than random selection on the multi-region test split at every budget from 100 to 1,000 labels and never reaches random's 1,000-label accuracy; entropy selection is worse still; preregistered P1 and P2 fail.
@@ -1717,39 +1590,6 @@
   cited_in:
     - {file: docs/TECHNIQUES.md, marker: two-periods-composition}
     - {file: docs/results/comparisons.md, marker: two-periods-composition}
-
-- id: residue-not-seasonal-water
-  statement: "On the 16,199 windows where exp60's same-sensor difference is the pre-event radar departing from GEOID's permanent-water label, the JRC Global Surface Water monthly history of the pre-event month observed 85% and calls 3.2% of the observed ones water, 0.1% of the 14,447 where the radar said water and 32% of the 1,752 where it said dry; the raw CEMS floodmask marks 1.9%; per event the water share is at or above one half on 3 of 17 events (p = 0.999); preregistered P1 fails: the residue is not the seasonal water of the date but windows the radar head calls water that neither the label nor a date-matched optical product holds."
-  status: rejected
-  experiments: [exp61]
-  artifacts: [exp/out/exp61_summary.json]
-  check: |-
-    (lambda s, r, t:
-      s['prereg']['P1'] is False and s['prereg']['complete'] is True and s['prereg']['gsw_observed_gate_ok'] is True
-      and r['radar_water_label_not_permanent'] == 14447 and r['radar_dry_label_permanent'] == 1752
-      and round(r['gsw_observed_share'], 2) == 0.85 and round(r['gsw_water_share_among_observed'], 3) == 0.032
-      and r['gsw_water_share_radar_water'] < 0.002 and round(r['gsw_water_share_radar_dry'], 2) == 0.32 and round(r['floodmask_share'], 3) == 0.019
-      and t['n_groups'] == 17 and t['w'] == 3 and t['l'] == 14 and t['sign_p'] > 0.05
-    )(A['exp/out/exp61_summary.json'], A['exp/out/exp61_summary.json']['results']['residue'], A['exp/out/exp61_summary.json']['results']['P1_test'])
-  cited_in:
-    - {file: docs/TECHNIQUES.md, marker: residue-not-seasonal-water}
-    - {file: docs/results/comparisons.md, marker: residue-not-seasonal-water}
-
-- id: geoid-label-is-permwater
-  statement: "GEOID-Flood's permanent-water class equals its permwater layer on 99.3% of exp60's windows and its flooded class equals its floodmask layer on 99.9%; the JRC monthly water of the pre-event month agrees with the permanent-water label on 99.2% of the 649,877 observed windows, more than with the radar head (97.5%) or the optical head (96.4%), and on the 42,696 sensor-only differing windows it sides with the radar head 61% of the time."
-  status: measured
-  experiments: [exp61]
-  artifacts: [exp/out/exp61_summary.json]
-  check: |-
-    (lambda R:
-      round(R['sanity']['permwater_equals_label_all_windows'], 3) == 0.993 and round(R['sanity']['floodmask_equals_flooded_label_all_windows'], 3) == 0.999
-      and round(R['agreement_with_gsw_all_observed']['label_permanent'], 3) == 0.992 and round(R['agreement_with_gsw_all_observed']['A_s1pre'], 3) == 0.975
-      and round(R['agreement_with_gsw_all_observed']['A_s2pre'], 3) == 0.964 and R['agreement_with_gsw_all_observed']['n'] == 649877
-      and R['sensor_only_differing']['n'] == 42696 and round(R['sensor_only_differing']['gsw_sides_with_s1'], 2) == 0.61
-    )(A['exp/out/exp61_summary.json']['results'])
-  cited_in:
-    - {file: docs/TECHNIQUES.md, marker: geoid-label-is-permwater}
-    - {file: docs/results/comparisons.md, marker: geoid-label-is-permwater}
 
 - id: fourth-cell-completed
   statement: "WorldFloods v2's post-event Sentinel-2 scenes complete the two-period, two-sensor square on 544 of exp60's 4,489 GEOID-Flood chips in 6 events; a post-event optical water head fitted on 1,766 clear WorldFloods chips from 40 scenes of other activations is right on 97.1% of GEOID's water-after windows there and agrees with WorldFloods' own water mask on 97.1%; the two labels agree on 98.4%."

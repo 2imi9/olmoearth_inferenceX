@@ -1,3 +1,0 @@
-  [FAIL] olmoearth_estimate_map_error
-  [ok] olmoearth_estimate_map_error
-  (3 turn(s), 2 provenance entries)

@@ -1,2 +1,0 @@
-  [ok] olmoearth_search_predictions
-  (2 turn(s), 1 provenance entries)

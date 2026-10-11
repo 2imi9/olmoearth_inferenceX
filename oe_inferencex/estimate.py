@@ -925,11 +925,13 @@ def estimate_error_rate(sample, wrong, unjudged=None, reviewer_false_alarm=0.0, 
     reviewer_false_alarm, reviewer_miss : bounds the user states, in [0, 1): the share of truly correct windows the
         reviewer marks wrong and of truly wrong windows the reviewer marks right. The labels show the rate
         p = theta (1 - e1) + (1 - theta) e0, so theta lies in [(p - E0) / (1 - E0), p / (1 - E1)], and those maps,
-        increasing in p, are applied to the interval's ends (the identified set is sharp, proved in Lean in the
-        repository's lean/ folder; tests/test_unjudged.py checks the coverage by exact enumeration).
+        increasing in p, are applied to the interval's ends (the identified set is sharp, proved in Lean in lean/ of
+        the v1.9.0 tree, https://github.com/2imi9/olmoearth_inferenceX/tree/v1.9.0/lean; tests/test_unjudged.py
+        checks the coverage by exact enumeration).
     Without these the result is `_estimate_core`'s, unchanged. With them `estimate_range` gives the range the labels
     allow, and `estimate` is None unless that range is one value; each condition's row is bounded the same way.
-    Sharpness is proved in lean/, not tested here; tests/test_unjudged.py checks coverage and the formulas."""
+    Sharpness is proved in lean/ of the v1.9.0 tree, not tested here; tests/test_unjudged.py checks coverage and the
+    formulas."""
     fa, miss = float(reviewer_false_alarm), float(reviewer_miss)
     for name, v in (("reviewer_false_alarm", fa), ("reviewer_miss", miss)):
         if not 0 <= v < 1:

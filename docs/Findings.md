@@ -362,7 +362,8 @@ reviewers err (exp91 measured it for a vision-language model). Labelling blind, 
 how much that changes the labels was not measured. Since 1.5.0 a reviewer can write `?` for a window that cannot be
 judged; `estimate` bounds it both ways and `certify` counts it as wrong. `estimate --reviewer-false-alarm E0
 --reviewer-miss E1` widens the interval to the sharp bounds for a reviewer whose error rates the user states (proved in
-`lean/`); the rates are the user's, not measured, and `certify` takes none.
+`lean/` of the [v1.9.0 tree](https://github.com/2imi9/olmoearth_inferenceX/tree/v1.9.0/lean)); the rates are the
+user's, not measured, and `certify` takes none.
 Claude (claude-opus-5-5), shown Sentinel-2 views of Sen1Floods11 Bolivia blind, was not a substitute for the reviewer:
 it judged 104 of 150 random windows and agreed with the hand labels on 85.6% of those (the map, on the same windows,
 95.2%, found after the result); with its 46 ? counted both ways its labels gave an interval of 4.2 to 46.9% where the

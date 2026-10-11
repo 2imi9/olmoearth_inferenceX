@@ -1,3 +1,0 @@
-  [ok] olmoearth_scores_from_file
-  [ok] olmoearth_review_set
-  (3 turn(s), 2 provenance entries)

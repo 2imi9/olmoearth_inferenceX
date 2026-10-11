@@ -3,7 +3,9 @@
 What the first twenty-five experiments support doing, and not doing, when judging where
 a prediction map is wrong in a region with no labels. Each item cites the
 experiment behind it; the evidence is in
-[../results/comparisons.md](../results/comparisons.md). Index at
+[../results/comparisons.md](../results/comparisons.md), and for the
+experiments archived on 10 October 2026 in its
+[v1.9.0 copy](https://github.com/2imi9/olmoearth_inferenceX/blob/v1.9.0/docs/results/comparisons.md). Index at
 [../TECHNIQUES.md](../TECHNIQUES.md).
 
 **What this page does not yet carry.** Forty-odd experiments after exp25 have
@@ -63,7 +65,8 @@ not a solved discrepancy you can reason around — measure it.
 **4. If a reference product is all you have, run a no-model control.** A
 pixel statistic (for water, the NDWI gradient) scored on the same errors
 exposes reference-omission scenes, where it outranks every model signal
-(exp06, exp09).
+(exp06 and exp09, archived;
+[v1.9.0](https://github.com/2imi9/olmoearth_inferenceX/blob/v1.9.0/docs/results/comparisons.md#no-model-image-statistic-controls-exp06)).
 
 **5. Evaluate the way exp11-exp13 do.** Pre-register scene selection before
 fetching scenes; hold out geographically; score with tie-aware AURC or
@@ -94,18 +97,22 @@ reliance instead.
 **9. Do not use distance to the training scene as an error ranker.** It
 fails in-domain (exp03, exp13) and on expert labels (exp18); its apparent
 win under geographic shift was a scale artifact on a scene whose errors were
-spectrally trivial (exp06, exp13).
+spectrally trivial (exp06, archived,
+[v1.9.0](https://github.com/2imi9/olmoearth_inferenceX/blob/v1.9.0/docs/results/comparisons.md#no-model-image-statistic-controls-exp06);
+exp13).
 
 **10. Do not expect hidden-state signals to transfer from language models.**
 Logit-lens settling, representation drift and attention entropy were all
 worse than confidence (exp17).
 
 **11. Do not build ensembles from one model family.** A stronger same-family
-partner makes disagreement *worse* (exp10), equal-weight aggregation hurts
-(exp03, exp04, exp07), and Dawid-Skene reliability estimation is invalid
-because the family errs together (exp07). Disagreement from a different
-*input view* (the v1 band-set tokens) is informative against WorldCover
-(exp17) but still loses on hand labels (exp18).
+partner makes disagreement *worse* (exp10, archived;
+[v1.9.0](https://github.com/2imi9/olmoearth_inferenceX/blob/v1.9.0/docs/results/comparisons.md#rater-strength-vs-diversity-exp10)),
+equal-weight aggregation hurts (exp03, exp04, exp07), and Dawid-Skene
+reliability estimation is invalid because the family errs together (exp07).
+Disagreement from a different *input view* (the v1 band-set tokens) is
+informative against WorldCover (exp17) but still loses on hand labels
+(exp18).
 
 **12. Do not fuse channels.** Prepending a reference-map check to boundary
 proximity did not help (exp15), and no combination has been found that beats

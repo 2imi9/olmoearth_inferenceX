@@ -127,7 +127,8 @@ The references say where each signal comes from; they are not evidence for it.
 - Shanmugam, D., Blalock, D., Sahoo, G. and Guttag, J. (2021). Better
   aggregation in test-time augmentation. *ICCV*.
   [doi:10.1109/ICCV48922.2021.00125](https://doi.org/10.1109/ICCV48922.2021.00125).
-  TTA; rejected (exp53).
+  TTA; rejected (exp53, archived;
+  [v1.9.0](https://github.com/2imi9/olmoearth_inferenceX/blob/v1.9.0/docs/results/comparisons.md#test-time-adaptation-of-the-head-by-shift-consistency-exp53)).
 - Bahat, Y. and Shakhnarovich, G. (2020). Classification confidence estimation
   with test-time data-augmentation. [arXiv:2006.16705](https://arxiv.org/abs/2006.16705).
   Augmentation consistency as confidence; the dihedral signal, rejected.
@@ -381,7 +382,7 @@ From a search of the 2025 and 2026 literature; each entry was checked against it
 - Jakubik et al. (2025). TerraMind: Large-Scale Generative Multimodality for Earth Observation. *ICCV*.
   [arXiv:2504.11171](https://arxiv.org/abs/2504.11171). TerraMind, an any-to-any generative multimodal Earth-observation model that can synthesise a missing sensor. It would make exp75 general: a second sensor for any cell, not only where one was published.
 - Doerksen et al. (2026). EarthShift: a benchmark for measuring robustness to real-world distribution shifts in Earth observation. *arXiv preprint*.
-  [arXiv:2605.29330](https://arxiv.org/abs/2605.29330). EarthShift, paired datasets measuring robustness to real-world distribution shift. A paired-reference construction of the kind the exp27 verdict asked for, aimed at shift.
+  [arXiv:2605.29330](https://arxiv.org/abs/2605.29330). EarthShift, paired datasets measuring robustness to real-world distribution shift. A paired-reference construction of the kind the exp27 verdict asked for (exp27 is archived; [v1.9.0](https://github.com/2imi9/olmoearth_inferenceX/blob/v1.9.0/exp/NOTES.md#exp27-oracle-gate-2026-09-06)), aimed at shift.
 - Gordon et al. (2026). MMEarth-Bench: Global Model Adaptation via Multimodal Test-Time Training. *ECCV*.
   [arXiv:2602.06285](https://arxiv.org/abs/2602.06285). MMEarth-Bench, geographically split multimodal test-time adaptation with label budgets. A testbed on which the label-budget results here could be replicated.
 - Kaushik et al. (2026). Assessing Geo-Foundational Models for Flood Inundation Mapping: Benchmarking Models for Sentinel-1, Sentinel-2, and Planetscope. *IEEE JSTARS*.

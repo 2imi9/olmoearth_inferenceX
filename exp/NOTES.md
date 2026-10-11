@@ -1,5 +1,10 @@
 # Experiment notes
 
+**Archived 10 October 2026.** The 14 experiments exp06, exp09, exp10, exp12, exp22, exp26, exp27, exp39, exp40,
+exp44, exp53, exp61, exp86 and exp87 were moved out of the repository. Their files (scripts, outputs, tests and plan
+pages) are in the [v1.9.0 tree](https://github.com/2imi9/olmoearth_inferenceX/tree/v1.9.0); where an entry below
+names one of their files, that is where it is.
+
 Chronological lab log. Standing conclusions live in docs/TECHNIQUES.md.
 
 Entries run to exp47 (9 September 2026). From exp49 on, each experiment is
