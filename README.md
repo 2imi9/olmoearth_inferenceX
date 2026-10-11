@@ -36,9 +36,12 @@ or a `.npy` array of shape `(C, H, W)`. `plan` says how many labels a question n
 yes, no or undetermined, and `--help` lists each command's options.
 [Quick start](https://olmoearth-inferencex.readthedocs.io/en/latest/Usage/#quick-start) runs each one on a test map.
 
-Limits: without labels it says where to look, not how wrong the map is; a model run on inputs unlike its training data
-can be confident and wrong (`--condition` treats each input condition on its own); every interval and certified zone
-assumes the labels are right, and labelling more and rerunning is a second test, except on a sequential sample.
+Limits: without labels it says where to look, not how wrong the map is. On the one test of a deployed model at a new
+year and place, graded at the plots of an independent random sample that had imagery, confidence ranked the errors
+with an AUROC of 0.64 under a one-to-one crosswalk, below the preregistered 0.70; that run cannot say whether the year,
+the place, the legend or the move from expert-placed points caused it. A model run on inputs unlike its training data can be confident and wrong
+(`--condition` treats each input condition on its own). Every interval and certified zone assumes the labels are
+right, and labelling more and rerunning is a second test, except on a sequential sample.
 
 
 Use from an agent
@@ -65,7 +68,11 @@ Evidence
 --------
 
 Tested on linear probes of sixteen encoders over the tasks of Ai2's embedding suite, and on seven published
-land-cover products against six reference samples, with the reference points standing in for the map. The
+land-cover products against six reference samples, with the reference points standing in for the map. On a deployed
+OlmoEarth model, a re-run of Ai2's configuration for its fine-tuned AWF model, the confidence ranked the map's errors
+with an AUROC of 0.85 at Ai2's expert-placed validation points but 0.64 on 2017 imagery at the plots of an independent
+random sample that had imagery (one-to-one crosswalk), below the preregistered 0.70; the record's own fine-tune of the
+task on OlmoEarth v1.2 gave the same verdicts (0.81 and 0.64). The
 [technical report](https://github.com/2imi9/olmoearth_inferenceX/blob/main/report/main.pdf) and the
 [documentation](https://olmoearth-inferencex.readthedocs.io/en/latest/Summary/) give the results and their limits.
 

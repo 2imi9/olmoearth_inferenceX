@@ -41,7 +41,12 @@ interval on their accuracy difference that names the more accurate map when it e
 closes a median 0.68 of the gap between a random and a perfect review order on the 24 tasks of the model authors'
 embedding suite, and a review of the least confident 10\% holds a median 0.214 of the errors, about twice a random
 10\%; it beats a random order in all 3,560 cells of sixteen encoders, their tasks and ten probe seeds, and beats
-informative no-model controls on three references produced outside this project. On PASTIS, a probe read without the
+informative no-model controls on three references produced outside this project. On a re-run of Ai2's deployment configuration for its fine-tuned AWF model, the
+confidence ranked the map's errors with an AUROC of 0.849 at Ai2's expert-placed validation points but, under a
+one-to-one crosswalk, 0.638 on 2017 imagery at the plots of an independent random sample around the area that had
+input, below the preregistered 0.70; the record's own fine-tune of the task on OlmoEarth v1.2 repeated both verdicts
+(0.814 and 0.642). That run changed the year, the place, the legend and the kind of point at once and cannot say which
+weakened the ranking. On PASTIS, a probe read without the
 optical input it was trained with erred confidently (59.8\% of its errors as confident as the median correct window,
 against 6.0\%), though not on CropHarvest China 6; given a raster of input conditions, the package therefore ranks,
 samples and certifies each condition on its own. The random-sample interval is exact; it remains valid when a reviewer cannot judge some windows, and
@@ -55,7 +60,7 @@ agreement with the reference (they named one on 6\% to 29\% of draws at 50 to 20
 confidence ranked its errors with an AUROC of 0.75; certified zones on that confidence met their guarantee in every
 cell, and at 300 labels the default rule returned no zone on 87\% of draws at $\alpha$ half the error rate, though 65\%
 of the plots lie in a zone within it.
-The record comprises 92 experiment scripts and 228 ledger claims, 226 of them checked against a committed artifact,
+The record comprises 96 experiment scripts and 234 ledger claims, 232 of them checked against a committed artifact,
 and reports failed predictions as failed.
 \end{abstract}
 
@@ -99,8 +104,9 @@ task. The certified zone follows risk control by exact tests \citep{bates2021,an
 between land-cover products \citep{fritz2008} and paired accuracy tests on a shared sample \citep{foody2004} precede the
 comparison of two maps, and the bounds for a reviewer who errs are the partially identified form of the correction of
 \citet{rogan1978}. \citet{lehmann2026} report that geospatial foundation models grow overconfident under corruption
-and that confidence-based abstention cannot defer around their confidently wrong predictions; apart from exp88's
-missing input (Section~\ref{sec:res-conditions}), this record has not applied such shifts. This work joins these parts in one after-the-fact tool
+and that confidence-based abstention cannot defer around their confidently wrong predictions; this record has applied
+no corruption, and besides exp88's missing input (Section~\ref{sec:res-conditions}) one shift of year and place, a
+deployed model graded at a random sample (Section~\ref{sec:res-deployed}). This work joins these parts in one after-the-fact tool
 for maps from Earth-observation foundation models and tests the known signals against the model's confidence and
 against controls that do not use the model.
 
@@ -419,7 +425,7 @@ experts annotating a product & Dynamic World \citep{brown2022}, 409 tiles \\
 surveyors in the field & LUCAS Copernicus 2022, the module described for 2018 by \citet{dandrimont2021} \\
 farmers' declarations & EuroCrops \citep{schneider2023}, labelled in both years \\
 the model authors' validation sets & Ai2's fine-tuned FT-AWF and Forest Loss Driver models \\
-analysts interpreting a simple random sample & LCMAP Reference Data Product v1.2 \citep{pengra2020}, 25,000 plots \\
+analysts interpreting a simple random sample & LCMAP Reference Data Product v1.2 \citep{pengra2020}, 25,000 plots; the East Africa TimeSync sample (exp94, exp99, exp103) \\
 \bottomrule
 \end{tabularx}
 \caption{Labelled testbeds by origin of the reference.}
@@ -430,12 +436,12 @@ analysts interpreting a simple random sample & LCMAP Reference Data Product v1.2
 \label{sec:protocol-ledger}
 
 Each experiment states its predictions and falsification conditions before it runs, with dated amendments; results
-read afterwards are marked as not preregistered here and in the ledger. The repository holds 92 experiment scripts named \code{expNN\_*.py},
-covering 83 experiment numbers from exp01 to exp100. The ledger \code{docs/claims.yaml} holds 228 claims, each with a
-statement, status, artifacts and an executable check (two rest on no committed artifact and say so); 75 are supported, 78 measured, 32 mixed, 41 rejected and 2
+read afterwards are marked as not preregistered here and in the ledger. The repository holds 96 experiment scripts named \code{expNN\_*.py},
+covering 86 experiment numbers from exp01 to exp104. The ledger \code{docs/claims.yaml} holds 234 claims, each with a
+statement, status, artifacts and an executable check (two rest on no committed artifact and say so); 76 are supported, 81 measured, 33 mixed, 42 rejected and 2
 superseded, and \code{scripts/claims.py stale} flags only the two superseded ones. After an audit on 23 September 2026
-found that 138 of the then 167 checks read a result back from its own artifact, second routes were added: 91 of the
-228 claims name a \code{crosscheck} test that reaches the number by another route, and every claim from exp79 on must
+found that 138 of the then 167 checks read a result back from its own artifact, second routes were added: 97 of the
+234 claims name a \code{crosscheck} test that reaches the number by another route, and every claim from exp79 on must
 name one.
 
 Corrected results appear in their current form. exp78's cluster-corrected arm is now the ratio estimator, which
@@ -589,6 +595,17 @@ no threshold. With the 38 plots without input filled all right or all wrong, the
 31.2\% and 43.4\% under STRICT and between 11.8\% and 24.1\% under LENIENT
 \claim{exp99-error-rate-of-plots-with-2017-input}. These are the record's first design-based error rates for an
 OlmoEarth deployment, at the plots with 2017 input, for one model and one year, with labels taken as right.
+
+exp103 applied exp98's and exp99's frozen rules, unchanged, to a second model of the same task: the record's fine-tune
+of OlmoEarth v1.2 Base with Ai2's recipe and labels (exp102, published on Hugging Face), run with rslearn over both
+deployment datasets. The verdicts repeat. At Ai2's 259 points the confidence ranks the errors with AUROC 0.814, the
+least confident 10\% hold 37.5\% of them and the points sit in the confident part of the map (mean percentile 0.653)
+\claim{exp103-v12-ranking-holds-at-ai2s-points}; at the 271 TimeSync plots the STRICT AUROC is 0.642 (90\% bootstrap
+0.582 to 0.703), below 0.70, and the least confident 10\% close 0.267 of the gap (0.017 to 0.497). LENIENT's 0.730
+meets the bar on its point value, but its interval contains 0.70, as v1's did, so the rules' different labels are not a
+difference between the models \claim{exp103-v12-transfer-ranking-misses-under-strict}. The two models share the task,
+the labels, the region and the recipe, so this replicates the findings across model versions; it is not an independent
+test of the shift.
 
 \subsection{Input conditions}
 \label{sec:res-conditions}
@@ -893,7 +910,7 @@ their errors, it estimates 0.975 to 0.983 for maps 0.883 to 0.914 accurate, and 
 is 0.83, 0.71 and 0.62 on PASTIS Sentinel-2, MADOS and Sen1Floods11 \claim{consensus-order-recovered-only-where-true-gaps-are-large}.
 Within one family it estimates 0.996 to 0.999 for maps 0.81 to 0.93 accurate
 \claim{within-family-consensus-is-the-unanimous-limit}. An error rate therefore requires a reference.
-Table~\ref{tab:failed} lists the failed predictions of exp77 to exp99.
+Table~\ref{tab:failed} lists the failed predictions of exp77 to exp103.
 
 \begin{table}[h]
 \centering\footnotesize
@@ -919,11 +936,14 @@ exp91 P1 & a vision-language reviewer agrees with the hand labels on $\geq 90\%$
 exp95 P2 & the standard level cut's coverage falls by more than 0.05 when labels are added on at least 17 of 34 maps & 14 of 34 \claim{exp95-standard-cut-falls-when-labels-are-added} \\
 exp98 P1 & re-run within 5 points of the replica at Ai2's points & interval $-5.1$ to $+0.8$, 0.15 past the margin \claim{exp98-equivalence-within-5-points-not-shown} \\
 exp99 P1 & design-weighted AUROC $\ge 0.70$ on the TimeSync plots & 0.638 STRICT, 0.678 LENIENT \claim{exp99-confidence-misses-the-ranking-bar-under-both-rules} \\
+exp101 P1; P2 & a two-step review holds $\ge 5$ points more STRICT errors than confidence; perturbation instability outranks confidence, both intervals above 0 & $-4.4$ points; AUROC 0.541 against 0.528, interval $-0.090$ to $+0.131$ \claim{exp101-shaking-does-not-help-under-transfer} \\
+exp103 P1 & exp99's P1 for the record's v1.2 fine-tune & 0.642 STRICT (interval to 0.703), 0.730 LENIENT \claim{exp103-v12-transfer-ranking-misses-under-strict} \\
 \bottomrule
 \end{tabularx}
-\caption{Preregistered predictions of exp77 to exp99 recorded as failed or failed as written. exp89 was report-only by
-an amendment made before any result, exp90 was not preregistered, and the predictions of exp92, exp93, exp94, exp96
-(at its preregistered seed) and exp97 held.}
+\caption{Preregistered predictions of exp77 to exp103 recorded as failed or failed as written. exp89 was report-only by
+an amendment made before any result, exp90 was not preregistered, exp100 applied a fixed rule with no predictions,
+exp102 trained a model, the predictions of exp92, exp93, exp94, exp96 (at its preregistered seed) and exp97 held, and
+exp103's others held (its review prediction on the point value).}
 \label{tab:failed}
 \end{table}
 
@@ -935,17 +955,19 @@ samples probability samples, with the points standing in for each map and the pr
 whether a reference point trained a product was not checked, and several pairs are related by construction or
 training; the rest of the
 labelled-route evidence is linear probes on frozen embeddings, graded against benchmark splits that are not probability
-samples, and one fine-tuned model, FT-AWF, which is also the only model run through a deployment pipeline: one
-re-run graded at Ai2's expert-placed points (exp98) and one transfer test graded at the plots of a random sample that
-had input (exp99), both through the v1-era olmoearth\_run configuration with runner and rslearn versions the record
-chose, not Ai2's lock or the current rslearn prediction. The ranking has been graded on four products' own confidence: Dynamic World's, LCMAP's, CGLS-LC100's and
+samples, and two fine-tuned models of one task run over deployment datasets: Ai2's FT-AWF, through one re-run graded at
+Ai2's expert-placed points (exp98) and one transfer test graded at the plots of a random sample that had input
+(exp99), both through the v1-era olmoearth\_run configuration with runner and rslearn versions the record chose, not
+Ai2's lock or the current rslearn prediction, and the record's own v1.2 fine-tune of the same task, run over the same
+two datasets with rslearn~0.1.17's prediction (exp103). The ranking has been graded on four products' own confidence: Dynamic World's, LCMAP's, CGLS-LC100's and
 ODSE-LULC's. The hand-labelled testbeds are mostly binary water
 tasks, on which the margin, one minus the top probability and entropy coincide, and the fine-tuned evidence is FT-AWF's
 41 errors on 344 points with Forest Loss Driver report-only \claim{fine-tuned-model-audit}, FT-AWF's re-run at 259 of
 those points, and its 2017 map at 271 TimeSync plots, whose missing plots are not missing at random and whose two
-crosswalks differ mostly at a legend boundary AWF does not define. exp98's equivalence interval and exp99's LENIENT AUROC
-and least-confident-tenth interval lie at or across their bars, and exp99 does not separate year, place, legend and
-point placement. The suite's 24 tasks come
+crosswalks differ mostly at a legend boundary AWF does not define, and the v1.2 fine-tune's maps at the same points and
+plots. exp98's equivalence interval, exp99's LENIENT AUROC and least-confident-tenth interval, and exp103's AUROC
+intervals under both rules and its least-confident-tenth interval (0.017 to 0.497) lie at or across their bars, and
+exp99 does not separate year, place, legend and point placement. The suite's 24 tasks come
 from 14 sources, its splits are the model authors' and not a landscape sample, and its controls are near chance. The
 estimation studies rest on seven segmentation tasks from five datasets, whose $64\times64$-pixel chip is smaller than a
 reviewer's unit, so the tile design effect is a lower bound. The shipped tile design under-covers where a few tiles hold
@@ -955,9 +977,15 @@ intervals are nominal (14 of 628 per-class cells below 0.93, the lowest 0.879).
 Every interval and certified zone describes agreement with the reviewer's labels. No experiment measured how often
 reviewers err; the reviewer-error bounds rest on rates the user states, and \code{certify} has no allowance for them.
 No real cloud has been tested: exp88's condition is whole-tile radar on three crop families, and a model trained with
-modality dropout is untested. Apart from exp88's missing input, ranking was measured on clean splits; no corruption or
-geographic shift of the kind \citet{lehmann2026} apply was tested, and they report that confidence-based abstention
-cannot defer around confidently wrong predictions under such shift. No label-free reading tried has identified the errors a model
+modality dropout is untested. Apart from exp88's missing input, the probes' ranking was measured on clean splits, and
+no corruption of the kind \citet{lehmann2026} apply was tested; they report that confidence-based abstention cannot
+defer around confidently wrong predictions under shift. The one shift of year and place the record tested, a deployed
+model on 2017 imagery graded at the plots of an independent random sample that had input (exp99, repeated on a second
+fine-tune in exp103), is consistent with them in direction: under the one-to-one crosswalk the ranking missed its bar
+(AUROC 0.638 and 0.642 against 0.70, the second's interval reaching 0.703), though the least confident 10\% still held
+errors beyond chance on the point value. They studied the calibration of frozen encoders, not a fine-tuned model's
+ranking, and the run cannot separate the year, the place, the legend boundary and the move from expert-placed points
+to a random sample. No label-free reading tried has identified the errors a model
 makes confidently. The ranking carries no guarantee, and a review set is not a sample.
 
 The agent evidence is binary water cards at two model sizes, a trial that passed only under an amended instrument, and

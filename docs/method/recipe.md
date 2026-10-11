@@ -138,11 +138,17 @@ reference maps on narrow channels (exp15).
   position encoding, which does *not* reduce sub-patch tiling instability
   (larger in v1.2, exp19); and it tokenizes Sentinel-2 as one band-set token
   per patch, so v1's band-set signal has no v1.2 counterpart.
-- **One fine-tuned model has been run end to end** from the published
-  checkpoint (exp21): confidence still ranks its errors best and tiling
-  instability ties it. The other published checkpoints (Mangrove,
-  ForestLossDriver, LFMC, EcosystemTypeMapping) have not been run; the water
-  results are for linear probes on frozen encoders.
+- **Two of Ai2's fine-tuned models have been run end to end** from the
+  published checkpoints (exp21, exp89; Forest Loss Driver report-only):
+  confidence still ranks FT-AWF's errors best on its validation points and
+  tiling instability ties it. Through FT-AWF's deployment configuration on
+  2017 imagery, graded at the plots of a random sample that had imagery, its
+  confidence ranked the errors with an AUROC of 0.64 under a one-to-one
+  crosswalk, below the preregistered 0.70, and the record's own v1.2
+  fine-tune did the same (exp99, exp103); the run cannot say whether the
+  year, the place or the legend caused it. Mangrove, LFMC and
+  EcosystemTypeMapping have not been run; the water results are for linear
+  probes on frozen encoders.
 
 ## Which confidence on a multi-class map
 

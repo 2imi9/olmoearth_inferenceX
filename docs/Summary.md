@@ -33,6 +33,15 @@ all, with the evidence.
   For Dynamic World, a model this project did not train, the gap between its two highest class
   probabilities beat a class-rarity baseline on 315 expert-annotated tiles and lost on 91. <!-- claim:dw-margin-ranks-a-production-model -->
   That baseline found about twice a random share of the errors there. <!-- claim:external-references-carry-informative-controls -->
+- **A deployed model.** Ai2's deployment configuration for its fine-tuned AWF model, re-run with its
+  probabilities kept: at the 259 of Ai2's validation points its map covers, confidence ranked the errors
+  with an AUROC of 0.849, and the least confident 10% of the points held 42.4% of them. <!-- claim:exp98-deployment-gives-the-evaluations-classes-and-ranking -->
+  Those points, placed by experts, sit in the confident part of the map. <!-- claim:exp98-validation-points-sit-in-the-confident-part -->
+  On 2017 imagery, graded at the plots of an independent random sample around the area that had
+  imagery, confidence ranked the errors with an AUROC of 0.638 under a one-to-one crosswalk, below
+  the preregistered 0.70. <!-- claim:exp99-confidence-misses-the-ranking-bar-under-both-rules -->
+  The record's own fine-tune of OlmoEarth v1.2 for the same task gave the same verdicts: 0.814 at
+  Ai2's points and, under the one-to-one crosswalk, 0.642 at those plots. <!-- claim:exp103-v12-ranking-holds-at-ai2s-points --> <!-- claim:exp103-v12-transfer-ranking-misses-under-strict -->
 - **Error rate.** From 300 randomly drawn windows, a 95% Wilson interval held the true rate in
   93.3% to 96.1% of 2,000 repeated draws, on each of the suite's seven segmentation tasks. <!-- claim:design-based-interval-is-honest -->
   `estimate` now prints the exact hypergeometric interval instead, which covers at least 95% by
@@ -78,6 +87,10 @@ detail.
   For the probe trained on both inputs, the share rose on Togo 12, from 10.4% to 48.5%, and fell
   on China 6, from 13.3% to 6.5%. <!-- claim:missing-modality-confident-errors-follow-the-shift-not-the-sensor -->
   No real cloud has been tested.
+- **Shift.** The ranking missed its bar on the one test under a shift of year and place, graded
+  at a random sample, with both models (above). That run cannot say whether the year, the place, the grass/shrub boundary
+  between the two legends or the move from expert-placed points to a random sample is the cause,
+  and no label-free reading tried in the record has found the errors a model makes confidently.
 - **Labels.** Every interval and certified zone describes agreement with the reviewer's labels,
   which the package treats as right. If the reviewer makes mistakes, the true rate can fall
   outside them; how often reviewers err was not measured. Label blind: hide the `map_class`
@@ -86,7 +99,8 @@ detail.
   counts it as wrong. `estimate --reviewer-false-alarm` and `--reviewer-miss` widen the interval
   for error rates the user states; they are not measured, and `certify` takes none.
 - **Kind of model.** Most of the evidence is linear probes on frozen embeddings. Of Ai2's
-  fine-tuned models, one was tested: FT-AWF, on 344 validation points. <!-- claim:fine-tuned-model-audit -->
+  fine-tuned models, one was graded: FT-AWF, through a replica on its 344 validation points and
+  through its deployment configuration (above). <!-- claim:fine-tuned-model-audit -->
   A second, Forest Loss Driver (109 windows), was run with FT-AWF report-only, its validation set
   too small to grade: a 10% review held 41.5% and 32.0% of the errors, against 19.5% and 18.3%
   for the best no-encoder control, a lead whose 95% interval includes zero on both. <!-- claim:exp89-finetuned-report-only -->

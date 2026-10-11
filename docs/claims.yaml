@@ -4785,6 +4785,8 @@
   cited_in:
     - {file: docs/results/comparisons.md, marker: exp98-deployment-gives-the-evaluations-classes-and-ranking}
     - {file: docs/Findings.md, marker: exp98-deployment-gives-the-evaluations-classes-and-ranking}
+    - {file: docs/Summary.md, marker: exp98-deployment-gives-the-evaluations-classes-and-ranking}
+    - {file: docs/TECHNIQUES.md, marker: exp98-deployment-gives-the-evaluations-classes-and-ranking}
   note: >-
     The points were placed by AWF's experts in 20 annotation tasks, not drawn at random over the map, so the ranking
     describes these points only; there is no whole-map rate and no certified zone. The 10% review is k = round(0.1 n) =
@@ -4812,6 +4814,7 @@
   cited_in:
     - {file: docs/results/comparisons.md, marker: exp98-validation-points-sit-in-the-confident-part}
     - {file: docs/Findings.md, marker: exp98-validation-points-sit-in-the-confident-part}
+    - {file: docs/Summary.md, marker: exp98-validation-points-sit-in-the-confident-part}
   note: >-
     The map's confidence sample is not saved, so the percentile cannot be recomputed from the artifacts. The crosscheck
     brackets it from the summary's five map quantiles and the points' confidences in exp98_units.npz: the mean lies in
@@ -4852,6 +4855,8 @@
   cited_in:
     - {file: docs/results/comparisons.md, marker: exp99-confidence-misses-the-ranking-bar-under-both-rules}
     - {file: docs/Findings.md, marker: exp99-confidence-misses-the-ranking-bar-under-both-rules}
+    - {file: docs/Summary.md, marker: exp99-confidence-misses-the-ranking-bar-under-both-rules}
+    - {file: docs/TECHNIQUES.md, marker: exp99-confidence-misses-the-ranking-bar-under-both-rules}
   note: >-
     Preregistered and frozen on 9 October 2026 (52489b1) before any class or probability was read at a plot; graded once
     at 52489b1 on 10 October (job records in exp/out/exp99/; the environment and checkpoint are exp98's). STRICT's
@@ -5045,6 +5050,8 @@
     )(S['prereg'], S['graded_validation']))(A['exp/out/exp103/awf2023/exp98_summary.json'])
   cited_in:
     - {file: docs/results/comparisons.md, marker: exp103-v12-ranking-holds-at-ai2s-points}
+    - {file: docs/Findings.md, marker: exp103-v12-ranking-holds-at-ai2s-points}
+    - {file: docs/Summary.md, marker: exp103-v12-ranking-holds-at-ai2s-points}
   note: >-
     Run by exp98's own script at b83a5b9 over the v1.2 fine-tune's output layer (rslearn 0.1.17 predict, read in 11
     parts). The checkpoint was chosen on Ai2's 344 validation points (exp102), as Ai2's v1 checkpoint was, so the
@@ -5071,6 +5078,9 @@
     )(S['prereg'], S['rules']['strict'], S['rules']['lenient'], S['rules']['strict']['ranking'], S['rules']['lenient']['ranking']))(A['exp/out/exp103/transfer2017/exp99_summary.json'])
   cited_in:
     - {file: docs/results/comparisons.md, marker: exp103-v12-transfer-ranking-misses-under-strict}
+    - {file: docs/Findings.md, marker: exp103-v12-transfer-ranking-misses-under-strict}
+    - {file: docs/Summary.md, marker: exp103-v12-transfer-ranking-misses-under-strict}
+    - {file: docs/TECHNIQUES.md, marker: exp103-v12-transfer-ranking-misses-under-strict}
   note: >-
     Run by exp99's own script at b83a5b9 over the v1.2 fine-tune's 2017 output layer (271 windows read one per part).
     The same 271 plots have input as in exp99, and the 38 without input are the same (not missing at random), so the

@@ -42,7 +42,8 @@ artifact under `exp/out/`, with its evidence in the [results record](results/com
   of the plots with imagery under a one-to-one crosswalk and 13% under a lenient one. Its confidence ranks those errors
   with AUROC 0.64 (90% interval 0.58 to 0.696), below the preregistered 0.70, though the least confident 10% still hold
   errors beyond chance (0.43 of the gap closed against a bar of 0.25, interval 0.10 to 0.65). The plots without imagery
-  are not missing at random, so these figures describe the plots with imagery, not the whole region (exp99).
+  are not missing at random, so these figures describe the plots with imagery, not the whole region (exp99). A
+  fine-tune of OlmoEarth v1.2 for the same task gives the same verdicts at both samples (exp103).
 - No signal from inside the encoder beats confidence, and a consensus of encoders does not estimate accuracy.
 - For a language-model agent at 7B the package is decisive when its tools are given directly; the agent as shipped
   found them on 17 of 40 runs. At 27B a model with a numpy sandbox nearly matches the package's ranking, and every arm
@@ -302,6 +303,14 @@ The error rate is 35.5% under the strict crosswalk (exact interval 26.0% to 45.8
 between the two rules is the grass/shrub boundary, which AWF does not define. Filling the 38 plots without imagery as
 all right or all wrong moves the strict rate between 31.2% and 43.4%, and the lenient one between 11.8% and 24.1%
 (report-only). <!-- claim:exp99-error-rate-of-plots-with-2017-input -->
+
+The record's own fine-tune of OlmoEarth v1.2 Base for the same task, with Ai2's recipe and labels (exp102), gives the
+same verdicts under the same frozen rules (exp103, preregistered). At Ai2's points its confidence ranks the errors with
+AUROC 0.814, and the least confident 10% hold 37.5% of them. <!-- claim:exp103-v12-ranking-holds-at-ai2s-points -->
+At the 2017 plots the strict AUROC is 0.642 (90% interval 0.582 to 0.703), below 0.70. The lenient one, 0.730, meets
+the bar on its point value, but its interval contains 0.70, as v1's did, so this is not a difference between the
+models. The two models share the task, the labels and the region, so this is a replication across model versions, not
+an independent test of the shift. <!-- claim:exp103-v12-transfer-ranking-misses-under-strict -->
 
 ## The package as an agent tool
 

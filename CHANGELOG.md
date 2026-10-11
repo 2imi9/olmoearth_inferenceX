@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+**The front pages carry the deployment results.** The README (Evidence and Limits), the white paper's abstract and
+Limitations, docs/Summary.md and docs/Findings.md now state that on a re-run of Ai2's FT-AWF deployment configuration
+the confidence ranked the errors at AUROC 0.849 at Ai2's expert-placed points but 0.638 on 2017 imagery at an
+independent random sample, below the preregistered 0.70, and that the v1.2 fine-tune repeated both verdicts (0.814,
+0.642), under the one-to-one crosswalk at the plots that had imagery, a run that cannot say whether the year, the
+place, the legend or the move from expert-placed points caused the miss. Stale texts corrected, each with the commit
+that made it stale: the white paper's introduction (written in 3462eb0) and Limitations said no shift had been applied,
+sentences left in place when its exp98 and exp99 section was written (da87c93); docs/Summary.md named FT-AWF's 344
+validation points only, stale since exp98 (c5092b4); docs/related_work.md (the Lehmann annotation, f19f59c, and its
+table row) and docs/testbeds.md's fine-tuned line (b8a0ac3) said no shift was applied or named the validation sets
+only, stale since exp99 (c300697); docs/method/recipe.md (9c92740) said one fine-tuned model had been run and Forest
+Loss Driver had not, stale since exp89 (6ba0382) and exp99. The white paper gains exp103's paragraph, exp101's and
+exp103's failed predictions in its table of failed predictions (now exp77 to exp103), exp103 among the Limitations'
+fine-tuned evidence and the TimeSync sample among its testbeds; docs/TECHNIQUES.md gains a row for the deployed model;
+the record counts are recomputed (96 scripts, 86 experiment numbers, 234 claims, 97 with a crosscheck).
+
 **The repository keeps what the package, its tests and the white paper rest on.** On 10 October 2026 the owner had the
 record trimmed: 12 earlier experiments (exp06, exp09, exp10, exp12, exp22, exp26, exp27, exp39, exp40, exp44, exp53,
 exp61), the OlmoEarth Agent trials exp86 and exp87 (about 465 MB of trial files) and the Lean proofs (`lean/`) were
