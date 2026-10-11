@@ -15,6 +15,18 @@ whose numbers are exp37's, and exp06 in a `signals.py` docstring, as provenance.
 tree on GitHub, and the docs link there; the git history and every release tag are unchanged. The white paper's record
 counts, already stale, are recomputed.
 
+**exp101 (preregistered, thresholds confirmed by the owner, frozen 10 October 2026 at a1b878e; fitted on an RTX PRO
+6000 and tested once on a B200, recorded after an independent audit): filter, then shake.** The owner's two-step idea:
+set aside the most confident share of the units, then rank the rest by how often FT-AWF's class changes over 320
+perturbed views (8 orientations, 5 month sets, 2 crop sizes, 4 sub-patch phases; the replica on a GPU, checked against
+the CPU). Fitted on exp98's 259 validation points (q = 0.6), tested on exp99's 271 plots: P1 does not hold (the 10%
+review holds 13.5% of the STRICT errors against confidence alone's 17.9%, interval of the difference -8.1 to +4.3
+points), and P2 does not hold (AUROC 0.541 against 0.528 among the plots not set aside). The errors that do not
+separate are the grass/shrub ones, which change class as often as correct plots; the other errors change about as
+often as at Ai2's points, and under LENIENT (report-only) the instability ranks the kept plots' errors at AUROC 0.676
+against 0.518. On the fit set the review holds 51.2% against 42.4%, optimistic since q was chosen there.
+`docs/plan/two_step.md`, `exp/exp101_two_step.py`, `exp/jobs/e101.sh`, `tests/test_exp101.py`, `exp/out/exp101_*`.
+
 **exp89's extraction dates every extracted file now** (70b2c01). tarfile gave each file its member's own time, older
 than the scratch purge's 30 days, so the AWF labels were removed a day after being extracted again.
 

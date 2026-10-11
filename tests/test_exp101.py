@@ -441,3 +441,64 @@ def test_f_without_the_2023_dataset_is_refused_unless_the_fallback_is_asked_for(
     with pytest.raises(ValueError, match="no dataset roots"):
         e101.attach_blocks({"name": "F", "positions": [{}], "points": [{}]}, roots=None, label_fallback=False,
                            log=lambda *a: None)
+
+
+# ----------------------------------------------------------------------------- the recorded run, by a second route
+# The claim ledger's crosschecks for exp101: the review shares, the instability and the set-aside counts recomputed
+# from the committed per-unit file with plain numpy (a tie-aware weighted review written here, not the script's).
+UNITS = os.path.join(ROOT, "exp", "out", "exp101_units.npz")
+SUMMARY = os.path.join(ROOT, "exp", "out", "exp101_summary.json")
+
+
+def _review(score, w, err, b):
+    """Share of the weighted errors in the top b of the weight by score (higher first); a tied group on the cut counts
+    in proportion."""
+    order = np.argsort(-score, kind="stable")
+    s, w2, e = score[order], w[order], err[order]
+    budget, used, got, i = b * w.sum(), 0.0, 0.0, 0
+    while i < len(s) and used < budget - 1e-12:
+        j = i
+        while j + 1 < len(s) and s[j + 1] == s[i]:
+            j += 1
+        gw, ge = w2[i:j + 1].sum(), (w2[i:j + 1] * e[i:j + 1]).sum()
+        f = min(1.0, (budget - used) / gw)
+        got, used, i = got + f * ge, used + f * gw, j + 1
+    return got / (w * err).sum()
+
+
+@pytest.mark.skipif(not os.path.exists(UNITS), reason="exp101 not recorded")
+def test_exp101_review_and_instability_by_a_second_route():
+    z = np.load(UNITS)
+    rec = json.load(open(SUMMARY))
+    assert rec["prereg_status"] == "frozen" and rec["dirty"] is False and rec["commit"].startswith("a1b878e")
+    E, F = z["set"] == 1, z["set"] == 0
+    assert (int(E.sum()), int(z["wrong"][E].sum()), int(F.sum()), int(z["wrong"][F].sum())) == (271, 91, 259, 33)
+    share = (z["view_class"][:, 1:] != z["v0_class"][:, None]).mean(1)
+    assert np.allclose(share, z["instability_share"])
+    w, err = z["weight"][E], z["wrong"][E]
+    conf, two = _review(z["suspicion"][E], w, err, 0.1), _review(z["two_step_rank"][E], w, err, 0.1)
+    assert round(conf, 4) == 0.1787 and round(two, 4) == 0.1348
+    P1 = rec["prereg"]["P1"]
+    assert P1["holds"] is False and abs((two - conf) - P1["value"]) < 1e-9
+    assert (int(z["set_aside_at_q"][E].sum()), int(err[z["set_aside_at_q"][E]].sum())) == (159, 38)
+    assert [round(share[E][err > 0].mean(), 3), round(share[E][err == 0].mean(), 3)] == [0.174, 0.097]
+    wf = z["wrong"][F]
+    assert [round(share[F][wf > 0].mean(), 3), round(share[F][wf == 0].mean(), 3)] == [0.263, 0.035]
+    assert _review(z["two_step_rank"][F], z["weight"][F], wf, 0.1) == pytest.approx(0.512, abs=1e-3)
+    assert _review(z["suspicion"][F], z["weight"][F], wf, 0.1) == pytest.approx(0.424, abs=1e-3)
+    # the plots kept, the grass/shrub plots (STRICT wrong, LENIENT right) and the AUROCs among the kept plots
+    keep, len_ = ~z["set_aside_at_q"][E], z["wrong_lenient"][E]
+    sE = share[E]
+    assert [round(sE[keep & (err > 0)].mean(), 3), round(sE[keep & (err == 0)].mean(), 3)] == [0.264, 0.224]
+    gs, other = (err == 1) & (len_ == 0), (err == 1) & (len_ == 1)
+    assert (int(gs.sum()), int(other.sum())) == (54, 37)
+    assert [round(sE[gs].mean(), 3), round(sE[other].mean(), 3)] == [0.098, 0.285]
+    key = sE * 1e6 + z["instability_mean_tv"][E]           # the share, ties broken by the mean distance to V0
+
+    def wauc(score, e, m):
+        pos, neg = m & (e == 1), m & (e == 0)
+        num = sum(wi * (w[neg][score[neg] < si].sum() + 0.5 * w[neg][score[neg] == si].sum())
+                  for si, wi in zip(score[pos], w[pos]))
+        return num / (w[pos].sum() * w[neg].sum())
+    assert [round(wauc(key, err, keep), 3), round(wauc(z["suspicion"][E], err, keep), 3)] == [0.541, 0.528]
+    assert [round(wauc(key, len_, keep), 3), round(wauc(z["suspicion"][E], len_, keep), 3)] == [0.676, 0.518]

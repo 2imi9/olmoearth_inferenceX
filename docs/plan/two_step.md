@@ -11,6 +11,14 @@ units, four view shapes gave the same class on the GPU and the CPU (128 of 128; 
 sample builder matched exp21's forward pass exactly, the replica's reference view agreed with the deployed map at 30 of
 the 32, and the GPU ran 196 views per second (the fit about 7 minutes, the test about 14).
 
+**Result, 11 October 2026 (added at recording; the frozen text is unchanged).** Fitted (job 1275097, an RTX PRO 6000)
+and tested once (job 1275098, a B200) at a1b878e, recorded after an independent audit ([comparisons](../results/comparisons.md#filter-then-shake-a-two-step-error-ranking-under-transfer-exp101)).
+q = 0.6 was chosen on F and reproduced by the test. P1 does not hold: R(0.6)'s 10% review holds 13.5% of E's STRICT
+errors against confidence alone's 17.9% (difference -4.4 points, interval -8.1 to +4.3). P2 does not hold: AUROC 0.541
+against 0.528 among the 112 plots not set aside (+0.013, interval -0.090 to +0.131). The floors are met. The replica's
+reference view gives the deployed map's class at 91.5% of F (237 of 259; exp98's label-window replica, 238) and 88.9%
+of E. On F, the fit set, the review holds 51.2% against 42.4%, an optimistic figure since q was chosen there.
+
 - **Allowed before freezing:** the smoke on synthetic inputs (`python exp/exp101_two_step.py --smoke`,
   `tests/test_exp101.py`); an inventory that counts, at exp98's validation points and exp99's plots, the units whose
   crop and twelve item groups can be read (no class, probability or perturbed reading); everything on the fit set F.
@@ -151,3 +159,20 @@ them; otherwise the predictions are reported without verdicts.
 `exp/out/exp101_summary.json` and `exp/out/exp101_units.npz` (per unit: set, label, errors, confidence, the 320 views'
 classes and their distances to V0, the instability; no position, no identifier). Job `exp/jobs/e101.sh` on the aicr
 cluster, one GPU, pinned to a full commit.
+
+## Deviations
+
+- **The GPU fix.** The page says the script moves the encoder's band-index tensors to the GPU; in the installed
+  olmoearth_pretrain 0.1.0 they are registered buffers, which move with the model, so the mover moved nothing
+  (`moved_tensor_attributes` is empty). The cause of exp89's job 1151050 is not known; the GPU smoke's equality check
+  is what showed the GPU path right.
+- **The inventory's count of windows changed to avoid clamping** was wrong in job 1274633 (an identity test on a fresh
+  tuple counted every unclamped pick); fixed before freezing, as the status line says. The fit and the test count
+  correctly.
+- **Two GPUs.** The page names one GPU; the fit ran on an NVIDIA RTX PRO 6000 and the test on a B200, which the GPU
+  smoke checked. The test recomputed F's views on the B200: the classes are identical at all 259 x 320 views and the
+  distances to V0 within 1e-5, and q is the same.
+- **The summary's `reading` field** uses the page's sentence for neither prediction holding ("as at Ai2's points and
+  on the earlier testbeds, the views add nothing confidence does not carry"); at Ai2's points (F) the views did add,
+  so the record reads the result as the comparisons page states it, not as that sentence.
+

@@ -4975,3 +4975,56 @@
     Not determined is the frozen rule's call when neither axis's 90% interval lies within half a pixel of the labelled
     pixel nor wholly beyond it. The map is the AWF decoder's output upsampled from 4-px patches, so it is smooth over a
     few pixels and a one-pixel offset is near the check's resolution.
+
+- id: exp101-shaking-does-not-help-under-transfer
+  statement: "Under transfer the two-step rule does not catch more STRICT errors: at exp99's 271 plots (2017 imagery) the 10% review by R(0.6) (the most confident 60% of the design weight set aside, the rest ranked by how often the FT-AWF replica's class changes over 320 perturbed views) holds 13.5% of the STRICT errors against confidence alone's 17.9% (difference -4.4 points, 90% within-country bootstrap -8.1 to +4.3), so P1 does not hold; among the 112 plots not set aside, the instability ranks the errors at AUROC 0.541 against confidence's 0.528 (difference +0.013, -0.090 to +0.131), so P2 does not hold. The 38 STRICT errors in the confident 60% bound any review from low confidence; among the plots kept, errors change over 26.4% of the views and correct plots over 22.4%. The 54 grass/shrub plots change as often as correct plots (9.8% against 9.7%), the other 37 errors over 28.5%; report-only, under LENIENT the instability ranks the kept plots' errors at AUROC 0.676 against 0.518 (+0.158, +0.004 to +0.284)."
+  crosscheck: tests/test_exp101.py::test_exp101_review_and_instability_by_a_second_route
+  status: rejected
+  experiments: [exp101]
+  artifacts: [exp/out/exp101_summary.json]
+  check: |-
+    (lambda S: (lambda P, T: S['prereg_status'] == 'frozen' and S['dirty'] is False and S['commit'].startswith('a1b878e')
+      and T['q'] == 0.6 and S['fit_record_check']['q_matches'] is True
+      and P['P1']['graded'] and P['P1']['holds'] is False and P['P2']['graded'] and P['P2']['holds'] is False
+      and [round(100 * P['P1'][k], 1) for k in ('two_step', 'confidence', 'value')] == [13.5, 17.9, -4.4]
+      and [round(100 * P['P1']['interval'][k], 1) for k in ('lo90', 'hi90')] == [-8.1, 4.3]
+      and [round(P['P2'][k], 3) for k in ('auroc_instability', 'auroc_confidence', 'value')] == [0.541, 0.528, 0.013]
+      and [round(P['P2']['interval'][k], 3) for k in ('lo90', 'hi90')] == [-0.09, 0.131]
+      and (T['strict']['set_aside']['n'], T['strict']['set_aside']['n_errors'], T['strict']['not_set_aside']['n']) == (159, 38, 112)
+      and T['grass_shrub_reported']['n'] == 54 and round(T['grass_shrub_reported']['mean_share_parting'], 3) == 0.098
+      and round(T['units']['mean_share_correct'], 3) == 0.097
+      and [round(T['lenient_reported']['not_set_aside'][k], 3) for k in ('auroc_instability', 'auroc_confidence', 'difference')] == [0.676, 0.518, 0.158]
+      and [round(T['lenient_reported']['bootstrap']['auroc_difference'][k], 3) for k in ('lo90', 'hi90')] == [0.004, 0.284]
+      and (P['floors']['n_with_views'], P['floors']['n_errors'], P['floors']['n_correct']) == (271, 91, 180)
+    )(S['prereg'], S['test']))(A['exp/out/exp101_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp101-shaking-does-not-help-under-transfer}
+  note: >-
+    The rule's q (0.6) was fitted on exp98's 259 validation points (F; job 1275097 on an RTX PRO 6000) and reproduced
+    there by the test run (job 1275098 on a B200, identical classes at all 259 x 320 views). The errors and confidence
+    are the deployed map's, as exp99 graded them; the grass/shrub plots are the 54 where STRICT and LENIENT part, and
+    the shares among the kept plots and of the other 37 errors are recomputed from exp101_units.npz by the crosscheck; the views are the record's replica of FT-AWF,
+    whose reference view gives the deployed map's class at 88.9% of the plots. 22 plots (8 errors, 14 correct) have
+    crops clamped at a window edge, so some of their views coincide.
+
+- id: exp101-shaking-separates-errors-at-ai2s-points
+  statement: "Report-only, on the fit set: at exp98's 259 validation points (2023, Ai2's held-out labels from the campaign that also gave the model's training points) the replica's class changes over a mean 26.3% of the 319 perturbed views at the errors against 3.5% at the correct points, and R(0.6)'s 10% review holds 51.2% of the errors against confidence alone's 42.4% (20%: 75.8% against 57.0%); the gain at 10% grows with the number of views (3.8 points with 4 views, 8.8 with all 319, a mean over 20 draws), while at exp99's plots it stays between -2.9 and -4.4 points whatever the number of views. q was chosen on these points, so their figures are optimistic."
+  crosscheck: tests/test_exp101.py::test_exp101_review_and_instability_by_a_second_route
+  status: measured
+  experiments: [exp101]
+  artifacts: [exp/out/exp101_fit.json, exp/out/exp101_summary.json]
+  check: |-
+    (lambda Fr, S: (lambda F, D, DE: Fr['commit'].startswith('a1b878e') and F['q'] == 0.6
+      and [round(100 * F['at_q']['review'][b][k], 1) for b in ('0.1', '0.2') for k in ('two_step', 'confidence')] == [51.2, 42.4, 75.8, 57.0]
+      and [round(F['units'][k], 3) for k in ('mean_share_errors', 'mean_share_correct')] == [0.263, 0.035]
+      and [round(100 * D[k]['review_difference_0.1']['mean'], 1) for k in ('4', '319')] == [3.8, 8.8]
+      and D['319']['draws'] == 20
+      and -4.45 < min(100 * v['review_difference_0.1']['mean'] for v in DE.values()) and max(100 * v['review_difference_0.1']['mean'] for v in DE.values()) < -2.85
+    )(Fr['fit'], Fr['fit']['dose_reported'], S['test']['dose_reported']))(A['exp/out/exp101_fit.json'], A['exp/out/exp101_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp101-shaking-separates-errors-at-ai2s-points}
+  note: >-
+    F is the fit set: q was chosen among four values on these points, on the 10% gain at all 319 views, so that figure
+    and the dose curve's end are optimistic; the share of views that change is not fitted. The dose curve dips from 8
+    to 16 views (5.4 to 4.2 points). The replica's reference view gives the deployed map's class at
+    91.5% of F.

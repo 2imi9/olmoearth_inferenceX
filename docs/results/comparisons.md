@@ -3818,6 +3818,59 @@ consequence of an offset in V (written for the case of aligned training points, 
 is to report the agreement at the best position beside them. exp99's plots did not resolve an offset here: a TimeSync
 plot spans three pixels.
 
+
+## Filter, then shake: a two-step error ranking under transfer (exp101)
+
+**Question.** The owner's idea, as a strainer lifts the soup off a hotpot: first set aside the part of the map the model
+is sure of, then shake what is left, looking at it from several perspectives, and see what holds. Under transfer
+(exp99) the model's confidence ranks its errors less well than at Ai2's points (exp98). Does a second step, ranking
+the less confident units by how often the model's class changes when its input is perturbed, catch more errors in a
+10% review than confidence alone? exp101 was preregistered (`docs/plan/two_step.md`), its thresholds confirmed by the
+owner, scaled up to 320 views per unit on a GPU at the owner's request, and frozen on 10 October 2026 (a1b878e) after
+an inventory and a GPU smoke; the rule was fitted on exp98's 259 validation points (F; job 1275097, an RTX PRO 6000) and
+tested once on exp99's 271 plots (E; job 1275098, a B200, which recomputed F's views with identical classes): `exp/exp101_two_step.py`, `exp/out/exp101_fit.json`,
+`exp101_summary.json`, `exp101_units.npz`, `exp101_units_fit.npz` and the job records in `exp/out/exp101/`.
+
+**The design.** The views are every combination of eight orientations (the dihedral group, mapped back exactly), five
+month sets (all twelve monthly item groups, or one quarter removed), two crop sizes (16 and 32 px) and four sub-patch
+phases, run through the record's replica of FT-AWF (exp89 arm A). A unit's instability is the share of the 319 views
+whose class differs from the reference view's. The rule R(q) sets aside the most confident share q of the design
+weight (the deployed map's top-1 probability, as exp98 and exp99 graded) and ranks the rest by instability. q = 0.6 was
+chosen on F from 0.5 to 0.8. On the GPU four view shapes gave the CPU's classes at 128 of 128 checks (logits within
+2.1e-5), and the replica's reference view gave the deployed map's class at 91.5% of F and 88.9% of E.
+
+**Under transfer the shaking does not help a STRICT review.** At exp99's plots the 10% review by R(0.6) holds 13.5% of
+the STRICT errors, against 17.9% for confidence alone: 4.4 points fewer (90% within-country bootstrap -8.1 to +4.3), so
+P1 does not hold. Among the 112 plots not set aside, the instability ranks the errors at AUROC 0.541 against
+confidence's 0.528 (+0.013, -0.090 to +0.131), so P2 does not hold either. 38 of the 91 STRICT errors sit in the
+confident 60% set aside; they bound any review that starts from low confidence, confidence alone's included, so the
+loss is in the second step: among the 112 plots kept, the errors change class over a mean 26.4% of the views and the
+correct plots over 22.4%. The STRICT errors that do not separate are the grass/shrub ones: the 54 plots where STRICT
+and LENIENT part change class over a mean 9.8% of the views, as often as the correct plots (9.7%; 43% of the 54 change
+in at least one view), and the two-step review holds 4.4 of them against confidence's 9. The other 37 errors change
+over 28.5%, close to the 26.3% of exp98's errors. Report-only: under LENIENT, which accepts the grass/shrub boundary,
+the instability ranks the errors among the plots kept at AUROC 0.676 against confidence's 0.518 (+0.158, interval
++0.004 to +0.284), and the 20% review holds 49.4% of the errors against 28.1% (10%: 26.1% against 23.7%); the STRICT
+gain at 10% stays between -2.9 and -4.4 points from 4 views to all 319.
+<!-- claim:exp101-shaking-does-not-help-under-transfer -->
+
+**At Ai2's held-out points it separates the errors.** F is Ai2's validation points, from the same labelling campaign as
+the model's training points. There the class changes over a mean 26.3% of the views at the errors and 3.5% at the
+correct points, and R(0.6)'s 10% review holds 51.2% of the errors against 42.4% (20%: 75.8% against 57.0%). q was chosen
+on these points (the 10% gain at all 319 views is the figure it was chosen on), so these figures are optimistic; the
+share of views that change was not fitted. Report-only, the 10% gain rises with the number of views, from 3.8 points
+with 4 views to 8.8 with all 319, with a dip from 8 to 16 views (5.4 to 4.2).
+<!-- claim:exp101-shaking-separates-errors-at-ai2s-points -->
+
+**What it shows and does not show.** Shaking finds the errors where the model hesitates, at Ai2's points and, under
+LENIENT, at exp99's plots too. What it does not find are the grass/shrub disagreements, which dominate the STRICT
+errors under transfer: there the replica's class changes no more often than at correct plots, and part of that
+boundary may be the two legends' rather than the model's (exp99). Catching those needs information from outside the
+model's view of the same pixels. The test does not separate the year, the place and the legend, as exp99 could not; the
+views are the replica's, not the deployed map's (its reference view gives the deployed class at 91.5% of F, against
+exp98's 91.9% for the label-window replica, and 88.9% of E); 22 of E's plots (8 errors, 14 correct) have crops clamped
+at a window edge, which makes some of their views coincide.
+
 ## A vision-language model as the reviewer (exp91)
 
 **Question.** The labelled routes need a reviewer. Can a general-purpose vision-language model supply the labels from
