@@ -631,9 +631,13 @@ def ring_centre_px(geom, swap=False, res=PIXEL_SIZE):
     for part in parts_of(geom):
         for i, ring in enumerate(part):
             a = np.asarray(ring, np.float64)[:, :2]
+            if len(a) < 3:
+                continue                              # no area, as in polygon_facts
             lon, lat = (a[:, 1], a[:, 0]) if swap else (a[:, 0], a[:, 1])
             x, y = t.transform(lon, lat)
             poly = shapely.geometry.Polygon(np.column_stack([x, y]))
+            if not poly.area > 0:
+                continue                              # a zero-area ring adds nothing to either sum
             sign = 1.0 if i == 0 else -1.0
             tot += sign * poly.area
             sx += sign * poly.area * poly.centroid.x
