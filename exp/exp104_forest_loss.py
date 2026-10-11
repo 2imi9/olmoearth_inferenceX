@@ -844,6 +844,7 @@ def check_dataset(ds, priv=None, workers=8):
     from rslearn.dataset.dataset import Dataset
     from rslearn.utils.geometry import Projection, STGeometry, WGS84_PROJECTION
     from rasterio.crs import CRS as RCRS
+    import shapely.errors
     import shapely.geometry
     d = Dataset(UPath(ds))
     wins = d.load_windows(workers=workers)
@@ -873,6 +874,7 @@ def check_dataset(ds, priv=None, workers=8):
             polys = json.load(f)
         order, _ = axis_order({int(k): v for k, v in polys.items()})
         proj = Projection(RCRS.from_epsg(3857), PIXEL_SIZE, -PIXEL_SIZE)
+        bad_geometry = 0
         for w in wins:
             u = sample.get(w.name)
             v = polys.get(str(u["alert_code"])) if u else None
@@ -883,10 +885,21 @@ def check_dataset(ds, priv=None, workers=8):
             if order == "latlon":
                 from shapely.ops import transform
                 shp = transform(lambda x, y, z=None: (y, x), shp)
-            g = STGeometry(WGS84_PROJECTION, shp, None).to_projection(proj)
-            c = g.shp.centroid
+            try:
+                c = STGeometry(WGS84_PROJECTION, shp, None).to_projection(proj).shp.centroid
+            except shapely.errors.GEOSException:
+                # rslearn's to_projection calls shapely.make_valid, which fails on some of MapBiomas's self-touching
+                # polygons ("Overlay input is mixed-dimension"); project the rings with pyproj alone instead, and count
+                bad_geometry += 1
+                import pyproj
+                from shapely.ops import transform as _tf
+                t = pyproj.Transformer.from_crs(4326, 3857, always_xy=True)
+                shp3857 = _tf(lambda x, y, z=None: t.transform(x, y), shp)
+                shp3857 = shp3857 if shp3857.is_valid else shp3857.buffer(0)
+                c = shapely.geometry.Point(shp3857.centroid.x / PIXEL_SIZE, -shp3857.centroid.y / PIXEL_SIZE)
             bad["centre_pixel"] += not (w.bounds[0] + WINDOW_PX // 2 - 1 <= c.x <= w.bounds[0] + WINDOW_PX // 2 + 2 and
                                   w.bounds[1] + WINDOW_PX // 2 - 1 <= c.y <= w.bounds[1] + WINDOW_PX // 2 + 2)
+        rec["polygons_rslearn_could_not_make_valid"] = bad_geometry     # a count, not a failure
     else:
         del bad["centre_pixel"]
     rec["bad"] = bad
