@@ -155,3 +155,38 @@ def test_the_suite_exports_load_as_exp78_exported_them():
     assert len({v.size for v in u.values()}) == 1 and u["dec"].dtype == np.int64
     sizes = {t: e105.load(t)["err"].size for t in names}
     assert sum(e105.gradable(n, e105.HEADLINE) for n in sizes.values()) == e105.N_GRADABLE
+
+
+def test_exp105_recorded_by_a_second_route():
+    """The recorded verdicts and the claims' numbers recomputed from the summary's per-task rows with code written
+    here (no import of exp105's win, ratio or verdicts)."""
+    import json
+    with open(os.path.join(ROOT, "exp", "out", "exp105_summary.json"), encoding="utf-8") as f:
+        S = json.load(f)
+    T = S["tasks"]
+    assert S["prereg_status"] == "frozen" and S["dirty"] is False and S["commit"].startswith("76b7a3c")
+    G = sorted(t for t, r in T.items() if r["n_units"] >= 600)
+    assert len(G) == 18 and G == sorted(S["verdicts"]["gradable_tasks"])
+
+    def arms(t, b="300"):
+        return T[t]["budgets"][b]["arms"]
+
+    def beats(x, y):
+        if x["coverage"] < 0.93:
+            return False
+        return y["coverage"] < 0.93 or x["half_width"] <= y["half_width"]
+
+    def cf_ratio(x, y):
+        return float("inf") if x["coverage"] < 0.93 else 0.0 if y["coverage"] < 0.93 else x["half_width"] / y["half_width"]
+
+    p1 = [t for t in G if beats(arms(t)["B"], arms(t)["C"])]
+    p2 = [t for t in G if beats(arms(t)["B"], arms(t)["D"])]
+    assert (len(p1), len(p2)) == (14, 16)
+    assert round(float(np.median([cf_ratio(arms(t)["B"], arms(t)["C"]) for t in G])), 3) == 0.853
+    assert round(float(np.median([cf_ratio(arms(t)["B"], arms(t)["D"]) for t in G])), 3) == 0.863
+    assert sum(beats(arms(t)["C"], arms(t)["B"]) for t in G) == 4 and sum(beats(arms(t)["D"], arms(t)["B"]) for t in G) == 2
+    dc = {t: arms(t)["D"]["half_width"] / arms(t)["C"]["half_width"] for t in G}
+    assert sum(abs(r - 1) < 0.01 for r in dc.values()) == 12 and 0.905 < dc["mados"] < 0.915
+    assert all(dc[t] > 1 for t in G if t.startswith("cropharvest_Peoples_Republic_of_China_6"))
+    # the report-only 100-label cells on the 200-window maps
+    assert [round(arms(t, "100")["B"]["coverage"], 3) for t in ("awf_sentinel2", "awf_landsat")] == [0.913, 0.933]

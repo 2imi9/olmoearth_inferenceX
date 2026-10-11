@@ -5085,3 +5085,75 @@
     Run by exp99's own script at b83a5b9 over the v1.2 fine-tune's 2017 output layer (271 windows read one per part).
     The same 271 plots have input as in exp99, and the 38 without input are the same (not missing at random), so the
     figures describe the plots with 2017 input. No comparison of the two models is made: one fine-tune, one seed.
+
+- id: exp105-confidence-design-narrower-than-map-class-strata
+  statement: "On the 18 tasks of exp78's export gradable at 300 labels (12 label sets; OlmoEarth Base linear probes on benchmark test splits, every window labelled), the shipped confidence design gives an interval for the map's overall window error rate that covers at least 0.93 and is no wider than map-class strata with proportional allocation (Olofsson's stratified estimator; the map-class allocation most favourable to the overall rate) on 14 of the 18 (bar 14), at a coverage-first median half-width ratio of 0.853 (bar 0.90): P1 holds, at its bar. Both designs cover on every task (0.940 to 0.957 and 0.946 to 0.959), so width decided each comparison: the confidence design is narrower by 10% or more on 11, and wider by 1.5% to 2.6% on the four that map-class strata win (CropHarvest China 6 and its S1+S2 input, So2Sat, Nandi Sentinel-1)."
+  crosscheck: tests/test_exp105.py::test_exp105_recorded_by_a_second_route
+  status: supported
+  experiments: [exp105]
+  artifacts: [exp/out/exp105_summary.json]
+  check: |-
+    (lambda S: (lambda V, T: S['prereg_status'] == 'frozen' and S['dirty'] is False and S['commit'].startswith('76b7a3c')
+      and V['n_gradable'] == 18 and V['P1']['holds'] is True and (V['P1']['wins'], V['P1']['of']) == (14, 18)
+      and round(V['P1']['median_half_width_ratio'], 3) == 0.853
+      and sorted(set(V['gradable_tasks']) - set(V['P1']['won'])) == ['cropharvest_Peoples_Republic_of_China_6',
+          'cropharvest_Peoples_Republic_of_China_6_sentinel1_sentinel2', 'm_so2sat', 'nandi_sentinel1']
+      and min(T[t]['budgets']['300']['arms']['B']['coverage'] for t in V['gradable_tasks']) >= 0.939
+      and min(T[t]['budgets']['300']['arms']['C']['coverage'] for t in V['gradable_tasks']) >= 0.946
+      and sum(T[t]['budgets']['300']['arms']['B']['half_width'] <= 0.9 * T[t]['budgets']['300']['arms']['C']['half_width']
+              for t in V['gradable_tasks']) == 11
+    )(S['verdicts'], S['tasks']))(A['exp/out/exp105_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp105-confidence-design-narrower-than-map-class-strata}
+    - {file: docs/Findings.md, marker: exp105-confidence-design-narrower-than-map-class-strata}
+    - {file: docs/Summary.md, marker: exp105-confidence-design-narrower-than-map-class-strata}
+  note: >-
+    Run once at the frozen 76b7a3c (job 1287676), 2,000 draws, seed 105; recorded after an independent audit that
+    reproduced every cell by its own sampler and at 10^6 count-level draws. The count turns on the coverage rule at
+    m-brick-kiln (error rate 0.036), where the confidence design covers 0.941 in this run, 0.9325 in exp81 and about
+    0.934 pooled over 30 reruns at other seeds made by the audit: 7 of those 30 gave 13 wins (P1 would fail), while
+    the widths and the median ratio (0.851 to 0.877) did not move. The verdict is the frozen rule's on the seed-105 run.
+
+- id: exp105-the-gain-is-from-the-strata
+  statement: "Against map-class strata given the confidence design's own allocation rule (Neyman from the model's confidence, floored at 0.02), the confidence design wins on 16 of the 18 tasks gradable at 300 labels (bar 12), at a median half-width ratio of 0.863: P2 holds, so the narrowing comes from stratifying by confidence rather than from the allocation. On map-class strata the confidence allocation changes the half-width by under 1% on 12 of the 18 tasks, narrows it by 9% on MADOS and widens it on the three CropHarvest China 6 tasks (by up to 9%); map-class strata win against the confidence design on 4 of the 18 and with its allocation on 2, below the page's 10 for any change of recommendation."
+  crosscheck: tests/test_exp105.py::test_exp105_recorded_by_a_second_route
+  status: supported
+  experiments: [exp105]
+  artifacts: [exp/out/exp105_summary.json]
+  check: |-
+    (lambda S: (lambda V, T, G: S['prereg_status'] == 'frozen' and S['commit'].startswith('76b7a3c')
+      and V['P2']['holds'] is True and (V['P2']['wins'], V['P2']['of']) == (16, 18)
+      and round(V['P2']['median_half_width_ratio'], 3) == 0.863
+      and (V['reverse']['C_over_B'], V['reverse']['D_over_B']) == (4, 2)
+      and sum(abs(T[t]['budgets']['300']['arms']['D']['half_width'] / T[t]['budgets']['300']['arms']['C']['half_width'] - 1) < 0.01 for t in G) == 12
+      and round(T['mados']['budgets']['300']['arms']['D']['half_width'] / T['mados']['budgets']['300']['arms']['C']['half_width'], 2) == 0.91
+      and all(T[t]['budgets']['300']['arms']['D']['half_width'] > T[t]['budgets']['300']['arms']['C']['half_width']
+              for t in G if t.startswith('cropharvest_Peoples_Republic_of_China_6'))
+      and max(T[t]['budgets']['300']['arms']['D']['half_width'] / T[t]['budgets']['300']['arms']['C']['half_width'] for t in G) < 1.09
+    )(S['verdicts'], S['tasks'], S['verdicts']['gradable_tasks']))(A['exp/out/exp105_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp105-the-gain-is-from-the-strata}
+  note: >-
+    P2 held in all 30 of the audit's reruns at other seeds. The D-over-C count (14 of 18 in this run, 11 to 14 over the
+    reruns) is mostly ties within 1% and is not read as the confidence allocation helping map-class strata.
+
+- id: exp105-confidence-design-short-at-100-labels-on-200-windows
+  statement: "Report-only: at 100 labels on the 200-window AWF maps, the shipped confidence design covers 0.913 on the Sentinel-2 map and 0.933 on the Landsat map (0.947 on Sentinel-1), where its two or three most confident strata get 11 to 13 labels each; map-class strata cover 0.943 to 0.962 there. The confidence design is not shown valid at 100 labels on a map of 200 windows, a case exp81 (300 and 1,000 labels) did not reach."
+  crosscheck: tests/test_exp105.py::test_exp105_recorded_by_a_second_route
+  status: measured
+  experiments: [exp105]
+  artifacts: [exp/out/exp105_summary.json]
+  check: |-
+    (lambda T: [round(T[t]['budgets']['100']['arms']['B']['coverage'], 3) for t in ('awf_sentinel2', 'awf_landsat', 'awf_sentinel1')] == [0.913, 0.933, 0.947]
+      and all(0.943 <= T[t]['budgets']['100']['arms']['C']['coverage'] <= 0.962 for t in ('awf_sentinel2', 'awf_landsat', 'awf_sentinel1'))
+      and all(T[t]['n_units'] == 200 for t in ('awf_sentinel2', 'awf_landsat', 'awf_sentinel1'))
+      and T['awf_sentinel2']['budgets']['100']['arms']['B']['allocation'] == [38, 26, 12, 12, 12]
+    )(A['exp/out/exp105_summary.json']['tasks'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp105-confidence-design-short-at-100-labels-on-200-windows}
+    - {file: docs/Summary.md, marker: exp105-confidence-design-short-at-100-labels-on-200-windows}
+  note: >-
+    Not preregistered as a prediction (budget 100 is report-only on the page). Over 5 reruns by the audit, AWF
+    Sentinel-2 pooled 0.9015 (every run below 0.93) and Landsat 0.9254 (4 of 5 below): the most confident strata hold
+    error rates of 0.025 and 0.0, so draws that miss the rare error understate the variance (exp81's rare-error
+    mechanism). The run counts AWF Landsat as a B win at 100.

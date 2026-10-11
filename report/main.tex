@@ -60,7 +60,7 @@ agreement with the reference (they named one on 6\% to 29\% of draws at 50 to 20
 confidence ranked its errors with an AUROC of 0.75; certified zones on that confidence met their guarantee in every
 cell, and at 300 labels the default rule returned no zone on 87\% of draws at $\alpha$ half the error rate, though 65\%
 of the plots lie in a zone within it.
-The record comprises 96 experiment scripts and 234 ledger claims, 232 of them checked against a committed artifact,
+The record comprises 97 experiment scripts and 237 ledger claims, 235 of them checked against a committed artifact,
 and reports failed predictions as failed.
 \end{abstract}
 
@@ -436,12 +436,12 @@ analysts interpreting a simple random sample & LCMAP Reference Data Product v1.2
 \label{sec:protocol-ledger}
 
 Each experiment states its predictions and falsification conditions before it runs, with dated amendments; results
-read afterwards are marked as not preregistered here and in the ledger. The repository holds 96 experiment scripts named \code{expNN\_*.py},
-covering 86 experiment numbers from exp01 to exp104. The ledger \code{docs/claims.yaml} holds 234 claims, each with a
-statement, status, artifacts and an executable check (two rest on no committed artifact and say so); 76 are supported, 81 measured, 33 mixed, 42 rejected and 2
+read afterwards are marked as not preregistered here and in the ledger. The repository holds 97 experiment scripts named \code{expNN\_*.py},
+covering 87 experiment numbers from exp01 to exp105. The ledger \code{docs/claims.yaml} holds 237 claims, each with a
+statement, status, artifacts and an executable check (two rest on no committed artifact and say so); 78 are supported, 82 measured, 33 mixed, 42 rejected and 2
 superseded, and \code{scripts/claims.py stale} flags only the two superseded ones. After an audit on 23 September 2026
-found that 138 of the then 167 checks read a result back from its own artifact, second routes were added: 97 of the
-234 claims name a \code{crosscheck} test that reaches the number by another route, and every claim from exp79 on must
+found that 138 of the then 167 checks read a result back from its own artifact, second routes were added: 100 of the
+237 claims name a \code{crosscheck} test that reaches the number by another route, and every claim from exp79 on must
 name one.
 
 Corrected results appear in their current form. exp78's cluster-corrected arm is now the ratio estimator, which
@@ -768,7 +768,16 @@ the package ships it, checked without preregistration, covers 94.5\% to 95.4\% o
 tiles hold most of the errors \claim{shipped-tile-design-coverage}. The confidence design narrows the interval to a
 median 0.80 of the random width with coverage intact, but its clause requiring a ratio above 0.94 at over 30\% error
 failed at 0.9361 \claim{confidence-helps-most-where-the-map-is-good}; it saves up to 2.51 times the labels, above the
-preregistered 1.8 \claim{confidence-saves-a-quarter-to-a-half-of-the-labels}. Labelling the 5\% review set and dividing
+preregistered 1.8 \claim{confidence-saves-a-quarter-to-a-half-of-the-labels}. Against the practitioner's design,
+strata by the map's classes with proportional allocation and the stratified estimator \citep{olofsson2014}, the
+shipped confidence design (exp105, preregistered, on exp78's 24 exports at 2,000 draws) gives a valid and no wider
+interval for the overall rate on 14 of the 18 tasks gradable at 300 labels, the preregistered bar, at a median 0.853 of
+the width; both cover on every task, and the four losses are 1.5\% to 2.6\% wider. The count turns on the coverage
+rule at m-brick-kiln (0.941 in this run, about 0.934 over 30 reruns at other seeds, 7 of which gave 13)
+\claim{exp105-confidence-design-narrower-than-map-class-strata}. Map-class strata given the same allocation rule lose on
+16 of 18, so the gain is the strata's \claim{exp105-the-gain-is-from-the-strata}; for the overall rate map-class
+strata gain little over a random sample, as Cochran's formula predicts. At 100 labels on a 200-window map the
+confidence design covered 0.913 \claim{exp105-confidence-design-short-at-100-labels-on-200-windows}. Labelling the 5\% review set and dividing
 gives 1.8 to 5.8 times the true rate on the seven tasks (from exp70's capture at 5\%), the case the review-set check
 refuses.
 
@@ -910,7 +919,7 @@ their errors, it estimates 0.975 to 0.983 for maps 0.883 to 0.914 accurate, and 
 is 0.83, 0.71 and 0.62 on PASTIS Sentinel-2, MADOS and Sen1Floods11 \claim{consensus-order-recovered-only-where-true-gaps-are-large}.
 Within one family it estimates 0.996 to 0.999 for maps 0.81 to 0.93 accurate
 \claim{within-family-consensus-is-the-unanimous-limit}. An error rate therefore requires a reference.
-Table~\ref{tab:failed} lists the failed predictions of exp77 to exp103.
+Table~\ref{tab:failed} lists the failed predictions of exp77 to exp105.
 
 \begin{table}[h]
 \centering\footnotesize
@@ -940,10 +949,11 @@ exp101 P1; P2 & a two-step review holds $\ge 5$ points more STRICT errors than c
 exp103 P1 & exp99's P1 for the record's v1.2 fine-tune & 0.642 STRICT (interval to 0.703), 0.730 LENIENT \claim{exp103-v12-transfer-ranking-misses-under-strict} \\
 \bottomrule
 \end{tabularx}
-\caption{Preregistered predictions of exp77 to exp103 recorded as failed or failed as written. exp89 was report-only by
+\caption{Preregistered predictions of exp77 to exp105 recorded as failed or failed as written. exp89 was report-only by
 an amendment made before any result, exp90 was not preregistered, exp100 applied a fixed rule with no predictions,
-exp102 trained a model, the predictions of exp92, exp93, exp94, exp96 (at its preregistered seed) and exp97 held, and
-exp103's others held (its review prediction on the point value).}
+exp102 trained a model, the predictions of exp92, exp93, exp94, exp96 (at its preregistered seed) and exp97 held,
+exp103's others held (its review prediction on the point value), exp104 is not yet graded, and exp105's two held (P1 at
+its bar).}
 \label{tab:failed}
 \end{table}
 

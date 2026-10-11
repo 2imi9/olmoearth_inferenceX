@@ -3912,6 +3912,53 @@ labels the failure STRICT's only, where for v1 (0.678) it labelled both rules fa
 v1 model: a second fine-tune of the same task, on a newer encoder, gives the same verdicts. It is the same task, region
 and labels; a different task is exp104's question. Which model is better is not asked and cannot be read from one seed.
 
+## The practitioner's design: confidence strata against map-class strata (exp105)
+
+The package's default design for "how wrong is the map?" stratifies by the model's confidence; the record had graded it
+against simple random sampling only (exp78, exp81). Practice stratifies by the map's classes (Olofsson et al. 2014).
+exp105 ([preregistration](../plan/class_strata_baseline.md), frozen 76b7a3c, thresholds confirmed by the owner, two
+reviews before freezing) drew five designs 2,000 times each at 100, 300 and 1,000 labels on exp78's 24 per-unit
+exports (OlmoEarth Base linear probes on the suite's benchmark test splits, every window labelled): A simple random
+(exact interval), B the shipped confidence design (margin quintiles, Neyman from the model's confidence floored at
+0.02), C map-class strata with proportional allocation and the stratified estimator (the map-class allocation most
+favourable to the overall rate; practice's rare-class-weighted allocations lie between C and E), D map-class strata
+with B's allocation rule, E map-class strata with equal allocation. B to E share the package's estimator and Wilson
+interval at the effective size. An arm wins a task when it covers at least 0.93 and the other does not or is wider.
+Recorded after an independent audit that reproduced every cell with its own sampler and at 10^6 count-level draws.
+
+| At 300 labels, 18 gradable tasks (12 label sets) | Result | Bar |
+|---|---|---|
+| P1: B wins against C | 14 of 18; median half-width ratio 0.853 | 14; 0.90 |
+| P2: B wins against D | 16 of 18; median 0.863 | 12 |
+| C wins against B; D wins against B | 4; 2 | 10 for any change of recommendation |
+| Coverage of B; of C | 0.940 to 0.957; 0.946 to 0.959 | 0.93 |
+
+**P1 holds, at its bar.** Both designs covered on every task, so width decided each comparison: the confidence design
+is narrower by 10% or more on 11 tasks and wider by 1.5% to 2.6% on the four that map-class strata win (CropHarvest
+China 6 and its S1+S2 input, So2Sat, Nandi Sentinel-1). <!-- claim:exp105-confidence-design-narrower-than-map-class-strata -->
+The count turns on the coverage rule at m-brick-kiln (error rate 0.036), where the confidence design covers 0.941 in
+this run, 0.9325 in exp81 and about 0.934 pooled over the audit's 30 reruns at other seeds; 7 of those reruns gave 13
+wins, while the widths and the median ratio (0.851 to 0.877) did not move. **P2 holds**: against map-class strata with
+the same allocation rule the confidence design wins on 16 of 18 (in all 30 reruns), so the narrowing comes from the
+strata. On map-class strata the confidence allocation itself changes the half-width by under 1% on 12 of 18 tasks,
+narrows it by 9% on MADOS and widens it on the three China 6 tasks. <!-- claim:exp105-the-gain-is-from-the-strata -->
+
+For the overall rate, map-class strata gain little over a simple random sample (variance ratio 0.81 to 1.05 against
+the confidence design's 0.48 to 0.99), as Cochran's formula predicts from the class error rates; on the binary tasks
+the measured ratios agree with the predicted ones within Monte Carlo error. Map-class strata are built for class areas
+and per-class accuracy, which exp105 does not grade (exp81 did); its per-class Wilson cells repeat exp81's known
+shortfall of the score form at small counts, which is why the random-design user's accuracy uses the exact interval.
+
+Report-only, at 100 labels on the 200-window AWF maps the confidence design covers 0.913 (Sentinel-2) and 0.933
+(Landsat), where its most confident strata get 11 to 13 labels and hold rare errors; map-class strata cover 0.943 to
+0.962 there. The confidence design is not shown valid at 100 labels on a map that small (the audit's reruns pool at
+0.90 and 0.93). <!-- claim:exp105-confidence-design-short-at-100-labels-on-200-windows -->
+In this run the shipped design covers on all 18 tasks at 300, including the four where exp85's harness arm (no floor,
+Wald interval) fell below 0.93; on m-eurosat either the floor or the Wilson form alone removes that collapse, and the
+coverage repeats exp81's. What exp105 cannot show: maps other than probe maps on benchmark splits (not landscape
+samples), class areas, per-class or producer's accuracy, wrong labels, or the confidence design under input shift,
+where exp88 showed the confidence overstating accuracy and the package refuses the confidence design given conditions.
+
 ## A vision-language model as the reviewer (exp91)
 
 **Question.** The labelled routes need a reviewer. Can a general-purpose vision-language model supply the labels from

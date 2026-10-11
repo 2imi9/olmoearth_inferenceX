@@ -45,7 +45,11 @@ all, with the evidence.
 - **Error rate.** From 300 randomly drawn windows, a 95% Wilson interval held the true rate in
   93.3% to 96.1% of 2,000 repeated draws, on each of the suite's seven segmentation tasks. <!-- claim:design-based-interval-is-honest -->
   `estimate` now prints the exact hypergeometric interval instead, which covers at least 95% by
-  construction.
+  construction. At 300 labels the default design, stratified by the model's confidence, gave a
+  narrower valid interval than stratifying by the map's classes, the usual practice, on 14 of 18
+  tasks (the preregistered bar) at a median 0.85 of its width; the count turns on one task's
+  coverage. <!-- claim:exp105-confidence-design-narrower-than-map-class-strata -->
+  At 100 labels on a 200-window map it covered 0.913, short of 0.93. <!-- claim:exp105-confidence-design-short-at-100-labels-on-200-windows -->
 - **Certified zone.** On OlmoEarth Base's 24 tasks, a certified zone was worse than its level
   in at most 8% of 2,000 draws, where 10% is allowed. <!-- claim:trust-zone-guarantee-holds -->
   On LCMAP's own confidence layer, graded against LCMAP's random reference plots, it was worse

@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+**exp105 (preregistered, frozen 11 October 2026 at 76b7a3c after two independent reviews; run once, job 1287676;
+recorded after an independent audit): the shipped confidence design against the practitioner's map-class strata.** On
+exp78's 24 per-unit exports (probe maps, every window labelled), 2,000 draws at 100, 300 and 1,000 labels: at 300 the
+confidence design gives a valid and no wider interval for the overall error rate than map-class strata with
+proportional allocation on 14 of the 18 gradable tasks (bar 14), median width ratio 0.853 (bar 0.90): P1 holds, at its
+bar, the count turning on one task's coverage (m-brick-kiln, 0.941 here, about 0.934 over the audit's 30 reruns, 7 of
+which gave 13). Against map-class strata with its own allocation rule it wins on 16 (P2 holds), so the gain is the
+strata's; map-class strata win on 4. Report-only: at 100 labels on a 200-window AWF map the confidence design covered
+0.913. exp/exp105_class_strata.py, exp/jobs/e105.sh, tests/test_exp105.py (second routes: B's allocation against
+sample_for_estimation, Cochran's variances, brute force, the recorded verdicts recomputed), three claims, the plan
+page's Result, the comparisons section, Summary and Findings, the white paper's estimation paragraph, table caption
+and record counts (97 scripts, 87 experiment numbers, 237 claims, 100 with a crosscheck); PDF rebuilt.
+
 **The front pages carry the deployment results.** The README (Evidence and Limits), the white paper's abstract and
 Limitations, docs/Summary.md and docs/Findings.md now state that on a re-run of Ai2's FT-AWF deployment configuration
 the confidence ranked the errors at AUROC 0.849 at Ai2's expert-placed points but 0.638 on 2017 imagery at an

@@ -33,6 +33,9 @@ artifact under `exp/out/`, with its evidence in the [results record](results/com
   half the error rate, returned no zone on most draws (exp93). On five more reference samples and seven products, in
   the United States, East Africa, Europe and worldwide from 2001 to 2020, the same gradings held, and three products'
   own confidences ranked their errors (exp94).
+- Stratifying the labels by the model's confidence, the package's default, gave a narrower valid interval for the
+  overall error rate than stratifying by the map's classes, the usual practice, on 14 of 18 probe-map tasks at 300
+  labels (the preregistered bar, met exactly; median width 0.85), and the gain comes from the strata (exp105). <!-- claim:exp105-confidence-design-narrower-than-map-class-strata -->
 - A map made by Ai2's own deployment configuration for its fine-tuned AWF model, re-run with probabilities kept, gives
   the evaluation's class at 92% of Ai2's validation points that fall on it, and its confidence ranks its errors there
   (AUROC 0.85). Its accuracy there was not shown to be within 5 points of the evaluation replica's, and no difference

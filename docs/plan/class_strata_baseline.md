@@ -8,6 +8,13 @@ floor (it is the shipped design), the median ratio is coverage-first like the wi
 reverse win counts, and the disclosure of what is already known is corrected. The page is frozen before any arm's
 interval is computed on the suite's units.
 
+**Result, 11 October 2026 (added at recording; the frozen text is unchanged).** Run once at 76b7a3c (job 1287676),
+recorded after an independent audit ([comparisons](../results/comparisons.md#the-practitioners-design-confidence-strata-against-map-class-strata-exp105)).
+P1 holds, at its bar: B wins against C on 14 of the 18 tasks, median ratio 0.853; the count turns on B's coverage at
+m-brick-kiln (0.941 here, about 0.934 pooled over 30 reruns, 7 of which gave 13). P2 holds: 16 of 18, median 0.863.
+C wins against B on 4 and D on 2, so no branch changes a recommendation. Report-only: at 100 labels the confidence
+design covers 0.913 and 0.933 on two 200-window AWF maps.
+
 - **Allowed before freezing:** the map-class stratum sizes of each task (the map's classes only, no label: done on 11
   October 2026, below), the smoke on synthetic units.
 - **Not allowed before freezing:** any interval, coverage or width of arms C, D or E on the suite's units.
