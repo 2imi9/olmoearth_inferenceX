@@ -757,6 +757,25 @@ def test_the_tar_round_trip_and_the_inventory_without_a_model(tmp_path):
     assert sum(s["units_per_split"].values()) + sum(sum(d.values()) for d in s["dropped_per_split"].values()) == 12
 
 
+def test_an_extraction_is_dated_now_not_with_its_members_times(tmp_path):
+    """The scratch purge removes files by age; a member packed in 1970 must not keep that date once extracted."""
+    import io
+    import tarfile
+    import time
+    tar = tmp_path / "old.tar"
+    with tarfile.open(tar, "w") as tf:
+        for name in ("dataset/windows/g/w0/metadata.json", "dataset/config.json"):
+            data = b"{}"
+            ti = tarfile.TarInfo(name)
+            ti.size, ti.mtime = len(data), 0
+            tf.addfile(ti, io.BytesIO(data))
+    t0 = time.time()
+    e89.extract_tar(str(tar), str(tmp_path / "data"))
+    for name in ("dataset/windows/g/w0/metadata.json", "dataset/config.json"):
+        st = os.stat(tmp_path / "data" / name)
+        assert st.st_mtime >= t0 - 2 and st.st_atime >= t0 - 2, name
+
+
 # ----------------------------------------------------------------------------- the pins
 def test_every_repo_exp89_names_is_pinned_or_says_why():
     rec = json.load(open(os.path.join(ROOT, "exp", "out", "upstream_revisions.json")))["repos"]

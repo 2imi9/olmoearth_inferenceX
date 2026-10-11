@@ -1966,7 +1966,12 @@ def _safe_member(m):
 
 
 def _write_extraction(data_dir, info, manifest):
-    """The manifest first, then the marker: a marker always has its manifest."""
+    """The manifest first, then the marker: a marker always has its manifest. Every extracted file is first dated now:
+    tarfile gives each file its member's own time, which for a dataset packed months ago is older than the scratch
+    purge's 30 days, so an extraction was removed at the next sweep (exp100's first job, 1271993, found 113,134 of the
+    AWF files gone a day after they were extracted again)."""
+    for rel in manifest:
+        os.utime(os.path.join(data_dir, rel), None)
     with open(os.path.join(data_dir, MANIFEST), "w") as f:
         json.dump(manifest, f)
     info = {**info, "n_files": len(manifest), "extracted_utc": utc_now()}
