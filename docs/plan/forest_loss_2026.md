@@ -1,7 +1,11 @@
 # A second task: Ai2's Forest Loss Driver model graded at 2026 MapBiomas Alerta alerts (exp104 preregistration)
 
-**Status: draft, written 11 October 2026.** The owner confirmed the design, the thresholds and the floors below on 11
-October 2026, as proposed. The page is frozen before the model has predicted any sampled alert.
+**Status: frozen on 11 October 2026, before the model predicted any sampled alert.** Written 11 October 2026. The
+owner confirmed the design, the thresholds and the floors below on 11 October 2026, as proposed. Before freezing: the
+windows (696, checked by recheck job 1286733 at 7fd4995), the imagery (prepare job 1286734: all 696 windows hold the
+four scenes before and the four after; 689 in the graded strata, against the floor of 500; Sentinel-2 fetched from
+Planetary Computer on 11 October 2026, counted at 22:04 UTC) and the GPU smoke on two synthetic windows (job 1286735:
+ten classes in Ai2's order, probabilities summing to one within 8e-8).
 
 - **Allowed before freezing:** the sampling frame and the sample (attributes only: code, driver, biome, dates, area,
   status), the windows and their imagery, the pipeline's smoke on synthetic or unsampled inputs.
