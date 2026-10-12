@@ -439,8 +439,10 @@ analysts interpreting a simple random sample & LCMAP Reference Data Product v1.2
 \subsection{Preregistration, the claim ledger and corrections}
 \label{sec:protocol-ledger}
 
-Each experiment states its predictions and falsification conditions before it runs, with dated amendments; results
-read afterwards are marked as not preregistered here and in the ledger. The repository holds 99 experiment scripts named \code{expNN\_*.py},
+Experiments state their predictions and falsification conditions before they run, in their scripts or, for many from
+exp48 on, in a preregistration page (\code{docs/plan}), with dated amendments; four early, exploratory scripts state
+none (exp01, exp18, exp19 and exp32), and results read afterwards are marked as not preregistered here and in the
+ledger. The repository holds 99 experiment scripts named \code{expNN\_*.py},
 covering 88 experiment numbers from exp01 to exp106. The ledger \code{docs/claims.yaml} holds 243 claims, each with a
 statement, status, artifacts and an executable check (two rest on no committed artifact and say so); 80 are supported, 85 measured, 33 mixed, 43 rejected and 2
 superseded, and \code{scripts/claims.py stale} flags only the two superseded ones. After an audit on 23 September 2026
