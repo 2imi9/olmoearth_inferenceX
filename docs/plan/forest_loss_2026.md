@@ -7,6 +7,15 @@ four scenes before and the four after; 689 in the graded strata, against the flo
 Planetary Computer on 11 October 2026, counted at 22:04 UTC) and the GPU smoke on two synthetic windows (job 1286735:
 ten classes in Ai2's order, probabilities summing to one within 8e-8).
 
+**Result, 11 October 2026 (added at recording; the frozen text is unchanged).** Predicted (1289592) and read (1289593)
+at 4c2f6c2; graded at deace9d (1290492) after the audit found the units file's rows unshuffled (the first grade, 1289594,
+had the same numbers); recorded after an independent audit
+([comparisons](../results/comparisons.md#a-second-task-ai2s-forest-loss-driver-model-at-2026-mapbiomas-alerta-alerts-exp104)).
+689 alerts graded, 71 disagreements. P1 holds on its point value (design-weighted AUROC 0.770, 90% interval 0.682 to
+0.855, which contains 0.70); P2 holds (0.457 of the gap, 0.339 to 0.644). P3: 10.9% disagreement (exact 8.0% to 14.4%),
+not comparable with Ai2's 76.1%. Post hoc: the 18 confusions between agriculture and mining are confident and rank at
+0.400; the 53 others at 0.945.
+
 - **Allowed before freezing:** the sampling frame and the sample (attributes only: code, driver, biome, dates, area,
   status), the windows and their imagery, the pipeline's smoke on synthetic or unsampled inputs.
 - **Not allowed before freezing:** any prediction of the model at a sampled alert.

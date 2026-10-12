@@ -42,6 +42,11 @@ all, with the evidence.
   the preregistered 0.70. <!-- claim:exp99-confidence-misses-the-ranking-bar-under-both-rules -->
   The record's own fine-tune of OlmoEarth v1.2 for the same task gave the same verdicts: 0.814 at
   Ai2's points and, under the one-to-one crosswalk, 0.642 at those plots. <!-- claim:exp103-v12-ranking-holds-at-ai2s-points --> <!-- claim:exp103-v12-transfer-ranking-misses-under-strict -->
+- **A second task.** Ai2's Forest Loss Driver model, graded at 689 agriculture and mining alerts
+  that MapBiomas Alerta published for the Amazon in the first half of 2026, after the model was
+  trained: its confidence ranked its disagreements with the analysts' drivers at a design-weighted
+  AUROC of 0.770 (bar 0.70 on the point value; the interval reaches 0.682), and a 10% review held
+  47.5% of them. <!-- claim:exp104-forest-loss-confidence-ranks-the-disagreements -->
 - **Error rate.** From 300 randomly drawn windows, a 95% Wilson interval held the true rate in
   93.3% to 96.1% of 2,000 repeated draws, on each of the suite's seven segmentation tasks. <!-- claim:design-based-interval-is-honest -->
   `estimate` now prints the exact hypergeometric interval instead, which covers at least 95% by
@@ -95,6 +100,8 @@ detail.
   at a random sample, with both models (above). That run cannot say whether the year, the place, the grass/shrub boundary
   between the two legends or the move from expert-placed points to a random sample is the cause,
   and no label-free reading tried in the record has found the errors a model makes confidently.
+  exp104's shift (months, inside the training region) is smaller and does not explain it; there
+  too the confusions between the two labelled classes were confident and ranked below chance. <!-- claim:exp104-the-ranked-disagreements-leave-the-two-labelled-classes -->
 - **Labels.** Every interval and certified zone describes agreement with the reviewer's labels,
   which the package treats as right. If the reviewer makes mistakes, the true rate can fall
   outside them; how often reviewers err was not measured. Label blind: hide the `map_class`
@@ -108,6 +115,8 @@ detail.
   A second, Forest Loss Driver (109 windows), was run with FT-AWF report-only, its validation set
   too small to grade: a 10% review held 41.5% and 32.0% of the errors, against 19.5% and 18.3%
   for the best no-encoder control, a lead whose 95% interval includes zero on both. <!-- claim:exp89-finetuned-report-only -->
+  Forest Loss Driver was then graded through its deployment configuration at 2026 MapBiomas
+  Alerta alerts (exp104, above), in two of its ten classes.
 - **Two maps.** Without labels, `compare` cannot say which map is right where they differ;
   labels drawn where they differ (`sample --other`) give an interval on the accuracy difference,
   which names a map only when it excludes zero, and not either map's accuracy. On

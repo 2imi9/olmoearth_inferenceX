@@ -3912,6 +3912,53 @@ labels the failure STRICT's only, where for v1 (0.678) it labelled both rules fa
 v1 model: a second fine-tune of the same task, on a newer encoder, gives the same verdicts. It is the same task, region
 and labels; a different task is exp104's question. Which model is better is not asked and cannot be read from one seed.
 
+## A second task: Ai2's Forest Loss Driver model at 2026 MapBiomas Alerta alerts (exp104)
+
+Every graded deployment in the record before this was one land-cover task in southern Kenya. exp104
+([preregistration](../plan/forest_loss_2026.md), frozen 54b1dfe, design and thresholds confirmed by the owner) ran Ai2's
+Forest Loss Driver model (OlmoEarth v1 Base fine-tuned by Ai2 to classify the driver of a forest-loss event into ten
+classes) with Ai2's configuration and rslearn 0.1.17, on 128-px windows centred on each alert with four Sentinel-2
+scenes before and four after (Planetary Computer, fetched 11 October 2026). It graded the model at a stratified sample
+of the alerts MapBiomas Alerta published for the Amazon biome, detected from 1 January to 30 June 2026, after the model
+was trained: agriculture, a simple random 300 of 3,565; mining (garimpo and mining), all 389; roads, all 7
+(report-only). The labels are MapBiomas analysts' drivers, crosswalked to the model's classes and taken as right; the
+frame covers 2 of the model's 10 classes. All 696 windows got their imagery and a prediction, 689 in the graded strata.
+Recorded after an independent audit that recomputed every number from the units file with its own code. The audit also
+found the units file's rows unshuffled, against the page (a defect of `shuffle_units` since ce23f6d); it was fixed and
+the grade rerun at deace9d, with the same numbers.
+
+| Graded strata, design-weighted | Result | Bar |
+|---|---|---|
+| P1: AUROC of the confidence for the disagreements | 0.770 (90% bootstrap 0.682 to 0.855) | 0.70 on the point value |
+| P2: share of the gap closed by the least confident 10% | 0.457 (0.339 to 0.644) | 0.25 |
+| P3: disagreement with MapBiomas's driver | 10.9% (exact 8.0% to 14.4%) | descriptive |
+
+**P1 holds on its point value**, as frozen; its interval contains 0.70, so the run does not show the AUROC above the
+bar. **P2 holds**, its interval above the bar: the least confident 10% of the design weight hold 47.5% of the weighted
+disagreements, against 10% at random and a ceiling of 91.9%. Agriculture carries 0.90 of the design weight; post hoc,
+it ranks at 0.754 on its own and the mining census at 0.943 (the unweighted 0.854 over the sample, which holds the
+census at 11.9 times its share, is not the frame's). <!-- claim:exp104-forest-loss-confidence-ranks-the-disagreements -->
+The model agrees with MapBiomas's driver at 89.1% of the frame's agriculture and mining alerts (agriculture 33
+disagreements of 300, 11.0%, exact 7.8% to 14.9%; mining 38 of 389, 9.8%, a census). Ai2's 76.1% is over ten classes on
+its 109 validation windows (Brazil 75, Colombia 34), the windows its checkpoint was chosen on: the two are not
+comparable. The commonest disagreement is mining called road (27). <!-- claim:exp104-forest-loss-agreement-with-mapbiomas -->
+
+Post hoc and report-only: the confidence ranks the 53 disagreements where the model picks a class MapBiomas does not
+record (road, hurricane, none, burned, airstrip) at a design-weighted AUROC of 0.945, and the 18 between agriculture and
+mining at 0.400, below chance; those 18 carry a median top-1 probability of 0.995, as the correct alerts do (0.996).
+The confusions between the two labelled classes are confident errors, as the grass/shrub errors of exp99 and exp101
+are; whether they are the model's or the reference's (an alert with mixed drivers, an analyst's call) the run cannot
+tell. <!-- claim:exp104-the-ranked-disagreements-leave-the-two-labelled-classes -->
+Report-only, as preregistered: 216 of the 689 graded alerts have their centroid outside their polygon, where the
+weighted disagreement rate is 15.9% against 9.5% inside; the difference has no interval and no causal reading.
+
+What exp104 changes: a second deployed OlmoEarth model, on a second task, graded at a stratified probability sample of
+another organisation's labels drawn after training, met the preregistered ranking bar on its point value and the review
+bar outside the noise, so the layer's ranking is not shown to be specific to the Kenyan land-cover model. What it does
+not: it does not explain exp99's and exp103's miss, where year, place, legend and point placement remain unseparated;
+the shift here is months, inside the model's training region, and telling agriculture from mining is a coarser call
+than grass from shrub; nor does it ease the confident-error limit, which it shows again.
+
 ## The practitioner's design: confidence strata against map-class strata (exp105)
 
 The package's default design for "how wrong is the map?" stratifies by the model's confidence; the record had graded it

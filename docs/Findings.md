@@ -33,6 +33,10 @@ artifact under `exp/out/`, with its evidence in the [results record](results/com
   half the error rate, returned no zone on most draws (exp93). On five more reference samples and seven products, in
   the United States, East Africa, Europe and worldwide from 2001 to 2020, the same gradings held, and three products'
   own confidences ranked their errors (exp94).
+- On a second task, Ai2's Forest Loss Driver model graded at 2026 MapBiomas Alerta alerts in the Amazon (689 agriculture
+  and mining alerts, labels drawn after training), the confidence ranked the disagreements with the analysts' drivers at
+  a design-weighted AUROC of 0.770, the preregistered bar on its point value (interval 0.682 to 0.855), though not the
+  confident confusions between agriculture and mining (exp104). <!-- claim:exp104-forest-loss-confidence-ranks-the-disagreements -->
 - Stratifying the labels by the model's confidence, the package's default, gave a narrower valid interval for the
   overall error rate than stratifying by the map's classes, the usual practice, on 14 of 18 probe-map tasks at 300
   labels (the preregistered bar, met exactly; median width 0.85), and the gain comes from the strata (exp105). <!-- claim:exp105-confidence-design-narrower-than-map-class-strata -->

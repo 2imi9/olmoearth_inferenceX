@@ -72,7 +72,9 @@ land-cover products against six reference samples, with the reference points sta
 OlmoEarth model, a re-run of Ai2's configuration for its fine-tuned AWF model, the confidence ranked the map's errors
 with an AUROC of 0.85 at Ai2's expert-placed validation points but 0.64 on 2017 imagery at the plots of an independent
 random sample that had imagery (one-to-one crosswalk), below the preregistered 0.70; the record's own fine-tune of the
-task on OlmoEarth v1.2 gave the same verdicts (0.81 and 0.64). The
+task on OlmoEarth v1.2 gave the same verdicts (0.81 and 0.64). On a second task, Ai2's Forest Loss Driver model graded
+at 2026 MapBiomas Alerta alerts in the Amazon, the confidence ranked the disagreements at 0.77, the preregistered bar on
+its point value (the interval reaches 0.68), but not the confident confusions between agriculture and mining. The
 [technical report](https://github.com/2imi9/olmoearth_inferenceX/blob/main/report/main.pdf) and the
 [documentation](https://olmoearth-inferencex.readthedocs.io/en/latest/Summary/) give the results and their limits.
 

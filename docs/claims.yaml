@@ -5157,3 +5157,71 @@
     Sentinel-2 pooled 0.9015 (every run below 0.93) and Landsat 0.9254 (4 of 5 below): the most confident strata hold
     error rates of 0.025 and 0.0, so draws that miss the rare error understate the variance (exp81's rare-error
     mechanism). The run counts AWF Landsat as a B win at 100.
+
+- id: exp104-forest-loss-confidence-ranks-the-disagreements
+  statement: "At a stratified sample of the 3,954 agriculture and mining alerts MapBiomas Alerta published for the Amazon biome, detected from 1 January to 30 June 2026 and read on 11 October 2026 (agriculture a simple random 300 of 3,565; mining, garimpo and mining, all 389), Ai2's Forest Loss Driver model, run with Ai2's configuration on windows centred on each alert's centroid, disagrees with the analysts' driver crosswalked to its classes at 71 of 689 alerts. The design-weighted AUROC of its confidence for those disagreements is 0.770, at least 0.70: P1 holds on its point value, as frozen; its 90% bootstrap interval, resampling alerts within each stratum, is 0.682 to 0.855 and contains 0.70, so the run does not show the AUROC above the bar. The least confident 10% of the design weight hold 47.5% of the weighted disagreements (10% at random, a ceiling of 91.9%), closing 0.457 of the gap (bar 0.25): P2 holds, its interval (0.339 to 0.644) above the bar. Agriculture carries 0.90 of the weight and ranks at 0.754 on its own, the mining census at 0.943 (post hoc)."
+  crosscheck: tests/test_exp104.py::test_exp104_recorded_by_a_second_route
+  status: supported
+  experiments: [exp104]
+  artifacts: [exp/out/exp104_summary.json, exp/out/exp104_posthoc.json]
+  check: |-
+    (lambda S, H: (lambda P, R, U: S['prereg_status'] == 'frozen' and S['dirty'] is False and S['commit'].startswith('deace9d')
+      and (P['P1']['holds'], P['P2']['holds']) == (True, True)
+      and [round(P['P1']['value'], 3), round(P['P2']['value'], 3)] == [0.77, 0.457]
+      and [round(R['auroc_weighted_bootstrap'][k], 3) for k in ('lo90', 'hi90')] == [0.682, 0.855]
+      and R['auroc_weighted_bootstrap']['lo90'] < 0.70 < R['auroc_weighted_bootstrap']['hi90']
+      and [round(R['gap_closed_0.1_weighted_bootstrap'][k], 3) for k in ('lo90', 'hi90')] == [0.339, 0.644]
+      and (R['n'], R['n_errors']) == (689, 71)
+      and [round(R['weighted'][k]['0.1'], 3) for k in ('capture', 'ceiling')] == [0.475, 0.919]
+      and [(U[s]['N'], U[s]['with_prediction']) for s in ('agriculture', 'mining')] == [(3565, 300), (389, 389)]
+      and [round(H['by_stratum'][s]['auroc'], 3) for s in ('agriculture', 'mining')] == [0.754, 0.943]
+    )(S['prereg'], S['ranking'], S['units']))(A['exp/out/exp104_summary.json'], A['exp/out/exp104_posthoc.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp104-forest-loss-confidence-ranks-the-disagreements}
+    - {file: docs/Findings.md, marker: exp104-forest-loss-confidence-ranks-the-disagreements}
+    - {file: docs/Summary.md, marker: exp104-forest-loss-confidence-ranks-the-disagreements}
+  note: >-
+    Run at the frozen page (54b1dfe): predict 1289592 and read 1289593 at 4c2f6c2; graded again (1290492) at deace9d
+    after the audit found the units file's rows unshuffled (shuffle_units, ce23f6d); the numbers did not change. The
+    labels are MapBiomas analysts' drivers taken as right; the frame is 2 of the model's 10 classes; the per-stratum
+    AUROCs are post hoc (exp/exp104_posthoc.py). The shift is months after training inside the model's training
+    region, not a new region or decade: this does not explain exp99's or exp103's miss.
+
+- id: exp104-forest-loss-agreement-with-mapbiomas
+  statement: "The Forest Loss Driver model agrees with MapBiomas's driver at 89.1% of the frame's agriculture and mining alerts: a design-weighted disagreement rate of 10.9% (the package's exact union interval 8.0% to 14.4%; agriculture 33 of 300, 11.0%, exact 7.8% to 14.9%; mining 38 of 389, 9.8%, a census). Ai2's 76.1% is over ten classes on its 109 validation windows (Brazil 75, Colombia 34), the windows its checkpoint was chosen on, and is not comparable. The commonest disagreement is mining called road (27 of 389)."
+  crosscheck: tests/test_exp104.py::test_exp104_recorded_by_a_second_route
+  status: measured
+  experiments: [exp104]
+  artifacts: [exp/out/exp104_summary.json]
+  check: |-
+    (lambda S: (lambda E: round(E['estimate'], 4) == 0.1088 and [round(E['low'], 3), round(E['high'], 3)] == [0.080, 0.144]
+      and (E['by_stratum']['agriculture']['errors'], E['by_stratum']['mining']['errors']) == (33, 38)
+      and [round(E['by_stratum']['agriculture'][k], 3) for k in ('low', 'high')] == [0.078, 0.149]
+      and S['ai2']['accuracy'] == 0.761 and 'Brazil 75, Colombia 34' in S['ai2']['on']
+      and S['confusion']['mining']['mining -> road'] == 27
+    )(S['p3_error_rate']))(A['exp/out/exp104_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp104-forest-loss-agreement-with-mapbiomas}
+  note: >-
+    P3, descriptive as frozen. The first grade output's note on Ai2's figure placed the validation windows in Peru,
+    Brazil and Colombia (from ce23f6d); the record's exp89 split has Brazil 75 and Colombia 34, corrected in deace9d.
+
+- id: exp104-the-ranked-disagreements-leave-the-two-labelled-classes
+  statement: "Post hoc, report-only: the Forest Loss Driver model's confidence ranks the 53 disagreements where it picks a class MapBiomas Alerta does not record (road, hurricane, none, burned, airstrip) at a design-weighted AUROC of 0.945 against the correct alerts, and the 18 between agriculture and mining at 0.400, below chance: those 18 carry a median top-1 probability of 0.995, as the correct alerts do (0.996). The confusions between the two labelled classes are confident errors, which the confidence does not find; whether they are the model's or the reference's the run cannot tell."
+  crosscheck: tests/test_exp104.py::test_exp104_recorded_by_a_second_route
+  status: measured
+  experiments: [exp104]
+  artifacts: [exp/out/exp104_posthoc.json]
+  check: |-
+    (lambda H: (lambda G: (G['to_a_class_mapbiomas_does_not_record']['n'], G['between_agriculture_and_mining']['n']) == (53, 18)
+      and round(G['to_a_class_mapbiomas_does_not_record']['weighted_auroc_against_correct'], 3) == 0.945
+      and round(G['between_agriculture_and_mining']['weighted_auroc_against_correct'], 3) == 0.4
+      and round(G['between_agriculture_and_mining']['median_top1'], 3) == 0.995 and round(H['correct']['median_top1'], 3) == 0.996
+    )(H['groups']))(A['exp/out/exp104_posthoc.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp104-the-ranked-disagreements-leave-the-two-labelled-classes}
+    - {file: docs/Summary.md, marker: exp104-the-ranked-disagreements-leave-the-two-labelled-classes}
+  note: >-
+    Asked for by the audit of exp104's grade, computed after the result by exp/exp104_posthoc.py from the recorded units
+    file; not preregistered. The labels are taken as right: a mixed-driver alert or an analyst's call could make some of
+    the 18 the reference's.

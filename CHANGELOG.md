@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+**exp104 (preregistered, frozen 11 October 2026 at 54b1dfe before any prediction at a sampled alert; predicted and
+read at 4c2f6c2, graded at deace9d; recorded after an independent audit): a second task.** Ai2's Forest Loss Driver
+model, run with Ai2's configuration and rslearn 0.1.17, graded at a stratified sample of the alerts MapBiomas Alerta
+published for the Amazon in January to June 2026 (agriculture 300 of 3,565, mining all 389; labels drawn after
+training, taken as right). 689 graded, 71 disagreements. P1 holds on its point value (design-weighted AUROC 0.770; the
+90% interval 0.682 to 0.855 contains 0.70); P2 holds (0.457 of the gap, interval above 0.25); P3 10.9% disagreement
+(exact 8.0% to 14.4%), not comparable with Ai2's 76.1%. Post hoc (exp/exp104_posthoc.py): the 53 disagreements into
+classes MapBiomas does not record rank at 0.945, the 18 between agriculture and mining at 0.400, confident as the
+correct alerts. The audit found the units file's rows unshuffled (`shuffle_units` since ce23f6d returned them in
+alert-code order when the name lists were present); fixed and regraded at deace9d before anything was committed, with
+the same numbers; the summary's note placing Ai2's validation windows in Peru corrected (Brazil 75, Colombia 34). Three
+claims, a second-route test, the plan page's Result and index row, a comparisons section, Summary, Findings, README,
+recipe, testbeds, the white paper (abstract, deployment section, limitations, table caption, counts: 98 scripts, 240
+claims, 103 with a crosscheck); PDF rebuilt.
+
 **exp105 (preregistered, frozen 11 October 2026 at 76b7a3c after two independent reviews; run once, job 1287676;
 recorded after an independent audit): the shipped confidence design against the practitioner's map-class strata.** On
 exp78's 24 per-unit exports (probe maps, every window labelled), 2,000 draws at 100, 300 and 1,000 labels: at 300 the

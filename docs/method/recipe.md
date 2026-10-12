@@ -146,9 +146,12 @@ reference maps on narrow channels (exp15).
   confidence ranked the errors with an AUROC of 0.64 under a one-to-one
   crosswalk, below the preregistered 0.70, and the record's own v1.2
   fine-tune did the same (exp99, exp103); the run cannot say whether the
-  year, the place or the legend caused it. Mangrove, LFMC and
-  EcosystemTypeMapping have not been run; the water results are for linear
-  probes on frozen encoders.
+  year, the place or the legend caused it. Forest Loss Driver, graded at
+  2026 MapBiomas Alerta alerts in the Amazon in two of its ten classes,
+  ranked its disagreements at 0.77, the preregistered bar on the point value,
+  except the confident confusions between agriculture and mining (exp104).
+  Mangrove, LFMC and EcosystemTypeMapping have not been run; the water
+  results are for linear probes on frozen encoders.
 
 ## Which confidence on a multi-class map
 

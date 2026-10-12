@@ -46,7 +46,9 @@ confidence ranked the map's errors with an AUROC of 0.849 at Ai2's expert-placed
 one-to-one crosswalk, 0.638 on 2017 imagery at the plots of an independent random sample around the area that had
 input, below the preregistered 0.70; the record's own fine-tune of the task on OlmoEarth v1.2 repeated both verdicts
 (0.814 and 0.642). That run changed the year, the place, the legend and the kind of point at once and cannot say which
-weakened the ranking. On PASTIS, a probe read without the
+weakened the ranking. On a second task, Ai2's Forest Loss Driver model at a stratified sample of 689 Amazon alerts
+MapBiomas Alerta published in 2026, the confidence ranked the disagreements at 0.770, the bar on the point value
+(interval 0.682 to 0.855), except the confident confusions between the two labelled classes. On PASTIS, a probe read without the
 optical input it was trained with erred confidently (59.8\% of its errors as confident as the median correct window,
 against 6.0\%), though not on CropHarvest China 6; given a raster of input conditions, the package therefore ranks,
 samples and certifies each condition on its own. The random-sample interval is exact; it remains valid when a reviewer cannot judge some windows, and
@@ -60,7 +62,7 @@ agreement with the reference (they named one on 6\% to 29\% of draws at 50 to 20
 confidence ranked its errors with an AUROC of 0.75; certified zones on that confidence met their guarantee in every
 cell, and at 300 labels the default rule returned no zone on 87\% of draws at $\alpha$ half the error rate, though 65\%
 of the plots lie in a zone within it.
-The record comprises 97 experiment scripts and 237 ledger claims, 235 of them checked against a committed artifact,
+The record comprises 98 experiment scripts and 240 ledger claims, 238 of them checked against a committed artifact,
 and reports failed predictions as failed.
 \end{abstract}
 
@@ -436,12 +438,12 @@ analysts interpreting a simple random sample & LCMAP Reference Data Product v1.2
 \label{sec:protocol-ledger}
 
 Each experiment states its predictions and falsification conditions before it runs, with dated amendments; results
-read afterwards are marked as not preregistered here and in the ledger. The repository holds 97 experiment scripts named \code{expNN\_*.py},
-covering 87 experiment numbers from exp01 to exp105. The ledger \code{docs/claims.yaml} holds 237 claims, each with a
-statement, status, artifacts and an executable check (two rest on no committed artifact and say so); 78 are supported, 82 measured, 33 mixed, 42 rejected and 2
+read afterwards are marked as not preregistered here and in the ledger. The repository holds 98 experiment scripts named \code{expNN\_*.py},
+covering 87 experiment numbers from exp01 to exp105. The ledger \code{docs/claims.yaml} holds 240 claims, each with a
+statement, status, artifacts and an executable check (two rest on no committed artifact and say so); 79 are supported, 84 measured, 33 mixed, 42 rejected and 2
 superseded, and \code{scripts/claims.py stale} flags only the two superseded ones. After an audit on 23 September 2026
-found that 138 of the then 167 checks read a result back from its own artifact, second routes were added: 100 of the
-237 claims name a \code{crosscheck} test that reaches the number by another route, and every claim from exp79 on must
+found that 138 of the then 167 checks read a result back from its own artifact, second routes were added: 103 of the
+240 claims name a \code{crosscheck} test that reaches the number by another route, and every claim from exp79 on must
 name one.
 
 Corrected results appear in their current form. exp78's cluster-corrected arm is now the ratio estimator, which
@@ -606,6 +608,20 @@ meets the bar on its point value, but its interval contains 0.70, as v1's did, s
 difference between the models \claim{exp103-v12-transfer-ranking-misses-under-strict}. The two models share the task,
 the labels, the region and the recipe, so this replicates the findings across model versions; it is not an independent
 test of the shift.
+
+exp104 graded a second deployed model on a second task: Ai2's Forest Loss Driver model (ten drivers of a forest-loss
+event), run with Ai2's configuration and rslearn on windows centred on each alert, at a stratified sample of the alerts
+MapBiomas Alerta published for the Amazon biome from January to June 2026, after the model was trained (agriculture, a
+random 300 of 3,565; mining, all 389), against the analysts' drivers taken as right. It disagrees at 71 of the 689
+graded alerts, 10.9\% design-weighted (exact 8.0\% to 14.4\%), not comparable with Ai2's 76.1\% over ten classes on
+the windows its checkpoint was chosen on \claim{exp104-forest-loss-agreement-with-mapbiomas}. The design-weighted AUROC
+of the confidence for the disagreements is 0.770, so P1 holds on its point value, though its 90\% interval, 0.682 to
+0.855, contains 0.70; the least confident 10\% close 0.457 of the gap, P2 holding with its interval (0.339 to 0.644)
+above the bar \claim{exp104-forest-loss-confidence-ranks-the-disagreements}. Post hoc, the 53 disagreements where the
+model picks a class MapBiomas does not record rank at 0.945, and the 18 between agriculture and mining at 0.400, with a
+median top-1 probability of 0.995, as for the correct alerts \claim{exp104-the-ranked-disagreements-leave-the-two-labelled-classes}.
+So the ranking is not shown to be specific to the land-cover model, but exp104 does not explain exp99's miss: its shift
+is months inside the training region, and its confusions between the labelled classes are confident errors again.
 
 \subsection{Input conditions}
 \label{sec:res-conditions}
@@ -952,8 +968,8 @@ exp103 P1 & exp99's P1 for the record's v1.2 fine-tune & 0.642 STRICT (interval 
 \caption{Preregistered predictions of exp77 to exp105 recorded as failed or failed as written. exp89 was report-only by
 an amendment made before any result, exp90 was not preregistered, exp100 applied a fixed rule with no predictions,
 exp102 trained a model, the predictions of exp92, exp93, exp94, exp96 (at its preregistered seed) and exp97 held,
-exp103's others held (its review prediction on the point value), exp104 is not yet graded, and exp105's two held (P1 at
-its bar).}
+exp103's others held (its review prediction on the point value), exp104's two held (P1 on its point value, its interval
+containing 0.70), and exp105's two held (P1 at its bar).}
 \label{tab:failed}
 \end{table}
 
@@ -969,7 +985,8 @@ samples, and two fine-tuned models of one task run over deployment datasets: Ai2
 Ai2's expert-placed points (exp98) and one transfer test graded at the plots of a random sample that had input
 (exp99), both through the v1-era olmoearth\_run configuration with runner and rslearn versions the record chose, not
 Ai2's lock or the current rslearn prediction, and the record's own v1.2 fine-tune of the same task, run over the same
-two datasets with rslearn~0.1.17's prediction (exp103). The ranking has been graded on four products' own confidence: Dynamic World's, LCMAP's, CGLS-LC100's and
+two datasets with rslearn~0.1.17's prediction (exp103); and Ai2's Forest Loss Driver model, run with rslearn at 689
+MapBiomas Alerta alerts in two of its ten classes against the analysts' drivers (exp104). The ranking has been graded on four products' own confidence: Dynamic World's, LCMAP's, CGLS-LC100's and
 ODSE-LULC's. The hand-labelled testbeds are mostly binary water
 tasks, on which the margin, one minus the top probability and entropy coincide, and the fine-tuned evidence is FT-AWF's
 41 errors on 344 points with Forest Loss Driver report-only \claim{fine-tuned-model-audit}, FT-AWF's re-run at 259 of
@@ -995,7 +1012,8 @@ fine-tune in exp103), is consistent with them in direction: under the one-to-one
 (AUROC 0.638 and 0.642 against 0.70, the second's interval reaching 0.703), though the least confident 10\% still held
 errors beyond chance on the point value. They studied the calibration of frozen encoders, not a fine-tuned model's
 ranking, and the run cannot separate the year, the place, the legend boundary and the move from expert-placed points
-to a random sample. No label-free reading tried has identified the errors a model
+to a random sample. exp104's shift, months after training inside the training region on another task, is smaller,
+met its bar on the point value and does not explain that miss. No label-free reading tried has identified the errors a model
 makes confidently. The ranking carries no guarantee, and a review set is not a sample.
 
 The agent evidence is binary water cards at two model sizes, a trial that passed only under an amended instrument, and

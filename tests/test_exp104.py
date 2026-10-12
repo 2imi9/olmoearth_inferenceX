@@ -466,3 +466,39 @@ def test_the_units_rows_are_shuffled_and_the_name_lists_kept(tmp_path):
 def test_the_smokes_units_are_shuffled(smoke):
     st = np.asarray(smoke["units"]["stratum"])
     assert (np.diff(st) != 0).sum() > 3, "the smoke's units must not come out in stratum blocks"
+
+
+def test_exp104_recorded_by_a_second_route():
+    """The recorded grade and the post-hoc decomposition recomputed from the units file with code written here (pair
+    counting, no import of the package's metrics or of exp104's grade): the design-weighted AUROC overall, by stratum
+    and by kind of disagreement, the stratified disagreement rate, and that the rows are not in stratum blocks."""
+    out = os.path.join(ROOT, "exp", "out")
+    S = json.load(open(os.path.join(out, "exp104_summary.json"), encoding="utf-8"))
+    H = json.load(open(os.path.join(out, "exp104_posthoc.json"), encoding="utf-8"))
+    u = np.load(os.path.join(out, "exp104_units.npz"), allow_pickle=False)
+    assert S["prereg_status"] == "frozen" and S["dirty"] is False and S["commit"].startswith("deace9d")
+    st, w, e, s, pred = u["stratum"], u["weight"], u["error"] == 1, u["suspicion"], u["pred"]
+    G = u["graded"].astype(bool)
+    assert (np.diff(st) != 0).sum() > 100, "the rows are shuffled"
+
+    def pairs(pos, neg):
+        P, N = np.flatnonzero(pos), np.flatnonzero(neg)
+        num = sum(w[i] * (w[N] * ((s[i] > s[N]) + 0.5 * (s[i] == s[N]))).sum() for i in P)
+        return num / (w[P].sum() * w[N].sum())
+
+    ok = G & ~e
+    assert pairs(G & e, ok) == pytest.approx(S["prereg"]["P1"]["value"], abs=1e-9) == pytest.approx(0.7704, abs=1e-4)
+    names = [str(c) for c in u["class_names"]]
+    lab = np.isin(pred, [names.index("agriculture"), names.index("mining")])
+    assert pairs(G & e & ~lab, ok) == pytest.approx(
+        H["groups"]["to_a_class_mapbiomas_does_not_record"]["weighted_auroc_against_correct"], abs=1e-9)
+    assert pairs(G & e & lab, ok) == pytest.approx(
+        H["groups"]["between_agriculture_and_mining"]["weighted_auroc_against_correct"], abs=1e-9)
+    assert ((G & e & ~lab).sum(), (G & e & lab).sum()) == (53, 18)
+    for k, name in enumerate(("agriculture", "mining")):
+        m = G & (st == k)
+        assert pairs(m & e, m & ~e) == pytest.approx(H["by_stratum"][name]["auroc"], abs=1e-9)
+    k = {name: int((G & e & (st == i)).sum()) for i, name in enumerate(("agriculture", "mining"))}
+    assert k == {"agriculture": 33, "mining": 38}
+    theta = (3565 * 33 / 300 + 38) / (3565 + 389)
+    assert S["p3_error_rate"]["estimate"] == pytest.approx(theta, rel=1e-12)
