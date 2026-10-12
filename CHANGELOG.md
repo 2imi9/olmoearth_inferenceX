@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+**exp107 (preregistered, frozen 1daa6bb) and exp108 (report-only).** exp107: on nine product pairs at 100 labels the
+tool's which-map design names the better-agreeing map as often as McNemar's exact test on 8 and as Foody's z form on 6
+(P1 not held; the losses on pairs under 1.2 points), and with a quarter of practice's labels on the pairs differing by 4
+to 6 points; the sign test on the tool's own sample names it more often still on 5 (P2 held), to be adopted up to a
+fifth of the differing windows (package change pending). exp108: the certified zone, conformal risk control and
+conformal selection each hold their own guarantee on the same maps and draws; neither conformal rule bounds the zone's
+error rate. Claims, comparisons sections, the plan page and index row. White paper not yet updated for either.
+
 **exp106 (preregistered, frozen 12 October 2026 at 5169e46; run once, job 1292574; recorded after an independent audit
 that rebuilt the cells from the point files): a second opinion from another product.** Does disagreement with Esri's
 10 m land cover flag a published product's confident errors and improve its review order? Three products with their own

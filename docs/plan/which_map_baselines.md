@@ -10,6 +10,12 @@ with the bars' numbers unchanged: practice is graded in two forms, McNemar's exa
 P1 asks the tool's design to meet both; the readings and limits below were sharpened. The page is frozen before any
 arm's probabilities are computed.
 
+**Result, 12 October 2026 (added at recording; the frozen text is unchanged).** Run once at 1daa6bb (job 1298649),
+recorded after an independent audit ([comparisons](../results/comparisons.md#which-map-is-more-accurate-the-tools-design-against-mcnemars-test-exp107)).
+P1 does not hold (8 of 9 against the exact test, 6 of 9 against Foody's z form; the three losses on pairs under 1.2
+points). P2 holds (5 of 9); the owner chose to adopt the sign test only up to a fifth of the differing windows, since
+past a quarter to two fifths it names the better map less often than the interval. The package change is pending.
+
 - **Not blind for the populations:** each pair's counts are on the record (exp92 and exp94, Q1): N, the reference rows
   where both maps have a class; D, those where the maps differ; K_A and K_B, those among D where only map A, or only
   map B, agrees with the reference. Every arm's operating characteristic is a function of (N, D, K_A, K_B), so the

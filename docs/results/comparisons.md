@@ -4044,6 +4044,34 @@ What exp106 cannot show: an OlmoEarth model's errors (these are products; the re
 confident errors is unchanged), a second product other than Esri, or grassland against shrubland in East Africa, which
 the cell's legend merges.
 
+## Which map is more accurate: the tool's design against McNemar's test (exp107)
+
+exp107 ([preregistration](../plan/which_map_baselines.md), frozen 1daa6bb, bars confirmed by the owner, two reviews)
+computed exactly, from the counts exp92 and exp94 recorded for nine product pairs, how often each design names the
+better-agreeing map: practice (a simple random sample, McNemar's exact test and Foody's uncorrected z form), the tool
+(labels where the maps differ, the package's interval) and the exact sign test on the tool's own sample. The outcome is
+arithmetic on known counts, not a blind test. Recorded after an independent audit.
+
+**P1 does not hold**: at 100 labels the tool's design names the better map at least as often as the exact test on 8
+of 9 pairs but as Foody's z form on only 6; the three z wins are on pairs under 1.2 points, where every arm names it
+with probability under 0.06. On the four pairs differing by 4 to 6 points the tool names it with probability 0.43 to
+0.59 against 0.17 to 0.25, and reaches 0.8 at 200 labels against 800. <!-- claim:exp107-tool-design-against-mcnemar -->
+**P2 holds**: the sign test on the tool's sample names the better map 0.095 to 0.154 more often than the interval on
+the five pairs differing by 2.7 points or more, never wrong more than 0.013 of the time; past a quarter to two fifths
+of the differing windows it names it less often (it ignores the finite-population correction), so the owner chose to
+adopt it only up to a fifth, keeping the interval above. <!-- claim:exp107-sign-test-on-the-tools-sample -->
+Equal label count, not equal effort; the stratified references' share of differing rows is the samples', not the maps'.
+
+## The certified zone against conformal risk control and conformal selection (exp108, report-only)
+
+Not preregistered (the owner chose a comparison table). On exp95's committed maps at 300 and 1,000 labels, the same
+draws for every rule: certify bounds its zone's own error rate with probability 1 − delta; conformal risk control
+bounds the expected share of unlabelled windows that are wrong and inside its zone; conformal selection with
+Benjamini-Hochberg bounds the expected share of wrong windows among those it selects. Each held its own guarantee and
+neither conformal rule held the zone's: their zones were wrong more than alpha on up to 100% and 52.9% of draws,
+certify's on at most 8.7%; conformal selection's zone was larger by a median 0.31 of the map.
+<!-- claim:exp108-zone-and-conformal-rules-each-hold-their-own-guarantee -->
+
 ## A vision-language model as the reviewer (exp91)
 
 **Question.** The labelled routes need a reviewer. Can a general-purpose vision-language model supply the labels from

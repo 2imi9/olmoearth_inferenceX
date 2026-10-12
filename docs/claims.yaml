@@ -5295,3 +5295,68 @@
     - {file: docs/results/comparisons.md, marker: exp106-a-related-second-product-also-meets-the-ratio}
   note: >-
     Report-only, as the page lists it. The NLCD points are a stratified sample read unweighted, as exp94 read them.
+
+- id: exp107-tool-design-against-mcnemar
+  statement: "On nine product pairs at 100 labels (exact probabilities from the counts exp92 and exp94 recorded), labels drawn where the maps differ, read with the package's interval, name the better-agreeing map at least as often as McNemar's exact test on a simple random sample on 8 of 9 pairs but as often as Foody's uncorrected z form on only 6 of 9, so preregistered P1 (7 of 9 against both) does not hold. The three pairs the z form wins differ by under 1.2 points, where every arm names the better map with probability under 0.06. On the four pairs differing by 4 to 6 points the tool's design names it with probability 0.43 to 0.59 against 0.17 to 0.25 (z) and needs 200 labels for 0.8 against 800 for practice; on LCMAP against Esri (2.7 points), 800 against 3,200."
+  crosscheck: tests/test_exp107.py::test_the_exact_arms_against_monte_carlo_with_the_package
+  status: rejected
+  experiments: [exp107]
+  artifacts: [exp/out/exp107_summary.json]
+  check: |-
+    (lambda S: (lambda V, P: S['prereg_status'] == 'frozen' and S['dirty'] is False and S['commit'].startswith('1daa6bb')
+      and V['P1']['holds'] is False and len(V['P1']['pairs_meeting']) == 8 and len(V['P1']['pairs_meeting_z']) == 6
+      and all(max(P[p]['budgets']['100'][k]['right'] for k in ('A', 'Az', 'B', 'C')) < 0.06
+              for p in ('nlcd_vs_lcmap_A2011', 'nlcd_vs_lcmap_B2011', 'cgls_vs_esri_eastafrica_2017'))
+      and all(P[p]['labels_for_power']['0.8'] == {'A': 800, 'Az': 800, 'B': 200, 'C': 200}
+              for p in ('nlcd_vs_lcmap_A2001', 'nlcd_vs_lcmap_A2006', 'nlcd_vs_lcmap_B2016', 'odse_vs_esri_europe_2017'))
+      and P['lcmap_vs_esri_2018']['labels_for_power']['0.8']['B'] == 800 and P['lcmap_vs_esri_2018']['labels_for_power']['0.8']['Az'] == 3200
+    )(S['verdicts'], S['pairs']))(A['exp/out/exp107_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp107-tool-design-against-mcnemar}
+  note: >-
+    Run once at the frozen 1daa6bb (job 1298649); recorded after an independent audit that reproduced every probability
+    by its own enumeration and a 20,000-draw Monte Carlo through the package. The outcome is arithmetic on recorded
+    counts (the page says so); equal label count, not equal effort; the stratified references' D/N is the samples'.
+
+- id: exp107-sign-test-on-the-tools-sample
+  statement: "On the tool's own sample, the exact sign test names the better-agreeing map at least 0.05 more often than the package's interval on 5 of 9 pairs at 100 labels (+0.095 to +0.154, the five pairs differing by 2.7 points or more), never naming the wrong map more than 0.013 of the time on any pair or budget, so preregistered P2 holds. Because the sign test treats the sample as drawn with replacement, past about a quarter to two fifths of the differing windows it names the better map less often than the interval (800 labels: 0.27 against 0.39 on NLCD A2011, 0.73 against 0.86 on GFC2020, 0.02 against 0.59 on NLCD B2011); the owner chose to adopt it only up to a fifth of the differing windows, keeping the interval above and the census answer at a census."
+  crosscheck: tests/test_exp107.py::test_the_exact_arms_against_monte_carlo_with_the_package
+  status: supported
+  experiments: [exp107]
+  artifacts: [exp/out/exp107_summary.json]
+  check: |-
+    (lambda S: (lambda V, P: V['P2']['holds'] is True and len(V['P2']['pairs_meeting']) == 5
+      and max(P[p]['largest_wrong_rate']['C'] for p in P) < 0.013
+      and [round(P[p]['budgets']['800']['C']['right'], 2) for p in ('nlcd_vs_lcmap_A2011', 'gfc2020_vs_worldcover', 'nlcd_vs_lcmap_B2011')] == [0.27, 0.73, 0.02]
+      and [round(P[p]['budgets']['800']['B']['right'], 2) for p in ('nlcd_vs_lcmap_A2011', 'gfc2020_vs_worldcover', 'nlcd_vs_lcmap_B2011')] == [0.39, 0.86, 0.59]
+    )(S['verdicts'], S['pairs']))(A['exp/out/exp107_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp107-sign-test-on-the-tools-sample}
+  note: >-
+    The package change (the sign test's verdict up to n/D = 0.2, the interval above, the census answer at n >= D) is
+    decided but not yet made; the 0.2 switch was chosen after the result and depends only on n and D, so the wrong-map
+    rate stays at most (1 - conf)/2.
+
+- id: exp108-zone-and-conformal-rules-each-hold-their-own-guarantee
+  statement: "Report-only, not preregistered: on exp95's committed maps at 300 labels (28 maps) and 1,000 (21), alpha half each map's error rate, delta 0.1, 2,000 draws, every rule on the same draws, each rule held its own guarantee and neither conformal rule held the zone's. certify's zone was wrong more than alpha on at most 8.7% of draws (and returned no zone on up to 99.7%); conformal risk control on the loss 'wrong and inside the zone' kept the mean share of unlabelled windows wrong and inside at 0.72 to 1.003 times alpha (within Monte Carlo error of its exact bound) while its zone was wrong more than alpha on 19.8% to 100% of draws; conformal selection with Benjamini-Hochberg kept its mean false-selection share at 0.61 to 1.001 times alpha while its zone was wrong more than alpha on 19.8% to 52.9% of draws, and its zone was larger than certify's on all 49 by a median 0.31 of the map. Selection with guaranteed risk was not run."
+  crosscheck: tests/test_exp108.py::test_the_conformal_arms_keep_their_guarantees_exactly_on_small_maps
+  status: measured
+  experiments: [exp108]
+  artifacts: [exp/out/exp108_summary.json]
+  check: |-
+    (lambda C: (lambda R: len(R) == 49 and sum(b == '300' for _, b, _ in R) == 28
+      and round(max(c['certify']['p_zone_error_above_alpha'] for *_, c in R), 3) == 0.087
+      and round(max(c['certify']['no_zone_rate'] for *_, c in R), 3) == 0.997
+      and [round(f(c['crc_joint']['p_zone_error_above_alpha'] for *_, c in R), 3) for f in (min, max)] == [0.198, 1.0]
+      and [round(f(c['crc_joint']['mean_unlabelled_wrong_and_in_zone'] / c['alpha'] for *_, c in R), 3) for f in (min, max)] == [0.725, 1.003]
+      and [round(f(c['bh_select']['mean_share_wrong_among_selected_unlabelled'] / c['alpha'] for *_, c in R), 3) for f in (min, max)] == [0.611, 1.001]
+      and [round(f(c['bh_select']['p_zone_error_above_alpha'] for *_, c in R), 3) for f in (min, max)] == [0.198, 0.529]
+      and all(c['bh_select']['mean_coverage'] > c['certify']['mean_coverage'] for *_, c in R)
+      and round(sorted(c['bh_select']['mean_coverage'] - c['certify']['mean_coverage'] for *_, c in R)[24], 2) == 0.31
+    )([(n, b, c) for n, v in C.items() for b, c in v.items()]))(A['exp/out/exp108_summary.json']['cells'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp108-zone-and-conformal-rules-each-hold-their-own-guarantee}
+  note: >-
+    Run once at 1daa6bb (job 1298650); report-only, as the owner chose. Recorded after an independent audit that
+    recomputed ten cells with its own code and checked the conformal arms against the papers' definitions; means above
+    alpha by at most 0.0013 alpha are draw noise (the CRC expectation has a closed form at most alpha on all 49).
