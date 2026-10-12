@@ -1,6 +1,7 @@
 # A second opinion from an independent product: does disagreement with another map find a product's confident errors? (exp106 preregistration)
 
-**Status: draft, written 12 October 2026.** The owner chose the predictions and their bars on the night of 11 to 12
+**Status: frozen on 12 October 2026, before anything using a reference label together with the disagreement or the
+confidence was computed.** Written 12 October 2026. The owner chose the predictions and their bars on the night of 11 to 12
 October 2026 (P1: the combined order's AUROC at least 0.02 above the product's own confidence's on at least 2 of 3
 product cells; P2: the flag at least twice as frequent among confident errors as among confident correct rows, on all
 3). "Weighted AUROC" in the owner's wording is the package's `weighted_auroc` with every row weighted 1. Changed before
