@@ -1,6 +1,7 @@
 # Which of two maps is more accurate: the tool's design against McNemar's test on a whole-map sample (exp107 preregistration)
 
-**Status: draft, written 12 October 2026.** The owner confirmed the predictions and their bars on 12 October 2026 (P1:
+**Status: frozen on 12 October 2026, before any arm's probabilities were computed on the nine pairs.** Written 12
+October 2026. The owner confirmed the predictions and their bars on 12 October 2026 (P1:
 the tool's design names the better-agreeing map at least as often as practice on at least 7 of 9 pairs at 100 labels,
 both naming the wrong map on at most 5% of draws on every pair; P2: if an exact test on the tool's own sample names it
 at least 5 points more often than the tool's interval on at least 5 of 9 pairs, and names the wrong map on at most 5% of
