@@ -139,3 +139,61 @@ def test_the_control_crosswalk_on_a_tiny_file(tmp_path, monkeypatch):
     assert list(ctl) == ["nlcd_A2001"]
     c = ctl["nlcd_A2001"]
     assert c["ref"].tolist() == [1, 6] and c["sec"].tolist() == [6, 1] and c["conf"].tolist() == [50.0, 99.0]
+
+
+def test_exp106_recorded_by_a_second_route():
+    """The recorded cells rebuilt from the point files with code written here (csv, numpy ranks; no import of exp106's
+    scoring or the package's metrics): rows, AUROCs of u and c, the gain, and the confident flag shares."""
+    import csv
+    import json
+    S = json.load(open(os.path.join(ROOT, "exp", "out", "exp106_summary.json"), encoding="utf-8"))
+    assert S["prereg_status"] == "frozen" and S["dirty"] is False and S["commit"].startswith("5169e46")
+    out = os.path.join(ROOT, "exp", "out")
+
+    def num(v, missing):
+        v = (v or "").strip()
+        return float(v) if v else missing
+
+    def rows(path, keep, cols):
+        R = [r for r in csv.DictReader(open(os.path.join(out, path), encoding="utf-8")) if keep(r)]
+        return [np.array([num(r[c], m) for r in R]) for c, m in cols]
+
+    ea = rows("exp94_eastafrica_points.csv", lambda r: r["year"] == "2017",
+              (("ref", 0), ("cgls", 0), ("cgls_proba", 255), ("esri", 0)))
+    eu = rows("exp94_europe_points.csv", lambda r: r["in_subset"] == "1" and r["odse_prob"].strip() != "",
+              (("ref", 0), ("odse", 0), ("odse_prob", -1), ("esri", 0)))
+    us = rows("exp92_plots.csv", lambda r: r["in_conf_subset"] == "1", (("ref", 0), ("lcmap", 0), ("lcpconf", 0), ("esri", 0)))
+
+    def rank_auroc(score, pos):
+        order = np.argsort(score, kind="mergesort")
+        ranks = np.empty(score.size)
+        sorted_s = score[order]
+        i = 0
+        while i < score.size:                                  # average ranks over ties
+            j = i
+            while j + 1 < score.size and sorted_s[j + 1] == sorted_s[i]:
+                j += 1
+            ranks[order[i:j + 1]] = (i + j) / 2 + 1
+            i = j + 1
+        n1, n0 = pos.sum(), (~pos).sum()
+        return (ranks[pos].sum() - n1 * (n1 + 1) / 2) / (n1 * n0)
+
+    for name, (ref, prod, conf, sec), lo in (("east_africa_cgls", ea, 0), ("europe_odse", eu, 0), ("conus_lcmap", us, 1)):
+        k = (ref > 0) & (prod > 0) & (sec > 0) & (conf >= lo) & (conf <= 100)
+        ref, prod, conf, sec = ref[k], prod[k], conf[k], sec[k]
+        err = prod != ref
+        u = 101 - conf
+        d = (prod != sec).astype(float)
+        c = d + u / 102
+        R = S["cells"][name]
+        assert R["n"] == err.size and R["errors"] == int(err.sum())
+        assert rank_auroc(u, err) == pytest.approx(R["auroc_own"], abs=1e-12)
+        assert rank_auroc(c, err) == pytest.approx(R["auroc_combined"], abs=1e-12)
+        m = np.median(conf[~err])
+        ce, cok = err & (conf >= m), ~err & (conf >= m)
+        assert d[ce].mean() == pytest.approx(R["confident"]["f_err"], abs=1e-12)
+        assert d[cok].mean() == pytest.approx(R["confident"]["f_ok"], abs=1e-12)
+    V = S["verdicts"]
+    gains = {c: S["cells"][c]["gain"] for c in e106.CELLS}
+    assert V["P1"]["holds"] == (sum(g >= 0.02 for g in gains.values()) >= 2) is True
+    assert V["P2"]["holds"] is False and S["cells"]["east_africa_cgls"]["confident"]["ratio"] < 2

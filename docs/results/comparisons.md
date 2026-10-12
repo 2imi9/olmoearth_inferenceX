@@ -4006,6 +4006,44 @@ coverage repeats exp81's. What exp105 cannot show: maps other than probe maps on
 samples), class areas, per-class or producer's accuracy, wrong labels, or the confidence design under input shift,
 where exp88 showed the confidence overstating accuracy and the package refuses the confidence design given conditions.
 
+## A second opinion from another product: disagreement with Esri at three published products (exp106)
+
+No label-free reading in the record had found the errors a model makes confidently. exp106
+([preregistration](../plan/second_opinion.md), frozen 5169e46; bars confirmed by the owner, two reviews before
+freezing) asked whether a second opinion from another product, Esri's 10 m land use and land cover, made by another
+programme from other data, flags a product's confident errors and improves its review order. Three published products
+with their own confidence, at the reference samples exp92 and exp94 read (every row weighted equally; the gradings
+describe these rows): CGLS-LC100 at 12,574 East Africa TimeSync 2017 plots, ODSE-LULC at 4,807 S2GLC points, LCMAP at
+4,794 of LCMAP's reference plots. The order puts the disputed rows first and the least confident first within each
+group. The third cell was first proposed with NLCD as LCMAP's second opinion; LCMAP was trained on NLCD 2001, so before
+freezing it took Esri, with NLCD a report-only control. That cell is not blind for P1: exp92 had graded both scores on
+its rows. Recorded after an independent audit that rebuilt the cells from the point files and reproduced every number.
+
+| Cell | AUROC, own to combined (P1: +0.02) | Confident errors flagged / confident correct flagged (P2: twofold) |
+|---|---|---|
+| ODSE-LULC, Europe | 0.787 to 0.863 (+0.077; by tile +0.056 to +0.097) | 45.8% of 59 / 11.1% of 2,183 (4.11; 2.49 to 6.50) |
+| LCMAP, CONUS (not blind for P1) | 0.753 to 0.832 (+0.079; +0.066 to +0.093) | 58.3% of 199 / 11.7% of 2,563 (4.96; 4.34 to 5.67) |
+| CGLS-LC100, East Africa | 0.721 to 0.718 (−0.002; within country −0.008 to +0.004) | 30.7% of 990 / 21.2% of 3,693 (1.45; 1.31 to 1.59) |
+
+**P1 holds, as frozen**: 2 of 3 cells. Of the two cells blind for P1 one meets the bar (Europe); 0.035 of the LCMAP
+cell's gain comes from error/correct pairs tied in lcpconf (99 on 2,645 rows), and the remaining 0.044 is above the bar
+on its own. <!-- claim:exp106-second-opinion-order-gains-on-two-of-three -->
+**P2 does not hold**: twofold on two cells, 1.45 on CGLS, its whole interval below 2. Among confident rows the flag marks
+a correct row exactly where Esri is wrong and misses an error exactly where Esri makes the same mistake; Esri repeats
+54.2%, 41.7% and 69.3% of the three products' confident errors, and on CGLS the cell misses on both counts. In use the
+flag is a filter on the confident part of a map, not a detector: 10.0%, 27.8% and 27.9% of the flagged confident rows
+are errors (2.6%, 7.2% and 21.1% of all confident rows). <!-- claim:exp106-second-opinion-flags-confident-errors-on-two-of-three -->
+The page's reading for "P1 holds, P2 does not" applies; the option of a reference product for `assess`, tied to both
+holding, is not taken up.
+
+Report-only, the related control (LCMAP against NLCD, read unweighted at NLCD's points) meets the twofold ratio in all
+five set-years (2.67 to 10.51) while NLCD repeats 58.1% to 94.8% of LCMAP's confident errors: the ratio does not
+require a second product independent of the first, so the cells' results are not credited to independence; what
+relatedness lowers is the share of confident errors found. <!-- claim:exp106-a-related-second-product-also-meets-the-ratio -->
+What exp106 cannot show: an OlmoEarth model's errors (these are products; the record's statement about models'
+confident errors is unchanged), a second product other than Esri, or grassland against shrubland in East Africa, which
+the cell's legend merges.
+
 ## A vision-language model as the reviewer (exp91)
 
 **Question.** The labelled routes need a reviewer. Can a general-purpose vision-language model supply the labels from

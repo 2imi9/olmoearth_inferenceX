@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+**exp106 (preregistered, frozen 12 October 2026 at 5169e46; run once, job 1292574; recorded after an independent audit
+that rebuilt the cells from the point files): a second opinion from another product.** Does disagreement with Esri's
+10 m land cover flag a published product's confident errors and improve its review order? Three products with their own
+confidence at the samples exp92 and exp94 read: CGLS-LC100 (12,574 East Africa TimeSync 2017 plots), ODSE-LULC (4,807
+S2GLC points), LCMAP (4,794 of its reference plots). P1 holds as frozen: the order putting disputed rows first gains
++0.077 (ODSE) and +0.079 (LCMAP) of AUROC, -0.002 on CGLS; one of the two cells blind for P1 meets the bar (LCMAP's
+was graded by exp92, and 0.035 of its gain is tie-breaking). P2 does not hold: the flag marks confident errors 4.11 and
+4.96 times as often as confident correct rows on ODSE and LCMAP, 1.45 on CGLS (Esri repeats 69.3% of CGLS's confident
+errors); most flagged confident rows are correct. A related control (NLCD for LCMAP, which it trained on) meets the
+ratio too. The third cell's second opinion was moved from NLCD to Esri before freezing, the bars unchanged, and its
+non-blindness disclosed. exp/exp106_second_opinion.py, exp/jobs/e106.sh, tests/test_exp106.py (second routes: the
+decomposition identity, brute-force AUROCs, the recorded cells rebuilt), three claims (supported, rejected, measured),
+the plan page and index row, a comparisons section, Summary, Findings and the white paper.
+
+**The white paper gains a section "Contributions and practice baselines"**, drafted and reviewed three times before
+merging: for each part of the tool the practice baseline, what the record measured against it and the comparisons not
+run (McNemar's test on a whole-map sample, conformal risk control and selection with guaranteed risk on the same maps,
+map-class strata for class areas, human reviewers' error rates, the ranking under corruption or a real cloud). Record
+counts recomputed (99 scripts, 88 experiment numbers, 243 claims, 106 with a crosscheck); PDF rebuilt.
+
 **exp104 (preregistered, frozen 11 October 2026 at 54b1dfe before any prediction at a sampled alert; predicted and
 read at 4c2f6c2, graded at deace9d; recorded after an independent audit): a second task.** Ai2's Forest Loss Driver
 model, run with Ai2's configuration and rslearn 0.1.17, graded at a stratified sample of the alerts MapBiomas Alerta

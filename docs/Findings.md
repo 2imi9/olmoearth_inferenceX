@@ -37,6 +37,10 @@ artifact under `exp/out/`, with its evidence in the [results record](results/com
   and mining alerts, labels drawn after training), the confidence ranked the disagreements with the analysts' drivers at
   a design-weighted AUROC of 0.770, the preregistered bar on its point value (interval 0.682 to 0.855), though not the
   confident confusions between agriculture and mining (exp104). <!-- claim:exp104-forest-loss-confidence-ranks-the-disagreements -->
+- On three published products, disagreement with a second product (Esri) flagged their confident errors 4.1 and 5.0
+  times as often as their confident correct rows on two of them and 1.45 times on the third, so the preregistered
+  twofold on all three did not hold; a related product (NLCD for LCMAP) meets the ratio too, and most flagged confident
+  rows are correct (exp106). <!-- claim:exp106-second-opinion-flags-confident-errors-on-two-of-three -->
 - Stratifying the labels by the model's confidence, the package's default, gave a narrower valid interval for the
   overall error rate than stratifying by the map's classes, the usual practice, on 14 of 18 probe-map tasks at 300
   labels (the preregistered bar, met exactly; median width 0.85), and the gain comes from the strata (exp105). <!-- claim:exp105-confidence-design-narrower-than-map-class-strata -->

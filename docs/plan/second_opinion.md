@@ -16,6 +16,13 @@ implied; P1 among the two blind cells is reported beside the verdict. Two review
 owner's, the readings below are mine, to be shown to the owner. The page is frozen before anything that uses a
 reference label together with the disagreement or the confidence is computed.
 
+**Result, 12 October 2026 (added at recording; the frozen text is unchanged).** Run once at 5169e46 (job 1292574),
+recorded after an independent audit ([comparisons](../results/comparisons.md#a-second-opinion-from-another-product-disagreement-with-esri-at-three-published-products-exp106)).
+P1 holds as frozen: the combined order gains +0.077 (Europe) and +0.079 (CONUS), −0.002 in East Africa; one of the two
+blind cells meets the bar, and 0.035 of CONUS's gain is tie-breaking. P2 does not hold: f_err / f_ok is 4.11 (Europe),
+4.96 (CONUS) and 1.45 (East Africa, interval 1.31 to 1.59). The reading "P1 holds, P2 does not" applies; the related
+control meets the ratio too (2.67 to 10.51), so it does not measure independence.
+
 - **Allowed before freezing:** the label-free inventory (rows, disagreement shares, the confidence's coupling with the
   disagreement; done on 12 October 2026, below) and the smoke on synthetic rows.
 - **Not allowed before freezing:** any error, AUROC, capture or cross-tabulation that uses the reference labels with

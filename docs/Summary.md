@@ -102,6 +102,9 @@ detail.
   and no label-free reading tried in the record has found the errors a model makes confidently.
   exp104's shift (months, inside the training region) is smaller and does not explain it; there
   too the confusions between the two labelled classes were confident and ranked below chance. <!-- claim:exp104-the-ranked-disagreements-leave-the-two-labelled-classes -->
+  On three published products, disagreement with a second product (Esri) flagged the confident
+  errors 4.1 and 5.0 times as often as confident correct rows on two and 1.45 times on the third,
+  short of the preregistered twofold on all three; most flagged confident rows were correct. <!-- claim:exp106-second-opinion-flags-confident-errors-on-two-of-three -->
 - **Labels.** Every interval and certified zone describes agreement with the reviewer's labels,
   which the package treats as right. If the reviewer makes mistakes, the true rate can fall
   outside them; how often reviewers err was not measured. Label blind: hide the `map_class`

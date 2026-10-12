@@ -5225,3 +5225,73 @@
     Asked for by the audit of exp104's grade, computed after the result by exp/exp104_posthoc.py from the recorded units
     file; not preregistered. The labels are taken as right: a mixed-driver alert or an analyst's call could make some of
     the 18 the reference's.
+
+- id: exp106-second-opinion-order-gains-on-two-of-three
+  statement: "Putting first the rows where a second product made by another programme, Esri's 10 m land use and land cover, disagrees with a published product, least confident first within each group, raises the AUROC for the product's errors over the product's own confidence by at least 0.02 on 2 of 3 cells (preregistered P1, as frozen): ODSE-LULC at 4,807 S2GLC points, 0.787 to 0.863 (+0.077, 90% bootstrap by tile +0.056 to +0.097); LCMAP at 4,794 of LCMAP's reference plots, 0.753 to 0.832 (+0.079, +0.066 to +0.093); CGLS-LC100 at 12,574 East Africa TimeSync 2017 plots, 0.721 to 0.718 (-0.002, within country -0.008 to +0.004). Of the two cells blind for P1, one meets the bar (Europe): the LCMAP cell is not blind, since exp92 graded both scores on its rows, and 0.035 of its gain comes from error/correct pairs tied in lcpconf (99 on 2,645 rows); the remaining 0.044 is above the bar on its own. Every row is weighted equally, so the gradings describe these rows."
+  crosscheck: tests/test_exp106.py::test_exp106_recorded_by_a_second_route
+  status: supported
+  experiments: [exp106]
+  artifacts: [exp/out/exp106_summary.json]
+  check: |-
+    (lambda S: (lambda C, V: S['prereg_status'] == 'frozen' and S['dirty'] is False and S['commit'].startswith('5169e46')
+      and V['P1']['holds'] is True and sorted(V['P1']['cells_meeting']) == ['conus_lcmap', 'europe_odse']
+      and V['P1']['blind_cells_meeting'] == ['europe_odse']
+      and [C[c]['n'] for c in ('east_africa_cgls', 'europe_odse', 'conus_lcmap')] == [12574, 4807, 4794]
+      and [round(C[c]['gain'], 3) for c in ('east_africa_cgls', 'europe_odse', 'conus_lcmap')] == [-0.002, 0.077, 0.079]
+      and [round(C['europe_odse'][k], 3) for k in ('auroc_own', 'auroc_combined')] == [0.787, 0.863]
+      and [round(C['conus_lcmap'][k], 3) for k in ('auroc_own', 'auroc_combined')] == [0.753, 0.832]
+      and [round(x, 3) for x in C['europe_odse']['bootstrap']['gain_interval']] == [0.056, 0.097]
+      and [round(x, 3) for x in C['east_africa_cgls']['bootstrap']['gain_interval']] == [-0.008, 0.004]
+      and round(C['conus_lcmap']['decomposition']['gain_from_pairs_u_ties'], 3) == 0.035
+      and C['conus_lcmap']['gain'] - C['conus_lcmap']['decomposition']['gain_from_pairs_u_ties'] > 0.02
+    )(S['cells'], S['verdicts']))(A['exp/out/exp106_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp106-second-opinion-order-gains-on-two-of-three}
+  note: >-
+    Run once at the frozen 5169e46 (job 1292574); recorded after an independent audit that rebuilt the cells from the
+    point files and reproduced every number to within 7e-18. Products, not an OlmoEarth model. Esri is the second
+    product in all three cells. The cell swap (LCMAP's second opinion from NLCD to Esri, before freezing) and cell 3's
+    non-blindness are on the page.
+
+- id: exp106-second-opinion-flags-confident-errors-on-two-of-three
+  statement: "Among each cell's confident rows (confidence at or above the median of its correct rows), disagreement with Esri flags the confident errors at least twice as often as the confident correct rows on 2 of 3 cells, not all 3, so preregistered P2 does not hold: ODSE 45.8% of 59 confident errors against 11.1% of 2,183 confident correct rows (4.11; by tile 2.49 to 6.50); LCMAP 58.3% of 199 against 11.7% of 2,563 (4.96; 4.34 to 5.67); CGLS 30.7% of 990 against 21.2% of 3,693 (1.45; within country 1.31 to 1.59). Of the flagged confident rows 10.0%, 27.8% and 27.9% are errors, against 2.6%, 7.2% and 21.1% of all confident rows. Among confident rows the flag marks a correct row exactly where Esri is wrong and misses an error exactly where Esri makes the same mistake: Esri repeats 54.2%, 41.7% and 69.3% of the confident errors, and on CGLS the cell misses on both counts (the bar needed f_err 0.425 at its f_ok, or f_ok 0.154 at its f_err)."
+  crosscheck: tests/test_exp106.py::test_exp106_recorded_by_a_second_route
+  status: rejected
+  experiments: [exp106]
+  artifacts: [exp/out/exp106_summary.json]
+  check: |-
+    (lambda S: (lambda C, V: V['P2']['holds'] is False and V['P2']['determined'] is True
+      and V['P2']['by_cell'] == {'east_africa_cgls': False, 'europe_odse': True, 'conus_lcmap': True}
+      and [(C[c]['confident']['confident_errors'], C[c]['confident']['confident_correct']) for c in ('europe_odse', 'conus_lcmap', 'east_africa_cgls')] == [(59, 2183), (199, 2563), (990, 3693)]
+      and [round(C[c]['confident']['f_err'], 3) for c in ('europe_odse', 'conus_lcmap', 'east_africa_cgls')] == [0.458, 0.583, 0.307]
+      and [round(C[c]['confident']['f_ok'], 3) for c in ('europe_odse', 'conus_lcmap', 'east_africa_cgls')] == [0.111, 0.117, 0.212]
+      and [round(C[c]['confident']['ratio'], 2) for c in ('europe_odse', 'conus_lcmap', 'east_africa_cgls')] == [4.11, 4.96, 1.45]
+      and [round(x, 2) for x in C['east_africa_cgls']['bootstrap']['ratio_interval']] == [1.31, 1.59]
+      and [round(C[c]['confident']['precision_of_d_among_confident'], 3) for c in ('europe_odse', 'conus_lcmap', 'east_africa_cgls')] == [0.1, 0.278, 0.279]
+      and [round(C[c]['confident']['confident_errors'] / (C[c]['confident']['confident_errors'] + C[c]['confident']['confident_correct']), 3) for c in ('europe_odse', 'conus_lcmap', 'east_africa_cgls')] == [0.026, 0.072, 0.211]
+    )(S['cells'], S['verdicts']))(A['exp/out/exp106_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp106-second-opinion-flags-confident-errors-on-two-of-three}
+    - {file: docs/Findings.md, marker: exp106-second-opinion-flags-confident-errors-on-two-of-three}
+    - {file: docs/Summary.md, marker: exp106-second-opinion-flags-confident-errors-on-two-of-three}
+  note: >-
+    The page's reading 'P1 holds, P2 does not' applies; its option of a reference product for assess was tied to both
+    holding and is not taken up. In use the flag is a filter on the confident part of a map, not a detector: about 9 in
+    10 flagged confident ODSE rows are correct. Products, not an OlmoEarth model: the record's statement that no
+    label-free reading tried has found a model's confident errors is unchanged.
+
+- id: exp106-a-related-second-product-also-meets-the-ratio
+  statement: "Report-only: in the related control, LCMAP's lcpconf against NLCD (LCMAP Collection 1.3 was trained on NLCD 2001) at NLCD's accuracy-assessment points read unweighted, the flag meets P2's twofold ratio in all five set-years (2.67 to 10.51) while NLCD repeats 94.8%, 89.6%, 84.7%, 71.3% and 58.1% of LCMAP's confident errors, and the combined order gains +0.003 to +0.108: the ratio does not require a second product independent of the first; what relatedness lowers is the share of confident errors the flag finds."
+  crosscheck: tests/test_exp106.py::test_exp106_recorded_by_a_second_route
+  status: measured
+  experiments: [exp106]
+  artifacts: [exp/out/exp106_summary.json]
+  check: |-
+    (lambda K: [round(K[k]['confident']['ratio'], 2) for k in ('nlcd_A2001', 'nlcd_A2006', 'nlcd_A2011', 'nlcd_B2011', 'nlcd_B2016')] == [2.79, 2.67, 4.09, 7.85, 10.51]
+      and [round(1 - K[k]['confident']['f_err'], 3) for k in ('nlcd_A2001', 'nlcd_A2006', 'nlcd_A2011', 'nlcd_B2011', 'nlcd_B2016')] == [0.948, 0.896, 0.847, 0.713, 0.581]
+      and [round(K[k]['gain'], 3) for k in ('nlcd_A2001', 'nlcd_B2016')] == [0.003, 0.108]
+    )(A['exp/out/exp106_summary.json']['control_related_products'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp106-a-related-second-product-also-meets-the-ratio}
+  note: >-
+    Report-only, as the page lists it. The NLCD points are a stratified sample read unweighted, as exp94 read them.
