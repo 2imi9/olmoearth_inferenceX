@@ -439,3 +439,30 @@ def test_nothing_written_carries_a_code_or_a_position(smoke, tmp_path):
         e104.save_units({"alert_code": np.array([1])}, str(tmp_path / "u.npz"))
     with pytest.raises(ValueError):
         e104.save_units({"pred": np.array([codes[2]])}, str(tmp_path / "u.npz"), codes=codes)
+
+
+def test_the_units_rows_are_shuffled_and_the_name_lists_kept(tmp_path):
+    """shuffle_units on a dict shaped like the grade's (per-row arrays plus the two name lists): every row array is
+    permuted by one permutation, kept privately; the name lists are untouched. Until the fix the name lists made it
+    return the rows in alert-code order (exp104's first grade output)."""
+    n = 200
+    stratum = np.repeat([0, 1, 2], [80, 110, 10])
+    probs = np.random.default_rng(0).random((n, 10)).astype(np.float32)
+    units = {"stratum": stratum, "stratum_names": np.array(["a", "b", "c"]), "label": np.arange(n),
+             "probs": probs, "class_names": np.array([f"k{i}" for i in range(10)])}
+    out = e104.shuffle_units(units, priv=str(tmp_path))
+    perm = np.load(tmp_path / "units_permutation.npy")
+    assert sorted(perm.tolist()) == list(range(n)) and not np.array_equal(perm, np.arange(n))
+    assert np.array_equal(out["label"], perm) and np.array_equal(out["stratum"], stratum[perm])
+    assert np.array_equal(out["probs"], probs[perm])
+    assert out["stratum_names"].tolist() == ["a", "b", "c"] and out["class_names"].size == 10
+    assert (np.diff(out["stratum"]) != 0).sum() > 10, "not in stratum blocks"
+    with pytest.raises(ValueError):
+        e104.shuffle_units({"label": np.arange(3)})
+    with pytest.raises(ValueError):
+        e104.shuffle_units({"stratum": np.arange(3), "label": np.arange(4)})
+
+
+def test_the_smokes_units_are_shuffled(smoke):
+    st = np.asarray(smoke["units"]["stratum"])
+    assert (np.diff(st) != 0).sum() > 3, "the smoke's units must not come out in stratum blocks"

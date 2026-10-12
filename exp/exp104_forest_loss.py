@@ -293,15 +293,23 @@ def dump(obj, path, codes=()):
 def shuffle_units(units, priv=None):
     """The per-alert rows in a random order: the mining stratum is a census and the agriculture sample follows from the
     public rule, so rows kept in alert-code order would match the public alerts. The permutation is drawn from the
-    operating system's entropy and kept only in the private directory (never in a tracked file)."""
-    n = {len(v) for v in units.values() if np.ndim(v) >= 1}
-    if len(n) != 1:
-        return units
-    n = n.pop()
+    operating system's entropy and kept only in the private directory (never in a tracked file). The row count is the
+    stratum column's; the per-row arrays are those of that length, and the name lists (stratum_names, class_names) stay
+    as they are. Until this was fixed the row count was read as "the one length every array shares", which the name
+    lists broke, so the rows were returned unshuffled without a word (introduced in ce23f6d; found by the audit of
+    exp104's grade before recording)."""
+    if "stratum" not in units:
+        raise ValueError("shuffle_units needs the per-row 'stratum' column to know the row count")
+    n = len(units["stratum"])
+    names = {"stratum_names", "class_names"}
+    rows = [k for k, v in units.items() if k not in names and np.ndim(v) >= 1]
+    bad = [k for k in rows if len(units[k]) != n]
+    if bad:
+        raise ValueError(f"shuffle_units: {bad} are not per-row arrays of length {n}")
     perm = np.random.default_rng(np.random.SeedSequence()).permutation(n)
     if priv:
         np.save(os.path.join(priv, "units_permutation.npy"), perm)
-    return {k: (np.asarray(v)[perm] if np.ndim(v) >= 1 and len(v) == n else v) for k, v in units.items()}
+    return {k: (np.asarray(v)[perm] if k in rows else v) for k, v in units.items()}
 
 
 def save_units(units, path, codes=()):
@@ -1235,7 +1243,7 @@ def analyse(sample, P, names, n_boot=BOOT, floors=FLOORS, thresholds=THRESHOLDS,
         rec["p3_error_rate"]["unweighted"] = float(err[G].mean())
         rec["p3_error_rate"]["accuracy"] = 1 - rec["p3_error_rate"]["estimate"]
         rec["ai2"] = {"accuracy": AI2_ACCURACY, "error_rate": 1 - AI2_ACCURACY,
-                      "on": "Ai2's 109 validation windows (Peru, Brazil, Colombia; ten classes)"}
+                      "on": "Ai2's 109 validation windows (Brazil 75, Colombia 34; ten classes; the windows its checkpoint was chosen on)"}
         rec["confusion"] = {s: confusion(label[(strat == s) & has], pred[(strat == s) & has]) for s in STRATUM_NAMES}
         rec["ranking"] = ranking(u_[G], err[G], weight[G], strat[G], n_boot)
         rec["predicted_classes"] = {s: {FLD_CLASSES[c]: int(((pred == c) & (strat == s)).sum())
