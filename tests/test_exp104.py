@@ -387,14 +387,17 @@ def test_the_smoke_cli(tmp_path, capsys):
 
 
 # ----------------------------------------------------------------------------- refusals and guards
-def test_the_grade_is_refused_while_the_page_is_a_draft(tmp_path, capsys):
-    assert e104.prereg_status() != "frozen", "this test is for the draft page; drop it once the page is frozen"
+def test_the_grade_is_refused_for_a_draft_page(tmp_path, capsys, monkeypatch):
+    """The refusal itself, with the page's status set to draft (the page has been frozen since 54b1dfe)."""
+    monkeypatch.setattr(e104, "prereg_status", lambda text=None: "draft")
     rc = e104.main(["--grade", "--private-dir", str(tmp_path), "--probs", str(tmp_path), "--out-dir", str(tmp_path)])
     assert rc == 3 and "refused" in capsys.readouterr().out
     with pytest.raises(PermissionError):
         e104.run_grade(str(tmp_path), str(tmp_path), str(tmp_path), status="draft")
+    monkeypatch.undo()
     assert e104.prereg_status("**Status: frozen on 12 October 2026.**") == "frozen"
     assert e104.prereg_status("**Status: draft, written 11 October 2026.** not frozen") == "draft"
+    assert e104.prereg_status() == "frozen"
 
 
 def test_predictions_out_of_ai2s_order_are_refused(tmp_path):
