@@ -37,26 +37,23 @@ or a `.npy` array of shape `(C, H, W)`. `plan` says how many labels a question n
 yes, no or undetermined, and `--help` lists each command's options.
 [Quick start](https://olmoearth-inferencex.readthedocs.io/en/latest/Usage/#quick-start) runs each one on a test map.
 
-Limits: without labels it says where to look, not how wrong the map is. On the one test of a deployed model at a new
-year and place, graded at the plots of an independent random sample that had imagery, confidence ranked the errors
-with an AUROC of 0.64 under a one-to-one crosswalk, below the preregistered 0.70; a later report-only reading found most
-of its confident errors on one grass/shrub boundary that neither legend defines, which none of the label-free signals
-tried separated. A model run on inputs unlike its training data can be confident and wrong (`--condition` treats each
-input condition on its own). Every interval and certified zone assumes the labels are
-right, and labelling more and rerunning is a second test, except on a sequential sample.
-
+Limits: without labels it says where to look, not how wrong the map is. Ranking by confidence can weaken when a model
+moves to a new place or year, and errors that come from two legends drawing a class boundary differently cannot be told
+from the imagery or the model, so they need labels. A model run on inputs unlike its training data can be confident
+and wrong (`--condition` treats each input condition on its own). Every interval and certified zone assumes the labels
+are right, and labelling more and rerunning is a second test, except on a sequential sample.
 
 Use from an agent
 -----------------
 
-`oe-inferencex mcp` is a local MCP server; nothing is hosted. With [uv](https://docs.astral.sh/uv/) installed:
+`oe-inferencex mcp` is a local MCP server; nothing is hosted. Add it to any MCP client as the command
 
 ```bash
-claude mcp add --scope user oe-inferencex -- uvx --from "olmoearth-inferencex[geo,mcp]" oe-inferencex mcp
+uvx --from "olmoearth-inferencex[geo,mcp]" oe-inferencex mcp
 ```
 
-Use a strong model: in a pilot, Claude Sonnet kept the tools' limits and Claude Haiku often dropped them. To try it,
-write the demo tile into an empty folder, start the agent there and ask:
+Use a capable model: in a pilot, smaller models dropped the limits the tools state. To try it, write the demo tile
+into an empty folder, start the agent there and ask:
 
 ```bash
 uvx --from olmoearth-inferencex oe-inferencex demo
@@ -65,22 +62,15 @@ uvx --from olmoearth-inferencex oe-inferencex demo
 > Where should I look first in oe_inferencex_demo/sample_probabilities.npy? Use windows of
 > 1 pixel, and grade the order against oe_inferencex_demo/sample_truth.npy.
 
-
 Evidence
 --------
 
-Tested on linear probes of sixteen encoders over the tasks of Ai2's embedding suite, and on seven published
-land-cover products against six reference samples, with the reference points standing in for the map. On a deployed
-OlmoEarth model, a re-run of Ai2's configuration for its fine-tuned AWF model, the confidence ranked the map's errors
-with an AUROC of 0.85 at Ai2's expert-placed validation points but 0.64 on 2017 imagery at the plots of an independent
-random sample that had imagery (one-to-one crosswalk), below the preregistered 0.70; the record's own fine-tune of the
-task on OlmoEarth v1.2 gave the same verdicts (0.81 and 0.64). Most of those confident errors lie on one grass/shrub
-boundary that neither legend defines (report-only). On a second task, Ai2's Forest Loss Driver model graded at 2026
-MapBiomas Alerta alerts in the Amazon, the confidence ranked the disagreements at 0.77, the preregistered bar on
-its point value (the interval reaches 0.68), but not the confident confusions between agriculture and mining. The
-[technical report](https://github.com/2imi9/olmoearth_inferenceX/blob/main/report/main.pdf) and the
-[documentation](https://olmoearth-inferencex.readthedocs.io/en/latest/Summary/) give the results and their limits.
-
+Tested on linear probes of sixteen encoders over the tasks of Ai2's embedding suite, on seven published land-cover
+products against six reference samples, and on two deployed OlmoEarth models. Within the data a model was trained
+for, its confidence ranks the map's errors well; after a move to a new place and year it ranked them below the
+preregistered bar, and most of its confident errors lay on one class boundary that the two legends draw differently.
+The [technical report](https://github.com/2imi9/olmoearth_inferenceX/blob/main/report/main.pdf) and the
+[documentation](https://olmoearth-inferencex.readthedocs.io/en/latest/Summary/) give every result and its limits.
 
 Development and license
 -----------------------
