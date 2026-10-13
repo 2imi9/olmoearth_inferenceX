@@ -8,7 +8,8 @@ for:
   a map wrong at a stated rate (50% unless stated);
 - which of two maps (`sample --other`, then `estimate`): the labels drawn where the maps differ name the more
   accurate map when the two accuracies differ by at least a stated amount, at the worst of the splits checked of the
-  differing windows into right in one map, in the other or in neither (two-class maps have one split);
+  differing windows into right in one map, in the other or in neither (two-class maps have one split), with the
+  verdict `estimate` gives: the exact sign test up to a fifth of the differing windows, the interval above;
 - certified zone (`certify`): for a zone wrong at a stated rate, the Bonferroni rule certifies it (exact, however the
   errors spread inside it); no spread of the errors lets the prefix rule certify it more often than the zone's own
   test passes (exact); and the prefix rule certifies it when every more confident zone of the grid is wrong no more
@@ -285,16 +286,34 @@ def plan_error_rate(N, width, error_rate=None, power=POWER, conf=0.95, max_label
 
 
 # ----------------------------------------------------------------------------- which of two maps
-def which_map_probability(N, D, n, KA, KB, conf=0.95):
+def which_map_probability(N, D, n, KA, KB, conf=0.95, rule="auto"):
     """(probability of naming map a, of naming map b) when n labels are drawn at random among the D windows where the
-    maps differ, KA of which are right in map a and KB in map b (the rest in neither), with the interval
-    `compare_from_disagreement` prints: each map's share of the differing windows that is right gets its exact
-    interval at 1 - (1 - conf) / 2, and the difference names a map when it excludes 0. The count right in a is
-    hypergeometric, and the count right in b given it is hypergeometric over the rest."""
+    maps differ, KA of which are right in map a and KB in map b (the rest in neither), with the verdict
+    `compare_from_disagreement` prints (`estimate.which_map_rule`).
+
+    The sign test (while 5 n <= D): the m drawn windows where one map is right are hypergeometric over the KA + KB,
+    the count right in a among them hypergeometric over those, and the test names a map when the smaller count is at
+    most `estimate.sign_critical(m, 1 - conf)`. The interval (above, or with rule="interval"): each map's share of the
+    differing windows that is right gets its exact interval at 1 - (1 - conf) / 2, and the difference names a map when
+    it excludes 0; the count right in a is hypergeometric, and the count right in b given it hypergeometric over the
+    rest. In n the probability is not monotone: it can fall where the interval takes over."""
     N, D, n, KA, KB = (int(v) for v in (N, D, n, KA, KB))
     if not (0 <= KA and 0 <= KB and KA + KB <= D and 1 <= n <= D <= N):
         raise ValueError(f"which_map_probability needs 0 <= KA, KB, KA + KB <= D and 1 <= n <= D <= N; got N={N}, "
                          f"D={D}, n={n}, KA={KA}, KB={KB}")
+    if est.which_map_rule(n, D, rule) == "sign":
+        alpha = 1 - est._level(conf)
+        T, p_a, p_b = KA + KB, 0.0, 0.0
+        ms, pm = _hyper_pmf(D, T, n)
+        for m, wm in zip(ms, pm):
+            m = int(m)
+            k = est.sign_critical(m, alpha) if m else -1
+            if k < 0:
+                continue
+            xs, px = _hyper_pmf(T, KA, m)                  # k < m / 2, so a count at most k is the smaller one
+            p_a += wm * float(px[(m - xs) <= k].sum())
+            p_b += wm * float(px[xs <= k].sum())
+        return float(p_a), float(p_b)
     if n == D:                                                 # a census of the differing windows
         return float(KA > KB), float(KB > KA)
     s = 1 - (1 - float(est._level(conf))) / 2
@@ -360,8 +379,9 @@ def plan_which_map(N, D, difference, power=POWER, both_wrong=None, two_class=Fal
     both_wrong: the share of the differing windows wrong in both maps; None checks the splits of `_worst_split` and
     reports the worst. two_class: where two-class maps differ one of them is right, so no window is wrong in both;
     their difference in windows then has the parity of D, and the smallest one of at least `difference` is planned.
-    The chance of naming the less accurate map is reported as its largest over the splits checked; the interval holds
-    it below (1 - conf) / 2 at any budget."""
+    The chance of naming the less accurate map is reported as its largest over the splits checked; the sign test and
+    the interval each hold it below (1 - conf) / 2 at any budget. The budgets either side of the switch from the sign
+    test to the interval (a fifth of the differing windows) are always checked, since the probability can fall there."""
     N = _check_count("the number of windows compared", N)
     D = _check_count("the number of differing windows", D)
     if D > N:
@@ -428,7 +448,10 @@ def plan_which_map(N, D, difference, power=POWER, both_wrong=None, two_class=Fal
                 if q is not None:
                     cands.add(q)
         return fn(b, sorted(cands))
-    probs, span = refine(fn_near, {b: fn(b) for b in ladder(top)}, power, every=True)
+    # the budgets either side of where the interval takes over from the sign test, where the probability can fall
+    first = sorted(set(ladder(top)) | {b for b in (D // est.SIGN_TEST_SHARE, D // est.SIGN_TEST_SHARE + 1)
+                                         if 1 <= b <= top})
+    probs, span = refine(fn_near, {b: fn(b) for b in first}, power, every=True)
     rec = recommend(probs, power)
     out = {**base, "difference_windows": delta, "both_wrong": None if both_wrong is None else float(both_wrong),
            "two_class": bool(two_class), "planned_for": said,

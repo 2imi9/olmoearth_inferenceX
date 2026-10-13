@@ -437,3 +437,117 @@ def test_the_server_refuses_a_threshold_without_other_and_names_its_parameters(t
                           other=str(tmp_path / "b.npy"))
     assert "no reviewer error rate applies to this comparison" in s["limits"]
     assert "only estimate can widen" not in s["limits"]
+
+
+# ----------------------------------------------------------------------------- the sign test's verdict (1.10.0)
+# exp107 (docs/plan/which_map_baselines.md): the exact sign test on the windows where one map is right names the better
+# map more often than the union-bound interval up to a fifth of the differing windows, less often past a quarter to two
+# fifths; the owner chose the test up to a fifth, the interval above and in a census.
+def test_the_sign_tests_critical_values_are_the_sign_tests():
+    from oe_inferencex import stats
+    for alpha in (0.05, 0.1, 0.01):
+        for m in range(0, 121):
+            k = est.sign_critical(m, alpha)
+            for w in range(m + 1):
+                assert (stats.sign_test(w, m - w) < alpha) == (min(w, m - w) <= k), (alpha, m, w)
+    for m in (1023, 1024, 1500, 3001):                      # past 2 ** 1024, where a float tail overflowed in exp107
+        k = est.sign_critical(m, 0.05)
+        assert stats.sign_test(k, m - k) < 0.05 <= stats.sign_test(k + 1, m - k - 1)
+
+
+def test_the_switch_is_a_fifth_of_the_differing_windows():
+    assert [est.which_map_rule(n, 500) for n in (1, 99, 100, 101, 499, 500)] == \
+        ["sign"] * 3 + ["interval"] * 3
+    assert est.which_map_rule(100, 100, "sign") == "sign" and est.which_map_rule(1, 500, "interval") == "interval"
+    with pytest.raises(ValueError, match="rule"):
+        est.which_map_rule(1, 5, "union")
+
+
+def test_the_sign_verdict_never_names_the_worse_map_more_than_its_level_around_the_switch():
+    """Exact: on either side of the switch, for equal counts and counts one apart, at several shares wrong in both, the
+    package's verdict names the less accurate map with probability at most 0.025."""
+    from oe_inferencex import plan
+    for D in (25, 101, 400):
+        for n in sorted({max(1, D // 5 - 2), D // 5, D // 5 + 1, D // 5 + 3, D // 2}):
+            for T in sorted({D, D - 1, (3 * D) // 4, D // 3}):
+                for KA in (T // 2, (T + 1) // 2):
+                    pa, pb = plan.which_map_probability(D, D, n, KA, T - KA)
+                    assert pb <= 0.025 + 1e-12, (D, n, T, KA, pb)
+                    if 2 * KA == T:
+                        assert pa <= 0.025 + 1e-12, (D, n, T, KA, pa)
+
+
+def test_the_sign_verdict_and_its_probability_are_exp107s_arm_c():
+    """Second route: plan's probability under the sign test equals exp107's own implementation (float tails through
+    stats.sign_test's critical values, written separately), and estimate's verdict, drawn by the package's sampler on
+    constructed maps, matches it within 4 Monte Carlo se."""
+    import os
+    import sys
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "exp"))
+    import exp107_which_map_baselines as e107
+    from oe_inferencex import plan
+    for D, T, KA, n in ((600, 500, 300, 100), (600, 500, 200, 100), (982, 871, 454, 100), (1467, 1234, 452, 200)):
+        assert np.allclose(plan.which_map_probability(5000, D, n, KA, T - KA), e107.sign_arm(D, T, KA, n), atol=1e-12)
+    N, D, KA, KB, n, R = 3000, 600, 300, 200, 100, 3000
+    rng = np.random.default_rng(7)
+    ref = rng.integers(0, 3, N)
+    a, b = ref.copy(), ref.copy()
+    idx = rng.permutation(N)
+    b[idx[:KA]] = (ref[idx[:KA]] + 1) % 3
+    a[idx[KA:KA + KB]] = (ref[idx[KA:KA + KB]] + 1) % 3
+    a[idx[KA + KB:D]], b[idx[KA + KB:D]] = (ref[idx[KA + KB:D]] + 1) % 3, (ref[idx[KA + KB:D]] + 2) % 3
+    named = [0, 0]
+    for r in range(R):
+        s = est.sample_disagreement(a, b, n, seed=r)
+        j = np.asarray(s["indices"], int)
+        res = est.compare_from_disagreement(s, a[j], b[j], ref[j])
+        assert res["verdict_rule"] == "sign"
+        if res["verdict"]:
+            named["ab".index(res["verdict"])] += 1
+    want = plan.which_map_probability(N, D, n, KA, KB)
+    for got, w in zip(named, want):
+        assert abs(got / R - w) < 4 * np.sqrt(max(w * (1 - w), 1e-4) / R), (got / R, w)
+
+
+def test_windows_marked_unjudged_count_against_the_map_the_test_would_name():
+    """a is named only if the test on (a, b + u) names it, so every way the ? windows could truly fall names a too."""
+    from oe_inferencex import stats
+    D = 10_000
+    for a, b, c, u in ((20, 5, 3, 0), (20, 5, 3, 4), (20, 5, 3, 9), (6, 18, 0, 2), (12, 12, 1, 3)):
+        r = est.compare_from_disagreement(_sample(D, D, a + b + c + u), *_labels(a, b, c + u, uc=u))
+        assert r["verdict_rule"] == "sign" and r["n_unjudged"] == u
+        named_a = stats.sign_test(a, b + u) < 0.05 and a > b + u
+        named_b = stats.sign_test(a + u, b) < 0.05 and b > a + u
+        assert r["verdict"] == ("a" if named_a else "b" if named_b else None), (a, b, u, r["verdict"])
+        if r["verdict"]:
+            for to_a in range(u + 1):                          # the ? windows truly right in a, the rest in b
+                aa, bb = a + to_a, b + u - to_a
+                assert stats.sign_test(aa, bb) < 0.05 and (aa > bb) == (r["verdict"] == "a")
+
+
+def test_a_census_and_the_interval_side_keep_the_intervals_verdict():
+    r = est.compare_from_disagreement(_sample(1000, 40, 40), *_labels(21, 19, 0))
+    assert r["verdict_rule"] == "interval" and r["verdict"] == "a" == r["interval_verdict"]
+    r = est.compare_from_disagreement(_sample(1000, 100, 60), *_labels(40, 20, 0))
+    assert r["verdict_rule"] == "interval" and r["verdict"] == r["interval_verdict"]
+
+
+def test_the_test_can_name_a_map_where_the_interval_cannot_and_every_reply_says_which_decided(tmp_path):
+    from oe_inferencex import decide
+    r = est.compare_from_disagreement(_sample(50_000, 10_000, 100), *_labels(30, 15, 55))
+    assert r["verdict_rule"] == "sign" and r["verdict"] == "a" and r["interval_verdict"] is None
+    assert r["difference"]["low"] < 0 < r["difference"]["high"]
+    head = decide.sign_test_head(r)
+    assert head.startswith("map a is more accurate than map b (exact sign test") and "p = " in head
+    assert "can include 0" in head
+    r = est.compare_from_disagreement(_sample(50_000, 10_000, 100), *_labels(42, 25, 33))
+    assert r["verdict"] == "a" and "p = 0.0498" in decide.sign_test_head(r)
+    r = est.compare_from_disagreement(_sample(50_000, 10_000, 100), *_labels(22, 10, 68))
+    assert r["verdict"] is None and "p = 0.0501" in decide.sign_test_head(r), "p is not rounded onto the cut"
+    r = est.compare_from_disagreement(_sample(50_000, 10_000, 65), *_labels(30, 10, 25, uc=25))
+    head = decide.sign_test_head(r)
+    assert r["verdict"] is None and "whichever map leads" in head and "p = " not in head
+    r = est.compare_from_disagreement(_sample(50_000, 10_000, 100), *_labels(30, 15, 55), conf=0.9)
+    assert "90% interval" in decide.sign_test_head(r)
+    old = {k: v for k, v in r.items() if k not in ("verdict_rule", "sign_test")}
+    assert decide.sign_test_head(old) is None, "a result written before 1.10.0 is read as the interval's"

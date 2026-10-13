@@ -4,8 +4,8 @@ olmoearth_inferenceX is a Python package for assessing classification maps from 
 reference labels, it ranks a map's windows by the model's confidence for manual review, lists the cues behind each
 flagged window, and compares two maps of the same area. With a labelled sample, it estimates the error rate and
 per-class accuracy with confidence intervals, certifies the most confident part of the map whose error rate is at most a
-stated level, and, from labels drawn where two maps differ, gives an interval on their accuracy difference that names the
-more accurate map when it excludes zero.
+stated level, and, from labels drawn where two maps differ, names the more accurate map with an exact test and gives an
+interval on their accuracy difference.
 
 The package reads the per-pixel probabilities, logits or class scores that a model exports, as GeoTIFF or `.npy`
 arrays, and needs no access to the model itself. It was developed on OlmoEarth and does not require torch.

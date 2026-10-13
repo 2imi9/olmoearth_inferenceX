@@ -1163,7 +1163,11 @@ def _estimate_disagreement(args):
     with open(out, "w") as f:
         json.dump(res, f, indent=1)
     d, v = res["difference"], res["verdict"]
-    if v == "a":
+    from oe_inferencex.decide import sign_test_head
+    sign = sign_test_head(res)
+    if sign:
+        head = sign
+    elif v == "a":
         head = (f"map a is more accurate than map b, by {100 * d['low']:.1f} to {100 * d['high']:.1f} points over the "
                 "windows compared (95% interval)")
     elif v == "b":
@@ -1176,7 +1180,8 @@ def _estimate_disagreement(args):
           f"({100 * res['disagree_share']:.1f}% of the {res['n_population']} windows compared): a right on "
           f"{res['n_a_right']}, b right on {res['n_b_right']}, neither on {res['n_neither']}"
           + (f", {res['n_unjudged']} could not be judged" if res["n_unjudged"] else "")
-          + f"\nnote: {res['note']}" + "".join(f"\nnote: {n}" for n in res["notes"]) + f"\nwrote {out}")
+          + f"\nnote: {res['note']}" + (f"\nnote: {res['verdict_note']}" if sign else "")
+          + "".join(f"\nnote: {n}" for n in res["notes"]) + f"\nwrote {out}")
     return 0
 
 

@@ -198,6 +198,8 @@ truth; not preregistered; linear probes, not map products), 100 such labels name
 against 12.7% for 100 windows of the whole map analysed on the differing windows they held, and 42.8% against 11.3% on
 the 1,709 pairs that differ on more than 100 windows. The lowest coverage over the pairs was 95.5%, and the wrong map
 was named on at most 4.0% of a pair's draws (exp90). <!-- claim:exp90-which-map-few-labels -->
+These are the interval's verdicts; from 1.10.0 the exact sign test decides while the labels are at most a fifth of the
+differing windows, where it named the better map more often on five of nine product pairs (exp107).
 
 Two Sentinel-2 acquisitions a median 118 days apart change decision on 31.2% of 7,109 LUCAS polygons against a 0.30%
 reseed floor, a rate that follows phenology, 44.5% on cropland against 20.8% on woodland (exp68).

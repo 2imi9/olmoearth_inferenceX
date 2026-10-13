@@ -70,7 +70,7 @@ def test_the_exact_arms_against_monte_carlo_with_the_package(KA, KB):
     for r in range(R):
         s = est.sample_disagreement(a, b, n, seed=r)
         j = np.asarray(s["indices"], int)
-        v = est.compare_from_disagreement(s, a[j], b[j], ref[j])["verdict"]
+        v = est.compare_from_disagreement(s, a[j], b[j], ref[j], rule="interval")["verdict"]
         if v in ("a", "b"):
             named["B"][0 if v == "a" else 1] += 1
         for arm, pool in (("A", np.arange(N)), ("C", diff)):

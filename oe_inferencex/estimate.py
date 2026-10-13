@@ -2069,6 +2069,47 @@ WHICH_MAP_NOTE = ("The difference is over the windows compared: both maps predic
                   "two classes. This says which map is more accurate and by how much, not either map's accuracy: where the maps agree "
                   "they are both right or both wrong, and how often needs a sample of all windows (sample --design random "
                   "on each map). Labels are assumed right; a window marked ? is counted for each map both ways.")
+SIGN_TEST_SHARE = 5                  # the sign test decides while the labels are at most 1/5 of the differing windows
+SIGN_TEST_NOTE = ("The verdict is the exact sign test on the labelled windows where one map is right (two-sided): it "
+                  "says which map is more accurate and names the less accurate one at most half its level of the time "
+                  "(2.5% at 95%), drawn without replacement. The interval gives the size of the difference; it is a "
+                  "union bound, wider than the test, so it can include 0 when the test names a map. The test decides "
+                  "while the labels are at most a fifth of the differing windows, where it names the better map more "
+                  "often than the interval (exp107); past that, and in a census, the interval decides.")
+_SIGN_CRIT = {}
+
+
+def sign_critical(m, alpha):
+    """The largest k with 2 P(Bin(m, 1/2) <= k) < alpha, or -1: the two-sided exact sign test on (w, m - w) rejects at
+    alpha exactly when min(w, m - w) <= k (stats.sign_test's p is min(1, 2 P(X <= min))). Integer arithmetic, alpha
+    as a fraction, so no float decides a tail and nothing overflows (exp107's critical values at m >= 1024)."""
+    alpha, m = _level(alpha), int(m)
+    key = (m, alpha)
+    if key not in _SIGN_CRIT:
+        if len(_SIGN_CRIT) > 100_000:
+            _SIGN_CRIT.clear()
+        total, cum, k, c = 1 << m, 0, -1, 1
+        for i in range(m // 2 + 1):                        # 2 P(X <= m/2) >= 1 > alpha, so the loop stops by then
+            cum += c
+            if 2 * cum * alpha.denominator < alpha.numerator * total:
+                k = i
+            else:
+                break
+            c = c * (m - i) // (i + 1)
+        _SIGN_CRIT[key] = k
+    return _SIGN_CRIT[key]
+
+
+def which_map_rule(n, D, rule="auto"):
+    """The rule that names a map from n labels among D differing windows: "sign" (the exact sign test) while
+    SIGN_TEST_SHARE * n <= D, else "interval" (the union-bound interval, which in a census is the census answer). The
+    switch depends on n and D only, fixed before any label, so whichever rule decides keeps its own wrong-map rate.
+    "sign" or "interval" forces one."""
+    if rule not in ("auto", "sign", "interval"):
+        raise ValueError(f"rule must be auto, sign or interval, got {rule!r}")
+    if rule != "auto":
+        return rule
+    return "sign" if SIGN_TEST_SHARE * int(n) <= int(D) else "interval"
 
 
 def sample_disagreement(class_a, class_b, budget, valid=None, seed=0):
@@ -2092,7 +2133,7 @@ def sample_disagreement(class_a, class_b, budget, valid=None, seed=0):
             "n_population": int(ok.sum()), "n_disagree": int(pop.size), "budget": budget, "seed": int(seed)}
 
 
-def compare_from_disagreement(sample, class_a, class_b, reference, unjudged=None, conf=0.95):
+def compare_from_disagreement(sample, class_a, class_b, reference, unjudged=None, conf=0.95, rule="auto"):
     """Which of two maps is more accurate, from a labelled `sample_disagreement`.
 
     class_a, class_b: each sampled window's class in the two maps, in the order of sample["indices"]; reference: the
@@ -2102,7 +2143,14 @@ def compare_from_disagreement(sample, class_a, class_b, reference, unjudged=None
     bound), and the accuracy difference over the N windows both maps predict, (K_a - K_b) / N, lies in
     [(lo_a - hi_b) D / N, (hi_a - lo_b) D / N]. A window marked ? counts as wrong for a map at that map's lower end and
     as right at its upper end; the intervals move one way with the count, so the bound holds whatever made the windows
-    hard to judge. The verdict names a map when the interval excludes 0."""
+    hard to judge.
+
+    The verdict (`which_map_rule`): while the labels are at most a fifth of the differing windows, the exact sign test
+    on a and b at alpha = 1 - conf, naming a only if the test on (a, b + u) names it and b only if the test on
+    (a + u, b) does, u the windows marked ?; the test on the true counts then names the same map, so the bound holds
+    whatever made them hard to judge. Past a fifth, and in a census, the interval names a map when it excludes 0.
+    exp107: at n = 100 the test named the better map 0.095 to 0.154 more often than the interval on 5 of 9 product
+    pairs, and less often past a quarter to two fifths of the differing windows (it ignores the finite population)."""
     idx = np.asarray(sample["indices"], int)
     ca, cb = np.asarray(class_a).ravel(), np.asarray(class_b).ravel()
     ref = np.asarray(reference).ravel()
@@ -2142,15 +2190,28 @@ def compare_from_disagreement(sample, class_a, class_b, reference, unjudged=None
     wf = Fraction(D, N)
     low, high = float((ex(lo_a) - ex(hi_b)) * wf), float((ex(hi_a) - ex(lo_b)) * wf)
     est_lo, est_hi = float(Fraction(a - (b + u), n) * wf), float(Fraction((a + u) - b, n) * wf)
-    verdict = "a" if low > 0 else "b" if high < 0 else None
+    interval_verdict = "a" if low > 0 else "b" if high < 0 else None
+    used = which_map_rule(n, D, rule)
+    from . import stats
+    alpha = 1 - _level(conf)
+    k = sign_critical(a + b + u, alpha)
+    sign_verdict = "a" if a > b + u and b + u <= k else "b" if b > a + u and a + u <= k else None
+    p = stats.sign_test(a, b + u) if a > b + u else stats.sign_test(a + u, b) if b > a + u else 1.0
+    verdict = sign_verdict if used == "sign" else interval_verdict
     return {"design": "disagreement", "n_population": N, "n_disagree": D, "disagree_share": D / N, "n_labelled": n,
             "n_unjudged": u, "n_a_right": a, "n_b_right": b, "n_neither": c,
             "share_a_right": {"low": lo_a, "high": hi_a}, "share_b_right": {"low": lo_b, "high": hi_b},
             "difference": {"estimate": est_lo if est_lo == est_hi else None, "estimate_range": [est_lo, est_hi],
                            "low": low, "high": high},
-            "verdict": verdict, "conf": conf,
+            "verdict": verdict, "verdict_rule": used, "interval_verdict": interval_verdict,
+            "sign_test": {"one_right": a + b, "unjudged": u, "p_value": float(p), "alpha": float(alpha),
+                          "verdict": sign_verdict},
+            "conf": conf,
             "method": (f"labels on a simple random sample of the {D} windows where the maps differ; each map's share of "
                        f"them that is right gets its exact interval at {side:.3g}, and the difference of the two, times "
                        f"{D}/{N}, covers the whole map's accuracy difference at least {conf:.0%} of the time (union "
-                       "bound)"),
-            "note": WHICH_MAP_NOTE}
+                       "bound); "
+                       + ("the verdict is the exact sign test on the windows where one map is right"
+                          + (", since the labels are at most a fifth of the differing windows" if rule == "auto" else "")
+                          if used == "sign" else "the verdict is the interval's")),
+            "note": WHICH_MAP_NOTE, "verdict_note": SIGN_TEST_NOTE}

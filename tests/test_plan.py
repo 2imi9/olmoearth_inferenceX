@@ -124,7 +124,9 @@ def _which_brute(N, D, n, KA, KB, conf=0.95):
                                               (3_000, 600, 80, 330, 230), (800, 200, 50, 60, 90),
                                               (2_500, 500, 454, 258, 233)])
 def test_which_map_probability_by_every_outcome(N, D, n, KA, KB):
-    p_a, p_b = plan.which_map_probability(N, D, n, KA, KB)
+    """The interval's probabilities against every outcome (the sign test's, up to a fifth of D, are checked against
+    exp107's own implementation in test_which_map.py)."""
+    p_a, p_b = plan.which_map_probability(N, D, n, KA, KB, rule="interval")
     b_a, b_b = _which_brute(N, D, n, KA, KB)
     assert abs(p_a - b_a) < 1e-9 and abs(p_b - b_b) < 1e-9
 

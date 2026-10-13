@@ -4059,7 +4059,8 @@ with probability under 0.06. On the four pairs differing by 4 to 6 points the to
 **P2 holds**: the sign test on the tool's sample names the better map 0.095 to 0.154 more often than the interval on
 the five pairs differing by 2.7 points or more, never wrong more than 0.013 of the time; past a quarter to two fifths
 of the differing windows it names it less often (it ignores the finite-population correction), so the owner chose to
-adopt it only up to a fifth, keeping the interval above. <!-- claim:exp107-sign-test-on-the-tools-sample -->
+adopt it only up to a fifth, keeping the interval above (in the package from 1.10.0, `estimate.which_map_rule`).
+<!-- claim:exp107-sign-test-on-the-tools-sample -->
 Equal label count, not equal effort; the stratified references' share of differing rows is the samples', not the maps'.
 
 ## The certified zone against conformal risk control and conformal selection (exp108, report-only)

@@ -274,11 +274,40 @@ def _dates_clause(r, graded=False):
     return said
 
 
+def _level_pc(r):
+    return f"{100 * float(r.get('conf', 0.95)):.3g}%"
+
+
+def sign_test_head(r):
+    """The answer to which of two maps is more accurate when the exact sign test gave the verdict (estimate on a sample
+    of the differing windows, 1.10.0 on), without a capital or a full stop; None when the interval gave it, as in every
+    result written before 1.10.0. The interval follows as the size of the difference."""
+    st = r.get("sign_test")
+    if r.get("verdict_rule") != "sign" or not st:
+        return None
+    d, v, u = r["difference"], r.get("verdict"), r.get("n_unjudged") or 0
+    a, b = r["n_a_right"], r["n_b_right"]
+    lead = a > b + u or b > a + u                          # else no test was run: p is estimate's placeholder 1
+    test = (f"exact sign test on the labelled windows where one map is right: a right on {a}, b on {b}"
+            + (f", {u} not judged and counted against {'the map named' if v else 'whichever map leads'}" if u else "")
+            + (f", p = {st['p_value']:.3g}" if lead or not u else ""))
+    size = (f"the difference, a minus b, lies between {100 * d['low']:+.1f} and {100 * d['high']:+.1f} points over the "
+            f"windows compared ({_level_pc(r)} interval; a union bound, wider than the test, so it can include 0)")
+    if v in ("a", "b"):
+        return f"map {v} is more accurate than map {'b' if v == 'a' else 'a'} ({test}); {size}"
+    return f"the labels cannot tell which map is more accurate ({test}); {size}"
+
+
 def _answer_more_accurate(r, k):
     if k == "two_maps_sample":
         d, v = r["difference"], r.get("verdict")
         lo, hi = 100 * d["low"], 100 * d["high"]
-        if v == "a":
+        head = sign_test_head(r)
+        if head and v:
+            why = f"At {_level_pc(r)} confidence, {head}."
+        elif head:
+            why = f"{head[0].upper()}{head[1:]}. " + comparison_second_look()
+        elif v == "a":
             why = (f"At 95% confidence, map a is more accurate than map b, by {lo:.1f} to {hi:.1f} points over the "
                    "windows compared.")
         elif v == "b":
@@ -293,7 +322,8 @@ def _answer_more_accurate(r, k):
         return {"type": "choice", "answer": v or "undetermined", "level": r.get("conf", 0.95), "exact": True,
                 "because": why,
                 "evidence": {k2: r.get(k2) for k2 in ("difference", "n_labelled", "n_disagree", "n_population",
-                                                       "n_a_right", "n_b_right", "n_neither", "n_unjudged")}}
+                                                       "n_a_right", "n_b_right", "n_neither", "n_unjudged",
+                                                       "verdict_rule", "sign_test", "interval_verdict")}}
     ws = (r.get("graded") or {}).get("which_side")
     if not ws:
         raise ValueError(NO_LABELS_WHICH)

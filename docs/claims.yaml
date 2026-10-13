@@ -5332,10 +5332,11 @@
     )(S['verdicts'], S['pairs']))(A['exp/out/exp107_summary.json'])
   cited_in:
     - {file: docs/results/comparisons.md, marker: exp107-sign-test-on-the-tools-sample}
+    - {file: docs/Usage.md, marker: exp107-sign-test-on-the-tools-sample}
   note: >-
     The package change (the sign test's verdict up to n/D = 0.2, the interval above, the census answer at n >= D) is
-    decided but not yet made; the 0.2 switch was chosen after the result and depends only on n and D, so the wrong-map
-    rate stays at most (1 - conf)/2.
+    made for 1.10.0 (estimate.which_map_rule; tests in tests/test_which_map.py); the 0.2 switch was chosen after the
+    result and depends only on n and D, so the wrong-map rate stays at most (1 - conf)/2.
 
 - id: exp108-zone-and-conformal-rules-each-hold-their-own-guarantee
   statement: "Report-only, not preregistered: on exp95's committed maps at 300 labels (28 maps) and 1,000 (21), alpha half each map's error rate, delta 0.1, 2,000 draws, every rule on the same draws, each rule held its own guarantee and neither conformal rule held the zone's. certify's zone was wrong more than alpha on at most 8.7% of draws (and returned no zone on up to 99.7%); conformal risk control on the loss 'wrong and inside the zone' kept the mean share of unlabelled windows wrong and inside at 0.72 to 1.003 times alpha (within Monte Carlo error of its exact bound) while its zone was wrong more than alpha on 19.8% to 100% of draws; conformal selection with Benjamini-Hochberg kept its mean false-selection share at 0.61 to 1.001 times alpha while its zone was wrong more than alpha on 19.8% to 52.9% of draws, and its zone was larger than certify's on all 49 by a median 0.31 of the map. Selection with guaranteed risk was not run."

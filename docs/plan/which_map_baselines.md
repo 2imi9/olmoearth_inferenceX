@@ -14,7 +14,8 @@ arm's probabilities are computed.
 recorded after an independent audit ([comparisons](../results/comparisons.md#which-map-is-more-accurate-the-tools-design-against-mcnemars-test-exp107)).
 P1 does not hold (8 of 9 against the exact test, 6 of 9 against Foody's z form; the three losses on pairs under 1.2
 points). P2 holds (5 of 9); the owner chose to adopt the sign test only up to a fifth of the differing windows, since
-past a quarter to two fifths it names the better map less often than the interval. The package change is pending.
+past a quarter to two fifths it names the better map less often than the interval. The package change is made for
+1.10.0 (`estimate.which_map_rule`).
 
 - **Not blind for the populations:** each pair's counts are on the record (exp92 and exp94, Q1): N, the reference rows
   where both maps have a class; D, those where the maps differ; K_A and K_B, those among D where only map A, or only

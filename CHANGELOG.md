@@ -1,6 +1,19 @@
 # Changelog
 
-## Unreleased
+## 1.10.0 (2026-10-13)
+
+**Which map is more accurate: the exact sign test decides up to a fifth of the differing windows (exp107's P2, the
+owner's choice).** `estimate` on a sample drawn with `--other` now names a map by the exact two-sided sign test on the
+labelled windows where one map is right while the labels are at most a fifth of the differing windows, and by the
+union-bound interval above and in a census; the switch depends only on the budget and the differing windows, so each
+rule keeps its wrong-map rate of at most 2.5%. A window marked `?` counts against the map the test would name. The
+interval stays as the size of the difference, with a note that it can include 0 when the test names a map; the result
+adds `verdict_rule`, `interval_verdict` and `sign_test` (counts, p-value). `plan.which_map_probability` and `plan`'s
+which-map advice follow (`rule="interval"` keeps the old verdict; exp107 pins it), and always check the budgets either
+side of the switch, where the probability can fall; `decide`, the command line and the MCP server say which rule
+decided. Results written before 1.10.0 read as before. Tests: the critical values against `stats.sign_test`, the exact
+wrong-map rate around the switch, the probabilities against exp107's own implementation and the package's verdicts on
+draws, the `?` rule against every way the windows could fall, the census.
 
 **exp107 (preregistered, frozen 1daa6bb) and exp108 (report-only).** exp107: on nine product pairs at 100 labels the
 tool's which-map design names the better-agreeing map as often as McNemar's exact test on 8 and as Foody's z form on 6

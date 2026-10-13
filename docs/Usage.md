@@ -18,7 +18,7 @@ extra) are new in 1.4.0.
 
 ## Quick start
 
-Every command below runs on 1.9.0. `scores.tif` is a map of per-class probabilities; add `--logits` for logits.
+Every command below runs on 1.10.0. `scores.tif` is a map of per-class probabilities; add `--logits` for logits.
 
 ```bash
 pip install "olmoearth-inferencex[geo]"
@@ -390,6 +390,15 @@ ones `compare` counts as differing. It does not give either map's accuracy: wher
 or both wrong, and how often needs a random sample of all windows (`sample --design random` on each map). `certify`
 refuses this sample.
 
+Which map it names (from 1.10.0): while the labels are at most a fifth of the differing windows, the exact sign test on
+the labelled windows where one map is right, two-sided at 5%, printed with its p-value and counts; it names the less
+accurate map at most 2.5% of the time. A window marked `?` counts against the map the test would name. The interval
+is then the size of the difference: wider than the test, it can include 0 when the test names a map. Past a fifth,
+and in a census, the interval names a map when it excludes 0. On nine product pairs at 100 labels the test named the
+better map 0.10 to 0.15 more often than the interval on five, and less often past a quarter to two fifths of the
+differing windows, since it ignores the finite population (exp107). The result's `verdict_rule` says which decided.
+<!-- claim:exp107-sign-test-on-the-tools-sample -->
+
 On the record's own maps (exp90: every pair of encoders run on the same units of each of the 24 tasks of Ai2's suite,
 2,514 pairs, with the full truth, 400 draws per pair; not preregistered; the maps are linear probes, not map products),
 100 labels on the differing windows named the right map on 60% of draws. The same 100 labels drawn from the whole map
@@ -698,7 +707,7 @@ wrote to_label_estimate_decisions.json
 |---|---|---|---|
 | `error_rate_below=T` | yes, no, undetermined | `estimate` | the 95% interval lies below T, at or above T, or across it |
 | `user_accuracy_above=T`, `producer_accuracy_above=T` | the same, per class | `estimate --per-class` | each class's interval; per-class intervals are nominal |
-| `more_accurate` | a, b, undetermined | `estimate` on a sample drawn with `--other` | the interval on the difference excludes 0 |
+| `more_accurate` | a, b, undetermined | `estimate` on a sample drawn with `--other` | the exact sign test names a map, while the labels are at most a fifth of the differing windows; above, the interval on the difference excludes 0 |
 | `more_accurate` | a, b, tie, undetermined | `compare --labels` | a count against the labels raster, taken as truth; undetermined unless every differing window carries a label |
 | `trusted_share` | a share of the map | `certify` | the certified share; 0 when nothing is certified |
 | `trusted_share_at_least=S` | yes, undetermined | `certify` | never no: a larger sample can certify more where the map's error rate is at most alpha (a second test when this run could certify something: up to twice delta for the two together) |

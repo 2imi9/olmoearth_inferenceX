@@ -1072,7 +1072,10 @@ def estimate(
 def _which_map(r, out):
     """estimate's reply on a sample of the windows where two maps differ."""
     d, v = r["difference"], r["verdict"]
-    if v == "a":
+    sign = _decide.sign_test_head(r)
+    if sign:
+        head = f"{sign[0].upper()}{sign[1:]}."
+    elif v == "a":
         head = (f"Map a is more accurate than map b, by {100 * d['low']:.1f} to {100 * d['high']:.1f} points over the "
                 "windows compared (95% interval).")
     elif v == "b":
@@ -1087,13 +1090,14 @@ def _which_map(r, out):
             + (f", {r['n_unjudged']} could not be judged." if r["n_unjudged"] else ".")]
     limits = [r["note"], "The interval is a union bound over the two maps' shares of the differing windows, each exact, "
               "so it covers the accuracy difference at least 95% of the time; it is not either map's accuracy."] + \
-        _notes(r.get("notes", []))
+        ([r["verdict_note"]] if sign and r.get("verdict_note") else []) + _notes(r.get("notes", []))
     nxt = ("For either map's own accuracy: sample with design \"random\" on that map's scores, have a reviewer label "
            "every row, then estimate." if v else
            "A larger sample drawn with other (a new seed gives a new draw; label all of it) narrows the interval. "
            + _decide.comparison_second_look(lead=False))
     summ = {k: r.get(k) for k in ("verdict", "difference", "n_labelled", "n_disagree", "n_population", "n_a_right",
-                                  "n_b_right", "n_neither", "n_unjudged", "share_a_right", "share_b_right")}
+                                  "n_b_right", "n_neither", "n_unjudged", "share_a_right", "share_b_right",
+                                  "verdict_rule", "sign_test", "interval_verdict")}
     return _reply(" ".join(said), _join(limits), nxt, {"estimate": out}, summ)
 
 

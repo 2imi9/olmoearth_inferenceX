@@ -121,8 +121,9 @@ detail.
   Forest Loss Driver was then graded through its deployment configuration at 2026 MapBiomas
   Alerta alerts (exp104, above), in two of its ten classes.
 - **Two maps.** Without labels, `compare` cannot say which map is right where they differ;
-  labels drawn where they differ (`sample --other`) give an interval on the accuracy difference,
-  which names a map only when it excludes zero, and not either map's accuracy. On
+  labels drawn where they differ (`sample --other`) name the more accurate map (an exact sign
+  test up to a fifth of the differing windows, the interval above) and give an interval on the
+  accuracy difference, not either map's accuracy. On
   15 pairs of flood maps, trusting the more confident map was right on 51% to 70% of the
   differing windows. <!-- claim:tool-vs-diff-resolution -->
 - **Floods.** A plain water index (NDWI) ranked the errors as well as or better than confidence

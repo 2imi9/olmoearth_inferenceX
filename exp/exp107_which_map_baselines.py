@@ -127,7 +127,7 @@ def arms(N, D, KA, KB, n):
     if n >= D:
         got["B"] = got["C"] = (float(KA > KB), float(KB > KA))
     else:
-        got["B"] = plan.which_map_probability(N, D, n, KA, KB)
+        got["B"] = plan.which_map_probability(N, D, n, KA, KB, rule="interval")   # the interval, as run at 1daa6bb
         got["C"] = sign_arm(D, T, KA, n)
     out = {}
     for arm, (pa, pb) in got.items():
