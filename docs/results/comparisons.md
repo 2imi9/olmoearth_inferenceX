@@ -4073,6 +4073,94 @@ neither conformal rule held the zone's: their zones were wrong more than alpha o
 certify's on at most 8.7%; conformal selection's zone was larger by a median 0.31 of the map.
 <!-- claim:exp108-zone-and-conformal-rules-each-hold-their-own-guarantee -->
 
+## Where the AWF fine-tunes' confident errors under transfer lie: mostly one contested legend pair (exp109, report-only)
+
+Not preregistered: an exploratory diagnosis on the plots and labels exp99, exp101 and exp103 had already examined,
+done on 12 and 13 October 2026 and audited then, recorded at the owner's request when the project was wrapped up. It
+asks why the confidence of both AWF fine-tunes misses the 0.70 ranking bar at the East Africa TimeSync plots (exp99,
+v1: 0.638; exp103, v1.2: 0.642, STRICT). `exp/exp109_transfer_diagnosis.py` reproduces it from the committed units
+files and writes `exp/out/exp109_summary.json` (aggregates only, the inputs' sha256): the 271 TimeSync 2017 plots with
+input, the same plots for both models, design-weighted as exp99 froze them; and Ai2's 259 AWF validation points,
+unweighted as exp98 graded them. The confident third is the plots whose top-1 probability is at or above its 2/3
+quantile over the 271, an unweighted count (91 plots); a STRICT-only error is wrong under STRICT and right under
+LENIENT. Intervals resample plots within each country (2,000 resamples, seed 0, the diagnosis's).
+
+| | v1 (exp99) | v1.2 (exp103) |
+|---|---|---|
+| Confident third at the TimeSync plots: weighted error rate, STRICT / LENIENT | 25.1% / 7.1% | 24.9% / 2.4% |
+| Confident STRICT errors that are STRICT-only | 14 of 20 | 20 of 22 |
+| of them shrubland_savanna where TimeSync says Open Grassland | 11 | 19 |
+| AUROC of the confidence, STRICT-only errors against STRICT-correct plots | 0.601 (0.526 to 0.675) | 0.561 (0.480 to 0.640) |
+| AUROC of the confidence, LENIENT errors against STRICT-correct plots | 0.698 (0.618 to 0.775) | 0.741 (0.678 to 0.801) |
+| At Ai2's 259 points: AUROC on the grass/shrub boundary | 0.899 (8 errors at 146 points) | 0.889 (8 at 142) |
+
+**The confident errors under STRICT lie mostly on one pair.** The confident third of either map is wrong at a quarter
+of its design weight under STRICT and at 7.1% and 2.4% under LENIENT. Of its STRICT errors, 14 of 20 (v1) and 20 of 22
+(v1.2) are STRICT-only, and 11 and 19 are one directional pair: the map says shrubland_savanna where TimeSync's
+interpreters said Open Grassland. AWF publishes no woody-cover threshold between its shrubland/savanna and grassland
+classes, and TimeSync's "without substantial woody vegetation" sets none either (exp99's crosswalk). At narrower cuts
+the share is higher (top quarter 12 of 15 and 14 of 15; top fifth 10 of 11 and 12 of 12), at wider cuts lower but still
+a majority (top 40% 15 of 23 and 20 of 24; top half 22 of 32 and 24 of 32). Over all 271 plots the pair holds 39 of
+v1's 54 STRICT-only errors and 41 of v1.2's 50; the reverse, grassland_barren on Wooded Grassland, 9 and 4.
+
+**The confidence barely ranks the STRICT-only errors, and ranks the rest about as a product's does.** Against the
+STRICT-correct plots the confidence ranks the STRICT-only errors (the pair's and the rest) at 0.601 and 0.561, v1's
+interval above 0.5 and v1.2's including it, and the LENIENT errors at 0.698 and 0.741; the gap is 0.097 for v1 (−0.003
+to +0.189) and 0.180 for v1.2 (+0.097 to +0.264). Over all plots the LENIENT errors rank at 0.678 and 0.730 (exp99,
+exp103), near the 0.720 to 0.787 that published products' own confidence reached at probability samples (exp92, exp94);
+exp99's interval for v1 (0.599 to 0.756) spans that range's low end. In distribution the same boundary is rankable: at
+Ai2's validation points the 8 grass/shrub errors of each model rank at 0.899 and 0.889, with median top-1 probabilities
+of 0.80 and 0.85 against 0.9996 and 0.9997 at the boundary's correct points, and none and one of them reach the TimeSync
+confident cut. They also run mostly the other way: grassland_barren where Ai2 labelled shrubland_savanna at 5 and 6 of
+the 8. The confident third of Ai2's points (87) holds 1 and 2 errors. Ai2's points' AUROC (0.849, 0.814) less the
+LENIENT errors' against the STRICT-correct plots is 0.151 for v1 and 0.073 for v1.2, read as the year, the place and the
+placement of the points together; the LENIENT errors' less STRICT's (0.638, 0.642) is 0.060 and 0.099, read as the
+legend's. For v1 the first is larger, for v1.2 the second.
+<!-- claim:exp109-transfer-confident-errors-lie-on-one-contested-pair -->
+
+**A plot-matched look at CGLS (exploratory; its data are not committed, so it carries no ledger claim).** exp99's 309
+plots were rebuilt from the pinned TimeSync file and Ai2's pinned request geometry (all 309 matched, every label equal
+to exp94's) and joined to CGLS-LC100's 2017 class (exp94's point file) and its 2017 cover fractions (v3.0.1, Zenodo
+3518036, CC BY 4.0; the 100 m pixel holding the plot). CGLS calls the models' confident shrubland calls on Open
+Grassland shrubs rather than herbaceous at 7 of 8 (v1) and 12 of 14 (v1.2), against 24 of 47 and 20 of 41 at their
+grassland calls there, and 52 of all 79 Open Grassland plots with either class. In CGLS woody cover (tree plus shrub), a
+logistic line between the models' grassland and shrubland calls sits at 27.1% (90% bootstrap 22.7 to 30.7) for v1 and
+24.3% (18.8 to 28.6) for v1.2, near CGLS's own herbaceous/shrub line (25.8%), and TimeSync's line between Open and
+Wooded Grassland at 34.1% (32.7 to 35.5), fitted on 2,228 Kenya and Tanzania 2017 plots outside the 309. The contested
+plots' woody cover lies between that of plots both legends call grass and plots both call woody (AUC 0.785 and 0.735
+against the first, 0.262 and 0.258 against the second). The lines differ, but neither sorts the contested plots: 77% and
+66% of them lie above both and 8% and 27% between them, and a flag on shrubland calls below TimeSync's line, put first,
+ranks the STRICT errors at 0.651 for either model against the confidence's 0.638 and 0.642, flagging 2 of the 11 and 2
+of the 19 confident contested plots. Nor are they patchier: the spread of woody cover over 300 m and 500 m blocks
+separates them from plots both legends call grass, or both call woody, at AUCs of 0.49 to 0.60, and the 300 m spread
+adds nothing to the woody level in predicting the shrubland call at Open Grassland plots (likelihood ratio 0.97 and 1.06
+on one degree of freedom).
+
+**Reading.** A large part of the confident errors under STRICT lie on one contested legend pair: the models call
+shrubland/savanna where TimeSync's interpreters saw open grassland. They lie on a boundary neither legend defines, so
+the crosswalk cannot settle them. The confidence separates the STRICT-only errors barely if at all (0.601 and 0.561),
+and neither exp101's shaking (on v1 those plots change class as often as correct ones) nor the exploratory woody-cover
+flag above (2 of the 11 and 2 of the 19 confident contested plots) separates them; exp106's second product cannot see
+the pair, since its legend merges it. The genuine errors, those LENIENT counts, the confidence ranks about as a
+published product's ranks its own. For v1 the loss from transfer and point placement is larger than the legend's (0.151
+against 0.060), for v1.2 the legend's is larger (0.099 against 0.073). The owner's decision: such definition and scale
+problems belong to the foundation model's team, not to the tool. Nothing here is a claim about either model beyond these
+numbers.
+
+**What it does not show.** The plots, labels and maps had been examined before (exp99, exp101, exp103), and the
+confident third, the pair and the split were chosen after looking; nothing was preregistered and no bar is graded. The
+counts are small (20 and 22 confident STRICT errors, 8 grass/shrub errors at Ai2's points), and both models are graded
+on the same 271 plots, so their agreement is not two samples. The STRICT-only bucket is defined by the crosswalk: it
+cannot separate a legend convention from a systematic practice of TimeSync's interpreters, or from a gap in what the
+AWF training labels support. The split of the loss sets unweighted expert-placed points against a design-weighted
+random sample and is descriptive, not an identified decomposition. The CGLS look is exploratory, on joined data the
+record does not commit, with a 100 m pixel standing for a 30 m plot; CGLS-LC100 shares ESA WorldCover's lineage (both
+from VITO-led production: Buchhorn et al. 2020, the Collection 3 product user manual, doi:10.5281/zenodo.3938963, VITO
+the lead contractor; Zanaga et al. 2021, 2022), and WorldCover 2021 is among OlmoEarth's pretraining map targets (a
+decode-only target of v1 and v1.2: the checkpoint's `config.json`, `only_decode_modalities`; the pretraining dataset
+card; Herzog et al. 2025, arXiv:2511.13655; see `docs/plan/roadmap.md`), so CGLS siding with the models is not
+independent of them. Which legend's line is right is not asked and cannot be read from these data.
+
 ## A vision-language model as the reviewer (exp91)
 
 **Question.** The labelled routes need a reviewer. Can a general-purpose vision-language model supply the labels from

@@ -32,6 +32,22 @@ reading's own coverage, none when the crosswalk is fitted to the labels, and its
 with the notes carried into its answer; both tables, recomputed and read back from Usage; the route through the command
 line, ties at the cut, a product map's own codes, and every refusal.
 
+**exp109 (report-only; not preregistered, exploratory, on plots already examined): why the AWF fine-tunes' confidence
+misses the ranking bar under transfer.** At the 271 East Africa TimeSync 2017 plots with input, the confident third of
+each map (an unweighted top third by top-1 probability) is wrong at 25.1% (v1) and 24.9% (v1.2) of its design weight
+under STRICT and 7.1% and 2.4% under LENIENT; 14 of 20 and 20 of 22 of its STRICT errors are STRICT-only, 11 and 19 of
+them shrubland_savanna where TimeSync says Open Grassland, a boundary neither legend publishes. The confidence ranks
+those STRICT-only errors at a design-weighted AUROC of 0.601 and 0.561 (within-country 90% intervals 0.526 to 0.675 and
+0.480 to 0.640) and the LENIENT errors at 0.698 and 0.741, against the STRICT-correct plots; at Ai2's validation points
+it ranks the grass/shrub boundary's errors at 0.899 and 0.889, where they run mostly the other way. The transfer and
+point-placement loss is larger than the legend's for v1 (0.151 against 0.060), smaller for v1.2 (0.073 against 0.099).
+An exploratory plot-matched join to CGLS-LC100 (data not committed, prose only) puts the models' grass/shrub line near
+24% to 27% woody cover and TimeSync's near 34%, though neither line sorts the contested plots. The owner's decision:
+such definition and scale problems belong to the foundation model's team, not to the tool.
+exp/exp109_transfer_diagnosis.py, exp/out/exp109_summary.json, tests/test_exp109.py (second routes: rank cuts, labels by
+name, pairwise AUROCs on p1, the STRICT-only one's within-country interval, and the two losses from those AUROCs), one
+claim (measured) and a comparisons section.
+
 ## 1.10.0 (2026-10-13)
 
 **Which map is more accurate: the exact sign test decides up to a fifth of the differing windows (exp107's P2, the

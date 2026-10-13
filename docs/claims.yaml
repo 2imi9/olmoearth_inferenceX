@@ -5361,3 +5361,34 @@
     Run once at 1daa6bb (job 1298650); report-only, as the owner chose. Recorded after an independent audit that
     recomputed ten cells with its own code and checked the conformal arms against the papers' definitions; means above
     alpha by at most 0.0013 alpha are draw noise (the CRC expectation has a closed form at most alpha on all 49).
+
+- id: exp109-transfer-confident-errors-lie-on-one-contested-pair
+  statement: "Report-only, not preregistered, exploratory on plots already examined: at the 271 East Africa TimeSync 2017 plots with input, the confident third of each AWF fine-tune's map (top-1 probability at or above its 2/3 quantile, an unweighted count of 91 plots) is wrong at 25.1% (v1) and 24.9% (v1.2) of its design weight under STRICT and 7.1% and 2.4% under LENIENT; 14 of v1's 20 and 20 of v1.2's 22 confident STRICT errors are STRICT-only, and 11 and 19 are the one directional pair shrubland_savanna where TimeSync says Open Grassland, whose boundary neither legend publishes. Against the STRICT-correct plots the confidence ranks the STRICT-only errors at a design-weighted AUROC of 0.601 (90% within-country bootstrap 0.526 to 0.675) and 0.561 (0.480 to 0.640) and the LENIENT errors at 0.698 and 0.741; at Ai2's 259 AWF validation points it ranks the 8 errors on the grass/shrub boundary at 0.899 and 0.889, most of them grassland_barren where Ai2 labels shrubland_savanna (5 and 6 of 8), the opposite direction. Ai2's points' AUROC less the LENIENT errors' (transfer and point placement) is 0.151 and 0.073; the LENIENT errors' less STRICT's (the legend) is 0.060 and 0.099."
+  crosscheck: tests/test_exp109.py::test_exp109_recorded_by_a_second_route
+  status: measured
+  experiments: [exp109, exp98, exp99, exp103]
+  artifacts: [exp/out/exp109_summary.json]
+  check: |-
+    (lambda S: (lambda T, I, L: S['preregistered'] is False
+      and [T[m]['n'] for m in ('v1', 'v1.2')] == [271, 271] and [T[m]['confident_third']['plots'] for m in ('v1', 'v1.2')] == [91, 91]
+      and [round(T[m]['confident_third']['weighted_error_rate'][r], 3) for m in ('v1', 'v1.2') for r in ('strict', 'lenient')] == [0.251, 0.071, 0.249, 0.024]
+      and [(T[m]['confident_third']['strict_errors'], T[m]['confident_third']['strict_only'], T[m]['confident_third']['shrubland_savanna_on_open_grassland']) for m in ('v1', 'v1.2')] == [(20, 14, 11), (22, 20, 19)]
+      and [round(T[m]['auroc_weighted'][k], 3) for m in ('v1', 'v1.2') for k in ('strict_only_errors_vs_strict_correct', 'lenient_errors_vs_strict_correct')] == [0.601, 0.698, 0.561, 0.741]
+      and [round(x, 3) for m in ('v1', 'v1.2') for x in T[m]['bootstrap']['strict_only_errors_vs_strict_correct']] == [0.526, 0.675, 0.48, 0.64]
+      and [round(T[m]['auroc_weighted'][k], 3) for m in ('v1', 'v1.2') for k in ('strict', 'lenient')] == [0.638, 0.678, 0.642, 0.73]
+      and [round(I[m]['auroc_unweighted'], 3) for m in ('v1', 'v1.2')] == [0.849, 0.814]
+      and [round(I[m]['grass_shrub']['auroc_unweighted'], 3) for m in ('v1', 'v1.2')] == [0.899, 0.889]
+      and [(I[m]['grass_shrub']['errors'], I[m]['grass_shrub']['grassland_barren_where_ai2_labels_shrubland_savanna']) for m in ('v1', 'v1.2')] == [(8, 5), (8, 6)]
+      and [round(L[m][k], 3) for m in ('v1', 'v1.2') for k in ('transfer_and_point_placement', 'legend')] == [0.151, 0.06, 0.073, 0.099]
+    )({m: v['transfer_2017'] for m, v in S['models'].items()}, {m: v['ai2_validation_points'] for m, v in S['models'].items()},
+      {m: v['losses'] for m, v in S['models'].items()}))(A['exp/out/exp109_summary.json'])
+  cited_in:
+    - {file: docs/results/comparisons.md, marker: exp109-transfer-confident-errors-lie-on-one-contested-pair}
+  note: >-
+    Recorded on 13 October 2026 at the owner's request, from a diagnosis done on 12 and 13 October in scratch scripts
+    and audited then; exp/exp109_transfer_diagnosis.py reproduces it from the committed units files (their sha256 in the
+    summary), the bootstrap with the diagnosis's seed 0. Seen plots, small counts, both models on the same plots; the
+    STRICT-only bucket is defined by the crosswalk and cannot separate a legend convention from a systematic reference
+    practice or a gap in what the training labels support. The split of the loss is descriptive (unweighted
+    expert-placed points against a design-weighted random sample). The plot-matched CGLS join in the comparisons
+    section is exploratory, on data not committed, and carries no claim.
