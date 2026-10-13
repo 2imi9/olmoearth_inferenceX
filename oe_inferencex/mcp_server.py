@@ -922,6 +922,22 @@ def sample(
                       else {})})
 
 
+# The per-class audit (sample --design audit, 13 October 2026) is read by the command line only in this version. A reply
+# here needs its own limits (the intervals do not hold jointly, a second reading of the same labels is a second test
+# and holds only with its crosswalk fixed before the labels, the class not the windows, a few labels cannot clear a
+# class of a large zone), and replies no agent has been tested on are where weak agents dropped limits (the agent test
+# of 2 October 2026). Without the first refusal, estimate would write the JSON and then fail on a missing key. The
+# texts name no option, since a refusal through this server names parameters (`_mcp_words`), and the command line is
+# the one to run. An audit's sidecar goes on to decide's own refusal of a sidecar.
+AUDIT_NOT_SERVED = ("{path} is a per-class audit (a sample drawn with the audit design), which this server does not "
+                    "read in this version. Read it on the command line: oe-inferencex estimate {path}, with the alpha "
+                    "option set to the rate chosen before any label was read, then oe-inferencex decide on the JSON it "
+                    "writes.")
+AUDIT_RESULT_NOT_SERVED = ("{path} is the result of a per-class audit, which this server does not read in this "
+                           "version. Ask on the command line: oe-inferencex decide {path}, asking error_rate_below with "
+                           "the rate.")
+
+
 def _out_json(sample_csv, out_dir, suffix):
     if out_dir is None:
         return None
@@ -951,6 +967,8 @@ def estimate(
                                                          "reviewer mark right, as the user states it")] = None,
 ) -> dict[str, Any]:
     path = _input(sample_csv, "sample_csv")
+    if cli._sidecar_design(path) == "audit":
+        raise Refused(AUDIT_NOT_SERVED.format(path=path))
     out = _out_json(path, out_dir, "estimate")
     argv = ["estimate", path]
     _opt(argv, "--reviewer-false-alarm", None if reviewer_false_alarm is None else float(reviewer_false_alarm))
@@ -1267,6 +1285,13 @@ def decide(
     = None,
 ) -> dict[str, Any]:
     path = _input(result_json, "result_json")
+    try:
+        given = _read_json(path)
+        audit = given.get("design") == "audit" and isinstance(given.get("per_class"), dict)
+    except (OSError, ValueError, AttributeError):        # unreadable or not an object: the command says so
+        audit = False
+    if audit:
+        raise Refused(AUDIT_RESULT_NOT_SERVED.format(path=path))
     out = None
     if out_dir is not None:
         os.makedirs(_abs(out_dir), exist_ok=True)

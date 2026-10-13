@@ -6,7 +6,9 @@ option nobody calls cannot break unseen again. Each run checks the exit, the fil
 its output; the numbers themselves are checked elsewhere (tests/test_cli.py, tests/test_consistency.py)."""
 import csv
 import json
+import math
 import os
+from fractions import Fraction
 
 import numpy as np
 import pytest
@@ -213,3 +215,43 @@ def test_certify_offers_only_the_rules_with_a_guarantee(labelled, tmp_path):
     if design in ("random", "condition"):
         with pytest.raises(SystemExit):
             main(["certify", csv_path, "--rule", "plugin", "--out", str(tmp_path / "p.json")])
+
+
+def test_estimate_refuses_the_audits_options_on_every_other_design(labelled, tmp_path):
+    """--alpha and --also-accept read a per-class audit (sample --design audit); on any other design they were options
+    that would be accepted and ignored."""
+    design, csv_path = labelled
+    pairs = tmp_path / "pairs.json"
+    pairs.write_text('{"0": [1]}')
+    for extra in (["--alpha", "0.05"], ["--also-accept", str(pairs)]):
+        with pytest.raises(SystemExit, match="read a per-class audit"):
+            main(["estimate", csv_path, "--out", str(tmp_path / "e.json"), *extra])
+
+
+# ----------------------------------------------------------------------------- the per-class audit
+@pytest.mark.parametrize("scores,extra", [("probs", []), ("probs", ["--zone-share", "0.5"]),
+                                          ("probs", ["--zone-cut", "0"]), ("logits", ["--logits"]),
+                                          ("probs", ["--nodata", "-1", "--patch", "8"])])
+def test_the_audit_under_each_option(maps, tmp_path, scores, extra):
+    out = str(tmp_path / "audit.csv")
+    assert main(["sample", maps[scores], "--design", "audit", "--per-class", "6", "--seed", "3", "--out", out,
+                 *extra]) == 0
+    side = _json(str(tmp_path / "audit.json"))
+    assert side["design"] == "audit" and side["zone"]["rule"] == ("cut" if "--zone-cut" in extra else "share")
+    if "--zone-cut" in extra:                               # a cut of 0 takes every window
+        assert side["zone"]["n_zone"] == side["n_population"]
+    else:
+        # the share asked for reaches the sampler: with it dropped, the default third passed every other check here
+        # (the review of 13 October 2026)
+        share = 0.5 if "--zone-share" in extra else 1 / 3
+        assert side["zone"]["share"] == share
+        assert side["zone"]["n_top"] == math.ceil(Fraction(share).limit_denominator(10) * side["n_population"])
+        assert side["zone"]["n_zone"] >= side["zone"]["n_top"]
+    _label(out, maps["probs"], maps["truth"], patch=8 if "--patch" in extra else PATCH)
+    assert main(["estimate", out, "--alpha", "0.2", "--out", str(tmp_path / "e.json")]) == 0
+    r = _json(str(tmp_path / "e.json"))
+    assert r["design"] == "audit" and set(r["per_class"]) == set(side["audited"])
+    for row in r["per_class"].values():
+        assert _interval_ok(row) and row["verdict"] in ("above", "below", "undetermined")
+    with pytest.raises(SystemExit, match="an audit sample draws a fixed number"):
+        main(["certify", out, "--alpha", "0.05", "--out", str(tmp_path / "z.json")])

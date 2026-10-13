@@ -472,6 +472,7 @@ reviewer, record the class seen in a `reference_class` column, and set `wrong` t
 | `random` | Simple random sample; required by `certify` without a condition | Exact hypergeometric; with `--condition`, also exact per condition, graded in exp88 |
 | `tiles` | `--per-tile` windows (default 16) in each of a random set of tiles of `--tile` windows per side (default 16) | Ratio estimator over tiles, with the naive interval beside it |
 | `condition` (default with `--condition`) | Strata by input condition, labels split equally | Exact per condition; whole map: the conditions' exact intervals at 1 − 0.05/L, weighted by share, at least 95% by construction; per class: not graded |
+| `audit` | `--per-class N` windows at random from each predicted class's confident zone (the top third of the map by default), in place of `--budget` | Exact hypergeometric per class, on that class's confident zone; no whole-map rate ([audit](#audit)) |
 
 The tile design matches how reviewers often label, and its intervals can under-cover. On six of exp78's seven tasks
 the naive interval covered the true rate 51 to 78% of the time at a nominal 95%. The corrected interval, as `--design tiles`
@@ -548,6 +549,119 @@ random design's, numbers and method alike.
 
 **The review set is not a sample.** It is selected to contain errors, so its error rate overstates the map's (1.8 to
 5.8 times on exp78's tasks). `sample` draws windows with weights the estimator undoes; the review set has none.
+
+### audit
+
+`sample --design audit` and `estimate` audit a map's confident calls class by class: how often is each predicted
+class wrong where the map is most sure of it? It was built for a fine-tuned model moved to a new region, whose
+confident errors sat mostly in one predicted class, at a boundary the reference legend draws elsewhere. It names the
+class, not the windows.
+
+```bash
+oe-inferencex sample scores.tif --design audit --per-class 20 --out audit.csv   # or --zone-share S, --zone-cut C
+# the reviewer writes in `reference_class` the class seen in each window, or ? where it cannot be judged (keep the
+# row); hide map_class to label blind
+oe-inferencex estimate audit.csv --alpha 0.05 --also-accept pairs.json   # alpha and pairs.json fixed before any label
+oe-inferencex decide audit_estimate.json --ask error_rate_below=0.05
+```
+
+**The confident zone.** By default, the top third of the valid windows by confidence (assess's per-window
+confidence, the CSV's `confidence` column): the cut is the confidence of the ceil(N/3)-th most confident of the N
+valid windows, and every window at the cut or above is in the zone, ties included. `--zone-share S` takes the top S
+instead, counted in exact fractions with S as written; `--zone-cut C` takes every window at confidence C or above, in
+the units of the `confidence` column. The cut is one for the whole map, fixed from the map alone before any label,
+and recorded in the sidecar (`zone`: `rule`, `share`, `n_top`, `cut`, `n_zone`, `share_of_map`), from which
+`estimate` reads it. On a banded or saturated confidence the ties can make the zone far larger than the share asked
+for; `sample` and `estimate` then print how many windows the share took by rank and how many more the ties added. A
+class whose windows rarely reach the cut is audited on few windows; one with no window in the zone is listed as not
+audited, with its window count, and nothing is said of it.
+
+**The draw.** `--per-class N` windows at random, without replacement, from each predicted class's windows in the
+zone. The class is the window's majority class, the `map_class` that `estimate` and `certify` grade. A class whose
+zone holds N windows or fewer is labelled in full, and the printed line names it. The rows come in one random order,
+so a reviewer labelling blind sees no runs of one class. The CSV holds `index`, window, pixel and map coordinates,
+`confidence`, `map_class` and an empty `reference_class`; there is no `wrong` column. The sidecar records
+`labels_per_class`, `audited` (per class: `n_zone`, `n_labelled`, `census`) and `not_audited`. `--per-class` has no
+default: see what N buys, below.
+
+**What `estimate` gives.** For each audited class c, in `per_class`: its zone's size and share of the zone, its
+labels, its errors (`reference_class` is not c), `errors_by_reference`, and the exact hypergeometric interval on its
+zone's error rate, the interval `estimate` gives an input condition. Given the map, the class's windows in the zone
+are a fixed population and its labels a simple random sample of it, so each interval covers that rate at least 95%
+of the time on its own; tests/test_class_audit.py enumerates it. A class labelled in full gets its exact rate. A
+window marked `?` counts as right at the interval's lower end and as wrong at its upper end, so the interval holds
+whatever made it hard to judge, and the estimate is a range. The intervals do not hold jointly: when no class is truly
+at or above alpha, the chance that some class is called `above` can reach 2.5% times the number of classes, and a
+class picked out because its interval looks worst is not covered at 95% as the one picked. No rate is given for the
+whole zone.
+
+**The verdict.** With `--alpha A`, each class reads `below` when its interval lies below A, `above` (printed "at
+least A") when it lies at or above A, and `undetermined` when it lies across A. This is the rule of `decide`'s
+`error_rate_below`, which on an audit result answers per class: below is yes, above is no. Each end of the interval is
+a 97.5% one-sided bound, so for one class each verdict is wrong at most 2.5% of the time. Choose A before any label is
+read.
+
+**What N buys.** On a zone of 6,000 windows, by the package's exact interval (arithmetic, not results;
+tests/test_class_audit.py recomputes the table):
+
+| alpha | labels per class | errors `above` needs, at least | P(`above`) at a zone error rate of 0.05 / 0.10 / 0.20 / 0.30 |
+|---|---|---|---|
+| 0.05 | 15 | 4 | 0.005 / 0.055 / 0.352 / 0.703 |
+| 0.05 | 20 | 4 | 0.016 / 0.133 / 0.589 / 0.893 |
+| 0.05 | 30 | 5 | 0.015 / 0.175 / 0.745 / 0.970 |
+| 0.10 | 15 | 5 | - / 0.013 / 0.164 / 0.485 |
+| 0.10 | 20 | 6 | - / 0.011 / 0.195 / 0.584 |
+| 0.10 | 30 | 8 | - / 0.008 / 0.239 / 0.719 |
+
+A dash is a rate below alpha, where `above` would be wrong; it is at most 0.001 in those rows. `below` needs at
+least 72 labels with no error at alpha 0.05, and 35 or 36 at alpha 0.10 (35 on this zone, 36 on a zone of a million
+windows). On a zone this large, an audit of 15 to 30 labels per class can therefore find a bad class but cannot clear
+a good one: it reads `above` or `undetermined`. A small zone, as a rare class's often is, can be cleared, since the
+interval is over the zone's own windows. With no error among the labels:
+
+| labels per class | alpha | `below` on every zone of up to | on no zone larger than |
+|---|---|---|---|
+| 15 | 0.05 | 15 (in full) | 15 |
+| 15 | 0.10 | 18 | 22 |
+| 20 | 0.05 | 24 | 24 |
+| 20 | 0.10 | 29 | 34 |
+| 30 | 0.05 | 36 | 43 |
+| 30 | 0.10 | 118 | 161 |
+
+Between the two columns some zones are cleared and some are not: the interval's upper end moves in steps of one window
+of the zone.
+
+**A second reading.** `--also-accept FILE` takes JSON `{"<predicted class>": [<reference classes also accepted>]}`, such
+as a lenient crosswalk between the map's legend and the reference's: `{"3": [4]}` also accepts reference class 4 in a
+window mapped as 3. Write the file before any label is read, as you choose alpha. Every class then gets a second
+interval and verdict from the same labels (`also_accept` in its row), under which a window is wrong only when its
+reference class is neither c nor one listed for c. A class that is `above` under the strict reading and not under the
+alternative gets a `note` counting its errors on the accepted pairs: those windows are errors only if the reference
+legend's boundary is the one that holds, which the labels cannot say; a legend difference, not necessarily a model
+error. The note describes; it does not test the legend against the model, and it needs `--alpha`. The second reading is
+a second test on the same labels. If the file was fixed before any label was read, each reading's interval is exact for
+its own definition of an error, and a class's two intervals hold together at least 90% of the time, by the union bound.
+A file written after the labels were seen can be fitted to them, and then neither statement holds: listing the reference
+classes a class's errors fell on clears it, and the note can then stand on model errors. A class listed for itself
+changes nothing; a listed class the sample does not audit is named (`also_accept_unused`) and not read.
+
+**What it does not say.** It names classes, not windows. The rate is that of the class's confident zone, not the
+class's user's accuracy over the map, which `estimate --per-class` on a random sample gives. The confident zone is not
+a certified zone, and `certify` refuses an audit sample. The labels are taken as right, and reviewer error rates are
+refused for the reason `certify` takes none: the confident zone is where a reviewer can be fooled too.
+
+**Refusals.** `sample` refuses `--per-class`, `--zone-share` and `--zone-cut` without `--design audit`, and `--budget`
+with it; the audit design also refuses both zone options together, a share outside (0, 1], a cut that is not finite or
+that no window reaches, `--condition`, `--other`, `--threshold` and the sequential design's options. `estimate` on an
+audit sample refuses `--per-class`, `--scores`, `--confidence`, `--nodata` and the reviewer rates, rows other than those
+the design drew, an edited `map_class`, a blank, negative or non-whole `reference_class` and a malformed `--also-accept`
+file; on any other sample it refuses `--alpha` and `--also-accept`. The MCP server does not read an audit sample or its
+result in this version; it refuses both and names the command to run.
+
+**In Python.** `estimate.sample_class_audit(margin, map_class, per_class, valid=None, share=None, cut=None, seed=0)`
+draws the sample from assess's per-window `confidence` and `pooled_argmax`;
+`estimate.class_audit_from_sample(sample, reference, unjudged=None, also_accept=None, alpha=None)` reads it; and
+`estimate.interval_verdict(low, high, alpha)` is the verdict rule.
 
 ### certify
 
@@ -706,6 +820,7 @@ wrote to_label_estimate_decisions.json
 | Question | Answers | Read from | Rule |
 |---|---|---|---|
 | `error_rate_below=T` | yes, no, undetermined | `estimate` | the 95% interval lies below T, at or above T, or across it |
+| `error_rate_below=T` | the same, per class | `estimate` on a sample drawn with `--design audit` | each class's exact interval on its confident zone's error rate; with `--also-accept`, the second reading's answer beside it |
 | `user_accuracy_above=T`, `producer_accuracy_above=T` | the same, per class | `estimate --per-class` | each class's interval; per-class intervals are nominal |
 | `more_accurate` | a, b, undetermined | `estimate` on a sample drawn with `--other` | the exact sign test names a map, while the labels are at most a fifth of the differing windows; above, the interval on the difference excludes 0 |
 | `more_accurate` | a, b, tie, undetermined | `compare --labels` | a count against the labels raster, taken as truth; undetermined unless every differing window carries a label |
@@ -1021,7 +1136,7 @@ On this pair most of the accuracy comes from the post-event side being usually r
 | `assess` | Review sets; with a reference, error rate, capture and tie-aware AURC; with a condition layer, each condition on its own |
 | `explain` | The cues behind each flagged window, with their measured enrichment |
 | `compare` | Where two inferences differ; with labels, the cross-tab and which side is right; `determinism_check` |
-| `estimate` | Sampling designs, the error rate, per-class accuracy, the certified zone, the review-set check; each per input condition |
+| `estimate` | Sampling designs, the error rate, per-class accuracy, the certified zone, the review-set check, each per input condition; the per-class audit of a map's confident calls |
 | `calibrate` | A fitted ranker or side rule, bound to its model family |
 | `signals` | Confidence, the boundary indicator, tiling instability, NDWI cues, no-model controls, `crop_dependence` |
 | `metrics`, `stats` | AURC, capture, calibration error and their design-weighted forms; sign tests and bootstraps |

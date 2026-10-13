@@ -14,6 +14,9 @@ made without labels, has no answer to give, not an undetermined one.
 
     question                   answers                    read from
     error_rate_below=T         yes / no / undetermined    estimate: the interval lies below T / at or above T / across it
+                                                          estimate on a sample drawn with design audit: the same, for
+                                                          each predicted class's confident zone, and for a second
+                                                          reading (also_accept) beside it
     user_accuracy_above=T      yes / no / undetermined    estimate with per_class, for each map class
     producer_accuracy_above=T  yes / no / undetermined    estimate with per_class, for each class
     more_accurate              a / b / undetermined       estimate on a sample drawn with other
@@ -101,13 +104,17 @@ def certificate_second_look(delta, tested=True):
 
 
 def kind(result):
-    """Which command wrote a result: "estimate", "two_maps_sample" (estimate on a sample drawn with other), "zone"
-    (certify) or "comparison" (compare). A sample's own sidecar, written before any label, is not a result."""
+    """Which command wrote a result: "estimate", "two_maps_sample" (estimate on a sample drawn with other),
+    "class_audit" (estimate on a sample drawn with design audit), "zone" (certify) or "comparison" (compare). A
+    sample's own sidecar, written before any label, is not a result."""
     if not isinstance(result, dict):
         raise ValueError("not a result that estimate, certify or compare wrote: the JSON is not an object")
-    if result.get("design") == "disagreement":
-        if "difference" in result and "verdict" in result:
+    if result.get("design") in ("disagreement", "audit"):
+        if result["design"] == "disagreement" and "difference" in result and "verdict" in result:
             return "two_maps_sample"
+        # an audit's sidecar has `labels_per_class`, never a `per_class` dict, so it cannot pass for a result
+        if result["design"] == "audit" and isinstance(result.get("per_class"), dict):
+            return "class_audit"
         raise ValueError("this is a sample's sidecar, written before the labels; run estimate on the labelled sample "
                          "and ask of the JSON estimate writes")
     if "rule" in result and "alpha" in result and "coverage" in result:
@@ -125,6 +132,7 @@ def available(result):
     return {"estimate": ["error_rate_below"] + (["user_accuracy_above", "producer_accuracy_above"]
                                                  if result.get("per_class") else []),
             "two_maps_sample": ["more_accurate", "share_differs"],
+            "class_audit": ["error_rate_below"],
             "zone": ["trusted_share", "trusted_share_at_least"],
             "comparison": (["more_accurate"] if (result.get("graded") or {}).get("which_side") else [])
             + ["share_differs"]}[k]
@@ -254,6 +262,64 @@ def _answer_class(r, t, which):
     ev.update({k: r[k] for k in ("per_class_warning", "per_class_note", "population_note") if r.get(k)})
     return {"type": "yes_no", "answer": "per class", "level": r.get("nominal_coverage", 0.95), "exact": False,
             "because": why, "per_class": per, "evidence": ev}
+
+
+def _answer_class_audit(r, t):
+    """error_rate_below for a per-class audit (estimate on a sample drawn with design audit): each predicted class's
+    confident zone against T by `_rate_below` on its exact interval, and, where the result holds a second reading
+    (also_accept), that reading's answer beside it. At T equal to the alpha estimate was given, each answer is
+    estimate's verdict: below is yes, at least alpha is no."""
+    per = {}
+    for c, row in r["per_class"].items():
+        a, _, _ = _rate_below(row, t)
+        per[c] = {"answer": a, "estimate": row.get("estimate"), "low": row["low"], "high": row["high"],
+                  "n_labelled": row.get("n_labelled"), "n_zone": row.get("n_zone"), "census": row.get("census")}
+        if row.get("estimate_range"):
+            per[c]["estimate_range"] = row["estimate_range"]
+        alt = row.get("also_accept")
+        if alt:
+            per[c]["also_accept"] = {"answer": _rate_below(dict(alt, method=row.get("method")), t)[0],
+                                     "accepted": alt.get("accepted"), "low": alt["low"], "high": alt["high"]}
+    counts = {x: sum(v["answer"] == x for v in per.values()) for x in ("yes", "no", "undetermined")}
+    said = [f"Error rate of each class's confident zone below {_pc(t)}: yes for {counts['yes']} classes, no for "
+            f"{counts['no']}, undetermined for {counts['undetermined']}. {SEPARATE}"]
+    z = r.get("zone") or {}
+    if z.get("n_zone") is not None and z.get("cut") is not None:
+        said.append(f"The confident zone is the {z['n_zone']} windows at confidence {float(z['cut']):.6g} or above "
+                    f"({_pc(z.get('share_of_map', 0))} of the {r.get('n_population')} valid windows), fixed from the map "
+                    "before any label; a class's rate is that of its windows in the zone, not its accuracy over the map.")
+    # The result's own caveats, as _answer_class carries the table's (2026-10-06): the selection clause of the audit's
+    # note, the crosswalk's condition and each class's legend note. The review of 13 October 2026 found all three
+    # missing here, so an agent quoting `because` would have dropped them.
+    said.append("A class picked out because its rate looks highest is not covered at 95% as the one picked. The audit "
+                "names classes, not windows.")
+    if r.get("not_audited"):
+        said.append("Classes with no window in the zone are not audited, and nothing is said of them: "
+                    + ", ".join(f"class {c}" for c in r["not_audited"]) + ".")
+    if any("also_accept" in v for v in per.values()):
+        # a second rule on the same labels is a second test (the comment above interval_second_look)
+        said.append("Each class's also_accept answer reads the same labels a second time, also accepting the reference "
+                    "classes the also-accept file lists for it: a second test on them. If the file was fixed before "
+                    "any label was read, a class's two intervals hold together at least 90% of the time (a union "
+                    "bound); a file written after the labels were seen can be fitted to them, and then the second "
+                    "answer has no guarantee.")
+    for c, row in r["per_class"].items():
+        if row.get("note"):
+            per[c]["note"] = row["note"]
+            said.append(_as_sentence(row["note"]))
+    if r.get("n_unjudged"):
+        said.append(f"{r['n_unjudged']} windows could not be judged (?): each interval counts them as right at its "
+                    "lower end and as wrong at its upper end.")
+    if counts["undetermined"]:
+        said.append(interval_second_look(True))
+    said.append(_labels_clause(r))
+    if r.get("population_note"):
+        said.append(str(r["population_note"]).strip())
+    ev = {k: r[k] for k in ("zone", "labels_per_class", "n_labelled", "n_population", "n_unjudged", "alpha", "method",
+                            "note", "not_audited", "also_accept", "reading_note", "population_note")
+          if r.get(k) is not None}
+    return {"type": "yes_no", "answer": "per class", "level": r.get("nominal_coverage", 0.95), "exact": True,
+            "because": " ".join(said), "per_class": per, "evidence": ev}
 
 
 def _as_sentence(text):
@@ -462,7 +528,7 @@ def decide(result, questions):
                 raise ValueError(NO_LABELS_WHICH)
             raise ValueError(f"{name} cannot be answered from a {k} result; it answers: {', '.join(can)}")
         if name == "error_rate_below":
-            ans = _answer_error_rate_below(result, v)
+            ans = _answer_class_audit(result, v) if k == "class_audit" else _answer_error_rate_below(result, v)
         elif name in ("user_accuracy_above", "producer_accuracy_above"):
             ans = _answer_class(result, v, name.split("_")[0])
         elif name == "more_accurate":

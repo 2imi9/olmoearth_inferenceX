@@ -7,7 +7,9 @@
                           [--threshold T]
     oe-inferencex demo    [--out DIR] [--made-up]   a first run on the real sample map shipped with the package
     oe-inferencex sample  scores.tif --budget 300 --out to_label.csv [--design D] [--condition layer.tif]
+    oe-inferencex sample  scores.tif --design audit --per-class 20 --out audit.csv   each class's confident zone
     oe-inferencex estimate to_label.csv [--per-class]       once the reviewer has filled the `wrong` column
+    oe-inferencex estimate audit.csv --alpha 0.05 [--also-accept pairs.json]   once `reference_class` is filled
     oe-inferencex certify  to_label.csv --alpha 0.05        from a random sample, or one drawn with --condition
     oe-inferencex mcp                                       a local MCP server on stdio, for an agent (the mcp extra)
     oe-inferencex from-olmoearth DS --out DIR [--conditions]  an OlmoEarth run's rslearn dataset -> the rasters
@@ -809,6 +811,18 @@ def cmd_sample(args):
     """Which windows to label, written as a CSV with an empty `wrong` column for the reviewer, and a sidecar
     JSON carrying the design so `estimate` can give the rate the design earns. With --condition, the input condition
     of every window is fixed here and recorded in the sidecar; `estimate` and `certify` read it from there."""
+    # read with getattr: demo.py and the tests build the argument Namespace by hand, without these attributes
+    audit_opts = [getattr(args, k, None) for k in ("per_class", "zone_share", "zone_cut")]
+    if getattr(args, "design", None) != "audit" and any(v is not None for v in audit_opts):
+        raise SystemExit("sample: --per-class, --zone-share and --zone-cut belong to --design audit")
+    if getattr(args, "design", None) == "audit":
+        if getattr(args, "budget", None) is not None:
+            raise SystemExit("sample: the audit's labels are --per-class N per predicted class; drop --budget")
+        return _sample_class_audit(args)
+    # --budget is checked here rather than by the parser, since the audit design takes --per-class instead; before the
+    # --other route, which needs it too
+    if getattr(args, "budget", None) is None:
+        raise SystemExit("sample: --budget is required: the number of windows to label (exp78 measured 300)")
     if getattr(args, "other", None):
         if getattr(args, "confidence", None) or getattr(args, "confidence_range", None):
             raise SystemExit("sample: --other draws among the windows where two class maps differ, which needs no "
@@ -877,37 +891,8 @@ def cmd_sample(args):
             anchor_rule = "declared"
     if anchor is not None and not est.ZONE_GRID[0] <= anchor <= 1:
         raise SystemExit(f"sample: --anchor is a share of the map between {est.ZONE_GRID[0]:g} and 1, got {anchor:g}")
-    if conf_path:
-        hard, conf_px, valid, geo, n_classes, more, prod_info = _read_product(args.scores, conf_path, args.nodata,
-                                                                               conf_range, "sample")
-        prod_notes += more
-        shape = hard.shape
-    else:
-        scores, valid, geo = read_raster(args.scores, args.nodata)
-        _check_scores(scores, valid, args.logits, args.scores)
-        shape = scores.shape[-2:]
-    pooled = None
-    if cond_path:
-        layer = _read_condition(cond_path, shape, geo, "sample")
-        try:
-            pooled = pool_condition(layer, args.patch, predicted=valid)     # the window grid assess gives
-        except ValueError as exc:
-            raise SystemExit(f"sample: {exc}") from None
-    if conf_path:
-        try:
-            out = assess_classmap(hard, conf_px, n_classes, patch=args.patch, nodata_mask=~valid, signal=PRODUCT_SIGNAL)
-        except ValueError as exc:                                 # a named refusal, not a traceback
-            raise SystemExit(f"sample: {exc}") from None
-        p1_w = None
-    else:
-        # a named refusal, as on the product branch: a fully clouded logit map or a --patch larger than the map was
-        # a ValueError traceback here, where assess refused the same input in one line (2026-10-06)
-        try:
-            out = assess_prediction(scores, is_logit=args.logits, patch=args.patch, nodata_mask=~valid)
-        except ValueError as exc:
-            raise SystemExit(f"sample: {exc}") from None
-        p1 = np.where(valid, _top1(scores, args.logits), np.nan)
-        p1_w = _pool_valid(p1, args.patch) if not valid.all() else _pool(p1, args.patch)
+    out, geo, p1_w, pooled, more, prod_info = _sample_map(args, conf_path, conf_range, cond_path)
+    prod_notes += more
     arr = out["arrays"]
     margin, valid_w, klass = arr["confidence"], arr["valid"], arr["pooled_argmax"]
     hw, ww = margin.shape
@@ -962,24 +947,10 @@ def cmd_sample(args):
                              "names": cond["names"], "sizes": cond["sizes"], "n_labelled": cond["n_labelled"],
                              "allocation_rule": cond["allocation_rule"], "n_windows_split": pooled["n_split"],
                              "n_windows_no_code": pooled["n_no_code"]}
-    if conf_path:   # estimate --per-class and certify rebuild the map from both layers, with the same range
-        side.update({"classes": os.path.abspath(args.scores), "confidence": os.path.abspath(conf_path),
-                     "confidence_range": None if conf_range is None else [float(v) for v in conf_range],
-                     "product_population": prod_info})
-    side.update({"scores": os.path.abspath(args.scores), "logits": args.logits, "patch": args.patch,
-                 "nodata": _json_nodata(args.nodata),     # estimate --per-class and certify recompute the map with it
-                 "grid": [int(hw), int(ww)], "csv": os.path.abspath(args.out),
-                 # what a reviewer with a GIS needs to find a window: the CRS, the pixel size, and the window's
-                 # footprint in ground units; x and y in the CSV are window centres in that CRS
-                 "crs": None if geo is None else str(geo["crs"]),
-                 "transform": None if geo is None else list(geo["transform"])[:6],
-                 "pixel_size": None if geo is None else [abs(geo["transform"].a), abs(geo["transform"].e)],
-                 "window_size_ground_units": None if geo is None else [abs(geo["transform"].a) * args.patch, abs(geo["transform"].e) * args.patch],
-                 "xy_are": "window centres in the raster's CRS" if geo is not None else "absent: the input had no georeference",
-                 "warnings": list(out.get("warnings", [])),
-                 "how_to_label": "open each window, set wrong=1 if the map's class there (the `map_class` column: the "
-                                 "majority of the window's pixels) is not what is on the ground, else 0; then: "
-                                 "oe-inferencex estimate " + os.path.basename(args.out)})
+    side.update(_sidecar_map_fields(args, geo, [int(hw), int(ww)], out, conf_path, conf_range, prod_info))
+    side["how_to_label"] = ("open each window, set wrong=1 if the map's class there (the `map_class` column: the "
+                            "majority of the window's pixels) is not what is on the ground, else 0; then: "
+                            "oe-inferencex estimate " + os.path.basename(args.out))
     with open(args.out[:-4] + ".json" if args.out.endswith(".csv") else args.out + ".json", "w") as f:
         json.dump(side, f, indent=1)
     what, notes = f"{design} design", []
@@ -1005,6 +976,66 @@ def cmd_sample(args):
           + (f"\nnote: {sample['note']}" if "note" in sample else "")
           + "".join(f"\nnote: {n}" for n in prod_notes + notes if n))
     return 0
+
+
+def _sample_map(args, conf_path, conf_range, cond_path=None):
+    """The map `sample` draws from, read and assessed as every design reads it: (assess's output, geo, the top-1
+    probability per window or None for a product, the condition layer pooled to windows or None, the product's notes,
+    the product's population info or None). The audit design reads the same windows, classes and confidence."""
+    prod_notes, prod_info = [], None
+    if conf_path:
+        hard, conf_px, valid, geo, n_classes, prod_notes, prod_info = _read_product(args.scores, conf_path, args.nodata,
+                                                                                    conf_range, "sample")
+        shape = hard.shape
+    else:
+        scores, valid, geo = read_raster(args.scores, args.nodata)
+        _check_scores(scores, valid, args.logits, args.scores)
+        shape = scores.shape[-2:]
+    pooled = None
+    if cond_path:
+        layer = _read_condition(cond_path, shape, geo, "sample")
+        try:
+            pooled = pool_condition(layer, args.patch, predicted=valid)     # the window grid assess gives
+        except ValueError as exc:
+            raise SystemExit(f"sample: {exc}") from None
+    if conf_path:
+        try:
+            out = assess_classmap(hard, conf_px, n_classes, patch=args.patch, nodata_mask=~valid, signal=PRODUCT_SIGNAL)
+        except ValueError as exc:                                 # a named refusal, not a traceback
+            raise SystemExit(f"sample: {exc}") from None
+        p1_w = None
+    else:
+        # a named refusal, as on the product branch: a fully clouded logit map or a --patch larger than the map was
+        # a ValueError traceback here, where assess refused the same input in one line (2026-10-06)
+        try:
+            out = assess_prediction(scores, is_logit=args.logits, patch=args.patch, nodata_mask=~valid)
+        except ValueError as exc:
+            raise SystemExit(f"sample: {exc}") from None
+        p1 = np.where(valid, _top1(scores, args.logits), np.nan)
+        p1_w = _pool_valid(p1, args.patch) if not valid.all() else _pool(p1, args.patch)
+    return out, geo, p1_w, pooled, list(prod_notes), prod_info
+
+
+def _sidecar_map_fields(args, geo, grid, out, conf_path, conf_range, prod_info):
+    """The map's fields of a sample's sidecar, whatever the design: where the map is and how it was read (estimate
+    --per-class and certify recompute it from them), its window grid, and what a reviewer needs to find a window."""
+    side = {}
+    if conf_path:   # estimate --per-class and certify rebuild the map from both layers, with the same range
+        side.update({"classes": os.path.abspath(args.scores), "confidence": os.path.abspath(conf_path),
+                     "confidence_range": None if conf_range is None else [float(v) for v in conf_range],
+                     "product_population": prod_info})
+    side.update({"scores": os.path.abspath(args.scores), "logits": args.logits, "patch": args.patch,
+                 "nodata": _json_nodata(args.nodata),     # estimate --per-class and certify recompute the map with it
+                 "grid": grid, "csv": os.path.abspath(args.out),
+                 # what a reviewer with a GIS needs to find a window: the CRS, the pixel size, and the window's
+                 # footprint in ground units; x and y in the CSV are window centres in that CRS
+                 "crs": None if geo is None else str(geo["crs"]),
+                 "transform": None if geo is None else list(geo["transform"])[:6],
+                 "pixel_size": None if geo is None else [abs(geo["transform"].a), abs(geo["transform"].e)],
+                 "window_size_ground_units": None if geo is None else [abs(geo["transform"].a) * args.patch, abs(geo["transform"].e) * args.patch],
+                 "xy_are": "window centres in the raster's CRS" if geo is not None else "absent: the input had no georeference",
+                 "warnings": list(out.get("warnings", []))})
+    return side
 
 
 def _sequential_to_extend(path, args):
@@ -1094,6 +1125,97 @@ def _sample_disagreement(args):
     return 0
 
 
+def _zone_words(zone):
+    """How the confident zone was set, as printed after its share of the map: the top third, the top S, or nothing
+    for a cut given as a confidence. Windows tied at the cut are in the zone, so on a banded or saturated confidence
+    it can hold far more than the share asked for; the words then say how many the ties added (the review of 13
+    October 2026: a band with 80% of its pixels at 100 printed a zone of 81.3% of the map as "the top third")."""
+    if zone["rule"] != "share":
+        return ""
+    top = "the top third" if zone["share"] == est.AUDIT_SHARE else f"the top {100 * zone['share']:g}%"
+    extra = int(zone["n_zone"]) - int(zone["n_top"])
+    if extra > 0:
+        return (f" ({top} by rank, {zone['n_top']} window{'' if zone['n_top'] == 1 else 's'}, and {extra} more tied "
+                "at the cut)")
+    return f" ({top})"
+
+
+def _sample_class_audit(args):
+    """sample --design audit: --per-class N windows at random from each predicted class's confident zone, written for
+    a reviewer to record the class seen in each. estimate then gives each class's zone error rate with its exact
+    interval and, with --alpha, a verdict per class."""
+    if getattr(args, "other", None):
+        raise SystemExit("sample --design audit draws from one map's confident zone; --other compares two maps, which "
+                         "is its own route: drop one of them")
+    if getattr(args, "condition", None) or getattr(args, "condition_names", None):
+        raise SystemExit("sample --design audit does not take --condition: the audit's strata are the predicted classes, "
+                         "and an input condition is not crossed with them in this version")
+    if getattr(args, "threshold", None) is not None:
+        raise SystemExit("sample: --threshold reads a second map's cut-off and is used only with --other")
+    if any(getattr(args, k, None) is not None for k in ("anchor", "alpha", "delta", "extend")):
+        raise SystemExit("sample: --anchor, --alpha, --delta and --extend belong to --design sequential")
+    n = getattr(args, "per_class", None)
+    if n is None or n < 1:
+        raise SystemExit("sample --design audit needs --per-class N, at least 1: the windows labelled per predicted "
+                         "class (docs/Usage.md, audit, says what N buys)" + ("" if n is None else f"; got {n}"))
+    share, cut = getattr(args, "zone_share", None), getattr(args, "zone_cut", None)
+    if share is not None and cut is not None:
+        raise SystemExit("sample: the confident zone is --zone-share or --zone-cut, not both")
+    if share is not None and not 0 < share <= 1:
+        raise SystemExit(f"sample: --zone-share is a share of the valid windows, in (0, 1]; got {share:g}")
+    if cut is not None and not np.isfinite(cut):
+        raise SystemExit(f"sample: --zone-cut is a confidence, a finite number; got {cut:g}")
+    if os.path.isdir(args.out):
+        raise SystemExit(f"--out {args.out} is a directory; name the CSV to write, for example {os.path.join(args.out, 'audit.csv')}")
+    _check_patch(args.patch, "sample")
+    conf_path, conf_range = _product_args(args, "sample")
+    out, geo, _, _, prod_notes, prod_info = _sample_map(args, conf_path, conf_range)
+    arr = out["arrays"]
+    margin, valid_w, klass = arr["confidence"], arr["valid"], arr["pooled_argmax"]
+    hw, ww = margin.shape
+    try:
+        smp = est.sample_class_audit(margin.ravel(), klass.ravel(), n, valid=valid_w.ravel(), share=share, cut=cut,
+                                     seed=args.seed)
+    except ValueError as exc:
+        raise SystemExit(f"sample: {exc}") from None
+    idx = smp["indices"]
+    rows, cols = np.divmod(idx, ww)
+    pr, pc, x, y = window_coords(rows, cols, geo, args.patch)
+    os.makedirs(os.path.dirname(os.path.abspath(args.out)) or ".", exist_ok=True)
+    with open(args.out, "w", newline="") as f:
+        w = csv.writer(f)
+        # map_class is the class the window is audited for, fixed at the draw; hide it from the reviewer to label
+        # blind. No `wrong` column: the error is reference_class against map_class, read by estimate
+        w.writerow(["index", "window_row", "window_col", "pixel_row", "pixel_col", "x", "y", "confidence", "map_class",
+                    "reference_class"])
+        for k, (i, r, c) in enumerate(zip(idx, rows, cols)):
+            w.writerow([int(i), int(r), int(c), int(pr[k]), int(pc[k]), None if x is None else float(x[k]),
+                        None if y is None else float(y[k]), float(margin[r, c]), int(klass[r, c]), ""])
+    side = {k: (v.tolist() if isinstance(v, np.ndarray) else v) for k, v in smp.items()}
+    side.update(_sidecar_map_fields(args, geo, [int(hw), int(ww)], out, conf_path, conf_range, prod_info))
+    side["how_to_label"] = ("open each window and write in reference_class the class that is there, in the map's class "
+                            "codes, or ? where it cannot be judged (keep the row); hide map_class to label blind; then: "
+                            f"oe-inferencex estimate {os.path.basename(args.out)} --alpha A, with A chosen before any "
+                            "label is read, as is any --also-accept file")
+    with open(args.out[:-4] + ".json" if args.out.endswith(".csv") else args.out + ".json", "w") as f:
+        json.dump(side, f, indent=1)
+    cls, z = smp["audited"], smp["zone"]
+    full = [f"class {c}, {e['n_zone']} window{'' if e['n_zone'] == 1 else 's'}" for c, e in cls.items() if e["census"]]
+    whose = (f"each of the {len(cls)} predicted classes' confident zones" if len(cls) > 1 else
+             "the one predicted class's confident zone")
+    print(f"{len(idx)} windows to label: up to {n} from {whose}" + (f" (labelled in full: {'; '.join(full)})" if full else "")
+          + f"; the zone is the {z['n_zone']} valid windows at confidence {z['cut']:.6g} or above, "
+          f"{100 * z['share_of_map']:.1f}% of the {smp['n_population']}{_zone_words(z)}; wrote {args.out} and its .json. "
+          "Write in `reference_class` the class you see in each window, or ? where a window cannot be judged (keep its "
+          f"row); hide map_class to label blind. Then run: oe-inferencex estimate {args.out} --alpha A, with A chosen "
+          "now, before any label is read; write any --also-accept file now too"
+          + "".join(f"\nnote: class {c} has no window in the zone ({e['n_windows']} windows of the map); the audit says "
+                    "nothing about it" for c, e in smp["not_audited"].items())
+          + "".join(f"\nwarning: {w}" for w in out.get("warnings", []))
+          + "".join(f"\nnote: {p}" for p in prod_notes if p))
+    return 0
+
+
 def _sidecar_design(path):
     """The design a sample CSV's sidecar records, or None when there is no readable sidecar."""
     side_path = path[:-4] + ".json" if path.endswith(".csv") else path + ".json"
@@ -1109,10 +1231,11 @@ def _estimate_disagreement(args):
     # --confidence too: added with the product input and accepted here unread, so a wrong or missing band path
     # passed with exit 0 (2026-10-06)
     if args.per_class or args.scores is not None or getattr(args, "confidence", None) is not None \
-            or args.nodata is not None or args.reviewer_false_alarm or args.reviewer_miss:
+            or args.nodata is not None or args.reviewer_false_alarm or args.reviewer_miss \
+            or getattr(args, "alpha", None) is not None or getattr(args, "also_accept", None) is not None:
         raise SystemExit("estimate: a sample of the windows where two maps differ takes none of --per-class, --scores, "
-                         "--confidence, --nodata, --reviewer-false-alarm and --reviewer-miss; it compares the two maps "
-                         "from the reference_class column alone")
+                         "--confidence, --nodata, --reviewer-false-alarm, --reviewer-miss, --alpha and --also-accept; it "
+                         "compares the two maps from the reference_class column alone")
     path = args.sample
     side_path = path[:-4] + ".json" if path.endswith(".csv") else path + ".json"
     with open(side_path) as f:
@@ -1137,26 +1260,8 @@ def _estimate_disagreement(args):
     if not (np.array_equal(ca, np.asarray(side["class_a"], int)) and np.array_equal(cb, np.asarray(side["class_b"], int))):
         raise SystemExit(f"{path}: class_a or class_b differs from the maps' classes the sample recorded; they are fixed "
                          "when the sample is drawn, so label the file `sample` wrote without changing them")
-    unjudged, ref, bad = [], [], []
-    for i, r in enumerate(rows):
-        v = str(r["reference_class"]).strip()
-        if v == "?":
-            unjudged.append(True)
-            ref.append(-1)
-            continue
-        try:
-            k = int(float(v))
-            if float(v) != k:
-                raise ValueError
-        except (ValueError, OverflowError):
-            bad.append((i + 2, v))
-            k = 0
-        unjudged.append(False)
-        ref.append(k)
-    if bad:
-        raise SystemExit(f"`reference_class` must be the class seen (a whole number, in the maps' class codes) or ? in "
-                         f"every row; {len(bad)} row(s) are not, first at row {bad[0][0]}: {bad[0][1]!r}")
-    res = est.compare_from_disagreement(side, ca, cb, np.array(ref), unjudged=np.array(unjudged))
+    ref, unjudged = _reference_column(rows)
+    res = est.compare_from_disagreement(side, ca, cb, ref, unjudged=unjudged)
     res.update({"sample": os.path.abspath(path), "map_a": side.get("map_a"), "map_b": side.get("map_b"),
                 "notes": list(side.get("notes", []))})
     _check_out_file(out, "estimate")
@@ -1182,6 +1287,152 @@ def _estimate_disagreement(args):
           + (f", {res['n_unjudged']} could not be judged" if res["n_unjudged"] else "")
           + f"\nnote: {res['note']}" + (f"\nnote: {res['verdict_note']}" if sign else "")
           + "".join(f"\nnote: {n}" for n in res["notes"]) + f"\nwrote {out}")
+    return 0
+
+
+def _reference_column(rows, codes="the maps' class codes", negative=True):
+    """The `reference_class` column of a sample whose reviewer records the class seen (sample --other, sample --design
+    audit): (the class per row, -1 where it is ?; True where it is ?). Every row holds a whole number or ?, none blank;
+    without `negative`, a whole number of at least 0."""
+    # The audit passes negative=False: its classes are at least 0 (sample_class_audit refuses a negative map_class), so
+    # a -1 written for "no data" or "cannot tell" was read as a judged class and counted as an error, which can turn a
+    # class's verdict to `above` (the review of 13 October 2026); estimate --per-class refuses it too. A sample --other
+    # keeps it, since compare maps a pair's negative codes back (tests/test_which_map.py).
+    unjudged, ref, bad = [], [], []
+    for i, r in enumerate(rows):
+        v = str(r["reference_class"]).strip()
+        if v == "?":
+            unjudged.append(True)
+            ref.append(-1)
+            continue
+        try:
+            k = int(float(v))
+            if float(v) != k or (k < 0 and not negative):
+                raise ValueError
+        except (ValueError, OverflowError):
+            bad.append((i + 2, v))
+            k = 0
+        unjudged.append(False)
+        ref.append(k)
+    if bad:
+        whole = "a whole number" if negative else "a whole number of at least 0"
+        raise SystemExit(f"`reference_class` must be the class seen ({whole}, in {codes}) or ? in every row"
+                         + ("" if negative else ", ? where a window cannot be judged")
+                         + f"; {len(bad)} row(s) are not, first at row {bad[0][0]}: {bad[0][1]!r}")
+    return np.array(ref, dtype=np.int64), np.array(unjudged, dtype=bool)
+
+
+def _also_accept(path):
+    """The --also-accept file: JSON {predicted class: [reference classes also accepted]}, read and checked, each
+    error refused by name."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            pairs = json.load(f)
+    except FileNotFoundError:
+        raise SystemExit(f"estimate: --also-accept {path}: no such file") from None
+    except OSError as exc:
+        raise SystemExit(f"estimate: --also-accept {path}: {exc.strerror or exc}") from None
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise SystemExit(f"estimate: --also-accept {path} is not JSON ({exc})") from None
+    try:
+        return est._also_accept_pairs(pairs)
+    except ValueError as exc:
+        raise SystemExit(f"estimate: --also-accept {path}: {exc}") from None
+
+
+def _verdict_words(verdict, alpha):
+    return {"above": f"at least {100 * alpha:g}%", "below": f"below {100 * alpha:g}%",
+            "undetermined": "undetermined"}[verdict]
+
+
+def _estimate_class_audit(args):
+    """estimate on a sample --design audit CSV: each predicted class's confident-zone error rate with its exact interval;
+    with --alpha a verdict per class, and with --also-accept a second reading of the same labels."""
+    if args.per_class:
+        raise SystemExit("estimate: an audit sample is read per class already; drop --per-class")
+    if args.scores is not None or getattr(args, "confidence", None) is not None or args.nodata is not None:
+        raise SystemExit("estimate: an audit sample takes none of --scores, --confidence and --nodata; it reads the "
+                         "classes the sample recorded and the reference_class column")
+    if args.reviewer_false_alarm or args.reviewer_miss:
+        # the reason certify takes none (cmd_certify): a miss rate would have to hold inside each confident zone
+        raise SystemExit("estimate: an audit sample takes no reviewer error rate: the confident zone is where a reviewer "
+                         "can be fooled too, and a rate measured on the whole map does not hold there")
+    path = args.sample
+    side_path = path[:-4] + ".json" if path.endswith(".csv") else path + ".json"
+    with open(side_path) as f:
+        side = json.load(f)
+    _check_sidecar(side, side_path, ("indices", "map_class", "audited", "zone"))
+    out = args.out or (path[:-4] + "_estimate.json" if path.endswith(".csv") else path + "_estimate.json")
+    accept_path = getattr(args, "also_accept", None)
+    _refuse_overwriting_inputs("estimate", [out], [path, side_path, accept_path])
+    with open(path, newline="", encoding="utf-8-sig") as f:
+        rows = list(csv.DictReader(f))
+    need = {"index", "map_class", "reference_class"}
+    if not rows or not need <= set(rows[0]):
+        raise SystemExit(f"{path}: expected the columns `sample --design audit` wrote ({', '.join(sorted(need))}); found "
+                         f"{', '.join(rows[0].keys()) if rows else 'no rows'}")
+    try:
+        idx = np.array([int(float(r["index"])) for r in rows])
+        mc = np.array([int(float(r["map_class"])) for r in rows])
+    except (ValueError, OverflowError) as exc:
+        raise SystemExit(f"{path}: the index and map_class columns are not the ones `sample --design audit` wrote: {exc}")
+    if not np.array_equal(idx, np.asarray(side["indices"], int)):
+        raise SystemExit("the CSV's rows do not match the design in its sidecar; label the file `sample` wrote, in order")
+    if not np.array_equal(mc, np.asarray(side["map_class"], int)):
+        k = int(np.argmax(mc != np.asarray(side["map_class"], int)))
+        raise SystemExit(f"{path}: map_class differs from the class the sample recorded (row {k + 2}: {mc[k]} in the CSV, "
+                         f"{side['map_class'][k]} recorded); it is the class each window was drawn for, fixed when the "
+                         "sample is drawn, so label the file `sample` wrote without changing it")
+    ref, unjudged = _reference_column(rows, "the map's class codes", negative=False)
+    accept = _also_accept(accept_path) if accept_path is not None else None
+    alpha = getattr(args, "alpha", None)
+    try:
+        res = est.class_audit_from_sample(side, ref, unjudged=unjudged, also_accept=accept, alpha=alpha)
+    except ValueError as exc:
+        raise SystemExit(f"estimate: {exc}") from None
+    res["sample"] = os.path.abspath(path)
+    if accept is not None:
+        res["also_accept"]["source"] = os.path.abspath(accept_path)
+    if _population_note(side):                       # a product's range left pixels out: the zone is of the rest
+        res["population_note"] = _population_note(side)
+    _check_out_file(out, "estimate")
+    with open(out, "w") as f:
+        json.dump(res, f, indent=1, default=float)
+    z = res["zone"]
+    lines = [f"confident zone: the {z['n_zone']} windows at confidence {z['cut']:.6g} or above, "
+             f"{100 * z['share_of_map']:.1f}% of the {res['n_population']} valid windows{_zone_words(z)}; "
+             f"{res['labels_per_class']} labels per predicted class"]
+    for c, row in res["per_class"].items():
+        counts = f"{row['n_wrong']} wrong" + (f" and {row['n_unjudged']} ?" if row["n_unjudged"] else "")
+        exact = "its exact range" if row["n_unjudged"] else "its exact rate"
+        said = f"; {_verdict_words(row['verdict'], alpha)}" if "verdict" in row else ""
+        if row["census"]:
+            lines.append(f"class {c}: labelled in full, {counts} of {row['n_labelled']} ({_rate(row)}), {exact}{said}")
+        else:
+            lines.append(f"class {c}: {counts} of {row['n_labelled']} labelled ({_rate(row)}), 95% interval "
+                         f"{100 * row['low']:.1f}% to {100 * row['high']:.1f}%, of {row['n_zone']} windows in its "
+                         f"zone{said}")
+        alt = row.get("also_accept")
+        if alt and alt["accepted"]:                    # a class with nothing more accepted reads the same
+            iv = exact if row["census"] else f"{100 * alt['low']:.1f}% to {100 * alt['high']:.1f}%"
+            lines.append(f"  also accepting {', '.join(str(a) for a in alt['accepted'])}: {alt['n_wrong']} wrong "
+                         f"({_rate(alt)}), {iv}" + (f"; {_verdict_words(alt['verdict'], alpha)}" if "verdict" in alt else ""))
+        if row.get("note"):
+            lines.append(f"  note: {row['note']}")
+    for c, e in res["not_audited"].items():
+        lines.append(f"not audited: class {c} (no window reaches the cut; {e['n_windows']} windows of the map)")
+    lines.append(f"note: {res['note']}")
+    if accept is not None:
+        lines.append(f"note: {res['reading_note']}")
+        if res["also_accept_unused"]:
+            lines.append(f"note: --also-accept lists class(es) {', '.join(res['also_accept_unused'])}, which this sample "
+                         "does not audit; they are not read")
+    if alpha is None:
+        lines.append("note: without --alpha no class gets a verdict, and none the note on errors an alternative reading "
+                     "accepts; pass --alpha A with A chosen before any label is read")
+    if "population_note" in res:
+        lines.append(f"note: {res['population_note']}")
+    print("\n".join(lines) + f"\nwrote {out}")
     return 0
 
 
@@ -1425,9 +1676,16 @@ def _outside_note(res):
 def cmd_estimate(args):
     """The map's error rate with its interval, from a filled-in sample CSV and its sidecar design; with
     --per-class, the user's and producer's accuracy and error-adjusted share per class as well. A sample drawn with
-    --other (two maps) gives which map is more accurate instead."""
-    if _sidecar_design(args.sample) == "disagreement":
+    --other (two maps) gives which map is more accurate instead, and one drawn with --design audit each predicted
+    class's confident-zone error rate."""
+    design = _sidecar_design(args.sample)
+    if design == "disagreement":
         return _estimate_disagreement(args)
+    if design == "audit":
+        return _estimate_class_audit(args)
+    if getattr(args, "alpha", None) is not None or getattr(args, "also_accept", None) is not None:
+        raise SystemExit("estimate: --alpha and --also-accept read a per-class audit (sample --design audit); for the "
+                         "whole map against a rate, ask decide error_rate_below=T of this estimate")
     if not args.per_class and (args.scores is not None or getattr(args, "confidence", None) is not None
                                or args.nodata is not None):
         # the error rate reads the CSV and its sidecar alone; accepting the map's options and ignoring them let a
@@ -1547,10 +1805,15 @@ def cmd_certify(args):
     random labelled sample so that the statement fails with probability at most --delta (exp80). A sample that
     records an input condition is certified per condition instead, with --delta split over the conditions tested
     (certify_by_condition); no whole-map zone is issued for it."""
-    if _sidecar_design(args.sample) == "disagreement":
+    design = _sidecar_design(args.sample)
+    if design == "disagreement":
         raise SystemExit("certify needs a random sample of one map's windows; this sample holds only windows where two "
                          "maps differ, which says which map is more accurate (estimate) but nothing about either "
                          "map's zones")
+    if design == "audit":
+        raise SystemExit("certify needs a random sample of the whole map; an audit sample draws a fixed number from each "
+                         "class's confident zone, which says which classes' confident calls are wrong (estimate) but "
+                         "certifies no zone")
     out = args.out or (args.sample[:-4] + "_zone.json" if args.sample.endswith(".csv") else args.sample + "_zone.json")
     mask_path = out[:-5] + ".npy" if out.endswith(".json") else out + ".npy"
     _refuse_overwriting_inputs("certify", [out, mask_path],
@@ -1755,7 +2018,11 @@ def cmd_decide(args):
         for c, row in (a.get("per_class") or {}).items():
             iv = (f" (95% interval {100 * row['low']:.1f}% to {100 * row['high']:.1f}%)" if row.get("low") is not None
                   else f" ({row.get('because', 'no interval')})")
-            print(f"  class {c}: {row['answer']}{iv}" + ("  [warning]" if row.get("warning") else ""))
+            # an audit's second reading of the same labels; a class with nothing more accepted reads the same
+            alt = row.get("also_accept")
+            print(f"  class {c}: {row['answer']}{iv}" + ("  [warning]" if row.get("warning") else "")
+                  + (f"; also accepting {', '.join(str(x) for x in alt['accepted'])}: {alt['answer']} "
+                     f"({100 * alt['low']:.1f}% to {100 * alt['high']:.1f}%)" if alt and alt.get("accepted") else ""))
     with open(out, "w") as f:
         json.dump(res, f, indent=1, default=float)
     print(f"wrote {out}")
@@ -2144,16 +2411,29 @@ def build_parser():
     c.set_defaults(func=cmd_compare)
     sm = sub.add_parser("sample", help="which windows to label so that `estimate` can say how wrong the map is")
     sm.add_argument("scores", help="the same map `assess` takes: (H, W) probability or logit map, or (C, H, W) scores")
-    sm.add_argument("--budget", type=int, required=True, help="number of windows to label (exp78 measured 300)")
+    # not required by the parser: the audit design takes --per-class instead, and cmd_sample refuses a missing budget
+    sm.add_argument("--budget", type=int, default=None,
+                    help="number of windows to label (exp78 measured 300); every design but audit needs it")
     sm.add_argument("--out", required=True, help="CSV to write; a .json sidecar with the design goes beside it")
-    sm.add_argument("--design", choices=("confidence", "proportional", "random", "sequential", "tiles", "condition"),
+    sm.add_argument("--design", choices=("confidence", "proportional", "random", "sequential", "tiles", "condition",
+                                         "audit"),
                     default=None,
                     help="confidence (default without --condition): stratified by margin, allocated from the model's "
                          "own confidence; tiles: how people actually label, with the cluster interval that requires; "
                          "condition (default with --condition): stratified by input condition, labels split equally, "
                          "never from the model's confidence; random takes --condition too and only records it; "
                          "sequential: a random order labelled from the top, to which labels can be added (--extend), "
-                         "and certify then holds at every look")
+                         "and certify then holds at every look; audit: N windows at random from each predicted "
+                         "class's confident zone (--per-class N), and estimate then gives each class's zone error rate")
+    sm.add_argument("--per-class", type=int, default=None, metavar="N",
+                    help="audit design: windows labelled per predicted class; a class whose zone holds N or fewer is "
+                         "labelled in full (docs/Usage.md, audit, says what N buys)")
+    sm.add_argument("--zone-share", type=float, default=None, metavar="S",
+                    help="audit design: the confident zone is this top share of the valid windows by confidence "
+                         "(default a third)")
+    sm.add_argument("--zone-cut", type=float, default=None, metavar="C",
+                    help="audit design: the confident zone is the windows at confidence C or above, in the units of "
+                         "the CSV's `confidence` column")
     sm.add_argument("--anchor", type=float, default=None,
                     help="sequential design: the smallest zone certify will test, as a share of the map, fixed now "
                          "before any label; or give --alpha instead")
@@ -2187,7 +2467,8 @@ def build_parser():
     sm.set_defaults(func=cmd_sample)
     e = sub.add_parser("estimate", help="the map's error rate with an interval, from the labelled sample CSV, and each "
                                         "input condition's when the sample was drawn with --condition")
-    e.add_argument("sample", help="the CSV `sample` wrote, with its `wrong` column filled in")
+    e.add_argument("sample", help="the CSV `sample` wrote, with its `wrong` column filled in (its `reference_class` "
+                                  "column, for a sample drawn with --other or --design audit)")
     e.add_argument("--out", default=None, help="JSON to write (default: <sample>_estimate.json)")
     e.add_argument("--per-class", action="store_true",
                    help="also user's accuracy, producer's accuracy and error-adjusted share per class; needs a "
@@ -2204,6 +2485,12 @@ def build_parser():
     e.add_argument("--nodata", type=float, default=None,
                    help="with --per-class: the no-data value `sample` was run with (default: the one its sidecar records; "
                         "a different value is refused); only needed for a sample written by 1.2.0")
+    e.add_argument("--alpha", type=float, default=None, metavar="A",
+                   help="audit sample: a verdict per class, above, below or undetermined against A, chosen before the "
+                        "labels are read")
+    e.add_argument("--also-accept", default=None, metavar="FILE",
+                   help="audit sample: JSON {predicted class: [reference classes also accepted]}; a second reading of "
+                        "the same labels")
     e.set_defaults(func=cmd_estimate)
     z = sub.add_parser("certify", help="which share of the map, from the most confident window down, is wrong at most "
                                         "alpha of the time, with a guarantee (needs a random sample; a sample drawn "

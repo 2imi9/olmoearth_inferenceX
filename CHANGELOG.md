@@ -1,5 +1,37 @@
 # Changelog
 
+## Unreleased
+
+**A per-class audit of a map's confident calls** (`sample --design audit --per-class N`, then `estimate --alpha A
+[--also-accept FILE]`). `sample` fixes the confident zone from the map before any label (by default the top third of the
+valid windows by confidence, ties at the cut included, and the printed line says how many windows the ties added;
+`--zone-share S` or `--zone-cut C` instead) and draws N windows at random from each predicted class's windows in it,
+labelling a class in full when its zone holds N or fewer, in one random order; the reviewer writes `reference_class` or
+`?`. `estimate` gives each class's zone size, labels, errors by reference class and the exact hypergeometric interval on
+its zone's error rate, with `?` bounded both ways, and with `--alpha` a verdict per class (below, at least alpha, or
+undetermined: `decide`'s `error_rate_below` rule, which on this result answers per class). `--also-accept` reads the
+same labels a second time with listed reference classes also accepted (a lenient crosswalk), and a class above alpha
+strictly but not under that reading gets a note that its errors lie on the accepted pairs: a legend difference, not
+necessarily a model error. Each interval is its own 95% statement, and they do not hold jointly. The second reading is a
+second test on the same labels: with the file fixed before any label is read, a class's two intervals hold together at
+least 90% of the time (a union bound); a file written after the labels were seen can be fitted to them, and then neither
+holds. The result, the printed notes and `decide`'s answer say so, and `decide` carries each class's note. Usage's table
+gives what N labels buy: on a zone of 6,000 windows, `above` at alpha 0.05 at a zone error rate of 0.30 comes with
+probability 0.703 from 15 labels and 0.893 from 20, and `below` needs at least 72 labels with no error, so on a zone
+that large a small audit can find a bad class but not clear a good one; a small zone it can (30 error-free labels read
+`below` on every zone of up to 36 windows at alpha 0.05, and on none larger than 43; Usage tabulates the limits).
+Refused: the audit's options without `--design audit` and `--budget` with it, both zone options, an empty zone,
+`--condition`, `--other`; `--per-class`, the map's options and reviewer rates on an audit sample, an edited `map_class`
+or reordered rows, a negative `reference_class`, a malformed `--also-accept`; `--alpha` and `--also-accept` on any other
+sample; `certify` on an audit sample. The MCP server refuses an audit sample and its result by name in this version and
+points to the command line; its sample tool does not offer the design. `sample --budget` is now checked by `sample`
+rather than the parser (the message names it). Python: `estimate.sample_class_audit`, `class_audit_from_sample`,
+`interval_verdict`. Tests (tests/test_class_audit.py): the zone and its ties, exact share counts and the draw; each
+class's coverage by exact enumeration, against an adversary marking `?` after seeing the truth; the alternative
+reading's own coverage, none when the crosswalk is fitted to the labels, and its note; the verdict against `decide`,
+with the notes carried into its answer; both tables, recomputed and read back from Usage; the route through the command
+line, ties at the cut, a product map's own codes, and every refusal.
+
 ## 1.10.0 (2026-10-13)
 
 **Which map is more accurate: the exact sign test decides up to a fifth of the differing windows (exp107's P2, the
