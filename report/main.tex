@@ -95,8 +95,10 @@ input conditions), pools them to windows that each carry a class and the model's
 question. Without labels, it ranks the windows by confidence into a review set (Section~\ref{sec:ranking}) and
 compares two maps (Section~\ref{sec:compare}). With a labelled sample, windows drawn at random give the error rate
 with an exact interval (Section~\ref{sec:estimate}) and, by exact tests on the most confident zones, a certified zone
-(Section~\ref{sec:zone}); windows drawn where two maps differ give the accuracy difference
-(Section~\ref{sec:whichmap}). Each step runs per input condition when a condition raster is given.}
+(Section~\ref{sec:zone}); windows drawn where two maps differ name the more accurate map by an exact test and give
+the accuracy difference (Section~\ref{sec:whichmap}); and a sample of each class's confident calls gives each class's
+error and the classes not to trust (Section~\ref{sec:audit}). Each step runs per input condition when a condition
+raster is given.}
 \label{fig:overview}
 \end{figure}
 

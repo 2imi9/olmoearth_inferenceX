@@ -6,7 +6,7 @@ which part you can trust, and which of two maps is more accurate. It was built t
 outputs. It reads only the per-class scores a model writes out, never runs the model and needs no torch, so it works
 as well on other models' maps and on published products that ship a confidence layer.
 
-<img src="https://raw.githubusercontent.com/2imi9/olmoearth_inferenceX/main/docs/figures/architecture.png" alt="Structure of olmoearth-inferenceX. Left: Sentinel-2 imagery goes through a model's encoder and decoder to its outputs, a class map and a confidence map. Right: the outputs are pooled to windows. Without reference labels, ranking the windows by confidence gives the review set, and comparing two maps A and B gives the disagreement map. With a labelled sample, a sample of the windows where A and B differ gives their accuracy difference with a 95% interval; a random sample with reference labels gives the error rate with an exact 95% interval and, by exact zone tests, the certified zone" width="900">
+<img src="https://raw.githubusercontent.com/2imi9/olmoearth_inferenceX/main/docs/figures/architecture.png" alt="Structure of olmoearth-inferenceX. Left: Sentinel-2 imagery goes through a model's encoder and decoder to its outputs, a class map and a confidence map. Right: the outputs are pooled to windows. Without reference labels, ranking the windows by confidence gives the review set, and comparing two maps A and B gives the disagreement map. With a labelled sample, a sample of the windows where A and B differ names the more accurate map by an exact test and gives their accuracy difference with a 95% interval; a random sample with reference labels gives the error rate with an exact 95% interval and, by exact zone tests, the certified zone; a sample of each class's confident calls gives each class's error with a 95% interval and the classes not to trust" width="100%">
 
 Documentation: https://olmoearth-inferencex.readthedocs.io/
 
@@ -29,6 +29,7 @@ Usage
 | How wrong is the map? | `sample scores.tif --budget 300 --design random --out to_label.csv`, fill in `wrong`, then `estimate to_label.csv` | about 300 random windows |
 | Which part can I trust? | `certify to_label.csv --alpha 0.05` | the same windows |
 | Which of two maps is more accurate? | `sample a.tif --other b.tif --budget 100 --out pairs.csv`, fill in `reference_class`, then `estimate pairs.csv` | about 100, where the maps differ |
+| Which class's confident calls can't I trust? | `sample scores.tif --design audit --per-class 20 --out audit.csv`, fill in `reference_class`, then `estimate audit.csv --alpha 0.05` | about 20 per class |
 | Where do two maps differ? | `compare a.tif b.tif --out diff` | none |
 
 Every command starts with `oe-inferencex`. The input is the model's per-class scores before the argmax, as a GeoTIFF
@@ -38,9 +39,10 @@ yes, no or undetermined, and `--help` lists each command's options.
 
 Limits: without labels it says where to look, not how wrong the map is. On the one test of a deployed model at a new
 year and place, graded at the plots of an independent random sample that had imagery, confidence ranked the errors
-with an AUROC of 0.64 under a one-to-one crosswalk, below the preregistered 0.70; that run cannot say whether the year,
-the place, the legend or the move from expert-placed points caused it. A model run on inputs unlike its training data can be confident and wrong
-(`--condition` treats each input condition on its own). Every interval and certified zone assumes the labels are
+with an AUROC of 0.64 under a one-to-one crosswalk, below the preregistered 0.70; a later report-only reading found most
+of its confident errors on one grass/shrub boundary that neither legend defines, which none of the label-free signals
+tried separated. A model run on inputs unlike its training data can be confident and wrong (`--condition` treats each
+input condition on its own). Every interval and certified zone assumes the labels are
 right, and labelling more and rerunning is a second test, except on a sequential sample.
 
 
@@ -72,8 +74,9 @@ land-cover products against six reference samples, with the reference points sta
 OlmoEarth model, a re-run of Ai2's configuration for its fine-tuned AWF model, the confidence ranked the map's errors
 with an AUROC of 0.85 at Ai2's expert-placed validation points but 0.64 on 2017 imagery at the plots of an independent
 random sample that had imagery (one-to-one crosswalk), below the preregistered 0.70; the record's own fine-tune of the
-task on OlmoEarth v1.2 gave the same verdicts (0.81 and 0.64). On a second task, Ai2's Forest Loss Driver model graded
-at 2026 MapBiomas Alerta alerts in the Amazon, the confidence ranked the disagreements at 0.77, the preregistered bar on
+task on OlmoEarth v1.2 gave the same verdicts (0.81 and 0.64). Most of those confident errors lie on one grass/shrub
+boundary that neither legend defines (report-only). On a second task, Ai2's Forest Loss Driver model graded at 2026
+MapBiomas Alerta alerts in the Amazon, the confidence ranked the disagreements at 0.77, the preregistered bar on
 its point value (the interval reaches 0.68), but not the confident confusions between agriculture and mining. The
 [technical report](https://github.com/2imi9/olmoearth_inferenceX/blob/main/report/main.pdf) and the
 [documentation](https://olmoearth-inferencex.readthedocs.io/en/latest/Summary/) give the results and their limits.
