@@ -2249,6 +2249,28 @@ AUDIT_READING_NOTE = ("The alternative reading also accepts, for each class, the
                       "file written after the labels were seen can be fitted to them, and then neither holds: listing "
                       "the classes a class's errors fell on clears it, and its note on a legend difference can then "
                       "stand on model errors.")
+# The same second reading for the whole map (estimate) and for the certified zone (certify), on the other designs.
+# Every estimator and zone rule takes a 0/1 `wrong`, and a crosswalk fixed before any label makes "wrong under it" a
+# fixed property of each window, so each guarantee holds for that reading as it holds for the strict one, and the two
+# together by the union bound. The strict result is the call made without the option, so it does not change.
+ESTIMATE_READING_NOTE = ("The alternative reading also accepts, for each map class, the reference classes the "
+                         "--also-accept file lists for it, and reads the same labels a second time: a second test on "
+                         "them. If the file was fixed before any label was read, each reading's interval holds at its "
+                         "own level for its own definition of an error (exact or nominal, as its method says), and an "
+                         "interval and its alternative hold together at least 90% of the time where each holds at 95% "
+                         "(a union bound): the whole map's two, and each condition's two. A file written after the "
+                         "labels were seen can be fitted to them, and then neither holds: listing the reference classes "
+                         "the errors fell on clears them.")
+ZONE_READING_NOTE = ("The alternative reading also accepts, for each map class, the reference classes the --also-accept "
+                     "file lists for it, and certifies from the same labels a second time, at the same alpha and delta: "
+                     "a second test on them. If the file was fixed before any label was read, each certificate fails on "
+                     "at most {delta:g} of samples for its own definition of an error, and the chance that either is "
+                     "wrong is at most {either:g} (a union bound). A window the alternative accepts is not an error "
+                     "under it, so its zone holds no more errors and can be larger than the strict one; its certificate "
+                     "says nothing about how often the windows it accepts are wrong under the strict reading. A file "
+                     "written after the labels were seen can be fitted to them, and then neither certificate holds.")
+ZONE_READING_SEQUENTIAL = (" On a sequential sample the file must be the same at every look: one changed after labels "
+                           "were read was written after they were seen.")
 
 
 def _audit_zone(margin, valid, share=None, cut=None):
@@ -2491,3 +2513,57 @@ def class_audit_from_sample(sample, reference, unjudged=None, also_accept=None, 
                     "also_accept_unused": [str(c) for c in sorted(pairs) if str(c) not in classes],
                     "reading_note": AUDIT_READING_NOTE})
     return out
+
+
+def also_accept_reading(wrong, map_class, reference, also_accept, unjudged=None):
+    """The labels read a second time, a window of map class c also counted right when its reference class is one
+    `also_accept` lists for c (a class listed for itself changes nothing). Returns {"wrong": 0/1 per labelled window
+    under this reading, `wrong` as given where unjudged; "pairs": the checked crosswalk (_also_accept_pairs);
+    "errors_accepted": {map class: {reference class: windows}}, the judged windows wrong under the strict reading that
+    this one accepts (named after the audit's errors_by_reference: in the audit's block, `accepted` is the list of
+    codes a class accepts); "n_accepted"; "unused": listed classes no labelled window is mapped as}. ValueError when
+    the lengths differ, `wrong` is not 0/1, a judged reference is not a whole number of at least 0, or `wrong`
+    disagrees with reference != map_class at a judged window (the first position named).
+
+    A window this reading accepts is wrong under the strict one, so its `wrong` is at most the strict one window by
+    window, and the windows that could not be judged are the same in both. Passed to `estimate_error_rate`,
+    `certify_zone`, `certify_by_condition` or `sequential.certify_zone_sequential` in place of the strict `wrong`, it
+    gets that function's own guarantee for this reading's definition of an error, when `also_accept` was fixed before
+    any label was read (ESTIMATE_READING_NOTE, ZONE_READING_NOTE)."""
+    w = np.asarray(wrong).ravel()
+    mc = np.asarray(map_class).ravel()
+    ref = np.asarray(reference).ravel()
+    unj = np.zeros(w.size, bool) if unjudged is None else np.asarray(unjudged, bool).ravel()
+    if not w.size == mc.size == ref.size == unj.size:
+        raise ValueError(f"{w.size} labels but {mc.size}, {ref.size} and {unj.size} map classes, references and flags")
+    if not np.isin(w, (0, 1)).all():
+        raise ValueError("wrong must be 0 or 1 per window")
+    pairs = _also_accept_pairs(also_accept)
+    judged = ~unj
+    r = np.where(judged, ref, 0).astype(np.float64)               # a ? window's reference is not read
+    bad = np.flatnonzero(~(np.isfinite(r) & (r == np.rint(r)) & (r >= 0)))
+    if bad.size:
+        k = int(bad[0])
+        raise ValueError(f"a judged window's reference class is a whole number of at least 0; window {k} has "
+                         f"{ref.tolist()[k]!r}")
+    # both readings read the same labels: a `wrong` that disagrees with the classes would make them read different ones
+    off = np.flatnonzero(judged & ((w == 1) != (ref != mc)))
+    if off.size:
+        k = int(off[0])
+        w_k, c_k, r_k = w.tolist()[k], mc.tolist()[k], ref.tolist()[k]
+        raise ValueError(f"wrong disagrees with whether the reference class differs from the map's class at window {k} "
+                         f"(wrong {w_k!r}, map class {c_k!r}, reference class {r_k!r}); the second reading reads the "
+                         "same labels as the first")
+    accepted = np.zeros(w.size, bool)
+    for c, codes in pairs.items():
+        more = [a for a in codes if a != c]
+        if more:
+            accepted |= judged & (mc == c) & np.isin(ref, more)
+    out = w.copy()
+    out[accepted] = 0
+    by = {}
+    for c in np.unique(mc[accepted]):
+        vals, cnt = np.unique(ref[accepted & (mc == c)], return_counts=True)
+        by[str(int(c))] = {str(int(v)): int(n) for v, n in zip(vals, cnt)}
+    return {"wrong": out, "pairs": {str(c): v for c, v in sorted(pairs.items())}, "errors_accepted": by,
+            "n_accepted": int(accepted.sum()), "unused": [str(c) for c in sorted(pairs) if not (mc == c).any()]}

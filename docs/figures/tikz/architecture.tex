@@ -43,6 +43,8 @@
   \def\bus{14.05}\def\laneL{14.25}\def\laneR{28.5}\def\colA{15.95}\def\tokx{17.95}\def\colB{22.35}\def\outx{24.05}
 
   % ======================================================================= your data and model
+  % the left half and its link to the bus, lowered to sit level with the taller right half
+  \begin{scope}[yshift=-1.3cm]
   \node[ptitle] at (2.25,8.55) {Satellite observations};
   \begin{scope}[on background layer] \draw[panel] (0.15,2.45) rectangle (4.35,8.15); \end{scope}
   \node[img, draw=s2!55] (bs) at (2.75,5.84) {\includegraphics[width=2.55cm]{rasters/scene_b11.png}};
@@ -69,7 +71,6 @@
   \node[thumb] (pred) at (8.35,6.49) {\includegraphics[width=1.75cm]{rasters/scene_pred.png}};
   \node[tlabel] at (8.35,4.96) {Confidence};
   \node[thumb] (conf) at (8.35,3.89) {\includegraphics[width=1.75cm]{rasters/scene_conf.png}};
-  \node[caption] at (5.0,-0.45) {Your data and model};
 
   % ======================================================================= olmoearth-inferenceX
   \node[op=sky] (pool) at (11.3,5.19) {Pool to\\ windows};
@@ -79,6 +80,8 @@
   \draw[flow] (pool.east) -- (13.13,5.19);
   \node[note, anchor=north] at (13.22,4.0) {class +\\ confidence};
   \draw[line width=0.9pt, draw=ink] (13.57,5.19) -- (\bus,5.19);
+  \end{scope}
+  \node[caption] at (5.0,-0.45) {Your data and model};
   \draw[line width=0.9pt, draw=ink] (\bus,8.0) -- (\bus,1.05);
 
   % ---- without reference labels

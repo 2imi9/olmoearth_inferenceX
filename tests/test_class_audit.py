@@ -617,12 +617,14 @@ def test_every_refusal_of_the_audit(tmp_path, capsys):
     assert main(["estimate", out, "--alpha", "0.05"]) == 0
     with pytest.raises(SystemExit, match="error_rate_below"):
         main(["decide", str(tmp_path / "a_estimate.json"), "--ask", "user_accuracy_above=0.9"])
-    # --alpha and --also-accept on another design's sample
+    # --alpha on another design's sample; --also-accept is read there too (tests/test_also_accept.py), from the class
+    # seen in each window, which this sample's CSV does not hold
     assert main(["sample", p, "--budget", "40", "--design", "random", "--patch", "1", "--out", str(tmp_path / "r.csv")]) == 0
     _fill(tmp_path / "r.csv", np.zeros(300, int), field="wrong")
-    for extra in (["--alpha", "0.05"], ["--also-accept", str(tmp_path / "pairs.json")]):
-        with pytest.raises(SystemExit, match="read a per-class audit"):
-            main(["estimate", str(tmp_path / "r.csv"), *extra])
+    with pytest.raises(SystemExit, match="--alpha reads a per-class audit"):
+        main(["estimate", str(tmp_path / "r.csv"), "--alpha", "0.05"])
+    with pytest.raises(SystemExit, match="--also-accept reads the class seen in each window: add a reference_class"):
+        main(["estimate", str(tmp_path / "r.csv"), "--also-accept", str(tmp_path / "pairs.json")])
     np.save(tmp_path / "q.npy", np.roll(np.load(p), 1, axis=0))
     assert main(["sample", p, "--other", str(tmp_path / "q.npy"), "--budget", "20", "--patch", "1",
                  "--out", str(tmp_path / "d.csv")]) == 0

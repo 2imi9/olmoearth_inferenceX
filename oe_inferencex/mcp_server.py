@@ -936,6 +936,14 @@ AUDIT_NOT_SERVED = ("{path} is a per-class audit (a sample drawn with the audit 
 AUDIT_RESULT_NOT_SERVED = ("{path} is the result of a per-class audit, which this server does not read in this "
                            "version. Ask on the command line: oe-inferencex decide {path}, asking error_rate_below with "
                            "the rate.")
+# The same second reading on a map's whole-map estimate or certified zone (estimate or certify with --also-accept, 13
+# October 2026): the estimate and certify tools take no such parameter, so their replies, which state no second test,
+# never meet one; a result written on the command line with one is refused here for the audit's reason.
+ALSO_ACCEPT_RESULT_NOT_SERVED = ("{path} holds a second reading of the same labels (estimate or certify run with an "
+                                 "also-accept file), which this server does not read in this version. Ask on the "
+                                 "command line: oe-inferencex decide {path}.")
+ESTIMATE_MAP_OPTIONS = ("estimate: scores, confidence and nodata are read only with per_class; the error rate comes "
+                        "from the CSV and its sidecar alone")
 
 
 def _out_json(sample_csv, out_dir, suffix):
@@ -967,8 +975,13 @@ def estimate(
                                                          "reviewer mark right, as the user states it")] = None,
 ) -> dict[str, Any]:
     path = _input(sample_csv, "sample_csv")
-    if cli._sidecar_design(path) == "audit":
+    design = cli._sidecar_design(path)
+    if design == "audit":
         raise Refused(AUDIT_NOT_SERVED.format(path=path))
+    if design != "disagreement" and not per_class and any(v is not None for v in (scores, confidence, nodata)):
+        # the command reads the map's options with --per-class or --also-accept, and its refusal names both; this
+        # server has no also_accept parameter, so it refuses here first, in the words it gave before 13 October 2026
+        raise Refused(ESTIMATE_MAP_OPTIONS)
     out = _out_json(path, out_dir, "estimate")
     argv = ["estimate", path]
     _opt(argv, "--reviewer-false-alarm", None if reviewer_false_alarm is None else float(reviewer_false_alarm))
@@ -1288,10 +1301,13 @@ def decide(
     try:
         given = _read_json(path)
         audit = given.get("design") == "audit" and isinstance(given.get("per_class"), dict)
+        second = isinstance(given.get("also_accept"), dict)
     except (OSError, ValueError, AttributeError):        # unreadable or not an object: the command says so
-        audit = False
+        audit = second = False
     if audit:
         raise Refused(AUDIT_RESULT_NOT_SERVED.format(path=path))
+    if second:
+        raise Refused(ALSO_ACCEPT_RESULT_NOT_SERVED.format(path=path))
     out = None
     if out_dir is not None:
         os.makedirs(_abs(out_dir), exist_ok=True)

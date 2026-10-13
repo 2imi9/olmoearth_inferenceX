@@ -326,6 +326,25 @@ From a search of the 2025 and 2026 literature; each entry was checked against it
 - Romero et al. (2026). How do Self-Supervised Remote Sensing Vision Models Transfer to Downstream Tasks?. *arXiv preprint*.
   [arXiv:2606.13896](https://arxiv.org/abs/2606.13896). How self-supervised remote-sensing models transfer, on PASTIS and Sen1Floods11 among others. External support for the readout-gap warning on two of this record's own tasks.
 
+### Added 13 October 2026
+
+From a prior-art check of 13 October 2026 (titles and abstracts; each entry checked against its publisher, ASPRS,
+Crossref or arXiv record).
+
+- Gopal, S. and Woodcock, C. (1994). Theory and methods for accuracy assessment of thematic maps using fuzzy sets.
+  *Photogrammetric Engineering and Remote Sensing* 60(2):181–188.
+  [ASPRS](https://asprs.org/wp-content/uploads/pers/1994journal/feb/1994_feb_181-188.pdf). Fuzzy accuracy
+  assessment: a map location may belong acceptably to more than one class. The package's `--also-accept` reading
+  (the per-class audit, `estimate` and `certify`) is this idea applied as a fixed lenient crosswalk.
+- Valle, D., Izbicki, R. and Leite, R. V. (2023). Quantifying uncertainty in land-use land-cover classification using
+  conformal statistics. *Remote Sensing of Environment* 295:113682.
+  [doi:10.1016/j.rse.2023.113682](https://doi.org/10.1016/j.rse.2023.113682). Per-pixel conformal prediction sets
+  for land cover with marginal coverage; the certified zone instead bounds the error rate inside one map's zone.
+- Lu, K., Kluger, D. M., Bates, S. and Wang, S. (2024). Regression coefficient estimation from remote sensing maps.
+  [arXiv:2407.13659](https://arxiv.org/abs/2407.13659). Prediction-powered inference with remote-sensing maps and a
+  small labelled sample, compared with design-based estimation; asymptotic, where the package's intervals are exact
+  over the finite population.
+
 ## 5. The models and the testbeds
 
 - Herzog, H. et al. (2025). OlmoEarth: stable latent image modeling for

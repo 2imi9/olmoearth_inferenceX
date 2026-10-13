@@ -8,9 +8,10 @@
     oe-inferencex demo    [--out DIR] [--made-up]   a first run on the real sample map shipped with the package
     oe-inferencex sample  scores.tif --budget 300 --out to_label.csv [--design D] [--condition layer.tif]
     oe-inferencex sample  scores.tif --design audit --per-class 20 --out audit.csv   each class's confident zone
-    oe-inferencex estimate to_label.csv [--per-class]       once the reviewer has filled the `wrong` column
+    oe-inferencex estimate to_label.csv [--per-class] [--also-accept pairs.json]   once the reviewer has filled `wrong`
     oe-inferencex estimate audit.csv --alpha 0.05 [--also-accept pairs.json]   once `reference_class` is filled
-    oe-inferencex certify  to_label.csv --alpha 0.05        from a random sample, or one drawn with --condition
+    oe-inferencex certify  to_label.csv --alpha 0.05 [--also-accept pairs.json]   from a random sample, or one drawn
+                                                            with --condition
     oe-inferencex mcp                                       a local MCP server on stdio, for an agent (the mcp extra)
     oe-inferencex from-olmoearth DS --out DIR [--conditions]  an OlmoEarth run's rslearn dataset -> the rasters
                                                             assess reads, and the command that reads them
@@ -859,12 +860,12 @@ def cmd_sample(args):
     if design == "sequential" and cond_path:
         raise SystemExit("sample: --design sequential does not take --condition: certify reads it as one random order "
                          "of the whole map")
-    old_side = old_wrong = anchor_rule = None
+    old_side = old_wrong = old_ref = anchor_rule = None
     if extend is not None:
         if any(v is not None for v in (anchor, a_alpha, a_delta)):
             raise SystemExit(f"sample --extend: the anchor was fixed when {extend} was drawn and cannot change after "
                              "labelling began; drop --anchor, --alpha and --delta")
-        old_side, old_wrong = _sequential_to_extend(extend, args)
+        old_side, old_wrong, old_ref = _sequential_to_extend(extend, args)
         anchor, anchor_rule = old_side["anchor"], old_side.get("anchor_rule")
     elif design == "sequential":
         # The anchor, the smallest zone certify will test, is fixed here, before any label: certify reads it from the
@@ -927,9 +928,12 @@ def cmd_sample(args):
         # shown so the reviewer judges the same thing the tool grades; a mixed window is where a reviewer looking
         # at the pixels could otherwise read the map's class differently (release check of 24 September)
         # with --condition, the condition's name follows `stratum` (under the condition design, the stratum is the
-        # condition's index); map_class and wrong stay the last two columns
+        # condition's index); map_class and wrong stay the last two columns. A `reference_class` column the reviewer
+        # added to a sequential sample (estimate --per-class and --also-accept read it) is kept by --extend, after
+        # `wrong`, blank on the new rows. Until 13 October 2026 --extend wrote the fixed columns only and dropped it
         w.writerow(["index", "window_row", "window_col", "pixel_row", "pixel_col", "x", "y", "stratum"]
-                   + ([] if cond is None else ["condition"]) + ["confidence", "map_class", "wrong"])
+                   + ([] if cond is None else ["condition"]) + ["confidence", "map_class", "wrong"]
+                   + ([] if old_ref is None else ["reference_class"]))
         strata = sample.get("strata")
         pos = {int(g): i for i, g in enumerate(sample.get("strata_of_population", []))}
         for k, (i, r, c) in enumerate(zip(idx, rows, cols)):
@@ -937,7 +941,8 @@ def cmd_sample(args):
                         None if y is None else float(y[k]), None if strata is None else int(strata[pos[int(i)]])]
                        + ([] if cond is None else [cond["names"][int(sample["condition_grid"][int(i)])]])
                        + [float(margin[r, c]), int(klass[r, c]),
-                          old_wrong[k] if old_wrong is not None and k < len(old_wrong) else ""])
+                          old_wrong[k] if old_wrong is not None and k < len(old_wrong) else ""]
+                       + ([] if old_ref is None else [old_ref[k] if k < len(old_ref) else ""]))
     side = {k: (v.tolist() if isinstance(v, np.ndarray) else v) for k, v in sample.items()}
     if design == "sequential":
         side["anchor"], side["anchor_rule"] = float(anchor), anchor_rule     # fixed now; certify reads them
@@ -1041,7 +1046,8 @@ def _sidecar_map_fields(args, geo, grid, out, conf_path, conf_range, prod_info):
 def _sequential_to_extend(path, args):
     """The sidecar and the `wrong` column of a sequential sample that `sample --extend` lengthens, checked: it must be a
     sequential sample of this map drawn with this seed, shorter than the new budget; its anchor, fixed when it was
-    drawn, is kept. Returns (sidecar, wrong values as written, one per row)."""
+    drawn, is kept. Returns (sidecar, wrong values as written, one per row, and the reference_class values as written
+    when the CSV has that column, else None)."""
     side_path = path[:-4] + ".json" if path.endswith(".csv") else path + ".json"
     if not os.path.exists(path) or not os.path.exists(side_path):
         raise SystemExit(f"sample --extend: {path} and its .json sidecar are needed")
@@ -1068,7 +1074,8 @@ def _sequential_to_extend(path, args):
         raise SystemExit(f"sample --extend: {path} lacks the `index` column `sample` wrote") from None
     if idx != [int(i) for i in side["indices"]]:
         raise SystemExit(f"sample --extend: the rows of {path} do not match its sidecar; extend the file `sample` wrote")
-    return side, [r.get("wrong", "") for r in rows]
+    return (side, [r.get("wrong", "") for r in rows],
+            [r.get("reference_class", "") for r in rows] if rows and "reference_class" in rows[0] else None)
 
 
 def _sample_disagreement(args):
@@ -1322,22 +1329,72 @@ def _reference_column(rows, codes="the maps' class codes", negative=True):
     return np.array(ref, dtype=np.int64), np.array(unjudged, dtype=bool)
 
 
-def _also_accept(path):
+def _also_accept(path, command="estimate"):
     """The --also-accept file: JSON {predicted class: [reference classes also accepted]}, read and checked, each
     error refused by name."""
     try:
         with open(path, encoding="utf-8") as f:
             pairs = json.load(f)
     except FileNotFoundError:
-        raise SystemExit(f"estimate: --also-accept {path}: no such file") from None
+        raise SystemExit(f"{command}: --also-accept {path}: no such file") from None
     except OSError as exc:
-        raise SystemExit(f"estimate: --also-accept {path}: {exc.strerror or exc}") from None
+        raise SystemExit(f"{command}: --also-accept {path}: {exc.strerror or exc}") from None
     except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-        raise SystemExit(f"estimate: --also-accept {path} is not JSON ({exc})") from None
+        raise SystemExit(f"{command}: --also-accept {path} is not JSON ({exc})") from None
     try:
         return est._also_accept_pairs(pairs)
     except ValueError as exc:
-        raise SystemExit(f"estimate: --also-accept {path}: {exc}") from None
+        raise SystemExit(f"{command}: --also-accept {path}: {exc}") from None
+
+
+def _also_accept_rows(command, path, rows, wrong, unjudged, map_class):
+    """The labels of a sample of one map read a second time with the --also-accept file (estimate and certify):
+    (the second reading's `wrong`, the result's block: source, pairs, errors_accepted, n_accepted; the listed classes
+    no labelled window is mapped as). `map_class` is the map's class at each labelled window, recomputed from the map
+    (_map_windows). Every refusal runs before anything is computed or written."""
+    if "reference_class" not in rows[0]:
+        raise SystemExit(f"{command}: --also-accept reads the class seen in each window: add a reference_class column "
+                         "beside wrong (a whole number of at least 0, in the map's class codes, or ? where wrong is ?)")
+    ref, ref_unj = _reference_column(rows, "the map's class codes", negative=False)
+    unjudged = np.asarray(unjudged, bool)
+    one = np.flatnonzero(ref_unj != unjudged)
+    if one.size:
+        k = int(one[0])
+        has, lacks = ("wrong", "reference_class") if unjudged[k] else ("reference_class", "wrong")
+        raise SystemExit(f"{command}: row {k + 2} is ? in {has} and not in {lacks}: a window that cannot be judged is ? "
+                         "in both columns, and one that can be judged is ? in neither")
+    # --per-class only notes a row where the two columns disagree, and its error rate reads `wrong`; here the two
+    # readings would then read different labels, so it is refused
+    mc = np.asarray(map_class).ravel()
+    off = np.flatnonzero(~unjudged & ((ref != mc).astype(int) != np.asarray(wrong).astype(int)))
+    if off.size:
+        k = int(off[0])
+        raise SystemExit(f"{command}: on {off.size} row(s) `wrong` disagrees with whether `reference_class` differs from "
+                         f"the map's class, first at row {k + 2} (wrong {int(wrong[k])}, reference_class {int(ref[k])}, "
+                         f"map_class {int(mc[k])}); --also-accept reads the same labels twice, so wrong must be 1 "
+                         "exactly where reference_class is not the map's class")
+    accept = _also_accept(path, command)
+    try:
+        rd = est.also_accept_reading(wrong, mc, ref, accept, unjudged=unjudged)
+    except ValueError as exc:
+        raise SystemExit(f"{command}: {exc}") from None
+    return rd["wrong"], {"source": os.path.abspath(path), "pairs": rd["pairs"],
+                         "errors_accepted": rd["errors_accepted"], "n_accepted": rd["n_accepted"]}, rd["unused"]
+
+
+def _also_words(block):
+    """What a second reading also accepts, as printed: "3 where the map says 2"."""
+    said = []
+    for c, codes in block["pairs"].items():
+        more = [str(a) for a in codes if str(a) != c]
+        if more:
+            said.append((", ".join(more[:-1]) + " or " if len(more) > 1 else "") + f"{more[-1]} where the map says {c}")
+    return "; ".join(said) if said else "no class beyond the map's own"
+
+
+def _unused_note(unused):
+    return (f"note: --also-accept lists class(es) {', '.join(unused)}, which no labelled window is mapped as; they are "
+            "not read")
 
 
 def _verdict_words(verdict, alpha):
@@ -1683,34 +1740,48 @@ def cmd_estimate(args):
         return _estimate_disagreement(args)
     if design == "audit":
         return _estimate_class_audit(args)
-    if getattr(args, "alpha", None) is not None or getattr(args, "also_accept", None) is not None:
-        raise SystemExit("estimate: --alpha and --also-accept read a per-class audit (sample --design audit); for the "
-                         "whole map against a rate, ask decide error_rate_below=T of this estimate")
-    if not args.per_class and (args.scores is not None or getattr(args, "confidence", None) is not None
-                               or args.nodata is not None):
+    if getattr(args, "alpha", None) is not None:
+        raise SystemExit("estimate: --alpha reads a per-class audit (sample --design audit); for the whole map against a "
+                         "rate, ask decide error_rate_below=T of this estimate")
+    accept_path = getattr(args, "also_accept", None)
+    if not (args.per_class or accept_path is not None) and (args.scores is not None or getattr(args, "confidence", None)
+                                                            is not None or args.nodata is not None):
         # the error rate reads the CSV and its sidecar alone; accepting the map's options and ignoring them let a
         # wrong --scores path pass unnoticed (release check of 24 September), and --confidence, added with the product
         # input, was accepted unread the same way, a missing band included (2026-10-06)
-        raise SystemExit("estimate: --scores, --confidence and --nodata are read only with --per-class; the error rate "
-                         "comes from the CSV and its sidecar alone")
+        raise SystemExit("estimate: --scores, --confidence and --nodata are read only with --per-class or --also-accept; "
+                         "the error rate comes from the CSV and its sidecar alone")
     side_path = args.sample[:-4] + ".json" if args.sample.endswith(".csv") else args.sample + ".json"
     out = args.out or (args.sample[:-4] + "_estimate.json" if args.sample.endswith(".csv") else args.sample + "_estimate.json")
-    _refuse_overwriting_inputs("estimate", [out], [args.sample, side_path])
+    _refuse_overwriting_inputs("estimate", [out], [args.sample, side_path, accept_path])
     side, rows, idx, sample, wrong, unjudged = _labelled_sample(args.sample, "estimate")
     fa, miss = args.reviewer_false_alarm or 0.0, args.reviewer_miss or 0.0
     for flag, v in (("--reviewer-false-alarm", fa), ("--reviewer-miss", miss)):
         if not 0 <= v < 1:
             raise SystemExit(f"estimate: {flag} must be at least 0 and below 1, got {v:g}")
+    if accept_path is not None and (fa or miss):
+        raise SystemExit("estimate: --also-accept takes no reviewer error rate: a stated rate bounds the reviewer's errors "
+                         "for one definition of an error, and the file changes that definition; a reviewer's confusions "
+                         "are likeliest on the very pairs it accepts")
     if args.per_class and (unjudged.any() or fa or miss):
         raise SystemExit("estimate --per-class needs the class seen in every window and a reviewer taken as right: "
                          + (f"{int(unjudged.sum())} window(s) are ? (could not be judged)" if unjudged.any() else
                             "--reviewer-false-alarm and --reviewer-miss do not apply to the per-class table")
                          + ". Run estimate without --per-class for the error rate with its bounds")
+    map_w = also = None
+    if accept_path is not None:
+        # the map's class at each window, recomputed from the map and checked against the CSV, as --per-class reads it
+        map_w = _map_windows(side, args.scores, args.nodata, "estimate --per-class" if args.per_class else "estimate",
+                             rows, idx, getattr(args, "confidence", None))
+        wrong_alt, also, unused = _also_accept_rows("estimate", accept_path, rows, wrong, unjudged,
+                                                    map_w[1].ravel()[idx])
     if side.get("design") == "sequential":
         # the labelled rows are the first windows of a random order: a simple random sample of their number
         sample = dict(sample, design="random", budget=int(idx.size))
     try:
         res = est.estimate_error_rate(sample, wrong, unjudged=unjudged, reviewer_false_alarm=fa, reviewer_miss=miss)
+        # the second reading: the same estimator on the same sample, with the windows the file accepts counted right
+        alt = None if also is None else est.estimate_error_rate(sample, wrong_alt, unjudged=unjudged)
     except ValueError as exc:
         raise SystemExit(f"estimate: {exc}")
     if side.get("design") == "sequential":
@@ -1721,8 +1792,8 @@ def cmd_estimate(args):
     per_class_text = ""
     if args.per_class:
         ref = _reference_classes(rows, args.sample)
-        _, hard, valid_w, n_classes = _map_windows(side, args.scores, args.nodata, "estimate --per-class", rows, idx,
-                                                   getattr(args, "confidence", None))
+        _, hard, valid_w, n_classes = map_w or _map_windows(side, args.scores, args.nodata, "estimate --per-class", rows,
+                                                            idx, getattr(args, "confidence", None))
         if side.get("confidence") and ref.size and ref.max() < MAX_CLASS_ID + 1:
             # a product's ids are its own: a reviewer can see a class the map never predicts, which has no score band
             n_classes = max(n_classes, int(ref.max()) + 1)
@@ -1767,6 +1838,34 @@ def cmd_estimate(args):
     res["sample"] = os.path.abspath(args.sample)
     if _population_note(side):                       # a product's range left pixels out: the rate is of the rest
         res["population_note"] = _population_note(side)
+    also_text = ""
+    if also is not None:
+        # last, so that the result without these three keys is the one written without the option
+        also["n_wrong"] = int(np.asarray(wrong_alt)[~unjudged].sum())
+        keep = ("n_labelled", "n_wrong", "n_unjudged", "estimate", "estimate_range", "low", "high", "half_width", "method")
+        for k in ("estimate", "estimate_range", "low", "high", "half_width", "method", "warning", "per_condition",
+                  "outside_condition_intervals"):
+            if k in alt:
+                also[k] = ({name: {q: row[q] for q in keep if q in row} for name, row in alt[k].items()}
+                           if k == "per_condition" else alt[k])
+        res.update({"also_accept": also, "also_accept_unused": unused, "reading_note": est.ESTIMATE_READING_NOTE})
+        n = also["n_accepted"]
+        moved = (f"{n} labelled window{'s' if n != 1 else ''} wrong above {'are' if n != 1 else 'is'} right under this "
+                 "reading (" + ", ".join(f"{c} seen as {r}: {k}" for c, by in also["errors_accepted"].items()
+                                         for r, k in by.items()) + ")"
+                 if n else "no labelled window wrong above is right under this reading")
+        lines = [f"also accepting {_also_words(also)} ({os.path.basename(accept_path)}): error rate {_rate(also)}, 95% "
+                 f"interval {100 * also['low']:.1f}% to {100 * also['high']:.1f}%; {moved}"]
+        if res.get("by_condition"):                     # one line per condition, as the strict lines
+            for name, row in also["per_condition"].items():
+                lines.append(f"  {name} {_rate(row)} ({100 * row['low']:.1f}% to {100 * row['high']:.1f}%)"
+                             if row["n_labelled"] else f"  {name}: no labelled window fell in this condition")
+        if "warning" in also:
+            lines.append(f"  warning: {also['warning']}")
+        lines.append(f"note: {res['reading_note']}")
+        if unused:
+            lines.append(_unused_note(unused))
+        also_text = "\n" + "\n".join(lines)
     _check_out_file(out, "estimate")
     with open(out, "w") as f:
         json.dump(res, f, indent=1, default=float)
@@ -1796,7 +1895,7 @@ def cmd_estimate(args):
           + (f"\nwarning: {res['warning']}" if "warning" in res else "") + cond_text + per_class_text
           + (f"\nwarning: {res['per_class_warning']}" if "per_class_warning" in res else "")
           + (f"\nnote: {res['population_note']}" if "population_note" in res else "")
-          + (f"\nnote: {res['sequential_note']}" if "sequential_note" in res else "") + f"\nwrote {out}")
+          + (f"\nnote: {res['sequential_note']}" if "sequential_note" in res else "") + also_text + f"\nwrote {out}")
     return 0
 
 
@@ -1816,8 +1915,10 @@ def cmd_certify(args):
                          "certifies no zone")
     out = args.out or (args.sample[:-4] + "_zone.json" if args.sample.endswith(".csv") else args.sample + "_zone.json")
     mask_path = out[:-5] + ".npy" if out.endswith(".json") else out + ".npy"
-    _refuse_overwriting_inputs("certify", [out, mask_path],
-                               [args.sample, args.sample[:-4] + ".json" if args.sample.endswith(".csv") else args.sample + ".json"])
+    accept_path = getattr(args, "also_accept", None)
+    _refuse_overwriting_inputs("certify", [out, mask_path, _also_mask(mask_path)],
+                               [args.sample, args.sample[:-4] + ".json" if args.sample.endswith(".csv") else args.sample + ".json",
+                                accept_path])
     side, rows, idx, sample, wrong, unjudged = _labelled_sample(args.sample, "certify")
     # A window that could not be judged counts as wrong: that can only certify less, so the guarantee holds whatever
     # made it hard to judge. certify takes no reviewer error rate: testing at alpha (1 - miss) would need the miss
@@ -1839,14 +1940,22 @@ def cmd_certify(args):
                          "which a stratified or tile draw is not. Draw one with `sample --design random`")
     margin, hard, valid_w, _ = _map_windows(side, args.scores, args.nodata, "certify", rows, idx,
                                             getattr(args, "confidence", None))
+    also = None
+    if accept_path is not None:
+        wrong_alt, block, unused = _also_accept_rows("certify", accept_path, rows, wrong, unjudged, hard.ravel()[idx])
+        also = (np.where(unjudged, 1, wrong_alt), block, unused)       # a ? window is wrong in both readings
     _check_out_file(out, "certify")                   # before the mask, which a refusal used to leave behind
     if by_condition:
-        return _certify_by_condition(args, sample, wrong, margin, valid_w, out, mask_path, bounds, int(unjudged.sum()))
+        return _certify_by_condition(args, sample, wrong, margin, valid_w, out, mask_path, bounds, int(unjudged.sum()),
+                                     also=also)
     if sequential:
-        return _certify_sequential(args, side, idx, wrong, margin, valid_w, out, mask_path, bounds, int(unjudged.sum()))
+        return _certify_sequential(args, side, idx, wrong, margin, valid_w, out, mask_path, bounds, int(unjudged.sum()),
+                                   also=also)
     try:
         res = est.certify_zone(margin.ravel(), idx, wrong, alpha, delta=args.delta, rule=args.rule, valid=valid_w.ravel(),
                                cut=args.level_cut)
+        res_alt = None if also is None else est.certify_zone(margin.ravel(), idx, also[0], alpha, delta=args.delta,
+                                                             rule=args.rule, valid=valid_w.ravel(), cut=args.level_cut)
     except ValueError as exc:
         raise SystemExit(f"certify: {exc}")
     hw, ww = margin.shape
@@ -1857,30 +1966,110 @@ def cmd_certify(args):
         res["zone_mask"] = os.path.abspath(mask_path)
     elif os.path.exists(mask_path):
         os.remove(mask_path)          # a previous run's zone must not sit beside a result that certifies none
+    a = _zone_also_accept(res_alt, also and also[1], _also_mask(mask_path), (hw, ww))
     res["sample"] = os.path.abspath(args.sample)
     if bounds:
         res.update({"n_unjudged": int(unjudged.sum()), "bounds_note": "; ".join(bounds)})
     if _population_note(side):                       # a product's range left pixels out: the zone is of the rest
         res["population_note"] = _population_note(side)
+    what = "confidence" if side.get("confidence") else "confidence margin"     # a product's band is no margin
+    also_text = ""
+    if a is not None:
+        res.update({"also_accept": a, "also_accept_unused": also[2],
+                    "reading_note": _zone_reading_note(args.delta, False)})
+        also_text = _zone_also_text(res, args, what, _also_mask(mask_path))
     with open(out, "w") as f:
         json.dump(res, f, indent=1, default=float)
     tail = "".join(f"\nnote: {b}" for b in bounds) + (f"\nnote: {res['population_note']}" if "population_note" in res else "")
     if res["coverage"] is None:
         print(f"no zone certified at alpha={args.alpha:g}, delta={args.delta:g} from {res['n_labelled']} labels. {res['note']}"
-              f"{tail}\nwrote {out}")
+              f"{tail}{also_text}\nwrote {out}")
     else:
-        what = "confidence" if side.get("confidence") else "confidence margin"     # a product's band is no margin
         print(f"the {100 * res['coverage']:.0f}% most confident windows ({res['n_zone']} of {res['n_population']}, {what} >= "
               f"{res['threshold']:.4f}) are wrong at most {100 * args.alpha:g}% of the time; this statement fails on at most "
               f"{100 * args.delta:g}% of samples like this one ({args.rule} rule; the exact upper bound on the zone's error "
               f"rate at that level is {100 * res['upper_bound']:.1f}%). Outside the zone nothing is certified.\n"
-              f"{res['note']}{tail}\nwrote {out} and the window mask {mask_path}")
+              f"{res['note']}{tail}{also_text}\nwrote {out} and the window mask {mask_path}")
     return 0
 
 
-def _certify_sequential(args, side, idx, wrong, margin, valid_w, out, mask_path, bounds=(), n_unjudged=0):
+# The second reading of certify (--also-accept), on each route: the same function a second time on the same labels,
+# with the windows the file accepts counted right. Only the keys that depend on the labels are repeated in its block;
+# the rule, alpha, delta, the population, the levels tested, the anchor and the split of delta are the strict
+# result's, the same in both (tests/test_also_accept.py checks it).
+ZONE_ALSO_KEYS = ("coverage", "n_zone", "threshold", "upper_bound", "n_tied_at_threshold", "n_tied_inside_zone",
+                  "certified_share_of_map", "n_certified", "per_condition", "levels", "note")
+
+
+def _also_mask(mask_path):
+    """The second reading's window mask, beside the strict one: <zone stem>_also_accept.npy."""
+    return mask_path[:-4] + "_also_accept.npy"
+
+
+def _zone_reading_note(delta, sequential):
+    return (est.ZONE_READING_NOTE.format(delta=delta, either=min(1.0, 2 * float(delta)))
+            + (est.ZONE_READING_SEQUENTIAL if sequential else ""))
+
+
+def _zone_also_accept(res_alt, block, mask_alt, shape):
+    """The `also_accept` block of a certify result: `block` with the second reading's zone (ZONE_ALSO_KEYS, where
+    present) and its window mask, written to `mask_alt` when that reading certifies something. Otherwise, and without
+    the option (res_alt None, and None returned), a stale mask there is removed, as the strict mask is."""
+    if res_alt is None:
+        if os.path.exists(mask_alt):
+            os.remove(mask_alt)
+        return None
+    zone_idx = np.asarray(res_alt.pop("zone_indices_in_order", np.zeros(0, int)), int)
+    for entry in (res_alt.get("per_condition") or {}).values():
+        entry.pop("zone_indices_in_order", None)
+    out = dict(block)
+    out.update({k: res_alt[k] for k in ZONE_ALSO_KEYS if k in res_alt})
+    if (res_alt.get("certified_share_of_map") if res_alt.get("by_condition") else res_alt.get("coverage")) is not None:
+        zone = np.zeros(int(np.prod(shape)), bool)
+        zone[zone_idx] = True
+        np.save(mask_alt, zone.reshape(shape))
+        out["zone_mask"] = os.path.abspath(mask_alt)
+    elif os.path.exists(mask_alt):
+        os.remove(mask_alt)
+    return out
+
+
+def _zone_also_text(res, args, what, mask_alt):
+    """The printed lines of certify's second reading, before `wrote`: the zone, or each condition's in a few words."""
+    a = res["also_accept"]
+    head = f"also accepting {_also_words(a)} ({os.path.basename(a['source'])})"
+    if res.get("by_condition"):
+        lines = [f"{head}, certified per input condition at the same alpha and delta:"]
+        for name, e in a["per_condition"].items():
+            if e.get("coverage") is not None:
+                lines.append(f"  {name}: {100 * e['coverage']:.0f}% of this condition certified ({e['n_zone']} of "
+                             f"{e['n_population']})")
+            else:
+                lines.append(f"  {name}: nothing certified ({e.get('reason') or 'no zone passed its test'})")
+        lines.append(f"together {100 * a['certified_share_of_map']:.1f}% of the map under this reading (mask {mask_alt})"
+                     if a.get("certified_share_of_map") is not None else
+                     "no zone is certified in any condition under this reading")
+    elif a.get("coverage") is not None:
+        rule = "sequential rule" if res.get("rule") == "sequential" else (
+            f"{res['rule']} rule; exact upper bound {100 * a['upper_bound']:.1f}%")
+        tied, inside = a.get("n_tied_at_threshold", 0), a.get("n_tied_inside_zone", 0)
+        lines = [f"{head}: the {100 * a['coverage']:.0f}% most confident windows ({a['n_zone']} of {res['n_population']}, "
+                 f"{what} >= {a['threshold']:.4f}) are wrong at most {100 * args.alpha:g}% of the time under this "
+                 f"reading, at the same delta ({rule}); window mask {mask_alt}"
+                 + (f"; {tied} windows share that {what} and only {inside} of them are inside the zone, so the zone is "
+                    "the window mask, not every window at or above the threshold" if tied > inside else "")]
+    else:
+        lines = [f"{head}: no zone certified under this reading. {a['note']}"]
+    lines.append(f"note: {res['reading_note']}")
+    if res["also_accept_unused"]:
+        lines.append(_unused_note(res["also_accept_unused"]))
+    return "\n" + "\n".join(lines)
+
+
+def _certify_sequential(args, side, idx, wrong, margin, valid_w, out, mask_path, bounds=(), n_unjudged=0, also=None):
     """certify for a sequential sample: the labelled rows, read from the top, in the order they were drawn; the anchor
-    the sample fixed, or the default from its first budget (sequential.anchor_coverage)."""
+    the sample fixed, or the default from its first budget (sequential.anchor_coverage). `also`: the second reading
+    (its `wrong`, block and unused classes), certified by the same rule from the same labels."""
     from oe_inferencex import sequential as sq
     try:
         if side.get("anchor") is None:
@@ -1889,6 +2078,9 @@ def _certify_sequential(args, side, idx, wrong, margin, valid_w, out, mask_path,
         res = sq.certify_zone_sequential(margin.ravel(), idx, wrong, args.alpha, delta=args.delta,
                                          anchor=float(side["anchor"]), valid=valid_w.ravel(), seed=int(side["seed"]))
         res["anchor_rule"] = side.get("anchor_rule")
+        res_alt = None if also is None else sq.certify_zone_sequential(
+            margin.ravel(), idx, also[0], args.alpha, delta=args.delta, anchor=float(side["anchor"]),
+            valid=valid_w.ravel(), seed=int(side["seed"]))
     except ValueError as exc:
         raise SystemExit(f"certify: {exc}")
     hw, ww = margin.shape
@@ -1899,12 +2091,18 @@ def _certify_sequential(args, side, idx, wrong, margin, valid_w, out, mask_path,
         res["zone_mask"] = os.path.abspath(mask_path)
     elif os.path.exists(mask_path):
         os.remove(mask_path)
+    a = _zone_also_accept(res_alt, also and also[1], _also_mask(mask_path), (hw, ww))
     res["sample"] = os.path.abspath(args.sample)
     res["n_drawn"] = int(side.get("n_drawn", len(idx)))
     if bounds:
         res.update({"n_unjudged": n_unjudged, "bounds_note": "; ".join(bounds)})
     if _population_note(side):
         res["population_note"] = _population_note(side)
+    what = "confidence" if side.get("confidence") else "confidence margin"
+    also_text = ""
+    if a is not None:
+        res.update({"also_accept": a, "also_accept_unused": also[2], "reading_note": _zone_reading_note(args.delta, True)})
+        also_text = _zone_also_text(res, args, what, _also_mask(mask_path))
     with open(out, "w") as f:
         json.dump(res, f, indent=1, default=float)
     tail = "".join(f"\nnote: {b}" for b in bounds) + (f"\nnote: {res['population_note']}" if "population_note" in res else "")
@@ -1912,24 +2110,27 @@ def _certify_sequential(args, side, idx, wrong, margin, valid_w, out, mask_path,
             "the sample (sample --extend), and run certify again: every look is covered by the same guarantee")
     if res["coverage"] is None:
         print(f"no zone certified yet at alpha={args.alpha:g}, delta={args.delta:g} from {res['n_labelled']} labels (sequential "
-              f"rule, anchor {100 * res['anchor']:.0f}% of the map). {res['note']}{tail}{more}\nwrote {out}")
+              f"rule, anchor {100 * res['anchor']:.0f}% of the map). {res['note']}{tail}{more}{also_text}\nwrote {out}")
     else:
-        what = "confidence" if side.get("confidence") else "confidence margin"
         print(f"the {100 * res['coverage']:.0f}% most confident windows ({res['n_zone']} of {res['n_population']}, {what} >= "
               f"{res['threshold']:.4f}) are wrong at most {100 * args.alpha:g}% of the time; this statement fails on at most "
               f"{100 * args.delta:g}% of samples like this one, however often certify is run on it as labels are added "
               f"(sequential rule, anchor {100 * res['anchor']:.0f}% of the map). Outside the zone nothing is certified.\n"
-              f"{res['note']}{tail}{more}\nwrote {out} and the window mask {mask_path}")
+              f"{res['note']}{tail}{more}{also_text}\nwrote {out} and the window mask {mask_path}")
     return 0
 
 
-def _certify_by_condition(args, sample, wrong, margin, valid_w, out, mask_path, bounds=(), n_unjudged=0):
+def _certify_by_condition(args, sample, wrong, margin, valid_w, out, mask_path, bounds=(), n_unjudged=0, also=None):
     """certify for a sample that records an input condition: a zone inside each condition with enough labels, and
     the union of the zones as the window mask. The top-level zone fields stay null, since the union is not "the
-    most confident share of the map" that readers of those fields take them to be."""
+    most confident share of the map" that readers of those fields take them to be. `also`: the second reading, as
+    for _certify_sequential."""
     try:
         res = est.certify_by_condition(sample, wrong, margin.ravel(), args.alpha, delta=args.delta, rule=args.rule,
                                        valid=valid_w.ravel(), cut=args.level_cut)
+        res_alt = None if also is None else est.certify_by_condition(sample, also[0], margin.ravel(), args.alpha,
+                                                                     delta=args.delta, rule=args.rule,
+                                                                     valid=valid_w.ravel(), cut=args.level_cut)
     except ValueError as exc:
         raise SystemExit(f"certify: {exc}")
     hw, ww = margin.shape
@@ -1943,11 +2144,17 @@ def _certify_by_condition(args, sample, wrong, margin, valid_w, out, mask_path, 
         res["zone_mask"] = os.path.abspath(mask_path)
     elif os.path.exists(mask_path):
         os.remove(mask_path)          # a previous run's zone must not sit beside a result that certifies none
+    also_block = _zone_also_accept(res_alt, also and also[1], _also_mask(mask_path), (hw, ww))
     res["sample"] = os.path.abspath(args.sample)
     if bounds:
         res.update({"n_unjudged": n_unjudged, "bounds_note": "; ".join(bounds)})
     if _population_note(sample):                     # a product's range left pixels out: the zones are of the rest
         res["population_note"] = _population_note(sample)
+    also_text = ""
+    if also_block is not None:
+        res.update({"also_accept": also_block, "also_accept_unused": also[2],
+                    "reading_note": _zone_reading_note(args.delta, False)})
+        also_text = _zone_also_text(res, args, None, _also_mask(mask_path))
     with open(out, "w") as f:
         json.dump(res, f, indent=1, default=float)
     a, d, b1 = args.alpha, args.delta, res["min_labels_to_certify"]
@@ -1990,7 +2197,7 @@ def _certify_by_condition(args, sample, wrong, margin, valid_w, out, mask_path, 
     else:
         lines.append("no zone is certified in any condition, so nothing is certified")
     lines += [f"note: {b}" for b in bounds] + ([f"note: {res['population_note']}"] if "population_note" in res else [])
-    print("\n".join(lines) + f"\nwrote {out}")
+    print("\n".join(lines) + also_text + f"\nwrote {out}")
     return 0
 
 
@@ -2008,13 +2215,26 @@ def cmd_decide(args):
     for q, a in res["answers"].items():
         shown = f"{100 * a['answer']:.1f}%" if a["type"] == "score" else a["answer"]
         print(f"{q}: {shown}. {a['because']}")
+        alt = a.get("also_accept")                    # a second reading of the same labels (--also-accept)
+        if alt:
+            print("  also accepting the file's pairs: " + (
+                f"{100 * alt['answer']:.1f}%" if a["type"] == "score" else
+                f"{alt['answer']} ({'95%' if alt.get('exact', True) else 'nominal 95%'} interval "
+                f"{100 * alt['low']:.1f}% to {100 * alt['high']:.1f}%)" if "low" in alt
+                else f"{alt['answer']} (certified: {100 * alt['certified']:.1f}%)"))
         for name, c in (a.get("per_condition") or {}).items():
+            c2 = c.get("also_accept")
             if "answer" in c:
-                print(f"  {name}: {c['answer']}")
+                print(f"  {name}: {c['answer']}" + (f"; also accepting: {c2['answer']}" if c2 else ""))
             else:
                 share = c.get("certified_share_of_condition")
-                print(f"  {name}: " + (f"{100 * share:.1f}% of this condition certified" if share else
-                                       f"nothing certified ({c.get('reason') or 'no zone passed its test'})"))
+                said = (f"{100 * share:.1f}% of this condition certified" if share else
+                        f"nothing certified ({c.get('reason') or 'no zone passed its test'})")
+                if c2:
+                    share2 = c2.get("certified_share_of_condition")
+                    said += "; also accepting: " + (f"{100 * share2:.1f}% of this condition certified" if share2
+                                                    else "nothing certified")
+                print(f"  {name}: {said}")
         for c, row in (a.get("per_class") or {}).items():
             iv = (f" (95% interval {100 * row['low']:.1f}% to {100 * row['high']:.1f}%)" if row.get("low") is not None
                   else f" ({row.get('because', 'no interval')})")
@@ -2353,6 +2573,13 @@ def cmd_mcp(args):
     return 0
 
 
+ALSO_ACCEPT_HELP = ("JSON {map class: [reference classes also accepted]}, written before any label is read: a second "
+                    "reading of the same labels, which needs a `reference_class` column (an audit sample has one)")
+# certify refuses an audit sample, so its help does not point to one
+CERTIFY_ALSO_ACCEPT_HELP = ("JSON {map class: [reference classes also accepted]}, written before any label is read: a "
+                            "second reading of the same labels, which needs a `reference_class` column beside `wrong`")
+
+
 def _product_parser_args(p):
     p.add_argument("--confidence", default=None, metavar="BAND",
                    help="a per-pixel confidence band on the map's grid that rises with confidence, as published "
@@ -2473,9 +2700,10 @@ def build_parser():
     e.add_argument("--per-class", action="store_true",
                    help="also user's accuracy, producer's accuracy and error-adjusted share per class; needs a "
                         "`reference_class` column in the CSV and the map's scores (from the sidecar, or --scores)")
-    e.add_argument("--scores", default=None, help="with --per-class: the raster `sample` was run on, if it has moved")
-    e.add_argument("--confidence", default=None, help="with --per-class: the confidence band `sample` was run on, if it "
-                                                      "has moved")
+    e.add_argument("--scores", default=None, help="with --per-class or --also-accept: the raster `sample` was run on, if "
+                                                  "it has moved")
+    e.add_argument("--confidence", default=None, help="with --per-class or --also-accept: the confidence band `sample` "
+                                                      "was run on, if it has moved")
     e.add_argument("--reviewer-false-alarm", type=float, default=None, metavar="E0",
                    help="at most this share of the truly correct windows does the reviewer mark wrong (0 to below 1); "
                         "widens the interval's lower end")
@@ -2483,14 +2711,12 @@ def build_parser():
                    help="at most this share of the truly wrong windows does the reviewer mark right (0 to below 1); "
                         "widens the interval's upper end")
     e.add_argument("--nodata", type=float, default=None,
-                   help="with --per-class: the no-data value `sample` was run with (default: the one its sidecar records; "
-                        "a different value is refused); only needed for a sample written by 1.2.0")
+                   help="with --per-class or --also-accept: the no-data value `sample` was run with (default: the one its "
+                        "sidecar records; a different value is refused); only needed for a sample written by 1.2.0")
     e.add_argument("--alpha", type=float, default=None, metavar="A",
                    help="audit sample: a verdict per class, above, below or undetermined against A, chosen before the "
                         "labels are read")
-    e.add_argument("--also-accept", default=None, metavar="FILE",
-                   help="audit sample: JSON {predicted class: [reference classes also accepted]}; a second reading of "
-                        "the same labels")
+    e.add_argument("--also-accept", default=None, metavar="FILE", help=ALSO_ACCEPT_HELP)
     e.set_defaults(func=cmd_estimate)
     z = sub.add_parser("certify", help="which share of the map, from the most confident window down, is wrong at most "
                                         "alpha of the time, with a guarantee (needs a random sample; a sample drawn "
@@ -2516,6 +2742,7 @@ def build_parser():
                    help="the no-data value `sample` was run with (default: the one its sidecar records; a different value "
                         "is refused); only needed for a sample written by 1.2.0")
     z.add_argument("--out", default=None, help="JSON to write (default: <sample>_zone.json; the window mask goes beside it as .npy)")
+    z.add_argument("--also-accept", default=None, metavar="FILE", help=CERTIFY_ALSO_ACCEPT_HELP)
     z.set_defaults(func=cmd_certify)
     dc = sub.add_parser("decide", help="typed answers (yes / no / undetermined, a / b, a share) to set questions, read "
                                         "from a result JSON that estimate, certify or compare wrote")

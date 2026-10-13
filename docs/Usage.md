@@ -18,7 +18,7 @@ extra) are new in 1.4.0.
 
 ## Quick start
 
-Every command below runs on 1.11.0. `scores.tif` is a map of per-class probabilities; add `--logits` for logits.
+Every command below runs on 1.12.0. `scores.tif` is a map of per-class probabilities; add `--logits` for logits.
 
 ```bash
 pip install "olmoearth-inferencex[geo]"
@@ -537,7 +537,8 @@ wrong beside 200 at 50%, with 150 labels each (exact, by enumeration in the test
 one condition the interval is the random design's exact one.
 
 `--per-class` needs a `reference_class` column (the class the reviewer saw, in the map's class ids) and the map's
-scores, from the sidecar's path or `--scores`; `--scores` and `--nodata` are accepted only with `--per-class`. It adds
+scores, from the sidecar's path or `--scores`; `--scores` and `--nodata` are accepted only with `--per-class` or
+`--also-accept` (below). It adds
 `confusion_counts`, `overall_accuracy` and, per class, the user's accuracy (the share of windows mapped as the class
 that belong to it), the producer's accuracy (the share of windows of the class mapped as it) and `reference_share`,
 the error-adjusted share of the map, each with an interval. A class is flagged for fewer than 30 labels
@@ -546,6 +547,42 @@ the error-adjusted share of the map, each with an interval. A class is flagged f
 same estimators run with the conditions as strata. These per-class intervals have not been graded there, and `method`
 and a printed note say so; each condition's error-rate interval is still exact. With one condition the table is the
 random design's, numbers and method alike.
+
+**A second reading.** `--also-accept FILE` reads the labels a second time, as the [audit](#audit) does (the acceptable
+classes of fuzzy accuracy assessment, Gopal and Woodcock 1994), on every
+other design: random, confidence, proportional, condition, tiles, and a sequential sample read as random. FILE is JSON
+`{"<map class>": [<reference classes also accepted>]}`, such as a lenient crosswalk between the map's legend and a
+reference whose legend draws a class boundary elsewhere (grass against shrub): `{"2": [3]}` also accepts reference
+class 3 in a window mapped as 2. Write it before any label is read. The reading needs the class seen in each window:
+add a `reference_class` column beside `wrong` (a whole number of at least 0, in the map's class codes, or `?` where
+`wrong` is `?`), with `wrong` 1 exactly where it differs from `map_class`. The map's class is recomputed from the map,
+as `--per-class` recomputes it, so the scores the sidecar names are read again (or `--scores`).
+
+```bash
+oe-inferencex estimate to_label.csv --also-accept pairs.json   # pairs.json written before any label
+```
+
+The strict result is the one written without the option, byte for byte, and its printed lines come first, unchanged.
+The JSON gains three keys: `also_accept` (`source`, `pairs`, `errors_accepted`, the strict errors it accepts by map
+class and reference class, `n_accepted`, `n_wrong`, and the second reading's `estimate`, `low`, `high`, `half_width`,
+`method`, any `warning` and, with conditions, `per_condition` and `outside_condition_intervals`);
+`also_accept_unused`, the listed classes no labelled window is mapped as; and `reading_note`. A `?` window is bounded
+both ways in both readings. The second reading is a second test on the same labels. If the file was fixed before any
+label was read, each reading's interval holds at its own level for its own definition of an error (exact or nominal,
+as its method says), and where both are exact the two hold together at least 90% of the time, by the union bound: the
+whole map's two, and each condition's two. Where either is nominal (tiles, and the confidence and proportional designs
+when every window is judged) the chances that either misses add up, and the two hold together only a nominal 90% of
+the time; `decide` says which. A file written after the labels were seen can be fitted to them, and then neither
+holds: listing the reference classes the errors fell on clears them. The second reading's errors are a subset of the
+strict ones, window by window, so its error rate is never above the strict one. Under the random and condition designs
+its interval's ends are at or below the strict ends; under the confidence and proportional designs the Wilson interval
+does not move one way with the count, and an end can sit above. `--per-class` keeps its table strict. With the option,
+`estimate` also refuses a `?` in only one of `wrong` and `reference_class`, a row where `wrong` disagrees with whether
+`reference_class` differs from the map's class (which `--per-class` alone only notes, but which would make the two
+readings read different labels), an edited `map_class`, a malformed file, and the reviewer rates: a stated rate bounds
+the reviewer's errors for one definition of an error, the file changes that definition, and a reviewer's confusions
+are likeliest on the very pairs it accepts. tests/test_also_accept.py enumerates both readings' coverage, and the two
+together, on small maps.
 
 **The review set is not a sample.** It is selected to contain errors, so its error rate overstates the map's (1.8 to
 5.8 times on exp78's tasks). `sample` draws windows with weights the estimator undoes; the review set has none.
@@ -631,7 +668,8 @@ interval is over the zone's own windows. With no error among the labels:
 Between the two columns some zones are cleared and some are not: the interval's upper end moves in steps of one window
 of the zone.
 
-**A second reading.** `--also-accept FILE` takes JSON `{"<predicted class>": [<reference classes also accepted>]}`, such
+**A second reading.** In the spirit of fuzzy accuracy assessment's acceptable classes (Gopal and Woodcock 1994),
+`--also-accept FILE` takes JSON `{"<predicted class>": [<reference classes also accepted>]}`, such
 as a lenient crosswalk between the map's legend and the reference's: `{"3": [4]}` also accepts reference class 4 in a
 window mapped as 3. Write the file before any label is read, as you choose alpha. Every class then gets a second
 interval and verdict from the same labels (`also_accept` in its row), under which a window is wrong only when its
@@ -655,8 +693,9 @@ with it; the audit design also refuses both zone options together, a share outsi
 that no window reaches, `--condition`, `--other`, `--threshold` and the sequential design's options. `estimate` on an
 audit sample refuses `--per-class`, `--scores`, `--confidence`, `--nodata` and the reviewer rates, rows other than those
 the design drew, an edited `map_class`, a blank, negative or non-whole `reference_class` and a malformed `--also-accept`
-file; on any other sample it refuses `--alpha` and `--also-accept`. The MCP server does not read an audit sample or its
-result in this version; it refuses both and names the command to run.
+file; on any other sample it refuses `--alpha`, and reads `--also-accept` as a second reading of the whole map
+([sample and estimate](#sample-and-estimate)). The MCP server does not read an audit sample or its result in this
+version; it refuses both and names the command to run.
 
 **In Python.** `estimate.sample_class_audit(margin, map_class, per_class, valid=None, share=None, cut=None, seed=0)`
 draws the sample from assess's per-window `confidence` and `pooled_argmax`;
@@ -769,6 +808,33 @@ confident share of the map. It adds `by_condition`, `delta_per_condition`, `n_co
 not written, and a stale one is removed, when nothing is certified. `--delta` keeps its meaning: the probability that
 any of the statements is wrong.
 
+**A second reading.** `certify --also-accept FILE` certifies from the same labels a second time, with the windows
+the file accepts counted right, on each route: one look, per input condition and sequential. It reads the file, the
+`reference_class` column and the map's class as `estimate` does ([sample and estimate](#sample-and-estimate)), with
+the same refusals, and refuses an audit sample and a sample of two maps' differing windows whole, as before.
+
+```bash
+oe-inferencex certify random.csv --alpha 0.05 --also-accept pairs.json   # pairs.json written before any label
+```
+
+The strict result, its printed lines and its mask are those written without the option. The JSON gains
+`also_accept` (`source`, `pairs`, `errors_accepted`, `n_accepted`, and the second reading's `coverage`, `n_zone`,
+`threshold`, `upper_bound`, tie counts, `levels` and `note`, or per condition `certified_share_of_map`, `n_certified`
+and `per_condition`, with its `zone_mask`), `also_accept_unused` and `reading_note`; what does not depend on the labels
+(the rule, α, δ, the population, the levels tested, the anchor, δ per condition) is the strict result's and is not
+repeated. The second mask is written beside the strict one as `<sample>_zone_also_accept.npy` when the second reading
+certifies something; otherwise a stale one is removed, with or without the option. A `?` window counts as wrong in
+both readings. Both run at the same α and δ: if the file was fixed before any label was read, each certificate fails
+on at most δ of samples for its own definition of an error, and the chance that either is wrong is at most 2δ, twice
+δ, by the union bound; on a sequential sample at every look, with the same file at every look. A window the second
+reading accepts is not an error under it, so it counts no more errors at any level, and on every draw its zone holds
+the strict one: it can be larger, and it can certify where the strict reading certifies nothing. Its certificate says
+nothing about how often the windows it accepts are wrong under the strict reading. A file written after the labels
+were seen can be fitted to them, and then neither certificate holds. tests/test_also_accept.py checks both readings,
+and either, on every error pattern of a small map, and that the union bound is needed: on one, either is wrong more
+often than δ. `sample --extend` keeps a `reference_class` column the reviewer added to a sequential sample, after
+`wrong`, blank on the new rows.
+
 ### plan
 
 `plan` says, before any label is drawn, how many labels a question needs. For each budget on a ladder (10, 12, 15,
@@ -819,13 +885,13 @@ wrote to_label_estimate_decisions.json
 
 | Question | Answers | Read from | Rule |
 |---|---|---|---|
-| `error_rate_below=T` | yes, no, undetermined | `estimate` | the 95% interval lies below T, at or above T, or across it |
+| `error_rate_below=T` | yes, no, undetermined | `estimate` | the 95% interval lies below T, at or above T, or across it; with `--also-accept`, the second reading's answer beside it, whole map and per condition |
 | `error_rate_below=T` | the same, per class | `estimate` on a sample drawn with `--design audit` | each class's exact interval on its confident zone's error rate; with `--also-accept`, the second reading's answer beside it |
 | `user_accuracy_above=T`, `producer_accuracy_above=T` | the same, per class | `estimate --per-class` | each class's interval; per-class intervals are nominal |
 | `more_accurate` | a, b, undetermined | `estimate` on a sample drawn with `--other` | the exact sign test names a map, while the labels are at most a fifth of the differing windows; above, the interval on the difference excludes 0 |
 | `more_accurate` | a, b, tie, undetermined | `compare --labels` | a count against the labels raster, taken as truth; undetermined unless every differing window carries a label |
-| `trusted_share` | a share of the map | `certify` | the certified share; 0 when nothing is certified |
-| `trusted_share_at_least=S` | yes, undetermined | `certify` | never no: a larger sample can certify more where the map's error rate is at most alpha (a second test when this run could certify something: up to twice delta for the two together) |
+| `trusted_share` | a share of the map | `certify` | the certified share; 0 when nothing is certified; with `--also-accept`, the second reading's beside it |
+| `trusted_share_at_least=S` | yes, undetermined | `certify` | never no: a larger sample can certify more where the map's error rate is at most alpha (a second test when this run could certify something: up to twice delta for the two together); with `--also-accept`, the second reading's answer beside it |
 | `share_differs` | a share of the windows | `compare`, or `estimate` on a sample drawn with `--other` | no labels needed; says nothing about which map is right |
 
 T and S are shares between 0 and 1. "undetermined" means the result does not settle the question; it is not a no. A
@@ -938,6 +1004,10 @@ numbers and the same refusals. The tool names are unchanged; each tool's title s
   passed with `logits=true`; for those, whose review sets tie, its conclusion says the order is not evidence.
 - **A refusal.** A tool error carrying the package's own message, with each command-line option it names written as
   the tool parameter (`--labels-date` becomes `labels_date`).
+- **What it does not read in this version.** A per-class audit (`sample --design audit`) and a second reading of the
+  same labels (`estimate` or `certify` with `--also-accept`): their replies would state a second test, and no agent
+  has been tested on such replies. The `estimate` and `certify` tools take no such parameter, and `decide` refuses
+  such a result and names the command to run.
 
 **Example questions**, on the test map that `examples/quickstart_map.py` writes (`scores.tif`, `other.tif`
 and `truth.tif`), each with the tools it uses and what the answer can and cannot be:
@@ -1065,7 +1135,8 @@ summary(out)                                # the JSON-safe view, no arrays
 ```python
 import numpy as np
 from oe_inferencex.assess import assess_prediction
-from oe_inferencex.estimate import certify_zone, estimate_error_rate, estimate_per_class, sample_for_estimation
+from oe_inferencex.estimate import (also_accept_reading, certify_zone, estimate_error_rate, estimate_per_class,
+                                    sample_for_estimation)
 
 out = assess_prediction(scores, is_logit=True)
 margin, valid = out["arrays"]["confidence"], out["arrays"]["valid"]
@@ -1076,6 +1147,8 @@ s = sample_for_estimation(margin, 300, design="random", valid=valid)   # design=
 estimate_error_rate(s, wrong)                                         # estimate, low, high, method
 estimate_per_class(s, reference, map_class)                           # per_class, confusion_counts, overall_accuracy
 certify_zone(margin.ravel(), s["indices"], wrong, alpha=0.05, valid=valid.ravel())   # random samples only
+alt = also_accept_reading(wrong, map_class[s["indices"]], reference, {"2": [3]})["wrong"]   # a second reading
+estimate_error_rate(s, alt)                                           # the same estimator, or certify_zone, on it
 ```
 
 With an input-condition layer:

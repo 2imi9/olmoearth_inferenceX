@@ -13,7 +13,8 @@ A question that a kind of result cannot answer at all is refused (ValueError): w
 made without labels, has no answer to give, not an undetermined one.
 
     question                   answers                    read from
-    error_rate_below=T         yes / no / undetermined    estimate: the interval lies below T / at or above T / across it
+    error_rate_below=T         yes / no / undetermined    estimate: the interval lies below T / at or above T / across it;
+                                                          with also_accept, a second reading's answer beside it
                                                           estimate on a sample drawn with design audit: the same, for
                                                           each predicted class's confident zone, and for a second
                                                           reading (also_accept) beside it
@@ -23,11 +24,13 @@ made without labels, has no answer to give, not an undetermined one.
                                a / b / tie / undetermined compare with labels: a count on the differing windows, the
                                                           labels taken as truth; undetermined unless every differing
                                                           window carries a label
-    trusted_share              a share of the map         certify: the certified share, 0 when nothing is certified
+    trusted_share              a share of the map         certify: the certified share, 0 when nothing is certified;
+                                                          with also_accept, a second reading's beside it
     trusted_share_at_least=S   yes / undetermined         certify: never "no", since a share not certified from these
                                                           labels can be certified from a larger sample where the map is
                                                           good enough (a second test when this run could certify
-                                                          something: up to twice delta for the two together)
+                                                          something: up to twice delta for the two together); with
+                                                          also_accept, a second reading's answer beside it
     share_differs              a share of the windows     compare, or estimate on a sample drawn with other; no labels
 
 T and S are shares from 0 to 1. A result with input conditions gives the whole map's answer and each condition's.
@@ -101,6 +104,33 @@ def certificate_second_look(delta, tested=True):
             "(with another delta, the sum of the two). To keep delta, choose the budget before any labelling and "
             "certify once, or draw the new sample as a sequential one (sample --design sequential), which can be "
             "added to and certified at every look.")
+
+
+# A second reading of the same labels (--also-accept: the audit's in 1.11.0, estimate's and certify's on 13 October
+# 2026) is a second test on them, so a new sample read both ways makes four tests on two samples, not the two the
+# sentences above count (the review of 13 October 2026).
+def readings_joint(exact=True):
+    """What the strict interval and the second reading's hold together, if the file was fixed before any label was
+    read: at least 90% when both are exact; when either is nominal, only that the chances add up."""
+    if exact:
+        return "the two intervals hold together at least 90% of the time (a union bound)"
+    return ("the chances that either interval misses add up (a union bound); each is nominal here, so the two hold "
+            "together a nominal 90% of the time, not a guaranteed one")
+
+
+def readings_second_look(delta=None, exact=True):
+    """After a second-look sentence on a result that holds a second reading: the new sample read both ways. `delta`
+    for certificates; without it, intervals, `exact` as for interval_second_look."""
+    if delta is not None:
+        four = 4 * float(delta)
+        reach = f"{_pc(four)}, four times delta" if four < 1 else "100%"
+        return ("Read both ways, as this one is, a new sample makes four certificates on two samples: the chance that "
+                f"one of them is wrong can reach {reach}.")
+    if exact:
+        return ("Read both ways, as this one is, a new sample makes four intervals on two samples: the chance that one "
+                "of them misses can reach 20%.")
+    return ("Read both ways, as this one is, a new sample makes four intervals on two samples, and the chances that "
+            "any of them misses add up.")
 
 
 def kind(result):
@@ -206,11 +236,37 @@ def _answer_error_rate_below(r, t):
     why = " ".join([why, _labels_clause(r), *_warned(r)])
     ev = {k: r.get(k) for k in ("estimate", "estimate_range", "low", "high", "n_labelled", "n_population",
                                 "n_unjudged", "design", "method", "reviewer_false_alarm", "reviewer_miss",
-                                "warning", "bounds_note", "population_note") if r.get(k) is not None}
-    out = {"type": "yes_no", "answer": a, "level": r.get("nominal_coverage", 0.95), "exact": exact, "because": why,
-           "evidence": ev}
+                                "warning", "bounds_note", "population_note", "also_accept", "reading_note")
+          if r.get(k) is not None}
+    # A second reading (estimate --also-accept): the answer stays the strict reading's, and the second one goes beside
+    # it with its own interval, read by the same rule; its block carries its own method, so exact or nominal is read
+    # as for the strict interval, and the two hold together at least 90% only when both are exact (the review of 13
+    # October 2026: on a nominal design the sentence claimed 90% flatly). Its own warning is carried as the strict
+    # one is: with fewer errors, it is the reading likelier to have one.
+    alt = r.get("also_accept") if isinstance(r.get("also_accept"), dict) else None
+    level = r.get("nominal_coverage", 0.95)
+    if alt is not None:
+        a2, _, exact2 = _rate_below(alt, t)
+        why += ((" " if why.endswith(".") else ". ")
+                + f"Read a second time, also accepting the reference classes the also-accept file lists for each map "
+                f"class, the answer is {a2}: its interval is {_pc(alt['low'])} to {_pc(alt['high'])}. That is a second "
+                "test on the same labels: if the file was fixed before any label was read, "
+                + readings_joint(exact and exact2)
+                + "; a file written after the labels were seen can be fitted to them, and then neither answer has a "
+                "guarantee.")
+        if alt.get("warning") and alt["warning"] != r.get("warning"):
+            why += f" Warning (second reading): {str(alt['warning']).strip().rstrip('.')}."
+        if a == "undetermined":                       # _rate_below's second-look sentence counted two tests
+            why += " " + readings_second_look(exact=exact and exact2)
+    out = {"type": "yes_no", "answer": a, "level": level, "exact": exact, "because": why, "evidence": ev}
+    if alt is not None:
+        out["also_accept"] = {"answer": a2, "low": alt["low"], "high": alt["high"], "level": level, "exact": exact2,
+                              "pairs": alt.get("pairs")}
+        if alt.get("warning"):
+            out["also_accept"]["warning"] = alt["warning"]
     if r.get("per_condition"):
         out["per_condition"] = {}
+        joint = True                                  # every condition's two intervals exact
         for name, row in r["per_condition"].items():
             if row.get("low") is None or row.get("high") is None:
                 out["per_condition"][name] = {"answer": "undetermined", "because": "no interval for this condition"}
@@ -222,10 +278,21 @@ def _answer_error_rate_below(r, t):
                                                           "can be said about it; a sample that puts labels in it is "
                                                           "its first test.")}
                 continue
-            ca, cwhy, _ = _rate_below(row, t, f"condition {name}")
+            ca, cwhy, cexact = _rate_below(row, t, f"condition {name}")
             out["per_condition"][name] = {"answer": ca, "because": cwhy, "low": row["low"], "high": row["high"]}
+            arow = ((alt or {}).get("per_condition") or {}).get(name)
+            if arow and arow.get("low") is not None and arow.get("high") is not None:
+                ca2, _, cexact2 = _rate_below(arow, t)
+                joint = joint and cexact and cexact2
+                out["per_condition"][name]["also_accept"] = {"answer": ca2, "low": arow["low"], "high": arow["high"],
+                                                             "exact": cexact2}
+                if ca == "undetermined":
+                    out["per_condition"][name]["because"] += " " + readings_second_look(exact=cexact and cexact2)
         out["because"] += (" Each input condition has its own answer, which can differ from the whole map's. "
                            + SEPARATE)
+        if alt is not None:
+            out["because"] += (" Each condition's second answer, beside its first, is read the same way: if the file "
+                               f"was fixed first, {readings_joint(joint)}.")
     return out
 
 
@@ -312,6 +379,8 @@ def _answer_class_audit(r, t):
                     "lower end and as wrong at its upper end.")
     if counts["undetermined"]:
         said.append(interval_second_look(True))
+        if any("also_accept" in v for v in per.values()):   # four tests, not two (readings_second_look)
+            said.append(readings_second_look(exact=True))
     said.append(_labels_clause(r))
     if r.get("population_note"):
         said.append(str(r["population_note"]).strip())
@@ -461,11 +530,36 @@ def _answer_trusted(r, share=None):
         tail += " " + str(r["bounds_note"]).strip()
     if r.get("population_note"):
         tail += " " + str(r["population_note"]).strip()
+    # A second reading (certify --also-accept): the answer stays the strict certificate's, and the second goes beside it
+    alt = r.get("also_accept") if isinstance(r.get("also_accept"), dict) else None
+    if alt is not None:
+        if by_cond:
+            cov2 = float(alt.get("certified_share_of_map") or 0.0)
+        else:
+            cov2 = alt["n_zone"] / r["n_population"] if alt.get("n_zone") else 0.0
+        twice = 2 * delta
+        either = f"{_pc(twice)}, twice delta" if twice < 1 else "100%"      # as certificate_second_look caps it
+        # the bounds note the tail may end with is written without a full stop
+        tail += ((" " if tail.endswith(".") else ". ")
+                 + f"Read a second time, also accepting the reference classes the also-accept file lists for each map "
+                 f"class, {_pc(cov2)} of the map is certified at the same alpha and delta. Its zone can be larger than "
+                 "the strict one, and it says nothing about how often the windows it accepts are wrong under the strict "
+                 "reading. That is a second test on the same labels: if the file was fixed before any label was read, "
+                 f"the chance that either certificate is wrong is at most {either} (a union bound)"
+                 + (", at every look of this sequential sample, with the same file at every look" if seq else "")
+                 + "; a file written after the labels were seen can be fitted to them, and then neither certificate "
+                 "holds.")
+        # the answer below advises a new sample with certificate_second_look, which counts two tests
+        if tested and not seq and (cov == 0 if share is None else cov < share):
+            tail += " " + readings_second_look(delta)
     ev = {k: r.get(k) for k in ("alpha", "delta", "rule", "n_labelled", "n_population", "n_zone", "coverage",
                                 "threshold", "upper_bound", "min_labels_to_certify", "n_unjudged", "bounds_note",
-                                "population_note", "note", "anchor", "n_drawn") if r.get(k) is not None}
+                                "population_note", "note", "anchor", "n_drawn", "also_accept", "reading_note")
+          if r.get(k) is not None}
     if share is None:
         out = {"type": "score", "answer": cov, "level": 1 - delta, "exact": True, "because": why + tail, "evidence": ev}
+        if alt is not None:
+            out["also_accept"] = {"answer": cov2, "certified": cov2, "pairs": alt.get("pairs")}
     else:
         a = "yes" if cov >= share else "undetermined"
         if a == "undetermined" and seq:
@@ -481,13 +575,22 @@ def _answer_trusted(r, share=None):
         why += tail
         out = {"type": "yes_no", "answer": a, "level": 1 - delta, "exact": True, "because": why,
                "evidence": {**ev, "certified": cov}}
+        if alt is not None:
+            out["also_accept"] = {"answer": "yes" if cov2 >= share else "undetermined", "certified": cov2,
+                                  "pairs": alt.get("pairs")}
     if by_cond:
         out["per_condition"] = {}
-        for name, e in r["per_condition"].items():
+
+        def share_of(e):
             got = e["n_zone"] / e["n_population"] if e.get("n_zone") and e.get("n_population") else None
-            out["per_condition"][name] = {"certified_share_of_condition": got if got is not None else
-                                          (0.0 if e.get("tested") else None),
+            return got if got is not None else (0.0 if e.get("tested") else None)
+
+        for name, e in r["per_condition"].items():
+            out["per_condition"][name] = {"certified_share_of_condition": share_of(e),
                                           "tested": e.get("tested"), "reason": e.get("reason")}
+            e2 = ((alt or {}).get("per_condition") or {}).get(name)
+            if e2 is not None:
+                out["per_condition"][name]["also_accept"] = {"certified_share_of_condition": share_of(e2)}
         out["because"] += " Each input condition is certified on its own; the share is of the whole map."
     return out
 

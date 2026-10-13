@@ -23,7 +23,7 @@
 \newcommand{\code}[1]{\texttt{#1}}
 
 \title{\pkg: confidence-based review, comparison and accuracy estimation for Earth-observation classification maps\\[6pt]
-\large Technical report, version 1.11.0}
+\large Technical report, version 1.12.0}
 \author{Ziming Qi\\[2pt] \small \url{https://github.com/2imi9/olmoearth_inferenceX}\\[-1pt]
 \small \url{https://olmoearth-inferencex.readthedocs.io}}
 \date{7 October 2026}
@@ -108,7 +108,8 @@ classification \citep{chow1970,geifman2017,geifman2019}, softmax confidence as t
 measures are \citet{rottmann2020} and \citet{meyer2021}. The estimators follow design-based map-accuracy practice
 \citep{olofsson2014,stehman2019}, with the cluster-sampling correction of \citet{stehman1997}; stratifying a classifier's
 evaluation sample by its confidence was proposed by \citet{kumar2016}, and prediction-powered inference
-\citep{angelopoulos2023ppi}, including a design-based spatial form \citep{shirota2026}, addresses the same estimation
+\citep{angelopoulos2023ppi}, including a design-based spatial form \citep{shirota2026} and applications to
+remote-sensing maps \citep{lu2024regression}, addresses the same estimation
 task. The certified zone follows risk control by exact tests \citep{bates2021,angelopoulos2021}. Disagreement maps
 between land-cover products \citep{fritz2008} and paired accuracy tests on a shared sample \citep{foody2004} precede the
 comparison of two maps, and the bounds for a reviewer who errs are the partially identified form of the correction of
@@ -353,7 +354,8 @@ predicted class's part of it, labelling a class in full when its part holds $N$ 
 class's zone error rate with its exact hypergeometric interval, \code{?} bounded both ways, and with a stated $\alpha$ a
 verdict per class (below, at least $\alpha$, or undetermined). Each interval is its own 95\% statement; the intervals do
 not hold jointly. \code{-{}-also-accept} reads the same labels a second time with listed reference classes also accepted,
-such as a lenient crosswalk, and notes a class whose errors lie on the accepted pairs: a legend difference, not
+such as a lenient crosswalk (the acceptable classes of fuzzy accuracy assessment, \citealp{gopal1994}); since version
+1.12.0 \code{estimate} and \code{certify} take the same reading for the whole map, each condition and the certified zone, and notes a class whose errors lie on the accepted pairs: a legend difference, not
 necessarily a model error. That reading is a second test on the same labels, valid only with the list fixed before any
 label is read (both readings hold together at least 90\% of the time, by the union bound). A small audit names a bad
 class but cannot clear a good one on a large zone: at $\alpha = 0.05$, \textit{below} needs at least 72 error-free labels
@@ -1055,7 +1057,8 @@ than its union-bound interval on five pairs, and is its verdict up to a fifth of
 \textbf{Certified zone.} The zone is risk control by exact tests in a fixed sequence \citep{bates2021,angelopoulos2021},
 and keeping the most confident part with a bounded error is selective classification \citep{geifman2017}, whose
 selection with guaranteed risk already bounds the selective risk with probability $1-\delta$, from labels treated as
-independent draws. The rule a reviewer would use without a test, the largest zone whose sample error rate is at most
+independent draws; for land cover, conformal prediction gives per-pixel sets with marginal coverage
+\citep{valle2023}, not a bound on the error rate inside a zone. The rule a reviewer would use without a test, the largest zone whose sample error rate is at most
 $\alpha$, exceeded $\alpha$ on up to 0.557 of draws \claim{trust-zone-guarantee-holds}, and, at 300 labels and $\alpha$
 half the error rate, on more than $\delta$ of draws on 16 of 21 tasks \claim{plugin-zone-violates-on-most-tasks}. Li et
 al.\ (2026, IEEE TGRS, \nolinkurl{doi:10.1109/tgrs.2026.3661208}) applied conformal risk control to SAR flood maps. The
@@ -1237,7 +1240,7 @@ GPU types, and the work has a single author.
 \section{Software}
 \label{sec:software}
 
-\pkg{} is on PyPI as \code{olmoearth-inferencex} (Apache License 2.0); this report describes version 1.11.0.
+\pkg{} is on PyPI as \code{olmoearth-inferencex} (Apache License 2.0); this report describes version 1.12.0.
 Version 1.0.0 (17 September 2026) carried ranking, explanation, comparison and label-fitted fusion; 1.2.0 (22 September)
 added \code{sample} and \code{estimate}; 1.3.0 (24 September) added \code{certify}, per-class accuracy, dates in
 \code{compare} and the exact random-sample interval, and fixed the 33 findings of a second line-by-line review, each
@@ -1249,7 +1252,7 @@ the fixes of a bug hunt in which seven finders, one per module group, reported 6
 second agent reproduced 60; each fix has a test, and two reviews of the fixes found that no recorded number changed.
 1.8.0 added \code{plan} and the sequential certificate, 1.9.0 reading an OlmoEarth run directly, 1.10.0 the exact
 sign test as the verdict on which of two maps is more accurate, up to a fifth of the differing windows, and 1.11.0 the
-per-class audit of the confident calls.
+per-class audit of the confident calls, and 1.12.0 the same second reading for \code{estimate} and \code{certify}.
 Since 1.4.1 each release has been preceded by a review in several lenses (from 1.5.0: statistics, code, and documents
 with tests), whose findings were fixed with tests. For 1.7.0 the suite ran against the built wheel without the source
 tree on Python 3.11, 3.12 and 3.13 with the optional extras (1,392 passed each), on the declared minimum core
@@ -1265,7 +1268,7 @@ bit-exactly with the package's decisions on the suite's 17 single-label tasks \c
 
 \begin{sloppypar}
 Code, experiments, outputs (\code{exp/out/}), the claim ledger and this report are at
-\url{https://github.com/2imi9/olmoearth_inferenceX}: the package as released is at tag \code{v1.11.0}, and this report,
+\url{https://github.com/2imi9/olmoearth_inferenceX}: the package as released is at tag \code{v1.12.0}, and this report,
 with the documentation corrections made alongside it, is on the main branch after that tag. The Lean proofs and the
 experiments archived from the main branch on 10 October 2026, among them the agent trials exp86 and exp87 and their
 plans, are at tag \code{v1.9.0} (\url{https://github.com/2imi9/olmoearth_inferenceX/tree/v1.9.0}). Documentation is at

@@ -217,15 +217,20 @@ def test_certify_offers_only_the_rules_with_a_guarantee(labelled, tmp_path):
             main(["certify", csv_path, "--rule", "plugin", "--out", str(tmp_path / "p.json")])
 
 
-def test_estimate_refuses_the_audits_options_on_every_other_design(labelled, tmp_path):
-    """--alpha and --also-accept read a per-class audit (sample --design audit); on any other design they were options
-    that would be accepted and ignored."""
+def test_estimate_refuses_the_audits_alpha_on_every_other_design_and_reads_also_accept(labelled, tmp_path):
+    """--alpha reads a per-class audit (sample --design audit); on any other design it would be accepted and ignored.
+    --also-accept is read on every design since 13 October 2026: a second reading beside the strict result, which
+    stays as it was (tests/test_also_accept.py checks the numbers)."""
     design, csv_path = labelled
     pairs = tmp_path / "pairs.json"
     pairs.write_text('{"0": [1]}')
-    for extra in (["--alpha", "0.05"], ["--also-accept", str(pairs)]):
-        with pytest.raises(SystemExit, match="read a per-class audit"):
-            main(["estimate", csv_path, "--out", str(tmp_path / "e.json"), *extra])
+    with pytest.raises(SystemExit, match="--alpha reads a per-class audit"):
+        main(["estimate", csv_path, "--out", str(tmp_path / "e.json"), "--alpha", "0.05"])
+    assert main(["estimate", csv_path, "--out", str(tmp_path / "plain.json")]) == 0
+    assert main(["estimate", csv_path, "--out", str(tmp_path / "e.json"), "--also-accept", str(pairs)]) == 0
+    plain, r = _json(tmp_path / "plain.json"), _json(tmp_path / "e.json")
+    assert {k: v for k, v in r.items() if k not in ("also_accept", "also_accept_unused", "reading_note")} == plain
+    assert r["also_accept"]["high"] <= r["high"] or design in ("confidence", "proportional", "tiles")
 
 
 # ----------------------------------------------------------------------------- the per-class audit

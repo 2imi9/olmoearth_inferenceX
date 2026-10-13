@@ -1,5 +1,57 @@
 # Changelog
 
+## 1.12.0 (2026-10-13)
+
+**Prior art named, and the front page brought up to date.** The second reading (`--also-accept`) is the acceptable
+classes of fuzzy accuracy assessment (Gopal and Woodcock 1994), now cited in Usage, the white paper and
+docs/related_work.md, beside conformal prediction for land cover (Valle et al. 2023) and prediction-powered inference
+on remote-sensing maps (Lu et al. 2024), each checked against its publisher or arXiv record (a prior-art check of five
+organisations and a broad sweep, 13 October 2026, found no model-agnostic map-verification layer with these
+guarantees; the statistics underneath are established). The architecture figure names the better map by an exact test,
+adds the per-class audit and is one font step larger; the README fills the column with it and states its limits and
+evidence in general terms. docs/TECHNIQUES.md: "measured for the first time" now says "first measured in this record".
+
+**A second reading of the whole map and of the certified zone** (`estimate --also-accept FILE` and `certify
+--also-accept FILE` on every sample of one map). The audit's lenient crosswalk, JSON `{"<map class>": [<reference
+classes also accepted>]}` written before any label is read, now reaches the whole-map error rate and its interval, each
+condition's, and the certified zone: the same labels are read a second time with a window of map class c also right
+where its reference class is one the file lists for c, and the same estimator or zone rule runs on that reading (random,
+confidence, proportional, condition and tiles designs, and a sequential sample, read as random by `estimate` and by the
+sequential rule at every look by `certify`; one look, per condition and sequential). It needs a `reference_class` column
+beside `wrong`, and the map's class is recomputed from the map. The strict result is the one written without the option,
+byte for byte, and its printed lines come first; the result gains `also_accept` (the file, its pairs, `errors_accepted`,
+the strict errors it accepts by map class and reference class, and the second reading's interval, or its zone,
+per-condition rows and window mask, `<sample>_zone_also_accept.npy`), `also_accept_unused` and `reading_note`. The
+second reading is a second test on the same labels: with the file fixed before any label is read, each reading holds at
+its own level for its own definition of an error, an interval and its alternative hold together at least 90% of the time
+where both are exact (a union bound; the whole map's two and each condition's two), and only a nominal 90% where either
+is nominal (tiles, and the confidence and proportional designs when every window is judged), and the chance that either
+certificate is wrong is at most twice delta (at every look of a sequential sample, with the same file at every look); a
+file written after the labels were seen can be fitted to them, and then neither holds. The second reading counts no more
+errors than the strict one at any window, so its certified zone holds the strict one and can be larger, and it can
+certify where the strict reading certifies nothing; it says nothing about how often the windows it accepts are wrong
+under the strict reading. The result, the printed notes, `decide` (which keeps answering from the strict reading and
+carries the second answer beside it, whole map and per condition, with its exact flag, its level and its own warning,
+and the sentence on the union bound) and Usage say so. Where `decide` advises a new sample, it adds that the new sample
+read both ways makes four tests on two samples: up to four times delta for certificates, 20% for exact intervals; the
+audit's answer (1.11.0) said two and now says four as well. `sample --extend` now keeps a `reference_class` column the
+reviewer added to a sequential sample, after `wrong`, blank on the new rows; it used to drop it (a CSV without the
+column is extended as before, byte for byte). Refused with the option: no `reference_class` column, a blank, non-whole
+or negative one, a `?` in only one of `wrong` and `reference_class`, a row where `wrong` disagrees with whether
+`reference_class` differs from the map's class (which `--per-class` alone only notes), an edited `map_class`, a
+malformed or missing file, the file named as `--out`, and, on `estimate`, the reviewer rates, since a stated rate bounds
+the reviewer's errors for one definition of an error and the file changes it. `--alpha` stays audit-only; `--scores`,
+`--confidence` and `--nodata` are read with `--per-class` or `--also-accept`. The MCP server takes no such parameter in
+this version, its `estimate` refuses `scores`, `confidence` and `nodata` without `per_class` in the words it used
+before, naming no option it lacks, and its `decide` refuses such a result by name and points to the command line.
+Python: `estimate.also_accept_reading`. Tests (tests/test_also_accept.py): the reading and its refusals; both readings'
+coverage by exact enumeration on a random sample and on the condition design, the two together, and against an adversary
+marking `?` after seeing the truth; certify under both readings on every error pattern of a small map, each within
+delta, either within twice delta, the zones nested, and a pattern where either exceeds delta; the strict result, printed
+lines and masks unchanged byte for byte on every design and route; a map where only the second reading certifies, and
+the stale mask removed; `decide` carrying both, the nominal wording on the confidence and tiles designs, the second
+reading's warning and the four tests; `--extend` keeping the column; every refusal; the server's refusals.
+
 ## 1.11.0 (2026-10-13)
 
 **A per-class audit of a map's confident calls** (`sample --design audit --per-class N`, then `estimate --alpha A
