@@ -47,9 +47,10 @@ Use from an agent
 -----------------
 
 `oe-inferencex mcp` is a local MCP server; nothing is hosted. Add it to any MCP client as the command
+`uvx --from "olmoearth-inferencex[geo,mcp]" oe-inferencex mcp`, for example in Claude Code:
 
 ```bash
-uvx --from "olmoearth-inferencex[geo,mcp]" oe-inferencex mcp
+claude mcp add --scope user oe-inferencex -- uvx --from "olmoearth-inferencex[geo,mcp]" oe-inferencex mcp
 ```
 
 Use a capable model: in a pilot, smaller models dropped the limits the tools state. To try it, write the demo tile
