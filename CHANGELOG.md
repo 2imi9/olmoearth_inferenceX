@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.11.0 (2026-10-13)
 
 **A per-class audit of a map's confident calls** (`sample --design audit --per-class N`, then `estimate --alpha A
 [--also-accept FILE]`). `sample` fixes the confident zone from the map before any label (by default the top third of the

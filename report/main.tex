@@ -23,7 +23,7 @@
 \newcommand{\code}[1]{\texttt{#1}}
 
 \title{\pkg: confidence-based review, comparison and accuracy estimation for Earth-observation classification maps\\[6pt]
-\large Technical report, version 1.10.0}
+\large Technical report, version 1.11.0}
 \author{Ziming Qi\\[2pt] \small \url{https://github.com/2imi9/olmoearth_inferenceX}\\[-1pt]
 \small \url{https://olmoearth-inferencex.readthedocs.io}}
 \date{7 October 2026}
@@ -46,7 +46,8 @@ confidence ranked the map's errors with an AUROC of 0.849 at Ai2's expert-placed
 one-to-one crosswalk, 0.638 on 2017 imagery at the plots of an independent random sample around the area that had
 input, below the preregistered 0.70; the record's own fine-tune of the task on OlmoEarth v1.2 repeated both verdicts
 (0.814 and 0.642). That run changed the year, the place, the legend and the kind of point at once and cannot say which
-weakened the ranking. On a second task, Ai2's Forest Loss Driver model at a stratified sample of 689 Amazon alerts
+weakened the ranking; a report-only reading found most of its confident errors on one grass/shrub boundary that neither
+legend defines. On a second task, Ai2's Forest Loss Driver model at a stratified sample of 689 Amazon alerts
 MapBiomas Alerta published in 2026, the confidence ranked the disagreements at 0.770, at or above the bar of 0.70 on the point value
 (interval 0.682 to 0.855), except the confident confusions between the two labelled classes. On three published
 products, disagreement with a second product flagged their confident errors four to five times as often as their
@@ -341,6 +342,21 @@ include 0 when the test names a map. The switch at a fifth was chosen after exp1
 (Section~\ref{sec:res-whichmap}). The package does not give either map's accuracy, which needs a sample of all windows,
 it assumes the labels are right, and \code{certify} refuses this sample.
 
+\subsection{A per-class audit of the confident calls}
+\label{sec:audit}
+
+Since version 1.11.0, \code{sample -{}-design audit} fixes a confident zone from the map before any label (by default the
+top third of the valid windows by confidence, ties at the cut included) and draws $N$ windows at random from each
+predicted class's part of it, labelling a class in full when its part holds $N$ or fewer. \code{estimate} gives each
+class's zone error rate with its exact hypergeometric interval, \code{?} bounded both ways, and with a stated $\alpha$ a
+verdict per class (below, at least $\alpha$, or undetermined). Each interval is its own 95\% statement; the intervals do
+not hold jointly. \code{-{}-also-accept} reads the same labels a second time with listed reference classes also accepted,
+such as a lenient crosswalk, and notes a class whose errors lie on the accepted pairs: a legend difference, not
+necessarily a model error. That reading is a second test on the same labels, valid only with the list fixed before any
+label is read (both readings hold together at least 90\% of the time, by the union bound). A small audit names a bad
+class but cannot clear a good one on a large zone: at $\alpha = 0.05$, \textit{below} needs at least 72 error-free labels
+there. It names the class, not the windows.
+
 \subsection{Interfaces}
 \label{sec:interfaces}
 
@@ -451,12 +467,12 @@ analysts interpreting a simple random sample & LCMAP Reference Data Product v1.2
 Experiments state their predictions and falsification conditions before they run, in their scripts or, for many from
 exp48 on, in a preregistration page (\code{docs/plan}), with dated amendments; four early, exploratory scripts state
 none (exp01, exp18, exp19 and exp32), and results read afterwards are marked as not preregistered here and in the
-ledger. The repository holds 101 experiment scripts named \code{expNN\_*.py},
-covering 90 experiment numbers from exp01 to exp108. The ledger \code{docs/claims.yaml} holds 246 claims, each with a
-statement, status, artifacts and an executable check (two rest on no committed artifact and say so); 81 are supported, 86 measured, 33 mixed, 44 rejected and 2
+ledger. The repository holds 102 experiment scripts named \code{expNN\_*.py},
+covering 91 experiment numbers from exp01 to exp109. The ledger \code{docs/claims.yaml} holds 247 claims, each with a
+statement, status, artifacts and an executable check (two rest on no committed artifact and say so); 81 are supported, 87 measured, 33 mixed, 44 rejected and 2
 superseded, and \code{scripts/claims.py stale} flags only the two superseded ones. After an audit on 23 September 2026
-found that 138 of the then 167 checks read a result back from its own artifact, second routes were added: 109 of the
-246 claims name a \code{crosscheck} test that reaches the number by another route, and every claim from exp79 on must
+found that 138 of the then 167 checks read a result back from its own artifact, second routes were added: 110 of the
+247 claims name a \code{crosscheck} test that reaches the number by another route, and every claim from exp79 on must
 name one.
 
 Corrected results appear in their current form. exp78's cluster-corrected arm is now the ratio estimator, which
@@ -621,6 +637,19 @@ meets the bar on its point value, but its interval contains 0.70, as v1's did, s
 difference between the models \claim{exp103-v12-transfer-ranking-misses-under-strict}. The two models share the task,
 the labels, the region and the recipe, so this replicates the findings across model versions; it is not an independent
 test of the shift.
+
+A report-only reading of the same plots (exp109, not preregistered, on plots already examined) located the confident
+errors. The confident third of each map is wrong at 25.1\% (v1) and 24.9\% (v1.2) of its weight under STRICT and at 7.1\%
+and 2.4\% under LENIENT; 14 of v1's 20 and 20 of v1.2's 22 confident STRICT errors are wrong only under STRICT, and 11
+and 19 are one directional pair, shrubland/savanna where TimeSync says Open Grassland, a boundary neither legend
+defines. The confidence barely ranks those errors (AUROC 0.601 and 0.561) and ranks the LENIENT errors at 0.698 and
+0.741, while at Ai2's points it ranks the errors on the same boundary at 0.899 and 0.889, where they run mostly the
+other way. For v1 the loss from transfer and point placement (0.151) is larger than the legend's (0.060); for v1.2 the
+legend's (0.099) is larger than the other's (0.073) \claim{exp109-transfer-confident-errors-lie-on-one-contested-pair}.
+An exploratory comparison with CGLS-LC100's 2017 cover fractions, not committed, put the models' grass/shrub line at
+lower woody cover than TimeSync's but sorted none of the contested plots. A boundary on a continuum that neither legend
+defines, at a scale where the classes mix, is a question for the model and its legend, not one a verification layer
+answers.
 
 exp104 graded a second deployed model on a second task: Ai2's Forest Loss Driver model (ten drivers of a forest-loss
 event), run with Ai2's configuration and rslearn on windows centred on each alert, at a stratified sample of the alerts
@@ -966,7 +995,10 @@ record's own fine-tune of that task on OlmoEarth v1.2 (AUROC 0.638 and 0.642 und
 runs cannot say which change weakened it \claim{exp99-confidence-misses-the-ranking-bar-under-both-rules}
 \claim{exp103-v12-transfer-ranking-misses-under-strict}; the second model shares the first's task, labels, region and
 recipe, so it repeats the test rather than adding an independent one. At the same plots, under the one-to-one crosswalk, a
-perturbation step after confidence did not catch more errors \claim{exp101-shaking-does-not-help-under-transfer}. On a
+perturbation step after confidence did not catch more errors \claim{exp101-shaking-does-not-help-under-transfer}.
+Most of those confident errors lie on one grass/shrub boundary that neither legend defines, which no label-free reading
+in the record separates; the per-class audit of Section~\ref{sec:audit} can name such a class from a few labels but not
+its windows \claim{exp109-transfer-confident-errors-lie-on-one-contested-pair}. On a
 second task under a smaller shift, months
 after training inside the training region, the confidence of Ai2's Forest Loss Driver model ranked its disagreements
 with analysts' labels at an AUROC of 0.770, at or above the bar of 0.70 on the point value, though the 90\% interval,
@@ -1057,17 +1089,18 @@ takes no reviewer rate (Section~\ref{sec:zone}).
 
 \textbf{What is new.} The parts exist; this work joins them for classification maps from Earth-observation foundation
 models. The package reads a model's scores after the fact and loads no model. One tool ranks a map's windows for review,
-compares two maps, estimates the error rate, certifies a zone and names the more accurate of two maps by an exact
-test. It refuses some inputs that would void its intervals, such as a review set offered as a random
+compares two maps, estimates the error rate, certifies a zone, names the more accurate of two maps by an exact
+test and audits each class's confident calls. It refuses some inputs that would void its intervals, such as a review set offered as a random
 sample, though labels from the confident end of a map, or clustered by tile, pass its check. Beside it stands the record
-of Section~\ref{sec:protocol-ledger}: 101 experiment scripts covering 90 experiment numbers from exp01 to
-exp108, and 246 ledger claims, 244 of them checked against a committed artifact; the failed preregistered predictions
+of Section~\ref{sec:protocol-ledger}: 102 experiment scripts covering 91 experiment numbers from exp01 to
+exp109, and 247 ledger claims, 245 of them checked against a committed artifact; the failed preregistered predictions
 of exp77 to exp107 are listed in Table~\ref{tab:failed}. It reports failures beside successes: the ranking's miss in runs that changed the year,
 the place, the legend and the kind of point at once, the confident errors it does not find, the zone that often returns
 nothing at 300 labels, a which-map design that fell short of practice's z form on nearly equal pairs, and a reviewer
 model that did not help. Not yet run are an exact paired interval on a whole-map sample, selection with guaranteed risk
-on the same maps, map-class strata graded for class areas and per-class accuracy, a measurement of human reviewers' error rates, and the ranking
-under corruption or a real cloud.
+on the same maps, map-class strata graded for class areas and per-class accuracy, a measurement of human reviewers' error rates, the ranking
+under corruption or a real cloud, a blind test of a fine-tuned model moved to a new place, and an end-to-end test in which
+an AI agent evaluating maps with the tool is compared with one reading only a validation figure.
 
 \section{Negative results}
 \label{sec:neg}
@@ -1145,7 +1178,7 @@ an amendment made before any result, exp90 was not preregistered, exp100 applied
 exp102 trained a model, the predictions of exp92, exp93, exp94, exp96 (at its preregistered seed) and exp97 held,
 exp103's others held (its review prediction on the point value), exp104's two held (P1 on its point value, its interval
 containing 0.70), exp105's two held (P1 at its bar), exp106's P1 held (on 2 of 3 cells, one of the two blind),
-exp107's P2 held, and exp108 was report-only.}
+exp107's P2 held, and exp108 and exp109 were report-only.}
 \label{tab:failed}
 \end{table}
 
@@ -1202,7 +1235,7 @@ GPU types, and the work has a single author.
 \section{Software}
 \label{sec:software}
 
-\pkg{} is on PyPI as \code{olmoearth-inferencex} (Apache License 2.0); this report describes version 1.10.0.
+\pkg{} is on PyPI as \code{olmoearth-inferencex} (Apache License 2.0); this report describes version 1.11.0.
 Version 1.0.0 (17 September 2026) carried ranking, explanation, comparison and label-fitted fusion; 1.2.0 (22 September)
 added \code{sample} and \code{estimate}; 1.3.0 (24 September) added \code{certify}, per-class accuracy, dates in
 \code{compare} and the exact random-sample interval, and fixed the 33 findings of a second line-by-line review, each
@@ -1212,8 +1245,9 @@ prefix rule and the exact tie decision at a level; 1.4.1 rewrote the server's te
 where they differ; 1.7.0 added \code{decide}, published products as input (a class map with its confidence band) and
 the fixes of a bug hunt in which seven finders, one per module group, reported 64 bugs, each shown by a script, and a
 second agent reproduced 60; each fix has a test, and two reviews of the fixes found that no recorded number changed.
-1.8.0 added \code{plan} and the sequential certificate, 1.9.0 reading an OlmoEarth run directly, and 1.10.0 the exact
-sign test as the verdict on which of two maps is more accurate, up to a fifth of the differing windows.
+1.8.0 added \code{plan} and the sequential certificate, 1.9.0 reading an OlmoEarth run directly, 1.10.0 the exact
+sign test as the verdict on which of two maps is more accurate, up to a fifth of the differing windows, and 1.11.0 the
+per-class audit of the confident calls.
 Since 1.4.1 each release has been preceded by a review in several lenses (from 1.5.0: statistics, code, and documents
 with tests), whose findings were fixed with tests. For 1.7.0 the suite ran against the built wheel without the source
 tree on Python 3.11, 3.12 and 3.13 with the optional extras (1,392 passed each), on the declared minimum core
@@ -1229,7 +1263,7 @@ bit-exactly with the package's decisions on the suite's 17 single-label tasks \c
 
 \begin{sloppypar}
 Code, experiments, outputs (\code{exp/out/}), the claim ledger and this report are at
-\url{https://github.com/2imi9/olmoearth_inferenceX}: the package as released is at tag \code{v1.10.0}, and this report,
+\url{https://github.com/2imi9/olmoearth_inferenceX}: the package as released is at tag \code{v1.11.0}, and this report,
 with the documentation corrections made alongside it, is on the main branch after that tag. The Lean proofs and the
 experiments archived from the main branch on 10 October 2026, among them the agent trials exp86 and exp87 and their
 plans, are at tag \code{v1.9.0} (\url{https://github.com/2imi9/olmoearth_inferenceX/tree/v1.9.0}). Documentation is at
