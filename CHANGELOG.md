@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+**The MCP server's refusal on a two-map sample names only its own parameters.** Given per_class, scores, confidence,
+nodata or a reviewer rate on a sample drawn with other, `estimate` through the server returned the command's refusal,
+which since 1.11.0 names --alpha and --also-accept, options the server does not offer; it now refuses first, naming
+only the parameters it has. Test: tests/test_also_accept.py.
+
 ## 1.12.0 (2026-10-13)
 
 **Prior art named, and the front page brought up to date.** The second reading (`--also-accept`) is the acceptable

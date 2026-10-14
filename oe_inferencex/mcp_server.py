@@ -942,6 +942,11 @@ AUDIT_RESULT_NOT_SERVED = ("{path} is the result of a per-class audit, which thi
 ALSO_ACCEPT_RESULT_NOT_SERVED = ("{path} holds a second reading of the same labels (estimate or certify run with an "
                                  "also-accept file), which this server does not read in this version. Ask on the "
                                  "command line: oe-inferencex decide {path}.")
+# The command refuses these on a sample of the windows where two maps differ in a text that names --alpha and
+# --also-accept, which this server does not offer (since 1.11.0); it refuses them here first, naming only its parameters.
+ESTIMATE_TWO_MAPS_OPTIONS = ("estimate: a sample of the windows where two maps differ takes none of per_class, scores, "
+                             "confidence, nodata, reviewer_false_alarm and reviewer_miss; it compares the two maps from "
+                             "the reference_class column alone")
 ESTIMATE_MAP_OPTIONS = ("estimate: scores, confidence and nodata are read only with per_class; the error rate comes "
                         "from the CSV and its sidecar alone")
 
@@ -978,6 +983,9 @@ def estimate(
     design = cli._sidecar_design(path)
     if design == "audit":
         raise Refused(AUDIT_NOT_SERVED.format(path=path))
+    if design == "disagreement" and (per_class or reviewer_false_alarm or reviewer_miss
+                                     or any(v is not None for v in (scores, confidence, nodata))):
+        raise Refused(ESTIMATE_TWO_MAPS_OPTIONS)
     if design != "disagreement" and not per_class and any(v is not None for v in (scores, confidence, nodata)):
         # the command reads the map's options with --per-class or --also-accept, and its refusal names both; this
         # server has no also_accept parameter, so it refuses here first, in the words it gave before 13 October 2026

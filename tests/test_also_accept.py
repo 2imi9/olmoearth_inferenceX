@@ -802,6 +802,25 @@ def test_every_refusal(tmp_path, capsys):
         main(["certify", str(tmp_path / "a.csv"), "--alpha", "0.1", "--also-accept", pairs])
 
 
+@pytest.mark.skipif(importlib.util.find_spec("mcp") is None, reason="the mcp extra is not installed")
+def test_the_server_refuses_options_on_a_two_map_sample_in_its_own_words(tmp_path):
+    """The command's refusal on a two-map sample names --alpha and --also-accept, which the server does not offer; the
+    server refuses first, naming only parameters it has (the review of 13 October 2026)."""
+    from oe_inferencex import mcp_server
+    p, _ = _write_map(tmp_path)
+    np.save(tmp_path / "q.npy", np.roll(np.load(p), 1, axis=2))
+    d = str(tmp_path / "d.csv")
+    assert main(["sample", p, "--other", str(tmp_path / "q.npy"), "--budget", "20", "--patch", "1", "--out", d]) == 0
+    for given in ({"per_class": True}, {"scores": p}, {"confidence": p}, {"nodata": 0.0},
+                  {"reviewer_false_alarm": 0.05}, {"reviewer_miss": 0.05}):
+        with pytest.raises(mcp_server.Refused) as e:
+            mcp_server.estimate(sample_csv=d, **given)
+        said = mcp_server._mcp_words(str(e.value))
+        assert str(e.value) == mcp_server.ESTIMATE_TWO_MAPS_OPTIONS
+        assert "--" not in said and "alpha" not in said and "also" not in said
+        assert not os.path.exists(str(tmp_path / "d_estimate.json"))
+
+
 def test_the_help_and_the_docs_name_the_option():
     import argparse
     sub = next(a for a in cli.build_parser()._actions if isinstance(a, argparse._SubParsersAction))
