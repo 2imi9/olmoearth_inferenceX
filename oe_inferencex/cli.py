@@ -22,7 +22,7 @@ cut-off is named with --threshold; without it a map outside [0, 1] is refused ra
 from the raster's own value, NaN, or --nodata. Outputs are
 plain files the caller reads back: JSON summaries (assess.summary / compare's dict), CSVs of the review windows with
 pixel and map coordinates, and rasters on the window grid (patch x patch pixels per window) when the input was one.
-Nothing here narrates; the JSON is the evidence (docs/method/agent_integration.md).
+Nothing here narrates; the JSON is the evidence (docs/method/agent_integration.md in the research record).
 
 The confidence ranking compares every window with every other. A model run on an input combination it was not trained
 on can be confidently wrong there: on PASTIS a probe trained on radar plus optical and run on radar alone, as under

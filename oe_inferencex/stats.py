@@ -1,13 +1,13 @@
 """Cross-unit tests for signal comparisons. Pure numpy.
 
 The statistics settled in exp13 and used by every experiment after it
-(docs/method/protocol.md): exact sign tests on untied pairs, a sign-flip
-permutation test on mean differences, a spatial block bootstrap within a
-unit, a cluster bootstrap across tasks (exp21), and the one-vote-per-cluster
-sign test that the river-clustered analyses use (summary_transfer, exp28,
-exp30, exp31). Units are scenes or tiles; a "gain" is the reference signal's
-E-AURC minus the candidate's on the same unit, so positive favours the
-candidate.
+(docs/method/protocol.md in the research record): exact sign tests on untied
+pairs, a sign-flip permutation test on mean differences, a spatial block
+bootstrap within a unit, a cluster bootstrap across tasks (exp21), and the
+one-vote-per-cluster sign test that the river-clustered analyses use
+(summary_transfer, exp28, exp30, exp31). Units are scenes or tiles; a "gain"
+is the reference signal's E-AURC minus the candidate's on the same unit, so
+positive favours the candidate.
 """
 from math import comb
 

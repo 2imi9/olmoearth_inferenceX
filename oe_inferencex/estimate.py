@@ -1,9 +1,9 @@
 """How wrong is the map? A design-based error rate from a labelled sample, and which windows to label.
 
 The label-free layers rank windows for review and never say how wrong a map is, because that needs a reference.
-This module is what a reference costs, measured in exp78 on the seven segmentation tasks of Ai2's suite with
-every unit labelled so the intervals could be graded (docs/results/comparisons.md, exp78): label 300 windows
-drawn by a design and the error rate comes back with an interval that covers the truth on 0.93 to 0.96 of
+This module is what a reference costs, measured in exp78 on the seven segmentation tasks of Ai2's suite with every
+unit labelled so the intervals could be graded (the research record's docs/results/comparisons.md, exp78): label 300
+windows drawn by a design and the error rate comes back with an interval that covers the truth on 0.93 to 0.96 of
 draws, about +/-3 points on a clean map and +/-5 on a messy one.
 
 Three things a user needs, and one they must be stopped from doing.
@@ -25,9 +25,9 @@ Three things a user needs, and one they must be stopped from doing.
   labels a ratio estimator with its ultimate-cluster interval, beside the naive one so the difference is visible.
   That last is the weakest of the three and says so: as shipped, it covered 94.5% to 95.4% of the time on five of
   exp78's tasks, 84.3% on Sen1Floods11 and 68.5% on MADOS, the two where a tenth of the tiles hold most of the errors
-  (exp/out/exp78_shipped_tiles.json). Labelling 18 tiles of 16 windows and using the ordinary formula gave a "95%"
-  interval that covered on 0.51 to 0.78 of draws; that is exp78's practical finding and the reason this function
-  will not compute the naive interval alone.
+  (exp/out/exp78_shipped_tiles.json in the research record). Labelling 18 tiles of 16 windows and using the ordinary
+  formula gave a "95%" interval that covered on 0.51 to 0.78 of draws; that is exp78's practical finding and the
+  reason this function will not compute the naive interval alone.
 - `estimate_from_indices` is for windows labelled without a design. It treats them as a random sample after
   checking only that they do not look like a review list: the mean suspicion percentile of a random sample is 0.5,
   of the tool's own review set about 0.97, and labelling the review set then dividing gives two to six times the
@@ -48,7 +48,7 @@ Q_FLOOR = 0.02                    # the confidence design assumes no stratum is 
 MIN_TILES = 5                     # fewer tiles than this and a between-tile standard error is not an estimate
 # The coverage this warning quotes for "this interval" is the shipped design's (exp/exp78_shipped_tiles.py, artifact
 # exp/out/exp78_shipped_tiles.json); 1.3.1 quoted exp78's own design of exactly 18 tiles and a normal quantile.
-# tests/test_estimate.py reads the numbers back from the artifact.
+# The research record's tests/test_estimate.py reads the numbers back from the artifact.
 TILES_WARNING = ("labels taken tile by tile are not independent, and a map whose tiles differ in size is labelled "
                  "unevenly; the naive interval beside this one is what the ordinary formula says, and in exp78, with "
                  "18 tiles of 16 windows, it covered 51 to 78% of the time on six of seven tasks while claiming 95%. "
@@ -58,7 +58,7 @@ TILES_WARNING = ("labels taken tile by tile are not independent, and a map whose
 # What a whole-map number does not say when part of the map was read from other inputs (exp88). The first two
 # travel in the outputs of estimate_error_rate and certify_zone when no input condition is recorded; the others go
 # with the per-condition results. The numbers are exp88's (exp/out/exp88_summary.json) and its matched-head
-# follow-up's (exp/out/exp88_matched_head.json); tests/test_assess.py reads them back from there.
+# follow-up's (exp/out/exp88_matched_head.json); the research record's tests/test_assess.py reads them back from there.
 SCOPE_ESTIMATE = ("This is the error rate of the whole map. If part of the map was predicted from other inputs, that "
                   "part's rate can differ widely from it. On a PASTIS map with half its tiles read without the optical "
                   "input by a probe trained on radar plus optical, that half's rate was 74.1% against 19.7% on the "
@@ -459,12 +459,12 @@ def neyman_allocation(sizes, spread, budget, floor=MIN_PER_STRATUM):
     asked for more units than it has.
 
     The continuous allocation n_h = B N_h S_h / sum N_h S_h minimises the stratified variance exactly (a Lagrange
-    condition, docs/method/protocol.md). This integer version floors it and hands the remainder to the strata
-    with the most units left, which is what exp78 ran. Its cost, measured rather than guessed: on tiny cases the
-    variance lands 1.3 to 2.3% above the best integer allocation (tests/test_estimate_exact.py); on exp78's
-    real strata at the record's budget of 300 it is 0.1 to 0.5% above the continuous optimum (MADOS 0.47%,
-    PASTIS S2 0.22%, m-cashew-plant 0.11%) and half that at 1,000. Kept as run so exp78's recorded numbers stay
-    the package's output."""
+    condition, the research record's docs/method/protocol.md). This integer version floors it and hands the
+    remainder to the strata with the most units left, which is what exp78 ran. Its cost, measured rather than
+    guessed: on tiny cases the variance lands 1.3 to 2.3% above the best integer allocation
+    (tests/test_estimate_exact.py); on exp78's real strata at the record's budget of 300 it is 0.1 to 0.5% above the
+    continuous optimum (MADOS 0.47%, PASTIS S2 0.22%, m-cashew-plant 0.11%) and half that at 1,000. Kept as run so
+    exp78's recorded numbers stay the package's output."""
     sizes = np.asarray(sizes, int)
     need = int(np.minimum(sizes, floor).sum())
     if budget < need:
@@ -1176,7 +1176,7 @@ def review_set_threshold(n, N=None):
     the suspect end. With ties ranked in a random order the percentiles are uniform again, and the mean separates
     them (a random sample 0.50, a review set inside a 60% block about 0.70), which the verification of the second
     review found the median did not. On exp78's units the review set and the confidence design's own sample are
-    still refused, and two hundred random draws pass (tests/test_estimate.py)."""
+    still refused, and two hundred random draws pass (the research record's tests/test_estimate.py)."""
     n = max(int(n), 1)
     fpc = 1.0 if N is None or int(N) <= 1 else max(int(N) - n, 0) / (int(N) - 1)
     return min(0.95, 0.5 + REVIEW_SET_SIGMAS * np.sqrt(1.0 / 12.0) * np.sqrt(fpc / n))

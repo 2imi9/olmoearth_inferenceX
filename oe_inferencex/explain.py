@@ -2,11 +2,11 @@
 
 Error ranking (assess.py) says which windows to review; this layer says why,
 in structured form, for the caller to narrate (docs/plan/roadmap.md,
-"Explanation layer"; docs/method/agent_integration.md). A cue is a fact about
-a window that can be checked without labels and whose share among error
-windows against correct windows has been measured on a reference. The cues
-that failed as rankers are the material: a cue that does not order errors can
-still explain them.
+"Explanation layer", and docs/method/agent_integration.md, both in the
+research record). A cue is a fact about a window that can be checked without
+labels and whose share among error windows against correct windows has been
+measured on a reference. The cues that failed as rankers are the material: a
+cue that does not order errors can still explain them.
 
 Enrichment is the only validation: share among errors against share among
 correct windows on expert labels where they exist, on reference disagreements
@@ -86,7 +86,8 @@ WC_DISAGREE_23 = "WorldCover disagreements vs agreements, the 24 rule scenes wit
 # The library. The expert-label shares are exp37's measurement on identical windows (Sen1Floods11 Bolivia, 81,984
 # valid windows, 7,248 errors of the exp18 head; exp/out/exp37_summary.json, part_b.analysis.cues); the boundary
 # shares equal exp36's boundary_share and exp18's 75% vs 21%. The reference-disagreement cues keep the numbers
-# their experiments recorded. tests/test_explain.py checks the expert-label shares against exp37's summary.
+# their experiments recorded. The research record's tests/test_explain.py checks the expert-label shares against
+# exp37's summary.
 CUES = {
     "boundary": Cue("boundary", "sits on a prediction boundary", 0.750, 0.214, BOLIVIA, "exp18, exp36, exp37",
                     verified=EXP82_BOUNDARY),

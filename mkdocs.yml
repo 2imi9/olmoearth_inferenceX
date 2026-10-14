@@ -7,20 +7,16 @@ edit_uri: edit/main/docs/
 
 # --strict on its own does not catch a link to an anchor that does not exist: mkdocs logs that at INFO and the
 # build stays green. Raising it to a warning is what makes the docs job of .github/workflows/check.yml able to
-# fail, which is how TECHNIQUES.md's link to exp77 came to point at its own page.
+# fail.
 validation:
   anchors: warn
   unrecognized_links: warn
 
 docs_dir: docs
 exclude_docs: |
-  figures/*.py
-  figures/tikz/
   __pycache__/
   requirements.txt
-  gen_pages.py
   gen_api.py
-  hooks.py
 
 theme:
   name: material
@@ -53,41 +49,40 @@ theme:
         icon: material/weather-sunny
         name: Switch to light mode
 
-# Top-level entries with children become the tabs; the first page of a section is its landing page (section-index).
+# Top-level entries become the tabs; the first page of a section is its landing page (section-index). The evidence
+# pages, the lab log and the technical report moved to the research record on 14 October 2026; the last tab links
+# there.
 nav:
-  - Home:
-      - index.md
-      - Summary: Summary.md
-      - Findings: Findings.md
-      - Recipe: method/recipe.md
-      - Related work: related_work.md
-  - Usage:
-      - Usage.md
-      - Agent integration: method/agent_integration.md
-      - Task cards: method/taskcards.md
-      - Infrastructure: method/infrastructure.md
-  - Evidence:
-      - Technique ledger: TECHNIQUES.md
-      - Explanation: results/explanation.md
-      - Signals: results/signals.md
-      - Comparisons: results/comparisons.md
-      - Test sets: testbeds.md
-      - Lab log: LabLog.md
-  - Protocol:
-      - method/protocol.md
-      - Claim ledger: method/claims.md
-      - Preregistrations and decisions: plan/index.md
+  - Home: index.md
+  - Usage: Usage.md
   - API Reference: reference/
-
-hooks:
-  - docs/hooks.py
+  - Research record: https://github.com/2imi9/olmoearth_inferenceX-record
 
 plugins:
   - search
   - section-index
+  # The pages that moved to the research record, so that links to them (among them the Findings URL that
+  # `oe-inferencex demo` printed up to 1.12.1) land on the moved page instead of a 404.
+  - redirects:
+      redirect_maps:
+        Summary.md: https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/Summary.md
+        Findings.md: https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/Findings.md
+        method/recipe.md: https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/method/recipe.md
+        related_work.md: https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/related_work.md
+        method/agent_integration.md: https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/method/agent_integration.md
+        method/taskcards.md: https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/method/taskcards.md
+        method/infrastructure.md: https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/method/infrastructure.md
+        TECHNIQUES.md: https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/TECHNIQUES.md
+        results/explanation.md: https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/results/explanation.md
+        results/signals.md: https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/results/signals.md
+        results/comparisons.md: https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/results/comparisons.md
+        testbeds.md: https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/testbeds.md
+        method/protocol.md: https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/method/protocol.md
+        method/claims.md: https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/method/claims.md
+        plan/index.md: https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/plan/index.md
+        LabLog.md: https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/exp/NOTES.md
   - gen-files:
       scripts:
-        - docs/gen_pages.py
         - docs/gen_api.py
   - literate-nav:
       nav_file: SUMMARY.md

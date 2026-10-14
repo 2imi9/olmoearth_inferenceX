@@ -70,13 +70,14 @@ Tested on linear probes of sixteen encoders over the tasks of Ai2's embedding su
 products against six reference samples, and on two deployed OlmoEarth models. Within the data a model was trained
 for, its confidence ranks the map's errors well; after a move to a new place and year it ranked them below the
 preregistered bar, and most of its confident errors lay on one class boundary that the two legends draw differently.
-The [technical report](https://github.com/2imi9/olmoearth_inferenceX/blob/main/report/main.pdf) and the
-[documentation](https://olmoearth-inferencex.readthedocs.io/en/latest/Summary/) give every result and its limits.
+The [technical report](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/report/main.pdf) and the
+[research record](https://github.com/2imi9/olmoearth_inferenceX-record) give every result and its limits.
 
 Development and license
 -----------------------
 
-Clone the repository, then `uv sync` and `uv run pytest`; the experiments also need `uv sync --extra encoder --extra geo`.
+Clone the repository, then `uv sync` and `uv run pytest`. The experiments and the tests that check the recorded
+results against the released package are in the [research record](https://github.com/2imi9/olmoearth_inferenceX-record).
 Apache License 2.0 ([LICENSE](https://github.com/2imi9/olmoearth_inferenceX/blob/main/LICENSE));
 cite with [CITATION.cff](https://github.com/2imi9/olmoearth_inferenceX/blob/main/CITATION.cff);
 questions in [GitHub issues](https://github.com/2imi9/olmoearth_inferenceX/issues).

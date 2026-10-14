@@ -3,11 +3,11 @@
 By default it audits a real map: one tile of Dynamic World, a served global land-cover product this project had no hand
 in, with the probabilities it publishes about itself and the expert annotation of the same ground (Zenodo record
 4766508, CC BY 4.0). The tile was chosen by a rule written before any tile was looked at, the median tile by error
-capture among the fully annotated ones, so it is representative and not flattering (scripts/make_demo_sample.py).
-`--made-up` audits a small synthetic water map instead. Either way the map goes through the same code path as
-`oe-inferencex assess`, and because the truth is known the run can say how many of the map's errors the review set
-holds and draw a random pick of the same size beside it. One tile illustrates the tool; it is not the evidence. The
-evidence is in the documentation.
+capture among the fully annotated ones, so it is representative and not flattering (scripts/make_demo_sample.py in the
+research record). `--made-up` audits a small synthetic water map instead. Either way the map goes through the same code
+path as `oe-inferencex assess`, and because the truth is known the run can say how many of the map's errors the review
+set holds and draw a random pick of the same size beside it. One tile illustrates the tool; it is not the evidence. The
+evidence is in the research record.
 """
 import argparse
 import contextlib
@@ -243,7 +243,7 @@ window, each with the evidence measured for it on expert-labelled maps; the firs
 What it does not do. {sc["sure"]} It does not say
 how wrong a map is either: that needs a reference, as here. One map illustrates the tool; it is not the evidence. The
 evidence, on many maps with expert labels, is here:
-  https://olmoearth-inferencex.readthedocs.io/en/latest/Findings/#in-short
+  https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/Findings.md#in-short
 
 Next, run the real command on this sample, then on your own map (GeoTIFF or .npy; probabilities, or logits with
 --logits). How to get a score map out of a model: https://olmoearth-inferencex.readthedocs.io/en/latest/Usage/

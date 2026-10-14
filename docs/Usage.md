@@ -1,8 +1,9 @@
 # Usage
 
 This page describes the inputs the package accepts, the `oe-inferencex` commands and the Python functions behind
-them. The evidence for each method is in [Findings](Findings.md) and, per experiment, in
-[Comparisons](results/comparisons.md).
+them. The evidence for each method is in the research record's
+[Findings](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/Findings.md) and, per experiment, in its
+[Comparisons](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/results/comparisons.md).
 
 ## Installation
 
@@ -131,7 +132,7 @@ A map is a GeoTIFF or `.npy` array of the scores a model's classification head p
 probabilities or logits for a binary task, `(C, H, W)` per class otherwise. For a binary task logits are preferred,
 because probabilities tie where they saturate; pass `--logits` (`is_logit=True` in Python). For a map of more than
 two classes, pass probabilities to the command line: with `--logits` it ranks by the logit margin, and the package
-warns that one minus the top probability ranks errors better ([exp76](results/comparisons.md#which-confidence-which-statistic-which-aggregator-exp76));
+warns that one minus the top probability ranks errors better ([exp76](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/results/comparisons.md#which-confidence-which-statistic-which-aggregator-exp76));
 in Python, `form="top1"` reads logits that way. Other maps are accepted with restrictions.
 
 | Map | Accepted by |
@@ -151,7 +152,7 @@ oe-inferencex certify to_label.csv --alpha 0.10      # after the reviewer has fi
 
 The range matters. LCMAP writes provenance codes from 151 into `lcpconf`; read as confidences they would rank above
 every real one and sit at the top of any certified zone, where they are wrong more often than the rest
-([exp93](results/comparisons.md#the-certified-zone-on-a-published-product-exp93): 29.1% against 17.7%). Without
+([exp93](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/results/comparisons.md#the-certified-zone-on-a-published-product-exp93): 29.1% against 17.7%). Without
 `--confidence-range` the whole band is read and a note says so. With it, the pixels outside are left out of the
 population, so every rate and zone is about the rest: `estimate` and `certify` say how many were left out. The window's
 class is the majority of its pixels' classes and its confidence the mean of the band over them, as for scores;
@@ -174,7 +175,7 @@ was 73.6% wrong, and 59.8% of its errors were at least as confident as the typic
 against 6.0% with full input. A probe trained on radar alone was 28.4% wrong and ranked its errors with an AUROC of
 0.79, against 0.83 with full input; 3.9% of its errors reached the same threshold, which is set by the probe trained
 on both. OlmoEarth Large's share rose only from 5.7% to 12.8-13.8%
-([exp88](results/comparisons.md#when-a-modality-is-missing-does-the-confidence-fall-with-the-accuracy-exp88)). If a
+([exp88](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/results/comparisons.md#when-a-modality-is-missing-does-the-confidence-fall-with-the-accuracy-exp88)). If a
 model can run with an input missing, compare confidence only between windows read from the same inputs, unless the
 model was trained on that input combination. That exception was tested only for a separate probe trained on the
 remaining input, not for one model trained with modality dropout. Even a model trained on each input can be wrong more often under one
@@ -338,10 +339,10 @@ for errors was 0.59 for a probe trained on radar plus optical and run on radar a
 0.79 for a probe trained on radar alone (exp88). Which condition is more accurate needs labels.
 
 `--order boundary_first` reviews the windows on a class boundary first, then the interior, each by confidence; the
-[Recipe](method/recipe.md) states when to use it. `--reference labels.tif`, an integer class raster on the same grid,
+[Recipe](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/method/recipe.md) states when to use it. `--reference labels.tif`, an integer class raster on the same grid,
 adds `against_reference`: the error rate, the errors captured at each budget, the AURC beside the random and oracle
 baselines, and the caveat that another product's map used as a reference can flatter boundary-type signals
-([exp18](results/comparisons.md#dense-flood-masks-sen1floods11-exp18)).
+([exp18](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/results/comparisons.md#dense-flood-masks-sen1floods11-exp18)).
 
 ### compare
 
@@ -397,7 +398,6 @@ is then the size of the difference: wider than the test, it can include 0 when t
 and in a census, the interval names a map when it excludes 0. On nine product pairs at 100 labels the test named the
 better map 0.10 to 0.15 more often than the interval on five, and less often past a quarter to two fifths of the
 differing windows, since it ignores the finite population (exp107). The result's `verdict_rule` says which decided.
-<!-- claim:exp107-sign-test-on-the-tools-sample -->
 
 On the record's own maps (exp90: every pair of encoders run on the same units of each of the 24 tasks of Ai2's suite,
 2,514 pairs, with the full truth, 400 draws per pair; not preregistered; the maps are linear probes, not map products),
@@ -406,7 +406,6 @@ named it on 13%, analysed on the differing windows they happened to hold. A thir
 windows or fewer and were labelled in full; on the other 1,709 the rates were 43% against 11%, with median widths of
 8.5 against 18.9 points. The coverage was at least 95% on every pair up to the draws' noise, and a wrong map was named
 on at most 4% of a pair's draws. The maps differed on a median 21% of the windows.
-<!-- claim:exp90-which-map-few-labels -->
 
 ### sample and estimate
 
@@ -426,7 +425,7 @@ oe-inferencex estimate to_label.csv --per-class    # once a `reference_class` co
 pixels. **The reviewer sets `wrong` to 1 when `map_class` is not what is on the ground, and to 0 otherwise**;
 `estimate` grades that class, not the window's centre pixel. Where a window cannot be judged (cloud, a mixed window,
 too little detail), the reviewer writes `?` and keeps the row. The recorded experiments used 300 windows
-([exp78](results/comparisons.md#how-wrong-is-this-map-what-a-reviewers-labels-buy-exp78)).
+([exp78](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/results/comparisons.md#how-wrong-is-this-map-what-a-reviewers-labels-buy-exp78)).
 
 **Windows marked `?`.** `estimate` bounds them both ways: the interval's lower end counts every `?` as right and its
 upper end every `?` as wrong, and the estimate is the range between. The exact intervals move one way with the error
@@ -478,7 +477,7 @@ The tile design matches how reviewers often label, and its intervals can under-c
 the naive interval covered the true rate 51 to 78% of the time at a nominal 95%. The corrected interval, as `--design tiles`
 ships it, covered 94.5% to 95.4% on five tasks and fell short on Sen1Floods11 (84.3%) and MADOS (68.5%), where a tenth
 of the tiles hold most of the errors
-([exp78](results/comparisons.md#how-wrong-is-this-map-what-a-reviewers-labels-buy-exp78)). The warning `estimate`
+([exp78](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/results/comparisons.md#how-wrong-is-this-map-what-a-reviewers-labels-buy-exp78)). The warning `estimate`
 prints for a tiles sample quotes these numbers since 1.4.0; 1.3.1's quoted exp78's own design (an exact 18 tiles and a
 normal quantile). If labelling has not started, draw single windows rather than tiles. If only the whole-map rate is needed, `--design random` gives the
 exact interval and is the design `certify` needs.
@@ -743,7 +742,6 @@ It writes `random_zone.json` (`coverage`, the certified share; `threshold`, the 
   (exp96's audit). To keep δ, choose the budget first (`plan` helps) and certify once, or draw a sequential sample
   (below), whose certificate holds at every look. The same holds for `estimate`'s interval and the comparison of two
   maps: with a second sample read after the first, the chance that one of two 95% intervals misses can reach 10%.
-  <!-- claim:certify-guarantee-is-per-budget-not-per-look -->
 - The confidence is recomputed from the scores the sidecar names (`--scores` if the raster has moved) and checked
   against the CSV; another raster, or another `--nodata`, is refused.
 - Without a condition, the zone JSON gains `scope`: the zone's rate is certified over all its windows together, and
@@ -777,7 +775,6 @@ labels. On exp95's and exp96's 366 maps (exp97, preregistered) it kept the guara
 0.1175 at δ = 0.1), where `certify` rerun after every 5% more labels exceeded 0.175 on 132 maps; with the default
 anchor it needed a median 1.71 times the labels to reach half the largest mean certified share the one-look rule
 reaches, and on small maps at a low α it can certify nothing where the one-look rule certifies half the map.
-<!-- claim:exp97-sequential-certificate-costs-labels -->
 `estimate` reads the labelled rows as a random sample of their number; its interval assumes that number was fixed
 before labelling. `--rule` and `--level-cut` belong to the one-look rule and are refused
 here. The zone JSON has `rule: "sequential"`, the `anchor` and how it was fixed (`anchor_rule`), `n_drawn`, and per
@@ -1037,7 +1034,7 @@ holds the same teaching as a skill; for Claude Code, copy its folder into `~/.cl
 
 The commands wrap functions that take and return arrays. Each result is a dict whose arrays stay in `out["arrays"]`;
 `summary(out)` is the JSON-safe view that crosses a tool boundary under the
-[agent contract](method/agent_integration.md).
+[agent contract](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/method/agent_integration.md).
 
 ### Assess a prediction and explain the review set
 
@@ -1059,7 +1056,7 @@ why["quotes"]["ndwi_ambiguous"]             # "is spectrally ambiguous ... (48% 
 ```
 
 - `form="top1"` ranks a multi-class logit map by one minus the top probability; the default remains the logit margin,
-  with a warning on such maps ([exp76](results/comparisons.md#which-confidence-which-statistic-which-aggregator-exp76)).
+  with a warning on such maps ([exp76](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/results/comparisons.md#which-confidence-which-statistic-which-aggregator-exp76)).
   The command line has no such option: class probabilities passed without `--logits` are ranked by the window mean of
   the top probability, where `form="top1"` takes the window mean of its log.
 - `explain_review_set` derives the boundary and low-confidence cues itself. Other cues are boolean arrays of window
@@ -1076,12 +1073,16 @@ why["quotes"]["ndwi_ambiguous"]             # "is spectrally ambiguous ... (48% 
 
 ### Compare two inferences of the same scene
 
+The two examples below and the one under [Fuse the readings with labels](#fuse-the-readings-with-labels) read arrays
+that the [research record](https://github.com/2imi9/olmoearth_inferenceX-record) commits under `exp/out/`; they run
+from a checkout of it.
+
 ![The two-period, two-sensor square on one GEOID-Flood chip: four dated inputs, four inferences on identical windows, the same-date and same-sensor differences on the scene, and the label bridge boxed apart](figures/compare.png)
 
 *Four dated inputs of one GEOID-Flood chip read on identical windows, with the same-date and same-sensor differences;
 the labels are set apart
-([exp57](results/comparisons.md#the-difference-atlas-every-pair-of-inferences-under-one-measurement-exp57),
-[exp62](results/comparisons.md#the-fourth-cell-post-event-optical-from-worldfloods-completes-the-square-exp62)).*
+([exp57](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/results/comparisons.md#the-difference-atlas-every-pair-of-inferences-under-one-measurement-exp57),
+[exp62](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/results/comparisons.md#the-fourth-cell-post-event-optical-from-worldfloods-completes-the-square-exp62)).*
 
 ```python
 import numpy as np
@@ -1125,10 +1126,10 @@ summary(out)                                # the JSON-safe view, no arrays
 - `groups=` (an id per window) adds per-group rates and, with labels, `over_groups` of the net correction with a
   one-sided exact sign test; `stability` gives the pairwise phi of several disagreement masks.
 - Which side is right where two maps differ is not readable without labels; the module reports both
-  ([exp58](results/comparisons.md#is-the-comparison-tool-better-than-the-raw-diff-exp58)).
+  ([exp58](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/results/comparisons.md#is-the-comparison-tool-better-than-the-raw-diff-exp58)).
 - `determinism_check(a, b, ok, floor=0.03, margin_a=ma, margin_b=mb)` gates one input inferred under two engines or
   precisions against the reseed floor (2 to 4% in exp57), and `signals.crop_dependence` measures how much a decision
-  depends on the crop, for the [adaptive-encoder readiness](plan/vit3_readiness.md) gates.
+  depends on the crop, for the [adaptive-encoder readiness](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/plan/vit3_readiness.md) gates.
 
 ### Estimate the error rate
 
@@ -1180,7 +1181,7 @@ sample.
 Where labels exist, `oe_inferencex.calibrate` fits a ranker, P(error | readings), or a side rule, P(side b is right |
 readings), cross-fitted by group (tile, event) and reported held-out. Each fusion is bound to its model family and
 refuses another unless forced, because such rules do not transfer
-([exp59](results/comparisons.md#a-label-fitted-rule-for-which-side-to-believe-exp59)).
+([exp59](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/results/comparisons.md#a-label-fitted-rule-for-which-side-to-believe-exp59)).
 
 ```python
 import numpy as np
@@ -1199,7 +1200,7 @@ fusion.score(side_features(fa, fb), family="FT-S2 v1")            # ValueError: 
 
 On this pair most of the accuracy comes from the post-event side being usually right (`always_b`, 0.804).
 `fit_ranker(signals, errors, ok, groups=..., family=...)` fits the review ranking the same way
-([exp65](results/comparisons.md#calibrate-on-the-record-the-fused-readings-held-out-exp65)). Fusions serialise with
+([exp65](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/results/comparisons.md#calibrate-on-the-record-the-fused-readings-held-out-exp65)). Fusions serialise with
 `to_dict` and `from_dict`.
 
 ## Modules
@@ -1214,7 +1215,7 @@ On this pair most of the accuracy comes from the post-event side being usually r
 | `signals` | Confidence, the boundary indicator, tiling instability, NDWI cues, no-model controls, `crop_dependence` |
 | `metrics`, `stats` | AURC, capture, calibration error and their design-weighted forms; sign tests and bootstraps |
 | `reliability`, `evidence` | SHRUG-FM's reliability signals, torch-free; the heads a candidate rule is scored with |
-| `taskcard`, `lcc` | The [task cards](method/taskcards.md) of OlmoEarth's fine-tuned models; a reader for the served change rasters |
+| `taskcard`, `lcc` | The [task cards](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/method/taskcards.md) of OlmoEarth's fine-tuned models; a reader for the served change rasters |
 | `olmoearth` | An OlmoEarth run's rslearn dataset read into scores and an input-condition layer (`from-olmoearth`; rasterio) |
 | `decide` | Typed answers to set questions, read from a result that `estimate`, `certify` or `compare` wrote |
 | `plan` | How many labels each labelled route needs, budget by budget, before any label is drawn |
@@ -1223,46 +1224,47 @@ On this pair most of the accuracy comes from the post-event side being usually r
 
 ## Reproducing the experiments
 
-```bash
-uv sync                                    # the package only, no torch
-uv run pytest                              # the package against the recorded numbers
-uv sync --extra encoder --extra geo        # the experiment environment (Linux resolves the cu128 torch build)
-uv run python scripts/audit_one_scene.py   # one scene end to end
-```
-
-The experiments are the numbered scripts in [`exp/`](../exp/), with outputs under `exp/out/` and the chronology in the
-[lab log](../exp/NOTES.md); the experiments archived on 10 October 2026 are in the
-[v1.9.0 tree](https://github.com/2imi9/olmoearth_inferenceX/tree/v1.9.0/exp). [`scripts/`](../scripts/) holds named
-entry points, and cluster jobs follow [Infrastructure](method/infrastructure.md). A new rule is scored with `metrics`
-and `stats` under the [protocol](method/protocol.md). `suite_regression.py` screens a per-unit reading,
+The experiments, their committed outputs, the claim ledger and the technical report are in a separate repository,
+the [research record](https://github.com/2imi9/olmoearth_inferenceX-record), split from this one at release 1.12.1. Its tests check each recorded result
+against the released package from PyPI. The experiments are the numbered scripts in its
+[`exp/`](https://github.com/2imi9/olmoearth_inferenceX-record/tree/main/exp), with outputs under `exp/out/` and the chronology in the
+[lab log](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/exp/NOTES.md); the experiments archived on 10 October 2026 are in this repository's
+[v1.9.0 tree](https://github.com/2imi9/olmoearth_inferenceX/tree/v1.9.0/exp). Its
+[`scripts/`](https://github.com/2imi9/olmoearth_inferenceX-record/tree/main/scripts) holds named entry points, and cluster jobs follow
+[Infrastructure](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/method/infrastructure.md). A new rule is scored with `metrics` and `stats` under the
+[protocol](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/method/protocol.md). `suite_regression.py` screens a per-unit reading,
 `f(probs, emb_test, emb_train, decisions)` with higher meaning more suspect, on Ai2's published suite against exp74's
-bar; `--model <its directory>` grades a new encoder the same way.
+bar; `--model <its directory>` grades a new encoder the same way. In a checkout of the research record:
 
 ```bash
-HF_HOME=<cache> python scripts/suite_regression.py --model olmoearth_base --signal mypkg.readings:my_reading
-python scripts/upstream_revision.py check
+uv sync                                    # the released package and pytest, no torch
+uv run pytest                              # the recorded results against the released package
+uv sync --extra encoder                    # the experiment environment (Linux resolves the cu128 torch build)
+uv run python scripts/audit_one_scene.py   # one scene end to end
+HF_HOME=<cache> uv run python scripts/suite_regression.py --model olmoearth_base --signal mypkg.readings:my_reading
+uv run python scripts/upstream_revision.py check
 ```
 
 A reading that screens well enters the record only through a preregistered experiment. `upstream_revision.py check`
 exits non-zero if an upstream repository has moved from the commit the record was measured against
-([upstream_revisions.json](https://github.com/2imi9/olmoearth_inferenceX/blob/main/exp/out/upstream_revisions.json));
-until the difference is attributed, a run against moved files is not comparable with the record.
+([upstream_revisions.json](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/exp/out/upstream_revisions.json)); until the difference is attributed, a run against
+moved files is not comparable with the record.
 
 ### Scores from a public fine-tuned model
 
-OlmoEarth Studio returns map tiles and a point lookup, not per-class scores. [`scripts/score_area.py`](https://github.com/2imi9/olmoearth_inferenceX/blob/main/scripts/score_area.py)
+OlmoEarth Studio returns map tiles and a point lookup, not per-class scores. The research record's [`scripts/score_area.py`](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/scripts/score_area.py)
 produces the input this package takes by running Ai2's fine-tuned AWF model (`allenai/OlmoEarth-v1-FT-AWF-Base`,
 land use and land cover in southern Kenya) over a small area, with the imagery, windowing and merge of Ai2's
 published configuration. It needs the experiment environment and, in practice, a GPU.
 
 ```bash
-uv run --extra encoder --extra geo python scripts/score_area.py --out scores --lat -2.55 --lon 36.81 --size 512
+uv run --extra encoder python scripts/score_area.py --out scores --lat -2.55 --lon 36.81 --size 512
 oe-inferencex assess scores/scores.tif --logits --out scores/assess
 ```
 
 The script writes `scores.tif`, a `(10, H, W)` float32 map of logits (probabilities with `--probabilities`) whose
 no-data value is NaN, and `manifest.json`, which records the model revision, the area and grid, the Sentinel-2 scenes
-of each 30-day period, the class names from the [task card](method/taskcards.md) and the software versions. Channel 9
+of each 30-day period, the class names from the [task card](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/method/taskcards.md) and the software versions. Channel 9
 is the label fill value, never a training target. The scores carry no labels: how wrong the map is still requires
-`sample`, then `estimate` or `certify`. The Slurm job [`scripts/score_area.sh`](https://github.com/2imi9/olmoearth_inferenceX/blob/main/scripts/score_area.sh) runs the
+`sample`, then `estimate` or `certify`. The Slurm job [`scripts/score_area.sh`](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/scripts/score_area.sh) runs the
 script on the cluster the experiments used and reads the result back with `assess` and `sample`.

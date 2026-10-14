@@ -1,11 +1,11 @@
-# Every push to main and every pull request: the recorded numbers still hold, the package still installs from
-# nothing but its declared dependencies, and the docs still build. It is not a release pipeline; publish.yml is.
+# Every push to main and every pull request: the package's tests pass, the package still installs from nothing but
+# its declared dependencies, and the docs still build. It is not a release pipeline; publish.yml is. The claim ledger
+# and the recorded numbers are checked in the research record, 2imi9/olmoearth_inferenceX-record, against the
+# released package.
 #
-# Why this exists at all, in a repository that is a research record rather than a product. The record's own check
-# is the claim ledger, and tests/test_claims.py evaluates every claim's check against the committed artifacts, so
-# `pytest` is the ledger run. Until now it ran only when someone remembered. The September 2026 audit then found
-# six defects in a released version, four of which returned a plausible wrong answer and exited 0, which is the
-# failure a person reading their own terminal does not catch.
+# Why the tests run on every change: the September 2026 audit found six defects in a released version, four of which
+# returned a plausible wrong answer and exited 0, which is the failure a person reading their own terminal does not
+# catch.
 #
 # The geo extra is not optional here. tests/test_cli.py opens with importorskip("rasterio"), so on the core
 # dependencies alone the whole file is skipped: twelve tests over the command line, including the one that pins
@@ -33,10 +33,8 @@ jobs:
         with:
           enable-cache: true
       # --frozen: a pyproject edited without relocking fails here rather than resolving to something else.
-      - name: The suite, the formulas and the claim ledger against the committed artifacts
+      - name: The package's tests, the formulas among them
         run: uv run --frozen --extra geo --python ${{ matrix.python }} pytest -q
-      - name: The suite-regression runner still scores a candidate reading and grades an encoder
-        run: uv run --frozen --extra geo --python ${{ matrix.python }} python scripts/suite_regression.py --smoke
 
   wheel:
     # What someone gets from `pip install olmoearth-inferencex`. publish.yml runs this too, at release, which is

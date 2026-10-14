@@ -1,9 +1,9 @@
 """Measure how two inferences of the same scene differ, without labels; grade the difference where labels exist.
 
 The comparison half of the package (docs/Usage.md, "Compare two inferences of
-the same scene"; docs/method/agent_integration.md). Two inferences of identical
-windows, shifted crops, two backbones, two sensors, a frozen and a fine-tuned
-model, are compared on the windows both predicted:
+the same scene"; docs/method/agent_integration.md in the research record). Two
+inferences of identical windows, shifted crops, two backbones, two sensors, a
+frozen and a fine-tuned model, are compared on the windows both predicted:
 
   disagreement   how much they differ, pooled and per group (tile, event)
   where          what the disagreement windows have in common: the enrichment of
@@ -458,7 +458,8 @@ def determinism_check(a, b, ok, floor=None, margin_a=None, margin_b=None, groups
     Returns n_windows, n_disagree, disagreement_rate, per_group (or None), margin_drift ({mean_abs, max_abs} on the
     valid windows, or None), floor, passes (rate <= floor, or None without a floor or without a compared window). A frozen fp32 encoder run twice
     must give 0. A test-time-training encoder fits its inner model in one full-batch step at learning rate 1.0, the
-    kind of computation whose numerics differ between engines; docs/plan/vit3_readiness.md makes this a gate."""
+    kind of computation whose numerics differ between engines; the research record's docs/plan/vit3_readiness.md
+    makes this a gate."""
     okm = _indicator(ok)
     dis = disagreement(a, b, okm, groups)
     out = {"n_windows": dis["n"], "n_disagree": dis["n_disagree"], "disagreement_rate": dis["rate"],

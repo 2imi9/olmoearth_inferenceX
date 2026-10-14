@@ -7,7 +7,7 @@ decomposition of an ensemble's probabilities (mutual information, average entrop
 bootstrap resamples for building such an ensemble, and the standardize / poly2 helpers of a labelled logistic
 fusion. Pure numpy in float64; distances are computed in blocks of CHUNK rows, so a 150k x 768 set against 64
 centroids never holds more than one (CHUNK, D) block and its (CHUNK, k) distances. exp/exp49_shrug_signals.py
-is the consumer and states the substitutions it makes for the paper's pretraining data.
+in the research record is the consumer and states the substitutions it makes for the paper's pretraining data.
 """
 import numpy as np
 

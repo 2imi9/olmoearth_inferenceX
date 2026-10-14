@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+**The research record moved to its own repository**, https://github.com/2imi9/olmoearth_inferenceX-record, split from
+this one at 0d1161a (release 1.12.1). It holds the experiments (`exp/`, with their committed outputs and cluster jobs),
+`scripts/`, the claim ledger (`docs/claims.yaml`), the evidence pages (Summary, Findings, the technique ledger,
+results, method, preregistrations, test sets and related work), the technical report (`report/`) and every test that
+reads them, which runs there against olmoearth-inferencex 1.12.1 from PyPI. This repository keeps the package, its
+tests, Usage, the API reference, the examples and the agent skill. The package's code and API are unchanged:
+docstrings and comments that name a moved file now say it is in the record, and `oe-inferencex demo` points to the
+record's Findings page instead of the documentation site's. The tests that read the record went with it, some of
+them out of thirteen test files that stay here, and the test of the MCP server's first question now compares the
+demo's own audit with the numbers the record pinned instead of reading them from `exp/out`. The CI no longer runs the suite-regression smoke, which moved
+with `scripts/`. The documentation site drops the moved pages, links the record from its navigation and redirects
+each moved page's address to the record (`mkdocs-redirects`, added to `docs/requirements.txt`). History was not
+rewritten: the moved files' history stays here, and the v1.12.1 tag still holds the whole record.
+
 ## 1.12.1 (2026-10-13)
 
 **The MCP server's refusal on a two-map sample names only its own parameters.** Given per_class, scores, confidence,

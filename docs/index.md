@@ -23,14 +23,14 @@ The demo assesses one Dynamic World tile with expert annotation. The tile was se
 tile was examined, as the lower median by error capture at a 5% budget among the 18 of Dynamic World's 409
 expert-annotated test tiles that meet the rule's criteria (annotated on at least 90% of windows, at least three
 classes on 5% of the windows each, an error rate between 5% and 35%); the selected tile is therefore typical rather
-than the most favourable. <!-- claim:demo-sample-is-the-median-tile -->
+than the most favourable.
 
 ![Three panels of a Dynamic World tile in southern Peru: the 5% of windows ranked first, the same windows over the map's errors in red, and a random 5% over the same errors](figures/demo_real_map.png)
 
 *Left: the 5% of windows ranked first, selected without labels. Middle: the same windows over the map's errors, in
 red; 67% of them are wrong, against 19% of the map. Right: a random 5%. The flagged windows hold 17% of the errors;
 with 19% of the map wrong and 5% reviewed, no selection of that size could hold more than 26%. A 20% review holds
-55%.* <!-- claim:demo-sample-hit-rate -->
+55%.*
 
 Another map is assessed with `oe-inferencex assess your_map.tif --out audit`. The [quick start](Usage.md#quick-start)
 goes from there to an error rate and a certified zone.
@@ -51,21 +51,27 @@ uv sync
 uv run pytest
 ```
 
-The experiments also require `uv sync --extra encoder --extra geo`
+The experiments are in a separate repository, the research record
 ([Usage: reproducing the experiments](Usage.md#reproducing-the-experiments)).
 
 ## Documentation
 
-- [Findings](Findings.md#in-short): what holds, what was rejected, and the limits; each statement links to its evidence.
-- [Usage](Usage.md): inputs, commands, the Python API and reproducing the experiments.
-- [Recipe](method/recipe.md): what to do and not do when assessing a map.
-- [Comparisons](results/comparisons.md): the record of each experiment; the [technique ledger](TECHNIQUES.md) lists
-  every technique tried with its verdict.
-- [Protocol](method/protocol.md): how results are scored; the [claim ledger](method/claims.md); the
-  [preregistrations and decisions](plan/index.md).
-- [Related work](related_work.md) and the
-  [technical report](https://github.com/2imi9/olmoearth_inferenceX/blob/main/report/main.pdf).
+- [Usage](Usage.md): inputs, commands and the Python API.
 - [API reference](reference/index.md): the `oe_inferencex` package, module by module.
+
+The evidence is in a separate repository, the [research record](https://github.com/2imi9/olmoearth_inferenceX-record), with the experiments, their
+outputs and the tests that check each recorded result against the released package:
+
+- [Findings](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/Findings.md#in-short): what holds, what was rejected, and the limits; each
+  statement links to its evidence.
+- [Recipe](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/method/recipe.md): what to do and not do when assessing a map.
+- [Comparisons](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/results/comparisons.md): the record of each experiment; the
+  [technique ledger](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/TECHNIQUES.md) lists every technique tried with its verdict.
+- [Protocol](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/method/protocol.md): how results are scored; the
+  [claim ledger](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/method/claims.md); the
+  [preregistrations and decisions](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/plan/index.md).
+- [Related work](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/related_work.md) and the
+  [technical report](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/report/main.pdf).
 
 ## Licence and contact
 

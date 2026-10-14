@@ -5,7 +5,6 @@ this project exists to prevent in the maps it audits. Each test states the user-
 """
 import argparse
 import csv
-import os
 
 import numpy as np
 import pytest
@@ -102,23 +101,6 @@ def test_an_unfittable_fold_is_never_reported_as_a_held_out_score():
     assert np.isnan(rep["held_out"]["excess_aurc"]), "an undefined held-out score must be NaN, never a number"
 
 
-def test_fit_side_with_one_group_is_refused_rather_than_reported_as_always_side_a():
-    """The high finding the 21 September audit left open. One group id collapses every fold; each held-out logit is
-    NaN, NaN > 0 is False, and fit_side reported the "always a" rate as its fitted rule's held-out accuracy: 0.196
-    on exp60 against an honest 0.830 cross-fitted by event, reversing the verdict against a 0.690 baseline."""
-    import os
-    from oe_inferencex.calibrate import fit_ranker, fit_side
-    z = np.load(os.path.join(os.path.dirname(__file__), "..", "exp", "out", "exp60_masks.npz"))
-    fa, fb = {"margin": z["margin_A_s1pre"]}, {"margin": z["margin_B_s1post"]}
-    one = np.zeros_like(z["event"])
-    with pytest.raises(ValueError, match="at least two groups"):
-        fit_side(fa, fb, z["A_s1pre"], z["B_s1post"], z["ok"], z["y_after"], groups=one, family="x")
-    _, r = fit_side(fa, fb, z["A_s1pre"], z["B_s1post"], z["ok"], z["y_after"], groups=z["event"], family="x")
-    assert round(r["held_out"]["share_right"], 3) == 0.830 and r["n_unscored_rows"] == 0
-    with pytest.raises(ValueError, match="at least two groups"):
-        fit_ranker({"m": z["margin_A_s1pre"]}, z["A_s1pre"] != z["y_after"], z["ok"], groups=one, family="x")
-
-
 def test_fit_side_excludes_unfittable_folds_instead_of_reading_them_as_side_a():
     """Two groups where one has no disagreement of one kind: that fold cannot be fitted, and its rows must be
     counted as unscored, not scored as "believe a"."""
@@ -182,17 +164,6 @@ def test_a_partial_reference_says_its_capture_is_over_its_own_windows():
     assert rc["n_windows_scored"] < out["n_windows"] and "not of the review sets" in rc["population"]
     assert rc["error_capture_at_budget"][0.05]["n_reviewed"] == max(1, round(0.05 * rc["n_windows_scored"]))
     assert any("reference covers" in w for w in out["warnings"])
-
-
-def test_reference_unstable_cue_quotes_exp23_as_recorded():
-    """Finding 14: the cue quoted 14.3x on 27 scenes; exp23 recorded 13.7x on 24."""
-    import json, os
-    from oe_inferencex.explain import CUES
-    t1 = json.load(open(os.path.join(os.path.dirname(__file__), "..", "exp", "out", "exp23_summary.json")))["tests"]["T1_enrichment"]
-    c = CUES["reference_unstable"]
-    assert c.share_errors == pytest.approx(t1["median_share_errors"], abs=5e-4)
-    assert c.share_correct == pytest.approx(t1["median_share_correct"], abs=5e-5)
-    assert round(c.enrichment, 1) == 13.7 and "24" in c.reference
 
 
 def test_low_confidence_cue_does_not_quote_its_20_percent_enrichment_at_another_cut():

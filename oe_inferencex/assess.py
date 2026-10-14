@@ -1,8 +1,9 @@
 """Assess a prediction output without labels (Layer 1: pure, no network).
 
-The recipe that the experiments support (docs/method/recipe.md): rank
-windows by the model's own confidence, use prediction-boundary proximity as
-a triage cue, report operating points, and state the caveats. The ranking
+The recipe that the experiments support (docs/method/recipe.md in the
+research record): rank windows by the model's own confidence, use
+prediction-boundary proximity as a triage cue, report operating points, and
+state the caveats. The ranking
 compares every window's confidence with every other's. A model run on an
 input combination it was not trained on can be confidently wrong there: on
 PASTIS a probe trained on radar plus optical and run on radar alone, as
@@ -57,7 +58,7 @@ RULE_TEXT = ("A window takes the condition held by most of its pixels that have 
              "A tie, or no such pixel, makes it 'unrecorded'.")
 # What the review order does not say when part of the map was read from inputs the model was not trained on. The
 # numbers are exp88's (exp/out/exp88_summary.json) and its matched-head follow-up's (exp/out/exp88_matched_head.json);
-# tests/test_assess.py reads them back from there.
+# the research record's tests/test_assess.py reads them back from there.
 SCOPE_ASSESS = ("The review order compares the confidence of every window with every other. Where part of the map was "
                 "predicted from an input combination the model was not trained on, the model can be confidently wrong "
                 "there, and those errors come late in this order. On PASTIS, OlmoEarth Base's probe trained on radar plus "

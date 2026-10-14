@@ -1,13 +1,14 @@
 """Label-free signals and the no-model pixel controls. Pure numpy.
 
-The signals the ledger supports (docs/TECHNIQUES.md, docs/method/recipe.md):
-the model's own confidence as the error ranker, prediction-boundary
-proximity as a triage cue, and the aligned tile-phase instability that
-beats confidence against WorldCover but not against hand labels. The pixel
-controls are the no-model references every signal must beat (recipe item
-4). Every function here reproduces the implementation used by the
-experiments it cites; `tests/test_signals.py` checks that equality against
-the experiment modules when the encoder stack is installed.
+The signals the ledger supports (docs/TECHNIQUES.md and docs/method/recipe.md
+in the research record): the model's own confidence as the error ranker,
+prediction-boundary proximity as a triage cue, and the aligned tile-phase
+instability that beats confidence against WorldCover but not against hand
+labels. The pixel controls are the no-model references every signal must beat
+(recipe item 4). Every function here reproduces the implementation used by the
+experiments it cites; the research record's `tests/test_signals.py` checks
+that equality against the experiment modules when the encoder stack is
+installed.
 
 Shapes: a "map" is (H, W) or a batch (N, H, W); an image is the 12 Sentinel-2
 bands (12, H, W) in the encoder's band order (S2_BANDS), raw digital numbers.
@@ -117,7 +118,8 @@ def crop_dependence(shift_decisions, patch=4):
 
     On a frozen encoder run at four offsets this is the tiling instability of exp13 seen as a map property. A
     test-time-training encoder refits its inner model on every crop from all of the crop's tokens, so the number is
-    expected to be structurally larger there; docs/plan/vit3_readiness.md preregisters it as a gate."""
+    expected to be structurally larger there; the research record's docs/plan/vit3_readiness.md preregisters it as a
+    gate."""
     maps = np.asarray(shift_decisions, dtype=np.float64)
     squeeze = maps.ndim == 3
     if squeeze:

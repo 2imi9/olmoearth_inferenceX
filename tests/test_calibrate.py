@@ -1,22 +1,13 @@
-"""oe_inferencex.calibrate on synthetic fixtures and on the committed exp60 decisions: held-out gains, the family lock,
-JSON round trips, and the logistic fit itself."""
+"""oe_inferencex.calibrate on synthetic fixtures: held-out gains, the family lock, JSON round trips, and the logistic
+fit itself. The check on the committed exp60 decisions is in the research record
+(https://github.com/2imi9/olmoearth_inferenceX-record)."""
 import json
-import os
 
 import numpy as np
 import pytest
 
 from oe_inferencex.calibrate import Fusion, _logistic, fit_ranker, fit_side, side_features
 from oe_inferencex.metrics import excess_aurc
-
-OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "exp", "out")
-
-
-def _need(name):
-    path = os.path.join(OUT, name)
-    if not os.path.exists(path):
-        pytest.skip(f"{name} not committed")
-    return path
 
 
 def _ranker_scene(seed=0, tiles=40, side=14):
@@ -88,20 +79,6 @@ def test_fit_side_beats_the_baseline_when_the_readings_carry_the_answer():
     feats = side_features({"margin": m_a, "unstable": u_a}, {"margin": m_b, "unstable": u_b})
     assert set(feats) == {"margin:a", "margin:b", "margin:a-b", "unstable:a", "unstable:b", "unstable:a-b"}
     assert fusion.prob(feats, family="synthetic").shape == n
-
-
-def test_fit_side_on_the_recorded_exp60_decisions():
-    """The radar pair across the event from the committed masks: margins of both sides, cross-fitted by event; the
-    fitted rule beats the coin and does not lose to the raw margin rule."""
-    z = np.load(_need("exp60_masks.npz"))
-    a, b, ok, lab = z["A_s1pre"], z["B_s1post"], z["ok"], z["y_after"]
-    fa, fb = {"margin": z["margin_A_s1pre"]}, {"margin": z["margin_B_s1post"]}
-    fusion, rep = fit_side(fa, fb, a, b, ok, lab, groups=z["event"], family="OlmoEarth v1 frozen S1 head")
-    assert rep["n_disagree"] == 29700
-    assert rep["held_out"]["share_right"] > 0.5
-    assert rep["held_out"]["share_right"] >= rep["baseline"]["share_right"] - 0.02
-    with pytest.raises(ValueError):
-        fusion.score(side_features(fa, fb), family="FT-S2 v1")
 
 
 def test_fit_side_compares_its_held_out_share_with_baselines_on_the_same_rows():

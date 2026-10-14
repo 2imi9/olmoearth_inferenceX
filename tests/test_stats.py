@@ -1,22 +1,10 @@
-"""Cross-unit tests (oe_inferencex.stats): exact values, and the recorded headline tests recomputed from
-the committed exp13 table."""
-import csv
-import os
+"""Cross-unit tests (oe_inferencex.stats): exact values. The recorded headline tests, recomputed from the committed
+exp13 table, are in the research record (https://github.com/2imi9/olmoearth_inferenceX-record)."""
 
 import numpy as np
 import pytest
 
 from oe_inferencex.stats import (block_bootstrap_indices, cluster_bootstrap_difference, clustered_sign_test, paired_cluster_bootstrap, paired_comparison, sign_test, spearman, wins_losses_ties)
-
-OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "exp", "out")
-RIVER = {"barotse": "Zambezi", "delta": "Zambezi", "kazungula": "Zambezi", "vicfalls_up": "Zambezi",
-         "zambezi_20": "Zambezi", "zambezi_50": "Zambezi", "zambezi_80": "Zambezi",
-         "cuando_20": "Cuando", "cuando_50": "Cuando", "cuando_80": "Cuando",
-         "kafue_20": "Kafue", "kafue_50": "Kafue", "kafue_80": "Kafue", "luangwa_conf": "Luangwa",
-         "okavango_50": "Okavango", "okavango_80": "Okavango", "okavango_sep": "Okavango",
-         "rovuma_20": "Rovuma", "rovuma_50": "Rovuma", "rovuma_80": "Rovuma",
-         "save_20": "Save", "save_50": "Save", "save_80": "Save",
-         "shire_20": "Shire", "shire_50": "Shire", "shire_80": "Shire", "shire_liwonde": "Shire"}
 
 
 def test_sign_test_values():
@@ -47,28 +35,6 @@ def test_clustered_sign_test_mean_and_majority():
     assert mean["per_cluster"]["C"] == pytest.approx(-0.8 / 3)                     # mean vote: C negative
     maj = clustered_sign_test(gains, clusters, aggregate="majority", alternative="two-sided")
     assert (maj["w"], maj["l"]) == (3, 0) and maj["p"] == pytest.approx(2 / 8)
-
-
-def _exp13_table():
-    path = os.path.join(OUT, "exp13_corrected_stats.csv")
-    if not os.path.exists(path):
-        pytest.skip("exp13 table not committed")
-    per = {}
-    for r in csv.DictReader(open(path)):
-        per.setdefault(r["scene"], {})[r["signal"]] = float(r["eaurc"])
-    return per
-
-
-def test_exp13_headline_tests_from_the_committed_table():
-    per = _exp13_table()
-    gains = {s: v["baseline"] - v["tile-phase (aligned)"] for s, v in per.items()}
-    w, l, t = wins_losses_ties(list(gains.values()))
-    assert (w, l, t) == (26, 1, 0) and sign_test(w, l) == pytest.approx(4.17e-07, rel=0.01)   # protocol: 26/27, p = 4e-07
-    river = clustered_sign_test(gains, RIVER, aggregate="majority", alternative="two-sided")
-    assert (river["w"], river["l"], river["n_clusters"]) == (8, 0, 8) and river["p"] == pytest.approx(0.0078, abs=1e-4)
-    assert clustered_sign_test(gains, RIVER)["p"] == pytest.approx(1 / 256)               # mean aggregate, one-sided
-    e_dist = {s: v["baseline"] - v["E_dist"] for s, v in per.items()}
-    assert wins_losses_ties(list(e_dist.values()))[:2] == (13, 14)                          # ledger: E_dist 13/27
 
 
 def test_block_bootstrap_resamples_whole_blocks():

@@ -415,10 +415,15 @@ def test_the_quick_start_map_can_be_written_with_nothing_installed():
                        for dep in project["optional-dependencies"][extra]), (path, req)
 
 
+# The demo tile's 5% review set as the record pinned it at 1.12.1 (exp/out/demo_sample_audit.json, now in
+# https://github.com/2imi9/olmoearth_inferenceX-record, where a test compares the demo's output with that file).
+DEMO_REVIEW_SET_05 = {"n_windows": 819, "errors_captured_fraction": 0.17454068241469817}
+
+
 def test_the_first_question_runs_on_the_demo_tile(tmp_path, monkeypatch, capsys):
     """The first question of the README and of Usage names the files `oe-inferencex demo` writes. Asked of assess as
     it says, with windows of 1 pixel and the tile's expert labels as reference, the answer is the demo's own: the 5%
-    review set holds the share of the errors the demo's pinned audit records."""
+    review set holds the share of the errors the demo's audit reports, which is the share the record pinned."""
     asked = set()
     for path in ("README.md", "docs/Usage.md"):
         quote = re.search(r"^> (Where should I look first.*?)\n\n", _doc(path), re.M | re.S)
@@ -432,7 +437,10 @@ def test_the_first_question_runs_on_the_demo_tile(tmp_path, monkeypatch, capsys)
     assert cli.main(["demo"]) == 0
     capsys.readouterr()
     out = mcp_server.assess(scores, str(tmp_path / "first"), patch=1, reference=truth)
-    pinned = json.load(open(os.path.join(ROOT, "exp", "out", "demo_sample_audit.json")))["review_sets"]["0.05"]
+    demo = json.load(open(tmp_path / "oe_inferencex_demo" / "audit" / "assessment.json"))
+    pinned = {"n_windows": demo["review_sets"]["0.05"]["n_windows"],
+              "errors_captured_fraction": demo["against_reference"]["error_capture_at_budget"]["0.05"]["errors_captured_fraction"]}
+    assert pinned == DEMO_REVIEW_SET_05
     assert out["summary"]["against_reference"]["errors_captured_fraction"]["0.05"] == pinned["errors_captured_fraction"]
     assert out["summary"]["review_sets"]["0.05"] == pinned["n_windows"]
     # the expert labels cover part of the tile, so the capture is said of the graded windows, not of the review set

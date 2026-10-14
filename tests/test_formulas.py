@@ -124,35 +124,6 @@ def test_excess_aurc_is_zero_for_the_oracle_and_the_headroom_denominator_is_cons
     assert abs(rnd) < 0.05
 
 
-def _extract(path, name):
-    """Lift one pure-numpy function out of an experiment script without importing it.
-
-    The experiment scripts import torch at module level, so importing them would skip this test in every
-    environment that lacks the encoder stack, which is where it is most likely to be run. The copied oracle is
-    pure numpy, so the function definition is compiled on its own."""
-    import ast, os
-    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    src = open(os.path.join(root, "exp", path), encoding="utf-8").read()
-    for node in ast.parse(src).body:
-        if isinstance(node, ast.FunctionDef) and node.name == name:
-            ns = {"np": np}
-            exec(compile(ast.Module(body=[node], type_ignores=[]), path, "exec"), ns)
-            return ns[name]
-    raise AssertionError(f"{path} no longer defines {name}(); if it was removed, drop this test with a reason")
-
-
-@pytest.mark.parametrize("path,name", [
-    ("exp13_stat_corrections.py", "oracle_aurc"),
-    ("exp18_sen1floods_expert.py", "oracle"),
-    ("exp19_v1_vs_v12.py", "oracle"),
-])
-def test_the_experiment_copies_of_the_oracle_still_equal_the_package(path, name):
-    """oracle_aurc is copied verbatim into three experiment scripts. Copies drift; this is what notices."""
-    fn = _extract(path, name)
-    for n, k in ((1024, 97), (225, 3), (50, 50), (50, 0), (7, 4)):
-        assert fn(n, k) == pytest.approx(oracle_aurc(n, k), abs=1e-15), f"exp/{path} has drifted from the package"
-
-
 def test_the_assessors_inline_top1_equals_the_signals_implementation():
     """assess.py computes the tie-free top-1 confidence inline instead of calling signals.confidence(form='top1').
     Nothing asserted they agree, and assess.py already imports from signals."""

@@ -2,8 +2,8 @@
 torch, so the assessment layer can be imported by consumers that do not ship
 torch.
 
-Conventions (docs/method/protocol.md): `uncertainty` is any score where
-higher means more suspect; `errors` is 0/1 per unit. Ties are handled by
+Conventions (docs/method/protocol.md in the research record): `uncertainty`
+is any score where higher means more suspect; `errors` is 0/1 per unit. Ties are handled by
 expectation under random tie-breaking, so no result depends on raster order.
 """
 import numpy as np
@@ -111,10 +111,10 @@ def augrc(uncertainty, errors):
 
         AUGRC = (1 - AUROC_f) * e * (1 - e) + e^2 / 2 + e / (2n)
 
-    derived in docs/method/protocol.md and checked to machine precision in tests/test_formulas.py. The coefficient
-    e(1 - e) is positive for any map that is neither perfect nor wholly wrong, so AUGRC cannot reorder two readings
-    that the failure AUROC already orders, and the last two terms do not depend on the reading at all. That is why
-    exp76 could answer the AUGRC challenge from exp70's recorded AUROC without recomputing anything.
+    derived in the research record's docs/method/protocol.md and checked to machine precision in tests/test_formulas.py.
+    The coefficient e(1 - e) is positive for any map that is neither perfect nor wholly wrong, so AUGRC cannot reorder
+    two readings that the failure AUROC already orders, and the last two terms do not depend on the reading at all. That
+    is why exp76 could answer the AUGRC challenge from exp70's recorded AUROC without recomputing anything.
 
     Ties are handled as aurc_expected handles them, by expectation under random tie-breaking, so the identity holds
     with the AUROC counting ties as half. NaN on an empty population."""

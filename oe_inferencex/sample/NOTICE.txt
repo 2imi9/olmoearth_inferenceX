@@ -10,4 +10,5 @@ Product: Brown, C. F. et al., "Dynamic World, Near real-time global 10 m land us
 
 The tile was chosen by scripts/make_demo_sample.py with a rule fixed before any tile was looked at (the lower-median tile
 by error capture at a 5% review budget among the fully annotated ones); every candidate is in
-exp/out/demo_sample_selection.json of the repository.
+exp/out/demo_sample_selection.json. Both are in the research record:
+https://github.com/2imi9/olmoearth_inferenceX-record

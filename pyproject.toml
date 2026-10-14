@@ -23,7 +23,7 @@ classifiers = [
 # Core: the assessment layer (oe_inferencex.assess / metrics / taskcard / lcc).
 # Deliberately free of torch and of olmoearth-pretrain, so the OlmoEarth Agent
 # can install this package without the encoder stack. See
-# docs/method/agent_integration.md.
+# docs/method/agent_integration.md in the research record.
 dependencies = [
     "numpy>=1.26.4",
     "pyyaml>=6.0",            # oe_inferencex.taskcard reads project model.yaml
@@ -37,10 +37,12 @@ oe-inferencex = "oe_inferencex.cli:main"
 Documentation = "https://olmoearth-inferencex.readthedocs.io"
 Repository = "https://github.com/2imi9/olmoearth_inferenceX"
 Changelog = "https://github.com/2imi9/olmoearth_inferenceX/blob/main/CHANGELOG.md"
+"Research record" = "https://github.com/2imi9/olmoearth_inferenceX-record"
 
 [project.optional-dependencies]
-# The encoder stack. Needed by oe_inferencex.{awf,data} and by 22 of the 27
-# experiment scripts; pulls torch, einops and universal-pathlib transitively.
+# The encoder stack. Needed by oe_inferencex.{awf,data} and by the research
+# record's experiment scripts that run an encoder; pulls torch, einops and
+# universal-pathlib transitively.
 # To reproduce against a specific upstream revision instead of the release,
 # install a checkout over the top:  uv pip install -e ../olmoearth_pretrain
 encoder = [
@@ -50,7 +52,8 @@ encoder = [
     "torch>=2.7,<2.8",
 ]
 
-# Geospatial IO and plotting, for the experiment scripts.
+# Geospatial IO and plotting: GeoTIFF input and output, and the research
+# record's experiment scripts.
 geo = [
     "rasterio>=1.4",
     "geopandas>=1.0",
@@ -66,8 +69,8 @@ geo = [
 mcp = ["mcp>=1.26,<2"]
 
 [dependency-groups]
-# `uv run pytest`: the assessment layer against the recorded numbers in exp/out (encoder-free);
-# the equality checks against the experiment modules run only when the encoder extra is installed.
+# `uv run pytest`: the package's tests (encoder-free). The checks against the recorded numbers and the
+# experiment modules are in the research record.
 dev = ["pytest>=8"]
 
 [build-system]
