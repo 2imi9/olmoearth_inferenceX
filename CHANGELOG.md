@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.12.2 (2026-10-14)
 
 **The research record moved to its own repository**, https://github.com/2imi9/olmoearth_inferenceX-record, split from
 this one at 0d1161a (release 1.12.1). It holds the experiments (`exp/`, with their committed outputs and cluster jobs),
