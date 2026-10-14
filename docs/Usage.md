@@ -1266,5 +1266,7 @@ The script writes `scores.tif`, a `(10, H, W)` float32 map of logits (probabilit
 no-data value is NaN, and `manifest.json`, which records the model revision, the area and grid, the Sentinel-2 scenes
 of each 30-day period, the class names from the [task card](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/method/taskcards.md) and the software versions. Channel 9
 is the label fill value, never a training target. The scores carry no labels: how wrong the map is still requires
-`sample`, then `estimate` or `certify`. The Slurm job [`scripts/score_area.sh`](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/scripts/score_area.sh) runs the
-script on the cluster the experiments used and reads the result back with `assess` and `sample`.
+`sample`, then `estimate` or `certify`. The Slurm job [`scripts/score_area.sh`](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/scripts/score_area.sh) ran the
+script on the cluster the experiments used and read the result back with `assess` and `sample`. It was written
+before the split, for a checkout of this repository, and reruns only from one at v1.12.1 (the record's README says
+how).
