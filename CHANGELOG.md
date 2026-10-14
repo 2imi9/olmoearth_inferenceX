@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.12.1 (2026-10-13)
 
 **The MCP server's refusal on a two-map sample names only its own parameters.** Given per_class, scores, confidence,
 nodata or a reviewer rate on a sample drawn with other, `estimate` through the server returned the command's refusal,
