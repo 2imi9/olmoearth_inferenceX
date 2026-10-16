@@ -1,4 +1,4 @@
-"""The test map of the README's quick start, and a stand-in for the reviewer who labels it.
+"""The test map of Usage's worked example (docs/Usage.md, Quick start), and a stand-in for the reviewer who labels it.
 
     python quickstart_map.py                      # writes scores.tif, other.tif and truth.tif
     python quickstart_map.py --label to_label.csv # fills `wrong` and `reference_class` from truth.tif
@@ -9,8 +9,8 @@ shape (4, 256, 256), float32. truth.tif holds the class that is really there. Mo
 boundaries and have a low top probability; a few sit inside a class and are confident, which no ranking by
 confidence finds.
 
-Everything is built from whole numbers, so the three files are the same on every machine and the commands in the
-README print the same lines. Needs numpy and rasterio (pip install "olmoearth-inferencex[geo]").
+Everything is built from whole numbers, so the three files are the same on every machine and the commands in
+Usage's worked example print the same lines. Needs numpy and rasterio (pip install "olmoearth-inferencex[geo]").
 """
 import csv
 import sys

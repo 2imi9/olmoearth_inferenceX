@@ -62,8 +62,8 @@ more accurate of two maps that differ by 2 points or more, `plan scores.tif --co
 
 ## Example questions
 
-Questions a user may ask, here on the README's test map (`scores.tif`, `other.tif` and `truth.tif`),
-each with the tools it uses and what the answer can and cannot be:
+Questions a user may ask, here on the test map that `examples/quickstart_map.py` writes (`scores.tif`, `other.tif`
+and `truth.tif`; Usage's worked example), each with the tools it uses and what the answer can and cannot be:
 
 - "Where should I look first in scores.tif?" Uses `assess`. The answer is a list of windows to check first, least
   confident first. It is not an error rate, and the errors the model is sure of come last. It needs the model's

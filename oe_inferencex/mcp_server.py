@@ -22,8 +22,9 @@ https://github.com/2imi9/olmoearth_inferenceX/blob/v1.9.0/exp/out/exp86_developm
 false statements per sentence fell from 7.5% to 2.2% on the eight development briefs the fixes were built against,
 mostly in round 8, which bundled tool outputs that state conclusions and limits, statistical rules in code and answer
 checks. No single change is shown to have caused the fall; the differences between rounds 8, 9 and 10 are within
-audit variation; the owner has not adjudicated materiality; and the held-out test (exp87) has no result yet. Two of
-its changes are copied here:
+audit variation; the owner has not adjudicated materiality; and the held-out test (exp87) ran one round and was
+archived on 10 October 2026 with the owner's review pending, so it has no recorded result. Two of its changes are
+copied here:
 
 - tool outputs that state their conclusion and their limits in plain words, so that the model does not guess
   (round 8);

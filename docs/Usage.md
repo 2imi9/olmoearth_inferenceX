@@ -211,7 +211,11 @@ run with the fine-tuned weights (pass `--ckpt_path`, or let the config's `manage
 checkpoint; otherwise the model predicts with its initial weights and its probabilities look plausible with no error),
 writes each window's prediction into the dataset's output layer and marks it `completed`. `from-olmoearth` reads
 that dataset and writes the files `assess` reads. It needs the `geo` extra (rasterio), and neither torch nor
-rslearn. `olmoearth_run` runs rslearn and writes the same layout, so a dataset it left is read the same way.
+rslearn. `olmoearth_run` runs rslearn and writes the same layout, so a dataset it left is read the same way. A
+checkpoint run again under newer libraries may not give its earlier map: Ai2's FT-AWF v1, run under rslearn 0.1.17
+with newer olmoearth_pretrain and torch, changed class at 14 of the 259 points of its earlier run, for a cause not
+found ([exp111](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/results/comparisons.md#a-blind-transfer-test-of-the-awf-fine-tunes-at-fresh-timesync-plots-exp111)).
+Before comparing a new run with an older map, check the new run at points whose output is known.
 
 ```bash
 oe-inferencex from-olmoearth path/to/dataset --out run --conditions
@@ -590,8 +594,13 @@ together, on small maps.
 
 `sample --design audit` and `estimate` audit a map's confident calls class by class: how often is each predicted
 class wrong where the map is most sure of it? It was built for a fine-tuned model moved to a new region, whose
-confident errors sat mostly in one predicted class, at a boundary the reference legend draws elsewhere. It names the
-class, not the windows.
+confident errors sat mostly in one predicted class, at a boundary the reference legend draws elsewhere
+([exp109](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/results/comparisons.md#where-the-awf-fine-tunes-confident-errors-under-transfer-lie-mostly-one-contested-legend-pair-exp109-report-only)).
+It names the class, not the windows. In a preregistered blind test at fresh plots, that class's confident zone was
+wrong 13.8% of the time under the strict reading, and 20 labels per class would have flagged it, with the note of the
+second reading (below), with probability 0.29 (0.14 at 15 labels, 0.39 at 30): less often than not
+([exp111](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/results/comparisons.md#a-blind-transfer-test-of-the-awf-fine-tunes-at-fresh-timesync-plots-exp111));
+what N buys, below, gives the arithmetic.
 
 ```bash
 oe-inferencex sample scores.tif --design audit --per-class 20 --out audit.csv   # or --zone-share S, --zone-cut C

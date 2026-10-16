@@ -2,12 +2,13 @@
 
 By default it audits a real map: one tile of Dynamic World, a served global land-cover product this project had no hand
 in, with the probabilities it publishes about itself and the expert annotation of the same ground (Zenodo record
-4766508, CC BY 4.0). The tile was chosen by a rule written before any tile was looked at, the median tile by error
-capture among the fully annotated ones, so it is representative and not flattering (scripts/make_demo_sample.py in the
-research record). `--made-up` audits a small synthetic water map instead. Either way the map goes through the same code
-path as `oe-inferencex assess`, and because the truth is known the run can say how many of the map's errors the review
-set holds and draw a random pick of the same size beside it. One tile illustrates the tool; it is not the evidence. The
-evidence is in the research record.
+4766508, CC BY 4.0). The tile was chosen by a rule written before any tile was looked at, the lower-median tile by
+error capture at a 5% review budget among the tiles that meet its criteria (annotated on at least 90% of their windows,
+at least three classes on 5% of the windows each, an error rate from 5% to 35%), so it is representative and not
+flattering (scripts/make_demo_sample.py in the research record). `--made-up` audits a small synthetic water map
+instead. Either way the map goes through the same code path as `oe-inferencex assess`, and because the truth is known
+the run can say how many of the map's errors the review set holds and draw a random pick of the same size beside it.
+One tile illustrates the tool; it is not the evidence. The evidence is in the research record.
 """
 import argparse
 import contextlib
