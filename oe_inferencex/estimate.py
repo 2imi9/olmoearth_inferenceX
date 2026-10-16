@@ -2220,8 +2220,8 @@ def compare_from_disagreement(sample, class_a, class_b, reference, unjudged=None
 # ----------------------------------------------------------------------------- which classes' confident calls are wrong
 # A per-class audit of a map's confident calls (13 October 2026, the owner's request). When an AWF fine-tune moved to
 # East Africa's TimeSync plots, most of its confident errors sat in one predicted class, at a boundary the reference
-# legend draws elsewhere (exp109, report-only; at fresh plots, in the blind test exp111, the pair again held most of
-# them). A small random sample from each predicted class's confident zone can find such a class (at exp111's fresh
+# legend draws elsewhere (exp109, report-only; at fresh plots, in the blind test exp111, the pair again held about half
+# or more of them, depending on the weighting). A small random sample from each predicted class's confident zone can find such a class (at exp111's fresh
 # plots, 20 labels per class would have flagged it with probability 0.29), and reading the same labels with the
 # contested pair accepted says whether its errors lie on that pair. The zone is fixed from the map before any label.
 # Given the map, each class's zone is a fixed finite population and its labels a simple random sample of fixed size, so

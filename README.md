@@ -29,7 +29,7 @@ Usage
 | How wrong is the map? | `sample scores.tif --budget 300 --design random --out to_label.csv`, fill in `wrong`, then `estimate to_label.csv` | about 300 random windows |
 | Which part can I trust? | `certify to_label.csv --alpha 0.05` | the same windows |
 | Which of two maps is more accurate? | `sample a.tif --other b.tif --budget 100 --out pairs.csv`, fill in `reference_class`, then `estimate pairs.csv` | about 100, where the maps differ |
-| Which class's confident calls can't I trust? | `sample scores.tif --design audit --per-class 20 --out audit.csv`, fill in `reference_class`, then `estimate audit.csv --alpha 0.05` | about 20 per class; that finds a badly wrong class and often misses a mildly wrong one |
+| Which class's confident calls can't I trust? | `sample scores.tif --design audit --per-class 20 --out audit.csv`, fill in `reference_class`, then `estimate audit.csv --alpha 0.05` | about 20 per class; that usually finds a badly wrong class and often misses a mildly wrong one |
 | Where do two maps differ? | `compare a.tif b.tif --out diff` | none |
 
 Every command starts with `oe-inferencex`. The input is the model's per-class scores before the argmax, as a GeoTIFF
@@ -73,7 +73,8 @@ products against six reference samples, on two deployed OlmoEarth models and on 
 map. Within the data a model was trained for, its confidence ranks the map's errors well. A fine-tuned land-cover
 model, on imagery of another year in and around the area it was fine-tuned for, ranked them below the preregistered
 bar; in a preregistered blind test at fresh plots farther away it reached the bar, so that miss did not replicate. In
-both, most of its confident errors lay on one class boundary that the two legends draw differently.
+both, about half or more of its confident errors, depending on the weighting, lay on one class boundary that the two
+legends draw differently.
 The [technical report](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/report/main.pdf) and the
 [research record](https://github.com/2imi9/olmoearth_inferenceX-record) give every result and its limits.
 
