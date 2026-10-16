@@ -153,8 +153,9 @@ def _real():
             "colours": DW_COLOURS, "soften": 0.6, "flag": INK, "classes": meta["classes"], "file": "sample_probabilities.npy",
             "intro": f"A real map was audited without using any labels: Dynamic World, a global 10 m land-cover product, on one tile\n"
                      f"of its public test set near {abs(meta['lat']):.1f} {ns}, {abs(meta['lon']):.1f} {ew} ({probs.shape[1]} x {probs.shape[2]} windows of "
-                     f"{meta['window_m']} m). The tile was chosen by a rule fixed in advance,\nthe median tile by error capture among "
-                     f"{meta['n_candidates']} fully annotated ones: a typical tile, not the best one.",
+                     f"{meta['window_m']} m). The tile was chosen by a rule fixed in advance,\nthe lower median by error capture at a 5% "
+                     f"review budget among the {meta['n_candidates']} tiles at least 90% annotated, with at least three classes and "
+                     f"an error rate of 5% to 35%:\na typical tile, not the best one.",
             "sure": "Errors the model is sure about are not flagged: nothing computed without labels finds those.",
             "credit": f"Map and expert labels: Dynamic World test tiles, Zenodo record {meta['zenodo_record']}, {meta['licence']} "
                       f"(Brown et al., Scientific Data, 2022)."}

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+`oe-inferencex demo` prints the tile-selection rule as written (the lower median by error capture at a 5% review
+budget among tiles at least 90% annotated, with at least three classes and an error rate of 5% to 35%); it said "the median
+tile among fully annotated ones". The README, Usage and docstrings now carry the record's exp111 blind transfer test.
+
 ## 1.12.2 (2026-10-14)
 
 **The research record moved to its own repository**, https://github.com/2imi9/olmoearth_inferenceX-record, split from
