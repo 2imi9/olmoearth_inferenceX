@@ -44,7 +44,7 @@ a test map.
 Examples
 --------
 
-**Where do I look first?** Dynamic World, a land-cover map made from Sentinel-2, on one tile in southern Peru. No
+**Where do I look first?** [Dynamic World](https://dynamicworld.app), a land-cover map made from Sentinel-2, on one tile in southern Peru. No
 labels are used to pick the windows; the expert's labels only show how it did.
 
 <img src="https://raw.githubusercontent.com/2imi9/olmoearth_inferenceX/main/docs/figures/example_peru.png" alt="Southern Peru, 5 km across: the Sentinel-2 image of 9 June 2019, the Dynamic World map, the 5% of windows flagged first without labels, and the same windows over the map's real errors, 67% of them wrong" width="100%">
@@ -59,8 +59,8 @@ Inside the orange box, water mapped from each sensor before and after; orange sq
 
 <img src="https://raw.githubusercontent.com/2imi9/olmoearth_inferenceX/main/docs/figures/compare.png" alt="The boxed patch: Sentinel-2 and Sentinel-1 images before and after the flood, the four water maps made from them, and orange squares where two of them disagree" width="100%">
 
-**Which of two maps is more accurate?** Fields of the World's global field map (FTW, 2nd edition) beside a second
-model, PRUE B3, on a test chip of the FTW benchmark in Croatia.
+**Which of two maps is more accurate?** [Fields of the World](https://fieldsofthe.world)'s global field map (FTW, 2nd edition) beside a second
+model, PRUE B3, on a test chip of the [FTW benchmark](https://arxiv.org/abs/2409.16252) in Croatia.
 
 <img src="https://raw.githubusercontent.com/2imi9/olmoearth_inferenceX/main/docs/figures/example_ftw.png" alt="One FTW benchmark test chip in Croatia, 2.5 km across: the Sentinel-2 image, FTW's 2nd-edition field map, the PRUE B3 field map, and the windows where the two maps differ, found without labels" width="100%">
 
@@ -68,7 +68,9 @@ Across Croatia's 353 test chips the two maps differ at 13% of windows. There FTW
 time, and labelling 100 of those windows names FTW the better map 99.9% of the time. In Belgium and Sweden, B3 was the
 better one.
 
-Imagery: contains modified Copernicus Sentinel data (2017 to 2023). FTW map: Fields of the World, CC BY 4.0. How the
+Imagery: contains modified Copernicus Sentinel data (2017 to 2023). Dynamic World map and expert labels:
+[Brown et al., Scientific Data, 2022](https://doi.org/10.1038/s41597-022-01307-4), CC BY 4.0. FTW map:
+[Fields of the World](https://fieldsofthe.world), CC BY 4.0. How the
 figures were made is in [docs/figures/examples](https://github.com/2imi9/olmoearth_inferenceX/tree/main/docs/figures/examples).
 
 Limits
