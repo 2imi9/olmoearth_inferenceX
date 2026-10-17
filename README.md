@@ -5,8 +5,9 @@ Checks an Earth-observation map after inference: where it is likely wrong, how w
 trust, and which of two maps is better.
 
 It reads only the per-class scores a model writes out. It never runs the model and needs no torch, so it works on
-OlmoEarth's outputs, on other models' maps and on published products with a confidence layer, from any satellite or
-aerial imagery (tested on Sentinel-1, Sentinel-2 and Landsat).
+OlmoEarth's outputs, on other models' maps and on published products with a confidence layer, whatever the imagery:
+radar or optical, Sentinel-1, Sentinel-2, Landsat, other satellites, aerial or drone. Tested so far on maps made from
+Sentinel-1, Sentinel-2 and Landsat.
 
 <img src="https://raw.githubusercontent.com/2imi9/olmoearth_inferenceX/main/docs/figures/architecture.png" alt="Structure of olmoearth-inferenceX. Left: Sentinel-2 imagery goes through a model's encoder and decoder to its outputs, a class map and a confidence map. Right: the outputs are pooled to windows. Without reference labels, ranking the windows by confidence gives the review set, and comparing two maps A and B gives the disagreement map. With a labelled sample, a sample of the windows where A and B differ names the more accurate map by an exact test and gives their accuracy difference with a 95% interval; a random sample with reference labels gives the error rate with an exact 95% interval and, by exact zone tests, the certified zone; a sample of each class's confident calls gives each class's error with a 95% interval and the classes not to trust" width="100%">
 
