@@ -43,18 +43,23 @@ a test map.
 Examples
 --------
 
-**Where do I look first?** Dynamic World, a Sentinel-2 land-cover map, on one tile in southern Peru. No labels are
-used to pick the windows; the expert's labels only show how it did.
+**Where do I look first?** Dynamic World, a land-cover map made from Sentinel-2, on one tile in southern Peru. No
+labels are used to pick the windows; the expert's labels only show how it did.
 
-<img src="https://raw.githubusercontent.com/2imi9/olmoearth_inferenceX/main/docs/figures/demo_real_map.png" alt="Three panels of a Dynamic World tile in southern Peru: the 5% of windows flagged first without labels; the same windows over the map's real errors in red, 67% of them wrong; a random 5% over the same errors, about 19% wrong" width="100%">
+<img src="https://raw.githubusercontent.com/2imi9/olmoearth_inferenceX/main/docs/figures/example_peru.png" alt="Southern Peru, 5 km across: the Sentinel-2 image of 9 June 2019, the Dynamic World map, the 5% of windows flagged first without labels, and the same windows over the map's real errors, 67% of them wrong" width="100%">
 
 The 5% it flags first are wrong 67% of the time. A random 5% would be wrong 19% of the time.
 
-**Where do two maps differ?** A flood at Lake Shkodër, Albania, in March 2018, mapped from Sentinel-2 optical and
-Sentinel-1 radar, before and after. The orange squares are where two of the maps disagree.
+**Where do two maps differ?** A flood at Lake Shkodër, Albania, in March 2018, seen by Sentinel-2 and Sentinel-1.
 
-<img src="https://raw.githubusercontent.com/2imi9/olmoearth_inferenceX/main/docs/figures/compare.png" alt="Lake Shkoder, Albania: Sentinel-2 and Sentinel-1 images before and after the March 2018 flood, the four water maps made from them, and orange squares where two of them disagree" width="100%">
+<img src="https://raw.githubusercontent.com/2imi9/olmoearth_inferenceX/main/docs/figures/example_flood_context.png" alt="Lake Shkoder, Albania, 8 km across: Sentinel-2 before the flood (2 April 2017), Sentinel-2 during it (28 March 2018) and Sentinel-1 radar during it (11 March 2018), with an orange box on the flooded shore" width="100%">
 
+Inside the orange box, water mapped from each sensor before and after; orange squares are where two maps disagree:
+
+<img src="https://raw.githubusercontent.com/2imi9/olmoearth_inferenceX/main/docs/figures/compare.png" alt="The boxed patch: Sentinel-2 and Sentinel-1 images before and after the flood, the four water maps made from them, and orange squares where two of them disagree" width="100%">
+
+Imagery: contains modified Copernicus Sentinel data (2017 to 2019); how the figures were made is in
+[docs/figures/examples](https://github.com/2imi9/olmoearth_inferenceX/tree/main/docs/figures/examples).
 
 Limits
 ------
