@@ -1,10 +1,12 @@
 olmoearth_inferenceX
 ====================
 
-olmoearth_inferenceX checks an Earth-observation map after inference: where it is likely wrong, how wrong it is,
-which part you can trust, and which of two maps is more accurate. It was built to check OlmoEarth's inference
-outputs. It reads only the per-class scores a model writes out, never runs the model and needs no torch, so it works
-as well on other models' maps and on published products that ship a confidence layer.
+Checks an Earth-observation map after inference: where it is likely wrong, how wrong it is, which part you can
+trust, and which of two maps is better.
+
+It reads only the per-class scores a model writes out. It never runs the model and needs no torch, so it works on
+OlmoEarth's outputs, on other models' maps and on published products with a confidence layer, whether the imagery
+was Sentinel-1, Sentinel-2 or Landsat.
 
 <img src="https://raw.githubusercontent.com/2imi9/olmoearth_inferenceX/main/docs/figures/architecture.png" alt="Structure of olmoearth-inferenceX. Left: Sentinel-2 imagery goes through a model's encoder and decoder to its outputs, a class map and a confidence map. Right: the outputs are pooled to windows. Without reference labels, ranking the windows by confidence gives the review set, and comparing two maps A and B gives the disagreement map. With a labelled sample, a sample of the windows where A and B differ names the more accurate map by an exact test and gives their accuracy difference with a 95% interval; a random sample with reference labels gives the error rate with an exact 95% interval and, by exact zone tests, the certified zone; a sample of each class's confident calls gives each class's error with a 95% interval and the classes not to trust" width="100%">
 
@@ -20,8 +22,8 @@ oe-inferencex demo                          # a real Dynamic World tile; needs n
 ```
 
 
-Usage
------
+What it answers
+---------------
 
 | Question | Commands | Labels |
 |---|---|---|
@@ -29,21 +31,41 @@ Usage
 | How wrong is the map? | `sample scores.tif --budget 300 --design random --out to_label.csv`, fill in `wrong`, then `estimate to_label.csv` | about 300 random windows |
 | Which part can I trust? | `certify to_label.csv --alpha 0.05` | the same windows |
 | Which of two maps is more accurate? | `sample a.tif --other b.tif --budget 100 --out pairs.csv`, fill in `reference_class`, then `estimate pairs.csv` | about 100, where the maps differ |
-| Which class's confident calls can't I trust? | `sample scores.tif --design audit --per-class 20 --out audit.csv`, fill in `reference_class`, then `estimate audit.csv --alpha 0.05` | about 20 per class; that usually finds a badly wrong class and often misses a mildly wrong one |
+| Which class's confident calls can't I trust? | `sample scores.tif --design audit --per-class 20 --out audit.csv`, fill in `reference_class`, then `estimate audit.csv --alpha 0.05` | about 20 per class |
 | Where do two maps differ? | `compare a.tif b.tif --out diff` | none |
 
 Every command starts with `oe-inferencex`. The input is the model's per-class scores before the argmax, as a GeoTIFF
-or a `.npy` array of shape `(C, H, W)`. `plan` says how many labels a question needs, `decide` turns a result into
-yes, no or undetermined, and `--help` lists each command's options.
-[Quick start](https://olmoearth-inferencex.readthedocs.io/en/latest/Usage/#quick-start) runs each one on a test map.
+or a `.npy` array of shape `(C, H, W)`. `plan` says how many labels a question needs and `--help` lists each command's
+options. The [quick start](https://olmoearth-inferencex.readthedocs.io/en/latest/Usage/#quick-start) runs each one on
+a test map.
 
-Limits: without labels it says where to look, not how wrong the map is. Ranking by confidence can weaken when a model
-moves to a new place or year: in one test it fell below the preregistered bar, and in a blind repeat at fresh plots it
-did not. Errors that come from two legends drawing a class boundary differently cannot be told from the imagery, and
-the model's confidence ranks them less well than its other errors, so they need labels. A model run on inputs unlike
-its training data can be confident and wrong (`--condition` treats each input condition on its own). Every interval and
-certified zone assumes the labels are right, and labelling more and rerunning is a second test, except on a sequential
-sample.
+
+Examples
+--------
+
+**Where do I look first?** Dynamic World, a Sentinel-2 land-cover map, on one tile in southern Peru. No labels are
+used to pick the windows; the expert's labels only show how it did.
+
+<img src="https://raw.githubusercontent.com/2imi9/olmoearth_inferenceX/main/docs/figures/demo_real_map.png" alt="Three panels of a Dynamic World tile in southern Peru: the 5% of windows flagged first without labels; the same windows over the map's real errors in red, 67% of them wrong; a random 5% over the same errors, about 19% wrong" width="100%">
+
+The 5% it flags first are wrong 67% of the time. A random 5% would be wrong 19% of the time.
+
+**Where do two maps differ?** A flood at Lake Shkodër, Albania, in March 2018, mapped from Sentinel-2 optical and
+Sentinel-1 radar, before and after. The orange squares are where two of the maps disagree.
+
+<img src="https://raw.githubusercontent.com/2imi9/olmoearth_inferenceX/main/docs/figures/compare.png" alt="Lake Shkoder, Albania: Sentinel-2 and Sentinel-1 images before and after the March 2018 flood, the four water maps made from them, and orange squares where two of them disagree" width="100%">
+
+
+Limits
+------
+
+- Without labels it tells you where to look, not how wrong the map is.
+- In a new place or year the ranking can weaken. Check it with a few labels.
+- When two legends draw a class boundary differently (grass or shrub, say), only labels find those errors.
+- Intervals and certified zones assume the labels are right.
+- If parts of the map were made from different inputs (clouds, a missing sensor), use `--condition`.
+- Labelling more and rerunning counts as a new test, unless you use a sequential sample.
+
 
 Use from an agent
 -----------------
@@ -55,8 +77,8 @@ Use from an agent
 claude mcp add --scope user oe-inferencex -- uvx --from "olmoearth-inferencex[geo,mcp]" oe-inferencex mcp
 ```
 
-Use a capable model: in a pilot, smaller models dropped the limits the tools state. To try it, write the demo tile
-into an empty folder, start the agent there and ask:
+Use a capable model; smaller ones dropped the limits the tools state. To try it, write the demo tile into an empty
+folder, start the agent there and ask:
 
 ```bash
 uvx --from olmoearth-inferencex oe-inferencex demo
@@ -65,24 +87,12 @@ uvx --from olmoearth-inferencex oe-inferencex demo
 > Where should I look first in oe_inferencex_demo/sample_probabilities.npy? Use windows of
 > 1 pixel, and grade the order against oe_inferencex_demo/sample_truth.npy.
 
-Evidence
---------
 
-Tested on linear probes of sixteen encoders over the tasks of Ai2's embedding suite, on seven published land-cover
-products against six reference samples, on two deployed OlmoEarth models and on another organisation's deployed field
-map. Within the data a model was trained for, its confidence ranks the map's errors well. A fine-tuned land-cover
-model, on imagery of another year in and around the area it was fine-tuned for, ranked them below the preregistered
-bar; in a preregistered blind test at fresh plots farther away it reached the bar, so that miss did not replicate. In
-both, about half or more of its confident errors, depending on the weighting, lay on one class boundary that the two
-legends draw differently.
-The [technical report](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/report/main.pdf) and the
-[research record](https://github.com/2imi9/olmoearth_inferenceX-record) give every result and its limits.
+More
+----
 
-Development and license
------------------------
-
-Clone the repository, then `uv sync` and `uv run pytest`. The experiments and the tests that check the recorded
-results against the released package are in the [research record](https://github.com/2imi9/olmoearth_inferenceX-record).
-Apache License 2.0 ([LICENSE](https://github.com/2imi9/olmoearth_inferenceX/blob/main/LICENSE));
-cite with [CITATION.cff](https://github.com/2imi9/olmoearth_inferenceX/blob/main/CITATION.cff);
-questions in [GitHub issues](https://github.com/2imi9/olmoearth_inferenceX/issues).
+- Every result, its limits and the technical report: the [research record](https://github.com/2imi9/olmoearth_inferenceX-record).
+- Development: clone the repository, then `uv sync` and `uv run pytest`.
+- Apache License 2.0 ([LICENSE](https://github.com/2imi9/olmoearth_inferenceX/blob/main/LICENSE)); cite with
+  [CITATION.cff](https://github.com/2imi9/olmoearth_inferenceX/blob/main/CITATION.cff); questions in
+  [GitHub issues](https://github.com/2imi9/olmoearth_inferenceX/issues).
