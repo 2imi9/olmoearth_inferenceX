@@ -58,8 +58,17 @@ Inside the orange box, water mapped from each sensor before and after; orange sq
 
 <img src="https://raw.githubusercontent.com/2imi9/olmoearth_inferenceX/main/docs/figures/compare.png" alt="The boxed patch: Sentinel-2 and Sentinel-1 images before and after the flood, the four water maps made from them, and orange squares where two of them disagree" width="100%">
 
-Imagery: contains modified Copernicus Sentinel data (2017 to 2019); how the figures were made is in
-[docs/figures/examples](https://github.com/2imi9/olmoearth_inferenceX/tree/main/docs/figures/examples).
+**Which of two maps is more accurate?** Fields of the World's global field map (FTW, 2nd edition) beside a second
+model, PRUE B3, on a test chip of the FTW benchmark in Croatia.
+
+<img src="https://raw.githubusercontent.com/2imi9/olmoearth_inferenceX/main/docs/figures/example_ftw.png" alt="One FTW benchmark test chip in Croatia, 2.5 km across: the Sentinel-2 image, FTW's 2nd-edition field map, the PRUE B3 field map, and the windows where the two maps differ, found without labels" width="100%">
+
+Across Croatia's 353 test chips the two maps differ at 13% of windows. There FTW agrees with the benchmark 74% of the
+time, and labelling 100 of those windows names FTW the better map 99.9% of the time. In Belgium and Sweden, B3 was the
+better one.
+
+Imagery: contains modified Copernicus Sentinel data (2017 to 2023). FTW map: Fields of the World, CC BY 4.0. How the
+figures were made is in [docs/figures/examples](https://github.com/2imi9/olmoearth_inferenceX/tree/main/docs/figures/examples).
 
 Limits
 ------
