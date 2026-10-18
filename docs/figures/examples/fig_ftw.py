@@ -49,7 +49,7 @@ w4 = s["populations"][C]["arm4"]; pr = s["verdicts"]["P4b"]["p_right"][C]
 h = [Patch(fc=FIELD, label="field"), Patch(fc=OTHER, ec="#bbbbbb", label="not field"),
      Patch(fc="#f28e2b", label="the maps differ")]
 fig.legend(handles=h, loc="lower center", ncol=3, frameon=False, fontsize=11, bbox_to_anchor=(0.5, -0.02))
-fig.text(0.5, -0.07, "One test chip in Croatia, 2.5 km across.", ha="center", fontsize=11, color="#444444")
+fig.text(0.5, -0.07, "One test chip in Croatia, about 1.5 km by 1.1 km.", ha="center", fontsize=11, color="#444444")
 print(f"croatia: differ {100 * w4['D'] / w4['N']:.1f}% of windows, FTW agrees at {100 * w4['K_A'] / w4['D']:.1f}%, P(names FTW | 100 labels) {100 * pr:.1f}%")
 plt.subplots_adjust(wspace=0.04, left=0.01, right=0.99, top=0.9, bottom=0.08)
 fig.savefig(OUT, bbox_inches="tight", facecolor="white")
