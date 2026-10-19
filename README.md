@@ -51,11 +51,11 @@ labels are used to pick the windows; the expert's labels only show how it did.
 
 The 5% it flags first are wrong 67% of the time. A random 5% would be wrong 19% of the time.
 
-**Where do two maps differ?** A flood at Lake Shkodër, Albania, in March 2018, seen by Sentinel-2 and Sentinel-1.
+**Where do two maps differ?** A flood at Lake Shkodër, Albania, in March 2018 ([Copernicus EMS activation EMSR273](https://rapidmapping.emergency.copernicus.eu/EMSR273)), seen by Sentinel-2 and Sentinel-1.
 
 <img src="https://raw.githubusercontent.com/2imi9/olmoearth_inferenceX/main/docs/figures/example_flood_context.png" alt="Lake Shkoder, Albania, 8 km across: Sentinel-2 before the flood (2 April 2017), Sentinel-2 during it (28 March 2018) and Sentinel-1 radar during it (11 March 2018), with an orange box on the flooded shore" width="100%">
 
-Inside the orange box, water mapped from each sensor before and after; orange squares are where two maps disagree:
+Inside the orange box, water mapped from each sensor before and after (imagery from [GEOID-Flood](https://huggingface.co/datasets/links-ads/geoid-flood) and [WorldFloods v2](https://huggingface.co/datasets/isp-uv-es/WorldFloodsv2)); orange squares are where two maps disagree:
 
 <img src="https://raw.githubusercontent.com/2imi9/olmoearth_inferenceX/main/docs/figures/compare.png" alt="The boxed patch: Sentinel-2 and Sentinel-1 images before and after the flood, the four water maps made from them, and orange squares where two of them disagree" width="100%">
 
