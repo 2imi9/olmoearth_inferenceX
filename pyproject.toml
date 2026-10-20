@@ -1,7 +1,7 @@
 [project]
 name = "olmoearth-inferencex"
-version = "1.12.2"
-description = "A Python package for assessing Earth-observation classification maps. It ranks map windows by model confidence for manual review, compares two maps of the same area, and estimates error rates and per-class accuracy from a labelled sample."
+version = "1.12.3"
+description = "Checks Earth-observation maps: where they're likely wrong, how accurate they are from a few labels, and which of two maps is better."
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
 authors = [{ name = "Ziming Qi" }]

@@ -1,6 +1,11 @@
 # Changelog
 
-## Unreleased
+## 1.12.3 (2026-10-19)
+
+**The PyPI page carries the current README**: a shorter opening, the imagery it works on, three examples with real
+satellite imagery (Dynamic World in southern Peru, the Lake Shkodër flood in Sentinel-2 and Sentinel-1, Fields of the
+World's field map against PRUE B3 in Croatia) and the limits as bullets. The package summary is the repository's new
+one-line description.
 
 `oe-inferencex demo` prints the tile-selection rule as written (the lower median by error capture at a 5% review
 budget among tiles at least 90% annotated, with at least three classes and an error rate of 5% to 35%); it said "the median

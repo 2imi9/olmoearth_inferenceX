@@ -1019,7 +1019,7 @@ wheels = [
 
 [[package]]
 name = "olmoearth-inferencex"
-version = "1.12.2"
+version = "1.12.3"
 source = { editable = "." }
 dependencies = [
     { name = "huggingface-hub" },
