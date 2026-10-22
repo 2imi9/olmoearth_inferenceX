@@ -3,6 +3,8 @@
     oe-inferencex assess  scores.tif --out DIR [--logits] [--patch 4] [--nodata V] [--reference labels.tif]
                           [--budgets 0.01 0.05 0.10] [--order confidence|boundary_first]
                           [--condition layer.tif [--condition-names 0=clear 1=cloudy]]
+    oe-inferencex boundary scores.tif --out band.tif --width-m 20 | --width-px 2   the class-edge band, as a
+                                                            condition layer for sample
     oe-inferencex compare a.tif b.tif --out DIR [--patch 4] [--nodata V] [--labels labels.tif] [--groups ids.tif]
                           [--threshold T]
     oe-inferencex demo    [--out DIR] [--made-up]   a first run on the real sample map shipped with the package
@@ -416,10 +418,59 @@ def cmd_assess(args):
             f"{100 * b5:.3g}% review set" for name, e in per_cond.items())
             + (f"\nnote: {out['scope']}" if "scope" in out else "")
             + "".join(f"\nnote: {n}" for n in blk.get("notes", [])))
+    # A review set cut inside a run of equal scores was reported in assessment.json only, so a kNN vote share or a
+    # saturated probability could pick a whole set by raster position with nothing on the terminal (2026-10-22).
+    tied_sets = [(b, rs) for b, rs in out["review_sets"].items() if "tied_at_cutoff" in rs]
+    tie_text = ("\nnote: the scores tie at the review-set cut-off, so " + ", ".join(
+        f"{rs['tied_at_cutoff']['inside']} of the {rs['n_windows']} windows at {100 * float(b):g}%"
+        for b, rs in tied_sets) + " were chosen among equal scores by raster position, not evidence; scores with few "
+        "distinct values (a kNN vote share, a saturated or quantized probability) cannot order them") if tied_sets else ""
     print(f"{s['n_windows']} windows of {args.patch} px; review sets " + ", ".join(f"{100 * float(b):g}%: {rs['n_windows']}" for b, rs in out["review_sets"].items()) +
-          f"; boundary windows {100 * s['boundary_window_fraction']:.1f}%" + ref_text + cond_text +
+          f"; boundary windows {100 * s['boundary_window_fraction']:.1f}%" + ref_text + cond_text + tie_text +
           "".join(f"\nnote: {n}" for n in prod_notes) +
           f"\nwrote {args.out}/assessment.json, explanation.json, review_set_*.csv, suspicion, boundary")
+    return 0
+
+
+# ----------------------------------------------------------------------------- boundary
+def cmd_boundary(args):
+    """Write the map's edge band as a condition layer, so that sample and estimate give the error rate near class
+    edges and away from them, each with the condition design's exact interval."""
+    from .assess import boundary_band
+    if (args.width_m is None) == (args.width_px is None):
+        raise SystemExit("boundary: give the band's width once, as --width-m (metres, from a GeoTIFF's pixel size) or "
+                         "--width-px (pixels)")
+    hard, valid, geo, _, _ = decisions(args.scores, args.nodata, args.threshold)
+    target = args.out if geo is not None else os.path.splitext(args.out)[0] + ".npy"     # write_raster's own rule
+    _refuse_overwriting_inputs("boundary", [target], [args.scores])
+    if args.width_m is not None:
+        if geo is None:
+            raise SystemExit("boundary: --width-m needs a GeoTIFF, whose pixel size converts metres to pixels; a .npy "
+                             "has none, so give --width-px")
+        if geo["crs"] is not None and geo["crs"].is_geographic:
+            raise SystemExit("boundary: the map's CRS is in degrees, so its pixel size is not in metres; give --width-px")
+        if args.width_m <= 0:
+            raise SystemExit(f"boundary: --width-m must be positive, got {args.width_m:g}")
+        px_w, px_h = abs(geo["transform"].a), abs(geo["transform"].e)
+        wc, wr = max(1, round(args.width_m / px_w)), max(1, round(args.width_m / px_h))
+        width_text = f"{args.width_m:g} m ({wr} rows, {wc} columns of {px_h:g} x {px_w:g} m pixels)"
+    else:
+        if args.width_px < 1:
+            raise SystemExit(f"boundary: --width-px must be at least 1, got {args.width_px}")
+        wr = wc = args.width_px
+        width_text = f"{wr} pixel{'s' if wr != 1 else ''}"
+    band = boundary_band(hard, valid, wr, wc)
+    if not valid.any():
+        raise SystemExit(f"boundary: {args.scores} has no valid pixel")
+    share = float((band[valid] == 1).mean())
+    pooled = pool_condition(band, args.patch, valid)
+    n_win = int((pooled["grid"] >= 0).sum())
+    win_share = float((pooled["grid"] == 1).sum() / n_win) if n_win else float("nan")
+    path = write_raster(args.out, band.astype(np.int32), geo, 1, -1)
+    print(f"{100 * share:.1f}% of valid pixels lie within {width_text} of another class; windows of {args.patch} px "
+          f"held mostly by the band: {_pct(None if np.isnan(win_share) else win_share, 1)}\nwrote {path}\n"
+          f"next: oe-inferencex sample {args.scores} --condition {path} --condition-names 0=interior 1=boundary "
+          f"--patch {args.patch} --budget 300 --out to_label.csv")
     return 0
 
 
@@ -2620,6 +2671,19 @@ def build_parser():
     d.add_argument("--seed", type=int, default=0, help="seed of the made-up scene and of the random pick")
     d.add_argument("--made-up", action="store_true", help="audit a small synthetic water map instead of the real sample tile")
     d.set_defaults(func=cmd_demo)
+    bd = sub.add_parser("boundary", help="write the map's class-edge band as a condition layer, so sample and estimate "
+                                         "give the error rate near edges and away from them")
+    bd.add_argument("scores", help="the map's scores (GeoTIFF or .npy), as assess reads them, or a hard class map")
+    bd.add_argument("--out", required=True, help="the band layer to write (GeoTIFF on the map's grid, or .npy)")
+    bd.add_argument("--width-m", type=float, default=None,
+                    help="the band's half-width in metres, converted with the GeoTIFF's pixel size; a common choice is "
+                         "the coarser of the map's and the reference's resolution")
+    bd.add_argument("--width-px", type=int, default=None, help="the band's half-width in pixels")
+    bd.add_argument("--patch", type=int, default=4, help="window size in pixels, as sample will use it (default 4)")
+    bd.add_argument("--nodata", type=float, default=None, help="no-data value (default: the raster's own, plus NaN)")
+    bd.add_argument("--threshold", type=float, default=None,
+                    help="cut a one-band continuous map here (binary logits: 0); a probability map is cut at 0.5")
+    bd.set_defaults(func=cmd_boundary)
     c = sub.add_parser("compare", help="measure how two inferences of the same scene differ")
     c.add_argument("a", help="first map: integer classes, a probability map (thresholded), or (C, H, W) scores (argmax)")
     c.add_argument("b", help="second map on the same grid")

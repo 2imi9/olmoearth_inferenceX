@@ -496,3 +496,24 @@ def test_single_condition_has_no_scope():
     lay[-4:] = -1
     two = assess_prediction(logit, condition=lay, **kw)
     assert two["conditions"]["n_conditions"] == 2 and two["scope"] == SCOPE_ASSESS_K.format(K=2)
+
+
+def test_boundary_band_marks_pixels_near_another_class_and_ignores_no_data():
+    from oe_inferencex.assess import boundary_band
+    hard = np.zeros((6, 8), int)
+    hard[:, 4:] = 1
+    valid = np.ones_like(hard, dtype=bool)
+    band = boundary_band(hard, valid, 1)
+    assert band[:, 3].tolist() == [1] * 6 and band[:, 4].tolist() == [1] * 6     # the two columns at the edge
+    assert band[:, :3].sum() == 0 and band[:, 5:].sum() == 0
+    assert (boundary_band(hard, valid, 2) == 1).sum() == 6 * 4                   # two columns each side
+    assert (boundary_band(hard, valid, 0, 3)[:, 1:7] == 1).all()                 # columns only, three each side
+    # a no-data pixel is -1 and is no neighbour: a class edge that runs only through no-data is no edge
+    valid[:, 4] = False
+    hard[:, 4:] = 0
+    hard[:, 6:] = 1
+    band = boundary_band(hard, valid, 1)
+    assert band[:, 4].tolist() == [-1] * 6 and band[:, 3].sum() == 0
+    assert band[:, 5].tolist() == [1] * 6 and band[:, 6].tolist() == [1] * 6
+    with pytest.raises(ValueError):
+        boundary_band(hard, valid, 0)

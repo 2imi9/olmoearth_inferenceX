@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+**`boundary`, a new command.** It writes the band of pixels within a given distance of another class (in metres from a
+GeoTIFF's pixel size, or in pixels) as a condition layer, so that `sample --condition` and `estimate` give the error
+rate near class edges and inside patches, each with the condition design's exact interval. It prints the share of the
+map in the band. No recorded experiment grades the band itself. Tests: tests/test_assess.py, tests/test_cli.py.
+
+**`assess` prints a review set cut inside tied scores.** When a review set's cut-off falls inside a run of equal scores (a
+kNN vote share, a saturated or quantized probability), the windows chosen there by raster position were reported in
+assessment.json only; the terminal now says how many. Tie-free maps print as before. Test: tests/test_cli.py.
+
 Usage gains "From precomputed embeddings (OlmoEarth v1.3)": fit a classifier that writes probabilities
 (logistic regression) on Ai2's v1.3 embeddings, save its probabilities, and run `assess`, `sample` and `estimate` on
 them; the points the classifier was fitted on cannot say how accurate the map is. Documentation only; no recorded

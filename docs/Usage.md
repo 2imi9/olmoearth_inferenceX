@@ -395,6 +395,27 @@ adds `against_reference`: the error rate, the errors captured at each budget, th
 baselines, and the caveat that another product's map used as a reference can flatter boundary-type signals
 ([exp18](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/results/comparisons.md#dense-flood-masks-sen1floods11-exp18)).
 
+### boundary
+
+Is the map worse at its class edges than inside its patches? `boundary` writes the band of pixels within a given
+distance of another class, as a condition layer on the map's grid; `sample` with that layer labels the band and the
+interior separately, and `estimate` gives each its own exact interval (the condition design, graded in exp88).
+
+```bash
+oe-inferencex boundary scores.tif --width-m 20 --out band.tif
+oe-inferencex sample scores.tif --condition band.tif --condition-names 0=interior 1=boundary --budget 300 --out to_label.csv
+oe-inferencex estimate to_label.csv                  # after the reviewer has filled `wrong`
+```
+
+The width is in metres (`--width-m`, from a GeoTIFF's pixel size, in a projected CRS) or pixels (`--width-px`). A
+reasonable width is the coarser of the map's and the reference's resolution, since a reference drawn on a coarser grid
+disagrees with the map along every edge whatever the model does. The command prints the share of the map in the band:
+how much the edges weigh depends on how large the patches are against the pixel. Fields of 30 ha at 10 m put a few
+percent of their pixels in a one-pixel band, smallholder plots of a third of a hectare most of theirs. Whether an edge
+error matters is the user's call: a field-boundary map is judged at its edges, a land-cover map mostly inside. A window
+split evenly between band and interior counts as the condition `unrecorded`, as for any layer. No recorded experiment
+grades the band itself.
+
 ### compare
 
 `compare` measures where two maps of the same area differ and, with labels, which map is right where they differ.

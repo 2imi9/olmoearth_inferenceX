@@ -58,6 +58,72 @@ def test_assess_writes_the_files_and_matches_the_api(tmp_path):
     assert s["files"]["explanation"].endswith("explanation.json")
 
 
+def test_assess_prints_a_review_set_cut_inside_tied_scores(tmp_path, capsys):
+    # A kNN-20 vote share takes 21 values: the 5% set's cut-off falls inside a run of equal scores, and the terminal
+    # says how many of its windows the raster order chose, as assessment.json does; a tie-free map prints nothing.
+    rng = np.random.default_rng(0)
+    votes = rng.integers(0, 21, (64, 64)) / 20.0
+    p = np.stack([votes, 1.0 - votes]).astype(np.float32)
+    np.save(tmp_path / "knn.npy", p)
+    assert main(["assess", str(tmp_path / "knn.npy"), "--patch", "1", "--out", str(tmp_path / "o")]) == 0
+    text = capsys.readouterr().out
+    s = json.load(open(tmp_path / "o" / "assessment.json"))
+    tied = s["review_sets"]["0.05"]["tied_at_cutoff"]
+    assert f"{tied['inside']} of the {s['review_sets']['0.05']['n_windows']} windows at 5%" in text
+    assert "raster position, not evidence" in text
+    p2, _ = _scene(seed=1)
+    np.save(tmp_path / "p.npy", p2)
+    assert main(["assess", str(tmp_path / "p.npy"), "--out", str(tmp_path / "o2")]) == 0
+    assert "raster position" not in capsys.readouterr().out
+
+
+def test_boundary_writes_a_condition_layer_that_sample_and_estimate_read(tmp_path, capsys):
+    # Two classes split down the middle: the band is the columns at the edge, the npy goes to sample as a condition,
+    # and estimate gives interior and boundary their own rates. --width-m needs a GeoTIFF's pixel size.
+    p = np.zeros((2, 32, 32), np.float32)
+    p[0, :, :16], p[1, :, 16:] = 0.9, 0.9
+    p[1, :, :16], p[0, :, 16:] = 0.1, 0.1
+    np.save(tmp_path / "p.npy", p)
+    assert main(["boundary", str(tmp_path / "p.npy"), "--width-px", "2", "--out", str(tmp_path / "band.npy")]) == 0
+    band = np.load(tmp_path / "band.npy")
+    assert band.shape == (32, 32) and set(np.unique(band)) == {0, 1} and (band[:, 14:18] == 1).all()
+    assert "12.5% of valid pixels" in capsys.readouterr().out
+    with pytest.raises(SystemExit, match="width-px"):
+        main(["boundary", str(tmp_path / "p.npy"), "--width-m", "20", "--out", str(tmp_path / "b2.npy")])
+    with pytest.raises(SystemExit, match="once"):
+        main(["boundary", str(tmp_path / "p.npy"), "--out", str(tmp_path / "b3.npy")])
+    with pytest.raises(SystemExit, match="overwrite"):
+        main(["boundary", str(tmp_path / "p.npy"), "--width-px", "1", "--out", str(tmp_path / "p.npy")])
+    csv_path = tmp_path / "s.csv"
+    assert main(["sample", str(tmp_path / "p.npy"), "--condition", str(tmp_path / "band.npy"), "--condition-names",
+                 "0=interior", "1=boundary", "--budget", "40", "--out", str(csv_path)]) == 0
+    rows = list(csv.DictReader(open(csv_path)))
+    for r in rows:
+        r["wrong"] = "0"
+    with open(csv_path, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=rows[0].keys())
+        w.writeheader()
+        w.writerows(rows)
+    capsys.readouterr()
+    assert main(["estimate", str(csv_path)]) == 0
+    text = capsys.readouterr().out
+    assert "interior" in text and "boundary" in text
+
+
+def test_boundary_width_in_metres_uses_the_geotiff_pixel_size(tmp_path, capsys):
+    # 10 m pixels: 20 m is two pixels each side, and the band is written as a GeoTIFF on the map's grid
+    p = np.zeros((2, 32, 32), np.float32)
+    p[0, :, :16], p[1, :, 16:] = 0.9, 0.9
+    p[1, :, :16], p[0, :, 16:] = 0.1, 0.1
+    _write(tmp_path / "p.tif", p)
+    assert main(["boundary", str(tmp_path / "p.tif"), "--width-m", "20", "--out", str(tmp_path / "band.tif")]) == 0
+    assert "20 m (2 rows, 2 columns of 10 x 10 m pixels)" in capsys.readouterr().out
+    with rasterio.open(tmp_path / "band.tif") as src:
+        band = src.read(1)
+        assert src.crs.to_epsg() == 32633 and src.transform.a == 10.0 and src.nodata == -1
+    assert (band[:, 14:18] == 1).all() and band[:, :14].sum() == 0 and band[:, 18:].sum() == 0
+
+
 def test_assess_accepts_npy_without_geo(tmp_path):
     p, _ = _scene(seed=1)
     np.save(tmp_path / "p.npy", p)

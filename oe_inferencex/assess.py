@@ -298,6 +298,44 @@ def boundary_first_score(suspicion, boundary):
     return np.where(np.asarray(boundary) > 0, 2.0, 0.0) + midrank_pct(s_).reshape(s_.shape)
 
 
+def _sliding(a, w, axis, op):
+    """Running max or min of `a` over +-w along `axis` (edges padded with a value op ignores)."""
+    if w == 0:
+        return a
+    fill = np.iinfo(a.dtype).min if op is np.maximum else np.iinfo(a.dtype).max
+    pad = [(0, 0)] * a.ndim
+    pad[axis] = (w, w)
+    p = np.pad(a, pad, constant_values=fill)
+    n = a.shape[axis]
+    out = a.copy()
+    for s in range(2 * w + 1):
+        out = op(out, np.take(p, np.arange(s, s + n), axis=axis))
+    return out
+
+
+def boundary_band(hard, valid, width_rows, width_cols=None):
+    """Per pixel: 1 where a valid pixel of another class lies within `width_rows` rows and `width_cols` columns, 0
+    for the rest of the valid pixels, -1 for no-data.
+
+    The band comes from the map alone, before any label, so a sample stratified by it as a condition layer keeps the
+    condition design's exact interval for each part (exp88 graded that design). Whether a boundary error matters is
+    the user's question: a field-boundary map is judged at its edges, a land-cover map mostly inside its patches, and
+    the share of the map in the band (small for large fields, most of the map for smallholder plots) says how much
+    the edges weigh. No recorded experiment grades the band itself."""
+    hard = np.asarray(hard)
+    valid = np.asarray(valid, dtype=bool)
+    if hard.ndim != 2 or hard.shape != valid.shape:
+        raise ValueError(f"boundary_band needs one (H, W) class map and its valid mask, got {hard.shape} and {valid.shape}")
+    wr = int(width_rows)
+    wc = wr if width_cols is None else int(width_cols)
+    if wr < 0 or wc < 0 or wr + wc == 0:
+        raise ValueError(f"the band's width must be at least one pixel, got {wr} rows and {wc} columns")
+    cls = np.where(valid, hard, 0).astype(np.int64)
+    hi = _sliding(_sliding(np.where(valid, cls, np.iinfo(np.int64).min), wr, 0, np.maximum), wc, 1, np.maximum)
+    lo = _sliding(_sliding(np.where(valid, cls, np.iinfo(np.int64).max), wr, 0, np.minimum), wc, 1, np.minimum)
+    return np.where(valid, (hi != lo).astype(np.int8), np.int8(-1))
+
+
 def assess_classmap(hard, confidence, n_classes, patch=4, nodata_mask=None, reference=None, budgets=(0.01, 0.05, 0.10),
                     signal="exported top-1 probability", order="confidence", condition=None, condition_names=None):
     """Production case: a hard class map plus an exported per-pixel confidence
