@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+Usage gains "From precomputed embeddings (OlmoEarth v1.3)": fit a classifier that writes probabilities
+(logistic regression) on Ai2's v1.3 embeddings, save its probabilities, and run `assess`, `sample` and `estimate` on
+them; the points the classifier was fitted on cannot say how accurate the map is. Documentation only; no recorded
+experiment grades this route on v1.3 embeddings.
+
 ## 1.12.3 (2026-10-19)
 
 **The PyPI page carries the current README**: a shorter opening, the imagery it works on, three examples with real

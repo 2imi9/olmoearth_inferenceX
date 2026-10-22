@@ -291,6 +291,53 @@ those are the conditions the layer records, so that `assess` ranks each of them 
 another season than its period, or anything about the model. No published project stores SCL, so without it the
 layer records coverage alone.
 
+## From precomputed embeddings (OlmoEarth v1.3)
+
+Ai2's [OlmoEarth v1.3 embeddings](https://source.coop/olmoearth/olmoearth-v1-3-embeddings) give one 128-dimensional
+vector per 10 m pixel per year. A map made from them is a classifier fitted on labelled points and applied to an area.
+Neither the embeddings nor their [report](https://allenai.org/papers/olmoearth-v1-3) carry a confidence, so the
+scores this package reads are the classifier's probabilities.
+
+- **Fit a classifier that writes probabilities.** Logistic regression is among the best readouts in the report's
+  Table 1 and writes them directly. A kNN vote share takes only k + 1 values (21 for the report's kNN-20), so most
+  windows tie and the ranking is coarse. Ridge regression writes scores, not probabilities.
+- **The points the classifier was fitted on cannot say how accurate the map is.** They are not a random sample of
+  the map, and the classifier has seen them. Draw a fresh sample with `sample` and label that.
+
+Read and dequantize an area as the [dataset's README](https://source.coop/olmoearth/olmoearth-v1-3-embeddings)
+shows, then:
+
+```python
+import numpy as np
+from sklearn.linear_model import LogisticRegression
+
+# v: (128, H, W) float, dequantized; NaN where the store has no data
+# rows, cols, classes: the labelled pixels in the area, classes as ids 0 to C - 1, every one present
+X = v[:, rows, cols].T
+clf = LogisticRegression(max_iter=2000).fit(X, classes)
+
+flat = v.reshape(v.shape[0], -1).T
+ok = ~np.isnan(flat).any(1)
+probs = np.full((len(clf.classes_), flat.shape[0]), np.nan, dtype=np.float32)
+probs[:, ok] = clf.predict_proba(flat[ok]).T
+np.save("scores.npy", probs.reshape(len(clf.classes_), *v.shape[1:]))
+```
+
+```bash
+oe-inferencex assess scores.npy --out audit                                        # where to look first
+oe-inferencex sample scores.npy --budget 300 --design random --out to_label.csv    # then fill `wrong`
+oe-inferencex estimate to_label.csv                                                # how wrong the map is
+```
+
+NaN is read as no-data. To keep the map's coordinates, write `probs` as a GeoTIFF in the zone's CRS instead
+(`proj:code` and `spatial:transform` in the zone's attributes).
+
+No recorded experiment grades this route on v1.3 embeddings. The closest evidence is linear probes on frozen
+embeddings of sixteen encoders: confidence ranked their errors better than a random order on every task
+([exp79](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/results/comparisons.md#is-the-record-bigger-than-its-own-seed-noise-final-reading-all-sixteen-encoders-exp79)).
+The report also says that 2025, most of 2024 and small parts of 2019 and 2023 were computed before a fix for a faint seam
+every 20.48 km; whether a classifier map errs more along those lines is not measured.
+
 ## Command line
 
 `oe-inferencex <command> --help` lists each command's options. Outputs are JSON summaries, CSV tables of windows with
