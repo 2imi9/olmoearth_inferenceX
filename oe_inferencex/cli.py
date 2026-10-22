@@ -3,6 +3,8 @@
     oe-inferencex assess  scores.tif --out DIR [--logits] [--patch 4] [--nodata V] [--reference labels.tif]
                           [--budgets 0.01 0.05 0.10] [--order confidence|boundary_first]
                           [--condition layer.tif [--condition-names 0=clear 1=cloudy]]
+    oe-inferencex from-embeddings --points points.csv --bbox W S E N --year 2025 --out scores.tif   precomputed
+                                                            embeddings + labelled points -> class probabilities
     oe-inferencex boundary scores.tif --out band.tif --width-m 20 | --width-px 2   the class-edge band, as a
                                                             condition layer for sample
     oe-inferencex compare a.tif b.tif --out DIR [--patch 4] [--nodata V] [--labels labels.tif] [--groups ids.tif]
@@ -429,6 +431,32 @@ def cmd_assess(args):
           f"; boundary windows {100 * s['boundary_window_fraction']:.1f}%" + ref_text + cond_text + tie_text +
           "".join(f"\nnote: {n}" for n in prod_notes) +
           f"\nwrote {args.out}/assessment.json, explanation.json, review_set_*.csv, suspicion, boundary")
+    return 0
+
+
+# ----------------------------------------------------------------------------- from-embeddings
+def cmd_from_embeddings(args):
+    """An area of precomputed embeddings and labelled points in; logistic regression's class probabilities out, as a
+    GeoTIFF assess reads."""
+    from . import embeddings as emb
+    if not args.out.lower().endswith((".tif", ".tiff")):
+        raise SystemExit("from-embeddings: --out is the GeoTIFF to write (.tif)")
+    args.store = args.store or emb.STORE
+    points = emb.read_points(args.points)
+    root = emb.open_store(args.store, args.endpoint or emb.ENDPOINT)
+    v, crs, transform, zone = emb.read_area(root, args.bbox, args.year, args.dims, args.max_pixels or emb.MAX_PIXELS)
+    probs, names, counts, notes = emb.fit_and_predict(v, crs, transform, points)
+    meta = {"store": args.store, "zone": zone, "crs": crs, "year": int(args.year), "dims": int(args.dims),
+            "bbox": [float(x) for x in args.bbox], "classifier": "sklearn LogisticRegression(max_iter=2000)",
+            "points_per_class": counts, "notes": notes}
+    side = emb.write_scores(args.out, probs, crs, transform, names, meta)
+    valid = float(np.isfinite(probs[0]).mean())
+    print(f"{len(names)} classes from {sum(counts.values())} points; wrote {args.out} ({probs.shape[1]} x "
+          f"{probs.shape[2]} pixels, {crs}, {100 * valid:.1f}% with an embedding) and {side}"
+          + "".join(f"\nnote: {n}" for n in notes)
+          + "\nnote: the points the classifier was fitted on cannot say how accurate the map is; draw a fresh sample "
+            "with sample and label that"
+          + f"\nnext: oe-inferencex assess {args.out} --out audit")
     return 0
 
 
@@ -2671,6 +2699,20 @@ def build_parser():
     d.add_argument("--seed", type=int, default=0, help="seed of the made-up scene and of the random pick")
     d.add_argument("--made-up", action="store_true", help="audit a small synthetic water map instead of the real sample tile")
     d.set_defaults(func=cmd_demo)
+    fe = sub.add_parser("from-embeddings", help="read an area of precomputed embeddings (OlmoEarth v1.3), fit logistic "
+                                                "regression on labelled points, and write its class probabilities")
+    fe.add_argument("--points", required=True, help="CSV with lon, lat and class columns")
+    fe.add_argument("--bbox", required=True, nargs=4, type=float, metavar=("WEST", "SOUTH", "EAST", "NORTH"),
+                    help="the area in degrees, inside one UTM zone")
+    fe.add_argument("--year", required=True, type=int, help="the calendar year of the embeddings")
+    fe.add_argument("--out", required=True, help="the GeoTIFF of class probabilities to write")
+    fe.add_argument("--dims", type=int, default=128, choices=(64, 128), help="64 reads half the data (default 128)")
+    fe.add_argument("--store", default=None, help="the Zarr store, an s3:// URL or a local directory (default: Ai2's "
+                                                  "OlmoEarth v1.3 embeddings on Source Cooperative)")
+    fe.add_argument("--endpoint", default=None, help="the S3 endpoint of an s3:// store (default: Source Cooperative)")
+    fe.add_argument("--max-pixels", type=int, default=None,
+                    help="refuse a box larger than this many pixels (default 1048576, a 10 km square at 10 m)")
+    fe.set_defaults(func=cmd_from_embeddings)
     bd = sub.add_parser("boundary", help="write the map's class-edge band as a condition layer, so sample and estimate "
                                          "give the error rate near edges and away from them")
     bd.add_argument("scores", help="the map's scores (GeoTIFF or .npy), as assess reads them, or a hard class map")

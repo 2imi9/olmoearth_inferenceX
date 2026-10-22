@@ -304,8 +304,24 @@ scores this package reads are the classifier's probabilities.
 - **The points the classifier was fitted on cannot say how accurate the map is.** They are not a random sample of
   the map, and the classifier has seen them. Draw a fresh sample with `sample` and label that.
 
-Read and dequantize an area as the [dataset's README](https://source.coop/olmoearth/olmoearth-v1-3-embeddings)
-shows, then:
+`from-embeddings` does both steps for one area: it reads the box from Ai2's store on Source Cooperative (anonymous,
+no account), fits logistic regression on your points and writes the class probabilities as a GeoTIFF on the store's
+grid, with a sidecar naming each band's class. It needs the `embeddings` extra.
+
+```bash
+pip install "olmoearth-inferencex[geo,embeddings]"
+oe-inferencex from-embeddings --points points.csv --bbox 14.95 44.95 15.05 45.05 --year 2025 --out scores.tif
+oe-inferencex assess scores.tif --out audit
+```
+
+`points.csv` has the columns `lon`, `lat` and `class`. The box is west, south, east, north in degrees and must lie in
+one UTM zone; it is limited to about a 10 km square at 10 m (`--max-pixels` raises the limit, and memory grows with
+it). `--dims 64` reads half the data. Points outside the box or on a pixel with no embedding are left out and counted.
+`--store` reads another store laid out the same way (a group per UTM zone, `proj:code`, `spatial:transform`,
+`geoemb:quantization`), an s3:// URL or a local directory.
+
+To use another classifier, read and dequantize the area as the
+[dataset's README](https://source.coop/olmoearth/olmoearth-v1-3-embeddings) shows, then:
 
 ```python
 import numpy as np
@@ -1285,7 +1301,7 @@ On this pair most of the accuracy comes from the post-event side being usually r
 
 | Module | Contents |
 |---|---|
-| `assess` | Review sets; with a reference, error rate, capture and tie-aware AURC; with a condition layer, each condition on its own |
+| `assess` | Review sets; with a reference, error rate, capture and tie-aware AURC; with a condition layer, each condition on its own; the class-edge band (`boundary`) |
 | `explain` | The cues behind each flagged window, with their measured enrichment |
 | `compare` | Where two inferences differ; with labels, the cross-tab and which side is right; `determinism_check` |
 | `estimate` | Sampling designs, the error rate, per-class accuracy, the certified zone, the review-set check, each per input condition; the per-class audit of a map's confident calls |
@@ -1295,6 +1311,7 @@ On this pair most of the accuracy comes from the post-event side being usually r
 | `reliability`, `evidence` | SHRUG-FM's reliability signals, torch-free; the heads a candidate rule is scored with |
 | `taskcard`, `lcc` | The [task cards](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/method/taskcards.md) of OlmoEarth's fine-tuned models; a reader for the served change rasters |
 | `olmoearth` | An OlmoEarth run's rslearn dataset read into scores and an input-condition layer (`from-olmoearth`; rasterio) |
+| `embeddings` | An area of a geo-embeddings Zarr store and labelled points to class probabilities (`from-embeddings`; the `embeddings` extra) |
 | `decide` | Typed answers to set questions, read from a result that `estimate`, `certify` or `compare` wrote |
 | `plan` | How many labels each labelled route needs, budget by budget, before any label is drawn |
 | `cli`, `demo` | The `oe-inferencex` commands |

@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+**`from-embeddings`, a new command, and the `embeddings` extra.** It reads an area of a geo-embeddings Zarr store (by
+default Ai2's OlmoEarth v1.3 embeddings on Source Cooperative, anonymous), fits logistic regression on labelled points
+and writes the class probabilities as a GeoTIFF on the store's grid, with a sidecar naming each band's class, so that
+`assess`, `sample` and `estimate` can check a map made from embeddings. The grid and the quantization are read from
+the store's own attributes. No recorded experiment grades this route on v1.3 embeddings. Tests: tests/test_embeddings.py,
+on a local store laid out the same way; CI installs the extra.
+
 **`boundary`, a new command.** It writes the band of pixels within a given distance of another class (in metres from a
 GeoTIFF's pixel size, or in pixels) as a condition layer, so that `sample --condition` and `estimate` give the error
 rate near class edges and inside patches, each with the condition design's exact interval. It prints the share of the

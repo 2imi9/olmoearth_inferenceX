@@ -34,7 +34,7 @@ jobs:
           enable-cache: true
       # --frozen: a pyproject edited without relocking fails here rather than resolving to something else.
       - name: The package's tests, the formulas among them
-        run: uv run --frozen --extra geo --python ${{ matrix.python }} pytest -q
+        run: uv run --frozen --extra geo --extra embeddings --python ${{ matrix.python }} pytest -q
 
   wheel:
     # What someone gets from `pip install olmoearth-inferencex`. publish.yml runs this too, at release, which is
