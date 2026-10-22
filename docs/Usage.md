@@ -348,9 +348,13 @@ oe-inferencex estimate to_label.csv                                             
 NaN is read as no-data. To keep the map's coordinates, write `probs` as a GeoTIFF in the zone's CRS instead
 (`proj:code` and `spatial:transform` in the zone's attributes).
 
-No recorded experiment grades this route on v1.3 embeddings. The closest evidence is linear probes on frozen
-embeddings of sixteen encoders: confidence ranked their errors better than a random order on every task
-([exp79](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/results/comparisons.md#is-the-record-bigger-than-its-own-seed-noise-final-reading-all-sixteen-encoders-exp79)).
+One preregistered experiment grades this route ([exp112](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/results/comparisons.md#a-map-made-from-olmoearth-v13-embeddings-at-lcmaps-probability-sample-exp112)): logistic regression on the 2018 v1.3 embeddings of
+1,000 random plots of LCMAP's reference sample, checked at 11,000 others. The map erred on 11.7% of them, its top
+probability ranked those errors at AUROC 0.876 (the least confident 10% held 41.6% of them), and the interval, the
+certified zone and the which-map route kept their guarantees. The fit points there were a random sample of the same
+population, the favourable case: a fit on a few points in one area, applied to that area, is not graded. The 2018
+vectors ran smaller than the dataset README says (median norm 3.08 against 3.4); carrying a fit across years is
+untested, so fit and apply on one year.
 The report also says that 2025, most of 2024 and small parts of 2019 and 2023 were computed before a fix for a faint seam
 every 20.48 km; whether a classifier map errs more along those lines is not measured.
 
@@ -802,7 +806,7 @@ draws the sample from assess's per-window `confidence` and `pooled_argmax`;
 samples. Outside that zone nothing is certified.
 
 ```bash
-oe-inferencex sample water_prob.tif --budget 300 --design random --out random.csv
+oe-inferencex sample water_prob.tif --budget 400 --design random --out random.csv
 oe-inferencex certify random.csv --alpha 0.05    # after the reviewer has filled `wrong`
 ```
 
@@ -823,6 +827,9 @@ It writes `random_zone.json` (`coverage`, the certified share; `threshold`, the 
   At the budget where a level enters it holds fewer than b_min labels about half the time, and the prefix rule must
   pass it first, so the chance of certifying can fall when labels are added (exp95: by more than 0.05 of the map on
   14 of 34 maps). `plan --coverage C --alpha A` lists those budgets; the one below each is the last before the fall.
+  At α = 5%, from 300 labels up, those budgets are 300, 450 and 900 (below 300 there are more, such as 225 and 180):
+  at each, even a perfect map certifies a zone only about half the time (0.525, 0.523 and 0.521 on a large map,
+  `plan.zone_level_probability`), so draw about 400, 600 to 850, or 1,200 labels instead. exp112 met this at 300 labels ([exp112](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/results/comparisons.md#a-map-made-from-olmoearth-v13-embeddings-at-lcmaps-probability-sample-exp112)).
   `ramp` is an option: the same levels up to 3 b_min labels, then none new until 9 b_min, then a level only once it
   expects 3 b_min labels. On 332 maps it was not designed on it halved the fall on 77% of the maps where it exceeded
   0.05 (exp96), but an audit found that share at the bar it had to pass (0.744 to 0.776 over 9 seeds), some falls

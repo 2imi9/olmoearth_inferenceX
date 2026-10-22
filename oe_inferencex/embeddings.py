@@ -9,7 +9,8 @@ years, the grid in the group's `proj:code` and `spatial:transform`, and the quan
 Logistic regression because it writes probabilities and is among the best readouts in the v1.3 report's Table 1; a
 kNN vote share takes k + 1 values and ties. The points the classifier is fitted on are not a random sample of the map
 and the classifier has seen them, so they cannot say how accurate the map is: `sample` draws the windows to label for
-that. No recorded experiment grades this route on v1.3 embeddings.
+that. exp112 graded this route at LCMAP's probability sample (2018, 1,000 random fit plots): the map's top
+probability ranked its errors at AUROC 0.876; a regional fit is not graded.
 
 Needs the `embeddings` extra (zarr, obstore, pyproj, scikit-learn) and the `geo` extra (rasterio).
 """

@@ -2,11 +2,21 @@
 
 ## Unreleased
 
+**Certify's budget advice.** The README drew 300 random windows for the error rate and the certified zone. At α = 5%
+and 300 labels the 15% level enters expecting exactly the 45 labels it needs, so even a perfect map certifies a zone
+only about half the time (0.525); from 300 up the same holds at 450 and 900 (0.523, 0.521). The README now draws
+400, and Usage names the budgets to avoid. Found by the research record's exp112, whose preregistered bar (copied from
+exp110) sat on that budget.
+
+**The embeddings route is graded once.** Usage and `oe_inferencex.embeddings` cite exp112: on LCMAP's probability
+sample, logistic regression on 1,000 random plots' v1.3 embeddings ranked its errors at AUROC 0.876. The fit points
+were random over CONUS; a regional fit is not graded.
+
 **`from-embeddings`, a new command, and the `embeddings` extra.** It reads an area of a geo-embeddings Zarr store (by
 default Ai2's OlmoEarth v1.3 embeddings on Source Cooperative, anonymous), fits logistic regression on labelled points
 and writes the class probabilities as a GeoTIFF on the store's grid, with a sidecar naming each band's class, so that
 `assess`, `sample` and `estimate` can check a map made from embeddings. The grid and the quantization are read from
-the store's own attributes. No recorded experiment grades this route on v1.3 embeddings. Tests: tests/test_embeddings.py,
+the store's own attributes. exp112 grades the route once (above). Tests: tests/test_embeddings.py,
 on a local store laid out the same way; CI installs the extra.
 
 **`boundary`, a new command.** It writes the band of pixels within a given distance of another class (in metres from a
@@ -20,8 +30,8 @@ assessment.json only; the terminal now says how many. Tie-free maps print as bef
 
 Usage gains "From precomputed embeddings (OlmoEarth v1.3)": fit a classifier that writes probabilities
 (logistic regression) on Ai2's v1.3 embeddings, save its probabilities, and run `assess`, `sample` and `estimate` on
-them; the points the classifier was fitted on cannot say how accurate the map is. Documentation only; no recorded
-experiment grades this route on v1.3 embeddings.
+them; the points the classifier was fitted on cannot say how accurate the map is. Documentation only; exp112 grades
+the route once (above).
 
 ## 1.12.3 (2026-10-19)
 
