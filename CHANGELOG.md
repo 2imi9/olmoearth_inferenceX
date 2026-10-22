@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.13.0 (2026-10-22)
 
 **Certify's budget advice.** The README drew 300 random windows for the error rate and the certified zone. At α = 5%
 and 300 labels the 15% level enters expecting exactly the 45 labels it needs, so even a perfect map certifies a zone
