@@ -1,5 +1,43 @@
 # Changelog
 
+## 1.14.0 (2026-10-23)
+
+**Per class, exactly, under a random sample.** `estimate --per-class` on a random sample (`--design random`, or a
+sequential sample read as random) now prints exact intervals for every class.
+- Each class's share gets the labels' own share with its hypergeometric interval at 1 - 0.05/L, so all L classes'
+  shares hold together at 95% (`reference_share_exact`).
+- A share the map draws outside its interval is named `drawn too little` or `drawn too much` (`drawn`); read the flag
+  with its interval.
+- Producer's accuracy gets the labels' found share with an interval from exact intervals for its two counts, bounded by
+  the map's own count of the class (`producer_accuracy_exact`). So a class the map hardly draws, and the labels show is
+  common, gets a low upper end where the error-adjusted point is `n/a`.
+- `--classes L` states the legend's size (by default the largest id plus one), and the JSON records it
+  (`per_class_legend_size`).
+
+The research record's exp115 graded these intervals on 39 fully labelled maps, with every probability computed
+exactly, and found them all at or above their levels. 400 labels flagged 16 of 17 classes of 5% or more drawn at half
+their share or less, most drawn far below half; a class of exactly 5% drawn at exactly half needs about 900 labels.
+
+The printed points beside the exact intervals are now the labels' own (the share k/n, the found share a/k), so a point
+never sits outside its interval. Olofsson et al.'s error-adjusted points and their normal-theory intervals stay in the
+JSON, and the warnings `few errors` and `near census`, which concern those, are no longer printed on the table's line.
+Other designs are unchanged. `decide`'s producer's-accuracy answers rest on the exact intervals under a random sample,
+and say they hold together. The MCP server passes the exact intervals and the flag in `summary.per_class`; its `plan`
+tool does not take a class yet. The golden outputs of the three random samples' per-class tables are regenerated and
+declared (tests/golden/condition_1_3_1/changes.py, REGENERATED), and what did not change in them is still checked
+against 1.3.1. Tests: tests/test_per_class.py, tests/test_cli.py.
+
+**`plan --class-share`.** How many random labels it takes for `estimate --per-class` to flag a class of a given true
+share that the map draws at a given fraction of it (`--drawn-at`, 0.5 by default; above 1, an over-draw), exactly,
+with the intervals of all `--classes` classes holding together (`oe_inferencex.plan.plan_class`). With eight classes, a
+class of 5% of a large map drawn at half its share needs about 900 labels to be flagged with probability 0.9; one of
+1%, several thousand. It refuses a share under one window and a map that would draw more windows than exist.
+
+**Usage: carrying a fit to a new area.** The embeddings section cites exp113 and exp114. Fitted on other territories of
+Ai2's PLANTEUR benchmark, the map's confidence still ranked its errors, but three of five held-out maps called nearly
+everything the majority class. Reweighting the two worst by the true class shares did not repair them, and a
+label-free estimate of the shares was not to be trusted there. Check a carried fit per class with random labels.
+
 ## 1.13.0 (2026-10-22)
 
 **Certify's budget advice.** The README drew 300 random windows for the error rate and the certified zone. At α = 5%

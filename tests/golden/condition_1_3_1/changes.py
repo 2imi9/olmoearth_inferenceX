@@ -87,6 +87,24 @@ CHANGES = (
 )
 LINE_PREFIXES = ("", "warning: ")
 
+# Outputs rewritten whole, on purpose, rather than changed by a listed text: the new bytes are a golden file of their
+# own, written by the package at the version named and reviewed, in the directory named; the 1.3.1 file beside this
+# one stays as it was. A JSON output is stored as the test compares it, without `scope`.
+REGENERATED = {
+    "why": ("the per-class table of a random sample (estimate --per-class, 1.14.0). Its share and producer's-accuracy "
+            "intervals are now exact (exp115, graded on 39 fully labelled maps), a class whose share the map draws "
+            "outside its interval is named drawn too little or too much, a producer's accuracy the point estimate "
+            "leaves out gets its exact interval, and a note says so; the JSON rows gain reference_share_exact, drawn "
+            "and producer_accuracy_exact and its per_class_method says the intervals are exact. Other designs are "
+            "unchanged"),
+    "version": "1.14.0",
+    "directory": "../per_class_exact_1_14_0",
+    "constant": ("oe_inferencex.estimate", "PER_CLASS_EXACT_NOTE"),
+    "files": ("sample_logits3_random.perclass.json", "sample_logits3_random.perclass.stdout.txt",
+              "sample_random.perclass.json", "sample_random.perclass.stdout.txt",
+              "sample_scene_random.perclass.json", "sample_scene_random.perclass.stdout.txt"),
+}
+
 
 def _replace(name, data, old, new, within_line=False):
     """(data with every whole occurrence of old replaced by new, the number replaced). Only JSON and stdout files
@@ -108,7 +126,14 @@ def _replace(name, data, old, new, within_line=False):
 
 
 def expected(name, data):
-    """The golden file `name` (its 1.3.1 bytes `data`) as the package must write it now."""
+    """The golden file `name` (its 1.3.1 bytes `data`) as the package must write it now: a regenerated output's new
+    golden bytes, or 1.3.1's with the listed changes."""
+    if name in REGENERATED["files"]:
+        import os
+        for c in CHANGES:                                       # a regenerated file is not also a listed change
+            assert name not in c["files"], name
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), REGENERATED["directory"], name), "rb") as f:
+            return f.read()
     for c in CHANGES:
         assert c["old"] != c["new"] and json.dumps(c["new"])[1:-1] == c["new"], c["why"]   # no escaping to hide in
         data, count = _replace(name, data, c["old"], c["new"], c.get("within_line", False))

@@ -851,7 +851,9 @@ def test_existing_outputs_are_byte_identical_to_1_3_1(tmp_path):
     - the instruction sample prints for the reviewer, which now offers ? for a window that cannot be judged: a stretch
       of the first line of the seven sample outputs;
     - the zone JSONs' `level_cut` key, added with the ramp option (exp96): it is "standard", the cut every 1.3.1 output
-      was made with, and is taken out with `scope`."""
+      was made with, and is taken out with `scope`;
+    - the per-class table of the three random samples, rewritten whole in 1.14.0 (exact intervals and the drawn flag,
+      exp115): changes.REGENERATED names the six files and holds their new bytes."""
     from oe_inferencex.assess import SCOPE_ASSESS
     from oe_inferencex.estimate import SCOPE_CERTIFY, SCOPE_ESTIMATE
     gen = _golden_module()
@@ -871,6 +873,41 @@ def test_existing_outputs_are_byte_identical_to_1_3_1(tmp_path):
     for c in changes.CHANGES:
         module, constant = c["constant"]
         assert getattr(importlib.import_module(module), constant) == c["new"], constant
+    # the outputs regenerated whole (the random sample's per-class table, 1.14.0): exactly these six golden files, none
+    # also a listed change, each new file present, the JSON without `scope`, and the stdout carrying the note the
+    # package keeps
+    regen = changes.REGENERATED
+    assert len(regen["files"]) == len(set(regen["files"])) == 6 and set(regen["files"]) <= set(golden["files"])
+    assert not set(regen["files"]) & set(listed) and not set(regen["files"]) & set(fill)
+    rdir = os.path.join(GOLDEN, regen["directory"])
+    assert sorted(os.listdir(rdir)) == sorted(regen["files"])
+    note = getattr(importlib.import_module(regen["constant"][0]), regen["constant"][1])
+    for name in regen["files"]:
+        with open(os.path.join(rdir, name), "rb") as f:
+            new = f.read()
+        with open(os.path.join(GOLDEN, name), "rb") as f:
+            old = f.read()
+        # what did not change on purpose still equals 1.3.1: in the JSON every key but the three exact ones added per
+        # row, the rows' warning text and the method, warning and legend size of the table; in the stdout every line
+        # but the class lines (whose start, up to the producer's accuracy, is 1.3.1's), the note and the warning on a
+        # map class with no labelled window
+        if name.endswith(".json"):
+            a, b = json.loads(new), json.loads(old)
+            assert "scope" not in a and all("reference_share_exact" in r for r in a["per_class"].values())
+            for d in (a, b):
+                for k in ("per_class_method", "per_class_warning", "per_class_legend_size"):
+                    d.pop(k, None)
+                for r in d["per_class"].values():
+                    for k in ("reference_share_exact", "drawn", "producer_accuracy_exact", "warning"):
+                        r.pop(k, None)
+            assert changes.same_but_last_digits(a, b), name
+        else:
+            assert f"note: {note}".encode() in new
+            nl, ol = new.decode().split("\n"), old.decode().split("\n")
+            keep = lambda ls: [x for x in ls if not x.startswith(("  class ", "note: ", "warning: map class"))]
+            assert keep(nl) == keep(ol), name
+            ncl, ocl = [x for x in nl if x.startswith("  class ")], [x for x in ol if x.startswith("  class ")]
+            assert len(ncl) == len(ocl) and all(x.split("producer's")[0] == y.split("producer's")[0] for x, y in zip(ncl, ocl))
 
     def scope_of(name):
         if name.startswith("api_") or name.endswith("__assessment.json"):

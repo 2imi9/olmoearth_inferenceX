@@ -274,3 +274,138 @@ def test_per_class_with_one_condition_is_the_random_design():
         assert pc.pop("design") == "condition" and pr.pop("design") == "random"
         assert pc == pr, seed
         assert pc["method"].startswith("random sample: exact hypergeometric") and "graded" not in pc["method"]
+
+
+# ----------------------------------------------------------------------------- exact intervals (exp115, 1.14.0)
+def _enumerate_exact(m, r, n, C):
+    import itertools
+    N = m.size
+    K, A = np.bincount(r, minlength=C), np.bincount(r[m == r], minlength=C)
+    share, pa, total = np.zeros(C), np.zeros(C), 0
+    for s in itertools.combinations(range(N), n):
+        s = np.array(s)
+        total += 1
+        out = est.estimate_per_class({"design": "random", "indices": s, "n_population": N}, r[s], m, n_classes=C)
+        for c in range(C):
+            row = out["per_class"][c]
+            share[c] += row["reference_share_exact"]["low"] <= K[c] / N <= row["reference_share_exact"]["high"]
+            pa[c] += row["producer_accuracy_exact"]["low"] <= A[c] / K[c] <= row["producer_accuracy_exact"]["high"]
+    return share / total, pa / total
+
+
+def test_exact_per_class_intervals_cover_on_every_sample():
+    """Every sample of 5 from 14 windows enumerated: each class's exact share interval covers its share, and its
+    producer's-accuracy interval its producer's accuracy, at least 1 - 0.05/C of the time (exp115's construction)."""
+    m = np.array([0, 0, 0, 0, 0, 1, 1, 1, 2, 2, 0, 1, 2, 0])
+    r = np.array([0, 0, 0, 1, 0, 1, 1, 2, 2, 2, 1, 1, 2, 0])
+    share, pa = _enumerate_exact(m, r, 5, 3)
+    assert (share >= 1 - 0.05 / 3).all() and (pa >= 1 - 0.05 / 3).all()
+
+
+def test_a_class_the_map_hardly_draws_is_flagged_and_bounded():
+    """A class that is 15% of the map, drawn on 0.5%: the labels flag it drawn too little, and its producer's accuracy,
+    which the point estimate leaves out when no labelled window is drawn in it, gets an exact upper end at most the
+    map's own count over the class's lower count."""
+    rng = np.random.default_rng(0)
+    N = 20_000
+    r = np.zeros(N, int)
+    r[:3000] = 1
+    m = r.copy()
+    m[:3000] = 0
+    m[:100] = 1                                                   # the map draws 100 of the class's 3,000 windows
+    idx = np.sort(rng.choice(N, 400, replace=False))
+    out = est.estimate_per_class({"design": "random", "indices": idx, "n_population": N}, r[idx], m, n_classes=2)
+    row = out["per_class"][1]
+    assert row["drawn"] == "too little"
+    k = int((r[idx] == 1).sum())
+    K_lo = round(est.hypergeom_interval(k, 400, N, conf=1 - 0.05 / 4)[0] * N)      # the count's interval, at its level
+    assert row["producer_accuracy_exact"]["high"] <= 100 / K_lo + 1e-12
+    assert row["producer_accuracy_exact"]["high"] < 0.1
+    assert out["per_class"][0]["drawn"] == "too much"
+
+
+def test_plan_class_matches_the_flag_probability():
+    """plan_class recommends the smallest budget from which the exact flag probability reaches the power asked for;
+    with eight classes a class of 5% drawn at half its share needs several hundred labels, one of 1% several
+    thousand."""
+    from oe_inferencex import plan
+    r5 = plan.plan_class(500_000, 0.05, 8, power=0.8)
+    assert 600 <= r5["labels"] <= 900 and r5["probability_at_labels"] >= 0.8
+    assert plan.class_flag_probability(500_000, r5["labels"] - 50, 0.05, 0.5, 8) < 0.8
+    r1 = plan.plan_class(500_000, 0.01, 8, power=0.8)
+    assert r1["labels"] > 3000
+    assert plan.class_flag_probability(10_000, 10_000, 0.05, 0.5, 8) == 1.0          # a census knows the share
+    with pytest.raises(ValueError):
+        plan.plan_class(1000, 0.05, 8, drawn_ratio=1.0)
+
+
+def test_exact_intervals_hold_jointly_with_a_never_drawn_class_and_one_never_right():
+    """Every sample of 5 from 14: class 2 is never drawn by the map, class 1 is drawn but never right (A = 0). Each
+    share and producer's-accuracy interval covers at its level, the shares jointly at 95% or more, and no
+    producer's-accuracy interval is inverted."""
+    import itertools
+    m = np.array([0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0])
+    r = np.array([0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 2, 0, 0])
+    N, n, C = m.size, 5, 3
+    K, A = np.bincount(r, minlength=C), np.bincount(r[m == r], minlength=C)
+    joint = total = 0
+    share, pa = np.zeros(C), np.zeros(C)
+    for s in itertools.combinations(range(N), n):
+        s = np.array(s)
+        total += 1
+        out = est.estimate_per_class({"design": "random", "indices": s, "n_population": N}, r[s], m, n_classes=C)
+        ok = True
+        for c in range(C):
+            row = out["per_class"][c]
+            se, pe = row["reference_share_exact"], row["producer_accuracy_exact"]
+            cov = se["low"] <= K[c] / N <= se["high"]
+            share[c] += cov
+            ok &= cov
+            assert pe["low"] <= pe["high"]
+            pa[c] += pe["low"] <= A[c] / K[c] <= pe["high"]
+        joint += ok
+    assert (share / total >= 1 - 0.05 / C).all() and (pa / total >= 1 - 0.05 / C).all() and joint / total >= 0.95
+
+
+def test_producer_interval_is_never_inverted():
+    """The review's case: a class of 500 of 1,000 windows that the map draws on 50, all right, and a sample of 400
+    that takes 40 of those 50 (an unlucky draw, on which an exact interval may miss: its guarantee is over the draws).
+    The lower end is bounded by the map's own count, so it never passes the upper end."""
+    N = 1000
+    r = np.zeros(N, int)
+    r[:500] = 1
+    m = np.zeros(N, int)
+    m[:50] = 1
+    idx = np.sort(np.concatenate([np.arange(40), np.arange(500, 860)]))
+    row = est.estimate_per_class({"design": "random", "indices": idx, "n_population": N}, r[idx], m,
+                                 n_classes=2)["per_class"][1]
+    pe = row["producer_accuracy_exact"]
+    assert pe["low"] <= pe["high"]
+
+
+def test_legend_size_sets_the_level_and_is_checked():
+    """A product's ids can be sparse: the legend size the user states sets the Bonferroni level (narrower intervals
+    than the largest id plus one), and a legend smaller than the classes the map and labels use is refused."""
+    rng = np.random.default_rng(1)
+    N = 5000
+    r = rng.choice([10, 20, 30], N, p=[0.6, 0.3, 0.1])
+    m = np.where(rng.random(N) < 0.9, r, 10)
+    idx = np.sort(rng.choice(N, 300, replace=False))
+    sample = {"design": "random", "indices": idx, "n_population": N}
+    wide = est.estimate_per_class(sample, r[idx], m)
+    tight = est.estimate_per_class(sample, r[idx], m, legend_size=3)
+    assert wide["legend_size"] == 31 and tight["legend_size"] == 3
+    w = lambda o: o["per_class"][30]["reference_share_exact"]["high"] - o["per_class"][30]["reference_share_exact"]["low"]
+    assert w(tight) < w(wide)
+    with pytest.raises(ValueError, match="legend holds 2 classes"):
+        est.estimate_per_class(sample, r[idx], m, legend_size=2)
+
+
+def test_plan_class_refuses_shares_no_map_can_have():
+    from oe_inferencex import plan
+    with pytest.raises(ValueError, match="under one"):
+        plan.plan_class(10, 0.04, 4)
+    with pytest.raises(ValueError, match="cannot draw"):
+        plan.plan_class(1000, 0.6, 4, drawn_ratio=2)
+    assert plan._class_counts(1000, 0.1, 1.001)[1] == 101          # an over-draw rounds up, never to the class's own
+    assert plan._class_counts(1000, 0.1, 0.999)[1] == 99

@@ -1,0 +1,402 @@
+{
+ "design": "random",
+ "n_labelled": 300,
+ "n_population": 1024,
+ "nominal_coverage": 0.95,
+ "estimate": 0.19,
+ "low": 0.154296875,
+ "high": 0.23046875,
+ "method": "exact hypergeometric interval (simple random sample of a finite map)",
+ "half_width": 0.0380859375,
+ "per_class": {
+  "0": {
+   "map_share": 0.0,
+   "n_labelled_map_class": 0,
+   "n_labelled_reference_class": 0,
+   "user_accuracy": null,
+   "producer_accuracy": null,
+   "reference_share": {
+    "estimate": 0.0,
+    "low": 0.0,
+    "high": 0.012642971224546034
+   },
+   "reference_share_exact": {
+    "estimate": 0.0,
+    "low": 0.0,
+    "high": 0.015625
+   },
+   "drawn": "within",
+   "producer_accuracy_exact": {
+    "estimate": null,
+    "low": 0.0,
+    "high": 1.0
+   },
+   "warning": "fewer than 30 labelled windows (0 the map calls this class, 0 the reference does); the exact intervals are wide, and the normal-theory ones, below about ten, not to be trusted",
+   "warning_codes": [
+    "few labels"
+   ]
+  },
+  "1": {
+   "map_share": 0.0126953125,
+   "n_labelled_map_class": 3,
+   "n_labelled_reference_class": 19,
+   "user_accuracy": {
+    "estimate": 1.0,
+    "low": 0.38461538461538464,
+    "high": 1.0
+   },
+   "producer_accuracy": {
+    "estimate": 0.19509774765939228,
+    "low": 0.14070034532763762,
+    "high": 0.2640633512480686
+   },
+   "reference_share": {
+    "estimate": 0.06507154824854192,
+    "low": 0.04727938423354225,
+    "high": 0.08893424103040318
+   },
+   "reference_share_exact": {
+    "estimate": 0.06333333333333334,
+    "low": 0.0361328125,
+    "high": 0.1044921875
+   },
+   "drawn": "too little",
+   "producer_accuracy_exact": {
+    "estimate": 0.15789473684210525,
+    "low": 0.02702702702702703,
+    "high": 0.37142857142857144
+   },
+   "warning": "fewer than 30 labelled windows (3 the map calls this class, 19 the reference does); the exact intervals are wide, and the normal-theory ones, below about ten, not to be trusted",
+   "warning_codes": [
+    "few labels"
+   ]
+  },
+  "2": {
+   "map_share": 0.001953125,
+   "n_labelled_map_class": 0,
+   "n_labelled_reference_class": 0,
+   "user_accuracy": null,
+   "producer_accuracy": null,
+   "reference_share": {
+    "estimate": 0.0,
+    "low": 0.0,
+    "high": 0.012642971224546034
+   },
+   "reference_share_exact": {
+    "estimate": 0.0,
+    "low": 0.0,
+    "high": 0.015625
+   },
+   "drawn": "within",
+   "producer_accuracy_exact": {
+    "estimate": null,
+    "low": 0.0,
+    "high": 1.0
+   },
+   "warning": "fewer than 30 labelled windows (0 the map calls this class, 0 the reference does); the exact intervals are wide, and the normal-theory ones, below about ten, not to be trusted",
+   "warning_codes": [
+    "few labels"
+   ]
+  },
+  "3": {
+   "map_share": 0.0,
+   "n_labelled_map_class": 0,
+   "n_labelled_reference_class": 0,
+   "user_accuracy": null,
+   "producer_accuracy": null,
+   "reference_share": {
+    "estimate": 0.0,
+    "low": 0.0,
+    "high": 0.012642971224546034
+   },
+   "reference_share_exact": {
+    "estimate": 0.0,
+    "low": 0.0,
+    "high": 0.015625
+   },
+   "drawn": "within",
+   "producer_accuracy_exact": {
+    "estimate": null,
+    "low": 0.0,
+    "high": 1.0
+   },
+   "warning": "fewer than 30 labelled windows (0 the map calls this class, 0 the reference does); the exact intervals are wide, and the normal-theory ones, below about ten, not to be trusted",
+   "warning_codes": [
+    "few labels"
+   ]
+  },
+  "4": {
+   "map_share": 0.337890625,
+   "n_labelled_map_class": 107,
+   "n_labelled_reference_class": 128,
+   "user_accuracy": {
+    "estimate": 0.9532710280373832,
+    "low": 0.9046242774566474,
+    "high": 0.9797687861271677
+   },
+   "producer_accuracy": {
+    "estimate": 0.7871615073629801,
+    "low": 0.7417881643381523,
+    "high": 0.826427418227323
+   },
+   "reference_share": {
+    "estimate": 0.40919346340625223,
+    "low": 0.38486056853637546,
+    "high": 0.4339794361733445
+   },
+   "reference_share_exact": {
+    "estimate": 0.4266666666666667,
+    "low": 0.3603515625,
+    "high": 0.4951171875
+   },
+   "drawn": "too little",
+   "producer_accuracy_exact": {
+    "estimate": 0.796875,
+    "low": 0.546875,
+    "high": 0.9505494505494505
+   }
+  },
+  "5": {
+   "map_share": 0.015625,
+   "n_labelled_map_class": 4,
+   "n_labelled_reference_class": 0,
+   "user_accuracy": {
+    "estimate": 0.0,
+    "low": 0.0,
+    "high": 0.5
+   },
+   "producer_accuracy": null,
+   "reference_share": {
+    "estimate": 0.0,
+    "low": 0.0,
+    "high": 0.012642971224546034
+   },
+   "reference_share_exact": {
+    "estimate": 0.0,
+    "low": 0.0,
+    "high": 0.015625
+   },
+   "drawn": "within",
+   "producer_accuracy_exact": {
+    "estimate": null,
+    "low": 0.0,
+    "high": 1.0
+   },
+   "warning": "fewer than 30 labelled windows (4 the map calls this class, 0 the reference does); the exact intervals are wide, and the normal-theory ones, below about ten, not to be trusted; the share rests on 4 sampled errors (4 the map calls this class wrongly, 0 of this class it misses); one error more or fewer in the draw moves the error-adjusted estimate by a whole window's weight, and its normal-theory interval can miss it; the exact intervals do not miss more often than their level",
+   "warning_codes": [
+    "few labels",
+    "few errors"
+   ]
+  },
+  "6": {
+   "map_share": 0.1650390625,
+   "n_labelled_map_class": 52,
+   "n_labelled_reference_class": 17,
+   "user_accuracy": {
+    "estimate": 0.3076923076923077,
+    "low": 0.20710059171597633,
+    "high": 0.4260355029585799
+   },
+   "producer_accuracy": {
+    "estimate": 0.9354795076423644,
+    "low": 0.7562298031437937,
+    "high": 0.9854575397144527
+   },
+   "reference_share": {
+    "estimate": 0.054283658364661654,
+    "low": 0.038672238339063636,
+    "high": 0.07570091482550524
+   },
+   "reference_share_exact": {
+    "estimate": 0.056666666666666664,
+    "low": 0.03125,
+    "high": 0.095703125
+   },
+   "drawn": "too much",
+   "producer_accuracy_exact": {
+    "estimate": 0.9411764705882353,
+    "low": 0.27450980392156865,
+    "high": 1.0
+   },
+   "warning": "fewer than 30 labelled windows (52 the map calls this class, 17 the reference does); the exact intervals are wide, and the normal-theory ones, below about ten, not to be trusted; the producer's accuracy rests on 1 sampled error (36 the map calls this class wrongly, 1 of this class it misses); one error more or fewer in the draw moves the error-adjusted estimate by a whole window's weight, and its normal-theory interval can miss it; the exact intervals do not miss more often than their level",
+   "warning_codes": [
+    "few labels",
+    "few errors"
+   ]
+  },
+  "7": {
+   "map_share": 0.4658203125,
+   "n_labelled_map_class": 133,
+   "n_labelled_reference_class": 136,
+   "user_accuracy": {
+    "estimate": 0.9172932330827067,
+    "low": 0.8658280922431866,
+    "high": 0.9517819706498952
+   },
+   "producer_accuracy": {
+    "estimate": 0.9101074635768386,
+    "low": 0.8712778489318116,
+    "high": 0.9380566929031404
+   },
+   "reference_share": {
+    "estimate": 0.4694982049805442,
+    "low": 0.444411955154072,
+    "high": 0.49473954442999596
+   },
+   "reference_share_exact": {
+    "estimate": 0.4533333333333333,
+    "low": 0.38671875,
+    "high": 0.521484375
+   },
+   "drawn": "within",
+   "producer_accuracy_exact": {
+    "estimate": 0.8970588235294118,
+    "low": 0.6370370370370371,
+    "high": 1.0
+   }
+  },
+  "8": {
+   "map_share": 0.0009765625,
+   "n_labelled_map_class": 1,
+   "n_labelled_reference_class": 0,
+   "user_accuracy": {
+    "estimate": 0.0,
+    "low": 0.0,
+    "high": 0.0
+   },
+   "producer_accuracy": null,
+   "reference_share": {
+    "estimate": 0.0,
+    "low": 0.0,
+    "high": 0.012642971224546034
+   },
+   "reference_share_exact": {
+    "estimate": 0.0,
+    "low": 0.0,
+    "high": 0.015625
+   },
+   "drawn": "within",
+   "producer_accuracy_exact": {
+    "estimate": null,
+    "low": 0.0,
+    "high": 1.0
+   },
+   "warning": "fewer than 30 labelled windows (1 the map calls this class, 0 the reference does); the exact intervals are wide, and the normal-theory ones, below about ten, not to be trusted; the share rests on 1 sampled error (1 the map calls this class wrongly, 0 of this class it misses); one error more or fewer in the draw moves the error-adjusted estimate by a whole window's weight, and its normal-theory interval can miss it; the exact intervals do not miss more often than their level",
+   "warning_codes": [
+    "few labels",
+    "few errors"
+   ]
+  }
+ },
+ "confusion_counts": [
+  [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  [
+   0,
+   3,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  [
+   0,
+   3,
+   0,
+   0,
+   102,
+   0,
+   0,
+   2,
+   0
+  ],
+  [
+   0,
+   0,
+   0,
+   0,
+   4,
+   0,
+   0,
+   0,
+   0
+  ],
+  [
+   0,
+   8,
+   0,
+   0,
+   17,
+   0,
+   16,
+   11,
+   0
+  ],
+  [
+   0,
+   5,
+   0,
+   0,
+   5,
+   0,
+   1,
+   122,
+   0
+  ],
+  [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   1,
+   0
+  ]
+ ],
+ "overall_accuracy": {
+  "estimate": 0.81,
+  "low": 0.76953125,
+  "high": 0.845703125
+ },
+ "per_class_method": "random sample: exact hypergeometric interval per map class for user's accuracy; shares post-stratified by map class and producer's accuracy by Olofsson et al. 2014 eq. 7 (points); exact intervals for each class's share (Bonferroni over the classes) and producer's accuracy (exp115)",
+ "per_class_legend_size": 9,
+ "per_class_warning": "map class(es) [2] have no labelled window; the error-adjusted reference shares (in the JSON) are short by their weight (0.002 of the map); the exact intervals printed are not",
+ "overall_accuracy_post_stratified": 0.8128717264466657,
+ "sample": "<TMP>/sample_random.csv"
+}

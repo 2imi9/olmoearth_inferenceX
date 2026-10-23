@@ -37,6 +37,8 @@ Three things a user needs, and one they must be stopped from doing.
 
 Every function is numpy only. The estimators are the ones exp78 ran; that script imports them from here.
 """
+import math
+
 import numpy as np
 
 Z95 = 1.959963984540054
@@ -86,6 +88,12 @@ CONDITION_WHOLE_MAP = ("Each condition's own interval is exact. The whole-map in
                        "the exact interval of a random sample of the same size. What the design buys is each condition's "
                        "own rate: a small condition gets as many labels as a large one, or all its windows. If only the "
                        "whole-map rate is needed, --design random can give a narrower interval.")
+PER_CLASS_EXACT_NOTE = ("under a random sample the per-class intervals printed are exact (exp115, graded on 39 fully "
+                        "labelled maps): the class shares hold together with probability at least 95%, and so do the "
+                        "producer's accuracies; a class whose share the map draws outside its interval is named drawn "
+                        "too little or too much. Read the flag with its interval: a large class can be flagged for a gap "
+                        "of a few points, and a rare class drawn at half its share may not be. A class under a few "
+                        "percent of the map needs more labels: oe-inferencex plan --class-share S --classes L")
 PER_CLASS_NOT_GRADED = ("The per-class intervals take the input conditions as strata. With conditions as strata, their "
                         "coverage has not been graded; each condition's error-rate interval is exact.")
 FAMILY_NOTE = ("Certified per input condition. Each of the {L} conditions with at least {b1} labels is tested at delta "
@@ -1382,7 +1390,7 @@ def _ht_ratio(num, den, strata, picked, sizes):
     return R, var
 
 
-def estimate_per_class(sample, reference, map_class, n_classes=None, interval="wilson"):
+def estimate_per_class(sample, reference, map_class, n_classes=None, interval="wilson", legend_size=None):
     """User's accuracy, producer's accuracy and error-adjusted share per class, from the labelled sample.
 
     sample    : what `sample_for_estimation` returned (designs "random", "confidence", "proportional" or "condition")
@@ -1402,7 +1410,15 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
     on the effective sample size (interval="wilson", the default; "wald" is the field's convention and is kept for the record, where exp81
     shows it collapsing to a point on classes with no sampled error). Tile samples are refused: the per-class
     cluster form is not graded yet. A class with fewer than MIN_PER_CLASS labelled windows carries a warning; a map class no
-    labelled window fell in leaves the share estimates short by its weight, and that is said."""
+    labelled window fell in leaves the share estimates short by its weight, and that is said.
+
+    Under a random sample each row also carries exact intervals (exp115): `reference_share_exact` (the labelled
+    windows' share k/n, with the hypergeometric interval at 1 - 0.05/L, L classes, so all shares hold together at
+    95%), `drawn` ("too little", "too much" or "within": the map's own count against that interval) and
+    `producer_accuracy_exact` (a/k, with exact intervals for its two counts at 1 - 0.05/(2L), the map's count bounding
+    it from above). L is `legend_size`, the number of classes the map's legend can hold, stated before the labels are
+    read; by default the table's number of classes. Under a random sample the normal-theory `producer_accuracy` and
+    `reference_share` are kept as before, and the warnings speak of the exact intervals."""
     ref = np.asarray(reference).ravel()
     idx = np.asarray(sample["indices"], int).ravel()
     mc = np.asarray(map_class).ravel()
@@ -1461,6 +1477,10 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
     C = int(n_classes) if n_classes is not None else int(max(int(mc[pop].max()), int(ref.max())) + 1)
     if (ref >= C).any() or (mc[pop] >= C).any():
         raise ValueError(f"a class id reaches or exceeds n_classes={C}")
+    used = np.union1d(np.unique(mc[pop]), np.unique(ref)).size
+    L = C if legend_size is None else int(legend_size)
+    if L < used:
+        raise ValueError(f"the legend holds {L} classes, but the map and the labels use {used}")
     m_s, r_s = mc[idx], ref
     conf = np.zeros((C, C), int)                              # rows: map class, columns: reference class
     np.add.at(conf, (m_s, r_s), 1)
@@ -1475,8 +1495,9 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
         v_u = u * (1 - u) * (fpc / denom)[:, None]                                          # V(u_ij) per cell
         unsampled = [int(i) for i in range(C) if N_map[i] > 0 and n_i[i] == 0]
         if unsampled:
-            warnings.append(f"map class(es) {unsampled} have no labelled window; the reference shares below are short "
-                            f"by their weight ({float(W[unsampled].sum()):.3f} of the map)")
+            warnings.append(f"map class(es) {unsampled} have no labelled window; the error-adjusted reference shares "
+                            f"(in the JSON) are short by their weight ({float(W[unsampled].sum()):.3f} of the map); the "
+                            "exact intervals printed are not")
         share_est = (W[:, None] * u).sum(0)                                                 # A_j = sum_i W_i u_ij
         share_var = (W[:, None] ** 2 * v_u).sum(0)
         # the overall accuracy is `estimate`'s quantity with `estimate`'s interval, exact under a random draw: the
@@ -1518,7 +1539,32 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
             e, lo, hi = _interval(share_est[c], share_var[c], idx.size, interval)
             row["reference_share"] = {"estimate": e, "low": lo, "high": hi}
             per[int(c)] = row
-        method = "random sample: exact hypergeometric interval per map class for user's accuracy; shares post-stratified by map class and producer's accuracy by Olofsson et al. 2014 eq. 7"
+        # exact intervals for every class (exp115, graded on 39 fully labelled maps): the labelled windows of
+        # reference class c are hypergeometric over its K_c windows, so its share gets the exact interval at
+        # 1 - 0.05/L (all classes together at least 95%); producer's accuracy A_c / K_c gets exact intervals for its
+        # two counts at 1 - 0.05/(2L), and A_c <= M_c bounds it by the map's own count, so a class the map hardly draws,
+        # and the labels show is common, gets a low upper end even when no labelled window is drawn in it. The ends are
+        # whole counts (K/N), rounded outward, so rounding never narrows an interval
+        n_lab = int(idx.size)
+        down = lambda x: int(math.floor(x * N + 1e-9))
+        up = lambda x: int(math.ceil(x * N - 1e-9))
+        for c in range(C):
+            k_c, a_c, M_c = int(conf[:, c].sum()), int(conf[c, c]), int(N_map[c])
+            lo, hi = hypergeom_interval(k_c, n_lab, N, conf=1 - 0.05 / L)
+            K_lo, K_hi = down(lo), up(hi)
+            per[c]["reference_share_exact"] = {"estimate": k_c / n_lab, "low": K_lo / N, "high": K_hi / N}
+            per[c]["drawn"] = "too little" if M_c < K_lo else "too much" if M_c > K_hi else "within"
+            lo2, hi2 = hypergeom_interval(k_c, n_lab, N, conf=1 - 0.05 / (2 * L))
+            alo, ahi = hypergeom_interval(a_c, n_lab, N, conf=1 - 0.05 / (2 * L))
+            K_lo2, K_hi2, A_lo, A_hi = down(lo2), up(hi2), down(alo), up(ahi)
+            # A_c <= M_c on every map, so min(A_lo, M_c) only lowers the lower end: the interval is never inverted
+            per[c]["producer_accuracy_exact"] = {
+                "estimate": a_c / k_c if k_c else None,
+                "low": min(A_lo, M_c) / K_hi2 if K_hi2 > 0 else 0.0,
+                "high": min(1.0, A_hi / K_lo2, M_c / K_lo2) if K_lo2 > 0 else 1.0}
+        method = ("random sample: exact hypergeometric interval per map class for user's accuracy; shares post-stratified by "
+                  "map class and producer's accuracy by Olofsson et al. 2014 eq. 7 (points); exact intervals for each "
+                  "class's share (Bonferroni over the classes) and producer's accuracy (exp115)")
     else:
         strata, sizes = np.asarray(sample["strata"]), list(sample["sizes"])
         pos = {int(g): i for i, g in enumerate(pop)}
@@ -1569,8 +1615,9 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
         if small:
             codes.append("few labels")
             notes.append(f"fewer than {MIN_PER_CLASS} labelled windows ({row['n_labelled_map_class']} the map calls this "
-                         f"class, {row['n_labelled_reference_class']} the reference does); the interval is wide and, "
-                         "below about ten, not to be trusted")
+                         f"class, {row['n_labelled_reference_class']} the reference does); "
+                         + ("the exact intervals are wide, and the normal-theory ones, below about ten, not to be "
+                            "trusted" if srs else "the interval is wide and, below about ten, not to be trusted"))
         if N_map[c] == 0 and conf[:, c].sum() > 0:
             codes.append("never predicted")
             notes.append("the map never predicts this class, which the labels show exists: its producer's accuracy is "
@@ -1588,8 +1635,11 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
             # because the same class has 27 omissions (the exp86 round 6 audit)
             rests = "; ".join(f"the {q} rests on {n_err} sampled error{'' if n_err == 1 else 's'}" for q, n_err in rare)
             notes.append(f"{rests} ({commissions} the map calls this class wrongly, {omissions} of this class it misses); "
-                         "one error more or fewer in the draw moves the estimate by a whole window's weight, and the "
-                         "interval can miss it")
+                         + ("one error more or fewer in the draw moves the error-adjusted estimate by a whole window's "
+                            "weight, and its normal-theory interval can miss it; the exact intervals do not miss more "
+                            "often than their level" if srs else
+                            "one error more or fewer in the draw moves the estimate by a whole window's weight, and the "
+                            "interval can miss it"))
         # exp81 measured one case where a nominal 95% interval covers well under 95%: a class nearly all of whose
         # windows are labelled, so the estimate takes a handful of values and a normal interval cannot follow it
         # (0.86-0.92 on five encoders' Togo classes). The thin-strata note below is a caution from the design: the
@@ -1600,7 +1650,9 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
             codes.append("near census")
             notes.append("nearly every window of this class is labelled; apart from the user's accuracy under a random sample, "
                          "which is exact, the intervals are a rough guide, since the estimate can only take a few values "
-                         "(exp81: coverage 0.86-0.92 on such classes)")
+                         "(exp81: coverage 0.86-0.92 on such classes)"
+                         + ("; under this random sample that concerns the normal-theory intervals, not the exact ones"
+                            if srs else ""))
         if not srs:
             f_all = idx.size / N
             thin = np.array([sizes[h] > 0 and (strata[local] == h).sum() / sizes[h] < 0.5 * f_all for h in range(len(sizes))])
@@ -1613,7 +1665,8 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
         if notes:
             row["warning"] = "; ".join(notes)
             row["warning_codes"] = codes
-    out = {"design": design, "interval": interval, "n_labelled": int(idx.size), "n_population": N, "n_classes": C, "nominal_coverage": 0.95,
+    out = {"design": design, "interval": interval, "n_labelled": int(idx.size), "n_population": N, "n_classes": C,
+           **({"legend_size": L} if srs else {}), "nominal_coverage": 0.95,
            "overall_accuracy": overall_row, "confusion_counts": conf.tolist(),
            "per_class": per, "method": method}
     if srs:

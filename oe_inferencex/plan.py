@@ -13,7 +13,10 @@ for:
 - certified zone (`certify`): for a zone wrong at a stated rate, the Bonferroni rule certifies it (exact, however the
   errors spread inside it); no spread of the errors lets the prefix rule certify it more often than the zone's own
   test passes (exact); and the prefix rule certifies it when every more confident zone of the grid is wrong no more
-  often (simulated, with the errors spread evenly, the worst such map).
+  often (simulated, with the errors spread evenly, the worst such map);
+- a class drawn wrong (`estimate --per-class` on a random sample): the class's exact interval, at the level that holds
+  all classes' intervals together, excludes the share the map draws, for a class of a stated share drawn at a stated
+  fraction of it (exact).
 
 The recommended budget is the smallest budget checked from which every larger budget checked reaches the probability
 asked for. Besides the ladder, nine budgets are checked below the recommendation and, where a budget is cheap to
@@ -45,8 +48,8 @@ ZONE_DRAWS = 2000
 NUMPY_URN = 10 ** 9                   # numpy's samplers draw without replacement only from fewer windows than this
 DEFAULT_RATE = 0.5
 PLAN_NOTE = ("Planned before any label. Each probability is over the reviewer's random draw, for a map with the "
-             "stated error rate or difference; the map's own error rate is what the labels will measure, so a plan "
-             "made at a guessed rate holds for that rate only. Labels are assumed right.")
+             "stated error rate, difference or class shares; what the map is like is what the labels will measure, so "
+             "a plan made at a guessed value holds for that value only. Labels are assumed right.")
 INTERVAL_NOTE = ("The interval ends are the exact tail inversion of estimate, decided in floating point; estimate "
                  "decides a tail lying within about 1e-6 of its level in exact arithmetic, which can move an end by "
                  "one window.")
@@ -282,6 +285,66 @@ def plan_error_rate(N, width, error_rate=None, power=POWER, conf=0.95, max_label
     if rec is None:
         out["refusal"] = (f"no budget checked up to {top} gives an interval this narrow with probability {power:g}"
                           + ("" if top >= N else "; check larger budgets or accept a wider interval"))
+    return out
+
+
+# ----------------------------------------------------------------------------- one class drawn wrong
+def class_flag_probability(N, n, share, drawn_ratio=0.5, n_classes=2, conf=0.95):
+    """The probability that n random labels flag a class as drawn wrong, as `estimate`'s per-class table does, when
+    round(share N) of the N windows are of that class and the map draws it on floor(drawn_ratio * that) windows: the
+    class's labelled count is hypergeometric, its exact interval is taken at 1 - (1 - conf) / n_classes (all classes
+    together at conf), and the flag fires when the map's count lies outside it (below for drawn_ratio < 1, above for
+    drawn_ratio > 1). Exact, over the draw (exp115)."""
+    N, n, C = int(N), int(n), int(n_classes)
+    K, M = _class_counts(N, share, drawn_ratio)
+    if n >= N:
+        return float(M != K)                                   # a census: the share is known
+    k, p = _hyper_pmf(N, K, n)
+    lo, hi = _ends_range(n, N, 1 - (1 - float(conf)) / C, int(k[0]), int(k[-1]))
+    fire = np.rint(lo * N) > M if drawn_ratio < 1 else np.rint(hi * N) < M
+    return float(p[fire].sum())
+
+
+def _class_counts(N, share, drawn_ratio):
+    """(K, M): the class's windows and the windows the map draws it on, refused where the stated shares cannot be a
+    map of N windows. An under-draw rounds the map's count down and an over-draw up, so it is never the class's own."""
+    K = int(round(share * N))
+    if K < 1:
+        raise ValueError(f"a share of {share:g} is under one of the {N} windows")
+    M = int(math.floor(drawn_ratio * K)) if drawn_ratio < 1 else int(math.ceil(drawn_ratio * K))
+    if M == K:
+        M = K - 1 if drawn_ratio < 1 else K + 1
+    if M > N:
+        raise ValueError(f"the map cannot draw the class on {M} windows of {N}; the share times drawn_ratio is above 1")
+    return K, M
+
+
+def plan_class(N, share, n_classes, drawn_ratio=0.5, power=POWER, conf=0.95, max_labels=MAX_LABELS):
+    """The probability, budget by budget, that random labels flag a class of this share that the map draws at
+    drawn_ratio of it, and the recommended budget. A rare class needs many labels: with eight classes, a class of 5%
+    of a large map drawn at half its share needs about 900 labels to be flagged with probability 0.9, one of 1% several
+    thousand."""
+    N = _check_count("the number of windows", N)
+    _check("the class's share", share, 0, 1)
+    _check("the share the map draws, as a fraction of the class's", drawn_ratio, 0, float("inf"), lo_open=False)
+    if drawn_ratio == 1:
+        raise ValueError("a class drawn at its own share is not drawn wrong; give drawn_ratio below or above 1")
+    C = _check_count("the number of classes", n_classes, lowest=2)
+    _class_counts(N, share, drawn_ratio)                       # refuses shares no map of N windows can have
+    _check("the probability asked for", power, 0, 1)
+    top = min(N, _check_count("the largest budget", max_labels))
+    fn = lambda b: class_flag_probability(N, b, share, drawn_ratio, C, conf)
+    probs, span = refine(fn, {b: fn(b) for b in ladder(top)}, power, every=True)
+    rec = recommend(probs, power)
+    out = {"question": "class", "n_population": N, "share": float(share), "drawn_ratio": float(drawn_ratio),
+           "n_classes": C, "power": float(power), "labels": rec,
+           "probability_at_labels": None if rec is None else probs[rec],
+           "probability_by_budget": {str(b): p for b, p in probs.items()}, "checked_up_to": top,
+           "every_budget_checked": None if span is None else list(span), "runs_reaching_power": runs(probs, power),
+           "census_checked": top >= N, "note": PLAN_NOTE, "interval_note": INTERVAL_NOTE}
+    if rec is None:
+        out["refusal"] = (f"no budget checked up to {top} flags this class with probability {power:g}"
+                          + ("" if top >= N else "; check larger budgets"))
     return out
 
 

@@ -43,6 +43,7 @@ import argparse
 import csv
 from types import SimpleNamespace
 import json
+import math
 import os
 import sys
 
@@ -1842,6 +1843,10 @@ def cmd_estimate(args):
         raise SystemExit("estimate: --also-accept takes no reviewer error rate: a stated rate bounds the reviewer's errors "
                          "for one definition of an error, and the file changes that definition; a reviewer's confusions "
                          "are likeliest on the very pairs it accepts")
+    if getattr(args, "classes", None) is not None and not args.per_class:
+        raise SystemExit("estimate: --classes sets the legend's size for the per-class table; it goes with --per-class")
+    if getattr(args, "classes", None) is not None and args.classes < 1:
+        raise SystemExit(f"estimate: --classes must be at least 1, got {args.classes}")
     if args.per_class and (unjudged.any() or fa or miss):
         raise SystemExit("estimate --per-class needs the class seen in every window and a reviewer taken as right: "
                          + (f"{int(unjudged.sum())} window(s) are ? (could not be judged)" if unjudged.any() else
@@ -1884,13 +1889,17 @@ def cmd_estimate(args):
         # row by row: the count alone matched when `wrong` marked rows 0-9 and the classes disagreed on rows 10-19
         mismatch = np.flatnonzero((map_class[idx] != ref).astype(int) != wrong)
         try:
-            pc = est.estimate_per_class(sample, ref, map_class, n_classes=n_classes)
+            pc = est.estimate_per_class(sample, ref, map_class, n_classes=n_classes,
+                                        legend_size=getattr(args, "classes", None))
         except ValueError as exc:
-            raise SystemExit(f"estimate --per-class: {exc}")
+            raise SystemExit(f"estimate --per-class: {exc}" + ("; give --classes, the number of classes the legend holds"
+                                                               if "legend" in str(exc) else ""))
         res["per_class"] = pc["per_class"]
         res["confusion_counts"] = pc["confusion_counts"]
         res["overall_accuracy"] = pc["overall_accuracy"]
         res["per_class_method"] = pc["method"]
+        if "legend_size" in pc:                           # the classes the exact intervals hold together over
+            res["per_class_legend_size"] = pc["legend_size"]
         if "warning" in pc:
             res["per_class_warning"] = pc["warning"]
         if pc.get("overall_accuracy_post_stratified") is not None:
@@ -1900,6 +1909,7 @@ def cmd_estimate(args):
                                      "`reference_class` differs from the map's class; the error rate above uses `wrong`, the "
                                      "per-class table uses `reference_class`")
         lines = []
+        exact = bool(pc["per_class"]) and all("reference_share_exact" in row for row in pc["per_class"].values())
         for c, row in pc["per_class"].items():
             if side.get("confidence") and row["map_share"] == 0 and not row.get("n_labelled_reference_class"):
                 continue        # a product's id neither the map nor the labels use (LCMAP's classes start at 1)
@@ -1907,8 +1917,32 @@ def cmd_estimate(args):
             f = lambda v: "n/a" if v is None else f"{100 * v['estimate']:.0f}% ({100 * v['low']:.0f}-{100 * v['high']:.0f})"
             # the tag names the warning's reason; it used to say "few labels" for a near-census class of 500 labels
             tag = f"  [warning: {', '.join(row.get('warning_codes', ['see the JSON']))}]" if "warning" in row else ""
-            lines.append(f"  class {c}: user's accuracy {f(ua)}, producer's {f(pa)}, share of map {100 * row['map_share']:.1f}% "
-                         f"-> error-adjusted {f(sh)}" + tag)
+            if exact:
+                # the printed line shows exact intervals only, so it names only the warning that bears on them (few
+                # labels: wide); the others concern the normal-theory fields kept in the JSON
+                codes = [k for k in row.get("warning_codes", []) if k not in ("few errors", "near census")]
+                tag = f"  [warning: {', '.join(codes)}]" if codes else ""
+                # a random sample: the share's and producer's accuracy's exact intervals (exp115), each with its own
+                # point (the labels' share k/n, the found share a/k), so a point never sits outside its interval; the
+                # error-adjusted points stay in the JSON. Ends rounded outward, the share's to a tenth of a point as the
+                # map's share is printed; a share the map draws outside its interval is named
+                pe, se = row["producer_accuracy_exact"], row["reference_share_exact"]
+                fl = lambda x, d: math.floor(x * 10 ** d + 1e-9) / 10 ** d
+                ce = lambda x, d: math.ceil(x * 10 ** d - 1e-9) / 10 ** d
+                pt = "n/a" if pe["estimate"] is None else f"{100 * pe['estimate']:.0f}%"
+                drawn = "" if row["drawn"] == "within" else f": drawn {row['drawn']}"
+                lines.append(f"  class {c}: user's accuracy {f(ua)}, producer's {pt} (exact {fl(100 * pe['low'], 0):.0f}-"
+                             f"{ce(100 * pe['high'], 0):.0f}), share of map {100 * row['map_share']:.1f}% -> labels "
+                             f"{100 * se['estimate']:.1f}% (exact {fl(100 * se['low'], 1):.1f}-{ce(100 * se['high'], 1):.1f})"
+                             f"{drawn}" + tag)
+            else:
+                lines.append(f"  class {c}: user's accuracy {f(ua)}, producer's {f(pa)}, share of map "
+                             f"{100 * row['map_share']:.1f}% -> error-adjusted {f(sh)}" + tag)
+        if exact:
+            lines.append(f"note: {est.PER_CLASS_EXACT_NOTE} (here {pc['legend_size']} classes)")
+            if side.get("design") == "sequential":
+                lines.append("note: a sequential sample's per-class intervals are exact when the number of labelled "
+                             "windows was fixed before labelling, as for its error rate")
         if res["design"] == "condition" and len(res.get("per_condition", {})) > 1:
             # the method string says so, and the printed table did not: the per-class intervals under this design
             # are not graded (review of 2026-09-29); with one condition the table is the random design's
@@ -2416,9 +2450,14 @@ def cmd_plan(args):
     from oe_inferencex import plan
     want_rate, want_which = args.width is not None, args.difference is not None
     want_zone = args.coverage is not None or args.alpha is not None or args.zone_error is not None
-    if not (want_rate or want_which or want_zone):
+    want_class = args.class_share is not None
+    if not (want_rate or want_which or want_zone or want_class):
         raise SystemExit("plan: say what to plan: --width (an error rate, its interval no wider than this), "
-                         "--difference with --other (which of two maps), or --coverage with --alpha (a certified zone)")
+                         "--difference with --other (which of two maps), --coverage with --alpha (a certified zone), "
+                         "or --class-share with --classes (a class the map draws wrong)")
+    if want_class and args.classes is None:
+        raise SystemExit("plan: --class-share needs --classes, the number of classes in the map's legend (the per-class "
+                         "intervals hold together over all of them)")
     if want_zone and (args.coverage is None or args.alpha is None):
         raise SystemExit("plan: a certified zone needs both --coverage (a level of the grid, 0.05 to 1 in steps of 0.05) "
                          "and --alpha (the error rate the zone must not exceed)")
@@ -2426,7 +2465,7 @@ def cmd_plan(args):
         raise SystemExit("plan: --difference compares two maps: give the second with --other, or the windows where they "
                          "differ with --differing and --windows")
     two = args.other is not None or args.differing is not None
-    if two and (want_rate or want_zone):
+    if two and (want_rate or want_zone or want_class):
         raise SystemExit("plan: --other and --differing plan which of two maps is more accurate; plan an error rate or a "
                          "zone of one map in a separate call")
     if two and not want_which:
@@ -2435,7 +2474,8 @@ def cmd_plan(args):
         ("--error-rate", args.error_rate, want_rate), ("--both-wrong", args.both_wrong, want_which),
         ("--zone-error", args.zone_error, want_zone), ("--delta", args.delta, want_zone),
         ("--threshold", args.threshold, args.other is not None),
-        ("--two-class", args.two_class or None, want_which)) if value is not None and not needs]
+        ("--two-class", args.two_class or None, want_which), ("--classes", args.classes, want_class),
+        ("--drawn-at", args.drawn_at, want_class)) if value is not None and not needs]
     if unused:
         one = len(unused) == 1
         raise SystemExit(f"plan: {', '.join(unused)} {'does' if one else 'do'} not apply to what is planned here; leave "
@@ -2506,7 +2546,7 @@ def cmd_plan(args):
             else:
                 notes.append("planned at the worst split checked of the differing windows; if both maps have only two "
                              "classes, --two-class plans their one split, which needs fewer labels")
-        if want_rate or want_zone:
+        if want_rate or want_zone or want_class:
             N = int(args.windows) if args.scores is None else None
             if N is None:
                 N, more = _plan_windows(args)
@@ -2524,6 +2564,24 @@ def cmd_plan(args):
                 runs.append(_sample_command(args, r["labels"], other=False))
             if "rate_note" in r:
                 notes.append(r["rate_note"][0].upper() + r["rate_note"][1:])
+        if want_class:
+            ratio = 0.5 if args.drawn_at is None else args.drawn_at
+            try:
+                r = plan.plan_class(N, args.class_share, args.classes, ratio, power, max_labels=top_asked)
+            except ValueError as exc:
+                raise SystemExit(f"plan: {str(exc).replace('drawn_ratio', '--drawn-at')}")
+            results["class"] = r
+            print(f"Class: a class that is {100 * args.class_share:.3g}% of the map's {N} window{'' if N == 1 else 's'}, "
+                  f"which the map draws at {ratio:g} of its share, drawn at random, "
+                  + _reach(r, r["checked_up_to"],
+                           *(f"{v} it drawn too {'little' if ratio < 1 else 'much'} with probability {power:g} or more"
+                             for v in ("flags", "flag")))
+                  + f" (exact; the intervals of all {args.classes} classes hold together at 95%).")
+            print(f"  by budget: {_ladder_text(r['probability_by_budget'], r['labels'], power)}")
+            if r["labels"] is not None:
+                runs.append(_sample_command(args, r["labels"], other=False))
+            notes.append("planned for one class at the share stated; a rarer class needs more labels (at 1% of the "
+                         "map several thousand), and the labels then need a `reference_class` column")
         if want_zone:
             delta = 0.1 if args.delta is None else args.delta
             r = plan.plan_zone(N, args.coverage, args.alpha, args.zone_error, power, delta, max_labels=top_asked)
@@ -2806,6 +2864,11 @@ def build_parser():
     e.add_argument("--per-class", action="store_true",
                    help="also user's accuracy, producer's accuracy and error-adjusted share per class; needs a "
                         "`reference_class` column in the CSV and the map's scores (from the sidecar, or --scores)")
+    e.add_argument("--classes", type=int, default=None, metavar="L",
+                   help="with --per-class: the number of classes the map's legend holds, stated before the labels are "
+                        "read (default: the largest class id plus one); the exact per-class intervals of a random "
+                        "sample hold together over L classes, so a product whose ids are sparse (10 to 100) gives "
+                        "narrower intervals with its true legend size")
     e.add_argument("--scores", default=None, help="with --per-class or --also-accept: the raster `sample` was run on, if "
                                                   "it has moved")
     e.add_argument("--confidence", default=None, help="with --per-class or --also-accept: the confidence band `sample` "
@@ -2860,7 +2923,8 @@ def build_parser():
     dc.add_argument("--out", default=None, help="JSON to write (default: <result>_decisions.json)")
     dc.set_defaults(func=cmd_decide)
     pl = sub.add_parser("plan", help="how many labels to draw before drawing any: an error-rate interval no wider than a "
-                                     "stated width, which of two maps is more accurate, or a certified zone")
+                                     "stated width, which of two maps is more accurate, a certified zone, or a class "
+                                     "the map draws wrong")
     pl.add_argument("scores", nargs="?", default=None,
                     help="the map, as sample takes it (not needed with --windows)")
     pl.add_argument("--other", default=None, metavar="MAP_B",
@@ -2884,6 +2948,13 @@ def build_parser():
     pl.add_argument("--zone-error", type=float, default=None,
                     help="zone: the rate you expect that zone to be wrong; without it only the floor is planned")
     pl.add_argument("--delta", type=float, default=None, help="zone: the chance the certificate may fail (default 0.1)")
+    pl.add_argument("--class-share", type=float, default=None, metavar="S",
+                    help="one class: its true share of the windows (by the reference, not the share the map draws); "
+                         "plans the labels that flag it as drawn wrong")
+    pl.add_argument("--classes", type=int, default=None, help="with --class-share: the number of classes in the legend")
+    pl.add_argument("--drawn-at", type=float, default=None, metavar="R",
+                    help="with --class-share: the share the map draws, as a fraction of the class's (default 0.5; above 1 "
+                         "plans an over-draw)")
     pl.add_argument("--power", type=float, default=None, help="the probability of the outcome planned for (default 0.9)")
     pl.add_argument("--max-labels", type=int, default=None,
                     help="the largest budget checked (default 10000, or the census when smaller)")

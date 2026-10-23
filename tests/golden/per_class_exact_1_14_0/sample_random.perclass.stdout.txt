@@ -1,0 +1,13 @@
+error rate 19.0%, 95% interval 15.4% to 23.0% (half-width 3.8 points), from 300 labelled windows of 1024; exact hypergeometric interval (simple random sample of a finite map)
+  class 0: user's accuracy n/a, producer's n/a (exact 0-100), share of map 0.0% -> labels 0.0% (exact 0.0-1.6)  [warning: few labels]
+  class 1: user's accuracy 100% (38-100), producer's 16% (exact 2-38), share of map 1.3% -> labels 6.3% (exact 3.6-10.5): drawn too little  [warning: few labels]
+  class 2: user's accuracy n/a, producer's n/a (exact 0-100), share of map 0.2% -> labels 0.0% (exact 0.0-1.6)  [warning: few labels]
+  class 3: user's accuracy n/a, producer's n/a (exact 0-100), share of map 0.0% -> labels 0.0% (exact 0.0-1.6)  [warning: few labels]
+  class 4: user's accuracy 95% (90-98), producer's 80% (exact 54-96), share of map 33.8% -> labels 42.7% (exact 36.0-49.6): drawn too little
+  class 5: user's accuracy 0% (0-50), producer's n/a (exact 0-100), share of map 1.6% -> labels 0.0% (exact 0.0-1.6)  [warning: few labels]
+  class 6: user's accuracy 31% (21-43), producer's 94% (exact 27-100), share of map 16.5% -> labels 5.7% (exact 3.1-9.6): drawn too much  [warning: few labels]
+  class 7: user's accuracy 92% (87-95), producer's 90% (exact 63-100), share of map 46.6% -> labels 45.3% (exact 38.6-52.2)
+  class 8: user's accuracy 0% (0-0), producer's n/a (exact 0-100), share of map 0.1% -> labels 0.0% (exact 0.0-1.6)  [warning: few labels]
+note: under a random sample the per-class intervals printed are exact (exp115, graded on 39 fully labelled maps): the class shares hold together with probability at least 95%, and so do the producer's accuracies; a class whose share the map draws outside its interval is named drawn too little or too much. Read the flag with its interval: a large class can be flagged for a gap of a few points, and a rare class drawn at half its share may not be. A class under a few percent of the map needs more labels: oe-inferencex plan --class-share S --classes L (here 9 classes)
+warning: map class(es) [2] have no labelled window; the error-adjusted reference shares (in the JSON) are short by their weight (0.002 of the map); the exact intervals printed are not
+wrote <TMP>/sample_random_perclass.json

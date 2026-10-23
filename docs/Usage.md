@@ -19,7 +19,7 @@ extra) are new in 1.4.0.
 
 ## Quick start
 
-Every command below runs on 1.13.0. `scores.tif` is a map of per-class probabilities; add `--logits` for logits.
+Every command below runs on 1.14.0. `scores.tif` is a map of per-class probabilities; add `--logits` for logits.
 
 ```bash
 pip install "olmoearth-inferencex[geo]"
@@ -358,7 +358,9 @@ In [exp113](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/
 the fit was carried to another area. It was fitted on other territories of Ai2's PLANTEUR crop-type benchmark and
 applied to a held-out one, five times. The ranking held in all five (AUROC 0.74 to 0.88), and the labelled routes kept
 their guarantees. But in three of them the map called nearly everything the majority class, so there the ranking
-mostly found the crop land it missed. When a fit is carried to a new area, check its error rate and its per-class
+mostly found the crop land it missed. Reweighting the two worst (Guyane and Réunion) by the true class shares
+did not repair them, and a label-free estimate of the shares was not to be trusted there ([exp114](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/results/comparisons.md#prior-shift-or-feature-shift-splitting-exp113s-transfer-failure-with-bayes-rule-exp114)).
+When a fit is carried to a new area, check its error rate and its per-class
 accuracy with random labels before trusting its classes. A fit on a few points in one area, applied to that area, is
 not graded. The 2018
 vectors ran smaller than the dataset README says (median norm 3.08 against 3.4); carrying a fit across years is
@@ -642,7 +644,32 @@ scores, from the sidecar's path or `--scores`; `--scores` and `--nodata` are acc
 that belong to it), the producer's accuracy (the share of windows of the class mapped as it) and `reference_share`,
 the error-adjusted share of the map, each with an interval. A class is flagged for fewer than 30 labels
 (`few labels`), one to four sampled errors (`few errors`), nearly all windows labelled (`near census`), thin sampling
-(`thin strata`), or no window predicted (`never predicted`, producer's accuracy 0). Under the condition design the
+(`thin strata`), or no window predicted (`never predicted`, producer's accuracy 0).
+
+Under a random sample (`--design random`, or a sequential sample read as random when its number of labels was fixed
+before labelling) the printed table's intervals are exact (since 1.14.0; the research record's
+[exp115](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/results/comparisons.md#per-class-exactly-the-class-a-map-draws-wrong-from-a-few-hundred-random-labels-exp115)
+graded them on 39 fully labelled maps).
+- **Each class's share.** The labelled windows of that class give the share's point (their count over the labels) and
+  its hypergeometric interval at 1 - 0.05/L, so the shares of all L classes hold together with probability at least
+  95% (`reference_share_exact`). L is the number of classes the legend holds: by default the largest class id plus
+  one, or `--classes L`, stated before the labels are read, for a product whose ids are sparse (10 to 100).
+- **The flag.** A class whose share the map draws outside that interval is named `drawn too little` or `drawn too
+  much` (`drawn`). Read the flag with its interval: its power follows the gap measured in sampling errors, so a large
+  class can be flagged for a gap of a few points, and a rare class drawn at half its share may not be.
+- **Producer's accuracy.** Its point is the share of the labelled windows of the class that the map draws as it. Its
+  interval comes from exact intervals for its two counts at 1 - 0.05/(2L), and the map's own count of the class bounds
+  it from above (`producer_accuracy_exact`). So a class the map hardly draws, and the labels show is common, gets a low
+  upper end, even where no labelled window is drawn in it.
+- **The JSON** keeps Olofsson et al.'s error-adjusted points and their normal-theory intervals (`reference_share`,
+  `producer_accuracy`) as before; the warnings `few errors` and `near census` concern those, and are not printed on the
+  table's line.
+- **How many labels.** In exp115, 400 random labels flagged 16 of 17 classes of 5% or more that the map drew at half
+  their share or less; most were drawn far below half. A class of exactly 5% drawn at exactly half its share is
+  flagged about half the time at 400 labels and needs about 900 for 0.9; one of 1% needs several thousand.
+  `plan --class-share S --classes L` says how many.
+
+Under the condition design the
 same estimators run with the conditions as strata. These per-class intervals have not been graded there, and `method`
 and a printed note say so; each condition's error-rate interval is still exact. With one condition the table is the
 random design's, numbers and method alike.
@@ -948,8 +975,8 @@ often than δ. `sample --extend` keeps a `reference_class` column the reviewer a
 package's own procedure gives what is asked, and it recommends the smallest budget from which every larger budget
 checked reaches that probability (0.9 by default, `--power`). It reads only counts from the maps: the valid windows,
 and for two maps the windows where they differ. What the labels will measure, it asks for: an error rate you expect
-(`--error-rate`, 50% if not given, where an interval is widest on a large map) or the rate you expect a zone to be
-wrong (`--zone-error`).
+(`--error-rate`, 50% if not given, where an interval is widest on a large map), the rate you expect a zone to be
+wrong (`--zone-error`), or a class's true share and the share the map draws of it (`--class-share`, `--drawn-at`).
 
 ```console
 $ oe-inferencex plan --windows 25000 --width 0.1 --error-rate 0.15
@@ -962,6 +989,7 @@ run: oe-inferencex sample MAP --design random --budget 244 --out to_label.csv
 |---|---|---|
 | An error rate, to within a width | `MAP --width W` (or `--windows N`) | the probability that `estimate`'s exact 95% interval is no wider than W (high minus low) |
 | Which of two maps is more accurate | `MAP_A --other MAP_B --difference D` (or `--windows N --differing D`) | the probability that labels drawn where the maps differ name the more accurate map when their accuracies differ by D or more, at the worst split checked of the differing windows into right in one map, in the other or in neither; with `--two-class`, the one split of two-class maps |
+| A class drawn wrong | `MAP --class-share S --classes C [--drawn-at R]` (or `--windows N`) | the probability that `estimate --per-class`'s exact interval for a class of share S flags it, when the map draws it at R of its share (0.5 by default; above 1, an over-draw), with the intervals of all C classes holding together at 95% |
 | A certified zone | `MAP --coverage C --alpha A [--zone-error R]` | the budget from which `certify` tests that zone at all; with R, the Bonferroni rule's probability of certifying it (exact, however the errors spread), the most the prefix rule can reach (exact) and the prefix rule's probability when its more confident zones are wrong no more often (simulated, the worst such map) |
 
 Between the budgets of the ladder the probability does not rise smoothly: the counts are discrete, so it steps, and
@@ -970,10 +998,10 @@ zone first, with few labels, and the Bonferroni rule splits delta over one more 
 only where its estimate less two standard errors reaches the probability. `plan` therefore checks nine
 budgets below the recommendation and, where a budget is cheap to compute exactly, every budget from it up to 5% above
 it, lists the budgets where a smaller zone enters, and, when the largest budget checked falls in such a fall, gives the
-runs of budgets that reach the probability instead of a recommendation. For the error rate and two maps the interval
-ends are `estimate`'s tail inversion decided in floating point, which can move an end by one window where a tail lies
-within about 1e-6 of its level. The plan holds for the rate or difference stated; the labels then measure the map's
-own. `--out plan.json` writes every budget checked. `oe_inferencex.plan` holds the functions.
+runs of budgets that reach the probability instead of a recommendation. For the error rate, two maps and a class the
+interval ends are `estimate`'s tail inversion decided in floating point, which can move an end by one window where a
+tail lies within about 1e-6 of its level. The plan holds for the rate, difference or shares stated; the labels then
+measure the map's own. `--out plan.json` writes every budget checked. `oe_inferencex.plan` holds the functions.
 
 ### decide
 
@@ -993,7 +1021,7 @@ wrote to_label_estimate_decisions.json
 |---|---|---|---|
 | `error_rate_below=T` | yes, no, undetermined | `estimate` | the 95% interval lies below T, at or above T, or across it; with `--also-accept`, the second reading's answer beside it, whole map and per condition |
 | `error_rate_below=T` | the same, per class | `estimate` on a sample drawn with `--design audit` | each class's exact interval on its confident zone's error rate; with `--also-accept`, the second reading's answer beside it |
-| `user_accuracy_above=T`, `producer_accuracy_above=T` | the same, per class | `estimate --per-class` | each class's interval; per-class intervals are nominal |
+| `user_accuracy_above=T`, `producer_accuracy_above=T` | the same, per class | `estimate --per-class` | each class's interval: exact under a random sample (each user's accuracy at 95%, the producer's accuracies together at 95%), nominal under the other designs |
 | `more_accurate` | a, b, undetermined | `estimate` on a sample drawn with `--other` | the exact sign test names a map, while the labels are at most a fifth of the differing windows; above, the interval on the difference excludes 0 |
 | `more_accurate` | a, b, tie, undetermined | `compare --labels` | a count against the labels raster, taken as truth; undetermined unless every differing window carries a label |
 | `trusted_share` | a share of the map | `certify` | the certified share; 0 when nothing is certified; with `--also-accept`, the second reading's beside it |
@@ -1003,10 +1031,11 @@ wrote to_label_estimate_decisions.json
 T and S are shares between 0 and 1. "undetermined" means the result does not settle the question; it is not a no. A
 question a kind of result holds no evidence for is refused: `more_accurate` on a comparison made without labels, since
 two maps that agree can both be wrong. A result with input conditions or classes gives each its own answer, each from
-its own interval; the intervals do not hold jointly. Each answer's `because` sentence carries the limit that matters
-most and the result's own warnings, and `<result>_decisions.json` holds the answer, the level, the evidence and the
-sentence. The `level` is the coverage of the interval behind the answer (0.95; nominal where `exact` is false, as for
-the default confidence design, tiles and per-class intervals), 1 - delta for a certified zone, and none for a count
+its own interval; the intervals do not hold jointly, except the producer's accuracies under a random sample, whose
+exact intervals hold together at 95%. Each answer's `because` sentence carries the limit that matters most and the
+result's own warnings, and `<result>_decisions.json` holds the answer, the level, the evidence and the sentence. The
+`level` is the coverage of the interval behind the answer (0.95; nominal where `exact` is false, as for the default
+confidence design, tiles and per-class intervals under designs other than random), 1 - delta for a certified zone, and none for a count
 against a labels raster, which has no sampling error but is only as right as those labels. `trusted_share` is the
 zone's own size over the map, not the grid's rounded coverage.
 

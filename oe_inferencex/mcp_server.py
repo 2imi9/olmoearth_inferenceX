@@ -1045,8 +1045,11 @@ def estimate(
         said.append(f"Overall accuracy {_pc(oa['estimate'])} ({_pc(oa['low'])} to {_pc(oa['high'])}); each class's "
                     "user's and producer's accuracy, with intervals, is in summary.per_class.")
         summ["overall_accuracy"] = oa
+        # under a random sample the exact intervals and the drawn flag (exp115, 1.14.0) go with the table
         summ["per_class"] = {c: {**{k: row.get(k) for k in ("user_accuracy", "producer_accuracy", "reference_share",
                                                             "map_share")},
+                                 **{k: row[k] for k in ("reference_share_exact", "producer_accuracy_exact", "drawn")
+                                    if k in row},
                                  **{k: row[k] for k in ("warning", "warning_codes") if k in row}}
                              for c, row in r["per_class"].items()}
         # the command prints each class's warning inside its table line, not on a `warning: ` line
@@ -1403,7 +1406,7 @@ def decide(
                     kinds |= {k for k in (True, False) if _decide.interval_second_look(k) in x.get("because", "")}
             for x in (a.get("per_class") or {}).values():
                 if x.get("answer") == "undetermined" and x.get("low") is not None:
-                    kinds.add(False)
+                    kinds.add(bool(a.get("exact")))           # exact under a random sample since 1.14.0
             for k in kinds:
                 (covered if _decide.interval_second_look(k) in told else bare[k]).append(q)
         covered = list(dict.fromkeys(covered))

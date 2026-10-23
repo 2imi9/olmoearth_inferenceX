@@ -298,10 +298,15 @@ def _answer_error_rate_below(r, t):
 
 def _answer_class(r, t, which):
     per = {}
+    # a random sample's table carries exact intervals (exp115, 1.14.0): the user's accuracy's was already exact, and
+    # the producer's accuracy's exact interval replaces the normal-theory one, so the answer rests on exact intervals
+    exact = bool(r["per_class"]) and all("producer_accuracy_exact" in row for row in r["per_class"].values())
     for c, row in r["per_class"].items():
         if row.get("map_share") == 0 and not row.get("n_labelled_reference_class"):
             continue                # an id neither the map nor the labels use (a product's classes can start at 1)
         acc = row.get(f"{which}_accuracy")
+        if which == "producer" and exact:
+            acc = {"estimate": (acc or {}).get("estimate"), **row["producer_accuracy_exact"]}
         if not acc or acc.get("low") is None or acc.get("high") is None:
             per[c] = {"answer": "undetermined", "low": None, "high": None,
                       "because": "no interval for this class" + (f": {row['warning']}" if row.get("warning") else ""),
@@ -314,8 +319,12 @@ def _answer_class(r, t, which):
     word = {"user": "user's", "producer": "producer's"}[which]
     warned = sum(bool(v.get("warning")) for v in per.values())
     why = (f"{word.capitalize()} accuracy above {_pc(t)}: yes for {counts['yes']} classes, no for {counts['no']}, "
-           f"undetermined for {counts['undetermined']}. {SEPARATE} Per-class intervals are nominal: a class resting on "
-           "a few sampled errors can be missed by its interval"
+           f"undetermined for {counts['undetermined']}. "
+           + ("The producer's accuracies' exact intervals hold together, all classes at 95% (exp115)"
+              if exact and which == "producer" else
+              f"{SEPARATE} Each user's accuracy's interval is exact under a random sample" if exact else
+              f"{SEPARATE} Per-class intervals are nominal: a class resting on a few sampled errors can be missed by "
+              "its interval")
            + (f", and {warned} class{'' if warned == 1 else 'es'} carry the package's warning" if warned else "")
            + ". " + _labels_clause(r))
     # The table's own warning and notes (2026-10-06): a map class with no labelled window leaves its share out of
@@ -327,7 +336,7 @@ def _answer_class(r, t, which):
     why = " ".join([why, *tail])
     ev = {"per_class_method": r.get("per_class_method"), "n_labelled": r.get("n_labelled")}
     ev.update({k: r[k] for k in ("per_class_warning", "per_class_note", "population_note") if r.get(k)})
-    return {"type": "yes_no", "answer": "per class", "level": r.get("nominal_coverage", 0.95), "exact": False,
+    return {"type": "yes_no", "answer": "per class", "level": r.get("nominal_coverage", 0.95), "exact": exact,
             "because": why, "per_class": per, "evidence": ev}
 
 
