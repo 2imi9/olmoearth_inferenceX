@@ -58,7 +58,9 @@ undetermined means the result does not settle the question; it is not a no.
 Before labelling, `oe-inferencex plan` says how many labels a step needs, budget by budget: `plan scores.tif --width
 0.1` for an error-rate interval no wider than 10 points, `plan a.tif --other b.tif --difference 0.02` for naming the
 more accurate of two maps that differ by 2 points or more, `plan scores.tif --coverage 0.5 --alpha 0.05 --zone-error
-0.01` for a certified zone. The plan holds for the rate or difference stated; the labels then measure the map's own.
+0.01` for a certified zone, `plan scores.tif --class-share 0.05 --classes 8` for flagging a class of 5% that the map
+draws at half its share. The plan holds for the rate, difference or shares stated; the labels then measure the map's
+own.
 
 ## Example questions
 

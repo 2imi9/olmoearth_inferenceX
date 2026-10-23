@@ -1893,13 +1893,17 @@ def cmd_estimate(args):
                                         legend_size=getattr(args, "classes", None))
         except ValueError as exc:
             raise SystemExit(f"estimate --per-class: {exc}" + ("; give --classes, the number of classes the legend holds"
-                                                               if "legend" in str(exc) else ""))
+                                                               if "legend" in str(exc) and getattr(args, "classes", None)
+                                                               is None else ""))
         res["per_class"] = pc["per_class"]
         res["confusion_counts"] = pc["confusion_counts"]
         res["overall_accuracy"] = pc["overall_accuracy"]
         res["per_class_method"] = pc["method"]
         if "legend_size" in pc:                           # the classes the exact intervals hold together over
             res["per_class_legend_size"] = pc["legend_size"]
+        elif getattr(args, "classes", None) is not None:
+            res["per_class_note"] = ("--classes sets the level of a random sample's exact intervals; this design's "
+                                     "per-class intervals do not use it")
         if "warning" in pc:
             res["per_class_warning"] = pc["warning"]
         if pc.get("overall_accuracy_post_stratified") is not None:

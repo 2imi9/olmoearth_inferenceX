@@ -1044,6 +1044,12 @@ def estimate(
         oa = r["overall_accuracy"]
         said.append(f"Overall accuracy {_pc(oa['estimate'])} ({_pc(oa['low'])} to {_pc(oa['high'])}); each class's "
                     "user's and producer's accuracy, with intervals, is in summary.per_class.")
+        drawn = {c: row["drawn"] for c, row in r["per_class"].items() if row.get("drawn") not in (None, "within")}
+        if drawn:
+            # the exact flag (1.14.0): named here, read with each class's interval in summary.per_class
+            said.append("The labels show the map draws " + "; ".join(
+                f"class {c} too {v.split()[-1]}" for c, v in drawn.items()) + " (each against its exact interval in "
+                "summary.per_class; a large class can be flagged for a gap of a few points).")
         summ["overall_accuracy"] = oa
         # under a random sample the exact intervals and the drawn flag (exp115, 1.14.0) go with the table
         summ["per_class"] = {c: {**{k: row.get(k) for k in ("user_accuracy", "producer_accuracy", "reference_share",
@@ -1358,8 +1364,10 @@ def decide(
     # estimate's per-condition and per-class intervals are each 95% on their own. One sentence said the latter of
     # both (2026-10-06), against the zone's own note and the certify reply.
     if rkind == "estimate":
+        joint = any(a.get("exact") and q == "producer_accuracy_above" for q, a in r["answers"].items())
         limits += (" Answers per class or per condition each rest on their own interval, and the intervals do not "
-                   "hold jointly.")
+                   "hold jointly" + (", except the producer's accuracies under a random sample, whose exact intervals "
+                                     "hold together at 95%." if joint else "."))
     elif rkind == "zone" and any(a.get("per_condition") for a in r["answers"].values()):
         delta = next(a["evidence"].get("delta") for a in r["answers"].values() if a.get("per_condition"))
         limits += (" The conditions' certificates hold together: delta is split over the conditions tested, so all "

@@ -151,7 +151,7 @@
    },
    "drawn": "too little",
    "producer_accuracy_exact": {
-    "estimate": 0.796875,
+    "estimate": 0.79193115234375,
     "low": 0.546875,
     "high": 0.9505494505494505
    }

@@ -317,7 +317,10 @@ def _answer_class(r, t, which):
                   "low": low, "high": high, "warning": row.get("warning")}
     counts = {x: sum(v["answer"] == x for v in per.values()) for x in ("yes", "no", "undetermined")}
     word = {"user": "user's", "producer": "producer's"}[which]
-    warned = sum(bool(v.get("warning")) for v in per.values())
+    # under a random sample only `few labels` bears on the exact intervals; the other warnings concern the
+    # normal-theory fields kept in the JSON, which the answer does not rest on
+    warned = sum(bool(v.get("warning")) and (not exact or "few labels" in (r["per_class"][c].get("warning_codes") or []))
+                 for c, v in per.items())
     why = (f"{word.capitalize()} accuracy above {_pc(t)}: yes for {counts['yes']} classes, no for {counts['no']}, "
            f"undetermined for {counts['undetermined']}. "
            + ("The producer's accuracies' exact intervals hold together, all classes at 95% (exp115)"

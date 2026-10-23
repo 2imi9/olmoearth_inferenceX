@@ -15,15 +15,16 @@ sequential sample read as random) now prints exact intervals for every class.
   (`per_class_legend_size`).
 
 The research record's exp115 graded these intervals on 39 fully labelled maps, with every probability computed
-exactly, and found them all at or above their levels. 400 labels flagged 16 of 17 classes of 5% or more drawn at half
-their share or less, most drawn far below half; a class of exactly 5% drawn at exactly half needs about 900 labels.
+exactly, and found them all at or above their levels. 400 labels flagged, with probability at least 0.8, 16 of 17
+classes of 5% or more drawn at half their share or less, most drawn far below half; with eight classes a class of
+exactly 5% drawn at exactly half needs about 900 labels.
 
-The printed points beside the exact intervals are now the labels' own (the share k/n, the found share a/k), so a point
-never sits outside its interval. Olofsson et al.'s error-adjusted points and their normal-theory intervals stay in the
+The printed points beside the exact intervals are now the labels' own (the share k/n, and the found share a/k capped
+as its upper end is, by the map's own count), so a point never sits outside its interval. Olofsson et al.'s error-adjusted points and their normal-theory intervals stay in the
 JSON, and the warnings `few errors` and `near census`, which concern those, are no longer printed on the table's line.
 Other designs are unchanged. `decide`'s producer's-accuracy answers rest on the exact intervals under a random sample,
-and say they hold together. The MCP server passes the exact intervals and the flag in `summary.per_class`; its `plan`
-tool does not take a class yet. The golden outputs of the three random samples' per-class tables are regenerated and
+and say they hold together. The MCP server passes the exact intervals and the flag in `summary.per_class` and names
+the flagged classes; its `plan` and `estimate` tools take no class share or legend size yet. The golden outputs of the three random samples' per-class tables are regenerated and
 declared (tests/golden/condition_1_3_1/changes.py, REGENERATED), and what did not change in them is still checked
 against 1.3.1. Tests: tests/test_per_class.py, tests/test_cli.py.
 

@@ -1418,7 +1418,8 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
     `producer_accuracy_exact` (a/k, with exact intervals for its two counts at 1 - 0.05/(2L), the map's count bounding
     it from above). L is `legend_size`, the number of classes the map's legend can hold, stated before the labels are
     read; by default the table's number of classes. Under a random sample the normal-theory `producer_accuracy` and
-    `reference_share` are kept as before, and the warnings speak of the exact intervals."""
+    `reference_share` are kept as before; the warnings `few errors` and `near census` concern those, and `few labels`
+    all of them."""
     ref = np.asarray(reference).ravel()
     idx = np.asarray(sample["indices"], int).ravel()
     mc = np.asarray(map_class).ravel()
@@ -1558,8 +1559,10 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
             alo, ahi = hypergeom_interval(a_c, n_lab, N, conf=1 - 0.05 / (2 * L))
             K_lo2, K_hi2, A_lo, A_hi = down(lo2), up(hi2), down(alo), up(ahi)
             # A_c <= M_c on every map, so min(A_lo, M_c) only lowers the lower end: the interval is never inverted
+            # the point is a/k capped as the upper end is, by the map's own count over the class's estimated size
+            # (A_c <= M_c), so it never sits outside its interval
             per[c]["producer_accuracy_exact"] = {
-                "estimate": a_c / k_c if k_c else None,
+                "estimate": min(a_c / k_c, M_c * n_lab / (k_c * N)) if k_c else None,
                 "low": min(A_lo, M_c) / K_hi2 if K_hi2 > 0 else 0.0,
                 "high": min(1.0, A_hi / K_lo2, M_c / K_lo2) if K_lo2 > 0 else 1.0}
         method = ("random sample: exact hypergeometric interval per map class for user's accuracy; shares post-stratified by "

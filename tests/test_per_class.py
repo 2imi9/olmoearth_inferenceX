@@ -409,3 +409,58 @@ def test_plan_class_refuses_shares_no_map_can_have():
         plan.plan_class(1000, 0.6, 4, drawn_ratio=2)
     assert plan._class_counts(1000, 0.1, 1.001)[1] == 101          # an over-draw rounds up, never to the class's own
     assert plan._class_counts(1000, 0.1, 0.999)[1] == 99
+
+
+def test_points_sit_inside_their_exact_intervals():
+    """Every sample of 6 from 16 windows of four classes: the labels' share k/n and the found share a/k (capped as the
+    upper end is) lie inside their exact intervals; the case the bound is built for, a common class the map hardly
+    draws, included."""
+    import itertools
+    m = np.array([0, 0, 0, 0, 0, 0, 1, 1, 0, 2, 2, 2, 3, 0, 0, 1])
+    r = np.array([0, 0, 0, 1, 1, 1, 1, 1, 1, 2, 2, 0, 3, 3, 2, 1])
+    for s in itertools.combinations(range(m.size), 6):
+        s = np.array(s)
+        out = est.estimate_per_class({"design": "random", "indices": s, "n_population": m.size}, r[s], m, n_classes=4)
+        for row in out["per_class"].values():
+            se, pe = row["reference_share_exact"], row["producer_accuracy_exact"]
+            assert se["low"] <= se["estimate"] + 1e-12 and se["estimate"] <= se["high"] + 1e-12
+            if pe["estimate"] is not None:
+                assert pe["low"] <= pe["estimate"] + 1e-12 <= pe["high"] + 2e-12
+
+
+def test_estimate_classes_and_plan_class_share_on_the_command_line(tmp_path, capsys):
+    """estimate --per-class --classes states the legend's size (recorded, refused without --per-class, and noted as
+    unused under another design); plan --class-share needs --classes and refuses what no map can have."""
+    import json
+    from oe_inferencex.cli import main
+    rng = np.random.default_rng(4)
+    probs = rng.dirichlet([1, 1, 1], size=(64, 64)).transpose(2, 0, 1).astype(np.float32)
+    path = tmp_path / "p.npy"
+    np.save(path, probs)
+    out = tmp_path / "s.csv"
+    assert main(["sample", str(path), "--budget", "120", "--design", "random", "--out", str(out), "--seed", "1"]) == 0
+    lines = out.read_text().splitlines()
+    head = lines[0].split(",")
+    rows = [dict(zip(head, ln.split(","))) for ln in lines[1:]]
+    for r_ in rows:
+        r_["wrong"], r_["reference_class"] = "0", r_["map_class"]
+    rows[0]["wrong"], rows[0]["reference_class"] = "1", str((int(rows[0]["map_class"]) + 1) % 3)
+    with open(out, "w") as f:
+        f.write(",".join(head + ["reference_class"]) + "\n")
+        for r_ in rows:
+            f.write(",".join(r_[k] for k in head + ["reference_class"]) + "\n")
+    capsys.readouterr()
+    assert main(["estimate", str(out), "--per-class", "--classes", "3", "--out", str(tmp_path / "e.json")]) == 0
+    printed = capsys.readouterr().out
+    assert "(exact " in printed and "(here 3 classes)" in printed
+    assert json.load(open(tmp_path / "e.json"))["per_class_legend_size"] == 3
+    with pytest.raises(SystemExit, match="goes with --per-class"):
+        main(["estimate", str(out), "--classes", "3"])
+    with pytest.raises(SystemExit, match="legend holds 2 classes"):
+        main(["estimate", str(out), "--per-class", "--classes", "2", "--out", str(tmp_path / "e2.json")])
+    with pytest.raises(SystemExit, match="needs --classes"):
+        main(["plan", "--windows", "1000", "--class-share", "0.1"])
+    with pytest.raises(SystemExit, match="cannot draw"):
+        main(["plan", "--windows", "1000", "--class-share", "0.6", "--classes", "4", "--drawn-at", "2"])
+    with pytest.raises(SystemExit, match="do not apply|does not apply"):
+        main(["plan", "--windows", "1000", "--width", "0.1", "--classes", "4"])

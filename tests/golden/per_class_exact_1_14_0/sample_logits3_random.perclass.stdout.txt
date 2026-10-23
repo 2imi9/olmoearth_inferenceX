@@ -1,6 +1,6 @@
 error rate 7.5%, 95% interval 3.5% to 14.1% (half-width 5.3 points), from 80 labelled windows of 256; exact hypergeometric interval (simple random sample of a finite map)
   class 0: user's accuracy 86% (72-94), producer's 96% (exact 46-100), share of map 35.2% -> labels 32.5% (exact 22.6-43.8)  [warning: few labels]
   class 1: user's accuracy 82% (54-95), producer's 75% (exact 19-100), share of map 16.0% -> labels 15.0% (exact 8.2-24.7)  [warning: few labels]
-  class 2: user's accuracy 100% (93-100), producer's 95% (exact 57-100), share of map 48.8% -> labels 52.5% (exact 41.0-63.7)
+  class 2: user's accuracy 100% (93-100), producer's 93% (exact 57-100), share of map 48.8% -> labels 52.5% (exact 41.0-63.7)
 note: under a random sample the per-class intervals printed are exact (exp115, graded on 39 fully labelled maps): the class shares hold together with probability at least 95%, and so do the producer's accuracies; a class whose share the map draws outside its interval is named drawn too little or too much. Read the flag with its interval: a large class can be flagged for a gap of a few points, and a rare class drawn at half its share may not be. A class under a few percent of the map needs more labels: oe-inferencex plan --class-share S --classes L (here 3 classes)
 wrote <TMP>/sample_logits3_random_perclass.json

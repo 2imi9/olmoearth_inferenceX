@@ -664,9 +664,10 @@ graded them on 39 fully labelled maps).
 - **The JSON** keeps Olofsson et al.'s error-adjusted points and their normal-theory intervals (`reference_share`,
   `producer_accuracy`) as before; the warnings `few errors` and `near census` concern those, and are not printed on the
   table's line.
-- **How many labels.** In exp115, 400 random labels flagged 16 of 17 classes of 5% or more that the map drew at half
-  their share or less; most were drawn far below half. A class of exactly 5% drawn at exactly half its share is
-  flagged about half the time at 400 labels and needs about 900 for 0.9; one of 1% needs several thousand.
+- **How many labels.** In exp115, 400 random labels flagged, with probability at least 0.8, 16 of 17 classes of 5% or
+  more that the map drew at half their share or less; most were drawn far below half. With eight classes, a class of
+  exactly 5% drawn at exactly half its share is flagged about half the time at 400 labels and needs about 900 for 0.9
+  (fewer with fewer classes, more with more); one of 1% needs several thousand.
   `plan --class-share S --classes L` says how many.
 
 Under the condition design the
