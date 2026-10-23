@@ -106,6 +106,27 @@ REGENERATED = {
 }
 
 
+# A key the package now adds as the last key of every result JSON the command line writes, taken out before the
+# comparison as `scope` and `level_cut` are: the package, its version and the command that wrote the file. The API's
+# summaries, explanation.json and a raster's grid file do not carry it. `commands` maps each kind of golden JSON to
+# the command it names.
+STAMP = {
+    "why": ("written_by (1.14.1): a result file names the release and the command that wrote it, since releases change "
+            "numbers on purpose (1.14.0 capped the producer's accuracy point) and a file that does not say cannot be "
+            "traced to its code"),
+    "key": "written_by",
+    "package": "olmoearth-inferencex",
+    "commands": (("__assessment.json", "assess"), (".estimate.json", "estimate"), (".perclass.json", "estimate"),
+                 (".certify_", "certify"), ("sample_", "sample")),
+}
+
+
+def stamped_command(name):
+    """The command whose `written_by` a golden JSON file `name` must carry, or None for a file that carries none."""
+    if not name.endswith(".json") or name.startswith("api_") or name.endswith(("__explanation.json", ".grid.json")):
+        return None
+    return next(cmd for part, cmd in STAMP["commands"] if part in name)
+
 def _replace(name, data, old, new, within_line=False):
     """(data with every whole occurrence of old replaced by new, the number replaced). Only JSON and stdout files
     can hold a change; any other file (arrays, CSVs) is returned as it is. A change `within_line` is a stretch of a

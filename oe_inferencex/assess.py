@@ -83,6 +83,24 @@ SCOPE_ASSESS_K = ("The review sets above rank all {K} input conditions together.
 # multi-class tasks (exp76), and passing probabilities is how the command line reaches the top probability.
 PROBABILITY_WARNING = ("probability input: confidence ties where probabilities saturate. For two classes, logits avoid "
                        "the ties; for more than two, keep the probabilities (exp76)")
+# The warnings on a one-band map read as logits whose values do not look like logits. Such a map is called class 1
+# above 0 and ranked by its distance from 0, and until 1.14.1 nothing looked at the values: a probability map, or a
+# regression output such as a canopy height, passed as logits gave a review set by size alone with exit 0 and no word
+# (the scan of the OlmoEarth Agent, 23 October 2026, whose tools refuse a review set for an unthresholded regression).
+# Warnings, not refusals: a scene can hold one class only, and its logits then sit on one side of 0. A value of
+# exactly 0 is class 0 (p1 > 0 is class 1), so a regression output with bare ground at 0 has no value below 0 and
+# both classes: the non-negative warning covers it (the review of 1.14.1).
+LOGIT_REGRESSION = ("A regression output (a height, a depth, an index, a class id) is not a logit: it has no margin, "
+                    "so a review set or error rate read from it is not evidence")
+LOGIT_RANGE_WARNING = ("logit input: every value lies in [0, 1] (to rounding), as probabilities do; read as logits, "
+                       "every value above 0 is class 1 and each window's confidence is the size of its values alone. "
+                       "If these are probabilities, pass them as probabilities (without --logits). " + LOGIT_REGRESSION)
+LOGIT_NONNEGATIVE_WARNING = ("logit input: no value is below 0 (to rounding), so every value above 0 is class 1, the "
+                             "rest class 0, and each window's confidence is the size of its values alone. The logits "
+                             "of a scene that holds both classes fall on both sides of 0. " + LOGIT_REGRESSION)
+LOGIT_NONPOSITIVE_WARNING = ("logit input: no value is above 0 (to rounding), so every value at or below 0 is class 0 "
+                             "and each window's confidence is the size of its values alone. The logits of a scene "
+                             "that holds both classes fall on both sides of 0. " + LOGIT_REGRESSION)
 # The warning on a multi-class logit map scored by the default form. `form` is a Python argument only (1.3.1 said
 # "pass form='top1'" alone). The warning is written into assessment.json and a sample's sidecar, which an agent on the
 # MCP server reads too, so it names each interface's route (the agent test of 2 October 2026). The command line reaches a top-probability reading through probability input: the
@@ -401,6 +419,13 @@ def assess_prediction(scores, is_logit, patch=4, nodata_mask=None, reference=Non
         if is_logit:
             margin = np.abs(p1)
             hard = (p1 > 0).astype(int)
+            v = p1 if nodata_mask is None else p1[~nodata_mask]
+            if v.size and v.min() >= -1e-6 and v.max() <= 1 + 1e-6:      # _check_probabilities' tolerance
+                warnings.append(LOGIT_RANGE_WARNING)
+            elif v.size and v.min() >= -1e-6:
+                warnings.append(LOGIT_NONNEGATIVE_WARNING)
+            elif v.size and v.max() <= 1e-6:
+                warnings.append(LOGIT_NONPOSITIVE_WARNING)
         else:
             margin = np.abs(p1 - 0.5) * 2
             hard = (p1 > 0.5).astype(int)

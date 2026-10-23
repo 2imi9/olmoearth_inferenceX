@@ -333,10 +333,10 @@ def _roundtrip(x):
 
 
 def _stripped_is(plain_path, both_path):
-    """The result with the option, without its three new keys (which come last), is the one written without the
-    option, byte for byte."""
+    """The result with the option, without its three new keys (which come last but for written_by, the last key of
+    every result file from 1.14.1), is the one written without the option, byte for byte."""
     both = _json(both_path)
-    assert list(both)[-3:] == THREE
+    assert list(both)[-4:] == THREE + ["written_by"]
     with open(plain_path) as f:
         assert json.dumps({k: v for k, v in both.items() if k not in THREE}, indent=1) == f.read()
     return both

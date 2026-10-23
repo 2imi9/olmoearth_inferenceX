@@ -1,5 +1,45 @@
 # Changelog
 
+## 1.14.1 (2026-10-23)
+
+Four fixes found by reading the OlmoEarth Agent, which wraps this package for an LLM and met each of them in its
+preregistered trials (exp86, exp87).
+
+**The label budget is one number.** SKILL.md and the MCP server recommended 300 random labels, the budget the recorded
+experiments used, and said the same labels then serve `certify`; SKILL.md's next step was `certify --alpha 0.05`. At
+alpha 0.05 a zone level enters at 300 labels, and even a perfect large map then certifies a zone only about half the
+time (0.525 on a million windows, 0.66 on 4,096; `plan.zone_level_probability`; docs/Usage.md lists 300, 450 and 900).
+README moved to 400 in a34fec7 and these texts did not. They now say about 400 and why, and a test requires README,
+SKILL.md and the server to name one budget, not one where a level enters at alpha 0.05 or 0.10.
+
+**A one-band map read as logits is checked.** With `--logits` nothing looked at the values: a probability map, or a
+regression output such as a canopy height, was called class 1 above 0, ranked by its size and returned with exit 0.
+`assess_prediction` now warns when every valid value lies in [0, 1] (as probabilities do), when none is below 0 (a
+height or a depth, bare ground at 0 included: every value above 0 is class 1), or when none is above 0 (every window is
+class 0). `assess` prints it, `sample` prints it with its other warnings, and the MCP server says it with its own
+parameter names. Warnings, not refusals: a scene can hold one class. The refusal of a non-probability map, the
+`--logits` help and the server's `logits` parameter say that a regression output has no margin (the refusal names
+compare's `--threshold`, which cuts such a map into classes, as `sample` and `plan` with `--other` do), and Usage's
+table of inputs says so.
+
+**Which of two maps, only at one time.** `sample --other` grades both maps against the one class a reviewer writes per
+window. Across dates a change on the ground reads as an error of the map of the other date, yet the MCP server's
+`compare` offered that route whatever its dates said. When the dates differ or overlap it now proposes a random sample
+of each map labelled at its own date (on its scores, or a product's class map with its confidence band; two error
+rates whose intervals do not hold jointly), and so does `decide` asked `more_accurate` of such a comparison (its
+refusal without labels, its answer when the labels cover part of the differing windows, and the server's next step).
+With one map's date given, both say to give the other first, since `compare` refuses to grade labels until then.
+`sample --other` and the server's `sample` with `other` say that both maps must describe one time, as does the
+labelling instruction; so do the `--other` help, the `other` parameters, the server's instructions, SKILL.md, README's
+row and Usage.
+
+**Every result file names the release that wrote it.** Each result file (assess's assessment.json, compare's
+comparison.json, sample's sidecar, and the JSON that estimate, certify, decide and plan write) ends with `written_by`:
+the package, its version and the command. Releases change numbers on purpose (1.14.0 capped the producer's accuracy
+point), and a file that did not say could not be traced to its code. Files from earlier releases are read as before.
+The golden test takes the key out as it does `scope` (tests/golden/condition_1_3_1/changes.py, STAMP). Tests:
+tests/test_agent_borrowings.py, tests/test_cli.py.
+
 ## 1.14.0 (2026-10-23)
 
 **Per class, exactly, under a random sample.** `estimate --per-class` on a random sample (`--design random`, or a

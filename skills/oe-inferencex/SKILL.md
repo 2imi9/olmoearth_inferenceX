@@ -33,19 +33,23 @@ Match the user's question to a step. The tool and the command of each step have 
    windows. `oe-inferencex assess scores.tif --out audit` writes `audit/review_set_05pct.csv` and the 1% and 10%
    sets.
 2. **How wrong is the map?** `sample`, label, `estimate`.
-   `oe-inferencex sample scores.tif --budget 300 --design random --out to_label.csv`. The user or a reviewer
+   `oe-inferencex sample scores.tif --budget 400 --design random --out to_label.csv`. The user or a reviewer
    fills `wrong` with 1 or 0 on every row, or `?` where a window cannot be judged, keeping the order and
    `to_label.json` beside it. Then `oe-inferencex estimate to_label.csv` gives the error rate with a 95%
    interval; windows marked `?` make it a range. If the user knows how often the reviewer errs, add
-   `--reviewer-false-alarm E0 --reviewer-miss E1` (shares of the correct and of the wrong windows).
+   `--reviewer-false-alarm E0 --reviewer-miss E1` (shares of the correct and of the wrong windows). About 400
+   rather than 300: the same labels serve step 3, and at alpha 0.05 even a perfect large map certifies a zone
+   from 300 random labels only about half the time.
 3. **Which part can I trust?** `certify`. `oe-inferencex certify to_label.csv --alpha 0.05`: the most confident
    share of the map whose error rate is at most alpha. It may certify nothing, and says why.
 4. **Which of two maps is better, and where do they differ?** `compare`.
    `oe-inferencex compare a.tif b.tif --out diff` says where they differ. Only with labels does it say which map
    is right there: add `--labels truth.tif`, and `--date-a`, `--date-b` when the maps describe dates. With few
-   labels: `oe-inferencex sample a.tif --other b.tif --budget 100 --out pairs.csv` draws windows only where the
-   maps differ; the reviewer writes the class seen in `reference_class` (or `?`); `oe-inferencex estimate
-   pairs.csv` says which map is more accurate and by how much.
+   labels, for two maps of the same time: `oe-inferencex sample a.tif --other b.tif --budget 100 --out pairs.csv`
+   draws windows only where the maps differ; the reviewer writes the class seen in `reference_class` (or `?`);
+   `oe-inferencex estimate pairs.csv` says which map is more accurate and by how much. For maps of different
+   dates, one reviewer's class grades both against one date, and a change on the ground reads as an error of
+   the other map: sample each map at random on its own, label it at its own date, and estimate each.
 5. **Per condition.** When a raster records each pixel's input condition (a cloud flag, the modalities present, a
    sensor id), pass `--condition layer.tif` to `assess` and `sample`. `estimate` and `certify` then give each
    condition its own rate and zone.
@@ -70,7 +74,7 @@ and `truth.tif`; Usage's worked example), each with the tools it uses and what t
 - "Where should I look first in scores.tif?" Uses `assess`. The answer is a list of windows to check first, least
   confident first. It is not an error rate, and the errors the model is sure of come last. It needs the model's
   per-class scores: a class map alone is refused, or gives an order that is not evidence.
-- "How wrong is scores.tif? Pick 300 windows at random for me to label." Uses `sample`, then `estimate`. In between,
+- "How wrong is scores.tif? Pick 400 windows at random for me to label." Uses `sample`, then `estimate`. In between,
   you set `wrong` to 1 or 0 on every row of the sample, or `?` where a window cannot be judged. The answer is an error rate with a 95% interval. No tool
   labels a window, and the interval assumes your labels are right.
 - "Which part of scores.tif can I trust at 5% error?" Uses `certify`, on the labels of that random sample. The answer

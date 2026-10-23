@@ -55,13 +55,37 @@ QUESTIONS = {
 }
 
 NO_LABELS_WHICH = ("compare cannot say which map is right without labels: two maps that agree can both be wrong, and "
-                   "where they differ either can be right. Label a sample of the windows where they differ (sample with "
-                   "--other set to the second map, then estimate) and ask more_accurate of its estimate, or run compare "
-                   "with --labels")
+                   "where they differ either can be right. If both maps describe the same time, label a sample of the "
+                   "windows where they differ (sample with --other set to the second map, then estimate) and ask "
+                   "more_accurate of its estimate, or run compare with --labels")
 PLUGIN_REFUSED = ("a zone from the plug-in rule carries no guarantee, so there is no certified share to report; certify "
                   "with the prefix or the bonferroni rule")
 SEPARATE = "Each has its own 95% interval; the intervals do not hold jointly."
 DATES_APART = ("different_time", "overlapping_time")
+# Across dates the differing windows, labelled once, grade both maps against the one date the labels show, and a change
+# on the ground reads as an error of the other map; until 1.14.1 decide proposed that route whatever the dates (the
+# review of 1.14.1, after compare stopped proposing it). What is left is each map's own error rate, from its own
+# scores (or a product's class map with its confidence band, since sample refuses a bare class map); decide does not
+# compare two such estimates.
+EACH_AT_ITS_DATE = ("these maps describe different times, and a sample of the windows where they differ grades both "
+                    "against the one date its labels show, so a change on the ground reads as an error of the other "
+                    "map. Instead, label a random sample of each map at its own date (sample --design random on each "
+                    "map's scores, or on a product's class map with its confidence band) and estimate each: two error "
+                    "rates, each with its own 95% interval, which do not hold jointly")
+NO_LABELS_WHICH_DATES = ("compare cannot say which map is right without labels: two maps that agree can both be wrong, "
+                         "and where they differ either can be right; " + EACH_AT_ITS_DATE)
+# With one date given the tool cannot tell an error from a change, and compare refuses to grade against labels.
+NO_LABELS_WHICH_ONE_DATE = ("compare cannot say which map is right without labels, and only one map's date was given: "
+                            "give both (compare with --date-a and --date-b) first, since across dates a sample of the "
+                            "windows where the maps differ cannot say which is more accurate, and compare refuses to "
+                            "grade labels until both are given")
+
+
+def _no_labels_which(r):
+    """decide's refusal of more_accurate on a comparison without labels, by what its dates say."""
+    st = (r.get("dates") or {}).get("status")
+    return (NO_LABELS_WHICH_DATES if st in DATES_APART else NO_LABELS_WHICH_ONE_DATE if st == "partly_stated"
+            else NO_LABELS_WHICH)
 
 
 def _pc(x):
@@ -408,6 +432,11 @@ def _as_sentence(text):
     return (t[0].upper() + t[1:]).rstrip(".") + "." if t else t
 
 
+def _apart(r):
+    """Whether a comparison's two maps describe different or overlapping times."""
+    return (r.get("dates") or {}).get("status") in DATES_APART
+
+
 def _dates_clause(r, graded=False):
     """For maps of different dates: the package's own reading of what a difference can be, and, for a count against
     labels, which map the labels' date favours."""
@@ -473,7 +502,7 @@ def _answer_more_accurate(r, k):
                                                        "verdict_rule", "sign_test", "interval_verdict")}}
     ws = (r.get("graded") or {}).get("which_side")
     if not ws:
-        raise ValueError(NO_LABELS_WHICH)
+        raise ValueError(_no_labels_which(r))
     a, b, n, total = ws["a_right"], ws["b_right"], ws["n_disagree"], r["n_disagree"]
     counted = f"a matches the labels on {a} and b on {b}" + (f", neither on {ws['neither']}" if ws.get("neither")
                                                                is not None else "")
@@ -491,8 +520,10 @@ def _answer_more_accurate(r, k):
         ans = "undetermined"
         why = (f"The labels cover {n} of the {total} windows where the maps differ ({counted}). Those {n} are where "
                "the labels raster happens to be, not a random sample of the differing windows, so they do not say "
-               "which map is right over all of them. Label a random sample of the differing windows (sample with "
-               "--other set to the second map, then estimate).")
+               "which map is right over all of them. " + (_as_sentence(EACH_AT_ITS_DATE) if _apart(r) else
+                                                          "If both maps describe the same time, label a random sample "
+                                                          "of the differing windows (sample with --other set to the "
+                                                          "second map, then estimate)."))
     else:
         ans = "a" if a > b else "b" if b > a else "tie"
         why = (f"Every one of the {total} windows where the maps differ carries a label: {counted}. This is a count "
@@ -640,7 +671,7 @@ def decide(result, questions):
         name, v = parse(q)
         if name not in can:
             if name == "more_accurate" and k == "comparison":
-                raise ValueError(NO_LABELS_WHICH)
+                raise ValueError(_no_labels_which(result))
             raise ValueError(f"{name} cannot be answered from a {k} result; it answers: {', '.join(can)}")
         if name == "error_rate_below":
             ans = _answer_class_audit(result, v) if k == "class_audit" else _answer_error_rate_below(result, v)

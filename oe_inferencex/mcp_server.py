@@ -102,6 +102,11 @@ HARD_RULES = (
     "exception is certify on a sequential sample: its certificate holds at every look as labels are added from the "
     "top.",
 )
+# Why the budget is about 400, in the words of every text that names one. Until 1.14.1 these texts said 300, the
+# budget the recorded experiments used, after README moved to 400 (a34fec7): at alpha 0.05 a level enters at 300 and a
+# perfect map certifies a zone only about half the time (docs/Usage.md, `plan.zone_level_probability`).
+BUDGET_300 = ("300 is enough for the error rate alone, but at alpha 0.05 even a perfect large map then certifies a "
+              "zone only about half the time; plan with coverage and alpha lists such budgets")
 
 INSTRUCTIONS = "\n".join([
     "oe-inferencex checks a classification map made by an Earth-observation model. It reads the scores the model "
@@ -118,9 +123,11 @@ INSTRUCTIONS = "\n".join([
     f"3. {TRUST} (certify) From the same labels, the most confident share of the map whose error rate is at most "
     "alpha. It can certify nothing, and then says why.",
     f"4. {TWO_MAPS} (compare) Where two maps of one area differ, window by window. Only with labels does it say which "
-    "map is right where they differ. With few labels: sample with other set to the second map draws windows only "
-    "where the maps differ, the reviewer writes the class seen in reference_class, and estimate says which map is more "
-    "accurate and by how much.",
+    "map is right where they differ. With few labels, for two maps of the same time: sample with other set to the "
+    "second map draws windows only where the maps differ, the reviewer writes the class seen in reference_class, and "
+    "estimate says which map is more accurate and by how much. For maps of different dates, one reviewer's class "
+    "grades both against one date, and a change on the ground reads as an error of the other map: sample each map at "
+    "random on its own and label it at its own date.",
     "5. Per condition: when a raster records each pixel's input condition (a cloud flag, the modalities present, a "
     "sensor id), pass it as condition to assess and to sample. estimate and certify then give each condition its own "
     "rate and zone. A model run on inputs it was not trained on can be sure and wrong, and its errors then come late "
@@ -235,15 +242,15 @@ CARDS = {
         f"Answers \"{HOW_WRONG}\", step 1: which windows to label, so that estimate can give the map's error rate.",
         "Does: draws budget windows and writes them to a CSV with an empty `wrong` column for the reviewer, and a "
         ".json sidecar holding the design, which estimate and certify read. With other (a second map of the same "
-        "grid) it draws only windows where the two maps differ, with an empty `reference_class` column, for estimate "
-        "to say which map is more accurate. Designs: confidence (the default without "
+        "grid and the same time) it draws only windows where the two maps differ, with an empty `reference_class` "
+        "column, for estimate to say which map is more accurate. Designs: confidence (the default without "
         "condition: stratified by confidence; estimate reads it, certify refuses it), random (serves estimate and "
         "certify; the default for a product's class map with confidence), sequential (a random order labelled from "
         "the top; extend adds windows later, keeping the labels, and certify holds at every look), proportional, "
         "tiles (a cluster design for labelling tile by tile) and condition (the default with condition: labels split "
         "equally across the input conditions).",
-        "Needs: the score raster assess takes, or a product's class map with confidence; a budget (the recorded "
-        "experiments used 300); an output directory.",
+        "Needs: the score raster assess takes, or a product's class map with confidence; a budget (about 400 for a "
+        f"random sample whose labels also serve certify: {BUDGET_300}); an output directory.",
         "Cannot: label the windows, fetch labels or say whether labels exist (the user or a reviewer fills "
         "`wrong`); turn a review set into a sample.",
     ]),
@@ -545,7 +552,8 @@ def assess(
                                          "classes, taken before the argmax; with confidence, the product's class map")],
     out_dir: Annotated[str, P(description="Directory to write the review sets, rasters and JSON into; created if "
                                           "needed. Files of the same name are overwritten")],
-    logits: Annotated[bool, P(description="True if the scores are logits rather than probabilities")] = False,
+    logits: Annotated[bool, P(description="True if the scores are logits rather than probabilities. A regression "
+                                          "output (a height, a depth, an index) is neither: it has no margin")] = False,
     patch: Annotated[int, P(description="Window side in pixels")] = 4,
     nodata: Annotated[float | None, P(description="No-data value (default: the raster's own, plus NaN)")] = None,
     reference: Annotated[str | None, P(description="Optional integer class raster on the map's grid, taken as truth, "
@@ -680,7 +688,7 @@ def assess(
     scope = s.get("scope")
     limits += _notes([MCP_SCOPE["assess"] if scope == _assess.SCOPE_ASSESS else scope] + _tagged(printed, "note"))
     n = int(s["n_windows"])
-    budget = ("a budget (the recorded experiments used 300)" if n > 300 else
+    budget = (f"a budget of about 400 ({BUDGET_300})" if n > 400 else
               f"a budget of up to {n}: the map has {n} windows, and labelling all of them gives its exact rate")
     nxt = (f"For how wrong the map is: sample with design \"random\" and {budget}, have the user or a reviewer fill "
            "`wrong` on every row, then estimate; the same labels then serve certify.")
@@ -785,11 +793,27 @@ def compare(
         # the agent into a refusal (2026-10-06)
         nxt = ("The maps differ in no window, so neither is more accurate on the windows compared and there is nothing "
                "to label between them. For either map's own error rate: sample on that map's scores, label, estimate.")
+    elif not graded and s["dates"]["status"] in ("different_time", "overlapping_time"):
+        # sample with other grades both maps against the one class a reviewer sees, at one date: where the ground
+        # changed between the maps, the map of the other date is counted wrong (the OlmoEarth Agent's rule that one
+        # date's reference grades only that date's map, exp86 round 8; proposed here whatever the dates until 1.14.1)
+        nxt = ("The maps describe different times, so a sample drawn where they differ cannot say which is more "
+               "accurate: one reviewer's class grades both against one date, and a change on the ground reads as an "
+               "error of the other map. For each map's own error rate: sample on that map's scores (or a product's "
+               "class map with its confidence band) at random, label it at that map's date, estimate.")
+    elif not graded and s["dates"]["status"] == "partly_stated":
+        # with one date the tool cannot tell an error from a change, and compare refuses to grade labels
+        nxt = ("Give both maps' dates (date_a and date_b) first: with one, the tool cannot say whether a difference "
+               "is an error or a change on the ground, compare refuses to grade labels, and across dates a sample "
+               "drawn where the maps differ cannot say which is more accurate. If both describe the same time, "
+               "sample on map a with other set to map b, have a reviewer write the class seen in each, and estimate "
+               "says which map is more accurate.")
     elif not graded:
-        nxt = ("To learn which map is more accurate with few labels: sample on map a with other set to map b draws "
-               "windows only where they differ; a reviewer writes the class seen in each, and estimate says which map "
-               "is more accurate and by how much. With a label raster on the same grid, compare again with labels. For "
-               "either map's own error rate: sample on that map's scores, label, estimate.")
+        nxt = ("To learn which map is more accurate with few labels, if both describe the same time: sample on map "
+               "a with other set to map b draws windows only where they differ; a reviewer writes the class seen in "
+               "each, and estimate says which map is more accurate and by how much. With a label raster on the same "
+               "grid, compare again with labels. For either map's own error rate: sample on that map's scores, label, "
+               "estimate.")
     else:
         nxt = "For either map's error rate: sample on that map's scores, label, estimate."
     return _reply(" ".join(said), _join(limits), nxt, files, summ)
@@ -798,7 +822,8 @@ def compare(
 def sample(
     scores: Annotated[str, P(description="The score raster assess takes; with confidence, the product's class map")],
     out_dir: Annotated[str, P(description="Directory to write the CSV and its .json sidecar into; created if needed")],
-    budget: Annotated[int, P(description="Number of windows to label (the recorded experiments used 300)")],
+    budget: Annotated[int, P(description="Number of windows to label: about 400 for a random sample whose labels "
+                                         f"also serve certify ({BUDGET_300})")],
     design: Annotated[Literal["confidence", "proportional", "random", "sequential", "tiles", "condition"] | None,
                       P(description="Sampling design. Default: condition with a condition layer, random with "
                                     "confidence (a product's band), confidence otherwise. Use random to certify from "
@@ -818,14 +843,16 @@ def sample(
     condition: Annotated[str | None, P(description="Optional integer raster on the map's grid: each pixel's input "
                                                    "condition")] = None,
     condition_names: Annotated[list[str] | None, P(description="Names of the condition values, as value=name")] = None,
-    logits: Annotated[bool, P(description="True if the scores are logits")] = False,
+    logits: Annotated[bool, P(description="True if the scores are logits. A regression output (a height, a "
+                                          "depth, an index) is not: it has no margin")] = False,
     patch: Annotated[int, P(description="Window side in pixels")] = 4,
     nodata: Annotated[float | None, P(description="No-data value (default: the raster's own, plus NaN)")] = None,
     seed: Annotated[int, P(description="Seed of the draw")] = 0,
     tile: Annotated[int, P(description="tiles design: tile side in windows")] = 16,
     per_tile: Annotated[int, P(description="tiles design: windows labelled per tile")] = 16,
-    other: Annotated[str | None, P(description="A second map of the same grid: sample only the windows where the two "
-                                               "maps differ, to learn which is more accurate")] = None,
+    other: Annotated[str | None, P(description="A second map of the same grid and the same time: sample only the "
+                                               "windows where the two maps differ, to learn which is more "
+                                               "accurate")] = None,
     threshold: Annotated[float | None, P(description="With other: cut-off of a 2-D continuous map (0.5 for a "
                                                      "probability map when omitted)")] = None,
     confidence: Annotated[str | None, P(description=CONFIDENCE_PARAM)] = None,
@@ -865,10 +892,11 @@ def sample(
         limits = ["This sample says which map is more accurate and by how much once labelled, not either map's accuracy, "
                   "and certify refuses it.", "The windows compared are those both maps predict where neither splits "
                   "evenly between two classes.", "Labels are assumed right; no reviewer error rate applies to this "
-                  "comparison."] + _notes(side.get("notes", []))
+                  "comparison."] + _notes(side.get("notes", []) + [cli.OTHER_DATES_NOTE])
         nxt = (f"Ask the user or a reviewer to open each window of {path} and write in `reference_class` the class that "
-               "is there, in the maps' class codes, or ? where it cannot be judged, keeping every row (hide class_a and "
-               f"class_b to label blind). Then call estimate with sample_csv={path}.")
+               "is there at the time both maps describe, in the maps' class codes, or ? where it cannot be judged, "
+               "keeping every row (hide class_a and class_b to label blind). Then call estimate with "
+               f"sample_csv={path}.")
         return _reply(" ".join(said), _join(limits), nxt, {"sample_csv": path, "sidecar": side_path},
                       {"design": "disagreement", "n_labelled": len(side["indices"]), "n_disagree": D,
                        "n_population": N, "seed": side.get("seed")})
@@ -1320,8 +1348,9 @@ def decide(
         given = _read_json(path)
         audit = given.get("design") == "audit" and isinstance(given.get("per_class"), dict)
         second = isinstance(given.get("also_accept"), dict)
+        apart = _decide._apart(given)
     except (OSError, ValueError, AttributeError):        # unreadable or not an object: the command says so
-        audit = second = False
+        audit = second = apart = False
     if audit:
         raise Refused(AUDIT_RESULT_NOT_SERVED.format(path=path))
     if second:
@@ -1378,9 +1407,11 @@ def decide(
                or any(x.get("answer") == "undetermined" for x in (a.get("per_condition") or {}).values())]
     # what can settle an undetermined answer depends on the result: a comparison has no sample to enlarge and no
     # interval to narrow, and "a larger sample drawn the same way" sent the agent looking for one (2026-10-06)
-    more = {"comparison": ("the labels raster does not cover every differing window; sample on map a with other set "
-                           "to map b, have a reviewer write reference_class on every row, then estimate, and ask "
-                           "more_accurate of that estimate."),
+    more = {"comparison": ("the labels raster does not cover every differing window; if both maps describe the same "
+                           "time, sample on map a with other set to map b, have a reviewer write reference_class on "
+                           "every row, then estimate, and ask more_accurate of that estimate." if not apart else
+                           "the labels raster does not cover every differing window, and "
+                           + _decide.EACH_AT_ITS_DATE + "."),
             "zone": ("a larger random sample (sample with design \"random\", or with the same condition layer, and a "
                      "larger budget), labelled in full, can certify more.")}
     seq = rkind == "zone" and any((a.get("evidence") or {}).get("rule") == "sequential" for a in r["answers"].values())
@@ -1445,8 +1476,8 @@ def decide(
 
 def plan(
     scores: Annotated[str | None, P(description="The map, as sample takes it; leave out when windows is given")] = None,
-    other: Annotated[str | None, P(description="A second map of the same grid: plan the labels that say which map is "
-                                               "more accurate")] = None,
+    other: Annotated[str | None, P(description="A second map of the same grid and the same time: plan the labels that "
+                                               "say which map is more accurate")] = None,
     windows: Annotated[int | None, P(description="The map's number of valid windows, instead of the map")] = None,
     differing: Annotated[int | None, P(description="With windows: the windows where two maps differ, instead of the "
                                                    "two maps")] = None,

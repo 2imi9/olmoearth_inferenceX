@@ -19,7 +19,7 @@ extra) are new in 1.4.0.
 
 ## Quick start
 
-Every command below runs on 1.14.0. `scores.tif` is a map of per-class probabilities; add `--logits` for logits.
+Every command below runs on 1.14.1. `scores.tif` is a map of per-class probabilities; add `--logits` for logits.
 
 ```bash
 pip install "olmoearth-inferencex[geo]"
@@ -67,8 +67,10 @@ window's pixel and map coordinates. There is one such file for 1% and for 10%.
 between two classes of the map, and whether it is among the least confident 20%.
 `suspicion.tif` is the ranking as a raster.
 
-**2. How wrong the map is.** This needs labels, and `sample` picks the windows. The recorded
-experiments used 300.
+**2. How wrong the map is.** This needs labels, and `sample` picks the windows. Here 300, as the
+recorded experiments used. When the same labels will go to `certify` at α = 5%, draw about 400 on a large map: at 300
+even a perfect large map certifies a zone only about half the time (0.66 on this map's 4096 windows,
+`plan.zone_level_probability`).
 
 ```console
 $ oe-inferencex sample scores.tif --budget 300 --design random --out to_label.csv
@@ -140,7 +142,7 @@ in Python, `form="top1"` reads logits that way. Other maps are accepted with res
 | Hard class map with an exported confidence band, as published products ship them (LCMAP's `lcpri` with `lcpconf`) | `assess`, `sample`, `estimate` and `certify` with `--confidence BAND` (`assess_classmap` in Python). The band must rise with confidence; negate an uncertainty band first. `--confidence-range LOW HIGH` leaves out band values outside it, such as codes; without it the package cannot tell codes from confidences. The band ranks only the pixels it separates. `sample` then defaults to the random design, since the confidence design needs a top-1 probability |
 | Hard class map alone | `compare` only; without a confidence there is no ranking |
 | Binary score in [0, 1] decided at 0.5, such as an OlmoEarth Studio `per_pixel_regression` output of a two-class task | Everything a binary probability map is, passed as one: windows are ranked by distance from 0.5, which needs no calibration, and a design-based estimate stays valid, since the score only allocates the labels. The score is not a probability of error, and no recorded experiment grades this case |
-| Continuous map, such as a regression output | `compare` only, at a cut-off named with `--threshold`; no recorded experiment grades this case |
+| Continuous map, such as a regression output | `compare`, and `sample` and `plan` with `--other`, at a cut-off named with `--threshold`; no recorded experiment grades this case. It has no margin, so no review set or error rate. The package cannot tell it from logits: passed with `--logits` it is ranked by its size, and from 1.14.1 a one-band map read as logits whose values all lie in [0, 1], or none below 0 (or none above), to rounding, carries a warning (on the terminal, in the JSON and through the MCP server) |
 
 For a published product, pass the class map as the map and its confidence band with `--confidence`:
 
@@ -371,7 +373,10 @@ every 20.48 km; whether a classifier map errs more along those lines is not meas
 ## Command line
 
 `oe-inferencex <command> --help` lists each command's options. Outputs are JSON summaries, CSV tables of windows with
-pixel and map coordinates, and rasters on the window grid (GeoTIFF for a GeoTIFF input, `.npy` otherwise).
+pixel and map coordinates, and rasters on the window grid (GeoTIFF for a GeoTIFF input, `.npy` otherwise). Each result
+file (assessment.json, comparison.json, a sample's sidecar, and the JSON that estimate, certify, decide and plan write)
+ends with `written_by`: the package, its installed version and the command (from 1.14.1), so a result can be traced to
+the release that wrote it; a file from an earlier release is read as before.
 
 ### demo
 
@@ -473,8 +478,9 @@ the dates differ, grading is refused until `--labels-date` gives the labels' dat
 right in one map and wrong in the other whatever either model did; `graded.graded_against` then names the map the
 labels match in time.
 
-**Which map is more accurate, with few labels.** Where two maps give the same class, both are right or both are
-wrong, so their accuracies differ only through the windows where they differ. Label a random sample of those:
+**Which map is more accurate, with few labels.** Where two maps of the same time give the same class, both are right
+or both are wrong, so their accuracies differ only through the windows where they differ. Label a random sample of
+those:
 
 ```bash
 oe-inferencex sample a.tif --other b.tif --budget 100 --out pairs.csv
@@ -492,6 +498,14 @@ reads them (class maps, probability maps cut at `--threshold`, or per-class scor
 ones `compare` counts as differing. It does not give either map's accuracy: where the maps agree they are both right
 or both wrong, and how often needs a random sample of all windows (`sample --design random` on each map). `certify`
 refuses this sample.
+
+Across dates the identity fails. The reviewer writes one class per window, seen at one date, and both maps are graded
+against it: where the ground changed between the two dates (a harvest, a flood, a season), the map of the other date is
+counted wrong, and a window where the maps agree can be right in one and wrong in the other. For maps of different
+dates, sample each map at random on its own (`sample --design random` on its scores, or on a product's class map with
+its confidence band), label each at its own map's date, and estimate each: two error rates whose intervals do not hold
+jointly. `compare` with `--date-a` and `--date-b` says which case two maps are in, and from 1.14.1 the next steps of
+`compare` (through the MCP server) and of `decide` follow the dates.
 
 Which map it names (from 1.10.0): while the labels are at most a fifth of the differing windows, the exact sign test on
 the labelled windows where one map is right, two-sided at 5%, printed with its p-value and counts; it names the less
@@ -1151,7 +1165,7 @@ and `truth.tif`), each with the tools it uses and what the answer can and cannot
 - "Where should I look first in scores.tif?" Uses `assess`. The answer is a list of windows to check first, least
   confident first. It is not an error rate, and the errors the model is sure of come last. It needs the model's
   per-class scores: a class map alone is refused, or gives an order that is not evidence.
-- "How wrong is scores.tif? Pick 300 windows at random for me to label." Uses `sample`, then `estimate`. In between,
+- "How wrong is scores.tif? Pick 400 windows at random for me to label." Uses `sample`, then `estimate`. In between,
   you set `wrong` to 1 or 0 on every row of the sample, or `?` where a window cannot be judged. The answer is an
   error rate with a 95% interval. No tool
   labels a window, and the interval assumes your labels are right.
@@ -1282,7 +1296,7 @@ out = assess_prediction(scores, is_logit=True)
 margin, valid = out["arrays"]["confidence"], out["arrays"]["valid"]
 map_class = np.where(valid, out["arrays"]["pooled_argmax"], -1).ravel()
 
-s = sample_for_estimation(margin, 300, design="random", valid=valid)   # design="confidence" also needs p1, the top-1 probability
+s = sample_for_estimation(margin, 400, design="random", valid=valid)   # design="confidence" also needs p1, the top-1 probability
 # wrong (1 or 0) and reference (the reviewer's class) for each window of s["indices"]
 estimate_error_rate(s, wrong)                                         # estimate, low, high, method
 estimate_per_class(s, reference, map_class)                           # per_class, confusion_counts, overall_accuracy

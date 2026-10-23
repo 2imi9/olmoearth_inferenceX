@@ -7,6 +7,7 @@ import os
 import numpy as np
 import pytest
 
+import oe_inferencex
 from oe_inferencex.assess import _pooled_argmax, assess_prediction, summary
 from oe_inferencex.cli import main
 from oe_inferencex.demo import SAMPLE
@@ -853,7 +854,11 @@ def test_existing_outputs_are_byte_identical_to_1_3_1(tmp_path):
     - the zone JSONs' `level_cut` key, added with the ramp option (exp96): it is "standard", the cut every 1.3.1 output
       was made with, and is taken out with `scope`;
     - the per-class table of the three random samples, rewritten whole in 1.14.0 (exact intervals and the drawn flag,
-      exp115): changes.REGENERATED names the six files and holds their new bytes."""
+      exp115): changes.REGENERATED names the six files and holds their new bytes;
+    - `written_by` (1.14.1), the last key of every result JSON the command line writes (here assessments, sample
+      sidecars, estimates and zones; not explanation.json): the package, its version and the command;
+      changes.STAMP names it, and it is taken out before the comparison, once the file is checked to be the dump
+      of what it parses to, so the rest still compares byte for byte."""
     from oe_inferencex.assess import SCOPE_ASSESS
     from oe_inferencex.estimate import SCOPE_CERTIFY, SCOPE_ESTIMATE
     gen = _golden_module()
@@ -918,10 +923,24 @@ def test_existing_outputs_are_byte_identical_to_1_3_1(tmp_path):
             return SCOPE_CERTIFY
         return None
 
-    n_scoped = 0
+    n_scoped = n_stamped = 0
     for name, data in sorted(files.items()):
         with open(os.path.join(GOLDEN, name), "rb") as f:
             want = changes.expected(name, f.read())          # 1.3.1's bytes with the listed changes, and no others
+        command = changes.stamped_command(name)
+        if command is not None:
+            # written_by (1.14.1), the last key of every result JSON the command line writes, taken out like `scope`.
+            # The file is first checked to be exactly the dump of what it parses to (indent 1, no newline at the
+            # end), so the redump of the rest compares the rest byte for byte
+            got = json.loads(data)
+            assert json.dumps(got, indent=1).encode() == data, name
+            assert list(got)[-1] == changes.STAMP["key"], name
+            assert got.pop(changes.STAMP["key"]) == {"package": changes.STAMP["package"],
+                                                     "version": oe_inferencex.__version__, "command": command}, name
+            data = json.dumps(got, indent=1).encode()
+            n_stamped += 1
+        else:
+            assert changes.STAMP["key"].encode() not in data, name
         scope = scope_of(name)
         if scope is None:
             assert data == want, name
@@ -943,6 +962,8 @@ def test_existing_outputs_are_byte_identical_to_1_3_1(tmp_path):
         n_scoped += 1
     # six API summaries, three assessments, seven estimates and six per-class, seven zones; the stdout of each run
     assert n_scoped == 6 + 3 + 13 + 7 and sum(n.endswith(".stdout.txt") for n in files) == 3 + 7 + 7 + 6 + 7
+    # stamped: the three assessments, seven sample sidecars, thirteen estimates and seven zones
+    assert n_stamped == 3 + 7 + 13 + 7
 
 
 def test_label_refuses_an_edited_condition_column(tmp_path):

@@ -129,6 +129,17 @@ def pool_valid(valid, patch):
     return valid[:h, :w].reshape(h // patch, patch, w // patch, patch).mean(axis=(1, 3)) >= 0.5
 
 
+def _stamp(result, command):
+    """`result` with `written_by` as its last key: the package, its version and the command that wrote the file.
+    Until 1.14.1 no result file named the release that wrote it, while releases change numbers on purpose (1.14.0
+    capped the producer's accuracy point), so a file could not be traced to its code (the OlmoEarth Agent stamps
+    its tool outputs; the scan of 23 October 2026). A file another release wrote is read as before."""
+    from oe_inferencex import __version__
+    result.pop("written_by", None)                              # last, also in a dict copied from a sidecar
+    result["written_by"] = {"package": "olmoearth-inferencex", "version": __version__, "command": command}
+    return result
+
+
 # ----------------------------------------------------------------------------- assess
 def _pct(x, nd=2):
     """A percentage, or the word undefined. `summary` turns NaN into None, and `None or 0` prints 0.00%, which reads as
@@ -163,7 +174,9 @@ def _check_scores(scores, valid, is_logit, path):
             f"{path}: values run {lo:.7g} to {hi:.7g}, which is not a probability map. Pass --logits if these are "
             f"logits, or give a (C, H, W) per-class score map. For a hard class map with its confidence band, as "
             f"published products ship them, pass the band with --confidence BAND (and --confidence-range LOW HIGH "
-            f"when the band also holds codes).")
+            f"when the band also holds codes). A regression output (a height, a depth, an index) is none of these: "
+            f"it has no margin, so no review set or error rate is read from it; compare cuts one into classes at "
+            f"--threshold.")
     if scores.ndim == 3:
         return
     integral = np.array_equal(v, np.rint(v))
@@ -398,7 +411,7 @@ def cmd_assess(args):
     written["explanation"] = os.path.join(args.out, "explanation.json")
     s["files"] = written
     with open(os.path.join(args.out, "assessment.json"), "w") as f:
-        json.dump(s, f, indent=1)
+        json.dump(_stamp(s, "assess"), f, indent=1)
     ref_block = s.get("against_reference") or {}
     # A budget is printed as the percent it is: rounded to a whole percent, 0.1% and 0.4% both printed as "0%" and
     # 2.5% as "2%", while the files and the JSON kept them apart (2026-10-06).
@@ -428,9 +441,12 @@ def cmd_assess(args):
         f"{rs['tied_at_cutoff']['inside']} of the {rs['n_windows']} windows at {100 * float(b):g}%"
         for b, rs in tied_sets) + " were chosen among equal scores by raster position, not evidence; scores with few "
         "distinct values (a kNN vote share, a saturated or quantized probability) cannot order them") if tied_sets else ""
+    # assessment.json holds every warning; the terminal shows the ones that say the input may not be what --logits
+    # claims (1.14.1), since the review set is then ordered by size alone
+    logit_text = "".join(f"\nwarning: {w}" for w in s.get("warnings", []) if w.startswith("logit input:"))
     print(f"{s['n_windows']} windows of {args.patch} px; review sets " + ", ".join(f"{100 * float(b):g}%: {rs['n_windows']}" for b, rs in out["review_sets"].items()) +
           f"; boundary windows {100 * s['boundary_window_fraction']:.1f}%" + ref_text + cond_text + tie_text +
-          "".join(f"\nnote: {n}" for n in prod_notes) +
+          logit_text + "".join(f"\nnote: {n}" for n in prod_notes) +
           f"\nwrote {args.out}/assessment.json, explanation.json, review_set_*.csv, suspicion, boundary")
     return 0
 
@@ -858,7 +874,7 @@ def cmd_compare(args):
             w.writerow([int(r), int(c), int(pr[i]), int(pc[i]), None if x is None else float(x[i]), None if y is None else float(y[i]), ca_, cb_])
     s["files"]["differing_windows"] = path
     with open(os.path.join(args.out, "comparison.json"), "w") as f:
-        json.dump(s, f, indent=1)
+        json.dump(_stamp(s, "compare"), f, indent=1)
     where = s["where"] or {}
     print(f"{s['n_disagree']} of {s['n_windows']} windows differ ({_pct(s['disagreement_rate'])})" +
           (f"; on a boundary of a {where['boundary_a']['enrichment']:.1f}x as often as the agreeing windows" if where.get("boundary_a", {}).get("enrichment") is not None else "") +
@@ -903,7 +919,8 @@ def cmd_sample(args):
     # --budget is checked here rather than by the parser, since the audit design takes --per-class instead; before the
     # --other route, which needs it too
     if getattr(args, "budget", None) is None:
-        raise SystemExit("sample: --budget is required: the number of windows to label (exp78 measured 300)")
+        raise SystemExit("sample: --budget is required: the number of windows to label (exp78 measured 300; about 400 "
+                         "for a random sample whose labels also serve certify at alpha 0.05)")
     if getattr(args, "other", None):
         if getattr(args, "confidence", None) or getattr(args, "confidence_range", None):
             raise SystemExit("sample: --other draws among the windows where two class maps differ, which needs no "
@@ -1037,7 +1054,7 @@ def cmd_sample(args):
                             "majority of the window's pixels) is not what is on the ground, else 0; then: "
                             "oe-inferencex estimate " + os.path.basename(args.out))
     with open(args.out[:-4] + ".json" if args.out.endswith(".csv") else args.out + ".json", "w") as f:
-        json.dump(side, f, indent=1)
+        json.dump(_stamp(side, "sample"), f, indent=1)
     what, notes = f"{design} design", []
     if cond is not None:
         counts = ", ".join(f"{name} {int(n)}" for name, n in zip(cond["names"], cond["n_labelled"]))
@@ -1158,6 +1175,15 @@ def _sequential_to_extend(path, args):
             [r.get("reference_class", "") for r in rows] if rows and "reference_class" in rows[0] else None)
 
 
+# One class is written per window, seen at one time, and both maps are graded against it. Until 1.14.1 nothing said
+# so: the route was offered for two maps of different dates, where a change on the ground between them reads as an
+# error of the map of the other date (the OlmoEarth Agent's trials, exp86 round 8).
+OTHER_DATES_NOTE = ("both maps are graded against the one class written per window, so they must describe the same "
+                    "time: across dates, a change on the ground between them reads as an error of the map of the "
+                    "other date. For maps of different dates, sample each map at random on its own and label it at "
+                    "its own date")
+
+
 def _sample_disagreement(args):
     """sample --other: windows drawn at random among those where two maps' classes differ, written for a reviewer to
     record the class seen in each. estimate then says which map is more accurate and by how much."""
@@ -1199,16 +1225,17 @@ def _sample_disagreement(args):
                  "crs": None if geo is None else str(geo["crs"]),
                  "transform": None if geo is None else list(geo["transform"])[:6],
                  "xy_are": "window centres in the raster's CRS" if geo is not None else "absent: the input had no georeference",
-                 "how_to_label": "open each window and write in reference_class the class that is there, in the maps' "
-                                 "class codes, or ? where it cannot be judged (keep the row); hide class_a and class_b "
+                 "how_to_label": "open each window and write in reference_class the class that is there at the time "
+                                 "both maps describe, in the maps' class codes, or ? where it cannot be judged (keep "
+                                 "the row); hide class_a and class_b "
                                  "to label blind; then: oe-inferencex estimate " + os.path.basename(args.out)})
     with open(args.out[:-4] + ".json" if args.out.endswith(".csv") else args.out + ".json", "w") as f:
-        json.dump(side, f, indent=1)
+        json.dump(_stamp(side, "sample"), f, indent=1)
     D, N = smp["n_disagree"], smp["n_population"]
     print(f"{len(idx)} windows to label of the {D} where the two maps differ ({100 * D / N:.1f}% of the {N} windows "
           f"compared: both maps predict them and neither splits evenly); wrote {args.out} and its .json. Write in `reference_class` the class you see in each window, or ? "
           f"where a window cannot be judged (keep its row), then run: oe-inferencex estimate {args.out}"
-          + "".join(f"\nnote: {n}" for n in t.notes))
+          + "".join(f"\nnote: {n}" for n in t.notes) + f"\nnote: {OTHER_DATES_NOTE}")
     return 0
 
 
@@ -1285,7 +1312,7 @@ def _sample_class_audit(args):
                             f"oe-inferencex estimate {os.path.basename(args.out)} --alpha A, with A chosen before any "
                             "label is read, as is any --also-accept file")
     with open(args.out[:-4] + ".json" if args.out.endswith(".csv") else args.out + ".json", "w") as f:
-        json.dump(side, f, indent=1)
+        json.dump(_stamp(side, "sample"), f, indent=1)
     cls, z = smp["audited"], smp["zone"]
     full = [f"class {c}, {e['n_zone']} window{'' if e['n_zone'] == 1 else 's'}" for c, e in cls.items() if e["census"]]
     whose = (f"each of the {len(cls)} predicted classes' confident zones" if len(cls) > 1 else
@@ -1353,7 +1380,7 @@ def _estimate_disagreement(args):
                 "notes": list(side.get("notes", []))})
     _check_out_file(out, "estimate")
     with open(out, "w") as f:
-        json.dump(res, f, indent=1)
+        json.dump(_stamp(res, "estimate"), f, indent=1)
     d, v = res["difference"], res["verdict"]
     from oe_inferencex.decide import sign_test_head
     sign = sign_test_head(res)
@@ -1534,7 +1561,7 @@ def _estimate_class_audit(args):
         res["population_note"] = _population_note(side)
     _check_out_file(out, "estimate")
     with open(out, "w") as f:
-        json.dump(res, f, indent=1, default=float)
+        json.dump(_stamp(res, "estimate"), f, indent=1, default=float)
     z = res["zone"]
     lines = [f"confident zone: the {z['n_zone']} windows at confidence {z['cut']:.6g} or above, "
              f"{100 * z['share_of_map']:.1f}% of the {res['n_population']} valid windows{_zone_words(z)}; "
@@ -1957,7 +1984,8 @@ def cmd_estimate(args):
         res["population_note"] = _population_note(side)
     also_text = ""
     if also is not None:
-        # last, so that the result without these three keys is the one written without the option
+        # last but for written_by (_stamp), so that the result without these three keys is the one written without
+        # the option
         also["n_wrong"] = int(np.asarray(wrong_alt)[~unjudged].sum())
         keep = ("n_labelled", "n_wrong", "n_unjudged", "estimate", "estimate_range", "low", "high", "half_width", "method")
         for k in ("estimate", "estimate_range", "low", "high", "half_width", "method", "warning", "per_condition",
@@ -1985,7 +2013,7 @@ def cmd_estimate(args):
         also_text = "\n" + "\n".join(lines)
     _check_out_file(out, "estimate")
     with open(out, "w") as f:
-        json.dump(res, f, indent=1, default=float)
+        json.dump(_stamp(res, "estimate"), f, indent=1, default=float)
     cond_text = ""
     if res.get("by_condition"):
         # each condition's own exact interval, one line each after the whole map's
@@ -2096,7 +2124,7 @@ def cmd_certify(args):
                     "reading_note": _zone_reading_note(args.delta, False)})
         also_text = _zone_also_text(res, args, what, _also_mask(mask_path))
     with open(out, "w") as f:
-        json.dump(res, f, indent=1, default=float)
+        json.dump(_stamp(res, "certify"), f, indent=1, default=float)
     tail = "".join(f"\nnote: {b}" for b in bounds) + (f"\nnote: {res['population_note']}" if "population_note" in res else "")
     if res["coverage"] is None:
         print(f"no zone certified at alpha={args.alpha:g}, delta={args.delta:g} from {res['n_labelled']} labels. {res['note']}"
@@ -2221,7 +2249,7 @@ def _certify_sequential(args, side, idx, wrong, margin, valid_w, out, mask_path,
         res.update({"also_accept": a, "also_accept_unused": also[2], "reading_note": _zone_reading_note(args.delta, True)})
         also_text = _zone_also_text(res, args, what, _also_mask(mask_path))
     with open(out, "w") as f:
-        json.dump(res, f, indent=1, default=float)
+        json.dump(_stamp(res, "certify"), f, indent=1, default=float)
     tail = "".join(f"\nnote: {b}" for b in bounds) + (f"\nnote: {res['population_note']}" if "population_note" in res else "")
     more = (f"\n{res['n_labelled']} of the {res['n_drawn']} windows drawn are labelled; label more from the top, or extend "
             "the sample (sample --extend), and run certify again: every look is covered by the same guarantee")
@@ -2273,7 +2301,7 @@ def _certify_by_condition(args, sample, wrong, margin, valid_w, out, mask_path, 
                     "reading_note": _zone_reading_note(args.delta, False)})
         also_text = _zone_also_text(res, args, None, _also_mask(mask_path))
     with open(out, "w") as f:
-        json.dump(res, f, indent=1, default=float)
+        json.dump(_stamp(res, "certify"), f, indent=1, default=float)
     a, d, b1 = args.alpha, args.delta, res["min_labels_to_certify"]
     if res["n_conditions_tested"]:
         lines = [f"certified per input condition at alpha={100 * a:g}%, delta={100 * d:g}% (each tested condition at "
@@ -2361,7 +2389,7 @@ def cmd_decide(args):
                   + (f"; also accepting {', '.join(str(x) for x in alt['accepted'])}: {alt['answer']} "
                      f"({100 * alt['low']:.1f}% to {100 * alt['high']:.1f}%)" if alt and alt.get("accepted") else ""))
     with open(out, "w") as f:
-        json.dump(res, f, indent=1, default=float)
+        json.dump(_stamp(res, "decide"), f, indent=1, default=float)
     print(f"wrote {out}")
     return 0
 
@@ -2635,7 +2663,7 @@ def cmd_plan(args):
     if out_path:
         _check_out_file(out_path, "plan")
         with open(out_path, "w") as f:
-            json.dump({"plans": results, "notes": notes, "run": runs}, f, indent=1, default=float)
+            json.dump(_stamp({"plans": results, "notes": notes, "run": runs}, "plan"), f, indent=1, default=float)
         print(f"wrote {out_path}")
     return 0
 
@@ -2742,7 +2770,8 @@ def build_parser():
     a.add_argument("--logits", action="store_true",
                    help="the scores are logits (tie-free confidence); default probabilities. A multi-class logit map is "
                         "ranked by its logit margin; for a top-probability reading, pass the class probabilities "
-                        "instead (in Python, form='top1' gives one from the logits)")
+                        "instead (in Python, form='top1' gives one from the logits). A regression output (a height, "
+                        "a depth, an index) is not a logit: it has no margin, so no review set is read from it")
     a.add_argument("--patch", type=int, default=4, help="window size in pixels (default 4)")
     a.add_argument("--nodata", type=float, default=None, help="no-data value (default: the raster's own, plus NaN)")
     a.add_argument("--reference", default=None, help="optional integer class raster treated as truth (the caveat applies)")
@@ -2808,7 +2837,8 @@ def build_parser():
     sm.add_argument("scores", help="the same map `assess` takes: (H, W) probability or logit map, or (C, H, W) scores")
     # not required by the parser: the audit design takes --per-class instead, and cmd_sample refuses a missing budget
     sm.add_argument("--budget", type=int, default=None,
-                    help="number of windows to label (exp78 measured 300); every design but audit needs it")
+                    help="number of windows to label (exp78 measured 300; about 400 for a random sample whose labels "
+                         "also serve certify at alpha 0.05); every design but audit needs it")
     sm.add_argument("--out", required=True, help="CSV to write; a .json sidecar with the design goes beside it")
     sm.add_argument("--design", choices=("confidence", "proportional", "random", "sequential", "tiles", "condition",
                                          "audit"),
@@ -2854,8 +2884,9 @@ def build_parser():
     sm.add_argument("--nodata", type=float, default=None)
     sm.add_argument("--seed", type=int, default=0)
     sm.add_argument("--other", default=None, metavar="MAP_B",
-                    help="a second map of the same grid: sample at random among the windows where the two maps' "
-                         "classes differ, to learn which map is more accurate (estimate then compares them)")
+                    help="a second map of the same grid and the same time: sample at random among the windows where "
+                         "the two maps' classes differ, to learn which map is more accurate (estimate then compares "
+                         "them)")
     sm.add_argument("--threshold", type=float, default=None,
                     help="with --other: cut-off of a 2-D continuous map (0.5 for a probability map when omitted)")
     _product_parser_args(sm)
@@ -2932,7 +2963,8 @@ def build_parser():
     pl.add_argument("scores", nargs="?", default=None,
                     help="the map, as sample takes it (not needed with --windows)")
     pl.add_argument("--other", default=None, metavar="MAP_B",
-                    help="a second map of the same grid: plan the labels that say which map is more accurate")
+                    help="a second map of the same grid and the same time: plan the labels that say which map is more "
+                         "accurate")
     pl.add_argument("--windows", type=int, default=None, help="the number of valid windows, instead of a map")
     pl.add_argument("--differing", type=int, default=None,
                     help="with --windows: the windows where two maps differ, instead of the two maps")
