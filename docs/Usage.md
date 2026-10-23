@@ -348,11 +348,19 @@ oe-inferencex estimate to_label.csv                                             
 NaN is read as no-data. To keep the map's coordinates, write `probs` as a GeoTIFF in the zone's CRS instead
 (`proj:code` and `spatial:transform` in the zone's attributes).
 
-One preregistered experiment grades this route ([exp112](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/results/comparisons.md#a-map-made-from-olmoearth-v13-embeddings-at-lcmaps-probability-sample-exp112)): logistic regression on the 2018 v1.3 embeddings of
-1,000 random plots of LCMAP's reference sample, checked at 11,000 others. The map erred on 11.7% of them, its top
+Two preregistered experiments grade this route. In [exp112](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/results/comparisons.md#a-map-made-from-olmoearth-v13-embeddings-at-lcmaps-probability-sample-exp112), logistic regression on the 2018 v1.3 embeddings of
+1,000 random plots of LCMAP's reference sample was checked at 11,000 others. The map erred on 11.7% of them, its top
 probability ranked those errors at AUROC 0.876 (the least confident 10% held 41.6% of them), and the interval, the
 certified zone and the which-map route kept their guarantees. The fit points there were a random sample of the same
-population, the favourable case: a fit on a few points in one area, applied to that area, is not graded. The 2018
+population, the favourable case.
+
+In [exp113](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/results/comparisons.md#train-on-five-territories-map-the-sixth-planteur-leave-one-island-out-with-three-embeddings-exp113)
+the fit was carried to another area. It was fitted on other territories of Ai2's PLANTEUR crop-type benchmark and
+applied to a held-out one, five times. The ranking held in all five (AUROC 0.74 to 0.88), and the labelled routes kept
+their guarantees. But in three of them the map called nearly everything the majority class, so there the ranking
+mostly found the crop land it missed. When a fit is carried to a new area, check its error rate and its per-class
+accuracy with random labels before trusting its classes. A fit on a few points in one area, applied to that area, is
+not graded. The 2018
 vectors ran smaller than the dataset README says (median norm 3.08 against 3.4); carrying a fit across years is
 untested, so fit and apply on one year.
 The report also says that 2025, most of 2024 and small parts of 2019 and 2023 were computed before a fix for a faint seam
