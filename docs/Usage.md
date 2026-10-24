@@ -1334,7 +1334,10 @@ why["quotes"]["ndwi_ambiguous"]             # "is spectrally ambiguous ... (48% 
 - `form="top1"` ranks a multi-class logit map by one minus the top probability; the default remains the logit margin,
   with a warning on such maps ([exp76](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/results/comparisons.md#which-confidence-which-statistic-which-aggregator-exp76)).
   The command line has no such option: class probabilities passed without `--logits` are ranked by the window mean of
-  the top probability, where `form="top1"` takes the window mean of its log.
+  the top probability, where `form="top1"` takes the window mean of its log. That form's `arrays["confidence"]` is on
+  the probability scale, where windows whose mean log probability lies above about -1.1e-16 round to exactly 1.0 and
+  tie (the rounding Barron et al., arXiv 2610.31642, call softmax collapse); rank from `arrays["log_confidence"]`, the
+  same windows on the log scale with no ties. assess's own review sets are ranked on that scale.
 - `explain_review_set` derives the boundary and low-confidence cues itself. Other cues are boolean arrays of window
   shape, such as spectral ambiguity (above) or tiling instability (`signals.aligned_tile_phase`); cues in
   `explain.CUES` are quoted with their measured enrichment, other names as unmeasured.

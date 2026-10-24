@@ -537,6 +537,43 @@ def equal_allocation(sizes, budget, floor=MIN_PER_STRATUM):
     return n
 
 
+CLASS_FLOOR = 50       # labels per map class at least, where it has them (Olofsson et al. 2014 suggest 50 to 100)
+
+
+def class_allocation(sizes, budget, floor=CLASS_FLOOR):
+    """The labels of a sample stratified by map class, as Olofsson et al. (2014, section 5.1.3) advise: every class gets
+    `floor` labels, or all its windows if it has fewer, so that each user's accuracy is estimated, and the rest of the
+    budget goes to the classes in proportion to their size, so that the overall accuracy and the class areas stay
+    precise; no class gets more labels than windows. A budget below the floors is refused.
+
+    Returns n_h with sum n_h = budget and min(N_h, floor) <= n_h <= N_h. The proportional part is allocated by largest
+    remainder over the room each class has left, and again while a class is filled, so the sum is exact."""
+    sizes = np.asarray(sizes, int)
+    N = int(sizes.sum())
+    if budget > N:
+        raise ValueError(f"a budget of {budget} is more than the {N} units of the strata")
+    n = np.minimum(sizes, int(floor))
+    if budget < int(n.sum()):
+        raise ValueError(f"a budget of {budget} cannot give each of the {int((sizes > 0).sum())} map classes its "
+                         f"{floor} labels (needs {int(n.sum())}); lower --min-per-class or raise --budget")
+    left = int(budget) - int(n.sum())
+    while left > 0:
+        room = sizes - n
+        open_ = room > 0
+        want = left * sizes[open_] / sizes[open_].sum()
+        add = np.minimum(np.floor(want).astype(int), room[open_])
+        rest = left - int(add.sum())
+        if rest > 0:                                  # largest remainders, among classes that still have room
+            frac = np.where(add < room[open_], want - np.floor(want), -1.0)
+            order = np.lexsort((np.flatnonzero(open_), -frac))
+            for j in order[:rest]:
+                if add[j] < room[open_][j]:
+                    add[j] += 1
+        n[open_] += add
+        left = int(budget) - int(n.sum())
+    return n
+
+
 def draw_stratified(rng, strata, sizes, allocation):
     """A without-replacement draw of `allocation[h]` units from each stratum."""
     idx = []
@@ -601,7 +638,8 @@ def _condition_index(condition, pop, n_windows, condition_names=None):
 
 
 def sample_for_estimation(margin, budget, design="confidence", p1=None, tiles=None, per_tile=M_PER_TILE,
-                          n_strata=N_STRATA, valid=None, seed=0, condition=None, condition_names=None, stable=False):
+                          n_strata=N_STRATA, valid=None, seed=0, condition=None, condition_names=None, stable=False,
+                          class_floor=None):
     """Which windows to label so that `estimate_error_rate` can give an honest rate afterwards.
 
     margin  : per-window confidence margin, higher = more confident (assess's `arrays["confidence"]`, flattened)
@@ -672,7 +710,9 @@ def sample_for_estimation(margin, budget, design="confidence", p1=None, tiles=No
     elif design == "condition":
         # a simple random sample within each condition; with one condition this is the random design's own draw
         # (draw_stratified with one stratum returns the indices of rng.choice(N, budget))
-        alloc = equal_allocation(c_sizes, budget)
+        # equal across input conditions; across map classes (class_floor given: the class design), Olofsson's
+        alloc = equal_allocation(c_sizes, budget) if class_floor is None else class_allocation(c_sizes, budget,
+                                                                                                class_floor)
         local = (np.concatenate([order[c_pop[order] == h][:int(nh)] for h, nh in enumerate(alloc)]) if stable else
                  draw_stratified(rng, c_pop, c_sizes, alloc))
         out.update({"indices": pop[local], "strata": c_pop, "strata_of_population": pop, "sizes": c_sizes.tolist(),
@@ -753,7 +793,8 @@ def sample_for_estimation(margin, budget, design="confidence", p1=None, tiles=No
         grid[pop] = c_pop
         out["condition"] = {"values": c_values, "names": c_names, "sizes": c_sizes.tolist(),
                             "n_labelled": np.bincount(grid[out["indices"]], minlength=c_sizes.size).tolist(),
-                            "allocation_rule": "equal" if design == "condition" else None}
+                            "allocation_rule": (None if design != "condition" else "equal" if class_floor is None
+                                                else f"proportional, at least {int(class_floor)} per class")}
         out["condition_grid"] = grid
         notes = list(c_notes)
         if c_sizes.size == 1:
@@ -1403,6 +1444,67 @@ def _ht_ratio(num, den, strata, picked, sizes):
     return R, var
 
 
+CLASS_DESIGN_METHOD = ("stratified by map class (Olofsson et al. 2014): each class's labels are a simple random sample of "
+                       "it, so its user's accuracy has an exact hypergeometric interval; the class shares (areas) and "
+                       "producer's accuracies are bounded by exact intervals on each reference class's count in each "
+                       "stratum, at 1 - 0.05 / (L x S) with L classes and S strata not labelled in full, so they all hold "
+                       "together with probability at least 95% (union bound); the points are Olofsson's stratified "
+                       "estimates; the overall accuracy takes the error rate's interval, the union bound over the classes")
+CLASS_DESIGN_EXACT_NOTE = ("under the class design the per-class intervals printed are exact: each user's accuracy at 95%, "
+                           "and the class shares and producer's accuracies together at 95% (a union bound over every "
+                           "class's count in every stratum, wide where many classes are thin); a class whose share the "
+                           "map draws outside its interval is named drawn too little or too much")
+
+
+def _class_design_exact(per, sample, strata, local, sizes, m_pop, r_s, C, L, N):
+    """The class design's exact intervals, written into `per` (rows by class): each map class is a stratum labelled at
+    random within it, so the count K_hj of reference class j in stratum h has an exact hypergeometric interval from
+    the n_hj of its n_h labels. Taken at 1 - 0.05 / (L S), with S the strata not labelled in full (a census enters
+    exactly), all of them hold together with probability at least 95%, and then so does every function of them that
+    is monotone in each count: the share of class j, sum_h K_hj / N, between the sums of the ends; and its producer's
+    accuracy A_j / (A_j + sum_{h != j} K_hj), with A_j = K_jj the windows of class j the map calls j, between
+    A_lo / (A_lo + sum hi) and A_hi / (A_hi + sum lo). The user's accuracy of class c is its stratum's own exact
+    interval at 95%. The points are Olofsson et al.'s (2014) stratified estimates."""
+    values = list(sample["condition"]["values"])
+    S = len(sizes)
+    n_h = np.bincount(strata[local], minlength=S)
+    counts = np.zeros((S, C), int)                                    # labelled windows of reference j in stratum h
+    np.add.at(counts, (strata[local], r_s), 1)
+    open_h = [h for h in range(S) if n_h[h] < sizes[h]]
+    level = 1 - 0.05 / max(L * max(len(open_h), 1), 1)
+    lo_K = np.zeros((S, C), int)
+    hi_K = np.zeros((S, C), int)
+    for h in range(S):
+        Nh, nh = int(sizes[h]), int(n_h[h])
+        for j in range(C):
+            if nh == Nh:                                              # a census: the count itself
+                lo_K[h, j] = hi_K[h, j] = int(counts[h, j])
+                continue
+            a, b = hypergeom_interval(int(counts[h, j]), nh, Nh, conf=level)
+            lo_K[h, j] = int(math.floor(a * Nh + 1e-9))
+            hi_K[h, j] = int(math.ceil(b * Nh - 1e-9))
+    stratum_of = {int(v): h for h, v in enumerate(values) if v is not None}
+    u = np.divide(counts, n_h[:, None], out=np.zeros((S, C)), where=n_h[:, None] > 0)
+    for c in range(C):
+        row = per[c]
+        h = stratum_of.get(c)
+        M_c = int(sizes[h]) if h is not None else 0
+        if h is not None and n_h[h] > 0:
+            lo, hi = hypergeom_interval(int(counts[h, c]), int(n_h[h]), M_c)
+            row["user_accuracy"] = {"estimate": float(u[h, c]), "low": lo, "high": hi}
+        k_lo, k_hi = int(lo_K[:, c].sum()), int(hi_K[:, c].sum())
+        share = float((np.asarray(sizes) * u[:, c]).sum() / N)
+        row["reference_share_exact"] = {"estimate": share, "low": k_lo / N, "high": k_hi / N}
+        row["drawn"] = "too little" if M_c < k_lo else "too much" if M_c > k_hi else "within"
+        a_lo, a_hi = (int(lo_K[h, c]), int(hi_K[h, c])) if h is not None else (0, 0)
+        rest_lo, rest_hi = k_lo - a_lo, k_hi - a_hi
+        found = float(sizes[h] * u[h, c]) if h is not None else 0.0
+        row["producer_accuracy_exact"] = {
+            "estimate": found / (share * N) if share > 0 else None,
+            "low": a_lo / (a_lo + rest_hi) if a_lo + rest_hi > 0 else 0.0,
+            "high": a_hi / (a_hi + rest_lo) if a_hi + rest_lo > 0 else 1.0}
+
+
 def estimate_per_class(sample, reference, map_class, n_classes=None, interval="wilson", legend_size=None):
     """User's accuracy, producer's accuracy and error-adjusted share per class, from the labelled sample.
 
@@ -1619,7 +1721,11 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
             tot, v = _ht_total(is_ref, strata, local, sizes)
             row["reference_share"] = dict(zip(("estimate", "low", "high"), _interval(tot / N, v / N ** 2, idx.size, interval)))
             per[int(c)] = row
-        method = ("stratified by input condition: ratios of Horvitz-Thompson totals with linearised variance; shares as "
+        by_class = design == "condition" and (sample.get("condition") or {}).get("by") == "map class"
+        if by_class:
+            _class_design_exact(per, sample, strata, local, sizes, m_pop, r_s, C, L, N)
+        method = (CLASS_DESIGN_METHOD if by_class else
+                  "stratified by input condition: ratios of Horvitz-Thompson totals with linearised variance; shares as "
                   "Horvitz-Thompson totals; with input conditions as strata these per-class intervals have not been graded; "
                   "the overall accuracy takes the error rate's interval (union bound over the conditions), which covers "
                   "at least 95% by construction"
@@ -1682,7 +1788,8 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
             row["warning"] = "; ".join(notes)
             row["warning_codes"] = codes
     out = {"design": design, "interval": interval, "n_labelled": int(idx.size), "n_population": N, "n_classes": C,
-           **({"legend_size": L} if srs else {}), "nominal_coverage": 0.95,
+           **({"legend_size": L} if srs or "reference_share_exact" in next(iter(per.values()), {}) else {}),
+           "nominal_coverage": 0.95,
            "overall_accuracy": overall_row, "confusion_counts": conf.tolist(),
            "per_class": per, "method": method}
     if srs:
@@ -2425,6 +2532,14 @@ ESTIMATE_READING_NOTE = ("The alternative reading also accepts, for each map cla
                          "(a union bound): the whole map's two, and each condition's two. A file written after the "
                          "labels were seen can be fitted to them, and then neither holds: listing the reference classes "
                          "the errors fell on clears them.")
+# What delta counts (the final review of 24 October 2026): it bounds the share of ALL samples on which the statement
+# is wrong, those that certify nothing included. A reader sees only the samples that certify, and among them more can
+# be wrong: on a real tile at alpha 0.1, 57 of the 187 draws that certified a zone certified a wrong one, where the
+# share of all draws stayed under delta. It is largest where a zone's true error rate sits just above alpha.
+ISSUED_NOTE = ("delta is the share of all samples, those that certify nothing included, on which a statement like this "
+               "is wrong. Among the samples that do certify a zone, the share wrong can be larger, most of all when a "
+               "zone's true error rate is just above alpha: there a zone is rarely certified, and when it is, it is "
+               "often wrong. A certified zone is not a 1 - delta chance of being right.")
 ZONE_READING_NOTE = ("The alternative reading also accepts, for each map class, the reference classes the --also-accept "
                      "file lists for it, and certifies from the same labels a second time, at the same alpha and delta: "
                      "a second test on them. If the file was fixed before any label was read, each certificate fails on "

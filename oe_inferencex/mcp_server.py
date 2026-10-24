@@ -424,7 +424,7 @@ _FLAGS = {"design", "condition", "condition-names", "confidence", "confidence-ra
           "delta", "rule", "budget", "seed", "labels", "reference", "threshold", "date-a", "date-b", "groups", "order",
           "budgets", "tile", "per-tile", "reviewer-false-alarm", "reviewer-miss", "other", "threshold", "windows",
           "differing", "width", "error-rate", "difference", "both-wrong", "coverage", "zone-error", "power",
-          "max-labels", "anchor", "extend", "target"}
+          "max-labels", "anchor", "extend", "target", "min-per-class", "seed-from-map", "level-cut"}
 
 
 def _mcp_words(text):
@@ -851,11 +851,14 @@ def sample(
     out_dir: Annotated[str, P(description="Directory to write the CSV and its .json sidecar into; created if needed")],
     budget: Annotated[int, P(description="Number of windows to label: about 400 for a random sample whose labels "
                                          f"also serve certify ({BUDGET_300})")],
-    design: Annotated[Literal["confidence", "proportional", "random", "sequential", "tiles", "condition"] | None,
+    design: Annotated[Literal["confidence", "proportional", "random", "sequential", "tiles", "condition", "class"] | None,
                       P(description="Sampling design. Default: condition with a condition layer, random with "
                                     "confidence (a product's band), confidence otherwise. Use random to certify from "
                                     "the same labels once; sequential to label from the top, add windows later "
-                                    "(extend) and certify at every look")] = None,
+                                    "(extend) and certify at every look; class to stratify by the map's own class "
+                                    "(Olofsson et al. 2014): exact per-class accuracy and area, and a zone per class")] = None,
+    min_per_class: Annotated[int | None, P(description="class design: labels per map class at least (default "
+                                                       f"{est.CLASS_FLOOR})")] = None,
     anchor: Annotated[float | None, P(description="sequential design: the smallest zone certify will test, as a "
                                                   "share of the map, fixed now before any label; or give alpha")]
     = None,
@@ -865,9 +868,21 @@ def sample(
                                                   "Bonferroni rule (plan with coverage says how many)")] = None,
     alpha: Annotated[float | None, P(description="sequential design, without anchor: the error rate certify will be "
                                                  "asked about; the anchor is then the zone this budget can certify if "
-                                                 "none of its labels is wrong, at most 0.25 of the map")] = None,
+                                                 "none of its labels is wrong, at most 0.25 of the map. With "
+                                                 "seed_from_map (required there): the alpha certify will test, fixed "
+                                                 "now")] = None,
     delta: Annotated[float | None, P(description="sequential design, with alpha: the delta the anchor is computed "
-                                                 "for (default 0.1)")] = None,
+                                                 "for (default 0.1); with seed_from_map, the delta certify will use, "
+                                                 "fixed now")] = None,
+    seed_from_map: Annotated[bool, P(description="Draw a sample a certificate can rest on: the seed is taken from the "
+                                                 "map's digest, the draw's settings and certify's alpha, delta and "
+                                                 "rule, which are fixed now (random, sequential or condition design; "
+                                                 "needs alpha)")] = False,
+    rule: Annotated[Literal["prefix", "bonferroni"] | None,
+                    P(description="With seed_from_map: certify's rule, fixed now (default prefix; target and "
+                                  "sequential samples have their own)")] = None,
+    level_cut: Annotated[Literal["standard", "ramp"] | None,
+                         P(description="With seed_from_map: certify's level cut, fixed now (default standard)")] = None,
     extend: Annotated[str | None, P(description="sequential design: a sample CSV to extend to budget windows, keeping "
                                                 "its labels (the same scores, patch and seed)")] = None,
     name: Annotated[str, P(description="File name of the CSV in out_dir")] = "to_label.csv",
@@ -902,6 +917,17 @@ def sample(
     _opt(argv, "--target", None if target is None else float(target))
     _opt(argv, "--alpha", None if alpha is None else float(alpha))
     _opt(argv, "--delta", None if delta is None else float(delta))
+    if min_per_class is not None:
+        argv.append(f"--min-per-class={int(min_per_class)}")
+    if seed_from_map:
+        argv.append("--seed-from-map")
+        if int(seed) != 0:
+            raise Refused("sample: give seed or seed_from_map, not both")
+        argv.remove(f"--seed={int(seed)}")
+    if rule is not None:
+        argv.append(f"--rule={rule}")
+    if level_cut is not None:
+        argv.append(f"--level-cut={level_cut}")
     if extend is not None:
         argv.append(f"--extend={_input(extend, 'extend')}")
     argv += _product_argv(confidence, confidence_range)
@@ -1214,8 +1240,10 @@ def certify(
     sample_csv: Annotated[str, P(description="The CSV that sample wrote with design \"random\" (or with condition), "
                                              "with `wrong` filled on every row, or with design \"sequential\", "
                                              "filled from the top row down")],
-    alpha: Annotated[float, P(description="The error rate the certified zone may not exceed, such as 0.05")],
-    delta: Annotated[float, P(description="The probability that the statement is wrong")] = est.ZONE_DELTA,
+    alpha: Annotated[float | None, P(description="The error rate the certified zone may not exceed, such as 0.05; "
+                                                  "omit it for a sample drawn with seed_from_map, which fixed it")] = None,
+    delta: Annotated[float | None, P(description="The probability that the statement is wrong (default "
+                                                 f"{est.ZONE_DELTA}); fixed by a sample drawn with seed_from_map")] = None,
     rule: Annotated[Literal["prefix", "bonferroni", "target"] | None,
                     P(description="prefix (the default without a target): fixed-sequence testing; bonferroni can "
                                   "certify more when the most confident windows hold many errors; target: the default, "
@@ -1230,7 +1258,11 @@ def certify(
 ) -> dict[str, Any]:
     path = _input(sample_csv, "sample_csv")
     out = _out_json(path, out_dir, "zone")
-    argv = ["certify", path, f"--alpha={_num(float(alpha))}", f"--delta={_num(float(delta))}"]
+    argv = ["certify", path]
+    if alpha is not None:
+        argv.append(f"--alpha={_num(float(alpha))}")
+    if delta is not None:
+        argv.append(f"--delta={_num(float(delta))}")
     if rule is not None:
         argv.append(f"--rule={rule}")
     if scores is not None:
@@ -1252,7 +1284,9 @@ def certify(
         summ.update({k: r.get(k) for k in ("target", "target_weight", "target_certified")})
     if r.get("rule") == "sequential":
         summ.update({"anchor": r.get("anchor"), "n_drawn": r.get("n_drawn")})
-    a, d = 100 * float(alpha), 100 * float(delta)
+    # as certify used them: the sample's plan, the parameters, or the default delta
+    a = 100 * float(alpha if alpha is not None else r["alpha"])
+    d = 100 * float(delta if delta is not None else r.get("delta") if r.get("delta") is not None else est.ZONE_DELTA)
     if r.get("by_condition"):
         lines = [ln for ln in printed.splitlines() if ln and not ln.startswith("wrote ")]
         per_line = [ln.strip() for ln in lines if ln.startswith("  ")]
@@ -1305,7 +1339,7 @@ def certify(
               "The rate holds for the certified windows together, not for each window.",
               ((_cap(r["bounds_note"]) + " ") if r.get("bounds_note") else "")
               + "Labels are assumed right: the zone describes agreement with the reviewer's labels. The guarantee also "
-              "needs the labelled windows to be a random sample."]
+              "needs the labelled windows to be a random sample."] + ([_cap(est.ISSUED_NOTE)] if certified else [])
     # with no zone and no condition, the note is the conclusion's reason, said there once
     scope = r.get("scope")
     # A product's range leaves pixels out, and "N of M windows" counts only the rest: the whole-map reply dropped
@@ -1325,7 +1359,7 @@ def certify(
                               "of them are inside its zone, so the zone is the set in the window mask, not every "
                               "window of the condition at or above the threshold.")
     if r.get("by_condition"):
-        nxt = _condition_need(r, float(alpha), float(delta))
+        nxt = _condition_need(r, a / 100, d / 100)
         if certified:
             nxt = ("The mask is a boolean array on the window grid. Outside it, each condition's own review set, from "
                    "assess with the condition layer, says which windows to check first."
@@ -1349,7 +1383,7 @@ def certify(
                 else f"Any zone needs at least {r['min_labels_to_certify']} labels at this alpha and delta. ")
                + "A larger random sample (sample with design \"random\" and a larger budget, labelled in full) can "
                "certify more. " + _decide.certificate_second_look(
-                   delta, target_rule or int(r["n_labelled"]) >= int(r["min_labels_to_certify"])))
+                   d / 100, target_rule or int(r["n_labelled"]) >= int(r["min_labels_to_certify"])))
     return _reply(" ".join(said), _join(limits), nxt, files, summ)
 
 

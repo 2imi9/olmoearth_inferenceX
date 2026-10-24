@@ -881,6 +881,11 @@ def test_existing_outputs_are_byte_identical_to_1_3_1(tmp_path):
     for c in changes.CHANGES:
         module, constant = c["constant"]
         assert getattr(importlib.import_module(module), constant) == c["new"], constant
+    # the lines added on purpose (1.17.0: what delta counts), each the note the package keeps, in golden files only
+    for a in changes.ADDED:
+        module, constant = a["constant"]
+        assert a["line"] == "note: " + getattr(importlib.import_module(module), constant), constant
+        assert len(a["files"]) == len(set(a["files"])) == 5 and set(a["files"]) <= set(golden["files"])
     # the outputs regenerated whole (the random sample's per-class table, 1.14.0): exactly these six golden files, none
     # also a listed change, each new file present, the JSON without `scope`, and the stdout carrying the note the
     # package keeps

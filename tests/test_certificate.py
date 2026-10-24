@@ -47,7 +47,7 @@ def bundle(tmp_path_factory):
         with contextlib.redirect_stdout(io.StringIO()):
             qs.write_maps()
             assert main(["sample", "scores.tif", "--design", "random", "--budget", "315", "--target", "0.5",
-                         "--seed-from-map", "--out", "s.csv"]) == 0
+                         "--seed-from-map", "--alpha", "0.05", "--out", "s.csv"]) == 0
             qs.label("s.csv")
             assert main(["certify", "s.csv", "--alpha", "0.05"]) == 0
             assert main(["certificate", "s_zone.json", "--date", "2024-06-01", "--out", "cert"]) == 0
@@ -63,7 +63,9 @@ def test_the_certificate_states_the_guarantee_and_binds_the_map(bundle):
     assert item["type"] == "Feature" and item["stac_version"] == "1.0.0" and p["datetime"] == "2024-06-01T00:00:00Z"
     assert p["zc:rule"] == "target" and p["zc:alpha"] == 0.05 and p["zc:delta"] == 0.1
     assert p["zc:coverage"] == zone["coverage"] and p["zc:upper_bound"] == zone["upper_bound"]
-    settings = cert.seed_settings("random", 315, 4, False, None, 0.5, None, None, None)
+    plan = {"alpha": 0.05, "delta": 0.1, "rule": "target", "level_cut": "standard"}
+    assert json.loads((bundle / "cert" / "labels.json").read_text())["certify"] == plan
+    settings = cert.seed_settings("random", 315, 4, False, None, 0.5, None, None, None, plan)
     assert p["zc:seed_rule"] == "from_map" and p["zc:seed"] == cert.seed_from(p["zc:map"]["map_sha256"], settings)
     assert p["zc:seed"] >= 2 ** 64 or p["zc:seed"] == int(cert.hashlib.sha256(
         (p["zc:map"]["map_sha256"] + json.dumps(settings, sort_keys=True)).encode()).hexdigest()[:32], 16)
@@ -91,7 +93,8 @@ def test_an_untouched_certificate_verifies(bundle):
                                                             scores=str(bundle / "scores.tif"))["notes"])
     code, out = _quiet(["verify", str(bundle / "cert" / "certificate.json")])
     assert code == 0 and out.splitlines()[-1].startswith("verified: The ")
-    assert "the rule and the level cut were chosen" in out
+    assert "alpha, delta, the rule and the level cut were fixed with the draw" in out
+    assert "more than delta can be wrong" in out.splitlines()[-1]
 
 
 def _copy(bundle, name):
@@ -251,7 +254,7 @@ def test_sequential_and_per_condition_certificates_verify(bundle, tmp_path, desi
     shutil.copyfile(bundle / "scores.tif", tmp_path / "scores.tif")
     shutil.copyfile(bundle / "truth.tif", tmp_path / "truth.tif")
     extra = (["--design", "sequential", "--alpha", "0.1"] if design == "sequential" else
-             ["--condition", str(tmp_path / "cond.tif"), "--condition-names", "0=west", "1=east"])
+             ["--condition", str(tmp_path / "cond.tif"), "--condition-names", "0=west", "1=east", "--alpha", "0.1"])
     cwd = os.getcwd()
     os.chdir(tmp_path)
     try:
@@ -348,7 +351,7 @@ def test_a_seed_given_by_hand_is_refused_and_a_dropped_seed_rule_fails(bundle, t
                          "--seed", "7", "--out", "s.csv"]) == 0
             qs.label("s.csv")
             assert main(["certify", "s.csv", "--alpha", "0.05"]) == 0
-            with pytest.raises(SystemExit, match="needs a sample drawn with `sample --seed-from-map`"):
+            with pytest.raises(SystemExit, match="needs a sample drawn with `sample --seed-from-map --alpha A`"):
                 main(["certificate", "s_zone.json", "--date", "2024-06-01", "--out", "cert"])
     finally:
         os.chdir(cwd)
@@ -519,7 +522,8 @@ def product(tmp_path_factory, bundle):
     try:
         with contextlib.redirect_stdout(io.StringIO()):
             assert main(["sample", "classes.tif", "--confidence", "band.tif", "--confidence-range", "0", "100",
-                         "--design", "random", "--budget", "400", "--seed-from-map", "--out", "s.csv"]) == 0
+                         "--design", "random", "--budget", "400", "--seed-from-map", "--alpha", "0.1",
+                         "--out", "s.csv"]) == 0
             qs.label("s.csv")
             assert main(["certify", "s.csv", "--alpha", "0.1"]) == 0
             assert main(["certificate", "s_zone.json", "--date", "2024-01-01/2024-12-31", "--out", "cert"]) == 0
@@ -626,7 +630,7 @@ def test_seed_from_map_refusals_for_names_and_designs(bundle):
     with pytest.raises(SystemExit, match="printable characters"):
         main(["sample", str(bundle / "scores.tif"), "--budget", "20", "--condition", str(bundle / "truth.tif"),
               "--condition-names", "0=cl\x1b[2Kear", "--out", str(bundle / "n.csv")])
-    with pytest.raises(SystemExit, match="random, sequential or condition design"):
+    with pytest.raises(SystemExit, match="random, sequential, condition or class design"):
         main(["sample", str(bundle / "scores.tif"), "--design", "proportional", "--budget", "20", "--seed-from-map",
               "--out", str(bundle / "p.csv")])
 
@@ -716,11 +720,26 @@ def test_a_mask_with_a_tag_the_writer_does_not_write_fails(bundle):
 
 def test_error_levels_outside_the_range_verify_runs_are_not_run(bundle):
     d = _copy(bundle, "t_tiny")
-    zone = json.loads((d / "zone.json").read_text())
-    zone["alpha"] = 1e-9
-    (d / "zone.json").write_text(json.dumps(zone, indent=1))
-    r = _forge(d)
+    r = _forge(d, side=lambda s: s["certify"].update(alpha=1e-9))
     assert r["checks"]["certify"]["ok"] is None and "error levels verify runs" in r["checks"]["certify"]["detail"]
+    assert r["checks"]["seed"]["ok"] is False
+
+
+def test_certify_keeps_to_the_plan_and_a_changed_plan_fails(bundle):
+    """alpha, delta, the rule and the level cut are fixed with the draw: certify refuses others on the same labels,
+    and a plan changed after labelling changes the seed."""
+    csv_path = str(bundle / "s.csv")
+    for argv, what in [(["--alpha", "0.15"], "--alpha 0.05"), (["--delta", "0.2"], "--delta 0.1"),
+                       (["--rule", "prefix"], "target rule"), (["--level-cut", "ramp"], "standard level cut")]:
+        with pytest.raises(SystemExit, match=what):
+            main(["certify", csv_path, *argv, "--out", str(bundle / "other_zone.json")])
+    for name, change in [("t_plan_alpha", {"alpha": 0.15}), ("t_plan_cut", {"level_cut": "ramp"})]:
+        d = _copy(bundle, name)
+        r = _forge(d, side=lambda s: s["certify"].update(change))
+        assert r["checks"]["seed"]["ok"] is False and not r["verified"], name
+    with pytest.raises(SystemExit, match="give --alpha"):
+        main(["sample", str(bundle / "scores.tif"), "--design", "random", "--budget", "20", "--seed-from-map",
+              "--out", str(bundle / "noplan.csv")])
 
 
 def test_issuer_fields_must_have_their_form(bundle):
@@ -779,7 +798,7 @@ def test_honest_certificates_of_other_maps_verify(bundle, tmp_path, kind):
     try:
         with contextlib.redirect_stdout(io.StringIO()):
             assert main(["sample", "scores.tif", "--design", "random", "--budget", "315", "--target", "0.5",
-                         "--seed-from-map", *nodata, "--out", "s.csv"]) == 0
+                         "--seed-from-map", "--alpha", "0.05", *nodata, "--out", "s.csv"]) == 0
             qs.label("s.csv")
             assert main(["certify", "s.csv", "--alpha", "0.05"]) == 0
             assert main(["certificate", "s_zone.json", "--date", "2024-06-01", "--out", "cert"]) == 0

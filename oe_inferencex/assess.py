@@ -462,7 +462,11 @@ def assess_prediction(scores, is_logit, patch=4, nodata_mask=None, reference=Non
             entry["confidence_quantiles"] = {q: float(np.exp(v)) for q, v in entry["confidence_quantiles"].items()}
         # the per-window array on the same scale as its quantiles: a threshold set from the quantiles used to be
         # compared with log-probabilities, so every window fell below the reported 25% quantile (review, 2026-09-23).
-        # exp is increasing, so the ranking, the review sets and the cues are unchanged.
+        # The review sets and cues were ranked on the log scale above. exp is increasing, but not strictly in floating
+        # point: a window mean of log p1 above -1.1e-16 rounds to exactly 1.0, the "softmax collapse" of Barron et al.
+        # (arXiv 2610.31642), and on a map with logit gaps of 5 to 60, 96 of 256 windows tied at 1.0. The log-scale
+        # array is kept beside it, tie-free, for anyone who ranks windows from these arrays (24 October 2026).
+        out["arrays"]["log_confidence"] = out["arrays"]["confidence"].copy()
         with np.errstate(over="ignore"):
             out["arrays"]["confidence"] = np.exp(out["arrays"]["confidence"])
         out["confidence_scale"] = "geometric mean of the top-1 probability over the window's pixels"

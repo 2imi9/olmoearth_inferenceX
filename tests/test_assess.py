@@ -517,3 +517,15 @@ def test_boundary_band_marks_pixels_near_another_class_and_ignores_no_data():
     assert band[:, 5].tolist() == [1] * 6 and band[:, 6].tolist() == [1] * 6
     with pytest.raises(ValueError):
         boundary_band(hard, valid, 0)
+
+
+def test_top1_form_keeps_a_tie_free_log_scale():
+    """Barron et al. (arXiv 2610.31642): a probability near 1 rounds to exactly 1.0 in floating point. With logit gaps
+    of 5 to 60 the window confidences on the probability scale tie at 1.0; the log-scale array does not."""
+    rng = np.random.default_rng(0)
+    z = rng.normal(0, 1, (3, 64, 64))
+    z[0] += np.linspace(5, 60, 64 * 64).reshape(64, 64)
+    out = assess_prediction(z.astype(np.float32), is_logit=True, patch=4, form="top1")
+    c, lc = out["arrays"]["confidence"].ravel(), out["arrays"]["log_confidence"].ravel()
+    assert (c == 1.0).sum() > 50 and np.unique(lc).size == lc.size
+    assert np.all(np.diff(c[np.argsort(lc)]) >= 0)                  # the same order, with ties only on the exp scale

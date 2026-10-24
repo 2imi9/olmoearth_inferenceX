@@ -65,9 +65,9 @@ CSV_INTEGERS = {"index", "window_row", "window_col", "pixel_row", "pixel_col", "
 RASTER_MAGIC = {".tif": (b"II*\x00", b"MM\x00*", b"II+\x00", b"MM\x00+"), ".tiff": (b"II*\x00", b"MM\x00*",
                 b"II+\x00", b"MM\x00+"), ".npy": (b"\x93NUMPY",)}
 ISSUERS_WORD = ("taken on the issuer's word: the labels (and any column the reviewer added), the map's date, when the "
-                "certificate was made and which release wrote it, the paths it names, the condition names, when alpha, "
-                "delta, the rule and the level cut were chosen, and that the sample was drawn once (settings, or the "
-                "map itself, can be varied before any label and one draw kept)")
+                "certificate was made and which release wrote it, the paths it names, the condition names, and that "
+                "the sample was drawn once (settings, or the map itself, can be varied before any label and one draw "
+                "kept); alpha, delta, the rule and the level cut were fixed with the draw, before any label")
 # files an operating system writes into a folder it shows; a bundle ignores them
 OS_FILES = {".DS_Store", "Thumbs.db", "desktop.ini"}
 # the largest bundle file read, by kind: a bundle's JSON and CSV are small, and a file is never read without end
@@ -261,17 +261,20 @@ def _grid_level(value, at_or_above=False):
 
 
 def seed_settings(design, budget, patch, logits, confidence_range, target, anchor, confidence_sha256,
-                  condition_sha256):
+                  condition_sha256, plan=None):
     """The settings that fix a draw and what certify gives from it, in one canonical form: what `seed_from` hashes with
     the map's digest. The no-data value is in the map's digest (the valid pixels). A product's confidence range is here
     because it changes the ranking without always changing a window's validity (review of 24 October 2026). Condition
-    names change nothing certify computes."""
+    names change nothing certify computes. `plan`: certify's alpha, delta, rule and level cut, fixed with the draw, so
+    that a certificate shows they were chosen before any label (final review of 24 October 2026)."""
     return {"design": design, "budget": None if design == "sequential" else int(budget), "patch": int(patch),
             "logits": bool(logits),
             "confidence_range": None if confidence_range is None else [repr(float(v)) for v in confidence_range],
             "target": None if target is None else _grid_level(target),
             "anchor": None if anchor is None else _grid_level(anchor, at_or_above=True),
-            "confidence_sha256": confidence_sha256, "condition_sha256": condition_sha256}
+            "confidence_sha256": confidence_sha256, "condition_sha256": condition_sha256,
+            "certify": None if not plan else {"alpha": repr(float(plan["alpha"])), "delta": repr(float(plan["delta"])),
+                                              "rule": plan.get("rule"), "level_cut": plan.get("level_cut")}}
 
 
 def seed_from(map_sha256, settings):
@@ -281,22 +284,23 @@ def seed_from(map_sha256, settings):
 
 
 def draw_seed(scores_path, nodata, logits, confidence_path, confidence_range, condition_path, design, budget, patch,
-              target, anchor):
+              target, anchor, plan=None):
     """{"seed", "map_sha256", "settings"} for a sample drawn with --seed-from-map."""
     digests, _, _ = map_digests(scores_path, nodata, confidence_path)
     settings = seed_settings(design, budget, patch, logits, confidence_range, target, anchor,
                              digests.get("confidence_sha256"),
-                             None if condition_path is None else raster_digest(condition_path))
+                             None if condition_path is None else raster_digest(condition_path), plan)
     return {"seed": seed_from(digests["map_sha256"], settings), "map_sha256": digests["map_sha256"],
             "settings": settings}
 
 
 def _side_settings(side, confidence_sha256):
     """seed_settings as a sample's sidecar records them."""
-    return seed_settings(side.get("design"), side.get("budget", len(side.get("indices", []))), side.get("patch", 4),
+    return seed_settings("class" if _by_class(side) else side.get("design"),
+                         side.get("budget", len(side.get("indices", []))), side.get("patch", 4),
                          side.get("logits", False), side.get("confidence_range"),
                          (side.get("target") or {}).get("coverage"), side.get("anchor"), confidence_sha256,
-                         (side.get("condition") or {}).get("sha256"))
+                         (side.get("condition") or {}).get("sha256"), side.get("certify"))
 
 
 def _map_paths(side, scores=None, confidence=None):
@@ -359,13 +363,16 @@ def _statement(zone, side):
                 + ("" if nodata is None else f" (no-data value {nodata})") + ", and nothing here describes them.")
     else:
         left = "" if nodata is None else f" Pixels holding the no-data value {nodata} are left out."
-    tail = (f" It is about the zone's windows of {patch} px taken together, not each pixel; outside the zone nothing "
-            "is certified, which does not mean wrong; and it assumes the reviewer's labels are right and that the "
-            "sample was drawn once.")
+    fixed = (" Alpha, delta and the rule were fixed with the draw, before any label." if side.get("certify") else "")
+    tail = (fixed + f" It is about the zone's windows of {patch} px taken together, not each pixel; outside the zone "
+            "nothing is certified, which does not mean wrong; it assumes the reviewer's labels are right and that the "
+            "sample was drawn once; and delta counts every sample, those that certify nothing included, so among "
+            "samples that certify a zone more than delta can be wrong.")
     if zone.get("by_condition"):
         tested = [f"{_name(n)} ({100 * e['coverage']:.0f}%)" for n, e in zone["per_condition"].items()
                   if e.get("coverage") is not None]
-        return (f"Certified per input condition (names as the issuer gave them): in {', '.join(tested) or 'no condition'}"
+        per = "map class" if _by_class(side) else "input condition"
+        return (f"Certified per {per} (names as the issuer gave them): in {', '.join(tested) or 'no ' + per}"
                 f" the most confident share given is wrong at most {a:g}% of the time; these statements hold together "
                 f"except on at most {d:g}% of samples like the recorded one ({zone.get('rule')} rule, "
                 f"{zone.get('n_labelled')} labels)." + left + tail)
@@ -453,9 +460,16 @@ def _bundle_file(name):
                                                                 ext.lower() in RASTER_MAGIC))
 
 
+def _by_class(side):
+    """A sample of the class design: its strata are the map's classes, read from the map, with no layer of their own."""
+    return (side.get("condition") or {}).get("by") == "map class"
+
+
 def _cond_name(side):
     cond = side.get("condition")
-    return ("condition" + os.path.splitext(str(cond["source"]))[1].lower()) if cond else None
+    if not cond or _by_class(side):
+        return None
+    return "condition" + os.path.splitext(str(cond["source"]))[1].lower()
 
 
 def build(zone_path, out_dir, date, scores=None, confidence=None):
@@ -488,11 +502,12 @@ def build(zone_path, out_dir, date, scores=None, confidence=None):
     csv_path = zone["sample"]
     side_path = csv_path[:-4] + ".json" if csv_path.endswith(".csv") else csv_path + ".json"
     side = _load(side_path)
-    if side.get("seed_rule") != "from_map":
-        raise ValueError(f"{csv_path} was drawn with a seed given by hand; a certificate needs a sample drawn with "
-                         "`sample --seed-from-map`, whose seed anyone holding the map can derive again, so that it "
-                         "shows the draw was fixed before the labels. Draw a new sample with it")
-    cond = side.get("condition")
+    if side.get("seed_rule") != "from_map" or not side.get("certify"):
+        raise ValueError(f"{csv_path} was not drawn for a certificate: a certificate needs a sample drawn with "
+                         "`sample --seed-from-map --alpha A`, whose seed anyone holding the map can derive again from the "
+                         "map, the draw's settings and certify's alpha, delta and rule, so that it shows they were all "
+                         "fixed before the labels. Draw a new sample with it")
+    cond = None if _by_class(side) else side.get("condition")
     copies = [(csv_path, BUNDLE["labels"]), (side_path, BUNDLE["sample"]), (zone_path, BUNDLE["zone"])]
     if cond:
         if os.path.splitext(str(cond["source"]))[1].lower() not in RASTER_MAGIC:
@@ -567,7 +582,8 @@ def _redraw(side, map_path, conf_path, cond_path, tmp, closed=False):
     if design not in ("random", "sequential", "condition"):
         return None, None, f"the {design} design is not one a certificate rests on"
     out = os.path.join(tmp, "redraw.csv")
-    argv = ["sample", map_path, "--design", design, "--budget", str(int(side.get("budget", len(side["indices"])))),
+    argv = ["sample", map_path, "--design", "class" if _by_class(side) else design,
+            "--budget", str(int(side.get("budget", len(side["indices"])))),
             "--seed-from-map", "--patch", str(int(side.get("patch", 4))), "--out", out]
     if side.get("logits") is True:
         argv.append("--logits")
@@ -581,11 +597,21 @@ def _redraw(side, map_path, conf_path, cond_path, tmp, closed=False):
         argv.append("--target=" + _arg(side["target"]["coverage"]))
     if design == "sequential" and side.get("anchor") is not None:
         argv.append("--anchor=" + _arg(side["anchor"]))
+    plan = side.get("certify") if isinstance(side.get("certify"), dict) else {}
+    if plan:                                           # certify's options, fixed with the draw, enter its seed
+        argv += ["--alpha=" + _arg(plan["alpha"]), "--delta=" + _arg(plan["delta"])]
+        if plan.get("rule") in ("prefix", "bonferroni"):
+            argv.append("--rule=" + plan["rule"])
+        if plan.get("level_cut") and design != "sequential":
+            argv.append("--level-cut=" + str(plan["level_cut"]))
     cond = side.get("condition")
-    if cond:
+    if cond and _by_class(side):
+        floor = re.search(r"at least (\d+) per class", str(cond.get("allocation_rule")))
+        argv += ["--min-per-class", floor.group(1) if floor else "-1"]
+    elif cond:
         argv += ["--condition", cond_path]
-        if cond.get("names_given"):
-            argv += ["--condition-names", *[f"{int(v)}={n}" for v, n in cond["names_given"]]]
+    if cond and cond.get("names_given"):
+        argv += ["--condition-names", *[f"{int(v)}={n}" for v, n in cond["names_given"]]]
     try:
         with contextlib.redirect_stdout(io.StringIO()), (_closed_gdal() if closed else contextlib.nullcontext()):
             cli.main(argv)
@@ -783,7 +809,7 @@ def _verify(item, p, base, cert_name, scores, confidence, checks, notes, out):
     from . import cli
     side = _load(os.path.join(base, BUNDLE["sample"]))
     zone = _load(os.path.join(base, BUNDLE["zone"]))
-    cond = side.get("condition")
+    cond = None if _by_class(side) else side.get("condition")
     cond_name = _cond_name(side)
     m = p.get("zc:map") or {}
     product = bool(side.get("confidence"))
@@ -868,9 +894,9 @@ def _verify(item, p, base, cert_name, scores, confidence, checks, notes, out):
             return
 
     # the seed: taken from the map and the settings
-    if side.get("seed_rule") != "from_map":
-        checks["seed"] = _check(False, "the sample's seed was not taken from the map (sample --seed-from-map), so "
-                                "nothing shows the draw was fixed before the labels")
+    if side.get("seed_rule") != "from_map" or not side.get("certify"):
+        checks["seed"] = _check(False, "the sample was not drawn for a certificate (sample --seed-from-map --alpha), so "
+                                "nothing shows the draw and certify's options were fixed before the labels")
     else:
         settings = _side_settings(side, digests.get("confidence_sha256"))
         ok = (type(side.get("seed")) is int and side["seed"] == seed_from(digests["map_sha256"], settings)
@@ -917,7 +943,8 @@ def _verify(item, p, base, cert_name, scores, confidence, checks, notes, out):
                                     if not diff else "the sample is not the one the map, the settings and the seed "
                                     f"draw: {_short(diff)}")
 
-        alpha, delta = zone.get("alpha"), zone.get("delta")
+        plan = side.get("certify") if isinstance(side.get("certify"), dict) else {}
+        alpha, delta = plan.get("alpha"), plan.get("delta")
         if not (type(alpha) is float and type(delta) is float and ALPHA_RANGE[0] <= alpha <= ALPHA_RANGE[1]
                 and DELTA_RANGE[0] <= delta <= DELTA_RANGE[1]):
             checks["certify"] = _check(None, f"certify was not run again: alpha and delta must lie in "
@@ -932,14 +959,11 @@ def _verify(item, p, base, cert_name, scores, confidence, checks, notes, out):
         shutil.copyfile(os.path.join(base, BUNDLE["labels"]), os.path.join(tmp, "labels.csv"))
         with open(os.path.join(tmp, "labels.json"), "w") as f:
             json.dump(side_run, f)
-        argv = ["certify", os.path.join(tmp, "labels.csv"), "--alpha", repr(float(zone["alpha"])),
-                "--delta", repr(float(zone["delta"])), "--out", os.path.join(tmp, "again.json"), "--scores", map_path]
+        # alpha, delta, the rule and the level cut are the plan the sample fixed, which certify reads and keeps to
+        argv = ["certify", os.path.join(tmp, "labels.csv"), "--out", os.path.join(tmp, "again.json"), "--scores",
+                map_path]
         if conf_path:
             argv += ["--confidence", conf_path]
-        if zone.get("rule") in ("prefix", "bonferroni"):         # target and sequential follow from the sidecar
-            argv += ["--rule", str(zone["rule"])]
-        if zone.get("level_cut") is not None and zone.get("rule") != "sequential":
-            argv += ["--level-cut", str(zone["level_cut"])]
         try:
             with contextlib.redirect_stdout(io.StringIO()), (_closed_gdal() if from_cert else
                                                              contextlib.nullcontext()):
@@ -985,8 +1009,11 @@ def _verify(item, p, base, cert_name, scores, confidence, checks, notes, out):
         ok = np.array_equal(bmask.astype(bool), again_mask.astype(bool))
         if ok and mtrans is not None:
             from rasterio.transform import Affine
+
+            from .cli import affine_apply
             ok = (_same_crs(_crs_text(geo["crs"]), mcrs)
-                  and not _differ(_terms(mtrans), _terms(geo["transform"] * Affine.scale(int(side.get("patch", 4))))))
+                  and not _differ(_terms(mtrans), _terms(affine_apply(geo["transform"],
+                                                                      Affine.scale(int(side.get("patch", 4)))))))
         checks["mask"] = _check(ok, "the zone mask is the zone certify gives, on the map's window grid" if ok else
                                 "the bundle's zone mask is not the zone certify gives on the map's window grid")
     except (OSError, ValueError) as exc:
@@ -1054,7 +1081,9 @@ def point(cert_path, x=None, y=None, row=None, col=None, mask=None):
         if t is None:
             raise ValueError("this map has no grid; give the point as a pixel row and column")
         from rasterio.transform import Affine
-        col, row = ~Affine(*t) * (float(x), float(y))
+
+        from .cli import affine_apply
+        col, row = affine_apply(~Affine(*t), (float(x), float(y)))
     if mask is None:
         mask = _read_mask(os.path.join(base, item["assets"]["zone_mask"]["href"]), (h // patch, w // patch))[0]
     if not (0 <= float(row) < h and 0 <= float(col) < w):

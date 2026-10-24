@@ -527,9 +527,10 @@ def test_the_server_lists_six_tools_each_described_by_its_card():
         assert t.annotations.openWorldHint is False
     schema = {t.name: t.inputSchema for t in tools}
     assert schema["assess"]["required"] == ["scores", "out_dir"]
-    assert set(schema["certify"]["required"]) == {"sample_csv", "alpha"}
+    assert set(schema["certify"]["required"]) == {"sample_csv"}       # alpha may be fixed by the sample (1.17.0)
     assert schema["sample"]["properties"]["design"]["anyOf"][0]["enum"] == ["confidence", "proportional", "random",
-                                                                            "sequential", "tiles", "condition"]
+                                                                            "sequential", "tiles", "condition",
+                                                                            "class"]
     assert all(p.get("description") for t in tools for p in t.inputSchema.get("properties", {}).values())
 
 

@@ -100,6 +100,15 @@ def read_raster(path, nodata=None):
     return a, valid, geo
 
 
+def affine_apply(a, b):
+    """The affine transform `a` applied to `b`, another transform or a point (x, y), arrays allowed: with @, which
+    affine 3 asks for (its * now warns), and with * on an older affine that has no @."""
+    try:
+        return a @ b
+    except TypeError:
+        return a * b
+
+
 def write_raster(path, array, geo, patch, nodata):
     """A window-grid array as a GeoTIFF on the input's grid scaled by `patch`, or .npy without geo."""
     if geo is None:
@@ -110,7 +119,7 @@ def write_raster(path, array, geo, patch, nodata):
     arr = np.asarray(array)
     dtype = "float32" if arr.dtype.kind == "f" else ("uint8" if arr.dtype == bool else "int32")
     with rasterio.open(path, "w", driver="GTiff", height=arr.shape[0], width=arr.shape[1], count=1, dtype=dtype,
-                       crs=geo["crs"], transform=geo["transform"] * Affine.scale(patch), nodata=nodata) as dst:
+                       crs=geo["crs"], transform=affine_apply(geo["transform"], Affine.scale(patch)), nodata=nodata) as dst:
         dst.write(arr.astype(dtype), 1)
     return path
 
@@ -120,7 +129,7 @@ def window_coords(rows, cols, geo, patch):
     pr, pc = rows * patch, cols * patch
     if geo is None:
         return pr, pc, None, None
-    x, y = geo["transform"] * (pc + patch / 2, pr + patch / 2)
+    x, y = affine_apply(geo["transform"], (pc + patch / 2, pr + patch / 2))
     return pr, pc, np.asarray(x), np.asarray(y)
 
 
@@ -1130,7 +1139,18 @@ def cmd_sample(args):
     conf_path, conf_range = _product_args(args, "sample")
     if getattr(args, "threshold", None) is not None:
         raise SystemExit("sample: --threshold reads a second map's cut-off and is used only with --other")
-    cond_path, cond_names = _condition_args(args, "sample")
+    by_class = getattr(args, "design", None) == "class"
+    if by_class:
+        # Stratified by the map's own class (Olofsson et al. 2014): the strata are the map classes, drawn at random
+        # within each, which the condition design's estimators, exact intervals and per-stratum zones already read;
+        # --condition-names names the classes. No layer: the strata come from the map, so its digest binds them.
+        if getattr(args, "condition", None):
+            raise SystemExit("sample: --design class takes its strata from the map's own classes; drop --condition")
+        cond_path, cond_names = None, _condition_names(getattr(args, "condition_names", None), "sample")
+    else:
+        if getattr(args, "min_per_class", None) is not None:
+            raise SystemExit("sample: --min-per-class belongs to --design class")
+        cond_path, cond_names = _condition_args(args, "sample")
     # None resolves to the condition design when a layer is given, to the confidence design otherwise; a product's
     # confidence band is no top-1 probability, which the confidence design allocates from, so it resolves to random
     prod_notes = []
@@ -1153,9 +1173,9 @@ def cmd_sample(args):
     seed_from_map = bool(getattr(args, "seed_from_map", False))
     if seed_from_map and args.seed != 0:
         raise SystemExit("sample: give --seed or --seed-from-map, not both")
-    if seed_from_map and design not in ("random", "sequential", "condition"):
+    if seed_from_map and design not in ("random", "sequential", "condition", "class"):
         raise SystemExit(f"sample: --seed-from-map draws a sample for a certificate, which certify gives from the "
-                         f"random, sequential or condition design; not from --design {design}")
+                         f"random, sequential, condition or class design; not from --design {design}")
     target = getattr(args, "target", None)
     if target is not None:
         # The target rule's zone, fixed before any label (1.16.0): certify reads it from the sidecar and refuses another
@@ -1168,8 +1188,14 @@ def cmd_sample(args):
                              f"{est.ZONE_GRID[1] - est.ZONE_GRID[0]:g}, got {target:g}")
     anchor, extend = getattr(args, "anchor", None), getattr(args, "extend", None)
     a_alpha, a_delta = getattr(args, "alpha", None), getattr(args, "delta", None)
-    if design != "sequential" and any(v is not None for v in (anchor, extend, a_alpha, a_delta)):
-        raise SystemExit("sample: --anchor, --alpha, --delta and --extend belong to --design sequential")
+    c_rule, c_cut = getattr(args, "rule", None), getattr(args, "level_cut", None)
+    if not seed_from_map and (c_rule is not None or c_cut is not None):
+        raise SystemExit("sample: --rule and --level-cut fix certify's options before any label, for a certificate; "
+                         "they go with --seed-from-map")
+    if design != "sequential" and (any(v is not None for v in (anchor, extend)) or
+                                   (not seed_from_map and any(v is not None for v in (a_alpha, a_delta)))):
+        raise SystemExit("sample: --anchor, --alpha, --delta and --extend belong to --design sequential (--alpha and "
+                         "--delta also to --seed-from-map, which fixes certify's error levels)")
     if design == "sequential" and cond_path:
         raise SystemExit("sample: --design sequential does not take --condition: certify reads it as one random order "
                          "of the whole map")
@@ -1185,14 +1211,15 @@ def cmd_sample(args):
         # sidecar. Computed from the alpha certify will be asked about when it is not given; certify at another alpha
         # keeps this anchor (review of 8 October 2026: an anchor recomputed from each certify run's alpha was not
         # fixed before the labels, as its guarantee needs).
-        if (anchor is None) == (a_alpha is None):
+        # with --seed-from-map, --alpha is certify's, fixed now, and a declared --anchor may go with it
+        if (anchor is None) == (a_alpha is None) and not (seed_from_map and a_alpha is not None):
             raise SystemExit("sample: a sequential sample fixes now, before any label, the smallest zone certify will "
                              "test: give --alpha (the error rate certify will be asked about; the anchor is then the "
                              "zone this budget can certify if none of its labels is wrong, at most a quarter of the "
                              "map) or --anchor (a share of the map), not both")
-        if anchor is not None and a_delta is not None:
+        if anchor is not None and a_delta is not None and not seed_from_map:
             raise SystemExit("sample: --delta goes with --alpha, to compute the anchor; with --anchor it is not used")
-        if a_alpha is not None:
+        if anchor is None:
             d = est.ZONE_DELTA if a_delta is None else a_delta
             if not (0 < a_alpha < 1 and 0 < d < 1):
                 raise SystemExit(f"sample: --alpha and --delta must be in (0, 1), got {a_alpha:g} and {d:g}")
@@ -1205,6 +1232,7 @@ def cmd_sample(args):
             anchor_rule = "declared"
     if anchor is not None and not est.ZONE_GRID[0] <= anchor <= 1:
         raise SystemExit(f"sample: --anchor is a share of the map between {est.ZONE_GRID[0]:g} and 1, got {anchor:g}")
+    plan = _certify_plan(design, target, a_alpha, a_delta, c_rule, c_cut, seed_from_map, old_side)
     seed_rule = None
     if seed_from_map or (old_side is not None and old_side.get("seed_rule") == "from_map"):
         # The seed taken from the map's digest together with every setting that fixes the draw (1.17.0): anyone holding
@@ -1212,7 +1240,7 @@ def cmd_sample(args):
         # changed after labelling (certificate.verify). An extension keeps the rule when its seed is the same.
         from .certificate import draw_seed
         seed_rule = draw_seed(args.scores, args.nodata, args.logits, conf_path, conf_range, cond_path, design,
-                              args.budget, args.patch, target, anchor)
+                              args.budget, args.patch, target, anchor, plan)
         if seed_from_map:
             if old_side is not None and int(old_side["seed"]) != seed_rule["seed"]:
                 raise SystemExit(f"sample --extend: {extend} was drawn with --seed {old_side['seed']}, not the seed this "
@@ -1222,6 +1250,12 @@ def cmd_sample(args):
             seed_rule = None
     out, geo, p1_w, pooled, more, prod_info = _sample_map(args, conf_path, conf_range, cond_path)
     prod_notes += more
+    if by_class:                                       # each window's stratum: the class the map gives it
+        a_ = out["arrays"]
+        pooled = {"grid": np.where(a_["valid"], a_["pooled_argmax"], -1).astype(np.int64), "n_split": 0,
+                  "n_no_code": 0}
+        if cond_names is None:
+            cond_names = {int(v): f"class {int(v)}" for v in np.unique(pooled["grid"][pooled["grid"] >= 0])}
     arr = out["arrays"]
     margin, valid_w, klass = arr["confidence"], arr["valid"], arr["pooled_argmax"]
     hw, ww = margin.shape
@@ -1230,10 +1264,12 @@ def cmd_sample(args):
         t = max(1, args.tile)
         tiles = (np.arange(hw)[:, None] // t) * ((ww + t - 1) // t) + (np.arange(ww)[None, :] // t)
     try:
-        sample = est.sample_for_estimation(margin, args.budget, design=design, p1=p1_w, tiles=tiles,
-                                           per_tile=args.per_tile, valid=valid_w, seed=args.seed,
+        sample = est.sample_for_estimation(margin, args.budget, design="condition" if by_class else design, p1=p1_w,
+                                           tiles=tiles, per_tile=args.per_tile, valid=valid_w, seed=args.seed,
                                            condition=None if pooled is None else pooled["grid"].ravel(),
-                                           condition_names=cond_names, stable=seed_rule is not None)
+                                           condition_names=cond_names, stable=seed_rule is not None,
+                                           class_floor=(est.CLASS_FLOOR if getattr(args, "min_per_class", None) is None
+                                                        else int(args.min_per_class)) if by_class else None)
     except ValueError as exc:
         raise SystemExit(f"sample: {exc}")
     idx = sample["indices"]
@@ -1279,16 +1315,22 @@ def cmd_sample(args):
     if seed_rule is not None:
         side.update({"seed_rule": "from_map", "map_sha256": seed_rule["map_sha256"],
                      "seed_settings": seed_rule["settings"]})
+    if plan is not None:
+        side["certify"] = plan                         # fixed now, with the draw; certify reads and keeps to it
     if cond is not None:
         # the design's source of truth for `estimate` and `certify`, which never read the raster again; its digest
         # binds the layer to the sample, so a certificate can show the layer was not swapped after labelling
         from .certificate import names_given, raster_digest
-        side["condition"] = {"source": os.path.abspath(cond_path), "rule": RULE_TEXT, "values": cond["values"],
+        side["condition"] = {"source": "map class" if by_class else os.path.abspath(cond_path),
+                             "rule": CLASS_RULE_TEXT if by_class else RULE_TEXT, "values": cond["values"],
                              "names": cond["names"], "sizes": cond["sizes"], "n_labelled": cond["n_labelled"],
                              "allocation_rule": cond["allocation_rule"], "n_windows_split": pooled["n_split"],
                              "n_windows_no_code": pooled["n_no_code"],
-                             "sha256": (seed_rule["settings"]["condition_sha256"] if seed_rule is not None
-                                        else raster_digest(cond_path)), "names_given": names_given(cond_names)}
+                             "sha256": (None if by_class else seed_rule["settings"]["condition_sha256"]
+                                        if seed_rule is not None else raster_digest(cond_path)),
+                             "names_given": names_given(cond_names)}
+        if by_class:
+            side["condition"]["by"] = "map class"      # the class design: certify, estimate and verify read it so
     side.update(_sidecar_map_fields(args, geo, [int(hw), int(ww)], out, conf_path, conf_range, prod_info))
     side["how_to_label"] = ("open each window, set wrong=1 if the map's class there (the `map_class` column: the "
                             "majority of the window's pixels) is not what is on the ground, else 0; then: "
@@ -1298,9 +1340,14 @@ def cmd_sample(args):
     what, notes = f"{design} design", []
     if cond is not None:
         counts = ", ".join(f"{name} {int(n)}" for name, n in zip(cond["names"], cond["n_labelled"]))
-        what = f"condition design: {counts}" if design == "condition" else f"random design; by chance: {counts}"
+        what = (f"class design: {counts}" if by_class else f"condition design: {counts}" if design == "condition"
+                else f"random design; by chance: {counts}")
         K = len(cond["names"])
-        if design == "condition" and K >= 2:
+        if by_class and K >= 2:
+            notes.append(f"labels are allocated by map class: each class at least {cond['allocation_rule'].split()[-3]} "
+                         "(or all its windows), the rest in proportion to its size (Olofsson et al. 2014); estimate "
+                         "--per-class gives each class's user's and producer's accuracy and area with exact intervals")
+        elif design == "condition" and K >= 2:
             notes.append(f"labels are split equally across the {K} input conditions so that each gets its own error "
                          "rate; the whole-map rate weights each condition by its share of the map")
         notes.append(_unrecorded_note(pooled["n_split"], pooled["n_no_code"]))
@@ -1325,6 +1372,33 @@ def cmd_sample(args):
           + (f"\nnote: {sample['note']}" if "note" in sample else "")
           + "".join(f"\nnote: {n}" for n in prod_notes + notes if n))
     return 0
+
+
+def _certify_plan(design, target, alpha, delta, rule, cut, seed_from_map, old_side):
+    """certify's options fixed with a sample drawn for a certificate (--seed-from-map): alpha, delta, the rule and the
+    level cut, which enter the seed, so that a certificate shows they were chosen before any label, not after (the
+    final review of 24 October 2026: one sample certified nothing at alpha 0.05 and 0.10 and 70% at 0.15, and every
+    one of those certificates verified). An extension keeps its sample's plan. None without --seed-from-map."""
+    if old_side is not None:
+        return old_side.get("certify")
+    if not seed_from_map:
+        return None
+    if alpha is None:
+        raise SystemExit("sample --seed-from-map: give --alpha, the error rate certify will test (and --delta, --rule or "
+                         "--level-cut if not the defaults): a sample drawn for a certificate fixes them now, before any "
+                         "label, and they enter the seed")
+    delta = est.ZONE_DELTA if delta is None else float(delta)
+    if not (1e-4 <= alpha <= 0.5 and 1e-6 <= delta <= 0.5):
+        raise SystemExit(f"sample: a certificate's alpha lies in [0.0001, 0.5] and delta in [0.000001, 0.5], got "
+                         f"{alpha:g} and {delta:g}")
+    if target is not None and rule not in (None, "target"):
+        raise SystemExit("sample: a sample with --target is certified by the target rule; drop --rule")
+    if design == "sequential" and (rule is not None or cut is not None):
+        raise SystemExit("sample: a sequential sample is certified by the sequential rule, with no level cut; drop "
+                         "--rule and --level-cut")
+    rule = "target" if target is not None else "sequential" if design == "sequential" else (rule or "prefix")
+    return {"alpha": float(alpha), "delta": delta, "rule": rule,
+            "level_cut": None if design == "sequential" else (cut or "standard")}
 
 
 def _sample_map(args, conf_path, conf_range, cond_path=None):
@@ -1426,6 +1500,32 @@ def _sequential_to_extend(path, args):
 # One class is written per window, seen at one time, and both maps are graded against it. Until 1.14.1 nothing said
 # so: the route was offered for two maps of different dates, where a change on the ground between them reads as an
 # error of the map of the other date (the OlmoEarth Agent's trials, exp86 round 8).
+_CLASS_WORDS = [(r"\bper input condition\b", "per map class"), (r"\bby input condition\b", "by map class"),
+                (r"\binput conditions\b", "map classes"), (r"\binput condition\b", "map class"),
+                (r"\bconditions\b", "classes"), (r"\bcondition\b", "class"),
+                (r"\bConditions\b", "Classes"), (r"\bCondition\b", "Class")]
+_PATH_KEYS = {"sample", "csv", "scores", "classes", "confidence", "zone_mask", "source", "out", "written_by"}
+
+
+def class_words(obj):
+    """A result of the class design in its own words: its strata are the map's classes, which the condition design's
+    estimators and texts call conditions. Paths and keys are left as they are."""
+    import re
+    if isinstance(obj, str):
+        for pat, rep in _CLASS_WORDS:
+            obj = re.sub(pat, rep, obj)
+        return obj
+    if isinstance(obj, dict):
+        return {k: (v if k in _PATH_KEYS else class_words(v)) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [class_words(v) for v in obj]
+    return obj
+
+
+CLASS_RULE_TEXT = ("A window's stratum is the class the map gives it, the majority of its pixels' classes (the map_class "
+                   "column), the class estimate and certify grade.")
+
+
 OTHER_DATES_NOTE = ("both maps are graded against the one class written per window, so they must describe the same "
                     "time: across dates, a change on the ground between them reads as an error of the map of the "
                     "other date. For maps of different dates, sample each map at random on its own and label it at "
@@ -2220,18 +2320,21 @@ def cmd_estimate(args):
                 pt = "n/a" if pe["estimate"] is None else f"{100 * pe['estimate']:.0f}%"
                 drawn = "" if row["drawn"] == "within" else f": drawn {row['drawn']}"
                 lines.append(f"  class {c}: user's accuracy {f(ua)}, producer's {pt} (exact {fl(100 * pe['low'], 0):.0f}-"
-                             f"{ce(100 * pe['high'], 0):.0f}), share of map {100 * row['map_share']:.1f}% -> labels "
+                             f"{ce(100 * pe['high'], 0):.0f}), share of map {100 * row['map_share']:.1f}% -> "
+                             f"{'area' if (side.get('condition') or {}).get('by') == 'map class' else 'labels'} "
                              f"{100 * se['estimate']:.1f}% (exact {fl(100 * se['low'], 1):.1f}-{ce(100 * se['high'], 1):.1f})"
                              f"{drawn}" + tag)
             else:
                 lines.append(f"  class {c}: user's accuracy {f(ua)}, producer's {f(pa)}, share of map "
                              f"{100 * row['map_share']:.1f}% -> error-adjusted {f(sh)}" + tag)
+        by_class = (side.get("condition") or {}).get("by") == "map class"
         if exact:
-            lines.append(f"note: {est.PER_CLASS_EXACT_NOTE} (here {pc['legend_size']} classes)")
+            lines.append(f"note: {est.CLASS_DESIGN_EXACT_NOTE if by_class else est.PER_CLASS_EXACT_NOTE} (here "
+                         f"{pc['legend_size']} classes)")
             if side.get("design") == "sequential":
                 lines.append("note: a sequential sample's per-class intervals are exact when the number of labelled "
                              "windows was fixed before labelling, as for its error rate")
-        if res["design"] == "condition" and len(res.get("per_condition", {})) > 1:
+        if res["design"] == "condition" and len(res.get("per_condition", {})) > 1 and not by_class:
             # the method string says so, and the printed table did not: the per-class intervals under this design
             # are not graded (review of 2026-09-29); with one condition the table is the random design's
             lines.append(f"note: {est.PER_CLASS_NOT_GRADED}")
@@ -2269,8 +2372,10 @@ def cmd_estimate(args):
             lines.append(_unused_note(unused))
         also_text = "\n" + "\n".join(lines)
     _check_out_file(out, "estimate")
+    by_class = (side.get("condition") or {}).get("by") == "map class"
+    words = class_words if by_class else (lambda x: x)
     with open(out, "w") as f:
-        json.dump(_stamp(res, "estimate"), f, indent=1, default=float)
+        json.dump(_stamp(words(res), "estimate"), f, indent=1, default=float)
     cond_text = ""
     if res.get("by_condition"):
         # each condition's own exact interval, one line each after the whole map's
@@ -2291,14 +2396,43 @@ def cmd_estimate(args):
         cond_text = "\n" + "\n".join(lines)
     # the interval is printed as its two ends: it is not symmetric about the estimate (Wilson never is, and a
     # clipped one is not), so "estimate +/- x" would name an interval that is not the one written
-    print(f"error rate {_rate(res)}, 95% interval {100 * res['low']:.1f}% to {100 * res['high']:.1f}% "
+    print(words(f"error rate {_rate(res)}, 95% interval {100 * res['low']:.1f}% to {100 * res['high']:.1f}% "
           f"(half-width {100 * res['half_width']:.1f} points), from {res['n_labelled']} labelled windows of {res['n_population']}; "
           f"{res['method']}" + (f"\nnote: {res['bounds_note']}" if res.get("bounds_note") else "")
           + (f"\nwarning: {res['warning']}" if "warning" in res else "") + cond_text + per_class_text
           + (f"\nwarning: {res['per_class_warning']}" if "per_class_warning" in res else "")
           + (f"\nnote: {res['population_note']}" if "population_note" in res else "")
-          + (f"\nnote: {res['sequential_note']}" if "sequential_note" in res else "") + also_text + f"\nwrote {out}")
+          + (f"\nnote: {res['sequential_note']}" if "sequential_note" in res else "") + also_text) + f"\nwrote {out}")
     return 0
+
+
+def _keep_to_plan(args, side):
+    """certify's options from the plan a sample drawn for a certificate fixed (sample --seed-from-map), refusing any
+    other: a second choice after the labels would be a second test. Without a plan, --alpha is required and --delta
+    defaults to est.ZONE_DELTA."""
+    plan = side.get("certify")
+    if not plan:
+        if args.alpha is None:
+            raise SystemExit("certify: --alpha is required: the error rate the certified zone may not exceed")
+        args.delta = est.ZONE_DELTA if args.delta is None else args.delta
+        return
+    for flag, given, fixed in (("--alpha", args.alpha, plan["alpha"]), ("--delta", args.delta, plan["delta"])):
+        if given is not None and float(given) != float(fixed):
+            raise SystemExit(f"certify: this sample fixed {flag} {fixed:g} before any label (sample --seed-from-map); "
+                             f"{flag} {given:g} on the same labels would be a second test")
+    args.alpha, args.delta = float(plan["alpha"]), float(plan["delta"])
+    rule, cut = plan.get("rule"), plan.get("level_cut")
+    if rule == "sequential":
+        if args.rule not in (None, "prefix") or args.level_cut is not None:
+            raise SystemExit("certify: this sample is certified by the sequential rule it fixed before any label")
+        return
+    if args.rule not in (None, rule):
+        raise SystemExit(f"certify: this sample fixed the {rule} rule before any label; --rule {args.rule} on the same "
+                         "labels would be a second test")
+    if args.level_cut not in (None, cut):
+        raise SystemExit(f"certify: this sample fixed the {cut} level cut before any label; --level-cut "
+                         f"{args.level_cut} on the same labels would be a second test")
+    args.rule, args.level_cut = rule, cut
 
 
 def cmd_certify(args):
@@ -2328,6 +2462,7 @@ def cmd_certify(args):
     # on the whole map does not give that (review of 2 October 2026: misses placed in the confident half certified a
     # zone wrong 10% of the time at alpha 5% on every draw).
     wrong = np.where(unjudged, 1, wrong)
+    _keep_to_plan(args, side)
     alpha = args.alpha
     bounds = ([f"{int(unjudged.sum())} window(s) that could not be judged (?) are counted as wrong, which keeps the "
                "guarantee whatever made them hard to judge and certifies less"] if unjudged.any() else [])
@@ -2396,6 +2531,8 @@ def cmd_certify(args):
     with open(out, "w") as f:
         json.dump(_stamp(res, "certify"), f, indent=1, default=float)
     tail = "".join(f"\nnote: {b}" for b in bounds) + (f"\nnote: {res['population_note']}" if "population_note" in res else "")
+    if res["coverage"] is not None:
+        tail += f"\nnote: {est.ISSUED_NOTE}"
     if res["coverage"] is None:
         print(f"no zone certified at alpha={args.alpha:g}, delta={args.delta:g} from {res['n_labelled']} labels. {res['note']}"
               f"{tail}{also_text}\nwrote {out}")
@@ -2571,7 +2708,8 @@ def _certify_by_condition(args, sample, wrong, margin, valid_w, out, mask_path, 
                     "reading_note": _zone_reading_note(args.delta, False)})
         also_text = _zone_also_text(res, args, None, _also_mask(mask_path))
     with open(out, "w") as f:
-        json.dump(_stamp(res, "certify"), f, indent=1, default=float)
+        json.dump(_stamp(class_words(res) if (sample.get("condition") or {}).get("by") == "map class" else res,
+                         "certify"), f, indent=1, default=float)
     a, d, b1 = args.alpha, args.delta, res["min_labels_to_certify"]
     if res["n_conditions_tested"]:
         lines = [f"certified per input condition at alpha={100 * a:g}%, delta={100 * d:g}% (each tested condition at "
@@ -2612,7 +2750,8 @@ def _certify_by_condition(args, sample, wrong, margin, valid_w, out, mask_path, 
     else:
         lines.append("no zone is certified in any condition, so nothing is certified")
     lines += [f"note: {b}" for b in bounds] + ([f"note: {res['population_note']}"] if "population_note" in res else [])
-    print("\n".join(lines) + also_text + f"\nwrote {out}")
+    text = "\n".join(lines) + also_text
+    print((class_words(text) if (sample.get("condition") or {}).get("by") == "map class" else text) + f"\nwrote {out}")
     return 0
 
 
@@ -3173,15 +3312,21 @@ def build_parser():
                          "also serve certify at alpha 0.05); every design but audit needs it")
     sm.add_argument("--out", required=True, help="CSV to write; a .json sidecar with the design goes beside it")
     sm.add_argument("--design", choices=("confidence", "proportional", "random", "sequential", "tiles", "condition",
-                                         "audit"),
+                                         "class", "audit"),
                     default=None,
                     help="confidence (default without --condition): stratified by margin, allocated from the model's "
                          "own confidence; tiles: how people actually label, with the cluster interval that requires; "
                          "condition (default with --condition): stratified by input condition, labels split equally, "
                          "never from the model's confidence; random takes --condition too and only records it; "
                          "sequential: a random order labelled from the top, to which labels can be added (--extend), "
-                         "and certify then holds at every look; audit: N windows at random from each predicted "
+                         "and certify then holds at every look; class: stratified by the map's own class, at least "
+                         "--min-per-class each and the rest in proportion to class size (Olofsson et al. 2014), with "
+                         "exact per-class accuracy and area from estimate --per-class and a zone per class from "
+                         "certify; audit: N windows at random from each predicted "
                          "class's confident zone (--per-class N), and estimate then gives each class's zone error rate")
+    sm.add_argument("--min-per-class", type=int, default=None, metavar="M",
+                    help=f"class design: labels per map class at least, where it has that many windows (default "
+                         f"{est.CLASS_FLOOR})")
     sm.add_argument("--per-class", type=int, default=None, metavar="N",
                     help="audit design: windows labelled per predicted class; a class whose zone holds N or fewer is "
                          "labelled in full (docs/Usage.md, audit, says what N buys)")
@@ -3201,9 +3346,16 @@ def build_parser():
     sm.add_argument("--alpha", type=float, default=None,
                     help="sequential design, without --anchor: the error rate certify will be asked about; the anchor "
                          "is then the zone this budget can certify if none of its labels is wrong, at most a quarter "
-                         "of the map, fixed now and written to the sidecar")
+                         "of the map, fixed now and written to the sidecar. With --seed-from-map (any design): the "
+                         "alpha certify will test, fixed now")
     sm.add_argument("--delta", type=float, default=None,
-                    help=f"sequential design, with --alpha: the delta the anchor is computed for (default {est.ZONE_DELTA})")
+                    help=f"sequential design, with --alpha: the delta the anchor is computed for (default "
+                         f"{est.ZONE_DELTA}); with --seed-from-map, the delta certify will use, fixed now")
+    sm.add_argument("--rule", choices=("prefix", "bonferroni"), default=None,
+                    help="with --seed-from-map: the rule certify will use, fixed now (default prefix; a sample with "
+                         "--target uses the target rule and a sequential one the sequential rule)")
+    sm.add_argument("--level-cut", choices=("standard", "ramp"), default=None,
+                    help="with --seed-from-map: certify's level cut, fixed now (default standard)")
     sm.add_argument("--extend", default=None, metavar="CSV",
                     help="sequential design: a sample CSV to extend to --budget windows, keeping its labels; the new "
                          "windows are the next ones of the same random order")
@@ -3266,8 +3418,10 @@ def build_parser():
                                         "with --condition is certified per input condition)")
     z.add_argument("sample", help="the CSV `sample --design random` (or `sample --condition`) wrote, with its `wrong` "
                                   "column filled in")
-    z.add_argument("--alpha", type=float, required=True, help="the error rate the certified zone may not exceed, e.g. 0.05")
-    z.add_argument("--delta", type=float, default=est.ZONE_DELTA,
+    z.add_argument("--alpha", type=float, default=None,
+                   help="the error rate the certified zone may not exceed, e.g. 0.05 (required, unless the sample fixed "
+                        "it with sample --seed-from-map --alpha)")
+    z.add_argument("--delta", type=float, default=None,
                    help=f"the probability the statement is allowed to be wrong (default {est.ZONE_DELTA}); for a sample "
                         "drawn with --condition, that any of the per-condition statements is, split over the conditions "
                         "tested")

@@ -87,6 +87,19 @@ CHANGES = (
 )
 LINE_PREFIXES = ("", "warning: ")
 
+# Lines the package now adds to a stdout file, on purpose, each written out whole and inserted before the file's
+# "wrote " line. A listed line missing, or found in a file the list does not name, fails the test.
+ADDED = (
+    {"why": ("what delta counts (1.17.0, the final review of 24 October 2026): every certify output that certifies a "
+             "zone says that delta bounds the share of all samples on which such a statement is wrong, those that "
+             "certify nothing included, and that among samples that certify a zone the share wrong can be larger"),
+     "line": ("note: delta is the share of all samples, those that certify nothing included, on which a statement like this is wrong. Among the samples that do certify a zone, the share wrong can be larger, most of all when a zone's true error rate is just above alpha: there a zone is rarely certified, and when it is, it is often wrong. A certified zone is not a 1 - delta chance of being right."),
+     "constant": ("oe_inferencex.estimate", "ISSUED_NOTE"),
+     "files": ("sample_random.certify_bonferroni.stdout.txt", "sample_random.certify_delta.stdout.txt",
+               "sample_random.certify_prefix.stdout.txt", "sample_random.certify_whole.stdout.txt",
+               "sample_scene_random.certify_prefix.stdout.txt")},
+)
+
 # Outputs rewritten whole, on purpose, rather than changed by a listed text: the new bytes are a golden file of their
 # own, written by the package at the version named and reviewed, in the directory named; the 1.3.1 file beside this
 # one stays as it was. A JSON output is stored as the test compares it, without `scope`.
@@ -161,6 +174,12 @@ def expected(name, data):
         want = 1 if name in c["files"] else 0
         assert count == want, f"{name}: {count} whole occurrences of a listed 1.3.1 text, expected {want}: {c['why']}"
         assert c["old"].encode() not in data, f"{name}: a listed 1.3.1 text is left inside other text: {c['why']}"
+    for a in ADDED:
+        if name in a["files"]:
+            lines = data.decode().split("\n")
+            assert a["line"] not in lines, f"{name}: an added line is already in 1.3.1's output: {a['why']}"
+            at = next(i for i, line in enumerate(lines) if line.startswith("wrote "))
+            data = "\n".join(lines[:at] + [a["line"]] + lines[at:]).encode()
     return data
 
 
