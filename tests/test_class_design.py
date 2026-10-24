@@ -148,3 +148,43 @@ def test_the_class_design_runs_end_to_end_with_a_certificate(tmp_path):
     with pytest.raises(SystemExit, match="belongs to --design class"):
         main(["sample", str(tmp_path / "scores.tif"), "--design", "random", "--budget", "200", "--min-per-class", "5",
               "--out", str(tmp_path / "y.csv")])
+
+
+def test_the_floor_is_fixed_with_the_draw(tmp_path):
+    """The class design's floor changes the windows drawn, so it enters the seed: a floor chosen after the labels
+    would be a second test of them (the review of 24 October 2026 shopped floors to a wrong statement on 0.153 of
+    draws at delta 0.1). A floor below 1 is refused."""
+    pytest.importorskip("rasterio")
+    from oe_inferencex import certificate as cert
+    from oe_inferencex.cli import main
+    spec = importlib.util.spec_from_file_location("quickstart_map", os.path.join(ROOT, "examples", "quickstart_map.py"))
+    qs = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(qs)
+    cwd = os.getcwd()
+    os.chdir(tmp_path)
+    try:
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            qs.write_maps()
+            seeds = []
+            for floor in ("20", "60"):
+                assert main(["sample", "scores.tif", "--design", "class", "--budget", "400", "--min-per-class", floor,
+                             "--seed-from-map", "--alpha", "0.1", "--out", f"f{floor}.csv"]) == 0
+                side = json.loads((tmp_path / f"f{floor}.json").read_text())
+                seeds.append(side["seed"])
+                assert side["condition"]["min_per_class"] == int(floor)
+                assert side["seed_settings"]["min_per_class"] == int(floor)
+            assert seeds[0] != seeds[1]
+            qs.label("f20.csv")
+            assert main(["certify", "f20.csv"]) == 0
+            assert "note: delta is the share of all samples" in out.getvalue()      # every route says what delta counts
+        side = json.loads((tmp_path / "f20.json").read_text())
+        for bad in ("0", "-3"):
+            with pytest.raises(SystemExit, match="at least 1"):
+                main(["sample", "scores.tif", "--design", "class", "--budget", "400", "--min-per-class", bad,
+                      "--out", "bad.csv"])
+        with pytest.raises(ValueError, match="at least one label"):
+            est.class_allocation([10, 20], 10, 0)
+        settings = cert._side_settings(dict(side, condition=dict(side["condition"], min_per_class=60)), None)
+        assert cert.seed_from(side["map_sha256"], settings) != side["seed"]
+    finally:
+        os.chdir(cwd)

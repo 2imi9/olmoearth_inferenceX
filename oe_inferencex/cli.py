@@ -1151,6 +1151,12 @@ def cmd_sample(args):
         if getattr(args, "min_per_class", None) is not None:
             raise SystemExit("sample: --min-per-class belongs to --design class")
         cond_path, cond_names = _condition_args(args, "sample")
+    class_floor = None
+    if by_class:
+        class_floor = est.CLASS_FLOOR if getattr(args, "min_per_class", None) is None else int(args.min_per_class)
+        if class_floor < 1:
+            raise SystemExit(f"sample: --min-per-class is at least 1 (each class's user's accuracy needs labels), got "
+                             f"{class_floor}")
     # None resolves to the condition design when a layer is given, to the confidence design otherwise; a product's
     # confidence band is no top-1 probability, which the confidence design allocates from, so it resolves to random
     prod_notes = []
@@ -1240,7 +1246,7 @@ def cmd_sample(args):
         # changed after labelling (certificate.verify). An extension keeps the rule when its seed is the same.
         from .certificate import draw_seed
         seed_rule = draw_seed(args.scores, args.nodata, args.logits, conf_path, conf_range, cond_path, design,
-                              args.budget, args.patch, target, anchor, plan)
+                              args.budget, args.patch, target, anchor, plan, class_floor)
         if seed_from_map:
             if old_side is not None and int(old_side["seed"]) != seed_rule["seed"]:
                 raise SystemExit(f"sample --extend: {extend} was drawn with --seed {old_side['seed']}, not the seed this "
@@ -1268,8 +1274,7 @@ def cmd_sample(args):
                                            tiles=tiles, per_tile=args.per_tile, valid=valid_w, seed=args.seed,
                                            condition=None if pooled is None else pooled["grid"].ravel(),
                                            condition_names=cond_names, stable=seed_rule is not None,
-                                           class_floor=(est.CLASS_FLOOR if getattr(args, "min_per_class", None) is None
-                                                        else int(args.min_per_class)) if by_class else None)
+                                           class_floor=class_floor)
     except ValueError as exc:
         raise SystemExit(f"sample: {exc}")
     idx = sample["indices"]
@@ -1331,6 +1336,7 @@ def cmd_sample(args):
                              "names_given": names_given(cond_names)}
         if by_class:
             side["condition"]["by"] = "map class"      # the class design: certify, estimate and verify read it so
+            side["condition"]["min_per_class"] = class_floor
     side.update(_sidecar_map_fields(args, geo, [int(hw), int(ww)], out, conf_path, conf_range, prod_info))
     side["how_to_label"] = ("open each window, set wrong=1 if the map's class there (the `map_class` column: the "
                             "majority of the window's pixels) is not what is on the ground, else 0; then: "
@@ -1352,7 +1358,8 @@ def cmd_sample(args):
                          "rate; the whole-map rate weights each condition by its share of the map")
         notes.append(_unrecorded_note(pooled["n_split"], pooled["n_no_code"]))
         if K >= 2:
-            notes.append(_certify_need_note(cond["names"], cond["n_labelled"]))
+            notes.append(_certify_need_note(cond["names"], cond["n_labelled"],
+                                            *((plan["alpha"], plan["delta"]) if plan else ())))
     if design == "sequential":
         kept = 0 if old_wrong is None else sum(str(v).strip() != "" for v in old_wrong)
         notes.insert(0, ("label from the top row down, in order; certify may be run after any number of labels and "
@@ -1370,7 +1377,7 @@ def cmd_sample(args):
           f"{FILL_INSTRUCTION} oe-inferencex estimate {args.out}"
           + "".join(f"\nwarning: {w}" for w in out.get("warnings", []))
           + (f"\nnote: {sample['note']}" if "note" in sample else "")
-          + "".join(f"\nnote: {n}" for n in prod_notes + notes if n))
+          + "".join(f"\nnote: {class_words(n) if by_class else n}" for n in prod_notes + notes if n))
     return 0
 
 
@@ -1380,6 +1387,14 @@ def _certify_plan(design, target, alpha, delta, rule, cut, seed_from_map, old_si
     final review of 24 October 2026: one sample certified nothing at alpha 0.05 and 0.10 and 70% at 0.15, and every
     one of those certificates verified). An extension keeps its sample's plan. None without --seed-from-map."""
     if old_side is not None:
+        if any(v is not None for v in (rule, cut)):
+            raise SystemExit("sample --extend: certify's options were fixed when the sample was drawn and cannot "
+                             "change after labelling began; drop --rule and --level-cut")
+        if seed_from_map and old_side.get("seed_rule") == "from_map" and not old_side.get("certify"):
+            raise SystemExit("sample --extend: this sample's seed was taken from the map by a release before 1.17.0, "
+                             "which did not fix certify's options with it, so it cannot carry a certificate; extend it "
+                             f"with --seed {old_side.get('seed')} (no certificate), or draw a new sample with "
+                             "--seed-from-map --alpha")
         return old_side.get("certify")
     if not seed_from_map:
         return None
@@ -2329,7 +2344,10 @@ def cmd_estimate(args):
                              f"{100 * row['map_share']:.1f}% -> error-adjusted {f(sh)}" + tag)
         by_class = (side.get("condition") or {}).get("by") == "map class"
         if exact:
-            lines.append(f"note: {est.CLASS_DESIGN_EXACT_NOTE if by_class else est.PER_CLASS_EXACT_NOTE} (here "
+            # a class design with one class is a random sample, and its table the random design's (the review of 24
+            # October 2026: it printed the class design's note beside the random design's numbers)
+            class_note = by_class and len((side.get("condition") or {}).get("values") or []) > 1
+            lines.append(f"note: {est.CLASS_DESIGN_EXACT_NOTE if class_note else est.PER_CLASS_EXACT_NOTE} (here "
                          f"{pc['legend_size']} classes)")
             if side.get("design") == "sequential":
                 lines.append("note: a sequential sample's per-class intervals are exact when the number of labelled "
@@ -2392,7 +2410,7 @@ def cmd_estimate(args):
         if res["design"] == "condition" and len(res["per_condition"]) > 1:
             # the whole-map line says "95% interval": this says how it holds and why it is wider than a stratified
             # one; the JSON's condition_note alone did not reach a reader of the printed result (review of 2026-09-29)
-            lines.append(f"note: {est.CONDITION_WHOLE_MAP}")
+            lines.append(f"note: {est.CLASS_WHOLE_MAP if by_class else est.CONDITION_WHOLE_MAP}")
         cond_text = "\n" + "\n".join(lines)
     # the interval is printed as its two ends: it is not symmetric about the estimate (Wilson never is, and a
     # clipped one is not), so "estimate +/- x" would name an interval that is not the one written
@@ -2411,6 +2429,10 @@ def _keep_to_plan(args, side):
     other: a second choice after the labels would be a second test. Without a plan, --alpha is required and --delta
     defaults to est.ZONE_DELTA."""
     plan = side.get("certify")
+    if plan is not None and not (isinstance(plan, dict) and type(plan.get("alpha")) is float
+                                 and type(plan.get("delta")) is float):
+        raise SystemExit("certify: the sidecar's `certify` plan is not the one sample writes (alpha and delta as "
+                         "numbers); draw the sample again")
     if not plan:
         if args.alpha is None:
             raise SystemExit("certify: --alpha is required: the error rate the certified zone may not exceed")
@@ -2668,7 +2690,8 @@ def _certify_sequential(args, side, idx, wrong, margin, valid_w, out, mask_path,
               f"{res['threshold']:.4f}) are wrong at most {100 * args.alpha:g}% of the time; this statement fails on at most "
               f"{100 * args.delta:g}% of samples like this one, however often certify is run on it as labels are added "
               f"(sequential rule, anchor {100 * res['anchor']:.0f}% of the map). Outside the zone nothing is certified.\n"
-              f"{res['note']}{tail}{more}{also_text}\nwrote {out} and the window mask {mask_path}")
+              f"{res['note']}{tail}\nnote: {est.ISSUED_NOTE}{more}{also_text}\nwrote {out} and the window mask "
+              f"{mask_path}")
     return 0
 
 
@@ -2750,6 +2773,8 @@ def _certify_by_condition(args, sample, wrong, margin, valid_w, out, mask_path, 
     else:
         lines.append("no zone is certified in any condition, so nothing is certified")
     lines += [f"note: {b}" for b in bounds] + ([f"note: {res['population_note']}"] if "population_note" in res else [])
+    if res["certified_share_of_map"] is not None:
+        lines.append(f"note: {est.ISSUED_NOTE}")
     text = "\n".join(lines) + also_text
     print((class_words(text) if (sample.get("condition") or {}).get("by") == "map class" else text) + f"\nwrote {out}")
     return 0

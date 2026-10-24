@@ -1095,8 +1095,9 @@ def test_certify_by_condition_writes_the_union_mask_and_removes_a_stale_one(tmp_
             assert line == (f"  {name}: the {100 * e['coverage']:.0f}% most confident windows of this condition "
                             f"({e['n_zone']} of {e['n_population']}, margin >= {e['threshold']:.4f}) are wrong at most "
                             "30% of the time")
-    assert printed[-2] == (f"together the certified windows are {100 * z['certified_share_of_map']:.1f}% of the map "
+    assert printed[-3] == (f"together the certified windows are {100 * z['certified_share_of_map']:.1f}% of the map "
                            f"(mask {tmp_path / 'r_zone.npy'}); outside them nothing is certified")
+    assert printed[-2] == f"note: {est.ISSUED_NOTE}"                  # what delta counts (1.17.0)
 
     capsys.readouterr()
     assert main(["certify", str(out), "--alpha", "0.01"]) == 0             # certifies nothing: the stale mask goes

@@ -32,7 +32,13 @@ oe-inferencex certify to_label.csv --alpha 0.10      # the certified zone
 ```
 
 `--design random` lets one set of labels serve both `estimate` and `certify`. Without it `sample` stratifies by
-confidence, which `estimate` reads and `certify` refuses. `certify` can return nothing, and says so;
+confidence, which `estimate` reads and `certify` refuses.
+
+The sections below go command by command. In short: `assess` says which windows to check first; `sample --design
+random` and `estimate` how wrong the map is; the same labels and `certify` which part can be trusted; `sample --design
+class` and `estimate --per-class` each class's accuracy and area; `sample --seed-from-map --alpha A`, `certify`,
+`certificate` and `verify` a certified part someone else can check; `sample --other` and `estimate` which of two maps is
+more accurate; and `plan` how many labels each needs. `certify` can return nothing, and says so;
 [certify](#certify) gives the labels a level needs. The worked example below shows the lines these commands print on
 a test map, and `examples/quickstart_map.py` writes that map and fills in its labels. Each command is described under
 [Command line](#command-line).
@@ -622,6 +628,7 @@ reviewer, record the class seen in a `reference_class` column, and set `wrong` t
 | `random` | Simple random sample; required by `certify` without a condition | Exact hypergeometric; with `--condition`, also exact per condition, graded in exp88 |
 | `tiles` | `--per-tile` windows (default 16) in each of a random set of tiles of `--tile` windows per side (default 16) | Ratio estimator over tiles, with the naive interval beside it |
 | `condition` (default with `--condition`) | Strata by input condition, labels split equally | Exact per condition; whole map: the conditions' exact intervals at 1 − 0.05/L, weighted by share, at least 95% by construction; per class: not graded |
+| `class` | Strata by the map's own class: each class at least `--min-per-class` (default 50, or all its windows), the rest in proportion to its size (Olofsson et al. 2014) | Exact per class; whole map as `condition`; with `--per-class`, each class's user's accuracy exact, and the class areas and producer's accuracies exact together at 95% ([below](#sampling-by-map-class)) |
 | `audit` | `--per-class N` windows at random from each predicted class's confident zone (the top third of the map by default), in place of `--budget` | Exact hypergeometric per class, on that class's confident zone; no whole-map rate ([audit](#audit)) |
 
 The tile design matches how reviewers often label, and its intervals can under-cover. On six of exp78's seven tasks
@@ -632,6 +639,30 @@ of the tiles hold most of the errors
 prints for a tiles sample quotes these numbers since 1.4.0; 1.3.1's quoted exp78's own design (an exact 18 tiles and a
 normal quantile). If labelling has not started, draw single windows rather than tiles. If only the whole-map rate is needed, `--design random` gives the
 exact interval and is the design `certify` needs.
+
+<a id="sampling-by-map-class"></a>**Sampling by map class.** The agencies' standard design (Olofsson et al. 2014,
+section 5.1.3) stratifies by the map's own class, so that a rare class gets enough labels for its user's accuracy:
+
+```bash
+oe-inferencex sample scores.tif --design class --budget 600 --out to_label.csv          # --min-per-class 50 by default
+oe-inferencex estimate to_label.csv --per-class     # with `reference_class` filled in
+oe-inferencex certify to_label.csv --alpha 0.10      # a zone per map class
+```
+
+Every class gets `--min-per-class` labels, or all its windows if it has fewer; the rest of the budget goes to the
+classes in proportion to their size. Each class's labels are a simple random sample of it, so its error rate and user's
+accuracy have exact hypergeometric intervals, and the whole-map error rate takes the union bound over the classes, as
+the condition design's does. `--per-class` adds each class's area (its share of the map by the reference) and
+producer's accuracy with exact intervals that hold together at 95%: the count of each reference class in each stratum
+has an exact interval at 1 − 0.05/(L·S), L classes and S strata not labelled in full, and the areas and producer's
+accuracies are bounded by those counts (a union bound; tests/test_class_design.py checks the coverage by exact
+computation over the stratified draw, with a negative control). They are wide where many classes are thin, and the
+points beside them are Olofsson's stratified estimates. `certify` gives a zone in each class, with delta split over the
+classes tested, as for input conditions. `--condition-names` names the classes; the class design takes no condition
+layer. On 269 of the record's fully labelled maps (exp116), every class's user's accuracy covered at its level
+for 2,401 of 2,402 classes and the areas with the producer's accuracies held together on every map; for all 1,148
+classes under 5% of their map, the interval was narrower than a random sample's of the same size, a median 0.61 of
+its width.
 
 **Sampling by input condition.** A map with a condition layer is sampled, estimated and certified
 per condition:
@@ -898,6 +929,19 @@ oe-inferencex certify random.csv --alpha 0.05    # after the reviewer has filled
 It writes `random_zone.json` (`coverage`, the certified share; `threshold`, the confidence margin at its edge;
 `upper_bound` on its error rate; `note`) and the zone as a window mask, `random_zone.npy`.
 
+**What δ counts.** δ bounds the share of all samples, those that certify nothing included, on which the statement is
+wrong. A reader sees only the samples that certify a zone, and among them more than δ can be wrong, most of all when a
+zone's true error rate sits just above α: there a zone is rarely certified, and when it is, it is often wrong. On
+the record's fully labelled maps (exp116, descriptive), on 46 of the 413 cells where the target rule certified a
+zone, more than δ of the zones certified were wrong, though the share of all draws stayed under δ on every cell. A certified zone is not a 1 − δ chance of
+being right; every certify output that certifies a zone says so.
+
+**Options fixed before labelling.** α, δ, the rule and the level cut must be chosen before the labels are read: running
+certify again at another α, or with the other rule, after seeing the result is a second test, and the guarantee does
+not hold for the one kept. A sample drawn with `sample --seed-from-map --alpha A [--delta D] [--rule R] [--level-cut
+C]` fixes them in its sidecar and in its seed; `certify` then reads them and refuses any other (and needs no
+`--alpha`).
+
 - A stratified or tile sample is refused, because the guarantee rests on the labels inside each candidate zone being
   a random sample of that zone.
 - `--rule prefix` (default) tests the zones from the most confident share up and stops at the first it cannot
@@ -919,7 +963,11 @@ It writes `random_zone.json` (`coverage`, the certified share; `threshold`, the 
   When no smaller zone is tested at the budget, the target holds all of δ and there is no fallback; `plan` counts
   that. Without a target the rule saves nothing, so choose one from what is known before
   labelling: the share of the map the user needs, a plan, or the error rate of the model's own held-out validation
-  labels, which may guide the choice but certify nothing on the map. The same labels serve `estimate`.
+  labels, which may guide the choice but certify nothing on the map. The same labels serve `estimate`. On the record's
+  fully labelled maps (exp116, 420 cells per target), the target rule's zone was wrong more than α on at most 0.0925
+  of draws at target 0.5 (bar 0.145), and with the target right it certified at least the target at least as often
+  as Bonferroni on 744 of 771 cells. The target is tested at any budget, also where it expects fewer labels than the
+  level cut asks of the other levels.
 - Like `estimate`, `certify` treats the labels as right: the zone's guarantee is about agreement with the reviewer's
   labels.
 - A labelled set that looks like the tool's review set (enriched for errors) is refused, and from 1.16.0 so is one
@@ -1043,16 +1091,17 @@ A certified zone can travel with the map (from 1.17.0). `certificate` packs the 
 anyone holding the map can check, and `verify` checks it.
 
 ```bash
-oe-inferencex sample scores.tif --design random --budget 400 --target 0.5 --seed-from-map --out s.csv
-oe-inferencex certify s.csv --alpha 0.05                       # after the reviewer has filled `wrong`
+oe-inferencex sample scores.tif --design random --budget 400 --target 0.5 --seed-from-map --alpha 0.05 --out s.csv
+oe-inferencex certify s.csv                                    # after the reviewer has filled `wrong`; alpha is the sample's
 oe-inferencex certificate s_zone.json --date 2024-06-01 --out cert
 oe-inferencex verify cert/certificate.json --scores my_copy.tif --at 500200 4999800   # is this point certified?
 ```
 
-A certificate needs a sample of the random, sequential or condition design drawn with `--seed-from-map`. Its seed is
-128 bits of sha256 over the map's digest and the settings that change what certify gives: the design, the budget (not
-for a sequential sample, which `--extend` lengthens), the window size, the logits reading, a product's confidence
-range, the target, the anchor, and the digests of a product's confidence band and of a condition layer. The no-data
+A certificate needs a sample of the random, sequential, condition or class design drawn with `--seed-from-map --alpha
+A`. Its seed is 128 bits of sha256 over the map's digest and the settings that change what certify gives: the design,
+the budget (not for a sequential sample, which `--extend` lengthens), the window size, the logits reading, a product's
+confidence range, the target, the anchor, the digests of a product's confidence band and of a condition layer, and
+certify's own options, α, δ, the rule and the level cut, which the sample fixes and certify keeps to. The no-data
 value is in the map's digest, since it decides the valid pixels. None of those settings can be changed after labelling
 without changing the windows, which verify would show. The windows are the first of a fixed random order read straight
 from PCG64, the same on every numpy release. What the seed cannot show is that the issuer drew once: any change to the
@@ -1097,9 +1146,9 @@ bundle, never other files.
 Taken on the issuer's word, and said so by verify: the labels (the point of trust, as for every statement the package
 makes, with any column the reviewer added), so a reviewer's errors pass through; the map's date and when the
 certificate was made and which release wrote it; the paths it names; the condition names (at most 64 printable
-characters without quotes, quoted in the statement as the issuer gave them);
-when certify's own options (alpha, delta, the rule, the level cut) were chosen, which nothing in the bundle shows
-were fixed before the labels were seen (a target fixed by `sample --target` is); and that the sample was drawn once. A
+characters without quotes, quoted in the statement as the issuer gave them); and that the sample was drawn once. α, δ,
+the rule and the level cut are not on that list: the sample fixed them with the draw, and the seed shows it. The
+statement also says what δ counts (see [certify](#certify)): among certificates issued, more than δ can be wrong. A
 certificate states one reading of the labels: one certified with `--also-accept` is refused. It is for the map it was
 written from: another date or a new version of the map is another map. It certifies the zone's windows taken
 together, not each pixel, and outside the zone nothing is certified, which does not mean wrong. The statistics are
@@ -1335,9 +1384,10 @@ why["quotes"]["ndwi_ambiguous"]             # "is spectrally ambiguous ... (48% 
   with a warning on such maps ([exp76](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/results/comparisons.md#which-confidence-which-statistic-which-aggregator-exp76)).
   The command line has no such option: class probabilities passed without `--logits` are ranked by the window mean of
   the top probability, where `form="top1"` takes the window mean of its log. That form's `arrays["confidence"]` is on
-  the probability scale, where windows whose mean log probability lies above about -1.1e-16 round to exactly 1.0 and
+  the probability scale, where windows whose mean log probability lies above about -5.6e-17 round to exactly 1.0 and
   tie (the rounding Barron et al., arXiv 2610.31642, call softmax collapse); rank from `arrays["log_confidence"]`, the
-  same windows on the log scale with no ties. assess's own review sets are ranked on that scale.
+  same windows on the log scale, which ties only where the logit gap exceeds about 745. assess's own review sets are
+  ranked on that scale.
 - `explain_review_set` derives the boundary and low-confidence cues itself. Other cues are boolean arrays of window
   shape, such as spectral ambiguity (above) or tiling instability (`signals.aligned_tile_phase`); cues in
   `explain.CUES` are quoted with their measured enrichment, other names as unmeasured.

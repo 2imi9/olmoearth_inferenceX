@@ -13,7 +13,7 @@ zone as a window-grid array no GIS could open. A certificate packs it to travel 
   (unchanged by recompression or retiling, changed by any edited pixel or no-data value), and of every file in the
   bundle.
 
-A certificate needs a sample drawn with `sample --seed-from-map`. Its seed is 128 bits of sha256 over the map's digest
+A certificate needs a sample drawn with `sample --seed-from-map --alpha A`. Its seed is 128 bits of sha256 over the map's digest
 (which covers the valid pixels, so the no-data value) and the settings that change what certify gives: the design, the
 budget (except for a sequential sample), the window size, the logits reading, a product's confidence range, the target,
 the anchor, and the digests of a product's confidence band and of a condition layer. None of those can be changed after
@@ -27,8 +27,8 @@ certifies again (the zone JSON); and builds the STAC Item and the zone mask agai
 only as GeoTIFF or .npy, with no sidecar files and no network, and the bundle must hold its own files and nothing else.
 Taken on the issuer's word, and said so by verify: the labels (the point of trust, as for every statement the package
 makes, with any column the reviewer added), the map's date and the time the certificate was made, the paths it names,
-the condition names, when certify's own options (alpha, delta, the rule, the level cut) were chosen, and that the
-sample was drawn once.
+the condition names, and that the sample was drawn once. certify's own options (alpha, delta, the rule, the level cut)
+are fixed with the draw and enter the seed (`sample --seed-from-map --alpha`), as the class design's floor does.
 
 The statistics are certify's own; what is new is the statement as a portable, re-checkable record. Its fields map onto
 ISO 19157-1: a conformance result (the specification "the zone's error rate is at most alpha", passed, with delta
@@ -261,7 +261,7 @@ def _grid_level(value, at_or_above=False):
 
 
 def seed_settings(design, budget, patch, logits, confidence_range, target, anchor, confidence_sha256,
-                  condition_sha256, plan=None):
+                  condition_sha256, plan=None, min_per_class=None):
     """The settings that fix a draw and what certify gives from it, in one canonical form: what `seed_from` hashes with
     the map's digest. The no-data value is in the map's digest (the valid pixels). A product's confidence range is here
     because it changes the ranking without always changing a window's validity (review of 24 October 2026). Condition
@@ -274,7 +274,10 @@ def seed_settings(design, budget, patch, logits, confidence_range, target, ancho
             "anchor": None if anchor is None else _grid_level(anchor, at_or_above=True),
             "confidence_sha256": confidence_sha256, "condition_sha256": condition_sha256,
             "certify": None if not plan else {"alpha": repr(float(plan["alpha"])), "delta": repr(float(plan["delta"])),
-                                              "rule": plan.get("rule"), "level_cut": plan.get("level_cut")}}
+                                              "rule": plan.get("rule"), "level_cut": plan.get("level_cut")},
+            # the class design's floor changes each class's allocation, so the windows drawn: chosen after the labels,
+            # it would be a second test of the same labels (the review of 24 October 2026 shopped it to 0.153 > delta)
+            "min_per_class": None if design != "class" else int(min_per_class)}
 
 
 def seed_from(map_sha256, settings):
@@ -284,12 +287,12 @@ def seed_from(map_sha256, settings):
 
 
 def draw_seed(scores_path, nodata, logits, confidence_path, confidence_range, condition_path, design, budget, patch,
-              target, anchor, plan=None):
+              target, anchor, plan=None, min_per_class=None):
     """{"seed", "map_sha256", "settings"} for a sample drawn with --seed-from-map."""
     digests, _, _ = map_digests(scores_path, nodata, confidence_path)
     settings = seed_settings(design, budget, patch, logits, confidence_range, target, anchor,
                              digests.get("confidence_sha256"),
-                             None if condition_path is None else raster_digest(condition_path), plan)
+                             None if condition_path is None else raster_digest(condition_path), plan, min_per_class)
     return {"seed": seed_from(digests["map_sha256"], settings), "map_sha256": digests["map_sha256"],
             "settings": settings}
 
@@ -300,7 +303,8 @@ def _side_settings(side, confidence_sha256):
                          side.get("budget", len(side.get("indices", []))), side.get("patch", 4),
                          side.get("logits", False), side.get("confidence_range"),
                          (side.get("target") or {}).get("coverage"), side.get("anchor"), confidence_sha256,
-                         (side.get("condition") or {}).get("sha256"), side.get("certify"))
+                         (side.get("condition") or {}).get("sha256"), side.get("certify"),
+                         (side.get("condition") or {}).get("min_per_class") if _by_class(side) else None)
 
 
 def _map_paths(side, scores=None, confidence=None):
@@ -369,8 +373,11 @@ def _statement(zone, side):
             "sample was drawn once; and delta counts every sample, those that certify nothing included, so among "
             "samples that certify a zone more than delta can be wrong.")
     if zone.get("by_condition"):
-        tested = [f"{_name(n)} ({100 * e['coverage']:.0f}%)" for n, e in zone["per_condition"].items()
-                  if e.get("coverage") is not None]
+        # a class design names each stratum by its map class code too: the names are the issuer's, the codes the map's
+        code = ({str(n): v for v, n in zip(side["condition"].get("values", []), side["condition"].get("names", []))}
+                if _by_class(side) else {})
+        tested = [(f"map class {code[n]} " if code.get(n) is not None else "") + f"{_name(n)} ({100 * e['coverage']:.0f}%)"
+                  for n, e in zone["per_condition"].items() if e.get("coverage") is not None]
         per = "map class" if _by_class(side) else "input condition"
         return (f"Certified per {per} (names as the issuer gave them): in {', '.join(tested) or 'no ' + per}"
                 f" the most confident share given is wrong at most {a:g}% of the time; these statements hold together "
@@ -606,8 +613,10 @@ def _redraw(side, map_path, conf_path, cond_path, tmp, closed=False):
             argv.append("--level-cut=" + str(plan["level_cut"]))
     cond = side.get("condition")
     if cond and _by_class(side):
-        floor = re.search(r"at least (\d+) per class", str(cond.get("allocation_rule")))
-        argv += ["--min-per-class", floor.group(1) if floor else "-1"]
+        floor = cond.get("min_per_class")
+        if type(floor) is not int or floor < 1:
+            return None, None, "the class design's floor (condition.min_per_class) is not a positive integer"
+        argv += ["--min-per-class", str(floor)]
     elif cond:
         argv += ["--condition", cond_path]
     if cond and cond.get("names_given"):

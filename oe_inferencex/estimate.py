@@ -88,6 +88,12 @@ CONDITION_WHOLE_MAP = ("Each condition's own interval is exact. The whole-map in
                        "the exact interval of a random sample of the same size. What the design buys is each condition's "
                        "own rate: a small condition gets as many labels as a large one, or all its windows. If only the "
                        "whole-map rate is needed, --design random can give a narrower interval.")
+CLASS_WHOLE_MAP = ("Each class's own interval is exact. The whole-map interval takes each class's exact interval at "
+                   "1 - 0.05/L, where L is the number of classes not labelled in full, and weights it by the class's "
+                   "share of the map, so it covers at least 95% by construction; it is wider than the usual stratified "
+                   "interval. What the design buys is each class's own accuracy: every class gets at least its floor "
+                   "of labels, or all its windows, and the rest go in proportion to class size (Olofsson et al. "
+                   "2014). If only the whole-map rate is needed, --design random can give a narrower interval.")
 PER_CLASS_EXACT_NOTE = ("under a random sample the per-class intervals printed are exact (exp115, graded on 39 fully "
                         "labelled maps): the class shares hold together with probability at least 95%, and so do the "
                         "producer's accuracies; a class whose share the map draws outside its interval is named drawn "
@@ -550,6 +556,8 @@ def class_allocation(sizes, budget, floor=CLASS_FLOOR):
     remainder over the room each class has left, and again while a class is filled, so the sum is exact."""
     sizes = np.asarray(sizes, int)
     N = int(sizes.sum())
+    if int(floor) < 1:
+        raise ValueError(f"the floor is at least one label per class, got {floor}")
     if budget > N:
         raise ValueError(f"a budget of {budget} is more than the {N} units of the strata")
     n = np.minimum(sizes, int(floor))
@@ -1215,7 +1223,9 @@ def _estimate_core(sample, wrong):
     out["half_width"] = (out["high"] - out["low"]) / 2
     if by_condition:
         per, outside = _per_condition(grid, c_values, c_names, c_sizes, idx, wrong, N, out["estimate"])
-        note = CONDITION_NOTE + (" " + CONDITION_WHOLE_MAP if design == "condition" and len(c_names) >= 2 else "")
+        by_class = (sample.get("condition") or {}).get("by") == "map class"
+        note = CONDITION_NOTE + (" " + (CLASS_WHOLE_MAP if by_class else CONDITION_WHOLE_MAP)
+                                 if design == "condition" and len(c_names) >= 2 else "")
         out.update({"by_condition": True, "per_condition": per, "condition_note": note,
                     "outside_condition_intervals": outside})
     else:
@@ -1603,6 +1613,7 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
     N_map = np.bincount(mc[pop], minlength=C).astype(float)
     W = N_map / N
     per, warnings = {}, []
+    by_class = False
     if srs:
         n_i = conf.sum(1).astype(float)
         u = np.divide(conf, n_i[:, None], out=np.zeros((C, C)), where=n_i[:, None] > 0)   # n_ij / n_i.
@@ -1738,8 +1749,16 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
             codes.append("few labels")
             notes.append(f"fewer than {MIN_PER_CLASS} labelled windows ({row['n_labelled_map_class']} the map calls this "
                          f"class, {row['n_labelled_reference_class']} the reference does); "
-                         + ("the exact intervals are wide, and the normal-theory ones, below about ten, not to be "
+                         + ("the exact intervals are wide" if by_class else
+                            "the exact intervals are wide, and the normal-theory ones, below about ten, not to be "
                             "trusted" if srs else "the interval is wide and, below about ten, not to be trusted"))
+        if by_class:
+            # the class design's printed intervals are exact (each class a stratum labelled at random within it): the
+            # warnings below concern normal-theory intervals, which it does not print (the review of 24 October 2026)
+            if notes:
+                row["warning"] = "; ".join(notes)
+                row["warning_codes"] = codes
+            continue
         if N_map[c] == 0 and conf[:, c].sum() > 0:
             codes.append("never predicted")
             notes.append("the map never predicts this class, which the labels show exists: its producer's accuracy is "
@@ -2534,8 +2553,9 @@ ESTIMATE_READING_NOTE = ("The alternative reading also accepts, for each map cla
                          "the errors fell on clears them.")
 # What delta counts (the final review of 24 October 2026): it bounds the share of ALL samples on which the statement
 # is wrong, those that certify nothing included. A reader sees only the samples that certify, and among them more can
-# be wrong: on a real tile at alpha 0.1, 57 of the 187 draws that certified a zone certified a wrong one, where the
-# share of all draws stayed under delta. It is largest where a zone's true error rate sits just above alpha.
+# be wrong: in the record's exp116 (descriptive), on 46 of the 413 real-map cells where the target rule certified a
+# zone, more than delta of the zones certified were wrong, where the share of all draws stayed under delta on every
+# cell. It is largest where a zone's true error rate sits just above alpha.
 ISSUED_NOTE = ("delta is the share of all samples, those that certify nothing included, on which a statement like this "
                "is wrong. Among the samples that do certify a zone, the share wrong can be larger, most of all when a "
                "zone's true error rate is just above alpha: there a zone is rarely certified, and when it is, it is "

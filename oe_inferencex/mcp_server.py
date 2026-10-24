@@ -120,7 +120,8 @@ INSTRUCTIONS = "\n".join([
     "share, the windows to check first. No labels.",
     f"2. {HOW_WRONG} (sample, label, estimate) sample picks the windows to label. The user or a reviewer fills the "
     "`wrong` column with 1 or 0 on every row, or ? where a window cannot be judged. estimate gives the error rate with "
-    "a 95% interval.",
+    "a 95% interval. For each class's accuracy and area, rare classes included, sample with design \"class\" "
+    "(stratified by map class) and estimate per class: exact intervals per class.",
     f"3. {TRUST} (certify) From the same labels, the most confident share of the map whose error rate is at most "
     "alpha. It can certify nothing, and then says why. If the user knows before labelling which share they want to "
     "trust, pass it as target to sample (design \"random\"): certify then uses the target rule, with the same "
@@ -184,8 +185,9 @@ CARDS = {
         "for a product, its band too, confidence); without them the files are read where the certificate says, which "
         "shows only that the two agree.",
         "Cannot: check what it takes on the issuer's word: the labels (the point of trust), the map's date and when "
-        "the certificate was made, the paths it names, the condition names, when alpha, delta, the rule and the level "
-        "cut were chosen, and that the sample was drawn once; say anything about a map other than the one certified; "
+        "the certificate was made, the paths it names, the condition names, and that the sample was drawn once (alpha, "
+        "delta, the rule and the level cut were fixed with the draw, which it does check); say anything about a map "
+        "other than the one certified; "
         "or certify "
         "a zone itself (certify does).",
     ]),
@@ -463,10 +465,34 @@ def _mcp_warning(text):
     return MCP_MARGIN_WARNING if str(text).strip() == _assess.MARGIN_FORM_WARNING else text
 
 
-def _reply(conclusion, limits, nxt, files, summary):
-    """A tool's result, every text in this server's words."""
-    return {"conclusion": _mcp_words(conclusion), "limits": _mcp_words(limits), "next": _mcp_words(nxt),
-            "files": files, "summary": summary}
+def _reply(conclusion, limits, nxt, files, summary, by_class=False):
+    """A tool's result, every text in this server's words; a sample of the class design in its own words, its strata
+    being the map's classes, not input conditions."""
+    words = _class_text if by_class else (lambda t: t)
+    return {"conclusion": words(_mcp_words(conclusion)), "limits": words(_mcp_words(limits)),
+            "next": words(_mcp_words(nxt)), "files": files, "summary": summary}
+
+
+def _class_text(text):
+    if not text:
+        return text
+    for pat, rep in ((r"\bwith the same condition layer\b", 'with design "class"'),
+                     (r"\bthe same condition layer\b", 'the class design'),
+                     (r"\bsample with condition\b", 'sample with design "class"'),
+                     (r"\ba condition layer\b", "the map's classes")):
+        text = re.sub(pat, rep, text)
+    from .cli import class_words
+    return class_words(text)
+
+
+def _sidecar_by_class(csv_path):
+    """Whether the sample beside this CSV is of the class design (its sidecar says so)."""
+    side = csv_path[:-4] + ".json" if str(csv_path).endswith(".csv") else str(csv_path) + ".json"
+    try:
+        with open(side) as f:
+            return (json.load(f).get("condition") or {}).get("by") == "map class"
+    except (OSError, ValueError, AttributeError):
+        return False
 
 
 def _grid_shape(path):
@@ -876,7 +902,7 @@ def sample(
                                                  "fixed now")] = None,
     seed_from_map: Annotated[bool, P(description="Draw a sample a certificate can rest on: the seed is taken from the "
                                                  "map's digest, the draw's settings and certify's alpha, delta and "
-                                                 "rule, which are fixed now (random, sequential or condition design; "
+                                                 "rule, which are fixed now (random, sequential, condition or class design; "
                                                  "needs alpha)")] = False,
     rule: Annotated[Literal["prefix", "bonferroni"] | None,
                     P(description="With seed_from_map: certify's rule, fixed now (default prefix; target and "
@@ -1003,6 +1029,7 @@ def sample(
                "rows; to add windows, call sample again with design \"sequential\", the same seed, a larger budget and "
                f"extend={path}.")
     return _reply(" ".join(said), _join(limits), nxt, {"sample_csv": path, "sidecar": side_path},
+                  by_class=(side.get("condition") or {}).get("by") == "map class", summary=
                   {"design": d, "n_labelled": len(side["indices"]), "n_population": side["n_population"],
                    "per_condition": per, "seed": side.get("seed"),
                    **({"anchor": side.get("anchor"), "first_budget": side.get("first_budget")} if d == "sequential"
@@ -1201,7 +1228,7 @@ def estimate(
                                                ("no reviewer rate, the labels taken as right", stated)) if applies]
             nxt += (" With a reference_class column (the class seen in each window)"
                     + "".join(f", {said}" for said in need) + ", per_class=true gives each class's accuracy.")
-    return _reply(" ".join(said), _join(limits), nxt, {"estimate": out}, summ)
+    return _reply(" ".join(said), _join(limits), nxt, {"estimate": out}, summ, by_class=_sidecar_by_class(path))
 
 
 def _which_map(r, out):
@@ -1384,7 +1411,7 @@ def certify(
                + "A larger random sample (sample with design \"random\" and a larger budget, labelled in full) can "
                "certify more. " + _decide.certificate_second_look(
                    d / 100, target_rule or int(r["n_labelled"]) >= int(r["min_labels_to_certify"])))
-    return _reply(" ".join(said), _join(limits), nxt, files, summ)
+    return _reply(" ".join(said), _join(limits), nxt, files, summ, by_class=_sidecar_by_class(path))
 
 
 def _condition_need(r, alpha, delta):

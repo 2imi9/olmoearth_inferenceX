@@ -35,7 +35,7 @@ What it answers
 | Which of two maps of the same time is more accurate? | `sample a.tif --other b.tif --budget 100 --out pairs.csv`, fill in `reference_class`, then `estimate pairs.csv` | about 100, where the maps differ |
 | Which class's confident calls can't I trust? | `sample scores.tif --design audit --per-class 20 --out audit.csv`, fill in `reference_class`, then `estimate audit.csv --alpha 0.05` | about 20 per class |
 | Where do two maps differ? | `compare a.tif b.tif --out diff` | none |
-| Can someone else check which part I certified? | sample with `--seed-from-map`; `certificate to_label_zone.json --date 2024-01-01/2024-12-31 --out cert`, then `verify cert/certificate.json --scores map.tif` | none beyond `certify`'s |
+| Can someone else check which part I certified? | sample with `--seed-from-map --alpha 0.05`; `certificate to_label_zone.json --date 2024-01-01/2024-12-31 --out cert`, then `verify cert/certificate.json --scores map.tif` | none beyond `certify`'s |
 | At which window size can each class be seen? | `scale scores.tif` (add `--reference truth.tif` for each size's error rate) | none |
 
 Every command starts with `oe-inferencex`. The input is the model's per-class scores before the argmax, as a GeoTIFF
@@ -87,25 +87,31 @@ With a simple random sample of the map's windows, drawn by `sample --design rand
   fails on at most δ of samples, 10% by default (`certify --alpha`, `--delta`, with its default prefix rule or
   `--rule bonferroni`). With the zone to trust fixed before labelling (`sample --target C`), certifying it with a
   given probability takes about half the labels the Bonferroni rule needs for that zone, when the target is right. On a sequential sample (`--design
-  sequential`) labels can be added and certify rerun at every look under the same guarantee.
+  sequential`) labels can be added and certify rerun at every look under the same guarantee. δ counts every sample,
+  those that certify nothing included: among the samples that do certify a zone, more than δ can be wrong.
 - **Each class's share** has an exact interval, and all classes' intervals hold together at 95%; so do the producer's
   accuracies (`estimate --per-class`).
+- **Per map class**, with a sample stratified by the map's class (`sample --design class`, the allocation Olofsson et
+  al. 2014 advise): each class's user's accuracy has an exact interval, and the class areas and producer's
+  accuracies exact intervals that hold together at 95%.
 
 Which of two maps of the same time is more accurate takes its own sample, of the windows where they differ
 (`sample --other`, then `estimate`): a 95% interval on the difference, and an exact sign test that names a map while
 the labels are at most a fifth of those windows.
 
 Three assumptions: the windows were drawn at random by `sample`; the labels are right; and the budget and settings (α,
-δ, the rule and level cut, `--classes`) were fixed before any label was read, with each result computed once. The one
+δ, the rule and level cut, `--classes`) were fixed before any label was read, with each result computed once
+(`sample --seed-from-map --alpha` fixes α, δ and the rule with the draw, for a certificate). The one
 exception is certify on a sequential sample, rerun as labels are added with α and δ unchanged; an error rate read from
-a sequential sample needs its number of labels fixed before labelling. The tests check each statement by exact
-computation, and the [research record](https://github.com/2imi9/olmoearth_inferenceX-record) checks them on fully
-labelled real maps, except the target rule, new in 1.16.0, which only the tests check so far.
+a sequential sample needs its number of labels fixed before labelling. "Exact" means decided in integer arithmetic
+wherever floating point could err, up to 5 million windows; above that the floats decide, within about 1e-8 relative.
+The tests check each statement by exact computation, and the [research record](https://github.com/2imi9/olmoearth_inferenceX-record) checks them on fully
+labelled real maps, the target rule and the class design included (exp116).
 
 A certified zone can travel with the map: `certificate` packs the statement, the zone as a GeoTIFF and digests of
 the map into a bundle, and `verify` builds it again from the map, the seed and the labels and compares it. It takes on
-the issuer's word that the labels are right, the map's date, when alpha and delta were chosen, and that the sample
-was drawn once.
+the issuer's word that the labels are right, the map's date, and that the sample was drawn once; α, δ and the rule
+are fixed with the draw.
 
 Without labels nothing is guaranteed: the confidence orders the windows to check, and in a new place it can be sure
 and wrong.

@@ -11,7 +11,8 @@ for a map with no grid); copies of the labelled sample, its sidecar, the zone JS
 sha256 digests of the map's decoded pixel values with its valid mask and transform, and of every file in the bundle.
 `certificate` verifies the bundle before handing it over.
 
-A certificate needs a sample drawn with the new `sample --seed-from-map` (random, sequential or condition design):
+A certificate needs a sample drawn with the new `sample --seed-from-map --alpha A` (random, sequential, condition or
+class design):
 its seed is 128 bits of sha256 over the map's digest and the settings that change what certify gives (the design, the
 budget except for a sequential sample, the window size, the logits reading, a product's confidence range, the target,
 the anchor, and the digests of a product's band and of a condition layer), so none of those settings can change after
@@ -30,11 +31,47 @@ network; it fails closed, prints each check on its own line and the statement as
 all pass; `--at X Y` or `--at-pixel ROW COL` says whether a point lies in the
 zone certify gives again. For a product it asks for the band too (`--confidence`). The MCP server gains a read-only
 `verify` tool. The fields map onto ISO 19157-1 (a conformance result and a coverage result). Taken on the issuer's
-word, and said so: the labels, the map's date and when the certificate was made, the paths, the condition names, when
-alpha, delta, the rule and the level cut were chosen, and that the sample was drawn once. The statistics are
+word, and said so: the labels, the map's date and when the certificate was made, the paths, the condition names,
+and that the sample was drawn once. The statistics are
 certify's own; what is new is the statement as a portable, re-checkable record: a search of standards (ISO 19157, STAC
 extensions, CEOS validation practice) and the literature on 24 October 2026 found no certificate that is at once
 design-based with a finite-sample bound, for a confidence-selected zone, bound to the map and re-checkable.
+
+**The class design: a sample stratified by map class.** `sample --design class` stratifies by the map's own class, as
+agencies do (Olofsson et al. 2014): every class gets `--min-per-class` labels (default 50, or all its windows) and the
+rest of the budget goes in proportion to class size (`estimate.class_allocation`). Each class's labels are a simple
+random sample of it, so its error rate and user's accuracy have exact intervals and the whole-map rate takes the union
+bound over the classes; `estimate --per-class` adds each class's area and producer's accuracy with exact intervals that
+hold together at 95% (exact intervals on each reference class's count in each stratum at 1 − 0.05/(L·S), a union
+bound; Olofsson's stratified estimates as points), and `certify` gives a zone per class. tests/test_class_design.py
+checks the coverage by exact computation over the stratified draw on 45 maps, with a negative control that shows the
+check can fail. It takes no condition layer, so a certificate needs no layer file. On real maps (the record's
+exp116, preregistered: the suite's 356 fully labelled unit maps), each class's user's accuracy covered at its level for
+2,401 of 2,402 classes, the areas and producer's accuracies held together on all 269 maps, and for every one of the
+1,148 classes under 5% of its map the interval was narrower than a random sample's (median 0.61 of its width). The same
+experiment graded the target rule of 1.16.0 on 420 cells per target: its zone was wrong more than alpha on at most
+0.0925 of draws at target 0.5 (bar 0.145), and with the target right it certified at least the target at least as
+often as Bonferroni on 744 of 771 cells; five certificates on the Dynamic World tile verified.
+
+**certify's options fixed with the draw.** `sample --seed-from-map` now needs `--alpha` (and takes `--delta`, `--rule`
+and `--level-cut`): certify's options are fixed in the sidecar and enter the seed, `certify` reads them and refuses any
+other, and a certificate no longer takes on the issuer's word when they were chosen (the final review's first
+deduction: one sample certified nothing at alpha 0.05 and 0.10 and 70% at 0.15, and each of those certificates
+verified). `certify --alpha` is then optional, as is the MCP certify tool's alpha.
+
+**What delta counts.** Every certify output that certifies a zone, the MCP reply and a certificate's statement now say
+that delta bounds the share of all samples, those that certify nothing included, on which a statement is wrong, and
+that among the samples that do certify a zone more than delta can be wrong (in exp116, on 46 of the 413 real-map cells
+where the target rule certified a zone, while the share of all draws stayed under delta on every cell).
+
+**form="top1" keeps a tie-free scale.** Its window confidences are on the probability scale, where a mean log
+probability above about -5.6e-17 rounds to exactly 1.0 and ties (96 of 256 windows on a test map with logit gaps of 5 to
+60): the rounding Barron, Gnanapragasam and Tschannen (arXiv 2610.31642) call softmax collapse. `arrays["log_confidence"]`
+holds the same windows on the log scale, which ties only past logit gaps of about 745; assess's own review sets were already ranked on it, and the
+comment that said exp kept the ranking is corrected. The command line's default logit margin never had the ties.
+
+Also: `Affine` transforms are composed with `@`, as affine 3 asks, with `*` kept for an older affine; the CI runs the
+MCP server's tests (the mcp extra), which were skipped; README says what "exact" means above 5 million windows.
 
 Also: a condition sample's sidecar records the layer's digest and the names given to its values (`condition.sha256`,
 `condition.names_given`); a condition name is at most 64 printable characters, without quotes or backslashes; a
