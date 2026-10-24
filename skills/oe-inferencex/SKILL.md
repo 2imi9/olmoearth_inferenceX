@@ -5,7 +5,8 @@ description: Check a classification map made by an Earth-observation model with 
 
 # oe-inferencex
 
-If the oe-inferencex MCP server is connected (tools `assess`, `compare`, `sample`, `estimate`, `certify`, `guide`),
+If the oe-inferencex MCP server is connected (tools `assess`, `compare`, `sample`, `estimate`, `certify`, `decide`,
+`plan`, `verify`, `guide`),
 call the tools: each returns a `conclusion`, its `limits` and what can be done `next`. Otherwise run the commands
 below.
 
@@ -40,11 +41,16 @@ Match the user's question to a step. The tool and the command of each step have 
    `--reviewer-false-alarm E0 --reviewer-miss E1` (shares of the correct and of the wrong windows). About 400
    rather than 300: the same labels serve step 3, and at alpha 0.05 even a perfect large map certifies a zone
    from 300 random labels only about half the time.
-3. **Which part can I trust?** `certify`. `oe-inferencex certify to_label.csv --alpha 0.05`: the most confident
-   share of the map whose error rate is at most alpha. It may certify nothing, and says why. If the user knows before
+3. **Which part can I trust?** `certify`. `oe-inferencex certify to_label.csv --alpha 0.05`: the most confident share
+   of the map whose error rate is at most alpha. It may certify nothing, and says why. If the user knows before
    labelling which share they want to trust, draw the sample with `--target C` (a grid level): certify then uses the
    target rule, with the same guarantee and, when the target is right, about half the labels the Bonferroni rule
-   needs for that zone on a large map.
+   needs for that zone on a large map. To hand the zone to someone else, draw the sample with `--seed-from-map`,
+   then `oe-inferencex certificate to_label_zone.json --date D --out cert` packs the zone with the map's digests, and
+   `oe-inferencex verify cert/certificate.json --scores <the user's copy of the map>` checks it (the server's
+   `verify` tool too; for a product, the band as well); trust a certificate only when verify says verified, quote
+   the statement verify prints, and say what it takes on the issuer's word (the labels, the date, when alpha and delta
+   were chosen, that the sample was drawn once).
 4. **Which of two maps is better, and where do they differ?** `compare`.
    `oe-inferencex compare a.tif b.tif --out diff` says where they differ. Only with labels does it say which map
    is right there: add `--labels truth.tif`, and `--date-a`, `--date-b` when the maps describe dates. With few

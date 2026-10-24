@@ -601,7 +601,7 @@ def _condition_index(condition, pop, n_windows, condition_names=None):
 
 
 def sample_for_estimation(margin, budget, design="confidence", p1=None, tiles=None, per_tile=M_PER_TILE,
-                          n_strata=N_STRATA, valid=None, seed=0, condition=None, condition_names=None):
+                          n_strata=N_STRATA, valid=None, seed=0, condition=None, condition_names=None, stable=False):
     """Which windows to label so that `estimate_error_rate` can give an honest rate afterwards.
 
     margin  : per-window confidence margin, higher = more confident (assess's `arrays["confidence"]`, flattened)
@@ -654,8 +654,15 @@ def sample_for_estimation(margin, budget, design="confidence", p1=None, tiles=No
     out = {"design": design, "budget": budget, "n_population": N, "seed": seed}
     if condition is not None:
         c_pop, c_values, c_names, c_sizes, c_notes = _condition_index(condition, pop, margin.size, condition_names)
+    if stable and design in ("random", "condition"):
+        # the draw a certificate rests on (sample --seed-from-map): taken from the fixed random order of the population
+        # that sequential_order reads straight from PCG64, the same on every numpy release, where Generator.choice's
+        # stream may change between releases and an honest certificate would then fail to verify
+        from .sequential import sequential_order
+        order = sequential_order(N, seed)
     if design == "random":
-        out["indices"] = pop[rng.choice(N, budget, replace=False)]      # the same draw with or without a condition
+        # the same draw with or without a condition
+        out["indices"] = pop[order[:budget]] if stable else pop[rng.choice(N, budget, replace=False)]
     elif design == "sequential":
         # the first `budget` windows of a fixed random order (sequential.sequential_order), read in that order; a
         # reviewer who adds labels takes the next ones, and certify then uses the sequential rule, valid at every look
@@ -666,7 +673,8 @@ def sample_for_estimation(margin, budget, design="confidence", p1=None, tiles=No
         # a simple random sample within each condition; with one condition this is the random design's own draw
         # (draw_stratified with one stratum returns the indices of rng.choice(N, budget))
         alloc = equal_allocation(c_sizes, budget)
-        local = draw_stratified(rng, c_pop, c_sizes, alloc)
+        local = (np.concatenate([order[c_pop[order] == h][:int(nh)] for h, nh in enumerate(alloc)]) if stable else
+                 draw_stratified(rng, c_pop, c_sizes, alloc))
         out.update({"indices": pop[local], "strata": c_pop, "strata_of_population": pop, "sizes": c_sizes.tolist(),
                     "allocation": alloc.tolist(), "n_strata": int(c_sizes.size)})
     elif design in ("confidence", "proportional"):

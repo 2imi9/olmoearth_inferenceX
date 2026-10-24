@@ -1,5 +1,60 @@
 # Changelog
 
+## 1.17.0 (2026-10-24)
+
+**Map certificates: a certified zone that travels with the map.** `oe-inferencex certificate ZONE_JSON --date D --out
+DIR` packs the result `certify` wrote into a bundle: `certificate.json`, a STAC Item (1.0.0) whose `zc:` properties
+state the guarantee (alpha, delta, the rule, the design, the seed, the target or anchor, the zone's coverage,
+threshold, upper bound and ties, per input condition where there is one, and the statement in words with what the
+population leaves out) for the map of date D; the zone as a GeoTIFF on the map's window grid, which a GIS opens (.npy
+for a map with no grid); copies of the labelled sample, its sidecar, the zone JSON and any input-condition layer; and
+sha256 digests of the map's decoded pixel values with its valid mask and transform, and of every file in the bundle.
+`certificate` verifies the bundle before handing it over.
+
+A certificate needs a sample drawn with the new `sample --seed-from-map` (random, sequential or condition design):
+its seed is 128 bits of sha256 over the map's digest and the settings that change what certify gives (the design, the
+budget except for a sequential sample, the window size, the logits reading, a product's confidence range, the target,
+the anchor, and the digests of a product's band and of a condition layer), so none of those settings can change after
+labelling without changing the windows. Such a sample is the first windows of a fixed random order read straight from
+PCG64, the same on every numpy release. The seed cannot show that the issuer drew once: any change to the map or the
+settings before labelling gives another draw, and the docs and every statement say the guarantee assumes one.
+
+`oe-inferencex verify certificate.json --scores MAP` builds the certificate again from the map, the bundled labels and
+the recorded settings and compares it: the map (digest, CRS as a CRS, grid), the bundle (its own files, as recorded,
+and nothing else), the condition layer, the seed, the sample drawn again (its sidecar, and every CSV column but the
+labels to a spreadsheet's rounding, no coarser than half a pixel), certify run again (the zone JSON), the STAC Item
+built again from that run (every field, by type, numbers to ten significant digits, the issuer's fields in their
+form) and the zone mask (a plain single-page GeoTIFF holding certify's zone). It reads bundle files only as regular
+files and rasters only as GeoTIFF or .npy, after checking what their headers declare, with no sidecar files and no
+network; it fails closed, prints each check on its own line and the statement as certify gives it, and exits 1 unless
+all pass; `--at X Y` or `--at-pixel ROW COL` says whether a point lies in the
+zone certify gives again. For a product it asks for the band too (`--confidence`). The MCP server gains a read-only
+`verify` tool. The fields map onto ISO 19157-1 (a conformance result and a coverage result). Taken on the issuer's
+word, and said so: the labels, the map's date and when the certificate was made, the paths, the condition names, when
+alpha, delta, the rule and the level cut were chosen, and that the sample was drawn once. The statistics are
+certify's own; what is new is the statement as a portable, re-checkable record: a search of standards (ISO 19157, STAC
+extensions, CEOS validation practice) and the literature on 24 October 2026 found no certificate that is at once
+design-based with a finite-sample bound, for a confidence-selected zone, bound to the map and re-checkable.
+
+Also: a condition sample's sidecar records the layer's digest and the names given to its values (`condition.sha256`,
+`condition.names_given`); a condition name is at most 64 printable characters, without quotes or backslashes; a
+sample CSV that names a column twice is refused; a sidecar writes an infinite no-data value as text ("inf"), as it
+writes NaN; `certify` reads a map at a GDAL path (/vsizip/, s3://) as `sample` does. Tests: tests/test_certificate.py
+(50).
+
+Four independent reviews (ten attackers, each finding reproduced by another agent) tried to forge certificates that
+still verify, to break verify, or to break honest certificates. They found, in turn: fields, the mask, the seed rule
+and the condition layer taken on trust; the logits reading, the target's weight, a product's confidence range and a
+31-bit seed searchable or unbound; a product's band read from a path the issuer chose; numbers compared to a tolerance
+(a seed 1e28 off, a window size of 3.9999999, Infinity); a mask's overviews, scale, second page, extra tags and
+sidecar files unchecked; VRT files that made verify fetch URLs; FIFOs, links to /dev/zero and forged tiny error levels
+that hung verify; condition names that could carry terminal control sequences or close their quotes; a CSV column
+named twice; coordinates written coarsely enough to name other windows; and honest certificates that failed (a
+spreadsheet-saved CSV, a map with no CRS, a custom LAEA CRS spelled as EPSG:3035, an infinite or negative no-data
+value, numpy's random stream, a .DS_Store in the folder). Each was fixed and has a test. The version is a minor one: existing commands keep
+their results (a condition sample's sidecar gains two fields, and the MCP guide lists `verify`), and the certificate
+format has no outside reader yet.
+
 ## 1.16.0 (2026-10-24)
 
 **The target rule: the same certified zone from about half the labels.** `sample --design random --target C` fixes,

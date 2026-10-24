@@ -203,6 +203,12 @@ def _condition_names(items, command):
             raise SystemExit(f"{command}: --condition-names takes value=name pairs, such as 0=clear 1=cloudy; got {item!r}")
         if value in names:
             raise SystemExit(f"{command}: --condition-names names the value {value} twice")
+        if len(name) > 64 or any(not ch.isprintable() or ch in '"\\' for ch in name):
+            # a name is printed in every statement made about its condition, a certificate's among them: control
+            # characters could rewrite what a terminal shows, and a quote could close the name and write a coverage
+            # of its own (reviews of 24 October 2026)
+            raise SystemExit(f"{command}: a condition name is at most 64 printable characters, without quotes or "
+                             f"backslashes, got {name!r}")
         names[value] = name
     return names
 
@@ -634,6 +640,75 @@ def cmd_scale(args):
     return 0
 
 
+# ----------------------------------------------------------------------------- certificate and verify
+def cmd_certificate(args):
+    """A certified zone packed to travel with the map: a STAC Item stating the guarantee, the zone as a georeferenced
+    mask, the labelled sample, its sidecar and any condition layer, and digests binding them to the map; verified
+    before it is handed over (certificate.py, 1.17.0)."""
+    from . import certificate as cert
+    try:
+        item = cert.build(args.zone, args.out, args.date, args.scores, args.confidence)
+    except (ValueError, TypeError, KeyError, OSError) as exc:
+        raise SystemExit(cert.printable(f"certificate: {exc}")) from None
+    p = item["properties"]
+    band = " --confidence <their copy of the band>" if p["zc:map"].get("confidence_sha256") else ""
+    print(cert.printable(
+        f"{p['zc:statement']}\nwrote {os.path.join(args.out, 'certificate.json')} with "
+        f"{', '.join(a['href'] for a in item['assets'].values())}, and verified it; the map's digest is "
+        f"{p['zc:map']['map_sha256'][:16]}...; anyone holding the map can check it: oe-inferencex verify "
+        f"{os.path.join(args.out, 'certificate.json')} --scores <their copy of the map>{band}\nnote: "
+        f"{cert.ISSUERS_WORD}"))
+    return 0
+
+
+def cmd_verify(args):
+    """Check a certificate by building it again from the map, the bundled labels and the recorded settings: the
+    bundle's files, the map, the seed, the draw, certify's result, the certificate's every field and the zone mask;
+    and with --at or --at-pixel, whether a point lies in the zone certify gives again."""
+    from . import certificate as cert
+    if args.out:
+        base = os.path.dirname(os.path.abspath(args.certificate))
+        if os.path.dirname(os.path.abspath(args.out)) == base:
+            raise SystemExit("verify: --out would write into the bundle's directory, which holds the bundle's files "
+                             "and nothing else; name a file elsewhere")
+        _check_out_file(args.out, "verify")
+        _refuse_overwriting_inputs("verify", [args.out], [args.certificate, args.scores, args.confidence])
+    try:
+        res = cert.verify(args.certificate, args.scores, args.confidence)
+    except cert.Unreadable as exc:
+        raise SystemExit(f"verify: {exc}") from None
+    pt = pt_error = None
+    if args.at or args.at_pixel:
+        x, y = args.at if args.at else (None, None)
+        r, c = args.at_pixel if args.at_pixel else (None, None)
+        if res["mask"] is None:                           # only the zone certify gives again is looked in
+            pt_error = "the zone could not be built again, so no point is looked up in it"
+        else:
+            try:
+                pt = cert.point(args.certificate, x=x, y=y, row=r, col=c, mask=res["mask"])
+            except Exception as exc:                      # a point not looked up never hides the checks
+                pt_error = str(exc)
+    mark = {True: "ok", False: "FAILED", None: "not checked"}
+    lines = [f"{name}: {mark[c['ok']]}: {c['detail']}" for name, c in res["checks"].items()]
+    lines += [f"note: {n}" for n in res["notes"]]
+    if pt is not None:
+        lines.append("point: " + (f"window {pt['window'][0]}, {pt['window'][1]} is " if pt["window"] else "it is ")
+                     + pt["where"] + ("" if res["verified"] else " (in the zone certify gives again; the certificate "
+                                      "is not verified)"))
+    elif pt_error:
+        lines.append(f"point: not looked up: {pt_error}")
+    verdict = ("verified: " + res["statement"] if res["verified"] else
+               "not verified: a check failed or could not be made; the certificate's statement is not shown to hold "
+               "for this map")
+    print("\n".join(cert.printable(line) for line in lines + [verdict]))     # each field on its own line
+    if args.out:
+        with open(args.out, "w") as f:
+            json.dump(_stamp({"verified": res["verified"], "checks": res["checks"], "notes": res["notes"],
+                              "statement": res["statement"] if res["verified"] else None, "map_read": res["map_read"],
+                              "point": pt, "certificate": os.path.abspath(args.certificate)}, "verify"), f, indent=1)
+    return 0 if res["verified"] else 1
+
+
 # ----------------------------------------------------------------------------- compare
 def decisions(path, nodata, threshold, notes=None):
     """(hard decisions, valid pixels, geo, n_classes, per-pixel confidence or None). The confidence breaks a tied
@@ -774,7 +849,9 @@ def _json_nodata(value):
     strict parser refuses, 2026-10-06); _map_windows reads it back with float()."""
     if value is None:
         return None
-    return "nan" if np.isnan(float(value)) else value
+    v = float(value)
+    # NaN and the infinities as text, which strict JSON (and a certificate's reader) accepts; float() reads them back
+    return "nan" if np.isnan(v) else ("inf" if v > 0 else "-inf") if np.isinf(v) else value
 
 
 def _product_args(args, command):
@@ -1024,6 +1101,10 @@ def cmd_sample(args):
     JSON carrying the design so `estimate` can give the rate the design earns. With --condition, the input condition
     of every window is fixed here and recorded in the sidecar; `estimate` and `certify` read it from there."""
     # read with getattr: demo.py and the tests build the argument Namespace by hand, without these attributes
+    if getattr(args, "seed_from_map", False) and (getattr(args, "other", None) or
+                                                   getattr(args, "design", None) == "audit"):
+        raise SystemExit("sample: --seed-from-map draws one map's sample from that map's own digest; it does not "
+                         "apply to --other or --design audit")
     if getattr(args, "target", None) is not None and (getattr(args, "other", None) or
                                                       getattr(args, "design", None) == "audit"):
         raise SystemExit("sample: --target fixes the zone the target rule will certify, which needs a simple random "
@@ -1069,6 +1150,12 @@ def cmd_sample(args):
     if design == "condition" and not cond_path:
         raise SystemExit("sample: --design condition needs --condition, a raster of each pixel's input condition (a "
                          "cloud flag, the modalities present, a sensor id)")
+    seed_from_map = bool(getattr(args, "seed_from_map", False))
+    if seed_from_map and args.seed != 0:
+        raise SystemExit("sample: give --seed or --seed-from-map, not both")
+    if seed_from_map and design not in ("random", "sequential", "condition"):
+        raise SystemExit(f"sample: --seed-from-map draws a sample for a certificate, which certify gives from the "
+                         f"random, sequential or condition design; not from --design {design}")
     target = getattr(args, "target", None)
     if target is not None:
         # The target rule's zone, fixed before any label (1.16.0): certify reads it from the sidecar and refuses another
@@ -1118,6 +1205,21 @@ def cmd_sample(args):
             anchor_rule = "declared"
     if anchor is not None and not est.ZONE_GRID[0] <= anchor <= 1:
         raise SystemExit(f"sample: --anchor is a share of the map between {est.ZONE_GRID[0]:g} and 1, got {anchor:g}")
+    seed_rule = None
+    if seed_from_map or (old_side is not None and old_side.get("seed_rule") == "from_map"):
+        # The seed taken from the map's digest together with every setting that fixes the draw (1.17.0): anyone holding
+        # the map derives it again, so a certificate can show the seed was not picked by hand and that no setting was
+        # changed after labelling (certificate.verify). An extension keeps the rule when its seed is the same.
+        from .certificate import draw_seed
+        seed_rule = draw_seed(args.scores, args.nodata, args.logits, conf_path, conf_range, cond_path, design,
+                              args.budget, args.patch, target, anchor)
+        if seed_from_map:
+            if old_side is not None and int(old_side["seed"]) != seed_rule["seed"]:
+                raise SystemExit(f"sample --extend: {extend} was drawn with --seed {old_side['seed']}, not the seed this "
+                                 "map and its settings give; extend it with that --seed")
+            args.seed = seed_rule["seed"]
+        elif seed_rule["seed"] != int(args.seed):
+            seed_rule = None
     out, geo, p1_w, pooled, more, prod_info = _sample_map(args, conf_path, conf_range, cond_path)
     prod_notes += more
     arr = out["arrays"]
@@ -1131,7 +1233,7 @@ def cmd_sample(args):
         sample = est.sample_for_estimation(margin, args.budget, design=design, p1=p1_w, tiles=tiles,
                                            per_tile=args.per_tile, valid=valid_w, seed=args.seed,
                                            condition=None if pooled is None else pooled["grid"].ravel(),
-                                           condition_names=cond_names)
+                                           condition_names=cond_names, stable=seed_rule is not None)
     except ValueError as exc:
         raise SystemExit(f"sample: {exc}")
     idx = sample["indices"]
@@ -1174,12 +1276,19 @@ def cmd_sample(args):
         side["anchor"], side["anchor_rule"] = float(anchor), anchor_rule     # fixed now; certify reads them
     if target is not None:
         side["target"] = {"coverage": float(target), "weight": est.TARGET_WEIGHT}   # fixed now; certify reads it
+    if seed_rule is not None:
+        side.update({"seed_rule": "from_map", "map_sha256": seed_rule["map_sha256"],
+                     "seed_settings": seed_rule["settings"]})
     if cond is not None:
-        # the design's source of truth for `estimate` and `certify`, which never read the raster again
+        # the design's source of truth for `estimate` and `certify`, which never read the raster again; its digest
+        # binds the layer to the sample, so a certificate can show the layer was not swapped after labelling
+        from .certificate import names_given, raster_digest
         side["condition"] = {"source": os.path.abspath(cond_path), "rule": RULE_TEXT, "values": cond["values"],
                              "names": cond["names"], "sizes": cond["sizes"], "n_labelled": cond["n_labelled"],
                              "allocation_rule": cond["allocation_rule"], "n_windows_split": pooled["n_split"],
-                             "n_windows_no_code": pooled["n_no_code"]}
+                             "n_windows_no_code": pooled["n_no_code"],
+                             "sha256": (seed_rule["settings"]["condition_sha256"] if seed_rule is not None
+                                        else raster_digest(cond_path)), "names_given": names_given(cond_names)}
     side.update(_sidecar_map_fields(args, geo, [int(hw), int(ww)], out, conf_path, conf_range, prod_info))
     side["how_to_label"] = ("open each window, set wrong=1 if the map's class there (the `map_class` column: the "
                             "majority of the window's pixels) is not what is on the ground, else 0; then: "
@@ -1201,7 +1310,9 @@ def cmd_sample(args):
         kept = 0 if old_wrong is None else sum(str(v).strip() != "" for v in old_wrong)
         notes.insert(0, ("label from the top row down, in order; certify may be run after any number of labels and "
                          "holds at every look. To add windows later: oe-inferencex sample " + args.scores
-                         + f" --design sequential --seed {args.seed} --budget <more> --extend {args.out}")
+                         + (" --design sequential " + ("--seed-from-map" if seed_rule is not None else
+                                                       f"--seed {args.seed}")
+                            + f" --budget <more> --extend {args.out}"))
                      + (f"; the {kept} labels already given are kept" if kept else ""))
     if target is not None:
         notes.insert(0, f"the target, the {100 * target:g}% most confident zone, is fixed now: certify will test it "
@@ -1290,7 +1401,8 @@ def _sequential_to_extend(path, args):
     if side.get("design") != "sequential" or side.get("anchor") is None:
         raise SystemExit(f"sample --extend: {path} was drawn with the {side.get('design')!r} design; only a sequential "
                          "sample can be extended, since only its order and anchor were fixed before labelling")
-    if int(side.get("seed", -1)) != int(args.seed):
+    if not getattr(args, "seed_from_map", False) and int(side.get("seed", -1)) != int(args.seed):
+        # with --seed-from-map the seed is derived later, once the anchor is known, and compared there
         raise SystemExit(f"sample --extend: {path} was drawn with --seed {side.get('seed')}; pass the same seed")
     if os.path.abspath(args.scores) != side.get("scores") or int(args.patch) != int(side.get("patch", -1)):
         raise SystemExit(f"sample --extend: {path} was drawn from {side.get('scores')} at --patch {side.get('patch')}; "
@@ -1761,8 +1873,11 @@ def _labelled_sample(path, command):
     with open(side_path) as f:
         side = json.load(f)
     _check_sidecar(side, side_path)
-    with open(path, newline="", encoding="utf-8-sig") as f:                 # a spreadsheet's BOM is not a column name
-        rows = list(csv.DictReader(f))
+    from .certificate import csv_rows
+    try:                                     # a spreadsheet's BOM is not a column name; a column named twice is refused
+        rows = csv_rows(path)
+    except (ValueError, OSError) as exc:
+        raise SystemExit(f"{command}: {exc}") from None
     need = {"index", "window_row", "window_col", "wrong"}
     if not rows or not need <= set(rows[0]):
         raise SystemExit(f"{path}: expected the columns `sample` wrote ({', '.join(sorted(need))}); found "
@@ -1834,6 +1949,12 @@ def _rounding_tolerance(text):
     return max(0.5 * 10.0 ** (-decimals + (int(exp) if exp else 0)), 1e-6)
 
 
+def _readable_path(path):
+    """A file on disk, or a path GDAL reads itself (/vsizip/, /vsicurl/, s3://): read_raster then says if it cannot."""
+    p = str(path)
+    return os.path.exists(p) or p.startswith("/vsi") or "://" in p
+
+
 def _map_windows(side, scores_override, nodata, command, rows=None, idx=None, confidence_override=None):
     """The map's per-window confidence, class and validity, recomputed from the scores the sample was drawn on, and
     checked to be that map: its population must be the sample's, and its confidence at the sampled windows the
@@ -1843,7 +1964,7 @@ def _map_windows(side, scores_override, nodata, command, rows=None, idx=None, co
         raise SystemExit(f"{command}: --confidence names a product's band, and this sample was drawn on scores, not "
                          "with --confidence")
     path = scores_override or side.get("scores")
-    if not path or not os.path.exists(path):
+    if not path or not _readable_path(path):
         raise SystemExit(f"{command}: the map's scores are needed again ({path or 'no path in the sidecar'} not found); "
                          "pass --scores with the raster `sample` was run on")
     recorded = None if side.get("nodata") is None else float(side["nodata"])     # "nan" is how NaN is written
@@ -1855,7 +1976,7 @@ def _map_windows(side, scores_override, nodata, command, rows=None, idx=None, co
         raise SystemExit(f"{command}: --nodata {nodata:g} differs from the {recorded:g} the sample was drawn with")
     if side.get("confidence"):                                  # a class map with its confidence band
         conf_path = confidence_override or side["confidence"]
-        if not os.path.exists(conf_path):
+        if not _readable_path(conf_path):
             raise SystemExit(f"{command}: the map's confidence band is needed again ({conf_path} not found); pass "
                              "--confidence with the band `sample` was run on")
         hard, conf_px, valid, _, n_classes, _, _ = _read_product(path, conf_path, nodata, side.get("confidence_range"),
@@ -3006,6 +3127,28 @@ def build_parser():
                          "accuracy, a census of the reference, not a sample")
     sc.add_argument("--out", default=None, help="JSON to write the profile to (optional)")
     sc.set_defaults(func=cmd_scale)
+    ce = sub.add_parser("certificate", help="pack a certified zone to travel with the map: a STAC Item stating the "
+                                            "guarantee, the zone as a GeoTIFF (.npy for a map with no grid), the "
+                                            "labels, and digests binding them to the map")
+    ce.add_argument("zone", help="the JSON certify wrote (random_zone.json)")
+    ce.add_argument("--date", required=True, help="the date or period the map describes (YYYY-MM-DD or start/end)")
+    ce.add_argument("--out", required=True, help="the directory to write the certificate bundle into")
+    ce.add_argument("--scores", default=None, help="the map, if it has moved since sample read it")
+    ce.add_argument("--confidence", default=None, help="a product's confidence band, if it has moved")
+    ce.set_defaults(func=cmd_certificate)
+    ve = sub.add_parser("verify", help="check a certificate by building it again from the map, the labels and the "
+                                       "recorded settings; and whether a point is in the zone")
+    ve.add_argument("certificate", help="certificate.json, with its bundle beside it")
+    ve.add_argument("--scores", default=None, help="your copy of the map; without it the map is read at the path "
+                                                   "the certificate names, which shows only that the certificate is "
+                                                   "consistent with that file")
+    ve.add_argument("--confidence", default=None, help="a product's confidence band, if it has moved")
+    ve.add_argument("--at", type=float, nargs=2, default=None, metavar=("X", "Y"),
+                    help="a point in the map's CRS: is it inside the certified zone?")
+    ve.add_argument("--at-pixel", type=float, nargs=2, default=None, metavar=("ROW", "COL"),
+                    help="a pixel of a map with no grid: is it inside the certified zone?")
+    ve.add_argument("--out", default=None, help="JSON to write the checks to (optional)")
+    ve.set_defaults(func=cmd_verify)
     c = sub.add_parser("compare", help="measure how two inferences of the same scene differ")
     c.add_argument("a", help="first map: integer classes, a probability map (thresholded), or (C, H, W) scores (argmax)")
     c.add_argument("b", help="second map on the same grid")
@@ -3076,6 +3219,9 @@ def build_parser():
     sm.add_argument("--patch", type=int, default=4)
     sm.add_argument("--nodata", type=float, default=None)
     sm.add_argument("--seed", type=int, default=0)
+    sm.add_argument("--seed-from-map", action="store_true",
+                    help="take the seed from the map's digest and every setting that fixes the draw, so that "
+                         "anyone holding the map derives it again; a certificate needs it (verify checks it)")
     sm.add_argument("--other", default=None, metavar="MAP_B",
                     help="a second map of the same grid and the same time: sample at random among the windows where "
                          "the two maps' classes differ, to learn which map is more accurate (estimate then compares "

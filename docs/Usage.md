@@ -19,7 +19,7 @@ extra) are new in 1.4.0.
 
 ## Quick start
 
-Every command below runs on 1.16.0. `scores.tif` is a map of per-class probabilities; add `--logits` for logits.
+Every command below runs on 1.17.0. `scores.tif` is a map of per-class probabilities; add `--logits` for logits.
 
 ```bash
 pip install "olmoearth-inferencex[geo]"
@@ -1037,6 +1037,74 @@ and either, on every error pattern of a small map, and that the union bound is n
 often than δ. `sample --extend` keeps a `reference_class` column the reviewer added to a sequential sample, after
 `wrong`, blank on the new rows.
 
+### certificate and verify
+
+A certified zone can travel with the map (from 1.17.0). `certificate` packs the result `certify` wrote into a bundle
+anyone holding the map can check, and `verify` checks it.
+
+```bash
+oe-inferencex sample scores.tif --design random --budget 400 --target 0.5 --seed-from-map --out s.csv
+oe-inferencex certify s.csv --alpha 0.05                       # after the reviewer has filled `wrong`
+oe-inferencex certificate s_zone.json --date 2024-06-01 --out cert
+oe-inferencex verify cert/certificate.json --scores my_copy.tif --at 500200 4999800   # is this point certified?
+```
+
+A certificate needs a sample of the random, sequential or condition design drawn with `--seed-from-map`. Its seed is
+128 bits of sha256 over the map's digest and the settings that change what certify gives: the design, the budget (not
+for a sequential sample, which `--extend` lengthens), the window size, the logits reading, a product's confidence
+range, the target, the anchor, and the digests of a product's confidence band and of a condition layer. The no-data
+value is in the map's digest, since it decides the valid pixels. None of those settings can be changed after labelling
+without changing the windows, which verify would show. The windows are the first of a fixed random order read straight
+from PCG64, the same on every numpy release. What the seed cannot show is that the issuer drew once: any change to the
+map or the settings before labelling, however small, gives another draw, and one can be kept, so the guarantee assumes
+a single draw.
+
+The bundle holds `certificate.json`, a STAC Item (`stac_version` 1.0.0) whose `zc:` properties state the guarantee
+(alpha, delta, the rule, the design, the seed, the target or anchor, the zone's coverage, threshold and upper bound,
+ties at the threshold, per input condition where the sample has one, and `zc:statement`, the guarantee in words, with
+what the population leaves out) for the map of `--date` (a date or a start/end period); the zone as a GeoTIFF on the
+map's window grid (`zone_mask.tif`, 1 inside), which a GIS opens (`zone_mask.npy` for a map with no grid); copies of
+the labelled CSV, its sidecar, the zone JSON and any input-condition layer (a GeoTIFF or .npy); and digests that bind it
+to the map: sha256 of the map's decoded pixel values with its valid mask and transform (a file rewritten with other
+compression keeps it, an edited pixel does not), and of every file in the bundle. The zone is the mask, not a
+threshold rule: windows that tie at the threshold can lie on either side. `zc:iso19157` gives the statement as an ISO
+19157-1 conformance result (the zone's error rate at most alpha, passed, failing on at most delta of samples) and the
+mask as its coverage result. `certificate` verifies the bundle before it hands it over.
+
+`verify` builds the certificate again from the map, the bundled labels and the recorded settings, and compares it.
+Its checks: `map` (the map's digest, CRS, shape and transform; the CRS is compared as a CRS, spelled as this package
+spells it), `bundle` (the bundle holds its own files as regular files, each with the digest recorded, and nothing else
+but the files an operating system writes into a folder, such as .DS_Store; a GIS's .aux.xml beside the mask fails it),
+`condition` (the bundled layer: one band on the map's grid, with the digest recorded), `seed` (taken from the map and
+the settings), `draw` (the sample drawn again: its sidecar, and every column of the CSV but `wrong` and the columns a
+reviewer added, to the rounding a spreadsheet makes but no coarser than half a pixel, or 5e-4 for the confidence; a
+column named twice fails it), `certify` (certify run again on the labels must write the zone JSON recorded; alpha in
+[0.0001, 0.5] and delta in [0.000001, 0.5], the levels verify runs), `statement` (the STAC Item built again from that
+run, every field, the statement, the footprint and the assets, must be the one written; integers, text and types
+exactly, other numbers to ten significant digits; the issuer's fields in the form build writes them) and `mask` (a
+plain single-page, single-band 0/1 GeoTIFF with only the tags the writer writes, holding the zone certify gives on the
+map's window grid). It reads bundle rasters only as GeoTIFF or .npy files, checking what their headers declare before
+reading, with no sidecar files and no network, and fails closed: anything it cannot read is a failed check. It prints
+each check, one line each, and, only when all pass, `verified` with the statement as certify gives it, exiting 1
+otherwise. `--at X Y` (the map's CRS) or `--at-pixel ROW COL` says whether that point's window is inside the zone
+certify gives again, and is not looked up when that zone could not be built. Pass `--scores` with your own copy of the
+map, and for a product `--confidence` with your copy of its band (verify asks for it): without them, verify reads the
+files at the paths the certificate names, which shows only that the certificate agrees with those files. The MCP
+server's `verify` tool does the same. `certificate` writes the bundle into a new folder beside `--out`, verifies it
+there and only then moves it in place, so a bundle that would not verify is never written; it replaces only an earlier
+bundle, never other files.
+
+Taken on the issuer's word, and said so by verify: the labels (the point of trust, as for every statement the package
+makes, with any column the reviewer added), so a reviewer's errors pass through; the map's date and when the
+certificate was made and which release wrote it; the paths it names; the condition names (at most 64 printable
+characters without quotes, quoted in the statement as the issuer gave them);
+when certify's own options (alpha, delta, the rule, the level cut) were chosen, which nothing in the bundle shows
+were fixed before the labels were seen (a target fixed by `sample --target` is); and that the sample was drawn once. A
+certificate states one reading of the labels: one certified with `--also-accept` is refused. It is for the map it was
+written from: another date or a new version of the map is another map. It certifies the zone's windows taken
+together, not each pixel, and outside the zone nothing is certified, which does not mean wrong. The statistics are
+certify's own; what 1.17.0 adds is the statement as a portable, re-checkable record.
+
 ### plan
 
 `plan` says, before any label is drawn, how many labels a question needs. For each budget on a ladder (10, 12, 15,
@@ -1428,6 +1496,7 @@ On this pair most of the accuracy comes from the post-event side being usually r
 | `embeddings` | An area of a geo-embeddings Zarr store and labelled points to class probabilities (`from-embeddings`; the `embeddings` extra) |
 | `decide` | Typed answers to set questions, read from a result that `estimate`, `certify` or `compare` wrote |
 | `plan` | How many labels each labelled route needs, budget by budget, before any label is drawn |
+| `certificate` | A certified zone packed to travel with the map (a STAC Item, the zone as a GeoTIFF, digests), and its verifier (`certificate`, `verify`) |
 | `scale` | The same map at several window sizes: each class's survival, windows bordering another class, confidence and, with a reference, the error rate (`scale`) |
 | `cli`, `demo` | The `oe-inferencex` commands |
 | `mcp_server` | The commands as tools of a local MCP server, `oe-inferencex mcp` (the `mcp` extra) |

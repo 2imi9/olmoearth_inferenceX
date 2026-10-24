@@ -81,6 +81,7 @@ TITLES = {
     "guide": "How do I use these tools?",
     "decide": "Turn a result into a typed answer: yes, no or undetermined; a, b or tie; a share",
     "plan": "How many labels do I need? Plan the budget before labelling",
+    "verify": "Can I trust this map's certificate? Check it, and whether a point lies in its certified zone",
 }
 
 HARD_RULES = (
@@ -135,6 +136,9 @@ INSTRUCTIONS = "\n".join([
     "sensor id), pass it as condition to assess and to sample. estimate and certify then give each condition its own "
     "rate and zone. A model run on inputs it was not trained on can be sure and wrong, and its errors then come late "
     "in a ranking of the whole map.",
+    "6. A map that comes with a certificate (certificate.json, written by `oe-inferencex certificate` from a certified "
+    "zone): verify checks it against the map and says whether a point lies in its certified zone. Trust the zone only "
+    "when verify says verified.",
     "",
     "Hard rules. Do not work around them. The package refuses only what a rule says it refuses; the rest is up to "
     "you:",
@@ -167,6 +171,24 @@ INSTRUCTIONS = "\n".join([
 ])
 
 CARDS = {
+    "verify": "\n".join([
+        "Checks a map certificate (the bundle `oe-inferencex certificate` writes from a certified zone) as anyone "
+        "holding the map can, and says whether a point lies in its certified zone.",
+        "Does: builds the certificate again from the map, the bundled labels and the recorded settings, and compares "
+        "it whole: the digests of the bundle's files and of the map's pixels and grid; the seed, which must come from "
+        "the map and every setting that fixes the draw; the sample drawn again (its sidecar and every column but the "
+        "labels); certify run again (the zone JSON); and the certificate's every field, its statement and the zone "
+        "mask, rebuilt from that run. With x and y (in the map's CRS), or row and col (pixels of a map with no grid), "
+        "it says whether that point's window is inside the zone certify gives again.",
+        "Needs: the path of certificate.json with its bundle beside it, and the user's own copy of the map (scores; "
+        "for a product, its band too, confidence); without them the files are read where the certificate says, which "
+        "shows only that the two agree.",
+        "Cannot: check what it takes on the issuer's word: the labels (the point of trust), the map's date and when "
+        "the certificate was made, the paths it names, the condition names, when alpha, delta, the rule and the level "
+        "cut were chosen, and that the sample was drawn once; say anything about a map other than the one certified; "
+        "or certify "
+        "a zone itself (certify does).",
+    ]),
     "plan": "\n".join([
         "Answers \"How many labels do I need?\" before any label, for the labelled steps.",
         "Does: for each budget on a ladder (10, 12, 15, 20, 25, ... up to 10000 or the census), the probability over "
@@ -545,7 +567,7 @@ def _product_argv(confidence, confidence_range):
 def guide() -> str:
     """The server's instructions and every tool's capability card, under the question the tool answers."""
     groups = [*QUESTIONS.items(), (TITLES["plan"], ("plan",)), (TITLES["decide"], ("decide",)),
-              (TITLES["guide"], ("guide",))]
+              (TITLES["verify"], ("verify",)), (TITLES["guide"], ("guide",))]
     cards = "\n\n".join(f"## {question}\n\n" + "\n\n".join(f"### {name}\n{CARDS[name]}" for name in names)
                         for question, names in groups)
     return (f"{INSTRUCTIONS}\n\nRelative paths are read from {os.getcwd()}.\n\n# Capability cards, by question\n\n"
@@ -1573,8 +1595,59 @@ def plan(
     return _reply(" ".join(said), limits, nxt, {"plan": out} if out_dir is not None else {}, summ)
 
 
+def verify(
+    certificate: Annotated[str, P(description="certificate.json, written by `oe-inferencex certificate`, with its "
+                                              "bundle beside it")],
+    scores: Annotated[str | None, P(description="The user's own copy of the map. Without it the map is read where the "
+                                                "certificate says, which shows only that the two agree")] = None,
+    confidence: Annotated[str | None, P(description="For a product, the user's own copy of its confidence band, "
+                                                    "needed with scores")] = None,
+    x: Annotated[float | None, P(description="With y: a point in the map's CRS to look up in the zone")] = None,
+    y: Annotated[float | None, P(description="With x: a point in the map's CRS")] = None,
+    row: Annotated[float | None, P(description="With col: a pixel of a map with no grid")] = None,
+    col: Annotated[float | None, P(description="With row: a pixel of a map with no grid")] = None,
+) -> dict[str, Any]:
+    from . import certificate as cert
+    path = _input(certificate, "certificate")
+    if (x is None) != (y is None) or (row is None) != (col is None):
+        raise Refused("verify: a point is x with y, or row with col; one of the pair was given alone")
+    with _CAPTURE:
+        try:
+            res = cert.verify(path, None if scores is None else _input(scores, "scores"),
+                              None if confidence is None else _input(confidence, "confidence"))
+        except cert.Unreadable as exc:
+            raise Refused(cert.printable(f"verify: {exc}")) from None
+        pt = None
+        if x is not None or row is not None:
+            if res["mask"] is None:
+                raise Refused("verify: the zone could not be built again, so no point is looked up in it; "
+                              + " ".join(cert.printable(f"{n}: {c['detail']}") for n, c in res["checks"].items()
+                                         if c["ok"] is not True))
+            try:
+                pt = cert.point(path, x=x, y=y, row=row, col=col, mask=res["mask"])
+            except Exception as exc:
+                raise Refused(cert.printable(f"verify: the point was not looked up: {exc}")) from None
+    failed = [f"{n[:1].upper() + n[1:]}: {c['detail']}" for n, c in res["checks"].items() if c["ok"] is not True]
+    said = (["Verified. " + res["statement"]] if res["verified"] else
+            ["Not verified: the certificate's statement is not shown to hold for this map. " + " ".join(
+                _sentence(f) for f in failed)])
+    if pt is not None:
+        said.append((f"The point's window ({pt['window'][0]}, {pt['window'][1]}) is " if pt["window"] else
+                     "The point is ") + pt["where"]
+                    + ("." if res["verified"] else ", in the zone certify gives again; the certificate is not verified."))
+    limits = ("verify builds the certificate again from the map, the labels and the recorded settings and compares "
+              "it. Inside the zone the windows are wrong at most alpha of the time taken together, not each one; "
+              "outside it nothing is certified, which does not "
+              "mean wrong." + "".join(" " + _sentence(n[:1].upper() + n[1:]) for n in res["notes"]))
+    nxt = ("Use the zone mask (zone_mask in the bundle) to keep the certified windows." if res["verified"] else
+           "Ask for the map and the bundle the certificate was written from, or certify the map again from a new "
+           "random sample.")
+    return _reply(cert.printable(" ".join(said)), cert.printable(limits), nxt, {},
+                  {"certificate": path, "verified": res["verified"], "checks": res["checks"], "notes": res["notes"],
+                   "map_read": res["map_read"], "point": pt})
+
 TOOLS = {"guide": guide, "assess": assess, "compare": compare, "sample": sample, "estimate": estimate,
-         "certify": certify, "decide": decide, "plan": plan}
+         "certify": certify, "decide": decide, "plan": plan, "verify": verify}
 
 
 # ----------------------------------------------------------------------------- the server
@@ -1605,7 +1678,8 @@ def build_server():
     # FastMCP 1.x leaves the low-level server's version unset, and the handshake then gives the SDK's own version
     server._mcp_server.version = __version__
     for name, fn in TOOLS.items():
-        hints = (ToolAnnotations(title=TITLES[name], readOnlyHint=True, openWorldHint=False) if name == "guide" else
+        hints = (ToolAnnotations(title=TITLES[name], readOnlyHint=True, openWorldHint=False)
+                 if name in ("guide", "verify") else
                  ToolAnnotations(title=TITLES[name], readOnlyHint=False, destructiveHint=True, idempotentHint=True,
                                  openWorldHint=False))
         server.add_tool(as_tool(fn), name=name, title=TITLES[name], description=CARDS[name], annotations=hints)

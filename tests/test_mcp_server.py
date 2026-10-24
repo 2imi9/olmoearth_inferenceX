@@ -46,9 +46,10 @@ _spec = importlib.util.spec_from_file_location("quickstart_map", os.path.join(RO
 quickstart_map = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(quickstart_map)
 
-TOOLS = {"guide", "assess", "compare", "sample", "estimate", "certify", "decide", "plan"}
-# guide teaches, decide reads a result the others wrote and plan sizes the labels before any is drawn: none of them answers one of the four questions
-HELPERS = {"guide", "decide", "plan"}
+TOOLS = {"guide", "assess", "compare", "sample", "estimate", "certify", "decide", "plan", "verify"}
+# guide teaches, decide reads a result the others wrote, plan sizes the labels before any is drawn and verify checks a
+# certificate certify's zone was packed into: none of them answers one of the four questions
+HELPERS = {"guide", "decide", "plan", "verify"}
 
 
 def _flat(text):
@@ -538,11 +539,12 @@ def test_guide_returns_the_instructions_and_every_card():
     assert not err
     assert text.startswith(mcp_server.INSTRUCTIONS)
     assert all(card in text for card in mcp_server.CARDS.values())
-    # the cards come under the question each tool answers, in the standard order, then plan, decide, guide last
+    # the cards come under the question each tool answers, in the standard order, then plan, decide, verify, guide last
     heads = re.findall(r"^## (.+)$", text, re.M)
-    assert heads == [*mcp_server.QUESTIONS, mcp_server.TITLES["plan"], mcp_server.TITLES["decide"], mcp_server.TITLES["guide"]]
+    assert heads == [*mcp_server.QUESTIONS, mcp_server.TITLES["plan"], mcp_server.TITLES["decide"],
+                     mcp_server.TITLES["verify"], mcp_server.TITLES["guide"]]
     assert re.findall(r"^### (\w+)$", text, re.M) == ["assess", "sample", "estimate", "certify", "compare", "plan", "decide",
-                                                      "guide"]
+                                                      "verify", "guide"]
     assert f"Relative paths are read from {os.getcwd()}." in text
 
 

@@ -702,7 +702,10 @@ def test_sample_condition_writes_design_and_columns(tmp_path, capsys):
     side = json.load(open(tmp_path / "s.json"))
     c = side["condition"]
     assert list(c) == ["source", "rule", "values", "names", "sizes", "n_labelled", "allocation_rule",
-                       "n_windows_split", "n_windows_no_code"]
+                       "n_windows_split", "n_windows_no_code", "sha256", "names_given"]
+    assert c["names_given"] == [[0, "clear"], [1, "cloudy"]]
+    from oe_inferencex.certificate import raster_digest
+    assert c["sha256"] == raster_digest(cpath)          # binds the layer to the sample (a certificate checks it)
     assert c["source"] == cpath and c["rule"] == RULE_TEXT and c["allocation_rule"] == "equal"
     assert c["values"] == [0, 1, None] and c["names"] == ["clear", "cloudy", "unrecorded"]
     assert sum(c["sizes"]) == side["n_population"] == 1024

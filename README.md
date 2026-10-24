@@ -35,6 +35,7 @@ What it answers
 | Which of two maps of the same time is more accurate? | `sample a.tif --other b.tif --budget 100 --out pairs.csv`, fill in `reference_class`, then `estimate pairs.csv` | about 100, where the maps differ |
 | Which class's confident calls can't I trust? | `sample scores.tif --design audit --per-class 20 --out audit.csv`, fill in `reference_class`, then `estimate audit.csv --alpha 0.05` | about 20 per class |
 | Where do two maps differ? | `compare a.tif b.tif --out diff` | none |
+| Can someone else check which part I certified? | sample with `--seed-from-map`; `certificate to_label_zone.json --date 2024-01-01/2024-12-31 --out cert`, then `verify cert/certificate.json --scores map.tif` | none beyond `certify`'s |
 | At which window size can each class be seen? | `scale scores.tif` (add `--reference truth.tif` for each size's error rate) | none |
 
 Every command starts with `oe-inferencex`. The input is the model's per-class scores before the argmax, as a GeoTIFF
@@ -100,6 +101,11 @@ exception is certify on a sequential sample, rerun as labels are added with α a
 a sequential sample needs its number of labels fixed before labelling. The tests check each statement by exact
 computation, and the [research record](https://github.com/2imi9/olmoearth_inferenceX-record) checks them on fully
 labelled real maps, except the target rule, new in 1.16.0, which only the tests check so far.
+
+A certified zone can travel with the map: `certificate` packs the statement, the zone as a GeoTIFF and digests of
+the map into a bundle, and `verify` builds it again from the map, the seed and the labels and compares it. It takes on
+the issuer's word that the labels are right, the map's date, when alpha and delta were chosen, and that the sample
+was drawn once.
 
 Without labels nothing is guaranteed: the confidence orders the windows to check, and in a new place it can be sure
 and wrong.
