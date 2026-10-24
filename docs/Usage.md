@@ -19,7 +19,7 @@ extra) are new in 1.4.0.
 
 ## Quick start
 
-Every command below runs on 1.14.1. `scores.tif` is a map of per-class probabilities; add `--logits` for logits.
+Every command below runs on 1.15.0. `scores.tif` is a map of per-class probabilities; add `--logits` for logits.
 
 ```bash
 pip install "olmoearth-inferencex[geo]"
@@ -450,6 +450,41 @@ percent of their pixels in a one-pixel band, smallholder plots of a third of a h
 error matters is the user's call: a field-boundary map is judged at its edges, a land-cover map mostly inside. A window
 split evenly between band and interior counts as the condition `unrecorded`, as for any layer. No recorded experiment
 grades the band itself.
+
+### scale
+
+At which window size can each class be seen? A window's class is the majority of its pixels', so a class whose
+features are small against the window (a road a pixel wide, a pond, a hedge) loses that majority as the window grows:
+its pixels sit in windows called something else, and a sample of windows that size grades only the part of it that
+still holds a majority. `scale` assesses the map at several window sizes and prints, for each, the number of windows,
+the share that border a window of another class (assess's boundary windows) and the median confidence; and, for each
+class, its survival: the share of the pixels the map calls that class that sit in a valid window called it (a pixel
+outside the window grid, or in a window that is mostly no-data, sits in none). Survival is 1 at 1 px; the first size
+where it falls below half is named, with how much of the class sits there in windows called another class and how
+much in no valid window (outside the window grid of that size, which drops the ragged right and bottom edge, or in a
+window that is mostly no-data); the pixels outside the grid are printed beside each size. It need not fall steadily: a
+plurality can return at a larger size. A size with no
+window at least half valid is kept, with every survival 0. The warnings assess gives (a probability map passed as
+logits, a ragged edge, a reference with more classes than the map) are written to the JSON, and the logit warnings are
+printed as `assess` prints them.
+
+```bash
+oe-inferencex scale scores.tif                                   # window sizes 1 2 4 8 16 px
+oe-inferencex scale scores.tif --patches 2 4 8 --reference truth.tif --out profile.json
+```
+
+On a GeoTIFF in a projected CRS with a north-up grid each size is also given in metres (converted from the CRS's
+unit). With `--reference`, a class raster on the map's
+grid, each size adds its error rate, the share of the errors in a 5% review and each class's producer's accuracy
+(classes the reference holds and the map never draws included): a census of the reference, so no interval, and only as
+right as the reference. A class the reference draws as small as
+the map does drops out of the reference's windows too, so the error rate does not show its loss; survival does. On a
+synthetic map a road one pixel wide graded at 0% error at every size while its survival was 0.00 from 4 px
+(tests/test_scale.py). A product's class map takes `--confidence` as in `assess`.
+
+`scale` zooms out only: the finest window is the sensor's pixel, and a class too small for it needs finer imagery.
+Survival describes where the map draws a class, not where the class is. Use it to choose the window size (`--patch`)
+before drawing a sample: a guaranteed error rate holds for the size the sample was drawn and labelled at.
 
 ### compare
 
@@ -1373,6 +1408,7 @@ On this pair most of the accuracy comes from the post-event side being usually r
 | `embeddings` | An area of a geo-embeddings Zarr store and labelled points to class probabilities (`from-embeddings`; the `embeddings` extra) |
 | `decide` | Typed answers to set questions, read from a result that `estimate`, `certify` or `compare` wrote |
 | `plan` | How many labels each labelled route needs, budget by budget, before any label is drawn |
+| `scale` | The same map at several window sizes: each class's survival, windows bordering another class, confidence and, with a reference, the error rate (`scale`) |
 | `cli`, `demo` | The `oe-inferencex` commands |
 | `mcp_server` | The commands as tools of a local MCP server, `oe-inferencex mcp` (the `mcp` extra) |
 

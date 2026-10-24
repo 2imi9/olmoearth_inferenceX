@@ -35,6 +35,7 @@ What it answers
 | Which of two maps of the same time is more accurate? | `sample a.tif --other b.tif --budget 100 --out pairs.csv`, fill in `reference_class`, then `estimate pairs.csv` | about 100, where the maps differ |
 | Which class's confident calls can't I trust? | `sample scores.tif --design audit --per-class 20 --out audit.csv`, fill in `reference_class`, then `estimate audit.csv --alpha 0.05` | about 20 per class |
 | Where do two maps differ? | `compare a.tif b.tif --out diff` | none |
+| At which window size can each class be seen? | `scale scores.tif` (add `--reference truth.tif` for each size's error rate) | none |
 
 Every command starts with `oe-inferencex`. The input is the model's per-class scores before the argmax, as a GeoTIFF
 or a `.npy` array of shape `(C, H, W)`. `plan` says how many labels a question needs and `--help` lists each command's
@@ -73,6 +74,34 @@ Imagery: contains modified Copernicus Sentinel data (2017 to 2023). Dynamic Worl
 [Brown et al., Scientific Data, 2022](https://doi.org/10.1038/s41597-022-01307-4), CC BY 4.0. FTW map:
 [Fields of the World](https://fieldsofthe.world), CC BY 4.0. How the
 figures were made is in [docs/figures/examples](https://github.com/2imi9/olmoearth_inferenceX/tree/main/docs/figures/examples).
+
+What is guaranteed
+------------------
+
+With a simple random sample of the map's windows, drawn by `sample --design random` and labelled by a reviewer:
+
+- **The error rate** has an exact 95% interval (`estimate`). The confidence, proportional and tiles designs give
+  approximate intervals; the condition design's hold per condition.
+- **The certified zone**, the most confident share of the map, is wrong at most α of the time, and this statement
+  fails on at most δ of samples, 10% by default (`certify --alpha`, `--delta`, with its default prefix rule or
+  `--rule bonferroni`). On a sequential sample (`--design sequential`) labels can be added and certify rerun at every
+  look under the same guarantee.
+- **Each class's share** has an exact interval, and all classes' intervals hold together at 95%; so do the producer's
+  accuracies (`estimate --per-class`).
+
+Which of two maps of the same time is more accurate takes its own sample, of the windows where they differ
+(`sample --other`, then `estimate`): a 95% interval on the difference, and an exact sign test that names a map while
+the labels are at most a fifth of those windows.
+
+Three assumptions: the windows were drawn at random by `sample`; the labels are right; and the budget and settings (α,
+δ, the rule and level cut, `--classes`) were fixed before any label was read, with each result computed once. The one
+exception is certify on a sequential sample, rerun as labels are added with α and δ unchanged; an error rate read from
+a sequential sample needs its number of labels fixed before labelling. The tests check each statement by exact
+computation, and the [research record](https://github.com/2imi9/olmoearth_inferenceX-record) checks them on fully
+labelled real maps.
+
+Without labels nothing is guaranteed: the confidence orders the windows to check, and in a new place it can be sure
+and wrong.
 
 Limits
 ------

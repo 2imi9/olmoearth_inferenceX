@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.15.0 (2026-10-24)
+
+**`scale`: at which window size each class can be seen.** A window's class is the majority of its pixels', so a class
+whose features are small against the window (a road a pixel wide, a pond, a hedge) loses that majority as the window
+grows, and a sample of windows that size grades only the part of it that still holds a majority. `oe-inferencex scale
+scores.tif` assesses the map at several window sizes (`--patches`, default 1 2 4 8 16 px; in metres too on a projected
+GeoTIFF) and gives, for each, the windows, the share that border a window of another class and the median confidence,
+and for each class its survival: the share of the pixels the map calls the class that sit in a valid window called it,
+with the first size where it falls below half. With `--reference` each size adds its error rate, the share of the
+errors in a 5% review and each class's producer's accuracy, a census of the reference with no interval. A class the
+reference draws as small as the map does drops out of the reference's windows too, so the error rate does not show its
+loss: on a synthetic map a road one pixel wide graded at 0% error at every size while its survival was 0.00 from 4 px.
+`scale` zooms out only, and survival is about where the map draws a class. A pixel outside the window grid, or in a
+window that is mostly no-data, sits in no window and does not survive; a size with no window at least half valid is
+kept with every survival 0. assess's warnings are carried into the JSON, and the logit warnings of 1.14.1 printed;
+classes the reference holds and the map never draws are printed with their producer's accuracy. A product's class map
+takes `--confidence`; `--out` writes the profile as JSON, ending with `written_by`. Python:
+`oe_inferencex.scale.scale_profile`. Tests: tests/test_scale.py (survival counted by hand, each size against assess,
+the two input routes against each other).
+
+**README: what is guaranteed.** One section states what the tool proves with a simple random sample (`sample --design
+random`): the error rate's exact interval, the certified zone at α and δ under the prefix or Bonferroni rule (rerun at
+every look on a sequential sample), and the per-class shares and producer's accuracies holding together; the two-map
+route's interval and sign test; the three assumptions (windows drawn at random by `sample`, labels right, settings
+fixed before the labels and each result computed once); and that without labels nothing is guaranteed.
+
 ## 1.14.1 (2026-10-23)
 
 Four fixes found by reading the OlmoEarth Agent, which wraps this package for an LLM and met each of them in its

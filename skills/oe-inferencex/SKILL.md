@@ -64,7 +64,9 @@ Before labelling, `oe-inferencex plan` says how many labels a step needs, budget
 more accurate of two maps that differ by 2 points or more, `plan scores.tif --coverage 0.5 --alpha 0.05 --zone-error
 0.01` for a certified zone, `plan scores.tif --class-share 0.05 --classes 8` for flagging a class of 5% that the map
 draws at half its share. The plan holds for the rate, difference or shares stated; the labels then measure the map's
-own.
+own. `oe-inferencex scale scores.tif` says at which window size each class can still be seen (where a class's
+survival falls below half, most of its pixels sit in windows called another class or in no valid window, and a sample
+of windows that size grades only the rest); choose `--patch` from it before sampling. It has no server tool.
 
 ## Example questions
 
