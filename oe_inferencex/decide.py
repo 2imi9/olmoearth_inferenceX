@@ -543,6 +543,8 @@ def _answer_trusted(r, share=None):
     # could this run have certified anything? Not below the labels a clean zone needs, nor with no condition tested
     if r.get("by_condition"):
         tested = bool(r.get("n_conditions_tested"))
+    elif r.get("rule") == "target":                    # the target is tested at any budget (1.16.0)
+        tested = bool(r.get("levels"))
     else:
         tested = r.get("min_labels_to_certify") is None or int(r.get("n_labelled") or 0) >= int(r["min_labels_to_certify"])
     by_cond = bool(r.get("by_condition"))

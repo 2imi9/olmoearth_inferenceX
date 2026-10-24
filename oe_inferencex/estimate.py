@@ -1193,8 +1193,10 @@ def review_set_threshold(n, N=None):
 def review_set_check(indices, margin, valid=None):
     """Do these windows look like a review list rather than a random sample of the map? The MEAN suspicion
     percentile of the sample, against review_set_threshold: 0.5 for a random draw, near 1 for the tool's own review
-    set, which is built to be enriched for errors. Passing does not make the windows a random sample: labels from the
-    confident end of the map, or clustered by tile, pass. The median is reported beside it and decides nothing. A census (every valid window, once) is never
+    set, which is built to be enriched for errors. Passing does not make the windows a random sample: labels clustered
+    by tile pass, and labels from the confident end pass this flag (certify refuses them by the mirror-image flag,
+    `looks_drawn_from_the_confident_end`, from 1.16.0; estimate does not). The median is reported beside it and decides
+    nothing. A census (every valid window, once) is never
     an enriched set: at a census the threshold is exactly 0.5 and the mean is 0.5 up to rounding, and until the
     release check of 24 September a sum that rounded up refused 2 to 5% of censuses as review sets."""
     margin = np.asarray(margin, dtype=np.float64).ravel()
@@ -1226,6 +1228,9 @@ def review_set_check(indices, margin, valid=None):
             # 1e-12 is far below any real enrichment (one standard error at 300 labels is 0.017) and far above the
             # rounding of a mean of percentiles
             "looks_like_a_review_set": bool(np.isfinite(mean) and not census and mean > thr + 1e-12),
+            # the mirror image, which certify refuses too (1.16.0): labels drawn from the confident end make every zone
+            # look cleaner than it is, and a mean this low is as unlikely for a random draw as a review set's
+            "looks_drawn_from_the_confident_end": bool(np.isfinite(mean) and not census and mean < 1 - thr - 1e-12),
             "share_in_top_5pct": float(np.mean(pct[inside] > 0.95)) if inside.any() else float("nan"),
             "n_outside_population": int((~inside).sum()), "n_duplicated": int(idx.size - np.unique(idx).size)}
 
@@ -1687,7 +1692,23 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
 # is approximated.
 ZONE_GRID = tuple(round(j / 20, 2) for j in range(1, 21))
 ZONE_DELTA = 0.10
-ZONE_RULES = ("prefix", "bonferroni", "plugin")
+ZONE_RULES = ("prefix", "bonferroni", "plugin", "target")
+# The target rule (1.16.0): a zone fixed before labelling holds TARGET_WEIGHT of delta and the smaller zones the rest,
+# tested as a fallback procedure (Wiens 2003; Wiens and Dmitrienko 2005). With the target right it needs about half
+# the labels of the Bonferroni rule on any spread of the errors (plan.target_probability); the design research of 24
+# October 2026 chose 0.8, which costs 9% over putting all of delta on the target and keeps a fallback for a target
+# that was too optimistic.
+TARGET_WEIGHT = 0.8
+TARGET_NOTE = ("target rule: the {target:g}% zone was fixed before labelling and holds {w:g} of delta, the smaller "
+               "zones share the rest, and a zone that passes hands its share up to the next larger one (a fallback "
+               "procedure, Wiens 2003), valid on any map whatever the shape of its error rate; a zone larger than the "
+               "target is certified only through that hand-up, and a target that was too optimistic leaves the smaller "
+               "zones the rest of delta")
+# when no smaller zone is tested (the target is the smallest level the budget tests) the target holds all of delta
+TARGET_ALONE_NOTE = ("target rule: the {target:g}% zone was fixed before labelling and, no smaller zone being tested "
+                     "at this budget, holds all of delta, so there is no fallback; a zone that passes hands its share "
+                     "up to the next larger one (a fallback procedure, Wiens 2003), valid on any map whatever the shape "
+                     "of its error rate")
 ZONE_CUTS = ("standard", "ramp")
 ZONE_CUT = "standard"             # the level cut; "ramp" is an option (exp95, exp96 and their audit: zone_cut)
 # The note a prefix certification carries. The prefix rule is fixed-sequence testing (Angelopoulos et al. 2025, Learn
@@ -1852,7 +1873,27 @@ def zone_counts(positions, wrong, sizes):
     return b.astype(int), cum[b].astype(int)
 
 
-def apply_zone_rule(p, b, k, alpha, delta=ZONE_DELTA, rule="prefix", n=None):
+def target_weights(n_levels, target_j, delta=ZONE_DELTA, weight=TARGET_WEIGHT):
+    """Each tested level's share of delta under the target rule, as Fractions: weight * delta on level target_j,
+    (1 - weight) * delta split equally over the levels below it (all of delta on the target when none is below it), and
+    nothing above it, which only a passing level's hand-up reaches."""
+    from fractions import Fraction
+    if not 0 <= int(target_j) < int(n_levels):
+        raise ValueError(f"the target is level {target_j} of {n_levels}")
+    if not 0 < weight <= 1:
+        raise ValueError(f"the target's share of delta must be in (0, 1], got {weight}")
+    d, w = _level(delta), _level(weight)
+    shares = [Fraction(0)] * int(n_levels)
+    if target_j == 0:
+        shares[0] = d
+    else:
+        shares[target_j] = w * d
+        for j in range(target_j):
+            shares[j] = (1 - w) * d / target_j
+    return shares
+
+
+def apply_zone_rule(p, b, k, alpha, delta=ZONE_DELTA, rule="prefix", n=None, weights=None):
     """Which grid levels a rule accepts, and the largest one; levels are in increasing coverage.
     prefix      accept while p <= delta from the smallest zone up, stop at the first failure: fixed-sequence
                 testing (Angelopoulos et al. 2025, Learn then Test), valid on any map whatever the shape of the
@@ -1861,6 +1902,11 @@ def apply_zone_rule(p, b, k, alpha, delta=ZONE_DELTA, rule="prefix", n=None):
                 then Test; valid on any map); it can pass a level the prefix rule stops at, and needs a smaller
                 p-value at every level
     plugin      accept every level whose sample rate k / b is at most alpha; no guarantee, the comparator
+    target      a fallback procedure over `weights` (target_weights), which sum to delta: from the smallest level up,
+                a level passes when p is at most its own weight plus the level of the one before it if that one
+                passed (Wiens 2003). Valid on any map: a zone wrong more than alpha of the time passes only if the
+                first such zone that passes does, whose level is at most the weight between it and the last such zone
+                before it, and those stretches are disjoint, so the chance is at most delta
     `n`, the zone sizes, lets a p-value within `_tie(n)` of its level be decided in integer arithmetic, so that every
     system certifies the same zone from the same labels; `certify_zone` passes it. Without it the float decides."""
     p, b, k = np.asarray(p, float), np.asarray(b, int), np.asarray(k, int)
@@ -1882,6 +1928,16 @@ def apply_zone_rule(p, b, k, alpha, delta=ZONE_DELTA, rule="prefix", n=None):
     elif rule == "plugin":
         with np.errstate(invalid="ignore", divide="ignore"):
             acc = (b > 0) & (k <= alpha * b)
+    elif rule == "target":
+        if weights is None or len(weights) != p.size:
+            raise ValueError("the target rule needs one share of delta per level (target_weights)")
+        acc, carry = np.zeros(p.size, bool), 0
+        for j in range(p.size):
+            level = _level(weights[j]) + carry
+            if level > 0 and passes(j, level):
+                acc[j], carry = True, level
+            else:
+                carry = 0
     else:
         raise ValueError(f"rule must be one of {ZONE_RULES}, got {rule!r}")
     best = int(np.flatnonzero(acc).max()) if acc.any() else None
@@ -1889,7 +1945,7 @@ def apply_zone_rule(p, b, k, alpha, delta=ZONE_DELTA, rule="prefix", n=None):
 
 
 def certify_zone(margin, indices, wrong, alpha, delta=ZONE_DELTA, rule="prefix", grid=ZONE_GRID, valid=None,
-                 cut=None):
+                 cut=None, target=None, target_weight=TARGET_WEIGHT):
     """The largest share of the map, taken from the most confident window down, that is wrong at most `alpha` of
     the time, certified so that the statement fails with probability at most `delta` over the reviewer's draw.
 
@@ -1898,7 +1954,10 @@ def certify_zone(margin, indices, wrong, alpha, delta=ZONE_DELTA, rule="prefix",
     wrong   : 0/1 per labelled window, in the order of `indices`
     rule    : "prefix" (fixed-sequence testing, valid on any map; certifies little when the most confident windows
               hold many errors), "bonferroni" (valid on any map; can certify more in that case and less in others),
-              "plugin" (no guarantee; what a reviewer would do unaided)
+              "plugin" (no guarantee; what a reviewer would do unaided), "target" (a fallback procedure that puts
+              `target_weight` of delta on the zone of coverage `target`, a grid level fixed before any label was
+              read, and the rest on the smaller zones; valid on any map, and with the target right it needs about
+              half the labels of the Bonferroni rule). The target is always tested, whatever the level cut
 
     The guarantee is for one sample whose size was fixed before its labels were read, certified once: certifying
     again after adding labels runs a new test each time, and the chance that some run is wrong grows with the runs.
@@ -1918,6 +1977,12 @@ def certify_zone(margin, indices, wrong, alpha, delta=ZONE_DELTA, rule="prefix",
         raise ValueError(f"alpha and delta must be in (0, 1), got {alpha}, {delta}")
     if rule not in ZONE_RULES:                                    # checked before a budget too small can hide a typo
         raise ValueError(f"rule must be one of {ZONE_RULES}, got {rule!r}")
+    if (rule == "target") != (target is not None):
+        raise ValueError("the target rule needs a target coverage, fixed before labelling, and a target goes with the "
+                         "target rule only")
+    if rule == "target" and not any(abs(target - g) < 1e-9 for g in grid):
+        raise ValueError(f"the target must be a level of the zone grid ({grid[0]:g} to {grid[-1]:g} in steps of "
+                         f"{grid[1] - grid[0]:g}), got {target:g}")
     chk = review_set_check(idx, margin, valid)
     if chk["n_outside_population"]:
         raise ValueError(f"{chk['n_outside_population']} labelled window(s) are outside the valid map")
@@ -1927,10 +1992,24 @@ def certify_zone(margin, indices, wrong, alpha, delta=ZONE_DELTA, rule="prefix",
         raise ValueError(f"these {idx.size} windows sit at a mean suspicion percentile of "
                          f"{chk['mean_suspicion_percentile']:.2f}, above {chk['threshold']:.2f}: an enriched set, not a "
                          "random sample, and a zone certified on it would be wrong. Draw the sample at random.")
+    if chk["looks_drawn_from_the_confident_end"]:
+        # until 1.16.0 only the enriched end was refused, so labels from the most confident windows were certified as
+        # if random and every zone looked cleaner than it is (the design research of 24 October 2026)
+        raise ValueError(f"these {idx.size} windows sit at a mean suspicion percentile of "
+                         f"{chk['mean_suspicion_percentile']:.2f}, below {1 - chk['threshold']:.2f}: drawn from the "
+                         "confident end of the map, not at random, and a zone certified on them would be wrong. Draw "
+                         "the sample at random.")
     order, pos = zone_order(margin, valid)
     N = int(order.size)
     cut = ZONE_CUT if cut is None else cut
     cov, sizes, c_min = zone_levels(N, idx.size, alpha, delta, grid, cut)
+    shares = None
+    if rule == "target":                     # the target is tested whatever the cut, which reads no label either
+        target = next(g for g in grid if abs(target - g) < 1e-9)
+        if target not in cov:
+            cov = sorted(cov + [target])
+            sizes = [max(1, int(round(c * N))) for c in cov]
+        shares = target_weights(len(cov), cov.index(target), delta, target_weight)
     out = {"rule": rule, "alpha": float(alpha), "delta": float(delta), "n_population": N, "n_labelled": int(idx.size),
            "level_cut": cut,
            "min_labels_to_certify": min_labels_to_certify(alpha, delta), "c_min": float(c_min), "levels": [],
@@ -1942,11 +2021,17 @@ def certify_zone(margin, indices, wrong, alpha, delta=ZONE_DELTA, rule="prefix",
         return out
     b, k = zone_counts(pos[idx], wrong, sizes)
     p = np.array([zone_pvalue(kk, bb, n, alpha) for kk, bb, n in zip(k, b, sizes)])
-    acc, best = apply_zone_rule(p, b, k, alpha, delta, rule, n=sizes)
+    acc, best = apply_zone_rule(p, b, k, alpha, delta, rule, n=sizes, weights=shares)
     for j, c in enumerate(cov):
         out["levels"].append({"coverage": c, "n_zone": sizes[j], "n_labelled_inside": int(b[j]), "n_wrong_inside": int(k[j]),
                               "p_value": float(p[j]), "upper_bound": zone_upper_bound(k[j], b[j], sizes[j], delta),
                               "accepted": bool(acc[j])})
+        if shares is not None:
+            out["levels"][-1]["share_of_delta"] = float(shares[j])
+    if rule == "target":
+        tj = cov.index(target)
+        out.update({"target": float(target), "target_weight": float(target_weight),
+                    "target_share_of_delta": float(shares[tj]), "target_certified": bool(acc[tj])})
     if best is None:
         out["note"] = (f"no zone certified at alpha={alpha:g}, delta={delta:g} with {idx.size} labels; the smallest testable "
                        f"zone ({cov[0]:.0%} of the map) held {int(b[0])} labels with {int(k[0])} wrong")
@@ -1965,6 +2050,9 @@ def certify_zone(margin, indices, wrong, alpha, delta=ZONE_DELTA, rule="prefix",
         out["note"] = "plug-in rule: no guarantee; the largest zone whose sample rate is at most alpha"
     elif rule == "prefix":
         out["note"] = PREFIX_NOTE
+    elif rule == "target":
+        out["note"] = (TARGET_NOTE.format(target=100 * target, w=target_weight) if cov.index(target) else
+                       TARGET_ALONE_NOTE.format(target=100 * target))
     else:
         out["note"] = (f"Bonferroni over the {len(cov)} testable levels: valid with no assumption on how the error rate "
                        "changes with the zone")
@@ -2014,8 +2102,8 @@ def certify_by_condition(sample, wrong, margin, alpha, delta=ZONE_DELTA, rule="p
     certified windows taken together are wrong at most alpha of the time: the union of the zones has error rate
     sum |Z_c| R_c / sum |Z_c| <= alpha. A condition with fewer labels is not tested.
 
-    Inside each condition `certify_zone` checks that the labels do not look like a review list (review_set_check);
-    labels from the confident end or clustered by tile pass that check. A
+    Inside each condition `certify_zone` checks that the labels look like neither a review list nor a draw from the
+    confident end (review_set_check, both ends from 1.16.0); labels clustered by tile pass that check. A
     condition whose labels fail that check is reported not tested, with the reason, and the others are certified at
     the delta / L already fixed. The check reads where the labels sit, never what they say, so leaving that condition
     out only leaves its share of delta unused. On the tool's own draw the check fails rarely, by chance.
@@ -2047,6 +2135,9 @@ def certify_by_condition(sample, wrong, margin, alpha, delta=ZONE_DELTA, rule="p
         # certify_zone accepts it as the comparator; here the family note would state a joint guarantee it lacks
         raise ValueError("the plug-in rule has no guarantee, so there is no delta to split over the conditions and "
                          "no joint statement to make; use the prefix or bonferroni rule")
+    if rule == "target":
+        raise ValueError("the target rule fixes one zone of the whole map before labelling and is not built per "
+                         "condition; use the prefix or bonferroni rule")
     if (idx < 0).any():
         raise ValueError("a labelled window index is negative; indices point into the flattened window grid")
     if np.unique(idx).size != idx.size:
@@ -2067,7 +2158,7 @@ def certify_by_condition(sample, wrong, margin, alpha, delta=ZONE_DELTA, rule="p
     for c in range(K):
         m = cgrid[idx] == c
         chk = review_set_check(idx[m], margin, valid & (cgrid == c)) if c in tested else None
-        if chk is not None and chk["looks_like_a_review_set"]:
+        if chk is not None and (chk["looks_like_a_review_set"] or chk["looks_drawn_from_the_confident_end"]):
             # certify_zone would refuse these labels as an enriched set, and until 2026-09-29 that refusal stopped
             # every condition. The check reads where the labels sit, not what they say, so leaving this condition out
             # after the split was fixed only leaves its share of delta unused: the others still hold together.
@@ -2082,6 +2173,14 @@ def certify_by_condition(sample, wrong, margin, alpha, delta=ZONE_DELTA, rule="p
                             f"{chk['mean_suspicion_percentile']:.2f} within the condition, above {chk['threshold']:.2f}. "
                             f"They look chosen for low confidence, yet {how}. A zone certified on chosen labels could "
                             "be wrong. If these are the labels `sample` drew, unedited, this is a rare chance draw")}
+            if not chk["looks_like_a_review_set"]:          # the confident end (1.16.0): the mirror-image reason
+                r["review_set_check"] = {"mean_suspicion_percentile": chk["mean_suspicion_percentile"],
+                                         "threshold": 1 - chk["threshold"], "end": "confident"}
+                r["reason"] = (f"its {int(n_c[c])} labels sit at a mean suspicion percentile of "
+                               f"{chk['mean_suspicion_percentile']:.2f} within the condition, below "
+                               f"{1 - chk['threshold']:.2f}. They look chosen for high confidence, yet {how}; every "
+                               "zone would look cleaner than it is. If these are the labels `sample` drew, unedited, "
+                               "this is a rare chance draw")
             refused.append(names[c])
         elif c in tested:
             r = certify_zone(margin, idx[m], wrong[m], alpha, delta=d, rule=rule, grid=grid, valid=valid & (cgrid == c),

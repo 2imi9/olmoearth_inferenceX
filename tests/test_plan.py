@@ -309,7 +309,7 @@ def test_a_zone_wrong_exactly_alpha_is_planned():
 
 def test_a_zone_certify_never_tests_on_this_map_is_refused():
     r = plan.plan_zone(1_000, 0.05, 0.01)
-    assert "never tests this zone" in r["refusal"]
+    assert "the prefix and Bonferroni rules never test this zone" in r["refusal"]
 
 
 def test_a_coverage_off_the_grid_is_refused():
@@ -511,7 +511,10 @@ def test_a_small_map_whose_grid_levels_share_a_zone_is_planned():
 
 def test_the_never_tested_refusal_gives_certifys_real_cut():
     r = plan.plan_zone(892, 0.05, 0.05, 0.01)
-    assert "tests only coverages of at least" in r["refusal"] and r["labels_to_test"] is None
+    assert "test only coverages of at least" in r["refusal"] and r["labels_to_test"] is None
+    # the target rule tests a target at any budget, so it is planned there (1.16.0)
+    assert "target rule tests a target fixed before labelling at any budget" in r["refusal"]
+    assert r["target"]["exact"] and "probability_by_budget" in r["target"]
 
 
 def test_the_ramp_cut_moves_the_entries_past_three_b_min():
@@ -526,7 +529,7 @@ def test_the_ramp_cut_moves_the_entries_past_three_b_min():
 def test_the_entry_note_says_the_fall_is_at_the_budget(tmp_path, monkeypatch, capsys):
     monkeypatch.chdir(tmp_path)
     got = _run("plan --windows 20000 --coverage 0.5 --alpha 0.05 --zone-error 0 --max-labels 450", capsys)
-    assert "from each of these budgets both rules can lose power" in got and "just past" not in got
+    assert "from each of these budgets the rules can lose power" in got and "just past" not in got
 
 
 # ----------------------------------------------------------------------------- maps of 1e9 windows or more

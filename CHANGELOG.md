@@ -1,5 +1,36 @@
 # Changelog
 
+## 1.16.0 (2026-10-24)
+
+**The target rule: the same certified zone from about half the labels.** `sample --design random --target C` fixes,
+before any label, the zone the user wants to trust, the C most confident share of the map. `certify` reads it from the
+sidecar and certifies with the target rule, and only with it: the target holds 0.8 of δ, the smaller zones share the
+rest, and a zone that passes hands its share up to the next larger one, a fallback procedure (Wiens 2003; Wiens and
+Dmitrienko 2005). It keeps certify's guarantee on any map whatever the shape of its error rate:
+tests/test_target_zone.py enumerates every error pattern of two small maps and every draw, for three targets and three
+shares of δ, and a hand-up that ignores failures exceeds δ on the same maps. With the target right it needs about half
+the labels of the Bonferroni rule, whatever the spread of the errors: for the top half of a 20,000-window map wrong
+1.25% of the time, with probability 0.9 at α = 5%, 329 labels against Bonferroni's 644 and the prefix rule's 2,645
+when the errors spread evenly. A larger zone than the target is certified only through the hand-up, and a target that
+was too optimistic leaves the smaller zones 0.2 of δ. The target may come from anything known before labelling (the
+share needed, a plan, the model's held-out validation labels), never from the map's labels. The same labels serve
+`estimate`. `plan --coverage C --alpha A --zone-error E` adds the target rule's budget, exact for any spread (the
+target's own test at 0.8 of δ, a lower bound: `plan.target_probability`), and its `sample` command; the MCP server's
+`sample` takes `target`, its `certify` reads it, and its `plan` reports the budget. Python: `certify_zone(...,
+rule="target", target=C)`, `estimate.target_weights`. The rule is not built per input condition or for a sequential
+sample. When no smaller zone is tested at the budget the target holds all of δ and has no fallback; the note says so,
+the zone JSON gives `target_share_of_delta`, and `plan` counts it. `plan` also gives the target rule's budget where
+the prefix and Bonferroni rules never test the zone. A too-optimistic target makes a smaller zone cost more labels than
+under Bonferroni: about 15% more for a target one grid level too high, up to about a third more with the whole map as
+the target.
+
+**certify refuses labels drawn from the confident end.** The check that refuses a labelled set looking like the tool's
+review set (enriched for errors) was one-sided, so labels from the most confident windows were certified as if random
+and every zone looked cleaner than it is. `review_set_check` now also flags a mean suspicion percentile as far below
+0.5 (`looks_drawn_from_the_confident_end`), which `certify` refuses and `certify_by_condition` treats as a condition
+not tested. The tool's own random draws fail it as rarely as the other end (four standard deviations). `estimate` from
+arbitrary windows is unchanged.
+
 ## 1.15.0 (2026-10-24)
 
 **`scale`: at which window size each class can be seen.** A window's class is the majority of its pixels', so a class

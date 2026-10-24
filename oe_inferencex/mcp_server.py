@@ -121,7 +121,10 @@ INSTRUCTIONS = "\n".join([
     "`wrong` column with 1 or 0 on every row, or ? where a window cannot be judged. estimate gives the error rate with "
     "a 95% interval.",
     f"3. {TRUST} (certify) From the same labels, the most confident share of the map whose error rate is at most "
-    "alpha. It can certify nothing, and then says why.",
+    "alpha. It can certify nothing, and then says why. If the user knows before labelling which share they want to "
+    "trust, pass it as target to sample (design \"random\"): certify then uses the target rule, with the same "
+    "guarantee and, when the target is right, about half the labels the Bonferroni rule needs for that zone on a large "
+    "map.",
     f"4. {TWO_MAPS} (compare) Where two maps of one area differ, window by window. Only with labels does it say which "
     "map is right where they differ. With few labels, for two maps of the same time: sample with other set to the "
     "second map draws windows only where the maps differ, the reviewer writes the class seen in reference_class, and "
@@ -173,9 +176,11 @@ CARDS = {
         "difference, labels drawn where two maps differ that name the more accurate map when their accuracies differ "
         "by at least difference, at the worst split checked of the differing windows (two_class plans the one split of "
         "two-class maps). With "
-        "coverage and alpha, the budget from which certify tests that zone at all and the budgets at which smaller "
-        "zones enter; with zone_error, the rate the user expects that zone to be wrong, the Bonferroni rule's chance "
-        "of certifying it (exact, however the errors spread), the most the prefix rule can reach (exact), and the "
+        "coverage and alpha, the budget from which the prefix and Bonferroni rules test that zone at all and the "
+        "budgets at which smaller zones enter; with zone_error, the rate the user expects that zone to be wrong, the "
+        "Bonferroni rule's chance of certifying it (exact, however the errors spread), the target rule's, for that "
+        "zone fixed as sample's target (exact lower bound, at any budget), the most the prefix rule can reach (exact), "
+        "and the "
         "prefix rule's chance when the more confident zones are wrong no more often (simulated).",
         "Needs: the map (as sample takes it) or windows, its number of valid windows; for two maps, the second map or "
         "differing. Fractions between 0 and 1 for width, difference, error_rate, coverage, alpha and zone_error.",
@@ -397,7 +402,7 @@ _FLAGS = {"design", "condition", "condition-names", "confidence", "confidence-ra
           "delta", "rule", "budget", "seed", "labels", "reference", "threshold", "date-a", "date-b", "groups", "order",
           "budgets", "tile", "per-tile", "reviewer-false-alarm", "reviewer-miss", "other", "threshold", "windows",
           "differing", "width", "error-rate", "difference", "both-wrong", "coverage", "zone-error", "power",
-          "max-labels", "anchor", "extend"}
+          "max-labels", "anchor", "extend", "target"}
 
 
 def _mcp_words(text):
@@ -832,6 +837,10 @@ def sample(
     anchor: Annotated[float | None, P(description="sequential design: the smallest zone certify will test, as a "
                                                   "share of the map, fixed now before any label; or give alpha")]
     = None,
+    target: Annotated[float | None, P(description="random design: the zone certify's target rule will test, the most "
+                                                  "confident share of the map (0.05 to 1 in steps of 0.05), fixed now "
+                                                  "before any label; with it right, about half the labels of the "
+                                                  "Bonferroni rule (plan with coverage says how many)")] = None,
     alpha: Annotated[float | None, P(description="sequential design, without anchor: the error rate certify will be "
                                                  "asked about; the anchor is then the zone this budget can certify if "
                                                  "none of its labels is wrong, at most 0.25 of the map")] = None,
@@ -868,6 +877,7 @@ def sample(
     if design is not None:
         argv.append(f"--design={design}")
     _opt(argv, "--anchor", None if anchor is None else float(anchor))
+    _opt(argv, "--target", None if target is None else float(target))
     _opt(argv, "--alpha", None if alpha is None else float(alpha))
     _opt(argv, "--delta", None if delta is None else float(delta))
     if extend is not None:
@@ -948,7 +958,7 @@ def sample(
                   {"design": d, "n_labelled": len(side["indices"]), "n_population": side["n_population"],
                    "per_condition": per, "seed": side.get("seed"),
                    **({"anchor": side.get("anchor"), "first_budget": side.get("first_budget")} if d == "sequential"
-                      else {})})
+                      else {}), **({"target": side["target"]} if side.get("target") else {})})
 
 
 # The per-class audit (sample --design audit, 13 October 2026) is read by the command line only in this version. A reply
@@ -1184,9 +1194,10 @@ def certify(
                                              "filled from the top row down")],
     alpha: Annotated[float, P(description="The error rate the certified zone may not exceed, such as 0.05")],
     delta: Annotated[float, P(description="The probability that the statement is wrong")] = est.ZONE_DELTA,
-    rule: Annotated[Literal["prefix", "bonferroni"], P(description="prefix (default): fixed-sequence testing; "
-                                                                   "bonferroni can certify more when the most "
-                                                                   "confident windows hold many errors")] = "prefix",
+    rule: Annotated[Literal["prefix", "bonferroni", "target"] | None,
+                    P(description="prefix (the default without a target): fixed-sequence testing; bonferroni can "
+                                  "certify more when the most confident windows hold many errors; target: the default, "
+                                  "and the only rule, for a sample drawn with target")] = None,
     scores: Annotated[str | None, P(description="The score raster sample was run on, if it has moved")] = None,
     confidence: Annotated[str | None, P(description="For a product's class map: the confidence band sample was run "
                                                     "on, if it has moved")] = None,
@@ -1197,7 +1208,9 @@ def certify(
 ) -> dict[str, Any]:
     path = _input(sample_csv, "sample_csv")
     out = _out_json(path, out_dir, "zone")
-    argv = ["certify", path, f"--alpha={_num(float(alpha))}", f"--delta={_num(float(delta))}", f"--rule={rule}"]
+    argv = ["certify", path, f"--alpha={_num(float(alpha))}", f"--delta={_num(float(delta))}"]
+    if rule is not None:
+        argv.append(f"--rule={rule}")
     if scores is not None:
         argv.append(f"--scores={_input(scores, 'scores')}")
     if confidence is not None:
@@ -1213,6 +1226,8 @@ def certify(
         files["zone_mask"] = r["zone_mask"]
     summ = {k: r.get(k) for k in ("alpha", "delta", "rule", "n_labelled", "n_population", "min_labels_to_certify",
                                   "coverage", "n_zone", "threshold", "upper_bound")}
+    if r.get("rule") == "target":
+        summ.update({k: r.get(k) for k in ("target", "target_weight", "target_certified")})
     if r.get("rule") == "sequential":
         summ.update({"anchor": r.get("anchor"), "n_drawn": r.get("n_drawn")})
     a, d = 100 * float(alpha), 100 * float(delta)
@@ -1307,9 +1322,12 @@ def certify(
         nxt = ("The mask is a boolean array on the window grid. Outside it, the review sets of assess say which "
                "windows to check first.")
     else:
-        nxt = (f"Any zone needs at least {r['min_labels_to_certify']} labels at this alpha and delta. A larger random "
-               "sample (sample with design \"random\" and a larger budget, labelled in full) can certify more. "
-               + _decide.certificate_second_look(delta, int(r["n_labelled"]) >= int(r["min_labels_to_certify"])))
+        target_rule = r.get("rule") == "target"            # the target is tested at any budget (1.16.0)
+        nxt = ((f"The target ({100 * float(r['target']):g}% of the map) was tested and did not pass. " if target_rule
+                else f"Any zone needs at least {r['min_labels_to_certify']} labels at this alpha and delta. ")
+               + "A larger random sample (sample with design \"random\" and a larger budget, labelled in full) can "
+               "certify more. " + _decide.certificate_second_look(
+                   delta, target_rule or int(r["n_labelled"]) >= int(r["min_labels_to_certify"])))
     return _reply(" ".join(said), _join(limits), nxt, files, summ)
 
 
@@ -1532,19 +1550,22 @@ def plan(
             os.makedirs(_abs(out_dir), exist_ok=True)
         printed = _run([*argv, f"--out={out}"])
         r = _read_json(out)
-    said = [line for line in printed.splitlines() if line.split(":", 1)[0] in ("Error rate", "Which map", "Zone")]
+    said = [line.strip() for line in printed.splitlines()
+            if line.split(":", 1)[0] in ("Error rate", "Which map", "Zone")
+            or line.strip().startswith("With this zone fixed as the target")]
     plans = r["plans"]
     summ = {}
     for q, p in plans.items():
         if q == "zone":
             summ[q] = {"labels_to_test": p.get("labels_to_test"), "entry_budgets": p.get("entry_budgets"),
                        **{k: (p[k].get("labels") if isinstance(p.get(k), dict) else None)
-                          for k in ("bonferroni", "prefix_even")}}
+                          for k in ("bonferroni", "prefix_even", "target")}}
         else:
             summ[q] = {"labels": p.get("labels"), "probability_at_labels": p.get("probability_at_labels")}
     limits = _join([*r.get("notes", []), next(iter(plans.values()))["note"] if plans else None])
-    nxt = ("Draw the labels with sample at the budget planned: design \"random\" for an error rate or a zone, or other "
-           "set to the second map for which map is more accurate. Every guarantee holds at whatever budget is fixed "
+    nxt = ("Draw the labels with sample at the budget planned: design \"random\" for an error rate or a zone (with "
+           "target set to the zone's coverage for the target rule's budget), or other set to the second map for which "
+           "map is more accurate. Every guarantee holds at whatever budget is fixed "
            "before labelling, for one reading of those labels (reading again at a larger budget is a second test, "
            "except for certify on a sequential sample); what the plan gives is the chance of a useful answer, which "
            "for certify can fall at the budgets at which a smaller zone becomes testable, until more labels restore "

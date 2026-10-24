@@ -1024,6 +1024,10 @@ def cmd_sample(args):
     JSON carrying the design so `estimate` can give the rate the design earns. With --condition, the input condition
     of every window is fixed here and recorded in the sidecar; `estimate` and `certify` read it from there."""
     # read with getattr: demo.py and the tests build the argument Namespace by hand, without these attributes
+    if getattr(args, "target", None) is not None and (getattr(args, "other", None) or
+                                                      getattr(args, "design", None) == "audit"):
+        raise SystemExit("sample: --target fixes the zone the target rule will certify, which needs a simple random "
+                         "sample of the whole map: --design random, without --other")
     audit_opts = [getattr(args, k, None) for k in ("per_class", "zone_share", "zone_cut")]
     if getattr(args, "design", None) != "audit" and any(v is not None for v in audit_opts):
         raise SystemExit("sample: --per-class, --zone-share and --zone-cut belong to --design audit")
@@ -1065,6 +1069,16 @@ def cmd_sample(args):
     if design == "condition" and not cond_path:
         raise SystemExit("sample: --design condition needs --condition, a raster of each pixel's input condition (a "
                          "cloud flag, the modalities present, a sensor id)")
+    target = getattr(args, "target", None)
+    if target is not None:
+        # The target rule's zone, fixed before any label (1.16.0): certify reads it from the sidecar and refuses another
+        # rule on these labels, as a sequential sample's anchor is fixed here.
+        if design != "random" or cond_path:
+            raise SystemExit("sample: --target fixes the zone the target rule will certify, which needs a simple "
+                             "random sample of the whole map: --design random, without --condition")
+        if not any(abs(target - g) < 1e-9 for g in est.ZONE_GRID):
+            raise SystemExit(f"sample: --target is a level of the zone grid, {est.ZONE_GRID[0]:g} to 1 in steps of "
+                             f"{est.ZONE_GRID[1] - est.ZONE_GRID[0]:g}, got {target:g}")
     anchor, extend = getattr(args, "anchor", None), getattr(args, "extend", None)
     a_alpha, a_delta = getattr(args, "alpha", None), getattr(args, "delta", None)
     if design != "sequential" and any(v is not None for v in (anchor, extend, a_alpha, a_delta)):
@@ -1158,6 +1172,8 @@ def cmd_sample(args):
     side = {k: (v.tolist() if isinstance(v, np.ndarray) else v) for k, v in sample.items()}
     if design == "sequential":
         side["anchor"], side["anchor_rule"] = float(anchor), anchor_rule     # fixed now; certify reads them
+    if target is not None:
+        side["target"] = {"coverage": float(target), "weight": est.TARGET_WEIGHT}   # fixed now; certify reads it
     if cond is not None:
         # the design's source of truth for `estimate` and `certify`, which never read the raster again
         side["condition"] = {"source": os.path.abspath(cond_path), "rule": RULE_TEXT, "values": cond["values"],
@@ -1187,6 +1203,11 @@ def cmd_sample(args):
                          "holds at every look. To add windows later: oe-inferencex sample " + args.scores
                          + f" --design sequential --seed {args.seed} --budget <more> --extend {args.out}")
                      + (f"; the {kept} labels already given are kept" if kept else ""))
+    if target is not None:
+        notes.insert(0, f"the target, the {100 * target:g}% most confident zone, is fixed now: certify will test it "
+                        f"with {est.TARGET_WEIGHT:g} of delta (all of it if no smaller zone is tested) and the smaller "
+                        "zones with the rest (the target rule). Choose alpha and delta now too, and certify once on "
+                        "the full labels")
     print(f"{len(idx)} windows to label of {sample['n_population']} valid ({what}); wrote {args.out} and its .json. "
           f"{FILL_INSTRUCTION} oe-inferencex estimate {args.out}"
           + "".join(f"\nwarning: {w}" for w in out.get("warnings", []))
@@ -2191,6 +2212,17 @@ def cmd_certify(args):
                "guarantee whatever made them hard to judge and certifies less"] if unjudged.any() else [])
     by_condition = side.get("condition_grid") is not None and side.get("design") in ("random", "condition")
     sequential = side.get("design") == "sequential"
+    # The rule: a sample that fixed a target before labelling is certified by the target rule, and only by it, since
+    # another rule on the same labels is a second test; without a target, prefix unless --rule says bonferroni.
+    target = side.get("target")
+    if target is not None and args.rule not in (None, "target"):
+        raise SystemExit(f"certify: this sample fixed the {100 * target['coverage']:g}% zone as its target before "
+                         f"labelling, so it is certified by the target rule; --rule {args.rule} on the same labels "
+                         "would be a second test")
+    if target is None and args.rule == "target":
+        raise SystemExit("certify: the target rule needs the target fixed before labelling; draw the sample with "
+                         "`sample --design random --target C`")
+    args.rule = args.rule or ("target" if target is not None else "prefix")
     if sequential and (args.rule != "prefix" or args.level_cut is not None):
         raise SystemExit("certify: a sequential sample is certified by the sequential rule, which tests each zone from "
                          "the anchor outward at every look; --rule and --level-cut belong to the one-look rule")
@@ -2212,10 +2244,12 @@ def cmd_certify(args):
         return _certify_sequential(args, side, idx, wrong, margin, valid_w, out, mask_path, bounds, int(unjudged.sum()),
                                    also=also)
     try:
+        tkw = {} if target is None else {"target": target["coverage"], "target_weight": target["weight"]}
         res = est.certify_zone(margin.ravel(), idx, wrong, alpha, delta=args.delta, rule=args.rule, valid=valid_w.ravel(),
-                               cut=args.level_cut)
+                               cut=args.level_cut, **tkw)
         res_alt = None if also is None else est.certify_zone(margin.ravel(), idx, also[0], alpha, delta=args.delta,
-                                                             rule=args.rule, valid=valid_w.ravel(), cut=args.level_cut)
+                                                             rule=args.rule, valid=valid_w.ravel(), cut=args.level_cut,
+                                                             **tkw)
     except ValueError as exc:
         raise SystemExit(f"certify: {exc}")
     hw, ww = margin.shape
@@ -2734,11 +2768,27 @@ def cmd_plan(args):
             r = plan.plan_zone(N, args.coverage, args.alpha, args.zone_error, power, delta, max_labels=top_asked)
             results["zone"] = r
             head = (f"Zone: {100 * r['coverage']:.3g}% of the map ({r['zone_windows']} of {N} windows) at alpha "
-                    f"{args.alpha:g}" + (f" is tested from {_labels(r['labels_to_test'])} drawn at random; fewer cannot "
-                                         f"certify it even with no error among them." if r.get("labels_to_test")
+                    f"{args.alpha:g}" + (f", under the prefix and Bonferroni rules, is tested from "
+                                         f"{_labels(r['labels_to_test'])} drawn at random; fewer cannot certify it "
+                                         "under them even with no error among them." if r.get("labels_to_test")
                                          else ":"))
+
+            def target_line(t):
+                # the target rule tests a target fixed before labelling at any budget (1.16.0)
+                return (f"  With this zone fixed as the target before labelling (sample --target {r['coverage']:g}), "
+                        "under the target rule, " + _reach(t, r["checked_up_to"], "certifies it", "certify it")
+                        + f", however its errors spread (exact: the target's own test at its share of delta, "
+                        f"{t['weight']:g} of it or all of it while no smaller zone is tested, a lower bound on "
+                        "certifying it or a larger zone).")
             if "refusal" in r:
                 print(f"{head} {r['refusal'][0].upper() + r['refusal'][1:]}.")
+                if "target" in r:
+                    print(target_line(r["target"]))
+                    tl = r["target"]
+                    print(f"  target by budget: {_ladder_text(tl['probability_by_budget'], tl['labels'], power)}")
+                    if r["target"]["labels"] is not None:
+                        runs.append(_sample_command(args, r["target"]["labels"], other=False)
+                                    + f" --target {r['coverage']:g}")
             elif "unplanned" in r:
                 print(f"{head} How many more it needs depends on how often the zone is wrong, which only the labels "
                       "measure; give --zone-error, the rate you expect, to plan them.")
@@ -2753,7 +2803,10 @@ def cmd_plan(args):
                       f"budget counts when its estimate less two standard errors reaches the probability), and "
                       f"no spread of the errors reaches the probability at {len(low)} of the "
                       f"{len(r['budgets_checked'])} budgets checked (exact).")
+                t = r["target"]
+                print(target_line(t))
                 print(f"  Bonferroni by budget: {_ladder_text(b['probability_by_budget'], b['labels'], power)}")
+                print(f"  target by budget: {_ladder_text(t['probability_by_budget'], t['labels'], power)}")
                 print(f"  prefix by budget (-: below {power:g} however the errors spread): "
                       f"{_ladder_text(ev['probability_by_budget'], ev['labels'], power)}")
                 if ev["drawn"] != "without replacement":
@@ -2762,12 +2815,15 @@ def cmd_plan(args):
                 if b["labels"] is not None or ev["labels"] is not None:
                     runs.append(_sample_command(args, max(v for v in (b["labels"], ev["labels"]) if v is not None),
                                                 other=False))
+                if t["labels"] is not None:
+                    runs.append(_sample_command(args, t["labels"], other=False) + f" --target {r['coverage']:g}")
             if r.get("entry_budgets"):
                 notes.append("At " + ", ".join(f"{e} labels the {float(g):.0%} zone" for g, e in r["entry_budgets"].items())
-                             + " becomes testable; from each of these budgets both rules can lose power until more "
+                             + " becomes testable; from each of these budgets the rules can lose power until more "
                              "labels restore it: the prefix rule tests the smallest testable zone first, with few "
-                             "labels, and the Bonferroni rule splits delta over one more zone. The budget one below "
-                             "each is the last before the fall")
+                             "labels, the Bonferroni rule splits delta over one more zone, and under the target rule "
+                             "the target's share falls from all of delta to 0.8 of it where the first zone smaller "
+                             "than the target enters. The budget one below each is the last before the fall")
     except ValueError as exc:
         raise SystemExit(f"plan: {exc}") from None
     for cmd in runs:
@@ -2992,6 +3048,10 @@ def build_parser():
     sm.add_argument("--zone-cut", type=float, default=None, metavar="C",
                     help="audit design: the confident zone is the windows at confidence C or above, in the units of "
                          "the CSV's `confidence` column")
+    sm.add_argument("--target", type=float, default=None, metavar="C",
+                    help="random design: fix now the zone certify's target rule will test, the C most confident share "
+                         "of the map (a grid level, 0.05 to 1); with the target right it needs about half the labels "
+                         "of the Bonferroni rule (plan --coverage C shows how many)")
     sm.add_argument("--anchor", type=float, default=None,
                     help="sequential design: the smallest zone certify will test, as a share of the map, fixed now "
                          "before any label; or give --alpha instead")
@@ -3065,9 +3125,10 @@ def build_parser():
                    help=f"the probability the statement is allowed to be wrong (default {est.ZONE_DELTA}); for a sample "
                         "drawn with --condition, that any of the per-condition statements is, split over the conditions "
                         "tested")
-    z.add_argument("--rule", choices=("prefix", "bonferroni"), default="prefix",
+    z.add_argument("--rule", choices=("prefix", "bonferroni", "target"), default=None,
                    help="prefix (default): fixed-sequence testing, valid on any map; it certifies little when the most "
-                        "confident windows hold many errors. bonferroni: valid on any map; it can certify more in that case")
+                        "confident windows hold many errors. bonferroni: valid on any map; it can certify more in that "
+                        "case. target: the default, and the only rule, for a sample drawn with --target")
     z.add_argument("--level-cut", choices=("standard", "ramp"), default=None,
                    help="which levels a budget tests. standard (default): a level once its zone expects "
                         "min_labels_to_certify labels. ramp: the same up to 3 times that budget, then a level only once "

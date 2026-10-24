@@ -581,8 +581,26 @@ def zone_level_probability(N, n, coverage, alpha, zone_error, delta=est.ZONE_DEL
     j, cov, sizes = _zone_index(N, n, coverage, alpha, delta, grid)
     if j is None:
         return 0.0
-    nz = sizes[j]
-    level = delta if level is None else level
+    return _pass_probability(N, n, sizes[j], alpha, zone_error, delta if level is None else level)
+
+
+def target_probability(N, n, coverage, alpha, zone_error, delta=est.ZONE_DELTA, weight=est.TARGET_WEIGHT,
+                       grid=est.ZONE_GRID):
+    """A lower bound on the probability that the target rule certifies the target zone (or a larger one) with n random
+    labels, when round(zone_error n_zone) of its n_zone windows are wrong: the chance that the target's own test passes
+    at its own share of delta, which the target rule always grants it, whatever the level cut: weight * delta, or all
+    of delta when no smaller level is tested at n (as certify_zone decides it). Exact, with certify's p-value and tie
+    rule, and like zone_level_probability it depends on the zone alone, not on how the errors spread."""
+    N, n = int(N), int(n)
+    c = _grid_level(coverage, grid)
+    below = sum(1 for g in est.zone_levels(N, n, alpha, delta, grid)[0] if g < c - 1e-9)
+    share = est._level(delta) if below == 0 else est._level(delta) * est._level(weight)
+    return _pass_probability(N, n, max(1, int(round(c * N))), alpha, zone_error, share)
+
+
+def _pass_probability(N, n, nz, alpha, zone_error, level):
+    """The probability that a zone of nz of the N windows, round(zone_error nz) of them wrong, passes certify's test at
+    `level` with n random labels."""
     Kz = int(round(zone_error * nz))
     K0 = math.floor(alpha * nz) + 1                            # zone_pvalue's null count
     if K0 > nz:
@@ -720,23 +738,50 @@ def plan_zone(N, coverage, alpha, zone_error=None, power=POWER, delta=est.ZONE_D
            "min_labels_inside": est.min_labels_to_certify(alpha, delta), "labels_to_test": floor,
            "entry_budgets": {f"{g:g}": e for g, e in entries.items()},
            "zone_error": None if zone_error is None else float(zone_error), "checked_up_to": top, "note": PLAN_NOTE}
-    if _zone_index(N, N, c, alpha, delta, grid)[0] is None:
-        out["refusal"] = (f"on a map of {N} windows certify never tests this zone at alpha {alpha:g}: even with every "
-                          f"window labelled, it tests only coverages of at least {est.zone_levels(N, N, alpha, delta, grid)[2]:.3g}, "
-                          f"where a zone holds {out['min_labels_inside']} labels")
-        out["labels_to_test"] = None
-        return out
+    never = _zone_index(N, N, c, alpha, delta, grid)[0] is None
+    never_text = (f"on a map of {N} windows the prefix and Bonferroni rules never test this zone at alpha {alpha:g}: "
+                  f"even with every window labelled, they test only coverages of at least "
+                  f"{est.zone_levels(N, N, alpha, delta, grid)[2]:.3g}, where a zone holds {out['min_labels_inside']} "
+                  "labels; the target rule tests a target fixed before labelling at any budget")
     if zone_error is None:
-        out["unplanned"] = ("the labels needed beyond the floor depend on how often the zone is wrong, which only "
-                            "the labels measure; state the rate you expect to plan them")
+        if never:
+            out["refusal"] = never_text + "; give the rate you expect the zone to be wrong to plan that budget"
+            out["labels_to_test"] = None
+        else:
+            out["unplanned"] = ("the labels needed beyond the floor depend on how often the zone is wrong, which only "
+                                "the labels measure; state the rate you expect to plan them")
         return out
     _check("the expected zone error rate", zone_error, 0, 1, lo_open=False, hi_open=True)
     if zone_error > alpha:
         out["refusal"] = (f"a zone wrong {zone_error:g} of the time is wrong more than alpha {alpha:g}; no budget "
                           "certifies it, and a rule that did would be wrong")
         return out
+    # the target rule (1.16.0): the zone fixed as the target before labelling is always tested, at its own share of
+    # delta, so its own test is a lower bound on certifying it, exact for any spread of the errors; it is planned even
+    # where the prefix and Bonferroni rules never test the zone or test it only beyond the budgets checked
+    tg = lambda b: target_probability(N, b, c, alpha, zone_error, delta, grid=grid)
+    # the entry budgets and the one below each are checked too: where the level just below the target enters, the
+    # target's share falls from all of delta to the weight, and its probability with it (the review of 1.16.0)
+    start = set(ladder(top)) | {top} | {e for e in entries.values()} | {e - 1 for e in entries.values() if e > 1}
+    tgt, tgt_span = refine(tg, {b: tg(b) for b in sorted(start)}, power, every=True)
+    rec_t = recommend(tgt, power)
+    if tgt_span is not None and (rec_t is None or not tgt_span[0] <= rec_t <= tgt_span[1]):
+        tgt_span = None
+    out["target"] = {"labels": rec_t, "probability_by_budget": {str(b): tgt[b] for b in sorted(tgt)},
+                     "every_budget_checked": None if tgt_span is None else list(tgt_span),
+                     "runs_reaching_power": runs(tgt, power), "weight": est.TARGET_WEIGHT, "exact": True,
+                     "lower_bound": True,
+                     "holds_for": "any spread of the errors inside the zone, with this coverage fixed as the target "
+                                  "before labelling (sample --target); the probability is that the target's own test "
+                                  "passes at its own share of delta (the weight, or all of delta while no smaller "
+                                  "zone is tested), a lower bound on certifying the target or a larger zone",
+                     "probability_at_labels": None if rec_t is None else tgt[rec_t]}
+    if never:
+        out["refusal"], out["labels_to_test"] = never_text, None
+        return out
     if floor > top:
-        out["refusal"] = f"the zone is tested only from {floor} labels, more than the {top} checked"
+        out["refusal"] = (f"under the prefix and Bonferroni rules the zone is tested only from {floor} labels, more "
+                          f"than the {top} checked")
         return out
     budgets = sorted(set([b for b in ladder(top) if b >= floor] + [floor]
                          + [e for e in entries.values() if e >= floor]

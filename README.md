@@ -30,7 +30,7 @@ What it answers
 |---|---|---|
 | Where do I look first? | `assess scores.tif --out audit` | none |
 | How wrong is the map? | `sample scores.tif --budget 400 --design random --out to_label.csv`, fill in `wrong`, then `estimate to_label.csv` | about 400 random windows |
-| Which part can I trust? | `certify to_label.csv --alpha 0.05` | the same windows |
+| Which part can I trust? | `certify to_label.csv --alpha 0.05` | the same windows; with `sample --target C`, about half what the Bonferroni rule needs |
 | Which class does the map draw wrong? | add a `reference_class` column (the class you see), then `estimate to_label.csv --per-class` | the same windows for a large class; about 900 for a 5% class drawn at half, thousands at 1% (`plan --class-share`) |
 | Which of two maps of the same time is more accurate? | `sample a.tif --other b.tif --budget 100 --out pairs.csv`, fill in `reference_class`, then `estimate pairs.csv` | about 100, where the maps differ |
 | Which class's confident calls can't I trust? | `sample scores.tif --design audit --per-class 20 --out audit.csv`, fill in `reference_class`, then `estimate audit.csv --alpha 0.05` | about 20 per class |
@@ -84,8 +84,9 @@ With a simple random sample of the map's windows, drawn by `sample --design rand
   approximate intervals; the condition design's hold per condition.
 - **The certified zone**, the most confident share of the map, is wrong at most α of the time, and this statement
   fails on at most δ of samples, 10% by default (`certify --alpha`, `--delta`, with its default prefix rule or
-  `--rule bonferroni`). On a sequential sample (`--design sequential`) labels can be added and certify rerun at every
-  look under the same guarantee.
+  `--rule bonferroni`). With the zone to trust fixed before labelling (`sample --target C`), certifying it with a
+  given probability takes about half the labels the Bonferroni rule needs for that zone, when the target is right. On a sequential sample (`--design
+  sequential`) labels can be added and certify rerun at every look under the same guarantee.
 - **Each class's share** has an exact interval, and all classes' intervals hold together at 95%; so do the producer's
   accuracies (`estimate --per-class`).
 
@@ -98,7 +99,7 @@ Three assumptions: the windows were drawn at random by `sample`; the labels are 
 exception is certify on a sequential sample, rerun as labels are added with α and δ unchanged; an error rate read from
 a sequential sample needs its number of labels fixed before labelling. The tests check each statement by exact
 computation, and the [research record](https://github.com/2imi9/olmoearth_inferenceX-record) checks them on fully
-labelled real maps.
+labelled real maps, except the target rule, new in 1.16.0, which only the tests check so far.
 
 Without labels nothing is guaranteed: the confidence orders the windows to check, and in a new place it can be sure
 and wrong.

@@ -19,7 +19,7 @@ extra) are new in 1.4.0.
 
 ## Quick start
 
-Every command below runs on 1.15.0. `scores.tif` is a map of per-class probabilities; add `--logits` for logits.
+Every command below runs on 1.16.0. `scores.tif` is a map of per-class probabilities; add `--logits` for logits.
 
 ```bash
 pip install "olmoearth-inferencex[geo]"
@@ -904,8 +904,27 @@ It writes `random_zone.json` (`coverage`, the certified share; `threshold`, the 
   certify. It is fixed-sequence testing, so it is valid on any map, whatever the shape of its error rate. It
   certifies little when the most confident windows hold many errors; there `--rule bonferroni`, which tests every
   level at δ divided by the number of levels, can certify more. Neither is the more powerful in general (exp80).
+- `--target C` (from 1.16.0), given to `sample` with `--design random`, fixes before any label the zone the user
+  wants to trust, the C most confident share of the map (a grid level). `certify` reads it from the sample's sidecar
+  and uses the target rule, and only it: the target holds 0.8 of δ, the smaller zones share the rest, and a zone that
+  passes hands its share up to the next larger one (a fallback procedure, Wiens 2003). It is valid on any map, like
+  the other two rules (tests/test_target_zone.py enumerates every error pattern of small maps and every draw). With
+  the target right it needs about half the labels of the Bonferroni rule, whatever the spread of the errors: to
+  certify the top half of a 20,000-window map wrong 1.25% of the time, with probability 0.9 at α = 5%, 329 random
+  labels against Bonferroni's 644 and the prefix rule's 2,645 when the errors spread evenly (`plan --coverage 0.5
+  --alpha 0.05 --zone-error 0.0125` gives all three). A zone larger than the target is certified only through the
+  hand-up; a target that was too optimistic leaves the smaller zones 0.2 of δ, and certifying one of them can then
+  take more labels than Bonferroni would: about 15% more for a target one grid level too high, up to about a third
+  more with the whole map as the target (about two and a half times what the right target needs).
+  When no smaller zone is tested at the budget, the target holds all of δ and there is no fallback; `plan` counts
+  that. Without a target the rule saves nothing, so choose one from what is known before
+  labelling: the share of the map the user needs, a plan, or the error rate of the model's own held-out validation
+  labels, which may guide the choice but certify nothing on the map. The same labels serve `estimate`.
 - Like `estimate`, `certify` treats the labels as right: the zone's guarantee is about agreement with the reviewer's
   labels.
+- A labelled set that looks like the tool's review set (enriched for errors) is refused, and from 1.16.0 so is one
+  drawn from the confident end of the map, whose mean suspicion percentile sits as far below 0.5: every zone would look
+  cleaner than it is.
 - When the budget cannot certify the level asked for, `certify` says so. With no error among its labels a zone needs
   about `ln(δ) / ln(1 − α)` labels (`min_labels_to_certify`, b_min): 45 at α = 5% and 255 at α = 0.9%, for δ = 0.1.
 - Which levels a budget n tests (`--level-cut`). By default, `standard`: a level once its zone expects b_min labels.
@@ -1040,18 +1059,19 @@ run: oe-inferencex sample MAP --design random --budget 244 --out to_label.csv
 | An error rate, to within a width | `MAP --width W` (or `--windows N`) | the probability that `estimate`'s exact 95% interval is no wider than W (high minus low) |
 | Which of two maps is more accurate | `MAP_A --other MAP_B --difference D` (or `--windows N --differing D`) | the probability that labels drawn where the maps differ name the more accurate map when their accuracies differ by D or more, at the worst split checked of the differing windows into right in one map, in the other or in neither; with `--two-class`, the one split of two-class maps |
 | A class drawn wrong | `MAP --class-share S --classes C [--drawn-at R]` (or `--windows N`) | the probability that `estimate --per-class`'s exact interval for a class of share S flags it, when the map draws it at R of its share (0.5 by default; above 1, an over-draw), with the intervals of all C classes holding together at 95% |
-| A certified zone | `MAP --coverage C --alpha A [--zone-error R]` | the budget from which `certify` tests that zone at all; with R, the Bonferroni rule's probability of certifying it (exact, however the errors spread), the most the prefix rule can reach (exact) and the prefix rule's probability when its more confident zones are wrong no more often (simulated, the worst such map) |
+| A certified zone | `MAP --coverage C --alpha A [--zone-error R]` | the budget from which the prefix and Bonferroni rules test that zone at all; with R, the Bonferroni rule's probability of certifying it (exact, however the errors spread), the target rule's for that zone fixed with `sample --target C` (exact lower bound, at any budget, from 1.16.0), the most the prefix rule can reach (exact) and the prefix rule's probability when its more confident zones are wrong no more often (simulated, the worst such map) |
 
 Between the budgets of the ladder the probability does not rise smoothly: the counts are discrete, so it steps, and
 for `certify` it falls at each budget where a smaller zone becomes testable, because the prefix rule then tests that
-zone first, with few labels, and the Bonferroni rule splits delta over one more zone; the simulated prefix figure counts
-only where its estimate less two standard errors reaches the probability. `plan` therefore checks nine
-budgets below the recommendation and, where a budget is cheap to compute exactly, every budget from it up to 5% above
-it, lists the budgets where a smaller zone enters, and, when the largest budget checked falls in such a fall, gives the
-runs of budgets that reach the probability instead of a recommendation. For the error rate, two maps and a class the
-interval ends are `estimate`'s tail inversion decided in floating point, which can move an end by one window where a
-tail lies within about 1e-6 of its level. The plan holds for the rate, difference or shares stated; the labels then
-measure the map's own. `--out plan.json` writes every budget checked. `oe_inferencex.plan` holds the functions.
+zone first, with few labels, the Bonferroni rule splits delta over one more zone, and under the target rule the
+target's share falls from all of delta to 0.8 of it where the first zone smaller than the target enters; the simulated
+prefix figure counts only where its estimate less two standard errors reaches the probability. `plan` therefore checks
+nine budgets below the recommendation and, where a budget is cheap to compute exactly, every budget from it up to 5%
+above it, lists the budgets where a smaller zone enters, and, when the largest budget checked falls in such a fall,
+gives the runs of budgets that reach the probability instead of a recommendation. For the error rate, two maps and a
+class the interval ends are `estimate`'s tail inversion decided in floating point, which can move an end by one window
+where a tail lies within about 1e-6 of its level. The plan holds for the rate, difference or shares stated; the labels
+then measure the map's own. `--out plan.json` writes every budget checked. `oe_inferencex.plan` holds the functions.
 
 ### decide
 
