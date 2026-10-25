@@ -602,7 +602,7 @@ def _pass_probability(N, n, nz, alpha, zone_error, level):
     """The probability that a zone of nz of the N windows, round(zone_error nz) of them wrong, passes certify's test at
     `level` with n random labels."""
     Kz = int(round(zone_error * nz))
-    K0 = math.floor(alpha * nz) + 1                            # zone_pvalue's null count
+    K0 = est.null_count(nz, alpha)                             # zone_pvalue's null count
     if K0 > nz:
         return 1.0                                             # no count of the zone exceeds alpha: every test passes
     lv = float(est._level(level))

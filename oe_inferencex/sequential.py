@@ -52,8 +52,8 @@ from . import estimate as est
 
 def _null_count(n, alpha):
     """M0, the smallest count of wrong windows that makes a zone of n windows wrong more than alpha of the time;
-    n + 1 when no count can (the null is empty)."""
-    return math.floor(alpha * n) + 1
+    n + 1 when no count can (the null is empty). alpha is read as the decimal it is written as (est.null_count)."""
+    return est.null_count(n, alpha)
 
 
 def _log_tail(k, n, N, K, upper):

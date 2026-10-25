@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.17.1 (2026-10-25)
+
+Three findings of the score review of 1.17.0 (three independent raters, 25 October 2026):
+
+- **The zone test's null count is exact.** floor(alpha n) + 1, the smallest count of a zone's n windows that is wrong
+  more than alpha of the time, was computed in floats: 0.29 x 100 is 28.999..., which gave 29, put a zone wrong
+  exactly 29% of the time into the null and about doubled the p-value. Valid, since the test was only more cautious,
+  but not the exact test the docs describe, on 26 two-decimal alphas up to 0.50 with n up to 2,000. `estimate.null_count`
+  now reads alpha as the decimal it is written as; certify's rules, the sequential rule and `plan` use it. A test checks
+  every such pair.
+- **The class design prints Olofsson's normal-theory intervals beside its exact ones.** The exact union bounds are 2.7
+  to 3.4 times as wide; `estimate --per-class` now shows, per class, the normal-theory producer's accuracy and area and,
+  for the whole map, the normal-theory overall accuracy (`overall_accuracy_normal_theory` in the JSON), with a note that
+  they are narrower and not exact. "(here 9 classes)" now reads "(the legend holds 9 classes)".
+- **The technical report's counts and one stale sentence** (in the research record): 98 experiment numbers and 280
+  ledger claims, exp116's failed-as-written P5 in the table of failed predictions, and the review-set check described
+  as refusing the confident end since 1.16.0.
+
 ## 1.17.0 (2026-10-24)
 
 **Map certificates: a certified zone that travels with the map.** `oe-inferencex certificate ZONE_JSON --date D --out

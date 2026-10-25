@@ -643,3 +643,20 @@ def test_the_condition_designs_whole_map_interval_against_a_random_samples(sizes
     assert (condition > random) == wider, (condition, random)
     assert "When the conditions' error rates are close, it is also wider than the exact interval of a random sample" \
         in est.CONDITION_WHOLE_MAP and "--design random can give a narrower interval" in est.CONDITION_WHOLE_MAP
+
+
+def test_the_null_count_reads_alpha_as_written():
+    """floor(alpha n) + 1 with alpha as the decimal it is written as: in floats 0.29 x 100 is 28.999..., which put a
+    zone wrong exactly 29% of the time into the null and about doubled the p-value (the score review of 25 October
+    2026). The zone test and the sequential rule use the same count."""
+    import math
+    from fractions import Fraction
+
+    from oe_inferencex import sequential as sq
+    for a in range(1, 51):
+        for n in range(1, 2001):
+            want = (a * n) // 100 + 1
+            assert est.null_count(n, a / 100) == want == sq._null_count(n, a / 100)
+    assert math.floor(0.29 * 100) + 1 == 29 and est.null_count(100, 0.29) == 30
+    # the p-value at the corrected count is the hypergeometric tail at K0 = 30
+    assert est.zone_pvalue_exact(0, 10, 100, 0.29) == Fraction(math.comb(70, 10), math.comb(100, 10))

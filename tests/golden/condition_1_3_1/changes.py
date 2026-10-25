@@ -109,7 +109,8 @@ REGENERATED = {
             "outside its interval is named drawn too little or too much, a producer's accuracy the point estimate "
             "leaves out gets its exact interval, and a note says so; the JSON rows gain reference_share_exact, drawn "
             "and producer_accuracy_exact and its per_class_method says the intervals are exact. Other designs are "
-            "unchanged"),
+            "unchanged. In 1.17.1 the note's '(here L classes)' became '(the legend holds L classes)', the one edit "
+            "made to these files since 1.14.0"),
     "version": "1.14.0",
     "directory": "../per_class_exact_1_14_0",
     "constant": ("oe_inferencex.estimate", "PER_CLASS_EXACT_NOTE"),

@@ -1460,6 +1460,9 @@ CLASS_DESIGN_METHOD = ("stratified by map class (Olofsson et al. 2014): each cla
                        "stratum, at 1 - 0.05 / (L x S) with L classes and S strata not labelled in full, so they all hold "
                        "together with probability at least 95% (union bound); the points are Olofsson's stratified "
                        "estimates; the overall accuracy takes the error rate's interval, the union bound over the classes")
+CLASS_NORMAL_NOTE = ("Beside the exact intervals, the normal-theory ones Olofsson et al. (2014) give from the same "
+                     "labels (stratified estimates with their standard errors): narrower, and not exact, so they can "
+                     "cover less than 95%, most of all for a rare class or one with few sampled errors.")
 CLASS_DESIGN_EXACT_NOTE = ("under the class design the per-class intervals printed are exact: each user's accuracy at 95%, "
                            "and the class shares and producer's accuracies together at 95% (a union bound over every "
                            "class's count in every stratum, wide where many classes are thin); a class whose share the "
@@ -1735,6 +1738,10 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
         by_class = design == "condition" and (sample.get("condition") or {}).get("by") == "map class"
         if by_class:
             _class_design_exact(per, sample, strata, local, sizes, m_pop, r_s, C, L, N)
+            # beside the exact union bounds, the normal-theory interval agencies read (Olofsson et al. 2014), so the
+            # width exactness costs is in view (the score review of 25 October 2026: 2.7 to 3.4 times as wide)
+            normal_overall = dict(zip(("estimate", "low", "high"),
+                                      _wald(*stratified_mean_and_variance(right, strata, local, sizes, N)[:2])))
         method = (CLASS_DESIGN_METHOD if by_class else
                   "stratified by input condition: ratios of Horvitz-Thompson totals with linearised variance; shares as "
                   "Horvitz-Thompson totals; with input conditions as strata these per-class intervals have not been graded; "
@@ -1813,6 +1820,8 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
            "per_class": per, "method": method}
     if srs:
         out["overall_accuracy_post_stratified"] = post_stratified
+    if by_class:
+        out["overall_accuracy_normal_theory"] = normal_overall
     if warnings:
         out["warning"] = "; ".join(warnings)
     return out
@@ -1881,6 +1890,15 @@ def hypergeom_cdf(k, n, K, b):
     return min(1.0, tot)
 
 
+def null_count(n, alpha):
+    """floor(alpha n) + 1, the smallest count of n windows that is wrong more than alpha of the time, with alpha read
+    as the decimal it is written as. In floats 0.29 x 100 is 28.999..., which gave 29 and put a zone wrong exactly 29%
+    of the time into the null: a p-value about twice too large, valid but not the exact test the docs describe, on 41
+    (alpha, n) pairs up to n = 2,000 (the score review of 25 October 2026)."""
+    from fractions import Fraction
+    return math.floor(Fraction(repr(float(alpha))) * int(n)) + 1
+
+
 def zone_pvalue(k, b, n, alpha):
     """The exact one-sided p-value against 'this zone of n windows is wrong more than alpha of the time', from k
     errors among b of its windows drawn at random. The null count that makes the p-value largest is the smallest
@@ -1894,7 +1912,7 @@ def zone_pvalue(k, b, n, alpha):
         return 1.0
     if not 0 <= k <= b <= n:
         raise ValueError(f"zone_pvalue needs 0 <= k <= b <= n, got k={k}, b={b}, n={n}")
-    K0 = math.floor(alpha * n) + 1
+    K0 = null_count(n, alpha)
     if K0 > n:                                  # no count of n can exceed alpha n: the null is empty
         return 0.0
     return hypergeom_cdf(k, n, K0, b)
@@ -1908,7 +1926,7 @@ def zone_pvalue_exact(k, b, n, alpha):
     n, b, k = int(n), int(b), int(k)
     if b == 0:
         return Fraction(1)
-    K0 = math.floor(alpha * n) + 1              # the same null count as zone_pvalue
+    K0 = null_count(n, alpha)                   # the same null count as zone_pvalue
     if K0 > n:
         return Fraction(0)
     return _hyper_tail_exact(k, b, n, K0, upper=False)

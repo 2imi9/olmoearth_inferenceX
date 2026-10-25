@@ -2334,11 +2334,13 @@ def cmd_estimate(args):
                 ce = lambda x, d: math.ceil(x * 10 ** d - 1e-9) / 10 ** d
                 pt = "n/a" if pe["estimate"] is None else f"{100 * pe['estimate']:.0f}%"
                 drawn = "" if row["drawn"] == "within" else f": drawn {row['drawn']}"
+                normal = ("" if (side.get("condition") or {}).get("by") != "map class" else
+                          f"; normal-theory: producer's {f(pa)}, area {f(sh)}")
                 lines.append(f"  class {c}: user's accuracy {f(ua)}, producer's {pt} (exact {fl(100 * pe['low'], 0):.0f}-"
                              f"{ce(100 * pe['high'], 0):.0f}), share of map {100 * row['map_share']:.1f}% -> "
                              f"{'area' if (side.get('condition') or {}).get('by') == 'map class' else 'labels'} "
                              f"{100 * se['estimate']:.1f}% (exact {fl(100 * se['low'], 1):.1f}-{ce(100 * se['high'], 1):.1f})"
-                             f"{drawn}" + tag)
+                             f"{drawn}" + normal + tag)
             else:
                 lines.append(f"  class {c}: user's accuracy {f(ua)}, producer's {f(pa)}, share of map "
                              f"{100 * row['map_share']:.1f}% -> error-adjusted {f(sh)}" + tag)
@@ -2347,8 +2349,12 @@ def cmd_estimate(args):
             # a class design with one class is a random sample, and its table the random design's (the review of 24
             # October 2026: it printed the class design's note beside the random design's numbers)
             class_note = by_class and len((side.get("condition") or {}).get("values") or []) > 1
-            lines.append(f"note: {est.CLASS_DESIGN_EXACT_NOTE if class_note else est.PER_CLASS_EXACT_NOTE} (here "
-                         f"{pc['legend_size']} classes)")
+            lines.append(f"note: {est.CLASS_DESIGN_EXACT_NOTE if class_note else est.PER_CLASS_EXACT_NOTE} (the "
+                         f"legend holds {pc['legend_size']} classes)")
+            if class_note and pc.get("overall_accuracy_normal_theory"):
+                o = pc["overall_accuracy_normal_theory"]
+                lines.append(f"note: {est.CLASS_NORMAL_NOTE} Overall accuracy {100 * o['estimate']:.1f}%, normal-theory "
+                             f"interval {100 * o['low']:.1f}% to {100 * o['high']:.1f}%.")
             if side.get("design") == "sequential":
                 lines.append("note: a sequential sample's per-class intervals are exact when the number of labelled "
                              "windows was fixed before labelling, as for its error rate")
