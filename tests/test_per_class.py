@@ -452,7 +452,7 @@ def test_estimate_classes_and_plan_class_share_on_the_command_line(tmp_path, cap
     capsys.readouterr()
     assert main(["estimate", str(out), "--per-class", "--classes", "3", "--out", str(tmp_path / "e.json")]) == 0
     printed = capsys.readouterr().out
-    assert "(exact " in printed and "(here 3 classes)" in printed
+    assert "(exact " in printed and "(the legend holds 3 classes)" in printed
     assert json.load(open(tmp_path / "e.json"))["per_class_legend_size"] == 3
     with pytest.raises(SystemExit, match="goes with --per-class"):
         main(["estimate", str(out), "--classes", "3"])
