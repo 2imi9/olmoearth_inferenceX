@@ -23,17 +23,22 @@ Modules, in the order a user meets them:
               per-class accuracy, and a certified zone of the map that is wrong at most alpha of the time; with an
               input condition, labels split equally across the conditions, each condition's exact interval, and a
               zone per condition with delta split over them (exp88)
+  agency      an agency's stratified reference sample (NLCD, GFC2020) -> overall, user's and producer's accuracy
+              and class shares of one map or two, each with an interval valid at any sample size (stratified: the
+              betting intervals, the box for ratios, the pure-stratum rule) and the normal-theory one beside it
   metrics     tie-aware AURC and excess AURC, capture at a budget, the attainable ceiling, design-weighted forms
   stats       exact sign tests, one-vote-per-cluster tests, block and cluster bootstraps
   signals     the confidence readings and the no-model pixel controls every rule is scored against
   reliability the ensemble and typicality signals that were tested and lost, kept so they can be re-tested
-  cli         `oe-inferencex demo`, `assess`, `compare`, `sample`, `estimate` and `certify`: rasters or .npy in, files out
+  cli         `oe-inferencex demo`, `assess`, `compare`, `sample`, `estimate`, `certify` and `grade`: rasters, .npy or
+              point tables in, files out
   mcp_server  the same commands as tools of a local MCP server for an agent, `oe-inferencex mcp`
   taskcard    what each OlmoEarth fine-tuned model is; lcc: a range reader for the served rasters
   olmoearth   an OlmoEarth run's rslearn dataset -> the scores assess reads and an input-condition layer on their grid
 By dependency the modules form three groups, and the layout stays flat (docs/plan/adr-001-repository-layout.md
 in the research record):
-  numpy only        assess, explain, compare, calibrate, estimate, metrics, stats, signals, reliability, cli
+  numpy only        assess, explain, compare, calibrate, estimate, agency, stratified, metrics, stats, signals,
+                    reliability, cli
   standard library  taskcard, lcc
   guarded extras    evidence (torch); awf and data (the "encoder" and "geo" extras); olmoearth's readers (rasterio,
                     the "geo" extra; the module imports with numpy alone); figstyle (matplotlib);
@@ -49,6 +54,7 @@ from importlib.metadata import PackageNotFoundError, version as _version
 
 from .assess import (assess_classmap, assess_prediction, boundary_first_score, pool_condition, review_mask,
                      review_order, summary)
+from .agency import design_from_sizes, design_from_weights, grade, read_points
 from .calibrate import fit_ranker, fit_side, side_features
 from .estimate import (certify_by_condition, cluster_interval, confidence_strata, design_effect, equal_allocation, estimate_error_rate, estimate_from_indices, exact_coverage_srs,
                        hypergeom_interval,
@@ -64,6 +70,7 @@ from .metrics import (attainable_ceiling, augrc, augrc_from_auroc, aurc_expected
 from .signals import (aligned_tile_phase, boundary_indicator, combine_midrank, confidence, crop_dependence,
                       midrank_pct, ndwi, ndwi_gradient, ndwi_level, pool_to_windows, s2_patch_variance,
                       shift_averaged_probability)
+from .stratified import betting_interval, pure_stratum_ratio
 from .stats import (block_bootstrap_indices, cluster_bootstrap_difference, clustered_sign_test,
                     paired_cluster_bootstrap, paired_comparison, rank_sum_test, sign_test, spearman, wins_losses_ties)
 
@@ -88,6 +95,8 @@ __all__ = [
     "sample_for_estimation", "estimate_error_rate", "estimate_from_indices", "review_set_check",
     "wilson_interval", "hypergeom_interval", "exact_coverage_srs", "stratified_interval", "stratified_interval_wilson", "stratified_mean_and_variance", "cluster_interval", "design_effect", "confidence_strata", "neyman_allocation",
     "equal_allocation", "certify_by_condition",
+    # agency: an agency's stratified sample graded, with intervals valid at any sample size
+    "grade", "read_points", "design_from_weights", "design_from_sizes", "betting_interval", "pure_stratum_ratio",
     # metrics
     "excess_aurc", "aurc_expected", "risk_coverage", "oracle_aurc", "capture_at_budget", "attainable_ceiling", "augrc", "augrc_from_auroc",
     "capture_at_budget_expected", "selective_accuracy", "expected_calibration_error",
