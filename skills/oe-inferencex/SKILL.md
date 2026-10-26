@@ -111,7 +111,8 @@ Do not work around them. The package refuses only what a rule says it refuses; t
 - Without labels, compare cannot say which map is right. Two maps that agree can both be wrong.
 - Labels are assumed right. The interval and the zone describe agreement with the reviewer's labels; only estimate
   can widen its interval for a reviewer who errs, at rates the user states.
-- Ranking needs the scores, not only the class map. A class map alone works only in compare. assess refuses a
+- Ranking needs the scores, not only the class map. A class map alone works only to compare two maps: in compare,
+  and in sample, estimate and plan with a second map (other). assess refuses a
   class map of more than two classes read as probabilities, but not a 0/1 map, nor any class map passed with
   logits=true: it reads the class ids as scores, and the order it gives is not evidence.
 - An interval or a certificate holds for one sample whose size was fixed before labelling, with the rule, alpha

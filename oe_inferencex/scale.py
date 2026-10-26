@@ -14,7 +14,8 @@ It zooms out only. The finest window is the sensor's pixel, and a class too smal
 class's survival is about where the map draws the class, not where the class is."""
 import numpy as np
 
-from .assess import NO_VALID_WINDOW, _pool, _pooled_argmax, assess_classmap, assess_prediction
+from .assess import (NO_VALID_WINDOW, _check_shape, _masked_as_nodata, _pool, _pooled_argmax, _reference_index,
+                     assess_classmap, assess_prediction)
 
 PATCHES = (1, 2, 4, 8, 16)
 # A descriptive line, not a test: below it most of the pixels the map calls c sit in windows called another class.
@@ -73,22 +74,18 @@ def _reference_block(out, reference, p, n_classes):
     """Per-class window accuracy against the reference, scored as assess scores it: the reference pooled over its own
     class range with an evenly split window left unscored, a window graded where both hold and the reference has a
     majority."""
-    ref = np.asarray(reference)
-    if ref.dtype.kind == "f":
-        ref = np.where(np.isfinite(ref), np.rint(np.where(np.isfinite(ref), ref, 0.0)), -1.0)
-    ref = ref.astype(int)
-    n_ref = int(ref[ref >= 0].max()) + 1 if (ref >= 0).any() else n_classes
-    ref_w = _pooled_argmax(ref, max(n_ref, n_classes), p, empty=-1, tie=-1)
+    ref, codes = _reference_index(reference, n_classes)     # remapped, so memory follows the classes present
+    ref_w = _pooled_argmax(ref, len(codes), p, empty=-1, tie=-1)
     pooled, valid_w = out["arrays"]["pooled_argmax"], out["arrays"]["valid"]
     scored = valid_w & (_pool((ref >= 0).astype(float), p) >= 0.5) & (ref_w >= 0)
     rw, mw = ref_w[scored], pooled[scored]
     per = {}
-    for c in range(max(n_ref, n_classes)):
-        in_ref, in_map = rw == c, mw == c
+    for i, c in enumerate(codes):
+        in_ref, in_map = rw == i, mw == i
         if in_ref.any() or in_map.any():
-            per[c] = {"windows_in_reference": int(in_ref.sum()), "windows_in_map": int(in_map.sum()),
-                      "producer_accuracy": float((mw[in_ref] == c).mean()) if in_ref.any() else None,
-                      "user_accuracy": float((rw[in_map] == c).mean()) if in_map.any() else None}
+            per[int(c)] = {"windows_in_reference": int(in_ref.sum()), "windows_in_map": int(in_map.sum()),
+                           "producer_accuracy": float((mw[in_ref] == i).mean()) if in_ref.any() else None,
+                           "user_accuracy": float((rw[in_map] == i).mean()) if in_map.any() else None}
     return per
 
 
@@ -112,12 +109,21 @@ def scale_profile(scores=None, is_logit=False, hard=None, confidence=None, n_cla
         raise ValueError("give either scores or a class map with its confidence band")
     if hard is not None and (confidence is None or n_classes is None):
         raise ValueError("a class map needs its confidence band and the number of classes")
+    # A masked array's mask is no-data, as assess reads it (the bug hunt of 2026-10-25): dropped, its fill was ranked.
+    # The shapes are checked first, so that a mask of the wrong shape is not broadcast into it (the review of 1.17.2).
+    shape = tuple(np.shape(scores)[-2:]) if scores is not None else tuple(np.shape(hard))
+    if hard is not None:
+        _check_shape("confidence band", np.shape(confidence), shape)
+    for name, layer in (("no-data mask", nodata_mask), ("reference", reference)):
+        if layer is not None:
+            _check_shape(name, np.shape(layer), shape)
     if scores is not None:
+        scores, nodata_mask = _masked_as_nodata(scores, nodata_mask)
         px_hard, n_cls = pixel_classes(scores, is_logit)
-        shape = np.asarray(scores).shape[-2:]
     else:
+        hard, nodata_mask = _masked_as_nodata(hard, nodata_mask)
+        confidence, nodata_mask = _masked_as_nodata(confidence, nodata_mask)
         px_hard, n_cls = np.asarray(hard).astype(int), int(n_classes)
-        shape = px_hard.shape
     fit, skipped = _check_patches(patches, shape)
     valid = np.ones(shape, dtype=bool) if nodata_mask is None else ~np.asarray(nodata_mask, dtype=bool)
     if scores is not None:
@@ -154,7 +160,7 @@ def scale_profile(scores=None, is_logit=False, hard=None, confidence=None, n_cla
             row["against_reference"] = {
                 "n_windows_scored": ref["n_windows_scored"], "error_rate": ref["error_rate"],
                 "excess_aurc_confidence": ref.get("excess_aurc_confidence"),
-                # with no error the share of the errors captured is undefined (assess writes 0 there)
+                # with no error the share of the errors captured is undefined (assess writes NaN there since 1.17.2)
                 "errors_in_5pct_review": None if not ref["error_rate"] else
                 (ref.get("error_capture_at_budget") or {}).get(0.05, {}).get("errors_captured_fraction"),
                 "per_class": _reference_block(out, reference, p, n_cls) if ref["n_windows_scored"] else {}}

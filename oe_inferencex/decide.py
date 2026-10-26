@@ -349,7 +349,8 @@ def _answer_class(r, t, which):
            f"undetermined for {counts['undetermined']}. "
            + ("The producer's accuracies' exact intervals hold together, all classes at 95% (exp115)"
               if exact and which == "producer" else
-              f"{SEPARATE} Each user's accuracy's interval is exact under a random sample" if exact else
+              f"{SEPARATE} Each user's accuracy's interval is exact under "
+              + ("the class design" if r.get("condition_by") == "map class" else "a random sample") if exact else
               f"{SEPARATE} Per-class intervals are nominal: a class resting on a few sampled errors can be missed by "
               "its interval")
            + (f", and {warned} class{'' if warned == 1 else 'es'} carry the package's warning" if warned else "")
@@ -656,6 +657,7 @@ def decide(result, questions):
     {question: answer}, "available"}, each answer {"type", "answer", "level", "exact", "because", "evidence"} and,
     where the result holds input conditions or classes, their own answers. A question the result cannot answer is
     refused with ValueError."""
+    path = result if isinstance(result, (str, os.PathLike)) else None
     if isinstance(result, (str, os.PathLike)):
         try:
             with open(result, encoding="utf-8") as f:
@@ -688,4 +690,11 @@ def decide(result, questions):
         else:
             ans = _answer_share_differs(result, k)
         answers[name if v is None else f"{name}={v:g}"] = ans
+    from .cli import class_wording, result_class_names
+    names = result_class_names(result, path)
+    if names is not None:
+        # the class design's strata are map classes: "Each input condition has its own answer" was said of them (the
+        # bug hunt of 2026-10-25), and of a certificate bundle's zone.json, which does not say so itself (the third
+        # review of 1.17.2)
+        answers = class_wording(result, names=names)(answers)
     return {"result_kind": k, "answers": answers, "available": can}

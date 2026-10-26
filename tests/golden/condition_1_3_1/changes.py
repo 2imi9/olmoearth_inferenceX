@@ -100,6 +100,37 @@ ADDED = (
                "sample_scene_random.certify_prefix.stdout.txt")},
 )
 
+# Stretches of one golden file the package now writes differently, on purpose, each written out whole for the file
+# that holds it: the texts carry that file's own counts, so no constant holds them. A listed stretch that is not in its
+# file exactly `count` times fails the test, and so does a new text already there.
+EDITS = (
+    {"why": ("the share of the errors a budget captures, when the reference finds no error (1.17.2, the bug hunt of "
+             "25 October 2026): 0/0 was written 0.0, read as 'the review set catches none of the errors', where scale "
+             "wrote it undefined; it is now NaN, null in the JSON"),
+     "file": "api_prediction_scene.json", "old": '"errors_captured_fraction": 0.0,',
+     "new": '"errors_captured_fraction": null,', "count": 2},
+    {"why": "the same share in the assessment the command line writes for the same map",
+     "file": "assess_scene__assessment.json", "old": '"errors_captured_fraction": 0.0,',
+     "new": '"errors_captured_fraction": null,', "count": 2},
+    {"why": ("assess's terminal line, for the same map: it says the reference grades 1016 of the 1020 windows and that "
+             "no window disagrees with it, where it printed a capture of 0.00 at each budget"),
+     "file": "assess_scene.stdout.txt", "old": "against the reference: error capture 5% -> 0.00, 10% -> 0.00",
+     "new": ("against the reference, which grades 1016 of the 1020 windows: no window disagrees with it, so error "
+             "capture is undefined"), "count": 1},
+    {"why": ("assess's terminal line with a reference that grades 247 of the 256 windows (1.17.2, the bug hunt): the "
+             "capture is measured on those windows in review order, not on the review sets printed beside it, and the "
+             "line now says so, as the MCP reply has since 2026-10-06"),
+     "file": "assess_logits3.stdout.txt",
+     "old": "against the reference: error capture 1% -> 0.00, 5% -> 0.09, 10% -> 0.30",
+     "new": ("against the reference, which grades 247 of the 256 windows: error capture 1% -> 0.00, 5% -> 0.09, "
+             "10% -> 0.30 (measured on those windows in review order, not on the review sets)"), "count": 1},
+    {"why": ("the zone's edge as certify prints it (1.17.2, the bug hunt): rounded to the nearest fourth decimal, the "
+             "threshold 0.43005 was printed 0.4301, a rule that leaves the threshold's own window out of the zone; it "
+             "is now the fewest decimals, four at least, that part the zone from the windows outside it"),
+     "file": "sample_random.certify_delta.stdout.txt", "old": "confidence margin >= 0.4301)",
+     "new": "confidence margin >= 0.4300)", "count": 1},
+)
+
 # Outputs rewritten whole, on purpose, rather than changed by a listed text: the new bytes are a golden file of their
 # own, written by the package at the version named and reviewed, in the directory named; the 1.3.1 file beside this
 # one stays as it was. A JSON output is stored as the test compares it, without `scope`.
@@ -175,6 +206,11 @@ def expected(name, data):
         want = 1 if name in c["files"] else 0
         assert count == want, f"{name}: {count} whole occurrences of a listed 1.3.1 text, expected {want}: {c['why']}"
         assert c["old"].encode() not in data, f"{name}: a listed 1.3.1 text is left inside other text: {c['why']}"
+    for ed in EDITS:
+        if name == ed["file"]:
+            o, n = ed["old"].encode(), ed["new"].encode()
+            assert data.count(o) == ed["count"] and n not in data, f"{name}: {ed['why']}"
+            data = data.replace(o, n)
     for a in ADDED:
         if name in a["files"]:
             lines = data.decode().split("\n")

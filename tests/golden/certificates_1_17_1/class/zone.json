@@ -1,0 +1,809 @@
+{
+ "rule": "prefix",
+ "alpha": 0.2,
+ "delta": 0.1,
+ "n_population": 4096,
+ "n_labelled": 1200,
+ "min_labels_to_certify": 11,
+ "levels": [],
+ "coverage": null,
+ "n_zone": null,
+ "threshold": null,
+ "upper_bound": null,
+ "by_condition": true,
+ "delta_per_condition": 0.025,
+ "n_conditions_tested": 4,
+ "certified_share_of_map": 1.0,
+ "n_certified": 4096,
+ "per_condition": {
+  "class 0": {
+   "rule": "prefix",
+   "alpha": 0.2,
+   "delta": 0.025,
+   "n_population": 754,
+   "n_labelled": 234,
+   "level_cut": "standard",
+   "min_labels_to_certify": 17,
+   "c_min": 0.07264957264957266,
+   "levels": [
+    {
+     "coverage": 0.1,
+     "n_zone": 75,
+     "n_labelled_inside": 18,
+     "n_wrong_inside": 0,
+     "p_value": 0.006772149608495379,
+     "upper_bound": 0.16,
+     "accepted": true
+    },
+    {
+     "coverage": 0.15,
+     "n_zone": 113,
+     "n_labelled_inside": 35,
+     "n_wrong_inside": 0,
+     "p_value": 5.9392093416442736e-05,
+     "upper_bound": 0.07964601769911504,
+     "accepted": true
+    },
+    {
+     "coverage": 0.2,
+     "n_zone": 151,
+     "n_labelled_inside": 49,
+     "n_wrong_inside": 0,
+     "p_value": 8.765673795789255e-07,
+     "upper_bound": 0.059602649006622516,
+     "accepted": true
+    },
+    {
+     "coverage": 0.25,
+     "n_zone": 188,
+     "n_labelled_inside": 60,
+     "n_wrong_inside": 0,
+     "p_value": 5.501020781979461e-08,
+     "upper_bound": 0.047872340425531915,
+     "accepted": true
+    },
+    {
+     "coverage": 0.3,
+     "n_zone": 226,
+     "n_labelled_inside": 70,
+     "n_wrong_inside": 0,
+     "p_value": 3.320301681569807e-09,
+     "upper_bound": 0.03982300884955752,
+     "accepted": true
+    },
+    {
+     "coverage": 0.35,
+     "n_zone": 264,
+     "n_labelled_inside": 82,
+     "n_wrong_inside": 0,
+     "p_value": 1.6334814141493889e-10,
+     "upper_bound": 0.03409090909090909,
+     "accepted": true
+    },
+    {
+     "coverage": 0.4,
+     "n_zone": 302,
+     "n_labelled_inside": 95,
+     "n_wrong_inside": 0,
+     "p_value": 3.476371106811703e-12,
+     "upper_bound": 0.029801324503311258,
+     "accepted": true
+    },
+    {
+     "coverage": 0.45,
+     "n_zone": 339,
+     "n_labelled_inside": 109,
+     "n_wrong_inside": 0,
+     "p_value": 7.592800871123063e-14,
+     "upper_bound": 0.02654867256637168,
+     "accepted": true
+    },
+    {
+     "coverage": 0.5,
+     "n_zone": 377,
+     "n_labelled_inside": 117,
+     "n_wrong_inside": 0,
+     "p_value": 9.132175821946359e-15,
+     "upper_bound": 0.023872679045092837,
+     "accepted": true
+    },
+    {
+     "coverage": 0.55,
+     "n_zone": 415,
+     "n_labelled_inside": 132,
+     "n_wrong_inside": 0,
+     "p_value": 9.64338776493305e-17,
+     "upper_bound": 0.021686746987951807,
+     "accepted": true
+    },
+    {
+     "coverage": 0.6,
+     "n_zone": 452,
+     "n_labelled_inside": 146,
+     "n_wrong_inside": 0,
+     "p_value": 2.0980264831164034e-18,
+     "upper_bound": 0.01991150442477876,
+     "accepted": true
+    },
+    {
+     "coverage": 0.65,
+     "n_zone": 490,
+     "n_labelled_inside": 162,
+     "n_wrong_inside": 1,
+     "p_value": 1.0663875262748516e-18,
+     "upper_bound": 0.02857142857142857,
+     "accepted": true
+    },
+    {
+     "coverage": 0.7,
+     "n_zone": 528,
+     "n_labelled_inside": 175,
+     "n_wrong_inside": 2,
+     "p_value": 1.508526821965367e-18,
+     "upper_bound": 0.03409090909090909,
+     "accepted": true
+    },
+    {
+     "coverage": 0.75,
+     "n_zone": 566,
+     "n_labelled_inside": 188,
+     "n_wrong_inside": 2,
+     "p_value": 3.662448249658458e-20,
+     "upper_bound": 0.03180212014134275,
+     "accepted": true
+    },
+    {
+     "coverage": 0.8,
+     "n_zone": 603,
+     "n_labelled_inside": 197,
+     "n_wrong_inside": 2,
+     "p_value": 5.015417695104831e-21,
+     "upper_bound": 0.03150912106135987,
+     "accepted": true
+    },
+    {
+     "coverage": 0.85,
+     "n_zone": 641,
+     "n_labelled_inside": 205,
+     "n_wrong_inside": 2,
+     "p_value": 6.488297935874147e-22,
+     "upper_bound": 0.029641185647425898,
+     "accepted": true
+    },
+    {
+     "coverage": 0.9,
+     "n_zone": 679,
+     "n_labelled_inside": 211,
+     "n_wrong_inside": 3,
+     "p_value": 7.308960133235424e-21,
+     "upper_bound": 0.035346097201767304,
+     "accepted": true
+    },
+    {
+     "coverage": 0.95,
+     "n_zone": 716,
+     "n_labelled_inside": 222,
+     "n_wrong_inside": 7,
+     "p_value": 2.164914227189049e-17,
+     "upper_bound": 0.05726256983240224,
+     "accepted": true
+    },
+    {
+     "coverage": 1.0,
+     "n_zone": 754,
+     "n_labelled_inside": 234,
+     "n_wrong_inside": 15,
+     "p_value": 1.4095628880499444e-11,
+     "upper_bound": 0.09681697612732096,
+     "accepted": true
+    }
+   ],
+   "coverage": 1.0,
+   "n_zone": 754,
+   "threshold": 0.4364776611328125,
+   "upper_bound": 0.09681697612732096,
+   "n_tied_at_threshold": 1,
+   "n_tied_inside_zone": 1,
+   "note": "prefix rule: fixed-sequence testing, valid on any map whatever the shape of its error rate; it stops at the first zone it cannot certify, so it certifies little when the most confident windows hold many errors, where the bonferroni rule can certify more; choose the rule before reading the labels, since running the other rule after seeing this zone is a second test",
+   "value": 0,
+   "tested": true,
+   "reason": null
+  },
+  "class 1": {
+   "rule": "prefix",
+   "alpha": 0.2,
+   "delta": 0.025,
+   "n_population": 1165,
+   "n_labelled": 334,
+   "level_cut": "standard",
+   "min_labels_to_certify": 17,
+   "c_min": 0.05089820359281437,
+   "levels": [
+    {
+     "coverage": 0.1,
+     "n_zone": 116,
+     "n_labelled_inside": 38,
+     "n_wrong_inside": 0,
+     "p_value": 1.7982905477876372e-05,
+     "upper_bound": 0.06896551724137931,
+     "accepted": true
+    },
+    {
+     "coverage": 0.15,
+     "n_zone": 175,
+     "n_labelled_inside": 54,
+     "n_wrong_inside": 0,
+     "p_value": 2.4570744754521324e-07,
+     "upper_bound": 0.05142857142857143,
+     "accepted": true
+    },
+    {
+     "coverage": 0.2,
+     "n_zone": 233,
+     "n_labelled_inside": 74,
+     "n_wrong_inside": 0,
+     "p_value": 1.181174458906105e-09,
+     "upper_bound": 0.03862660944206009,
+     "accepted": true
+    },
+    {
+     "coverage": 0.25,
+     "n_zone": 291,
+     "n_labelled_inside": 85,
+     "n_wrong_inside": 0,
+     "p_value": 7.680428380944977e-11,
+     "upper_bound": 0.03436426116838488,
+     "accepted": true
+    },
+    {
+     "coverage": 0.3,
+     "n_zone": 350,
+     "n_labelled_inside": 99,
+     "n_wrong_inside": 0,
+     "p_value": 1.9577105967439753e-12,
+     "upper_bound": 0.02857142857142857,
+     "accepted": true
+    },
+    {
+     "coverage": 0.35,
+     "n_zone": 408,
+     "n_labelled_inside": 118,
+     "n_wrong_inside": 0,
+     "p_value": 1.3220746046023736e-14,
+     "upper_bound": 0.024509803921568627,
+     "accepted": true
+    },
+    {
+     "coverage": 0.4,
+     "n_zone": 466,
+     "n_labelled_inside": 136,
+     "n_wrong_inside": 0,
+     "p_value": 7.949857421761423e-17,
+     "upper_bound": 0.02145922746781116,
+     "accepted": true
+    },
+    {
+     "coverage": 0.45,
+     "n_zone": 524,
+     "n_labelled_inside": 153,
+     "n_wrong_inside": 0,
+     "p_value": 1.0494280603715927e-18,
+     "upper_bound": 0.019083969465648856,
+     "accepted": true
+    },
+    {
+     "coverage": 0.5,
+     "n_zone": 582,
+     "n_labelled_inside": 166,
+     "n_wrong_inside": 0,
+     "p_value": 3.3154609586391003e-20,
+     "upper_bound": 0.01718213058419244,
+     "accepted": true
+    },
+    {
+     "coverage": 0.55,
+     "n_zone": 641,
+     "n_labelled_inside": 177,
+     "n_wrong_inside": 0,
+     "p_value": 2.2206619997846195e-21,
+     "upper_bound": 0.0171606864274571,
+     "accepted": true
+    },
+    {
+     "coverage": 0.6,
+     "n_zone": 699,
+     "n_labelled_inside": 196,
+     "n_wrong_inside": 0,
+     "p_value": 1.508445316308383e-23,
+     "upper_bound": 0.015736766809728183,
+     "accepted": true
+    },
+    {
+     "coverage": 0.65,
+     "n_zone": 757,
+     "n_labelled_inside": 207,
+     "n_wrong_inside": 0,
+     "p_value": 8.994848583277597e-25,
+     "upper_bound": 0.01453104359313078,
+     "accepted": true
+    },
+    {
+     "coverage": 0.7,
+     "n_zone": 816,
+     "n_labelled_inside": 229,
+     "n_wrong_inside": 0,
+     "p_value": 1.6644384672932863e-27,
+     "upper_bound": 0.013480392156862746,
+     "accepted": true
+    },
+    {
+     "coverage": 0.75,
+     "n_zone": 874,
+     "n_labelled_inside": 248,
+     "n_wrong_inside": 0,
+     "p_value": 1.1301487983505978e-29,
+     "upper_bound": 0.011441647597254004,
+     "accepted": true
+    },
+    {
+     "coverage": 0.8,
+     "n_zone": 932,
+     "n_labelled_inside": 266,
+     "n_wrong_inside": 0,
+     "p_value": 6.868258873640053e-32,
+     "upper_bound": 0.01072961373390558,
+     "accepted": true
+    },
+    {
+     "coverage": 0.85,
+     "n_zone": 990,
+     "n_labelled_inside": 282,
+     "n_wrong_inside": 0,
+     "p_value": 8.051348476646753e-34,
+     "upper_bound": 0.010101010101010102,
+     "accepted": true
+    },
+    {
+     "coverage": 0.9,
+     "n_zone": 1048,
+     "n_labelled_inside": 304,
+     "n_wrong_inside": 2,
+     "p_value": 1.4522016857738799e-32,
+     "upper_bound": 0.020038167938931296,
+     "accepted": true
+    },
+    {
+     "coverage": 0.95,
+     "n_zone": 1107,
+     "n_labelled_inside": 325,
+     "n_wrong_inside": 14,
+     "p_value": 9.344874273102113e-21,
+     "upper_bound": 0.06594399277326106,
+     "accepted": true
+    },
+    {
+     "coverage": 1.0,
+     "n_zone": 1165,
+     "n_labelled_inside": 334,
+     "n_wrong_inside": 22,
+     "p_value": 2.9291551892445467e-15,
+     "upper_bound": 0.0927038626609442,
+     "accepted": true
+    }
+   ],
+   "coverage": 1.0,
+   "n_zone": 1165,
+   "threshold": 0.4410400390625,
+   "upper_bound": 0.0927038626609442,
+   "n_tied_at_threshold": 1,
+   "n_tied_inside_zone": 1,
+   "note": "prefix rule: fixed-sequence testing, valid on any map whatever the shape of its error rate; it stops at the first zone it cannot certify, so it certifies little when the most confident windows hold many errors, where the bonferroni rule can certify more; choose the rule before reading the labels, since running the other rule after seeing this zone is a second test",
+   "value": 1,
+   "tested": true,
+   "reason": null
+  },
+  "class 2": {
+   "rule": "prefix",
+   "alpha": 0.2,
+   "delta": 0.025,
+   "n_population": 666,
+   "n_labelled": 213,
+   "level_cut": "standard",
+   "min_labels_to_certify": 17,
+   "c_min": 0.07981220657276995,
+   "levels": [
+    {
+     "coverage": 0.1,
+     "n_zone": 67,
+     "n_labelled_inside": 22,
+     "n_wrong_inside": 0,
+     "p_value": 0.0017051608858239047,
+     "upper_bound": 0.11940298507462686,
+     "accepted": true
+    },
+    {
+     "coverage": 0.15,
+     "n_zone": 100,
+     "n_labelled_inside": 32,
+     "n_wrong_inside": 0,
+     "p_value": 9.192305194946656e-05,
+     "upper_bound": 0.09,
+     "accepted": true
+    },
+    {
+     "coverage": 0.2,
+     "n_zone": 133,
+     "n_labelled_inside": 42,
+     "n_wrong_inside": 0,
+     "p_value": 8.212231615976898e-06,
+     "upper_bound": 0.06766917293233082,
+     "accepted": true
+    },
+    {
+     "coverage": 0.25,
+     "n_zone": 166,
+     "n_labelled_inside": 55,
+     "n_wrong_inside": 0,
+     "p_value": 1.5081423974924787e-07,
+     "upper_bound": 0.04819277108433735,
+     "accepted": true
+    },
+    {
+     "coverage": 0.3,
+     "n_zone": 200,
+     "n_labelled_inside": 65,
+     "n_wrong_inside": 0,
+     "p_value": 9.24486123906414e-09,
+     "upper_bound": 0.045,
+     "accepted": true
+    },
+    {
+     "coverage": 0.35,
+     "n_zone": 233,
+     "n_labelled_inside": 78,
+     "n_wrong_inside": 1,
+     "p_value": 9.91028691396041e-09,
+     "upper_bound": 0.055793991416309016,
+     "accepted": true
+    },
+    {
+     "coverage": 0.4,
+     "n_zone": 266,
+     "n_labelled_inside": 88,
+     "n_wrong_inside": 1,
+     "p_value": 5.964495983238542e-10,
+     "upper_bound": 0.05263157894736842,
+     "accepted": true
+    },
+    {
+     "coverage": 0.45,
+     "n_zone": 300,
+     "n_labelled_inside": 98,
+     "n_wrong_inside": 1,
+     "p_value": 4.02646996139012e-11,
+     "upper_bound": 0.04666666666666667,
+     "accepted": true
+    },
+    {
+     "coverage": 0.5,
+     "n_zone": 333,
+     "n_labelled_inside": 111,
+     "n_wrong_inside": 1,
+     "p_value": 1.4125627385436165e-12,
+     "upper_bound": 0.042042042042042045,
+     "accepted": true
+    },
+    {
+     "coverage": 0.55,
+     "n_zone": 366,
+     "n_labelled_inside": 123,
+     "n_wrong_inside": 1,
+     "p_value": 4.108485776250734e-14,
+     "upper_bound": 0.03551912568306011,
+     "accepted": true
+    },
+    {
+     "coverage": 0.6,
+     "n_zone": 400,
+     "n_labelled_inside": 136,
+     "n_wrong_inside": 1,
+     "p_value": 9.43893286207547e-16,
+     "upper_bound": 0.0325,
+     "accepted": true
+    },
+    {
+     "coverage": 0.65,
+     "n_zone": 433,
+     "n_labelled_inside": 148,
+     "n_wrong_inside": 1,
+     "p_value": 4.5717899485147356e-17,
+     "upper_bound": 0.03002309468822171,
+     "accepted": true
+    },
+    {
+     "coverage": 0.7,
+     "n_zone": 466,
+     "n_labelled_inside": 157,
+     "n_wrong_inside": 1,
+     "p_value": 3.695972533492425e-18,
+     "upper_bound": 0.027896995708154508,
+     "accepted": true
+    },
+    {
+     "coverage": 0.75,
+     "n_zone": 500,
+     "n_labelled_inside": 170,
+     "n_wrong_inside": 1,
+     "p_value": 8.309788190469e-20,
+     "upper_bound": 0.026,
+     "accepted": true
+    },
+    {
+     "coverage": 0.8,
+     "n_zone": 533,
+     "n_labelled_inside": 177,
+     "n_wrong_inside": 2,
+     "p_value": 8.621885018782205e-19,
+     "upper_bound": 0.03377110694183865,
+     "accepted": true
+    },
+    {
+     "coverage": 0.85,
+     "n_zone": 566,
+     "n_labelled_inside": 180,
+     "n_wrong_inside": 5,
+     "p_value": 3.383864725036201e-15,
+     "upper_bound": 0.05653710247349823,
+     "accepted": true
+    },
+    {
+     "coverage": 0.9,
+     "n_zone": 599,
+     "n_labelled_inside": 190,
+     "n_wrong_inside": 10,
+     "p_value": 2.2374311241207925e-11,
+     "upper_bound": 0.08681135225375626,
+     "accepted": true
+    },
+    {
+     "coverage": 0.95,
+     "n_zone": 633,
+     "n_labelled_inside": 204,
+     "n_wrong_inside": 15,
+     "p_value": 4.16779756023062e-09,
+     "upper_bound": 0.11058451816745656,
+     "accepted": true
+    },
+    {
+     "coverage": 1.0,
+     "n_zone": 666,
+     "n_labelled_inside": 213,
+     "n_wrong_inside": 22,
+     "p_value": 5.361111316939498e-06,
+     "upper_bound": 0.14264264264264265,
+     "accepted": true
+    }
+   ],
+   "coverage": 1.0,
+   "n_zone": 666,
+   "threshold": 0.4314727783203125,
+   "upper_bound": 0.14264264264264265,
+   "n_tied_at_threshold": 1,
+   "n_tied_inside_zone": 1,
+   "note": "prefix rule: fixed-sequence testing, valid on any map whatever the shape of its error rate; it stops at the first zone it cannot certify, so it certifies little when the most confident windows hold many errors, where the bonferroni rule can certify more; choose the rule before reading the labels, since running the other rule after seeing this zone is a second test",
+   "value": 2,
+   "tested": true,
+   "reason": null
+  },
+  "class 3": {
+   "rule": "prefix",
+   "alpha": 0.2,
+   "delta": 0.025,
+   "n_population": 1511,
+   "n_labelled": 419,
+   "level_cut": "standard",
+   "min_labels_to_certify": 17,
+   "c_min": 0.0405727923627685,
+   "levels": [
+    {
+     "coverage": 0.05,
+     "n_zone": 76,
+     "n_labelled_inside": 23,
+     "n_wrong_inside": 0,
+     "p_value": 0.0013706826692974942,
+     "upper_bound": 0.11842105263157894,
+     "accepted": true
+    },
+    {
+     "coverage": 0.1,
+     "n_zone": 151,
+     "n_labelled_inside": 44,
+     "n_wrong_inside": 0,
+     "p_value": 5.043974460694207e-06,
+     "upper_bound": 0.06622516556291391,
+     "accepted": true
+    },
+    {
+     "coverage": 0.15,
+     "n_zone": 227,
+     "n_labelled_inside": 65,
+     "n_wrong_inside": 0,
+     "p_value": 2.0396933223946937e-08,
+     "upper_bound": 0.04405286343612335,
+     "accepted": true
+    },
+    {
+     "coverage": 0.2,
+     "n_zone": 302,
+     "n_labelled_inside": 94,
+     "n_wrong_inside": 0,
+     "p_value": 4.9189468722225856e-12,
+     "upper_bound": 0.029801324503311258,
+     "accepted": true
+    },
+    {
+     "coverage": 0.25,
+     "n_zone": 378,
+     "n_labelled_inside": 116,
+     "n_wrong_inside": 0,
+     "p_value": 1.4499283231852646e-14,
+     "upper_bound": 0.023809523809523808,
+     "accepted": true
+    },
+    {
+     "coverage": 0.3,
+     "n_zone": 453,
+     "n_labelled_inside": 139,
+     "n_wrong_inside": 0,
+     "p_value": 2.6886401695341337e-17,
+     "upper_bound": 0.019867549668874173,
+     "accepted": true
+    },
+    {
+     "coverage": 0.35,
+     "n_zone": 529,
+     "n_labelled_inside": 159,
+     "n_wrong_inside": 0,
+     "p_value": 1.5482647305569003e-19,
+     "upper_bound": 0.01890359168241966,
+     "accepted": true
+    },
+    {
+     "coverage": 0.4,
+     "n_zone": 604,
+     "n_labelled_inside": 171,
+     "n_wrong_inside": 0,
+     "p_value": 1.1111772883171639e-20,
+     "upper_bound": 0.016556291390728478,
+     "accepted": true
+    },
+    {
+     "coverage": 0.45,
+     "n_zone": 680,
+     "n_labelled_inside": 188,
+     "n_wrong_inside": 0,
+     "p_value": 1.066622958009128e-22,
+     "upper_bound": 0.016176470588235296,
+     "accepted": true
+    },
+    {
+     "coverage": 0.5,
+     "n_zone": 756,
+     "n_labelled_inside": 206,
+     "n_wrong_inside": 1,
+     "p_value": 8.944815844242014e-23,
+     "upper_bound": 0.022486772486772486,
+     "accepted": true
+    },
+    {
+     "coverage": 0.55,
+     "n_zone": 831,
+     "n_labelled_inside": 225,
+     "n_wrong_inside": 1,
+     "p_value": 6.689873830300577e-25,
+     "upper_bound": 0.02045728038507822,
+     "accepted": true
+    },
+    {
+     "coverage": 0.6,
+     "n_zone": 907,
+     "n_labelled_inside": 250,
+     "n_wrong_inside": 1,
+     "p_value": 8.183573943925332e-28,
+     "upper_bound": 0.018743109151047408,
+     "accepted": true
+    },
+    {
+     "coverage": 0.65,
+     "n_zone": 982,
+     "n_labelled_inside": 273,
+     "n_wrong_inside": 1,
+     "p_value": 1.6898632713895755e-30,
+     "upper_bound": 0.017311608961303463,
+     "accepted": true
+    },
+    {
+     "coverage": 0.7,
+     "n_zone": 1058,
+     "n_labelled_inside": 291,
+     "n_wrong_inside": 1,
+     "p_value": 1.886530877878928e-32,
+     "upper_bound": 0.01606805293005671,
+     "accepted": true
+    },
+    {
+     "coverage": 0.75,
+     "n_zone": 1133,
+     "n_labelled_inside": 316,
+     "n_wrong_inside": 1,
+     "p_value": 2.0333241374864949e-35,
+     "upper_bound": 0.01500441306266549,
+     "accepted": true
+    },
+    {
+     "coverage": 0.8,
+     "n_zone": 1209,
+     "n_labelled_inside": 334,
+     "n_wrong_inside": 1,
+     "p_value": 2.2550719266238263e-37,
+     "upper_bound": 0.014061207609594707,
+     "accepted": true
+    },
+    {
+     "coverage": 0.85,
+     "n_zone": 1284,
+     "n_labelled_inside": 357,
+     "n_wrong_inside": 1,
+     "p_value": 4.562380910387325e-40,
+     "upper_bound": 0.0132398753894081,
+     "accepted": true
+    },
+    {
+     "coverage": 0.9,
+     "n_zone": 1360,
+     "n_labelled_inside": 376,
+     "n_wrong_inside": 1,
+     "p_value": 2.400285551186185e-42,
+     "upper_bound": 0.0125,
+     "accepted": true
+    },
+    {
+     "coverage": 0.95,
+     "n_zone": 1435,
+     "n_labelled_inside": 404,
+     "n_wrong_inside": 9,
+     "p_value": 7.668121177046768e-34,
+     "upper_bound": 0.03832752613240418,
+     "accepted": true
+    },
+    {
+     "coverage": 1.0,
+     "n_zone": 1511,
+     "n_labelled_inside": 419,
+     "n_wrong_inside": 15,
+     "p_value": 8.62781005894862e-29,
+     "upper_bound": 0.05493050959629384,
+     "accepted": true
+    }
+   ],
+   "coverage": 1.0,
+   "n_zone": 1511,
+   "threshold": 0.4331512451171875,
+   "upper_bound": 0.05493050959629384,
+   "n_tied_at_threshold": 1,
+   "n_tied_inside_zone": 1,
+   "note": "prefix rule: fixed-sequence testing, valid on any map whatever the shape of its error rate; it stops at the first zone it cannot certify, so it certifies little when the most confident windows hold many errors, where the bonferroni rule can certify more; choose the rule before reading the labels, since running the other rule after seeing this zone is a second test",
+   "value": 3,
+   "tested": true,
+   "reason": null
+  }
+ },
+ "note": "Certified per map class. Each of the 4 classes with at least 11 labels is tested at delta 0.025, so all their statements hold together except on at most 0.1 of samples. On that event the certified windows taken together are wrong at most 0.2 of the time. Classes with fewer labels are not tested. Outside the certified windows nothing is certified.",
+ "zone_mask": "/private/tmp/oeix_1_17_1/a/c_zone.npy",
+ "sample": "/private/tmp/oeix_1_17_1/a/c.csv",
+ "written_by": {
+  "package": "olmoearth-inferencex",
+  "version": "1.17.1",
+  "command": "certify"
+ }
+}

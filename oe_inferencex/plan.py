@@ -739,10 +739,15 @@ def plan_zone(N, coverage, alpha, zone_error=None, power=POWER, delta=est.ZONE_D
            "entry_budgets": {f"{g:g}": e for g, e in entries.items()},
            "zone_error": None if zone_error is None else float(zone_error), "checked_up_to": top, "note": PLAN_NOTE}
     never = _zone_index(N, N, c, alpha, delta, grid)[0] is None
+    least = est.zone_levels(N, N, alpha, delta, grid)[2]
+    # a map smaller than the labels a zone needs has no zone to test: "coverages of at least 1.5" was said of a 30-window
+    # map at alpha 0.05 (the bug hunt of 2026-10-25)
     never_text = (f"on a map of {N} windows the prefix and Bonferroni rules never test this zone at alpha {alpha:g}: "
-                  f"even with every window labelled, they test only coverages of at least "
-                  f"{est.zone_levels(N, N, alpha, delta, grid)[2]:.3g}, where a zone holds {out['min_labels_inside']} "
-                  "labels; the target rule tests a target fixed before labelling at any budget")
+                  + (f"even with every window labelled, they test only coverages of at least {least:.3g}, where a "
+                     f"zone holds {out['min_labels_inside']} labels" if least <= 1 else
+                     f"they test no zone at all, since a zone needs {out['min_labels_inside']} labels and the whole "
+                     "map holds fewer windows")
+                  + "; the target rule tests a target fixed before labelling at any budget")
     if zone_error is None:
         if never:
             out["refusal"] = never_text + "; give the rate you expect the zone to be wrong to plan that budget"

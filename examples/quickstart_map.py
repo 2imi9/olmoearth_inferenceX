@@ -13,6 +13,7 @@ Everything is built from whole numbers, so the three files are the same on every
 Usage's worked example print the same lines. Needs numpy and rasterio (pip install "olmoearth-inferencex[geo]").
 """
 import csv
+import os
 import sys
 
 import numpy as np
@@ -113,22 +114,25 @@ def label(path, truth_path="truth.tif"):
 
     with rasterio.open(truth_path) as src:
         truth = src.read(1)
-    with open(path, newline="") as f:
+    with open(path, newline="", encoding="utf-8-sig") as f:
         rows = list(csv.DictReader(f))
     fields = list(rows[0])
     if "reference_class" not in fields:
         fields.append("reference_class")
-    one_map = "map_class" in fields          # a pairs CSV crashed here on a KeyError until 2026-10-06
+    # A pairs CSV has no map_class (a KeyError until 2026-10-06), and an audit CSV no `wrong`: setting it there failed
+    # after the file was opened for writing, which left the header alone (the bug hunt of 2026-10-25)
+    one_map = "map_class" in fields and "wrong" in fields
     for row in rows:
         r, c = int(row["pixel_row"]), int(row["pixel_col"])
         seen = int(np.bincount(truth[r:r + PATCH, c:c + PATCH].ravel()).argmax())
         row["reference_class"] = seen
         if one_map:
             row["wrong"] = int(seen != int(row["map_class"]))
-    with open(path, "w", newline="") as f:
+    with open(path + ".part", "w", newline="", encoding="utf-8") as f:          # the sample is replaced only once the labels are written
         writer = csv.DictWriter(f, fieldnames=fields)
         writer.writeheader()
         writer.writerows(rows)
+    os.replace(path + ".part", path)
     print(f"labelled {len(rows)} windows in {path}"
           + (f": {sum(row['wrong'] for row in rows)} wrong" if one_map else ": the class seen in each"))
 

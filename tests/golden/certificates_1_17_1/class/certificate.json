@@ -1,0 +1,174 @@
+{
+ "type": "Feature",
+ "stac_version": "1.0.0",
+ "stac_extensions": [],
+ "id": "zone-eaa838a183e64193",
+ "geometry": {
+  "type": "Polygon",
+  "coordinates": [
+   [
+    [
+     9.0,
+     45.13042818538006
+    ],
+    [
+     9.032568065955136,
+     45.13042818538006
+    ],
+    [
+     9.032568065955136,
+     45.153477183356024
+    ],
+    [
+     9.0,
+     45.153477183356024
+    ],
+    [
+     9.0,
+     45.13042818538006
+    ]
+   ]
+  ]
+ },
+ "bbox": [
+  9.0,
+  45.13042818538006,
+  9.032568065955136,
+  45.153477183356024
+ ],
+ "properties": {
+  "datetime": "2024-06-01T00:00:00Z",
+  "created": "2026-10-26T02:32:48Z",
+  "zc:version": "1.0",
+  "zc:rule": "prefix",
+  "zc:alpha": 0.2,
+  "zc:delta": 0.1,
+  "zc:n_population": 4096,
+  "zc:n_labelled": 1200,
+  "zc:certified_share_of_map": 1.0,
+  "zc:delta_per_condition": 0.025,
+  "zc:n_conditions_tested": 4,
+  "zc:design": "condition",
+  "zc:seed": 89275968523418903162672738675759508538,
+  "zc:seed_rule": "from_map",
+  "zc:patch": 4,
+  "zc:statement": "Certified per map class (names as the issuer gave them): in map class 0 \"class 0\" (100%), map class 1 \"class 1\" (100%), map class 2 \"class 2\" (100%), map class 3 \"class 3\" (100%) the most confident share given is wrong at most 20% of the time; these statements hold together except on at most 10% of samples like the recorded one (prefix rule, 1200 labels). Alpha, delta and the rule were fixed with the draw, before any label. It is about the zone's windows of 4 px taken together, not each pixel; outside the zone nothing is certified, which does not mean wrong; it assumes the reviewer's labels are right and that the sample was drawn once; and delta counts every sample, those that certify nothing included, so among samples that certify a zone more than delta can be wrong.",
+  "zc:iso19157": {
+   "conformance_result": {
+    "specification": "the error rate of the zone's windows is at most 0.2",
+    "pass": true,
+    "explanation": "fails on at most 0.1 of samples"
+   },
+   "coverage_result": "zone_mask.tif"
+  },
+  "zc:per_condition": {
+   "class 0": {
+    "coverage": 1.0,
+    "n_zone": 754,
+    "threshold": 0.4364776611328125,
+    "upper_bound": 0.09681697612732096,
+    "delta": 0.025,
+    "tested": true,
+    "n_tied_at_threshold": 1,
+    "n_tied_inside_zone": 1
+   },
+   "class 1": {
+    "coverage": 1.0,
+    "n_zone": 1165,
+    "threshold": 0.4410400390625,
+    "upper_bound": 0.0927038626609442,
+    "delta": 0.025,
+    "tested": true,
+    "n_tied_at_threshold": 1,
+    "n_tied_inside_zone": 1
+   },
+   "class 2": {
+    "coverage": 1.0,
+    "n_zone": 666,
+    "threshold": 0.4314727783203125,
+    "upper_bound": 0.14264264264264265,
+    "delta": 0.025,
+    "tested": true,
+    "n_tied_at_threshold": 1,
+    "n_tied_inside_zone": 1
+   },
+   "class 3": {
+    "coverage": 1.0,
+    "n_zone": 1511,
+    "threshold": 0.4331512451171875,
+    "upper_bound": 0.05493050959629384,
+    "delta": 0.025,
+    "tested": true,
+    "n_tied_at_threshold": 1,
+    "n_tied_inside_zone": 1
+   }
+  },
+  "zc:map": {
+   "map_sha256": "eaa838a183e64193c0ddae57963aa48c5f718f70578c5d50cccced17b0e9091b",
+   "shape": [
+    256,
+    256
+   ],
+   "crs": "EPSG:32632",
+   "transform": [
+    10.0,
+    0.0,
+    500000.0,
+    0.0,
+    -10.0,
+    5000000.0
+   ],
+   "path": "/private/tmp/oeix_1_17_1/a/scores.tif",
+   "confidence_path": null
+  },
+  "zc:files": {
+   "labels.csv": "25cd005e8cd1b9beece1acede36048a7dd8124fb163e0b66234e7c4240efe2a6",
+   "labels.json": "3649ad1fc80e65e0cb89fb9e8f71aee874f02ef8e972bff47ce8b83fa30b5591",
+   "zone.json": "4f287290437aef81c3b315af0eebcbbedce2c266d80b091709889b4ae65c7c81",
+   "zone_mask.tif": "6d375ccafb1a56ece0621f940ec9bf272c84932c596b172d63df86d79e13e550"
+  },
+  "zc:written_by": {
+   "package": "olmoearth-inferencex",
+   "version": "1.17.1",
+   "command": "certificate"
+  }
+ },
+ "assets": {
+  "zone_mask": {
+   "href": "zone_mask.tif",
+   "type": "image/tiff; application=geotiff",
+   "roles": [
+    "data"
+   ],
+   "title": "the certified zone on the map's window grid (1 inside); the zone is this mask, not a threshold rule"
+  },
+  "labels": {
+   "href": "labels.csv",
+   "type": "text/csv",
+   "roles": [
+    "metadata"
+   ]
+  },
+  "sample": {
+   "href": "labels.json",
+   "type": "application/json",
+   "roles": [
+    "metadata"
+   ]
+  },
+  "zone": {
+   "href": "zone.json",
+   "type": "application/json",
+   "roles": [
+    "metadata"
+   ]
+  }
+ },
+ "links": [
+  {
+   "rel": "derived_from",
+   "href": "/private/tmp/oeix_1_17_1/a/scores.tif",
+   "title": "the map certified"
+  }
+ ]
+}

@@ -578,7 +578,7 @@ def read_window_probs(ds, out, layer="output", prob_property="probs", group=None
     npy = os.path.join(out, "window_probs.npy")
     np.save(npy, P[:, None, :].astype(np.float32))
     index = os.path.join(out, "window_probs.csv")
-    with open(index, "w", newline="") as f:
+    with open(index, "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         w.writerow(["window_col", "window", "feature", "crs", "x", "y", "argmax", "class"])
         for i, (r, a, c) in enumerate(zip(rows, argmax, written)):
@@ -755,6 +755,22 @@ def _code_name(code, layers, clouds):
     return ",".join(parts)
 
 
+def _command_names(present, layers, clouds):
+    """({code: name} for the command line, the layer numbers used or None). A condition name there is at most 64
+    characters (cli._condition_names): three layers named as rslearn names them ran to 75, and the assess command
+    printed was refused (the bug hunt of 2026-10-25). So each name is the full one where all fit, else names the
+    layers by their place among the inputs (1 for the first), else is the code alone; the JSON's `codes` keep the
+    full names."""
+    full = {v: _code_name(v, layers, clouds) for v in present}
+    if all(len(n) <= 64 for n in full.values()):
+        return full, None
+    nums = [str(i + 1) for i in range(len(layers))]
+    short = {v: _code_name(v, nums, {k: clouds[n] for k, n in zip(nums, layers)}) for v in present}
+    if all(len(n) <= 64 for n in short.values()):
+        return short, dict(zip(nums, layers))
+    return {v: str(v) for v in present}, {}
+
+
 def condition_rule(layers, timesteps, clouds):
     """The rule the codes follow, in words, as the JSON records it."""
     radix = " x ".join(f"{10 if clouds[n] else 4} ({n})" for n in layers)
@@ -843,7 +859,16 @@ def condition_from_inputs(ds, out, inputs=None, layer="output", group=None, wind
                              f"assess reads at most {MAX_CONDITIONS}. Pass fewer input layers (--inputs)")
         codes_all |= set(present)
         path = _write_tif(os.path.join(out, f"condition_{g['label']}.tif"), cond.astype(np.int32), g, "int32", -1)
-        items = [f"{v}={_code_name(v, names, clouds)}" for v in present]
+        short, numbered = _command_names(present, names, clouds)
+        items = [f"{v}={short[v]}" for v in present]
+        if numbered:
+            notes.append(f"the condition names of {g['label']} would run past 64 characters, so its command numbers the "
+                         "input layers: " + ", ".join(f"{k} = {n}" for k, n in numbered.items())
+                         + f"; {CONDITIONS_JSON} holds the full names under `codes`")
+        elif numbered is not None:
+            notes.append(f"the condition names of {g['label']} would run past 64 characters even with the layers "
+                         f"numbered, so its command names each condition by its code; {CONDITIONS_JSON} holds the "
+                         "full names under `codes`")
         entries.append({"label": g["label"], "crs": g["crs"].to_string(), "condition": path, "codes": present,
                         "condition_names": " ".join(["--condition-names"] + [shlex.quote(i) for i in items]),
                         "conflicting_pixels": int(conflict.sum()),

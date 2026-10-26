@@ -61,6 +61,17 @@ PER_CONDITION_KEYS = ("coverage", "n_zone", "threshold", "upper_bound", "delta",
 SIDE_OWN = {"csv", "scores", "classes", "confidence", "how_to_label", "written_by", "crs", "anchor_rule",
             "first_budget", "condition"}
 ZONE_OWN = {"sample", "zone_mask", "written_by"}
+# Keys certify writes since 1.17.2, each derived from fields compared anyway (the edge from the threshold and the map,
+# condition_by from the sidecar): a zone JSON written before them lacks them, and certify run again is compared without
+# them there. Compared in full, they failed every certificate 1.17.0 and 1.17.1 issued (the review of 1.17.2).
+ZONE_ADDED = ("edge", "condition_by")
+# The last release that changed what certify writes from the same labels (estimate.null_count in 1.17.1, the class
+# design's wording in 1.17.2): a zone an earlier release wrote is also run again under that release's rules
+RULES_CHANGED = (1, 17, 2)
+# verify runs sample and certify again in this process with stdout redirected, which is the whole process's: two
+# verify calls from two threads restored each other's stream and left a dead one in place (the fourth review of
+# 1.17.2), so the runs take turns
+_RUN = __import__("threading").RLock()
 CSV_INTEGERS = {"index", "window_row", "window_col", "pixel_row", "pixel_col", "stratum", "map_class"}
 RASTER_MAGIC = {".tif": (b"II*\x00", b"MM\x00*", b"II+\x00", b"MM\x00+"), ".tiff": (b"II*\x00", b"MM\x00*",
                 b"II+\x00", b"MM\x00+"), ".npy": (b"\x93NUMPY",)}
@@ -307,6 +318,33 @@ def _side_settings(side, confidence_sha256):
                          (side.get("condition") or {}).get("min_per_class") if _by_class(side) else None)
 
 
+def cli_where(path):
+    """A map's path as the certificate records it: as given for a path GDAL reads itself (/vsizip/, /vsicurl/, s3://),
+    which os.path.abspath broke, else absolute (cli._where; the review of 1.17.2)."""
+    from .cli import _where
+    return _where(path)
+
+
+def _reads_alone(path, nodata=None):
+    """Whether a raster reads the same without the files beside it, as verify reads a certificate's rasters."""
+    from .cli import read_raster
+    if str(path).endswith(".npy"):
+        return True
+    def read():
+        a, valid, geo = read_raster(os.fspath(path), _nodata(nodata))
+        # the CRS too, which the digest leaves out and an .aux.xml can hold (the third review of 1.17.2), compared as a
+        # CRS: the same CRS spelled as ESRI WKT in an .aux.xml was refused as text (the fourth review)
+        return pixel_digest(a, valid, geo), None if geo is None else geo.get("crs")
+    d1, c1 = read()
+    with _closed_gdal():
+        d2, c2 = read()
+    if d1 != d2 or (c1 is None) != (c2 is None):
+        return False
+    # as verify compares the CRS a certificate records: the same CRS, spelled as this package spells it (a CRS with no
+    # EPSG code is compared as GDAL writes its WKT, which an .aux.xml can change; the fifth review of 1.17.2)
+    return c1 is None or (_same_crs(_crs_text(c1), c2) and _crs_spelled(_crs_text(c1), {"crs": c2}))
+
+
 def _map_paths(side, scores=None, confidence=None):
     """The map's paths as the sidecar names them, or the overrides when the files have moved."""
     if side.get("confidence"):
@@ -448,8 +486,12 @@ def _declared(path):
             raise ValueError(f"{os.path.basename(str(path))} is not a numeric raster")
         return (1 if a.ndim == 2 else int(a.shape[0]), int(a.shape[-2]), int(a.shape[-1]), int(a.dtype.itemsize))
     import rasterio
+    from .cli import _mask_bands
     with _closed_gdal(), rasterio.open(path, driver="GTiff") as src:
-        return (src.count, src.height, src.width, max(np.dtype(d).itemsize for d in src.dtypes))
+        # the alpha band of a two-band raster is its mask, as read_raster reads it: a condition layer with one was
+        # sampled and then refused here as two bands (the review of 1.17.2)
+        bands = src.count - (_mask_bands(src)[0] is not None)
+        return (bands, src.height, src.width, max(np.dtype(d).itemsize for d in src.dtypes))
 
 
 def _layer_on_grid(path, shape):
@@ -515,6 +557,36 @@ def build(zone_path, out_dir, date, scores=None, confidence=None):
                          "map, the draw's settings and certify's alpha, delta and rule, so that it shows they were all "
                          "fixed before the labels. Draw a new sample with it")
     cond = None if _by_class(side) else side.get("condition")
+    # verify opens a certificate's rasters as plain local files, alone: a GDAL virtual path, or a raster whose mask or
+    # no-data value lives in a file beside it (a .msk, an .aux.xml), was certified and then failed verify from the
+    # certificate's own paths, or failed the bundle's own check with a message about the condition layer or the map's
+    # digest (the review of 1.17.2). Refused by name before anything is written.
+    rasters = [(p, n, role) for p, n, role in ((_map_paths(side, scores, confidence)[0], side.get("nodata"), "map"),
+                                               (_map_paths(side, scores, confidence)[1], None, "band"),
+                                               ((cond or {}).get("source"), None, "condition")) if p]
+    for path, nd, role in rasters:
+        # the map and its band can be named again with --scores and --confidence, which keeps the labels; the condition
+        # layer is the sample's own, and only a new draw on a plain file changes it (the third review of 1.17.2). The
+        # role, not the path, decides: a linked class map that is also the condition layer kept the map's link (the
+        # fifth review)
+        redo = ("draw the sample again with the layer as a plain GeoTIFF or .npy file" if role == "condition" else
+                "run certificate again with --scores (and --confidence for a band) naming it: the pixels are the "
+                "same, so the sample and its labels stand")
+        if str(path).startswith("/vsi") or "://" in str(path):
+            raise ValueError(f"{path} is a path GDAL reads itself, and a certificate's rasters are read from plain local "
+                             f"files when it is verified; copy the raster to a local GeoTIFF and {redo}")
+        try:
+            # what verify opens from a certificate's own paths; the condition layer is carried as a copy, so a link to
+            # a plain file is fine there (the fourth review of 1.17.2)
+            _plain_raster(os.path.realpath(path) if role == "condition" else path)
+        except ValueError as exc:
+            raise ValueError(f"verify reads a certificate's rasters as plain local GeoTIFF or .npy files, and {exc}; "
+                             f"write it as one (or name the file a link points to) and {redo}") from None
+        if not _reads_alone(path, nd):
+            raise ValueError(f"{path} reads differently without the files beside it (a .msk mask, or an .aux.xml or "
+                             "world file holding a no-data value, the CRS or the georeferencing), which a certificate "
+                             "does not carry and verify does not read; write them into the GeoTIFF itself "
+                             f"(GDAL_TIFF_INTERNAL_MASK=YES for a mask) and {redo}")
     copies = [(csv_path, BUNDLE["labels"]), (side_path, BUNDLE["sample"]), (zone_path, BUNDLE["zone"])]
     if cond:
         if os.path.splitext(str(cond["source"]))[1].lower() not in RASTER_MAGIC:
@@ -551,7 +623,13 @@ def _write_bundle(zone, side, copies, out_dir, map_path, conf_path, digests, sha
     """The bundle written into `out_dir` and verified there; ValueError when it does not verify."""
     from .cli import write_raster
     for src, name in copies:
-        shutil.copyfile(src, os.path.join(out_dir, name))
+        if name == BUNDLE["zone"]:
+            # without the keys certify writes since 1.17.2, derived from fields kept: a release before them verifies
+            # the bundle too, where every 1.17.2 certificate failed 1.17.1's verify "in edge" (the review of 1.17.2)
+            with open(os.path.join(out_dir, name), "w") as f:
+                json.dump(_strip_added(_load(src)), f, indent=1)
+        else:
+            shutil.copyfile(src, os.path.join(out_dir, name))
     mask = np.load(zone["zone_mask"])
     mask_path = write_raster(os.path.join(out_dir, "zone_mask.tif"), mask.astype(bool), geo,
                              int(side.get("patch", 4)), None)
@@ -560,8 +638,8 @@ def _write_bundle(zone, side, copies, out_dir, map_path, conf_path, digests, sha
     issuer = {"times": ({"datetime": _rfc3339(start)} if start == end else
                         {"datetime": None, "start_datetime": _rfc3339(start), "end_datetime": _rfc3339(end, end=True)}),
               "created": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-              "map_path": os.path.abspath(map_path),
-              "confidence_path": None if conf_path is None else os.path.abspath(conf_path),
+              "map_path": cli_where(map_path),
+              "confidence_path": None if conf_path is None else cli_where(conf_path),
               "written_by": {"package": "olmoearth-inferencex", "version": __version__, "command": "certificate"}}
     names = [n for _, n in copies] + [os.path.basename(mask_path)]
     files = {n: file_sha256(os.path.join(out_dir, n)) for n in names}
@@ -574,6 +652,16 @@ def _write_bundle(zone, side, copies, out_dir, map_path, conf_path, digests, sha
     if not res["verified"]:
         failed = "; ".join(f"{n}: {c['detail']}" for n, c in res["checks"].items() if c["ok"] is not True)
         raise ValueError(f"the bundle does not verify, so it is no certificate, and nothing was written: {failed}")
+    # and as a recipient checks it: from the paths it names, each raster read alone (no file beside it, no link, no
+    # network). The checks above name the known ways a raster reads differently so; this one catches any other, which
+    # five reviews of 1.17.2 kept finding (a CRS in an .aux.xml, a link, a non-EPSG CRS spelled again)
+    alone = verify(cert_path)
+    if not alone["verified"]:
+        failed = "; ".join(f"{n}: {c['detail']}" for n, c in alone["checks"].items() if c["ok"] is not True)
+        raise ValueError("the bundle verifies with the map read here, but not from the paths it names, as a "
+                         f"recipient's verify reads them, so nothing was written: {failed}. Write the map as a plain "
+                         "GeoTIFF with its mask, no-data value and CRS inside it and run certificate again, with "
+                         "--scores for a copy elsewhere")
     return item
 
 
@@ -622,7 +710,7 @@ def _redraw(side, map_path, conf_path, cond_path, tmp, closed=False):
     if cond and cond.get("names_given"):
         argv += ["--condition-names", *[f"{int(v)}={n}" for v, n in cond["names_given"]]]
     try:
-        with contextlib.redirect_stdout(io.StringIO()), (_closed_gdal() if closed else contextlib.nullcontext()):
+        with _RUN, contextlib.redirect_stdout(io.StringIO()), (_closed_gdal() if closed else contextlib.nullcontext()):
             cli.main(argv)
         return _load(os.path.join(tmp, "redraw.json")), out, None
     except (SystemExit, OSError, ValueError) as exc:
@@ -633,6 +721,85 @@ def _arg(value):
     """A number as argparse takes it back exactly: positional notation, since it reads '-3.4e+38' as an option."""
     v = float(value)
     return repr(v) if not math.isfinite(v) else np.format_float_positional(v, unique=True, trim="0")
+
+
+def _strip_added(zone):
+    """A zone JSON without the keys ZONE_ADDED names, at the top and in each condition's entry."""
+    out = {k: v for k, v in zone.items() if k not in ZONE_ADDED}
+    if isinstance(out.get("per_condition"), dict):
+        out["per_condition"] = {n: ({k: v for k, v in e.items() if k not in ZONE_ADDED} if isinstance(e, dict) else e)
+                                for n, e in out["per_condition"].items()}
+    return out
+
+
+def _certified_sizes(res):
+    """(windows certified in all, in each condition) of a certify result, for comparing two rules on the same labels:
+    one is no larger than the other when each count is no larger. A tuple compares element by element only in order,
+    so the per-condition counts are kept as a mapping and compared through the `<=` of _Sizes."""
+    per = {n: int(e.get("n_zone") or 0) for n, e in (res.get("per_condition") or {}).items() if isinstance(e, dict)}
+    return _Sizes(int(res.get("n_zone") or res.get("n_certified") or 0), per)
+
+
+class _Sizes:
+    def __init__(self, total, per):
+        self.total, self.per = total, per
+
+    def __le__(self, other):
+        return self.total <= other.total and all(v <= other.per.get(n, 0) for n, v in self.per.items())
+
+
+def _release(version):
+    """(major, minor, patch) of a release string such as "1.17.1" or "1.17.2.dev3"; (0, 0, 0) when unreadable."""
+    m = re.match(r"(\d+)\.(\d+)(?:\.(\d+))?", str(version or ""))
+    return tuple(int(g or 0) for g in m.groups()) if m else (0, 0, 0)
+
+
+@contextlib.contextmanager
+def _rules_of(written_by):
+    """certify run again with the arithmetic and the words of the release that wrote the zone JSON: 1.17.1 made the
+    zone test's null count exact (floor(alpha n) + 1 had been taken in floats), and 1.17.2 kept class names and paths
+    out of the class design's rewording, so a certificate 1.17.0 issued at alpha 0.29, or one with a class named
+    "good condition", failed verify on p-values or a note (the reviews of 1.17.2). The release is held in a context
+    variable that null_count and class_words read, so another thread, or another verify, is not touched (patched module
+    functions were left in place by concurrent calls; the third review). An older rule is not taken on the issuer's
+    word: _verify accepts its result only where it certifies no more than this release's rules."""
+    from . import estimate as est
+    if written_by is None:                           # this release's rules: the default, not the oldest
+        yield                                        # (_release(None) is (0, 0, 0); the fourth review of 1.17.2)
+        return
+    v = _release(written_by.get("version") if isinstance(written_by, dict) else None)
+    token = est.RULES_OF.set(v)
+    try:
+        yield
+    finally:
+        est.RULES_OF.reset(token)
+
+
+def _class_words_1171(obj, keep=()):
+    """cli.class_words as 1.17.0 and 1.17.1 had it: every string reworded, names and paths included."""
+    from .cli import _CLASS_WORDS, _PATH_KEYS
+    if isinstance(obj, str):
+        for pat, rep in _CLASS_WORDS:
+            obj = re.sub(pat, rep, obj)
+        return obj
+    if isinstance(obj, dict):
+        return {k: (v if k in _PATH_KEYS else _class_words_1171(v)) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_class_words_1171(v) for v in obj]
+    return obj
+
+
+def _without_added(again, zone):
+    """certify's result run again, without the keys ZONE_ADDED names where the recorded zone JSON lacks them: at the top
+    and in each condition's entry."""
+    def drop(a, z):
+        return {k: v for k, v in a.items() if not (k in ZONE_ADDED and k not in z)}
+    out = drop(again, zone)
+    pa, pz = out.get("per_condition"), zone.get("per_condition")
+    if isinstance(pa, dict) and isinstance(pz, dict):
+        out["per_condition"] = {n: drop(e, pz[n]) if isinstance(e, dict) and isinstance(pz.get(n), dict) else e
+                                for n, e in pa.items()}
+    return out
 
 
 def _differ(a, b, own=(), path="", loose=()):
@@ -681,6 +848,8 @@ def csv_rows(path):
             raise ValueError(f"{os.path.basename(str(path))} names a column twice or leaves one unnamed")
         rows = []
         for line in reader:
+            if not line:            # a blank line, as an editor leaves at the end: DictReader skips it, and so did 1.16.0
+                continue
             if len(line) > len(header):
                 raise ValueError(f"{os.path.basename(str(path))} has a row with more fields than columns")
             rows.append(dict(zip(header, line + [""] * (len(header) - len(line)))))
@@ -854,7 +1023,7 @@ def _verify(item, p, base, cert_name, scores, confidence, checks, notes, out):
         except (OSError, ValueError) as exc:
             checks["map"] = _check(None, f"the map the certificate names was not read: {exc}")
             return
-    out["map_read"] = os.path.abspath(map_path)
+    out["map_read"] = cli_where(map_path)
 
     # the map
     try:
@@ -962,9 +1131,9 @@ def _verify(item, p, base, cert_name, scores, confidence, checks, notes, out):
             return
         # certify again from the labels, with the map as the verifier gives it and the options the zone JSON records
         side_run = {k: v for k, v in side.items() if k not in ("classes", "confidence")}
-        side_run["scores"] = os.path.abspath(map_path)
+        side_run["scores"] = cli_where(map_path)
         if product:
-            side_run.update({"classes": os.path.abspath(map_path), "confidence": os.path.abspath(conf_path)})
+            side_run.update({"classes": cli_where(map_path), "confidence": cli_where(conf_path)})
         shutil.copyfile(os.path.join(base, BUNDLE["labels"]), os.path.join(tmp, "labels.csv"))
         with open(os.path.join(tmp, "labels.json"), "w") as f:
             json.dump(side_run, f)
@@ -973,16 +1142,31 @@ def _verify(item, p, base, cert_name, scores, confidence, checks, notes, out):
                 map_path]
         if conf_path:
             argv += ["--confidence", conf_path]
-        try:
-            with contextlib.redirect_stdout(io.StringIO()), (_closed_gdal() if from_cert else
-                                                             contextlib.nullcontext()):
+        def rerun(written_by):
+            with _RUN, contextlib.redirect_stdout(io.StringIO()), (_closed_gdal() if from_cert else
+                                                                   contextlib.nullcontext()), _rules_of(written_by):
                 cli.main(argv)
-            again = _load(os.path.join(tmp, "again.json"))
-            again_mask = np.load(again["zone_mask"])
+            res = _load(os.path.join(tmp, "again.json"))
+            return res, np.load(res["zone_mask"])
+        try:
+            again, again_mask = rerun(None)                          # this release's rules
+            diff = _differ(zone, _without_added(again, zone), ZONE_OWN)
+            older = _release((zone.get("written_by") or {}).get("version")
+                             if isinstance(zone.get("written_by"), dict) else None) < RULES_CHANGED
+            if diff and older:
+                # the rules of the release that wrote the zone; taken only where they certify no more than this
+                # release's on the same labels (an older rule is not always the more cautious: 1.17.0's float null
+                # count is the larger at alpha 1/3; the third review of 1.17.2)
+                old, old_mask = rerun(zone.get("written_by"))
+                if not _differ(zone, _without_added(old, zone), ZONE_OWN):
+                    if _certified_sizes(old) <= _certified_sizes(again):
+                        again, again_mask, diff = old, old_mask, []
+                    else:
+                        diff = [f"the zone certifies more under the rules of the release it names "
+                                f"({zone['written_by']['version']}) than under this release's"]
         except (SystemExit, OSError, ValueError, KeyError) as exc:
             checks["certify"] = _check(None, f"certify could not be run again: {exc}")
             return
-        diff = _differ(zone, again, ZONE_OWN)
         diff += [k for k in ("sample", "zone_mask") if not isinstance(zone.get(k), str)]
         wbz = zone.get("written_by")
         if not (isinstance(wbz, dict) and set(wbz) == {"package", "version", "command"}

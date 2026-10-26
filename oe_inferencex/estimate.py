@@ -241,8 +241,11 @@ EXACT_N_MAX = 5_000_000
 def _tie(N):
     """The relative window around a level inside which a tail over a population of N is decided exactly. Above
     EXACT_N_MAX windows the floats decide, as before 2026-10-06: the window grows as N ln N, and on a full Sentinel-2
-    tile at patch 1 (about 1e8 windows) the exact sums it calls took seconds per interval, where the float error they
-    guard against is of order 1e-8 relative (the review of 2026-10-06). Every recorded experiment is below the cap."""
+    tile at patch 1 (about 1e8 windows) the exact sums it calls took seconds per interval (the review of 2026-10-06).
+    The float error they guard against grows with N: measured against the exact tail, about 2e-8 relative at 6e6
+    windows, up to 8e-7 at 1e8 and 8e-6 at 1e9, so above the cap an interval's end can move by one window (k = 22 of
+    n = 300 at N = 1e8: a lower end of 4,652,571 where the exact one is 4,652,570), a change in coverage of order 1e-8.
+    Stated as 1e-8 relative until the bug hunt of 2026-10-25. Every recorded experiment is below the cap."""
     import math
     N = max(int(N), 1)
     if N > EXACT_N_MAX:
@@ -977,6 +980,11 @@ def _stratum_union(sample, wrong):
     return _union_interval(k_h, n_h, sizes)
 
 
+SEQUENTIAL_READ_NOTE = ("the first {n} windows of a sequential sample, read as a random sample of that size. The "
+                        "interval holds when that number was fixed before labelling; one read at a stop chosen because "
+                        "the labels looked good can be too narrow. certify on this sample holds at every look")
+
+
 def estimate_error_rate(sample, wrong, unjudged=None, reviewer_false_alarm=0.0, reviewer_miss=0.0):
     """The error rate of the whole map from the labelled sample, with the interval its design earns
     (`_estimate_core`), and, when asked, bounded for windows the reviewer could not judge and for a reviewer who errs.
@@ -997,6 +1005,15 @@ def estimate_error_rate(sample, wrong, unjudged=None, reviewer_false_alarm=0.0, 
     allow, and `estimate` is None unless that range is one value; each condition's row is bounded the same way.
     Sharpness is proved in lean/ of the v1.9.0 tree, not tested here; tests/test_unjudged.py checks coverage and the
     formulas."""
+    if sample.get("design") == "sequential":
+        # The labelled windows are the first of a random order: a simple random sample of their number, as the command
+        # line reads it. The API refused a sample sample_for_estimation drew as an "unknown design" (the bug hunt of
+        # 2026-10-25).
+        n = int(np.asarray(sample["indices"]).size)
+        res = estimate_error_rate(dict(sample, design="random", budget=n), wrong, unjudged, reviewer_false_alarm,
+                                  reviewer_miss)
+        res["sequential_note"] = SEQUENTIAL_READ_NOTE.format(n=n)
+        return res
     fa, miss = float(reviewer_false_alarm), float(reviewer_miss)
     for name, v in (("reviewer_false_alarm", fa), ("reviewer_miss", miss)):
         if not 0 <= v < 1:
@@ -1205,11 +1222,17 @@ def _estimate_core(sample, wrong):
         nlo, nhi = wilson_interval(int(wrong.sum()), idx.size, N)
         n_tiles = int(sample["n_tiles"])
         notes = [TILES_WARNING]
-        if var == 0:
+        # Equal rates are decided on the counts, exactly: the ratio estimator lands an ulp off a common rate of 1/7,
+        # the variance came out 1e-34, and 6 wrong in 42 printed "14.3% to 14.3%" (the bug hunt of 2026-10-25).
+        from fractions import Fraction
+        t_l = tiles[idx]
+        rates = {Fraction(int(wrong[t_l == u].sum()), int((t_l == u).sum())) for u in np.unique(t_l)}
+        if len(rates) == 1:
             # every sampled tile shows the same rate (a clean map: no error in any tile); the between-tile variance
             # is zero and the interval would be a point. Fall back to Wilson on the labelled count, the bound the
             # design cannot improve on without an observed error.
-            lo, hi = wilson_interval(float(est) * idx.size, idx.size, N)
+            est = float(rates.pop())
+            lo, hi = wilson_interval(int(wrong.sum()), idx.size, N)
             notes.append("every sampled tile shows the same error rate, so the between-tile variance is zero; the "
                          f"interval is the simple-random Wilson bound at {idx.size} labels, which is optimistic if "
                          "errors cluster")
@@ -1228,6 +1251,8 @@ def _estimate_core(sample, wrong):
                                  if design == "condition" and len(c_names) >= 2 else "")
         out.update({"by_condition": True, "per_condition": per, "condition_note": note,
                     "outside_condition_intervals": outside})
+        if by_class:            # the strata are map classes: decide and the texts word them so (cli.class_names)
+            out["condition_by"] = "map class"
     else:
         out["scope"] = SCOPE_ESTIMATE
     return out
@@ -1463,6 +1488,12 @@ CLASS_DESIGN_METHOD = ("stratified by map class (Olofsson et al. 2014): each cla
 CLASS_NORMAL_NOTE = ("Beside the exact intervals, the normal-theory ones Olofsson et al. (2014) give from the same "
                      "labels (stratified estimates with their standard errors): narrower, and not exact, so they can "
                      "cover less than 95%, most of all for a rare class or one with few sampled errors.")
+# The rows of a class-design sample run class by class, as the draw makes them, and three columns name the class: hiding
+# map_class alone, as the docs said, hid nothing (the bug hunt of 2026-10-25). The order is kept, since it is part of
+# the draw that verify checks on every certificate made since 1.17.0.
+CLASS_BLIND_NOTE = ("the rows run class by class, and the `map_class`, `condition` and `stratum` columns all name the "
+                    "map's class: to label blind, hide those three and show the windows in a shuffled order, then "
+                    "write each label on its own row, keeping the CSV's row order")
 CLASS_DESIGN_EXACT_NOTE = ("under the class design the per-class intervals printed are exact: each user's accuracy at 95%, "
                            "and the class shares and producer's accuracies together at 95% (a union bound over every "
                            "class's count in every stratum, wide where many classes are thin); a class whose share the "
@@ -1521,7 +1552,8 @@ def _class_design_exact(per, sample, strata, local, sizes, m_pop, r_s, C, L, N):
 def estimate_per_class(sample, reference, map_class, n_classes=None, interval="wilson", legend_size=None):
     """User's accuracy, producer's accuracy and error-adjusted share per class, from the labelled sample.
 
-    sample    : what `sample_for_estimation` returned (designs "random", "confidence", "proportional" or "condition")
+    sample    : what `sample_for_estimation` returned (designs "random", "confidence", "proportional" or "condition";
+                "sequential" is read as a random sample of the windows labelled)
     reference : the reference class of every labelled window, in the order of sample["indices"], integers >= 0
     map_class : the map's class of EVERY window (the flattened grid `sample` was drawn on); negative at no-data,
                 and the count of non-negative entries must equal the population the sample was drawn from
@@ -1547,7 +1579,11 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
     it from above). L is `legend_size`, the number of classes the map's legend can hold, stated before the labels are
     read; by default the table's number of classes. Under a random sample the normal-theory `producer_accuracy` and
     `reference_share` are kept as before; the warnings `few errors` and `near census` concern those, and `few labels`
-    all of them."""
+    all of them. Under the class design (the condition design by map class) the rows carry exact intervals too
+    (`_class_design_exact`), and the normal-theory `producer_accuracy` and `reference_share` beside them are Olofsson
+    et al.'s, estimate +/- 1.96 SE, whatever `interval` says, as `overall_accuracy_normal_theory` is."""
+    if interval not in ("wilson", "wald"):     # before the class design sets its own form (the review of 1.17.2)
+        raise ValueError(f"interval must be 'wilson' or 'wald', got {interval!r}")
     ref = np.asarray(reference).ravel()
     idx = np.asarray(sample["indices"], int).ravel()
     mc = np.asarray(map_class).ravel()
@@ -1575,6 +1611,8 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
     ref = ref.astype(int)
     if (ref < 0).any():
         raise ValueError("reference classes must be >= 0; a window the reviewer could not label should not be in the sample")
+    if sample.get("design") == "sequential":                 # read as random, as estimate_error_rate reads it
+        sample = dict(sample, design="random", budget=int(np.asarray(sample["indices"]).size))
     design = sample["design"]
     if design == "tiles":
         raise ValueError("per-class accuracy from a tile sample is not graded yet (exp81 covers random and confidence "
@@ -1721,21 +1759,26 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
         else:
             o_est, o_lo, o_hi = _wald(*stratified_mean_and_variance(right, strata, local, sizes, N)[:2])
         overall_row = {"estimate": o_est, "low": o_lo, "high": o_hi}
+        by_class = design == "condition" and (sample.get("condition") or {}).get("by") == "map class"
+        # Under the class design the normal-theory fields are printed as Olofsson et al.'s (2014), estimate +/- 1.96 SE,
+        # as the overall row beside them is; they were Wilson intervals on an effective n, one printed block in two forms
+        # under one label (class 2's producer's accuracy 82.1-97.4 for Olofsson's 85.7-100.0; the bug hunt of
+        # 2026-10-25). The user's accuracy is replaced by its exact interval (_class_design_exact).
+        form = "wald" if by_class else interval
         for c in range(C):
             is_map = (m_pop == c).astype(float)
             is_ref = (r_pop == c).astype(float)
             both = is_map * is_ref
             row = {"map_share": float(W[c]), "n_labelled_map_class": int(conf[c].sum()), "n_labelled_reference_class": int(conf[:, c].sum())}
             ua, v = _ht_ratio(both, is_map, strata, local, sizes)
-            row["user_accuracy"] = None if not np.isfinite(ua) else dict(zip(("estimate", "low", "high"), _interval(ua, v, conf[c].sum(), interval)))
+            row["user_accuracy"] = None if not np.isfinite(ua) else dict(zip(("estimate", "low", "high"), _interval(ua, v, conf[c].sum(), form)))
             pa, v = _ht_ratio(both, is_ref, strata, local, sizes)
-            row["producer_accuracy"] = None if not np.isfinite(pa) else dict(zip(("estimate", "low", "high"), _interval(pa, v, conf[:, c].sum(), interval)))
+            row["producer_accuracy"] = None if not np.isfinite(pa) else dict(zip(("estimate", "low", "high"), _interval(pa, v, conf[:, c].sum(), form)))
             if N_map[c] == 0 and conf[:, c].sum() > 0:
                 row["producer_accuracy"] = {"estimate": 0.0, "low": 0.0, "high": 0.0}      # exactly 0, as above
             tot, v = _ht_total(is_ref, strata, local, sizes)
-            row["reference_share"] = dict(zip(("estimate", "low", "high"), _interval(tot / N, v / N ** 2, idx.size, interval)))
+            row["reference_share"] = dict(zip(("estimate", "low", "high"), _interval(tot / N, v / N ** 2, idx.size, form)))
             per[int(c)] = row
-        by_class = design == "condition" and (sample.get("condition") or {}).get("by") == "map class"
         if by_class:
             _class_design_exact(per, sample, strata, local, sizes, m_pop, r_s, C, L, N)
             # beside the exact union bounds, the normal-theory interval agencies read (Olofsson et al. 2014), so the
@@ -1813,7 +1856,8 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
         if notes:
             row["warning"] = "; ".join(notes)
             row["warning_codes"] = codes
-    out = {"design": design, "interval": interval, "n_labelled": int(idx.size), "n_population": N, "n_classes": C,
+    out = {"design": design, "interval": "wald" if by_class else interval, "n_labelled": int(idx.size),
+           "n_population": N, "n_classes": C,
            **({"legend_size": L} if srs or "reference_share_exact" in next(iter(per.values()), {}) else {}),
            "nominal_coverage": 0.95,
            "overall_accuracy": overall_row, "confusion_counts": conf.tolist(),
@@ -1890,11 +1934,46 @@ def hypergeom_cdf(k, n, K, b):
     return min(1.0, tot)
 
 
+def zone_edge(threshold, below):
+    """The zone's edge as a decimal to print: the fewest decimals, four at least, whose value v has below < v <=
+    threshold, so that "confidence >= v" takes the zone's windows and none outside it (`below` is the most confident
+    window outside the zone, None when the zone holds every window). Rounded to the nearest fourth decimal, a threshold
+    of 0.72453757 was printed 0.7245 and took in 31 windows outside a 198,000-window zone, and 0.43005 was printed
+    0.4301, which left the threshold's own window out (the bug hunt of 2026-10-25). Where a window outside the zone ties
+    with the threshold no value parts them; the tie counts say so."""
+    from decimal import ROUND_FLOOR, Decimal, localcontext
+    t = Decimal(repr(float(threshold)))
+    with localcontext() as ctx:
+        ctx.prec = 400              # a float's integer digits and 17 decimals: 28 failed from 1e24 (the review of 1.17.2)
+        for d in range(4, 18):
+            v = t.quantize(Decimal(1).scaleb(-d), rounding=ROUND_FLOOR)
+            if below is None or below >= threshold or float(v) > below:
+                return f"{v:f}"
+    return repr(float(threshold))
+
+
+def _edge_of(margin, order, n_zone, tied, inside):
+    """The zone's printed edge: parted from the most confident window outside the zone that lies below the threshold,
+    past the windows outside it tied with the threshold, which the tie counts name. Parted from a tied window, the
+    edge fell back to four decimals and took in windows below the threshold that no text counted (the review of
+    1.17.2)."""
+    k = n_zone + (tied - inside)
+    return zone_edge(float(margin[order[n_zone - 1]]), float(margin[order[k]]) if k < order.size else None)
+
+
+# The release whose rules certify runs with: this one unless verify is checking a zone an older release wrote
+# (certificate._rules_of). A context variable, so another thread is not touched.
+RULES_OF = __import__("contextvars").ContextVar("oe_inferencex_rules_of", default=(10 ** 9,))
+
+
 def null_count(n, alpha):
     """floor(alpha n) + 1, the smallest count of n windows that is wrong more than alpha of the time, with alpha read
     as the decimal it is written as. In floats 0.29 x 100 is 28.999..., which gave 29 and put a zone wrong exactly 29%
-    of the time into the null: a p-value about twice too large, valid but not the exact test the docs describe, on 41
-    (alpha, n) pairs up to n = 2,000 (the score review of 25 October 2026)."""
+    of the time into the null: a p-value about twice too large, valid but not the exact test the docs describe. Among
+    the two-decimal alphas up to 0.50 and n up to 2,000 that is 26 (alpha, n) pairs, at alphas 0.29, 0.35 and 0.41
+    (the score review of 25 October 2026; counted 41 here until the bug hunt of the same day)."""
+    if RULES_OF.get() < (1, 17, 1):                  # as 1.17.0 counted, for verify of a zone it wrote
+        return math.floor(alpha * n) + 1
     from fractions import Fraction
     return math.floor(Fraction(repr(float(alpha))) * int(n)) + 1
 
@@ -1962,6 +2041,11 @@ def min_labels_to_certify(alpha, delta=ZONE_DELTA):
     import math
     if not (0 < alpha < 1 and 0 < delta < 1):
         raise ValueError(f"alpha and delta must be in (0, 1), got {alpha}, {delta}")
+    # Taken in floats, as every release has: where delta is (1 - alpha)^b as written (alpha 0.3, delta 0.0823543 =
+    # 0.7^7) the ratio can come out a hair above b and ask for one label more. It is kept so: the count sets the level
+    # cut, which decides which zones certify tests before any label is read, so an exact count is another procedure
+    # (on such a sample it tests a smaller first zone and can certify less, or, on others, more), and certificates
+    # made with this one must verify (the bug hunt of 2026-10-25 and the third review of 1.17.2).
     return int(math.ceil(math.log(delta) / math.log1p(-alpha)))   # log1p: log(1 - alpha) is 0.0 below alpha ~ 1e-16
 
 
@@ -2195,9 +2279,10 @@ def certify_zone(margin, indices, wrong, alpha, delta=ZONE_DELTA, rule="prefix",
     # threshold" is not the zone there, and the counts say so.
     tied = int((margin[order] == thr).sum())
     inside = int((margin[order[:n_zone]] == thr).sum())
-    out.update({"coverage": cov[best], "n_zone": n_zone, "threshold": thr, "n_tied_at_threshold": tied,
-                "n_tied_inside_zone": inside, "upper_bound": out["levels"][best]["upper_bound"],
-                "zone_indices_in_order": order[:n_zone]})
+    out.update({"coverage": cov[best], "n_zone": n_zone, "threshold": thr,
+                "edge": _edge_of(margin, order, n_zone, tied, inside),
+                "n_tied_at_threshold": tied, "n_tied_inside_zone": inside,
+                "upper_bound": out["levels"][best]["upper_bound"], "zone_indices_in_order": order[:n_zone]})
     if rule == "plugin":
         out["note"] = "plug-in rule: no guarantee; the largest zone whose sample rate is at most alpha"
     elif rule == "prefix":
@@ -2360,11 +2445,14 @@ def certify_by_condition(sample, wrong, margin, alpha, delta=ZONE_DELTA, rule="p
         # FAMILY_NOTE divides delta over the tested conditions; with none tested it has no delta to state
         note = (f"Certified per input condition. No condition holds the {b1} labels that certifying any zone at alpha "
                 f"{alpha:g} needs, so none was tested and nothing is certified.")
-    return {"rule": rule, "alpha": float(alpha), "delta": float(delta), "n_population": N, "n_labelled": int(idx.size),
-            "min_labels_to_certify": b1, "levels": [], "coverage": None, "n_zone": None, "threshold": None,
-            "upper_bound": None, "by_condition": True, "delta_per_condition": d, "n_conditions_tested": L - len(refused),
-            "certified_share_of_map": n_cert / N if zones else None, "n_certified": n_cert, "per_condition": per,
-            "zone_indices_in_order": np.concatenate(zones) if zones else np.zeros(0, int), "note": note}
+    res = {"rule": rule, "alpha": float(alpha), "delta": float(delta), "n_population": N, "n_labelled": int(idx.size),
+           "min_labels_to_certify": b1, "levels": [], "coverage": None, "n_zone": None, "threshold": None,
+           "upper_bound": None, "by_condition": True, "delta_per_condition": d, "n_conditions_tested": L - len(refused),
+           "certified_share_of_map": n_cert / N if zones else None, "n_certified": n_cert, "per_condition": per,
+           "zone_indices_in_order": np.concatenate(zones) if zones else np.zeros(0, int), "note": note}
+    if (sample.get("condition") or {}).get("by") == "map class":     # as _estimate_core marks it
+        res["condition_by"] = "map class"
+    return res
 
 
 # ----------------------------------------------------------------------------- which of two maps is more accurate

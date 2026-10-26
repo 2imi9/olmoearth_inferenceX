@@ -60,8 +60,9 @@ from oe_inferencex.signals import boundary_indicator
 # ----------------------------------------------------------------------------- IO
 def read_raster(path, nodata=None):
     """(array, valid mask, geo) where geo is None for .npy and {transform, crs} for rasters. One band comes back as
-    (H, W) from either format. A pixel is no-data where any band is not finite, or where every band holds the no-data
-    value (GDAL's dataset mask)."""
+    (H, W) from either format. A pixel is no-data where any band is not finite, where every band holds the no-data
+    value (GDAL's dataset mask), or, on a GeoTIFF, where GDAL's mask says so (an internal mask, a .msk file, or an alpha
+    band beside one data band; _mask_bands says why only there)."""
     if path.endswith(".npy"):
         # a mistyped path is a named refusal, not a traceback (bug hunt of 2026-10-06)
         try:
@@ -70,7 +71,12 @@ def read_raster(path, nodata=None):
             raise SystemExit(f"{path}: no such file") from None
         except (OSError, ValueError) as exc:
             raise SystemExit(f"{path}: not an array numpy can read ({exc})") from None
-        nd, geo = nodata, None
+        if a.ndim not in (2, 3) or a.dtype.kind not in "biuf" or 0 in a.shape:
+            # a 0-d, 1-d or 4-d array, strings or an empty band axis ended in tracebacks (the bug hunt of 25 October
+            # 2026)
+            raise SystemExit(f"{path}: a raster is a 2-D (H, W) or 3-D (C, H, W) array of numbers; this one is "
+                             f"{a.ndim}-D {a.dtype} of shape {a.shape}")
+        nd, geo, gdal_valid, alpha_valid = nodata, None, None, None
     else:
         try:
             import rasterio
@@ -83,10 +89,14 @@ def read_raster(path, nodata=None):
             raise SystemExit(f"{path}: no such file" if "://" not in path and not os.path.exists(path)
                              else f"{path}: not a raster rasterio can read ({exc})") from None
         with src:
-            a = src.read()
+            a, gdal_valid, alpha_valid = _read_masked(src)
             nd = src.nodata if nodata is None else nodata
             geo = {"transform": src.transform, "crs": src.crs}
     valid = np.isfinite(a).all(axis=0) if a.ndim == 3 else np.isfinite(a)
+    if not path.endswith(".npy") and gdal_valid is not None:
+        valid &= gdal_valid
+    if not path.endswith(".npy") and alpha_valid is not None:
+        valid &= alpha_valid
     if nd is not None:
         # No-data only where EVERY band holds the value, as GDAL's dataset mask has it. Until 2026-10-06 one band
         # sufficed, so a probability vector with one class at exactly 0 (a profile copied from Sentinel-2 carries
@@ -98,6 +108,52 @@ def read_raster(path, nodata=None):
         # "0 of 4096 windows differ" where the same maps as GeoTIFFs differ on 507, exit 0 (2026-10-06).
         a = a[0]
     return a, valid, geo
+
+
+def _mask_bands(src):
+    """(the alpha band that is the raster's mask or None, whether GDAL keeps another mask: internal or a .msk file).
+    No-data GDAL keeps in a mask rather than as a value was read as data until 1.17.2, and an all-zero masked half made
+    the whole 5% review set and half a random sample no-data windows (the bug hunt of 25 October 2026). An alpha band is
+    the mask beside one data band (a class map with its alpha, as gdalwarp -dstalpha writes it), whatever GDAL's own
+    flags say (it applies alpha only to 2- and 4-band Byte or UInt16 rasters). With more bands it is read as data, as
+    before 1.17.2: GDAL marks the 4th band of a 4-band 8-bit GeoTIFF alpha by default, and a 4-class map lost its 4th
+    class, and the pixels where that class scored 0, to the mask (the reviews of 1.17.2)."""
+    from rasterio.enums import ColorInterp, MaskFlags
+    alpha = [i + 1 for i, c in enumerate(src.colorinterp) if c == ColorInterp.alpha]
+    alpha_mask = alpha[0] if src.count == 2 and len(alpha) == 1 else None
+    other = any(MaskFlags.all_valid not in f and MaskFlags.nodata not in f and MaskFlags.alpha not in f
+                for f in src.mask_flag_enums)
+    return alpha_mask, other
+
+
+def _read_masked(src):
+    """(the data bands, GDAL's mask as valid pixels or None, the alpha band as valid pixels or None); _mask_bands says
+    which mask a raster carries."""
+    alpha_mask, other = _mask_bands(src)
+    keep = [i + 1 for i in range(src.count) if i + 1 != alpha_mask]
+    a = src.read(keep) if alpha_mask else src.read()
+    return a, (src.dataset_mask() > 0 if other else None), (src.read(alpha_mask) > 0 if alpha_mask else None)
+
+
+def _gdal_masked(path):
+    """Whether a GeoTIFF keeps no-data in a mask read_raster reads (internal, a .msk file or the alpha band of a
+    two-band raster), as it has since 1.17.2; False for a .npy or a file that cannot be read."""
+    if not path or str(path).endswith(".npy"):
+        return False
+    try:
+        import rasterio
+        with rasterio.open(path) as src:
+            alpha_mask, other = _mask_bands(src)
+            return alpha_mask is not None or other
+    except Exception:
+        return False
+
+
+def _mask_hint(*paths):
+    """The note a refusal adds when the sample may have been drawn before 1.17.2 read the raster's mask."""
+    return (" The raster keeps no-data in a GDAL mask (or the alpha band of a two-band raster), which is no-data since "
+            "1.17.2 and was read as data before; a sample drawn before 1.17.2 on it no longer matches, so draw the "
+            "sample again." if any(_gdal_masked(p) for p in paths) else "")
 
 
 def affine_apply(a, b):
@@ -288,25 +344,65 @@ def _check_out_dir(out, command):
         raise SystemExit(f"{command}: --out {out} is a file; name the directory to write into")
 
 
-def _check_out_file(out, command):
+def _check_out_file(out, command, example="result.json"):
     """estimate, certify and decide write the file --out names: a directory there, or a missing parent directory, was a
     traceback, and certify had already left its mask beside the directory (2026-10-06). The parent is made, as sample
-    makes it."""
+    makes it. `example` names the kind of file written (boundary writes a band, not a JSON)."""
     if os.path.isdir(out):
-        raise SystemExit(f"{command}: --out {out} is a directory; name the JSON to write, for example "
-                         f"{os.path.join(out, 'result.json')}")
+        kind = "JSON" if example.endswith(".json") else "file"
+        raise SystemExit(f"{command}: --out {out} is a directory; name the {kind} to write, for example "
+                         f"{os.path.join(out, example)}")
     os.makedirs(os.path.dirname(os.path.abspath(out)) or ".", exist_ok=True)
+
+
+def _num_arg(value):
+    """A number as a printed command must give it after a space: positional and exact, since argparse reads
+    '-3.4e+38' as an option (the review of 1.17.2)."""
+    v = float(value)
+    return np.format_float_positional(v, trim="-") if np.isfinite(v) else repr(v)
+
+
+def _nodata_arg(value):
+    """--nodata as one token with the exact value, as a printed command must give it: argparse takes '-3.4e+38' or
+    '-inf' after a space for an option, and :g turned a fill of 1234567 into 1.23457e+06, another value (the review of
+    1.17.2)."""
+    v = _json_nodata(value)
+    return f"--nodata={v if isinstance(v, str) else repr(float(v))}"
+
+
+def _same_file(a, b):
+    """Whether two paths name one file: by the file itself where both exist (another letter case on a case-insensitive
+    disk, a symlink), else by the resolved path (the bug hunt of 25 October 2026: `estimate --out S.json` replaced the
+    sidecar s.json on macOS)."""
+    try:
+        return os.path.samefile(a, b)
+    except OSError:
+        return os.path.realpath(a) == os.path.realpath(b)
 
 
 def _refuse_overwriting_inputs(command, outputs, inputs):
     """Refuse an output path that is one of the inputs. `assess --condition condition.npy --out .` replaced the user's
     pixel layer with the window grid, exit 0, and the next run was refused on its shape; `estimate s.csv --out s.json`
     replaced the sample's design, and every later estimate died on a KeyError (2026-10-06)."""
-    given = {os.path.realpath(p): p for p in inputs if p}
     for o in outputs:
-        if os.path.realpath(o) in given:
-            raise SystemExit(f"{command}: writing {o} would overwrite the input {given[os.path.realpath(o)]}; name "
-                             "another --out")
+        for p in inputs:
+            if p and o and isinstance(p, str) and _same_file(o, p):
+                raise SystemExit(f"{command}: writing {o} would overwrite the input {p}; name another --out")
+
+
+def _sample_map_inputs(sample_path, *overrides):
+    """The rasters a labelled sample was drawn from, as its sidecar names them, with any override: what estimate and
+    certify read again and must never write over (the bug hunt of 25 October 2026: `certify s.csv --out map.json` with
+    map.npy deleted the map, and `--out map.tif` wrote the zone over it)."""
+    side_path = sample_path[:-4] + ".json" if sample_path.endswith(".csv") else sample_path + ".json"
+    try:
+        with open(side_path) as f:
+            side = json.load(f)
+    except (OSError, ValueError):
+        return [o for o in overrides if o]
+    cond = side.get("condition") if isinstance(side.get("condition"), dict) else {}
+    named = [side.get(k) for k in ("scores", "classes", "confidence", "map_a", "map_b")] + [cond.get("source")]
+    return [p for p in named + list(overrides) if isinstance(p, str) and p]
 
 
 def _budget_tag(b):
@@ -362,9 +458,9 @@ def cmd_assess(args):
         raise SystemExit(f"assess: {exc}") from None
     os.makedirs(args.out, exist_ok=True)
     s = summary(out)
-    s["inputs"] = {"scores": os.path.abspath(args.scores), "logits": args.logits, "reference": os.path.abspath(args.reference) if args.reference else None}
+    s["inputs"] = {"scores": _where(args.scores), "logits": args.logits, "reference": _where(args.reference) if args.reference else None}
     if conf_path:   # "scores" keeps naming the first argument, here the class map
-        s["inputs"].update({"classes": os.path.abspath(args.scores), "confidence": os.path.abspath(conf_path),
+        s["inputs"].update({"classes": _where(args.scores), "confidence": _where(conf_path),
                             "confidence_range": None if conf_range is None else [float(v) for v in conf_range]})
         s["notes"] = list(s.get("notes", [])) + prod_notes
     arr = out["arrays"]
@@ -373,9 +469,9 @@ def cmd_assess(args):
     if layer is not None:
         # recorded only with a layer: without one, assessment.json differs from 1.3.1's by `scope` and the corrected
         # warning texts listed in tests/golden/condition_1_3_1/changes.py
-        s["inputs"].update({"condition": os.path.abspath(cond_path),
+        s["inputs"].update({"condition": _where(cond_path),
                             "condition_names": {str(k): v for k, v in cond_names.items()} if cond_names else None})
-        s["conditions"]["source"] = os.path.abspath(cond_path)
+        s["conditions"]["source"] = _where(cond_path)
         per_cond = out["conditions"]["per_condition"]
         name_of = {e["value"]: name for name, e in per_cond.items()}          # None is the unrecorded windows' value
         name_at = lambda r, c: name_of[int(arr["condition"][r, c]) if arr["condition"][r, c] >= 0 else None]
@@ -388,7 +484,7 @@ def cmd_assess(args):
         # their old zero-padded name; only the sub-percent budgets that used to collide get a decimal form.
         tag = _budget_tag(b)
         path = os.path.join(args.out, f"review_set_{tag}pct.csv")
-        with open(path, "w", newline="") as f:
+        with open(path, "w", newline="", encoding="utf-8") as f:
             w = csv.writer(f)
             w.writerow(["rank", "window_row", "window_col", "pixel_row", "pixel_col", "x", "y", "confidence", "boundary"]
                        + ([] if layer is None else ["condition"]))
@@ -399,7 +495,7 @@ def cmd_assess(args):
         if layer is not None:
             # each condition's own review set: the whole map's order kept to that condition, ranked from 1 within it
             path = os.path.join(args.out, f"review_set_{tag}pct_by_condition.csv")
-            with open(path, "w", newline="") as f:
+            with open(path, "w", newline="", encoding="utf-8") as f:
                 w = csv.writer(f)
                 w.writerow(["condition", "rank_in_condition", "window_row", "window_col", "pixel_row", "pixel_col", "x",
                             "y", "confidence", "boundary"])
@@ -431,8 +527,21 @@ def cmd_assess(args):
     # A budget is printed as the percent it is: rounded to a whole percent, 0.1% and 0.4% both printed as "0%" and
     # 2.5% as "2%", while the files and the JSON kept them apart (2026-10-06).
     if "error_capture_at_budget" in ref_block:
-        ref_text = "; against the reference: error capture " + ", ".join(
-            f"{100 * float(b):g}% -> {v['errors_captured_fraction']:.2f}" for b, v in ref_block["error_capture_at_budget"].items())
+        # With a partial reference the capture is measured on the windows it grades, in review order, not on the review
+        # sets: "5% -> 0.31" was printed beside a 5% review set that holds 0.46 of the disagreements; and with no
+        # disagreement the share captured is undefined, where 0.00 read as "the review set catches none of the errors"
+        # (the bug hunt of 2026-10-25; the MCP reply said both since 2026-10-06).
+        n_ref, n_all = ref_block["n_windows_scored"], s["n_windows"]
+        partial = n_ref < n_all
+        ref_text = "; against the reference" + (f", which grades {n_ref} of the {n_all} windows" if partial else "") + ": "
+        if not ref_block["error_rate"]:
+            ref_text += "no window disagrees with it, so error capture is undefined"
+        else:
+            ref_text += "error capture " + ", ".join(
+                f"{100 * float(b):g}% -> {v['errors_captured_fraction']:.2f}"
+                for b, v in ref_block["error_capture_at_budget"].items())
+            if partial:
+                ref_text += " (measured on those windows in review order, not on the review sets)"
     elif args.reference:
         # sparse point labels, an all-no-data or an evenly split reference: no window could be graded, which used to
         # crash here after the files were written (review of 2026-09-23)
@@ -500,18 +609,39 @@ def cmd_boundary(args):
     if (args.width_m is None) == (args.width_px is None):
         raise SystemExit("boundary: give the band's width once, as --width-m (metres, from a GeoTIFF's pixel size) or "
                          "--width-px (pixels)")
-    hard, valid, geo, _, _ = decisions(args.scores, args.nodata, args.threshold)
+    _check_patch(args.patch, "boundary")
+    hard, valid, geo, _, conf = decisions(args.scores, args.nodata, args.threshold)
+    if geo is not None and args.out.lower().endswith(".npy"):
+        # write_raster writes a GeoTIFF on a GeoTIFF map's grid whatever the name: a band.npy holding TIFF bytes, and
+        # the sample command printed beside it refused the file (the bug hunt of 2026-10-25).
+        raise SystemExit(f"boundary: {args.scores} is a GeoTIFF, so the band is written on its grid as a GeoTIFF; "
+                         f"name --out with .tif, not {args.out}")
     target = args.out if geo is not None else os.path.splitext(args.out)[0] + ".npy"     # write_raster's own rule
     _refuse_overwriting_inputs("boundary", [target], [args.scores])
+    _check_out_file(target, "boundary", "band.tif" if geo is not None else "band.npy")
     if args.width_m is not None:
         if geo is None:
             raise SystemExit("boundary: --width-m needs a GeoTIFF, whose pixel size converts metres to pixels; a .npy "
                              "has none, so give --width-px")
-        if geo["crs"] is not None and geo["crs"].is_geographic:
+        # The pixel size was read as metres whatever the CRS: 10 US-survey-foot pixels made a 20 m band 6 m wide, and a
+        # GeoTIFF with no CRS (an identity transform) a band of 20 pixels "of 1 x 1 m". The width is converted as
+        # scale's window sizes are (the bug hunt of 2026-10-25).
+        crs, t = geo["crs"], geo["transform"]
+        if crs is None:
+            raise SystemExit(f"boundary: {args.scores} has no CRS, so its pixel size is in no known unit; give --width-px")
+        if crs.is_geographic:
             raise SystemExit("boundary: the map's CRS is in degrees, so its pixel size is not in metres; give --width-px")
+        if t.b or t.d:
+            raise SystemExit("boundary: the map's grid is rotated or sheared, so a pixel has no single width along its "
+                             "rows and columns; give --width-px")
+        try:
+            factor = float(crs.linear_units_factor[1])
+        except Exception:
+            raise SystemExit("boundary: the map's CRS names no linear unit, so its pixel size cannot be read in metres; "
+                             "give --width-px") from None
         if args.width_m <= 0:
             raise SystemExit(f"boundary: --width-m must be positive, got {args.width_m:g}")
-        px_w, px_h = abs(geo["transform"].a), abs(geo["transform"].e)
+        px_w, px_h = abs(t.a) * factor, abs(t.e) * factor
         wc, wr = max(1, round(args.width_m / px_w)), max(1, round(args.width_m / px_h))
         width_text = f"{args.width_m:g} m ({wr} rows, {wc} columns of {px_h:g} x {px_w:g} m pixels)"
     else:
@@ -523,15 +653,60 @@ def cmd_boundary(args):
     if not valid.any():
         raise SystemExit(f"boundary: {args.scores} has no valid pixel")
     share = float((band[valid] == 1).mean())
-    pooled = pool_condition(band, args.patch, valid)
+    try:
+        pooled = pool_condition(band, args.patch, valid)
+    except ValueError as exc:                            # a window larger than the map, or none half valid
+        raise SystemExit(f"boundary: {exc}") from None
     n_win = int((pooled["grid"] >= 0).sum())
     win_share = float((pooled["grid"] == 1).sum() / n_win) if n_win else float("nan")
     path = write_raster(args.out, band.astype(np.int32), geo, 1, -1)
+    # The map is read again by sample as boundary read it: without the --nodata given here, a .npy's fill became the
+    # band's "unrecorded" windows and took half the labels (the bug hunt of 2026-10-25). sample ranks windows by the
+    # map's scores: a one-band map cut at 0 is logits, a class map needs its confidence band, and a continuous map cut
+    # elsewhere has no scores sample reads (the review of 1.17.2: the command printed was refused).
+    import shlex
+    flags, need = "", ""
+    if conf is None:
+        flags, need = " --confidence BAND", ("; BAND is the map's confidence band, which sample needs beside a class "
+                                              "map to rank its windows")
+    else:
+        a, ok, _ = read_raster(args.scores, args.nodata)
+        v = a[..., ok] if a.ndim == 3 else a[ok]
+        unit = v.size == 0 or (float(v.min()) >= -PROB_TOLERANCE and float(v.max()) <= 1 + PROB_TOLERANCE)
+        if a.ndim == 2 and a.dtype.kind in "biu" and (v.size == 0 or np.isin(v, (0, 1)).all()):
+            # a 0/1 integer map is a class map whatever --threshold cut it at: sample reads it with its confidence band
+            # (it lost that advice when cut below 1; the third review of 1.17.2); a percent-cover map cut at 50 is not
+            # one (the fourth review)
+            flags, need = " --confidence BAND", ("; BAND is the map's confidence band, which sample needs beside a "
+                                                  "class map to rank its windows")
+        elif a.ndim == 3:
+            # a (C, H, W) map outside [0, 1] is logits to sample, which refused it as printed (the second review)
+            flags = "" if unit else " --logits"
+        elif args.threshold == 0:
+            flags = " --logits"
+        elif args.threshold is not None and not unit:
+            need = (f"; sample reads a map's scores, and a continuous map cut at {args.threshold:g} has none: give "
+                    "sample the scores this map was made from, or a confidence band with --confidence")
+        elif args.threshold is not None and args.threshold != 0.5:
+            need = (f"; sample reads a one-band probability map at 0.5, where boundary cut it at {args.threshold:g}, so "
+                    "its windows' classes can differ from the band's")
+    flags += f" {_nodata_arg(args.nodata)}" if args.nodata is not None else ""
+    budget = min(300, n_win)              # a map of fewer valid windows refused 300 (the second review of 1.17.2)
     print(f"{100 * share:.1f}% of valid pixels lie within {width_text} of another class; windows of {args.patch} px "
           f"held mostly by the band: {_pct(None if np.isnan(win_share) else win_share, 1)}\nwrote {path}\n"
-          f"next: oe-inferencex sample {args.scores} --condition {path} --condition-names 0=interior 1=boundary "
-          f"--patch {args.patch} --budget 300 --out to_label.csv")
+          f"next: oe-inferencex sample {shlex.quote(args.scores)}{flags} --condition {shlex.quote(path)} "
+          f"--condition-names 0=interior 1=boundary --patch {args.patch} --budget {budget} --out to_label.csv{need}")
     return 0
+
+
+def _band_count(path):
+    """The number of bands of a raster or (C, H, W) array, 1 for a 2-D one, without reading its values."""
+    if str(path).endswith(".npy"):
+        shape = np.load(path, mmap_mode="r").shape
+        return shape[0] if len(shape) == 3 else 1
+    import rasterio
+    with rasterio.open(path) as src:                    # the alpha band of a two-band raster is its mask
+        return src.count - (_mask_bands(src)[0] is not None)
 
 
 # ----------------------------------------------------------------------------- scale
@@ -588,10 +763,10 @@ def cmd_scale(args):
         raise SystemExit(f"scale: {exc}") from None
     res["notes"] += prod_notes
     res["window_size"] = {p: _window_size_text(p, geo) for p in res["patches"]}
-    res["inputs"] = {"scores": os.path.abspath(args.scores), "logits": args.logits,
-                     "confidence": os.path.abspath(conf_path) if conf_path else None,
+    res["inputs"] = {"scores": _where(args.scores), "logits": args.logits,
+                     "confidence": _where(conf_path) if conf_path else None,
                      "confidence_range": None if conf_range is None else [float(v) for v in conf_range],
-                     "reference": os.path.abspath(args.reference) if args.reference else None}
+                     "reference": _where(args.reference) if args.reference else None}
     graded = args.reference is not None
     nan_none = lambda x: None if x is None or x != x else x          # an undefined rate prints as undefined
     lines = ["window size: windows, windows bordering another class, median confidence"
@@ -677,11 +852,30 @@ def cmd_verify(args):
     from . import certificate as cert
     if args.out:
         base = os.path.dirname(os.path.abspath(args.certificate))
-        if os.path.dirname(os.path.abspath(args.out)) == base:
+        out_dir = os.path.dirname(os.path.abspath(args.out))
+        # another letter case or a symlink to the bundle counts too, and so does a directory under it, which made
+        # every later verify fail on a file that is not the bundle's (the review of 1.17.2)
+        d, inside = out_dir, False
+        while True:
+            if os.path.exists(d) and _same_file(d, base) or os.path.realpath(d) == os.path.realpath(base):
+                inside = True
+                break
+            up = os.path.dirname(d)
+            if up == d:
+                break
+            d = up
+        if inside:
             raise SystemExit("verify: --out would write into the bundle's directory, which holds the bundle's files "
                              "and nothing else; name a file elsewhere")
         _check_out_file(args.out, "verify")
-        _refuse_overwriting_inputs("verify", [args.out], [args.certificate, args.scores, args.confidence])
+        named = []                             # the map the certificate names, read when --scores is not given
+        try:
+            with open(args.certificate) as f:
+                m = (json.load(f).get("properties") or {}).get("zc:map") or {}
+            named = [m.get("path"), m.get("confidence_path")]
+        except (OSError, ValueError, AttributeError):
+            pass
+        _refuse_overwriting_inputs("verify", [args.out], [args.certificate, args.scores, args.confidence, *named])
     try:
         res = cert.verify(args.certificate, args.scores, args.confidence)
     except cert.Unreadable as exc:
@@ -1057,7 +1251,7 @@ def cmd_compare(args):
             notes.append(f"{n_nogroup} windows fall in no group and are counted overall but in no per-group rate")
     os.makedirs(args.out, exist_ok=True)
     s = summary(out)
-    s["inputs"] = {"a": os.path.abspath(args.a), "b": os.path.abspath(args.b), "labels": os.path.abspath(args.labels) if args.labels else None, "patch_px": args.patch,
+    s["inputs"] = {"a": _where(args.a), "b": _where(args.b), "labels": _where(args.labels) if args.labels else None, "patch_px": args.patch,
                    "date_a": args.date_a, "date_b": args.date_b, "labels_date": args.labels_date}
     if notes:
         s["notes"] = notes
@@ -1067,7 +1261,7 @@ def cmd_compare(args):
     rows, cols = np.nonzero(out["arrays"]["disagree"])
     pr, pc, x, y = window_coords(rows, cols, geo, args.patch)
     path = os.path.join(args.out, "differing_windows.csv")
-    with open(path, "w", newline="") as f:
+    with open(path, "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         w.writerow(["window_row", "window_col", "pixel_row", "pixel_col", "x", "y", "a", "b"])
         for i, (r, c) in enumerate(zip(rows, cols)):
@@ -1110,6 +1304,19 @@ def cmd_sample(args):
     JSON carrying the design so `estimate` can give the rate the design earns. With --condition, the input condition
     of every window is fixed here and recorded in the sidecar; `estimate` and `certify` read it from there."""
     # read with getattr: demo.py and the tests build the argument Namespace by hand, without these attributes
+    out_csv = getattr(args, "out", None)
+    if out_csv:
+        # the CSV and its sidecar never write over a raster the sample reads (the bug hunt of 25 October 2026:
+        # `--out scores.tif` replaced the map with the CSV, exit 0); --extend's own CSV may be named, as it is extended
+        # the --extend sample's CSV and sidecar too, unless --out names that CSV itself (the review of 1.17.2: --out
+        # naming its sidecar wrote the CSV over the labelled sample's design)
+        ext = getattr(args, "extend", None)
+        ext_files = ([ext, ext[:-4] + ".json" if ext.endswith(".csv") else ext + ".json"]
+                     if ext and not _same_file(out_csv, ext) else [])
+        _refuse_overwriting_inputs("sample", [out_csv, out_csv[:-4] + ".json" if out_csv.endswith(".csv") else
+                                              out_csv + ".json"],
+                                   [getattr(args, k, None) for k in ("scores", "other", "confidence", "condition")]
+                                   + ext_files)
     if getattr(args, "seed_from_map", False) and (getattr(args, "other", None) or
                                                    getattr(args, "design", None) == "audit"):
         raise SystemExit("sample: --seed-from-map draws one map's sample from that map's own digest; it does not "
@@ -1118,6 +1325,23 @@ def cmd_sample(args):
                                                       getattr(args, "design", None) == "audit"):
         raise SystemExit("sample: --target fixes the zone the target rule will certify, which needs a simple random "
                          "sample of the whole map: --design random, without --other")
+    if getattr(args, "other", None) or getattr(args, "design", None) == "audit":
+        # one map's options, read by neither route: each passed unread, and --extend with --out naming the sequential
+        # CSV replaced its 100 labels with an unlabelled pairs sample (the bug hunt of 2026-10-25)
+        unread = [flag for flag, key in (("--extend", "extend"), ("--anchor", "anchor"), ("--alpha", "alpha"),
+                                         ("--delta", "delta"), ("--rule", "rule"), ("--level-cut", "level_cut"),
+                                         ("--min-per-class", "min_per_class"))
+                  if getattr(args, key, None) is not None]
+        if getattr(args, "other", None) and getattr(args, "condition_names", None):
+            unread.append("--condition-names")
+        if getattr(args, "other", None) and getattr(args, "logits", False):
+            unread.append("--logits")          # the two maps are read as classes (the review of 1.17.2)
+        if unread:
+            route = "--other" if getattr(args, "other", None) else "--design audit"
+            raise SystemExit(f"sample {route} takes none of {', '.join(unread)}: --extend, --anchor, --alpha and --delta "
+                             "belong to --design sequential, --rule and --level-cut to --seed-from-map, --min-per-class "
+                             "to --design class and --condition-names to --condition; --other reads both maps' classes, "
+                             "so it reads no --logits")
     audit_opts = [getattr(args, k, None) for k in ("per_class", "zone_share", "zone_cut")]
     if getattr(args, "design", None) != "audit" and any(v is not None for v in audit_opts):
         raise SystemExit("sample: --per-class, --zone-share and --zone-cut belong to --design audit")
@@ -1205,12 +1429,12 @@ def cmd_sample(args):
     if design == "sequential" and cond_path:
         raise SystemExit("sample: --design sequential does not take --condition: certify reads it as one random order "
                          "of the whole map")
-    old_side = old_wrong = old_ref = anchor_rule = None
+    old_side = old_wrong = old_ref = old_rows = anchor_rule = None
     if extend is not None:
         if any(v is not None for v in (anchor, a_alpha, a_delta)):
             raise SystemExit(f"sample --extend: the anchor was fixed when {extend} was drawn and cannot change after "
                              "labelling began; drop --anchor, --alpha and --delta")
-        old_side, old_wrong, old_ref = _sequential_to_extend(extend, args)
+        old_side, old_wrong, old_ref, old_rows = _sequential_to_extend(extend, args)
         anchor, anchor_rule = old_side["anchor"], old_side.get("anchor_rule")
     elif design == "sequential":
         # The anchor, the smallest zone certify will test, is fixed here, before any label: certify reads it from the
@@ -1249,8 +1473,11 @@ def cmd_sample(args):
                               args.budget, args.patch, target, anchor, plan, class_floor)
         if seed_from_map:
             if old_side is not None and int(old_side["seed"]) != seed_rule["seed"]:
-                raise SystemExit(f"sample --extend: {extend} was drawn with --seed {old_side['seed']}, not the seed this "
-                                 "map and its settings give; extend it with that --seed")
+                # "extend it with that --seed" sent the user to a run that dropped the seed rule (the bug hunt of
+                # 2026-10-25): the settings that enter the seed are what differ
+                raise SystemExit(f"sample --extend: {extend} was drawn with the seed {old_side['seed']}, not the seed this "
+                                 "map and its settings give; extend it with the options it was drawn with, as the "
+                                 "command sample printed for it gives them." + _mask_hint(args.scores, conf_path))
             args.seed = seed_rule["seed"]
         elif seed_rule["seed"] != int(args.seed):
             seed_rule = None
@@ -1283,7 +1510,15 @@ def cmd_sample(args):
         if sample["n_population"] != old_side.get("n_population") or not np.array_equal(idx[:prev.size], prev):
             raise SystemExit(f"sample --extend: {extend} was not drawn from this map with this seed: its windows are not "
                              "the start of the order this map and seed give. Pass the same scores, --patch, --nodata "
-                             "and --seed it was drawn with")
+                             "and --seed it was drawn with." + _mask_hint(args.scores, conf_path))
+        # the windows already labelled must show the confidence and class they were labelled with: on a 1.17.1 sample
+        # whose raster's mask 1.17.2 reads, the extension kept the labels and rewrote map_class under them, and certify
+        # then accepted what it refused unextended (the third review of 1.17.2)
+        k = _kept_rows_mismatch(old_rows, margin.ravel()[prev], klass.ravel()[prev])
+        if k is not None:
+            raise SystemExit(f"sample --extend: the windows of {extend} labelled so far no longer show the confidence and "
+                             f"class the CSV records (row {k + 2}); this is not the map they were labelled on."
+                             + _mask_hint(args.scores, conf_path))
         sample["first_budget"] = old_side["first_budget"]
     cond = sample.get("condition")
     rows, cols = np.divmod(idx, ww)
@@ -1291,7 +1526,9 @@ def cmd_sample(args):
     if os.path.isdir(args.out):
         raise SystemExit(f"--out {args.out} is a directory; name the CSV to write, for example {os.path.join(args.out, 'to_label.csv')}")
     os.makedirs(os.path.dirname(os.path.abspath(args.out)) or ".", exist_ok=True)
-    with open(args.out, "w", newline="") as f:
+    # UTF-8, as every reader reads it: in the locale's encoding (cp1252 on Windows) a condition named bewölkt was
+    # written as one byte, and estimate refused the file (the bug hunt of 2026-10-25)
+    with open(args.out, "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         # map_class: the class `estimate` and `certify` grade at the window (the majority of its pixels' classes),
         # shown so the reviewer judges the same thing the tool grades; a mixed window is where a reviewer looking
@@ -1326,7 +1563,7 @@ def cmd_sample(args):
         # the design's source of truth for `estimate` and `certify`, which never read the raster again; its digest
         # binds the layer to the sample, so a certificate can show the layer was not swapped after labelling
         from .certificate import names_given, raster_digest
-        side["condition"] = {"source": "map class" if by_class else os.path.abspath(cond_path),
+        side["condition"] = {"source": "map class" if by_class else _where(cond_path),
                              "rule": CLASS_RULE_TEXT if by_class else RULE_TEXT, "values": cond["values"],
                              "names": cond["names"], "sizes": cond["sizes"], "n_labelled": cond["n_labelled"],
                              "allocation_rule": cond["allocation_rule"], "n_windows_split": pooled["n_split"],
@@ -1353,6 +1590,7 @@ def cmd_sample(args):
             notes.append(f"labels are allocated by map class: each class at least {cond['allocation_rule'].split()[-3]} "
                          "(or all its windows), the rest in proportion to its size (Olofsson et al. 2014); estimate "
                          "--per-class gives each class's user's and producer's accuracy and area with exact intervals")
+            notes.append(est.CLASS_BLIND_NOTE)
         elif design == "condition" and K >= 2:
             notes.append(f"labels are split equally across the {K} input conditions so that each gets its own error "
                          "rate; the whole-map rate weights each condition by its share of the map")
@@ -1363,10 +1601,7 @@ def cmd_sample(args):
     if design == "sequential":
         kept = 0 if old_wrong is None else sum(str(v).strip() != "" for v in old_wrong)
         notes.insert(0, ("label from the top row down, in order; certify may be run after any number of labels and "
-                         "holds at every look. To add windows later: oe-inferencex sample " + args.scores
-                         + (" --design sequential " + ("--seed-from-map" if seed_rule is not None else
-                                                       f"--seed {args.seed}")
-                            + f" --budget <more> --extend {args.out}"))
+                         "holds at every look. To add windows later: " + _extend_command(args, seed_rule))
                      + (f"; the {kept} labels already given are kept" if kept else ""))
     if target is not None:
         notes.insert(0, f"the target, the {100 * target:g}% most confident zone, is fixed now: certify will test it "
@@ -1377,7 +1612,7 @@ def cmd_sample(args):
           f"{FILL_INSTRUCTION} oe-inferencex estimate {args.out}"
           + "".join(f"\nwarning: {w}" for w in out.get("warnings", []))
           + (f"\nnote: {sample['note']}" if "note" in sample else "")
-          + "".join(f"\nnote: {class_words(n) if by_class else n}" for n in prod_notes + notes if n))
+          + "".join(f"\nnote: {class_wording(side, args.out)(n)}" for n in prod_notes + notes if n))
     return 0
 
 
@@ -1459,10 +1694,10 @@ def _sidecar_map_fields(args, geo, grid, out, conf_path, conf_range, prod_info):
     --per-class and certify recompute it from them), its window grid, and what a reviewer needs to find a window."""
     side = {}
     if conf_path:   # estimate --per-class and certify rebuild the map from both layers, with the same range
-        side.update({"classes": os.path.abspath(args.scores), "confidence": os.path.abspath(conf_path),
+        side.update({"classes": _where(args.scores), "confidence": _where(conf_path),
                      "confidence_range": None if conf_range is None else [float(v) for v in conf_range],
                      "product_population": prod_info})
-    side.update({"scores": os.path.abspath(args.scores), "logits": args.logits, "patch": args.patch,
+    side.update({"scores": _where(args.scores), "logits": args.logits, "patch": args.patch,
                  "nodata": _json_nodata(args.nodata),     # estimate --per-class and certify recompute the map with it
                  "grid": grid, "csv": os.path.abspath(args.out),
                  # what a reviewer with a GIS needs to find a window: the CRS, the pixel size, and the window's
@@ -1474,6 +1709,60 @@ def _sidecar_map_fields(args, geo, grid, out, conf_path, conf_range, prod_info):
                  "xy_are": "window centres in the raster's CRS" if geo is not None else "absent: the input had no georeference",
                  "warnings": list(out.get("warnings", []))})
     return side
+
+
+def _extend_command(args, seed_rule):
+    """The command that extends this sequential sample, the map read as this run read it (the extension takes the
+    certify plan from the sidecar). It named the map and the seed alone, so for a product the band was dropped, and
+    with --seed-from-map the seed, which the band enters, no longer matched (the bug hunt of 2026-10-25)."""
+    import shlex
+    cmd = ["oe-inferencex", "sample", args.scores]
+    if getattr(args, "confidence", None):
+        cmd += ["--confidence", args.confidence]
+    if getattr(args, "confidence_range", None):
+        cmd += ["--confidence-range", *[_num_arg(v) for v in args.confidence_range]]
+    if args.logits:
+        cmd.append("--logits")
+    if args.nodata is not None:
+        cmd.append(_nodata_arg(args.nodata))
+    if args.patch != 4:
+        cmd += ["--patch", str(args.patch)]
+    cmd += ["--design", "sequential"] + (["--seed-from-map"] if seed_rule is not None else ["--seed", str(args.seed)])
+    # with --out, which sample requires: the command printed until 1.17.2 lacked it and was refused (the review)
+    out = shlex.quote(args.out)
+    return " ".join(shlex.quote(c) for c in cmd) + f" --budget <more> --extend {out} --out {out}"
+
+
+def _kept_rows_mismatch(rows, conf_at, class_at):
+    """The first of a sample's rows whose recorded confidence or class the map no longer gives, or None; the columns
+    and the tolerance are _map_windows's."""
+    for k, r in enumerate(rows or []):
+        try:
+            if abs(float(conf_at[k]) - float(r["confidence"])) > _rounding_tolerance(r["confidence"]) * (1 + 1e-9) + 1e-12:
+                return k
+        except (KeyError, ValueError, TypeError):
+            pass
+        try:
+            if int(float(r["map_class"])) != int(class_at[k]):
+                return k
+        except (KeyError, ValueError, TypeError, OverflowError):
+            pass
+    return None
+
+
+def _reading_text(side):
+    """The options a sample's sidecar says the map was read with, as a command gives them."""
+    import shlex
+    flags = []
+    if side.get("confidence"):
+        flags += ["--confidence", side["confidence"]]
+    if side.get("confidence_range") is not None:
+        flags += ["--confidence-range", *[_num_arg(v) for v in side["confidence_range"]]]
+    if side.get("logits"):
+        flags.append("--logits")
+    if side.get("nodata") is not None:
+        flags.append(_nodata_arg(side["nodata"]))
+    return " ".join(shlex.quote(f) for f in flags) or "no --confidence, --logits or --nodata"
 
 
 def _sequential_to_extend(path, args):
@@ -1493,15 +1782,28 @@ def _sequential_to_extend(path, args):
     if not getattr(args, "seed_from_map", False) and int(side.get("seed", -1)) != int(args.seed):
         # with --seed-from-map the seed is derived later, once the anchor is known, and compared there
         raise SystemExit(f"sample --extend: {path} was drawn with --seed {side.get('seed')}; pass the same seed")
-    if os.path.abspath(args.scores) != side.get("scores") or int(args.patch) != int(side.get("patch", -1)):
+    if _where(args.scores) != side.get("scores") or int(args.patch) != int(side.get("patch", -1)):
         raise SystemExit(f"sample --extend: {path} was drawn from {side.get('scores')} at --patch {side.get('patch')}; "
                          "extend it from the same map and patch")
+    # The map read as it was: a product's band dropped, or --logits added, passed, and the kept labels were paired with
+    # other confidences (a band's 45.75 became 1.0, every window tied for certify); with --seed-from-map the seed
+    # rule was lost (the bug hunt of 2026-10-25)
+    conf = getattr(args, "confidence", None)
+    rng = getattr(args, "confidence_range", None)
+    differ = [flag for flag, now, then in (
+        ("--logits", bool(args.logits), bool(side.get("logits", False))),
+        ("--nodata", _json_nodata(args.nodata), side.get("nodata")),
+        ("--confidence", None if not conf else _where(conf), side.get("confidence")),
+        ("--confidence-range", None if rng is None else [float(v) for v in rng], side.get("confidence_range")))
+              if now != then]
+    if differ:
+        raise SystemExit(f"sample --extend: {path} was drawn reading the map with {_reading_text(side)}; extend it "
+                         f"reading it the same way ({', '.join(differ)} differ)")
     n_old = len(side["indices"])
     if args.budget <= n_old:
         raise SystemExit(f"sample --extend: {path} already holds {n_old} windows; --budget is the new total, larger "
                          "than that")
-    with open(path, newline="", encoding="utf-8-sig") as f:
-        rows = list(csv.DictReader(f))
+    rows = _csv_rows(path, "sample --extend")
     try:
         idx = [int(float(r["index"])) for r in rows]
     except (KeyError, ValueError, OverflowError):
@@ -1509,32 +1811,121 @@ def _sequential_to_extend(path, args):
     if idx != [int(i) for i in side["indices"]]:
         raise SystemExit(f"sample --extend: the rows of {path} do not match its sidecar; extend the file `sample` wrote")
     return (side, [r.get("wrong", "") for r in rows],
-            [r.get("reference_class", "") for r in rows] if rows and "reference_class" in rows[0] else None)
+            [r.get("reference_class", "") for r in rows] if rows and "reference_class" in rows[0] else None, rows)
 
 
 # One class is written per window, seen at one time, and both maps are graded against it. Until 1.14.1 nothing said
 # so: the route was offered for two maps of different dates, where a change on the ground between them reads as an
 # error of the map of the other date (the OlmoEarth Agent's trials, exp86 round 8).
-_CLASS_WORDS = [(r"\bper input condition\b", "per map class"), (r"\bby input condition\b", "by map class"),
+_CLASS_WORDS = [(r"\bper class or per condition\b", "per class"), (r"\bper input condition\b", "per map class"), (r"\bby input condition\b", "by map class"),
                 (r"\binput conditions\b", "map classes"), (r"\binput condition\b", "map class"),
                 (r"\bconditions\b", "classes"), (r"\bcondition\b", "class"),
                 (r"\bConditions\b", "Classes"), (r"\bCondition\b", "Class")]
 _PATH_KEYS = {"sample", "csv", "scores", "classes", "confidence", "zone_mask", "source", "out", "written_by"}
 
 
-def class_words(obj):
+def class_words(obj, keep=(), paths=()):
     """A result of the class design in its own words: its strata are the map's classes, which the condition design's
-    estimators and texts call conditions. Paths and keys are left as they are."""
+    estimators and texts call conditions. Keys, path values, the paths a text names, a `code span` (a column or a
+    command) and the class names in `keep` are left as they are. A class named "good condition" was printed "good
+    class", the JSON's outside_condition_intervals named classes that were not its keys (a KeyError in the MCP estimate
+    tool), and a sample in a folder named condition was sent to .../class/to_label.csv, a file that does not exist (the
+    bug hunt of 2026-10-25).
+
+    Paths are held first, each as a whole token, with its file name where that has an extension: the generic path token
+    matched "sample_csv=/a/Site" first and reworded " conditions 2026", and a file name held inside words ("t" in
+    "input") turned the wording off (the reviews of 1.17.2). A class name is held as a whole word, so a backtick in it
+    opens no code span, unless it is made only of the words the rules match ("input", "condition"): held, it stopped the
+    rules in the package's own sentences, so it is worded as they are. A list entry that is exactly a class name, as in
+    outside_condition_intervals, names a stratum and is kept; other values are worded (a class named "condition" kept
+    the design's own value "condition" unworded; the fourth review)."""
     import re
+    from .estimate import RULES_OF
+    if RULES_OF.get() < (1, 17, 2):                  # as 1.17.0 and 1.17.1 worded, for verify of a zone they wrote
+        from .certificate import _class_words_1171
+        return _class_words_1171(obj)
+    names = {str(k) for k in keep if str(k)}
     if isinstance(obj, str):
+        held = []
+        # a mark the text does not hold: a NUL of the text's own hung the restore, or was taken for a mark (a name
+        # "a\x000\x00" printed "awater"; the fourth and fifth reviews of 1.17.2)
+        mark = next(chr(c) for c in range(0xE000, 0xF900) if chr(c) not in obj)
+
+        def hold(m):
+            held.append(m.group(0))
+            return f"{mark}{len(held) - 1}{mark}"
+        kept = {os.fspath(p) for p in paths if p and ("/" in os.fspath(p) or "\\" in os.fspath(p) or "." in os.fspath(p))}
+        kept |= {b for b in (os.path.basename(k.replace("\\", "/")) for k in list(kept)) if "." in b}
+        if kept:
+            obj = re.sub("|".join(rf"(?<![^\s=(\'\"]){re.escape(k)}(?!\w)"
+                                  for k in sorted(kept, key=len, reverse=True)), hold, obj)
+        # a name with a character the later passes read (a backtick, a slash) is held too, whatever its words
+        held_names = [k for k in names if set(re.findall(r"\w+", k.lower())) - _RULE_WORDS or re.search(r"[`/\\]", k)]
+        if held_names:
+            obj = re.sub("|".join(rf"(?<!\w){re.escape(k)}(?!\w)" for k in sorted(held_names, key=len, reverse=True)),
+                         hold, obj)
+        m = re.escape(mark)
+        obj = re.sub(rf"[^\s{m}]*[/\\][^\s{m}]*|`[^`{m}]*`", hold, obj)
         for pat, rep in _CLASS_WORDS:
             obj = re.sub(pat, rep, obj)
+        for i in reversed(range(len(held))):            # a held stretch can hold only earlier ones
+            obj = obj.replace(f"{mark}{i}{mark}", held[i])
         return obj
     if isinstance(obj, dict):
-        return {k: (v if k in _PATH_KEYS else class_words(v)) for k, v in obj.items()}
+        return {k: (v if k in _PATH_KEYS else class_words(v, keep, paths)) for k, v in obj.items()}
     if isinstance(obj, list):
-        return [class_words(v) for v in obj]
+        # an entry that is exactly a class name names a stratum (outside_condition_intervals), and is kept
+        return [v if isinstance(v, str) and v in names else class_words(v, keep, paths) for v in obj]
     return obj
+
+
+# the words the rules match: a class name made only of them cannot be held without stopping the rules in the package's
+# own sentences ("t" or "input" held in "per input condition"), and is worded as they are
+_RULE_WORDS = {"per", "by", "input", "condition", "conditions", "class", "or"}       # every word of _CLASS_WORDS
+
+
+def class_names(obj):
+    """The class design's stratum names, which class_words keeps as written, or None for a sample or a result of any
+    other design: read from a sample's sidecar (its condition block says by "map class") or from a result of estimate
+    or certify (condition_by)."""
+    cond = (obj or {}).get("condition") or {}
+    if isinstance(cond, dict) and cond.get("by") == "map class":
+        return [str(n) for n in cond.get("names") or []]
+    if (obj or {}).get("condition_by") == "map class":
+        return [str(n) for n in (obj.get("per_condition") or {})]
+    return None
+
+
+def class_wording(obj, *paths, names=None):
+    """class_words with the class design's names and the `paths` a text names kept, for a sample or result of the
+    class design (or the `names` given); the identity for any other."""
+    names = class_names(obj) if names is None else names
+    kept = [os.fspath(p) for p in paths if p]
+    return (lambda x: x) if names is None else (lambda x: class_words(x, names, kept))
+
+
+def result_class_names(result, path=None):
+    """class_names of a result, and for a zone JSON that does not say (a certificate bundle's zone.json carries no
+    condition_by, so that 1.17.1 can verify it) the names its sample's sidecar gives: the bundle's labels.json beside
+    it, or the sidecar of the sample it names. decide answered a bundle's class-design zone in condition words (the
+    third review of 1.17.2)."""
+    names = class_names(result)
+    if names is not None or not isinstance(result, dict) or not result.get("by_condition"):
+        return names
+    sides = []
+    if path and os.path.basename(str(path)) == "zone.json":
+        sides.append(os.path.join(os.path.dirname(os.path.abspath(str(path))), "labels.json"))
+    if isinstance(result.get("sample"), str):
+        sides.append(result["sample"][:-4] + ".json" if result["sample"].endswith(".csv") else result["sample"] + ".json")
+    for side_path in sides:
+        try:
+            with open(side_path, encoding="utf-8") as f:
+                n = class_names(json.load(f))
+        except (OSError, ValueError, AttributeError):
+            continue
+        if n is not None:
+            return n
+    return None
 
 
 CLASS_RULE_TEXT = ("A window's stratum is the class the map gives it, the majority of its pixels' classes (the map_class "
@@ -1572,7 +1963,7 @@ def _sample_disagreement(args):
     if os.path.isdir(args.out):
         raise SystemExit(f"--out {args.out} is a directory; name the CSV to write, for example {os.path.join(args.out, 'to_label.csv')}")
     os.makedirs(os.path.dirname(os.path.abspath(args.out)) or ".", exist_ok=True)
-    with open(args.out, "w", newline="") as f:
+    with open(args.out, "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         # class_a and class_b are the maps' classes at the window; hide them from the reviewer to label blind
         w.writerow(["index", "window_row", "window_col", "pixel_row", "pixel_col", "x", "y", "class_a", "class_b",
@@ -1582,7 +1973,7 @@ def _sample_disagreement(args):
                         None if y is None else float(y[k]), ca[k], cb[k], ""])
     geo = t.geo
     side = {k: (v.tolist() if isinstance(v, np.ndarray) else v) for k, v in smp.items()}
-    side.update({"map_a": os.path.abspath(args.scores), "map_b": os.path.abspath(args.other), "patch": args.patch,
+    side.update({"map_a": _where(args.scores), "map_b": _where(args.other), "patch": args.patch,
                  "nodata": _json_nodata(args.nodata), "threshold": args.threshold, "grid": [int(hw), int(ww)],
                  "csv": os.path.abspath(args.out), "class_a": ca, "class_b": cb, "notes": list(t.notes),
                  "crs": None if geo is None else str(geo["crs"]),
@@ -1659,7 +2050,7 @@ def _sample_class_audit(args):
     rows, cols = np.divmod(idx, ww)
     pr, pc, x, y = window_coords(rows, cols, geo, args.patch)
     os.makedirs(os.path.dirname(os.path.abspath(args.out)) or ".", exist_ok=True)
-    with open(args.out, "w", newline="") as f:
+    with open(args.out, "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         # map_class is the class the window is audited for, fixed at the draw; hide it from the reviewer to label
         # blind. No `wrong` column: the error is reference_class against map_class, read by estimate
@@ -1707,21 +2098,22 @@ def _estimate_disagreement(args):
     """estimate on a sample --other CSV: which map is more accurate, and by how much."""
     # --confidence too: added with the product input and accepted here unread, so a wrong or missing band path
     # passed with exit 0 (2026-10-06)
+    # --classes too, accepted unread, even negative (the bug hunt of 2026-10-25)
     if args.per_class or args.scores is not None or getattr(args, "confidence", None) is not None \
             or args.nodata is not None or args.reviewer_false_alarm or args.reviewer_miss \
-            or getattr(args, "alpha", None) is not None or getattr(args, "also_accept", None) is not None:
-        raise SystemExit("estimate: a sample of the windows where two maps differ takes none of --per-class, --scores, "
-                         "--confidence, --nodata, --reviewer-false-alarm, --reviewer-miss, --alpha and --also-accept; it "
-                         "compares the two maps from the reference_class column alone")
+            or getattr(args, "alpha", None) is not None or getattr(args, "also_accept", None) is not None \
+            or args.classes is not None:
+        raise SystemExit("estimate: a sample of the windows where two maps differ takes none of --per-class, --classes, "
+                         "--scores, --confidence, --nodata, --reviewer-false-alarm, --reviewer-miss, --alpha and "
+                         "--also-accept; it compares the two maps from the reference_class column alone")
     path = args.sample
     side_path = path[:-4] + ".json" if path.endswith(".csv") else path + ".json"
     with open(side_path) as f:
         side = json.load(f)
     _check_sidecar(side, side_path, ("indices", "class_a", "class_b"))
     out = args.out or (path[:-4] + "_estimate.json" if path.endswith(".csv") else path + "_estimate.json")
-    _refuse_overwriting_inputs("estimate", [out], [path, side_path])
-    with open(path, newline="", encoding="utf-8-sig") as f:
-        rows = list(csv.DictReader(f))
+    _refuse_overwriting_inputs("estimate", [out], [path, side_path, *_sample_map_inputs(path)])
+    rows = _csv_rows(path, "estimate")
     need = {"index", "class_a", "class_b", "reference_class"}
     if not rows or not need <= set(rows[0]):
         raise SystemExit(f"{path}: expected the columns `sample --other` wrote ({', '.join(sorted(need))}); found "
@@ -1875,8 +2267,9 @@ def _verdict_words(verdict, alpha):
 def _estimate_class_audit(args):
     """estimate on a sample --design audit CSV: each predicted class's confident-zone error rate with its exact interval;
     with --alpha a verdict per class, and with --also-accept a second reading of the same labels."""
-    if args.per_class:
-        raise SystemExit("estimate: an audit sample is read per class already; drop --per-class")
+    if args.per_class or args.classes is not None:      # --classes was accepted unread (the bug hunt of 2026-10-25)
+        raise SystemExit("estimate: an audit sample is read per class already, over the classes it recorded; drop "
+                         "--per-class and --classes")
     if args.scores is not None or getattr(args, "confidence", None) is not None or args.nodata is not None:
         raise SystemExit("estimate: an audit sample takes none of --scores, --confidence and --nodata; it reads the "
                          "classes the sample recorded and the reference_class column")
@@ -1891,9 +2284,8 @@ def _estimate_class_audit(args):
     _check_sidecar(side, side_path, ("indices", "map_class", "audited", "zone"))
     out = args.out or (path[:-4] + "_estimate.json" if path.endswith(".csv") else path + "_estimate.json")
     accept_path = getattr(args, "also_accept", None)
-    _refuse_overwriting_inputs("estimate", [out], [path, side_path, accept_path])
-    with open(path, newline="", encoding="utf-8-sig") as f:
-        rows = list(csv.DictReader(f))
+    _refuse_overwriting_inputs("estimate", [out], [path, side_path, accept_path, *_sample_map_inputs(path)])
+    rows = _csv_rows(path, "estimate")
     need = {"index", "map_class", "reference_class"}
     if not rows or not need <= set(rows[0]):
         raise SystemExit(f"{path}: expected the columns `sample --design audit` wrote ({', '.join(sorted(need))}); found "
@@ -1978,6 +2370,18 @@ def _check_sidecar(side, side_path, keys=("indices",)):
                          "wrote, or a result was written over it; draw the sample again")
 
 
+def _csv_rows(path, command):
+    """A sample CSV's rows (certificate.csv_rows), its refusals as the command's. The --other, audit and --extend routes
+    read with csv.DictReader, which keeps the last copy of a column named twice where a spreadsheet shows the first:
+    a second reference_class column turned an undetermined comparison into "b is more accurate", exit 0 (the bug hunt
+    of 2026-10-25)."""
+    from .certificate import csv_rows
+    try:                                     # a spreadsheet's BOM is not a column name; a column named twice is refused
+        return csv_rows(path)
+    except (ValueError, OSError) as exc:
+        raise SystemExit(f"{command}: {exc}") from None
+
+
 def _labelled_sample(path, command):
     """A filled-in sample CSV and its sidecar design, checked: the rows are the design's, every `wrong` is 0, 1 or `?`
     (a window the reviewer could not judge). Returns (sidecar, rows, indices, sample dict for the estimators, wrong,
@@ -1988,11 +2392,7 @@ def _labelled_sample(path, command):
     with open(side_path) as f:
         side = json.load(f)
     _check_sidecar(side, side_path)
-    from .certificate import csv_rows
-    try:                                     # a spreadsheet's BOM is not a column name; a column named twice is refused
-        rows = csv_rows(path)
-    except (ValueError, OSError) as exc:
-        raise SystemExit(f"{command}: {exc}") from None
+    rows = _csv_rows(path, command)
     need = {"index", "window_row", "window_col", "wrong"}
     if not rows or not need <= set(rows[0]):
         raise SystemExit(f"{path}: expected the columns `sample` wrote ({', '.join(sorted(need))}); found "
@@ -2064,6 +2464,15 @@ def _rounding_tolerance(text):
     return max(0.5 * 10.0 ** (-decimals + (int(exp) if exp else 0)), 1e-6)
 
 
+def _where(path):
+    """An input path as a result or sidecar records it: absolute for a file on disk, as given for a path GDAL reads
+    itself (/vsizip/, /vsicurl/, s3://). os.path.abspath broke those: '/vsizip//abs/m.zip/x.tif' lost its '//', and
+    's3://b/x.tif' became '<cwd>/s3:/b/x.tif', so a sample drawn on them could not be certified from its sidecar (the
+    bug hunt of 2026-10-25)."""
+    p = str(path)
+    return p if p.startswith("/vsi") or "://" in p else os.path.abspath(p)
+
+
 def _readable_path(path):
     """A file on disk, or a path GDAL reads itself (/vsizip/, /vsicurl/, s3://): read_raster then says if it cannot."""
     p = str(path)
@@ -2116,6 +2525,9 @@ def _map_windows(side, scores_override, nodata, command, rows=None, idx=None, co
                          f"{side.get('grid')}; pass the raster the sample was drawn on")
     conf, valid_w = arr["confidence"], arr["valid"]
     n_pop = int((valid_w & np.isfinite(conf)).sum())
+    # 1.17.2 reads a GeoTIFF's mask as no-data: a sample drawn before on such a raster counted the masked pixels, and
+    # whichever check catches the change says why (the reviews of 1.17.2)
+    mask_hint = _mask_hint(path, (confidence_override or side.get("confidence")) if side.get("confidence") else None)
     if side.get("n_population") is not None and n_pop != int(side["n_population"]):
         # 1.7.0 changed the no-data rule of a multi-band raster (a pixel is no-data only when every band holds the
         # value), so a sample drawn before on such a raster can name a population no option restores (the review of
@@ -2123,8 +2535,15 @@ def _map_windows(side, scores_override, nodata, command, rows=None, idx=None, co
         hint = (" If the sample was drawn before 1.7.0 on a multi-band raster with a no-data value, the population "
                 "changed with the fix to the no-data rule (pixels where only some bands hold the value are data now); "
                 "draw the sample again." if side.get("nodata") is not None or nodata is not None else "")
+        hint += mask_hint
         raise SystemExit(f"{command}: {path} has {n_pop} valid windows, but the sample was drawn from {side['n_population']}; "
                          "pass the raster, and the --nodata value, the sample was drawn with." + hint)
+    if rows is not None and idx is not None and rows and "confidence" not in rows[0] and "map_class" not in rows[0]:
+        # with both columns deleted nothing was checked, and another map on the same grid was certified from this
+        # map's labels, exit 0 (the bug hunt of 2026-10-25); to label blind, hide them
+        raise SystemExit(f"{command}: the CSV has neither the `confidence` nor the `map_class` column `sample` wrote, so "
+                         "it cannot be checked to be this map's sample; put them back (to label blind, hide them, do "
+                         "not delete them)")
     if rows is not None and idx is not None and "confidence" in rows[0]:
         try:
             written = np.array([float(r["confidence"]) for r in rows])
@@ -2139,7 +2558,7 @@ def _map_windows(side, scores_override, nodata, command, rows=None, idx=None, co
                 k = int(np.argmax(off))
                 raise SystemExit(f"{command}: the map's confidence at the sampled windows is not the one the CSV records "
                                  f"(row {k + 2}: {written[k]:.6g} in the CSV, {conf.ravel()[idx][k]:.6g} now); this is not the "
-                                 "map the sample was drawn on")
+                                 "map the sample was drawn on." + mask_hint)
     if rows is not None and idx is not None and "map_class" in rows[0]:
         # The class too: a product's class map and band are two files, and another year's class map on the same grid
         # with the same band passed the confidence check, so estimate --per-class built its table from that map, exit
@@ -2155,7 +2574,7 @@ def _map_windows(side, scores_override, nodata, command, rows=None, idx=None, co
                 k = int(bad[0])
                 raise SystemExit(f"{command}: the map's class at the sampled windows is not the one the CSV records on "
                                  f"{bad.size} row(s) (row {k + 2}: {recorded[k]} in the CSV, {int(now[k])} now); this is "
-                                 "not the map the sample was drawn on")
+                                 "not the map the sample was drawn on." + mask_hint)
     return conf, arr["pooled_argmax"], valid_w, n_classes
 
 
@@ -2232,7 +2651,9 @@ def cmd_estimate(args):
                          "the error rate comes from the CSV and its sidecar alone")
     side_path = args.sample[:-4] + ".json" if args.sample.endswith(".csv") else args.sample + ".json"
     out = args.out or (args.sample[:-4] + "_estimate.json" if args.sample.endswith(".csv") else args.sample + "_estimate.json")
-    _refuse_overwriting_inputs("estimate", [out], [args.sample, side_path, accept_path])
+    _refuse_overwriting_inputs("estimate", [out], [args.sample, side_path, accept_path,
+                                                   *_sample_map_inputs(args.sample, args.scores,
+                                                                       getattr(args, "confidence", None))])
     side, rows, idx, sample, wrong, unjudged = _labelled_sample(args.sample, "estimate")
     fa, miss = args.reviewer_false_alarm or 0.0, args.reviewer_miss or 0.0
     for flag, v in (("--reviewer-false-alarm", fa), ("--reviewer-miss", miss)):
@@ -2268,10 +2689,7 @@ def cmd_estimate(args):
     except ValueError as exc:
         raise SystemExit(f"estimate: {exc}")
     if side.get("design") == "sequential":
-        res["sequential_note"] = (f"the first {int(idx.size)} windows of a sequential sample, read as a random sample of "
-                                  "that size. The interval holds when that number was fixed before labelling; one read "
-                                  "at a stop chosen because the labels looked good can be too narrow. certify on this "
-                                  "sample holds at every look")
+        res["sequential_note"] = est.SEQUENTIAL_READ_NOTE.format(n=int(idx.size))
     per_class_text = ""
     if args.per_class:
         ref = _reference_classes(rows, args.sample)
@@ -2307,6 +2725,10 @@ def cmd_estimate(args):
             res["per_class_warning"] = pc["warning"]
         if pc.get("overall_accuracy_post_stratified") is not None:
             res["overall_accuracy_post_stratified"] = pc["overall_accuracy_post_stratified"]
+        if pc.get("overall_accuracy_normal_theory") is not None:
+            # printed since 1.17.1 and promised in the JSON by its CHANGELOG, but never written (the bug hunt of
+            # 2026-10-25)
+            res["overall_accuracy_normal_theory"] = pc["overall_accuracy_normal_theory"]
         if mismatch.size:
             res["per_class_note"] = (f"on {mismatch.size} row(s), first row {int(mismatch[0]) + 2}, `wrong` disagrees with whether "
                                      "`reference_class` differs from the map's class; the error rate above uses `wrong`, the "
@@ -2397,7 +2819,7 @@ def cmd_estimate(args):
         also_text = "\n" + "\n".join(lines)
     _check_out_file(out, "estimate")
     by_class = (side.get("condition") or {}).get("by") == "map class"
-    words = class_words if by_class else (lambda x: x)
+    words = class_wording(side, args.sample, out, accept_path)
     with open(out, "w") as f:
         json.dump(_stamp(words(res), "estimate"), f, indent=1, default=float)
     cond_text = ""
@@ -2451,7 +2873,8 @@ def _keep_to_plan(args, side):
     args.alpha, args.delta = float(plan["alpha"]), float(plan["delta"])
     rule, cut = plan.get("rule"), plan.get("level_cut")
     if rule == "sequential":
-        if args.rule not in (None, "prefix") or args.level_cut is not None:
+        # an explicit --rule prefix passed too, where Usage says --rule is refused here (the bug hunt of 2026-10-25)
+        if args.rule is not None or args.level_cut is not None:
             raise SystemExit("certify: this sample is certified by the sequential rule it fixed before any label")
         return
     if args.rule not in (None, rule):
@@ -2482,7 +2905,7 @@ def cmd_certify(args):
     accept_path = getattr(args, "also_accept", None)
     _refuse_overwriting_inputs("certify", [out, mask_path, _also_mask(mask_path)],
                                [args.sample, args.sample[:-4] + ".json" if args.sample.endswith(".csv") else args.sample + ".json",
-                                accept_path])
+                                accept_path, *_sample_map_inputs(args.sample, args.scores, args.confidence)])
     side, rows, idx, sample, wrong, unjudged = _labelled_sample(args.sample, "certify")
     # A window that could not be judged counts as wrong: that can only certify less, so the guarantee holds whatever
     # made it hard to judge. certify takes no reviewer error rate: testing at alpha (1 - miss) would need the miss
@@ -2506,10 +2929,11 @@ def cmd_certify(args):
     if target is None and args.rule == "target":
         raise SystemExit("certify: the target rule needs the target fixed before labelling; draw the sample with "
                          "`sample --design random --target C`")
-    args.rule = args.rule or ("target" if target is not None else "prefix")
-    if sequential and (args.rule != "prefix" or args.level_cut is not None):
+    # before the default is filled in: an explicit --rule prefix passed once it was (the bug hunt of 2026-10-25)
+    if sequential and (args.rule is not None or args.level_cut is not None):
         raise SystemExit("certify: a sequential sample is certified by the sequential rule, which tests each zone from "
                          "the anchor outward at every look; --rule and --level-cut belong to the one-look rule")
+    args.rule = args.rule or ("target" if target is not None else "prefix")
     if side.get("design") != "random" and not by_condition and not sequential:
         raise SystemExit(f"certify needs a random sample: this CSV was drawn with the {side.get('design')!r} design. The "
                          "guarantee rests on the labelled windows inside each zone being a random sample of that zone, "
@@ -2566,7 +2990,7 @@ def cmd_certify(args):
               f"{tail}{also_text}\nwrote {out}")
     else:
         print(f"the {100 * res['coverage']:.0f}% most confident windows ({res['n_zone']} of {res['n_population']}, {what} >= "
-              f"{res['threshold']:.4f}) are wrong at most {100 * args.alpha:g}% of the time; this statement fails on at most "
+              f"{res['edge']}) are wrong at most {100 * args.alpha:g}% of the time; this statement fails on at most "
               f"{100 * args.delta:g}% of samples like this one ({args.rule} rule; the exact upper bound on the zone's error "
               f"rate at that level is {100 * res['upper_bound']:.1f}%). Outside the zone nothing is certified.\n"
               f"{res['note']}{tail}{also_text}\nwrote {out} and the window mask {mask_path}")
@@ -2577,7 +3001,7 @@ def cmd_certify(args):
 # with the windows the file accepts counted right. Only the keys that depend on the labels are repeated in its block;
 # the rule, alpha, delta, the population, the levels tested, the anchor and the split of delta are the strict
 # result's, the same in both (tests/test_also_accept.py checks it).
-ZONE_ALSO_KEYS = ("coverage", "n_zone", "threshold", "upper_bound", "n_tied_at_threshold", "n_tied_inside_zone",
+ZONE_ALSO_KEYS = ("coverage", "n_zone", "threshold", "edge", "upper_bound", "n_tied_at_threshold", "n_tied_inside_zone",
                   "certified_share_of_map", "n_certified", "per_condition", "levels", "note")
 
 
@@ -2634,7 +3058,7 @@ def _zone_also_text(res, args, what, mask_alt):
             f"{res['rule']} rule; exact upper bound {100 * a['upper_bound']:.1f}%")
         tied, inside = a.get("n_tied_at_threshold", 0), a.get("n_tied_inside_zone", 0)
         lines = [f"{head}: the {100 * a['coverage']:.0f}% most confident windows ({a['n_zone']} of {res['n_population']}, "
-                 f"{what} >= {a['threshold']:.4f}) are wrong at most {100 * args.alpha:g}% of the time under this "
+                 f"{what} >= {a['edge']}) are wrong at most {100 * args.alpha:g}% of the time under this "
                  f"reading, at the same delta ({rule}); window mask {mask_alt}"
                  + (f"; {tied} windows share that {what} and only {inside} of them are inside the zone, so the zone is "
                     "the window mask, not every window at or above the threshold" if tied > inside else "")]
@@ -2693,7 +3117,7 @@ def _certify_sequential(args, side, idx, wrong, margin, valid_w, out, mask_path,
               f"rule, anchor {100 * res['anchor']:.0f}% of the map). {res['note']}{tail}{more}{also_text}\nwrote {out}")
     else:
         print(f"the {100 * res['coverage']:.0f}% most confident windows ({res['n_zone']} of {res['n_population']}, {what} >= "
-              f"{res['threshold']:.4f}) are wrong at most {100 * args.alpha:g}% of the time; this statement fails on at most "
+              f"{res['edge']}) are wrong at most {100 * args.alpha:g}% of the time; this statement fails on at most "
               f"{100 * args.delta:g}% of samples like this one, however often certify is run on it as labels are added "
               f"(sequential rule, anchor {100 * res['anchor']:.0f}% of the map). Outside the zone nothing is certified.\n"
               f"{res['note']}{tail}\nnote: {est.ISSUED_NOTE}{more}{also_text}\nwrote {out} and the window mask "
@@ -2737,7 +3161,7 @@ def _certify_by_condition(args, sample, wrong, margin, valid_w, out, mask_path, 
                     "reading_note": _zone_reading_note(args.delta, False)})
         also_text = _zone_also_text(res, args, None, _also_mask(mask_path))
     with open(out, "w") as f:
-        json.dump(_stamp(class_words(res) if (sample.get("condition") or {}).get("by") == "map class" else res,
+        json.dump(_stamp(class_wording(sample, args.sample, mask_path, getattr(args, "also_accept", None))(res),
                          "certify"), f, indent=1, default=float)
     a, d, b1 = args.alpha, args.delta, res["min_labels_to_certify"]
     if res["n_conditions_tested"]:
@@ -2762,7 +3186,7 @@ def _certify_by_condition(args, sample, wrong, margin, valid_w, out, mask_path, 
             # all wrong (2026-10-06): read as a rule, the threshold took in the uncertified windows.
             tied, inside = e.get("n_tied_at_threshold", 0), e.get("n_tied_inside_zone", 0)
             lines.append(f"  {name}: the {100 * e['coverage']:.0f}% most confident windows of this condition ({e['n_zone']} "
-                         f"of {e['n_population']}, {what} >= {e['threshold']:.4f}) are wrong at most {100 * a:g}% of "
+                         f"of {e['n_population']}, {what} >= {e['edge']}) are wrong at most {100 * a:g}% of "
                          "the time"
                          + (f"; {tied} windows share that {what} and only {inside} of them are inside the zone, so the "
                             f"zone is the window mask, not every window at or above the threshold" if tied > inside else ""))
@@ -2782,8 +3206,14 @@ def _certify_by_condition(args, sample, wrong, margin, valid_w, out, mask_path, 
     if res["certified_share_of_map"] is not None:
         lines.append(f"note: {est.ISSUED_NOTE}")
     text = "\n".join(lines) + also_text
-    print((class_words(text) if (sample.get("condition") or {}).get("by") == "map class" else text) + f"\nwrote {out}")
+    print(class_wording(sample, args.sample, mask_path, _also_mask(mask_path), getattr(args, "also_accept", None))(text)
+          + f"\nwrote {out}")
     return 0
+
+
+def _worded_print(words):
+    import builtins
+    return lambda text="", **kw: builtins.print(words(text), **kw)
 
 
 def cmd_decide(args):
@@ -2797,12 +3227,21 @@ def cmd_decide(args):
     out = args.out or (r[:-5] + "_decisions.json" if r.endswith(".json") else r + "_decisions.json")
     _refuse_overwriting_inputs("decide", [out], [r])
     _check_out_file(out, "decide")
+    # a result of the class design is answered in its own words: decide said "input condition" and "of this condition"
+    # of map classes (the bug hunt of 2026-10-25); decide.decide words its own texts so
+    say = print
+    try:
+        with open(r, encoding="utf-8") as f:
+            given = json.load(f)
+        say = _worded_print(class_wording(given, r, out, names=result_class_names(given, r)))
+    except (OSError, ValueError, AttributeError):
+        pass
     for q, a in res["answers"].items():
         shown = f"{100 * a['answer']:.1f}%" if a["type"] == "score" else a["answer"]
-        print(f"{q}: {shown}. {a['because']}")
+        say(f"{q}: {shown}. {a['because']}")
         alt = a.get("also_accept")                    # a second reading of the same labels (--also-accept)
         if alt:
-            print("  also accepting the file's pairs: " + (
+            say("  also accepting the file's pairs: " + (
                 f"{100 * alt['answer']:.1f}%" if a["type"] == "score" else
                 f"{alt['answer']} ({'95%' if alt.get('exact', True) else 'nominal 95%'} interval "
                 f"{100 * alt['low']:.1f}% to {100 * alt['high']:.1f}%)" if "low" in alt
@@ -2810,7 +3249,7 @@ def cmd_decide(args):
         for name, c in (a.get("per_condition") or {}).items():
             c2 = c.get("also_accept")
             if "answer" in c:
-                print(f"  {name}: {c['answer']}" + (f"; also accepting: {c2['answer']}" if c2 else ""))
+                say(f"  {name}: {c['answer']}" + (f"; also accepting: {c2['answer']}" if c2 else ""))
             else:
                 share = c.get("certified_share_of_condition")
                 said = (f"{100 * share:.1f}% of this condition certified" if share else
@@ -2819,13 +3258,13 @@ def cmd_decide(args):
                     share2 = c2.get("certified_share_of_condition")
                     said += "; also accepting: " + (f"{100 * share2:.1f}% of this condition certified" if share2
                                                     else "nothing certified")
-                print(f"  {name}: {said}")
+                say(f"  {name}: {said}")
         for c, row in (a.get("per_class") or {}).items():
             iv = (f" (95% interval {100 * row['low']:.1f}% to {100 * row['high']:.1f}%)" if row.get("low") is not None
                   else f" ({row.get('because', 'no interval')})")
             # an audit's second reading of the same labels; a class with nothing more accepted reads the same
             alt = row.get("also_accept")
-            print(f"  class {c}: {row['answer']}{iv}" + ("  [warning]" if row.get("warning") else "")
+            say(f"  class {c}: {row['answer']}{iv}" + ("  [warning]" if row.get("warning") else "")
                   + (f"; also accepting {', '.join(str(x) for x in alt['accepted'])}: {alt['answer']} "
                      f"({100 * alt['low']:.1f}% to {100 * alt['high']:.1f}%)" if alt and alt.get("accepted") else ""))
     with open(out, "w") as f:
@@ -2886,15 +3325,15 @@ def _sample_command(args, budget, other):
     if args.patch is not None and args.patch != 4:
         cmd += ["--patch", str(args.patch)]
     if args.nodata is not None:
-        cmd += ["--nodata", repr(args.nodata)]
-    if args.logits:
+        cmd.append(_nodata_arg(args.nodata))
+    if args.logits and not other:           # sample --other reads no logits and refuses the option
         cmd += ["--logits"]
     if other and args.threshold is not None:
-        cmd += ["--threshold", repr(args.threshold)]
+        cmd.append(f"--threshold={args.threshold!r}")     # one token: argparse reads '-1e-05' as an option
     if getattr(args, "confidence", None):
         cmd += ["--confidence", args.confidence]
     if getattr(args, "confidence_range", None):
-        cmd += ["--confidence-range", *[repr(v) for v in args.confidence_range]]
+        cmd += ["--confidence-range", *[_num_arg(v) for v in args.confidence_range]]
     return " ".join(shlex.quote(c) for c in cmd)
 
 
@@ -3104,8 +3543,14 @@ def cmd_plan(args):
                     notes.append(f"The prefix rule's simulation drew its labels {ev['drawn']}; the bound is "
                                  "subtracted from each budget's lower end")
                 if b["labels"] is not None or ev["labels"] is not None:
-                    runs.append(_sample_command(args, max(v for v in (b["labels"], ev["labels"]) if v is not None),
-                                                other=False))
+                    cmd = _sample_command(args, max(v for v in (b["labels"], ev["labels"]) if v is not None), other=False)
+                    if ev["labels"] is None:
+                        # Only the Bonferroni rule reaches the probability, so the run fixes it with the draw: a bare
+                        # sample line certified with the default prefix rule reached about 0.34 where 0.9 was planned
+                        # (the bug hunt of 2026-10-25).
+                        cmd += f" --seed-from-map --alpha {args.alpha!r} --rule bonferroni" + (
+                            "" if args.delta is None else f" --delta {args.delta!r}")
+                    runs.append(cmd)
                 if t["labels"] is not None:
                     runs.append(_sample_command(args, t["labels"], other=False) + f" --target {r['coverage']:g}")
             if r.get("entry_budgets"):

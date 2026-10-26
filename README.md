@@ -104,7 +104,8 @@ Three assumptions: the windows were drawn at random by `sample`; the labels are 
 (`sample --seed-from-map --alpha` fixes α, δ and the rule with the draw, for a certificate). The one
 exception is certify on a sequential sample, rerun as labels are added with α and δ unchanged; an error rate read from
 a sequential sample needs its number of labels fixed before labelling. "Exact" means decided in integer arithmetic
-wherever floating point could err, up to 5 million windows; above that the floats decide, within about 1e-8 relative.
+wherever floating point could err, up to 5 million windows; above that the floats decide, with a relative error under
+1e-6 at 1e8 windows and 1e-5 at 1e9, so an interval's end can move by one window.
 The tests check each statement by exact computation, and the [research record](https://github.com/2imi9/olmoearth_inferenceX-record) checks them on fully
 labelled real maps, the target rule and the class design included (exp116).
 

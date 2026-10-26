@@ -1,0 +1,231 @@
+{
+ "rule": "sequential",
+ "alpha": 0.1,
+ "delta": 0.1,
+ "n_population": 4096,
+ "n_labelled": 300,
+ "anchor": 0.15,
+ "min_labels_to_certify": 34,
+ "levels": [
+  {
+   "coverage": 0.15,
+   "n_zone": 614,
+   "n_labelled_inside": 50,
+   "n_wrong_inside": 0,
+   "log_e_value": 3.919221525330414,
+   "log_e_value_max": 3.919221525330414,
+   "passed": true,
+   "passed_at_label": 213,
+   "certified": true
+  },
+  {
+   "coverage": 0.2,
+   "n_zone": 819,
+   "n_labelled_inside": 66,
+   "n_wrong_inside": 0,
+   "log_e_value": 5.368931579855484,
+   "log_e_value_max": 5.368931579855484,
+   "passed": true,
+   "passed_at_label": 184,
+   "certified": true
+  },
+  {
+   "coverage": 0.25,
+   "n_zone": 1024,
+   "n_labelled_inside": 81,
+   "n_wrong_inside": 0,
+   "log_e_value": 6.852579892949905,
+   "log_e_value_max": 6.852579892949905,
+   "passed": true,
+   "passed_at_label": 149,
+   "certified": true
+  },
+  {
+   "coverage": 0.3,
+   "n_zone": 1229,
+   "n_labelled_inside": 99,
+   "n_wrong_inside": 0,
+   "log_e_value": 8.60245031240271,
+   "log_e_value_max": 8.60245031240271,
+   "passed": true,
+   "passed_at_label": 143,
+   "certified": true
+  },
+  {
+   "coverage": 0.35,
+   "n_zone": 1434,
+   "n_labelled_inside": 113,
+   "n_wrong_inside": 0,
+   "log_e_value": 10.042797578970294,
+   "log_e_value_max": 10.042797578970294,
+   "passed": true,
+   "passed_at_label": 125,
+   "certified": true
+  },
+  {
+   "coverage": 0.4,
+   "n_zone": 1638,
+   "n_labelled_inside": 130,
+   "n_wrong_inside": 0,
+   "log_e_value": 11.744654419301867,
+   "log_e_value_max": 11.744654419301867,
+   "passed": true,
+   "passed_at_label": 111,
+   "certified": true
+  },
+  {
+   "coverage": 0.45,
+   "n_zone": 1843,
+   "n_labelled_inside": 144,
+   "n_wrong_inside": 0,
+   "log_e_value": 13.215067393391905,
+   "log_e_value_max": 13.215067393391905,
+   "passed": true,
+   "passed_at_label": 99,
+   "certified": true
+  },
+  {
+   "coverage": 0.5,
+   "n_zone": 2048,
+   "n_labelled_inside": 155,
+   "n_wrong_inside": 0,
+   "log_e_value": 14.284770315107153,
+   "log_e_value_max": 14.284770315107153,
+   "passed": true,
+   "passed_at_label": 89,
+   "certified": true
+  },
+  {
+   "coverage": 0.55,
+   "n_zone": 2253,
+   "n_labelled_inside": 169,
+   "n_wrong_inside": 0,
+   "log_e_value": 15.770249190259278,
+   "log_e_value_max": 15.770249190259278,
+   "passed": true,
+   "passed_at_label": 79,
+   "certified": true
+  },
+  {
+   "coverage": 0.6,
+   "n_zone": 2458,
+   "n_labelled_inside": 189,
+   "n_wrong_inside": 0,
+   "log_e_value": 17.835398358805605,
+   "log_e_value_max": 17.835398358805605,
+   "passed": true,
+   "passed_at_label": 61,
+   "certified": true
+  },
+  {
+   "coverage": 0.65,
+   "n_zone": 2662,
+   "n_labelled_inside": 200,
+   "n_wrong_inside": 0,
+   "log_e_value": 19.015695328060588,
+   "log_e_value_max": 19.015695328060588,
+   "passed": true,
+   "passed_at_label": 59,
+   "certified": true
+  },
+  {
+   "coverage": 0.7,
+   "n_zone": 2867,
+   "n_labelled_inside": 215,
+   "n_wrong_inside": 1,
+   "log_e_value": 17.28552701869762,
+   "log_e_value_max": 17.28552701869762,
+   "passed": true,
+   "passed_at_label": 55,
+   "certified": true
+  },
+  {
+   "coverage": 0.75,
+   "n_zone": 3072,
+   "n_labelled_inside": 237,
+   "n_wrong_inside": 1,
+   "log_e_value": 19.577074008571913,
+   "log_e_value_max": 19.577074008571913,
+   "passed": true,
+   "passed_at_label": 48,
+   "certified": true
+  },
+  {
+   "coverage": 0.8,
+   "n_zone": 3277,
+   "n_labelled_inside": 246,
+   "n_wrong_inside": 1,
+   "log_e_value": 20.420589982304364,
+   "log_e_value_max": 20.420589982304364,
+   "passed": true,
+   "passed_at_label": 43,
+   "certified": true
+  },
+  {
+   "coverage": 0.85,
+   "n_zone": 3482,
+   "n_labelled_inside": 258,
+   "n_wrong_inside": 1,
+   "log_e_value": 21.668029687258013,
+   "log_e_value_max": 21.668029687258013,
+   "passed": true,
+   "passed_at_label": 40,
+   "certified": true
+  },
+  {
+   "coverage": 0.9,
+   "n_zone": 3686,
+   "n_labelled_inside": 271,
+   "n_wrong_inside": 4,
+   "log_e_value": 15.70061882775883,
+   "log_e_value_max": 15.929108818542204,
+   "passed": true,
+   "passed_at_label": 36,
+   "certified": true
+  },
+  {
+   "coverage": 0.95,
+   "n_zone": 3891,
+   "n_labelled_inside": 291,
+   "n_wrong_inside": 11,
+   "log_e_value": 7.270542416061744,
+   "log_e_value_max": 7.270542416061744,
+   "passed": true,
+   "passed_at_label": 36,
+   "certified": true
+  },
+  {
+   "coverage": 1.0,
+   "n_zone": 4096,
+   "n_labelled_inside": 300,
+   "n_wrong_inside": 18,
+   "log_e_value": 2.1916669410404666,
+   "log_e_value_max": 2.4661977215739626,
+   "passed": true,
+   "passed_at_label": 264,
+   "certified": true
+  }
+ ],
+ "coverage": 1.0,
+ "n_zone": 4096,
+ "threshold": 0.4314727783203125,
+ "scope": "The zone's error rate is certified over all its windows together. Where part of the map was predicted from other inputs, that part of the zone can be wrong more often than the rest. If the model was not trained on those inputs, its errors there can be confident ones and fall inside the zone (exp88). To certify each input condition on its own, draw the sample with --condition.",
+ "order_verified": true,
+ "n_tied_at_threshold": 1,
+ "n_tied_inside_zone": 1,
+ "note": "sequential rule: each zone from the anchor outward is tested by an e-process on the labels in the order they were drawn, and passes once it reaches 1/delta; the statement holds at every look together, so it fails on at most delta of samples however often certify is run on this sample and whenever labelling stops, and a zone once certified stays certified",
+ "anchor_rule": {
+  "alpha": 0.1,
+  "delta": 0.1,
+  "first_budget": 300,
+  "rule": "the smallest grid zone expecting min_labels_sequential labels at the first budget, at most 0.25"
+ },
+ "zone_mask": "/private/tmp/oeix_1_17_1/a/q_zone.npy",
+ "sample": "/private/tmp/oeix_1_17_1/a/q.csv",
+ "n_drawn": 300,
+ "written_by": {
+  "package": "olmoearth-inferencex",
+  "version": "1.17.1",
+  "command": "certify"
+ }
+}

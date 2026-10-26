@@ -156,12 +156,24 @@ def min_labels_sequential(alpha, delta=est.ZONE_DELTA):
         raise ValueError(f"alpha and delta must be in (0, 1), got {alpha}, {delta}")
     target = -math.log(delta)
     l1a = math.log1p(-alpha)
-    t = est.min_labels_to_certify(alpha, delta)          # the e-process needs at least what the one-look test needs
-    while True:
-        le = (math.log(-math.expm1((t + 1) * l1a)) - math.log(t + 1) - math.log(alpha) - t * l1a)
-        if le >= target:
-            return t
-        t += 1
+
+    def reached(t):
+        return math.log(-math.expm1((t + 1) * l1a)) - math.log(t + 1) - math.log(alpha) - t * l1a >= target
+    # The e-process needs at least what the one-look test needs. A clean zone's log e-value rises with every label
+    # (its derivative in t is c (1 + 1 / (e^x - 1) - 1 / x) with c = -log(1 - alpha) and x = c (t + 1), above c / 2),
+    # so the labels that reach 1/delta are all t from the first, which galloping and bisection find. Stepping one label
+    # at a time took 21 s at alpha 1e-8 and hours below (the bug hunt of 2026-10-25); tests/test_bughunt_1_17_2.py
+    # compares the two on a grid of levels.
+    lo = est.min_labels_to_certify(alpha, delta)
+    if reached(lo):
+        return lo
+    hi = 2 * lo
+    while not reached(hi):
+        lo, hi = hi, 2 * hi
+    while hi - lo > 1:
+        mid = (lo + hi) // 2
+        lo, hi = (lo, mid) if reached(mid) else (mid, hi)
+    return hi
 
 
 def level_path(draw, wrong_inside, n, alpha, delta=est.ZONE_DELTA):
@@ -328,8 +340,10 @@ def certify_zone_sequential(margin, indices, wrong, alpha, delta=est.ZONE_DELTA,
     thr = float(margin[order[n_zone - 1]])
     tied = int((margin[order] == thr).sum())
     inside = int((margin[order[:n_zone]] == thr).sum())
-    out.update({"coverage": cov[best], "n_zone": n_zone, "threshold": thr, "n_tied_at_threshold": tied,
-                "n_tied_inside_zone": inside, "zone_indices_in_order": order[:n_zone], "note": SEQUENTIAL_NOTE})
+    out.update({"coverage": cov[best], "n_zone": n_zone, "threshold": thr,
+                "edge": est._edge_of(margin, order, n_zone, tied, inside),
+                "n_tied_at_threshold": tied, "n_tied_inside_zone": inside, "zone_indices_in_order": order[:n_zone],
+                "note": SEQUENTIAL_NOTE})
     if tied > inside:
         out["note"] += (f"; {tied} windows share the threshold margin and only {inside} of them are inside the zone, so "
                         "the zone is the set returned, not every window at or above the threshold")

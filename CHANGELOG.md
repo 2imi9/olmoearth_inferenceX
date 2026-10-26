@@ -1,5 +1,103 @@
 # Changelog
 
+## 1.17.2 (2026-10-25)
+
+A bug hunt of 1.17.1 (six module groups, each finding reproduced by a second agent): 51 real findings, two of them
+high, all fixed here; then five independent reviews of the fixes (each finding verified by a second agent): 27 more,
+one of them high, then 18, 17, 9 and 7, fixed too. Each has a test that fails before its fix (tests/test_bughunt_1_17_2.py).
+No guarantee is weakened; the outputs that change on purpose are listed in tests/golden/condition_1_3_1/changes.py.
+
+- **Certificates issued by 1.17.0 and 1.17.1 still verify, and 1.17.1 verifies those of 1.17.2.** certify's result
+  gained `edge` (below), and verify compared certify run again with the recorded zone JSON key for key, so in the first
+  draft of this release every earlier certificate failed. Keys a recorded zone predates are left out of the comparison,
+  and a bundle's zone.json carries no key an earlier release does not write. Where certify run again by this release
+  differs from a zone an earlier release wrote, it is run again with that release's rules (1.17.0's float null count,
+  which made a 1.17.0 certificate at alpha 0.29 fail since 1.17.1; 1.17.1's class wording), and that result is taken
+  only where it certifies no more than this release's, since an older rule is not always the more cautious (the float
+  count is the larger at alpha 1/3: a 1.17.0 certificate that certifies more by it fails). The release is held in a
+  context variable, so no other thread's rules are touched, and verify's runs take turns on the redirected output, which
+  they now restore (what another thread prints during a verify still goes to it, as before). Four
+  certificates issued by 1.17.1 (a target, a class-design, a sequential one, and a class design whose classes are named
+  "input", "condition" and "good condition") are kept in tests/golden/certificates_1_17_1 and verified on every run.
+- **No command writes over its inputs.** `certify --out map.json` with map.npy as the map deleted the map (the zone
+  mask is the JSON's stem plus .npy), `--out scores.tif` wrote the zone over the raster, `sample --out scores.tif`
+  replaced the map with the CSV, and a condition layer named by `--out` was destroyed before the run was refused.
+  certify, estimate, verify and sample now refuse an output that is one of their inputs, the sample's map included, by
+  file identity (another letter case or a link is the same file); `sample --extend` refuses an --out that names the
+  extended sample's sidecar, and verify an --out anywhere under the bundle's directory.
+- **No-data held in a GeoTIFF's mask is no data.** A mask without a nodata value was read as data, so the masked half's
+  zero vectors filled half a random sample and the review set; `read_raster` now reads GDAL's mask (internal or a .msk
+  file). An alpha band is the mask beside one data band (a class map with its alpha, as gdalwarp -dstalpha writes it),
+  whatever GDAL's own flags say; beside more it is read as data, as before, since GDAL marks the 4th band of a 4-band
+  8-bit GeoTIFF alpha by default and a 4-class map would lose its 4th class. A sample drawn before 1.17.2 on a masked
+  raster counted the masked windows: it no longer matches the map and is refused with a hint to draw it again,
+  whichever check catches it, `sample --extend` included (which kept the labels and rewrote the classes under them); a
+  certificate on it no longer verifies. A .npy that is not (H, W) or (C, H, W) is refused by name.
+- **What `certificate` will not issue.** verify opens a certificate's rasters as plain local GeoTIFF or .npy files,
+  alone: a raster that reads differently without the files beside it (a .msk mask, or an .aux.xml or world file holding
+  a no-data value, the CRS or the georeferencing), a GDAL virtual path, another format or a link was certified and then
+  failed verify from the certificate's own paths. Each is refused by name, with the way to keep the labels: write the
+  raster as a plain GeoTIFF with the same pixels and run certificate again, with `--scores` for a copy elsewhere; and
+  `certificate` now verifies each bundle twice before writing it, with the map as read there and as a recipient reads
+  it from the paths it names, so a way not named here is refused too. A condition layer reached through a link is
+  carried as a copy, and one with the alpha band of a two-band raster as one band.
+- **assess, scale and boundary.** `boundary --width-m` converts the CRS's unit (10 US-survey-foot pixels made a 20 m
+  band 6 m wide) and refuses a map with no CRS or a rotated grid; it refuses a .npy name for a GeoTIFF band, `--patch
+  0` and a window larger than the map by name, makes the parent of `--out`, and its printed next command reads the map
+  as boundary did (`--nodata`, `--logits` for a logit map, `--confidence BAND` for a class map whatever the cut, a note
+  where sample reads a one-band map at another cut) and asks for no more labels than the map has windows. In Python, a
+  numpy masked array's mask is no data in assess and scale (its fill was ranked least confident), a reference, band or
+  mask of another shape than the map is refused before any mask is combined, and a reference's class ids are remapped
+  before pooling (an undeclared fill of 65535 took 1.1 GB at 128 x 128 pixels); the warning on ids the map cannot
+  predict counts the reference's own classes. With no error against the reference the share of errors captured is
+  undefined (null), as scale says, not 0; and assess's terminal line says how many windows a partial reference grades
+  and that its capture is measured on those, not on the review sets.
+- **estimate.** A tile sample whose tiles all show the same nonzero rate gets the Wilson fallback, not an interval of
+  zero width (the equal rates are now compared exactly). The --other and audit routes and `sample --extend` read the
+  CSV as strictly as the one-map route (a second reference_class column is refused), a blank line is read as before
+  1.17.0, and `--classes` is refused where it is not read. In Python, a sequential sample is read as a random sample of
+  the windows labelled, as the command line reads it. The class design's normal-theory per-class intervals are now
+  Olofsson's estimate +/- 1.96 SE, as the 1.17.1 note said (they were Wilson intervals on an effective sample size),
+  and `overall_accuracy_normal_theory`, promised in the JSON by 1.17.1, is written there and in the MCP summary.
+- **certify and plan.** The zone's edge is printed with the fewest decimals, four at least, that part the zone from the
+  windows outside it, past any tied with the threshold, which the tie counts name (rounded to the nearest fourth
+  decimal it could take in windows outside the zone or leave the threshold's own out); the result JSON keeps it as
+  `edge`. `--rule prefix` on a sequential sample is refused, as any `--rule` is. The sequential minimum of labels is
+  found by bisection (alpha 1e-8 took 21 s, smaller hours). The fewest labels a zone needs stays the float ceiling it
+  has always been, which at a delta of exactly (1 - alpha)^b asks for one label more: it sets the level cut, so an
+  exact count is another procedure (a first draft of this release changed it, and the zones tested, and certificates,
+  with it). `plan`'s run line, and the MCP plan reply, fix `--rule bonferroni` with the draw when only that rule
+  reaches the probability, and a map smaller than a zone's labels is said to test no zone.
+- **The class design in its own words.** Class names and file paths are no longer rewritten (a class named "good
+  condition" was printed "good class", and a list in the JSON then named classes that were not its keys, a KeyError in
+  the MCP estimate tool): a class name is kept as a whole word in a sentence, except one made only of the words the
+  rules reword ("input", "condition"), which is worded as the sentences are; a list entry that is exactly a class name
+  is kept; and the paths a text names are kept whole, spaces included, with their file names. `decide` and the MCP decide reply answer
+  a class-design result per map class, a certificate bundle's zone.json too (read from the sample beside it), and name
+  the class design where its intervals are exact; estimate's and certify's results mark it with `condition_by`; the
+  MCP sample summary names the design "class". The MCP decide reply's clause on the producer's accuracies holding
+  together never fired (since 1.14.0) and now does. The design's rows stay in the drawn order, which `verify` checks
+  on every class-design certificate, and sample, Usage and the MCP reply say which three columns to hide and to shuffle
+  the windows shown to label blind.
+- **sample.** `--extend` refuses a map read another way (`--logits`, `--nodata`, `--confidence` or its range), and the
+  command printed to extend a sequential sample carries those options and `--out`, so it runs as printed (without them
+  a product's seed from the map no longer matched); the MCP reply gives the same call as the tool's own parameters.
+  Printed commands give numbers as argparse reads them (`--nodata=-3.4e+38`, `--threshold=-1e-05`, not a separate
+  token it takes for an option). `--other` and `--design audit` refuse the one-map options they ignored, among them
+  `--extend`, which replaced a labelled sequential CSV, and `--other` refuses `--logits`. CSVs are written as UTF-8,
+  which every reader reads (a condition named bewölkt broke estimate under a Windows locale). GDAL virtual paths
+  (/vsizip/, /vsicurl/, s3://) are recorded as given, and a sample whose `confidence` and `map_class` columns were both
+  deleted is refused, since nothing then checks it is the map's.
+- **from-olmoearth and from-embeddings.** Condition names that would run past 64 characters number the input layers in
+  the printed command, which assess refused. from-embeddings leaves out points with no class (fitted as a class named
+  "" before), refuses a coordinate that is not a number of degrees by row, reads a spreadsheet's byte-order mark,
+  refuses a store with no complete quantization, and says when the box lies outside the store's grid.
+- **Texts.** The decide table and Usage say the class design's per-class intervals are exact; a class map alone works
+  in compare and in sample, estimate and plan with `--other`; the README and `_tie` state the float error above 5
+  million windows as measured (under 1e-6 at 1e8 windows, so an end can move by one window); the 1.17.1 entry and
+  `null_count` count 26 (alpha, n) pairs, not 26 alphas or 41 pairs. The quick-start labeller fills an audit sample
+  (it left the file with its header alone).
+
 ## 1.17.1 (2026-10-25)
 
 Three findings of the score review of 1.17.0 (three independent raters, 25 October 2026):
@@ -7,7 +105,8 @@ Three findings of the score review of 1.17.0 (three independent raters, 25 Octob
 - **The zone test's null count is exact.** floor(alpha n) + 1, the smallest count of a zone's n windows that is wrong
   more than alpha of the time, was computed in floats: 0.29 x 100 is 28.999..., which gave 29, put a zone wrong
   exactly 29% of the time into the null and about doubled the p-value. Valid, since the test was only more cautious,
-  but not the exact test the docs describe, on 26 two-decimal alphas up to 0.50 with n up to 2,000. `estimate.null_count`
+  but not the exact test the docs describe, on 26 (alpha, n) pairs among the two-decimal alphas up to 0.50 and n up to
+  2,000, at alphas 0.29, 0.35 and 0.41 (first written "26 two-decimal alphas"). `estimate.null_count`
   now reads alpha as the decimal it is written as; certify's rules, the sequential rule and `plan` use it. A test checks
   every such pair.
 - **The class design prints Olofsson's normal-theory intervals beside its exact ones.** The exact union bounds are 2.7

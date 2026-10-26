@@ -45,7 +45,12 @@ def open_store(url=STORE, endpoint=ENDPOINT):
 
 
 def dequantize(q, quant):
-    """Float embeddings from the stored integers, NaN at no-data, by the store's own `geoemb:quantization`."""
+    """Float embeddings from the stored integers, NaN at no-data, by the store's own `geoemb:quantization`. A store
+    that records none, or not all of it, is another layout and is refused (an AttributeError traceback until the bug
+    hunt of 2026-10-25)."""
+    if not isinstance(quant, dict) or not {"method", "valid_range", "nodata", "power"} <= set(quant):
+        raise SystemExit("from-embeddings: the store records no complete geoemb:quantization (method, valid_range, "
+                         "nodata, power), so it is not laid out as the geo-embeddings Zarr convention says")
     if quant.get("method") != "signed_power":
         raise SystemExit(f"from-embeddings: the store's quantization is {quant.get('method')!r}; only signed_power "
                          "is read")
@@ -90,6 +95,9 @@ def read_area(root, bbox, year, dims=128, max_pixels=MAX_PIXELS):
     arr = g["embeddings"]
     r0, c0 = max(r0, 0), max(c0, 0)
     r1, c1 = min(r1, arr.shape[2]), min(c1, arr.shape[3])
+    if r1 <= r0 or c1 <= c0:          # said of the box, where "the points carry 0 class" blamed the points
+        raise SystemExit(f"from-embeddings: the box lies outside the grid of the store's {zone} group, so it holds no "
+                         "embedding")
     if (r1 - r0) * (c1 - c0) > max_pixels:
         raise SystemExit(f"from-embeddings: the box is {r1 - r0} x {c1 - c0} pixels, above --max-pixels {max_pixels}; "
                          "read a smaller box or raise the limit (memory grows with it)")
@@ -105,12 +113,26 @@ def read_area(root, bbox, year, dims=128, max_pixels=MAX_PIXELS):
 
 
 def read_points(path):
-    """[(lon, lat, label)] from a CSV with lon, lat and class columns."""
-    with open(path, newline="") as fh:
+    """[(lon, lat, label)] from a CSV with lon, lat and class columns; label None where the class cell is blank, which
+    fit_and_predict leaves out and counts. A blank class was fitted as a class named "" and written as a band, a
+    coordinate that is not a number in degrees was a traceback, and a spreadsheet's byte-order mark hid the first
+    column's name (the bug hunt of 2026-10-25)."""
+    with open(path, newline="", encoding="utf-8-sig") as fh:
         rows = list(csv.DictReader(fh))
     if not rows or not {"lon", "lat", "class"} <= set(rows[0]):
         raise SystemExit(f"from-embeddings: {path} needs the columns lon, lat and class")
-    return [(float(r["lon"]), float(r["lat"]), r["class"].strip()) for r in rows]
+    points = []
+    for i, r in enumerate(rows):
+        try:
+            lon, lat = float(r["lon"]), float(r["lat"])
+        except (TypeError, ValueError):
+            lon = lat = math.nan
+        if not (-180 <= lon <= 180 and -90 <= lat <= 90):
+            raise SystemExit(f"from-embeddings: row {i + 2} of {path} gives lon {r['lon']!r} and lat {r['lat']!r}; each "
+                             "is a number of degrees, lon from -180 to 180 and lat from -90 to 90")
+        lab = (r["class"] or "").strip()
+        points.append((lon, lat, lab or None))
+    return points
 
 
 def fit_and_predict(v, crs, transform, points):
@@ -122,8 +144,11 @@ def fit_and_predict(v, crs, transform, points):
     tr = pyproj.Transformer.from_crs("EPSG:4326", crs, always_xy=True)
     inv = ~transform
     used, labels, rc = [], [], []
-    outside = nodata = 0
+    outside = nodata = unlabelled = 0
     for lon, lat, lab in points:
+        if lab is None:
+            unlabelled += 1
+            continue
         x, y = tr.transform(lon, lat)
         col, row = (int(math.floor(t)) for t in inv @ (x, y))
         if not (0 <= row < v.shape[1] and 0 <= col < v.shape[2]):
@@ -134,6 +159,8 @@ def fit_and_predict(v, crs, transform, points):
             continue
         rc.append((row, col))
         labels.append(lab)
+    if unlabelled:
+        notes.append(f"{unlabelled} point{'s' if unlabelled != 1 else ''} with no class left out")
     if outside:
         notes.append(f"{outside} point{'s' if outside != 1 else ''} outside the box left out")
     if nodata:

@@ -19,7 +19,7 @@ extra) are new in 1.4.0.
 
 ## Quick start
 
-Every command below runs on 1.17.1. `scores.tif` is a map of per-class probabilities; add `--logits` for logits.
+Every command below runs on 1.17.2. `scores.tif` is a map of per-class probabilities; add `--logits` for logits.
 
 ```bash
 pip install "olmoearth-inferencex[geo]"
@@ -110,7 +110,7 @@ at most 10% of the samples that could have been drawn (`--delta`).
 
 ```console
 $ oe-inferencex certify to_label.csv --alpha 0.05
-the 90% most confident windows (3686 of 4096, confidence margin >= 0.6662) are wrong at most 5% of the time; this statement fails on at most 10% of samples like this one (prefix rule; the exact upper bound on the zone's error rate at that level is 2.4%). Outside the zone nothing is certified.
+the 90% most confident windows (3686 of 4096, confidence margin >= 0.6661) are wrong at most 5% of the time; this statement fails on at most 10% of samples like this one (prefix rule; the exact upper bound on the zone's error rate at that level is 2.4%). Outside the zone nothing is certified.
 prefix rule: fixed-sequence testing, valid on any map whatever the shape of its error rate; it stops at the first zone it cannot certify, so it certifies little when the most confident windows hold many errors, where the bonferroni rule can certify more; choose the rule before reading the labels, since running the other rule after seeing this zone is a second test
 note: delta is the share of all samples, those that certify nothing included, on which a statement like this is wrong. Among the samples that do certify a zone, the share wrong can be larger, most of all when a zone's true error rate is just above alpha: there a zone is rarely certified, and when it is, it is often wrong. A certified zone is not a 1 - delta chance of being right.
 wrote to_label_zone.json and the window mask to_label_zone.npy
@@ -147,7 +147,7 @@ in Python, `form="top1"` reads logits that way. Other maps are accepted with res
 | Map | Accepted by |
 |---|---|
 | Hard class map with an exported confidence band, as published products ship them (LCMAP's `lcpri` with `lcpconf`) | `assess`, `sample`, `estimate` and `certify` with `--confidence BAND` (`assess_classmap` in Python). The band must rise with confidence; negate an uncertainty band first. `--confidence-range LOW HIGH` leaves out band values outside it, such as codes; without it the package cannot tell codes from confidences. The band ranks only the pixels it separates. `sample` then defaults to the random design, since the confidence design needs a top-1 probability |
-| Hard class map alone | `compare` only; without a confidence there is no ranking |
+| Hard class map alone | `compare`, and `sample`, `estimate` and `plan` with `--other` (which of two maps is more accurate); without a confidence there is no ranking, so no review set and no error rate of one map |
 | Binary score in [0, 1] decided at 0.5, such as an OlmoEarth Studio `per_pixel_regression` output of a two-class task | Everything a binary probability map is, passed as one: windows are ranked by distance from 0.5, which needs no calibration, and a design-based estimate stays valid, since the score only allocates the labels. The score is not a probability of error, and no recorded experiment grades this case |
 | Continuous map, such as a regression output | `compare`, and `sample` and `plan` with `--other`, at a cut-off named with `--threshold`; no recorded experiment grades this case. It has no margin, so no review set or error rate. The package cannot tell it from logits: passed with `--logits` it is ranked by its size, and from 1.14.1 a one-band map read as logits whose values all lie in [0, 1], or none below 0 (or none above), to rounding, carries a warning (on the terminal, in the JSON and through the MCP server) |
 
@@ -175,7 +175,10 @@ pixels of each pixel's confidence, and its class the majority class of its pixel
 left out. A pixel's confidence is its top class probability for class probabilities, the gap between its two highest
 logits with `--logits` (with `form="top1"` in Python, the log of its top probability), and for a two-class map the
 distance of the probability from 0.5, or the absolute logit. The experiments graded a close relative: the margin
-between the two highest class probabilities of the window's mean probabilities. exp76 compares the forms. No-data comes from the raster's no-data value, from NaN or from `--nodata`.
+between the two highest class probabilities of the window's mean probabilities. exp76 compares the forms. No-data comes from the raster's no-data value, from NaN, from `--nodata` or, since 1.17.2, from a GeoTIFF's mask (an
+internal mask, a .msk file, or the alpha band of a two-band raster, which is then read as the mask, not as a band; a
+raster of more bands reads an alpha band as data, since GDAL marks the 4th band of a 4-band 8-bit GeoTIFF alpha by
+default). A certificate needs the mask inside the file or as a no-data value, since it carries no .msk file.
 
 **The input condition.** Without a layer `assess` ranks every window with every other. Where part
 of a map was predicted from an input combination the model was not trained on, such as radar alone under cloud for a
@@ -449,7 +452,9 @@ oe-inferencex sample scores.tif --condition band.tif --condition-names 0=interio
 oe-inferencex estimate to_label.csv                  # after the reviewer has filled `wrong`
 ```
 
-The width is in metres (`--width-m`, from a GeoTIFF's pixel size, in a projected CRS) or pixels (`--width-px`). A
+The width is in metres (`--width-m`, from a GeoTIFF's pixel size in its CRS's unit converted to metres, on a
+projected CRS with a north-up grid; a map with no CRS, a degree CRS or a rotated grid takes `--width-px`) or pixels
+(`--width-px`). A
 reasonable width is the coarser of the map's and the reference's resolution, since a reference drawn on a coarser grid
 disagrees with the map along every edge whatever the model does. The command prints the share of the map in the band:
 how much the edges weigh depends on how large the patches are against the pixel. Fields of 30 ha at 10 m put a few
@@ -660,7 +665,9 @@ accuracies are bounded by those counts (a union bound; tests/test_class_design.p
 computation over the stratified draw, with a negative control). They are wide where many classes are thin, and the
 points beside them are Olofsson's stratified estimates. `certify` gives a zone in each class, with delta split over the
 classes tested, as for input conditions. `--condition-names` names the classes; the class design takes no condition
-layer. On 269 of the record's fully labelled maps (exp116), every class's user's accuracy covered at its level
+layer. Its rows run class by class, and the `map_class`, `condition` and `stratum` columns all name the map's class: to
+label blind, hide those three and show the windows in a shuffled order, then write each label on its own row, keeping
+the CSV's row order (the order is part of the draw that `verify` checks). On 269 of the record's fully labelled maps (exp116), every class's user's accuracy covered at its level
 for 2,401 of 2,402 classes and the areas with the producer's accuracies held together on every map; for all 1,148
 classes under 5% of their map, the interval was narrower than a random sample's of the same size, a median 0.61 of
 its width.
@@ -1209,7 +1216,7 @@ wrote to_label_estimate_decisions.json
 |---|---|---|---|
 | `error_rate_below=T` | yes, no, undetermined | `estimate` | the 95% interval lies below T, at or above T, or across it; with `--also-accept`, the second reading's answer beside it, whole map and per condition |
 | `error_rate_below=T` | the same, per class | `estimate` on a sample drawn with `--design audit` | each class's exact interval on its confident zone's error rate; with `--also-accept`, the second reading's answer beside it |
-| `user_accuracy_above=T`, `producer_accuracy_above=T` | the same, per class | `estimate --per-class` | each class's interval: exact under a random sample (each user's accuracy at 95%, the producer's accuracies together at 95%), nominal under the other designs |
+| `user_accuracy_above=T`, `producer_accuracy_above=T` | the same, per class | `estimate --per-class` | each class's interval: exact under a random sample and the class design (each user's accuracy at 95%, the producer's accuracies together at 95%), nominal under the other designs |
 | `more_accurate` | a, b, undetermined | `estimate` on a sample drawn with `--other` | the exact sign test names a map, while the labels are at most a fifth of the differing windows; above, the interval on the difference excludes 0 |
 | `more_accurate` | a, b, tie, undetermined | `compare --labels` | a count against the labels raster, taken as truth; undetermined unless every differing window carries a label |
 | `trusted_share` | a share of the map | `certify` | the certified share; 0 when nothing is certified; with `--also-accept`, the second reading's beside it |
@@ -1219,11 +1226,12 @@ wrote to_label_estimate_decisions.json
 T and S are shares between 0 and 1. "undetermined" means the result does not settle the question; it is not a no. A
 question a kind of result holds no evidence for is refused: `more_accurate` on a comparison made without labels, since
 two maps that agree can both be wrong. A result with input conditions or classes gives each its own answer, each from
-its own interval; the intervals do not hold jointly, except the producer's accuracies under a random sample, whose
-exact intervals hold together at 95%. Each answer's `because` sentence carries the limit that matters most and the
+its own interval; the intervals do not hold jointly, except the producer's accuracies under a random sample or the
+class design, whose exact intervals hold together at 95%. A result of the class design is answered in its own words,
+per map class. Each answer's `because` sentence carries the limit that matters most and the
 result's own warnings, and `<result>_decisions.json` holds the answer, the level, the evidence and the sentence. The
 `level` is the coverage of the interval behind the answer (0.95; nominal where `exact` is false, as for the default
-confidence design, tiles and per-class intervals under designs other than random), 1 - delta for a certified zone, and none for a count
+confidence design, tiles and per-class intervals under designs other than random and class), 1 - delta for a certified zone, and none for a count
 against a labels raster, which has no sampling error but is only as right as those labels. `trusted_share` is the
 zone's own size over the map, not the grid's rounded coverage.
 

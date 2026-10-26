@@ -1,0 +1,211 @@
+{
+ "rule": "target",
+ "alpha": 0.05,
+ "delta": 0.1,
+ "n_population": 4096,
+ "n_labelled": 315,
+ "level_cut": "standard",
+ "min_labels_to_certify": 45,
+ "c_min": 0.14285714285714285,
+ "levels": [
+  {
+   "coverage": 0.15,
+   "n_zone": 614,
+   "n_labelled_inside": 43,
+   "n_wrong_inside": 1,
+   "p_value": 0.343888878560865,
+   "upper_bound": 0.08469055374592833,
+   "accepted": false,
+   "share_of_delta": 0.002857142857142857
+  },
+  {
+   "coverage": 0.2,
+   "n_zone": 819,
+   "n_labelled_inside": 64,
+   "n_wrong_inside": 1,
+   "p_value": 0.15216625737449282,
+   "upper_bound": 0.057387057387057384,
+   "accepted": false,
+   "share_of_delta": 0.002857142857142857
+  },
+  {
+   "coverage": 0.25,
+   "n_zone": 1024,
+   "n_labelled_inside": 80,
+   "n_wrong_inside": 1,
+   "p_value": 0.07349378970146858,
+   "upper_bound": 0.0458984375,
+   "accepted": false,
+   "share_of_delta": 0.002857142857142857
+  },
+  {
+   "coverage": 0.3,
+   "n_zone": 1229,
+   "n_labelled_inside": 98,
+   "n_wrong_inside": 3,
+   "p_value": 0.2543351898996096,
+   "upper_bound": 0.06509357200976404,
+   "accepted": false,
+   "share_of_delta": 0.002857142857142857
+  },
+  {
+   "coverage": 0.35,
+   "n_zone": 1434,
+   "n_labelled_inside": 120,
+   "n_wrong_inside": 3,
+   "p_value": 0.13094833343385154,
+   "upper_bound": 0.05299860529986053,
+   "accepted": false,
+   "share_of_delta": 0.002857142857142857
+  },
+  {
+   "coverage": 0.4,
+   "n_zone": 1638,
+   "n_labelled_inside": 136,
+   "n_wrong_inside": 3,
+   "p_value": 0.07771747385688307,
+   "upper_bound": 0.04700854700854701,
+   "accepted": false,
+   "share_of_delta": 0.002857142857142857
+  },
+  {
+   "coverage": 0.45,
+   "n_zone": 1843,
+   "n_labelled_inside": 151,
+   "n_wrong_inside": 3,
+   "p_value": 0.04391036382598351,
+   "upper_bound": 0.042322300596852956,
+   "accepted": false,
+   "share_of_delta": 0.002857142857142857
+  },
+  {
+   "coverage": 0.5,
+   "n_zone": 2048,
+   "n_labelled_inside": 168,
+   "n_wrong_inside": 3,
+   "p_value": 0.023819284640935544,
+   "upper_bound": 0.0380859375,
+   "accepted": true,
+   "share_of_delta": 0.08
+  },
+  {
+   "coverage": 0.55,
+   "n_zone": 2253,
+   "n_labelled_inside": 185,
+   "n_wrong_inside": 3,
+   "p_value": 0.012628393720759468,
+   "upper_bound": 0.03462050599201065,
+   "accepted": true,
+   "share_of_delta": 0.0
+  },
+  {
+   "coverage": 0.6,
+   "n_zone": 2458,
+   "n_labelled_inside": 201,
+   "n_wrong_inside": 3,
+   "p_value": 0.0068424338167907845,
+   "upper_bound": 0.03213995117982099,
+   "accepted": true,
+   "share_of_delta": 0.0
+  },
+  {
+   "coverage": 0.65,
+   "n_zone": 2662,
+   "n_labelled_inside": 218,
+   "n_wrong_inside": 3,
+   "p_value": 0.0032593582233024776,
+   "upper_bound": 0.029676934635612322,
+   "accepted": true,
+   "share_of_delta": 0.0
+  },
+  {
+   "coverage": 0.7,
+   "n_zone": 2867,
+   "n_labelled_inside": 233,
+   "n_wrong_inside": 3,
+   "p_value": 0.0017897185553687157,
+   "upper_bound": 0.027554935472619464,
+   "accepted": true,
+   "share_of_delta": 0.0
+  },
+  {
+   "coverage": 0.75,
+   "n_zone": 3072,
+   "n_labelled_inside": 252,
+   "n_wrong_inside": 3,
+   "p_value": 0.0008161235610462881,
+   "upper_bound": 0.025716145833333332,
+   "accepted": true,
+   "share_of_delta": 0.0
+  },
+  {
+   "coverage": 0.8,
+   "n_zone": 3277,
+   "n_labelled_inside": 264,
+   "n_wrong_inside": 3,
+   "p_value": 0.0005013386171097958,
+   "upper_bound": 0.024412572474824534,
+   "accepted": true,
+   "share_of_delta": 0.0
+  },
+  {
+   "coverage": 0.85,
+   "n_zone": 3482,
+   "n_labelled_inside": 279,
+   "n_wrong_inside": 3,
+   "p_value": 0.00024938795417464343,
+   "upper_bound": 0.022975301550832855,
+   "accepted": true,
+   "share_of_delta": 0.0
+  },
+  {
+   "coverage": 0.9,
+   "n_zone": 3686,
+   "n_labelled_inside": 288,
+   "n_wrong_inside": 5,
+   "p_value": 0.0025938414732758017,
+   "upper_bound": 0.031199131850244168,
+   "accepted": true,
+   "share_of_delta": 0.0
+  },
+  {
+   "coverage": 0.95,
+   "n_zone": 3891,
+   "n_labelled_inside": 303,
+   "n_wrong_inside": 9,
+   "p_value": 0.052404397628006666,
+   "upper_bound": 0.045746594705731176,
+   "accepted": true,
+   "share_of_delta": 0.0
+  },
+  {
+   "coverage": 1.0,
+   "n_zone": 4096,
+   "n_labelled_inside": 315,
+   "n_wrong_inside": 18,
+   "p_value": 0.7738088864265802,
+   "upper_bound": 0.076904296875,
+   "accepted": false,
+   "share_of_delta": 0.0
+  }
+ ],
+ "coverage": 0.95,
+ "n_zone": 3891,
+ "threshold": 0.5623931884765625,
+ "upper_bound": 0.045746594705731176,
+ "scope": "The zone's error rate is certified over all its windows together. Where part of the map was predicted from other inputs, that part of the zone can be wrong more often than the rest. If the model was not trained on those inputs, its errors there can be confident ones and fall inside the zone (exp88). To certify each input condition on its own, draw the sample with --condition.",
+ "target": 0.5,
+ "target_weight": 0.8,
+ "target_share_of_delta": 0.08,
+ "target_certified": true,
+ "n_tied_at_threshold": 1,
+ "n_tied_inside_zone": 1,
+ "note": "target rule: the 50% zone was fixed before labelling and holds 0.8 of delta, the smaller zones share the rest, and a zone that passes hands its share up to the next larger one (a fallback procedure, Wiens 2003), valid on any map whatever the shape of its error rate; a zone larger than the target is certified only through that hand-up, and a target that was too optimistic leaves the smaller zones the rest of delta",
+ "zone_mask": "/private/tmp/oeix_1_17_1/a/s_zone.npy",
+ "sample": "/private/tmp/oeix_1_17_1/a/s.csv",
+ "written_by": {
+  "package": "olmoearth-inferencex",
+  "version": "1.17.1",
+  "command": "certify"
+ }
+}

@@ -134,6 +134,50 @@ def _as_mask(nodata_mask):
     return None if nodata_mask is None else np.asarray(nodata_mask, dtype=bool)
 
 
+def _masked_as_nodata(a, nodata_mask):
+    """(a's data, nodata_mask with a numpy masked array's mask added). np.asarray drops the mask, and rasterio's
+    read(masked=True) returns one: the fill under it (0, a logit margin of 0) was ranked as the least confident value,
+    and a 12.5% review set was all masked windows, where the same data with nodata_mask ranked none of them (the bug
+    hunt of 2026-10-25). A pixel masked in any band of a (C, H, W) array carries no prediction."""
+    if not np.ma.isMaskedArray(a):
+        return a, nodata_mask
+    m = np.ma.getmaskarray(a)
+    m = m.any(0) if m.ndim == 3 else m
+    return np.ma.getdata(a), (m if nodata_mask is None else _as_mask(nodata_mask) | m)
+
+
+def _check_shape(name, shape, map_shape):
+    """A layer of another shape than the map is refused, as the condition layer is: a reference 3 columns wider was
+    cropped to the window grid and graded, an error rate of 0.538 for an aligned 0.000 (the bug hunt of 2026-10-25)."""
+    if tuple(shape) != tuple(map_shape):
+        dims = lambda s: " x ".join(str(int(d)) for d in s) if len(s) == 2 else f"of shape {tuple(int(d) for d in s)}"
+        raise ValueError(f"the {name} is {dims(shape)} px and the map is {dims(map_shape)} px; give it on the map's grid")
+
+
+def _reference_index(reference, n_classes):
+    """(index, codes): each pixel's reference class as an index into `codes`, -1 where there is no label, and `codes`
+    the class ids, the map's 0..n_classes-1 first (an index below n_classes is that class) and then the reference's
+    other ids in ascending order. A float reference is read as the command line reads a reference raster: NaN (or inf)
+    is no label and a value is rounded to the nearest class id. Until 2026-10-06 astype(int) cast NaN to class 0 on
+    arm64 and to INT_MIN (no label) on x86, so a reference that was NaN but for one correct window scored 16 windows at
+    an error rate of 0.9375 on one machine and 1 window at 0 on the other, and 0.9999 was truncated to 0. A masked
+    array's masked pixels have no label.
+
+    Pooling keeps one count per index, so memory follows the classes present: pooled over 0 to the largest id, an
+    undeclared fill of 65535 in a 128 x 128 reference took 1.1 GB, and 32 GiB at 1024 x 1024 (the bug hunt of
+    2026-10-25; compare remaps its codes for the same reason since 2026-09-23)."""
+    masked = np.ma.getmaskarray(reference) if np.ma.isMaskedArray(reference) else None
+    ref = np.asarray(np.ma.getdata(reference))
+    if ref.dtype.kind == "f":
+        ref = np.where(np.isfinite(ref), np.rint(np.where(np.isfinite(ref), ref, 0.0)), -1.0)
+    ref = ref.astype(np.int64)  # values < 0 mean no reference
+    if masked is not None:
+        ref = np.where(masked, -1, ref)
+    labelled = ref >= 0
+    codes = np.union1d(np.arange(n_classes), ref[labelled])
+    return np.where(labelled, np.searchsorted(codes, np.where(labelled, ref, 0)), -1), codes
+
+
 def _nonfinite_as_nodata(implied, nodata_mask, warnings):
     """`nodata_mask` with the pixels of `implied` (a non-finite score or confidence) added, said in `warnings`.
 
@@ -361,6 +405,13 @@ def assess_classmap(hard, confidence, n_classes, patch=4, nodata_mask=None, refe
     no logits. Ties in `confidence` are reported, because a quantized or
     saturated band can only rank the pixels it separates. `condition` and
     `condition_names` are as in assess_prediction."""
+    # shapes first: a masked array's mask, or a band's NaN, broadcast a mask of the wrong shape across the map (the
+    # review of 1.17.2)
+    _check_shape("confidence band", np.shape(confidence), np.shape(hard))
+    if nodata_mask is not None:
+        _check_shape("no-data mask", np.shape(nodata_mask), np.shape(hard))
+    hard, nodata_mask = _masked_as_nodata(hard, nodata_mask)
+    confidence, nodata_mask = _masked_as_nodata(confidence, nodata_mask)
     hard = np.asarray(hard).astype(int)
     conf = np.asarray(confidence, dtype=np.float64)
     nonfinite = []
@@ -404,6 +455,9 @@ def assess_prediction(scores, is_logit, patch=4, nodata_mask=None, reference=Non
     condition, or with two or more, `scope` says what the whole-map ranking does not show (exp88)."""
     if form not in ("margin", "top1"):
         raise ValueError(f"form must be 'margin' or 'top1', got {form!r}")
+    if nodata_mask is not None:            # before a masked array's mask is added to it (the review of 1.17.2)
+        _check_shape("no-data mask", np.shape(nodata_mask), np.shape(scores)[-2:])
+    scores, nodata_mask = _masked_as_nodata(scores, nodata_mask)
     scores = np.asarray(scores, dtype=np.float64)
     nodata_mask = _as_mask(nodata_mask)
     if not is_logit:
@@ -497,6 +551,10 @@ def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, sig
     hard = np.asarray(hard).astype(int)
     nodata_mask = _as_mask(nodata_mask)
     H, W = hard.shape[-2:]
+    if nodata_mask is not None:
+        _check_shape("no-data mask", nodata_mask.shape, (H, W))
+    if reference is not None:
+        _check_shape("reference", np.shape(reference), (H, W))
     _check_patch(patch)
     if patch > H or patch > W:
         raise ValueError(f"the window of {patch} px is larger than the map, {H} x {W} px; pass a smaller --patch")
@@ -570,14 +628,7 @@ def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, sig
             out["scope"] = SCOPE_ASSESS_K.format(K=K)
 
     if reference is not None:
-        ref = np.asarray(reference)
-        if ref.dtype.kind == "f":
-            # A float reference is read as the command line reads a reference raster: NaN (or inf) is no label and a
-            # value is rounded to the nearest class id. Until 2026-10-06 astype(int) cast NaN to class 0 on arm64 and
-            # to INT_MIN (no label) on x86, so a reference that was NaN but for one correct window scored 16 windows at
-            # an error rate of 0.9375 on one machine and 1 window at 0 on the other, and 0.9999 was truncated to 0.
-            ref = np.where(np.isfinite(ref), np.rint(np.where(np.isfinite(ref), ref, 0.0)), -1.0)
-        ref = ref.astype(int)  # values < 0 mean no reference
+        ref, codes = _reference_index(reference, n_classes)
         ref_valid_w = _pool((ref >= 0).astype(float), patch) >= 0.5
         scored = valid_w & ref_valid_w
         # The reference is pooled over ITS OWN class range, never the prediction's. _pooled_argmax counts votes only
@@ -585,12 +636,15 @@ def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, sig
         # reference pixel of class 2 and let the window label fall to a surviving low index: measured at an error
         # rate of 0.0625 against an honest 0.1875 on a binary flood model graded against dry/flood/permanent-water,
         # with no warning. The identical defect was found, measured at 44.9% and fixed for `compare --labels`
-        # (cli.py) on 2026-09-14 and never carried across to here. Fixed 2026-09-21.
-        n_ref = int(ref[ref >= 0].max()) + 1 if (ref >= 0).any() else n_classes
-        if n_ref > n_classes:
-            warnings.append(f"the reference carries {n_ref} classes and the map predicts {n_classes}; windows whose "
-                            f"reference class the map cannot predict are counted wrong")
-        ref_w = _pooled_argmax(ref, max(n_ref, n_classes), patch, empty=-1, tie=-1)
+        # (cli.py) on 2026-09-14 and never carried across to here. Fixed 2026-09-21. An index below n_classes is
+        # that class, so the pooled index compares with the map's class as it is.
+        if len(codes) > n_classes:
+            extra = ", ".join(str(int(c)) for c in codes[n_classes:][:5]) + (", ..." if len(codes) > n_classes + 5 else "")
+            n_ref = int(np.unique(ref[ref >= 0]).size)      # the reference's own ids, not the union with the map's
+            warnings.append(f"the reference carries {n_ref} class{'es' if n_ref != 1 else ''} and the map predicts "
+                            f"{n_classes}; windows whose reference class the map cannot predict ({extra}) are counted "
+                            "wrong")
+        ref_w = _pooled_argmax(ref, len(codes), patch, empty=-1, tie=-1)
         n_ref_tied = int((scored & (ref_w < 0)).sum())
         scored = scored & (ref_w >= 0)                      # a reference with no majority grades nothing
         if n_ref_tied:
@@ -620,14 +674,17 @@ def _assess(margin, hard, n_classes, patch, nodata_mask, reference, budgets, sig
         e_sorted = e[np.argsort(r_s, kind="stable")[::-1]]   # capture follows the review order
         for b in budgets:
             k = max(1, int(round(b * len(e))))
-            cap[b] = {"n_reviewed": int(k), "errors_captured_fraction": float(e_sorted[:k].sum() / max(e.sum(), 1)),
+            # With no error the share captured is 0/0: written 0.0 until 1.17.2, read as "the review set catches
+            # none of the errors", where scale wrote it undefined (the bug hunt of 2026-10-25).
+            cap[b] = {"n_reviewed": int(k),
+                      "errors_captured_fraction": float(e_sorted[:k].sum() / e.sum()) if e.sum() else float("nan"),
                       "precision_in_set": float(e_sorted[:k].mean())}
         rc["error_capture_at_budget"] = cap
         rc["boundary_share_among_errors"] = float((bnd_s[e > 0] > 0).mean()) if e.sum() else float("nan")
         # the systematic-error report a labelled map allows: which (predicted, reference) pairs the errors fall
         # into (exp82: on the suite's many-class tasks the top three pairs hold 18% to 61% of the errors)
         from oe_inferencex.explain import confusion_pairs
-        rc["confusion_pairs"] = confusion_pairs(ref_w[scored], pooled_hard[scored])
+        rc["confusion_pairs"] = confusion_pairs(codes[ref_w[scored]], pooled_hard[scored])
         rc["caveat"] = "reference-product labels can flatter boundary-type signals (exp18); treat as expert truth only if it is"
         out["against_reference"] = rc
     return out

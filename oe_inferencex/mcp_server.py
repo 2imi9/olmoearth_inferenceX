@@ -93,7 +93,8 @@ HARD_RULES = (
     "Without labels, compare cannot say which map is right. Two maps that agree can both be wrong.",
     "Labels are assumed right. The interval and the zone describe agreement with the reviewer's labels; only estimate "
     "can widen its interval for a reviewer who errs, at rates the user states.",
-    "Ranking needs the scores, not only the class map. A class map alone works only in compare. assess refuses a "
+    "Ranking needs the scores, not only the class map. A class map alone works only to compare two maps: in compare, "
+    "and in sample, estimate and plan with a second map (other). assess refuses a "
     "class map of more than two classes read as probabilities, but not a 0/1 map, nor any class map passed with "
     "logits=true: it reads the class ids as scores, and the order it gives is not evidence.",
     "An interval or a certificate holds for one sample whose size was fixed before labelling, with the rule, alpha "
@@ -465,15 +466,18 @@ def _mcp_warning(text):
     return MCP_MARGIN_WARNING if str(text).strip() == _assess.MARGIN_FORM_WARNING else text
 
 
-def _reply(conclusion, limits, nxt, files, summary, by_class=False):
+def _reply(conclusion, limits, nxt, files, summary, class_names=None, paths=()):
     """A tool's result, every text in this server's words; a sample of the class design in its own words, its strata
     being the map's classes, not input conditions."""
-    words = _class_text if by_class else (lambda t: t)
+    # the class design's names and every path the reply names are kept as written (cli.class_words)
+    kept = [*paths, *(v for v in (files or {}).values() if isinstance(v, str))]
+    words = (lambda t: _class_text(t, class_names, kept)) if class_names is not None else (lambda t: t)
     return {"conclusion": words(_mcp_words(conclusion)), "limits": words(_mcp_words(limits)),
             "next": words(_mcp_words(nxt)), "files": files, "summary": summary}
 
 
-def _class_text(text):
+def _class_text(text, names=(), paths=()):
+    """A reply of the class design in its own words, its class names and file paths kept as written (cli.class_words)."""
     if not text:
         return text
     for pat, rep in ((r"\bwith the same condition layer\b", 'with design "class"'),
@@ -482,17 +486,35 @@ def _class_text(text):
                      (r"\ba condition layer\b", "the map's classes")):
         text = re.sub(pat, rep, text)
     from .cli import class_words
-    return class_words(text)
+    return class_words(text, names, paths)
 
 
-def _sidecar_by_class(csv_path):
-    """Whether the sample beside this CSV is of the class design (its sidecar says so)."""
+def _reading_params(side):
+    """The parameters that read the map as a sample's sidecar says it was read, as the sample tool takes them: an
+    extension without them was refused, or before 1.17.2 dropped a product's band (the review of 1.17.2)."""
+    parts = []
+    if side.get("confidence"):
+        parts.append(f"confidence={side['confidence']}")
+    if side.get("confidence_range") is not None:
+        parts.append(f"confidence_range={list(side['confidence_range'])}")
+    if side.get("logits"):
+        parts.append("logits=true")
+    if side.get("nodata") is not None:
+        parts.append(f"nodata={side['nodata']}")
+    if int(side.get("patch", 4)) != 4:
+        parts.append(f"patch={int(side['patch'])}")
+    return "".join(p + ", " for p in parts)
+
+
+def _sidecar_class_names(csv_path):
+    """The class names of the class-design sample beside this CSV, or None for a sample of another design (its sidecar
+    says which; cli.class_names)."""
     side = csv_path[:-4] + ".json" if str(csv_path).endswith(".csv") else str(csv_path) + ".json"
     try:
         with open(side) as f:
-            return (json.load(f).get("condition") or {}).get("by") == "map class"
+            return cli.class_names(json.load(f))
     except (OSError, ValueError, AttributeError):
-        return False
+        return None
 
 
 def _grid_shape(path):
@@ -707,7 +729,11 @@ def assess(
     ref = s.get("against_reference") or {}
     if reference is not None:
         cap = ref.get("error_capture_at_budget") or {}
-        if cap and int(ref.get("n_windows_scored") or 0) < int(s["n_windows"]):
+        if cap and not ref.get("error_rate"):
+            # no disagreement: the share of them captured is undefined (assess writes null since 1.17.2)
+            said.append(f"Against the reference, which grades {int(ref['n_windows_scored'])} of the {s['n_windows']} "
+                        "windows, none disagrees with it, so there is no disagreement for a review set to capture.")
+        elif cap and int(ref.get("n_windows_scored") or 0) < int(s["n_windows"]):
             # The capture ranks only the windows the reference grades (assess.py), so it is not the review set's: with
             # a reference on a quarter of the quick-start map "the 5% review set holds 67%" was said of a set that
             # holds 35% of them (2026-10-06). Said of the set it is measured on.
@@ -1006,7 +1032,8 @@ def sample(
     limits = ["No window is labelled yet: no tool labels windows, fetches labels or knows whether labels exist."
               if d != "sequential" else "No tool labels windows, fetches labels or knows whether labels exist.",
               HARD_RULES[3] + " To label blind, hide map_class, write the class seen in a reference_class column and "
-              "set wrong where the two differ."]
+              "set wrong where the two differ." + (" Under the class design, " + est.CLASS_BLIND_NOTE + "."
+                                                   if cli.class_names(side) is not None else "")]
     if d == "sequential":
         limits.append("Both estimate and certify read the rows labelled from the top. certify's statement holds at "
                       "every look, however often it is run as labels are added; estimate's interval assumes the number "
@@ -1016,7 +1043,10 @@ def sample(
     else:
         limits.append(f"This sample serves estimate, and certify refuses the {d} design. To certify a zone, sample "
                       "with design \"random\".")
-    limits += _warnings(_tagged(printed, "warning")) + _notes(_tagged(printed, "note"))
+    # the command line's extension command is said in `next` as the tool's own call: in limits its --out became
+    # out_dir set to the CSV, which raised FileExistsError (the second review of 1.17.2)
+    limits += _warnings(_tagged(printed, "warning")) + _notes(
+        [re.sub(r" To add windows later: .*?(?=; the \d+ labels|$)", "", t) for t in _tagged(printed, "note")])
     nxt = (f"Ask the user or a reviewer to open each window of {path} and set `wrong` to 1 if map_class is not what "
            f"is there, else 0, or ? where the window cannot be judged, on every row, keeping the row order and "
            f"{os.path.basename(side_path)} beside it. Then call estimate with sample_csv={path}.")
@@ -1026,11 +1056,14 @@ def sample(
         nxt = (f"Ask the user or a reviewer to open the windows of {path} from the top row down and set `wrong` to 1 if "
                "map_class is not what is there, else 0, or ? where the window cannot be judged, keeping the row order "
                f"and {os.path.basename(side_path)} beside it. Call certify with sample_csv={path} after any number of "
-               "rows; to add windows, call sample again with design \"sequential\", the same seed, a larger budget and "
-               f"extend={path}.")
+               "rows; to add windows, call sample again with design \"sequential\", "
+               + ("seed_from_map=true" if side.get("seed_rule") == "from_map" else "the same seed")
+               + ", a larger budget, " + _reading_params(side) + f"extend={path} and the same out_dir and name.")
     return _reply(" ".join(said), _join(limits), nxt, {"sample_csv": path, "sidecar": side_path},
-                  by_class=(side.get("condition") or {}).get("by") == "map class", summary=
-                  {"design": d, "n_labelled": len(side["indices"]), "n_population": side["n_population"],
+                  class_names=cli.class_names(side), summary=
+                  # the class design by its name: summary.design said "condition" (the bug hunt of 2026-10-25)
+                  {"design": "class" if cli.class_names(side) is not None else d, "n_labelled": len(side["indices"]),
+                   "n_population": side["n_population"],
                    "per_condition": per, "seed": side.get("seed"),
                    **({"anchor": side.get("anchor"), "first_budget": side.get("first_budget")} if d == "sequential"
                       else {}), **({"target": side["target"]} if side.get("target") else {})})
@@ -1164,6 +1197,8 @@ def estimate(
                 f"class {c} too {v.split()[-1]}" for c, v in drawn.items()) + " (each against its exact interval in "
                 "summary.per_class; a large class can be flagged for a gap of a few points).")
         summ["overall_accuracy"] = oa
+        if r.get("overall_accuracy_normal_theory") is not None:       # the class design's, Olofsson's form
+            summ["overall_accuracy_normal_theory"] = r["overall_accuracy_normal_theory"]
         # under a random sample the exact intervals and the drawn flag (exp115, 1.14.0) go with the table
         summ["per_class"] = {c: {**{k: row.get(k) for k in ("user_accuracy", "producer_accuracy", "reference_share",
                                                             "map_share")},
@@ -1189,7 +1224,10 @@ def estimate(
     limits += _warnings(_tagged(printed, "warning")) + _warnings([r.get("per_class_warning")]) + _warnings(class_warnings)
     scope = r.get("scope")
     # the note on conditions outside the whole-map interval is said in the conclusion; once is enough
-    outside = cli._outside_note(r)[len("note: "):] if r.get("outside_condition_intervals") else None
+    # compared as the command printed it, in the class design's words where it has them: the unworded note never
+    # matched, and the class design's said it twice (the second review of 1.17.2)
+    outside = (cli.class_wording(r)(cli._outside_note(r))[len("note: "):] if r.get("outside_condition_intervals")
+               else None)
     limits += _notes([r.get("per_class_note"), r.get("condition_note"),
                       MCP_SCOPE["estimate"] if scope == est.SCOPE_ESTIMATE else scope]
                      + [t for t in _tagged(printed, "note") if t != outside])
@@ -1228,7 +1266,8 @@ def estimate(
                                                ("no reviewer rate, the labels taken as right", stated)) if applies]
             nxt += (" With a reference_class column (the class seen in each window)"
                     + "".join(f", {said}" for said in need) + ", per_class=true gives each class's accuracy.")
-    return _reply(" ".join(said), _join(limits), nxt, {"estimate": out}, summ, by_class=_sidecar_by_class(path))
+    return _reply(" ".join(said), _join(limits), nxt, {"estimate": out}, summ, class_names=_sidecar_class_names(path),
+                  paths=[path])
 
 
 def _which_map(r, out):
@@ -1332,7 +1371,7 @@ def certify(
         certified = r.get("certified_share_of_map") is not None
     elif r["coverage"] is not None and r.get("rule") == "sequential":
         said = [f"Taken together, the {100 * r['coverage']:.0f}% most confident windows ({r['n_zone']} of "
-                f"{r['n_population']}, confidence >= {r['threshold']:.4f}) are wrong at most {a:g}% of the time. The "
+                f"{r['n_population']}, confidence >= {r.get('edge') or format(r['threshold'], '.4f')}) are wrong at most {a:g}% of the time. The "
                 "rate holds for them as a group, not for each window, and outside them nothing is certified. This "
                 f"statement fails on at most {d:g}% of samples like this one however often certify is run on it as "
                 f"labels are added (delta, which can be set lower; sequential rule, from the anchor zone, "
@@ -1342,7 +1381,7 @@ def certify(
         # "are wrong at most 5% of the time" was read as a promise for each window, and delta as fixed (the agent
         # test of 2 October 2026)
         said = [f"Taken together, the {100 * r['coverage']:.0f}% most confident windows ({r['n_zone']} of "
-                f"{r['n_population']}, confidence >= {r['threshold']:.4f}) are wrong at most {a:g}% of the time. The "
+                f"{r['n_population']}, confidence >= {r.get('edge') or format(r['threshold'], '.4f')}) are wrong at most {a:g}% of the time. The "
                 "rate holds for them as a group, not for each window, and outside them nothing is certified. This "
                 f"statement fails on at most {d:g}% of samples like this one (delta, chosen before the labels were read; "
                 f"{r['rule']} rule; the exact upper bound on this zone's error rate is "
@@ -1388,8 +1427,12 @@ def certify(
     if r.get("by_condition"):
         nxt = _condition_need(r, a / 100, d / 100)
         if certified:
-            nxt = ("The mask is a boolean array on the window grid. Outside it, each condition's own review set, from "
-                   "assess with the condition layer, says which windows to check first."
+            # the class design has no layer to give assess: its classes are the map's own (the bug hunt of 2026-10-25)
+            nxt = ("The mask is a boolean array on the window grid. Outside it, "
+                   + ("the review sets of assess say which windows to check first."
+                      if r.get("condition_by") == "map class" else
+                      "each condition's own review set, from assess with the condition layer, says which windows to "
+                      "check first.")
                    + (" " + nxt if any(e.get("coverage") is None for e in r["per_condition"].values()) else ""))
     elif r.get("rule") == "sequential":
         nxt = (f"{r['n_labelled']} of the {r.get('n_drawn', r['n_labelled'])} windows drawn are labelled. Label more "
@@ -1411,7 +1454,8 @@ def certify(
                + "A larger random sample (sample with design \"random\" and a larger budget, labelled in full) can "
                "certify more. " + _decide.certificate_second_look(
                    d / 100, target_rule or int(r["n_labelled"]) >= int(r["min_labels_to_certify"])))
-    return _reply(" ".join(said), _join(limits), nxt, files, summ, by_class=_sidecar_by_class(path))
+    return _reply(" ".join(said), _join(limits), nxt, files, summ, class_names=_sidecar_class_names(path),
+                  paths=[path])
 
 
 def _condition_need(r, alpha, delta):
@@ -1445,6 +1489,7 @@ def decide(
     = None,
 ) -> dict[str, Any]:
     path = _input(result_json, "result_json")
+    given = None
     try:
         given = _read_json(path)
         audit = given.get("design") == "audit" and isinstance(given.get("per_class"), dict)
@@ -1494,10 +1539,13 @@ def decide(
     # estimate's per-condition and per-class intervals are each 95% on their own. One sentence said the latter of
     # both (2026-10-06), against the zone's own note and the certify reply.
     if rkind == "estimate":
-        joint = any(a.get("exact") and q == "producer_accuracy_above" for q, a in r["answers"].items())
+        # every key carries its threshold ("producer_accuracy_above=0.9"), so the name alone never matched and the
+        # clause never fired, beside a conclusion that said the producer's accuracies hold together (the review of
+        # 1.17.2; since 1.14.0)
+        joint = any(a.get("exact") and q.split("=")[0] == "producer_accuracy_above" for q, a in r["answers"].items())
         limits += (" Answers per class or per condition each rest on their own interval, and the intervals do not "
-                   "hold jointly" + (", except the producer's accuracies under a random sample, whose exact intervals "
-                                     "hold together at 95%." if joint else "."))
+                   "hold jointly" + (", except the producer's accuracies under a random sample or the class design, "
+                                     "whose exact intervals hold together at 95%." if joint else "."))
     elif rkind == "zone" and any(a.get("per_condition") for a in r["answers"].values()):
         delta = next(a["evidence"].get("delta") for a in r["answers"].values() if a.get("per_condition"))
         limits += (" The conditions' certificates hold together: delta is split over the conditions tested, so all "
@@ -1572,7 +1620,9 @@ def decide(
             "per_class": {q: {c: {k: row.get(k) for k in ("answer", "low", "high", "warning")}
                               for c, row in a["per_class"].items()}
                           for q, a in r["answers"].items() if a.get("per_class")} or None}
-    return _reply(" ".join(said), limits, nxt, {"decisions": out}, summ)
+    # a class-design result in its own words, as decide words its answers (the review of 1.17.2)
+    return _reply(" ".join(said), limits, nxt, {"decisions": out}, summ,
+                  class_names=cli.result_class_names(given, path) if isinstance(given, dict) else None, paths=[path])
 
 
 def plan(
@@ -1653,6 +1703,13 @@ def plan(
            "except for certify on a sequential sample); what the plan gives is the chance of a useful answer, which "
            "for certify can fall at the budgets at which a smaller zone becomes testable, until more labels restore "
            "it.")
+    z = plans.get("zone") or {}
+    if (z.get("bonferroni") or {}).get("labels") is not None and (z.get("prefix_even") or {}).get("labels") is None:
+        # as the command line's run line (the review of 1.17.2): the default prefix rule did not reach the
+        # probability, so the Bonferroni budget holds only with that rule fixed before labelling
+        nxt += (" For the zone, only the Bonferroni rule reaches the probability at the budget planned: draw that "
+                "sample with seed_from_map=true, alpha and rule=\"bonferroni\", so certify keeps to that rule; under "
+                "the default prefix rule the same budget can fall far short.")
     return _reply(" ".join(said), limits, nxt, {"plan": out} if out_dir is not None else {}, summ)
 
 

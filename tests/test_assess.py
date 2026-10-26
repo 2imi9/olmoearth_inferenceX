@@ -364,8 +364,9 @@ def test_without_a_condition_only_scope_is_added():
     """Against the summaries generated at 725dffa, before the layer was built: byte for byte once `scope` is taken
     out, and `scope` is SCOPE_ASSESS, outside the warnings. The deliberate changes are the multi-class logit
     warning of api_prediction_logits3_margin and the probability warning of the two probability summaries, listed
-    with their old and new texts in golden/condition_1_3_1/changes.py; every other byte is 1.3.1's, but for the last
-    digits of a float where numpy builds differ."""
+    with their old and new texts in golden/condition_1_3_1/changes.py, and api_prediction_scene's share of the errors
+    captured where the reference finds none, null since 1.17.2 (changes.EDITS); every other byte is 1.3.1's, but for
+    the last digits of a float where numpy builds differ."""
     calls = _golden_calls()
     changes = _golden_changes()
     assert sorted(calls) == json.load(open(os.path.join(GOLDEN, "manifest.json")))["api"]

@@ -635,7 +635,7 @@ def test_sample_estimate_certify_give_the_readme_numbers(qs):
     s = out["summary"]
     assert (s["coverage"], s["n_zone"], s["n_population"]) == (0.9, 3686, 4096)
     assert out["conclusion"].startswith("Taken together, the 90% most confident windows (3686 of 4096, confidence >= "
-                                        "0.6662) are wrong at most 5% of the time. The rate holds for them as a group, "
+                                        "0.6661) are wrong at most 5% of the time. The rate holds for them as a group, "
                                         "not for each window, and outside them nothing is certified.")
     assert "delta, chosen before the labels were read" in out["conclusion"]
     assert np.load(out["files"]["zone_mask"]).sum() == 3686

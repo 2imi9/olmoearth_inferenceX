@@ -855,13 +855,19 @@ def test_existing_outputs_are_byte_identical_to_1_3_1(tmp_path):
     - the instruction sample prints for the reviewer, which now offers ? for a window that cannot be judged: a stretch
       of the first line of the seven sample outputs;
     - the zone JSONs' `level_cut` key, added with the ramp option (exp96): it is "standard", the cut every 1.3.1 output
-      was made with, and is taken out with `scope`;
+      was made with, and is taken out with `scope`; and their `edge` (1.17.2), the threshold as printed, which is
+      taken out too once it is checked to be at most the threshold;
     - the per-class table of the three random samples, rewritten whole in 1.14.0 (exact intervals and the drawn flag,
       exp115): changes.REGENERATED names the six files and holds their new bytes;
     - `written_by` (1.14.1), the last key of every result JSON the command line writes (here assessments, sample
       sidecars, estimates and zones; not explanation.json): the package, its version and the command;
       changes.STAMP names it, and it is taken out before the comparison, once the file is checked to be the dump
-      of what it parses to, so the rest still compares byte for byte."""
+      of what it parses to, so the rest still compares byte for byte;
+    - the share of the errors a budget captures where the reference finds none (1.17.2): null, not 0.0, in
+      assess_scene's assessment and the API summary api_prediction_scene, and assess's terminal line, which now says
+      how many windows a partial reference grades (assess_scene, assess_logits3); and the zone's edge as certify prints
+      it, now never above the threshold (sample_random certify_delta): changes.EDITS, each stretch written out for its
+      one file."""
     from oe_inferencex.assess import SCOPE_ASSESS
     from oe_inferencex.estimate import SCOPE_CERTIFY, SCOPE_ESTIMATE
     gen = _golden_module()
@@ -892,6 +898,11 @@ def test_existing_outputs_are_byte_identical_to_1_3_1(tmp_path):
     regen = changes.REGENERATED
     assert len(regen["files"]) == len(set(regen["files"])) == 6 and set(regen["files"]) <= set(golden["files"])
     assert not set(regen["files"]) & set(listed) and not set(regen["files"]) & set(fill)
+    # the stretches edited on purpose (1.17.2: a capture of no error is undefined, a partial reference is said, the
+    # zone's edge), each in one golden file, none of them a regenerated file
+    edited = [ed["file"] for ed in changes.EDITS]
+    assert len(edited) == len(set(edited)) == 5 and set(edited) <= set(golden["files"])
+    assert not set(edited) & set(regen["files"])
     rdir = os.path.join(GOLDEN, regen["directory"])
     assert sorted(os.listdir(rdir)) == sorted(regen["files"])
     note = getattr(importlib.import_module(regen["constant"][0]), regen["constant"][1])
@@ -957,6 +968,10 @@ def test_existing_outputs_are_byte_identical_to_1_3_1(tmp_path):
         assert got.pop("scope") == scope, name
         if scope == SCOPE_CERTIFY:
             assert got.pop("level_cut") == "standard", name
+            # the zone's edge as printed (1.17.2), beside the threshold it never exceeds; a zone not certified has none
+            edge = got.pop("edge", None)
+            assert (edge is None) == (got["threshold"] is None), name
+            assert edge is None or float(edge) <= got["threshold"], name
         # the golden JSON reads back to itself, so equal bytes after the dump mean equal bytes but for `scope`
         assert (json.dumps(json.loads(want), indent=1) + ("\n" if name.startswith("api_") else "")).encode() == want, name
         if (json.dumps(got, indent=1) + ("\n" if name.startswith("api_") else "")).encode() != want:
@@ -1093,7 +1108,7 @@ def test_certify_by_condition_writes_the_union_mask_and_removes_a_stale_one(tmp_
         line = next(ln for ln in printed if ln.startswith(f"  {name}: "))
         if e["coverage"] is not None:
             assert line == (f"  {name}: the {100 * e['coverage']:.0f}% most confident windows of this condition "
-                            f"({e['n_zone']} of {e['n_population']}, margin >= {e['threshold']:.4f}) are wrong at most "
+                            f"({e['n_zone']} of {e['n_population']}, margin >= {e['edge']}) are wrong at most "
                             "30% of the time")
     assert printed[-3] == (f"together the certified windows are {100 * z['certified_share_of_map']:.1f}% of the map "
                            f"(mask {tmp_path / 'r_zone.npy'}); outside them nothing is certified")
