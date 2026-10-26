@@ -47,12 +47,18 @@ K_MIX = 12            # values of c in the mixture
 SPAN = 10.0           # c runs geometrically from c_lo (every stratum at variance 1/4) to SPAN * c_lo
 PURE_GAMMA = 0.1      # the pure-stratum rule spends this share of alpha on the mixed strata (0.005 at alpha 0.05)
 # The dynamic programme's work for one stratum is about K_MIX * n * (k1 + 1) * (k2 + 1) for its two smaller counts;
-# above this it would run for many minutes, and the stratum is refused rather than left running.
+# above this it would run for many minutes, and the interval is left uncomputed rather than left running.
 MAX_WORK = 5e10
 
 METHOD_LINEAR = "betting"
 METHOD_BOX = "box of two betting intervals"
 METHOD_PURE = "pure-stratum rule"
+
+
+class TooLarge(ValueError):
+    """A stratum too large for the exact average over orders: the interval that needs it is not computed, and the
+    other numbers of a grading still are (the review of 26 October 2026: one refusal ended the whole run, even its
+    overall accuracy)."""
 
 
 def _logsumexp(x):
@@ -85,9 +91,11 @@ def _stratum_logavg(counts, vals, lam0, N):
         cen = np.minimum((0.5 + S) / (t + 1), KAPPA / lt)
         tail = S / (N - t) if finite else 0.0
         return (np.log1p(lt * (v[0] - cen)) + lt * (cen + tail)).sum(axis=1)
-    if K * n * (k1 + 1) * (k2 + 1) > MAX_WORK:
-        raise ValueError(f"a stratum of {n} labels with {k1} and {k2} in its two smaller values is too large for the "
-                         f"exact average over orders; split it into smaller strata of the design")
+    work = K * n * (k1 + 1) * (k2 + 1)
+    if work > MAX_WORK:
+        raise TooLarge(f"a stratum of {n} labels with {k1} and {k2} in its two smaller values is too large for the "
+                       f"exact average over the orders of its labels (about {work:.1e} steps); this interval is not "
+                       f"computed")
     s1 = np.arange(k1 + 1, dtype=float).reshape(1, -1, 1)
     s2 = np.arange(k2 + 1, dtype=float).reshape(1, 1, -1)
     L = np.full((K, k1 + 1, k2 + 1), -np.inf)
@@ -251,12 +259,17 @@ def linear(design, x_low, x_high=None, alpha=0.05, scale=1.0, shift=0.0):
     e_lo, v_lo = normal_linear(design, x_low)
     e_hi, v_hi = (e_lo, v_lo) if x_high is None else normal_linear(design, x_high)
     e_hi += design.W_unsampled
-    lo, hi = betting_interval(design, x_low, x_high, alpha)
     z = _z(alpha)
     T = lambda v: scale * v + shift
     exact = (x_high is None or np.array_equal(x_low, x_high)) and design.W_unsampled == 0
-    return {"estimate": T(e_lo) if exact else [T(e_lo), T(e_hi)], "interval": [T(lo), T(hi)],
-            "normal_theory": [T(e_lo - z * math.sqrt(v_lo)), T(e_hi + z * math.sqrt(v_hi))], "method": METHOD_LINEAR}
+    out = {"estimate": T(e_lo) if exact else [T(e_lo), T(e_hi)],
+           "normal_theory": [T(e_lo - z * math.sqrt(v_lo)), T(e_hi + z * math.sqrt(v_hi))], "method": METHOD_LINEAR}
+    try:
+        lo, hi = betting_interval(design, x_low, x_high, alpha)
+        out["interval"] = [T(lo), T(hi)]
+    except TooLarge as exc:
+        out.update({"interval": None, "not_computed": str(exc)})
+    return out
 
 
 def _z(alpha):
@@ -323,8 +336,12 @@ def ratio(design, y_min, w_max, y_max=None, w_min=None, alpha=0.05, box=True):
     out["normal_theory"] = [R_lo - z * math.sqrt(v_lo or 0.0), R_hi + z * math.sqrt(v_hi or 0.0)]
     if not box:
         return out
-    ly, uy = betting_interval(design, y_min, y_max, alpha / 2)
-    lw, uw = betting_interval(design, w_min, w_max, alpha / 2)
+    try:
+        ly, uy = betting_interval(design, y_min, y_max, alpha / 2)
+        lw, uw = betting_interval(design, w_min, w_max, alpha / 2)
+    except TooLarge as exc:
+        out.update({"interval": None, "not_computed": str(exc)})
+        return out
     lo = ly / (ly + uw) if ly + uw > 0 else 0.0
     hi = uy / (uy + lw) if uy + lw > 0 else 1.0
     out["interval"] = [float(max(0.0, lo)), float(min(1.0, hi))]

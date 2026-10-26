@@ -1,5 +1,35 @@
 # Changelog
 
+## 1.18.0 (unreleased)
+
+- **`grade`: an agency's stratified reference sample, graded with intervals that hold.** The 1.17.0 raters found no
+  route to grade an existing agency sample with its inclusion probabilities. `grade` reads the published points (each
+  one's stratum, reference label, optional alternate label and the class each map gives it, with a weight column or a
+  file of stratum sizes, in units or areas) and returns what the agency reports: overall accuracy, each class's user's
+  and producer's accuracy and share of the reference, and with two maps the difference of their accuracies on
+  the same points, each with an interval valid at any sample size, with the agency's
+  normal-theory interval (Stehman 2014, Olofsson et al. 2014) beside it, nominal; and the error matrix as estimated
+  shares. Linear quantities take a stratified
+  betting interval (each stratum's e-value averaged exactly over the orders of its labels; the product over strata
+  depends on the means only through their weighted total, so no union bound over strata); ratios the box of two such
+  intervals; a user's accuracy whose class fills one declared pure stratum (`--pure`, an agency's no-change strata) the
+  pure-stratum rule, exact hypergeometric intervals joined by a union bound. Unknown values (no-data, a missing
+  reference label, a stratum with no point) are bounded, never dropped.
+  On NLCD 2016's assessment (Wickham et al. 2021, set B: 4,629 points in 21 strata) grade
+  reproduces the published overall accuracies (86.4% by the primary-or-alternate rule, 72.1% by the primary label,
+  86.5% for 2011, 79.0% at level I), each with an interval 1.6 times the normal one's width (86.4%: 84.1 to 88.4);
+  on GFC2020's (21,612 points in 149 strata given as areas) GFC2020 V2 is 91.5% accurate (90.8 to 92.2; published
+  as 91%). Every interval equals the design study's, whose scripts read the points their own way (the interval code is a
+  port of theirs; aicr job 1532668). NLCD's
+  lead over LCMAP at eight classes, +1.3 points, is significant by normal theory (0.4 to 2.3) and not by the valid
+  interval (-0.2 to 2.9).
+  The design study behind the choice (three designs and a judge; exact enumerations, widths on NLCD and GFC2020 and a
+  simulation at their shapes, all on the cluster) is in the research record. New modules `oe_inferencex.agency` and
+  `oe_inferencex.stratified`; tests/test_agency.py checks the dynamic programme against every order, the e-value at the
+  truth, and by enumerating every population and sample of small designs the coverage of the linear interval (two-
+  and three-valued, and read as a point frame with the deflation), the box (with a stratum left unsampled), the
+  pure-stratum rule and the bounds on unknown values; and Olofsson et al.'s worked example.
+
 ## 1.17.2 (2026-10-25)
 
 A bug hunt of 1.17.1 (six module groups, each finding reproduced by a second agent): 51 real findings, two of them

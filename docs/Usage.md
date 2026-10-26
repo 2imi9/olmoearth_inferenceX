@@ -1235,6 +1235,71 @@ confidence design, tiles and per-class intervals under designs other than random
 against a labels raster, which has no sampling error but is only as right as those labels. `trusted_share` is the
 zone's own size over the map, not the grid's rounded coverage.
 
+### grade
+
+`grade` reads the points of an agency's accuracy assessment, a stratified random sample with known stratum sizes, and
+returns what the agency reports. Each accuracy, share and difference comes with an interval valid at any sample size
+and the agency's own normal-theory interval beside it. The agency's design is taken as published: nothing here draws
+a sample.
+
+- **Overall accuracy** of each map, and with two maps (`--map` twice) the difference of their accuracies on the same
+  points.
+- **Per class:** user's and producer's accuracy, and the class's share of the reference (its area, as a share).
+- **The error matrix** as estimated shares of the population, without intervals.
+
+The input is a CSV with one row per point: its stratum, its reference label and the class each map gives it. The
+stratum sizes come either from a weight column (`--weight`, the stratum's size over its labels, as NLCD publishes it)
+or from a second CSV (`--strata`: the stratum in the first column, its size in the second). Sizes count units (pixels)
+drawn without replacement, or with `--sizes area` they are areas: the points then lie at random within them, and
+`--unit-area` gives the unit drawn when it is a pixel. `--alternate` names a second reference label: a map class equal
+to either label is right, as NLCD grades. On NLCD 2016's assessment (Wickham et al. 2021, set B, 4,629 points in 21
+strata):
+
+```console
+$ oe-inferencex grade nlcdB2016.csv --stratum stratum --weight weight --reference ref --alternate alt --map nlcd --pure 1=11 2=21 3=22 4=23 5=24 6=31 7=41 8=42 9=43 10=52 11=71 12=81 13=82 14=90 15=95
+4629 points in 21 strata (units drawn without replacement); a point is right when the map's class equals its reference label or its alternate label; the reference class is the map's class where it equals the alternate, else the reference label
+overall accuracy: estimate [95% interval, valid at any sample size] (normal theory, nominal)
+  nlcd: 86.39% [84.11, 88.40] (normal 85.07, 87.71)
+nlcd per class: user's accuracy | producer's accuracy | share of the reference
+  11: 98.9% [89.8, 99.9] (normal 97.5, 100.3)* | 96.2% [68.5, 100.0] (normal 92.9, 99.6) | 1.78% [1.40, 2.25] (normal 1.70, 1.85)
+  21: 87.4% [79.4, 91.8] (normal 83.4, 91.5)* | 60.2% [43.6, 77.0] (normal 53.2, 67.1) | 4.33% [3.57, 5.33] (normal 3.82, 4.84)
+  22: 74.3% [63.3, 81.4] (normal 69.0, 79.7)* | 69.4% [37.0, 100.0] (normal 58.2, 80.7) | 1.64% [1.15, 2.30] (normal 1.36, 1.91)
+  23: 76.7% [58.8, 86.3] (normal 70.4, 83.0)* | 82.0% [18.8, 100.0] (normal 74.4, 89.7) | 0.67% [0.30, 1.15] (normal 0.60, 0.75)
+  24: 74.9% [46.4, 87.1] (normal 69.7, 80.2)* | 76.1% [0.0, 100.0] (normal 63.7, 88.6) | 0.26% [0.00, 0.73] (normal 0.21, 0.31)
+  31: 76.8% [59.8, 86.7] (normal 68.3, 85.3)* | 73.5% [27.1, 100.0] (normal 56.7, 90.2) | 1.08% [0.61, 1.75] (normal 0.82, 1.34)
+  41: 89.3% [83.4, 93.3] (normal 85.6, 93.1)* | 79.3% [69.7, 87.0] (normal 75.3, 83.3) | 10.97% [9.92, 12.14] (normal 10.32, 11.62)
+  42: 91.8% [86.5, 95.2] (normal 88.5, 95.0)* | 83.4% [75.0, 90.0] (normal 79.9, 87.0) | 12.98% [11.89, 14.17] (normal 12.31, 13.65)
+  43: 74.0% [63.1, 82.4] (normal 67.0, 80.9)* | 77.9% [58.4, 94.1] (normal 70.8, 85.0) | 3.59% [2.90, 4.37] (normal 3.18, 4.00)
+  52: 86.7% [82.1, 90.5] (normal 83.6, 89.8)* | 94.1% [89.4, 97.3] (normal 92.2, 95.9) | 21.00% [19.58, 22.29] (normal 20.18, 21.81)
+  71: 90.1% [83.8, 94.4] (normal 86.4, 93.8)* | 91.3% [84.0, 96.3] (normal 88.4, 94.2) | 14.24% [12.99, 15.40] (normal 13.54, 14.94)
+  81: 76.5% [66.4, 84.2] (normal 69.0, 83.9)* | 75.4% [58.6, 88.1] (normal 69.0, 81.9) | 6.59% [5.42, 7.88] (normal 5.86, 7.32)
+  82: 93.0% [88.7, 95.9] (normal 90.2, 95.9)* | 93.5% [87.4, 97.8] (normal 91.0, 96.0) | 16.67% [15.54, 17.79] (normal 16.02, 17.32)
+  90: 61.4% [51.2, 70.5] (normal 53.8, 68.9)* | 96.3% [75.8, 100.0] (normal 93.3, 99.3) | 2.85% [2.20, 3.50] (normal 2.50, 3.20)
+  95: 68.0% [52.7, 79.7] (normal 60.8, 75.2)* | 75.2% [37.7, 100.0] (normal 63.7, 86.8) | 1.35% [0.89, 1.94] (normal 1.12, 1.59)
+  * user's accuracy by the pure-stratum rule
+note: Each interval holds at 95% on its own, at every sample size; the intervals do not hold jointly. The normal-theory interval beside each one is the agency's (Stehman 2014, Olofsson et al. 2014): nominal, and in a small class or a stratum of few labels it can cover far less than it says.
+note: User's accuracy of class(es) 11, 21, 22, 23, 24, 31, 41, 42, 43, 52, 71, 81, 82, 90, 95 of nlcd uses the pure-stratum rule: each class fills one declared stratum (every unit there mapped as it), and the interval is a union bound of exact hypergeometric intervals, at 0.1 of alpha for the strata declared pure for no class.
+```
+
+How each interval is made (`oe_inferencex.stratified`):
+
+| Number | Interval | Cost against normal theory |
+|---|---|---|
+| Overall accuracy, a class's share, the difference of two maps | a betting confidence interval for a stratified sample without replacement: each stratum's e-value, averaged exactly over the orders of its labels, depends on the stratum means only through the weighted total, so the strata need no union bound | 1.60 to 1.64 times as wide on every overall accuracy and difference of NLCD 2016 and GFC2020; more for a small class's share (NLCD 24's, 0.26%: 0 to 0.73%, normal theory 0.21 to 0.31%) |
+| User's and producer's accuracy | the box of two betting intervals at alpha/2, one for the units that count for the class and one for those in its denominator that do not | about 2 times (1.9 to 2.4) for a large class: GFC2020's two classes, NLCD's producer's accuracies of 21, 41, 42, 52, 71 and 82. For a class with few labels it can say little or nothing: NLCD 24's producer's accuracy, 0.3% of the reference, is 0 to 100% |
+| User's accuracy of a class with one declared pure stratum (`--pure STRATUM=CLASS`) | the pure-stratum rule: exact hypergeometric intervals for that stratum and for each stratum declared pure for no class, joined by a union bound | 1.2 to 1.7 times for 11 of NLCD's 15 classes, 1.9 to 3.9 for the other four (the smallest, or nearly always right); NLCD 21: 12 points, where the box gives 30 and normal theory 8 |
+
+`--pure` declares strata every unit of which the first `--map` labels the class: an agency's no-change strata, built
+from the map itself. A declared stratum with a point mapped otherwise is refused. The declaration must come from the
+design, not from the points, and it holds for the first map only.
+
+Unknown values are bounded, never dropped: a map's no-data (`--nodata`, empty and NA cells), a point without a
+reference label, and a stratum the sizes name but no point falls in. Each lower end counts them against the map and
+each upper end for it, so the estimate becomes a range. `--sampled-strata-only` instead leaves the empty strata out of
+the population, as some agencies report, and says so. Each interval holds at 95% (`--alpha`) on its own; the intervals
+do not hold jointly. The normal-theory intervals are those of Stehman (2014) and Olofsson et al. (2014), nominal: in a
+small class or a stratum of few labels they can cover far less than they say. `--out grade.json` writes every number.
+
 ## Use from an agent (MCP)
 
 New in 1.4.0. `oe-inferencex mcp` starts a local MCP server on stdio, so that an agent can run

@@ -3,10 +3,11 @@
 The 1.17.0 raters found "no route to grade an existing agency stratified sample with its inclusion probabilities". An
 agency's accuracy assessment publishes its points: each one's stratum, its reference label (NLCD also an alternate
 label), the map's class at it, and either its weight (the stratum's size over its labels) or the strata's sizes
-beside. `grade` reads them and returns what the agency reports (overall accuracy; each class's user's and producer's
-accuracy and its share of the reference; the error matrix as shares of the population; with two maps, the difference
-of their overall accuracies on the same points), each with an interval valid at every sample size (stratified.py)
-and the normal-theory interval of Stehman (2014) and Olofsson et al. (2014) beside it, which is nominal.
+beside. `grade` reads them and returns what the agency reports: overall accuracy, each class's user's and producer's
+accuracy and its share of the reference, and with two maps the difference of their overall accuracies on the same
+points, each with an interval valid at every sample size (stratified.py) and the normal-theory interval of Stehman
+(2014) and Olofsson et al. (2014) beside it, which is nominal; and the error matrix as estimated shares of the
+population, without intervals.
 
 A point's class is right when the map's class equals its reference label or, with an alternate label, either label
 (NLCD's rule; the reference class is then the map's class where it equals the alternate, else the primary label).
@@ -18,10 +19,11 @@ Class codes are read as text; a code that is a whole number is normalised ("11.0
 different tools agree. Points read as written: the design is the agency's, and nothing here draws a sample."""
 import csv
 import math
+import re
 
 import numpy as np
 
-from .stratified import METHOD_PURE, PURE_GAMMA, Design, linear, pure_stratum_ratio, ratio
+from .stratified import METHOD_PURE, PURE_GAMMA, Design, _z, linear, pure_stratum_ratio, ratio
 
 UNKNOWN_CODES = ("", "na", "nan", "none", "null")
 WEIGHT_TOLERANCE = 1e-6           # relative spread of the weights within a stratum: above it, not a stratified SRS
@@ -29,9 +31,15 @@ _OTHER = object()                 # a completion of an unknown value: a class ot
 
 INTERVAL_NOTE = ("Each interval holds at {conf:g}% on its own, at every sample size; the intervals do not hold "
                  "jointly. The normal-theory interval beside each one is the agency's (Stehman 2014, Olofsson et al. "
-                 "2014): nominal, and in a small class or a stratum of few labels it can cover far less than it says.")
-UNKNOWN_NOTE = ("{k} point(s) have an unknown value ({what}). They are bounded, not dropped: each lower end counts them "
-                "against the map and each upper end for it, so the estimate is a range.")
+                 "2014): nominal, and in a small class or a stratum of few labels it can cover far less than it says. "
+                 "Its ends are the estimate plus or minus {z:.3g} standard errors, unclipped, as agencies publish them, "
+                 "so they can pass 0 or 100%.")
+UNKNOWN_NOTE = ("{k} point(s) have an unknown value (unknown values: {what}). They are bounded, not dropped: each lower "
+                "end counts them against the map and each upper end for it, so the estimate is a range.")
+NOT_COMPUTED_NOTE = ("{k} interval(s) are not computed (null in the JSON): a stratum is too large for the exact average "
+                     "over the orders of its labels. The estimates and the normal-theory intervals are given.")
+PURE_PARTLY_NOTE = ("The pure-stratum rule was not used for class(es) {classes} of {map}, which have more than one "
+                    "declared pure stratum; their user's accuracies take the box interval.")
 UNSAMPLED_NOTE = ("{k} stratum(s) hold no label: {names}, {share:.4g} of the population. Their values are bounded "
                   "(0 at each lower end, their whole share at each upper end), so every estimate is a range.")
 SAMPLED_ONLY_NOTE = ("The population is restricted to the {H} sampled strata, as asked: {k} stratum(s) with no label "
@@ -48,17 +56,54 @@ PRIMARY_RULE = "a point is right when the map's class equals its reference label
 
 
 def _code(value, unknown):
-    """A class or stratum code as text, a whole number normalised ('11.0' -> '11'); None when unknown."""
+    """A class or stratum code as text, a whole number normalised ('11.0' -> '11'); None when unknown. Whole numbers
+    written as digits are read exactly: through a float, two codes of 17 or more digits became one (the review of 26
+    October 2026)."""
     s = "" if value is None else str(value).strip()
     if s.lower() in UNKNOWN_CODES:
         return None
-    try:
-        f = float(s)
-        if math.isfinite(f) and f == int(f):
-            s = str(int(f))
-    except (ValueError, OverflowError):
-        pass
+    if re.fullmatch(r"[+-]?\d+(\.0*)?", s):
+        s = str(int(s.split(".")[0]))
+    else:
+        try:
+            f = float(s)
+            if math.isfinite(f) and f == int(f) and abs(f) < 2 ** 53:
+                s = str(int(f))
+        except (ValueError, OverflowError):
+            pass
     return None if s in unknown else s
+
+
+def _half_unit(text):
+    """Half a unit in the last place a number was written to ('2666.67' -> 0.005, '1.5e3' -> 50): the most its
+    printing can have moved it."""
+    m = re.fullmatch(r"\s*[+-]?\d*(?:\.(\d*))?(?:[eE]([+-]?\d+))?\s*", str(text))
+    if not m:
+        return 0.0
+    return 0.5 * 10.0 ** (int(m.group(2) or 0) - len(m.group(1) or ""))
+
+
+def _read_table(path):
+    """A CSV's rows as (line, dict), read as a spreadsheet shows them: a byte-order mark dropped (Excel's 'CSV
+    UTF-8'), the column names stripped, a short row padded with empty cells (unknown values), a blank row skipped; a
+    column named twice or unnamed refused (csv.DictReader keeps the last copy where a spreadsheet shows the first), and
+    a row longer than the header, as certificate.csv_rows reads a sample (the review of 26 October 2026)."""
+    with open(path, newline="", encoding="utf-8-sig") as f:
+        reader = csv.reader(f)
+        header = next(reader, None)
+        if header is None:
+            return [], []
+        header = [h.strip() for h in header]
+        if len(set(header)) != len(header) or not all(header):
+            raise ValueError(f"{path} names a column twice or leaves one unnamed: {', '.join(header)}")
+        rows = []
+        for line in reader:
+            if not line or all(not c.strip() for c in line):
+                continue
+            if len(line) > len(header):
+                raise ValueError(f"{path} line {reader.line_num}: more fields than the header's {len(header)} columns")
+            rows.append((reader.line_num, dict(zip(header, line + [""] * (len(header) - len(line))))))
+    return header, rows
 
 
 def _sort_key(code):
@@ -70,20 +115,23 @@ def _sort_key(code):
 
 def read_points(path, stratum, reference, maps, alternate=None, weight=None, nodata=()):
     """The labelled points of a CSV: their stratum, reference label, alternate label (optional), each map's class
-    (dict name -> list) and weight (optional). Codes in `nodata`, and empty or NA cells, are unknown (None)."""
+    (dict name -> list) and weight (optional, with `weight_half_unit`, half a unit in the last place each was written
+    to). Codes in `nodata`, and empty or NA cells, are unknown (None)."""
     unknown = {c for c in (_code(v, ()) for v in nodata) if c is not None}
-    with open(path, newline="") as f:
-        rows = list(csv.DictReader(f))
+    header, rows = _read_table(path)
     if not rows:
         raise ValueError(f"{path} holds no point")
-    cols = set(rows[0])
     for col in [stratum, reference, alternate, weight] + list(maps):
-        if col is not None and col not in cols:
-            raise ValueError(f"{path} has no column {col!r}; its columns are {', '.join(sorted(cols))}")
+        if col is not None and col not in header:
+            raise ValueError(f"{path} has no column {col!r}; its columns are {', '.join(header)}")
     if len(set(maps)) != len(maps):
         raise ValueError("each --map names a different column")
-    out = {"stratum": [], "reference": [], "alternate": [], "maps": {m: [] for m in maps}, "weight": []}
-    for i, r in enumerate(rows, start=2):
+    roles = [stratum, reference] + ([alternate] if alternate else []) + ([weight] if weight else [])
+    if set(maps) & set(roles) or len(set(roles)) != len(roles):
+        raise ValueError("the stratum, reference, alternate, weight and map columns must be different columns")
+    out = {"stratum": [], "reference": [], "alternate": [], "maps": {m: [] for m in maps}, "weight": [],
+           "weight_half_unit": []}
+    for i, r in rows:
         s = _code(r[stratum], ())
         if s is None:
             raise ValueError(f"{path} line {i}: no stratum")
@@ -100,15 +148,25 @@ def read_points(path, stratum, reference, maps, alternate=None, weight=None, nod
             if not (math.isfinite(w) and w > 0):
                 raise ValueError(f"{path} line {i}: weight {w} must be positive")
             out["weight"].append(w)
+            out["weight_half_unit"].append(_half_unit(r[weight]))
     return out
 
 
 def read_strata(path):
-    """Stratum sizes from a CSV whose first column is the stratum and second its size (a header row first)."""
-    with open(path, newline="") as f:
+    """Stratum sizes from a CSV whose first column is the stratum and second its size, after a header row. A first row
+    whose second cell is a number is refused: read as a header, it would drop a stratum, and with it the share of the
+    population its bounds stand for (the review of 26 October 2026)."""
+    with open(path, newline="", encoding="utf-8-sig") as f:
         rows = list(csv.reader(f))
     if len(rows) < 2 or len(rows[0]) < 2:
         raise ValueError(f"{path}: a header row, then one row per stratum: stratum, size")
+    try:
+        float(rows[0][1])
+    except ValueError:
+        pass
+    else:
+        raise ValueError(f"{path}: the first row ({', '.join(rows[0][:2])}) looks like a stratum, not a header; add a "
+                         f"header row (stratum,size)")
     sizes = {}
     for i, r in enumerate(rows[1:], start=2):
         if not r or all(not c.strip() for c in r):
@@ -147,9 +205,13 @@ def _frame(names, sizes, kind, unit_area):
     return sizes, np.full(sizes.size, math.inf), Nlo
 
 
-def design_from_weights(strata, weights, kind="units", unit_area=None):
+def design_from_weights(strata, weights, kind="units", unit_area=None, half_unit=None):
     """The design a point table with weights describes: a stratum's size is the sum of its points' weights (whole
-    units, rounded, or an area), which must be equal within the stratum (a stratified simple random sample)."""
+    units, or an area), which must be equal within the stratum (a stratified simple random sample). With whole units,
+    the sum is rounded only as far as the weights' printing can have moved it (`half_unit`, per weight: half a unit in
+    its last written place; without it, 1e-6 relative): weights that are areas, read as units, are refused rather than
+    rounded to a near-census (the review of 26 October 2026). Weights printed coarsely can leave a size a unit or two
+    off; that is all the printing says."""
     ids = sorted(set(strata), key=_sort_key)
     pos = {s: h for h, s in enumerate(ids)}
     hidx = np.array([pos[s] for s in strata])
@@ -161,7 +223,16 @@ def design_from_weights(strata, weights, kind="units", unit_area=None):
             raise ValueError(f"the weights differ within stratum {s} ({wh.min():g} to {wh.max():g}): not a "
                              f"stratified simple random sample, which this command grades")
     if kind == "units":
-        tot = np.round(tot)                     # weights printed to a few digits add up to a size near a whole number
+        if half_unit is None:
+            tol = np.maximum(1e-6 * tot, 1e-6)
+        else:
+            tol = np.bincount(hidx, weights=np.asarray(half_unit, float), minlength=len(ids)) + 1e-9 * tot
+        bad = np.flatnonzero(np.abs(tot - np.round(tot)) > tol)
+        if bad.size:
+            h = int(bad[0])
+            raise ValueError(f"stratum {ids[h]}: its weights add up to {tot[h]:.6g}, not a whole number of units as "
+                             f"written; give areas with --sizes area")
+        tot = np.round(tot)
     S, N, Nlo = _frame(ids, tot, kind, unit_area)
     return Design(hidx, S / S.sum(), N, Nlo, names=ids)
 
@@ -202,6 +273,20 @@ def _completions(m, r, alt, c):
     ms = [m] if m is not None else [v for v in (c, alt) if v is not None] + [_OTHER]
     rs = [r] if r is not None else [c, _OTHER]
     return [(a, b) for a in ms for b in rs]
+
+
+def _diff_bounds(ma, mb, r, alt):
+    """The least and greatest of right_a - right_b at a point, over the joint completions of its unknown values: two
+    maps that give an unknown reference the same class differ by 0 there, where each map's own bounds allowed -1 to 1
+    (the review of 26 October 2026). Completions: the values named at the point and three classes named nowhere."""
+    if ma is not None and mb is not None and r is not None:
+        d = float(_right(ma, r, alt)) - float(_right(mb, r, alt))
+        return d, d
+    cand = list(dict.fromkeys(v for v in (ma, mb, r, alt) if v is not None)) + [object(), object(), object()]
+    ds = [float(_right(a, q, alt)) - float(_right(b, q, alt))
+          for a in ([ma] if ma is not None else cand) for b in ([mb] if mb is not None else cand)
+          for q in ([r] if r is not None else cand)]
+    return min(ds), max(ds)
 
 
 def _oa_bounds(m, r, alt):
@@ -250,7 +335,7 @@ def grade(design, reference, maps, alternate=None, pure=None, alpha=0.05):
         if len(v) != P:
             raise ValueError(f"{k} has {len(v)} values; the design has {P} points")
     pure = dict(pure or {})
-    notes = [INTERVAL_NOTE.format(conf=100 * (1 - alpha))]
+    notes = [INTERVAL_NOTE.format(conf=100 * (1 - alpha), z=_z(alpha))]
     classes = _natural({c for c in reference if c is not None}
                        | {c for m in names for c in maps[m] if c is not None})
     out = {"points": P, "strata": design.H, "maps": names, "classes": classes, "alpha": alpha,
@@ -275,14 +360,15 @@ def grade(design, reference, maps, alternate=None, pure=None, alpha=0.05):
         out["overall_accuracy"][m] = _q(linear(design, b[:, 0], b[:, 1], alpha), b)
     for i, a in enumerate(names):
         for b in names[i + 1:]:
-            lo = (1.0 + oa_bounds[a][:, 0] - oa_bounds[b][:, 1]) / 2
-            hi = (1.0 + oa_bounds[a][:, 1] - oa_bounds[b][:, 0]) / 2
-            q = linear(design, lo, hi, alpha, scale=2.0, shift=-1.0)
+            d = np.array([_diff_bounds(maps[a][j], maps[b][j], reference[j], alternate[j]) for j in range(P)])
+            q = linear(design, (1.0 + d[:, 0]) / 2, (1.0 + d[:, 1]) / 2, alpha, scale=2.0, shift=-1.0)
             q["disagreeing_points"] = int(np.sum(np.array(maps[a], dtype=object) != np.array(maps[b], dtype=object)))
             out["differences"][f"{a} minus {b}"] = q
-    pure_use, pure_skip = _pure_plan(design, reference, maps[names[0]], pure, out["unknown"][names[0]], n_ref_unknown)
-    if pure and pure_skip:
+    pure_use, pure_skip, pure_many = _pure_plan(design, maps[names[0]], pure, out["unknown"][names[0]], n_ref_unknown)
+    if pure_skip:
         notes.append(PURE_SKIPPED_NOTE.format(map=names[0], why=pure_skip))
+    if pure_many:
+        notes.append(PURE_PARTLY_NOTE.format(classes=", ".join(pure_many), map=names[0]))
     for m in names:
         per, used = {}, []
         for c in classes:
@@ -316,9 +402,22 @@ def grade(design, reference, maps, alternate=None, pure=None, alpha=0.05):
             notes.append(PURE_NOTE.format(classes=", ".join(used), map=m, g=PURE_GAMMA))
     unk = [f"{k} {v}" for k, v in out["unknown"].items() if v]
     if unk:
-        notes.append(UNKNOWN_NOTE.format(k=sum(out["unknown"].values()), what=", ".join(unk)))
+        points = sum(reference[i] is None or any(maps[m][i] is None for m in names) for i in range(P))
+        notes.append(UNKNOWN_NOTE.format(k=points, what=", ".join(unk)))
+    skipped = sum(q.get("interval", 0) is None for q in _quantities(out))
+    if skipped:
+        notes.append(NOT_COMPUTED_NOTE.format(k=skipped))
     out["notes"] = notes
     return out
+
+
+def _quantities(res):
+    """Every number of a grading that carries an interval."""
+    yield from res["overall_accuracy"].values()
+    yield from res["differences"].values()
+    for per in res["per_class"].values():
+        for row in per.values():
+            yield from (row["user"], row["producer"], row["reference_share"])
 
 
 def linear_estimate(design, x):
@@ -332,11 +431,12 @@ def _q(q, bounds):
     return q
 
 
-def _pure_plan(design, reference, first_map, pure, map_unknown, ref_unknown):
-    """class -> the index of its one declared pure stratum, where the rule applies; and why it does not, if not. A
-    declaration contradicted by a labelled point (mapped otherwise, or unknown) is refused: it is false."""
+def _pure_plan(design, first_map, pure, map_unknown, ref_unknown):
+    """class -> the index of its one declared pure stratum, where the rule applies; why it applies to no class, if
+    so; and the classes it skips for having more than one declared pure stratum. A declaration contradicted by a
+    labelled point (mapped otherwise, or unknown) is refused: it is false."""
     if not pure:
-        return {}, None
+        return {}, None, []
     pos = {s: h for h, s in enumerate(design.names)}
     by_class = {}
     for s, c in pure.items():
@@ -357,15 +457,15 @@ def _pure_plan(design, reference, first_map, pure, map_unknown, ref_unknown):
     elif map_unknown or ref_unknown:
         why = "some values are unknown"
     if why:
-        return {}, why
+        return {}, why, []
     use = {c: hs[0] for c, hs in by_class.items() if len(hs) == 1}
-    many = sorted((c for c, hs in by_class.items() if len(hs) > 1), key=_sort_key)
-    return use, (f"class(es) {', '.join(many)} have more than one declared pure stratum" if many else None)
+    return use, None, sorted((c for c, hs in by_class.items() if len(hs) > 1), key=_sort_key)
 
 
 def _error_matrix(design, mapped, reference, alternate, classes):
     """The estimated share of the population in each (map class, reference class) cell, the reference class by the
-    rule in use; points with an unknown value in their own row or column."""
+    rule in use; points with an unknown value in their own row or column. Point estimates, without intervals. Strata
+    with no label are in no cell: the cells add up to 1 less `unsampled_share`."""
     labels = classes + ["unknown"]
     pos = {c: i for i, c in enumerate(classes)}
     k = len(labels)
@@ -378,4 +478,4 @@ def _error_matrix(design, mapped, reference, alternate, classes):
             M[pos.get(m, k - 1), pos.get(rs, k - 1)] += design.W[h] / idx.size
     keep = [i for i in range(k) if i < k - 1 or M[k - 1].any() or M[:, k - 1].any()]
     return {"rows_map_columns_reference": [labels[i] for i in keep],
-            "share": [[float(M[i, j]) for j in keep] for i in keep]}
+            "share": [[float(M[i, j]) for j in keep] for i in keep], "unsampled_share": design.W_unsampled}

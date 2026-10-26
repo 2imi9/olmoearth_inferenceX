@@ -201,6 +201,113 @@ def test_unknown_values_bounded_cover_every_population(alpha):
     assert worst >= 1 - alpha - 1e-12
 
 
+@pytest.mark.parametrize("Ns, ns, W", [((5, 4), (3, 2), (0.5, 0.5)), ((5, 4), (4, 3), (0.6, 0.4)),
+                                       ((6, 3), (3, 2), (0.5, 0.5))])
+@pytest.mark.parametrize("alpha", [0.1, 0.3])
+def test_point_frame_reading_with_the_deflation_covers_every_population(Ns, ns, W, alpha):
+    """An area frame drawn as units (--unit-area): the strata read as point frames (N inf) and deflated for at least
+    Nlo units, here exactly the N units each holds, drawn without replacement as the labels were."""
+    hidx = np.concatenate([np.full(n, h) for h, n in enumerate(ns)])
+    d = Design(hidx, W, [math.inf] * len(Ns), Nlo=[float(N) for N in Ns])
+    H = len(Ns)
+    ivs = {}
+    for ks in itertools.product(*[range(n + 1) for n in ns]):
+        ivs[ks] = betting_interval(d, values(d, [[1.0] * ks[h] + [0.0] * (ns[h] - ks[h]) for h in range(H)]),
+                                   alpha=alpha)
+    worst = 1.0
+    for Ms in itertools.product(*[range(N + 1) for N in Ns]):
+        theta = sum(W[h] * Ms[h] / Ns[h] for h in range(H))
+        cov = 0.0
+        for ks, (lo, hi) in ivs.items():
+            lp = sum(log_choose(Ms[h], ks[h]) + log_choose(Ns[h] - Ms[h], ns[h] - ks[h]) - log_choose(Ns[h], ns[h])
+                     for h in range(H))
+            if lp > -math.inf and lo - 1e-12 <= theta <= hi + 1e-12:
+                cov += math.exp(lp)
+        worst = min(worst, cov)
+    assert worst >= 1 - alpha - 1e-12
+
+
+def test_the_deflation_widens_the_interval_by_its_formula():
+    from oe_inferencex.stratified import _log_parts, _root_low, _strata, c_grid
+    ns, W = (30, 20), (0.7, 0.3)
+    hidx = np.concatenate([np.full(n, h) for h, n in enumerate(ns)])
+    x = np.array([1.0] * 18 + [0.0] * 12 + [1.0] * 10 + [0.0] * 10)
+    plain = Design(hidx, W, [math.inf, math.inf])
+    defl = Design(hidx, W, [math.inf, math.inf], Nlo=[60.0, 25.0])
+    lo_p, hi_p = betting_interval(plain, x)
+    lo_d, hi_d = betting_interval(defl, x)
+    assert 0 < lo_d < lo_p < hi_p < hi_d < 1                    # a sign slip in the deflation would narrow it
+    cs = c_grid(defl.W, defl.n, 0.05)
+    D = cs * (0.7 * 29 / (2 * (60 - 30 + 1)) + 0.3 * 19 / (2 * (25 - 20 + 1)))
+    A = _log_parts(plain, _strata(plain, x), cs, "low") - D
+    assert lo_d == pytest.approx(_root_low(A, cs, math.log(2 / 0.05), 1.0), abs=1e-12)
+
+
+@pytest.mark.parametrize("alpha", [0.1, 0.3])
+def test_three_valued_difference_covers_every_population(alpha):
+    """The difference of two maps' accuracies: each unit is 0, 1/2 or 1 (b right only, both or neither, a right
+    only), theta the weighted mean."""
+    Ns, ns, W = (4, 3), (2, 2), (0.6, 0.4)
+    d = design_of(ns, Ns, W)
+    ivs = {}
+    for ss in itertools.product(*[compositions(n) for n in ns]):
+        ivs[ss] = betting_interval(d, values(d, [[0.0] * s[0] + [0.5] * s[1] + [1.0] * s[2] for s in ss]), alpha=alpha)
+    worst = 1.0
+    for pops in itertools.product(*[compositions(N) for N in Ns]):
+        theta = sum(W[h] * (0.5 * pops[h][1] + pops[h][2]) / Ns[h] for h in range(2))
+        cov = 0.0
+        for ss, (lo, hi) in ivs.items():
+            lp = sum(sum(log_choose(pops[h][j], ss[h][j]) for j in range(3)) - log_choose(Ns[h], ns[h])
+                     for h in range(2))
+            if lp > -math.inf and lo - 1e-12 <= theta <= hi + 1e-12:
+                cov += math.exp(lp)
+        worst = min(worst, cov)
+    assert worst >= 1 - alpha - 1e-12
+
+
+@pytest.mark.parametrize("alpha", [0.1, 0.3])
+def test_box_ratio_with_an_unsampled_stratum_covers_every_population(alpha):
+    """Two sampled strata and a third of 3 units with no label, whose composition is anything: the box must cover
+    the ratio over all three."""
+    Ns, ns, Nu = (4, 3), (2, 2), 3
+    W = [N / (sum(Ns) + Nu) for N in Ns]
+    Wu = Nu / (sum(Ns) + Nu)
+    d = Design(np.concatenate([np.full(n, h) for h, n in enumerate(ns)]), W, [float(N) for N in Ns], W_unsampled=Wu)
+    ivs = {}
+    for ss in itertools.product(*[compositions(n) for n in ns]):
+        y = values(d, [[1.0] * s[0] + [0.0] * (s[1] + s[2]) for s in ss])
+        w = values(d, [[0.0] * s[0] + [1.0] * s[1] + [0.0] * s[2] for s in ss])
+        ivs[ss] = ratio(d, y, w, alpha=alpha)["interval"]
+    worst = 1.0
+    for pops in itertools.product(*[compositions(N) for N in Ns]):
+        for pu in compositions(Nu):
+            ty = sum(W[h] * pops[h][0] / Ns[h] for h in range(2)) + Wu * pu[0] / Nu
+            tz = sum(W[h] * (pops[h][0] + pops[h][1]) / Ns[h] for h in range(2)) + Wu * (pu[0] + pu[1]) / Nu
+            if tz <= 0:
+                continue
+            cov = 0.0
+            for ss, (lo, hi) in ivs.items():
+                lp = sum(sum(log_choose(pops[h][j], ss[h][j]) for j in range(3)) - log_choose(Ns[h], ns[h])
+                         for h in range(2))
+                if lp > -math.inf and lo - 1e-12 <= ty / tz <= hi + 1e-12:
+                    cov += math.exp(lp)
+            worst = min(worst, cov)
+    assert worst >= 1 - alpha - 1e-12
+
+
+def test_a_stratum_too_large_leaves_its_interval_uncomputed(monkeypatch):
+    from oe_inferencex import stratified
+    monkeypatch.setattr(stratified, "MAX_WORK", 1)
+    res = olofsson_result()
+    oa = res["overall_accuracy"]["map"]
+    assert oa["interval"] is None and "not computed" in oa["not_computed"]
+    assert oa["estimate"] == pytest.approx(0.9465, abs=1e-4) and oa["normal_theory"] is not None
+    assert res["per_class"]["map"]["1"]["producer"]["interval"] is None
+    assert any("interval(s) are not computed" in n for n in res["notes"])
+    pure = olofsson_result(pure={"1": "1"})["per_class"]["map"]["1"]["user"]
+    assert pure["interval"] is not None                         # the pure-stratum rule needs no average over orders
+
+
 def test_a_census_stratum_and_the_unsampled_share():
     d = Design([0, 0, 1, 1], [0.5, 0.3], [2.0, 10.0], W_unsampled=0.2)
     lo, hi = betting_interval(d, [1.0, 1.0, 0.0, 1.0])
@@ -258,14 +365,21 @@ def test_olofsson_worked_example_normal_theory():
     assert half(share) * ha == pytest.approx(6158, abs=2)
 
 
-def test_olofsson_valid_intervals_hold_the_estimate_and_are_wider():
+def test_olofsson_valid_intervals_hold_the_estimate_and_say_something():
+    """Each interval holds its estimate, and is neither narrower than normal theory's nor vacuous: a box collapsing
+    to [0, 1] would pass every coverage test (the review of 26 October 2026)."""
     res = olofsson_result()
     for q in [res["overall_accuracy"]["map"]] + [row[k] for row in res["per_class"]["map"].values()
                                                  for k in ("user", "producer", "reference_share")]:
         lo, hi = q["interval"]
         assert lo - 1e-12 <= q["estimate"] <= hi + 1e-12
+    width = lambda q, k: q[k][1] - q[k][0]
     oa = res["overall_accuracy"]["map"]
-    assert oa["interval"][1] - oa["interval"][0] < 2.0 * (oa["normal_theory"][1] - oa["normal_theory"][0])
+    assert width(oa, "normal_theory") < width(oa, "interval") < 2.0 * width(oa, "normal_theory")
+    for c in ("3", "4"):                                        # the two large classes: 165 and 325 labels
+        for k in ("user", "producer"):
+            q = res["per_class"]["map"][c][k]
+            assert width(q, "normal_theory") < width(q, "interval") < 4.0 * width(q, "normal_theory"), (c, k)
 
 
 def test_olofsson_pure_strata_take_the_pure_stratum_rule():
@@ -296,6 +410,14 @@ def test_alternate_label_counts_as_right_and_names_the_reference_class():
     assert plain["overall_accuracy"]["m"]["estimate"] == pytest.approx(0.25 * 2 / 3 + 0.75 * 1 / 3)
     assert rule["overall_accuracy"]["m"]["estimate"] == pytest.approx(0.25 * 1 + 0.75 * 2 / 3)
     assert "alternate" in rule["rule"]
+    # the reference class is the map's where it equals the alternate: point 2 (map 2, alternate 2) is class 2 and
+    # point 5 (map 1, reference 2, alternate 1) class 1, so class 1 is points 1, 5 and 6
+    one = rule["per_class"]["m"]["1"]
+    assert one["reference_share"]["estimate"] == pytest.approx(7 / 12)
+    assert one["producer"]["estimate"] == pytest.approx(4 / 7)
+    em = rule["error_matrix"]["m"]
+    assert em["rows_map_columns_reference"] == ["1", "2"]
+    assert np.allclose(em["share"], [[1 / 3, 0.0], [1 / 4, 5 / 12]]) and em["unsampled_share"] == 0
 
 
 def test_unknown_values_make_a_range_inside_the_interval():
@@ -348,6 +470,49 @@ def test_codes_are_read_as_text_with_whole_numbers_normalised():
     assert agency._code("11.0", ()) == "11" and agency._code(" 52 ", ()) == "52"
     assert agency._code("NA", ()) is None and agency._code("", ()) is None
     assert agency._code("0", {"0"}) is None and agency._code("forest", ()) == "forest"
+    # long whole numbers stay distinct (through a float both were 12345678901234567168)
+    assert agency._code("12345678901234567890", ()) != agency._code("12345678901234567891", ())
+    assert agency._code("1e3", ()) == "1000" and agency._code("-0", ()) == "0"
+
+
+def test_weights_that_are_areas_are_refused_as_units_and_printed_weights_are_rounded():
+    with pytest.raises(ValueError, match="not a whole number of units as written"):
+        agency.design_from_weights(["a"] * 30, [1.25] * 30, half_unit=[agency._half_unit("1.25")] * 30)
+    d = agency.design_from_weights(["a"] * 75 + ["b"] * 325, [2666.67] * 75 + [19846.15] * 325,
+                                   half_unit=[agency._half_unit("2666.67")] * 75 + [agency._half_unit("19846.15")] * 325)
+    assert list(d.N) == [200000.0, 6449999.0]                   # 2666.67 x 75 = 200000.25; 19846.15 x 325 = 6449998.75
+    assert agency._half_unit("2666.67") == pytest.approx(0.005) and agency._half_unit("1.5e3") == pytest.approx(50)
+
+
+def test_pure_stratum_notes_name_the_classes_they_skip():
+    pts = ["s1"] * 3 + ["s2"] * 3 + ["s3"] * 3 + ["s4"] * 3
+    d = agency.design_from_sizes(pts, {"s1": 100, "s2": 100, "s3": 100, "s4": 100})
+    m = ["1"] * 6 + ["2"] * 3 + ["1", "2", "3"]
+    res = agency.grade(d, ["1", "1", "2"] * 4, {"m": m}, pure={"s1": "1", "s2": "1", "s3": "2"})
+    assert res["per_class"]["m"]["2"]["user"]["method"] == "pure-stratum rule"
+    assert res["per_class"]["m"]["1"]["user"]["method"] == "box of two betting intervals"
+    assert not any("was not used for m (" in n for n in res["notes"])
+    assert any("not used for class(es) 1 of m" in n for n in res["notes"])
+
+
+def test_the_unknown_note_counts_points_and_two_maps_agreeing_differ_by_nothing():
+    d = small_design()
+    ref = [None, "1", "2", None, "2", "1"]
+    maps = {"a": ["1", "1", "2", "2", "2", "1"], "b": ["1", "1", "2", "2", "2", "1"]}
+    res = agency.grade(d, ref, maps)
+    assert any(n.startswith("2 point(s) have an unknown value") for n in res["notes"])
+    q = res["differences"]["a minus b"]
+    assert q["estimate"] == 0 and q["interval"][0] <= 0 <= q["interval"][1]
+    both = agency.grade(d, [None, "1", "2", "2", "2", "1"], {"m": [None, "1", "2", "2", "2", "1"]})
+    assert any(n.startswith("1 point(s) have an unknown value") for n in both["notes"])
+
+
+def test_the_error_matrix_says_what_it_leaves_out_and_the_note_says_normal_ends_are_unclipped():
+    d = agency.design_from_sizes(["a", "a", "b", "b"], {"a": 100, "b": 300, "c": 100})
+    res = agency.grade(d, ["1"] * 4, {"m": ["1"] * 4})
+    em = res["error_matrix"]["m"]
+    assert em["share"] == [[pytest.approx(0.8)]] and em["unsampled_share"] == pytest.approx(0.2)
+    assert "unclipped" in res["notes"][0] and "1.96 standard errors" in res["notes"][0]
 
 
 # ----------------------------------------------------------------------------------------------- the command line
@@ -400,3 +565,27 @@ def test_cli_refusals(tmp_path):
         main(base + ["--weight", "w", "--alpha", "1.5"])
     with pytest.raises(SystemExit, match="would overwrite the input"):
         main(base + ["--weight", "w", "--out", str(path)])
+    with pytest.raises(SystemExit, match="must be different columns"):
+        main(["grade", str(path), "--stratum", "s", "--reference", "r", "--map", "r", "--weight", "w"])
+
+
+def test_cli_reads_a_table_as_a_spreadsheet_shows_it(tmp_path, capsys):
+    """The review of 26 October 2026: a byte-order mark, a column named twice, a short row and a long one."""
+    def run(text, *extra):
+        p = tmp_path / "t.csv"
+        p.write_text(text, encoding="utf-8")
+        return main(["grade", str(p), "--stratum", "s", "--reference", "r", "--map", "m", *extra])
+    assert run("﻿s,m,r,w\na,1,1,10\na,2,1,10\nb,1,1,5\nb,1,2,5\n", "--weight", "w") == 0
+    assert "overall accuracy" in capsys.readouterr().out
+    with pytest.raises(SystemExit, match="names a column twice"):
+        run("s,r,m,w,r\na,1,1,10,2\n", "--weight", "w")
+    with pytest.raises(SystemExit, match="line 3: weight '' is not a number"):
+        run("s,m,r,w\na,1,1,10\na,1\n", "--weight", "w")
+    with pytest.raises(SystemExit, match="line 2: more fields"):
+        run("s,m,r,w\na,1,1,10,\n", "--weight", "w")
+    sizes = tmp_path / "sizes.csv"
+    sizes.write_text("a,30\nb,60\n")
+    with pytest.raises(SystemExit, match="looks like a stratum, not a header"):
+        run("s,m,r\na,1,1\nb,1,1\n", "--strata", str(sizes))
+    sizes.write_text("﻿stratum,size\na,30\nb,60\n", encoding="utf-8")
+    assert run("s,m,r\na,1,1\nb,1,1\n", "--strata", str(sizes)) == 0

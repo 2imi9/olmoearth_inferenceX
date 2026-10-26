@@ -839,7 +839,7 @@ def _range_pct(e, nd):
 
 def _iv_pct(q, nd, scale=100.0):
     iv, nt = q["interval"], q.get("normal_theory")
-    s = f"[{scale * iv[0]:.{nd}f}, {scale * iv[1]:.{nd}f}]"
+    s = "[not computed]" if iv is None else f"[{scale * iv[0]:.{nd}f}, {scale * iv[1]:.{nd}f}]"
     return s + ("" if nt is None else f" (normal {scale * nt[0]:.{nd}f}, {scale * nt[1]:.{nd}f})")
 
 
@@ -870,7 +870,8 @@ def cmd_grade(args):
         pts = agency.read_points(args.points, args.stratum, args.reference, args.map, args.alternate, args.weight,
                                  args.nodata)
         if args.weight:
-            design = agency.design_from_weights(pts["stratum"], pts["weight"], args.sizes, args.unit_area)
+            design = agency.design_from_weights(pts["stratum"], pts["weight"], args.sizes, args.unit_area,
+                                                pts["weight_half_unit"])
         else:
             design = agency.design_from_sizes(pts["stratum"], agency.read_strata(args.strata), args.sizes,
                                               args.unit_area, args.sampled_strata_only)

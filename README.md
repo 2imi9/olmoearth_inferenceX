@@ -37,9 +37,10 @@ What it answers
 | Where do two maps differ? | `compare a.tif b.tif --out diff` | none |
 | Can someone else check which part I certified? | sample with `--seed-from-map --alpha 0.05`; `certificate to_label_zone.json --date 2024-01-01/2024-12-31 --out cert`, then `verify cert/certificate.json --scores map.tif` | none beyond `certify`'s |
 | At which window size can each class be seen? | `scale scores.tif` (add `--reference truth.tif` for each size's error rate) | none |
+| How accurate is a map by an agency's published sample (NLCD, GFC2020)? | `grade points.csv --stratum S --weight W --reference R --map M` (`--map` twice for two maps) | none: the agency's labelled points |
 
 Every command starts with `oe-inferencex`. The input is the model's per-class scores before the argmax, as a GeoTIFF
-or a `.npy` array of shape `(C, H, W)`. `plan` says how many labels a question needs and `--help` lists each command's
+or a `.npy` array of shape `(C, H, W)`; `grade` reads a CSV of labelled points instead. `plan` says how many labels a question needs and `--help` lists each command's
 options. The [quick start](https://olmoearth-inferencex.readthedocs.io/en/latest/Usage/#quick-start) runs each one on
 a test map.
 
@@ -94,6 +95,10 @@ With a simple random sample of the map's windows, drawn by `sample --design rand
 - **Per map class**, with a sample stratified by the map's class (`sample --design class`, the allocation Olofsson et
   al. 2014 advise): each class's user's accuracy has an exact interval, and the class areas and producer's
   accuracies exact intervals that hold together at 95%.
+
+With an agency's stratified sample (`grade`), overall accuracy, each class's user's and producer's accuracy and share
+of the reference, and the difference of two maps each have a 95% interval valid at any sample size, beside the
+agency's normal-theory one, which is nominal. The error matrix is given as estimated shares, without intervals.
 
 Which of two maps of the same time is more accurate takes its own sample, of the windows where they differ
 (`sample --other`, then `estimate`): a 95% interval on the difference, and an exact sign test that names a map while
