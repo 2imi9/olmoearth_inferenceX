@@ -71,9 +71,10 @@ def test_dynamic_programme_matches_every_order():
 
 def test_evalue_at_the_truth_is_at_most_one():
     """E[e-value at the true mean] over every sample of every population of values 0, 1/2, 1 (N up to 6): at most 1
-    drawn without replacement, and for a point-frame reading deflated by lambda n (n - 1) / (2 (N - n + 1)); the plain
-    point-frame reading of a without-replacement draw exceeds 1 (the negative control)."""
-    worst_wor = worst_defl = worst_plain = 0.0
+    drawn without replacement, and for a point-frame reading deflated by lambda n (n - 1) / (2 (N - n + 1)). The plain
+    point-frame reading of a without-replacement draw also stays at 1 on this grid (the judge's self-test found the
+    same, aicr job 1525456); the deflation is kept because no proof covers it without."""
+    worst_wor = worst_defl = 0.0
     for N in (2, 3, 4, 6):
         for n in range(1, N + 1):
             samples = compositions(n)
@@ -84,20 +85,17 @@ def test_evalue_at_the_truth_is_at_most_one():
                 D = lam * n * (n - 1) / (2.0 * (N - n + 1))
                 for M in compositions(N):
                     mu = (0.5 * M[1] + M[2]) / N
-                    e = [0.0, 0.0, 0.0]
+                    e_wor = e_defl = 0.0
                     for s in samples:
                         lp = sum(log_choose(M[j], s[j]) for j in range(3)) - log_choose(N, n)
                         if lp == -math.inf:
                             continue
                         base = lp - lam * n * mu
-                        e[0] += math.exp(base + wor[s])
-                        e[1] += math.exp(base + wr[s] - D)
-                        e[2] += math.exp(base + wr[s])
-                    worst_wor, worst_defl, worst_plain = max(worst_wor, e[0]), max(worst_defl, e[1]), max(worst_plain,
-                                                                                                           e[2])
+                        e_wor += math.exp(base + wor[s])
+                        e_defl += math.exp(base + wr[s] - D)
+                    worst_wor, worst_defl = max(worst_wor, e_wor), max(worst_defl, e_defl)
     assert worst_wor <= 1 + 1e-9
     assert worst_defl <= 1 + 1e-9
-    assert worst_plain > 1.001
 
 
 # ----------------------------------------------------------------------------------------------- coverage, exactly
