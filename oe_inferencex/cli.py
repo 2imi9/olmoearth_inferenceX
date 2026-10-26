@@ -873,8 +873,9 @@ def cmd_grade(args):
             design = agency.design_from_weights(pts["stratum"], pts["weight"], args.sizes, args.unit_area,
                                                 pts["weight_half_unit"])
         else:
-            design = agency.design_from_sizes(pts["stratum"], agency.read_strata(args.strata), args.sizes,
-                                              args.unit_area, args.sampled_strata_only)
+            sizes = agency.read_strata(args.strata, pts["stratum"])
+            design = agency.design_from_sizes(pts["stratum"], sizes, args.sizes, args.unit_area,
+                                              args.sampled_strata_only)
         res = agency.grade(design, pts["reference"], pts["maps"], pts["alternate"] if args.alternate else None, pure,
                            args.alpha)
     except (OSError, ValueError) as exc:

@@ -384,7 +384,7 @@ every 20.48 km; whether a classifier map errs more along those lines is not meas
 
 `oe-inferencex <command> --help` lists each command's options. Outputs are JSON summaries, CSV tables of windows with
 pixel and map coordinates, and rasters on the window grid (GeoTIFF for a GeoTIFF input, `.npy` otherwise). Each result
-file (assessment.json, comparison.json, a sample's sidecar, and the JSON that estimate, certify, decide and plan write)
+file (assessment.json, comparison.json, a sample's sidecar, and the JSON that estimate, certify, decide, plan and grade write)
 ends with `written_by`: the package, its installed version and the command (from 1.14.1), so a result can be traced to
 the release that wrote it; a file from an earlier release is read as before.
 
@@ -1254,7 +1254,10 @@ drawn without replacement, or with `--sizes area` they are areas: the points the
 `--unit-area` gives the unit drawn when it is a pixel. With `--unit-area` each stratum is read as points and the
 interval widened for the draw without replacement: by little where a stratum holds far more units than labels (GFC2020's
 strata hold millions of hectares), by much as the labels approach the units, where sizes in units read the draw
-exactly. `--alternate` names a second reference label: a map class equal to either label is right, as NLCD grades. On NLCD 2016's assessment (Wickham et al. 2021, set B, 4,629 points in 21
+exactly. Weights give a stratum's size only as far as their printing allows: a sum no whole number fits within the
+weights' last printed digits is refused (areas given as units), and where several fit, the stratum is read as points
+drawn from at least the fewest, and said so. `--alternate` names a second reference label: a map class equal to either
+label is right, as NLCD grades. On NLCD 2016's assessment (Wickham et al. 2021, set B, 4,629 points in 21
 strata):
 
 ```console

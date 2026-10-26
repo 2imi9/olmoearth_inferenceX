@@ -1,6 +1,6 @@
 [project]
 name = "olmoearth-inferencex"
-version = "1.17.2"
+version = "1.18.0"
 description = "Checks Earth-observation maps: where they're likely wrong, how accurate they are from a few labels, and which of two maps is better."
 readme = "README.md"
 requires-python = ">=3.11,<3.14"

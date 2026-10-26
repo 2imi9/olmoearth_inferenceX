@@ -475,13 +475,29 @@ def test_codes_are_read_as_text_with_whole_numbers_normalised():
     assert agency._code("1e3", ()) == "1000" and agency._code("-0", ()) == "0"
 
 
-def test_weights_that_are_areas_are_refused_as_units_and_printed_weights_are_rounded():
-    with pytest.raises(ValueError, match="not a whole number of units as written"):
+def test_weights_give_a_size_only_as_far_as_their_printing_allows():
+    """The reviews of 26 October 2026: area weights read as units are refused where their printing can tell; one
+    whole number within the printing is the size; several, and the stratum is read as points drawn from at least the
+    fewest, so a near-census is never made exact and the pure-stratum rule is not used."""
+    with pytest.raises(ValueError, match="add up to 37.5, which their printing does not allow"):
         agency.design_from_weights(["a"] * 30, [1.25] * 30, half_unit=[agency._half_unit("1.25")] * 30)
     d = agency.design_from_weights(["a"] * 75 + ["b"] * 325, [2666.67] * 75 + [19846.15] * 325,
                                    half_unit=[agency._half_unit("2666.67")] * 75 + [agency._half_unit("19846.15")] * 325)
-    assert list(d.N) == [200000.0, 6449999.0]                   # 2666.67 x 75 = 200000.25; 19846.15 x 325 = 6449998.75
+    # 2666.67 x 75 = 200000.25 within 0.375: only 200000; 19846.15 x 325 = 6449998.75 within 1.625: 6449998 to 6450000
+    assert d.N[0] == 200000.0 and np.isinf(d.N[1]) and d.Nlo[1] == 6449998.0 and np.isnan(d.Nlo[0])
+    assert d.point_read == ["b"]
+    # without half_unit, each weight's shortest printing, as the command line reads a table
+    assert agency.design_from_weights(["a"] * 75, [2666.67] * 75).N[0] == 200000.0
     assert agency._half_unit("2666.67") == pytest.approx(0.005) and agency._half_unit("1.5e3") == pytest.approx(50)
+    # a near-census printed as whole numbers: 9 labels of a stratum of 10 units, weight 10/9 printed '1', allows 5 to
+    # 13 units; read as points from at least 9, and the pure-stratum rule (which made it a census) is not used
+    d = agency.design_from_weights(["p"] * 9 + ["q"] * 10, [1.0] * 9 + [10.0] * 10,
+                                   half_unit=[agency._half_unit("1")] * 9 + [agency._half_unit("10.00")] * 10)
+    assert d.point_read == ["p"] and d.Nlo[0] == 9.0 and d.N[1] == 100.0
+    res = agency.grade(d, ["1"] * 8 + ["2"] + ["2"] * 10, {"m": ["1"] * 9 + ["2"] * 10}, pure={"p": "1", "q": "2"})
+    assert res["per_class"]["m"]["1"]["user"]["method"] == "box of two betting intervals"
+    assert any("size is not known in whole units" in n for n in res["notes"])
+    assert any("printed too coarsely" in n for n in res["notes"])
 
 
 def test_pure_stratum_notes_name_the_classes_they_skip():
@@ -565,27 +581,39 @@ def test_cli_refusals(tmp_path):
         main(base + ["--weight", "w", "--alpha", "1.5"])
     with pytest.raises(SystemExit, match="would overwrite the input"):
         main(base + ["--weight", "w", "--out", str(path)])
-    with pytest.raises(SystemExit, match="must be different columns"):
+    with pytest.raises(SystemExit, match="must differ from each other, from the stratum"):
         main(["grade", str(path), "--stratum", "s", "--reference", "r", "--map", "r", "--weight", "w"])
 
 
 def test_cli_reads_a_table_as_a_spreadsheet_shows_it(tmp_path, capsys):
-    """The review of 26 October 2026: a byte-order mark, a column named twice, a short row and a long one."""
-    def run(text, *extra):
+    """The reviews of 26 October 2026: a byte-order mark, a column named twice, a short row and a long one, pandas'
+    and R's row index, a trailing delimiter, a sample stratified by the map's own column, and the sizes file's header."""
+    def run(text, *extra, stratum="s"):
         p = tmp_path / "t.csv"
         p.write_text(text, encoding="utf-8")
-        return main(["grade", str(p), "--stratum", "s", "--reference", "r", "--map", "m", *extra])
+        return main(["grade", str(p), "--stratum", stratum, "--reference", "r", "--map", "m", *extra])
     assert run("﻿s,m,r,w\na,1,1,10\na,2,1,10\nb,1,1,5\nb,1,2,5\n", "--weight", "w") == 0
     assert "overall accuracy" in capsys.readouterr().out
-    with pytest.raises(SystemExit, match="names a column twice"):
+    # pandas' default index column (unnamed), an unused column named twice and a trailing delimiter are read
+    assert run(",s,m,r,w,note,note\n0,a,1,1,10,x,y\n1,a,2,1,10,,\n2,b,1,1,5,,\n3,b,1,2,5,,\n", "--weight", "w") == 0
+    assert run("s,m,r,w\na,1,1,10,\na,2,1,10,\nb,1,1,5,\nb,1,2,5,\n", "--weight", "w") == 0
+    with pytest.raises(SystemExit, match="names the column 'r' twice"):
         run("s,r,m,w,r\na,1,1,10,2\n", "--weight", "w")
     with pytest.raises(SystemExit, match="line 3: weight '' is not a number"):
         run("s,m,r,w\na,1,1,10\na,1\n", "--weight", "w")
     with pytest.raises(SystemExit, match="line 2: more fields"):
-        run("s,m,r,w\na,1,1,10,\n", "--weight", "w")
+        run("s,m,r,w\na,1,1,10,5\n", "--weight", "w")
+    # stratified by the map's class: the stratum is the map's own column
+    assert run("m,r,w\n1,1,10\n1,2,10\n2,2,5\n2,2,5\n", "--weight", "w", stratum="m") == 0
+    capsys.readouterr()
     sizes = tmp_path / "sizes.csv"
     sizes.write_text("a,30\nb,60\n")
     with pytest.raises(SystemExit, match="looks like a stratum, not a header"):
         run("s,m,r\na,1,1\nb,1,1\n", "--strata", str(sizes))
     sizes.write_text("﻿stratum,size\na,30\nb,60\n", encoding="utf-8")
     assert run("s,m,r\na,1,1\nb,1,1\n", "--strata", str(sizes)) == 0
+    sizes.write_text("stratum,2016\na,30\nb,60\n")              # a header whose size column is named by a year
+    assert run("s,m,r\na,1,1\nb,1,1\n", "--strata", str(sizes)) == 0
+    sizes.write_text('"","stratum","size"\n"1","a",30\n"2","b",60\n')   # R's write.csv with row names
+    with pytest.raises(SystemExit, match="first column has no name"):
+        run("s,m,r\na,1,1\nb,1,1\n", "--strata", str(sizes))

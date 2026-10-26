@@ -134,8 +134,9 @@ def c_grid(W, n, alpha, K=K_MIX, span=SPAN):
 class Design:
     """A stratified simple random sample. Sampled stratum h (0 .. H-1) has share W[h] of the population (of its units,
     or of its area), N[h] units (inf for a point frame) and the n[h] labelled points whose index into the strata is
-    `hidx`; Nlo[h], for a point frame drawn as units, the fewest units the stratum can hold (None: a true point frame).
-    `W_unsampled` is the share of the strata holding no label, whose values are bounded, never guessed."""
+    `hidx`; Nlo[h], for a point frame drawn as units, the fewest units the stratum can hold (NaN, or Nlo None, for a
+    true point frame or a stratum of known size). `W_unsampled` is the share of the strata holding no label, whose
+    values are bounded, never guessed."""
 
     def __init__(self, hidx, W, N, Nlo=None, names=None, W_unsampled=0.0, names_unsampled=()):
         self.hidx = np.asarray(hidx, dtype=int)
@@ -162,10 +163,11 @@ class Design:
             h = int(np.flatnonzero(fin & (self.N < self.n))[0])
             raise ValueError(f"stratum {self.names[h]} holds {self.n[h]} labels but only {self.N[h]:g} units")
         if self.Nlo is not None:
-            if fin.any():
+            given = ~np.isnan(self.Nlo)
+            if (given & fin).any():
                 raise ValueError("Nlo is for a point frame (N inf)")
-            if (self.Nlo < self.n).any():
-                h = int(np.flatnonzero(self.Nlo < self.n)[0])
+            if (given & (self.Nlo < self.n)).any():
+                h = int(np.flatnonzero(given & (self.Nlo < self.n))[0])
                 raise ValueError(f"stratum {self.names[h]} holds {self.n[h]} labels but at least {self.Nlo[h]:g} units "
                                  f"by its area; the unit area is too large")
         self.masks = [self.hidx == h for h in range(self.H)]
@@ -199,7 +201,9 @@ def _log_parts(design, strata, cs, side):
         v = vals if side == "low" else [1.0 - u for u in vals]
         A += _stratum_logavg(counts, v, cs * design.W[h] / design.n[h], design.N[h])
     if design.Nlo is not None:
-        A -= cs * float(np.sum(design.W * (design.n - 1) / (2.0 * (design.Nlo - design.n + 1))))
+        given = ~np.isnan(design.Nlo)
+        W, n, Nlo = design.W[given], design.n[given], design.Nlo[given]
+        A -= cs * float(np.sum(W * (n - 1) / (2.0 * (Nlo - n + 1))))
     return A
 
 

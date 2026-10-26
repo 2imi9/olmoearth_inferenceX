@@ -42,6 +42,10 @@ PURE_PARTLY_NOTE = ("The pure-stratum rule was not used for class(es) {classes} 
                     "declared pure stratum; their user's accuracies take the box interval.")
 UNSAMPLED_NOTE = ("{k} stratum(s) hold no label: {names}, {share:.4g} of the population. Their values are bounded "
                   "(0 at each lower end, their whole share at each upper end), so every estimate is a range.")
+POINT_READ_NOTE = ("The weights of {k} stratum(s) ({names}) are printed too coarsely to give one whole number of units: "
+                   "each is read as points drawn from at least the fewest units its weights allow, which widens its "
+                   "intervals a little, and the pure-stratum rule is not used. Stratum sizes (--strata) give them "
+                   "exactly.")
 SAMPLED_ONLY_NOTE = ("The population is restricted to the {H} sampled strata, as asked: {k} stratum(s) with no label "
                      "({share:.4g} of the stratum sizes given) are left out of every number.")
 PURE_NOTE = ("User's accuracy of class(es) {classes} of {map} uses the pure-stratum rule: each class fills one declared "
@@ -84,26 +88,29 @@ def _half_unit(text):
 
 
 def _read_table(path):
-    """A CSV's rows as (line, dict), read as a spreadsheet shows them: a byte-order mark dropped (Excel's 'CSV
-    UTF-8'), the column names stripped, a short row padded with empty cells (unknown values), a blank row skipped; a
-    column named twice or unnamed refused (csv.DictReader keeps the last copy where a spreadsheet shows the first), and
-    a row longer than the header, as certificate.csv_rows reads a sample (the review of 26 October 2026)."""
+    """A CSV's column names, the names given twice, and its rows as (line, dict of the columns named once), read as a
+    spreadsheet shows them: a byte-order mark dropped (Excel's 'CSV UTF-8'), the names stripped, a short row padded
+    with empty cells (unknown values), a blank row skipped, a row with more filled cells than the header refused.
+    Unnamed columns (pandas' and R's row index) are left out, and a column named twice is kept out of the rows, so
+    read_points refuses it only if asked to read it: csv.DictReader kept its last copy where a spreadsheet shows the
+    first (the reviews of 26 October 2026)."""
     with open(path, newline="", encoding="utf-8-sig") as f:
         reader = csv.reader(f)
         header = next(reader, None)
         if header is None:
-            return [], []
+            return [], set(), []
         header = [h.strip() for h in header]
-        if len(set(header)) != len(header) or not all(header):
-            raise ValueError(f"{path} names a column twice or leaves one unnamed: {', '.join(header)}")
+        twice = {h for h in header if h and header.count(h) > 1}
+        keep = [(j, h) for j, h in enumerate(header) if h and h not in twice]
         rows = []
         for line in reader:
             if not line or all(not c.strip() for c in line):
                 continue
-            if len(line) > len(header):
+            if any(c.strip() for c in line[len(header):]):
                 raise ValueError(f"{path} line {reader.line_num}: more fields than the header's {len(header)} columns")
-            rows.append((reader.line_num, dict(zip(header, line + [""] * (len(header) - len(line))))))
-    return header, rows
+            line = line + [""] * (len(header) - len(line))
+            rows.append((reader.line_num, {h: line[j] for j, h in keep}))
+    return [h for h in header if h], twice, rows
 
 
 def _sort_key(code):
@@ -118,17 +125,22 @@ def read_points(path, stratum, reference, maps, alternate=None, weight=None, nod
     (dict name -> list) and weight (optional, with `weight_half_unit`, half a unit in the last place each was written
     to). Codes in `nodata`, and empty or NA cells, are unknown (None)."""
     unknown = {c for c in (_code(v, ()) for v in nodata) if c is not None}
-    header, rows = _read_table(path)
+    header, twice, rows = _read_table(path)
     if not rows:
         raise ValueError(f"{path} holds no point")
     for col in [stratum, reference, alternate, weight] + list(maps):
+        if col is not None and col in twice:
+            raise ValueError(f"{path} names the column {col!r} twice; a spreadsheet shows one copy and a CSV reader "
+                             f"another, so it is not read")
         if col is not None and col not in header:
-            raise ValueError(f"{path} has no column {col!r}; its columns are {', '.join(header)}")
+            raise ValueError(f"{path} has no column {col!r}; its columns are {', '.join(dict.fromkeys(header))}")
     if len(set(maps)) != len(maps):
         raise ValueError("each --map names a different column")
-    roles = [stratum, reference] + ([alternate] if alternate else []) + ([weight] if weight else [])
-    if set(maps) & set(roles) or len(set(roles)) != len(roles):
-        raise ValueError("the stratum, reference, alternate, weight and map columns must be different columns")
+    # the stratum may be a map's own column (a sample stratified by the map's class); the labels and weights may not
+    roles = [reference] + ([alternate] if alternate else []) + ([weight] if weight else [])
+    if set(roles) & (set(maps) | {stratum}) or len(set(roles)) != len(roles):
+        raise ValueError("the reference, alternate and weight columns must differ from each other, from the stratum "
+                         "and from every map column")
     out = {"stratum": [], "reference": [], "alternate": [], "maps": {m: [] for m in maps}, "weight": [],
            "weight_half_unit": []}
     for i, r in rows:
@@ -152,19 +164,26 @@ def read_points(path, stratum, reference, maps, alternate=None, weight=None, nod
     return out
 
 
-def read_strata(path):
-    """Stratum sizes from a CSV whose first column is the stratum and second its size, after a header row. A first row
-    whose second cell is a number is refused: read as a header, it would drop a stratum, and with it the share of the
-    population its bounds stand for (the review of 26 October 2026)."""
+def read_strata(path, point_strata=None):
+    """Stratum sizes from a CSV whose first column is the stratum and second its size, after a header row. Refused:
+    an unnamed first column (a row index, as pandas and R write by default, whose row numbers would be read as strata
+    and the strata as sizes), and a first row that is a stratum (one the points name, with a number beside it; without
+    `point_strata`, any first row whose second cell is a number), which read as a header would drop that stratum and
+    the share of the population its bounds stand for (the reviews of 26 October 2026)."""
     with open(path, newline="", encoding="utf-8-sig") as f:
         rows = list(csv.reader(f))
     if len(rows) < 2 or len(rows[0]) < 2:
         raise ValueError(f"{path}: a header row, then one row per stratum: stratum, size")
+    if not rows[0][0].strip():
+        raise ValueError(f"{path}: the first column has no name, as a row index written by pandas or R has; write the "
+                         f"file with the stratum first and its size second")
     try:
         float(rows[0][1])
+        numeric = True
     except ValueError:
-        pass
-    else:
+        numeric = False
+    first = _code(rows[0][0], ())
+    if numeric and (point_strata is None or first in set(point_strata)):
         raise ValueError(f"{path}: the first row ({', '.join(rows[0][:2])}) looks like a stratum, not a header; add a "
                          f"header row (stratum,size)")
     sizes = {}
@@ -208,10 +227,13 @@ def _frame(names, sizes, kind, unit_area):
 def design_from_weights(strata, weights, kind="units", unit_area=None, half_unit=None):
     """The design a point table with weights describes: a stratum's size is the sum of its points' weights (whole
     units, or an area), which must be equal within the stratum (a stratified simple random sample). With whole units,
-    the sum is rounded only as far as the weights' printing can have moved it (`half_unit`, per weight: half a unit in
-    its last written place; without it, 1e-6 relative): weights that are areas, read as units, are refused rather than
-    rounded to a near-census (the review of 26 October 2026). Weights printed coarsely can leave a size a unit or two
-    off; that is all the printing says."""
+    the sizes the sum allows are the whole numbers within the weights' printing of it (`half_unit`, per weight: half a
+    unit in its last written place; without it, each weight's shortest printing, as the command line reads a table):
+    none, and the stratum is refused (weights that are areas, printed finely enough to tell); one, and that is its size;
+    several, and the stratum is read as a point frame drawn from at least the fewest of them, with the deflation, as a
+    size picked among them could make a near-census exact (the reviews of 26 October 2026: the pure-stratum rule then
+    returned a point that missed the truth). Area weights printed coarsely enough pass as units; the printing cannot
+    tell them apart."""
     ids = sorted(set(strata), key=_sort_key)
     pos = {s: h for h, s in enumerate(ids)}
     hidx = np.array([pos[s] for s in strata])
@@ -223,16 +245,26 @@ def design_from_weights(strata, weights, kind="units", unit_area=None, half_unit
             raise ValueError(f"the weights differ within stratum {s} ({wh.min():g} to {wh.max():g}): not a "
                              f"stratified simple random sample, which this command grades")
     if kind == "units":
+        if unit_area is not None:
+            raise ValueError("--unit-area is for sizes given as areas")
         if half_unit is None:
-            tol = np.maximum(1e-6 * tot, 1e-6)
-        else:
-            tol = np.bincount(hidx, weights=np.asarray(half_unit, float), minlength=len(ids)) + 1e-9 * tot
-        bad = np.flatnonzero(np.abs(tot - np.round(tot)) > tol)
+            half_unit = [_half_unit(repr(float(x))) for x in w]
+        n = np.bincount(hidx, minlength=len(ids))
+        # half a unit per weight, and the float sum's own error (a few ulps per term)
+        tol = (np.bincount(hidx, weights=np.asarray(half_unit, float), minlength=len(ids))
+               + 4 * n * np.finfo(float).eps * tot)
+        least, most = np.ceil(tot - tol), np.floor(tot + tol)
+        bad = np.flatnonzero(least > most)
         if bad.size:
             h = int(bad[0])
-            raise ValueError(f"stratum {ids[h]}: its weights add up to {tot[h]:.6g}, not a whole number of units as "
-                             f"written; give areas with --sizes area")
-        tot = np.round(tot)
+            raise ValueError(f"stratum {ids[h]}: its weights add up to {tot[h]:.10g}, which their printing does not "
+                             f"allow to be a whole number of units; if they are areas, give --sizes area")
+        one = least == most
+        N = np.where(one, least, np.inf)
+        S = np.where(one, least, tot)
+        d = Design(hidx, S / S.sum(), N, None if one.all() else np.where(one, np.nan, np.maximum(least, n)), names=ids)
+        d.point_read = [ids[h] for h in np.flatnonzero(~one)]
+        return d
     S, N, Nlo = _frame(ids, tot, kind, unit_area)
     return Design(hidx, S / S.sum(), N, Nlo, names=ids)
 
@@ -347,6 +379,9 @@ def grade(design, reference, maps, alternate=None, pure=None, alpha=0.05):
                                            share=design.W_unsampled))
     if getattr(design, "left_out", None):
         notes.append(SAMPLED_ONLY_NOTE.format(H=design.H, k=len(design.left_out), share=design.left_out_share))
+    if getattr(design, "point_read", None):
+        notes.append(POINT_READ_NOTE.format(k=len(design.point_read), names=", ".join(design.point_read[:8])
+                                            + (" ..." if len(design.point_read) > 8 else "")))
     ones = int((design.n == 1).sum())
     if ones:
         notes.append(ONE_LABEL_NOTE.format(k=ones))
@@ -453,7 +488,7 @@ def _pure_plan(design, first_map, pure, map_unknown, ref_unknown):
     if design.W_unsampled > 0:
         why = "a stratum holds no label"
     elif not np.isfinite(design.N).all():
-        why = "the strata are areas, not whole units"
+        why = "a stratum's size is not known in whole units"
     elif map_unknown or ref_unknown:
         why = "some values are unknown"
     if why:

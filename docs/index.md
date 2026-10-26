@@ -5,7 +5,8 @@ reference labels, it ranks a map's windows by the model's confidence for manual 
 flagged window, and compares two maps of the same area. With a labelled sample, it estimates the error rate and
 per-class accuracy with confidence intervals, certifies the most confident part of the map whose error rate is at most a
 stated level, and, from labels drawn where two maps differ, names the more accurate map with an exact test and gives an
-interval on their accuracy difference.
+interval on their accuracy difference. From an agency's published stratified sample (NLCD's, GFC2020's) it grades a
+map, or two, with intervals valid at any sample size beside the agency's normal-theory ones.
 
 The package reads the per-pixel probabilities, logits or class scores that a model exports, as GeoTIFF or `.npy`
 arrays, and needs no access to the model itself. It was developed on OlmoEarth and does not require torch.

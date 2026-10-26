@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.18.0 (unreleased)
+## 1.18.0 (2026-10-26)
 
 - **`grade`: an agency's stratified reference sample, graded with intervals that hold.** The 1.17.0 raters found no
   route to grade an existing agency sample with its inclusion probabilities. `grade` reads the published points (each
@@ -14,7 +14,8 @@
   depends on the means only through their weighted total, so no union bound over strata); ratios the box of two such
   intervals; a user's accuracy whose class fills one declared pure stratum (`--pure`, an agency's no-change strata) the
   pure-stratum rule, exact hypergeometric intervals joined by a union bound. Unknown values (no-data, a missing
-  reference label, a stratum with no point) are bounded, never dropped.
+  reference label, a stratum with no point) are bounded, never dropped. Weights give a stratum's size only as far as
+  their printing allows. Tables are read as a spreadsheet shows them.
   On NLCD 2016's assessment (Wickham et al. 2021, set B: 4,629 points in 21 strata) grade
   reproduces the published overall accuracies (86.4% by the primary-or-alternate rule, 72.1% by the primary label,
   86.5% for 2011, 79.0% at level I), each with an interval 1.6 times the normal one's width (86.4%: 84.1 to 88.4);
