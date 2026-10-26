@@ -458,7 +458,7 @@ def test_unsampled_strata_are_bounded_or_left_out_on_request():
 def test_weights_must_be_equal_within_a_stratum_and_sizes_whole():
     with pytest.raises(ValueError, match="weights differ within stratum a"):
         agency.design_from_weights(["a", "a"], [10.0, 11.0])
-    d = agency.design_from_weights(["a", "a", "b"], [50.0000001, 50.0000001, 30.0])
+    d = agency.design_from_weights(["a", "a", "b"], [50.0, 50.0, 30.0])
     assert list(d.N) == [100.0, 30.0]
     with pytest.raises(ValueError, match="not a whole number"):
         agency.design_from_sizes(["a"], {"a": 10.5})
@@ -542,7 +542,9 @@ def write_points(path, rows, cols):
 def test_cli_grades_the_olofsson_example_from_weights_and_from_sizes(tmp_path, capsys):
     pts = olofsson_points()
     n = {s: sum(p["stratum"] == s for p in pts) for s in OLOFSSON_PIXELS}
-    rows = [dict(p, weight=OLOFSSON_PIXELS[p["stratum"]] / n[p["stratum"]], other=p["ref"]) for p in pts]
+    # weights to six decimals, as agencies print them: each stratum's size is then one whole number (weights printed as
+    # 2000.0 would leave 150,000 +/- 3.75 open, and that stratum would be read as points)
+    rows = [dict(p, weight=f"{OLOFSSON_PIXELS[p['stratum']] / n[p['stratum']]:.6f}", other=p["ref"]) for p in pts]
     path = tmp_path / "points.csv"
     write_points(path, rows, ["stratum", "map", "ref", "weight", "other"])
     out = tmp_path / "g.json"
