@@ -1251,8 +1251,10 @@ The input is a CSV with one row per point: its stratum, its reference label and 
 stratum sizes come either from a weight column (`--weight`, the stratum's size over its labels, as NLCD publishes it)
 or from a second CSV (`--strata`: the stratum in the first column, its size in the second). Sizes count units (pixels)
 drawn without replacement, or with `--sizes area` they are areas: the points then lie at random within them, and
-`--unit-area` gives the unit drawn when it is a pixel. `--alternate` names a second reference label: a map class equal
-to either label is right, as NLCD grades. On NLCD 2016's assessment (Wickham et al. 2021, set B, 4,629 points in 21
+`--unit-area` gives the unit drawn when it is a pixel. With `--unit-area` each stratum is read as points and the
+interval widened for the draw without replacement: by little where a stratum holds far more units than labels (GFC2020's
+strata hold millions of hectares), by much as the labels approach the units, where sizes in units read the draw
+exactly. `--alternate` names a second reference label: a map class equal to either label is right, as NLCD grades. On NLCD 2016's assessment (Wickham et al. 2021, set B, 4,629 points in 21
 strata):
 
 ```console
@@ -1277,7 +1279,7 @@ nlcd per class: user's accuracy | producer's accuracy | share of the reference
   90: 61.4% [51.2, 70.5] (normal 53.8, 68.9)* | 96.3% [75.8, 100.0] (normal 93.3, 99.3) | 2.85% [2.20, 3.50] (normal 2.50, 3.20)
   95: 68.0% [52.7, 79.7] (normal 60.8, 75.2)* | 75.2% [37.7, 100.0] (normal 63.7, 86.8) | 1.35% [0.89, 1.94] (normal 1.12, 1.59)
   * user's accuracy by the pure-stratum rule
-note: Each interval holds at 95% on its own, at every sample size; the intervals do not hold jointly. The normal-theory interval beside each one is the agency's (Stehman 2014, Olofsson et al. 2014): nominal, and in a small class or a stratum of few labels it can cover far less than it says.
+note: Each interval holds at 95% on its own, at every sample size; the intervals do not hold jointly. The normal-theory interval beside each one is the agency's (Stehman 2014, Olofsson et al. 2014): nominal, and in a small class or a stratum of few labels it can cover far less than it says. Its ends are the estimate plus or minus 1.96 standard errors, unclipped, as agencies publish them, so they can pass 0 or 100%.
 note: User's accuracy of class(es) 11, 21, 22, 23, 24, 31, 41, 42, 43, 52, 71, 81, 82, 90, 95 of nlcd uses the pure-stratum rule: each class fills one declared stratum (every unit there mapped as it), and the interval is a union bound of exact hypergeometric intervals, at 0.1 of alpha for the strata declared pure for no class.
 ```
 

@@ -20,7 +20,7 @@
   86.5% for 2011, 79.0% at level I), each with an interval 1.6 times the normal one's width (86.4%: 84.1 to 88.4);
   on GFC2020's (21,612 points in 149 strata given as areas) GFC2020 V2 is 91.5% accurate (90.8 to 92.2; published
   as 91%). Every interval equals the design study's, whose scripts read the points their own way (the interval code is a
-  port of theirs; aicr job 1532668). NLCD's
+  port of theirs; aicr jobs 1532668 and 1533266). NLCD's
   lead over LCMAP at eight classes, +1.3 points, is significant by normal theory (0.4 to 2.3) and not by the valid
   interval (-0.2 to 2.9).
   The design study behind the choice (three designs and a judge; exact enumerations, widths on NLCD and GFC2020 and a

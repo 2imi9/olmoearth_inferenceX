@@ -233,12 +233,12 @@ def test_the_deflation_widens_the_interval_by_its_formula():
     hidx = np.concatenate([np.full(n, h) for h, n in enumerate(ns)])
     x = np.array([1.0] * 18 + [0.0] * 12 + [1.0] * 10 + [0.0] * 10)
     plain = Design(hidx, W, [math.inf, math.inf])
-    defl = Design(hidx, W, [math.inf, math.inf], Nlo=[60.0, 25.0])
+    defl = Design(hidx, W, [math.inf, math.inf], Nlo=[3000.0, 2000.0])
     lo_p, hi_p = betting_interval(plain, x)
     lo_d, hi_d = betting_interval(defl, x)
     assert 0 < lo_d < lo_p < hi_p < hi_d < 1                    # a sign slip in the deflation would narrow it
     cs = c_grid(defl.W, defl.n, 0.05)
-    D = cs * (0.7 * 29 / (2 * (60 - 30 + 1)) + 0.3 * 19 / (2 * (25 - 20 + 1)))
+    D = cs * (0.7 * 29 / (2 * (3000 - 30 + 1)) + 0.3 * 19 / (2 * (2000 - 20 + 1)))
     A = _log_parts(plain, _strata(plain, x), cs, "low") - D
     assert lo_d == pytest.approx(_root_low(A, cs, math.log(2 / 0.05), 1.0), abs=1e-12)
 
