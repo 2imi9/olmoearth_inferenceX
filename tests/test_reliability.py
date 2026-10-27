@@ -241,9 +241,11 @@ def test_evidence_pooling_crops_a_ragged_edge_and_dawid_skene_refuses_out_of_ran
     import importlib, sys, types
     import pytest
     monkeypatch.setitem(sys.modules, "torch", types.ModuleType("torch"))
-    sys.modules.pop("oe_inferencex.evidence", None)
+    for key in ("oe_inferencex.evidence", "oe_inferencex.research.evidence"):
+        sys.modules.pop(key, None)
     evidence = importlib.import_module("oe_inferencex.evidence")
     monkeypatch.delitem(sys.modules, "oe_inferencex.evidence")
+    monkeypatch.delitem(sys.modules, "oe_inferencex.research.evidence")
     assert evidence.pool_to_patches(np.ones((33, 32), bool), 16).shape == (2, 2)
     with pytest.raises(ValueError, match="votes must be classes"):
         evidence.dawid_skene(np.array([[0, -1], [1, 1]]), 2)

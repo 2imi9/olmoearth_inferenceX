@@ -1,5 +1,6 @@
 """The feature-folder layout of 1.19.0 (ADR-002): every 1.18.1 module path still imports, as the moved module itself."""
 import importlib
+import importlib.util
 import subprocess
 import sys
 
@@ -11,6 +12,10 @@ import oe_inferencex as ox
 MOVED = {
     "metrics": "common.metrics", "signals": "common.signals", "stats": "common.stats",
     "assess": "review.assess", "explain": "review.explain", "calibrate": "review.calibrate",
+    "olmoearth": "readers.olmoearth", "embeddings": "readers.embeddings", "lcc": "readers.lcc",
+    "taskcard": "readers.taskcard",
+    "evidence": "research.evidence", "awf": "research.awf", "data": "research.data", "figstyle": "research.figstyle",
+    "reliability": "research.reliability",
 }
 
 # oe_inferencex.__all__ at 1.18.1, sorted.
@@ -73,6 +78,21 @@ def test_importing_the_package_loads_no_torch_matplotlib_or_old_path():
     run = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
     assert run.returncode == 0, run.stderr
     assert run.stdout == "[]\n"
+
+
+def test_python_m_runs_the_moved_taskcard(monkeypatch, capsys):
+    """`python -m oe_inferencex.taskcard` (taskcard's usage line) runs the moved module's main block: in process
+    through runpy, and as a command, whose argv[0] is then the moved file, so argparse still calls it taskcard.py."""
+    import runpy
+    monkeypatch.delitem(sys.modules, "oe_inferencex.taskcard", raising=False)     # found by the finder, not the cache
+    origin = importlib.util.find_spec("oe_inferencex.taskcard").origin
+    assert origin == importlib.import_module("oe_inferencex.readers.taskcard").__file__
+    monkeypatch.setattr(sys, "argv", ["taskcard.py", "--help"])
+    with pytest.raises(SystemExit) as exc:
+        runpy.run_module("oe_inferencex.taskcard", run_name="__main__")
+    assert exc.value.code == 0 and capsys.readouterr().out.startswith("usage: taskcard.py ")
+    run = subprocess.run([sys.executable, "-m", "oe_inferencex.taskcard", "--help"], capture_output=True, text=True)
+    assert run.returncode == 0 and run.stdout.startswith("usage: taskcard.py "), run.stderr
 
 
 def test_the_public_names_are_those_of_1_18_1():

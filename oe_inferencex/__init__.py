@@ -122,6 +122,10 @@ __all__ = [
 _MOVED = {
     "metrics": "common.metrics", "signals": "common.signals", "stats": "common.stats",
     "assess": "review.assess", "explain": "review.explain", "calibrate": "review.calibrate",
+    "olmoearth": "readers.olmoearth", "embeddings": "readers.embeddings", "lcc": "readers.lcc",
+    "taskcard": "readers.taskcard",
+    "evidence": "research.evidence", "awf": "research.awf", "data": "research.data", "figstyle": "research.figstyle",
+    "reliability": "research.reliability",
 }
 
 

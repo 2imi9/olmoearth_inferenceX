@@ -7,7 +7,7 @@ except ImportError as exc:  # pragma: no cover - a plain install, without the ex
                       "pip install 'olmoearth-inferencex[encoder]'") from exc
 
 from oe_inferencex.common.metrics import aurc_expected, risk_coverage  # noqa: F401  (re-exported; torch-free home)
-from oe_inferencex.reliability import dawid_skene  # noqa: F401  (moved to its torch-free home on 2026-09-23; exp07 and exp83 call it)
+from oe_inferencex.research.reliability import dawid_skene  # noqa: F401  (moved to its torch-free home on 2026-09-23; exp07 and exp83 call it)
 
 
 def train_logistic_head(feats, labels, epochs=300, lr=0.05):

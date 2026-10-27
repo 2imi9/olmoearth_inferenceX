@@ -275,7 +275,7 @@ def cmd_assess(args):
 def cmd_from_embeddings(args):
     """An area of precomputed embeddings and labelled points in; logistic regression's class probabilities out, as a
     GeoTIFF assess reads."""
-    from . import embeddings as emb
+    from oe_inferencex.readers import embeddings as emb
     if not args.out.lower().endswith((".tif", ".tiff")):
         raise SystemExit("from-embeddings: --out is the GeoTIFF to write (.tif)")
     args.store = args.store or emb.STORE
@@ -2671,7 +2671,7 @@ def cmd_from_olmoearth(args):
     """An OlmoEarth run's rslearn dataset in, the rasters `assess` reads out (oe_inferencex.olmoearth): the output
     layer's probabilities pasted onto one grid per CRS, and with --conditions the input-condition layer on the same
     grid; then the assess command that reads them."""
-    from oe_inferencex import olmoearth as oe
+    from oe_inferencex.readers import olmoearth as oe
     _check_out_dir(args.out, "from-olmoearth")
     if args.inputs and not args.conditions:
         raise SystemExit("from-olmoearth: --inputs names the input layers of the condition layer; add --conditions")
