@@ -17,6 +17,7 @@ MOVED = {
     "evidence": "research.evidence", "awf": "research.awf", "data": "research.data", "figstyle": "research.figstyle",
     "reliability": "research.reliability",
     "sequential": "certify.sequential", "certificate": "certify.certificate",
+    "stratified": "agency.stratified",
 }
 
 # oe_inferencex.__all__ at 1.18.1, sorted.

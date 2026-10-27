@@ -73,12 +73,13 @@ from .common.metrics import (attainable_ceiling, augrc, augrc_from_auroc, aurc_e
 from .common.signals import (aligned_tile_phase, boundary_indicator, combine_midrank, confidence, crop_dependence,
                              midrank_pct, ndwi, ndwi_gradient, ndwi_level, pool_to_windows, s2_patch_variance,
                              shift_averaged_probability)
-from .stratified import betting_interval, pure_stratum_ratio
+from .agency.stratified import betting_interval, pure_stratum_ratio
 from .common.stats import (block_bootstrap_indices, cluster_bootstrap_difference, clustered_sign_test,
                            paired_cluster_bootstrap, paired_comparison, rank_sum_test, sign_test, spearman, wins_losses_ties)
 # The module attributes the 1.18.1 imports above bound as a side effect (`ox.metrics` after `import oe_inferencex`)
 from .common import metrics, signals, stats  # noqa: F401
 from .review import assess, calibrate, explain  # noqa: F401
+from .agency import stratified  # noqa: F401
 
 try:
     __version__ = _version("olmoearth-inferencex")
@@ -127,6 +128,7 @@ _MOVED = {
     "evidence": "research.evidence", "awf": "research.awf", "data": "research.data", "figstyle": "research.figstyle",
     "reliability": "research.reliability",
     "sequential": "certify.sequential", "certificate": "certify.certificate",
+    "stratified": "agency.stratified",
 }
 
 

@@ -361,7 +361,7 @@ def pure_stratum_ratio(design, own, mixed, k_right, k_wrong, alpha=0.05, gamma=N
     1 - gamma / (2 M), M the mixed strata not labelled in full. The ratio rises with own's share and the mixed right
     counts and falls with the mixed wrong ones, so its ends are the ratio at those ends. Needs each stratum's size in
     whole units and no unsampled stratum. Returns (low, high)."""
-    from .estimate import hypergeom_interval
+    from oe_inferencex.common.hypergeom import hypergeom_interval
     gamma = PURE_GAMMA * alpha if gamma is None else gamma
     if not 0 < gamma < alpha:
         raise ValueError(f"gamma must be in (0, alpha), got {gamma}")

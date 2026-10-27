@@ -36,7 +36,7 @@ import math
 
 import numpy as np
 
-from . import estimate as est
+from oe_inferencex import estimate as est
 
 POWER = 0.9
 TAIL = 1e-12                          # probability mass a count's distribution may leave out at each end
