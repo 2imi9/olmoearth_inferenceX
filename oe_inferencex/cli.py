@@ -3843,9 +3843,10 @@ def build_parser():
     gr.add_argument("--map", required=True, action="append", metavar="COL",
                     help="a column holding a map's class at each point; give it twice to compare two maps on the same "
                          "points. The first is the map the strata were drawn from")
-    gr.add_argument("--alternate", default=None, metavar="COL",
-                    help="a second reference label per point: a map class equal to either label counts as right "
-                         "(NLCD's rule)")
+    gr.add_argument("--alternate", nargs="+", default=None, metavar="COL",
+                    help="columns of further acceptable reference labels per point: a map class equal to the "
+                         "reference label or any of them counts as right (NLCD's rule; its published per-class table "
+                         "also accepts the 2011 primary label)")
     sz = gr.add_mutually_exclusive_group(required=True)
     sz.add_argument("--weight", default=None, metavar="COL",
                     help="each point's weight, its stratum's size over the stratum's labels (N_h / n_h)")

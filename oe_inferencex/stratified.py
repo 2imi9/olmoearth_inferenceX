@@ -31,7 +31,8 @@ lies in [L_y / (L_y + U_w), U_y / (U_y + L_w)] when both hold, a union bound. It
 certified scan of the ratio for the large classes and 25 to 40% for small ones, and takes seconds where the scan took
 up to 40 minutes (aicr jobs 1525456 and 1531551). A user's accuracy whose class has one declared pure stratum (every
 unit in it mapped as the class: an agency's no-change stratum) takes the pure-stratum rule instead, a union bound of
-exact hypergeometric intervals that is several times narrower on NLCD (11: 10 points against the box's 30).
+exact hypergeometric intervals, narrower than the box on all 15 NLCD classes (a median 0.61 of its width; class 11:
+10 points against the box's 30; exp117).
 
 Unknown values (a map's no-data, a point without a reference label) are bounded: the lower end counts each against the
 map, the upper end for it. Strata with no label are bounded the same way. Coverage at the agency designs' shapes,

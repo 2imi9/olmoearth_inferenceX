@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.18.1 (2026-10-26)
+
+- **NLCD 2016's per-class table, reconciled.** The 1.18.0 raters found `grade`'s per-class accuracies on NLCD 2016 up
+  to 4.75 points off Table 4 of Wickham et al. (2021), against a transcription never checked against the PDF. Read
+  from the PDF, the transcription is right; every per-class accuracy by the primary label is reproduced (15 user's,
+  15 producer's), and so is the text's overall accuracy by the primary-or-alternate rule (86.4%). The table's own
+  primary-or-alternate columns follow a rule the paper does not state: every user's accuracy is reproduced when the
+  2011 primary label is accepted too, which also gives the caption's 86.9% (86.955%, truncated), while its producer's
+  accuracies match no rule tried (best 7 of 15). `--alternate` now takes several columns, each an acceptable label, so
+  `--alternate alt pri2011` grades by the table's rule; one column grades as before. Record: exp117.
+- The pure-stratum rule's docstring said "several times narrower" than the box; exp117 measured a median 0.61 of the
+  box's width on NLCD's 15 classes (0.32 to 0.76), which it now says.
+
 ## 1.18.0 (2026-10-26)
 
 - **`grade`: an agency's stratified reference sample, graded with intervals that hold.** The 1.17.0 raters found no

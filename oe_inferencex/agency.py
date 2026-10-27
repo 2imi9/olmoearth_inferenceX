@@ -9,8 +9,10 @@ points, each with an interval valid at every sample size (stratified.py) and the
 (2014) and Olofsson et al. (2014) beside it, which is nominal; and the error matrix as estimated shares of the
 population, without intervals.
 
-A point's class is right when the map's class equals its reference label or, with an alternate label, either label
-(NLCD's rule; the reference class is then the map's class where it equals the alternate, else the primary label).
+A point's class is right when the map's class equals its reference label or, with alternate labels, any of them
+(NLCD's rule; the reference class is then the map's class where it equals an alternate, else the primary label).
+NLCD 2016's published per-class table counts the 2011 primary label as an alternate too, though its text does not say
+so (exp117 in the research record): `--alternate` takes several columns.
 Unknown values (a map's no-data, a missing reference label) are bounded, never dropped: dropping them would grade a
 different population. A stratum with no label is bounded the same way unless the population is restricted to the
 sampled strata on request.
@@ -54,8 +56,8 @@ PURE_NOTE = ("User's accuracy of class(es) {classes} of {map} uses the pure-stra
 PURE_SKIPPED_NOTE = ("The pure-stratum rule was not used for {map} ({why}); its user's accuracies take the box interval.")
 ONE_LABEL_NOTE = ("{k} stratum(s) hold one label, whose variance normal theory cannot estimate; it leaves them out, "
                   "which makes its intervals narrower than it can justify.")
-ALTERNATE_RULE = ("a point is right when the map's class equals its reference label or its alternate label; the "
-                  "reference class is the map's class where it equals the alternate, else the reference label")
+ALTERNATE_RULE = ("a point is right when the map's class equals its reference label or an alternate label; the "
+                  "reference class is the map's class where it equals an alternate, else the reference label")
 PRIMARY_RULE = "a point is right when the map's class equals its reference label"
 
 
@@ -121,14 +123,15 @@ def _sort_key(code):
 
 
 def read_points(path, stratum, reference, maps, alternate=None, weight=None, nodata=()):
-    """The labelled points of a CSV: their stratum, reference label, alternate label (optional), each map's class
-    (dict name -> list) and weight (optional, with `weight_half_unit`, half a unit in the last place each was written
-    to). Codes in `nodata`, and empty or NA cells, are unknown (None)."""
+    """The labelled points of a CSV: their stratum, reference label, alternate labels (optional: one column or several,
+    a tuple per point), each map's class (dict name -> list) and weight (optional, with `weight_half_unit`, half a
+    unit in the last place each was written to). Codes in `nodata`, and empty or NA cells, are unknown (None)."""
     unknown = {c for c in (_code(v, ()) for v in nodata) if c is not None}
+    alts = [alternate] if isinstance(alternate, str) else list(alternate or [])
     header, twice, rows = _read_table(path)
     if not rows:
         raise ValueError(f"{path} holds no point")
-    for col in [stratum, reference, alternate, weight] + list(maps):
+    for col in [stratum, reference, weight] + alts + list(maps):
         if col is not None and col in twice:
             raise ValueError(f"{path} names the column {col!r} twice; a spreadsheet shows one copy and a CSV reader "
                              f"another, so it is not read")
@@ -137,7 +140,7 @@ def read_points(path, stratum, reference, maps, alternate=None, weight=None, nod
     if len(set(maps)) != len(maps):
         raise ValueError("each --map names a different column")
     # the stratum may be a map's own column (a sample stratified by the map's class); the labels and weights may not
-    roles = [reference] + ([alternate] if alternate else []) + ([weight] if weight else [])
+    roles = [reference] + alts + ([weight] if weight else [])
     if set(roles) & (set(maps) | {stratum}) or len(set(roles)) != len(roles):
         raise ValueError("the reference, alternate and weight columns must differ from each other, from the stratum "
                          "and from every map column")
@@ -149,7 +152,10 @@ def read_points(path, stratum, reference, maps, alternate=None, weight=None, nod
             raise ValueError(f"{path} line {i}: no stratum")
         out["stratum"].append(s)
         out["reference"].append(_code(r[reference], unknown))
-        out["alternate"].append(_code(r[alternate], unknown) if alternate else None)
+        if alts:
+            out["alternate"].append(tuple(c for c in (_code(r[a], unknown) for a in alts) if c is not None))
+        else:
+            out["alternate"].append(None)
         for m in maps:
             out["maps"][m].append(_code(r[m], unknown))
         if weight:
@@ -291,55 +297,64 @@ def design_from_sizes(strata, sizes, kind="units", unit_area=None, sampled_only=
 
 
 # ----------------------------------------------------------------------------------------------- values per point
-def _right(m, r, alt):
-    return m == r or (alt is not None and m == alt)
+def _alts(a):
+    """A point's alternate labels as a tuple: none, one code, or several (each an acceptable reference label)."""
+    if a is None:
+        return ()
+    if isinstance(a, (tuple, list)):
+        return tuple(x for x in a if x is not None)
+    return (a,)
 
 
-def _ref_class(m, r, alt):
-    return m if (alt is not None and m == alt) else r
+def _right(m, r, alts):
+    return m == r or m in alts
 
 
-def _completions(m, r, alt, c):
+def _ref_class(m, r, alts):
+    return m if m in alts else r
+
+
+def _completions(m, r, alts, c):
     """The (map, reference) values a point can take: its own where known; for an unknown map value, the class c, the
-    alternate label and a class other than both; for an unknown reference label, c and another class."""
-    ms = [m] if m is not None else [v for v in (c, alt) if v is not None] + [_OTHER]
+    alternate labels and a class other than all of them; for an unknown reference label, c and another class."""
+    ms = [m] if m is not None else list(dict.fromkeys((c,) + alts)) + [_OTHER]
     rs = [r] if r is not None else [c, _OTHER]
     return [(a, b) for a in ms for b in rs]
 
 
-def _diff_bounds(ma, mb, r, alt):
+def _diff_bounds(ma, mb, r, alts):
     """The least and greatest of right_a - right_b at a point, over the joint completions of its unknown values: two
     maps that give an unknown reference the same class differ by 0 there, where each map's own bounds allowed -1 to 1
     (the review of 26 October 2026). Completions: the values named at the point and three classes named nowhere."""
     if ma is not None and mb is not None and r is not None:
-        d = float(_right(ma, r, alt)) - float(_right(mb, r, alt))
+        d = float(_right(ma, r, alts)) - float(_right(mb, r, alts))
         return d, d
-    cand = list(dict.fromkeys(v for v in (ma, mb, r, alt) if v is not None)) + [object(), object(), object()]
-    ds = [float(_right(a, q, alt)) - float(_right(b, q, alt))
+    cand = list(dict.fromkeys(v for v in (ma, mb, r) + alts if v is not None)) + [object(), object(), object()]
+    ds = [float(_right(a, q, alts)) - float(_right(b, q, alts))
           for a in ([ma] if ma is not None else cand) for b in ([mb] if mb is not None else cand)
           for q in ([r] if r is not None else cand)]
     return min(ds), max(ds)
 
 
-def _oa_bounds(m, r, alt):
+def _oa_bounds(m, r, alts):
     """The least and greatest correctness of a point: known when both values are; an unknown map value can be right
-    or wrong; an unknown reference label can be right or wrong unless the map's class is the alternate label."""
+    or wrong; an unknown reference label can be right or wrong unless the map's class is an alternate label."""
     if m is not None and r is not None:
-        v = float(_right(m, r, alt))
+        v = float(_right(m, r, alts))
         return v, v
-    if m is not None and alt is not None and m == alt:
+    if m is not None and m in alts:
         return 1.0, 1.0
     return 0.0, 1.0
 
 
-def _class_bounds(m, r, alt, c):
+def _class_bounds(m, r, alts, c):
     """For class c, the least and greatest over a point's completions of: the user's accuracy's y (mapped c and
     right) and w (mapped c and wrong); the producer's y (mapped c and reference c) and w (reference c, mapped
     otherwise); and the reference-share indicator."""
     vals = []
-    for a, b in _completions(m, r, alt, c):
-        rs = _ref_class(a, b, alt)
-        ok = _right(a, b, alt)
+    for a, b in _completions(m, r, alts, c):
+        rs = _ref_class(a, b, alts)
+        ok = _right(a, b, alts)
         vals.append((a == c and ok, a == c and not ok, a == c and rs == c, rs == c and a != c, rs == c))
     v = np.array(vals, dtype=float)
     return v.min(axis=0), v.max(axis=0)
@@ -353,16 +368,17 @@ def _natural(codes):
 def grade(design, reference, maps, alternate=None, pure=None, alpha=0.05):
     """Overall accuracy per map, the difference between maps, and per class the user's and producer's accuracy and
     the share of the reference, each with its valid interval and the normal-theory one, and the error matrix's
-    estimated shares. reference, alternate: one code or None per point; maps: dict name -> codes, the first the map
-    the strata were drawn from; pure: dict stratum -> class, strata every unit of which the first map labels the
-    class (an agency's no-change strata), used for that map's user's accuracies."""
+    estimated shares. reference: one code or None per point; alternate: per point one code, a tuple of codes or None;
+    maps: dict name -> codes, the first the map the strata were drawn from; pure: dict stratum -> class, strata every
+    unit of which the first map labels the class (an agency's no-change strata), used for that map's user's
+    accuracies."""
     if not 0 < alpha < 1:
         raise ValueError(f"alpha must be in (0, 1), got {alpha}")
     names = list(maps)
     if not names:
         raise ValueError("give at least one map")
     P = design.hidx.size
-    alternate = [None] * P if alternate is None else list(alternate)
+    alternate = [()] * P if alternate is None else [_alts(a) for a in alternate]
     for k, v in [("reference", reference), ("alternate", alternate)] + [(f"map {m}", maps[m]) for m in names]:
         if len(v) != P:
             raise ValueError(f"{k} has {len(v)} values; the design has {P} points")
@@ -371,7 +387,7 @@ def grade(design, reference, maps, alternate=None, pure=None, alpha=0.05):
     classes = _natural({c for c in reference if c is not None}
                        | {c for m in names for c in maps[m] if c is not None})
     out = {"points": P, "strata": design.H, "maps": names, "classes": classes, "alpha": alpha,
-           "rule": ALTERNATE_RULE if any(a is not None for a in alternate) else PRIMARY_RULE,
+           "rule": ALTERNATE_RULE if any(alternate) else PRIMARY_RULE,
            "overall_accuracy": {}, "differences": {}, "per_class": {}, "error_matrix": {}, "unknown": {}}
     if design.W_unsampled > 0:
         notes.append(UNSAMPLED_NOTE.format(k=len(design.names_unsampled), names=", ".join(design.names_unsampled[:8])

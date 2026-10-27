@@ -420,6 +420,31 @@ def test_alternate_label_counts_as_right_and_names_the_reference_class():
     assert np.allclose(em["share"], [[1 / 3, 0.0], [1 / 4, 5 / 12]]) and em["unsampled_share"] == 0
 
 
+def test_several_alternate_labels_each_count_as_right(tmp_path, capsys):
+    """NLCD 2016's per-class table also accepts the 2011 primary label (exp117): several alternates per point, each a
+    right answer, the reference class the map's where it equals one of them."""
+    d = small_design()
+    ref = ["1", "1", "2", "2", "2", "1"]
+    m = ["1", "2", "3", "2", "1", "3"]
+    one = agency.grade(d, ref, {"m": m}, alternate=[None, "2", None, None, None, None])
+    two = agency.grade(d, ref, {"m": m}, alternate=[(), ("2",), ("4", "3"), None, ("1",), ("5", "3")])
+    assert one["overall_accuracy"]["m"]["estimate"] == pytest.approx(0.25 * 2 / 3 + 0.75 * 1 / 3)
+    assert two["overall_accuracy"]["m"]["estimate"] == pytest.approx(1.0)
+    assert two["per_class"]["m"]["3"]["reference_share"]["estimate"] == pytest.approx(0.25 / 3 + 0.75 / 3)
+    p = tmp_path / "t.csv"
+    p.write_text("s,m,r,a1,a2\na,1,1,,\na,2,1,2,\na,3,2,4,3\nb,2,2,,\nb,1,2,1,\nb,3,1,5,3\n")
+    sizes = tmp_path / "sizes.csv"
+    sizes.write_text("stratum,size\na,100\nb,300\n")
+    out = tmp_path / "g.json"
+    assert main(["grade", str(p), "--stratum", "s", "--reference", "r", "--map", "m", "--alternate", "a1", "a2",
+                 "--strata", str(sizes), "--out", str(out)]) == 0
+    assert json.load(open(out))["overall_accuracy"]["m"]["estimate"] == pytest.approx(1.0)
+    assert "an alternate label" in capsys.readouterr().out
+    with pytest.raises(SystemExit, match="must differ from each other"):
+        main(["grade", str(p), "--stratum", "s", "--reference", "r", "--map", "m", "--alternate", "a1", "a1",
+              "--strata", str(sizes)])
+
+
 def test_unknown_values_make_a_range_inside_the_interval():
     d = small_design()
     res = agency.grade(d, ["1", "1", None, "2", "2", "2"], {"m": ["1", None, "2", "2", "1", "2"]})

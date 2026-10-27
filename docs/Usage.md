@@ -1256,9 +1256,11 @@ interval widened for the draw without replacement: by little where a stratum hol
 strata hold millions of hectares), by much as the labels approach the units, where sizes in units read the draw
 exactly. Weights give a stratum's size only as far as their printing allows: a sum no whole number fits within the
 weights' last printed digits is refused (areas given as units), and where several fit, the stratum is read as points
-drawn from at least the fewest, and said so. `--alternate` names a second reference label: a map class equal to either
-label is right, as NLCD grades. On NLCD 2016's assessment (Wickham et al. 2021, set B, 4,629 points in 21
-strata):
+drawn from at least the fewest, and said so. `--alternate` names further reference labels, one column or several: a
+map class equal to the reference label or any of them is right, as NLCD grades. NLCD 2016's text grades with one
+alternate (86.4% overall); its per-class table also accepts the 2011 primary label, which `--alternate alt pri2011`
+reproduces for every user's accuracy; its producer's accuracies match no rule tried (exp117). On NLCD 2016's
+assessment (Wickham et al. 2021, set B, 4,629 points in 21 strata):
 
 ```console
 $ oe-inferencex grade nlcdB2016.csv --stratum stratum --weight weight --reference ref --alternate alt --map nlcd --pure 1=11 2=21 3=22 4=23 5=24 6=31 7=41 8=42 9=43 10=52 11=71 12=81 13=82 14=90 15=95
