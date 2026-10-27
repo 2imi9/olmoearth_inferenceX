@@ -163,6 +163,9 @@ def kind(result):
     sample's own sidecar, written before any label, is not a result."""
     if not isinstance(result, dict):
         raise ValueError("not a result that estimate, certify or compare wrote: the JSON is not an object")
+    if result.get("by_profile"):
+        raise ValueError("per-profile verdicts (certify on a profile sample) are read from the table certify printed "
+                         "and its JSON; decide does not answer questions of them in this version")
     if result.get("design") in ("disagreement", "audit"):
         if result["design"] == "disagreement" and "difference" in result and "verdict" in result:
             return "two_maps_sample"
@@ -690,11 +693,14 @@ def decide(result, questions):
         else:
             ans = _answer_share_differs(result, k)
         answers[name if v is None else f"{name}={v:g}"] = ans
-    from oe_inferencex.common.wording import class_wording, result_class_names
+    from oe_inferencex.common.wording import class_wording, profile_names, result_class_names
     names = result_class_names(result, path)
     if names is not None:
         # the class design's strata are map classes: "Each input condition has its own answer" was said of them (the
         # bug hunt of 2026-10-25), and of a certificate bundle's zone.json, which does not say so itself (the third
         # review of 1.17.2)
         answers = class_wording(result, names=names)(answers)
+    elif profile_names(result) is not None:
+        # the profile design's strata are profiles (estimate on a sample drawn with --design profile): worded so
+        answers = class_wording(result)(answers)
     return {"result_kind": k, "answers": answers, "available": can}

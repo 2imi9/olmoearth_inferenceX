@@ -1089,6 +1089,11 @@ AUDIT_RESULT_NOT_SERVED = ("{path} is the result of a per-class audit, which thi
 ALSO_ACCEPT_RESULT_NOT_SERVED = ("{path} holds a second reading of the same labels (estimate or certify run with an "
                                  "also-accept file), which this server does not read in this version. Ask on the "
                                  "command line: oe-inferencex decide {path}.")
+# A sample drawn by profile (sample --design profile, 1.20.0) gets a verdict per profile from certify on the command
+# line; this server's certify tool states one zone, so it refuses the sample whole rather than misread it.
+PROFILE_NOT_SERVED = ("{path} was drawn by profile (a sample of the profile design); this server does not give "
+                      "per-profile verdicts in this version. Read it on the command line: oe-inferencex certify {path}, "
+                      "with the alpha option set to the rate chosen before any label was read.")
 # The command refuses these on a sample of the windows where two maps differ in a text that names --alpha and
 # --also-accept, which this server does not offer (since 1.11.0); it refuses them here first, naming only its parameters.
 ESTIMATE_TWO_MAPS_OPTIONS = ("estimate: a sample of the windows where two maps differ takes none of per_class, scores, "
@@ -1323,6 +1328,8 @@ def certify(
                                                  "CSV)")] = None,
 ) -> dict[str, Any]:
     path = _input(sample_csv, "sample_csv")
+    if cli._sidecar_by(path) == "profile":
+        raise Refused(PROFILE_NOT_SERVED.format(path=path))
     out = _out_json(path, out_dir, "zone")
     argv = ["certify", path]
     if alpha is not None:

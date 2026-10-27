@@ -529,6 +529,9 @@ def build(zone_path, out_dir, date, scores=None, confidence=None):
     overwritten by its own copy, and a bundle that does not verify."""
     from oe_inferencex.compare import _period
     zone = _load(zone_path)
+    if zone.get("by_profile"):
+        raise ValueError(f"{zone_path} holds per-profile verdicts; a certificate packs one certified zone, and verdicts "
+                         "are not packed in this version")
     certified = zone.get("coverage") is not None or zone.get("certified_share_of_map")
     if not certified:
         raise ValueError(f"{zone_path} certifies no zone, so there is nothing to put in a certificate")

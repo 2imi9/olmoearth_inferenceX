@@ -45,6 +45,40 @@ def _certify_need_note(names, n_labelled, alpha=0.05, delta=est.ZONE_DELTA):
             f"at least {b1} labels), each needs at least {bL} labels" + (f"; {short}" if short else ""))
 
 
+def _profile_need_note(names, sizes, n_labelled, alpha=0.05, delta=est.ZONE_DELTA):
+    """How many labels a profile needs before `certify` can call it good, at an illustrative alpha: delta is split over
+    the L profiles labelled in part, and each interval's upper tail holds delta / (2 L), so a profile with no error
+    among its labels is good from min_labels_to_certify(alpha, delta / (2 L)) labels in a large profile."""
+    part = [(name, int(n)) for name, N, n in zip(names, sizes, n_labelled) if 0 < int(n) < int(N)]
+    L = len(part)
+    if L == 0:
+        return "every profile is labelled in full: certify compares each one's exact rate with alpha"
+    b = est.min_labels_to_certify(alpha, delta / (2 * L))
+    short = ", ".join(f"{name} gets {n}" for name, n in part if n < b)
+    return (f"with delta {delta:g} split over the {L} profile{'s' if L != 1 else ''} labelled in part, a profile with no "
+            f"error among its labels is found good at alpha {alpha:g} from about {b} labels (fewer in a small profile)"
+            + (f"; {short}" if short else ""))
+
+
+def _print_profile_sample(args, sample, cond, prof, layer, out, prod_notes):
+    """What sample prints for the profile design: the profiles, the labels each gets, and what certify can do with
+    them. Not worded through class_wording: its notes speak of the input-condition layer, which is a field here."""
+    K = len(cond["names"])
+    lines = [f"  {name}: {int(N)} windows, {int(n)} to label" + (" (all)" if int(n) >= int(N) else "")
+             for name, N, n in zip(cond["names"], cond["sizes"], cond["n_labelled"])]
+    notes = [est.PROFILE_ALLOCATION_NOTE.format(K=K) if K >= 2 else None,
+             None if layer is None else _unrecorded_note(layer["n_split"], layer["n_no_code"]),
+             _profile_need_note(cond["names"], cond["sizes"], cond["n_labelled"]), est.PROFILE_BLIND_NOTE] + prof["notes"]
+    print(f"{len(sample['indices'])} windows to label of {sample['n_population']} valid (profile design, {K} "
+          f"profile{'s' if K != 1 else ''} by {prof['block']['by']}); wrote {args.out} and its .json. "
+          f"{FILL_INSTRUCTION} oe-inferencex certify {args.out} --alpha A (a verdict per profile, with A and --delta "
+          f"chosen now, before any label is read), or oe-inferencex estimate {args.out} (each profile's error rate)\n"
+          + "\n".join(lines)
+          + "".join(f"\nwarning: {w}" for w in out.get("warnings", []))
+          + "".join(f"\nnote: {n}" for n in prod_notes + notes if n))
+    return 0
+
+
 # ----------------------------------------------------------------------------- entry
 # ----------------------------------------------------------------------------- sample / estimate
 def _top1(scores, is_logit):
@@ -77,6 +111,9 @@ def cmd_sample(args):
                                               out_csv + ".json"],
                                    [getattr(args, k, None) for k in ("scores", "other", "confidence", "condition")]
                                    + ext_files)
+    if getattr(args, "design", None) != "profile" and (getattr(args, "profile_by", None) is not None
+                                                       or getattr(args, "min_windows", None) is not None):
+        raise SystemExit("sample: --profile-by and --min-windows belong to --design profile")
     if getattr(args, "seed_from_map", False) and (getattr(args, "other", None) or
                                                    getattr(args, "design", None) == "audit"):
         raise SystemExit("sample: --seed-from-map draws one map's sample from that map's own digest; it does not "
@@ -160,6 +197,29 @@ def cmd_sample(args):
     if design == "condition" and not cond_path:
         raise SystemExit("sample: --design condition needs --condition, a raster of each pixel's input condition (a "
                          "cloud flag, the modalities present, a sensor id)")
+    by_profile = design == "profile"
+    profile_fields = min_windows = None
+    if by_profile:
+        # Localized certification: the strata are profiles fixed from the map alone, before any label (estimate.profiles);
+        # the condition design's equal split, draw and estimators are reused with the profiles as its conditions
+        if getattr(args, "profile_by", None) is None:
+            raise SystemExit("sample: --design profile needs --profile-by, the fields that fix each window's profile "
+                             "before any label: confidence:Q, condition, class and grid:G (for example "
+                             "confidence:3,class)")
+        try:
+            profile_fields = est.parse_profile_by(args.profile_by)
+        except ValueError as exc:
+            raise SystemExit(f"sample: {exc}") from None
+        named = {f for f, _ in profile_fields}
+        if cond_path and "condition" not in named:
+            raise SystemExit("sample: --condition is read only when --profile-by names condition")
+        if "condition" in named and not cond_path:
+            raise SystemExit("sample: --profile-by names condition, which needs --condition, a raster of each pixel's "
+                             "input condition")
+        min_windows = (est.MIN_PROFILE_WINDOWS if getattr(args, "min_windows", None) is None
+                       else int(args.min_windows))
+        if min_windows < 1:
+            raise SystemExit(f"sample: --min-windows is at least 1, got {min_windows}")
     seed_from_map = bool(getattr(args, "seed_from_map", False))
     if seed_from_map and args.seed != 0:
         raise SystemExit("sample: give --seed or --seed-from-map, not both")
@@ -249,6 +309,18 @@ def cmd_sample(args):
                   "n_no_code": 0}
         if cond_names is None:
             cond_names = {int(v): f"class {int(v)}" for v in np.unique(pooled["grid"][pooled["grid"] >= 0])}
+    layer = prof = None
+    if by_profile:                                     # each window's stratum: its profile, fixed from the map alone
+        a_ = out["arrays"]
+        try:
+            prof = est.build_profiles(a_["confidence"], a_["valid"], profile_fields,
+                                      condition=None if pooled is None else pooled["grid"], condition_names=cond_names,
+                                      map_class=a_["pooled_argmax"], min_windows=min_windows)
+        except ValueError as exc:
+            raise SystemExit(f"sample: {exc}") from None
+        layer, layer_names = pooled, cond_names
+        pooled = {"grid": prof["index"].reshape(a_["confidence"].shape), "n_split": 0, "n_no_code": 0}
+        cond_names = dict(enumerate(prof["names"]))
     arr = out["arrays"]
     margin, valid_w, klass = arr["confidence"], arr["valid"], arr["pooled_argmax"]
     hw, ww = margin.shape
@@ -257,7 +329,8 @@ def cmd_sample(args):
         t = max(1, args.tile)
         tiles = (np.arange(hw)[:, None] // t) * ((ww + t - 1) // t) + (np.arange(ww)[None, :] // t)
     try:
-        sample = est.sample_for_estimation(margin, args.budget, design="condition" if by_class else design, p1=p1_w,
+        sample = est.sample_for_estimation(margin, args.budget, design="condition" if by_class or by_profile else design,
+                                           p1=p1_w,
                                            tiles=tiles, per_tile=args.per_tile, valid=valid_w, seed=args.seed,
                                            condition=None if pooled is None else pooled["grid"].ravel(),
                                            condition_names=cond_names, stable=seed_rule is not None,
@@ -323,23 +396,41 @@ def cmd_sample(args):
         # the design's source of truth for `estimate` and `certify`, which never read the raster again; its digest
         # binds the layer to the sample, so a certificate can show the layer was not swapped after labelling
         from oe_inferencex.certify.certificate import names_given, raster_digest
-        side["condition"] = {"source": "map class" if by_class else _where(cond_path),
-                             "rule": CLASS_RULE_TEXT if by_class else RULE_TEXT, "values": cond["values"],
+        side["condition"] = {"source": "map class" if by_class else "profile" if by_profile else _where(cond_path),
+                             "rule": CLASS_RULE_TEXT if by_class else est.PROFILE_RULE_TEXT if by_profile else RULE_TEXT,
+                             "values": cond["values"],
                              "names": cond["names"], "sizes": cond["sizes"], "n_labelled": cond["n_labelled"],
                              "allocation_rule": cond["allocation_rule"], "n_windows_split": pooled["n_split"],
                              "n_windows_no_code": pooled["n_no_code"],
-                             "sha256": (None if by_class else seed_rule["settings"]["condition_sha256"]
+                             "sha256": (None if by_class or by_profile else seed_rule["settings"]["condition_sha256"]
                                         if seed_rule is not None else raster_digest(cond_path)),
-                             "names_given": names_given(cond_names)}
+                             "names_given": None if by_profile else names_given(cond_names)}
         if by_class:
             side["condition"]["by"] = "map class"      # the class design: certify, estimate and verify read it so
             side["condition"]["min_per_class"] = class_floor
+        if by_profile:
+            # the profile design: certify gives each profile a verdict and estimate words its strata as profiles. The
+            # partition, its fields and the fold rule are written here, before any label; the input-condition layer,
+            # when a field, is described under its field, not in the condition block, whose strata are the profiles
+            side["condition"]["by"] = "profile"
+            block = prof["block"]
+            for field in block["fields"]:
+                if field["field"] == "condition":
+                    field.update({"source": _where(cond_path), "sha256": raster_digest(cond_path),
+                                  "names_given": names_given(layer_names), "n_windows_split": layer["n_split"],
+                                  "n_windows_no_code": layer["n_no_code"]})
+            side["profile"] = block
     side.update(_sidecar_map_fields(args, geo, [int(hw), int(ww)], out, conf_path, conf_range, prod_info))
     side["how_to_label"] = ("open each window, set wrong=1 if the map's class there (the `map_class` column: the "
                             "majority of the window's pixels) is not what is on the ground, else 0; then: "
                             "oe-inferencex estimate " + os.path.basename(args.out))
+    if by_profile:
+        side["how_to_label"] += (f"; then: oe-inferencex certify {os.path.basename(args.out)} --alpha A, with A (and "
+                                 "--delta) chosen before any label is read")
     with open(args.out[:-4] + ".json" if args.out.endswith(".csv") else args.out + ".json", "w") as f:
         json.dump(_stamp(side, "sample"), f, indent=1)
+    if by_profile:
+        return _print_profile_sample(args, sample, cond, prof, layer, out, prod_notes)
     what, notes = f"{design} design", []
     if cond is not None:
         counts = ", ".join(f"{name} {int(n)}" for name, n in zip(cond["names"], cond["n_labelled"]))
@@ -730,7 +821,7 @@ def add_sample_parser(sub):
                          "also serve certify at alpha 0.05); every design but audit needs it")
     sm.add_argument("--out", required=True, help="CSV to write; a .json sidecar with the design goes beside it")
     sm.add_argument("--design", choices=("confidence", "proportional", "random", "sequential", "tiles", "condition",
-                                         "class", "audit"),
+                                         "class", "audit", "profile"),
                     default=None,
                     help="confidence (default without --condition): stratified by margin, allocated from the model's "
                          "own confidence; tiles: how people actually label, with the cluster interval that requires; "
@@ -741,7 +832,16 @@ def add_sample_parser(sub):
                          "--min-per-class each and the rest in proportion to class size (Olofsson et al. 2014), with "
                          "exact per-class accuracy and area from estimate --per-class and a zone per class from "
                          "certify; audit: N windows at random from each predicted "
-                         "class's confident zone (--per-class N), and estimate then gives each class's zone error rate")
+                         "class's confident zone (--per-class N), and estimate then gives each class's zone error rate; "
+                         "profile: stratified by profiles fixed from the map before any label (--profile-by), labels "
+                         "split equally, and certify then calls each profile good, bad or undecided")
+    sm.add_argument("--profile-by", default=None, metavar="SPEC",
+                    help="profile design: the fields that fix each window's profile, comma-separated: confidence:Q (Q "
+                         f"bands, 2 to {est.MAX_BANDS}), condition (needs --condition), class, grid:G (G by G blocks, 2 "
+                         f"to {est.MAX_GRID}); at most {est.MAX_PROFILES} profiles")
+    sm.add_argument("--min-windows", type=int, default=None, metavar="M",
+                    help=f"profile design: a combination with fewer windows is folded into one profile named other "
+                         f"(default {est.MIN_PROFILE_WINDOWS})")
     sm.add_argument("--min-per-class", type=int, default=None, metavar="M",
                     help=f"class design: labels per map class at least, where it has that many windows (default "
                          f"{est.CLASS_FLOOR})")

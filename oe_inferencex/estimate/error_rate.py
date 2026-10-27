@@ -379,8 +379,11 @@ def _estimate_core(sample, wrong):
                                  if design == "condition" and len(c_names) >= 2 else "")
         out.update({"by_condition": True, "per_condition": per, "condition_note": note,
                     "outside_condition_intervals": outside})
-        if by_class:            # the strata are map classes: decide and the texts word them so (cli.class_names)
-            out["condition_by"] = "map class"
+        # the strata are map classes or profiles: decide and the texts word them so (cli.class_names, profile_names);
+        # absent when they are input conditions, as before
+        by = (sample.get("condition") or {}).get("by")
+        if by:
+            out["condition_by"] = by
     else:
         out["scope"] = SCOPE_ESTIMATE
     return out

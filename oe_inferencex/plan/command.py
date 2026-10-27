@@ -100,12 +100,31 @@ def cmd_plan(args):
     procedure reaches the outcome, and the smallest budget from which every larger one checked reaches it."""
     from oe_inferencex import plan
     want_rate, want_which = args.width is not None, args.difference is not None
-    want_zone = args.coverage is not None or args.alpha is not None or args.zone_error is not None
+    # a profile of a profile sample (localized certification): read with getattr, as the tests build the Namespace
+    profiles, profile_error = getattr(args, "profiles", None), getattr(args, "profile_error", None)
+    want_profile = profiles is not None or profile_error is not None
+    want_zone = (args.coverage is not None or args.zone_error is not None
+                 or (args.alpha is not None and not want_profile))
     want_class = args.class_share is not None
-    if not (want_rate or want_which or want_zone or want_class):
+    if not (want_rate or want_which or want_zone or want_class or want_profile):
         raise SystemExit("plan: say what to plan: --width (an error rate, its interval no wider than this), "
                          "--difference with --other (which of two maps), --coverage with --alpha (a certified zone), "
-                         "or --class-share with --classes (a class the map draws wrong)")
+                         "--class-share with --classes (a class the map draws wrong), or --profiles with "
+                         "--profile-error and --alpha (a profile's verdict)")
+    if want_profile:
+        others = [flag for flag, value in (("--width", args.width), ("--difference", args.difference),
+                                           ("--coverage", args.coverage), ("--zone-error", args.zone_error),
+                                           ("--class-share", args.class_share), ("--other", args.other),
+                                           ("--differing", args.differing)) if value is not None]
+        if others:
+            raise SystemExit(f"plan: plan a profile in a separate call, without {', '.join(others)}")
+        if args.scores is not None:
+            raise SystemExit("plan: a profile is planned from its size, not from the map: give --windows, the size of "
+                             "the largest profile, which sample --design profile prints")
+        if args.windows is None or args.alpha is None or profiles is None or profile_error is None:
+            raise SystemExit("plan: a profile's verdict needs --windows (its windows), --alpha (the error rate a good "
+                             "profile may not exceed), --profiles (L, the profiles labelled in part, over which delta "
+                             "is split) and --profile-error (the rate you expect the profile to be wrong)")
     if want_class and args.classes is None:
         raise SystemExit("plan: --class-share needs --classes, the number of classes in the map's legend (the per-class "
                          "intervals hold together over all of them)")
@@ -123,7 +142,7 @@ def cmd_plan(args):
         raise SystemExit("plan: --other and --differing go with --difference")
     unused = [flag for flag, value, needs in (
         ("--error-rate", args.error_rate, want_rate), ("--both-wrong", args.both_wrong, want_which),
-        ("--zone-error", args.zone_error, want_zone), ("--delta", args.delta, want_zone),
+        ("--zone-error", args.zone_error, want_zone), ("--delta", args.delta, want_zone or want_profile),
         ("--threshold", args.threshold, args.other is not None),
         ("--two-class", args.two_class or None, want_which), ("--classes", args.classes, want_class),
         ("--drawn-at", args.drawn_at, want_class)) if value is not None and not needs]
@@ -197,11 +216,25 @@ def cmd_plan(args):
             else:
                 notes.append("planned at the worst split checked of the differing windows; if both maps have only two "
                              "classes, --two-class plans their one split, which needs fewer labels")
-        if want_rate or want_zone or want_class:
+        if want_rate or want_zone or want_class or want_profile:
             N = int(args.windows) if args.scores is None else None
             if N is None:
                 N, more = _plan_windows(args)
                 notes += more
+        if want_profile:
+            delta = 0.1 if args.delta is None else args.delta
+            r = plan.plan_profile(N, args.alpha, profile_error, profiles, delta, power, max_labels=top_asked)
+            results["profile"] = r
+            said = {"good": f"good (wrong at most {100 * args.alpha:g}% of the time)",
+                    "bad": f"bad (wrong more than {100 * args.alpha:g}% of the time)"}[r["verdict"]]
+            print(f"Profile: a profile of {N} window{'' if N == 1 else 's'} wrong {100 * profile_error:.3g}% of the "
+                  f"time, with delta {delta:g} split over {r['n_profiles']} profile{'' if r['n_profiles'] == 1 else 's'} "
+                  f"(each interval at {100 * r['level']:.4g}%), labelled at random within it, "
+                  + _reach(r, r["checked_up_to"], *(f"{v} it {said} with probability {power:g} or more"
+                                                    for v in ("calls", "call")))
+                  + " (exact).")
+            print(f"  by budget: {_ladder_text(r['probability_by_budget'], r['labels'], power)}")
+            notes.append(r["profile_note"][0].upper() + r["profile_note"][1:])
         if want_rate:
             r = plan.plan_error_rate(N, args.width, args.error_rate, power, max_labels=top_asked)
             results["error_rate"] = r
@@ -350,6 +383,12 @@ def add_plan_parser(sub):
     pl.add_argument("--drawn-at", type=float, default=None, metavar="R",
                     help="with --class-share: the share the map draws, as a fraction of the class's (default 0.5; above 1 "
                          "plans an over-draw)")
+    pl.add_argument("--profiles", type=int, default=None, metavar="L",
+                    help="one profile of a profile sample: the profiles labelled in part, over which certify splits "
+                         "delta; with --windows (the profile's windows), --alpha and --profile-error")
+    pl.add_argument("--profile-error", type=float, default=None, metavar="E",
+                    help="with --profiles: the rate you expect the profile to be wrong; below --alpha plans a good "
+                         "verdict, above it a bad one")
     pl.add_argument("--power", type=float, default=None, help="the probability of the outcome planned for (default 0.9)")
     pl.add_argument("--max-labels", type=int, default=None,
                     help="the largest budget checked (default 10000, or the census when smaller)")

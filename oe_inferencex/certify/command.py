@@ -6,7 +6,7 @@ import numpy as np
 
 from oe_inferencex.certify import zone as est
 from oe_inferencex.common.labels import (_also_accept_rows, _also_words, _labelled_sample, _population_note,
-                                         _sample_map_inputs, _sidecar_design, _unused_note)
+                                         _sample_map_inputs, _sidecar_by, _sidecar_design, _unused_note)
 from oe_inferencex.common.output import _check_out_file, _refuse_overwriting_inputs, _same_file, _stamp
 from oe_inferencex.common.wording import class_wording
 from oe_inferencex.review.windows import _map_windows
@@ -148,6 +148,8 @@ def cmd_certify(args):
         raise SystemExit("certify needs a random sample of the whole map; an audit sample draws a fixed number from each "
                          "class's confident zone, which says which classes' confident calls are wrong (estimate) but "
                          "certifies no zone")
+    if _sidecar_by(args.sample) == "profile":
+        return _certify_by_profile(args)
     out = args.out or (args.sample[:-4] + "_zone.json" if args.sample.endswith(".csv") else args.sample + "_zone.json")
     mask_path = out[:-5] + ".npy" if out.endswith(".json") else out + ".npy"
     accept_path = getattr(args, "also_accept", None)
@@ -459,6 +461,89 @@ def _certify_by_condition(args, sample, wrong, margin, valid_w, out, mask_path, 
     return 0
 
 
+def _tenth(x, up):
+    """A share as a percentage to a tenth of a point, rounded outward from the float (itself outward from the exact
+    end), in exact arithmetic: a float times 1000 can round across a tenth."""
+    import math
+    from fractions import Fraction
+    q = Fraction(float(x)) * 1000
+    return (math.ceil(q) if up else math.floor(q)) / 10
+
+
+def _profile_line(name, e, alpha):
+    """One profile's printed line: its verdict, its counts, its interval or exact rate, and its size."""
+    said = {"good": f"good (wrong at most {100 * alpha:g}% of the time)",
+            "bad": f"bad (wrong more than {100 * alpha:g}% of the time)", "undecided": "undecided"}[e["verdict"]]
+    counts = f"{e['n_wrong']} wrong" + (f" and {e['n_unjudged']} ?" if e["n_unjudged"] else "")
+    if not e["n_labelled"]:
+        what = "no label, so nothing can be said about it"
+    elif e["census"]:
+        rate = (f"its exact rate {100 * e['estimate']:.1f}%" if e["estimate"] is not None else
+                f"the range its ? windows leave, {100 * e['estimate_range'][0]:.1f}% to "
+                f"{100 * e['estimate_range'][1]:.1f}%")
+        what = f"labelled in full, {counts} of {e['n_labelled']}, {rate}"
+    else:
+        what = (f"{counts} of {e['n_labelled']} labelled, interval {_tenth(e['low'], False):.1f}% to "
+                f"{_tenth(e['high'], True):.1f}%")
+    return f"  {name}: {said}: {what}; {e['n_population']} windows, {100 * e['share_of_map']:.1f}% of the map"
+
+
+def _certify_by_profile(args):
+    """certify on a sample drawn by profile (sample --design profile): each profile called good, bad or undecided
+    against --alpha, with --delta split over the profiles labelled in part (certify.localized.profile_verdicts), and the
+    verdicts written as a raster on the window grid beside the JSON. The verdicts read the CSV and its sidecar alone, as
+    estimate's error rate does: no rule, level cut, map or second reading enters them in this version."""
+    from oe_inferencex.certify import localized as loc
+    given = [flag for flag, key in (("--rule", "rule"), ("--level-cut", "level_cut"), ("--also-accept", "also_accept"),
+                                    ("--scores", "scores"), ("--confidence", "confidence"), ("--nodata", "nodata"))
+             if getattr(args, key, None) is not None]
+    if given:
+        raise SystemExit(f"certify: a sample drawn by profile takes none of {', '.join(given)}: each profile's verdict "
+                         "reads the CSV and its sidecar alone, with no rule, level cut, map or second reading in this "
+                         "version")
+    if args.alpha is None:
+        raise SystemExit("certify: --alpha is required: the error rate a good profile may not exceed, chosen before any "
+                         "label is read")
+    delta = est.ZONE_DELTA if args.delta is None else args.delta
+    if not (0 < args.alpha < 1 and 0 < delta < 1):
+        raise SystemExit(f"certify: --alpha and --delta must be in (0, 1), got {args.alpha:g} and {delta:g}")
+    side_path = args.sample[:-4] + ".json" if args.sample.endswith(".csv") else args.sample + ".json"
+    out = args.out or (args.sample[:-4] + "_profiles.json" if args.sample.endswith(".csv") else
+                       args.sample + "_profiles.json")
+    raster = out[:-5] + ".npy" if out.endswith(".json") else out + ".npy"
+    _refuse_overwriting_inputs("certify", [out, raster], [args.sample, side_path, *_sample_map_inputs(args.sample)])
+    side, rows, idx, sample, wrong, unjudged = _labelled_sample(args.sample, "certify")
+    try:
+        res = loc.profile_verdicts(sample, wrong, args.alpha, unjudged=unjudged, delta=delta)
+        shape = tuple(int(v) for v in side["grid"])
+        codes = np.asarray(res.pop("verdict_grid")).reshape(shape)
+    except (ValueError, KeyError, TypeError) as exc:
+        raise SystemExit(f"certify: {exc}") from None
+    _check_out_file(out, "certify")                   # before the raster, which a refusal would leave behind
+    np.save(raster, codes)
+    res.update({"verdict_raster": os.path.abspath(raster), "sample": os.path.abspath(args.sample)})
+    if _population_note(side):                       # a product's range left pixels out: the profiles are of the rest
+        res["population_note"] = _population_note(side)
+    with open(out, "w") as f:
+        json.dump(_stamp(res, "certify"), f, indent=1, default=float)
+    a, d, L = args.alpha, delta, res["n_tested"]
+    head = (f"verdicts per profile at alpha={100 * a:g}%, delta={100 * d:g}% (" + (
+        f"{L} profile{'s' if L != 1 else ''} labelled in part, each interval at {100 * res['level']:.4g}%, so all "
+        f"verdicts hold together and every interval holds on at least {100 * (1 - d):g}% of samples; ends rounded "
+        "outward to a tenth of a point, the verdicts compare the exact ends with alpha):" if L else
+        "every profile labelled in full, so each verdict compares its exact rate with alpha):"))
+    lines = [head] + [_profile_line(name, e, a) for name, e in res["profiles"].items()]
+    c = res["verdict_counts"]
+    lines.append(f"together: good {100 * c['good']['share_of_map']:.1f}% of the map, bad "
+                 f"{100 * c['bad']['share_of_map']:.1f}%, undecided {100 * c['undecided']['share_of_map']:.1f}%; "
+                 f"verdict raster {raster} (window grid: 1 good, 2 bad, 3 undecided, 0 outside the population)")
+    lines += [f"note: {n}" for n in res["notes"]]
+    if "population_note" in res:
+        lines.append(f"note: {res['population_note']}")
+    print("\n".join(lines) + f"\nwrote {out}")
+    return 0
+
+
 # certify refuses an audit sample, so its help does not point to one
 CERTIFY_ALSO_ACCEPT_HELP = ("JSON {map class: [reference classes also accepted]}, written before any label is read: a "
                             "second reading of the same labels, which needs a `reference_class` column beside `wrong`")
@@ -497,14 +582,16 @@ def add_certify_parser(sub):
                                         "alpha of the time, with a guarantee (needs a random sample; a sample drawn "
                                         "with --condition is certified per input condition)")
     z.add_argument("sample", help="the CSV `sample --design random` (or `sample --condition`) wrote, with its `wrong` "
-                                  "column filled in")
+                                  "column filled in; on one `sample --design profile` wrote, a verdict per profile (good, "
+                                  "bad or undecided against --alpha) and the verdict raster")
     z.add_argument("--alpha", type=float, default=None,
                    help="the error rate the certified zone may not exceed, e.g. 0.05 (required, unless the sample fixed "
                         "it with sample --seed-from-map --alpha)")
     z.add_argument("--delta", type=float, default=None,
                    help=f"the probability the statement is allowed to be wrong (default {est.ZONE_DELTA}); for a sample "
                         "drawn with --condition, that any of the per-condition statements is, split over the conditions "
-                        "tested")
+                        "tested; for a profile sample, that any interval misses, split over the profiles labelled in "
+                        "part")
     z.add_argument("--rule", choices=("prefix", "bonferroni", "target"), default=None,
                    help="prefix (default): fixed-sequence testing, valid on any map; it certifies little when the most "
                         "confident windows hold many errors. bonferroni: valid on any map; it can certify more in that "

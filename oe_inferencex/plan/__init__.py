@@ -348,6 +348,102 @@ def plan_class(N, share, n_classes, drawn_ratio=0.5, power=POWER, conf=0.95, max
     return out
 
 
+# ----------------------------------------------------------------------------- one profile (localized certification)
+PROFILE_PLAN_NOTE = ("sample --design profile splits the budget equally, so about L times this many labels give each "
+                     "profile as many; a profile with fewer windows is labelled in full and needs none of delta, so "
+                     "planning with all L is conservative; plan each profile at its own size")
+
+
+def _profile_called(k, n, N, a, edge, tail, want):
+    """Whether certify calls a profile of N windows `want` from k errors among n labels (0 < n < N), with no `?`: the
+    exact interval at 1 - delta/L, each tail at `tail` = delta/(2L), compared with alpha `a`, a Fraction. Good is
+    k/n <= a with the count edge + 1 = floor(a N) + 1 rejected by the lower tail, P(X <= k) <= tail, which is the
+    interval's upper end at most a; bad is k/n > a with the count edge rejected by the upper tail, P(X >= k) <= tail,
+    which is its lower end above a. Each tail is decided as the interval decides it (_at_most: exactly within _tie(N)
+    of its level), so this is certify's verdict, not an approximation of it."""
+    from fractions import Fraction
+    if want == "good":
+        if Fraction(k, n) > a:
+            return False
+        K = edge + 1
+        return est._at_most(est._hyper_tail(k, n, N, K, upper=False), tail,
+                            lambda: est._hyper_tail_exact(k, n, N, K, upper=False), N)
+    if Fraction(k, n) <= a:
+        return False
+    return est._at_most(est._hyper_tail(k, n, N, edge, upper=True), tail,
+                        lambda: est._hyper_tail_exact(k, n, N, edge, upper=True), N)
+
+
+def profile_verdict_probability(N, n, alpha, error_rate, delta, n_profiles, want):
+    """The probability that `certify` calls a profile `want` ("good" or "bad"), when round(error_rate N) of its N windows
+    are wrong and n of them are labelled at random, with delta split over n_profiles profiles labelled in part (each
+    interval at 1 - delta / n_profiles). Exact over the draw, the verdict decided as certify decides it
+    (_profile_called); the count's distribution leaves out a TAIL of mass at each end. A census (n >= N) is 1.0 or 0.0,
+    its exact rate against alpha; no label is never a verdict."""
+    from fractions import Fraction
+    N, n, L = int(N), int(n), int(n_profiles)
+    K = int(round(error_rate * N))
+    a = est._level(alpha)
+    if n >= N:
+        return float(Fraction(K, N) <= a if want == "good" else Fraction(K, N) > a)
+    if n <= 0:
+        return 0.0
+    tail = est._level(delta) / (2 * L)
+    edge = math.floor(a * N)                                   # the most windows of N wrong at most alpha
+    k, p = _hyper_pmf(N, K, n)
+    called = lambda j: _profile_called(int(k[j]), n, N, a, edge, tail, want)
+    # good holds on a run of the smallest counts and bad on a run of the largest (each tail is monotone in k): bisect
+    lo, hi = 0, k.size
+    while lo < hi:
+        mid = (lo + hi) // 2
+        if called(mid) == (want == "bad"):
+            hi = mid
+        else:
+            lo = mid + 1
+    hit = np.arange(k.size) < lo if want == "good" else np.arange(k.size) >= lo
+    return float(p[hit].sum())
+
+
+def _profile_side(N, alpha, error_rate):
+    """The verdict a profile of N windows wrong at error_rate should get: "good" when it is below alpha, as a count of
+    N windows too, "bad" when it is above; refused when the two disagree or the rate is alpha itself."""
+    from fractions import Fraction
+    K, a = int(round(error_rate * N)), est._level(alpha)
+    if error_rate < alpha and Fraction(K, N) <= a:
+        return "good"
+    if error_rate > alpha and Fraction(K, N) > a:
+        return "bad"
+    raise ValueError(f"at {N} windows a rate of {error_rate:g} is {K} windows, not on the side of alpha {alpha:g} it "
+                     "states; a rate equal to alpha cannot be told from one just above it")
+
+
+def plan_profile(N, alpha, error_rate, n_profiles, delta=est.ZONE_DELTA, power=POWER, max_labels=MAX_LABELS):
+    """The probability, budget by budget, that `certify` on a profile sample calls a profile of N windows good (its
+    error rate below alpha) or bad (above), with delta split over n_profiles profiles labelled in part, and the
+    recommended budget for that profile. Exact (profile_verdict_probability)."""
+    N = _check_count("the number of windows", N)
+    _check("alpha", alpha, 0, 1)
+    _check("delta", delta, 0, 1)
+    L = _check_count("the number of profiles", n_profiles)
+    _check("the profile's expected error rate", error_rate, 0, 1, lo_open=False, hi_open=False)
+    _check("the probability asked for", power, 0, 1)
+    want = _profile_side(N, alpha, error_rate)
+    top = min(N, _check_count("the largest budget", max_labels))
+    fn = lambda b: profile_verdict_probability(N, b, alpha, error_rate, delta, L, want)
+    probs, span = refine(fn, {b: fn(b) for b in ladder(top)}, power, every=True)
+    rec = recommend(probs, power)
+    out = {"question": "profile", "n_population": N, "alpha": float(alpha), "delta": float(delta), "n_profiles": L,
+           "error_rate": float(error_rate), "verdict": want, "level": float(1 - est._level(delta) / L),
+           "power": float(power), "labels": rec, "probability_at_labels": None if rec is None else probs[rec],
+           "probability_by_budget": {str(b): p for b, p in probs.items()}, "checked_up_to": top,
+           "every_budget_checked": None if span is None else list(span), "runs_reaching_power": runs(probs, power),
+           "census_checked": top >= N, "note": PLAN_NOTE, "profile_note": PROFILE_PLAN_NOTE}
+    if rec is None:
+        out["refusal"] = (f"no budget checked up to {top} calls this profile {want} with probability {power:g}"
+                          + ("" if top >= N else "; check larger budgets"))
+    return out
+
+
 # ----------------------------------------------------------------------------- which of two maps
 def which_map_probability(N, D, n, KA, KB, conf=0.95, rule="auto"):
     """(probability of naming map a, of naming map b) when n labels are drawn at random among the D windows where the

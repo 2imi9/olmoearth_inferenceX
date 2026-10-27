@@ -88,6 +88,9 @@ With windows drawn by `sample` and labelled by a reviewer:
   time, except on at most δ of samples (10% by default). δ also counts the samples that certify nothing, so among
   those that certify a zone, more than δ can be wrong. On `--design sequential`, certify can be rerun as labels are
   added, with the same α and δ.
+- **Per profile** (`certify`, on `--design profile`): parts of the map fixed from the map alone before any label
+  (confidence band, input condition, class, grid block) are each called good (wrong at most α), bad (more than α) or
+  undecided; all the verdicts are right together except on at most δ of samples.
 - **Per class** (`estimate --per-class`, on `--design random` or `class`): an exact interval for each class's user's
   accuracy, each at 95%, and for every class's share and producer's accuracy, holding together at 95%.
 - **Two maps** (`sample --other`, then `estimate`): a 95% interval on their difference, and an exact sign test that

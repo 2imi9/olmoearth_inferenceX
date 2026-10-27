@@ -74,3 +74,8 @@ from oe_inferencex.estimate.which_map import (SIGN_TEST_NOTE, SIGN_TEST_SHARE, W
                                               which_map_rule)
 from oe_inferencex.estimate.audit import (AUDIT_METHOD, AUDIT_NOTE, AUDIT_READING_NOTE, AUDIT_SHARE, AUDIT_ZONE_TEXT,
                                           _audit_zone, class_audit_from_sample, interval_verdict, sample_class_audit)
+from oe_inferencex.estimate.profiles import (MAX_BANDS, MAX_GRID, MAX_PROFILES, MIN_PROFILE_WINDOWS,
+                                             PROFILE_ALLOCATION_NOTE, PROFILE_BLIND_NOTE, PROFILE_RULE_TEXT,
+                                             build_profiles, parse_profile_by, profile_spec)
+from oe_inferencex.certify.localized import (PROFILE_METHOD, VERDICT_CODES, profile_interval, profile_verdict,
+                                             profile_verdicts)

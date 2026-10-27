@@ -20,6 +20,8 @@ def _sample_map_inputs(sample_path, *overrides):
         return [o for o in overrides if o]
     cond = side.get("condition") if isinstance(side.get("condition"), dict) else {}
     named = [side.get(k) for k in ("scores", "classes", "confidence", "map_a", "map_b")] + [cond.get("source")]
+    prof = side.get("profile") if isinstance(side.get("profile"), dict) else {}
+    named += [f.get("source") for f in prof.get("fields") or [] if isinstance(f, dict)]     # a profile sample's layer
     return [p for p in named + list(overrides) if isinstance(p, str) and p]
 
 
@@ -42,6 +44,19 @@ def _sidecar_design(path):
             return json.load(f).get("design")
     except (OSError, ValueError):
         return None
+
+
+def _sidecar_by(path):
+    """What a sample's strata are, as its sidecar's condition block says (`by`: "map class" for the class design,
+    "profile" for the profile design), or None: no readable sidecar, no condition block, or strata by input condition."""
+    side_path = path[:-4] + ".json" if path.endswith(".csv") else path + ".json"
+    try:
+        with open(side_path) as f:
+            side = json.load(f)
+    except (OSError, ValueError):
+        return None
+    cond = side.get("condition") if isinstance(side, dict) else None
+    return cond.get("by") if isinstance(cond, dict) else None
 
 
 def _reference_column(rows, codes="the maps' class codes", negative=True):

@@ -10,10 +10,16 @@ _CLASS_WORDS = [(r"\bper class or per condition\b", "per class"), (r"\bper input
                 (r"\binput conditions\b", "map classes"), (r"\binput condition\b", "map class"),
                 (r"\bconditions\b", "classes"), (r"\bcondition\b", "class"),
                 (r"\bConditions\b", "Classes"), (r"\bCondition\b", "Class")]
+# The profile design's strata are profiles (sample --design profile), which the condition design's estimators and texts
+# call conditions; worded so where its results are printed and written, as the class design's are.
+_PROFILE_WORDS = [(r"\bper input condition\b", "per profile"), (r"\bby input condition\b", "by profile"),
+                  (r"\binput conditions\b", "profiles"), (r"\binput condition\b", "profile"),
+                  (r"\bconditions\b", "profiles"), (r"\bcondition\b", "profile"),
+                  (r"\bConditions\b", "Profiles"), (r"\bCondition\b", "Profile")]
 _PATH_KEYS = {"sample", "csv", "scores", "classes", "confidence", "zone_mask", "source", "out", "written_by"}
 
 
-def class_words(obj, keep=(), paths=()):
+def class_words(obj, keep=(), paths=(), table=None):
     """A result of the class design in its own words: its strata are the map's classes, which the condition design's
     estimators and texts call conditions. Keys, path values, the paths a text names, a `code span` (a column or a
     command) and the class names in `keep` are left as they are. A class named "good condition" was printed "good
@@ -27,10 +33,13 @@ def class_words(obj, keep=(), paths=()):
     opens no code span, unless it is made only of the words the rules match ("input", "condition"): held, it stopped the
     rules in the package's own sentences, so it is worded as they are. A list entry that is exactly a class name, as in
     outside_condition_intervals, names a stratum and is kept; other values are worded (a class named "condition" kept
-    the design's own value "condition" unworded; the fourth review)."""
+    the design's own value "condition" unworded; the fourth review).
+
+    `table` is the word table, _CLASS_WORDS when None; the profile design passes _PROFILE_WORDS (profile_names)."""
     import re
     from oe_inferencex.certify.zone import RULES_OF
-    if RULES_OF.get() < (1, 17, 2):                  # as 1.17.0 and 1.17.1 worded, for verify of a zone they wrote
+    # as 1.17.0 and 1.17.1 worded, for verify of a zone they wrote (the class table only: those releases had no other)
+    if table is None and RULES_OF.get() < (1, 17, 2):
         from oe_inferencex.certify.certificate import _class_words_1171
         return _class_words_1171(obj)
     names = {str(k) for k in keep if str(k)}
@@ -55,16 +64,16 @@ def class_words(obj, keep=(), paths=()):
                          hold, obj)
         m = re.escape(mark)
         obj = re.sub(rf"[^\s{m}]*[/\\][^\s{m}]*|`[^`{m}]*`", hold, obj)
-        for pat, rep in _CLASS_WORDS:
+        for pat, rep in (_CLASS_WORDS if table is None else table):
             obj = re.sub(pat, rep, obj)
         for i in reversed(range(len(held))):            # a held stretch can hold only earlier ones
             obj = obj.replace(f"{mark}{i}{mark}", held[i])
         return obj
     if isinstance(obj, dict):
-        return {k: (v if k in _PATH_KEYS else class_words(v, keep, paths)) for k, v in obj.items()}
+        return {k: (v if k in _PATH_KEYS else class_words(v, keep, paths, table)) for k, v in obj.items()}
     if isinstance(obj, list):
         # an entry that is exactly a class name names a stratum (outside_condition_intervals), and is kept
-        return [v if isinstance(v, str) and v in names else class_words(v, keep, paths) for v in obj]
+        return [v if isinstance(v, str) and v in names else class_words(v, keep, paths, table) for v in obj]
     return obj
 
 
@@ -85,11 +94,28 @@ def class_names(obj):
     return None
 
 
+def profile_names(obj):
+    """The profile design's stratum names (sample --design profile), or None for a sample or a result of any other
+    design: read from a sample's sidecar (its condition block says by "profile") or from a result of estimate
+    (condition_by)."""
+    cond = (obj or {}).get("condition") or {}
+    if isinstance(cond, dict) and cond.get("by") == "profile":
+        return [str(n) for n in cond.get("names") or []]
+    if (obj or {}).get("condition_by") == "profile":
+        return [str(n) for n in (obj.get("per_condition") or {})]
+    return None
+
+
 def class_wording(obj, *paths, names=None):
     """class_words with the class design's names and the `paths` a text names kept, for a sample or result of the
-    class design (or the `names` given); the identity for any other."""
-    names = class_names(obj) if names is None else names
+    class design (or the `names` given); for one of the profile design, with its profile names and the profile words;
+    the identity for any other."""
     kept = [os.fspath(p) for p in paths if p]
+    if names is None:
+        names = class_names(obj)
+        profiles = None if names is not None else profile_names(obj)
+        if profiles is not None:
+            return lambda x: class_words(x, profiles, kept, _PROFILE_WORDS)
     return (lambda x: x) if names is None else (lambda x: class_words(x, names, kept))
 
 

@@ -640,6 +640,7 @@ reviewer, record the class seen in a `reference_class` column, and set `wrong` t
 | `condition` (default with `--condition`) | Strata by input condition, labels split equally | Exact per condition; whole map: the conditions' exact intervals at 1 − 0.05/L, weighted by share, at least 95% by construction; per class: not graded |
 | `class` | Strata by the map's own class: each class at least `--min-per-class` (default 50, or all its windows), the rest in proportion to its size (Olofsson et al. 2014) | Exact per class; whole map as `condition`; with `--per-class`, each class's user's accuracy exact, and the class areas and producer's accuracies exact together at 95% ([below](#sampling-by-map-class)) |
 | `audit` | `--per-class N` windows at random from each predicted class's confident zone (the top third of the map by default), in place of `--budget` | Exact hypergeometric per class, on that class's confident zone; no whole-map rate ([audit](#audit)) |
+| `profile` | Strata are profiles fixed from the map before any label (`--profile-by`, `--min-windows`), labels split equally | Exact per profile; whole map as `condition`; `certify` calls each profile good, bad or undecided ([below](#sampling-by-profile)) |
 
 The tile design matches how reviewers often label, and its intervals can under-cover. On six of exp78's seven tasks
 the naive interval covered the true rate 51 to 78% of the time at a nominal 95%. The corrected interval, as `--design tiles`
@@ -696,6 +697,34 @@ layer and only records each window's condition; each condition's count is then l
 `proportional` and `tiles` designs refuse a layer, and `--design condition` refuses to run without one. The printed
 line gives the labels per condition and, for two or more, the labels each needs before `certify` can say anything
 about it.
+
+<a id="sampling-by-profile"></a>**Sampling by profile.** The profile design (1.20.0) splits the map into at most 12
+profiles fixed from the map alone, before any label, and labels each at random, so that `certify` can say which parts
+of the map are good, which bad and which it cannot tell (localized certification, [below](#certify)):
+
+```bash
+oe-inferencex sample scores.tif --logits --design profile --profile-by confidence:3,condition,class \
+    --condition cloud_flag.tif --condition-names 0=clear 1=cloudy --budget 900 --out to_label.csv
+oe-inferencex certify to_label.csv --alpha 0.05      # good, bad or undecided per profile
+oe-inferencex estimate to_label.csv                  # each profile's error rate, and the whole map's
+```
+
+`--profile-by` names the fields, comma-separated, in any order: `confidence:Q` (Q bands of the window confidence, 2 to
+5; the band edges are quantiles of the valid windows' confidence, and a window tied at an edge goes to the band above),
+`condition` (the input condition, as `--condition` gives it; it needs the layer, and the layer is read only with this
+field), `class` (the class the map gives the window) and `grid:G` (the window's block of a G by G grid, 2 to 4). Each
+combination that occurs is a cell; every cell with fewer than `--min-windows` windows (100 by default) is folded into
+one profile named `other`, placed last. More than 12 profiles after folding is refused: use fewer fields or bands, or
+raise `--min-windows`. A profile is named by its fields, such as `confidence 1/3, condition cloudy, class 4` (band 1
+is the least confident). Labels are split equally, as under the condition design: a profile too small for an equal
+share is labelled in full. Banding by confidence is safe here, since each band is judged on its own labels. "Profile"
+here is not `scale`'s profile. The sidecar records the design as `condition` with `condition.by: "profile"`, its
+strata the profiles, and adds `profile`: the fields (with the band edges, and the layer's path, digest and names),
+`min_windows`, the rule, every cell with its windows and its profile, and the profiles. `estimate` and `certify` read
+the profiles from there and never rebuild them. The rows run profile by profile, and the `stratum`, `condition`,
+`confidence` and `map_class` columns show each window's profile: to label blind, hide them and show the windows in a
+shuffled order, keeping the CSV's row order. `estimate` reads a profile sample as a condition sample and words its
+strata as profiles. `--seed-from-map`, `--target` and the sequential options are refused with this design.
 
 `estimate` writes `to_label_estimate.json` (`estimate`, `low`, `high`, `half_width`, `method`, and `effective_n`
 under the confidence and proportional designs). It refuses a blank `wrong`, a `wrong` other than 0 or 1, and rows
@@ -1070,6 +1099,38 @@ confident share of the map. It adds `by_condition`, `delta_per_condition`, `n_co
 not written, and a stale one is removed, when nothing is certified. `--delta` keeps its meaning: the probability that
 any of the statements is wrong.
 
+<a id="per-profile"></a>**Per profile (localized certification).** On a sample drawn with `--design profile`
+([sampling by profile](#sampling-by-profile)), `certify --alpha A [--delta D]` calls each profile good (wrong at most
+A of the time), bad (wrong more than A of the time) or undecided. `L`, the profiles labelled in part, is fixed by the
+sizes and the budget before any label. Each of them gets the exact two-sided hypergeometric interval for its error rate
+at 1 − D/L; a `?` window counts right at the interval's lower end and wrong at its upper end. A profile is good when
+the upper end is at most A, bad when the lower end is above A, and undecided otherwise; the comparison is made in exact
+arithmetic, with A as written. The L intervals hold together, and every verdict is right, except on at most D of
+samples; a wrong good needs the interval to miss above and a wrong bad to miss below, so the verdicts alone are wrong
+on at most D/2. A profile labelled in full has its exact rate (or the range its `?` windows leave), needs none of D and
+is never wrong; one with no label is undecided. `other` is one profile: its verdict is about its windows together and
+says nothing about any one cell folded into it. Each verdict is about a profile's windows taken together, not each
+window. The verdicts read the CSV and its sidecar alone, so `--rule`, `--level-cut`, `--also-accept`, `--scores`,
+`--confidence` and `--nodata` are refused. The labels a profile needs to be found good with no error among them, at
+A = 5% and D = 0.1, in a large profile (`min_labels_to_certify(A, D/(2L))`; fewer in a small one):
+
+| Profiles labelled in part (`L`) | 1 | 2 | 4 | 8 | 12 |
+|---|---|---|---|---|---|
+| Labels needed per profile | 59 | 72 | 86 | 99 | 107 |
+
+`certify` prints one line per profile, the ends rounded outward to a tenth of a point (the verdict compares the exact
+ends), and writes `<sample>_profiles.json`: `by_profile`, `alpha`, `delta`, `n_profiles`, `n_tested` (L),
+`delta_per_profile`, `level`, `method`, `profiles` (per profile: `definition`, `n_population`, `share_of_map`,
+`n_labelled`, `n_wrong`, `n_unjudged`, `census`, `tested`, `estimate` or `estimate_range`, `low`, `high`, `verdict`),
+`verdict_counts`, `verdict_codes`, `notes` and `verdict_raster`, the path of `<sample>_profiles.npy`: one code per
+window of the window grid, 1 good, 2 bad, 3 undecided, 0 outside the population. The guarantee assumes the labels are
+right and that A and D were chosen before any label was read; running certify again at another A or D, or after adding
+labels, is a new test. It also assumes the sidecar is the one `sample` wrote: the CSV is checked against the sidecar,
+not the sidecar against the map. `certificate`, `verify`, `decide` and the MCP server's `certify` tool do not take a
+profile sample's verdicts in this version. `certify --rule bonferroni` on a condition sample already tested a "good"
+of sorts per condition (each condition's whole extent among its levels); what is new here is the partition fixed from
+the map, the bad verdict, undecided, the raster and `?` bounded both ways.
+
 **A second reading.** `certify --also-accept FILE` certifies from the same labels a second time, with the windows
 the file accepts counted right, on each route: one look, per input condition and sequential. It reads the file, the
 `reference_class` column and the map's class as `estimate` does ([sample and estimate](#sample-and-estimate)), with
@@ -1188,6 +1249,7 @@ run: oe-inferencex sample MAP --design random --budget 244 --out to_label.csv
 | An error rate, to within a width | `MAP --width W` (or `--windows N`) | the probability that `estimate`'s exact 95% interval is no wider than W (high minus low) |
 | Which of two maps is more accurate | `MAP_A --other MAP_B --difference D` (or `--windows N --differing D`) | the probability that labels drawn where the maps differ name the more accurate map when their accuracies differ by D or more, at the worst split checked of the differing windows into right in one map, in the other or in neither; with `--two-class`, the one split of two-class maps |
 | A class drawn wrong | `MAP --class-share S --classes C [--drawn-at R]` (or `--windows N`) | the probability that `estimate --per-class`'s exact interval for a class of share S flags it, when the map draws it at R of its share (0.5 by default; above 1, an over-draw), with the intervals of all C classes holding together at 95% |
+| One profile's verdict | `--windows N --alpha A --profiles L --profile-error E [--delta D]` | the probability that `certify` on a profile sample calls a profile of N windows good (E below A) or bad (E above A), with D split over the L profiles labelled in part (exact); a profile has no map of its own, so give its windows, which `sample --design profile` prints, and no `run:` line is printed |
 | A certified zone | `MAP --coverage C --alpha A [--zone-error R]` | the budget from which the prefix and Bonferroni rules test that zone at all; with R, the Bonferroni rule's probability of certifying it (exact, however the errors spread), the target rule's for that zone fixed with `sample --target C` (exact lower bound, at any budget, from 1.16.0), the most the prefix rule can reach (exact) and the prefix rule's probability when its more confident zones are wrong no more often (simulated, the worst such map) |
 
 Between the budgets of the ladder the probability does not rise smoothly: the counts are discrete, so it steps, and
@@ -1630,8 +1692,8 @@ The module paths of 1.18.1 still import. For example, `oe_inferencex.assess` giv
 | `review` | `assess`: review sets; with a reference, error rate, capture and tie-aware AURC; with a condition layer, each condition on its own; the class-edge band (`boundary`). `explain`: the cues behind each flagged window, with their measured enrichment. `calibrate`: a fitted ranker or side rule, bound to its model family. The window readers the labelled commands share |
 | `compare` | Where two inferences differ; with labels, the cross-tab and which side is right; `determinism_check` (`compare`) |
 | `scale` | The same map at several window sizes: each class's survival, windows bordering another class, confidence and, with a reference, the error rate (`scale`) |
-| `estimate` | Sampling designs, the error rate, per-class accuracy, the review-set check, each per input condition; the per-class audit of a map's confident calls; which of two maps is more accurate, from labels (`sample`, `estimate`) |
-| `certify` | `zone`, `sequential`: the certified zone, per input condition too. `certificate`: a certified zone packed to travel with the map (a STAC Item, the zone as a GeoTIFF, digests), and its verifier (`certify`, `certificate`, `verify`) |
+| `estimate` | Sampling designs, the error rate, per-class accuracy, the review-set check, each per input condition; `profiles`: the profiles of the profile design, fixed from the map before any label; the per-class audit of a map's confident calls; which of two maps is more accurate, from labels (`sample`, `estimate`) |
+| `certify` | `zone`, `sequential`: the certified zone, per input condition too. `localized`: a verdict per profile, good, bad or undecided. `certificate`: a certified zone packed to travel with the map (a STAC Item, the zone as a GeoTIFF, digests), and its verifier (`certify`, `certificate`, `verify`) |
 | `plan` | How many labels each labelled route needs, budget by budget, before any label is drawn (`plan`) |
 | `decide` | Typed answers to set questions, read from a result that `estimate`, `certify` or `compare` wrote (`decide`) |
 | `agency` | An agency's stratified reference sample graded, with intervals valid at any sample size; `stratified` holds the intervals (`grade`) |

@@ -1,5 +1,46 @@
 # Changelog
 
+## 1.20.0 (unreleased)
+
+- **Localized certification: a verdict per profile of the map.** `sample --design profile --profile-by SPEC
+  [--min-windows M]` splits the map's windows into at most 12 profiles fixed from the map alone, before any label:
+  the fields `confidence:Q` (Q quantile bands of the window confidence, 2 to 5), `condition` (the input condition,
+  with `--condition`), `class` (the map's class) and `grid:G` (a G by G block of the window grid, 2 to 4), in any
+  order. Each combination that occurs is a cell, and every cell with fewer than `--min-windows` windows (100 by
+  default) is folded into one profile named `other`; more than 12 profiles is refused. The labels are split equally
+  and drawn at random in each profile, as under the condition design, whose sidecar fields, CSV columns and checks it
+  reuses (`design: "condition"`, `condition.by: "profile"`); the sidecar adds `profile`: the fields, band edges, the
+  layer's path and digest, every cell and the profiles. New module `oe_inferencex/estimate/profiles.py`
+  (`parse_profile_by`, `build_profiles`).
+- **`certify` on a profile sample** calls each profile good (its exact upper end at most alpha), bad (its exact lower
+  end above alpha) or undecided, from the exact two-sided hypergeometric interval at 1 − delta/L, L the profiles
+  labelled in part; a `?` window counts right at the lower end and wrong at the upper. All L intervals hold, and every
+  verdict is right, except on at most delta of samples; the verdicts alone are wrong on at most delta/2, since a wrong
+  verdict needs its interval to miss on one side. A profile labelled in full compares its exact rate and needs none of
+  delta. It writes `<sample>_profiles.json` and `<sample>_profiles.npy`, the verdict code of every window (1 good, 2
+  bad, 3 undecided, 0 outside the population), and refuses `--rule`, `--level-cut`, `--also-accept`, `--scores`,
+  `--confidence` and `--nodata`. New module `oe_inferencex/certify/localized.py` (`profile_interval`,
+  `profile_verdict`, `profile_verdicts`). What was already there: `certify --rule bonferroni` on a condition sample
+  tests each condition's whole extent among its levels, a "good" of sorts at delta split over levels and conditions;
+  new are the partition fixed from the map, the bad verdict, undecided, the raster and `?` bounded both ways.
+- **`plan --windows N --alpha A --profiles L --profile-error E [--delta D]`**: the probability, budget by budget,
+  that certify calls a profile of N windows good (E below A) or bad (E above A), exact, with the tie rule certify
+  uses (`plan.plan_profile`, `plan.profile_verdict_probability`). With no error seen, a large profile is good at A 5%
+  and D 0.1 from 59, 72, 86, 99 and 107 labels at L 1, 2, 4, 8 and 12.
+- `estimate` on a profile sample gives each profile's rate and the whole map's, as on a condition sample, worded as
+  profiles, with one more note (`profile_note`). `estimate`'s JSON now takes `condition_by` from the sidecar's
+  `condition.by`, which is "map class" for a class sample as before and absent for every other sample, as before.
+  `common/wording.py` gains the profile word table; `class_words` takes it as an optional argument, its default
+  unchanged.
+- Refused, in this version: a certificate of per-profile verdicts (`certificate`), `decide` on them, and the MCP
+  server's `certify` tool on a profile sample. `--seed-from-map`, `--target` and the sequential options are refused
+  with the profile design.
+- No existing output changes but the help of `sample`, `certify` and `plan`, and the text of `plan`'s refusal when
+  nothing is asked, which names the new route. tests/test_localized.py checks the verdicts by exact enumeration over
+  every error pattern and every draw of small maps (and by counts over every population of larger ones), with a
+  negative control, the `?` bounds against any choice of the windows marked `?`, the agreement with certify's zone
+  test, the plan against brute force, the partition, and the command line end to end.
+
 ## 1.19.0 (2026-10-27)
 
 The package's layout, and nothing else: no function, option or output changes but the version a result is stamped

@@ -418,6 +418,8 @@ def cmd_estimate(args):
         also_text = "\n" + "\n".join(lines)
     _check_out_file(out, "estimate")
     by_class = (side.get("condition") or {}).get("by") == "map class"
+    if (side.get("condition") or {}).get("by") == "profile":           # the profile design: what certify adds
+        res["profile_note"] = PROFILE_ESTIMATE_NOTE
     words = class_wording(side, args.sample, out, accept_path)
     with open(out, "w") as f:
         json.dump(_stamp(words(res), "estimate"), f, indent=1, default=float)
@@ -447,8 +449,16 @@ def cmd_estimate(args):
           + (f"\nwarning: {res['warning']}" if "warning" in res else "") + cond_text + per_class_text
           + (f"\nwarning: {res['per_class_warning']}" if "per_class_warning" in res else "")
           + (f"\nnote: {res['population_note']}" if "population_note" in res else "")
-          + (f"\nnote: {res['sequential_note']}" if "sequential_note" in res else "") + also_text) + f"\nwrote {out}")
+          + (f"\nnote: {res['sequential_note']}" if "sequential_note" in res else "") + also_text
+          + (f"\nnote: {res['profile_note']}" if "profile_note" in res else "")) + f"\nwrote {out}")
     return 0
+
+
+# estimate on a sample drawn by profile: each profile's rate is printed above in profile words (class_wording); this
+# says what certify adds
+PROFILE_ESTIMATE_NOTE = ("This sample was drawn by profile (sample --design profile). certify --alpha A gives each "
+                         "profile a verdict, good, bad or undecided against A, with delta split over all of them; A is "
+                         "chosen before any label is read.")
 
 
 ALSO_ACCEPT_HELP = ("JSON {map class: [reference classes also accepted]}, written before any label is read: a second "
