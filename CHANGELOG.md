@@ -40,10 +40,12 @@ with and one line that names a moved file (below).
   hook (also through the standard lazy loader, with a blocked module, across a reload of a module that still
   carries an old path's spec and of the package, and that finding an old path imports nothing), and that importing
   the package loads neither torch nor matplotlib.
-- Checked on the cluster before release (aicr job 1543225): 1.18.1 and 1.19.0 ran the same 157 commands and calls
-  and wrote the same 418 files, byte for byte (1.18.1 run twice, to show the battery is deterministic); the suite
-  passes before and after (1,296 and 1,319 tests, the 23 new ones in test_layout.py); the public surface, `--help`,
-  the demo without extras and the documentation build agree, apart from the two checkouts' absolute paths.
+- Checked on the cluster before release, at the commit before this text (aicr jobs 1544286 and 1544287): 1.18.1 and
+  1.19.0 ran the same 157 commands and calls and wrote the same 418 files, byte for byte (1.18.1 run twice, to show
+  the battery is deterministic; the battery does not write the task-card page); the suite passes before and after
+  (1,296 and 1,321 tests, the 25 new ones in test_layout.py) on Python 3.12, and 1,321 on 3.11 and 3.13; the public
+  surface, `--help`, the demo without extras and the documentation build agree, apart from the two checkouts'
+  absolute paths and the version a result is stamped with.
 
 ## 1.18.1 (2026-10-26)
 
