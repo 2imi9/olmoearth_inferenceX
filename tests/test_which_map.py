@@ -428,6 +428,34 @@ def test_the_sign_verdict_never_names_the_worse_map_more_than_its_level_around_t
                         assert pa <= 0.025 + 1e-12, (D, n, T, KA, pa)
 
 
+def test_hypergeometric_lower_tail_is_no_heavier_than_the_fair_binomial():
+    """Lemma W of the technical report, in exact integers: of T windows where one map is right, K_a >= T - K_a are right
+    in a; with X the count right in a among m drawn without replacement, P(X <= k) <= P(Bin(m, 1/2) <= k) for every
+    k < m/2. Both sides times 2^m C(T, m): sum_{x<=k} C(K_a, x) C(T - K_a, m - x) 2^m <= sum_{x<=k} C(m, x) C(T, m).
+    Every T <= 60, every such K_a and 1 <= m <= T; equality at K_a = T/2, odd m and k = (m - 1)/2 (the proof's empty
+    middle). The range k < m/2 is needed, and it contains every critical value of the sign test."""
+    comb = math.comb
+    for T in range(1, 61):
+        for KA in range((T + 1) // 2, T + 1):              # K_a >= K_b = T - K_a
+            for m in range(1, T + 1):
+                whole, hyper, fair = comb(T, m), 0, 0
+                for k in range((m - 1) // 2 + 1):          # every k with 2k < m, cumulative sums
+                    hyper += comb(KA, k) * comb(T - KA, m - k)
+                    fair += comb(m, k)
+                    assert hyper << m <= fair * whole, (T, KA, m, k)
+                    if 2 * KA == T and 2 * k + 1 == m:
+                        assert hyper << m == fair * whole, (T, KA, m, k)
+    # at k >= m/2 it fails even with K_a > K_b: T = 5, K_a = 3, m = 3, k = 2 gives 9/10 against 7/8
+    T, KA, m, k = 5, 3, 3, 2
+    hyper = sum(comb(KA, x) * comb(T - KA, m - x) for x in range(k + 1))
+    fair = sum(comb(m, x) for x in range(k + 1))
+    assert (hyper, fair, comb(T, m)) == (9, 7, 10) and hyper << m > fair * comb(T, m)
+    # every critical value is below m/2, and at most m/2 - 1 (Uhlmann's range at K_a / T >= 1/2)
+    for alpha in (0.05, 0.1, 0.01):
+        for m in range(1, 201):
+            assert 2 * (est.sign_critical(m, alpha) + 1) <= m, (alpha, m)
+
+
 def test_windows_marked_unjudged_count_against_the_map_the_test_would_name():
     """a is named only if the test on (a, b + u) names it, so every way the ? windows could truly fall names a too."""
     from oe_inferencex import stats

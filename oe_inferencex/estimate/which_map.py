@@ -92,7 +92,10 @@ def compare_from_disagreement(sample, class_a, class_b, reference, unjudged=None
     The verdict (`which_map_rule`): while the labels are at most a fifth of the differing windows, the exact sign test
     on a and b at alpha = 1 - conf, naming a only if the test on (a, b + u) names it and b only if the test on
     (a + u, b) does, u the windows marked ?; the test on the true counts then names the same map, so the bound holds
-    whatever made them hard to judge. Past a fifth, and in a census, the interval names a map when it excludes 0.
+    whatever made them hard to judge. Given the m sampled windows where exactly one map is right, the count right in a
+    is hypergeometric over the K_a + K_b such windows, and when K_a >= K_b its lower tail below m / 2 is no heavier
+    than Bin(m, 1/2)'s (Lemma W of the technical report, proved there), so the test names the less accurate map at
+    most (1 - conf) / 2 of the time. Past a fifth, and in a census, the interval names a map when it excludes 0.
     exp107: at n = 100 the test named the better map 0.095 to 0.154 more often than the interval on 5 of 9 product
     pairs, and less often past a quarter to two fifths of the differing windows (it ignores the finite population)."""
     idx = np.asarray(sample["indices"], int)
