@@ -240,15 +240,24 @@ def test_evidence_pooling_crops_a_ragged_edge_and_dawid_skene_refuses_out_of_ran
     than skipping, which would leave CI never running this test."""
     import importlib, sys, types
     import pytest
+    import oe_inferencex.research
+    keys = ("oe_inferencex.evidence", "oe_inferencex.research.evidence")
+    holders = (oe_inferencex, oe_inferencex.research)     # the import binds `evidence` on both
     monkeypatch.setitem(sys.modules, "torch", types.ModuleType("torch"))
-    for key in ("oe_inferencex.evidence", "oe_inferencex.research.evidence"):
-        sys.modules.pop(key, None)
-    evidence = importlib.import_module("oe_inferencex.evidence")
-    monkeypatch.delitem(sys.modules, "oe_inferencex.evidence")
-    monkeypatch.delitem(sys.modules, "oe_inferencex.research.evidence")
-    assert evidence.pool_to_patches(np.ones((33, 32), bool), 16).shape == (2, 2)
-    with pytest.raises(ValueError, match="votes must be classes"):
-        evidence.dawid_skene(np.array([[0, -1], [1, 1]]), 2)
+    for key in keys:                         # an evidence module cached before the test comes back at teardown
+        monkeypatch.delitem(sys.modules, key, raising=False)
+    for holder in holders:
+        monkeypatch.delattr(holder, "evidence", raising=False)
+    try:
+        evidence = importlib.import_module("oe_inferencex.evidence")
+        assert evidence.pool_to_patches(np.ones((33, 32), bool), 16).shape == (2, 2)
+        with pytest.raises(ValueError, match="votes must be classes"):
+            evidence.dawid_skene(np.array([[0, -1], [1, 1]]), 2)
+    finally:                                 # the module bound to the stub torch does not outlive the test
+        for key in keys:
+            sys.modules.pop(key, None)
+        for holder in holders:
+            vars(holder).pop("evidence", None)
 
 
 def test_dawid_skene_edge_inputs_the_second_review_found():

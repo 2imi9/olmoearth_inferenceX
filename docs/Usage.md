@@ -1616,13 +1616,13 @@ On this pair most of the accuracy comes from the post-event side being usually r
 ## Modules
 
 The package has one folder per feature. Each folder holds the feature's logic and its commands. Code that two or more
-features use is in `common`.
+features use is in `common`, except the window readers the labelled commands share, which are in `review`.
 
 The module paths of 1.18.1 still import. For example, `oe_inferencex.assess` gives the module `oe_inferencex.review.assess`.
 
 | Folder | Contents |
 |---|---|
-| `review` | `assess`: review sets; with a reference, error rate, capture and tie-aware AURC; with a condition layer, each condition on its own; the class-edge band (`boundary`). `explain`: the cues behind each flagged window, with their measured enrichment. `calibrate`: a fitted ranker or side rule, bound to its model family |
+| `review` | `assess`: review sets; with a reference, error rate, capture and tie-aware AURC; with a condition layer, each condition on its own; the class-edge band (`boundary`). `explain`: the cues behind each flagged window, with their measured enrichment. `calibrate`: a fitted ranker or side rule, bound to its model family. The window readers the labelled commands share |
 | `compare` | Where two inferences differ; with labels, the cross-tab and which side is right; `determinism_check` (`compare`) |
 | `scale` | The same map at several window sizes: each class's survival, windows bordering another class, confidence and, with a reference, the error rate (`scale`) |
 | `estimate` | Sampling designs, the error rate, per-class accuracy, the review-set check, each per input condition; the per-class audit of a map's confident calls; which of two maps is more accurate, from labels (`sample`, `estimate`) |

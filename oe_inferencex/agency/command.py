@@ -23,7 +23,8 @@ def _iv_pct(q, nd, scale=100.0):
 def cmd_grade(args):
     """One or more maps graded with an agency's stratified reference sample: overall accuracy, the difference between
     two maps, each class's user's and producer's accuracy and share of the reference, each with an interval valid at
-    every sample size and the normal-theory one beside it, nominal (agency.py, stratified.py)."""
+    every sample size and the normal-theory one beside it, nominal (oe_inferencex.agency and
+    oe_inferencex.agency.stratified)."""
     from oe_inferencex import agency
     if not 0 < args.alpha < 1:
         raise SystemExit(f"grade: --alpha must be in (0, 1), got {args.alpha}")

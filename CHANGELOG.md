@@ -1,20 +1,22 @@
 # Changelog
 
-## 1.19.0 (2026-10-26)
+## 1.19.0 (2026-10-27)
 
-The package's layout, and nothing else: no function, text, option or output changes but the version a result is
-stamped with.
+The package's layout, and nothing else: no function, option or output changes but the version a result is stamped
+with and one line that names a moved file (below).
 
-- **Feature folders (ADR-002 in the research record).** The 27 modules are now folders by feature, each holding its
-  logic and its commands: `review` (assess, explain, calibrate; the commands `assess` and `boundary`), `compare`,
+- **Feature folders (ADR-002 in the research record).** The 25 modules other than `demo` and `mcp_server`, which
+  stay where they were, are now in folders by feature, each holding its logic and its commands: `review` (assess,
+  explain, calibrate, the window readers the labelled commands share; the commands `assess` and `boundary`), `compare`,
   `scale`, `estimate` (estimate.py split into designs, intervals, error_rate, model_assisted, per_class, which_map and
   audit; `sample` and `estimate`), `certify` (zone, sequential, certificate; `certify`, `certificate` and `verify`),
   `plan`, `decide`, `agency` (with stratified; `grade`), `readers` (olmoearth, embeddings, lcc, taskcard;
   `from-olmoearth` and `from-embeddings`), `research` (evidence, awf, data, figstyle, reliability), `common` (metrics,
   signals, stats, the exact hypergeometric arithmetic, the sampling primitives and the commands' shared helpers) and
   `cli` (the parser and `main`). cli.py (4,137 lines) and estimate.py (2,974) are split by feature, and three lazy
-  import cycles are gone (estimate and sequential, decide and cli, data and cli). `demo` and `mcp_server` stay where
-  they were. Function bodies moved verbatim; only import lines changed.
+  import cycles are gone (estimate and sequential, decide and cli, data and cli). Function bodies moved verbatim; only
+  import lines changed, and the paths of moved files that docstrings and one output line name: the task-card page
+  (`python -m oe_inferencex.taskcard --all --md FILE`) says it was resolved by `oe_inferencex/readers/taskcard.py`.
 - **Every 1.18.1 import path still works, as the same module.** `oe_inferencex.estimate`, `.cli`, `.compare`,
   `.scale`, `.plan`, `.decide` and `.agency` are packages that keep every name they had, private ones included. The
   18 modules that moved (assess, explain, calibrate, metrics, signals, stats, reliability, evidence, awf, data,
@@ -27,10 +29,14 @@ stamped with.
 - **What can differ.** A moved module's `__name__`, and the `__module__` of what it defines, name the new path
   (`oe_inferencex.review.explain.Cue`), so a pickle written by 1.19.0 does not load in 1.18.1; one written by 1.18.1
   still loads. The API reference pages of the moved modules moved with them (`reference/assess/` is now
-  `reference/review/assess/`); the old addresses redirect. No module file remains at an old path.
+  `reference/review/assess/`); the old addresses redirect. No module file remains at an old path, so tools that
+  resolve imports from files (type checkers, editors, PyInstaller) do not find the old paths. In one process, once an
+  old path is imported, `runpy.run_module` refuses it (the module's loader answers to its new name); run the new path
+  there. `python -m` with an old path, and runpy before the old path is imported, still run it.
 - Six tests patch the module that now holds what they patch (test_trust_zone.py twice, test_bughunt_1_17_2.py,
   test_class_design.py, test_also_accept.py, test_reliability.py). tests/test_layout.py checks the old paths, the
-  hook, and that importing the package loads neither torch nor matplotlib.
+  hook (also under the standard lazy loader, with a blocked module and across a reload of the package, and that
+  finding an old path imports nothing), and that importing the package loads neither torch nor matplotlib.
 - Checked on the cluster before release (aicr job 1543225): 1.18.1 and 1.19.0 ran the same 157 commands and calls
   and wrote the same 418 files, byte for byte (1.18.1 run twice, to show the battery is deterministic); the suite
   passes before and after (1,296 and 1,319 tests, the 23 new ones in test_layout.py); the public surface, `--help`,

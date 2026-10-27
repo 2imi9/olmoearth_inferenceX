@@ -31,7 +31,7 @@ def _window_size_text(p, geo):
 def cmd_scale(args):
     """The same map at several window sizes: how much of each class survives the window's majority, how many windows
     border a window of another class, how confident they are and, with a reference, each size's error rate
-    (scale.py)."""
+    (oe_inferencex.scale)."""
     from oe_inferencex.scale import scale_profile
     conf_path, conf_range = _product_args(args, "scale")
     prod_notes = []

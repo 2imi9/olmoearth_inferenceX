@@ -3,6 +3,7 @@ import importlib
 import importlib.util
 import subprocess
 import sys
+import textwrap
 
 import pytest
 
@@ -56,9 +57,10 @@ def test_an_old_path_is_the_moved_module(old, new, monkeypatch):
         return
     assert importlib.import_module(f"oe_inferencex.{old}") is moved
     assert sys.modules[f"oe_inferencex.{old}"] is moved and getattr(ox, old) is moved
-    # the moved module keeps its own name, spec and package: relative imports and reloads resolve where it lives
+    # the moved module keeps its own name, spec, package and loader: relative imports and reloads resolve where it lives
     assert moved.__name__ == moved.__spec__.name == f"oe_inferencex.{new}"
     assert moved.__package__ == f"oe_inferencex.{new}".rpartition(".")[0]
+    assert moved.__loader__ is moved.__spec__.loader
 
 
 def test_a_name_and_a_patch_through_an_old_path_are_the_moved_module_s(monkeypatch):
@@ -86,7 +88,7 @@ def test_python_m_runs_the_moved_taskcard(monkeypatch, capsys):
     """`python -m oe_inferencex.taskcard` (taskcard's usage line) runs the moved module's main block: in process
     through runpy, and as a command, whose argv[0] is then the moved file, so argparse still calls it taskcard.py."""
     import runpy
-    monkeypatch.delitem(sys.modules, "oe_inferencex.taskcard", raising=False)     # found by the finder, not the cache
+    monkeypatch.delitem(sys.modules, "oe_inferencex.taskcard", raising=False)     # not imported yet: see the next test
     origin = importlib.util.find_spec("oe_inferencex.taskcard").origin
     assert origin == importlib.import_module("oe_inferencex.readers.taskcard").__file__
     monkeypatch.setattr(sys, "argv", ["taskcard.py", "--help"])
@@ -95,6 +97,69 @@ def test_python_m_runs_the_moved_taskcard(monkeypatch, capsys):
     assert exc.value.code == 0 and capsys.readouterr().out.startswith("usage: taskcard.py ")
     run = subprocess.run([sys.executable, "-m", "oe_inferencex.taskcard", "--help"], capture_output=True, text=True)
     assert run.returncode == 0 and run.stdout.startswith("usage: taskcard.py "), run.stderr
+
+
+def test_runpy_refuses_an_old_path_already_imported_and_runs_the_new_one(monkeypatch, capsys):
+    """What can differ (CHANGELOG 1.19.0): once imported, an old path is the moved module, whose loader answers to the
+    new name only, so runpy in the same process refuses the old name; the new name runs."""
+    import runpy
+    import warnings
+    importlib.import_module("oe_inferencex.taskcard")
+    monkeypatch.setattr(sys, "argv", ["taskcard.py", "--help"])
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)      # runpy: found in sys.modules before its execution
+        with pytest.raises(ImportError, match="cannot handle oe_inferencex.taskcard"):
+            runpy.run_module("oe_inferencex.taskcard", run_name="__main__")
+        with pytest.raises(SystemExit) as exc:
+            runpy.run_module("oe_inferencex.readers.taskcard", run_name="__main__")
+    assert exc.value.code == 0 and capsys.readouterr().out.startswith("usage: taskcard.py ")
+
+
+def test_the_finder_imports_nothing_to_find_and_holds_under_lazy_loading_blocking_and_reload():
+    """In a fresh interpreter, the ways other than a plain import that reach the finder: finding an old path imports
+    nothing (the import system calls find_spec under its global lock); an old path imported before its new one; the
+    standard library's lazy loader; a new path blocked with None, refused as missing; a pickle that names an old path;
+    a reload of the package, which keeps one finder."""
+    code = textwrap.dedent("""
+        import importlib, importlib.util, pickle, sys, types
+        import oe_inferencex as ox
+        before = set(sys.modules)
+        assert importlib.util.find_spec("oe_inferencex.evidence").origin.endswith("evidence.py")
+        assert set(sys.modules) == before, sorted(set(sys.modules) - before)
+
+        old = importlib.import_module("oe_inferencex.taskcard")
+        new = sys.modules["oe_inferencex.readers.taskcard"]
+        assert old is new and new.__name__ == new.__spec__.name == "oe_inferencex.readers.taskcard"
+        assert new.__package__ == "oe_inferencex.readers" and new.__loader__ is new.__spec__.loader
+
+        spec = importlib.util.find_spec("oe_inferencex.lcc")
+        spec.loader = importlib.util.LazyLoader(spec.loader)
+        lazy = importlib.util.module_from_spec(spec)
+        sys.modules["oe_inferencex.lcc"] = lazy
+        spec.loader.exec_module(lazy)
+        real = importlib.import_module("oe_inferencex.readers.lcc")
+        assert real.__spec__.name == "oe_inferencex.readers.lcc"         # the first attribute access loads it
+        assert lazy is real and type(real) is types.ModuleType
+        assert real.__package__ == "oe_inferencex.readers" and real.__loader__ is real.__spec__.loader
+
+        sys.modules["oe_inferencex.research.figstyle"] = None
+        try:
+            importlib.import_module("oe_inferencex.figstyle")
+        except ModuleNotFoundError as exc:
+            assert "halted; None in sys.modules" in str(exc), exc
+        else:
+            raise AssertionError("a blocked module imported")
+        assert "oe_inferencex.figstyle" not in sys.modules
+
+        assert pickle.loads(b"coe_inferencex.stats\\nsign_test\\n.") is ox.sign_test
+        assert importlib.reload(sys.modules["oe_inferencex.stats"]).__name__ == "oe_inferencex.common.stats"
+        importlib.reload(ox)
+        assert sum(type(f).__name__ == "_MovedModules" for f in sys.meta_path) == 1
+        assert importlib.import_module("oe_inferencex.metrics") is sys.modules["oe_inferencex.common.metrics"]
+        print("ok")
+        """)
+    run = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+    assert run.returncode == 0 and run.stdout == "ok\n", run.stderr
 
 
 def test_the_public_names_are_those_of_1_18_1():

@@ -1,6 +1,6 @@
-"""grade and its intervals (agency.py, stratified.py): exact checks by enumeration, Olofsson et al.'s worked example,
-and the command line. The enumerations are the judge's of 26 October 2026 (aicr job 1525456), at sizes a test can run:
-every population and every sample of two or three small strata, coverage computed exactly."""
+"""grade and its intervals (agency/__init__.py, agency/stratified.py): exact checks by enumeration, Olofsson et al.'s
+worked example, and the command line. The enumerations are the judge's of 26 October 2026 (aicr job 1525456), at sizes
+a test can run: every population and every sample of two or three small strata, coverage computed exactly."""
 import csv
 import itertools
 import json

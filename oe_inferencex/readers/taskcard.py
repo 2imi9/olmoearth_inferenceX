@@ -344,7 +344,7 @@ def lcc_card():
 
 # ---------------------------------------------------------------- rendering
 def to_markdown(cards):
-    out = ["# Task cards", "", "Resolved from configuration sources by `oe_inferencex/taskcard.py`; no evidence is generated here.", ""]
+    out = ["# Task cards", "", "Resolved from configuration sources by `oe_inferencex/readers/taskcard.py`; no evidence is generated here.", ""]
     for c in cards:
         out.append(f"## {c.name}  ({c.kind})")
         if c.goal:

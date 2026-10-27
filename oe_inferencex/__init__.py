@@ -17,7 +17,8 @@ Folders, one per feature, each with its logic and its commands, in the order a u
   review      assess: a prediction or served class map -> review sets at budgets, boundary-first order, reference
               scoring, and with an input-condition layer (a cloud flag, the modalities present) each condition on its
               own; explain: why each review window is suspect, label-free cues with their measured enrichment;
-              calibrate: fuse the readings with labels, a ranker or side rule, held out, bound to its model family
+              calibrate: fuse the readings with labels, a ranker or side rule, held out, bound to its model family;
+              and the window readers the labelled commands share
   compare     how two inferences of the same scene differ: disagreement, where it sits, stability, the label bridge
   scale       one map at several window sizes
   estimate    how wrong the map is, from a labelled sample: which windows to label, the design-based interval,
@@ -25,7 +26,8 @@ Folders, one per feature, each with its logic and its commands, in the order a u
               condition's exact interval (exp88)
   certify     a certified zone of the map that is wrong at most alpha of the time, per condition with delta split
               over them (zone, sequential), and the certificate that carries it (certificate)
-  plan        how many labels each route needs; decide: typed answers read from a result
+  plan        how many labels each route needs
+  decide      typed answers read from a result that estimate, certify or compare wrote
   agency      an agency's stratified reference sample (NLCD, GFC2020) -> overall, user's and producer's accuracy
               and class shares of one map or two, each with an interval valid at any sample size (stratified: the
               betting intervals, the box for ratios, the pure-stratum rule) and the normal-theory one beside it
@@ -59,7 +61,9 @@ docs/Usage.md and docs/index.md, the documentation: https://olmoearth-inferencex
 """
 from importlib.metadata import PackageNotFoundError, version as _version
 import importlib.abc
+import importlib.machinery
 import importlib.util
+import os
 import sys
 
 from .review.assess import (assess_classmap, assess_prediction, boundary_first_score, pool_condition, review_mask,
@@ -142,24 +146,35 @@ _MOVED = {
 class _MovedModules(importlib.abc.MetaPathFinder, importlib.abc.Loader):
     """Finds `oe_inferencex.<old>` of _MOVED and loads it as the module it moved to."""
 
+    def __init__(self):
+        self._own = {}      # a moved module's name -> its own spec, package and loader, which exec_module puts back
+
+    def _file(self, tail):
+        """The moved module's file, located without importing anything, not even its folder: find_spec runs under
+        the import system's global lock, where importing a package could deadlock against another thread."""
+        folder = _MOVED[tail].rpartition(".")[0]
+        where = [os.path.join(entry, *folder.split(".")) for entry in __path__]
+        return importlib.machinery.PathFinder.find_spec(f"{__name__}.{_MOVED[tail]}", where)
+
     def find_spec(self, fullname, path=None, target=None):
         head, _, tail = fullname.rpartition(".")
-        if head == __name__ and tail in _MOVED:
-            moved = importlib.util.find_spec(f"{__name__}.{_MOVED[tail]}")      # found, not executed
-            return importlib.util.spec_from_loader(fullname, self, origin=moved.origin)  # origin: argv[0] under -m
-        return None
+        if head != __name__ or tail not in _MOVED:
+            return None
+        moved = self._file(tail)                         # its origin is argv[0] under -m
+        return None if moved is None else importlib.util.spec_from_loader(fullname, self, origin=moved.origin)
 
     def create_module(self, spec):
         module = importlib.import_module(f"{__name__}.{_MOVED[spec.name.rpartition('.')[2]]}")
-        spec.loader_state = module.__spec__, module.__package__     # the import system sets both to the old path's
-        return module
+        if module.__spec__.name == module.__name__:      # its own spec, not one an unfinished old-path load left on it
+            self._own[module.__name__] = module.__spec__, module.__package__, module.__loader__
+        return module       # the import system now sets the old path's spec on it, and a lazy loader its loader
 
     def exec_module(self, module):
-        module.__spec__, module.__package__ = module.__spec__.loader_state      # the moved module keeps its own
+        module.__spec__, module.__package__, module.__loader__ = self._own[module.__name__]   # it keeps its own
 
     def get_code(self, fullname):          # so `python -m oe_inferencex.taskcard` still runs its main block
-        real = f"{__name__}.{_MOVED[fullname.rpartition('.')[2]]}"
-        return importlib.util.find_spec(real).loader.get_code(real)
+        tail = fullname.rpartition(".")[2]
+        return self._file(tail).loader.get_code(f"{__name__}.{_MOVED[tail]}")
 
 
 if not any(type(finder).__module__ == __name__ for finder in sys.meta_path):     # once, also after a reload

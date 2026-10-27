@@ -1,4 +1,4 @@
-"""Sequential certify (oe_inferencex/sequential.py), checked in exact arithmetic rather than by simulation.
+"""Sequential certify (oe_inferencex/certify/sequential.py), checked in exact arithmetic rather than by simulation.
 
 The e-process's closed form is compared with the mixture it stands for; its supermartingale property is checked
 under every null count, not only the boundary one; and Ville's bound, the whole guarantee, is computed exactly by
