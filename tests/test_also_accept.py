@@ -680,9 +680,10 @@ def test_per_class_stays_strict_and_reads_the_map_once(tmp_path, capsys, monkeyp
     s = _sample(tmp_path, p, "random")
     _label(s, truth)
     _run(capsys, ["estimate", s, "--per-class", "--out", str(tmp_path / "plain.json")])
+    from oe_inferencex.estimate import estimate_command     # where cmd_estimate looks _map_windows up (ADR-002)
     calls = []
-    real = cli._map_windows
-    monkeypatch.setattr(cli, "_map_windows", lambda *a, **k: calls.append(a[3]) or real(*a, **k))
+    real = estimate_command._map_windows
+    monkeypatch.setattr(estimate_command, "_map_windows", lambda *a, **k: calls.append(a[3]) or real(*a, **k))
     _run(capsys, ["estimate", s, "--per-class", "--out", str(tmp_path / "both.json"), "--also-accept",
                   str(tmp_path / "pairs.json")])
     assert calls == ["estimate --per-class"]
