@@ -13,8 +13,8 @@ from math import comb
 
 import numpy as np
 
-from oe_inferencex.metrics import aurc_expected
-from oe_inferencex.signals import midrank_pct
+from oe_inferencex.common.metrics import aurc_expected
+from oe_inferencex.common.signals import midrank_pct
 
 TIE_TOL = 1e-12
 

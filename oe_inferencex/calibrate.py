@@ -21,7 +21,7 @@ and exp59 fitted with an optimiser. Signals may point either way: the fit learns
 import numpy as np
 
 from oe_inferencex.compare import over_groups
-from oe_inferencex.metrics import capture_at_budget_expected, excess_aurc, expected_calibration_error
+from oe_inferencex.common.metrics import capture_at_budget_expected, excess_aurc, expected_calibration_error
 
 MIN_GROUP_ERRORS = 3
 

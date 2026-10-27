@@ -49,8 +49,8 @@ import warnings
 import numpy as np
 
 from oe_inferencex.estimate import _condition_index
-from oe_inferencex.metrics import aurc_expected
-from oe_inferencex.signals import boundary_indicator, midrank_pct
+from oe_inferencex.common.metrics import aurc_expected
+from oe_inferencex.common.signals import boundary_indicator, midrank_pct
 
 QUANTILES = (0.05, 0.25, 0.5, 0.75, 0.95)
 MAX_CONDITIONS = 64               # distinct condition values a layer may hold; more is a continuous layer, not a category

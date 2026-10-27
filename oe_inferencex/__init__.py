@@ -51,6 +51,9 @@ The paths under docs/, exp/ and scripts/ that docstrings and comments here name 
 docs/Usage.md and docs/index.md, the documentation: https://olmoearth-inferencex.readthedocs.io
 """
 from importlib.metadata import PackageNotFoundError, version as _version
+import importlib.abc
+import importlib.util
+import sys
 
 from .assess import (assess_classmap, assess_prediction, boundary_first_score, pool_condition, review_mask,
                      review_order, summary)
@@ -63,16 +66,18 @@ from .estimate import (certify_by_condition, cluster_interval, confidence_strata
 from .compare import (compare_inferences, crosstab, determinism_check, disagreement, over_groups, phi, stability,
                       where, which_side)
 from .explain import CUES, cue_enrichment, derive_cues, explain_review_set, library_table
-from .metrics import (attainable_ceiling, augrc, augrc_from_auroc, aurc_expected, capture_at_budget, capture_at_budget_expected, excess_aurc,
-                      expected_calibration_error, oracle_aurc, risk_coverage, selective_accuracy,
-                      weighted_aurc, weighted_auroc, weighted_capture_at_budget, weighted_excess_aurc,
-                      weighted_mean)
-from .signals import (aligned_tile_phase, boundary_indicator, combine_midrank, confidence, crop_dependence,
-                      midrank_pct, ndwi, ndwi_gradient, ndwi_level, pool_to_windows, s2_patch_variance,
-                      shift_averaged_probability)
+from .common.metrics import (attainable_ceiling, augrc, augrc_from_auroc, aurc_expected, capture_at_budget, capture_at_budget_expected, excess_aurc,
+                             expected_calibration_error, oracle_aurc, risk_coverage, selective_accuracy,
+                             weighted_aurc, weighted_auroc, weighted_capture_at_budget, weighted_excess_aurc,
+                             weighted_mean)
+from .common.signals import (aligned_tile_phase, boundary_indicator, combine_midrank, confidence, crop_dependence,
+                             midrank_pct, ndwi, ndwi_gradient, ndwi_level, pool_to_windows, s2_patch_variance,
+                             shift_averaged_probability)
 from .stratified import betting_interval, pure_stratum_ratio
-from .stats import (block_bootstrap_indices, cluster_bootstrap_difference, clustered_sign_test,
-                    paired_cluster_bootstrap, paired_comparison, rank_sum_test, sign_test, spearman, wins_losses_ties)
+from .common.stats import (block_bootstrap_indices, cluster_bootstrap_difference, clustered_sign_test,
+                           paired_cluster_bootstrap, paired_comparison, rank_sum_test, sign_test, spearman, wins_losses_ties)
+# The module attributes the 1.18.1 imports above bound as a side effect (`ox.metrics` after `import oe_inferencex`)
+from .common import metrics, signals, stats  # noqa: F401
 
 try:
     __version__ = _version("olmoearth-inferencex")
@@ -108,3 +113,38 @@ __all__ = [
     "confidence", "boundary_indicator", "aligned_tile_phase", "shift_averaged_probability", "pool_to_windows",
     "ndwi", "ndwi_gradient", "ndwi_level", "s2_patch_variance", "midrank_pct", "combine_midrank",
 ]
+
+# The 1.18.1 module paths that 1.19.0 moved into feature folders (ADR-002), old name -> new path. Importing an old
+# path gives the moved module itself, not a copy: `oe_inferencex.metrics is oe_inferencex.common.metrics`, so private
+# names, monkeypatches and module state are the one module's. Nothing is imported before an old path is asked for
+# (evidence still needs torch only then). The package's own code imports the new paths.
+_MOVED = {
+    "metrics": "common.metrics", "signals": "common.signals", "stats": "common.stats",
+}
+
+
+class _MovedModules(importlib.abc.MetaPathFinder, importlib.abc.Loader):
+    """Finds `oe_inferencex.<old>` of _MOVED and loads it as the module it moved to."""
+
+    def find_spec(self, fullname, path=None, target=None):
+        head, _, tail = fullname.rpartition(".")
+        if head == __name__ and tail in _MOVED:
+            moved = importlib.util.find_spec(f"{__name__}.{_MOVED[tail]}")      # found, not executed
+            return importlib.util.spec_from_loader(fullname, self, origin=moved.origin)  # origin: argv[0] under -m
+        return None
+
+    def create_module(self, spec):
+        module = importlib.import_module(f"{__name__}.{_MOVED[spec.name.rpartition('.')[2]]}")
+        spec.loader_state = module.__spec__, module.__package__     # the import system sets both to the old path's
+        return module
+
+    def exec_module(self, module):
+        module.__spec__, module.__package__ = module.__spec__.loader_state      # the moved module keeps its own
+
+    def get_code(self, fullname):          # so `python -m oe_inferencex.taskcard` still runs its main block
+        real = f"{__name__}.{_MOVED[fullname.rpartition('.')[2]]}"
+        return importlib.util.find_spec(real).loader.get_code(real)
+
+
+if not any(type(finder).__module__ == __name__ for finder in sys.meta_path):     # once, also after a reload
+    sys.meta_path.insert(0, _MovedModules())

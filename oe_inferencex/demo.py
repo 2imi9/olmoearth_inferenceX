@@ -21,7 +21,7 @@ import zlib
 import numpy as np
 
 from oe_inferencex.assess import assess_prediction
-from oe_inferencex.metrics import attainable_ceiling
+from oe_inferencex.common.metrics import attainable_ceiling
 
 LAND, WATER, FLAG, WRONG, RANDOM, INK = (236, 231, 219), (74, 144, 196), (255, 140, 0), (214, 39, 40), (60, 60, 60), (40, 40, 40)
 UNKNOWN = (255, 255, 255)

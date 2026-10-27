@@ -57,7 +57,7 @@ from oe_inferencex.assess import (RULE_TEXT, _boundary_valid, _pool, _pool_valid
 from oe_inferencex import estimate as est
 from oe_inferencex.compare import compare_inferences
 from oe_inferencex.explain import explain_review_set
-from oe_inferencex.signals import boundary_indicator
+from oe_inferencex.common.signals import boundary_indicator
 
 
 # ----------------------------------------------------------------------------- IO

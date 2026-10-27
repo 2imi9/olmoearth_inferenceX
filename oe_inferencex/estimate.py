@@ -2587,7 +2587,7 @@ def compare_from_disagreement(sample, class_a, class_b, reference, unjudged=None
     est_lo, est_hi = float(Fraction(a - (b + u), n) * wf), float(Fraction((a + u) - b, n) * wf)
     interval_verdict = "a" if low > 0 else "b" if high < 0 else None
     used = which_map_rule(n, D, rule)
-    from . import stats
+    from oe_inferencex.common import stats
     alpha = 1 - _level(conf)
     k = sign_critical(a + b + u, alpha)
     sign_verdict = "a" if a > b + u and b + u <= k else "b" if b > a + u and a + u <= k else None
