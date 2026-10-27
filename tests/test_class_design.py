@@ -60,9 +60,10 @@ def _exact_coverage(K, n_h, L, level=None):
         total = math.comb(int(sizes[h]), n_h[h])
         outcomes.append([(x, math.prod(math.comb(int(K[h, j]), x[j]) for j in range(C)) / total)
                          for x in _compositions(n_h[h], C) if all(x[j] <= K[h, j] for j in range(C))])
-    orig = est.hypergeom_interval
+    from oe_inferencex.estimate import per_class            # where _class_design_exact looks hypergeom_interval up (ADR-002)
+    orig = per_class.hypergeom_interval
     cached = functools.lru_cache(maxsize=None)(lambda k, n, M, conf: orig(k, n, M, conf if level is None else level))
-    est.hypergeom_interval = lambda k, n, M, conf=0.95: cached(k, n, M, conf)
+    per_class.hypergeom_interval = lambda k, n, M, conf=0.95: cached(k, n, M, conf)
     joint, ua_cov = 0.0, np.zeros(S)
     try:
         for combo in itertools.product(*outcomes):
@@ -81,7 +82,7 @@ def _exact_coverage(K, n_h, L, level=None):
                 u = per[h]["user_accuracy"]
                 ua_cov[h] += p * (u["low"] - 1e-12 <= ua[h] <= u["high"] + 1e-12)
     finally:
-        est.hypergeom_interval = orig
+        per_class.hypergeom_interval = orig
     return joint, float(ua_cov.min())
 
 
