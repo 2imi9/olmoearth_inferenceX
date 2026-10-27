@@ -95,34 +95,15 @@ from oe_inferencex.estimate.sample_command import (CLASS_RULE_TEXT, FILL_INSTRUC
 from oe_inferencex.estimate.estimate_command import (ALSO_ACCEPT_HELP, _estimate_class_audit, _estimate_disagreement,
                                                      _outside_note, _rate, _reference_classes, _verdict_words,
                                                      add_estimate_parser, cmd_estimate)
-
-
-def cmd_demo(args):
-    from oe_inferencex.demo import run
-    return run(out=args.out, seed=args.seed, made_up=args.made_up)
-
-
-def cmd_mcp(args):
-    """Serve the commands above as MCP tools on stdio, for an agent on the user's machine (oe_inferencex.mcp_server).
-    The agent starts this; nobody types into it. Without the mcp extra it says how to install it."""
-    from oe_inferencex import mcp_server
-    try:
-        server = mcp_server.build_server()
-    except ImportError as exc:
-        raise SystemExit(f"oe-inferencex mcp: {exc}") from None
-    server.run("stdio")
-    return 0
+from oe_inferencex.cli.demo_command import add_demo_parser, cmd_demo
+from oe_inferencex.cli.mcp_command import add_mcp_parser, cmd_mcp
 
 
 def build_parser():
     p = argparse.ArgumentParser(prog="oe-inferencex", description=__doc__.split("\n\n")[0])
     sub = p.add_subparsers(dest="command", required=True)
     add_assess_parser(sub)
-    d = sub.add_parser("demo", help="first run: audit the real sample map shipped with the package (or a made-up one) and draw the result")
-    d.add_argument("--out", default="oe_inferencex_demo", help="output directory (default oe_inferencex_demo)")
-    d.add_argument("--seed", type=int, default=0, help="seed of the made-up scene and of the random pick")
-    d.add_argument("--made-up", action="store_true", help="audit a small synthetic water map instead of the real sample tile")
-    d.set_defaults(func=cmd_demo)
+    add_demo_parser(sub)
     add_from_embeddings_parser(sub)
     add_boundary_parser(sub)
     add_scale_parser(sub)
@@ -135,9 +116,7 @@ def build_parser():
     add_certify_parser(sub)
     add_decide_parser(sub)
     add_plan_parser(sub)
-    m = sub.add_parser("mcp", help="serve these commands as tools to an agent on this machine (a local MCP server on "
-                                    "stdio; needs the mcp extra)")
-    m.set_defaults(func=cmd_mcp)
+    add_mcp_parser(sub)
     add_from_olmoearth_parser(sub)
     return p
 
@@ -145,7 +124,3 @@ def build_parser():
 def main(argv=None):
     args = build_parser().parse_args(argv)
     return args.func(args)
-
-
-if __name__ == "__main__":
-    sys.exit(main())
