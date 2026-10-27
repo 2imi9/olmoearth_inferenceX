@@ -48,7 +48,7 @@ import warnings
 
 import numpy as np
 
-from oe_inferencex.estimate import _condition_index
+from oe_inferencex.common.sampling import _condition_index
 from oe_inferencex.common.metrics import aurc_expected
 from oe_inferencex.common.signals import boundary_indicator, midrank_pct
 

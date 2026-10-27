@@ -636,13 +636,15 @@ def test_the_exact_interval_is_decided_alike_on_every_system(monkeypatch):
     P(X >= 1 | K = 1) = 1/40, the level at conf 0.95. Nudged a last digit either way, the interval is the same, the
     one integer arithmetic gives."""
     from fractions import Fraction
+    from oe_inferencex.common import hypergeom as hg        # where _hypergeom_interval looks _hyper_tail up (ADR-002)
     assert est._hyper_tail_exact(1, 1, 40, 1, upper=True) == Fraction(1, 40)
-    real = est._hyper_tail
-    seen = []
+    real = hg._hyper_tail
+    seen, calls = [], []
     for nudge in (1 - 4e-16, 1 + 4e-16):
-        monkeypatch.setattr(est, "_hyper_tail", lambda *a, nudge=nudge, **kw: real(*a, **kw) * nudge)
-        est._hypergeom_interval.cache_clear()
+        monkeypatch.setattr(hg, "_hyper_tail", lambda *a, nudge=nudge, **kw: calls.append(1) or real(*a, **kw) * nudge)
+        hg._hypergeom_interval.cache_clear()
         seen.append(est.hypergeom_interval(1, 1, 40))
-    est._hypergeom_interval.cache_clear()
+    hg._hypergeom_interval.cache_clear()
+    assert calls                                            # the nudged tail was used
     assert seen[0] == seen[1] == (2 / 40, 1.0)
 

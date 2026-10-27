@@ -48,6 +48,7 @@ from fractions import Fraction
 import numpy as np
 
 from . import estimate as est
+from oe_inferencex.common.sampling import sequential_order
 
 
 def _null_count(n, alpha):
@@ -216,16 +217,6 @@ SEQUENTIAL_NOTE = ("sequential rule: each zone from the anchor outward is tested
                    "order they were drawn, and passes once it reaches 1/delta; the statement holds at every look "
                    "together, so it fails on at most delta of samples however often certify is run on this sample and "
                    "whenever labelling stops, and a zone once certified stays certified")
-
-
-def sequential_order(n_population, seed):
-    """A random order of the population, the same on every system and every numpy release: the windows sorted by
-    64-bit keys read straight from the PCG64 bit generator seeded with `seed` (SeedSequence and PCG64 are fixed
-    algorithms; Generator methods such as permutation may change their streams between releases). Any prefix of it
-    is a simple random sample, and a longer prefix extends a shorter one, which is what lets a reviewer add labels."""
-    n = int(n_population)
-    keys = np.random.PCG64(int(seed)).random_raw(n)
-    return np.lexsort((np.arange(n), keys))
 
 
 ANCHOR_CAP = 0.25                 # the default anchor is at most a quarter of the map (exp97)

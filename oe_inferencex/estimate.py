@@ -41,11 +41,17 @@ import math
 
 import numpy as np
 
+from oe_inferencex.common.hypergeom import (EXACT_N_MAX, _TIE, _at_most, _float_above, _float_below, _hyper_tail,
+                                            _hyper_tail_exact, _hypergeom_fractions, _hypergeom_interval, _level,
+                                            _log_choose, _tie, hypergeom_cdf, hypergeom_interval)
+from oe_inferencex.common.readings import _also_accept_pairs, _code, also_accept_reading
+from oe_inferencex.common.sampling import (REVIEW_SET_SIGMAS, UNRECORDED, _condition_guards, _condition_index,
+                                           review_set_check, review_set_threshold)
+
 Z95 = 1.959963984540054
 N_STRATA = 5
 MIN_PER_STRATUM = 2
 M_PER_TILE = 16
-REVIEW_SET_SIGMAS = 4.0           # a sample whose mean suspicion percentile sits this many SDs above 0.5 is refused
 Q_FLOOR = 0.02                    # the confidence design assumes no stratum is better than 98% right until labelled
 MIN_TILES = 5                     # fewer tiles than this and a between-tile standard error is not an estimate
 # The coverage this warning quotes for "this interval" is the shipped design's (exp/exp78_shipped_tiles.py, artifact
@@ -110,7 +116,6 @@ FAMILY_NOTE_ONE = ("Certified per input condition. The one condition with at lea
                    "so its statement fails on at most {delta:g} of samples. When it holds, the certified windows are "
                    "wrong at most {alpha:g} of the time. Conditions with fewer labels are not tested. Outside the "
                    "certified windows nothing is certified.")
-UNRECORDED = "unrecorded"          # the name of the windows with no recorded condition; reserved
 CONFIDENCE_REFUSAL = ("that design allocates labels from the model's confidence, which can overstate the accuracy of "
                       "a condition read from an input combination the model was not trained on: it did on PASTIS for a "
                       "probe trained on radar plus optical and run on radar alone, though not on CropHarvest China 6 "
@@ -189,163 +194,6 @@ def exact_coverage_srs(N, K, B, interval=None):
         if lo <= theta <= hi:
             tot += math.exp(lc(K, k) + lc(N - K, B - k) - lc(N, B))
     return tot
-
-
-def _hyper_tail(k, n, N, K, upper):
-    """P(X >= k) when `upper`, else P(X <= k), for X hypergeometric: n draws without replacement from N units of
-    which K are marked. Summed in log space along the pmf's ratio recurrence, so it neither loops in Python over
-    the support nor overflows when k sits far from the mode."""
-    import math
-    lo, hi = max(0, n - (N - K)), min(n, K)
-    if upper:
-        if k <= lo:
-            return 1.0
-        if k > hi:
-            return 0.0
-        x = np.arange(k, hi, dtype=np.float64)                  # pmf(x + 1) / pmf(x), x = k .. hi - 1
-        r = (K - x) * (n - x) / ((x + 1.0) * (N - K - n + x + 1.0))
-    else:
-        if k >= hi:
-            return 1.0
-        if k < lo:
-            return 0.0
-        x = np.arange(k, lo, -1, dtype=np.float64)              # pmf(x - 1) / pmf(x), x = k .. lo + 1
-        r = x * (N - K - n + x) / ((K - x + 1.0) * (n - x + 1.0))
-    lead = _log_choose(K, k) + _log_choose(N - K, n - k) - _log_choose(N, n)
-    if r.size == 0:
-        return min(1.0, math.exp(lead))
-    cs = np.cumsum(np.log(r))
-    m = max(0.0, float(cs.max()))
-    return min(1.0, math.exp(lead + m + math.log(math.exp(-m) + float(np.exp(cs - m).sum()))))
-
-
-
-# The tails above are computed through math.lgamma and math.exp, whose last digits differ between C libraries. A tail
-# exactly equal to a level then falls on either side of it: one error among three labels of a 5-window zone at alpha
-# 0.4 has the p-value 3/10, computed as 0.29999999999999977 on macOS and 0.30000000000000004 on Linux (glibc 2.34),
-# so at delta 0.3 the same labels certified a zone on one system and not on the other. Where a tail lies within _TIE
-# of its level, the comparison is redone in integer arithmetic against the level as written (0.3 is 3/10), so every
-# system decides alike. Away from the level the float decides, as before.
-# Until 2026-10-06 the window was _TIE whatever the population, but a tail's float error grows with it: lgamma(N + 1)
-# is about N ln N, a unit in its last place is worth up to eps N ln N, and nine such terms make up a tail. On a zone of
-# 1,293,697 windows (b = 233, k = 7, alpha 0.05) the p-value was 3.4e-9 off, past the window: the float gave
-# 0.0999999997, integer arithmetic 0.1000000001, and certify_zone certified the whole map at delta 0.1 where the exact
-# test refuses it. The window is now relative to the size of the numbers (`_tie`), 64 eps N ln N with _TIE its floor,
-# so the integer arithmetic decides wherever the float could err; it costs a few hundred big-integer terms at most.
-_TIE = 1e-9
-
-
-EXACT_N_MAX = 5_000_000
-
-
-def _tie(N):
-    """The relative window around a level inside which a tail over a population of N is decided exactly. Above
-    EXACT_N_MAX windows the floats decide, as before 2026-10-06: the window grows as N ln N, and on a full Sentinel-2
-    tile at patch 1 (about 1e8 windows) the exact sums it calls took seconds per interval (the review of 2026-10-06).
-    The float error they guard against grows with N: measured against the exact tail, about 2e-8 relative at 6e6
-    windows, up to 8e-7 at 1e8 and 8e-6 at 1e9, so above the cap an interval's end can move by one window (k = 22 of
-    n = 300 at N = 1e8: a lower end of 4,652,571 where the exact one is 4,652,570), a change in coverage of order 1e-8.
-    Stated as 1e-8 relative until the bug hunt of 2026-10-25. Every recorded experiment is below the cap."""
-    import math
-    N = max(int(N), 1)
-    if N > EXACT_N_MAX:
-        return _TIE
-    return max(_TIE, 64 * float(np.finfo(np.float64).eps) * N * math.log(N + 1))
-
-
-def _level(x):
-    """A level as written: 0.1 is 1/10, not the binary float nearest to it."""
-    from fractions import Fraction
-    return x if isinstance(x, Fraction) else Fraction(repr(float(x)))
-
-
-def _float_below(q):
-    """The largest float at most the fraction q."""
-    import math
-    from fractions import Fraction
-    f = float(q)
-    return f if Fraction(f) <= q else math.nextafter(f, -math.inf)
-
-
-def _float_above(q):
-    """The smallest float at least the fraction q."""
-    import math
-    from fractions import Fraction
-    f = float(q)
-    return f if Fraction(f) >= q else math.nextafter(f, math.inf)
-
-
-def _hyper_tail_exact(k, n, N, K, upper):
-    """_hyper_tail in integer arithmetic, as a Fraction: P(X >= k) when `upper`, else P(X <= k)."""
-    import math
-    from fractions import Fraction
-    lo, hi = max(0, n - (N - K)), min(n, K)
-    xs = range(max(k, lo), hi + 1) if upper else range(lo, min(k, hi) + 1)
-    return Fraction(sum(math.comb(K, x) * math.comb(N - K, n - x) for x in xs), math.comb(N, n))
-
-
-def _at_most(value, level, exact, N=None):
-    """value <= level for a tail computed in floating point over a population of N; within _tie(N) of the level
-    (_TIE without N), exact() decides."""
-    level = _level(level)
-    if abs(value - float(level)) > (_TIE if N is None else _tie(N)) * float(level):
-        return value <= float(level)
-    return exact() <= level
-
-def hypergeom_interval(k, n, N, conf=0.95):
-    """Exact equal-tailed interval for the share K/N of marked units in a finite population of N, from k marked
-    among a simple random sample of n: every K whose two tails at the observed k both exceed (1 - conf)/2, the
-    tail inversion of Buonaccorsi (1987) and Wang (2015), the finite-population form of Clopper and Pearson. Its
-    coverage is at least `conf` for every (N, K, n) by construction; the trusted zone's tests (`zone_pvalue`) are
-    the one-sided form of the same inversion. exp81's sixth amendment adopted it for the user's accuracy under a
-    random sample, where the labelled windows of a map class are a simple random sample of that class: on a grid
-    of classes with N <= 1000 it never covered below 0.951, where the finite-population Wilson form fell below
-    0.93 on 40 of 164 cells. The interval is widened, when needed, to hold the sample share k/n, which near a census
-    can fall between two population values. A census is the point; an empty sample is everything."""
-    if not 0 < conf < 1:
-        raise ValueError(f"conf must be in (0, 1), got {conf}")
-    counts = []
-    for name, x in (("k", k), ("n", n), ("N", N)):
-        if isinstance(x, (bool, np.bool_)) or float(x) != int(x):
-            raise ValueError(f"hypergeom_interval takes whole counts, got {name}={x!r}")
-        counts.append(int(x))
-    k, n, N = counts
-    if n < 0 or k < 0 or k > n or n > N:
-        raise ValueError(f"hypergeom_interval needs 0 <= k <= n <= N, got k={k}, n={n}, N={N}")
-    # validated here, cached below on plain ints: a cache in front of the checks let True (equal to 1) through
-    lo, hi = _hypergeom_interval(k, n, N, float(conf))
-    # The interval is over population values K/N, the estimate the sample share k/n, and near a census the two sit on
-    # different grids: 269 of 273 labelled (0.98535) left only 270 of 274 (0.98540) standing, an interval that did not
-    # contain the estimate printed beside it (property tests, 2026-09-23). Widening to include k/n keeps the coverage.
-    if n:
-        lo, hi = min(lo, k / n), max(hi, k / n)
-    return lo, hi
-
-
-@__import__("functools").lru_cache(maxsize=1 << 16)
-def _hypergeom_interval(k, n, N, conf):
-    if n == 0:
-        return 0.0, 1.0
-    if n >= N:
-        return k / n, k / n
-    a = (1 - _level(conf)) / 2                                   # as written: 0.95 gives 1/40
-    lo_K, hi_K = k, N - (n - k)                                  # the counts the sample does not rule out outright
-    left, right = lo_K, hi_K                                     # smallest K with P(X >= k | K) > a (nondecreasing in K)
-    while left < right:
-        mid = (left + right) // 2
-        if not _at_most(_hyper_tail(k, n, N, mid, upper=True), a, lambda: _hyper_tail_exact(k, n, N, mid, upper=True), N):
-            right = mid
-        else:
-            left = mid + 1
-    K_lo = left
-    left, right = lo_K, hi_K                                     # largest K with P(X <= k | K) > a (nonincreasing in K)
-    while left < right:
-        mid = (left + right + 1) // 2
-        if not _at_most(_hyper_tail(k, n, N, mid, upper=False), a, lambda: _hyper_tail_exact(k, n, N, mid, upper=False), N):
-            left = mid
-        else:
-            right = mid - 1
-    return K_lo / N, left / N
 
 
 def confidence_strata(margin, n_strata=N_STRATA):
@@ -594,60 +442,6 @@ def draw_stratified(rng, strata, sizes, allocation):
     return np.concatenate(idx)
 
 
-def _condition_index(condition, pop, n_windows, condition_names=None):
-    """The input condition of every population window as an index c = 0..K-1: the recorded values present in the
-    population in ascending order, then "unrecorded" last if any window has none. Returns (index per population
-    window, values with None for unrecorded, names, sizes, notes)."""
-    cond = np.asarray(condition).ravel()
-    if cond.size != n_windows:
-        raise ValueError(f"condition has {cond.size} entries for {n_windows} windows")
-    if cond.dtype.kind == "b":
-        cond = cond.astype(np.int64)
-    elif cond.dtype.kind == "f":
-        finite = np.isfinite(cond)
-        if not np.all(np.mod(cond[finite], 1) == 0):
-            raise ValueError("condition must hold an integer per window, negative where none is recorded; bin a "
-                             "continuous layer, such as cloud fraction, first")
-        cond = np.where(finite, cond, -1).astype(np.int64)      # NaN is unrecorded, as at the pixel level
-    elif cond.dtype.kind in "iu":
-        cond = cond.astype(np.int64)
-    else:
-        raise ValueError(f"condition must hold an integer per window, got dtype {cond.dtype}")
-    cp = cond[pop]
-    rec = cp >= 0
-    vals = np.unique(cp[rec])
-    if vals.size == 0:
-        raise ValueError("no window of the population has a recorded condition: every one is unrecorded (a tie, or "
-                         "no pixel with a value), so there is nothing to split the labels by")
-    has_unrecorded = bool((~rec).any())
-    K = int(vals.size) + int(has_unrecorded)
-    index = np.full(cp.size, K - 1, dtype=np.int64)             # unrecorded windows form the last condition
-    index[rec] = np.searchsorted(vals, cp[rec])
-    given = {}
-    for key, name in (condition_names or {}).items():
-        try:
-            v = int(key)
-            if isinstance(key, (bool, np.bool_)) or float(key) != v:
-                raise ValueError
-        except (TypeError, ValueError):
-            raise ValueError(f"condition_names maps a condition value (an integer) to its name; got the key {key!r}") from None
-        if v < 0:
-            raise ValueError(f"condition_names gives a name to {v}, but a negative value means unrecorded")
-        if not isinstance(name, str) or not name.strip():
-            raise ValueError(f"the name of condition {v} must be a non-empty string, got {name!r}")
-        if name == UNRECORDED:
-            raise ValueError(f'"{UNRECORDED}" is reserved for the windows with no recorded condition; name {v} otherwise')
-        given[v] = name
-    values = [int(v) for v in vals] + ([None] if has_unrecorded else [])
-    names = [given.get(int(v), str(int(v))) for v in vals] + ([UNRECORDED] if has_unrecorded else [])
-    if len(set(names)) != len(names):
-        dup = sorted({n for n in names if names.count(n) > 1})
-        raise ValueError(f"two conditions share the name {dup[0]!r}; condition names must be unique")
-    notes = [f"value {v} ({name}) holds no window" for v, name in sorted(given.items()) if v not in set(vals.tolist())]
-    sizes = np.bincount(index, minlength=K)
-    return index, values, names, sizes, notes
-
-
 def sample_for_estimation(margin, budget, design="confidence", p1=None, tiles=None, per_tile=M_PER_TILE,
                           n_strata=N_STRATA, valid=None, seed=0, condition=None, condition_names=None, stable=False,
                           class_floor=None):
@@ -707,7 +501,7 @@ def sample_for_estimation(margin, budget, design="confidence", p1=None, tiles=No
         # the draw a certificate rests on (sample --seed-from-map): taken from the fixed random order of the population
         # that sequential_order reads straight from PCG64, the same on every numpy release, where Generator.choice's
         # stream may change between releases and an honest certificate would then fail to verify
-        from .sequential import sequential_order
+        from oe_inferencex.common.sampling import sequential_order
         order = sequential_order(N, seed)
     if design == "random":
         # the same draw with or without a condition
@@ -715,7 +509,7 @@ def sample_for_estimation(margin, budget, design="confidence", p1=None, tiles=No
     elif design == "sequential":
         # the first `budget` windows of a fixed random order (sequential.sequential_order), read in that order; a
         # reviewer who adds labels takes the next ones, and certify then uses the sequential rule, valid at every look
-        from .sequential import sequential_order
+        from oe_inferencex.common.sampling import sequential_order
         out["indices"] = pop[sequential_order(N, seed)[:budget]]
         out["first_budget"] = budget
     elif design == "condition":
@@ -815,61 +609,6 @@ def sample_for_estimation(margin, budget, design="confidence", p1=None, tiles=No
     return out
 
 
-# ----------------------------------------------------------------------------- estimates
-def _condition_guards(sample, idx):
-    """Check a sample that records an input condition against itself, and return (condition grid, values, names,
-    sizes). The condition is fixed at sampling time and the sidecar is its source of truth, so an edited or mixed-up
-    sample is refused here rather than estimated: a stray condition index would otherwise be dropped in silence."""
-    grid = np.asarray(sample["condition_grid"])
-    if grid.ndim != 1:
-        raise ValueError(f"condition_grid must be one value per window of the flattened grid; it has shape {grid.shape}")
-    if grid.dtype.kind not in "iu":
-        if grid.dtype.kind != "f" or not np.isfinite(grid).all() or not np.all(np.mod(grid, 1) == 0):
-            raise ValueError("condition_grid must hold an integer condition index per window, -1 outside the population")
-    grid = grid.astype(np.int64)
-    if (idx >= grid.size).any():
-        raise ValueError(f"a labelled window index lies beyond the {grid.size} windows of the condition grid")
-    if (grid[idx] < 0).any():
-        raise ValueError(f"{int((grid[idx] < 0).sum())} labelled window(s) sit outside the population the condition "
-                         "grid records")
-    N = int(sample["n_population"])
-    if int((grid >= 0).sum()) != N:
-        raise ValueError(f"the condition grid holds {int((grid >= 0).sum())} population windows, but the sample was drawn "
-                         f"from {N}")
-    info = sample.get("condition") or {}
-    values, names, sizes = list(info.get("values", [])), list(info.get("names", [])), list(info.get("sizes", []))
-    K = len(names)
-    if K == 0 or not len(values) == len(sizes) == K:
-        raise ValueError(f"the sample's condition block lists {len(values)} values, {K} names and {len(sizes)} sizes; "
-                         "they must be one per condition")
-    if int(grid.max()) >= K:
-        raise ValueError(f"the condition grid holds a condition index of {int(grid.max())}, but the sample names {K} "
-                         "conditions")
-    counted = np.bincount(grid[grid >= 0], minlength=K)
-    if [int(s) for s in sizes] != counted.tolist():
-        raise ValueError(f"the condition sizes {[int(s) for s in sizes]} are not the counts of the condition grid "
-                         f"{counted.tolist()}")
-    if sample.get("design") == "condition":
-        if int(sample.get("n_strata", -1)) != K:
-            raise ValueError(f"a condition sample has one stratum per condition: n_strata is {sample.get('n_strata')}, "
-                             f"with {K} conditions")
-        strata = np.asarray(sample["strata"])
-        if strata.size and (int(strata.min()) < 0 or int(strata.max()) >= K):
-            raise ValueError(f"a stratum id lies outside the {K} conditions (0 to {K - 1})")
-        sop = np.asarray(sample["strata_of_population"], int)
-        if (sop.size != strata.size or sop.size != N or (sop < 0).any() or (sop >= grid.size).any()
-                or not np.array_equal(strata.astype(np.int64), grid[sop])):
-            raise ValueError("the strata of this condition sample are not the conditions of its population windows")
-        if [int(s) for s in sample["sizes"]] != counted.tolist() or int(np.sum(sample["sizes"])) != N:
-            raise ValueError(f"the strata sizes {list(sample['sizes'])} do not add up to the population of {N} windows "
-                             "as the condition grid counts it")
-        n_c = np.bincount(grid[idx], minlength=K)
-        if n_c.tolist() != [int(a) for a in sample["allocation"]]:
-            raise ValueError(f"the labelled windows per condition {n_c.tolist()} are not the design's allocation "
-                             f"{[int(a) for a in sample['allocation']]}")
-    return grid, values, names, [int(s) for s in sizes]
-
-
 def _per_condition(grid, values, names, sizes, idx, wrong, N, whole):
     """Each condition's error rate with its exact interval. Under the condition design n_c is fixed; under a random
     sample the labels that fall in c are a simple random sample of c given their count n_c. Either way
@@ -932,17 +671,6 @@ def _union_interval(k, n, sizes, alpha=0.05):
         lo += W * a
         hi += W * b
     return float(theta), float(lo), float(hi), L
-
-
-def _hypergeom_fractions(k, n, N, conf):
-    """hypergeom_interval's ends, exactly: population counts over N (the exact rate when n == N, 0 to 1 with no
-    label), widened to hold k / n. The float K / N times N is within far less than 1/2 of K."""
-    from fractions import Fraction
-    a, b = _hypergeom_interval(k, n, N, conf)
-    a, b = Fraction(round(a * N), N), Fraction(round(b * N), N)
-    if n:
-        a, b = min(a, Fraction(k, n)), max(b, Fraction(k, n))
-    return a, b
 
 
 # Windows the reviewer could not judge, and a reviewer who errs (the CLI defect of 1 October 2026: the command told a
@@ -1256,67 +984,6 @@ def _estimate_core(sample, wrong):
     else:
         out["scope"] = SCOPE_ESTIMATE
     return out
-
-
-def review_set_threshold(n, N=None):
-    """The MEAN suspicion percentile above which n windows drawn from N are not a random sample: 0.5 plus
-    REVIEW_SET_SIGMAS standard deviations of the mean of n uniform percentiles drawn without replacement,
-    sqrt(1/12) sqrt((N - n) / ((N - 1) n)); about 0.567 at 300 labels of a large map.
-
-    Until 2026-09-24 the statistic was the median (threshold 0.5 + 4 x 0.6/sqrt(n), 0.64 at 300). Under heavy ties
-    the median cannot separate a random sample from the tool's review set: both land inside a large tied block at
-    the suspect end. With ties ranked in a random order the percentiles are uniform again, and the mean separates
-    them (a random sample 0.50, a review set inside a 60% block about 0.70), which the verification of the second
-    review found the median did not. On exp78's units the review set and the confidence design's own sample are
-    still refused, and two hundred random draws pass (the research record's tests/test_estimate.py)."""
-    n = max(int(n), 1)
-    fpc = 1.0 if N is None or int(N) <= 1 else max(int(N) - n, 0) / (int(N) - 1)
-    return min(0.95, 0.5 + REVIEW_SET_SIGMAS * np.sqrt(1.0 / 12.0) * np.sqrt(fpc / n))
-
-
-def review_set_check(indices, margin, valid=None):
-    """Do these windows look like a review list rather than a random sample of the map? The MEAN suspicion
-    percentile of the sample, against review_set_threshold: 0.5 for a random draw, near 1 for the tool's own review
-    set, which is built to be enriched for errors. Passing does not make the windows a random sample: labels clustered
-    by tile pass, and labels from the confident end pass this flag (certify refuses them by the mirror-image flag,
-    `looks_drawn_from_the_confident_end`, from 1.16.0; estimate does not). The median is reported beside it and decides
-    nothing. A census (every valid window, once) is never
-    an enriched set: at a census the threshold is exactly 0.5 and the mean is 0.5 up to rounding, and until the
-    release check of 24 September a sum that rounded up refused 2 to 5% of censuses as review sets."""
-    margin = np.asarray(margin, dtype=np.float64).ravel()
-    valid = np.ones(margin.size, bool) if valid is None else np.asarray(valid, bool).ravel()
-    # A window with no finite margin is not in the population. assess's confidence array is NaN at no-data, and
-    # argsort put NaN at the suspect end, so at 40% no-data the tool's own review set passed as a random sample.
-    valid = valid & np.isfinite(margin)
-    idx = np.asarray(indices, int).ravel()
-    pop = np.flatnonzero(valid)
-    # Tied windows are ranked in a fixed random order, independent of raster position, so a random sample's
-    # percentiles are uniform whatever the ties. Mid-ranks, used until 2026-09-23, gave a tied block one percentile
-    # near its middle, and when half the map or more tied at the suspect end a genuine random sample's median fell
-    # inside that block and was refused as a review set (27 of 50 draws at 50% tied, 50 of 50 at 60%).
-    s = -margin[pop]
-    order = np.lexsort((np.random.default_rng(0).random(pop.size), s))
-    ranks = np.empty(pop.size)
-    ranks[order] = np.arange(pop.size)
-    rank = np.full(margin.size, np.nan)
-    rank[pop] = (ranks + 0.5) / pop.size
-    on_grid = (idx >= 0) & (idx < margin.size)                   # a negative index used to wrap to the last window
-    pct = np.full(idx.size, np.nan)
-    pct[on_grid] = rank[idx[on_grid]]
-    inside = np.isfinite(pct)
-    med = float(np.median(pct[inside])) if inside.any() else float("nan")
-    mean = float(np.mean(pct[inside])) if inside.any() else float("nan")
-    thr = review_set_threshold(int(inside.sum()), pop.size)
-    census = bool(inside.all() and np.unique(idx[inside]).size == pop.size)
-    return {"mean_suspicion_percentile": mean, "median_suspicion_percentile": med, "threshold": thr,
-            # 1e-12 is far below any real enrichment (one standard error at 300 labels is 0.017) and far above the
-            # rounding of a mean of percentiles
-            "looks_like_a_review_set": bool(np.isfinite(mean) and not census and mean > thr + 1e-12),
-            # the mirror image, which certify refuses too (1.16.0): labels drawn from the confident end make every zone
-            # look cleaner than it is, and a mean this low is as unlikely for a random draw as a review set's
-            "looks_drawn_from_the_confident_end": bool(np.isfinite(mean) and not census and mean < 1 - thr - 1e-12),
-            "share_in_top_5pct": float(np.mean(pct[inside] > 0.95)) if inside.any() else float("nan"),
-            "n_outside_population": int((~inside).sum()), "n_duplicated": int(idx.size - np.unique(idx).size)}
 
 
 def estimate_from_indices(indices, wrong, margin, valid=None):
@@ -1908,30 +1575,6 @@ PREFIX_NOTE = ("prefix rule: fixed-sequence testing, valid on any map whatever t
                "the first zone it cannot certify, so it certifies little when the most confident windows hold many "
                "errors, where the bonferroni rule can certify more; choose the rule before reading the labels, since "
                "running the other rule after seeing this zone is a second test")
-
-
-def _log_choose(n, r):
-    import math
-    return math.lgamma(n + 1) - math.lgamma(r + 1) - math.lgamma(n - r + 1)
-
-
-def hypergeom_cdf(k, n, K, b):
-    """P(X <= k) for X ~ Hypergeom(n, K, b): b windows drawn without replacement from n of which K are wrong.
-    Exact, by log-gamma sums, no approximation."""
-    import math
-    n, K, b, k = int(n), int(K), int(b), int(k)
-    if not (0 <= K <= n and 0 <= b <= n):
-        raise ValueError(f"hypergeom_cdf needs 0 <= K <= n and 0 <= b <= n, got n={n}, K={K}, b={b}")
-    lo, hi = max(0, b - (n - K)), min(b, K)
-    if k < lo:
-        return 0.0
-    if k >= hi:
-        return 1.0
-    denom = _log_choose(n, b)
-    tot = 0.0
-    for x in range(lo, k + 1):
-        tot += math.exp(_log_choose(K, x) + _log_choose(n - K, b - x) - denom)
-    return min(1.0, tot)
 
 
 def zone_edge(threshold, below):
@@ -2773,49 +2416,6 @@ def interval_verdict(low, high, alpha):
     return "below" if high < alpha else "above" if low >= alpha else "undetermined"
 
 
-def _code(x, strings=True):
-    """A class code as an int: from an int, a whole float, or (with `strings`, as JSON keys are) the string of a whole
-    number; None for anything else."""
-    if isinstance(x, (bool, np.bool_)):
-        return None
-    if isinstance(x, str):
-        if not strings:
-            return None
-        try:
-            return int(x.strip())
-        except ValueError:
-            return None
-    try:
-        v = float(x)
-    except (TypeError, ValueError):
-        return None
-    return int(v) if np.isfinite(v) and v == int(v) else None
-
-
-def _also_accept_pairs(also_accept):
-    """{predicted class: sorted reference classes also accepted for it} from a mapping of class codes (ints, or their
-    strings as JSON keys) to lists of class codes; ValueError saying what is wrong otherwise."""
-    shape = 'such as {"3": [4]}: each predicted class code to the list of reference class codes also accepted for it'
-    if not isinstance(also_accept, dict):
-        raise ValueError(f"also_accept maps class codes to lists of class codes, {shape}; got a "
-                         f"{type(also_accept).__name__}")
-    pairs = {}
-    for key, codes in also_accept.items():
-        c = _code(key)
-        if c is None:
-            raise ValueError(f"also_accept: the key {key!r} is not a class code (a whole number), {shape}")
-        if c in pairs:
-            raise ValueError(f"also_accept names class {c} twice")
-        if not isinstance(codes, (list, tuple)):
-            raise ValueError(f"also_accept: class {c} maps to {codes!r}, not a list of class codes, {shape}")
-        got = [_code(v, strings=False) for v in codes]
-        if any(v is None for v in got):
-            bad = next(v for v, g in zip(codes, got) if g is None)
-            raise ValueError(f"also_accept: class {c} lists {bad!r}, which is not a class code (a whole number)")
-        pairs[c] = sorted(set(got))
-    return pairs
-
-
 def class_audit_from_sample(sample, reference, unjudged=None, also_accept=None, alpha=None, conf=0.95):
     """How often each predicted class's confident calls are wrong, from a labelled `sample_class_audit`.
 
@@ -2918,57 +2518,3 @@ def class_audit_from_sample(sample, reference, unjudged=None, also_accept=None, 
                     "also_accept_unused": [str(c) for c in sorted(pairs) if str(c) not in classes],
                     "reading_note": AUDIT_READING_NOTE})
     return out
-
-
-def also_accept_reading(wrong, map_class, reference, also_accept, unjudged=None):
-    """The labels read a second time, a window of map class c also counted right when its reference class is one
-    `also_accept` lists for c (a class listed for itself changes nothing). Returns {"wrong": 0/1 per labelled window
-    under this reading, `wrong` as given where unjudged; "pairs": the checked crosswalk (_also_accept_pairs);
-    "errors_accepted": {map class: {reference class: windows}}, the judged windows wrong under the strict reading that
-    this one accepts (named after the audit's errors_by_reference: in the audit's block, `accepted` is the list of
-    codes a class accepts); "n_accepted"; "unused": listed classes no labelled window is mapped as}. ValueError when
-    the lengths differ, `wrong` is not 0/1, a judged reference is not a whole number of at least 0, or `wrong`
-    disagrees with reference != map_class at a judged window (the first position named).
-
-    A window this reading accepts is wrong under the strict one, so its `wrong` is at most the strict one window by
-    window, and the windows that could not be judged are the same in both. Passed to `estimate_error_rate`,
-    `certify_zone`, `certify_by_condition` or `sequential.certify_zone_sequential` in place of the strict `wrong`, it
-    gets that function's own guarantee for this reading's definition of an error, when `also_accept` was fixed before
-    any label was read (ESTIMATE_READING_NOTE, ZONE_READING_NOTE)."""
-    w = np.asarray(wrong).ravel()
-    mc = np.asarray(map_class).ravel()
-    ref = np.asarray(reference).ravel()
-    unj = np.zeros(w.size, bool) if unjudged is None else np.asarray(unjudged, bool).ravel()
-    if not w.size == mc.size == ref.size == unj.size:
-        raise ValueError(f"{w.size} labels but {mc.size}, {ref.size} and {unj.size} map classes, references and flags")
-    if not np.isin(w, (0, 1)).all():
-        raise ValueError("wrong must be 0 or 1 per window")
-    pairs = _also_accept_pairs(also_accept)
-    judged = ~unj
-    r = np.where(judged, ref, 0).astype(np.float64)               # a ? window's reference is not read
-    bad = np.flatnonzero(~(np.isfinite(r) & (r == np.rint(r)) & (r >= 0)))
-    if bad.size:
-        k = int(bad[0])
-        raise ValueError(f"a judged window's reference class is a whole number of at least 0; window {k} has "
-                         f"{ref.tolist()[k]!r}")
-    # both readings read the same labels: a `wrong` that disagrees with the classes would make them read different ones
-    off = np.flatnonzero(judged & ((w == 1) != (ref != mc)))
-    if off.size:
-        k = int(off[0])
-        w_k, c_k, r_k = w.tolist()[k], mc.tolist()[k], ref.tolist()[k]
-        raise ValueError(f"wrong disagrees with whether the reference class differs from the map's class at window {k} "
-                         f"(wrong {w_k!r}, map class {c_k!r}, reference class {r_k!r}); the second reading reads the "
-                         "same labels as the first")
-    accepted = np.zeros(w.size, bool)
-    for c, codes in pairs.items():
-        more = [a for a in codes if a != c]
-        if more:
-            accepted |= judged & (mc == c) & np.isin(ref, more)
-    out = w.copy()
-    out[accepted] = 0
-    by = {}
-    for c in np.unique(mc[accepted]):
-        vals, cnt = np.unique(ref[accepted & (mc == c)], return_counts=True)
-        by[str(int(c))] = {str(int(v)): int(n) for v, n in zip(vals, cnt)}
-    return {"wrong": out, "pairs": {str(c): v for c, v in sorted(pairs.items())}, "errors_accepted": by,
-            "n_accepted": int(accepted.sum()), "unused": [str(c) for c in sorted(pairs) if not (mc == c).any()]}
