@@ -45,7 +45,8 @@
   changes: every output, the golden files included, is 1.19.0's. With it, the whole-map error rate gets
   `valid_interval` (`estimate` or `estimate_range`, `low`, `high`, `half_width`, `guarantee: "valid"`, `form` and
   `method`), which covers the true rate at least 95% of the time for every map and every number of labels under the
-  confidence, proportional, condition, class and profile designs and a random or sequential sample. Strata labelled
+  confidence, proportional, condition, class and profile designs and a random or sequential sample, the sequential
+  one read as a random sample of the number labelled, fixed before the labels are read. Strata labelled
   in full enter exactly; one stratum labelled in part takes its exact hypergeometric interval (under a random sample,
   the interval estimate prints anyway, to the last bit); two or more take `grade`'s betting interval for a stratified
   sample drawn without replacement (agency/stratified.py), whose bets are fixed by the strata's sizes and label
@@ -60,9 +61,10 @@
   stratum too large for the exact average over the orders of its labels is found from its label count before any
   label is read; the whole map then takes the union bound over the strata and a per-class interval is left
   uncomputed. Refused: `--design tiles`, and samples drawn with `--other` or `--design audit`. Under the confidence
-  and proportional designs it is wider than their Wilson interval, which is nominal (91.3% to 94.1% on the record's
-  maps at 100 labels); about 1.6 to 2.2 times is expected, from `grade`'s 1.6 times normal theory's (exp117, exp118),
-  and it can be narrower than the condition and class designs' union bound. It is slower: about a second for the
+  and proportional designs it is expected to be wider than their Wilson interval, which is nominal (in the record it
+  covered 91.3% at 100 labels on a 200-window map, exp105; 92.7% near a census, 300 of 306 labelled; and at least 93%
+  on the other graded cells, exp78); about 1.6 to 2.2 times is expected, from `grade`'s 1.6 times normal theory's
+  (exp117, exp118), and it can be narrower than the condition and class designs' union bound. It is slower: about a second for the
   whole map at 1,000 labels and one to two seconds per class, by `grade`'s timing. Both are to be measured on
   `estimate`'s designs before the default is reconsidered. New private module `oe_inferencex/estimate/valid.py`
   (`linear_valid`, `whole_map_valid`, `class_quantities`, `producer_box`, `per_class_valid`), nothing added to

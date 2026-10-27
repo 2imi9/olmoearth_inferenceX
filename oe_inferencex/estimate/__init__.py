@@ -59,13 +59,13 @@ from oe_inferencex.estimate.error_rate import (CLASS_WHOLE_MAP, CONDITION_NOTE, 
                                                REVIEWER_NOTE, SCOPE_ESTIMATE, SEQUENTIAL_READ_NOTE, TILES_WARNING,
                                                UNJUDGED_NOTE, UNJUDGED_STRATIFIED_NOTE, _estimate_core, _per_condition,
                                                _stratum_union, estimate_error_rate, estimate_from_indices)
-from oe_inferencex.estimate.valid import (PER_CLASS_VALID_NOTE, VALID_HELP, VALID_NOTE, class_quantities, linear_valid,
-                                          per_class_valid, producer_box, whole_map_valid, worst_work)
 from oe_inferencex.estimate.model_assisted import (MIN_FOR_TUNING, model_assisted_interval,
                                                    stratified_model_assisted_interval, tuned_coefficient)
 from oe_inferencex.estimate.per_class import (CLASS_DESIGN_EXACT_NOTE, CLASS_DESIGN_METHOD, CLASS_NORMAL_NOTE, MIN_PER_CLASS,
                                               PER_CLASS_EXACT_NOTE, PER_CLASS_NOT_GRADED, RARE_ERRORS, _class_design_exact,
                                               _ht_ratio, _ht_total, _interval, _wald, _wilson_eff, estimate_per_class)
+from oe_inferencex.estimate.valid import (PER_CLASS_VALID_NOTE, VALID_HELP, VALID_NOTE, class_quantities, linear_valid,
+                                          per_class_valid, producer_box, whole_map_valid, worst_work)
 from oe_inferencex.certify.zone import (FAMILY_NOTE, FAMILY_NOTE_ONE, ISSUED_NOTE, PREFIX_NOTE, RULES_OF, SCOPE_CERTIFY,
                                         TARGET_ALONE_NOTE, TARGET_NOTE, TARGET_WEIGHT, ZONE_CUT, ZONE_CUTS, ZONE_DELTA,
                                         ZONE_GRID, ZONE_READING_NOTE, ZONE_READING_SEQUENTIAL, ZONE_RULES, _edge_of,

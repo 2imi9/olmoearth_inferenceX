@@ -66,10 +66,15 @@ def _table(N, n, parts):
     return out
 
 
-def _worst(Ns, ns, parts, interval, truth, tol=1e-12):
+def _worst(Ns, ns, parts, interval, truth):
     """The least probability, over every population of strata of Ns windows of `parts` kinds, that interval(population,
     draw) holds truth(population): ns windows drawn without replacement in each stratum, independent across strata. A
-    truth of None (nothing to cover) is skipped; an interval of None (no statement) is counted as holding."""
+    truth of None (nothing to cover) is skipped; an interval of None (no statement) is counted as holding, and the
+    callers that pass one check it arises only where the table without --valid makes no statement either. The ends are
+    compared with the truth exactly, with no tolerance: the truths are correctly rounded quotients of whole numbers,
+    exact and census ends the nearest float to their fraction, betting and box ends rounded outward (valid.py), so an
+    end that held its fraction holds the rounded truth. The 1e-12 the callers allow is on the probability, a sum of
+    exponentials of log-gamma differences."""
     tables = [_table(N, n, parts) for N, n in zip(Ns, ns)]
     worst = 1.0
     for pops in itertools.product(*[list(t) for t in tables]):
@@ -79,7 +84,7 @@ def _worst(Ns, ns, parts, interval, truth, tol=1e-12):
         cov = 0.0
         for combo in itertools.product(*[list(tables[h][p].items()) for h, p in enumerate(pops)]):
             iv = interval(pops, tuple(s for s, _ in combo))
-            if iv is None or iv[0] - tol <= theta <= iv[1] + tol:
+            if iv is None or iv[0] <= theta <= iv[1]:
                 cov += math.exp(sum(lp for _, lp in combo))
         worst = min(worst, cov)
     return worst
@@ -168,7 +173,7 @@ def test_the_whole_map_check_can_fail():
         loose[ks], point[ks] = (r["low"], r["high"]), (r["estimate"], r["estimate"])
     truth = lambda pops: sum(p[1] for p in pops) / sum(Ns)
     assert _worst(Ns, ns, 2, lambda pops, ss: loose[tuple(s[1] for s in ss)], truth) < 0.9
-    assert _worst(Ns, ns, 2, lambda pops, ss: point[tuple(s[1] for s in ss)], truth, tol=0.0) < 0.9
+    assert _worst(Ns, ns, 2, lambda pops, ss: point[tuple(s[1] for s in ss)], truth) < 0.9
 
 
 @pytest.mark.parametrize("Ns, ns", [((4, 3), (2, 2)), ((4, 2), (2, 2)), ((5, 3), (3, 1))])
@@ -352,6 +357,11 @@ def _class_table(Ns, alpha, seen=None):
         key = (tuple((p[0] + p[1], p[2] + p[3]) for p in pops), ss)
         if key not in cache:
             q = V.class_quantities(0, *_per_class_draw(Ns, pops, ss), alpha)
+            # no statement only where the table without --valid makes none: the user's accuracy with no labelled
+            # window mapped as the class, the producer's with none of it; never the share
+            assert (q["user_accuracy"] is None) == (sum(s[0] + s[1] for s in ss) == 0), (ss, q["user_accuracy"])
+            assert (q["producer_accuracy"] is None) == (sum(s[0] + s[2] for s in ss) == 0), (ss, q["producer_accuracy"])
+            assert q["reference_share"] is not None
             for name, v in q.items():
                 if v is not None:
                     assert _holds_its_point(v), (name, v)
@@ -376,7 +386,7 @@ def test_the_per_class_check_can_fail(monkeypatch):
             return None if v is None else tuple(_points(v))
         return f
     for name, truth in _per_class_truths(Ns).items():
-        assert _worst(Ns, ns, 4, point(name), truth, tol=0.0) < 0.9, name
+        assert _worst(Ns, ns, 4, point(name), truth) < 0.9, name
 
 
 # the fixed maps of tests/test_class_design.py (_maps()[:4]): stratum h is map class h, K[h][j] its windows of
@@ -412,10 +422,13 @@ def test_the_class_designs_per_quantity_intervals_cover(K, n_h):
             q = V.class_quantities(c, sizes, M_hc, h_s, h_s, r_s)
             ua = q["user_accuracy"]
             assert (ua["low"], ua["high"]) == est.hypergeom_interval(combo[c][0][c], n_h[c], int(sizes[c]))
+            # no statement only for the producer's accuracy of a class no labelled window is of; never for the share
+            assert q["reference_share"] is not None
+            assert (q["producer_accuracy"] is None) == (sum(x[c] for x, _ in combo) == 0)
             for name in truth:
                 v = q[name]                       # None: no labelled window of the class, no statement to miss
                 assert v is None or _holds_its_point(v), (name, v)
-                cov[(name, c)] += p * (v is None or v["low"] - 1e-12 <= truth[name][c] <= v["high"] + 1e-12)
+                cov[(name, c)] += p * (v is None or v["low"] <= truth[name][c] <= v["high"])
     assert min(cov.values()) >= 0.95 - 1e-12, cov
 
 

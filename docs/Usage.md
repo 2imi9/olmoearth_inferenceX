@@ -656,7 +656,8 @@ oe-inferencex estimate to_label.csv --valid --per-class
 
 - **What it guarantees.** The whole-map error rate's interval covers the true rate at least 95% of the time, for every
   map and every number of labels, under the confidence, proportional, condition, class and profile designs and a
-  random or sequential sample; no normal approximation enters it. A stratum labelled in full enters exactly. With one
+  random or sequential sample, the sequential one read as a random sample of the number labelled, fixed before the
+  labels are read; no normal approximation enters it. A stratum labelled in full enters exactly. With one
   stratum labelled in part, the interval is that stratum's exact hypergeometric interval: under a random sample it is
   the exact interval `estimate` prints anyway, to the last bit. With two or more, it is the betting interval for a
   stratified sample drawn without replacement (Waudby-Smith and Ramdas 2020), the method `grade` uses
@@ -684,15 +685,16 @@ oe-inferencex estimate to_label.csv --valid --per-class
   `producer_accuracy`, `reference_share`, each with its point, ends and form, and the share's `drawn`),
   `overall_accuracy_valid` and `per_class_valid_note`; with `--also-accept`, the second reading's `valid_interval`.
   `decide`, `certify` and the MCP server read the fields they read without `--valid`.
-- **What it costs.** Under the confidence and proportional designs it is wider than their Wilson interval, which is
-  nominal (it covered 91.3% to 94.1% of the time on the research record's maps at 100 labels): `grade`'s betting
+- **What it costs.** Under the confidence and proportional designs it is expected to be wider than their Wilson
+  interval, which is nominal (in the research record it covered 91.3% at 100 labels on a 200-window map, exp105;
+  92.7% near a census, 300 of 306 labelled; and at least 93% on the other graded cells, exp78): `grade`'s betting
   intervals were 1.6 times as wide as normal theory's on agencies' samples (exp117, exp118), and on `estimate`'s
   designs at 200 to 1,000 labels about 1.6 to 2.2 times is expected, not yet measured. Under the condition and class
-  designs it can be narrower than their union bound, more so with many strata. It averages exactly over the orders of
-  each stratum's labels, so it is slower: by `grade`'s timing (exp117), about a second for the whole map at 1,000
-  labels and one to two seconds per class with `--per-class`, so a minute or more for many classes. A stratum of tens
-  of thousands of labels is too large for that average; this is decided from the label counts before any label is
-  read, and the whole map then takes the union bound over the strata (`form: "union bound"`), a per-class interval
+  designs it can be narrower than their union bound, more so with many strata (expected, not yet measured). It
+  averages exactly over the orders of each stratum's labels, so it is slower: by `grade`'s timing (exp117), about a
+  second for the whole map at 1,000 labels and one to two seconds per class with `--per-class`, so a minute or more
+  for many classes. A stratum of about 90,000 labels or more is too large for that average; this is decided from the
+  label counts before any label is read, and the whole map then takes the union bound over the strata (`form: "union bound"`), a per-class interval
   none (`not_computed`).
 - **Refused.** `--design tiles` (labels taken tile by tile are not a random sample of windows), and samples drawn with
   `--other` or `--design audit`, which have intervals of their own.

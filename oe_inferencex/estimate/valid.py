@@ -74,10 +74,11 @@ VALID_NOTE = ("--valid: the first interval covers the whole-map rate at least 95
               "labelled in part takes its exact hypergeometric interval, and two or more take the betting interval "
               "for a stratified sample drawn without replacement, the method grade uses. The line below it is the "
               "interval estimate prints without --valid, unchanged: under the confidence and proportional designs "
-              "Wilson's on the design's effective sample size, which is nominal (it covered 91.3% to 94.1% on the "
-              "research record's maps at 100 labels, 92.7% near a census); under `--design condition`, `class` and "
-              "`profile` the union bound over the strata, which holds too; under a random sample the same exact "
-              "interval. The valid interval is wider than a nominal one and can be narrower than the union bound.")
+              "Wilson's on the design's effective sample size, which is nominal (in the research record it covered "
+              "91.3% at 100 labels on a 200-window map, exp105; 92.7% near a census, 300 of 306 labelled; and at "
+              "least 93% on the other graded cells, exp78); under `--design condition`, `class` and `profile` the "
+              "union bound over the strata, which holds too; under a random sample the same exact interval. The "
+              "valid interval is expected to be wider than a nominal one and can be narrower than the union bound.")
 PER_CLASS_VALID_NOTE = ("--valid: each interval on a line marked valid holds at 95% on its own, for every map and every "
                         "number of labels: the user's accuracy over the windows the map calls the class in each "
                         "stratum (exact where they lie in one stratum labelled in part), the producer's accuracy from "
@@ -87,8 +88,8 @@ PER_CLASS_VALID_NOTE = ("--valid: each interval on a line marked valid holds at 
 VALID_HELP = ("also an interval valid at every sample size, printed beside the one given without it, which does not "
               "change: for the error rate and, with --per-class, each class's user's accuracy, producer's accuracy and "
               "share, under every design but tiles (exact where one stratum is labelled in part, a betting interval "
-              "over the strata where several are). Under the confidence and proportional designs it is wider than "
-              "their nominal interval, and with --per-class it takes seconds per class")
+              "over the strata where several are). Under the confidence and proportional designs it is expected to "
+              "be wider than their nominal interval, and with --per-class it takes seconds per class")
 
 
 def worst_work(n):
