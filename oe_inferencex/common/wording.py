@@ -31,7 +31,7 @@ def class_words(obj, keep=(), paths=()):
     import re
     from oe_inferencex.certify.zone import RULES_OF
     if RULES_OF.get() < (1, 17, 2):                  # as 1.17.0 and 1.17.1 worded, for verify of a zone they wrote
-        from oe_inferencex.certificate import _class_words_1171
+        from oe_inferencex.certify.certificate import _class_words_1171
         return _class_words_1171(obj)
     names = {str(k) for k in keep if str(k)}
     if isinstance(obj, str):

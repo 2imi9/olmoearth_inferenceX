@@ -47,7 +47,7 @@ from fractions import Fraction
 
 import numpy as np
 
-from . import estimate as est
+from oe_inferencex import estimate as est
 from oe_inferencex.common.sampling import sequential_order
 
 

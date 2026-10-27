@@ -158,7 +158,7 @@ def _csv_rows(path, command):
     read with csv.DictReader, which keeps the last copy of a column named twice where a spreadsheet shows the first:
     a second reference_class column turned an undetermined comparison into "b is more accurate", exit 0 (the bug hunt
     of 2026-10-25)."""
-    from oe_inferencex.certificate import csv_rows
+    from oe_inferencex.certify.certificate import csv_rows
     try:                                     # a spreadsheet's BOM is not a column name; a column named twice is refused
         return csv_rows(path)
     except (ValueError, OSError) as exc:

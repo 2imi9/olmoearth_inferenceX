@@ -1725,7 +1725,7 @@ def verify(
     row: Annotated[float | None, P(description="With col: a pixel of a map with no grid")] = None,
     col: Annotated[float | None, P(description="With row: a pixel of a map with no grid")] = None,
 ) -> dict[str, Any]:
-    from . import certificate as cert
+    from oe_inferencex.certify import certificate as cert
     path = _input(certificate, "certificate")
     if (x is None) != (y is None) or (row is None) != (col is None):
         raise Refused("verify: a point is x with y, or row with col; one of the pair was given alone")

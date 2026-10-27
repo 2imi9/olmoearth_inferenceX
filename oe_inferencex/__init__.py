@@ -126,6 +126,7 @@ _MOVED = {
     "taskcard": "readers.taskcard",
     "evidence": "research.evidence", "awf": "research.awf", "data": "research.data", "figstyle": "research.figstyle",
     "reliability": "research.reliability",
+    "sequential": "certify.sequential", "certificate": "certify.certificate",
 }
 
 

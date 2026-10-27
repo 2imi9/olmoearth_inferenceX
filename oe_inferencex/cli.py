@@ -603,7 +603,7 @@ def cmd_certificate(args):
     """A certified zone packed to travel with the map: a STAC Item stating the guarantee, the zone as a georeferenced
     mask, the labelled sample, its sidecar and any condition layer, and digests binding them to the map; verified
     before it is handed over (certificate.py, 1.17.0)."""
-    from . import certificate as cert
+    from oe_inferencex.certify import certificate as cert
     try:
         item = cert.build(args.zone, args.out, args.date, args.scores, args.confidence)
     except (ValueError, TypeError, KeyError, OSError) as exc:
@@ -623,7 +623,7 @@ def cmd_verify(args):
     """Check a certificate by building it again from the map, the bundled labels and the recorded settings: the
     bundle's files, the map, the seed, the draw, certify's result, the certificate's every field and the zone mask;
     and with --at or --at-pixel, whether a point lies in the zone certify gives again."""
-    from . import certificate as cert
+    from oe_inferencex.certify import certificate as cert
     if args.out:
         base = os.path.dirname(os.path.abspath(args.certificate))
         out_dir = os.path.dirname(os.path.abspath(args.out))
@@ -976,7 +976,7 @@ def cmd_sample(args):
             d = est.ZONE_DELTA if a_delta is None else a_delta
             if not (0 < a_alpha < 1 and 0 < d < 1):
                 raise SystemExit(f"sample: --alpha and --delta must be in (0, 1), got {a_alpha:g} and {d:g}")
-            from oe_inferencex import sequential as sq
+            from oe_inferencex.certify import sequential as sq
             anchor = sq.anchor_coverage(args.budget, a_alpha, d)
             anchor_rule = {"alpha": a_alpha, "delta": d, "first_budget": int(args.budget),
                            "rule": "the smallest grid zone expecting min_labels_sequential labels at the first budget, "
@@ -991,7 +991,7 @@ def cmd_sample(args):
         # The seed taken from the map's digest together with every setting that fixes the draw (1.17.0): anyone holding
         # the map derives it again, so a certificate can show the seed was not picked by hand and that no setting was
         # changed after labelling (certificate.verify). An extension keeps the rule when its seed is the same.
-        from .certificate import draw_seed
+        from oe_inferencex.certify.certificate import draw_seed
         seed_rule = draw_seed(args.scores, args.nodata, args.logits, conf_path, conf_range, cond_path, design,
                               args.budget, args.patch, target, anchor, plan, class_floor)
         if seed_from_map:
@@ -1085,7 +1085,7 @@ def cmd_sample(args):
     if cond is not None:
         # the design's source of truth for `estimate` and `certify`, which never read the raster again; its digest
         # binds the layer to the sample, so a certificate can show the layer was not swapped after labelling
-        from .certificate import names_given, raster_digest
+        from oe_inferencex.certify.certificate import names_given, raster_digest
         side["condition"] = {"source": "map class" if by_class else _where(cond_path),
                              "rule": CLASS_RULE_TEXT if by_class else RULE_TEXT, "values": cond["values"],
                              "names": cond["names"], "sizes": cond["sizes"], "n_labelled": cond["n_labelled"],
@@ -2156,7 +2156,7 @@ def _certify_sequential(args, side, idx, wrong, margin, valid_w, out, mask_path,
     """certify for a sequential sample: the labelled rows, read from the top, in the order they were drawn; the anchor
     the sample fixed, or the default from its first budget (sequential.anchor_coverage). `also`: the second reading
     (its `wrong`, block and unused classes), certified by the same rule from the same labels."""
-    from oe_inferencex import sequential as sq
+    from oe_inferencex.certify import sequential as sq
     try:
         if side.get("anchor") is None:
             raise ValueError("this sequential sample records no anchor; draw it with this version's sample, which fixes "

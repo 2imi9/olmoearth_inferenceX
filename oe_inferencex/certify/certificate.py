@@ -263,7 +263,7 @@ def names_given(names):
 def _grid_level(value, at_or_above=False):
     """A target or an anchor as the zone grid level it means: the level within 1e-9 (a target), or the smallest level
     at or above it (an anchor, as certify_zone_sequential reads it). Values that mean the same level give one seed."""
-    from .estimate import ZONE_GRID
+    from oe_inferencex.certify.zone import ZONE_GRID
     v = float(value)
     for g in ZONE_GRID:
         if (g >= v - 1e-12) if at_or_above else abs(g - v) < 1e-9:
@@ -527,7 +527,7 @@ def build(zone_path, out_dir, date, scores=None, confidence=None):
     nothing or reads the labels twice (--also-accept), a sample whose seed was not taken from the map, a condition
     layer that is not a GeoTIFF or .npy, an out_dir that is a file or holds other files, a source that would be
     overwritten by its own copy, and a bundle that does not verify."""
-    from .compare import _period
+    from oe_inferencex.compare import _period
     zone = _load(zone_path)
     certified = zone.get("coverage") is not None or zone.get("certified_share_of_map")
     if not certified:
@@ -634,7 +634,7 @@ def _write_bundle(zone, side, copies, out_dir, map_path, conf_path, digests, sha
     mask_path = write_raster(os.path.join(out_dir, "zone_mask.tif"), mask.astype(bool), geo,
                              int(side.get("patch", 4)), None)
     start, end = period
-    from . import __version__
+    from oe_inferencex import __version__
     issuer = {"times": ({"datetime": _rfc3339(start)} if start == end else
                         {"datetime": None, "start_datetime": _rfc3339(start), "end_datetime": _rfc3339(end, end=True)}),
               "created": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -672,7 +672,7 @@ def _check(ok, detail):
 def _redraw(side, map_path, conf_path, cond_path, tmp, closed=False):
     """The sample drawn again with --seed-from-map from the map, the recorded settings and the bundled condition layer:
     (sidecar of the new draw, path of its CSV, None) or (None, None, the reason it could not be drawn again)."""
-    from . import cli
+    from oe_inferencex import cli
     design = side.get("design")
     if design not in ("random", "sequential", "condition"):
         return None, None, f"the {design} design is not one a certificate rests on"
@@ -763,7 +763,7 @@ def _rules_of(written_by):
     variable that null_count and class_words read, so another thread, or another verify, is not touched (patched module
     functions were left in place by concurrent calls; the third review). An older rule is not taken on the issuer's
     word: _verify accepts its result only where it certifies no more than this release's rules."""
-    from . import estimate as est
+    from oe_inferencex.certify import zone as est
     if written_by is None:                           # this release's rules: the default, not the oldest
         yield                                        # (_release(None) is (0, 0, 0); the fourth review of 1.17.2)
         return
@@ -984,7 +984,7 @@ def verify(cert_path, scores=None, confidence=None):
 
 
 def _verify(item, p, base, cert_name, scores, confidence, checks, notes, out):
-    from . import cli
+    from oe_inferencex import cli
     side = _load(os.path.join(base, BUNDLE["sample"]))
     zone = _load(os.path.join(base, BUNDLE["zone"]))
     cond = None if _by_class(side) else side.get("condition")
