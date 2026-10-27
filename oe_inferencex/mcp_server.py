@@ -56,7 +56,7 @@ except ImportError:                        # pragma: no cover - pydantic comes w
     Field = None
 
 from oe_inferencex import __version__, cli
-from oe_inferencex import assess as _assess
+from oe_inferencex.review import assess as _assess
 from oe_inferencex import estimate as est
 from oe_inferencex import decide as _decide
 

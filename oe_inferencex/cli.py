@@ -52,11 +52,11 @@ import sys
 
 import numpy as np
 
-from oe_inferencex.assess import (RULE_TEXT, _boundary_valid, _pool, _pool_valid, _pooled_argmax, assess_classmap,
-                                  assess_prediction, pool_condition, summary)
+from oe_inferencex.review.assess import (RULE_TEXT, _boundary_valid, _pool, _pool_valid, _pooled_argmax, assess_classmap,
+                                         assess_prediction, pool_condition, summary)
 from oe_inferencex import estimate as est
 from oe_inferencex.compare import compare_inferences
-from oe_inferencex.explain import explain_review_set
+from oe_inferencex.review.explain import explain_review_set
 from oe_inferencex.common.signals import boundary_indicator
 
 
@@ -608,7 +608,7 @@ def cmd_from_embeddings(args):
 def cmd_boundary(args):
     """Write the map's edge band as a condition layer, so that sample and estimate give the error rate near class
     edges and away from them, each with the condition design's exact interval."""
-    from .assess import boundary_band
+    from oe_inferencex.review.assess import boundary_band
     if (args.width_m is None) == (args.width_px is None):
         raise SystemExit("boundary: give the band's width once, as --width-m (metres, from a GeoTIFF's pixel size) or "
                          "--width-px (pixels)")

@@ -55,17 +55,17 @@ import importlib.abc
 import importlib.util
 import sys
 
-from .assess import (assess_classmap, assess_prediction, boundary_first_score, pool_condition, review_mask,
-                     review_order, summary)
+from .review.assess import (assess_classmap, assess_prediction, boundary_first_score, pool_condition, review_mask,
+                            review_order, summary)
 from .agency import design_from_sizes, design_from_weights, grade, read_points
-from .calibrate import fit_ranker, fit_side, side_features
+from .review.calibrate import fit_ranker, fit_side, side_features
 from .estimate import (certify_by_condition, cluster_interval, confidence_strata, design_effect, equal_allocation, estimate_error_rate, estimate_from_indices, exact_coverage_srs,
                        hypergeom_interval,
                        neyman_allocation, review_set_check, sample_for_estimation, stratified_interval, stratified_interval_wilson, stratified_mean_and_variance,
                        wilson_interval)
 from .compare import (compare_inferences, crosstab, determinism_check, disagreement, over_groups, phi, stability,
                       where, which_side)
-from .explain import CUES, cue_enrichment, derive_cues, explain_review_set, library_table
+from .review.explain import CUES, cue_enrichment, derive_cues, explain_review_set, library_table
 from .common.metrics import (attainable_ceiling, augrc, augrc_from_auroc, aurc_expected, capture_at_budget, capture_at_budget_expected, excess_aurc,
                              expected_calibration_error, oracle_aurc, risk_coverage, selective_accuracy,
                              weighted_aurc, weighted_auroc, weighted_capture_at_budget, weighted_excess_aurc,
@@ -78,6 +78,7 @@ from .common.stats import (block_bootstrap_indices, cluster_bootstrap_difference
                            paired_cluster_bootstrap, paired_comparison, rank_sum_test, sign_test, spearman, wins_losses_ties)
 # The module attributes the 1.18.1 imports above bound as a side effect (`ox.metrics` after `import oe_inferencex`)
 from .common import metrics, signals, stats  # noqa: F401
+from .review import assess, calibrate, explain  # noqa: F401
 
 try:
     __version__ = _version("olmoearth-inferencex")
@@ -120,6 +121,7 @@ __all__ = [
 # (evidence still needs torch only then). The package's own code imports the new paths.
 _MOVED = {
     "metrics": "common.metrics", "signals": "common.signals", "stats": "common.stats",
+    "assess": "review.assess", "explain": "review.explain", "calibrate": "review.calibrate",
 }
 
 

@@ -35,7 +35,7 @@ import math
 
 import numpy as np
 
-from oe_inferencex.explain import cue_enrichment
+from oe_inferencex.review.explain import cue_enrichment
 from oe_inferencex.common.stats import TIE_TOL, sign_test, wins_losses_ties
 
 NAN = float("nan")

@@ -10,6 +10,7 @@ import oe_inferencex as ox
 # The modules that moved into folders: their 1.18.1 path -> their new one.
 MOVED = {
     "metrics": "common.metrics", "signals": "common.signals", "stats": "common.stats",
+    "assess": "review.assess", "explain": "review.explain", "calibrate": "review.calibrate",
 }
 
 # oe_inferencex.__all__ at 1.18.1, sorted.

@@ -14,8 +14,8 @@ It zooms out only. The finest window is the sensor's pixel, and a class too smal
 class's survival is about where the map draws the class, not where the class is."""
 import numpy as np
 
-from .assess import (NO_VALID_WINDOW, _check_shape, _masked_as_nodata, _pool, _pooled_argmax, _reference_index,
-                     assess_classmap, assess_prediction)
+from oe_inferencex.review.assess import (NO_VALID_WINDOW, _check_shape, _masked_as_nodata, _pool, _pooled_argmax, _reference_index,
+                                         assess_classmap, assess_prediction)
 
 PATCHES = (1, 2, 4, 8, 16)
 # A descriptive line, not a test: below it most of the pixels the map calls c sit in windows called another class.

@@ -52,7 +52,7 @@ import shlex
 
 import numpy as np
 
-from oe_inferencex.assess import MAX_CONDITIONS
+from oe_inferencex.review.assess import MAX_CONDITIONS
 
 SOURCE = "rslearn @ 5780896a, olmoearth_projects @ f3c9b0c8"
 PROB_TOLERANCE = 1e-6       # as cli.PROB_TOLERANCE: float32 rounding puts a probability an ulp outside [0, 1]

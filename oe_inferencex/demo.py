@@ -20,7 +20,7 @@ import zlib
 
 import numpy as np
 
-from oe_inferencex.assess import assess_prediction
+from oe_inferencex.review.assess import assess_prediction
 from oe_inferencex.common.metrics import attainable_ceiling
 
 LAND, WATER, FLAG, WRONG, RANDOM, INK = (236, 231, 219), (74, 144, 196), (255, 140, 0), (214, 39, 40), (60, 60, 60), (40, 40, 40)
@@ -163,7 +163,7 @@ def _real():
 
 def run(out="oe_inferencex_demo", seed=0, budget=0.05, made_up=False):
     from oe_inferencex import cli                     # here, not at import: cli imports this module for its parser
-    from oe_inferencex.assess import _pool, _pooled_argmax
+    from oe_inferencex.review.assess import _pool, _pooled_argmax
     os.makedirs(out, exist_ok=True)
     sc = _made_up(seed) if made_up or not os.path.exists(SAMPLE) else _real()
     patch = sc["patch"]
