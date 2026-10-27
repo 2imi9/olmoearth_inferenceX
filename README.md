@@ -83,7 +83,8 @@ What is guaranteed
 With windows drawn by `sample` and labelled by a reviewer:
 
 - **Error rate** (`estimate`, on `--design random`): an exact 95% interval. The confidence, proportional and tiles
-  designs give approximate ones.
+  designs give approximate ones; `estimate --valid` adds beside them a 95% interval valid at every sample size, on
+  every design but tiles.
 - **Certified zone** (`certify`, on `--design random`): the most confident share of the map is wrong at most α of the
   time, except on at most δ of samples (10% by default). δ also counts the samples that certify nothing, so among
   those that certify a zone, more than δ can be wrong. On `--design sequential`, certify can be rerun as labels are
@@ -92,7 +93,9 @@ With windows drawn by `sample` and labelled by a reviewer:
   (confidence band, input condition, class, grid block) are each called good (wrong at most α), bad (more than α) or
   undecided; all the verdicts are right together except on at most δ of samples.
 - **Per class** (`estimate --per-class`, on `--design random` or `class`): an exact interval for each class's user's
-  accuracy, each at 95%, and for every class's share and producer's accuracy, holding together at 95%.
+  accuracy, each at 95%, and for every class's share and producer's accuracy, holding together at 95%. With
+  `--valid`, on every design but tiles, each class's user's accuracy, producer's accuracy and share get a 95% interval
+  valid at every sample size, each on its own.
 - **Two maps** (`sample --other`, then `estimate`): a 95% interval on their difference, and an exact sign test that
   names a map, the less accurate one at most 2.5% of the time, while the labels are at most a fifth of the windows
   where they differ.

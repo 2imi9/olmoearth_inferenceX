@@ -40,6 +40,38 @@
   every error pattern and every draw of small maps (and by counts over every population of larger ones), with a
   negative control, the `?` bounds against any choice of the windows marked `?`, the agreement with certify's zone
   test, the plan against brute force, the partition, and the command line end to end.
+- **`estimate --valid`: an interval valid at every sample size beside the one estimate gives, opt-in.** In Python,
+  `estimate_error_rate(..., valid=True)` and `estimate_per_class(..., valid=True)`. Without the option nothing
+  changes: every output, the golden files included, is 1.19.0's. With it, the whole-map error rate gets
+  `valid_interval` (`estimate` or `estimate_range`, `low`, `high`, `half_width`, `guarantee: "valid"`, `form` and
+  `method`), which covers the true rate at least 95% of the time for every map and every number of labels under the
+  confidence, proportional, condition, class and profile designs and a random or sequential sample. Strata labelled
+  in full enter exactly; one stratum labelled in part takes its exact hypergeometric interval (under a random sample,
+  the interval estimate prints anyway, to the last bit); two or more take `grade`'s betting interval for a stratified
+  sample drawn without replacement (agency/stratified.py), whose bets are fixed by the strata's sizes and label
+  counts. A `?` counts right at the lower end and wrong at the upper, each a one-sided bound on a fixed population, so
+  no switch to the union bound is needed; the reviewer's bounds map the ends as before. With `--per-class`, each row
+  gains `valid`: the user's accuracy over the windows each stratum's map calls the class (post-stratified; the class
+  design's is 1.19.0's exact interval to the last bit), the producer's accuracy by the box of two such intervals at
+  97.5%, and the share over the strata, each at 95% on its own, each holding its own point (a range where a part of a
+  stratum holds no label), the share with its own `drawn`; and `overall_accuracy_valid` and `per_class_valid_note`.
+  The printed result puts the valid line first and the line printed without `--valid` below it, labelled, then a
+  note; each class line likewise. `decide`, `certify`, `plan` and the MCP server read the fields they read before. A
+  stratum too large for the exact average over the orders of its labels is found from its label count before any
+  label is read; the whole map then takes the union bound over the strata and a per-class interval is left
+  uncomputed. Refused: `--design tiles`, and samples drawn with `--other` or `--design audit`. Under the confidence
+  and proportional designs it is wider than their Wilson interval, which is nominal (91.3% to 94.1% on the record's
+  maps at 100 labels); about 1.6 to 2.2 times is expected, from `grade`'s 1.6 times normal theory's (exp117, exp118),
+  and it can be narrower than the condition and class designs' union bound. It is slower: about a second for the
+  whole map at 1,000 labels and one to two seconds per class, by `grade`'s timing. Both are to be measured on
+  `estimate`'s designs before the default is reconsidered. New private module `oe_inferencex/estimate/valid.py`
+  (`linear_valid`, `whole_map_valid`, `class_quantities`, `producer_box`, `per_class_valid`), nothing added to
+  `oe_inferencex.__all__`; `estimate`'s help gains `--valid`. tests/test_estimate_valid.py checks the coverage by
+  exact enumeration over every population of small maps (two and three strata, an empty stratum, strata labelled in
+  full, `?` against any choice of the windows marked, per class over windows of four kinds and on the class design's
+  maps), the bit-for-bit identities, the fallback, negative controls, and that the output without `--valid` is the
+  golden one (read as it is, not regenerated) and decide's answers the same; tests/test_cli_matrix.py runs it on
+  every design.
 
 ## 1.19.0 (2026-10-27)
 

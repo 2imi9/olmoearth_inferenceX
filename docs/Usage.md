@@ -601,7 +601,8 @@ windows are mostly the wrong ones (tests/test_unjudged.py checks this by exact e
 adversary). Under the confidence and proportional designs the interval is then the sum of each stratum's exact
 interval at 1 - 0.05/L, weighted by its share of the map, in place of the Wilson interval, which does not move one
 way, and is much wider: under those designs most of the width comes from that switch, not from the `?` windows
-themselves. The tiles design and `--per-class` refuse `?`. `certify` counts every `?` as wrong, which certifies less
+themselves. With `--valid` ([below](#valid-interval)) those designs also get an interval that bounds `?` with no
+such switch. The tiles design and `--per-class` refuse `?`. `certify` counts every `?` as wrong, which certifies less
 and keeps the guarantee. Each `?` widens the result, so judging them is worth it where possible.
 
 `estimate` and `certify` treat the labels as right. Their interval and zone describe agreement with the reviewer's
@@ -633,7 +634,7 @@ reviewer, record the class seen in a `reference_class` column, and set `wrong` t
 
 | `--design` | Draw | Interval in `estimate` |
 |---|---|---|
-| `confidence` (default without `--condition`) | Strata by confidence margin, budget allocated from the model's confidence | Wilson at the design's effective sample size |
+| `confidence` (default without `--condition`) | Strata by confidence margin, budget allocated from the model's confidence | Wilson at the design's effective sample size, nominal; with `--valid`, also one valid at every sample size |
 | `proportional` | The same strata, budget allocated by stratum size | The same |
 | `random` | Simple random sample; required by `certify` without a condition | Exact hypergeometric; with `--condition`, also exact per condition, graded in exp88 |
 | `tiles` | `--per-tile` windows (default 16) in each of a random set of tiles of `--tile` windows per side (default 16) | Ratio estimator over tiles, with the naive interval beside it |
@@ -641,6 +642,63 @@ reviewer, record the class seen in a `reference_class` column, and set `wrong` t
 | `class` | Strata by the map's own class: each class at least `--min-per-class` (default 50, or all its windows), the rest in proportion to its size (Olofsson et al. 2014) | Exact per class; whole map as `condition`; with `--per-class`, each class's user's accuracy exact, and the class areas and producer's accuracies exact together at 95% ([below](#sampling-by-map-class)) |
 | `audit` | `--per-class N` windows at random from each predicted class's confident zone (the top third of the map by default), in place of `--budget` | Exact hypergeometric per class, on that class's confident zone; no whole-map rate ([audit](#audit)) |
 | `profile` | Strata are profiles fixed from the map before any label (`--profile-by`, `--min-windows`), labels split equally | Exact per profile; whole map as `condition`; `certify` calls each profile good, bad or undecided ([below](#sampling-by-profile)) |
+
+With `--valid`, every design but `tiles` and `audit` also gets an interval valid at every sample size, for the whole
+map and, with `--per-class`, for each class ([below](#valid-interval)).
+
+<a id="valid-interval"></a>**An interval valid at every sample size (`--valid`, 1.20.0).** The intervals above are
+unchanged; `--valid` adds one beside them.
+
+```bash
+oe-inferencex estimate to_label.csv --valid
+oe-inferencex estimate to_label.csv --valid --per-class
+```
+
+- **What it guarantees.** The whole-map error rate's interval covers the true rate at least 95% of the time, for every
+  map and every number of labels, under the confidence, proportional, condition, class and profile designs and a
+  random or sequential sample; no normal approximation enters it. A stratum labelled in full enters exactly. With one
+  stratum labelled in part, the interval is that stratum's exact hypergeometric interval: under a random sample it is
+  the exact interval `estimate` prints anyway, to the last bit. With two or more, it is the betting interval for a
+  stratified sample drawn without replacement (Waudby-Smith and Ramdas 2020), the method `grade` uses
+  (agency/stratified.py); its mixture of bets is fixed by the strata's sizes and label counts, never by the labels.
+- **`?` and reviewer bounds.** A `?` counts right at the lower end and wrong at the upper end; each end is a one-sided
+  bound on a fixed population, so the interval holds whichever windows are `?`, with no switch to another interval.
+  `--reviewer-false-alarm` and `--reviewer-miss` map its ends as they map the others.
+- **Per class** (`--valid --per-class`). Each class's user's accuracy is bounded over the windows the map calls the
+  class in each stratum: given how many labels fall in each such part, they are a random sample of it, so the
+  interval holds given those numbers and so always (exact where the class lies in one stratum labelled in part, as
+  under the class design, where it is 1.19.0's interval to the last bit). The producer's accuracy takes two such
+  intervals at 97.5% each (the box `grade` uses), the share an interval over the strata. Each holds at 95% on its own;
+  they do not hold jointly, and a class whose share the map draws outside its own interval is flagged on that
+  interval alone. Under a random sample and the class design, the joint intervals of the table printed without
+  `--valid` stay beside them.
+- **Its point.** Each valid interval carries its own point, the stratified estimate (post-stratified by the map's
+  class for a user's accuracy), and holds it; where a part of a stratum the map calls a class holds no label, that
+  part is bounded (0 at the lower end, all of it at the upper), and the point is a range.
+- **What is printed.** The first line is the valid interval (`valid 95% interval`), the second the line printed
+  without `--valid`, after `without --valid:`, then everything else as before and a note. With `--per-class`, each
+  class has a line marked `valid` and below it the line printed without `--valid`.
+- **The JSON.** It is the result without `--valid`, key for key, plus `valid_interval` (`estimate` or
+  `estimate_range`, `low`, `high`, `half_width`, `guarantee: "valid"`, `form`: `census`, `exact`, `betting` or
+  `union bound`, and `method`); with `--per-class`, `valid` in each class's row (`user_accuracy`,
+  `producer_accuracy`, `reference_share`, each with its point, ends and form, and the share's `drawn`),
+  `overall_accuracy_valid` and `per_class_valid_note`; with `--also-accept`, the second reading's `valid_interval`.
+  `decide`, `certify` and the MCP server read the fields they read without `--valid`.
+- **What it costs.** Under the confidence and proportional designs it is wider than their Wilson interval, which is
+  nominal (it covered 91.3% to 94.1% of the time on the research record's maps at 100 labels): `grade`'s betting
+  intervals were 1.6 times as wide as normal theory's on agencies' samples (exp117, exp118), and on `estimate`'s
+  designs at 200 to 1,000 labels about 1.6 to 2.2 times is expected, not yet measured. Under the condition and class
+  designs it can be narrower than their union bound, more so with many strata. It averages exactly over the orders of
+  each stratum's labels, so it is slower: by `grade`'s timing (exp117), about a second for the whole map at 1,000
+  labels and one to two seconds per class with `--per-class`, so a minute or more for many classes. A stratum of tens
+  of thousands of labels is too large for that average; this is decided from the label counts before any label is
+  read, and the whole map then takes the union bound over the strata (`form: "union bound"`), a per-class interval
+  none (`not_computed`).
+- **Refused.** `--design tiles` (labels taken tile by tile are not a random sample of windows), and samples drawn with
+  `--other` or `--design audit`, which have intervals of their own.
+- tests/test_estimate_valid.py checks the coverage by exact enumeration over every population of small maps, `?`
+  against any choice of the windows marked, per class over windows of four kinds, with negative controls, and that
+  the output without `--valid` is the golden one.
 
 The tile design matches how reviewers often label, and its intervals can under-cover. On six of exp78's seven tasks
 the naive interval covered the true rate 51 to 78% of the time at a nominal 95%. The corrected interval, as `--design tiles`
@@ -727,8 +785,8 @@ shuffled order, keeping the CSV's row order. `estimate` reads a profile sample a
 strata as profiles. `--seed-from-map`, `--target` and the sequential options are refused with this design.
 
 `estimate` writes `to_label_estimate.json` (`estimate`, `low`, `high`, `half_width`, `method`, and `effective_n`
-under the confidence and proportional designs). It refuses a blank `wrong`, a `wrong` other than 0 or 1, and rows
-other than those the design drew. Without a condition the JSON gains `scope`: a whole-map rate can hide a part read
+under the confidence and proportional designs; with `--valid`, `valid_interval` beside them). It refuses a blank
+`wrong`, a `wrong` other than 0 or 1, and rows other than those the design drew. Without a condition the JSON gains `scope`: a whole-map rate can hide a part read
 from other inputs. On a PASTIS map with half its tiles read without the optical input by a probe trained on radar plus
 optical, that part's error rate was 74.1% and the rest's 19.7%, while random samples of 300 estimated 46.9% on
 average. Read by a probe trained on radar alone, that part was still 28.3% wrong (exp88).
@@ -1626,6 +1684,8 @@ estimate_per_class(s, reference, map_class)                           # per_clas
 certify_zone(margin.ravel(), s["indices"], wrong, alpha=0.05, valid=valid.ravel())   # random samples only
 alt = also_accept_reading(wrong, map_class[s["indices"]], reference, {"2": [3]})["wrong"]   # a second reading
 estimate_error_rate(s, alt)                                           # the same estimator, or certify_zone, on it
+estimate_error_rate(s, wrong, valid=True)["valid_interval"]           # estimate --valid: valid at every sample size
+estimate_per_class(s, reference, map_class, valid=True)               # adds `valid` per row, overall_accuracy_valid
 ```
 
 With an input-condition layer:
@@ -1683,7 +1743,7 @@ On this pair most of the accuracy comes from the post-event side being usually r
 
 The package has one folder per feature. Each folder holds the feature's logic and its commands. Helpers that several
 features share are in `common`. Features also use one another's logic: `scale`, `estimate`, `plan` and `compare` read
-maps through `review`, and `estimate` builds on `certify`'s zone.
+maps through `review`, and `estimate` builds on `certify`'s zone and, for `--valid`, on `agency`'s betting interval.
 
 The module paths of 1.18.1 still import. For example, `oe_inferencex.assess` gives the module `oe_inferencex.review.assess`.
 
@@ -1692,7 +1752,7 @@ The module paths of 1.18.1 still import. For example, `oe_inferencex.assess` giv
 | `review` | `assess`: review sets; with a reference, error rate, capture and tie-aware AURC; with a condition layer, each condition on its own; the class-edge band (`boundary`). `explain`: the cues behind each flagged window, with their measured enrichment. `calibrate`: a fitted ranker or side rule, bound to its model family. The window readers the labelled commands share |
 | `compare` | Where two inferences differ; with labels, the cross-tab and which side is right; `determinism_check` (`compare`) |
 | `scale` | The same map at several window sizes: each class's survival, windows bordering another class, confidence and, with a reference, the error rate (`scale`) |
-| `estimate` | Sampling designs, the error rate, per-class accuracy, the review-set check, each per input condition; `profiles`: the profiles of the profile design, fixed from the map before any label; the per-class audit of a map's confident calls; which of two maps is more accurate, from labels (`sample`, `estimate`) |
+| `estimate` | Sampling designs, the error rate, per-class accuracy, the review-set check, each per input condition; `profiles`: the profiles of the profile design, fixed from the map before any label; `valid`: the intervals of `--valid`, valid at every sample size, built on `agency`'s betting interval; the per-class audit of a map's confident calls; which of two maps is more accurate, from labels (`sample`, `estimate`) |
 | `certify` | `zone`, `sequential`: the certified zone, per input condition too. `localized`: a verdict per profile, good, bad or undecided. `certificate`: a certified zone packed to travel with the map (a STAC Item, the zone as a GeoTIFF, digests), and its verifier (`certify`, `certificate`, `verify`) |
 | `plan` | How many labels each labelled route needs, budget by budget, before any label is drawn (`plan`) |
 | `decide` | Typed answers to set questions, read from a result that `estimate`, `certify` or `compare` wrote (`decide`) |

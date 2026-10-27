@@ -27,7 +27,9 @@ Three things a user needs, and one they must be stopped from doing.
   exp78's tasks, 84.3% on Sen1Floods11 and 68.5% on MADOS, the two where a tenth of the tiles hold most of the errors
   (exp/out/exp78_shipped_tiles.json in the research record). Labelling 18 tiles of 16 windows and using the ordinary
   formula gave a "95%" interval that covered on 0.51 to 0.78 of draws; that is exp78's practical finding and the
-  reason this function will not compute the naive interval alone.
+  reason this function will not compute the naive interval alone. With valid=True (`estimate --valid`, 1.20.0,
+  estimate/valid.py) it adds, beside the interval the design earns and without changing it, one valid at every sample
+  size under every design but tiles; `estimate_per_class(valid=True)` does the same per class.
 - `estimate_from_indices` is for windows labelled without a design. It treats them as a random sample after
   checking only that they do not look like a review list: the mean suspicion percentile of a random sample is 0.5,
   of the tool's own review set about 0.97, and labelling the review set then dividing gives two to six times the
@@ -57,6 +59,8 @@ from oe_inferencex.estimate.error_rate import (CLASS_WHOLE_MAP, CONDITION_NOTE, 
                                                REVIEWER_NOTE, SCOPE_ESTIMATE, SEQUENTIAL_READ_NOTE, TILES_WARNING,
                                                UNJUDGED_NOTE, UNJUDGED_STRATIFIED_NOTE, _estimate_core, _per_condition,
                                                _stratum_union, estimate_error_rate, estimate_from_indices)
+from oe_inferencex.estimate.valid import (PER_CLASS_VALID_NOTE, VALID_HELP, VALID_NOTE, class_quantities, linear_valid,
+                                          per_class_valid, producer_box, whole_map_valid, worst_work)
 from oe_inferencex.estimate.model_assisted import (MIN_FOR_TUNING, model_assisted_interval,
                                                    stratified_model_assisted_interval, tuned_coefficient)
 from oe_inferencex.estimate.per_class import (CLASS_DESIGN_EXACT_NOTE, CLASS_DESIGN_METHOD, CLASS_NORMAL_NOTE, MIN_PER_CLASS,

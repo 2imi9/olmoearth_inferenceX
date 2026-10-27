@@ -7,6 +7,7 @@ from oe_inferencex.common.hypergeom import hypergeom_interval
 from oe_inferencex.common.sampling import _condition_guards
 from oe_inferencex.estimate.intervals import (Z95, _union_interval, stratified_interval_wilson, stratified_mean_and_variance,
                                               wilson_interval)
+from oe_inferencex.estimate.valid import PER_CLASS_VALID_NOTE, per_class_valid
 
 PER_CLASS_EXACT_NOTE = ("under a random sample the per-class intervals printed are exact (exp115, graded on 39 fully "
                         "labelled maps): the class shares hold together with probability at least 95%, and so do the "
@@ -153,7 +154,7 @@ def _class_design_exact(per, sample, strata, local, sizes, m_pop, r_s, C, L, N):
             "high": a_hi / (a_hi + rest_lo) if a_hi + rest_lo > 0 else 1.0}
 
 
-def estimate_per_class(sample, reference, map_class, n_classes=None, interval="wilson", legend_size=None):
+def estimate_per_class(sample, reference, map_class, n_classes=None, interval="wilson", legend_size=None, valid=False):
     """User's accuracy, producer's accuracy and error-adjusted share per class, from the labelled sample.
 
     sample    : what `sample_for_estimation` returned (designs "random", "confidence", "proportional" or "condition";
@@ -185,7 +186,12 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
     `reference_share` are kept as before; the warnings `few errors` and `near census` concern those, and `few labels`
     all of them. Under the class design (the condition design by map class) the rows carry exact intervals too
     (`_class_design_exact`), and the normal-theory `producer_accuracy` and `reference_share` beside them are Olofsson
-    et al.'s, estimate +/- 1.96 SE, whatever `interval` says, as `overall_accuracy_normal_theory` is."""
+    et al.'s, estimate +/- 1.96 SE, whatever `interval` says, as `overall_accuracy_normal_theory` is.
+
+    With `valid` (1.20.0, `estimate --valid --per-class`), each row also carries `valid`: its user's accuracy,
+    producer's accuracy and reference share with intervals valid at every sample size, each on its own at 95%
+    (estimate/valid.py: `class_quantities`), and the result `overall_accuracy_valid` and `valid_note`. Every other
+    key is the result without it, unchanged."""
     if interval not in ("wilson", "wald"):     # before the class design sets its own form (the review of 1.17.2)
         raise ValueError(f"interval must be 'wilson' or 'wald', got {interval!r}")
     ref = np.asarray(reference).ravel()
@@ -472,4 +478,10 @@ def estimate_per_class(sample, reference, map_class, n_classes=None, interval="w
         out["overall_accuracy_normal_theory"] = normal_overall
     if warnings:
         out["warning"] = "; ".join(warnings)
+    if valid:
+        overall_v, rows_v = per_class_valid(sample, idx, ref, mc, pop, C, srs)
+        for c, row in per.items():
+            row["valid"] = rows_v[c]
+        out["overall_accuracy_valid"] = overall_v
+        out["valid_note"] = PER_CLASS_VALID_NOTE
     return out

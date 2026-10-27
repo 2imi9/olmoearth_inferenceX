@@ -179,6 +179,42 @@ def test_estimate_per_class_under_each_design(labelled, tmp_path, capsys):
                 assert _interval_ok(row[q]), (q, row[q])
 
 
+def test_estimate_valid_under_each_design(labelled, tmp_path, capsys):
+    """--valid (1.20.0) adds the valid interval, per class too, and its lines; every key of the result without it and
+    every line it printed stay, the class lines below their valid ones. The tiles design is refused."""
+    design, csv_path = labelled
+    if design == "tiles":
+        with pytest.raises(SystemExit, match="no interval for the tiles design"):
+            main(["estimate", csv_path, "--valid", "--out", str(tmp_path / "v.json")])
+        return
+    from oe_inferencex import estimate as est
+    for extra in ([], ["--per-class"]):
+        capsys.readouterr()
+        assert main(["estimate", csv_path, *extra, "--out", str(tmp_path / "plain.json")]) == 0
+        plain_lines = [x for x in capsys.readouterr().out.splitlines() if not x.startswith("wrote ")]
+        assert main(["estimate", csv_path, *extra, "--valid", "--out", str(tmp_path / "v.json")]) == 0
+        lines = [x for x in capsys.readouterr().out.splitlines() if not x.startswith("wrote ")]
+        plain, r = _json(tmp_path / "plain.json"), _json(tmp_path / "v.json")
+        v = r.pop("valid_interval")
+        assert v["guarantee"] == "valid" and _interval_ok(v)
+        assert lines[1] == "without --valid: " + plain_lines[0] and f"note: {est.VALID_NOTE}" in lines
+        if extra:
+            assert r.pop("per_class_valid_note") == est.PER_CLASS_VALID_NOTE
+            assert _interval_ok(r.pop("overall_accuracy_valid"))
+            for row in r["per_class"].values():
+                for q in row.pop("valid").values():
+                    assert q is None or q["low"] <= min(_points(q)) <= max(_points(q)) <= q["high"], q
+            classes = [x for x in plain_lines if x.startswith("  class ")]
+            assert [x for x in lines if x.startswith("    without --valid: ")] == \
+                ["    without --valid: " + x.split(": ", 1)[1] for x in classes]
+            assert len([x for x in lines if x.startswith("  class ") and ", valid: " in x]) == len(classes)
+        assert r == plain
+
+
+def _points(q):
+    return q["estimate_range"] if q["estimate"] is None else [q["estimate"]] * 2
+
+
 @pytest.mark.parametrize("rule", ["prefix", "bonferroni"])            # the plug-in comparator is Python-only: no guarantee
 @pytest.mark.parametrize("alpha", [0.3, 0.001])
 def test_certify_under_each_rule(labelled, tmp_path, rule, alpha):

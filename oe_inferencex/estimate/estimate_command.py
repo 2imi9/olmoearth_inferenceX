@@ -21,6 +21,9 @@ def _estimate_disagreement(args):
     # --confidence too: added with the product input and accepted here unread, so a wrong or missing band path
     # passed with exit 0 (2026-10-06)
     # --classes too, accepted unread, even negative (the bug hunt of 2026-10-25)
+    if getattr(args, "valid", False):
+        raise SystemExit("estimate: --valid reads a sample drawn for the error rate; a sample of the windows where two "
+                         "maps differ has its own interval and sign test")
     if args.per_class or args.scores is not None or getattr(args, "confidence", None) is not None \
             or args.nodata is not None or args.reviewer_false_alarm or args.reviewer_miss \
             or getattr(args, "alpha", None) is not None or getattr(args, "also_accept", None) is not None \
@@ -89,6 +92,9 @@ def _verdict_words(verdict, alpha):
 def _estimate_class_audit(args):
     """estimate on a sample --design audit CSV: each predicted class's confident-zone error rate with its exact interval;
     with --alpha a verdict per class, and with --also-accept a second reading of the same labels."""
+    if getattr(args, "valid", False):
+        raise SystemExit("estimate: --valid reads a sample drawn for the error rate; an audit sample's intervals are "
+                         "exact per class already")
     if args.per_class or args.classes is not None:      # --classes was accepted unread (the bug hunt of 2026-10-25)
         raise SystemExit("estimate: an audit sample is read per class already, over the classes it recorded; drop "
                          "--per-class and --classes")
@@ -203,6 +209,31 @@ def _rate(res):
     return f"{100 * res['estimate']:.1f}%"
 
 
+def _valid_class_line(c, row):
+    """A class's line of valid intervals (estimate --valid --per-class): each point (a range where a part of a stratum
+    the map calls the class holds no label) with its interval, ends rounded outward; the share flagged on its own
+    interval. Of the row's warnings it names those that bear on these intervals."""
+    v = row["valid"]
+
+    def f(q, d=0):
+        if q is None:
+            return "n/a"
+        if q.get("low") is None:
+            return "not computed"
+        e = q.get("estimate")
+        pt = (f"{100 * e:.{d}f}%" if e is not None else
+              f"{100 * q['estimate_range'][0]:.{d}f}-{100 * q['estimate_range'][1]:.{d}f}%")
+        lo = math.floor(100 * q["low"] * 10 ** d + 1e-9) / 10 ** d
+        hi = math.ceil(100 * q["high"] * 10 ** d - 1e-9) / 10 ** d
+        return f"{pt} ({lo:.{d}f}-{hi:.{d}f})"
+    sh = v["reference_share"]
+    drawn = f": drawn {sh['drawn']}" if sh and sh.get("drawn") not in (None, "within") else ""
+    codes = [k for k in row.get("warning_codes", []) if k in ("few labels", "never predicted")]
+    tag = f"  [warning: {', '.join(codes)}]" if codes else ""
+    return (f"  class {c}, valid: user's accuracy {f(v['user_accuracy'])}, producer's {f(v['producer_accuracy'])}, "
+            f"share of map {100 * row['map_share']:.1f}% -> reference {f(sh, 1)}{drawn}{tag}")
+
+
 def _outside_note(res):
     """The closing note of `estimate` when the whole-map rate lies outside some conditions' intervals, worded by the
     direction observed: a condition whose interval lies above the whole-map rate is worse than the map as a whole,
@@ -281,10 +312,12 @@ def cmd_estimate(args):
     if side.get("design") == "sequential":
         # the labelled rows are the first windows of a random order: a simple random sample of their number
         sample = dict(sample, design="random", budget=int(idx.size))
+    valid = bool(getattr(args, "valid", False))       # 1.20.0: the valid interval beside the one given without it
     try:
-        res = est.estimate_error_rate(sample, wrong, unjudged=unjudged, reviewer_false_alarm=fa, reviewer_miss=miss)
+        res = est.estimate_error_rate(sample, wrong, unjudged=unjudged, reviewer_false_alarm=fa, reviewer_miss=miss,
+                                      valid=valid)
         # the second reading: the same estimator on the same sample, with the windows the file accepts counted right
-        alt = None if also is None else est.estimate_error_rate(sample, wrong_alt, unjudged=unjudged)
+        alt = None if also is None else est.estimate_error_rate(sample, wrong_alt, unjudged=unjudged, valid=valid)
     except ValueError as exc:
         raise SystemExit(f"estimate: {exc}")
     if side.get("design") == "sequential":
@@ -306,7 +339,7 @@ def cmd_estimate(args):
         mismatch = np.flatnonzero((map_class[idx] != ref).astype(int) != wrong)
         try:
             pc = est.estimate_per_class(sample, ref, map_class, n_classes=n_classes,
-                                        legend_size=getattr(args, "classes", None))
+                                        legend_size=getattr(args, "classes", None), valid=valid)
         except ValueError as exc:
             raise SystemExit(f"estimate --per-class: {exc}" + ("; give --classes, the number of classes the legend holds"
                                                                if "legend" in str(exc) and getattr(args, "classes", None)
@@ -328,6 +361,9 @@ def cmd_estimate(args):
             # printed since 1.17.1 and promised in the JSON by its CHANGELOG, but never written (the bug hunt of
             # 2026-10-25)
             res["overall_accuracy_normal_theory"] = pc["overall_accuracy_normal_theory"]
+        if valid:
+            res["overall_accuracy_valid"] = pc["overall_accuracy_valid"]
+            res["per_class_valid_note"] = pc["valid_note"]
         if mismatch.size:
             res["per_class_note"] = (f"on {mismatch.size} row(s), first row {int(mismatch[0]) + 2}, `wrong` disagrees with whether "
                                      "`reference_class` differs from the map's class; the error rate above uses `wrong`, the "
@@ -357,14 +393,20 @@ def cmd_estimate(args):
                 drawn = "" if row["drawn"] == "within" else f": drawn {row['drawn']}"
                 normal = ("" if (side.get("condition") or {}).get("by") != "map class" else
                           f"; normal-theory: producer's {f(pa)}, area {f(sh)}")
-                lines.append(f"  class {c}: user's accuracy {f(ua)}, producer's {pt} (exact {fl(100 * pe['low'], 0):.0f}-"
-                             f"{ce(100 * pe['high'], 0):.0f}), share of map {100 * row['map_share']:.1f}% -> "
-                             f"{'area' if (side.get('condition') or {}).get('by') == 'map class' else 'labels'} "
-                             f"{100 * se['estimate']:.1f}% (exact {fl(100 * se['low'], 1):.1f}-{ce(100 * se['high'], 1):.1f})"
-                             f"{drawn}" + normal + tag)
+                line = (f"  class {c}: user's accuracy {f(ua)}, producer's {pt} (exact {fl(100 * pe['low'], 0):.0f}-"
+                        f"{ce(100 * pe['high'], 0):.0f}), share of map {100 * row['map_share']:.1f}% -> "
+                        f"{'area' if (side.get('condition') or {}).get('by') == 'map class' else 'labels'} "
+                        f"{100 * se['estimate']:.1f}% (exact {fl(100 * se['low'], 1):.1f}-{ce(100 * se['high'], 1):.1f})"
+                        f"{drawn}" + normal + tag)
             else:
-                lines.append(f"  class {c}: user's accuracy {f(ua)}, producer's {f(pa)}, share of map "
-                             f"{100 * row['map_share']:.1f}% -> error-adjusted {f(sh)}" + tag)
+                line = (f"  class {c}: user's accuracy {f(ua)}, producer's {f(pa)}, share of map "
+                        f"{100 * row['map_share']:.1f}% -> error-adjusted {f(sh)}" + tag)
+            if valid:
+                # the valid intervals first, then the line printed without --valid, unchanged, labelled so
+                lines.append(_valid_class_line(c, row))
+                lines.append("    without --valid: " + line[len(f"  class {c}: "):])
+            else:
+                lines.append(line)
         by_class = (side.get("condition") or {}).get("by") == "map class"
         if exact:
             # a class design with one class is a random sample, and its table the random design's (the review of 24
@@ -383,6 +425,13 @@ def cmd_estimate(args):
             # the method string says so, and the printed table did not: the per-class intervals under this design
             # are not graded (review of 2026-09-29); with one condition the table is the random design's
             lines.append(f"note: {est.PER_CLASS_NOT_GRADED}")
+        if valid:
+            ov, o = res["overall_accuracy_valid"], res["overall_accuracy"]
+            lines.append(("overall accuracy: the valid interval is not computed" if ov["low"] is None else
+                          f"overall accuracy {_rate(ov)}, valid 95% interval {100 * ov['low']:.1f}% to "
+                          f"{100 * ov['high']:.1f}%")
+                         + f"; without --valid {100 * o['low']:.1f}% to {100 * o['high']:.1f}%")
+            lines.append(f"note: {est.PER_CLASS_VALID_NOTE}")
         per_class_text = "\n" + "\n".join(lines) + (f"\nnote: {res['per_class_note']}" if "per_class_note" in res else "")
     res["sample"] = os.path.abspath(args.sample)
     if _population_note(side):                       # a product's range left pixels out: the rate is of the rest
@@ -398,6 +447,8 @@ def cmd_estimate(args):
             if k in alt:
                 also[k] = ({name: {q: row[q] for q in keep if q in row} for name, row in alt[k].items()}
                            if k == "per_condition" else alt[k])
+        if "valid_interval" in alt:                     # --valid: the second reading's valid interval too
+            also["valid_interval"] = alt["valid_interval"]
         res.update({"also_accept": also, "also_accept_unused": unused, "reading_note": est.ESTIMATE_READING_NOTE})
         n = also["n_accepted"]
         moved = (f"{n} labelled window{'s' if n != 1 else ''} wrong above {'are' if n != 1 else 'is'} right under this "
@@ -406,6 +457,10 @@ def cmd_estimate(args):
                  if n else "no labelled window wrong above is right under this reading")
         lines = [f"also accepting {_also_words(also)} ({os.path.basename(accept_path)}): error rate {_rate(also)}, 95% "
                  f"interval {100 * also['low']:.1f}% to {100 * also['high']:.1f}%; {moved}"]
+        if "valid_interval" in also:
+            va = also["valid_interval"]
+            lines[0] += (f"; valid 95% interval {100 * va['low']:.1f}% to {100 * va['high']:.1f}% (the interval before "
+                         "it is the one given without --valid)")
         if res.get("by_condition"):                     # one line per condition, as the strict lines
             for name, row in also["per_condition"].items():
                 lines.append(f"  {name} {_rate(row)} ({100 * row['low']:.1f}% to {100 * row['high']:.1f}%)"
@@ -443,10 +498,18 @@ def cmd_estimate(args):
         cond_text = "\n" + "\n".join(lines)
     # the interval is printed as its two ends: it is not symmetric about the estimate (Wilson never is, and a
     # clipped one is not), so "estimate +/- x" would name an interval that is not the one written
-    print(words(f"error rate {_rate(res)}, 95% interval {100 * res['low']:.1f}% to {100 * res['high']:.1f}% "
-          f"(half-width {100 * res['half_width']:.1f} points), from {res['n_labelled']} labelled windows of {res['n_population']}; "
-          f"{res['method']}" + (f"\nnote: {res['bounds_note']}" if res.get("bounds_note") else "")
-          + (f"\nwarning: {res['warning']}" if "warning" in res else "") + cond_text + per_class_text
+    head = (f"error rate {_rate(res)}, 95% interval {100 * res['low']:.1f}% to {100 * res['high']:.1f}% "
+            f"(half-width {100 * res['half_width']:.1f} points), from {res['n_labelled']} labelled windows of {res['n_population']}; "
+            f"{res['method']}")
+    if valid:
+        # 1.20.0: the valid interval first, then the line printed without --valid, unchanged, labelled so
+        v = res["valid_interval"]
+        head = (f"error rate {_rate(v)}, valid 95% interval {100 * v['low']:.1f}% to {100 * v['high']:.1f}% "
+                f"(half-width {100 * v['half_width']:.1f} points), from {res['n_labelled']} labelled windows of "
+                f"{res['n_population']}; {v['method']}\nwithout --valid: {head}")
+    print(words(head + (f"\nnote: {res['bounds_note']}" if res.get("bounds_note") else "")
+          + (f"\nwarning: {res['warning']}" if "warning" in res else "")
+          + (f"\nnote: {est.VALID_NOTE}" if valid else "") + cond_text + per_class_text
           + (f"\nwarning: {res['per_class_warning']}" if "per_class_warning" in res else "")
           + (f"\nnote: {res['population_note']}" if "population_note" in res else "")
           + (f"\nnote: {res['sequential_note']}" if "sequential_note" in res else "") + also_text
@@ -496,4 +559,5 @@ def add_estimate_parser(sub):
                    help="audit sample: a verdict per class, above, below or undetermined against A, chosen before the "
                         "labels are read")
     e.add_argument("--also-accept", default=None, metavar="FILE", help=ALSO_ACCEPT_HELP)
+    e.add_argument("--valid", action="store_true", help=est.VALID_HELP)
     e.set_defaults(func=cmd_estimate)

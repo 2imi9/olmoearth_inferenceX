@@ -6,6 +6,7 @@ from oe_inferencex.common.sampling import _condition_guards, review_set_check
 from oe_inferencex.estimate.designs import MIN_PER_STRATUM
 from oe_inferencex.estimate.intervals import (_union_interval, cluster_interval, stratified_interval_wilson,
                                               stratified_mean_and_variance, wilson_interval)
+from oe_inferencex.estimate.valid import whole_map_valid
 
 # The coverage this warning quotes for "this interval" is the shipped design's (exp/exp78_shipped_tiles.py, artifact
 # exp/out/exp78_shipped_tiles.json); 1.3.1 quoted exp78's own design of exactly 18 tiles and a normal quantile.
@@ -113,7 +114,7 @@ SEQUENTIAL_READ_NOTE = ("the first {n} windows of a sequential sample, read as a
                         "the labels looked good can be too narrow. certify on this sample holds at every look")
 
 
-def estimate_error_rate(sample, wrong, unjudged=None, reviewer_false_alarm=0.0, reviewer_miss=0.0):
+def estimate_error_rate(sample, wrong, unjudged=None, reviewer_false_alarm=0.0, reviewer_miss=0.0, valid=False):
     """The error rate of the whole map from the labelled sample, with the interval its design earns
     (`_estimate_core`), and, when asked, bounded for windows the reviewer could not judge and for a reviewer who errs.
 
@@ -132,7 +133,16 @@ def estimate_error_rate(sample, wrong, unjudged=None, reviewer_false_alarm=0.0, 
     Without these the result is `_estimate_core`'s, unchanged. With them `estimate_range` gives the range the labels
     allow, and `estimate` is None unless that range is one value; each condition's row is bounded the same way.
     Sharpness is proved in lean/ of the v1.9.0 tree, not tested here; tests/test_unjudged.py checks coverage and the
-    formulas."""
+    formulas.
+    valid : True adds `valid_interval` (1.20.0, `estimate --valid`): the interval valid at every sample size under
+        every design but tiles (estimate/valid.py: `whole_map_valid`), with its own point, form and method, `?` and
+        the reviewer's bounds read as above. Every other key is the result without it, unchanged, so what reads the
+        result (decide, certify's notes, the MCP server) reads the same numbers. tests/test_estimate_valid.py checks
+        its coverage by exact enumeration."""
+    if valid:
+        res = estimate_error_rate(sample, wrong, unjudged, reviewer_false_alarm, reviewer_miss)
+        res["valid_interval"] = whole_map_valid(sample, wrong, unjudged, reviewer_false_alarm, reviewer_miss)
+        return res
     if sample.get("design") == "sequential":
         # The labelled windows are the first of a random order: a simple random sample of their number, as the command
         # line reads it. The API refused a sample sample_for_estimation drew as an "unknown design" (the bug hunt of
