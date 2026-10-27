@@ -804,6 +804,7 @@ def test_a_certificate_is_rerun_with_the_rules_of_the_release_that_wrote_it(tmp_
     import oe_inferencex
     from oe_inferencex import certificate as cert
     from oe_inferencex import estimate as est
+    from oe_inferencex.certify import zone as zone_mod
     rng = np.random.default_rng(3)
     p = rng.random((2, 400, 400)).astype(np.float32)
     np.save(tmp_path / "p.npy", p / p.sum(0))
@@ -811,7 +812,7 @@ def test_a_certificate_is_rerun_with_the_rules_of_the_release_that_wrote_it(tmp_
     os.chdir(tmp_path)
     try:
         with monkeypatch.context() as mp:
-            mp.setattr(est, "null_count", lambda n, alpha: math.floor(alpha * n) + 1)
+            mp.setattr(zone_mod, "null_count", lambda n, alpha: math.floor(alpha * n) + 1)
             mp.setattr(oe_inferencex, "__version__", "1.17.0")
             with contextlib.redirect_stdout(io.StringIO()):
                 assert main(["sample", "p.npy", "--design", "random", "--budget", "400", "--seed-from-map",

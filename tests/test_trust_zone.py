@@ -624,10 +624,14 @@ def test_a_p_value_equal_to_its_level_is_decided_alike_on_every_system(monkeypat
         assert est.apply_zone_rule([p], [3], [1], 0.4, 0.6, "bonferroni", n=[5])[0].tolist() == [True], p
     assert est.apply_zone_rule([0.3 + 1e-6], [3], [1], 0.4, 0.3, "prefix", n=[5])[1] is None
     # the whole certificate, with the p-value as either system computes it
+    from oe_inferencex.certify import zone                  # where certify_zone looks zone_pvalue up (ADR-002)
     margin = np.arange(5, 0, -1, dtype=float)            # zone order 0..4
     for p in (0.29999999999999977, 0.30000000000000004):
-        monkeypatch.setattr(est, "zone_pvalue", lambda k, b, n, a, p=p: p if (k, b, n) == (1, 3, 5) else 1.0)
+        used = []
+        monkeypatch.setattr(zone, "zone_pvalue",
+                            lambda k, b, n, a, p=p: used.append((k, b, n)) or (p if (k, b, n) == (1, 3, 5) else 1.0))
         out = est.certify_zone(margin, [0, 1, 2], [1, 0, 0], 0.4, delta=0.3, rule="prefix", grid=(1.0,))
+        assert (1, 3, 5) in used                            # the fake p-value was the one decided on
         assert out["levels"][0]["accepted"] is True, p
 
 
