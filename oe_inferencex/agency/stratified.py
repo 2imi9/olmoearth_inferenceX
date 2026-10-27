@@ -16,8 +16,9 @@ drawn without replacement from N_h units (N_h infinite for a point frame), gets 
 
 m_t(mu) = (N mu - S_t) / (N - t) the mean of the units not yet drawn when mu is the truth (S_t the sum of the t values
 before), c_t = (1/2 + S_t) / (t + 1) the running mean, clipped at KAPPA / l_t so every factor stays positive, and
-l_t = c W_h (N_h - t) / (N_h n_h). Each factor has conditional mean at most 1 (1 + y <= e^y, the step of Theorem 3.2 of
-Waudby-Smith and Ramdas 2020 before Fan et al.'s inequality), so E K_h(true mu_h) <= 1. log K_h is linear in mu_h with
+l_t = c W_h (N_h - t) / (N_h n_h). Each factor has conditional mean at most 1 (1 + y <= e^y, the last step of the
+proof of Theorem 3.2 of Waudby-Smith and Ramdas 2020, taken after their use of Fan et al.'s inequality; the technical
+report's Lemma 1), so E K_h(true mu_h) <= 1. log K_h is linear in mu_h with
 slope -c W_h, so the product over the independent strata depends on the means only through theta = sum_h W_h mu_h, and
 no split of theta among the strata needs searching. Averaged exactly over every order of each stratum's labels (a
 dynamic programme over the counts, so no random order is drawn), mixed over K_MIX values of c fixed by the design (the
@@ -82,7 +83,9 @@ RATIO_ROUNDS = 5                  # 5 rounds of 8 points divide the widest bin (
 RATIO_TOL = 1e-6
 RATIO_ORDER_TOL = 1e-8
 # The work of one direct interval, sum over its points and strata of K_MIX * n * (k1 + 1) * (k2 + 1), is bounded
-# before it starts; above this it is not computed and the box is given beside it. A placeholder until J3 times it.
+# before it starts; above this it is not computed and the box is given beside it. About four minutes on one core (aicr
+# job 1553048: about 24 s per 1e9): NLCD 2016's largest direct interval (6.2e9) computes; GFC2020's (3.6e10 to
+# 1.2e11, 14 and 48 minutes for two of them) take the box.
 RATIO_MAX_WORK = 1e10
 RATIO_CHUNK = 2 ** 22             # floats per state array of the batched programme (32 MB; about seven such arrays
                                   # live during a step); larger batches are split

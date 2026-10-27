@@ -15,7 +15,7 @@ without replacement, independent across groups. Each group is one of three kinds
 With no open group the ends are exact. With one, it is that group's exact hypergeometric interval at 1 - alpha
 (`hypergeom_interval`), the others added exactly: under a random sample, and for the class design's user's accuracy,
 estimate's own exact interval to the last bit. With two or more, the betting interval of `grade` over the open groups
-(agency/stratified.py; Waudby-Smith and Ramdas 2020, the report's Theorem 1), whose mixture of bets is fixed by the
+(agency/stratified.py; the technical report's Theorem 1), whose mixture of bets is fixed by the
 groups' sizes and label counts, never by the labels. Census and exact ends are the nearest float to their fraction, as
 `_union_interval` rounds them; betting ends come from a bisection and move one float outward. Every interval is
 widened, when needed, to hold its own point, which never lowers its coverage.
@@ -58,7 +58,7 @@ WHOLE_MAP_FORMS = {
     FORM_EXACT: ("valid at every sample size: one stratum is labelled in part, and the interval is its exact "
                  "hypergeometric interval at 95%, with any stratum labelled in full added exactly"),
     FORM_BETTING: ("valid at every sample size: the betting interval for a stratified sample drawn without replacement "
-                   "(Waudby-Smith and Ramdas 2020; the interval grade gives), the strata labelled in full added "
+                   "(the interval grade gives; the technical report's Theorem 1), the strata labelled in full added "
                    "exactly"),
     FORM_UNION: ("valid at every sample size: a stratum holds too many labels for the betting interval's exact average "
                  "over their orders, so the interval is the sum of each stratum's exact interval at 1 - 0.05/L, "
@@ -78,7 +78,8 @@ VALID_NOTE = ("--valid: the first interval covers the whole-map rate at least 95
               "91.3% at 100 labels on a 200-window map, exp105; 92.7% near a census, 300 of 306 labelled; and at "
               "least 93% on the other graded cells, exp78); under `--design condition`, `class` and `profile` the "
               "union bound over the strata, which holds too; under a random sample the same exact interval. The "
-              "valid interval is expected to be wider than a nominal one and can be narrower than the union bound.")
+              "valid interval was 1.6 to 1.7 times as wide as the confidence design's Wilson interval and 0.6 times "
+              "the class design's union bound on the demo tile (aicr job 1554014).")
 PER_CLASS_VALID_NOTE = ("--valid: each interval on a line marked valid holds at 95% on its own, for every map and every "
                         "number of labels: the user's accuracy over the windows the map calls the class in each "
                         "stratum (exact where they lie in one stratum labelled in part), the producer's accuracy from "

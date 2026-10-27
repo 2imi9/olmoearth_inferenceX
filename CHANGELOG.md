@@ -60,13 +60,13 @@
   note; each class line likewise. `decide`, `certify`, `plan` and the MCP server read the fields they read before. A
   stratum too large for the exact average over the orders of its labels is found from its label count before any
   label is read; the whole map then takes the union bound over the strata and a per-class interval is left
-  uncomputed. Refused: `--design tiles`, and samples drawn with `--other` or `--design audit`. Under the confidence
-  and proportional designs it is expected to be wider than their Wilson interval, which is nominal (in the record it
-  covered 91.3% at 100 labels on a 200-window map, exp105; 92.7% near a census, 300 of 306 labelled; and at least 93%
-  on the other graded cells, exp78); about 1.6 to 2.2 times is expected, from `grade`'s 1.6 times normal theory's
-  (exp117, exp118), and it can be narrower than the condition and class designs' union bound. It is slower: about a second for the
-  whole map at 1,000 labels and one to two seconds per class, by `grade`'s timing. Both are to be measured on
-  `estimate`'s designs before the default is reconsidered. New private module `oe_inferencex/estimate/valid.py`
+  uncomputed. Refused: `--design tiles`, and samples drawn with `--other` or `--design audit`. On the demo tile
+  (16,380 windows; aicr job 1554014) it was 1.72 and 1.64 times as wide as the confidence design's Wilson interval at
+  300 and 1,000 labels (that interval is nominal: in the record it covered 91.3% at 100 labels on a 200-window map,
+  exp105; 92.7% near a census, 300 of 306 labelled; and at least 93% on the other graded cells, exp78), and 0.60
+  times as wide as the class design's union bound at 1,000 labels; on one core the whole map took under 0.3 s and
+  `--per-class` about a second at 1,000 labels. Coverage and widths across the record's maps are to be measured
+  before the default is reconsidered. New private module `oe_inferencex/estimate/valid.py`
   (`linear_valid`, `whole_map_valid`, `class_quantities`, `producer_box`, `per_class_valid`), nothing added to
   `oe_inferencex.__all__`; `estimate`'s help gains `--valid`. tests/test_estimate_valid.py checks the coverage by
   exact enumeration over every population of small maps (two and three strata, an empty stratum, strata labelled in
@@ -74,6 +74,10 @@
   maps), the bit-for-bit identities, the fallback, negative controls, and that the output without `--valid` is the
   golden one (read as it is, not regenerated) and decide's answers the same; tests/test_cli_matrix.py runs it on
   every design.
+- **Two attributions corrected.** Since 1.18.0 the stratified module's docstring placed 1 + y <= e^y "before Fan et al.'s
+  inequality" in Waudby-Smith and Ramdas 2020's proof of Theorem 3.2; it is the last step, taken after it (the
+  technical report's Lemma 1 has it right since 27 October). `--valid`'s method text cites the report's Theorem 1
+  rather than that paper, which has no betting process. Found by the report's referee; no number changes.
 - **The which-map verdict's bound is proved.** `estimate`'s docstring for the comparison of two maps now states why
   the exact sign test names the less accurate map at most half its level of the time: given the m sampled windows
   where exactly one map is right, the count right in a is hypergeometric, and when K_a >= K_b its lower tail below
@@ -95,8 +99,8 @@
   the sampled share, was valid only when every stratum holds a label, which held for both its data sets, so no
   recorded number changes. The upper end is 1 less the lower end of 1 - R. The JSON adds `ratio_method` and
   `inputs.ratio`, and for each such quantity `method` ("betting test inverted over the ratio") and `box` (the 1.19.0
-  interval); a note says how the intervals are made. Its work is bounded before it starts (`RATIO_MAX_WORK`, a
-  placeholder of 1e10 steps until the aicr timings set it); above it the interval is null, the box is printed in its
+  interval); a note says how the intervals are made. Its work is bounded before it starts (`RATIO_MAX_WORK`, 1e10
+  steps, about four minutes on one core); above it the interval is null, the box is printed in its
   place as `[not computed; box a, b]`, and a note says that taking the box only then is a choice made on the data.
   `stratified.ratio` takes `method="box" | "direct" | None`; its `box=` keyword is kept for this release as a
   deprecated alias (box=False is method=None). New tests (tests/test_ratio_direct.py): the batched programme against
@@ -105,8 +109,13 @@
   point-frame reading with the deflation), the swap of y and w, the scan order forced, the box beside it, the cap
   and the command line. Their box checks compare this code with itself (`--ratio box` with the default, the box
   beside the direct interval with the box alone): that the box is still 1.19.0's, number for number, rests on the
-  layout harness run against 1.19.0 on aicr and on test_agency.py's Olofsson checks. Widths and times on NLCD 2016
-  and GFC2020, and Olofsson's direct numbers as goldens, come from aicr before release; the default's switch is the owner's decision against those timings.
+  layout harness run against 1.19.0 on aicr (job 1553610: 157 steps and 418 files identical apart from the new
+  options in five commands' help and one plan refusal) and on test_agency.py's Olofsson checks. Measured on one core
+  (aicr job 1553048): NLCD 2016's eight-class two-map grade took 627 s with its 26 direct intervals (446 s at a
+  tolerance of 1e-4), each a median 0.83 of the box's width (0.64 to 0.92) and a median 1.74 times normal theory's;
+  GFC2020's direct intervals need 3.6e10 to 1.2e11 steps (14 and 48 minutes for two of them), above the bound, so
+  there the box is given. The default stays the box: the owner's rule was each two-map grade under 10 minutes on one
+  core.
 
 ## 1.19.0 (2026-10-27)
 

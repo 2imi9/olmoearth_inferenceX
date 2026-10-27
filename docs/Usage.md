@@ -660,7 +660,7 @@ oe-inferencex estimate to_label.csv --valid --per-class
   labels are read; no normal approximation enters it. A stratum labelled in full enters exactly. With one
   stratum labelled in part, the interval is that stratum's exact hypergeometric interval: under a random sample it is
   the exact interval `estimate` prints anyway, to the last bit. With two or more, it is the betting interval for a
-  stratified sample drawn without replacement (Waudby-Smith and Ramdas 2020), the method `grade` uses
+  stratified sample drawn without replacement (the technical report's Theorem 1), the method `grade` uses
   (agency/stratified.py); its mixture of bets is fixed by the strata's sizes and label counts, never by the labels.
 - **`?` and reviewer bounds.** A `?` counts right at the lower end and wrong at the upper end; each end is a one-sided
   bound on a fixed population, so the interval holds whichever windows are `?`, with no switch to another interval.
@@ -685,15 +685,14 @@ oe-inferencex estimate to_label.csv --valid --per-class
   `producer_accuracy`, `reference_share`, each with its point, ends and form, and the share's `drawn`),
   `overall_accuracy_valid` and `per_class_valid_note`; with `--also-accept`, the second reading's `valid_interval`.
   `decide`, `certify` and the MCP server read the fields they read without `--valid`.
-- **What it costs.** Under the confidence and proportional designs it is expected to be wider than their Wilson
-  interval, which is nominal (in the research record it covered 91.3% at 100 labels on a 200-window map, exp105;
-  92.7% near a census, 300 of 306 labelled; and at least 93% on the other graded cells, exp78): `grade`'s betting
-  intervals were 1.6 times as wide as normal theory's on agencies' samples (exp117, exp118), and on `estimate`'s
-  designs at 200 to 1,000 labels about 1.6 to 2.2 times is expected, not yet measured. Under the condition and class
-  designs it can be narrower than their union bound, more so with many strata (expected, not yet measured). It
-  averages exactly over the orders of each stratum's labels, so it is slower: by `grade`'s timing (exp117), about a
-  second for the whole map at 1,000 labels and one to two seconds per class with `--per-class`, so a minute or more
-  for many classes. A stratum of about 90,000 labels or more is too large for that average; this is decided from the
+- **What it costs.** On the demo tile (16,380 windows; aicr job 1554014) it was 1.72 and 1.64 times as wide as the
+  confidence design's Wilson interval at 300 and 1,000 labels. That interval is nominal: in the research record it
+  covered 91.3% at 100 labels on a 200-window map (exp105), 92.7% near a census (300 of 306 labelled) and at least 93%
+  on the other graded cells (exp78). Under the class design at 1,000 labels it was 0.60 times as wide as the union
+  bound the design prints without `--valid`: narrower, and still valid. Coverage and widths across the record's maps
+  are not yet measured. It averages exactly over the orders of each stratum's labels; on one core the whole map took
+  under 0.3 s and `--per-class` about a second at 1,000 labels (0.4 s at 300). A stratum of about 90,000 labels or
+  more is too large for that average; this is decided from the
   label counts before any label is read, and the whole map then takes the union bound over the strata (`form: "union bound"`), a per-class interval
   none (`not_computed`).
 - **Refused.** `--design tiles` (labels taken tile by tile are not a random sample of windows), and samples drawn with
@@ -1421,7 +1420,7 @@ How each interval is made (`oe_inferencex.stratified`):
 | Overall accuracy, a class's share, the difference of two maps | a betting confidence interval for a stratified sample without replacement: each stratum's e-value, averaged exactly over the orders of its labels, depends on the stratum means only through the weighted total, so the strata need no union bound | 1.60 to 1.64 times as wide on every overall accuracy and difference of NLCD 2016 and GFC2020; more for a small class's share (NLCD 24's, 0.26%: 0 to 0.73%, normal theory 0.21 to 0.31%) |
 | User's and producer's accuracy | the box of two betting intervals at alpha/2, one for the units that count for the class and one for those in its denominator that do not | about 2 times (1.9 to 2.4) for a large class: GFC2020's two classes, NLCD's producer's accuracies of 21, 41, 42, 52, 71 and 82. For a class with few labels it can say little or nothing: NLCD 24's producer's accuracy, 0.3% of the reference, is 0 to 100% |
 | User's accuracy of a class with one declared pure stratum (`--pure STRATUM=CLASS`) | the pure-stratum rule: exact hypergeometric intervals for that stratum and for each stratum declared pure for no class, joined by a union bound | 1.2 to 1.7 times for 11 of NLCD's 15 classes, 1.9 to 3.9 for the other four (the smallest, or nearly always right); NLCD 21: 12 points, where the box gives 30 and normal theory 8 |
-| User's and producer's accuracy with `--ratio direct` (new in 1.20.0, not the default) | one betting test of θ_y − r(θ_y + θ_w) ≤ 0 inverted over r, each end at alpha/2, in 32 fixed bins of r inside which the test is monotone; the box beside it in the JSON | not yet measured on NLCD and GFC2020; it runs the test at up to 73 values of r per end where the box solves two linear tests once |
+| User's and producer's accuracy with `--ratio direct` (new in 1.20.0, not the default) | one betting test of θ_y − r(θ_y + θ_w) ≤ 0 inverted over r, each end at alpha/2, in 32 fixed bins of r inside which the test is monotone; the box beside it in the JSON | a median 1.74 times on NLCD 2016's eight-class grade (1.62 to 3.56), a median 0.83 of the box's width; on GFC2020 above its work bound, so the box |
 
 `--ratio direct` gives each user's and producer's accuracy that the pure-stratum rule does not give one test instead
 of the box's two: a unit counts 1 when it counts for the class, 0 when it is in the denominator and does not, and r
@@ -1430,7 +1429,10 @@ label. Each r gets the test of its bin, fixed in advance, so the ends are found 
 inside one, never tuned to the labels. The default stays `--ratio box`, whose output is 1.19.0's, number for number.
 The direct interval's work is bounded before it starts; above the bound it is not computed (null in the JSON) and the
 box is printed in its place, labelled `box`. The box holds at the same level on its own, but taking it only where the
-direct interval is missing is a choice made on the data; `--ratio box` fixes the choice in advance.
+direct interval is missing is a choice made on the data; `--ratio box` fixes the choice in advance. Measured on one
+core (aicr job 1553048): NLCD 2016's eight-class two-map grade took 627 s with its 26 direct intervals, each a median
+0.83 of the box's width (0.64 to 0.92); GFC2020's direct intervals are above the bound (14 and 48 minutes for two of
+them), so there the box is given. The default stays the box for that reason.
 
 `--pure` declares strata every unit of which the first `--map` labels the class: an agency's no-change strata, built
 from the map itself. A declared stratum with a point mapped otherwise is refused. The declaration must come from the
