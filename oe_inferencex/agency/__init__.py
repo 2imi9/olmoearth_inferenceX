@@ -43,8 +43,10 @@ NOT_COMPUTED_NOTE = ("{k} interval(s) are not computed (null in the JSON): a str
 RATIO_NOTE = ("User's and producer's accuracies (--ratio direct) invert one betting test of theta_y - r (theta_y + "
               "theta_w) <= 0 over r, each end at alpha/2, in fixed bins of r inside which the test is monotone (method "
               "in the JSON); the box of two betting intervals, the default, is beside each as 'box'.")
-NOT_COMPUTED_BOX_NOTE = ("{k} of them are direct ratio intervals, whose work grows with the labels in each kind; the "
-                         "box of two betting intervals is printed in their place, labelled 'box'. It holds at the same "
+NOT_COMPUTED_BOX_NOTE = ("{k} direct ratio interval(s) are not computed (null in the JSON): the work of the whole "
+                         "interval, which grows with the labels in each kind, is above its bound (RATIO_MAX_WORK; each "
+                         "one's not_computed gives the reason), while the box computed. The box of two betting "
+                         "intervals is printed in their place, labelled 'box'. It holds at the same "
                          "level on its own, but taking it only where the direct interval is missing is a choice made "
                          "on the data, since the limit depends on the label counts; --ratio box fixes it in advance.")
 PURE_PARTLY_NOTE = ("The pure-stratum rule was not used for class(es) {classes} of {map}, which have more than one "
@@ -468,10 +470,11 @@ def grade(design, reference, maps, alternate=None, pure=None, alpha=0.05, ratio_
     if unk:
         points = sum(reference[i] is None or any(maps[m][i] is None for m in names) for i in range(P))
         notes.append(UNKNOWN_NOTE.format(k=points, what=", ".join(unk)))
-    skipped = sum(q.get("interval", 0) is None for q in _quantities(out))
+    # a direct ratio interval with the box beside it was stopped by its own bound, not by a stratum: its own note
+    boxed = sum(q.get("interval", 0) is None and q.get("box") is not None for q in _quantities(out))
+    skipped = sum(q.get("interval", 0) is None for q in _quantities(out)) - boxed
     if skipped:
         notes.append(NOT_COMPUTED_NOTE.format(k=skipped))
-    boxed = sum(q.get("interval", 0) is None and q.get("box") is not None for q in _quantities(out))
     if boxed:
         notes.append(NOT_COMPUTED_BOX_NOTE.format(k=boxed))
     out["notes"] = notes

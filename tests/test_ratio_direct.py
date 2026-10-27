@@ -373,9 +373,9 @@ def test_a_direct_interval_too_large_gives_the_box_in_its_place(monkeypatch):
             assert q["interval"] is None and "RATIO_MAX_WORK" in q["not_computed"]
             assert q["method"] == METHOD_RATIO and q["box"] == box["per_class"]["map"][c][k]["interval"]
     assert res["overall_accuracy"]["map"]["interval"] is not None   # the rest of the grading still stands
-    assert any(n.startswith("8 interval(s) are not computed") for n in res["notes"])
-    assert any(n.startswith("8 of them are direct ratio intervals") and "choice made on the data" in n
-               for n in res["notes"])
+    assert not any(n.startswith("8 interval(s) are not computed") for n in res["notes"])   # no stratum stopped them
+    assert any(n.startswith("8 direct ratio interval(s) are not computed") and "RATIO_MAX_WORK" in n
+               and "choice made on the data" in n for n in res["notes"])
     pure = olofsson_result(ratio_method="direct", pure={"1": "1"})["per_class"]["map"]["1"]["user"]
     assert pure["method"] == "pure-stratum rule" and pure["interval"] is not None and "box" not in pure
 

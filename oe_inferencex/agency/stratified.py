@@ -84,7 +84,8 @@ RATIO_ORDER_TOL = 1e-8
 # The work of one direct interval, sum over its points and strata of K_MIX * n * (k1 + 1) * (k2 + 1), is bounded
 # before it starts; above this it is not computed and the box is given beside it. A placeholder until J3 times it.
 RATIO_MAX_WORK = 1e10
-RATIO_CHUNK = 2 ** 22             # floats per state array of the batched programme (32 MB); larger batches are split
+RATIO_CHUNK = 2 ** 22             # floats per state array of the batched programme (32 MB; about seven such arrays
+                                  # live during a step); larger batches are split
 
 METHOD_LINEAR = "betting"
 METHOD_BOX = "box of two betting intervals"
@@ -622,6 +623,8 @@ def _ratio_low_end(design, counts, alpha):
         if bins.size == 0:
             continue
         f = _ratio_logM(design, counts, EDGES[bins + 1], ANCHORS[bins], EDGES[bins + 1], cs) - thr
+        if np.isnan(f).any():                                   # f < 0 is False for NaN: it would read as rejected
+            raise RuntimeError("the ratio's test is NaN at a bin's end: a bug")
         acc = np.flatnonzero(f < 0)
         if acc.size:
             first, f_end = int(bins[acc[0]]), float(f[acc[0]])

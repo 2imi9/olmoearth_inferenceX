@@ -93,7 +93,7 @@ def cmd_grade(args):
             lines.append("  * user's accuracy by the pure-stratum rule")
         if res.get("ratio_method") == "direct":
             lines.append("  user's and producer's accuracy otherwise by the betting test inverted over the ratio "
-                         "(--ratio direct); the box is beside each in the JSON")
+                         "(--ratio direct); the box is beside each in the JSON written by --out")
     print("\n".join(lines) + "".join(f"\nnote: {n}" for n in res["notes"]) + (f"\nwrote {args.out}" if args.out else ""))
     if args.out:
         with open(args.out, "w") as f:

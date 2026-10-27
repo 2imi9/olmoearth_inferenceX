@@ -25,8 +25,10 @@
   every order and against the old one at the anchor, the e-value at the truth at most 1, log M nonincreasing in each
   bin, exact coverage of every population (three kinds, an unsampled stratum, unknown values of three kinds, a
   point-frame reading with the deflation), the swap of y and w, the scan order forced, the box beside it, the cap
-  and the command line. Widths and times on NLCD 2016 and GFC2020, and Olofsson's direct numbers as goldens, come
-  from aicr before release; the default's switch is the owner's decision against those timings.
+  and the command line. Their box checks compare this code with itself (`--ratio box` with the default, the box
+  beside the direct interval with the box alone): that the box is still 1.19.0's, number for number, rests on the
+  layout harness run against 1.19.0 on aicr and on test_agency.py's Olofsson checks. Widths and times on NLCD 2016
+  and GFC2020, and Olofsson's direct numbers as goldens, come from aicr before release; the default's switch is the owner's decision against those timings.
 
 ## 1.19.0 (2026-10-27)
 
