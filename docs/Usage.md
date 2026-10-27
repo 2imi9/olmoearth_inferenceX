@@ -590,6 +590,10 @@ pixels. **The reviewer sets `wrong` to 1 when `map_class` is not what is on the 
 too little detail), the reviewer writes `?` and keeps the row. The recorded experiments used 300 windows
 ([exp78](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/results/comparisons.md#how-wrong-is-this-map-what-a-reviewers-labels-buy-exp78)).
 
+**What "exact" means.** An exact interval or test is decided in integer arithmetic wherever floating point could
+err, up to 5 million windows. Above that floating point decides, with a relative error under 1e-6 at 1e8 windows and
+1e-5 at 1e9, so an interval's end can move by one window.
+
 **Windows marked `?`.** `estimate` bounds them both ways: the interval's lower end counts every `?` as right and its
 upper end every `?` as wrong, and the estimate is the range between. The exact intervals move one way with the error
 count, so the interval still covers at least 95% whatever made those windows hard to judge, even when the hard
