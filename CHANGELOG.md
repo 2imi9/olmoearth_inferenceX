@@ -1,5 +1,37 @@
 # Changelog
 
+## 1.19.0 (unreleased)
+
+The package's layout, and nothing else: no function, text, option or output changes but the version a result is
+stamped with.
+
+- **Feature folders (ADR-002 in the research record).** The 27 modules are now folders by feature, each holding its
+  logic and its commands: `review` (assess, explain, calibrate; the commands `assess` and `boundary`), `compare`,
+  `scale`, `estimate` (estimate.py split into designs, intervals, error_rate, model_assisted, per_class, which_map and
+  audit; `sample` and `estimate`), `certify` (zone, sequential, certificate; `certify`, `certificate` and `verify`),
+  `plan`, `decide`, `agency` (with stratified; `grade`), `readers` (olmoearth, embeddings, lcc, taskcard;
+  `from-olmoearth` and `from-embeddings`), `research` (evidence, awf, data, figstyle, reliability), `common` (metrics,
+  signals, stats, the exact hypergeometric arithmetic, the sampling primitives and the commands' shared helpers) and
+  `cli` (the parser and `main`). cli.py (4,137 lines) and estimate.py (2,974) are split by feature, and three lazy
+  import cycles are gone (estimate and sequential, decide and cli, data and cli). `demo` and `mcp_server` stay where
+  they were. Function bodies moved verbatim; only import lines changed.
+- **Every 1.18.1 import path still works, as the same module.** `oe_inferencex.estimate`, `.cli`, `.compare`,
+  `.scale`, `.plan`, `.decide` and `.agency` are packages that keep every name they had, private ones included. The
+  18 modules that moved (assess, explain, calibrate, metrics, signals, stats, reliability, evidence, awf, data,
+  figstyle, olmoearth, embeddings, lcc, taskcard, stratified, sequential and certificate) are found at their old paths
+  by one import hook in `oe_inferencex/__init__.py`: `import oe_inferencex.metrics` gives the module
+  `oe_inferencex.common.metrics` itself, not a copy, so private names, monkeypatches and module state stay one.
+  Nothing is imported before it is asked for, so `oe_inferencex.evidence` still needs torch only when it is imported,
+  and `python -m oe_inferencex.taskcard` still runs. The package's own code imports the new paths.
+  `oe_inferencex.__all__` (84 names, the same objects) and the command `oe-inferencex` are unchanged.
+- **What can differ.** A moved module's `__name__`, and the `__module__` of what it defines, name the new path
+  (`oe_inferencex.review.explain.Cue`), so a pickle written by 1.19.0 does not load in 1.18.1; one written by 1.18.1
+  still loads. The API reference pages of the moved modules moved with them (`reference/assess/` is now
+  `reference/review/assess/`); the old addresses redirect. No module file remains at an old path.
+- Six tests patch the module that now holds what they patch (test_trust_zone.py twice, test_bughunt_1_17_2.py,
+  test_class_design.py, test_also_accept.py, test_reliability.py). tests/test_layout.py checks the old paths, the
+  hook, and that importing the package loads neither torch nor matplotlib.
+
 ## 1.18.1 (2026-10-26)
 
 - **NLCD 2016's per-class table, reconciled.** The 1.18.0 raters found `grade`'s per-class accuracies on NLCD 2016 up

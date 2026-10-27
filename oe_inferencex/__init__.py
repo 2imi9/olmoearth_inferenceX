@@ -13,37 +13,44 @@ is, with the interval its sampling design earns, because that question has no la
     s = ox.sample_for_estimation(margin, 300, p1=p1)          # which 300 windows to label
     ox.estimate_error_rate(s, wrong)                          # ... -> the error rate, with a 95% interval
 
-Modules, in the order a user meets them:
-  assess      a prediction or served class map -> review sets at budgets, boundary-first order, reference scoring,
-              and with an input-condition layer (a cloud flag, the modalities present) each condition on its own
-  explain     why each review window is suspect: label-free cues with their measured enrichment
+Folders, one per feature, each with its logic and its commands, in the order a user meets them:
+  review      assess: a prediction or served class map -> review sets at budgets, boundary-first order, reference
+              scoring, and with an input-condition layer (a cloud flag, the modalities present) each condition on its
+              own; explain: why each review window is suspect, label-free cues with their measured enrichment;
+              calibrate: fuse the readings with labels, a ranker or side rule, held out, bound to its model family
   compare     how two inferences of the same scene differ: disagreement, where it sits, stability, the label bridge
-  calibrate   fuse the readings with labels: a ranker or side rule, held out, bound to its model family
+  scale       one map at several window sizes
   estimate    how wrong the map is, from a labelled sample: which windows to label, the design-based interval,
-              per-class accuracy, and a certified zone of the map that is wrong at most alpha of the time; with an
-              input condition, labels split equally across the conditions, each condition's exact interval, and a
-              zone per condition with delta split over them (exp88)
+              per-class accuracy; with an input condition, labels split equally across the conditions and each
+              condition's exact interval (exp88)
+  certify     a certified zone of the map that is wrong at most alpha of the time, per condition with delta split
+              over them (zone, sequential), and the certificate that carries it (certificate)
+  plan        how many labels each route needs; decide: typed answers read from a result
   agency      an agency's stratified reference sample (NLCD, GFC2020) -> overall, user's and producer's accuracy
               and class shares of one map or two, each with an interval valid at any sample size (stratified: the
               betting intervals, the box for ratios, the pure-stratum rule) and the normal-theory one beside it
-  metrics     tie-aware AURC and excess AURC, capture at a budget, the attainable ceiling, design-weighted forms
-  stats       exact sign tests, one-vote-per-cluster tests, block and cluster bootstraps
-  signals     the confidence readings and the no-model pixel controls every rule is scored against
-  reliability the ensemble and typicality signals that were tested and lost, kept so they can be re-tested
+  readers     taskcard: what each OlmoEarth fine-tuned model is; lcc: a range reader for the served rasters;
+              olmoearth: an OlmoEarth run's rslearn dataset -> the scores assess reads and an input-condition layer
+              on their grid; embeddings: a geo-embeddings store and labelled points -> class probabilities
+  common      what two or more features share. metrics: tie-aware AURC and excess AURC, capture at a budget, the
+              attainable ceiling, design-weighted forms; stats: exact sign tests, one-vote-per-cluster tests, block
+              and cluster bootstraps; signals: the confidence readings and the no-model pixel controls every rule is
+              scored against; the exact hypergeometric arithmetic; the commands' raster, output and wording helpers
+  research    the research record's toolkit. reliability: the ensemble and typicality signals that were tested and
+              lost, kept so they can be re-tested; evidence, awf, data, figstyle
   cli         `oe-inferencex demo`, `assess`, `compare`, `sample`, `estimate`, `certify` and `grade`: rasters, .npy or
               point tables in, files out
   mcp_server  the same commands as tools of a local MCP server for an agent, `oe-inferencex mcp`
-  taskcard    what each OlmoEarth fine-tuned model is; lcc: a range reader for the served rasters
-  olmoearth   an OlmoEarth run's rslearn dataset -> the scores assess reads and an input-condition layer on their grid
-By dependency the modules form three groups, and the layout stays flat (docs/plan/adr-001-repository-layout.md
-in the research record):
-  numpy only        assess, explain, compare, calibrate, estimate, agency, stratified, metrics, stats, signals,
-                    reliability, cli
-  standard library  taskcard, lcc
-  guarded extras    evidence (torch); awf and data (the "encoder" and "geo" extras); olmoearth's readers (rasterio,
-                    the "geo" extra; the module imports with numpy alone); figstyle (matplotlib);
-                    mcp_server's server (the "mcp" extra; its texts and tool functions are numpy only).
-                    Not imported here; each names its extra if imported without it.
+The layout is feature folders (docs/plan/adr-002-feature-folders.md in the research record). The 1.18.1 module paths
+(oe_inferencex.assess, oe_inferencex.metrics and the rest) still import, each as the module that now holds its code.
+By dependency the modules form three groups:
+  numpy only        review, compare, estimate, agency, common.metrics, common.stats, common.signals,
+                    research.reliability, cli
+  standard library  readers.taskcard, readers.lcc
+  guarded extras    research.evidence (torch); research.awf and research.data (the "encoder" and "geo" extras);
+                    readers.olmoearth's readers (rasterio, the "geo" extra; the module imports with numpy alone);
+                    research.figstyle (matplotlib); mcp_server's server (the "mcp" extra; its texts and tool
+                    functions are numpy only). Not imported here; each names its extra if imported without it.
 
 The evidence behind each function is in the research record, one claim id per number:
 https://github.com/2imi9/olmoearth_inferenceX-record.

@@ -81,6 +81,26 @@ plugins:
         method/claims.md: https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/method/claims.md
         plan/index.md: https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/plan/index.md
         LabLog.md: https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/exp/NOTES.md
+        # The API pages of the modules 1.19.0 moved into feature folders (ADR-002). Absolute targets: they do not
+        # depend on the order in which gen-files writes the pages and this plugin reads them.
+        reference/assess.md: https://olmoearth-inferencex.readthedocs.io/en/latest/reference/review/assess/
+        reference/explain.md: https://olmoearth-inferencex.readthedocs.io/en/latest/reference/review/explain/
+        reference/calibrate.md: https://olmoearth-inferencex.readthedocs.io/en/latest/reference/review/calibrate/
+        reference/metrics.md: https://olmoearth-inferencex.readthedocs.io/en/latest/reference/common/metrics/
+        reference/signals.md: https://olmoearth-inferencex.readthedocs.io/en/latest/reference/common/signals/
+        reference/stats.md: https://olmoearth-inferencex.readthedocs.io/en/latest/reference/common/stats/
+        reference/reliability.md: https://olmoearth-inferencex.readthedocs.io/en/latest/reference/research/reliability/
+        reference/evidence.md: https://olmoearth-inferencex.readthedocs.io/en/latest/reference/research/evidence/
+        reference/awf.md: https://olmoearth-inferencex.readthedocs.io/en/latest/reference/research/awf/
+        reference/data.md: https://olmoearth-inferencex.readthedocs.io/en/latest/reference/research/data/
+        reference/figstyle.md: https://olmoearth-inferencex.readthedocs.io/en/latest/reference/research/figstyle/
+        reference/olmoearth.md: https://olmoearth-inferencex.readthedocs.io/en/latest/reference/readers/olmoearth/
+        reference/embeddings.md: https://olmoearth-inferencex.readthedocs.io/en/latest/reference/readers/embeddings/
+        reference/lcc.md: https://olmoearth-inferencex.readthedocs.io/en/latest/reference/readers/lcc/
+        reference/taskcard.md: https://olmoearth-inferencex.readthedocs.io/en/latest/reference/readers/taskcard/
+        reference/stratified.md: https://olmoearth-inferencex.readthedocs.io/en/latest/reference/agency/stratified/
+        reference/sequential.md: https://olmoearth-inferencex.readthedocs.io/en/latest/reference/certify/sequential/
+        reference/certificate.md: https://olmoearth-inferencex.readthedocs.io/en/latest/reference/certify/certificate/
   - gen-files:
       scripts:
         - docs/gen_api.py

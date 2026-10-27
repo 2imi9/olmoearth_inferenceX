@@ -1615,24 +1615,25 @@ On this pair most of the accuracy comes from the post-event side being usually r
 
 ## Modules
 
-| Module | Contents |
+The package has one folder per feature. Each folder holds the feature's logic and its commands. Code that two or more
+features use is in `common`.
+
+The module paths of 1.18.1 still import. For example, `oe_inferencex.assess` gives the module `oe_inferencex.review.assess`.
+
+| Folder | Contents |
 |---|---|
-| `assess` | Review sets; with a reference, error rate, capture and tie-aware AURC; with a condition layer, each condition on its own; the class-edge band (`boundary`) |
-| `explain` | The cues behind each flagged window, with their measured enrichment |
-| `compare` | Where two inferences differ; with labels, the cross-tab and which side is right; `determinism_check` |
-| `estimate` | Sampling designs, the error rate, per-class accuracy, the certified zone, the review-set check, each per input condition; the per-class audit of a map's confident calls |
-| `calibrate` | A fitted ranker or side rule, bound to its model family |
-| `signals` | Confidence, the boundary indicator, tiling instability, NDWI cues, no-model controls, `crop_dependence` |
-| `metrics`, `stats` | AURC, capture, calibration error and their design-weighted forms; sign tests and bootstraps |
-| `reliability`, `evidence` | SHRUG-FM's reliability signals, torch-free; the heads a candidate rule is scored with |
-| `taskcard`, `lcc` | The [task cards](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/method/taskcards.md) of OlmoEarth's fine-tuned models; a reader for the served change rasters |
-| `olmoearth` | An OlmoEarth run's rslearn dataset read into scores and an input-condition layer (`from-olmoearth`; rasterio) |
-| `embeddings` | An area of a geo-embeddings Zarr store and labelled points to class probabilities (`from-embeddings`; the `embeddings` extra) |
-| `decide` | Typed answers to set questions, read from a result that `estimate`, `certify` or `compare` wrote |
-| `plan` | How many labels each labelled route needs, budget by budget, before any label is drawn |
-| `certificate` | A certified zone packed to travel with the map (a STAC Item, the zone as a GeoTIFF, digests), and its verifier (`certificate`, `verify`) |
+| `review` | `assess`: review sets; with a reference, error rate, capture and tie-aware AURC; with a condition layer, each condition on its own; the class-edge band (`boundary`). `explain`: the cues behind each flagged window, with their measured enrichment. `calibrate`: a fitted ranker or side rule, bound to its model family |
+| `compare` | Where two inferences differ; with labels, the cross-tab and which side is right; `determinism_check` (`compare`) |
 | `scale` | The same map at several window sizes: each class's survival, windows bordering another class, confidence and, with a reference, the error rate (`scale`) |
-| `cli`, `demo` | The `oe-inferencex` commands |
+| `estimate` | Sampling designs, the error rate, per-class accuracy, the review-set check, each per input condition; the per-class audit of a map's confident calls; which of two maps is more accurate, from labels (`sample`, `estimate`) |
+| `certify` | `zone`, `sequential`: the certified zone, per input condition too. `certificate`: a certified zone packed to travel with the map (a STAC Item, the zone as a GeoTIFF, digests), and its verifier (`certify`, `certificate`, `verify`) |
+| `plan` | How many labels each labelled route needs, budget by budget, before any label is drawn (`plan`) |
+| `decide` | Typed answers to set questions, read from a result that `estimate`, `certify` or `compare` wrote (`decide`) |
+| `agency` | An agency's stratified reference sample graded, with intervals valid at any sample size; `stratified` holds the intervals (`grade`) |
+| `readers` | `taskcard`, `lcc`: the [task cards](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/method/taskcards.md) of OlmoEarth's fine-tuned models; a reader for the served change rasters. `olmoearth`: an OlmoEarth run's rslearn dataset read into scores and an input-condition layer (`from-olmoearth`; rasterio). `embeddings`: an area of a geo-embeddings Zarr store and labelled points to class probabilities (`from-embeddings`; the `embeddings` extra) |
+| `common` | `signals`: confidence, the boundary indicator, tiling instability, NDWI cues, no-model controls, `crop_dependence`. `metrics`, `stats`: AURC, capture, calibration error and their design-weighted forms; sign tests and bootstraps. The exact hypergeometric arithmetic, and the commands' shared helpers |
+| `research` | `reliability`, `evidence`: SHRUG-FM's reliability signals, torch-free; the heads a candidate rule is scored with. `awf`, `data`, `figstyle`: the research record's encoder runs and figures |
+| `cli`, `demo` | The `oe-inferencex` commands put together; the first run (`demo`) |
 | `mcp_server` | The commands as tools of a local MCP server, `oe-inferencex mcp` (the `mcp` extra) |
 
 ## Reproducing the experiments
