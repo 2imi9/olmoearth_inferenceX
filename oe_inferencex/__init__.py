@@ -91,7 +91,7 @@ from .agency import stratified  # noqa: F401
 try:
     __version__ = _version("olmoearth-inferencex")
 except PackageNotFoundError:          # a source checkout that was never installed
-    __version__ = "1.18.1"
+    __version__ = "1.19.0"
 
 __all__ = [
     "crop_dependence", "determinism_check",

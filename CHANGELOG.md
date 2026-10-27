@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.19.0 (unreleased)
+## 1.19.0 (2026-10-26)
 
 The package's layout, and nothing else: no function, text, option or output changes but the version a result is
 stamped with.
