@@ -227,7 +227,7 @@ def _closed_gdal():
 
 
 def raster_digest(path, nodata=None, plain=False):
-    from .cli import read_raster
+    from oe_inferencex.common.raster import read_raster
     if plain:
         _plain_raster(path)
         with _closed_gdal():
@@ -241,7 +241,7 @@ def map_digests(scores_path, nodata=None, confidence_path=None, plain=False):
     """{"map_sha256": the digest of the map as the package reads it (the scores, or a product's class map), and with
     a confidence band "confidence_sha256"}; plus the grid it was read on. `plain`: the paths came from a certificate,
     so only a plain GeoTIFF or .npy is opened, with no sidecar files and no network."""
-    from .cli import read_raster
+    from oe_inferencex.common.raster import read_raster
     if plain:
         _plain_raster(scores_path)
         with _closed_gdal():
@@ -321,13 +321,13 @@ def _side_settings(side, confidence_sha256):
 def cli_where(path):
     """A map's path as the certificate records it: as given for a path GDAL reads itself (/vsizip/, /vsicurl/, s3://),
     which os.path.abspath broke, else absolute (cli._where; the review of 1.17.2)."""
-    from .cli import _where
+    from oe_inferencex.common.output import _where
     return _where(path)
 
 
 def _reads_alone(path, nodata=None):
     """Whether a raster reads the same without the files beside it, as verify reads a certificate's rasters."""
-    from .cli import read_raster
+    from oe_inferencex.common.raster import read_raster
     if str(path).endswith(".npy"):
         return True
     def read():
@@ -486,7 +486,7 @@ def _declared(path):
             raise ValueError(f"{os.path.basename(str(path))} is not a numeric raster")
         return (1 if a.ndim == 2 else int(a.shape[0]), int(a.shape[-2]), int(a.shape[-1]), int(a.dtype.itemsize))
     import rasterio
-    from .cli import _mask_bands
+    from oe_inferencex.common.raster import _mask_bands
     with _closed_gdal(), rasterio.open(path, driver="GTiff") as src:
         # the alpha band of a two-band raster is its mask, as read_raster reads it: a condition layer with one was
         # sampled and then refused here as two bands (the review of 1.17.2)
@@ -621,7 +621,7 @@ def build(zone_path, out_dir, date, scores=None, confidence=None):
 
 def _write_bundle(zone, side, copies, out_dir, map_path, conf_path, digests, shape, geo, period):
     """The bundle written into `out_dir` and verified there; ValueError when it does not verify."""
-    from .cli import write_raster
+    from oe_inferencex.common.raster import write_raster
     for src, name in copies:
         if name == BUNDLE["zone"]:
             # without the keys certify writes since 1.17.2, derived from fields kept: a release before them verifies
@@ -777,7 +777,7 @@ def _rules_of(written_by):
 
 def _class_words_1171(obj, keep=()):
     """cli.class_words as 1.17.0 and 1.17.1 had it: every string reworded, names and paths included."""
-    from .cli import _CLASS_WORDS, _PATH_KEYS
+    from oe_inferencex.common.wording import _CLASS_WORDS, _PATH_KEYS
     if isinstance(obj, str):
         for pat, rep in _CLASS_WORDS:
             obj = re.sub(pat, rep, obj)
@@ -830,7 +830,7 @@ def _differ(a, b, own=(), path="", loose=()):
 
 
 def _rounding_tolerance(text):
-    from .cli import _rounding_tolerance as tol
+    from oe_inferencex.common.labels import _rounding_tolerance as tol
     return tol(text)
 
 
@@ -1203,7 +1203,7 @@ def _verify(item, p, base, cert_name, scores, confidence, checks, notes, out):
         if ok and mtrans is not None:
             from rasterio.transform import Affine
 
-            from .cli import affine_apply
+            from oe_inferencex.common.raster import affine_apply
             ok = (_same_crs(_crs_text(geo["crs"]), mcrs)
                   and not _differ(_terms(mtrans), _terms(affine_apply(geo["transform"],
                                                                       Affine.scale(int(side.get("patch", 4)))))))
@@ -1275,7 +1275,7 @@ def point(cert_path, x=None, y=None, row=None, col=None, mask=None):
             raise ValueError("this map has no grid; give the point as a pixel row and column")
         from rasterio.transform import Affine
 
-        from .cli import affine_apply
+        from oe_inferencex.common.raster import affine_apply
         col, row = affine_apply(~Affine(*t), (float(x), float(y)))
     if mask is None:
         mask = _read_mask(os.path.join(base, item["assets"]["zone_mask"]["href"]), (h // patch, w // patch))[0]

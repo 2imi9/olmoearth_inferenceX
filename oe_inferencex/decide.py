@@ -690,7 +690,7 @@ def decide(result, questions):
         else:
             ans = _answer_share_differs(result, k)
         answers[name if v is None else f"{name}={v:g}"] = ans
-    from .cli import class_wording, result_class_names
+    from oe_inferencex.common.wording import class_wording, result_class_names
     names = result_class_names(result, path)
     if names is not None:
         # the class design's strata are map classes: "Each input condition has its own answer" was said of them (the

@@ -41,7 +41,7 @@ def fetch_s2_window(lon, lat, size=128, datetime="2024-06-01/2024-09-30", max_cl
         crs, transform = src.crs, src.transform
         xs, ys = rasterio.warp.transform("EPSG:4326", crs, [lon], [lat])
         row, col = src.index(xs[0], ys[0])
-    from .cli import affine_apply
+    from oe_inferencex.common.raster import affine_apply
     win_transform = affine_apply(transform, rasterio.Affine.translation(col - size // 2, row - size // 2))
     image = np.zeros((len(band_order), size, size), dtype=np.int32)
     for bi, band in enumerate(band_order):
