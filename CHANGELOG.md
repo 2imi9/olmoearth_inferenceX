@@ -76,8 +76,8 @@
   every design.
 - **The which-map verdict's bound is proved.** `estimate`'s docstring for the comparison of two maps now states why
   the exact sign test names the less accurate map at most half its level of the time: given the m sampled windows
-  where exactly one map is right, the count right in a is hypergeometric, and when K_a >= K_b its lower tail below m
-  / 2 is no heavier than Bin(m, 1/2)'s (Lemma W of the technical report, with Corollary W for windows marked ?).
+  where exactly one map is right, the count right in a is hypergeometric, and when K_a >= K_b its lower tail below
+  m / 2 is no heavier than Bin(m, 1/2)'s (Lemma W of the technical report, with Corollary W for windows marked ?).
   tests/test_which_map.py checks the lemma in exact integer arithmetic for every population of up to 60 windows, and
   that it fails at k >= m / 2, where it is not claimed. No output changes.
 - **`grade --ratio direct`: one betting test inverted over a user's or producer's accuracy (an option; the default
