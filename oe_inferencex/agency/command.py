@@ -15,8 +15,11 @@ def _range_pct(e, nd):
 
 
 def _iv_pct(q, nd, scale=100.0):
-    iv, nt = q["interval"], q.get("normal_theory")
-    s = "[not computed]" if iv is None else f"[{scale * iv[0]:.{nd}f}, {scale * iv[1]:.{nd}f}]"
+    iv, nt, box = q["interval"], q.get("normal_theory"), q.get("box")
+    if iv is None and box is not None:                          # a direct ratio interval too large: the box, labelled
+        s = f"[not computed; box {scale * box[0]:.{nd}f}, {scale * box[1]:.{nd}f}]"
+    else:
+        s = "[not computed]" if iv is None else f"[{scale * iv[0]:.{nd}f}, {scale * iv[1]:.{nd}f}]"
     return s + ("" if nt is None else f" (normal {scale * nt[0]:.{nd}f}, {scale * nt[1]:.{nd}f})")
 
 
@@ -55,7 +58,7 @@ def cmd_grade(args):
             design = agency.design_from_sizes(pts["stratum"], sizes, args.sizes, args.unit_area,
                                               args.sampled_strata_only)
         res = agency.grade(design, pts["reference"], pts["maps"], pts["alternate"] if args.alternate else None, pure,
-                           args.alpha)
+                           args.alpha, ratio_method=getattr(args, "ratio", "box"))
     except (OSError, ValueError) as exc:
         raise SystemExit(f"grade: {exc}") from None
     res["design"] = {"sizes_from": "weights" if args.weight else "strata file", "sizes": args.sizes,
@@ -68,6 +71,8 @@ def cmd_grade(args):
                      "stratum": args.stratum, "reference": args.reference, "alternate": args.alternate,
                      "maps": args.map, "weight": args.weight, "nodata": args.nodata,
                      "pure": {s: c for s, c in pure.items()}, "sampled_strata_only": args.sampled_strata_only}
+    if res.get("ratio_method") == "direct":                     # the default's inputs stay 1.19.0's, key for key
+        res["inputs"]["ratio"] = "direct"
     conf = f"{100 * (1 - args.alpha):g}%"
     lines = [f"{res['points']} points in {res['strata']} strata ({res['design']['frame']}); {res['rule']}",
              f"overall accuracy: estimate [{conf} interval, valid at any sample size] (normal theory, nominal)"]
@@ -86,6 +91,9 @@ def cmd_grade(args):
                          f"{_range_pct(p['estimate'], 1)} {_iv_pct(p, 1)} | {_range_pct(s['estimate'], 2)} {_iv_pct(s, 2)}")
         if any(r["user"]["method"] == "pure-stratum rule" for r in per.values()):
             lines.append("  * user's accuracy by the pure-stratum rule")
+        if res.get("ratio_method") == "direct":
+            lines.append("  user's and producer's accuracy otherwise by the betting test inverted over the ratio "
+                         "(--ratio direct); the box is beside each in the JSON written by --out")
     print("\n".join(lines) + "".join(f"\nnote: {n}" for n in res["notes"]) + (f"\nwrote {args.out}" if args.out else ""))
     if args.out:
         with open(args.out, "w") as f:
@@ -129,6 +137,10 @@ def add_grade_parser(sub):
     gr.add_argument("--pure", nargs="+", default=[], metavar="STRATUM=CLASS",
                     help="strata every unit of which the first map labels CLASS (an agency's no-change strata); that "
                          "class's user's accuracy then takes the narrower pure-stratum rule")
+    gr.add_argument("--ratio", choices=("box", "direct"), default="box",
+                    help="the interval of user's and producer's accuracies: box (default), the box of two betting "
+                         "intervals, fast; direct, one betting test inverted over the ratio, far slower on large "
+                         "strata, with the box beside it in the JSON")
     gr.add_argument("--alpha", type=float, default=0.05, help="1 - the confidence of each interval (default 0.05)")
     gr.add_argument("--out", default=None, help="JSON to write (optional)")
     gr.set_defaults(func=cmd_grade)
