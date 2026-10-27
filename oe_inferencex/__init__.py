@@ -34,7 +34,7 @@ Folders, one per feature, each with its logic and its commands, in the order a u
   readers     taskcard: what each OlmoEarth fine-tuned model is; lcc: a range reader for the served rasters;
               olmoearth: an OlmoEarth run's rslearn dataset -> the scores assess reads and an input-condition layer
               on their grid; embeddings: a geo-embeddings store and labelled points -> class probabilities
-  common      what two or more features share. metrics: tie-aware AURC and excess AURC, capture at a budget, the
+  common      the helpers two or more features share. metrics: tie-aware AURC and excess AURC, capture at a budget, the
               attainable ceiling, design-weighted forms; stats: exact sign tests, one-vote-per-cluster tests, block
               and cluster bootstraps; signals: the confidence readings and the no-model pixel controls every rule is
               scored against; the exact hypergeometric arithmetic; the commands' raster, output and wording helpers
@@ -164,13 +164,21 @@ class _MovedModules(importlib.abc.MetaPathFinder, importlib.abc.Loader):
         return None if moved is None else importlib.util.spec_from_loader(fullname, self, origin=moved.origin)
 
     def create_module(self, spec):
-        module = importlib.import_module(f"{__name__}.{_MOVED[spec.name.rpartition('.')[2]]}")
-        if module.__spec__.name == module.__name__:      # its own spec, not one an unfinished old-path load left on it
-            self._own[module.__name__] = module.__spec__, module.__package__, module.__loader__
+        target = f"{__name__}.{_MOVED[spec.name.rpartition('.')[2]]}"
+        module = importlib.import_module(target)    # at once, also under a lazy loader: the old path is this module
+        if module.__spec__.name == target:          # its own spec, not one an unfinished old-path load left on it
+            self._own[target] = module.__spec__, module.__package__, module.__loader__
         return module       # the import system now sets the old path's spec on it, and a lazy loader its loader
 
     def exec_module(self, module):
-        module.__spec__, module.__package__, module.__loader__ = self._own[module.__name__]   # it keeps its own
+        """Gives the moved module back its own name, spec, package and loader, which the import system set to the
+        old path's (a reload or the old `load_module` overwrites the name and package too)."""
+        old = module.__spec__.name
+        target = f"{__name__}.{_MOVED[old.rpartition('.')[2]]}"
+        if target not in self._own:
+            raise ImportError(f"{old} moved to {target}, whose own spec this finder never saw", name=old)
+        module.__spec__, module.__package__, module.__loader__ = self._own[target]
+        module.__name__ = target
 
     def get_code(self, fullname):          # so `python -m oe_inferencex.taskcard` still runs its main block
         tail = fullname.rpartition(".")[2]

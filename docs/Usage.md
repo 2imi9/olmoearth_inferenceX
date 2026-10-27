@@ -1615,8 +1615,9 @@ On this pair most of the accuracy comes from the post-event side being usually r
 
 ## Modules
 
-The package has one folder per feature. Each folder holds the feature's logic and its commands. Code that two or more
-features use is in `common`, except the window readers the labelled commands share, which are in `review`.
+The package has one folder per feature. Each folder holds the feature's logic and its commands. Helpers that several
+features share are in `common`. Features also use one another's logic: `scale`, `estimate`, `plan` and `compare` read
+maps through `review`, and `estimate` builds on `certify`'s zone.
 
 The module paths of 1.18.1 still import. For example, `oe_inferencex.assess` gives the module `oe_inferencex.review.assess`.
 

@@ -118,8 +118,9 @@ def test_runpy_refuses_an_old_path_already_imported_and_runs_the_new_one(monkeyp
 def test_the_finder_imports_nothing_to_find_and_holds_under_lazy_loading_blocking_and_reload():
     """In a fresh interpreter, the ways other than a plain import that reach the finder: finding an old path imports
     nothing (the import system calls find_spec under its global lock); an old path imported before its new one; the
-    standard library's lazy loader; a new path blocked with None, refused as missing; a pickle that names an old path;
-    a reload of the package, which keeps one finder."""
+    standard library's lazy loader, which imports an old path at once; a reload of a module that still carries an old
+    path's spec; a new path blocked with None, refused as missing; a pickle that names an old path; a reload of the
+    package, which keeps one finder."""
     code = textwrap.dedent("""
         import importlib, importlib.util, pickle, sys, types
         import oe_inferencex as ox
@@ -135,12 +136,21 @@ def test_the_finder_imports_nothing_to_find_and_holds_under_lazy_loading_blockin
         spec = importlib.util.find_spec("oe_inferencex.lcc")
         spec.loader = importlib.util.LazyLoader(spec.loader)
         lazy = importlib.util.module_from_spec(spec)
+        assert "oe_inferencex.readers.lcc" in sys.modules       # imported at once: the old path is the moved module
         sys.modules["oe_inferencex.lcc"] = lazy
         spec.loader.exec_module(lazy)
         real = importlib.import_module("oe_inferencex.readers.lcc")
-        assert real.__spec__.name == "oe_inferencex.readers.lcc"         # the first attribute access loads it
+        assert real.__spec__.name == "oe_inferencex.readers.lcc"         # the first attribute access restores it
         assert lazy is real and type(real) is types.ModuleType
         assert real.__package__ == "oe_inferencex.readers" and real.__loader__ is real.__spec__.loader
+
+        spec = importlib.util.find_spec("oe_inferencex.signals")
+        half = importlib.util.module_from_spec(spec)            # never executed: it carries the old path's spec
+        sys.modules["oe_inferencex.signals"] = half
+        importlib.reload(half)                                  # sets the old path's name, package and loader too
+        own = sys.modules["oe_inferencex.common.signals"]
+        assert half is own and own.__name__ == own.__spec__.name == "oe_inferencex.common.signals"
+        assert own.__package__ == "oe_inferencex.common" and own.__loader__ is own.__spec__.loader
 
         sys.modules["oe_inferencex.research.figstyle"] = None
         try:

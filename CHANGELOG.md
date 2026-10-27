@@ -32,11 +32,14 @@ with and one line that names a moved file (below).
   `reference/review/assess/`); the old addresses redirect. No module file remains at an old path, so tools that
   resolve imports from files (type checkers, editors, PyInstaller) do not find the old paths. In one process, once an
   old path is imported, `runpy.run_module` refuses it (the module's loader answers to its new name); run the new path
-  there. `python -m` with an old path, and runpy before the old path is imported, still run it.
+  there. `python -m` with an old path, and runpy before the old path is imported, still run it. Under the standard
+  library's lazy loader an old path is imported at once, because it must be the moved module itself; lazy-load the
+  new path.
 - Six tests patch the module that now holds what they patch (test_trust_zone.py twice, test_bughunt_1_17_2.py,
   test_class_design.py, test_also_accept.py, test_reliability.py). tests/test_layout.py checks the old paths, the
-  hook (also under the standard lazy loader, with a blocked module and across a reload of the package, and that
-  finding an old path imports nothing), and that importing the package loads neither torch nor matplotlib.
+  hook (also through the standard lazy loader, with a blocked module, across a reload of a module that still
+  carries an old path's spec and of the package, and that finding an old path imports nothing), and that importing
+  the package loads neither torch nor matplotlib.
 - Checked on the cluster before release (aicr job 1543225): 1.18.1 and 1.19.0 ran the same 157 commands and calls
   and wrote the same 418 files, byte for byte (1.18.1 run twice, to show the battery is deterministic); the suite
   passes before and after (1,296 and 1,319 tests, the 23 new ones in test_layout.py); the public surface, `--help`,
