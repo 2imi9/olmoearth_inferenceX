@@ -31,6 +31,10 @@ stamped with.
 - Six tests patch the module that now holds what they patch (test_trust_zone.py twice, test_bughunt_1_17_2.py,
   test_class_design.py, test_also_accept.py, test_reliability.py). tests/test_layout.py checks the old paths, the
   hook, and that importing the package loads neither torch nor matplotlib.
+- Checked on the cluster before release (aicr job 1543225): 1.18.1 and 1.19.0 ran the same 157 commands and calls
+  and wrote the same 418 files, byte for byte (1.18.1 run twice, to show the battery is deterministic); the suite
+  passes before and after (1,296 and 1,319 tests, the 23 new ones in test_layout.py); the public surface, `--help`,
+  the demo without extras and the documentation build agree, apart from the two checkouts' absolute paths.
 
 ## 1.18.1 (2026-10-26)
 
