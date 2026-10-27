@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.20.0 (unreleased)
+## 1.20.0 (2026-10-27)
 
 - **Localized certification: a verdict per profile of the map.** `sample --design profile --profile-by SPEC
   [--min-windows M]` splits the map's windows into at most 12 profiles fixed from the map alone, before any label:
