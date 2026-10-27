@@ -40,6 +40,13 @@ UNKNOWN_NOTE = ("{k} point(s) have an unknown value (unknown values: {what}). Th
                 "end counts them against the map and each upper end for it, so the estimate is a range.")
 NOT_COMPUTED_NOTE = ("{k} interval(s) are not computed (null in the JSON): a stratum is too large for the exact average "
                      "over the orders of its labels. The estimates and the normal-theory intervals are given.")
+RATIO_NOTE = ("User's and producer's accuracies (--ratio direct) invert one betting test of theta_y - r (theta_y + "
+              "theta_w) <= 0 over r, each end at alpha/2, in fixed bins of r inside which the test is monotone (method "
+              "in the JSON); the box of two betting intervals, the default, is beside each as 'box'.")
+NOT_COMPUTED_BOX_NOTE = ("{k} of them are direct ratio intervals, whose work grows with the labels in each kind; the "
+                         "box of two betting intervals is printed in their place, labelled 'box'. It holds at the same "
+                         "level on its own, but taking it only where the direct interval is missing is a choice made "
+                         "on the data, since the limit depends on the label counts; --ratio box fixes it in advance.")
 PURE_PARTLY_NOTE = ("The pure-stratum rule was not used for class(es) {classes} of {map}, which have more than one "
                     "declared pure stratum; their user's accuracies take the box interval.")
 UNSAMPLED_NOTE = ("{k} stratum(s) hold no label: {names}, {share:.4g} of the population. Their values are bounded "
@@ -365,15 +372,18 @@ def _natural(codes):
 
 
 # ----------------------------------------------------------------------------------------------- grading
-def grade(design, reference, maps, alternate=None, pure=None, alpha=0.05):
+def grade(design, reference, maps, alternate=None, pure=None, alpha=0.05, ratio_method="box"):
     """Overall accuracy per map, the difference between maps, and per class the user's and producer's accuracy and
     the share of the reference, each with its valid interval and the normal-theory one, and the error matrix's
     estimated shares. reference: one code or None per point; alternate: per point one code, a tuple of codes or None;
     maps: dict name -> codes, the first the map the strata were drawn from; pure: dict stratum -> class, strata every
     unit of which the first map labels the class (an agency's no-change strata), used for that map's user's
-    accuracies."""
+    accuracies; ratio_method: "box" (the default) or "direct", the interval of the user's and producer's accuracies
+    the pure-stratum rule does not give (stratified.ratio)."""
     if not 0 < alpha < 1:
         raise ValueError(f"alpha must be in (0, 1), got {alpha}")
+    if ratio_method not in ("box", "direct"):
+        raise ValueError(f"ratio_method is 'box' or 'direct', got {ratio_method!r}")
     names = list(maps)
     if not names:
         raise ValueError("give at least one map")
@@ -389,6 +399,9 @@ def grade(design, reference, maps, alternate=None, pure=None, alpha=0.05):
     out = {"points": P, "strata": design.H, "maps": names, "classes": classes, "alpha": alpha,
            "rule": ALTERNATE_RULE if any(alternate) else PRIMARY_RULE,
            "overall_accuracy": {}, "differences": {}, "per_class": {}, "error_matrix": {}, "unknown": {}}
+    if ratio_method == "direct":                                # the default's output stays 1.19.0's, key for key
+        out["ratio_method"] = ratio_method
+        notes.append(RATIO_NOTE)
     if design.W_unsampled > 0:
         notes.append(UNSAMPLED_NOTE.format(k=len(design.names_unsampled), names=", ".join(design.names_unsampled[:8])
                                            + (" ..." if len(design.names_unsampled) > 8 else ""),
@@ -428,7 +441,7 @@ def grade(design, reference, maps, alternate=None, pure=None, alpha=0.05):
             row = {"labels_mapped": int(sum(v == c for v in maps[m])), "labels_reference": int(lo[:, 4].sum())}
             own = pure_use.get(c) if m == names[0] else None
             if own is not None:
-                u = ratio(design, lo[:, 0], hi[:, 1], hi[:, 0], lo[:, 1], alpha, box=False)
+                u = ratio(design, lo[:, 0], hi[:, 1], hi[:, 0], lo[:, 1], alpha, method=None)
                 kr = np.bincount(design.hidx, weights=lo[:, 0], minlength=design.H)
                 kw = np.bincount(design.hidx, weights=lo[:, 1], minlength=design.H)
                 mixed = [h for h in range(design.H) if design.names[h] not in pure]
@@ -437,9 +450,9 @@ def grade(design, reference, maps, alternate=None, pure=None, alpha=0.05):
                 u["pure_stratum"] = design.names[own]
                 used.append(c)
             else:
-                u = ratio(design, lo[:, 0], hi[:, 1], hi[:, 0], lo[:, 1], alpha)
+                u = ratio(design, lo[:, 0], hi[:, 1], hi[:, 0], lo[:, 1], alpha, method=ratio_method)
             row["user"] = u
-            row["producer"] = ratio(design, lo[:, 2], hi[:, 3], hi[:, 2], lo[:, 3], alpha)
+            row["producer"] = ratio(design, lo[:, 2], hi[:, 3], hi[:, 2], lo[:, 3], alpha, method=ratio_method)
             row["reference_share"] = linear(design, lo[:, 4], hi[:, 4], alpha)
             mapped = np.array([v == c for v in maps[m]], float)
             known = np.array([v is not None for v in maps[m]], float)
@@ -458,6 +471,9 @@ def grade(design, reference, maps, alternate=None, pure=None, alpha=0.05):
     skipped = sum(q.get("interval", 0) is None for q in _quantities(out))
     if skipped:
         notes.append(NOT_COMPUTED_NOTE.format(k=skipped))
+    boxed = sum(q.get("interval", 0) is None and q.get("box") is not None for q in _quantities(out))
+    if boxed:
+        notes.append(NOT_COMPUTED_BOX_NOTE.format(k=boxed))
     out["notes"] = notes
     return out
 

@@ -1299,6 +1299,16 @@ How each interval is made (`oe_inferencex.stratified`):
 | Overall accuracy, a class's share, the difference of two maps | a betting confidence interval for a stratified sample without replacement: each stratum's e-value, averaged exactly over the orders of its labels, depends on the stratum means only through the weighted total, so the strata need no union bound | 1.60 to 1.64 times as wide on every overall accuracy and difference of NLCD 2016 and GFC2020; more for a small class's share (NLCD 24's, 0.26%: 0 to 0.73%, normal theory 0.21 to 0.31%) |
 | User's and producer's accuracy | the box of two betting intervals at alpha/2, one for the units that count for the class and one for those in its denominator that do not | about 2 times (1.9 to 2.4) for a large class: GFC2020's two classes, NLCD's producer's accuracies of 21, 41, 42, 52, 71 and 82. For a class with few labels it can say little or nothing: NLCD 24's producer's accuracy, 0.3% of the reference, is 0 to 100% |
 | User's accuracy of a class with one declared pure stratum (`--pure STRATUM=CLASS`) | the pure-stratum rule: exact hypergeometric intervals for that stratum and for each stratum declared pure for no class, joined by a union bound | 1.2 to 1.7 times for 11 of NLCD's 15 classes, 1.9 to 3.9 for the other four (the smallest, or nearly always right); NLCD 21: 12 points, where the box gives 30 and normal theory 8 |
+| User's and producer's accuracy with `--ratio direct` (new in 1.20.0, not the default) | one betting test of θ_y − r(θ_y + θ_w) ≤ 0 inverted over r, each end at alpha/2, in 32 fixed bins of r inside which the test is monotone; the box beside it in the JSON | not yet measured on NLCD and GFC2020; it runs the test at up to 73 values of r per end where the box solves two linear tests once |
+
+`--ratio direct` gives each user's and producer's accuracy that the pure-stratum rule does not give one test instead
+of the box's two: a unit counts 1 when it counts for the class, 0 when it is in the denominator and does not, and r
+otherwise, and if the ratio is at most r the weighted mean of those values is at most r, also with strata that hold no
+label. Each r gets the test of its bin, fixed in advance, so the ends are found by a scan of the bins and a search
+inside one, never tuned to the labels. The default stays `--ratio box`, whose output is 1.19.0's, number for number.
+The direct interval's work is bounded before it starts; above the bound it is not computed (null in the JSON) and the
+box is printed in its place, labelled `box`. The box holds at the same level on its own, but taking it only where the
+direct interval is missing is a choice made on the data; `--ratio box` fixes the choice in advance.
 
 `--pure` declares strata every unit of which the first `--map` labels the class: an agency's no-change strata, built
 from the map itself. A declared stratum with a point mapped otherwise is refused. The declaration must come from the

@@ -1,5 +1,33 @@
 # Changelog
 
+## 1.20.0 (unreleased)
+
+- **`grade --ratio direct`: one betting test inverted over a user's or producer's accuracy (an option; the default
+  stays the box).** `--ratio {box,direct}`, default `box`, whose output is 1.19.0's key for key and number for number.
+  With `direct`, each user's and producer's accuracy that the pure-stratum rule does not give tests R <= r with the
+  values 1 (counts for the class), 0 (in its denominator, does not) and r (neither), whose weighted mean over the
+  sampled strata is at most r when R <= r, whatever the strata with no label hold; each end spends alpha/2 at
+  threshold 2/alpha, where the box spends alpha/4 per part. The inversion itself is exp117's (`ratio_interval` in
+  the record's exp117_agency/betting_widths.py). What is new: (1) a centre under which the test is provably monotone
+  in r inside 32 fixed bins (equal steps in arcsin sqrt r): r plus a shift that does not depend on r, anchored at the
+  bin's middle, where exp117's running mean has no monotonicity proof and needed a certified walk; so each end is a
+  scan of the bins (a bin is rejected whole when its own test rejects its right end) and a bracketing in the first
+  bin that is not, to 1e-6, at most 73 evaluations per end, batched; the family of tests is fixed by the bins, and the
+  estimate only orders the scan; (2) the null value theta_0 = r, valid with unsampled strata: exp117's null, r times
+  the sampled share, was valid only when every stratum holds a label, which held for both its data sets, so no
+  recorded number changes. The upper end is 1 less the lower end of 1 - R. The JSON adds `ratio_method` and
+  `inputs.ratio`, and for each such quantity `method` ("betting test inverted over the ratio") and `box` (the 1.19.0
+  interval); a note says how the intervals are made. Its work is bounded before it starts (`RATIO_MAX_WORK`, a
+  placeholder of 1e10 steps until the aicr timings set it); above it the interval is null, the box is printed in its
+  place as `[not computed; box a, b]`, and a note says that taking the box only then is a choice made on the data.
+  `stratified.ratio` takes `method="box" | "direct" | None`; its `box=` keyword is kept for this release as a
+  deprecated alias (box=False is method=None). New tests (tests/test_ratio_direct.py): the batched programme against
+  every order and against the old one at the anchor, the e-value at the truth at most 1, log M nonincreasing in each
+  bin, exact coverage of every population (three kinds, an unsampled stratum, unknown values of three kinds, a
+  point-frame reading with the deflation), the swap of y and w, the scan order forced, the box beside it, the cap
+  and the command line. Widths and times on NLCD 2016 and GFC2020, and Olofsson's direct numbers as goldens, come
+  from aicr before release; the default's switch is the owner's decision against those timings.
+
 ## 1.19.0 (2026-10-27)
 
 The package's layout, and nothing else: no function, option or output changes but the version a result is stamped

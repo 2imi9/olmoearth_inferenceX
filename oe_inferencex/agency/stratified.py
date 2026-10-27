@@ -34,11 +34,31 @@ unit in it mapped as the class: an agency's no-change stratum) takes the pure-st
 exact hypergeometric intervals, narrower than the box on all 15 NLCD classes (a median 0.61 of its width; class 11:
 10 points against the box's 30; exp117).
 
+With `method="direct"` (grade --ratio direct, from 1.20.0; the box stays the default), a ratio takes one betting test
+inverted over r instead of the box. Each unit is given u_r = y + r (1 - y - w): 1 where y = 1, 0 where w = 1, r
+elsewhere. If R <= r over the whole population, the sampled strata's sum of W_h mean_h(u_r) is at most r, whatever the
+unsampled strata hold (u >= 0 there), so the linear test above with theta_0 = r tests R <= r; each end spends alpha/2.
+The inversion itself is exp117's (Fieller 1954 for the classical analogue; the linearisation is Stark's assorter);
+exp117's null r times the sampled share was right only with no unsampled stratum. What is new is a centre under which
+the test is monotone in r, so the ends are found by a search rather than a certified walk. r runs in RATIO_BINS fixed
+bins [e(j), e(j+1)), the last closed, e(j) = sin^2(j pi / (2 RATIO_BINS)) (EDGES), and in bin j the centre is r plus a
+shift that does not depend on r, c_t = r + min((1/2 - rho_j + P_t - rho_j (P_t + Q_t)) / (t + 1), KAPPA / l_t -
+e(j+1)), P_t and Q_t the labels of value 1 and 0 before step t and rho_j the bin's anchor (ANCHORS, sin^2 at its
+middle). At r = rho_j, unclipped, that is the running mean above; l_t c_t <= KAPPA on the whole closed bin. There
+log M is nonincreasing in r: per step its derivative adds -l_t (P_t + Q_t) / (N_h - t) (nothing for a point frame)
+and, for a value 1 or 0, -l_t / (1 + l_t (x_t - c_t)), and the unsampled strata add -c W_unsampled. So bin j is
+rejected whole when its own test (anchor j) rejects e(j+1), and in the first bin that is not, the rejected r are a
+prefix, bracketed to RATIO_TOL. The family of tests is fixed by the bins, never by the labels; the estimate chooses
+only which bins are evaluated first. The upper end is 1 less the lower end of 1 - R = theta_w / (theta_y + theta_w).
+The box is returned beside it. It costs many evaluations of the test where the box takes two, so grade gives the box
+unless asked.
+
 Unknown values (a map's no-data, a point without a reference label) are bounded: the lower end counts each against the
 map, the upper end for it. Strata with no label are bounded the same way. Coverage at the agency designs' shapes,
 simulated with the observed shares (300 draws each, aicr job 1531551): 0.997 to 1.000 for the betting and box
 intervals, 0.937 to 0.970 for normal theory. numpy only."""
 import math
+import warnings
 
 import numpy as np
 
@@ -50,10 +70,26 @@ PURE_GAMMA = 0.1      # the pure-stratum rule spends this share of alpha on the 
 # The dynamic programme's work for one stratum is about K_MIX * n * (k1 + 1) * (k2 + 1) for its two smaller counts;
 # above this it would run for many minutes, and the interval is left uncomputed rather than left running.
 MAX_WORK = 5e10
+# A ratio's direct interval (method "direct"): the bins of r, each with its anchor at its middle in arcsin sqrt(r);
+# the points per refining round, the rounds at most and the width at which they stop; a rise of log M inside a bin
+# above RATIO_ORDER_TOL is a bug, below it rounding. The values were fixed before the timings of aicr job J3.
+RATIO_BINS = 32
+EDGES = np.sin(np.arange(RATIO_BINS + 1) * math.pi / (2 * RATIO_BINS)) ** 2
+EDGES[0], EDGES[-1] = 0.0, 1.0
+ANCHORS = np.sin((np.arange(RATIO_BINS) + 0.5) * math.pi / (2 * RATIO_BINS)) ** 2
+RATIO_BATCH = 8
+RATIO_ROUNDS = 5                  # 5 rounds of 8 points divide the widest bin (0.049) by 9^5: below RATIO_TOL
+RATIO_TOL = 1e-6
+RATIO_ORDER_TOL = 1e-8
+# The work of one direct interval, sum over its points and strata of K_MIX * n * (k1 + 1) * (k2 + 1), is bounded
+# before it starts; above this it is not computed and the box is given beside it. A placeholder until J3 times it.
+RATIO_MAX_WORK = 1e10
+RATIO_CHUNK = 2 ** 22             # floats per state array of the batched programme (32 MB); larger batches are split
 
 METHOD_LINEAR = "betting"
 METHOD_BOX = "box of two betting intervals"
 METHOD_PURE = "pure-stratum rule"
+METHOD_RATIO = "betting test inverted over the ratio"
 
 
 class TooLarge(ValueError):
@@ -315,12 +351,22 @@ def normal_ratio(design, y, z, add_y=0.0, add_z=0.0):
     return R, var / tz ** 2
 
 
-def ratio(design, y_min, w_max, y_max=None, w_min=None, alpha=0.05, box=True):
+def ratio(design, y_min, w_max, y_max=None, w_min=None, alpha=0.05, box=None, method="box"):
     """R = theta_y / (theta_y + theta_w), y and w indicators with y + w <= 1 at each point (y: counts for the class
     and is right; w: in the denominator and wrong). With unknown values, y_min <= y <= y_max and w_min <= w <= w_max at
     each point: the lower end takes y at its least and w at its most, the upper end the reverse. Returns the estimate
-    (a range when values are unknown), the box interval (skipped without `box`, for a caller with a better one) and the
-    normal-theory one."""
+    (a range when values are unknown), the interval and the normal-theory one. method: "box" (the default), "direct"
+    (the betting test inverted over the ratio, ratio_interval, with the box beside it as "box"; when the direct one is
+    too large to compute, its interval is null and the box is still given) or None (no interval, for a caller with a
+    better one). `box` is 1.19.0's keyword, kept for one release: box=False is method=None, box=True the default."""
+    if box is not None:
+        warnings.warn("ratio(box=...) is deprecated and will be removed in 1.21.0: use method='box' or method=None",
+                      DeprecationWarning, stacklevel=2)
+        if method != "box":
+            raise ValueError("give method or the deprecated box, not both")
+        method = "box" if box else None
+    if method not in ("box", "direct", None):
+        raise ValueError(f"method is 'box', 'direct' or None, got {method!r}")
     y_max = y_min if y_max is None else y_max
     w_min = w_max if w_min is None else w_min
     y_min, w_max, y_max, w_min = (np.asarray(a, float) for a in (y_min, w_max, y_max, w_min))
@@ -331,25 +377,39 @@ def ratio(design, y_min, w_max, y_max=None, w_min=None, alpha=0.05, box=True):
     R_lo, v_lo = normal_ratio(design, y_min, y_min + w_max, 0.0, Wu)
     R_hi, v_hi = normal_ratio(design, y_max, y_max + w_min, Wu, Wu)
     exact = np.array_equal(y_min, y_max) and np.array_equal(w_min, w_max) and Wu == 0
+    if method == "direct":
+        out["method"] = METHOD_RATIO
     if R_lo is None and R_hi is None:
         out.update({"estimate": None, "interval": [0.0, 1.0], "normal_theory": None})
+        if method == "direct":
+            out["box"] = [0.0, 1.0]
         return out
     R_lo = 0.0 if R_lo is None else R_lo
     R_hi = 1.0 if R_hi is None else R_hi
     z = _z(alpha)
     out["estimate"] = R_lo if exact else [R_lo, R_hi]
     out["normal_theory"] = [R_lo - z * math.sqrt(v_lo or 0.0), R_hi + z * math.sqrt(v_hi or 0.0)]
-    if not box:
+    if method is None:
         return out
     try:
         ly, uy = betting_interval(design, y_min, y_max, alpha / 2)
         lw, uw = betting_interval(design, w_min, w_max, alpha / 2)
     except TooLarge as exc:
+        # the direct interval's strata are at least as large as the box's, so it is not computed either
         out.update({"interval": None, "not_computed": str(exc)})
+        if method == "direct":
+            out["box"] = None
         return out
     lo = ly / (ly + uw) if ly + uw > 0 else 0.0
     hi = uy / (uy + lw) if uy + lw > 0 else 1.0
     out["interval"] = [float(max(0.0, lo)), float(min(1.0, hi))]
+    if method == "box":
+        return out
+    out["box"] = out["interval"]
+    try:
+        out["interval"] = list(ratio_interval(design, y_min, w_max, y_max, w_min, alpha))
+    except TooLarge as exc:
+        out.update({"interval": None, "not_computed": str(exc)})
     return out
 
 
@@ -394,3 +454,214 @@ def pure_stratum_ratio(design, own, mixed, k_right, k_wrong, alpha=0.05, gamma=N
     lo = (Wd * lp + A_lo) / (Wd + A_lo + B_hi)
     hi = min(1.0, (Wd * up + A_hi) / (Wd + A_hi + B_lo))
     return float(lo), float(hi)
+
+
+# ----------------------------------------------------------------------------------------------- ratios, directly
+def _ratio_bin(r):
+    """The bin of r: [EDGES[j], EDGES[j + 1]), the last closed at 1."""
+    return min(RATIO_BINS - 1, int(np.searchsorted(EDGES, r, side="right")) - 1)
+
+
+def _ratio_counts(design, one, zero):
+    """Per stratum, the labels of one side of a ratio's test: of value 1 (`one` = 1), of value 0 (`zero` = 1) and of
+    value r (neither). The lower end takes one = y_min, zero = w_max; the upper end one = w_min, zero = y_max."""
+    one, zero = np.asarray(one, float), np.asarray(zero, float)
+    if one.shape != design.hidx.shape or zero.shape != design.hidx.shape:
+        raise ValueError(f"one value per labelled point: got {one.shape} and {zero.shape}, the design has "
+                         f"{design.hidx.shape}")
+    if not (np.isin(one, (0.0, 1.0)).all() and np.isin(zero, (0.0, 1.0)).all()):
+        raise ValueError("the direct ratio interval takes y and w as 0 or 1 at each point")
+    if (one + zero > 1).any():
+        raise ValueError("y + w must be at most 1 at each point")
+    k1 = np.rint(np.bincount(design.hidx, weights=one, minlength=design.H)).astype(int)
+    k0 = np.rint(np.bincount(design.hidx, weights=zero, minlength=design.H)).astype(int)
+    return [(int(a), int(b), int(n - a - b)) for a, b, n in zip(k1, k0, design.n)]
+
+
+def _ratio_work(counts):
+    """The work of one evaluation of a side's test, in the units of MAX_WORK: K_MIX * n * (k1 + 1) * (k2 + 1) per
+    stratum, k1 and k2 its two smaller counts."""
+    work = 0.0
+    for c in counts:
+        k = sorted(c)
+        work += K_MIX * sum(c) * (k[0] + 1) * (k[1] + 1)
+    return work
+
+
+def _stratum_logavg_ratio(counts, r, rho, top, lam0, N):
+    """_stratum_logavg for one side of a ratio's test, at a batch of points r (shape B) at once. counts: the
+    stratum's labels of value 1, of value 0 and of value r; P_t, Q_t and C_t of them drawn before step t. The centre
+    is r plus a shift that does not depend on r, c_t = r + min((1/2 - rho + P_t - rho (P_t + Q_t)) / (t + 1),
+    KAPPA / l_t - top), rho the bin's anchor and top its right end (scalars, or shape B): at r = rho, unclipped, it is
+    the running mean of the values, and l_t c_t <= KAPPA for every r <= top, so every factor stays at least
+    1 - KAPPA. Returns shape (B, K), K the values of lam0."""
+    counts = [int(x) for x in counts]
+    r = np.asarray(r, float).ravel()
+    rho = np.broadcast_to(np.asarray(rho, float), r.shape)
+    top = np.broadcast_to(np.asarray(top, float), r.shape)
+    lam0 = np.asarray(lam0, float).ravel()
+    B, K, n = r.size, lam0.size, sum(counts)
+    if n == 0:
+        return np.zeros((B, K))
+    order = sorted(range(3), key=lambda j: -counts[j])          # the largest count is implied by the other two
+    k0, k1, k2 = (counts[j] for j in order)
+    single = k1 == 0 and k2 == 0
+    cells = n if single else (k1 + 1) * (k2 + 1)
+    if not single and K * n * cells > MAX_WORK:
+        raise TooLarge(f"a stratum of {n} labels with {k1} and {k2} in its two smaller kinds is too large for the "
+                       f"exact average over the orders of its labels (about {K * n * cells:.1e} steps); this interval "
+                       f"is not computed")
+    step = max(1, RATIO_CHUNK // (K * cells))
+    if B > step:
+        return np.concatenate([_stratum_logavg_ratio(counts, r[i:i + step], rho[i:i + step], top[i:i + step], lam0,
+                                                     N) for i in range(0, B, step)])
+    finite = math.isfinite(N)
+    if single:                                                  # one kind: a single order, summed at once
+        kind = order[0]
+        t = np.arange(n, dtype=float).reshape(1, 1, -1)
+        r3, rho3, top3 = (a.reshape(-1, 1, 1) for a in (r, rho, top))
+        lt = lam0.reshape(1, -1, 1) * ((N - t) / N if finite else 1.0)
+        P = t if kind == 0 else 0.0
+        Q = t if kind == 1 else 0.0
+        C = t if kind == 2 else 0.0
+        c = r3 + np.minimum((0.5 - rho3 + P - rho3 * (P + Q)) / (t + 1), KAPPA / lt - top3)
+        tail = (P + r3 * C) / (N - t) if finite else 0.0
+        x = r3 if kind == 2 else (1.0 if kind == 0 else 0.0)
+        return (np.log1p(lt * (x - c)) + lt * (c + tail)).sum(axis=2)
+    pos = [order.index(kind) for kind in range(3)]              # where each kind's count sits among (s0, s1, s2)
+    s1 = np.arange(k1 + 1, dtype=float).reshape(1, 1, -1, 1)
+    s2 = np.arange(k2 + 1, dtype=float).reshape(1, 1, 1, -1)
+    r4, rho4, top4 = (a.reshape(-1, 1, 1, 1) for a in (r, rho, top))
+    lam = lam0.reshape(1, -1, 1, 1)
+    L = np.full((B, K, k1 + 1, k2 + 1), -np.inf)
+    L[:, :, 0, 0] = 0.0
+    for t in range(n):
+        s0 = t - s1 - s2
+        valid = (s0 >= 0) & (s0 <= k0)
+        drawn = (s0, s1, s2)
+        P, Q, C = (drawn[pos[kind]] for kind in range(3))
+        lt = lam * ((N - t) / N) if finite else lam
+        c = r4 + np.minimum((0.5 - rho4 + P - rho4 * (P + Q)) / (t + 1), KAPPA / lt - top4)
+        base = lt * (c + ((P + r4 * C) / (N - t) if finite else 0.0))
+        new = np.full_like(L, -np.inf)
+        for j, kj in enumerate((k0, k1, k2)):
+            if kj == 0:
+                continue
+            kind = order[j]
+            x = r4 if kind == 2 else (1.0 if kind == 0 else 0.0)
+            with np.errstate(invalid="ignore", divide="ignore", over="ignore"):
+                lf = np.log1p(lt * (x - c)) + base
+            src = L + np.where(valid, lf, -np.inf)
+            if j == 0:
+                new = np.logaddexp(new, np.where(s0 + 1 <= k0, src, -np.inf))
+            elif j == 1:
+                new[:, :, 1:, :] = np.logaddexp(new[:, :, 1:, :], src[:, :, :-1, :])
+            else:
+                new[:, :, :, 1:] = np.logaddexp(new[:, :, :, 1:], src[:, :, :, :-1])
+        L = new
+    return L[:, :, k1, k2] - (math.lgamma(n + 1) - math.lgamma(k0 + 1) - math.lgamma(k1 + 1) - math.lgamma(k2 + 1))
+
+
+def _deflation(design, cs):
+    """The area frames' deflation of log M for each c, as in _log_parts; it does not depend on r."""
+    if design.Nlo is None:
+        return np.zeros(cs.size)
+    given = ~np.isnan(design.Nlo)
+    W, n, Nlo = design.W[given], design.n[given], design.Nlo[given]
+    return cs * float(np.sum(W * (n - 1) / (2.0 * (Nlo - n + 1))))
+
+
+def _ratio_logM(design, counts, r, rho, top, cs):
+    """log of the mixed e-value of one side's test at each r (shape B), with theta_0 = r: the log of the mean over c
+    of exp(sum_h A_h - deflation - c r). rho and top: each point's bin anchor and right end (scalars, or shape B)."""
+    r = np.asarray(r, float).ravel()
+    A = np.zeros((r.size, cs.size))
+    for h, cnt in enumerate(counts):
+        A += _stratum_logavg_ratio(cnt, r, rho, top, cs * design.W[h] / design.n[h], design.N[h])
+    E = A - _deflation(design, cs)[None, :] - math.log(cs.size) - cs[None, :] * r[:, None]
+    m = E.max(axis=1, keepdims=True)
+    return (m + np.log(np.exp(E - m).sum(axis=1, keepdims=True))).ravel()
+
+
+def _scan_start(design, counts):
+    """The bin holding the side's estimate, the last the scan's first pass evaluates. It orders the search only: every
+    bin up to the first not rejected is evaluated whichever it is, so the end found does not depend on it."""
+    num = sum(design.W[h] * c[0] / design.n[h] for h, c in enumerate(counts))
+    den = sum(design.W[h] * (c[0] + c[1]) / design.n[h] for h, c in enumerate(counts))
+    return _ratio_bin(num / den) if den > 0 else RATIO_BINS - 1
+
+
+def _bracket(pts):
+    """From one bin's points evaluated so far, (r, log M - threshold), the largest point below which every point is
+    rejected (None when the bin's first point is accepted) and the first accepted point. log M is nonincreasing in the
+    bin: a rise above RATIO_ORDER_TOL is a bug and raises; a smaller one is rounding, and a point after the first
+    accepted one counts as accepted whatever its value, which can only lower the end (the conservative side)."""
+    pts = sorted(pts)
+    f = np.array([v for _, v in pts])
+    if np.isnan(f).any():
+        raise RuntimeError("the ratio's test is NaN inside a bin: a bug")
+    rise = float((f - np.minimum.accumulate(f)).max())
+    if rise > RATIO_ORDER_TOL:
+        raise RuntimeError(f"the ratio's test rose by {rise:.3g} inside a bin, where it cannot: a bug")
+    i = int(np.flatnonzero(f < 0)[0])
+    return (None if i == 0 else pts[i - 1][0]), pts[i][0]
+
+
+def _ratio_low_end(design, counts, alpha):
+    """The lower end of one side: the largest r known to be rejected at alpha/2, every r below it rejected too. First
+    pass: bin j is rejected whole when its own test (anchor j) rejects its right end; the first bin that is not holds
+    the end. Then up to RATIO_ROUNDS rounds of RATIO_BATCH points (the bin's left end too, in the first) shrink the
+    bracket of the last rejected and the first accepted point to RATIO_TOL."""
+    if not any(c[0] + c[1] for c in counts):
+        return 0.0                                              # every value is r: the test never rejects
+    cs = c_grid(design.W, design.n, alpha)
+    thr = math.log(2.0 / alpha)
+    start = _scan_start(design, counts)
+    first = f_end = None
+    for bins in (np.arange(0, start + 1), np.arange(start + 1, RATIO_BINS)):
+        if bins.size == 0:
+            continue
+        f = _ratio_logM(design, counts, EDGES[bins + 1], ANCHORS[bins], EDGES[bins + 1], cs) - thr
+        acc = np.flatnonzero(f < 0)
+        if acc.size:
+            first, f_end = int(bins[acc[0]]), float(f[acc[0]])
+            break
+    if first is None:
+        return 1.0
+    a, b = float(EDGES[first]), float(EDGES[first + 1])
+    pts = [(b, f_end)]
+    lo, hi = None, b
+    for k in range(RATIO_ROUNDS):
+        left = a if lo is None else lo
+        rs = left + (hi - left) * np.arange(1, RATIO_BATCH + 1) / (RATIO_BATCH + 1)
+        if k == 0:
+            rs = np.concatenate([[a], rs])
+        f = _ratio_logM(design, counts, rs, ANCHORS[first], b, cs) - thr
+        pts += list(zip(rs.tolist(), f.tolist()))
+        lo, hi = _bracket(pts)
+        if lo is None:
+            return a                                            # every r below the bin is rejected, its left end not
+        if hi - lo <= RATIO_TOL:
+            break
+    return lo
+
+
+def ratio_interval(design, y_min, w_max, y_max=None, w_min=None, alpha=0.05):
+    """The direct interval for R = theta_y / (theta_y + theta_w) (the module's docstring): the lower end from the
+    test of R <= r with y at its least and w at its most, the upper end 1 less the lower end of 1 - R with w at its
+    least and y at its most, each at alpha/2. y and w are 0 or 1 at each point. When the two ends cross, no r is
+    accepted, and the interval is [the smaller, the larger]. Raises TooLarge above RATIO_MAX_WORK, bounded before any
+    work. Returns (low, high)."""
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in (0, 1), got {alpha}")
+    y_max = y_min if y_max is None else y_max
+    w_min = w_max if w_min is None else w_min
+    low_counts = _ratio_counts(design, y_min, w_max)
+    high_counts = _ratio_counts(design, w_min, y_max)
+    work = (RATIO_BINS + 1 + RATIO_ROUNDS * RATIO_BATCH) * (_ratio_work(low_counts) + _ratio_work(high_counts))
+    if work > RATIO_MAX_WORK:
+        raise TooLarge(f"the direct ratio interval needs about {work:.1e} steps, above RATIO_MAX_WORK "
+                       f"({RATIO_MAX_WORK:.0e}); it is not computed, and the box is given beside it")
+    lo = _ratio_low_end(design, low_counts, alpha)
+    hi = 1.0 - _ratio_low_end(design, high_counts, alpha)
+    return float(min(lo, hi)), float(max(lo, hi))
