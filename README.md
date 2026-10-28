@@ -4,9 +4,12 @@ olmoearth_inferenceX
 Checks an Earth-observation map after inference: where it is likely wrong, how wrong it is, which part you can
 trust, and which of two maps is better.
 
-It reads only what a model or product writes out: per-class scores, a class map with its confidence band, or, to
-compare two maps, the class maps alone. It never runs the model and needs no torch, so it works on OlmoEarth's outputs, other models' maps and published products. Tested on maps made from
-Sentinel-1, Sentinel-2 and Landsat. An agent can run it through its MCP server.
+- It reads only what a model or product writes out: per-class scores, a class map with its confidence band, or two
+  class maps alone, to compare them.
+- It never runs the model and needs no torch, so it works on OlmoEarth's outputs, other models' maps and published
+  products.
+- Tested on maps made from Sentinel-1, Sentinel-2 and Landsat.
+- An agent can run it through its MCP server.
 
 <img src="https://raw.githubusercontent.com/2imi9/olmoearth_inferenceX/main/docs/figures/architecture.png" alt="Structure of olmoearth-inferenceX. Left: Sentinel-2 imagery goes through a model's encoder and decoder to its outputs, a class map and a confidence map. Right: the outputs are pooled to windows. Without reference labels, ranking the windows by confidence gives the review set, and comparing two maps A and B gives the disagreement map. With a labelled sample, a sample of the windows where A and B differ names the more accurate map by an exact test and gives their accuracy difference with a 95% interval; a random sample with reference labels gives the error rate with an exact 95% interval and, by exact zone tests, the certified zone; a sample of each class's confident calls gives each class's error with a 95% interval and the classes not to trust" width="100%">
 
@@ -21,8 +24,10 @@ pip install "olmoearth-inferencex[geo]"    # Python 3.11 to 3.13; without [geo] 
 oe-inferencex demo                          # a real Dynamic World tile; needs no data
 ```
 
-From an OlmoEarth model run with rslearn: set `output_probs: true` in the segmentation task, write to a float32
-layer, run `rslearn model predict` with the fine-tuned checkpoint, then
+From an OlmoEarth model run with rslearn:
+
+- Set `output_probs: true` in the segmentation task and write to a float32 layer.
+- Run `rslearn model predict` with the fine-tuned checkpoint, then:
 
 ```bash
 oe-inferencex from-olmoearth path/to/dataset --out run    # add --layer NAME if the probabilities are not in `output`
@@ -35,6 +40,18 @@ to a new layer and unset `output_layer_name_skip_inference_if_exists`
 
 What it answers
 ---------------
+
+Every command starts with `oe-inferencex`. The main questions:
+
+- **Where do I look first?** `assess scores.tif --out audit`, with no labels.
+- **How wrong is the map?** `sample scores.tif --budget 400 --design random --out to_label.csv`, fill in `wrong`,
+  then `estimate to_label.csv`.
+- **Which part can I trust?** `certify to_label.csv --alpha 0.05`, on the same labels.
+- **Which of two maps of the same time is more accurate?** `sample a.tif --other b.tif --budget 100 --out pairs.csv`,
+  fill in `reference_class`, then `estimate pairs.csv`.
+
+<details>
+<summary>All eleven questions, with the labels each needs</summary>
 
 | Question | Commands | Labels |
 |---|---|---|
@@ -50,12 +67,15 @@ What it answers
 | At which window size can each class be seen? | `scale scores.tif` (add `--reference truth.tif` for each size's error rate) | none |
 | How accurate is a map by an agency's published sample (NLCD, GFC2020)? | `grade points.csv --stratum S --weight W --reference R --map M` (`--map` twice for two maps) | none: the agency's labelled points |
 
-Every command starts with `oe-inferencex`. The input is the model's per-class scores before the argmax, a GeoTIFF or
-a `.npy` of shape `(C, H, W)`, or `(H, W)` for two classes; a product's class map takes `--confidence`; two class maps alone work for `compare`
-and `sample --other`; `grade` reads a CSV of labelled points. `plan` says how many labels a question needs,
-and `--help` lists each command's options. The
-[quick start](https://olmoearth-inferencex.readthedocs.io/en/latest/Usage/#quick-start) runs the main ones (`assess`,
-`sample`, `estimate`, `certify`, `compare`) on a test map.
+</details>
+
+- Input: the model's per-class scores before the argmax, as a GeoTIFF or a `.npy` of shape `(C, H, W)`, or `(H, W)`
+  for two classes.
+- A product's class map takes `--confidence`. Two class maps alone work for `compare` and `sample --other`. `grade`
+  reads a CSV of labelled points.
+- `plan` says how many labels a question needs; `--help` lists each command's options.
+- The [quick start](https://olmoearth-inferencex.readthedocs.io/en/latest/Usage/#quick-start) runs the main ones
+  (`assess`, `sample`, `estimate`, `certify`, `compare`) on a test map.
 
 
 Use from an agent
@@ -63,14 +83,6 @@ Use from an agent
 
 `oe-inferencex mcp` is a local MCP server; nothing is hosted. It gives an agent most of the steps above as tools:
 `assess`, `compare`, `sample`, `estimate`, `certify`, `plan`, `decide` and `verify`, with `guide` to read them all.
-
-- Each tool but `guide` replies in JSON: the files written, the summary numbers, and three texts to quote: the
-  conclusion, its limits and the next step.
-- `decide` turns a result into a typed answer: yes, no or undetermined; map a, map b, a tie or undetermined; or a
-  share.
-- The server's instructions state the rules an agent must keep, such as: a review set is not a sample.
-- Command line only: `grade`, `scale`, `certificate`, `from-olmoearth`, the profile and audit designs,
-  `estimate --valid`, and `plan --class-share` and `--profiles`.
 
 Add it to any MCP client, for example Claude Code:
 
@@ -88,12 +100,25 @@ uvx --from olmoearth-inferencex oe-inferencex demo
 > Where should I look first in oe_inferencex_demo/sample_probabilities.npy? Use windows of
 > 1 pixel, and grade the order against oe_inferencex_demo/sample_truth.npy.
 
+<details>
+<summary>What the tools reply, and what is command line only</summary>
+
+- Each tool but `guide` replies in JSON: the files written, the summary numbers, and three texts to quote: the
+  conclusion, its limits and the next step.
+- `decide` turns a result into a typed answer: yes, no or undetermined; map a, map b, a tie or undetermined; or a
+  share.
+- The server's instructions state the rules an agent must keep, such as: a review set is not a sample.
+- Command line only: `grade`, `scale`, `certificate`, `from-olmoearth`, the profile and audit designs,
+  `estimate --valid`, and `plan --class-share` and `--profiles`.
+
+</details>
+
 
 Examples
 --------
 
-**Where do I look first?** [Dynamic World](https://dynamicworld.app), a land-cover map made from Sentinel-2, on one tile in southern Peru. No
-labels are used to pick the windows; the expert's labels only show how it did.
+**Where do I look first?** [Dynamic World](https://dynamicworld.app), a land-cover map made from Sentinel-2, on one
+tile in southern Peru. No labels are used to pick the windows; the expert's labels only show how it did.
 
 <img src="https://raw.githubusercontent.com/2imi9/olmoearth_inferenceX/main/docs/figures/example_peru.png" alt="Southern Peru, 5 km across: the Sentinel-2 image of 9 June 2019, the Dynamic World map, the 5% of windows flagged first without labels, and the same windows over the map's real errors, 67% of them wrong" width="100%">
 
@@ -114,29 +139,44 @@ the [FTW benchmark](https://arxiv.org/abs/2409.16252) in Croatia.
 <img src="https://raw.githubusercontent.com/2imi9/olmoearth_inferenceX/main/docs/figures/example_ftw.png" alt="One FTW benchmark test chip in Croatia, about 1.5 km by 1.1 km, north up: the Sentinel-2 image, FTW's 2nd-edition field map, the PRUE B3 field map, and the windows where the two maps differ, found without labels" width="100%">
 
 Across Croatia's 353 test chips the two maps differ at 13% of windows. There the 2nd-edition map agrees with the
-benchmark 74% of the time, and labelling 100 of those windows names it as the map that agrees better with the
-benchmark 99.9% of the time. In Belgium and Sweden, B3 agreed better.
+benchmark 74% of the time. Labelling 100 of those windows names it as the map that agrees better with the benchmark
+99.9% of the time. In Belgium and Sweden, B3 agreed better.
 
-Imagery: contains modified Copernicus Sentinel data (2017 to 2023). Dynamic World map and expert labels:
-[Brown et al., Scientific Data, 2022](https://doi.org/10.1038/s41597-022-01307-4), CC BY 4.0. FTW map and PRUE B3:
-[Fields of the World](https://fieldsofthe.world), CC BY 4.0. Flood imagery and labels:
-[GEOID-Flood](https://huggingface.co/datasets/links-ads/geoid-flood), CC BY 4.0, and
-[WorldFloods v2](https://huggingface.co/datasets/isp-uv-es/WorldFloodsv2), CC BY-NC 4.0; the four water maps are the
-research record's water heads on OlmoEarth features (exp60, exp62), trained on their labels. How the example figures
-were made is in [docs/figures/examples](https://github.com/2imi9/olmoearth_inferenceX/tree/main/docs/figures/examples);
-`compare.png` comes from the research record's TikZ figure `docs/figures/tikz/compare_inferences.tex`.
+<details>
+<summary>Data and figure credits</summary>
+
+- Imagery: contains modified Copernicus Sentinel data (2017 to 2023).
+- Dynamic World map and expert labels: [Brown et al., Scientific Data, 2022](https://doi.org/10.1038/s41597-022-01307-4),
+  CC BY 4.0.
+- FTW map and PRUE B3: [Fields of the World](https://fieldsofthe.world), CC BY 4.0.
+- Flood imagery and labels: [GEOID-Flood](https://huggingface.co/datasets/links-ads/geoid-flood), CC BY 4.0, and
+  [WorldFloods v2](https://huggingface.co/datasets/isp-uv-es/WorldFloodsv2), CC BY-NC 4.0. The four water maps are
+  the research record's water heads on OlmoEarth features (exp60, exp62), trained on their labels.
+- How the example figures were made is in
+  [docs/figures/examples](https://github.com/2imi9/olmoearth_inferenceX/tree/main/docs/figures/examples);
+  `compare.png` comes from the research record's TikZ figure `docs/figures/tikz/compare_inferences.tex`.
+
+</details>
+
 
 What is guaranteed
 ------------------
 
-With windows drawn by `sample` and labelled by a reviewer:
-
-- **Error rate** (`estimate`, on `--design random`): an exact 95% interval. The confidence, proportional and tiles
-  designs give approximate ones; `--valid` adds one valid at every sample size, on every design but tiles and audit.
-- **Certified zone** (`certify`, on `--design random`): the most confident share of the map is wrong at most α of the
+- **Error rate** (`estimate`, on a `--design random` sample labelled by a reviewer): an exact 95% interval.
+- **Certified zone** (`certify`, on the same labels): the most confident share of the map is wrong at most α of the
   time, except on at most δ of samples (10% by default). δ also counts the samples that certify nothing, so among
-  those that certify a zone, more than δ can be wrong. On `--design sequential`, certify can be rerun as labels are
-  added, with the same α and δ.
+  those that certify a zone, more than δ can be wrong.
+- All guarantees hold when the settings (α, δ, the budget, the rule and level cut, `--classes`) were fixed before any
+  label was read. Intervals and certified zones assume the labels are right.
+
+<details>
+<summary>The other guarantees, and what is checked</summary>
+
+With windows drawn by `sample` and labelled by a reviewer, beyond the two above:
+
+- **Error rate**: the confidence, proportional and tiles designs give approximate intervals; `--valid` adds one valid
+  at every sample size, on every design but tiles and audit.
+- **Certified zone**: on `--design sequential`, certify can be rerun as labels are added, with the same α and δ.
 - **Per profile** (`certify`, on `--design profile`): parts of the map fixed from the map alone before any label
   (confidence band, input condition, class, grid block) are each called good (wrong at most α), bad (more than α) or
   undecided; all the verdicts are right together except on at most δ of samples.
@@ -154,12 +194,13 @@ With an agency's own stratified sample (`grade`): overall accuracy, each class's
 share of the reference, and the difference of two maps, each with a 95% interval valid at any sample size, beside the
 agency's nominal normal-theory one.
 
-Each holds when the settings (α, δ, the budget, the rule and level cut, `--classes`) were fixed before any label was
-read. The tests check each statement by exact computation. The
+The tests check each statement by exact computation. The
 [research record](https://github.com/2imi9/olmoearth_inferenceX-record) checks most of them on fully labelled real
 maps; not yet `--valid` or the per-profile verdicts, and `grade`'s intervals by simulation at NLCD's design (exp118).
 Details: [sample and estimate](https://olmoearth-inferencex.readthedocs.io/en/latest/Usage/#sample-and-estimate),
 [certify](https://olmoearth-inferencex.readthedocs.io/en/latest/Usage/#certify).
+
+</details>
 
 Limits
 ------
