@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- **README.** The rslearn route (`output_probs`, a float32 output layer, the fine-tuned checkpoint, `from-olmoearth`),
+  the agent section moved up and exact about the MCP server (what each reply holds, `decide`'s answers, what is
+  command line only), a per-profile row, and corrected wording: the per-class joint statements under a random sample,
+  `--valid` refused on tiles and audit, which guarantees the record checks on real maps, the certificate row's
+  command, and PRUE B3 named as FTW's own baseline.
+- **The FTW example figure was drawn upside down** since it was added (f1bc472, in 1.12.3): the benchmark's chips are
+  stored south-up (row 0 = south) and `docs/figures/examples/fig_ftw.py` drew them as stored. It now flips them north
+  up and draws each pixel at its ground shape (about 6 m N-S by 4 m E-W, so the chip is taller than wide); same chip,
+  same numbers (aicr 1555871). The licences of the flood figure's sources and of PRUE B3 are now credited.
+
 ## 1.20.0 (2026-10-27)
 
 - **Localized certification: a verdict per profile of the map.** `sample --design profile --profile-by SPEC
