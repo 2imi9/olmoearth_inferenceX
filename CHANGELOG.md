@@ -4,6 +4,10 @@
 
 Documentation only: the code is 1.20.0's apart from the version, so PyPI's page carries the README below.
 
+- **Two medians in 1.20.0's `--ratio direct` figures corrected** (CHANGELOG 1.20.0 and Usage). Recomputed from job
+  1553048's JSON, NLCD 2016's 26 direct intervals are a median 0.82 of the box's width (not 0.83; the range 0.64 to
+  0.92 stands) and a median 1.73 times normal theory's (not 1.74, which was against normal theory's interval cut to
+  0 to 100%; the range 1.62 to 3.56 stands). The 627 s is the 26 direct intervals' time in all.
 - **README.** The rslearn route (`output_probs`, a float32 output layer, the fine-tuned checkpoint, `from-olmoearth`),
   the agent section moved up and exact about the MCP server (what each reply holds, `decide`'s answers, what is
   command line only), a per-profile row, and corrected wording: the per-class joint statements under a random sample,
@@ -126,7 +130,7 @@ Documentation only: the code is 1.20.0's apart from the version, so PyPI's page 
   layout harness run against 1.19.0 on aicr (job 1553610: 157 steps and 418 files identical apart from the new
   options in five commands' help and one plan refusal) and on test_agency.py's Olofsson checks. Measured on one core
   (aicr job 1553048): NLCD 2016's eight-class two-map grade took 627 s with its 26 direct intervals (446 s at a
-  tolerance of 1e-4), each a median 0.83 of the box's width (0.64 to 0.92) and a median 1.74 times normal theory's;
+  tolerance of 1e-4), each a median 0.82 of the box's width (0.64 to 0.92) and a median 1.73 times normal theory's;
   GFC2020's direct intervals need 3.6e10 to 1.2e11 steps (14 and 48 minutes for two of them), above the bound, so
   there the box is given. The default stays the box: the owner's rule was each two-map grade under 10 minutes on one
   core.
