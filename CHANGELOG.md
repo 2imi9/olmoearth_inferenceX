@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.20.1 (2026-10-27)
+
+Documentation only: the code is 1.20.0's apart from the version, so PyPI's page carries the README below.
 
 - **README.** The rslearn route (`output_probs`, a float32 output layer, the fine-tuned checkpoint, `from-olmoearth`),
   the agent section moved up and exact about the MCP server (what each reply holds, `decide`'s answers, what is
