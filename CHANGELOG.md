@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.20.2 (2026-10-29)
+
+Documentation only: the code is 1.20.1's apart from the version, so PyPI's page carries the shortened README.
 
 - **Docs: README shortened.** Short bullets; the full question table, what the agent tools reply and what is command
   line only, the example credits and most guarantees are collapsed by default. Every row, guarantee, limit and credit
