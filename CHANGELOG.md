@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.20.3 (2026-10-29)
 
 - **`certificate` on a map that is not north up.** GDAL georeferences a grid that is south up, rotated, or the pixel
   grid of a GeoTIFF with no georeferencing once scaled to windows (its rows step down, as a south-up map's do) as a
