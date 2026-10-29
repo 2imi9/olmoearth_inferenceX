@@ -23,6 +23,7 @@ pytest.importorskip("rasterio")
 from oe_inferencex import certificate as cert                       # noqa: E402
 from oe_inferencex import mcp_server                                 # noqa: E402
 from oe_inferencex.cli import main                                   # noqa: E402
+from oe_inferencex.common.raster import affine_apply                 # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _spec = importlib.util.spec_from_file_location("quickstart_map", os.path.join(ROOT, "examples", "quickstart_map.py"))
@@ -774,17 +775,23 @@ def test_a_users_files_in_out_are_never_replaced(bundle, tmp_path):
     assert (tmp_path / "out" / "condition.tif").read_text() == "mine"
 
 
-@pytest.mark.parametrize("kind", ["no_crs", "loose_laea", "inf_nodata", "negative_nodata"])
-def test_honest_certificates_of_other_maps_verify(bundle, tmp_path, kind):
-    """A map with no CRS, one whose CRS rasterio names loosely (a LAEA on GRS 1980 read back as EPSG:3035), and
-    no-data values strict JSON and argparse handle only when written with care (inf, -3.4e+38)."""
+def _other_map_certificate(bundle, tmp_path, kind):
+    """The quick-start map rewritten as `kind`, sampled, labelled, certified and given a certificate in tmp_path/cert."""
     import rasterio
     from rasterio.crs import CRS
+    from rasterio.transform import Affine
     with rasterio.open(bundle / "scores.tif") as src:
         prof, a = src.profile, src.read()
     nodata = []
+    t = prof["transform"]
     if kind == "no_crs":
         prof.update(crs=None)
+    elif kind == "no_grid":                         # no CRS and no transform: GDAL's identity grid
+        prof.update(crs=None, transform=Affine.identity())
+    elif kind == "south_up":                        # row 0 at the south edge
+        prof.update(transform=Affine(t.a, 0.0, t.c, 0.0, -t.e, t.f + t.e * prof["height"]))
+    elif kind == "rotated":
+        prof.update(transform=affine_apply(t, Affine.rotation(20)))
     elif kind == "loose_laea":
         prof.update(crs=CRS.from_proj4("+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 "
                                        "+units=m"))
@@ -804,4 +811,66 @@ def test_honest_certificates_of_other_maps_verify(bundle, tmp_path, kind):
             assert main(["certificate", "s_zone.json", "--date", "2024-06-01", "--out", "cert"]) == 0
     finally:
         os.chdir(cwd)
-    assert cert.verify(str(tmp_path / "cert" / "certificate.json"), scores=str(tmp_path / "scores.tif"))["verified"]
+    return tmp_path / "cert"
+
+
+@pytest.mark.parametrize("kind", ["no_crs", "no_grid", "south_up", "rotated", "loose_laea", "inf_nodata",
+                                  "negative_nodata"])
+def test_honest_certificates_of_other_maps_verify(bundle, tmp_path, kind):
+    """A map with no CRS; with no georeferencing at all, south up or rotated, whose zone mask GDAL georeferences with
+    a ModelTransformation matrix (refused, and no certificate given, through 1.20.2); one whose CRS rasterio names
+    loosely (a LAEA on GRS 1980 read back as EPSG:3035); and no-data values strict JSON and argparse handle only when
+    written with care (inf, -3.4e+38)."""
+    import rasterio
+    from rasterio.transform import Affine
+    d = _other_map_certificate(bundle, tmp_path, kind)
+    assert cert.verify(str(d / "certificate.json"), scores=str(tmp_path / "scores.tif"))["verified"]
+    tags = set(cert._tiff_pages(str(d / "zone_mask.tif"))[0])
+    matrix = kind in ("no_grid", "south_up", "rotated")
+    assert (cert.TRANSFORM_MATRIX in tags) is matrix and not (matrix and tags & cert.PIXEL_GRID)
+    with rasterio.open(tmp_path / "scores.tif") as src, rasterio.open(d / "zone_mask.tif") as m:
+        assert m.transform == affine_apply(src.transform, Affine.scale(4)) and m.crs == src.crs
+
+
+def _set_double(path, tag, i, value):
+    """Overwrite the i-th double of a classic TIFF's tag in place, as a forger with a hex editor would."""
+    import struct
+    raw = bytearray(path.read_bytes())
+    bo = "<" if raw[:2] == b"II" else ">"
+    start = struct.unpack(bo + "I", raw[4:8])[0]
+    n = struct.unpack(bo + "H", raw[start:start + 2])[0]
+    entry = next(start + 2 + 12 * k for k in range(n)
+                 if struct.unpack(bo + "H", raw[start + 2 + 12 * k:start + 4 + 12 * k])[0] == tag)
+    where = struct.unpack(bo + "I", raw[entry + 8:entry + 12])[0]
+    raw[where + 8 * i:where + 8 * (i + 1)] = struct.pack(bo + "d", value)
+    path.write_bytes(bytes(raw))
+
+
+def test_a_matrix_mask_with_a_second_georeferencing_or_hidden_terms_fails(bundle, tmp_path, monkeypatch):
+    """A mask may carry PixelScale and Tiepoint or a ModelTransformation matrix, not both (GDAL reads the first and
+    libgeotiff the second), and one matrix, not two; and a matrix must hold only the six terms GDAL reads."""
+    d = _other_map_certificate(bundle, tmp_path, "south_up")
+    real = cert._tiff_pages
+    for extra in (sorted(cert.PIXEL_GRID), [cert.TRANSFORM_MATRIX]):           # both georeferencings; a second matrix
+        monkeypatch.setattr(cert, "_tiff_pages", lambda p, extra=extra: [real(p)[0] + extra])
+        r = cert.verify(str(d / "certificate.json"))
+        assert r["checks"]["mask"]["ok"] is False and not r["verified"], extra
+    monkeypatch.setattr(cert, "_tiff_pages", real)
+    assert cert.verify(str(d / "certificate.json"))["verified"]
+    _set_double(d / "zone_mask.tif", cert.TRANSFORM_MATRIX, 12, 1e-3)          # a perspective term GDAL ignores
+    r = _forge(d)
+    assert r["checks"]["mask"]["ok"] is False and "georeferencing holds more" in r["checks"]["mask"]["detail"]
+
+
+def test_a_north_up_mask_whose_pixel_scale_is_negative_fails(bundle):
+    """GDAL reads a negative y step in PixelScale as north up, so the grid it reads is the map's; libgeotiff mirrors
+    the grid, and the zone with it, north of the map. Such a mask passed verify through 1.20.2."""
+    import rasterio
+    d = _copy(bundle, "t_negscale")
+    with rasterio.open(d / "zone_mask.tif") as src:
+        honest = src.transform
+    _set_double(d / "zone_mask.tif", 33550, 1, honest.e)
+    with rasterio.open(d / "zone_mask.tif") as src:                            # GDAL places it where it was
+        assert src.transform == honest
+    r = _forge(d)
+    assert r["checks"]["mask"]["ok"] is False and "georeferencing holds more" in r["checks"]["mask"]["detail"]

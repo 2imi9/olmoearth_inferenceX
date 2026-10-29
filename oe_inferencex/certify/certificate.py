@@ -85,8 +85,15 @@ OS_FILES = {".DS_Store", "Thumbs.db", "desktop.ini"}
 MAX_BYTES = {".json": 512 << 20, ".csv": 128 << 20}
 # the TIFF tags the mask writer emits (stripped or tiled, georeferenced or not); any other tag, or a second page, is
 # something a GIS may show that verify did not check
-MASK_TAGS = {254, 256, 257, 258, 259, 262, 273, 277, 278, 279, 284, 317, 322, 323, 324, 325, 339, 33550, 33922, 34735,
-             34736, 34737}
+MASK_TAGS = {254, 256, 257, 258, 259, 262, 273, 277, 278, 279, 284, 317, 322, 323, 324, 325, 339, 33550, 33922, 34264,
+             34735, 34736, 34737}
+# GDAL writes a north-up grid as PixelScale and Tiepoint, and any other grid (south up, rotated, or the pixel grid of a
+# map with no georeferencing once scaled to windows, whose rows step down) as a 4 x 4 ModelTransformation matrix. A mask
+# holds one or the other: GDAL reads PixelScale first and libgeotiff the matrix, so a mask with both could place the
+# zone in two places; and it holds them exactly as GDAL writes the grid it reads (_as_gdal_reads). Through 1.20.2 the
+# matrix was refused outright, and a map with no georeferencing, or south up, got no certificate.
+TRANSFORM_MATRIX, PIXEL_GRID = 34264, {33550, 33922}
+GEO_DOUBLES = {33550: 3, 33922: 6, 34264: 16}       # PixelScale, one Tiepoint, the matrix: doubles as GDAL writes them
 RFC3339 = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$")
 RELEASE = re.compile(r"^\d+\.\d+(\.\d+)?([abrc.+-][0-9A-Za-z.+-]*)?$")
 # certify's error levels verify will run: a sequential rule's label count grows as 1/alpha, so a forged tiny alpha
@@ -912,6 +919,54 @@ def _tiff_pages(path):
     return pages
 
 
+def _tiff_geo_doubles(path):
+    """The georeferencing tags of a TIFF's first page (PixelScale, Tiepoint, ModelTransformation) as {tag: [doubles]},
+    read from its structure, not through GDAL; a tag held in any other form or count than GDAL writes (GEO_DOUBLES),
+    or reaching past the file's end, maps to None."""
+    out = {}
+    with open(path, "rb") as f:
+        b = f.read(16)
+        bo = "<" if b[:2] == b"II" else ">"
+        big = struct.unpack(bo + "H", b[2:4])[0] == 43
+        f.seek(struct.unpack(bo + ("Q" if big else "I"), b[8:16] if big else b[4:8])[0])
+        n = struct.unpack(bo + ("Q" if big else "H"), f.read(8 if big else 2))[0]
+        es = 20 if big else 12
+        entries = f.read(min(n, 64) * es)
+        for i in range(len(entries) // es):
+            e = entries[i * es:(i + 1) * es]
+            tag, kind = struct.unpack(bo + "HH", e[:4])
+            if tag not in GEO_DOUBLES:
+                continue
+            count, where = struct.unpack(bo + ("QQ" if big else "II"), e[4:])
+            out[tag] = None
+            if kind == 12 and count == GEO_DOUBLES[tag]:   # 3, 6 or 16 doubles never fit inside the entry
+                f.seek(where)
+                data = f.read(8 * count)
+                if len(data) == 8 * count:
+                    out[tag] = list(struct.unpack(bo + f"{count}d", data))
+    return out
+
+
+def _gdal_matrix(t):
+    """The ModelTransformation matrix GDAL writes for the transform `t`: its six terms, the rest 0 but the last 1."""
+    return [t.a, t.b, 0.0, t.c, t.d, t.e, 0.0, t.f, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]
+
+
+def _as_gdal_reads(raw, t):
+    """Whether a mask's georeferencing tags (`_tiff_geo_doubles`) hold the grid GDAL read from them, `t`, as GDAL writes
+    it: the matrix with nothing beyond its six terms, or a PixelScale whose y step is positive and a Tiepoint at pixel
+    (0, 0). GDAL reads a negative y step as north up where libgeotiff mirrors the grid, and ignores a perspective row
+    another reader may apply (the review of 29 October 2026). The z terms are not compared."""
+    if not raw:
+        return True                                  # no georeferencing: GDAL's identity grid, which verify compares
+    if TRANSFORM_MATRIX in raw:
+        return raw[TRANSFORM_MATRIX] == _gdal_matrix(t)
+    scale, tie = raw.get(33550), raw.get(33922)
+    return (scale is not None and tie is not None and t.b == 0 and t.d == 0 and scale[0] == t.a
+            and scale[1] == -t.e and scale[1] > 0 and tie[0] == 0 and tie[1] == 0 and tie[3] == t.c
+            and tie[4] == t.f)
+
+
 def _read_mask(path, shape):
     """The bundle's zone mask, checked to be a plain one before and after it is read: a single-band uint8 GeoTIFF of 0
     and 1 with no no-data, scale, offset, overviews, colour table, internal mask or tags beyond AREA_OR_POINT=Area (a GIS
@@ -927,9 +982,11 @@ def _read_mask(path, shape):
             raise ValueError("the .npy mask holds values other than 0 and 1")
         return m, None, None
     pages = _tiff_pages(path)
-    if len(pages) != 1 or not set(pages[0]) <= MASK_TAGS:
+    # a tag given twice is refused too: _tiff_geo_doubles reads the first, and another reader may take the second
+    if (len(pages) != 1 or not set(pages[0]) <= MASK_TAGS or len(set(pages[0])) != len(pages[0])
+            or (TRANSFORM_MATRIX in pages[0] and PIXEL_GRID & set(pages[0]))):
         raise ValueError("the mask GeoTIFF has more than one page, or tags the mask writer does not write (an "
-                         "orientation, a second georeferencing, metadata)")
+                         "orientation, a second georeferencing, a tag given twice, metadata)")
     import rasterio
     from rasterio.enums import ColorInterp, MaskFlags
     with _closed_gdal(), rasterio.open(path, driver="GTiff") as src:
@@ -950,6 +1007,10 @@ def _read_mask(path, shape):
         if not plain:
             raise ValueError("the mask GeoTIFF carries more than one band of 0 and 1 (a no-data value, a scale or "
                              "offset, overviews, a colour table, an internal mask, tags or descriptions)")
+        if not _as_gdal_reads(_tiff_geo_doubles(path), src.transform):
+            raise ValueError("the mask GeoTIFF's georeferencing holds more than the grid GDAL reads from it (a "
+                             "negative y step, a perspective term, a second tiepoint), which another reader would "
+                             "place elsewhere")
         m = src.read(1)
         if not np.isin(m, (0, 1)).all():
             raise ValueError("the mask holds values other than 0 and 1")

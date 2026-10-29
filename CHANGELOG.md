@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+- **`certificate` on a map that is not north up.** GDAL georeferences a grid that is south up, rotated, or the pixel
+  grid of a GeoTIFF with no georeferencing once scaled to windows (its rows step down, as a south-up map's do) as a
+  4 x 4 ModelTransformation matrix (TIFF tag 34264), not as PixelScale and Tiepoint. The zone mask's tag check, added
+  in 1.17.0, refused that tag, so `certificate` refused its own mask and no such map got a certificate. The mask may now
+  carry the matrix, provided it carries no PixelScale or Tiepoint beside it (GDAL reads those first, libgeotiff the
+  matrix, so a mask with both could place the zone in two places); verify compares the grid with the map's as before.
+  A certificate of such a map needs verify from this release on: 1.17.0 to 1.20.2 refuse its mask.
+- **verify reads a mask's georeferencing as written, not only as GDAL reads it.** The matrix must hold only the six
+  terms GDAL reads, and PixelScale and Tiepoint must be the north-up grid GDAL writes: a positive y step and one
+  tiepoint at pixel (0, 0). A north-up mask whose PixelScale held a negative y step passed verify through 1.20.2:
+  GDAL reads it as north up, the map's grid, while libgeotiff mirrors it and the zone north of the map (found in the
+  review of this fix). A mask that gives any tag twice is refused too. Tests: certificates of a map with no
+  georeferencing, south up and rotated verify; a matrix mask with a second georeferencing, a second matrix or a
+  perspective term fails, and so does a north-up mask with a negative y step.
+
 ## 1.20.2 (2026-10-29)
 
 Documentation only: the code is 1.20.1's apart from the version, so PyPI's page carries the shortened README.
