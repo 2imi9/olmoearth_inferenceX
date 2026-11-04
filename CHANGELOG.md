@@ -7,8 +7,9 @@
   the more accurate of these two maps on this area and date, and does not rank the models or recipes that made them:
   another seed, area, date or library version can give a different answer. Usage's `grade` says the same of two maps'
   difference. One map is one training run and one prediction (Corley et al. 2026, arXiv 2605.12678, R4); on the
-  record, reseeding a head moved 2 to 4% of the windows (exp57) and a checkpoint run under newer libraries changed
-  class at 14 of 259 points (exp111). No number changed.
+  record, reseeding a probe moved 0.2 to 1.3% of the windows (exp83, exp66), another crop offset or backbone version
+  2 to 4% (exp57), and a checkpoint run under newer libraries changed class at 14 of 259 points (exp111). No number
+  changed.
 
 ## 1.20.3 (2026-10-29)
 

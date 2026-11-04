@@ -9,6 +9,7 @@ import csv
 import importlib.util
 import json
 import math
+import os
 
 import numpy as np
 import pytest
@@ -203,6 +204,17 @@ def test_the_route_through_the_server(tmp_path):
     assert est.WHICH_MAP_SCOPE_NOTE in s["limits"] and est.WHICH_MAP_SCOPE_NOTE in r["limits"]
     c = mcp_server.compare(a=str(tmp_path / "a.npy"), b=str(tmp_path / "b.npy"), out_dir=str(tmp_path / "c"), patch=1)
     assert "other set to map b" in c["next"]
+
+
+def test_the_docs_give_each_record_figure_its_own_experiment():
+    # exp57's 2 to 4% is between crop offsets and backbones; reseeding a probe moved 0.2 to 1.3% (exp83, exp66)
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    said = ("reseeding a probe moved 0.2 to 1.3% of the windows (exp83, exp66), another crop offset or backbone "
+            "version 2 to 4% (exp57)")
+    for name in ("docs/Usage.md", "CHANGELOG.md"):
+        text = " ".join(open(os.path.join(root, name), encoding="utf-8").read().split())
+        assert said in text and "reseeding a head moved 2 to 4%" not in text
+        assert name == "CHANGELOG.md" or est.WHICH_MAP_SCOPE_NOTE in text
 
 
 # ----------------------------------------------------------------------------- the review of 3 October 2026

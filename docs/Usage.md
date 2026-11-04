@@ -548,8 +548,9 @@ refuses this sample.
 
 The verdict names the more accurate of these two maps on this area and date, and does not rank the models or recipes
 that made them: another seed, area, date or library version can give a different answer. One map is one training run
-and one prediction: on the record, reseeding a head moved 2 to 4% of the windows (exp57), and a checkpoint run under
-newer libraries changed class at 14 of 259 points (exp111).
+and one prediction: on the record, reseeding a probe moved 0.2 to 1.3% of the windows (exp83, exp66), another crop
+offset or backbone version 2 to 4% (exp57), and a checkpoint run under newer libraries changed class at 14 of 259
+points (exp111).
 
 Across dates the identity fails. The reviewer writes one class per window, seen at one date, and both maps are graded
 against it: where the ground changed between the two dates (a harvest, a flood, a season), the map of the other date is
