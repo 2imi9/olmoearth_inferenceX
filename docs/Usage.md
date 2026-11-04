@@ -546,6 +546,11 @@ ones `compare` counts as differing. It does not give either map's accuracy: wher
 or both wrong, and how often needs a random sample of all windows (`sample --design random` on each map). `certify`
 refuses this sample.
 
+The verdict names the more accurate of these two maps on this area and date, and does not rank the models or recipes
+that made them: another seed, area, date or library version can give a different answer. One map is one training run
+and one prediction: on the record, reseeding a head moved 2 to 4% of the windows (exp57), and a checkpoint run under
+newer libraries changed class at 14 of 259 points (exp111).
+
 Across dates the identity fails. The reviewer writes one class per window, seen at one date, and both maps are graded
 against it: where the ground changed between the two dates (a harvest, a flood, a season), the map of the other date is
 counted wrong, and a window where the maps agree can be right in one and wrong in the other. For maps of different
@@ -1368,7 +1373,7 @@ and the agency's own normal-theory interval beside it. The agency's design is ta
 a sample.
 
 - **Overall accuracy** of each map, and with two maps (`--map` twice) the difference of their accuracies on the same
-  points.
+  points. It compares these two maps, not the models or recipes that made them.
 - **Per class:** user's and producer's accuracy, and the class's share of the reference (its area, as a share).
 - **The error matrix** as estimated shares of the population, without intervals.
 

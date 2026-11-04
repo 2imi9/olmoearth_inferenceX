@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- **Which of two maps: what the verdict is about.** `estimate` on a sample drawn with `--other` (its printed note, the
+  result's `note` and the MCP server's limits, for `sample` with `other` too) and Usage now say that the verdict names
+  the more accurate of these two maps on this area and date, and does not rank the models or recipes that made them:
+  another seed, area, date or library version can give a different answer. Usage's `grade` says the same of two maps'
+  difference. One map is one training run and one prediction (Corley et al. 2026, arXiv 2605.12678, R4); on the
+  record, reseeding a head moved 2 to 4% of the windows (exp57) and a checkpoint run under newer libraries changed
+  class at 14 of 259 points (exp111). No number changed.
+
 ## 1.20.3 (2026-10-29)
 
 - **`certificate` on a map that is not north up.** GDAL georeferences a grid that is south up, rotated, or the pixel

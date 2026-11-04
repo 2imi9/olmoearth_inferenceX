@@ -73,9 +73,9 @@ from oe_inferencex.certify.zone import (FAMILY_NOTE, FAMILY_NOTE_ONE, ISSUED_NOT
                                         min_labels_to_certify, null_count, target_weights, zone_counts, zone_cut,
                                         zone_edge, zone_levels, zone_order, zone_pvalue, zone_pvalue_exact,
                                         zone_upper_bound)
-from oe_inferencex.estimate.which_map import (SIGN_TEST_NOTE, SIGN_TEST_SHARE, WHICH_MAP_NOTE, _SIGN_CRIT,
-                                              compare_from_disagreement, sample_disagreement, sign_critical,
-                                              which_map_rule)
+from oe_inferencex.estimate.which_map import (SIGN_TEST_NOTE, SIGN_TEST_SHARE, WHICH_MAP_NOTE, WHICH_MAP_SCOPE_NOTE,
+                                              _SIGN_CRIT, compare_from_disagreement, sample_disagreement,
+                                              sign_critical, which_map_rule)
 from oe_inferencex.estimate.audit import (AUDIT_METHOD, AUDIT_NOTE, AUDIT_READING_NOTE, AUDIT_SHARE, AUDIT_ZONE_TEXT,
                                           _audit_zone, class_audit_from_sample, interval_verdict, sample_class_audit)
 from oe_inferencex.estimate.profiles import (MAX_BANDS, MAX_GRID, MAX_PROFILES, MIN_PROFILE_WINDOWS,

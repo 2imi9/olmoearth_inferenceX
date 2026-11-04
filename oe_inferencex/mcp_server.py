@@ -1000,9 +1000,9 @@ def sample(
         said = [f"{len(side['indices'])} windows to label of the {D} where the two maps differ ({_pc(D / N)} of the {N} "
                 f"windows compared), listed in {path}; the design is in {side_path}. No window is labelled yet."]
         limits = ["This sample says which map is more accurate and by how much once labelled, not either map's accuracy, "
-                  "and certify refuses it.", "The windows compared are those both maps predict where neither splits "
-                  "evenly between two classes.", "Labels are assumed right; no reviewer error rate applies to this "
-                  "comparison."] + _notes(side.get("notes", []) + [cli.OTHER_DATES_NOTE])
+                  "and certify refuses it.", est.WHICH_MAP_SCOPE_NOTE, "The windows compared are those both maps "
+                  "predict where neither splits evenly between two classes.", "Labels are assumed right; no reviewer "
+                  "error rate applies to this comparison."] + _notes(side.get("notes", []) + [cli.OTHER_DATES_NOTE])
         nxt = (f"Ask the user or a reviewer to open each window of {path} and write in `reference_class` the class that "
                "is there at the time both maps describe, in the maps' class codes, or ? where it cannot be judged, "
                "keeping every row (hide class_a and class_b to label blind). Then call estimate with "

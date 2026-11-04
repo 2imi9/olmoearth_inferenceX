@@ -145,6 +145,8 @@ def test_sample_other_then_estimate_names_the_more_accurate_map(tmp_path, capsys
     assert r["verdict"] == "a" and printed.startswith("map a is more accurate than map b, by")
     assert r["difference"]["low"] <= true_delta <= r["difference"]["high"]
     assert r["n_unjudged"] == 2 and "2 could not be judged" in printed
+    # the verdict is about these two maps, not the models or recipes that made them (Corley et al. 2026, R4)
+    assert est.WHICH_MAP_SCOPE_NOTE in printed and est.WHICH_MAP_SCOPE_NOTE in r["note"]
     with pytest.raises(SystemExit, match="certify needs a random sample of one map's windows"):
         main(["certify", str(out), "--alpha", "0.05"])
     with pytest.raises(SystemExit, match="takes none of --per-class"):
@@ -198,6 +200,7 @@ def test_the_route_through_the_server(tmp_path):
     r = mcp_server.estimate(sample_csv=s["files"]["sample_csv"])
     assert r["summary"]["verdict"] == "a" and r["conclusion"].startswith("Map a is more accurate than map b, by")
     assert "not either map's accuracy" in r["limits"]
+    assert est.WHICH_MAP_SCOPE_NOTE in s["limits"] and est.WHICH_MAP_SCOPE_NOTE in r["limits"]
     c = mcp_server.compare(a=str(tmp_path / "a.npy"), b=str(tmp_path / "b.npy"), out_dir=str(tmp_path / "c"), patch=1)
     assert "other set to map b" in c["next"]
 
