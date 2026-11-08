@@ -479,6 +479,8 @@ def sign_test_head(r):
 
 
 def _answer_more_accurate(r, k):
+    # a map named here is the more accurate of these two maps, not of the models that made them (Corley et al. 2026, R4)
+    from oe_inferencex.estimate.which_map import WHICH_MAP_SCOPE_NOTE
     if k == "two_maps_sample":
         d, v = r["difference"], r.get("verdict")
         lo, hi = 100 * d["low"], 100 * d["high"]
@@ -497,6 +499,8 @@ def _answer_more_accurate(r, k):
             why = (f"The labels cannot tell which map is more accurate: the difference, a minus b, lies between "
                    f"{lo:+.1f} and {hi:+.1f} points (95% interval). " + comparison_second_look())
         why += " This says which map is better, not either map's accuracy. " + _labels_clause(r)
+        if v in ("a", "b"):
+            why += " " + WHICH_MAP_SCOPE_NOTE
         if r.get("n_unjudged"):
             why += f" {r['n_unjudged']} windows could not be judged and are counted for each map both ways."
         return {"type": "choice", "answer": v or "undetermined", "level": r.get("conf", 0.95), "exact": True,
@@ -533,6 +537,8 @@ def _answer_more_accurate(r, k):
         why = (f"Every one of the {total} windows where the maps differ carries a label: {counted}. This is a count "
                "against the labels raster, taken as truth: it has no interval, is only as right as those labels, and "
                "says nothing about the windows where the maps agree.")
+        if ans in ("a", "b"):
+            why += " " + WHICH_MAP_SCOPE_NOTE
     # with no window differing there is nothing the labels' date can favour (the review of 2026-10-06)
     why = " ".join([why, *_dates_clause(r, graded=bool(total))])
     return {"type": "choice", "answer": ans, "level": None, "exact": None, "because": why,

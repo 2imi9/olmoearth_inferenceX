@@ -450,11 +450,13 @@ def _graded_against(reading):
 
 def determinism_check(a, b, ok, floor=None, margin_a=None, margin_b=None, groups=None):
     """The same input inferred twice, by two engines, precisions or batch compositions: does the map move, and by
-    more than reseeding the head moves it?
+    more than a given floor?
 
-    a, b: hard decisions of the same shape; ok: the valid windows; floor: the reseed disagreement rate the record
-    gives for the model family (exp57 measured 2 to 4% between two inferences of one scene), so a rate above it is
-    drift the engine introduced; margin_a, margin_b: optional per-window margins, for the drift of the score itself.
+    a, b: hard decisions of the same shape; ok: the valid windows; floor: the disagreement rate to gate against, so a
+    rate above it is drift the engine introduced (the record's readiness plan uses exp57's 2 to 4% of windows, the move
+    between two crop offsets or two backbone versions of one scene; reseeding a probe moved 0.2 to 0.6%, exp63 and
+    exp83, so a rate under such a floor can still be more than a reseed moves); margin_a, margin_b: optional
+    per-window margins, for the drift of the score itself.
     Returns n_windows, n_disagree, disagreement_rate, per_group (or None), margin_drift ({mean_abs, max_abs} on the
     valid windows, or None), floor, passes (rate <= floor, or None without a floor or without a compared window). A frozen fp32 encoder run twice
     must give 0. A test-time-training encoder fits its inner model in one full-batch step at learning rate 1.0, the

@@ -547,10 +547,10 @@ or both wrong, and how often needs a random sample of all windows (`sample --des
 refuses this sample.
 
 The verdict names the more accurate of these two maps on this area and date, and does not rank the models or recipes
-that made them: another seed, area, date or library version can give a different answer. One map is one training run
-and one prediction: on the record, reseeding a probe moved 0.2 to 1.3% of the windows (exp83, exp66), another crop
-offset or backbone version 2 to 4% (exp57), and a checkpoint run under newer libraries changed class at 14 of 259
-points (exp111).
+that made them: another training seed, area, date or library version can give a different answer. One map is one
+training run and one prediction: on the record, reseeding a probe moved 0.2 to 0.6% of the windows (exp63, exp83),
+another crop offset or backbone version 2 to 4% (exp57), and a checkpoint run under newer libraries changed class at 14
+of 259 points (exp111).
 
 Across dates the identity fails. The reviewer writes one class per window, seen at one date, and both maps are graded
 against it: where the ground changed between the two dates (a harvest, a flood, a season), the map of the other date is
@@ -1682,8 +1682,10 @@ summary(out)                                # the JSON-safe view, no arrays
 - Which side is right where two maps differ is not readable without labels; the module reports both
   ([exp58](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/results/comparisons.md#is-the-comparison-tool-better-than-the-raw-diff-exp58)).
 - `determinism_check(a, b, ok, floor=0.03, margin_a=ma, margin_b=mb)` gates one input inferred under two engines or
-  precisions against the reseed floor (2 to 4% in exp57), and `signals.crop_dependence` measures how much a decision
-  depends on the crop, for the [adaptive-encoder readiness](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/plan/vit3_readiness.md) gates.
+  precisions against a floor, and `signals.crop_dependence` measures how much a decision depends on the crop, for the
+  [adaptive-encoder readiness](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/plan/vit3_readiness.md) gates.
+  The floor 0.03 is inside the 2 to 4% of windows that another crop offset or backbone version moved in exp57; reseeding
+  a probe moved 0.2 to 0.6% (exp63, exp83), so a run under that floor can still move more than a reseed does.
 
 ### Estimate the error rate
 
