@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+- **Which of two maps: what the verdict is about.** `estimate` on a sample drawn with `--other` (its printed note, the
+  result's `note` and the MCP server's limits, for `sample` with `other` too) and Usage now say that the verdict names
+  the more accurate of these two maps on this area and date, and does not rank the models or recipes that made them:
+  another training seed, area, date or library version can give a different answer. Usage's `grade` says the same of
+  two maps' difference, and `decide`'s which-map answers (on a sample of the differing windows, or a comparison with
+  labels on all of them) carry the same sentence. One map is one training run and one prediction (Corley et al. 2026,
+  arXiv 2605.12678, R4); on the record, reseeding a probe moved 0.2 to 0.6% of the windows (exp63, exp83), another
+  crop offset or backbone version 2 to 4% (exp57), and a checkpoint run under newer libraries changed class at 14 of
+  259 points (exp111). No number changed.
+- **`determinism_check`'s floor, named for what it measured.** Its docstring (since 94eb283) and Usage's line on it
+  (since 3c5dc34) called exp57's 2 to 4% the reseed floor, as the research record's readiness plan did; it is the move
+  between crop offsets and backbone versions, and reseeding a probe moved 0.2 to 0.6% (exp63, exp83), so a run under
+  Usage's example floor of 0.03 can still move more than a reseed does. The record's plan is amended the same way. The
+  example floor and every default are unchanged.
+
 ## 1.20.3 (2026-10-29)
 
 - **`certificate` on a map that is not north up.** GDAL georeferences a grid that is south up, rotated, or the pixel

@@ -9,6 +9,7 @@ import csv
 import importlib.util
 import json
 import math
+import os
 
 import numpy as np
 import pytest
@@ -145,6 +146,8 @@ def test_sample_other_then_estimate_names_the_more_accurate_map(tmp_path, capsys
     assert r["verdict"] == "a" and printed.startswith("map a is more accurate than map b, by")
     assert r["difference"]["low"] <= true_delta <= r["difference"]["high"]
     assert r["n_unjudged"] == 2 and "2 could not be judged" in printed
+    # the verdict is about these two maps, not the models or recipes that made them (Corley et al. 2026, R4)
+    assert est.WHICH_MAP_SCOPE_NOTE in printed and est.WHICH_MAP_SCOPE_NOTE in r["note"]
     with pytest.raises(SystemExit, match="certify needs a random sample of one map's windows"):
         main(["certify", str(out), "--alpha", "0.05"])
     with pytest.raises(SystemExit, match="takes none of --per-class"):
@@ -198,8 +201,49 @@ def test_the_route_through_the_server(tmp_path):
     r = mcp_server.estimate(sample_csv=s["files"]["sample_csv"])
     assert r["summary"]["verdict"] == "a" and r["conclusion"].startswith("Map a is more accurate than map b, by")
     assert "not either map's accuracy" in r["limits"]
+    assert est.WHICH_MAP_SCOPE_NOTE in s["limits"] and est.WHICH_MAP_SCOPE_NOTE in r["limits"]
     c = mcp_server.compare(a=str(tmp_path / "a.npy"), b=str(tmp_path / "b.npy"), out_dir=str(tmp_path / "c"), patch=1)
     assert "other set to map b" in c["next"]
+
+
+def test_the_docs_give_each_record_figure_its_own_experiment():
+    # exp57's 2 to 4% is between crop offsets and backbones; reseeding a probe moved 0.2 to 0.6% (exp63, exp83). No
+    # DFC2020 figure (exp66): publishing one needs the IEEE GRSS IADF committee's and TU Munich's approval
+    from oe_inferencex.compare import determinism_check
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    said = ("reseeding a probe moved 0.2 to 0.6% of the windows (exp63, exp83), another crop offset or backbone "
+            "version 2 to 4% (exp57)")
+    for name in ("docs/Usage.md", "CHANGELOG.md"):
+        text = " ".join(open(os.path.join(root, name), encoding="utf-8").read().split())
+        assert said in text and "reseeding a head moved 2 to 4%" not in text and "(exp83, exp66)" not in text
+        assert "reseed floor (2 to 4%" not in text
+        assert name == "CHANGELOG.md" or est.WHICH_MAP_SCOPE_NOTE in text
+    # determinism_check's floor: exp57's 2 to 4% named for what it measured, not as the reseed rate
+    doc = " ".join(determinism_check.__doc__.split())
+    assert "reseeding the head moves it" not in doc and "reseed disagreement rate" not in doc
+    assert "two crop offsets or two backbone versions" in doc and "reseeding a probe moved 0.2 to 0.6%" in doc
+    usage = " ".join(open(os.path.join(root, "docs/Usage.md"), encoding="utf-8").read().split())
+    assert ("The floor 0.03 is inside the 2 to 4% of windows that another crop offset or backbone version moved in "
+            "exp57; reseeding a probe moved 0.2 to 0.6% (exp63, exp83)") in usage
+
+
+def test_decide_names_a_map_not_a_model():
+    # decide's which-map answers carry the scope wherever they name a map, and only there
+    from oe_inferencex.decide import decide
+    r = {"design": "disagreement", "n_population": 4096, "n_disagree": 507, "disagree_share": 507 / 4096,
+         "n_labelled": 100, "n_unjudged": 0, "n_a_right": 50, "n_b_right": 45, "n_neither": 5,
+         "difference": {"estimate": 0.0, "estimate_range": [0, 0], "low": 0.01, "high": 0.05}, "verdict": "a",
+         "conf": 0.95}
+    named = decide(r, ["more_accurate"])["answers"]["more_accurate"]
+    assert named["answer"] == "a" and est.WHICH_MAP_SCOPE_NOTE in named["because"]
+    open_ = decide(dict(r, verdict=None, difference=dict(r["difference"], low=-0.02)), ["more_accurate"])
+    assert est.WHICH_MAP_SCOPE_NOTE not in open_["answers"]["more_accurate"]["because"]
+    base = {"n_windows": 4096, "n_disagree": 507, "disagreement_rate": 507 / 4096, "dates": {"status": "unstated"}}
+    graded = lambda a, b: dict(base, graded={"which_side": {"n_disagree": 507, "a_right": a, "b_right": b,
+                                                            "neither": 507 - a - b}})
+    assert est.WHICH_MAP_SCOPE_NOTE in decide(graded(228, 239), ["more_accurate"])["answers"]["more_accurate"]["because"]
+    assert est.WHICH_MAP_SCOPE_NOTE not in decide(graded(230, 230), ["more_accurate"])["answers"]["more_accurate"][
+        "because"]
 
 
 # ----------------------------------------------------------------------------- the review of 3 October 2026

@@ -9,10 +9,18 @@ from oe_inferencex.common.hypergeom import _level, hypergeom_interval
 # only through the windows where they differ. So the difference acc_a - acc_b = (K_a - K_b) / N, with K_a and K_b the
 # differing windows where a, and where b, is right, and a random sample of the D differing windows estimates it with
 # about N / D times fewer labels than a sample of the whole map (exp90: a median of 4.8 times on the record's maps).
+# One map is one training run and one prediction, so the verdict is about the two maps, not what made them (Corley et
+# al. 2026, arXiv 2605.12678, R4): reseeding a probe moved 0.2 to 0.6% of the windows (exp63, exp83), another crop
+# offset or backbone version 2 to 4% (exp57), and a checkpoint run under newer libraries changed class at 14 of 259
+# points (exp111). "Training seed", not "seed": the MCP replies that carry this note also name the sample's own seed.
+WHICH_MAP_SCOPE_NOTE = ("The verdict names the more accurate of these two maps on this area and date, and does not "
+                        "rank the models or recipes that made them: another training seed, area, date or library "
+                        "version can give a different answer.")
 WHICH_MAP_NOTE = ("The difference is over the windows compared: both maps predict them and neither splits evenly between "
                   "two classes. This says which map is more accurate and by how much, not either map's accuracy: where the maps agree "
                   "they are both right or both wrong, and how often needs a sample of all windows (sample --design random "
-                  "on each map). Labels are assumed right; a window marked ? is counted for each map both ways.")
+                  "on each map). Labels are assumed right; a window marked ? is counted for each map both ways. "
+                  + WHICH_MAP_SCOPE_NOTE)
 SIGN_TEST_SHARE = 5                  # the sign test decides while the labels are at most 1/5 of the differing windows
 SIGN_TEST_NOTE = ("The verdict is the exact sign test on the labelled windows where one map is right (two-sided): it "
                   "says which map is more accurate and names the less accurate one at most half its level of the time "
