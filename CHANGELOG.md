@@ -16,6 +16,20 @@
   between crop offsets and backbone versions, and reseeding a probe moved 0.2 to 0.6% (exp63, exp83), so a run under
   Usage's example floor of 0.03 can still move more than a reseed does. The record's plan is amended the same way. The
   example floor and every default are unchanged.
+- **Docs: which of several maps is most accurate, from one random sample.** `grade` has always graded every pair of
+  the maps given with `--map`; Usage's `grade` now says how to use that for K maps of one area and date: one random
+  sample of windows (`sample --design random --patch 1`), a constant stratum of the sample's `n_population`, and
+  `--alpha` 2α/(K−1). The maps no pairwise interval places below another form a set that holds each most accurate map
+  with probability at least 1 − α, a union bound over the K − 1 intervals pairing it with another map, each end at
+  most α/(K−1); the probability is over the random draw, so it holds whatever the spatial pattern of the maps' errors.
+  It answers the map-level ranking that Corley et al. (2026, arXiv 2605.12678, R2) ask for and leave without a design,
+  and Usage gives its limits: labels on the whole map, fixed in advance, these maps and not the models, a benchmark's
+  sample kept secret until the maps are frozen. `--map`'s help and grade's docstrings said one or two maps; they now
+  say once per map. Tests: by enumeration over every population of 5 units and every sample of 4, each most accurate
+  map leaves the set with probability at most α (α 0.2 and 0.4); the command line on three maps; Usage's sentences. No
+  number or computation changed. An independent review of the argument against the code, before it was written down,
+  added its conditions: every drawn row kept, N from the sidecar only, strict ends, a not-computed interval separating
+  nothing, the printed level per interval.
 
 ## 1.20.3 (2026-10-29)
 

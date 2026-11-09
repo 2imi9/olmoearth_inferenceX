@@ -1373,8 +1373,8 @@ returns what the agency reports. Each accuracy, share and difference comes with 
 and the agency's own normal-theory interval beside it. The agency's design is taken as published: nothing here draws
 a sample.
 
-- **Overall accuracy** of each map, and with two maps (`--map` twice) the difference of their accuracies on the same
-  points. It compares these two maps, not the models or recipes that made them.
+- **Overall accuracy** of each map, and with two or more maps (`--map` once per map) the difference of each pair's
+  accuracies on the same points. It compares these maps, not the models or recipes that made them.
 - **Per class:** user's and producer's accuracy, and the class's share of the reference (its area, as a share).
 - **The error matrix** as estimated shares of the population, without intervals.
 
@@ -1450,6 +1450,56 @@ each upper end for it, so the estimate becomes a range. `--sampled-strata-only` 
 the population, as some agencies report, and says so. Each interval holds at 95% (`--alpha`) on its own; the intervals
 do not hold jointly. The normal-theory intervals are those of Stehman (2014) and Olofsson et al. (2014), nominal: in a
 small class or a stratum of few labels they can cover far less than they say. `--out grade.json` writes every number.
+
+#### Which of several maps is most accurate, from one random sample
+
+`grade` prints the difference of every pair of maps it is given, so one simple random sample of windows, labelled once,
+can rank any number K of maps of the same area and date (documented in 1.20.4; no computation changed):
+
+1. Draw the sample from one of the maps (its scores, or a product's class map with its confidence band):
+   `oe-inferencex sample A.tif --design random --patch 1 --budget 400 --seed 7 --out pts.csv`. With `--patch 1` a
+   window is one pixel. Every other map must be on A's grid and use the legend the reviewer labels in.
+2. The reviewer writes each point's class on the ground in a new column, `reference_class`. Keep every drawn row: a
+   window the reviewer cannot label stays, its reference left empty. Add one column per map: A's class is
+   `map_class`; read each other map's class at the point's `pixel_row` and `pixel_col`. A map's no-data is left empty
+   or declared with `--nodata`, and is then bounded both ways, as `grade` bounds every unknown value; a no-data code
+   not declared is read as a class, and so counted wrong.
+3. Add a column `frame` holding `all` on every row (the random design leaves `stratum` empty, which `grade` refuses),
+   and a sizes file `strata.csv` of two lines, `frame,windows` and `all,N`, where N is the `n_population` in the
+   sample's `.json` sidecar: the windows the sample was drawn from, no other count. Keep the default `--sizes units`.
+4. Grade at `--alpha` 2α/(K−1), for example K = 3 maps at α = 0.05 (K = 5 would take 0.025):
+
+```console
+$ oe-inferencex grade pts.csv --stratum frame --reference reference_class --map map_class --map B --map C --strata strata.csv --alpha 0.05
+```
+
+The set of the best, S, is the maps that no printed difference places below another: a map leaves S when the
+interval on "it minus another" has its upper end below 0, or the interval on "another minus it" its lower end above
+0, strictly; an interval printed as not computed separates nothing. Each most accurate map (each of them on its own,
+if several tie) is in S with probability at least 1 − α. It leaves S only if one of the K − 1 intervals pairing it
+with another map misses on its side, and each end of a `grade` interval at `--alpha` a misses with probability at most
+a/2, so all of them together at most (K − 1)·a/2 = α. The probability is over the random draw only: the maps and each
+window's reference class are fixed, so it holds whatever the maps' errors and their spatial pattern, and it takes the
+reviewer's labels as right. When S holds one map, that map is named. When it holds several, these labels do not
+separate them, and a map in S is not shown to be close to the best; an empty S settles nothing. `grade` prints each
+interval at 100(1 − a)%, two-sided and on its own (90% for K = 2 at α = 0.05); the 1 − α belongs to S, which uses
+one side of K − 1 of them.
+
+- Fix the maps, α, the seed and the budget before any label is read, and grade all n labels at once: the intervals
+  are for a sample size fixed in advance, not valid at every look. Dropping a map after seeing the results, drawing
+  again with another seed, stopping early or adding labels to settle a close call is a second test the bound does
+  not cover, and a map fitted or tuned to these labels voids it.
+- The labels fall on the whole map, not only where the maps differ, and the valid intervals are wider than normal
+  theory's (1.6 times on NLCD 2016 and GFC2020, exp117), so at a few hundred labels S can keep several maps. For
+  two maps, `sample --other` labels only the windows where they differ (exp90: at 100 labels it named the right map on
+  60% of draws, against 13% from the whole map).
+- It names the most accurate of these maps on the windows where A has a value (A's no-data is outside the frame, so
+  the comparison is A's area), on this area and date, against these labels. It does not rank the models or recipes
+  that made them, and it says nothing of run-to-run variation: another training seed can change the answer.
+- A benchmark that grades maps made after its sample is drawn keeps the sample secret until every map is frozen: not
+  `--seed-from-map` or a published seed, from which a submitter could work out the windows. Publish the SHA-256 of the
+  seed and a salt before submissions, reveal both once every map is frozen, and draw a fresh sample for each round:
+  maps resubmitted against the same labels can be tuned to them.
 
 ## Use from an agent (MCP)
 

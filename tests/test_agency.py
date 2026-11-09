@@ -644,3 +644,95 @@ def test_cli_reads_a_table_as_a_spreadsheet_shows_it(tmp_path, capsys):
     sizes.write_text('"","stratum","size"\n"1","a",30\n"2","b",60\n')   # R's write.csv with row names
     with pytest.raises(SystemExit, match="first column has no name"):
         run("s,m,r\na,1,1\nb,1,1\n", "--strata", str(sizes))
+
+
+# ------------------------------------------------------------------------- several maps on one random sample
+def set_of_the_best(res, names):
+    """Usage, grade, which of several maps: the maps that no pairwise interval places below another, strictly; an
+    interval not computed separates nothing."""
+    out = set(names)
+    for key, q in res["differences"].items():
+        a, b = key.split(" minus ")
+        if q["interval"] is None or q["interval"][0] is None:
+            continue
+        lo, hi = q["interval"]
+        if lo > 0:
+            out.discard(b)
+        if hi < 0:
+            out.discard(a)
+    return out
+
+
+@pytest.mark.parametrize("alpha", [0.2, 0.4])
+def test_the_set_of_the_best_holds_each_most_accurate_map(alpha):
+    """K = 3 maps graded on one simple random sample, one stratum, at grade's alpha 2 alpha / (K - 1): over every
+    population of N = 5 units, each right or wrong in each map, and every sample of n = 4, each most accurate map is
+    left out of the set of the best with probability at most alpha (Usage: the union bound over the K - 1 intervals
+    pairing it with another map, each end of each at alpha / (K - 1))."""
+    N, n, K = 5, 4, 3
+    names = ["a", "b", "c"]
+    kinds = list(itertools.product((0, 1), repeat=K))         # right (1) or wrong (0) in each map
+    d = agency.design_from_sizes(["all"] * n, {"all": N})
+    sets = {}
+    for smp in compositions(n, len(kinds)):
+        rows = [t for t, k in zip(kinds, smp) for _ in range(k)]
+        maps = {m: ["1" if r[j] else "2" for r in rows] for j, m in enumerate(names)}
+        sets[smp] = set_of_the_best(agency.grade(d, ["1"] * n, maps, alpha=2 * alpha / (K - 1)), names)
+    assert any(len(s) < K for s in sets.values())             # some samples do separate maps here
+    worst = 0.0
+    for pop in compositions(N, len(kinds)):
+        acc = [sum(k * t[j] for t, k in zip(kinds, pop)) for j in range(K)]
+        for j in (j for j in range(K) if acc[j] == max(acc)):
+            miss = sum(math.exp(sum(log_choose(P, k) for P, k in zip(pop, smp)) - log_choose(N, n))
+                       for smp, s in sets.items() if names[j] not in s)
+            worst = max(worst, miss)
+    assert worst <= alpha + 1e-12
+
+
+def test_cli_grades_several_maps_on_one_random_sample(tmp_path, capsys):
+    """Usage's route: one constant stratum, its size from a sizes file, --map once per map: every pair's difference
+    printed and written, at the --alpha given."""
+    ref = ["1", "2"] * 20
+    a = list(ref)
+    b = ["1", "2"] * 10 + ["2", "1"] * 10                     # right on half the points
+    c = ["2", "1"] * 20
+    rows = [{"frame": "all", "reference_class": r, "map_class": x, "B": y, "C": z} for r, x, y, z in zip(ref, a, b, c)]
+    path = tmp_path / "pts.csv"
+    write_points(path, rows, ["frame", "reference_class", "map_class", "B", "C"])
+    sizes = tmp_path / "strata.csv"
+    sizes.write_text("frame,windows\nall,400\n")
+    outs = {}
+    for alpha in ("0.05", "0.025"):
+        out = tmp_path / f"g{alpha}.json"
+        assert main(["grade", str(path), "--stratum", "frame", "--reference", "reference_class", "--map", "map_class",
+                     "--map", "B", "--map", "C", "--strata", str(sizes), "--alpha", alpha, "--out", str(out)]) == 0
+        text = capsys.readouterr().out
+        res = json.load(open(out))
+        pairs = ("map_class minus B", "map_class minus C", "B minus C")
+        assert set(res["differences"]) == set(pairs) and all(p in text for p in pairs)
+        assert res["strata"] == 1 and f"{100 * (1 - float(alpha)):g}% interval" in text
+        outs[alpha] = res
+    assert any(outs["0.05"]["differences"][p]["interval"] != outs["0.025"]["differences"][p]["interval"]
+               for p in ("map_class minus B", "map_class minus C", "B minus C"))
+    assert set_of_the_best(outs["0.05"], ["map_class", "B", "C"]) == {"map_class"}
+
+
+def test_usage_says_how_to_rank_several_maps_and_what_it_is_about():
+    import os
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    usage = " ".join(open(os.path.join(root, "docs/Usage.md"), encoding="utf-8").read().split())
+    for said in ("Grade at `--alpha` 2α/(K−1)",
+                 "Each most accurate map (each of them on its own, if several tie) is in S with probability at least "
+                 "1 − α.",
+                 "an interval printed as not computed separates nothing",
+                 "Keep every drawn row",
+                 "where N is the `n_population` in the sample's `.json` sidecar",
+                 "It does not rank the models or recipes that made them",
+                 "Publish the SHA-256 of the seed and a salt before submissions"):
+        assert said in usage, said
+    import argparse
+    from oe_inferencex.agency.command import add_grade_parser
+    sub = argparse.ArgumentParser().add_subparsers()
+    add_grade_parser(sub)
+    helps = {a.dest: a.help for a in sub.choices["grade"]._actions}
+    assert "give it once per map" in helps["map"]
