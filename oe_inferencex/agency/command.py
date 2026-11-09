@@ -1,4 +1,4 @@
-"""The command grade: one or two maps graded with an agency's stratified sample, each interval valid at any size."""
+"""The command grade: one or more maps graded with an agency's stratified sample, each interval valid at any size."""
 import json
 
 from oe_inferencex.common.output import _check_out_file, _refuse_overwriting_inputs, _stamp, _where
@@ -25,7 +25,7 @@ def _iv_pct(q, nd, scale=100.0):
 
 def cmd_grade(args):
     """One or more maps graded with an agency's stratified reference sample: overall accuracy, the difference between
-    two maps, each class's user's and producer's accuracy and share of the reference, each with an interval valid at
+    each pair of maps, each class's user's and producer's accuracy and share of the reference, each with an interval valid at
     every sample size and the normal-theory one beside it, nominal (oe_inferencex.agency and
     oe_inferencex.agency.stratified)."""
     from oe_inferencex import agency
@@ -102,7 +102,7 @@ def cmd_grade(args):
 
 
 def add_grade_parser(sub):
-    gr = sub.add_parser("grade", help="grade one or two maps with an agency's stratified reference sample (NLCD, "
+    gr = sub.add_parser("grade", help="grade one or more maps with an agency's stratified reference sample (NLCD, "
                                       "GFC2020): overall, user's and producer's accuracy and class shares, each with "
                                       "an interval valid at any sample size and the normal-theory one beside it")
     gr.add_argument("points", help="CSV of the labelled points: each one's stratum, reference label and the class "
@@ -110,8 +110,8 @@ def add_grade_parser(sub):
     gr.add_argument("--stratum", required=True, metavar="COL", help="the column holding each point's stratum")
     gr.add_argument("--reference", required=True, metavar="COL", help="the column holding each point's reference label")
     gr.add_argument("--map", required=True, action="append", metavar="COL",
-                    help="a column holding a map's class at each point; give it twice to compare two maps on the same "
-                         "points. The first is the map the strata were drawn from")
+                    help="a column holding a map's class at each point; give it once per map to compare maps on the "
+                         "same points (each pair's difference). The first is the map the strata were drawn from")
     gr.add_argument("--alternate", nargs="+", default=None, metavar="COL",
                     help="columns of further acceptable reference labels per point: a map class equal to the "
                          "reference label or any of them counts as right (NLCD's rule; its published per-class table "

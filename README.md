@@ -65,7 +65,7 @@ Every command starts with `oe-inferencex`. The main questions:
 | Where do two maps differ? | `compare a.tif b.tif --out diff` | none |
 | Can someone else check which part I certified? | `sample scores.tif --design random --budget 400 --seed-from-map --alpha 0.05 --out cert.csv`, fill in `wrong`, `certify cert.csv`, then `certificate cert_zone.json --date 2024-01-01/2024-12-31 --out cert` and `verify cert/certificate.json --scores scores.tif` | about 400, drawn this way from the start |
 | At which window size can each class be seen? | `scale scores.tif` (add `--reference truth.tif` for each size's error rate) | none |
-| How accurate is a map by an agency's published sample (NLCD, GFC2020)? | `grade points.csv --stratum S --weight W --reference R --map M` (`--map` twice for two maps) | none: the agency's labelled points |
+| How accurate is a map by an agency's published sample (NLCD, GFC2020)? | `grade points.csv --stratum S --weight W --reference R --map M` (`--map` once per map, for each pair's difference; Usage's `grade` ranks several maps on one random sample) | none: the agency's labelled points |
 
 </details>
 

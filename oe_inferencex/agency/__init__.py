@@ -4,8 +4,8 @@ The 1.17.0 raters found "no route to grade an existing agency stratified sample 
 agency's accuracy assessment publishes its points: each one's stratum, its reference label (NLCD also an alternate
 label), the map's class at it, and either its weight (the stratum's size over its labels) or the strata's sizes
 beside. `grade` reads them and returns what the agency reports: overall accuracy, each class's user's and producer's
-accuracy and its share of the reference, and with two maps the difference of their overall accuracies on the same
-points, each with an interval valid at every sample size (stratified.py) and the normal-theory interval of Stehman
+accuracy and its share of the reference, and with two or more maps the difference of each pair's overall accuracies on the
+same points, each with an interval valid at every sample size (stratified.py) and the normal-theory interval of Stehman
 (2014) and Olofsson et al. (2014) beside it, which is nominal; and the error matrix as estimated shares of the
 population, without intervals.
 
