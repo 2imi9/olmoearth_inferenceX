@@ -1,6 +1,9 @@
 # Changelog
 
-## Unreleased
+## 1.20.4 (2026-11-09)
+
+Text only: no number, computation or default changed since 1.20.3. What changed is what the tool says: estimate's
+which-map note, the MCP server's limits and decide's which-map answers, grade's help, and the docs.
 
 - **Which of two maps: what the verdict is about.** `estimate` on a sample drawn with `--other` (its printed note, the
   result's `note` and the MCP server's limits, for `sample` with `other` too) and Usage now say that the verdict names
