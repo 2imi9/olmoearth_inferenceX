@@ -774,8 +774,8 @@ def _sample_class_audit(args):
     os.makedirs(os.path.dirname(os.path.abspath(args.out)) or ".", exist_ok=True)
     with open(args.out, "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
-        # map_class is the class the window is audited for, fixed at the draw; hide it from the reviewer to label
-        # blind. No `wrong` column: the error is reference_class against map_class, read by estimate
+        # map_class is the class the window is audited for, fixed at the draw; hide it and confidence from the reviewer
+        # to label blind. No `wrong` column: the error is reference_class against map_class, read by estimate
         w.writerow(["index", "window_row", "window_col", "pixel_row", "pixel_col", "x", "y", "confidence", "map_class",
                     "reference_class"])
         for k, (i, r, c) in enumerate(zip(idx, rows, cols)):
@@ -784,7 +784,8 @@ def _sample_class_audit(args):
     side = {k: (v.tolist() if isinstance(v, np.ndarray) else v) for k, v in smp.items()}
     side.update(_sidecar_map_fields(args, geo, [int(hw), int(ww)], out, conf_path, conf_range, prod_info))
     side["how_to_label"] = ("open each window and write in reference_class the class that is there, in the map's class "
-                            "codes, or ? where it cannot be judged (keep the row); hide map_class to label blind; then: "
+                            "codes, or ? where it cannot be judged (keep the row); hide map_class and confidence to "
+                            "label blind; then: "
                             f"oe-inferencex estimate {os.path.basename(args.out)} --alpha A, with A chosen before any "
                             "label is read, as is any --also-accept file")
     with open(args.out[:-4] + ".json" if args.out.endswith(".csv") else args.out + ".json", "w") as f:
@@ -797,7 +798,8 @@ def _sample_class_audit(args):
           + f"; the zone is the {z['n_zone']} valid windows at confidence {z['cut']:.6g} or above, "
           f"{100 * z['share_of_map']:.1f}% of the {smp['n_population']}{_zone_words(z)}; wrote {args.out} and its .json. "
           "Write in `reference_class` the class you see in each window, or ? where a window cannot be judged (keep its "
-          f"row); hide map_class to label blind. Then run: oe-inferencex estimate {args.out} --alpha A, with A chosen "
+          f"row); hide map_class and confidence to label blind. Then run: oe-inferencex estimate {args.out} --alpha A, "
+          "with A chosen "
           "now, before any label is read; write any --also-accept file now too"
           + "".join(f"\nnote: class {c} has no window in the zone ({e['n_windows']} windows of the map); the audit says "
                     "nothing about it" for c, e in smp["not_audited"].items())

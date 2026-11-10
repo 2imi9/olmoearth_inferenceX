@@ -111,7 +111,8 @@ def add_grade_parser(sub):
     gr.add_argument("--reference", required=True, metavar="COL", help="the column holding each point's reference label")
     gr.add_argument("--map", required=True, action="append", metavar="COL",
                     help="a column holding a map's class at each point; give it once per map to compare maps on the "
-                         "same points (each pair's difference). The first is the map the strata were drawn from")
+                         "same points (each pair's difference). The first is the map --pure refers to (in an agency's "
+                         "sample, the map the strata were drawn from)")
     gr.add_argument("--alternate", nargs="+", default=None, metavar="COL",
                     help="columns of further acceptable reference labels per point: a map class equal to the "
                          "reference label or any of them counts as right (NLCD's rule; its published per-class table "

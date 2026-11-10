@@ -1,5 +1,34 @@
 # Changelog
 
+## Unreleased
+
+Text only: no number, computation or default changed. From a user's notes on a kelp-mapping thesis that ran the tool
+(sample --design random, sample --other, estimate, certify, weighted_auroc), checked against the code.
+
+- **Labelling blind.** Usage's first sample and its `certify` section, and the MCP server's limits for `sample`, said
+  to hide `map_class` only. A sample's CSV also carries `confidence`, `stratum` and `condition`, and the stratified
+  designs write the rows stratum by stratum, so a reviewer labelling in the CSV's order could see how sure the map was,
+  the window's input condition or its map class. They now say to hide those columns too, show the windows in a
+  shuffled copy and copy each label back to its row by `index`, never by position; a sequential sample, already in
+  random order, is labelled from the top row down as before. The per-class audit's printed line, sidecar and Usage
+  example now say to hide `confidence` too (its rows are already in random order). For `sample --other`, Usage now
+  says that its rows already come in random order, and that with two classes a reviewer who knows the design knows
+  each window holds one map's claim of each class (agreement windows mixed in, kept out of `estimate`'s file, hide it;
+  not measured).
+- **Which of two maps: the labels do not grade a confidence.** Usage now says that the labels of a `sample --other`
+  sample are all on windows where the maps differ, none where they agree, so they cannot grade either map's
+  confidence, and points to a
+  random sample with `certify`, or a sample by confidence band.
+- **One map in several rasters.** A run across UTM zones comes as one raster per CRS. Usage now gives the route to one
+  error rate for the whole map: a random sample of each raster, each with its own seed so the strata are drawn
+  independently, the rasters as strata of known size (each sidecar's `n_population`), and `grade`.
+- **Smaller.** Usage now says a map on another grid is refused for its pixel size too, not only its CRS or origin, and
+  is never resampled. README's limit "check it with a few labels" now names the routes. Usage's API table and
+  `weighted_auroc`'s docstring say the design-weighted metrics are point values with no interval. `grade`'s `--map`
+  help said the first map is the one the strata were drawn from; what the code uses it for is `--pure`. A which-map
+  result's `verdict_note` was the sign test's note also where the interval decided; it now names the rule used
+  (estimate and the MCP server printed it only under the sign test, and still do).
+
 ## 1.20.4 (2026-11-09)
 
 Text only: no number, computation or default changed since 1.20.3. What changed is what the tool says: estimate's

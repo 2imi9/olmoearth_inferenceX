@@ -206,7 +206,7 @@ Limits
 ------
 
 - Without labels it tells you where to look, not how wrong the map is.
-- In a new place or year the ranking can weaken. Check it with a few labels.
+- In a new place or year the ranking can weaken. Check it with a few labels: a random sample and `certify`, or a sample by confidence band.
 - When two legends draw a class boundary differently (grass or shrub, say), only labels find those errors.
 - Intervals and certified zones assume the labels are right.
 - If parts of the map were made from different inputs (clouds, a missing sensor), use `--condition`.
