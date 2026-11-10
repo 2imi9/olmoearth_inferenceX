@@ -28,6 +28,11 @@ SIGN_TEST_NOTE = ("The verdict is the exact sign test on the labelled windows wh
                   "union bound, wider than the test, so it can include 0 when the test names a map. The test decides "
                   "while the labels are at most a fifth of the differing windows, where it names the better map more "
                   "often than the interval (exp107); past that, and in a census, the interval decides.")
+# Until 1.20.4 every result carried SIGN_TEST_NOTE as its verdict_note, also where the interval decided (estimate and
+# the MCP server print the note only under the sign test; the JSON carried it either way)
+INTERVAL_VERDICT_NOTE = ("The verdict is the interval's: it names a map only where the interval on the difference lies "
+                         "wholly on one side of 0. The labels are more than a fifth of the differing windows (or a "
+                         "census, or the interval rule was asked for), where the interval decides.")
 _SIGN_CRIT = {}
 
 
@@ -169,4 +174,4 @@ def compare_from_disagreement(sample, class_a, class_b, reference, unjudged=None
                        + ("the verdict is the exact sign test on the windows where one map is right"
                           + (", since the labels are at most a fifth of the differing windows" if rule == "auto" else "")
                           if used == "sign" else "the verdict is the interval's")),
-            "note": WHICH_MAP_NOTE, "verdict_note": SIGN_TEST_NOTE}
+            "note": WHICH_MAP_NOTE, "verdict_note": SIGN_TEST_NOTE if used == "sign" else INTERVAL_VERDICT_NOTE}

@@ -89,8 +89,11 @@ probabilities (see [Inputs](#inputs)).
 
 Open `to_label.csv`. For each row, look at the window in imagery or on the ground. Set `wrong`
 to 1 if `map_class` is not what is there, otherwise to 0, or `?` where it cannot be judged. To label
-blind, hide the `map_class` column, write the class you see in `reference_class`, and set `wrong`
-where the two differ. Fill every row, keep the row order,
+blind, hide the `map_class`, `confidence`, `stratum` and `condition` columns, write the class you see in
+`reference_class`, and set `wrong` where the two differ. A random sample's rows come in the draw's random order; the
+confidence, proportional and condition designs write them stratum by stratum, so their order shows how sure the map
+was: show the reviewer a shuffled copy and copy each label back to its row by `index`, never by position.
+Fill every row, keep the row order,
 and keep `to_label.json` beside the CSV. On the test map,
 `python quickstart_map.py --label to_label.csv` does this from `truth.tif`.
 
@@ -288,7 +291,8 @@ class is not the argmax (a two-class task with `positive_class_threshold` other 
 
 **Large areas.** The scores of one CRS are held in memory as one grid, up to 4 GiB. A run larger than that is read in
 parts: `--window` takes shell patterns of window ids (`group/name`, e.g. `'default/*_12_*'`), and each part goes to
-its own `--out`. `--group` reads whole window groups.
+its own `--out`. `--group` reads whole window groups. For one error rate of a map in several rasters, one per CRS or
+per part, see [One map in several rasters](#one-map-in-several-rasters).
 
 **The condition layer.** With `--conditions`, `condition_<EPSG>.tif` lies on the scores' grid. Each pixel's code says,
 for each input layer, in how many of the run's timesteps a scene covered the pixel: all, at least half, fewer, or
@@ -514,7 +518,9 @@ adds and those both make.
 
 Class maps are read as integers, a single-band probability map is cut at `--threshold` (0.5 when omitted), and a
 multi-band score map is argmaxed; a continuous map outside [0, 1] needs `--threshold`. The maps, `--labels` and
-`--groups` must share one grid; another CRS or origin is refused. Windows are compared where both maps predicted. A
+`--groups` must share one grid; another CRS, pixel size or origin is refused, not resampled, since resampling
+changes a map's values and its windows: put the maps on one grid by a rule fixed before any label is read. Windows are
+compared where both maps predicted. A
 window whose pixels split evenly between two classes goes to the more confident pixels, or is left out and noted
 when either map is a hard class map.
 
@@ -536,6 +542,11 @@ oe-inferencex sample a.tif --other b.tif --budget 100 --out pairs.csv
 oe-inferencex estimate pairs.csv
 ```
 
+The rows come in the draw's random order, so hiding `class_a` and `class_b` is all that labelling blind needs here. With
+two classes every window holds one map's claim of each class, and a reviewer who knows the design may lean one way on
+hard windows; windows where the maps agree, mixed in and kept in a file `estimate` never reads, hide that. Neither
+effect was measured.
+
 `estimate` then says which map is more accurate and by how much, as a 95% interval on the difference in accuracy, a
 minus b, over the windows compared: both maps predict them, and where either map is a class map, windows split evenly
 between two classes are left out (with scores on both sides a tie goes to the more confident pixels). Each map's share of the differing windows that is right gets its exact interval at 97.5%,
@@ -544,7 +555,10 @@ bound; it is conservative. A window marked `?` is counted for each map both ways
 reads them (class maps, probability maps cut at `--threshold`, or per-class scores argmaxed), and the windows are the
 ones `compare` counts as differing. It does not give either map's accuracy: where the maps agree they are both right
 or both wrong, and how often needs a random sample of all windows (`sample --design random` on each map). `certify`
-refuses this sample.
+refuses this sample. Nor do these labels grade either map's confidence: every labelled window is one where the maps
+differ, so the windows where both are wrong are never drawn. To check a map's confidence against a reviewer, label a
+random sample of that map and run `certify`, or sample it by confidence band (`--design profile --profile-by
+confidence:3`).
 
 The verdict names the more accurate of these two maps on this area and date, and does not rank the models or recipes
 that made them: another training seed, area, date or library version can give a different answer. One map is one
@@ -634,8 +648,9 @@ reviewer misses at most E1 of the wrong windows inside every zone the test can c
 windows, where a model's confident errors sit and a reviewer may be fooled too, and a miss rate measured on the whole
 map, such as one from a second review of a random sample, does not establish it: misses placed in the confident half
 of a map made such a test certify a zone wrong 10% of the time at α = 5% on every draw (review of 2 October 2026). Labelling blind keeps the reviewer from anchoring on the map's
-class, though how much that changes the labels was not measured either: hide the `map_class` column from the
-reviewer, record the class seen in a `reference_class` column, and set `wrong` to 1 where it differs from
+class, though how much that changes the labels was not measured either: hide the `map_class`, `confidence`,
+`stratum` and `condition` columns from the reviewer, show the windows in a shuffled copy and copy each label back by
+`index`, record the class seen in a `reference_class` column, and set `wrong` to 1 where it differs from
 `map_class`.
 
 | `--design` | Draw | Interval in `estimate` |
@@ -1501,6 +1516,22 @@ one side of K − 1 of them.
   seed and a salt before submissions, reveal both once every map is frozen, and draw a fresh sample for each round:
   maps resubmitted against the same labels can be tuned to them.
 
+#### One map in several rasters
+
+A run across UTM zones comes from `from-olmoearth` as one `scores_<EPSG>.tif` per CRS, and a large run read in parts as
+one raster per part. `assess`, `sample`, `estimate` and `certify` take one raster at a time. For one error rate of the
+whole map, sample each raster with `--design random` at the same `--patch`, with every budget fixed before any label
+is read. The reviewer writes each window's class in `reference_class`, empty where it cannot be judged. Join the rows
+into one CSV with a column `part` naming the raster, write `parts.csv` with the header `part,windows` and one line per
+raster giving the `n_population` from its sidecar, and run:
+
+```console
+$ oe-inferencex grade all.csv --stratum part --reference reference_class --map map_class --strata parts.csv
+```
+
+The overall accuracy is one minus the error rate over all the windows of all the rasters, with `grade`'s interval,
+valid at any sample size. It is not each raster's `estimate` pooled. A certified zone stays per raster.
+
 ## Use from an agent (MCP)
 
 New in 1.4.0. `oe-inferencex mcp` starts a local MCP server on stdio, so that an agent can run
@@ -1830,7 +1861,7 @@ The module paths of 1.18.1 still import. For example, `oe_inferencex.assess` giv
 | `decide` | Typed answers to set questions, read from a result that `estimate`, `certify` or `compare` wrote (`decide`) |
 | `agency` | An agency's stratified reference sample graded, with intervals valid at any sample size; `stratified` holds the intervals (`grade`) |
 | `readers` | `taskcard`, `lcc`: the [task cards](https://github.com/2imi9/olmoearth_inferenceX-record/blob/main/docs/method/taskcards.md) of OlmoEarth's fine-tuned models; a reader for the served change rasters. `olmoearth`: an OlmoEarth run's rslearn dataset read into scores and an input-condition layer (`from-olmoearth`; rasterio). `embeddings`: an area of a geo-embeddings Zarr store and labelled points to class probabilities (`from-embeddings`; the `embeddings` extra) |
-| `common` | `signals`: confidence, the boundary indicator, tiling instability, NDWI cues, no-model controls, `crop_dependence`. `metrics`, `stats`: AURC, capture, calibration error and their design-weighted forms; sign tests and bootstraps. The exact hypergeometric arithmetic, and the commands' shared helpers |
+| `common` | `signals`: confidence, the boundary indicator, tiling instability, NDWI cues, no-model controls, `crop_dependence`. `metrics`, `stats`: AURC, capture, calibration error, AUROC and their design-weighted forms, as point values with no interval; sign tests, and cluster bootstraps of a difference. The exact hypergeometric arithmetic, and the commands' shared helpers |
 | `research` | `reliability`, `evidence`: SHRUG-FM's reliability signals, torch-free; the heads a candidate rule is scored with. `awf`, `data`, `figstyle`: the research record's encoder runs and figures |
 | `cli`, `demo` | The `oe-inferencex` commands put together; the first run (`demo`) |
 | `mcp_server` | The commands as tools of a local MCP server, `oe-inferencex mcp` (the `mcp` extra) |

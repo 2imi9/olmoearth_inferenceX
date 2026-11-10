@@ -364,7 +364,9 @@ def weighted_auroc(uncertainty, errors, weights):
 
     Unlike capture at a budget this has no base-rate ceiling, so it is the statistic to use when comparing how well a
     score ranks errors across two populations whose error rates differ. NaN when every unit is an error or none is,
-    counted in weight: units of weight zero are not in the population."""
+    counted in weight: units of weight zero are not in the population. A point value only: the package gives no
+    interval for it, and a bootstrap that resamples with replacement does not account for labels drawn without
+    replacement."""
     u = np.asarray(uncertainty, dtype=np.float64).ravel()
     e = np.asarray(errors, dtype=np.float64).ravel().astype(bool)
     w = np.asarray(weights, dtype=np.float64).ravel()
