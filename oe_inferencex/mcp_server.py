@@ -1031,10 +1031,13 @@ def sample(
                     "fills `wrong` on every row.")
     limits = ["No window is labelled yet: no tool labels windows, fetches labels or knows whether labels exist."
               if d != "sequential" else "No tool labels windows, fetches labels or knows whether labels exist.",
-              HARD_RULES[3] + " To label blind, hide map_class, confidence, stratum and condition, show the windows "
-              "in a shuffled copy and copy each label back to its row by index (a stratified design writes the rows "
-              "stratum by stratum), write the class seen in a reference_class column and set wrong where the two "
-              "differ." + (" Under the class design, " + est.CLASS_BLIND_NOTE + "."
+              HARD_RULES[3] + " To label blind, hide map_class, confidence, stratum and condition, "
+              + ("label the rows from the top row down as they come (they are already in random order), "
+                 if d == "sequential" else
+                 "show the windows in a shuffled copy and copy each label back to its row by index (a stratified "
+                 "design writes the rows stratum by stratum), ")
+              + "write the class seen in a reference_class column and set wrong where the two differ."
+              + (" Under the class design, " + est.CLASS_BLIND_NOTE + "."
                            if cli.class_names(side) is not None else "")]
     if d == "sequential":
         limits.append("Both estimate and certify read the rows labelled from the top. certify's statement holds at "

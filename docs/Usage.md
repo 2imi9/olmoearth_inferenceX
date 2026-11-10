@@ -91,8 +91,9 @@ Open `to_label.csv`. For each row, look at the window in imagery or on the groun
 to 1 if `map_class` is not what is there, otherwise to 0, or `?` where it cannot be judged. To label
 blind, hide the `map_class`, `confidence`, `stratum` and `condition` columns, write the class you see in
 `reference_class`, and set `wrong` where the two differ. A random sample's rows come in the draw's random order; the
-confidence, proportional and condition designs write them stratum by stratum, so their order shows how sure the map
-was: show the reviewer a shuffled copy and copy each label back to its row by `index`, never by position.
+stratified designs write them stratum by stratum, so their order shows how sure the map was (confidence,
+proportional), each window's input condition (condition) or its map class (class): show the reviewer a shuffled copy
+and copy each label back to its row by `index`, never by position.
 Fill every row, keep the row order,
 and keep `to_label.json` beside the CSV. On the test map,
 `python quickstart_map.py --label to_label.csv` does this from `truth.tif`.
@@ -556,7 +557,7 @@ reads them (class maps, probability maps cut at `--threshold`, or per-class scor
 ones `compare` counts as differing. It does not give either map's accuracy: where the maps agree they are both right
 or both wrong, and how often needs a random sample of all windows (`sample --design random` on each map). `certify`
 refuses this sample. Nor do these labels grade either map's confidence: every labelled window is one where the maps
-differ, so the windows where both are wrong are never drawn. To check a map's confidence against a reviewer, label a
+differ, so no window where the maps agree, right or wrong, is ever drawn. To check a map's confidence against a reviewer, label a
 random sample of that map and run `certify`, or sample it by confidence band (`--design profile --profile-by
 confidence:3`).
 
@@ -650,8 +651,8 @@ map, such as one from a second review of a random sample, does not establish it:
 of a map made such a test certify a zone wrong 10% of the time at α = 5% on every draw (review of 2 October 2026). Labelling blind keeps the reviewer from anchoring on the map's
 class, though how much that changes the labels was not measured either: hide the `map_class`, `confidence`,
 `stratum` and `condition` columns from the reviewer, show the windows in a shuffled copy and copy each label back by
-`index`, record the class seen in a `reference_class` column, and set `wrong` to 1 where it differs from
-`map_class`.
+`index` (a sequential sample is labelled from the top row down in its own random order, not from a shuffled copy),
+record the class seen in a `reference_class` column, and set `wrong` to 1 where it differs from `map_class`.
 
 | `--design` | Draw | Interval in `estimate` |
 |---|---|---|
@@ -931,7 +932,7 @@ what N buys, below, gives the arithmetic.
 ```bash
 oe-inferencex sample scores.tif --design audit --per-class 20 --out audit.csv   # or --zone-share S, --zone-cut C
 # the reviewer writes in `reference_class` the class seen in each window, or ? where it cannot be judged (keep the
-# row); hide map_class to label blind
+# row); hide map_class and confidence to label blind
 oe-inferencex estimate audit.csv --alpha 0.05 --also-accept pairs.json   # alpha and pairs.json fixed before any label
 oe-inferencex decide audit_estimate.json --ask error_rate_below=0.05
 ```
@@ -1520,8 +1521,9 @@ one side of K − 1 of them.
 
 A run across UTM zones comes from `from-olmoearth` as one `scores_<EPSG>.tif` per CRS, and a large run read in parts as
 one raster per part. `assess`, `sample`, `estimate` and `certify` take one raster at a time. For one error rate of the
-whole map, sample each raster with `--design random` at the same `--patch`, with every budget fixed before any label
-is read. The reviewer writes each window's class in `reference_class`, empty where it cannot be judged. Join the rows
+whole map, sample each raster with `--design random` at the same `--patch` and with its own `--seed` (the default, 0,
+would give rasters of equal size the same windows, and the strata must be drawn independently), every seed and budget
+fixed before any label is read. The reviewer writes each window's class in `reference_class`, empty where it cannot be judged. Join the rows
 into one CSV with a column `part` naming the raster, write `parts.csv` with the header `part,windows` and one line per
 raster giving the `n_population` from its sidecar, and run:
 
@@ -1530,7 +1532,7 @@ $ oe-inferencex grade all.csv --stratum part --reference reference_class --map m
 ```
 
 The overall accuracy is one minus the error rate over all the windows of all the rasters, with `grade`'s interval,
-valid at any sample size. It is not each raster's `estimate` pooled. A certified zone stays per raster.
+valid at any sample size when the rasters were drawn independently. It is not each raster's `estimate` pooled. A certified zone stays per raster.
 
 ## Use from an agent (MCP)
 

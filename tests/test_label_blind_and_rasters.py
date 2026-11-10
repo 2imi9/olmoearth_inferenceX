@@ -41,14 +41,23 @@ def test_usage_and_the_mcp_server_say_what_to_hide_and_how_to_copy_labels_back()
                  "Neither effect was measured."):
         assert said in usage, said
     src = _joined("oe_inferencex/mcp_server.py")          # read as text: the mcp extra is optional
-    assert "To label blind, hide map_class, confidence, stratum and condition, show the windows " in src
+    assert "To label blind, hide map_class, confidence, stratum and condition, " in src
     assert "To label blind, hide map_class, write the class seen" not in src
+    # a sequential sample is labelled from the top row down; only the other designs get the shuffled copy
+    assert ('"label the rows from the top row down as they come (they are already in random order), " '
+            'if d == "sequential" else "show the windows in a shuffled copy and copy each label back to its row by '
+            'index') in src
+    assert "(a sequential sample is labelled from the top row down in its own random order, not from a shuffled copy)" \
+        in usage
+    audit = _joined("oe_inferencex/estimate/sample_command.py")
+    assert "hide map_class and confidence to label blind" in audit and "hide map_class to label blind" not in audit
+    assert "hide map_class and confidence to label blind" in usage
 
 
 def test_usage_says_the_which_map_labels_do_not_grade_a_confidence():
     usage = _joined("docs/Usage.md")
     assert "Nor do these labels grade either map's confidence" in usage
-    assert "so the windows where both are wrong are never drawn" in usage
+    assert "so no window where the maps agree, right or wrong, is ever drawn" in usage
 
 
 def test_usage_gives_one_error_rate_for_a_map_in_several_rasters():
@@ -58,6 +67,9 @@ def test_usage_gives_one_error_rate_for_a_map_in_several_rasters():
                  "write `parts.csv` with the header `part,windows` and one line per raster giving the `n_population` "
                  "from its sidecar",
                  "--stratum part --reference reference_class --map map_class --strata parts.csv",
+                 "with its own `--seed` (the default, 0, would give rasters of equal size the same windows, and the "
+                 "strata must be drawn independently)",
+                 "valid at any sample size when the rasters were drawn independently",
                  "It is not each raster's `estimate` pooled. A certified zone stays per raster."):
         assert said in usage, said
 
