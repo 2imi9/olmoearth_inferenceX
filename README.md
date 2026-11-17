@@ -145,7 +145,7 @@ benchmark 74% of the time. Labelling 100 of those windows names it as the map th
 <details>
 <summary>Data and figure credits</summary>
 
-- Imagery: contains modified Copernicus Sentinel data (2017 to 2023).
+- Imagery: contains modified Copernicus Sentinel data (2017 to 2024).
 - Dynamic World map and expert labels: [Brown et al., Scientific Data, 2022](https://doi.org/10.1038/s41597-022-01307-4),
   CC BY 4.0.
 - FTW map and PRUE B3: [Fields of the World](https://fieldsofthe.world), CC BY 4.0.
@@ -196,7 +196,9 @@ agency's nominal normal-theory one.
 
 The tests check each statement by exact computation. The
 [research record](https://github.com/2imi9/olmoearth_inferenceX-record) checks most of them on fully labelled real
-maps; not yet `--valid` or the per-profile verdicts, and `grade`'s intervals by simulation at NLCD's design (exp118).
+maps, among them `--valid`'s error-rate interval and the per-profile verdicts (exp120: linear-probe maps and one Dynamic
+World tile), and checks `grade`'s intervals by simulation at NLCD's design (exp118); `--valid`'s per-class intervals are
+not yet checked.
 Details: [sample and estimate](https://olmoearth-inferencex.readthedocs.io/en/latest/Usage/#sample-and-estimate),
 [certify](https://olmoearth-inferencex.readthedocs.io/en/latest/Usage/#certify).
 
